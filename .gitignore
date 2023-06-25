@@ -1,0 +1,54 @@
+# General macOS
+.DS_Store
+
+# General Windows
+Thumbs.db
+Desktop.ini
+
+# JetBrains IDEs
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Android Studio
+*.iml
+.gradle/
+/build/
+/captures/
+/local.properties
+/.idea/caches/
+/.idea/libraries/
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/gradle.xml
+/captured-exceptions.txt
+/.externalNativeBuild
+
+# Xcode
+*.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/
+DerivedData/
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+
+# WebStorm
+/.idea/
+
+
+# Backup files (e.g., from editors or version control systems)
+*~
+*\#*
