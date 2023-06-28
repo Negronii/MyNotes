@@ -865,28 +865,55 @@ Redux is used when:
 
 Actions are used to update data in the store.
 
-## Reducer
+## Reducers
 
-Reducers are functions that help initialize, modify, and remove data in the store. They take the old state and the action as input and output the updated state to the store.
+Reducers are functions that initialize, modify, and remove data in the store. They take the previous state and an action as input and return the updated state to the store. 
 
-React components subscribe to the store.
+When data is updated in reducers, the reducer publishes the updated data to components. 
 
-If we want to modify data in the store, the component needs to use actions. Actions are sent to the store's middleware and then passed to the reducer. The reducer takes the old state and the action to update the data. This operation of sending actions is called 'dispatch'.
+## Actions
 
-When the data is updated in reducers, the reducer publishes the updated data to components.
+Actions are payloads of information that send data from your application to your store. They are the only source of information for the store. If a component wants to modify data in the store, it needs to use actions. 
+
+These actions are sent to the store's middleware and then passed to the reducer. The reducer takes the previous state and the action to update the data. This operation of sending actions is known as 'dispatch'.
+
+## Store
+
+The store is the object that brings actions and reducers together. The store has the following responsibilities:
+
+- Holds application state
+- Allows access to state via `getState()`
+- Allows state to be updated via `dispatch(action)`
+- Registers listeners via `subscribe(listener)`
+- Handles unregistering of listeners via the function returned by `subscribe(listener)`
+
+React components subscribe to the store and get updated whenever the state changes.
+
+## Installing Redux
 
 To install Redux, use the following command:
-```
+
+```bash
 npm install redux
 ```
 
 It's common to create a `/redux` folder in the `src` directory to manage all Redux files.
 
-## Create Reducer
+## Creating a Reducer
 
-In `redux/languageReducer.ts`:
+As your project grows, actions can become very complicated. Therefore, it's always better to create separate action files to manage actions. 
+
+For example, in `redux/language/languageActions.ts`, you can define an action type:
 
 ```typescript
+export const CHANGE_LANGUAGE = "change_language";
+```
+
+Then, in `redux/language/languageReducer.ts`, you can create a reducer that handles this action:
+
+```typescript
+import { CHANGE_LANGUAGE } from "./languageActions"
+
 interface LanguageState {
     language: 'en' | 'zh';
     languageList: { name: string; code: string }[];
@@ -902,27 +929,41 @@ const defaultState: LanguageState = {
 
 // This is the reducer function, which takes the current state and an action to output the new state
 export default (state = defaultState, action) => {
-    if (action.type === "change_language") {
+    if (action.type === CHANGE_LANGUAGE) {
         const newState = { ...state, language: action.payload };
         return newState;
     }
 };
 ```
 
-## Create Store
+## Creating a Store
+install reduxJS packages
+```
+npm install @reduxjs/toolkit
+```
+The store is created by passing in the reducer to the `configureStore` function:
 
 ```typescript
-import { createStore } from "redux";
-import languageReducer from "./languageReducer";
+// store.ts
+import {configureStore} from '@reduxjs/toolkit';
+import languageReducer from './language/languageReducer';
 
-// createStore takes a reducer function as a parameter, so create the reducer first
-const store = createStore(languageReducer);
+const store = configureStore({
+  reducer: languageReducer,
+});
+
+
 export default store;
 ```
 
-## Use Store in Class Component
+## Using the Store in a Class Component
+
+You can use the store in a class component by calling `store.getState()` to set the component's state:
 
 ```typescript
+// In header.class.tsx
+import store from '../../redux/store'
+...
 // Use store.getState() to set component state
 constructor(props) {
     super(props);
@@ -934,25 +975,38 @@ constructor(props) {
 }
 ```
 
-## Dispatch Action
+## Dispatching an Action
 
-Define the action name. Refer to [Redux documentation](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers#designing-actions) for more information on designing actions.
+Actions are dispatched using the
 
-The action type is often set as an instruction name, e.g., "change_color", "set_username". Then, set the payload data to the store. Payload examples include "red" and "ruimingx".
+`store.dispatch()` method. The action is an object that must have a `type` property, which is often set as an instruction name, such as "change_color" or "set_username". The `payload` property is the data that you want to send to the store. 
 
-Example:
+For more information on designing actions, refer to the [Redux documentation](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers#designing-actions).
+
+Here is an example of how to dispatch an action:
+
 ```typescript
+// header.class.tsx
+import store from '../../redux/store'
+...
+// note here the e is menu list click event, e.key is defined to be language en or zh
 menuClickHandler = (e) => {
     const action = { type: "change_language", payload: e.key };
     store.dispatch(action);
 };
 ```
 
-# i18Next
+In this example, when the `menuClickHandler` function is called, it dispatches an action to change the language. The `e.key` is the new language code, which is sent as the payload of the action.
 
-Quick start guide: [link](https://react.i18next.com/guides/quick-start)
+By organizing your Redux code in this way, you can manage your application's state in a predictable manner, making it easier to debug and test your application.
 
-## Install
+# i18Next: A Quick Start Guide
+
+This guide will walk you through the process of setting up i18Next for your React application. i18Next is a powerful internationalization framework for JavaScript, and it's compatible with React.
+
+## Installation
+
+To install i18Next and its React integration, run the following command in your terminal:
 
 ```bash
 npm install react-i18next i18next --save
@@ -960,18 +1014,323 @@ npm install react-i18next i18next --save
 
 ## Configuration
 
-Create `configs.ts` file and import the necessary modules:
+1. Create a `configs.ts` file in your project directory.
+
+2. Import the necessary modules:
 
 ```typescript
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 ```
 
-Create language JSON files and import them into `configs.ts`:
+3. Create language JSON files (e.g., `en.json` for English, `zh.json` for Chinese) in your project directory. These files will contain your translations.
+
+4. Import the language JSON files into `configs.ts`:
 
 ```typescript
 import translation_en from './en.json';
 import translation_zh from './zh.json';
 ```
 
-Copy the resources from the quick start website.
+5. Set up your i18Next configuration:
+
+```typescript
+const resources = {
+    en: {
+        translation: translation_en
+    },
+    zh: {
+        translation: translation_zh
+    }
+};
+
+i18n
+    .use(initReactI18next) // passes i18n down to react-i18next
+    .init({
+        resources,
+        lng: "en", // language to use
+        interpolation: {
+            escapeValue: false // react already safes from xss
+        }
+    });
+
+export default i18n;
+```
+
+## Usage in Class Components
+
+1. Import the `withTranslation` higher-order component (HOC) and `WithTranslation` type from `react-i18next`:
+
+```typescript
+import {withTranslation, WithTranslation} from "react-i18next";
+```
+
+2. Add `WithTranslation` to your component's props type:
+
+```typescript
+class HeaderComponent extends React.Component<RouteComponentProps & WithTranslation, State> {
+  ...
+}
+```
+
+3. In your component's render function, extract the `t` function from the props. This function is used to translate your text:
+
+```typescript
+render() {
+  const {t} = this.props;
+  ...
+  return (
+      <div>{/* top-header */}
+          <Typography.Text>{t("header.slogan")}</Typography.Text>
+          <Dropdown.Button
+            ...
+          >
+              {this.state.language==="en" ? "English" : "中文"}
+          </Dropdown.Button>
+                  
+      </div>
+  )
+}
+```
+
+4. Wrap your component with the `withTranslation` HOC when exporting:
+
+```typescript
+export const Header = withTranslation()(withRouter(HeaderComponent))
+```
+
+## Usage in Functional Components
+
+In functional components, you can use the `useTranslation` hook instead of the `withTranslation` HOC:
+
+```typescript
+import {useTranslation, withTranslation} from "react-i18next";
+
+export const Footer: React.FC = () => {
+    const {t} = useTranslation();
+    return (
+        <Layout.Footer>
+            <Typography.Title level={3} style={{textAlign: "center"}}>
+                {t("footer.detail")}
+            </Typography.Title>
+        </Layout.Footer>
+    )
+}
+```
+
+## Updating Code with Factory Mode
+
+To ensure strong typing for your Redux actions, you can use action creators. Here's an example of how to do this for language-related actions:
+
+```typescript
+export const CHANGE_LANGUAGE = "change_language";
+
+interface ChangeLanguageAction {
+    type: typeof CHANGE_LANGUAGE,
+    payload: "zh" | "en"
+}
+
+export type LanguageActionTypes = ChangeLanguageAction;
+
+export const changeLanguageActionCreator = (languageCode:
+
+"zh" | "en") : ChangeLanguageAction => {
+    return {
+        type: CHANGE_LANGUAGE,
+        payload: languageCode
+    };
+}
+```
+
+Then, in your reducer, you can handle different actions by setting the action type to `LanguageActionTypes`:
+
+```typescript
+import i18n from "i18next"
+import { CHANGE_LANGUAGE, LanguageActionTypes } from "./languageActions"
+
+export interface LanguageState {
+    language: 'en' | 'zh'
+    languageList: {name: string, code: string}[]
+}
+
+const defaultState: LanguageState = {
+    language: 'en',
+    languageList: [{name: "中文", code: 'zh'}, {name: "English", code: 'en'}]
+}
+
+export default (state = defaultState, action: LanguageActionTypes) => {
+    if (action.type === CHANGE_LANGUAGE) {
+        i18n.changeLanguage(action.payload)
+        const newState = {...state, language: action.payload}
+        return newState
+    }
+    return state
+}
+```
+
+Finally, in your components, you can use `changeLanguageActionCreator` to create a strongly-typed action:
+
+```typescript
+menuClickHandler = (e) => {
+    const action = {type: "change_language", payload: e.key}
+    store.dispatch(changeLanguageActionCreator(e.key))
+}
+```
+
+This approach ensures that your Redux actions are strongly typed, which can help prevent bugs and improve code readability.
+
+# React-Redux Integration: Class and Function Components
+
+This guide will walk you through the process of integrating React-Redux with both class and function components. 
+
+## Prerequisites
+
+Before you start, make sure you have the React-Redux library installed. If not, you can install it using npm:
+
+```bash
+npm install react-redux
+```
+
+React-Redux does not natively support TypeScript. Therefore, you need to install TypeScript support files:
+
+```bash
+npm install @types/react-redux --save-dev
+```
+
+## React-Redux with Class Component
+
+### Setting up the Provider
+
+React-Redux includes a `<Provider />` component, which makes the Redux store available to the rest of your app:
+
+```typescript
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { Provider } from 'react-redux';
+import store  from './redux/store';
+
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+root.render(
+  <React.StrictMode>
+    <Provider store={store}>
+      <App />
+    </Provider>
+  </React.StrictMode>
+);
+```
+
+### Connecting the Component
+
+Next, go to the component where you wish to use React-Redux and import `connect`:
+
+```typescript
+import { connect } from 'react-redux';
+import { Dispatch } from 'redux';
+
+// Define two functions for React-Redux connect HOC
+const mapStateToProps = (state: RootState) => {
+    return {
+        language: state.language,
+        languageList: state.languageList
+    }
+}
+
+const mapDispatchToProps = (dispatch: Dispatch) => {
+    return {
+        changeLanguage: (code: 'zh' | 'en') => {
+            const action = changeLanguageActionCreator(code)
+            dispatch(action)
+        }
+    }
+}
+
+// Now there is no need to use subscriber stuff to manage redux, we can use props to replace state, i.e. 
+// this.state.languageList -> this.props.languageList
+// this.state.changeLanguage -> this.props.changeLanguage
+```
+
+### Modifying the Component
+
+Since we used HOC to inject props, we need to modify the props type:
+
+```typescript
+class HeaderComponent extends React.Component<RouteComponentProps & // react-router type
+    WithTranslation & // i18n type
+    ReturnType<typeof mapStateToProps> & // redux store type
+    ReturnType<typeof mapDispatchToProps> // redux dispatch type
+    > {
+    
+    menuClickHandler = (e) => {
+        this.props.changeLanguage(e.key)
+    }
+
+    render() {
+        // Render logic here
+    }
+}
+
+// At last, use HOC to contain the entire component, pass in the argument
+export const Header = connect(mapStateToProps, mapDispatchToProps)(withTranslation()(withRouter(HeaderComponent)))
+```
+
+### Modifying the Store Type
+
+In order to bind the type of state defined in mapStateToProps, we need to modify the type of store:
+
+```typescript
+import {createStore} from "redux";
+import languageReducer from "./language/languageReducer";
+
+const store = createStore(languageReducer)
+
+export type RootState = ReturnType<typeof store.getState>
+
+export default store
+```
+
+## React-Redux with Function Component
+
+### Creating a hooks.ts File
+
+First, in order to use hooks from redux, we need to create a `hooks.ts` file in the redux folder. This is purely for low coupling between component and store:
+
+```typescript
+import { 
+    useSelector as useReduxSelector, 
+    TypedUseSelectorHook } 
+    from "react-redux";
+import { RootState } from "./store";
+
+export const useSelector: TypedUseSelectorHook<RootState> = useReduxSelector;
+```
+
+### Using useSelector and action factory to dispatch
+
+Then, import `useSelector` and action factory to dispatch:
+
+```typescript
+import { useSelector } from '../../redux
+
+/hooks';
+import { useDispatch } from 'react-redux';
+import { LanguageActionTypes, changeLanguageActionCreator } from '../../redux/language/languageActions';
+
+export const Header: React.FC = () => {
+  const language = useSelector((state) => state.language)
+  const languageList = useSelector((state) => state.languageList)
+  const dispatch = useDispatch()
+
+  const menuClickHandler = (e) => {
+    dispatch(changeLanguageActionCreator(e.key))
+  }
+  
+  // Then modify the rest of the code, delete all "this.props."
+  // Rest of the component code
+}
+```
+
+In this setup, we use `useSelector` to access the state from the Redux store and `useDispatch` to dispatch actions to the store. The `menuClickHandler` function dispatches an action to change the language when a menu item is clicked.
+
+For more information and advanced usage, you can refer to the official React-Redux documentation [here](https://react-redux.js.org/introduction/getting-started).
