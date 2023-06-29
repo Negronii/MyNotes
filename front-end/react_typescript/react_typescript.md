@@ -1311,9 +1311,7 @@ export const useSelector: TypedUseSelectorHook<RootState> = useReduxSelector;
 Then, import `useSelector` and action factory to dispatch:
 
 ```typescript
-import { useSelector } from '../../redux
-
-/hooks';
+import { useSelector } from '../../redux/hooks';
 import { useDispatch } from 'react-redux';
 import { LanguageActionTypes, changeLanguageActionCreator } from '../../redux/language/languageActions';
 
@@ -1334,3 +1332,152 @@ export const Header: React.FC = () => {
 In this setup, we use `useSelector` to access the state from the Redux store and `useDispatch` to dispatch actions to the store. The `menuClickHandler` function dispatches an action to change the language when a menu item is clicked.
 
 For more information and advanced usage, you can refer to the official React-Redux documentation [here](https://react-redux.js.org/introduction/getting-started).
+
+
+# Fetching Data with Axios
+
+Compared to the Fetch function in vanilla JavaScript, Axios is compatible with IE7. If we use Fetch, we need to handle compatibility issues ourselves. 
+
+## Installation
+
+To install Axios, use the following command:
+
+```bash
+npm install axios
+```
+
+## Example Usage
+
+Here is an example of how to use Axios in a React component:
+
+```typescript
+import axios from 'axios';
+
+interface State {
+    loading: boolean;
+    error: any;
+    productList: any[];
+}
+
+class HomePageComponent extends React.Component<any, any> {
+    constructor(props) {
+        super(props);
+        this.state = {
+            loading: true,
+            error: null,
+            productList: []
+        }
+    }
+
+    async componentDidMount() {
+        try {
+            const {data} = await axios
+            .get('http://123.56.149.216:8080/api/productCollections', {})
+            this.setState({
+                loading: false,
+                error: null,
+                productList: data
+            })
+        } catch (error) {
+            if (error instanceof Error) {
+                this.setState({
+                    loading: false,
+                    error: error.message
+                })
+            }
+        }
+    }
+
+    render(): React.ReactNode {
+        const {t} = this.props;
+        const {productList, loading, error} = this.state;
+        if (loading) {
+            return <Spin size={"large"} style={{
+                marginTop: 200,
+                marginBottom: 200,
+                marginLeft: "auto",
+                marginRight: "auto",
+                width: "100%"
+            }}/>
+        }
+        if (error) {
+            return <div>Error: {error}</div>
+        }
+        return (
+          <>
+            {// Here we can use productList, e.g.}
+            </Row>
+                <ProductCollection
+                    title={<Typography.Title level={3} type={"warning"}>
+                        {t("home_page.hot_recommended")}
+                    </Typography.Title>}
+                    sideImage={sideImage1}
+                    products={productList[0].touristRoutes}
+                />
+                <ProductCollection
+                    title={<Typography.Title level={3} type={"danger"}>
+                        {t("home_page.new_arrival")}
+                    </Typography.Title>}
+                    sideImage={sideImage2}
+                    products={productList[1].touristRoutes}
+                />
+                <ProductCollection
+                    title={<Typography.Title level={3} type={"success"}>
+                        {t("home_page.domestic_travel")}
+                    </Typography.Title>}
+                    sideImage={sideImage3}
+                    products={productList[2].touristRoutes}
+                />
+          </>
+        )
+    }
+}
+
+export const HomePage = withTranslation()(HomePageComponent);
+```
+
+For headers that should always exist, add the following in `index.ts` at the outermost level:
+
+```typescript
+import axios from 'axios';
+axios.defaults.headers['x-icode'] = 'BF10F5C62A274A1C';
+```
+
+---
+
+# Redux vs MVC
+
+In MVC, managing state and render logic can be complex and difficult. Therefore, we suggest using Redux more often.
+
+## Redux Store with Multiple Reducers
+
+Here is an example of a Redux store with multiple reducers:
+
+```typescript
+import {configureStore, combineReducers} from '@reduxjs/toolkit';
+import languageReducer from './language/languageReducer';
+import recommendProducgsReducer from './recommendProducts/recommendProducgsReducer';
+
+const rootReducer = combineReducers({
+  language: languageReducer,
+  recommendProducts: recommendProducgsReducer,
+});
+
+// Configure the store with the combined reducer
+const store = configureStore({
+  reducer: rootReducer,
+});
+
+export type RootState = ReturnType<typeof store.getState>
+
+export default store;
+```
+
+Then, in `
+
+Header.tsx`, we can use the language and languageList by:
+
+```typescript
+const language = useSelector((state) => state.language.language)
+const languageList = useSelector((state) => state.language.languageList)
+```
