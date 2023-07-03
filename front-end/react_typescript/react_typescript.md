@@ -1473,11 +1473,178 @@ export type RootState = ReturnType<typeof store.getState>
 export default store;
 ```
 
-Then, in `
-
-Header.tsx`, we can use the language and languageList by:
+Then, in `Header.tsx`, we can use the language and languageList by:
 
 ```typescript
 const language = useSelector((state) => state.language.language)
 const languageList = useSelector((state) => state.language.languageList)
 ```
+
+# Redux-Thunk
+
+Redux-Thunk is a middleware that allows Redux actions to handle asynchronous operations and side-effects. It extends the functionality of Redux's `dispatch` function to support function types.
+
+## Redux-Thunk and Redux Toolkit
+
+As of Redux Toolkit 1.0.0, the `configureStore` function sets up the store with a Redux middleware pipeline, which includes redux-thunk by default. 
+
+```javascript
+import { configureStore } from '@reduxjs/toolkit'
+```
+
+However, if you're working in an environment older than Redux Toolkit 1.0.0, you'll need to manually import and apply the thunk middleware when creating the store:
+
+```javascript
+import { createStore, applyMiddleware } from 'redux';
+import thunk from 'redux-thunk';
+
+const store = createStore(
+  rootReducer, 
+  applyMiddleware(thunk)
+);
+```
+
+## Installation
+
+To use ThunkAction, you first need to install redux-thunk:
+
+```bash
+npm install redux-thunk
+```
+
+## Usage
+
+In your actions file, import the `ThunkAction` type from redux-thunk and the `RootState` from your store:
+
+```typescript
+import { ThunkAction } from "redux-thunk";
+import { RootState } from "../store";
+```
+
+`ThunkAction` takes four generic parameters: 
+
+1. Function return type
+2. RootState
+3. Function argument type
+4. Action type
+
+It also takes two parameters: `dispatch` and `getState`.
+
+Here's an example of a ThunkAction:
+
+```typescript
+export const giveMeDataActionCreator = (): ThunkAction<void, 
+    RootState, 
+    undefined, 
+    RecommendProductsAction> => async (dispatch, getState) => {
+    dispatch(fetchRecommendProductsStartActionCreator())
+    try {
+        const {data} = await axios
+        .get('http://123.56.149.216:8080/api/productCollections')
+        dispatch(fetchRecommendProductsSuccessActionCreator(data))
+    } catch (error) {
+        dispatch(fetchRecommendProductsFailActionCreator(error))
+    }
+}
+```
+
+After setting up the `giveMeDataActionCreator`, you can go back to your component, remove the side-effect code section, and replace it with the following:
+
+```typescript
+const mapDispatchToProps = (dispatch) => {
+    return {
+        giveMeDataActionCreator: () => {
+            dispatch(giveMeDataActionCreator())
+        }   
+    }
+}
+...
+// and inside class component
+async componentDidMount() {
+    this.props.giveMeDataActionCreator();
+}
+```
+
+This will dispatch the `giveMeDataActionCreator` when the component mounts, triggering the asynchronous action and handling any side-effects.
+
+
+# Redux Middleware
+
+In Redux, middleware is a higher-order function that composes a dispatch function to return a new dispatch function. It often turns async actions into actions.
+
+## Formula of Defining Middleware for Redux
+
+Middleware in Redux can be defined using the following formula:
+
+```typescript
+const middleware = (store) => (next) => (action) => {}
+```
+
+In this formula:
+
+- `store` is the Redux store instance.
+- `next` is the next middleware in the chain or the Redux dispatch function if the current middleware is the last one in the chain.
+- `action` is the current action being dispatched.
+
+## Middleware Invocation
+
+In Redux, the middleware will be invoked like this:
+
+```typescript
+middleware(store)(next)(action)
+```
+
+## Example
+
+Here's an example of a Redux middleware that logs the current state, the action being dispatched, and the state after the action has been dispatched:
+
+```typescript
+import { Middleware } from "redux"
+
+export const actionLog: Middleware = (store) => (next) => (action) => {
+    console.log("state current", store.getState())
+    console.log("fire action", action)
+    next(action)
+    console.log("state next", store.getState())
+}
+```
+
+## Using the Middleware
+
+The middleware can be used in the Redux store like this:
+
+```typescript
+import { configureStore } from '@reduxjs/toolkit';
+
+const store = configureStore({
+  reducer: rootReducer,
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(actionLog),
+});
+```
+
+In this code, `getDefaultMiddleware` is a function provided by Redux Toolkit that returns the default list of middleware included in the store. The `concat` method is used to add the `actionLog` middleware to this list.
+
+---
+
+# HATEOAS: Hypertext As The Engine Of Application State
+
+HATEOAS is a constraint of the REST application architecture that implies that a client interacts with a network application entirely through hypermedia provided dynamically by application servers. 
+
+For example, if a client makes a POST request to buy a product, the server should return not only the status of the request but also links (URLs) to:
+
+- Get the details of the product.
+- Cancel the purchase.
+- Update the purchase details.
+
+This way, the client does not need to hard-code these URLs; they are provided dynamically by the server. This makes the client less coupled to the server, which is one of the main benefits of HATEOAS.
+
+Redux-toolkit (RTK)
+create app with RTK
+```
+# Redux + Plain JS template
+npx create-react-app my-app --template redux
+ 
+# Redux + TypeScript template
+npx create-react-app my-app --template redux-typescript
+```
+
