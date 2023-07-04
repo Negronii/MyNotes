@@ -147,9 +147,9 @@ EA = H \times C + (1 - H) \times M
 $$
 
 where:
-- \(H\) is the hit ratio (the ratio of references satisfied by cache to total references)
-- \(C\) is the cache access time
-- \(M\) is the memory access time
+- $H$ is the hit ratio (the ratio of references satisfied by cache to total references)
+- $C$ is the cache access time
+- $M$ is the memory access time
 
 This concept also applies to the disk buffer or disk cache, which is embedded in the disk and differs from the cache in the memory hierarchy. The effective disk buffer access time can be calculated using a similar formula:
 
@@ -158,16 +158,16 @@ EA = HB \times BC + (1 - HB) \times D
 $$
 
 where:
-- \(HB\) is the hit ratio of the disk buffer
-- \(BC\) is the buffer access time
-- \(D\) is the disk access time
+- $HB$ is the hit ratio of the disk buffer
+- $BC$ is the buffer access time
+- $D$ is the disk access time
 
 ### Example
 
 Consider two machines: Machine A has a smaller cache with a 50% cache hit ratio, and Machine B has a larger cache with a 90% cache hit ratio. However, the memory access time of Machine A is 100C, and that of Machine B is 400C, where \(C\) is the cache access time. Despite Machine A having faster memory access, Machine B has a faster overall effective memory access time due to its larger cache and higher cache hit ratio.
 
-- Effective memory access time of A: \(0.5 \times C + (1 - 0.5) \times 100C = 50.5C\)
-- Effective memory access time of B: \(0.9 \times C + (1 - 0.9) \times 400C = 40.9C\)
+- Effective memory access time of A: $0.5 \times C + (1 - 0.5) \times 100C = 50.5C$
+- Effective memory access time of B: $0.9 \times C + (1 - 0.9) \times 400C = 40.9C$
 
 ## Database Types
 
