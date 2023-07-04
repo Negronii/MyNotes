@@ -407,7 +407,7 @@ In the context of database systems, disk writes play a crucial role in ensuring 
 
 ## Cyclic Redundancy Check (CRC)
 
-CRC is an error detection algorithm used to detect errors in data transmission or storage. It involves the use of a polynomial to generate a check value. The most common CRC polynomial is \(x^{32} + x^{23} + x^{7} + 1\). This CRC generator can detect all burst errors with a length less than or equal to 32 bits. For burst errors with length 33, 5 out of 10 billion will be undetected, and for burst errors of length 34 or more, 3 out of 10 billion will be undetected.
+CRC is an error detection algorithm used to detect errors in data transmission or storage. It involves the use of a polynomial to generate a check value. The most common CRC polynomial is $x^{32} + x^{23} + x^{7} + 1$. This CRC generator can detect all burst errors with a length less than or equal to 32 bits. For burst errors with length 33, 5 out of 10 billion will be undetected, and for burst errors of length 34 or more, 3 out of 10 billion will be undetected.
 
 The process of CRC generation involves several steps:
 
@@ -452,15 +452,15 @@ These laws have significant implications for the development of hardware and the
 It's important to be familiar with the different units of data storage:
 
 - Byte (B): 1
-- Kilobyte (KB): \(1,024^1\) or \(2^{10}\) = 1,024 Bytes
-- Megabyte (MB): \(1,024^2\) or \(2^{20}\) = 1,048,576 Bytes
+- Kilobyte (KB): $1,024^1$ or $2^{10}$ = 1,024 Bytes
+- Megabyte (MB): $1,024^2$ or $2^{20}$ = 1,048,576 Bytes
 - Gigabyte (
 
-GB): \(1,024^3\) or \(2^{30}\) = 1,073,741,824 Bytes
-- Terabyte (TB): \(1,024^4\) or \(2^{40}\) = 1,099,511,627,776 Bytes
-- Petabyte (PB): \(1,024^5\) or \(2^{50}\) = 1,125,899,906,842,624 Bytes
-- Exabyte (EB): \(1,024^6\) or \(2^{60}\) = 1,152,921,504,606,846,976 Bytes
-- Zettabyte (ZB): \(1,024^7\) or \(2^{70}\) = 1,180,591,620,717,411,303,424 Bytes
-- Yottabyte (YB): \(1,024^8\) or \(2^{80}\) = 1,208,925,819,614,629,174,706,176 Bytes
+GB): $1,024^3$ or $2^{30}$ = 1,073,741,824 Bytes
+- Terabyte (TB): $1,024^4$ or $2^{40}$ = 1,099,511,627,776 Bytes
+- Petabyte (PB): $1,024^5$ or $2^{50}$ = 1,125,899,906,842,624 Bytes
+- Exabyte (EB): $1,024^6$ or $2^{60}$ = 1,152,921,504,606,846,976 Bytes
+- Zettabyte (ZB): $1,024^7$ or $2^{70}$ = 1,180,591,620,717,411,303,424 Bytes
+- Yottabyte (YB): $1,024^8$ or $2^{80}$ = 1,208,925,819,614,629,174,706,176 Bytes
 
 These units are essential for understanding the capacity of different storage devices and the amount of data that can be stored in them.
