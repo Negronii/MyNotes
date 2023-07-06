@@ -1638,7 +1638,14 @@ For example, if a client makes a POST request to buy a product, the server shoul
 
 This way, the client does not need to hard-code these URLs; they are provided dynamically by the server. This makes the client less coupled to the server, which is one of the main benefits of HATEOAS.
 
-Redux-toolkit (RTK)
+If backend returns HTML string directly, we can use following to insert it in react component
+```typescript
+<div dangerouslySetInnerHTML={{__html: data}}></div>
+```
+
+# Redux-toolkit (RTK)
+https://redux-toolkit.js.org/
+
 create app with RTK
 ```
 # Redux + Plain JS template
@@ -1648,3 +1655,210 @@ npx create-react-app my-app --template redux
 npx create-react-app my-app --template redux-typescript
 ```
 
+install later
+```
+npm install @reduxjs/toolkit
+```
+
+## createSlice
+https://redux-toolkit.js.org/api/createSlice
+
+A function that accepts an initial state, an object of reducer functions, and a "slice name", and automatically generates action creators and action types that correspond to the reducers and state.
+
+This API is the standard approach for writing Redux logic.
+
+Internally, it uses createAction and createReducer, so you may also use Immer to write "mutating" immutable updates.
+
+### official example
+```typescript
+import { createSlice, createAction } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit'
+import { createStore, combineReducers } from 'redux'
+
+const incrementBy = createAction<number>('incrementBy')
+const decrementBy = createAction<number>('decrementBy')
+
+const counter = createSlice({
+  name: 'counter',
+  initialState: 0 as number,
+  reducers: {
+    increment: (state) => state + 1,
+    decrement: (state) => state - 1,
+    multiply: {
+      reducer: (state, action: PayloadAction<number>) => state * action.payload,
+      prepare: (value?: number) => ({ payload: value || 2 }), // fallback if the payload is a falsy value
+    },
+  },
+  // "builder callback API", recommended for TypeScript users
+  extraReducers: (builder) => {
+    builder.addCase(incrementBy, (state, action) => {
+      return state + action.payload
+    })
+    builder.addCase(decrementBy, (state, action) => {
+      return state - action.payload
+    })
+  },
+})
+
+const user = createSlice({
+  name: 'user',
+  initialState: { name: '', age: 20 },
+  reducers: {
+    setUserName: (state, action) => {
+      state.name = action.payload // mutate the state all you want with immer
+    },
+  },
+  // "map object API"
+  extraReducers: {
+    // @ts-expect-error in TypeScript, this would need to be [counter.actions.increment.type]
+    [counter.actions.increment]: (
+      state,
+      action /* action will be inferred as "any", as the map notation does not contain type information */
+    ) => {
+      state.age += 1
+    },
+  },
+})
+
+const reducer = combineReducers({
+  counter: counter.reducer,
+  user: user.reducer,
+})
+
+const store = createStore(reducer)
+
+store.dispatch(counter.actions.increment())
+// -> { counter: 1, user: {name : '', age: 21} }
+store.dispatch(counter.actions.increment())
+// -> { counter: 2, user: {name: '', age: 22} }
+store.dispatch(counter.actions.multiply(3))
+// -> { counter: 6, user: {name: '', age: 22} }
+store.dispatch(counter.actions.multiply())
+// -> { counter: 12, user: {name: '', age: 22} }
+console.log(`${counter.actions.decrement}`)
+// -> "counter/decrement"
+store.dispatch(user.actions.setUserName('eric'))
+// -> { counter: 12, user: { name: 'eric', age: 22} }
+```
+
+## ConfigureStore
+
+`configureStore` has strong compatibility with `createStore`. It accepts an options object with the following properties:
+
+```typescript
+interface ConfigureStoreOptions<
+  S = any,
+  A extends Action = AnyAction,
+  M extends Middlewares<S> = Middlewares<S>
+> {
+  reducer: Reducer<S, A> | ReducersMapObject<S, A>;
+  middleware?: ((getDefaultMiddleware: CurriedGetDefaultMiddleware<S>) => M) | M;
+  devTools?: boolean | DevToolsOptions;
+  preloadedState?: DeepPartial<S extends any ? S : S>;
+  enhancers?: StoreEnhancer[] | ConfigureEnhancersCallback;
+}
+```
+
+The `getDefaultMiddleware` function is a form of syntactic sugar. It does not overwrite old default middleware. You can concatenate other middleware by using `getDefaultMiddleware().concat(newMiddleware)`.
+
+For `devTools`, you need to install the 'Redux DevTools' Chrome plugin.
+
+Here's an example of how to use `configureStore`:
+
+```typescript
+import {configureStore, combineReducers} from '@reduxjs/toolkit';
+import languageReducer from './language/languageReducer';
+import recommendProductsReducer from './recommendProducts/recommendProductsReducer';
+import { actionLog } from './middlewares/actionLog';
+import { ProductDetailSlice } from './productDetails/slice';
+
+const rootReducer = combineReducers({
+  language: languageReducer,
+  recommendProducts: recommendProductsReducer,
+  productDetails: ProductDetailSlice.reducer,
+});
+
+const store = configureStore({
+  reducer: rootReducer,
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(actionLog),
+  devTools: true,
+});
+
+export type RootState = ReturnType<typeof store.getState>
+
+export default store;
+```
+
+## createAsyncThunk
+
+`createAsyncThunk` is a function that accepts a Redux action type string and a callback function that should return a promise. It generates promise lifecycle action types based on the action type prefix that you pass in, and returns a thunk action creator that will run the promise callback and dispatch the lifecycle actions based on the returned promise.
+
+The `type` parameter is a string that will be used to generate additional Redux action type constants, representing the lifecycle of an async request.
+
+Here's an example of how to use `createAsyncThunk`:
+
+```typescript
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
+
+interface ProductDetailsState {
+    loading: boolean;
+    error: string | null;
+    data: any;
+}
+
+const initialState: ProductDetailsState = {
+    loading: true,
+    error: null,
+    data: null
+}
+
+export const getProductDetails = createAsyncThunk(
+    "productDetails/getProductDetails",
+    async (touristRouteId: string, thunkAPI) => {
+        const {data} = await axios.get(`http://123.56.149.216:8080/api/touristRoutes/${touristRouteId}`);
+        return data;
+    }
+)
+
+export const ProductDetailSlice = createSlice({
+    name: 'productDetails',
+    initialState,
+    reducers: {},
+    extraReducers: {
+        [getProductDetails.pending.type] :(state) => {
+            state.loading = true;
+        },
+        [getProductDetails.fulfilled.type]: (state, action: PayloadAction<any>) => {
+            state.data = action.payload;
+            state.loading = false;
+            state.error = null;
+        },
+        [getProductDetails.rejected.type]: (state, action: PayloadAction<string|null>) => {
+            state.loading = false;
+            state.error = action.payload;
+        },
+    }
+})
+```
+
+In
+
+the `DetailPage.tsx`, you can use the `getProductDetails` function like this:
+
+```typescript
+useEffect(() => {
+  if (params.touristRouteId) {
+      dispatch(getProductDetails(params.touristRouteId));
+  }
+}, []);
+```
+
+However, there might be a type conflict between ReduxAsyncThunk and 'any' type at `const dispatch = useDispatch();`. To resolve this, you can define your own hook for `useDispatch`. Here's how you can do it in `hooks.ts`:
+
+```typescript
+import { useDispatch as useReduxDispatch} from "react-redux";
+export const useDispatch = () => useReduxDispatch<AppDispatch>();
+```
+
+Then, change the `useDispatch` import from redux to `hooks.ts`.

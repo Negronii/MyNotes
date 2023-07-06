@@ -454,9 +454,7 @@ It's important to be familiar with the different units of data storage:
 - Byte (B): 1
 - Kilobyte (KB): $1,024^1$ or $2^{10}$ = 1,024 Bytes
 - Megabyte (MB): $1,024^2$ or $2^{20}$ = 1,048,576 Bytes
-- Gigabyte (
-
-GB): $1,024^3$ or $2^{30}$ = 1,073,741,824 Bytes
+- Gigabyte (GB): $1,024^3$ or $2^{30}$ = 1,073,741,824 Bytes
 - Terabyte (TB): $1,024^4$ or $2^{40}$ = 1,099,511,627,776 Bytes
 - Petabyte (PB): $1,024^5$ or $2^{50}$ = 1,125,899,906,842,624 Bytes
 - Exabyte (EB): $1,024^6$ or $2^{60}$ = 1,152,921,504,606,846,976 Bytes
