@@ -158,7 +158,7 @@ where:
 
 ### Example
 
-Consider two machines: Machine A has a smaller cache with a 50% cache hit ratio, and Machine B has a larger cache with a 90% cache hit ratio. However, the memory access time of Machine A is 100C, and that of Machine B is 400C, where \(C\) is the cache access time. Despite Machine A having faster memory access, Machine B has a faster overall effective memory access time due to its larger cache and higher cache hit ratio.
+Consider two machines: Machine A has a smaller cache with a 50% cache hit ratio, and Machine B has a larger cache with a 90% cache hit ratio. However, the memory access time of Machine A is 100C, and that of Machine B is 400C, where $C$ is the cache access time. Despite Machine A having faster memory access, Machine B has a faster overall effective memory access time due to its larger cache and higher cache hit ratio.
 
 - Effective memory access time of A: $0.5 \times C + (1 - 0.5) \times 100C = 50.5C$
 - Effective memory access time of B: $0.9 \times C + (1 - 0.9) \times 400C = 40.9C$
@@ -399,36 +399,39 @@ In a reliable message passing system, the communication between two nodes can be
 - **Ack**: Number of acknowledgements
 
 For example, the communication between Node A and Node B can be represented as follows:
-<image alt="State 0: Node A (In:6, Ack:3, Out:3), Node B (Out:6, Ack:6, In:3)" src="com_01.png"/>
-<image alt="State 1: Node B sends message 7, Node A (In:6, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_02.png"/>
-<image alt="State 2: Node A sends acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_03.png"/>
-<image alt="State 3: Node B receives acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:7, In:3)" src="com_04.png"/>
+<image alt="State 0: Node A (In:6, Ack:3, Out:3), Node B (Out:6, Ack:6, In:3)" src="com_01.png" width=600/>
+<image alt="State 1: Node B sends message 7, Node A (In:6, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_02.png" width=600/>
+<image alt="State 2: Node A sends acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_03.png" width=600/>
+<image alt="State 3: Node B receives acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:7, In:3)" src="com_04.png" width=600/>
 
+## Database Transaction Models
 
-## Disk Writes and Data Consistency
+Database transaction models are crucial for maintaining data consistency. The principle is that either the entire block of data is written correctly on the disk, or the block's contents remain unchanged. There are two primary methods to achieve this:
 
-In the context of database systems, disk writes play a crucial role in ensuring data consistency. The principle is that either the entire block is written correctly on the disk, or the contents of the block remain unchanged. There are two primary methods to achieve this:
+- **Duplex Write**: This method involves writing each block of data in two places sequentially. If one of the writes fails, the system can issue another write. Each block is associated with a version number, and the block with the latest version number contains the most recent data. While reading, we can determine the error of a disk block by its CRC (Cyclic Redundancy Check). This method always guarantees that at least one block has consistent data.
 
-1. **Duplex Write**: Each block of data is written in two places sequentially. If one of the writes fails, the system can issue another write. Each block is associated with a version number, and the block with the latest version number contains the most recent data. While reading, we can determine the error of a disk block by its CRC (Cyclic Redundancy Check). This method always guarantees that at least one block has consistent data.
+- **Logged Write**: This method is similar to duplex write, except one of the writes goes to a log. This method is very efficient if the changes to a block are small.
 
-2. **Logged Write**: This method is similar to duplex write, except one of the writes goes to a log. This method is very efficient if the changes to a block are small.
+## ACID Properties in Transaction Models
 
-## Cyclic Redundancy Check (CRC)
+The ACID properties are a set of properties that guarantee reliable processing of database transactions. They are:
 
-CRC is an error detection algorithm used to detect errors in data transmission or storage. It involves the use of a polynomial to generate a check value. The most common CRC polynomial is $x^{32} + x^{23} + x^{7} + 1$. This CRC generator can detect all burst errors with a length less than or equal to 32 bits. For burst errors with length 33, 5 out of 10 billion will be undetected, and for burst errors of length 34 or more, 3 out of 10 billion will be undetected.
+- **Atomicity**: This property ensures that all changes to data are performed as if they are a single operation. That is, all the changes are performed, or none of them are. For example, if we are transferring $100 from account A to account B, the operation is atomic because either the entire operation (deducting from A and adding to B) happens, or none of it does.
 
-The process of CRC generation involves several steps:
+- **Consistency**: This property ensures that any data written to the database must be valid according to all defined rules. For example, if the student ID is the primary key, then no duplicate student ID is allowed. What is considered 'consistent' depends on the application and context constraints.
 
-1. Add n zero bits as 'padding to the right of the input bits.
-2. Compute the (n + 1)-bit pattern representing the CRC's divisor (called a "polynomial").
-3. Position the (n + 1)-bit pattern representing the CRC's divisor underneath the left-hand end of the input bits.
-4. The algorithm acts on the bits directly above the divisor in each step. The result for each iteration is the bitwise XOR of the polynomial divisor with the bits above it. The bits not above the divisor are simply copied directly below for that step. The divisor is then shifted one bit to the right, and the process is repeated until the bits of the input message becomes zero.
+- **Isolation**: This property ensures that transactions are executed as if they are the only one in the system. For example, in an application that transfers funds from one account to another, isolation ensures that another transaction sees the transferred funds in one account or the other, but not in both, nor in neither.
 
-The validity of a received message can be verified by performing the above calculation again, this time with the check value added instead of zeroes. The remainder should equal zero if there are no detectable errors.
+- **Durability**: This property ensures that the system can tolerate system failures and any committed updates should not be lost.
 
-## Atomicity in Database Transactions
+It's important to note that sometimes the ACID properties can conflict with each other, but we still need to ensure the following:
 
-Atomicity is a property of database transactions which ensures that all changes to data are performed as if they are a single operation. That is, all the changes are performed, or none of them are. For example, if we are transferring $100 from account A to account B, the operation is atomic because either the entire operation (deducting from A and adding to B) happens, or none of it does.
+- Fast access to large amounts of data
+- Provide a secure and stable repository when things fail
+- Provides standard interfaces to data definition and manipulation
+- Help multiuser accesses are done in an orderly manner
+- Allow convenient ways for report production and browsing
+- Ease in loading data, archiving, performance tuning
 
 ## Disk Block Update Process
 
@@ -446,6 +449,210 @@ For example:
 <image alt="State 2: Operation: Modify contents in memory to say 200, contents modified to 200 in memory, update changes to disk, Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123)" src="update_disk_block_03.png" width=400/>
 <image src="update_disk_block_04.png" width=400/>
 <image alt="State 3: Operation: Write to disk in a different block, Written to a different block, Next update will take place to Block 123 and the version number V#7 will be changed to v#9. (Two different physical disks can be used for duplex writes as well), Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123; 200 700 (v#8) Block 475)" src="update_disk_block_05.png" width=400/>
+
+## Cyclic Redundancy Check (CRC)
+
+### Definition
+The Cyclic Redundancy Check (CRC) is an error detection algorithm used in digital networks and storage devices to detect accidental changes to raw data. It is commonly used in networks and storage devices such as hard disk drives and RAM.
+
+### How it Works
+CRC involves the use of a specified polynomial and a sequence of bitwise exclusive-or (XOR) operations. The final CRC value is stored for each data block (or the data unit on which CRC is performed). The correctness of data can be checked with CRC by retrieving its corresponding CRC value and performing a sequence of bitwise XOR operations.
+
+### CRC Generation
+A CRC polynomial, such as x32 + x23 + x7 + 1, is used in the generation of the CRC. This particular polynomial can detect all burst errors with a length less than or equal to 32 bits. It can also detect 5 out of 10 billion burst errors with length 33 and 3 out of 10 billion burst errors of length 34 or more.
+
+### CRC Calculation
+To compute an n-bit binary CRC, follow these steps:
+
+1. **Padding**: Add n zero bits as 'padding' to the right of the input bits. For example, if the input is 11010011101100, it is padded with zeros corresponding to the bit length n of the CRC: 11010011101100 000.
+
+2. **Compute Polynomial**: Compute the (n + 1)-bit pattern representing the CRC's divisor (called a "polynomial"). For example, a 3-bit CRC with a polynomial x3 + x + 1 would have the coefficients 1, 0, 1, and 1.
+
+3. **Position Polynomial**: Position the (n + 1)-bit pattern representing the CRC's divisor underneath the left-hand end of the input bits.
+
+4. **Perform XOR Operations**: The algorithm acts on the bits directly above the divisor in each step. The result for each iteration is the bitwise XOR of the polynomial divisor with the bits above it. The bits not above the divisor are copied directly below for that step. The divisor is then shifted one bit to the right, and the process is repeated until the bits of the input message become zero. The remainder will be the value of the CRC function.
+
+Example:
+
+![CRC calculation](CRC_calculation.png)
+
+### Checking Validity with CRC
+The validity of a received message can be verified by performing the above calculation again, this time with the check value added instead of zeroes. The remainder should equal zero if there are no detectable errors.
+
+## Database Engine
+
+The Database Engine is the core service for storing, processing, and securing data. It provides controlled access and rapid transaction processing to meet the requirements of the most demanding data consuming applications within your enterprise.
+
+The process of how it works can be summarized as follows:
+
+1. Different types of queries are received from different types of users.
+2. These queries are processed by the Query Evaluation Engine.
+3. The Storage Manager provides the interface between the low-level data stored in the database and the application programs and queries submitted to the system.
+4. The Storage Manager implements several data structures as part of the physical system implementation: 
+    - Data files (the database itself)
+    - Indices (to provide fast access to data items)
+    - Data dictionary (metadata)
+
+![database engine](database_engine.png)
+
+## Query Processing
+
+The process of query processing involves several steps:
+
+1. The input query is received.
+2. The query is parsed and translated.
+3. The query is converted into a relational algebra expression.
+4. An execution plan is created.
+5. The plan with the least cost (fastest plan) is chosen.
+6. The chosen plan is executed by the evaluation engine.
+7. The output is produced.
+
+![query_processing](query_processor.png)
+
+
+## Relational Algebra Expressions
+
+Relational algebra expressions are used to represent the operations involved in retrieving data from the database. For example, the SQL query:
+
+```sql
+SELECT salary
+FROM Employees 
+WHERE salary < 60000
+```
+
+Can be represented in relational algebra as:
+
+$$
+\pi_{salary}(\sigma_{salary<60000} (Employees))
+$$
+
+Or alternatively as:
+
+$$
+\sigma_{salary<60000} (\pi_{salary} (Employees))
+$$
+
+## Join Operations
+
+Join operations are used to combine rows from two or more tables based on a related column between them. For example, the SQL query:
+
+```sql
+SELECT *
+FROM Employees
+INNER JOIN Managers
+ON Employees.EmpID = Managers.EmpID;
+```
+
+Can be represented in relational algebra as:
+
+$$
+\pi_{*}(\sigma_{Employees.EmpID=Managers.EmpID} (Employees \times Managers))
+$$
+
+Join operations are very common and also very expensive in terms of computational resources. There are different types of join operations, such as inner join and outer join, but the focus here is on the inner join.
+
+## Data Storage
+
+Data in a database is stored in files. Each database is mapped into different files, and each file is a sequence of records. These files are then mapped into fixed-length storage units called data blocks (also known as logical blocks, or pages). The cost of a query is determined by the number of pages or disk blocks that are accessed from the disk to answer the query.
+
+For example, if the size of each record is 55 bytes and the fixed size of one data block is 4096 bytes, the number of records that can be stored in one data block is 4096/55, which is approximately 74 records (ignoring any overheads).
+
+Sure, I'd be happy to help you reorganize your notes. Here's a revised version:
+
+# Query Plans and Optimisation
+
+## Steps in Cost-Based Query Optimisation
+1. Generate logically equivalent expressions of the query.
+2. Annotate resultant expressions to get alternative query plans. This includes deciding between heap scan/index scan and determining the type of join algorithm.
+
+## Estimating Costs
+### Step 1: Result Size Calculation Using Reduction Factor
+Consider the query `Employees ---- 𝜎𝑆𝑎𝑙𝑎𝑟𝑦<60000`. The reduction factor (RF) depends on the type of the predicate:
+
+- For `Col = value`, RF = $\frac{1}{\text{Number of unique values (Col)}}$
+- For `Col > value`, RF = $\frac{\text{High(Col) – value}}{\text{High(Col) – Low(Col)}}$
+- For `Col < value`, RF = $\frac{\text{val – Low(Col)}}{\text{High(Col) – Low(Col)}}$
+- For `Col_A = Col_B` (for joins), RF = $\frac{1}{\text{Max number of unique values in } \mathrm{Col_A,Col_B}}$
+
+### Step 2: Different Options for Retrieving Data and Calculating Cost
+This is an estimation step. The choice on how to run a query on the server is based on cost estimates, which can be influenced by statistics, table sizes, available indices, and other factors. These decisions can dramatically affect performance.
+
+## Joins
+### Simple Nested-Loop Join
+To compute a theta join, for each tuple $tr$ in $r$ and each tuple $ts$ in $s$, we test the pair $(tr,ts)$ to see if they satisfy the join condition theta (θ). If they do, we add `tr • ts` to the result. 
+
+In this context, $r$ is called the outer relation and $s$ the inner relation of the join. This method requires no indices and can be used with any kind of join condition. However, it can be expensive since it examines every pair of tuples in the two relations. This could be cheap if performed on two small tables where they fit into main memory.
+
+### Cost Calculation for Simple Nested-Loop Join
+Consider a bank database with the following characteristics:
+- Number of records of customer: 10,000, depositor: 5000
+- Number of Pages of customer: 400, depositor: 100
+
+In the worst case, if there is enough memory only to hold one page/block of each table, the estimated cost is $br + (nr ∗ bs)$ page access. Here, $br$ represents the number of blocks in relation $r$, $nr$ represents the number of records in relation $r$, and $bs$ represents the number of blocks in relation $s$.
+
+For example, with depositor as the outer relation, the cost is $100 + (5000 ∗ 400) = 2,000,100$ page access. With customer as the outer relation, the cost is $400 + (10000 ∗ 100) = 1,000,400$ page access.
+
+### Page-Oriented Nested-Loop Join
+This is a variant of nested-loop join in which every page of the inner relation is paired with every page of the outer relation. The cost calculation is similar to the simple nested-loop join, but the estimated cost is $br + (br ∗ bs)$ page access.
+
+For example, with depositor as the outer relation, the cost is $100 + (100 ∗ 400) = 40100$ page access. With customer as the outer relation, the cost is $400 + (400 ∗ 100) = 40400$ page access. This method is several orders of magnitude faster than the simple nested-loop join.
+
+### Block Nested-Loop Join
+This is another variant of nested-loop join in which every block of the inner relation is paired with every block of the outer relation. The cost is $br + (br ∗ bs)$ block transfers + $2 * br$ seeks. Here, $nr$ is approximated to $br$.
+
+## Importance of a Good Query Optimizer
+- The query optimizer is crucial for query efficiency.
+- Generating all equivalent expressions exhaustively is costly.
+- The interaction of evaluation techniques must be considered when choosing evaluation plans. Selecting the cheapest algorithm for each operation independently may not result in the best overall cost.
+- Estimations of the result size may not always be accurate.
+
+## Real-World Considerations
+- Cost-based optimization can be expensive, so systems may use heuristics to reduce the number of choices that must be made in a cost-based manner.
+- Heuristic optimization transforms the query-tree using a set of rules that typically improve execution performance. These rules include:
+  - Performing selections early to reduce the number of tuples.
+  - Performing projections early to reduce the number of attributes.
+  - Performing the most restrictive selection and join operations (i.e., those with the smallest result size) before other similar operations.
+- Some systems use only heuristics, while others combine heuristics with cost-based optimization.
+- Optimizers often use simple heuristics for very cheap queries and perform exhaustive enumeration for more expensive queries.
+
+## Further Optimization Techniques
+- Better estimation of reduction factors can be achieved through sampling and histograms.
+- Adaptive plans: Wait for some parts of a plan to execute first, then choose the next best alternative. For example, use hash-join if more than 100 pages are from Employees, otherwise use PNLJ.
+- Readjust statistics: Monitor planned execution against actual and expected cardinalities, analyze adjustments, and provide feedback to the optimizer to generate the best plan.
+
+## Query Processing Steps
+- Translate the query to a relational algebra expression.
+- Make an execution plan.
+
+## Query Optimization
+- Query optimization involves making the right choices and annotations.
+
+## Query Plan
+- Decisions need to be made, such as which two tables to join first out of three.
+- Join algorithms are a part of this process.
+
+## Cost-Based Query Optimization
+- Generate logically equivalent expressions of the query.
+- Annotate resultant expressions to get alternative query plans.
+- Choose the cheapest plan based on estimated cost.
+- Estimation of plan cost is based on statistical information about tables (e.g., number of distinct values for an attribute), statistics estimation for intermediate results, and cost formulae for algorithms.
+
+## Generation of Alternatives
+- Query optimizers use equivalence rules to systematically generate expressions equivalent to the given expression.
+- All equivalent expressions can be generated exhaustively, but this approach is expensive in space and time.
+
+## Choosing the Best Plan
+- The interaction of evaluation techniques must be considered when choosing evaluation plans.
+- Choosing the cheapest algorithm for each operation independently may not yield the best overall algorithm.
+- For example, merge-join may be costlier than hash-join, but it may provide a sorted output which could be useful later.
+
+## Practical Considerations
+- Systems may use heuristics to reduce the number of choices that must be made in a cost-based manner.
+- Practical query optimizers incorporate elements of the following two broad approaches:
+  - Searching all the plans and choosing the best plan in a cost-based manner.
+  - Using heuristics to choose a plan.
+- Some systems use only heuristics, while others combine heuristics with cost-based optimization.
+- Optimizers often use simple heuristics for very cheap queries and perform exhaustive enumeration for more expensive queries.
 
 # Appendix
 
