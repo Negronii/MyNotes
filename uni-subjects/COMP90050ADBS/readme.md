@@ -88,9 +88,7 @@ The lack of moving parts in SSDs leads to several advantages over HDDs:
 - Silent operation
 - Faster random access times
 
-However, SSDs also have their drawbacks. They are relatively more expensive and have certain read/write limitations. For instance, SSDs tend to be slower when overwriting
-
-data.
+However, SSDs also have their drawbacks. They are relatively more expensive and have certain read/write limitations. For instance, SSDs tend to be slower when overwriting data.
 
 ## Disk Access Time in SSDs
 
@@ -120,21 +118,17 @@ This approach balances the need for speed and cost, providing a more efficient w
 
 ### Example 
 
-In a hard disk drive (HDD), the average seek time is 12 ms, rotation delay is 4 ms, and transfer rate is 4MB/sec. For simplicity we assume 1MB equals to 1000KB.
+1. In a hard disk drive (HDD), the average seek time is 12 ms, rotation delay is 4 ms, and transfer rate is 4MB/sec. For simplicity we assume 1MB equals to 1000KB. 
+- What will be the disk access time for a transfer size of 8MB? 
+  - Disk access time for 8MB = $12 + 4 + \frac{8}{4}\times1000ms = 2016ms$
+- What will be the disk access time for a transfer size of 8KB?
+  - Disk access time for 8KB = $12 + 4 + \frac{8}{4 \times 1000}\times1000ms = 18ms$
+- A comparison of the two cases highlights that sequentially reading large data pays off as seek time is buried under a lot of transfer time. For example, in the first case, seek time is only 0.6% of the total time while nearly all the time is spent on transferring data. In the second case, seek time is 66.7% of the total time while only a small fraction of the time is spent on data transfer.
 
-1. What physical property of an HDD causes the seek time delay?
-   - The seek time delay/seek latency is the period that the head of the actuator arm moves from a position to a required track.
-2. What physical property of an HDD causes the rotation delay?
-   -  The rotation delay/rotation latency is the waiting period that the rotation of the disk brings the required sector of a track to head of the actuator arm.
-3. What will be the disk access time for a transfer size of 8MB? What will be the disk access time for a transfer size of 8KB?
-    - Disk access time for 8MB = $12 + 4 + \frac{8}{4}\times1000ms = 2016ms$
-    - Disk access time for 8KB = $12 + 4 + \frac{8}{4 \times 1000}\times1000ms = 18ms$
-    - A comparison of the two cases highlights that sequentially reading large data pays off as seek time is buried under a lot of transfer time. For example, in the first case, seek time is only 0.6% of the total time while nearly all the time is spent on transferring data. In the second case, seek time is 66.7% of the total time while only a small fraction of the time is spent on data transfer.
-4. In a solid state drive, what will be the disk access time for a transfer size of 8MB when transfer rate 4MB/sec? Is an SSD faster than an HDD for the same amount of
+1. In a solid state drive, what will be the disk access time for a transfer size of 8MB when transfer rate 4MB/sec? Is an SSD faster than an HDD for the same amount of data transfer (Assuming the base sequential data transfer rates are the same for the given two drives.)? Why?
 
-data transfer (Assuming the base sequential data transfer rates are the same for the given two drives.)? Why?
-   - Unlike an HDD, an SSD do not have any rotating part. Hence there is no rotation delay or seek delay in an SSD. Therefore, for the same transfer rate and same amount of data transfer, an SSD is always faster than an HDD. Moreover, the data transfer rate of SSDs is usually higher than that of HDDs in general as well.
-   - Disk access time of SSD = $\frac{Transfer Length}{Bandwidth} = \frac{8}{4} = 2sec$
+- Unlike an HDD, an SSD do not have any rotating part. Hence there is no rotation delay or seek delay in an SSD. Therefore, for the same transfer rate and same amount of data transfer, an SSD is always faster than an HDD. Moreover, the data transfer rate of SSDs is usually higher than that of HDDs in general as well.
+- Disk access time of SSD = $\frac{Transfer Length}{Bandwidth} = \frac{8}{4} = 2sec$
 
 ## Memory Hierarchy and Effective Memory Access Time
 
@@ -169,67 +163,84 @@ Consider two machines: Machine A has a smaller cache with a 50% cache hit ratio,
 - Effective memory access time of A: $0.5 \times C + (1 - 0.5) \times 100C = 50.5C$
 - Effective memory access time of B: $0.9 \times C + (1 - 0.9) \times 400C = 40.9C$
 
+Sure, I'd be happy to help you reorganize and format your notes. Here's a revised version of your notes:
+
 ## Database Types
 
-### Simple File
+1. **Simple File**
+   - **Definition**: A data storage system where data is stored as a plain text file. Each line represents one record, with fields separated by delimiters (e.g., commas or tabs).
+   - **Strengths**: Fast for simple applications.
+   - **Weaknesses**: Less reliable and can be slow for complex applications. It requires additional code development for features that exist in relational databases and can have concurrency problems.
+   - **Use Cases**: Suitable for simple applications where speed is a priority.
 
-Data is stored as a plain text file, with each line holding one record and fields separated by delimiters. This format is fast for simple applications but can be slow for complex ones. It's less reliable, hard to maintain, and requires additional code development for features that exist in relational databases. It's suitable for simple applications where speed is a priority.
+2. **Relational Database Systems (RDBS)**
+   - **Definition**: A data storage system where data is stored as a collection of tables (relations) consisting of rows and columns. Tables in a database are related using primary/foreign key relationships.
+   - **Strengths**: Very reliable, application independent optimisation, well suited to many applications, very fast due to large main memory machines and SSDs.
+   - **Weaknesses**: Can be slow for some simple applications.
+   - **Use Cases**: Suitable for applications requiring high reliability and speed, and those that can benefit from application independent optimisation.
 
-### Relational Database Systems (RDBS)
+3. **Object Oriented Database Systems (OODB)**
+   - **Definition**: A data storage system where data is stored in the form of 'objects' directly, similar to Object Oriented Programming (OOP).
+   - **Strengths**: Reliable, well suited for applications requiring complex data.
+   - **Weaknesses**: Can be slow on some applications, limited application independent optimisation.
+   - **Use Cases**: Suitable for applications requiring complex data structures and methods.
 
-Data is stored as a collection of tables (relations) consisting of rows and columns. Tables in a database are related using primary/foreign key relationships. RDBS is very reliable, application-independent, and well-suited to many applications. It can be slow for some simple applications but is ideal for applications requiring high reliability and speed.
+4. **NoSQL Databases**
+   - **Key-value Storage**
+     - **Definition**: A key-value database stores data as a collection of key-value pairs where a key serves as a unique identifier. All access to the database are done via the key.
+     - **Strengths**: Flexible/no fixed schema, simple design, should linearly scale.
+     - **Weaknesses**: Compromise consistency, allows replications, may result in stale reads.
+     - **Use Cases**: Suitable if the dataset do not need complex relational table type of structure, but can be expressed with simple key-value pairs. The simple structure allows faster insertion and search, and scales quickly. For example – shopping cart in an e-commerce site.
+   - **Document Storage**
+     - **Definition**: Flexible for storing different kinds of documents, where they may not all have the same sections. XML, JSON, etc. are subclasses of document-oriented databases.
+     - **Use Cases**: Well suited when different kinds of documents do not always have the same structure/sections. For example – news articles.
+   - **Graph Storage**
+     - **Definition**: Graphs capture connectivity between entities. A graph is a structure amounting to a set of objects (called vertices) where some pairs of the objects are connected/related in some sense. A connection is called an edge. The links can be material or immaterial.
+     - **Use Cases**: Well suited for connection data: social network connections (e.g., who are my friends of friends) , spatial data (e.g., route planning – which ways can I go now to reach destination).
 
-### Object Oriented Database Systems (OODB)
-
-Data is stored in the form of 'objects' directly, similar to Object Oriented Programming (OOP). OODB is reliable and well-suited for applications requiring complex data. It can be slow on some applications and has limited application-independent optimization.
-
-### NoSQL Databases
-
-#### Key-value Storage
-
-A key-value database stores data as a collection of key-value pairs where a key serves as a unique identifier. All access to the database is done via the key. Both keys and values can be complex. This type of database is flexible, has a simple design, and should linearly scale. It's suitable for datasets that do not need complex relational table structures but can be expressed with simple key-value pairs.
-
-#### Document Storage
-
-This type of database is flexible for storing different kinds of documents, where they may not all have the same sections. XML, JSON,
-
-etc. are subclasses of document-oriented databases. It's well-suited for cases where different kinds of documents do not always have the same structure/sections.
-
-#### Graph Storage
-
-Graphs capture connectivity between entities. A graph is a structure amounting to a set of objects (vertices) where some pairs of the objects are connected/related in some sense. A connection is called an edge. The links can be material or immaterial. It's well-suited for connection data such as social network connections and spatial data.
-
-### Deductive Database Systems (DDBS)
-
-A DDBS can make deductions based on rules and facts stored in the database. Most of the application can be developed entirely using DDBS. However, many applications do not require the expressive power of these systems.
+5. **Deductive Database Systems (DDBS)**
+   - **Definition**: A database system that can make deductions based on rules and facts stored in the database.
+   - **Strengths**: Most of the application can be developed entirely using DDBS.
+   - **Weaknesses**: Many applications do not require the expressive power of these systems.
+   - **Use Cases**: Applications that require rule-based deductions.
 
 ## Database Architectures
 
-### Centralized (Client-Server) Database Architecture
+1. **Centralized (Client-Server) Database Architecture**
+   - **Description**: A centralized database architecture involves a central server with a central database in one location. The client and server can be in different locations.
+   - **Advantages**: Suitable for simple applications, easy to manage, simple system administration, effective optimization process.
+   - **Disadvantages**: May not scale well, limited to one location.
+   - **Use Cases**: Suitable for applications that can be managed centrally, such as PC/Cluster Computing/data centres.
 
-A centralized database architecture involves a central server with a central database in one location. The client and server can be in different locations. This architecture is suitable for simple applications, easy to manage, and has simple system administration. However, it may not scale well and is limited to one location.
+2. **Distributed Database Architecture**
+   - **Description**: In a distributed database architecture, data is distributed across several nodes in different locations.
+   - **Advantages**: Scalable, can handle large data sets, provides concurrency, recovery, and transaction processing.
+   - **Disadvantages**: System administration and crash recovery are difficult, potential inconsistency due to data replication.
+   - **Use Cases**: Suitable for large-scale applications that require data distribution and concurrency.
 
-### Distributed Database Architecture
+3. **World Wide Web (WWW) Database Architecture**
+   - **Description**: In the WWW database architecture, data is stored in many locations with several owners of data.
+   - **Advantages**: Very convenient to access and share data, wide data availability.
+   - **Disadvantages**: Has security issues, no guarantee on availability or consistency, ineffective optimization process, extreme levels of administration issues.
+   - **Use Cases**: Suitable for applications that require wide data availability and can tolerate inconsistency.
 
-In a distributed database architecture, data is distributed across several nodes in different locations. This architecture is scalable, suitable for large applications, can handle large data sets, and provides concurrency, recovery, and transaction processing. However, system administration and crash recovery are difficult, and potential inconsistency may occur due to data replication.
+4. **Grid Database Architecture**
+   - **Description**: In a grid database architecture, data and processing are shared among a group of computer systems which may be geographically separated.
+   - **Advantages**: High processing capability, access at different locations, shared data and processing.
+   - **Disadvantages**: Similar issues to distributed databases, less used nowadays, administration done locally by each owner, reliability and security not well developed or studied.
+   - **Use Cases**: Specific applications, such as scientific applications.
 
-### World Wide Web (WWW) Database Architecture
+5. **Peer-to-Peer (P2P) Database Architecture**
+   - **Description**: In a P2P database architecture, data and processing are shared among a group of computer systems which may be geographically separated. Nodes can join and leave the network at will.
+   - **Advantages**: Suitable when the nodes of the network cannot be planned in advance, or some may leave and join frequently, shared data and processing, flexible network membership.
+   - **Disadvantages**: Difficult to design transaction models due to flexible network membership, applications are usually limited to simple file sharing.
+   - **Use Cases**: Specific applications, such as scientific applications, where nodes need the flexibility to join and leave the network.
 
-In the WWW database architecture, data is stored in many locations with several owners of data. This architecture is very convenient to access and share data, and it offers wide data availability. However, it has security issues, no guarantee on availability or consistency, ineffective optimization process, and extreme levels of administration issues.
-
-### Grid Database Architecture
-
-In a grid database architecture, data and processing are shared among a group of computer systems which may be geographically separated. This architecture offers high processing capability, access at different locations, and shared data and processing. However, it has similar issues to distributed databases, is less used nowadays, and reliability and security are not well developed or studied.
-
-### Peer-to-Peer (P2P) Database Architecture
-
-In a P2P database architecture, data and processing are shared among a group of computer systems which may be geographically separated. Nodes can join and leave the network at will. This architecture is suitable when the nodes of the network cannot be planned in advance, or some may leave and join frequently. However, it's difficult to design transaction models due to flexible network membership, and applications are usually limited to simple file sharing.
-
-### Cloud-Based Database Architecture
-
-Cloud-based database architecture offers online computing, storage, and a range of new services for data and devices that are accessible through the Internet. This architecture offers on-demand resources, is cost-effective, and maintenance is done externally by the cloud provider. However, it has some privacy and confidentiality issues, and there is a dependence on internet connectivity. It's suitable for applications that require on-demand resources and services, and can benefit from the pay-as-you-go model.
-
-**Note**: I have not made any corrections to your notes as the information provided was accurate. I have only reorganized and reformatted the content as per your requirements.
+6. **Cloud-Based Database Architecture**
+   - **Description**: Cloud-based database architecture offers online computing, storage, and a range of new services for data and devices that are accessible through the Internet.
+   - **Advantages**: On-demand resources, cost-effective, maintenance done externally by the cloud provider, user pays for the services just like phone services, electricity, etc., huge potential for developing applications with minimal infrastructure costs.
+   - **Disadvantages**: Has some privacy and confidentiality issues – but most trusted providers can address any issues emerging on this type relatively easily, e.g., Amazon etc., dependence on internet connectivity.
+   - **Use Cases**: Suitable for applications that require on-demand resources and services, and can benefit from the pay-as-you-go model.
 
 ## Fault Tolerance
 
@@ -265,58 +276,67 @@ where:
 
 RAID is a method of combining multiple disks as a unit for fault tolerance or performance improvement, or both, of a database system. There are several RAID levels, each with its own advantages and disadvantages.
 
-- We use b for Bit; B for byte; A for block
-- 8 continuous bits = 1 byte
-- 4000/8000 continuous bytes = 1 block 
+For graphs below, we use following
+- We use b for Bit; B for byte; 8 continuous bits = 1 byte
+- A for block, 4000/8000 continuous bytes = 1 block 
+- p for parity, Parity (or check bits) are used for error detection
+  - P0 is parity for bytes B0 and B1, $P_i = B_{2i} \oplus B_{2i+1}$, here $\oplus$ is exclusive-or operator
 
 Please note that the RAID levels are not exhaustive and there are other RAID levels such as RAID 10, RAID 50, etc. that combine the features of the basic RAID levels for additional redundancy or performance.
 
 ### RAID 0 (Block Level Striping)
+<image alt="RAID0" src="raid0.png" width=300/>
 
 - Data is split into blocks and spread across multiple disks.
 - Advantages: Balanced I/O of disk drives, throughput approximately doubles.
 - Drawbacks: Any disk failure is catastrophic, and MTTF reduces by a factor of 2.
 
 ### RAID 1 (Mirroring)
+<image alt="RAID1" src="raid1.png" width=300/>
 
 - Data is duplicated across two or more disks.
 - Advantages: Higher read throughput, continues to operate as long as one disk is functional, MTTF increases substantially.
 - Drawbacks: Lower write throughput, half storage utilization.
 
 ### RAID 2 (Bit Level Striping)
+<image alt="RAID2" src="raid2.png" width=300/>
 
 - Data is split into bits and spread across multiple disks.
 - Advantages: Higher transfer rate.
 - Drawbacks: MTTF reduced by half as in RAID 0, rarely used.
 
 ### RAID 3 (Byte Level Striping)
+<image alt="RAID3" src="raid3.png" width=300/>
 
-- Data is split into bytes and spread across multiple disks, with a parity byte for error detection.
+- Data is split into bytes and spread across multiple disks, with a parity byte for error detection. 
 - Advantages: Higher transfer rate, MTTF increases substantially as one disk failure can be recovered from the data of the other disks.
 - Drawbacks: Rarely used.
 
-### RAID 4 (Block Level
-
-Striping)
+### RAID 4 (Block Level Striping)
+<image alt="RAID4" src="raid4.png" width=300/>
 
 - Data is split into blocks and spread across multiple disks, with a dedicated disk for parity blocks.
 - Advantages: Higher throughput, MTTF increases substantially.
 - Drawbacks: Very slow writes, the dedicated parity disk has more writes as parity needs to be updated for every data write.
 
 ### RAID 5 (Block Level Striping with Parity Striping)
+<image alt="RAID5" src="raid5.png" width=300/>
 
-- Data and parity blocks are both split and spread across multiple disks.
+- Data and parity blocks are both split and spread across multiple disks. 
 - Advantages: Higher throughput, slower writes but better than RAID 4 as parity bits are distributed among all disks and the number of write operations on average equal among all disks, MTTF increases substantially.
 - Drawbacks: Complex to implement and manage.
 
 ### RAID 6 (Block Level Striping with Double Parity)
+<image alt="RAID6" src="raid6.png" width=500/>
 
 - Similar to RAID 5 except two parity blocks are used.
 - Advantages: Any two disk failures can be safe to recover the data, reliability is of the order of $\frac{MTTF^3}{10}$.
+- P0 and P1 are parity blocks for blocks A0, A1 and A2. These are computed in such way that any two disk failures can be safe to recover the data.
 - Drawbacks: More complex parity calculation, slower writes due to double parity.
 
 ## Choosing RAID Level
-
+Tradeoff here: 
+**Higher throughput at the cost of increased vulnerability to failures.**
 When choosing the suitable RAID level, the following factors should be considered:
 
 - **Reliability**: The ability of the system to handle and recover from hardware failure.
@@ -337,8 +357,6 @@ Key characteristics of SAN include:
 
 ## Fault Tolerance by Voting
 
-Fault tolerance in database systems can be achieved through voting mechanisms. There are two main types of voting mechanisms: Failvote and Failfast.
-
 ### Failvote
 
 In a Failvote system, a majority agreement is needed to accept an action, such as a read or write operation. For instance, if we start with 10 devices, the system works as long as 6 of them are working. An action is accepted when 6 or more devices agree on the decision. The system stops functioning when the 5th device fails, as there cannot be 6 devices agreeing on the decision.
@@ -349,9 +367,7 @@ In contrast, a Failfast system is only concerned with the majority among the wor
 
 ## Supermodule
 
-A Supermodule is a system with
-
-multiple hard disk drives that is expected to function with only one working disk. It uses voting when multiple disks are working/available, but can still function even when only one disk is available.
+A Supermodule is a system with multiple hard disk drives that is expected to function with only one working disk. It uses voting when multiple disks are working/available, but can still function even when only one disk is available.
 
 ## Fault Tolerance with Repair
 
@@ -383,19 +399,11 @@ In a reliable message passing system, the communication between two nodes can be
 - **Ack**: Number of acknowledgements
 
 For example, the communication between Node A and Node B can be represented as follows:
+<image alt="State 0: Node A (In:6, Ack:3, Out:3), Node B (Out:6, Ack:6, In:3)" src="com_01.png"/>
+<image alt="State 1: Node B sends message 7, Node A (In:6, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_02.png"/>
+<image alt="State 2: Node A sends acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_03.png"/>
+<image alt="State 3: Node B receives acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:7, In:3)" src="com_04.png"/>
 
-- **State 0**: Node A (In:6, Ack:3, Out:3), Node B (Out:6, Ack:6, In:3)
-- **State 1**: Node B sends message 7, Node A (In:6, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)
-- **State 2**: Node A sends acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)
-- **State 3**: Node B receives acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:7, In:3)
-
-## Checkpointing and Message Passing
-
-Before sending a message, a checkpoint is created to ensure data consistency. This can be represented as a series of states:
-
-- **State 0**: Node A (In:6, Out:3, Ack:3), Node B (In:3, Out:6, Ack:6)
-- **State 1**: Node B sends message 7, Node A (In:6, Out:3, Ack:3), Node B (In:3, Out:7, Ack:6)
-- **State 2**: Node A receives message 7, Node A (In:7, Out:3, Ack:3), Node B (In:3, Out:7, Ack:6)
 
 ## Disk Writes and Data Consistency
 
@@ -411,9 +419,7 @@ CRC is an error detection algorithm used to detect errors in data transmission o
 
 The process of CRC generation involves several steps:
 
-1. Add n zero bits as 'padding
-
-to the right of the input bits.
+1. Add n zero bits as 'padding to the right of the input bits.
 2. Compute the (n + 1)-bit pattern representing the CRC's divisor (called a "polynomial").
 3. Position the (n + 1)-bit pattern representing the CRC's divisor underneath the left-hand end of the input bits.
 4. The algorithm acts on the bits directly above the divisor in each step. The result for each iteration is the bitwise XOR of the polynomial divisor with the bits above it. The bits not above the divisor are simply copied directly below for that step. The divisor is then shifted one bit to the right, and the process is repeated until the bits of the input message becomes zero.
@@ -434,10 +440,12 @@ The process of updating a disk block involves several steps:
 
 For example:
 
-- **State 0**: Main Memory (empty), Hard Disk (100 700 (v#7) Block 123)
-- **State 1**: Operation: **read**, Main Memory (100 700), Hard Disk (100 700 (v#7) Block 123)
-- **State 2**: Operation: **Modify** contents in memory to say 200, contents modified to 200 in memory, update changes to disk, Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123)
-- **State 3**: Operation: **Write** to disk in a different block, Written to a different block, Next update will take place to Block 123 and the version number V#7 will be changed to v#9. (Two different physical disks can be used for duplex writes as well), Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123; 200 700 (v#8) Block 475)
+<image alt="State 0: Main Memory (empty), Hard Disk (100 700 (v#7) Block 123)" src="update_disk_block_00.png" width=400/>
+<image alt="State 1: Operation: read, Main Memory (100 700), Hard Disk (100 700 (v#7) Block 123)" src="update_disk_block_01.png" width=400/>
+<image src="update_disk_block_02.png" width=400/>
+<image alt="State 2: Operation: Modify contents in memory to say 200, contents modified to 200 in memory, update changes to disk, Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123)" src="update_disk_block_03.png" width=400/>
+<image src="update_disk_block_04.png" width=400/>
+<image alt="State 3: Operation: Write to disk in a different block, Written to a different block, Next update will take place to Block 123 and the version number V#7 will be changed to v#9. (Two different physical disks can be used for duplex writes as well), Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123; 200 700 (v#8) Block 475)" src="update_disk_block_05.png" width=400/>
 
 # Appendix
 
