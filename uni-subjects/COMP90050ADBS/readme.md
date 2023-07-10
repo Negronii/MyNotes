@@ -276,63 +276,67 @@ where:
 
 RAID is a method of combining multiple disks as a unit for fault tolerance or performance improvement, or both, of a database system. There are several RAID levels, each with its own advantages and disadvantages.
 
-For graphs below, we use following
+For graphs below, we use the following conventions:
 - We use b for Bit; B for byte; 8 continuous bits = 1 byte
 - A for block, 4000/8000 continuous bytes = 1 block 
 - p for parity, Parity (or check bits) are used for error detection
-  - P0 is parity for bytes B0 and B1, $P_i = B_{2i} \oplus B_{2i+1}$, here $\oplus$ is exclusive-or operator
+  - P0 is parity for bytes B0 and B1, $P_i = B_{2i} \oplus B_{2i+1}$, here $\oplus$ is the exclusive-or operator
 
 Please note that the RAID levels are not exhaustive and there are other RAID levels such as RAID 10, RAID 50, etc. that combine the features of the basic RAID levels for additional redundancy or performance.
+
+Baseline: One Disk
+- MTTF (Mean Time To Failure): 1/p
+- p: Probability of failure of a disk, MTTF(disk) = 1/p
 
 ### RAID 0 (Block Level Striping)
 <image alt="RAID0" src="raid0.png" width=300/>
 
 - Data is split into blocks and spread across multiple disks.
-- Advantages: Balanced I/O of disk drives, throughput approximately doubles.
-- Drawbacks: Any disk failure is catastrophic, and MTTF reduces by a factor of 2.
+- Advantages: Balanced I/O of disk drives, throughput approximately doubles. It has double throughput compared to one disk.
+- Drawbacks: Any disk failure is catastrophic, and MTTF reduces by a factor of 2. The probability of failure is $P(failure) = P(A) + P(B) = 2p$. Thus, MTTF(Raid0) = 1/(2p) = 1/2 x MTTF(disk).
 
 ### RAID 1 (Mirroring)
 <image alt="RAID1" src="raid1.png" width=300/>
 
 - Data is duplicated across two or more disks.
-- Advantages: Higher read throughput, continues to operate as long as one disk is functional, MTTF increases substantially.
-- Drawbacks: Lower write throughput, half storage utilization.
+- Advantages: Higher read throughput, continues to operate as long as one disk is functional, MTTF increases substantially. It has better fault tolerance, as it fails only if both disks fail.
+- Drawbacks: Lower write throughput, half storage utilization, requires double storage. The probability of failure is $P(failure) = P(A and B) = P(A) * P(B) = p^2$. Hence, $MTTF(RAID1) = (1/p)^2 = MTTF(disk)^2$.
 
 ### RAID 2 (Bit Level Striping)
 <image alt="RAID2" src="raid2.png" width=300/>
 
 - Data is split into bits and spread across multiple disks.
-- Advantages: Higher transfer rate.
-- Drawbacks: MTTF reduced by half as in RAID 0, rarely used.
+- Advantages: Higher transfer rate. Similar to RAID 0, but stores data at the bit level.
+- Drawbacks: MTTF reduced by half as in RAID 0, rarely used. MTTF for RAID 2 is the same as that for RAID 0.
 
 ### RAID 3 (Byte Level Striping)
 <image alt="RAID3" src="raid3.png" width=300/>
 
 - Data is split into bytes and spread across multiple disks, with a parity byte for error detection. 
-- Advantages: Higher transfer rate, MTTF increases substantially as one disk failure can be recovered from the data of the other disks.
-- Drawbacks: Rarely used.
+- Advantages: Higher transfer rate than RAID 0, MTTF increases substantially as one disk failure can be recovered from the data of the other disks. The system fails if any two of the three disks fail.
+- Drawbacks: Rarely used. The probability of failure is $P(failure) = {3 \choose 2}p^2 = 3p^2$. Hence, $MTTF(RAID3) = 1/3 x (1/p)^2 = 1/3 x MTTF(disk)^2$. Compared to RAID1, $MTTF(RAID3) = MTTF(RAID1)/3$, which indicates RAID1 is better.
 
 ### RAID 4 (Block Level Striping)
 <image alt="RAID4" src="raid4.png" width=300/>
 
 - Data is split into blocks and spread across multiple disks, with a dedicated disk for parity blocks.
-- Advantages: Higher throughput, MTTF increases substantially.
+- Advantages: Higher throughput, MTTF increases substantially. The throughput is higher as the data is stored at the block level.
 - Drawbacks: Very slow writes, the dedicated parity disk has more writes as parity needs to be updated for every data write.
 
 ### RAID 5 (Block Level Striping with Parity Striping)
 <image alt="RAID5" src="raid5.png" width=300/>
 
-- Data and parity blocks are both split and spread across multiple disks. 
-- Advantages: Higher throughput, slower writes but better than RAID 4 as parity bits are distributed among all disks and the number of write operations on average equal among all disks, MTTF increases substantially.
+- Data and parity blocks are both split and spread across multiple disks. Similar to RAID 4, but Parity is distributed among all disks.
+- Advantages: Higher throughput, slower writes but better than RAID 4 as parity bits are distributed among all disks and the number of write operations on average equal among all disks, MTTF increases substantially. The write speed is better compared to RAID 4.
 - Drawbacks: Complex to implement and manage.
 
 ### RAID 6 (Block Level Striping with Double Parity)
 <image alt="RAID6" src="raid6.png" width=500/>
 
-- Similar to RAID 5 except two parity blocks are used.
-- Advantages: Any two disk failures can be safe to recover the data, reliability is of the order of $\frac{MTTF^3}{10}$.
+- Similar to RAID 5 except two parity blocks are used. This is an extension of RAID 5 with two more disks.
+- Advantages: Any two disk failures can be safe to recover the data, reliability is of the order of $MTTF^3/10$. Parities are stored in a way to insure recovery in the case of two failures, providing higher throughput.
 - P0 and P1 are parity blocks for blocks A0, A1 and A2. These are computed in such way that any two disk failures can be safe to recover the data.
-- Drawbacks: More complex parity calculation, slower writes due to double parity.
+- Drawbacks: More complex parity calculation, slower writes due to double parity. The probability of failure is $P(Failure) = {5 \choose 3}p^3 = 10p^3$, leading to a longer MTTF: $MTTF = 1/10 x (1/p)^3 = 1/10 x MTTF(disk)^3$.
 
 ## Choosing RAID Level
 Tradeoff here: 
@@ -357,17 +361,21 @@ Key characteristics of SAN include:
 
 ## Fault Tolerance by Voting
 
+Fault tolerance refers to the capacity of a system to continue operation even in the event of a failure of one or more of its components. One strategy to ensure fault tolerance is through voting systems, which are particularly useful when we receive inconsistent readings or outcomes from different components. For example, imagine a system with multiple hard disks where a subset of disks read 2, while the rest read 5. In such cases, majority voting could be employed as a solution to inconsistent reads or any other actions where there is not a consensus.
+
+Two major types of majority voting systems are:
+
 ### Failvote
 
-In a Failvote system, a majority agreement is needed to accept an action, such as a read or write operation. For instance, if we start with 10 devices, the system works as long as 6 of them are working. An action is accepted when 6 or more devices agree on the decision. The system stops functioning when the 5th device fails, as there cannot be 6 devices agreeing on the decision.
+In a Failvote system, a majority agreement is needed to accept an action, such as a read or write operation. For instance, if we start with 10 devices, the system works as long as 6 of them are working. An action is accepted when 6 or more devices agree on the decision. This majority is defined intuitively as half of the total number of devices plus one, or mathematically as |n/2| + 1. The system stops functioning when the 5th device fails, as there cannot be 6 devices agreeing on the decision.
 
 ### Failfast
 
-In contrast, a Failfast system is only concerned with the majority among the working devices. It assumes that we can identify which devices are working. Hence, we can continue to operate until only 2 working devices remain. If both agree, we can proceed with the action. However, if they differ, the system stops. For example, if 0 devices are faulty, we have 10 working and we need at least 6 to agree. If 1 device is faulty, we have 9 working and we need at least 5 to agree. The system continues to operate in this manner until 8 devices are faulty, leaving 2 working devices that both need to agree. If 9 devices are faulty, we have 1 working and we have to stop as there is nothing to compare!
+Failfast, on the other hand, is only concerned with the majority among the working devices. It assumes that we can identify which devices are working. Hence, we can continue to operate until only 2 working devices remain. If both agree, we can proceed with the action. However, if they differ, the system stops. For example, if 0 devices are faulty, we have 10 working and we need at least 6 to agree. If 1 device is faulty, we have 9 working and we need at least 5 to agree. The system continues to operate in this manner until 8 devices are faulty, leaving 2 working devices that both need to agree. If 9 devices are faulty, we have 1 working and we have to stop as there is nothing to compare!
 
 ## Supermodule
 
-A Supermodule is a system with multiple hard disk drives that is expected to function with only one working disk. It uses voting when multiple disks are working/available, but can still function even when only one disk is available.
+A Supermodule is a unique system with multiple hard disk drives that is expected to function with only one working disk. It uses voting when multiple disks are working/available, but unlike the Failvote or Failfast systems, a Supermodule can still function even when only one disk is available. This adaptability allows for significant fault tolerance.
 
 ## Fault Tolerance with Repair
 
@@ -557,25 +565,56 @@ Data in a database is stored in files. Each database is mapped into different fi
 
 For example, if the size of each record is 55 bytes and the fixed size of one data block is 4096 bytes, the number of records that can be stored in one data block is 4096/55, which is approximately 74 records (ignoring any overheads).
 
-Sure, I'd be happy to help you reorganize your notes. Here's a revised version:
+## Query Processing and Optimization
 
-# Query Plans and Optimisation
+Query processing and optimization involve a series of steps aimed at improving the efficiency of retrieving data from a database. This process is critical to minimizing the number of disk blocks (pages) read, thereby optimizing server resources and response times.
 
-## Steps in Cost-Based Query Optimisation
-1. Generate logically equivalent expressions of the query.
-2. Annotate resultant expressions to get alternative query plans. This includes deciding between heap scan/index scan and determining the type of join algorithm.
+### Query Processing Steps
+- Translation of the query to a relational algebra expression
+- Creation of an execution plan
 
-## Estimating Costs
-### Step 1: Result Size Calculation Using Reduction Factor
-Consider the query `Employees ---- 𝜎𝑆𝑎𝑙𝑎𝑟𝑦<60000`. The reduction factor (RF) depends on the type of the predicate:
+### Query Optimization
+- Query optimization primarily involves making informed choices and annotations to improve the query's execution efficiency
+- The ultimate goal is to minimize the estimated cost
 
-- For `Col = value`, RF = $\frac{1}{\text{Number of unique values (Col)}}$
-- For `Col > value`, RF = $\frac{\text{High(Col) – value}}{\text{High(Col) – Low(Col)}}$
-- For `Col < value`, RF = $\frac{\text{val – Low(Col)}}{\text{High(Col) – Low(Col)}}$
-- For `Col_A = Col_B` (for joins), RF = $\frac{1}{\text{Max number of unique values in } \mathrm{Col_A,Col_B}}$
+## Steps of Cost-Based Query Optimization Process
+1. **Generation of Logically Equivalent Expressions**: The first step involves generating various expressions that are logically equivalent to the given SQL statement. However, doing this exhaustively can be expensive in terms of time and space.
 
-### Step 2: Different Options for Retrieving Data and Calculating Cost
-This is an estimation step. The choice on how to run a query on the server is based on cost estimates, which can be influenced by statistics, table sizes, available indices, and other factors. These decisions can dramatically affect performance.
+2. **Annotation of Resultant Expressions**: This involves annotating the resultant expressions to get alternative query plans, such as deciding between heap scan/index scan or determining the type of join algorithm.
+
+3. **Estimation of Plan Cost**: The cost of each plan is estimated based on statistical information about tables, cost formulae for algorithms, and statistics estimation for intermediate results to compute cost of complex expressions. Factors influencing this estimation include available indices, table sizes, and other statistics.
+
+4. **Selection of the Cheapest Plan**: The final step involves choosing the plan with the lowest estimated cost. However, it's essential to consider the interaction of evaluation techniques when choosing evaluation plans. Picking the cheapest algorithm for each operation independently may not result in the best overall algorithm. For example, although merge-join may be costlier than hash-join, it may provide a sorted output which could be useful later.
+
+### Estimating Costs
+The estimation of cost involves a two-step process:
+
+1. **Result Size Calculation Using Reduction Factor**: For a given query, the reduction factor (RF) is calculated based on the type of predicate used.
+
+    - For `Col = value`, RF = $\frac{1}{\text{Number of unique values (Col)}}$
+    - For `Col > value`, RF = $\frac{\text{High(Col) – value}}{\text{High(Col) – Low(Col)}}$
+    - For `Col < value`, RF = $\frac{\text{val – Low(Col)}}{\text{High(Col) – Low(Col)}}$
+    - For `Col_A = Col_B` (for joins), RF = $\frac{1}{\text{Max number of unique values in } \mathrm{Col_A,Col_B}}$
+
+2. **Options for Retrieving Data and Calculating Cost**: This step involves deciding how to run the query on the server. The decision is based on cost estimates influenced by table sizes, available indices, and other statistical factors.
+
+### Real-World Scenario: Heuristic Optimization
+In real-world scenarios, exhaustive cost-based optimization can be expensive. Hence, systems often use heuristic optimization, which transforms the query-tree using a set of rules that typically improve execution performance:
+
+- Perform selections early to reduce the number of tuples
+- Perform projections early to reduce the number of attributes
+- Perform most restrictive selection and join operations (with smallest result size) before other similar operations
+
+Some systems use only heuristics, while others combine heuristics with cost-based optimization. In many cases, simple heuristics are used for very cheap queries, while exhaustive enumeration is performed for more expensive queries.
+
+### Further Optimization Techniques
+- **Improved Estimation of Reduction Factors**: Better estimation of reduction factors can be achieved through sampling and histograms.
+
+- **Adaptive Plans**: These involve waiting for some parts of a plan to execute first, then choosing the next best alternative. For instance, using hash-join if more than 100 pages are from Employees, otherwise using PNLJ.
+
+- **Readjust Statistics**: This involves monitoring planned execution against actual and expected cardinalities, analyzing adjustments, and providing feedback to the optimizer to generate the best plan.
+
+In summary, a good query optimizer is crucial for query efficiency, and its effectiveness depends on careful choices at each step of the optimization process. Despite some challenges, such as inaccurate result size estimations, strategic approaches such as the use of heuristics, adaptive plans, and readjusted statistics can significantly improve the optimization process.
 
 ## Joins
 ### Simple Nested-Loop Join
@@ -600,59 +639,388 @@ For example, with depositor as the outer relation, the cost is $100 + (100 ∗ 4
 ### Block Nested-Loop Join
 This is another variant of nested-loop join in which every block of the inner relation is paired with every block of the outer relation. The cost is $br + (br ∗ bs)$ block transfers + $2 * br$ seeks. Here, $nr$ is approximated to $br$.
 
-## Importance of a Good Query Optimizer
-- The query optimizer is crucial for query efficiency.
-- Generating all equivalent expressions exhaustively is costly.
-- The interaction of evaluation techniques must be considered when choosing evaluation plans. Selecting the cheapest algorithm for each operation independently may not result in the best overall cost.
-- Estimations of the result size may not always be accurate.
 
-## Real-World Considerations
-- Cost-based optimization can be expensive, so systems may use heuristics to reduce the number of choices that must be made in a cost-based manner.
-- Heuristic optimization transforms the query-tree using a set of rules that typically improve execution performance. These rules include:
-  - Performing selections early to reduce the number of tuples.
-  - Performing projections early to reduce the number of attributes.
-  - Performing the most restrictive selection and join operations (i.e., those with the smallest result size) before other similar operations.
-- Some systems use only heuristics, while others combine heuristics with cost-based optimization.
-- Optimizers often use simple heuristics for very cheap queries and perform exhaustive enumeration for more expensive queries.
-
-## Further Optimization Techniques
-- Better estimation of reduction factors can be achieved through sampling and histograms.
-- Adaptive plans: Wait for some parts of a plan to execute first, then choose the next best alternative. For example, use hash-join if more than 100 pages are from Employees, otherwise use PNLJ.
-- Readjust statistics: Monitor planned execution against actual and expected cardinalities, analyze adjustments, and provide feedback to the optimizer to generate the best plan.
-
-## Query Processing Steps
-- Translate the query to a relational algebra expression.
-- Make an execution plan.
-
-## Query Optimization
-- Query optimization involves making the right choices and annotations.
-
-## Query Plan
-- Decisions need to be made, such as which two tables to join first out of three.
-- Join algorithms are a part of this process.
-
-## Cost-Based Query Optimization
-- Generate logically equivalent expressions of the query.
-- Annotate resultant expressions to get alternative query plans.
-- Choose the cheapest plan based on estimated cost.
-- Estimation of plan cost is based on statistical information about tables (e.g., number of distinct values for an attribute), statistics estimation for intermediate results, and cost formulae for algorithms.
-
-## Generation of Alternatives
-- Query optimizers use equivalence rules to systematically generate expressions equivalent to the given expression.
-- All equivalent expressions can be generated exhaustively, but this approach is expensive in space and time.
-
-## Choosing the Best Plan
-- The interaction of evaluation techniques must be considered when choosing evaluation plans.
-- Choosing the cheapest algorithm for each operation independently may not yield the best overall algorithm.
-- For example, merge-join may be costlier than hash-join, but it may provide a sorted output which could be useful later.
-
-## Practical Considerations
-- Systems may use heuristics to reduce the number of choices that must be made in a cost-based manner.
+## Practical Approaches
 - Practical query optimizers incorporate elements of the following two broad approaches:
-  - Searching all the plans and choosing the best plan in a cost-based manner.
-  - Using heuristics to choose a plan.
-- Some systems use only heuristics, while others combine heuristics with cost-based optimization.
-- Optimizers often use simple heuristics for very cheap queries and perform exhaustive enumeration for more expensive queries.
+  - Search all the plans and choose the best plan in a cost-based fashion.
+  - Use heuristics to choose a plan.
+
+## Query Costs – In Practice
+
+- Query Store in SQL server management studio used for monitoring and managing costs.
+
+### Troubleshooting to Manage Costs
+
+- Identification of 'regressed queries' – pinpointing queries with worsening execution metrics.
+- Real-time tracking of critical queries.
+
+### Process 
+
+1. Enable Query Store.
+2. Let Query Store collect data.
+3. Identify and fix "problematic" queries.
+
+### Addressing Suboptimal Performance 
+
+When a query's performance is suboptimal, possible actions include:
+
+- Forcing a query plan instead of the one chosen by the optimizer.
+- Considering the need for an index to expedite data retrieval.
+- Enforcing statistic recompilation.
+- Possibly rewriting the query.
+
+#### Query Rewriting with Parameters for Execution Plan Reuse
+
+Queries can be rewritten to utilize parameters which allows for plan reuse. Here's an example:
+
+Original queries:
+
+```sql
+SELECT *
+FROM Product
+WHERE categoryID = 1;
+
+SELECT *
+FROM Product
+WHERE categoryID = 4;
+```
+
+Rewritten query with parameterization:
+
+```sql
+DECLARE @MyIntParm INT SET @MyIntParm = 1
+EXEC sp_executesql
+N'SELECT *
+FROM Product
+WHERE categoryID = @Parm', N'@Parm INT',
+@MyIntParm
+```
+
+In the parameterized example, we've replaced the fixed categoryID value with a variable (`@Parm`). This allows the optimizer to generate the same plan for different values of categoryID (e.g., 1, 4) and reuse it, which can improve performance.
+
+## Lowering Query Costs Further
+
+### Store Derived Data
+
+- Applicable when derived values are needed frequently and data doesn't change often.
+
+### Use Pre-Joined Tables
+
+- Applicable when tables need to be frequently joined.
+- Regularly check and update pre-joined table for updates in the original table. However, this may occasionally return some 'outdated' results.
+
+## Efficiency in DBMS
+
+- DBMS must efficiently support the following operations:
+  - Inserting, deleting, and modifying records.
+  - Reading a particular record (specified using a record ID).
+  - Scanning all records (possibly with conditions on the retrieved records), or scanning a range of records.
+
+- DBMS administrators typically create indices to facilitate almost direct access to individual items. Indices also enhance the efficiency of join operations, especially when a join condition restricts the number of items to be joined in a table.
+
+## Data Storage on Disk
+
+- Databases are mapped into different files, each consisting of a sequence of records.
+- Each file is further divided into fixed length storage units called data blocks (also referred to as logical blocks, or pages).
+- For example, if each record size is 55 bytes and the fixed size of a data block is 4096 bytes, then multiple records will be stored in one data block.
+
+## Indexing for Efficiency
+
+- Indexing is a key mechanism to speed up access to desired data, similar to looking up a phone book or dictionary.
+- Search Key: attribute or set of attributes used to look up records/rows, such as a person's ID.
+- An index file consists of records (called index entries) which contain a search-key and a pointer to the data location.
+- Index files are typically smaller than the original data files, and a substantial part of them can reside in main memory, which is faster than disk storage.
+
+## Disk Access Efficiency
+
+- Disk access becomes faster through indexing by:
+  - Retrieving records with a specified attribute value using minimal disk accesses.
+  - Retrieving records with an attribute value falling within a specified range using a single seek and consecutive sequential reads.
+
+## Criteria for Indexing
+
+- Indexing involves a tradeoff, considering factors like:
+  - Insertion time to the index.
+  - Deletion time from the index.
+  - Minimizing index rearrangement post insertion and deletion.
+  - Considering space overhead for the index itself.
+
+- There is no universally optimal indexing technique; each technique is best suited to particular applications.
+
+- Two basic kinds of indices based on search keys are:
+  - Ordered indices: search keys are stored in an ordered manner.
+  - Hash indices: search keys are distributed uniformly across "buckets" using a hash function.
+
+## Indices in Database Systems
+
+- **Indices** are used to speed up the search for records in a database.
+- Types: Ordered, Clustering (Primary), Non-clustering (Secondary).
+
+Search using Indexes:
+- B+ tree: Finding a particular value, finding a range of values.
+- Hash index: Finding a particular value.
+- Bitmap index: Finding the total number.
+- Spatial indexes: Range query, nearest neighbor query.
+- Quadtree.
+- R-tree.
+
+## Ordered Index
+
+- Search keys are stored in a certain order.
+- The records in the indexed file may also be sorted.
+- Ordered indices help facilitate binary search, maintaining data in order.
+
+### Clustering Index / Primary Index
+
+- In a sequentially ordered file, the index whose search key specifies the sequential order of the file.
+- The search key of a primary index is usually (but not necessarily) the primary key.
+
+### Non-clustering Index / Secondary Index
+
+- The index whose search key specifies an order different from the sequential order of the file.
+- Secondary indices improve the performance of queries that use keys other than the search key of the clustering index.
+- Hash indices and Bitmap indices are examples of secondary indices.
+
+## B+ Trees in DBMS
+
+- B+ trees are extensively used in DBMS for indexing, owing to their efficiency. They are among the most popular index structures in DBMS.
+- B+ trees automatically reorganize themselves with small, local changes upon insertions and deletions, negating the need for periodic reorganization.
+
+### Why B+ Trees?
+
+- Binary search on ordered files degrades as the file grows, creating many overflow blocks.
+- Keeping files in order requires periodic reorganization which is not needed with B+ trees.
+
+### Defining a B+ Tree
+
+- Similar to a binary tree, but with a higher fan-out defined by a number $n$.
+- All root-to-leaf paths are of the same length (depth).
+- Non-root or leaf nodes have between $\lceil n/2 \rceil$ and $n$ children.
+- A leaf node has between $\lceil (n–1)/2 \rceil$ and $n–1$ values.
+- If there are $K$ search-key values in the file, the height of the tree is at most $\lceil \log_{\lceil n/2 \rceil} K \rceil$, keeping the tree balanced.
+
+### B+ Tree Node Structure
+
+- Search keys in a node are ordered: $K_1 < K_2 < K_3 < ... < K_{n–1}$.
+- Each node is defined as: $P_1, K_1, P_2, K_2, ..., P_{n-1}, K_{n-1}, P_n$ where $K_i$ are search-key values and $P_i$ are pointers.
+
+### Querying a B+ Tree
+
+- To find all records with a search-key value $k$:
+  1. Start with $N =$ root.
+  2. Loop until $N$ is a leaf node:
+    - If there exists $K_i > k$, then set $N = P_i$.
+    - If $k \geq K_{n–1}$, set $N = P_n$.
+  3. If there is an $i$ such that $K_i = k$, follow pointer $P_i$ to the desired record or bucket.
+  4. If no such $i$ exists, then no record with search-key value $k$ exists.
+
+### Range Queries on B+ Trees
+
+- B+ trees are perfect for executing range queries, enabling finding all records with search key values within a given range.
+
+### B+ Tree File Organization
+
+- Leaf nodes store records, rather than pointers to children.
+- This organization helps maintain order during insertions/deletions/updates.
+
+### Advantages and Disadvantages of B+ Trees
+
+- **Advantages**: Self-reorganization, no need for entire file reorganization, higher fan-out compared to binary trees.
+- **Disadvantages**: Extra overhead for insertions and deletions, space overhead.
+- Despite the disadvantages, B+ trees are extensively used in DBMS due to the significant benefits they offer.
+
+## Hash Indices
+
+- Hash indices organize search keys and their associated record pointers into a hash file structure. The order isn't important.
+- They are always secondary indices.
+- The goal is to find the associated record file in one shot using the key.
+- An ideal hash function should be:
+  - **Uniform**: Each bucket is assigned the same number of search-key values from all possible values.
+  $$\text{Probability}(\text{Bucket}_i) = \frac{1}{\text{total number of buckets}}$$
+  - **Random**: Each bucket has an equal number of records regardless of the actual distribution of search-key values in the file.
+- Typical hash functions perform computations on the internal binary representation of the search-key.
+
+## Bitmap Indices
+
+- Useful when records in a relation are numbered sequentially and the attribute has relatively few distinct values. Examples include gender, country, state, and income levels broken into ranges.
+- Bitmaps are simple arrays of bits.
+- Bitmap index on an attribute has a bitmap for each value of the attribute.
+- Bitmap has as many bits as there are records.
+- In a bitmap for a value $v$, the bit for a record is 1 if the record has value $v$ for the attribute, and 0 otherwise.
+- This type of index is often used in business analysis, where aggregate data (such as the total number of a certain type) is important.
+
+## Spatial Data and Indexing
+- Spatial data is not easily accessible by simple identifiers. It often requires special indexing due to the complexity of computations, such as intersections of objects in space.
+- A key issue is that there's no trivial way to sort items, especially for range queries.
+- To manage this, new indices, similar to B+ trees, were developed to exponentially reduce computations by repeatedly dividing space.
+- Such indices are used in Oracle Spatial and similar DBMS extensions.
+- One such data structure is the Quadtree.
+
+## Quadtrees
+- Each node of a quadtree corresponds to a rectangular region of space. The top node covers the entire target space.
+- Each non-leaf node divides its region into four equal-sized quadrants.
+- Each such node has four child nodes corresponding to the four quadrants, and this division continues recursively until a stopping condition is met. For example, leaf nodes might contain between zero and a fixed maximum number of points.
+
+## Transforming a k-d tree to Quadtree
+- A k-d tree and quadtree both partition the space into regions. However, a k-d tree uses hyperplanes perpendicular to one of the axes at each step, while a quadtree (in 2D) always splits a region into four equal rectangles.
+- Given a k-d tree, to convert it into a quadtree:
+  1. For each node in the k-d tree, note the split dimension and value.
+  2. In the quadtree, instead of using the k-d tree split, divide the space into four equal quadrants.
+  3. Associate the points within each quadrant to the corresponding leaf nodes of the quadtree.
+  4. Note that this transformation might result in quadtrees with different depth levels since k-d trees and quadtrees divide the space differently.
+  
+## Example of a k-d tree and describe how it can be built. 
+Let's consider a set of 2D points. Here are the points: 
+
+```
+A: (2,3)
+B: (5,4)
+C: (9,6)
+D: (4,7)
+E: (8,1)
+F: (7,2)
+```
+
+The construction of a 2D k-d tree involves the following steps:
+
+1. Start at the root node, choose an axis (usually start with the x-axis), and find the median point. Let's sort the points by their x-coordinate:
+    ```
+    A: (2,3)
+    D: (4,7)
+    B: (5,4)
+    F: (7,2)
+    E: (8,1)
+    C: (9,6)
+    ```
+   The median point is `B: (5,4)`. This becomes the root of the tree.
+
+2. For the remaining points, you create two partitions - one for the points with x-values less than the root, and one for points with x-values greater than the root. 
+
+    Points with x < 5: `A: (2,3)`, `D: (4,7)`
+
+    Points with x > 5: `F: (7,2)`, `E: (8,1)`, `C: (9,6)`
+
+3. Repeat the process for each partition, but switch the axis to the y-axis.
+
+   For x < 5, sort by y: `A: (2,3)`, `D: (4,7)`. The median is `A: (2,3)`. This becomes the left child of the root.
+
+   For x > 5, sort by y: `E: (8,1)`, `F: (7,2)`, `C: (9,6)`. The median is `F: (7,2)`. This becomes the right child of the root.
+
+4. Repeat this process recursively for each partition, alternating the axis at each level.
+
+Here's what the final k-d tree would look like:
+
+```
+        B (5,4)
+       /      \
+  A (2,3)     F (7,2)
+    \           /     \
+  D (4,7)  E (8,1)  C (9,6)
+```
+
+This k-d tree is efficient for various spatial queries like range searches and nearest neighbor searches because it attempts to partition the space into equal halves at each step, reducing the search space considerably at each level.
+
+## R-Trees
+- **Definition**: R-trees are an N-dimensional extension of B+-trees. They are primarily used for indexing sets of rectangles and polygons, making them incredibly useful for location data. The basic concept of an R-tree generalizes the notion of a one-dimensional interval associated with each B+-tree node to an N-dimensional interval, or an N-dimensional rectangle. 
+- **Purpose**: R-trees are specifically designed for use in databases that handle geographical or spatial information.
+- **Supported Variants**: There are several types of R-trees, including R+-trees and R*-trees.
+- **Restrictions**: While the generalization for N > 2 is straightforward, R-trees are most effective for relatively small N.
+- **Bounding Boxes**: These are the smallest possible rectangles that can contain all the rectangles/polygons associated with a given node. Overlaps between bounding boxes of the children of a node are permitted.
+
+### Example of an R-Tree
+- An R-tree represents a set of rectangles, outlined by a solid line, along with the bounding boxes (dashed line) of the nodes. The objects are grouped based on a particular rule.
+
+### Searching in R-Trees
+- **Objective**: The goal is to find data items that intersect a given query point or region, starting from the root node.
+- **Process**: 
+    - If the node is a leaf node, output the data items whose keys intersect the given query point or region.
+    - Otherwise, for each child of the current node whose bounding box intersects the query point or region, recursively search the child.
+- **Efficiency**: While this can be inefficient in the worst case (since multiple paths may need to be searched due to overlaps), it works acceptably in practice.
+
+## Nearest Neighbor (NN) Query in R-Trees
+- Running a nearest neighbor query in R-Trees is a process similar to other tree-based structures, such as Best First Search. Access is ordered with respect to the distance to the query point.
+    1. Use a sorted priority queue of the R-tree nodes based on the minimum distance from the query.
+    2. Traverse the node that is at the top of the priority queue and add its elements to the queue. Continue this process.
+    3. Stop when the node at the top of the queue is a data object. This signifies that the first nearest neighbor has been found. 
+
+This algorithm for finding the nearest neighbor in R-trees is known as a best-first search algorithm.
+
+## SQL Indexing
+- **Purpose**: Speeds up data retrieval operations on a database table.
+- **Automatic Index Creation**: Some indexes are automatically created by the DBMS.
+    - For `UNIQUE` constraint, DBMS creates a non-clustered index.
+    - For `PRIMARY KEY`, DBMS creates a clustered index.
+- **Index Application**: Indexes can be created on any relation or view, such as the join result of two tables.
+
+### Index Definition in SQL
+- **Create Index**: `create index <index-name> on <relation-name> (<attribute-list>)`
+    - Clustered Index: `CREATE CLUSTERED INDEX index1 ON table1 (column1);`
+    - Non-clustered Index with Unique Constraints: `CREATE UNIQUE INDEX index1 ON table1 (column1 DESC, column2 ASC, column3 DESC);`
+- **Drop Index**: `drop index <index-name>`
+- **Specialized Index**:
+    - Filtered Index: `CREATE INDEX index1 ON table1 (column1) WHERE Year > ‘2010’;`
+    - Spatial Index: `CREATE SPATIAL INDEX index_name ON table_name(Geometry_type_col_name) WITH ( BOUNDING_BOX = ( 0, 0, 500, 200 ) );`
+
+## Managing Database Indexes
+- There are numerous index types and many subtypes, e.g., MX-CIF quadtree and R-trees among others.
+- It is not feasible to learn all index types for all data types.
+- When managing a dataset:
+    - Identify the potential query types.
+    - Research suitable indices that the particular DBMS would support for the data type.
+    - Understand which queries perform better on which index.
+    - Create an index if dealing with large data.
+    - Monitor the performance of the index.
+    - Tune or create other indices as necessary.
+- Every DBMS will have a version of the “create index” SQL statement for managing indices.
+
+## SQL Injection
+
+- SQL injection occurs when an application executes a database query using user-input data, and the user input or part of it is treated as an SQL statement.
+- It can be prevented by using user parameterized queries or prepared statements, which allow the database to distinguish between code and data.
+- User parameterized query/prepared statement example: 
+  ```java
+  String query = "SELECT * from login where user = " + request.getParameter("userName");
+  ```
+
+### SQL Syntax
+
+- SQL syntax follows a specific structure and logic.
+- Logical statement example: `'a'='a'` (comparison of two equal strings)
+- Example: 
+  ```sql
+  SELECT * FROM `table` WHERE 'a'='a'
+  ```
+- Example of a valid SQL query:
+  ```sql
+  SELECT * FROM `login` WHERE `user`='farhana' AND `pass`='comp90050'
+  ```
+- Example of an SQL injection attack:
+  ```sql
+  SELECT * FROM `login` WHERE `user`='' OR 'a'='a' AND `pass`='' OR 'a'='a'
+  ```
+
+Multi-Statements
+
+- SQL injections can also involve multiple statements.
+- Multiple statements example: `S1; S2`
+- Example:
+  ```sql
+  SELECT * FROM `table`; DROP TABLE `table`;
+  ```
+- Example of a valid SQL query:
+  ```sql
+  SELECT * FROM `login` WHERE `user`='farhana' AND `pass`='comp90050'
+  ```
+- Example of an SQL injection attack:
+  ```sql
+  SELECT * FROM `login` WHERE `user`=''; DROP TABLE `login`; --' AND `pass`=''
+  ```
+
+### Prevention
+
+- To prevent SQL injection attacks, it is recommended to use user parameterized queries or prepared statements.
+- User parameterized query/prepared statement allows the database to differentiate between code and data.
+- By using placeholders for user input, the database can ensure that the input is treated as data rather than executable code.
 
 # Appendix
 
