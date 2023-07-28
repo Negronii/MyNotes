@@ -2,7 +2,6 @@
 ## Database Management System (DBMS)
 
 A Database Management System (DBMS) is a software system designed to store, manage, and facilitate access to databases. The complexity of managing a database system has increased due to:
-
 - More data
 - More aspects of businesses
 - Data stored in various sites and accessed by many users
@@ -414,32 +413,11 @@ For example, the communication between Node A and Node B can be represented as f
 
 ## Database Transaction Models
 
-Database transaction models are crucial for maintaining data consistency. The principle is that either the entire block of data is written correctly on the disk, or the block's contents remain unchanged. There are two primary methods to achieve this:
+**Database Transaction Models**: Database transaction models are crucial for maintaining data consistency. The principle is that either the entire block of data is written correctly on the disk, or the block's contents remain unchanged. There are two primary methods to achieve this:
 
-- **Duplex Write**: This method involves writing each block of data in two places sequentially. If one of the writes fails, the system can issue another write. Each block is associated with a version number, and the block with the latest version number contains the most recent data. While reading, we can determine the error of a disk block by its CRC (Cyclic Redundancy Check). This method always guarantees that at least one block has consistent data.
+  - **Duplex Write**: Each block of data is written in two places sequentially. If one of the writes fails, another write can be issued. Each block is associated with a version number, with the block of the latest version containing the most recent data. Errors in a disk block can be determined by its CRC (Cyclic Redundancy Check). This method guarantees at least one block of consistent data.
 
-- **Logged Write**: This method is similar to duplex write, except one of the writes goes to a log. This method is very efficient if the changes to a block are small.
-
-## ACID Properties in Transaction Models
-
-The ACID properties are a set of properties that guarantee reliable processing of database transactions. They are:
-
-- **Atomicity**: This property ensures that all changes to data are performed as if they are a single operation. That is, all the changes are performed, or none of them are. For example, if we are transferring $100 from account A to account B, the operation is atomic because either the entire operation (deducting from A and adding to B) happens, or none of it does.
-
-- **Consistency**: This property ensures that any data written to the database must be valid according to all defined rules. For example, if the student ID is the primary key, then no duplicate student ID is allowed. What is considered 'consistent' depends on the application and context constraints.
-
-- **Isolation**: This property ensures that transactions are executed as if they are the only one in the system. For example, in an application that transfers funds from one account to another, isolation ensures that another transaction sees the transferred funds in one account or the other, but not in both, nor in neither.
-
-- **Durability**: This property ensures that the system can tolerate system failures and any committed updates should not be lost.
-
-It's important to note that sometimes the ACID properties can conflict with each other, but we still need to ensure the following:
-
-- Fast access to large amounts of data
-- Provide a secure and stable repository when things fail
-- Provides standard interfaces to data definition and manipulation
-- Help multiuser accesses are done in an orderly manner
-- Allow convenient ways for report production and browsing
-- Ease in loading data, archiving, performance tuning
+  - **Logged Write**: Similar to duplex write, except one write goes to a log. This method is efficient if changes to a block are small.
 
 ## Disk Block Update Process
 
@@ -999,7 +977,7 @@ This algorithm for finding the nearest neighbor in R-trees is known as a best-fi
   SELECT * FROM `login` WHERE `user`='' OR 'a'='a' AND `pass`='' OR 'a'='a'
   ```
 
-Multi-Statements
+### Multi-Statements
 
 - SQL injections can also involve multiple statements.
 - Multiple statements example: `S1; S2`
@@ -1021,6 +999,413 @@ Multi-Statements
 - To prevent SQL injection attacks, it is recommended to use user parameterized queries or prepared statements.
 - User parameterized query/prepared statement allows the database to differentiate between code and data.
 - By using placeholders for user input, the database can ensure that the input is treated as data rather than executable code.
+
+## Transation model - ACID properties
+[Go to Database Transaction Models and ACID Properties](#database-transaction-models)
+
+**ACID (Atomicity, Consistency, Isolation, Durability) Properties**: The ACID properties are a set of properties that guarantee reliable processing of database transactions.
+
+  - **Atomicity**: All changes to data are performed as a single operation. Either all the changes are performed, or none of them are. E.g., transferring $100 from account A to account B either happens in its entirety (deducting from A and adding to B), or not at all.
+
+  - **Consistency**: Any data written to the database must be valid according to all defined rules. What is considered 'consistent' depends on the application and context constraints.
+
+  - **Isolation**: Transactions are executed as if they are the only one in the system. E.g., in an application that transfers funds, isolation ensures another transaction sees the transferred funds in one account or the other, but not in both or neither.
+
+  - **Durability**: The system can tolerate system failures, and any committed updates should not be lost.
+
+**Types of Actions** within these transaction models:
+
+- **Unprotected actions**: No ACID property.
+
+- **Protected actions**: These actions are not externalized before they are completely done. They can be rolled back if required and possess the ACID properties.
+
+- **Real actions**: These are physical actions that once performed cannot be undone. In many situations, atomicity is not possible with real actions (e.g., firing two rockets as a single atomic action).
+
+ACID properties might sometimes conflict with each other, yet, the system must still ensure fast access to large amounts of data, provide a secure and stable repository when things fail, offer standard interfaces for data definition and manipulation, manage multi-user access in an orderly manner, allow convenient ways for report production and browsing, and ease data loading, archiving, and performance tuning.
+
+Certainly, here are the notes with original comments included in the code:
+
+### Embedded SQL in C with Open Database Connectivity Example:
+```C
+int main() {
+    exec sql INCLUDE SQLCA; // SQL Communication Area
+    exec sql BEGIN DECLARE SECTION;
+    // Variables for communicating between SQL and C
+    int OrderID; // Employee ID (from user)
+    int CustID; // Retrieved customer ID
+    char SalesPerson[10]; // Retrieved salesperson name
+    char Status[6]; // Retrieved order status
+    exec sql END DECLARE SECTION;
+    // Set up error processing, Proper error handling is important!!!
+    exec sql WHENEVER SQLERROR GOTO query_error; 
+    exec sql WHENEVER NOT FOUND GOTO bad_number;
+    // Prompt the user for order number 
+    printf ("Enter order number: "); 
+    scanf_s("%d", &OrderID);
+    // Execute the SQL query
+    exec sql SELECT CustID, SalesPerson, Status FROM Orders
+    WHERE OrderID = :OrderID // ”:” indicates to refer to C variable
+    INTO :CustID, :SalesPerson, :Status;
+    // Display the results
+    printf ("Customer number: %d\n", CustID);
+    printf ("Salesperson: %s\n", SalesPerson); 
+    printf ("Status: %s\n", Status);
+    exit(); 
+    query_error: printf ("SQL error: %ld\n", sqlca->sqlcode); exit();
+    bad_number: printf ("Invalid order number.\n"); exit(); 
+}
+```
+**Concepts**
+- **Host Variables**: Declared between `BEGIN DECLARE SECTION` and `END DECLARE SECTION`. Prefixed by a colon `:` when accessed, distinguishing them from database objects.
+- **Data Types**: Host variables perform dual roles:
+  - They are program variables, declared and manipulated by host language statements.
+  - Used in embedded SQL to retrieve database data.
+  - If no host language type matches a DBMS data type, automatic conversion is performed by the DBMS.
+- **Error Handling**: Errors reported by DBMS to the applications program through an SQL Communications Area (SQLCA) using `INCLUDE SQLCA`. `WHENEVER...GOTO` statement generates error-handling code to process DBMS errors.
+- **Singleton SELECT**: Returns only a single row of data. Doesn't declare or use cursors.
+
+## Flat Transaction
+
+- A flat transaction is a transaction model where everything inside the `BEGIN WORK` and `COMMIT WORK` is at the same level.
+- It will either survive together with everything else (commit), or it will be rolled back with everything else (abort) in case of errors.
+  
+### Basic Example of Flat Transaction
+
+- Creation of a table:
+
+  ```sql
+  exec sql CREATE Table accounts (
+  AccId NUMERIC(9),
+  BranchId NUMERIC(9), FOREIGN KEY REFERENCES branches, 
+  AccBalance NUMERIC(10),
+  PRIMARY KEY(AccId));
+  ```
+
+- A Debit/Credit Transaction:
+
+  ```sql
+  DCApplication()
+  {
+  read input msg;
+  exec sql BEGIN WORK;
+  AccBalance = DodebitCredit(BranchId, TellerId, AccId, delta); send output msg;
+  exec sql COMMIT WORK; 
+  }
+  ```
+
+- The `DodebitCredit` function:
+
+  ```sql
+  Long DoDebitCredit(long BranchId,
+  long TellerId, long AccId, long AccBalance, long delta){
+  exec sql UPDATE accounts
+  SET AccBalance =AccBalance + :delta WHERE AccId = :AccId;
+  exec sql SELECT AccBalance INTO :AccBalance FROM accounts WHERE AccId = :AccId;
+  exec sql UPDATE tellers
+  SET TellerBalance = TellerBalance + :delta WHERE TellerId = :TellerId;
+  exec sql UPDATE branches
+  SET BranchBalance = BranchBalance + :delta WHERE BranchId = :BranchId;
+  Exec sql INSERT INTO history(TellerId, BranchId, AccId, delta, time)
+  VALUES( :TellerId, :BranchId, :AccId, :delta, CURRENT); return(AccBalance);
+  }
+  ```
+
+### Flat Transaction with Check on Account Balance
+
+- Modification of the `DCApplication` function to prevent account overdraft:
+
+  ```sql
+  DCApplication(){
+  read input msg;
+  exec sql BEGIN WORK;
+  AccBalance = DodebitCredit(BranchId, TellerId, AccId, delta); if (AccBalance < 0 && delta < 0){
+  exec sql ROLLBACK WORK;
+  } else{
+  send output msg;
+  exec sql COMMIT WORK;} }
+  ```
+
+### Limitations of Flat Transactions
+
+- Flat transactions do not model many real applications (e.g. airline booking)
+- Redoing the whole transaction due to failure of a single part leads to unnecessary computation.
+
+### Solution: Save Points
+
+- Save points can be used to address the limitations of flat transactions.
+- If an error occurs, instead of rolling back the entire transaction, we can roll back to the latest save point, reducing unnecessary computations.
+
+```sql
+IncreaseSalary()
+{ real percentRaise;
+receive(percentRaise);
+exec SQL BEGIN WORK;
+exec SQL UPDATE employee
+set salary = salary*(1+ :percentRaise)
+send(done);
+exec sql COMMIT WORK;
+return }
+```
+
+This transaction could be a long running transaction. Savepoints can be used here to avoid unnecessary computation in case of a failure.
+
+## Nested Transaction Rules
+
+- **Commit Rule**
+  - A subtransaction may commit or abort; however, the commit cannot take place unless the parent transaction itself commits.
+  - A subtransaction possesses Atomicity (A), Consistency (C), and Isolation (I) properties, but not Durability (D), unless all its ancestors commit.
+  - The commit of a subtransaction makes its results available only to its parent transactions.
+
+- **Roll Back Rules**
+  - When a subtransaction rolls back, it forces all its children to also roll back.
+
+- **Visibility Rules**
+  - Changes made by a subtransaction are visible to the parent only upon the subtransaction's commitment. All objects of the parent are visible to its children.
+  - It's important that the parent does not modify objects while the children are accessing them to maintain consistency. This isn't a problem, as parent transactions do not run in parallel with their child transactions.
+
+## Transaction Processing Monitor (TP Monitor)
+
+- The primary role of a TP monitor is to coordinate other system components and manage resources.
+- It oversees the transfer of data between clients and servers, decomposing applications or code into transactions and ensuring proper database updates.
+- The TP monitor takes appropriate actions in the event of errors.
+
+## TP Monitor Services
+
+- **Heterogeneity**
+  - When an application requires access to different database systems, local ACID properties of individual database systems are insufficient. 
+  - The local TP monitor must interact with other TP monitors to maintain the overall ACID property. 
+  - This requires employing a form of a 2-phase commit protocol.
+
+- **Control Communication**
+  - When an application communicates with remote processes, the local TP monitor should maintain the communication status among these processes to recover from a potential crash.
+
+- **Terminal Management**
+  - As many terminals run client software, the TP monitor should provide appropriate ACID properties between client and server processes.
+
+- **Presentation Service**
+  - The TP monitor must manage various presentation (user interface) software, a task similar to terminal management. 
+  - Examples include X-windows and other GUI environments.
+
+- **Context Management**
+  - This involves managing sessions and similar constructs within the transactional environment.
+
+- **Start/Restart**
+  - In a TP-based system, there is no difference between start and restart operations. The TP monitor handles these in the same way.
+
+Sure, here's the simplified and formatted notes for your content.
+
+## Concurrency Control
+- Purpose: To resolve conflicts and preserve database consistency.
+- Different methods include: Dekker's Algorithm, OS supported primitives, Spin Locks.
+
+### Dekker's Algorithm
+```
+int c1, c2, turn = 1; 
+T1 {
+  ...
+  c1 = 1; turn = 2;
+  repeat until { c2 == 0 or turn == 1}
+  // Exclusive access to the shared resource
+  counter = counter+1;
+  // Release resource
+  c1 = 0;
+}
+
+T2 {
+  ...
+  c2 = 1; turn = 1;
+  repeat until { c1 == 0 or turn == 2}
+  // Exclusive access to the shared resource
+  counter = counter+1;
+  // Release resource
+  c2 = 0 ;
+}
+```
+
+Dekker's algorithm
+```
+int turn = 0; int wants[2];
+while (true) {
+  wants[i] = true;
+  while (wants[il) {
+    if (turn == j) {
+      wants[i] = false;
+      while (turn == j);
+      wants[i] = true;
+    }
+  }
+  counter = counter + 1;
+  turn = j;
+  want[i] = false;
+}
+```
+- Nearly no hardware support needed, but needs atomic reads and writes to main memory.
+- Implementation becomes complex for more than two transactions/processes.
+- Requires a lot of storage space.
+- Utilizes busy waiting, efficient if lock contention is low.
+
+### OS Supported Primitives
+- Lock request is passed to the OS through an interrupt call.
+- Doesn't need any special hardware but are expensive due to context save for requesting process.
+- Doesn't use busy waiting, hence more effective.
+- Independent of the number of processes.
+
+### Spin Locks
+- Executed using atomic machine instructions such as test and set or swap.
+- Requires hardware support, should be able to lock bus for two memory cycles.
+- Uses busy waiting, efficient for low lock contentions, widely used in DB systems.
+
+### Implementation of Atomic operations
+- Test and Set:
+```
+testAndSet(int *lock) {
+  // Executed atomically
+  if (*lock == 1){
+    * lock = 0; 
+    return (true)
+  } else return (false);
+}
+```
+- Compare and Swap:
+```
+cs(int *cell, int *old, int *new) {
+  // Executed atomically
+  if (*cell == *old) { 
+    *cell = *new; 
+    return TRUE;
+  } else { 
+    *old = *cell; 
+    return FALSE;
+  }
+}
+temp = counter;
+do
+new = temp+1; 
+while(!cs(&counter,&temp,&new);
+```
+
+## Semaphores
+- Based on train-track semaphore system
+- Get() and Give() are primary operations
+- Get() acquires semaphore; Give() releases semaphore
+
+### Basic Procedure
+1. Attempt Get(track); if not clear, wait
+2. On successful Get(track), use it; exclusive use ensures no interference
+3. After use, Release(track) for others
+4. Semaphore set (blocked) when used, and cleared (unblocked) when not used
+
+### Exclusive Mode Semaphore
+- Maintains pointer to queue of processes
+- Pointer points to process owning the semaphore if no waiters
+- If waiters present, semaphore points to linked list of waiting processes
+- Post-usage, owner process wakes up the oldest process in queue (FIFO)
+
+### Semaphore Implementation
+- struct Process { PID pid; PCB * sem_wait; } for exclusive mode
+- Initialisation: void initialise(Xsemaphore *sem) {*sem = NULL; return;}
+- Lock: void lock(Xsemaphore *sem)
+- Unlock: void unlock(Xsemphore *sem)
+
+### Convoy Avoiding Semaphore
+- Avoids long list of waiting processes (convoy)
+- Process frees the semaphore and wakes up all processes in list post-usage
+- Each awakened process re-executes the routine for semaphore acquisition
+- Lock: void lock(Xsemaphore *sem)
+- Unlock: void unlock(Xsemphore *sem)
+
+### Summary
+Semaphores provide a mechanism for managing process access to resources. The semaphore's state, either clear or set, dictates whether a process can proceed or must wait. Specific implementations may further manage the queue of waiting processes to avoid 'convoy' situations, where many processes are waiting for resource access.
+
+## Deadlocks
+
+- A deadlock arises when each process is waiting for another member to release the resources it wants.
+- They are rare but do occur and the database has to deal with them.
+
+### Deadlocks Solutions
+
+- Ensure resource abundance to prevent waiting: impractical due to resource limitations.
+- Prohibit process from waiting, and implement rollback after certain time: risk of live locks which are worse than deadlocks.
+- Follow linear order for resource requests: a transaction requests the ith resource first, then jth resource if j > i to avoid cyclic dependencies.
+
+### Process Interaction and Resource Levels
+
+- Process Pa: Holds resources at level i, requests resources at level j held by Pb. j > i
+- Process Pq: Holds resources at level g, requests resources at level l held by Pd. l > g
+- Process Pb: Holds resources at level j, requests resources at level k held by Pc. k > j
+- Process Pc: Holds resources at level k, requests resources at level l held by Pd. l > k
+- Process Pd: Holds resources at level l and is currently running.
+- Given: l > k > j > i and l > g. Loops cannot exist. Dependency graph can be a tree or a linear chain, thus no cycles.
+
+### Deadlock Avoidance/Mitigation Strategies
+
+- Pre-declare all necessary resources and allocate in a single request.
+- Check the resource dependency graph periodically for cycles. If cycles are detected, rollback (terminate) one or more transactions to remove the deadlocks. Select the transactions which have consumed fewer resources for rollback.
+- Limit maximum waiting time for a lock and then enforce rollback. This approach is adopted by many successful systems (e.g., IBM, Tandem).
+- Some distributed database systems only maintain local dependency graphs and use time-outs to handle global deadlocks.
+
+### Deadlock Probability
+
+- The probability of deadlock occurrence depends on several factors like the number of resources, number of concurrent processes, resource request and release patterns, etc. Precise computation is complex and often avoided in favor of deadlock detection and mitigation.
+
+## Isolation in Database Systems
+
+- Isolation, the 'I' in the ACID properties, refers to the ability of the database system to execute concurrent transactions as if they were running sequentially. This helps maintain database consistency.
+- Isolation assures that each transaction runs in its own 'bubble' and is not affected by other concurrent transactions.
+- This guarantees consistency, as long as each transaction itself is consistent.
+
+### Achieving Isolation
+
+- Sequential processing of each transaction is one way to achieve isolation. However, this is usually not efficient and results in poor response times.
+- We can run transactions concurrently, which should not cause application programs to malfunction.
+- The goals of concurrent execution are:
+  - It should not cause application programs (transactions) to malfunction.
+  - It should not result in lower throughput or longer response times than serial execution.
+
+### Dependencies and Transaction Isolation
+
+- In order to achieve isolation, it's important to understand the dependency of operations.
+- Given a set of transactions, we can determine which transaction depends on which other transaction using a Dependency Model:
+  - Ii : Set of inputs (objects that are read) of a transaction Ti
+  - Oi : Set of outputs (objects that are modified) of a transaction Ti
+- Dependency can be identified if the intersection of Oi and (Ij U Oj) is empty for all i ≠ j
+- Note: This approach cannot always be planned ahead as in many cases inputs and outputs may be state dependent/not known beforehand.
+
+### Formal Definition of Dependency
+
+- A history sequence of tuples (H) of the form (T, action, object) is used to establish dependencies.
+- If T1 performs an action on an object O, then T2 performs an action on the same O, and there is no write action in between by another transaction on O – then T2 depends on T1.
+- Dependency Graph: In this graph, transactions are nodes, and an edge from the node Ti to Tj exists if (Ti, O, Tj) is in DEP(H), denoting Tj depends on Ti.
+
+### Dependency Relations
+
+- There are three scenarios for dependencies:
+  - a1 = WRITE & a2 = WRITE;
+  - a1 = WRITE & a2 = READ;
+  - a1 = READ & a2 = WRITE (dependency as T1 may read again after a2).
+
+### Dependency Equivalence
+
+- DEP(H) = { (Ti, O, Tj) | Tj depends on Ti }.
+- Two histories H1 and H2 contain the same tuples, H1 and H2 are equivalent if DEP(H1) = DEP(H2).
+- This equivalence suggests that the final state of the database will be identical regardless of the sequence of operations in either H1 or H2.
+
+### Isolated Histories
+
+- A history is said to be isolated if it is equivalent to a serial history (as if all transactions are executed serially/sequentially)
+- A serial history results from running transactions sequentially one by one.
+- Maximum of N! serial histories can result from N transactions.
+- A history is legal if it does not grant conflicting grants.
+- Before(T) = {T’ | T’ << T} and After(T) = {T’| T << T’}
+
+### Wormhole Transactions
+
+- A transaction T’ is called a wormhole transaction if T' belongs to Before(T)∩After(T)
+- That is T << T’ << T. This implies there is a cycle in the dependency graph of the history.
+- Presence of a wormhole transaction implies the history is not isolated, meaning it's not a serial schedule.
+- A history is serial if it runs one transaction at a time sequentially, or equivalent to a serial history.
+- Wormhole theorem: A history is isolated if and only if it has no wormholes.
+
 
 # Appendix
 
