@@ -470,3 +470,26 @@ drop index \<index-name>
 
 Most database systems allow specification of type of index, and clustering
 
+## Specialized indexes - Filtered index
+CREATE INDEX index1 ON table1 (column1) WHERE Year > ‘2010’;
+
+(A filtered index is an optimized nonclustered index, suited for queries that select a small percentage of rows from a table. It uses a filter predicate to index a portion of the data in the table)
+
+## Spatial index
+CREATE SPATIAL INDEX index_name ON table_name(Geometry_type_col_name) WITH ( BOUNDING_BOX = ( 0, 0, 500, 200 ) );
+
+# Summary
+- There is no point going through all index types for all data types 
+  - There is hundreds of them
+  - Even each type would have many subtypes
+    - E.g., MX-CIF quadtree is one quadtree type among many 
+  - Same with R-trees, etc
+  - Same with many other index types
+- Given a data set, when uploading to the DBMS
+  - Find the potential query types
+  - Research what indices that particular DBMS would have for that data type
+  - Research for what queries you would better do on what index
+  - Create index if you have large data
+  - Monitor performance
+  - Tune or create other indices
+  - Your DMBS will have a version of the “create index” SQL statement
