@@ -30,7 +30,8 @@ Reliability of a database system is ensured by:
 - Fault tolerance
 - Data duplication
 
-# Hard Disk Drive
+# Hard Disk & Memory Hierarchy
+## Hard Disk Drive
 ![Physical Architecture](./physicalArchitecture.png)
 
 A **hard disk drive (HDD)** is a crucial component of computing systems that provides data storage. Its structure comprises of several key elements:
@@ -44,7 +45,7 @@ A **hard disk drive (HDD)** is a crucial component of computing systems that pro
 
 Note that the disk rotates at high speed, allowing the head to read and write data at different locations.
 
-## Disk Access Time in HDD
+### Disk Access Time in HDD
 The formula to calculate the disk access time is as follows:
 
 $$
@@ -61,7 +62,7 @@ Where:
 What is the Disk access time for a transfer size of 4KB, when average seek time is 12 ms, rotation delay 4 ms, transfer rate 4MB/sec?
 $12ms + 4ms + \frac{4KB}{4MB/S \times 1000KB/MB}\times1000ms/S = 17ms$.
 
-# Solid-State Drives (SSD)
+## Solid-State Drives (SSD)
 Solid-State Drives (SSDs) are a type of storage device that do not have any moving parts
 - **No seek/rotational latency**
 - No start-up times
@@ -70,13 +71,13 @@ Solid-State Drives (SSDs) are a type of storage device that do not have any movi
 
 However, SSDs also have their drawbacks. They are relatively more expensive and have certain read/write limitations. For instance, SSDs tend to be slower when overwriting data.
 
-## Disk Access Time in SSDs
+### Disk Access Time in SSDs
 The formula to calculate the disk access time is as follows:
 $$
 \text{Disk Access Time} = \frac{\text{Transfer Length}}{\text{Bandwidth}}
 $$
 
-# Memory Hierarchy
+## Memory Hierarchy
 ![Memory Hierarchy](./Mem-hierarchy.png)
 - Reg: Register
 - The cache, both on-chip and off-chip, facilitates faster access by reducing the frequency of hard disk accesses. The unit of measurement for cache is typically in MB. 
@@ -86,7 +87,7 @@ $$
 - Storage Capacity: Cache (in MB) < Main Memory (in GB) < Hard Disk (in TB)
 - Access Sequence: Data is first requested from the cache, if not found, then from the main memory, and if still not found, finally from the hard disk.
 
-## Effective Memory Access Time
+### Effective Memory Access Time
 The effective memory access time (EA) can be calculated using the following formula:
 
 $$
@@ -103,7 +104,7 @@ Why don't we have larger caches?
 1. They are expensive.
 2. If the processor and the cache are not on the same chip, the access time increases.
 
-## Effective Disk Buffer Access Time
+### Effective Disk Buffer Access Time
 The disk cache is embedded in the disk and is different from the cache in the memory hierarchy. In other words, it's NOT the L1 or L2 cache shown in the image. It is part of the hard disk!
 The effective disk buffer access time can be calculated using a similar formula:
 
@@ -121,9 +122,10 @@ e.g., Assume disk access time is S, buffer access time is C, hit ratio is H, and
 
 $EA = 30\% \times C + (1 - 30\%) \times S = 0.3C + 0.7 \times 1000C = 700.3C$
 
-# Database Types
+# Type of DB systems and DB Architectures
+## Database Types
 
-## Simple File
+### Simple File
 - **Definition**: A data storage system where data is stored as a plain text file. Each line represents one record, with fields separated by delimiters (e.g., commas or tabs).
 - **Strengths**: Fast for simple applications.
 - **Weaknesses**: 
@@ -133,7 +135,7 @@ $EA = 30\% \times C + (1 - 30\%) \times S = 0.3C + 0.7 \times 1000C = 700.3C$
   - Concurrency problems for maintainging.
 - **Use Cases**: Suitable for simple applications where speed is a priority.
 
-## Relational Database Systems (RDBS)
+### Relational Database Systems (RDBS)
 - **Definition**: 
   - A data storage system where data is stored as a collection of tables (relations) consisting of rows and columns. 
   - Tables in a database are related using primary/foreign key relationships. Primary key could be combination of items. 
@@ -145,25 +147,25 @@ $EA = 30\% \times C + (1 - 30\%) \times S = 0.3C + 0.7 \times 1000C = 700.3C$
 - **Weaknesses**: Can be slow for some simple applications.
 - **Use Cases**: Suitable for applications requiring high reliability and speed, and those that can benefit from application independent optimisation.
 
-## Object Oriented Database Systems (OODB)
+### Object Oriented Database Systems (OODB)
 - **Definition**: A data storage system where data is stored in the form of 'objects' directly, similar to Object Oriented Programming (OOP).
 - **Strengths**: Reliable, well suited for applications requiring complex data.
 - **Weaknesses**: Can be slow on some applications, limited application independent optimisation.
 - **Use Cases**: Suitable for applications requiring complex data structures and methods.
 
-## NoSQL Databases - Key-value Storage
+### NoSQL Databases - Key-value Storage
 - **Definition**: Stores data as a collection of key–value pairs, where each key is unique. Atomic updates at Key-value pair level (row update) only
 - **Use Cases**: building very fast, highly parallel processing of
 large data - MapReduce and Hadoop are examples
 
-## Deductive Database Systems (DDBS)
+### Deductive Database Systems (DDBS)
 - **Definition**: A database system that can make deductions based on rules and facts stored in the database.
 - **Strengths**: Most of the application can be developed entirely using DDBS.
 - **Weaknesses**: Many applications do not require the expressive power of these systems.
 - **Use Cases**: Applications that require rule-based deductions.
 
-# Database Architectures
-## Centralized (Client-Server) Database Architecture
+## Database Architectures
+### Centralized (Client-Server) Database Architecture
 - **Description**: 
   - The central server is with database in one location. 
   - The client and server can be in different locations.
@@ -175,7 +177,7 @@ large data - MapReduce and Hadoop are examples
 - **Disadvantages**: May not scale well, limited to one location.
 - **Use Cases**: Suitable for applications that can be managed centrally, such as PC/Cluster Computing/data centres.
 
-## Distributed Database Architecture
+### Distributed Database Architecture
 - **Description**: 
   - Data is distributed across several nodes in different locations.
   - Communicate with each other using network. 
@@ -187,7 +189,7 @@ large data - MapReduce and Hadoop are examples
   - potential **inconsistency** due to data replication.
 - **Use Cases**: Suitable for large-scale applications that require data distribution and concurrency.
 
-## World Wide Web (WWW) Database Architecture
+### World Wide Web (WWW) Database Architecture
 - **Description**: In the WWW database architecture, data is stored in many locations with several owners of data.
 - **Advantages**: Very convenient to access and share data, wide data availability.
 - **Disadvantages**: 
@@ -196,7 +198,7 @@ large data - MapReduce and Hadoop are examples
   - ineffective optimization process, 
 - **Use Cases**: Suitable for applications that require wide data availability and can tolerate inconsistency.
 
-## Grid Database Architecture
+### Grid Database Architecture
 - **Description**: In a grid database architecture, data and processing are shared among a group of computer systems which may be geographically separated.
 - **Advantages**: 
   - High processing capability, 
@@ -208,13 +210,13 @@ large data - MapReduce and Hadoop are examples
   - reliability and security not well developed or studied.
 - **Use Cases**: Scientific applications.
 
-## Peer-to-Peer (P2P) Database Architecture
+### Peer-to-Peer (P2P) Database Architecture
 - **Description**: Data and processing are shared among a group of computer systems which may be **geographically separated**. **Nodes can join and leave the network at will**. Administration is done by owner.
 - **Advantages**: Suitable when the nodes of the network cannot be planned in advance, or some may leave and join frequently, shared data and processing, flexible network membership.
 - **Disadvantages**: Difficult to design transaction models due to flexible network membership, applications are usually limited to simple file sharing.
 - **Use Cases**: Specific applications, such as scientific applications, where nodes need the flexibility to join and leave the network.
 
-## Cloud-Based Database Architecture
+### Cloud-Based Database Architecture
 - **Description**: Cloud-based database architecture offers online computing, storage, and a range of new services for data and devices that are accessible through the Internet. 
 - **Advantages**: 
   - Pay as you go, On-demand resources, cost-effective, 
@@ -223,7 +225,8 @@ large data - MapReduce and Hadoop are examples
 - **Disadvantages**: Has some privacy and confidentiality issues – but most trusted providers can address any issues emerging on this type relatively easily, e.g., Amazon etc., dependence on internet connectivity.
 - **Use Cases**: Suitable for applications that require on-demand resources and services, and can benefit from the pay-as-you-go model.
 
-# Basic Probability and Mean Time to Event
+# Fault Tolerance Introduction
+## Basic Probability and Mean Time to Event
 
 The probability of an event and the mean time to an event are fundamental concepts in understanding system reliability. Here are some key formulas:
 
@@ -238,7 +241,7 @@ If there are $n$ events, each with the same probability $p$, then:
 - Probability that one of the events occur: $n \times p$ (assuming $p$ is small)
 - Mean time to one of the events (i.e., mean time to the first event): $\frac{1}{n \times p} = \frac{1}{p} \times \frac{1}{n} = m \times \frac{1}{n} = \frac{m}{n}$(where $m = \frac{1}{p}$ is the mean time to an event)
 
-# Module Availability
+## Module Availability
 Module availability is the ratio of service accomplishment to elapsed time.
 ![Module Availability](./module-availability.png)
 It can be calculated as:
@@ -398,7 +401,8 @@ If two nodes want to communicate with each other, how to make sure the data sent
 - Stable storage – data in stable storage is durable and not be lost easily 
 - Acknowledgement info
 
-# Atomicity
+# Duplex Write & Logged Write
+## Atomicity
 All changes to data are performed as if they are a single operation. That is, all the changes are performed, or none of them are. 
 
 e.g., A transfer $100 to B.
@@ -406,7 +410,7 @@ e.g., A transfer $100 to B.
 - B +100
 - log A transfer $100 to B.
 
-# Atomic Disk Write – Duplex Write
+## Atomic Disk Write – Duplex Write
 
 - Each block of data is written in two places sequentially
 - If one of the writes fail, system can issue another write
@@ -426,7 +430,7 @@ State 2: Operation: Modify contents in memory to say 200, contents modified to 2
 State 3: Operation: Write to disk in a different block, Written to a different block, Next update will take place to Block 123 and the version number V#7 will be changed to v#9. (Two different physical disks can be used for duplex writes as well), Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123; 200 700 (v#8) Block 475)
 ![](update_disk_block_05.png)
 
-# Logged write
+## Logged write
 - similar to duplex write, except one of the writes goes to a log. 
 - Log – durable & can be read quickly
 - This method is very efficient if the changes to a block are small. 
