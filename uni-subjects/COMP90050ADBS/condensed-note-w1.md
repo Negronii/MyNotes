@@ -190,7 +190,7 @@ large data - MapReduce and Hadoop are examples
 - **Use Cases**: Suitable for large-scale applications that require data distribution and concurrency.
 
 ### World Wide Web (WWW) Database Architecture
-- **Description**: In the WWW database architecture, data is stored in many locations with several owners of data.
+- **Description**: In the WWW database architecture, data is stored in many locations with **several owners** of data.
 - **Advantages**: Very convenient to access and share data, wide data availability.
 - **Disadvantages**: 
   - Has security issues, extreme levels of administration issues.
