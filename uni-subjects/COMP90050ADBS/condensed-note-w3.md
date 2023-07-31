@@ -308,7 +308,7 @@ $$
 - This approach cannot be planed ahead as in many situation inputs and outputs may be state dependant/not known in prior.
 
 ## Dependency Formal Definition
-- Let **H** is a** history sequence** of tuples of the form (T, action, object). Here, T is transaction, action can be read/write, object is what the action operates on. e.g. (T1, Read, O1)
+- Let **H** is a **history sequence** of tuples of the form (T, action, object). Here, T is transaction, action can be read/write, object is what the action operates on. e.g. (T1, Read, O1)
 - Let T1 and T2 are transactions in H. If T1 performs an action on an object O, then T2 performs an action on the same O, and **there is no write action in between by another transaction on O – then T2 depends on T1**.
 - Formally, the dependency of T2 on T1 (T1, O, T2) exists in history H if there are indexes i and j such that i < j, H[i] involves action a1 on O by T1, and H[j] involves action a2 on O by T2, and there are no other H[k] = (T’,WRITE,O) for i < k < j
 - **Dependency graph**: Transactions are nodes, and object labels the edges from the node Ti to Tj if (Ti, O, Tj) is in DEP(H).
