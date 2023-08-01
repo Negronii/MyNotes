@@ -1657,13 +1657,13 @@ Recovery manager guarantees Atomicity and Durability.
 - Durability - the system should tolerate system failures and any committed updates should not be lost.
 
 ## Desired behaviors when crash happens
-![](./desiredCrash.png)
+![](./desiredCrash.png)  
 As can be seen from the graph, T1, T2, T3 has committed before the crash happens; T4 and T5 haven't commt; T6 aborted before the crash happens.
 We need to ensure the committed and abortted transactions do not lost th eupdates. 
 Since T4 and T5 are incomplete, need to be rollback. 
 
-## Data Access
-![](./dataaccess.png)
+## Data Access 
+![](./dataaccess.png)  
 Two types of data blocks
 - **Physical blocks** are those blocks residing on the disk.
 - **Buffer blocks** are the blocks residing temporarily in main memory.
@@ -1704,10 +1704,10 @@ More Concepts:
 - flushedLSN - max LSN flushed so far (flush to disk)
 - WAL - Before a page is written to disk make sure **pageLSN <= flushedLSN**
 
-**Cannot** write the page to disk
-![](./WALegCannot.png)
-**Can** write the page to disk
-![](./WALegCan.png)
+**Cannot** write the page to disk  
+![](./WALegCannot.png)  
+**Can** write the page to disk    
+![](./WALegCan.png)  
 
 ## Transaction Table
 - One entry per active transaction  
@@ -1791,11 +1791,11 @@ Three phases
 
 ## Crash recovery – Steps
 1. **Analysis phase**
-- Transaction table
+- Transaction table, When you meet “End”, remove the transaction in Transaction table
 - Dirty page table
 2. **Redo phase (top - bottom)**
 - tart from the smallest number in Dirty page table – x
-- For each **CLR or update **log record (exclude “commit”, “abort”, “end”, “checkpoint”), check **if the page is in Dirty page table && LSN >= x && pageLSN < LSN** (assume manually pageLSN if you don’t know and reset pageLSN after redo)
+- For each **CLR or update** log record (exclude “commit”, “abort”, “end”, “checkpoint”), check **if the page is in Dirty page table && LSN >= x && pageLSN < LSN** (assume manually pageLSN if you don’t know and reset pageLSN after redo)
 - Then, for these record, redo the action for LSN
 3. **Undo phase (bottom - top)**
 - For the transactions which are in Transaction table, need to be undone 
