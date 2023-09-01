@@ -170,3 +170,21 @@ public Person getPersonById(@PathVariable("id") UUID id) {
     return null;
 }
 ```
+
+Inside components, if we want the object to be not null and valid, we can use
+```java
+public void addPerson(@Valid @NonNull @RequestBody Person person) {
+    personService.addPerson(person);
+}
+```
+
+If we want a attribute not to be null, we can use
+```java
+@NotBlank
+private final String name
+```
+
+Deployment: after running maven install, there will be a target folder, and a xxx.jar file. To run it, use
+```
+java -jar xxx.jar
+```
