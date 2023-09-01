@@ -871,20 +871,20 @@ Advantages of B+-trees outweigh disadvantages for DBMSs (B+ trees are used exten
 - Each division happens with respect to a rule based on data type. Each non-leaf nodes divides its region into four equal sized quadrants
 - Thus each such node has four child nodes corresponding to the four quadrants and division continues recursively until a stopping condition
 ### Quadtree – e.g.,
-Example: **Leaf nodes** have between zero and **some fixed maximum number** of points (set to 1 in example below)
-![quad tree example](quadtreeExample.png)
+Example: **Leaf nodes** have between zero and **some fixed maximum number** of points (set to 1 in example below)  
+![quad tree example](quadtreeExample.png)  
 It is keep spliting into squares until no more than n (1 in this example) leaf nodes are inside same square
 
 ### Quadtree Tree structure
-![tree](quadtreenodesexample.png)
+![tree](quadtreenodesexample.png)  
 ### Quadtree – e.g., run NN (nearest neighbor) query
-![NN on quad tree](NNonQuadtree.png)
+![NN on quad tree](NNonQuadtree.png)  
 
 ### 2022S1 Exam Question 5 Example
-Given the k-d tree below with point data, where black labeled dots represent spatial coordinate data, and the rectangular area is divided into regions with the division order given with numbers: draw the associated k-d tree as a tree structure with leaves labeled as the data labels given below. Assume **left subarea** of a division goes to a **left subtree**, and **lower subarea** of a division also goes to a **left subtree**. The figure for the k-tree follows:
-![Q5 graph](2022S1Q5.png)
-The key idea is, for each division, split the current node (root) to 2 nodes. Put the left-down on left, right-up on right nodes.
-![answer](2022S1Q5Answer.png)
+Given the k-d tree below with point data, where black labeled dots represent spatial coordinate data, and the rectangular area is divided into regions with the division order given with numbers: draw the associated k-d tree as a tree structure with leaves labeled as the data labels given below. Assume **left subarea** of a division goes to a **left subtree**, and **lower subarea** of a division also goes to a **left subtree**. The figure for the k-tree follows:  
+![Q5 graph](2022S1Q5.png)  
+The key idea is, for each division, split the current node (root) to 2 nodes. Put the left-down on left, right-up on right nodes.  
+![answer](2022S1Q5Answer.png)  
 
 ## R-Trees
 - R-trees are an N-dimensional extension of B+-trees, useful for indexing sets of rectangles and other polygons.
