@@ -1,3 +1,31 @@
+## Create project/components
+If you are not working on Rider (JetBrains series) or Visual Studio Windows, you may need use CLI to initiate project/files. Following command gives a list of things we can create with CLI
+```
+dotnet new list
+```
+For our case we are building microservices, a 'solution' may be wonderful, and we are using web api in the solution, so use following command to initiate. 
+```
+dotnet new sln
+dotnet new webapi -o src/AuctionService
+dotnet sln add src/AuctionService
+```
+
+## run app in CLI
+```
+cd src/AuctionService
+dotnet watch
+```
+
+## Nuget
+install extension Nuget Gallery for VSCode, then in search section on the top, type
+```
+>Nuget Gallery: Open Nuget Gallery
+```
+Then in the window, install whatever needed, simplly search for packages, e.g. here's what we gonna use
+- Microsoft.EntityFrameworkCore.Design
+- Npgsql.EntityFrameworkCore.PostgreSQL
+- AutoMapper.Extensions.Microsoft.DependencyInjection
+
 ## install the Entity Framework Core CLI tools
 ```
 dotnet tool install --global dotnet-ef
@@ -6,6 +34,14 @@ or update with
 ```
 dotnet tool update --global dotnet-ef
 ```
+
+## Migrate data entity
+dotnet ef migrations add "InitialCreate" -o Data/Migrations
+
+# Old
+
+
+
 
 ## Primary Key for a Table in C#
 
