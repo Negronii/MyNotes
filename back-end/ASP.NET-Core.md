@@ -1,3 +1,4 @@
+# Setups
 ## Create project/components
 If you are not working on Rider (JetBrains series) or Visual Studio Windows, you may need use CLI to initiate project/files. Following command gives a list of things we can create with CLI
 ```
@@ -26,68 +27,7 @@ Then in the window, install whatever needed, simplly search for packages, e.g. h
 - Npgsql.EntityFrameworkCore.PostgreSQL
 - AutoMapper.Extensions.Microsoft.DependencyInjection
 
-## install the Entity Framework Core CLI tools
-```
-dotnet tool install --global dotnet-ef
-```
-or update with
-```
-dotnet tool update --global dotnet-ef
-```
-
-## Migrate data entity
-dotnet ef migrations add "InitialCreate" -o Data/Migrations
-
-# Old
-
-
-
-
-## Primary Key for a Table in C#
-
-You can specify the primary key for a table in a C# model class like so:
-
-```csharp
-using System.ComponentModel.DataAnnotations;
-
-namespace BulkyWeb.Models
-{
-    public class Category
-    {
-        [Key]
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public int DisplayOrder { get; set; }
-    }
-}
-```
-
-> **Note**: The `[Key]` attribute is not necessary when the property is named `Id` or `<ClassName>Id`. It is implicitly treated as the primary key. In other cases, such as a property named `Name`, you would need to explicitly add the `[Key]` attribute.
-
----
-
-## Making a Property Non-Nullable with `[Required]`
-
-You can make a property non-nullable using the `[Required]` attribute, often used for string properties:
-
-```csharp
-using System.ComponentModel.DataAnnotations;
-
-namespace BulkyWeb.Models
-{
-    public class Category
-    {
-        public int Id { get; set; }
-        [Required]
-        public string Name { get; set; }
-        public int DisplayOrder { get; set; }
-    }
-}
-```
-
----
-
-## Installing NuGet Packages in Visual Studio
+### Installing NuGet Packages in Visual Studio
 
 1. Right-click on the project name (not the solution name), e.g., `BulkyWeb (main)`.
 2. Select "Manage NuGet Package".
@@ -98,8 +38,7 @@ For database connectivity, you can install the following packages:
 - Microsoft.EntityFrameworkCore.SqlServer
 - Microsoft.EntityFrameworkCore.Tools (for migrations)
 
-
-## Installing NuGet Packages with `dotnet` CLI (Command Line Interface)
+### Installing NuGet Packages with `dotnet` CLI (Command Line Interface)
 Install Microsoft.EntityFrameworkCore
 ```bash
 dotnet add package Microsoft.EntityFrameworkCore
@@ -114,7 +53,339 @@ dotnet add package Microsoft.EntityFrameworkCore.Tools
 ```
 Run these commands in the terminal, making sure you are in the directory where your `.csproj` file resides. 
 
----
+
+## install the Entity Framework Core CLI tools
+```
+dotnet tool install --global dotnet-ef
+```
+or update with
+```
+dotnet tool update --global dotnet-ef
+```
+
+## Primary Key for a Table in C#
+
+You can specify the primary key for a table in a C# model class like so:
+
+```csharp
+public class Category
+{
+    [Key]
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int DisplayOrder { get; set; }
+}
+```
+
+## Making a Property Non-Nullable with `[Required]`
+
+You can make a property non-nullable using the `[Required]` attribute, often used for string properties:
+
+```csharp
+public class Category
+{
+    public int Id { get; set; }
+    [Required]
+    public string Name { get; set; }
+    public int DisplayOrder { get; set; }
+}
+```
+
+> **Note**: The `[Key]` attribute is not necessary when the property is named `Id` or `<ClassName>Id`. It is implicitly treated as the primary key. In other cases, such as a property named `Name`, you would need to explicitly add the `[Key]` attribute.
+
+## Migrate data entity
+The command then generates a new migration file with code to upgrade the database schema. This migration file is added to a Migrations folder in your project. The name provided (AddCategoryTableToDb in this case) is used to name this new file, making it easier to identify what change this migration corresponds to. When you run the migration command, it will look at your DbContext class to determine the schema of the database, comparing it to the current database schema to generate the appropriate SQL code to update the schema.
+```
+dotnet ef migrations add "InitialCreate" -o Data/Migrations
+```
+After adding the migration, you can update the database with the newly added migration using the following command:
+```
+dotnet ef database update
+```
+
+
+## Add a gitignore file
+```
+dotnet new gitignore
+```
+
+# Concepts
+
+## Entities
+They are often used to map directly to database tables. They are part of your domain model and can be used throughout the application. Usually tied to your database schema, meaning any changes to them could affect the database directly. Can be heavily interconnected through relationships like foreign keys, navigation properties, etc.  
+In other words, the object classes in domain layer taught in SDA (SWEN90007) classes are entities. 
+
+## DTO
+In the context of ASP.NET and generally in software development, DTO stands for Data Transfer Object. A DTO is an object that carries data between processes. While it may seem similar to an entity, it serves a different purpose. They are used to transfer data and do not contain behavior. They are plain objects with properties and are usually "dumb" objects.   
+In the context of a web API project, a Data Transfer Object (DTO) is often used to define the data structure for the request body as well as the response body. Essentially, it helps define the contract between the client and the server about what data is expected to be sent and received.
+
+## Mappings
+Example
+```csharp
+using AuctionService.DTOs;
+using AuctionServices.Entities;
+using AutoMapper;
+
+namespace AuctionService.RequestHelpers;
+
+public class MappingProfiles: Profile
+{
+    public MappingProfiles()
+    {
+        CreateMap<Auction, AuctionDto>().IncludeMembers(x => x.Item);
+        CreateMap<Item, AuctionDto>();
+        CreateMap<CreateAuctionDto, Auction>()
+            .ForMember(d => d.Item, o => o.MapFrom(s => s));
+        CreateMap<CreateAuctionDto, Item>();
+    }
+}
+```
+
+`CreateMap`  
+CreateMap essentially sets up a mapping profile to convert one object type into another. AutoMapper uses these profiles to know how to automatically perform the conversion when you call _mapper.Map<>().
+
+`AutoMapper`
+
+A Profile in AutoMapper allows you to organize your mappings. You could potentially have different profiles for different parts of your application or different mapping scenarios. In essence, it encapsulates configurations for your object-object mappings. When you register your profiles, AutoMapper knows which mappings are valid.
+
+The Map method infers the source type from the object you pass to it. If you have more than one mapping that starts from AuctionDto, AutoMapper will throw an exception when you try to map it, saying that it's ambiguous. You have to specify more information to help it choose the correct mapping. Also, AutoMapper is smart enough to map collections. If you've configured how to map Auction to AuctionDto, AutoMapper knows how to map `List<Auction>` to `List<AuctionDto>`.
+
+## DbContext
+A simple Db context example: 
+```Csharp
+using AuctionServices.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace AuctionServices.Data;
+
+public class AuctionDbContext : DbContext {
+    
+    public AuctionDbContext(DbContextOptions options) : base(options) {}
+
+    public DbSet<Auction> Auctions { get; set; }
+}
+```
+
+`base()`  
+base(options) in the AuctionDbContext constructor is equivalent to super(options) in Java. It calls the base class (DbContext) constructor and passes the options parameter to it.
+
+`DbSet<Auction> Auctions { get; set; }`
+This line creates a property in the AuctionDbContext class that represents a table in the database. The table will have columns and data types that correspond to the properties and data types of the Auction class. The `{ get; set; }` is syntactic sugar for getter and setter methods, similar to how you'd have `@Getter` and `@Setter` annotations in Java.
+
+## Dependency Injection in .NET CORE
+Example partial code in program.cs
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllers();
+builder.Services.AddDbContext<AuctionDbContext>(options => {
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+var app = builder.Build();
+```
+
+### Services
+The Dependency Injection (DI) container is like a recipe book. When you use builder.Services.AddXYZ(), you're essentially adding a recipe to that book. These recipes tell the DI system how to create instances of particular services when they're needed. You aren't actually cooking (instantiating) anything at this point; you're just describing how to do it. 
+
+### Scope
+Scopes can be seen as "kitchen counters" where the cooking (instantiation) happens. Each counter (scope) can have its own set of cooked dishes (instances), created according to the recipes in the main book (DI container).
+
+When a new scope is created using CreateScope(), it inherits all the recipes from the main recipe book but has its own counter space to prepare dishes. This is especially useful for Scoped services, which you might want to instantiate once per request or operation and then share within that specific operation.
+
+### Code Analogy
+builder = WebApplication.CreateBuilder(args); - You're preparing to create your kitchen (application) and recipe book (DI container).
+builder.Services.AddXYZ(...); - You're adding recipes to the recipe book.
+
+### Assemble automappers
+```csharp
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+```
+It registers AutoMapper with the DI container, scanning through the assemblies to find all classes that inherit from AutoMapper's Profile class and registering them.
+
+## Initialize DbContext
+It is often required to have a DBInitializer class
+```csharp
+using AuctionServices.Data;
+using AuctionServices.Entities;
+using Microsoft.EntityFrameworkCore;
+namespace AuctionService.Data;
+public class DbInitializer
+{
+    public static void InitDb(WebApplication app) {
+        using var scope = app.Services.CreateScope();
+        SeedData(scope.ServiceProvider.GetService<AuctionDbContext>());
+    }
+    private static void SeedData(AuctionDbContext context)
+    {
+        context.Database.Migrate();
+        if (context.Auctions.Any()) 
+        { 
+            Console.WriteLine("Auction data already exists.");
+            return;
+        }
+        var auctions = new List<Auction>()
+        {
+            // auctions
+            new Auction
+            {
+               ...
+            },
+            ...
+        };
+        context.AddRange(auctions);
+        context.SaveChanges();
+    }
+}
+```
+`Seed function`  
+The seed function is essentially initializing the database with some default data. context.Database.Migrate() ensures that the database schema is up-to-date, context.Auctions.Any() checks if there's already any data in the Auctions table, and context.AddRange(auctions) and context.SaveChanges() add new rows to the table and save those changes, respectively.  
+
+`scope.ServiceProvider.GetService<AuctionDbContext>()`  
+This line is using the dependency injection framework to get an instance of AuctionDbContext. This is similar to asking the application's "container" for an instance of a particular service that's been registered.  
+
+`using var scope = app.Services.CreateScope();`  
+You're setting up a kitchen counter (scope) to start cooking.   
+In C#, using has two purposes. One is for importing namespaces (like import in Java or Python), and the other is for resource management. In this case, it's the latter. When you declare a variable with using, it's automatically disposed of when it goes out of scope. This is similar to Java's try-with-resources statement for automatic resource management. i.e. 
+```java
+try (scope = app.Services.CreateScope();) {
+    SeedData(scope.ServiceProvider.GetService<AuctionDbContext>());
+}   
+```
+CreateScope() creates a new scope for retrieving services from the dependency injection container. This is useful for scoped services, meaning services that are created once per client request. Creating a scope allows you to resolve these scoped services for a specific block of code.  
+
+`SeedData(scope.ServiceProvider.GetService<AuctionDbContext>());`  
+You're following a recipe to cook a specific dish (AuctionDbContext) for this kitchen counter (scope).
+
+
+
+
+## Controllers
+Example code:
+```csharp
+using AuctionService.DTOs;
+using AuctionServices.Data;
+using AuctionServices.Entities;
+using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace AuctionService.Controllers;
+
+[ApiController]
+[Route("api/auctions")]
+public class AuctionsController: ControllerBase
+{
+    private readonly AuctionDbContext _context;
+    private readonly IMapper _mapper;
+
+    public AuctionsController(AuctionDbContext context, IMapper mapper)
+    {
+        _context = context;
+        _mapper = mapper;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<List<AuctionDto>>> GetAllAuctions()
+    {
+        var auctions = await _context.Auctions
+            .Include(x => x.Item)
+            .OrderBy(x => x.Item.Make)
+            .ToListAsync();
+        return _mapper.Map<List<AuctionDto>>(auctions);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<AuctionDto>> GetAuctionById(Guid id)
+    {
+        var auction = await _context.Auctions
+            .Include(x => x.Item)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (auction == null) return NotFound();
+        return _mapper.Map<AuctionDto>(auction);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<AuctionDto>> CreateAuction(CreateAuctionDto createAuctionDto)
+    {
+        var auction = _mapper.Map<Auction>(createAuctionDto);
+        auction.Seller = "test";
+        _context.Auctions.Add(auction);
+        var result = await _context.SaveChangesAsync() > 0;
+        if (!result) return BadRequest("Failed to create auction");
+        return CreatedAtAction(nameof(GetAuctionById), new {auction.Id}, _mapper.Map<AuctionDto>(auction));
+    }
+}
+```
+
+### `Task`  
+It is pretty much Promise in Javascript. 
+
+### How `_context` and `_mapper` are resolved
+The AuctionDbContext and IMapper instances are automatically injected into your controller's constructor by ASP.NET Core's Dependency Injection (DI) mechanism. This is because these types are registered in the DI container in the Program.cs.
+
+### Return Type of Controller Endpoints
+Returning `Task<ActionResult<T>>` is a common pattern for asynchronous endpoints in ASP.NET Core, but it's not a fixed or forced pattern. You can return other types as well. This particular return type gives you a lot of flexibility:
+
+`Task` makes it asynchronous.
+`ActionResult` allows you to return different HTTP status codes.
+The generic `T` allows you to specify the data type that should be serialized into the response body.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Appendix
+## Run a postgres db
+Create a docker compose file with following
+```yml
+services:
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgrespwd
+    ports: 
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
+```
+Then run 
+```
+docker compose up -d
+```
+And in appsettings.Development.json, use correct authentication and port
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Information"
+    }
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost:5432;User Id=postgres;Password=postgrespwd;Database=auctions"
+  }
+}
+```
 
 ## Running MSSQL on macOS via Docker
 
@@ -128,7 +399,7 @@ docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=YourStrong!Passw0rd' -p 1433:1433 
 
 ### Connecting to MSSQL Using Azure Data Studio
 
-1. Click on "New Connection".
+1. Download and install Azure Data Studio, open and click on "New Connection".
 2. Fill in the details:
     - Server: `localhost,1433`
     - Authentication Type: SQL Login
@@ -142,9 +413,8 @@ docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=YourStrong!Passw0rd' -p 1433:1433 
 2. Select "New Database" and name your database `Bulky`.
 3. Click "OK".
 
----
 
-## Updating appsettings.json for Database Connection
+### Updating appsettings.json for Database Connection
 
 Update `appsettings.json` to include your database connection string:
 
@@ -162,83 +432,3 @@ Update `appsettings.json` to include your database connection string:
   }
 }
 ```
-
-Run the following command to update your database:
-
-```zsh
-dotnet ef database update
-```
-
----
-## Migration
-
-The command then generates a new migration file with code to upgrade the database schema. This migration file is added to a Migrations folder in your project. The name provided (AddCategoryTableToDb in this case) is used to name this new file, making it easier to identify what change this migration corresponds to.
-```
-dotnet ef migrations add AddCategoryTableToDb
-```
-
-After adding the migration, you can update the database with the newly added migration using the following command:
-```
-dotnet ef database update
-```
-
----
-
-### How to Create a Table in a Database Using .NET Core and Entity Framework Core
-
-#### Step 1: Create the Model Class
-
-Create a model class with the necessary annotations to represent the table schema.
-
-```csharp
-using System.ComponentModel.DataAnnotations;
-
-namespace BulkyWeb.Models
-{
-    public class Category
-    {
-        [Key]
-        public int Id { get; set; }
-        
-        [Required]
-        public string Name { get; set; }
-        
-        public int DisplayOrder { get; set; }
-    }
-}
-```
-
-#### Step 2: Update the DbContext Class
-
-Navigate to your `ApplicationDbContext` class (usually in the `Data` directory), and add a `DbSet` for your model.
-
-```csharp
-using BulkyWeb.Models;
-using Microsoft.EntityFrameworkCore;
-
-namespace BulkyWeb.Data
-{
-    public class ApplicationDbContext : DbContext
-    {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
-        }
-        
-        public DbSet<Category> Categories { get; set; }
-    }
-}
-```
-
-#### Step 3: Generate and Apply Migrations
-
-Open the terminal, navigate to the directory containing your `.csproj` file, and run the following commands:
-
-```bash
-dotnet ef migrations add AddCategoryTableToDb
-dotnet ef database update
-```
-
----
-
-After completing these steps, a new table named `Categories` should be created in your database with the schema defined in the `Category` model.
