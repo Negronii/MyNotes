@@ -334,6 +334,149 @@ Returning `Task<ActionResult<T>>` is a common pattern for asynchronous endpoints
 The generic `T` allows you to specify the data type that should be serialized into the response body.
 
 
+## Working with MongoDB in a .NET Environment
+
+### 1. Required NuGet Packages:
+
+These are the necessary packages you'd need to work with MongoDB and other related tasks:
+
+```xml
+<!-- Provides functionality to map object properties to each other -->
+<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+
+<!-- Enables the generation of OpenAPI/Swagger documentation -->
+<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.10" />
+
+<!-- Provides a convenient API to interact with MongoDB -->
+<PackageReference Include="MongoDB.Entities" Version="22.1.0" />
+```
+
+### 2. Setting Up MongoDB Using Docker:
+
+Here's a Docker Compose file that sets up both PostgreSQL and MongoDB:
+
+```yml
+services:
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgrespwd
+    ports: 
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  mongodb:
+    image: mongo
+    environment: 
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=mongopwd
+    ports: 
+      - 27017:27017
+    volumes:
+      - mongodata:/var/lib/mongo/data
+
+volumes:
+  pgdata:
+  mongodata:
+```
+
+**Steps to Use:**
+- Run the `docker-compose` command to create the containers.
+- Install the MongoDB extension for VSCode.
+- Use the "new connection" feature, choose "Username/Password" authentication, and input the credentials specified in the Docker Compose file to connect.
+
+### 3. Setting Up Models and Database Initialization:
+
+- Create a "Models" folder to define the data schemas.
+- Create a `DbInitializer` to initialize the database from a prepared JSON file if the database is empty.
+
+```csharp
+using System.Text.Json;
+using MongoDB.Driver;
+using MongoDB.Entities;
+
+namespace SearchService;
+
+public class DbInitializer
+{
+    public static async Task InitDb(WebApplication app)
+    {
+        // Initialize the MongoDB database
+        await DB.InitAsync("SearchDB", MongoClientSettings
+            .FromConnectionString(app.Configuration.GetConnectionString("MongoDbConnection")));
+
+        // Create indexes for the Item entity
+        await DB.Index<Item>()
+            .Key(x => x.Make, KeyType.Text)
+            .Key(x => x.Model, KeyType.Text)
+            .Key(x => x.Color , KeyType.Text)
+            .CreateAsync();
+
+        // Check if any data exists
+        var count = await DB.CountAsync<Item>();
+        if (count == 0)
+        {
+            Console.WriteLine("No data - will attempt to seed");
+            var itemData = await File.ReadAllTextAsync("Data/ItemData.json");
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var items = JsonSerializer.Deserialize<List<Item>>(itemData, options);
+            await DB.SaveAsync(items);
+        }
+    }
+}
+```
+
+To run the initializer, add the following in your `program.cs`:
+
+```csharp
+try {
+    await DbInitializer.InitDb(app);
+} catch (Exception ex) {
+    Console.WriteLine(ex.Message);
+}
+```
+
+### 4. Setting Up Controllers:
+
+Here's an example of a simple search controller:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using MongoDB.Entities;
+
+namespace SearchService;
+
+[ApiController]
+[Route("api/search")]
+public class SearchController: ControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<List<Item>>> SearchItems(string searchTerm)
+    {
+        var query = DB.Find<Item>();
+        query.Sort(x => x.Ascending(a => a.Make));
+
+        // If a search term is provided, perform a full-text search
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query.Match(Search.Full, searchTerm).SortByTextScore();
+        }
+
+        var result = await query.ExecuteAsync();
+        return result;
+    }
+}
+```
+
+**Explanation:** This controller contains an endpoint that allows for searching items. If a `searchTerm` is provided, it performs a full-text search on the MongoDB collection; otherwise, it simply fetches and sorts the data by the "Make" attribute.
+
+
+
+
+
+
+
+
 
 
 
@@ -432,3 +575,4 @@ Update `appsettings.json` to include your database connection string:
   }
 }
 ```
+
