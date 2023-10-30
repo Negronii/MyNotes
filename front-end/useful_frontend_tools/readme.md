@@ -22,11 +22,11 @@ Vscode downloads the plugin `easyless`, then creates `less1.less` and writes it 
 
 ```less
 .father {
-    color: pink;
-    width: (68 / 37.5rem);
-    .son {
-        background-color: skyblue;
-    }
+  color: pink;
+  width: (68 / 37.5rem);
+  .son {
+    background-color: skyblue;
+  }
 }
 ```
 
@@ -34,11 +34,11 @@ Press Save, and the `less1.css` file will be automatically generated as follows:
 
 ```css
 .father {
-    color: pink;
-    width: 1.81333333rem;
+  color: pink;
+  width: 1.81333333rem;
 }
 .father .son {
-    background-color: skyblue;
+  background-color: skyblue;
 }
 ```
 
@@ -65,25 +65,25 @@ Usage of `&` symbol
 
 ```less
 .father {
-    color: pink;
-    .son {
-        background-color: skyblue;
-        &:hover {
-            background-color: green;
-        }
+  color: pink;
+  .son {
+    background-color: skyblue;
+    &:hover {
+      background-color: green;
     }
+  }
 }
 ```
 
 ```css
 .father {
-    color: pink;
+  color: pink;
 }
 .father .son {
-    background-color: skyblue;
+  background-color: skyblue;
 }
 .father .son:hover {
-    background-color: green;
+  background-color: green;
 }
 ```
 
@@ -142,8 +142,8 @@ e.g. The viewport width is 375px, to convert a box with a width of 68px and a he
 ```less
 @vw: 3.75vw;
 .box {
-    width: (68 / @vw);
-    height: (29 / @vw);
+  width: (68 / @vw);
+  height: (29 / @vw);
 }
 ```
 
@@ -152,49 +152,56 @@ e.g. The viewport height is 667px, and a box with a width of 68px and a height o
 ```less
 @vh: 6.67vh;
 .box {
-    width: (68 / @vh);
-    height: (29 / @vh);
+  width: (68 / @vh);
+  height: (29 / @vh);
 }
 ```
 
 # PxCook
+
 ## Design Mode Import Image
+
 - Point ruler can measure the length of how many pixels
 - Click the straw to get the RGB value
-
 
 # VSCode
 
 After creating a new one in vscode, type an English `!` to get the skeleton.
 
 ## Quick comment
+
 Use `command + /` to quickly comment or uncomment a line of code.
 
 ## Auto wrap
+
 Press `option + z` to enable or disable automatic word wrapping in the editor.
 
 ## Copy and paste current line
+
 Use `alt + shift + down arrow` to copy and paste the current line.
 
 ## Modify multiple lines simultaneously
+
 Hold `alt` and click on multiple lines to make changes to all of them at the same time.
 
 ## Emmet syntax
+
 Emmet allows you to write code quickly using shorthand notations.
 
 Syntax: `+`
 
-Example | Effect
---- | ---
-`div` | `<div></div>`
-`.red` | `<div class="red"></div>`
-`#one` | `<div id="one"></div>`
-`p.red#one` | `<div class="red" id="one"></div>`
-`ul>li` | `<ul><li></li></ul>`
-`ul>li{i’m li content}` | `<ul><li>i’m li content</li></ul>`
-`ul>li*3` | `<ul><li></li><li></li><li></li></ul>`
+| Example                 | Effect                                 |
+| ----------------------- | -------------------------------------- |
+| `div`                   | `<div></div>`                          |
+| `.red`                  | `<div class="red"></div>`              |
+| `#one`                  | `<div id="one"></div>`                 |
+| `p.red#one`             | `<div class="red" id="one"></div>`     |
+| `ul>li`                 | `<ul><li></li></ul>`                   |
+| `ul>li{i’m li content}` | `<ul><li>i’m li content</li></ul>`     |
+| `ul>li*3`               | `<ul><li></li><li></li><li></li></ul>` |
 
 ## Background shortcuts
+
 - `bgc`: `background-color`
 - `bgi`: `background-image`
 - `bgr`: `background-repeat`
@@ -202,19 +209,25 @@ Example | Effect
 - `bg`: `background`
 
 ## Text alignment
+
 Use `tac` for `text-align: center`.
 
 ## Positioning
+
 Use `por` for `position: relative;`.
 
 ## Border shortcut
+
 Type `bd` and press `tab` to quickly generate a border.
 
 ## Width and height shortcuts
+
 Use `w100+h100` for `width: 100; height: 100;`.
 
 ## Favicon
+
 To specify a favicon for your webpage, use the following HTML tag:
+
 ```
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 ```

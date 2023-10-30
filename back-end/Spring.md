@@ -2,6 +2,7 @@ Initiate project: go to https://start.spring.io/ and choose environment/dependen
 
 Dependency injection example
 /model.person
+
 ```java
 package com.example.demo.model;
 
@@ -28,7 +29,9 @@ public class Person {
     }
 }
 ```
+
 /service/PersonService.java
+
 ```java
 package com.example.demo.service;
 
@@ -67,7 +70,9 @@ public class PersonService {
     }
 }
 ```
+
 /dao/PersonDAO.java
+
 ```java
 package com.example.demo.dao;
 
@@ -89,8 +94,10 @@ public interface PersonDAO {
 }
 
 ```
+
 /dao/FakePersonDataAccessService.java
-```java 
+
+```java
 package com.example.demo.dao;
 
 import com.example.demo.model.Person;
@@ -117,7 +124,9 @@ public class FakePersonDataAccessService implements PersonDAO{
     }
 }
 ```
+
 api/PersonController
+
 ```java
 package com.example.demo.api;
 
@@ -150,20 +159,23 @@ public class PersonController {
 
 }
 ```
+
 Here, we established a minimum java spring app with one end point
 `http://localhost:8080/api/v1/person`
 test with post request and json in body
+
 ```
 {
     "name":"James Bond"
 }
 ```
+
 or use get to get all being sent
 
+With such design, we can inject our FakePersonDataAccessService into the OersonDAO in service constructor. It provides benefits that, we don't need to mannually initiate by passing in a FakePersonDataAccessService object, also make it flexible, e.g. in the future we may have a PersonMongoService implements PersonDAO, with @Repository("mongo"), we can easily switch database in one line of code.
 
-With such design, we can inject our FakePersonDataAccessService into the OersonDAO in service constructor. It provides benefits that, we don't need to mannually initiate by passing in a FakePersonDataAccessService object, also make it flexible, e.g. in the future we may have a PersonMongoService implements PersonDAO, with @Repository("mongo"), we can easily switch database in one line of code. 
+To pass variable from path, use
 
-To pass variable from path, use 
 ```java
 @GetMapping(path = "{id}")
 public Person getPersonById(@PathVariable("id") UUID id) {
@@ -172,6 +184,7 @@ public Person getPersonById(@PathVariable("id") UUID id) {
 ```
 
 Inside components, if we want the object to be not null and valid, we can use
+
 ```java
 public void addPerson(@Valid @NonNull @RequestBody Person person) {
     personService.addPerson(person);
@@ -179,12 +192,14 @@ public void addPerson(@Valid @NonNull @RequestBody Person person) {
 ```
 
 If we want a attribute not to be null, we can use
+
 ```java
 @NotBlank
 private final String name
 ```
 
 Deployment: after running maven install, there will be a target folder, and a xxx.jar file. To run it, use
+
 ```
 java -jar xxx.jar
 ```

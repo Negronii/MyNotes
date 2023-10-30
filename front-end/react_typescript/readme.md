@@ -22,43 +22,43 @@ To enable TypeScript to accept the `any` type, add `"noImplicitAny": false` in t
 Here's an example of a component written in TypeScript:
 
 ```tsx
-import React from 'react';
+import React from "react";
 
 interface RobotProps {
-    id: number;
-    name: string;
-    email: string;
+  id: number;
+  name: string;
+  email: string;
 }
 
 const Robot: React.FC<RobotProps> = ({ id, name, email }) => {
-    return (
-        <li>
-            <img alt="robot" src={`https://robohash.org/${id}`} />
-            <h2>{name}</h2>
-            <p>{email}</p>
-        </li>
-    );
+  return (
+    <li>
+      <img alt="robot" src={`https://robohash.org/${id}`} />
+      <h2>{name}</h2>
+      <p>{email}</p>
+    </li>
+  );
 };
 
 export default Robot;
 ```
 
 Notes:
+
 - `React.FC` is a function component type that allows TypeScript to handle input props.
 - It's recommended to define the type of `React.FC` using an interface (e.g., `RobotProps`), so that we can access attributes in the `props` object using destructuring.
-
 
 ## Example of using component in App.tsx
 
 ```tsx
-import React from 'react';
-import robots from './mockData/robots.json';
+import React from "react";
+import robots from "./mockData/robots.json";
 import Robot from "./components/robots";
 
 export default function App() {
   return (
     <ul>
-      {robots.map(r => (
+      {robots.map((r) => (
         <Robot id={r.id} email={r.email} name={r.name} />
       ))}
     </ul>
@@ -76,15 +76,17 @@ Naming: `<tsx file name>.module.css`
 How to use:
 
 Not suggested:
+
 ```tsx
-import './<file name>.module.css';
+import "./<file name>.module.css";
 ```
 
 However, we do not want the CSS styles to be global, as it breaks modules.
 
 Recommended:
+
 ```tsx
-import styles from './<file name>.module.css';
+import styles from "./<file name>.module.css";
 ```
 
 Now we will see TypeScript showing an error. We need to declare CSS files for TypeScript. Create a file called `custom.d.ts` and add the following code to declare:
@@ -109,7 +111,7 @@ In the assets directory, we prefer to classify assets by type, e.g., "images", "
 Import media in JavaScript:
 
 ```tsx
-import logo from './logo.svg';
+import logo from "./logo.svg";
 ```
 
 Note that image types such as `.svg`, `.jpg`, `.jpeg`, `.png` are declared in `react-app.d.ts`, so we do not need to declare them.
@@ -122,7 +124,8 @@ Import `.ttf` fonts:
 ```css
 @font-face {
   font-family: "Slidefu";
-  src: local("Slidefu"), url("./assets/fonts/Slidefu-Regular-2.ttf") format("truetype");
+  src: local("Slidefu"),
+    url("./assets/fonts/Slidefu-Regular-2.ttf") format("truetype");
 }
 ```
 
@@ -148,40 +151,40 @@ import styles from "./ShoppingCart.module.css";
 interface Props {}
 
 interface State {
-    ishidden: boolean; // This is an attribute we defined, true when the cart is hidden
+  ishidden: boolean; // This is an attribute we defined, true when the cart is hidden
 }
 
 export default class ShoppingCart extends React.Component<Props, State> {
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            ishidden: false,
-        };
-    }
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      ishidden: false,
+    };
+  }
 
-    render() {
-        return (
-            <div className={styles.cartContainer}>
-                <button
-                    className={styles.button}
-                    onClick={() => {
-                        this.setState({ ishidden: !this.state.ishidden });
-                    }}
-                >
-                    Cart (2)
-                </button>
-                <div
-                    className={styles.cartDropDown}
-                    style={{ display: this.state.ishidden ? "none" : "block" }}
-                >
-                    <ul>
-                        <li>robot 1</li>
-                        <li>robot 2</li>
-                    </ul>
-                </div>
-            </div>
-        );
-    }
+  render() {
+    return (
+      <div className={styles.cartContainer}>
+        <button
+          className={styles.button}
+          onClick={() => {
+            this.setState({ ishidden: !this.state.ishidden });
+          }}
+        >
+          Cart (2)
+        </button>
+        <div
+          className={styles.cartDropDown}
+          style={{ display: this.state.ishidden ? "none" : "block" }}
+        >
+          <ul>
+            <li>robot 1</li>
+            <li>robot 2</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
 }
 ```
 
@@ -204,13 +207,13 @@ Since `setState()` is an asynchronous operation, to ensure that something happen
 
 ```tsx
 this.setState(
-    (prevState, prevProps) => {
-        // <state object>
-    },
-    () => {
-        // Callback function
-        console.log(`count is ${this.state.count}`);
-    }
+  (prevState, prevProps) => {
+    // <state object>
+  },
+  () => {
+    // Callback function
+    console.log(`count is ${this.state.count}`);
+  }
 );
 ```
 
@@ -221,18 +224,18 @@ Example:
 
 ```tsx
 <button
-    onClick={() => {
-        this.setState(
-            (prevState, prevProps) => {
-                return { count: prevState.count + 1 };
-            },
-            () => {
-                console.log(`count is ${this.state.count}`);
-            }
-        );
-    }}
+  onClick={() => {
+    this.setState(
+      (prevState, prevProps) => {
+        return { count: prevState.count + 1 };
+      },
+      () => {
+        console.log(`count is ${this.state.count}`);
+      }
+    );
+  }}
 >
-    Click me
+  Click me
 </button>
 ```
 
@@ -253,9 +256,7 @@ However, we can use a pointer function to avoid this issue:
 
 ```tsx
 handleClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    this.setState({ ishidden
-
-: !this.state.ishidden });
+  this.setState({ ishidden: !this.state.ishidden });
 };
 ```
 
@@ -270,7 +271,7 @@ To distinguish the target, you can use:
 
 ```tsx
 if ((e.target as HTMLElement).nodeName === "SPAN") {
-    // do something, e.g. this.setState({ishidden: !this.state.ishidden})
+  // do something, e.g. this.setState({ishidden: !this.state.ishidden})
 }
 ```
 
@@ -352,8 +353,8 @@ This is equivalent to the following code:
 ```jsx
 useEffect(() => {
   fetch("https://jsonplaceholder.typicode.com/users")
-    .then(result => result.json())
-    .then(data => setRobotGallery(data));
+    .then((result) => result.json())
+    .then((data) => setRobotGallery(data));
 }, []);
 ```
 
@@ -373,7 +374,9 @@ useEffect(() => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch("https://jsonplaceholder.typicode.com/users");
+      const response = await fetch(
+        "https://jsonplaceholder.typicode.com/users"
+      );
       const data = await response.json();
       setRobotGallery(data);
       setLoading(false);
@@ -394,19 +397,21 @@ useEffect(() => {
 You can conditionally render components based on the loading and error states:
 
 ```jsx
-{(!error || error !== "") && <div>Error: {error}</div>}
+{
+  (!error || error !== "") && <div>Error: {error}</div>;
+}
 
-{!loading ? (
-  <div className={styles.robotList}>
-    {robotGallery.map(r => (
-      <Robot key={r.id} id={r.id} email={r.email} name={r.name} />
-
-
-    ))}
-  </div>
-) : (
-  <h2>Loading</h2>
-)}
+{
+  !loading ? (
+    <div className={styles.robotList}>
+      {robotGallery.map((r) => (
+        <Robot key={r.id} id={r.id} email={r.email} name={r.name} />
+      ))}
+    </div>
+  ) : (
+    <h2>Loading</h2>
+  );
+}
 ```
 
 ## Context and useContext
@@ -414,12 +419,13 @@ You can conditionally render components based on the loading and error states:
 To pass a parameter, we may use props to pass attributes to child nodes. However, if we want to share the props with child nodes of a child node, the complexity of rendering increases.
 
 To create a context:
+
 ```typescript
 const defaultContextValue = {
-    username: "Ron"
-}
+  username: "Ron",
+};
 
-export const appContext = createContext(defaultContextValue)
+export const appContext = createContext(defaultContextValue);
 ```
 
 Use `createContext(<defined context value>)` to create the context, and then export it so that other `.tsx` files can import it.
@@ -427,6 +433,7 @@ Use `createContext(<defined context value>)` to create the context, and then exp
 To use the context in child nodes, wrap the desired child nodes with `<appContext.Provider value={defaultContextValue}></appContext.Provider>`.
 
 In the child component, import the context:
+
 ```typescript
 import { appContext } from "../index";
 ```
@@ -434,6 +441,7 @@ import { appContext } from "../index";
 Declare `const value = useContext(appContext)`, and then `value.username = "Ron"` as expected.
 
 If the component is not a functional component (e.g., a component class), we can let it render as follows:
+
 ```typescript
 <appContext.Consumer>
   {value => {
@@ -441,20 +449,22 @@ If the component is not a functional component (e.g., a component class), we can
   }}
 </appContext.Consumer>
 ```
+
 Where `value` is the same as before.
 
 ## Example:
 
 index.tsx:
+
 ```typescript
 const defaultContextValue = {
-    username: "Ron"
-}
+  username: "Ron",
+};
 
-export const appContext = createContext(defaultContextValue)
+export const appContext = createContext(defaultContextValue);
 
 const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
+  document.getElementById("root") as HTMLElement
 );
 
 root.render(
@@ -467,24 +477,25 @@ root.render(
 ```
 
 Robots.tsx (where Robot is a child component of `<App />`):
+
 ```typescript
 interface RobotProps {
-    id: number,
-    name: string,
-    email: string
+  id: number;
+  name: string;
+  email: string;
 }
 
-const Robot: React.FC<RobotProps> = ({id, name, email}) => {
-    const value = useContext(appContext)
-    return (
-        <div className={styles.cardContainer}>
-            <img alt="robot" src={`https://robohash.org/${id}`}/>
-            <h2>{name}</h2>
-            <p>{email}</p>
-            <p>username: {value.username}</p>
-        </div>
-    )
-}
+const Robot: React.FC<RobotProps> = ({ id, name, email }) => {
+  const value = useContext(appContext);
+  return (
+    <div className={styles.cardContainer}>
+      <img alt="robot" src={`https://robohash.org/${id}`} />
+      <h2>{name}</h2>
+      <p>{email}</p>
+      <p>username: {value.username}</p>
+    </div>
+  );
+};
 
 export default Robot;
 ```
@@ -492,6 +503,7 @@ export default Robot;
 ## Making context a component to manage global state
 
 **Example AppState.tsx**
+
 ```typescript
 import React, { createContext, PropsWithChildren, useState } from "react";
 
@@ -528,6 +540,7 @@ export const AppStateProvider: React.FC<PropsWithChildren<{}>> = (props) => {
 ```
 
 In `index.tsx`, we import and wrap the app in the `AppStateProvider` component:
+
 ```tsx
 <AppStateProvider>
   <App />
@@ -535,6 +548,7 @@ In `index.tsx`, we import and wrap the app in the `AppStateProvider` component:
 ```
 
 In `robot.tsx`, we define a function to handle adding items to the cart:
+
 ```tsx
 const setState = useContext(setStateContext);
 const addToCart = () => {
@@ -552,6 +566,7 @@ const addToCart = () => {
 ```
 
 In `shoppingCart.tsx`, we use `appContext.Consumer` to wrap all elements within a function with a `value` parameter:
+
 ```tsx
 <appContext.Consumer>
   {(value) => (
@@ -577,6 +592,7 @@ In `shoppingCart.tsx`, we use `appContext.Consumer` to wrap all elements within 
 ```
 
 ### HOC - Higher Order Component
+
 - HOC is a function that returns a component.
 - It can add functions to child components by wrapping them.
 - It takes a component as input and outputs the component with added features.
@@ -653,92 +669,96 @@ export default withAddToCart(RobotDiscount);
 ```
 
 ### Customize and Define a Hook
+
 - A hook should be named starting with 'use', e.g., `useAddToCart`.
 - Example using a hook to achieve the functionality mentioned above:
 
 ```jsx
 // addToCart.tsx
 export const useAddToCart = () => {
-    const setState = React.useContext(setStateContext);
+  const setState = React.useContext(setStateContext);
 
-    const addToCart = (id, name) => {
-        if (setState) {
-            setState(prevState => {
-                return {
-                    ...prevState,
-                    shoppingCart: {
-                        items: [...prevState.shoppingCart.items, {id, name}]
-                    }
-                };
-            });
-        }
-    };
+  const addToCart = (id, name) => {
+    if (setState) {
+      setState((prevState) => {
+        return {
+          ...prevState,
+          shoppingCart: {
+            items: [...prevState.shoppingCart.items, { id, name }],
+          },
+        };
+      });
+    }
+  };
 
-    return addToCart;
-}
+  return addToCart;
+};
 
 // robot.tsx
 export interface RobotProps {
-    id: number,
-    name: string,
-    email: string,
+  id: number;
+  name: string;
+  email: string;
 }
 
-const Robot: React.FC<RobotProps> = ({id, name, email}) => {
-    const value = useContext(appContext);
-    const addToCart = useAddToCart();
+const Robot: React.FC<RobotProps> = ({ id, name, email }) => {
+  const value = useContext(appContext);
+  const addToCart = useAddToCart();
 
-    return (
-        <div className={styles.cardContainer}>
-            <img alt
-
-="robot" src={`https://robohash.org/${id}`}/>
-            <h2>{name}</h2>
-            <p>{email}</p>
-            <p>username: {value.username}</p>
-            <button onClick={() => addToCart(id, name)}>Add to cart</button>
-        </div>
-    );
-}
+  return (
+    <div className={styles.cardContainer}>
+      <img alt="robot" src={`https://robohash.org/${id}`} />
+      <h2>{name}</h2>
+      <p>{email}</p>
+      <p>username: {value.username}</p>
+      <button onClick={() => addToCart(id, name)}>Add to cart</button>
+    </div>
+  );
+};
 
 export default Robot;
 ```
 
-
 ## Simplified import using index.tsx
+
 ![Screenshot](src_screenshot.png)
 
 In the `/footer` and `/header` directories, the `index.ts` files contain the following code:
+
 ```typescript
-export * from './Header';
-export * from './Footer';
+export * from "./Header";
+export * from "./Footer";
 ```
 
 In the `/component` directory, the `index.ts` file contains:
+
 ```typescript
-export * from './header';
-export * from './footer';
+export * from "./header";
+export * from "./footer";
 ```
 
 To use them in `App.tsx`, we can import `Header` and `Footer` like this:
+
 ```typescript
-import { Header, Footer } from './components';
+import { Header, Footer } from "./components";
 ```
 
 ## Ant Design
+
 To use Ant Design, you need to install the package and the icons by running the following command:
+
 ```bash
 npm install antd @ant-design/icons
 ```
 
 After installation, you can visit the [Ant Design Components Overview](https://ant.design/components/overview) for examples on how to use different components such as Layout, Typography, Input, Menu, Button, Dropdown, and the GlobalOutlined icon. You can also refer to the `Header.tsx` file in the ReactTravel project for an example.
 
-
-
 # react-router
+
 A package that supports routing in react. Routing refers to managing UI by tracking the URL, for example, showing search results when the URL is localhost:3000/search.
 
 To install react-router, use the following command:
+
 ```
 npm install react-router-dom@latest
 ```
@@ -748,37 +768,47 @@ npm install react-router-dom@latest
 - `<HashRouter>` implements router switch using `window.location.hash`.
 
 ## Route by URL
+
 Example: Display the `HomePage` component when the URL path is '/', `LoginPage` when it is 'login', and so on. Show a "page not found" message if the URL does not match any defined routes.
 
 ```jsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 function App() {
-    return (
-        <div className={styles['App']}>
-            <BrowserRouter>
-                <Routes>
-                    <Route path={'/'} element={<HomePage/>}></Route>
-                    <Route path={'/login'} element={<LoginPage/>}></Route>
-                    <Route path={'/register'} element={<RegisterPage/>}></Route>
-                    <Route path={'/detail/:touristRouteId/:other'} element={<DetailPage/>}></Route>
-                    <Route path={'*'} element={<h1>404 page not found, catch all</h1>}></Route>
-                </Routes>
-            </BrowserRouter>
-        </div>
-    );
+  return (
+    <div className={styles["App"]}>
+      <BrowserRouter>
+        <Routes>
+          <Route path={"/"} element={<HomePage />}></Route>
+          <Route path={"/login"} element={<LoginPage />}></Route>
+          <Route path={"/register"} element={<RegisterPage />}></Route>
+          <Route
+            path={"/detail/:touristRouteId/:other"}
+            element={<DetailPage />}
+          ></Route>
+          <Route
+            path={"*"}
+            element={<h1>404 page not found, catch all</h1>}
+          ></Route>
+        </Routes>
+      </BrowserRouter>
+    </div>
+  );
 }
 ```
 
 ## Passing parameter/s from URL
+
 Example: Passing an ID as a parameter to the detail page.
 
 In `app.tsx`:
+
 ```jsx
-<Route path={'/detail/:touristRouteId'} element={<DetailPage/>}></Route>
+<Route path={"/detail/:touristRouteId"} element={<DetailPage />}></Route>
 ```
 
 In `details.tsx`:
+
 ```jsx
 export const DetailPage: React.FC = () => {
     const params = useParams<"touristRouteId">();
@@ -791,11 +821,13 @@ export const DetailPage: React.FC = () => {
 Example: Passing multiple parameters.
 
 In `app.tsx`:
+
 ```jsx
-<Route path={'/detail/:touristRouteId/:other'} element={<DetailPage/>}></Route>
+<Route path={"/detail/:touristRouteId/:other"} element={<DetailPage />}></Route>
 ```
 
 In `details.tsx`:
+
 ```jsx
 type MatchParams = {
     touristRouteId: string,
@@ -814,9 +846,11 @@ Tip: `type` vs `interface`
 In most cases, we can use both interchangeably. However, we can define a type like `type str = "str"`, but we cannot do the same with an interface.
 
 ## Navigation
+
 Router navigation: `useNavigate()`
 
 Example:
+
 ```jsx
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 
@@ -827,18 +861,17 @@ const navigate = useNavigate();
 
 // This function is invoked by an onclick event, it can be shortened to () => navigate('/register')
 function handleRegister() {
-    // This will navigate from http://localhost:3000 to http://localhost:3000/register
-    navigate('/register');
+  // This will navigate from http://localhost:3000 to http://localhost:3000/register
+  navigate("/register");
 }
 ```
 
 An alternative way is to use `<Link>` from `'react-router-dom'`:
-```jsx
-import { Link } from 'react-router-dom';
 
-<Link to="/register">
-    ...
-</Link>
+```jsx
+import { Link } from "react-router-dom";
+
+<Link to="/register">...</Link>;
 ```
 
 Both ways work, but `<Link>` is preferred as it is easier and shorter, and avoids adding an event to handle navigation
@@ -867,13 +900,13 @@ Actions are used to update data in the store.
 
 ## Reducers
 
-Reducers are functions that initialize, modify, and remove data in the store. They take the previous state and an action as input and return the updated state to the store. 
+Reducers are functions that initialize, modify, and remove data in the store. They take the previous state and an action as input and return the updated state to the store.
 
-When data is updated in reducers, the reducer publishes the updated data to components. 
+When data is updated in reducers, the reducer publishes the updated data to components.
 
 ## Actions
 
-Actions are payloads of information that send data from your application to your store. They are the only source of information for the store. If a component wants to modify data in the store, it needs to use actions. 
+Actions are payloads of information that send data from your application to your store. They are the only source of information for the store. If a component wants to modify data in the store, it needs to use actions.
 
 These actions are sent to the store's middleware and then passed to the reducer. The reducer takes the previous state and the action to update the data. This operation of sending actions is known as 'dispatch'.
 
@@ -901,7 +934,7 @@ It's common to create a `/redux` folder in the `src` directory to manage all Red
 
 ## Creating a Reducer
 
-As your project grows, actions can become very complicated. Therefore, it's always better to create separate action files to manage actions. 
+As your project grows, actions can become very complicated. Therefore, it's always better to create separate action files to manage actions.
 
 For example, in `redux/language/languageActions.ts`, you can define an action type:
 
@@ -912,46 +945,48 @@ export const CHANGE_LANGUAGE = "change_language";
 Then, in `redux/language/languageReducer.ts`, you can create a reducer that handles this action:
 
 ```typescript
-import { CHANGE_LANGUAGE } from "./languageActions"
+import { CHANGE_LANGUAGE } from "./languageActions";
 
 interface LanguageState {
-    language: 'en' | 'zh';
-    languageList: { name: string; code: string }[];
+  language: "en" | "zh";
+  languageList: { name: string; code: string }[];
 }
 
 const defaultState: LanguageState = {
-    language: 'zh',
-    languageList: [
-        { name: "中文", code: 'zh' },
-        { name: "English", code: 'en' }
-    ]
+  language: "zh",
+  languageList: [
+    { name: "中文", code: "zh" },
+    { name: "English", code: "en" },
+  ],
 };
 
 // This is the reducer function, which takes the current state and an action to output the new state
 export default (state = defaultState, action) => {
-    if (action.type === CHANGE_LANGUAGE) {
-        const newState = { ...state, language: action.payload };
-        return newState;
-    }
+  if (action.type === CHANGE_LANGUAGE) {
+    const newState = { ...state, language: action.payload };
+    return newState;
+  }
 };
 ```
 
 ## Creating a Store
+
 install reduxJS packages
+
 ```
 npm install @reduxjs/toolkit
 ```
+
 The store is created by passing in the reducer to the `configureStore` function:
 
 ```typescript
 // store.ts
-import {configureStore} from '@reduxjs/toolkit';
-import languageReducer from './language/languageReducer';
+import { configureStore } from "@reduxjs/toolkit";
+import languageReducer from "./language/languageReducer";
 
 const store = configureStore({
   reducer: languageReducer,
 });
-
 
 export default store;
 ```
@@ -979,7 +1014,7 @@ constructor(props) {
 
 Actions are dispatched using the
 
-`store.dispatch()` method. The action is an object that must have a `type` property, which is often set as an instruction name, such as "change_color" or "set_username". The `payload` property is the data that you want to send to the store. 
+`store.dispatch()` method. The action is an object that must have a `type` property, which is often set as an instruction name, such as "change_color" or "set_username". The `payload` property is the data that you want to send to the store.
 
 For more information on designing actions, refer to the [Redux documentation](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers#designing-actions).
 
@@ -1028,31 +1063,31 @@ import { initReactI18next } from "react-i18next";
 4. Import the language JSON files into `configs.ts`:
 
 ```typescript
-import translation_en from './en.json';
-import translation_zh from './zh.json';
+import translation_en from "./en.json";
+import translation_zh from "./zh.json";
 ```
 
 5. Set up your i18Next configuration:
 
 ```typescript
 const resources = {
-    en: {
-        translation: translation_en
-    },
-    zh: {
-        translation: translation_zh
-    }
+  en: {
+    translation: translation_en,
+  },
+  zh: {
+    translation: translation_zh,
+  },
 };
 
 i18n
-    .use(initReactI18next) // passes i18n down to react-i18next
-    .init({
-        resources,
-        lng: "en", // language to use
-        interpolation: {
-            escapeValue: false // react already safes from xss
-        }
-    });
+  .use(initReactI18next) // passes i18n down to react-i18next
+  .init({
+    resources,
+    lng: "en", // language to use
+    interpolation: {
+      escapeValue: false, // react already safes from xss
+    },
+  });
 
 export default i18n;
 ```
@@ -1062,7 +1097,7 @@ export default i18n;
 1. Import the `withTranslation` higher-order component (HOC) and `WithTranslation` type from `react-i18next`:
 
 ```typescript
-import {withTranslation, WithTranslation} from "react-i18next";
+import { withTranslation, WithTranslation } from "react-i18next";
 ```
 
 2. Add `WithTranslation` to your component's props type:
@@ -1087,7 +1122,7 @@ render() {
           >
               {this.state.language==="en" ? "English" : "中文"}
           </Dropdown.Button>
-                  
+
       </div>
   )
 }
@@ -1096,7 +1131,7 @@ render() {
 4. Wrap your component with the `withTranslation` HOC when exporting:
 
 ```typescript
-export const Header = withTranslation()(withRouter(HeaderComponent))
+export const Header = withTranslation()(withRouter(HeaderComponent));
 ```
 
 ## Usage in Functional Components
@@ -1104,18 +1139,18 @@ export const Header = withTranslation()(withRouter(HeaderComponent))
 In functional components, you can use the `useTranslation` hook instead of the `withTranslation` HOC:
 
 ```typescript
-import {useTranslation, withTranslation} from "react-i18next";
+import { useTranslation, withTranslation } from "react-i18next";
 
 export const Footer: React.FC = () => {
-    const {t} = useTranslation();
-    return (
-        <Layout.Footer>
-            <Typography.Title level={3} style={{textAlign: "center"}}>
-                {t("footer.detail")}
-            </Typography.Title>
-        </Layout.Footer>
-    )
-}
+  const { t } = useTranslation();
+  return (
+    <Layout.Footer>
+      <Typography.Title level={3} style={{ textAlign: "center" }}>
+        {t("footer.detail")}
+      </Typography.Title>
+    </Layout.Footer>
+  );
+};
 ```
 
 ## Updating Code with Factory Mode
@@ -1126,62 +1161,65 @@ To ensure strong typing for your Redux actions, you can use action creators. Her
 export const CHANGE_LANGUAGE = "change_language";
 
 interface ChangeLanguageAction {
-    type: typeof CHANGE_LANGUAGE,
-    payload: "zh" | "en"
+  type: typeof CHANGE_LANGUAGE;
+  payload: "zh" | "en";
 }
 
 export type LanguageActionTypes = ChangeLanguageAction;
 
-export const changeLanguageActionCreator = (languageCode:
-
-"zh" | "en") : ChangeLanguageAction => {
-    return {
-        type: CHANGE_LANGUAGE,
-        payload: languageCode
-    };
-}
+export const changeLanguageActionCreator = (
+  languageCode: "zh" | "en"
+): ChangeLanguageAction => {
+  return {
+    type: CHANGE_LANGUAGE,
+    payload: languageCode,
+  };
+};
 ```
 
 Then, in your reducer, you can handle different actions by setting the action type to `LanguageActionTypes`:
 
 ```typescript
-import i18n from "i18next"
-import { CHANGE_LANGUAGE, LanguageActionTypes } from "./languageActions"
+import i18n from "i18next";
+import { CHANGE_LANGUAGE, LanguageActionTypes } from "./languageActions";
 
 export interface LanguageState {
-    language: 'en' | 'zh'
-    languageList: {name: string, code: string}[]
+  language: "en" | "zh";
+  languageList: { name: string; code: string }[];
 }
 
 const defaultState: LanguageState = {
-    language: 'en',
-    languageList: [{name: "中文", code: 'zh'}, {name: "English", code: 'en'}]
-}
+  language: "en",
+  languageList: [
+    { name: "中文", code: "zh" },
+    { name: "English", code: "en" },
+  ],
+};
 
 export default (state = defaultState, action: LanguageActionTypes) => {
-    if (action.type === CHANGE_LANGUAGE) {
-        i18n.changeLanguage(action.payload)
-        const newState = {...state, language: action.payload}
-        return newState
-    }
-    return state
-}
+  if (action.type === CHANGE_LANGUAGE) {
+    i18n.changeLanguage(action.payload);
+    const newState = { ...state, language: action.payload };
+    return newState;
+  }
+  return state;
+};
 ```
 
 Finally, in your components, you can use `changeLanguageActionCreator` to create a strongly-typed action:
 
 ```typescript
 menuClickHandler = (e) => {
-    const action = {type: "change_language", payload: e.key}
-    store.dispatch(changeLanguageActionCreator(e.key))
-}
+  const action = { type: "change_language", payload: e.key };
+  store.dispatch(changeLanguageActionCreator(e.key));
+};
 ```
 
 This approach ensures that your Redux actions are strongly typed, which can help prevent bugs and improve code readability.
 
 # React-Redux Integration: Class and Function Components
 
-This guide will walk you through the process of integrating React-Redux with both class and function components. 
+This guide will walk you through the process of integrating React-Redux with both class and function components.
 
 ## Prerequisites
 
@@ -1204,13 +1242,13 @@ npm install @types/react-redux --save-dev
 React-Redux includes a `<Provider />` component, which makes the Redux store available to the rest of your app:
 
 ```typescript
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { Provider } from 'react-redux';
-import store  from './redux/store';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { Provider } from "react-redux";
+import store from "./redux/store";
 
 const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
+  document.getElementById("root") as HTMLElement
 );
 root.render(
   <React.StrictMode>
@@ -1226,27 +1264,27 @@ root.render(
 Next, go to the component where you wish to use React-Redux and import `connect`:
 
 ```typescript
-import { connect } from 'react-redux';
-import { Dispatch } from 'redux';
+import { connect } from "react-redux";
+import { Dispatch } from "redux";
 
 // Define two functions for React-Redux connect HOC
 const mapStateToProps = (state: RootState) => {
-    return {
-        language: state.language,
-        languageList: state.languageList
-    }
-}
+  return {
+    language: state.language,
+    languageList: state.languageList,
+  };
+};
 
 const mapDispatchToProps = (dispatch: Dispatch) => {
-    return {
-        changeLanguage: (code: 'zh' | 'en') => {
-            const action = changeLanguageActionCreator(code)
-            dispatch(action)
-        }
-    }
-}
+  return {
+    changeLanguage: (code: "zh" | "en") => {
+      const action = changeLanguageActionCreator(code);
+      dispatch(action);
+    },
+  };
+};
 
-// Now there is no need to use subscriber stuff to manage redux, we can use props to replace state, i.e. 
+// Now there is no need to use subscriber stuff to manage redux, we can use props to replace state, i.e.
 // this.state.languageList -> this.props.languageList
 // this.state.changeLanguage -> this.props.changeLanguage
 ```
@@ -1256,23 +1294,26 @@ const mapDispatchToProps = (dispatch: Dispatch) => {
 Since we used HOC to inject props, we need to modify the props type:
 
 ```typescript
-class HeaderComponent extends React.Component<RouteComponentProps & // react-router type
+class HeaderComponent extends React.Component<
+  RouteComponentProps & // react-router type
     WithTranslation & // i18n type
     ReturnType<typeof mapStateToProps> & // redux store type
     ReturnType<typeof mapDispatchToProps> // redux dispatch type
-    > {
-    
-    menuClickHandler = (e) => {
-        this.props.changeLanguage(e.key)
-    }
+> {
+  menuClickHandler = (e) => {
+    this.props.changeLanguage(e.key);
+  };
 
-    render() {
-        // Render logic here
-    }
+  render() {
+    // Render logic here
+  }
 }
 
 // At last, use HOC to contain the entire component, pass in the argument
-export const Header = connect(mapStateToProps, mapDispatchToProps)(withTranslation()(withRouter(HeaderComponent)))
+export const Header = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(withTranslation()(withRouter(HeaderComponent)));
 ```
 
 ### Modifying the Store Type
@@ -1280,14 +1321,14 @@ export const Header = connect(mapStateToProps, mapDispatchToProps)(withTranslati
 In order to bind the type of state defined in mapStateToProps, we need to modify the type of store:
 
 ```typescript
-import {createStore} from "redux";
+import { createStore } from "redux";
 import languageReducer from "./language/languageReducer";
 
-const store = createStore(languageReducer)
+const store = createStore(languageReducer);
 
-export type RootState = ReturnType<typeof store.getState>
+export type RootState = ReturnType<typeof store.getState>;
 
-export default store
+export default store;
 ```
 
 ## React-Redux with Function Component
@@ -1297,10 +1338,10 @@ export default store
 First, in order to use hooks from redux, we need to create a `hooks.ts` file in the redux folder. This is purely for low coupling between component and store:
 
 ```typescript
-import { 
-    useSelector as useReduxSelector, 
-    TypedUseSelectorHook } 
-    from "react-redux";
+import {
+  useSelector as useReduxSelector,
+  TypedUseSelectorHook,
+} from "react-redux";
 import { RootState } from "./store";
 
 export const useSelector: TypedUseSelectorHook<RootState> = useReduxSelector;
@@ -1311,32 +1352,34 @@ export const useSelector: TypedUseSelectorHook<RootState> = useReduxSelector;
 Then, import `useSelector` and action factory to dispatch:
 
 ```typescript
-import { useSelector } from '../../redux/hooks';
-import { useDispatch } from 'react-redux';
-import { LanguageActionTypes, changeLanguageActionCreator } from '../../redux/language/languageActions';
+import { useSelector } from "../../redux/hooks";
+import { useDispatch } from "react-redux";
+import {
+  LanguageActionTypes,
+  changeLanguageActionCreator,
+} from "../../redux/language/languageActions";
 
 export const Header: React.FC = () => {
-  const language = useSelector((state) => state.language)
-  const languageList = useSelector((state) => state.languageList)
-  const dispatch = useDispatch()
+  const language = useSelector((state) => state.language);
+  const languageList = useSelector((state) => state.languageList);
+  const dispatch = useDispatch();
 
   const menuClickHandler = (e) => {
-    dispatch(changeLanguageActionCreator(e.key))
-  }
-  
+    dispatch(changeLanguageActionCreator(e.key));
+  };
+
   // Then modify the rest of the code, delete all "this.props."
   // Rest of the component code
-}
+};
 ```
 
 In this setup, we use `useSelector` to access the state from the Redux store and `useDispatch` to dispatch actions to the store. The `menuClickHandler` function dispatches an action to change the language when a menu item is clicked.
 
 For more information and advanced usage, you can refer to the official React-Redux documentation [here](https://react-redux.js.org/introduction/getting-started).
 
-
 # Fetching Data with Axios
 
-Compared to the Fetch function in vanilla JavaScript, Axios is compatible with IE7. If we use Fetch, we need to handle compatibility issues ourselves. 
+Compared to the Fetch function in vanilla JavaScript, Axios is compatible with IE7. If we use Fetch, we need to handle compatibility issues ourselves.
 
 ## Installation
 
@@ -1439,8 +1482,8 @@ export const HomePage = withTranslation()(HomePageComponent);
 For headers that should always exist, add the following in `index.ts` at the outermost level:
 
 ```typescript
-import axios from 'axios';
-axios.defaults.headers['x-icode'] = 'BF10F5C62A274A1C';
+import axios from "axios";
+axios.defaults.headers["x-icode"] = "BF10F5C62A274A1C";
 ```
 
 ---
@@ -1454,9 +1497,9 @@ In MVC, managing state and render logic can be complex and difficult. Therefore,
 Here is an example of a Redux store with multiple reducers:
 
 ```typescript
-import {configureStore, combineReducers} from '@reduxjs/toolkit';
-import languageReducer from './language/languageReducer';
-import recommendProducgsReducer from './recommendProducts/recommendProducgsReducer';
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import languageReducer from "./language/languageReducer";
+import recommendProducgsReducer from "./recommendProducts/recommendProducgsReducer";
 
 const rootReducer = combineReducers({
   language: languageReducer,
@@ -1468,7 +1511,7 @@ const store = configureStore({
   reducer: rootReducer,
 });
 
-export type RootState = ReturnType<typeof store.getState>
+export type RootState = ReturnType<typeof store.getState>;
 
 export default store;
 ```
@@ -1476,8 +1519,8 @@ export default store;
 Then, in `Header.tsx`, we can use the language and languageList by:
 
 ```typescript
-const language = useSelector((state) => state.language.language)
-const languageList = useSelector((state) => state.language.languageList)
+const language = useSelector((state) => state.language.language);
+const languageList = useSelector((state) => state.language.languageList);
 ```
 
 # Redux-Thunk
@@ -1486,22 +1529,19 @@ Redux-Thunk is a middleware that allows Redux actions to handle asynchronous ope
 
 ## Redux-Thunk and Redux Toolkit
 
-As of Redux Toolkit 1.0.0, the `configureStore` function sets up the store with a Redux middleware pipeline, which includes redux-thunk by default. 
+As of Redux Toolkit 1.0.0, the `configureStore` function sets up the store with a Redux middleware pipeline, which includes redux-thunk by default.
 
 ```javascript
-import { configureStore } from '@reduxjs/toolkit'
+import { configureStore } from "@reduxjs/toolkit";
 ```
 
 However, if you're working in an environment older than Redux Toolkit 1.0.0, you'll need to manually import and apply the thunk middleware when creating the store:
 
 ```javascript
-import { createStore, applyMiddleware } from 'redux';
-import thunk from 'redux-thunk';
+import { createStore, applyMiddleware } from "redux";
+import thunk from "redux-thunk";
 
-const store = createStore(
-  rootReducer, 
-  applyMiddleware(thunk)
-);
+const store = createStore(rootReducer, applyMiddleware(thunk));
 ```
 
 ## Installation
@@ -1521,7 +1561,7 @@ import { ThunkAction } from "redux-thunk";
 import { RootState } from "../store";
 ```
 
-`ThunkAction` takes four generic parameters: 
+`ThunkAction` takes four generic parameters:
 
 1. Function return type
 2. RootState
@@ -1533,19 +1573,19 @@ It also takes two parameters: `dispatch` and `getState`.
 Here's an example of a ThunkAction:
 
 ```typescript
-export const giveMeDataActionCreator = (): ThunkAction<void, 
-    RootState, 
-    undefined, 
-    RecommendProductsAction> => async (dispatch, getState) => {
-    dispatch(fetchRecommendProductsStartActionCreator())
+export const giveMeDataActionCreator =
+  (): ThunkAction<void, RootState, undefined, RecommendProductsAction> =>
+  async (dispatch, getState) => {
+    dispatch(fetchRecommendProductsStartActionCreator());
     try {
-        const {data} = await axios
-        .get('http://123.56.149.216:8080/api/productCollections')
-        dispatch(fetchRecommendProductsSuccessActionCreator(data))
+      const { data } = await axios.get(
+        "http://123.56.149.216:8080/api/productCollections"
+      );
+      dispatch(fetchRecommendProductsSuccessActionCreator(data));
     } catch (error) {
-        dispatch(fetchRecommendProductsFailActionCreator(error))
+      dispatch(fetchRecommendProductsFailActionCreator(error));
     }
-}
+  };
 ```
 
 After setting up the `giveMeDataActionCreator`, you can go back to your component, remove the side-effect code section, and replace it with the following:
@@ -1555,7 +1595,7 @@ const mapDispatchToProps = (dispatch) => {
     return {
         giveMeDataActionCreator: () => {
             dispatch(giveMeDataActionCreator())
-        }   
+        }
     }
 }
 ...
@@ -1567,7 +1607,6 @@ async componentDidMount() {
 
 This will dispatch the `giveMeDataActionCreator` when the component mounts, triggering the asynchronous action and handling any side-effects.
 
-
 # Redux Middleware
 
 In Redux, middleware is a higher-order function that composes a dispatch function to return a new dispatch function. It often turns async actions into actions.
@@ -1577,7 +1616,7 @@ In Redux, middleware is a higher-order function that composes a dispatch functio
 Middleware in Redux can be defined using the following formula:
 
 ```typescript
-const middleware = (store) => (next) => (action) => {}
+const middleware = (store) => (next) => (action) => {};
 ```
 
 In this formula:
@@ -1591,7 +1630,7 @@ In this formula:
 In Redux, the middleware will be invoked like this:
 
 ```typescript
-middleware(store)(next)(action)
+middleware(store)(next)(action);
 ```
 
 ## Example
@@ -1599,14 +1638,14 @@ middleware(store)(next)(action)
 Here's an example of a Redux middleware that logs the current state, the action being dispatched, and the state after the action has been dispatched:
 
 ```typescript
-import { Middleware } from "redux"
+import { Middleware } from "redux";
 
 export const actionLog: Middleware = (store) => (next) => (action) => {
-    console.log("state current", store.getState())
-    console.log("fire action", action)
-    next(action)
-    console.log("state next", store.getState())
-}
+  console.log("state current", store.getState());
+  console.log("fire action", action);
+  next(action);
+  console.log("state next", store.getState());
+};
 ```
 
 ## Using the Middleware
@@ -1614,11 +1653,12 @@ export const actionLog: Middleware = (store) => (next) => (action) => {
 The middleware can be used in the Redux store like this:
 
 ```typescript
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from "@reduxjs/toolkit";
 
 const store = configureStore({
   reducer: rootReducer,
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(actionLog),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(actionLog),
 });
 ```
 
@@ -1628,7 +1668,7 @@ In this code, `getDefaultMiddleware` is a function provided by Redux Toolkit tha
 
 # HATEOAS: Hypertext As The Engine Of Application State
 
-HATEOAS is a constraint of the REST application architecture that implies that a client interacts with a network application entirely through hypermedia provided dynamically by application servers. 
+HATEOAS is a constraint of the REST application architecture that implies that a client interacts with a network application entirely through hypermedia provided dynamically by application servers.
 
 For example, if a client makes a POST request to buy a product, the server should return not only the status of the request but also links (URLs) to:
 
@@ -1639,28 +1679,33 @@ For example, if a client makes a POST request to buy a product, the server shoul
 This way, the client does not need to hard-code these URLs; they are provided dynamically by the server. This makes the client less coupled to the server, which is one of the main benefits of HATEOAS.
 
 If backend returns HTML string directly, we can use following to insert it in react component
+
 ```typescript
-<div dangerouslySetInnerHTML={{__html: data}}></div>
+<div dangerouslySetInnerHTML={{ __html: data }}></div>
 ```
 
 # Redux-toolkit (RTK)
+
 https://redux-toolkit.js.org/
 
 create app with RTK
+
 ```
 # Redux + Plain JS template
 npx create-react-app my-app --template redux
- 
+
 # Redux + TypeScript template
 npx create-react-app my-app --template redux-typescript
 ```
 
 install later
+
 ```
 npm install @reduxjs/toolkit
 ```
 
 ## createSlice
+
 https://redux-toolkit.js.org/api/createSlice
 
 A function that accepts an initial state, an object of reducer functions, and a "slice name", and automatically generates action creators and action types that correspond to the reducers and state.
@@ -1670,16 +1715,17 @@ This API is the standard approach for writing Redux logic.
 Internally, it uses createAction and createReducer, so you may also use Immer to write "mutating" immutable updates.
 
 ### official example
-```typescript
-import { createSlice, createAction } from '@reduxjs/toolkit'
-import type { PayloadAction } from '@reduxjs/toolkit'
-import { createStore, combineReducers } from 'redux'
 
-const incrementBy = createAction<number>('incrementBy')
-const decrementBy = createAction<number>('decrementBy')
+```typescript
+import { createSlice, createAction } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+import { createStore, combineReducers } from "redux";
+
+const incrementBy = createAction<number>("incrementBy");
+const decrementBy = createAction<number>("decrementBy");
 
 const counter = createSlice({
-  name: 'counter',
+  name: "counter",
   initialState: 0 as number,
   reducers: {
     increment: (state) => state + 1,
@@ -1692,20 +1738,20 @@ const counter = createSlice({
   // "builder callback API", recommended for TypeScript users
   extraReducers: (builder) => {
     builder.addCase(incrementBy, (state, action) => {
-      return state + action.payload
-    })
+      return state + action.payload;
+    });
     builder.addCase(decrementBy, (state, action) => {
-      return state - action.payload
-    })
+      return state - action.payload;
+    });
   },
-})
+});
 
 const user = createSlice({
-  name: 'user',
-  initialState: { name: '', age: 20 },
+  name: "user",
+  initialState: { name: "", age: 20 },
   reducers: {
     setUserName: (state, action) => {
-      state.name = action.payload // mutate the state all you want with immer
+      state.name = action.payload; // mutate the state all you want with immer
     },
   },
   // "map object API"
@@ -1715,29 +1761,29 @@ const user = createSlice({
       state,
       action /* action will be inferred as "any", as the map notation does not contain type information */
     ) => {
-      state.age += 1
+      state.age += 1;
     },
   },
-})
+});
 
 const reducer = combineReducers({
   counter: counter.reducer,
   user: user.reducer,
-})
+});
 
-const store = createStore(reducer)
+const store = createStore(reducer);
 
-store.dispatch(counter.actions.increment())
+store.dispatch(counter.actions.increment());
 // -> { counter: 1, user: {name : '', age: 21} }
-store.dispatch(counter.actions.increment())
+store.dispatch(counter.actions.increment());
 // -> { counter: 2, user: {name: '', age: 22} }
-store.dispatch(counter.actions.multiply(3))
+store.dispatch(counter.actions.multiply(3));
 // -> { counter: 6, user: {name: '', age: 22} }
-store.dispatch(counter.actions.multiply())
+store.dispatch(counter.actions.multiply());
 // -> { counter: 12, user: {name: '', age: 22} }
-console.log(`${counter.actions.decrement}`)
+console.log(`${counter.actions.decrement}`);
 // -> "counter/decrement"
-store.dispatch(user.actions.setUserName('eric'))
+store.dispatch(user.actions.setUserName("eric"));
 // -> { counter: 12, user: { name: 'eric', age: 22} }
 ```
 
@@ -1752,7 +1798,9 @@ interface ConfigureStoreOptions<
   M extends Middlewares<S> = Middlewares<S>
 > {
   reducer: Reducer<S, A> | ReducersMapObject<S, A>;
-  middleware?: ((getDefaultMiddleware: CurriedGetDefaultMiddleware<S>) => M) | M;
+  middleware?:
+    | ((getDefaultMiddleware: CurriedGetDefaultMiddleware<S>) => M)
+    | M;
   devTools?: boolean | DevToolsOptions;
   preloadedState?: DeepPartial<S extends any ? S : S>;
   enhancers?: StoreEnhancer[] | ConfigureEnhancersCallback;
@@ -1766,11 +1814,11 @@ For `devTools`, you need to install the 'Redux DevTools' Chrome plugin.
 Here's an example of how to use `configureStore`:
 
 ```typescript
-import {configureStore, combineReducers} from '@reduxjs/toolkit';
-import languageReducer from './language/languageReducer';
-import recommendProductsReducer from './recommendProducts/recommendProductsReducer';
-import { actionLog } from './middlewares/actionLog';
-import { ProductDetailSlice } from './productDetails/slice';
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import languageReducer from "./language/languageReducer";
+import recommendProductsReducer from "./recommendProducts/recommendProductsReducer";
+import { actionLog } from "./middlewares/actionLog";
+import { ProductDetailSlice } from "./productDetails/slice";
 
 const rootReducer = combineReducers({
   language: languageReducer,
@@ -1780,11 +1828,12 @@ const rootReducer = combineReducers({
 
 const store = configureStore({
   reducer: rootReducer,
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(actionLog),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(actionLog),
   devTools: true,
 });
 
-export type RootState = ReturnType<typeof store.getState>
+export type RootState = ReturnType<typeof store.getState>;
 
 export default store;
 ```
@@ -1798,48 +1847,53 @@ The `type` parameter is a string that will be used to generate additional Redux 
 Here's an example of how to use `createAsyncThunk`:
 
 ```typescript
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 interface ProductDetailsState {
-    loading: boolean;
-    error: string | null;
-    data: any;
+  loading: boolean;
+  error: string | null;
+  data: any;
 }
 
 const initialState: ProductDetailsState = {
-    loading: true,
-    error: null,
-    data: null
-}
+  loading: true,
+  error: null,
+  data: null,
+};
 
 export const getProductDetails = createAsyncThunk(
-    "productDetails/getProductDetails",
-    async (touristRouteId: string, thunkAPI) => {
-        const {data} = await axios.get(`http://123.56.149.216:8080/api/touristRoutes/${touristRouteId}`);
-        return data;
-    }
-)
+  "productDetails/getProductDetails",
+  async (touristRouteId: string, thunkAPI) => {
+    const { data } = await axios.get(
+      `http://123.56.149.216:8080/api/touristRoutes/${touristRouteId}`
+    );
+    return data;
+  }
+);
 
 export const ProductDetailSlice = createSlice({
-    name: 'productDetails',
-    initialState,
-    reducers: {},
-    extraReducers: {
-        [getProductDetails.pending.type] :(state) => {
-            state.loading = true;
-        },
-        [getProductDetails.fulfilled.type]: (state, action: PayloadAction<any>) => {
-            state.data = action.payload;
-            state.loading = false;
-            state.error = null;
-        },
-        [getProductDetails.rejected.type]: (state, action: PayloadAction<string|null>) => {
-            state.loading = false;
-            state.error = action.payload;
-        },
-    }
-})
+  name: "productDetails",
+  initialState,
+  reducers: {},
+  extraReducers: {
+    [getProductDetails.pending.type]: (state) => {
+      state.loading = true;
+    },
+    [getProductDetails.fulfilled.type]: (state, action: PayloadAction<any>) => {
+      state.data = action.payload;
+      state.loading = false;
+      state.error = null;
+    },
+    [getProductDetails.rejected.type]: (
+      state,
+      action: PayloadAction<string | null>
+    ) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+  },
+});
 ```
 
 In
@@ -1849,7 +1903,7 @@ the `DetailPage.tsx`, you can use the `getProductDetails` function like this:
 ```typescript
 useEffect(() => {
   if (params.touristRouteId) {
-      dispatch(getProductDetails(params.touristRouteId));
+    dispatch(getProductDetails(params.touristRouteId));
   }
 }, []);
 ```
@@ -1857,7 +1911,7 @@ useEffect(() => {
 However, there might be a type conflict between ReduxAsyncThunk and 'any' type at `const dispatch = useDispatch();`. To resolve this, you can define your own hook for `useDispatch`. Here's how you can do it in `hooks.ts`:
 
 ```typescript
-import { useDispatch as useReduxDispatch} from "react-redux";
+import { useDispatch as useReduxDispatch } from "react-redux";
 export const useDispatch = () => useReduxDispatch<AppDispatch>();
 ```
 
