@@ -1,18 +1,21 @@
 # General
 
 ## Path
+
 - Absolute path (not commonly used): can directly reach the target location, starting from a drive letter or a full URL. E.g. `/Users/r/Desktop/Front-end learning/cat.jpeg`, `www.xxxx.cn/yy/logo.gif`
 - Relative path (commonly used): start from the current file to find the file
   - Same-level files: in a folder with this HTML "filename.suffix"
   - Lower-level files: in another folder in the folder where HTML is located "Another_folder_name/filename.suffix"
   - Upper-level file: in the same folder as the folder where this HTML is located  "`../filename.suffix`" (`../` means to the upper-level directory)
-  - Two levels up:  "`../../filename.suffix`" 
+  - Two levels up: "`../../filename.suffix`"
 
 ## Standard Stream
+
 - Block-level elements, top-to-bottom, vertical layout, on a single line
 - Inline elements or inline-block elements, from left to right, horizontal layout, automatic line splitting if there is not enough space
 
 # Block-level Element
+
 - A block-level element always starts on a new line, and the browsers automatically add some space (a margin) before and after the element.
 - A block-level element always covers the entire width available (stretches out to the left and right as far as possible).
 - The parent element's width is width, and the content stretches the height by default.
@@ -20,6 +23,7 @@
 - Representative tags: `div`, `p`, `h` series, `ul`, `li`, `dl`, `dt`, `dd`, `form`, `header`, `nav`, `footer`
 
 # Inline-level Element
+
 - An inline element does not start on a new line.
 - An inline element only takes up as much width as necessary.
 - One line can display multiple.
@@ -28,11 +32,13 @@
 - Representative tags: `a`, `span`, `b`, `u`, `i`, `s`, `strong`, `ins`, `em`, `del` ...
 
 # Inline-block-level Element
+
 - One line can display multiple
 - Can set width and height
 - Representing tags: `input`, `textarea`, `button`, `select`, `img` ...
 
 # Project Structure
+
 - The homepage of the website must be called `index.html`
 - The project folder structure of the website: a `CSS` folder, an `image` folder, an `index.html`
 - Layout: From outside to inside, from top to bottom, from left to right
@@ -51,23 +57,27 @@
   - `Index.css` Homepage style
 
 ```html
-<link rel="stylesheet" href="./css/base.css">
-<link rel="stylesheet" href="./css/common.css">
-<link rel="stylesheet" href="./css/index.css">
+<link rel="stylesheet" href="./css/base.css" />
+<link rel="stylesheet" href="./css/common.css" />
+<link rel="stylesheet" href="./css/index.css" />
 ```
+
 Introduced in order, the externally linked style sheet will take effect
 
 # Sprites
+
 - Introduction to sprites: Many pictures in the project are combined into a big picture, this big picture is the sprite picture
 - Advantages: reduce
 
- the number of server sending, reduce server pressure, improve the page loading speed
+the number of server sending, reduce server pressure, improve the page loading speed
+
 - Steps for usage:
   1. Create a box, set the size of the box to be the same as the thumbnail size
   2. Set the sprite as the background image of the box
   3. Modify the position of the background image, measure the coordinates of the upper left corner of the small image through pxcook, and set the negative values to the box's `background-position: x y;`
 
 # bd and hd
+
 When I don't know what class is called `<div class="hd"></div>`, `hd` means head, and similarly, `bd` means body
 
 # Banner
@@ -79,6 +89,7 @@ Then use the positioning to make the floating window on the left (`aside`)
 The small dots below represent the current instead of hover. The solution is to add a `class = "current"` to `li`, and then select `.current` in CSS
 
 # Mobile Web Basis
+
 - The computer screen is large, usually in the centre of the version
 - The mobile phone screen is small, the general width is 100%
 - Google Chrome mobile phone simulator: right-click inspect, click
@@ -87,6 +98,7 @@ The small dots below represent the current instead of hover. The solution is to 
 - Sometimes the design drawing is 2 times the size. The way to judge is to see if the length is 1920. If so, select 2x in the design drawing option above pxcook
 
 # Browser Support Check
+
 `caniuse.com`
 Can be used to check if a browser supports a certain technology
 
@@ -97,6 +109,7 @@ The written content does not need to copy and paste multiple contents, and all t
 # HTTML Basis
 
 ## A Sample HTML Structure
+
 ```
 <!DOCTYPE html>
 <html lang="en">
@@ -126,39 +139,48 @@ The written content does not need to copy and paste multiple contents, and all t
 Sometimes we call tags "elements" or "labels"; they are the same thing.
 
 ## SEO: search engine optimisation
+
 - Get your site to rank high on search sites
 - Ranking of bidding
 - The suffix of the file be .html
 
 ## Tag Semantics (with the correct tags in the right places)
+
 Three main SEO tags:
+
 - Title, e.g. `<title>京东(JD.COM)-正品低价、品质保障、配送及时、轻松购物！</title>`
 - Description. e.g. `<meta name="description" content="京东JD.COM-专业的综合网上购物商城，为您提供正品低价的购物选择、优质便捷的服务体验。商品来自全球数十万品牌商家，囊括家电、手机、电脑、服装、居家、母婴、美妆、个护、食品、生鲜等丰富品类，满足各种购物需求。">`
 - Keywords. e.g. `<meta name="Keywords" content="网上购物,网上商城,家电,手机,电脑,服装,居家,母婴,美妆,个护,食品,生鲜,京东">`
 
 ## Set up icon
+
 - Icon: Small icon displayed on the left side of the title page
 - e.g. `<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">`
 
 ## Comment in HTML:
+
 - `<!-- context -->`
 
 ## Class attribute
+
 - All tags have a class attribute.
 - Class names cannot start with a numeric underscore
 - A tag can have multiple class names at the same time, separated by spaces
 - e.g. `<div class="one two three">222</div>`
 
 ## id attribute
+
 - All tags have an id attribute
 - 'id' is unique on a page and cannot be repeated
 - There can only be one 'id' attribute value on a tag
 - e.g. `<div id="one">222</div>`
 
 ## Semantic wrapping
+
 - Block
 
 -level elements act as large containers that can be nested: text, block-level elements, inline-block elements, inline elements, etc.
+
 - But: don't nest p, div, h, etc. elements in p tags.
 - Reason: Because the semantics are inappropriate since the paragraph is already a paragraph, it cannot be a title, and the title is the same.
 - The 'a' element can nest any element, but the 'a' tag cannot nest another 'a' tag
@@ -170,6 +192,7 @@ If the heading has a start tag and an end tag, it must have a start tag and an e
 If the heading has a start tag and no end tag, it must have a start tag and no end tag.
 
 ## Heading Element `<h1></h1>`
+
 ```
 <h1>title</h1>
 ...
@@ -179,17 +202,21 @@ If the heading has a start tag and no end tag, it must have a start tag and no e
 The titles are bold, exclusive lines. The font size gets smaller as the number increases. In development, we can manage size in CSS, so always use `<h1>` for the main title, h2 for headings, and h3 for sub-headings. (Semantic tags)
 
 ## Paragraph element `<p></p>`
+
 `<p>context</p>`
 
 Exclusive lines. There is a space between tags.
 
 ## The Line Break element `<br>`
+
 Produces a line break in the text (carriage-return). It helps break paragraphs where the division of lines is significant.
 
 ## The Thematic Break (Horizontal Rule) element `<hr>`
+
 It represents a thematic break between paragraph-level elements and draws a horizontal line on the page.
 
 ## Font elements
+
 `<b>context</b>` or `<strong>context</strong>`: bold
 
 `<u>context</u>` or `<ins>context</ins>`: underline
@@ -201,6 +228,7 @@ It represents a thematic break between paragraph-level elements and draws a hori
 All the font elements can be used inside paragraphs.
 
 ## Image element `<img src="">`
+
 e.g. `<img src="./cat.jpeg" alt="pic of cat" title="so cute a cat" width="200" height="150">`
 
 Must have a start tag and must not have an end tag.
@@ -222,6 +250,7 @@ height: Height of the image. `height="<integer>"`
 If only one of the width or height is set, the other will be proportionally enlarged and reduced. If both are set, it may cause the picture to be deformed.
 
 ## Audio element `<audio src="" controls></audio>`
+
 Useful attributes:
 src: the path of the audio supports MP3. See General-path for more info.
 
@@ -234,6 +263,7 @@ loop: loop playback, no attribute value required
 e.g. `<audio src="hello.mp3" controls autoplay loop></audio>`
 
 ## Video element `<video src="" controls></video>`
+
 Useful attributes:
 src: path of the video, support mp4. See General-path for more info.
 
@@ -248,6 +278,7 @@ muted: play muted
 e.g. `<video src="hello.mp4" controls autoplay loop muted></video>`
 
 ## The Anchor element `<a href="landing page full path"></a>`
+
 e.g. `<a href="https://www.google.com">open Google</a>`
 
 The full path of the landing page:
@@ -255,12 +286,12 @@ The website contains https://www., e.g. https://www.baidu.com
 or file path, e.g. filename.html
 Or empty link: #, the function is that you don't know where to jump to in the early stage of development. You can use this instead of
 
- changing it in the future.
+changing it in the future.
 
 Useful attributes:
 target: the opening form of the target page, the value could be:
-_self: the default value, jump directly from the current page
-_blank: open in new window
+\_self: the default value, jump directly from the current page
+\_blank: open in new window
 
 e.g. `<a href="https://www.baidu.com" target="_blank">Open Baidu</a>`
 
@@ -271,14 +302,16 @@ The unordered list `<ul>` is used to indicate the entire unordered list. It is u
 - `<li>`: Represents each item of the list and contains the content of each line. Any content can be nested within it.
 
 Example:
+
 ```html
 <ul>
-    <li>apple</li>
-    <li>banana</li>
+  <li>apple</li>
+  <li>banana</li>
 </ul>
 ```
 
 Output:
+
 <ul>
     <li>apple</li>
     <li>banana</li>
@@ -291,14 +324,16 @@ The ordered list `<ol>` represents the entire ordered list. It is used to wrap t
 - `<li>`: Represents each item of the list and contains the content of each line. Any content can be nested within it.
 
 Example:
+
 ```html
 <ol>
-    <li>apple</li>
-    <li>banana</li>
+  <li>apple</li>
+  <li>banana</li>
 </ol>
 ```
 
 Output:
+
 <ol>
     <li>apple</li>
     <li>banana</li>
@@ -311,17 +346,18 @@ The description list `<dl>` represents the entire description list. It is used t
 - `<dt>`: The Description Term element represents the title of the list. Any content can be nested within it.
 - `<dd>`: The Description Details element represents each content in the list. Any content can be nested within it.
 
-
 Example:
+
 ```html
 <dl>
-    <dt>Fruit</dt>
-    <dd>Apple</dd>
-    <dd>Pear</dd>
+  <dt>Fruit</dt>
+  <dd>Apple</dd>
+  <dd>Pear</dd>
 </dl>
 ```
 
 Output:
+
 <dl>
     <dt>Fruit</dt>
     <dd>Apple</dd>
@@ -329,6 +365,7 @@ Output:
 </dl>
 
 ## Table element
+
 ```
 <table border="1" width="600" height="400">
     <caption>Fruit list</caption>
@@ -370,6 +407,7 @@ Output:
 </table>
 
 ## Table structure (just for extension)
+
 ```
 <thead> table head </thead>
 <tbody> table body </tbody>
@@ -377,12 +415,13 @@ Output:
 ```
 
 ## Merge cells
+
 - Top-left rule: merge up and down remains up, merge left and right remains left
 
-Attribute name | Attribute value | Description
---- | --- | ---
-rowspan | number of cells to merge | Merge vertically
-colspan | number of cells to merge | Merge horizontally
+| Attribute name | Attribute value          | Description        |
+| -------------- | ------------------------ | ------------------ |
+| rowspan        | number of cells to merge | Merge vertically   |
+| colspan        | number of cells to merge | Merge horizontally |
 
 ```
 <table border="1" width="600" height="400">
@@ -403,6 +442,7 @@ colspan | number of cells to merge | Merge horizontally
     </tr>
 </table>
 ```
+
 <table border="1">
     <caption>Fruit list</caption>
     <tr>
@@ -466,43 +506,54 @@ Useful attribute: `type`
 ### Useful 'type' values
 
 #### `text`
-The default value. A single-line text field. Line breaks are automatically removed from the input value. 
+
+The default value. A single-line text field. Line breaks are automatically removed from the input value.
 e.g. text: `<input type="text">`
 
 #### `password`
-A single-line text field whose value is obscured. Will alert the user if the site is not secure. 
+
+A single-line text field whose value is obscured. Will alert the user if the site is not secure.
 e.g. password `<input type="password">`
 
 #### `radio`
-A radio button allows a single value to be selected out of multiple choices with the same `name` value. 
+
+A radio button allows a single value to be selected out of multiple choices with the same `name` value.
 e.g. How are you going? `<input type="radio">Good.`
 
 #### `checkbox`
+
 A check box allows single values to be selected/deselected. Suitable for more than one answer can be selected.
 
 #### `file`
+
 A control that lets the user select a file. Use the `accept` attribute to define the types of files that the control can select.
 
 #### `submit`
+
 A button that submits the form.
 
 #### `reset`
+
 A button that resets the contents of the form to default values. Not recommended.
 
 #### `button`
+
 A push-button with no default behavior displays the `value` attribute's value, empty by default. Use JavaScript to add a function.
 
 Common attributes when `type = "text"`: `placeholder`
 
 #### `placeholder`
+
 Text that prompts the user for input.
 e.g. `<input type="text" placeholder="enter account name">`
 
 Common attributes when `type = "radio"`: `name`
 
 #### `name`
+
 Grouping, those with the same name are grouped together, and only one of them can be selected at the same time.
 e.g. gender:
+
 ```
 <input type="radio" name="gender">male
 <input type="radio" name="gender">female
@@ -511,8 +562,10 @@ e.g. gender:
 Common attribute when `type = "radio"` or `type = "checkbox"`: `checked`
 
 #### `checked`
+
 Selected by default.
 e.g. gender:
+
 ```
 <input type="radio" name="gender">male
 <input type="radio" name="gender" checked>female
@@ -521,9 +574,11 @@ e.g. gender:
 Common attributes when `type = "file"`: `multiple`
 
 #### `multiple`
+
 Can upload multiple files at once.
 
 All buttons (`submit`, `reset`, `button`) should be matched with the `form` tag. The usage is to wrap the `form` tag together.
+
 ```
 <form action="">
   name: <input type="text">
@@ -537,19 +592,21 @@ All buttons (`submit`, `reset`, `button`) should be matched with the `form` tag.
 
 Submit address in `action`
 All buttons common attribute value: what name do you want to call
+
 ```
 <input type="submit" value="free register">
 <input type="button" value="free register">
 ```
 
-## `button` element 
+## `button` element
 
 `<button></button>`
 
-- Common attribute `type`. 
+- Common attribute `type`.
 - Attribute value: `submit`, `reset`, `button`. The usage is the same as the `type` attribute of the `input` tag.
 - Submit button by default in Google Chrome.
 - The button is a double label, which is convenient to include other content, text, pictures, etc.
+
 ```
 <button>I’m a button</button>
 <button type="submit">I’m a submit button</button>
@@ -562,7 +619,8 @@ All buttons common attribute value: what name do you want to call
 `<option></option>`: each item of the drop-down menu
 `selected` attribute in `option` element: The default selection of the drop-down menu, if there is no selection,
 
- it will default to the first option
+it will default to the first option
+
 ```
 <select>
   <option>Beijing</option>
@@ -584,11 +642,13 @@ Drag the bottom-right corner can change the size, but it is best to use CSS to d
 Often used to bind the relationship between content and form element
 
 Use method 1:
+
 - Use label tags to wrap content
 - Add an `id` attribute to the label tag
 - Set the corresponding `id` attribute value to the `for` attribute of the label element
 
 Use method 2:
+
 - Use label tags to wrap content and form tags
 - Delete the `for` attribute of the label tag
 
@@ -603,6 +663,7 @@ Semantic element `<div></div>` `<span></span>`
 No semantics for these two layout elements. They can be used in other elements. Both do not have effects but can be added in CSS.
 
 Elements with semantics (just for extension):
+
 - `header`: web page header
 - `nav`: web navigation
 - `footer`: bottom of the page
@@ -612,16 +673,15 @@ Elements with semantics (just for extension):
 
 The mobile terminal uses more commonly and does not have any effect. Add the effect to CSS.
 
-
 ## Useful Character Entities:
 
-| Result | Description         | Character Entity |
-| ------ | ------------------- | ---------------- |
-|        | Space               | `&nbsp;`         |
-| <      | Lower than          | `&lt;`           |
-| >      | Greater than        | `&gt;`           |
-| "      | Quotation mark      | `&quot;`         |
-| &      | Ampersand           | `&amp;`          |
+| Result | Description    | Character Entity |
+| ------ | -------------- | ---------------- |
+|        | Space          | `&nbsp;`         |
+| <      | Lower than     | `&lt;`           |
+| >      | Greater than   | `&gt;`           |
+| "      | Quotation mark | `&quot;`         |
+| &      | Ampersand      | `&amp;`          |
 
 These character entities are useful when working with HTML to represent special characters and prevent them from being interpreted as code or causing syntax errors. Here's a breakdown of each character entity:
 
@@ -632,4 +692,3 @@ These character entities are useful when working with HTML to represent special 
 - `&amp;`: Represents the ampersand symbol (`&`), which is used to start character entities in HTML itself. It needs to be encoded to avoid confusion with an actual character entity.
 
 These character entities ensure that special characters are correctly rendered in HTML and help maintain proper syntax and formatting.
-

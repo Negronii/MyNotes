@@ -5,14 +5,19 @@ Every element is an object, and the document represents the entire HTML document
 ## getElementByID
 
 To retrieve an element in the document, we use the following syntax:
+
 ```javascript
 <element name>.getElementById('<element id>')
 ```
+
 For example:
+
 ```javascript
-document.getElementById('time')
+document.getElementById("time");
 ```
+
 The return value is an object. To log the element object we retrieve, we can use:
+
 ```javascript
 console.dir(<element object>)
 ```
@@ -20,26 +25,35 @@ console.dir(<element object>)
 ## getElementByTagName
 
 To retrieve elements by their tag name, we use the syntax:
+
 ```javascript
 <element name>.getElementsByTagName('<tag name>')
 ```
+
 For instance, if we want to retrieve `<li>` elements, we use:
+
 ```javascript
-document.getElementsByTagName('li')
+document.getElementsByTagName("li");
 ```
+
 The return value is a pseudo array, which can be accessed using the following syntax:
+
 ```javascript
 <returnObject>[<index>]
 ```
+
 To traverse the returned elements, we can use a loop:
+
 ```javascript
 for (let i = 0; i < <returnObject>.length; i++) {
   <returnObject>[i]
 }
 ```
+
 If no elements are found, an array with a length of 0 will be returned.
 
 To retrieve the child elements within a parent tag, we can use the following approach:
+
 ```javascript
 const ols = document.getElementsByTagName('ol');
 const lis = ols[<index>].getElementsByTagName('li');
@@ -48,65 +62,81 @@ const lis = ols[<index>].getElementsByTagName('li');
 # Some get function only available in HTML5
 
 ## getElementsByClassName
+
 ```javascript
 <element name>.getElementsByClassName('<class name>')
 ```
+
 - Return a collection of elements.
 - Example:
+
 ```javascript
-var boxes = document.getElementsByClassName('box');
+var boxes = document.getElementsByClassName("box");
 ```
 
 ## querySelector
+
 ```javascript
-document.querySelector('<selector>')
+document.querySelector("<selector>");
 ```
+
 - Return the first element selected by the selector.
 - Examples:
+
 ```javascript
-var box = document.querySelector('.box');
-var box = document.querySelector('#nav');
-var box = document.querySelector('li');
+var box = document.querySelector(".box");
+var box = document.querySelector("#nav");
+var box = document.querySelector("li");
 ```
+
 - Useful in developing.
 
 ## querySelectorAll
+
 ```javascript
-document.querySelectorAll('<selector>')
+document.querySelectorAll("<selector>");
 ```
+
 - Return all elements selected by the selector.
 - Example:
+
 ```javascript
-var boxes = document.querySelectorAll('.box');
+var boxes = document.querySelectorAll(".box");
 ```
+
 - Useful in developing.
 
 ## document.body & document.documentElement
+
 ```javascript
 var bodyEle = document.body; // get body element object
 var htmlEle = document.documentElement; // get html element object
 ```
 
 # Events introduction
+
 Events consist of three parts: event source, event type, event handler.
 
 - Event source: Which object triggered the event? Example:
+
 ```javascript
-var btn = document.getElementById('btn');
+var btn = document.getElementById("btn");
 ```
 
 - Event type: How to trigger the event? What is the event?
 - Here is a list of some common HTML events:
+
   - onclick
   - onmouseover
   - onkeydown
   - onsubmit
   - ...
-  (Note: Please provide specific event names for a more accurate list)
+    (Note: Please provide specific event names for a more accurate list)
 
 - Event handler: Define the function for the event type. Example:
+
 ```javascript
-btn.onclick = function() {
+btn.onclick = function () {
   // do something
 };
 ```
@@ -116,16 +146,17 @@ btn.onclick = function() {
 `innerText` & `innerHTML`
 
 - `element.innerText`: Returns the text content of an element, excluding any HTML tags, spaces, and newlines inside.
+
   - Example:
     ```javascript
-    element.innerText = '2022-11-09'; // define the value
+    element.innerText = "2022-11-09"; // define the value
     ```
     This sets the inner text of the element to '2022-11-09'.
 
 - `element.innerHTML`: Returns the complete HTML content of an element, including any HTML tags, spaces, and newlines inside.
   - Example:
     ```javascript
-    element.innerHTML = '<strong>Today is:</strong> 2022-11-09';
+    element.innerHTML = "<strong>Today is:</strong> 2022-11-09";
     ```
     This sets the inner HTML of the element to '<strong>Today is:</strong> 2022-11-09'.
 
@@ -136,13 +167,13 @@ btn.onclick = function() {
 
 ```html
 <script>
-  var btn = document.querySelector('button');
-  var input = document.querySelector('input');
+  var btn = document.querySelector("button");
+  var input = document.querySelector("input");
 
   // Register the onclick event
-  btn.onclick = function() {
+  btn.onclick = function () {
     // Modify the input value
-    input.value = 'entered';
+    input.value = "entered";
 
     // Disable the button, making it unclickable
     btn.disabled = true;
@@ -151,11 +182,11 @@ btn.onclick = function() {
     this.disabled = true;
   };
 
-  input.onfocus = function() {
+  input.onfocus = function () {
     // Event handler when the user clicks on the input
   };
 
-  input.onblur = function() {
+  input.onblur = function () {
     // Event handler when the user clicks on the input and then clicks somewhere else
   };
 
@@ -173,7 +204,7 @@ btn.onclick = function() {
 - `title`: Specifies extra information about an element (typically displayed as a tooltip).
 
 ```javascript
-img.src = 'pic/pic.png';
+img.src = "pic/pic.png";
 ```
 
 ## Inline Style modification
@@ -183,13 +214,13 @@ img.src = 'pic/pic.png';
 - To hide an element, set its `display` style property to `'none'`.
 
 ```javascript
-var div = document.querySelector('div');
+var div = document.querySelector("div");
 
 // Modify background color
-div.style.backgroundColor = 'pink';
+div.style.backgroundColor = "pink";
 
 // Hide the div
-div.style.display = 'none';
+div.style.display = "none";
 ```
 
 ## Classname style modification
@@ -198,11 +229,11 @@ div.style.display = 'none';
 - To keep the previous class name, separate multiple class names with a space.
 
 ```javascript
-var div = document.querySelector('div');
-div.className = 'box';
+var div = document.querySelector("div");
+div.className = "box";
 
 // To keep the previous class name
-div.className = 'first second';
+div.className = "first second";
 ```
 
 ## Customized attributes
@@ -212,11 +243,13 @@ div.className = 'first second';
 - To use all variables (including customized): `<elementName>.getAttribute('<attribute name>')`
 
 Example:
+
 ```html
 <div id="test" index="1"></div>
 ```
+
 ```javascript
-var div = document.querySelector('div');
+var div = document.querySelector("div");
 div.id; // returns 'test'
 div.getAttribute("index"); // returns '1'
 ```
@@ -224,30 +257,34 @@ div.getAttribute("index"); // returns '1'
 - Set built-in attributes: `<elementName>.<attributeName> = '<value>'`
 - Set
 
- all attributes: `<elementName>.setAttribute('<attributeName>', '<value>')`
+all attributes: `<elementName>.setAttribute('<attributeName>', '<value>')`
 
 Example:
+
 ```javascript
-div.setAttribute('class', 'box');
-div.setAttribute('index', '1');
+div.setAttribute("class", "box");
+div.setAttribute("index", "1");
 ```
 
 - Remove an attribute: `<elementName>.removeAttribute('<attributeName>')`
 
 Example:
+
 ```javascript
-div.removeAttribute('index');
+div.removeAttribute("index");
 ```
 
 - W3C Rule: Developer-defined attributes must start with `data-`, e.g., `data-index`.
 - `dataset`: Stores all attributes starting with `data-`. Attribute names with `-` will be transferred to lower camel case naming, i.e., `data-test-attr` will be `dataset.testAttr`.
 
 Example:
+
 ```html
 <div id="test" data-index="1" data-test-attr="test"></div>
 ```
+
 ```javascript
-var div = document.querySelector('div');
+var div = document.querySelector("div");
 div.dataset.index; // returns '1'
 div.dataset.testAttr; // returns 'test'
 ```
@@ -256,37 +293,44 @@ In development, `getAttribute` and `setAttribute` are more commonly used.
 
 # Node operations
 
-Node operations can make it easier to find the son elements of the elements. It has worse compatibility but easier to develop front-end. A node has `nodeType`, `nodeName`, `nodeValue`. 
+Node operations can make it easier to find the son elements of the elements. It has worse compatibility but easier to develop front-end. A node has `nodeType`, `nodeName`, `nodeValue`.
 
-## Element node: 
+## Element node:
+
 `nodeType = 1` (most useful)
 
-## Attribute node: 
+## Attribute node:
+
 `nodeType = 2`
 
-## Text node: 
+## Text node:
+
 `nodeType = 3` (text, space, newline)
 
 # parentNode
+
 `node.parentNode` // get the closest parent of this node, if there is no parent node return null
 
 E.g.
+
 ```html
 <div class="box1">
-    <div class="box2"></div>
+  <div class="box2"></div>
 </div>
 ```
+
 ```javascript
-var div = document.querySelector('.box2');
-box2.parentNode // will get div with class = box1
+var div = document.querySelector(".box2");
+box2.parentNode; // will get div with class = box1
 ```
 
 # Get child nodes
+
 `<parentNode>.childNodes` // get a collection of all child nodes, including element, attribute, and text. Therefore, if we want to get all element nodes, we need a for loop and check if `child.nodeType == 1`
 
 ```javascript
-var div = document.querySelector('.box1');
-box2.childNodes // will get div with class = box2
+var div = document.querySelector(".box1");
+box2.childNodes; // will get div with class = box2
 ```
 
 So, `childNodes` is not recommended.
@@ -309,6 +353,7 @@ However, both first and last element child have compatibility issues. Only IE9+ 
 ```
 
 ## Sibling nodes
+
 `<node>.nextSibling` // return the next sibling node, whatever it is element, attribute, or text node. If cannot find, return null.
 
 `<node>.previousSibling` // return the previous sibling node, whatever it is element, attribute, or text node. If cannot find, return null.
@@ -324,14 +369,15 @@ So, to avoid compatibility issues, we can use:
 ```javascript
 var el = element;
 while (el = element.nextSibling) {
-    if (el.nodeType == 1) 
+    if (el.nodeType == 1)
         // do something
 }
-// not found 
+// not found
 return null;
 ```
 
 ## Create node
+
 Create a node
 
 Place it in a parent node
@@ -340,15 +386,21 @@ Place it in a parent node
 var <elementName> = document.createElement('<tagName>') // create a dynamic node
 node.appendChild(<child>) // append a child node at the end of a node, similar to after sudo element in CSS
 ```
-e.g. 
+
+e.g.
+
 ```html
-<ul><li>123</li></ul>
+<ul>
+  <li>123</li>
+</ul>
 ```
+
 ```javascript
-var li = document.createElement('li');
-var ul = document.querySelector('ul');
+var li = document.createElement("li");
+var ul = document.querySelector("ul");
 ul.appendChild(li);
 ```
+
 Result will become `<ul><li>123</li><li></li></ul>`
 
 ```javascript
@@ -356,15 +408,21 @@ node.insertBefore(<child>, <indicated element>) // insert a child node before a 
 
  sudo element in CSS
 ```
-e.g. 
+
+e.g.
+
 ```html
-<ul><li>123</li></ul>
+<ul>
+  <li>123</li>
+</ul>
 ```
+
 ```javascript
-var li = document.createElement('li');
-var ul = document.querySelector('ul');
+var li = document.createElement("li");
+var ul = document.querySelector("ul");
 ul.insertBefore(li, ul.children[0]);
 ```
+
 Result will become `<ul><li></li><li>123</li></ul>`
 
 Efficiency under a large amount of element creation: much faster than `innerHTML += "…"`
@@ -372,77 +430,89 @@ Efficiency under a large amount of element creation: much faster than `innerHTML
 However, if we use an array to store string elements and use `<element>.innerHTML = <array>.join('')`, it will be faster than `createElement`
 
 ## Remove node
+
 `<node>.removeChild(<child>)` // remove the child from node, return the deleted node
 
-e.g. 
+e.g.
+
 ```html
 <ul>
-    <li>a</li>
-    <li>b</li>
-    <li>c</li>
+  <li>a</li>
+  <li>b</li>
+  <li>c</li>
 </ul>
-<button >
+<button></button>
 ```
+
 ```javascript
-var ul = document.querySelector('ul');
-var button = document.querySelector('button');
+var ul = document.querySelector("ul");
+var button = document.querySelector("button");
 button.onclick = () => {
-    if (ul.children.length > 0)
-        ul.removeChild(ul.children[0]);
-    else 
-        this.disabled = true;
-}
+  if (ul.children.length > 0) ul.removeChild(ul.children[0]);
+  else this.disabled = true;
+};
 ```
 
 ## Clone node
+
 `<node>.cloneNode()` returns the clone of the node. If we put no parameter or false, it will be a shallow copy with no child nodes. If we put true in the parameter, it will return a deep copy, i.e., `<node>.cloneNode(true)`
 
-e.g. 
+e.g.
+
 ```html
 <ul>
-    <li>a</li>
-    <li>b</li>
-    <li>c</li>
+  <li>a</li>
+  <li>b</li>
+  <li>c</li>
 </ul>
-<button >
+<button></button>
 ```
+
 ```javascript
-var ul = document.querySelector('ul');
+var ul = document.querySelector("ul");
 var lili = ul.children[0].cloneNode();
 ul.appendNode(lili);
 ```
 
 ## Dynamic table
-E.g. 
+
+E.g.
+
 ```html
 <table>
-    <thead> 
-        <th>name</th>
-        <th>subject</th>
-        <th>grade</th>
-    </thead>
-    <tbody>
-    </tbody>
+  <thead>
+    <th>name</th>
+    <th>subject</th>
+    <th>grade</th>
+  </thead>
+  <tbody></tbody>
 </table>
 ```
+
 ```javascript
-var mockData = [{name:'Ron',subject:'math',grade:'100'}, {name:'jack',subject:'calculus',grade:'70'}, {name:'Mar',subject:'bus',grade:'90'}];
-var body = document.querySelector('tbody');
+var mockData = [
+  { name: "Ron", subject: "math", grade: "100" },
+  { name: "jack", subject: "calculus", grade: "70" },
+  { name: "Mar", subject: "bus", grade: "90" },
+];
+var body = document.querySelector("tbody");
 for (var I = 0; I < mockData.length; I++) {
-    var tr = document.createElement('tr');
-    tbody.append(tr);
-    for (var k in mockData[I]) {
-        var td = document.createElement('td');
-        td.innerHTML = mockData[I][k];
-        tr.appendChild(td);
-    }
+  var tr = document.createElement("tr");
+  tbody.append(tr);
+  for (var k in mockData[I]) {
+    var td = document.createElement("td");
+    td.innerHTML = mockData[I][k];
+    tr.appendChild(td);
+  }
 }
 ```
+
 Remember for object traverse:
+
 ```javascript
 for (var k in obj) {
-    // k is property name
-    // obj[k] is property value
+  // k is property name
+  // obj[k] is property value
 }
 ```
 
@@ -491,12 +561,12 @@ The method to remove an event listener: `removeEventListener`
 Example for a single-use button:
 
 ```javascript
-function fn() { 
-    alert(11);
-    btn.removeEventListener('click', fn)
+function fn() {
+  alert(11);
+  btn.removeEventListener("click", fn);
 }
 
-btn.addEventListener('click', fn); // note here! fn not fn(), no brackets
+btn.addEventListener("click", fn); // note here! fn not fn(), no brackets
 ```
 
 ## DOM Event Stream
@@ -512,15 +582,17 @@ Using `<eventTarget>.addEventListener(<type>, listener, true)` will trigger even
 ### What's the difference?
 
 If at the capturing stage and both the father and son have a click event listener:
+
 - The father's event will trigger first, then the son.
 
 If at the bubbling stage and both the father and son have a click event listener:
+
 - The son's event will trigger first, then the father.
 
 ## Event Object
 
 ```javascript
-btn.onclick = function(event) {}
+btn.onclick = function (event) {};
 ```
 
 Event is an object. If it is a click event, it will contain information like mouse coordinates. If it is a key-pressed event, it will contain which key is pressed.
@@ -563,24 +635,27 @@ The advantage of event delegation over setting registered events for all `li` el
 # Mouse events
 
 ## Disable right click menu - `contextmenu`
+
 `contextmenu` controls when to display the context menu and is often used to disable the default context menu.
 
 ```javascript
-document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-})
+document.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+});
 ```
 
 ## Disable mouse selection - `selectstart`
+
 `selectstart` event is used to disable mouse selection.
 
 ```javascript
-document.addEventListener('selectstart', (e) => {
-    e.preventDefault();
-})
+document.addEventListener("selectstart", (e) => {
+  e.preventDefault();
+});
 ```
 
 # Mouse event attributes
+
 - `e.clientX`: X coordinate relative to the viewable area of the browser
 - `e.clientY`: Y coordinate relative to the viewable area of the browser
 - `e.pageX`: X coordinate relative to the document page
@@ -591,27 +666,27 @@ document.addEventListener('selectstart', (e) => {
 Example: Moving a picture with the mouse
 
 ```html
-<style> 
-.pic{
-    position:absolute;
-    top:2px; /* remember the absolute positioning requires a top value */
-}
+<style>
+  .pic {
+    position: absolute;
+    top: 2px; /* remember the absolute positioning requires a top value */
+  }
 </style>
 
-<body> 
-<img src="…" alt="">
+<body>
+  <img src="…" alt="" />
 </body>
 ```
 
 ```javascript
-var pic = document.querySelector('img')
-document.addEventListener('mousemove', (e) => {
-   // trigger when the mouse move ≥ 1px
-    var x = e.pageX;
-    var y = e.pageY;
-    pic.style.left = x + 'px'
-    pic.style.top = y + 'px'
-})
+var pic = document.querySelector("img");
+document.addEventListener("mousemove", (e) => {
+  // trigger when the mouse move ≥ 1px
+  var x = e.pageX;
+  var y = e.pageY;
+  pic.style.left = x + "px";
+  pic.style.top = y + "px";
+});
 ```
 
 # Keyboard events
@@ -625,10 +700,10 @@ When using `addEventListener`, don't add "on" at the start of the word. For exam
 Example:
 
 ```javascript
-document.addEventListener('keyup', (e) => {
-    // e.keyCode to get the ASCII value of the pressed key, e.g., pressing number 1
-    // then the keyCode = 49
-})
+document.addEventListener("keyup", (e) => {
+  // e.keyCode to get the ASCII value of the pressed key, e.g., pressing number 1
+  // then the keyCode = 49
+});
 ```
 
 For actions that we want to execute once, use `keyup`, since holding the key down will continuously trigger `keydown` and `keypress`.
@@ -672,16 +747,16 @@ There are two ways to handle the `onload` event:
 1. Using the `onload` property of the `window` object:
 
 ```javascript
-window.onload = function() {
-    // Code to be executed after the window is loaded
+window.onload = function () {
+  // Code to be executed after the window is loaded
 };
 ```
 
 2. Using the `addEventListener` method of the `window` object:
 
 ```javascript
-window.addEventListener('load', function() {
-    // Code to be executed after the window is loaded
+window.addEventListener("load", function () {
+  // Code to be executed after the window is loaded
 });
 ```
 
@@ -692,8 +767,8 @@ The `DOMContentLoaded` event is triggered when the document is loaded, excluding
 Example:
 
 ```javascript
-document.addEventListener('DOMContentLoaded', function() {
-    // Code to be executed when the document is loaded
+document.addEventListener("DOMContentLoaded", function () {
+  // Code to be executed when the document is loaded
 });
 ```
 
@@ -706,16 +781,16 @@ There are two ways to handle the `resize` event:
 1. Using the `onresize` property of the `window` object:
 
 ```javascript
-window.onresize = function() {
-    // Code to be executed when the window size changes
+window.onresize = function () {
+  // Code to be executed when the window size changes
 };
 ```
 
 2. Using the `addEventListener` method of the `window` object:
 
 ```javascript
-window.addEventListener('resize', function() {
-    // Code to be executed when the window size changes
+window.addEventListener("resize", function () {
+  // Code to be executed when the window size changes
 });
 ```
 
@@ -726,15 +801,17 @@ The `window.innerWidth` property can be used to obtain the current width of the 
 The `setTimeout` function is used to schedule the execution of a function after a specified timeout. It takes two parameters: the function to be executed and the timeout duration in milliseconds. The function will be invoked once the specified timeout has elapsed. The `window` object can be omitted when calling this function.
 
 Example:
+
 ```javascript
-setTimeout(function(){}, 2000);
+setTimeout(function () {}, 2000);
 ```
 
 To store the timer ID for later use, you can assign the `setTimeout` function call to a variable.
 
 Example:
+
 ```javascript
-var timer = setTimeout(function(){}, 2000);
+var timer = setTimeout(function () {}, 2000);
 ```
 
 # clearTimer
@@ -742,6 +819,7 @@ var timer = setTimeout(function(){}, 2000);
 The `clearTimer` function is used to cancel a timer that was previously set using `setTimeout`. It takes the timer ID as a parameter. The `window` object can be omitted when calling this function.
 
 Example:
+
 ```javascript
 clearTimer(timer);
 ```
@@ -751,15 +829,17 @@ clearTimer(timer);
 The `setInterval` function is used to repeatedly invoke a function at a specified interval. It takes two parameters: the function to be executed and the interval duration in milliseconds. The function will be invoked every specified interval. The `window` object can be omitted when calling this function.
 
 Example:
+
 ```javascript
-setInterval(function(){}, 2000);
+setInterval(function () {}, 2000);
 ```
 
 To store the interval ID for later use, you can assign the `setInterval` function call to a variable.
 
 Example:
+
 ```javascript
-var interval = setInterval(function(){}, 2000);
+var interval = setInterval(function () {}, 2000);
 ```
 
 # clearInterval
@@ -767,6 +847,7 @@ var interval = setInterval(function(){}, 2000);
 The `clearInterval` function is used to stop the execution of an interval that was previously set using `setInterval`. It takes the interval ID as a parameter. The `window` object can be omitted when calling this function.
 
 Example:
+
 ```javascript
 clearInterval(interval);
 ```
@@ -774,36 +855,44 @@ clearInterval(interval);
 # 'this' Keyword Usage
 
 ## Global Usage
+
 In global usage, `this` refers to the `window` object. For example:
+
 ```javascript
 console.log(this); // Outputs the window object
 ```
 
 ## Timer Function Usage
+
 In timer functions such as `setTimeout` and `setInterval`, `this` also points to the `window` object, regardless of whether it is inside a button click listener function. For example:
+
 ```javascript
-setInterval(function() {
+setInterval(function () {
   console.log(this); // Outputs the window object
 }, 2000);
 ```
 
 ## Function Invocation Usage
+
 When a function is invoked, `this` points to the object that invokes the function. For instance:
+
 ```javascript
 var o = {
-  sayHi: function() {
+  sayHi: function () {
     console.log(this); // Outputs the object 'o'
-  }
+  },
 };
 o.sayHi(); // Invoking the 'sayHi' method on object 'o'
 
-btn.onclick = function() {
+btn.onclick = function () {
   console.log(this); // Outputs the clicked button object
 };
 ```
 
 ## Constructor Method Usage
+
 In a constructor method, `this` points to the instance object being created. For example:
+
 ```javascript
 function Fun() {
   console.log(this); // Outputs the instance object
@@ -814,18 +903,23 @@ var fun = new Fun(); // Creating an instance of 'Fun'
 # Async and Sync
 
 ## Synchronized
+
 Synchronized tasks involve completing one thing entirely before moving on to the next thing. For example:
+
 - Boil water
 - Cut vegetables
 - Cook
 
 ## Asynchronous (Async)
+
 Async tasks involve doing multiple things simultaneously. For example:
+
 - Boil water
 - Cut vegetables (at the same time)
 - Cook
 
 Async tasks are implemented using callback functions. Callback functions can include:
+
 - Normal events, e.g., click, resize
 - Resource loading, e.g., load, error
 - Timers, e.g., setInterval, setTimeout
@@ -850,7 +944,7 @@ while (true) {
     while (!syncTasks.isEmpty()) {
         do(syncTasks.pop());
     }
-    
+
     if (!asyncTasks.isEmpty()) {
         syncTasks.push(asyncTasks.poll());
     }
@@ -888,16 +982,18 @@ The `location` object provides various properties to access and manipulate the U
 This property is commonly used when we want to navigate to a different page.
 
 Example usage:
+
 ```javascript
-var div = querySelector('div');
+var div = querySelector("div");
 var time = 5;
-setInterval(function(){
-    if (time == 0) {
-        location.href = "www.itcast.cn";
-    } else {
-        div.innerHTML = 'You will be navigated to itcast.cn in ' + time + ' seconds';
-        time--;
-    }
+setInterval(function () {
+  if (time == 0) {
+    location.href = "www.itcast.cn";
+  } else {
+    div.innerHTML =
+      "You will be navigated to itcast.cn in " + time + " seconds";
+    time--;
+  }
 }, 1000);
 ```
 
@@ -906,6 +1002,7 @@ setInterval(function(){
 This property allows passing parameters from one page to another. We can use `location.href` to navigate to another page with a query.
 
 Example:
+
 - For the link `http://www.itcast.cn/index.html?name=andy`, `location.search` returns `?name=andy`.
 - Use `substr` to extract the parameter: `var parameter = location.search.substr(1) // var parameter = 'name=andy'`.
 - Split the parameter using `=` as the separator: `var arr = parameter.split('=')`. Now `arr[0] = name` and `arr[1] = andy`.
@@ -1000,4 +1097,3 @@ title.addEventListener("mouseup", function(){
 ## Scroll series
 
 Animation function packaging
-

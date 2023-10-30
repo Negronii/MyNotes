@@ -14,11 +14,13 @@ npm start
 To add dependencies as developing tools in your React project, you can use either `npm` or `yarn`. Here are the commands:
 
 Using npm:
+
 ```shell
 npm install <package name> --save-dev
 ```
 
 Using yarn:
+
 ```shell
 yarn add <package name> --dev
 ```
@@ -28,11 +30,13 @@ yarn add <package name> --dev
 If you want to remove a dependency from your React project, you can use the following commands:
 
 Using npm:
+
 ```shell
 npm uninstall <package name> --save
 ```
 
 Using yarn:
+
 ```shell
 yarn remove <package name>
 ```
@@ -44,10 +48,10 @@ Assuming you have a `<div id="root"></div>` in the HTML body, you can create a R
 ```javascript
 // Create a React element
 // React.createElement(<element name>, <element property>, <innerHTML>)
-const title = React.createElement('h1', null, 'Hello React');
+const title = React.createElement("h1", null, "Hello React");
 
 // Create a root from the DOM
-const domContainer = document.getElementById('root');
+const domContainer = document.getElementById("root");
 const root = ReactDOM.createRoot(domContainer);
 
 // Render the title we just created
@@ -74,7 +78,7 @@ You can also use variable values inside JSX:
 
 ```jsx
 var welcome = "welcome to JSX";
-<h1 className="header">Message: {welcome}</h1>
+<h1 className="header">Message: {welcome}</h1>;
 ```
 
 Note that the attribute for specifying the class name in JSX is `className`, not `class`.
@@ -87,12 +91,12 @@ Example of recommended JSX format and structure
 
 ```jsx
 function Header() {
-    return (
-        <div>
-            <h1>hello</h1>
-            <p> this is a JSX</p>
-        </div>
-    );
+  return (
+    <div>
+      <h1>hello</h1>
+      <p> this is a JSX</p>
+    </div>
+  );
 }
 
 export default Header;
@@ -104,42 +108,42 @@ export default Header;
 import Header from "./components/Header";
 
 function TempName() {
-    return (
-        <div>
-            <Header />
-            <h1>reason learn react</h1>
-            <ol>
-                <li>hirable</li>
-                <li>h1 grade</li>
-            </ol>
-        </div>
-    );
+  return (
+    <div>
+      <Header />
+      <h1>reason learn react</h1>
+      <ol>
+        <li>hirable</li>
+        <li>h1 grade</li>
+      </ol>
+    </div>
+  );
 }
 
-const domContainer = document.getElementById('root');
+const domContainer = document.getElementById("root");
 const root = ReactDOM.createRoot(domContainer);
-root.render(<TempName/>);
+root.render(<TempName />);
 ```
 
 # Keys of recommended JSX formatting
 
 - Use parentheses "()" to cover HTML.
-- Because setting a variable header will take up RAM, but letting a function return it won’t do so. 
+- Because setting a variable header will take up RAM, but letting a function return it won’t do so.
 - Such functions are called components, and it is recommended to use Upper-camel naming convention, e.g., NavItem, HeaderIntro.
 - Note that we can only render one node here. The node could have children nodes, which is why the previous HTML is wrapped with a `div` element.
 - When we want to use such functions, we can call `render` with `<ComponentName />`. It is the same as `root.render(React.createElement(TempName, null))`.
 - Components can contain other components by using `<ComponentName />`.
-- If the page will contain a large number of elements, it is recommended to create a function called `Page()` and divide the components into multiple functions. Add the components to the `Page` element and render only the `Page`, e.g., 
+- If the page will contain a large number of elements, it is recommended to create a function called `Page()` and divide the components into multiple functions. Add the components to the `Page` element and render only the `Page`, e.g.,
 
 ```jsx
 function Page() {
-    return (
-        <div>
-            <Header />
-            <MainContent />
-            <Footer />
-        </div>
-    );
+  return (
+    <div>
+      <Header />
+      <MainContent />
+      <Footer />
+    </div>
+  );
 }
 ```
 
@@ -154,7 +158,7 @@ In a React component JSX, we can use `<ul className="">` to set a class and use 
 In images, if we use `<img src="..."/>`, the resource may be invalid if we are calling the function from another JavaScript file in a different directory. The solution is to import the image first, e.g.:
 
 ```javascript
-import reactLogo from "../images/react-icon.png"
+import reactLogo from "../images/react-icon.png";
 ```
 
 Then in usage, we can write:
@@ -206,16 +210,16 @@ Header:
 
 ```javascript
 function Header(props) {
-  console.log(props)
+  console.log(props);
   return (
     <div>
       <h1>hello {props.cat}</h1>
       <p> this is a JSX {props.head}</p>
     </div>
-  )
+  );
 }
 
-export default Header
+export default Header;
 ```
 
 Log:
@@ -231,10 +235,8 @@ Note: `props` stands for properties. We CANNOT pass props to native DOM elements
 ```javascript
 export default function Joke(props) {
   return (
-    <div>
-      {props.setup && <h1>render only when props.setup is true</h1>}
-    </div>
-  )
+    <div>{props.setup && <h1>render only when props.setup is true</h1>}</div>
+  );
 }
 ```
 
@@ -251,10 +253,10 @@ It will only render the statement when `props.setup = true`.
 ## JavaScript `.map()` Review
 
 ```javascript
-const nums = [1, 2, 3, 4, 5]
+const nums = [1, 2, 3, 4, 5];
 const squared = nums.map(function (item) {
-  return item * item
-})
+  return item * item;
+});
 ```
 
 `.map()` will call the function on each item in the array, and the return value will replace the item. We can also use the index of the current value:
@@ -262,12 +264,12 @@ const squared = nums.map(function (item) {
 ```javascript
 const squared = nums.map((cur, index) => {
   // do something
-})
+});
 ```
 
 ## Render Array in JSX
 
-```javascript
+````javascript
 const fruits = [{ color: "red", size: 15 }, { color: "orange", size: 10 }]
 const fruitElement = fruits.map((item) => {
   return <Fruit color={item.color} size={item.size} />
@@ -284,17 +286,20 @@ export default function App() {
 
 ```javascript
 <img src={`../images/${image}`} />
-```
+````
 
 Use backticks to cover the whole string and include the JavaScript string inside `${}`.
 
 ## Object Spread Syntax
 
 ```javascript
-const fruits = [{ color: "red", size: 15 }, { color: "orange", size: 10 }]
+const fruits = [
+  { color: "red", size: 15 },
+  { color: "orange", size: 10 },
+];
 const fruitElement = fruits.map((item) => {
-  return <Fruit {...item} />
-})
+  return <Fruit {...item} />;
+});
 ```
 
 This is the same as above (`return <Fruit color={item.color} size={item.size}>`). This will send each property in `item` as props to the `Fruit` function. This is less recommended, as passing objects one by one explicitly is more straightforward to see what the props are.
@@ -315,7 +320,7 @@ export default function App() {
   function handleClick() {
     // do something
   }
-  return <button onClick={handleClick}>button</button>
+  return <button onClick={handleClick}>button</button>;
 }
 ```
 
@@ -355,28 +360,28 @@ E.g. we have 2 buttons, one to add one to minus one
 const [count, setCount] = React.useState(0);
 
 export default function App() {
-    function add() {
-        // we can use a lambda function, most preferred
-        setCount(prevCount => prevCount + 1);
-        // it is the same as
-        // setCount(function(prevCount) {
-        //    return prevCount + 1;
-        // })
-        // we can use set method directly, NOT preferred
-        // setCount(count + 1);
-    }
-    
-    function minus() {
-        setCount(prevCount => prevCount - 1);
-    }
-    
-    return (
-        <div>
-            <button onClick={add}>plus</button>
-            <h1>{count}</h1>
-            <button onClick={minus}>minus</button>
-        </div>
-    );
+  function add() {
+    // we can use a lambda function, most preferred
+    setCount((prevCount) => prevCount + 1);
+    // it is the same as
+    // setCount(function(prevCount) {
+    //    return prevCount + 1;
+    // })
+    // we can use set method directly, NOT preferred
+    // setCount(count + 1);
+  }
+
+  function minus() {
+    setCount((prevCount) => prevCount - 1);
+  }
+
+  return (
+    <div>
+      <button onClick={add}>plus</button>
+      <h1>{count}</h1>
+      <button onClick={minus}>minus</button>
+    </div>
+  );
 }
 ```
 
@@ -386,28 +391,34 @@ E.g. we want to update the App component when the user clicks on a button to add
 
 ```jsx
 export default function App() {
-    const thingsArray = ["Thing 1", "Thing 2"];
-    
-    function addItem() {
-        setThingsArray(prevState => {return [...prevState, `Thing ${thingsArray.length + 1}`]});
-    }
-    
-    // here key = {thing} is just to avoid warning, doesn’t matter
-    const thingsElements = thingsArray.map(thing => <p key={thing}>{thing}</p>);
-    
-    return (
-        <div>
-            <button onClick={handleClick}>button</button>
-            {thingsElements}
-        </div>
-    );
+  const thingsArray = ["Thing 1", "Thing 2"];
+
+  function addItem() {
+    setThingsArray((prevState) => {
+      return [...prevState, `Thing ${thingsArray.length + 1}`];
+    });
+  }
+
+  // here key = {thing} is just to avoid warning, doesn’t matter
+  const thingsElements = thingsArray.map((thing) => <p key={thing}>{thing}</p>);
+
+  return (
+    <div>
+      <button onClick={handleClick}>button</button>
+      {thingsElements}
+    </div>
+  );
 }
 ```
 
 ## Modify a property in state object
 
 ```jsx
-const [contact, setContact] = React.useState({ firstName: "Ron", lastName: "Xie", isFavorite: true });
+const [contact, setContact] = React.useState({
+  firstName: "Ron",
+  lastName: "Xie",
+  isFavorite: true,
+});
 
 function changeFavorite() {
   setContact((prevState) => ({
@@ -477,7 +488,7 @@ const styles = { backgroundColor: props.darkMode ? "black" : "white" };
 
 Multiple children components can invoke a function in the parent component by passing the function in props. To determine which child component called the function, we can pass a unique ID in props and let the child call the function with
 
- the unique ID as a parameter. This way, the parent component can identify which child is calling the function and update the state accordingly.
+the unique ID as a parameter. This way, the parent component can identify which child is calling the function and update the state accordingly.
 
 In `App.js`:
 
@@ -485,7 +496,7 @@ In `App.js`:
 const [boxes, setBoxes] = React.useState([
   { id: 1, on: false },
   { id: 2, on: false },
-  { id: 3, on: true }
+  { id: 3, on: true },
 ]);
 
 function toggle(id) {
@@ -526,9 +537,11 @@ Explanation: In this example, the `App` component has an array state variable `b
 Conditional rendering in React allows you to conditionally render certain components or elements based on a condition. There are two common ways to perform conditional rendering in React:
 
 1. Using the logical AND operator (`&&`):
+
    ```jsx
    {condition && <element>}
    ```
+
    If the `condition` is true, the `element` will be rendered. Otherwise, it will not be rendered.
 
 2. Using the ternary operator (`? :`):
@@ -545,7 +558,11 @@ const [isShown, setIsShown] = React.useState(true);
 return (
   <div>
     {isShown && <h1>Show context</h1>}
-    <button onClick={() => { setIsShown(prev => !prev) }}>
+    <button
+      onClick={() => {
+        setIsShown((prev) => !prev);
+      }}
+    >
       {isShown ? "Hide" : "Show"}
     </button>
   </div>
@@ -569,15 +586,15 @@ export default function Form() {
     comment: "",
     isFriendly: true,
     employment: "",
-    favColor: ""
+    favColor: "",
   });
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
-    setFormData(prevState => {
+    setFormData((prevState) => {
       return {
         ...prevState,
-        [name]: type === "checkbox" ? checked : value
+        [name]: type === "checkbox" ? checked : value,
       };
     });
   }
@@ -625,7 +642,7 @@ export default function Form() {
         name="isFriendly"
       />
       <label htmlFor="isFriendly">Are you friendly?</label>
-      <br/>
+      <br />
       <fieldset>
         <legend>Current employment status</legend>
         <input
@@ -637,7 +654,7 @@ export default function Form() {
           onChange={handleChange}
         />
         <label htmlFor="unemployed">Unemployed</label>
-        <br/>
+        <br />
         <input
           type="radio"
           id="full-time"
@@ -647,9 +664,8 @@ export default function Form() {
           onChange={handleChange}
         />
 
-
         <label htmlFor="full-time">Full-time</label>
-        <br/>
+        <br />
         <input
           type="radio"
           id="part-time"
@@ -660,7 +676,7 @@ export default function Form() {
         />
         <label htmlFor="part-time">Part-time</label>
       </fieldset>
-      <br/>
+      <br />
       <label htmlFor="favColor">What is your favorite color?</label>
       <select
         id="favColor"
@@ -671,7 +687,7 @@ export default function Form() {
         <option value="red">Red</option>
         <option value="blue">Blue</option>
       </select>
-      <br/>
+      <br />
       <button type="submit">Submit</button>
     </form>
   );
@@ -683,32 +699,32 @@ In the above example, the form collects data from different inputs such as text 
 Remember to set the `value` prop of each input element equal to the corresponding state value (`formData.<fieldName>`) to establish the connection between the input and the state value.
 
 # Deal with API
+
 ## Get the data (fetch, axios)
+
 ### Store data to state
 
 ```jsx
-export default function Fetch(){
-    const [starWarsData, setStarwarsData] = React.useState({})
-    
-    // fetch("https://swapi.dev/api/people/1")
-    //     .then(r => r.json())
-    //     .then(data => setStarwarsData(data))
-    
-    return (
-        <div>
-            {JSON.stringify(starWarsData, null, 2)}
-        </div>
-    )
+export default function Fetch() {
+  const [starWarsData, setStarwarsData] = React.useState({});
+
+  // fetch("https://swapi.dev/api/people/1")
+  //     .then(r => r.json())
+  //     .then(data => setStarwarsData(data))
+
+  return <div>{JSON.stringify(starWarsData, null, 2)}</div>;
 }
 ```
 
 However, the following code will trigger an infinite loop. Fetch data -> set state -> React re-render component -> fetch data...
 
 # Side Effect
+
 The operations may cause side effects: all operations other than returning a value, e.g., modifying global variables, requesting data, modifying DOM elements, even requesting data.
 Side effect refers to the same input but different output, e.g., requesting data from the backend, same API, same props but may get different data.
 
 ## useEffect()
+
 [Official React documentation on useEffect()](https://reactjs.org/docs/hooks-effect.html)
 
 `useEffect()` helps manage side effects (and avoid the infinite loop before).
@@ -716,6 +732,7 @@ Side effect refers to any code that affects an outside system, e.g., local stora
 Data fetching, setting up a subscription, and manually changing the DOM in React components are all examples of side effects.
 
 ### How to use:
+
 `useEffect(<a function>, <an array of dependencies>)`
 
 Every time we render the component, it will compare the dependencies array with the dependencies array from the last render. If the value changed, it will run the function.
@@ -723,6 +740,7 @@ Every time we render the component, it will compare the dependencies array with 
 We can also call `useEffect(<a function>)` with no dependencies array. However, it is not recommended as it is almost the same as not putting it in `useEffect()`. The only change is it will be recalled in every re-render, not after re-render.
 
 The code we put in `useEffect()` will be executed:
+
 - After the component is rendered.
 - After every re-render of the component (assuming no dependencies array).
 - Will not run the effect when the values in the dependencies array remain the same since the last render.
@@ -733,66 +751,71 @@ The function will be called when the data in the dependencies array changes.
 An example of clicking on a button to increase the count and show the Star Wars data using the count as the index:
 
 ```jsx
-import React from 'react';
+import React from "react";
 
 export default function Fetch() {
-    const [starWarsData, setStarwarsData] = React.useState({});
-    const [count, setCount] = React.useState(1);
+  const [starWarsData, setStarwarsData] = React.useState({});
+  const [count, setCount] = React.useState(1);
 
-    React.useEffect(() => {
-        console.log(1);
-        fetch(`https://swapi.dev/api/people/${count}`)
-            .then(r => r.json())
-            .then(data => setStarwarsData(data));
-    }, [count]);
+  React.useEffect(() => {
+    console.log(1);
+    fetch(`https://swapi.dev/api/people/${count}`)
+      .then((r) => r.json())
+      .then((data) => setStarwarsData(data));
+  }, [count]);
 
-    return (
-        <div>
-            <button onClick={() => {
-                setCount(prevState => prevState + 1);
-            }}>
-                count++
-            </button>
-            {count}
-            {JSON.stringify(starWarsData, null, 2)}
-        </div>
-    );
+  return (
+    <div>
+      <button
+        onClick={() => {
+          setCount((prevState) => prevState + 1);
+        }}
+      >
+        count++
+      </button>
+      {count}
+      {JSON.stringify(starWarsData, null, 2)}
+    </div>
+  );
 }
 ```
 
 # Cleaning up side-effects
+
 When the DOM element (or React component) is to be deleted, there might be side effects that cause memory leakage. For example, if you create a label and add a listener in `useEffect()`, you want to remove the listener (i.e., cleaning up) when you delete the entire element.
 
 The solution is to return
 
- a cleaning up function in `useEffect()`.
+a cleaning up function in `useEffect()`.
 
 Example:
 
 ```jsx
 React.useEffect(() => {
-    function doSomething() {
-        // Code for the side effect
-    }
+  function doSomething() {
+    // Code for the side effect
+  }
 
-    // We add the event listener to window and want to clean it up after this element is deleted
-    window.addEventListener("resize", doSomething);
+  // We add the event listener to window and want to clean it up after this element is deleted
+  window.addEventListener("resize", doSomething);
 
-    function cleaningUp() {
-        window.removeEventListener("resize", doSomething);
-    }
+  function cleaningUp() {
+    window.removeEventListener("resize", doSomething);
+  }
 
-    return cleaningUp;
+  return cleaningUp;
 }, []);
 ```
 
 # Local storage
+
 Using local storage:
+
 - `localStorage.getItem("<key>")`
 - `localStorage.setItem("<key>", <value>)`
 
 Note:
+
 - The value must be a string. If you want to store an array or object, use `JSON.stringify(<value>)` to convert it to a string.
 - To decode the stringified value, use `JSON.parse(<stringified value>)`.
 - `JSON.stringify(null)` will return null.
-
