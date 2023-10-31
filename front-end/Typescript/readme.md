@@ -164,7 +164,9 @@ Closures are a fundamental aspect of JavaScript, enabling developers to manage a
   ```typescript
   array.map(callback(currentValue[, index[, array]])[, thisArg])
   ```
+The square brackets [...] around index and array mean that these parameters are optional. So when you write a callback function for the map() method, you can choose to include or ignore these parameters.
 
+The nested square brackets like [, index[, array]] signify that if you want to include array in your callback, you also need to include index. In other words, if you decide to use the array parameter in your callback, you can't skip the index parameter.
 ### Examples of `array.map()`
 
 1. **Basic Usage**:
