@@ -1,8 +1,8 @@
 # SwiftUI Notes
 
-## Image Literal in Swift
+## Image Literal
 
-Swift provides a feature known as an *image literal* which is a convenient way to insert images directly into your code. This feature can greatly simplify the process of working with images in a Swift project within Xcode.
+*Image literal* which is a convenient way to insert images directly into your code. 
 
 ### Key Points
 
@@ -34,16 +34,21 @@ let images: [UIImage] = [#imageLiteral(resourceName: "image1"), #imageLiteral(re
 
 Here, `images` is an array containing three image literals, which can be iterated over or accessed via their index.
 
-### Benefits
+# String Interpolation
 
-- **Readability**: Image literals show a thumbnail of the image in your code, which makes it easier to know which image you're working with without having to remember filenames.
-- **Maintainability**: By avoiding string-based filenames, you reduce the risk of typos and make your code less error-prone.
+**Swift vs. JavaScript**
 
-### Considerations
+In Swift programming, when you want to insert the value of a variable or an expression directly into a string, you use the **String Interpolation** method. The syntax for string interpolation in Swift is:
+```swift
+"\(varName)"
+```
 
-- **Build Performance**: Overuse of image literals may affect build performance and Xcode's editor performance, as each literal involves a preview rendering within the code.
-- **Version Control**: Image literals might not be as clear when viewing the code outside of Xcode, such as in a text-based diff on a version control system.
+The syntax for string interpolation in JavaScript is below, just FYI:
+```javascript
+`${varName}`
+```
 
-### Conclusion
+**Summary:**
 
-Image literals are a helpful tool within Xcode that can streamline the process of working with images in your Swift applications. By utilizing this feature, developers can enhance the readability of their code and reduce potential errors associated with image handling.
+- In **Swift**: Use `"\(varName)"` for string interpolation.
+- In **JavaScript**: Use `` `${varName}` `` for the same effect.
