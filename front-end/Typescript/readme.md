@@ -1,13 +1,7 @@
 # Closure
 
-- Closure is inherent to the language's design and is not user-created. It's vital to understand how the language implements it.
-- A key concern for developers is when something works without them understanding why.
-
-**What is Closure?**
-
 - A closure is formed when an inner function, defined within an outer function, references variables from the outer function's scope.
 - Even after the outer function completes execution, the inner function maintains access to those variables due to closure.
-- Essentially, a closure lets a function "remember" and use variables from its outer function's scope, even if those variables are out of scope.
 
 **When to Use Closures?**
 
