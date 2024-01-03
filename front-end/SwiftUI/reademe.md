@@ -428,6 +428,19 @@ Image("diamond")
     .frame(width: 200.0)
 ```
 
+#### Example for a Scalable Avatar Image
+
+```swift
+Image("YourImageName in Assets")
+    .resizable()
+    .aspectRatio(contentMode: .fit)
+    .frame(height: 150)
+    .clipShape(Circle())
+    .overlay(
+        Circle().stroke(Color.white, lineWidth: 5)
+    )
+```
+
 ### Understanding Predefined Values
 
 - Values that start with a '.' (dot) are predefined in SwiftUI, such as some fonts and colors.
@@ -482,3 +495,175 @@ Text("Ruiming Xie").font(Font.custom("Pacifico-Regular", size: 40))
 ```
 
 This code creates a `Text` view and applies the custom font `Pacifico-Regular` with a font size of 40.
+
+## Shapes and Colors
+
+### Using fill() for Shapes
+
+For shapes, instead of applying color directly as a foreground color, it’s often more effective to use `fill()` to apply the color within the shape's boundary.
+
+```swift
+RoundedRectangle(cornerRadius: 25)
+    .fill(Color.white)
+```
+
+### ForegroundColor for Text
+
+For text elements, applying color is straightforward with the `foregroundColor()` modifier.
+
+```swift
+Text("Hello, World!")
+    .foregroundColor(.white)
+```
+
+## SF Symbols
+
+### Downloading SF Symbols
+
+To use SF Symbols, first download SF Symbols 5 from Apple's official website.
+
+### Searching and Using an SF Symbol
+
+Once you have SF Symbols installed, you can easily browse and find the appropriate symbol for your use case.
+
+```swift
+Image(systemName: "phone.fill")
+```
+
+### Coloring SF Symbols
+
+Change the color of an SF Symbol using `foregroundColor()`.
+
+```swift
+Image(systemName: "phone.fill")
+    .foregroundColor(.green)
+```
+
+## Padding and Margins
+
+Padding in SwiftUI might not behave as you expect if you're coming from a CSS background.
+
+### Understanding Padding in SwiftUI
+
+Padding in SwiftUI often acts more like what we would consider margins in CSS.
+
+```swift
+RoundedRectangle(cornerRadius: 25)
+    .fill(Color.white)
+    .frame(height: 50)
+    .overlay(
+        HStack {
+            Image(systemName: "phone.fill")
+                .foregroundColor(.green)
+            Text("+61 402 369 915")
+                .foregroundColor(.black)
+        }
+    )
+    .padding(.all) // This adds space around the RoundedRectangle, like a CSS margin.
+```
+
+## Code Reusability
+
+Xcode provides tools to help clean up and reuse your code effectively.
+
+### Extracting a Subview
+
+Select a block of code, right-click, and choose `Extract Subview` to create a reusable component.
+
+## Creating Parameterized Views
+
+SwiftUI's declarative syntax makes it simple to create views that can be customized with parameters.
+
+### Defining a Parameterized View
+
+You can define a view that takes parameters to create a reusable UI component.
+
+```swift
+struct InfoView: View {
+    let text: String
+    let imageName: String
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 25)
+            .fill(Color.white)
+            .frame(height: 50)
+            .overlay(
+                HStack {
+                    Image(systemName: imageName)
+                        .foregroundColor(.green)
+                    Text(text)
+                        .foregroundColor(.black)
+                }
+            )
+            .padding(.all)
+    }
+}
+```
+
+### Using the Parameterized View
+
+Instantiate and use the new view by passing in the required parameters.
+
+```swift
+InfoView(text: "+61 402 369 915", imageName: "phone.fill")
+```
+
+## Organizing UI Components
+
+Maintaining an organized codebase is crucial when developing complex applications in SwiftUI. The Model-View-Controller (MVC) design pattern can help with this organization.
+
+### Using the View Folder in MVC
+
+In the MVC design pattern, it’s a common practice to place UI components in a dedicated `View` folder. This helps in keeping the project organized and the MVC layers separated.
+
+### Creating a New SwiftUI View
+
+When adding a new UI component, you should:
+
+1. Click on `New File...` in Xcode.
+2. Choose `SwiftUI View` from the template options.
+3. Save the new file in the `View` folder to adhere to MVC principles.
+
+### Example: InfoView.swift
+
+Below is an example of how you can structure a SwiftUI view in a separate file:
+
+```swift
+import SwiftUI
+
+struct InfoView: View {
+    let text: String
+    let imageName: String
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 25)
+            .fill(Color.white)
+            .frame(height: 50)
+            // .foregroundColor(.white) // This line is commented out because we use .fill
+            .overlay(
+                HStack {
+                    Image(systemName: imageName)
+                        .foregroundColor(.green)
+                    Text(text)
+                        .foregroundColor(.black)
+                }
+            )
+            .padding(.all)
+    }
+}
+
+// MARK: - Preview
+struct InfoView_Previews: PreviewProvider {
+    static var previews: some View {
+        InfoView(text: "+61 402 369 915", imageName: "phone.fill")
+    }
+}
+```
+
+### Using MARK Comments
+
+To increase readability and organization of your SwiftUI views, use `// MARK: -` comments to separate different sections of the file, such as the body definition and the preview provider.
+
+### Previews Section
+
+SwiftUI allows you to preview your custom views with different data directly within Xcode. The `PreviewProvider` protocol enables you to see a live preview of your views with sample data.
