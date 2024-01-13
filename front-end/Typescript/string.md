@@ -207,3 +207,16 @@ beginning at the specified location through the specified number of characters.
   ```javascript
   console.log(String.fromCharCode(72, 101, 108, 108, 111)); // Output: "Hello"
   ```
+
+## Traverse String
+```ts
+const str = "Hello"
+
+let result: string[] = [];
+for (let i = 0; i < str.length; i++) {
+    let char = str.charAt(i);
+    result.push(char);
+}
+// ["H", "e", "l", "l", "o"] 
+console.log(result);	
+```
