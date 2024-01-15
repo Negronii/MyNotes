@@ -15,3 +15,63 @@ In TypeScript, implementing a queue can be done using either an array or a linke
 
 So, while both can be used to implement a queue, a linked list is generally faster and more efficient for typical queue operations. This makes linked lists preferable in scenarios where frequent enqueue and dequeue operations are expected, whereas arrays might be more suitable when memory efficiency is a priority and operations are less frequent.
 
+## implement a queue with linkedlist
+```ts
+interface ILinkedListNode {
+    val: number;
+    next: ILinkedListNode | null;
+}
+
+class Queue {
+    // undefined usually used for uninitialized value, null for empty values, here null is better
+    private head: ILinkedListNode | null;
+    private tail: ILinkedListNode | null;
+    private len: number;
+
+    // use constructor instead of set values above, make code more readable
+    // Inside class methods, use this to refer to instance variables 
+    constructor(){
+        this.head = null;
+        this.tail = null;
+        this.len = 0;
+    }
+
+    // for better clarity, mention return type void if return nothing
+    offer(val: number): void {
+        const temp: ILinkedListNode = {val: val, next: null};
+        // in case the queue is empty, use === check value and type
+        if (this.head === null) {
+            this.head = temp;
+            this.tail = temp;
+        } 
+        // normal case
+        else {
+            // avoid non-null assertions to avoid legitimate null/undefined errors, i.e. try avoid below commented code
+            // this.tail!.next = temp;
+            if (this.tail) {
+                this.tail.next = temp;
+            }
+            this.tail = temp;
+        }
+        this.len += 1;
+    }
+
+    poll(): number | null {
+        if (this.head === null) {
+            return null;
+        } 
+        if (this.head.next === null) {
+            this.tail = null;
+        }
+        // here use const instead of let, since it never changes
+        const temp = this.head.val;
+        this.head = this.head.next;
+        this.len -= 1;
+        return temp;
+    }
+
+    get size(): number {
+        return this.len;
+    }
+}
+```
