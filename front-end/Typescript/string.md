@@ -220,3 +220,13 @@ for (let i = 0; i < str.length; i++) {
 // ["H", "e", "l", "l", "o"] 
 console.log(result);	
 ```
+
+```ts
+const s = "Hello"
+let result: string[] = [];
+for (let char of s) {
+    result.push(char);
+}
+// ["H", "e", "l", "l", "o"] 
+console.log(result);	
+```
