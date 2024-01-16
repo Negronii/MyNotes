@@ -70,8 +70,111 @@ class Queue {
         return temp;
     }
 
+    // with get keyword, we can use the return value as an attribute, e.g. const queue = new Queue(); const len = queue.size;
     get size(): number {
         return this.len;
     }
 }
 ```
+
+## Implement binary search and describe time complexity
+```ts
+// assume input nums is in ascending order, return the index or null if not found
+function binarySearch(nums: number[], target: number): number | null {
+    let left: number = 0;
+    let right: number = nums.length - 1;
+    // use <= for case length = 1
+    while (left <= right) {
+        // Use Math.floor to avoid floating point values for the mid index.
+        let mid: number = Math.floor((left + right) / 2);
+        if (nums[mid] === target) {
+            return mid;
+        }
+        if (nums[mid] > target) {
+            right = mid - 1;
+        } else {
+            left = mid + 1;
+        }
+    }
+    return null;
+}
+```
+Binary search has a time complexity of O(log n), where n is the number of elements in the array. This is because the algorithm divides the search interval in half with each step.
+
+## Given an ascending number array and a number n, find 2 numbers in array sum is n. 
+```ts
+function twoSumsAscending(nums: number[], target: number): number[]{
+    let left: number = 0;
+    let right: number = nums.length - 1;
+    // Use '<' instead of '<=' to prevent the same element from being used twice
+    while (left < right) {
+        if (nums[left] + nums[right] === target) {
+            return [nums[left], nums[right]];
+        }
+        if (nums[left] + nums[right] < target) {
+            left++;
+        } else {
+            right--;
+        }
+    }
+    return [];
+}
+```
+
+## In-order, pre-order and post-order
+In the context of binary trees, in-order, pre-order, and post-order refer to the three primary ways to traverse the nodes of the tree, each with a different order for visiting the nodes.
+**In-Order Traversal**: Left, Root, Right.
+**Pre-Order Traversal**: Root, Left, Right.
+**Post-Order Traversal**: Left, Right, Root.
+
+## find the kth smallest value in a binary search tree
+```ts
+interface ITreeNode{
+    val: number;
+    left: ITreeNode | null;
+    right: ITreeNode | null;
+}
+
+function findKthSmallest(root:ITreeNode, k: number): number | null {
+    let count: number = 0;
+    let result: number | null = null;
+
+    // this function is in-order
+    function dfsHelper(curNode: ITreeNode) {
+        if (curNode === null || result !== null) return;
+
+        dfsHelper(curNode.left);
+
+        if (++count === k) {
+            result = curNode.val;
+            return;
+        }
+
+        dfsHelper(curNode.right);
+    }
+
+    dfsHelper(root);
+
+    return result;
+}
+```
+
+## Why binary tree so important, not trinary or quanary tree? 
+While arrays provide faster access (O(1)), adding or deleting elements is less efficient (O(N)). Linked lists offer efficient insertion and deletion (O(1)), but slower access times (O(N)).
+
+Compared to arrays and linked lists, binary trees offer a good balance with O(logn) time complexity for access, add, and delete operations when the tree is balanced.
+
+Binary trees, as opposed to ternary or quaternary trees, provide a simpler and more efficient structure for most applications. They strike a balance between maintaining low complexity and achieving efficient operations.
+
+## Why balancing binary tree so important?
+An unbalanced binary tree can degenerate into a linked list, leading to O(N) time complexity for operations like add, delete, update, and search. A balanced binary tree, on the other hand, maintains a height of O(logn), ensuring that operations can be performed in logarithmic time. This balance is essential for leveraging the efficiency of binary trees, especially in scenarios where quick search, insertion, and deletion are frequently required.
+
+## Why tree operations has time complexity of O(logn)?
+`logn` represents the height of a balanced binary tree. In a balanced tree, each operation like search, insert, or delete involves traversing a path from the root to a leaf node, or vice versa. The number of levels (or height) of the tree determines the maximum number of steps needed for these operations. Since a balanced binary tree is structured to have a height that grows logarithmically with the number of nodes (n), the operations are significantly more efficient than linear time complexity, particularly for large datasets.
+
+## What is a black-red tree? What is B tree? 
+- **Red-Black Tree**: It is a type of self-balancing binary search tree. Each node in the tree is colored either red or black. The tree uses these colors along with specific rules to ensure that the tree remains balanced during insertions and deletions. This balancing act ensures that the tree maintains its O(logn) time complexity for operations. Red-Black Trees are particularly valued for their relatively simple balancing logic and efficient operations, making them suitable for various applications, including implementing associative arrays and priority queues.
+
+- **B-Tree**: A B-Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time. Unlike binary trees, B-Trees are multi-way trees (having more than two children) and are optimized for systems that read and write large blocks of data, like databases and filesystems. They are designed to efficiently minimize disk I/O operations, and their branching factor (the number of child nodes) can be adjusted to optimize the balance between the tree's height and the number of nodes accessed per operation.
+
+Both Red-Black Trees and B-Trees are advanced tree structures designed to optimize performance for different scenarios, with Red-Black Trees often used in memory and B-Trees in disk-based storage systems.
