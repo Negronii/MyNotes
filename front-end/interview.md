@@ -178,3 +178,25 @@ An unbalanced binary tree can degenerate into a linked list, leading to O(N) tim
 - **B-Tree**: A B-Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time. Unlike binary trees, B-Trees are multi-way trees (having more than two children) and are optimized for systems that read and write large blocks of data, like databases and filesystems. They are designed to efficiently minimize disk I/O operations, and their branching factor (the number of child nodes) can be adjusted to optimize the balance between the tree's height and the number of nodes accessed per operation.
 
 Both Red-Black Trees and B-Trees are advanced tree structures designed to optimize performance for different scenarios, with Red-Black Trees often used in memory and B-Trees in disk-based storage systems.
+
+## Explain how the stack is used in memory management for frontend applications
+The stack in frontend memory management is a structured region of memory that operates on a Last In, First Out (LIFO) basis. It's used primarily for storing primitive data types and pointers to objects during function calls. When a function is called, its variables are pushed onto the stack, and they are popped off when the function exits. The stack is fast and efficient for managing function calls due to its structured nature but is limited in size. Overuse can lead to a stack overflow error. It's ideal for temporary, short-lived data.
+
+## How does the heap function in memory management for frontend web applications?
+In frontend applications, the heap is a key area of memory used for dynamic allocation, especially for storing objects and complex data structures. It's a less organized memory pool compared to the stack and is managed manually. 
+
+In terms of structure, the heap can be visualized as a complete binary tree, where each parent node is smaller (in a min-heap) or larger (in a max-heap) than its children. 
+
+The logical structure of the heap is a binary tree, but physically, it is often implemented as an array. This array-based implementation maximizes space usage due to continuous memory allocation. In the array, the first index is often ignored for convenience, with the heap starting from the second index. For any given index `i` in this array, the parent node can be found at `Math.floor(i/2)`, while the left and right children are located at `2 * i` and `2 * i + 1`, respectively. This structure allows efficient operations like insertion and removal, which are crucial for managing dynamic data in web applications.
+
+## Explain the difference between primitive types and reference types
+
+In JavaScript, primitive types (like `number`, `string`, `boolean`, `null`, `undefined`, `symbol`, and `bigint`) are stored directly in the location the variable accesses. They are stored in the stack, which provides quick access and efficient memory allocation. When you assign a primitive type to a variable, you're copying the value into that variable.
+
+On the other hand, reference types (like `object`, `array`, and `function`) are stored in the heap, which is a larger pool of memory designed for storing larger, more complex data. Instead of storing the actual data in the variable on the stack, JavaScript stores a reference (or pointer) to the location in memory where the data is held. This means when you manipulate an object or an array, you're working with a reference to that data, not the actual data itself. Any changes made through one reference are seen by all other references because they all refer to the same underlying data in the heap.
+
+## heap VS binary search tree
+- searching is slower than BST, the left and right node is not ordered so we cannot use binary search
+- add/search is faster, saves time in balancing in overal
+- both time complexity is at O(logn) level, which is height of tree
+
