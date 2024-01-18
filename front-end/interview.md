@@ -200,3 +200,257 @@ On the other hand, reference types (like `object`, `array`, and `function`) are 
 - add/search is faster, saves time in balancing in overal
 - both time complexity is at O(logn) level, which is height of tree
 
+## Write a recursive function and a non-recursive return the nth fibonacci number, explain why the recursive one may crash
+```ts
+// method one, recursive
+function fibonacci(n: number): number {
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+// method 2, loop
+function fibonacci(n: number): number {
+    if (n < 0) return -1;
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    let prevprev = 0, prev = 1, result = 0;
+
+    for (let i = 2; i <= n; i++) {
+        result = prevprev + prev;
+        prevprev = prev;
+        prev = result;
+    }
+
+    return result;
+}
+```
+
+In the recursive Fibonacci function, each function call is added to the call stack, a special region in memory where function call information is stored. When `n` is large, this results in a very deep recursion, where each call to `fibonacci` leads to two more calls, exponentially increasing the number of calls on the stack. This can quickly exceed the memory limit of the stack, leading to a stack overflow error. This happens because the stack has a limited size and cannot accommodate the large number of nested function calls required by the recursive approach for large values of `n`.
+
+### Recursive Implementation:
+
+- **Time Complexity: O(2^n)**
+
+  Each call to `fibonacciRecursive` generates two more calls, except for the base cases. This exponential growth results in a time complexity of O(2^n), where `n` is the input number.
+
+  e.g. we want to calculate f(8)  
+  f(8) = f(7) + f (6), and f(7) = f(6) + f(5)  
+  Therefore, F(6) is calculated twice which is redundant computations
+
+- **Space Complexity: O(n)**
+
+  The space complexity is determined by the height of the call stack, which in the worst case (when `n` is large) will have `n` calls stacked on top of each other before reaching the base case. This results in a space complexity of O(n).
+
+### Iterative Implementation:
+
+- **Time Complexity: O(n)**
+
+  The function iterates from 2 to `n` once, performing a constant amount of work in each iteration. Therefore, the time complexity is linear, O(n).
+
+- **Space Complexity: O(1)**
+
+  The iterative solution uses a fixed amount of space (the variables `prevprev`, `prev`, and `result`). This amount of space does not change as `n` increases, making the space complexity constant, O(1).
+
+## What is dynamic programing
+- Dynamic programming involves breaking down a complex problem into smaller, overlapping subproblems, solving these down to the simplest base cases. 
+- It uses recursion with memoization, or iterative methods with tabulation, to optimize by preventing redundant computations.
+
+## A frog, can jump 1 or 2 steps each time. How many ways can i jump a n step stair? 
+```ts
+function frogJumpDP(n: number): number {
+    // only one way to go to step 0 which is doing nothing
+    if (n === 0) return 1;
+    // the first 1 is for simplicity of calculation so that dp[2] will be 2
+    // the second 1 is only one way to go to stair 1
+    const dp = [1, 1];
+    for (let i = 2; i <= n; i++) {
+        dp[i] = dp[i - 1] + dp[i - 2];
+    }
+    return dp[n];
+}
+
+```
+
+## Move all zeros in an array to its end 
+- maintaining the order of the non-zero elements. 
+- The operation should be performed in-place
+```ts
+function moveZeroToEnd(nums: number[]): void {
+    let zeroStart: number = -1;
+    for (let i = 0; i < nums.length; i++) {
+        if (nums[i] !== 0 && zeroStart !== -1) {
+            nums[zeroStart] = nums[i];
+            nums[i] = 0;
+            zeroStart++;
+        } else if (nums[i] === 0 && zeroStart === -1) {
+            zeroStart = i;
+        }
+    }
+}
+```
+
+## Identify the longest sequence of a continuous character in a given string. 
+For example, for the string 'aabaacceee', the function should return 'e'.
+```ts
+interface IRes {
+    char: string;
+    len: number;
+}
+
+function findLongest(s: string): IRes {
+    if (s.length === 0) return { char: '', len: 0 }; // Handle empty string
+
+    let longestChar: string = s.charAt(0);
+    let longest: number = 1;
+    let currentChar: string = s.charAt(0);
+    let currentLength: number = 1;
+
+    for (let i = 1; i < s.length; i++) {
+        if (s.charAt(i) === currentChar) {
+            currentLength++;
+        } else {
+            if (currentLength > longest) {
+                longest = currentLength;
+                longestChar = currentChar;
+            }
+            currentChar = s.charAt(i);
+            currentLength = 1;
+        }
+    }
+
+    // Check and update for the last character sequence
+    if (currentLength > longest) {
+        longest = currentLength;
+        longestChar = currentChar;
+    }
+
+    return { char: longestChar, len: longest };
+}
+
+```
+
+## Implement quicksort in typescript
+```ts
+function quickSort(nums: number[]): number[] {
+    if (nums.length <= 1) return nums;
+
+    const midInd = Math.floor(nums.length / 2);
+    // array.splice(a, b) removes b elements starting from index a from the array. The return value is an array of the removed elements.
+    const mid = nums.splice(midInd, 1)[0];
+
+    const left: number[] = []
+    const right: number[] = []
+    for (let i = 0; i < nums.length; i++) {
+        if (nums[i] < mid) {
+            left.push(nums[i]);
+        } else {
+            right.push(nums[i]);
+        }
+    }
+
+    return quickSort(left).concat([mid], quickSort(right));
+}
+```
+
+- **Average Case (O(n log n))**: In the average case, the pivot divides the array into two roughly equal parts, leading to a logarithmic number of recursive calls (log n). In each level of recursion, the algorithm performs O(n) operations to partition the array around the pivot. Thus, the average case is O(n log n).
+
+- **Worst Case (O(n²))**: The worst case occurs when the pivot is the smallest or largest element in each recursive call, leading to unbalanced partitions. This results in n recursive calls, each doing O(n) work, thus O(n²).
+
+## find palindrome number
+Palindrome number, e.g. 1, 2, 22, 101, 10001, 20002, 2002 etc
+```ts
+function findAllPalindromeNumbers(max: number): number[] {
+    const res = []
+
+    for (let i = 0; i <= max; i++) {
+        // find reversed number first, then compare
+        let reversedNum: number = 0, temp: number = i;
+        while (temp !== 0) {
+            reversedNum *= 10;
+            reversedNum += temp % 10;
+            temp = Math.floor(temp / 10);
+        }
+        if (reversedNum === i) {
+            res.push(i);
+        }
+    }
+
+    return res;
+}
+
+function findAllPalindromeNumbers(max: number): number[] {
+    const res = [];
+
+    for (let i = 0; i < max; i++) {
+        const s = i.toString();
+        let start = 0, end = s.length - 1;
+        let isPalindrome = true;
+        while (start < end) {
+            if (s.charAt(start++) !== s.charAt(end--)) {
+                isPalindrome = false;
+                break;
+            }
+        }
+        if (isPalindrome) res.push(i);
+    }
+
+    return res;
+}
+```
+
+## Identify whether a string is prefix of a word in dictionary
+A Trie, or a prefix tree, is an optimal data structure for this problem. It stores strings in a tree-like structure, where each node represents a character of a string. The root represents an empty string, and each path from the root to a leaf node represents a word.
+
+To check if a string is a prefix of any word in the dictionary, we insert each word into the Trie. Then, for the given string, we traverse the Trie from the root. If we can traverse the Trie following the characters of the string without any breaks, and reach a node (not necessarily a leaf node), then the string is a valid prefix in the dictionary.
+
+This approach is efficient in terms of time complexity, especially for multiple prefix searches, as each search is only as long as the length of the string being searched.
+
+e.g. word apple may looks like this: {a: {p: {p: {l: {e: null}}}}}
+
+The time complexity for this is O(m) where m is the length of the string
+
+## formatting numbers into a thousand separator style (e.g., "1,000", "12,000,000")
+```ts
+function format(num: number): string{
+    let res: string = "";
+    const s: string = num.toString();
+    let count: number = 0;
+    for (let i = s.length - 1; i >= 0; i--) {
+        if (++count === 3 && i !== 0) {
+            res = "," + res;
+        }
+        res = s.charAt(i) + res;
+    }
+    return res;
+}
+```
+
+## Switch letter case, e.g. aBc123D -> AbC123d
+```ts
+function switchLetterCase(s: string): string {
+    let res = ""
+
+    // according to ascii table, A-Z is 65-90, a-z is 97-122
+    const UPPER_CASE_A = 65;
+    const UPPER_CASE_Z = 90;
+    const LOWER_CASE_A = 97;
+    const LOWER_CASE_Z = 122;
+
+    for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i);
+        if (code >= UPPER_CASE_A && code <= UPPER_CASE_Z) {
+            // Convert to lower case
+            res += String.fromCharCode(code + 32); 
+        } else if (code >= LOWER_CASE_A && code <= LOWER_CASE_Z) {
+            // Convert to upper case
+            res += String.fromCharCode(code - 32); 
+        } else {
+            // Non-alphabetic characters are unchanged
+            res += s.charAt(i); 
+        }
+    }
+
+    return res
+}
+```
