@@ -454,3 +454,408 @@ function switchLetterCase(s: string): string {
     return res
 }
 ```
+
+## Why 0.1 + 0.2 !== 0.3
+
+This is a result of how computers handle binary floating-point arithmetic.
+
+When you add these approximations, the tiny errors in their representation lead to results that are not exact, hence 0.1 + 0.2 results in something slightly different from 0.3. This is an issue inherent in IEEE 754 standard for floating-point arithmetic, which is used by most modern programming languages.
+
+In practical terms, to compare floating-point numbers in such cases, a common approach is to check if they are close enough to each other, within a small tolerance, rather than expecting exact equality.
+
+## Tell the difference of Ajax, Fetch and Axios
+
+### Ajax (Asynchronous JavaScript and XML)
+
+1. **What it is**: Ajax is not a technology in itself, but a term that refers to the use of a group of technologies together. These technologies include HTML, CSS, JavaScript, the DOM, XML, XSLT, and most importantly, the XMLHttpRequest object. Ajax allows web pages to be updated asynchronously by exchanging small amounts of data with the server behind the scenes. This means it's possible to update parts of a web page, without reloading the whole page.
+
+2. **Code Example**:
+   ```javascript
+   var xhttp = new XMLHttpRequest();
+   xhttp.onreadystatechange = function() {
+       if (this.readyState == 4 && this.status == 200) {
+          document.getElementById("demo").innerHTML = this.responseText;
+       }
+   };
+   xhttp.open("GET", "ajax_info.txt", true);
+   xhttp.send();
+   ```
+
+### Fetch API
+
+1. **What it is**: The Fetch API provides a more modern and powerful way to make web requests. It is a built-in window object in modern browsers, replacing the need to use the more complex XMLHttpRequest. Fetch returns Promises and is much cleaner and easier to use.
+
+2. **Code Example**:
+   ```javascript
+   fetch('https://api.example.com/data')
+     .then(response => response.json())
+     .then(data => console.log(data))
+     .catch(error => console.error('Error:', error));
+   ```
+
+### Axios
+
+1. **What it is**: Axios is a popular, promise-based HTTP client for the browser and node.js. It provides a simple to use library in a small package with a very extensible interface. It's capable of making XMLHttpRequests from the browser and http requests from node.js, supports the Promise API, intercept request and response, transform request and response data, cancel requests, and automatic transforms for JSON data.
+
+2. **Code Example**:
+   ```javascript
+   axios.get('https://api.example.com/data')
+     .then(response => {
+       console.log(response.data);
+     })
+     .catch(error => {
+       console.error('Error:', error);
+     });
+   ```
+
+### Sample Interview Answer
+
+Ajax, Fetch, and Axios are all related to making HTTP requests in web applications, but they differ in their approach and implementation.
+
+- Ajax is a broad set of technologies that allows web applications to send and retrieve data from a server asynchronously without interfering with the display and behavior of the existing page. It mainly uses the `XMLHttpRequest` object for this purpose.
+- The Fetch API is a modern interface in JavaScript that allows you to make HTTP requests. It's more powerful and flexible than Ajax's `XMLHttpRequest` and returns promises, making it easier to use in modern web applications.
+- Axios is a third-party library that simplifies making HTTP requests. It provides a more user-friendly API and additional features like intercepting requests and responses, which are not natively available in Fetch.
+
+In summary, while Ajax refers to a classical web development practice for asynchronous requests, Fetch and Axios are more modern approaches with Axios offering additional features and a simpler API over the native Fetch API.
+
+
+## What is debouncing and what is throttling, what are the differences, and name use cases of each
+
+**Debouncing**
+
+Debouncing in the context of web development is a programming practice used to ensure that time-consuming tasks do not fire so often, which can be inefficient or harmful to performance. This is particularly useful in situations where some code is not only triggered by user actions but is also potentially triggered repeatedly or rapidly, like resizing windows or scrolling.
+
+A debounced function will only execute after a certain amount of time has passed since it was last called. So, if the debounced function is attached to an event like scrolling, it will only execute after the user has stopped scrolling for a specified time.
+
+**Throttling**
+
+Throttling, like debouncing, is a technique to control how many times a function can be executed over time. It's used to ensure that the function is only called at every specified time interval. For example, if you have a function that fires on a scroll event and you throttle it to execute only once every 100 milliseconds, the function will execute at most 10 times per second, no matter how many times the scroll event fires.
+
+**Differences between Debouncing and Throttling**
+
+1. **Timing Control**: Debouncing is based on the principle of delaying the execution of a function until after some time has elapsed since the last time it was invoked. Throttling, on the other hand, ensures that a function is executed at regular intervals.
+
+2. **Use Cases**: Debouncing is typically used in situations where you want to ensure that a function is not executed too frequently, but also don't care if there are delays in execution. Throttling is used when you need to guarantee a steady, consistent rate of execution.
+
+3. **Behavior**: In debouncing, the function will only be executed after the triggering event has stopped for a defined period. In throttling, the function will execute at regular intervals regardless of how many times the user triggers the event.
+
+**Use Cases**
+
+1. **Debouncing**: A common use case for debouncing is in search bars. As a user types, you don't want to fire off an API request for every keystroke. Instead, you wait until the user pauses or stops typing before sending the request.
+
+2. **Throttling**: Throttling is often used in scroll events. For example, if you have an infinite scroll feature on a website, you don't want to load more content every single pixel of scroll. Instead, you can throttle the scroll event to load more content at every certain interval of scrolling.
+
+These techniques are crucial for optimizing performance and user experience in web applications.
+
+In reality, we use **Lodash** library to achieve Debouncing and Throttling.
+
+## Implement debouncing in typescript
+```js
+function debounce(func, waitFor) {
+    let timeout;
+
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            func.apply(this, args);
+        }, waitFor);
+    };
+}
+
+// Example Usage:
+const debouncedLog = debounce((message) => console.log(message), 500);
+
+// Usage
+debouncedLog("Hello");
+debouncedLog("Hello again, quickly"); // This call will cancel the previous one and only this message will be logged after 500ms
+```
+
+## Implement a throttling function in JavaScript
+```js
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// Example usage:
+window.addEventListener('resize', throttle(function() {
+    console.log('Resize event triggered');
+}, 2000));
+```
+
+## CSS Units: Differences and Usage
+
+1. **Pixels (px):** Pixels are a fixed-size unit that is most commonly used in screen media. A pixel is an absolute unit that doesn't change based on other elements. It's great for when you need precise control over element sizing, like for borders or shadows.
+
+2. **Percent (%):** Percentages are relative units and depend on the parent element's size. They are extremely useful for creating layouts that adapt to different screen sizes, maintaining proportions regardless of the parent size.
+
+3. **Ems (em):** Ems are relative to the font-size of the element they are used on. If used on font-size, they are relative to the font-size of the parent element. Ems are great for scalable typography and elements that need to maintain their proportions relative to text size.
+
+4. **Rems (rem):** Rems are relative to the font-size of the root element (html). They allow for consistent scaling across the entire document and are very useful in responsive design for maintaining uniformity in spacing, layout, and typography.
+
+5. **Viewport Width (vw):** 1vw is equal to 1% of the viewport's width. This unit is helpful for creating elements that scale with the width of the viewport, like for fluid layouts and typography.
+
+6. **Viewport Height (vh):** Similarly, 1vh is 1% of the viewport's height. It's useful for elements that should scale with the height of the viewport, such as sections of a single-page layout.
+
+7. **Viewport Minimum (vmin):** This unit is 1% of the viewport's smaller dimension (height or width). Vmin is particularly useful for maintaining aspect ratios in responsive design.
+
+8. **Viewport Maximum (vmax):** Conversely, vmax is 1% of the larger dimension (height or width). It's less commonly used but can be beneficial for certain design challenges.
+
+## Example of Responsive Design Code
+```css
+/* Base HTML font size */
+html {
+    font-size: 16px; /* Set a standard font size */
+}
+
+/* Responsive font size for smaller screens */
+@media only screen and (max-width: 300px) {
+    html {
+        font-size: 14px; /* Reduce font size on small devices */
+    }
+}
+
+/* Paragraph styling */
+p {
+    font-size: 1rem; /* Font size is relative to HTML element */
+    line-height: 1.5; /* Good for readability */
+    margin: 0 0 1rem 0; /* Spacing for paragraphs */
+}
+
+/* Responsive element styling */
+@media only screen and (max-width: 768px) {
+    p {
+        font-size: 0.9rem; /* Smaller font size on tablets and smaller devices */
+    }
+}
+```
+
+This example demonstrates responsive typography using rem units and media queries. The base font size is set on the `html` element, which the `rem` units reference. Media queries adjust the base font size for smaller screens, affecting all elements using `rem`. The `p` (paragraph) styling is also adjusted for smaller screens to ensure readability.
+
+## What are the drawbacks of arrow functions and situations where they can't be used
+
+Arrow functions do not have their own this context. They lexically bind their this value from the surrounding context. This is useful in some scenarios (like callbacks) but poses limitations in others.
+It wont work in the dynamic context callback function
+```ts
+const btn = document.getElementById('btn');
+btn.addEventListener('click', () => {
+    // here, `this` is window, not button
+    console.log(this === window);
+    this.innerHTML = 'clicked'
+})
+```
+
+```ts
+function f1(){
+    console.log(this) // will return this function
+}
+
+console.log(this)
+const f2 = () => {
+    console.log(this) // will return same value as above 'this' side effect scope, not the function itself
+}
+```
+
+No arguments Object: Unlike regular functions, arrow functions do not have an arguments object. This can be circumvented by using rest parameters.
+```ts
+// continued from above
+f1.call({x:100}) // this will work
+f2.call({x:100}) // this not will work
+```
+
+Not Suitable for Object Methods: When used as methods in objects, this will not refer to the object itself but to the surrounding lexical context.
+```ts
+const obj = {
+    name: 'aaa';
+    getName = () => {
+        return this.name
+    }
+}
+
+obj.getName() // this wont work
+```
+
+Not Suitable for Prototype Methods: Similar to object methods, this in an arrow function used as a prototype method will not refer to the object instance.
+```ts
+const obj = {
+    name: 'aaa';
+}
+obj.__proto__.getName = () => {
+        return this.name
+    }
+
+obj.getName() // this wont work either
+```
+
+Cannot be Used as Constructors: Arrow functions cannot be used as constructor functions. They cannot be used with the new keyword since they don't have a this context.
+```ts
+const Foo = (name, age) => {
+    this.name = name;
+    this.age = age
+}
+const f = new Foo('aa', 20); // this wont work
+```
+
+### Sample answer: 
+Arrow functions in JavaScript are beneficial for their concise syntax and lexical this binding, but they have limitations. They are not suitable as constructor functions, object methods, prototype methods, or in any scenario where the function needs its own this context. They also lack the traditional arguments object. These limitations make them less versatile in certain use cases, particularly in object-oriented programming.
+
+## Describe TCP 3-way handshake and 4-way termination
+### TCP 3-Way Handshake (Connection Establishment)
+The TCP 3-way handshake is a process used in the TCP/IP protocol to establish a connection between a client and server.
+
+1. **SYN**: The client sends a SYN (synchronize) packet to the server to initiate a connection. This packet contains an initial sequence number for the connection.
+2. **SYN-ACK**: The server responds with a SYN-ACK (synchronize-acknowledge) packet. This acknowledgment packet confirms receipt of the SYN packet and includes the server's own initial sequence number.
+3. **ACK**: The client sends an ACK (acknowledge) packet back to the server, acknowledging receipt of the server's SYN-ACK packet. This completes the handshake, and the connection is established.
+
+### TCP 4-Way Termination (Connection Termination)
+The 4-way termination process is used to gracefully close a TCP connection.
+
+1. **FIN from Initiator**: The party wishing to terminate the connection (let's say A) sends a FIN (finish) packet to the other party (B), indicating it has finished sending data.
+2. **ACK from Receiver**: B sends an ACK packet back to A, acknowledging the receipt of the FIN packet.
+3. **FIN from Receiver**: After B has finished sending its remaining data, it sends its own FIN packet to A, indicating it too is ready to close the connection.
+4. **ACK from Initiator**: A sends a final ACK packet to B, acknowledging the receipt of B's FIN packet. After this step, A can close the connection. B, upon receiving this final ACK, also closes the connection.
+
+### Sample Answer
+The TCP 3-way handshake is a method used in the TCP/IP protocol to establish a connection between two parties. It involves three steps: SYN, SYN-ACK, and ACK, ensuring both parties are ready to transmit data. On the other hand, the TCP 4-way termination process, also known as the 4-way handshake, is used for closing a connection. It involves four steps: a FIN packet from the initiator, an ACK from the receiver, a FIN from the receiver, and a final ACK from the initiator. This process ensures that both parties have completed transmitting all their data before the connection is closed.
+
+## Difference between `for..in` and `for..of` loops in JavaScript. 
+
+### For...in Loop:
+- The `for..in` loop iterates over all enumerable properties of an object.
+- It is generally used for objects, where the loop iterates over the property keys of the object.
+- For arrays, it iterates over the index values (keys) of the array.
+
+```ts
+const arr: number[] = [10, 20, 30]; // Array should be defined as number[]
+for (let i in arr) {
+    console.log(i); // Output: 0, 1, 2 (indexes)
+}
+
+const str: string = 'abc';
+for (let i in str) {
+    console.log(i); // Output: 0, 1, 2 (indexes)
+}
+
+const obj = {name: 'aaa', age: 30};
+for (let i in obj) {
+    console.log(i); // Output: name, age (keys)
+}
+```
+
+### For...of Loop:
+- The `for..of` loop iterates over iterable objects such as Arrays, Strings, Maps, NodeLists, and more.
+- It is used to iterate over the values in these collections.
+- It cannot be used directly on objects since they are not iterable.
+
+```ts
+const arr: number[] = [10, 20, 30];
+for (let i of arr) {
+    console.log(i); // Output: 10, 20, 30 (values)
+}
+
+const str: string = 'abc';
+for (let i of str) {
+    console.log(i); // Output: a, b, c (characters)
+}
+
+function fn(){
+    for (let arg of arguments) {
+        console.log(arg);
+    }
+}
+
+fn(100, 200, 'aaa'); // Output: 100, 200, 'aaa'
+
+const s1 = new Set([10, 20, 30]);
+for (let i of s1) {
+    console.log(i); // Output: 10, 20, 30 (Set values)
+}
+
+const m1 = new Map([
+    ['x', 100],
+    ['y', 200],
+    ['z', 300]
+]);
+for (let [key, value] of m1) {
+    console.log([key, value]); // Output: ['x', 100], ['y', 200], ['z', 300]
+}
+```
+
+### Key Differences:
+1. **Usage**: `for..in` is used to iterate over the keys of an object, whereas `for..of` is used to iterate over values of iterable objects.
+2. **Applicability**: `for..in` works well with objects but is not ideal for arrays since the order of iteration is not guaranteed. `for..of` is ideal for arrays and other iterable objects.
+3. **Type of Iterated Elements**: `for..in` iterates over keys (property names), while `for..of` iterates over values.
+
+### Sample Answer:
+The `for..in` loop in JavaScript is used to iterate over enumerable properties of an object, such as the keys of an object or the indices of an array. In contrast, the `for..of` loop is designed to iterate over the values of iterable objects like arrays, strings, Sets, Maps, and generator objects. The key difference lies in what they iterate over: `for..in` goes over keys/indexes, and `for..of` goes over values. `for..in` is typically used for objects, while `for..of` is more suitable for arrays and other iterable collections.
+
+## What is and when to use `for await...of`
+he for await...of statement is a feature in JavaScript that allows you to loop over asynchronous iterables—objects that you can iterate over asynchronously, such as Promises.
+
+### Code example:
+```ts
+async function processPromises() {
+    function createPromise(val) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(val);
+            }, 1000);
+        });
+    }
+
+    const p1 = createPromise(100);
+    const p2 = createPromise(200);
+    const p3 = createPromise(300);
+    const list = [p1, p2, p3];
+
+    // Iterating over an array of Promises and logging each resolved value
+    // effect is same as:
+    // Promise.all(list).then(res => console.log(res))
+    for await (let res of list) {
+        console.log(res);
+    }
+
+    // Performing asynchronous operations in sequence
+    const arr = [100, 200, 300];
+    for (let num of arr) {
+        const res = await createPromise(num); // Ensure this code is inside an async function
+        console.log(res);
+    }
+}
+
+processPromises();
+```
+
+The `for await...of` loop is a powerful feature for handling asynchronous operations in JavaScript, providing a more intuitive and cleaner way to process sequences of Promises compared to chaining or using `Promise.all()`. It's particularly useful in scenarios where you need to maintain the order of operations or when working with streams of asynchronous data.
+
+### Box Model Explanation
+
+The CSS box model is a fundamental concept in web development that describes how the dimensions of each HTML element are calculated. The components of the box model, from outer to inner, are:
+
+1. **Margin**: The outermost layer, which defines the space between the element's border and surrounding elements.
+2. **Border**: The border that surrounds the padding and content. It's the boundary between the margin and the padding.
+3. **Padding**: The space between the border and the content. It increases the space inside the element.
+4. **Content**: The innermost area where the actual text, images, or other media are displayed.
+5. **Box-sizing**: A property that determines how the width and height of an element are calculated. If set to `border-box`, the element's padding and border are included in the element's width and height. If set to `content-box`, the width and height only include the content, not the padding or border. 
+
+### Differences Between offsetHeight, scrollHeight, and clientHeight
+
+1. **offsetHeight**: The `offsetHeight` property measures the total visible height of an element, including padding, border, and the scroll bar on the element (if any), but excluding margins. It's the outermost height measurement that includes everything inside the margin.
+
+2. **clientHeight**: The `clientHeight` property measures the visible content area (including padding) of an element but excludes the border, scrollbar, and margin. It's useful for getting the actual area available for the content inside an element.
+
+3. **scrollHeight**: The `scrollHeight` property measures the total height of an element's content, including content not visible on the screen due to overflow. It includes padding but excludes borders, scrollbar, and margin. This is larger than the `clientHeight` if there's content that overflows outside the visible area.
+
+### Sample Answer
+The primary differences among `offsetHeight`, `scrollHeight`, and `clientHeight` relate to what they include in their calculations. `offsetHeight` includes the border, padding, and the vertical scrollbar (if present), making it the total outer height. `clientHeight` includes the padding and the viewable content height, but not the border or scrollbar. Lastly, `scrollHeight` measures the total height of the content, including what's not visible due to overflow, plus padding. These properties are essential for dynamically managing layouts, handling scrolling behavior, or adjusting elements based on their content size.
+
+## Explain difference between HTMLCollection and NodeList
+
