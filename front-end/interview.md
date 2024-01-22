@@ -859,3 +859,131 @@ The primary differences among `offsetHeight`, `scrollHeight`, and `clientHeight`
 
 ## Explain difference between HTMLCollection and NodeList
 
+The DOM represents a document as a tree structure where `Node` is the fundamental building block. All other entities like elements, text, and comments are derived from `Node`. This hierarchy is important to understand the relationship between different types of nodes and how they interact within the DOM tree.
+
+- `Node`: The basic unit in the DOM tree, serving as a parent for more specific nodes.
+- `Element`: Represents an element in the HTML document. It's a specific type of node that can have attributes and child nodes.
+- `HTMLElement`: A further specialization of `Element` that represents elements specifically defined by HTML standards.
+- `HTMLCollection` and `NodeList` are collections used to represent groups of nodes. However, they differ in what they contain and how they are updated:
+
+  - `HTMLCollection`: A live collection that specifically contains `Element` nodes. It automatically updates when the DOM changes. It's commonly returned by methods like `document.getElementsByClassName` or the `.children` property of an element.
+  - `NodeList`: A collection that can hold any type of `Node`, including `Element`, `Text`, and `Comment` nodes. Depending on how it's obtained, it can be live (automatically updating with the DOM) or static (not updating). For example, `NodeList` returned by `Node.childNodes` is live, while `NodeList` returned by `document.querySelectorAll` is static.
+
+**Difference between HTMLCollection and NodeList:**
+
+The primary difference between an `HTMLCollection` and a `NodeList` lies in the types of nodes they can contain and their dynamism in reflecting changes to the DOM:
+
+1. **Node Types**: `HTMLCollection` is exclusively a collection of `Element` nodes, which are HTML elements. On the other hand, `NodeList` can contain any type of nodes, including `Element`, `Text` (text inside elements), and `Comment` nodes.
+
+2. **Dynamism**: `HTMLCollection` is live, meaning it updates automatically to reflect changes in the DOM. If an element is added or removed, the `HTMLCollection` immediately reflects this change. However, not all `NodeList` objects are live; some (like those returned by `document.querySelectorAll`) are static snapshots of the DOM state at the time of their creation. Others, like the list returned by `.childNodes`, are live.
+
+### `.children` vs `.childNodes`
+Assume we got
+```html
+<p id='p1'>
+    <em>hello</em> hello <b>bold</b><!-- comment -->
+</p>
+```
+
+```ts
+const p = document.getElementById('p1')
+p.children // this is instance of HTMLCollection, not NodeList
+// here p.children has em, has b, but does not have text like hello, bold, and the comment text
+p.childNodes //this is a instance of NodeList
+//here p.childNodes include em, text, b, comment, where text is the second hello
+p.tagName // correct only if this p is an Element
+p.nodeName // correct only if this p is a Node
+```
+
+### Sample answer
+Both are collections used in the DOM to handle groups of nodes, but they differ mainly in two aspects: the types of nodes they can contain and whether or not they are live. `HTMLCollection` is a live collection that only includes `Element` nodes and automatically updates with the DOM, making it ideal for working with HTML elements directly. `NodeList`, however, can contain any type of nodes, including text and comments, and can be either live or static, offering more flexibility in handling various parts of the DOM.
+
+## What are the features of JavaScript's strict mode?
+Strict mode in JavaScript is a way to opt into a restricted variant of JavaScript. By invoking strict mode, you can make your code safer by eliminating some JavaScript silent errors, making them throw errors instead. This helps in debugging and writing "cleaner" code. It also prevents or throws errors for actions that are considered bad practices or that could lead to bugs in your JavaScript code.
+
+Strict mode can be enabled by adding `'use strict';` at the beginning of a script or a function. The scope of strict mode depends on where it is declared. If it's declared at the top of a file, it applies to the entire script. If it's declared at the beginning of a function, it applies only to that function.
+
+### Features of Strict Mode
+
+1. **Variables Must Be Declared**: In strict mode, all variables must be declared before use. This means that if you try to use a variable without declaring it first, JavaScript will throw a reference error.
+
+2. **The `with` Statement Is Not Allowed**: The `with` statement is forbidden in strict mode as it makes the scope ambiguous and the code harder to optimize and debug.
+
+3. **Creates Eval Scope**: Code evaluated by `eval()` is executed in its own lexical scope in strict mode, meaning that variables or functions declared inside of an `eval()` statement are not created in the containing scope.
+
+4. **`this` Keyword in Functions**: In strict mode, when a function is called without an explicit subject (i.e., without an object as context), the value of `this` is `undefined` rather than the global object (window in browsers). This helps avoid common mistakes like inadvertently referring to the global object.
+
+5. **Duplicate Parameter Names Are Not Allowed**: In strict mode, you cannot have functions with duplicate named parameters, which can help avoid confusing bugs in your code.
+
+6. **Assignments to Non-Writable Properties Throw an Error**: In non-strict mode, assigning a value to a non-writable property silently fails. In strict mode, it throws an error.
+
+7. **Attempting to Delete Undeletable Properties Throws an Error**: In strict mode, trying to delete a property that cannot be deleted (like `Object.prototype`) will throw an error.
+
+8. **Octal Syntax Is Not Allowed**: In strict mode, octal literals and octal escape sequences are not allowed, preventing errors related to ambiguous string data.
+
+### Sample Answer
+
+JavaScript's strict mode is a feature that allows developers to opt into a restricted variant of JavaScript, making it easier to write secure and robust code. By declaring `'use strict';` at the beginning of a script or function, we activate strict mode which enforces several constraints: variables must be declared before use, the `with` statement is disallowed, creating a more predictable scope for `eval()`, and ensuring `this` does not default to the global object in functions called without an explicit subject. Additionally, strict mode forbids duplicate parameter names in functions, throws errors for assignments to non-writable properties and undeletable properties, and disallows octal syntax. These features help prevent common coding pitfalls and enhance code quality by making certain errors more apparent during the development phase.
+
+## Why send options request when using HTTP cross origin? 
+
+1. **Same-Origin Policy**: This security measure is implemented by web browsers to prevent malicious websites from accessing resources and data hosted on another domain without permission. It ensures that scripts running on one page cannot make requests to another domain without explicit consent from the domain being requested.
+
+2. **Cross-Origin Resource Sharing (CORS)**: To allow web pages to overcome the same-origin policy restrictions safely, CORS was introduced as a mechanism that enables secure cross-origin requests and data sharing. This is where the OPTIONS preflight request comes into play.
+
+3. **OPTIONS Preflight Request**: Before sending an actual request (like GET, POST, PUT, DELETE), the browser sends an OPTIONS request to the server hosting the cross-origin resource. This preflight request checks if the actual request is safe to send by examining what HTTP methods and headers are allowed by the server for cross-origin requests.
+
+4. **Cross-Origin Requests without Preflight**: Not all cross-origin requests trigger a preflight. Simple requests, or those that meet specific criteria (such as using only certain safe HTTP methods or headers), don't require an OPTIONS preflight. However, for most AJAX requests that might modify data on the server or involve credentials, a preflight check is mandatory.
+
+### CORS solutions
+**Solution 1**
+```html
+<!-- www.aaa.com Mx -->
+<script>
+    window.onSuccess = function (data) {
+        console.log(data)
+    }
+</script>
+<script src="https://www.bbb.com/api/getData"></script>
+<!-- https://www.bbb.com/api/getData 返回了一段字符串： -->
+'onSuccess({ errno: 0, data： { /* 数据内容 */ }})'
+```
+Utilizes a workaround by injecting a `<script>` tag from another origin. The script returns a function call as a string, which is then executed by the browser. This method circumvents the same-origin policy but is limited in use and doesn't involve an OPTIONS request.
+
+**Solution 2 (prefered)**
+```ts
+// CORS 配置允许跨域（服务端）
+response.setHeader ("Access-Control-Allow-Origin", "http://localhost: 8011")//或者 '*'
+response.setHeader ("Access-Control-Allow-Headers", "X-Requested-With")
+response.setHeader ("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS") 
+response.setHeader ("Access-Control-Allow-Credentials", "true") // allow accept cookie
+```
+Properly configuring CORS on the server-side to explicitly allow cross-origin requests from certain origins, methods, and headers. This is the preferred and secure method to handle cross-origin requests, directly addressing the need for an OPTIONS preflight request to ensure security and compliance.
+
+### Sample Answer
+
+An OPTIONS request is sent as part of the CORS protocol to ensure secure communication between different origins. This preflight request is automatically initiated by the browser to verify whether the server supports the intended cross-origin request. It checks the server's policies on accepting requests from different origins, the methods allowed, and the headers that can be included in the actual request. This mechanism helps in mitigating potential security risks by ensuring that only permitted cross-origin requests are made, adhering to the server's access control policies. The use of an OPTIONS request is a critical step in the security model of the web, allowing developers to build web applications that can safely interact with resources across different domains.
+
+## What is Restful API
+RESTful APIs are architectural guidelines for designing networked applications. They rely on stateless, client-server communication, where operations are performed using standard HTTP methods. For managing a blog, RESTful APIs provide endpoints for creating (POST), deleting (DELETE), updating (PATCH or PUT), and querying (GET) blog posts. Each operation targets a specific resource, identified by a URL, and uses the appropriate HTTP method to convey the action. For updates, PUT replaces an entire resource, while PATCH modifies parts of it, making PATCH more suitable for updates where only a few fields change. This approach to API design promotes scalability, simplicity, and flexibility.
+
+## How do JS do garbage collection and what is garbage collection
+Garbage collection in JavaScript is a process that automatically identifies and frees up memory that is no longer in use by the application. This is crucial in preventing memory leaks and ensuring that the application uses memory efficiently. JavaScript's garbage collection mechanism can be understood through two primary methods:
+
+1. **Reference Counting**: This is an older strategy where the garbage collector keeps track of how many references exist to a value. If the reference count drops to zero, meaning no part of your program is using that value anymore, it can be considered garbage and thus eligible for collection. However, this method has a significant drawback related to circular references. If two or more objects reference each other, they can create a loop that prevents their reference count from ever reaching zero, leading to memory leaks.
+
+2. **Mark-and-Sweep Algorithm**: This is the more modern approach used by JavaScript engines like V8 (Chrome, Node.js) and SpiderMonkey (Firefox). The algorithm marks the "roots" (variables directly referenced by the code you're running plus global variables, like `window` in browsers). It then traverses from these roots and marks all reachable objects. Any object that is not marked as reachable by the end of this traversal is considered unreachable and can be garbage-collected. This approach effectively solves the circular reference problem found in the reference counting method.
+
+### Sample Answer
+Garbage collection in JavaScript is a critical process that automatically identifies and frees up memory that is no longer being used, preventing memory leaks and ensuring efficient memory use. Initially, JavaScript utilized a method known as reference counting, which tracked how many references were made to a particular value. However, this method had a significant limitation, particularly with circular references, where two objects reference each other, preventing their reference counts from ever reaching zero and thus not being eligible for garbage collection.
+
+To overcome this, modern JavaScript engines now employ the Mark-and-Sweep algorithm. This method starts from root references, such as global variables or active ones in the current execution context, and marks all reachable objects. Any objects that are not marked during this process are considered unreachable and are cleared from memory. This approach is more efficient and avoids the pitfalls of circular references, ensuring that unused memory is reclaimed for future use, which is essential for the performance and reliability of web applications.
+
+## Is closure a memory leak in JS?
+Closures in JavaScript are not inherently sources of memory leaks; they are a fundamental part of the language's functionality, allowing functions to access and remember variables from their lexical scope even after the outer function has finished executing. However, closures can potentially lead to memory leaks if they retain references to large scopes or objects longer than necessary. This happens when a closure that is no longer needed still remains referenced in the code, preventing the JavaScript engine's garbage collector from freeing up the memory occupied by the scope's variables. To prevent such issues, it's important to be mindful of the lifecycle of closures and ensure they are dereferenced when no longer needed, especially in scenarios involving loops or large objects. This careful management of closures ensures efficient memory usage without sacrificing the powerful capabilities they provide in JavaScript programming.
+
+## How to detect memory leak in JS? What are the scenarios in JS or React? 
+To detect memory leaks in JavaScript and React, I primarily use the Chrome Developer Tools, particularly the Performance tab. By recording the memory usage while interacting with the application, I observe the heap usage over time. A continuous increase in memory usage without corresponding drops after garbage collection indicates a potential memory leak. Common scenarios in React involve unmanaged event listeners, uncleared timers, misuse of external libraries, and improper handling of state and props. Proactively managing resources, such as removing event listeners and clearing timers when components unmount, is crucial for preventing memory leaks.
+
+## What is WeakMap WeakSet? What are the use cases?
+In JavaScript, WeakMap and WeakSet are specialized collections that store objects weakly. This means they do not prevent their elements from being garbage-collected. A WeakMap allows us to associate data with an object in a way that doesn't prevent the object from being collected, making it ideal for private data or caches that do not interfere with garbage collection. Similarly, a WeakSet lets us track a group of objects for presence checks without affecting their lifecycles, useful for keeping track of which objects have undergone a certain process. Both are crucial for memory-efficient code, especially in applications with complex object graphs or those that require fine-grained control over memory and lifecycle management.
