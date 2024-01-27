@@ -987,3 +987,61 @@ To detect memory leaks in JavaScript and React, I primarily use the Chrome Devel
 
 ## What is WeakMap WeakSet? What are the use cases?
 In JavaScript, WeakMap and WeakSet are specialized collections that store objects weakly. This means they do not prevent their elements from being garbage-collected. A WeakMap allows us to associate data with an object in a way that doesn't prevent the object from being collected, making it ideal for private data or caches that do not interfere with garbage collection. Similarly, a WeakSet lets us track a group of objects for presence checks without affecting their lifecycles, useful for keeping track of which objects have undergone a certain process. Both are crucial for memory-efficient code, especially in applications with complex object graphs or those that require fine-grained control over memory and lifecycle management.
+
+## Difference Between Browser and Node.js Event Loop:
+
+JavaScript, being single-threaded, utilizes the event loop mechanism to handle asynchronous operations, enabling non-blocking execution. This is crucial in both browser and Node.js environments, yet the implementation and behavior of the event loop differ in each due to their distinct operational contexts and requirements.
+
+### Micro-tasks and Macro-tasks:
+- **Macro-tasks**: Operations like `setTimeout`, `setInterval`, and various web API calls. They are scheduled to run after the current script has completed and the micro-task queue is empty.
+- **Micro-tasks**: Primarily related to promises, async/await operations. They execute immediately after the current script and before any subsequent macro-tasks, ensuring higher priority in execution.
+
+### Browser Event Loop:
+- The browser event loop shares the main thread with tasks like DOM rendering, necessitating efficient task management to prevent UI blocking.
+- It operates with two types of task queues: macro-tasks and micro-tasks, with micro-tasks receiving execution priority right after the current task, even before moving to the next macro-task. This prioritization ensures that operations like promise resolutions are handled promptly, often before the next frame rendering.
+
+### Node.js Event Loop:
+- Node.js, though also single-threaded and relying on asynchronous execution, categorizes macro-tasks and micro-tasks with specific types and priorities, reflecting its backend operation focus, where UI blocking is not a concern but efficient handling of I/O operations is.
+- **Macro-task types in Node.js**, ordered by priority, include:
+  - **Timers**: `setTimeout`, `setInterval` for scheduling future tasks.
+  - **I/O Callbacks**: Handling network, stream, and TCP errors.
+  - **Idle/Prepare**: Internal Node.js engine tasks.
+  - **Poll**: Retrieving new I/O events.
+  - **Check**: Handling `setImmediate` callbacks.
+  - **Close Callbacks**: Executing callbacks like `socket.on('close')`.
+
+- **Micro-task types in Node.js**, include:
+  - **`process.nextTick`**: Allows deferring execution of a callback until the current operation completes, with very high priority.
+  - **Promise/async/await**: For handling asynchronous operations with promises.
+
+- In Node.js, the event loop executes synchronized code first, then processes all micro-tasks (with `process.nextTick` having the highest priority), and then proceeds to execute macro-tasks, attending to micro-tasks in between as they arise.
+
+### Sample Answer:
+While the event loop mechanism in both the browser and Node.js is fundamentally similar, enabling asynchronous JavaScript execution in a single-threaded environment, there are notable differences in their implementation. In Node.js, macro-tasks and micro-tasks are specifically categorized with defined priorities, reflecting its backend focus on efficient I/O handling. Both environments execute synchronous tasks first, followed by micro-tasks due to their higher priority, and then macro-tasks. However, the browser's event loop is particularly designed to manage UI responsiveness by prioritizing micro-tasks to ensure smooth user experiences, while Node.js focuses on efficient I/O processing through its event loop structure.
+
+## Is Virtual DOM (VDOM) fast? 
+The concept of Virtual DOM (VDOM) is pivotal in modern web development, especially with frameworks like React and Vue. The Virtual DOM is essentially a lightweight copy of the real DOM (Document Object Model) represented as JavaScript objects. It was popularized by React but is now a common concept in various front-end frameworks due to its efficiency in updating the user interface.
+
+### Understanding Virtual DOM and Its Performance
+
+The question of whether the Virtual DOM is fast hinges on the context of the comparison. When you compare direct manipulation of the real DOM (as done with libraries like jQuery) to the process involving the Virtual DOM, direct DOM manipulation can be faster for singular, simple operations because it involves direct interaction with the browser's rendering pipeline. However, this speed comes at the cost of efficiency and scalability when dealing with complex applications.
+
+The Virtual DOM introduces an abstraction layer that allows for a more declarative approach to defining UI components and their state changes. Here's a breakdown of how it works:
+1. When data changes within an application, the entire UI is re-rendered in the Virtual DOM.
+2. A diffing algorithm then compares the new Virtual DOM with a snapshot of the Virtual DOM from the last render cycle to determine the minimal set of changes needed to update the real DOM.
+3. These changes are then efficiently batched and applied to the real DOM, minimizing direct manipulation and reflow/repaint costs.
+
+### Advantages of Using Virtual DOM
+
+- **Component-Based Architecture**: Both React and Vue utilize a component-based structure that encapsulates the UI and business logic into reusable pieces, making development more manageable and scalable.
+- **Separation of Concerns**: By decoupling the data model from the UI (view), these frameworks enforce a design where the UI is a function of the state, promoting a more predictable flow of data and easier state management.
+- **Efficiency in Development**: Developers can focus on state management and business logic, rather than direct DOM manipulations. This leads to more maintainable code and a faster development cycle.
+
+### Sample Answer
+
+Direct manipulation of the DOM, as seen in libraries like jQuery, can perform faster for individual, straightforward operations due to the absence of an intermediate layer. However, this approach lacks scalability and maintainability in complex applications. The Virtual DOM, while introducing an additional step in the rendering process, provides a more efficient and effective solution for dynamic web applications. It achieves this by:
+1. Allowing data changes to trigger UI updates without manual DOM manipulation.
+2. Utilizing a diffing algorithm to identify and apply only necessary changes to the real DOM.
+3. Facilitating a component-based architecture that enhances code reusability and maintainability.
+
+Thus, the Virtual DOM is not inherently faster than direct DOM manipulation in every case, but it offers a more suitable approach for building complex, interactive web applications. Its efficiency comes from reducing the amount of direct DOM manipulation required, leading to better performance in dynamic applications where state changes frequently.
