@@ -1153,3 +1153,164 @@ if (cluster.isMaster) {
 - **Fork vs. Cluster Usage**:
   - **Fork**: Best suited for offloading CPU-intensive tasks to child processes, thereby preventing the main application thread from blocking.
   - **Cluster**: Ideal for creating redundant worker processes in server applications, enhancing availability and fault tolerance, especially under high load.
+
+
+## Describe JS-bridge principles
+
+### What is JS-bridge
+JSBridge serves as a middleware between native applications and JavaScript running within a webview. JavaScript cannot directly invoke native APIs due to the sandboxed nature of web content for security reasons. A JSBridge provides a structured interface through which JavaScript can communicate with the native side of an application. This enables web content to access device features or native functionality that is otherwise inaccessible to pure web applications. For example, within the Facebook app, it's possible to open H5 websites; this is facilitated by JSBridge, allowing the web content to interact with the app's native features.
+
+### Frequent used methods to achieve JS-Bridge
+
+1. **Global API Registration**: This method involves exposing native functions as global JavaScript functions that can be called directly from the web content. However, this approach may encounter issues with asynchronous execution, such as delays in reading from local files or fetching data over the network. For example:
+
+```js
+// Incorrect: const version = window.getVersion() // getVersion is from bridge, but have problem of lag at async, e.g. read from local file or web
+async function getVersion() {
+  return new Promise((resolve, reject) => {
+    if (window.bridge && window.bridge.getVersion) {
+      resolve(window.bridge.getVersion());
+    } else {
+      reject('Bridge or getVersion method not found.');
+    }
+  });
+}
+```
+
+2. **URL Scheme (Recommended)**: This technique involves defining custom URL schemes that the native application can recognize and handle. When a webview navigates to a URL with a custom scheme, the app intercepts the request and performs the corresponding native action. This method is more flexible and allows for easy asynchronous communication. A common implementation involves creating invisible iframes to trigger these URL schemes without navigating away from the current page. The example provided showcases an SDK object encapsulating calls to different native functions via URL schemes:
+
+```js
+// Example of an SDK object to interface with native app functions through URL schemes
+const sdk = {
+    invoke(url, data, onSuccess, onError) {
+        const iframe = document.createElement('iframe');
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
+            try {
+                const content = iframe.contentWindow.document.body.innerHTML;
+                onSuccess(JSON.parse(content));
+            } catch (error) {
+                onError(error);
+            } finally {
+                iframe.remove();
+            }
+        };
+        iframe.onerror = (error) => {
+            onError(error);
+            iframe.remove();
+        };
+        iframe.src = `my-app-name://${url}?data=${encodeURIComponent(JSON.stringify(data))}`;
+    },
+    fn1(data, onSuccess, onError) {
+        this.invoke('api/fn1', data, onSuccess, onError);
+    },
+    fn2(data, onSuccess, onError) {
+        this.invoke('api/fn2', data, onSuccess, onError);
+    },
+    fn3(data, onSuccess, onError) {
+        this.invoke('api/fn3', data, onSuccess, onError);
+    }
+};
+```
+
+## What is `window.requestIdleCallback`? What's the difference between `requestIdleCallback` and `requestAnimationFrame`?
+
+`window.requestIdleCallback` is a method that allows developers to queue a function to be executed when the browser is idle. This API provides an opportunity to perform background and low-priority work without interfering with critical animations or input response times. It's particularly useful for tasks that aren't time-critical, such as analytics and background data processing.
+
+### React Fiber
+
+React Fiber is a reimplementation of React's core algorithm. It changes the component tree structure to a linked list, enabling incremental rendering. This means that rendering work can be split into chunks and spread out over multiple frames. Fiber's architecture allows React to pause rendering to handle more urgent tasks and then resume when the browser is idle. This is where `requestIdleCallback` becomes relevant; it provides a native way to schedule these low-priority tasks during idle times, enhancing performance without sacrificing user experience.
+
+However, it's important to note that `requestIdleCallback` may have compatibility issues with Safari and Internet Explorer.
+
+### Difference between `requestIdleCallback` and `requestAnimationFrame`
+
+- **`requestAnimationFrame`** is designed for animations and executes just before each repaint, ensuring smooth visual updates. It has a higher priority because maintaining a high frame rate is crucial for animations and user interface responsiveness.
+- **`requestIdleCallback`**, on the other hand, is intended for tasks that can wait until the main thread is idle. It runs with lower priority, making it suitable for non-urgent tasks that don't need to be completed immediately.
+
+Both `requestAnimationFrame` and `requestIdleCallback` are considered macro tasks in the JavaScript event loop, but they serve different purposes based on their execution timing and priority levels.
+
+## Difference Algorithm and Implementation in React
+
+### Difference Algorithm
+The difference algorithm, often referred to as the "diff" algorithm, plays a crucial role in determining how to update the DOM by comparing two versions of the virtual DOM. Here’s how it works:
+- The algorithm compares components at the same hierarchical level in the virtual DOM tree, avoiding cross-level comparisons.
+- If it detects different tags, it will remove the old component and construct a new one instead of delving into further details.
+- For child components, the comparison is facilitated by unique "keys," which underscore the significance of assigning keys to list items.
+
+### React's Difference Algorithm
+React's diff algorithm employs an efficient strategy known as "right shifting." This means that during a comparison, if elements have only moved backward (to the right) in the list, React will move the elements accordingly instead of recreating them. This approach minimizes unnecessary DOM manipulations, leading to better performance.
+
+### Importance of Keys
+Keys are vital for optimizing the rendering process in React. When keys are provided, React uses them to identify which elements have changed, been added, or been removed. This helps in:
+- Precisely moving elements in the DOM without having to rebuild them, thus saving time and computational resources.
+- Increasing efficiency, especially in dynamic lists where the order of elements might change over time. Without keys, React would have to rebuild the entire list to ensure accuracy, which is far less efficient.
+
+## How to Prevent 300ms Delay for Double Click to Zoom on Mobile Phones?
+On mobile web applications, a common issue is the 300ms delay when users attempt to double-click (tap) to zoom. This delay was originally implemented to differentiate between a tap (single click) and a double-tap (double click). However, this can interfere with the responsiveness of web applications. In the past, developers used libraries like FastClick to circumvent this delay. Modern browsers have introduced ways to address this issue by detecting the site's responsiveness through meta tags.
+
+To prevent the 300ms delay on mobile devices without relying on external libraries like FastClick, ensure your web application is using responsive design principles. Implement the following meta tag in your HTML:
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1">
+```
+This meta tag informs the browser that your website is optimized for mobile devices, prompting it to disable the 300ms delay for a better user experience. This approach is preferred as it relies on standard responsive design practices rather than additional scripts, improving your website's performance and compatibility.
+
+## Retina Screen and 1px Lines Implementation
+
+When designing for Retina displays, setting elements to 1px using CSS can result in lines that appear too thick, due to some mobile phones having a Device Pixel Ratio (DPR) of 2. This means 1 CSS pixel could use 2 physical pixels, making the line appear thicker than intended. Directly setting elements to 0.5px can lead to compatibility issues across different browsers. To achieve the desired 1px line appearance on Retina screens, we can use CSS pseudo-elements combined with the `transform` property for optimization. 
+
+Here's an improved and corrected example:
+
+```css
+#box::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: #d9d9d9;
+  transform: scaleY(0.5);
+  transform-origin: 0 0;
+}
+```
+
+This approach leverages the `::before` pseudo-element to create a line that visually represents 1px on Retina displays by scaling it down by 50% along the Y-axis. This effectively simulates a thinner line without causing browser compatibility issues.
+
+### Handling Borders with Border-Radius
+
+When dealing with elements that have a border-radius, applying a thin border can be slightly more complex due to the way borders interact with the border-radius. In such cases, using `box-shadow` can offer a solution that allows for a fine-tuned appearance:
+
+```css
+#box {
+  box-shadow: 0 0 0 0.5px #d9d9d9;
+}
+```
+
+This method applies a `box-shadow` that mimics a border, allowing for the adjustment of its thickness to achieve the desired 0.5px visual effect on Retina displays. It's a versatile approach that maintains the element's aesthetic, including when a border-radius is applied, ensuring the visual consistency of the design across high-resolution screens.
+
+## What is the difference between a token and a cookie in web requests?
+
+### Cookie
+A cookie is a small piece of data sent from a website and stored on the user's computer by the user's web browser while the user is browsing. Cookies were designed to be a reliable mechanism for websites to remember stateful information (such as items added in the shopping cart) or to record the user's browsing activity (including clicking particular buttons, logging in, or recording which pages were visited in the past). They can also be used to remember pieces of information that the user previously entered into form fields, such as names, addresses, passwords, and credit card numbers.
+
+- HTTP is stateless, so cookies are used in each request to identify the user's session.
+- The server can send a "Set-Cookie" header to the client-side, with cookies having a size limit of 4KB.
+- Cookies have a Same-Origin Policy (SOP) restriction by default, meaning they cannot be shared or sent across different origins.
+- Before HTML5, cookies were sometimes used to store data; however, LocalStorage and SessionStorage are now preferred for this purpose.
+
+### Modern Browser Restrictions on Third-Party Cookies
+Modern browsers are increasingly restricting or banning third-party cookies to enhance user privacy. This move is distinct from Same-Origin Policy restrictions and aims to limit third-party advertisements and tracking mechanisms that compromise user privacy.
+
+### Cookie and Session
+- **Cookies**: Primarily used for login authentication, cookies store identifiers like a user ID.
+- **Session**: Stored on the server side, sessions maintain detailed user information corresponding to the identifiers stored in cookies.
+- The combination of cookies and sessions is a traditional solution for maintaining authenticated states across web requests. The typical flow involves:
+  1. The user inputs a username and password on the client side.
+  2. The client side sends these credentials to the server side.
+  3. The server side updates the session in memory and sets a cookie, possibly including the user ID.
+  4. For subsequent requests, the server identifies the user based on the cookie, facilitating a personalized and secure user experience.
+
+### Token-Based Authentication
+Unlike cookies and sessions, token-based authentication systems, such as those using JSON Web Tokens (JWT), send a token to the client after successful authentication. This token is then included in each request to the server, allowing the server to verify the user's identity and permissions without needing to maintain a session state. Tokens are particularly useful in single page applications (SPAs) and for creating services that are easily scalable and maintainable due to their stateless nature.
