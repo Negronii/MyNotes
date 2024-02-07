@@ -1486,8 +1486,6 @@ SQL Injection attacks occur when an attacker is able to insert or "inject" a SQL
 ### Best Practices for Prevention
 Implementing robust security measures on both the front-end and back-end is crucial for protecting web applications against these attacks. This includes validating user inputs, employing security headers, and adhering to secure coding practices. Regular security audits and updates can also significantly reduce vulnerabilities.
 
-# Front-end Developer Interview Questions
-
 ## Websocket vs HTTP Protocol
 
 ### Websocket Protocol
