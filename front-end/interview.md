@@ -1293,24 +1293,258 @@ This method applies a `box-shadow` that mimics a border, allowing for the adjust
 ## What is the difference between a token and a cookie in web requests?
 
 ### Cookie
-A cookie is a small piece of data sent from a website and stored on the user's computer by the user's web browser while the user is browsing. Cookies were designed to be a reliable mechanism for websites to remember stateful information (such as items added in the shopping cart) or to record the user's browsing activity (including clicking particular buttons, logging in, or recording which pages were visited in the past). They can also be used to remember pieces of information that the user previously entered into form fields, such as names, addresses, passwords, and credit card numbers.
+A cookie is a small piece of data sent from a website and stored on the user's computer by the web browser while browsing. Cookies enable websites to remember stateful information (such as items in a shopping cart) or to record browsing activities (like logging in or visiting pages). They are also used to recall information entered into form fields, such as names and addresses.
 
-- HTTP is stateless, so cookies are used in each request to identify the user's session.
-- The server can send a "Set-Cookie" header to the client-side, with cookies having a size limit of 4KB.
-- Cookies have a Same-Origin Policy (SOP) restriction by default, meaning they cannot be shared or sent across different origins.
-- Before HTML5, cookies were sometimes used to store data; however, LocalStorage and SessionStorage are now preferred for this purpose.
+- Cookies help maintain a user's session by being included in every request to identify the session due to HTTP's stateless nature.
+- Servers send a "Set-Cookie" header to the client, with cookies limited to 4KB.
+- Cookies are subject to Same-Origin Policy (SOP), preventing them from being shared across different origins.
+- Before HTML5, cookies were used for data storage, but LocalStorage and SessionStorage are now preferred.
 
 ### Modern Browser Restrictions on Third-Party Cookies
-Modern browsers are increasingly restricting or banning third-party cookies to enhance user privacy. This move is distinct from Same-Origin Policy restrictions and aims to limit third-party advertisements and tracking mechanisms that compromise user privacy.
+Modern browsers are limiting or blocking third-party cookies to improve privacy. This is aimed at reducing third-party ads and trackers that invade privacy, separate from the Same-Origin Policy.
 
 ### Cookie and Session
-- **Cookies**: Primarily used for login authentication, cookies store identifiers like a user ID.
-- **Session**: Stored on the server side, sessions maintain detailed user information corresponding to the identifiers stored in cookies.
-- The combination of cookies and sessions is a traditional solution for maintaining authenticated states across web requests. The typical flow involves:
-  1. The user inputs a username and password on the client side.
-  2. The client side sends these credentials to the server side.
-  3. The server side updates the session in memory and sets a cookie, possibly including the user ID.
-  4. For subsequent requests, the server identifies the user based on the cookie, facilitating a personalized and secure user experience.
+- **Cookies** are used for login authentication, storing identifiers like a user ID.
+- **Sessions** are server-side storage of user information linked to cookie identifiers.
+- Cookies and sessions together maintain authenticated states across web requests. The process typically involves the client sending credentials, the server updating the session and setting a cookie, and subsequent requests being personalized and secure based on the cookie.
 
-### Token-Based Authentication
-Unlike cookies and sessions, token-based authentication systems, such as those using JSON Web Tokens (JWT), send a token to the client after successful authentication. This token is then included in each request to the server, allowing the server to verify the user's identity and permissions without needing to maintain a session state. Tokens are particularly useful in single page applications (SPAs) and for creating services that are easily scalable and maintainable due to their stateless nature.
+### Token
+- Tokens, unlike cookies, are not part of the HTTP standards and can be customized. They need manual storage, such as in LocalStorage.
+- Tokens are not automatically managed by browsers and must be manually set and sent in headers, for example, as "Authorization: Bearer <token>".
+- Unlike cookies, tokens do not have inherent CORS limitations.
+- **JWT (JSON Web Token)** is a common type of token that involves the backend authenticating a login request and returning an encrypted string token, which the client stores and includes in the header of subsequent requests.
+
+### Follow up: Session vs Token, which is better
+The choice between session and token-based authentication depends on the specific requirements and constraints of the application.  
+For applications prioritizing server control over user sessions, quick user management actions, and where server resources are not a major concern, session-based authentication may be preferred.  
+For applications requiring scalability across multiple servers, reduced server load, and flexibility in handling requests from various domains (thus minimizing CORS issues), token-based authentication is often the better choice.  
+Both approaches have their merits and drawbacks, and the decision should align with the application's architectural needs, security requirements, and expected user load.  
+
+### Follow up: How to Achieve SSO (Single Sign-On)?
+
+Single Sign-On (SSO) is an authentication process that allows a user to access multiple systems with one set of login credentials. This process involves three parties: the client side, the server side (System A), and a third-party SSO provider. The SSO flow typically follows these steps:
+
+1. **Client Side Accesses System A**: The user tries to access System A.
+2. **Authentication Failure**: System A checks for a valid certificate. Finding none, it informs the client that authentication has failed and login is required.
+3. **Redirect to SSO Provider**: The client is redirected to the SSO provider because it lacks an SSO certificate.
+4. **SSO Login Request**: The SSO provider requests the client to log in.
+5. **Client Side Login**: The user logs in to the SSO provider.
+6. **SSO Certificate and Token Issuance**: Upon successful login, the SSO provider issues a ticket (token) and an SSO certificate to the client.
+7. **Certificate Storage on Client Side**: The client stores the SSO certificate.
+8. **System A Validates Certificate**: The client attempts to access System A again, this time presenting the SSO certificate. System A contacts the SSO provider to validate the certificate.
+9. **Certificate Validation by SSO Provider**: The SSO provider authenticates the certificate and validates the ticket.
+10. **Valid Ticket Acknowledgment**: System A receives a message from the SSO provider that the ticket is valid and proceeds to process the client's request.
+11. **Data Returned to Client Side**: System A returns the requested data to the client.
+
+**Key Concepts Related to SSO:**
+
+- **SSO Certificate**: A digital certificate that confirms the user's identity. It's used by the client to prove authentication without logging in again.
+- **Token (Ticket)**: A unique piece of data issued by the SSO provider that represents the user's authentication state. It's used for validating the user's session without re-entering credentials.
+- **Authentication Flow**: The process by which a user's identity is verified across multiple applications or systems using a single set of credentials managed by the SSO provider.
+
+**Benefits of SSO:**
+
+- **Enhanced User Experience**: Users need to log in only once to access multiple applications, simplifying their interaction with web services.
+- **Improved Security**: Centralizes the management of user credentials and authentication processes, reducing the likelihood of password fatigue and the risks associated with managing multiple credentials.
+- **Simplified Administration**: Eases the burden of password resets, account lockouts, and other administrative tasks related to user access across multiple systems.
+
+## Difference between HTTP and UDP
+
+HTTP (Hypertext Transfer Protocol) and UDP (User Datagram Protocol) operate at different layers of the network stack, with HTTP functioning at the application layer and UDP at the transport layer.
+
+### HTTP
+- **Layer**: Application
+- **Connection**: Connection-oriented
+- **Reliability**: HTTP is built on TCP (Transmission Control Protocol), which ensures reliable transmission of data through error checking and retransmission of lost packets.
+- **Use Cases**: Web browsing, form submission, data transfer in a reliable and ordered manner.
+- **Characteristics**: HTTP requests and responses are structured in a predefined format, allowing for complex web interactions, including state management through cookies, authentication, and caching strategies.
+
+### UDP
+- **Layer**: Transport
+- **Connection**: Connectionless
+- **Reliability**: Does not guarantee delivery, order, or error checking, making it less reliable but faster compared to TCP.
+- **Use Cases**: Streaming media (video, audio), online gaming, voice over IP (VoIP) where speed is crucial and occasional data loss is acceptable.
+- **Characteristics**: Suitable for applications that require fast, efficient transmission, such as live broadcasting or multiplayer online games.
+
+#### OSI Model Layers
+1. Application Layer
+2. Presentation Layer
+3. Session Layer
+4. Transport Layer (TCP, UDP)
+5. Network Layer
+6. Data Link Layer
+7. Physical Layer
+
+#### TCP/IP Model Layers
+1. Application Layer (HTTP, DNS, SMTP)
+2. Transport Layer (TCP, UDP)
+3. Internet Layer (IP)
+4. Network Interface Layer
+
+### Follow-up: Difference between HTTP 1.0, 1.1, and 2.0
+
+#### HTTP 1.0
+- **Features**: Basic protocol supporting GET and POST methods.
+- **Connection**: Each request opens a new TCP connection, leading to overhead and latency.
+
+#### HTTP 1.1
+- **Features**: Introduced more sophisticated caching mechanisms (Cache-Control, ETag), persistent connections (`Connection: keep-alive`) to allow multiple requests over a single connection, range requests, and additional methods like PUT and DELETE for RESTful APIs.
+- **Performance**: Reduced latency by reusing connections, introduced chunked transfer encoding for dynamic content.
+
+#### HTTP 2.0
+- **Features**: Significantly improved performance through header compression (reducing overhead), multiplexing (allowing multiple requests and responses to be in flight simultaneously over a single TCP connection), and server push capabilities.
+- **Adoption**: Increasingly widespread, offering substantial efficiency improvements over HTTP/1.x.
+
+### Clarifications and Corrections
+- The OSI model does not include a "web layer" but rather a network layer.
+- The TCP/IP model simplifies the OSI layers into four layers, focusing on the internet protocol suite.
+- HTTP 2.0 is not "the newest version" as HTTP/3 is emerging, utilizing QUIC (a transport layer network protocol) over UDP for even better performance in certain conditions.
+
+## What is an HTTPS Man-in-the-Middle Attack? How Can It Be Prevented?
+
+A Man-in-the-Middle (MitM) attack occurs when an attacker intercepts the communication between two parties, usually with the intent to secretly listen in or modify the messages being exchanged. In the context of HTTPS, this can be particularly damaging as HTTPS is designed to secure transmissions over the web, making any breach a serious concern.
+
+### Symmetrical Encryption
+Symmetrical encryption uses a single key for both encryption and decryption. This method is efficient and less resource-intensive, making it a cost-effective solution for many encryption needs.
+
+### Asymmetrical Encryption
+Asymmetrical encryption, on the other hand, involves two keys: a public key for encryption and a private key for decryption. This type of encryption is more secure but also more resource-intensive, leading to higher costs.
+
+### HTTPS Encryption Process
+- HTTP transmits data in plain text, making it vulnerable to interception and eavesdropping.
+- HTTPS enhances security by encrypting the data transmitted between the client and the server. The encryption process involves:
+  1. The client generates a random key and encrypts it with the server's public key, then sends this encrypted key to the server.
+  2. The server decrypts the received key using its private key.
+  3. Both parties use the random key for symmetric encryption, securing the subsequent communication.
+
+The initial exchange of the random key uses asymmetrical encryption, ensuring that only the server can decrypt the key with its private key. The subsequent communication is secured through symmetrical encryption.
+
+### Man-in-the-Middle Attack
+During the asymmetrical encryption step, there's a risk that an attacker could intervene by presenting the client with the attacker's public key instead of the server's. This allows the attacker to decrypt, read, and potentially alter the communication by hijacking the session key.
+
+### Prevention Measures
+The primary defense against MitM attacks in the context of HTTPS is the use of certificates. Certificates are digital documents that verify the identity of the parties involved in the communication. They are issued by trusted third-party organizations known as Certificate Authorities (CAs). To prevent MitM attacks, it is crucial to:
+- Ensure that the website's certificate is valid and issued by a reputable CA.
+- The browser checks that the domain name in the certificate matches the website's domain.
+- Use certificates from CAs that have established trust relationships with major browser vendors.
+
+By adhering to these practices, both website owners and users can significantly reduce the risk of falling victim to MitM attacks, ensuring that their communications remain secure and private.
+
+## What is the difference between `defer` and `async` attributes in `<script>` elements?
+
+The `<script>` element can be used to include JavaScript in HTML documents. When scripts are loaded and executed, they can affect how quickly a page becomes interactive. The `defer` and `async` attributes provide different ways to control this behavior.
+
+### `defer`
+The `defer` attribute tells the browser to continue parsing the HTML document while the script is being downloaded asynchronously. The key point is that the script execution is deferred until the entire HTML document has been parsed. This means that scripts with `defer` will not run until the HTML parsing is complete, which is similar to placing a `<script>` tag at the end of the `<body>` element. However, `defer` ensures that scripts are executed in the order they appear in the document, which is not guaranteed when scripts are manually placed at the bottom of the `<body>`. 
+
+### `async`
+The `async` attribute also allows the script to be downloaded in parallel to HTML parsing. However, unlike `defer`, `async` scripts are executed as soon as they are downloaded, which could be before or after the HTML parsing is complete. This means the execution order of scripts is not guaranteed. `async` is best used for scripts that do not depend on other scripts and do not modify the DOM (Document Object Model).
+
+### Difference between Prefetch and DNS-Prefetch
+
+#### Prefetch and Preload
+- **Preload** is a directive used to instruct the browser to load a resource early in the page's lifecycle, because it will be needed soon. This is crucial for resources that are critical to the current page's content, ensuring they are loaded with higher priority. The syntax is `<link rel="preload" href="example.js" as="script">` (or as="style" for CSS files), indicating that the resource is important for the immediate page load.
+- **Prefetch** is a hint to the browser that a resource might be needed in the future, but not on the current page. Resources prefetched are fetched and stored in the cache with low priority, during idle browser time, making them faster to load on subsequent page visits. The syntax is `<link rel="prefetch" href="example.js" as="script">`, suggesting the resource may be used in subsequent pages or actions.
+
+#### DNS-Prefetch and Preconnect
+- **DNS-Prefetch** is a way to resolve domain names (DNS lookups) before a user clicks on a link. This process reduces latency when the user navigates to the linked resource, as the DNS resolution step is already completed. The syntax for using it is `<link rel="dns-prefetch" href="//example.com">`. It's especially useful for third-party resources or any links that lead to different domains.
+- **Preconnect** goes a step further than DNS-prefetch by not only resolving the domain name but also performing the TCP handshake and, if the protocol is HTTPS, the TLS negotiation. This fully prepares the browser for a future connection, reducing the connection establishment time. The syntax is `<link rel="preconnect" href="//example.com">`. Preconnect is more comprehensive than DNS-prefetch because it completes all the preliminary network steps, making the resource ready to be used with minimal delay.
+
+### Summary
+- Use **preload** for critical resources needed for the current page to ensure they are loaded quickly and with high priority.
+- Use **prefetch** for resources that will be needed in subsequent page visits, to speed up their load time when the user navigates to those pages.
+- Use **dns-prefetch** to resolve domain names ahead of time, reducing DNS lookup time for third-party resources or anticipated navigations.
+- Use **preconnect** to fully prepare for a future connection, including DNS lookup, TCP handshake, and TLS negotiation, minimizing the latency for high-priority, cross-origin requests.
+
+## Front-End Security Threats and Prevention Measures
+
+### XSS (Cross-Site Scripting)
+XSS attacks occur when an attacker injects malicious JavaScript code into a web application's output. The injected code executes within the victim's browser when they visit the compromised web page.
+
+**Prevention:** Ensure the encoding or escaping of user input on both the front-end and back-end. For example, convert `<` to `&lt;` and `>` to `&gt;`. Modern JavaScript frameworks like React automatically escape HTML to safeguard against XSS, significantly reducing the risk.
+
+### CSRF (Cross-Site Request Forgery)
+In CSRF attacks, attackers trick users into executing unwanted actions on a web application where they're authenticated, leveraging the user's identity.
+
+**Prevention:** Employ anti-CSRF tokens and set the `SameSite` attribute for cookies to `strict` to prevent cross-site request forgery. Limiting CORS (Cross-Origin Resource Sharing) and utilizing authentication mechanisms also bolster security.
+
+### Clickjacking
+Clickjacking tricks users into clicking on something different from what the user perceives, often by embedding a page as a transparent iframe.
+
+**Prevention:** To prevent clickjacking, ensure that your website does not allow itself to be embedded in an iframe on another site by setting the `X-Frame-Options` header to `SAMEORIGIN`. Also, verify that `window.top.location.hostname` is the same as `window.location.hostname`; if not, redirect the user appropriately.
+
+### DDoS (Distributed Denial of Service)
+DDoS attacks flood a server with numerous requests to exhaust resources and bandwidth, rendering the service unavailable to legitimate users.
+
+**Prevention:** DDoS protection is challenging to implement at the software level alone; employing cloud-based DDoS protection services or Web Application Firewalls (WAF) can help mitigate these attacks.
+
+### SQL Injection
+SQL Injection attacks occur when an attacker is able to insert or "inject" a SQL query via the input data from the client to the application.
+
+**Prevention:** Safeguard against SQL Injection by validating and sanitizing all user inputs. Utilize prepared statements and parameterized queries to ensure the database executes only the intended queries, not the injected malicious code.
+
+### Best Practices for Prevention
+Implementing robust security measures on both the front-end and back-end is crucial for protecting web applications against these attacks. This includes validating user inputs, employing security headers, and adhering to secure coding practices. Regular security audits and updates can also significantly reduce vulnerabilities.
+
+# Front-end Developer Interview Questions
+
+## Websocket vs HTTP Protocol
+
+### Websocket Protocol
+- **Supports peer-to-peer communication**: Unlike HTTP, which is primarily designed for client-server communication, Websockets enable real-time, bi-directional communication between the client and server.
+- **Protocol Name**: The Websocket protocol is indicated by `ws://` or `wss://` for secure Websockets, similar to how `http://` and `https://` indicate HTTP and HTTPS protocols.
+- **Initiation**: A Websocket connection can be initiated by either the client or server side. This flexibility is particularly useful for applications that require real-time data exchange.
+- **Use Cases**: It is widely used in applications requiring real-time interaction, such as message notifications, live discussion rooms, and collaborative editing platforms.
+- **CORS Policy**: Websockets are not subject to the same-origin policy, which restricts how a document or script loaded from one origin can interact with resources from another origin. This means Websockets do not have CORS limitations.
+- **Communication**: Communication over a Websocket is achieved through the `send` method for sending messages and the `onmessage` event handler for receiving messages. This contrasts with the request-response model used by HTTP.
+- **Security**: A Websocket connection can be upgraded to a secure connection (`wss://`), analogous to upgrading HTTP to HTTPS, to ensure encrypted communication.
+
+### Connection Steps
+1. The process begins with a standard HTTP request.
+2. If successful, the connection is upgraded to a Websocket protocol for ongoing communication.
+
+### A Discussion Room Code Example: Node.js Side
+```js
+const { WebSocketServer } = require('ws');
+const wsServer = new WebSocketServer({ port: 3000 });
+const list = new Set();
+
+wsServer.on('connection', curWs => {
+    console.info('Connected');
+    list.add(curWs);
+    // Implement cleanup mechanism here to remove inactive connections
+
+    curWs.on('message', msg => {
+        console.info('Received message:', msg.toString());
+        // Broadcast to other clients
+        list.forEach(ws => {
+            if (ws === curWs) return;
+            ws.send(msg.toString());
+        });
+    });
+});
+```
+*Note: It's important to implement a cleanup mechanism to remove inactive connections to prevent memory leaks.*
+
+### Code Example: Website Side
+```html
+<script>
+    const ws = new WebSocket('ws://127.0.0.1:3000');
+    ws.onopen = () => {
+        console.info('Opened');
+        ws.send('Client opened');
+    };
+    ws.onmessage = event => {
+        console.info('Received message:', event.data);
+    };
+
+    const btnSend = document.getElementById('btn-send');
+    btnSend.addEventListener('click', () => {
+        console.info('Clicked');
+        ws.send('Current time: ' + Date.now());
+    });
+</script>
+```
+
+### Socket.IO
+In practice, for ease of use and additional features, developers often use libraries like Socket.IO. Socket.IO abstracts the complexities of Websockets and provides a cleaner API, such as `socket.emit()` for sending messages and `io.on()` for listening to events.
