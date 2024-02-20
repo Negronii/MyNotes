@@ -1546,3 +1546,237 @@ wsServer.on('connection', curWs => {
 
 ### Socket.IO
 In practice, for ease of use and additional features, developers often use libraries like Socket.IO. Socket.IO abstracts the complexities of Websockets and provides a cleaner API, such as `socket.emit()` for sending messages and `io.on()` for listening to events.
+
+### Difference between WebSocket and HTTP: keep-alive
+
+The main difference between WebSocket and HTTP with the `keep-alive` connection option lies in the nature of the communication and the initiation of requests.
+
+#### HTTP: keep-alive
+- **Connection Type**: HTTP is a stateless protocol. By default, each request/response pair is followed by closing the connection. However, with the `keep-alive` option, the connection between the client and server can be kept open, allowing multiple requests to be sent over the same connection without having to re-establish it each time.
+- **Client-Initiated**: In an HTTP communication, even with `keep-alive`, the client initiates all requests. The server cannot send data to the client unless the client first sends a request. This means the server must wait for the client to request data before it can send any.
+- **Server Response**: With `keep-alive`, the server holds the connection open for a specified time (or until a specified number of requests have been sent), allowing for faster subsequent requests by avoiding the overhead of establishing new connections. However, the server is essentially in a wait state, responding to client requests as they come in without the ability to initiate communication.
+- **Timeouts and Retries**: If the server takes too long to respond, the client might face timeouts and may need to retry its request. This mechanism doesn't inherently solve issues related to real-time data exchange or server push capabilities.
+
+#### WebSocket
+- **Bi-Directional Communication**: WebSocket provides a full-duplex communication channel that operates over a single, long-lived connection. Once established, this connection allows either the client or the server to initiate messages, breaking away from the request-response model.
+- **Server and Client Initiation**: Unlike HTTP, WebSocket allows the server to send data to the client at any time once the WebSocket connection is established. This makes it ideal for real-time applications where the server needs to push updates to the client without waiting for a request.
+- **Real-Time Interaction**: WebSocket is designed for applications that require real-time data exchange, such as live chat, gaming, or financial trading applications, where the overhead of establishing new connections for each message (as in HTTP) would be prohibitive.
+- **Efficiency and Performance**: WebSocket connections are more efficient for real-time communication because they eliminate the HTTP overhead after the initial handshake. This makes WebSocket a better choice for scenarios where performance and latency are critical.
+
+## Describe the Complete Process of Entering a URL to Presenting the Page
+
+When a URL is entered into a browser, the process from initiating a web request to the final rendering of the page involves several critical steps. Here is a detailed breakdown:
+
+### Web Request
+1. **DNS Lookup**: The browser initiates a DNS query to convert the hostname in the URL into an IP address. This process may involve querying multiple DNS servers.
+2. **TCP Connection**: Establishes a TCP connection with the server using a three-way handshake. This ensures a reliable communication channel.
+3. **HTTP Request**: The browser sends an HTTP request to the server's IP address, requesting the webpage content.
+4. **Server Response**: The server processes the request and sends back a response, typically including the HTML source code of the page.
+
+### Parsing HTML
+1. **Resource Fetching**: As the browser parses the HTML, it may encounter references to external resources such as JavaScript, CSS, images, and videos. Each of these resources may require additional DNS lookups, TCP connections, and HTTP requests.
+2. **DOM and CSSOM Trees**: The browser converts the HTML document into a structured format known as the Document Object Model (DOM). Simultaneously, CSS files are processed into the CSS Object Model (CSSOM) or style tree.
+3. **Render Tree Construction**: The DOM and CSSOM trees are combined to form the render tree, which represents all visible elements on the page and their styles.
+4. **Optimization**: To optimize loading and parsing:
+   - CSS is typically placed in the `<head>` to avoid rendering blocks.
+   - JavaScript files are placed at the end of the `<body>` or loaded with `defer` or `async` attributes to not block HTML parsing.
+   - Specifying image dimensions helps in layout calculation and prevents reflows.
+
+### Rendering the Page
+1. **Layout Calculation**: The browser calculates the size and position of each element in the render tree.
+2. **Painting**: The visible elements are then painted onto the screen.
+3. **JavaScript Execution**: JavaScript files are executed, which may modify the DOM and trigger a re-rendering of the page.
+4. **Asynchronous Loading**: Some resources, like CSS and images, are fetched asynchronously and may cause the page to render again upon loading.
+
+### Repaint vs. Reflow
+
+Understanding the difference between repaint and reflow is crucial in web development, especially for dynamic web pages where elements can change frequently due to animations, modals, dialogs, popups, or modifications to the DOM like adding or deleting elements.
+
+#### Repaint
+A repaint occurs when changes are made to an element's visual appearance that do not affect its layout in the document. Examples include changes in color, background-color, visibility, and outline. During a repaint, the element's geometry (size and position) remains unchanged, and thus, it does not impact the position of any other elements.
+
+#### Reflow
+Reflow, also known as layout, involves recalculating the positions and sizes of elements in the document. This process is more computationally expensive than repaints because it affects the layout of the element that is changing and may also impact other elements on the page. Causes of reflow include changes to the browser window size, alterations in content (such as adding or removing elements), and modifications to elements' styles affecting their sizes (e.g., width, height, margin, padding).
+
+#### Difference
+The primary difference between repaint and reflow is the scope of impact and the cost in terms of performance. Reflows can trigger repaints, but repaints do not necessarily cause reflows. Because reflows can impact the layout of the entire page, they are more performance-intensive than repaints.
+
+#### Methods to Avoid Unnecessary Reflows
+- **Batch Style Changes**: Apply multiple style changes at once by changing the class of an element instead of individual styles.
+- **Minimize DOM Access**: Modify elements offscreen or in a document fragment before adding them to the DOM. Using `display: none` before making changes can remove the element from the flow, thus reducing reflow costs.
+- **Use Block Formatting Context (BFC)**: Utilizing BFC properties can isolate elements from affecting each other, minimizing the need for reflows.
+- **Event Optimization**: Use debouncing and throttling for events that trigger frequent reflows, such as window resizing or scrolling.
+- **Optimize Animations**: Prefer CSS3 animations and `requestAnimationFrame` over JavaScript animations to reduce reflow and repaint costs.
+
+### Expansion: Block Formatting Context (BFC)
+A Block Formatting Context is an HTML box that serves as a containment boundary, ensuring that elements within it do not affect the layout of elements outside it. BFC can be triggered by:
+- The root element (`html`).
+- Elements with `float` properties other than `none`.
+- Elements with `position: absolute` or `fixed`.
+- Elements with `display: inline-block`, `table-cell`, `table-caption`, `flex`, `grid`, or other table-related values.
+- Elements with `overflow` set to anything other than `visible`.
+
+## How to Implement Multi-Tab Communication on a Website?
+
+Implementing multi-tab communication in web applications allows for the sharing of data and messages between different tabs or windows of the same origin. Here are three common methods to achieve this, along with their advantages, limitations, and use cases.
+
+### 1. Using WebSockets
+WebSockets provide a full-duplex communication channel over a single, long-lived connection, enabling real-time data exchange between the client and server.
+
+- **Advantages**:
+  - No CORS (Cross-Origin Resource Sharing) limitations, allowing for communication across different domains.
+  - Enables real-time, bidirectional communication between the client and server.
+
+- **Limitations**:
+  - Requires server-side support, which can be more costly and complex to implement compared to client-side-only solutions.
+  - Maintaining a WebSocket connection can be resource-intensive for both the server and client.
+
+- **Use Case**:
+  Ideal for applications that require real-time data exchange, such as live chat applications, online gaming, and collaborative editing tools.
+
+### 2. Using `localStorage`
+`localStorage` is a web storage API that allows data to be stored in key-value pairs in the browser, and it can be used for communication between tabs within the same origin.
+
+- **Advantages**:
+  - Simple to implement and does not require server-side support.
+  - Works across tabs within the same origin, making it suitable for sharing data between different parts of the same application.
+
+- **Limitations**:
+  - Limited to communication within the same origin.
+  - Storage space is limited (typically around 5MB).
+
+- **Example Code**:
+  ```html
+  <!-- In one tab (e.g., list page) -->
+  <script>
+      window.addEventListener('storage', event => {
+          if (event.key === 'changeInfo') {
+              console.info('New info received:', event.newValue);
+          }
+      });
+  </script>
+  <!-- In another tab (e.g., detail page) -->
+  <script>
+      document.getElementById('btn1').addEventListener('click', () => {
+          const newInfo = {
+              id: 100,
+              name: 'Item ' + Date.now()
+          };
+          localStorage.setItem('changeInfo', JSON.stringify(newInfo));
+      });
+  </script>
+  ```
+  - **Key Points**:
+    - Tabs A and B are within the same origin.
+    - Tab A sets `localStorage`, and Tab B listens for changes in `localStorage`.
+
+### 3. Using `SharedWorker`
+`SharedWorker` is a type of Web Worker that allows for the creation of a shared execution environment, accessible by multiple scripts even if they are in different windows, iframes, or tabs.
+
+- **Advantages**:
+  - Enables communication and data sharing between tabs, iframes, or windows from the same origin.
+  - Offloads work to a background thread, preventing UI blocking.
+
+- **Limitations**:
+  - More complex to implement and test compared to other methods.
+  - Support across browsers can be inconsistent.
+  - Limited to same-origin communication.
+
+- **Example Code**:
+  ```html
+  <!-- In one tab (e.g., list) -->
+  <script>
+      const worker = new SharedWorker('worker.js');
+      worker.port.onmessage = e => console.info('Message from worker:', e.data);
+  </script>
+  <!-- In another tab (e.g., detail) -->
+  <script>
+      const worker = new SharedWorker('worker.js');
+      document.getElementById('btn1').addEventListener('click', () => {
+          worker.port.postMessage('Message from detail tab');
+      });
+  </script>
+  ```
+  ```js
+  // worker.js
+  const ports = new Set();
+  onconnect = event => {
+      const port = event.ports[0];
+      ports.add(port);
+      port.onmessage = e => {
+          // Broadcast the message to all connected ports except the sender
+          ports.forEach(p => {
+              if (p !== port) {
+                  p.postMessage(e.data);
+              }
+          });
+      };
+      port.postMessage('SharedWorker initialized');
+  }
+  ```
+  - **Key Points**:
+    - `SharedWorker` can start a shared process for communication between tabs from the same origin.
+    - It is capable of running JavaScript in the background, independent of any particular tab, allowing for more complex inter-tab communication scenarios.
+
+### How to Achieve Communication Between a Website and an Iframe
+
+Communicating between a website and an iframe can be efficiently achieved using the `window.postMessage()` method. This approach allows for secure cross-origin communication without being restricted by CORS (Cross-Origin Resource Sharing) policies. The `postMessage` method enables sending data from the parent page to an iframe or vice versa, regardless of their origin, ensuring a versatile and secure way to interact across different domains.
+
+- **Advantages**:
+  - Bypasses CORS restrictions, enabling communication across different origins.
+  - Provides a mechanism to verify the origin of the messages, enhancing security.
+
+- **Example Code**:
+
+  - **Child (Iframe Content)**:
+    ```html
+    <!-- Child HTML content -->
+    <p>Child page
+      <button id="btn1">Send Message</button>
+    </p>
+    <script>
+        const btn1 = document.getElementById('btn1');
+        btn1.addEventListener('click', () => {
+            console.info('Child button clicked');
+            window.parent.postMessage('Message from child', '*'); // Use specific origin instead of '*' in production
+        });
+
+        window.addEventListener('message', event => {
+            // Always check the origin of the data!
+            if (/* validate event.origin */) {
+                console.info('Origin:', event.origin);
+                console.info('Child received:', event.data);
+            }
+        });
+    </script>
+    ```
+  - **Parent**:
+    ```html
+    <!-- Parent HTML content -->
+    <p>Index page
+      <button id="btn1">Send Message</button>
+    </p>
+    <iframe id="iframe1" src="./child.html"></iframe>
+    <script>
+        const btn1 = document.getElementById('btn1');
+        const iframe = document.getElementById('iframe1');
+
+        btn1.addEventListener('click', () => {
+            console.info('Parent button clicked');
+            iframe.contentWindow.postMessage('Message from parent', '*'); // Use specific origin instead of '*' in production
+        });
+
+        window.addEventListener('message', event => {
+            // Always validate the origin of the data!
+            if (/* validate event.origin */) {
+                console.info('Origin:', event.origin);
+                console.info('Parent received:', event.data);
+            }
+        });
+    </script>
+    ```
+- **Key Points**:
+  - The `'*'` argument in `postMessage` indicates that the message can be sent to any origin. In production environments, this should be replaced with the specific target origin to prevent security vulnerabilities.
+  - It's crucial to validate the `event.origin` in the message event listener to ensure that messages are only accepted from trusted sources. This validation prevents potential cross-site scripting (XSS) attacks.
+
+## 
