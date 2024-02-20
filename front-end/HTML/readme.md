@@ -6,7 +6,7 @@
 - Relative path (commonly used): start from the current file to find the file
   - Same-level files: in a folder with this HTML "filename.suffix"
   - Lower-level files: in another folder in the folder where HTML is located "Another_folder_name/filename.suffix"
-  - Upper-level file: in the same folder as the folder where this HTML is located  "`../filename.suffix`" (`../` means to the upper-level directory)
+  - Upper-level file: in the same folder as the folder where this HTML is located "`../filename.suffix`" (`../` means to the upper-level directory)
   - Two levels up: "`../../filename.suffix`"
 
 ## Standard Stream
@@ -106,7 +106,7 @@ For future javascript:
 Data that may be modified in the future must be written in a separate tag
 The written content does not need to copy and paste multiple contents, and all the data is replaced by the back-end
 
-# HTTML Basis
+# HTML Basis
 
 ## A Sample HTML Structure
 
@@ -177,9 +177,7 @@ Three main SEO tags:
 
 ## Semantic wrapping
 
-- Block
-
--level elements act as large containers that can be nested: text, block-level elements, inline-block elements, inline elements, etc.
+- Block-level elements act as large containers that can be nested: text, block-level elements, inline-block elements, inline elements, etc.
 
 - But: don't nest p, div, h, etc. elements in p tags.
 - Reason: Because the semantics are inappropriate since the paragraph is already a paragraph, it cannot be a title, and the title is the same.
