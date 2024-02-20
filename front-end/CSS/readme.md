@@ -493,6 +493,7 @@ Transition - let the style of the element change slowly, often used with hover t
 Property values:
 - Transition properties: `all` (all properties that can be transitioned are transitioned, or a single property such as `width` (only the width is transitioned)
 - The duration of the transition: `number + s` (how many seconds)
+
 Be careful:
 - If multiple properties transition together, they can be separated by commas, e.g. `transition: width 1s, background-color 2s;`
 - The transition needs to have different styles between the default state and the hover state in order to have a transition effect
