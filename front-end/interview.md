@@ -1879,5 +1879,264 @@ Handling text overflow for multi-line scenarios, where you want to limit the tex
 
 This method uses `-webkit-box`, `-webkit-box-orient`, and `-webkit-line-clamp` to achieve multi-line truncation. It's important to note that this approach is somewhat limited by its compatibility with only webkit-based browsers (e.g., Safari, Chrome). However, it's widely used due to its simplicity and effectiveness in most web scenarios.
 
-Keep in mind that as of my last update, CSS lacks a universally supported standard for multi-line text truncation that works across all browsers without relying on webkit-specific properties. Developers often use JavaScript-based solutions or other CSS tricks for cross-browser compatibility.
+## Common Design Patterns in Front-End Development and Their Usage Scenarios
 
+### Design Principles
+The most important principle in design patterns is the **Open/Closed Principle**, which states that a system should be open for extension but closed for modification. This means you should be able to add new functionality without changing the existing code.
+
+### Factory Pattern
+The Factory pattern involves using a factory function to create instances, effectively hiding the `new` keyword to encapsulate the creation process. This pattern is useful for scenarios where the creation process is complex or when there needs to be some control over how instances are created. Examples include the jQuery `$` function and React's `createElement` function.
+
+#### Example:
+```typescript
+class Foo {}
+
+function factory() {
+    return new Foo();
+}
+
+const f = factory();
+```
+
+### Singleton Pattern
+The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is particularly useful for cases where a single instance of a class should be used across the system, such as the store in Vuex and Redux or a globally unique dialog/modal. JavaScript makes implementing singletons straightforward because there's no need to worry about multithreading issues that might arise in languages like Java, where thread locking mechanisms might be necessary to prevent multiple instances from being created.
+
+#### Example:
+```typescript
+class Singleton {
+    private static instance: Singleton;
+    private constructor() {}
+    static getInstance() {
+        if (!Singleton.instance) {
+            Singleton.instance = new Singleton();
+        }
+        return Singleton.instance;
+    }
+    fn1() {}
+    fn2() {}
+}
+
+const s = Singleton.getInstance();
+s.fn1();
+```
+
+### Proxy Pattern
+The Proxy pattern involves using a proxy layer that clients interact with instead of accessing the object directly. This allows for various operations, like monitoring or intercepting get and set operations, to be performed transparently. A practical example of this pattern is the implementation of Vue3's reactivity system using ES6's `Proxy`.
+
+#### Example:
+```typescript
+const obj = new Proxy({}, {
+    get(target, key) {
+        console.log('get', key);
+        return target[key];
+    },
+    set(target, key, value) {
+        console.log('set', key, value);
+        target[key] = value;
+    }
+});
+obj.name = 'jack';
+console.log(obj.name);
+```
+
+### Observer Pattern
+The Observer pattern is widely used in front-end development. It involves a subject and observers, where the observers are notified and updated whenever the subject undergoes a change. A common example is attaching click event listeners to a button, where each listener acts as an observer to the button's click event.
+
+#### Example:
+```typescript
+btn.addEventListener('click', () => {
+    console.log('click');
+});
+```
+
+### Publish-Subscribe Pattern
+Similar to the Observer pattern, the Publish-Subscribe pattern provides a more decoupled way for components to communicate. Components can publish events to a specific event channel and subscribe to this channel to receive notifications. It's important to unsubscribe from events, especially in component lifecycle hooks, to prevent memory leaks.
+
+#### Example:
+```typescript
+event.on('event-key', () => {
+    console.log('event 1');
+});
+event.on('event-key', () => {
+    console.log('event 2');
+});
+event.emit('event-key');
+
+// Remember to unsubscribe
+function fn1() {}
+event.on('event-key', fn1);
+event.off('event-key', fn1);
+```
+
+### Decorator Pattern
+The Decorator pattern allows for behavior to be added to individual objects, either statically or dynamically, without affecting the behavior of other objects from the same class. This pattern is similar to Aspect-Oriented Programming (AOP) and is supported in ES and TypeScript through decorator syntax. It's particularly useful for adding features or functionalities to existing classes without modifying them.
+
+#### Example:
+```typescript
+@testable
+class MyTestableClass {
+    // ...
+}
+
+function testable(target) {
+    target.isTestable = true;
+}
+
+console.log(MyTestableClass.isTestable);
+```
+In the example above, `@testable` is a decorator that adds new functionality to `MyTestableClass`.
+
+### What's the distinction between the Observer pattern and the Publish-Subscribe pattern?
+
+### Observer Pattern
+In the Observer pattern, the subject (the object being observed) and the observers (the objects that want to be notified of changes in the subject) have direct knowledge of each other. This means there is a direct relationship where the subject holds references to the observers and directly notifies them of any changes. This pattern allows for a straightforward and direct communication line but can lead to higher coupling between the subject and its observers.
+
+#### Characteristics:
+- **Direct Communication**: Observers are directly registered with the subject.
+- **Coupling**: There is a higher degree of coupling, as the subject and observers are directly aware of each other.
+- **Use Case**: Suitable for simpler scenarios where the subject's state change is of interest to specific observers directly related to the subject.
+
+### Publish-Subscribe Pattern
+The Publish-Subscribe pattern, on the other hand, introduces a middle layer known as the "event channel" or "message broker," which decouples the publishers (the sources of events) from the subscribers (the receivers of events). Publishers publish events to the event channel without knowing who the subscribers will be. Similarly, subscribers listen for events through the event channel without knowing who the publishers are. This level of indirection adds flexibility and reduces coupling between components, making the system more scalable and easier to extend.
+
+#### Characteristics:
+- **Indirect Communication**: The communication between publishers and subscribers is mediated by an event channel, without direct knowledge of each other.
+- **Coupling**: There is lower coupling due to the presence of the event channel as an intermediary.
+- **Use Case**: Ideal for more complex scenarios where the event source and event consumers need to remain decoupled for scalability and maintainability reasons.
+
+In summary, the key difference lies in the relationship and communication method between the parties involved: the Observer pattern facilitates direct communication between the subject and its observers, resulting in tighter coupling, whereas the Publish-Subscribe pattern uses an event channel to mediate communication, leading to looser coupling and greater flexibility.
+
+## In practical work, how have you optimized React?
+
+### Modify CSS to simulate v-show
+Using inline CSS to conditionally display components can be optimized to avoid conditional rendering blocks and improve readability:
+
+```ts
+{/* Instead of conditionally rendering the component twice */}
+{!flag && <MyComponent style={{display: 'none'}}/>}
+{flag && <MyComponent />}
+
+// Use a single line with conditional styling
+<MyComponent style={{display: flag ? 'block' : 'none'}} />
+```
+
+### Use keys in loops
+Using a unique `key` prop in a list helps React identify which items have changed, added, or removed, which can improve the performance of list updates:
+
+```ts
+const todoItems = todos.map(todo => 
+    // Avoid using the index as a key if the list can change
+    <li key={todo.id}>
+        {todo.text}
+    </li>
+)
+```
+
+### Use Fragment to reduce DOM depth
+React Fragments allow you to group a list of children without adding extra nodes to the DOM, which can lead to a more performant and cleaner DOM structure:
+
+```ts
+return <>
+    <div>1</div>
+    <div>2</div>
+</>
+```
+
+### Do not define functions in JSX
+Defining functions directly in JSX can lead to performance issues as the function will be recreated on every render. Instead, define your function outside the JSX return statement:
+
+```ts
+// Avoid defining functions directly in the JSX
+<button onClick={() => {...}}>Click Me</button>
+
+// Prefer defining your function outside and referencing it in JSX
+function MyComponent() {
+    const handleClick = () => {...}
+    return <button onClick={handleClick}>Click Me</button>
+}
+```
+
+### Bind `this` in the constructor
+For class components, it's important to bind `this` in the constructor to ensure that `this` refers to the component instance in your event handlers:
+
+```ts
+class MyComponent extends React.Component {
+    constructor(props) {
+        super(props)
+        // Bind this in the constructor
+        this.handleClick = this.handleClick.bind(this)
+    }
+    handleClick() { /* Now `this` refers to the component instance */ }
+    
+    // Arrow functions automatically bind `this` to the class instance
+    handleClick2 = () => { /* Arrow function, no need to bind this */ }
+    
+    render() {
+        return <button onClick={this.handleClick}>Click Me</button>
+    }
+}
+```
+
+### Use shouldComponentUpdate or React.PureComponent
+Certainly! Optimizing React components for performance can significantly improve the responsiveness of your application, especially for complex user interfaces or applications dealing with large datasets. Three key concepts to understand in this context are `shouldComponentUpdate`, `React.PureComponent`, and `React.memo`. Each offers a way to control component re-rendering under different circumstances.
+
+#### `shouldComponentUpdate`
+
+The `shouldComponentUpdate` method is available in class components and allows you to prevent unnecessary re-renders by manually determining whether a component should update in response to changes in props or state. It receives the next props and state as arguments and returns a boolean value indicating whether React should continue with the rendering process.
+
+Implementing `shouldComponentUpdate` can significantly improve performance, particularly in cases where you know that the UI does not need to update in response to certain changes.
+
+```ts
+class MyComponent extends React.Component {
+  shouldComponentUpdate(nextProps, nextState) {
+    // Only re-render if the next id is different from the current one
+    return nextProps.id !== this.props.id;
+  }
+  
+  render() {
+    return <div>{this.props.id}</div>;
+  }
+}
+```
+
+In the example above, the component will only re-render if the `id` prop changes. This manual comparison can be very efficient but requires careful implementation to avoid missed updates or stale renders.
+
+#### `React.PureComponent`
+
+`React.PureComponent` is a base class for class components that automatically implements `shouldComponentUpdate` with a shallow prop and state comparison. When your component extends `React.PureComponent`, React will shallowly compare the old props and state with the new ones and re-render the component only if there was a change.
+
+This is particularly useful for components that have simple props and state structures where a shallow comparison is sufficient to detect changes.
+
+```ts
+class MyComponent extends React.PureComponent {
+  render() {
+    return <div>{this.props.id}</div>;
+  }
+}
+```
+
+While `React.PureComponent` reduces the need to manually implement `shouldComponentUpdate`, it's important to remember that it performs a shallow comparison. This means it might not work as expected if your props or state include complex data structures like nested objects or arrays that might change internally without changing their identity.
+
+#### `React.memo`
+
+For functional components, which cannot extend `React.PureComponent` or implement `shouldComponentUpdate`, React provides the `React.memo` higher-order component. Similar to `React.PureComponent`, `React.memo` wraps a functional component and adds a memoization feature, performing a shallow comparison of the component's props. If the props are the same as the previous render, React will skip rendering the component and reuse the last rendered result.
+
+```ts
+const MyComponent = React.memo(function MyComponent(props) {
+  return <div>{props.id}</div>;
+});
+```
+
+`React.memo` is a powerful tool for optimizing functional components, especially when they are expected to render often with the same props. For more complex comparison logic, `React.memo` accepts a second argument, a custom comparison function, giving you control over the comparison logic similar to `shouldComponentUpdate`.
+
+```ts
+const MyComponent = React.memo(function MyComponent(props) {
+  // Component body
+}, (prevProps, nextProps) => {
+  // Return true if passing nextProps to render would return
+  // the same result as passing prevProps, false otherwise
+  return prevProps.id === nextProps.id;
+});
+```
+
+In summary, `shouldComponentUpdate`, `React.PureComponent`, and `React.memo` are valuable tools in a React developer's toolkit for preventing unnecessary renders and optimizing application performance. Choosing the right tool depends on whether you are working with class or functional components and the complexity of your components' props and state.
