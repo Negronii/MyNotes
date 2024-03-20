@@ -458,6 +458,7 @@ Create a rectangular box
 
 Content overflow part display effect
 Overflow part: refers to the area where the content of the box exceeds the scope of the box
+
 Property values:
 - `visible` (default value, the overflow part is visible)
 - `hidden` (the overflow part is invisible)
@@ -468,12 +469,11 @@ The most commonly used in work is `hidden`, to solve the problems caused by the 
 ## Visibility and display
 
 Scenario: Make an element itself invisible. For example, the element is hidden after the mouse hover
+
 Common properties:
 - `visibility: hidden;` (placeholder hiding effect, not commonly used)
 - `display: none;` (no placeholder hidden, commonly used)
-Difference: visibility will occupy the standard stream, the display
-
- will be off-label
+Difference: visibility will occupy the standard stream, the display will be off-label  
 E.g. Mouse over to display the image
 ```css
 img {display:none}
@@ -482,9 +482,9 @@ a:hover img {display:block}
 
 ## `opacity`
 
-Element transparency
-Scenario: Make an element transparent as a whole
-Attribute value: a number between 0 and 1, 1 means fully opaque, 0 means fully transparent
+Element transparency  
+Scenario: Make an element transparent as a whole  
+Attribute value: a number between 0 and 1, 1 means fully opaque, 0 means fully transparent  
 `opacity` will make the element transparent as a whole, including its content and child elements
 
 ## `transition`
@@ -576,9 +576,7 @@ If you want to write in more detail, you can set `border-width`, `border-style`,
 ### Clear default margins
 
 - Scenario: The browser will set the default margin and padding for some tags, but generally, you need to clear the default margin and padding of these tags before starting the project and then set them by yourself.
-  - Example: `*{
-
- margin: 0; padding: 0; box-sizing: border-box;}`
+  - Example: `*{margin: 0; padding: 0; box-sizing: border-box;}`
 
 ## Center a box
 
@@ -817,7 +815,7 @@ The relative, absolute, and fixed positions have the same default level. At this
 When do we use positioning?
 - If the image cannot be aligned with `vertical-align` and `line-height`, use positioning.
 
-# Inconfont
+# Icon font
 
 The simple images represented by font can be modified using `font-size` and `color`.
 
@@ -1146,9 +1144,7 @@ Value            function
 
 `row`            Horizontal (default)
 
-`column`        
-
- Vertical
+`column`         Vertical
 
 `row-reverse`    Horizontal, right to left
 
