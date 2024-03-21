@@ -6,6 +6,203 @@ When you add these approximations, the tiny errors in their representation lead 
 
 In practical terms, to compare floating-point numbers in such cases, a common approach is to check if they are close enough to each other, within a small tolerance, rather than expecting exact equality.
 
+## What is the JavaScript Prototype Chain? How is it Formed?
+
+### The Concept of the Prototype Chain
+
+In JavaScript, every object has a property called `prototype`, which refers to another object. This `prototype` object has its own `prototype`, and so on, until an object with a `null` prototype is reached, which is the end of the prototype chain. The chain is formed through these `prototype` links between objects.
+
+When you try to access a property or method of an object, JavaScript engine will first search on the object itself. If it doesn't find it, it will look into the object's prototype, then the prototype's prototype, and so on, up the chain until it either finds the property/method or reaches the end of the chain (`null` prototype).
+
+### How the Chain is Formed
+
+The prototype chain is established through the constructor function of an object. When an object is created using a constructor function (using the `new` keyword), the newly created object's internal `[[Prototype]]` (often accessible as `__proto__`) property is set to the prototype object of the constructor function. This links the object to its prototype, forming a part of the chain.
+
+### Example to Illustrate
+
+```javascript
+function Person(name) {
+  this.name = name;
+}
+
+Person.prototype.sayHello = function() {
+  console.log(`Hello, my name is ${this.name}`);
+};
+
+const alice = new Person('Alice');
+
+alice.sayHello(); // Outputs: Hello, my name is Alice
+console.log(alice.__proto__ === Person.prototype); // true
+console.log(Person.prototype.__proto__ === Object.prototype); // true
+console.log(Object.prototype.__proto__); // null
+```
+
+In this example:
+- `alice` is an instance of `Person`.
+- `alice` inherits the `sayHello` method from `Person.prototype` via the prototype chain.
+- The chain for `alice` looks like this: `alice` object --> `Person.prototype` --> `Object.prototype` --> `null`.
+- This illustrates how `alice.sayHello()` is able to work: JavaScript searches `alice` for `sayHello`, doesn't find it, then moves up to `Person.prototype`, where it finds and executes the method.
+
+## Array Flattening Function in JavaScript
+Array flattening is the process of converting a nested array into a single-dimensional array. This is a common task in JavaScript to simplify array handling.
+```ts
+function arrayFlatten(arr: any[]): any[] {
+    let flattenedArray = [];
+    for (let i = 0; i < arr.length; i++) {
+        if (Array.isArray(arr[i])) {
+            flattenedArray = flattenedArray.concat(arrayFlatten(arr[i])); 
+        } else {
+            flattenedArray.push(arr[i]);
+        }
+    }
+    return flattenedArray;
+}
+```
+
+Second Implementation (Using `reduce`):   
+This implementation is concise and correctly flattens the array using the `reduce` method combined with recursion.
+```ts
+function arrayFlatten(arr: any[]): any[]{
+    return arr.reduce((prev, cur) => {
+        return prev.concat(Array.isArray(cur) ? arrayFlatten(cur) : cur);
+    }, []);
+}
+```
+
+## Writing a `getType` Function in JavaScript
+Determining the type of a variable accurately in JavaScript can be tricky due to the language's dynamic nature. The `typeof` operator, `instanceof` keyword, and `Object.prototype.toString.call()` method are commonly used techniques to identify variable types. e.g. `typeof 1` returns `'number'`, `typeof 'test'` returns `'string'`, and `typeof [1, 2, 3]` returns `'object'`. However, `typeof` has limitations, especially for reference types, where it returns `'object'` for arrays, null, and objects. To address this, the `Object.prototype.toString.call()` method provides a more detailed type check for reference types.
+```ts
+function getType(val: any): string {
+    const type = typeof val;
+    if (type !== 'object') {
+        return type; // Returns 'number', 'string', 'boolean', etc.
+    }
+    // For objects, including arrays and null, use Object.prototype.toString
+    return Object.prototype.toString.call(val).slice(8, -1).toLowerCase();
+}
+```
+
+## What happens when you `new` an object, and how to simulate the `new` process with a method?
+
+When the `new` keyword is used in JavaScript, it performs several actions behind the scenes to create a new instance of an object based on a constructor function. Here's what happens step by step, and how to simulate this process:
+
+1. **Create an empty object** that inherits from the constructor function's prototype.
+2. **Execute the constructor function** with the newly created object assigned to `this`.
+3. **Return the new object** unless the constructor explicitly returns a different object.
+
+The method to simulate the `new` process can be represented as follows:
+
+```typescript
+function _new(fn: Function, ...args: any[]): any {
+    const obj = Object.create(fn.prototype); // Step 1
+    const res = fn.apply(obj, args); // Step 2
+    return res instanceof Object ? res : obj; // Step 3
+}
+
+// Test example
+function Person(name: string) {
+    this.name = name;
+}
+const person = _new(Person, 'Tom');
+console.log(person.name); // Tom
+```
+
+### Understanding `class` as Syntactic Sugar
+
+It's important to note that a `class` in JavaScript is essentially syntactic sugar over the existing prototype-based inheritance and does not introduce a new object-oriented inheritance model. At its core, a class is just a special type of function, and thus `typeof ClassName === 'function'`.
+
+## Differences between `Object.create` and `{}`
+
+Creating objects in JavaScript can be achieved in multiple ways, each with its own set of characteristics regarding prototype inheritance.
+
+1. **Using `{}` (Object Literals)**: This is the most common way to create an object. The created object inherits from `Object.prototype`, making it an instance of Object.
+
+    ```typescript
+    const obj1 = {};
+    console.log(obj1.__proto__ === Object.prototype); // true
+    ```
+
+2. **Using `Object.create(proto)`**: This method creates a new object with the specified object as its prototype. This allows for more flexibility in setting up the prototype chain.
+
+    - **`Object.create(Object.prototype)`**: Creates a new object with `Object.prototype` as its prototype, similar to `{}`.
+    - **`Object.create({name: 'Tom'})`**: Creates a new object with a custom object (`{name: 'Tom'}`) as its prototype, diverging from `Object.prototype`.
+
+    ```typescript
+    const obj2 = Object.create(Object.prototype);
+    const obj3 = Object.create({name: 'Tom'});
+    console.log(obj2.__proto__ === Object.prototype); // true
+    console.log(obj3.__proto__ === Object.prototype); // false
+    ```
+
+## Depth-First Search (DFS) of a DOM Tree
+Depth-First Search (DFS) is a method used to traverse or search a tree or graph data structure. The algorithm starts at the root node and explores as far as possible along each branch before backtracking. When applied to a DOM tree, DFS will visit each node in a manner that deeply explores a node's children before moving to its siblings.
+
+### Code Example for DFS
+The given TypeScript function `dfs` illustrates how DFS can be applied to a DOM tree. The `visitNode` function is used to log different types of nodes (Comment, Text, HTMLElement). In the `dfs` function, recursion is utilized to visit each node starting from the root, exploring all its child nodes deeply before moving to the next sibling.
+
+```typescript
+function visitNode(node: Node) {
+    if (node instanceof Comment) {
+        console.log('comment', node.textContent);
+    }
+    if (node instanceof Text) {
+        const t = node.textContent.trim();
+        if (t) {
+            console.log('text', t);
+        }
+    }
+    if (node instanceof HTMLElement) {
+        console.log('element', node.tagName);
+    }
+}
+
+function dfs(node: Node) {
+    visitNode(node);
+    node.childNodes.forEach((child) => {
+        dfs(child);
+    });
+}
+```
+
+### Without Recursion
+DFS can be implemented without recursion by using a stack to simulate the call stack of recursion. This approach avoids potential stack overflow errors that may occur with deep recursion. While recursion is more straightforward and readable, using a stack can be more efficient and safer for deep trees.
+
+```typescript
+function dfsWithoutRecursion(node: Node) {
+    const stack = [node];
+    while (stack.length) {
+        const n = stack.pop();
+        visitNode(n);
+        Array.from(n.childNodes).reverse().forEach((child) => {
+            stack.push(child);
+        });
+    }
+}
+```
+
+## Breadth-First Search (BFS) of a DOM Tree
+Breadth-First Search (BFS) is another method to traverse or search a tree or graph data structure. Unlike DFS, BFS explores all the neighbor nodes at the present depth prior to moving on to the nodes at the next depth level. Applied to a DOM tree, BFS will visit each node level by level.
+
+### Code Example for BFS
+The `bfs` function demonstrates how BFS can be applied to a DOM tree. It uses a queue to visit each node at the current level before moving to the nodes at the next level. This approach ensures that nodes are visited in a breadth-wise manner.
+
+```typescript
+function bfs(node: Node) {
+    const queue = [node];
+    while (queue.length) {
+        const n = queue.shift();
+        visitNode(n);
+        n.childNodes.forEach((child) => {
+            queue.push(child);
+        });
+    }
+}
+```
+
+### Key Differences Between DFS and BFS
+- **DFS** dives as deep as possible into the tree's branches before backtracking, which can be implemented either recursively or using a stack.
+- **BFS** visits all nodes at the current level before moving to the next level, using a queue to keep track of the order.
+
 ## Drawbacks of Arrow Functions and Situations Where They Can't Be Used
 
 Arrow functions, introduced in ES6, provide a concise syntax and lexically bind the `this` value, but they have limitations in certain scenarios:
@@ -289,3 +486,4 @@ In modern JavaScript engines, the performance gap between `for` and `forEach` is
 
 ### Conclusion
 While `for` loops can be faster due to lower overhead and greater optimization potential, the `forEach` method often offers more readable and maintainable code. The choice between the two should balance the need for performance with the benefits of cleaner and more expressive code, tailored to the specific needs of the project.
+
