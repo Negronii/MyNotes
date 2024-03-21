@@ -1,0 +1,436 @@
+## How is a linked list used in front-end development?
+In front-end development, linked lists aren't commonly used, but a notable example is in React's Fiber architecture. React Fiber uses a linked list to manage the component tree instead of a traditional tree structure. This shift allows React to perform work in chunks and prioritize updates more effectively. The linked list structure enables incremental rendering, where the rendering work can be paused and resumed, improving app performance and user experience. It also facilitates the handling of concurrent operations in the UI, allowing for smoother and more responsive interfaces. Overall, while linked lists are not a standard tool in front-end development, their use in React Fiber demonstrates how they can optimize rendering and state management in complex applications
+
+## implementing a queue using a linked list in TypeScript:
+In TypeScript, you can implement a queue using a linked list by maintaining references to both the head and tail of the list. The queue operations work as follows:
+
+Enqueue (Add to Queue): To add an item, you create a new node and attach it to the current tail of the linked list, then update the tail reference to this new node. If the queue is empty, this new node is both the head and tail.
+
+Dequeue (Remove from Queue): To remove an item, you take the value from the head of the linked list and then update the head reference to the next node in the list. If the list becomes empty, update the tail reference to null as well.
+
+This approach ensures that both enqueue and dequeue operations are O(1), providing efficient queue management. It’s important to handle edge cases, such as dequeueing from an empty queue, to avoid errors.
+
+## Implement a queue in TypeScript, and is a linked list faster or an array?
+In TypeScript, implementing a queue can be done using either an array or a linked list. An array-based queue is simple to implement but its dequeue operation (shift) is O(n) due to the need to shift elements. In contrast, a linked list implementation offers O(1) time complexity for both enqueue and dequeue operations, as it allows for constant-time insertions and deletions without reindexing.
+
+So, while both can be used to implement a queue, a linked list is generally faster and more efficient for typical queue operations. This makes linked lists preferable in scenarios where frequent enqueue and dequeue operations are expected, whereas arrays might be more suitable when memory efficiency is a priority and operations are less frequent.
+
+## implement a queue with linkedlist
+```ts
+interface ILinkedListNode {
+    val: number;
+    next: ILinkedListNode | null;
+}
+
+class Queue {
+    // undefined usually used for uninitialized value, null for empty values, here null is better
+    private head: ILinkedListNode | null;
+    private tail: ILinkedListNode | null;
+    private len: number;
+
+    // use constructor instead of set values above, make code more readable
+    // Inside class methods, use this to refer to instance variables 
+    constructor(){
+        this.head = null;
+        this.tail = null;
+        this.len = 0;
+    }
+
+    // for better clarity, mention return type void if return nothing
+    offer(val: number): void {
+        const temp: ILinkedListNode = {val: val, next: null};
+        // in case the queue is empty, use === check value and type
+        if (this.head === null) {
+            this.head = temp;
+            this.tail = temp;
+        } 
+        // normal case
+        else {
+            // avoid non-null assertions to avoid legitimate null/undefined errors, i.e. try avoid below commented code
+            // this.tail!.next = temp;
+            if (this.tail) {
+                this.tail.next = temp;
+            }
+            this.tail = temp;
+        }
+        this.len += 1;
+    }
+
+    poll(): number | null {
+        if (this.head === null) {
+            return null;
+        } 
+        if (this.head.next === null) {
+            this.tail = null;
+        }
+        // here use const instead of let, since it never changes
+        const temp = this.head.val;
+        this.head = this.head.next;
+        this.len -= 1;
+        return temp;
+    }
+
+    // with get keyword, we can use the return value as an attribute, e.g. const queue = new Queue(); const len = queue.size;
+    get size(): number {
+        return this.len;
+    }
+}
+```
+
+## Implement binary search and describe time complexity
+```ts
+// assume input nums is in ascending order, return the index or null if not found
+function binarySearch(nums: number[], target: number): number | null {
+    let left: number = 0;
+    let right: number = nums.length - 1;
+    // use <= for case length = 1
+    while (left <= right) {
+        // Use Math.floor to avoid floating point values for the mid index.
+        let mid: number = Math.floor((left + right) / 2);
+        if (nums[mid] === target) {
+            return mid;
+        }
+        if (nums[mid] > target) {
+            right = mid - 1;
+        } else {
+            left = mid + 1;
+        }
+    }
+    return null;
+}
+```
+Binary search has a time complexity of O(log n), where n is the number of elements in the array. This is because the algorithm divides the search interval in half with each step.
+
+## Given an ascending number array and a number n, find 2 numbers in array sum is n. 
+```ts
+function twoSumsAscending(nums: number[], target: number): number[]{
+    let left: number = 0;
+    let right: number = nums.length - 1;
+    // Use '<' instead of '<=' to prevent the same element from being used twice
+    while (left < right) {
+        if (nums[left] + nums[right] === target) {
+            return [nums[left], nums[right]];
+        }
+        if (nums[left] + nums[right] < target) {
+            left++;
+        } else {
+            right--;
+        }
+    }
+    return [];
+}
+```
+
+## In-order, pre-order and post-order
+In the context of binary trees, in-order, pre-order, and post-order refer to the three primary ways to traverse the nodes of the tree, each with a different order for visiting the nodes.
+**In-Order Traversal**: Left, Root, Right.
+**Pre-Order Traversal**: Root, Left, Right.
+**Post-Order Traversal**: Left, Right, Root.
+
+## find the kth smallest value in a binary search tree
+```ts
+interface ITreeNode{
+    val: number;
+    left: ITreeNode | null;
+    right: ITreeNode | null;
+}
+
+function findKthSmallest(root:ITreeNode, k: number): number | null {
+    let count: number = 0;
+    let result: number | null = null;
+
+    // this function is in-order
+    function dfsHelper(curNode: ITreeNode) {
+        if (curNode === null || result !== null) return;
+
+        dfsHelper(curNode.left);
+
+        if (++count === k) {
+            result = curNode.val;
+            return;
+        }
+
+        dfsHelper(curNode.right);
+    }
+
+    dfsHelper(root);
+
+    return result;
+}
+```
+
+## Why binary tree so important, not trinary or quanary tree? 
+While arrays provide faster access (O(1)), adding or deleting elements is less efficient (O(N)). Linked lists offer efficient insertion and deletion (O(1)), but slower access times (O(N)).
+
+Compared to arrays and linked lists, binary trees offer a good balance with O(logn) time complexity for access, add, and delete operations when the tree is balanced.
+
+Binary trees, as opposed to ternary or quaternary trees, provide a simpler and more efficient structure for most applications. They strike a balance between maintaining low complexity and achieving efficient operations.
+
+## Why balancing binary tree so important?
+An unbalanced binary tree can degenerate into a linked list, leading to O(N) time complexity for operations like add, delete, update, and search. A balanced binary tree, on the other hand, maintains a height of O(logn), ensuring that operations can be performed in logarithmic time. This balance is essential for leveraging the efficiency of binary trees, especially in scenarios where quick search, insertion, and deletion are frequently required.
+
+## Why tree operations has time complexity of O(logn)?
+`logn` represents the height of a balanced binary tree. In a balanced tree, each operation like search, insert, or delete involves traversing a path from the root to a leaf node, or vice versa. The number of levels (or height) of the tree determines the maximum number of steps needed for these operations. Since a balanced binary tree is structured to have a height that grows logarithmically with the number of nodes (n), the operations are significantly more efficient than linear time complexity, particularly for large datasets.
+
+## What is a black-red tree? What is B tree? 
+- **Red-Black Tree**: It is a type of self-balancing binary search tree. Each node in the tree is colored either red or black. The tree uses these colors along with specific rules to ensure that the tree remains balanced during insertions and deletions. This balancing act ensures that the tree maintains its O(logn) time complexity for operations. Red-Black Trees are particularly valued for their relatively simple balancing logic and efficient operations, making them suitable for various applications, including implementing associative arrays and priority queues.
+
+- **B-Tree**: A B-Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time. Unlike binary trees, B-Trees are multi-way trees (having more than two children) and are optimized for systems that read and write large blocks of data, like databases and filesystems. They are designed to efficiently minimize disk I/O operations, and their branching factor (the number of child nodes) can be adjusted to optimize the balance between the tree's height and the number of nodes accessed per operation.
+
+Both Red-Black Trees and B-Trees are advanced tree structures designed to optimize performance for different scenarios, with Red-Black Trees often used in memory and B-Trees in disk-based storage systems.
+
+## Write a recursive function and a non-recursive return the nth fibonacci number, explain why the recursive one may crash
+```ts
+// method one, recursive
+function fibonacci(n: number): number {
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+// method 2, loop
+function fibonacci(n: number): number {
+    if (n < 0) return -1;
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    let prevprev = 0, prev = 1, result = 0;
+
+    for (let i = 2; i <= n; i++) {
+        result = prevprev + prev;
+        prevprev = prev;
+        prev = result;
+    }
+
+    return result;
+}
+```
+
+In the recursive Fibonacci function, each function call is added to the call stack, a special region in memory where function call information is stored. When `n` is large, this results in a very deep recursion, where each call to `fibonacci` leads to two more calls, exponentially increasing the number of calls on the stack. This can quickly exceed the memory limit of the stack, leading to a stack overflow error. This happens because the stack has a limited size and cannot accommodate the large number of nested function calls required by the recursive approach for large values of `n`.
+
+### Recursive Implementation:
+
+- **Time Complexity: O(2^n)**
+
+  Each call to `fibonacciRecursive` generates two more calls, except for the base cases. This exponential growth results in a time complexity of O(2^n), where `n` is the input number.
+
+  e.g. we want to calculate f(8)  
+  f(8) = f(7) + f (6), and f(7) = f(6) + f(5)  
+  Therefore, F(6) is calculated twice which is redundant computations
+
+- **Space Complexity: O(n)**
+
+  The space complexity is determined by the height of the call stack, which in the worst case (when `n` is large) will have `n` calls stacked on top of each other before reaching the base case. This results in a space complexity of O(n).
+
+### Iterative Implementation:
+
+- **Time Complexity: O(n)**
+
+  The function iterates from 2 to `n` once, performing a constant amount of work in each iteration. Therefore, the time complexity is linear, O(n).
+
+- **Space Complexity: O(1)**
+
+  The iterative solution uses a fixed amount of space (the variables `prevprev`, `prev`, and `result`). This amount of space does not change as `n` increases, making the space complexity constant, O(1).
+
+## What is dynamic programing
+- Dynamic programming involves breaking down a complex problem into smaller, overlapping subproblems, solving these down to the simplest base cases. 
+- It uses recursion with memoization, or iterative methods with tabulation, to optimize by preventing redundant computations.
+
+## A frog, can jump 1 or 2 steps each time. How many ways can i jump a n step stair? 
+```ts
+function frogJumpDP(n: number): number {
+    // only one way to go to step 0 which is doing nothing
+    if (n === 0) return 1;
+    // the first 1 is for simplicity of calculation so that dp[2] will be 2
+    // the second 1 is only one way to go to stair 1
+    const dp = [1, 1];
+    for (let i = 2; i <= n; i++) {
+        dp[i] = dp[i - 1] + dp[i - 2];
+    }
+    return dp[n];
+}
+
+```
+
+## Move all zeros in an array to its end 
+- maintaining the order of the non-zero elements. 
+- The operation should be performed in-place
+```ts
+function moveZeroToEnd(nums: number[]): void {
+    let zeroStart: number = -1;
+    for (let i = 0; i < nums.length; i++) {
+        if (nums[i] !== 0 && zeroStart !== -1) {
+            nums[zeroStart] = nums[i];
+            nums[i] = 0;
+            zeroStart++;
+        } else if (nums[i] === 0 && zeroStart === -1) {
+            zeroStart = i;
+        }
+    }
+}
+```
+
+## Identify the longest sequence of a continuous character in a given string. 
+For example, for the string 'aabaacceee', the function should return 'e'.
+```ts
+interface IRes {
+    char: string;
+    len: number;
+}
+
+function findLongest(s: string): IRes {
+    if (s.length === 0) return { char: '', len: 0 }; // Handle empty string
+
+    let longestChar: string = s.charAt(0);
+    let longest: number = 1;
+    let currentChar: string = s.charAt(0);
+    let currentLength: number = 1;
+
+    for (let i = 1; i < s.length; i++) {
+        if (s.charAt(i) === currentChar) {
+            currentLength++;
+        } else {
+            if (currentLength > longest) {
+                longest = currentLength;
+                longestChar = currentChar;
+            }
+            currentChar = s.charAt(i);
+            currentLength = 1;
+        }
+    }
+
+    // Check and update for the last character sequence
+    if (currentLength > longest) {
+        longest = currentLength;
+        longestChar = currentChar;
+    }
+
+    return { char: longestChar, len: longest };
+}
+
+```
+
+## Implement quicksort in typescript
+```ts
+function quickSort(nums: number[]): number[] {
+    if (nums.length <= 1) return nums;
+
+    const midInd = Math.floor(nums.length / 2);
+    // array.splice(a, b) removes b elements starting from index a from the array. The return value is an array of the removed elements.
+    const mid = nums.splice(midInd, 1)[0];
+
+    const left: number[] = []
+    const right: number[] = []
+    for (let i = 0; i < nums.length; i++) {
+        if (nums[i] < mid) {
+            left.push(nums[i]);
+        } else {
+            right.push(nums[i]);
+        }
+    }
+
+    return quickSort(left).concat([mid], quickSort(right));
+}
+```
+
+- **Average Case (O(n log n))**: In the average case, the pivot divides the array into two roughly equal parts, leading to a logarithmic number of recursive calls (log n). In each level of recursion, the algorithm performs O(n) operations to partition the array around the pivot. Thus, the average case is O(n log n).
+
+- **Worst Case (O(n²))**: The worst case occurs when the pivot is the smallest or largest element in each recursive call, leading to unbalanced partitions. This results in n recursive calls, each doing O(n) work, thus O(n²).
+
+## find palindrome number
+Palindrome number, e.g. 1, 2, 22, 101, 10001, 20002, 2002 etc
+```ts
+function findAllPalindromeNumbers(max: number): number[] {
+    const res = []
+
+    for (let i = 0; i <= max; i++) {
+        // find reversed number first, then compare
+        let reversedNum: number = 0, temp: number = i;
+        while (temp !== 0) {
+            reversedNum *= 10;
+            reversedNum += temp % 10;
+            temp = Math.floor(temp / 10);
+        }
+        if (reversedNum === i) {
+            res.push(i);
+        }
+    }
+
+    return res;
+}
+
+function findAllPalindromeNumbers(max: number): number[] {
+    const res = [];
+
+    for (let i = 0; i < max; i++) {
+        const s = i.toString();
+        let start = 0, end = s.length - 1;
+        let isPalindrome = true;
+        while (start < end) {
+            if (s.charAt(start++) !== s.charAt(end--)) {
+                isPalindrome = false;
+                break;
+            }
+        }
+        if (isPalindrome) res.push(i);
+    }
+
+    return res;
+}
+```
+
+## Identify whether a string is prefix of a word in dictionary
+A Trie, or a prefix tree, is an optimal data structure for this problem. It stores strings in a tree-like structure, where each node represents a character of a string. The root represents an empty string, and each path from the root to a leaf node represents a word.
+
+To check if a string is a prefix of any word in the dictionary, we insert each word into the Trie. Then, for the given string, we traverse the Trie from the root. If we can traverse the Trie following the characters of the string without any breaks, and reach a node (not necessarily a leaf node), then the string is a valid prefix in the dictionary.
+
+This approach is efficient in terms of time complexity, especially for multiple prefix searches, as each search is only as long as the length of the string being searched.
+
+e.g. word apple may looks like this: {a: {p: {p: {l: {e: null}}}}}
+
+The time complexity for this is O(m) where m is the length of the string
+
+## formatting numbers into a thousand separator style (e.g., "1,000", "12,000,000")
+```ts
+function format(num: number): string{
+    let res: string = "";
+    const s: string = num.toString();
+    let count: number = 0;
+    for (let i = s.length - 1; i >= 0; i--) {
+        if (++count === 3 && i !== 0) {
+            res = "," + res;
+        }
+        res = s.charAt(i) + res;
+    }
+    return res;
+}
+```
+
+## Switch letter case, e.g. aBc123D -> AbC123d
+```ts
+function switchLetterCase(s: string): string {
+    let res = ""
+
+    // according to ascii table, A-Z is 65-90, a-z is 97-122
+    const UPPER_CASE_A = 65;
+    const UPPER_CASE_Z = 90;
+    const LOWER_CASE_A = 97;
+    const LOWER_CASE_Z = 122;
+
+    for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i);
+        if (code >= UPPER_CASE_A && code <= UPPER_CASE_Z) {
+            // Convert to lower case
+            res += String.fromCharCode(code + 32); 
+        } else if (code >= LOWER_CASE_A && code <= LOWER_CASE_Z) {
+            // Convert to upper case
+            res += String.fromCharCode(code - 32); 
+        } else {
+            // Non-alphabetic characters are unchanged
+            res += s.charAt(i); 
+        }
+    }
+
+    return res
+}
+```
+
