@@ -17,3 +17,5 @@ done
 
 # add to git
 git add $output
+git commit -m "update $output"
+git push
