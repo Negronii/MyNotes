@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # define the output file
-output="All-In-One.md"
+output="Interview-All-In-One.md"
 
 # delete the output file if it exists
 rm -f $output
