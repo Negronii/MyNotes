@@ -2423,7 +2423,7 @@ The most important principle in design patterns is the **Open/Closed Principle**
 ### Factory Pattern
 The Factory pattern involves using a factory function to create instances, effectively hiding the `new` keyword to encapsulate the creation process. This pattern is useful for scenarios where the creation process is complex or when there needs to be some control over how instances are created. Examples include the jQuery `$` function and React's `createElement` function.
 
-#### Example:
+**Example**:
 ```typescript
 class Foo {}
 
@@ -2437,7 +2437,7 @@ const f = factory();
 ### Singleton Pattern
 The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is particularly useful for cases where a single instance of a class should be used across the system, such as the store in Vuex and Redux or a globally unique dialog/modal. JavaScript makes implementing singletons straightforward because there's no need to worry about multithreading issues that might arise in languages like Java, where thread locking mechanisms might be necessary to prevent multiple instances from being created.
 
-#### Example:
+**Example**:
 ```typescript
 class Singleton {
     private static instance: Singleton;
@@ -2459,7 +2459,7 @@ s.fn1();
 ### Proxy Pattern
 The Proxy pattern involves using a proxy layer that clients interact with instead of accessing the object directly. This allows for various operations, like monitoring or intercepting get and set operations, to be performed transparently. A practical example of this pattern is the implementation of Vue3's reactivity system using ES6's `Proxy`.
 
-#### Example:
+**Example**:
 ```typescript
 const obj = new Proxy({}, {
     get(target, key) {
@@ -2478,7 +2478,7 @@ console.log(obj.name);
 ### Observer Pattern
 The Observer pattern is widely used in front-end development. It involves a subject and observers, where the observers are notified and updated whenever the subject undergoes a change. A common example is attaching click event listeners to a button, where each listener acts as an observer to the button's click event.
 
-#### Example:
+**Example**:
 ```typescript
 btn.addEventListener('click', () => {
     console.log('click');
@@ -2488,7 +2488,7 @@ btn.addEventListener('click', () => {
 ### Publish-Subscribe Pattern
 Similar to the Observer pattern, the Publish-Subscribe pattern provides a more decoupled way for components to communicate. Components can publish events to a specific event channel and subscribe to this channel to receive notifications. It's important to unsubscribe from events, especially in component lifecycle hooks, to prevent memory leaks.
 
-#### Example:
+**Example**:
 ```typescript
 event.on('event-key', () => {
     console.log('event 1');
@@ -2507,7 +2507,7 @@ event.off('event-key', fn1);
 ### Decorator Pattern
 The Decorator pattern allows for behavior to be added to individual objects, either statically or dynamically, without affecting the behavior of other objects from the same class. This pattern is similar to Aspect-Oriented Programming (AOP) and is supported in ES and TypeScript through decorator syntax. It's particularly useful for adding features or functionalities to existing classes without modifying them.
 
-#### Example:
+**Example**:
 ```typescript
 @testable
 class MyTestableClass {
