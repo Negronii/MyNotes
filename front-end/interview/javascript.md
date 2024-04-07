@@ -134,75 +134,6 @@ Creating objects in JavaScript can be achieved in multiple ways, each with its o
     console.log(obj3.__proto__ === Object.prototype); // false
     ```
 
-## Depth-First Search (DFS) of a DOM Tree
-Depth-First Search (DFS) is a method used to traverse or search a tree or graph data structure. The algorithm starts at the root node and explores as far as possible along each branch before backtracking. When applied to a DOM tree, DFS will visit each node in a manner that deeply explores a node's children before moving to its siblings.
-
-### Code Example for DFS
-The given TypeScript function `dfs` illustrates how DFS can be applied to a DOM tree. The `visitNode` function is used to log different types of nodes (Comment, Text, HTMLElement). In the `dfs` function, recursion is utilized to visit each node starting from the root, exploring all its child nodes deeply before moving to the next sibling.
-
-```typescript
-function visitNode(node: Node) {
-    if (node instanceof Comment) {
-        console.log('comment', node.textContent);
-    }
-    if (node instanceof Text) {
-        const t = node.textContent.trim();
-        if (t) {
-            console.log('text', t);
-        }
-    }
-    if (node instanceof HTMLElement) {
-        console.log('element', node.tagName);
-    }
-}
-
-function dfs(node: Node) {
-    visitNode(node);
-    node.childNodes.forEach((child) => {
-        dfs(child);
-    });
-}
-```
-
-### Without Recursion
-DFS can be implemented without recursion by using a stack to simulate the call stack of recursion. This approach avoids potential stack overflow errors that may occur with deep recursion. While recursion is more straightforward and readable, using a stack can be more efficient and safer for deep trees.
-
-```typescript
-function dfsWithoutRecursion(node: Node) {
-    const stack = [node];
-    while (stack.length) {
-        const n = stack.pop();
-        visitNode(n);
-        Array.from(n.childNodes).reverse().forEach((child) => {
-            stack.push(child);
-        });
-    }
-}
-```
-
-## Breadth-First Search (BFS) of a DOM Tree
-Breadth-First Search (BFS) is another method to traverse or search a tree or graph data structure. Unlike DFS, BFS explores all the neighbor nodes at the present depth prior to moving on to the nodes at the next depth level. Applied to a DOM tree, BFS will visit each node level by level.
-
-### Code Example for BFS
-The `bfs` function demonstrates how BFS can be applied to a DOM tree. It uses a queue to visit each node at the current level before moving to the nodes at the next level. This approach ensures that nodes are visited in a breadth-wise manner.
-
-```typescript
-function bfs(node: Node) {
-    const queue = [node];
-    while (queue.length) {
-        const n = queue.shift();
-        visitNode(n);
-        n.childNodes.forEach((child) => {
-            queue.push(child);
-        });
-    }
-}
-```
-
-### Key Differences Between DFS and BFS
-- **DFS** dives as deep as possible into the tree's branches before backtracking, which can be implemented either recursively or using a stack.
-- **BFS** visits all nodes at the current level before moving to the next level, using a queue to keep track of the order.
-
 ## Drawbacks of Arrow Functions and Situations Where They Can't Be Used
 
 Arrow functions, introduced in ES6, provide a concise syntax and lexically bind the `this` value, but they have limitations in certain scenarios:
@@ -487,3 +418,719 @@ In modern JavaScript engines, the performance gap between `for` and `forEach` is
 ### Conclusion
 While `for` loops can be faster due to lower overhead and greater optimization potential, the `forEach` method often offers more readable and maintainable code. The choice between the two should balance the need for performance with the benefits of cleaner and more expressive code, tailored to the specific needs of the project.
 
+## Implement LazyMan Class
+
+The `LazyMan` class simulates a sequence of actions for an individual, incorporating actions such as eating or sleeping. The implementation leverages JavaScript's features to enhance code readability and maintainability through chainable method calls and asynchronous execution.
+
+### Features
+
+- **Chainable Methods**: Allows for the chaining of `eat` and `sleep` methods, improving code readability and flow.
+- **Asynchronous `sleep`**: Utilizes JavaScript's event loop to introduce a delay with the `sleep` method before continuing to the next action, demonstrating asynchronous behavior.
+
+### Implementation
+
+The implementation below outlines the structure and functionality of the `LazyMan` class:
+
+```typescript
+class LazyMan {
+    private taskList: Array<Function>; // Holds a queue of tasks (actions) to be executed.
+    private name: string;
+
+    constructor(name: string) {
+        this.name = name;
+        this.taskList = [];
+        setTimeout(() => { // Initiates task execution asynchronously.
+            this.next();
+        }, 0);
+    }
+
+    eat(food: string) {
+        this.taskList.push(() => { // Queues an eating action.
+            console.log(`eat ${food}`);
+            this.next(); // Proceeds to the next queued action.
+        });
+        return this; // Facilitates method chaining by returning the LazyMan instance.
+    }
+
+    sleep(time: number) {
+        this.taskList.push(() => { // Queues a sleeping action with a delay.
+            setTimeout(() => {
+                console.log(`wake up after ${time}`);
+                this.next(); // Continues to the next action after the delay.
+            }, time);
+        });
+        return this; // Allows for continued chaining.
+    }
+
+    next() {
+        const fn = this.taskList.shift(); // Dequeues the next action.
+        fn && fn(); // Executes the action if it exists.
+    }
+}
+```
+
+### Usage Example
+
+This example demonstrates using the `LazyMan` class to sequence actions in an expressive manner:
+
+```typescript
+const me = new LazyMan('ronron');
+me.eat('apple').sleep(1000).eat('banana').sleep(1000).eat('pear');
+```
+
+### Key Concepts
+
+- **Chainable Methods**: Achieved by returning the instance itself (`this`) from each method, allowing for a fluent interface where methods can be called sequentially on the same object.
+- **Asynchronous Execution**: Demonstrates the use of JavaScript's `setTimeout` to introduce execution delays, simulating sleep and showcasing asynchronous programming principles.
+
+## Write a `curry` function to curry other functions
+
+### Concept
+Currying is the process of transforming a function with multiple arguments into a sequence of nesting functions that each take a single argument. Its main benefits include **parameter reuse, delayed execution, early return, and function composition**.
+
+### Implementation
+```ts
+function curry(fn: Function) {
+    return function curried(...args: any[]) {
+        if (args.length >= fn.length) {
+            return fn.apply(this, args);
+        } else {
+            return function (...nextArgs: any[]) {
+                return curried.apply(this, args.concat(nextArgs));
+            };
+        }
+    };
+}
+
+function sum(a: number, b: number, c: number) {
+    return a + b + c;
+}
+
+const curriedSum = curry(sum);
+console.log(curriedSum(1)(2)(3)); // Output: 6
+console.log(curriedSum(1, 2)(3)); // Output: 6
+console.log(curriedSum(1)(2, 3)); // Output: 6
+```
+
+## Understanding the principle of `instanceof`
+
+### Concept
+The `instanceof` operator in JavaScript is used to determine whether a particular constructor appears anywhere in the prototype chain of an object. It checks if the `prototype` property of a constructor appears in the prototype chain of an object.
+
+### Implementation
+To understand the underlying principle, we can implement a function `myInstanceOf` that mimics the behavior of the `instanceof` operator. This function iteratively checks the prototype chain of an object against a constructor's prototype.
+
+```ts
+function myInstanceOf(obj: any, constructor: Function) {
+    let proto = obj.__proto__;
+    while (proto) {
+        if (proto === constructor.prototype) {
+            return true;
+        }
+        proto = proto.__proto__;
+    }
+    return false;
+}
+
+function Foo() {}
+const f = new Foo();
+console.log(myInstanceOf(f, Foo)); // Output: true
+```
+
+## Implementing a `bind` Function
+
+The `bind` function in JavaScript is essential for setting the `this` context of a function explicitly. It ensures predictable function execution by setting `this` to a specific object, regardless of how the function is called.
+
+### Application of `bind`:
+
+- **Returns a New Function**: Unlike `call` and `apply`, which execute the function immediately, `bind` returns a new function. When called, this new function has its `this` context and any initial arguments pre-set.
+- **Binds `this` and Partial Arguments**: `bind` allows for the binding of the `this` context to an object and permits partial application of arguments, enabling some function arguments to be pre-filled and the rest supplied upon calling the bound function.
+- **Arrow Function Limitation**: Arrow functions do not have their own `this` context but inherit it from the surrounding lexical context. Thus, using `bind` to change the `this` context of an arrow function is ineffective. However, `bind` can still be used to pre-fill parameters.
+- **Use as a Constructor**: If a bound function is used as a constructor with the `new` keyword, `this` within the function body points to the new object being created. This is despite any explicit binding set by `bind`.
+- **Normal Function Call**: In a regular function call scenario, `this` refers to the object that was bound using `bind`, which ensures a consistent context in callbacks and event handlers.
+
+### Implementation Strategy:
+
+Implementing `bind` involves creating a new function that, upon invocation, calls the original function with a predetermined `this` context and a combination of pre-bound and newly provided arguments.
+
+### Example:
+
+```typescript
+function fn(a, b) {
+    console.log(this, a, b);
+}
+
+const obj = { name: 'ronron' };
+const boundFn = fn.bind(obj, 1); // Binds 'obj' as 'this' and '1' as the first argument
+boundFn(2); // Output: { name: 'ronron' } 1 2
+```
+
+### Custom `bind` Implementation:
+
+```typescript
+Function.prototype.myBind = function (context, ...preBoundArgs) {
+    const originalFunction = this; // Capture the original function
+    return function(...newArgs) {
+        // Combine pre-bound arguments with new ones
+        return originalFunction.apply(context, preBoundArgs.concat(newArgs));
+    };
+};
+```
+
+## Implementing `call` and `apply` Functions
+
+`call` and `apply` are indispensable for immediate function invocation with an explicitly specified `this` context and arguments.
+
+### Binding `this`
+
+- `bind`, `call`, and `apply` are all crucial for setting a function's `this` context in JavaScript.
+- In contrast to `bind`, which returns a new function, `call` and `apply` invoke the function right away with a specified `this` context.
+- The primary difference between `call` and `apply` lies in their handling of function arguments: `call` accepts an enumerated list of arguments, while `apply` expects an array of arguments.
+
+### Custom Implementation of `call` and `apply`
+
+```typescript
+Function.prototype.myCall = function (context = window, ...args) {
+    const uniqueKey = Symbol(); // Use Symbol to create a unique key and avoid property conflicts
+    context[uniqueKey] = this; // 'this' refers to the current function to be executed
+    const result = context[uniqueKey](...args); // Execute the function with 'this' bound to the context and the provided arguments
+    delete context[uniqueKey]; // Remove the temporary function reference to clean up
+    return result;
+};
+
+// For myApply, adjust to accept an array of arguments
+Function.prototype.myApply = function (context = window, args = []) {
+    const uniqueKey = Symbol(); // Unique property key
+    context[uniqueKey] = this; // Assign function to context
+    const result = context[uniqueKey](...args); // Execute with array of arguments spread into function
+    delete context[uniqueKey]; // Cleanup
+    return result;
+};
+```
+
+## Implementing a Custom EventBus
+
+An **EventBus** is a design pattern that enhances loose coupling among components within software applications. This pattern allows components to communicate with each other without having direct dependencies or knowledge about each other, thereby promoting modularity and ease of integration.
+
+### Methods
+The EventBus pattern is implemented through several methods that manage the lifecycle of events and their listeners:
+
+- **on(event: string, listener: Function)**: Registers a listener to an event. The listener can be triggered multiple times for as long as it remains bound to the event. It remains active until it is explicitly removed with the `off` method.
+
+- **once(event: string, listener: Function)**: Similar to `on`, but the listener is designed to be triggered only once. After it is triggered, the listener is automatically removed. It can also be manually removed before it is triggered by using the `off` method.
+
+- **emit(event: string, ...args: any[])**: Triggers all listeners bound to a specific event, passing along any arguments to the listeners.
+
+- **off(event: string, listener: Function)**: Removes a specific listener from an event. This is crucial for managing the lifecycle of listeners and can be used for listeners registered with both `on` and `once`.
+
+### Data Structure
+Internally, the EventBus class uses a `Record<string, Function[]>` to maintain a map between event names and arrays of listener functions. This data structure ensures a systematic and type-safe way to manage event-listener relationships.
+
+### Implementation in TypeScript
+```typescript
+class EventBus {
+    private events: Record<string, Function[]>; // Stores event-to-listener mappings
+
+    constructor() {
+        this.events = {};
+    }
+
+    // Registers a listener for an event for multiple triggers
+    on(event: string, listener: Function): void {
+        if (!this.events[event]) {
+            this.events[event] = [];
+        }
+        this.events[event].push(listener);
+    }
+
+    // Registers a listener for a single trigger on an event
+    once(event: string, listener: Function): void {
+        const onceListener = (...args: any[]) => {
+            listener(...args); // Trigger the original listener
+            this.off(event, onceListener); // Automatically remove after execution
+        };
+        this.on(event, onceListener); // Use `on` to bind the wrapper listener
+    }
+
+    // Triggers all listeners for an event, passing additional arguments
+    emit(event: string, ...args: any[]): void {
+        if (this.events[event]) {
+            this.events[event].forEach(listener => listener(...args));
+        }
+    }
+
+    // Removes a listener from an event
+    off(event: string, listener: Function): void {
+        if (this.events[event]) {
+            this.events[event] = this.events[event].filter(l => l !== listener);
+        }
+    }
+}
+```
+
+### Usage Example
+Here's how to use the EventBus to bind, emit, and unbind events. It's important to follow the correct procedure for unbinding using `off`:
+
+```typescript
+const eventBus = new EventBus();
+
+// Bind the 'click' event
+eventBus.on('click', () => console.log('clicked'));
+
+// Bind the 'hover' event for a single-time execution
+eventBus.once('hover', () => console.log('hovered'));
+
+// Emit the 'click' event
+eventBus.emit('click'); // Output: clicked
+
+// Emit the 'hover' event
+eventBus.emit('hover'); // Output: hovered
+// Trying to emit 'hover' again will result in no output, as the once-bound listener is removed after execution
+
+// Unbind the 'click' event
+const clickListener = () => console.log('clicked');
+// Note: This demonstrates the concept, but to successfully unbind, the original function reference must be used
+eventBus.off('click', clickListener);
+eventBus.emit('click'); // There will be no output if the exact function reference was used for both binding and unbinding
+```
+
+## Implementing the Least Recently Used (LRU) Cache Algorithm in JavaScript
+
+The Least Recently Used (LRU) Cache Algorithm is a sophisticated caching mechanism designed to optimize memory usage in applications. It achieves this by maintaining a collection of the most recently accessed items and discarding the least recently used items once the cache reaches its specified capacity. This approach is particularly advantageous in scenarios where memory resources are limited and access patterns are highly variable.
+
+### Core Functionalities
+
+At the heart of an LRU Cache are two essential methods: `get` and `put`. These methods are responsible for accessing and modifying the cache's contents in accordance with the LRU caching strategy.
+
+### The `get` Method
+
+The `get(key)` method plays a critical role in the LRU cache's operation by retrieving the value associated with a specific key. Its behavior is twofold:
+- **Found Key:** If the key exists in the cache, `get` returns its value. Additionally, it updates the cache to mark the key as recently accessed, effectively moving its associated value to the "end" of the cache, which symbolizes its recent use.
+- **Missing Key:** If the key is not present in the cache, `get` returns `-1`, indicating that no value is associated with the key in the cache.
+
+### The `put` Method
+
+The `put(key, value)` method is responsible for inserting or updating key-value pairs in the cache. Its operation is guided by the following principles:
+- **Existing Key:** If the key is already present in the cache, its value is updated, and its position is adjusted to reflect its recent use.
+- **New Key with Full Cache:** If the key is new and the cache has reached its maximum capacity, the least recently used item is evicted to accommodate the new key-value pair. This ensures that the cache does not exceed its size limit while prioritizing the retention of recently accessed items.
+
+### Implementation Example
+
+Leveraging JavaScript's `Map` object, which naturally maintains the order of its elements based on insertion, we can efficiently implement an LRU Cache. The `Map` object's inherent ordering is utilized to track the recency of access for the cache's key-value pairs.
+
+```typescript
+class LRUCache {
+    private capacity: number;
+    private cache: Map<number, number>;
+
+    constructor(capacity: number) {
+        this.capacity = capacity; // Define the maximum size of the cache
+        this.cache = new Map(); // Utilize a Map for its order-preserving properties
+    }
+
+    get(key: number): number {
+        if (this.cache.has(key)) {
+            const value = this.cache.get(key);
+            this.cache.delete(key); // Remove the key to update its position
+            this.cache.set(key, value); // Re-insert the key to mark it as recently used
+            return value;
+        }
+        return -1; // Key not found
+    }
+
+    put(key: number, value: number): void {
+        if (this.cache.has(key)) {
+            this.cache.delete(key); // Prepare to update the key's position
+        } else if (this.cache.size >= this.capacity) {
+            // Cache is full, remove the least recently used item
+            const leastUsedKey = this.cache.keys().next().value;
+            this.cache.delete(leastUsedKey);
+        }
+        this.cache.set(key, value); // Insert or update the key-value pair
+    }
+}
+```
+
+### Example Usage
+
+This example demonstrates how to use the `LRUCache` class, showcasing the eviction policy and access patterns:
+
+```typescript
+const lruCache = new LRUCache(2); // Initialize a new LRU Cache with a capacity of 2
+
+// Inserting key-value pairs
+lruCache.put(1, 1); // Inserts (1, 1)
+lruCache.put(2, 2); // Inserts (2, 2)
+
+// Accessing stored values
+console.log(lruCache.get(1)); // Outputs: 1 (key 1 is found)
+
+// Inserting another key-value pair, causing the least recently used key (2) to be evicted
+lruCache.put(3, 3); // Evicts key 2 and inserts (3, 3)
+
+console.log(lruCache.get(2)); // Outputs: -1 (key 2 has been evicted)
+
+// Further operations demonstrate the LRU eviction policy
+lruCache.put(4, 4); // Evicts key 1 and inserts (4, 4)
+console.log(lruCache.get(1)); // Outputs: -1 (key 1 has been evicted)
+console.log(lru
+
+Cache.get(3)); // Outputs: 3 (key 3 is found)
+console.log(lruCache.get(4)); // Outputs: 4 (key 4 is found)
+```
+
+## Follow-up: Implementing LRU Cache Without Map or Record
+
+Creating an LRU (Least Recently Used) cache in JavaScript without the built-in `Map` or `Record` types involves a more manual approach to managing memory and order of items. This method uses a hash table for quick access and a doubly linked list to efficiently keep track of the items' order, prioritizing the most recently used.
+
+### Core Components
+
+The implementation consists of two main components:
+
+1. **Doubly Linked List:** Each node in the list corresponds to an item in the cache, equipped with pointers to both the preceding and subsequent items. This bidirectional linking enables quick additions, removals, and reordering of nodes based on access patterns, facilitating the LRU policy's requirement of moving recently accessed items to the forefront.
+
+2. **Hash Table:** For the hash table, a simple JavaScript object (`{}`) suffices. The hash table offers constant-time complexity for key-based operations, such as lookups, insertions, and deletions. It stores references to the nodes in the doubly linked list, thereby bridging the gap between quick access and maintaining order.
+
+### Detailed Implementation
+
+```typescript
+class ListNode {
+    key: number;
+    value: number;
+    prev: ListNode | null = null;
+    next: ListNode | null = null;
+
+    constructor(key: number, value: number) {
+        this.key = key;
+        this.value = value;
+    }
+}
+
+class LRUCache {
+    private capacity: number;
+    private hashTable: { [key: number]: ListNode };
+    private head: ListNode | null;
+    private tail: ListNode | null;
+
+    constructor(capacity: number) {
+        this.capacity = capacity; // Defines the cache's maximum size
+        this.hashTable = {}; // Key-node reference storage
+        this.head = this.tail = null; // Initial empty state for the doubly linked list
+    }
+
+    get(key: number): number {
+        if (!(key in this.hashTable)) {
+            return -1; // Key not found scenario
+        }
+        const node = this.hashTable[key];
+        this.moveToHead(node); // Update access order
+        return node.value;
+    }
+
+    put(key: number, value: number): void {
+        if (key in this.hashTable) {
+            const node = this.hashTable[key];
+            node.value = value;
+            this.moveToHead(node); // Refresh position
+        } else {
+            const newNode = new ListNode(key, value);
+            if (Object.keys(this.hashTable).length === this.capacity) {
+                this.removeLRUItem(); // Evict least recently used
+            }
+            this.hashTable[key] = newNode;
+            this.addNode(newNode); // Insert at head
+        }
+    }
+
+    private addNode(node: ListNode): void {
+        // Prepends node to the doubly linked list
+        node.next = this.head;
+        node.prev = null;
+        if (this.head) {
+            this.head.prev = node;
+        }
+        this.head = node;
+        if (!this.tail) {
+            this.tail = node; // First node becomes both head and tail
+        }
+    }
+
+    private removeNode(node: ListNode): void {
+        // Detaches node from its current position in the list
+        if (node.prev) {
+            node.prev.next = node.next;
+        } else {
+            this.head = node.next; // Node is head
+        }
+        if (node.next) {
+            node.next.prev = node.prev;
+        } else {
+            this.tail = node.prev; // Node is tail
+        }
+    }
+
+    private moveToHead(node: ListNode): void {
+        // Re-positions a node to the head after access
+        this.removeNode(node);
+        this.addNode(node);
+    }
+
+    private removeLRUItem(): void {
+        // Evicts the least recently used node from the list's tail
+        if (this.tail) {
+            delete this.hashTable[this.tail.key]; // Cleanup hash table entry
+            this.removeNode(this.tail); // Detach the node
+        }
+    }
+}
+```
+
+## Implement a Deep Copy Function
+
+Creating a deep copy function in JavaScript is crucial when you want to duplicate complex data structures without altering the original data. This function must handle various data types, including Maps, Sets, and objects with circular references. The common approach using `JSON.stringify` and `JSON.parse` falls short for these use cases due to its limitations with certain data types and structures.
+
+### Why Not `JSON.stringify` and `JSON.parse`?
+
+Using `JSON.stringify` followed by `JSON.parse` is a quick method to deep copy objects without nested structures or special types. However, this approach has significant limitations:
+
+- **Loses Map and Set data:** When Maps and Sets are passed through this process, they are converted into objects and arrays, respectively, losing their inherent properties and behaviors.
+- **Fails with circular references:** If the object contains circular references (objects referencing themselves directly or indirectly), `JSON.stringify` will throw an error, as it cannot serialize cyclic structures.
+- **Does not copy special objects correctly:** Certain JavaScript objects like functions, `undefined`, and special objects (e.g., `RegExp`, `Date`) cannot be accurately cloned through this method, resulting in loss of information or incorrect copying.
+
+### Handling Maps, Sets, and Circular References
+
+To address these limitations, a custom deep copy function is required. This function must thoughtfully handle various data structures, including Maps, Sets, and objects with circular references, ensuring an accurate and efficient cloning process. Below is an enhanced TypeScript implementation that covers these cases effectively:
+
+```typescript
+function deepCopy(obj: any, map = new WeakMap()): any {
+  // Directly return if obj is null or not an object (e.g., primitives and functions)
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  // Use an existing reference from map if obj was already copied (circular reference handling)
+  if (map.has(obj)) {
+    return map.get(obj);
+  }
+
+  let copy;
+
+  // Clone Date objects by creating a new instance with the same time value
+  if (obj instanceof Date) {
+    copy = new Date(obj.getTime());
+  }
+  // Clone RegExp objects by creating a new instance with the same pattern and flags
+  else if (obj instanceof RegExp) {
+    copy = new RegExp(obj.source, obj.flags);
+  }
+  // Deep copy Map objects by iterating over entries and recursively copying them
+  else if (obj instanceof Map) {
+    copy = new Map();
+    obj.forEach((value, key) => {
+      copy.set(key, deepCopy(value, map));
+    });
+  }
+  // Deep copy Set objects by iterating over values and recursively copying them
+  else if (obj instanceof Set) {
+    copy = new Set();
+    obj.forEach(value => {
+      copy.add(deepCopy(value, map));
+    });
+  }
+  // Handle Arrays and plain Objects by creating an empty structure and recursively copying properties
+  else {
+    copy = Array.isArray(obj) ? [] : {};
+    map.set(obj, copy); // Track the object copy to handle circular references
+    Object.keys(obj).forEach(key => {
+      copy[key] = deepCopy(obj[key], map);
+    });
+  }
+
+  return copy;
+}
+```
+
+### Key Points
+
+- **Circular Reference Handling:** Utilizes a `WeakMap` to keep track of previously copied objects. This prevents infinite loops by reusing the copied reference instead of attempting to copy the object again.
+- **Special Object Cloning:** Provides tailored cloning strategies for `Date` and `RegExp` objects, ensuring that their unique properties and behaviors are preserved in the copy.
+- **Recursive Deep Copy:** Employs a recursive approach to accurately copy nested structures, including objects, arrays, Maps, and Sets. This ensures that the deep copy function can handle complex and deeply nested data structures effectively.
+
+### Elaboration on Special Object Cloning
+`Date` and `RegExp` objects have unique properties and methods that are not enumerable and cannot be copied over by simply iterating over their keys. For instance:
+- A `Date` object encapsulates a single moment in time, represented internally as a timestamp (the number of milliseconds since the Unix Epoch). This value is not directly accessible as an enumerable property that can be copied.
+- A `RegExp` object contains a pattern and flags (such as global, multiline, etc.), which are crucial for its operation. These are accessed through properties like source and flags, not directly copyable via key enumeration.
+
+## Understanding `['1', '2', '3'].map(parseInt)` Output
+
+When using the `map` method with `parseInt` as the callback function, the output is `[1, NaN, NaN]`. This result might be surprising at first glance, but it makes sense when you understand how both `map` and `parseInt` functions work.
+
+### `parseInt` Function Explained
+
+The `parseInt` function converts a string argument to an integer of the specified radix (base). Its signature is `parseInt(string, radix)`, where:
+
+- `string` is the string to be parsed.
+- `radix` (optional) specifies the base of the numeral system to be used. It can be between 2 and 36.
+
+If `radix` is 0, unspecified, or derived from the string's prefix (e.g., `0x` for hexadecimals), `parseInt` will attempt to guess the radix:
+
+- Hexadecimal (base 16) if the string starts with "0x" or "0X".
+- Decimal (base 10) for all other cases.
+
+However, to avoid confusion and ensure consistent results, it's recommended always to specify the radix.
+
+#### Examples of `parseInt` Usage:
+
+```typescript
+parseInt('11', 2); // Returns 3. ('11' in binary equals 3 in decimal)
+parseInt('3', 2); // Returns NaN. ('3' is not a valid binary number)
+parseInt('A', 16); // Returns 10. ('A' in hexadecimal equals 10 in decimal)
+parseInt('0x2F'); // Returns 47. Implicitly detects hexadecimal.
+parseInt('1', 0); // Returns 1. (0 or unspecified radix defaults to base 10)
+```
+
+### Why `['1', '2', '3'].map(parseInt)` Returns `[1, NaN, NaN]`
+
+When using `map` with `parseInt`, each element of the array is passed to `parseInt` along with its index. The `map` method calls the callback with three arguments: the current element, its index, and the entire array. In the case of `parseInt`, this means the second argument (the index) is used as the radix.
+
+Breaking it down:
+
+- `parseInt('1', 0)`: The radix is `0`, so `parseInt` treats it as base 10. The result is `1`.
+- `parseInt('2', 1)`: The radix is `1`, which is not a valid radix, leading to `NaN`.
+- `parseInt('3', 2)`: The radix is `2` (binary), and since '3' is not a valid binary digit, the result is `NaN`.
+
+#### Detailed Explanation:
+
+```typescript
+const arr = ['1', '2', '3'];
+const res = arr.map((item, index) => {
+    // For '1', index is 0: parseInt('1', 0) => 1, since 0 is treated as base 10.
+    // For '2', index is 1: parseInt('2', 1) => NaN, since 1 is not a valid radix.
+    // For '3', index is 2: parseInt('3', 2) => NaN, since '3' is not a valid binary digit.
+    return parseInt(item, index);
+});
+```
+
+## Understanding Formal and Actual Parameters in JavaScript
+
+In JavaScript, the interaction between formal parameters (the parameters defined in a function declaration) and actual parameters (the arguments passed to the function at call time) plays a crucial role in how data is handled within functions. This distinction is especially important when considering the type of the passed data: primitive types versus reference types.
+
+### Primitive Types and Value Passing
+
+- **Definition**: Primitive types include data types such as numbers, strings, booleans, undefined, null, symbol, and BigInt. 
+- **Behavior**: When a primitive type is passed as an argument to a function, JavaScript creates a copy of its value and passes it to the function. This is known as *pass-by-value*. Consequently, any modifications made to this parameter within the function's scope do not affect the original variable.
+- **Example**: 
+```javascript
+function modifyPrimitive(value) {
+    value = "changed";
+    console.log("Inside function:", value); // Outputs: "Inside function: changed"
+}
+
+let originalValue = "original";
+modifyPrimitive(originalValue);
+console.log("Outside function:", originalValue); // Outputs: "Outside function: original"
+```
+This example demonstrates that the `originalValue` remains unchanged outside the function, despite being modified inside the function.
+
+### Reference Types and Reference Passing
+
+- **Definition**: Reference types include objects, arrays, and functions. 
+- **Behavior**: When a reference type is passed as an argument, JavaScript passes a copy of the reference to the object rather than the object itself. This mechanism is often referred to as *pass-by-reference-like* behavior. It's crucial to understand that this is not true pass-by-reference (as seen in some other programming languages) but rather passing a copy of the reference value. Therefore, any modifications made to the object's properties or elements within the function will reflect on the original object.
+- **Example**:
+```javascript
+function modifyObject(obj) {
+    obj.property = "modified";
+    console.log("Inside function:", obj.property); // Outputs: "Inside function: modified"
+}
+
+let originalObject = { property: "original" };
+modifyObject(originalObject);
+console.log("Outside function:", originalObject.property); // Outputs: "Outside function: modified"
+```
+This example illustrates how changes made to the `originalObject`'s properties inside the `modifyObject` function are visible outside the function.
+
+### Corrected Code Example
+
+```javascript
+function changeArg(x) {
+    x = 200;
+}
+
+function changeArgObj(obj) {
+    obj.name = 'newName';
+}
+
+let num = 100;
+changeArg(num);
+console.log(num); // Outputs: 100
+
+let obj = {name: 'ronron'};
+changeArg(obj);
+console.log(obj); // Outputs: {name: 'ronron'}
+changeArgObj(obj);
+console.log(obj); // Outputs: {name: 'newName'}
+```
+
+The code snippet above demonstrates the distinct behaviors of primitive and reference types when passed as arguments to functions. The first call to `changeArg` with a primitive type (`num`) does not affect the original value, whereas the call to `changeArgObj` with a reference type (`obj`) allows for modifications that are reflected outside the function.
+
+### Best Practices
+
+When working with functions in JavaScript, consider the following best practices to ensure code clarity, maintainability, and predictability:
+
+- **Immutability**: Whenever possible, treat input parameters as immutable. Avoid modifying the inputs directly to prevent unexpected side effects.
+- **Copying Objects**: If you need to modify an object, consider creating a deep copy of the object and working on the copy. This approach helps maintain the integrity of the original data.
+- **Documentation**: Clearly document any functions that modify input parameters, explaining the rationale and potential effects on the passed arguments. This can aid in understanding and troubleshooting.
+- **Functional Programming**: Explore functional programming principles, which encourage immutability and functions without side effects, for cleaner and more predictable code.
+
+## Constructor Functions and Prototype Properties with the Same Name
+```javascript
+function Foo(){
+    Foo.a = function(){
+        console.log(1)
+    }
+    this.a = function(){
+        console.log(2)
+    }
+}
+Foo.prototype.a = function(){
+    console.log(3)
+}
+Foo.a = function(){
+    console.log(4)
+}
+Foo.a(); // Output: 4
+let obj = new Foo(); 
+obj.a(); // Output: 2
+Foo.a(); // Output: 1
+```
+
+### Step-by-Step Breakdown
+
+1. **Function Definition and Static Property Initialization**
+
+   Initially, a function `Foo` is defined. Following its definition, `Foo.a` is assigned a function that logs `4`. This is a static property of the `Foo` function itself, not of its instances.
+
+2. **Static Method Invocation**
+
+   Invoking `Foo.a()` at this point outputs `4`, as it calls the function assigned to `Foo.a` before any instances of `Foo` are created.
+
+3. **Instance Creation**
+
+   When a new instance of `Foo` is created (`let obj = new Foo()`), several things happen inside the constructor function:
+   
+   - `Foo.a` is redefined to a function that logs `1`. This redefinition overwrites the initial static definition of `Foo.a` that logged `4`.
+   - `this.a` is defined as a function that logs `2`. This assigns an `a` function to the newly created instance, which is separate from `Foo`'s static properties and its prototype.
+
+4. **Instance Method Invocation**
+
+   Invoking `obj.a()` now outputs `2`. This is because the instance (`obj`) has its own `a` property, which takes precedence over the `Foo` prototype's `a` property.
+
+5. **Static Method Post-Instance Invocation**
+
+   Calling `Foo.a()` after creating an instance of `Foo` outputs `1`. This is because the creation of an instance (`new Foo()`) redefined `Foo.a` to a new function that logs `1`.
+
+### Key Takeaways
+
+- **Static vs. Instance Properties**: Static properties defined on a constructor function itself (`Foo.a`) are separate from instance properties defined within the constructor using `this` keyword (`this.a`).
+- **Prototype Properties**: Properties defined on the prototype (`Foo.prototype.a`) are shared across all instances. However, they have lower precedence compared to instance-specific properties.
+- **Precedence and Overwriting**: When accessing a property, instance properties take precedence over prototype properties. Static properties can be redefined, affecting their behavior when accessed before and after instance creation.

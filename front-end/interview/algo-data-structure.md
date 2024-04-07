@@ -434,3 +434,134 @@ function switchLetterCase(s: string): string {
 }
 ```
 
+## Depth-First Search (DFS) of a DOM Tree
+Depth-First Search (DFS) is a method used to traverse or search a tree or graph data structure. The algorithm starts at the root node and explores as far as possible along each branch before backtracking. When applied to a DOM tree, DFS will visit each node in a manner that deeply explores a node's children before moving to its siblings.
+
+### Code Example for DFS
+The given TypeScript function `dfs` illustrates how DFS can be applied to a DOM tree. The `visitNode` function is used to log different types of nodes (Comment, Text, HTMLElement). In the `dfs` function, recursion is utilized to visit each node starting from the root, exploring all its child nodes deeply before moving to the next sibling.
+
+```typescript
+function visitNode(node: Node) {
+    if (node instanceof Comment) {
+        console.log('comment', node.textContent);
+    }
+    if (node instanceof Text) {
+        const t = node.textContent.trim();
+        if (t) {
+            console.log('text', t);
+        }
+    }
+    if (node instanceof HTMLElement) {
+        console.log('element', node.tagName);
+    }
+}
+
+function dfs(node: Node) {
+    visitNode(node);
+    node.childNodes.forEach((child) => {
+        dfs(child);
+    });
+}
+```
+
+### Without Recursion
+DFS can be implemented without recursion by using a stack to simulate the call stack of recursion. This approach avoids potential stack overflow errors that may occur with deep recursion. While recursion is more straightforward and readable, using a stack can be more efficient and safer for deep trees.
+
+```typescript
+function dfsWithoutRecursion(node: Node) {
+    const stack = [node];
+    while (stack.length) {
+        const n = stack.pop();
+        visitNode(n);
+        Array.from(n.childNodes).reverse().forEach((child) => {
+            stack.push(child);
+        });
+    }
+}
+```
+
+## Breadth-First Search (BFS) of a DOM Tree
+Breadth-First Search (BFS) is another method to traverse or search a tree or graph data structure. Unlike DFS, BFS explores all the neighbor nodes at the present depth prior to moving on to the nodes at the next depth level. Applied to a DOM tree, BFS will visit each node level by level.
+
+### Code Example for BFS
+The `bfs` function demonstrates how BFS can be applied to a DOM tree. It uses a queue to visit each node at the current level before moving to the nodes at the next level. This approach ensures that nodes are visited in a breadth-wise manner.
+
+```typescript
+function bfs(node: Node) {
+    const queue = [node];
+    while (queue.length) {
+        const n = queue.shift();
+        visitNode(n);
+        n.childNodes.forEach((child) => {
+            queue.push(child);
+        });
+    }
+}
+```
+
+### Key Differences Between DFS and BFS
+- **DFS** dives as deep as possible into the tree's branches before backtracking, which can be implemented either recursively or using a stack.
+- **BFS** visits all nodes at the current level before moving to the next level, using a queue to keep track of the order.
+
+## Array to Tree and Tree to Array Conversion
+### TreeNode and ArrayItem Interfaces
+```typescript
+interface TreeNode {
+    id: number;
+    name: string;
+    children?: TreeNode[];
+}
+
+interface ArrayItem {
+    id: number;
+    parentId: number;
+    name: string;
+}
+```
+
+### Array to Tree Conversion
+```typescript
+function arrayToTree(arr: ArrayItem[]): TreeNode | null {
+    const map = new Map<number, TreeNode>();
+    let root: TreeNode | null = null;
+
+    // sort by parentId to ensure parent nodes are processed before children
+    arr.sort((a, b) => a.parentId - b.parentId);
+
+    arr.forEach(item => {
+        const {id, parentId, name} = item;
+        const treeNode: TreeNode = {id, name, children: []};
+        map.set(id, treeNode);
+
+        if (parentId === 0) {
+            root = treeNode;
+        } else {
+            const parent = map.get(parentId);
+            parent?.children.push(treeNode);
+        }
+    });
+
+    return root;
+}
+```
+
+### Tree to Array Conversion
+```typescript
+function treeToArray(tree: TreeNode): ArrayItem[] {
+    const result: ArrayItem[] = [];
+
+    function traverse(node: TreeNode, parentId: number) {
+        const {id, name, children} = node;
+        result.push({id, parentId, name});
+        children?.forEach(child => traverse(child, id));
+    }
+
+    traverse(tree, 0);
+    return result;
+}
+```
+
+### Contextual Understanding
+- **Relational Databases**: Such as PostgreSQL, typically store data in a tabular format with rows and columns, which resembles the flat array structure. This format is efficient for operations that involve relations between different entities.
+  
+- **Non-relational Databases**: For instance, MongoDB, often store data in formats akin to the tree structure, like documents in BSON format. This structure is advantageous for storing nested or hierarchical data, such as comments on a post or categories with subcategories.
