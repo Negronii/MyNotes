@@ -2,6 +2,7 @@
 
 # define the output file
 output="Interview-All-In-One.md"
+temp="temp.md"
 
 # delete the output file if it exists
 rm -f $output
@@ -9,7 +10,7 @@ rm -f $output
 # merge all markdown files into the output file
 for file in *.md; do
     # skip the output file
-    if [[ $file != $output ]]; then
+    if [[ $file != $output && $file != $temp]]; then
         echo -e "\n# $file\n" >> $output
         cat $file >> $output
     fi
