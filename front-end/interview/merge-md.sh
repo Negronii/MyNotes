@@ -1,26 +1,24 @@
 #!/bin/bash
 
-# define the output file
+# Define the output file and temporary file
 output="Interview-All-In-One.md"
 temp="temp.md"
 
-# delete the output file if it exists
-rm -f $output
+# Delete the output file if it exists
+rm -f "$output"
 
-# merge all markdown files into the output file
-for file in *.md; do
-    # skip the output file
-    if [[ $file != $output && $file != $temp ]]; then
-        echo -e "\n# $file\n" >> $output
-        cat $file >> $output
-    fi
+# Use find to safely handle filenames with spaces
+# Concatenate the content of each markdown file into the output file
+find . -maxdepth 1 -name '*.md' ! -name "$output" ! -name "$temp" -print0 | while IFS= read -r -d '' file; do
+    echo -e "\n# $(basename "$file")\n" >> "$output"
+    cat "$file" >> "$output"
 done
 
-# see if the output file has changed
-if ! git diff --quiet -- $output; then
-    # add the output file to the staging area
-    git add $output
+# Check if there have been any changes
+if ! git diff --quiet; then
+    # Add the output file to the staging area
+    git add "$output"
 
-    # commit the output file
+    # Commit the changes
     git commit -m "Automatically merged Markdown files into $output"
 fi
