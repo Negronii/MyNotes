@@ -7,9 +7,9 @@ temp="temp.md"
 # Delete the output file if it exists
 rm -f "$output"
 
-# Use find to safely handle filenames with spaces
-# Concatenate the content of each markdown file into the output file
-find . -maxdepth 1 -name '*.md' ! -name "$output" ! -name "$temp" -print0 | while IFS= read -r -d '' file; do
+# Use find to get the list of markdown files, excluding the ones we don't want,
+# and then sort them. We use 'sort -V' for natural sorting, which handles the numerical sorting nicely.
+find . -maxdepth 1 -name '*.md' ! -name "$output" ! -name "$temp" -print0 | sort -zV | while IFS= read -r -d '' file; do
     echo -e "\n# $(basename "$file")\n" >> "$output"
     cat "$file" >> "$output"
 done
