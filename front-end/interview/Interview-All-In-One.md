@@ -981,8 +981,7 @@ const me = new LazyMan('ronron');
 me.eat('apple').sleep(1000).eat('banana').sleep(1000).eat('pear');
 ```
 - **Chainable Methods**: Achieved by returning the instance itself (`this`) from each method, allowing for a fluent interface where methods can be called sequentially on the same object.
-- **Asynchronous Execution**: Demonstrates the use of JavaScript's `setTimeout` to introduce execution delays, simulating sleep and showcasing asynchronous programming principles.
-
+- **Asynchronous Execution**: Demonstrates the use of JavaScript's `setTimeout` to introduce execution delays, simulating sleep and showcasing asynchronous programming principles. The setTimeout in constructor initiates the asynchronous execution of the first task in the taskList, allowing for a delayed start of the queued actions.The first `this.next` actually starts when the synchronous code finishes, i.e. at `me.eat('apple').sleep(1000).eat('banana').sleep(1000).eat('pear');` line.
 
 ## Implementing a Custom EventBus
 
