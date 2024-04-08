@@ -632,7 +632,7 @@ Arrow functions are not suitable for defining object or prototype methods where 
        getName: () => this.name // `this` does not refer to `obj`
    };
 
-   obj.getName(); // Will not work as expected
+   obj.getName(); // Will not work as expected, returns global object's `name`
    ```
 
 2. **Prototype Methods**:
@@ -644,7 +644,7 @@ Arrow functions are not suitable for defining object or prototype methods where 
    MyObject.prototype.getName = () => this.name; // `this` does not refer to the instance of `MyObject`
 
    const myObj = new MyObject();
-   myObj.getName(); // Will not work as expected
+   myObj.getName(); // Will not work as expected, returns global object's `name`
    ```
 
 ### Constructors
