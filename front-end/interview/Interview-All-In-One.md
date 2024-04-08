@@ -166,29 +166,31 @@ To achieve this layout, you can use CSS Flexbox. Flexbox provides an efficient w
 ```
 # 2. Javascript.md
 
-## What are the Features of JavaScript's Strict Mode?
+## JavaScript's Strict Mode Features
 
-Strict mode in JavaScript is an option that enables a restricted variant of JavaScript, enhancing error detection and overall code quality. It's activated by adding `'use strict';` at the beginning of a script or function.
+JavaScript's Strict Mode is a feature that enforces a stricter parsing and error handling mechanism on your JavaScript code. Activating Strict Mode can be done by adding `'use strict';` at the beginning of a script or a function block. This mode intentionally has different semantics from the normal code, aimed at improving code reliability and performance.
 
 ### Features of Strict Mode
 
-1. **Variables Must Be Declared**: Strict mode requires all variables to be declared before use. Usage of undeclared variables will result in a reference error, preventing accidental global variable creation.
+1. **Mandatory Variable Declarations**: In Strict Mode, every variable must be declared before use. If a script attempts to use an undeclared variable, JavaScript will throw a `ReferenceError`. This requirement helps to avoid the accidental creation of global variables caused by typographical errors.
 
-2. **No `with` Statement**: The `with` statement is prohibited as it complicates the scope chain, making code optimization and debugging more difficult.
+2. **Disallows the `with` Statement**: The `with` statement is not allowed in Strict Mode because it creates ambiguity about the scope of variables. Its use can lead to significant performance hits and complicates the debugging process, as it modifies the scope chain, making it harder to predict which variables will be affected by a piece of code.
 
-3. **Eval Scope Limitation**: Code within `eval()` is executed in its own scope, ensuring that variables or functions within `eval()` do not affect the surrounding scope.
+3. **Scoped `eval()` Function**: Any declarations within an `eval()` expression in Strict Mode do not affect the surrounding scope, making `eval()` safer by preventing it from introducing new variables or modifying existing ones in the parent scope.
 
-4. **Controlled `this` Keyword Behavior**: In non-method functions, `this` is `undefined` instead of defaulting to the global object, reducing the risk of unintended references to the global scope.
+4. **Secure `this` Keyword Behavior**: In functions that are not called as methods of an object, the value of `this` is `undefined` in Strict Mode. This contrasts with non-strict mode, where `this` defaults to the global object, reducing the risk of inadvertently modifying the global environment.
 
-5. **No Duplicate Parameter Names**: Functions cannot have parameters with the same name, aiding in the prevention of coding mistakes.
+5. **Prohibits Duplicate Parameter Names**: Functions cannot have multiple parameters with the same name, which eliminates potential errors from duplicated identifiers and enhances code clarity.
 
-6. **Immutable Non-Writable Properties**: Assignments to non-writable properties result in an error, ensuring data integrity.
+6. **Immutable Non-Writable Properties**: In Strict Mode, attempts to assign values to non-writable properties result in a `TypeError`. This feature ensures the immutability of constants and read-only properties, thus preserving data integrity.
 
-7. **Protection Against Deleting Fixed Properties**: Attempts to delete undeletable properties (like `Object.prototype`) trigger an error.
+7. **Restrictions on Deleting Properties**: Trying to delete non-deletable properties (such as built-in objects or fixed properties) will throw a `TypeError`, protecting important parts of the language’s core.
 
-8. **No Octal Literals and Syntax**: Octal literals and escape sequences are disallowed, avoiding confusion with string data.
+8. **No Octal Numeric Literals**: Octal literals and octal escape sequences are not allowed in Strict Mode. This restriction avoids confusion between mistakenly leading zeroes in numbers and octal syntax, making the code more readable and less prone to errors. Octal literals are those starting with a leading zero, like `010` stands for 8 in decimal. Octal escape sequences are those starting with `\`, like `\141` stands for `'a'`.
 
-In conclusion, strict mode in JavaScript helps in writing safer and cleaner code by turning silent errors into throw errors, enforcing variable declarations, clarifying function scope, and preventing common coding pitfalls. These features significantly contribute to the robustness and maintainability of JavaScript code.
+### Conclusion
+
+By enforcing these constraints, Strict Mode significantly aids in the development of more secure, robust, and clean JavaScript code. It prevents common coding errors, reduces accidental global variable creation, clarifies the scope chain, and enforces a cleaner syntax. Adopting Strict Mode can lead to better performance, easier debugging, and a more structured codebase, which are crucial for maintaining large-scale JavaScript applications.
 
 ## Traverse an Array: `for` vs. `forEach`
 
