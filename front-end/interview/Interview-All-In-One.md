@@ -186,7 +186,8 @@ JavaScript's Strict Mode is a feature that enforces a stricter parsing and error
 
 7. **Restrictions on Deleting Properties**: Trying to delete non-deletable properties (such as built-in objects or fixed properties) will throw a `TypeError`, protecting important parts of the language’s core.
 
-8. **No Octal Numeric Literals**: Octal literals and octal escape sequences are not allowed in Strict Mode. This restriction avoids confusion between mistakenly leading zeroes in numbers and octal syntax, making the code more readable and less prone to errors. Octal literals are those starting with a leading zero, like `010` stands for 8 in decimal. Octal escape sequences are those starting with `\`, like `\141` stands for `'a'`.
+8. **No Octal Numeric Literals**: Octal literals and octal escape sequences are not allowed in Strict Mode. This restriction avoids confusion between mistakenly leading zeroes in numbers and octal syntax, making the code more readable and less prone to errors. 
+   - Octal literals are those starting with a leading zero, like `010` stands for 8 in decimal. Octal escape sequences are those starting with `\`, like `\141` stands for `'a'`. We can use `u0061` instead of `\141` to represent `'a'`, and `0o10` instead of `010` to represent `8`.
 
 ### Conclusion
 
