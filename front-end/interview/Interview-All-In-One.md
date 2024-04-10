@@ -234,9 +234,7 @@ CSS Grid Layout is a two-dimensional layout system for the web. It lets you layo
 
 **For the Grid Container**  
 
-- **display**: Defines the element as a
-
- grid container and establishes a new grid formatting context for its contents. Values: `grid`, `inline-grid`.
+- **display**: Defines the element as a grid container and establishes a new grid formatting context for its contents. Values: `grid`, `inline-grid`.
 - **grid-template-columns** / **grid-template-rows**: Defines the columns/rows of the grid with a space-separated list of values. The values represent the track size, and the space between them represents the grid line.
 - **grid-gap** (also `row-gap` and `column-gap`): Defines the size of the gap between the rows and columns.
 - **justify-items**, **align-items**, **place-items**: Aligns grid items along the row axis, column axis, or both.
