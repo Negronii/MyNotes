@@ -164,6 +164,118 @@ To achieve this layout, you can use CSS Flexbox. Flexbox provides an efficient w
     <div class="right">Right</div>
 </div>
 ```
+
+## Flexbox Layout
+
+Flexbox, formally known as the Flexible Box Layout, is a one-dimensional layout method for laying out items in rows or columns within a container. It allows you to design a complex layout structure with a simpler and more flexible approach.
+
+- **Flex Container**: The element on which `display: flex` or `display: inline-flex` is applied. It becomes the flex container, and its children become flex items.
+- **Flex Items**: Direct children of the flex container.
+
+### Key Properties
+
+**For the Flex Container**  
+
+- **display**: This defines a flex container; set this to `flex` or `inline-flex`.
+- **flex-direction**: This establishes the main-axis, determining the direction flex items are placed in the flex container. Values: `row`, `row-reverse`, `column`, `column-reverse`.
+- **flex-wrap**: By default, flex items will all try to fit onto one line. You can change that and allow the items to wrap as needed with this property. Values: `nowrap`, `wrap`, `wrap-reverse`.
+- **justify-content**: This defines the alignment along the main axis. Values include `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly`.
+- **align-items**: This defines the default behavior for how flex items are laid out along the cross axis on the current line. Think of it as the `justify-content` version for the cross-axis (perpendicular to the main-axis). Values: `flex-start`, `flex-end`, `center`, `baseline`, `stretch`.
+- **align-content**: This aligns a flex container's lines within when there is extra space in the cross-axis, similar to how `justify-content` aligns individual items within the main-axis. Note, this property has no effect when there is only one line of flex items. Values: `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `stretch`.
+
+**For Flex Items**  
+
+- **flex-grow**: This defines the ability for a flex item to grow if necessary. It accepts a unitless value that serves as a proportion. It dictates what amount of the available space inside the flex container the item should take up.
+- **flex-shrink**: This defines the ability for a flex item to shrink if necessary.
+- **flex-basis**: This defines the default size of an element before the remaining space is distributed. It can be a length (e.g., 20%, 5rem, etc.) or a keyword like `auto`.
+- **flex**: This is a shorthand for the `flex-grow`, `flex-shrink`, and `flex-basis` properties.
+- **align-self**: This allows the default alignment (or the one specified by `align-items`) to be overridden for individual flex items.
+
+### Flexbox Use Cases
+
+- **Centering a child element**: Flexbox makes centering items within a container straightforward, both vertically and horizontally.
+- **Creating a navigation bar**: Easily align navigation items evenly.
+- **Equal height columns/rows**: Even when content size varies.
+
+**Example**
+
+```html
+<div class="flex-container">
+  <div class="flex-item">1</div>
+  <div class="flex-item">2</div>
+  <div class="flex-item">3</div>
+</div>
+```
+
+```css
+.flex-container {
+  display: flex;
+  justify-content: center; /* Center items horizontally */
+  align-items: center; /* Center items vertically */
+  height: 200px; /* Define height */
+}
+
+.flex-item {
+  margin: 5px;
+}
+```
+
+## Grid Layout
+
+CSS Grid Layout is a two-dimensional layout system for the web. It lets you layout items into rows and columns, and it’s the perfect tool for creating complex web layouts. It’s a much more powerful and versatile system than Flexbox for certain types of layouts.
+
+- **Grid Container**: The element on which `display: grid` or `display: inline-grid` is applied. It becomes the grid container.
+- **Grid Item**: The children (direct descendants) of the grid container.
+- **Grid Line**: The dividing lines that make up the structure of the grid. They can be horizontal or vertical.
+- **Grid Cell**: The space between two adjacent row and two adjacent column grid lines. It’s a single "unit" of the grid.
+- **Grid Area**: The total space surrounded by four grid lines. A grid area may be composed of any number of grid cells.
+
+### Key Properties
+
+**For the Grid Container**  
+
+- **display**: Defines the element as a
+
+ grid container and establishes a new grid formatting context for its contents. Values: `grid`, `inline-grid`.
+- **grid-template-columns** / **grid-template-rows**: Defines the columns/rows of the grid with a space-separated list of values. The values represent the track size, and the space between them represents the grid line.
+- **grid-gap** (also `row-gap` and `column-gap`): Defines the size of the gap between the rows and columns.
+- **justify-items**, **align-items**, **place-items**: Aligns grid items along the row axis, column axis, or both.
+- **justify-content**, **align-content**, **place-content**: Aligns the grid itself inside the grid container.
+
+**For Grid Items**  
+
+- **grid-column-start** / **grid-column-end** and **grid-row-start** / **grid-row-end**: Determines a grid item’s location within the grid by referring to specific grid lines.
+- **grid-column** / **grid-row**: Shorthand for `grid-column-start`/`end` and `grid-row-start`/`end`.
+- **grid-area**: Gives an item a name so it can be referenced by a template created with the `grid-template-areas` property.
+
+### Grid Layout Use Cases
+
+- **Complex layouts**: Ideal for designing layouts with multiple rows and columns, such as magazines and newspapers.
+- **Responsive designs**: Easily adjust and reflow content based on screen size.
+- **Alignment and spacing**: Precisely control the alignment, spacing, and sizing of grid items.
+
+**Example**  
+
+```html
+<div class="grid-container">
+  <div class="grid-item">1</div>
+  <div class="grid-item">2</div>
+  <div class="grid-item">3</div>
+</div>
+```
+
+```css
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.grid-item {
+  padding: 20px;
+  background-color: lightgrey;
+}
+```
 # 2. Javascript.md
 
 ## JavaScript's Strict Mode Features
@@ -2956,6 +3068,7 @@ class ErrorBoundary extends React.Component {
 - Implementing error reporting and monitoring (also known as error tracking or logging) is crucial for understanding and improving the stability of a React application. This involves capturing errors, logging them to a server, and analyzing them to fix bugs or improve application UX.
 
 ## React Lifecycle
+
 The React component lifecycle refers to the series of events that occur from the moment a component is initially rendered until it is finally destroyed. Understanding these lifecycle events is crucial for creating efficient and effective React applications. The lifecycle can be divided into three main phases:
 
 ### Mounting
@@ -2976,6 +3089,100 @@ The updating phase occurs when a component's state or props change, leading to a
 ### Unmounting
 The unmounting phase occurs when a component is being removed from the DOM. It includes one main lifecycle method:
 - `componentWillUnmount()`: This method is called right before a component is destroyed and removed from the DOM. It's used to perform any necessary cleanup, such as invalidating timers, canceling network requests, or cleaning up any subscriptions made in `componentDidMount()`.
+
+
+## Understanding React's `setState` Behavior
+
+React's `setState` method is fundamental for managing state changes within components. It's designed to optimize application performance through asynchronous updates and batching. 
+
+### Asynchronous State Updates and Batching
+
+React batches multiple `setState` calls into a single update to minimize re-rendering, enhancing application performance. This batching is automatic, combining several updates into one, leading to fewer re-renders and a smoother user experience.
+
+**Example:** Observe how `setState` behaves within a lifecycle method.
+
+```javascript
+componentDidMount() {
+  this.setState({ val: this.state.val + 1 }); // Initial state: val = 0
+  console.log(this.state.val); // Likely logs 0, not 1 due to batching
+
+  this.setState({ val: this.state.val + 1 });
+  console.log(this.state.val); // Still logs 0 for the same reason
+
+  // `setState` within setTimeout runs synchronously
+  setTimeout(() => {
+    this.setState({ val: this.state.val + 1 });
+    console.log(this.state.val); // Now logs 2, updates are applied
+
+    this.setState({ val: this.state.val + 1 });
+    console.log(this.state.val); // Logs 3, confirming the synchronous update
+  }, 0);
+}
+```
+
+### Synchronous Updates in Specific Contexts
+
+While `setState` is predominantly asynchronous within React's lifecycle and event handling, there are exceptions where it executes synchronously:
+
+- **JavaScript Timing Functions:** Inside `setTimeout` or `setInterval`, `setState` acts synchronously.
+- **Promise Resolutions:** In `.then` or async function callbacks, `setState` is synchronous.
+- **Native DOM Events:** Using `setState` in native event handlers results in synchronous updates.
+- **AJAX Callbacks:** AJAX callbacks also trigger synchronous `setState` updates.
+
+**Example:** Synchronous update with a native event handler.
+
+```javascript
+document.getElementById('myButton').addEventListener('click', () => {
+  this.setState({ val: this.state.val + 1 });
+  console.log(this.state.val); // Updates and logs the new value instantly
+});
+```
+
+### Embracing React 18's Automatic Batching
+
+React 18 enhances batching by automatically applying it across all update scenarios, including those previously synchronous. This change simplifies state update patterns and further improves performance.
+
+**Adapting to React 18:**
+
+```javascript
+// Before React 18
+ReactDOM.render(<App />, document.getElementById('root'));
+
+// With React 18 and onwards
+const root = React.createRoot(document.getElementById('root'));
+root.render(<App />);
+```
+
+### Exceptions to Batching
+
+Some updates are processed immediately, even with React's batching:
+
+- Updates in a `setState` callback are immediate.
+- Synchronous updates still occur in certain non-React contexts, like direct DOM event handlers or timing functions.
+
+## `setState` as Microtask or Macrotask?
+
+`setState` can act as either, influenced by its execution context. Within `setTimeout`, it's a macrotask, while in a `Promise.resolve().then()`, it becomes a microtask. This flexibility allows `setState` to adapt its execution for optimal application performance.
+
+**Execution Timing Example:**
+
+```javascript
+componentDidMount() {
+  setTimeout(() => {
+    console.log('--Start--');
+
+    Promise.resolve().then(() => {
+      console.log('--Promise then--');
+    });
+
+    this.setState({ val: this.state.val + 1 });
+    console.log(this.state.val); // Displays the current state value
+
+    console.log('--End--');
+  });
+}
+// Expected output sequence: --Start--, current state value, --End--, --Promise then--
+```
 # 7. Performance.md
 
 ## How to diagnose performance issues in a slow HTML5 page?
