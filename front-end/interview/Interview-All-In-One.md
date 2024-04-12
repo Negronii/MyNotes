@@ -906,6 +906,134 @@ console.log(curriedSum(1, 2)(3)); // Output: 6
 console.log(curriedSum(1)(2, 3)); // Output: 6
 ```
 
+## Value Types vs. Reference Types
+**What is the output of the following code, and why?**
+
+```javascript
+let a = {n: 1}
+let b = a
+a.x = a = {n: 2}
+console.log(a.x)
+console.log(b.x)
+```
+
+To decipher the output of this code snippet, we must delve into several core JavaScript mechanics:
+
+1. **Sequential Assignments Are Executed Right-to-Left**
+
+   Sequential assignments in JavaScript are processed from right to left. This means the right-most assignment is completed first before moving to the left. Here's a simple illustration:
+
+   ```javascript
+   let a = 100;
+   let b = a = 200;
+   // This is processed as:
+   // 1. a = 200
+   // 2. b = a (where a is now 200)
+   ```
+
+2. **Dot Notation for Property Access Has High Precedence**
+
+   When accessing or assigning properties using dot notation, the operation to access the property (or create a reference to it) is prioritized. For instance:
+
+   ```javascript
+   let a = {};
+   a.x = 100;
+   // This operation can be broken down into:
+   // 1. Access (or prepare to access) a.x, which is initially undefined
+   // 2. Assign 100 to a.x
+   ```
+
+With these principles in mind, let's dissect the initial example:
+
+```javascript
+let a = {n: 1}
+let b = a;
+// At this point, both 'a' and 'b' reference the same object: {n: 1}
+
+a.x = a = {n: 2};
+// The operations unfold as follows:
+// 1. The dot notation (a.x) creates a reference for 'x' on the object, setting it to undefined
+// 2. 'a' is then reassigned to a new object: {n: 2}
+// 3. Finally, 'a.x' assigns the new object {n: 2} to 'x', but since 'a' has been reassigned, this operation does not affect the new 'a' but the old object referenced by 'b'
+```
+
+Here's a visual representation of the state changes:
+
+1. After declaring `a` and `b`:
+
+```
+a, b -> {n: 1}
+```
+
+2. Preparing to assign to `a.x`:
+
+```
+a, b -> {n: 1, x: undefined}
+```
+
+3. Reassigning `a`:
+
+```
+a -> {n: 2}
+b -> {n: 1, x: undefined}
+```
+
+4. Attempting to assign `{n: 2}` to `a.x`, which now refers to the old object `b` references:
+
+```
+a -> {n: 2}
+b -> {n: 1, x: {n: 2}}
+```
+
+### Outputs:
+
+- `console.log(a.x)` prints `undefined`, because 'a' now points to `{n: 2}`, which does not have an 'x' property.
+- `console.log(b.x)` prints `{n: 2}`, because 'b' still points to the original object, which now includes `x: {n: 2}`.
+
+## Object Key Data Types in JavaScript
+
+In JavaScript, the keys of an object can only be strings or symbols. This fundamental principle ensures consistency in how JavaScript engines interpret key values. However, when other data types are used as keys, they undergo a conversion process. Below, we explore the rules and nuances of this conversion process, along with practical examples to deepen understanding.
+
+### Principles of Key Conversion
+
+1. **Allowed Key Types**: Only strings and symbols can be used directly as keys. This limitation is designed to ensure property keys have a predictable format.
+2. **Conversion of Other Types**: If a key is not a string or symbol, JavaScript will automatically convert it to a string using the object's `toString()` method.
+3. **Conversion Rule**: The `toString()` method is universally applied to non-string, non-symbol keys to obtain their string representation.
+4. **Plain Object Conversion**: Any plain object used as a key is converted to the string `"[object Object]"`. This conversion underscores the importance of string and symbol uniqueness.
+5. **Map Object Exception**: Unlike object literals, `Map` objects can use values of any type as keys without automatic conversion. This feature makes `Map` a versatile alternative for complex data structures.
+
+### Examples and Explanations
+
+**Example 1: Numeric and String Key Equivalence**
+
+```javascript
+let a = {}, b = '123', c = 123;
+a[b] = 'b';
+a[c] = 'c';
+console.log(a[b]); // Outputs: 'c'
+```
+- In this example, both `b` (a string) and `c` (a number) are used as keys. Since `c` is converted to a string, it overwrites the value associated with the string `'123'`, demonstrating how numeric keys are treated as their string equivalents.
+
+**Example 2: Symbol Uniqueness**
+
+```javascript
+let a = {}, b = Symbol('123'), c = Symbol('123');
+a[b] = 'b';
+a[c] = 'c';
+console.log(a[b]); // Outputs: 'b'
+```
+- Symbols are unique, so even if `b` and `c` have the same description (`'123'`), they are considered different keys. This example illustrates the utility of symbols for creating distinct key-value pairs.
+
+**Example 3: Plain Object Conversion to String**
+
+```javascript
+let a = {}, b = {key: '123'}, c = {key: '456'};
+a[b] = 'b';
+a[c] = 'c';
+console.log(a[b]); // Outputs: 'c'
+```
+- Here, `b` and `c` are both plain objects. Despite having different properties, they are converted to the same string (`"[object Object]"`) when used as keys, causing `c` to overwrite `b`'s associated value. This highlights the importance of careful key selection to avoid unintended overwrites.
+
 ## Constructor Functions and Prototype Properties with the Same Name
 ```javascript
 function Foo(){
@@ -3454,7 +3582,91 @@ const MyComponent = React.memo(function MyComponent(props) {
   return prevProps.id === nextProps.id;
 });
 ```
-# 8. System Design.md
+# 8. Project Design.md
+
+## Designing a Front-End Analytics SDK
+
+A Front-End Analytics Software Development Kit (SDK) is essential for collecting, analyzing, and reporting user behavior data on websites. This includes data such as page views (PV), click events, custom events (e.g., subscriptions to a VIP service, cancellations of a VIP service), performance metrics, and error logging. Large companies often develop their own analytics solutions, while small to medium-sized enterprises might opt for third-party services like Google Analytics.
+
+The SDK serves as a bridge between the client-side environment and the analytics server, enabling a cyclical process: The SDK collects data from the user's interactions with the website, sends this data to the analytics server, and then the server processes and analyzes the data to generate reports. These insights can then be used to optimize the website, creating a feedback loop that enhances user experience.
+
+### Key Metrics to Track
+
+1. **Page Views (PV):** Measure the number of times a page is loaded or reloaded in a browser.
+2. **Custom Events:** Track specific user actions such as becoming a VIP member or cancelling a VIP membership.
+3. **Performance Metrics:** Monitor the performance of the website, including loading times and interaction delays.
+4. **Error Logging:** Capture JavaScript errors and promise rejections to identify issues affecting user experience.
+
+### SDK Design Overview
+
+```javascript
+class AnalyticsSDK {
+  constructor(productId) {
+    this.productId = productId;
+    this.initPerformanceTracking();
+    this.initErrorTracking();
+  }
+
+  // Use private methods for internal functionality in TypeScript
+  send(url, params = {}) {
+    params.productId = this.productId;
+    const queryString = Object.entries(params)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&');
+    const fullUrl = `${url}?${queryString}`;
+    // Use a beacon or an image to send data to overcome CORS issues, no need for response handling, and better compatibility
+    navigator.sendBeacon ? navigator.sendBeacon(fullUrl) : this.fallbackSend(fullUrl);
+  }
+
+  initPerformanceTracking() {
+    window.addEventListener('load', () => {
+      const performanceData = performance.timing.toJSON ? performance.timing.toJSON() : performance.timing;
+      this.send('https://analytics.example.com/performance', { data: JSON.stringify(performanceData) });
+    });
+  }
+
+  initErrorTracking() {
+    window.addEventListener('error', (event) => {
+      this.sendError(event.message, event.filename, event.lineno, event.colno);
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      this.sendError('Unhandled Promise Rejection', event.reason);
+    });
+  }
+
+  sendError(message, source = '', lineno = 0, colno = 0) {
+    this.send('https://analytics.example.com/error', { message, source, lineno, colno });
+  }
+
+  trackPageView() {
+    // Implement logic to avoid duplicate tracking on single-page applications
+    this.send('https://analytics.example.com/pv', { url: window.location.href });
+  }
+
+  trackEvent(eventName, value) {
+    this.send('https://analytics.example.com/event', { eventName, value });
+  }
+
+  fallbackSend(url) {
+    // Fallback for older browsers without navigator.sendBeacon support
+    const img = new Image();
+    img.src = url;
+  }
+}
+
+// Usage example
+document.addEventListener('DOMContentLoaded', () => {
+  const analytics = new AnalyticsSDK('your-product-id');
+  analytics.trackPageView();
+});
+```
+
+This code example outlines the basic structure and functionality of an analytics SDK. It demonstrates how to send data to an analytics server using either the Beacon API or an image tag as a fallback, how to track performance metrics, handle errors, and record custom events. Remember, this is a starting point, and the implementation can be extended with more features like batched sending for performance optimization, more sophisticated error handling, or integration with popular frameworks.
+
+**Conclusion**
+
+When designing a front-end analytics SDK, the key considerations should include the types of data you wish to collect, how to efficiently and securely transmit this data to the server, and ensuring that your tracking does not adversely affect the user experience. Tailor your SDK to be flexible, extensible, and easy to integrate into existing projects.
+# 9. System Design.md
 
 ## Common Design Patterns in Front-End Development and Their Usage Scenarios
 
