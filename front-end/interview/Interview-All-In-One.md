@@ -1282,6 +1282,58 @@ function getType(val: any): string {
 }
 ```
 
+## Understanding JavaScript Proxies for State Monitoring
+
+JavaScript `Proxy` is a versatile feature that enables the creation of a proxy for another object. This proxy allows for the interception and customization of operations performed on the original object, including property access, assignment, and enumeration. This capability is especially valuable for tracking changes in objects or arrays in a dynamic manner, enabling actions like logging additions to a list or triggering updates in response to changes.
+
+### The Basics of Proxy
+
+A `Proxy` in JavaScript acts as a sophisticated wrapper for an original object, granting fine-grained control over interactions with that object. Operations on the proxy can be intercepted to implement custom behaviors for fundamental operations such as property reads or writes.
+
+### Practical Example: Monitoring List Additions
+
+To demonstrate the utility of a `Proxy`, consider a use case where it's necessary to monitor additions to a list (an array) and perform actions like logging these additions, validating the new items, or updating the UI. A `Proxy` facilitates these tasks by allowing for custom handlers for get and set operations.
+
+**Example Implementation**
+
+The following example showcases the use of a `Proxy` to observe and react to new items being added to a list:
+
+```javascript
+// Handler object with traps for get and set operations
+let handler = {
+  // Trap for property access
+  get(target, property, receiver) {
+    console.log(`Accessing property '${property}'`);
+    return Reflect.get(...arguments); // Uses Reflect API for default operations
+  },
+  // Trap for property assignment
+  set(target, property, value, receiver) {
+    console.log(`Adding '${value}' to the list`);
+    target[property] = value; // Updates the target list
+    // Here, additional actions can be implemented, such as validation or UI updates
+    return true; // Indicates that the operation was successful
+  }
+};
+
+// The original list to be monitored
+let originalList = [];
+
+// Creating the proxy for the original list
+let proxyList = new Proxy(originalList, handler);
+
+// Performing operations on the proxy list
+proxyList.push('Apple');  // Output: Adding 'Apple' to the list
+proxyList.push('Banana'); // Output: Adding 'Banana' to the list
+```
+
+In this enhanced example, interactions with the `proxyList` trigger the appropriate handler within the `handler` object. Adding a new item to the list via the `push` method activates the `set` trap, which logs the operation and facilitates additional actions like validations or UI adjustments.
+
+### Advantages of Using Proxies
+
+- **Interception and Customization**: Proxies offer a powerful means to intercept and tailor the behavior of fundamental operations on objects, enabling the implementation of custom behaviors and checks.
+- **Programmatic Validation**: They provide a mechanism for enforcing programmatic validation rules and constraints on object properties, enhancing data integrity and application robustness.
+- **Change Detection**: Proxies are instrumental in detecting changes to objects and arrays, supporting reactive programming patterns by facilitating dynamic responses to data modifications.
+
 ## Implement `LazyMan` Class
 
 The `LazyMan` class simulates a sequence of actions for an individual, incorporating actions such as eating or sleeping. Allows for the chaining of `eat` and `sleep` methods, improving code readability and flow. Utilizes JavaScript's event loop to introduce a delay with the `sleep` method before continuing to the next action, demonstrating asynchronous behavior.
@@ -2175,6 +2227,33 @@ function switchLetterCase(s: string): string {
 
 # 4. Network Systems.md
 
+## HTTP Status Codes
+### 1xx: Informational
+- **100 Continue**: Indicates that the initial part of a request has been received and the client should continue with the request.
+
+### 2xx: Success
+- **200 OK**: The request has succeeded. The information returned with the response depends on the method used in the request.
+- **201 Created**: The request has been fulfilled and has resulted in one or more new resources being created.
+- **204 No Content**: The server successfully processed the request, but is not returning any content.
+
+### 3xx: Redirection
+- **301 Moved Permanently**: This response code means that the URI of the requested resource has been changed permanently.
+- **302 Found**: This response code means that the URI of the requested resource has been changed temporarily.
+- **304 Not Modified**: Indicates that the resource has not been modified since the last request.
+
+### 4xx: Client Error
+- **400 Bad Request**: The server cannot or will not process the request due to an apparent client error.
+- **401 Unauthorized**: Similar to 403 Forbidden, but specifically for use when authentication is required and has failed or has not yet been provided.
+- **403 Forbidden**: The request was valid, but the server is refusing action.
+- **404 Not Found**: The requested resource could not be found but may be available in the future.
+- **429 Too Many Requests**: The user has sent too many requests in a given amount of time.
+
+### 5xx: Server Error
+- **500 Internal Server Error**: A generic error message, given when an unexpected condition was encountered and no more specific message is suitable.
+- **502 Bad Gateway**: The server was acting as a gateway or proxy and received an invalid response from the upstream server.
+- **503 Service Unavailable**: The server is currently unavailable (because it is overloaded or down for maintenance).
+- **504 Gateway Timeout**: The server was acting as a gateway or proxy and did not receive a timely response from the upstream server.
+
 ## Tell the difference of Ajax, Fetch and Axios
 
 Ajax, Fetch, and Axios are all tools for making HTTP requests in web applications, but they have distinct characteristics and uses.
@@ -2276,36 +2355,46 @@ This approach involves configuring the server to send appropriate CORS headers, 
 ## What is Restful API
 RESTful APIs are architectural guidelines for designing networked applications. They rely on stateless, client-server communication, where operations are performed using standard HTTP methods. For managing a blog, RESTful APIs provide endpoints for creating (POST), deleting (DELETE), updating (PATCH or PUT), and querying (GET) blog posts. Each operation targets a specific resource, identified by a URL, and uses the appropriate HTTP method to convey the action. For updates, PUT replaces an entire resource, while PATCH modifies parts of it, making PATCH more suitable for updates where only a few fields change. This approach to API design promotes scalability, simplicity, and flexibility.
 
-## What is the difference between a token and a cookie in web requests?
+## User Authentication: Cookies vs. Tokens
+### Cookies
 
-### Cookie
-A cookie is a small piece of data sent from a website and stored on the user's computer by the web browser while browsing. Cookies enable websites to remember stateful information (such as items in a shopping cart) or to record browsing activities (like logging in or visiting pages). They are also used to recall information entered into form fields, such as names and addresses.
+Cookies are small data pieces sent from a website and stored on the user's device by their browser. They play a vital role in maintaining session state and personalizing user experience on the web.
 
-- Cookies help maintain a user's session by being included in every request to identify the session due to HTTP's stateless nature.
-- Servers send a "Set-Cookie" header to the client, with cookies limited to 4KB.
-- Cookies are subject to Same-Origin Policy (SOP), preventing them from being shared across different origins.
-- Before HTML5, cookies were used for data storage, but LocalStorage and SessionStorage are now preferred.
+- **Functionality**: Cookies are essential for managing user sessions. By attaching to every request, they help overcome HTTP's stateless nature, ensuring users remain logged in as they navigate a site.
+- **Limitations**: Each cookie is limited to 4KB and must adhere to the Same-Origin Policy (SOP), which prevents sharing across different origins. Modern web practices favor LocalStorage and SessionStorage for data storage due to these limitations.
+- **Security and Privacy**: In response to privacy concerns, modern browsers are restricting third-party cookies. Despite this, cookies are still widely used for authentication, in tandem with server-side sessions. To enhance security, the `HttpOnly` attribute can be set, preventing client-side script access and mitigating XSS attack risks.
 
-Modern browsers are limiting or blocking third-party cookies to improve privacy. This is aimed at reducing third-party ads and trackers that invade privacy, separate from the Same-Origin Policy.
+**Authentication with Cookies and Sessions**
 
-**Cookies + Sessions for authentication**
-- **Cookies** are used for login authentication, storing identifiers like a user ID.
-- **Sessions** are server-side storage of user information linked to cookie identifiers.
-- Cookies and sessions together maintain authenticated states across web requests. The process typically involves the client sending credentials, the server updating the session and setting a cookie, and subsequent requests being personalized and secure based on the cookie.
+- Cookies contain identifiers (e.g., user ID), facilitating user authentication.
+- Server-side sessions store user information linked to these identifiers, maintaining authenticated states across web requests.
+- The authentication flow involves the server setting a cookie after successful credential verification, with subsequent requests using this cookie for secure and personalized interactions.
 
-### Token
-- Tokens, unlike cookies, are not part of the HTTP standards and can be customized. They need manual storage, such as in LocalStorage.
-- Tokens are not automatically managed by browsers and must be manually set and sent in headers, for example, as "Authorization: Bearer <token>".
-- Unlike cookies, tokens do not have inherent CORS limitations.
-- **JWT (JSON Web Token)** is a common type of token that involves the backend authenticating a login request and returning an encrypted string token, which the client stores and includes in the header of subsequent requests.
+### Tokens
 
-### Follow up: Session vs Token, which is better
-The choice between session and token-based authentication depends on the specific requirements and constraints of the application.  
-For applications prioritizing server control over user sessions, quick user management actions, and where server resources are not a major concern, session-based authentication may be preferred.  
-For applications requiring scalability across multiple servers, reduced server load, and flexibility in handling requests from various domains (thus minimizing CORS issues), token-based authentication is often the better choice.  
-Both approaches have their merits and drawbacks, and the decision should align with the application's architectural needs, security requirements, and expected user load.  
+Tokens offer a customizable alternative to cookies, not bounded by HTTP standards. They are especially useful in scenarios requiring flexibility and cross-domain requests.
 
-### Follow up: How to Achieve SSO (Single Sign-On)?
+- **Storage and Management**: Unlike cookies, tokens need manual storage (e.g., in LocalStorage) and must be explicitly included in headers (e.g., `Authorization: Bearer <token>`).
+- **Cross-Origin Resource Sharing (CORS)**: Tokens are not restricted by CORS, offering greater flexibility for cross-domain requests.
+- **JWT (JSON Web Token)**: A prevalent type of token, JWTs are encrypted strings returned by the backend upon authentication. They contain all necessary user state information, enabling stateless authentication and facilitating scalability and performance in distributed systems.
+
+**Advantages of JWT**
+
+- **Cross-Domain Authentication**: JWTs operate independently of cookies, making them ideal for cross-domain scenarios.
+- **Stateless Authentication**: With no need for server-side session storage, JWTs are perfect for distributed systems, enhancing scalability and reducing server load.
+- **Self-Contained**: JWTs carry all necessary user information, allowing servers to verify requests with just the token, without database lookups.
+- **Scalability and Performance**: The stateless nature of JWTs reduces the need for server resources, making them suitable for large-scale applications.
+
+### Session vs. Token: Choosing the Right Approach
+
+The choice between session and token-based authentication depends on application needs:
+
+- **Session-Based Authentication** is preferred for applications requiring tight server control over user sessions and where server resource availability is not a constraint. It facilitates immediate user management actions.
+- **Token-Based Authentication** shines in applications demanding scalability, reduced server load, and flexibility in cross-domain requests, minimizing CORS issues.
+
+The decision should be guided by the application's architectural requirements, security needs, and anticipated user volume, balancing the trade-offs between control, scalability, and flexibility.
+
+## Follow up: How to Achieve SSO (Single Sign-On)?
 
 Single Sign-On (SSO) is an authentication process that allows a user to access multiple systems with one set of login credentials. This process involves three parties: the client side, the server side (System A), and a third-party SSO provider. The SSO flow typically follows these steps:
 
@@ -2562,6 +2651,64 @@ if (Math.abs(sum - target) < tolerance) {
     console.log('Not Equal');
 }
 ```
+
+## Front-End Storage Options
+
+Understanding the different storage options available in front-end development is crucial for managing data efficiently and enhancing user experience. Each storage mechanism has its unique features, capacity, and use cases. Here, we'll explore three primary storage spaces: `LocalStorage`, `SessionStorage`, and `Cookies`, focusing on their characteristics, benefits, and practical applications.
+
+### LocalStorage
+
+LocalStorage provides a way to store data persistently on the client's browser. It's a key-value storage mechanism that allows data to remain saved across browser sessions and even after the browser is closed and reopened.
+
+**Features:**
+
+- **Persistent Storage:** Data remains until it's explicitly removed via script or by the user, making it reliable for long-term data storage.
+- **Capacity:** Offers around 5MB of storage per domain, which is sufficient for most use cases without impacting performance.
+- **Access:** Data is accessible synchronously, ensuring easy retrieval from the same domain without involving server requests.
+
+**Uses:**
+
+- Ideal for saving user preferences, themes, or other settings that enhance the user experience.
+- Caching application data to speed up load times and reduce dependency on network requests.
+- Storing game progress or application states that can be resumed later.
+
+### SessionStorage
+
+SessionStorage is similar to LocalStorage in many ways but is designed for storage that lasts only for the duration of the page session. It's perfect for data that doesn't need to persist beyond the current tab or window.
+
+**Features:**
+
+- **Tab-Specific Storage:** Unique storage space for each tab or window, cleared automatically when the tab or window is closed.
+- **Capacity:** Also offers about 5MB of storage per domain, aligning with LocalStorage.
+- **Access:** Allows for synchronous access within the same domain, facilitating quick data retrieval for the session's duration.
+
+**Uses:**
+
+- Suitable for storing data related to user input, form states, or selections within a single session, preventing data loss when navigating pages.
+- Temporary storage of application states that should not be retained after the session ends.
+- Facilitating state management in single-page applications (SPAs) for a seamless user experience without persisting data beyond necessity.
+
+### Cookies
+
+Cookies are fundamentally different from LocalStorage and SessionStorage in that they are intended to be sent to and from the server with each HTTP request. This makes them a powerful tool for session management and tracking user activity.
+
+**Features:**
+
+- **Server Communication:** Automatically included with every HTTP request, making them ideal for authentication and state management.
+- **Capacity:** Limited to about 4KB per cookie, which constrains their use to smaller data sets.
+- **Expiration:** Can be set with a specific expiration date, after which they're deleted automatically, supporting both session-based and persistent storage strategies.
+
+**Uses:**
+
+- Managing user sessions by storing session identifiers, enabling users to remain logged in between visits.
+- Storing user preferences or settings that influence server-side rendering or content delivery.
+- Implementing tracking mechanisms for analytics, user behavior analysis, or targeted advertising.
+
+### Choosing the Right Storage Mechanism
+
+- **LocalStorage** shines for storing larger amounts of data that need to persist over long periods, without the overhead of server communication. It's best for enhancing client-side experience with minimal impact on performance.
+- **SessionStorage** offers a transient storage solution for sensitive or temporary data, ensuring that information is not retained beyond the necessary scope of the user's session.
+- **Cookies** remain a staple for scenarios requiring server-side access to client data, especially for authentication, session management, and personalization efforts. Their small size and automatic transmission with HTTP requests make them indispensable for certain tasks, albeit with considerations for security and performance.
 
 ## Explain how the stack is used in memory management for frontend applications
 It operates on a Last In, First Out (LIFO) principle, efficiently managing function calls and primitive data types. When a function is invoked, its variables are pushed onto the stack, and upon the function's completion, they are removed. This system is particularly suitable for handling temporary, short-lived data. However, the stack's limited size means excessive usage can result in a stack overflow error.
@@ -3309,6 +3456,143 @@ componentDidMount() {
 }
 // Expected output sequence: --Start--, current state value, --End--, --Promise then--
 ```
+
+## Advantages of Next.js Over React
+
+Next.js is an advanced framework built on top of React. It introduces a set of features aimed at improving the development and performance of web applications. Here's an organized and enhanced overview of its key benefits:
+
+- **Server-Side Rendering (SSR)**
+  - SSR greatly enhances the user experience by speeding up the initial page load times. It does so by serving fully-rendered HTML pages from the server, ready for the browser to display. This not only reduces the time users spend waiting for content to become interactive but also significantly boosts SEO. Search engines can crawl and index the content more effectively because it's fully rendered upfront.
+
+- **Static Site Generation (SSG)**
+  - SSG allows developers to pre-render pages during the build process. These pages are then served instantly from a Content Delivery Network (CDN), which drastically cuts down on load times and server processing. This method is particularly efficient for sites with content that doesn't change often, making it a stellar choice for blogs, documentation sites, and corporate websites.
+
+- **Incremental Static Regeneration (ISR)**
+  - ISR combines the strengths of SSR and SSG to offer a dynamic solution for static content. It allows pages to be regenerated with updated data on a per-request basis without necessitating a complete site rebuild. This innovative approach means that websites can serve static pages for fast load times while still updating content in almost real-time, a game-changer for e-commerce sites, news platforms, and more.
+
+- **File System Routing**
+  - By utilizing the filesystem for routing, Next.js makes page creation and route management straightforward. Developers can simply add files to the `pages` directory, and the framework automatically creates routes matching the file structure. This convention-over-configuration approach simplifies navigation and streamlines the development process.
+
+- **API Routes**
+  - With built-in support for API routes, Next.js enables developers to handle frontend and backend code within the same project. This facilitates the development of full-stack applications without the need to separate the client and server logic, streamlining project management and deployment.
+
+- **Built-In CSS and Sass Support**
+  - Next.js simplifies the styling process by natively supporting CSS and Sass. Developers can import styles directly into components without any extra setup or configuration, making it easier to manage styles and ensuring that styles are only loaded when the component is rendered, thereby improving performance.
+
+- **Optimized Performance and Automatic Code Splitting**
+  - Next.js automatically splits code at the page level, ensuring that only the necessary JavaScript is loaded for each page. This results in faster page loads and a smoother browsing experience for users. The framework also includes various optimization features out of the box, such as image optimization, minimizing the effort required to achieve high performance.
+
+- **Community and Ecosystem**
+  - Next.js benefits from a large and active community of developers. This vibrant ecosystem provides a wealth of plugins, tools, and integrations, addressing common development challenges and facilitating innovation. The strong community support also means that developers have access to a plethora of resources, tutorials, and forums for learning and troubleshooting.
+
+## Next.js Rendering Strategies: SSR, SSG, and ISR vs. Traditional React Rendering
+### Server-Side Rendering (SSR)
+
+**Overview**: SSR dynamically generates HTML for each page request at the server level. This approach allows the server to pre-render React components into HTML, enhancing SEO and ensuring content is immediately available to the user upon request.
+
+**Workflow**:
+1. **Request Initiation**: A user or search engine makes a request to the server for a specific page.
+2. **React Component Rendering**: The server executes React components associated with the requested route, generating the page's HTML.
+3. **HTML Delivery**: This HTML is sent to the client's browser, displaying the content instantly.
+4. **Hydration**: The browser subsequently downloads the JavaScript bundle, enabling interactivity through React hydration.
+
+**Implementation**: Utilize the `getServerSideProps` function within Next.js pages to perform server-side operations, such as fetching data, which is then passed as props to the component.
+
+### Static Site Generation (SSG)
+
+**Overview**: SSG pre-renders pages into static HTML files during the build phase. These files are served directly to the browser, significantly reducing load times and server requests.
+
+**Workflow**:
+1. **Build-time HTML Generation**: During the build, Next.js pre-renders pages into static HTML using the site's React components.
+2. **Static File Serving**: The generated HTML files are stored and served as static resources upon request.
+3. **Immediate Content Display**: Browsers display the static content instantly upon loading.
+4. **Hydration Process**: Similar to SSR, the static content is then hydrated to become fully interactive.
+
+**Implementation**: Leverage `getStaticProps` for data fetching at build time and `getStaticPaths` for dynamic routing, enabling the generation of static pages with dynamic content.
+
+### Incremental Static Regeneration (ISR)
+
+**Overview**: ISR combines the best of SSR and SSG, allowing for static pages to be updated "on-the-fly" after deployment without needing a full rebuild of the site.
+
+**Workflow**:
+1. **Initial Static Generation**: Pages are generated statically at build time.
+2. **Regeneration Trigger**: Upon a page request, the server evaluates if the page should be updated based on specified criteria (e.g., time intervals).
+3. **Stale Content Delivery with Background Regeneration**: If an update is needed, the server serves the current (stale) version to the user, while a new version is generated in the background for subsequent requests.
+4. **Continuous Updates**: This mechanism ensures content remains fresh without sacrificing load times.
+
+**Implementation**: Use `getStaticProps` with the `revalidate` property to set the conditions under which a page should be regenerated.
+
+### Traditional React Project Rendering
+
+**Characteristics**: Traditional React apps primarily rely on Client-Side Rendering (CSR), where a static HTML file is sent to the browser, and React renders the UI dynamically in the browser.
+
+**Comparative Analysis**:
+- **Performance & SEO**: Next.js strategies like SSR, SSG, and ISR enhance initial page load speed and improve SEO by serving pre-rendered content. Conversely, CSR may result in slower initial loads and SEO challenges.
+- **Development Experience**: Next.js offers a comprehensive framework with built-in features for optimization, which can introduce a learning curve compared to the straightforwardness of traditional React but ultimately provides a richer set of tools for developers.
+- **Flexibility & Optimization**: With Next.js, developers can choose the most suitable rendering strategy for each part of their application, offering unparalleled flexibility and optimization opportunities. Traditional React's reliance on CSR may be simpler but lacks the built-in mechanisms for optimizing performance and SEO in diverse scenarios.
+
+## Next.js Lifecycle Events and Phases
+### Server-side Lifecycle (During SSR or SSG)
+
+The server-side lifecycle begins when a page request is made. Next.js processes this request in distinct stages to serve the requested content efficiently.
+
+**Data Fetching**
+
+Data fetching methods enable you to pull data into your application during different stages of the rendering process. These methods cater to various rendering strategies:
+
+- **`getStaticProps`**: Utilized during the build time for static generation. It fetches data and passes it as props to your page at build time, making it ideal for pages that can pre-render with static data.
+- **`getServerSideProps`**: Executed on every request in server-side rendering contexts. This function allows for data fetching on a per-request basis, ensuring that the rendered page always includes the most up-to-date data.
+- **`getInitialProps`**: Although still supported, this method is less recommended. It can fetch data for both SSR and CSR but lacks the efficiency and specificity of `getStaticProps` and `getServerSideProps`. It can be used in pages and the `_app.js` component.
+
+**Rendering**
+
+Next.js then proceeds to render the page:
+
+- After executing the appropriate data fetching methods, Next.js server renders the React components into HTML, combining them with the fetched data.
+
+**Result**
+
+- The server responds to the client's request by sending the rendered HTML along with any fetched JSON data (for `getStaticProps` or `getServerSideProps`), ensuring an optimized initial load.
+
+### Client-side Lifecycle
+
+Upon receiving the HTML, the browser re-hydrates the static content into a dynamic React application, enabling interactive features.
+
+**Mounting**
+
+The mounting phase establishes the foundation of the application's client-side lifecycle:
+
+- **`constructor`**: Initializes the component state and binds event handlers.
+- **`static getDerivedStateFromProps`**: Updates the state based on changes to props over time.
+- **`render`**: Responsible for UI rendering.
+- **`componentDidMount`**: Marks the component as fully interactive. It's the ideal place for operations that should only occur in a client-side context, such as API calls exclusive to the client.
+
+**Updating**
+
+The updating phase manages changes to props or state:
+
+- **`static getDerivedStateFromProps`**: Prepares for state changes derived from new props.
+- **`shouldComponentUpdate`**: Determines if the component should re-render in response to state or props changes.
+- **`render`**: Re-renders the UI based on state or props changes.
+- **`getSnapshotBeforeUpdate`**: Captures the DOM state before updates (e.g., for scroll position).
+- **`componentDidUpdate`**: Invoked after re-rendering, suitable for DOM updates based on the latest changes.
+
+**Unmounting**
+
+- **`componentWillUnmount`**: Cleans up any resources allocated during the component's lifecycle, such as timers or network requests, to prevent memory leaks.
+
+### Navigation
+
+Next.js enhances client-side navigation through:
+
+- Prefetching resources for linked pages, making subsequent page loads almost instantaneous.
+- Utilizing Next.js's `<Link />` or the `router.push()` for optimized client-side routing, akin to a single-page application but with the added benefits of Next.js's performance optimizations.
+
+### Build Time
+
+The build phase is critical for optimizing your application:
+
+- **`getStaticProps`** and **`getStaticPaths`** are crucial for static generation, allowing Next.js to pre-render pages with dynamic routes at build time, ensuring faster load times and SEO benefits.
 # 7. Performance.md
 
 ## How to diagnose performance issues in a slow HTML5 page?
