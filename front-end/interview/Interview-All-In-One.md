@@ -274,6 +274,94 @@ CSS Grid Layout is a two-dimensional layout system for the web. It lets you layo
   background-color: lightgrey;
 }
 ```
+
+## Different Ways to Implement a Two-Column Layout with Fixed and Responsive Sides
+
+Creating a layout where one side has a fixed width while the other side adapts responsively is a common requirement in front-end development. Various CSS layout models offer distinct advantages and can be selected based on the specific needs of the project. Understanding these models is essential for effectively designing responsive interfaces.
+
+### Flexbox Layout
+Flexbox is a powerful tool for building dynamic layouts with items of uncertain size. It excels at aligning and distributing space within a container.
+
+```css
+.container {
+    display: flex;
+}
+
+.left-side {
+    width: 200px;
+    background-color: lightblue;
+}
+
+.right-side {
+    flex-grow: 1;
+    background-color: lightgreen;
+}
+```
+**Explanation**: Here, the `.container` is designated as a flex container using `display: flex;`. The `.left-side` maintains a constant width of 200px. The `.right-side` utilizes `flex-grow: 1;` to automatically expand and occupy the remaining space in the container, ensuring a responsive layout.
+
+### Grid Layout
+The CSS Grid Layout is particularly useful for managing more complex and fine-grained layouts. It provides direct control over both rows and columns.
+
+```css
+.container {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+}
+
+.left-side {
+    background-color: lightblue;
+}
+
+.right-side {
+    background-color: lightgreen;
+}
+```
+**Explanation**: In this setup, `grid-template-columns: 200px 1fr;` establishes a two-column grid where the `.left-side` is fixed at 200px and the `.right-side` takes up the remaining space (`1fr` indicates a fraction of the available space), adapting fluidly to changes in the viewport size.
+
+### Float Layout
+While float-based layouts are less common in modern CSS, they're still useful for simpler applications or when modifying legacy projects.
+
+```css
+.container {
+    overflow: hidden; /* Clears the float effect within the container */
+}
+
+.left-side {
+    float: left;
+    width: 200px;
+    background-color: lightblue;
+}
+
+.right-side {
+    width: calc(100% - 200px); /* Dynamic calculation of the width */
+    background-color: lightgreen;
+}
+```
+**Explanation**: The `.left-side` is floated to the left, allowing the `.right-side` to dynamically adjust its width using `calc(100% - 200px);`. This calculation subtracts the width of the left column from the container's total width, ensuring the right side adapts based on available space.
+
+### Positioning Layout
+Positioning is valuable for explicit spatial control in a layout, useful for overlaying elements or setting a component within a specific area.
+
+```css
+.container {
+    position: relative;
+}
+
+.left-side {
+    position: absolute;
+    width: 200px;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background-color: lightblue;
+}
+
+.right-side {
+    margin-left: 200px; /* Ensures no overlap with the left side */
+    background-color: lightgreen;
+}
+```
+**Explanation**: The `.left-side` is absolutely positioned relative to its parent, which is made a positioning context with `position: relative;`. This setup ensures that the `.left-side` stays fixed while the `.right-side` uses a `margin-left` of 200px to start to the right of the left side, remaining responsive and adjusting based on the container's width.
 # 2. Javascript.md
 
 ## JavaScript's Strict Mode Features
@@ -989,6 +1077,38 @@ b -> {n: 1, x: {n: 2}}
 
 - `console.log(a.x)` prints `undefined`, because 'a' now points to `{n: 2}`, which does not have an 'x' property.
 - `console.log(b.x)` prints `{n: 2}`, because 'b' still points to the original object, which now includes `x: {n: 2}`.
+
+## Understanding Function Parameters and Arguments in JavaScript
+```javascript
+function modifyObject(a) {
+    a.x = 1;
+    console.log(a.x);  
+    a = { x: 3 };
+    console.log(a.x);  
+}
+
+var obj = { x: 0 };
+modifyObject(obj);
+console.log(obj.x); 
+```
+
+### Detailed Output Explanation
+
+1. **Initial Object Setup**: We start with an object `obj` initialized with a property `x` set to 0: `var obj = { x: 0 };`.
+
+2. **Function Invocation**: The function `modifyObject` is called with `obj` as its argument.
+
+    - **Inside the Function**:
+      - **Property Modification**: By executing `a.x = 1;`, the property `x` of the object `a` is updated to 1. Since JavaScript objects are passed by reference, this modification impacts the `obj` object outside the function.
+      - **First Console Log**: `console.log(a.x);` logs the updated value of `x`, now 1.
+      - **Object Reassignment**: The line `a = { x: 3 };` changes the local variable `a` to a new object with `x` set to 3. This change is localized to the function's scope and does not affect `obj`.
+      - **Second Console Log**: Outputs `3` as `console.log(a.x);` reflects the value of `x` in the new object, not the original `obj`.
+
+3. **Final Output Outside the Function**: `console.log(obj.x);` outside the function confirms that `obj.x` is still 1. This shows that while `a` was reassigned to a new object inside the function, it did not affect the original object `obj` because the reassignment does not change the original reference to `obj`.
+
+### Understanding Object Behavior with Functions
+
+In JavaScript, objects are manipulated by reference, meaning that when an object is passed to a function, the function receives a reference to the actual object. Any modifications to the object's properties within the function affect the object everywhere it is referenced. Conversely, reassigning the reference within the function to a new object does not affect the original object; it merely changes the local reference within that function's scope.
 
 ## Object Key Data Types in JavaScript
 
@@ -3029,6 +3149,33 @@ const sdk = {
 };
 ```
 
+## How are Hybrid Templates Updated?
+### Template Management and Version Control
+Effective template management is achieved through systematic version control and careful organization:
+
+1. **CMS Upload:** Templates are uploaded to a template server via a content management system (CMS), ensuring that all digital assets are centrally managed.
+2. **Version Tagging:** Each template upload is tagged with a unique version identifier (e.g., v1.0, v1.1). This practice supports effective iteration management, facilitates easy rollback in case of issues, and simplifies version comparisons.
+
+### Template Integration in Applications
+Templates are integrated into applications through a series of steps that ensure their proper utilization and rendering:
+
+1. **Template Retrieval:** Applications fetch the latest template versions from the server as needed, downloading essential files including HTML, JavaScript (JS), and Cascading Style Sheets (CSS).
+2. **Webview Rendering:** The application's view layer utilizes a webview to render the downloaded content. Files are accessed through a URL scheme (e.g., `file://`), allowing for isolated and secure rendering within the app.
+3. **Dynamic Data Rendering:** Webviews make AJAX calls to an API server to retrieve necessary data. This data is then dynamically populated into the HTML templates, creating a personalized user experience.
+
+### Template Update Triggers
+The timing of template updates is crucial to maintain both performance and user experience:
+
+- **At Launch:** Each time the application is launched, it checks for and downloads any available new templates.
+- **Periodic Updates:** Regular checks (e.g., every 5 minutes) are scheduled to ensure the application has the most current template, balancing the need for freshness with performance considerations.
+
+### Managing Template Updates
+The update process is designed to minimize disruption and maximize application performance:
+
+1. **Performance Considerations:** Direct downloads of new templates at the time of detection can adversely affect the app’s responsiveness, particularly under poor network conditions.
+2. **Background Processing:** To avoid performance hits, new templates are downloaded in the background, allowing the application to continue operating with the current version until the update is ready.
+3. **Seamless Switch:** Upon successful download, the application seamlessly transitions to the new template version without interrupting the user experience, ensuring a smooth and imperceptible update process.
+
 ## How to Implement Multi-Tab Communication on a Website?
 
 Implementing multi-tab communication in web applications allows for the sharing of data and messages between different tabs or windows of the same origin. Here are three common methods to achieve this, along with their advantages, limitations, and use cases.
@@ -3950,7 +4097,318 @@ This code example outlines the basic structure and functionality of an analytics
 **Conclusion**
 
 When designing a front-end analytics SDK, the key considerations should include the types of data you wish to collect, how to efficiently and securely transmit this data to the server, and ensuring that your tracking does not adversely affect the user experience. Tailor your SDK to be flexible, extensible, and easy to integrate into existing projects.
-# 9. System Design.md
+
+## Understanding and Configuring Source Maps
+
+Source maps are files that provide a way of mapping code within a compressed or minified file back to its original source. This is particularly useful in JavaScript where the production code is often obfuscated and minified to reduce load times and improve performance. When an error occurs in such scripts, the source map allows developers to see the original code instead of the minified or obfuscated version, thus making debugging much easier.
+
+**Benefits of Source Maps**
+
+- **Debugging**: Converts obfuscated or minified code references back into the original source code, enabling easier debugging.
+- **Error Tracking**: Allows you to trace errors and logs in the production environment back to the exact place in the source code where they were generated.
+
+**How to Locate a Source Map**
+
+Source maps can typically be identified and accessed in one of two ways:
+
+1. By the source mapping URL comment at the end of a JavaScript file, which looks like this: `//# sourceMappingURL=jquery.min.map`.
+2. By a `.map` file located in the same directory as the JavaScript file, e.g., `jquery.min.map`.
+
+### Configuring Source Maps with Webpack
+
+Webpack offers various options for generating source maps, controlled through the `devtool` configuration property. Here are the common settings:
+
+- **`source-map`**: Generates a separate `.map` file and appends a sourceMappingURL comment to the end of the JavaScript file.
+- **`eval-source-map`**: Each module is executed with `eval()` and a SourceMap is added as a DataUrl to the eval.
+- **`inline-source-map`**: Adds a DataUrl containing the sourcemap to the JavaScript file.
+- **`cheap-source-map`**: Generates a source map that includes line numbers only, not column mappings.
+- **`eval-cheap-source-map`**: Similar to `cheap-source-map`, but uses `eval()` and does not produce a separate `.map` file.
+
+**Code Example for Webpack Configuration**
+
+```javascript
+// File: build/webpack.prod.js
+module.exports = {
+  devtool: 'source-map'
+};
+```
+
+Running `npm run build` will generate the source map file in the distribution folder. The generated `.map` file will be referenced at the bottom of the JavaScript file:
+
+```javascript
+//# sourceMappingURL=bundle.xxx.js.map
+```
+
+### Best Practices for Source Map Usage
+
+- **Development Environment**: Use configurations like `eval`, `eval-source-map`, or `eval-cheap-source-map` for faster build and rebuild speed. Alternatively, source maps may be omitted entirely if not needed for initial development testing.
+- **Production Environment**: Use `source-map` to enable detailed debugging capabilities without exposing the source code directly within the JavaScript files.
+- **Open Source Projects**: Source maps should be available to aid other developers in debugging and understanding the codebase.
+- **Proprietary Projects**: Avoid distributing source maps in production to protect the source code. External visibility of source maps can lead to reverse engineering and potential code leakage.
+
+## When to Use SPA and When to Use MPA?
+
+### SPA: Single Page Application
+Single Page Applications (SPAs) are web applications that load a single HTML page and dynamically update that page as the user interacts with the app. SPAs use JavaScript to load content and typically involve frameworks like React, Vue.js, or Angular. These frameworks can be configured as SPAs or MPAs, but are often used to create efficient SPAs due to their component-based architectures.
+
+**Use Cases for SPA:**
+- **Complex Web Applications:** SPAs are ideal for situations where the user experience benefits from a seamless interaction without the page reloads typical of traditional web applications. Examples include advanced project management tools, interactive social media platforms, and rich user dashboards.
+- **High Interaction Applications:** Applications that require real-time user interactions without interruption, such as live data updates, instant messaging platforms, and collaborative tools.
+- **Internal Business Applications:** Large scale enterprise dashboards, such as CRM systems or cloud service consoles, where constant page reloading can hinder productivity.
+
+**Advantages:**
+- **Speed and User Experience:** After the initial load, SPAs do not require page reloads, which can significantly enhance the user experience by providing faster transitions and a smooth, app-like feel.
+- **Reduced Server Load:** Since most resources are loaded once at the start, SPAs can reduce server load during the session.
+
+**Considerations:**
+- **Initial Load Time:** SPAs typically require more time to load initially as they fetch all the necessary JavaScript at once.
+- **SEO Challenges:** Search engines traditionally have difficulties indexing content that is dynamically loaded by JavaScript. This can be mitigated by implementing Server Side Rendering (SSR) or using tools like prerendering.
+
+### MPA: Multi Page Application
+Multi Page Applications (MPAs) work in a traditional way where each change or submission leads to a new page being sent to the client by the server. This approach is straightforward and aligns with the original working of the web.
+
+**Use Cases for MPA:**
+- **Simple Websites:** If the site is mostly static and informational, such as a corporate website, an MPA may be more appropriate.
+- **E-commerce Sites:** Online stores often benefit from an MPA setup, where each product page can be indexed separately by search engines.
+- **Content-driven Projects:** News sites, blogs, and marketing websites where SEO is crucial can benefit from the straightforward link structure and easier indexability of MPAs.
+
+**Advantages:**
+- **SEO:** MPAs have a clear advantage in search engine optimization since each page is indexed separately with its own URL.
+- **Simplicity:** Development can be more straightforward, as the server handles most of the content rendering.
+
+**Considerations:**
+- **User Experience:** Navigating between pages can result in a slower, less seamless user experience, particularly if the server response time is slow.
+- **Higher Server Load:** Each page request loads resources from the server, which can increase load and affect performance during high traffic periods.
+
+### Choosing Between SPA and MPA
+The decision to use an SPA or MPA should not solely be based on technological capabilities but should consider the specific business needs and user experience requirements. Evaluate the complexity of the application, the need for speed and seamless interactions against the importance of SEO, and simplicity in development and maintenance.
+
+## Design a Data Model and Core Features for an HTML5 Low-Code Development Platform
+
+Creating an effective data model for a low-code development platform involves constructing a robust structure that supports extensive customization, real-time collaboration, and project management. This section outlines the primary components and functionalities that should be considered in the design process.
+
+- **User Interface Design Tools:** Tools should allow users to visually create and adjust UI components. Features might include drag-and-drop interfaces, property inspectors, and responsive design options.
+- **Project Management:** Capabilities should include creating new projects, saving ongoing work, publishing finished or interim stages, and managing project versions.
+- **Collaboration Features:** The platform should support simultaneous editing by multiple users, conflict resolution strategies, and live updates to facilitate team-based project development.
+- **Extensibility:** The system should allow for the integration of third-party or custom-built plugins and components to enhance functionality.
+
+### Data Model Considerations
+
+To achieve efficient and scalable management of project data and user activities, consider the following:
+
+- **Data Syncing:** Use technologies such as WebSockets for real-time communication and long polling for less frequent updates to ensure that all users see the most current project state without significant delay.
+- **Component Selection:** Maintain a detailed registry of each user-selected component, identified by unique IDs. This registry should track changes to component properties over time, aiding in undo/redo features and historical edits.
+- **Layer Management:** Implement a system to manage the z-index and stacking of UI components through an organized list or array. This arrangement helps in manipulating layer properties like order, visibility, and nesting.
+
+### Efficient Component Management
+
+Organizing components and their properties efficiently ensures smoother operation and better performance:
+
+- **Style Management:** Centralize styling information within a `style` object for each component to facilitate the application of themes and visual updates.
+- **Layer Representation:** Utilize array indices for managing layer depth to simplify rendering logic and enable quick adjustments to the visual hierarchy.
+
+### Example Implementation in React
+
+Below is an example of a React context provider setup for managing project state in a low-code development environment:
+
+```jsx
+import React, { useContext, useState } from 'react';
+
+const ProjectContext = React.createContext();
+
+const ProjectProvider = ({ children }) => {
+    const [project, setProject] = useState({
+        title: "My New Project",
+        settings: {
+            language: 'EN',
+            theme: 'light',
+        },
+        layout: {
+            backgroundColor: '#f0f0f0',
+            fontSize: '14px',
+        },
+        components: [
+            {
+                id: 'header',
+                name: 'Main Header',
+                type: 'text',
+                style: {
+                    color: '#333',
+                    fontSize: '32px',
+                },
+                attributes: {
+                    content: 'Welcome to Your Project',
+                },
+                children: [],
+            },
+            {
+                id: 'image1',
+                name: 'Feature Image',
+                type: 'image',
+                style: {
+                    width: '100%',
+                    height: 'auto',
+                },
+                attributes: {
+                    src: 'url/to/your/image.jpg',
+                    alt: 'Descriptive Image Alt Text',
+                },
+            }
+        ],
+        selectedComponentId: null,
+    });
+
+    const handleComponentSelect = (componentId) => {
+        setProject(prevProject => ({ ...prevProject, selectedComponentId: componentId }));
+    };
+
+    return (
+        <ProjectContext.Provider value={{ project, setProject, handleComponentSelect }}>
+            {children}
+        </ProjectContext.Provider>
+    );
+};
+
+const App = () => {
+    const { project, handleComponentSelect } = useContext(ProjectContext);
+
+    const renderComponent = (component) => (
+        <div style={component.style} onClick={() => handleComponentSelect(component.id)}>
+            {component.type === 'text' ? component.attributes.content : (
+                <img src={component.attributes.src} alt={component.attributes.alt} style={{ width: '100%', height: 'auto' }} />
+            )}
+        </div>
+    );
+
+    return (
+        <div style={{ backgroundColor: project.layout.backgroundColor }}>
+            <h1 style={{ fontSize: project.layout.fontSize }}>{project.title}</h1>
+            {project.components.map(renderComponent)}
+        </div>
+    );
+};
+```
+
+## Design a "User - Role - Permission" System
+
+Implementing a User - Role - Permission system effectively manages access within software, such as a blog management system. This is typically structured using the Role-Based Access Control (RBAC) model, a proven approach for handling large-scale permission management due to its scalability and maintainability.
+
+RBAC helps simplify the assignment and management of access rights within a system by linking permissions to roles, and roles to users. This model is adaptable, making it easier to implement changes to access policies and manage user permissions with minimal disruption.
+
+### User Types and Permissions
+
+A blog management system may feature several types of users, each with unique permissions:
+
+- **Normal User**: Capable of reading, auditing, and hiding blog posts.
+- **Admin User**: Inherits all permissions of a normal user, and can additionally update and delete blog posts.
+- **Super Admin**: Inherits all permissions of an admin user, with further capabilities to manage user accounts, assign roles, and modify user roles and permissions.
+
+### Data Models
+
+Key entities in the RBAC system include:
+
+#### User
+- `id`: A unique identifier for each user.
+- `user_name`: A username for logging in.
+- `hashed_password`: A securely encrypted password.
+- `comment`: An optional field for notes or additional information about the user.
+
+#### Role
+- `id`: A unique identifier for each role.
+- `role_name`: The name of the role, indicative of its associated permissions.
+
+#### Permission
+- `permission_id`: A unique identifier for each permission.
+- `permission_name`: A description of the action that the permission allows.
+
+### Relationships
+
+Effective management of relationships is crucial in an RBAC system to maintain data integrity and system security.
+
+#### User_Role
+- `user_id`: Connects to a specific user.
+- `role_id[]`: An array of role identifiers, enabling a many-to-many relationship between users and roles.
+
+#### Role_Permission
+- `role_id`: Connects to a specific role.
+- `permission_id[]`: An array of permission identifiers, allowing a role to be associated with multiple permissions.
+
+### Functional Modules
+
+The system should be divided into manageable modules to enhance maintainability and scalability:
+
+- **User Management**: Handles creating, deleting, modifying users, and assigning roles.
+- **Role Management**: Manages creating, deleting, and modifying roles, as well as assigning permissions.
+- **Permission Management**: Responsible for creating, deleting, and modifying permissions.
+
+### Design Principles
+
+- **Clarity**: Components should be distinct and understandable to both developers and end-users.
+- **Maintainability**: The system should be easy to modify and update.
+- **Scalability**: Designed to accommodate growth in users, roles, and permissions without degradation in performance.
+- **Standards Adherence**: Follow established best practices and standards, utilizing existing solutions before developing new methodologies.
+
+## Design a HTML5 prize draw page, what are the backend api you need to implement?
+Thinking process:  
+1. think about the user flow, business logic process, different stages of the process
+2. think about the api you need to implement in each step
+
+### User Flow and Business Logic
+
+1. **User Registration and Authentication**: This is the starting point for user interaction on the prize draw page. Users need to log in or register to participate.
+2. **Prize Draw Participation**: The system checks if the user has already participated in the draw. If not, the user can proceed to draw a prize.
+3. **Result Handling and Information Submission**: After drawing, the user can see the results and must submit additional information (e.g., shipping address) if they win.
+4. **Post-Draw Interactions**: Users can check the status of their prize, view previous draws, and get details about the prizes they've won.
+
+### Backend API Requirements
+
+To support the user flow and business logic detailed above, a robust set of backend APIs will need to be developed:
+
+1. **User API**: Register a new user. Authenticate a user. Retrieve user profile information. Update user profile information.
+
+2. **Draw Prize API**: Perform a prize draw. Retrieve the current status of a draw. Fetch the result of the last prize draw.
+
+3. **Prize API**: List all available prizes. Get details about a specific prize. Retrieve the user's prize draw history. Update information about a prize (admin restricted).
+
+4. **Statistics API**: Obtain general statistics about page visits, user participation in draws, and shares.
+
+5. **Share API**: Log a user's action of sharing the page to social media.
+
+## How would you approach technology selection as the front-end lead on a project?
+
+Choosing the right technology stack is essential for the success of a project. This decision should be guided by several factors, which include but are not limited to the project requirements, the team's expertise, and the long-term maintenance of the project.
+
+1. Choosing a Front-End Framework
+
+    Frameworks like Vue, React, Nuxt.js, and Next.js each have their strengths and are suitable for different kinds of projects:
+
+    - **Vue and Nuxt.js**: Best for progressive web applications and when you need a quick development environment setup. Vue's ecosystem is friendly and incrementally adoptable.
+    - **React and Next.js**: Ideal for large-scale applications with complex states and dynamic content. React's component-based architecture facilitates reusable UI components.
+2. Selecting the Programming Language
+   - **JavaScript**: The standard language of the web; vast ecosystem, high flexibility.
+   - **TypeScript**: Offers type safety and is preferable in large projects to reduce bugs and enhance code quality.
+3. DevOps, CI/CD, and Build Tools
+   - Incorporating DevOps practices and continuous integration/continuous delivery (CI/CD) pipelines ensures that your development process is efficient and that deployments are smooth.
+   - Common build tools like Webpack and Babel are essential for bundling JavaScript applications and managing assets.
+
+### Decision Factors
+- Is the community mature?  
+    A mature community means better support, more libraries, and a greater likelihood of finding solutions to problems that arise.
+- Does our company have experience with the technology?
+    Leveraging existing knowledge can reduce training time and lead to faster development cycles.
+-Cost of learning for the team
+    Consider how easy it is for your team to learn the technology. Avoid high learning curves if speed is a priority.
+
+### Cost Considerations
+-Learning Curve
+    Technologies that are complex to understand or that have poor documentation can slow down development.
+- Maintenance
+    For instance, excessive use of `any` in TypeScript can defeat the purpose of using TypeScript in the first place due to the lack of type safety.
+- DevOps Costs
+    The integration of continuous integration and continuous delivery systems can vary in complexity and cost depending on the chosen technologies.
+
+**Final Note**: While there's no inherently "good" or "bad" technology, the best choice always depends on the specific context of the project and the composition of the team. It's important not to follow trends blindly but to choose technologies that offer the best balance of benefits to challenges in your specific situation. Always be balanced and analytical in your approach to technology selection.
+# 9. Design Patterns.md
 
 ## Common Design Patterns in Front-End Development and Their Usage Scenarios
 
