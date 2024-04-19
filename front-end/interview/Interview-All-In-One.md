@@ -429,46 +429,6 @@ In this setup, `white-space: nowrap` ensures the text stays on a single line, `o
 
 This method uses `-webkit-box`, `-webkit-box-orient`, and `-webkit-line-clamp` to achieve multi-line truncation. It's important to note that this approach is somewhat limited by its compatibility with only webkit-based browsers (e.g., Safari, Chrome). However, it's widely used due to its simplicity and effectiveness in most web scenarios.
 
-## Solve Styling Problem: Responsive Three-Div Setup
-
-You have a large `div` element that contains three smaller `div` elements. The goal is to position these three child `div`s side by side — left, center, and right within the parent `div`. The left and right `div`s have a fixed width, while the center `div` should automatically adjust its width to occupy all remaining space.
-
-**Solution**  
-To achieve this layout, you can use CSS Flexbox. Flexbox provides an efficient way to distribute space and align items within a container, even when their size is unknown or dynamic.
-
-1. **Set the Display Property of the Parent `div`**: First, you need to define the parent `div` as a flex container. This is done by setting its `display` property to `flex`.
-
-    ```css
-    .parent {
-        display: flex;
-    }
-    ```
-
-2. **Define the Width of the Child `div`s**: Next, specify the width for the left and right child `div`s since they have a fixed size. The width can be set in pixels, ems, or any other CSS units.
-
-    ```css
-    .left, .right {
-        width: 100px; /* Example fixed width */
-    }
-    ```
-
-3. **Flexible Width for the Center `div`**: For the center `div`, you want it to fill the remaining space. This is achieved by setting the `flex-grow` property to a value greater than 0. Setting it to 1 tells the `div` to occupy any available space.
-
-    ```css
-    .center {
-        flex-grow: 1;
-    }
-    ```
-
-**HTML Structure:**
-```html
-<div class="parent">
-    <div class="left">Left</div>
-    <div class="center">Center</div>
-    <div class="right">Right</div>
-</div>
-```
-
 ## Flexbox Layout
 
 Flexbox, formally known as the Flexible Box Layout, is a one-dimensional layout method for laying out items in rows or columns within a container. It allows you to design a complex layout structure with a simpler and more flexible approach.
@@ -578,6 +538,119 @@ CSS Grid Layout is a two-dimensional layout system for the web. It lets you layo
   background-color: lightgrey;
 }
 ```
+
+## Responsive Three-Div Setup
+
+The layout includes two fixed-width divs on the sides (`left` and `right`) and a dynamically adjusting center div (`center`).
+
+### HTML Structure
+The foundation of the layout starts with basic HTML:
+
+```html
+<div class="parent">
+    <div class="left">Left</div>
+    <div class="center">Center</div>
+    <div class="right">Right</div>
+</div>
+```
+
+### CSS Resets
+Consistent styling across browsers begins with CSS resets:
+
+```css
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+div {
+    height: 100px;  /* Example height for visualization */
+}
+.left, .right {
+    width: 100px;  /* Fixed width for left and right divs */
+}
+```
+
+### Styling Solutions
+Explore different CSS solutions to achieve the layout, each with their unique benefits and limitations.
+
+### Float-Based Layout
+Utilize CSS floats for a traditional approach:
+
+```css
+.left {
+    float: left;
+}
+.right {
+    float: right;
+}
+```
+**Pros**: Broad compatibility with older browsers.  
+**Cons**: Potential layout quirks requiring `clear` fixes.
+
+### Table Display Layout
+Simulate table behavior with CSS:
+
+```css
+.parent {
+    display: table;
+}
+.left, .center, .right {
+    display: table-cell;
+}
+```
+**Pros**: Stable and predictable rendering.  
+**Cons**: Semantically inappropriate for non-tabular data.
+
+### Absolute Positioning Layout
+Control positioning explicitly:
+
+```css
+.parent {
+    position: relative;
+}
+.left {
+    position: absolute;
+    left: 0;
+}
+.right {
+    position: absolute;
+    right: 0;
+}
+.center {
+    position: absolute;
+    left: 100px;
+    right: 100px;
+}
+```
+**Pros**: Complete control over positioning.  
+**Cons**: Complicates responsiveness and document flow.
+
+### Flexbox Layout
+Implement a modern responsive solution:
+
+```css
+.parent {
+    display: flex;
+}
+.center {
+    flex-grow: 1;
+}
+```
+**Pros**: Efficient, responsive design with minimal code.  
+**Cons**: Issues with very old browser compatibility.
+
+### Grid Layout
+Create precise layouts with CSS Grid:
+
+```css
+.parent {
+    display: grid;
+    grid-template-columns: 100px 1fr 100px;
+}
+```
+**Pros**: Ideal for complex layouts, clean and versatile.  
+**Cons**: Not fully supported in older browsers.
 
 ## Different Ways to Implement a Two-Column Layout with Fixed and Responsive Sides
 
@@ -825,34 +898,38 @@ The inline-block method is useful for simpler two-column layouts but requires ca
 }
 ```
 Explanation: setting `top`, `right`, `bottom`, and `left` is actually moving the boundary of the box model, not only the content. Setting them all to 0 will make the box model fill the container, and since we set the content with fixed dimensions, `margin: auto` will center the box model within the container. 
-# 2. Javascript.md
 
-## JavaScript's Strict Mode Features
+## CSS Graphics: Drawing a Triangle
 
-JavaScript's Strict Mode is a feature that enforces a stricter parsing and error handling mechanism on your JavaScript code. Activating Strict Mode can be done by adding `'use strict';` at the beginning of a script or a function block. This mode intentionally has different semantics from the normal code, aimed at improving code reliability and performance.
+Triangles are an essential graphical element in web design, often utilized to indicate dropdowns in expandable menus or to highlight selected options in navigation bars. By using CSS instead of images to create these shapes, developers can significantly enhance website performance.
 
-### Features of Strict Mode
+**Benefits of Using CSS for Triangles**
 
-1. **Mandatory Variable Declarations**: In Strict Mode, every variable must be declared before use. If a script attempts to use an undeclared variable, JavaScript will throw a `ReferenceError`. This requirement helps to avoid the accidental creation of global variables caused by typographical errors.
+CSS-based triangles improve loading times and reduce data bandwidth by eliminating the need for additional HTTP requests that image files would require. This method is not only efficient but also scalable and easily customizable, facilitating a faster and more responsive user experience.
 
-2. **Disallows the `with` Statement**: The `with` statement is not allowed in Strict Mode because it creates ambiguity about the scope of variables. Its use can lead to significant performance hits and complicates the debugging process, as it modifies the scope chain, making it harder to predict which variables will be affected by a piece of code.
+```html
+<!-- HTML structure -->
+<div class="triangle"></div>
 
-3. **Scoped `eval()` Function**: Any declarations within an `eval()` expression in Strict Mode do not affect the surrounding scope, making `eval()` safer by preventing it from introducing new variables or modifying existing ones in the parent scope.
+<!-- CSS styling -->
+<style>
+.triangle {
+  width: 0; 
+  height: 0;
+  border: 10px solid transparent;
+  border-left: 10px solid red; /* Visible border - color can be changed */
+}
+</style>
+```
 
-4. **Secure `this` Keyword Behavior**: In functions that are not called as methods of an object, the value of `this` is `undefined` in Strict Mode. This contrasts with non-strict mode, where `this` defaults to the global object, reducing the risk of inadvertently modifying the global environment.
+**Technical Explanation and Customization**  
+- **Structure**: The `div` element assigned with the `.triangle` class does not require explicit height or width dimensions as the shape is wholly formed through CSS borders.
+- **Borders**:
+  - **Transparent Borders**: The illusion of the triangle is created by making three sides of a square's borders transparent, thereby visually forming two sides of the triangle.
+  - **Colored Border**: The fourth side (`border-left` in this example) is colored, forming the visible base of the triangle.
+- **Customization**: Altering the direction of the triangle involves changing the border that is colored. For instance, to make the triangle point upwards, apply `border-bottom: 10px solid red;` while keeping the other borders transparent.
 
-5. **Prohibits Duplicate Parameter Names**: Functions cannot have multiple parameters with the same name, which eliminates potential errors from duplicated identifiers and enhances code clarity.
-
-6. **Immutable Non-Writable Properties**: In Strict Mode, attempts to assign values to non-writable properties result in a `TypeError`. This feature ensures the immutability of constants and read-only properties, thus preserving data integrity.
-
-7. **Restrictions on Deleting Properties**: Trying to delete non-deletable properties (such as built-in objects or fixed properties) will throw a `TypeError`, protecting important parts of the language’s core.
-
-8. **No Octal Numeric Literals**: Octal literals and octal escape sequences are not allowed in Strict Mode. This restriction avoids confusion between mistakenly leading zeroes in numbers and octal syntax, making the code more readable and less prone to errors. 
-   - Octal literals are those starting with a leading zero, like `010` stands for 8 in decimal. Octal escape sequences are those starting with `\`, like `\141` stands for `'a'`. We can use `u0061` instead of `\141` to represent `'a'`, and `0o10` instead of `010` to represent `8`.
-
-### Conclusion
-
-By enforcing these constraints, Strict Mode significantly aids in the development of more secure, robust, and clean JavaScript code. It prevents common coding errors, reduces accidental global variable creation, clarifies the scope chain, and enforces a cleaner syntax. Adopting Strict Mode can lead to better performance, easier debugging, and a more structured codebase, which are crucial for maintaining large-scale JavaScript applications.
+# 2.1 Traversing.md
 
 ## Traverse an Array: `for` vs. `forEach`
 
@@ -926,44 +1003,8 @@ for (let [key, value] of m1) {
 }
 ```
 
-## What is and when to use `for await...of`
-The for await...of statement is a feature in JavaScript that allows you to loop over asynchronous iterables—objects that you can iterate over asynchronously, such as Promises. It waits until the Promise is resolved before moving to the next iteration, making it useful for handling asynchronous operations in a sequential manner.
-```ts
-async function processPromises() {
-    function createPromise(val) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(val);
-            }, 1000);
-        });
-    }
 
-    const p1 = createPromise(100);
-    const p2 = createPromise(200);
-    const p3 = createPromise(300);
-    const list = [p1, p2, p3];
-
-    // Iterating over an array of Promises and logging each resolved value
-    // effect is same as:
-    // Promise.all(list).then(res => console.log(res))
-    for await (let res of list) {
-        console.log(res);
-    }
-
-    // Performing asynchronous operations in sequence
-    const arr = [100, 200, 300];
-    for (let num of arr) {
-        const res = await createPromise(num); // Ensure this code is inside an async function
-        console.log(res);
-    }
-}
-
-processPromises();
-```
-
-The `for await...of` loop is a powerful feature for handling asynchronous operations in JavaScript, providing a more intuitive and cleaner way to process sequences of Promises compared to chaining or using `Promise.all()`. It's particularly useful in scenarios where you need to maintain the order of operations or when working with streams of asynchronous data.
-
-`Promise.all()` only make sure the promises are resolved in parallel, or there is an error in any of the promises, but `for await...of` makes sure the promises are resolved in sequence.
+# 2.2 Promise & Async.md
 
 ## Understanding Promise Execution Order
 ### Basic Promise Execution Flow
@@ -1072,13 +1113,60 @@ Promise.resolve().then(() => {
 
 This simulation illustrates the complexity of managing asynchronous operations with promises. It emphasizes the importance of understanding the scheduling mechanisms of promises and their resolutions by the JavaScript event loop and microtask queue to effectively control asynchronous code flow.
 
+## What is and when to use `for await...of`
+The for await...of statement is a feature in JavaScript that allows you to loop over asynchronous iterables—objects that you can iterate over asynchronously, such as Promises. It waits until the Promise is resolved before moving to the next iteration, making it useful for handling asynchronous operations in a sequential manner.
+```ts
+async function processPromises() {
+    function createPromise(val) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(val);
+            }, 1000);
+        });
+    }
+
+    const p1 = createPromise(100);
+    const p2 = createPromise(200);
+    const p3 = createPromise(300);
+    const list = [p1, p2, p3];
+
+    // Iterating over an array of Promises and logging each resolved value
+    // effect is same as:
+    // Promise.all(list).then(res => console.log(res))
+    for await (let res of list) {
+        console.log(res);
+    }
+
+    // Performing asynchronous operations in sequence
+    const arr = [100, 200, 300];
+    for (let num of arr) {
+        const res = await createPromise(num); // Ensure this code is inside an async function
+        console.log(res);
+    }
+}
+
+processPromises();
+```
+
+The `for await...of` loop is a powerful feature for handling asynchronous operations in JavaScript, providing a more intuitive and cleaner way to process sequences of Promises compared to chaining or using `Promise.all()`. It's particularly useful in scenarios where you need to maintain the order of operations or when working with streams of asynchronous data.
+
+`Promise.all()` only make sure the promises are resolved in parallel, or there is an error in any of the promises, but `for await...of` makes sure the promises are resolved in sequence.
+
+
+# 2.3 Object & Prototype.md
+
 ## What is the JavaScript Prototype Chain? How is it Formed?
+Javascript is sometimes referred to as a "prototype-based language" because it relies heavily on prototypal inheritance. The prototype chain is a mechanism that allows objects to inherit properties and methods from other objects. 
+
+When a property or method is accessed on an object, JavaScript will first look for it on the object itself. If it's not found, it will look up the prototype chain to find the property or method on the object's prototype. This process continues up the chain until the property or method is found or until the end of the chain is reached.
+
+The top of the prototype chain is the `Object.prototype` object, which includes common methods and properties like `toString` and `valueOf`. All objects in JavaScript inherit from `Object.prototype`, either directly or indirectly through the prototype chain. That's why you can call methods like `toString` on any object in JavaScript.
+
+### Distinction Between Functions and Objects
 JavaScript treats functions as first-class objects, meaning that every function in JavaScript is actually a special type of object. This distinction is crucial for understanding the prototype chain. There are two key properties involved in the prototype chain mechanism: `prototype` and `__proto__`.
 
 - **`prototype` Property**: This property is present only in functions. It points to the prototype object that will be assigned as the `__proto__` of instances created by that function when using the `new` keyword.
 - **`__proto__` Property**: Every object (including function objects) has this property, which points to the object's prototype, forming a chain up to `null`, the end of the prototype chain.
-
-This chain ensures that when you access a property or method of an object, if it's not found on the object itself, JavaScript will look up the prototype chain until it finds the property/method or reaches the end of the chain.
 
 ### Formation of the Prototype Chain
 
@@ -1187,6 +1275,333 @@ function Foo() {}
 const f = new Foo();
 console.log(myInstanceOf(f, Foo)); // Output: true
 ```
+
+## Object Key Data Types in JavaScript
+
+In JavaScript, the keys of an object can only be strings or symbols. This fundamental principle ensures consistency in how JavaScript engines interpret key values. However, when other data types are used as keys, they undergo a conversion process. Below, we explore the rules and nuances of this conversion process, along with practical examples to deepen understanding.
+
+### Principles of Key Conversion
+
+1. **Allowed Key Types**: Only strings and symbols can be used directly as keys. This limitation is designed to ensure property keys have a predictable format.
+2. **Conversion of Other Types**: If a key is not a string or symbol, JavaScript will automatically convert it to a string using the object's `toString()` method.
+3. **Conversion Rule**: The `toString()` method is universally applied to non-string, non-symbol keys to obtain their string representation.
+4. **Plain Object Conversion**: Any plain object used as a key is converted to the string `"[object Object]"`. This conversion underscores the importance of string and symbol uniqueness.
+5. **Map Object Exception**: Unlike object literals, `Map` objects can use values of any type as keys without automatic conversion. This feature makes `Map` a versatile alternative for complex data structures.
+
+### Examples and Explanations
+
+**Example 1: Numeric and String Key Equivalence**
+
+```javascript
+let a = {}, b = '123', c = 123;
+a[b] = 'b';
+a[c] = 'c';
+console.log(a[b]); // Outputs: 'c'
+```
+- In this example, both `b` (a string) and `c` (a number) are used as keys. Since `c` is converted to a string, it overwrites the value associated with the string `'123'`, demonstrating how numeric keys are treated as their string equivalents.
+
+**Example 2: Symbol Uniqueness**
+
+```javascript
+let a = {}, b = Symbol('123'), c = Symbol('123');
+a[b] = 'b';
+a[c] = 'c';
+console.log(a[b]); // Outputs: 'b'
+```
+- Symbols are unique, so even if `b` and `c` have the same description (`'123'`), they are considered different keys. This example illustrates the utility of symbols for creating distinct key-value pairs.
+
+**Example 3: Plain Object Conversion to String**
+
+```javascript
+let a = {}, b = {key: '123'}, c = {key: '456'};
+a[b] = 'b';
+a[c] = 'c';
+console.log(a[b]); // Outputs: 'c'
+```
+- Here, `b` and `c` are both plain objects. Despite having different properties, they are converted to the same string (`"[object Object]"`) when used as keys, causing `c` to overwrite `b`'s associated value. This highlights the importance of careful key selection to avoid unintended overwrites.
+
+## Value Types vs. Reference Types
+**What is the output of the following code, and why?**
+
+```javascript
+let a = {n: 1}
+let b = a
+a.x = a = {n: 2}
+console.log(a.x)
+console.log(b.x)
+```
+
+To decipher the output of this code snippet, we must delve into several core JavaScript mechanics:
+
+1. **Sequential Assignments Are Executed Right-to-Left**
+
+   Sequential assignments in JavaScript are processed from right to left. This means the right-most assignment is completed first before moving to the left. Here's a simple illustration:
+
+   ```javascript
+   let a = 100;
+   let b = a = 200;
+   // This is processed as:
+   // 1. a = 200
+   // 2. b = a (where a is now 200)
+   ```
+
+2. **Dot Notation for Property Access Has High Precedence**
+
+   When accessing or assigning properties using dot notation, the operation to access the property (or create a reference to it) is prioritized. For instance:
+
+   ```javascript
+   let a = {};
+   a.x = 100;
+   // This operation can be broken down into:
+   // 1. Access (or prepare to access) a.x, which is initially undefined
+   // 2. Assign 100 to a.x
+   ```
+
+With these principles in mind, let's dissect the initial example:
+
+```javascript
+let a = {n: 1}
+let b = a;
+// At this point, both 'a' and 'b' reference the same object: {n: 1}
+
+a.x = a = {n: 2};
+// The operations unfold as follows:
+// 1. The dot notation (a.x) creates a reference for 'x' on the object, setting it to undefined
+// 2. 'a' is then reassigned to a new object: {n: 2}
+// 3. Finally, 'a.x' assigns the new object {n: 2} to 'x', but since 'a' has been reassigned, this operation does not affect the new 'a' but the old object referenced by 'b'
+```
+
+Here's a visual representation of the state changes:
+
+1. After declaring `a` and `b`:
+
+```
+a, b -> {n: 1}
+```
+
+2. Preparing to assign to `a.x`:
+
+```
+a, b -> {n: 1, x: undefined}
+```
+
+3. Reassigning `a`:
+
+```
+a -> {n: 2}
+b -> {n: 1, x: undefined}
+```
+
+4. Attempting to assign `{n: 2}` to `a.x`, which now refers to the old object `b` references:
+
+```
+a -> {n: 2}
+b -> {n: 1, x: {n: 2}}
+```
+
+### Outputs:
+
+- `console.log(a.x)` prints `undefined`, because 'a' now points to `{n: 2}`, which does not have an 'x' property.
+- `console.log(b.x)` prints `{n: 2}`, because 'b' still points to the original object, which now includes `x: {n: 2}`.
+# 2.4 Scope & Closure.md
+
+## What is Scope in JavaScript?
+Scope in JavaScript is a fundamental concept that determines the accessibility of variables, functions, and objects at various levels throughout your code. 
+
+### Types of Scope in JavaScript
+JavaScript implements several layers of scope, each defining a distinct level of variable accessibility from the most general to the most specific: global, local (function), block, and module.
+
+### Global Scope
+Variables and functions in the global scope are accessible from any part of the code. This scope is the outermost layer where any variable or function not contained within a specific block or function belongs.
+
+**Example of Global Scope**:
+```javascript
+var globalVariable = 'I am a global variable';
+console.log(globalVariable); // Output: I am a global variable
+```
+
+**Global Scope and the `window` Object**:
+In browser environments, global scope variables and functions become properties of the `window` object, allowing them to be accessed via this global context.
+
+**Key Features of the `window` Object**:
+1. **DOM Management**: Access and manipulate the Document Object Model (DOM) through `window.document`.
+2. **URL and Navigation**: Manage the browser's URL and navigation state with `window.location`.
+3. **Debugging Utilities**: Utilize debugging tools such as `window.console`.
+4. **User Interaction**: Interact with the user via `window.alert`, `window.confirm`, and `window.prompt`.
+5. **Web Storage**: Store data locally with `window.localStorage` and `window.sessionStorage`.
+6. **Timers**: Implement delays and intervals using `window.setTimeout` and `window.setInterval`.
+7. **Networking**: Make network requests using `window.fetch`.
+8. **Event Handling**: Manage event listeners with `window.addEventListener` and `window.removeEventListener`.
+9. **Window Management**: Control browser windows through `window.open` and `window.close`.
+
+### Local Scope (Function Scope)
+Local scope restricts variable access to the function in which they are declared, significantly enhancing security and memory management.
+
+**Example of Local Scope**:
+```javascript
+function localScopeExample() {
+    var localVariable = 'I am a local variable';
+    console.log(localVariable); // Output: I am a local variable
+}
+localScopeExample();
+console.log(localVariable); // Error: localVariable is not defined
+```
+
+### Block Scope
+Introduced with ES6, `let` and `const` provide block-level scope, which restricts variable access to the specific block where they are declared, such as within `if` statements or loops.
+
+**Example of Block Scope**:
+```javascript
+if (true) {
+    let blockScopedVariable = 'I am block scoped';
+    console.log(blockScopedVariable); // Output: I am block scoped
+}
+console.log(blockScopedVariable); // Error: blockScopedVariable is not defined
+```
+
+### Lexical Scope
+JavaScript employs lexical scoping where a function enclosed within another function has access to the outer function's scope.
+
+**Example of Lexical Scope**:
+```javascript
+function outerFunction() {
+    var outerVariable = 'I exist in the outer function';
+    function innerFunction() {
+        console.log(outerVariable); // Output: I exist in the outer function
+    }
+    innerFunction();
+}
+outerFunction();
+```
+
+### Module Scope
+With ES6 modules, scope is limited to the module itself, helping avoid global namespace pollution and fostering better modularity.
+
+### Scope Linking in JavaScript
+JavaScript's scope chaining enables variable resolution along the scope chain, ensuring variables defined in outer scopes are accessible in inner scopes.
+
+**Example of Scope Linking**:
+```javascript
+var globalVar = 'accessible everywhere';
+
+function outerFunc() {
+    var outerVar = 'accessible in this function and its inner functions';
+    function innerFunc() {
+        var innerVar = 'only accessible in this function';
+        console.log(globalVar);  // Output: accessible everywhere
+        console.log(outerVar);  // Output: accessible in this function and its inner functions
+        console.log(innerVar);  // Output: only accessible in this function
+    }
+    innerFunc();
+}
+outerFunc();
+```
+
+## What is Closure
+
+A closure is a function combined with its lexical environment, which allows it to access variables from the outer function’s scope even after the outer function has returned. This feature is crucial in JavaScript and enables powerful programming patterns.
+
+```javascript
+function outerFunction() {
+    var outerVariable = 'I am outside!';
+    function innerFunction() {
+        console.log(outerVariable);
+    };
+    return innerFunction;
+}
+
+var innerFunc = outerFunction();
+innerFunc(); // Output: 'I am outside!'
+```
+
+### Practical Applications of Closures
+
+**Event Handlers**  
+Closures enable JavaScript developers to manage changes in state in a controlled manner. For example, adjusting the font size of a text element upon a button click is a typical use case:
+
+```html
+<div id="text">Hello, World!</div>
+<button id="button">Change Font Size</button>
+<script>
+    function changeFontSize(size) {
+        return function() {
+            document.getElementById('text').style.fontSize = size + 'px';
+        }
+    }
+
+    document.getElementById('button').addEventListener('click', changeFontSize(20));
+</script>
+```
+
+**Creating Private Variables**  
+Closures facilitate the creation of private variables that cannot be accessed directly from outside the function, thereby emulating private methods and properties:
+
+```javascript
+function makeCounter() {
+    var count = 0;
+    return {
+        increment: function() {
+            count++;
+            console.log(count);
+        },
+        decrement: function() {
+            count--;
+            console.log(count);
+        }
+    }
+}
+
+var counter1 = makeCounter();
+var counter2 = makeCounter();
+counter1.increment(); // Output: 1
+counter1.increment(); // Output: 2
+counter2.increment(); // Output: 1
+```
+
+**Event Binding within Loops**  
+Using closures within loops to bind event listeners avoids common pitfalls related to JavaScript’s lexical scoping:
+
+```html
+<div>0</div>
+<div>1</div>
+<div>2</div>
+<div>3</div>
+<div>4</div>
+<script>
+    var divs = document.getElementsByTagName('div');
+    for (var i = 0; i < divs.length; i++) {
+        (function(i) {
+            divs[i].addEventListener('click', function() {
+                console.log('You clicked on element #' + i);
+            });
+        })(i);
+    }
+</script>
+```
+
+### Memory Management and Closures
+
+**Potential Memory Issues**  
+While closures are powerful, they can lead to memory issues if not used carefully. For instance, closures in loops that capture large objects or DOM elements can lead to memory leaks in older browsers:
+
+```javascript
+function outerFunction() {
+    var outerVariable = 'I am outside!';
+    function innerFunction() {
+        console.log(outerVariable);
+    };
+    return innerFunction;
+}
+
+var innerFunc = outerFunction();
+innerFunc(); // Output: 'I am outside!'
+```
+
+**Modern Garbage Collection**  
+Modern browsers implement the mark-and-sweep garbage collection algorithm which mitigates issues with closures and memory leaks that were prevalent in older browsers using reference counting.
+
+
+# 2.5 Functions & this.md
 
 ## `this` Keyword in JavaScript
 `this` value depends on where and how the function it refers to is called.
@@ -1431,191 +1846,66 @@ const f = new Foo('aa', 20); // TypeError: Foo is not a constructor
 **Summary**  
 While arrow functions offer concise syntax and are useful in many cases, especially for inline functions and callbacks, their inability to bind their own `this`, lack of an `arguments` object, and unsuitability for object methods, prototype methods, and constructors limit their applicability in certain JavaScript programming scenarios.
 
-## Write a `curry` function to curry other functions
-Currying is the process of transforming a function with multiple arguments into a sequence of nesting functions that each take a single argument. Its main benefits include **parameter reuse, delayed execution, early return, and function composition**.
-
-```ts
-function curry(fn: Function) {
-    return function curried(...args: any[]) {
-        if (args.length >= fn.length) {
-            return fn.apply(this, args);
-        } else {
-            return function (...nextArgs: any[]) {
-                return curried.apply(this, args.concat(nextArgs));
-            };
-        }
-    };
-}
-
-function sum(a: number, b: number, c: number) {
-    return a + b + c;
-}
-
-const curriedSum = curry(sum);
-console.log(curriedSum(1)(2)(3)); // Output: 6
-console.log(curriedSum(1, 2)(3)); // Output: 6
-console.log(curriedSum(1)(2, 3)); // Output: 6
-```
-
-## Value Types vs. Reference Types
-**What is the output of the following code, and why?**
-
-```javascript
-let a = {n: 1}
-let b = a
-a.x = a = {n: 2}
-console.log(a.x)
-console.log(b.x)
-```
-
-To decipher the output of this code snippet, we must delve into several core JavaScript mechanics:
-
-1. **Sequential Assignments Are Executed Right-to-Left**
-
-   Sequential assignments in JavaScript are processed from right to left. This means the right-most assignment is completed first before moving to the left. Here's a simple illustration:
-
-   ```javascript
-   let a = 100;
-   let b = a = 200;
-   // This is processed as:
-   // 1. a = 200
-   // 2. b = a (where a is now 200)
-   ```
-
-2. **Dot Notation for Property Access Has High Precedence**
-
-   When accessing or assigning properties using dot notation, the operation to access the property (or create a reference to it) is prioritized. For instance:
-
-   ```javascript
-   let a = {};
-   a.x = 100;
-   // This operation can be broken down into:
-   // 1. Access (or prepare to access) a.x, which is initially undefined
-   // 2. Assign 100 to a.x
-   ```
-
-With these principles in mind, let's dissect the initial example:
-
-```javascript
-let a = {n: 1}
-let b = a;
-// At this point, both 'a' and 'b' reference the same object: {n: 1}
-
-a.x = a = {n: 2};
-// The operations unfold as follows:
-// 1. The dot notation (a.x) creates a reference for 'x' on the object, setting it to undefined
-// 2. 'a' is then reassigned to a new object: {n: 2}
-// 3. Finally, 'a.x' assigns the new object {n: 2} to 'x', but since 'a' has been reassigned, this operation does not affect the new 'a' but the old object referenced by 'b'
-```
-
-Here's a visual representation of the state changes:
-
-1. After declaring `a` and `b`:
-
-```
-a, b -> {n: 1}
-```
-
-2. Preparing to assign to `a.x`:
-
-```
-a, b -> {n: 1, x: undefined}
-```
-
-3. Reassigning `a`:
-
-```
-a -> {n: 2}
-b -> {n: 1, x: undefined}
-```
-
-4. Attempting to assign `{n: 2}` to `a.x`, which now refers to the old object `b` references:
-
-```
-a -> {n: 2}
-b -> {n: 1, x: {n: 2}}
-```
-
-### Outputs:
-
-- `console.log(a.x)` prints `undefined`, because 'a' now points to `{n: 2}`, which does not have an 'x' property.
-- `console.log(b.x)` prints `{n: 2}`, because 'b' still points to the original object, which now includes `x: {n: 2}`.
-
 ## Understanding Function Parameters and Arguments in JavaScript
-```javascript
-function modifyObject(a) {
-    a.x = 1;
-    console.log(a.x);  
-    a = { x: 3 };
-    console.log(a.x);  
-}
 
-var obj = { x: 0 };
-modifyObject(obj);
-console.log(obj.x); 
-```
+### Formal and Actual Parameters
+- **Formal parameters** are the parameters defined in a function's declaration.
+- **Actual parameters** are the arguments passed to the function at call time.
 
-### Detailed Output Explanation
+### Primitive Types and Value Passing
+- **Primitive Types**: Includes data types like numbers, strings, booleans, undefined, null, symbol, and BigInt.
+- **Behavior**: When these types are passed to a function, JavaScript creates a copy of the value (pass-by-value). Modifications to the parameter within the function do not affect the original variable.
+- **Example**:
+  ```javascript
+  function modifyPrimitive(value) {
+      value = "changed";
+      console.log("Inside function:", value); // Outputs: "Inside function: changed"
+  }
 
-1. **Initial Object Setup**: We start with an object `obj` initialized with a property `x` set to 0: `var obj = { x: 0 };`.
+  let originalValue = "original";
+  modifyPrimitive(originalValue);
+  console.log("Outside function:", originalValue); // Outputs: "Outside function: original"
+  ```
 
-2. **Function Invocation**: The function `modifyObject` is called with `obj` as its argument.
+### Reference Types and Reference Passing
+- **Reference Types**: Includes objects, arrays, and functions.
+- **Behavior**: Passing a reference type as an argument results in a copy of the reference being passed, not the actual object. Modifications to the object's properties affect the original object (pass-by-reference-like behavior).
+- **Example**:
+  ```javascript
+  function modifyObject(obj) {
+      obj.property = "modified";
+      console.log("Inside function:", obj.property); // Outputs: "Inside function: modified"
+  }
 
-    - **Inside the Function**:
-      - **Property Modification**: By executing `a.x = 1;`, the property `x` of the object `a` is updated to 1. Since JavaScript objects are passed by reference, this modification impacts the `obj` object outside the function.
-      - **First Console Log**: `console.log(a.x);` logs the updated value of `x`, now 1.
-      - **Object Reassignment**: The line `a = { x: 3 };` changes the local variable `a` to a new object with `x` set to 3. This change is localized to the function's scope and does not affect `obj`.
-      - **Second Console Log**: Outputs `3` as `console.log(a.x);` reflects the value of `x` in the new object, not the original `obj`.
+  let originalObject = { property: "original" };
+  modifyObject(originalObject);
+  console.log("Outside function:", originalObject.property); // Outputs: "Outside function: modified"
+  ```
 
-3. **Final Output Outside the Function**: `console.log(obj.x);` outside the function confirms that `obj.x` is still 1. This shows that while `a` was reassigned to a new object inside the function, it did not affect the original object `obj` because the reassignment does not change the original reference to `obj`.
+### Detailed Behavior Explanation
+- **Initial Setup**: An object `obj` is initialized with `x` set to 0.
+- **Function Behavior**:
+  - Modifying `obj.x` within the function affects `obj` outside the function due to reference passing.
+  - Reassigning the reference `a` inside the function to a new object does not affect the original object `obj`.
 
-### Understanding Object Behavior with Functions
+  ```javascript
+  function modifyObject(a) {
+      a.x = 1;
+      console.log(a.x);  // Outputs: 1
+      a = { x: 3 };
+      console.log(a.x);  // Outputs: 3
+  }
 
-In JavaScript, objects are manipulated by reference, meaning that when an object is passed to a function, the function receives a reference to the actual object. Any modifications to the object's properties within the function affect the object everywhere it is referenced. Conversely, reassigning the reference within the function to a new object does not affect the original object; it merely changes the local reference within that function's scope.
+  var obj = { x: 0 };
+  modifyObject(obj);
+  console.log(obj.x); // Outputs: 1
+  ```
 
-## Object Key Data Types in JavaScript
-
-In JavaScript, the keys of an object can only be strings or symbols. This fundamental principle ensures consistency in how JavaScript engines interpret key values. However, when other data types are used as keys, they undergo a conversion process. Below, we explore the rules and nuances of this conversion process, along with practical examples to deepen understanding.
-
-### Principles of Key Conversion
-
-1. **Allowed Key Types**: Only strings and symbols can be used directly as keys. This limitation is designed to ensure property keys have a predictable format.
-2. **Conversion of Other Types**: If a key is not a string or symbol, JavaScript will automatically convert it to a string using the object's `toString()` method.
-3. **Conversion Rule**: The `toString()` method is universally applied to non-string, non-symbol keys to obtain their string representation.
-4. **Plain Object Conversion**: Any plain object used as a key is converted to the string `"[object Object]"`. This conversion underscores the importance of string and symbol uniqueness.
-5. **Map Object Exception**: Unlike object literals, `Map` objects can use values of any type as keys without automatic conversion. This feature makes `Map` a versatile alternative for complex data structures.
-
-### Examples and Explanations
-
-**Example 1: Numeric and String Key Equivalence**
-
-```javascript
-let a = {}, b = '123', c = 123;
-a[b] = 'b';
-a[c] = 'c';
-console.log(a[b]); // Outputs: 'c'
-```
-- In this example, both `b` (a string) and `c` (a number) are used as keys. Since `c` is converted to a string, it overwrites the value associated with the string `'123'`, demonstrating how numeric keys are treated as their string equivalents.
-
-**Example 2: Symbol Uniqueness**
-
-```javascript
-let a = {}, b = Symbol('123'), c = Symbol('123');
-a[b] = 'b';
-a[c] = 'c';
-console.log(a[b]); // Outputs: 'b'
-```
-- Symbols are unique, so even if `b` and `c` have the same description (`'123'`), they are considered different keys. This example illustrates the utility of symbols for creating distinct key-value pairs.
-
-**Example 3: Plain Object Conversion to String**
-
-```javascript
-let a = {}, b = {key: '123'}, c = {key: '456'};
-a[b] = 'b';
-a[c] = 'c';
-console.log(a[b]); // Outputs: 'c'
-```
-- Here, `b` and `c` are both plain objects. Despite having different properties, they are converted to the same string (`"[object Object]"`) when used as keys, causing `c` to overwrite `b`'s associated value. This highlights the importance of careful key selection to avoid unintended overwrites.
+### Best Practices
+- **Immutability**: Treat parameters as immutable to avoid side effects.
+- **Copying Objects**: Use a deep copy for modifications to preserve the original data.
+- **Documentation**: Clearly document any modifications within functions.
+- **Functional Programming**: Emphasize immutability and side-effect-free functions for clarity and predictability.
 
 ## Constructor Functions and Prototype Properties with the Same Name
 ```javascript
@@ -1668,6 +1958,62 @@ Foo.a(); // Output: 1
 - **Static vs. Instance Properties**: Static properties defined on a constructor function itself (`Foo.a`) are separate from instance properties defined within the constructor using `this` keyword (`this.a`).
 - **Prototype Properties**: Properties defined on the prototype (`Foo.prototype.a`) are shared across all instances. However, they have lower precedence compared to instance-specific properties.
 - **Precedence and Overwriting**: When accessing a property, instance properties take precedence over prototype properties. Static properties can be redefined, affecting their behavior when accessed before and after instance creation.
+
+
+# 2.6 Other.md
+
+## JavaScript's Strict Mode Features
+
+JavaScript's Strict Mode is a feature that enforces a stricter parsing and error handling mechanism on your JavaScript code. Activating Strict Mode can be done by adding `'use strict';` at the beginning of a script or a function block. This mode intentionally has different semantics from the normal code, aimed at improving code reliability and performance.
+
+### Features of Strict Mode
+
+1. **Mandatory Variable Declarations**: In Strict Mode, every variable must be declared before use. If a script attempts to use an undeclared variable, JavaScript will throw a `ReferenceError`. This requirement helps to avoid the accidental creation of global variables caused by typographical errors.
+
+2. **Disallows the `with` Statement**: The `with` statement is not allowed in Strict Mode because it creates ambiguity about the scope of variables. Its use can lead to significant performance hits and complicates the debugging process, as it modifies the scope chain, making it harder to predict which variables will be affected by a piece of code.
+
+3. **Scoped `eval()` Function**: Any declarations within an `eval()` expression in Strict Mode do not affect the surrounding scope, making `eval()` safer by preventing it from introducing new variables or modifying existing ones in the parent scope.
+
+4. **Secure `this` Keyword Behavior**: In functions that are not called as methods of an object, the value of `this` is `undefined` in Strict Mode. This contrasts with non-strict mode, where `this` defaults to the global object, reducing the risk of inadvertently modifying the global environment.
+
+5. **Prohibits Duplicate Parameter Names**: Functions cannot have multiple parameters with the same name, which eliminates potential errors from duplicated identifiers and enhances code clarity.
+
+6. **Immutable Non-Writable Properties**: In Strict Mode, attempts to assign values to non-writable properties result in a `TypeError`. This feature ensures the immutability of constants and read-only properties, thus preserving data integrity.
+
+7. **Restrictions on Deleting Properties**: Trying to delete non-deletable properties (such as built-in objects or fixed properties) will throw a `TypeError`, protecting important parts of the language’s core.
+
+8. **No Octal Numeric Literals**: Octal literals and octal escape sequences are not allowed in Strict Mode. This restriction avoids confusion between mistakenly leading zeroes in numbers and octal syntax, making the code more readable and less prone to errors. 
+   - Octal literals are those starting with a leading zero, like `010` stands for 8 in decimal. Octal escape sequences are those starting with `\`, like `\141` stands for `'a'`. We can use `u0061` instead of `\141` to represent `'a'`, and `0o10` instead of `010` to represent `8`.
+
+### Conclusion
+
+By enforcing these constraints, Strict Mode significantly aids in the development of more secure, robust, and clean JavaScript code. It prevents common coding errors, reduces accidental global variable creation, clarifies the scope chain, and enforces a cleaner syntax. Adopting Strict Mode can lead to better performance, easier debugging, and a more structured codebase, which are crucial for maintaining large-scale JavaScript applications.
+
+## Write a `curry` function to curry other functions
+Currying is the process of transforming a function with multiple arguments into a sequence of nesting functions that each take a single argument. Its main benefits include **parameter reuse, delayed execution, early return, and function composition**.
+
+```ts
+function curry(fn: Function) {
+    return function curried(...args: any[]) {
+        if (args.length >= fn.length) {
+            return fn.apply(this, args);
+        } else {
+            return function (...nextArgs: any[]) {
+                return curried.apply(this, args.concat(nextArgs));
+            };
+        }
+    };
+}
+
+function sum(a: number, b: number, c: number) {
+    return a + b + c;
+}
+
+const curriedSum = curry(sum);
+console.log(curriedSum(1)(2)(3)); // Output: 6
+console.log(curriedSum(1, 2)(3)); // Output: 6
+console.log(curriedSum(1)(2, 3)); // Output: 6
+```
 
 ## Implement a Deep Copy Function
 
@@ -1745,68 +2091,6 @@ function deepCopy(obj: any, map = new WeakMap()): any {
 - A `Date` object encapsulates a single moment in time, represented internally as a timestamp (the number of milliseconds since the Unix Epoch). This value is not directly accessible as an enumerable property that can be copied.
 - A `RegExp` object contains a pattern and flags (such as global, multiline, etc.), which are crucial for its operation. These are accessed through properties like source and flags, not directly copyable via key enumeration.
 
-## Understanding Formal and Actual Parameters in JavaScript
-- Formal parameters: the parameters defined in a function declaration. 
-- Actual parameters: the arguments passed to the function at call time.
-
-### Primitive Types and Value Passing
-- **Definition**: Primitive types include data types such as numbers, strings, booleans, undefined, null, symbol, and BigInt. 
-- **Behavior**: When a primitive type is passed as an argument to a function, JavaScript creates a copy of its value and passes it to the function. This is known as *pass-by-value*. Consequently, any modifications made to this parameter within the function's scope do not affect the original variable.
-- **Example**: 
-```javascript
-function modifyPrimitive(value) {
-    value = "changed";
-    console.log("Inside function:", value); // Outputs: "Inside function: changed"
-}
-
-let originalValue = "original";
-modifyPrimitive(originalValue);
-console.log("Outside function:", originalValue); // Outputs: "Outside function: original"
-```
-
-### Reference Types and Reference Passing
-- **Definition**: Reference types include objects, arrays, and functions. 
-- **Behavior**: When a reference type is passed as an argument, JavaScript passes a copy of the reference to the object rather than the object itself. This mechanism is often referred to as *pass-by-reference-like* behavior. It's crucial to understand that this is not true pass-by-reference (as seen in some other programming languages) but rather passing a copy of the reference value. Therefore, any modifications made to the object's properties or elements within the function will reflect on the original object.
-- **Example**:
-```javascript
-function modifyObject(obj) {
-    obj.property = "modified";
-    console.log("Inside function:", obj.property); // Outputs: "Inside function: modified"
-}
-
-let originalObject = { property: "original" };
-modifyObject(originalObject);
-console.log("Outside function:", originalObject.property); // Outputs: "Outside function: modified"
-```
-
-Therefore: 
-```javascript
-function changeArg(x) {
-    x = 200;
-}
-
-function changeArgObj(obj) {
-    obj.name = 'newName';
-}
-
-let num = 100;
-changeArg(num);
-console.log(num); // Outputs: 100
-
-let obj = {name: 'ronron'};
-changeArg(obj);
-console.log(obj); // Outputs: {name: 'ronron'}
-changeArgObj(obj);
-console.log(obj); // Outputs: {name: 'newName'}
-```
-
-### Best Practices
-When working with functions in JavaScript, consider the following best practices to ensure code clarity, maintainability, and predictability:
-- **Immutability**: Whenever possible, treat input parameters as immutable. Avoid modifying the inputs directly to prevent unexpected side effects.
-- **Copying Objects**: If you need to modify an object, consider creating a deep copy of the object and working on the copy. This approach helps maintain the integrity of the original data.
-- **Documentation**: Clearly document any functions that modify input parameters, explaining the rationale and potential effects on the passed arguments. This can aid in understanding and troubleshooting.
-- **Functional Programming**: Explore functional programming principles, which encourage immutability and functions without side effects, for cleaner and more predictable code.
-
 ## Understanding `['1', '2', '3'].map(parseInt)` Output
 The `parseInt` function converts a string argument to an integer of the specified radix (base). Its signature is `parseInt(string, radix)`, where:
 - `string` is the string to be parsed.
@@ -1848,7 +2132,7 @@ const res = arr.map((item, index) => {
     return parseInt(item, index);
 });
 ```
-  
+
 ## Writing a `getType` Function in JavaScript
 The `typeof` operator, `instanceof` keyword, and `Object.prototype.toString.call()` method are commonly used techniques to identify variable types. e.g. `typeof 1` returns `'number'`, `typeof 'test'` returns `'string'`, and `typeof [1, 2, 3]` returns `'object'`. 
 
@@ -2213,6 +2497,9 @@ class LRUCache {
     }
 }
 ```
+# 2. Javascript.md
+
+
 # 3. Algorithms and Data Structures.md
 
 ## How is a linked list used in front-end development?
@@ -4365,6 +4652,69 @@ Performance optimization is a gradual process, unlike bug fixes which can often 
 
 ### Summary
 Analyze performance metrics to identify the root causes of slowness, address issues specifically, and continuously improve and optimize for better performance.
+
+## Performance Optimization with CSS
+### CSS Shorthand Properties
+Utilizing CSS shorthand properties effectively reduces the size of CSS files, making them faster to parse by browsers.
+
+- **Example of Margin Shorthand**:
+   ```css
+   /* Less optimal method */
+   .foo {
+       margin-top: 10px;
+       margin-right: 20px;
+       margin-bottom: 30px;
+       margin-left: 40px;
+   }
+
+   /* Recommended shorthand method */
+   .foo { 
+       margin: 10px 20px 30px 40px; 
+   }
+   ```
+   Shorthand properties not only streamline the code but also decrease the overall file size.
+
+### Utilizing CSS for Graphics
+Replacing image files with CSS for graphical elements significantly cuts down the number of HTTP requests and conserves bandwidth.
+
+- **Example: Creating a Triangle Using CSS**:
+   ```css
+   .triangle {
+       width: 0;
+       height: 0;
+       border-left: 50px solid transparent;
+       border-right: 50px solid transparent;
+       border-bottom: 100px solid black;
+   }
+   ```
+   This method leverages the browser's capability to render shapes, thus avoiding additional image requests.
+
+### Optimizing CSS Values
+Minimizing redundancy in CSS values can further reduce file size and enhance parsing speed by the browser.
+
+- **Example of Optimizing Numerical Values**:
+   ```css
+   /* Less optimal method */
+   .foo {
+       width: 0.2em;
+       height: 20.0em;
+       margin: 0.0px;
+   }
+
+   /* Optimized method */
+   .foo {
+       width: .2em;
+       height: 20em;
+       margin: 0;
+   }
+   ```
+   Removing unnecessary zeros and units where not needed simplifies the CSS and speeds up processing.
+
+### Using CSS Sprites
+CSS sprites combine multiple images into one, reducing the number of server requests. However, this becomes less significant with HTTP/2 as it handles multiple requests more efficiently.
+
+- **Understanding CSS Sprites**:
+   CSS sprites are used to include multiple images in a single image file and display only parts of it for different elements using the `background-position` CSS property. This technique is valuable for HTTP/1.1 environments.
 
 ## What is debouncing and what is throttling, what are the differences, and name use cases of each
 
