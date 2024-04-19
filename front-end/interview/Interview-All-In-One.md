@@ -201,6 +201,89 @@ CSS selectors are patterns used to select the HTML elements you want to style. T
 - Avoid overly specific selectors to ensure CSS remains flexible and manageable.
 - Use meaningful class and ID names that reflect the function or content rather than appearance.
 
+## Clear Floats
+
+Floating elements can remove them from the normal flow of a document, causing parent containers to collapse if not properly handled. It's crucial for front-end developers to understand the methods available to manage this behavior effectively.
+
+### Methods of Clearing Floats - Pure CSS
+#### Pseudo-Element Method
+This method involves using a CSS pseudo-element, which can clean up the HTML by eliminating the need for explicit clear elements.
+
+**Pros**:
+- Keeps the HTML cleaner by not requiring additional markup.
+- Generally well-supported in modern browsers.
+
+**Cons**:
+- May not be supported by some older browsers.
+
+**Example**:
+```css
+.parent::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+```
+
+#### Block Formatting Context (BFC)
+A Block Formatting Context is another CSS method to clear floats by setting properties on the parent element that establish a new block formatting context.
+
+**Pros**:
+- Simplifies CSS by not requiring additional elements.
+- Broadly compatible with most browsers.
+
+**Cons**:
+- Can cause clipping of content that extends outside the parent's bounds.
+
+**Example**:
+```css
+.parent {
+    overflow: hidden; /* 'auto' can also be used if clipping is a concern */
+}
+```
+
+#### Fixed Dimensions
+Applying fixed dimensions to the parent element is a straightforward method, though less flexible.
+
+**Pros**:
+- Easy to implement and has universal browser support.
+
+**Cons**:
+- Inflexible and can lead to issues with content overflow if the size of child elements changes.
+
+**Example**:
+```css
+.parent {
+    width: 300px; /* Fixed width */
+    height: 200px; /* Fixed height */
+}
+```
+
+### Clearing Element - Adding HTML Element
+
+Introducing a clearing element in HTML is a traditional method to ensure the parent container extends beyond the floated elements, maintaining the layout structure.
+
+**Pros**:
+- Effective and straightforward method to clear floats.
+- Ensures the layout is not broken by floated elements.
+
+**Cons**:
+- Adds non-semantic, extra HTML elements which can complicate maintenance.
+
+**Example**:
+```html
+<div class="parent">
+    <div class="child">Content</div>
+    <div class="child">Content</div>
+    <div class="clearfix"></div>
+</div>
+```
+```css
+.clearfix {
+    clear: both;
+}
+```
+
 ## CSS Units: Differences and Usage
 
 1. **Pixels (px):** Pixels are a fixed-size unit that is most commonly used in screen media. A pixel is an absolute unit that doesn't change based on other elements. It's great for when you need precise control over element sizing, like for borders or shadows.
@@ -498,10 +581,12 @@ CSS Grid Layout is a two-dimensional layout system for the web. It lets you layo
 
 ## Different Ways to Implement a Two-Column Layout with Fixed and Responsive Sides
 
-Creating a layout where one side has a fixed width while the other side adapts responsively is a common requirement in front-end development. Various CSS layout models offer distinct advantages and can be selected based on the specific needs of the project. Understanding these models is essential for effectively designing responsive interfaces.
+Creating a layout where one side has a fixed width while the other side adapts responsively.
 
-### Flexbox Layout
-Flexbox is a powerful tool for building dynamic layouts with items of uncertain size. It excels at aligning and distributing space within a container.
+### Strict responsive solutions
+
+**Flexbox Layout**
+Flexbox offers a robust method for creating dynamic layouts. It excels in aligning and distributing space within a container, making it ideal for uncertain item sizes.
 
 ```css
 .container {
@@ -518,10 +603,10 @@ Flexbox is a powerful tool for building dynamic layouts with items of uncertain 
     background-color: lightgreen;
 }
 ```
-**Explanation**: Here, the `.container` is designated as a flex container using `display: flex;`. The `.left-side` maintains a constant width of 200px. The `.right-side` utilizes `flex-grow: 1;` to automatically expand and occupy the remaining space in the container, ensuring a responsive layout.
+**Explanation**: The `.container` uses `display: flex;` to become a flex container. The `.left-side` has a fixed width of 200px, ensuring stability, while the `.right-side` uses `flex-grow: 1;` to adapt and fill the remaining space, maintaining responsiveness as the viewport size changes.
 
-### Grid Layout
-The CSS Grid Layout is particularly useful for managing more complex and fine-grained layouts. It provides direct control over both rows and columns.
+**Grid Layout**
+The CSS Grid Layout provides precise control over layout grids, suitable for complex arrangements.
 
 ```css
 .container {
@@ -537,10 +622,37 @@ The CSS Grid Layout is particularly useful for managing more complex and fine-gr
     background-color: lightgreen;
 }
 ```
-**Explanation**: In this setup, `grid-template-columns: 200px 1fr;` establishes a two-column grid where the `.left-side` is fixed at 200px and the `.right-side` takes up the remaining space (`1fr` indicates a fraction of the available space), adapting fluidly to changes in the viewport size.
+**Explanation**: Here, `grid-template-columns: 200px 1fr;` sets up a two-column grid. The `.left-side` is fixed at 200px, and the `.right-side` expands dynamically with `1fr` representing a fraction of the available space, offering a fluid response to viewport adjustments.
 
-### Float Layout
-While float-based layouts are less common in modern CSS, they're still useful for simpler applications or when modifying legacy projects.
+**Table Layout**
+Table Layout, while traditional, is effectively used for displaying structured data and certain layout designs.
+
+```css
+.container {
+    display: table;
+    width: 100%;
+}
+
+.left-side, .right-side {
+    display: table-cell;
+}
+
+.left-side {
+    width: 200px;
+    background-color: lightblue;
+}
+
+.right-side {
+    background-color: lightgreen;
+}
+```
+**Explanation**: The `.container` is set as a table, creating a robust framework for the `.left-side` and `.right-side` styled as table cells. The `.left-side` maintains a fixed width, and the `.right-side` adjusts to occupy any remaining space, ensuring the layout remains responsive.
+
+### Non-strict responsive solutions
+Some layout techniques do not adapt when the viewport size changes but can be useful for specific design requirements.
+
+**CSS Float Layout**  
+The float layout method, though somewhat dated, remains useful particularly for simpler or legacy projects.
 
 ```css
 .container {
@@ -558,10 +670,10 @@ While float-based layouts are less common in modern CSS, they're still useful fo
     background-color: lightgreen;
 }
 ```
-**Explanation**: The `.left-side` is floated to the left, allowing the `.right-side` to dynamically adjust its width using `calc(100% - 200px);`. This calculation subtracts the width of the left column from the container's total width, ensuring the right side adapts based on available space.
+**Explanation**: By floating the `.left-side` to the left, we allow the `.right-side` to automatically adjust its width with `calc(100% - 200px);`. This dynamic calculation subtracts the fixed width of the left column from the total container width, ensuring the right side is responsive to the remaining space.
 
-### Positioning Layout
-Positioning is valuable for explicit spatial control in a layout, useful for overlaying elements or setting a component within a specific area.
+**CSS Positioning Layout**  
+Positioning allows for precise control over layout elements, ideal for complex positioning needs.
 
 ```css
 .container {
@@ -578,11 +690,141 @@ Positioning is valuable for explicit spatial control in a layout, useful for ove
 }
 
 .right-side {
-    margin-left: 200px; /* Ensures no overlap with the left side */
+    margin-left: 200px; /* Prevents overlap with the left side */
     background-color: lightgreen;
 }
 ```
-**Explanation**: The `.left-side` is absolutely positioned relative to its parent, which is made a positioning context with `position: relative;`. This setup ensures that the `.left-side` stays fixed while the `.right-side` uses a `margin-left` of 200px to start to the right of the left side, remaining responsive and adjusting based on the container's width.
+**Explanation**: By setting the `.left-side` to `position: absolute;` relative to its `position: relative;` parent, it remains stationary. The `.right-side` employs a `margin-left` of 200px to start adjacent to the left side, providing a responsive layout that adjusts based on the overall container width.
+
+**CSS Inline-block Layout**  
+The inline-block method is useful for simpler two-column layouts but requires careful management of element spacing.
+
+```css
+.container {
+    font-size: 0; /* Eliminates whitespace between inline-block elements */
+}
+
+.left-side, .right-side {
+    display: inline-block;
+    vertical-align: top; /* Ensures top alignment */
+}
+
+.left-side {
+    width: 200px;
+    background-color: lightblue;
+}
+
+.right-side {
+    width: calc(100% - 200px); /* Adjusts width based on the left side */
+    background-color: lightgreen;
+}
+```
+**Explanation**: Both `.left-side` and `.right-side` are displayed as inline-block, with the `.left-side` fixed at 200px. The `.right-side` uses `calc(100% - 200px);` for width adjustment, filling the rest of the container width. Setting the container’s `font-size` to 0 removes the whitespace between inline-block elements, ensuring the columns are seamlessly adjacent without gaps.
+
+## CSS Centering Techniques
+```html
+<!-- Example HTML structure to use as a reference throughout this guide -->
+<div class="container">
+  <div class="center-fixed"></div>
+  <div class="center-auto"></div>
+  <div class="center-dynamic"></div>
+  <div class="center-flex"></div>
+  <div class="center-grid"></div>
+  <div class="center-table"></div>
+</div>
+
+<style>
+  .container {
+    width: 300px;
+    height: 300px;
+    border: 1px solid black;
+  }
+</style>
+```
+
+### Centering with Dynamic Dimensions
+**Absolute** Positioning with Transform
+```css
+.container {
+  position: relative;
+}
+
+.center-dynamic {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+```
+
+**Flexbox**
+```css
+.center-flex {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Full viewport height */
+}
+```
+
+**CSS Grid**
+```css
+.center-grid {
+  display: grid;
+  place-items: center;
+  height: 100vh; /* Full viewport height */
+}
+```
+
+**table**
+```css
+.container {
+  display: table;
+}
+
+.center-table {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+```
+
+### Centering with Fixed Dimensions
+**Absolute Positioning with Negative Margin**
+```css
+.container {
+  position: relative;
+}
+
+.center-fixed {
+  position: absolute;
+  width: 200px;
+  height: 100px;
+  top: 50%;
+  left: 50%;
+  margin-top: -50px;  /* Half of height */
+  margin-left: -100px; /* Half of width */
+}
+```
+
+**Absolute Positioning with Auto Margins**
+```css
+.container {
+  position: relative;
+}
+
+.center-auto {
+  position: absolute;
+  width: 200px;
+  height: 100px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: auto;
+}
+```
+Explanation: setting `top`, `right`, `bottom`, and `left` is actually moving the boundary of the box model, not only the content. Setting them all to 0 will make the box model fill the container, and since we set the content with fixed dimensions, `margin: auto` will center the box model within the container. 
 # 2. Javascript.md
 
 ## JavaScript's Strict Mode Features
@@ -2108,6 +2350,8 @@ An unbalanced binary tree can degenerate into a linked list, leading to O(N) tim
 
 - **B-Tree**: A B-Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time. Unlike binary trees, B-Trees are multi-way trees (having more than two children) and are optimized for systems that read and write large blocks of data, like databases and filesystems. They are designed to efficiently minimize disk I/O operations, and their branching factor (the number of child nodes) can be adjusted to optimize the balance between the tree's height and the number of nodes accessed per operation.
 
+- **B+ Tree**: A variant of the B-Tree, the B+ Tree, is commonly used in databases and file systems. It maintains data in the leaf nodes, while the internal nodes store only keys for navigation. This design allows for efficient range queries and sequential access, making B+ Trees well-suited for systems that require high-performance data retrieval. See https://blog.csdn.net/Weixiaohuai/article/details/109493541
+
 Both Red-Black Trees and B-Trees are advanced tree structures designed to optimize performance for different scenarios, with Red-Black Trees often used in memory and B-Trees in disk-based storage systems.
 
 ## Identify whether a string is prefix of a word in dictionary
@@ -2317,6 +2561,55 @@ function frogJumpDP(n: number): number {
     return dp[n];
 }
 ```
+
+## 01 Knapsack Problem
+In the 0-1 Knapsack problem, you are given a set of items, each with a weight and a value. The goal is to determine the maximum value of items that can be packed into a knapsack with a limited carrying capacity. Each item can either be included in its entirety or excluded; partial items are not allowed.
+
+```java
+public class Knapsack01 {
+
+    /**
+     * Calculates the maximum value that can be packed into the knapsack.
+     *
+     * @param W the maximum weight capacity of the knapsack
+     * @param weights array of item weights
+     * @param values array of item values
+     * @param n number of items
+     * @return the maximum value that fits in the knapsack
+     */
+    public static int knapsack(int W, int[] weights, int[] values, int n) {
+        // dp[w] will hold the maximum value that can be attained with a knapsack capacity of w
+        int[] dp = new int[W + 1];
+
+        // Process each item
+        for (int i = 0; i < n; i++) {
+            // Iterate through all capacities from max to the weight of the current item
+            for (int w = W; w >= weights[i]; w--) {
+                // Update dp[w] to the maximum of itself and the value of taking item i
+                dp[w] = Math.max(dp[w], dp[w - weights[i]] + values[i]);
+            }
+        }
+
+        return dp[W];
+    }
+
+    public static void main(String[] args) {
+        int[] weights = {1, 3, 4};
+        int[] values = {1500, 2000, 3000};
+        int W = 4; // Maximum weight capacity of the knapsack
+        int n = weights.length; // Number of items
+
+        int maxVal = knapsack(W, weights, values, n);
+        System.out.println("Maximum value that can be packed: " + maxVal);
+    }
+}
+```
+
+#### Key Concepts Explained
+
+- **Dynamic Programming Array (`dp`)**: The `dp` array is central to the solution, where `dp[w]` represents the maximum value that can be achieved with a knapsack capacity of `w`.
+- **Iteration Order**: It's crucial to iterate the weights in reverse when considering each item, as this ensures that each item is only considered once per capacity.
+- **Item Processing**: For each item, we compare the maximum value of not taking the item (`dp[w]`) versus taking the item (`dp[w - weights[i]] + values[i]`), thus ensuring that we always store the best solution for every capacity.
 
 ## Array Flattening Function in JavaScript
 Array flattening is the process of converting a nested array into a single-dimensional array. 
@@ -2656,6 +2949,83 @@ Overall, Ajax represents a classical approach to asynchronous web requests, whil
 3. **FIN from Receiver**: After sending any remaining data, B sends its own FIN packet to A, indicating its readiness to close the connection.
 4. **ACK from Initiator**: A responds with a final ACK packet acknowledging B's FIN. Post this, A can safely close the connection. B, upon receiving this ACK, will also close the connection. This ensures a clean and orderly termination of the connection from both ends.
 
+## Understanding TCP Packet Sticking
+
+TCP packet sticking refers to the phenomenon where multiple data packets transmitted from one source are interpreted as a single packet by the receiving end. This behavior stems from TCP’s stream-oriented nature, which views data as a continuous stream, not as discrete units. Grasping this concept is essential for front-end developers, especially those dealing with real-time data flows.
+
+### Reasons Behind TCP Packet Sticking
+TCP packet sticking is influenced by several factors that affect the handling and interpretation of data packets:
+
+**Application and TCP Buffer Size Discrepancy**  
+TCP might combine small, frequently sent data chunks into fewer packets to enhance transmission efficiency. This occurs particularly when the data written by the application is much smaller than the TCP buffer size.
+
+**Receiver Processing Delays**  
+Delays in processing at the receiver’s end can lead to the accumulation of packets in the TCP buffer, which may then be treated as a single larger packet. This is common when the receiver does not quickly read the incoming data.
+
+**Network Conditions and Retransmission**  
+Variations in network conditions, such as congestion or transmission delays, and TCP’s retransmission strategies for handling lost packets can cause packets to be grouped upon receipt.
+
+### Mitigating TCP Packet Sticking
+Several technical solutions can be implemented to prevent TCP packet sticking and ensure accurate data transmission:
+
+**Delimiters**  
+Using specific characters or sequences to mark the end of messages can delineate message boundaries. This method requires caution, as delimiters might inadvertently occur within the data, potentially leading to parsing errors.
+
+**Length-Prefixed Data**  
+A robust solution involves prefixing each data segment with its length, informing the receiver of the exact byte count of the message. This ensures messages are fully and correctly reconstructed, independent of packet reception sequence.
+
+**Application-Level Framing**
+Creating custom protocols at the application level to define the structure and handling of messages can significantly reduce packet sticking. This technique can incorporate both delimiter and length-based strategies to adapt to different data transmission conditions.
+
+**Fixed-Length Messages**
+Employing messages with a predetermined size can facilitate data processing, as the receiver always knows the size of expected data, minimizing the risk of packet merging.
+
+## Difference between HTTP and UDP
+
+HTTP (Hypertext Transfer Protocol) and UDP (User Datagram Protocol) operate at different layers of the network stack, with HTTP functioning at the application layer and UDP at the transport layer.
+
+**HTTP**
+- **Layer**: Application
+- **Connection**: Connection-oriented
+- **Reliability**: HTTP is built on TCP (Transmission Control Protocol), which ensures reliable transmission of data through error checking and retransmission of lost packets.
+- **Use Cases**: Web browsing, form submission, data transfer in a reliable and ordered manner.
+- **Characteristics**: HTTP requests and responses are structured in a predefined format, allowing for complex web interactions, including state management through cookies, authentication, and caching strategies.
+
+**UDP**
+- **Layer**: Transport
+- **Connection**: Connectionless
+- **Reliability**: Does not guarantee delivery, order, or error checking, making it less reliable but faster compared to TCP.
+- **Use Cases**: Streaming media (video, audio), online gaming, voice over IP (VoIP) where speed is crucial and occasional data loss is acceptable.
+- **Characteristics**: Suitable for applications that require fast, efficient transmission, such as live broadcasting or multiplayer online games.
+
+**OSI Model Layers**
+1. Application Layer
+2. Presentation Layer
+3. Session Layer
+4. Transport Layer (TCP, UDP)
+5. Network Layer
+6. Data Link Layer
+7. Physical Layer
+
+**TCP/IP Model Layers**
+1. Application Layer (HTTP, DNS, SMTP)
+2. Transport Layer (TCP, UDP)
+3. Internet Layer (IP)
+4. Network Interface Layer
+
+## Follow-up: Difference between HTTP 1.0, 1.1, and 2.0
+**HTTP 1.0**
+- **Features**: Basic protocol supporting GET and POST methods.
+- **Connection**: Each request opens a new TCP connection, leading to overhead and latency.
+
+**HTTP 1.1**
+- **Features**: Introduced more sophisticated caching mechanisms (Cache-Control, ETag), persistent connections (`Connection: keep-alive`) to allow multiple requests over a single connection, range requests, and additional methods like PUT and DELETE for RESTful APIs.
+- **Performance**: Reduced latency by reusing connections, introduced chunked transfer encoding for dynamic content.
+
+**HTTP 2.0**
+- **Features**: Significantly improved performance through header compression (reducing overhead), multiplexing (allowing multiple requests and responses to be in flight simultaneously over a single TCP connection), and server push capabilities.
+- **Adoption**: Increasingly widespread, offering substantial efficiency improvements over HTTP/1.x.
+
 ## Why send options request when using HTTP cross origin?
 An OPTIONS request is vital in the CORS process to ensure secure cross-origin communication. It helps browsers determine whether the server's CORS policy permits the actual request, thus enhancing web security by allowing servers to specify who can access their resources and how.
 
@@ -2763,51 +3133,6 @@ Single Sign-On (SSO) is an authentication process that allows a user to access m
 - **Improved Security**: Centralizes the management of user credentials and authentication processes, reducing the likelihood of password fatigue and the risks associated with managing multiple credentials.
 - **Simplified Administration**: Eases the burden of password resets, account lockouts, and other administrative tasks related to user access across multiple systems.
 
-## Difference between HTTP and UDP
-
-HTTP (Hypertext Transfer Protocol) and UDP (User Datagram Protocol) operate at different layers of the network stack, with HTTP functioning at the application layer and UDP at the transport layer.
-
-**HTTP**
-- **Layer**: Application
-- **Connection**: Connection-oriented
-- **Reliability**: HTTP is built on TCP (Transmission Control Protocol), which ensures reliable transmission of data through error checking and retransmission of lost packets.
-- **Use Cases**: Web browsing, form submission, data transfer in a reliable and ordered manner.
-- **Characteristics**: HTTP requests and responses are structured in a predefined format, allowing for complex web interactions, including state management through cookies, authentication, and caching strategies.
-
-**UDP**
-- **Layer**: Transport
-- **Connection**: Connectionless
-- **Reliability**: Does not guarantee delivery, order, or error checking, making it less reliable but faster compared to TCP.
-- **Use Cases**: Streaming media (video, audio), online gaming, voice over IP (VoIP) where speed is crucial and occasional data loss is acceptable.
-- **Characteristics**: Suitable for applications that require fast, efficient transmission, such as live broadcasting or multiplayer online games.
-
-**OSI Model Layers**
-1. Application Layer
-2. Presentation Layer
-3. Session Layer
-4. Transport Layer (TCP, UDP)
-5. Network Layer
-6. Data Link Layer
-7. Physical Layer
-
-**TCP/IP Model Layers**
-1. Application Layer (HTTP, DNS, SMTP)
-2. Transport Layer (TCP, UDP)
-3. Internet Layer (IP)
-4. Network Interface Layer
-
-## Follow-up: Difference between HTTP 1.0, 1.1, and 2.0
-**HTTP 1.0**
-- **Features**: Basic protocol supporting GET and POST methods.
-- **Connection**: Each request opens a new TCP connection, leading to overhead and latency.
-
-**HTTP 1.1**
-- **Features**: Introduced more sophisticated caching mechanisms (Cache-Control, ETag), persistent connections (`Connection: keep-alive`) to allow multiple requests over a single connection, range requests, and additional methods like PUT and DELETE for RESTful APIs.
-- **Performance**: Reduced latency by reusing connections, introduced chunked transfer encoding for dynamic content.
-
-**HTTP 2.0**
-- **Features**: Significantly improved performance through header compression (reducing overhead), multiplexing (allowing multiple requests and responses to be in flight simultaneously over a single TCP connection), and server push capabilities.
-- **Adoption**: Increasingly widespread, offering substantial efficiency improvements over HTTP/1.x.
 
 ## What is an HTTPS Man-in-the-Middle Attack? How Can It Be Prevented?
 
@@ -3369,6 +3694,42 @@ const sdk = {
     }
 };
 ```
+
+## Storing Resources for Quick Rendering in Future Requests
+Caching strategies enable browsers to store copies of files locally, reducing load times for repeat visitors and decreasing server load.
+
+### HTTP Headers for Caching
+HTTP headers control the caching mechanisms of web resources. Here are the main headers involved:
+
+**Cache-Control**  
+The `Cache-Control` header specifies directives for caching mechanisms in both requests and responses. It's critical for defining the duration and manner of caching. Examples include:
+- `max-age=<seconds>`: Specifies the maximum amount of time a resource is considered fresh.
+- `no-cache`: Requires caches to submit the request to the origin server for validation before releasing a cached copy.
+- `private`: Indicates that the response is intended for a single user and should not be stored by shared caches.
+
+**Expires**  
+The `Expires` header provides a specific date/time after which the response is considered stale. It is less flexible than `Cache-Control` and is overridden if both headers are present.
+
+**ETag**  
+An `ETag` (entity tag) is a unique identifier assigned by a web server to a specific version of a resource. It helps to manage changes to resource files, enabling more efficient caching by allowing web servers to validate if the content has changed since the last fetch.
+
+**Last-Modified**  
+The `Last-Modified` header indicates the date and time a resource was last changed. Like `ETag`, this header helps in validating cached resources. If the resource has not been modified since the last fetch, a `304 Not Modified` response can be returned instead of the resource, saving bandwidth.
+
+### Practical Example: Implementing Caching with HTTP Headers
+To illustrate the use of these headers in practice, consider the following scenario:
+You have a website with a JavaScript file that rarely changes. To ensure that users don't download this file every time they visit your site, you can set HTTP headers as follows:
+
+```http
+Cache-Control: public, max-age=31536000
+ETag: "abcd1234"
+```
+
+In this example:
+- `Cache-Control` instructs the browser that the file can be cached and considered fresh for one year (31,536,000 seconds).
+- The `ETag` header provides a unique version identifier, allowing the browser to check if the file has changed since the last download.
+
+Using these headers correctly can significantly enhance user experience by speeding up load times and reducing server load.
 
 ## How are Hybrid Templates Updated?
 ### Template Management and Version Control
