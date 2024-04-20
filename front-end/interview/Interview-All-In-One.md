@@ -584,6 +584,10 @@ Utilize CSS floats for a traditional approach:
 .right {
     float: right;
 }
+.center {
+    margin-left: 100px;  /* Offset equal to the width of the left div */
+    margin-right: 100px; /* Offset equal to the width of the right div */
+}
 ```
 **Pros**: Broad compatibility with older browsers.  
 **Cons**: Potential layout quirks requiring `clear` fixes.
