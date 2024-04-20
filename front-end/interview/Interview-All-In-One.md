@@ -585,8 +585,7 @@ Utilize CSS floats for a traditional approach:
     float: right;
 }
 .center {
-    margin-left: 100px;  /* Offset equal to the width of the left div */
-    margin-right: 100px; /* Offset equal to the width of the right div */
+    margin: 0 100px; /* Margin equals the width of the side divs to prevent overlap */
 }
 ```
 **Pros**: Broad compatibility with older browsers.  
@@ -598,6 +597,7 @@ Simulate table behavior with CSS:
 ```css
 .parent {
     display: table;
+    width: 100%;
 }
 .left, .center, .right {
     display: table-cell;
@@ -622,9 +622,7 @@ Control positioning explicitly:
     right: 0;
 }
 .center {
-    position: absolute;
-    left: 100px;
-    right: 100px;
+    margin: 0 100px; /* Prevents overlap with absolutely positioned divs */
 }
 ```
 **Pros**: Complete control over positioning.  
