@@ -563,11 +563,25 @@ Consistent styling across browsers begins with CSS resets:
     padding: 0;
     box-sizing: border-box;
 }
+
 div {
     height: 100px;  /* Example height for visualization */
 }
+
+.parent {
+  width: 100%;
+}
+
 .left, .right {
     width: 100px;  /* Fixed width for left and right divs */
+}
+
+.left {
+    background-color: lightblue;
+}
+
+.center {
+    background-color: lightgreen;
 }
 ```
 
@@ -581,9 +595,11 @@ Utilize CSS floats for a traditional approach:
 .left {
     float: left;
 }
+
 .right {
     float: right;
 }
+
 .center {
     width: calc(100% - 200px); /* Adjust width dynamically */
     /* Choose one from below is fine */
@@ -602,8 +618,8 @@ Simulate table behavior with CSS:
 ```css
 .parent {
     display: table;
-    width: 100%;
 }
+
 .left, .center, .right {
     display: table-cell;
 }
@@ -618,14 +634,17 @@ Control positioning explicitly:
 .parent {
     position: relative;
 }
+
 .left {
     position: absolute;
     left: 0;
 }
+
 .right {
     position: absolute;
     right: 0;
 }
+
 .center {
     /* Choose one from below is fine */
     /* margin: 0 100px;
@@ -648,6 +667,7 @@ Implement a modern responsive solution:
 .parent {
     display: flex;
 }
+
 .center {
     flex-grow: 1;
 }
@@ -671,6 +691,29 @@ Create precise layouts with CSS Grid:
 
 Creating a layout where one side has a fixed width while the other side adapts responsively.
 
+```html
+<div class="container">
+    <div class="left-side">Fixed width</div>
+    <div class="right-side">Responsive width</div>
+</div>
+```
+
+```css
+.container {
+  width: 100%;
+}
+
+.left-side {
+    width: 200px; /* Fixed width */
+    background-color: lightblue;
+}
+
+.right-side {
+    background-color: lightgreen;
+}
+/* Add responsive styling here */
+```
+
 ### Strict responsive solutions
 
 **Flexbox Layout**
@@ -681,14 +724,8 @@ Flexbox offers a robust method for creating dynamic layouts. It excels in aligni
     display: flex;
 }
 
-.left-side {
-    width: 200px;
-    background-color: lightblue;
-}
-
 .right-side {
     flex-grow: 1;
-    background-color: lightgreen;
 }
 ```
 **Explanation**: The `.container` uses `display: flex;` to become a flex container. The `.left-side` has a fixed width of 200px, ensuring stability, while the `.right-side` uses `flex-grow: 1;` to adapt and fill the remaining space, maintaining responsiveness as the viewport size changes.
@@ -700,14 +737,6 @@ The CSS Grid Layout provides precise control over layout grids, suitable for com
 .container {
     display: grid;
     grid-template-columns: 200px 1fr;
-}
-
-.left-side {
-    background-color: lightblue;
-}
-
-.right-side {
-    background-color: lightgreen;
 }
 ```
 **Explanation**: Here, `grid-template-columns: 200px 1fr;` sets up a two-column grid. The `.left-side` is fixed at 200px, and the `.right-side` expands dynamically with `1fr` representing a fraction of the available space, offering a fluid response to viewport adjustments.
@@ -723,15 +752,6 @@ Table Layout, while traditional, is effectively used for displaying structured d
 
 .left-side, .right-side {
     display: table-cell;
-}
-
-.left-side {
-    width: 200px;
-    background-color: lightblue;
-}
-
-.right-side {
-    background-color: lightgreen;
 }
 ```
 **Explanation**: The `.container` is set as a table, creating a robust framework for the `.left-side` and `.right-side` styled as table cells. The `.left-side` maintains a fixed width, and the `.right-side` adjusts to occupy any remaining space, ensuring the layout remains responsive.
@@ -749,13 +769,11 @@ The float layout method, though somewhat dated, remains useful particularly for 
 
 .left-side {
     float: left;
-    width: 200px;
-    background-color: lightblue;
 }
 
 .right-side {
+    margin-left: 200px; /* Prevents overlap with the left side */
     width: calc(100% - 200px); /* Dynamic calculation of the width */
-    background-color: lightgreen;
 }
 ```
 **Explanation**: By floating the `.left-side` to the left, we allow the `.right-side` to automatically adjust its width with `calc(100% - 200px);`. This dynamic calculation subtracts the fixed width of the left column from the total container width, ensuring the right side is responsive to the remaining space.
@@ -770,16 +788,14 @@ Positioning allows for precise control over layout elements, ideal for complex p
 
 .left-side {
     position: absolute;
-    width: 200px;
     top: 0;
     bottom: 0;
     left: 0;
-    background-color: lightblue;
 }
 
 .right-side {
     margin-left: 200px; /* Prevents overlap with the left side */
-    background-color: lightgreen;
+    width: calc(100% - 200px); /* Dynamic calculation of the width */
 }
 ```
 **Explanation**: By setting the `.left-side` to `position: absolute;` relative to its `position: relative;` parent, it remains stationary. The `.right-side` employs a `margin-left` of 200px to start adjacent to the left side, providing a responsive layout that adjusts based on the overall container width.
@@ -797,14 +813,8 @@ The inline-block method is useful for simpler two-column layouts but requires ca
     vertical-align: top; /* Ensures top alignment */
 }
 
-.left-side {
-    width: 200px;
-    background-color: lightblue;
-}
-
 .right-side {
     width: calc(100% - 200px); /* Adjusts width based on the left side */
-    background-color: lightgreen;
 }
 ```
 **Explanation**: Both `.left-side` and `.right-side` are displayed as inline-block, with the `.left-side` fixed at 200px. The `.right-side` uses `calc(100% - 200px);` for width adjustment, filling the rest of the container width. Setting the container’s `font-size` to 0 removes the whitespace between inline-block elements, ensuring the columns are seamlessly adjacent without gaps.
