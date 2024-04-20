@@ -909,7 +909,6 @@ The inline-block method is useful for simpler two-column layouts but requires ca
 ```css
 .container {
     position: relative;
-    overflow: hidden;
 }
 
 .center-dynamic {
@@ -957,7 +956,6 @@ The inline-block method is useful for simpler two-column layouts but requires ca
 ```css
 .container {
     position: relative;
-    overflow: hidden;
 }
 
 .center-fixed {
