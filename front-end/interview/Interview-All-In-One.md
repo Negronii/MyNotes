@@ -1166,6 +1166,8 @@ Promise.resolve().then(() => {
 Promise.resolve().then(() => {
   console.log(0);
   return Promise.resolve(1);
+}).then(res => {
+  console.log(res)
 }).then(() => {
   console.log(2);
 }).then(() => {
@@ -1181,7 +1183,6 @@ Promise.resolve().then(() => {
   console.log(7);
 });
 ```
-
 **Output:** `0 4 1 6 2 7 3`.
 
 **Detailed Insights:**  
