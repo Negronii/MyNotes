@@ -929,6 +929,9 @@ CSS-based triangles improve loading times and reduce data bandwidth by eliminati
   - **Colored Border**: The fourth side (`border-left` in this example) is colored, forming the visible base of the triangle.
 - **Customization**: Altering the direction of the triangle involves changing the border that is colored. For instance, to make the triangle point upwards, apply `border-bottom: 10px solid red;` while keeping the other borders transparent.
 
+# 2.0 Javascript.md
+
+
 # 2.1 Traversing.md
 
 ## Traverse an Array: `for` vs. `forEach`
@@ -2497,9 +2500,6 @@ class LRUCache {
     }
 }
 ```
-# 2. Javascript.md
-
-
 # 3. Algorithms and Data Structures.md
 
 ## How is a linked list used in front-end development?
