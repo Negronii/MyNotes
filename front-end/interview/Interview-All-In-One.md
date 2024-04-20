@@ -621,7 +621,7 @@ Or
 
 .center {
     float: left;
-    width: calc(100% - 200px); /* Adjust width dynamically */
+    width: calc(100% - 100px); /* Adjust width dynamically */
 }
 ```
 **Pros**: Broad compatibility with older browsers.  
