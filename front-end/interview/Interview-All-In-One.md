@@ -799,10 +799,6 @@ Some layout techniques do not adapt when the viewport size changes but can be us
 The float layout method, though somewhat dated, remains useful particularly for simpler or legacy projects.
 
 ```css
-.container {
-    overflow: hidden; /* Clears the float effect within the container */
-}
-
 .left-side {
     float: left;
 }
@@ -811,6 +807,21 @@ The float layout method, though somewhat dated, remains useful particularly for 
     margin-left: 200px; /* Prevents overlap with the left side */
     width: calc(100% - 200px); /* Dynamic calculation of the width */
 }
+```
+Or
+```css
+.container {
+    overflow: hidden; /* Clears the float effect within the container */
+}
+
+.left-side {
+    float: left;
+    width: 200px; /* Fixed width */
+}
+
+.right-side {
+    float: left;
+    width: calc(100% - 200px); /* Dynamic calculation of the width */
 ```
 **Explanation**: By floating the `.left-side` to the left, we allow the `.right-side` to automatically adjust its width with `calc(100% - 200px);`. This dynamic calculation subtracts the fixed width of the left column from the total container width, ensuring the right side is responsive to the remaining space.
 
@@ -824,14 +835,31 @@ Positioning allows for precise control over layout elements, ideal for complex p
 
 .left-side {
     position: absolute;
-    top: 0;
-    bottom: 0;
     left: 0;
 }
 
 .right-side {
     margin-left: 200px; /* Prevents overlap with the left side */
     width: calc(100% - 200px); /* Dynamic calculation of the width */
+}
+```
+Or
+```css
+.container {
+    position: relative;
+    overflow: hidden; /* Clears the float effect within the container, creates a BFC */
+}
+
+.left-side {
+    position: absolute;
+    left: 0;
+    width: 200px; /* Fixed width */
+}
+
+.right-side {
+    position: absolute;
+    left: 200px; /* Adjusts position based on the left side */
+    right: 0;
 }
 ```
 **Explanation**: By setting the `.left-side` to `position: absolute;` relative to its `position: relative;` parent, it remains stationary. The `.right-side` employs a `margin-left` of 200px to start adjacent to the left side, providing a responsive layout that adjusts based on the overall container width.
