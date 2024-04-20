@@ -887,20 +887,20 @@ The inline-block method is useful for simpler two-column layouts but requires ca
 ```html
 <!-- Example HTML structure to use as a reference throughout this guide -->
 <div class="container">
-  <div class="center-fixed"></div>
-  <div class="center-auto"></div>
-  <div class="center-dynamic"></div>
-  <div class="center-flex"></div>
-  <div class="center-grid"></div>
-  <div class="center-table"></div>
+    <div class="center-fixed"></div>
+    <div class="center-auto"></div>
+    <div class="center-dynamic"></div>
+    <div class="center-flex"></div>
+    <div class="center-grid"></div>
+    <div class="center-table"></div>
 </div>
 
 <style>
-  .container {
-    width: 300px;
-    height: 300px;
-    border: 1px solid black;
-  }
+    .container {
+        width: 300px;
+        height: 300px;
+        border: 1px solid black;
+    }
 </style>
 ```
 
@@ -908,46 +908,47 @@ The inline-block method is useful for simpler two-column layouts but requires ca
 **Absolute** Positioning with Transform
 ```css
 .container {
-  position: relative;
+    position: relative;
+    overflow: hidden;
 }
 
 .center-dynamic {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 ```
 
 **Flexbox**
 ```css
 .center-flex {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh; /* Full viewport height */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Full viewport height */
 }
 ```
 
 **CSS Grid**
 ```css
 .center-grid {
-  display: grid;
-  place-items: center;
-  height: 100vh; /* Full viewport height */
+    display: grid;
+    place-items: center;
+    height: 100vh; /* Full viewport height */
 }
 ```
 
 **table**
 ```css
 .container {
-  display: table;
+    display: table;
 }
 
 .center-table {
-  display: table-cell;
-  vertical-align: middle;
-  text-align: center;
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
 }
 ```
 
@@ -955,35 +956,37 @@ The inline-block method is useful for simpler two-column layouts but requires ca
 **Absolute Positioning with Negative Margin**
 ```css
 .container {
-  position: relative;
+    position: relative;
+    overflow: hidden;
 }
 
 .center-fixed {
-  position: absolute;
-  width: 200px;
-  height: 100px;
-  top: 50%;
-  left: 50%;
-  margin-top: -50px;  /* Half of height */
-  margin-left: -100px; /* Half of width */
+    position: absolute;
+    width: 200px;
+    height: 100px;
+    top: 50%;
+    left: 50%;
+    margin-top: -50px;  /* Half of height */
+    margin-left: -100px; /* Half of width */
 }
 ```
 
 **Absolute Positioning with Auto Margins**
 ```css
 .container {
-  position: relative;
+    position: relative;
+    overflow: hidden;
 }
 
 .center-auto {
-  position: absolute;
-  width: 200px;
-  height: 100px;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  margin: auto;
+    position: absolute;
+    width: 200px;
+    height: 100px;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: auto;
 }
 ```
 Explanation: setting `top`, `right`, `bottom`, and `left` is actually moving the boundary of the box model, not only the content. Setting them all to 0 will make the box model fill the container, and since we set the content with fixed dimensions, `margin: auto` will center the box model within the container. 
