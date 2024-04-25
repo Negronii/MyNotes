@@ -973,7 +973,6 @@ The inline-block method is useful for simpler two-column layouts but requires ca
 ```css
 .container {
     position: relative;
-    overflow: hidden;
 }
 
 .center-auto {
@@ -3409,18 +3408,35 @@ HTTP (Hypertext Transfer Protocol) and UDP (User Datagram Protocol) operate at d
 3. Internet Layer (IP)
 4. Network Interface Layer
 
-## Follow-up: Difference between HTTP 1.0, 1.1, and 2.0
-**HTTP 1.0**
-- **Features**: Basic protocol supporting GET and POST methods.
-- **Connection**: Each request opens a new TCP connection, leading to overhead and latency.
+## Follow-up: Difference between HTTP 1.0, 1.1, 2.0 and 3.0
+**HTTP 1.0**  
+- **Features**: Supports basic methods like GET and POST.
+- **Connection**: Each HTTP request results in a new TCP connection, increasing overhead and latency due to the need for multiple connections.
 
-**HTTP 1.1**
-- **Features**: Introduced more sophisticated caching mechanisms (Cache-Control, ETag), persistent connections (`Connection: keep-alive`) to allow multiple requests over a single connection, range requests, and additional methods like PUT and DELETE for RESTful APIs.
-- **Performance**: Reduced latency by reusing connections, introduced chunked transfer encoding for dynamic content.
+**HTTP 1.1**  
+- **Features**:
+  - Advanced caching mechanisms such as Cache-Control and ETag.
+  - Persistent connections with `Connection: keep-alive` enabling multiple requests over a single connection.
+  - Support for range requests and additional methods like PUT and DELETE to facilitate RESTful APIs.
+- **Performance**:
+  - Connection reuse significantly cuts down on latency.
+  - Chunked transfer encoding supports dynamic content delivery without predefined content size.
 
-**HTTP 2.0**
-- **Features**: Significantly improved performance through header compression (reducing overhead), multiplexing (allowing multiple requests and responses to be in flight simultaneously over a single TCP connection), and server push capabilities.
-- **Adoption**: Increasingly widespread, offering substantial efficiency improvements over HTTP/1.x.
+**HTTP 2.0**  
+- **Features**:
+  - Header compression reduces overhead.
+  - Multiplexing allows several requests and responses simultaneously over a single connection. Sprite images and inlining CSS are no longer necessary.
+  - Server push improves web page load times by preemptively sending resources to the client.
+- **Adoption**:
+  - Its adoption has grown due to marked improvements in handling web traffic and resource delivery compared to HTTP/1.x.
+
+**HTTP 3.0**  
+- **Features**:
+  - Built on QUIC (Quick UDP Internet Connections) instead of TCP.
+  - Enhanced security through improved encryption methods.
+  - Reduced latency by eliminating head-of-line blocking, a limitation in previous HTTP versions over TCP.
+- **Adoption**:
+  - Facilitates faster connection establishment and robust handling of connections even in adverse network conditions.
 
 ## Why send options request when using HTTP cross origin?
 An OPTIONS request is vital in the CORS process to ensure secure cross-origin communication. It helps browsers determine whether the server's CORS policy permits the actual request, thus enhancing web security by allowing servers to specify who can access their resources and how.
