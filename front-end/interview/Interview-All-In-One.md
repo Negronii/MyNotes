@@ -1020,7 +1020,32 @@ CSS-based triangles improve loading times and reduce data bandwidth by eliminati
 
 # 2.0 Javascript.md
 
+## JavaScript's Strict Mode Features
 
+JavaScript's Strict Mode is a feature that enforces a stricter parsing and error handling mechanism on your JavaScript code. Activating Strict Mode can be done by adding `'use strict';` at the beginning of a script or a function block. This mode intentionally has different semantics from the normal code, aimed at improving code reliability and performance.
+
+### Features of Strict Mode
+
+1. **Mandatory Variable Declarations**: In Strict Mode, every variable must be declared before use. If a script attempts to use an undeclared variable, JavaScript will throw a `ReferenceError`. This requirement helps to avoid the accidental creation of global variables caused by typographical errors.
+
+2. **Disallows the `with` Statement**: The `with` statement is not allowed in Strict Mode because it creates ambiguity about the scope of variables. Its use can lead to significant performance hits and complicates the debugging process, as it modifies the scope chain, making it harder to predict which variables will be affected by a piece of code.
+
+3. **Scoped `eval()` Function**: Any declarations within an `eval()` expression in Strict Mode do not affect the surrounding scope, making `eval()` safer by preventing it from introducing new variables or modifying existing ones in the parent scope.
+
+4. **Secure `this` Keyword Behavior**: In functions that are not called as methods of an object, the value of `this` is `undefined` in Strict Mode. This contrasts with non-strict mode, where `this` defaults to the global object, reducing the risk of inadvertently modifying the global environment.
+
+5. **Prohibits Duplicate Parameter Names**: Functions cannot have multiple parameters with the same name, which eliminates potential errors from duplicated identifiers and enhances code clarity.
+
+6. **Immutable Non-Writable Properties**: In Strict Mode, attempts to assign values to non-writable properties result in a `TypeError`. This feature ensures the immutability of constants and read-only properties, thus preserving data integrity.
+
+7. **Restrictions on Deleting Properties**: Trying to delete non-deletable properties (such as built-in objects or fixed properties) will throw a `TypeError`, protecting important parts of the language’s core.
+
+8. **No Octal Numeric Literals**: Octal literals and octal escape sequences are not allowed in Strict Mode. This restriction avoids confusion between mistakenly leading zeroes in numbers and octal syntax, making the code more readable and less prone to errors. 
+   - Octal literals are those starting with a leading zero, like `010` stands for 8 in decimal. Octal escape sequences are those starting with `\`, like `\141` stands for `'a'`. We can use `u0061` instead of `\141` to represent `'a'`, and `0o10` instead of `010` to represent `8`.
+
+### Conclusion
+
+By enforcing these constraints, Strict Mode significantly aids in the development of more secure, robust, and clean JavaScript code. It prevents common coding errors, reduces accidental global variable creation, clarifies the scope chain, and enforces a cleaner syntax. Adopting Strict Mode can lead to better performance, easier debugging, and a more structured codebase, which are crucial for maintaining large-scale JavaScript applications.
 # 2.1 Traversing.md
 
 ## Traverse an Array: `for` vs. `forEach`
@@ -1095,7 +1120,200 @@ for (let [key, value] of m1) {
 }
 ```
 
+## Remove Duplicate Values from an Array
 
+### 1. Using a Set
+Utilizing a `Set` is an efficient and straightforward method to remove duplicates from an array. A `Set` in JavaScript automatically discards any duplicate values.
+
+**Example Code**:
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return [...new Set(arr)];
+}
+```
+**Time Complexity:** O(n) — as each element is processed once.
+**Space Complexity:** O(n) — in the worst case, if all elements are unique, space required is equivalent to the input size.
+
+### 2.1 Using Filter with Index Check
+This approach uses the `filter` method combined with `indexOf` to keep only the first occurrence of each element, suitable for those who prefer not to use `Set`.
+
+**Example Code**:
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return arr.filter((item, index) => arr.indexOf(item) === index);
+}
+```
+**Time Complexity:** O(n^2) — as `indexOf` checks across the array for each element.
+**Space Complexity:** O(n) — to store the filtered array of unique items.
+
+### 2.2 Using Filter with Index Check (Optimized)
+To optimize the filtering approach for removing duplicates, we can use a `Set` to track items that have already been seen. This reduces the time complexity significantly.
+
+**Optimized Example Code**:
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  const seen = new Set<T>();
+  return arr.filter(item => {
+    if (!seen.has(item)) {
+      seen.add(item);
+      return true;
+    }
+    return false;
+  });
+}
+```
+**Time Complexity:** O(n) — each element is processed once with set operations that are generally O(1).
+**Space Complexity:** O(n) — for the set holding the seen items.
+
+### 3. Using a Map for Object Uniqueness
+A `Map` can effectively ensure the uniqueness of objects in an array based on specific properties, such as `id` or `name`.
+
+**Example Code**:
+```typescript
+interface CustomObject {
+  id: number;
+  name: string;
+}
+
+function removeDuplicates(arr: CustomObject[]): CustomObject[] {
+  const unique = new Map<number, CustomObject>();
+  arr.forEach(obj => unique.set(obj.id, obj));
+  return Array.from(unique.values());
+}
+```
+**Time Complexity:** O(n) — as elements are processed individually and map operations are generally O(1).
+**Space Complexity:** O(n) — each unique object is stored once.
+
+### 4.1 Using Reduce with an Accumulator
+The `reduce` method can be creatively used to accumulate unique items by checking for their existence before adding.
+
+**Example Code**:
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return arr.reduce((acc, current) => {
+    if (!acc.includes(current)) {
+      acc.push(current);
+    }
+    return acc;
+  }, [] as T[]);
+}
+```
+**Time Complexity:** O(n^2) — because `includes` must iterate over the accumulated items for each array element.
+**Space Complexity:** O(n) — for the accumulator array without duplicates.
+
+### 4.2 Using Reduce with an Accumulator (Optimized)
+The original use of `includes` can be optimized by using a `Set` to track items that have been added to the accumulator. This avoids the need to iterate over the accumulator with each addition.
+
+**Optimized Example Code**:
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  const seen = new Set<T>();
+  return arr.reduce((acc, current) => {
+    if (!seen.has(current)) {
+      seen.add(current);
+      acc.push(current);
+    }
+    return acc;
+  }, [] as T[]);
+}
+```
+**Time Complexity:** O(n) — since `Set` operations (`has` and `add`) are O(1), and we process each item once.
+**Space Complexity:** O(n) — for the set and the accumulator.
+
+### 5.1 Using Sort and Reduce
+This method leverages the combination of `sort` and `reduce` to efficiently identify and remove duplicates in a sorted array.
+
+**Example Code**:
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return arr.sort().reduce((acc, current) => {
+    if (acc.length === 0 || acc[acc.length - 1] !== current) {
+      acc.push(current);
+    }
+    return acc;
+  }, [] as T[]);
+}
+```
+**Time Complexity:** O(n log n) — due to the sorting operation.
+**Space Complexity:** O(n) — to store the final array of unique items.
+
+### 5.2 Using Sort and Reduce (with Comparator)
+To ensure that `sort` behaves predictably across different data types, especially numbers, you can provide a comparator function. This is crucial when the array could contain numeric values or a mix of data types.
+
+**Optimized Example Code**:
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return arr.sort((a, b) => {
+    if (a > b) {
+      return 1;
+    } else if (a < b) {
+      return -1;
+    } else {
+      return 0;
+    }
+  }).reduce((acc, current) => {
+    if (acc.length === 0 || acc[acc.length - 1] !== current) {
+      acc.push(current);
+    }
+    return acc;
+  }, [] as T[]);
+}
+```
+**Time Complexity:** O(n log n) — due to the sorting operation.
+**Space Complexity:** O(n) — to store the resulting array of unique items.
+
+## Find Max Number in a List
+### Method 1: Using Spread Operator with `Math.max`
+
+**Code**:
+```ts
+function findMaxNumber(arr: number[]): number {
+  return Math.max(...arr);
+}
+```
+
+**Explanation**:
+- Utilizes the spread operator `...` to expand the array elements as individual arguments to `Math.max`.
+- Simple and clean, but may lead to performance issues or a stack overflow error with very large arrays due to limitations in the number of arguments that can be passed to a function.
+
+### Method 2: Using `Math.max` with `apply`
+
+**Code**:
+```ts
+function findMaxNumber(arr: number[]): number {
+  return Math.max.apply(null, arr);
+}
+```
+
+**Explanation**:
+- Similar to the previous method but uses `apply` to pass the array as an argument list to `Math.max`.
+- Avoids the potential stack overflow of the spread operator but still may encounter performance issues with very large datasets.
+
+### Method 3: Using `reduce` Method
+
+**Code**:
+```ts
+function findMaxNumber(arr: number[]): number {
+  return arr.reduce((acc, cur) => acc > cur ? acc : cur, arr[0]);
+}
+```
+
+**Explanation**:
+- Implements the `reduce` function to traverse the array and maintain the highest value found.
+- Provides good performance for large arrays and is the most functional programming approach among the listed methods.
+
+### Method 4: Using `sort`
+
+**Code**:
+```ts
+function findMaxNumber(arr: number[]): number {
+  return arr.sort((a, b) => b - a)[0];
+}
+```
+
+**Explanation**:
+- Sorts the array in descending order and selects the first element.
+- This method is less efficient due to the overhead of sorting the entire array and should be used when the smallest or a specific order of elements is also needed.
 # 2.2 Promise & Async.md
 
 ## Understanding Promise Execution Order
@@ -2051,34 +2269,7 @@ Foo.a(); // Output: 1
 - **Precedence and Overwriting**: When accessing a property, instance properties take precedence over prototype properties. Static properties can be redefined, affecting their behavior when accessed before and after instance creation.
 
 
-# 2.6 Other.md
-
-## JavaScript's Strict Mode Features
-
-JavaScript's Strict Mode is a feature that enforces a stricter parsing and error handling mechanism on your JavaScript code. Activating Strict Mode can be done by adding `'use strict';` at the beginning of a script or a function block. This mode intentionally has different semantics from the normal code, aimed at improving code reliability and performance.
-
-### Features of Strict Mode
-
-1. **Mandatory Variable Declarations**: In Strict Mode, every variable must be declared before use. If a script attempts to use an undeclared variable, JavaScript will throw a `ReferenceError`. This requirement helps to avoid the accidental creation of global variables caused by typographical errors.
-
-2. **Disallows the `with` Statement**: The `with` statement is not allowed in Strict Mode because it creates ambiguity about the scope of variables. Its use can lead to significant performance hits and complicates the debugging process, as it modifies the scope chain, making it harder to predict which variables will be affected by a piece of code.
-
-3. **Scoped `eval()` Function**: Any declarations within an `eval()` expression in Strict Mode do not affect the surrounding scope, making `eval()` safer by preventing it from introducing new variables or modifying existing ones in the parent scope.
-
-4. **Secure `this` Keyword Behavior**: In functions that are not called as methods of an object, the value of `this` is `undefined` in Strict Mode. This contrasts with non-strict mode, where `this` defaults to the global object, reducing the risk of inadvertently modifying the global environment.
-
-5. **Prohibits Duplicate Parameter Names**: Functions cannot have multiple parameters with the same name, which eliminates potential errors from duplicated identifiers and enhances code clarity.
-
-6. **Immutable Non-Writable Properties**: In Strict Mode, attempts to assign values to non-writable properties result in a `TypeError`. This feature ensures the immutability of constants and read-only properties, thus preserving data integrity.
-
-7. **Restrictions on Deleting Properties**: Trying to delete non-deletable properties (such as built-in objects or fixed properties) will throw a `TypeError`, protecting important parts of the language’s core.
-
-8. **No Octal Numeric Literals**: Octal literals and octal escape sequences are not allowed in Strict Mode. This restriction avoids confusion between mistakenly leading zeroes in numbers and octal syntax, making the code more readable and less prone to errors. 
-   - Octal literals are those starting with a leading zero, like `010` stands for 8 in decimal. Octal escape sequences are those starting with `\`, like `\141` stands for `'a'`. We can use `u0061` instead of `\141` to represent `'a'`, and `0o10` instead of `010` to represent `8`.
-
-### Conclusion
-
-By enforcing these constraints, Strict Mode significantly aids in the development of more secure, robust, and clean JavaScript code. It prevents common coding errors, reduces accidental global variable creation, clarifies the scope chain, and enforces a cleaner syntax. Adopting Strict Mode can lead to better performance, easier debugging, and a more structured codebase, which are crucial for maintaining large-scale JavaScript applications.
+# 2.6 Usecase Implementation.md
 
 ## Write a `curry` function to curry other functions
 Currying is the process of transforming a function with multiple arguments into a sequence of nesting functions that each take a single argument. Its main benefits include **parameter reuse, delayed execution, early return, and function composition**.
@@ -2588,6 +2779,9 @@ class LRUCache {
     }
 }
 ```
+
+
+
 # 3. Algorithms and Data Structures.md
 
 ## How is a linked list used in front-end development?
@@ -3028,9 +3222,6 @@ function arrayFlatten(arr: any[]): any[]{
     }, []);
 }
 ```
-
-
-
 
 ## Implement binary search and describe time complexity
 ```ts
