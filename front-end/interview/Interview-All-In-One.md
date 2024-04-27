@@ -1120,6 +1120,73 @@ for (let [key, value] of m1) {
 }
 ```
 
+## Array Flattening Function in JavaScript
+
+**Recursive Approach**
+```ts
+function arrayFlatten(arr: any[]): any[] {
+    let flattenedArray = [];
+    for (let i = 0; i < arr.length; i++) {
+        if (Array.isArray(arr[i])) {
+            flattenedArray = flattenedArray.concat(arrayFlatten(arr[i]));
+        } else {
+            flattenedArray.push(arr[i]);
+        }
+    }
+    return flattenedArray;
+}
+```
+**Advantages**:
+- Works universally, including in environments without ES6 support.
+- Easy to understand and implement.
+
+**Disadvantages**:
+- Can be less efficient with very deep or very large arrays due to recursive calls.
+
+**Functional Programming Approach**
+```ts
+function arrayFlatten(arr: any[]): any[]{
+    return arr.reduce((prev, cur) => {
+        return prev.concat(Array.isArray(cur) ? arrayFlatten(cur) : cur);
+    }, []);
+}
+```
+**Advantages**:
+- Declarative and concise.
+- Leverages functional programming techniques.
+
+**Disadvantages**:
+- Recursive, similar performance considerations as the recursive approach.
+
+**Iterative Approach**
+```ts
+function arrayFlatten(arr: any[]): any[] {
+    while (arr.some(Array.isArray)) {
+        arr = [].concat(...arr);
+    }
+    return arr;
+}
+```
+**Advantages**:
+- Non-recursive, potentially better performance on large datasets.
+- Easy to read and understand.
+
+**Disadvantages**:
+- Might not be as intuitive for those unfamiliar with JavaScript's spread operator and `some` method.
+
+**ES6 Flat Method**
+```ts
+function arrayFlatten(arr: any[]): any[] {
+    return arr.flat(Infinity);
+}
+```
+**Advantages**:
+- Simplest and most elegant solution.
+- Very efficient and concise.
+
+**Disadvantages**:
+- Limited browser support; not available in Internet Explorer or older browsers.
+
 ## Remove Duplicate Values from an Array
 
 ### 1. Using a Set
@@ -1564,26 +1631,82 @@ console.log(person.name); // Tom
 
 It's important to note that a `class` in JavaScript is essentially syntactic sugar over the existing prototype-based inheritance and does not introduce a new object-oriented inheritance model. At its core, a class is just a special type of function, and thus `typeof ClassName === 'function'`.
 
-## Understanding the principle of `instanceof`
+## Determining Variable Types in JavaScript
 
-The `instanceof` operator in JavaScript is used to determine whether a particular constructor appears anywhere in the prototype chain of an object. It checks if the `prototype` property of a constructor appears in the prototype chain of an object.
+Understanding the type of a variable is crucial in JavaScript due to its dynamically typed nature. This section explores various methods to ascertain the type of variables effectively.
 
-```ts
-function myInstanceOf(obj: any, constructor: Function) {
-    let proto = obj.__proto__;
-    while (proto) {
-        if (proto === constructor.prototype) {
-            return true;
-        }
-        proto = proto.__proto__;
+### `typeof` Operator
+**Overview:**
+The `typeof` operator is a straightforward tool used to determine the primitive type of a variable.
+
+**Examples and Usage:**
+```javascript
+console.log(typeof 1); // Output: 'number'
+console.log(typeof 'test'); // Output: 'string'
+console.log(typeof true); // Output: 'boolean'
+```
+
+**Advantages:**
+- Simple and quick to use for identifying primitive types.
+
+**Limitations:**
+- Inadequate for non-primitive types, as it returns `'object'` for arrays, null, and plain objects, which can be misleading.
+
+### `Object.prototype.toString.call()`
+**Overview:**
+A more robust method for type checking that addresses the limitations of the `typeof` operator by providing a precise type string for all objects.
+
+**Examples and Usage:**
+```javascript
+console.log(Object.prototype.toString.call([1, 2, 3])); // Output: '[object Array]'
+console.log(Object.prototype.toString.call(null)); // Output: '[object Null]'
+```
+
+**Advantages:**
+- Provides detailed type information, helpful in debugging and validation processes.
+
+**Limitations:**
+- More verbose and complex compared to `typeof`, potentially increasing code complexity for simple checks.
+
+### `instanceof` Operator
+**Overview:**
+Used to verify whether an object is an instance of a particular class or constructor function within its prototype chain.
+
+**Examples and Usage:**
+```javascript
+console.log([] instanceof Array); // Output: true
+console.log({} instanceof Object); // Output: true
+```
+
+**Limitations:**
+- Only applicable to objects created by constructors, not suitable for primitive types.
+
+### Custom `getType` Function
+**Overview:**
+To overcome the limitations of the above methods, a custom function can be defined to provide a comprehensive type checking mechanism.
+
+**Function Definition and Usage:**
+```javascript
+function getType(val) {
+    const type = typeof val;
+    if (type !== 'object') {
+        return type; // Directly return the type of primitives.
+    } else if (val === null) {
+        return 'null'; // Correctly identify null.
     }
-    return false;
+    // Use Object.prototype.toString for detailed object type identification.
+    return Object.prototype.toString.call(val).slice(8, -1).toLowerCase();
 }
 
-function Foo() {}
-const f = new Foo();
-console.log(myInstanceOf(f, Foo)); // Output: true
+console.log(getType(null)); // Output: 'null'
+console.log(getType([1, 2, 3])); // Output: 'array'
 ```
+
+**Advantages:**
+- Provides accurate type information for both primitive and reference types, enhancing debugging and validation.
+
+**Enhanced Comprehension:**
+This custom function integrates the strengths of both `typeof` and `Object.prototype.toString.call()` methods, offering a versatile tool for type checking in JavaScript applications. It simplifies the process while ensuring accuracy and comprehensiveness in type determination.
 
 ## Object Key Data Types in JavaScript
 
@@ -1724,22 +1847,6 @@ Using `JSON.stringify` followed by `JSON.parse` is a quick method to deep copy o
 - **Loses Map and Set data:** When Maps and Sets are passed through this process, they are converted into objects and arrays, respectively, losing their inherent properties and behaviors.
 - **Fails with circular references:** If the object contains circular references (objects referencing themselves directly or indirectly), `JSON.stringify` will throw an error, as it cannot serialize cyclic structures.
 - **Does not copy special objects correctly:** Certain JavaScript objects like functions, `undefined`, and special objects (e.g., `RegExp`, `Date`) cannot be accurately cloned through this method, resulting in loss of information or incorrect copying.
-
-## Writing a `getType` Function in JavaScript
-The `typeof` operator, `instanceof` keyword, and `Object.prototype.toString.call()` method are commonly used techniques to identify variable types. e.g. `typeof 1` returns `'number'`, `typeof 'test'` returns `'string'`, and `typeof [1, 2, 3]` returns `'object'`. 
-
-However, `typeof` has limitations, especially for reference types, where it returns `'object'` for arrays, null, and objects. To address this, the `Object.prototype.toString.call()` method provides a more detailed type check for reference types.
-
-```ts
-function getType(val: any): string {
-    const type = typeof val;
-    if (type !== 'object') {
-        return type; // Returns 'number', 'string', 'boolean', etc.
-    }
-    // For objects, including arrays and null, use Object.prototype.toString
-    return Object.prototype.toString.call(val).slice(8, -1).toLowerCase();
-}
-```
 
 ### Handling Maps, Sets, and Circular References
 
@@ -3146,29 +3253,6 @@ public class Knapsack01 {
 - **Dynamic Programming Array (`dp`)**: The `dp` array is central to the solution, where `dp[w]` represents the maximum value that can be achieved with a knapsack capacity of `w`.
 - **Iteration Order**: It's crucial to iterate the weights in reverse when considering each item, as this ensures that each item is only considered once per capacity.
 - **Item Processing**: For each item, we compare the maximum value of not taking the item (`dp[w]`) versus taking the item (`dp[w - weights[i]] + values[i]`), thus ensuring that we always store the best solution for every capacity.
-
-## Array Flattening Function in JavaScript
-Array flattening is the process of converting a nested array into a single-dimensional array. 
-
-```ts
-function arrayFlatten(arr: any[]): any[] {
-    let flattenedArray = [];
-    for (let i = 0; i < arr.length; i++) {
-        if (Array.isArray(arr[i])) {
-            flattenedArray = flattenedArray.concat(arrayFlatten(arr[i])); 
-        } else {
-            flattenedArray.push(arr[i]);
-        }
-    }
-    return flattenedArray;
-}
-
-function arrayFlatten(arr: any[]): any[]{
-    return arr.reduce((prev, cur) => {
-        return prev.concat(Array.isArray(cur) ? arrayFlatten(cur) : cur);
-    }, []);
-}
-```
 
 ## Implement binary search and describe time complexity
 ```ts
@@ -5833,3 +5917,108 @@ The Publish-Subscribe pattern, on the other hand, introduces a middle layer know
 
 In summary, the key difference lies in the relationship and communication method between the parties involved: the Observer pattern facilitates direct communication between the subject and its observers, resulting in tighter coupling, whereas the Publish-Subscribe pattern uses an event channel to mediate communication, leading to looser coupling and greater flexibility.
 
+
+# 10. Other.md
+
+## Understanding Deadlocks
+Deadlocks can occur in any system where shared resources are accessed concurrently. However, in the context of front-end development, this typically relates to asynchronous tasks and resource loading.
+
+#### Necessary Conditions for Deadlock
+To grasp how deadlocks occur and prevent them, it's essential to understand the following conditions, adapted from general computing to the web development context:
+
+- **Mutual Exclusion**: A resource cannot be shared and is exclusively held by one process at a time. In web development, this could translate to exclusive access to the DOM or single-threaded operations in JavaScript where certain operations cannot run simultaneously due to browser limitations.
+
+- **Hold and Wait**: A process is holding at least one resource and is waiting to acquire additional resources that are currently being held by other processes. For example, a JavaScript event loop might be waiting for a fetch API response while holding onto DOM access until the fetch is completed.
+
+- **No Preemption**: A resource can only be released voluntarily by the process holding it, not forcibly taken away. This is akin to JavaScript promises which cannot be canceled once initiated; they must resolve or reject.
+
+- **Circular Wait**: There exists a set of processes, each of which is waiting for a resource held by another process in the set, creating a circular chain of dependencies. In the context of web applications, this might happen when multiple asynchronous JavaScript operations are waiting on each other to release some resource, like API data or access to IndexedDB.
+
+## Java HashMap Overview
+
+### Storage Structure
+**Key Storage:** Java's `HashMap` stores data in an array of nodes, each node being a "bucket." These buckets may contain multiple entries linked together by a common array index, resulting in a structure known as chained bucketing.
+**Node Composition:** Each node in the chain comprises a key-value pair, the key's hash code, and a reference to the next node, enabling efficient navigation and retrieval.
+
+### Hash Function
+**Initial Hashing:** Keys are first processed using their `hashCode()` method, which generates a preliminary hash code.
+**Supplemental Hashing:** To minimize clustering—an issue with some native hash functions—a supplemental hash function further processes the initial hash. This determines the exact index in the array where the entry should be stored, enhancing key distribution across the buckets.
+
+### Handling Key Conflicts
+**Chaining Mechanism:** When multiple keys hash to the same index, the `HashMap` utilizes a linked list to manage these collisions. Each new entry is added to the end of the list at that particular index, maintaining a retrievable sequence of entries.
+
+### Expansion of Array Length
+**Trigger for Expansion:** The array is resized—typically doubling in size—when the number of entries exceeds 75% of the array's current capacity. This threshold is known as the load factor.
+**Rehashing Process:** Post-expansion, all existing entries must be rehashed to the new, larger array. This ensures entries are redistributed according to the new array size, though it is computationally demanding.
+
+### Conversion to Red-Black Tree
+**Conditions for Conversion:** If a bucket becomes overly populated (typically when it holds more than eight entries), it is converted from a linked list to a red-black tree. This enhances search efficiency within that bucket.
+**Reversion to Linked List:** Should the number of entries in a bucket fall below the threshold, the structure reverts to a linked list to maintain performance balance.
+
+## Benefits of Using Cloud Functions like Google Cloud Compared to Traditional Front-end/Back-end Separation
+
+Cloud functions, such as those provided by Google Cloud, offer several advantages over the traditional front-end/back-end separation architecture. These benefits stem from cloud functions' ability to operate in a serverless environment, which changes how applications are built, deployed, and scaled. Below, we detail these benefits:
+
+### Cost Efficiency
+- **Google Cloud Functions** operate on a pay-as-you-go model, where charges are incurred only when the code is executed. This is particularly beneficial for applications with fluctuating traffic, as it aligns operational costs directly with actual usage, avoiding the need to pay for idle resources.
+
+### Simplified Management
+- **Serverless Architecture**: With Google Cloud Functions, there's no need to manage servers. Google handles all the infrastructure management tasks, including maintenance, patching, and security. In contrast, traditional architectures, even when utilizing virtual or cloud servers, require developers or operations teams to manage server configuration and upkeep.
+
+### Automatic Scaling
+- **Adaptability to Traffic**: Google Cloud Functions automatically scale based on the number of requests. This ensures that during peak traffic periods, more resources are allocated to handle increased concurrent requests, and during low traffic times, resources are reduced to save costs. Traditional models often require manual intervention or additional automation tools for scaling.
+
+### Rapid Iteration
+- **Development Agility**: The serverless model enables developers to quickly create and deploy code without worrying about underlying infrastructure. This supports faster development cycles and rapid iteration, whereas traditional deployment models might involve complex configuration and deployment processes.
+
+### Integration and Automation
+- **Seamless Ecosystem Connectivity**: Google Cloud Functions can be easily integrated with other services and tools within the Google Cloud Platform (GCP), such as Google Cloud Pub/Sub and Google Cloud Storage. This facilitates the creation of end-to-end automated solutions, streamlining the development process and enhancing functionality.
+
+### Event-Driven Architecture
+- **Responsive Microservices**: Google Cloud Functions inherently support an event-driven architecture, directly responding to events from Google Cloud services, like file uploads to Google Cloud Storage or messages published to Google Cloud Pub/Sub. This model is ideal for building highly decoupled and responsive microservices, as it allows services to react immediately to changes and triggers within the ecosystem.
+
+## Agile Development
+
+### Overview
+Agile development is a software and product development methodology that prioritizes flexibility, iterative progress, and continuous improvement. It promotes the delivery of small, workable segments of a project frequently. This approach allows development teams to respond swiftly and efficiently to changes in project requirements or priorities.
+
+### Principles
+Agile development is based on several core principles:
+- **Customer satisfaction** through early and continuous delivery of valuable software.
+- **Welcoming changing requirements**, even late in development.
+- **Delivering working software frequently**, from a couple of weeks to a couple of months, with a preference for the shorter timescale.
+- **Daily cooperation** between business people and developers.
+- **Supporting and trusting** individuals to get the job done.
+- **Face-to-face conversation** as the most efficient and effective method of conveying information.
+- **Maintaining a constant pace** indefinitely.
+- **Continuous attention** to technical excellence and good design.
+- **Simplicity**—the art of maximizing the amount of work not done—is essential.
+- **Self-organizing teams** which produce the best architectures, requirements, and designs.
+- **Regular reflection** on how to become more effective, then tuning and adjusting behavior accordingly.
+
+### Benefits
+The benefits of Agile development include:
+- **Increased flexibility and adaptability** to change.
+- **Enhanced product quality** due to frequent testing and revisions.
+- **Higher customer satisfaction** through the delivery of products that better meet customer needs and preferences.
+- **Improved project predictability** and reduced risks.
+
+## Scrum Methodology
+
+### Scrum Master Role
+The Scrum Master is a key facilitator within the Scrum methodology, a prominent Agile framework. This role involves:
+- **Facilitating the Scrum process**: Helping the development team work cohesively.
+- **Removing impediments**: Addressing any obstacles that prevent the team from achieving their sprint goals.
+- **Ensuring clear communication**: Acting as a bridge between stakeholders and the development team to ensure all parties are aligned.
+
+### Responsibilities
+The Scrum Master's responsibilities are not akin to those of a traditional project manager. Instead, they include:
+- **Coaching the team**: Providing guidance to all team members, including the Product Owner, on Scrum practices.
+- **Promoting Scrum values**: Encouraging and supporting the adoption of Scrum, including its iterative development and feedback loops.
+- **Protecting the team from external interruptions**: Ensuring that the team can focus on their current sprint tasks.
+
+### Challenges
+Some common challenges faced by Scrum Masters include:
+- **Managing complex team dynamics** and ensuring smooth collaboration.
+- **Handling resistance to Scrum practices**: Particularly from team members unfamiliar with or skeptical of Agile methods.
+- **Balancing multiple roles**: Sometimes, Scrum Masters might need to address conflicts or fulfill multiple roles depending on team needs and organizational structure.
