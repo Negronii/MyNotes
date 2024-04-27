@@ -11,3 +11,24 @@ To grasp how deadlocks occur and prevent them, it's essential to understand the 
 - **No Preemption**: A resource can only be released voluntarily by the process holding it, not forcibly taken away. This is akin to JavaScript promises which cannot be canceled once initiated; they must resolve or reject.
 
 - **Circular Wait**: There exists a set of processes, each of which is waiting for a resource held by another process in the set, creating a circular chain of dependencies. In the context of web applications, this might happen when multiple asynchronous JavaScript operations are waiting on each other to release some resource, like API data or access to IndexedDB.
+
+## Java HashMap Overview
+
+### Storage Structure
+**Key Storage:** Java's `HashMap` stores data in an array of nodes, each node being a "bucket." These buckets may contain multiple entries linked together by a common array index, resulting in a structure known as chained bucketing.
+**Node Composition:** Each node in the chain comprises a key-value pair, the key's hash code, and a reference to the next node, enabling efficient navigation and retrieval.
+
+### Hash Function
+**Initial Hashing:** Keys are first processed using their `hashCode()` method, which generates a preliminary hash code.
+**Supplemental Hashing:** To minimize clustering—an issue with some native hash functions—a supplemental hash function further processes the initial hash. This determines the exact index in the array where the entry should be stored, enhancing key distribution across the buckets.
+
+### Handling Key Conflicts
+**Chaining Mechanism:** When multiple keys hash to the same index, the `HashMap` utilizes a linked list to manage these collisions. Each new entry is added to the end of the list at that particular index, maintaining a retrievable sequence of entries.
+
+### Expansion of Array Length
+**Trigger for Expansion:** The array is resized—typically doubling in size—when the number of entries exceeds 75% of the array's current capacity. This threshold is known as the load factor.
+**Rehashing Process:** Post-expansion, all existing entries must be rehashed to the new, larger array. This ensures entries are redistributed according to the new array size, though it is computationally demanding.
+
+### Conversion to Red-Black Tree
+**Conditions for Conversion:** If a bucket becomes overly populated (typically when it holds more than eight entries), it is converted from a linked list to a red-black tree. This enhances search efficiency within that bucket.
+**Reversion to Linked List:** Should the number of entries in a bucket fall below the threshold, the structure reverts to a linked list to maintain performance balance.
