@@ -1712,6 +1712,99 @@ b -> {n: 1, x: {n: 2}}
 
 - `console.log(a.x)` prints `undefined`, because 'a' now points to `{n: 2}`, which does not have an 'x' property.
 - `console.log(b.x)` prints `{n: 2}`, because 'b' still points to the original object, which now includes `x: {n: 2}`.
+
+## Implement a Deep Copy Function
+
+Creating a deep copy function in JavaScript is crucial when you want to duplicate complex data structures without altering the original data. This function must handle various data types, including Maps, Sets, and objects with circular references. The common approach using `JSON.stringify` and `JSON.parse` falls short for these use cases due to its limitations with certain data types and structures.
+
+### Why Not `JSON.stringify` and `JSON.parse`?
+
+Using `JSON.stringify` followed by `JSON.parse` is a quick method to deep copy objects without nested structures or special types. However, this approach has significant limitations:
+
+- **Loses Map and Set data:** When Maps and Sets are passed through this process, they are converted into objects and arrays, respectively, losing their inherent properties and behaviors.
+- **Fails with circular references:** If the object contains circular references (objects referencing themselves directly or indirectly), `JSON.stringify` will throw an error, as it cannot serialize cyclic structures.
+- **Does not copy special objects correctly:** Certain JavaScript objects like functions, `undefined`, and special objects (e.g., `RegExp`, `Date`) cannot be accurately cloned through this method, resulting in loss of information or incorrect copying.
+
+## Writing a `getType` Function in JavaScript
+The `typeof` operator, `instanceof` keyword, and `Object.prototype.toString.call()` method are commonly used techniques to identify variable types. e.g. `typeof 1` returns `'number'`, `typeof 'test'` returns `'string'`, and `typeof [1, 2, 3]` returns `'object'`. 
+
+However, `typeof` has limitations, especially for reference types, where it returns `'object'` for arrays, null, and objects. To address this, the `Object.prototype.toString.call()` method provides a more detailed type check for reference types.
+
+```ts
+function getType(val: any): string {
+    const type = typeof val;
+    if (type !== 'object') {
+        return type; // Returns 'number', 'string', 'boolean', etc.
+    }
+    // For objects, including arrays and null, use Object.prototype.toString
+    return Object.prototype.toString.call(val).slice(8, -1).toLowerCase();
+}
+```
+
+### Handling Maps, Sets, and Circular References
+
+To address these limitations, a custom deep copy function is required. This function must thoughtfully handle various data structures, including Maps, Sets, and objects with circular references, ensuring an accurate and efficient cloning process. Below is an enhanced TypeScript implementation that covers these cases effectively:
+
+```typescript
+function deepCopy(obj: any, map = new WeakMap()): any {
+  // Directly return if obj is null or not an object (e.g., primitives and functions)
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  // Use an existing reference from map if obj was already copied (circular reference handling)
+  if (map.has(obj)) {
+    return map.get(obj);
+  }
+
+  let copy;
+
+  // Clone Date objects by creating a new instance with the same time value
+  if (obj instanceof Date) {
+    copy = new Date(obj.getTime());
+  }
+  // Clone RegExp objects by creating a new instance with the same pattern and flags
+  else if (obj instanceof RegExp) {
+    copy = new RegExp(obj.source, obj.flags);
+  }
+  // Deep copy Map objects by iterating over entries and recursively copying them
+  else if (obj instanceof Map) {
+    copy = new Map();
+    obj.forEach((value, key) => {
+      copy.set(key, deepCopy(value, map));
+    });
+  }
+  // Deep copy Set objects by iterating over values and recursively copying them
+  else if (obj instanceof Set) {
+    copy = new Set();
+    obj.forEach(value => {
+      copy.add(deepCopy(value, map));
+    });
+  }
+  // Handle Arrays and plain Objects by creating an empty structure and recursively copying properties
+  else {
+    copy = Array.isArray(obj) ? [] : {};
+    map.set(obj, copy); // Track the object copy to handle circular references
+    Object.keys(obj).forEach(key => {
+      copy[key] = deepCopy(obj[key], map);
+    });
+  }
+
+  return copy;
+}
+```
+
+### Key Points
+
+- **Circular Reference Handling:** Utilizes a `WeakMap` to keep track of previously copied objects. This prevents infinite loops by reusing the copied reference instead of attempting to copy the object again.
+- **Special Object Cloning:** Provides tailored cloning strategies for `Date` and `RegExp` objects, ensuring that their unique properties and behaviors are preserved in the copy.
+- **Recursive Deep Copy:** Employs a recursive approach to accurately copy nested structures, including objects, arrays, Maps, and Sets. This ensures that the deep copy function can handle complex and deeply nested data structures effectively.
+
+### Special Object Cloning - `Date` and `RegExp`
+`Date` and `RegExp` objects have unique properties and methods that are not enumerable and cannot be copied over by simply iterating over their keys. For instance:
+- A `Date` object encapsulates a single moment in time, represented internally as a timestamp (the number of milliseconds since the Unix Epoch). This value is not directly accessible as an enumerable property that can be copied.
+- A `RegExp` object contains a pattern and flags (such as global, multiline, etc.), which are crucial for its operation. These are accessed through properties like source and flags, not directly copyable via key enumeration.
+
 # 2.4 Scope & Closure.md
 
 ## What is Scope in JavaScript?
@@ -2268,9 +2361,6 @@ Foo.a(); // Output: 1
 - **Prototype Properties**: Properties defined on the prototype (`Foo.prototype.a`) are shared across all instances. However, they have lower precedence compared to instance-specific properties.
 - **Precedence and Overwriting**: When accessing a property, instance properties take precedence over prototype properties. Static properties can be redefined, affecting their behavior when accessed before and after instance creation.
 
-
-# 2.6 Usecase Implementation.md
-
 ## Write a `curry` function to curry other functions
 Currying is the process of transforming a function with multiple arguments into a sequence of nesting functions that each take a single argument. Its main benefits include **parameter reuse, delayed execution, early return, and function composition**.
 
@@ -2296,82 +2386,6 @@ console.log(curriedSum(1)(2)(3)); // Output: 6
 console.log(curriedSum(1, 2)(3)); // Output: 6
 console.log(curriedSum(1)(2, 3)); // Output: 6
 ```
-
-## Implement a Deep Copy Function
-
-Creating a deep copy function in JavaScript is crucial when you want to duplicate complex data structures without altering the original data. This function must handle various data types, including Maps, Sets, and objects with circular references. The common approach using `JSON.stringify` and `JSON.parse` falls short for these use cases due to its limitations with certain data types and structures.
-
-### Why Not `JSON.stringify` and `JSON.parse`?
-
-Using `JSON.stringify` followed by `JSON.parse` is a quick method to deep copy objects without nested structures or special types. However, this approach has significant limitations:
-
-- **Loses Map and Set data:** When Maps and Sets are passed through this process, they are converted into objects and arrays, respectively, losing their inherent properties and behaviors.
-- **Fails with circular references:** If the object contains circular references (objects referencing themselves directly or indirectly), `JSON.stringify` will throw an error, as it cannot serialize cyclic structures.
-- **Does not copy special objects correctly:** Certain JavaScript objects like functions, `undefined`, and special objects (e.g., `RegExp`, `Date`) cannot be accurately cloned through this method, resulting in loss of information or incorrect copying.
-
-### Handling Maps, Sets, and Circular References
-
-To address these limitations, a custom deep copy function is required. This function must thoughtfully handle various data structures, including Maps, Sets, and objects with circular references, ensuring an accurate and efficient cloning process. Below is an enhanced TypeScript implementation that covers these cases effectively:
-
-```typescript
-function deepCopy(obj: any, map = new WeakMap()): any {
-  // Directly return if obj is null or not an object (e.g., primitives and functions)
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-
-  // Use an existing reference from map if obj was already copied (circular reference handling)
-  if (map.has(obj)) {
-    return map.get(obj);
-  }
-
-  let copy;
-
-  // Clone Date objects by creating a new instance with the same time value
-  if (obj instanceof Date) {
-    copy = new Date(obj.getTime());
-  }
-  // Clone RegExp objects by creating a new instance with the same pattern and flags
-  else if (obj instanceof RegExp) {
-    copy = new RegExp(obj.source, obj.flags);
-  }
-  // Deep copy Map objects by iterating over entries and recursively copying them
-  else if (obj instanceof Map) {
-    copy = new Map();
-    obj.forEach((value, key) => {
-      copy.set(key, deepCopy(value, map));
-    });
-  }
-  // Deep copy Set objects by iterating over values and recursively copying them
-  else if (obj instanceof Set) {
-    copy = new Set();
-    obj.forEach(value => {
-      copy.add(deepCopy(value, map));
-    });
-  }
-  // Handle Arrays and plain Objects by creating an empty structure and recursively copying properties
-  else {
-    copy = Array.isArray(obj) ? [] : {};
-    map.set(obj, copy); // Track the object copy to handle circular references
-    Object.keys(obj).forEach(key => {
-      copy[key] = deepCopy(obj[key], map);
-    });
-  }
-
-  return copy;
-}
-```
-
-### Key Points
-
-- **Circular Reference Handling:** Utilizes a `WeakMap` to keep track of previously copied objects. This prevents infinite loops by reusing the copied reference instead of attempting to copy the object again.
-- **Special Object Cloning:** Provides tailored cloning strategies for `Date` and `RegExp` objects, ensuring that their unique properties and behaviors are preserved in the copy.
-- **Recursive Deep Copy:** Employs a recursive approach to accurately copy nested structures, including objects, arrays, Maps, and Sets. This ensures that the deep copy function can handle complex and deeply nested data structures effectively.
-
-### Special Object Cloning - `Date` and `RegExp`
-`Date` and `RegExp` objects have unique properties and methods that are not enumerable and cannot be copied over by simply iterating over their keys. For instance:
-- A `Date` object encapsulates a single moment in time, represented internally as a timestamp (the number of milliseconds since the Unix Epoch). This value is not directly accessible as an enumerable property that can be copied.
-- A `RegExp` object contains a pattern and flags (such as global, multiline, etc.), which are crucial for its operation. These are accessed through properties like source and flags, not directly copyable via key enumeration.
 
 ## Understanding `['1', '2', '3'].map(parseInt)` Output
 The `parseInt` function converts a string argument to an integer of the specified radix (base). Its signature is `parseInt(string, radix)`, where:
@@ -2414,74 +2428,7 @@ const res = arr.map((item, index) => {
     return parseInt(item, index);
 });
 ```
-
-## Writing a `getType` Function in JavaScript
-The `typeof` operator, `instanceof` keyword, and `Object.prototype.toString.call()` method are commonly used techniques to identify variable types. e.g. `typeof 1` returns `'number'`, `typeof 'test'` returns `'string'`, and `typeof [1, 2, 3]` returns `'object'`. 
-
-However, `typeof` has limitations, especially for reference types, where it returns `'object'` for arrays, null, and objects. To address this, the `Object.prototype.toString.call()` method provides a more detailed type check for reference types.
-
-```ts
-function getType(val: any): string {
-    const type = typeof val;
-    if (type !== 'object') {
-        return type; // Returns 'number', 'string', 'boolean', etc.
-    }
-    // For objects, including arrays and null, use Object.prototype.toString
-    return Object.prototype.toString.call(val).slice(8, -1).toLowerCase();
-}
-```
-
-## Understanding JavaScript Proxies for State Monitoring
-
-JavaScript `Proxy` is a versatile feature that enables the creation of a proxy for another object. This proxy allows for the interception and customization of operations performed on the original object, including property access, assignment, and enumeration. This capability is especially valuable for tracking changes in objects or arrays in a dynamic manner, enabling actions like logging additions to a list or triggering updates in response to changes.
-
-### The Basics of Proxy
-
-A `Proxy` in JavaScript acts as a sophisticated wrapper for an original object, granting fine-grained control over interactions with that object. Operations on the proxy can be intercepted to implement custom behaviors for fundamental operations such as property reads or writes.
-
-### Practical Example: Monitoring List Additions
-
-To demonstrate the utility of a `Proxy`, consider a use case where it's necessary to monitor additions to a list (an array) and perform actions like logging these additions, validating the new items, or updating the UI. A `Proxy` facilitates these tasks by allowing for custom handlers for get and set operations.
-
-**Example Implementation**
-
-The following example showcases the use of a `Proxy` to observe and react to new items being added to a list:
-
-```javascript
-// Handler object with traps for get and set operations
-let handler = {
-  // Trap for property access
-  get(target, property, receiver) {
-    console.log(`Accessing property '${property}'`);
-    return Reflect.get(...arguments); // Uses Reflect API for default operations
-  },
-  // Trap for property assignment
-  set(target, property, value, receiver) {
-    console.log(`Adding '${value}' to the list`);
-    target[property] = value; // Updates the target list
-    // Here, additional actions can be implemented, such as validation or UI updates
-    return true; // Indicates that the operation was successful
-  }
-};
-
-// The original list to be monitored
-let originalList = [];
-
-// Creating the proxy for the original list
-let proxyList = new Proxy(originalList, handler);
-
-// Performing operations on the proxy list
-proxyList.push('Apple');  // Output: Adding 'Apple' to the list
-proxyList.push('Banana'); // Output: Adding 'Banana' to the list
-```
-
-In this enhanced example, interactions with the `proxyList` trigger the appropriate handler within the `handler` object. Adding a new item to the list via the `push` method activates the `set` trap, which logs the operation and facilitates additional actions like validations or UI adjustments.
-
-### Advantages of Using Proxies
-
-- **Interception and Customization**: Proxies offer a powerful means to intercept and tailor the behavior of fundamental operations on objects, enabling the implementation of custom behaviors and checks.
-- **Programmatic Validation**: They provide a mechanism for enforcing programmatic validation rules and constraints on object properties, enhancing data integrity and application robustness.
-- **Change Detection**: Proxies are instrumental in detecting changes to objects and arrays, supporting reactive programming patterns by facilitating dynamic responses to data modifications.
+# 2.6 Implementations.md
 
 ## Implement `LazyMan` Class
 
@@ -5727,12 +5674,10 @@ Choosing the right technology stack is essential for the success of a project. T
 
 # 9. Design Patterns.md
 
-## Common Design Patterns in Front-End Development and Their Usage Scenarios
-
-### Design Principles
+## Design Principles
 The most important principle in design patterns is the **Open/Closed Principle**, which states that a system should be open for extension but closed for modification. This means you should be able to add new functionality without changing the existing code.
 
-### Factory Pattern
+## Factory Pattern
 The Factory pattern involves using a factory function to create instances, effectively hiding the `new` keyword to encapsulate the creation process. This pattern is useful for scenarios where the creation process is complex or when there needs to be some control over how instances are created. Examples include the jQuery `$` function and React's `createElement` function.
 
 **Example**:
@@ -5746,7 +5691,7 @@ function factory() {
 const f = factory();
 ```
 
-### Singleton Pattern
+## Singleton Pattern
 The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is particularly useful for cases where a single instance of a class should be used across the system, such as the store in Vuex and Redux or a globally unique dialog/modal. JavaScript makes implementing singletons straightforward because there's no need to worry about multithreading issues that might arise in languages like Java, where thread locking mechanisms might be necessary to prevent multiple instances from being created.
 
 **Example**:
@@ -5768,26 +5713,60 @@ const s = Singleton.getInstance();
 s.fn1();
 ```
 
-### Proxy Pattern
-The Proxy pattern involves using a proxy layer that clients interact with instead of accessing the object directly. This allows for various operations, like monitoring or intercepting get and set operations, to be performed transparently. A practical example of this pattern is the implementation of Vue3's reactivity system using ES6's `Proxy`.
+## Proxy Pattern
+The Proxy pattern involves using a proxy layer that clients interact with instead of accessing the object directly. This allows for various operations, like monitoring or intercepting get and set operations, to be performed transparently. 
 
-**Example**:
-```typescript
-const obj = new Proxy({}, {
-    get(target, key) {
-        console.log('get', key);
-        return target[key];
-    },
-    set(target, key, value) {
-        console.log('set', key, value);
-        target[key] = value;
-    }
-});
-obj.name = 'jack';
-console.log(obj.name);
+JavaScript `Proxy` is a versatile feature that enables the creation of a proxy for another object. This proxy allows for the interception and customization of operations performed on the original object, including property access, assignment, and enumeration. This capability is especially valuable for tracking changes in objects or arrays in a dynamic manner, enabling actions like logging additions to a list or triggering updates in response to changes.
+
+### The Basics of Proxy
+
+A `Proxy` in JavaScript acts as a sophisticated wrapper for an original object, granting fine-grained control over interactions with that object. Operations on the proxy can be intercepted to implement custom behaviors for fundamental operations such as property reads or writes.
+
+### Practical Example: Monitoring List Additions
+
+To demonstrate the utility of a `Proxy`, consider a use case where it's necessary to monitor additions to a list (an array) and perform actions like logging these additions, validating the new items, or updating the UI. A `Proxy` facilitates these tasks by allowing for custom handlers for get and set operations.
+
+**Example Implementation**
+
+The following example showcases the use of a `Proxy` to observe and react to new items being added to a list:
+
+```javascript
+// Handler object with traps for get and set operations
+let handler = {
+  // Trap for property access
+  get(target, property, receiver) {
+    console.log(`Accessing property '${property}'`);
+    return Reflect.get(...arguments); // Uses Reflect API for default operations
+  },
+  // Trap for property assignment
+  set(target, property, value, receiver) {
+    console.log(`Adding '${value}' to the list`);
+    target[property] = value; // Updates the target list
+    // Here, additional actions can be implemented, such as validation or UI updates
+    return true; // Indicates that the operation was successful
+  }
+};
+
+// The original list to be monitored
+let originalList = [];
+
+// Creating the proxy for the original list
+let proxyList = new Proxy(originalList, handler);
+
+// Performing operations on the proxy list
+proxyList.push('Apple');  // Output: Adding 'Apple' to the list
+proxyList.push('Banana'); // Output: Adding 'Banana' to the list
 ```
 
-### Observer Pattern
+In this enhanced example, interactions with the `proxyList` trigger the appropriate handler within the `handler` object. Adding a new item to the list via the `push` method activates the `set` trap, which logs the operation and facilitates additional actions like validations or UI adjustments.
+
+### Advantages of Using Proxies
+
+- **Interception and Customization**: Proxies offer a powerful means to intercept and tailor the behavior of fundamental operations on objects, enabling the implementation of custom behaviors and checks.
+- **Programmatic Validation**: They provide a mechanism for enforcing programmatic validation rules and constraints on object properties, enhancing data integrity and application robustness.
+- **Change Detection**: Proxies are instrumental in detecting changes to objects and arrays, supporting reactive programming patterns by facilitating dynamic responses to data modifications.
+
+## Observer Pattern
 The Observer pattern is widely used in front-end development. It involves a subject and observers, where the observers are notified and updated whenever the subject undergoes a change. A common example is attaching click event listeners to a button, where each listener acts as an observer to the button's click event.
 
 **Example**:
@@ -5797,7 +5776,7 @@ btn.addEventListener('click', () => {
 });
 ```
 
-### Publish-Subscribe Pattern
+## Publish-Subscribe Pattern
 Similar to the Observer pattern, the Publish-Subscribe pattern provides a more decoupled way for components to communicate. Components can publish events to a specific event channel and subscribe to this channel to receive notifications. It's important to unsubscribe from events, especially in component lifecycle hooks, to prevent memory leaks.
 
 **Example**:
@@ -5816,7 +5795,7 @@ event.on('event-key', fn1);
 event.off('event-key', fn1);
 ```
 
-### Decorator Pattern
+## Decorator Pattern
 The Decorator pattern allows for behavior to be added to individual objects, either statically or dynamically, without affecting the behavior of other objects from the same class. This pattern is similar to Aspect-Oriented Programming (AOP) and is supported in ES and TypeScript through decorator syntax. It's particularly useful for adding features or functionalities to existing classes without modifying them.
 
 **Example**:
@@ -5834,7 +5813,7 @@ console.log(MyTestableClass.isTestable);
 ```
 In the example above, `@testable` is a decorator that adds new functionality to `MyTestableClass`.
 
-### What's the distinction between the Observer pattern and the Publish-Subscribe pattern?
+## What's the distinction between the Observer pattern and the Publish-Subscribe pattern?
 
 ### Observer Pattern
 In the Observer pattern, the subject (the object being observed) and the observers (the objects that want to be notified of changes in the subject) have direct knowledge of each other. This means there is a direct relationship where the subject holds references to the observers and directly notifies them of any changes. This pattern allows for a straightforward and direct communication line but can lead to higher coupling between the subject and its observers.
@@ -5854,24 +5833,3 @@ The Publish-Subscribe pattern, on the other hand, introduces a middle layer know
 
 In summary, the key difference lies in the relationship and communication method between the parties involved: the Observer pattern facilitates direct communication between the subject and its observers, resulting in tighter coupling, whereas the Publish-Subscribe pattern uses an event channel to mediate communication, leading to looser coupling and greater flexibility.
 
-## Benefits of Using Cloud Functions like Google Cloud Compared to Traditional Front-end/Back-end Separation
-
-Cloud functions, such as those provided by Google Cloud, offer several advantages over the traditional front-end/back-end separation architecture. These benefits stem from cloud functions' ability to operate in a serverless environment, which changes how applications are built, deployed, and scaled. Below, we detail these benefits:
-
-### Cost Efficiency
-- **Google Cloud Functions** operate on a pay-as-you-go model, where charges are incurred only when the code is executed. This is particularly beneficial for applications with fluctuating traffic, as it aligns operational costs directly with actual usage, avoiding the need to pay for idle resources.
-
-### Simplified Management
-- **Serverless Architecture**: With Google Cloud Functions, there's no need to manage servers. Google handles all the infrastructure management tasks, including maintenance, patching, and security. In contrast, traditional architectures, even when utilizing virtual or cloud servers, require developers or operations teams to manage server configuration and upkeep.
-
-### Automatic Scaling
-- **Adaptability to Traffic**: Google Cloud Functions automatically scale based on the number of requests. This ensures that during peak traffic periods, more resources are allocated to handle increased concurrent requests, and during low traffic times, resources are reduced to save costs. Traditional models often require manual intervention or additional automation tools for scaling.
-
-### Rapid Iteration
-- **Development Agility**: The serverless model enables developers to quickly create and deploy code without worrying about underlying infrastructure. This supports faster development cycles and rapid iteration, whereas traditional deployment models might involve complex configuration and deployment processes.
-
-### Integration and Automation
-- **Seamless Ecosystem Connectivity**: Google Cloud Functions can be easily integrated with other services and tools within the Google Cloud Platform (GCP), such as Google Cloud Pub/Sub and Google Cloud Storage. This facilitates the creation of end-to-end automated solutions, streamlining the development process and enhancing functionality.
-
-### Event-Driven Architecture
-- **Responsive Microservices**: Google Cloud Functions inherently support an event-driven architecture, directly responding to events from Google Cloud services, like file uploads to Google Cloud Storage or messages published to Google Cloud Pub/Sub. This model is ideal for building highly decoupled and responsive microservices, as it allows services to react immediately to changes and triggers within the ecosystem.
