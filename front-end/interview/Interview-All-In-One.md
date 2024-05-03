@@ -4282,42 +4282,79 @@ HTTP (Hypertext Transfer Protocol) and UDP (User Datagram Protocol) operate at d
 - **Adoption**:
   - Facilitates faster connection establishment and robust handling of connections even in adverse network conditions.
 
-## Why send options request when using HTTP cross origin?
-An OPTIONS request is vital in the CORS process to ensure secure cross-origin communication. It helps browsers determine whether the server's CORS policy permits the actual request, thus enhancing web security by allowing servers to specify who can access their resources and how.
+## What is CORS
 
-### Understanding the Importance of OPTIONS Requests in Cross-Origin HTTP Communication
+Cross-Origin Resource Sharing (CORS) is a web browser security feature that allows controlled access to resources located outside of a given domain. It modifies the stricter same-origin policy, enabling safe cross-origin requests and data sharing between browsers and web servers.
 
-1. **Same-Origin Policy**: A fundamental security concept in web development, the same-origin policy restricts how a document or script loaded from one origin can interact with resources from another origin. This policy is implemented by web browsers to prevent potentially malicious scripts on one website from obtaining access to sensitive data on another website. A same origin is defined by matching the protocol, domain, and port of the two resources.
+### Understanding CORS and Same-Origin Policy
 
-2. **Cross-Origin Resource Sharing (CORS)**: CORS is a mechanism that allows many resources (e.g., fonts, JavaScript, etc.) on a web page to be requested from another domain outside the domain from which the first resource was served. It's a way for servers to indicate any origins (domain, scheme, or port) other than its own from which a browser should permit loading of resources.
+1. **Same-Origin Policy**: This security measure restricts scripts on one origin from interacting with resources on another origin unless they share the same protocol, domain, and port. It is crucial for preventing malicious sites from accessing sensitive data on another site.
 
-3. **OPTIONS Preflight Request**: In CORS, an OPTIONS preflight request is automatically sent by the browser to determine whether the cross-origin request is safe to send. This preflight checks if the server will accept the actual request, based on its CORS policy. This request includes methods like GET, POST, or custom headers that might be used in the actual request.
+2. **The Role of CORS**: CORS allows for the selective relaxation of the same-origin policy. Servers can specify "Access-Control-Allow-*" headers in responses to permit or deny requests based on origin, methods, and headers.
 
-4. **Cross-Origin Requests without Preflight**: Not all cross-origin requests need a preflight. Simple requests, like using GET or POST with certain headers, might not trigger this preflight check. However, more complex requests, especially those using methods like PUT or DELETE, or containing custom headers, generally require a preflight check.
+### Practical Implementation of CORS
 
-### CORS Solutions
+- **Server-Side Configuration**: Implementing CORS requires adjusting the server's response headers. An example configuration is:
+   ```javascript
+   Access-Control-Allow-Origin: http://localhost:8011
+   Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+   Access-Control-Allow-Headers: X-Requested-With, Content-Type
+   Access-Control-Allow-Credentials: true
+   ```
+   This configuration details which origins, methods, and headers are allowed for cross-origin requests and whether credentials like cookies can be included.
 
-**Solution 1: JSONP Approach**
-```html
-<!-- On the client side -->
-<script>
-    window.onSuccess = function (data) {
-        console.log(data);
-    }
-</script>
-<script src="https://www.example.com/api/getData"></script>
-```
-In the JSONP (JSON with Padding) approach, a `<script>` tag is used to bypass the same-origin policy. The external script contains a function call with the desired data. While this method can circumvent CORS restrictions, it's limited in functionality and security.
+### CORS Workarounds
 
-**Solution 2: Server-Side CORS Configuration (Preferred)**
-```javascript
-// Server-side configuration for CORS
-response.setHeader("Access-Control-Allow-Origin", "http://localhost:8011"); // or use '*' for all origins
-response.setHeader("Access-Control-Allow-Headers", "X-Requested-With");
-response.setHeader("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS");
-response.setHeader("Access-Control-Allow-Credentials", "true"); // Allow cookies
-```
-This approach involves configuring the server to send appropriate CORS headers, allowing requests from specific origins or methods. It's the preferred method for handling cross-origin requests as it provides better control and security.
+#### JSONP Workaround for CORS
+
+- **JSONP (JSON with Padding)**: A technique for circumventing the same-origin policy using script tags. JSONP allows data fetching from different domains but lacks the security and versatility of CORS.
+   ```html
+   <!-- Example of JSONP -->
+   <script>
+       window.onSuccess = function(data) {
+           console.log(data);
+       }
+   </script>
+   <script src="https://www.example.com/api/getData?callback=onSuccess"></script>
+   ```
+   JSONP must be supported by the server, which should return data with a callback function, enabling dynamic data retrieval without CORS restrictions.
+
+#### PostMessage Workaround for CORS
+
+- **PostMessage**: This method enables safe cross-origin communication between Window objects by allowing scripts to exchange messages across different origins. It is an HTML5 XMLHttpRequest Level 2 API, providing a secure alternative to JSONP for cross-origin data sharing.
+   - Scenarios facilitated by postMessage include:
+     1. Communication between a page and its newly opened window.
+     2. Multi-tab communication.
+     3. Interaction between a page and its embedded iframe.
+     4. Cross-origin communication in the above scenarios.
+
+#### Nginx as a Reverse Proxy
+
+- **Nginx Configuration**: Nginx can function as a reverse proxy to facilitate CORS requests. By adding the necessary CORS headers to responses, Nginx serves as an intermediary, ensuring secure cross-origin communication.
+   ```nginx
+   server {
+     listen 80;
+     server_name example.com;
+     location / {
+       proxy_pass http://domain2.com:8080;  # domain2.com is the target server.
+     }
+   }
+   ```
+
+## Why Send OPTIONS Request When Using HTTP Cross-Origin
+
+An OPTIONS request acts as a CORS preflight check, sent before the actual request to confirm that the server's CORS policy allows the intended cross-origin action.
+
+### Importance of OPTIONS Requests in CORS
+
+1. **Preflight Requests**: Browsers use an OPTIONS request to perform a preflight check for complex operations like PUT, DELETE, or those involving non-standard headers, ensuring they comply with the server's CORS settings.
+
+2. **Security and Compliance**: These preflight checks help prevent unauthorized cross-origin requests, enhancing security and adherence to explicitly stated CORS policies by the server.
+
+### Scenarios Requiring OPTIONS Requests
+
+- **Complex Requests**: Requests using methods other than GET or POST, or employing custom headers, necessitate preflight checks.
+- **Security-Sensitive Operations**: Operations that alter server data, such as updates or deletions, generally require a preflight to prevent CSRF attacks and ensure secure cross-origin interactions.
 
 ## User Authentication: Cookies vs. Tokens
 ### Cookies
@@ -4571,6 +4608,33 @@ if (Math.abs(sum - target) < tolerance) {
 }
 ```
 
+## Main Components of a Web Browser
+The web browser is a complex application designed to enable internet browsing. Its main components are critical to its functionality and user experience.
+
+### User Interface (UI)
+**Description:** The user interface includes elements like the address bar, navigation buttons (back, forward), and bookmarking menu, which facilitate user interaction with the browser.
+
+### Browser Engine
+**Functionality:** The browser engine acts as a mediator between the UI and the rendering engine, managing inputs and outputs from the user interface to the display.
+
+### Rendering Engine
+**Role:** The rendering engine is crucial for displaying requested web content. It interprets HTML, CSS, and images from the web, rendering them as visual outputs on the screen.
+
+### Networking
+**Operations:** This component handles network operations such as HTTP requests. It is vital for fetching resources like HTML pages, images, and other files required for web content rendering.
+
+### JavaScript Interpreter
+**Purpose:** The JavaScript interpreter parses and executes JavaScript code, enabling dynamic interactions within web pages through scripting.
+
+### UI Backend
+**Utility:** Responsible for drawing basic widgets like combo boxes and windows, the UI backend serves as a bridge between the operating system and the graphical rendering.
+
+### Data Storage
+**Functionality:** Data storage mechanisms in browsers manage the storage of data such as cookies, cache, and local storage, playing a crucial role in data persistence and retrieval.
+
+### Browser Plugins
+**Examples:** Historically, plugins like Adobe Flash Player extended browser capabilities. However, modern browsers are moving away from plugins towards native HTML5 due to security and efficiency reasons.
+
 ## Front-End Storage Options
 
 Understanding the different storage options available in front-end development is crucial for managing data efficiently and enhancing user experience. Each storage mechanism has its unique features, capacity, and use cases. Here, we'll explore three primary storage spaces: `LocalStorage`, `SessionStorage`, and `Cookies`, focusing on their characteristics, benefits, and practical applications.
@@ -4701,33 +4765,47 @@ When a URL is entered into a browser, the process from initiating a web request 
 3. **JavaScript Execution**: JavaScript files are executed, which may modify the DOM and trigger a re-rendering of the page.
 4. **Asynchronous Loading**: Some resources, like CSS and images, are fetched asynchronously and may cause the page to render again upon loading.
 
-### Repaint vs. Reflow
+## Web Performance: Repaint vs. Reflow
+### Reflow
+Reflow, also known as layout, involves recalculating the positions and dimensions of elements to accurately reflect any changes in the DOM that affect their layout. This calculation is necessary to construct the render tree, which integrates style information with visible elements.
 
-Understanding the difference between repaint and reflow is crucial in web development, especially for dynamic web pages where elements can change frequently due to animations, modals, dialogs, popups, or modifications to the DOM like adding or deleting elements.
+Reflow is computationally intensive as it may affect the layout of the entire page, not just the element being altered. Common triggers include:
+- Resizing the browser window.
+- Modifying content that affects layout (e.g., adding or removing elements).
+- Alterations in style properties (e.g., width, height, margin, padding).
 
-#### Repaint
-A repaint occurs when changes are made to an element's visual appearance that do not affect its layout in the document. Examples include changes in color, background-color, visibility, and outline. During a repaint, the element's geometry (size and position) remains unchanged, and thus, it does not impact the position of any other elements.
+### Repaint
+Repaint deals with redrawing the visual styles of elements without affecting their layout. After the layout is determined and the render tree constructed, repaint updates the visual appearance based on style changes.
 
-#### Reflow
-Reflow, also known as layout, involves recalculating the positions and sizes of elements in the document. This process is more computationally expensive than repaints because it affects the layout of the element that is changing and may also impact other elements on the page. Causes of reflow include changes to the browser window size, alterations in content (such as adding or removing elements), and modifications to elements' styles affecting their sizes (e.g., width, height, margin, padding).
+Repaint is less performance-heavy as it does not involve layout changes. Typical scenarios include:
+- Changes in visibility, colors, or shadows.
+- Adjustments to backgrounds or borders.
 
-#### Difference
-The primary difference between repaint and reflow is the scope of impact and the cost in terms of performance. Reflows can trigger repaints, but repaints do not necessarily cause reflows. Because reflows can impact the layout of the entire page, they are more performance-intensive than repaints.
+### Comparing Reflow and Repaint
+Reflow will trigger a repaint, but a repaint does not necessarily cause a reflow.
 
-#### Methods to Avoid Unnecessary Reflows
-- **Batch Style Changes**: Apply multiple style changes at once by changing the class of an element instead of individual styles.
-- **Minimize DOM Access**: Modify elements offscreen or in a document fragment before adding them to the DOM. Using `display: none` before making changes can remove the element from the flow, thus reducing reflow costs.
-- **Use Block Formatting Context (BFC)**: Utilizing BFC properties can isolate elements from affecting each other, minimizing the need for reflows.
-- **Event Optimization**: Use debouncing and throttling for events that trigger frequent reflows, such as window resizing or scrolling.
-- **Optimize Animations**: Prefer CSS3 animations and `requestAnimationFrame` over JavaScript animations to reduce reflow and repaint costs.
+#### **Performance Costs**
+The primary distinction lies in their impact on performance:
+- **Reflows** can affect the entire page and are therefore more costly.
+- **Repaints** affect only the appearance, without layout changes, making them less resource-intensive.
 
-### Expansion: Block Formatting Context (BFC)
-A Block Formatting Context is an HTML box that serves as a containment boundary, ensuring that elements within it do not affect the layout of elements outside it. BFC can be triggered by:
-- The root element (`html`).
-- Elements with `float` properties other than `none`.
-- Elements with `position: absolute` or `fixed`.
-- Elements with `display: inline-block`, `table-cell`, `table-caption`, `flex`, `grid`, or other table-related values.
-- Elements with `overflow` set to anything other than `visible`.
+### Optimization Strategies
+To minimize performance costs, implement the following practices:
+
+#### **Batch Style Changes**
+Group multiple style changes into a single class adjustment to reduce the number of reflows.
+
+#### **Minimize DOM Access**
+Modify elements offscreen or within a document fragment to limit the impact on the actual DOM.
+
+#### **Leverage Block Formatting Context**
+Using BFC properties can prevent elements from affecting each other’s layout, thus reducing reflows.
+
+#### **Optimize Event Handling**
+Implement debouncing or throttling to manage events that cause frequent reflows, such as resizing or scrolling.
+
+#### **Prioritize CSS3 and `requestAnimationFrame`**
+For animations, prefer CSS3 and `requestAnimationFrame` over JavaScript-driven animations to decrease both reflow and repaint occurrences.
 
 ## What is the difference between `defer` and `async` attributes in `<script>` elements?
 
@@ -4774,37 +4852,66 @@ Considering the following HTML snippet:
 
 In summary, `HTMLCollection` and `NodeList` are key concepts in DOM manipulation, each with its specific use cases. Understanding their differences is vital for efficient and effective front-end web development.
 
-## Difference Between Browser and Node.js Event Loop:
+## Difference Between Browser and Node.js Event Loop
 
-JavaScript, known for its single-threaded nature, employs the event loop mechanism to manage asynchronous operations, facilitating non-blocking execution. This approach is pivotal in both browser and Node.js environments. However, the event loop's implementation and functionality exhibit distinct characteristics in each context, shaped by their unique operational demands.
+JavaScript is designed to operate in a single-threaded manner, utilizing the event loop mechanism to manage asynchronous operations, which allows for non-blocking execution. 
 
-### Micro-tasks and Macro-tasks:
-- **Macro-tasks**: Encompass operations like `setTimeout`, `setInterval`, and various web API calls. They are scheduled to execute once the current script finishes and the micro-task queue is cleared.
-- **Micro-tasks**: Primarily involve promise-related operations, including async/await. These tasks execute immediately after the current script, before any pending macro-tasks, granting them a higher execution priority.
+### Micro-tasks and Macro-tasks
 
-### Browser Event Loop:
-- In the browser, the event loop shares the main thread with activities such as DOM rendering, necessitating efficient task management to avoid UI disruptions.
-- The browser event loop manages two kinds of task queues: macro-tasks and micro-tasks. Micro-tasks are given precedence, executing right after the current task, even before proceeding to the next macro-task. This prioritization ensures prompt handling of operations like promise resolutions, often before rendering the next frame.
+- **Macro-tasks**: Include operations such as `setTimeout`, `setInterval`, and various web API calls. These tasks are queued to run after the current script has completed execution and the micro-task queue has been cleared.
+- **Micro-tasks**: Generally related to promise operations, including async/await. These tasks are executed immediately after the current script ends, prior to any pending macro-tasks, giving them a higher priority in execution.
 
-### Node.js Event Loop:
-- Node.js, while also single-threaded and dependent on asynchronous execution, classifies macro-tasks and micro-tasks into specific types and priorities. This reflects its backend-oriented nature, focusing on efficient I/O operations rather than UI concerns.
+### Example Scenario
+
+```javascript
+console.log('Start');
+
+setTimeout(() => console.log('Timeout 1'), 0);
+
+new Promise((resolve) => {
+  console.log('Promise 1');
+  resolve();
+  console.log('Promise 1 then');
+}).then(() => console.log('Promise 2'));
+
+console.log('End');
+```
+
+**Output**:
+```
+Start
+Promise 1
+Promise 1 then
+End
+Promise 2
+Timeout 1
+```
+
+Note that the Promise constructor is executed synchronously, while the `then` callback is queued as a micro-task, ensuring its execution before the `setTimeout` callback.
+
+### Browser Event Loop
+
+- In the browser, the event loop operates on the main thread alongside activities such as DOM rendering, which requires careful task management to avoid UI disruptions.
+- Task management in browsers involves two queues: macro-tasks and micro-tasks, with micro-tasks receiving higher priority. This arrangement ensures prompt processing of operations like promise resolutions, often before rendering the next frame.
+
+### Node.js Event Loop
+
+- In contrast, Node.js organizes macro-tasks and micro-tasks into distinct types and priorities suitable for backend operations, focusing on efficient I/O handling rather than UI responsiveness.
 - **Macro-task types in Node.js**, listed in order of priority:
-  - **Timers**: Includes `setTimeout` and `setInterval` for scheduling future tasks.
-  - **I/O Callbacks**: Addresses network, stream, and TCP errors.
-  - **Idle/Prepare**: Consists of internal Node.js engine tasks.
-  - **Poll**: Responsible for fetching new I/O events.
-  - **Check**: Manages `setImmediate` callbacks.
-  - **Close Callbacks**: Executes callbacks such as `socket.on('close')`.
+  - **Timers**: Scheduling tasks like `setTimeout` and `setInterval`.
+  - **I/O Callbacks**: Managing errors related to network, streams, and TCP.
+  - **Idle/Prepare**: Internal tasks of the Node.js engine.
+  - **Poll**: Fetching new I/O events.
+  - **Check**: Handling `setImmediate` callbacks.
+  - **Close Callbacks**: Executing callbacks such as `socket.on('close')`.
 
 - **Micro-task types in Node.js**:
-  - **`process.nextTick`**: This function defers the execution of a callback until the current operation concludes, offering very high priority.
-  - **Promise/async/await**: Handles asynchronous operations using promises.
+  - **`process.nextTick`**: Allows deferring the execution of a callback until after the current operation, with a very high priority.
+  - **Promise/async/await**: Manages asynchronous operations effectively.
 
-- In Node.js, the event loop initially executes synchronous code, then processes all micro-tasks (with `process.nextTick` having utmost priority), followed by macro-tasks. It also attends to micro-tasks as they emerge during macro-task execution.
+- Node.js processes all micro-tasks (with `process.nextTick` as the highest priority) after the initial execution of synchronous code, followed by macro-tasks. During macro-task execution, it continues to process emerging micro-tasks.
 
-The event loop in both browser and Node.js is fundamentally similar, enabling asynchronous JavaScript execution within a single-threaded context. However, their implementations diverge significantly. In Node.js, macro-tasks and micro-tasks are distinctly categorized with defined priorities, mirroring its backend emphasis on effective I/O management. Both environments prioritize synchronous tasks first, then micro-tasks, and finally macro-tasks. The browser's event loop, specifically designed to maintain UI responsiveness, prioritizes micro-tasks to ensure smooth user experiences. Conversely, Node.js's event loop structure is tailored for efficient I/O processing.
-
-
+The fundamental concept of the event loop is shared between the browser and Node.js, enabling asynchronous execution within a single-threaded context. However, their specific implementations reflect the different priorities and operational needs of the two environments: UI responsiveness in browsers and efficient I/O processing in Node.js.
 
 ## Node.js Process Creation and Communication
 
@@ -5011,6 +5118,34 @@ The update process is designed to minimize disruption and maximize application p
 2. **Background Processing:** To avoid performance hits, new templates are downloaded in the background, allowing the application to continue operating with the current version until the update is ready.
 3. **Seamless Switch:** Upon successful download, the application seamlessly transitions to the new template version without interrupting the user experience, ensuring a smooth and imperceptible update process.
 
+## Browser Event Transfer Process
+
+Events in the DOM can propagate in two key phases: capturing and bubbling. This section explains these phases and how React manages event propagation using its synthetic event system.
+
+### Event Propagation Phases
+
+**Event propagation** in the DOM occurs in three distinct phases:
+
+#### 1. Capture Phase
+- **Description**: During the capture phase, the event starts from the root node of the DOM and travels downward towards the target node, passing through each intermediary node.
+- **Purpose**: This phase allows for the interception of events before they reach their intended target.
+
+#### 2. Target Phase
+- **Description**: The target phase is where the event reaches the element that triggered the event.
+- **Interaction**: Here, event listeners attached directly to the target node are executed.
+
+#### 3. Bubble Phase
+- **Description**: After reaching the target, the event then bubbles up from the target node back to the root of the DOM.
+- **Utility**: This phase is used for event delegation, allowing for more efficient memory usage and less complex event management in applications.
+
+### Event Binding in React
+
+React abstracts the DOM's event propagation mechanism through what is known as the **Synthetic Event System**:
+
+- **Synthetic Events**: React creates a cross-browser wrapper around the browser’s native event. This is known as a synthetic event. It has the same interface as the browser’s native event, including `stopPropagation()` and `preventDefault()`, except events work identically across all browsers.
+- **Event Delegation**: Instead of binding events to the node itself, React binds events to the document's root node and uses event bubbling to manage events. This helps in optimizing performance and simplifying event handling.
+- **Phases Combination**: React does not use the capture phase for most events, but it provides an option to handle an event in the capture phase by appending `Capture` to the event handler's name (e.g., `onClickCapture`).
+
 ## How to Implement Multi-Tab Communication on a Website?
 
 Implementing multi-tab communication in web applications allows for the sharing of data and messages between different tabs or windows of the same origin. Here are three common methods to achieve this, along with their advantages, limitations, and use cases.
@@ -5195,8 +5330,6 @@ This method is technically challenging to implement from scratch due to the need
 For Vue.js projects, `Vue-virtual-scroll-list` can be used, and for React projects, `React-virtualized` is a suitable choice. These libraries simplify the implementation of virtual scrolling by handling the complexities of DOM element management based on scroll behavior.
 
 However, even using these libraries, the performance is still a concern for phones and low-end devices. It's important to consider the user experience and the practicality of displaying such a large amount of data at once.
-
-
 
 ## How to Prevent 300ms Delay for Double Click to Zoom on Mobile Phones?
 On mobile web applications, a common issue is the 300ms delay when users attempt to double-click (tap) to zoom. This delay was originally implemented to differentiate between a tap (single click) and a double-tap (double click). However, this can interfere with the responsiveness of web applications. In the past, developers used libraries like FastClick to circumvent this delay. Modern browsers have introduced ways to address this issue by detecting the site's responsiveness through meta tags.
