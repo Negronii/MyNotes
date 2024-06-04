@@ -1,187 +1,372 @@
 # General
 
-## Path
+## Paths
 
-- Absolute path (not commonly used): can directly reach the target location, starting from a drive letter or a full URL. E.g. `/Users/r/Desktop/Front-end learning/cat.jpeg`, `www.xxxx.cn/yy/logo.gif`
-- Relative path (commonly used): start from the current file to find the file
-  - Same-level files: in a folder with this HTML "filename.suffix"
-  - Lower-level files: in another folder in the folder where HTML is located "Another_folder_name/filename.suffix"
-  - Upper-level file: in the same folder as the folder where this HTML is located "`../filename.suffix`" (`../` means to the upper-level directory)
-  - Two levels up: "`../../filename.suffix`"
+### Absolute Path
+
+An absolute path points directly to a location in the file system or web structure. It starts from the root directory or a full URL. While not commonly used in front-end development due to its rigidity, it's essential to understand its structure.
+
+**Example:**
+- File System: `/Users/r/Desktop/Front-end-learning/cat.jpeg`
+- URL: `https://www.example.com/images/logo.gif`
+
+### Relative Path
+
+Relative paths are commonly used because they are flexible and easier to maintain. They define the path to a resource relative to the current file's location.
+
+**Types:**
+- **Same-level files:** In the same folder as the HTML file. Example: `filename.extension`
+- **Lower-level files:** In a subfolder of the current folder. Example: `subfolder/filename.extension`
+- **Upper-level files:** In the parent folder of the current folder. Example: `../filename.extension`
+- **Two levels up:** Example: `../../filename.extension`
 
 ## Standard Stream
 
-- Block-level elements, top-to-bottom, vertical layout, on a single line
-- Inline elements or inline-block elements, from left to right, horizontal layout, automatic line splitting if there is not enough space
+### Block-level Elements
 
-# Block-level Element
+Block-level elements occupy the entire width available, forcing a new line before and after the element. They are typically used for structuring the main parts of the document.
 
-- A block-level element always starts on a new line, and the browsers automatically add some space (a margin) before and after the element.
-- A block-level element always covers the entire width available (stretches out to the left and right as far as possible).
-- The parent element's width is width, and the content stretches the height by default.
-- Can set width and height
-- Representative tags: `div`, `p`, `h` series, `ul`, `li`, `dl`, `dt`, `dd`, `form`, `header`, `nav`, `footer`
+**Key Points:**
+- Start on a new line.
+- Stretch the full width of the parent container.
+- Allow setting of width and height.
+- Examples: `div`, `p`, `h1-h6`, `ul`, `li`, `dl`, `dt`, `dd`, `form`, `header`, `nav`, `footer`.
 
-# Inline-level Element
+### Inline-level Elements
 
-- An inline element does not start on a new line.
-- An inline element only takes up as much width as necessary.
-- One line can display multiple.
-- The content stretches the width and height by default
-- Width and height cannot be set (can be set, but not valid)
-- Representative tags: `a`, `span`, `b`, `u`, `i`, `s`, `strong`, `ins`, `em`, `del` ...
+Inline elements occupy only the space bounded by the tags defining the element. They do not start on a new line and only take up as much width as necessary.
 
-# Inline-block-level Element
+**Key Points:**
+- Do not start on a new line.
+- Width and height settings are generally ineffective.
+- Examples: `a`, `span`, `b`, `u`, `i`, `strong`, `em`, `img`.
 
-- One line can display multiple
-- Can set width and height
-- Representing tags: `input`, `textarea`, `button`, `select`, `img` ...
+### Inline-block Elements
 
-# Project Structure
+Inline-block elements combine features of both inline and block-level elements. They allow setting of width and height while still flowing with inline content.
 
-- The homepage of the website must be called `index.html`
-- The project folder structure of the website: a `CSS` folder, an `image` folder, an `index.html`
-- Layout: From outside to inside, from top to bottom, from left to right
-- A typical root directory:
-  - `favicon.ico`
-  - `images` folder, for fixed pictures (logo, style modification pictures...),
-  - `upload` folder, for non-fixed pictures (product pictures, promotional pictures...)
-  - `index.html`
-  - `HTML` folder
-  - `LESS` folder
-  - `CSS` folder
-  - `lib` folder for icon font
-  - `js` folder for javascript and flexible.js
-  - `base.css` base common styles
-  - `common.css` Repeated styles for multiple modules in this web page, such as head, bottom
-  - `Index.css` Homepage style
+**Key Points:**
+- Display inline with other elements.
+- Allow width and height settings.
+- Examples: `input`, `textarea`, `button`, `select`, `img`.
 
-```html
-<link rel="stylesheet" href="./css/base.css" />
-<link rel="stylesheet" href="./css/common.css" />
-<link rel="stylesheet" href="./css/index.css" />
+## Project Structure
+
+Organizing files in a clear, logical structure helps manage and maintain the project efficiently.
+
+### Typical Project Structure
+
+```
+/project-root
+  /css
+    - base.css
+    - common.css
+    - index.css
+  /images
+  /upload
+  /html
+  /less
+  /lib
+  /js
+    - main.js
+  - index.html
+  - favicon.ico
 ```
 
-Introduced in order, the externally linked style sheet will take effect
+**Example:**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/common.css">
+  <link rel="stylesheet" href="./css/index.css">
+</head>
+<body>
+  <!-- Content goes here -->
+</body>
+</html>
+```
 
-# Sprites
+## Sprites
 
-- Introduction to sprites: Many pictures in the project are combined into a big picture, this big picture is the sprite picture
-- Advantages: reduce
+Sprites combine multiple images into one, reducing the number of server requests and improving load times.
 
-the number of server sending, reduce server pressure, improve the page loading speed
+### Steps to Use Sprites
 
-- Steps for usage:
-  1. Create a box, set the size of the box to be the same as the thumbnail size
-  2. Set the sprite as the background image of the box
-  3. Modify the position of the background image, measure the coordinates of the upper left corner of the small image through pxcook, and set the negative values to the box's `background-position: x y;`
+1. Create a container and set its size to the size of the desired sprite.
+2. Set the sprite image as the background of the container.
+3. Adjust the background position to display the correct part of the sprite.
 
-# bd and hd
+**Example:**
+```css
+.sprite {
+  width: 50px;
+  height: 50px;
+  background: url('sprite.png') no-repeat;
+  background-position: -10px -20px; /* Adjust based on sprite position */
+}
+```
 
-When I don't know what class is called `<div class="hd"></div>`, `hd` means head, and similarly, `bd` means body
+## Banner
 
-# Banner
+For creating a banner with multiple images:
 
-<image src="banner.png">
+1. Use an unordered list (`<ul>`) with list items (`<li>`) for each image.
+2. Position the list items using CSS.
+3. Indicate the current image with a class like `.current`.
 
-For a banner picture like this, use `<ul> <li> <a> <img>` to put all the pictures, as many pictures as there are as many `<li>`
-Then use the positioning to make the floating window on the left (`aside`)
-The small dots below represent the current instead of hover. The solution is to add a `class = "current"` to `li`, and then select `.current` in CSS
+**Example:**
+```html
+<ul class="banner">
+  <li class="current"><a href="#"><img src="image1.jpg" alt="Image 1"></a></li>
+  <li><a href="#"><img src="image2.jpg" alt="Image 2"></a></li>
+  <!-- Additional images -->
+</ul>
+```
 
-# Mobile Web Basis
+```css
+.banner {
+  position: relative;
+  overflow: hidden;
+}
+.banner li {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: none;
+}
+.banner li.current {
+  display: block;
+}
+```
 
-- The computer screen is large, usually in the centre of the version
-- The mobile phone screen is small, the general width is 100%
-- Google Chrome mobile phone simulator: right-click inspect, click
-- Most mobile phone designs are based on iPhone 6, 7, 8 sizes, i.e., physical resolution 750\*1334 logical resolution 375\*667
-- Percentage layout is also called flow layout, the effect is adaptive width, fixed height
-- Sometimes the design drawing is 2 times the size. The way to judge is to see if the length is 1920. If so, select 2x in the design drawing option above pxcook
+## Mobile Web Basics
 
-# Browser Support Check
+### Responsive Design Principles
 
-`caniuse.com`
-Can be used to check if a browser supports a certain technology
+1. **Viewport Meta Tag:** Ensures proper scaling on mobile devices.
+   ```html
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   ```
+2. **Flexible Layouts:** Use percentages, flexbox, or grid layouts for adaptable designs.
+3. **Media Queries:** Adjust styles based on device characteristics.
+   ```css
+   @media (max-width: 600px) {
+     .container {
+       flex-direction: column;
+     }
+   }
+   ```
 
-For future javascript:
-Data that may be modified in the future must be written in a separate tag
-The written content does not need to copy and paste multiple contents, and all the data is replaced by the back-end
+### Common Screen Sizes
 
-# HTML Basis
+- **iPhone 6/7/8:** 375x667 logical resolution (750x1334 physical).
+- **Adaptive Layout:** Use relative units like percentages and rem for layout.
+
+### Development Tools
+
+- **Chrome DevTools:** Inspect and simulate mobile devices.
+- **Responsive Design Mode:** Adjust viewport size and test responsiveness.
+
+## Browser Support Check
+
+Use tools like [Can I Use](https://caniuse.com) to check compatibility of web technologies across different browsers.
+
+**Example:**
+```javascript
+if ('fetch' in window) {
+  // Use fetch API
+} else {
+  // Fallback for older browsers
+}
+```
+
+## Future-proof JavaScript
+
+Isolate experimental or polyfill-required code to ensure future compatibility.
+
+**Example:**
+```html
+<script>
+  if (!window.Promise) {
+    // Load a Promise polyfill
+    document.write('<script src="https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.min.js"><\/script>');
+  }
+</script>
+```
+
+# HTML Basics
 
 ## A Sample HTML Structure
 
-```
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titile</title>
+    <title>Title</title>
 </head>
 <body>
 </body>
 </html>
 ```
 
-- Line 1: Tell the browser the version of the web page; html means it is Version html5.
-- Line 2: Tell the search engine and translator the web page's language. zh-CN is simplified Chinese; en is English.
-- Line 3: the head section (invisible to end-user)
-- Line 4: The encoding of the website only uses UTF-8 in web development
-- Line 5:
-- Line 6:
-- Line 7: The title of the website, shown in the name bar in the browser, is also shown in the title part of the search engine results.
-- Line 8: indicates it is the end of the head section
-- Line 9: body part (the only visible part)
-- Line 10: indicates it is the end of the body section
-- Line 11: indicates it is the end of the HTML file
+### Breakdown and Best Practices
 
-Sometimes we call tags "elements" or "labels"; they are the same thing.
+1. **DOCTYPE Declaration:**
+   ```html
+   <!DOCTYPE html>
+   ```
+   - Declares the document type and version as HTML5. Ensures the browser renders the page correctly and consistently.
 
-## SEO: search engine optimisation
+2. **HTML Tag:**
+   ```html
+   <html lang="en">
+   ```
+   - The `lang` attribute specifies the language of the document, which is important for accessibility and SEO.
 
-- Get your site to rank high on search sites
-- Ranking of bidding
-- The suffix of the file be .html
+3. **Head Section:**
+   ```html
+   <head>
+       <meta charset="UTF-8">
+       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+       <title>Title</title>
+   </head>
+   ```
+   - **Meta Tags:**
+     - `charset="UTF-8"` ensures proper encoding of the document, supporting most characters.
+     - `viewport` meta tag is crucial for responsive web design, ensuring the page scales correctly on different devices.
+   - **Title Tag:**
+     - The `title` tag specifies the page title, shown on the browser tab and in search engine results. It should be concise and relevant.
 
-## Tag Semantics (with the correct tags in the right places)
+4. **Body Section:**
+   ```html
+   <body>
+   </body>
+   </html>
+   ```
+   - Contains the visible content of the page.
 
-Three main SEO tags:
+### Explanation of Tags and Attributes
 
-- Title, e.g. `<title>京东(JD.COM)-正品低价、品质保障、配送及时、轻松购物！</title>`
-- Description. e.g. `<meta name="description" content="京东JD.COM-专业的综合网上购物商城，为您提供正品低价的购物选择、优质便捷的服务体验。商品来自全球数十万品牌商家，囊括家电、手机、电脑、服装、居家、母婴、美妆、个护、食品、生鲜等丰富品类，满足各种购物需求。">`
-- Keywords. e.g. `<meta name="Keywords" content="网上购物,网上商城,家电,手机,电脑,服装,居家,母婴,美妆,个护,食品,生鲜,京东">`
+- **Tags:** Elements or labels used to structure a webpage.
+- **Attributes:** Provide additional information about an element, usually in the form of name-value pairs.
 
-## Set up icon
+## SEO: Search Engine Optimization
 
-- Icon: Small icon displayed on the left side of the title page
-- e.g. `<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">`
+To improve the visibility of your site in search engine results, consider the following:
 
-## Comment in HTML:
+### Important SEO Tags
 
-- `<!-- context -->`
+1. **Title Tag:**
+   ```html
+   <title>Example Website - Best Products Online</title>
+   ```
+   - The `title` should be descriptive and include relevant keywords.
 
-## Class attribute
+2. **Meta Description:**
+   ```html
+   <meta name="description" content="Example Website offers the best products online with great discounts and free shipping.">
+   ```
+   - Provides a brief summary of the webpage content. It appears in search results below the title.
 
-- All tags have a class attribute.
-- Class names cannot start with a numeric underscore
-- A tag can have multiple class names at the same time, separated by spaces
-- e.g. `<div class="one two three">222</div>`
+3. **Meta Keywords (Deprecated):**
+   ```html
+   <meta name="keywords" content="online shopping, best products, discounts, free shipping">
+   ```
+   - Historically used for specifying keywords, but now largely ignored by major search engines.
 
-## id attribute
+### Set Up Icon (Favicon)
 
-- All tags have an id attribute
-- 'id' is unique on a page and cannot be repeated
-- There can only be one 'id' attribute value on a tag
-- e.g. `<div id="one">222</div>`
+- **Favicon:**
+  ```html
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+  ```
+  - A small icon displayed in the browser tab, bookmark list, etc.
 
-## Semantic wrapping
+## Commenting in HTML
 
-- Block-level elements act as large containers that can be nested: text, block-level elements, inline-block elements, inline elements, etc.
+- **Comment Syntax:**
+  ```html
+  <!-- This is a comment -->
+  ```
+  - Comments are not displayed in the browser and are used to leave notes or explanations in the code.
 
-- But: don't nest p, div, h, etc. elements in p tags.
-- Reason: Because the semantics are inappropriate since the paragraph is already a paragraph, it cannot be a title, and the title is the same.
-- The 'a' element can nest any element, but the 'a' tag cannot nest another 'a' tag
+## Class Attribute
+
+- **Usage:**
+  ```html
+  <div class="container main-content"></div>
+  ```
+  - Allows styling and manipulation of elements using CSS and JavaScript.
+  - Multiple classes can be applied to a single element, separated by spaces.
+
+## ID Attribute
+
+- **Usage:**
+  ```html
+  <div id="header"></div>
+  ```
+  - Unique within a page, used for styling and manipulating specific elements.
+  - Should only be used once per page.
+
+## Semantic Wrapping
+
+Using semantic HTML elements improves accessibility, SEO, and readability:
+
+1. **Block-Level Elements:**
+   - Examples: `<div>`, `<p>`, `<h1>`, `<section>`, `<article>`, etc.
+   - Act as containers for other elements.
+
+2. **Nesting Rules:**
+   - Avoid nesting block-level elements like `<p>` inside other block-level elements like `<div>`, `<h1>`, etc.
+   - Example of incorrect nesting:
+     ```html
+     <p>This is a paragraph <div>This should not be here</div></p>
+     ```
+   - Correct usage:
+     ```html
+     <div>
+         <p>This is a paragraph</p>
+         <div>This is a separate block element</div>
+     </div>
+     ```
+
+### Semantic Elements
+
+- **Examples:**
+  ```html
+  <header>Header content</header>
+  <nav>Navigation links</nav>
+  <main>Main content</main>
+  <footer>Footer content</footer>
+  ```
+  - Using these elements makes your HTML more meaningful and easier to understand.
+
+## Semantic Elements vs. Non-Semantic Elements
+
+### Non-Semantic Elements
+
+- `<div>`: Used as a container for other elements, often for styling purposes.
+- `<span>`: Used to apply styles to inline text or elements.
+
+### Semantic Elements
+
+Semantic elements clearly describe their meaning in a way that is understandable to both the developer and the browser.
+
+- **Examples:**
+  - `<header>`: Defines the header section of a document or a section.
+  - `<nav>`: Defines a set of navigation links.
+  - `<footer>`: Defines the footer section of a document or a section.
+  - `<aside>`: Defines content that is tangentially related to the content around it.
+  - `<section>`: Defines a section in a document.
+  - `<article>`: Defines an independent, self-contained content.
 
 # Basic tags
 
@@ -279,6 +464,9 @@ e.g. `<video src="hello.mp4" controls autoplay loop muted></video>`
 
 e.g. `<a href="https://www.google.com">open Google</a>`
 
+**Output**
+<a href="https://www.google.com">open Google</a>
+
 The full path of the landing page:
 The website contains https://www., e.g. https://www.baidu.com
 or file path, e.g. filename.html
@@ -293,400 +481,599 @@ target: the opening form of the target page, the value could be:
 
 e.g. `<a href="https://www.baidu.com" target="_blank">Open Baidu</a>`
 
-# Unordered List
+# HTML Lists and Tables
 
-The unordered list `<ul>` is used to indicate the entire unordered list. It is used to wrap the `<li>` tags, and it only contains `<li>` tags.
+## Unordered List
 
-- `<li>`: Represents each item of the list and contains the content of each line. Any content can be nested within it.
+An unordered list (`<ul>`) is used to create a list of items in no specific order. It is commonly used for bullet points.
 
-Example:
+**Syntax and Usage**
+
+- **`<ul>`**: Wraps the entire unordered list.
+- **`<li>`**: Represents each item within the list. It can contain any type of content, including other lists.
+
+**Example**
 
 ```html
 <ul>
-  <li>apple</li>
-  <li>banana</li>
+  <li>Apple</li>
+  <li>Banana</li>
 </ul>
 ```
 
-Output:
+**Output**
 
 <ul>
-    <li>apple</li>
-    <li>banana</li>
+  <li>Apple</li>
+  <li>Banana</li>
 </ul>
 
-# Ordered List
+**Best Practices**
 
-The ordered list `<ol>` represents the entire ordered list. It is used to wrap the `<li>` tags, and it only contains `<li>` tags.
+- Use unordered lists for items that don't have a specific sequence.
+- Keep the content of `<li>` items concise for readability.
 
-- `<li>`: Represents each item of the list and contains the content of each line. Any content can be nested within it.
+## Ordered List
 
-Example:
+An ordered list (`<ol>`) is used to create a list of items in a specific order, typically numbered.
+
+**Syntax and Usage**
+
+- **`<ol>`**: Wraps the entire ordered list.
+- **`<li>`**: Represents each item within the list.
+
+**Example**
 
 ```html
 <ol>
-  <li>apple</li>
-  <li>banana</li>
+  <li>First item</li>
+  <li>Second item</li>
 </ol>
 ```
 
-Output:
+**Output**
 
 <ol>
-    <li>apple</li>
-    <li>banana</li>
+  <li>First item</li>
+  <li>Second item</li>
 </ol>
 
-# Description List
+**Best** Practices
 
-The description list `<dl>` represents the entire description list. It is used to wrap the `<dt>` and `<dd>` tags, and it only contains `<dt>` and `<dd>` tags.
+- Use ordered lists for steps, instructions, or any items that follow a specific order.
+- Utilize the `type` attribute if a different numbering style is required (e.g., Roman numerals, letters).
 
-- `<dt>`: The Description Term element represents the title of the list. Any content can be nested within it.
-- `<dd>`: The Description Details element represents each content in the list. Any content can be nested within it.
+## Description List
 
-Example:
+A description list (`<dl>`) is used to group terms and descriptions. It is useful for glossaries or lists of terms and definitions.
+
+**Syntax and Usage**
+
+- **`<dl>`**: Wraps the entire description list.
+- **`<dt>`**: Represents a term or name.
+- **`<dd>`**: Describes the term.
+
+**Example**
 
 ```html
 <dl>
-  <dt>Fruit</dt>
-  <dd>Apple</dd>
-  <dd>Pear</dd>
+  <dt>HTML</dt>
+  <dd>HyperText Markup Language</dd>
+  <dt>CSS</dt>
+  <dd>Cascading Style Sheets</dd>
 </dl>
 ```
 
-Output:
+**Output**
 
 <dl>
-    <dt>Fruit</dt>
-    <dd>Apple</dd>
-    <dd>Pear</dd>
+  <dt>HTML</dt>
+  <dd>HyperText Markup Language</dd>
+  <dt>CSS</dt>
+  <dd>Cascading Style Sheets</dd>
 </dl>
 
-## Table element
+**Best Practices**
 
-```
-<table border="1" width="600" height="400">
-    <caption>Fruit list</caption>
+- Use description lists for term-definition pairs to enhance readability and structure.
+- Ensure terms and descriptions are clear and concise.
+
+## Table 
+
+Tables are used to display data in a structured format with rows and columns. Modern best practices emphasize accessibility and responsiveness.
+
+**Syntax and Usage**
+
+```html
+<table>
+  <caption>Fruit List</caption>
+  <thead>
     <tr>
-        <th>Fruit</th>
-        <th>Weight</th>
-        <th>Taste</th>
+      <th>Fruit</th>
+      <th>Weight</th>
+      <th>Taste</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Apple</td>
+      <td>150g</td>
+      <td>Good</td>
     </tr>
     <tr>
-        <td>Apple</td>
-        <td>150g</td>
-        <td>Good</td>
+      <td>Pear</td>
+      <td>100g</td>
+      <td>Good</td>
     </tr>
-    <tr>
-        <td>Pear</td>
-        <td>100g</td>
-        <td>Good</td>
-    </tr>
+  </tbody>
 </table>
 ```
+
+**Output**
 
 <table border="1">
-    <caption>Fruit list</caption>
+  <caption>Fruit List</caption>
+  <thead>
     <tr>
-        <th>Fruit</th>
-        <th>Weight</th>
-        <th>Taste</th>
+      <th>Fruit</th>
+      <th>Weight</th>
+      <th>Taste</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Apple</td>
+      <td>150g</td>
+      <td>Good</td>
     </tr>
     <tr>
-        <td>Apple</td>
-        <td>150g</td>
-        <td>Good</td>
+      <td>Pear</td>
+      <td>100g</td>
+      <td>Good</td>
     </tr>
-    <tr>
-        <td>Pear</td>
-        <td>100g</td>
-        <td>Good</td>
-    </tr>
+  </tbody>
 </table>
 
-## Table structure (just for extension)
+**Best** Practices
 
-```
-<thead> table head </thead>
-<tbody> table body </tbody>
-<tfoot> table foot </tfoot>
-```
+- **Accessibility**: Use `<thead>`, `<tbody>`, and `<tfoot>` to group table sections. Provide clear and concise captions and headers.
+- **Responsive Design**: Ensure tables are responsive using CSS (e.g., setting `overflow-x` to `auto` for small screens).
 
-## Merge cells
+### Table Elements
 
-- Top-left rule: merge up and down remains up, merge left and right remains left
+- **`<caption>`**: Describes the table's content.
+- **`<thead>`**: Groups the header content.
+- **`<tbody>`**: Groups the body content.
+- **`<tfoot>`**: Groups the footer content.
+- **`<tr>`**: Represents a table row.
+- **`<th>`**: Represents a table header cell.
+- **`<td>`**: Represents a table data cell.
 
-| Attribute name | Attribute value          | Description        |
-| -------------- | ------------------------ | ------------------ |
-| rowspan        | number of cells to merge | Merge vertically   |
-| colspan        | number of cells to merge | Merge horizontally |
+### Example with Merged Cells
 
-```
-<table border="1" width="600" height="400">
-    <caption>Fruit list</caption>
+**Syntax and Usage**
+
+```html
+<table>
+  <caption>Fruit List</caption>
+  <thead>
     <tr>
-        <th>Fruit</th>
-        <th>Weight</th>
-        <th>Taste</th>
+      <th>Fruit</th>
+      <th>Weight</th>
+      <th>Taste</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Apple</td>
+      <td rowspan="2">150g</td>
+      <td>Good</td>
     </tr>
     <tr>
-        <td>Apple</td>
-        <td rowspan="2">150g</td>
-        <td>Good</td>
+      <td>Pear</td>
+      <td>Good</td>
     </tr>
     <tr>
-        <td>Pear</td>
-        <td>Good</td>
+      <td>Banana</td>
+      <td colspan="2">50g</td>
     </tr>
+  </tbody>
 </table>
 ```
+
+**Output**
 
 <table border="1">
-    <caption>Fruit list</caption>
+  <caption>Fruit List</caption>
+  <thead>
     <tr>
-        <th>Fruit</th>
-        <th>Weight</th>
-        <th>Taste</th>
+      <th>Fruit</th>
+      <th>Weight</th>
+      <th>Taste</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Apple</td>
+      <td rowspan="2">150g</td>
+      <td>Good</td>
     </tr>
     <tr>
-        <td>Apple</td>
-        <td rowspan="2">150g</td>
-        <td>Good</td>
+      <td>Pear</td>
+      <td>Good</td>
     </tr>
     <tr>
-        <td>Pear</td>
-        <td>Good</td>
+      <td>Banana</td>
+      <td colspan="2">50g</td>
     </tr>
+  </tbody>
 </table>
 
-```
-<table border="1" width="600" height="400">
-    <caption>Fruit list</caption>
-    <tr>
-        <th>Fruit</th>
-        <th>Weight</th>
-        <th>Taste</th>
-    </tr>
-    <tr>
-        <td>Apple</td>
-        <td>150g</td>
-        <td>Good</td>
-    </tr>
-    <tr>
-        <td>Pear</td>
-        <td colspan="2">100g</td>
-    </tr>
-</table>
-```
+**Best Practices for Merging Cells**
 
-<table border="1">
-    <caption>Fruit list</caption>
-    <tr>
-        <th>Fruit</th>
-        <th>Weight</th>
-        <th>Taste</th>
-    </tr>
-    <tr>
-        <td>Apple</td>
-        <td>150g</td>
-        <td>Good</td>
-    </tr>
-    <tr>
-        <td>Pear</td>
-        <td colspan="2">100g</td>
-    </tr>
-</table>
+- Use the `rowspan` attribute to merge cells vertically.
+- Use the `colspan` attribute to merge cells horizontally.
+- Follow the top-left rule: merged cells should remain aligned to the top and left.
 
-## The Input (Form Input) element `<input>`
+# HTML Form Elements
 
-Useful attribute: `type`
+## The Input Element `<input>`
 
-### Useful 'type' values
+The `<input>` element is one of the most versatile and commonly used elements in HTML forms. It can be configured to accept different types of data through the `type` attribute.
+
+### Useful `type` Values
 
 #### `text`
 
-The default value. A single-line text field. Line breaks are automatically removed from the input value.
-e.g. text: `<input type="text">`
+A single-line text field. Line breaks are automatically removed from the input value.
+```html
+<input type="text">
+```
+
+**Output**
+<input type="text">
 
 #### `password`
 
-A single-line text field whose value is obscured. Will alert the user if the site is not secure.
-e.g. password `<input type="password">`
+A single-line text field whose value is obscured. It alerts the user if the site is not secure.
+```html
+<input type="password">
+```
+
+**Output**
+<input type="password">
 
 #### `radio`
 
-A radio button allows a single value to be selected out of multiple choices with the same `name` value.
-e.g. How are you going? `<input type="radio">Good.`
+A radio button allows a single value to be selected out of multiple choices with the same `name` value.
+```html
+<input type="radio" name="example"> Option 1
+<input type="radio" name="example"> Option 2
+```
+
+**Output**
+<input type="radio" name="example"> Option 1
+<input type="radio" name="example"> Option 2
 
 #### `checkbox`
 
-A check box allows single values to be selected/deselected. Suitable for more than one answer can be selected.
+A checkbox allows single values to be selected or deselected. Suitable when more than one answer can be selected.
+```html
+<input type="checkbox" name="example1"> Option 1
+<input type="checkbox" name="example2"> Option 2
+```
+
+**Output**
+<input type="checkbox" name="example1"> Option 1
+<input type="checkbox" name="example2"> Option 2
 
 #### `file`
 
-A control that lets the user select a file. Use the `accept` attribute to define the types of files that the control can select.
+A control that lets the user select a file. Use the `accept` attribute to define the types of files that the control can select.
+```html
+<input type="file" accept=".jpg, .jpeg, .png">
+```
+
+**Output**
+<input type="file" accept=".jpg, .jpeg, .png">
 
 #### `submit`
 
 A button that submits the form.
+```html
+<input type="submit" value="Submit">
+```
+
+**Output**
+<input type="submit" value="Submit">
 
 #### `reset`
 
-A button that resets the contents of the form to default values. Not recommended.
+A button that resets the contents of the form to default values. Not recommended as it can lead to accidental data loss.
+```html
+<input type="reset" value="Reset">
+```
+
+**Output**
+<input type="reset" value="Reset">
+
 
 #### `button`
 
-A push-button with no default behavior displays the `value` attribute's value, empty by default. Use JavaScript to add a function.
+A push-button with no default behavior. Use JavaScript to add functionality.
+```html
+<input type="button" value="Click me" onclick="alert('Button clicked!')">
+```
 
-Common attributes when `type = "text"`: `placeholder`
+**Output**
+<input type="button" value="Click me" onclick="alert('Button clicked!')">
+
+### Common Attributes
 
 #### `placeholder`
 
-Text that prompts the user for input.
-e.g. `<input type="text" placeholder="enter account name">`
+Provides a hint to the user of what can be entered in the field.
+```html
+<input type="text" placeholder="Enter your name">
+```
 
-Common attributes when `type = "radio"`: `name`
+**Output**
+<input type="text" placeholder="Enter your name">
 
 #### `name`
 
-Grouping, those with the same name are grouped together, and only one of them can be selected at the same time.
-e.g. gender:
-
-```
-<input type="radio" name="gender">male
-<input type="radio" name="gender">female
+Groups radio buttons together so that only one can be selected at a time.
+```html
+<input type="radio" name="gender" value="male"> Male
+<input type="radio" name="gender" value="female"> Female
 ```
 
-Common attribute when `type = "radio"` or `type = "checkbox"`: `checked`
+**Output**
+<input type="radio" name="gender" value="male"> Male
+<input type="radio" name="gender" value="female"> Female
 
 #### `checked`
 
-Selected by default.
-e.g. gender:
-
-```
-<input type="radio" name="gender">male
-<input type="radio" name="gender" checked>female
+Sets a checkbox or radio button to be selected by default.
+```html
+<input type="checkbox" name="subscribe" checked> Subscribe to newsletter
 ```
 
-Common attributes when `type = "file"`: `multiple`
+**Output**
+<input type="checkbox" name="subscribe" checked> Subscribe to newsletter
 
 #### `multiple`
 
-Can upload multiple files at once.
-
-All buttons (`submit`, `reset`, `button`) should be matched with the `form` tag. The usage is to wrap the `form` tag together.
-
+Allows multiple files to be selected in a file input.
+```html
+<input type="file" name="files" multiple>
 ```
-<form action="">
-  name: <input type="text">
-  <br><br>
-  password: <input type="password">
-  <br><br>
-  <input type="submit">
-  <input type="reset">
+
+**Output**
+<input type="file" name="files" multiple>
+
+### Example Usage
+
+#### Basic Form with Input Elements
+
+```html
+<form action="/submit" method="post">
+  Name: <input type="text" name="name" placeholder="Enter your name"><br><br>
+  Password: <input type="password" name="password"><br><br>
+  Gender:
+  <input type="radio" name="gender" value="male"> Male
+  <input type="radio" name="gender" value="female" checked> Female<br><br>
+  Interests:
+  <input type="checkbox" name="interest1" value="coding"> Coding
+  <input type="checkbox" name="interest2" value="music" checked> Music<br><br>
+  Upload files: <input type="file" name="files" multiple><br><br>
+  <input type="submit" value="Submit">
+  <input type="reset" value="Reset">
 </form>
 ```
 
-Submit address in `action`
-All buttons common attribute value: what name do you want to call
+**Output**
+<form action="/submit" method="post">
+  Name: <input type="text" name="name" placeholder="Enter your name"><br><br>
+  Password: <input type="password" name="password"><br><br>
+  Gender:
+  <input type="radio" name="gender" value="male"> Male
+  <input type="radio" name="gender" value="female" checked> Female<br><br>
+  Interests:
+  <input type="checkbox" name="interest1" value="coding"> Coding
+  <input type="checkbox" name="interest2" value="music" checked> Music<br><br>
+  Upload files: <input type="file" name="files" multiple><br><br>
+  <input type="submit" value="Submit">
+  <input type="reset" value="Reset">
+</form>
 
+## The `button` Element
+
+The `<button>` element is used to create clickable buttons.
+
+### Common Attribute
+
+#### `type`
+
+Defines the behavior of the button. It can be `submit`, `reset`, or `button`.
+
+```html
+<button type="submit">Submit</button>
+<button type="reset">Reset</button>
+<button type="button" onclick="alert('Button clicked!')">Click me</button>
 ```
-<input type="submit" value="free register">
-<input type="button" value="free register">
+
+**Output**
+<button type="submit">Submit</button>
+<button type="reset">Reset</button>
+<button type="button" onclick="alert('Button clicked!')">Click me</button>
+
+### Example Usage
+
+```html
+<button>I'm a button</button>
+<button type="submit">I'm a submit button</button>
+<button type="reset">I'm a reset button</button>
 ```
+**Output**
+<button>I'm a button</button>
+<button type="submit">I'm a submit button</button>
+<button type="reset">I'm a reset button</button>
 
-## `button` element
+## The `select` Element
 
-`<button></button>`
+The `<select>` element is used to create a drop-down list.
 
-- Common attribute `type`.
-- Attribute value: `submit`, `reset`, `button`. The usage is the same as the `type` attribute of the `input` tag.
-- Submit button by default in Google Chrome.
-- The button is a double label, which is convenient to include other content, text, pictures, etc.
+### Structure
 
-```
-<button>I’m a button</button>
-<button type="submit">I’m a submit button</button>
-<button type="reset">I’m a reset button</button>
-```
+- `<select></select>`: The entire drop-down menu.
+- `<option></option>`: Each item in the drop-down menu.
 
-## `select`: drop-down menu labels
+### Example Usage
 
-`<select></select>`: the entire drop-down menu labels, used to contain option labels
-`<option></option>`: each item of the drop-down menu
-`selected` attribute in `option` element: The default selection of the drop-down menu, if there is no selection,
-
-it will default to the first option
-
-```
-<select>
-  <option>Beijing</option>
-  <option>GuangZhou</option>
-  <option>Shanghai</option>
-  <option selected>Shenzhen</option>
+```html
+<select name="cities">
+  <option value="beijing">Beijing</option>
+  <option value="guangzhou">Guangzhou</option>
+  <option value="shanghai">Shanghai</option>
+  <option value="shenzhen" selected>Shenzhen</option>
 </select>
 ```
 
-## A multi-line text input control (text area) `<textarea></textarea>`
+**Output**
+<select name="cities">
+  <option value="beijing">Beijing</option>
+  <option value="guangzhou">Guangzhou</option>
+  <option value="shanghai">Shanghai</option>
+  <option value="shenzhen" selected>Shenzhen</option>
+</select>
 
-Useful attributes:
-`cols`: the width of the visible part
-`rows`: the number of visible lines of text
-Drag the bottom-right corner can change the size, but it is best to use CSS to disable it in actual development.
+### Common Attributes
 
-## Label element `<label></label>`
+#### `name`
 
-Often used to bind the relationship between content and form element
+Identifies the drop-down menu when the form is submitted.
 
-Use method 1:
-
-- Use label tags to wrap content
-- Add an `id` attribute to the label tag
-- Set the corresponding `id` attribute value to the `for` attribute of the label element
-
-Use method 2:
-
-- Use label tags to wrap content and form tags
-- Delete the `for` attribute of the label tag
-
+```html
+<select name="city">
+  <option value="new-york">New York</option>
+  <option value="los-angeles">Los Angeles</option>
+</select>
 ```
+
+**Output**
+<select name="cities" multiple>
+  <option value="beijing">Beijing</option>
+  <option value="guangzhou">Guangzhou</option>
+  <option value="shanghai">Shanghai</option>
+  <option value="shenzhen">Shenzhen</option>
+</select>
+
+#### `multiple`
+
+Allows multiple selections within the drop-down list.
+
+```html
+<select name="cities" multiple>
+  <option value="beijing">Beijing</option>
+  <option value="guangzhou">Guangzhou</option>
+  <option value="shanghai">Shanghai</option>
+  <option value="shenzhen">Shenzhen</option>
+</select>
+```
+
+**Output**
+<select name="cities" multiple>
+  <option value="beijing">Beijing</option>
+  <option value="guangzhou">Guangzhou</option>
+  <option value="shanghai">Shanghai</option>
+  <option value="shenzhen">Shenzhen</option>
+</select>
+
+### Selected Attribute
+
+Specifies the default selected item in the drop-down list.
+
+```html
+<select>
+  <option value="option1">Option 1</option>
+  <option value="option2" selected>Option 2</option>
+  <option value="option3">Option 3</option>
+</select>
+```
+
+**Output**
+<select>
+  <option value="option1">Option 1</option>
+  <option value="option2" selected>Option 2</option>
+  <option value="option3">Option 3</option>
+</select>
+
+### A Multi-line Text Input Control (`<textarea></textarea>`)
+
+**Useful Attributes**
+
+- `cols`: Specifies the visible width of the text area in characters.
+- `rows`: Specifies the visible number of lines in the text area.
+
+**Best Practices**
+
+- **Resizing:**
+  - By default, users can resize the text area by dragging the bottom-right corner. However, it is often best to control resizing via CSS to maintain layout consistency.
+  - Example:
+    ```css
+    textarea {
+        resize: none; /* Disables resizing */
+    }
+    ```
+
+### Label Element (`<label></label>`)
+
+**Usage**
+
+Labels are used to bind a text description to a form element, enhancing accessibility and usability.
+
+**Method 1: Using `for` Attribute**
+
+- Wrap the form element with a label tag.
+- Add an `id` attribute to the form element.
+- Set the `for` attribute of the label tag to the same value as the form element's `id`.
+
+**Method 2: Wrapping the Form Element**
+
+- Wrap both the form element and its content with a label tag.
+- Omit the `for` attribute.
+
+**Example**
+
+```html
 gender:
 <input type="radio" name="gender" id="male"> <label for="male">male</label>
 <label><input type="radio" name="gender"> female</label>
 ```
 
-Semantic element `<div></div>` `<span></span>`
+## Useful Character Entities
 
-No semantics for these two layout elements. They can be used in other elements. Both do not have effects but can be added in CSS.
-
-Elements with semantics (just for extension):
-
-- `header`: web page header
-- `nav`: web navigation
-- `footer`: bottom of the page
-- `aside`: sidebar
-- `section`: area fast
-- `article`: article
-
-The mobile terminal uses more commonly and does not have any effect. Add the effect to CSS.
-
-## Useful Character Entities:
+### Character Entities Table
 
 | Result | Description    | Character Entity |
 | ------ | -------------- | ---------------- |
 |        | Space          | `&nbsp;`         |
-| <      | Lower than     | `&lt;`           |
+| <      | Less than      | `&lt;`           |
 | >      | Greater than   | `&gt;`           |
 | "      | Quotation mark | `&quot;`         |
 | &      | Ampersand      | `&amp;`          |
 
-These character entities are useful when working with HTML to represent special characters and prevent them from being interpreted as code or causing syntax errors. Here's a breakdown of each character entity:
+### Explanation
 
-- `&nbsp;`: Represents a non-breaking space, which is a space that will not be collapsed in HTML.
-- `&lt;`: Represents the less than symbol (`<`), which is used in HTML tags and can be encoded to prevent it from being interpreted as the start of a tag.
-- `&gt;`: Represents the greater than symbol (`>`), which is also used in HTML tags and can be encoded to prevent it from being interpreted as the end of a tag.
-- `&quot;`: Represents the quotation mark (`"`), which is commonly used to enclose attribute values in HTML and can be encoded to avoid conflicting with the surrounding quotes.
-- `&amp;`: Represents the ampersand symbol (`&`), which is used to start character entities in HTML itself. It needs to be encoded to avoid confusion with an actual character entity.
+- **`&nbsp;`**: Represents a non-breaking space, which prevents automatic line breaks at its position.
+- **`&lt;`**: Represents the less than symbol (`<`), preventing it from being interpreted as an HTML tag.
+- **`&gt;`**: Represents the greater than symbol (`>`), preventing it from being interpreted as the end of an HTML tag.
+- **`&quot;`**: Represents the double quotation mark (`"`), often used to encapsulate attribute values.
+- **`&amp;`**: Represents the ampersand (`&`), used to start character entities.
 
-These character entities ensure that special characters are correctly rendered in HTML and help maintain proper syntax and formatting.
+### Usage Example
+
+```html
+<p>This is a paragraph with a special character: &amp;.</p>
+```
