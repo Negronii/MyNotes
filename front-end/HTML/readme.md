@@ -730,18 +730,12 @@ A single-line text field. Line breaks are automatically removed from the input v
 <input type="text">
 ```
 
-**Output**
-<input type="text">
-
 #### `password`
 
 A single-line text field whose value is obscured. It alerts the user if the site is not secure.
 ```html
 <input type="password">
 ```
-
-**Output**
-<input type="password">
 
 #### `radio`
 
@@ -751,10 +745,6 @@ A radio button allows a single value to be selected out of multiple choices with
 <input type="radio" name="example"> Option 2
 ```
 
-**Output**
-<input type="radio" name="example"> Option 1
-<input type="radio" name="example"> Option 2
-
 #### `checkbox`
 
 A checkbox allows single values to be selected or deselected. Suitable when more than one answer can be selected.
@@ -763,19 +753,12 @@ A checkbox allows single values to be selected or deselected. Suitable when more
 <input type="checkbox" name="example2"> Option 2
 ```
 
-**Output**
-<input type="checkbox" name="example1"> Option 1
-<input type="checkbox" name="example2"> Option 2
-
 #### `file`
 
 A control that lets the user select a file. Use the `accept` attribute to define the types of files that the control can select.
 ```html
 <input type="file" accept=".jpg, .jpeg, .png">
 ```
-
-**Output**
-<input type="file" accept=".jpg, .jpeg, .png">
 
 #### `submit`
 
@@ -784,9 +767,6 @@ A button that submits the form.
 <input type="submit" value="Submit">
 ```
 
-**Output**
-<input type="submit" value="Submit">
-
 #### `reset`
 
 A button that resets the contents of the form to default values. Not recommended as it can lead to accidental data loss.
@@ -794,19 +774,12 @@ A button that resets the contents of the form to default values. Not recommended
 <input type="reset" value="Reset">
 ```
 
-**Output**
-<input type="reset" value="Reset">
-
-
 #### `button`
 
 A push-button with no default behavior. Use JavaScript to add functionality.
 ```html
 <input type="button" value="Click me" onclick="alert('Button clicked!')">
 ```
-
-**Output**
-<input type="button" value="Click me" onclick="alert('Button clicked!')">
 
 ### Common Attributes
 
@@ -817,9 +790,6 @@ Provides a hint to the user of what can be entered in the field.
 <input type="text" placeholder="Enter your name">
 ```
 
-**Output**
-<input type="text" placeholder="Enter your name">
-
 #### `name`
 
 Groups radio buttons together so that only one can be selected at a time.
@@ -828,10 +798,6 @@ Groups radio buttons together so that only one can be selected at a time.
 <input type="radio" name="gender" value="female"> Female
 ```
 
-**Output**
-<input type="radio" name="gender" value="male"> Male
-<input type="radio" name="gender" value="female"> Female
-
 #### `checked`
 
 Sets a checkbox or radio button to be selected by default.
@@ -839,18 +805,12 @@ Sets a checkbox or radio button to be selected by default.
 <input type="checkbox" name="subscribe" checked> Subscribe to newsletter
 ```
 
-**Output**
-<input type="checkbox" name="subscribe" checked> Subscribe to newsletter
-
 #### `multiple`
 
 Allows multiple files to be selected in a file input.
 ```html
 <input type="file" name="files" multiple>
 ```
-
-**Output**
-<input type="file" name="files" multiple>
 
 ### Example Usage
 
@@ -872,21 +832,6 @@ Allows multiple files to be selected in a file input.
 </form>
 ```
 
-**Output**
-<form action="/submit" method="post">
-  Name: <input type="text" name="name" placeholder="Enter your name"><br><br>
-  Password: <input type="password" name="password"><br><br>
-  Gender:
-  <input type="radio" name="gender" value="male"> Male
-  <input type="radio" name="gender" value="female" checked> Female<br><br>
-  Interests:
-  <input type="checkbox" name="interest1" value="coding"> Coding
-  <input type="checkbox" name="interest2" value="music" checked> Music<br><br>
-  Upload files: <input type="file" name="files" multiple><br><br>
-  <input type="submit" value="Submit">
-  <input type="reset" value="Reset">
-</form>
-
 ## The `button` Element
 
 The `<button>` element is used to create clickable buttons.
@@ -903,11 +848,6 @@ Defines the behavior of the button. It can be `submit`, `reset`, or `button`.
 <button type="button" onclick="alert('Button clicked!')">Click me</button>
 ```
 
-**Output**
-<button type="submit">Submit</button>
-<button type="reset">Reset</button>
-<button type="button" onclick="alert('Button clicked!')">Click me</button>
-
 ### Example Usage
 
 ```html
@@ -915,10 +855,6 @@ Defines the behavior of the button. It can be `submit`, `reset`, or `button`.
 <button type="submit">I'm a submit button</button>
 <button type="reset">I'm a reset button</button>
 ```
-**Output**
-<button>I'm a button</button>
-<button type="submit">I'm a submit button</button>
-<button type="reset">I'm a reset button</button>
 
 ## The `select` Element
 
@@ -940,14 +876,6 @@ The `<select>` element is used to create a drop-down list.
 </select>
 ```
 
-**Output**
-<select name="cities">
-  <option value="beijing">Beijing</option>
-  <option value="guangzhou">Guangzhou</option>
-  <option value="shanghai">Shanghai</option>
-  <option value="shenzhen" selected>Shenzhen</option>
-</select>
-
 ### Common Attributes
 
 #### `name`
@@ -960,14 +888,6 @@ Identifies the drop-down menu when the form is submitted.
   <option value="los-angeles">Los Angeles</option>
 </select>
 ```
-
-**Output**
-<select name="cities" multiple>
-  <option value="beijing">Beijing</option>
-  <option value="guangzhou">Guangzhou</option>
-  <option value="shanghai">Shanghai</option>
-  <option value="shenzhen">Shenzhen</option>
-</select>
 
 #### `multiple`
 
@@ -982,14 +902,6 @@ Allows multiple selections within the drop-down list.
 </select>
 ```
 
-**Output**
-<select name="cities" multiple>
-  <option value="beijing">Beijing</option>
-  <option value="guangzhou">Guangzhou</option>
-  <option value="shanghai">Shanghai</option>
-  <option value="shenzhen">Shenzhen</option>
-</select>
-
 ### Selected Attribute
 
 Specifies the default selected item in the drop-down list.
@@ -1001,13 +913,6 @@ Specifies the default selected item in the drop-down list.
   <option value="option3">Option 3</option>
 </select>
 ```
-
-**Output**
-<select>
-  <option value="option1">Option 1</option>
-  <option value="option2" selected>Option 2</option>
-  <option value="option3">Option 3</option>
-</select>
 
 ### A Multi-line Text Input Control (`<textarea></textarea>`)
 
