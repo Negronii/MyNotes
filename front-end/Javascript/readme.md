@@ -1,317 +1,486 @@
-# DOM: Document Object Module
+# DOM: Document Object Model
 
-Every element is an object, and the document represents the entire HTML document.
+The Document Object Model (DOM) represents a webpage so that programs can change the document structure, style, and content. The DOM represents the document as nodes and objects, which can be manipulated with scripting languages like JavaScript.
 
-## getElementByID
+## Accessing Elements
 
-To retrieve an element in the document, we use the following syntax:
+### getElementById
 
+Retrieves an element by its ID. This method returns a single element object.
+
+**Syntax:**
 ```javascript
-<element name>.getElementById('<element id>')
+document.getElementById('<element id>')
 ```
 
-For example:
-
+**Example:**
 ```javascript
-document.getElementById("time");
+const timeElement = document.getElementById("time");
+console.dir(timeElement);
+```
+- `document.getElementById("time")` retrieves the element with the ID `time`.
+- `console.dir(timeElement)` logs the element object to the console.
+
+### getElementsByTagName
+
+Retrieves all elements with the specified tag name. This method returns an HTMLCollection, which is a pseudo-array (array-like object).
+
+**Syntax:**
+```javascript
+document.getElementsByTagName('<tag name>')
 ```
 
-The return value is an object. To log the element object we retrieve, we can use:
-
+**Example:**
 ```javascript
-console.dir(<element object>)
-```
+const listItems = document.getElementsByTagName("li");
 
-## getElementByTagName
-
-To retrieve elements by their tag name, we use the syntax:
-
-```javascript
-<element name>.getElementsByTagName('<tag name>')
-```
-
-For instance, if we want to retrieve `<li>` elements, we use:
-
-```javascript
-document.getElementsByTagName("li");
-```
-
-The return value is a pseudo array, which can be accessed using the following syntax:
-
-```javascript
-<returnObject>[<index>]
-```
-
-To traverse the returned elements, we can use a loop:
-
-```javascript
-for (let i = 0; i < <returnObject>.length; i++) {
-  <returnObject>[i]
+for (let i = 0; i < listItems.length; i++) {
+  console.log(listItems[i]);
 }
 ```
+- `document.getElementsByTagName("li")` retrieves all `<li>` elements.
+- The for loop iterates through the HTMLCollection and logs each `<li>` element.
 
-If no elements are found, an array with a length of 0 will be returned.
-
-To retrieve the child elements within a parent tag, we can use the following approach:
-
+**Accessing Child Elements:**
 ```javascript
 const ols = document.getElementsByTagName('ol');
-const lis = ols[<index>].getElementsByTagName('li');
+const lis = ols[0].getElementsByTagName('li');
 ```
+- `ols[0]` accesses the first `<ol>` element.
+- `ols[0].getElementsByTagName('li')` retrieves all `<li>` elements within the first `<ol>`.
 
-# Some get function only available in HTML5
+## Modern Methods (HTML5)
 
-## getElementsByClassName
+### getElementsByClassName
 
+Retrieves all elements with the specified class name. This method returns an HTMLCollection.
+
+**Syntax:**
 ```javascript
-<element name>.getElementsByClassName('<class name>')
+document.getElementsByClassName('<class name>')
 ```
 
-- Return a collection of elements.
-- Example:
-
+**Example:**
 ```javascript
-var boxes = document.getElementsByClassName("box");
+const boxes = document.getElementsByClassName("box");
 ```
+- `document.getElementsByClassName("box")` retrieves all elements with the class `box`.
 
-## querySelector
+### querySelector
 
+Retrieves the first element that matches the specified CSS selector. This method returns a single element object.
+
+**Syntax:**
 ```javascript
-document.querySelector("<selector>");
+document.querySelector('<selector>')
 ```
 
-- Return the first element selected by the selector.
-- Examples:
-
+**Examples:**
 ```javascript
-var box = document.querySelector(".box");
-var box = document.querySelector("#nav");
-var box = document.querySelector("li");
+const firstBox = document.querySelector(".box");
+const navElement = document.querySelector("#nav");
+const firstListItem = document.querySelector("li");
 ```
+- `document.querySelector(".box")` retrieves the first element with the class `box`.
+- `document.querySelector("#nav")` retrieves the element with the ID `nav`.
+- `document.querySelector("li")` retrieves the first `<li>` element.
 
-- Useful in developing.
+### querySelectorAll
 
-## querySelectorAll
+Retrieves all elements that match the specified CSS selector. This method returns a NodeList, which is a collection of nodes.
 
+**Syntax:**
 ```javascript
-document.querySelectorAll("<selector>");
+document.querySelectorAll('<selector>')
 ```
 
-- Return all elements selected by the selector.
-- Example:
-
+**Example:**
 ```javascript
-var boxes = document.querySelectorAll(".box");
+const allBoxes = document.querySelectorAll(".box");
+
+allBoxes.forEach(box => {
+  console.log(box);
+});
 ```
+- `document.querySelectorAll(".box")` retrieves all elements with the class `box`.
+- `NodeList.forEach` is used to iterate over the NodeList and log each element.
 
-- Useful in developing.
+## Document Properties
 
-## document.body & document.documentElement
+### document.body
 
+Retrieves the `<body>` element.
+
+**Example:**
 ```javascript
-var bodyEle = document.body; // get body element object
-var htmlEle = document.documentElement; // get html element object
+const bodyElement = document.body;
+console.log(bodyElement);
 ```
+- `document.body` gets the `<body>` element object.
 
-# Events introduction
+### document.documentElement
 
-Events consist of three parts: event source, event type, event handler.
+Retrieves the `<html>` element.
 
-- Event source: Which object triggered the event? Example:
+**Example:**
+```javascript
+const htmlElement = document.documentElement;
+console.log(htmlElement);
+```
+- `document.documentElement` gets the `<html>` element object.
+
+## Best Practices
+
+1. **Use `querySelector` and `querySelectorAll`:**
+   - These methods are more flexible and support complex CSS selectors.
+   - Example:
+     ```javascript
+     const mainHeader = document.querySelector('header.main-header');
+     const activeItems = document.querySelectorAll('.menu-item.active');
+     ```
+
+2. **Cache DOM Queries:**
+   - Repeated DOM queries can be expensive. Store references to elements that are accessed multiple times.
+   - Example:
+     ```javascript
+     const menuItems = document.querySelectorAll('.menu-item');
+     menuItems.forEach(item => {
+       // Perform operations on each item
+     });
+     ```
+
+3. **Use Event Delegation:**
+   - Instead of adding event listeners to multiple elements, add a single event listener to a common parent.
+   - Example:
+     ```javascript
+     document.querySelector('.menu').addEventListener('click', (event) => {
+       if (event.target.matches('.menu-item')) {
+         // Handle menu item click
+       }
+     });
+     ```
+
+# Events Introduction
+
+Events are actions or occurrences that happen in the browser and can be detected and handled by JavaScript. They consist of three main parts: event source, event type, and event handler.
+
+## Event Source
+
+The event source is the object that triggers the event. For example, if a button is clicked, the button element is the event source.
+
+### Example
 
 ```javascript
 var btn = document.getElementById("btn");
 ```
 
-- Event type: How to trigger the event? What is the event?
-- Here is a list of some common HTML events:
+Here, `btn` is the event source, which is a reference to the button element with the ID "btn".
 
-  - onclick
-  - onmouseover
-  - onkeydown
-  - onsubmit
-  - ...
-    (Note: Please provide specific event names for a more accurate list)
+## Event Type
 
-- Event handler: Define the function for the event type. Example:
+Event type defines how the event is triggered and what kind of event it is. Here are some common HTML events:
+
+- `onclick`: Triggered when an element is clicked.
+- `onmouseover`: Triggered when the mouse pointer moves over an element.
+- `onmouseout`: Triggered when the mouse pointer moves out of an element.
+- `onkeydown`: Triggered when a key is pressed down.
+- `onkeyup`: Triggered when a key is released.
+- `onsubmit`: Triggered when a form is submitted.
+- `onload`: Triggered when the page has loaded.
+- `onresize`: Triggered when the window is resized.
+
+**Example**
 
 ```javascript
 btn.onclick = function () {
-  // do something
+  // do something when the button is clicked
 };
 ```
 
-# Modify element attributes
+In this example, `onclick` is the event type that triggers the provided function when the button is clicked.
 
-`innerText` & `innerHTML`
+## Event Handler
 
-- `element.innerText`: Returns the text content of an element, excluding any HTML tags, spaces, and newlines inside.
+An event handler is a function that is executed when the event occurs. It defines the action to be performed in response to the event.
 
-  - Example:
-    ```javascript
-    element.innerText = "2022-11-09"; // define the value
-    ```
-    This sets the inner text of the element to '2022-11-09'.
+**Example**
 
-- `element.innerHTML`: Returns the complete HTML content of an element, including any HTML tags, spaces, and newlines inside.
-  - Example:
-    ```javascript
-    element.innerHTML = "<strong>Today is:</strong> 2022-11-09";
-    ```
-    This sets the inner HTML of the element to '<strong>Today is:</strong> 2022-11-09'.
+```javascript
+btn.onclick = function () {
+  alert("Button clicked!");
+};
+```
 
-`input` attributes
+Here, the event handler is a function that displays an alert message when the button is clicked.
 
-- `<button>`: Represents a clickable button.
-- `<input type="text" value="please enter">`: Represents a text input field with an initial value of 'please enter'.
+## Modern Event Handling with addEventListener
+
+Using `addEventListener` is the recommended way to handle events as it allows multiple event handlers for the same event and can be used to remove event listeners.
+
+**Example**
+
+```javascript
+btn.addEventListener('click', function() {
+  alert("Button clicked!");
+});
+```
+
+You can also remove an event listener using `removeEventListener`.
+
+**Example**
+
+```javascript
+function handleClick() {
+  alert("Button clicked!");
+}
+
+btn.addEventListener('click', handleClick);
+
+// To remove the event listener
+btn.removeEventListener('click', handleClick);
+```
+
+# Modify Element Attributes
+
+Modifying element attributes allows you to change the properties of HTML elements dynamically.
+
+## `innerText` & `innerHTML`
+
+### `innerText`
+
+`element.innerText` returns or sets the text content of an element, excluding any HTML tags.
+
+**Example**
+
+```javascript
+element.innerText = "2024-06-04";
+```
+
+This sets the inner text of the element to '2024-06-04'.
+
+### `innerHTML`
+
+`element.innerHTML` returns or sets the complete HTML content of an element, including HTML tags.
+
+**Example**
+
+```javascript
+element.innerHTML = "<strong>Today is:</strong> 2024-06-04";
+```
+
+This sets the inner HTML of the element to '<strong>Today is:</strong> 2024-06-04'.
+
+## Input Attributes
+
+Input attributes allow you to control the behavior and appearance of input elements.
+
+**Example**
 
 ```html
-<script>
-  var btn = document.querySelector("button");
-  var input = document.querySelector("input");
-
-  // Register the onclick event
-  btn.onclick = function () {
-    // Modify the input value
-    input.value = "entered";
-
-    // Disable the button, making it unclickable
-    btn.disabled = true;
-
-    // Alternatively, we can use 'this' keyword, which refers to the event function caller (btn)
-    this.disabled = true;
-  };
-
-  input.onfocus = function () {
-    // Event handler when the user clicks on the input
-  };
-
-  input.onblur = function () {
-    // Event handler when the user clicks on the input and then clicks somewhere else
-  };
-
-  // Get the number of characters in the input value
-  input.value.length;
-</script>
-```
-
-## Image attributes
-
-- `src`: Specifies the source URL of an image.
-- `href`: Specifies the URL of a linked resource (typically used with anchor tags).
-- `id`: Specifies a unique identifier for an element.
-- `alt`: Specifies alternative text for an image, to be displayed if the image cannot be loaded.
-- `title`: Specifies extra information about an element (typically displayed as a tooltip).
-
-```javascript
-img.src = "pic/pic.png";
-```
-
-## Inline Style modification
-
-- Modify the style attributes of an element using JavaScript.
-- Style attributes use lower camel case naming strategy (e.g., `backgroundColor` instead of `background-color`).
-- To hide an element, set its `display` style property to `'none'`.
-
-```javascript
-var div = document.querySelector("div");
-
-// Modify background color
-div.style.backgroundColor = "pink";
-
-// Hide the div
-div.style.display = "none";
-```
-
-## Classname style modification
-
-- Change the class name of an element. If the element already has a class name, it will be replaced.
-- To keep the previous class name, separate multiple class names with a space.
-
-```javascript
-var div = document.querySelector("div");
-div.className = "box";
-
-// To keep the previous class name
-div.className = "first second";
-```
-
-## Customized attributes
-
-- Elements can have attributes defined by HTML built-in and by developers.
-- To use HTML built-in attributes: `<elementName>.<attributeName>`
-- To use all variables (including customized): `<elementName>.getAttribute('<attribute name>')`
-
-Example:
-
-```html
-<div id="test" index="1"></div>
+<button>Click me</button>
+<input type="text" value="Please enter">
 ```
 
 ```javascript
-var div = document.querySelector("div");
-div.id; // returns 'test'
-div.getAttribute("index"); // returns '1'
+var btn = document.querySelector("button");
+var input = document.querySelector("input");
+
+// Register the onclick event
+btn.onclick = function () {
+  // Modify the input value
+  input.value = "Entered";
+
+  // Disable the button, making it unclickable
+  btn.disabled = true;
+
+  // Alternatively, use 'this' keyword, which refers to the event function caller (btn)
+  this.disabled = true;
+};
+
+input.onfocus = function () {
+  // Event handler when the user clicks on the input
+  console.log("Input focused");
+};
+
+input.onblur = function () {
+  // Event handler when the user clicks on the input and then clicks somewhere else
+  console.log("Input blurred");
+};
+
+// Get the number of characters in the input value
+console.log(input.value.length);
 ```
 
-- Set built-in attributes: `<elementName>.<attributeName> = '<value>'`
-- Set
+## Best Practices
 
-all attributes: `<elementName>.setAttribute('<attributeName>', '<value>')`
+1. **Use `addEventListener`**: Prefer using `addEventListener` for event handling to keep your code flexible and maintainable.
+2. **Keep Functions Separate**: Define event handler functions separately to improve readability and reusability.
+3. **Avoid Inline Event Handlers**: Avoid using inline event handlers in HTML. Instead, use JavaScript to attach event listeners.
+4. **Accessibility**: Ensure interactive elements are accessible by using appropriate ARIA roles and properties.
 
-Example:
+## Image Attributes
 
-```javascript
-div.setAttribute("class", "box");
-div.setAttribute("index", "1");
-```
+Images in HTML are managed using the `<img>` tag. Here are some key attributes for handling images effectively:
 
-- Remove an attribute: `<elementName>.removeAttribute('<attributeName>')`
+1. **src**:
+   - Specifies the source URL of an image.
+   ```html
+   <img src="images/example.png" alt="Example Image">
+   ```
+   - Example with JavaScript:
+     ```javascript
+     var img = document.querySelector("img");
+     img.src = "images/new-image.png";
+     ```
 
-Example:
+2. **alt**:
+   - Provides alternative text for an image if it cannot be displayed.
+   - Important for accessibility and SEO.
+   ```html
+   <img src="images/example.png" alt="A descriptive text about the image">
+   ```
 
-```javascript
-div.removeAttribute("index");
-```
+3. **title**:
+   - Offers additional information about an element, typically shown as a tooltip.
+   ```html
+   <img src="images/example.png" alt="Example Image" title="This is an example image">
+   ```
 
-- W3C Rule: Developer-defined attributes must start with `data-`, e.g., `data-index`.
-- `dataset`: Stores all attributes starting with `data-`. Attribute names with `-` will be transferred to lower camel case naming, i.e., `data-test-attr` will be `dataset.testAttr`.
+4. **id**:
+   - Specifies a unique identifier for an element.
+   ```html
+   <img id="uniqueImage" src="images/example.png" alt="Example Image">
+   ```
 
-Example:
+### Best Practices:
+- Always include the `alt` attribute for better accessibility and SEO.
+- Use meaningful `alt` text that describes the content of the image.
+- Use `title` for supplementary information but not as a replacement for `alt`.
 
-```html
-<div id="test" data-index="1" data-test-attr="test"></div>
-```
+## Inline Style Modification
 
-```javascript
-var div = document.querySelector("div");
-div.dataset.index; // returns '1'
-div.dataset.testAttr; // returns 'test'
-```
+Modifying the inline styles of elements using JavaScript can be powerful for dynamic styling:
 
-In development, `getAttribute` and `setAttribute` are more commonly used.
+1. **Accessing and Modifying Styles:**
+   ```javascript
+   var div = document.querySelector("div");
+   
+   // Modify background color
+   div.style.backgroundColor = "pink";
+   
+   // Hide the div
+   div.style.display = "none";
+   ```
+   - Style properties use camelCase in JavaScript (e.g., `backgroundColor` instead of `background-color`).
 
-# Node operations
+2. **Best Practices:**
+   - Minimize inline style modifications to maintain separation of concerns.
+   - Prefer CSS classes for consistent styling.
 
-Node operations can make it easier to find the son elements of the elements. It has worse compatibility but easier to develop front-end. A node has `nodeType`, `nodeName`, `nodeValue`.
+## Class Name Style Modification
 
-## Element node:
+Class names are a more flexible and maintainable way to apply styles:
 
-`nodeType = 1` (most useful)
+1. **Changing Class Names:**
+   ```javascript
+   var div = document.querySelector("div");
+   div.className = "box";
+   ```
 
-## Attribute node:
+2. **Adding Multiple Classes:**
+   ```javascript
+   div.className = "first second";
+   ```
 
-`nodeType = 2`
+3. **Best Practices:**
+   - Use `classList` for more control over class manipulations:
+     ```javascript
+     div.classList.add("newClass");
+     div.classList.remove("oldClass");
+     div.classList.toggle("toggleClass");
+     ```
 
-## Text node:
+## Custom Attributes
 
-`nodeType = 3` (text, space, newline)
+Custom attributes allow you to add extra information to HTML elements:
 
-# parentNode
+1. **HTML Built-in Attributes:**
+   ```html
+   <div id="test" index="1"></div>
+   ```
 
-`node.parentNode` // get the closest parent of this node, if there is no parent node return null
+2. **Accessing Attributes:**
+   ```javascript
+   var div = document.querySelector("#test");
+   console.log(div.id); // 'test'
+   console.log(div.getAttribute("index")); // '1'
+   ```
 
-E.g.
+3. **Setting Attributes:**
+   ```javascript
+   div.setAttribute("class", "box");
+   div.setAttribute("index", "1");
+   ```
+
+4. **Removing Attributes:**
+   ```javascript
+   div.removeAttribute("index");
+   ```
+
+5. **Developer-defined Attributes:**
+   - Must start with `data-`.
+   ```html
+   <div id="test" data-index="1" data-test-attr="test"></div>
+   ```
+
+6. **Using `dataset`:**
+   ```javascript
+   var div = document.querySelector("#test");
+   console.log(div.dataset.index); // '1'
+   console.log(div.dataset.testAttr); // 'test'
+   ```
+
+7. **Best Practices:**
+   - Use `data-` attributes for storing custom data.
+   - Prefer `getAttribute` and `setAttribute` for handling non-standard attributes.
+
+# Node Operations in Modern Front-End Development
+
+Node operations are essential for manipulating the DOM (Document Object Model). These operations allow you to find, create, manipulate, and remove elements within the DOM, making front-end development more dynamic and interactive.
+
+## Node Types and Properties
+
+Every node in the DOM has the following properties:
+
+- `nodeType`: Represents the type of the node (element, attribute, text, etc.).
+- `nodeName`: The name of the node (tag name for elements).
+- `nodeValue`: The value of the node (for text nodes).
+
+### Common Node Types
+
+1. **Element Node (`nodeType = 1`):** Represents HTML elements.
+   ```javascript
+   let elementNode = document.createElement('div');
+   console.log(elementNode.nodeType); // 1
+   ```
+
+2. **Attribute Node (`nodeType = 2`):** Represents attributes of elements.
+   ```javascript
+   let attributeNode = document.createAttribute('class');
+   console.log(attributeNode.nodeType); // 2
+   ```
+
+3. **Text Node (`nodeType = 3`):** Represents text content within elements.
+   ```javascript
+   let textNode = document.createTextNode('Hello, World!');
+   console.log(textNode.nodeType); // 3
+   ```
+
+## Accessing Parent Node
+
+`node.parentNode` returns the closest parent node of the specified node. If there is no parent, it returns `null`.
+
+**Example**
 
 ```html
 <div class="box1">
@@ -320,74 +489,81 @@ E.g.
 ```
 
 ```javascript
-var div = document.querySelector(".box2");
-box2.parentNode; // will get div with class = box1
+let box2 = document.querySelector('.box2');
+console.log(box2.parentNode); // <div class="box1"></div>
 ```
 
-# Get child nodes
+## Accessing Child Nodes
 
-`<parentNode>.childNodes` // get a collection of all child nodes, including element, attribute, and text. Therefore, if we want to get all element nodes, we need a for loop and check if `child.nodeType == 1`
+1. **`parentNode.childNodes`:** Returns a live collection of all child nodes, including element, attribute, and text nodes.
+   ```javascript
+   let children = parentNode.childNodes;
+   children.forEach(child => {
+       if (child.nodeType === 1) {
+           // Element node
+       }
+   });
+   ```
+
+2. **`parentNode.children`:** Returns a live HTMLCollection of only element child nodes.
+   ```javascript
+   let children = parentNode.children;
+   ```
+
+3. **`parentNode.firstChild` and `parentNode.lastChild`:** Return the first and last child nodes, respectively, regardless of type.
+   ```javascript
+   let firstChild = parentNode.firstChild;
+   let lastChild = parentNode.lastChild;
+   ```
+
+4. **`parentNode.firstElementChild` and `parentNode.lastElementChild`:** Return the first and last element child nodes, respectively.
+   ```javascript
+   let firstElementChild = parentNode.firstElementChild;
+   let lastElementChild = parentNode.lastElementChild;
+   ```
+
+### Example of Using `children`
 
 ```javascript
-var div = document.querySelector(".box1");
-box2.childNodes; // will get div with class = box2
+let div = document.querySelector('.box1');
+console.log(div.children); // HTMLCollection of element children
+console.log(div.children[0]); // First element child
+console.log(div.children[div.children.length - 1]); // Last element child
 ```
 
-So, `childNodes` is not recommended.
+## Accessing Sibling Nodes
 
-`<parentNode>.children` // return all element children nodes, useful in development
+1. **`node.nextSibling` and `node.previousSibling`:** Return the next and previous sibling nodes, respectively, regardless of type.
+   ```javascript
+   let nextSibling = node.nextSibling;
+   let previousSibling = node.previousSibling;
+   ```
 
-`<parentNode>.firstChild` // return the first child node, whatever it is element, attribute, or text node.
+2. **`node.nextElementSibling` and `node.previousElementSibling`:** Return the next and previous element sibling nodes, respectively.
+   ```javascript
+   let nextElementSibling = node.nextElementSibling;
+   let previousElementSibling = node.previousElementSibling;
+   ```
 
-`<parentNode>.lastChild` // return the last child node, whatever it is element, attribute, or text node.
+### Compatibility Workaround
 
-`<parentNode>.firstElementChild` // return the first element child node
-
-`<parentNode>.lastElementChild` // return the last element child node
-
-However, both first and last element child have compatibility issues. Only IE9+ supports this.
-
-```javascript
-<parentNode>.children[0]  // return the first element child node, useful in development
-<parentNode>.children[<parentNode>.children.length - 1]  // return the last element child node, useful in development
-```
-
-## Sibling nodes
-
-`<node>.nextSibling` // return the next sibling node, whatever it is element, attribute, or text node. If cannot find, return null.
-
-`<node>.previousSibling` // return the previous sibling node, whatever it is element, attribute, or text node. If cannot find, return null.
-
-`<node>.nextElementSibling` // return the next element sibling node. If cannot find, return null.
-
-`<node>.previousElementSibling` // return the previous element sibling node. If not found, return null.
-
-However, both next and previous sibling element child have compatibility issues. Only IE9+ supports this.
-
-So, to avoid compatibility issues, we can use:
+For older browsers that do not support `nextElementSibling` and `previousElementSibling`:
 
 ```javascript
-var el = element;
-while (el = element.nextSibling) {
-    if (el.nodeType == 1)
-        // do something
+function getNextElementSibling(element) {
+    let sibling = element.nextSibling;
+    while (sibling && sibling.nodeType !== 1) {
+        sibling = sibling.nextSibling;
+    }
+    return sibling;
 }
-// not found
-return null;
 ```
 
-## Create node
+## Creating Nodes
 
-Create a node
+Creating nodes and appending them to the DOM is a fundamental operation.
 
-Place it in a parent node
-
-```javascript
-var <elementName> = document.createElement('<tagName>') // create a dynamic node
-node.appendChild(<child>) // append a child node at the end of a node, similar to after sudo element in CSS
-```
-
-e.g.
+**Example**
 
 ```html
 <ul>
@@ -396,44 +572,44 @@ e.g.
 ```
 
 ```javascript
-var li = document.createElement("li");
-var ul = document.querySelector("ul");
-ul.appendChild(li);
+let li = document.createElement('li'); // Create a new list item
+li.textContent = 'New Item'; // Set text content
+let ul = document.querySelector('ul');
+ul.appendChild(li); // Append the new item to the list
 ```
 
-Result will become `<ul><li>123</li><li></li></ul>`
-
-```javascript
-node.insertBefore(<child>, <indicated element>) // insert a child node before a node, similar to before
-
- sudo element in CSS
-```
-
-e.g.
+### Result
 
 ```html
 <ul>
   <li>123</li>
+  <li>New Item</li>
 </ul>
 ```
 
+### Inserting Before a Node
+
 ```javascript
-var li = document.createElement("li");
-var ul = document.querySelector("ul");
-ul.insertBefore(li, ul.children[0]);
+let li = document.createElement('li');
+li.textContent = 'First Item';
+let ul = document.querySelector('ul');
+ul.insertBefore(li, ul.children[0]); // Insert before the first child
 ```
 
-Result will become `<ul><li></li><li>123</li></ul>`
+### Result
 
-Efficiency under a large amount of element creation: much faster than `innerHTML += "…"`
+```html
+<ul>
+  <li>First Item</li>
+  <li>123</li>
+</ul>
+```
 
-However, if we use an array to store string elements and use `<element>.innerHTML = <array>.join('')`, it will be faster than `createElement`
+## Removing Nodes
 
-## Remove node
+Removing nodes from the DOM is straightforward.
 
-`<node>.removeChild(<child>)` // remove the child from node, return the deleted node
-
-e.g.
+**Example**
 
 ```html
 <ul>
@@ -441,23 +617,26 @@ e.g.
   <li>b</li>
   <li>c</li>
 </ul>
-<button></button>
+<button>Remove First Item</button>
 ```
 
 ```javascript
-var ul = document.querySelector("ul");
-var button = document.querySelector("button");
+let ul = document.querySelector('ul');
+let button = document.querySelector('button');
 button.onclick = () => {
-  if (ul.children.length > 0) ul.removeChild(ul.children[0]);
-  else this.disabled = true;
+  if (ul.children.length > 0) {
+    ul.removeChild(ul.children[0]); // Remove the first child
+  } else {
+    button.disabled = true; // Disable button if no more children
+  }
 };
 ```
 
-## Clone node
+## Cloning Nodes
 
-`<node>.cloneNode()` returns the clone of the node. If we put no parameter or false, it will be a shallow copy with no child nodes. If we put true in the parameter, it will return a deep copy, i.e., `<node>.cloneNode(true)`
+Cloning nodes can be done using `cloneNode()`. This can be a shallow or deep clone.
 
-e.g.
+**Example**
 
 ```html
 <ul>
@@ -465,468 +644,831 @@ e.g.
   <li>b</li>
   <li>c</li>
 </ul>
-<button></button>
+<button>Clone First Item</button>
 ```
 
 ```javascript
-var ul = document.querySelector("ul");
-var lili = ul.children[0].cloneNode();
-ul.appendNode(lili);
+let ul = document.querySelector('ul');
+let button = document.querySelector('button');
+button.onclick = () => {
+  let firstItem = ul.children[0].cloneNode(true); // Deep clone
+  ul.appendChild(firstItem); // Append the cloned item
+};
 ```
 
-## Dynamic table
+## Dynamic Table
 
-E.g.
+### HTML Structure
 
 ```html
 <table>
   <thead>
-    <th>name</th>
-    <th>subject</th>
-    <th>grade</th>
+    <tr>
+      <th>Name</th>
+      <th>Subject</th>
+      <th>Grade</th>
+    </tr>
   </thead>
   <tbody></tbody>
 </table>
 ```
 
+- **`<table>`**: Represents the table element.
+- **`<thead>`**: Contains the header row of the table.
+- **`<tr>`**: Table row.
+- **`<th>`**: Table header cell, providing column names.
+- **`<tbody>`**: Contains the body rows of the table.
+
+### JavaScript to Populate Table
+
 ```javascript
-var mockData = [
-  { name: "Ron", subject: "math", grade: "100" },
-  { name: "jack", subject: "calculus", grade: "70" },
-  { name: "Mar", subject: "bus", grade: "90" },
+const mockData = [
+  { name: "Ron", subject: "Math", grade: "100" },
+  { name: "Jack", subject: "Calculus", grade: "70" },
+  { name: "Mar", subject: "Business", grade: "90" }
 ];
-var body = document.querySelector("tbody");
-for (var I = 0; I < mockData.length; I++) {
-  var tr = document.createElement("tr");
-  tbody.append(tr);
-  for (var k in mockData[I]) {
-    var td = document.createElement("td");
-    td.innerHTML = mockData[I][k];
+
+const tbody = document.querySelector("tbody");
+
+mockData.forEach(data => {
+  const tr = document.createElement("tr");
+  tbody.appendChild(tr);
+
+  for (const key in data) {
+    const td = document.createElement("td");
+    td.textContent = data[key];
     tr.appendChild(td);
   }
+});
+```
+
+### Explanation
+
+- **`forEach` Loop**: Iterates over `mockData` array.
+- **`createElement`**: Creates new elements (`<tr>` and `<td>`).
+- **`appendChild`**: Appends created elements to the parent element.
+- **`textContent`**: Sets the text content of a `<td>` element.
+
+### Object Traversal
+
+```javascript
+for (const key in obj) {
+  // key is property name
+  // obj[key] is property value
 }
 ```
 
-Remember for object traverse:
+## Event Operations
+
+### Registering Events
+
+**Recommended Method by W3C**: `addEventListener`
 
 ```javascript
-for (var k in obj) {
-  // k is property name
-  // obj[k] is property value
-}
+eventTarget.addEventListener(type, listener, useCapture);
 ```
 
-# Event Operations
+- **Type**: Event type string, e.g., `click`, `mouseover`.
+- **Listener**: Function to call when the event occurs.
+- **useCapture**: Optional, defaults to `false`.
 
-## Register Event
-
-The method recommended by w3c: `addEventListener`
+**Example**
 
 ```javascript
-<eventTarget>.addEventListener(<type>, listener, [, useCapture]);
+const btn = document.querySelector("button");
+
+// Traditional way
+btn.onclick = () => {
+  // Function to call on click
+};
+
+// Recommended way
+btn.addEventListener('click', () => {
+  // Function to call on click
+});
 ```
 
-- **Type**: event type string, could be `click`, `mouseover` (no `on` here, not `onClick`)
-- **Listener**: function to call when the event happens
-- **useCapture**: optional, default is `false`
+### Differences Between Traditional Way and `addEventListener`
 
-Example:
+- **Traditional Way**: Can only assign one function to an event.
+- **Event Listener Approach**: Allows multiple listeners for the same event.
+
+### Example with Multiple Listeners
 
 ```javascript
-btn = querySelector(button);
-btn.onclick = () -> { //traditional way}
-btn.addEventListener('click', () -> { // recommended way})
+btn.addEventListener('click', () => { alert(11); });
+btn.addEventListener('click', () => { alert(12); });
+btn.addEventListener('click', () => { alert(13); });
 ```
 
-### What is the difference between the traditional way and event listener?
+- Alerts `11`, `12`, and `13` in sequence.
 
-The traditional way can only call one function, or we need a wrapper to contain functions in sequence. However, with the event listener approach, the same event on the same element can have multiple listeners. For example:
+### Removing Event Listener
+
+**Method**: `removeEventListener`
 
 ```javascript
-btn.addEventListener('click', () -> {alert(11)})
-btn.addEventListener('click', () -> {alert(12)})
-btn.addEventListener('click', () -> {alert(13)})
+eventTarget.removeEventListener(type, listener);
 ```
 
-In this case, it will alert `11`, `12`, `13` in sequence.
-
-## Remove Event
-
-The method to remove an event listener: `removeEventListener`
+### Example for Single-use Button
 
 ```javascript
-<eventTarget>.removeEventListener(<type>, listener);
-```
-
-Example for a single-use button:
-
-```javascript
-function fn() {
+function handleClick() {
   alert(11);
-  btn.removeEventListener("click", fn);
+  btn.removeEventListener("click", handleClick);
 }
 
-btn.addEventListener("click", fn); // note here! fn not fn(), no brackets
+btn.addEventListener("click", handleClick); // Note: function name without brackets
 ```
 
-## DOM Event Stream
+## DOM Event Flow
 
-Event stream: the sequence of accepting events from the document.
+### Event Stream
 
-When the document (page) detects an event, it will proceed to find which element listens to the event. The element listening to the event will tell the parent node until the document catches the event.
+- **Capturing Phase**: Event starts from the document and traverses down to the target element.
+- **Bubbling Phase**: Event bubbles up from the target element to the document.
 
-The traditional `onclick` and `onmouseover` trigger events at the bubbling stage.
+### Example with Capturing and Bubbling
 
-Using `<eventTarget>.addEventListener(<type>, listener, true)` will trigger events at the capturing stage.
+```javascript
+const parent = document.querySelector(".parent");
+const child = document.querySelector(".child");
 
-### What's the difference?
+parent.addEventListener("click", () => { alert("Parent Clicked"); }, true); // Capturing
+child.addEventListener("click", () => { alert("Child Clicked"); }, false); // Bubbling
+```
 
-If at the capturing stage and both the father and son have a click event listener:
+- **Capturing Phase**: Parent's event triggers first.
+- **Bubbling Phase**: Child's event triggers first.
 
-- The father's event will trigger first, then the son.
+### Using `addEventListener` for Different Phases
 
-If at the bubbling stage and both the father and son have a click event listener:
+```javascript
+// Capturing phase
+eventTarget.addEventListener(type, listener, true);
 
-- The son's event will trigger first, then the father.
+// Bubbling phase (default)
+eventTarget.addEventListener(type, listener, false);
+```
+
+# HTML Events and Event Handling
 
 ## Event Object
 
+### Understanding the Event Object
+
+In JavaScript, when an event occurs (e.g., a click or a keypress), an event object is created containing detailed information about the event. The event object provides various properties and methods that can be used to handle the event.
+
+### Example of Using the Event Object
+
 ```javascript
-btn.onclick = function (event) {};
+btn.onclick = function (event) {
+    // event contains all information about the event
+};
 ```
 
-Event is an object. If it is a click event, it will contain information like mouse coordinates. If it is a key-pressed event, it will contain which key is pressed.
+The event object (`event`) can be accessed within the event handler function. It provides information such as mouse coordinates for a click event or the key pressed for a keyboard event.
 
-The system will provide the event object for us; there's no need to pass it as a parameter. The event can be named `e`, `evt`, or `event`.
+### Event Object Properties
 
-Compatibility issue: IE 6-8 does not support auto parameter passing; we can use `window.event` to access the event object.
+- **`e.target` vs. `this`**:
+  - `e.target` refers to the element that triggered the event.
+  - `this` refers to the element to which the event handler is attached.
 
-`e.target` and `this` may be different. For example, when clicking on the son, the father's click event listener will also be triggered, but `e.target` refers to the son.
+  ```javascript
+  btn.onclick = function (e) {
+      console.log(e.target); // Element that was clicked
+      console.log(this);     // Element to which the event handler is attached
+  };
+  ```
 
-`e.preventDefault()` can be used to prevent the default actions, such as clicking on a link but not navigating. However, `preventDefault` has compatibility issues. Alternatively, we can let the listener function return `false` to achieve the same goal.
+### Preventing Default Actions
 
-`e.stopPropagation()` is used to prevent further bubbling. If the son triggers the event, the father will not trigger it. This method also has compatibility issues, but we can use `e.cancelBubble = true`.
+- **`e.preventDefault()`**: Prevents the default action associated with the event.
+  ```javascript
+  document.querySelector('a').addEventListener('click', function (e) {
+      e.preventDefault(); // Prevents navigation
+  });
+  ```
+
+### Stopping Event Propagation
+
+- **`e.stopPropagation()`**: Prevents the event from bubbling up the DOM tree.
+  ```javascript
+  document.querySelector('button').addEventListener('click', function (e) {
+      e.stopPropagation(); // Prevents parent elements from receiving the event
+  });
+  ```
 
 ## Event Delegation
 
-Example:
+Event delegation allows you to attach a single event listener to a parent element to manage all child elements' events. This is more efficient than attaching event listeners to each child element individually.
 
-```javascript
-<ul>
-  <li>click to do something</li>
-  <li>click to
+### Example of Event Delegation
 
- do something</li>
-  <li>click to do something</li>
+```html
+<ul id="list">
+    <li>Item 1</li>
+    <li>Item 2</li>
+    <li>Item 3</li>
 </ul>
-
-var ul = document.querySelector('ul')
-ul.addEventListener('click', (e) -> {
-    // do something
-    // e.target can get the li it is clicking on
-    e.target.style.backgroundColor = 'pink'
-})
 ```
 
-We can register the event to the `ul` (parent node) and then use the target attribute of the event object to find the `li` element that was clicked. Because clicking on the `li` will bubble the event to the parent node `ul`, and the parent node `ul` has registered the event, it will trigger the event handler.
-
-The advantage of event delegation over setting registered events for all `li` elements is that we only operate on the DOM once, improving efficiency.
-
-# Mouse events
-
-## Disable right click menu - `contextmenu`
-
-`contextmenu` controls when to display the context menu and is often used to disable the default context menu.
-
 ```javascript
-document.addEventListener("contextmenu", (e) => {
-  e.preventDefault();
+document.getElementById('list').addEventListener('click', function (e) {
+    if (e.target.tagName === 'LI') {
+        e.target.style.backgroundColor = 'pink'; // Change background of clicked <li>
+    }
 });
 ```
 
-## Disable mouse selection - `selectstart`
+By attaching a single event listener to the `<ul>`, you can handle clicks on all `<li>` elements.
 
-`selectstart` event is used to disable mouse selection.
+### Benefits of Event Delegation
 
-```javascript
-document.addEventListener("selectstart", (e) => {
-  e.preventDefault();
-});
-```
+- **Efficiency**: Reduces the number of event listeners, improving performance.
+- **Dynamic Content**: Automatically handles dynamically added child elements.
 
-# Mouse event attributes
+## Mouse Events
 
-- `e.clientX`: X coordinate relative to the viewable area of the browser
-- `e.clientY`: Y coordinate relative to the viewable area of the browser
-- `e.pageX`: X coordinate relative to the document page
-- `e.pageY`: Y coordinate relative to the document page
-- `e.screenX`: X coordinate relative to the screen
-- `e.screenY`: Y coordinate relative to the screen
+### Disabling Right-Click Menu
 
-Example: Moving a picture with the mouse
+- **`contextmenu` Event**: Used to disable the default context menu.
+  ```javascript
+  document.addEventListener('contextmenu', function (e) {
+      e.preventDefault(); // Disables right-click menu
+  });
+  ```
+
+### Disabling Text Selection
+
+- **`selectstart` Event**: Used to disable text selection.
+  ```javascript
+  document.addEventListener('selectstart', function (e) {
+      e.preventDefault(); // Disables text selection
+  });
+  ```
+
+## Mouse Event Attributes
+
+- **`e.clientX`**: X coordinate relative to the viewable area of the browser.
+- **`e.clientY`**: Y coordinate relative to the viewable area of the browser.
+- **`e.pageX`**: X coordinate relative to the document.
+- **`e.pageY`**: Y coordinate relative to the document.
+- **`e.screenX`**: X coordinate relative to the screen.
+- **`e.screenY`**: Y coordinate relative to the screen.
+
+### Example: Moving an Element with the Mouse
 
 ```html
 <style>
   .pic {
-    position: absolute;
-    top: 2px; /* remember the absolute positioning requires a top value */
+      position: absolute;
+      top: 2px;
   }
 </style>
-
 <body>
-  <img src="…" alt="" />
+  <img src="image.jpg" alt="Movable Image" class="pic">
 </body>
 ```
 
 ```javascript
-var pic = document.querySelector("img");
-document.addEventListener("mousemove", (e) => {
-  // trigger when the mouse move ≥ 1px
-  var x = e.pageX;
-  var y = e.pageY;
-  pic.style.left = x + "px";
-  pic.style.top = y + "px";
+var pic = document.querySelector('.pic');
+document.addEventListener('mousemove', function (e) {
+    pic.style.left = e.pageX + 'px';
+    pic.style.top = e.pageY + 'px';
 });
 ```
 
-# Keyboard events
+## Keyboard Events
 
-- `onkeyup`: Triggered when a key is released (loosing).
-- `onkeydown`: Triggered when a key is pressed down.
-- `onkeypress`: Similar to `onkeydown`, but cannot identify function keys like shift or ctrl or arrows.
+### Common Keyboard Events
 
-When using `addEventListener`, don't add "on" at the start of the word. For example, use `'keyup'` or `'keydown'`.
+- **`keyup`**: Triggered when a key is released.
+- **`keydown`**: Triggered when a key is pressed.
+- **`keypress`**: Similar to `keydown`, but does not detect special keys like Shift, Ctrl, or Arrow keys.
 
-Example:
+### Example: Handling Keyboard Events
 
 ```javascript
-document.addEventListener("keyup", (e) => {
-  // e.keyCode to get the ASCII value of the pressed key, e.g., pressing number 1
-  // then the keyCode = 49
+document.addEventListener('keyup', function (e) {
+    console.log(e.keyCode); // Outputs the ASCII value of the released key
 });
 ```
 
-For actions that we want to execute once, use `keyup`, since holding the key down will continuously trigger `keydown` and `keypress`.
+### Best Practices
 
-# BOM - Browser Object Model
+- Use `keyup` for actions that should be executed once, as holding down a key triggers continuous `keydown` and `keypress` events.
+- When using `addEventListener`, omit the "on" prefix (e.g., use `'keyup'`, not `'onkeyup'`).
 
-The Browser Object Model (BOM) allows interaction with the browser window and provides access to various browser-related objects and properties. However, it has worse compatibility across different browsers.
+# Browser Object Model (BOM)
 
-## BOM Includes
+The Browser Object Model (BOM) allows interaction with the browser window and provides access to various browser-related objects and properties. It encompasses several objects that help manage and interact with the browser environment. While the BOM has some inconsistencies across different browsers, understanding its components is essential for web development.
 
-The BOM includes the following objects:
+## BOM Components
 
-- `document`: Represents the current HTML document loaded in the browser.
-- `location`: Provides information about the URL of the current document and allows navigation to other URLs.
-- `navigation`: Represents the user's navigation history (back, forward, etc.).
-- `screen`: Provides information about the user's screen or display.
-- `history`: Represents the browser's session history.
+### 1. `window` Object
 
-## Window Object
+The `window` object is the top-level object in the BOM hierarchy. It represents the browser window and provides methods and properties for interacting with the browser.
 
-The `window` object serves as an interface to interact with the browser and is a global object. All variables and functions become attributes and functions of the `window` object. For example, `window.document` refers to the document we use before.
+- **Global Object:**
+  All global JavaScript variables and functions are properties of the `window` object.
 
-Some other commonly used functions, such as `alert()` and `prompt()`, are also part of the `window` object.
+  ```javascript
+  var x = 5;
+  console.log(window.x); // Outputs: 5
+  ```
 
-It's important to note that `window.name` has a special attribute, so it's advisable to avoid setting a variable with the name "name."
+- **Common Methods:**
+  - `alert(message)`: Displays an alert box with a message.
+  - `confirm(message)`: Displays a confirmation dialog box with OK and Cancel buttons.
+  - `prompt(message, default)`: Displays a dialog box that prompts the user for input.
 
-Example:
+  ```javascript
+  alert('Hello, world!');
+  var userResponse = confirm('Do you agree?');
+  var userInput = prompt('Please enter your name:', 'Guest');
+  ```
 
+- **Special Properties:**
+  Avoid naming variables as "name" because `window.name` is a special property used to store the name of the window.
+
+  ```javascript
+  window.name = 'myWindow';
+  console.log(window.name); // Outputs: myWindow
+  ```
+
+### 2. `document` Object
+
+The `document` object represents the current HTML document loaded in the browser. It provides methods and properties for accessing and manipulating the content of the document.
+
+- **Example:**
+  ```javascript
+  console.log(document.title); // Outputs the title of the current document
+  ```
+
+### 3. `location` Object
+
+The `location` object contains information about the current URL and provides methods for navigating to different URLs.
+
+- **Common Properties:**
+  - `href`: The entire URL.
+  - `hostname`: The domain name of the web host.
+  - `pathname`: The path and filename of the current page.
+  - `search`: The query string of the URL.
+
+- **Example:**
+  ```javascript
+  console.log(location.href); // Outputs the full URL
+  location.href = 'https://www.example.com'; // Redirects to a new URL
+  ```
+
+### 4. `history` Object
+
+The `history` object provides methods to interact with the browser's session history.
+
+- **Common Methods:**
+  - `back()`: Loads the previous URL in the history list.
+  - `forward()`: Loads the next URL in the history list.
+  - `go(n)`: Loads a specific URL from the history list.
+
+  ```javascript
+  history.back(); // Goes back to the previous page
+  history.forward(); // Goes forward to the next page
+  history.go(-2); // Goes back two pages
+  ```
+
+### 5. `navigator` Object
+
+The `navigator` object contains information about the browser.
+
+- **Common Properties:**
+  - `userAgent`: The user agent string of the browser.
+  - `platform`: The platform on which the browser is running.
+
+  ```javascript
+  console.log(navigator.userAgent); // Outputs the user agent string
+  console.log(navigator.platform); // Outputs the platform (e.g., Win32)
+  ```
+
+### 6. `screen` Object
+
+The `screen` object provides information about the user's screen.
+
+- **Common Properties:**
+  - `width`: The width of the screen in pixels.
+  - `height`: The height of the screen in pixels.
+
+  ```javascript
+  console.log(screen.width); // Outputs the screen width
+  console.log(screen.height); // Outputs the screen height
+  ```
+
+## Events in BOM
+
+### 1. `onload` Event
+
+The `onload` event is triggered when the window is fully loaded, including the document, CSS, images, and other resources.
+
+- **Using `onload` Property:**
+  ```javascript
+  window.onload = function() {
+    console.log('Window fully loaded');
+  };
+  ```
+
+- **Using `addEventListener`:**
+  ```javascript
+  window.addEventListener('load', function() {
+    console.log('Window fully loaded');
+  });
+  ```
+
+### 2. `DOMContentLoaded` Event
+
+The `DOMContentLoaded` event is triggered when the HTML document is completely loaded and parsed, without waiting for stylesheets, images, and subframes to finish loading.
+
+- **Example:**
+  ```javascript
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Document fully loaded and parsed');
+  });
+  ```
+
+### 3. `resize` Event
+
+The `resize` event is triggered when the size of the browser window changes.
+
+- **Using `onresize` Property:**
+  ```javascript
+  window.onresize = function() {
+    console.log('Window resized');
+  };
+  ```
+
+- **Using `addEventListener`:**
+  ```javascript
+  window.addEventListener('resize', function() {
+    console.log('Window resized');
+  });
+  ```
+
+- **Example to Get Window Size:**
+  ```javascript
+  window.addEventListener('resize', function() {
+    console.log('Width: ' + window.innerWidth + ', Height: ' + window.innerHeight);
+  });
+  ```
+
+### 4. `scroll` Event
+
+The `scroll` event is triggered when the user scrolls the content of an element.
+
+- **Example:**
+  ```javascript
+  window.addEventListener('scroll', function() {
+    console.log('Page scrolled');
+  });
+  ```
+
+# JavaScript Timer Functions
+
+## Timer Functions
+
+### `setTimeout`
+
+The `setTimeout` function is used to schedule the execution of a function after a specified timeout. It takes two parameters: the function to be executed and the timeout duration in milliseconds. The `window` object can be omitted when calling this function.
+
+**Syntax:**
 ```javascript
-var i = 10;
-console.log(i);
-console.log(window.i);
+setTimeout(function, delay);
 ```
 
-## `onload` Event
-
-The `onload` event is triggered when the window is fully loaded, including the document, CSS, images, and Flash content.
-
-There are two ways to handle the `onload` event:
-
-1. Using the `onload` property of the `window` object:
-
+**Example:**
 ```javascript
-window.onload = function () {
-  // Code to be executed after the window is loaded
-};
+setTimeout(function () {
+    console.log("Executed after 2 seconds");
+}, 2000);
 ```
 
-2. Using the `addEventListener` method of the `window` object:
+**Storing the Timer ID:**
+You can store the timer ID for later use by assigning the `setTimeout` function call to a variable. This is useful for clearing the timeout before it executes.
 
+**Example:**
 ```javascript
-window.addEventListener("load", function () {
-  // Code to be executed after the window is loaded
-});
+var timer = setTimeout(function () {
+    console.log("This will not be executed if clearTimeout is called");
+}, 2000);
 ```
 
-## `DOMContentLoaded` Event
+### `clearTimeout`
 
-The `DOMContentLoaded` event is triggered when the document is loaded, excluding external resources such as CSS, images, and Flash content. This event is useful when there are many images to load, and you want to perform certain actions before all the images are loaded.
+The `clearTimeout` function is used to cancel a timer that was previously set using `setTimeout`. It takes the timer ID as a parameter.
 
-Example:
-
+**Syntax:**
 ```javascript
-document.addEventListener("DOMContentLoaded", function () {
-  // Code to be executed when the document is loaded
-});
+clearTimeout(timerID);
 ```
 
-## `resize` Event
-
-The `resize` event is triggered when the size of the browser window changes. This event is often used in responsive programming to adjust the layout or behavior of the page based on the window size.
-
-There are two ways to handle the `resize` event:
-
-1. Using the `onresize` property of the `window` object:
-
+**Example:**
 ```javascript
-window.onresize = function () {
-  // Code to be executed when the window size changes
-};
+clearTimeout(timer);
 ```
 
-2. Using the `addEventListener` method of the `window` object:
+### `setInterval`
 
+The `setInterval` function is used to repeatedly invoke a function at a specified interval. It takes two parameters: the function to be executed and the interval duration in milliseconds.
+
+**Syntax:**
 ```javascript
-window.addEventListener("resize", function () {
-  // Code to be executed when the window size changes
-});
+setInterval(function, interval);
 ```
 
-The `window.innerWidth` property can be used to obtain the current width of the browser window.
-
-# Timer
-
-The `setTimeout` function is used to schedule the execution of a function after a specified timeout. It takes two parameters: the function to be executed and the timeout duration in milliseconds. The function will be invoked once the specified timeout has elapsed. The `window` object can be omitted when calling this function.
-
-Example:
-
+**Example:**
 ```javascript
-setTimeout(function () {}, 2000);
+setInterval(function () {
+    console.log("Executed every 2 seconds");
+}, 2000);
 ```
 
-To store the timer ID for later use, you can assign the `setTimeout` function call to a variable.
+**Storing the Interval ID:**
+You can store the interval ID for later use by assigning the `setInterval` function call to a variable. This is useful for clearing the interval when you no longer need it.
 
-Example:
-
+**Example:**
 ```javascript
-var timer = setTimeout(function () {}, 2000);
+var interval = setInterval(function () {
+    console.log("This will not be executed if clearInterval is called");
+}, 2000);
 ```
 
-# clearTimer
+### `clearInterval`
 
-The `clearTimer` function is used to cancel a timer that was previously set using `setTimeout`. It takes the timer ID as a parameter. The `window` object can be omitted when calling this function.
+The `clearInterval` function is used to stop the execution of an interval that was previously set using `setInterval`. It takes the interval ID as a parameter.
 
-Example:
-
+**Syntax:**
 ```javascript
-clearTimer(timer);
+clearInterval(intervalID);
 ```
 
-# setInterval
-
-The `setInterval` function is used to repeatedly invoke a function at a specified interval. It takes two parameters: the function to be executed and the interval duration in milliseconds. The function will be invoked every specified interval. The `window` object can be omitted when calling this function.
-
-Example:
-
-```javascript
-setInterval(function () {}, 2000);
-```
-
-To store the interval ID for later use, you can assign the `setInterval` function call to a variable.
-
-Example:
-
-```javascript
-var interval = setInterval(function () {}, 2000);
-```
-
-# clearInterval
-
-The `clearInterval` function is used to stop the execution of an interval that was previously set using `setInterval`. It takes the interval ID as a parameter. The `window` object can be omitted when calling this function.
-
-Example:
-
+**Example:**
 ```javascript
 clearInterval(interval);
 ```
 
-# 'this' Keyword Usage
+### Best Practices
 
-## Global Usage
+1. **Clear Unused Timers and Intervals:**
+   Always clear timers and intervals that are no longer needed to avoid memory leaks and unexpected behavior.
 
-In global usage, `this` refers to the `window` object. For example:
+2. **Use Named Functions:**
+   Using named functions instead of anonymous functions makes your code more readable and easier to debug.
 
+   **Example:**
+   ```javascript
+   function greet() {
+       console.log("Hello!");
+   }
+   var timer = setTimeout(greet, 2000);
+   clearTimeout(timer);
+   ```
+
+3. **Handle Scope Correctly:**
+   Use arrow functions to preserve the `this` context inside the callback functions for `setTimeout` and `setInterval`.
+
+   **Example:**
+   ```javascript
+   class Example {
+       constructor() {
+           this.name = "Example";
+       }
+
+       startTimer() {
+           setTimeout(() => {
+               console.log(this.name); // 'this' refers to the Example instance
+           }, 1000);
+       }
+   }
+
+   const example = new Example();
+   example.startTimer(); // Logs "Example" after 1 second
+   ```
+
+# `this` Keyword Usage
+
+The `this` keyword in JavaScript is dynamically scoped, meaning its value depends on how the function is called.
+
+### Global Usage
+
+In the global context, `this` refers to the `window` object.
+
+**Example:**
 ```javascript
 console.log(this); // Outputs the window object
 ```
 
-## Timer Function Usage
+### Timer Function Usage
 
-In timer functions such as `setTimeout` and `setInterval`, `this` also points to the `window` object, regardless of whether it is inside a button click listener function. For example:
+In timer functions such as `setTimeout` and `setInterval`, `this` also points to the `window` object by default. To ensure `this` refers to the correct context, use arrow functions or bind the function.
 
+**Example with Arrow Function:**
 ```javascript
-setInterval(function () {
-  console.log(this); // Outputs the window object
+setTimeout(() => {
+    console.log(this); // 'this' refers to the enclosing lexical context
 }, 2000);
 ```
 
-## Function Invocation Usage
-
-When a function is invoked, `this` points to the object that invokes the function. For instance:
-
+**Example with `bind`:**
 ```javascript
-var o = {
-  sayHi: function () {
-    console.log(this); // Outputs the object 'o'
-  },
-};
-o.sayHi(); // Invoking the 'sayHi' method on object 'o'
+setTimeout(function () {
+    console.log(this);
+}.bind(this), 2000);
+```
 
+### Function Invocation Usage
+
+When a function is invoked as a method of an object, `this` refers to the object that owns the method.
+
+**Example:**
+```javascript
+var obj = {
+    name: "Object",
+    greet: function () {
+        console.log(this.name); // Outputs "Object"
+    }
+};
+obj.greet(); // Invoking the 'greet' method on object 'obj'
+```
+
+**Event Listener Example:**
+```javascript
+var btn = document.getElementById("myButton");
 btn.onclick = function () {
-  console.log(this); // Outputs the clicked button object
+    console.log(this); // Outputs the clicked button object
 };
 ```
 
-## Constructor Method Usage
+### Constructor Method Usage
 
-In a constructor method, `this` points to the instance object being created. For example:
+In a constructor function, `this` refers to the instance of the object being created.
 
+**Example:**
 ```javascript
-function Fun() {
-  console.log(this); // Outputs the instance object
+function Person(name) {
+    this.name = name;
 }
-var fun = new Fun(); // Creating an instance of 'Fun'
+
+var person = new Person("Alice");
+console.log(person.name); // Outputs "Alice"
 ```
 
-# Async and Sync
+### Best Practices
 
-## Synchronized
+1. **Use Arrow Functions for Callbacks:**
+   Arrow functions do not have their own `this` context; they inherit it from the parent scope.
 
-Synchronized tasks involve completing one thing entirely before moving on to the next thing. For example:
+2. **Bind Methods in Class Constructors:**
+   When using ES6 classes, bind methods in the constructor to ensure `this` refers to the class instance.
 
-- Boil water
-- Cut vegetables
-- Cook
+   **Example:**
+   ```javascript
+   class Counter {
+       constructor() {
+           this.count = 0;
+           this.increment = this.increment.bind(this);
+       }
 
-## Asynchronous (Async)
+       increment() {
+           this.count += 1;
+           console.log(this.count);
+       }
+   }
 
-Async tasks involve doing multiple things simultaneously. For example:
+   const counter = new Counter();
+   document.getElementById("incrementBtn").addEventListener("click", counter.increment);
+   ```
 
-- Boil water
-- Cut vegetables (at the same time)
-- Cook
+# Asynchronous and Synchronous Programming
 
-Async tasks are implemented using callback functions. Callback functions can include:
+## Synchronous Tasks
 
-- Normal events, e.g., click, resize
-- Resource loading, e.g., load, error
-- Timers, e.g., setInterval, setTimeout
+Synchronous tasks are operations that are executed one after another, where each task must complete before the next one begins. This is like following a step-by-step recipe where you cannot start the next step until the current one is finished.
 
-JavaScript handles tasks by placing all synchronized tasks in an operation stack and executing them one by one on the main thread. When it encounters a callback function, it adds it to an async queue. After completing all tasks in the sync stack, JavaScript continues to retrieve a task from the async queue, adds it to the sync stack, and executes it. This process continues in a loop known as the event loop.
+### Example of Synchronous Tasks:
 
-Here's how JavaScript works in pseudo code:
+1. Boil water
+2. Cut vegetables
+3. Cook
+
+In JavaScript, synchronous code is executed in the order it is written. If a task takes a long time, it will block the following tasks from executing until it is finished.
+
+### Code Example:
+
+```javascript
+console.log('Boil water');
+console.log('Cut vegetables');
+console.log('Cook');
+```
+
+Output:
+```
+Boil water
+Cut vegetables
+Cook
+```
+
+In this example, each task is executed in sequence.
+
+## Asynchronous Tasks
+
+Asynchronous tasks allow multiple operations to occur simultaneously, improving efficiency and performance. This approach is like multitasking, where you can boil water and cut vegetables at the same time, rather than waiting for the water to boil before starting to cut vegetables.
+
+### Implementing Asynchronous Tasks in JavaScript
+
+Asynchronous tasks in JavaScript are commonly implemented using callback functions, Promises, or `async/await`. These methods allow JavaScript to perform non-blocking operations, meaning other tasks can run while waiting for an async operation to complete.
+
+### Callback Functions
+
+A callback function is a function passed into another function as an argument, which is then executed inside the outer function.
+
+**Example**:
+
+```javascript
+function boilWater(callback) {
+    setTimeout(() => {
+        console.log('Boil water');
+        callback();
+    }, 1000);
+}
+
+function cutVegetables() {
+    console.log('Cut vegetables');
+}
+
+boilWater(cutVegetables);
+```
+
+In this example, `boilWater` is asynchronous and uses `setTimeout` to simulate boiling water. Once the water is boiled, it calls the `cutVegetables` function.
+
+### Promises
+
+Promises provide a cleaner, more powerful way to handle asynchronous operations. A Promise represents a value that may be available now, in the future, or never.
+
+**Example**
+
+```javascript
+function boilWater() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            console.log('Boil water');
+            resolve();
+        }, 1000);
+    });
+}
+
+function cutVegetables() {
+    console.log('Cut vegetables');
+}
+
+boilWater().then(cutVegetables);
+```
+
+### Async/Await
+
+`async/await` is syntactic sugar built on top of Promises, making asynchronous code look and behave more like synchronous code. 
+
+**Example**:
+
+```javascript
+function boilWater() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            console.log('Boil water');
+            resolve();
+        }, 1000);
+    });
+}
+
+async function prepareMeal() {
+    await boilWater();
+    console.log('Cut vegetables');
+}
+
+prepareMeal();
+```
+
+### JavaScript Event Loop
+
+JavaScript uses an event loop to manage synchronous and asynchronous tasks. The event loop allows JavaScript to perform non-blocking operations by offloading tasks to the browser's API (like timers and network requests), which then push the callback functions to the event queue once they are completed.
+
+### Event Loop Process:
+
+1. All synchronous tasks are executed first and placed in the call stack.
+2. When an asynchronous task is encountered (e.g., `setTimeout`, HTTP request), it is offloaded and its callback function is registered in the event queue.
+3. Once the call stack is empty, the event loop picks the oldest task from the event queue and pushes it to the call stack.
+4. This cycle continues indefinitely.
+
+### Pseudo Code Example:
 
 ```javascript
 Queue syncTasks;
@@ -951,126 +1493,164 @@ while (true) {
 }
 ```
 
-# URL and Location object
+# URL and Location Object
+
+## URL Structure
 
 The URL structure consists of the following components:
 
-`<protocol>://<host:port>/<path>/<?query>#<fragment>`
+```
+<protocol>://<host:port>/<path>/<?query>#<fragment>
+```
 
-Example URL: `http://www.itcast.cn/index.html?name=andy&age=18#link`
+### Example URL
 
-- **Protocol**: Specifies the protocol used, such as `http`, `ftp`, `mailto`, etc.
-- **Host**: Represents the hostname of the server.
-- **Port**: Optional component, defaults to 80 for HTTP if not specified.
-- **Path**: Represents the directory or file path.
-- **Query**: Parameters passed in the URL, starting with `?` and separated by `&`.
-- **Fragment**: Refers to a specific location or anchor within the page.
+```
+http://www.itcast.cn/index.html?name=andy&age=18#link
+```
 
-## Location object
+### Components Explained
+
+1. **Protocol**: Specifies the protocol used, such as `http`, `https`, `ftp`, `mailto`, etc.
+2. **Host**: Represents the hostname of the server.
+3. **Port**: Optional component, defaults to 80 for HTTP if not specified. For HTTPS, it defaults to 443.
+4. **Path**: Represents the directory or file path on the server.
+5. **Query**: Parameters passed in the URL, starting with `?` and separated by `&`.
+6. **Fragment**: Refers to a specific location or anchor within the page, starting with `#`.
+
+## Location Object
 
 The `location` object provides various properties to access and manipulate the URL components.
 
+### Properties
+
 - `location.href`: Gets or sets the entire URL.
-- `location.host`: Returns the hostname, e.g., `www.itcast.cn`.
+- `location.protocol`: Returns the protocol (e.g., `http:` or `https:`).
+- `location.host`: Returns the hostname and port (e.g., `www.itcast.cn:80`).
+- `location.hostname`: Returns the hostname (e.g., `www.itcast.cn`).
 - `location.port`: Returns the port number, or an empty string if not specified.
-- `location.pathname`: Returns the pathname.
-- `location.search`: Returns the parameters.
-- `location.hash`: Returns the fragment or anchor.
+- `location.pathname`: Returns the path (e.g., `/index.html`).
+- `location.search`: Returns the query string (e.g., `?name=andy&age=18`).
+- `location.hash`: Returns the fragment (e.g., `#link`).
 
-## `location.href`
+### Methods
 
-This property is commonly used when we want to navigate to a different page.
+- `location.assign(url)`: Loads a new document.
+- `location.replace(url)`: Replaces the current document with a new one (does not create a history entry).
+- `location.reload()`: Reloads the current document.
 
-Example usage:
+### Examples
+
+#### Redirecting to Another Page
 
 ```javascript
-var div = querySelector("div");
 var time = 5;
+var div = document.querySelector("div");
 setInterval(function () {
-  if (time == 0) {
-    location.href = "www.itcast.cn";
-  } else {
-    div.innerHTML =
-      "You will be navigated to itcast.cn in " + time + " seconds";
-    time--;
-  }
+    if (time === 0) {
+        location.href = "http://www.itcast.cn";
+    } else {
+        div.innerHTML = "You will be redirected to itcast.cn in " + time + " seconds";
+        time--;
+    }
 }, 1000);
 ```
 
-## `location.search`
+#### Extracting Query Parameters
 
-This property allows passing parameters from one page to another. We can use `location.href` to navigate to another page with a query.
+```javascript
+var searchParams = new URLSearchParams(location.search);
+var name = searchParams.get('name'); // 'andy'
+var age = searchParams.get('age'); // '18'
+```
 
-Example:
-
-- For the link `http://www.itcast.cn/index.html?name=andy`, `location.search` returns `?name=andy`.
-- Use `substr` to extract the parameter: `var parameter = location.search.substr(1) // var parameter = 'name=andy'`.
-- Split the parameter using `=` as the separator: `var arr = parameter.split('=')`. Now `arr[0] = name` and `arr[1] = andy`.
-
-## Location methods
-
-The `location` object provides methods to manipulate the browser location.
-
-- `location.assign('<url>')`: Similar to changing `href`, it records the history so that the user can go back.
-- `location.replace('<url>')`: Navigates without leaving a history entry, preventing the user from going back.
-- `location.reload()`: Refreshes the current page.
-
-## Navigator object
+## Navigator Object
 
 The `navigator` object provides information about the user's browser.
 
-- `navigator.userAgent`: This feature can be used to detect whether the user is using a mobile or desktop browser. For more details, refer to this [Stack Overflow post](https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser).
+### Common Properties
 
-## History object
+- `navigator.userAgent`: Returns the user agent string for the browser. Useful for detecting the browser or device type.
+- `navigator.language`: Returns the preferred language of the user.
+- `navigator.platform`: Returns the platform on which the browser is running (e.g., `Win32`, `MacIntel`).
+
+### Example: Detecting Mobile Browsers
+
+```javascript
+var isMobile = /Mobi|Android/i.test(navigator.userAgent);
+if (isMobile) {
+    console.log("You are using a mobile browser.");
+} else {
+    console.log("You are using a desktop browser.");
+}
+```
+
+## History Object
 
 The `history` object provides methods to navigate through the browser history.
 
-- `history.forward()`: Equivalent to clicking the forward button in the browser.
-- `history.backward()`: Equivalent to clicking the back button in the browser.
-- `history.go(<number>)`: Goes forward or backward in the history. Use negative numbers to go backward (`go(-1)`), positive numbers to go forward (`go(1)`), and so on.
+### Methods
 
-# Web special effects
+- `history.back()`: Equivalent to clicking the browser's back button.
+- `history.forward()`: Equivalent to clicking the browser's forward button.
+- `history.go(n)`: Navigates to a specific point in the browser history. A positive number moves forward, and a negative number moves backward.
 
-## Offset series
+### Example: Navigating the Browser History
 
-We can use the offset series attributes to get the element offset, location, size, etc.
-The attributes do not have a unit.
+```javascript
+// Go back one page
+history.back();
 
-## Frequent used attributes
+// Go forward one page
+history.forward();
 
-`<element>.offsetParent` - returns the parent element with positioning. If no parent element has positioning, then it returns the body element.
+// Go back two pages
+history.go(-2);
 
-`<element>.offsetTop` - returns the top offset of the parent element with positioning. If it does not have a parent element with positioning, it returns the top offset from the body element.
+// Go forward two pages
+history.go(2);
+```
 
-`<element>.offsetLeft` - returns the left border offset of the parent element with positioning. If it does not have a parent element with positioning, it returns the left offset from the body element.
+# Web Special Effects
 
-`<element>.offsetWidth` - returns the width including padding, border, and content. The return value has no unit.
+## Offset Series
 
-`<element>.offsetHeight` - returns the height including padding, border, and content. The return value has no unit.
+The offset series attributes provide information about the element's position, size, and relationship to its offset parent.
 
-## Difference between style and offset
+### Commonly Used Properties
 
-### Offset
+- `element.offsetParent`: Returns the nearest positioned ancestor element. If none, it returns the body element.
+- `element.offsetTop`: Returns the top position of the element relative to its offset parent.
+- `element.offsetLeft`: Returns the left position of the element relative to its offset parent.
+- `element.offsetWidth`: Returns the element's width, including padding and borders.
+- `element.offsetHeight`: Returns the element's height, including padding and borders.
 
-- It can get the style value from any stylesheet.
-- The return value does not have a unit.
-- `offsetWidth` includes padding + border + width.
-- `offsetWidth` is read-only and cannot be assigned a value. If we want to get the width only, it is better to use `element.offsetWidth`.
+### Difference Between Style and Offset
 
-### Style
+#### Offset Properties
 
-- Style can only get inline style value. We cannot use `style.width` if it is written in a `<style>` element or an external file.
-- `style.width` returns a string with a unit.
+- Can retrieve values from any stylesheet (inline, internal, or external).
+- Values are unitless.
+- `offsetWidth` includes padding, border, and content.
+- Offset properties are read-only.
+
+#### Style Properties
+
+- Can only retrieve inline style values.
+- Values include units.
 - `style.width` does not include padding and border.
-- `style.width` is readable and writable. If we want to change the width, it is better to use `style`.
+- Style properties are readable and writable.
 
-### Example: Get the coordinate inside the box
+### Example: Getting the Coordinates Inside a Box
 
-We can use the mouse move event.
-
-Coordinate of X inside box = `e.pageX - this.offsetLeft`
-
-Coordinate of Y inside box = `e.pageY - this.offsetTop`
+```javascript
+element.addEventListener('mousemove', function (e) {
+    var x = e.pageX - this.offsetLeft;
+    var y = e.pageY - this.offsetTop;
+    console.log('X coordinate inside the box: ' + x);
+    console.log('Y coordinate inside the box: ' + y);
+});
+```
 
 ## Mouse drag
 
@@ -1091,9 +1671,3 @@ title.addEventListener("mouseup", function(){
     document.removeEventListener("mousemove", doSomething)
 })
 ```
-
-# Client series
-
-## Scroll series
-
-Animation function packaging
