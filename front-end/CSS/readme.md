@@ -1931,7 +1931,7 @@ Allows the default alignment (or the one specified by `align-items`) to be overr
 
 Media queries allow us to apply different CSS styles based on the characteristics of the user's device, such as its screen width, height, orientation, and resolution. This enables us to create responsive designs that adapt to different screen sizes and devices.
 
-### Syntax
+**Syntax**
 
 The basic syntax for a media query is as follows:
 
@@ -1943,7 +1943,7 @@ The basic syntax for a media query is as follows:
 }
 ```
 
-### Example
+**Example**
 
 ```css
 @media (width: 320px) {
@@ -2039,7 +2039,7 @@ Using media queries to apply different background colors based on the viewport w
 }
 ```
 
-### Explanation
+**Explanation:**
 
 - **Below 768px:** The `body` element has a default background color (e.g., white).
 - **768px to 991px:** The `body` element has a pink background color.
@@ -2079,13 +2079,13 @@ You can link different CSS files for different screen widths using the `media` a
 <link rel="stylesheet" href="styles-1200.css" media="(min-width: 1200px)">
 ```
 
-### Explanation
+**Explanation:**
 
 - `styles-768.css` is applied when the viewport width is 768px or wider.
 - `styles-992.css` is applied when the viewport width is 992px or wider.
 - `styles-1200.css` is applied when the viewport width is 1200px or wider.
 
-### Notes
+**Notes:**
 
 - Media features should be written directly within parentheses.
 - Double quotes around media features in the `link` element should not be omitted.
@@ -2135,7 +2135,6 @@ You can link different CSS files for different screen widths using the `media` a
 
 ## REM - Relative Unit
 
-### Definition and Usage
 - **REM (Root EM):** A scalable unit in CSS used for responsive design.
   - 1rem = Computed value of `font-size` of the root element (`<html>`).
   - Allows for scalable and consistent sizing across elements.
@@ -2158,7 +2157,7 @@ You can link different CSS files for different screen widths using the `media` a
   }
   ```
 
-### Advantages
+**Advantages:**
 - **Scalability:** Changing the root font size scales all rem-based elements proportionally.
 - **Consistency:** Ensures a consistent design across different devices and resolutions.
 
@@ -2169,8 +2168,7 @@ You can link different CSS files for different screen widths using the `media` a
   - `1vw` = 1% of the viewport width.
   - `1vh` = 1% of the viewport height.
   
-### Usage in CSS
-- Example:
+**Example:**
   ```css
   .box {
       width: 50vw;  /* 50% of the viewport width */
@@ -2178,13 +2176,12 @@ You can link different CSS files for different screen widths using the `media` a
   }
   ```
 
-### Advantages
+**Advantages:**
 - **Direct Responsiveness:** Automatically adjusts to the size of the viewport without additional media queries.
 - **Flexibility:** Ideal for full-screen layouts and elements that need to scale directly with the viewport.
 
 ## PX to VW Conversion in Design
 
-### Conversion Process
 1. **Determine VW Size:**
    - If the design width is 1000px, 1vw would be 10px.
 2. **Calculate VW Value:**
@@ -2198,7 +2195,6 @@ You can link different CSS files for different screen widths using the `media` a
 
 ## Bootstrap
 
-### Overview
 - **Official Website:** [Bootstrap v3.4.1 Documentation](https://v3.bootcss.com/css/)
 - **Version:** 3.4.1 (most stable for legacy projects)
 
@@ -2207,7 +2203,7 @@ You can link different CSS files for different screen widths using the `media` a
   - The layout is based on a 12-column grid system.
   - Classes define the number of columns an element spans.
 
-### Example
+**Example**
 ```html
 <div class="container">
     <div class="row">
