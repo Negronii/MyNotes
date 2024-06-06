@@ -1,96 +1,163 @@
-# CSS Basis
+# CSS Basics
 
-Comment in CSS:
+## Commenting in CSS
+
+### Syntax
 ```css
-/* comment context*/
+/* This is a comment */
 ```
+- Comments are used to explain the code and are ignored by the browser.
 
-How to write?
+## Writing CSS
+
+### Syntax
 ```css
 selector {
-  /* styles */
+  property: value;
 }
 ```
+- **Selector:** Targets the HTML elements to style.
+- **Property:** The aspect of the element you want to change (e.g., `color`, `font-size`).
+- **Value:** The specific value for the property (e.g., `red`, `16px`).
 
-## Overwriting
+**Example**
+```css
+p {
+  color: blue;
+  font-size: 16px;
+}
+```
+- This example selects all `<p>` elements and sets their text color to blue and font size to 16px.
 
-If a property is used twice, the later use will overwrite the previously used Font composite property.
+## Overwriting Properties
 
-## Inheritance and cascading
+- When the same property is defined multiple times for an element, the last definition overwrites the previous ones.
+- Example:
+  ```css
+  p {
+    color: red;
+    color: blue; /* This will be applied */
+  }
+  ```
 
-Inherit: The child element has the characteristics of inheriting the style of the parent element by default.
+## Inheritance and Cascading
 
-Typical properties that can be inherited (text control properties can be inherited): color, font-style, font-size, font-family, text-align, text-indent, line-height...
+### Inheritance
 
-You can use debugging tools (Inspect in Google browser) to determine whether inheritance is possible.
-
-The inheritance of color by the 'a' tag will fail because the 'a' label itself has a color attribute.
-
-Inheriting the font size of the title class will fail because the title has a font-size attribute.
+- Certain CSS properties are inherited from parent elements to child elements.
+- Common inheritable properties include `color`, `font-family`, `font-size`, `line-height`, `text-align`.
+- Example:
+  ```html
+  <div style="color: red;">
+    <p>This text will be red because it inherits the color from the parent div.</p>
+  </div>
+  ```
 
 ### Cascading
 
-Set different styles for the same label -> the styles will be stacked at this time -> work together on the label.
+- CSS rules cascade, meaning multiple rules can apply to an element.
+- When conflicting rules are applied, the rule with higher specificity or the one that appears last takes precedence.
+- Example:
+  ```css
+  p {
+    color: red;
+  }
+  .special {
+    color: blue; /* This will be applied if the element has class="special" */
+  }
+  ```
 
-Set the same style for the same label -> At this time, the styles will be stacked and covered -> The final style written at the end will take effect.
+## Specificity and Priority
 
-Note: When styles conflict, the result can only be judged by cascading if the selectors have the same priority.
+### Specificity Hierarchy
 
-### Priority
+1. Inline styles (`style` attribute) - highest priority
+2. ID selectors (`#id`)
+3. Class selectors (`.class`), attribute selectors (`[type="text"]`), and pseudo-classes (`:hover`)
+4. Type selectors (`div`, `p`, `h1`) and pseudo-elements (`::before`, `::after`)
+5. Universal selector (`*`), combinators (`+`, `>`, `~`), and negation pseudo-class (`:not()`)
 
-Feature: Different selectors have different priorities, the style of the selector with high priority will override the style of the selector with low priority.
+### Specificity Calculation
 
-Priority formula: inherit < wildcard selector < tag selector < class selector < id selector < inline style <!important
+- Specificity is calculated based on the count of selectors in each category.
+- Example:
+  ```css
+  /* Specificity: 0-1-1-0 */
+  #main .content p {
+    color: green;
+  }
 
-Be careful: `!important` is written after the attribute value and before the semicolon.
+  /* Specificity: 0-1-0-1 */
+  .content p {
+    color: blue; /* This will be overridden by the previous rule */
+  }
+  ```
 
-`!important` cannot increase the priority of inheritance, as long as the inheritance has the lowest priority!
+### `!important` Declaration
 
-It is not recommended to use `!important` in actual development.
+- Overrides all other declarations, regardless of specificity.
+- Example:
+  ```css
+  p {
+    color: red !important;
+    color: blue; /* This will be ignored */
+  }
+  ```
+- Use `!important` sparingly as it can make debugging difficult.
 
 ## Weight Superposition Calculation
 
-Scenario: When using a composite selector, you need to determine which selector will take effect in the end.
+- When using composite selectors, the one with the higher specificity takes effect.
+- Example:
+  ```css
+  /* Specificity: 0-1-0-0 */
+  .box {
+    color: blue;
+  }
 
-Weighted Addition Formula:
+  /* Specificity: 0-1-1-0 */
+  .box:hover::before {
+    color: green; /* This will be applied */
+  }
+  ```
 
-1. First, compare the first number. If the comparison comes out, you don't need to look at it.
-2. Then compare the following number, and so on.
-3. If there is `!important` and it is not inherited, the weight is the highest in the world.
+## Pseudo-Elements
 
-## Pseudo-element
+- Used to style specific parts of an element.
+- Common pseudo-elements: `::before`, `::after`, `::first-letter`, `::first-line`.
+- Example:
+  ```css
+  p::before {
+    content: "Note: ";
+    font-weight: bold;
+  }
+  ```
 
-Pseudo-elements can be used for non-body elements in general content.
+## HTML Height 100%
 
-Element: tag set by HTML.
+- To ensure the HTML and body elements occupy the full height of the viewport:
+  ```css
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  ```
 
-Pseudo element: CSS simulates the effect of the label.
+## CSS Preprocessors (LESS/Sass)
 
-## Consecutive Writing
+- CSS preprocessors like LESS and Sass add functionality to CSS such as variables, nesting, and mixins.
+- Example of a LESS file structure:
+  - `base.less` or `base.css`: Basic styles and resets.
+  - `normalize.less` or `normalize.css`: Ensures cross-browser compatibility.
+  - `index.less` or `index.css`: Specific styles for the homepage.
 
-To write `.box:hover.box::before` directly, you can write `.box:hover::before` directly.
-
-## HTML height 100%
-
-Note when working on projects: sometimes you need to set `html { height: 100%; }`.
-
-Because the height of html is not as big as the browser by default.
-
-So sometimes the height of the body is 0 even if it is set to 100%.
-
-## LESS/CSS Typical Files
-
-- `base.less/css`: initialization
-- `normalize.less/css`: Compatibility
-- `index.less/css`: CSS for the home page
-
-# Where to write CSS?
+# Where to Write CSS
 
 ## Internal Style Sheet
 
 To write an internal style sheet, follow these steps:
 
-1. Add a `<style>` tag below the `<title>` tag in the `<head>` section of your HTML document.
+1. Add a `<style>` tag within the `<head>` section of your HTML document.
 2. Define the selectors and their corresponding CSS properties within the `<style>` tag.
 
 Example:
@@ -99,47 +166,57 @@ Example:
 <!DOCTYPE html>
 <html lang="en">
 <head>
-     <meta charset="UTF-8">
-     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>Document</title>
-     <style>
-         p {
-             color: red;
-         }
-     </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        p {
+            color: red;
+        }
+    </style>
 </head>
 <body>
-     <p>a red sentence</p>
+    <p>This is a red sentence.</p>
 </body>
 </html>
 ```
 
-In the example above, the selector `p` is used to target all `<p>` tags within the `<body>` section. The CSS property `color: red;` sets the color of the text inside the `<p>` tags to red.
+In the example above, the selector `p` targets all `<p>` tags within the `<body>` section. The CSS property `color: red;` sets the text color inside the `<p>` tags to red.
 
 ## External Style Sheet
 
 To use an external style sheet, follow these steps:
 
-1. Create a separate CSS file with a `.css` extension (e.g., `mycss.css`).
+1. Create a separate CSS file with a `.css` extension (e.g., `styles.css`).
 2. Define the selectors and their corresponding CSS properties in the external CSS file.
 3. Link the external CSS file to your HTML document using the `<link>` tag.
 
-Example CSS file (`mycss.css`):
+Example CSS file (`styles.css`):
 
 ```css
 p {
-     color: aqua;
+    color: aqua;
 }
 ```
 
-To reference the external CSS file, add the following code below the `<title>` element in the `<head>` section of your HTML document:
+To reference the external CSS file, add the following code within the `<head>` section of your HTML document:
 
 ```html
-<link rel="stylesheet" href="mycss.css">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <p>This is an aqua sentence.</p>
+</body>
+</html>
 ```
 
-In the example above, the `link` tag with the `rel="stylesheet"` attribute specifies that the referenced file is a CSS file. The `href` attribute specifies the path to the external CSS file (`mycss.css` in this case).
+In the example above, the `<link>` tag with the `rel="stylesheet"` attribute specifies that the referenced file is a CSS file. The `href` attribute specifies the path to the external CSS file (`styles.css` in this case).
 
 ## Inline Style
 
@@ -151,250 +228,438 @@ To apply inline styles directly to an HTML element, follow these steps:
 Example:
 
 ```html
-<p style="color: aqua;">happy</p>
+<p style="color: aqua;">This is an aqua sentence.</p>
 ```
 
-In the example above, the `style` attribute is added to the `<p>` tag, and the CSS property `color: aqua;` sets the color of the text inside the `<p>` tag to aqua.
+In the example above, the `style` attribute is added to the `<p>` tag, and the CSS property `color: aqua;` sets the text color inside the `<p>` tag to aqua.
 
-# Selectors
+# CSS Selectors
 
-## Class selector:
-Structure: `.classname {css_property_name: property_value;}`
-E.g. `.one { color: red; }`
-Find all pages with this class name tag to set the style by class name. Class names can be repeated, and a class selector can select multiple tags at the same time.
+## Class Selector
 
-## ID selector:
-(usually not used to write CSS, but will be selected with js)
-Structure: `#id_property_value {css_property_name: property_value;}`
-Find all tags with this id attribute value on the page to set the style. An id selector can only select one tag. E.g. `#one { color: blue; }`
+- **Syntax:** `.classname { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  .highlight {
+      color: red;
+  }
+  ```
+  ```html
+  <p class="highlight">This is a red sentence.</p>
+  ```
+  - The class selector `.highlight` targets all elements with the class `highlight`.
 
-## Wildcard selector (*):
-Structure: `*{css_property_name: property_value;}`
-Modify all styles of the page, rarely used. It can be used to clear the margin and padding of the label. E.g. `*{ margin: 0; padding: 0; box-sizing: border-box;}`
+## ID Selector
 
-## Descendant combinator (" " a single space character):
-According to the nesting relationship of HTML tags, select the elements that satisfy the conditions in the descendants of the parent element.
-Syntax: `selector1 selector2 { /* property declarations */}`
-Among the descendants of the tag found by selector1, find a tag setting style that satisfies selector2. Note: descendants include children, grandchildren, and grand-grandchildren…
-Separate selectors with spaces. E.g. `div p {color: red }`
+- **Syntax:** `#idname { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  #unique {
+      color: blue;
+  }
+  ```
+  ```html
+  <p id="unique">This is a blue sentence.</p>
+  ```
+  - The ID selector `#unique` targets the element with the ID `unique`.
 
-## The child combinator (>):
-It matches only those elements matched by the second selector that are the direct children of elements matched by the first. Only children are matched (i.e. not grandchildren).
-Syntax: `selector1 > selector2 { style properties }`
-E.g. `div > a { color: rebeccapurple; }`
+## Universal Selector
 
-## Selector list (,):
-The CSS selector list (,) selects all the matching nodes. Function: select multiple labels at the same time, set the style.
-Syntax: `selector1, selector2 { /* property declarations */ }`
-Find the tags selected by selector 1 and selector 2 to set the style. Each set of selectors in a union selector is separated by ','. Each set of selectors can be a base selector or a combined selector. Selector list is usually written one per line to improve readability. E.g. `h1, p, span { color: red; }`
+- **Syntax:** `* { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+  }
+  ```
+  - The universal selector `*` targets all elements, commonly used for resetting styles.
 
-## Intersection combinator (next to each other):
-Select the tags on the page that meet multiple conditions at the same time.
-Syntax: `selector1selector2{ /* property declarations */ }`
-Set CSS styles for tags selected by selector1 and selector2 at the same time. Selectors are next to each other, with nothing in the middle. If there is a tag selector, the tag selector must be written first. E.g. `p.red { color:red; }`
+## Descendant Combinator
 
-## Hover pseudo-class selector:
-Select the state that is hovered over the element, set the label.
-Syntax: `selector:hover {/* property declarations */ }`
-Note: The element selected by the pseudo-class selector is in a certain state. E.g. `a:hover{ color: red; }`
+- **Syntax:** `selector1 selector2 { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  div p {
+      color: red;
+  }
+  ```
+  ```html
+  <div>
+      <p>This is a red paragraph inside a div.</p>
+  </div>
+  ```
+  - Targets `<p>` elements that are descendants of `<div>` elements.
 
-## Structural pseudo-class selector:
-Function: Find elements based on their structural relationship in HTML. Advantages: Reduce dependencies on classes, which is conducive to clean code. The selector E is the tag name = element name, similar to java generics, and the object tag name should be filled in when using.
-- `E:first-child{}`: matches the first child element in the parent element and is the E element.
-- `E:last-child{}`: matches the last child element in the parent element and is the E element.
-- `E:nth
+## Child Combinator
 
--child(n){}`: matches the nth word element in the parent element and is an E element.
-- `E:nth-last-child{}`: matches the nth last element in the parent element and is the E element.
+- **Syntax:** `selector1 > selector2 { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  div > p {
+      color: rebeccapurple;
+  }
+  ```
+  ```html
+  <div>
+      <p>This is a purple paragraph directly inside a div.</p>
+  </div>
+  ```
+  - Targets `<p>` elements that are direct children of `<div>` elements.
 
-Note on n: n is 0, 1, 2, 3, 4, 5... (similar to python range). n can be a common formula:
-- even, 2n
-- Odd odd, 2n+1, 2n-1
-- find the first five -n+5
-- Find n+5 from the fifth
+## Selector List
 
-Example:
-```html
-<style>
-    li:nth-child(4n){
-        background-color: blue;
-    }
-</style>
-<body>
-    <!-- ul>li{this is $th li}*8 -->
-    <ul>
-        <li>this is 1th li</li>
-        <li>this is 2th li</li>
-        <li>this is 3th li</li>
-        <li>this is 4th li</li>
-        <li>this is 5th li</li>
-        <li>this is 6th li</li>
-        <li>this is 7th li</li>
-        <li>this is 8th li</li>
-    </ul>
-</body>
-```
+- **Syntax:** `selector1, selector2 { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  h1, p, span {
+      color: red;
+  }
+  ```
+  ```html
+  <h1>This is a red heading.</h1>
+  <p>This is a red paragraph.</p>
+  <span>This is a red span.</span>
+  ```
+  - Targets all elements listed (e.g., `h1`, `p`, `span`).
+
+## Attribute Selector
+
+- **Syntax:** `[attribute=value] { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  [type="text"] {
+      border: 1px solid #000;
+  }
+  ```
+  ```html
+  <input type="text">
+  ```
+  - Targets elements with a specific attribute value.
+
+## Hover Pseudo-Class Selector
+
+- **Syntax:** `selector:hover { css_property_name: property_value; }`
+- **Example:**
+  ```css
+  a:hover {
+      color: red;
+  }
+  ```
+  ```html
+  <a href="#">Hover over me</a>
+  ```
+  - Targets elements when the user hovers over them.
+
+## Structural Pseudo-Class Selectors
+
+- **Syntax and Examples:**
+  ```css
+  /* First child */
+  p:first-child {
+      color: blue;
+  }
+
+  /* Last child */
+  p:last-child {
+      color: green;
+  }
+
+  /* Nth child */
+  p:nth-child(2) {
+      color: red;
+  }
+
+  /* Nth last child */
+  p:nth-last-child(2) {
+      color: purple;
+  }
+
+  /* Nth of type */
+  p:nth-of-type(3) {
+      color: orange;
+  }
+
+  /* Nth last of type */
+  p:nth-last-of-type(3) {
+      color: pink;
+  }
+  ```
+  ```html
+  <div>
+      <p>First paragraph (blue)</p>
+      <p>Second paragraph (red)</p>
+      <p>Third paragraph (orange)</p>
+      <p>Fourth paragraph (default)</p>
+      <p>Fifth paragraph (default)</p>
+      <p>Sixth paragraph (pink)</p>
+  </div>
+  ```
+
+## Pseudo-Elements
+
+- **Syntax and Examples:**
+  ```css
+  /* Before pseudo-element */
+  p::before {
+      content: "Prefix ";
+      color: red;
+  }
+
+  /* After pseudo-element */
+  p::after {
+      content: " Suffix";
+      color: blue;
+  }
+  ```
+  ```html
+  <p>This is a paragraph.</p>
+  ```
+  - The `::before` and `::after` pseudo-elements insert content before and after the element's actual content.
 
 # Font Properties
 
-## font-size
-Property: `font-size`
-Value: `<number>px`
-Example: `font-size: 30px;` (If `p` is not set, the default is `16px`)
+## Font Size
 
-## font-weight
-Property: `font-weight`
-Value: (recommended number)
-Keywords: `normal` (normal) / `bold` (bold)
-Pure numbers: between `100` and `900`, normal `400`, bold `700`
+### Property: `font-size`
+- **Value:** `<number>px`, `<number>em`, `<number>rem`
+- **Example:**
+  ```css
+  p {
+      font-size: 30px;
+  }
+  ```
+- **Default Value:** If not set, the default is `16px`.
+- **Best Practices:**
+  - Use relative units like `em` or `rem` for responsive design.
+  - **Example:**
+    ```css
+    p {
+        font-size: 1.5rem;
+    }
+    ```
+  - `em` is relative to the font-size of the parent element.
+  - `rem` is relative to the font-size of the root element (`<html>`).
 
-## font-style
-Property: `font-style`
-Value: `normal` (normal) / `italic` (oblique)
+## Font Weight
 
-## font family
-Property: `font-family`
-Common values: specific font 1, specific font 2, specific font 3;
-If the specific font one is installed on the user's computer, the specific font one is used. If not, the specific font two is used, and so on.
-Example:
-```css
-div{
-    font-family: Arial, Helvetica, sans-serif;
-}
-```
+### Property: `font-weight`
+- **Value:** 
+  - Keywords: `normal`, `bold`
+  - Numeric: `100` to `900`
+- **Examples:**
+  ```css
+  p {
+      font-weight: normal; /* equivalent to 400 */
+      font-weight: bold;   /* equivalent to 700 */
+      font-weight: 700;
+  }
+  ```
+- **Best Practices:**
+  - Use numeric values for more precise control over font weight.
 
-## `font`
-Composite property: `font`
-Value: `font: style weight size family;`
-Example:
-```css
-p{
-    font: italic 700 66px Arial;
-}
-```
-Omission requirement: only the first two can be omitted, i.e. use the default value
-Example:
-```css
-p{
-    font: 66px Arial;
-}
-```
-If you want to set both single and continuous writing at the same time:
-Either write it alone under the continuation
-Either write it alone in the concatenation
-Example:
-```css
-p{
-    font: italic 700 66px Arial;
-    font-style: normal;
-}
-```
+## Font Style
 
-## `text-indent`
-Property: `text-indent`
-Value: `<number>px` / `<number>em`
-Using `em` is recommended; `1em` is the size of a current character.
-Example: `p{ text-indent: 1em;}`
+### Property: `font-style`
+- **Value:** `normal`, `italic`, `oblique`
+- **Example:**
+  ```css
+  p {
+      font-style: italic;
+  }
+  ```
 
-## `text-align`
-Horizontal text alignment
-Property: `text-align`
-Value: `<keyword>`
-Keyword options: `left`, `right`, `center`
-You need to set the parent to align correctly. For example, use the selector to select the `body` tag in the middle of the web page.
-`text-align: center` can center text, `span` tags, `a` tags, `input` tags, and `img` tags.
+## Font Family
 
-## `text-decoration`
-Property: `text-decoration`
-Value: `<keyword>`
-Keyword options: `underline`, `line-through`, `overline`, `none`
-`line-through` adds a line through the text, `overline` adds a line above the text, and `none` removes any decoration.
-The underline of the 'a' element can be removed with `text-decoration: none`.
+### Property: `font-family`
+- **Value:** A list of font family names
+- **Example:**
+  ```css
+  div {
+      font-family: Arial, Helvetica, sans-serif;
+  }
+  ```
+- **Best Practices:**
+  - Provide a fallback system font.
+  - Always end with a generic family name like `serif`, `sans-serif`, `monospace`.
 
-## `line-height`
-Line height: top spacing + text size + bottom spacing.
-Property: `line-height`
-Value: `<number>px` or `<multiple>`
-Example: `line-height: 50px;` or `line-height: 2;`
-To center a single line of text vertically, set `line-height` to the height of the text's parent element.
-For precise layout, set `line-height: 1` to cancel the upper and lower spacing.
-It can be written in `font`, `size`, and `line-height` separated by slashes, i.e. 
-`font: style weight size/line-height family;`
-Example: `font: italic 700 66px/2 Arial`
+## Font Shorthand Property
 
-## `color` and `background-color`
-Color is the font color.
-Background color is the color behind the text.
-Value: `<color name>`, `<rbg(x, y, z)>`, `<rbga(x, y, z, o)>`, Sixteen-digit notation
-`x`, `y`, `z` values: integers ranging from `0` to `255`
-`o`: decimal number ranging from `0` to `1`, representing the transparency value
-Example: `color: red;`, `color: rgb(0,0,0);`, `color: rgba(255,255,255,0.5);`, `color:#00ff00`
+### Property: `font`
+- **Value:** `font: <style> <weight> <size>/<line-height> <family>;`
+- **Example:**
+  ```css
+  p {
+      font: italic 700 16px/1.5 Arial, sans-serif;
+  }
+  ```
+- **Best Practices:**
+  - Use shorthand for concise and readable CSS.
+  - Ensure all necessary values are included to avoid unexpected inheritance.
+
+## Text Indentation
+
+### Property: `text-indent`
+- **Value:** `<number>px`, `<number>em`
+- **Example:**
+  ```css
+  p {
+      text-indent: 1em;
+  }
+  ```
+- **Best Practices:**
+  - Use `em` for responsive indentation relative to the font size.
+
+## Text Alignment
+
+### Property: `text-align`
+- **Value:** `left`, `right`, `center`, `justify`
+- **Example:**
+  ```css
+  div {
+      text-align: center;
+  }
+  ```
+- **Best Practices:**
+  - Center text within parent containers.
+  - Use `justify` for a clean, aligned appearance in blocks of text.
+
+## Text Decoration
+
+### Property: `text-decoration`
+- **Value:** `underline`, `line-through`, `overline`, `none`
+- **Example:**
+  ```css
+  a {
+      text-decoration: none;
+  }
+  ```
+- **Best Practices:**
+  - Use for adding or removing text decorations, especially links.
+
+## Line Height
+
+### Property: `line-height`
+- **Value:** `<number>px`, `<multiple>`
+- **Example:**
+  ```css
+  p {
+      line-height: 1.5;
+  }
+  ```
+- **Best Practices:**
+  - Use relative values (`1.5`, `2`) for better scaling across different font sizes.
+  - Use the shorthand `font` property for combined settings:
+    ```css
+    p {
+        font: italic 700 16px/2 Arial, sans-serif;
+    }
+    ```
+
+## Color and Background Color
+
+### Properties: `color`, `background-color`
+- **Value:** `<color name>`, `rgb(x, y, z)`, `rgba(x, y, z, o)`, `#hex`
+- **Examples:**
+  ```css
+  p {
+      color: red;
+      background-color: rgba(255, 255, 255, 0.5);
+  }
+  ```
+- **Best Practices:**
+  - Use `rgba` for adding transparency.
+  - Use `hex` for consistency and compactness.
 
 # Background Properties
 
-## `background-image`
-Property value: `url('<path to the image>')`
-Quotes('') can be omitted in `url()`.
-The picture is tiled horizontally and vertically by default. That is, if the box size is 400\*400 and the picture is 200\*200, four pictures will be automatically tiled.
-To decorate the box, similar to `background-color`.
-e.g. `background-image: url('image/car.jpg');`
-Difference between `img` element: background image is only used for decoration purposes.
+## Background Image
 
-## `background gradient`
-Syntax: `background-image: linear-gradient(color1, color2, color3);`
-e.g. `background-image: linear-gradient(pink, skyblue, pink);`
-Statements commonly used in the workplace: 
-```
-background-image: linear-gradient(transparent, rgba(0,0,0,.6));
-```
-Where `transparent` means complete transparency, you can use `rgba(0,0,0,0)`.
+### Property: `background-image`
+- **Value:** `url('<path>')`
+- **Example:**
+  ```css
+  div {
+      background-image: url('image/car.jpg');
+  }
+  ```
+- **Best Practices:**
+  - Use images for decorative purposes, ensuring accessibility is not hindered.
 
-Normally invisible and the background gradient become visible after hovering:
-Process:
-1. Write the box positioning to control its position.
-2. Implement hover to display.
-3. Find the parent tag of the box size; if not, create a box.
-4. Add `position: relative;` to the parent tag.
-5. Add an `after` pseudo-element to the box:  
-```
-box_name::after {
-    position:absolute;
-    left:0;
-    top:0;
-    content:'';
-    /* Set the width and height equal to the parent's width and height, which can completely cover the entire box */
-    background-image: linear-gradient(transparent, rgba(0,0,0,.6));
-    opacity:0;
-    transition:all 1s;
-}
-```
-6. `box_name::after:hover {opacity:1}`
-See more details at front-end learning/web/gradient2.html.
+## Background Gradient
 
-## `background-repeat`
-Property value:
-- `repeat`: default, tile horizontally and vertically.
-- `no-repeat`: does not tile.
-- `repeat-x`: tile horizontally.
-- `repeat-y`: tile vertically.
+### Property: `background-image`
+- **Value:** `linear-gradient(color1, color2, ...)`
+- **Example:**
+  ```css
+  div {
+      background-image: linear-gradient(pink, skyblue, pink);
+  }
+  ```
+- **Best Practices:**
+  - Use gradients for smooth color transitions.
+  - Implement with pseudo-elements for hover effects:
+    ```css
+    .box::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(transparent, rgba(0,0,0,.6));
+        opacity: 0;
+        transition: opacity 1s;
+    }
+    .box:hover::after {
+        opacity: 1;
+    }
+    ```
 
-## `background-position`
-Property value: `<horizontal position> <vertical position>`
-Horizontal position can be: `left`, `center`, `right`, `top`, `<number>px`.
-Vertical position can be: `top`, `center`, `bottom`, `<number>px`.
-While using `<number>px <number>px`, it means the coordinate of the top-left corner.
-One of the center can be omitted if we want to horizontally and vertically center the background.
+## Background Repeat
 
-## `background-size`
-Attribute value: `number+px`, `percentage`, `contain`, `cover`.
-`contain`: Include, and scale the background image proportionally, but will not exceed the maximum box.
-`cover`: Cover, scale the background image proportionally until it just fills the entire box and there is no blank space, which may cause part of the image to be invisible.
+### Property: `background-repeat`
+- **Value:** `repeat`, `no-repeat`, `repeat-x`, `repeat-y`
+- **Examples:**
+  ```css
+  div {
+      background-repeat: no-repeat;
+  }
+  ```
 
-## `background`
-Syntax: `background: color image repeat position;`
-If `position` is a word, it can be reversed, but if using values, the horizontal position must be specified first and then the vertical.
-It is recommended to write a separate style below or inside the ligature.
-e.g. `background: pink url(image1.jpg) no-repeat 50px 100px;`
+## Background Position
+
+### Property: `background-position`
+- **Value:** `left top`, `center center`, `50px 100px`
+- **Examples:**
+  ```css
+  div {
+      background-position: center;
+  }
+  ```
+
+## Background Size
+
+### Property: `background-size`
+- **Value:** `cover`, `contain`, `number+px`, `percentage`
+- **Examples:**
+  ```css
+  div {
+      background-size: cover;
+  }
+  ```
+
+## Background Shorthand Property
+
+### Property: `background`
+- **Syntax:** `background: <color> <image> <repeat> <position> <size>;`
+- **Example:**
+  ```css
+  div {
+      background: pink url('image1.jpg') no-repeat 50px 100px;
+  }
+  ```
 
 # Other important styles
 
@@ -501,17 +766,21 @@ Be careful:
 - Set to the default state, there is a transition effect when the mouse moves in and out
 - Set the hover state, there is a transition effect when the mouse is moved in, and there is no transition effect when the mouse is moved out
 
-# Box model
+# Box Model
 
+The box model in CSS describes the rectangular boxes that are generated for elements in the document tree and lays out the fundamental aspects of sizing, padding, borders, and margins.
+
+## Components of the Box Model
+
+1. **Content Area:** The area where the content is displayed, defined by the `width` and `height` properties.
+2. **Padding Area:** The space between the content and the border. It is transparent and expands the area inside the border.
+3. **Border Area:** The border surrounding the padding (if any) and content.
+4. **Margin Area:** The outermost space, outside the border, which separates the element from other elements.
+
+### Visualization
 ![Box Model](box_model.png)
 
-Each tab of the page can be seen as a box, and it is more accessible to layout through the perspective of the box.
-
-When a browser renders a web page, it regards the elements in the web page as rectangular areas, which we call boxes vividly.
-
-CSS says that each box comprises the content area, padding area, border area, and outer margin area. This is the box model. Therefore, Box size = width/height + padding + border-width
-
-## CSS code example
+## Example CSS Code
 
 ```css
 div {
@@ -524,206 +793,279 @@ div {
 }
 ```
 
-## Content area
+In this example:
+- `width` and `height` define the content area.
+- `padding` adds space inside the border.
+- `border` defines the border around the content and padding.
+- `margin` creates space outside the border.
 
-The content area is the width * height area.
+## Detailed Breakdown
 
-- width: The width the text background takes up.
-  - Property value: `<number>px`
-  - Example: `width: 400px;`
+### Content Area
 
-- height: The height the text background takes up.
-  - Property value: `<number>px`
-  - Example: `height: 400px;`
+Defines the main area where the content is placed.
 
-## Border
+- **width:** Sets the width of the content area.
+  ```css
+  width: 400px;
+  ```
 
-- Property value: Consecutive writing of a single value, separated by spaces.
-  - The first value is the thickness of the line, `<number>px`, e.g., `1px`.
-  - The second value is the border type: solid, dashed, dotted.
-  - The third value is the color. See the color for the value.
-  - Example: `border: 10px solid red`
+- **height:** Sets the height of the content area.
+  ```css
+  height: 400px;
+  ```
 
-### Scenario: Set border on one side of the box
+### Padding
 
-- Property name: `border-position` noun (top, right, bottom, left)
-- Property values are written the same as above.
-  - Example: `border-right: 1px solid black;`
+Adds space inside the border, around the content area.
 
-If you want to write in more detail, you can set `border-width`, `border-style`, and `border-color`.
+- **Syntax:**
+  ```css
+  padding: 20px; /* Applies to all sides */
+  padding: 10px 20px; /* Vertical | Horizontal */
+  padding: 10px 15px 20px; /* Top | Horizontal | Bottom */
+  padding: 10px 15px 20px 25px; /* Top | Right | Bottom | Left */
+  ```
 
-## Padding
+### Border
 
-- Property value: `<4 numbers + px>`
-  - When a single number is used, all four sides are widened by `npx`.
-  - When there are two numbers, up and down, left and right.
-  - When there are three numbers, the order is up, left, right, down.
-  - When there are four numbers, the order is top, right, bottom, left.
-  - Memory: Always assign values clockwise from the top; if the number is not enough, it is equal to the opposite value.
-  - Usage scenario: If the width and height are bound to die, an exception will be displayed if the number of words is too large, but if the width is not set, only the height is set, and then the left and right padding can be set to optimize this situation (`padding: 0 15px;`)
+Defines the border around the padding and content area.
 
-## `box-sizing: border-box;`
+- **Syntax:**
+  ```css
+  border: 10px solid red;
+  ```
 
-- Scenario: Box size 300px * 300px, background pink, border 10px solid black, top, bottom, left, left and right 20px padding.
-- When setting the border and padding to the box, it will be enlarged.
-- For automatic internal subtraction, set the width and height to 300px, and then set the property `box-sizing: border-box;` to the box.
+- **Single Side Border:**
+  ```css
+  border-right: 1px solid black;
+  ```
 
-## Margin
+- **Detailed Border Properties:**
+  ```css
+  border-width: 10px;
+  border-style: solid;
+  border-color: red;
+  ```
 
-- Set the same way as the padding above.
-  - Example: `margin: 20px;`
+### Margin
 
-### Clear default margins
+Creates space outside the border, separating the element from other elements.
 
-- Scenario: The browser will set the default margin and padding for some tags, but generally, you need to clear the default margin and padding of these tags before starting the project and then set them by yourself.
-  - Example: `*{margin: 0; padding: 0; box-sizing: border-box;}`
+- **Syntax:**
+  ```css
+  margin: 20px; /* Applies to all sides */
+  margin: 10px 20px; /* Vertical | Horizontal */
+  margin: 10px 15px 20px; /* Top | Horizontal | Bottom */
+  margin: 10px 15px 20px 25px; /* Top | Right | Bottom | Left */
+  ```
 
-## Center a box
+### Box-Sizing
 
-- `margin: 0 auto`
+By default, the `width` and `height` of an element only include the content box. To include padding and border in the element's total width and height, use `box-sizing: border-box;`.
 
-## Box tips
+- **Example:**
+  ```css
+  div {
+      width: 300px;
+      height: 300px;
+      padding: 20px;
+      border: 10px solid black;
+      box-sizing: border-box;
+  }
+  ```
 
-When writing a box, you must first write the width and height background color, write the content, adjust the content position, and adjust the text details.
+## Centering a Box
 
-## `box-shadow`
+To center a block element horizontally within its container, use `margin: 0 auto;`.
 
-- Property values: h-shadow, v-shadow, blur, spread, color, inset.
-  - h-shadow: value number + px, a negative value is allowed, it is required, the larger the number, the more the shadow goes to the right.
-  - v-shadow: value number + px, a negative value is allowed, it is required, the larger the number, the lower the shadow.
-  - blur: value number + px, optional, the larger the number, the more blurred.
-  - spread: value number + px, optional, the larger the number, the larger the shadow.
-  - Color: Value standard name /rbg/rbga, optional, shadow color.
-  - Inset/outset: optional, inset is to change the shadow to inner shadow, outset is the default, outer shadow.
+- **Example:**
+  ```css
+  .centered-box {
+      width: 300px;
+      margin: 0 auto;
+  }
+  ```
+
+## Clear Default Margins and Padding
+
+Browsers apply default margins and padding to some elements. It's a common practice to reset these values at the start of your CSS.
+
+- **Example:**
+  ```css
+  * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+  }
+  ```
+
+## Box Tips
+
+When creating a box, follow these steps:
+1. Define `width`, `height`, and `background-color`.
+2. Add content and adjust its position.
+3. Fine-tune the appearance with padding, borders, and margins.
+
+## Box Shadow
+
+The `box-shadow` property adds shadows to elements, enhancing their visual appeal.
+
+- **Syntax:**
+  ```css
+  box-shadow: h-shadow v-shadow blur spread color inset;
+  ```
+
+- **Example:**
+  ```css
+  div {
+      box-shadow: 5px 10px 15px 0px rgba(0, 0, 0, 0.2);
+  }
+  ```
 
 ## Margin Collapsing Phenomenon
 
-### Merging Phenomenon
+When vertical margins of adjacent block-level elements meet, they collapse, resulting in a combined margin that is the greater of the two.
 
-The upper and lower margins of vertical block-level elements will merge. For example, the upper margin-bottom is 50px and the lower margin-top is 50px, so the distance between them is 50px instead of 100px. The distance between the two is the maximum value of the margin.
+### Solution to Margin Collapsing
 
-Solution: Just set a margin.
+1. **Add Border or Padding:**
+   ```css
+   .parent {
+       border-top: 1px solid transparent; /* or padding-top: 1px; */
+   }
+   ```
 
-### Collapse
+2. **Use Overflow Property:**
+   ```css
+   .parent {
+       overflow: hidden;
+   }
+   ```
 
-In nested block-level elements, the margin-top of the child element will act on the parent element.
+3. **Convert to Inline-Block:**
+   ```css
+   .parent {
+       display: inline-block;
+   }
+   ```
 
-Result: Cause the parent element to move down together.
-
-Solution:
-
-- Set border-top or padding-top to the parent element to separate the margin-top of parent and child elements.
-- Set `overflow: hidden;` on the parent element (recommended).
-- Convert to inline-block element.
-- Set `float`.
+4. **Use Float Property:**
+   ```css
+   .parent {
+       float: left;
+   }
+   ```
 
 # Pseudo-elements
 
-Pseudo-elements in CSS allow you to add decorative or informational content to an element. They are represented by the `::before` and `::after` selectors.
+Pseudo-elements in CSS allow you to style specific parts of an element's content.
 
 ## ::before
-The `::before` pseudo-element adds content to the front of the parent element's content. It is often used for decorative purposes or to insert icons or shapes before the content.
 
-```css
-.father {
-    width: 300px;
-    height: 300px;
-    background-color: pink;
-}
+Adds content before the element's actual content.
 
-.father::before {
-    content: 'shape';
-}
-```
-
-In the example above, the `::before` pseudo-element is added to the `.father` element, and its content is set to 'shape'. This will insert the word 'shape' before the content of the `.father` element.
+- **Example:**
+  ```css
+  .box::before {
+      content: 'Prefix ';
+      color: blue;
+  }
+  ```
 
 ## ::after
-The `::after` pseudo-element adds content to the end of the parent element's content. It is commonly used for decorative elements or to add additional information after the content.
 
-```css
-.father::after {
-    content: 'you';
-}
-```
+Adds content after the element's actual content.
 
-In the example above, the `::after` pseudo-element is added to the `.father` element, and its content is set to 'you'. This will insert the word 'you' after the content of the `.father` element.
+- **Example:**
+  ```css
+  .box::after {
+      content: ' Suffix';
+      color: red;
+  }
+  ```
 
-Note that for both `::before` and `::after`, the `content` attribute must be set in order for the pseudo-elements to take effect, even if there is no text content. To create empty pseudo-elements, you can use `content: '';`.
+### Notes
 
-Pseudo-elements are inline elements by default, but you can change their display to `block` to make them behave like block-level elements.
-
-To change the display of a pseudo-element to block, you can use the `display: block;` CSS property.
-
-```css
-.father::before,
-.father::after {
-    display: block;
-}
-```
-
-In the example above, both the `::before` and `::after` pseudo-elements of the `.father` element are set to `display: block;`, making them behave as block-level elements.
-
-Remember to use appropriate selectors and apply the desired styles to customize the appearance of pseudo-elements in your HTML and CSS code.
+- Both `::before` and `::after` require the `content` property.
+- By default, pseudo-elements are `inline`, but you can change their display:
+  ```css
+  .box::before, .box::after {
+      display: block;
+  }
+  ```
 
 # Float
 
-Float is a CSS property used to position elements horizontally. It allows elements to be placed side by side, either to the left or right of their container. The `float` property can have a value of `left` or `right`.
-
-Example:
-
-```css
-div {
-    float: left;
-    background-color: skyblue;
-}
-
-div {
-    float: left;
-    background-color: pink;
-}
-```
+The `float` property in CSS is used to position elements horizontally, allowing them to be placed side by side, either to the left or right of their container. While float was a popular method for creating multi-column layouts in the past, modern CSS layout techniques like Flexbox and Grid have largely replaced its usage.
 
 ## Floating Features
 
-- Floating labels will leave the standard flow and take no place in the standard flow.
-- Floating elements are half a level higher than the standard flow and can cover elements in the standard flow.
-- Floating to find floating, the next floating element will float around the previous floating element.
-- Floating labels are top-aligned.
-- Floating elements have special display effects: one line can display more than one, and the width and height can be set (that is, the floating label has the characteristics of an inline-block).
-- Floating elements cannot be centered by `text-align: center;` or `margin: 0 auto;`.
-- The left and right of the floating element are the leftmost and rightmost of the parent element.
+- **Standard Flow Impact:** Floating elements are removed from the standard document flow, allowing other elements to wrap around them.
+- **Stacking Context:** Floating elements create a new stacking context, appearing above standard flow elements but below positioned elements.
+- **Alignment:** Floating elements align to the top of their containing element.
+- **Display Characteristics:** Floating elements behave like inline-block elements, allowing multiple elements to appear on the same line and enabling the setting of width and height.
 
-## Recommended CSS Writing Order
+## Example
 
-Writing CSS in a specific order can help improve rendering performance. The recommended order is as follows:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .box {
+            width: 100px;
+            height: 100px;
+            margin: 10px;
+        }
+        .left {
+            float: left;
+            background-color: skyblue;
+        }
+        .right {
+            float: right;
+            background-color: pink;
+        }
+    </style>
+    <title>Float Example</title>
+</head>
+<body>
+    <div class="box left"></div>
+    <div class="box left"></div>
+    <div class="box right"></div>
+</body>
+</html>
+```
 
-1. Float/display
-2. Box model related: margin, border, padding, width, height, and background-color
-3. Text style
+## Clearing Floats
 
-## Making Navigation Page
+When elements are floated, their parent element may collapse if the parent does not have a specified height. Several methods can be used to clear the effect of floating:
 
-To create a navigation menu, it is recommended to use a list to contain each `<a>` element. This improves rendering efficiency. If you want the entire list to be clickable, make the `<a>` tag bigger with CSS. If you want only the text to be clickable, make the `<li>` tag bigger. Float the `<li>` tag to align the navigation horizontally.
+1. **Extra Tag Method:**
+   Add an extra block-level element at the end of the parent element with `clear: both;`.
+   ```html
+   <div class="clearfix"></div>
+   <style>
+       .clearfix {
+           clear: both;
+       }
+   </style>
+   ```
 
-## Clearing the Effect of Floating
-
-When elements are floated, their parent element's standard flow can be affected, especially when the parent element doesn't have a specified height. Here are some solutions to clear the effect of floating:
-
-1. Setting the height of the parent element.
-2. Using the extra tag method: Add a block-level element to the end of the parent element and apply `clear: both;` to it. This is commonly done using `<div class="clearfix"></div>`, and the corresponding CSS class is `.clearfix { clear: both; }`.
-3. Single pseudo-element clearing: Use pseudo-elements instead of extra tags. This method is more compatible with older browsers. Example:
+2. **Single Pseudo-Element Clearing:**
+   Use pseudo-elements to clear floats.
    ```css
    .clearfix::after {
        content: '';
        display: block;
        clear: both;
-       height: 0;
-       visibility: hidden;
    }
    ```
-   Add the `.clearfix` class to the parent element: `<div class="top clearfix"></div>`.
-4. Double pseudo-element clearing (recommended):
+
+3. **Double Pseudo-Element Clearing (Recommended):**
+   This method ensures better compatibility and prevents collapsing issues.
    ```css
    .clearfix::before,
    .clearfix::after {
@@ -734,453 +1076,843 @@ When elements are floated, their parent element's standard flow can be affected,
        clear: both;
    }
    ```
-   Add the `.clearfix` class to the parent element: `<div class="top clearfix"></div>`. Using double pseudo-elements helps avoid collapse problems.
-5. Overflow method (recommended): Set `overflow: hidden;` directly to the parent element.
+
+4. **Overflow Method (Recommended):**
+   Set `overflow: hidden;` on the parent element.
+   ```css
+   .parent {
+       overflow: hidden;
+   }
+   ```
+
+## Modern Alternatives
+
+- **Flexbox:**
+  A more modern and flexible way to create layouts. Flexbox makes it easier to design responsive layouts.
+  ```css
+  .container {
+      display: flex;
+  }
+  .item {
+      flex: 1;
+  }
+  ```
+
+- **CSS Grid:**
+  A powerful layout system that allows for complex layouts with precise control.
+  ```css
+  .grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+  }
+  .grid-item {
+      background-color: skyblue;
+  }
+  ```
 
 # Positioning
 
-## How to use position?
+CSS positioning allows elements to be positioned in a specific place on the page. There are several types of positioning:
 
-Set `position` property.
+## Types of Positioning
 
-- Property name: `position`
-- Property value: `static`, `relative`, `absolute`, `fixed`
+1. **Static Positioning (default):**
+   ```css
+   position: static;
+   ```
+   - Elements are positioned according to the normal document flow.
 
-Set the offset value. The offset value is divided into two directions: horizontally and vertically. The principle of selection is generally the principle of proximity. If both are written, only `left/top` shall prevail.
+2. **Relative Positioning:**
+   ```css
+   position: relative;
+   ```
+   - Elements are positioned relative to their original position in the document flow.
+   - They maintain their original space in the document.
+   - Example:
+     ```css
+     .relative {
+         position: relative;
+         left: 10px;
+         top: 20px;
+     }
+     ```
 
-- Property names: `left`, `right`, `top`, `bottom`
-- Property value: `number + px`, the number can be negative
+3. **Absolute Positioning:**
+   ```css
+   position: absolute;
+   ```
+   - Elements are positioned relative to their nearest positioned ancestor (not static).
+   - If no such ancestor exists, they are positioned relative to the initial containing block (viewport).
+   - They are removed from the normal document flow.
+   - Example:
+     ```css
+     .absolute {
+         position: absolute;
+         left: 50px;
+         top: 100px;
+     }
+     ```
 
-It will take the direction as a reference and move the distance of the property value in the opposite direction. For example, `left: 100px;` will move 100px from the far left to the right, `right: -4; top: 0;` moves four pixels from the upper right corner to the right.
+4. **Fixed Positioning:**
+   ```css
+   position: fixed;
+   ```
+   - Elements are positioned relative to the viewport.
+   - They do not move when the page is scrolled.
+   - Example:
+     ```css
+     .fixed {
+         position: fixed;
+         bottom: 10px;
+         right: 10px;
+     }
+     ```
 
-## Relative positioning
+5. **Sticky Positioning:**
+   ```css
+   position: sticky;
+   ```
+   - Elements are positioned based on the user's scroll position.
+   - They switch between relative and fixed positioning depending on the scroll position.
+   - Example:
+     ```css
+     .sticky {
+         position: sticky;
+         top: 0;
+     }
+     ```
 
-```css
-position: relative;
-```
+## Offset Properties
 
-- Need to cooperate with the orientation attribute to achieve movement.
-- It still has the display mode characteristics of the original label.
-- Moves relative to its original position.
-- Takes place on the page without breaking out of the standard flow.
-- Application scenario: Cooperate with absolute positioning group cp, parent relative positioning, child absolute positioning (child absolute parent relative) for small movements.
-- If `left: 100px; top: 100px;` is equivalent to moving to the lower right corner.
-
-## Absolute positioning
-
-```css
-position: absolute;
-```
-
-- First, find the parent that has been positioned (with the `position` property), and if there is such a parent, use this parent as a reference for positioning.
-- If there is a parent, but the parent is not positioned, position with the browser window as a reference.
-- Need to cooperate with the orientation properties to achieve movement.
-- The orientation attribute can take a percentage, e.g., `left: 50%;` that is, the position of the upper left corner of the label to the center line of the parent element.
-- If you want the tag to be in the middle, you can use:
-  - `left: 50%; margin-left` takes the negative half of the width.
-  - `top: 50%; margin-top`: negative half of the height.
-- You can also use the `transition` property to set the box in the middle:
+- **left, right, top, bottom:**
+  These properties specify the offset from the respective edge.
   ```css
-  transform: {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%,-50%);
+  .example {
+      position: absolute;
+      top: 20px;
+      left: 30px;
   }
   ```
-- Moves relative to the browser's visible range by default.
-- Does not occupy a place on the page (off-label).
-- Application scenario: use together with relative positioning.
-
-## Fixed positioning
-
-```css
-position: fixed;
-```
-
-- Need to cooperate with the orientation attribute to achieve movement.
-- Moves relative to the browser viewable area.
-- Does not occupy a place on the page: has been removed.
-- Application scenario: let the box be fixed in a certain position on the page, e.g., back to the top button.
-
-Element hierarchy: `standard flow < float < positioning`.
-The relative, absolute, and fixed positions have the same default level. At this time, the higher level written below in the HTML will cover the above elements.
 
 ## z-index
 
-- Property value: an integer.
-- The larger the value, the higher the display order. The default value is 0.
-- The `position` attribute is required to take effect.
+- The `z-index` property specifies the stack order of elements.
+- Higher values are displayed in front of lower values.
+- Only works on positioned elements (position other than static).
+  ```css
+  .example {
+      position: relative;
+      z-index: 10;
+  }
+  ```
 
-When do we use positioning?
-- If the image cannot be aligned with `vertical-align` and `line-height`, use positioning.
+## Application Scenarios
 
-# Icon font
+- **Relative Positioning:**
+  - Used for slight adjustments and when combined with absolute positioning for creating complex layouts.
+- **Absolute Positioning:**
+  - Used for elements that need to be precisely placed without affecting other elements.
+- **Fixed Positioning:**
+  - Ideal for elements that should remain in a fixed position on the screen, such as navigation bars and back-to-top buttons.
+- **Sticky Positioning:**
+  - Useful for headers or other elements that should stick to the top of the viewport when scrolling.
 
-The simple images represented by font can be modified using `font-size` and `color`.
+# Icon Fonts
 
-## Advantage vs image/background image
+Icon fonts are font files that contain vector-based icons instead of letters and numbers. They offer flexibility and efficiency in web design.
 
-- Flexibility: Flexibility to modify styles, such as size, color, etc.
-- Lightweight: Small size, fast rendering, and reduced server requests.
-- Compatibility: Compatible with almost all major browsers.
+## Advantages of Icon Fonts vs. Images/Background Images
 
-## How to use iconfont? — Download
+### Flexibility
+- **Scalability:** Icon fonts can be scaled to any size without losing quality.
+- **Styling:** Easily modify styles such as size, color, and shadow using CSS.
+  
+### Lightweight
+- **Performance:** Small file sizes lead to faster loading times and reduced server requests.
+- **Consistency:** Consistent appearance across different devices and resolutions.
 
-1. Go and login into `https://www.iconfont.cn/`.
-2. Find 素材库 —> 官方图标库.
-3. Add the iconfont to the cart.
-4. Click 添加至项目.
+### Compatibility
+- **Cross-Browser Support:** Compatible with almost all major browsers, ensuring a consistent user experience.
+
+## How to Use Icon Fonts
+
+### Downloading Icon Fonts
+
+1. Go to [Iconfont](https://www.iconfont.cn/) and log in.
+2. Navigate to 素材库 (Material Library) → 官方图标库 (Official Icon Library).
+3. Add the desired icons to the cart.
+4. Click 添加至项目 (Add to Project).
 5. Create a new project by clicking the folder icon with a plus sign.
-6. Click download on the project page.
+6. Download the project from the project page.
 
-## How to use iconfont? — Invoke
+### Invoking Icon Fonts
 
-1. Firstly, introduce font icon style sheet to the project, e.g., `<link rel="stylesheet" href="./iconfont.css">`.
-2. To invoke the iconfont, add 2 class names to the tag:
-   - `iconfont`: Basic styles, including the use of fonts, etc.
-   - `icon-xxx`: The class name corresponding to the icon.
-3. There is `demo.html` on the downloaded page, click on the font class to see the name of the icon class.
-   - e.g., `<span class="iconfont icon-favourites-fill"></span>`.
-4. When adjusting, use `.icon-favourites-fill{ }` in the current `.css` to select it.
-5. The principle is that it comes with a `::before` to add icons.
+1. **Include the Font Icon Stylesheet:**
+   ```html
+   <link rel="stylesheet" href="./iconfont.css">
+   ```
 
-## How to use iconfont? — Upload
+2. **Use the Icon in HTML:**
+   ```html
+   <span class="iconfont icon-favourites-fill"></span>
+   ```
+   - `iconfont`: Basic styles for using the font.
+   - `icon-xxx`: Class name corresponding to the specific icon.
 
-Sometimes the icons in the design draft are not in iconfont, then you can upload and download them yourself.
+3. **Customizing Icons with CSS:**
+   ```css
+   .icon-favourites-fill {
+       color: red;
+       font-size: 24px;
+   }
+   ```
 
-1. Look for a designer to communicate and ask for a vector illustration in SVG format.
-2. Upload in the upper right corner —> 上传SVG图标.
-3. 浏览本地图标 —> 去除颜色提交.
-4. Add to cart —> Download and use.
+### Uploading Custom Icons
 
-# Transform
-All transforms remember to match the transition property to activate
+If the icons in the design draft are not available in Iconfont, you can upload your own.
 
-## Displacement
-How to use: `transform: translate(<horizontal movement distance> <vertical movement distance>);`
-Value: positive or negative, it can be a number + px or a percentage (the reference is the size of the box itself)
-Note: The positive direction of the x-axis is right, and the positive direction of the y-axis is down.
-e.g. `transform: translate(50px, 100px); transform: translate(-50%, -100%);`
-If you only move in one direction, you can use `translateX();` `translateY();`
+1. Request vector illustrations in SVG format from the designer.
+2. Upload the SVG icons to Iconfont:
+   - Click 上传SVG图标 (Upload SVG Icons).
+   - Browse local icons and remove colors before submission.
+3. Add the icons to the cart and download them for use.
 
-## Rotate
-How to use: `transform:rotate(<angle>);`
-Angle value: number + deg,
-Can be positive or negative, turn clockwise when taking a positive number, and turn counter-clockwise when taking a negative number
-e.g. `transform: rotate(360deg);`
+# CSS Transforms
 
-Change the transform-origin:
-The default transform-origin is the box center
-`transform-origin: <the horizontal position of the origin> <the vertical position of the origin>;`
-Value: position noun (left, right, top, bottom, center), number + px, percentage (the reference is the size of the box itself)
-Add to the tag itself before the transform, don't write it in the hover part
+CSS transforms allow you to modify the coordinate space of the CSS visual formatting model. They include various functions like translate, rotate, scale, and more.
 
-## Multiple transforms
-`transform: translate() rotate();`
-If you rotate first, the direction of the coordinate axis will be changed, and the direction of displacement will be affected, so all multi-transform rotate is written at the end
-Because of the cascading of CSS, multiple transformations cannot be split into several transforms and written separately
-Having a transform after the hover should pay attention. If you use `transform: translate(-50%, -50%);` before the hover to locate, then you need to use multiple transformations after the hover. `transform:translate(-50%,-50%) rotate(360deg);` to cancel the stacking
+## Displacement (Translate)
 
-## Zoom
-Attribute value: scale
-`transform: scale(x-axis scaling factor y-axis scaling factor);`
-Under normal circumstances, you will write `transform: scale(scaling factor);` to achieve equal scaling of the x-axis and y-axis
-A zoom factor greater than 1 means zoom in, less than 1 means zoom out
-e.g. `transform: scale(1.2); transform: scale(0.8);`
-If you only scale in one direction, you can use `scaleX(<times>);` `scaleY(<times>);` `scaleZ(<times>)`
-Scale in 3d: `transform: scale3d(x, y, z);` x, y, z are the scaling factors in the x-axis direction, the y-axis direction, and the z-axis direction respectively
+- **Syntax:**
+  ```css
+  transform: translate(x, y);
+  ```
+- **Example:**
+  ```css
+  transform: translate(50px, 100px); /* Moves right by 50px and down by 100px */
+  transform: translate(-50%, -100%); /* Moves left by 50% and up by 100% */
+  ```
+- **Single Axis:**
+  ```css
+  transform: translateX(50px); /* Moves right by 50px */
+  transform: translateY(100px); /* Moves down by 100px */
+  ```
 
-## Space Transformation (3d Transformation)
-The Z-axis direction is the same as the line-of-sight direction, and the positive value points out of the screen (to the user)
-Syntax: `transform:translate3d(x,y,z);`
-You can use `translateX(x);` `translateY(y);` `translateZ(z);` to modify a value alone
-The value can be positive or negative, it can be a pixel number + px or a percentage
+## Rotation (Rotate)
 
-## Perspective effect (the nearer the bigger, the farther the smaller
-attribute name: perspective
-Attribute value: number + px, generally between 800 - 1200
-Use: add to the parent, add to body tag if the parent is body tag
+- **Syntax:**
+  ```css
+  transform: rotate(angle);
+  ```
+- **Example:**
+  ```css
+  transform: rotate(45deg); /* Rotates 45 degrees clockwise */
+  transform: rotate(-45deg); /* Rotates 45 degrees counter-clockwise */
+  ```
+- **Changing Transform Origin:**
+  ```css
+  transform-origin: center center; /* Default origin is the center */
+  transform-origin: left top; /* Origin is the top-left corner */
+  ```
 
-## Space rotation
-Syntax: `transform: rotateZ(value);`
-The effect of rotateZ is completely equal to rotate
-Syntax: `transform: rotateX(value);`
-Rotate around the
+## Scaling (Scale)
 
- x-axis, you can adjust the viewing distance with the perspective property
-Syntax: `transform: rotateY(value);`
-Rotate around the y-axis, you can adjust the viewing distance with the perspective property
-Left-hand rule: hold the rotation axis with the left hand, the thumb points to the positive direction, and the bending direction of the fingers is the positive direction of rotation
-i.e. the positive x-axis is to the right, the positive y-axis is down, and the positive z-axis points to itself
+- **Syntax:**
+  ```css
+  transform: scale(x, y);
+  ```
+- **Example:**
+  ```css
+  transform: scale(1.5); /* Scales uniformly by 1.5 */
+  transform: scale(1.5, 2); /* Scales x-axis by 1.5 and y-axis by 2 */
+  ```
+- **Single Axis:**
+  ```css
+  transform: scaleX(1.5); /* Scales x-axis by 1.5 */
+  transform: scaleY(2); /* Scales y-axis by 2 */
+  ```
 
-## rotate3d 
-(extension, won't be used at work)
-Attribute value: `rotate3d (x, y, z, angle degrees)`: used to customize the position and rotation angle of the rotation axis
-x y z is a number between 0-1
+## 3D Transformations
 
-## Stereoscopic presentation 
-(extension, not commonly used in work), emmet shortcut key tfs
-`transform-style: preserve-3d;`
-Make child elements in true 3d space
-The default value is flat, which means rendering in 2d
-You can use translate to adjust the distance between the front and back sides
+### Space Transformation
 
-```html
-<style>
-        .cube {
-            position: relative;
-            width: 200px;
-            height: 200px;
-            margin: 100px auto;
-            transition: all 2s;
-            transform-style: preserve-3d;
-        }
-        .cube div {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 200px;
-            height: 200px;
-        }
-        .cube .front {
-            background-color: skyblue;
-            transform: translateZ(200px);
-        }
-        .cube .back {
-            background-color: green;
-        }
-        .cube:hover {
-            transform: rotateY(180deg);
-        }
-</style>
+- **Syntax:**
+  ```css
+  transform: translate3d(x, y, z);
+  ```
+- **Example:**
+  ```css
+  transform: translate3d(50px, 100px, 200px); /* Moves in 3D space */
+  ```
 
-<div class="cube">
-    <div class="front">
-    </div>
-    <div class="back">
-    </div>
-</div>
-```
+### Perspective Effect
 
-If you want to make a front and an upper cube rotated down,
-1. Make a big box, put two small squares in it, add `transform-style: preserve-3d;`
-2. In order to facilitate observation, the box can be rotated by some angles first
-3. Use positioning to overlap two squares
-4. Rotate the above square by 90 degrees with multiple transforms, shift up, shift back
-5. Add a rotation transform to the big box
+- **Syntax:**
+  ```css
+  perspective: 1000px;
+  ```
+- **Use:** Applied to the parent element to create a perspective effect for its child elements.
+
+### Space Rotation
+
+- **Syntax:**
+  ```css
+  transform: rotateX(angle); /* Rotates around the x-axis */
+  transform: rotateY(angle); /* Rotates around the y-axis */
+  transform: rotateZ(angle); /* Rotates around the z-axis (same as rotate) */
+  ```
+
+### rotate3d
+
+- **Syntax:**
+  ```css
+  transform: rotate3d(x, y, z, angle);
+  ```
+- **Example:**
+  ```css
+  transform: rotate3d(1, 1, 0, 45deg); /* Custom rotation axis */
+  ```
+
+## Stereoscopic Presentation (3D)
+
+- **Syntax:**
+  ```css
+  transform-style: preserve-3d;
+  ```
+- **Example:**
+  ```html
+  <style>
+      .cube {
+          position: relative;
+          width: 200px;
+          height: 200px;
+          margin: 100px auto;
+          transform-style: preserve-3d;
+          transition: transform 2s;
+      }
+      .cube div {
+          position: absolute;
+          width: 200px;
+          height: 200px;
+      }
+      .cube .front {
+          background-color: skyblue;
+          transform: translateZ(100px);
+      }
+      .cube .back {
+          background-color: green;
+          transform: rotateY(180deg) translateZ(100px);
+      }
+      .cube:hover {
+          transform: rotateY(180deg);
+      }
+  </style>
+
+  <div class="cube">
+      <div class="front"></div>
+      <div class="back"></div>
+  </div>
+  ```
+
+### Steps to Create a 3D Cube
+
+1. Create a container and set `transform-style: preserve-3d;`.
+2. Position child elements to form the faces of the cube.
+3. Apply 3D transforms to position and rotate the faces as needed.
+4. Use CSS transitions for smooth animations.
 
 # Animation
 
-When to use animation and when to transition:
-Transition: only start and end points
-Animation: There are other actions besides the starting point and the end point, realizing the change process between multiple actions, and the animation process is controllable
+## When to Use Animation vs. Transition
 
-Define animation:
+### Transition
+- **Use Case:** For simple changes with only start and end points.
+- **Example:** Changing the background color of a button on hover.
+- **Syntax:**
+  ```css
+  .button {
+      transition: background-color 0.3s ease;
+  }
+
+  .button:hover {
+      background-color: blue;
+  }
+  ```
+
+### Animation
+- **Use Case:** For more complex sequences involving multiple steps, intermediate states, and controllable animations.
+- **Example:** Creating a loading spinner or a slideshow.
+- **Syntax:**
+  ```css
+  @keyframes animationName {
+      0% { /* initial state */ }
+      50% { /* intermediate state */ }
+      100% { /* final state */ }
+  }
+
+  .element {
+      animation: animationName 2s infinite;
+  }
+  ```
+
+## Defining Animation
+
+### Keyframes
+- **Syntax:**
+  ```css
+  @keyframes animationName {
+      0% { /* from */ }
+      100% { /* to */ }
+      /* intermediate steps */
+  }
+  ```
+- **Example:**
+  ```css
+  @keyframes changeWidth {
+      0% {
+          width: 200px;
+      }
+      30% {
+          width: 300px;
+      }
+      100% {
+          width: 800px;
+      }
+  }
+
+  .box {
+      width: 200px;
+      height: 100px;
+      background-color: pink;
+      animation: changeWidth 1s;
+  }
+  ```
+
+## Using Animation
+
+### Animation Property Syntax
+- **Comprehensive Syntax:**
+  ```css
+  animation: name duration timing-function delay iteration-count direction fill-mode play-state;
+  ```
+- **Order:** The properties can be swapped, and some can be ignored.
+
+### Animation Timing Function
+- **Values:**
+  - `linear`: Uniform speed.
+  - `ease`, `ease-in`, `ease-out`, `ease-in-out`: Various easing functions for smooth transitions.
+  - `steps(number)`: Divides the animation into a set number of steps (useful for sprite animations).
+
+### Animation Duration and Delay
+- **Two Time-Values:**
+  - First value: Duration of the animation.
+  - Second value: Delay before the animation starts.
+
+### Animation Iteration Count
+- **Values:**
+  - `number`: Specific number of repetitions.
+  - `infinite`: Loops indefinitely.
+
+### Animation Direction
+- **Values:**
+  - `normal`: Default, animation runs forward.
+  - `reverse`: Runs animation backward.
+  - `alternate`: Alternates between running forward and backward.
+  - `alternate-reverse`: Alternates, starting backward.
+
+### Animation Fill Mode
+- **Values:**
+  - `none`: Default, animation does not apply styles after finishing.
+  - `forwards`: Retains the end state after completion.
+  - `backwards`: Applies the starting state before the animation starts.
+  - `both`: Applies both `forwards` and `backwards`.
+
+### Animation Play State
+- **Values:**
+  - `running`: Default, the animation is playing.
+  - `paused`: The animation is paused.
+
+### Combining Multiple Animations
+- **Syntax:**
+  ```css
+  animation: animation1, animation2, animation3;
+  ```
+
+## Comprehensive Example
+
+### Continuous Scrolling Images
+
+A box holding images that scroll from right to left seamlessly.
+
+#### HTML Structure
+```html
+<div class="carousel">
+    <ul class="carousel-list">
+        <li><img src="image1.jpg" alt="Image 1"></li>
+        <li><img src="image2.jpg" alt="Image 2"></li>
+        <li><img src="image3.jpg" alt="Image 3"></li>
+        <!-- Repeat images for seamless effect -->
+        <li><img src="image1.jpg" alt="Image 1"></li>
+        <li><img src="image2.jpg" alt="Image 2"></li>
+        <li><img src="image3.jpg" alt="Image 3"></li>
+    </ul>
+</div>
+```
+
+#### CSS Styling
 ```css
-@keyframes animation name {
-    0% {} from {}
-    10% {} to {}
-    100% {}
+.carousel {
+    width: 100%;
+    overflow: hidden;
 }
-```
 
-Use animation: 
-```css
-animation: animation name animation duration;
-```
-Example:
-```css
-@keyframes change {
+.carousel-list {
+    display: flex;
+    width: calc(100% * 6); /* Adjust based on number of images */
+    animation: scroll 10s linear infinite;
+}
+
+.carousel-list li {
+    width: calc(100% / 6); /* Adjust based on number of images */
+    list-style: none;
+}
+
+@keyframes scroll {
     0% {
-        width: 200px;
-    }
-    30% {
-        width: 300px;
+        transform: translateX(0);
     }
     100% {
-        width: 800px;
+        transform: translateX(-100%);
     }
 }
+```
 
-.box {
-    width: 200px;
-    height: 100px;
-    background-color: pink;
-    animation: change 1s;
+### Explanation
+1. **Container with Overflow Hidden:** 
+   ```css
+   .carousel {
+       width: 100%;
+       overflow: hidden;
+   }
+   ```
+   - Ensures that only the visible part of the images is shown.
+
+2. **Flexbox for Image List:**
+   ```css
+   .carousel-list {
+       display: flex;
+       width: calc(100% * 6);
+       animation: scroll 10s linear infinite;
+   }
+   ```
+   - Flexbox arranges images in a row.
+   - Width set to accommodate all images.
+
+3. **Keyframes for Scrolling:**
+   ```css
+   @keyframes scroll {
+       0% {
+           transform: translateX(0);
+       }
+       100% {
+           transform: translateX(-100%);
+       }
+   }
+   ```
+   - Animates the list from its original position to the left, creating a scrolling effect.
+
+
+# Flex Layout
+
+Flexbox, or the Flexible Box Layout Module, is designed to help developers create complex and responsive web layouts more efficiently. It allows for the alignment and distribution of space among items in a container, even when their size is unknown and/or dynamic. Flexbox is particularly well-suited for one-dimensional layouts.
+
+## Flex Model Composition
+
+![Flex Model Composition](flex.png)
+
+### Flex Container and Flex Items
+
+- **Flex Container:** The parent element with `display: flex;`.
+- **Flex Items:** The child elements inside the flex container.
+
+### Axes
+
+- **Main Axis:** The primary axis along which flex items are laid out. It is horizontal by default.
+- **Cross Axis:** The perpendicular axis to the main axis. It is vertical by default.
+
+### Basic Usage
+
+To create a flex container, apply `display: flex;` to the parent element. The children will automatically become flex items.
+
+```html
+<div class="flex-container">
+    <div class="flex-item">Item 1</div>
+    <div class="flex-item">Item 2</div>
+    <div class="flex-item">Item 3</div>
+</div>
+```
+
+```css
+.flex-container {
+    display: flex;
+}
+.flex-item {
+    /* Flex item properties */
 }
 ```
 
-## More animation properties
-
-`animation` property syntax:
-```css
-animation: animation-name animation-duration animation-timing-function animation-delay animation-iteration-count animation-direction animation-fill-mode animation-play-state;
-```
-The order between attributes can be swapped, and some properties can be ignored.
-
-The value of `animation-timing-function` (not commonly used):
-- `linear` (uniform speed)
-- `steps (<number>)`, indicating that the animation is divided into several steps (frames), commonly used in clocks and watches
-
-If there are 2 time-values, the first is the animation duration and the second is the delay duration.
-
-The value of `animation-iteration-count`:
-- `number` (how many times to repeat)
-- `infinite` (infinite loop)
-
-If you want the animation to return to the original in reverse, set the `animation-direction` to `alternate`.
-
-If you want to set `animation-fill-mode`, remove the number of `animation-iteration-count` and `animation-direction`.
-
-The value of `animation-fill-mode`:
-- `backwards` (default value)
-- `forwards` (the animation stays at the beginning)
-
-The value of `animation-play-state`: `paused`, usually matched with `hover`, when the mouse leaves, pause the playback.
-
-Single property modification is also available.
-
-Add multiple animations separated by commas:
-```css
-animation: animation 1, animation 2, animation 3;
-```
-
-## An example
-
-A box can hold three pictures at the same time, and then the pictures scroll from right to left all the time.
-
-1. Create a box and set `overflow: hidden`.
-2. Create `ul` and `li` and put a picture each, set `left` floating.
-3. Put the first three sheets to the end so they won't be blank when scrolling to the far right.
-4. Then when scrolling to the last three pictures, the animation is replayed, seamless.
-5. The animation is added to the `ul`, and the parent moves the child will follow.
-
-# Flex layout
-
-Flexibly and rapidly develop web pages, avoid the problem of off-label caused by box floating, suitable for structured layouts.
-
-## Flex model composition:
-![Flex model composition](flex.png)
-
-
-Setting method: add `display:flex;` to the parent element, and the child element can be automatically squeezed and stretched
-
-Components: flex container, flex box, main axis, side axis/cross axis
-
-Flex container: parent element
-
-Flex box: child elements inside the parent element with `display: flex` added
-
-The default main axis is horizontal, default cross axis is vertical
-
-Visual effects by default: children are arranged in a row/horizontal
-
-Reason: The default main axis is horizontal, and the elastic boxes are arranged along the main axis
-
-## justify-content
-
-In the flex model, you can set the spacing between boxes by adjusting the alignment of the main axis or side axis
-
-`justify-content` property - adjusts the alignment of the element on the main axis
-
-Value            function
-
-`flex-start`     The default value, the starting point is arranged in sequence without blank space
-
-`flex-end`       Arranges sequentially from the end without blank space
-
-`center`         Centered along the main axis
-
-`space-around`   The elastic box is evenly arranged along the main axis, and the blank space is evenly divided on both sides of the elastic box
-
-`space-between`  Flex boxes are evenly arranged along the main axis, and the white space is evenly divided between adjacent boxes
-
-`space-evenly`   The elastic boxes are evenly arranged along the main axis, and the distance between the elastic box and the container is equal
-
-Visual effects
-
-`center`         Center, no white space
-
-`space-around`   There is white space at the far left and right, and the space between boxes is twice the space between the left and right
-
-`space-between`  No space left and right, equal space between boxes
-
-`space-evenly`   Has blank space at the far left and right, equal to the space between boxes
-
-## align-items and align-self
-
-`align-items` - adjusts the alignment of elements on the side axis (added to the parent element)
-
-`align-self` - controls the alignment of a flexbox on the side axis (added to flexbox)
-
-Value (shared by both properties)  Function
-
-`flex-start`               The default, the starting points are arranged in order
-
-`flex-end`                 Be arranged in sequence starting from the end
-
-`center`                   Is centered along the side axis
-
-`stretch`                  The default value, the elastic box is stretched along the main axis to cover the container, and the height property of the child needs to be removed
-
-## flex - modify the stretch ratio
-
-Value: integer
-
-Note: Only occupy the remaining size of the parent box
-
-The definition of the remaining size: the container minus the space occupied by all boxes without flex properties, including the margin and the box itself
-
-The number here represents the number of copies. For example, if there are only two boxes in this container with `flex:1;` it means that the remaining size is divided into two parts, and each of the two boxes occupies one part. Similarly, if only one box uses `flex: 1;` it means that the remaining size is divided into one share, and this box occupies one share, that is, 100% of the remaining size.
-
-## flex-direction - change the orientation of elements
-
-How to use: Add to the label with `display: flex;` attribute (flexible container)
-
-The main axis is horizontal by default, and the side axis is vertical by default.
-
-Value            function
-
-`row`            Horizontal (default)
-
-`column`         Vertical
-
-`row-reverse`    Horizontal, right to left
-
-`column-reverse` Vertical, bottom to top
-
-After changing `flex-direction` to `column`, the main axis is from top to bottom. At this time, if you want to center vertically, use `justify-content:center;` if you want to center horizontally, use `align-items: center;`
-
-## flex-wrap - achieve multi-line arrangement effect of flex box
-
-If you don't use this property, the default value is `nowrap`, even if the box is set to the `width` property, it will be scaled and arranged in a row
-
-Use: `flex-wrap: wrap;`
-
-## align-content - adjust line alignment mode
-
-Only used in case of `flex-wrap:wrap;`
-
-The value is basically the same as `justify-content`
-
-## Automatic ellipsis:
+## Properties of Flex Container
+
+### `justify-content`
+
+Aligns flex items along the main axis.
+
+- **Values:**
+  - `flex-start`: Default. Items are packed toward the start of the main axis.
+  - `flex-end`: Items are packed toward the end of the main axis.
+  - `center`: Items are centered along the main axis.
+  - `space-between`: Items are evenly distributed; the first item is at the start, the last item is at the end.
+  - `space-around`: Items are evenly distributed with equal space around them.
+  - `space-evenly`: Items are distributed so that the spacing between any two items (and the space to the edges) is equal.
 
 ```css
-text-overflow: ellipsis;
-white-space: nowrap;
-overflow: hidden;
+.flex-container {
+    justify-content: center;
+}
 ```
 
-## Flexbox auto ellipsis:
+### `align-items`
 
-Add the above three to the flex box
+Aligns flex items along the cross axis.
 
-Add `flex: 1; width: 0;` in parent
+- **Values:**
+  - `flex-start`: Items are aligned to the start of the cross axis.
+  - `flex-end`: Items are aligned to the end of the cross axis.
+  - `center`: Items are centered along the cross axis.
+  - `stretch`: Default. Items are stretched to fill the container.
+  - `baseline`: Items are aligned such that their baselines align.
 
-The purpose of width is to display the ellipsis when overflowing instead of letting the content stretch the box
+```css
+.flex-container {
+    align-items: center;
+}
+```
 
-The two lines end with an ellipsis, just copy and paste without memorizing
+### `flex-direction`
+
+Defines the direction of the main axis.
+
+- **Values:**
+  - `row`: Default. Main axis is horizontal.
+  - `row-reverse`: Main axis is horizontal, but reversed.
+  - `column`: Main axis is vertical.
+  - `column-reverse`: Main axis is vertical, but reversed.
+
+```css
+.flex-container {
+    flex-direction: column;
+}
+```
+
+### `flex-wrap`
+
+Allows flex items to wrap onto multiple lines.
+
+- **Values:**
+  - `nowrap`: Default. All flex items are on one line.
+  - `wrap`: Flex items will wrap onto multiple lines.
+  - `wrap-reverse`: Flex items will wrap onto multiple lines from bottom to top.
+
+```css
+.flex-container {
+    flex-wrap: wrap;
+}
+```
+
+### `align-content`
+
+Aligns lines of flex items along the cross axis when there is extra space.
+
+- **Values:**
+  - `flex-start`: Lines are packed toward the start of the cross axis.
+  - `flex-end`: Lines are packed toward the end of the cross axis.
+  - `center`: Lines are centered along the cross axis.
+  - `space-between`: Lines are evenly distributed; the first line is at the start, the last line is at the end.
+  - `space-around`: Lines are evenly distributed with equal space around them.
+  - `stretch`: Default. Lines stretch to take up the remaining space.
+
+```css
+.flex-container {
+    align-content: space-between;
+}
+```
+
+## Properties of Flex Items
+
+### `order`
+
+Controls the order of flex items. By default, all items have an order value of 0. Items with a lower order value will appear first.
+
+```css
+.flex-item {
+    order: 1;
+}
+```
+
+### `flex-grow`
+
+Defines the ability for a flex item to grow if necessary. It accepts a unitless value that serves as a proportion. It dictates what amount of the available space inside the flex container the item should take up.
+
+```css
+.flex-item {
+    flex-grow: 2; /* This item will take up twice as much space as an item with flex-grow: 1 */
+}
+```
+
+### `flex-shrink`
+
+Defines the ability for a flex item to shrink if necessary. It accepts a unitless value that serves as a proportion. If omitted, it is set to 1.
+
+```css
+.flex-item {
+    flex-shrink: 1; /* Default value */
+}
+```
+
+### `flex-basis`
+
+Defines the default size of an element before the remaining space is distributed. It can be a length (e.g., 20%, 5rem) or a keyword (e.g., auto).
+
+```css
+.flex-item {
+    flex-basis: 200px;
+}
+```
+
+### `align-self`
+
+Allows the default alignment (or the one specified by `align-items`) to be overridden for individual flex items.
+
+- **Values:**
+  - `auto`: Default. Inherits the value of `align-items` from the parent flex container.
+  - `flex-start`: Aligns the item to the start of the cross axis.
+  - `flex-end`: Aligns the item to the end of the cross axis.
+  - `center`: Centers the item along the cross axis.
+  - `baseline`: Aligns the item such that its baseline aligns with that of other items.
+  - `stretch`: Stretches the item to fill the container.
+
+```css
+.flex-item {
+    align-self: flex-end;
+}
+```
+
+## Examples
+
+### Basic Flexbox Layout
+
+```html
+<div class="flex-container">
+    <div class="flex-item">Item 1</div>
+    <div class="flex-item">Item 2</div>
+    <div class="flex-item">Item 3</div>
+</div>
+```
+
+```css
+.flex-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 100vh;
+}
+.flex-item {
+    background-color: lightcoral;
+    padding: 20px;
+    margin: 10px;
+    color: white;
+    font-size: 1.5rem;
+}
+```
+
+### Flexible Item Sizes
+
+```html
+<div class="flex-container">
+    <div class="flex-item">Item 1</div>
+    <div class="flex-item">Item 2</div>
+    <div class="flex-item">Item 3</div>
+</div>
+```
+
+```css
+.flex-container {
+    display: flex;
+}
+.flex-item {
+    flex: 1;
+    margin: 10px;
+    background-color: lightblue;
+    padding: 20px;
+}
+```
+
+### Responsive Navbar with Flexbox
+
+```html
+<nav class="navbar">
+    <div class="nav-item">Home</div>
+    <div class="nav-item">About</div>
+    <div class="nav-item">Services</div>
+    <div class="nav-item">Contact</div>
+</nav>
+```
+
+```css
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    background-color: #333;
+    padding: 10px;
+}
+.nav-item {
+    color: white;
+    padding: 10px;
+    text-decoration: none;
+}
+.nav-item:hover {
+    background-color: #575757;
+}
+```
+
+### Automatic Ellipsis with Flexbox
+
+```html
+<div class="flex-container">
+    <div class="flex-item ellipsis">This is a long text that will be truncated with an ellipsis when it overflows the container.</div>
+</div>
+```
+
+```css
+.flex-container {
+    display: flex;
+    width: 200px;
+}
+.flex-item {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+```
+
+### Multi-line Text Ellipsis
+
+```html
+<div class="ellipsis2">
+    This is a long text that will be truncated with an ellipsis after two lines when it overflows the container. It is an example of how to handle multi-line text overflow in a flexbox layout.
+</div>
+```
 
 ```css
 .ellipsis2 {
@@ -1189,23 +1921,29 @@ The two lines end with an ellipsis, just copy and paste without memorizing
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    white-space: normal;
 }
 ```
 
-# Responsive website
+# Responsive Website Development
 
-## Media queries
-Media queries allow us to write differentiated CSS styles by detecting the width of the viewport. The syntax is similar to an if statement, and the CSS within the media query is executed when the media feature condition is satisfied.
+## Media Queries
+
+Media queries allow us to apply different CSS styles based on the characteristics of the user's device, such as its screen width, height, orientation, and resolution. This enables us to create responsive designs that adapt to different screen sizes and devices.
+
+### Syntax
+
+The basic syntax for a media query is as follows:
 
 ```css
-@media (media property) {
-    Selector {
-        css property
+@media (media-feature) {
+    selector {
+        property: value;
     }
 }
 ```
 
-For example:
+### Example
 
 ```css
 @media (width: 320px) {
@@ -1215,30 +1953,71 @@ For example:
 }
 ```
 
-In the above example, when the viewport width is 320px, the font size of the `html` element is set to 32px.
+In this example, when the viewport width is exactly 320px, the font size of the `html` element is set to 32px.
 
-Generally, the font size of the `html` element is set to one-tenth of the viewport width, which can be a decimal. For example, if the viewport width is 375px, then the font size is set to 37.5px.
+### Common Media Features
 
-We can also use `max-width` and `min-width` to judge in media queries:
+1. **Width and Height:**
+   ```css
+   @media (max-width: 768px) {
+       body {
+           background-color: pink;
+       }
+   }
+
+   @media (min-width: 1200px) {
+       body {
+           background-color: skyblue;
+       }
+   }
+   ```
+   - `max-width`: Applied when the viewport width is less than or equal to the specified value.
+   - `min-width`: Applied when the viewport width is greater than or equal to the specified value.
+
+2. **Orientation:**
+   ```css
+   @media (orientation: portrait) {
+       body {
+           font-size: 18px;
+       }
+   }
+
+   @media (orientation: landscape) {
+       body {
+           font-size: 16px;
+       }
+   }
+   ```
+   - `orientation`: Determines whether the device is in portrait or landscape mode.
+
+3. **Resolution:**
+   ```css
+   @media (min-resolution: 2dppx) {
+       img {
+           width: 100px;
+           height: 100px;
+       }
+   }
+   ```
+   - `min-resolution`: Applied for devices with a minimum resolution.
+
+### Responsive Font Size
+
+Setting the font size relative to the viewport width:
 
 ```css
-@media (max-width: 768px) {
-    body {
-        background-color: pink;
-    }
-}
-
-@media (min-width: 1200px) {
-    body {
-        background-color: skyblue;
+@media (min-width: 375px) {
+    html {
+        font-size: 37.5px;
     }
 }
 ```
 
-The `body` element will have a pink background color when the viewport width is less than or equal to 768px. When the viewport width is greater than or equal to 1200px, the `body` element will have a sky blue background color.
+This approach ensures that the font size scales proportionally with the viewport width.
 
-## A simple example of a responsive website
-In this example, different background colors are applied based on the width of the viewport using CSS cascading implementation.
+## Example of a Responsive Website
+
+Using media queries to apply different background colors based on the viewport width:
 
 ```css
 @media (min-width: 768px) {
@@ -1260,108 +2039,214 @@ In this example, different background colors are applied based on the width of t
 }
 ```
 
-When the viewport width is less than 768px, the `body` element will have a white background color. For widths between 768px and 991px, the background color will be pink. For widths between 992px and 1199px, the background color will be green. Finally, for widths greater than or equal to 1200px, the background color will be sky blue.
+### Explanation
 
-## Full media query
-A full media query consists of the `@media` keyword, media type, and media property.
+- **Below 768px:** The `body` element has a default background color (e.g., white).
+- **768px to 991px:** The `body` element has a pink background color.
+- **992px to 1199px:** The `body` element has a green background color.
+- **1200px and above:** The `body` element has a sky blue background color.
+
+## Full Media Query Structure
+
+A full media query consists of the `@media` keyword, media type, and media feature:
 
 ```css
-@media media type and (media property) {
-    css code
+@media media-type and (media-feature) {
+    css-code
 }
 ```
 
-Commonly used media types are `screen`, `print`, `speech`, and `all`, with `screen` being the most commonly used.
+### Media Types
 
-Media properties include `width`, `height`, `max-height`, `min-height`, `max-width`, `min-width`, and `orientation`. The `orientation` property determines the screen orientation, with values being `portrait` or `landscape`.
+- `screen`: Used for computer screens, tablets, smartphones, etc.
+- `print`: Used for printers.
+- `speech`: Used for screen readers.
+- `all`: Suitable for all devices.
 
-## Link different CSS according to the width of the screen
-To link different CSS files based on the width of the screen, we can use the `link` element with the `media` attribute.
+### Media Features
+
+- `width`, `height`, `max-width`, `min-width`, `max-height`, `min-height`
+- `orientation` (portrait or landscape)
+- `resolution`, `aspect-ratio`, `color`, `color-index`, `monochrome`
+
+## Linking Different CSS Files Based on Screen Width
+
+You can link different CSS files for different screen widths using the `media` attribute in the `link` element:
 
 ```html
-<link rel="stylesheet" href="path.css" media="(min-width: 768px)">
-<link rel="stylesheet" href="path.css" media="(min-width: 992px)">
-<link rel="stylesheet" href="path.css" media="(min-width: 1200px)">
+<link rel="stylesheet" href="styles-768.css" media="(min-width: 768px)">
+<link rel="stylesheet" href="styles-992.css" media="(min-width: 992px)">
+<link rel="stylesheet" href="styles-1200.css" media="(min-width: 1200px)">
 ```
 
-In the above example, the CSS file specified by `path.css` will be applied when the screen width is greater than or equal to the specified values.
+### Explanation
 
-It's important to note that the media features should be written directly within parentheses, and the double quotes cannot be deleted.
+- `styles-768.css` is applied when the viewport width is 768px or wider.
+- `styles-992.css` is applied when the viewport width is 992px or wider.
+- `styles-1200.css` is applied when the viewport width is 1200px or wider.
+
+### Notes
+
+- Media features should be written directly within parentheses.
+- Double quotes around media features in the `link` element should not be omitted.
+
+## Best Practices
+
+1. **Mobile-First Approach:**
+   - Write base styles for small screens first, and use media queries to add styles for larger screens.
+   - Example:
+     ```css
+     body {
+         font-size: 16px;
+     }
+
+     @media (min-width: 768px) {
+         body {
+             font-size: 18px;
+         }
+     }
+
+     @media (min-width: 1200px) {
+         body {
+             font-size: 20px;
+         }
+     }
+     ```
+
+2. **Use Relative Units:**
+   - Use relative units like `em`, `rem`, `%`, and `vh`/`vw` for more flexible and scalable designs.
+   - Example:
+     ```css
+     .container {
+         width: 80%;
+         padding: 2rem;
+     }
+     ```
+
+3. **Test Across Devices:**
+   - Test your website on different devices and screen sizes to ensure it looks good and functions well on all of them.
+
+4. **Performance Optimization:**
+   - Minimize CSS file size and avoid using too many media queries.
+   - Use CSS preprocessors like SASS or LESS to manage complex responsive designs more effectively.
 
 
-# rem - old but widely used relative unit
+# CSS Units and Responsive Design
 
-## rem: most current enterprise solutions
+## REM - Relative Unit
 
-- The rem unit is the calculation result of the font size relative to the html tag
-- 1rem = 1html label font size
-- Adjust the html font size: `html {font-size:20px;}`
-- Usage example: `width:5rem; height:5rem;`
-- 5rem is half the width of the phone screen
-- Divide the size in the design draft by the html font size to calculate the size in rem units, more operations see LESS syntax module
+### Definition and Usage
+- **REM (Root EM):** A scalable unit in CSS used for responsive design.
+  - 1rem = Computed value of `font-size` of the root element (`<html>`).
+  - Allows for scalable and consistent sizing across elements.
 
-# flexible
+### Setting the Root Font Size
+- Example:
+  ```css
+  html {
+      font-size: 20px;
+  }
+  ```
+  - All rem units will be relative to this root size. For instance, `2rem` would be equal to 40px.
 
-- With flexible.js, the size of web page elements is proportional to the scaling effect in devices of different widths.
-- flexible.js is a js framework developed by mobile phone Taobao to adapt to the mobile terminal
-- The core principle is to analyze the viewport width and then set the font-size of html
-- Where to find flexible.js: [https://github.com/amfe/lib-flexible](https://github.com/amfe/lib-flexible) copy and paste index.html into flexible.js
-- Flexible introduction and usage: first download flexible.js to the local, and then write at the bottom of the body tag
-  `<script src="path to flexible.js"></script>`
+### Usage in CSS
+- Example:
+  ```css
+  .box {
+      width: 5rem;  /* Equivalent to 100px if root font-size is 20px */
+      height: 5rem; /* Equivalent to 100px if root font-size is 20px */
+  }
+  ```
 
-# vw/vh - better and more future relative unit
+### Advantages
+- **Scalability:** Changing the root font size scales all rem-based elements proportionally.
+- **Consistency:** Ensures a consistent design across different devices and resolutions.
 
-- vw:viewpoint width
-- vh:viewpoint height
-- Relative units, calculated relative to the viewport size
-- 1vw = 1/100 viewport width
-- 1vh = 1/100 viewport height
-- Usage example
-  - `width:50vw;`
-  - `height:30vw;`
-  - `width:50vh;`
-  - `height:30vh;`
-- Advantages compared to rem: no need to introduce flexible.js and media queries
-- Vw, vh can be used, but not mixed! ! Can not set the width unit vw height vh! vw is recommended
+## VW/VH - Viewport Units
 
-# px to vw in the design drawing
+### Definition and Usage
+- **Viewport Width (vw) and Viewport Height (vh):**
+  - `1vw` = 1% of the viewport width.
+  - `1vh` = 1% of the viewport height.
+  
+### Usage in CSS
+- Example:
+  ```css
+  .box {
+      width: 50vw;  /* 50% of the viewport width */
+      height: 30vh; /* 30% of the viewport height */
+  }
+  ```
 
-- Determine the vw size in the design draft (1/100 viewport width) to view the design draft width —> determine the reference device viewport width —> determine the vw size (1/100 viewport width)
-- Size in Vw units = value in px units / (1/100 viewport width)
-- Transferring from px unit see less module for more information
+### Advantages
+- **Direct Responsiveness:** Automatically adjusts to the size of the viewport without additional media queries.
+- **Flexibility:** Ideal for full-screen layouts and elements that need to scale directly with the viewport.
 
-# Bootstrap
-- Official website: [bootcss.com](https://v3.bootcss.com/css/)
-- Remember to download version 3.4.1, the most stable
-- When calling `<link rel="stylesheet" href="./bootstrap-3.4.1-dist/css/bootstrap.min.css">`
+## PX to VW Conversion in Design
 
-## Grid System
-![grid.png](grid.png)
-- The webpage is divided into 12 equal parts. If the width of the box is 100%, it will occupy 12 parts.
-- If the width of the box is 25%, it will account for 3 shares.
-- Code: `class-prefix` + how many spaces it occupies.
-  - For example, `.col-lg-3` means that it occupies three grids in a large window, and four rows can be arranged in a row.
+### Conversion Process
+1. **Determine VW Size:**
+   - If the design width is 1000px, 1vw would be 10px.
+2. **Calculate VW Value:**
+   - Formula: `(Value in px) / (Viewport width / 100)`
+   - Example: For a 200px element in a 1000px viewport:
+     ```css
+     .element {
+         width: 20vw;  /* 200px / (1000px / 100) = 20vw */
+     }
+     ```
 
-## Container
-- The `.container` class is the class name provided by Bootstrap.
-  - All boxes with this class name have a default width and center, with left and right padding of 15px.
-- The `.container-fluid` class is also a class name provided by Bootstrap.
-  - The default width of all boxes with this class name is 100%, with left and right padding of 15px.
-- Use the `.row` and `.column` class names to define the rows and columns of the grid layout, respectively.
-  - The `.row` class comes with left and right padding of -15px (negative number).
-  - So, if you want the content to fill the `.container`, put a `.row` in the `.container` to offset the spacing.
+## Bootstrap
 
-## Other Effects
-- [Bootcss.com/css](https://v3.bootcss.com/css/)
-  - If you have nothing to do, just take a look. There is a navigation on the right side of the website to quickly find relevant content.
+### Overview
+- **Official Website:** [Bootstrap v3.4.1 Documentation](https://v3.bootcss.com/css/)
+- **Version:** 3.4.1 (most stable for legacy projects)
 
-## Components
-- There are a lot of beautiful components. Just copy and paste and adjust them yourself.
+### Grid System
+- **Concept:**
+  - The layout is based on a 12-column grid system.
+  - Classes define the number of columns an element spans.
 
-## Bootstrap Font Icon
-- Bootstrap also has its own font icon, similar to Iconfont.
+### Example
+```html
+<div class="container">
+    <div class="row">
+        <div class="col-lg-3">Column 1</div>
+        <div class="col-lg-3">Column 2</div>
+        <div class="col-lg-3">Column 3</div>
+        <div class="col-lg-3">Column 4</div>
+    </div>
+</div>
+```
+- **Classes:**
+  - `.container` and `.container-fluid`: Define the fixed or fluid container.
+  - `.row`: Defines a row in the grid.
+  - `.col-lg-*`: Defines column span based on screen size (e.g., `.col-lg-3` spans 3 out of 12 columns).
 
-# Introducing JavaScript
-- Two files need to be imported.
-  - `jQuery.js` must be imported first, and then `bootstrap.min.js`.
+### Responsive Design
+- **Containers:**
+  - `.container`: Fixed width with responsive behavior.
+  - `.container-fluid`: Full-width container spanning the entire viewport.
+  
+### Components and Utilities
+- **Components:**
+  - Pre-styled UI elements (buttons, modals, navigation bars, etc.).
+  - Example:
+    ```html
+    <button class="btn btn-primary">Primary Button</button>
+    ```
+- **Utilities:**
+  - Helper classes for margin, padding, text alignment, etc.
+  - Example:
+    ```html
+    <div class="text-center">Centered Text</div>
+    ```
 
+## Introducing JavaScript in Bootstrap
+- **Dependencies:**
+  - jQuery must be included before Bootstrap's JavaScript.
+  - Example:
+    ```html
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="path/to/bootstrap.min.js"></script>
+    ```
