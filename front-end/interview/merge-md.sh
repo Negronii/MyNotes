@@ -7,6 +7,9 @@ temp="temp.md"
 # Delete the output file if it exists
 rm -f "$output"
 
+# Initialize a variable to track the current main topic
+current_main_topic=""
+
 # Use find to get the list of markdown files, excluding the ones we don't want,
 # and then sort them. We use 'sort -V' for natural sorting, which handles the numerical sorting nicely.
 find . -maxdepth 1 -name '*.md' ! -name "$output" ! -name "$temp" -print0 | sort -zV | while IFS= read -r -d '' file; do
@@ -16,14 +19,16 @@ find . -maxdepth 1 -name '*.md' ! -name "$output" ! -name "$temp" -print0 | sort
     if [[ $filename =~ ^[0-9]+(\.[0-9]+)?\ .*$ ]]; then
         # Main topic
         if [[ $filename =~ ^[0-9]+\ .*$ ]]; then
-            echo -e "\n# $filename\n" >> "$output"
+            current_main_topic="$filename"
+            echo -e "\n# $current_main_topic\n" >> "$output"
         # Subtopic
         elif [[ $filename =~ ^[0-9]+\.[0-9]+\ .*$ ]]; then
             echo -e "\n## $filename\n" >> "$output"
         fi
     else
         # If the filename doesn't match the pattern, treat it as a main topic
-        echo -e "\n# $filename\n" >> "$output"
+        current_main_topic="$filename"
+        echo -e "\n# $current_main_topic\n" >> "$output"
     fi
 
     # Read the file line by line
