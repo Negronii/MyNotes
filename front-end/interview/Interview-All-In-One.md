@@ -1151,2255 +1151,6 @@ In this example:
 - `analytics.js` is loaded asynchronously because it does not depend on the DOM.
 - `main.js` is deferred to ensure it runs after the document is fully parsed and in the order it appears.
 
-# 10. Design Patterns
-
-### Design Principles
-The most important principle in design patterns is the **Open/Closed Principle**, which states that a system should be open for extension but closed for modification. This means you should be able to add new functionality without changing the existing code.
-
-### Factory Pattern
-The Factory pattern involves using a factory function to create instances, effectively hiding the `new` keyword to encapsulate the creation process. This pattern is useful for scenarios where the creation process is complex or when there needs to be some control over how instances are created. Examples include the jQuery `$` function and React's `createElement` function.
-
-**Example**:
-```typescript
-class Foo {}
-
-function factory() {
-    return new Foo();
-}
-
-const f = factory();
-```
-
-### Singleton Pattern
-The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is particularly useful for cases where a single instance of a class should be used across the system, such as the store in Vuex and Redux or a globally unique dialog/modal. JavaScript makes implementing singletons straightforward because there's no need to worry about multithreading issues that might arise in languages like Java, where thread locking mechanisms might be necessary to prevent multiple instances from being created.
-
-**Example**:
-```typescript
-class Singleton {
-    private static instance: Singleton;
-    private constructor() {}
-    static getInstance() {
-        if (!Singleton.instance) {
-            Singleton.instance = new Singleton();
-        }
-        return Singleton.instance;
-    }
-    fn1() {}
-    fn2() {}
-}
-
-const s = Singleton.getInstance();
-s.fn1();
-```
-
-### Strategy Model
-
-**Strategy Model** is a behavioral design pattern that allows the definition of a family of algorithms, the encapsulation of each algorithm, and making their instances interchangeable within that family. This pattern is particularly useful when you need to dynamically alter the behavior of an object and want to avoid conditional statements.
-
-Consider a scenario in a software application for a logistics company that calculates shipping costs. Different shipping options (e.g., air, ground, freight) have different cost calculation algorithms. The Strategy pattern allows you to switch between different shipping strategies dynamically depending on the user's choice or other specific conditions.
-
-```javascript
-// Basic implementation of the Strategy pattern
-class Shipping {
-  constructor() {
-    this.company = null;
-  }
-
-  setStrategy(company) {
-    this.company = company;
-  }
-
-  calculate(package) {
-    return this.company.calculate(package);
-  }
-}
-
-class UPS {
-  calculate(pkg) {
-    return `$${pkg.weight * 1.56}`;
-  }
-}
-
-class USPS {
-  calculate(pkg) {
-    return `$${pkg.weight * 1.45}`;
-  }
-}
-
-class Fedex {
-  calculate(pkg) {
-    return `$${pkg.weight * 1.60}`;
-  }
-}
-
-const package = { weight: 5 }; // weight in lbs
-const shipping = new Shipping();
-
-// Using UPS strategy
-shipping.setStrategy(new UPS());
-console.log('Shipping cost with UPS:', shipping.calculate(package));  // "Shipping cost with UPS: $7.8"
-
-// Switching to USPS strategy without modifying the Shipping class
-shipping.setStrategy(new USPS());
-console.log('Shipping cost with USPS:', shipping.calculate(package));  // "Shipping cost with USPS: $7.25"
-```
-
-**Benefits and Use Cases**
-- **Flexibility**: Allows objects to switch behaviors dynamically.
-- **Decoupling**: Strategies can be developed and extended independently from clients that use them.
-- **Testability**: Each strategy can be tested independently from the clients and other strategies.
-
-### Proxy Pattern
-The Proxy pattern in software design encapsulates an object with a proxy, which intercepts and controls interactions with that object. This pattern is particularly useful in JavaScript for operations like monitoring, logging, and performing custom actions on property access or assignment.
-
-JavaScript `Proxy` is a powerful feature that allows for the creation of a proxy for another object. It enables the interception and customization of fundamental operations performed on the original object, including property access, assignment, and enumeration. This feature is invaluable for scenarios such as tracking changes, enforcing validations, and dynamically updating UI based on data changes.
-
-#### The Basics of Proxy
-In JavaScript, a `Proxy` serves as a sophisticated handler for an original object, allowing fine-grained control over how interactions with that object are managed. This control extends to almost all operations performed on the object, enabling developers to define custom behaviors for property access, updates, and more.
-
-#### Practical Example: Monitoring List Additions
-This example illustrates how a `Proxy` can be used to monitor and log additions to an array, potentially triggering other actions like validations or UI updates:
-
-**Example Implementation**
-```javascript
-// Define handler with traps for get and set operations
-let handler = {
-  // Trap for property access
-  get(target, property, receiver) {
-    console.log(`Accessing property '${property}'`);
-    return Reflect.get(...arguments);
-  },
-  // Trap for property assignment
-  set(target, property, value, receiver) {
-    console.log(`Adding '${value}' to the list`);
-    target[property] = value; // Update the target list
-    // Implement additional actions like validation or UI updates here
-    return true; // Confirm the operation's success
-  }
-};
-
-// Initialize the original list
-let originalList = [];
-
-// Create the proxy for the original list
-let proxyList = new Proxy(originalList, handler);
-
-// Use the proxy list to perform operations
-proxyList.push('Apple');  // Output: Adding 'Apple' to the list
-proxyList.push('Banana'); // Output: Adding 'Banana' to the list
-```
-This example demonstrates the `Proxy` pattern's utility in JavaScript, where interactions with `proxyList` trigger the defined handlers, allowing for enhanced control and responsiveness in applications.
-
-#### Advantages of Using Proxies
-- **Interception and Customization**: Proxies enable precise control over how operations on objects are conducted, facilitating the implementation of additional behaviors and validations.
-- **Programmatic Validation**: They offer a robust method for enforcing rules and constraints programmatically, which helps maintain data integrity and robustness in applications.
-- **Change Detection**: Proxies are essential in reactive programming patterns where changes to objects or arrays need to trigger dynamic responses.
-
-#### JavaScript Quirk: Overcoming Paradoxical Conditions
-The following TypeScript example demonstrates an interesting use of property definitions to satisfy seemingly paradoxical conditions:
-
-```ts
-// Using Object.defineProperty to manipulate property accesses dynamically
-Object.defineProperty(window, 'a', {
-  get: function() {
-    this.value = this.value || 0;
-    return ++this.value;
-  }
-});
-
-if (a === 1 && a === 2 && a === 3) {
-  console.log('Hello World!');
-}
-```
-In this scenario, `Object.defineProperty` is employed similarly to a proxy, allowing dynamic manipulation of property access. It defines a getter for the property `a` that increments its value each time it's accessed, thereby making the condition `a === 1 && a === 2 && a === 3` true.
-
-### Observer Pattern
-The Observer pattern is widely used in front-end development. It involves a subject and observers, where the observers are notified and updated whenever the subject undergoes a change. A common example is attaching click event listeners to a button, where each listener acts as an observer to the button's click event.
-
-**Example**:
-```typescript
-btn.addEventListener('click', () => {
-    console.log('click');
-});
-```
-
-### Publish-Subscribe Pattern
-Similar to the Observer pattern, the Publish-Subscribe pattern provides a more decoupled way for components to communicate. Components can publish events to a specific event channel and subscribe to this channel to receive notifications. It's important to unsubscribe from events, especially in component lifecycle hooks, to prevent memory leaks.
-
-**Example**:
-```typescript
-event.on('event-key', () => {
-    console.log('event 1');
-});
-event.on('event-key', () => {
-    console.log('event 2');
-});
-event.emit('event-key');
-
-// Remember to unsubscribe
-function fn1() {}
-event.on('event-key', fn1);
-event.off('event-key', fn1);
-```
-
-### Decorator Pattern
-The Decorator pattern allows for behavior to be added to individual objects, either statically or dynamically, without affecting the behavior of other objects from the same class. This pattern is similar to Aspect-Oriented Programming (AOP) and is supported in ES and TypeScript through decorator syntax. It's particularly useful for adding features or functionalities to existing classes without modifying them.
-
-**Example**:
-```typescript
-@testable
-class MyTestableClass {
-    // ...
-}
-
-function testable(target) {
-    target.isTestable = true;
-}
-
-console.log(MyTestableClass.isTestable);
-```
-In the example above, `@testable` is a decorator that adds new functionality to `MyTestableClass`.
-
-### What's the distinction between the Observer pattern and the Publish-Subscribe pattern?
-
-#### Observer Pattern
-In the Observer pattern, the subject (the object being observed) and the observers (the objects that want to be notified of changes in the subject) have direct knowledge of each other. This means there is a direct relationship where the subject holds references to the observers and directly notifies them of any changes. This pattern allows for a straightforward and direct communication line but can lead to higher coupling between the subject and its observers.
-
-##### Characteristics:
-- **Direct Communication**: Observers are directly registered with the subject.
-- **Coupling**: There is a higher degree of coupling, as the subject and observers are directly aware of each other.
-- **Use Case**: Suitable for simpler scenarios where the subject's state change is of interest to specific observers directly related to the subject.
-
-#### Publish-Subscribe Pattern
-The Publish-Subscribe pattern, on the other hand, introduces a middle layer known as the "event channel" or "message broker," which decouples the publishers (the sources of events) from the subscribers (the receivers of events). Publishers publish events to the event channel without knowing who the subscribers will be. Similarly, subscribers listen for events through the event channel without knowing who the publishers are. This level of indirection adds flexibility and reduces coupling between components, making the system more scalable and easier to extend.
-
-##### Characteristics:
-- **Indirect Communication**: The communication between publishers and subscribers is mediated by an event channel, without direct knowledge of each other.
-- **Coupling**: There is lower coupling due to the presence of the event channel as an intermediary.
-- **Use Case**: Ideal for more complex scenarios where the event source and event consumers need to remain decoupled for scalability and maintainability reasons.
-
-In summary, the key difference lies in the relationship and communication method between the parties involved: the Observer pattern facilitates direct communication between the subject and its observers, resulting in tighter coupling, whereas the Publish-Subscribe pattern uses an event channel to mediate communication, leading to looser coupling and greater flexibility.
-
-### Iterator Pattern
-The iterator pattern is a design pattern in object-oriented programming that allows sequential access to the elements of an aggregate object without exposing its underlying structure. This pattern is particularly useful in JavaScript, where it forms the basis of iterable objects that can be looped over with constructs like `for...of`.
-
-#### Context in JavaScript
-
-Introduced with ES6 (ECMAScript 2015), iterators in JavaScript are integral to handling collections of data, especially when the collection size is not predetermined or elements are generated dynamically. An iterator in JavaScript is an object that provides a `next()` method returning an object with properties:
-- `value`: represents the next element in the sequence.
-- `done`: a boolean indicating whether the sequence has been fully traversed.
-
-#### Implementing an Iterator
-
-Creating an iterable object in JavaScript involves defining a `Symbol.iterator` method, which returns an iterator. This method is automatically invoked by JavaScript's newer syntax features such as the `for...of` loop.
-
-##### Example: Range Iterator
-
-```javascript
-// Define a range object that is iterable using the iterator pattern
-const range = {
-  start: 1,
-  end: 5,
-
-  [Symbol.iterator]() {
-    let current = this.start;
-    return {
-      next: () => {
-        if (current <= this.end) {
-          return { value: current++, done: false };
-        } else {
-          return { done: true };
-        }
-      }
-    };
-  }
-};
-
-// Iterate over the range using a for...of loop
-for (let num of range) {
-  console.log(num);  // Outputs: 1, 2, 3, 4, 5
-}
-```
-
-#### Usage in Modern JavaScript
-
-Iterators are foundational to many built-in JavaScript structures such as:
-- **Arrays**
-- **Strings**
-- **Maps**
-- **Sets**
-
-These structures use iterators implicitly in language features like `for...of` loops, array destructuring, spread syntax, and others.
-
-#### Advantages of Using Iterators
-
-1. **Abstraction**: Provides a unified interface for element access, shielding clients from complex underlying data structures.
-2. **Decoupling**: Separates data structures from the algorithms used on them, increasing modularity.
-3. **Flexibility**: Allows algorithms to operate on diverse data structures simply by adhering to the iterator protocol.
-
-
-# 11. Environment and DevOps
-
-### Webpack Overview
-Webpack is a vital tool for modern JavaScript applications, acting as a static module bundler. It analyzes modules and their dependencies to generate static assets, optimizing the web application's loading process.
-
-#### Module Dependency Management
-Webpack's strength lies in its efficient handling of dependencies. For example, consider three interconnected modules: Module A relies on Module B, which in turn depends on Module C. Webpack will bundle these modules into a single file, significantly enhancing loading efficiency by reducing the number of server requests needed.
-
-#### Code Compilation
-Webpack supports various file types and languages, facilitating seamless code transformation and integration. For instance, it can convert TypeScript (TSX) files to JavaScript (JSX), and LESS files to CSS. This flexibility helps maintain a smooth development process across different technologies.
-
-#### Development Efficiency
-One of Webpack’s key features is hot reloading, which automatically updates modules in the browser when developers save changes. This feature streamlines the development workflow by providing instant feedback, thereby accelerating the development cycle.
-
-#### Project Optimization
-Webpack can significantly reduce file sizes through compression and optimization techniques. Utilizing plugins, it can minify and gzip output files, enhancing download speeds and overall application performance. This optimization is crucial for improving user experience in production environments.
-
-### Loaders in Webpack
-Loaders are integral to the Webpack ecosystem, enabling the transformation of files from one format to another during the build process. This feature allows developers to incorporate various file types into the dependency graph of their applications, enhancing functionality and efficiency.
-
-#### JavaScript-related Loaders
-- **`babel-loader`**: Transforms newer versions of JavaScript (ES6 and beyond) into the more broadly supported ES5 format. This ensures compatibility across various browsers and environments.
-- **`ts-loader`** or **`awesome-typescript-loader`**: Converts TypeScript into JavaScript, facilitating seamless integration with Webpack’s build pipeline.
-- **`eslint-loader`**: Integrates linting into the build process, promoting high code quality standards.
-- **`source-map-loader`**: Supports debugging efforts by processing JavaScript source maps. This allows developers to trace back minified code to its original form, simplifying troubleshooting.
-
-#### CSS-related Loaders
-- **`css-loader`**: Handles CSS dependencies by resolving `@import` and `url()` paths within CSS files, treating them as JavaScript modules.
-- **`style-loader`**: Injects CSS directly into the DOM via `<style>` tags, enabling immediate style updates without external style sheets.
-- **`sass-loader`**, **`less-loader`**: These loaders transform SASS/SCSS and LESS code into standard CSS, streamlining the development of complex stylesheets.
-- **`postcss-loader`**: Applies enhancements to CSS through plugins such as Autoprefixer, which optimizes CSS for cross-browser compatibility.
-
-#### File-related Loaders
-- **`file-loader`**, **`url-loader`**: These loaders manage file imports by generating URLs and converting files into DataURLs if they are below a specified size, optimizing web performance.
-- **`image-webpack-loader`**: Reduces image file sizes without compromising quality, crucial for maintaining fast load times.
-- **`gzip-loader`**: Compresses assets using the Gzip algorithm to further decrease loading times.
-
-#### Other Loaders
-- **`html-loader`**: Processes HTML files by treating them as strings, which improves handling of asset URLs.
-- **`raw-loader`**: Imports files as raw text, useful for certain custom manipulations.
-- **`svg-inline-loader`**: Integrates SVGs directly into HTML documents, enhancing performance and handling of these graphics.
-- **`markdown-loader`**: Transforms Markdown into HTML, allowing Markdown to be used directly in web projects.
-
-#### Loader Execution Order
-Understanding the execution order of loaders is essential for proper configuration. Loaders in Webpack process from right to left (or bottom to top when configured in an array). This order means that the last loader in the sequence modifies its input first before passing it to the next loader.
-
-**Example Configurations:**
-```js
-module: {
-  rules: [
-    {
-      test: /\.tsx?$/,
-      use: ['babel-loader', 'ts-loader']
-    },
-    {
-      test: /\.css$/,
-      use: ['style-loader', 'css-loader']
-    }
-  ]
-}
-```
-
-**Execution Sequences:**
-- **TypeScript Files**: `ts-loader` compiles TypeScript first, followed by `babel-loader` which transpiles to ES5.
-- **CSS Files**: `css-loader` manages imports and URLs first, then `style-loader` injects the styles into the webpage.
-
-### How to Implement a Webpack Loader
-
-#### Setting Up Webpack
-1. **Initialization**:
-   Ensure that you have Node.js installed on your system. Then, initiate your project with npm:
-   ```bash
-   npm init -y
-   ```
-   This command creates a `package.json` file in your project directory.
-
-2. **Installing Webpack**:
-   Install webpack and webpack-cli as development dependencies:
-   ```bash
-   npm install webpack webpack-cli -D
-   ```
-
-#### Configuration File
-Create a `webpack.config.js` file in your project root:
-```javascript
-const path = require('path');
-
-module.exports = {
-    entry: './src/index.js', // Entry file
-    mode: 'development', // Development mode
-    module: {
-        rules: [
-            {
-                test: /\.js$/, // Target js files
-                use: ['uglify-loader'] // Use custom loader
-            }
-        ]
-    },
-    resolveLoader: {
-        modules: [path.resolve(__dirname, 'loaders'), 'node_modules']
-    }
-};
-```
-#### Loader Implementation
-Implement the custom loader in `loaders/uglify-loader.js`:
-```javascript
-const UglifyJS = require('uglify-js');
-
-module.exports = function(source) {
-    const result = UglifyJS.minify(source);
-    return result.code; // Return minified code
-};
-```
-
-#### Build Script
-Add a build script in your `package.json` to simplify the build process:
-```json
-"scripts": {
-    "build": "webpack"
-}
-```
-
-#### Building the Project
-Execute the build process using npm:
-```bash
-npm run build
-```
-This command will compile your source files using webpack and the specified loader, outputting the results to `dist/main.js`.
-
-#### Testing the Output
-Check the `dist/main.js` file to verify that your JavaScript code has been minified successfully.
-
-### Webpack Plugins Overview
-https://webpack.js.org/plugins/
-
-Webpack plugins are integral to enhancing the functionality of Webpack, the prominent JavaScript module bundler. These plugins facilitate a broad spectrum of tasks across bundle optimization, asset management, and environment variable injection. By hooking into Webpack's compilation lifecycle, they allow developers to customize behavior throughout the bundling process.
-
-#### Commonly Used Webpack Plugins
-
-Explore some of the most frequently employed Webpack plugins designed to streamline both development and production workflows:
-
-1. **HtmlWebpackPlugin**  
-   Automates the creation of HTML files to serve webpack bundles, efficiently managing script injections and CSS linking.
-
-2. **MiniCssExtractPlugin**  
-   Extracts CSS into separate files for each JavaScript file containing CSS, supporting individual CSS and SourceMaps for modules.
-
-3. **DefinePlugin**  
-   Facilitates the creation of global constants configurable at compile time, enhancing the differentiation between development and production behaviors.
-
-4. **CleanWebpackPlugin**  
-   Cleans up the build folder(s) prior to building, ensuring that only necessary files are generated, thereby avoiding the accumulation of outdated files.
-
-5. **TerserWebpackPlugin**  
-   Utilizes Terser to minimize JavaScript files, optimizing load times and reducing bandwidth consumption.
-
-6. **CompressionWebpackPlugin**  
-   Generates compressed versions of assets, which can be served with Content-Encoding, particularly beneficial in production to minimize asset sizes.
-
-7. **DllPlugin** and **DllReferencePlugin**  
-   These plugins enable bundle splitting to significantly enhance build time performance by allowing vendor bundles to be compiled once and reused.
-
-8. **HotModuleReplacementPlugin**  
-   Supports Hot Module Replacement (HMR), facilitating module exchange, addition, or removal during runtime without a full page reload.
-
-9. **ProvidePlugin**  
-   Automatically loads modules, eliminating the need for explicit imports or requires, which can be useful for globally accessing certain libraries.
-
-#### Plugin Execution Order
-
-- **Sequential and Parallel Execution**: Plugins are generally applied in the order they are listed in the Webpack configuration. While some hooks operate sequentially (e.g., `apply` methods), others are executed in parallel, which means plugins operate independently unless coordinated through asynchronous mechanisms.
-
-### How to Implement a Webpack Plugin
-
-#### Overview
-Webpack plugins are integral for extending the build features and functionalities of webpack. This section will guide you through the steps of implementing a custom webpack plugin within a basic project setup.
-
-#### Initial Setup
-**Project Configuration**
-1. Initialize your project by setting up the `webpack.config.js` file:
-    ```js
-    const path = require('path');
-
-    module.exports = {
-        entry: './src/index.js',
-        mode: 'development',
-    }
-    ```
-2. Install the necessary webpack packages:
-    ```bash
-    npm i webpack-cli webpack -D
-    ```
-3. Configure the `package.json` to include a build script:
-    ```json
-    "scripts": {
-        "build": "webpack"
-    }
-    ```
-
-#### Plugin Implementation
-**Creating a Custom Plugin**
-1. Define your custom plugin in `plugin/LogPlugin.js`. Ensure to import necessary modules:
-    ```js
-    const json = require('format-json');
-    const fs = require('fs');
-
-    class LogPlugin {
-        constructor(options) {
-            this.options = options;
-            console.log(options);
-        }
-
-        // 'compiler' refers to the webpack compiler instance
-        apply(compiler) {
-            compiler.hooks.done.tapAsync('getStats', (stats, callback) => {
-                const statsJson = stats.toJson();
-                const plainlog = json.plain(statsJson);
-                const outputPath = this.options.outputPath;
-                fs.writeFileSync(outputPath, plainlog);
-                callback();
-            });
-        }
-    }
-
-    module.exports = LogPlugin;
-    ```
-
-**Integrating the Plugin with Webpack**
-1. Update the `webpack.config.js` to utilize the newly created plugin:
-    ```js
-    const path = require('path');
-    const MyLogPlugin = require('./plugin/LogPlugin');
-
-    module.exports = {
-        entry: './src/index.js',
-        mode: 'development',
-        plugins: [
-            new MyLogPlugin({
-                outputPath: path.resolve(__dirname, 'webpack.log.json')
-            })
-        ]
-    }
-    ```
-
-#### Building the Project
-**Running the Build Process**
-1. Install any dependencies if not already installed:
-    ```bash
-    npm install
-    ```
-2. Execute the build command to generate the output:
-    ```bash
-    npm run build
-    ```
-
-#### Results
-After running the build process, the log file generated by the custom plugin can be found in the root directory of your project. This file contains the JSON formatted build statistics, providing insights into the build process.
-
-### Webpack Build Process
-
-**1. Combine Initial Parameters:** Begin by merging user-supplied parameters from configuration files and command line arguments. This step ensures that Webpack operates with a complete set of instructions tailored to the specific build.
-
-**2. Initialize Compiler:** Create a compiler instance that handles file watching (for changes) and triggers recompilations. The complete Webpack configuration is included here to guide the compilation process.
-
-**3. Load Plugins:** Sequentially load and initialize each plugin. Plugins extend Webpack's capabilities and are crucial for tasks like optimization and environment variable injection. Each plugin's `apply` method is called with the compiler object as an argument, allowing it to hook into the Webpack lifecycle.
-
-**4. Find File Entry:** Identify the entry point file(s) and construct a dependency graph that represents how files interact and depend on one another.
-
-**5. Invoke Loaders:** Process the source code through loaders. Loaders transform the files before they are added to the dependency graph. For example, Babel-loader transforms JSX and ES6+ syntax into plain JavaScript.
-
-**6. Output the Final Product:** Combine all modules and output the final bundled file(s). This step involves optimizations like minification and chunk splitting to improve load times.
-
-### Understanding and Configuring Source Maps
-
-Source maps are files that provide a way of mapping code within a compressed or minified file back to its original source. This is particularly useful in JavaScript where the production code is often obfuscated and minified to reduce load times and improve performance. When an error occurs in such scripts, the source map allows developers to see the original code instead of the minified or obfuscated version, thus making debugging much easier.
-
-**Benefits of Source Maps**
-
-- **Debugging**: Converts obfuscated or minified code references back into the original source code, enabling easier debugging.
-- **Error Tracking**: Allows you to trace errors and logs in the production environment back to the exact place in the source code where they were generated.
-
-**How to Locate a Source Map**
-
-Source maps can typically be identified and accessed in one of two ways:
-
-1. By the source mapping URL comment at the end of a JavaScript file, which looks like this: `//# sourceMappingURL=jquery.min.map`.
-2. By a `.map` file located in the same directory as the JavaScript file, e.g., `jquery.min.map`.
-
-#### Configuring Source Maps with Webpack
-
-Webpack offers various options for generating source maps, controlled through the `devtool` configuration property. Here are the common settings:
-
-- **`source-map`**: Generates a separate `.map` file and appends a sourceMappingURL comment to the end of the JavaScript file.
-- **`eval-source-map`**: Each module is executed with `eval()` and a SourceMap is added as a DataUrl to the eval.
-- **`inline-source-map`**: Adds a DataUrl containing the sourcemap to the JavaScript file.
-- **`cheap-source-map`**: Generates a source map that includes line numbers only, not column mappings.
-- **`eval-cheap-source-map`**: Similar to `cheap-source-map`, but uses `eval()` and does not produce a separate `.map` file.
-
-**Code Example for Webpack Configuration**
-
-```javascript
-// File: build/webpack.prod.js
-module.exports = {
-  devtool: 'source-map'
-};
-```
-
-Running `npm run build` will generate the source map file in the distribution folder. The generated `.map` file will be referenced at the bottom of the JavaScript file:
-
-```javascript
-//# sourceMappingURL=bundle.xxx.js.map
-```
-
-#### Best Practices for Source Map Usage
-
-- **Development Environment**: Use configurations like `eval`, `eval-source-map`, or `eval-cheap-source-map` for faster build and rebuild speed. Alternatively, source maps may be omitted entirely if not needed for initial development testing.
-- **Production Environment**: Use `source-map` to enable detailed debugging capabilities without exposing the source code directly within the JavaScript files.
-- **Open Source Projects**: Source maps should be available to aid other developers in debugging and understanding the codebase.
-- **Proprietary Projects**: Avoid distributing source maps in production to protect the source code. External visibility of source maps can lead to reverse engineering and potential code leakage.
-
-### Using Corepack
-
-#### What does `corepack enable` do?
-
-When you run `corepack enable`, it prepares your environment to use the package managers supported by Corepack—Yarn and pnpm—by setting up shims (proxy executables) that point to specific versions of these managers. These shims ensure that when you run a command like `yarn` or `pnpm`, the correct version of the package manager is invoked, based on the project's configuration, even if it isn't globally installed.
-
-#### How to use Corepack on a MacBook
-
-Here are the steps to enable and use Corepack on a MacBook:
-
-1. **Ensure Node.js is Installed**: First, make sure you have Node.js installed. If it's not installed, you can download and install it from [Node.js's official website](https://nodejs.org/). For macOS, the preferred way to install Node.js is via Homebrew:
-
-   ```bash
-   brew install node
-   ```
-
-   This will install the latest version of Node.js along with npm.
-
-2. **Enable Corepack**:
-   
-   Open your terminal and run the following command to enable Corepack:
-
-   ```bash
-   corepack enable
-   ```
-
-   This command sets up the necessary shims for Yarn and pnpm. After running this, commands like `yarn` or `pnpm` will use the versions specified by Corepack.
-
-3. **Verify Installation**:
-   
-   You can verify that Corepack is correctly set up by checking the versions of the package managers:
-
-   ```bash
-   yarn --version
-   pnpm --version
-   ```
-
-   This will output the versions of Yarn and pnpm that Corepack will use.
-
-#### Dependencies
-
-Corepack itself doesn't require any specific dependencies other than Node.js. It's integrated with Node.js and utilizes the existing system setup for Node.js and npm.
-
-#### Additional Configuration (if needed)
-
-In some cases, you might need to configure Corepack to use specific versions of Yarn or pnpm, or manage versions differently. You can do this by modifying the `package.json` of your project or globally through configuration files.
-
-#### Troubleshooting
-
-If you encounter issues with Corepack not behaving as expected, you might need to check the following:
-
-- Ensure your Node.js version is compatible with Corepack (Node.js 16.10 or later).
-- Check if Corepack is properly enabled by running `corepack --status`.
-- Re-run `corepack enable` if the shims are not set correctly.
-
-### Benefits of Using Cloud Functions like Google Cloud Compared to Traditional Front-end/Back-end Separation
-
-Cloud functions, such as those provided by Google Cloud, offer several advantages over the traditional front-end/back-end separation architecture. These benefits stem from cloud functions' ability to operate in a serverless environment, which changes how applications are built, deployed, and scaled. Below, we detail these benefits:
-
-#### Cost Efficiency
-- **Google Cloud Functions** operate on a pay-as-you-go model, where charges are incurred only when the code is executed. This is particularly beneficial for applications with fluctuating traffic, as it aligns operational costs directly with actual usage, avoiding the need to pay for idle resources.
-
-#### Simplified Management
-- **Serverless Architecture**: With Google Cloud Functions, there's no need to manage servers. Google handles all the infrastructure management tasks, including maintenance, patching, and security. In contrast, traditional architectures, even when utilizing virtual or cloud servers, require developers or operations teams to manage server configuration and upkeep.
-
-#### Automatic Scaling
-- **Adaptability to Traffic**: Google Cloud Functions automatically scale based on the number of requests. This ensures that during peak traffic periods, more resources are allocated to handle increased concurrent requests, and during low traffic times, resources are reduced to save costs. Traditional models often require manual intervention or additional automation tools for scaling.
-
-#### Rapid Iteration
-- **Development Agility**: The serverless model enables developers to quickly create and deploy code without worrying about underlying infrastructure. This supports faster development cycles and rapid iteration, whereas traditional deployment models might involve complex configuration and deployment processes.
-
-#### Integration and Automation
-- **Seamless Ecosystem Connectivity**: Google Cloud Functions can be easily integrated with other services and tools within the Google Cloud Platform (GCP), such as Google Cloud Pub/Sub and Google Cloud Storage. This facilitates the creation of end-to-end automated solutions, streamlining the development process and enhancing functionality.
-
-#### Event-Driven Architecture
-
-# 12. Useful Libraries
-
-
-## 12.1 Lodash
-
-#### Array Functions
-
-1. **_.chunk(array, [size=1])**
-   - Splits an array into chunks of the specified size.
-   ```javascript
-   _.chunk(['a', 'b', 'c', 'd'], 2);
-   // => [['a', 'b'], ['c', 'd']]
-   ```
-
-2. **_.compact(array)**
-   - Creates a new array with all falsey values removed.
-   ```javascript
-   _.compact([0, 1, false, 2, '', 3]);
-   // => [1, 2, 3]
-   ```
-
-3. **_.concat(array, [values])**
-   - Concatenates array with any additional arrays and/or values.
-   ```javascript
-   var array = [1];
-   var other = _.concat(array, 2, [3], [[4]]);
-   // => [1, 2, 3, [4]]
-   ```
-
-4. **_.difference(array, [values])**
-   - Creates an array excluding all given values.
-   ```javascript
-   _.difference([2, 1], [2, 3]);
-   // => [1]
-   ```
-
-5. **_.drop(array, [n=1])**
-   - Creates a slice of array with n elements dropped from the beginning.
-   ```javascript
-   _.drop([1, 2, 3], 2);
-   // => [3]
-   ```
-
-#### Collection Functions
-
-1. **_.each(collection, [iteratee=_.identity])**
-   - Iterates over elements of collection and invokes iteratee for each element.
-   ```javascript
-   _.each([1, 2], function(value) {
-     console.log(value);
-   });
-   // => Logs `1` then `2`.
-   ```
-
-2. **_.filter(collection, [predicate=_.identity])**
-   - Iterates over elements of collection, returning an array of all elements predicate returns truthy for.
-   ```javascript
-   var users = [
-     { 'user': 'barney', 'active': true },
-     { 'user': 'fred', 'active': false }
-   ];
-   _.filter(users, function(o) { return !o.active; });
-   // => [{ 'user': 'fred', 'active': false }]
-   ```
-
-3. **_.find(collection, [predicate=_.identity], [fromIndex=0])**
-   - Iterates over elements of collection, returning the first element predicate returns truthy for.
-   ```javascript
-   var users = [
-     { 'user': 'barney',  'age': 36, 'active': true },
-     { 'user': 'fred',    'age': 40, 'active': false }
-   ];
-   _.find(users, function(o) { return o.age < 40; });
-   // => { 'user': 'barney', 'age': 36, 'active': true }
-   ```
-
-4. **_.map(collection, [iteratee=_.identity])**
-   - Creates an array of values by running each element in collection through iteratee.
-   ```javascript
-   function square(n) {
-     return n * n;
-   }
-   _.map([4, 8], square);
-   // => [16, 64]
-   ```
-
-5. **_.reduce(collection, [iteratee=_.identity], [accumulator])**
-   - Reduces collection to a value which is the accumulated result of running each element in collection through iteratee.
-   ```javascript
-   _.reduce([1, 2], function(sum, n) {
-     return sum + n;
-   }, 0);
-   // => 3
-   ```
-
-#### Object Functions
-
-1. **_.assign(object, [sources])**
-   - Assigns own enumerable string keyed properties of source objects to the destination object.
-   ```javascript
-   function Foo() {
-     this.a = 1;
-   }
-   function Bar() {
-     this.c = 3;
-   }
-   Foo.prototype.b = 2;
-   Bar.prototype.d = 4;
-   _.assign({ 'a': 0 }, new Foo, new Bar);
-   // => { 'a': 1, 'c': 3 }
-   ```
-
-2. **_.get(object, path, [defaultValue])**
-   - Gets the value at path of object. If the resolved value is undefined, the defaultValue is returned in its place.
-   ```javascript
-   var object = { 'a': [{ 'b': { 'c': 3 } }] };
-   _.get(object, 'a[0].b.c');
-   // => 3
-   _.get(object, 'a[0].b.d', 'default');
-   // => 'default'
-   ```
-
-3. **_.keys(object)**
-   - Creates an array of the own enumerable string keyed property names of object.
-   ```javascript
-   function Foo() {
-     this.a = 1;
-     this.b = 2;
-   }
-   Foo.prototype.c = 3;
-   _.keys(new Foo);
-   // => ['a', 'b']
-   ```
-
-4. **_.merge(object, [sources])**
-   - Recursively merges own and inherited enumerable string keyed properties of source objects into the destination object.
-   ```javascript
-   var object = {
-     'a': [{ 'b': 2 }, { 'd': 4 }]
-   };
-   var other = {
-     'a': [{ 'c': 3 }, { 'e': 5 }]
-   };
-   _.merge(object, other);
-   // => { 'a': [{ 'b': 2, 'c': 3 }, { 'd': 4, 'e': 5 }] }
-   ```
-
-5. **_.omit(object, [paths])**
-   - Creates an object composed of the own and inherited enumerable property paths of object that are not omitted.
-   ```javascript
-   var object = { 'a': 1, 'b': '2', 'c': 3 };
-   _.omit(object, ['a', 'c']);
-   // => { 'b': '2' }
-   ```
-
-#### Utility Functions
-
-1. **_.identity(value)**
-   - Returns the first argument it receives.
-   ```javascript
-   var object = { 'a': 1 };
-   console.log(_.identity(object) === object);
-   // => true
-   ```
-
-2. **_.times(n, [iteratee=_.identity])**
-   - Invokes the iteratee n times, returning an array of the results of each invocation.
-   ```javascript
-   _.times(3, String);
-   // => ['0', '1', '2']
-   ```
-
-3. **_.uniqueId([prefix=''])**
-   - Generates a unique ID. If prefix is given, the ID is appended to it.
-   ```javascript
-   _.uniqueId('contact_');
-   // => 'contact_1'
-   _.uniqueId();
-   // => '2'
-   ```
-
-#### String Functions
-
-1. **_.camelCase([string=''])**
-   - Converts string to camel case.
-   ```javascript
-   _.camelCase('Foo Bar');
-   // => 'fooBar'
-   ```
-
-2. **_.capitalize([string=''])**
-   - Converts the first character of string to upper case and the remaining to lower case.
-   ```javascript
-   _.capitalize('FRED');
-   // => 'Fred'
-   ```
-
-3. **_.kebabCase([string=''])**
-   - Converts string to kebab case.
-   ```javascript
-   _.kebabCase('Foo Bar');
-   // => 'foo-bar'
-   ```
-
-4. **_.snakeCase([string=''])**
-   - Converts string to snake case.
-   ```javascript
-   _.snakeCase('Foo Bar');
-   // => 'foo_bar'
-   ```
-
-5. **_.startCase([string=''])**
-   - Converts string to start case.
-   ```javascript
-   _.startCase('fooBar');
-   // => 'Foo Bar'
-   ```
-
-#### Function Functions
-
-1. **_.debounce(func, [wait=0], [options={}])**
-   - Creates a debounced function that delays invoking func until after wait milliseconds have elapsed.
-   ```javascript
-   var save = _.debounce(function() {
-     // Save logic
-   }, 1000);
-   ```
-
-2. **_.throttle(func, [wait=0], [options={}])**
-   - Creates a throttled function that only invokes func at most once per every wait milliseconds.
-   ```javascript
-   var throttled = _.throttle(function() {
-     // Throttle logic
-   }, 1000);
-
-## 12.2 ahooks
-
-### Installation
-
-To install the `ahooks` library, you can use npm or yarn:
-
-```bash
-$ npm install --save ahooks
-## or
-$ yarn add ahooks
-## or
-$ pnpm add ahooks
-## or
-$ bun add ahooks
-```
-
-### `useRequest`
-
-#### Key Features of useRequest
-
-1. **Simplified Data Fetching**:
-   - `useRequest` abstracts the complexities of making asynchronous requests, allowing developers to focus on application logic rather than boilerplate code.
-
-2. **Loading and Error States**:
-   - Automatically manages loading and error states, providing hooks (`loading`, `error`) that can be used to display appropriate UI elements (e.g., spinners, error messages).
-
-3. **Polling and Refreshing**:
-   - Supports polling (making repeated requests at specified intervals) and manual refreshing, making it easy to keep data up-to-date.
-
-4. **Debouncing and Throttling**:
-   - Built-in support for debouncing and throttling requests helps to optimize network usage and improve performance.
-
-5. **Pagination and Load More**:
-   - Offers utilities to handle pagination and infinite scrolling scenarios, simplifying the implementation of these common patterns.
-
-6. **Retry Mechanism**:
-   - Automatically retries failed requests with customizable retry logic, improving the reliability of data fetching.
-
-#### Basic Usage
-
-Here's a simple example to demonstrate the basic usage of `useRequest`:
-
-```javascript
-import React from 'react';
-import { useRequest } from 'ahooks';
-import axios from 'axios';
-
-const fetchUserData = () => {
-  return axios.get('https://api.example.com/user');
-};
-
-const UserComponent = () => {
-  const { data, error, loading } = useRequest(fetchUserData);
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error.message}</p>;
-
-  return (
-    <div>
-      <h1>User Data</h1>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  );
-};
-
-export default UserComponent;
-```
-
-#### Advanced Features
-
-1. **Polling**:
-   ```javascript
-   const { data, run, cancel } = useRequest(fetchUserData, {
-     pollingInterval: 5000, // poll every 5 seconds
-   });
-
-   // Call `cancel` to stop polling
-   ```
-
-2. **Debouncing**:
-   ```javascript
-   const { run } = useRequest(fetchUserData, {
-     debounceInterval: 300, // debounce for 300ms
-   });
-
-   // Call `run` to trigger the request
-   ```
-
-3. **Pagination**:
-   ```javascript
-   const { data, loading, loadMore, noMore } = useRequest(
-     ({ currentPage }) => fetchUserData(currentPage),
-     {
-       paginated: true,
-       loadMore: true,
-     }
-   );
-
-   // Call `loadMore` to fetch the next page of data
-   ```
-
-4. **Retry**:
-   ```javascript
-   const { data, error, loading } = useRequest(fetchUserData, {
-     retryCount: 3, // retry up to 3 times on failure
-     retryInterval: 1000, // wait 1 second between retries
-   });
-   ```
-
-5. **Manual Trigger**:
-   ```javascript
-   const { data, run } = useRequest(fetchUserData, {
-     manual: true,
-   });
-
-   // Call `run` to manually trigger the request
-   ```
-
-6. **Custom Request Instance**:
-   ```javascript
-   import { request } from 'umi'; // or any other request library
-
-   const { data, error, loading } = useRequest(
-     () => request('/api/user'),
-     {
-       requestMethod: (params) => request(params), // use a custom request method
-     }
-   );
-   ```
-
-#### Customizing Behavior
-
-The `useRequest` hook can be customized extensively through its options:
-
-- `defaultParams`: Default parameters for the request function.
-- `onSuccess`: Callback function to be called on successful response.
-- `onError`: Callback function to be called on error.
-- `onBefore`: Callback function to be called before the request is made.
-- `onFinally`: Callback function to be called after the request is completed (regardless of success or error).
-
-Example:
-
-```javascript
-const { data, run } = useRequest(fetchUserData, {
-  manual: true,
-  defaultParams: [initialParams],
-  onSuccess: (result, params) => {
-    console.log('Request succeeded with params:', params);
-  },
-  onError: (error, params) => {
-    console.error('Request failed with params:', params);
-  },
-  onBefore: (params) => {
-    console.log('Request started with params:', params);
-  },
-  onFinally: (params) => {
-    console.log('Request completed with params:', params);
-  },
-});
-```
-
-### `useMemoizedFn`
-
-`useMemoizedFn` is a hook provided by the ahooks library, which is a collection of high-quality and reliable React hooks. This hook is specifically designed to handle the memoization of functions in a more efficient way, ensuring that the same function reference is maintained across renders unless its dependencies change. Here's a detailed overview and comparison with `useCallback`.
-
-##### Features of `useMemoizedFn`
-
-1. **Persistent Function Reference**: `useMemoizedFn` ensures that the function reference remains the same across re-renders, which helps in avoiding unnecessary re-renders of child components that depend on this function.
-
-2. **Dependency Management**: Unlike `useCallback`, `useMemoizedFn` does not require dependencies to be passed. It automatically manages dependencies and ensures that the memoized function is updated only when necessary.
-
-3. **Simplicity**: The API is straightforward and does not require passing dependency arrays, making it less error-prone and simpler to use.
-
-##### Usage
-
-Here’s how you can use `useMemoizedFn`:
-
-```javascript
-import { useMemoizedFn } from 'ahooks';
-
-function MyComponent() {
-  const [count, setCount] = useState(0);
-
-  const handleClick = useMemoizedFn(() => {
-    console.log(count);
-  });
-
-  return (
-    <div>
-      <p>{count}</p>
-      <button onClick={handleClick}>Click me</button>
-    </div>
-  );
-}
-```
-
-In this example, `handleClick` maintains the same reference across renders, ensuring efficient updates.
-
-#### Comparison with `useCallback`
-
-`useCallback` is a React hook that also memoizes functions, but there are some key differences between `useCallback` and `useMemoizedFn`.
-
-##### `useCallback` Characteristics
-
-1. **Dependency Array**: `useCallback` requires a dependency array to be passed. The memoized function will only change if one of the dependencies changes.
-   
-   ```javascript
-   const memoizedCallback = useCallback(
-     () => {
-       doSomething(a, b);
-     },
-     [a, b],
-   );
-   ```
-
-2. **Explicit Control**: By using a dependency array, `useCallback` gives you explicit control over when the memoized function should update.
-
-3. **Potential for Errors**: If dependencies are not managed correctly, it can lead to bugs where the memoized function does not update when expected, or updates unnecessarily.
-
-##### Advantages of `useMemoizedFn` over `useCallback`
-
-1. **Ease of Use**: `useMemoizedFn` does not require a dependency array, reducing the chance of making mistakes related to dependency management.
-
-2. **Automatic Dependency Management**: It automatically ensures that the function is updated when necessary, abstracting away the complexity.
-
-3. **Consistent Function Reference**: It guarantees a consistent function reference across renders, which is useful in scenarios where maintaining a stable function reference is crucial, such as in event handlers or callbacks passed to deeply nested components.
-
-##### When to Use Each Hook
-
-- **`useCallback`**: Use when you need explicit control over when the memoized function should update based on specific dependencies. It is useful when the dependencies are few and easy to manage.
-
-- **`useMemoizedFn`**: Use when you want a simpler and more reliable way to memoize functions without worrying about dependencies. It is particularly useful in complex components where dependency management can become cumbersome.
-
-#### `useToggle` vs. `useBoolean`
-
-#### `useToggle`
-
-**Description:**
-`useToggle` is a hook designed to manage a boolean state with an easy-to-use API for toggling the state between `true` and `false`.
-
-**Usage:**
-```javascript
-import { useToggle } from 'ahooks';
-
-const [state, { toggle, setLeft, setRight }] = useToggle();
-```
-
-**API:**
-- `state`: The current boolean state.
-- `toggle`: A function to switch the state between `true` and `false`.
-- `setLeft`: A function to set the state to `false`.
-- `setRight`: A function to set the state to `true`.
-
-**Example:**
-```javascript
-const MyComponent = () => {
-  const [state, { toggle, setLeft, setRight }] = useToggle();
-
-  return (
-    <div>
-      <p>Current state: {state.toString()}</p>
-      <button onClick={toggle}>Toggle</button>
-      <button onClick={setLeft}>Set False</button>
-      <button onClick={setRight}>Set True</button>
-    </div>
-  );
-};
-```
-
-#### `useBoolean`
-
-**Description:**
-`useBoolean` is another hook from `ahooks` for managing boolean state, offering similar functionality to `useToggle` but with a slightly different API.
-
-**Usage:**
-```javascript
-import { useBoolean } from 'ahooks';
-
-const [state, { setTrue, setFalse, toggle }] = useBoolean();
-```
-
-**API:**
-- `state`: The current boolean state.
-- `setTrue`: A function to set the state to `true`.
-- `setFalse`: A function to set the state to `false`.
-- `toggle`: A function to switch the state between `true` and `false`.
-
-**Example:**
-```javascript
-const MyComponent = () => {
-  const [state, { setTrue, setFalse, toggle }] = useBoolean();
-
-  return (
-    <div>
-      <p>Current state: {state.toString()}</p>
-      <button onClick={toggle}>Toggle</button>
-      <button onClick={setTrue}>Set True</button>
-      <button onClick={setFalse}>Set False</button>
-    </div>
-  );
-};
-```
-
-#### Comparison between `useToggle` and `useBoolean`
-
-**Similarities:**
-1. **Purpose:** Both hooks are designed to manage boolean state in React components.
-2. **API Methods:** Both provide methods to toggle the state and explicitly set it to `true` or `false`.
-3. **Ease of Use:** Both hooks are simple to implement and use, making state management straightforward.
-
-**Differences:**
-1. **Naming Conventions:** The primary difference lies in the naming of the methods provided by the hooks.
-   - `useToggle`: `toggle`, `setLeft`, `setRight`
-   - `useBoolean`: `toggle`, `setTrue`, `setFalse`
-2. **Intuitiveness:** The method names in `useBoolean` (`setTrue`, `setFalse`) may be more intuitive to understand at first glance compared to `useToggle` (`setLeft`, `setRight`).
-3. **Consistency:** `useBoolean` may align better with naming conventions and expectations in other React hooks or state management patterns (`setTrue`, `setFalse` vs. `setLeft`, `setRight`).
-
-#### Conclusion
-
-Both `useToggle` and `useBoolean` from `ahooks` serve the same fundamental purpose of managing boolean state with slight differences in their API design. Choosing between them may come down to personal preference or specific project conventions. `useBoolean` provides more intuitive method names (`setTrue`, `setFalse`), while `useToggle` offers similar functionality with slightly different naming (`setLeft`, `setRight`). Both are effective tools for handling boolean state in React applications.
-
-### `useDynamicList`
-
-`useDynamicList` is particularly useful for managing dynamic lists, providing a set of methods to manipulate the list's state efficiently.
-
-#### Key Features
-- **Dynamic List Management**: Easily add, remove, update, and manipulate list items.
-- **Immutable Updates**: Ensures state updates are done immutably, preserving React's state management principles.
-- **Convenient API**: Provides a set of methods to handle common list operations.
-
-#### Basic Usage
-Here’s a basic example of how to use `useDynamicList`:
-
-```jsx
-import React from 'react';
-import { useDynamicList } from 'ahooks';
-
-const DynamicListComponent = () => {
-  const { list, insert, remove, move, push, reset, getKey, getIndex, merge, replace, shift, pop, unshift, sortList } = useDynamicList([1, 2, 3]);
-
-  return (
-    <div>
-      <button onClick={() => push(Math.random())}>Add Random</button>
-      <button onClick={() => remove(0)}>Remove First</button>
-      <ul>
-        {list.map((item, index) => (
-          <li key={getKey(index)}>{item}</li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-export default DynamicListComponent;
-```
-
-#### API Methods
-
-- **list**: The current state of the list.
-- **insert(index, item)**: Inserts an item at the specified index.
-- **remove(index)**: Removes the item at the specified index.
-- **move(fromIndex, toIndex)**: Moves an item from one index to another.
-- **push(...items)**: Adds one or more items to the end of the list.
-- **reset(newList)**: Resets the list to the new list provided.
-- **getKey(index)**: Returns a unique key for the item at the specified index.
-- **getIndex(key)**: Returns the index of the item with the specified key.
-- **merge(index, items)**: Merges items into the list at the specified index.
-- **replace(index, item)**: Replaces the item at the specified index with a new item.
-- **shift()**: Removes the first item of the list.
-- **pop()**: Removes the last item of the list.
-- **unshift(...items)**: Adds one or more items to the beginning of the list.
-- **sortList(compareFunction)**: Sorts the list with the specified compare function.
-
-#### Example Methods Usage
-
-- **insert(index, item)**:
-
-  ```jsx
-  insert(1, 'newItem');
-  ```
-
-- **remove(index)**:
-
-  ```jsx
-  remove(0);
-  ```
-
-- **move(fromIndex, toIndex)**:
-
-  ```jsx
-  move(2, 0);
-  ```
-
-- **push(...items)**:
-
-  ```jsx
-  push('item1', 'item2');
-  ```
-
-- **reset(newList)**:
-
-  ```jsx
-  reset([4, 5, 6]);
-  ```
-
-- **getKey(index)**:
-
-  ```jsx
-  const key = getKey(2);
-  ```
-
-- **getIndex(key)**:
-
-  ```jsx
-  const index = getIndex(key);
-  ```
-
-- **merge(index, items)**:
-
-  ```jsx
-  merge(1, ['a', 'b']);
-  ```
-
-- **replace(index, item)**:
-
-  ```jsx
-  replace(2, 'replacedItem');
-  ```
-
-- **shift()**:
-
-  ```jsx
-  shift();
-  ```
-
-- **pop()**:
-
-  ```jsx
-  pop();
-  ```
-
-- **unshift(...items)**:
-
-  ```jsx
-  unshift('startItem1', 'startItem2');
-  ```
-
-- **sortList(compareFunction)**:
-
-  ```jsx
-  sortList((a, b) => a - b);
-  ```
-
-#### Advanced Usage
-
-**Maintaining Keys:**
-Each item in the list has a unique key to help with React's reconciliation process.
-
-```jsx
-const { list, getKey } = useDynamicList([{ id: 1, value: 'a' }, { id: 2, value: 'b' }]);
-
-return (
-  <ul>
-    {list.map((item, index) => (
-      <li key={getKey(index)}>{item.value}</li>
-    ))}
-  </ul>
-);
-```
-
-**Sorting List:**
-
-```jsx
-const { list, sortList } = useDynamicList([3, 1, 2]);
-
-sortList((a, b) => a - b); // Sorts list in ascending order
-```
-
-### `useInfiniteScroll`
-
-`useInfiniteScroll` is a custom hook provided by the `ahooks` library that simplifies the implementation of infinite scrolling in React applications. Infinite scrolling is a pattern where more content is loaded as the user scrolls down the page, creating a seamless experience without the need for pagination buttons. This hook manages the complexities of loading additional data as needed, ensuring a smooth and efficient user experience.
-
-#### Key Features
-
-1. **Data Loading Management**: Automatically handles data fetching as the user scrolls, providing a callback to load more data.
-2. **Scroll Container Configuration**: Supports specifying different scroll containers, not just the window.
-3. **Threshold Setting**: Allows setting a threshold to determine when to trigger data loading before the user reaches the bottom.
-4. **Loading State Management**: Provides states to manage loading and error handling.
-5. **Customizable Options**: Offers various customization options to tailor the behavior to specific use cases.
-
-#### Basic Usage
-
-Here’s a simple example to demonstrate the use of `useInfiniteScroll`:
-
-```jsx
-import React, { useState } from 'react';
-import { useInfiniteScroll } from 'ahooks';
-
-const InfiniteScrollComponent = () => {
-  const [data, setData] = useState([]);
-  const [page, setPage] = useState(1);
-
-  const fetchMoreData = async () => {
-    const response = await fetch(`https://api.example.com/data?page=${page}`);
-    const newData = await response.json();
-    setData((prevData) => [...prevData, ...newData]);
-    setPage(page + 1);
-  };
-
-  const { data: infiniteData, loading, noMore, error } = useInfiniteScroll(fetchMoreData, {
-    threshold: 100,
-  });
-
-  return (
-    <div>
-      {data.map((item, index) => (
-        <div key={index}>{item.name}</div>
-      ))}
-      {loading && <p>Loading...</p>}
-      {noMore && <p>No more data</p>}
-      {error && <p>Error loading data</p>}
-    </div>
-  );
-};
-
-export default InfiniteScrollComponent;
-```
-
-#### API
-
-The `useInfiniteScroll` hook provides several configuration options and returns useful states:
-
-##### Configuration Options
-
-- **target**: The target container to listen for scroll events. Default is `window`.
-- **threshold**: Distance in pixels from the bottom of the container to trigger loading. Default is `100`.
-- **isNoMore**: A function to determine if there is no more data to load.
-- **loadingDelay**: Delay in milliseconds before setting the loading state to `true`. Default is `0`.
-
-##### Return Values
-
-- **data**: The accumulated data from the infinite scroll.
-- **loading**: A boolean indicating if data is currently being loaded.
-- **noMore**: A boolean indicating if there is no more data to load.
-- **error**: An error object if there was an error during data loading.
-
-#### Advanced Usage
-
-For more complex use cases, `useInfiniteScroll` can be customized extensively. Here’s an example with custom scroll container and no more data condition:
-
-```jsx
-import React, { useState, useRef } from 'react';
-import { useInfiniteScroll } from 'ahooks';
-
-const CustomInfiniteScrollComponent = () => {
-  const [data, setData] = useState([]);
-  const [page, setPage] = useState(1);
-  const containerRef = useRef(null);
-
-  const fetchMoreData = async () => {
-    const response = await fetch(`https://api.example.com/data?page=${page}`);
-    const newData = await response.json();
-    setData((prevData) => [...prevData, ...newData]);
-    setPage(page + 1);
-  };
-
-  const isNoMore = data.length >= 100;
-
-  const { loading, noMore, error } = useInfiniteScroll(fetchMoreData, {
-    target: containerRef,
-    threshold: 50,
-    isNoMore: () => isNoMore,
-  });
-
-  return (
-    <div ref={containerRef} style={{ height: '400px', overflowY: 'scroll' }}>
-      {data.map((item, index) => (
-        <div key={index}>{item.name}</div>
-      ))}
-      {loading && <p>Loading...</p>}
-      {noMore && <p>No more data</p>}
-      {error && <p>Error loading data</p>}
-    </div>
-  );
-};
-
-export default CustomInfiniteScrollComponent;
-```
-
-### `useVirtualList`
-
-The `useVirtualList` hook is designed to optimize the rendering performance of large lists by implementing a virtualized list. Virtualization helps in rendering only the visible items within the viewport, reducing the amount of DOM manipulation and improving performance.
-
-#### Key Features
-
-1. **Performance Optimization**: By only rendering the items that are visible within the scrollable area, `useVirtualList` helps in significantly reducing the rendering overhead, leading to smoother performance, especially for large lists.
-   
-2. **Customization**: The hook provides several customization options, allowing developers to adjust the behavior of the virtual list according to their specific needs.
-
-3. **Ease of Integration**: It integrates seamlessly with React components, making it easy to adopt and use within existing projects.
-
-##### Installation
-
-To use `useVirtualList`, you need to have `ahooks` installed in your project. You can install it via npm or yarn:
-
-```sh
-npm install ahooks
-```
-or
-```sh
-yarn add ahooks
-```
-
-#### Basic Usage
-
-Here’s a basic example of how to use `useVirtualList` in a React component:
-
-```jsx
-import React from 'react';
-import { useVirtualList } from 'ahooks';
-
-const VirtualListExample = () => {
-  const itemCount = 10000; // Example item count
-  const itemHeight = 50; // Height of each item in pixels
-
-  const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
-    Array.from({ length: itemCount }).map((_, index) => ({ id: index, name: `Item ${index}` })),
-    {
-      itemHeight,
-      overscan: 5, // Number of extra items to render beyond the visible area
-    }
-  );
-
-  return (
-    <div {...containerProps} style={{ height: 500, overflow: 'auto' }}>
-      <div {...wrapperProps}>
-        {list.map((item) => (
-          <div key={item.data.id} style={{ height: itemHeight }}>
-            {item.data.name}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default VirtualListExample;
-```
-
-#### Parameters and Options
-
-The `useVirtualList` hook takes two main parameters: the source list and an options object.
-
-1. **Source List**: An array of data items to be rendered.
-
-2. **Options Object**: This object allows you to configure the behavior of the virtual list. Key options include:
-   - `itemHeight`: The fixed height of each item in the list.
-   - `overscan`: Number of extra items to render before and after the visible items for smoother scrolling.
-   - `estimateSize`: A function to estimate the size of each item if they have variable heights.
-
-#### Return Values
-
-The hook returns an object with the following properties:
-
-- **list**: An array of items currently being rendered. Each item contains the data and its position in the list.
-- **containerProps**: Props to be spread on the container element.
-- **wrapperProps**: Props to be spread on the wrapper element that contains the rendered items.
-- **scrollTo**: A function to programmatically scroll to a specific item.
-
-#### Advanced Usage
-
-For lists with variable item heights, you can provide an `estimateSize` function:
-
-```jsx
-import React from 'react';
-import { useVirtualList } from 'ahooks';
-
-const VirtualListVariableHeightExample = () => {
-  const itemCount = 10000;
-
-  const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
-    Array.from({ length: itemCount }).map((_, index) => ({ id: index, name: `Item ${index}`, height: 30 + (index % 5) * 10 })),
-    {
-      itemHeight: 50, // Provide a default height
-      overscan: 5,
-      estimateSize: (index) => 30 + (index % 5) * 10, // Function to estimate item height
-    }
-  );
-
-  return (
-    <div {...containerProps} style={{ height: 500, overflow: 'auto' }}>
-      <div {...wrapperProps}>
-        {list.map((item) => (
-          <div key={item.data.id} style={{ height: item.data.height }}>
-            {item.data.name}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default VirtualListVariableHeightExample;
-```
-
-In this example, the `estimateSize` function dynamically calculates the height of each item.
-
-### `usePagination`
-
-`usePagination` is a custom React hook provided by the `ahooks` library, which simplifies the implementation of pagination logic in React applications. It abstracts away common pagination-related tasks, making it easier to manage paginated data, handle page changes, and integrate with APIs or other data sources.
-
-#### Basic Usage
-The `usePagination` hook provides a straightforward way to manage paginated data. Here's a basic example of how to use it:
-
-```jsx
-import React from 'react';
-import { usePagination } from 'ahooks';
-
-const fetchData = ({ current, pageSize }) => {
-  // Replace with your data fetching logic
-  return fetch(`/api/data?page=${current}&size=${pageSize}`)
-    .then(response => response.json());
-};
-
-const PaginatedComponent = () => {
-  const { data, loading, pagination } = usePagination(fetchData, {
-    defaultPageSize: 10,
-  });
-
-  return (
-    <div>
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <ul>
-          {data?.list?.map(item => (
-            <li key={item.id}>{item.name}</li>
-          ))}
-        </ul>
-      )}
-      <div>
-        <button onClick={() => pagination.changePage(1)} disabled={pagination.current === 1}>
-          First
-        </button>
-        <button onClick={pagination.prevPage} disabled={!pagination.hasPrev}>
-          Previous
-        </button>
-        <button onClick={pagination.nextPage} disabled={!pagination.hasNext}>
-          Next
-        </button>
-        <button onClick={() => pagination.changePage(pagination.totalPages)} disabled={pagination.current === pagination.totalPages}>
-          Last
-        </button>
-        <span>
-          Page {pagination.current} of {pagination.totalPages}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-export default PaginatedComponent;
-```
-
-#### API Reference
-The `usePagination` hook returns an object with several properties and methods. Here is a detailed breakdown:
-
-- **Properties:**
-  - `data`: The paginated data returned by the `service` function.
-  - `loading`: A boolean indicating whether the data is currently being loaded.
-  - `pagination`: An object containing pagination-related properties and methods.
-
-- **Pagination Object Properties:**
-  - `current`: The current page number.
-  - `pageSize`: The number of items per page.
-  - `total`: The total number of items.
-  - `totalPages`: The total number of pages.
-  - `hasPrev`: A boolean indicating if there is a previous page.
-  - `hasNext`: A boolean indicating if there is a next page.
-
-- **Pagination Object Methods:**
-  - `changePage`: A function to change to a specific page.
-  - `prevPage`: A function to go to the previous page.
-  - `nextPage`: A function to go to the next page.
-  - `changePageSize`: A function to change the number of items per page.
-
-##### Configuration Options
-The `usePagination` hook accepts two parameters:
-
-1. **Service Function (`service`):**
-   - A function that fetches the paginated data. It receives an object containing `current` and `pageSize` as arguments.
-
-2. **Options (`options`):**
-   - An optional configuration object. Common options include:
-     - `defaultCurrent`: The default current page (default: 1).
-     - `defaultPageSize`: The default number of items per page (default: 10).
-     - `onChange`: A callback function that gets called when the page or page size changes.
-     - `formatResult`: A function to format the result of the service function. It should return an object containing `list` and `total`.
-
-#### Example with Configuration Options
-```jsx
-const PaginatedComponent = () => {
-  const { data, loading, pagination } = usePagination(fetchData, {
-    defaultCurrent: 1,
-    defaultPageSize: 10,
-    onChange: (current, pageSize) => {
-      console.log(`Page: ${current}, PageSize: ${pageSize}`);
-    },
-    formatResult: (response) => ({
-      list: response.items,
-      total: response.totalCount,
-    }),
-  });
-
-  // ...rest of the component
-};
-```
-
-### `useDebounce`
-
-`useDebounce` is used to debounce values and functions, reducing the frequency at which they are invoked. This is particularly useful in scenarios where you want to limit the rate of execution of a function, such as handling user input in a search field or resizing a window.
-
-`useDebounce` helps to delay the processing of a value or the execution of a function until a specified amount of time has passed since it was last invoked. This can improve performance by preventing unnecessary operations and reducing the load on the system.
-
-#### Key Features
-
-1. **Value Debouncing**: Delays the update of a value until a specified delay period has passed.
-2. **Function Debouncing**: Delays the execution of a function, ensuring it is not called more frequently than the specified delay.
-
-#### API Reference
-
-`useDebounce` provides two main hooks: `useDebounce` for values and `useDebounceFn` for functions.
-
-##### `useDebounce`
-
-This hook is used to debounce a value.
-
-```typescript
-const debouncedValue = useDebounce<T>(value: T, options?: { wait?: number, leading?: boolean, trailing?: boolean, maxWait?: number });
-```
-
-- `value`: The value to debounce.
-- `options`: An optional object to configure the debounce behavior.
-  - `wait`: The delay in milliseconds (default is 1000ms).
-  - `leading`: Whether to invoke on the leading edge (default is false).
-  - `trailing`: Whether to invoke on the trailing edge (default is true).
-  - `maxWait`: The maximum time `value` can be delayed before it's invoked (default is undefined).
-
-##### `useDebounceFn`
-
-This hook is used to debounce a function.
-
-```typescript
-const { run, cancel, flush } = useDebounceFn<T>(fn: T, options?: { wait?: number, leading?: boolean, trailing?: boolean, maxWait?: number });
-```
-
-- `fn`: The function to debounce.
-- `options`: An optional object to configure the debounce behavior.
-  - `wait`: The delay in milliseconds (default is 1000ms).
-  - `leading`: Whether to invoke on the leading edge (default is false).
-  - `trailing`: Whether to invoke on the trailing edge (default is true).
-  - `maxWait`: The maximum time `fn` can be delayed before it's invoked (default is undefined).
-
-#### Usage Examples
-
-##### Debouncing a Value
-
-Here’s how to debounce a value, such as an input field’s value:
-
-```javascript
-import React, { useState } from 'react';
-import { useDebounce } from 'ahooks';
-
-function DebouncedInput() {
-  const [value, setValue] = useState('');
-  const debouncedValue = useDebounce(value, { wait: 500 });
-
-  return (
-    <div>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-      <p>Debounced Value: {debouncedValue}</p>
-    </div>
-  );
-}
-```
-
-In this example, `debouncedValue` will only update 500ms after the user stops typing.
-
-##### Debouncing a Function
-
-Here’s how to debounce a function, such as a search function that fetches data from an API:
-
-```javascript
-import React, { useState } from 'react';
-import { useDebounceFn } from 'ahooks';
-
-function DebouncedSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-
-  const { run: debouncedSearch } = useDebounceFn((q) => {
-    fetch(`https://api.example.com/search?q=${q}`)
-      .then((res) => res.json())
-      .then((data) => setResults(data));
-  }, { wait: 500 });
-
-  const handleSearch = (e) => {
-    setQuery(e.target.value);
-    debouncedSearch(e.target.value);
-  };
-
-  return (
-    <div>
-      <input
-        type="text"
-        value={query}
-        onChange={handleSearch}
-      />
-      <ul>
-        {results.map((item) => (
-          <li key={item.id}>{item.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-```
-
-In this example, the `debouncedSearch` function will only be called 500ms after the user stops typing in the input field, reducing the number of API requests.
-
-#### Advanced Configuration
-
-- **Leading Edge Invocation**: If you want the debounced function to be called at the start of the delay period, set `leading: true`.
-- **Trailing Edge Invocation**: The function is called at the end of the delay period by default (`trailing: true`), but you can disable it if needed.
-- **Max Wait Time**: To ensure the function is invoked after a maximum time, even if the user keeps triggering it, use `maxWait`.
-
-### `useThrottle`
-
-The `useThrottle` hook in `ahooks` is a powerful utility designed to limit the number of times a function can be called over a specified period. This can be extremely useful in scenarios where a function might be called excessively, such as during scroll or resize events. Throttling ensures that the function is executed at most once every specified time interval, thus improving performance and reducing the load on the browser.
-
-#### Key Concepts
-
-- **Throttling**: It limits the execution of a function to once every specified interval, regardless of how many times the event occurs.
-- **Debouncing**: In contrast, debouncing delays the execution of a function until a specified period has elapsed since the last time it was invoked.
-
-#### Syntax
-
-```javascript
-const throttledValue = useThrottle(value, options);
-```
-
-#### Parameters
-
-- `value`: The value to be throttled. This can be any value that changes over time, such as a state variable.
-- `options`: An optional object to configure the throttling behavior. It can include:
-  - `wait`: The time in milliseconds to throttle executions. Default is `1000ms`.
-  - `leading`: Boolean to indicate if the function should be invoked on the leading edge of the timeout. Default is `true`.
-  - `trailing`: Boolean to indicate if the function should be invoked on the trailing edge of the timeout. Default is `true`.
-
-#### Returns
-
-- `throttledValue`: The throttled version of the provided value. It updates at most once every `wait` milliseconds.
-
-#### Example Usage
-
-```javascript
-import React, { useState } from 'react';
-import { useThrottle } from 'ahooks';
-
-const ThrottledComponent = () => {
-  const [value, setValue] = useState('');
-  const throttledValue = useThrottle(value, { wait: 500 });
-
-  const handleChange = (e) => {
-    setValue(e.target.value);
-  };
-
-  return (
-    <div>
-      <input type="text" value={value} onChange={handleChange} />
-      <p>Throttled Value: {throttledValue}</p>
-    </div>
-  );
-};
-
-export default ThrottledComponent;
-```
-
-In this example, the `value` state updates immediately on input changes, but the `throttledValue` only updates at most once every 500 milliseconds. This can help in reducing the frequency of expensive operations like API calls or complex calculations.
-
-#### Practical Applications
-
-- **Scroll Events**: Throttling can significantly improve performance by reducing the number of times a scroll event handler is called.
-- **Resize Events**: Similarly, handling resize events with throttling can prevent excessive recalculations and re-renders.
-- **API Calls**: When making API calls based on user input, throttling can prevent the server from being overwhelmed by too many requests in a short period.
-
-#### Considerations
-
-- **Leading vs. Trailing Execution**: By default, `useThrottle` invokes the function on both the leading and trailing edge of the interval. Depending on your use case, you might want to disable one of these. For instance, setting `leading` to `false` will prevent the function from being called immediately, and setting `trailing` to `false` will prevent it from being called at the end of the interval.
-- **State Synchronization**: When dealing with React state, ensure that the throttled value is used appropriately within your components to avoid stale state issues.
-
-### `useMap`
-
-`useMap` is a hook designed to manage a Map object in a React component. Maps are collections of key-value pairs where keys can be of any data type. `useMap` provides a set of utilities to interact with the Map, making it easier to handle complex state management scenarios.
-
-#### Key Features:
-
-- **Initialization**: Initialize the Map with a default set of key-value pairs.
-- **Basic Operations**: Add, delete, and retrieve values from the Map.
-- **Clearing**: Clear all entries in the Map.
-- **Size**: Get the current size of the Map.
-- **Entries**: Retrieve all entries in the Map as an array.
-
-#### Example Usage:
-
-```jsx
-import React from 'react';
-import { useMap } from 'ahooks';
-
-const ExampleComponent = () => {
-  const [map, { set, get, remove, reset, clear }] = useMap([
-    ['key1', 'value1'],
-    ['key2', 'value2'],
-  ]);
-
-  return (
-    <div>
-      <button onClick={() => set('key3', 'value3')}>Add key3</button>
-      <button onClick={() => remove('key1')}>Remove key1</button>
-      <button onClick={() => clear()}>Clear All</button>
-      <div>Value of key2: {get('key2')}</div>
-    </div>
-  );
-};
-```
-
-#### API:
-
-- `set(key, value)`: Adds or updates a key-value pair in the Map.
-- `get(key)`: Retrieves the value associated with the specified key.
-- `remove(key)`: Deletes the key-value pair with the specified key.
-- `reset(newMap)`: Resets the Map to a new set of key-value pairs.
-- `clear()`: Clears all entries in the Map.
-- `map`: The current state of the Map.
-
-### `useSet`
-
-`useSet` is a hook designed to manage a Set object in a React component. Sets are collections of unique values, meaning that any value in a Set can occur only once. `useSet` provides utilities to interact with the Set, making it easier to handle collections of unique items.
-
-#### Key Features:
-
-- **Initialization**: Initialize the Set with a default set of values.
-- **Basic Operations**: Add and delete values from the Set.
-- **Clearing**: Clear all values in the Set.
-- **Size**: Get the current size of the Set.
-- **Values**: Retrieve all values in the Set as an array.
-
-#### Example Usage:
-
-```jsx
-import React from 'react';
-import { useSet } from 'ahooks';
-
-const ExampleComponent = () => {
-  const [set, { add, remove, reset, clear }] = useSet(['value1', 'value2']);
-
-  return (
-    <div>
-      <button onClick={() => add('value3')}>Add value3</button>
-      <button onClick={() => remove('value1')}>Remove value1</button>
-      <button onClick={() => clear()}>Clear All</button>
-      <div>Set size: {set.size}</div>
-    </div>
-  );
-};
-```
-
-#### API:
-
-- `add(value)`: Adds a new value to the Set.
-- `remove(value)`: Deletes the specified value from the Set.
-- `reset(newSet)`: Resets the Set to a new set of values.
-- `clear()`: Clears all values in the Set.
-- `set`: The current state of the Set.
-
-### `useCreation`
-
-`useCreation` is a specialized hook from the `ahooks` library, designed to optimize the creation and memoization of complex objects and values in React. It provides an alternative to the standard React hooks like `useMemo` and `useCallback` with some added guarantees and optimizations.
-
-#### `useCreation` Overview
-
-#### Basic Usage
-
-The `useCreation` hook is typically used when you need to create complex objects, functions, or computations that should not be recalculated on every render unless certain dependencies change. Here's a basic example:
-
-```javascript
-import { useCreation } from 'ahooks';
-
-const MyComponent = () => {
-  const complexObject = useCreation(() => {
-    return { value: Math.random() };
-  }, []);
-
-  return <div>{complexObject.value}</div>;
-};
-```
-
-In this example, `complexObject` will be created once and will not change unless the dependencies in the second argument array change.
-
-#### Comparison with Other Memo Series Hooks
-
-##### `useMemo`
-
-`useMemo` is a standard React hook used to memoize a value. It recalculates the value only when its dependencies change. 
-
-**Example:**
-```javascript
-const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
-```
-
-**Pros:**
-- Part of React's core API, no need for additional libraries.
-- Good for simple memoization of values.
-
-**Cons:**
-- Does not provide strong guarantees about the referential equality of the returned value.
-- Can still trigger recalculations if not used carefully.
-
-##### `useCallback`
-
-`useCallback` is similar to `useMemo` but is specifically designed for memoizing functions.
-
-**Example:**
-```javascript
-const memoizedCallback = useCallback(() => {
-  doSomething(a, b);
-}, [a, b]);
-```
-
-**Pros:**
-- Reduces the need to create functions on every render.
-- Helps with performance optimization when passing callbacks to child components.
-
-**Cons:**
-- Same as `useMemo`, lacks strong guarantees about referential equality.
-
-#### `useCreation` vs. `useMemo`/`useCallback`
-
-**useCreation** provides stronger guarantees and optimizations compared to `useMemo` and `useCallback`:
-
-1. **Stable References:**
-   `useCreation` ensures that the created object or function will have a stable reference, which can be crucial for avoiding unnecessary re-renders in deeply nested components or complex dependency arrays.
-
-2. **Predictable Behavior:**
-   It guarantees that the value will only be recalculated when dependencies change, providing a more predictable and reliable memoization behavior.
-
-3. **Performance:**
-   By ensuring referential equality, `useCreation` can help avoid performance pitfalls associated with unnecessary re-renders caused by changing references.
-
-#### Practical Example and Comparison
-
-Let's compare a practical scenario where `useMemo` might not be sufficient:
-
-**Using `useMemo`:**
-
-```javascript
-const expensiveObject = useMemo(() => {
-  return { value: computeExpensiveValue(a, b) };
-}, [a, b]);
-
-// In some cases, React might still re-create the object unnecessarily.
-```
-
-**Using `useCreation`:**
-
-```javascript
-const expensiveObject = useCreation(() => {
-  return { value: computeExpensiveValue(a, b) };
-}, [a, b]);
-
-// This ensures that `expensiveObject` has a stable reference and will only be re-created if `a` or `b` changes.
-```
-
-#### Conclusion
-
-`useCreation` is a powerful hook from `ahooks` that offers more reliable memoization for complex objects and values compared to `useMemo` and `useCallback`. Its main advantage lies in providing stable references and predictable behavior, making it a valuable tool for optimizing performance in React applications. While `useMemo` and `useCallback` are suitable for many common use cases, `useCreation` shines in scenarios where stability and performance are critical.
-
-In the given code, the `useLatest` hook from `ahooks` is used to maintain a reference to the latest value of the `count` state. This helps in ensuring that the latest value is always used in the `setInterval` callback. Let's break down the code and understand why `count2` is not updating properly:
-
-### `useLatest`
-
-The `useLatest` hook from `ahooks` provides a way to get the latest value of a variable within a callback or asynchronous function. It returns a mutable reference object whose `.current` property is always the latest value of the given variable.
-
-#### Code Explanation
-
-Here's the code with explanations:
-
-```javascript
-import React, { useState, useEffect } from 'react';
-import { useLatest } from 'ahooks';
-
-export default () => {
-  const [count, setCount] = useState(0);
-  const [count2, setCount2] = useState(0);
-
-  const latestCountRef = useLatest(count); // Create a ref that always holds the latest value of count
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCount(latestCountRef.current + 1); // Use the latest value of count to update it
-    }, 1000);
-    return () => clearInterval(interval); // Cleanup the interval on unmount
-  }, [latestCountRef]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCount2(count2 + 1); // This will use the initial value of count2 to update it
-    }, 1000);
-    return () => clearInterval(interval); // Cleanup the interval on unmount
-  }, [count2]);
-
-  return (
-    <>
-      <p>count(useLatest): {count}</p>
-      <p>count(default): {count2}</p>
-    </>
-  );
-};
-```
-
-#### Why `count2` is Not Updating
-
-The `count2` state is not updating as expected because of how the closure works in JavaScript. In the `setInterval` callback for `count2`, the value of `count2` is captured when the effect is initially run, which is `0`. Since `count2` is a dependency of the effect, the `setInterval` callback keeps using this initial value and increments it by `1` every second, but the updated value is not captured in the closure of the interval callback.
-
-#### Solution
-
-To ensure `count2` updates properly, you should use the functional form of the state updater function. This form ensures that the latest state value is always used to compute the next state:
-
-```javascript
-import React, { useState, useEffect } from 'react';
-import { useLatest } from 'ahooks';
-
-export default () => {
-  const [count, setCount] = useState(0);
-  const [count2, setCount2] = useState(0);
-
-  const latestCountRef = useLatest(count);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCount(latestCountRef.current + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [latestCountRef]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCount2(prevCount2 => prevCount2 + 1); // Use the functional updater form
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <>
-      <p>count(useLatest): {count}</p>
-      <p>count(default): {count2}</p>
-    </>
-  );
-};
-```
-
-#### Explanation of the Solution
-
-- **Functional State Updater**: The `setCount2` function is called with a function that takes the previous state (`prevCount2`) and returns the next state (`prevCount2 + 1`). This ensures that the latest state value is always used, even within the interval callback.
-- **Effect Dependencies**: The dependency array for the second `useEffect` is now empty (`[]`). This ensures that the effect runs only once on mount, and the interval callback always has the latest state due to the functional updater.
-
-#### Conclusion
-
-
-# 13. Other
-
-### Discuss Your Strengths and Weaknesses
-- **Contextual Fit:** Avoid core skills required for the position.
-- **Scenario-Based Weakness:** Describe weaknesses within specific scenarios.
-- **Rationalized Explanation:** Provide reasoned explanations for any weaknesses.
-- **Strengths:** Freely discuss strengths, focusing on those relevant to the position.
-
-### Willingness to Work Overtime
-- **Scenario - Urgent Projects:**
-  - **Example Answer:** "Given that your company is in a growth phase, as seen from the projects showcased on your website, I understand that working late might be necessary occasionally to meet deadlines. I am willing to collaborate to ensure smooth project completion, and I trust that such experiences will also foster my personal growth."
-- **Scenario - New Employee:**
-  - **Example Answer:** "As a newcomer, I may initially be unfamiliar with the specifics of the business, which might necessitate some overtime. However, I prefer to optimize my work efficiency and seek advice from experienced colleagues to complete tasks during regular hours. Of course, I'm open to overtime during critical situations."
-
-### Salary Expectations
-- **Motivation Beyond Salary:**
-  - "While salary is not my sole criterion, my primary motivation to join your company is interest in the role, which I am passionate about and believe I am well-suited for. I trust the company to offer a fair compensation."
-- **Expected Salary:**
-  - "I would like my salary to be around XX. Based on my research, the salary range for this position at your company is between A and B. Considering the responsibilities and requirements, I am open to your evaluation process."
-
-### Why Are You Suitable for This Position?
-- **Match Skills to Job Requirements:** Outline how your skills align with the job's demands.
-- **Contribution to Company:** Explain specific contributions you can make to the company.
-- **Unique Selling Point:** Highlight what sets you apart from other candidates, providing examples to support your claims.
-
-### Understanding of Our Company
-- **Realistic Approach:** Be honest about your level of understanding; explain what you know.
-- **Preparation:** It's beneficial to research the company and industry beforehand and discuss how your skills and goals align with the company's needs during the interview.
-
-### Overcoming Lack of Experience
-- **Acknowledge Importance:** Recognize the value of experience.
-- **Highlight Strengths:** Use your unique strengths to compensate for lack of experience.
-- **Commitment to Improvement:** Avoid generic statements and emphasize continuous skill enhancement.
-
-### Additional Questions to Ask
-- **Job-Specific Questions:**
-  1. What additional skills or knowledge do I need to excel in this position?
-  2. What are the most critical abilities for this job?
-  3. How can I bridge any gaps in my capabilities over the next three months?
-  4. Are there any skills or abilities you think I lack for this role?
-- **Personal Feedback:**
-  1. What do you see as my biggest strength and area for improvement?
-  2. Any feedback on my interview performance?
-- **Clarification of Interview Responses:**
-  1. "Could you suggest a better way to think through the question I answered earlier about [specific topic]?"
-- **Concluding Remark:**
-  - "I have no further questions. It has been a pleasure discussing with you!"
-
 # 2. Javascript
 
 ### JavaScript's Strict Mode Features
@@ -9785,3 +7536,2252 @@ The Scrum Master's responsibilities are not akin to those of a traditional proje
 Some common challenges faced by Scrum Masters include:
 - **Managing complex team dynamics** and ensuring smooth collaboration.
 - **Handling resistance to Scrum practices**: Particularly from team members unfamiliar with or skeptical of Agile methods.
+
+# 10. Design Patterns
+
+### Design Principles
+The most important principle in design patterns is the **Open/Closed Principle**, which states that a system should be open for extension but closed for modification. This means you should be able to add new functionality without changing the existing code.
+
+### Factory Pattern
+The Factory pattern involves using a factory function to create instances, effectively hiding the `new` keyword to encapsulate the creation process. This pattern is useful for scenarios where the creation process is complex or when there needs to be some control over how instances are created. Examples include the jQuery `$` function and React's `createElement` function.
+
+**Example**:
+```typescript
+class Foo {}
+
+function factory() {
+    return new Foo();
+}
+
+const f = factory();
+```
+
+### Singleton Pattern
+The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is particularly useful for cases where a single instance of a class should be used across the system, such as the store in Vuex and Redux or a globally unique dialog/modal. JavaScript makes implementing singletons straightforward because there's no need to worry about multithreading issues that might arise in languages like Java, where thread locking mechanisms might be necessary to prevent multiple instances from being created.
+
+**Example**:
+```typescript
+class Singleton {
+    private static instance: Singleton;
+    private constructor() {}
+    static getInstance() {
+        if (!Singleton.instance) {
+            Singleton.instance = new Singleton();
+        }
+        return Singleton.instance;
+    }
+    fn1() {}
+    fn2() {}
+}
+
+const s = Singleton.getInstance();
+s.fn1();
+```
+
+### Strategy Model
+
+**Strategy Model** is a behavioral design pattern that allows the definition of a family of algorithms, the encapsulation of each algorithm, and making their instances interchangeable within that family. This pattern is particularly useful when you need to dynamically alter the behavior of an object and want to avoid conditional statements.
+
+Consider a scenario in a software application for a logistics company that calculates shipping costs. Different shipping options (e.g., air, ground, freight) have different cost calculation algorithms. The Strategy pattern allows you to switch between different shipping strategies dynamically depending on the user's choice or other specific conditions.
+
+```javascript
+// Basic implementation of the Strategy pattern
+class Shipping {
+  constructor() {
+    this.company = null;
+  }
+
+  setStrategy(company) {
+    this.company = company;
+  }
+
+  calculate(package) {
+    return this.company.calculate(package);
+  }
+}
+
+class UPS {
+  calculate(pkg) {
+    return `$${pkg.weight * 1.56}`;
+  }
+}
+
+class USPS {
+  calculate(pkg) {
+    return `$${pkg.weight * 1.45}`;
+  }
+}
+
+class Fedex {
+  calculate(pkg) {
+    return `$${pkg.weight * 1.60}`;
+  }
+}
+
+const package = { weight: 5 }; // weight in lbs
+const shipping = new Shipping();
+
+// Using UPS strategy
+shipping.setStrategy(new UPS());
+console.log('Shipping cost with UPS:', shipping.calculate(package));  // "Shipping cost with UPS: $7.8"
+
+// Switching to USPS strategy without modifying the Shipping class
+shipping.setStrategy(new USPS());
+console.log('Shipping cost with USPS:', shipping.calculate(package));  // "Shipping cost with USPS: $7.25"
+```
+
+**Benefits and Use Cases**
+- **Flexibility**: Allows objects to switch behaviors dynamically.
+- **Decoupling**: Strategies can be developed and extended independently from clients that use them.
+- **Testability**: Each strategy can be tested independently from the clients and other strategies.
+
+### Proxy Pattern
+The Proxy pattern in software design encapsulates an object with a proxy, which intercepts and controls interactions with that object. This pattern is particularly useful in JavaScript for operations like monitoring, logging, and performing custom actions on property access or assignment.
+
+JavaScript `Proxy` is a powerful feature that allows for the creation of a proxy for another object. It enables the interception and customization of fundamental operations performed on the original object, including property access, assignment, and enumeration. This feature is invaluable for scenarios such as tracking changes, enforcing validations, and dynamically updating UI based on data changes.
+
+#### The Basics of Proxy
+In JavaScript, a `Proxy` serves as a sophisticated handler for an original object, allowing fine-grained control over how interactions with that object are managed. This control extends to almost all operations performed on the object, enabling developers to define custom behaviors for property access, updates, and more.
+
+#### Practical Example: Monitoring List Additions
+This example illustrates how a `Proxy` can be used to monitor and log additions to an array, potentially triggering other actions like validations or UI updates:
+
+**Example Implementation**
+```javascript
+// Define handler with traps for get and set operations
+let handler = {
+  // Trap for property access
+  get(target, property, receiver) {
+    console.log(`Accessing property '${property}'`);
+    return Reflect.get(...arguments);
+  },
+  // Trap for property assignment
+  set(target, property, value, receiver) {
+    console.log(`Adding '${value}' to the list`);
+    target[property] = value; // Update the target list
+    // Implement additional actions like validation or UI updates here
+    return true; // Confirm the operation's success
+  }
+};
+
+// Initialize the original list
+let originalList = [];
+
+// Create the proxy for the original list
+let proxyList = new Proxy(originalList, handler);
+
+// Use the proxy list to perform operations
+proxyList.push('Apple');  // Output: Adding 'Apple' to the list
+proxyList.push('Banana'); // Output: Adding 'Banana' to the list
+```
+This example demonstrates the `Proxy` pattern's utility in JavaScript, where interactions with `proxyList` trigger the defined handlers, allowing for enhanced control and responsiveness in applications.
+
+#### Advantages of Using Proxies
+- **Interception and Customization**: Proxies enable precise control over how operations on objects are conducted, facilitating the implementation of additional behaviors and validations.
+- **Programmatic Validation**: They offer a robust method for enforcing rules and constraints programmatically, which helps maintain data integrity and robustness in applications.
+- **Change Detection**: Proxies are essential in reactive programming patterns where changes to objects or arrays need to trigger dynamic responses.
+
+#### JavaScript Quirk: Overcoming Paradoxical Conditions
+The following TypeScript example demonstrates an interesting use of property definitions to satisfy seemingly paradoxical conditions:
+
+```ts
+// Using Object.defineProperty to manipulate property accesses dynamically
+Object.defineProperty(window, 'a', {
+  get: function() {
+    this.value = this.value || 0;
+    return ++this.value;
+  }
+});
+
+if (a === 1 && a === 2 && a === 3) {
+  console.log('Hello World!');
+}
+```
+In this scenario, `Object.defineProperty` is employed similarly to a proxy, allowing dynamic manipulation of property access. It defines a getter for the property `a` that increments its value each time it's accessed, thereby making the condition `a === 1 && a === 2 && a === 3` true.
+
+### Observer Pattern
+The Observer pattern is widely used in front-end development. It involves a subject and observers, where the observers are notified and updated whenever the subject undergoes a change. A common example is attaching click event listeners to a button, where each listener acts as an observer to the button's click event.
+
+**Example**:
+```typescript
+btn.addEventListener('click', () => {
+    console.log('click');
+});
+```
+
+### Publish-Subscribe Pattern
+Similar to the Observer pattern, the Publish-Subscribe pattern provides a more decoupled way for components to communicate. Components can publish events to a specific event channel and subscribe to this channel to receive notifications. It's important to unsubscribe from events, especially in component lifecycle hooks, to prevent memory leaks.
+
+**Example**:
+```typescript
+event.on('event-key', () => {
+    console.log('event 1');
+});
+event.on('event-key', () => {
+    console.log('event 2');
+});
+event.emit('event-key');
+
+// Remember to unsubscribe
+function fn1() {}
+event.on('event-key', fn1);
+event.off('event-key', fn1);
+```
+
+### Decorator Pattern
+The Decorator pattern allows for behavior to be added to individual objects, either statically or dynamically, without affecting the behavior of other objects from the same class. This pattern is similar to Aspect-Oriented Programming (AOP) and is supported in ES and TypeScript through decorator syntax. It's particularly useful for adding features or functionalities to existing classes without modifying them.
+
+**Example**:
+```typescript
+@testable
+class MyTestableClass {
+    // ...
+}
+
+function testable(target) {
+    target.isTestable = true;
+}
+
+console.log(MyTestableClass.isTestable);
+```
+In the example above, `@testable` is a decorator that adds new functionality to `MyTestableClass`.
+
+### What's the distinction between the Observer pattern and the Publish-Subscribe pattern?
+
+#### Observer Pattern
+In the Observer pattern, the subject (the object being observed) and the observers (the objects that want to be notified of changes in the subject) have direct knowledge of each other. This means there is a direct relationship where the subject holds references to the observers and directly notifies them of any changes. This pattern allows for a straightforward and direct communication line but can lead to higher coupling between the subject and its observers.
+
+##### Characteristics:
+- **Direct Communication**: Observers are directly registered with the subject.
+- **Coupling**: There is a higher degree of coupling, as the subject and observers are directly aware of each other.
+- **Use Case**: Suitable for simpler scenarios where the subject's state change is of interest to specific observers directly related to the subject.
+
+#### Publish-Subscribe Pattern
+The Publish-Subscribe pattern, on the other hand, introduces a middle layer known as the "event channel" or "message broker," which decouples the publishers (the sources of events) from the subscribers (the receivers of events). Publishers publish events to the event channel without knowing who the subscribers will be. Similarly, subscribers listen for events through the event channel without knowing who the publishers are. This level of indirection adds flexibility and reduces coupling between components, making the system more scalable and easier to extend.
+
+##### Characteristics:
+- **Indirect Communication**: The communication between publishers and subscribers is mediated by an event channel, without direct knowledge of each other.
+- **Coupling**: There is lower coupling due to the presence of the event channel as an intermediary.
+- **Use Case**: Ideal for more complex scenarios where the event source and event consumers need to remain decoupled for scalability and maintainability reasons.
+
+In summary, the key difference lies in the relationship and communication method between the parties involved: the Observer pattern facilitates direct communication between the subject and its observers, resulting in tighter coupling, whereas the Publish-Subscribe pattern uses an event channel to mediate communication, leading to looser coupling and greater flexibility.
+
+### Iterator Pattern
+The iterator pattern is a design pattern in object-oriented programming that allows sequential access to the elements of an aggregate object without exposing its underlying structure. This pattern is particularly useful in JavaScript, where it forms the basis of iterable objects that can be looped over with constructs like `for...of`.
+
+#### Context in JavaScript
+
+Introduced with ES6 (ECMAScript 2015), iterators in JavaScript are integral to handling collections of data, especially when the collection size is not predetermined or elements are generated dynamically. An iterator in JavaScript is an object that provides a `next()` method returning an object with properties:
+- `value`: represents the next element in the sequence.
+- `done`: a boolean indicating whether the sequence has been fully traversed.
+
+#### Implementing an Iterator
+
+Creating an iterable object in JavaScript involves defining a `Symbol.iterator` method, which returns an iterator. This method is automatically invoked by JavaScript's newer syntax features such as the `for...of` loop.
+
+##### Example: Range Iterator
+
+```javascript
+// Define a range object that is iterable using the iterator pattern
+const range = {
+  start: 1,
+  end: 5,
+
+  [Symbol.iterator]() {
+    let current = this.start;
+    return {
+      next: () => {
+        if (current <= this.end) {
+          return { value: current++, done: false };
+        } else {
+          return { done: true };
+        }
+      }
+    };
+  }
+};
+
+// Iterate over the range using a for...of loop
+for (let num of range) {
+  console.log(num);  // Outputs: 1, 2, 3, 4, 5
+}
+```
+
+#### Usage in Modern JavaScript
+
+Iterators are foundational to many built-in JavaScript structures such as:
+- **Arrays**
+- **Strings**
+- **Maps**
+- **Sets**
+
+These structures use iterators implicitly in language features like `for...of` loops, array destructuring, spread syntax, and others.
+
+#### Advantages of Using Iterators
+
+1. **Abstraction**: Provides a unified interface for element access, shielding clients from complex underlying data structures.
+2. **Decoupling**: Separates data structures from the algorithms used on them, increasing modularity.
+3. **Flexibility**: Allows algorithms to operate on diverse data structures simply by adhering to the iterator protocol.
+
+
+# 11. Environment and DevOps
+
+### Webpack Overview
+Webpack is a vital tool for modern JavaScript applications, acting as a static module bundler. It analyzes modules and their dependencies to generate static assets, optimizing the web application's loading process.
+
+#### Module Dependency Management
+Webpack's strength lies in its efficient handling of dependencies. For example, consider three interconnected modules: Module A relies on Module B, which in turn depends on Module C. Webpack will bundle these modules into a single file, significantly enhancing loading efficiency by reducing the number of server requests needed.
+
+#### Code Compilation
+Webpack supports various file types and languages, facilitating seamless code transformation and integration. For instance, it can convert TypeScript (TSX) files to JavaScript (JSX), and LESS files to CSS. This flexibility helps maintain a smooth development process across different technologies.
+
+#### Development Efficiency
+One of Webpack’s key features is hot reloading, which automatically updates modules in the browser when developers save changes. This feature streamlines the development workflow by providing instant feedback, thereby accelerating the development cycle.
+
+#### Project Optimization
+Webpack can significantly reduce file sizes through compression and optimization techniques. Utilizing plugins, it can minify and gzip output files, enhancing download speeds and overall application performance. This optimization is crucial for improving user experience in production environments.
+
+### Loaders in Webpack
+Loaders are integral to the Webpack ecosystem, enabling the transformation of files from one format to another during the build process. This feature allows developers to incorporate various file types into the dependency graph of their applications, enhancing functionality and efficiency.
+
+#### JavaScript-related Loaders
+- **`babel-loader`**: Transforms newer versions of JavaScript (ES6 and beyond) into the more broadly supported ES5 format. This ensures compatibility across various browsers and environments.
+- **`ts-loader`** or **`awesome-typescript-loader`**: Converts TypeScript into JavaScript, facilitating seamless integration with Webpack’s build pipeline.
+- **`eslint-loader`**: Integrates linting into the build process, promoting high code quality standards.
+- **`source-map-loader`**: Supports debugging efforts by processing JavaScript source maps. This allows developers to trace back minified code to its original form, simplifying troubleshooting.
+
+#### CSS-related Loaders
+- **`css-loader`**: Handles CSS dependencies by resolving `@import` and `url()` paths within CSS files, treating them as JavaScript modules.
+- **`style-loader`**: Injects CSS directly into the DOM via `<style>` tags, enabling immediate style updates without external style sheets.
+- **`sass-loader`**, **`less-loader`**: These loaders transform SASS/SCSS and LESS code into standard CSS, streamlining the development of complex stylesheets.
+- **`postcss-loader`**: Applies enhancements to CSS through plugins such as Autoprefixer, which optimizes CSS for cross-browser compatibility.
+
+#### File-related Loaders
+- **`file-loader`**, **`url-loader`**: These loaders manage file imports by generating URLs and converting files into DataURLs if they are below a specified size, optimizing web performance.
+- **`image-webpack-loader`**: Reduces image file sizes without compromising quality, crucial for maintaining fast load times.
+- **`gzip-loader`**: Compresses assets using the Gzip algorithm to further decrease loading times.
+
+#### Other Loaders
+- **`html-loader`**: Processes HTML files by treating them as strings, which improves handling of asset URLs.
+- **`raw-loader`**: Imports files as raw text, useful for certain custom manipulations.
+- **`svg-inline-loader`**: Integrates SVGs directly into HTML documents, enhancing performance and handling of these graphics.
+- **`markdown-loader`**: Transforms Markdown into HTML, allowing Markdown to be used directly in web projects.
+
+#### Loader Execution Order
+Understanding the execution order of loaders is essential for proper configuration. Loaders in Webpack process from right to left (or bottom to top when configured in an array). This order means that the last loader in the sequence modifies its input first before passing it to the next loader.
+
+**Example Configurations:**
+```js
+module: {
+  rules: [
+    {
+      test: /\.tsx?$/,
+      use: ['babel-loader', 'ts-loader']
+    },
+    {
+      test: /\.css$/,
+      use: ['style-loader', 'css-loader']
+    }
+  ]
+}
+```
+
+**Execution Sequences:**
+- **TypeScript Files**: `ts-loader` compiles TypeScript first, followed by `babel-loader` which transpiles to ES5.
+- **CSS Files**: `css-loader` manages imports and URLs first, then `style-loader` injects the styles into the webpage.
+
+### How to Implement a Webpack Loader
+
+#### Setting Up Webpack
+1. **Initialization**:
+   Ensure that you have Node.js installed on your system. Then, initiate your project with npm:
+   ```bash
+   npm init -y
+   ```
+   This command creates a `package.json` file in your project directory.
+
+2. **Installing Webpack**:
+   Install webpack and webpack-cli as development dependencies:
+   ```bash
+   npm install webpack webpack-cli -D
+   ```
+
+#### Configuration File
+Create a `webpack.config.js` file in your project root:
+```javascript
+const path = require('path');
+
+module.exports = {
+    entry: './src/index.js', // Entry file
+    mode: 'development', // Development mode
+    module: {
+        rules: [
+            {
+                test: /\.js$/, // Target js files
+                use: ['uglify-loader'] // Use custom loader
+            }
+        ]
+    },
+    resolveLoader: {
+        modules: [path.resolve(__dirname, 'loaders'), 'node_modules']
+    }
+};
+```
+#### Loader Implementation
+Implement the custom loader in `loaders/uglify-loader.js`:
+```javascript
+const UglifyJS = require('uglify-js');
+
+module.exports = function(source) {
+    const result = UglifyJS.minify(source);
+    return result.code; // Return minified code
+};
+```
+
+#### Build Script
+Add a build script in your `package.json` to simplify the build process:
+```json
+"scripts": {
+    "build": "webpack"
+}
+```
+
+#### Building the Project
+Execute the build process using npm:
+```bash
+npm run build
+```
+This command will compile your source files using webpack and the specified loader, outputting the results to `dist/main.js`.
+
+#### Testing the Output
+Check the `dist/main.js` file to verify that your JavaScript code has been minified successfully.
+
+### Webpack Plugins Overview
+https://webpack.js.org/plugins/
+
+Webpack plugins are integral to enhancing the functionality of Webpack, the prominent JavaScript module bundler. These plugins facilitate a broad spectrum of tasks across bundle optimization, asset management, and environment variable injection. By hooking into Webpack's compilation lifecycle, they allow developers to customize behavior throughout the bundling process.
+
+#### Commonly Used Webpack Plugins
+
+Explore some of the most frequently employed Webpack plugins designed to streamline both development and production workflows:
+
+1. **HtmlWebpackPlugin**  
+   Automates the creation of HTML files to serve webpack bundles, efficiently managing script injections and CSS linking.
+
+2. **MiniCssExtractPlugin**  
+   Extracts CSS into separate files for each JavaScript file containing CSS, supporting individual CSS and SourceMaps for modules.
+
+3. **DefinePlugin**  
+   Facilitates the creation of global constants configurable at compile time, enhancing the differentiation between development and production behaviors.
+
+4. **CleanWebpackPlugin**  
+   Cleans up the build folder(s) prior to building, ensuring that only necessary files are generated, thereby avoiding the accumulation of outdated files.
+
+5. **TerserWebpackPlugin**  
+   Utilizes Terser to minimize JavaScript files, optimizing load times and reducing bandwidth consumption.
+
+6. **CompressionWebpackPlugin**  
+   Generates compressed versions of assets, which can be served with Content-Encoding, particularly beneficial in production to minimize asset sizes.
+
+7. **DllPlugin** and **DllReferencePlugin**  
+   These plugins enable bundle splitting to significantly enhance build time performance by allowing vendor bundles to be compiled once and reused.
+
+8. **HotModuleReplacementPlugin**  
+   Supports Hot Module Replacement (HMR), facilitating module exchange, addition, or removal during runtime without a full page reload.
+
+9. **ProvidePlugin**  
+   Automatically loads modules, eliminating the need for explicit imports or requires, which can be useful for globally accessing certain libraries.
+
+#### Plugin Execution Order
+
+- **Sequential and Parallel Execution**: Plugins are generally applied in the order they are listed in the Webpack configuration. While some hooks operate sequentially (e.g., `apply` methods), others are executed in parallel, which means plugins operate independently unless coordinated through asynchronous mechanisms.
+
+### How to Implement a Webpack Plugin
+
+#### Overview
+Webpack plugins are integral for extending the build features and functionalities of webpack. This section will guide you through the steps of implementing a custom webpack plugin within a basic project setup.
+
+#### Initial Setup
+**Project Configuration**
+1. Initialize your project by setting up the `webpack.config.js` file:
+    ```js
+    const path = require('path');
+
+    module.exports = {
+        entry: './src/index.js',
+        mode: 'development',
+    }
+    ```
+2. Install the necessary webpack packages:
+    ```bash
+    npm i webpack-cli webpack -D
+    ```
+3. Configure the `package.json` to include a build script:
+    ```json
+    "scripts": {
+        "build": "webpack"
+    }
+    ```
+
+#### Plugin Implementation
+**Creating a Custom Plugin**
+1. Define your custom plugin in `plugin/LogPlugin.js`. Ensure to import necessary modules:
+    ```js
+    const json = require('format-json');
+    const fs = require('fs');
+
+    class LogPlugin {
+        constructor(options) {
+            this.options = options;
+            console.log(options);
+        }
+
+        // 'compiler' refers to the webpack compiler instance
+        apply(compiler) {
+            compiler.hooks.done.tapAsync('getStats', (stats, callback) => {
+                const statsJson = stats.toJson();
+                const plainlog = json.plain(statsJson);
+                const outputPath = this.options.outputPath;
+                fs.writeFileSync(outputPath, plainlog);
+                callback();
+            });
+        }
+    }
+
+    module.exports = LogPlugin;
+    ```
+
+**Integrating the Plugin with Webpack**
+1. Update the `webpack.config.js` to utilize the newly created plugin:
+    ```js
+    const path = require('path');
+    const MyLogPlugin = require('./plugin/LogPlugin');
+
+    module.exports = {
+        entry: './src/index.js',
+        mode: 'development',
+        plugins: [
+            new MyLogPlugin({
+                outputPath: path.resolve(__dirname, 'webpack.log.json')
+            })
+        ]
+    }
+    ```
+
+#### Building the Project
+**Running the Build Process**
+1. Install any dependencies if not already installed:
+    ```bash
+    npm install
+    ```
+2. Execute the build command to generate the output:
+    ```bash
+    npm run build
+    ```
+
+#### Results
+After running the build process, the log file generated by the custom plugin can be found in the root directory of your project. This file contains the JSON formatted build statistics, providing insights into the build process.
+
+### Webpack Build Process
+
+**1. Combine Initial Parameters:** Begin by merging user-supplied parameters from configuration files and command line arguments. This step ensures that Webpack operates with a complete set of instructions tailored to the specific build.
+
+**2. Initialize Compiler:** Create a compiler instance that handles file watching (for changes) and triggers recompilations. The complete Webpack configuration is included here to guide the compilation process.
+
+**3. Load Plugins:** Sequentially load and initialize each plugin. Plugins extend Webpack's capabilities and are crucial for tasks like optimization and environment variable injection. Each plugin's `apply` method is called with the compiler object as an argument, allowing it to hook into the Webpack lifecycle.
+
+**4. Find File Entry:** Identify the entry point file(s) and construct a dependency graph that represents how files interact and depend on one another.
+
+**5. Invoke Loaders:** Process the source code through loaders. Loaders transform the files before they are added to the dependency graph. For example, Babel-loader transforms JSX and ES6+ syntax into plain JavaScript.
+
+**6. Output the Final Product:** Combine all modules and output the final bundled file(s). This step involves optimizations like minification and chunk splitting to improve load times.
+
+### Understanding and Configuring Source Maps
+
+Source maps are files that provide a way of mapping code within a compressed or minified file back to its original source. This is particularly useful in JavaScript where the production code is often obfuscated and minified to reduce load times and improve performance. When an error occurs in such scripts, the source map allows developers to see the original code instead of the minified or obfuscated version, thus making debugging much easier.
+
+**Benefits of Source Maps**
+
+- **Debugging**: Converts obfuscated or minified code references back into the original source code, enabling easier debugging.
+- **Error Tracking**: Allows you to trace errors and logs in the production environment back to the exact place in the source code where they were generated.
+
+**How to Locate a Source Map**
+
+Source maps can typically be identified and accessed in one of two ways:
+
+1. By the source mapping URL comment at the end of a JavaScript file, which looks like this: `//# sourceMappingURL=jquery.min.map`.
+2. By a `.map` file located in the same directory as the JavaScript file, e.g., `jquery.min.map`.
+
+#### Configuring Source Maps with Webpack
+
+Webpack offers various options for generating source maps, controlled through the `devtool` configuration property. Here are the common settings:
+
+- **`source-map`**: Generates a separate `.map` file and appends a sourceMappingURL comment to the end of the JavaScript file.
+- **`eval-source-map`**: Each module is executed with `eval()` and a SourceMap is added as a DataUrl to the eval.
+- **`inline-source-map`**: Adds a DataUrl containing the sourcemap to the JavaScript file.
+- **`cheap-source-map`**: Generates a source map that includes line numbers only, not column mappings.
+- **`eval-cheap-source-map`**: Similar to `cheap-source-map`, but uses `eval()` and does not produce a separate `.map` file.
+
+**Code Example for Webpack Configuration**
+
+```javascript
+// File: build/webpack.prod.js
+module.exports = {
+  devtool: 'source-map'
+};
+```
+
+Running `npm run build` will generate the source map file in the distribution folder. The generated `.map` file will be referenced at the bottom of the JavaScript file:
+
+```javascript
+//# sourceMappingURL=bundle.xxx.js.map
+```
+
+#### Best Practices for Source Map Usage
+
+- **Development Environment**: Use configurations like `eval`, `eval-source-map`, or `eval-cheap-source-map` for faster build and rebuild speed. Alternatively, source maps may be omitted entirely if not needed for initial development testing.
+- **Production Environment**: Use `source-map` to enable detailed debugging capabilities without exposing the source code directly within the JavaScript files.
+- **Open Source Projects**: Source maps should be available to aid other developers in debugging and understanding the codebase.
+- **Proprietary Projects**: Avoid distributing source maps in production to protect the source code. External visibility of source maps can lead to reverse engineering and potential code leakage.
+
+### Using Corepack
+
+#### What does `corepack enable` do?
+
+When you run `corepack enable`, it prepares your environment to use the package managers supported by Corepack—Yarn and pnpm—by setting up shims (proxy executables) that point to specific versions of these managers. These shims ensure that when you run a command like `yarn` or `pnpm`, the correct version of the package manager is invoked, based on the project's configuration, even if it isn't globally installed.
+
+#### How to use Corepack on a MacBook
+
+Here are the steps to enable and use Corepack on a MacBook:
+
+1. **Ensure Node.js is Installed**: First, make sure you have Node.js installed. If it's not installed, you can download and install it from [Node.js's official website](https://nodejs.org/). For macOS, the preferred way to install Node.js is via Homebrew:
+
+   ```bash
+   brew install node
+   ```
+
+   This will install the latest version of Node.js along with npm.
+
+2. **Enable Corepack**:
+   
+   Open your terminal and run the following command to enable Corepack:
+
+   ```bash
+   corepack enable
+   ```
+
+   This command sets up the necessary shims for Yarn and pnpm. After running this, commands like `yarn` or `pnpm` will use the versions specified by Corepack.
+
+3. **Verify Installation**:
+   
+   You can verify that Corepack is correctly set up by checking the versions of the package managers:
+
+   ```bash
+   yarn --version
+   pnpm --version
+   ```
+
+   This will output the versions of Yarn and pnpm that Corepack will use.
+
+#### Dependencies
+
+Corepack itself doesn't require any specific dependencies other than Node.js. It's integrated with Node.js and utilizes the existing system setup for Node.js and npm.
+
+#### Additional Configuration (if needed)
+
+In some cases, you might need to configure Corepack to use specific versions of Yarn or pnpm, or manage versions differently. You can do this by modifying the `package.json` of your project or globally through configuration files.
+
+#### Troubleshooting
+
+If you encounter issues with Corepack not behaving as expected, you might need to check the following:
+
+- Ensure your Node.js version is compatible with Corepack (Node.js 16.10 or later).
+- Check if Corepack is properly enabled by running `corepack --status`.
+- Re-run `corepack enable` if the shims are not set correctly.
+
+### Benefits of Using Cloud Functions like Google Cloud Compared to Traditional Front-end/Back-end Separation
+
+Cloud functions, such as those provided by Google Cloud, offer several advantages over the traditional front-end/back-end separation architecture. These benefits stem from cloud functions' ability to operate in a serverless environment, which changes how applications are built, deployed, and scaled. Below, we detail these benefits:
+
+#### Cost Efficiency
+- **Google Cloud Functions** operate on a pay-as-you-go model, where charges are incurred only when the code is executed. This is particularly beneficial for applications with fluctuating traffic, as it aligns operational costs directly with actual usage, avoiding the need to pay for idle resources.
+
+#### Simplified Management
+- **Serverless Architecture**: With Google Cloud Functions, there's no need to manage servers. Google handles all the infrastructure management tasks, including maintenance, patching, and security. In contrast, traditional architectures, even when utilizing virtual or cloud servers, require developers or operations teams to manage server configuration and upkeep.
+
+#### Automatic Scaling
+- **Adaptability to Traffic**: Google Cloud Functions automatically scale based on the number of requests. This ensures that during peak traffic periods, more resources are allocated to handle increased concurrent requests, and during low traffic times, resources are reduced to save costs. Traditional models often require manual intervention or additional automation tools for scaling.
+
+#### Rapid Iteration
+- **Development Agility**: The serverless model enables developers to quickly create and deploy code without worrying about underlying infrastructure. This supports faster development cycles and rapid iteration, whereas traditional deployment models might involve complex configuration and deployment processes.
+
+#### Integration and Automation
+- **Seamless Ecosystem Connectivity**: Google Cloud Functions can be easily integrated with other services and tools within the Google Cloud Platform (GCP), such as Google Cloud Pub/Sub and Google Cloud Storage. This facilitates the creation of end-to-end automated solutions, streamlining the development process and enhancing functionality.
+
+#### Event-Driven Architecture
+
+# 12. Useful Libraries
+
+
+## 12.1 Lodash
+
+#### Array Functions
+
+1. **_.chunk(array, [size=1])**
+   - Splits an array into chunks of the specified size.
+   ```javascript
+   _.chunk(['a', 'b', 'c', 'd'], 2);
+   // => [['a', 'b'], ['c', 'd']]
+   ```
+
+2. **_.compact(array)**
+   - Creates a new array with all falsey values removed.
+   ```javascript
+   _.compact([0, 1, false, 2, '', 3]);
+   // => [1, 2, 3]
+   ```
+
+3. **_.concat(array, [values])**
+   - Concatenates array with any additional arrays and/or values.
+   ```javascript
+   var array = [1];
+   var other = _.concat(array, 2, [3], [[4]]);
+   // => [1, 2, 3, [4]]
+   ```
+
+4. **_.difference(array, [values])**
+   - Creates an array excluding all given values.
+   ```javascript
+   _.difference([2, 1], [2, 3]);
+   // => [1]
+   ```
+
+5. **_.drop(array, [n=1])**
+   - Creates a slice of array with n elements dropped from the beginning.
+   ```javascript
+   _.drop([1, 2, 3], 2);
+   // => [3]
+   ```
+
+#### Collection Functions
+
+1. **_.each(collection, [iteratee=_.identity])**
+   - Iterates over elements of collection and invokes iteratee for each element.
+   ```javascript
+   _.each([1, 2], function(value) {
+     console.log(value);
+   });
+   // => Logs `1` then `2`.
+   ```
+
+2. **_.filter(collection, [predicate=_.identity])**
+   - Iterates over elements of collection, returning an array of all elements predicate returns truthy for.
+   ```javascript
+   var users = [
+     { 'user': 'barney', 'active': true },
+     { 'user': 'fred', 'active': false }
+   ];
+   _.filter(users, function(o) { return !o.active; });
+   // => [{ 'user': 'fred', 'active': false }]
+   ```
+
+3. **_.find(collection, [predicate=_.identity], [fromIndex=0])**
+   - Iterates over elements of collection, returning the first element predicate returns truthy for.
+   ```javascript
+   var users = [
+     { 'user': 'barney',  'age': 36, 'active': true },
+     { 'user': 'fred',    'age': 40, 'active': false }
+   ];
+   _.find(users, function(o) { return o.age < 40; });
+   // => { 'user': 'barney', 'age': 36, 'active': true }
+   ```
+
+4. **_.map(collection, [iteratee=_.identity])**
+   - Creates an array of values by running each element in collection through iteratee.
+   ```javascript
+   function square(n) {
+     return n * n;
+   }
+   _.map([4, 8], square);
+   // => [16, 64]
+   ```
+
+5. **_.reduce(collection, [iteratee=_.identity], [accumulator])**
+   - Reduces collection to a value which is the accumulated result of running each element in collection through iteratee.
+   ```javascript
+   _.reduce([1, 2], function(sum, n) {
+     return sum + n;
+   }, 0);
+   // => 3
+   ```
+
+#### Object Functions
+
+1. **_.assign(object, [sources])**
+   - Assigns own enumerable string keyed properties of source objects to the destination object.
+   ```javascript
+   function Foo() {
+     this.a = 1;
+   }
+   function Bar() {
+     this.c = 3;
+   }
+   Foo.prototype.b = 2;
+   Bar.prototype.d = 4;
+   _.assign({ 'a': 0 }, new Foo, new Bar);
+   // => { 'a': 1, 'c': 3 }
+   ```
+
+2. **_.get(object, path, [defaultValue])**
+   - Gets the value at path of object. If the resolved value is undefined, the defaultValue is returned in its place.
+   ```javascript
+   var object = { 'a': [{ 'b': { 'c': 3 } }] };
+   _.get(object, 'a[0].b.c');
+   // => 3
+   _.get(object, 'a[0].b.d', 'default');
+   // => 'default'
+   ```
+
+3. **_.keys(object)**
+   - Creates an array of the own enumerable string keyed property names of object.
+   ```javascript
+   function Foo() {
+     this.a = 1;
+     this.b = 2;
+   }
+   Foo.prototype.c = 3;
+   _.keys(new Foo);
+   // => ['a', 'b']
+   ```
+
+4. **_.merge(object, [sources])**
+   - Recursively merges own and inherited enumerable string keyed properties of source objects into the destination object.
+   ```javascript
+   var object = {
+     'a': [{ 'b': 2 }, { 'd': 4 }]
+   };
+   var other = {
+     'a': [{ 'c': 3 }, { 'e': 5 }]
+   };
+   _.merge(object, other);
+   // => { 'a': [{ 'b': 2, 'c': 3 }, { 'd': 4, 'e': 5 }] }
+   ```
+
+5. **_.omit(object, [paths])**
+   - Creates an object composed of the own and inherited enumerable property paths of object that are not omitted.
+   ```javascript
+   var object = { 'a': 1, 'b': '2', 'c': 3 };
+   _.omit(object, ['a', 'c']);
+   // => { 'b': '2' }
+   ```
+
+#### Utility Functions
+
+1. **_.identity(value)**
+   - Returns the first argument it receives.
+   ```javascript
+   var object = { 'a': 1 };
+   console.log(_.identity(object) === object);
+   // => true
+   ```
+
+2. **_.times(n, [iteratee=_.identity])**
+   - Invokes the iteratee n times, returning an array of the results of each invocation.
+   ```javascript
+   _.times(3, String);
+   // => ['0', '1', '2']
+   ```
+
+3. **_.uniqueId([prefix=''])**
+   - Generates a unique ID. If prefix is given, the ID is appended to it.
+   ```javascript
+   _.uniqueId('contact_');
+   // => 'contact_1'
+   _.uniqueId();
+   // => '2'
+   ```
+
+#### String Functions
+
+1. **_.camelCase([string=''])**
+   - Converts string to camel case.
+   ```javascript
+   _.camelCase('Foo Bar');
+   // => 'fooBar'
+   ```
+
+2. **_.capitalize([string=''])**
+   - Converts the first character of string to upper case and the remaining to lower case.
+   ```javascript
+   _.capitalize('FRED');
+   // => 'Fred'
+   ```
+
+3. **_.kebabCase([string=''])**
+   - Converts string to kebab case.
+   ```javascript
+   _.kebabCase('Foo Bar');
+   // => 'foo-bar'
+   ```
+
+4. **_.snakeCase([string=''])**
+   - Converts string to snake case.
+   ```javascript
+   _.snakeCase('Foo Bar');
+   // => 'foo_bar'
+   ```
+
+5. **_.startCase([string=''])**
+   - Converts string to start case.
+   ```javascript
+   _.startCase('fooBar');
+   // => 'Foo Bar'
+   ```
+
+#### Function Functions
+
+1. **_.debounce(func, [wait=0], [options={}])**
+   - Creates a debounced function that delays invoking func until after wait milliseconds have elapsed.
+   ```javascript
+   var save = _.debounce(function() {
+     // Save logic
+   }, 1000);
+   ```
+
+2. **_.throttle(func, [wait=0], [options={}])**
+   - Creates a throttled function that only invokes func at most once per every wait milliseconds.
+   ```javascript
+   var throttled = _.throttle(function() {
+     // Throttle logic
+   }, 1000);
+
+## 12.2 ahooks
+
+### Installation
+
+To install the `ahooks` library, you can use npm or yarn:
+
+```bash
+$ npm install --save ahooks
+## or
+$ yarn add ahooks
+## or
+$ pnpm add ahooks
+## or
+$ bun add ahooks
+```
+
+### `useRequest`
+
+#### Key Features of useRequest
+
+1. **Simplified Data Fetching**:
+   - `useRequest` abstracts the complexities of making asynchronous requests, allowing developers to focus on application logic rather than boilerplate code.
+
+2. **Loading and Error States**:
+   - Automatically manages loading and error states, providing hooks (`loading`, `error`) that can be used to display appropriate UI elements (e.g., spinners, error messages).
+
+3. **Polling and Refreshing**:
+   - Supports polling (making repeated requests at specified intervals) and manual refreshing, making it easy to keep data up-to-date.
+
+4. **Debouncing and Throttling**:
+   - Built-in support for debouncing and throttling requests helps to optimize network usage and improve performance.
+
+5. **Pagination and Load More**:
+   - Offers utilities to handle pagination and infinite scrolling scenarios, simplifying the implementation of these common patterns.
+
+6. **Retry Mechanism**:
+   - Automatically retries failed requests with customizable retry logic, improving the reliability of data fetching.
+
+#### Basic Usage
+
+Here's a simple example to demonstrate the basic usage of `useRequest`:
+
+```javascript
+import React from 'react';
+import { useRequest } from 'ahooks';
+import axios from 'axios';
+
+const fetchUserData = () => {
+  return axios.get('https://api.example.com/user');
+};
+
+const UserComponent = () => {
+  const { data, error, loading } = useRequest(fetchUserData);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      <h1>User Data</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+};
+
+export default UserComponent;
+```
+
+#### Advanced Features
+
+1. **Polling**:
+   ```javascript
+   const { data, run, cancel } = useRequest(fetchUserData, {
+     pollingInterval: 5000, // poll every 5 seconds
+   });
+
+   // Call `cancel` to stop polling
+   ```
+
+2. **Debouncing**:
+   ```javascript
+   const { run } = useRequest(fetchUserData, {
+     debounceInterval: 300, // debounce for 300ms
+   });
+
+   // Call `run` to trigger the request
+   ```
+
+3. **Pagination**:
+   ```javascript
+   const { data, loading, loadMore, noMore } = useRequest(
+     ({ currentPage }) => fetchUserData(currentPage),
+     {
+       paginated: true,
+       loadMore: true,
+     }
+   );
+
+   // Call `loadMore` to fetch the next page of data
+   ```
+
+4. **Retry**:
+   ```javascript
+   const { data, error, loading } = useRequest(fetchUserData, {
+     retryCount: 3, // retry up to 3 times on failure
+     retryInterval: 1000, // wait 1 second between retries
+   });
+   ```
+
+5. **Manual Trigger**:
+   ```javascript
+   const { data, run } = useRequest(fetchUserData, {
+     manual: true,
+   });
+
+   // Call `run` to manually trigger the request
+   ```
+
+6. **Custom Request Instance**:
+   ```javascript
+   import { request } from 'umi'; // or any other request library
+
+   const { data, error, loading } = useRequest(
+     () => request('/api/user'),
+     {
+       requestMethod: (params) => request(params), // use a custom request method
+     }
+   );
+   ```
+
+#### Customizing Behavior
+
+The `useRequest` hook can be customized extensively through its options:
+
+- `defaultParams`: Default parameters for the request function.
+- `onSuccess`: Callback function to be called on successful response.
+- `onError`: Callback function to be called on error.
+- `onBefore`: Callback function to be called before the request is made.
+- `onFinally`: Callback function to be called after the request is completed (regardless of success or error).
+
+Example:
+
+```javascript
+const { data, run } = useRequest(fetchUserData, {
+  manual: true,
+  defaultParams: [initialParams],
+  onSuccess: (result, params) => {
+    console.log('Request succeeded with params:', params);
+  },
+  onError: (error, params) => {
+    console.error('Request failed with params:', params);
+  },
+  onBefore: (params) => {
+    console.log('Request started with params:', params);
+  },
+  onFinally: (params) => {
+    console.log('Request completed with params:', params);
+  },
+});
+```
+
+### `useMemoizedFn`
+
+`useMemoizedFn` is a hook provided by the ahooks library, which is a collection of high-quality and reliable React hooks. This hook is specifically designed to handle the memoization of functions in a more efficient way, ensuring that the same function reference is maintained across renders unless its dependencies change. Here's a detailed overview and comparison with `useCallback`.
+
+##### Features of `useMemoizedFn`
+
+1. **Persistent Function Reference**: `useMemoizedFn` ensures that the function reference remains the same across re-renders, which helps in avoiding unnecessary re-renders of child components that depend on this function.
+
+2. **Dependency Management**: Unlike `useCallback`, `useMemoizedFn` does not require dependencies to be passed. It automatically manages dependencies and ensures that the memoized function is updated only when necessary.
+
+3. **Simplicity**: The API is straightforward and does not require passing dependency arrays, making it less error-prone and simpler to use.
+
+##### Usage
+
+Here’s how you can use `useMemoizedFn`:
+
+```javascript
+import { useMemoizedFn } from 'ahooks';
+
+function MyComponent() {
+  const [count, setCount] = useState(0);
+
+  const handleClick = useMemoizedFn(() => {
+    console.log(count);
+  });
+
+  return (
+    <div>
+      <p>{count}</p>
+      <button onClick={handleClick}>Click me</button>
+    </div>
+  );
+}
+```
+
+In this example, `handleClick` maintains the same reference across renders, ensuring efficient updates.
+
+#### Comparison with `useCallback`
+
+`useCallback` is a React hook that also memoizes functions, but there are some key differences between `useCallback` and `useMemoizedFn`.
+
+##### `useCallback` Characteristics
+
+1. **Dependency Array**: `useCallback` requires a dependency array to be passed. The memoized function will only change if one of the dependencies changes.
+   
+   ```javascript
+   const memoizedCallback = useCallback(
+     () => {
+       doSomething(a, b);
+     },
+     [a, b],
+   );
+   ```
+
+2. **Explicit Control**: By using a dependency array, `useCallback` gives you explicit control over when the memoized function should update.
+
+3. **Potential for Errors**: If dependencies are not managed correctly, it can lead to bugs where the memoized function does not update when expected, or updates unnecessarily.
+
+##### Advantages of `useMemoizedFn` over `useCallback`
+
+1. **Ease of Use**: `useMemoizedFn` does not require a dependency array, reducing the chance of making mistakes related to dependency management.
+
+2. **Automatic Dependency Management**: It automatically ensures that the function is updated when necessary, abstracting away the complexity.
+
+3. **Consistent Function Reference**: It guarantees a consistent function reference across renders, which is useful in scenarios where maintaining a stable function reference is crucial, such as in event handlers or callbacks passed to deeply nested components.
+
+##### When to Use Each Hook
+
+- **`useCallback`**: Use when you need explicit control over when the memoized function should update based on specific dependencies. It is useful when the dependencies are few and easy to manage.
+
+- **`useMemoizedFn`**: Use when you want a simpler and more reliable way to memoize functions without worrying about dependencies. It is particularly useful in complex components where dependency management can become cumbersome.
+
+#### `useToggle` vs. `useBoolean`
+
+#### `useToggle`
+
+**Description:**
+`useToggle` is a hook designed to manage a boolean state with an easy-to-use API for toggling the state between `true` and `false`.
+
+**Usage:**
+```javascript
+import { useToggle } from 'ahooks';
+
+const [state, { toggle, setLeft, setRight }] = useToggle();
+```
+
+**API:**
+- `state`: The current boolean state.
+- `toggle`: A function to switch the state between `true` and `false`.
+- `setLeft`: A function to set the state to `false`.
+- `setRight`: A function to set the state to `true`.
+
+**Example:**
+```javascript
+const MyComponent = () => {
+  const [state, { toggle, setLeft, setRight }] = useToggle();
+
+  return (
+    <div>
+      <p>Current state: {state.toString()}</p>
+      <button onClick={toggle}>Toggle</button>
+      <button onClick={setLeft}>Set False</button>
+      <button onClick={setRight}>Set True</button>
+    </div>
+  );
+};
+```
+
+#### `useBoolean`
+
+**Description:**
+`useBoolean` is another hook from `ahooks` for managing boolean state, offering similar functionality to `useToggle` but with a slightly different API.
+
+**Usage:**
+```javascript
+import { useBoolean } from 'ahooks';
+
+const [state, { setTrue, setFalse, toggle }] = useBoolean();
+```
+
+**API:**
+- `state`: The current boolean state.
+- `setTrue`: A function to set the state to `true`.
+- `setFalse`: A function to set the state to `false`.
+- `toggle`: A function to switch the state between `true` and `false`.
+
+**Example:**
+```javascript
+const MyComponent = () => {
+  const [state, { setTrue, setFalse, toggle }] = useBoolean();
+
+  return (
+    <div>
+      <p>Current state: {state.toString()}</p>
+      <button onClick={toggle}>Toggle</button>
+      <button onClick={setTrue}>Set True</button>
+      <button onClick={setFalse}>Set False</button>
+    </div>
+  );
+};
+```
+
+#### Comparison between `useToggle` and `useBoolean`
+
+**Similarities:**
+1. **Purpose:** Both hooks are designed to manage boolean state in React components.
+2. **API Methods:** Both provide methods to toggle the state and explicitly set it to `true` or `false`.
+3. **Ease of Use:** Both hooks are simple to implement and use, making state management straightforward.
+
+**Differences:**
+1. **Naming Conventions:** The primary difference lies in the naming of the methods provided by the hooks.
+   - `useToggle`: `toggle`, `setLeft`, `setRight`
+   - `useBoolean`: `toggle`, `setTrue`, `setFalse`
+2. **Intuitiveness:** The method names in `useBoolean` (`setTrue`, `setFalse`) may be more intuitive to understand at first glance compared to `useToggle` (`setLeft`, `setRight`).
+3. **Consistency:** `useBoolean` may align better with naming conventions and expectations in other React hooks or state management patterns (`setTrue`, `setFalse` vs. `setLeft`, `setRight`).
+
+#### Conclusion
+
+Both `useToggle` and `useBoolean` from `ahooks` serve the same fundamental purpose of managing boolean state with slight differences in their API design. Choosing between them may come down to personal preference or specific project conventions. `useBoolean` provides more intuitive method names (`setTrue`, `setFalse`), while `useToggle` offers similar functionality with slightly different naming (`setLeft`, `setRight`). Both are effective tools for handling boolean state in React applications.
+
+### `useDynamicList`
+
+`useDynamicList` is particularly useful for managing dynamic lists, providing a set of methods to manipulate the list's state efficiently.
+
+#### Key Features
+- **Dynamic List Management**: Easily add, remove, update, and manipulate list items.
+- **Immutable Updates**: Ensures state updates are done immutably, preserving React's state management principles.
+- **Convenient API**: Provides a set of methods to handle common list operations.
+
+#### Basic Usage
+Here’s a basic example of how to use `useDynamicList`:
+
+```jsx
+import React from 'react';
+import { useDynamicList } from 'ahooks';
+
+const DynamicListComponent = () => {
+  const { list, insert, remove, move, push, reset, getKey, getIndex, merge, replace, shift, pop, unshift, sortList } = useDynamicList([1, 2, 3]);
+
+  return (
+    <div>
+      <button onClick={() => push(Math.random())}>Add Random</button>
+      <button onClick={() => remove(0)}>Remove First</button>
+      <ul>
+        {list.map((item, index) => (
+          <li key={getKey(index)}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+export default DynamicListComponent;
+```
+
+#### API Methods
+
+- **list**: The current state of the list.
+- **insert(index, item)**: Inserts an item at the specified index.
+- **remove(index)**: Removes the item at the specified index.
+- **move(fromIndex, toIndex)**: Moves an item from one index to another.
+- **push(...items)**: Adds one or more items to the end of the list.
+- **reset(newList)**: Resets the list to the new list provided.
+- **getKey(index)**: Returns a unique key for the item at the specified index.
+- **getIndex(key)**: Returns the index of the item with the specified key.
+- **merge(index, items)**: Merges items into the list at the specified index.
+- **replace(index, item)**: Replaces the item at the specified index with a new item.
+- **shift()**: Removes the first item of the list.
+- **pop()**: Removes the last item of the list.
+- **unshift(...items)**: Adds one or more items to the beginning of the list.
+- **sortList(compareFunction)**: Sorts the list with the specified compare function.
+
+#### Example Methods Usage
+
+- **insert(index, item)**:
+
+  ```jsx
+  insert(1, 'newItem');
+  ```
+
+- **remove(index)**:
+
+  ```jsx
+  remove(0);
+  ```
+
+- **move(fromIndex, toIndex)**:
+
+  ```jsx
+  move(2, 0);
+  ```
+
+- **push(...items)**:
+
+  ```jsx
+  push('item1', 'item2');
+  ```
+
+- **reset(newList)**:
+
+  ```jsx
+  reset([4, 5, 6]);
+  ```
+
+- **getKey(index)**:
+
+  ```jsx
+  const key = getKey(2);
+  ```
+
+- **getIndex(key)**:
+
+  ```jsx
+  const index = getIndex(key);
+  ```
+
+- **merge(index, items)**:
+
+  ```jsx
+  merge(1, ['a', 'b']);
+  ```
+
+- **replace(index, item)**:
+
+  ```jsx
+  replace(2, 'replacedItem');
+  ```
+
+- **shift()**:
+
+  ```jsx
+  shift();
+  ```
+
+- **pop()**:
+
+  ```jsx
+  pop();
+  ```
+
+- **unshift(...items)**:
+
+  ```jsx
+  unshift('startItem1', 'startItem2');
+  ```
+
+- **sortList(compareFunction)**:
+
+  ```jsx
+  sortList((a, b) => a - b);
+  ```
+
+#### Advanced Usage
+
+**Maintaining Keys:**
+Each item in the list has a unique key to help with React's reconciliation process.
+
+```jsx
+const { list, getKey } = useDynamicList([{ id: 1, value: 'a' }, { id: 2, value: 'b' }]);
+
+return (
+  <ul>
+    {list.map((item, index) => (
+      <li key={getKey(index)}>{item.value}</li>
+    ))}
+  </ul>
+);
+```
+
+**Sorting List:**
+
+```jsx
+const { list, sortList } = useDynamicList([3, 1, 2]);
+
+sortList((a, b) => a - b); // Sorts list in ascending order
+```
+
+### `useInfiniteScroll`
+
+`useInfiniteScroll` is a custom hook provided by the `ahooks` library that simplifies the implementation of infinite scrolling in React applications. Infinite scrolling is a pattern where more content is loaded as the user scrolls down the page, creating a seamless experience without the need for pagination buttons. This hook manages the complexities of loading additional data as needed, ensuring a smooth and efficient user experience.
+
+#### Key Features
+
+1. **Data Loading Management**: Automatically handles data fetching as the user scrolls, providing a callback to load more data.
+2. **Scroll Container Configuration**: Supports specifying different scroll containers, not just the window.
+3. **Threshold Setting**: Allows setting a threshold to determine when to trigger data loading before the user reaches the bottom.
+4. **Loading State Management**: Provides states to manage loading and error handling.
+5. **Customizable Options**: Offers various customization options to tailor the behavior to specific use cases.
+
+#### Basic Usage
+
+Here’s a simple example to demonstrate the use of `useInfiniteScroll`:
+
+```jsx
+import React, { useState } from 'react';
+import { useInfiniteScroll } from 'ahooks';
+
+const InfiniteScrollComponent = () => {
+  const [data, setData] = useState([]);
+  const [page, setPage] = useState(1);
+
+  const fetchMoreData = async () => {
+    const response = await fetch(`https://api.example.com/data?page=${page}`);
+    const newData = await response.json();
+    setData((prevData) => [...prevData, ...newData]);
+    setPage(page + 1);
+  };
+
+  const { data: infiniteData, loading, noMore, error } = useInfiniteScroll(fetchMoreData, {
+    threshold: 100,
+  });
+
+  return (
+    <div>
+      {data.map((item, index) => (
+        <div key={index}>{item.name}</div>
+      ))}
+      {loading && <p>Loading...</p>}
+      {noMore && <p>No more data</p>}
+      {error && <p>Error loading data</p>}
+    </div>
+  );
+};
+
+export default InfiniteScrollComponent;
+```
+
+#### API
+
+The `useInfiniteScroll` hook provides several configuration options and returns useful states:
+
+##### Configuration Options
+
+- **target**: The target container to listen for scroll events. Default is `window`.
+- **threshold**: Distance in pixels from the bottom of the container to trigger loading. Default is `100`.
+- **isNoMore**: A function to determine if there is no more data to load.
+- **loadingDelay**: Delay in milliseconds before setting the loading state to `true`. Default is `0`.
+
+##### Return Values
+
+- **data**: The accumulated data from the infinite scroll.
+- **loading**: A boolean indicating if data is currently being loaded.
+- **noMore**: A boolean indicating if there is no more data to load.
+- **error**: An error object if there was an error during data loading.
+
+#### Advanced Usage
+
+For more complex use cases, `useInfiniteScroll` can be customized extensively. Here’s an example with custom scroll container and no more data condition:
+
+```jsx
+import React, { useState, useRef } from 'react';
+import { useInfiniteScroll } from 'ahooks';
+
+const CustomInfiniteScrollComponent = () => {
+  const [data, setData] = useState([]);
+  const [page, setPage] = useState(1);
+  const containerRef = useRef(null);
+
+  const fetchMoreData = async () => {
+    const response = await fetch(`https://api.example.com/data?page=${page}`);
+    const newData = await response.json();
+    setData((prevData) => [...prevData, ...newData]);
+    setPage(page + 1);
+  };
+
+  const isNoMore = data.length >= 100;
+
+  const { loading, noMore, error } = useInfiniteScroll(fetchMoreData, {
+    target: containerRef,
+    threshold: 50,
+    isNoMore: () => isNoMore,
+  });
+
+  return (
+    <div ref={containerRef} style={{ height: '400px', overflowY: 'scroll' }}>
+      {data.map((item, index) => (
+        <div key={index}>{item.name}</div>
+      ))}
+      {loading && <p>Loading...</p>}
+      {noMore && <p>No more data</p>}
+      {error && <p>Error loading data</p>}
+    </div>
+  );
+};
+
+export default CustomInfiniteScrollComponent;
+```
+
+### `useVirtualList`
+
+The `useVirtualList` hook is designed to optimize the rendering performance of large lists by implementing a virtualized list. Virtualization helps in rendering only the visible items within the viewport, reducing the amount of DOM manipulation and improving performance.
+
+#### Key Features
+
+1. **Performance Optimization**: By only rendering the items that are visible within the scrollable area, `useVirtualList` helps in significantly reducing the rendering overhead, leading to smoother performance, especially for large lists.
+   
+2. **Customization**: The hook provides several customization options, allowing developers to adjust the behavior of the virtual list according to their specific needs.
+
+3. **Ease of Integration**: It integrates seamlessly with React components, making it easy to adopt and use within existing projects.
+
+##### Installation
+
+To use `useVirtualList`, you need to have `ahooks` installed in your project. You can install it via npm or yarn:
+
+```sh
+npm install ahooks
+```
+or
+```sh
+yarn add ahooks
+```
+
+#### Basic Usage
+
+Here’s a basic example of how to use `useVirtualList` in a React component:
+
+```jsx
+import React from 'react';
+import { useVirtualList } from 'ahooks';
+
+const VirtualListExample = () => {
+  const itemCount = 10000; // Example item count
+  const itemHeight = 50; // Height of each item in pixels
+
+  const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
+    Array.from({ length: itemCount }).map((_, index) => ({ id: index, name: `Item ${index}` })),
+    {
+      itemHeight,
+      overscan: 5, // Number of extra items to render beyond the visible area
+    }
+  );
+
+  return (
+    <div {...containerProps} style={{ height: 500, overflow: 'auto' }}>
+      <div {...wrapperProps}>
+        {list.map((item) => (
+          <div key={item.data.id} style={{ height: itemHeight }}>
+            {item.data.name}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default VirtualListExample;
+```
+
+#### Parameters and Options
+
+The `useVirtualList` hook takes two main parameters: the source list and an options object.
+
+1. **Source List**: An array of data items to be rendered.
+
+2. **Options Object**: This object allows you to configure the behavior of the virtual list. Key options include:
+   - `itemHeight`: The fixed height of each item in the list.
+   - `overscan`: Number of extra items to render before and after the visible items for smoother scrolling.
+   - `estimateSize`: A function to estimate the size of each item if they have variable heights.
+
+#### Return Values
+
+The hook returns an object with the following properties:
+
+- **list**: An array of items currently being rendered. Each item contains the data and its position in the list.
+- **containerProps**: Props to be spread on the container element.
+- **wrapperProps**: Props to be spread on the wrapper element that contains the rendered items.
+- **scrollTo**: A function to programmatically scroll to a specific item.
+
+#### Advanced Usage
+
+For lists with variable item heights, you can provide an `estimateSize` function:
+
+```jsx
+import React from 'react';
+import { useVirtualList } from 'ahooks';
+
+const VirtualListVariableHeightExample = () => {
+  const itemCount = 10000;
+
+  const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
+    Array.from({ length: itemCount }).map((_, index) => ({ id: index, name: `Item ${index}`, height: 30 + (index % 5) * 10 })),
+    {
+      itemHeight: 50, // Provide a default height
+      overscan: 5,
+      estimateSize: (index) => 30 + (index % 5) * 10, // Function to estimate item height
+    }
+  );
+
+  return (
+    <div {...containerProps} style={{ height: 500, overflow: 'auto' }}>
+      <div {...wrapperProps}>
+        {list.map((item) => (
+          <div key={item.data.id} style={{ height: item.data.height }}>
+            {item.data.name}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default VirtualListVariableHeightExample;
+```
+
+In this example, the `estimateSize` function dynamically calculates the height of each item.
+
+### `usePagination`
+
+`usePagination` is a custom React hook provided by the `ahooks` library, which simplifies the implementation of pagination logic in React applications. It abstracts away common pagination-related tasks, making it easier to manage paginated data, handle page changes, and integrate with APIs or other data sources.
+
+#### Basic Usage
+The `usePagination` hook provides a straightforward way to manage paginated data. Here's a basic example of how to use it:
+
+```jsx
+import React from 'react';
+import { usePagination } from 'ahooks';
+
+const fetchData = ({ current, pageSize }) => {
+  // Replace with your data fetching logic
+  return fetch(`/api/data?page=${current}&size=${pageSize}`)
+    .then(response => response.json());
+};
+
+const PaginatedComponent = () => {
+  const { data, loading, pagination } = usePagination(fetchData, {
+    defaultPageSize: 10,
+  });
+
+  return (
+    <div>
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <ul>
+          {data?.list?.map(item => (
+            <li key={item.id}>{item.name}</li>
+          ))}
+        </ul>
+      )}
+      <div>
+        <button onClick={() => pagination.changePage(1)} disabled={pagination.current === 1}>
+          First
+        </button>
+        <button onClick={pagination.prevPage} disabled={!pagination.hasPrev}>
+          Previous
+        </button>
+        <button onClick={pagination.nextPage} disabled={!pagination.hasNext}>
+          Next
+        </button>
+        <button onClick={() => pagination.changePage(pagination.totalPages)} disabled={pagination.current === pagination.totalPages}>
+          Last
+        </button>
+        <span>
+          Page {pagination.current} of {pagination.totalPages}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+export default PaginatedComponent;
+```
+
+#### API Reference
+The `usePagination` hook returns an object with several properties and methods. Here is a detailed breakdown:
+
+- **Properties:**
+  - `data`: The paginated data returned by the `service` function.
+  - `loading`: A boolean indicating whether the data is currently being loaded.
+  - `pagination`: An object containing pagination-related properties and methods.
+
+- **Pagination Object Properties:**
+  - `current`: The current page number.
+  - `pageSize`: The number of items per page.
+  - `total`: The total number of items.
+  - `totalPages`: The total number of pages.
+  - `hasPrev`: A boolean indicating if there is a previous page.
+  - `hasNext`: A boolean indicating if there is a next page.
+
+- **Pagination Object Methods:**
+  - `changePage`: A function to change to a specific page.
+  - `prevPage`: A function to go to the previous page.
+  - `nextPage`: A function to go to the next page.
+  - `changePageSize`: A function to change the number of items per page.
+
+##### Configuration Options
+The `usePagination` hook accepts two parameters:
+
+1. **Service Function (`service`):**
+   - A function that fetches the paginated data. It receives an object containing `current` and `pageSize` as arguments.
+
+2. **Options (`options`):**
+   - An optional configuration object. Common options include:
+     - `defaultCurrent`: The default current page (default: 1).
+     - `defaultPageSize`: The default number of items per page (default: 10).
+     - `onChange`: A callback function that gets called when the page or page size changes.
+     - `formatResult`: A function to format the result of the service function. It should return an object containing `list` and `total`.
+
+#### Example with Configuration Options
+```jsx
+const PaginatedComponent = () => {
+  const { data, loading, pagination } = usePagination(fetchData, {
+    defaultCurrent: 1,
+    defaultPageSize: 10,
+    onChange: (current, pageSize) => {
+      console.log(`Page: ${current}, PageSize: ${pageSize}`);
+    },
+    formatResult: (response) => ({
+      list: response.items,
+      total: response.totalCount,
+    }),
+  });
+
+  // ...rest of the component
+};
+```
+
+### `useDebounce`
+
+`useDebounce` is used to debounce values and functions, reducing the frequency at which they are invoked. This is particularly useful in scenarios where you want to limit the rate of execution of a function, such as handling user input in a search field or resizing a window.
+
+`useDebounce` helps to delay the processing of a value or the execution of a function until a specified amount of time has passed since it was last invoked. This can improve performance by preventing unnecessary operations and reducing the load on the system.
+
+#### Key Features
+
+1. **Value Debouncing**: Delays the update of a value until a specified delay period has passed.
+2. **Function Debouncing**: Delays the execution of a function, ensuring it is not called more frequently than the specified delay.
+
+#### API Reference
+
+`useDebounce` provides two main hooks: `useDebounce` for values and `useDebounceFn` for functions.
+
+##### `useDebounce`
+
+This hook is used to debounce a value.
+
+```typescript
+const debouncedValue = useDebounce<T>(value: T, options?: { wait?: number, leading?: boolean, trailing?: boolean, maxWait?: number });
+```
+
+- `value`: The value to debounce.
+- `options`: An optional object to configure the debounce behavior.
+  - `wait`: The delay in milliseconds (default is 1000ms).
+  - `leading`: Whether to invoke on the leading edge (default is false).
+  - `trailing`: Whether to invoke on the trailing edge (default is true).
+  - `maxWait`: The maximum time `value` can be delayed before it's invoked (default is undefined).
+
+##### `useDebounceFn`
+
+This hook is used to debounce a function.
+
+```typescript
+const { run, cancel, flush } = useDebounceFn<T>(fn: T, options?: { wait?: number, leading?: boolean, trailing?: boolean, maxWait?: number });
+```
+
+- `fn`: The function to debounce.
+- `options`: An optional object to configure the debounce behavior.
+  - `wait`: The delay in milliseconds (default is 1000ms).
+  - `leading`: Whether to invoke on the leading edge (default is false).
+  - `trailing`: Whether to invoke on the trailing edge (default is true).
+  - `maxWait`: The maximum time `fn` can be delayed before it's invoked (default is undefined).
+
+#### Usage Examples
+
+##### Debouncing a Value
+
+Here’s how to debounce a value, such as an input field’s value:
+
+```javascript
+import React, { useState } from 'react';
+import { useDebounce } from 'ahooks';
+
+function DebouncedInput() {
+  const [value, setValue] = useState('');
+  const debouncedValue = useDebounce(value, { wait: 500 });
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      <p>Debounced Value: {debouncedValue}</p>
+    </div>
+  );
+}
+```
+
+In this example, `debouncedValue` will only update 500ms after the user stops typing.
+
+##### Debouncing a Function
+
+Here’s how to debounce a function, such as a search function that fetches data from an API:
+
+```javascript
+import React, { useState } from 'react';
+import { useDebounceFn } from 'ahooks';
+
+function DebouncedSearch() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+
+  const { run: debouncedSearch } = useDebounceFn((q) => {
+    fetch(`https://api.example.com/search?q=${q}`)
+      .then((res) => res.json())
+      .then((data) => setResults(data));
+  }, { wait: 500 });
+
+  const handleSearch = (e) => {
+    setQuery(e.target.value);
+    debouncedSearch(e.target.value);
+  };
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={query}
+        onChange={handleSearch}
+      />
+      <ul>
+        {results.map((item) => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+In this example, the `debouncedSearch` function will only be called 500ms after the user stops typing in the input field, reducing the number of API requests.
+
+#### Advanced Configuration
+
+- **Leading Edge Invocation**: If you want the debounced function to be called at the start of the delay period, set `leading: true`.
+- **Trailing Edge Invocation**: The function is called at the end of the delay period by default (`trailing: true`), but you can disable it if needed.
+- **Max Wait Time**: To ensure the function is invoked after a maximum time, even if the user keeps triggering it, use `maxWait`.
+
+### `useThrottle`
+
+The `useThrottle` hook in `ahooks` is a powerful utility designed to limit the number of times a function can be called over a specified period. This can be extremely useful in scenarios where a function might be called excessively, such as during scroll or resize events. Throttling ensures that the function is executed at most once every specified time interval, thus improving performance and reducing the load on the browser.
+
+#### Key Concepts
+
+- **Throttling**: It limits the execution of a function to once every specified interval, regardless of how many times the event occurs.
+- **Debouncing**: In contrast, debouncing delays the execution of a function until a specified period has elapsed since the last time it was invoked.
+
+#### Syntax
+
+```javascript
+const throttledValue = useThrottle(value, options);
+```
+
+#### Parameters
+
+- `value`: The value to be throttled. This can be any value that changes over time, such as a state variable.
+- `options`: An optional object to configure the throttling behavior. It can include:
+  - `wait`: The time in milliseconds to throttle executions. Default is `1000ms`.
+  - `leading`: Boolean to indicate if the function should be invoked on the leading edge of the timeout. Default is `true`.
+  - `trailing`: Boolean to indicate if the function should be invoked on the trailing edge of the timeout. Default is `true`.
+
+#### Returns
+
+- `throttledValue`: The throttled version of the provided value. It updates at most once every `wait` milliseconds.
+
+#### Example Usage
+
+```javascript
+import React, { useState } from 'react';
+import { useThrottle } from 'ahooks';
+
+const ThrottledComponent = () => {
+  const [value, setValue] = useState('');
+  const throttledValue = useThrottle(value, { wait: 500 });
+
+  const handleChange = (e) => {
+    setValue(e.target.value);
+  };
+
+  return (
+    <div>
+      <input type="text" value={value} onChange={handleChange} />
+      <p>Throttled Value: {throttledValue}</p>
+    </div>
+  );
+};
+
+export default ThrottledComponent;
+```
+
+In this example, the `value` state updates immediately on input changes, but the `throttledValue` only updates at most once every 500 milliseconds. This can help in reducing the frequency of expensive operations like API calls or complex calculations.
+
+#### Practical Applications
+
+- **Scroll Events**: Throttling can significantly improve performance by reducing the number of times a scroll event handler is called.
+- **Resize Events**: Similarly, handling resize events with throttling can prevent excessive recalculations and re-renders.
+- **API Calls**: When making API calls based on user input, throttling can prevent the server from being overwhelmed by too many requests in a short period.
+
+#### Considerations
+
+- **Leading vs. Trailing Execution**: By default, `useThrottle` invokes the function on both the leading and trailing edge of the interval. Depending on your use case, you might want to disable one of these. For instance, setting `leading` to `false` will prevent the function from being called immediately, and setting `trailing` to `false` will prevent it from being called at the end of the interval.
+- **State Synchronization**: When dealing with React state, ensure that the throttled value is used appropriately within your components to avoid stale state issues.
+
+### `useMap`
+
+`useMap` is a hook designed to manage a Map object in a React component. Maps are collections of key-value pairs where keys can be of any data type. `useMap` provides a set of utilities to interact with the Map, making it easier to handle complex state management scenarios.
+
+#### Key Features:
+
+- **Initialization**: Initialize the Map with a default set of key-value pairs.
+- **Basic Operations**: Add, delete, and retrieve values from the Map.
+- **Clearing**: Clear all entries in the Map.
+- **Size**: Get the current size of the Map.
+- **Entries**: Retrieve all entries in the Map as an array.
+
+#### Example Usage:
+
+```jsx
+import React from 'react';
+import { useMap } from 'ahooks';
+
+const ExampleComponent = () => {
+  const [map, { set, get, remove, reset, clear }] = useMap([
+    ['key1', 'value1'],
+    ['key2', 'value2'],
+  ]);
+
+  return (
+    <div>
+      <button onClick={() => set('key3', 'value3')}>Add key3</button>
+      <button onClick={() => remove('key1')}>Remove key1</button>
+      <button onClick={() => clear()}>Clear All</button>
+      <div>Value of key2: {get('key2')}</div>
+    </div>
+  );
+};
+```
+
+#### API:
+
+- `set(key, value)`: Adds or updates a key-value pair in the Map.
+- `get(key)`: Retrieves the value associated with the specified key.
+- `remove(key)`: Deletes the key-value pair with the specified key.
+- `reset(newMap)`: Resets the Map to a new set of key-value pairs.
+- `clear()`: Clears all entries in the Map.
+- `map`: The current state of the Map.
+
+### `useSet`
+
+`useSet` is a hook designed to manage a Set object in a React component. Sets are collections of unique values, meaning that any value in a Set can occur only once. `useSet` provides utilities to interact with the Set, making it easier to handle collections of unique items.
+
+#### Key Features:
+
+- **Initialization**: Initialize the Set with a default set of values.
+- **Basic Operations**: Add and delete values from the Set.
+- **Clearing**: Clear all values in the Set.
+- **Size**: Get the current size of the Set.
+- **Values**: Retrieve all values in the Set as an array.
+
+#### Example Usage:
+
+```jsx
+import React from 'react';
+import { useSet } from 'ahooks';
+
+const ExampleComponent = () => {
+  const [set, { add, remove, reset, clear }] = useSet(['value1', 'value2']);
+
+  return (
+    <div>
+      <button onClick={() => add('value3')}>Add value3</button>
+      <button onClick={() => remove('value1')}>Remove value1</button>
+      <button onClick={() => clear()}>Clear All</button>
+      <div>Set size: {set.size}</div>
+    </div>
+  );
+};
+```
+
+#### API:
+
+- `add(value)`: Adds a new value to the Set.
+- `remove(value)`: Deletes the specified value from the Set.
+- `reset(newSet)`: Resets the Set to a new set of values.
+- `clear()`: Clears all values in the Set.
+- `set`: The current state of the Set.
+
+### `useCreation`
+
+`useCreation` is a specialized hook from the `ahooks` library, designed to optimize the creation and memoization of complex objects and values in React. It provides an alternative to the standard React hooks like `useMemo` and `useCallback` with some added guarantees and optimizations.
+
+#### `useCreation` Overview
+
+#### Basic Usage
+
+The `useCreation` hook is typically used when you need to create complex objects, functions, or computations that should not be recalculated on every render unless certain dependencies change. Here's a basic example:
+
+```javascript
+import { useCreation } from 'ahooks';
+
+const MyComponent = () => {
+  const complexObject = useCreation(() => {
+    return { value: Math.random() };
+  }, []);
+
+  return <div>{complexObject.value}</div>;
+};
+```
+
+In this example, `complexObject` will be created once and will not change unless the dependencies in the second argument array change.
+
+#### Comparison with Other Memo Series Hooks
+
+##### `useMemo`
+
+`useMemo` is a standard React hook used to memoize a value. It recalculates the value only when its dependencies change. 
+
+**Example:**
+```javascript
+const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
+```
+
+**Pros:**
+- Part of React's core API, no need for additional libraries.
+- Good for simple memoization of values.
+
+**Cons:**
+- Does not provide strong guarantees about the referential equality of the returned value.
+- Can still trigger recalculations if not used carefully.
+
+##### `useCallback`
+
+`useCallback` is similar to `useMemo` but is specifically designed for memoizing functions.
+
+**Example:**
+```javascript
+const memoizedCallback = useCallback(() => {
+  doSomething(a, b);
+}, [a, b]);
+```
+
+**Pros:**
+- Reduces the need to create functions on every render.
+- Helps with performance optimization when passing callbacks to child components.
+
+**Cons:**
+- Same as `useMemo`, lacks strong guarantees about referential equality.
+
+#### `useCreation` vs. `useMemo`/`useCallback`
+
+**useCreation** provides stronger guarantees and optimizations compared to `useMemo` and `useCallback`:
+
+1. **Stable References:**
+   `useCreation` ensures that the created object or function will have a stable reference, which can be crucial for avoiding unnecessary re-renders in deeply nested components or complex dependency arrays.
+
+2. **Predictable Behavior:**
+   It guarantees that the value will only be recalculated when dependencies change, providing a more predictable and reliable memoization behavior.
+
+3. **Performance:**
+   By ensuring referential equality, `useCreation` can help avoid performance pitfalls associated with unnecessary re-renders caused by changing references.
+
+#### Practical Example and Comparison
+
+Let's compare a practical scenario where `useMemo` might not be sufficient:
+
+**Using `useMemo`:**
+
+```javascript
+const expensiveObject = useMemo(() => {
+  return { value: computeExpensiveValue(a, b) };
+}, [a, b]);
+
+// In some cases, React might still re-create the object unnecessarily.
+```
+
+**Using `useCreation`:**
+
+```javascript
+const expensiveObject = useCreation(() => {
+  return { value: computeExpensiveValue(a, b) };
+}, [a, b]);
+
+// This ensures that `expensiveObject` has a stable reference and will only be re-created if `a` or `b` changes.
+```
+
+#### Conclusion
+
+`useCreation` is a powerful hook from `ahooks` that offers more reliable memoization for complex objects and values compared to `useMemo` and `useCallback`. Its main advantage lies in providing stable references and predictable behavior, making it a valuable tool for optimizing performance in React applications. While `useMemo` and `useCallback` are suitable for many common use cases, `useCreation` shines in scenarios where stability and performance are critical.
+
+In the given code, the `useLatest` hook from `ahooks` is used to maintain a reference to the latest value of the `count` state. This helps in ensuring that the latest value is always used in the `setInterval` callback. Let's break down the code and understand why `count2` is not updating properly:
+
+### `useLatest`
+
+The `useLatest` hook from `ahooks` provides a way to get the latest value of a variable within a callback or asynchronous function. It returns a mutable reference object whose `.current` property is always the latest value of the given variable.
+
+#### Code Explanation
+
+Here's the code with explanations:
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { useLatest } from 'ahooks';
+
+export default () => {
+  const [count, setCount] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  const latestCountRef = useLatest(count); // Create a ref that always holds the latest value of count
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount(latestCountRef.current + 1); // Use the latest value of count to update it
+    }, 1000);
+    return () => clearInterval(interval); // Cleanup the interval on unmount
+  }, [latestCountRef]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount2(count2 + 1); // This will use the initial value of count2 to update it
+    }, 1000);
+    return () => clearInterval(interval); // Cleanup the interval on unmount
+  }, [count2]);
+
+  return (
+    <>
+      <p>count(useLatest): {count}</p>
+      <p>count(default): {count2}</p>
+    </>
+  );
+};
+```
+
+#### Why `count2` is Not Updating
+
+The `count2` state is not updating as expected because of how the closure works in JavaScript. In the `setInterval` callback for `count2`, the value of `count2` is captured when the effect is initially run, which is `0`. Since `count2` is a dependency of the effect, the `setInterval` callback keeps using this initial value and increments it by `1` every second, but the updated value is not captured in the closure of the interval callback.
+
+#### Solution
+
+To ensure `count2` updates properly, you should use the functional form of the state updater function. This form ensures that the latest state value is always used to compute the next state:
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { useLatest } from 'ahooks';
+
+export default () => {
+  const [count, setCount] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  const latestCountRef = useLatest(count);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount(latestCountRef.current + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [latestCountRef]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount2(prevCount2 => prevCount2 + 1); // Use the functional updater form
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <>
+      <p>count(useLatest): {count}</p>
+      <p>count(default): {count2}</p>
+    </>
+  );
+};
+```
+
+#### Explanation of the Solution
+
+- **Functional State Updater**: The `setCount2` function is called with a function that takes the previous state (`prevCount2`) and returns the next state (`prevCount2 + 1`). This ensures that the latest state value is always used, even within the interval callback.
+- **Effect Dependencies**: The dependency array for the second `useEffect` is now empty (`[]`). This ensures that the effect runs only once on mount, and the interval callback always has the latest state due to the functional updater.
+
+#### Conclusion
+
+
+# 13. Other
+
+### Discuss Your Strengths and Weaknesses
+- **Contextual Fit:** Avoid core skills required for the position.
+- **Scenario-Based Weakness:** Describe weaknesses within specific scenarios.
+- **Rationalized Explanation:** Provide reasoned explanations for any weaknesses.
+- **Strengths:** Freely discuss strengths, focusing on those relevant to the position.
+
+### Willingness to Work Overtime
+- **Scenario - Urgent Projects:**
+  - **Example Answer:** "Given that your company is in a growth phase, as seen from the projects showcased on your website, I understand that working late might be necessary occasionally to meet deadlines. I am willing to collaborate to ensure smooth project completion, and I trust that such experiences will also foster my personal growth."
+- **Scenario - New Employee:**
+  - **Example Answer:** "As a newcomer, I may initially be unfamiliar with the specifics of the business, which might necessitate some overtime. However, I prefer to optimize my work efficiency and seek advice from experienced colleagues to complete tasks during regular hours. Of course, I'm open to overtime during critical situations."
+
+### Salary Expectations
+- **Motivation Beyond Salary:**
+  - "While salary is not my sole criterion, my primary motivation to join your company is interest in the role, which I am passionate about and believe I am well-suited for. I trust the company to offer a fair compensation."
+- **Expected Salary:**
+  - "I would like my salary to be around XX. Based on my research, the salary range for this position at your company is between A and B. Considering the responsibilities and requirements, I am open to your evaluation process."
+
+### Why Are You Suitable for This Position?
+- **Match Skills to Job Requirements:** Outline how your skills align with the job's demands.
+- **Contribution to Company:** Explain specific contributions you can make to the company.
+- **Unique Selling Point:** Highlight what sets you apart from other candidates, providing examples to support your claims.
+
+### Understanding of Our Company
+- **Realistic Approach:** Be honest about your level of understanding; explain what you know.
+- **Preparation:** It's beneficial to research the company and industry beforehand and discuss how your skills and goals align with the company's needs during the interview.
+
+### Overcoming Lack of Experience
+- **Acknowledge Importance:** Recognize the value of experience.
+- **Highlight Strengths:** Use your unique strengths to compensate for lack of experience.
+- **Commitment to Improvement:** Avoid generic statements and emphasize continuous skill enhancement.
+
+### Additional Questions to Ask
+- **Job-Specific Questions:**
+  1. What additional skills or knowledge do I need to excel in this position?
+  2. What are the most critical abilities for this job?
+  3. How can I bridge any gaps in my capabilities over the next three months?
+  4. Are there any skills or abilities you think I lack for this role?
+- **Personal Feedback:**
+  1. What do you see as my biggest strength and area for improvement?
+  2. Any feedback on my interview performance?
+- **Clarification of Interview Responses:**
+  1. "Could you suggest a better way to think through the question I answered earlier about [specific topic]?"
+- **Concluding Remark:**
+  - "I have no further questions. It has been a pleasure discussing with you!"
