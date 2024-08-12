@@ -4704,6 +4704,8 @@ In JavaScript, primitive types and reference types are stored and accessed diffe
 
 Primitive types, such as `number`, `string`, `boolean`, `null`, `undefined`, `symbol`, and `bigint`, are stored directly in the variable's memory location, usually on the stack. This direct storage enables quick access and efficient memory management, particularly for simple, immutable values.
 
+Among these, `null` and `undefined` are special primitive types that represent the absence of a value. `null` is explicitly assigned to indicate no value, while `undefined` is the default value for uninitialized variables. `undefined` should not be explicitly assigned, as it can lead to confusion and unexpected behavior. `typeof null` returns `'object'`, which is because null is considered an empty object reference.
+
 In contrast, reference types, like `object`, `array`, and `function`, are stored in the heap. When you create a reference type, the JavaScript engine allocates memory in the heap and stores the data there. The variable on the stack then holds a reference (or pointer) to that memory location. This means when you manipulate an object or an array, you're working through a reference. Any changes made to the object or array are reflected across all references to that object, as they all point to the same memory location in the heap.
 
 ### Related Topic: Memory Allocation for Objects and Arrays
