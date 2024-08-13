@@ -8,8 +8,14 @@ temp="temp.md"
 rm -f "$output"
 
 # Use find to get the list of markdown files, excluding the ones we don't want,
-# and then sort them. We use 'sort -V' for natural sorting, which handles the numerical sorting nicely.
-find . -maxdepth 1 -name '*.md' ! -name "$output" ! -name "$temp" -print0 | sort -zV | while IFS= read -r -d '' file; do
+# and then sort them. We use a custom sort with awk to handle filenames numerically.
+filelist=$(find . -maxdepth 1 -name '*.md' ! -name "$output" ! -name "$temp" \
+  | awk -F'[/.]' '{ printf "%05d%05d %s\n", $2, ($3==""?0:$3), $0 }' \
+  | sort -k1,1n \
+  | cut -d' ' -f2-)
+
+# Process each file
+echo "$filelist" | while IFS= read -r file; do
     filename=$(basename "$file" .md)
 
     # Check if the filename is a main topic or a subtopic
