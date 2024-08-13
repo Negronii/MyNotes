@@ -30,16 +30,19 @@
 ### 6. Runtime Environments
    - 6.1 Node.js Fundamentals
    - 6.2 Browser-specific JavaScript
+   - 6.3 Dev tools
 
 ### 7. Networking and APIs
    - 7.1 HTTP Protocols and WebSockets
    - 7.2 Web Security and Authentication
 
 ### 8. Frontend Frameworks and Libraries
-   - 8.1 React Basics (State, Props, Lifecycle)
-   - 8.2 Advanced React (Hooks, Context API, Performance Optimization)
-   - 8.3 Next.js (SSR, SSG, ISR)
-   - 8.4 Utility Libraries (Lodash, ahooks)
+   - 8.1 Virtual DOM
+   - 8.2 React Basics (State, Props, Lifecycle)
+   - 8.3 Advanced React (Hooks, Context API, Performance Optimization)
+   - 8.4 Next.js (SSR, SSG, ISR)
+   - 8.5 Lodash
+   - 8.6 ahooks
 
 ### 9. Architecture and Design
    - 9.1 Software Design Principles
@@ -52,6 +55,10 @@
 
 ### 11. Interview Skills
    - 11.1 Interview Tips
+
+### 12. Software Development Methodologies
+   - 12.1 Agile Development
+   - 12.2 Scrum Related
 
 
 # 1. WebBasics
@@ -9778,6 +9785,51 @@ When designing a front-end analytics SDK, the key considerations should include 
 
 ## 11.1 Interview Tips
 
+#### Discuss Your Strengths and Weaknesses
+- **Contextual Fit:** Avoid core skills required for the position.
+- **Scenario-Based Weakness:** Describe weaknesses within specific scenarios.
+- **Rationalized Explanation:** Provide reasoned explanations for any weaknesses.
+- **Strengths:** Freely discuss strengths, focusing on those relevant to the position.
+
+#### Willingness to Work Overtime
+- **Scenario - Urgent Projects:**
+  - **Example Answer:** "Given that your company is in a growth phase, as seen from the projects showcased on your website, I understand that working late might be necessary occasionally to meet deadlines. I am willing to collaborate to ensure smooth project completion, and I trust that such experiences will also foster my personal growth."
+- **Scenario - New Employee:**
+  - **Example Answer:** "As a newcomer, I may initially be unfamiliar with the specifics of the business, which might necessitate some overtime. However, I prefer to optimize my work efficiency and seek advice from experienced colleagues to complete tasks during regular hours. Of course, I'm open to overtime during critical situations."
+
+#### Salary Expectations
+- **Motivation Beyond Salary:**
+  - "While salary is not my sole criterion, my primary motivation to join your company is interest in the role, which I am passionate about and believe I am well-suited for. I trust the company to offer a fair compensation."
+- **Expected Salary:**
+  - "I would like my salary to be around XX. Based on my research, the salary range for this position at your company is between A and B. Considering the responsibilities and requirements, I am open to your evaluation process."
+
+#### Why Are You Suitable for This Position?
+- **Match Skills to Job Requirements:** Outline how your skills align with the job's demands.
+- **Contribution to Company:** Explain specific contributions you can make to the company.
+- **Unique Selling Point:** Highlight what sets you apart from other candidates, providing examples to support your claims.
+
+#### Understanding of Our Company
+- **Realistic Approach:** Be honest about your level of understanding; explain what you know.
+- **Preparation:** It's beneficial to research the company and industry beforehand and discuss how your skills and goals align with the company's needs during the interview.
+
+#### Overcoming Lack of Experience
+- **Acknowledge Importance:** Recognize the value of experience.
+- **Highlight Strengths:** Use your unique strengths to compensate for lack of experience.
+- **Commitment to Improvement:** Avoid generic statements and emphasize continuous skill enhancement.
+
+#### Additional Questions to Ask
+- **Job-Specific Questions:**
+  1. What additional skills or knowledge do I need to excel in this position?
+  2. What are the most critical abilities for this job?
+  3. How can I bridge any gaps in my capabilities over the next three months?
+  4. Are there any skills or abilities you think I lack for this role?
+- **Personal Feedback:**
+  1. What do you see as my biggest strength and area for improvement?
+  2. Any feedback on my interview performance?
+- **Clarification of Interview Responses:**
+  1. "Could you suggest a better way to think through the question I answered earlier about [specific topic]?"
+- **Concluding Remark:**
+  - "I have no further questions. It has been a pleasure discussing with you!"
 
 # 12. Software Development Methodologies
 
@@ -9866,51 +9918,3 @@ To grasp how deadlocks occur and prevent them, it's essential to understand the 
 
 ##### Conversion to Red-Black Tree
 **Conditions for Conversion:** If a bucket becomes overly populated (typically when it holds more than eight entries), it is converted from a linked list to a red-black tree. This enhances search efficiency within that bucket.
-
-# 14. interview related
-
-#### Discuss Your Strengths and Weaknesses
-- **Contextual Fit:** Avoid core skills required for the position.
-- **Scenario-Based Weakness:** Describe weaknesses within specific scenarios.
-- **Rationalized Explanation:** Provide reasoned explanations for any weaknesses.
-- **Strengths:** Freely discuss strengths, focusing on those relevant to the position.
-
-#### Willingness to Work Overtime
-- **Scenario - Urgent Projects:**
-  - **Example Answer:** "Given that your company is in a growth phase, as seen from the projects showcased on your website, I understand that working late might be necessary occasionally to meet deadlines. I am willing to collaborate to ensure smooth project completion, and I trust that such experiences will also foster my personal growth."
-- **Scenario - New Employee:**
-  - **Example Answer:** "As a newcomer, I may initially be unfamiliar with the specifics of the business, which might necessitate some overtime. However, I prefer to optimize my work efficiency and seek advice from experienced colleagues to complete tasks during regular hours. Of course, I'm open to overtime during critical situations."
-
-#### Salary Expectations
-- **Motivation Beyond Salary:**
-  - "While salary is not my sole criterion, my primary motivation to join your company is interest in the role, which I am passionate about and believe I am well-suited for. I trust the company to offer a fair compensation."
-- **Expected Salary:**
-  - "I would like my salary to be around XX. Based on my research, the salary range for this position at your company is between A and B. Considering the responsibilities and requirements, I am open to your evaluation process."
-
-#### Why Are You Suitable for This Position?
-- **Match Skills to Job Requirements:** Outline how your skills align with the job's demands.
-- **Contribution to Company:** Explain specific contributions you can make to the company.
-- **Unique Selling Point:** Highlight what sets you apart from other candidates, providing examples to support your claims.
-
-#### Understanding of Our Company
-- **Realistic Approach:** Be honest about your level of understanding; explain what you know.
-- **Preparation:** It's beneficial to research the company and industry beforehand and discuss how your skills and goals align with the company's needs during the interview.
-
-#### Overcoming Lack of Experience
-- **Acknowledge Importance:** Recognize the value of experience.
-- **Highlight Strengths:** Use your unique strengths to compensate for lack of experience.
-- **Commitment to Improvement:** Avoid generic statements and emphasize continuous skill enhancement.
-
-#### Additional Questions to Ask
-- **Job-Specific Questions:**
-  1. What additional skills or knowledge do I need to excel in this position?
-  2. What are the most critical abilities for this job?
-  3. How can I bridge any gaps in my capabilities over the next three months?
-  4. Are there any skills or abilities you think I lack for this role?
-- **Personal Feedback:**
-  1. What do you see as my biggest strength and area for improvement?
-  2. Any feedback on my interview performance?
-- **Clarification of Interview Responses:**
-  1. "Could you suggest a better way to think through the question I answered earlier about [specific topic]?"
-- **Concluding Remark:**
-  - "I have no further questions. It has been a pleasure discussing with you!"
