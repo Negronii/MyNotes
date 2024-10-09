@@ -3160,36 +3160,81 @@ Foo.a(); // Output: 1
 - **Precedence and Overwriting**: When accessing a property, instance properties take precedence over prototype properties. Static properties can be redefined, affecting their behavior when accessed before and after instance creation.
 
 #### New Methods Introduced in ES6
-##### Object Methods
-**Object Manipulation Functions**
-- **Object.is(obj1, obj2)**: Compares two objects. It returns `true` if both objects are identical. This method is similar to the strict equality operator `===`, but also handles special cases like comparing `NaN` to itself, where it returns `true` (unlike `===`).
-- **Object.assign(target, source)**: Copies all enumerable own properties from one or more source objects to a target object. It returns the modified target object. Useful for cloning and merging objects without additional libraries.
+##### `Object.assign`
+`Object.assign` is used to copy the values of all [[enumerable]] own properties from one or more source objects to a target object. It returns the target object. Note this is shallow copy. It will take later one for same property.
 
-**Retrieval Functions**
-- **Object.keys(obj)**: Returns an array containing the names of all own enumerable property names of the object.
-- **Object.values(obj)**: Returns an array containing the values corresponding to all own enumerable property values of the object.
-- **Object.entries(obj)**: Returns an array of arrays, each inner array is a [key, value] pair from the object. This is useful for iterating over objects using the new `for...of` loop.
-
-##### Array Methods
-**Creation Functions**
-- **Array.from(obj, mapFn?, thisArg?)**: Creates a new, shallow-copied Array instance from an array-like or iterable object. Optional parameters allow mapping each element through a function, transforming them during creation.
-- **Array.of(...elements)**: Creates a new Array instance with a variable number of elements, regardless of number or type of the arguments. This method is especially useful when you want to create an array from a set of elements.
-
-###### Practical Examples
-
-**Using Object.assign to merge objects:**
 ```javascript
-const obj1 = { a: 1 };
-const obj2 = { b: 2 };
-const mergedObj = Object.assign({}, obj1, obj2);
-console.log(mergedObj); // Output: { a: 1, b: 2 }
+const target = { a: 1, b: 2 };
+const source = { b: 3, c: 4 };
+const result = Object.assign(target, source);
+// { a: 1, b: 3, c: 4 }
+
+const obj1 = { a: 1, b: 2 };
+const obj2 = { b: 3, c: 4 };
+const merged = Object.assign({}, obj1, obj2);
+// { a: 1, b: 3, c: 4 }
 ```
 
-**Using Array.from to convert a NodeList to an Array:**
+##### `Object.is`
+
+`Object.is` is used to determine whether two values are the same value. It is similar to the strict equality operator `===`, but there are some differences:
+- `NaN` is considered the same as `NaN`.
+- `+0` and `-0` are considered different.
+
 ```javascript
-const nodeList = document.querySelectorAll('div'); // NodeList of div elements
-const nodesArray = Array.from(nodeList);
-console.log(nodesArray); // Output: [div, div, ...]
+Object.is(NaN, NaN); // true
+Object.is(+0, -0); // false
+```
+
+##### `Object.keys`
+
+`Object.keys` is used to return an array of a given object's own enumerable property names.
+
+```javascript
+const obj = { a: 1, b: 2, c: 3 };
+const keys = Object.keys(obj);
+// ['a', 'b', 'c']
+```
+
+##### `Object.values`
+
+`Object.values` is used to return an array of a given object's own enumerable property values.
+
+```javascript
+const obj = { a: 1, b: 2, c: 3 };
+const values = Object.values(obj);
+// [1, 2, 3]
+```
+
+##### `Object.entries`
+
+`Object.entries` is used to return an array of a given object's own enumerable property [key, value] pairs.
+
+```javascript
+const obj = { a: 1, b: 2, c: 3 };
+const entries = Object.entries(obj);
+// [['a', 1], ['b', 2], ['c', 3]]
+```
+
+These methods are useful for iterating over objects and working with their properties in various scenarios.
+
+##### `Array.from`
+
+`Array.from` is used to create a new, shallow-copied Array instance from an array-like or iterable object. Optional parameters allow mapping each element through a function, transforming them during creation.
+
+```javascript
+const arrayLike = { 0: 'a', 1: 'b', length: 2 };
+const arr = Array.from(arrayLike);
+// ['a', 'b']
+```
+
+##### `Array.of`
+
+`Array.of` is used to create a new Array instance with a variable number of elements, regardless of number or type of the arguments. This method is especially useful when you want to create an array from a set of elements.
+
+```javascript
+const arr1 = Array.of(1, 2, 3);
+// [1, 2, 3]
 ```
 
 #### Explain how the stack is used in memory management for frontend applications
@@ -3304,65 +3349,206 @@ In this example, both `p1` and `p2` will have the same hidden class because they
 
 Hidden classes are an internal mechanism used by JavaScript engines to optimize property access in objects. By designing object structures thoughtfully, you can leverage this mechanism to enhance the execution efficiency of your code.
 
+### Data Attribute
+
+#### Data Property
+
+- **[[configurable]]**: Indicates whether the property can be deleted or modified. If `false`, the property cannot be deleted or changed (except for its value if `writable` is `true`).
+- **[[enumerable]]**: Indicates whether the property shows up in a `for...in` loop and `Object.keys` method.
+- **[[writable]]**: Indicates whether the value of the property can be changed.
+- **[[value]]**: The actual value of the property.
+
+To change the attributes of a data property, you can use `Object.defineProperty` or `Object.defineProperties`.
+
+**Example:**
+```javascript
+let obj = {};
+Object.defineProperty(obj, 'name', {
+  value: 'John',
+  writable: false,
+  configurable: true,
+  enumerable: true
+});
+```
+
+#### Accessor Property
+
+- **[[get]]**: A function that is called when the property is accessed. The function should return the value of the property.
+- **[[set]]**: A function that is called when the property is assigned a value. The function receives the new value as an argument.
+- **[[configurable]]**: Indicates whether the property can be deleted or modified.
+- **[[enumerable]]**: Indicates whether the property shows up in a `for...in` loop and `Object.keys` method.
+
+To change the attributes of an accessor property, you can use `Object.defineProperty` or `Object.defineProperties`.
+
+**Example:**
+```javascript
+let obj = {
+  _name: 'John'
+};
+Object.defineProperty(obj, 'name', {
+  get() {
+    return this._name;
+  },
+  set(value) {
+    this._name = value;
+  },
+  configurable: true,
+  enumerable: true
+});
+```
+
+#### GetOwnPropertyDescriptor
+
+`Object.getOwnPropertyDescriptor(obj, prop)` returns the descriptor of the specified property of the object, containing details about the property such as its value, and its attributes like `configurable`, `enumerable`, `writable`, `get`, and `set`.
+
+**Example:**
+```javascript
+let obj = {
+  _name: 'John'
+};
+
+// Define a data property
+Object.defineProperty(obj, 'name', {
+  value: 'John',
+  writable: false,
+  configurable: true,
+  enumerable: true
+});
+
+// Get the property descriptor
+let descriptor = Object.getOwnPropertyDescriptor(obj, 'name');
+// {
+//   value: 'John',
+//   writable: false,
+//   configurable: true,
+//   enumerable: true
+// }
+```
+
+This method is useful for inspecting the attributes of a property to understand its configuration and behavior.
+
 ## 2.5 Javascript Patterns and Protocols
 
-#### Iterator Pattern
-The iterator pattern is a design pattern in object-oriented programming that allows sequential access to the elements of an aggregate object without exposing its underlying structure. This pattern is particularly useful in JavaScript, where it forms the basis of iterable objects that can be looped over with constructs like `for...of`.
+#### Iterator and Iterable Interface in JavaScript
 
-##### Context in JavaScript
+##### Overview
 
-Introduced with ES6 (ECMAScript 2015), iterators in JavaScript are integral to handling collections of data, especially when the collection size is not predetermined or elements are generated dynamically. An iterator in JavaScript is an object that provides a `next()` method returning an object with properties:
-- `value`: represents the next element in the sequence.
-- `done`: a boolean indicating whether the sequence has been fully traversed.
+In JavaScript, the `Iterable` and `Iterator` interfaces provide a standardized way to iterate over collections of data.
 
-##### Implementing an Iterator
+##### Iterable Interface
 
-Creating an iterable object in JavaScript involves defining a `Symbol.iterator` method, which returns an iterator. This method is automatically invoked by JavaScript's newer syntax features such as the `for...of` loop.
+An object is considered **iterable** if it implements the `@@iterator` method, which is accessible via the `[Symbol.iterator]` property. This method should return an **iterator**.
 
-###### Example: Range Iterator
+##### Iterator Interface
+
+An **iterator** is an object that adheres to the following interface:
+- It has a `next()` method.
+- The `next()` method returns an object with two properties:
+  - `value`: The next value in the iteration sequence.
+  - `done`: A boolean indicating whether the iteration is complete.
+
+##### Types Implementing the Iterable Interface
+
+Several built-in types in JavaScript implement the iterable interface, including:
+- Arrays
+- Strings
+- Maps
+- Sets
+- Typed Arrays
+- The `arguments` object
+- NodeLists (in the DOM)
+
+##### Implementing a Custom Iterable Class
+
+To create a custom iterable, you need to define the `[Symbol.iterator]` method in your class.
 
 ```javascript
-// Define a range object that is iterable using the iterator pattern
-const range = {
-  start: 1,
-  end: 5,
+class MyIterable {
+  constructor(data) {
+    this.data = data;
+  }
 
   [Symbol.iterator]() {
-    let current = this.start;
+    let index = 0;
+    const data = this.data;
+
     return {
-      next: () => {
-        if (current <= this.end) {
-          return { value: current++, done: false };
+      next() {
+        if (index < data.length) {
+          return { value: data[index++], done: false };
         } else {
-          return { done: true };
+          return { value: undefined, done: true };
         }
       }
     };
   }
-};
+}
 
-// Iterate over the range using a for...of loop
-for (let num of range) {
-  console.log(num);  // Outputs: 1, 2, 3, 4, 5
+// Usage example
+const myIterable = new MyIterable([1, 2, 3, 4]);
+
+for (const value of myIterable) {
+  console.log(value); // 1, 2, 3, 4
 }
 ```
 
-##### Usage in Modern JavaScript
+##### Best Practices
+- Ensure the iterator is stateless or properly handles its state to avoid bugs.
+- Implement the `return` and `throw` methods in the iterator if necessary to handle cleanup or error conditions.
+- Use iterables for collections that need custom iteration behavior or when implementing complex data structures.
 
-Iterators are foundational to many built-in JavaScript structures such as:
-- **Arrays**
-- **Strings**
-- **Maps**
-- **Sets**
+##### When to Use
+- When you need custom iteration logic.
+- When implementing complex data structures that require specific iteration behavior.
+- When you want to create objects that can be used with `for...of` loops, spread syntax, or other constructs that rely on iteration.
 
-These structures use iterators implicitly in language features like `for...of` loops, array destructuring, spread syntax, and others.
+#### Generators in JavaScript
 
-##### Advantages of Using Iterators
+##### Overview
 
-1. **Abstraction**: Provides a unified interface for element access, shielding clients from complex underlying data structures.
-2. **Decoupling**: Separates data structures from the algorithms used on them, increasing modularity.
-3. **Flexibility**: Allows algorithms to operate on diverse data structures simply by adhering to the iterator protocol.
+Generators are special functions that can pause execution and resume at a later time. They provide a powerful way to work with iterators.
 
+##### Declaring a Generator
+
+A generator function is declared using the `function*` syntax.
+
+```javascript
+function* myGenerator() {
+  yield 1;
+  yield 2;
+  yield 3;
+}
+```
+
+##### Using `yield`
+
+The `yield` keyword is used to pause the function and return a value. The function can be resumed later from where it was paused.
+
+```javascript
+function* range(start, end) {
+  for (let i = start; i <= end; i++) {
+    yield i;
+  }
+}
+
+// Usage example
+const gen = range(1, 5);
+
+for (const value of gen) {
+  console.log(value); // 1, 2, 3, 4, 5
+}
+```
+
+##### Best Practices
+- Use generators for lazy evaluation, where you generate values on-the-fly rather than storing them in memory.
+- Handle the `done` property correctly to avoid infinite loops.
+- Use `return` to exit a generator early and provide a final value if needed.
+- Use `throw` within a generator to handle errors gracefully.
+
+##### When to Use
+- When you need to work with sequences of values that are computationally expensive or infinite.
+- When you need to implement complex iteration logic.
+- When you want to simplify asynchronous programming by using `yield` to pause execution until a promise resolves.
 
 # 3. Advanced JavaScript
 
@@ -10736,3 +10922,12 @@ case ":$PATH:" in
 esac
 ## pnpm end
 ```
+
+# 15. Useful Resources
+
+#### 狼叔的node学习笔记
+https://i5ting.github.io/How-to-learn-node-correctly/
+
+#### 狼叔的github
+https://github.com/i5ting
+
