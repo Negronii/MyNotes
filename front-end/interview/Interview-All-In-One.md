@@ -1810,6 +1810,247 @@ var array = [].concat(baseArray);
   console.log(beasts.lastIndexOf('bison'));   // Output: 4
   ```
 
+#### `Map` Object
+
+##### Creating a Map
+
+```javascript
+let myMap = new Map();
+```
+
+##### Setting Values
+
+To add or update elements in a `Map`, use the `set` method.
+
+```javascript
+myMap.set('key1', 'value1');
+myMap.set('key2', 'value2');
+myMap.set(3, 'value3'); // Keys can be of any type
+```
+
+##### Getting Values
+
+To retrieve the value associated with a key, use the `get` method.
+
+```javascript
+let value1 = myMap.get('key1'); // 'value1'
+let value2 = myMap.get('key2'); // 'value2'
+let value3 = myMap.get(3);      // 'value3'
+```
+
+##### Deleting Values
+
+To remove an element from the `Map` by key, use the `delete` method.
+
+```javascript
+myMap.delete('key2'); // Removes the key-value pair with key 'key2'
+```
+
+##### Clearing the Map
+
+To remove all elements from the `Map`, use the `clear` method.
+
+```javascript
+myMap.clear(); // Empties the Map
+```
+
+##### Checking for Existence
+
+To check if a key exists in the `Map`, use the `has` method.
+
+```javascript
+let hasKey1 = myMap.has('key1'); // true or false
+```
+
+##### Traversing a Map
+
+You can traverse a `Map` using several methods:
+
+1. **Using `for...of` loop:**
+
+   ```javascript
+   for (let [key, value] of myMap) {
+       console.log(key, value);
+   }
+   ```
+
+2. **Using `forEach` method:**
+
+   ```javascript
+   myMap.forEach((value, key) => {
+       console.log(key, value);
+   });
+   ```
+
+3. **Iterating over keys:**
+
+   ```javascript
+   for (let key of myMap.keys()) {
+       console.log(key);
+   }
+   ```
+
+4. **Iterating over values:**
+
+   ```javascript
+   for (let value of myMap.values()) {
+       console.log(value);
+   }
+   ```
+
+5. **Iterating over entries:**
+
+   ```javascript
+   for (let [key, value] of myMap.entries()) {
+       console.log(key, value);
+   }
+   ```
+
+##### Example Usage
+
+```javascript
+let myMap = new Map();
+
+// Adding elements
+myMap.set('name', 'Alice');
+myMap.set('age', 30);
+myMap.set('job', 'developer');
+
+// Getting elements
+console.log(myMap.get('name')); // Alice
+console.log(myMap.get('age'));  // 30
+
+// Checking existence
+console.log(myMap.has('job'));  // true
+
+// Deleting an element
+myMap.delete('age');
+
+// Traversing the Map
+myMap.forEach((value, key) => {
+    console.log(`${key}: ${value}`);
+});
+
+// Clearing the Map
+myMap.clear();
+console.log(myMap.size); // 0
+```
+
+##### Summary
+
+- **`set(key, value)`**: Adds or updates an element.
+- **`get(key)`**: Retrieves the value for a key.
+- **`delete(key)`**: Removes an element by key.
+- **`clear()`**: Removes all elements.
+- **`has(key)`**: Checks if a key exists.
+- **Traversal**: Use `for...of`, `forEach`, `keys()`, `values()`, or `entries()` to iterate through the map.
+
+#### JavaScript `Set` Object
+
+The `Set` object is a collection of unique values. A value in a `Set` may only occur once; it is unique in the `Set`'s collection. The `Set` object lets you store unique values of any type, whether primitive values or object references.
+
+##### Key Methods
+
+- **`add(value)`**: Adds a new element with the given value to the `Set`.
+  ```javascript
+  const mySet = new Set();
+  mySet.add(1);
+  mySet.add(5);
+  mySet.add('some text');
+  ```
+
+- **`has(value)`**: Checks if the `Set` contains a specified value.
+  ```javascript
+  console.log(mySet.has(1)); // true
+  console.log(mySet.has(3)); // false
+  ```
+
+- **`delete(value)`**: Removes the specified value from the `Set`.
+  ```javascript
+  mySet.delete(5);
+  console.log(mySet.has(5)); // false
+  ```
+
+- **`clear()`**: Removes all elements from the `Set`.
+  ```javascript
+  mySet.clear();
+  console.log(mySet.size); // 0
+  ```
+
+- **`size`**: Returns the number of values in the `Set`.
+  ```javascript
+  console.log(mySet.size); // 3 (if 3 elements were added)
+  ```
+
+##### Traversing a `Set`
+
+You can traverse a `Set` using various methods:
+
+- **`for...of` Loop**: Iterates over the values of the `Set`.
+  ```javascript
+  for (let value of mySet) {
+    console.log(value);
+  }
+  ```
+
+- **`forEach` Method**: Executes a provided function once for each value in the `Set`.
+  ```javascript
+  mySet.forEach(value => {
+    console.log(value);
+  });
+  ```
+
+- **`values` Method**: Returns a new iterator object containing the values for each element in the `Set`.
+  ```javascript
+  const iterator = mySet.values();
+  for (let value of iterator) {
+    console.log(value);
+  }
+  ```
+
+- **`keys` Method**: (Alias for `values` method) Returns a new iterator object containing the values for each element in the `Set`.
+  ```javascript
+  const iterator = mySet.keys();
+  for (let value of iterator) {
+    console.log(value);
+  }
+  ```
+
+- **`entries` Method**: Returns a new iterator object containing an array of `[value, value]` for each element in the `Set`.
+  ```javascript
+  const iterator = mySet.entries();
+  for (let entry of iterator) {
+    console.log(entry);
+  }
+  ```
+
+##### Example Usage
+
+```javascript
+const mySet = new Set([1, 2, 3, 4]);
+
+// Add values
+mySet.add(5);
+mySet.add(5); // Duplicate, will not be added
+
+// Check for values
+console.log(mySet.has(1)); // true
+console.log(mySet.has(6)); // false
+
+// Delete a value
+mySet.delete(3);
+console.log(mySet.has(3)); // false
+
+// Traverse the Set
+mySet.forEach(value => {
+  console.log(value); // 1, 2, 4, 5
+});
+
+// Clear the Set
+mySet.clear();
+console.log(mySet.size); // 0
+```
+
 #### Determining Variable Types in JavaScript
 
 Understanding the type of a variable is crucial in JavaScript due to its dynamically typed nature. This section explores various methods to ascertain the type of variables effectively.
@@ -2958,11 +3199,110 @@ It operates on a Last In, First Out (LIFO) principle, efficiently managing funct
 It's used for dynamic allocation, primarily for objects and complex data structures. Unlike the stack, the heap is a larger, unstructured memory pool that requires manual management. Memory allocation and deallocation in the heap are handled by the JavaScript engine, which includes tasks like object creation and garbage collection.
 
 #### WeakMap and WeakSet in JavaScript
-WeakMap and WeakSet in JavaScript are collections that store objects weakly, meaning their elements are not prevented from being garbage-collected. They are often used in managing caches, tracking object references, and keeping metadata about objects without affecting their lifecycle.
 
-- **WeakMap**: Allows associating data with objects without preventing their garbage collection. This is useful for private data or caches that do not interfere with the lifecycle of the objects. Ideal for situations where you want to avoid creating memory leaks by inadvertently retaining references to objects.
+WeakMap and WeakSet are specialized collections in JavaScript that store their elements weakly, meaning the elements do not prevent garbage collection. This makes them particularly useful for managing caches, tracking object references, and associating metadata with objects without affecting their lifecycle.
 
-- **WeakSet**: Enables tracking a group of objects for presence checks without affecting their garbage collection. This is useful for tracking which objects have undergone a specific process without creating memory leaks.
+##### WeakMap
+
+A `WeakMap` is a collection of key-value pairs where the keys are objects and the values can be any arbitrary value. The key feature of a `WeakMap` is that it allows the garbage collection of its keys when there are no other references to them. Here are some important characteristics and best practices:
+
+- **Automatic Garbage Collection**: If a key object in a `WeakMap` is no longer referenced elsewhere, it can be garbage-collected, and the corresponding value in the `WeakMap` will also be removed.
+
+- **Non-Enumerability**: `WeakMap` keys are not enumerable, which means you cannot iterate over the keys or values of a `WeakMap`. This ensures that the data remains private and is not accidentally exposed.
+
+- **Use Case for Private Data**: `WeakMap` is ideal for associating private data with objects. For example, you can use a `WeakMap` to store private properties for objects created within a closure, ensuring that these properties are only accessible through the `WeakMap`.
+
+- **Memory Efficiency**: By allowing keys to be garbage-collected, `WeakMap` helps in managing memory efficiently, especially in scenarios where objects are created and discarded frequently.
+
+###### Example Usage:
+```javascript
+const privateData = new WeakMap();
+
+class MyClass {
+  constructor() {
+    privateData.set(this, { secret: 'hidden' });
+  }
+
+  getSecret() {
+    return privateData.get(this).secret;
+  }
+}
+
+const instance = new MyClass();
+console.log(instance.getSecret()); // 'hidden'
+
+// When `instance` is no longer referenced, the key-value pair in `privateData` can be garbage-collected.
+```
+
+##### WeakSet
+
+A `WeakSet` is a collection of objects, where an object can be a member of the set only once. Similar to `WeakMap`, the objects in a `WeakSet` are held weakly, meaning they do not prevent garbage collection.
+
+- **Automatic Garbage Collection**: Objects in a `WeakSet` that are no longer referenced elsewhere can be garbage-collected.
+
+- **Non-Enumerability**: `WeakSet` does not provide methods to iterate over its elements, ensuring that the objects it contains are not exposed inadvertently.
+
+- **Use Case for Tracking Objects**: `WeakSet` is useful for tracking objects without preventing their garbage collection. For example, you can use a `WeakSet` to keep track of which objects have been processed without risking memory leaks.
+
+###### Example Usage:
+```javascript
+const processedObjects = new WeakSet();
+
+function process(obj) {
+  if (!processedObjects.has(obj)) {
+    // Process the object
+    processedObjects.add(obj);
+  }
+}
+
+const obj1 = {};
+process(obj1);
+
+// When `obj1` is no longer referenced, it can be garbage-collected, and will be removed from `processedObjects`.
+```
+
+#### Summary
+
+- **WeakMap**: Associates data with objects without preventing their garbage collection. Ideal for private data and caches.
+- **WeakSet**: Tracks objects for presence checks without preventing their garbage collection. Useful for tracking the state of objects.
+
+Both `WeakMap` and `WeakSet` are powerful tools for managing memory and ensuring efficient garbage collection in JavaScript applications. They help avoid memory leaks by not holding strong references to their keys or elements, making them suitable for scenarios where object lifecycles are dynamic and unpredictable.
+
+#### hidden classes
+
+In JavaScript, **hidden classes** are an optimization mechanism primarily used to enhance the performance of property access in objects. They are an internal feature of the V8 engine (used by Chrome and Node.js) that helps speed up how properties are accessed by dynamically managing the structure of objects.
+
+#### How Hidden Classes Work
+
+1. **Object Creation**: When you create an object, the JavaScript engine assigns a hidden class to that object, which contains layout information about its properties.
+
+2. **Adding Properties**: When you add properties to an object, if these properties are added in a consistent order and manner, the JavaScript engine can reuse the existing hidden class or create a new one that reflects the object's structure.
+
+3. **Optimized Access**: By using hidden classes, the JavaScript engine can quickly locate an object's properties without having to search through the entire object, making property access more efficient.
+
+#### Example
+
+Consider the following code:
+
+```javascript
+function createPoint(x, y) {
+    return { x: x, y: y };
+}
+
+const p1 = createPoint(1, 2);
+const p2 = createPoint(3, 4);
+```
+
+In this example, both `p1` and `p2` will have the same hidden class because they have the same structure.
+
+#### Benefits of Hidden Classes
+
+- **Shared Structure**: If multiple objects have the same properties and structure, they can share the same hidden class, improving performance.
+- **Avoiding Dynamic Modifications**: Frequently adding or removing properties can lead to changes in hidden classes, which can degrade performance. Therefore, it’s best to determine an object’s structure as much as possible at creation time.
+
+#### Summary
+
+Hidden classes are an internal mechanism used by JavaScript engines to optimize property access in objects. By designing object structures thoughtfully, you can leverage this mechanism to enhance the execution efficiency of your code.
 
 ## 2.5 Javascript Patterns and Protocols
 
@@ -9522,6 +9862,14 @@ These metrics are arranged in chronological order: FP < FCP < FMP < DCL < LCP < 
 ##### Chrome DevTools
 - **Performance:** Records page performance data, including CPU, memory, network, rendering, and more. Enabling screenshots captures web page snapshots, and timing indicators can show the metrics mentioned above.
 - **Network:** Analyzes network requests, including the resources requested, timeline, size, and more. It also shows an overview of performance metrics when enabled.
+- In React devtools, settings, general, check "Highlight updates when components render". It can also record performance like chrome devtools. It is more specific to React and comprehensive.
+- ```javascript
+    function foo() {
+    debugger;
+    console.log('foo');
+    }
+    ```
+    In chrome devtools, you can use `debugger` to pause the execution of the code and inspect the variables. 
 
 ##### Lighthouse
 A popular third-party performance evaluation tool that works on both mobile and desktop. It provides an overall score, including the above metrics, and offers optimization suggestions such as using next-gen image formats (e.g., WebP, AVIF), compressing and correctly sizing images, which can save loading time.
@@ -9547,6 +9895,25 @@ Performance optimization is a gradual process, unlike bug fixes which can often 
 
 ##### Summary
 Analyze performance metrics to identify the root causes of slowness, address issues specifically, and continuously improve and optimize for better performance.
+
+#### My Improve performance experience
+
+In Shopee's CMT project, we had a requirement to enhance the user experience by adding a "Set Metrics" button to the drawer filter interface. When users click the filter button on the table, a drawer containing various filter fields appears. Our goal was to integrate a "Set Metrics" button at the top of this drawer, allowing users to customize their view. Upon clicking the "Set Metrics" button, a modal should pop up, enabling users to select which fields they want to display in the drawer filter.
+
+We were using a useDrawerFilter custom hook to manage the filter drawer options, the result is passed to the table component as a prop. 
+
+The initial design involved managing state through a useSetMetrics custom hook, which maintained two key states: one for tracking selected metrics that changed with user selections in the "Set Metrics" modal (representing unsaved changes) and another for saved changes. The useMetrics hook was then called within the useDrawerFilter hook to retrieve these states, utilizing the saved changes to determine which fields to display. 
+
+However, a significant issue arose when the "Set Metrics" modal was opened; any selection or deselection of fields would trigger a re-render of the useDrawerFilter hook due to updates in the unsaved changes state. This unintended re-rendering affected the entire table, causing it to refresh every time a change was made, resulting in a noticeable delay of around half a second for updates. This behavior created a frustrating user experience and highlighted the need for a more efficient state management approach.
+
+Initially, I was unsure of the cause of the performance issue. To investigate, I utilized Chrome DevTools to record the application's performance. The recording revealed that JavaScript calculations were consuming nearly all the processing time. Upon further inspection, I discovered that the React Diff function was taking an excessive amount of time, indicating that something was being re-rendered too frequently. To pinpoint the issue, I opened the React DevTools and enabled the "Show re-rendered components" feature. This allowed me to identify that the entire table component was re-rendering with every selection change made in the "Set Metrics" modal, confirming my suspicion that unnecessary re-renders were significantly impacting performance.
+
+The final solution involved moving the useSetMetrics hook inside the SetMetricsButton component, which effectively isolated the state management for metrics selection. This change prevented unnecessary re-renders of the useDrawerFilter hook and its parent components whenever the state of the "Set Metrics" modal changed.
+
+The useDrawerFilter hook continued to manage the state of selected fields, with a callback function for updating the state passed to the button component. This callback was only invoked when the save button in the modal was clicked, ensuring that the hook's state was updated only when necessary.
+
+After implementing this change, performance improved significantly; however, it was still not sufficient. The modal's closing animation was sluggish due to lingering performance issues, negatively impacting the user experience. To address this, I optimized the process by allowing the animation to complete before calling the callback to update the state.
+
 
 ## 10.2 Rendering and Computation Optimization
 
@@ -10135,3 +10502,237 @@ To grasp how deadlocks occur and prevent them, it's essential to understand the 
 
 ##### Conversion to Red-Black Tree
 **Conditions for Conversion:** If a bucket becomes overly populated (typically when it holds more than eight entries), it is converted from a linked list to a red-black tree. This enhances search efficiency within that bucket.
+
+# 14. Shell tools
+
+#### Oh My Zsh
+```zsh
+## If you come from bash you might have to change your $PATH.
+## export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+
+## Path to your Oh My Zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+## Set name of the theme to load --- if set to "random", it will
+## load a random theme each time Oh My Zsh is loaded, in which case,
+## to know which specific one was loaded, run: echo $RANDOM_THEME
+## See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+ZSH_THEME="robbyrussell"
+
+## Set list of themes to pick from when loading at random
+## Setting this variable when ZSH_THEME=random will cause zsh to load
+## a theme from this variable instead of looking in $ZSH/themes/
+## If set to an empty array, this variable will have no effect.
+## ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
+
+## Uncomment the following line to use case-sensitive completion.
+## CASE_SENSITIVE="true"
+
+## Uncomment the following line to use hyphen-insensitive completion.
+## Case-sensitive completion must be off. _ and - will be interchangeable.
+## HYPHEN_INSENSITIVE="true"
+
+## Uncomment one of the following lines to change the auto-update behavior
+## zstyle ':omz:update' mode disabled  # disable automatic updates
+## zstyle ':omz:update' mode auto      # update automatically without asking
+## zstyle ':omz:update' mode reminder  # just remind me to update when it's time
+
+## Uncomment the following line to change how often to auto-update (in days).
+## zstyle ':omz:update' frequency 13
+
+## Uncomment the following line if pasting URLs and other text is messed up.
+## DISABLE_MAGIC_FUNCTIONS="true"
+
+## Uncomment the following line to disable colors in ls.
+## DISABLE_LS_COLORS="true"
+
+## Uncomment the following line to disable auto-setting terminal title.
+## DISABLE_AUTO_TITLE="true"
+
+## Uncomment the following line to enable command auto-correction.
+## ENABLE_CORRECTION="true"
+
+## Uncomment the following line to display red dots whilst waiting for completion.
+## You can also set it to another string to have that shown instead of the default red dots.
+## e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
+## Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
+## COMPLETION_WAITING_DOTS="true"
+
+## Uncomment the following line if you want to disable marking untracked files
+## under VCS as dirty. This makes repository status check for large repositories
+## much, much faster.
+## DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+## Uncomment the following line if you want to change the command execution time
+## stamp shown in the history command output.
+## You can set one of the optional three formats:
+## "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
+## or set a custom format using the strftime function format specifications,
+## see 'man strftime' for details.
+## HIST_STAMPS="mm/dd/yyyy"
+
+## Would you like to use another custom folder than $ZSH/custom?
+## ZSH_CUSTOM=/path/to/new-custom-folder
+
+## Which plugins would you like to load?
+## Standard plugins can be found in $ZSH/plugins/
+## Custom plugins may be added to $ZSH_CUSTOM/plugins/
+## Example format: plugins=(rails git textmate ruby lighthouse)
+## Add wisely, as too many plugins slow down shell startup.
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting zsh-completions)
+
+source $ZSH/oh-my-zsh.sh
+
+## User configuration
+
+## export MANPATH="/usr/local/man:$MANPATH"
+
+## You may need to manually set your language environment
+## export LANG=en_US.UTF-8
+
+## Preferred editor for local and remote sessions
+## if [[ -n $SSH_CONNECTION ]]; then
+##   export EDITOR='vim'
+## else
+##   export EDITOR='mvim'
+## fi
+
+## Compilation flags
+## export ARCHFLAGS="-arch $(uname -m)"
+
+## Set personal aliases, overriding those provided by Oh My Zsh libs,
+## plugins, and themes. Aliases can be placed here, though Oh My Zsh
+## users are encouraged to define aliases within a top-level file in
+## the $ZSH_CUSTOM folder, with .zsh extension. Examples:
+## - $ZSH_CUSTOM/aliases.zsh
+## - $ZSH_CUSTOM/macos.zsh
+## For a full list of active aliases, run `alias`.
+##
+## Example aliases
+## alias zshconfig="mate ~/.zshrc"
+## alias ohmyzsh="mate ~/.oh-my-zsh"
+
+## pnpm
+export PNPM_HOME="/Users/ruiming.xie/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+## pnpm end
+➜  ~ nano .zshrc
+➜  ~ cat .zshrc
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+## If you come from bash you might have to change your $PATH.
+## export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+
+## Path to your Oh My Zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+## Set name of the theme to load --- if set to "random", it will
+## load a random theme each time Oh My Zsh is loaded, in which case,
+## to know which specific one was loaded, run: echo $RANDOM_THEME
+## See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+ZSH_THEME="robbyrussell"
+
+## Set list of themes to pick from when loading at random
+## Setting this variable when ZSH_THEME=random will cause zsh to load
+## a theme from this variable instead of looking in $ZSH/themes/
+## If set to an empty array, this variable will have no effect.
+## ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
+
+## Uncomment the following line to use case-sensitive completion.
+## CASE_SENSITIVE="true"
+
+## Uncomment the following line to use hyphen-insensitive completion.
+## Case-sensitive completion must be off. _ and - will be interchangeable.
+## HYPHEN_INSENSITIVE="true"
+
+## Uncomment one of the following lines to change the auto-update behavior
+## zstyle ':omz:update' mode disabled  # disable automatic updates
+## zstyle ':omz:update' mode auto      # update automatically without asking
+## zstyle ':omz:update' mode reminder  # just remind me to update when it's time
+
+## Uncomment the following line to change how often to auto-update (in days).
+## zstyle ':omz:update' frequency 13
+
+## Uncomment the following line if pasting URLs and other text is messed up.
+## DISABLE_MAGIC_FUNCTIONS="true"
+
+## Uncomment the following line to disable colors in ls.
+## DISABLE_LS_COLORS="true"
+
+## Uncomment the following line to disable auto-setting terminal title.
+## DISABLE_AUTO_TITLE="true"
+
+## Uncomment the following line to enable command auto-correction.
+## ENABLE_CORRECTION="true"
+
+## Uncomment the following line to display red dots whilst waiting for completion.
+## You can also set it to another string to have that shown instead of the default red dots.
+## e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
+## Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
+## COMPLETION_WAITING_DOTS="true"
+
+## Uncomment the following line if you want to disable marking untracked files
+## under VCS as dirty. This makes repository status check for large repositories
+## much, much faster.
+## DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+## Uncomment the following line if you want to change the command execution time
+## stamp shown in the history command output.
+## You can set one of the optional three formats:
+## "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
+## or set a custom format using the strftime function format specifications,
+## see 'man strftime' for details.
+## HIST_STAMPS="mm/dd/yyyy"
+
+## Would you like to use another custom folder than $ZSH/custom?
+## ZSH_CUSTOM=/path/to/new-custom-folder
+
+## Which plugins would you like to load?
+## Standard plugins can be found in $ZSH/plugins/
+## Custom plugins may be added to $ZSH_CUSTOM/plugins/
+## Example format: plugins=(rails git textmate ruby lighthouse)
+## Add wisely, as too many plugins slow down shell startup.
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting zsh-completions)
+
+source $ZSH/oh-my-zsh.sh
+
+## User configuration
+
+## export MANPATH="/usr/local/man:$MANPATH"
+
+## You may need to manually set your language environment
+## export LANG=en_US.UTF-8
+
+## Preferred editor for local and remote sessions
+## if [[ -n $SSH_CONNECTION ]]; then
+##   export EDITOR='vim'
+## else
+##   export EDITOR='mvim'
+## fi
+
+## Compilation flags
+## export ARCHFLAGS="-arch $(uname -m)"
+
+## Set personal aliases, overriding those provided by Oh My Zsh libs,
+## plugins, and themes. Aliases can be placed here, though Oh My Zsh
+## users are encouraged to define aliases within a top-level file in
+## the $ZSH_CUSTOM folder, with .zsh extension. Examples:
+## - $ZSH_CUSTOM/aliases.zsh
+## - $ZSH_CUSTOM/macos.zsh
+## For a full list of active aliases, run `alias`.
+##
+## Example aliases
+## alias zshconfig="mate ~/.zshrc"
+## alias ohmyzsh="mate ~/.oh-my-zsh"
+
+## pnpm
+export PNPM_HOME="/Users/ruiming.xie/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+## pnpm end
+```
