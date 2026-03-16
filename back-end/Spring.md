@@ -1,7 +1,12 @@
-Initiate project: go to https://start.spring.io/ and choose environment/dependencies
+# Spring Boot
 
-Dependency injection example
-/model.person
+## Project Setup
+
+Initiate project: go to https://start.spring.io/ and choose environment/dependencies.
+
+## Dependency Injection Example
+
+### Model — `/model/Person.java`
 
 ```java
 package com.example.demo.model;
@@ -30,18 +35,9 @@ public class Person {
 }
 ```
 
-/service/PersonService.java
+### Service — `/service/PersonService.java`
 
 ```java
-package com.example.demo.service;
-
-import com.example.demo.dao.PersonDAO;
-import com.example.demo.model.Person;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
-
-@Service
 package com.example.demo.service;
 
 import com.example.demo.dao.PersonDAO;
@@ -71,7 +67,7 @@ public class PersonService {
 }
 ```
 
-/dao/PersonDAO.java
+### DAO Interface — `/dao/PersonDAO.java`
 
 ```java
 package com.example.demo.dao;
@@ -95,7 +91,7 @@ public interface PersonDAO {
 
 ```
 
-/dao/FakePersonDataAccessService.java
+### Repository — `/dao/FakePersonDataAccessService.java`
 
 ```java
 package com.example.demo.dao;
@@ -125,7 +121,7 @@ public class FakePersonDataAccessService implements PersonDAO{
 }
 ```
 
-api/PersonController
+### Controller — `/api/PersonController.java`
 
 ```java
 package com.example.demo.api;
@@ -160,7 +156,9 @@ public class PersonController {
 }
 ```
 
-Here, we established a minimum java spring app with one end point
+## Usage
+
+Here, we established a minimum Java Spring app with one endpoint
 `http://localhost:8080/api/v1/person`
 test with post request and json in body
 
@@ -172,9 +170,11 @@ test with post request and json in body
 
 or use get to get all being sent
 
-With such design, we can inject our FakePersonDataAccessService into the OersonDAO in service constructor. It provides benefits that, we don't need to mannually initiate by passing in a FakePersonDataAccessService object, also make it flexible, e.g. in the future we may have a PersonMongoService implements PersonDAO, with @Repository("mongo"), we can easily switch database in one line of code.
+With such design, we can inject our FakePersonDataAccessService into the PersonDAO in the service constructor. We don't need to manually instantiate it by passing in a FakePersonDataAccessService object, and it stays flexible — e.g., in the future we may have a PersonMongoService that implements PersonDAO with `@Repository("mongo")`, and we can easily switch database in one line of code.
 
-To pass variable from path, use
+## Path Variables and Validation
+
+To pass a variable from the path, use
 
 ```java
 @GetMapping(path = "{id}")
@@ -183,7 +183,7 @@ public Person getPersonById(@PathVariable("id") UUID id) {
 }
 ```
 
-Inside components, if we want the object to be not null and valid, we can use
+To require a request body to be non-null and valid:
 
 ```java
 public void addPerson(@Valid @NonNull @RequestBody Person person) {
@@ -191,14 +191,16 @@ public void addPerson(@Valid @NonNull @RequestBody Person person) {
 }
 ```
 
-If we want a attribute not to be null, we can use
+To require a specific field to not be blank:
 
 ```java
 @NotBlank
 private final String name
 ```
 
-Deployment: after running maven install, there will be a target folder, and a xxx.jar file. To run it, use
+## Deployment
+
+After running `mvn install`, a `target` folder is created containing a `.jar` file. To run it:
 
 ```
 java -jar xxx.jar

@@ -107,7 +107,6 @@ Docker Compose allows you to define and run multi-container Docker applications.
 
 ### Template
 ```yaml
-version: '3'
 services: 
   <service-name>:
     image: <image-name>
@@ -117,9 +116,10 @@ services:
       - <ENV_VAR_NAME>=<value>
 ```
 
+> The top-level `version` key (e.g., `version: '3'`) is **obsolete** in Docker Compose V2 and is ignored. You can safely omit it.
+
 ### Example
 ```yaml
-version: '3'
 services: 
   mongodb:
     image: mongo
@@ -138,8 +138,10 @@ services:
 ```
 
 ### How to Run This YAML
-- **Start Containers**: `docker-compose -f <filename> up` (e.g., `docker-compose -f my_compose.yaml up`)
-- **Stop Containers**: `docker-compose -f <filename> down` (e.g., `docker-compose -f my_compose.yaml down`)
+- **Start Containers**: `docker compose -f <filename> up` (e.g., `docker compose -f my_compose.yaml up`)
+- **Stop Containers**: `docker compose -f <filename> down` (e.g., `docker compose -f my_compose.yaml down`)
+
+> **`docker compose` vs `docker-compose`**: The hyphenated `docker-compose` is the standalone Python-based V1 tool (deprecated). The space-separated `docker compose` is the V2 plugin built into the Docker CLI. Use `docker compose` going forward.
 
 ## Dockerfile
 
@@ -171,6 +173,29 @@ CMD ["node", "/home/app/server.js"]
 ## Building an Image
 - Command: `docker build -t <image-name>:<tag> .`
 - Example: `docker build -t my-app:1.0 .`
+
+## Multi-Stage Builds
+
+Multi-stage builds use multiple `FROM` statements to keep the final image small by separating the build environment from the runtime environment.
+
+```dockerfile
+# Stage 1: Build
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Production
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+CMD ["node", "dist/index.js"]
+```
+
+Only the final stage ends up in the image. Build tools, source code, and dev dependencies from earlier stages are discarded, resulting in significantly smaller images.
 
 ## Use Amazon Elastic Container Registry (ECR)
 - Create a repository on Amazon ECR for each image.
