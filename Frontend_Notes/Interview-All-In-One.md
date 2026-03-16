@@ -1,4 +1,4 @@
-
+-e 
 # 0. Catalogue
 
 ### 1. Browser Basics
@@ -79,10 +79,10 @@
 
 ### 16. Git & Version Control
    - 16.1 Git Essentials
-
+-e 
 # 1. Browser
 
-
+-e 
 ## 1.1 Browser Basics
 
 ## Core Browser Components & Their Roles
@@ -165,10 +165,10 @@
 - **Rehydration**: SSR → client-side JS attaches event listeners (e.g., React hydration).
 - **Speculative Parsing**: Modern browsers pre-scan HTML to load resources (e.g., scripts, images) in advance.
 - **Layout Thrashing**: Forced synchronous layouts (e.g., reading `offsetHeight` after DOM write) degrade performance. Use `FastDOM` or batch reads/writes.
-
+-e 
 # 2. HTML & CSS
 
-
+-e 
 ## 2.1 HTML & CSS Basics
 
 ## CSS Units: Strategic Usage and Trade-offs
@@ -310,7 +310,7 @@ In this setup, `white-space: nowrap` ensures the text stays on a single line, `o
 ```
 
 This method uses `-webkit-box`, `-webkit-box-orient`, and `-webkit-line-clamp` to achieve multi-line truncation. It's important to note that this approach is somewhat limited by its compatibility with only webkit-based browsers (e.g., Safari, Chrome). However, it's widely used due to its simplicity and effectiveness in most web scenarios.
-
+-e 
 ## 2.2 Box Model and BFC
 
 ## Box Model
@@ -464,7 +464,7 @@ Adjust the `.container`'s display property to manage the floats properly and mai
   display: inline-block; /* Establishes a BFC */
 }
 ```
-
+-e 
 ## 2.3 Flex & Grid Layout
 
 ## Flexbox Layout
@@ -575,7 +575,7 @@ CSS Grid Layout is a two-dimensional layout system for the web. It lets you layo
   padding: 20px;
   background-color: lightgrey;
 }
-
+-e 
 ## 2.4 Browser - HTML & CSS part
 
 ## Web Performance: Repaint vs. Reflow
@@ -682,7 +682,7 @@ Both `defer` and `async` attributes are used to control how scripts are loaded a
 4. **Use Non-Blocking JavaScript:**
    - Avoid blocking the rendering of the page by using `defer` or `async`.
    - Ensuring that the static content loads first.
-
+-e 
 ## 2.5 DOM Properties
 
 ## Element Dimension Properties
@@ -773,7 +773,7 @@ function isInViewport(element) {
   );
 }
 ```
-
+-e 
 ## 2.6 CSS Interview Questions
 
 ## Clear Floats
@@ -1380,7 +1380,7 @@ To prevent the 300ms delay on mobile devices without relying on external librari
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ```
 This meta tag informs the browser that your website is optimized for mobile devices, prompting it to disable the 300ms delay for a better user experience. This approach is preferred as it relies on standard responsive design practices rather than additional scripts, improving your website's performance and compatibility.
-
+-e 
 ## 2.7 CSS Position, Display, and Animations
 
 ## CSS Position, Display, and Animations
@@ -1609,10 +1609,10 @@ Keyframes define intermediate states for animation; `animation` applies them.
 
 - **`transform: translateZ(0)`** — promotes a layer to the compositor without visible movement
 - **Caution:** Overuse of `will-change` or `translateZ(0)` can increase memory pressure; use only where needed for performance
-
+-e 
 # 3. JavaScript 101
 
-
+-e 
 ## 3.1 Javascript Basics
 
 ## JavaScript Variable Declarations: `var`, `let`, and `const`
@@ -1693,7 +1693,7 @@ b[0] = 10; // Allowed: modifying an object's content
 ECMAScript 6 introduced `let` and `const` to address the issues associated with `var` and provide more robust variable declaration options. Here are some best practices for using these declarations effectively:
 
 1. Do not use `var` unless necessary, as `let` and `const` offer better scoping and error prevention.
-
+-e 
 ## 3.2 Javascript Types
 
 ## Primitive Types
@@ -1971,7 +1971,7 @@ a[c] = 'c';
 console.log(a[b]); // Outputs: 'c'
 ```
 - Here, `b` and `c` are both plain objects. Despite having different properties, they are converted to the same string (`"[object Object]"`) when used as keys, causing `c` to overwrite `b`'s associated value. This highlights the importance of careful key selection to avoid unintended overwrites.
-
+-e 
 ## 3.3 Map & Set in JS
 
 ## `Map` Object
@@ -2204,7 +2204,7 @@ mySet.forEach(value => {
 // Clear the Set
 mySet.clear();
 console.log(mySet.size); // 0
-
+-e 
 ## 3.4 Memory in JS, WeakMap and WeakSet
 
 ## Explain how the stack and heap are used in memory management for frontend applications
@@ -2284,7 +2284,7 @@ process(obj1);
 - **WeakSet**: Tracks objects for presence checks without preventing their garbage collection. Useful for tracking the state of objects.
 
 Both `WeakMap` and `WeakSet` are powerful tools for managing memory and ensuring efficient garbage collection in JavaScript applications. They help avoid memory leaks by not holding strong references to their keys or elements, making them suitable for scenarios where object lifecycles are dynamic and unpredictable.
-
+-e 
 ## 3.5 Array in JS
 
 ## Difference between `for..in` and `for..of` loops in JavaScript. 
@@ -2672,7 +2672,7 @@ function arrayFlatten(arr: any[]): any[] {
 
 **Disadvantages**:
 - Limited browser support; not available in Internet Explorer or older browsers.
-
+-e 
 ## 3.6 ES6 New Methods
 
 ## New Methods Introduced in ES6
@@ -2751,7 +2751,7 @@ const arr = Array.from(arrayLike);
 ```javascript
 const arr1 = Array.of(1, 2, 3);
 // [1, 2, 3]
-
+-e 
 ## 3.7 Other JS
 
 ## JavaScript's Strict Mode Features
@@ -2836,7 +2836,7 @@ In React, `!!` prevents accidental rendering of falsy values like `0` or `''`:
 ```
 
 Without `!!`, a `list.length` of `0` would render the literal `0` in the DOM instead of rendering nothing.
-
+-e 
 ## 3.8 Modern JavaScript Features
 
 ## Modern JavaScript Features (ES2020+)
@@ -3092,10 +3092,10 @@ const load = async () => {
 ```
 
 **Key differences:** `import` is static (parsed at compile time); `import()` is dynamic and returns a Promise.
-
+-e 
 # 4. Advanced Javascript
 
-
+-e 
 ## 4.1 Object, Function, and Prototype
 
 ## What is the JavaScript Prototype Chain? How is it Formed?
@@ -3536,7 +3536,7 @@ let descriptor = Object.getOwnPropertyDescriptor(obj, 'name');
 ```
 
 This method is useful for inspecting the attributes of a property to understand its configuration and behavior.
-
+-e 
 ## 4.2 Scope & Closure
 
 #### What is Scope in JavaScript?
@@ -3734,7 +3734,7 @@ innerFunc(); // Output: 'I am outside!'
 **Modern Garbage Collection**  
 Modern browsers implement the mark-and-sweep garbage collection algorithm which mitigates issues with closures and memory leaks that were prevalent in older browsers using reference counting.
 
-
+-e 
 ## 4.3 Asynchronous JavaScript
 
 ## Callback Functions
@@ -4038,7 +4038,7 @@ To get the expected `[1, 2, 3]`, explicitly wrap the callback:
 // or simply:
 ['1', '2', '3'].map(Number); // [1, 2, 3]
 ```
-
+-e 
 ## 4.4 Iterators and Generators
 
 ## Iterable and Iterator Protocol
@@ -4224,7 +4224,7 @@ function* fetchUser(id) {
 | Early termination | Manual `return()` method | Built-in `return()` and `throw()` |
 
 Generators are the preferred choice for most iteration scenarios due to their simpler syntax and automatic state management. Custom iterators are useful when you need fine-grained control or when implementing data structures.
-
+-e 
 ## 4.5 Error Handling
 
 ## 4.5 Error Handling
@@ -4430,10 +4430,10 @@ import { ErrorBoundary } from 'react-error-boundary';
   <MyComponent />
 </ErrorBoundary>
 ```
-
+-e 
 # 5. DOM & Browser APIs
 
-
+-e 
 ## 5.1 DOM Manipulation and Events
 
 ## Deep Copy
@@ -4605,7 +4605,7 @@ arr.reduce((max, cur) => cur > max ? cur : max, arr[0]);
 ```
 
 For arrays with millions of elements, the `reduce` approach is the safest since `Math.max` with spread/apply pushes all arguments onto the call stack.
-
+-e 
 ## 5.2 Browser Storage and Communication
 
 ## Front-End Storage
@@ -4780,7 +4780,7 @@ const version = window.NativeBridge.getVersion();
 ```
 
 The URL scheme approach is preferred for its flexibility and better handling of asynchronous responses.
-
+-e 
 ## 5.3 Image Lazy Loading
 
 ## Native Lazy Loading
@@ -4857,10 +4857,10 @@ window.addEventListener('scroll', throttle(() => {
 - Load above-the-fold images eagerly (`loading="eager"` or omit the attribute) to avoid layout shift.
 - Use appropriately sized placeholder images or set explicit `width` and `height` on `<img>` elements to reserve space and prevent Cumulative Layout Shift (CLS).
 - Combine lazy loading with modern image formats (WebP, AVIF) and `srcset` for responsive images.
-
+-e 
 # 6. TypeScript
 
-
+-e 
 ## 6.1 Advanced TypeScript
 
 ## Utility Types
@@ -5053,10 +5053,10 @@ class Greeter { /* ... */ }
 ```
 
 Decorators are widely used in frameworks like Angular and NestJS for dependency injection, route definitions, and metadata annotation.
-
+-e 
 # 7. Event Loop & Runtime
 
-
+-e 
 ## 7.1 Event Loop
 
 ## The Event Loop
@@ -5156,7 +5156,7 @@ Used by V8 (Chrome, Node.js) and SpiderMonkey (Firefox). Starting from root refe
 ### Detecting Leaks
 
 Use Chrome DevTools Performance tab to record memory usage over time. A steadily increasing heap without drops after GC cycles indicates a leak. The Memory tab provides heap snapshots for comparing object counts between points in time.
-
+-e 
 ## 7.2 Node.js Fundamentals
 
 ## Process vs Thread
@@ -5248,7 +5248,7 @@ Cloud functions (AWS Lambda, Google Cloud Functions, Vercel Edge Functions) run 
 - Stateless -- no persistent in-memory state between invocations.
 
 Serverless is well-suited for API endpoints, webhooks, scheduled tasks, and event-driven processing.
-
+-e 
 ## 7.3 Build Tools
 
 ## Webpack
@@ -5360,10 +5360,10 @@ corepack prepare pnpm@latest --activate  # pin a specific version
 ```
 
 When `packageManager` is specified in `package.json`, Corepack ensures the correct version is used automatically, preventing version mismatches across team members.
-
+-e 
 # 8. Networking & Security
 
-
+-e 
 ## 8.1 HTTP Protocols and WebSockets
 
 ## RESTful API
@@ -5477,7 +5477,8 @@ The 4-step process is needed because each direction closes independently -- B ma
 
 TCP is stream-oriented, so multiple small writes may arrive as a single read. Solutions:
 - **Length-prefixed messages**: Prepend each message with its byte length.
-- **Delimiters**: Use a special character (e.g., `\n`) to mark message boundaries.
+- **Delimiters**: Use a special character (e.g., `
+`) to mark message boundaries.
 - **Fixed-length messages**: Pad each message to a fixed size.
 
 ## HTTP Version Evolution
@@ -5572,7 +5573,7 @@ HTTP keep-alive reuses TCP connections for multiple request-response pairs, but 
 | `<link rel="prefetch">` | Hint for next-page resources (low priority) | Resources for likely next navigation |
 | `<link rel="dns-prefetch">` | Resolve DNS early | Third-party domains (CDNs, analytics) |
 | `<link rel="preconnect">` | DNS + TCP + TLS handshake | High-priority third-party origins |
-
+-e 
 ## 8.2 Web Security and Authentication
 
 ## Authentication: Cookies vs Tokens
@@ -5687,10 +5688,10 @@ Injecting SQL through user input fields to manipulate database queries.
 - Use parameterized queries / prepared statements.
 - Validate and sanitize all user input.
 - Apply the principle of least privilege to database accounts.
-
+-e 
 # 9. React & Frameworks
 
-
+-e 
 ## 9.1 Virtual DOM and Framework Selection
 
 ## Virtual DOM
@@ -5731,7 +5732,7 @@ There is no universally "best" stack. The decision depends on:
 - **Team experience**: Productivity is highest with familiar tools.
 - **Learning cost**: TypeScript adds initial overhead but reduces long-term maintenance cost.
 - **Project requirements**: SSR needs, mobile targets, performance constraints.
-
+-e 
 ## 9.2 React Basics
 
 ## JSX
@@ -5859,7 +5860,7 @@ function Post() {
 | UX | Smooth, app-like transitions | Traditional page transitions |
 | Complexity | Higher (state management, routing) | Lower per page |
 | Examples | Gmail, Figma, Notion | News sites, e-commerce |
-
+-e 
 ## 9.3 Advanced React
 
 ## Component Communication
@@ -6014,7 +6015,7 @@ else if (loading) content = <Spinner />;
 else content = <Data />;
 return <div>{content}</div>;
 ```
-
+-e 
 ## 9.4 Next.js
 
 ## Why Next.js Over Plain React
@@ -6140,10 +6141,10 @@ export default function handler(req, res) {
 ```
 
 Supports all HTTP methods. Useful for form handling, proxying external APIs, and lightweight backend logic without a separate server.
-
+-e 
 # 10. Data Structures & Algorithms
 
-
+-e 
 ## 10.1 Algorithms and Complexity
 
 ## Dynamic Programming
@@ -6345,7 +6346,7 @@ function switchCase(s) {
   }).join('');
 }
 ```
-
+-e 
 ## 10.2 Core Data Structures
 
 ## Tree Traversals
@@ -6489,7 +6490,7 @@ function treeToArray(tree) {
   return result;
 }
 ```
-
+-e 
 ## 10.3 Practical Data Structure Implementations
 
 ## LRU Cache
@@ -6651,10 +6652,10 @@ React Fiber represents the component tree as a linked structure (child, sibling,
 - **Incremental rendering**: Work can be split into small units and spread across frames.
 - **Priority-based scheduling**: High-priority updates (input, animations) can interrupt lower-priority rendering.
 - **Pause and resume**: Rendering can yield to the browser for layout and paint, then resume.
-
+-e 
 # 11. Performance Optimization
 
-
+-e 
 ## 11.1 Performance Metrics and Analysis
 
 ## Performance Metrics
@@ -6793,7 +6794,7 @@ function report(url, data) {
 ```
 
 Batch events and send periodically (e.g., every 10 seconds or on page unload) to reduce network overhead.
-
+-e 
 ## 11.2 Rendering and Computation Optimization
 
 ## Virtual Scrolling
@@ -6917,10 +6918,10 @@ Hints to the browser about upcoming transformations, allowing it to optimize com
 ```
 
 Use sparingly -- applying `will-change` to too many elements wastes GPU memory.
-
+-e 
 # 12. Architecture & Design Patterns
 
-
+-e 
 ## 12.1 Software Design Principles
 
 ## SOLID Principles
@@ -7011,7 +7012,7 @@ Data flows in one direction: Action → Dispatcher → Store → View. This pred
 ### Micro-Frontends
 
 Splitting a large frontend into independently deployable applications, each owned by a different team. Useful for large organizations where teams need autonomy. Trade-offs include increased infrastructure complexity and potential inconsistency.
-
+-e 
 ## 12.2 Design Patterns in Practice
 
 ## Factory Pattern
@@ -7133,10 +7134,10 @@ User → UserRole → Role → RolePermission → Permission
 ```
 
 This separation allows adding new roles or changing permissions without modifying user records or application code.
-
+-e 
 # 13. Libraries
 
-
+-e 
 ## 13.1 Lodash
 
 ## Array Utilities
@@ -7219,7 +7220,7 @@ Lodash is most valuable when:
 - Processing collections with complex transformations.
 
 With modern JavaScript, many Lodash functions have native equivalents: `Array.prototype.flat()`, `Object.entries()`, optional chaining (`?.`), nullish coalescing (`??`). Evaluate whether native methods suffice before adding the dependency.
-
+-e 
 ## 13.2 ahooks
 
 ## Overview
@@ -7385,10 +7386,10 @@ const { list, push, remove, move, insert, getKey } = useDynamicList([
 ```
 
 Each item receives a stable key via `getKey(index)`, solving the key management problem for dynamic forms and sortable lists.
-
+-e 
 # 14. Professional Skills
 
-
+-e 
 ## 14.1 Interview Tips
 
 ## Discussing Strengths and Weaknesses
@@ -7460,7 +7461,7 @@ Show you've done your homework:
 - Thank the interviewer for their time and the conversation.
 - Reiterate your interest: "This conversation has reinforced my excitement about the role. I'd love the opportunity to contribute to the team."
 - Ask about next steps: "What does the rest of the process look like?"
-
+-e 
 ## 14.2 Agile and Scrum
 
 ## Agile Development
@@ -7546,7 +7547,7 @@ The team reflects on the sprint process:
 - **Scope creep**: Adding items mid-sprint undermines the sprint commitment. Use the backlog for new requests.
 - **Resistance to change**: Teams accustomed to waterfall may struggle with iterative planning. Start with pilot teams and demonstrate results.
 - **Skipping retrospectives**: Without reflection, the same problems recur. Retrospectives are not optional.
-
+-e 
 ## 15.1 Frontend Testing
 
 ## 15.1 Frontend Testing
@@ -7852,7 +7853,7 @@ test('matches snapshot', () => {
 ```
 
 Prefer explicit assertions over snapshots when testing behavior. Update snapshots intentionally with `jest -u`.
-
+-e 
 ## 16.1 Git Essentials
 
 ## Git Essentials
