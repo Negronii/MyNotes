@@ -31,7 +31,7 @@ install extension Nuget Gallery for VSCode, then in search section on the top, t
 >Nuget Gallery: Open Nuget Gallery
 ```
 
-Then in the window, install whatever needed, simplly search for packages, e.g. here's what we gonna use
+Then in the window, install whatever needed, simply search for packages, e.g. here's what we gonna use
 
 - Microsoft.EntityFrameworkCore.Design
 - Npgsql.EntityFrameworkCore.PostgreSQL
@@ -150,7 +150,7 @@ Example
 
 ```csharp
 using AuctionService.DTOs;
-using AuctionServices.Entities;
+using AuctionService.Entities;
 using AutoMapper;
 
 namespace AuctionService.RequestHelpers;
@@ -182,10 +182,10 @@ The Map method infers the source type from the object you pass to it. If you hav
 A simple Db context example:
 
 ```Csharp
-using AuctionServices.Entities;
+using AuctionService.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace AuctionServices.Data;
+namespace AuctionService.Data;
 
 public class AuctionDbContext : DbContext {
 
@@ -246,8 +246,8 @@ It registers AutoMapper with the DI container, scanning through the assemblies t
 It is often required to have a DBInitializer class
 
 ```csharp
-using AuctionServices.Data;
-using AuctionServices.Entities;
+using AuctionService.Data;
+using AuctionService.Entities;
 using Microsoft.EntityFrameworkCore;
 namespace AuctionService.Data;
 public class DbInitializer
@@ -306,8 +306,8 @@ Example code:
 
 ```csharp
 using AuctionService.DTOs;
-using AuctionServices.Data;
-using AuctionServices.Entities;
+using AuctionService.Data;
+using AuctionService.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

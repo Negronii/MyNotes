@@ -104,3 +104,86 @@ describe('Calculator Module', () => {
 - **`it` Blocks**: Each `it` block contains an individual test case with a clear, descriptive name indicating what the test is verifying.
 
 This structure helps in organizing tests logically and makes it easier to understand what each part of the module is supposed to do, based on the tests.
+
+## Setup and Teardown
+
+Use lifecycle hooks to set up preconditions and clean up after tests.
+
+```javascript
+describe('Database', () => {
+  let db;
+
+  beforeAll(() => {
+    db = connectToTestDB();
+  });
+
+  afterAll(() => {
+    db.close();
+  });
+
+  beforeEach(() => {
+    db.clear();
+  });
+
+  it('should insert a record', () => {
+    db.insert({ id: 1, name: 'Alice' });
+    expect(db.count()).toBe(1);
+  });
+});
+```
+
+- `beforeAll` / `afterAll` — run once per `describe` block
+- `beforeEach` / `afterEach` — run before/after every `it` block
+
+## Mocking in Practice
+
+### `jest.fn()` — Create a Mock Function
+
+```javascript
+const callback = jest.fn();
+callback('hello');
+
+expect(callback).toHaveBeenCalledWith('hello');
+expect(callback).toHaveBeenCalledTimes(1);
+```
+
+### `jest.mock()` — Mock an Entire Module
+
+```javascript
+jest.mock('./api');
+const api = require('./api');
+
+api.fetchUser.mockResolvedValue({ id: 1, name: 'Alice' });
+
+it('should fetch user', async () => {
+  const user = await api.fetchUser(1);
+  expect(user.name).toBe('Alice');
+});
+```
+
+### `jest.spyOn()` — Spy on an Existing Method
+
+```javascript
+const obj = { greet: (name) => `Hi ${name}` };
+const spy = jest.spyOn(obj, 'greet');
+
+obj.greet('Bob');
+
+expect(spy).toHaveBeenCalledWith('Bob');
+spy.mockRestore();
+```
+
+## Common Matchers
+
+| Matcher | Purpose |
+|---|---|
+| `toBe(value)` | Strict equality (`===`) |
+| `toEqual(value)` | Deep equality (objects/arrays) |
+| `toBeTruthy()` / `toBeFalsy()` | Boolean coercion check |
+| `toBeNull()` / `toBeUndefined()` | Null/undefined check |
+| `toContain(item)` | Array contains item or string contains substring |
+| `toThrow()` | Function throws an error |
+| `toHaveLength(n)` | Array/string length |
+| `toMatchObject(obj)` | Object contains subset of properties |
+| `toHaveBeenCalled()` | Mock was called |
+| `toHaveBeenCalledWith(args)` | Mock was called with specific args |
