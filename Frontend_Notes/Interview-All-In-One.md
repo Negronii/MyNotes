@@ -11,6 +11,7 @@
    - 2.4 Browser - HTML & CSS Part
    - 2.5 DOM Properties
    - 2.6 CSS Interview Questions
+   - 2.7 CSS Position, Display, and Animations
 
 ### 3. JavaScript Fundamentals
    - 3.1 Javascript Basics
@@ -20,12 +21,14 @@
    - 3.5 Array in JS
    - 3.6 ES6 New Methods
    - 3.7 Other JS
+   - 3.8 Modern JavaScript Features
 
 ### 4. Advanced JavaScript
    - 4.1 Object, Function, and Prototype
    - 4.2 Scope & Closure
    - 4.3 Asynchronous JavaScript
    - 4.4 Iterators and Generators
+   - 4.5 Error Handling
 
 ### 5. DOM & Browser APIs
    - 5.1 DOM Manipulation and Events
@@ -70,6 +73,12 @@
 ### 14. Professional Skills
    - 14.1 Interview Tips
    - 14.2 Agile and Scrum
+
+### 15. Frontend Testing
+   - 15.1 Frontend Testing
+
+### 16. Git & Version Control
+   - 16.1 Git Essentials
 
 # 1. Browser
 
@@ -1372,6 +1381,235 @@ To prevent the 300ms delay on mobile devices without relying on external librari
 ```
 This meta tag informs the browser that your website is optimized for mobile devices, prompting it to disable the 300ms delay for a better user experience. This approach is preferred as it relies on standard responsive design practices rather than additional scripts, improving your website's performance and compatibility.
 
+## 2.7 CSS Position, Display, and Animations
+
+## CSS Position, Display, and Animations
+
+### 1. CSS `position` Property
+
+#### Overview
+
+The `position` property determines how an element is positioned in the document flow and how it affects layout calculations.
+
+#### `position: static` (default)
+
+- Default behavior: element flows normally in document order
+- `top`, `right`, `bottom`, `left`, and `z-index` have no effect
+
+```css
+.box {
+  position: static;
+}
+```
+
+#### `position: relative`
+
+- Element remains in normal flow; space is reserved as if it were not positioned
+- `top`, `right`, `bottom`, `left` offset the element from its original position
+- Creates a new positioning context for absolutely positioned descendants
+
+```css
+.box {
+  position: relative;
+  top: 10px;
+  left: 20px;
+}
+```
+
+#### `position: absolute`
+
+- Element is removed from normal flow; no space reserved
+- Positioned relative to nearest **positioned ancestor** (ancestor with `position` other than `static`)
+- If no positioned ancestor exists, positioned relative to the initial containing block (usually `html`)
+
+```css
+.parent {
+  position: relative; /* Creates positioning context */
+}
+
+.child {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+```
+
+#### `position: fixed`
+
+- Removed from normal flow; positioned relative to the **viewport**
+- Stays in place during scroll (unless `transform`, `filter`, or `perspective` is applied to an ancestor, which creates a new containing block)
+
+```css
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+```
+
+#### `position: sticky`
+
+- Hybrid: element starts in normal flow, then behaves like `fixed` once the scroll position crosses a specified threshold
+- Requires at least one of `top`, `right`, `bottom`, `left` to be set
+
+```css
+.header {
+  position: sticky;
+  top: 0;
+}
+```
+
+#### Stacking Context and `z-index`
+
+- `z-index` controls stacking order along the z-axis only within the same stacking context
+- Elements with `position` other than `static` create a stacking context when `z-index` is set (or `opacity` < 1, `transform`, `filter`, etc.)
+- A stacking context isolates its children; a child's `z-index` cannot compare with elements outside its stacking context
+
+```css
+.layer-a {
+  position: relative;
+  z-index: 1;
+}
+
+.layer-b {
+  position: relative;
+  z-index: 2; /* Renders above layer-a */
+}
+```
+
+---
+
+### 2. `display: none` vs `visibility: hidden` vs `opacity: 0`
+
+| Aspect | `display: none` | `visibility: hidden` | `opacity: 0` |
+|--------|----------------|---------------------|--------------|
+| **Space in layout** | No space; element removed from flow | Space reserved; layout unchanged | Space reserved; layout unchanged |
+| **Event handling** | Not clickable; no pointer events | Not clickable; no pointer events | Clickable by default; receives events |
+| **Accessibility** | Screen readers ignore | Screen readers ignore | Screen readers may still announce |
+| **Transitions** | Cannot animate (no intermediate state) | Can animate `visibility` | Can animate `opacity` |
+| **Reflow/repaint** | Causes reflow when toggled | Repaint only (no layout change) | Repaint only (no layout change) |
+| **Child visibility** | Children hidden | Children inherit visibility | Children inherit opacity |
+
+#### Additional Notes
+
+- **`visibility: hidden`** — children can override with `visibility: visible` to become visible again
+- **`opacity: 0`** — use `pointer-events: none` when you want to hide without receiving clicks
+- **`display: none`** — best for conditional rendering (e.g., responsive toggles) since it fully removes the element from layout
+
+```css
+.hidden-flow { display: none; }
+.hidden-space { visibility: hidden; }
+.hidden-transparent { opacity: 0; pointer-events: none; }
+```
+
+---
+
+### 3. CSS Transitions and Animations
+
+#### Transitions
+
+Transitions animate property changes from one state to another when a specified property changes.
+
+**Shorthand syntax:**
+
+```css
+.element {
+  transition: property duration timing-function delay;
+}
+
+/* Example */
+.button {
+  transition: background-color 0.3s ease-in-out 0.1s;
+}
+```
+
+**Individual properties:**
+
+| Property | Purpose |
+|----------|---------|
+| `transition-property` | Properties to animate (e.g., `all`, `color`, `transform`) |
+| `transition-duration` | Length of transition (e.g., `0.3s`, `300ms`) |
+| `transition-timing-function` | Easing curve (`ease`, `linear`, `ease-in`, `ease-out`, `cubic-bezier()`) |
+| `transition-delay` | Delay before transition starts |
+
+```css
+.element {
+  transition-property: transform, opacity;
+  transition-duration: 0.3s, 0.2s;
+  transition-timing-function: ease-out, linear;
+  transition-delay: 0s, 0.1s;
+}
+```
+
+#### `@keyframes` and `animation`
+
+Keyframes define intermediate states for animation; `animation` applies them.
+
+```css
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(10%); }
+  100% { transform: translateX(0); }
+}
+
+.box {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+```
+
+**Individual properties:**
+
+| Property | Purpose |
+|----------|---------|
+| `animation-name` | Keyframes name |
+| `animation-duration` | Length of one cycle |
+| `animation-timing-function` | Easing per keyframe |
+| `animation-delay` | Delay before start |
+| `animation-iteration-count` | `1`, `infinite`, or number |
+| `animation-direction` | `normal`, `reverse`, `alternate`, `alternate-reverse` |
+| `animation-fill-mode` | `none`, `forwards`, `backwards`, `both` |
+| `animation-play-state` | `running` or `paused` |
+
+#### `transform` Properties
+
+| Property | Effect |
+|----------|--------|
+| `translate(x, y)` | Move element |
+| `translateX(x)` | Move horizontally |
+| `translateY(y)` | Move vertically |
+| `translateZ(z)` | Move on z-axis (requires 3D context) |
+| `rotate(angle)` | Rotate 2D |
+| `rotateX/Y/Z(angle)` | Rotate 3D |
+| `scale(x, y)` | Resize |
+| `scaleX(x)` / `scaleY(y)` | Resize per axis |
+
+```css
+.card {
+  transform: translate(10px, 20px) rotate(5deg) scale(1.05);
+}
+```
+
+#### GPU Compositing and Hardware Acceleration
+
+- Animating `transform` and `opacity` typically triggers compositing (GPU layer) instead of layout/paint recalculations
+- `will-change` hints to the browser that a property will change, allowing it to optimize ahead of time
+
+```css
+.animated {
+  will-change: transform;
+  transform: translateZ(0); /* Force GPU layer */
+}
+```
+
+- **`transform: translateZ(0)`** — promotes a layer to the compositor without visible movement
+- **Caution:** Overuse of `will-change` or `translateZ(0)` can increase memory pressure; use only where needed for performance
+
 # 3. JavaScript 101
 
 
@@ -2558,6 +2796,303 @@ if (Math.abs(sum - target) < tolerance) {
 }
 ```
 
+## `==` vs `===`
+
+- `==` (loose equality) performs **type coercion** before comparing. Values are converted to a common type.
+- `===` (strict equality) compares both **value and type** without conversion.
+
+```javascript
+5 == '5';          // true  (string '5' coerced to number)
+null == undefined; // true  (special rule)
+0 == false;        // true  (false coerced to 0)
+'' == false;       // true  (both coerced to 0)
+
+5 === '5';          // false (different types)
+null === undefined; // false (different types)
+0 === false;        // false (different types)
+```
+
+Always use `===` unless you intentionally need type coercion (e.g., `value == null` to check for both `null` and `undefined`).
+
+## The `!!` Operator
+
+`!!` converts any value to its boolean equivalent. The first `!` coerces to boolean and negates; the second `!` negates back.
+
+```javascript
+!!'hello';    // true
+!!0;          // false
+!!null;       // false
+!!undefined;  // false
+!!NaN;        // false
+!!'';         // false
+!!{};         // true
+!![];         // true
+```
+
+In React, `!!` prevents accidental rendering of falsy values like `0` or `''`:
+
+```jsx
+{!!list.length && <ItemList items={list} />}
+```
+
+Without `!!`, a `list.length` of `0` would render the literal `0` in the DOM instead of rendering nothing.
+
+## 3.8 Modern JavaScript Features
+
+## Modern JavaScript Features (ES2020+)
+
+### 1. Optional Chaining (`?.`)
+
+Short-circuits when the left-hand side is `null` or `undefined`, returning `undefined` instead of throwing.
+
+#### Syntax
+
+```javascript
+obj?.prop
+obj?.[expr]
+func?.(args)
+```
+
+#### Use Cases
+
+**Objects:**
+```javascript
+const user = { address: { city: 'NYC' } };
+user?.address?.city;        // 'NYC'
+user?.profile?.avatar;     // undefined (no error)
+```
+
+**Methods:**
+```javascript
+const obj = { greet: () => 'hi' };
+obj.greet?.();             // 'hi'
+obj.missing?.();           // undefined
+```
+
+**Arrays:**
+```javascript
+const arr = [1, 2, 3];
+arr?.[0];                  // 1
+arr?.[10];                 // undefined
+```
+
+**Nested optional access:**
+```javascript
+const data = { items: [{ name: 'a' }] };
+data?.items?.[0]?.name;    // 'a'
+```
+
+---
+
+### 2. Nullish Coalescing (`??`)
+
+Returns the right-hand side only when the left-hand side is `null` or `undefined`. Unlike `||`, it does **not** treat `0`, `''`, or `false` as falsy.
+
+| Left Value | `a \|\| b` | `a ?? b` |
+|------------|------------|----------|
+| `null`     | `b`        | `b`      |
+| `undefined`| `b`        | `b`      |
+| `0`        | `b`        | `0`      |
+| `''`       | `b`        | `''`     |
+| `false`    | `b`        | `false`  |
+| `NaN`      | `b`        | `NaN`    |
+
+**When to use each:**
+- `??` — default values where `0`, `''`, or `false` are valid
+- `||` — default when any falsy value should trigger fallback
+
+```javascript
+const count = 0;
+count || 10;   // 10
+count ?? 10;   // 0
+
+const name = '';
+name || 'Anonymous';   // 'Anonymous'
+name ?? 'Anonymous';   // ''
+```
+
+---
+
+### 3. Destructuring
+
+#### Object Destructuring
+
+```javascript
+const { a, b } = obj;
+const { a: alias, b = 10 } = obj;   // rename + default
+const { a, ...rest } = obj;         // rest pattern
+```
+
+#### Array Destructuring
+
+```javascript
+const [first, second] = arr;
+const [a, , c] = arr;               // skip element
+const [x, ...tail] = arr;           // rest
+const [a = 0, b = 0] = arr;        // defaults
+```
+
+#### Nested Destructuring
+
+```javascript
+const { user: { name, address: { city } } } = data;
+const [[a, b], [c, d]] = nested;
+```
+
+#### Renaming
+
+```javascript
+const { name: userName, id: userId } = user;
+```
+
+#### Rest Pattern
+
+```javascript
+const { a, b, ...others } = obj;   // others = remaining props
+const [head, ...rest] = arr;       // rest = remaining elements
+```
+
+---
+
+### 4. Template Literals
+
+#### Basic Interpolation
+
+```javascript
+const name = 'World';
+`Hello, ${name}!`;
+`2 + 2 = ${2 + 2}`;
+```
+
+#### Tagged Templates
+
+The tag function receives an array of string segments and the interpolated values. Useful for sanitization, i18n, or DSLs.
+
+```javascript
+function tag(strings, ...values) {
+  return strings.reduce((acc, str, i) => acc + str + (values[i] ?? ''), '');
+}
+tag`Hello ${'World'}!`;  // 'Hello World!'
+```
+
+**Signature:** `tag(strings: TemplateStringsArray, ...values: any[])`
+
+---
+
+### 5. Promise Combinators
+
+| Method | Resolves when | Rejects when | Return type |
+|--------|---------------|--------------|-------------|
+| `Promise.all` | All fulfill | Any rejects | `[results]` or first rejection |
+| `Promise.allSettled` | All settle (fulfill or reject) | Never | `[{status, value?}, {status, reason?}]` |
+| `Promise.any` | Any fulfills | All reject | First fulfilled value or `AggregateError` |
+| `Promise.race` | First settles (either way) | First rejects | First result or first rejection |
+
+#### Behavior on Rejection
+
+```javascript
+// Promise.all — short-circuits on first rejection
+Promise.all([p1, p2, p3]).catch(e => e);  // rejects with p1's error if p1 rejects
+
+// Promise.allSettled — never rejects
+Promise.allSettled([p1, p2, p3]).then(results => {
+  // results: [{status:'fulfilled', value}, {status:'rejected', reason}, ...]
+});
+
+// Promise.any — rejects only if all reject (AggregateError)
+Promise.any([p1, p2, p3]).then(v => v);   // first fulfilled value
+
+// Promise.race — first to settle wins (fulfill or reject)
+Promise.race([p1, p2, p3]);              // first result or first error
+```
+
+---
+
+### 6. Newer APIs
+
+#### `globalThis`
+
+Cross-environment reference to the global object (browser `window`, Node `global`, workers `self`).
+
+```javascript
+globalThis.setTimeout === window.setTimeout;  // true in browser
+```
+
+#### `Array.at(index)`
+
+Access by index; negative indices count from the end.
+
+```javascript
+const arr = [1, 2, 3];
+arr.at(0);   // 1
+arr.at(-1);  // 3
+arr.at(-2);  // 2
+```
+
+#### `Object.hasOwn(obj, prop)`
+
+Replaces `obj.hasOwnProperty(prop)`; avoids prototype lookup issues.
+
+```javascript
+const o = { a: 1 };
+Object.hasOwn(o, 'a');       // true
+Object.hasOwn(o, 'toString'); // false
+```
+
+#### `structuredClone(value)`
+
+Deep clone of serializable values (no functions, symbols, or circular refs without special handling).
+
+```javascript
+const original = { a: 1, nested: { b: 2 } };
+const copy = structuredClone(original);
+copy.nested.b = 3;
+original.nested.b;  // 2
+```
+
+---
+
+### 7. Modules
+
+#### CommonJS vs ES Modules
+
+| Aspect | CommonJS | ES Modules |
+|--------|----------|------------|
+| Syntax | `require()`, `module.exports` | `import`, `export` |
+| Loading | Synchronous | Asynchronous (static analysis) |
+| Top-level `await` | No | Yes |
+| Tree-shaking | Limited | Supported |
+| `this` at top level | `exports` | `undefined` |
+
+#### CommonJS
+
+```javascript
+const { foo } = require('./module');
+module.exports = { bar };
+```
+
+#### ES Modules
+
+```javascript
+import { foo } from './module.js';
+import * as ns from './module.js';
+export { bar };
+export default baz;
+```
+
+#### Dynamic `import()`
+
+Returns a Promise; use for code-splitting or conditional loading.
+
+```javascript
+const load = async () => {
+  const { default: Component } = await import('./Component.js');
+  return Component;
+};
+```
+
+**Key differences:** `import` is static (parsed at compile time); `import()` is dynamic and returns a Promise.
+
 # 4. Advanced Javascript
 
 
@@ -3689,6 +4224,212 @@ function* fetchUser(id) {
 | Early termination | Manual `return()` method | Built-in `return()` and `throw()` |
 
 Generators are the preferred choice for most iteration scenarios due to their simpler syntax and automatic state management. Custom iterators are useful when you need fine-grained control or when implementing data structures.
+
+## 4.5 Error Handling
+
+## 4.5 Error Handling
+
+### try/catch/finally
+
+```javascript
+try {
+  riskyOperation();
+} catch (error) {
+  console.error(error.message);
+} finally {
+  cleanup(); // Always runs, even after return or throw
+}
+```
+
+- **finally** executes regardless of whether the try block completes, throws, or returns. It runs before the error propagates or the return value is delivered.
+- **Rethrowing**: Use `throw error` (not `throw`) to preserve the original stack trace.
+- **Nested try/catch**: Inner catch can rethrow to outer; outer catch receives the error if inner doesn't handle it.
+
+```javascript
+try {
+  try {
+    throw new Error('inner');
+  } catch (e) {
+    console.log('inner caught');
+    throw e; // Rethrow to outer
+  }
+} catch (e) {
+  console.log('outer caught:', e.message);
+}
+```
+
+---
+
+### Custom Error Classes
+
+Extend `Error` and call `super()` so `instanceof Error` and stack traces work correctly.
+
+```javascript
+class ValidationError extends Error {
+  constructor(message, field) {
+    super(message);
+    this.name = 'ValidationError';
+    this.field = field;
+    Object.setPrototypeOf(this, ValidationError.prototype);
+  }
+}
+
+// Usage
+throw new ValidationError('Invalid email', 'email');
+
+// instanceof checking
+try {
+  validate(input);
+} catch (e) {
+  if (e instanceof ValidationError) {
+    showFieldError(e.field, e.message);
+  } else {
+    throw e;
+  }
+}
+```
+
+**Note**: `Object.setPrototypeOf(this, ValidationError.prototype)` fixes `instanceof` in some transpiled/bundled environments where the prototype chain can break.
+
+---
+
+### Promise Rejection Handling
+
+#### .catch() chaining
+
+```javascript
+fetch('/api/data')
+  .then(res => res.json())
+  .catch(err => console.error('Fetch failed:', err))
+  .then(data => process(data)); // Runs with undefined if catch ran
+```
+
+- A `.catch()` returns a resolved promise unless it rethrows.
+- Chained `.then()` after `.catch()` receives the catch return value (or `undefined` if catch doesn't return).
+
+#### async/await with try/catch
+
+```javascript
+async function loadData() {
+  try {
+    const res = await fetch('/api/data');
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error(error);
+    throw error; // Reject the returned promise
+  }
+}
+```
+
+#### Unhandled rejection pitfalls
+
+- Rejections not caught by `.catch()` or try/catch become **unhandled promise rejections**.
+- In Node.js and browsers, these can trigger `unhandledrejection` and may cause process exit or console warnings.
+- Always attach `.catch()` to promise chains or wrap async calls in try/catch.
+
+```javascript
+// BAD: unhandled rejection if fetch fails
+async function bad() {
+  const res = await fetch('/api'); // No try/catch
+  return res.json();
+}
+
+// GOOD
+async function good() {
+  try {
+    const res = await fetch('/api');
+    return res.json();
+  } catch (e) {
+    handleError(e);
+  }
+}
+```
+
+---
+
+### Global Error Handlers
+
+#### window.onerror
+
+```javascript
+window.onerror = function(message, source, lineno, colno, error) {
+  console.log(message, source, lineno, colno, error?.stack);
+  return true; // Suppress default browser error UI
+};
+```
+
+- **Parameters**: `message`, `source` (URL), `lineno`, `colno`, `error` (Error object, may be undefined).
+- **Limitation**: Cross-origin scripts often yield `"Script error."` with no stack trace due to CORS. Use `Cross-Origin-Resource-Policy` or serve scripts same-origin for full details.
+
+#### window.addEventListener('unhandledrejection')
+
+Catches promise rejections that are never handled.
+
+```javascript
+window.addEventListener('unhandledrejection', event => {
+  console.error('Unhandled rejection:', event.reason);
+  event.preventDefault(); // Prevent default console error
+});
+```
+
+- `event.reason` is the rejection value (often an Error).
+- `event.promise` is the rejected promise.
+
+#### window.addEventListener('error')
+
+Catches resource loading errors (images, scripts, stylesheets) that `onerror` does not.
+
+```javascript
+window.addEventListener('error', event => {
+  if (event.target !== window) {
+    console.error('Resource failed:', event.target.src || event.target.href);
+  }
+}, true); // Use capture phase
+```
+
+- Use `event.target !== window` to distinguish resource errors from script errors.
+- Must use capture phase (`true`) for some resource errors.
+
+---
+
+### React Error Boundaries
+
+Error boundaries catch JavaScript errors in the component tree and render a fallback UI. They are **class components only** — there is no hook equivalent.
+
+```jsx
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    logErrorToService(error, errorInfo.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <h1>Something went wrong.</h1>;
+    }
+    return this.props.children;
+  }
+}
+```
+
+- **getDerivedStateFromError**: Sync, used to update state for fallback UI.
+- **componentDidCatch**: For side effects (logging, reporting).
+- Error boundaries do **not** catch: event handler errors, async code, SSR errors, or errors inside the boundary itself.
+- For function components, use a library such as **react-error-boundary**:
+
+```jsx
+import { ErrorBoundary } from 'react-error-boundary';
+
+<ErrorBoundary fallback={<div>Error!</div>} onError={logError}>
+  <MyComponent />
+</ErrorBoundary>
+```
 
 # 5. DOM & Browser APIs
 
@@ -6805,3 +7546,489 @@ The team reflects on the sprint process:
 - **Scope creep**: Adding items mid-sprint undermines the sprint commitment. Use the backlog for new requests.
 - **Resistance to change**: Teams accustomed to waterfall may struggle with iterative planning. Start with pilot teams and demonstrate results.
 - **Skipping retrospectives**: Without reflection, the same problems recur. Retrospectives are not optional.
+
+## 15.1 Frontend Testing
+
+## 15.1 Frontend Testing
+
+### 1. Testing Pyramid
+
+The testing pyramid describes the ideal distribution of tests: many unit tests at the base, fewer integration tests in the middle, and fewest end-to-end tests at the top.
+
+| Level | Count | Scope | Tools |
+|-------|-------|-------|-------|
+| **Unit** | Most | Single function/component in isolation | Jest, Vitest |
+| **Integration** | Middle | Multiple units working together | Jest + RTL, Vitest + Testing Library |
+| **E2E** | Fewest | Full app in real browser | Playwright, Cypress, Puppeteer |
+
+- **Unit tests**: Fast, cheap, isolate logic. Test pure functions, utilities, individual component behavior.
+- **Integration tests**: Verify components interact correctly with hooks, context, API mocks.
+- **E2E tests**: Slow, expensive, catch real user flows. Use sparingly for critical paths.
+
+---
+
+### 2. Jest Fundamentals
+
+#### describe, it/test
+
+```javascript
+describe('Calculator', () => {
+  it('adds two numbers', () => {
+    expect(1 + 2).toBe(3);
+  });
+
+  test('subtracts two numbers', () => {
+    expect(5 - 3).toBe(2);
+  });
+});
+```
+
+`describe` groups tests; `it` and `test` are interchangeable.
+
+#### Common Matchers
+
+| Matcher | Use Case |
+|---------|----------|
+| `toBe(value)` | Strict equality (`===`). Use for primitives. |
+| `toEqual(value)` | Deep equality. Use for objects/arrays. |
+| `toBeTruthy()` / `toBeFalsy()` | Boolean coercion |
+| `toBeNull()` / `toBeUndefined()` | Null/undefined checks |
+| `toThrow()` / `toThrow(error)` | Exception assertion |
+| `toContain(item)` | Array/string contains |
+| `toHaveLength(n)` | Array/string length |
+| `toMatch(regex)` | String matches regex |
+| `toBeGreaterThan(n)` / `toBeLessThan(n)` | Number comparison |
+
+```javascript
+expect(2 + 2).toBe(4);
+expect({ a: 1 }).toEqual({ a: 1 });
+expect([1, 2, 3]).toContain(2);
+expect(() => fn()).toThrow('error message');
+```
+
+#### Setup and Teardown
+
+```javascript
+describe('Database', () => {
+  beforeAll(() => {
+    // Run once before all tests in this block
+  });
+
+  afterAll(() => {
+    // Run once after all tests
+  });
+
+  beforeEach(() => {
+    // Run before each test
+  });
+
+  afterEach(() => {
+    // Run after each test
+  });
+});
+```
+
+---
+
+### 3. Mocking in Jest
+
+#### jest.fn()
+
+Creates a mock function. Tracks calls and return values.
+
+```javascript
+const mockFn = jest.fn();
+mockFn(1, 2);
+expect(mockFn).toHaveBeenCalled();
+expect(mockFn).toHaveBeenCalledWith(1, 2);
+expect(mockFn).toHaveBeenCalledTimes(1);
+
+// Custom return
+mockFn.mockReturnValue(42);
+expect(mockFn()).toBe(42);
+```
+
+#### jest.mock()
+
+Mocks an entire module. Hoisted to top of file.
+
+```javascript
+jest.mock('./api');
+
+import { fetchUser } from './api';
+
+test('uses mocked fetchUser', async () => {
+  fetchUser.mockResolvedValue({ id: 1, name: 'Alice' });
+  const user = await fetchUser();
+  expect(user.name).toBe('Alice');
+});
+```
+
+#### jest.spyOn()
+
+Spies on an existing method without replacing the module. Can restore with `mockRestore()`.
+
+```javascript
+const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+// ... test
+spy.mockRestore();
+```
+
+#### Async Mocks
+
+```javascript
+const mockFetch = jest.fn();
+
+mockFetch.mockResolvedValue({ data: 'success' });
+mockFetch.mockRejectedValue(new Error('Network error'));
+
+// For multiple calls
+mockFetch
+  .mockResolvedValueOnce({ page: 1 })
+  .mockResolvedValueOnce({ page: 2 });
+```
+
+---
+
+### 4. React Testing Library (RTL)
+
+#### Philosophy
+
+Test from the user's perspective: what they see and do. Avoid testing implementation details (state, props, internal methods).
+
+#### Core API
+
+```jsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+render(<MyComponent />);
+
+// Queries
+screen.getByText('Submit');        // Throws if not found
+screen.queryByText('Optional');    // Returns null if not found
+screen.findByText('Async');        // Returns promise, waits for element
+screen.getByRole('button', { name: /submit/i });
+screen.getByTestId('custom-id');   // Last resort
+```
+
+#### Query Priority
+
+1. `getByRole` — accessibility, user-facing
+2. `getByLabelText` — forms
+3. `getByPlaceholderText` — forms
+4. `getByText` — non-interactive content
+5. `getByDisplayValue` — form values
+6. `getByAltText` — images
+7. `getByTitle` — title attribute
+8. `getByTestId` — when above fail
+
+#### User Interactions
+
+Prefer `userEvent` over `fireEvent` — simulates real user behavior (e.g., proper event order).
+
+```jsx
+import userEvent from '@testing-library/user-event';
+
+// userEvent (preferred)
+await userEvent.click(screen.getByRole('button'));
+await userEvent.type(screen.getByLabelText('Email'), 'test@example.com');
+
+// fireEvent (lower-level)
+fireEvent.click(button);
+fireEvent.change(input, { target: { value: 'text' } });
+```
+
+#### Async Utilities
+
+```jsx
+import { waitFor, findByRole } from '@testing-library/react';
+
+// waitFor — retries until assertion passes or timeout
+await waitFor(() => {
+  expect(screen.getByText('Loaded')).toBeInTheDocument();
+});
+
+// findBy* — shorthand for waitFor + getBy
+const button = await screen.findByRole('button', { name: 'Submit' });
+```
+
+#### Example: Form Submission
+
+```jsx
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import LoginForm from './LoginForm';
+
+test('submits form with email and password', async () => {
+  const onSubmit = jest.fn();
+  render(<LoginForm onSubmit={onSubmit} />);
+
+  await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com');
+  await userEvent.type(screen.getByLabelText(/password/i), 'secret123');
+  await userEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+  await waitFor(() => {
+    expect(onSubmit).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'secret123',
+    });
+  });
+});
+```
+
+---
+
+### 5. Testing Patterns
+
+#### Arrange-Act-Assert (AAA)
+
+Structure tests in three clear phases:
+
+```jsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+test('increments counter', async () => {
+  // Arrange
+  render(<Counter />);
+  const button = screen.getByRole('button', { name: /increment/i });
+
+  // Act
+  await userEvent.click(button);
+
+  // Assert
+  expect(screen.getByText('1')).toBeInTheDocument();
+});
+```
+
+#### Testing Async Operations
+
+```jsx
+import { render, screen } from '@testing-library/react';
+
+test('loads user data', async () => {
+  jest.spyOn(api, 'fetchUser').mockResolvedValue({ name: 'Alice' });
+
+  render(<UserProfile userId={1} />);
+
+  expect(screen.getByText(/loading/i)).toBeInTheDocument();
+
+  const name = await screen.findByText('Alice');
+  expect(name).toBeInTheDocument();
+});
+```
+
+#### Testing Custom Hooks with renderHook
+
+```javascript
+import { renderHook, act } from '@testing-library/react';
+import { useCounter } from './useCounter';
+
+test('increments counter', () => {
+  const { result } = renderHook(() => useCounter(0));
+
+  act(() => {
+    result.current.increment();
+  });
+
+  expect(result.current.count).toBe(1);
+});
+```
+
+#### Snapshot Testing
+
+**When to use**: Stable UI components, regression for layout/structure.
+
+**When not to use**: Frequently changing UI, large snapshots, testing behavior.
+
+```jsx
+import { render } from '@testing-library/react';
+
+test('matches snapshot', () => {
+  const { container } = render(<Header />);
+  expect(container).toMatchSnapshot();
+});
+```
+
+Prefer explicit assertions over snapshots when testing behavior. Update snapshots intentionally with `jest -u`.
+
+## 16.1 Git Essentials
+
+## Git Essentials
+
+### Core Commands
+
+| Command | Purpose |
+|---|---|
+| `git init` | Initialize a new repository |
+| `git clone <url>` | Clone a remote repository |
+| `git add <file>` | Stage changes (`git add .` for all) |
+| `git commit -m "msg"` | Commit staged changes |
+| `git status` | Show working tree status |
+| `git log --oneline` | Compact commit history |
+| `git diff` | Unstaged changes (`--staged` for staged) |
+
+### Remote Operations
+
+```bash
+git remote add origin <url>
+git push -u origin main        # first push, sets upstream
+git push                       # subsequent pushes
+git pull                       # fetch + merge
+git fetch                      # download without merging
+```
+
+`git pull` = `git fetch` + `git merge`. Use `git fetch` when you want to inspect remote changes before integrating them.
+
+### Branching
+
+```bash
+git branch feature/login       # create branch
+git checkout feature/login     # switch to branch
+git checkout -b feature/login  # create + switch (shorthand)
+git switch -c feature/login    # modern alternative to checkout -b
+git branch -d feature/login    # delete branch (safe — prevents deleting unmerged)
+git branch -D feature/login    # force delete
+```
+
+#### Branching Strategies
+
+**Feature Branches**: Each feature/bugfix gets its own branch off `main`. Merged back via PR.
+
+**Git Flow** (simplified):
+- `main` — production-ready code
+- `develop` — integration branch
+- `feature/*` — new features branch off `develop`
+- `hotfix/*` — urgent fixes branch off `main`
+
+### Merge vs Rebase
+
+#### `git merge`
+
+Combines branches by creating a **merge commit** that ties the two histories together. Non-destructive — original branch history is preserved.
+
+```bash
+git checkout main
+git merge feature/login
+```
+
+```
+A---B---C  (main)
+     \       \
+      D---E   M  (merge commit)
+```
+
+#### `git rebase`
+
+Replays commits from one branch **on top of** another, creating a linear history. Rewrites commit hashes.
+
+```bash
+git checkout feature/login
+git rebase main
+```
+
+```
+A---B---C  (main)
+         \
+          D'---E'  (feature/login, rebased)
+```
+
+#### When to Use Each
+
+| Scenario | Use |
+|---|---|
+| Merging a feature branch into `main` via PR | `merge` (preserves context) |
+| Updating a feature branch with latest `main` | `rebase` (keeps history clean) |
+| Shared/public branches | `merge` (never rebase shared branches) |
+| Local-only branches | `rebase` (cleaner log) |
+
+**Golden rule**: never rebase commits that have been pushed and shared with others.
+
+### Resolving Merge Conflicts
+
+When Git can't auto-merge, it marks conflicts in the file:
+
+```
+<<<<<<< HEAD
+const timeout = 3000;
+=======
+const timeout = 5000;
+>>>>>>> feature/login
+```
+
+Steps:
+1. Open conflicted files, choose the correct code (or combine both)
+2. Remove the conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)
+3. `git add <file>` to mark as resolved
+4. `git commit` (or `git rebase --continue` if rebasing)
+
+### Useful Commands
+
+#### `git stash`
+
+Temporarily shelves uncommitted changes.
+
+```bash
+git stash                  # stash changes
+git stash list             # see all stashes
+git stash pop              # apply most recent stash and remove it
+git stash apply            # apply without removing
+git stash drop             # discard most recent stash
+```
+
+#### `git cherry-pick`
+
+Apply a specific commit from another branch onto the current branch.
+
+```bash
+git cherry-pick <commit-hash>
+```
+
+#### `git reset` vs `git revert`
+
+| | `git reset` | `git revert` |
+|---|---|---|
+| **What it does** | Moves HEAD backward, discarding commits | Creates a new commit that undoes a previous one |
+| **History** | Rewrites history (destructive) | Preserves history (safe) |
+| **Use case** | Undo local, unpushed commits | Undo a commit that's already pushed |
+
+```bash
+git reset --soft HEAD~1    # undo commit, keep changes staged
+git reset --mixed HEAD~1   # undo commit, keep changes unstaged (default)
+git reset --hard HEAD~1    # undo commit, discard all changes
+
+git revert <commit-hash>   # create a new "undo" commit
+```
+
+#### `git reflog`
+
+Shows a log of all HEAD movements — useful for recovering from accidental `reset --hard` or deleted branches.
+
+```bash
+git reflog
+git checkout <lost-commit-hash>
+```
+
+### PR / Code Review Workflow
+
+1. Create a feature branch from `main`
+2. Make commits with clear, descriptive messages
+3. Push the branch and open a Pull Request
+4. Reviewers comment, request changes, or approve
+5. Address feedback with new commits (avoid force-pushing during review)
+6. Squash-merge or merge into `main`
+7. Delete the feature branch
+
+#### Commit Message Conventions
+
+```
+type(scope): short description
+
+feat(auth): add JWT token refresh
+fix(api): handle 404 in user endpoint
+refactor(utils): extract date formatting
+docs(readme): update setup instructions
+```
+
+Common types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`.
