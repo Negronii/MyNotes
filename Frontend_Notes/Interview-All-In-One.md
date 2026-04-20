@@ -85,8 +85,6 @@
 
 ## 1.1 Browser Basics
 
-## Browser Basics
-
 Two interview questions this note prepares you for:
 
 1. **What are the major components of a browser, and what do they do?**
@@ -229,8 +227,6 @@ items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 
 ## 2.1 HTML & CSS Basics
 
-## HTML & CSS Basics
-
 A grab-bag reference for five CSS foundations that show up constantly in interviews: units, selectors/specificity, responsive techniques, inheritance, and text-overflow tricks. Reach for this when you need to refresh the vocabulary — for mechanism-heavy deep dives, cross-links are at the end of each section.
 
 ### CSS Units — which to use when
@@ -372,8 +368,6 @@ All three properties are needed: `nowrap` keeps text on one line, `overflow: hid
 Uses the old `-webkit-box` layout, but is very widely supported (Chromium, Safari, modern Firefox). For pure-spec alternatives, `line-clamp` is now in CSS Overflow Module Level 4 — ship when browser support matures.
 
 ## 2.2 Box Model and BFC
-
-## Box Model and Block Formatting Context
 
 Interview questions this note prepares you for:
 
@@ -536,8 +530,6 @@ Both make the parent's height include the floated children. Prefer `flow-root` i
 **See also:** [`2.6 CSS Interview Questions`](./2.6%20CSS%20Interview%20Questions.md) for more clear-floats patterns and layout interview scenarios.
 
 ## 2.3 Flex & Grid Layout
-
-## Flex & Grid Layout
 
 Reach for this when you need to remember the property names and what each one does. For "how should I approach this layout?" style interview answers, the patterns live in [`2.6 CSS Interview Questions`](./2.6%20CSS%20Interview%20Questions.md).
 
@@ -795,8 +787,6 @@ items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 **See also:** [`1.1 Browser Basics`](./1.1%20Browser%20Basics.md) for the full URL→render pipeline that these topics fit into, [`11.2 Rendering and Computation Optimization`](./11.2%20Rendering%20and%20Computation%20Optimization.md) for deeper animation/scroll optimization.
 
 ## 2.5 DOM Properties
-
-## DOM Element Dimension Properties
 
 Reach for this when you need to measure an element in JavaScript and can't remember which property includes which layers of the box model. These are all geometry properties — reading them forces a layout flush, so use sparingly in tight loops (see [`2.4 Browser - HTML & CSS part`](./2.4%20Browser%20-%20HTML%20%26%20CSS%20part.md) for layout thrashing).
 
@@ -1684,8 +1674,6 @@ b[0] = 10; // fine — mutating the array
 
 ## 3.2 Javascript Types
 
-## JavaScript Types
-
 Four interview questions this note prepares you for:
 
 1. **What are the primitive types in JavaScript?**
@@ -1903,8 +1891,6 @@ console.log(o[k1]); // 'two'  (both keys coerced to "[object Object]")
 
 ## 3.3 Map & Set in JS
 
-## `Map` and `Set`
-
 Reach for this when you need the API reference for `Map` or `Set` — what methods they expose, how to iterate them, and when to pick them over plain objects and arrays.
 
 ### When to use `Map` vs plain object
@@ -2081,8 +2067,6 @@ const only = [...a].filter(x => !b.has(x));
 **See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](./3.4%20Memory%20in%20JS,%20WeakMap%20and%20WeakSet.md) for the garbage-collection-aware variants (`WeakMap` / `WeakSet`), [`3.2 Javascript Types`](./3.2%20Javascript%20Types.md) for why plain objects are unreliable as dictionaries.
 
 ## 3.4 Memory in JS, WeakMap and WeakSet
-
-## Memory, `WeakMap`, and `WeakSet`
 
 Three interview questions this note prepares you for:
 
@@ -2538,8 +2522,6 @@ function arrayFlatten(arr: any[]): any[] {
 
 ## 3.6 ES6 New Methods
 
-## ES6 Object and Array Methods
-
 Reach for this when you need a quick reference for the `Object.*` and `Array.*` utility methods introduced in ES6. For newer additions (`Object.hasOwn`, `Array.at`, `structuredClone`), see [`3.8 Modern JavaScript Features`](./3.8%20Modern%20JavaScript%20Features.md).
 
 ### Object methods
@@ -2640,8 +2622,6 @@ Array.of(3);   // creates [3] — one element, value 3
 
 ## 3.7 Other JS
 
-## Other JavaScript Basics
-
 A grab-bag of short interview-favorite JavaScript topics. Reach for this when someone asks about strict mode, floating-point math, equality operators, or the `!!` idiom.
 
 ### What does `'use strict';` do?
@@ -2735,8 +2715,6 @@ The fix is to coerce to boolean first:
 **Gotcha — `!!` vs. `Boolean()`:** Functionally identical — pick whichever your team's lint rules prefer. `!!` is slightly faster in micro-benchmarks, but the difference is irrelevant in practice.
 
 ## 3.8 Modern JavaScript Features
-
-## Modern JavaScript Features (ES2020+)
 
 Reach for this when you need a quick reference for optional chaining, nullish coalescing, destructuring, promise combinators, and other post-ES6 language additions that come up constantly in interviews. For pre-ES2020 additions (`Object.keys`, `Array.from`, etc.), see [`3.6 ES6 New Methods`](./3.6%20ES6%20New%20Methods.md).
 
@@ -3018,8 +2996,6 @@ const load = async () => {
 
 
 ## 4.1 Object, Function, and Prototype
-
-## Object, Function, and Prototype
 
 A bundle of classic interview questions about JavaScript's prototype system, `this`, `new`, and property descriptors.
 
@@ -3353,8 +3329,6 @@ Object.getOwnPropertyDescriptor(obj, 'name');
 
 ## 4.2 Scope & Closure
 
-## Scope and Closure
-
 ### What is scope in JavaScript?
 
 **Headline (30s):** Scope is the set of rules that determines *where* a variable is accessible. JavaScript has four scopes layered from broad to narrow: **global**, **module**, **function (local)**, and **block**. When you reference a variable, the engine walks outward through the enclosing scopes until it finds the name or throws `ReferenceError`.
@@ -3537,8 +3511,6 @@ With `var`, there's **one** `i` shared by every iteration — by the time the ti
 **See also:** [`3.1 JavaScript Basics`](./3.1%20Javascript%20Basics.md) for `var` / `let` / `const` scope semantics, [`4.1 Object, Function, and Prototype`](./4.1%20Object%2C%20Function%2C%20and%20Prototype.md) for how `this` differs from scope.
 
 ## 4.3 Asynchronous JavaScript
-
-## Asynchronous JavaScript
 
 ### Why did JavaScript evolve from callbacks to Promises to `async/await`?
 
@@ -3847,8 +3819,6 @@ Arrow functions are concise and lexically bind `this`, but they have real limits
 
 ## 4.4 Iterators and Generators
 
-## Iterators and Generators
-
 ### What's the iteration protocol, and why does it matter?
 
 **Headline (30s):** JavaScript defines two protocols — **iterable** and **iterator** — that any object can implement to participate in `for...of`, spread (`...`), destructuring, and `Array.from`. A generator is a function that implements both protocols automatically via `yield`. Understanding the protocol is the key to building custom data structures that "just work" with the language's iteration features.
@@ -4047,8 +4017,6 @@ A runner would call `.next()` with each resolved value. Today, `async/await` doe
 **See also:** [`3.5 Array in JS`](./3.5%20Array%20in%20JS.md) for `for...of` vs `for...in` semantics, [`4.3 Asynchronous JavaScript`](./4.3%20Asynchronous%20JavaScript.md) for `for await...of` and async iteration.
 
 ## 4.5 Error Handling
-
-## Error Handling
 
 ### How should you handle errors in modern JavaScript?
 
@@ -4309,8 +4277,6 @@ A production app uses all of them. Missing any layer lets bugs go silent.
 
 ## 5.1 DOM Manipulation and Events
 
-## DOM Manipulation and Events
-
 A bundle of interview questions around DOM events, runtime scheduling, and utility patterns that commonly come up.
 
 ## How do you write a proper deep copy?
@@ -4547,8 +4513,6 @@ for (let i = 1; i < arr.length; i++) {
 
 ## 5.2 Browser Storage and Communication
 
-## Browser Storage and Communication
-
 A bundle of interview questions about storing data in the browser and sending messages between tabs, iframes, and native shells.
 
 ## What's the difference between `localStorage`, `sessionStorage`, and cookies?
@@ -4769,8 +4733,6 @@ Feels like normal JS — synchronous or callback-based depending on what the nat
 
 ## 5.3 Image Lazy Loading
 
-## Image Lazy Loading
-
 ### How do you lazy-load images in the browser?
 
 **Headline (30s):** Three techniques, in order of preference: (1) the native `loading="lazy"` HTML attribute — one line, no JS; (2) the `IntersectionObserver` API for anything the native attribute can't cover; (3) throttled scroll-event listeners as a last-resort legacy fallback. Modern sites use the native attribute as the default, with an `IntersectionObserver` fallback for older browsers.
@@ -4902,8 +4864,6 @@ Lazy-loading images is great — unless you introduce layout shift every time on
 
 
 ## 6.1 Advanced TypeScript
-
-## Advanced TypeScript
 
 A bundle of interview questions about TypeScript's more powerful features — utility types, generics, `Proxy`, and decorators.
 
@@ -5166,8 +5126,6 @@ class Greeter { /* instances / prototype can't have properties added or removed 
 
 ## 7.1 Event Loop
 
-## The Event Loop
-
 ### How does JavaScript run asynchronous code on a single thread?
 
 **Headline (30s):** JavaScript has one thread and one call stack — it can't truly do two things at once. The **event loop** is the scheduler that makes single-threaded JS feel concurrent. It pulls *one* macrotask from a queue (a `setTimeout` callback, an I/O completion, a UI event), runs it to completion, then drains all queued microtasks (Promise callbacks), then repeats. Asynchronous APIs don't "run in parallel" — they hand work off to the browser or OS, which queues a callback when the work is done.
@@ -5326,8 +5284,6 @@ Most leaks are the same pattern: something unreachable from your mental model is
 
 ## 7.2 Node.js Fundamentals
 
-## Node.js Fundamentals
-
 A bundle of interview questions about Node.js's runtime model — threads vs. processes, multi-core utilization, and serverless.
 
 ## What's the difference between a process and a thread?
@@ -5440,8 +5396,6 @@ pm2 reload app            # zero-downtime restart
 **See also:** [`7.1 Event Loop`](./7.1%20Event%20Loop.md) for the single-threaded runtime model that shapes these choices, [`12.1 Software Design Principles`](./12.1%20Software%20Design%20Principles.md) for where serverless fits in overall application architecture.
 
 ## 7.3 Build Tools
-
-## Build Tools
 
 Reach for this when you need a quick reference for Webpack's core concepts, loaders, plugins, source maps, and adjacent tooling like Corepack. For ESM vs. CommonJS and dynamic imports, see [`3.8 Modern JavaScript Features`](./3.8%20Modern%20JavaScript%20Features.md).
 
@@ -5585,8 +5539,6 @@ With `"packageManager": "pnpm@8.15.0"` in `package.json`, any team member runnin
 
 
 ## 8.1 HTTP Protocols and WebSockets
-
-## HTTP Protocols and WebSockets
 
 A bundle of interview questions about HTTP, the network stack, CORS, and WebSockets — the networking layer beneath every web app.
 
@@ -5859,8 +5811,6 @@ HTTP keep-alive reuses a TCP connection across multiple request/response pairs �
 
 ## 8.2 Web Security and Authentication
 
-## Web Security and Authentication
-
 A bundle of interview questions on authentication, HTTPS, and the common web-security attacks you'll be asked about in any frontend interview.
 
 ## Cookies vs. tokens — which to use for authentication?
@@ -6031,8 +5981,6 @@ What you *can* do in application code: respond quickly with minimal work to know
 
 ## 9.1 Virtual DOM and Framework Selection
 
-## Virtual DOM and Framework Selection
-
 ### How does the Virtual DOM work, and is it actually fast?
 
 **Headline (30s):** The Virtual DOM is a JavaScript object tree that mirrors the real DOM. On state change, the framework rebuilds the virtual tree, **diffs** it against the previous one, and applies only the minimal set of changes to the real DOM in a batched update. It's *not* automatically faster than hand-optimized direct DOM manipulation — the real value is **predictable performance at scale** and a **component model** that lets you describe UI declaratively without writing your own DOM diff code.
@@ -6103,8 +6051,6 @@ Non-VDOM reactive frameworks exist too — **Svelte** compiles away reactivity a
 **See also:** [`9.2 React Basics`](./9.2%20React%20Basics.md) for JSX, the diff algorithm, and the React component model, [`9.4 Next.js`](./9.4%20Next.js.md) for SSR/SSG/ISR rendering strategies.
 
 ## 9.2 React Basics
-
-## React Basics
 
 A bundle of interview questions every React developer should be able to answer on the spot — JSX, the diff algorithm, the lifecycle, `setState` behavior, routing, and the SPA/MPA distinction.
 
@@ -6338,8 +6284,6 @@ function Post() {
 **See also:** [`9.4 Next.js`](./9.4%20Next.js.md) for hybrid SPA/MPA rendering strategies (SSR/SSG/ISR), [`9.3 Advanced React`](./9.3%20Advanced%20React.md) for hooks, refs, and component composition patterns.
 
 ## 9.3 Advanced React
-
-## Advanced React
 
 A bundle of intermediate/advanced React interview questions — component communication, hooks, and reusable component patterns.
 
@@ -6585,8 +6529,6 @@ return <div>{content}</div>;
 
 ## 9.4 Next.js
 
-## Next.js
-
 ### Why pick Next.js over plain React?
 
 **Headline (30s):** Plain React is purely client-side — you ship JavaScript, the browser renders the UI. That's fine for app-like experiences but poor for SEO and first-paint performance. Next.js adds **server-side rendering (SSR)**, **static generation (SSG)**, and **incremental regeneration (ISR)** on top of React, plus file-based routing, API routes, and built-in optimizations (image, font, bundle). It lets you pick the right rendering strategy per page instead of committing the whole app to CSR.
@@ -6772,8 +6714,6 @@ Supports all HTTP methods. Use for:
 
 
 ## 10.1 Algorithms and Complexity
-
-## Algorithms and Complexity
 
 Reach for this when you need a quick reference for the common algorithmic patterns that show up in frontend interviews — dynamic programming, binary search, two pointers, sorting, and string algorithms. Each section gives the canonical implementation with complexity analysis.
 
@@ -7010,8 +6950,6 @@ function switchCase(s) {
 
 ## 10.2 Core Data Structures
 
-## Core Data Structures
-
 Reach for this when you need a quick reference for tree-based data structures — traversals, balanced trees, tries, DOM traversal patterns, and the array↔tree conversion that comes up in real frontend work.
 
 ### Tree traversals
@@ -7180,8 +7118,6 @@ function treeToArray(tree) {
 **See also:** [`10.1 Algorithms and Complexity`](./10.1%20Algorithms%20and%20Complexity.md) for sorts, searches, and DP patterns, [`10.3 Practical Data Structure Implementations`](./10.3%20Practical%20Data%20Structure%20Implementations.md) for LRU cache, queues, and stacks.
 
 ## 10.3 Practical Data Structure Implementations
-
-## Practical Data Structure Implementations
 
 Reach for this when you need canonical JavaScript implementations of the data structures that come up in interviews — LRU cache, queue, stack — plus a note on how React Fiber uses linked-list structures internally.
 
@@ -7365,8 +7301,6 @@ The linked-list-ish structure is chosen precisely because it's *easy to traverse
 
 
 ## 11.1 Performance Metrics and Analysis
-
-## Performance Metrics and Analysis
 
 A bundle of interview questions about how to measure, diagnose, and optimize web app performance.
 
@@ -7564,8 +7498,6 @@ window.addEventListener('beforeunload', flush);
 
 ## 11.2 Rendering and Computation Optimization
 
-## Rendering and Computation Optimization
-
 A bundle of interview questions on optimizing render performance — virtual scrolling, React-specific techniques, and CSS tips.
 
 ## How does virtual scrolling work, and when should you use it?
@@ -7728,8 +7660,6 @@ See [`2.7 CSS Position, Display, and Animations`](./2.7%20CSS%20Position%2C%20Di
 
 ## 12.1 Software Design Principles
 
-## Software Design Principles
-
 A bundle of interview questions on the design principles that separate maintainable frontend code from the kind that rots.
 
 ## What are the SOLID principles, and what does each mean?
@@ -7842,8 +7772,6 @@ Splitting a large frontend into independently deployable apps, each owned by a d
 **See also:** [`12.2 Design Patterns in Practice`](./12.2%20Design%20Patterns%20in%20Practice.md) for the GoF patterns that implement these principles.
 
 ## 12.2 Design Patterns in Practice
-
-## Design Patterns in Practice
 
 A bundle of interview questions on the design patterns that come up most in frontend work — plus two system-design mini-problems (low-code editor, RBAC) that exercise those patterns.
 
@@ -8000,8 +7928,6 @@ To check "can this user write?", look up their roles, then the permissions on th
 
 ## 13.1 Lodash
 
-## Lodash
-
 **Reach for this when** you need a quick reference for Lodash utilities — the functions that still earn their place in a modern codebase (`_.get`, `_.cloneDeep`, `_.debounce`) versus the ones that are now one-liners with native JS.
 
 **Headline:** Lodash is a utility library covering four buckets — **Array**, **Collection**, **Object**, **Function**, **String**. Most of its value today lives in **deep-object helpers** (`_.get`, `_.set`, `_.merge`, `_.cloneDeep`) and **robust debounce/throttle**. Many simpler utilities have native equivalents; check before adding the dependency.
@@ -8103,8 +8029,6 @@ Lodash earns its place when:
 **See also:** [`3.8 Modern JavaScript Features`](./3.8%20Modern%20JavaScript%20Features.md) for native alternatives like `structuredClone`, [`11.1 Performance Metrics and Analysis`](./11.1%20Performance%20Metrics%20and%20Analysis.md) for debounce/throttle decision guide.
 
 ## 13.2 ahooks
-
-## ahooks
 
 **Reach for this when** you need a quick reference for ahooks — the React hooks library that covers the hooks people keep rewriting in every project (data fetching, debounced state, localStorage sync, stable callbacks, virtual lists).
 
@@ -8291,8 +8215,6 @@ Reach for ahooks when:
 
 ## 14.1 Interview Tips
 
-## Interview Tips
-
 **Reach for this when** you need a quick reference for the behavioral side of a frontend interview — framing your strengths/weaknesses, answering "why us", discussing salary, and asking good questions back.
 
 **Headline:** Strong behavioral answers share three qualities — **concrete** (backed by specific examples), **relevant** (tied to the role), and **self-aware** (honest about gaps with a plan to close them). Avoid generic phrasing; interviewers hear "I'm a perfectionist" from 90% of candidates.
@@ -8374,8 +8296,6 @@ Show you've done your homework:
 **Gotcha — don't skip asking questions.** "No questions" signals lack of interest. Prepare 3–5 in advance, even if your core questions got answered; you can always add "I was curious about X, but you covered it earlier — can you expand on Y?"
 
 ## 14.2 Agile and Scrum
-
-## Agile and Scrum
 
 **Reach for this when** you need a quick reference for how most modern engineering teams organize work — Agile principles, the Scrum framework (roles, events, artifacts), and the common failure modes.
 
@@ -8479,8 +8399,6 @@ The team reflects on the sprint process:
 **See also:** [`14.1 Interview Tips`](./14.1%20Interview%20Tips.md) for how to discuss Agile experience in interviews.
 
 ## 15.1 Frontend Testing
-
-## Frontend Testing
 
 **Reach for this when** you need a quick reference for frontend testing — the test pyramid, Jest/Vitest APIs, mocking, React Testing Library, and patterns like Arrange-Act-Assert.
 
@@ -8760,8 +8678,6 @@ Prefer explicit assertions over snapshots when testing behavior. Update snapshot
 **See also:** [`9.3 Advanced React`](./9.3%20Advanced%20React.md) for custom-hook patterns under test, [`16.1 Git Essentials`](./16.1%20Git%20Essentials.md) for PR workflow that integrates CI tests.
 
 ## 16.1 Git Essentials
-
-## Git Essentials
 
 **Reach for this when** you need a quick reference for day-to-day Git — core commands, branching, merge vs. rebase, conflict resolution, and the PR workflow.
 
