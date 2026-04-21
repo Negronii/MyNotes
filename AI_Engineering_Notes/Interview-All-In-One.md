@@ -85,12 +85,14 @@ This note prepares you to answer:
 
 The result is a mix of whole words, subwords, and common character sequences.
 
-**Example:**
+**Example** (using GPT-4's `cl100k_base` tokenizer):
 
 ```
 Input:  "The transformer architecture revolutionized NLP."
-Tokens: ["The", " transform", "er", " architecture", " revolution", "ized", " NLP", "."]
+Tokens: ["The", " transformer", " architecture", " revolution", "ized", " N", "LP", "."]
 ```
+
+Common words like "transformer" stay whole; less common ones like "revolutionized" split into morphemes ("revolution" + "ized"); rare acronyms like "NLP" split into characters.
 
 **Rule of thumb:** ~1 token ≈ 0.75 words in English. Varies by language and text style.
 
@@ -99,9 +101,10 @@ Tokens: ["The", " transform", "er", " architecture", " revolution", "ized", " NL
 | Model | Vocabulary |
 |---|---|
 | BERT | ~30k |
-| Llama | 32k |
-| GPT-2 | ~50k |
-| GPT-3 / 4 | ~100k |
+| Llama 1 / 2 | 32k |
+| Llama 3 | ~128k |
+| GPT-2 / GPT-3 | ~50k |
+| GPT-3.5 / GPT-4 (`cl100k_base`) | ~100k |
 
 **Gotcha:** Don't count tokens by eyeballing character count. Use the model's actual tokenizer (e.g., `tiktoken` for OpenAI). Emojis, non-English characters, and rare symbols can each be several tokens — emoji-heavy or CJK input can eat your context budget much faster than the character count suggests.
 
@@ -396,7 +399,7 @@ The four principles, as slots to memorize:
 
 **Headline (30s):** Structure system prompts in seven layers, general → specific. Each layer narrows behavior more than the last; deeper layers only matter if the higher ones are set first.
 
-The seven layers, as slots:
+The seven layers, as slots to memorize:
 
 1. **Identity & context** — role, environment, primary objective
 2. **Behavioral guidelines** — tone, professional standards, communication style
@@ -459,10 +462,11 @@ Current user: Jane Doe (premium). Open tickets: #4521. Last interaction: 2 hours
 
 **How each works:**
 
-- **JSON mode:** `response_format: { "type": "json_object" }` on OpenAI / Anthropic. Forces valid JSON syntax. Does NOT guarantee the output matches your schema.
-- **XML tags:** `<summary>...</summary>`, `<analysis>...</analysis>`. No API support needed; works on any model. Easy to parse with regex or simple split.
+- **JSON mode** (OpenAI): `response_format: { "type": "json_object" }`. Forces valid JSON syntax. Does NOT guarantee the output matches your schema.
+- **Tool use as a structure hack** (Anthropic and others): define a tool whose only purpose is to receive the structured output. The provider's tool-use validator gives you near-guaranteed schema compliance.
+- **XML tags:** `<summary>...</summary>`, `<analysis>...</analysis>`. No API support needed; works on any model. Anthropic models are explicitly trained on XML, making this the most reliable approach for Claude.
 - **Markdown headers / code fences:** human-readable AND parseable. Good when the same output has to serve both human reviewers and programmatic consumers.
-- **Constrained decoding:** inference-engine level (vLLM, llama.cpp, some APIs via schema). Invalid tokens are masked during generation, so output is guaranteed to parse.
+- **Constrained / guided decoding:** OpenAI's "Structured Outputs" (`response_format: { "type": "json_schema", ... }`), or self-hosted via vLLM, llama.cpp, Outlines, etc. Invalid tokens are masked during generation, so output is guaranteed to match the schema/grammar.
 
 **Example outputs:**
 
@@ -848,7 +852,7 @@ Andrej Karpathy:
 | Cached (prompt prefix) | $0.30 / MTok |
 | Uncached (new tokens) | $3.00 / MTok |
 
-#### The 4 practices, as slots:
+#### The 4 practices
 
 **1. Keep the prompt prefix stable.** Any change to the prefix invalidates the cache for all subsequent tokens.
 
@@ -874,7 +878,7 @@ You are an assistant...
 
 **Headline (30s):** When context nears limits (or cost/latency become painful), you have three levers: **Reduce** (shrink the tokens while preserving signal — compaction, tool-result clearing), **Offload** (move data out and keep references in context — file system as external memory, just-in-time loading), or **Isolate** (delegate to sub-agents with clean context, return condensed summaries). Most production systems combine all three.
 
-The three strategies, as slots:
+The three strategies, as slots to memorize:
 
 #### Strategy A: Reduce Context
 
@@ -1326,15 +1330,19 @@ def agent_loop(model, tools, instructions, user_input, max_turns=10):
         if not response.tool_calls:
             return response.content
 
-        for tool_call in response.tool_calls:
-            result = execute_tool(tool_call.name, tool_call.arguments)
-            messages.append({"role": "tool", "content": result})
-
         messages.append({
             "role": "assistant",
             "content": response.content,
             "tool_calls": response.tool_calls,
         })
+
+        for tool_call in response.tool_calls:
+            result = execute_tool(tool_call.name, tool_call.arguments)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": result,
+            })
 
     raise MaxTurnsExceeded()
 ```
@@ -1463,7 +1471,7 @@ Deterministic orchestration — you write the control flow; the LLM is called at
 
 **How it works:** generator produces a candidate → evaluator scores or critiques it → generator revises → repeat until criteria are met (or max iterations).
 
-**Example:** Generate code → run tests → evaluator inspects failures → regenerator fixes.
+**Example:** Generate code → run tests → evaluator inspects failures → generator fixes.
 
 **How interviewers probe it:** "How do you prevent infinite loops?" → hard cap on iterations, early stop if score plateaus. "What if the evaluator and generator are the same model?" → they can share blind spots; use different models or strict rubrics to reduce self-agreement.
 
@@ -1663,16 +1671,19 @@ EXAMPLES:
 
 ```json
 {
-  "order_id": {
-    "type": "string",
-    "description": "Order ID (format: ord_xxx or numeric). Example: 'ord_a1b2c3' or '12345'",
-    "required": true
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "Order ID (format: ord_xxx or numeric). Example: 'ord_a1b2c3' or '12345'"
+    },
+    "include_line_items": {
+      "type": "boolean",
+      "description": "Include line items. Default: true. Set false for status-only checks.",
+      "default": true
+    }
   },
-  "include_line_items": {
-    "type": "boolean",
-    "description": "Include line items. Default: true. Set false for status-only checks.",
-    "default": true
-  }
+  "required": ["order_id"]
 }
 ```
 
@@ -1680,14 +1691,17 @@ EXAMPLES:
 
 ```json
 {
-  "refund_amount": {
-    "type": "number",
-    "description": "Amount in USD. Required when partial refund. Must not exceed order total.",
-    "required": false
-  },
-  "refund_reason": {
-    "type": "string",
-    "description": "Required when refund_amount > 100. Valid: 'damaged', 'wrong_item', 'not_as_described', 'other'"
+  "type": "object",
+  "properties": {
+    "refund_amount": {
+      "type": "number",
+      "description": "Amount in USD. Required when partial refund. Must not exceed order total."
+    },
+    "refund_reason": {
+      "type": "string",
+      "enum": ["damaged", "wrong_item", "not_as_described", "other"],
+      "description": "Required when refund_amount > 100. Valid: 'damaged', 'wrong_item', 'not_as_described', 'other'"
+    }
   }
 }
 ```
@@ -2120,7 +2134,7 @@ Try each in order. Move to the next only when the current approach demonstrably 
 
 1. **Prepare dataset** — format, clean, split train/validation (e.g., 90/10). Deduplicate. Verify label quality.
 2. **Choose base model and method** — e.g., Llama 3 + LoRA. Pick the smallest base that might work; upgrade only if it underperforms.
-3. **Set hyperparameters** — learning rate often 1e-5–2e-5, epochs 1–3, batch size as large as memory allows.
+3. **Set hyperparameters** — learning rate is method-dependent: ~1e-5–5e-5 for full fine-tuning (small updates), ~1e-4–5e-4 for LoRA (small param count tolerates a higher LR). Epochs 1–3 is typical; batch size as large as memory allows.
 4. **Train and monitor loss** — watch training vs. validation loss. Validation loss rising = overfitting. Use early stopping.
 5. **Evaluate on held-out set** — task-specific metrics, format compliance, no regression on general capabilities.
 6. **Deploy and monitor** — A/B test, track latency, error rates, user feedback.
