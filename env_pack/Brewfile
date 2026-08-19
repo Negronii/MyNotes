@@ -1,0 +1,44 @@
+# Git / CLI
+brew "git"
+brew "git-lfs"
+brew "gh"
+brew "wget"
+brew "jq"
+brew "yq"
+brew "ripgrep"
+brew "fd"
+brew "fzf"
+brew "bat"
+brew "eza"
+brew "zoxide"
+brew "direnv"
+brew "just"
+brew "make"
+
+# Shell quality
+brew "shellcheck"
+brew "shfmt"
+brew "zsh-autosuggestions"
+brew "zsh-syntax-highlighting"
+
+# Runtimes
+brew "node"
+brew "nvm"
+brew "corepack"
+brew "uv"
+brew "pyenv"
+brew "pyenv-virtualenv"
+brew "go"
+
+# Codex / automation
+
+# Data and file tooling
+brew "duckdb"
+brew "postgresql@14"
+brew "imagemagick"
+brew "ffmpeg"
+brew "qpdf"
+brew "pandoc"
+
+# Fonts are not self-updating GUI apps
+cask "font-jetbrains-mono"
