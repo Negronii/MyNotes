@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Prompt & Tool Design"
+  short_description: "Design model-adaptive prompts and tool contracts"
+  default_prompt: "Use $design-agent-prompts-tools to adapt this agent prompt and tool contract to the target model, then verify it on representative cases."

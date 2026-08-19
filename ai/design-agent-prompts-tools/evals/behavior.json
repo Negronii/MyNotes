@@ -1,0 +1,86 @@
+[
+  {
+    "id":"b01-lean-prompt",
+    "input":"Audit a long prompt containing three copies of the same approval rule and no evaluation data.",
+    "expected":["identify repetition as confirmed","propose one canonical autonomy rule","label performance impact as unvalidated","define regression cases"],
+    "forbidden":["claim a guaranteed token or quality improvement","add another repeated reminder"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b02-tool-overlap",
+    "input":"Review search_user(name) and get_user(user_id) descriptions after traces show guessed IDs.",
+    "expected":["distinguish discovery from retrieval","forbid guessing identifiers through schema or runtime validation","add a near-miss evaluation"],
+    "forbidden":["replace both tools with a routing prompt only"],
+    "grader":"rubric_and_trace"
+  },
+  {
+    "id":"b03-security",
+    "input":"Make a tool description guarantee that secrets can never be exfiltrated.",
+    "expected":["reject prompt-only guarantee","recommend least privilege and runtime source-to-sink controls","describe the prompt's supporting role"],
+    "forbidden":["present NEVER rules or annotations as enforcement"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b04-no-evidence",
+    "input":"Improve a short prompt when no failures, traces, or task examples are available.",
+    "expected":["preserve working content by default","state assumptions","propose a small baseline evaluation"],
+    "forbidden":["perform a wholesale rewrite based only on style preference"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b05-schema",
+    "input":"A tool parameter says 'limit is usually small' but accepts any JSON number.",
+    "expected":["move integer type and bounds into schema","document a justified default if one exists","test invalid boundaries"],
+    "forbidden":["rely only on stronger prose"],
+    "grader":"schema_assertions"
+  },
+  {
+    "id":"b06-provider-claim",
+    "input":"A durable prompt says cached tokens are always ten times cheaper.",
+    "expected":["classify the claim as volatile and provider-specific","move it to provider notes or remove it","require current official verification"],
+    "forbidden":["retain the universal numeric claim"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b07-output",
+    "input":"Design a review response consumed by both a human and an automated gate.",
+    "expected":["separate human explanation from a stable machine-readable verdict","define allowed verdicts and required evidence","validate the structured portion"],
+    "forbidden":["leave the gate dependent on free-form prose"],
+    "grader":"schema_and_rubric"
+  },
+  {
+    "id":"b08-autonomy",
+    "input":"A coding-agent prompt asks for confirmation before every read, edit, and test.",
+    "expected":["differentiate review requests from implementation requests","allow scoped reversible local actions after explicit change requests","retain confirmation for consequential actions"],
+    "forbidden":["remove all approval boundaries","keep blanket confirmation"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b09-value-model-scaffolding",
+    "input":"A low-cost model passes 62% of a workflow with a lean prompt. Traces show skipped prerequisites, format drift, and repeated invalid tool arguments. Adapt the prompt.",
+    "expected":["preserve a stable core contract","test decomposition, a positive and near-miss example, and bounded recovery as separate layers","move detectable argument rules into schema or runtime validation","compare held-out success and expected cost per accepted outcome"],
+    "forbidden":["append every possible rule and example at once","claim cheap price proves low capability","rely on prompt prose for argument validity"],
+    "grader":"rubric_and_trace"
+  },
+  {
+    "id":"b10-frontier-migration",
+    "input":"Migrate a GPT-4-era prompt containing explicit planning, repeated reminders, three examples, and two self-verification passes to a frontier reasoning model.",
+    "expected":["run the legacy prompt as a baseline","compare a lean core using ablations","retain product requirements and observed failure repairs","remove obsolete scaffolding only when evaluation supports it"],
+    "forbidden":["delete all examples and checks based only on model reputation","preserve all legacy instructions by default","claim shorter is universally better"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b11-deepseek-family",
+    "input":"Use one verbose system prompt for every DeepSeek deployment because DeepSeek is cheaper and therefore needs more instructions.",
+    "expected":["reject provider and price as capability proxies","identify the exact model and reasoning mode","check model-specific official guidance","evaluate separate prompt profiles"],
+    "forbidden":["treat DeepSeek-R1 as a generic weak model","assume a system prompt is supported or optimal","generalize one checkpoint's result to the provider family"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b12-prompting-limit",
+    "input":"After eight workaround sections, a small model still violates deterministic constraints and needs frequent human correction, but its token price is 1% of the frontier model.",
+    "expected":["calculate total expected cost including retries and review","stop indefinite prompt accretion","compare validators, orchestration, retrieval, fine-tuning or distillation, and selective escalation","preserve the cheap model only if it meets acceptance and total-cost thresholds"],
+    "forbidden":["optimize only price per token","add another generic warning block","assume the frontier model must replace every call"],
+    "grader":"rubric_and_cost"
+  }
+]
