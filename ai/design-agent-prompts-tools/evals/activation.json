@@ -1,0 +1,21 @@
+[
+  {"id":"a01","query":"Review this system prompt for contradictory autonomy rules and make it leaner.","should_trigger":true,"reason":"Standalone agent prompt audit."},
+  {"id":"a02","query":"Design JSON Schema parameters for an LLM tool that schedules a meeting.","should_trigger":true,"reason":"Tool parameter contract."},
+  {"id":"a03","query":"Our agent keeps choosing get_user instead of search_users. Diagnose the tool descriptions.","should_trigger":true,"reason":"Tool selection failure."},
+  {"id":"a04","query":"Rewrite this developer prompt so the model asks before external writes but not before local tests.","should_trigger":true,"reason":"Autonomy boundary in a prompt."},
+  {"id":"a05","query":"Define a stable output and error contract for this MCP tool.","should_trigger":true,"reason":"Tool result contract."},
+  {"id":"a06","query":"This prompt became 4,000 tokens after several incidents. Remove redundant rules without regressing behavior.","should_trigger":true,"reason":"Prompt simplification with eval requirement."},
+  {"id":"a07","query":"Create positive and near-miss eval cases for these tool descriptions.","should_trigger":true,"reason":"Prompt/tool behavior evaluation."},
+  {"id":"a08","query":"Analyze these agent traces and explain why invalid tool arguments increased.","should_trigger":true,"reason":"Trace-based tool contract diagnosis."},
+  {"id":"a09","query":"Adapt this lean GPT-5.6 agent prompt for GLM-4.7-Flash without losing the cost advantage.","should_trigger":true,"reason":"Model-specific prompt scaffolding and cost-adjusted evaluation."},
+  {"id":"a10","query":"Our cheap model ignores edge cases unless the prompt includes steps and examples. Design and test a scaffolded variant.","should_trigger":true,"reason":"Capability-conditioned prompt design."},
+  {"id":"n01","query":"Create a reusable Codex Skill directory for processing invoices.","should_trigger":false,"reason":"Skill architecture belongs to skill creation/system engineering."},
+  {"id":"n02","query":"Audit this Skill's folder layout, activation description, and reference routing.","should_trigger":false,"reason":"General Skill lifecycle audit, not a standalone prompt/tool artifact."},
+  {"id":"n03","query":"Fix the failing GitHub Actions workflow on my pull request.","should_trigger":false,"reason":"CI debugging task."},
+  {"id":"n04","query":"Compare current frontier models for a customer-support benchmark.","should_trigger":false,"reason":"Model selection without prompt/tool change."},
+  {"id":"n05","query":"Write an OpenAPI specification for our public REST service.","should_trigger":false,"reason":"API design not specifically for LLM tools."},
+  {"id":"n06","query":"Research recent prompt-injection incidents and summarize the news.","should_trigger":false,"reason":"Research request, not prompt/tool engineering."},
+  {"id":"n07","query":"Implement OAuth authorization and rate limiting for this MCP server.","should_trigger":false,"reason":"Runtime/server implementation rather than prompt or schema design."},
+  {"id":"n08","query":"Explain what a system prompt is to a beginner.","should_trigger":false,"reason":"General explanation does not require specialized design workflow."},
+  {"id":"n09","query":"Which low-cost model has the cheapest API price today?","should_trigger":false,"reason":"Current model pricing research without a prompt or tool change."}
+]
