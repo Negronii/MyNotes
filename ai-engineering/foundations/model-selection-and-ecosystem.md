@@ -1,148 +1,63 @@
-# Model Selection and Ecosystem
+# Model Selection and Ecosystem / 模型选择与生态
 
-> **Last updated:** 2026-04-21.
-> **Aging content warning:** specific model names (Claude Opus, GPT-4, Gemini Pro, Llama 3) change every few months. The **capability tiers** and **selection principles** below are stable; the specific SKU in each tier is an example, not a fixed fact. When an interviewer names a model you haven't heard of, map it to the nearest tier from context (size, price, benchmark claims) and reason from there.
+**Core explanation / 核心解释：** Select a model for a defined task and deployment context, then compare candidates on representative examples and operating constraints. Model names, rankings, context limits, supported inputs, and prices change; a public benchmark or provider label is evidence to investigate, not a permanent selection rule. / 先明确任务和部署条件，再用有代表性的样本和运行约束比较候选模型。模型名称、排名、上下文限制、输入能力和价格都会变化；公开基准或供应商标签可以帮助缩小范围，但不能作为长期固定的选择规则。
 
-This is a reference page. Reach for it when:
+**30-second answer / 30 秒回答**
 
-- You're picking a provider or routing traffic between tiers.
-- An interviewer asks "why this model?" and you need the tradeoffs to cite.
-- You need the open-vs-closed decision rule.
-- You're estimating cost or explaining why KV-cache hit rate matters.
+- **English:** I define the quality bar and hard constraints first, then compare a small set of eligible models on the same held-out task set. I measure task quality, latency, total cost, tool or format reliability, and data-handling requirements. I choose the least costly option that meets the agreed bar, and re-evaluate routing or fallbacks against the same criteria.
+- **中文：** 我先定义质量要求和硬性约束，再用同一组保留样本比较少量候选模型。我会测量任务质量、时延、总成本、工具或格式可靠性以及数据处理要求，选择能够达到约定标准且总成本合适的模型，并用相同标准评估路由和回退方案。
 
----
+## Start with the task contract / 从任务要求开始
 
-## Capability tiers (stable abstraction)
+Record what a successful result must do, what errors matter, and which operating conditions are fixed. Compare candidates on the same prompt, data, tools, and evaluation protocol where possible.
 
-Models come in three consistent tiers regardless of provider. Route by tier, not by specific model — the tier is what you're really picking, the SKU just changes under the hood.
+| Dimension | Questions to answer |
+|---|---|
+| **Task quality / 任务质量** | What counts as correct or useful? Which edge cases and refusal cases matter? |
+| **Latency and availability / 时延与可用性** | Is the constraint about time to first response, full completion, or uptime? Which workload and region are representative? |
+| **Cost / 成本** | Include input and output usage, retries, retrieval, hosting, support, and evaluation—not just one token rate. |
+| **Inputs and outputs / 输入与输出** | Does the task require text, image, audio, or other modalities? Are schemas or tools supported for this exact model and API? |
+| **Data handling / 数据处理** | What does the contract, configuration, retention policy, and deployment boundary allow? “Hosted” or “open-weight” alone does not answer this. |
+| **Operations / 运维** | Who owns scaling, updates, monitoring, security patches, and incident response? |
 
-| Tier | Capability descriptor | Used for | Examples (as of 2026-04-21) |
-|---|---|---|---|
-| **Frontier** | Top-end reasoning, long context, highest quality | Complex reasoning, code generation, deep analysis | Claude Opus, GPT-4, Gemini Pro |
-| **Balanced** | Good reasoning, reasonable price | General chat, moderate reasoning, summarization | Claude Sonnet, GPT-4o |
-| **Fast/cheap** | Low latency, low cost | Classification, extraction, high-volume routing | Claude Haiku, GPT-4o-mini |
+Public benchmarks can help generate a shortlist when their task and protocol are relevant. They do not establish performance on a different prompt, data distribution, API configuration, or deployment. Keep an application-specific held-out set and report its sample scope and uncertainty; see [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md).
 
-**How interviewers probe it:** "Why not just use the frontier tier everywhere?" → cost and latency scale linearly with usage; the fast tier is often 10–20× cheaper. Use frontier where quality matters; route the rest down.
+## Model tiers are shorthand, not a catalog / 模型档位只是简称，不是目录
 
----
+Teams sometimes use labels such as **frontier**, **balanced**, and **fast** to describe rough cost/latency/capability tradeoffs within a provider's current catalog. Those labels are not shared standards: a “fast” model can be the better choice on a narrow task, and a “frontier” label does not prove quality on yours. Avoid copying an undated model list or treating a prior ranking as a current fact. Verify the exact model ID, supported API features, context limit, and pricing in the provider's current documentation when making a real selection.
 
-## Provider catalog (examples, date-stamped)
+## Hosted API, open-weight, or hybrid? / 托管 API、开放权重还是混合部署？
 
-| Provider | Model | Open/Closed | Context Window | Strengths |
-|---|---|---|---|---|
-| OpenAI | GPT-4, GPT-4o, GPT-4.1 | Closed | 128k | Strong reasoning, coding, instruction following; multimodal (4o, 4.1) |
-| Anthropic | Claude Opus, Sonnet, Haiku | Closed | 200k | Long context, strong safety, nuanced reasoning; Opus for hard tasks |
-| Google | Gemini Pro, Gemini Flash | Closed | 1M+ (Pro) | Very long context, multimodal, good for retrieval-heavy workflows |
-| Meta | Llama 3 (8B, 70B, 405B) | Open-weight | 8k–128k | Self-hostable, fine-tunable, strong open baseline |
-| Mistral AI | Mistral 7B, Mixtral 8x7B | Open-weight | 32k | Efficient MoE, good quality/size tradeoff |
-
-**Gotcha:** Cited benchmark numbers age faster than the models. A "best at coding" claim from six months ago rarely holds today. Recheck on your own task before committing.
-
----
-
-## Open-source vs. closed-source — how to choose (tradeoff)
-
-**Headline (30s):** **Closed-source** when you want top performance, minimal ops, and can accept data leaving your environment under a DPA. **Open-source** (open-weight) when data must stay on-prem, you need fine-tuning or custom architectures, or you want to avoid per-token costs at sufficient scale.
-
-| Factor | Open-Source | Closed-Source |
+| Approach | Potential advantages | Costs and constraints to compare |
 |---|---|---|
-| **Cost** | No per-token API fees; pay for compute/infra | Pay per token; varies by model and provider |
-| **Data privacy** | Data stays on your infra | Data sent to provider; check DPA and retention |
-| **Customization** | Fine-tune, modify architecture, change weights | Limited to API params; some providers offer fine-tuning |
-| **Performance** | Often behind frontier models; improving | Typically best on benchmarks |
-| **Maintenance** | You manage updates, security, scaling | Provider handles ops and updates |
-| **Compliance** | Full control for HIPAA, SOC2, etc. | Depends on provider certifications |
+| **Hosted API / 托管 API** | Quick access to managed inference and model updates; less serving infrastructure to operate. | Data flows and retention depend on the provider's terms and configuration; usage, rate limits, availability, and model lifecycle are provider-controlled. |
+| **Open-weight deployment / 开放权重部署** | More control over serving location, model version, and infrastructure choices. | A weight license is not automatically an open-source license or permission for every use. The operator owns hardware, serving, security, scaling, and updates. |
+| **Hybrid / 混合部署** | Different models or environments can serve distinct workload classes. | Adds routing, evaluation, observability, policy consistency, and failure paths across systems. |
 
-**Decision rule:**
+Do not pick a hosting pattern from API spend alone. A useful estimate is:
 
-1. Does data need to stay on-prem (regulatory, contractual)? → open-source.
-2. Is API spend projected above ~$10K/month *and* the task doesn't need frontier quality? → open-source may amortize.
-3. Otherwise → closed-source. Speed to ship and quality-per-dollar are hard to beat below that volume.
+$$
+\text{total cost} \approx \text{inference usage} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and risk controls}
+$$
 
-**Tiebreaker question (to ask the interviewer):** "What's the compliance requirement, and what's the expected monthly LLM spend?" These two answers usually pin the decision.
+Compare the same workload, quality target, peak traffic, and data constraints. A provider API may suit rapid iteration; self-hosting may suit a real data-control or workload need; edge deployment can help when offline operation or device constraints dominate. The break-even point depends on the actual workload and people costs.
 
-**Gotcha:** Self-hosting math often looks attractive at high volume but ignores hidden costs — MLOps headcount, GPU availability, internal eval infrastructure. The break-even is typically later than teams expect. See [9.1 AI Application Architecture → Deployment patterns](../systems/ai-application-architecture.md#api-self-hosted-edge-or-hybrid--how-do-you-pick-a-deployment-pattern) for the full picture.
+## Route by measured need / 按实测需求路由
 
----
+Routing can send simple, low-risk requests to a cheaper model and reserve a more capable option for cases that benefit from it. First measure whether the router's errors, added latency, and maintenance are outweighed by the savings. Use a task-relevant fallback when routing confidence is insufficient, and ensure high-impact operations still pass application-side authorization. Do not label “classification,” “reasoning,” or “extraction” as automatically easy or hard across all models.
 
-## Model sizing strategy
+## Multimodal capability / 多模态能力
 
-### Establish baseline first
+“Multimodal” does not specify which input or output a model supports or how well it handles a task. Test the actual modality and input shape—such as a chart, scanned document, spoken utterance, or video sample—under the target API. Check model documentation for supported formats, limits, and feature combinations at the time of deployment.
 
-1. Start with the most capable model (frontier tier) for your task.
-2. Measure quality and latency to define a baseline.
-3. Swap to smaller models **only where** quality remains acceptable.
+## Related notes / 相关笔记
 
-### Avoid premature optimization
+- [AI Application Architecture / AI应用架构](../systems/ai-application-architecture.md) covers routing, cost, monitoring, and deployment choices.
+- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) covers token budgets and provider-specific prompt caching.
+- [Fine-tuning Strategies / 微调策略](../fine-tuning/fine-tuning-strategies.md) distinguishes behavior adaptation from maintained external knowledge.
+- [RAG Architecture and Implementation / 检索增强生成](../rag/rag-architecture-and-implementation.md) covers current or access-controlled external evidence.
 
-Do not default to the cheapest model before validating quality. Downgrading too early hides capability gaps and makes debugging harder — you can't tell whether a failure is your prompt or a weaker model.
+## Sources / 来源
 
-### Task-level routing
-
-Route by task, not by a single global model choice:
-
-| Task Type | Example | Suggested Tier |
-|---|---|---|
-| Simple classification | Sentiment, intent | Fast/cheap |
-| Extraction | NER, structured output | Balanced |
-| Reasoning | Math, code, analysis | Frontier |
-| High-volume, low-stakes | Log parsing, simple routing | Fast/cheap |
-
-**How interviewers probe it:** "How do you know when to downgrade?" → run both models on a held-out eval; downgrade when quality delta is within your task's tolerance. "Who decides the tolerance?" → product and ops; it's a business call informed by eval data.
-
----
-
-## Multimodal capabilities
-
-| Capability | Description | Models (examples) |
-|---|---|---|
-| **Vision** | Image understanding, OCR, diagrams | GPT-4o, GPT-4.1, Claude 3, Gemini Pro |
-| **Audio (STT)** | Speech-to-text | Whisper (OpenAI), Gemini |
-| **Audio (TTS)** | Text-to-speech | OpenAI TTS, ElevenLabs, Google |
-| **Video** | Video understanding, frames | GPT-4o, Gemini 1.5 Pro |
-
-### Support by family (as of date stamp)
-
-- **GPT-4o / 4.1:** vision, audio in/out.
-- **Claude 3:** vision (images).
-- **Gemini Pro / Flash:** vision, audio, video.
-- **Llama, Mistral:** text-only (unless extended with adapters).
-
-**Gotcha:** "Multimodal" is a one-word label for a wide capability range. A model that OCRs text from screenshots isn't necessarily good at parsing engineering diagrams; "video understanding" at 1 frame/sec is different from real-time video. Probe specifically for the modality and task you need.
-
----
-
-## Token economics
-
-### How pricing works
-
-Most APIs charge separately for:
-
-- **Input tokens:** prompt + system message + any retrieved context.
-- **Output tokens:** generated completion.
-
-Output tokens are usually more expensive than input tokens (2–3× typical).
-
-### Cached vs. uncached pricing
-
-Some providers (Anthropic, OpenAI) offer lower prices for cached context:
-
-| Model | Uncached (input) | Cached (input) | Output |
-|---|---|---|---|
-| Claude Sonnet (example) | ~$3/MTok | ~$0.30/MTok | ~$15/MTok |
-
-Cached pricing can be ~**10× cheaper** for repeated context (e.g., RAG documents, long system prompts).
-
-### Why KV-cache hit rate matters
-
-- **KV-cache:** key-value cache for attention; avoids recomputing representations for unchanged prefix tokens.
-- **Cache hit:** user sends the same or extended prompt; provider reuses cached prefix.
-- **Cache miss:** new or changed prompt; full recomputation.
-
-Higher cache hit rate → more requests billed at cached rates → lower cost. Design prompts and retrieval so that the long, stable prefix (system prompt + docs) is reused across requests. See [3.1 Context Engineering → KV-Cache Optimization](../context/context-engineering-principles.md#how-do-you-use-the-kv-cache-to-cut-inference-cost) for the practices.
-
-**Gotcha:** Dynamic content (timestamps, session IDs) at the top of the prompt invalidates the cache for everything that follows. Push dynamic content **below** the static prefix, or inject via tool results instead of the system prompt.
-
----
-
-**See also:** [9.1 AI Application Architecture](../systems/ai-application-architecture.md) for cost management, routing, and monitoring; [3.1 Context Engineering Principles](../context/context-engineering-principles.md) for KV-cache practices; [7.1 Fine-tuning Strategies](../fine-tuning/fine-tuning-strategies.md) for when the open-source + fine-tune path makes sense.
+- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Its guidance treats prompting, context, fine-tuning, and evaluation as task-specific optimization levers rather than a universal linear ladder.
+- For current OpenAI model IDs and feature support, consult the changing [Models documentation](https://developers.openai.com/api/docs/models), checked 2026-10-15.

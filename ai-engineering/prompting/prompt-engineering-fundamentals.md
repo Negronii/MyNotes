@@ -1,187 +1,87 @@
-# Prompt Engineering Fundamentals
+# Prompt Engineering Fundamentals / 提示工程基础
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** A useful prompt makes the task, necessary context, constraints, and expected output clear. Add examples or structure when they address a measured failure. Prompt text can guide model behavior, but it cannot enforce access control, guarantee factual accuracy, or replace validation in the application. / 有效提示词要清楚说明任务、必要背景、约束和输出要求。只有在它们能解决实测问题时，才增加示例或结构。提示词能引导模型，但不能执行访问控制、保证事实正确，也不能替代应用校验。
 
-- What makes a prompt work, and what's the "capable intern" heuristic?
-- What are the four principles that prevent most agent failures?
-- How do you structure a system prompt? (The 7-layer architecture)
-- How do you get reliable structured output from an LLM?
+**30-second answer / 30 秒回答**
 
----
+- **English:** I write instructions for a capable reader who does not know my application’s unstated rules. I provide relevant context, define what success and uncertainty look like, and specify the output contract. I test the prompt on representative and boundary cases; permissions and business rules remain enforced by code.
+- **中文：** 我会把提示词写给一位聪明但不了解应用隐含规则的读者，补充必要背景，说明成功条件、不确定时的处理方式和输出约定，再用有代表性和边界样本评估。权限与业务规则仍由代码执行。
 
-## What makes a prompt work, and what's the "capable intern" heuristic?
+**Key terms / 关键术语：** instruction / 指令；context / 上下文；few-shot example / 少样本示例；output contract / 输出约定；structured output / 结构化输出；validation / 校验。
 
-**Headline (30s):** Good prompts share three traits — **clarity** (unambiguous language), **specificity** (concrete requirements on length, format, and constraints), and **structure** (sections, bullets, numbered steps the model can parse). The mental model is the **capable intern**: write for someone smart who follows instructions precisely but lacks your system's context. Assume competence; do not assume context.
+## The “capable intern” heuristic / “能干的实习生”启发式
 
-**Why it's asked:** Tests whether you treat prompting as an engineering problem (removing ambiguity) or a magic-words problem.
+Treat the model as capable of using the information and tools actually supplied, but unaware of unstated product rules, source freshness, user permissions, or the format expected by a downstream system. State those requirements explicitly when they matter.
 
-**What the model does and doesn't have:**
-
-- Has — broad knowledge, reasoning ability, instruction-following.
-- Doesn't have — your product's business rules, your API schemas and tool names, your preferred output formats, your domain-specific terminology.
-
-Supply the missing context explicitly.
-
-**Gotcha:** Candidates describe prompting as "finding the right words" — prompts that work aren't clever, they're **unambiguous**. If two engineers could interpret the prompt differently, the model can too.
-
----
-
-## The 4 principles that prevent 80% of agent failures
-
-**Headline (30s):** Write for a capable intern → be descriptive, not concise → define the negative space → show, don't tell. In that order. Most agent failures come from violating one of these four; almost none come from anything more exotic.
-
-The four principles, as slots to memorize:
-
-1. **Write for a capable intern** — supply product context, tool names, and business rules explicitly.
-2. **Be descriptive, not concise** — vague instructions cause retries, which cost more tokens than a longer prompt.
-3. **Define the negative space** — what NOT to do prevents more failures than what TO do.
-4. **Show, don't tell** — one concrete example beats a paragraph of description.
-
-### Principle 1: Write for a capable intern
-
-| Bad | Good |
+| Vague request | More useful instruction |
 |---|---|
-| "Handle the refund." | "You are a support agent. When the user requests a refund, call `process_refund(order_id)` with the order ID from the conversation. Confirm the refund amount before calling." |
-| "Fix the bug." | "You are a code reviewer. Identify the bug in the `validate_input` function. Output a patch in unified diff format." |
+| “Handle the refund.” | “Look up the sample order, check the current refund policy, and explain the next step. The application must authorize any refund action before execution.” |
+| “Classify the ticket.” | “Choose billing, technical, or general. If the message does not contain enough evidence, return needs_review.” |
+| “Summarize the document.” | “Return three bullets about the decisions and open questions. Do not add claims absent from the supplied document.” |
 
-### Principle 2: Be descriptive, not concise
+These examples illustrate clarity; they do not imply that a prompt can verify an order, authorize a refund, or make a summary factually correct. The runtime must perform those checks.
 
-| Bad | Good |
-|---|---|
-| "Be helpful." | "Respond in 2–4 sentences. Prioritize actionable next steps. Do not speculate about causes the user did not mention." |
-| "Format the output." | "Return a JSON object with keys `summary` (string, max 100 chars), `confidence` (float 0–1), and `actions` (array of strings)." |
+## A practical prompt checklist / 提示词检查清单
 
-### Principle 3: Define the negative space
+Include only what helps this task:
 
-| Bad | Good |
-|---|---|
-| "Summarize the document." | "Summarize the document in 3 bullet points. Do NOT include direct quotes. Do NOT add information not present in the source." |
-| "Classify the ticket." | "Classify as `billing`, `technical`, or `general`. Do NOT invent new categories. If unclear, use `general`." |
+1. **Goal / 目标：** State the requested result and audience.
+2. **Relevant context / 相关背景：** Supply rules, terminology, source material, or assumptions the model cannot infer.
+3. **Inputs / 输入：** Identify the content to transform and delimit untrusted source text.
+4. **Constraints / 约束：** Explain required coverage, exclusions, uncertainty handling, and what should trigger a question or handoff.
+5. **Examples / 示例：** Add aligned positive, negative, or edge examples when they reduce ambiguity.
+6. **Output contract / 输出约定：** Specify fields, format, length, language, and validation expectations.
+7. **Tools and side effects / 工具与副作用：** Explain intended tool use, while the application independently enforces permissions and business conditions.
 
-### Principle 4: Show, don't tell
+This list is an organizing aid, not a universal seven-layer prompt architecture. Some APIs distinguish system, developer, and user messages; use the roles and precedence defined by the exact API. Put dynamic data in the request context rather than hard-coding user records in reusable instructions.
 
-| Bad | Good |
-|---|---|
-| "Output dates in ISO format." | "Output dates in ISO format. Example: `2024-03-15`" |
-| "Respond professionally." | "Respond professionally. Good: 'I'd be happy to help with that.' Bad: 'Sure thing lol'" |
+## Make constraints and examples useful / 让约束和示例真正有用
 
-**Gotcha:** Candidates reach for few-shot examples (principle 4) first and add rules reluctantly. In practice, **defining the negative space** (principle 3) eliminates more production failures than any other single change — the model defaults to plausible-but-wrong behaviors when you haven't explicitly forbidden them.
+“Be concise” may be sufficient for a simple chat. A downstream parser may need a precise schema, while a support response may need an uncertainty path. More text is not automatically better: conflicting examples, repeated rules, or irrelevant context can hurt.
 
----
+Use an example that demonstrates the intended boundary, not only the easiest typical input. If examples and instructions disagree, the model may follow the wrong pattern. Keep examples synthetic and avoid real customer records or secrets.
 
-## The 7-layer system prompt architecture
+## Structured output / 结构化输出
 
-**Headline (30s):** Structure system prompts in seven layers, general → specific. Each layer narrows behavior more than the last; deeper layers only matter if the higher ones are set first.
+For machine-consumed output, prefer an API-supported schema-constrained mode when it fits the task. In the OpenAI API documentation checked on 2026-10-15, Structured Outputs supports schema adherence for supported schemas and models; JSON mode guarantees valid JSON syntax but not adherence to an application schema. Refusals, incomplete responses, unsupported schema features, and semantic errors still need handling. Schema conformance does not prove that a field is true, authorized, or safe to execute. If the chosen API cannot enforce the schema, parse, validate, and use a bounded retry or explicit failure path.
 
-The seven layers, as slots to memorize:
+For human-readable output, headings, bullets, XML tags, or code fences can make sections easier to interpret. Delimiters help organize content; they are not a security boundary and do not guarantee valid machine output.
 
-1. **Identity & context** — role, environment, primary objective
-2. **Behavioral guidelines** — tone, professional standards, communication style
-3. **Tool usage policies** — general rules for when to use which tool
-4. **Domain procedures** — workflows for specific scenarios (refunds, escalations, etc.)
-5. **Output formatting** — response structure, data formats, length constraints
-6. **Safety guardrails** — safeguards for destructive or sensitive operations
-7. **Runtime context** — dynamic info injected per request (user profile, session state)
+**Small output contract / 简单输出约定:**
 
-### Layer 1: Identity & context
-
-```
-You are a customer support agent for Acme SaaS. You operate in a live chat environment. Your primary objective is to resolve issues within 3 exchanges when possible.
-```
-
-### Layer 2: Behavioral guidelines
-
-```
-Maintain a friendly, professional tone. Use the customer's name when known. Never make promises about timelines you cannot guarantee.
-```
-
-### Layer 3: Tool usage policies
-
-```
-Use `lookup_order` before discussing order details. Use `create_ticket` only when the issue cannot be resolved in chat. Prefer read-only tools when the user's intent is unclear.
-```
-
-### Layer 4: Domain procedures
-
-```
-Refund workflow: 1) Confirm order ID and amount. 2) Call `check_refund_eligibility`. 3) If eligible, call `process_refund`. 4) Confirm completion to the user.
-Escalation: If the user requests a manager or mentions legal action, immediately call `escalate_to_tier2` and inform the user a specialist will follow up.
-```
-
-### Layer 5: Output formatting
-
-```
-Structure responses as: [Brief acknowledgment] [Action taken or next step] [Closing]. Keep each response under 150 words. Use bullet points for lists of 3+ items.
-```
-
-### Layer 6: Safety guardrails
-
-```
-NEVER execute `delete_account` without explicit user confirmation including the phrase "delete my account". NEVER share internal ticket IDs or agent notes with the user.
-```
-
-### Layer 7: Runtime context
-
-```
-Current user: Jane Doe (premium). Open tickets: #4521. Last interaction: 2 hours ago, billing question.
-```
-
-**Gotcha:** Stuffing everything into layer 1 (identity + tone + procedures + formatting) is the most common failure. The layering isn't decorative — it lets you edit behavior without rewriting the whole prompt, and it lets runtime context (layer 7) change per request without invalidating the KV-cache on the rest (see [3.1 Context Engineering → KV-Cache Optimization](../context/context-engineering-principles.md#how-do-you-use-the-kv-cache-to-cut-inference-cost)).
-
----
-
-## How do you get reliable structured output from an LLM?
-
-**Headline (30s):** Three levers, in order of strength: **JSON mode** (provider API forces syntactically valid JSON), **XML/markdown delimiters** (easy to parse; works on any model), and **constrained decoding** (masks invalid tokens during generation — forces output to conform to a schema/regex/grammar). Pick constrained decoding when downstream systems require strict parsing and retries are costly.
-
-**How each works:**
-
-- **JSON mode** (OpenAI): `response_format: { "type": "json_object" }`. Forces valid JSON syntax. Does NOT guarantee the output matches your schema.
-- **Tool use as a structure hack** (Anthropic and others): define a tool whose only purpose is to receive the structured output. The provider's tool-use validator gives you near-guaranteed schema compliance.
-- **XML tags:** `<summary>...</summary>`, `<analysis>...</analysis>`. No API support needed; works on any model. Anthropic models are explicitly trained on XML, making this the most reliable approach for Claude.
-- **Markdown headers / code fences:** human-readable AND parseable. Good when the same output has to serve both human reviewers and programmatic consumers.
-- **Constrained / guided decoding:** OpenAI's "Structured Outputs" (`response_format: { "type": "json_schema", ... }`), or self-hosted via vLLM, llama.cpp, Outlines, etc. Invalid tokens are masked during generation, so output is guaranteed to match the schema/grammar.
-
-**Example outputs:**
-
-```json
+~~~json
 {
-  "summary": "The customer reported a billing discrepancy.",
+  "summary": "A short account of the supplied text",
   "category": "billing",
-  "priority": "high",
-  "suggested_actions": ["verify_payment", "check_invoice"]
+  "needs_review": false
 }
-```
+~~~
 
-```
-<summary>
-Brief overview of the issue.
-</summary>
+Application code should check allowed categories and required fields, and verify any consequential claim against its source.
 
-<analysis>
-Detailed reasoning and evidence.
-</analysis>
+## Optional organization pattern / 可选组织方式
 
-<recommendation>
-Concrete next steps.
-</recommendation>
-```
+Some teams group a long instruction by general-to-specific concerns. The following is a checklist, not a standard that every prompt needs:
 
-**Gotcha:** JSON mode guarantees **valid JSON syntax**, not **schema compliance**. The model can still return `{"category": "urgent"}` when your schema only allows `billing | technical | general`. Either use constrained decoding with a JSON Schema, or validate the parsed JSON yourself and retry on schema mismatch.
+| Section | What it contains |
+|---|---|
+| **Role and task context / 角色与任务背景** | Work setting and goal. |
+| **Behavior / 行为** | Tone and response style. |
+| **Tool guidance / 工具说明** | Intended use and limits of available tools. |
+| **Procedure / 流程** | Steps that are useful to explain to the model. |
+| **Output / 输出** | Format and length. |
+| **Safety reminders / 安全提醒** | Human-readable reminders; code still enforces authorization and stop conditions. |
+| **Request-specific context / 本轮背景** | Current task data and state, supplied only when needed. |
 
----
+Do not put real names, ticket numbers, secrets, or private histories in a reusable prompt. Use a synthetic record when illustrating the format.
 
-## Emphasis techniques (reference)
+## Related notes / 相关笔记
 
-Reach for this when you need to signal priority within a prompt — "this rule is hard" vs. "this is a nice-to-have."
+- [Advanced Prompting Techniques / 高级提示技巧](./advanced-prompting-techniques.md) covers few-shot examples, reasoning cues, self-consistency, and workflows.
+- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) explains how to select and update the information for each inference.
+- [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md) explains why prompts cannot replace runtime authorization.
 
-| Technique | Use Case | Example |
-|---|---|---|
-| **CAPS** | Critical rules, hard constraints | NEVER share API keys. ALWAYS validate input. |
-| **Bold** | Important concepts, priorities | **Always** confirm before destructive actions. |
-| `Backticks` | Code, field names, literals | Call `get_user_profile` with `user_id`. |
-| `<example>` tags | Demonstrations, templates | `<example>Good: "I'll look into that." Bad: "idk"</example>` |
+## Sources / 来源
 
-Combine for hierarchy: CAPS for must-follow rules, bold for emphasis, backticks for technical terms.
-
-**See also:** [2.2 Advanced Prompting Techniques](./advanced-prompting-techniques.md) for CoT, few-shot, ReAct, and other technique-level patterns.
+- OpenAI, [Model optimization: write effective prompts](https://developers.openai.com/api/docs/guides/model-optimization#write-effective-prompts), checked 2026-10-15.
+- OpenAI, [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. API behavior and supported schema features can change.
