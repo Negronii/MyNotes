@@ -1789,637 +1789,278 @@ o[k2] = 'two';
 console.log(o[k1]); // 'two'  (both keys coerced to "[object Object]")
 ```
 
-**Gotcha — reaching for `Map` when object keys matter:** If you need to associate data with objects without this collision (or without coercion at all), use `Map`. See [`3.3 Map & Set in JS`](#11.%20Map%20&%20Set%20in%20JS%20/%20JavaScript%E4%B8%AD%E7%9A%84Map%E4%B8%8ESet).
+**Gotcha — reaching for `Map` when object keys matter:** If you need to associate data with objects without this collision (or without coercion at all), use `Map`. See [`3.3 Map & Set in JS`](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set).
 
-**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20Memory%20in%20JS,%20WeakMap%20and%20WeakSet%20/%20JavaScript%E5%86%85%E5%AD%98%E3%80%81WeakMap%E4%B8%8EWeakSet) for how primitives and references interact with the stack and heap.
-## 11. Map & Set in JS / JavaScript中的Map与Set
+**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for how primitives and references interact with the stack and heap.
+## 11. Map and Set in JavaScript / JavaScript 中的 Map 与 Set
 
-Reach for this when you need the API reference for `Map` or `Set` — what methods they expose, how to iterate them, and when to pick them over plain objects and arrays.
+### Map and Set in JavaScript / JavaScript 中的 Map 与 Set
 
-#### When to use `Map` vs plain object
+**Key terms / 关键词:** keyed collection 键控集合 · SameValueZero 相同值零 · insertion order 插入顺序 · set-like object 类 Set 对象
 
-- **`Map`** — keys of any type (including objects and functions), preserved insertion order, `.size` property, direct iteration with `for...of`. Slightly slower than plain objects for string-only keys but far more predictable.
-- **Object** — only string and symbol keys, shape-optimized by the JS engine, but prototype pollution and the `"[object Object]"` coercion trap (see [`3.2 JavaScript Types`](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B)) make it risky as a general-purpose dictionary.
+Use `Map` for key-value data when keys are not just fixed strings or symbols, or when direct iteration and a size property help. Use `Set` when uniqueness and membership are central. ECMAScript specifies observable ordering and equality, but not a particular hash-table implementation or constant-time performance. / 当键不只是固定字符串或 Symbol，或需要直接迭代与 size 属性时，可用 `Map` 保存键值数据；当重点是唯一性和成员判断时，可用 `Set`。ECMAScript 规定可观察到的顺序和相等规则，但不规定具体哈希表实现或恒定时间性能。
 
-Rule of thumb: **if keys are anything other than fixed identifiers, use `Map`**.
+#### Choosing a collection / 选择集合
 
-#### When to use `Set` vs array
+- `Map`: keys may be any value; object keys use identity; entries iterate in insertion order. Updating an existing key does not move its position. Delete then reinsert to place it at the end. / `Map`：键可以是任意值；对象键按身份比较；条目按插入顺序迭代。更新已有键不会改变位置；删除后重新插入才会移到末尾。
+- `Set`: stores unique values in insertion order. Deleting and adding a value again places it at the end. / `Set`：按插入顺序保存唯一值。删除后再次添加会移到末尾。
+- Plain objects coerce property keys to strings or symbols and include prototype behavior unless created with a null prototype. For ordinary dictionaries, `Object.hasOwn` avoids an overridden `hasOwnProperty`; `Map` is often simpler when keys are dynamic. / 普通对象会把属性键转换为字符串或 Symbol；除非创建为 null 原型对象，否则还有原型行为。对象字典可用 `Object.hasOwn` 避免被覆盖的 `hasOwnProperty`；键动态时通常 Map 更简单。
+- Arrays are suited to indexed, positional data. A Set is not a replacement when duplicate positions or random indexing matter. / 数组适合按索引排列的数据；若需要保留重复位置或随机索引，Set 不能替代数组。
 
-- **`Set`** — O(1) uniqueness checks, automatic dedupe on insert, `.has()` is constant time.
-- **Array** — ordered, index-addressable, rich iteration methods (`map`, `filter`, `reduce`).
+Both Map and Set use SameValueZero for keys or members: NaN matches NaN, and +0 and -0 are treated as the same key. Objects compare by identity. / Map 和 Set 对键或成员使用 SameValueZero：NaN 与自身相同，+0 与 -0 被视为同一个键；对象按身份比较。
 
-Rule of thumb: **if the primary operation is "is this value present?", use `Set`**. If you need order or positional access, use an array.
-
----
-
-#### `Map`
-
-##### Creating a Map
+#### Map / 映射
 
 ```javascript
-let myMap = new Map();
-let fromPairs = new Map([['a', 1], ['b', 2]]);
+const userById = new Map();
+userById.set(7, { name: "Ada" });
+userById.set("7", { name: "Grace" }); // number and string keys differ
+
+userById.get(7); // { name: "Ada" }
+userById.has(8); // false
+userById.size; // 2
+
+for (const [id, user] of userById) {
+  console.log(id, user.name); // insertion order
+}
 ```
 
-##### Core methods
+Core methods are `set`, `get`, `has`, `delete`, `clear`, and the `size` property. `keys()`, `values()`, and `entries()` return iterators; the default iterator is `entries()`. `forEach` receives `(value, key, map)`. / 常用方法包括 `set`、`get`、`has`、`delete`、`clear`，以及 `size` 属性。`keys()`、`values()`、`entries()` 返回迭代器；默认迭代器等同于 `entries()`。`forEach` 的参数顺序是 `(value, key, map)`。
 
-| Method | What it does |
+| Method / 方法 | Result / 返回值 |
 |---|---|
-| `set(key, value)` | add or update an entry |
-| `get(key)` | return the value, or `undefined` |
-| `has(key)` | boolean check |
-| `delete(key)` | remove an entry |
-| `clear()` | empty the map |
-| `size` | number of entries (property, not method) |
+| `set(key, value)` | The Map, for chaining / 返回 Map，可链式调用 |
+| `get(key)` | Value or `undefined` / 值或 `undefined` |
+| `has(key)` | Boolean / 布尔值 |
+| `delete(key)` | Whether an entry was removed / 是否删除了条目 |
+| `clear()` | Empties the Map / 清空 Map |
+
+#### Set / 集合
 
 ```javascript
-myMap.set('key1', 'value1');
-myMap.set('key2', 'value2');
-myMap.set(3, 'value3'); // any type of key
-
-myMap.get('key1');  // 'value1'
-myMap.has('key1');  // true
-myMap.delete('key2');
-myMap.clear();
+const tags = new Set(["js", "runtime", "js"]);
+tags.add("language");
+tags.has("js"); // true
+[...tags]; // ["js", "runtime", "language"]
 ```
 
-##### Traversing a Map
+Core methods are `add`, `has`, `delete`, `clear`, and the `size` property. `keys()` and `values()` produce the same values; `entries()` yields `[value, value]` for compatibility with Map iteration. `forEach` receives `(value, value, set)`. / 常用方法包括 `add`、`has`、`delete`、`clear`，以及 `size` 属性。`keys()` 和 `values()` 产出相同的值；为兼容 Map 迭代，`entries()` 产出 `[value, value]`。`forEach` 的参数顺序是 `(value, value, set)`。
 
-```javascript
-// Entry iteration (for...of with destructuring)
-for (const [key, value] of myMap) {
-  console.log(key, value);
-}
-
-// forEach — value, key, map (note the unusual order)
-myMap.forEach((value, key) => {
-  console.log(key, value);
-});
-
-// Keys only
-for (const key of myMap.keys()) { console.log(key); }
-
-// Values only
-for (const value of myMap.values()) { console.log(value); }
-
-// Entries (same as default iteration)
-for (const [key, value] of myMap.entries()) { console.log(key, value); }
-```
-
-##### Example end-to-end
-
-```javascript
-let myMap = new Map();
-
-myMap.set('name', 'Alice');
-myMap.set('age', 30);
-myMap.set('job', 'developer');
-
-myMap.get('name');   // 'Alice'
-myMap.has('job');    // true
-myMap.delete('age');
-
-myMap.forEach((value, key) => {
-  console.log(`${key}: ${value}`);
-});
-
-myMap.clear();
-console.log(myMap.size); // 0
-```
-
----
-
-#### `Set`
-
-A `Set` holds unique values — assigning a duplicate is a no-op. Keys and values are the same thing.
-
-##### Core methods
-
-| Method | What it does |
+| Method / 方法 | Result / 返回值 |
 |---|---|
-| `add(value)` | insert a value (no-op if duplicate) |
-| `has(value)` | boolean check |
-| `delete(value)` | remove a value |
-| `clear()` | empty the set |
-| `size` | number of entries |
+| `add(value)` | The Set, for chaining / 返回 Set，可链式调用 |
+| `has(value)` | Boolean / 布尔值 |
+| `delete(value)` | Whether a value was removed / 是否删除了值 |
+| `clear()` | Empties the Set / 清空 Set |
+
+#### Set composition methods / Set 集合运算
+
+ECMAScript 2025 standardized `union`, `intersection`, `difference`, `symmetricDifference`, `isSubsetOf`, `isSupersetOf`, and `isDisjointFrom`. They accept set-like inputs and return a Set or boolean as indicated by the method. Check runtime support when targeting older engines. / ECMAScript 2025 标准化了 `union`、`intersection`、`difference`、`symmetricDifference`、`isSubsetOf`、`isSupersetOf` 和 `isDisjointFrom`。这些方法接受类 Set 输入，并按方法返回 Set 或布尔值。面向较旧引擎时需确认运行时支持。
 
 ```javascript
-const mySet = new Set();
-mySet.add(1);
-mySet.add(5);
-mySet.add('some text');
+const enabled = new Set(["search", "export"]);
+const available = new Set(["search", "export", "admin"]);
 
-mySet.has(1);  // true
-mySet.has(3);  // false
-mySet.delete(5);
-mySet.clear();
+[...enabled.intersection(available)]; // ["search", "export"]
+enabled.isSubsetOf(available); // true
 ```
 
-##### Traversing a Set
+#### Common patterns / 常见用法
 
 ```javascript
-// for...of yields values in insertion order
-for (const value of mySet) { console.log(value); }
+const unique = [...new Set([1, 2, 2, 3])]; // [1, 2, 3]
 
-// forEach — value, value, set (value given twice for API consistency with Map)
-mySet.forEach(value => console.log(value));
-
-// values() and keys() return the same iterator
-for (const value of mySet.values()) { console.log(value); }
-
-// entries() yields [value, value] for Map API parity
-for (const [v1, v2] of mySet.entries()) { console.log(v1, v2); }
+const right = new Set([2, 3, 4]);
+const leftOnly = [...new Set([1, 2, 3])]
+  .filter(value => !right.has(value)); // [1]
 ```
 
-##### Example end-to-end
+For repeated membership checks, build the lookup Set once rather than inside the filter callback. / 需要反复查询成员时，应先创建一次 Set，而不是在 filter 回调中重复创建。
+
+**Interview answer / 面试回答:** Map preserves arbitrary key identity and insertion order; Set preserves unique values in insertion order. Both use SameValueZero, while plain object keys undergo property-key conversion. Their complexity depends on the implementation; the standard requires average sublinear access rather than a fixed O(1) guarantee. / Map 保留任意键的身份和插入顺序；Set 按插入顺序保存唯一值。二者使用 SameValueZero，普通对象键则会进行属性键转换。复杂度取决于实现；标准只要求平均访问优于线性，并不保证固定 O(1)。
+
+See [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) and [Set methods](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set-objects). / 详见 [ECMAScript 键控集合规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) 与 [Set 方法规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set-objects)。
+
+Related: [JavaScript Types and Coercion / JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B); [Memory and weak collections / JavaScript 内存与弱集合](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
+## 12. JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef
+
+### JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef
+
+**Key terms / 关键词:** reachability 可达性 · weak key 弱键 · garbage collection 垃圾回收 · finalization 清理回调
+
+JavaScript specifies object identity, reachability-related weak collection behavior, and observable results. It does not require values to live on a “stack” or “heap,” prescribe one garbage collector, or promise when collection occurs. Treat weak references as a way to avoid owning a key, never as a predictable cleanup schedule. / JavaScript 规定对象身份、弱集合相关行为和可观察结果，但不要求值存放在“栈”或“堆”中，不规定唯一的垃圾回收算法，也不保证何时回收。弱引用用于避免强持有某个键，不能当作可预测的清理计划。
+
+#### WeakMap / 弱映射
+
+A WeakMap associates a weakly held key with a strongly held value. The entry does not by itself keep its key alive. It has no enumeration, `size`, or `forEach`, because exposing which keys remain would make garbage-collection timing observable. / WeakMap 把弱持有的键关联到强持有的值。该条目本身不会让键保持存活。它没有枚举、`size` 或 `forEach`，因为暴露哪些键仍存在会使垃圾回收时机变得可观察。
+
+Since ECMAScript 2023, keys may be objects or non-registered symbols. `Symbol.for(...)` symbols are registered and cannot be weak keys. Older runtimes may support only object keys, so check the target runtime if symbol keys are needed. / 从 ECMAScript 2023 起，键可以是对象或非注册 Symbol。`Symbol.for(...)` 创建的注册 Symbol 不能作为弱键。较旧运行时可能只支持对象键；需要 Symbol 键时应检查目标运行时支持情况。
 
 ```javascript
-const mySet = new Set([1, 2, 3, 4]);
+const metadata = new WeakMap();
 
-mySet.add(5);
-mySet.add(5); // ignored — already present
+function attachMetadata(node, info) {
+  metadata.set(node, info);
+}
+function readMetadata(node) {
+  return metadata.get(node);
+}
 
-mySet.has(1);  // true
-mySet.has(6);  // false
-mySet.delete(3);
+const privateSymbol = Symbol("metadata");
+metadata.set(privateSymbol, { source: "ES2023 non-registered symbol key" });
 
-mySet.forEach(v => console.log(v)); // 1, 2, 4, 5
-
-mySet.clear();
-console.log(mySet.size); // 0
+const registered = Symbol.for("shared");
+metadata.has(registered); // false
+// metadata.set(registered, {}); // TypeError
 ```
 
-#### Common idioms
+Typical uses include metadata keyed by objects owned elsewhere, or data associated with class instances without creating a public property. The WeakMap entry does not by itself keep its key alive, even when the value refers back to the key; another strong path to the key, such as an externally retained value, can still keep it alive. / 常见用途包括为其他代码持有的对象保存元数据，或为类实例关联数据而不增加公开属性。WeakMap 条目本身不会让键保持存活，即使值又引用该键也是如此；但若存在其他强引用路径（例如值被外部继续持有），键仍会存活。
 
-**Remove duplicates from an array:**
+#### WeakSet / 弱集合
+
+A WeakSet weakly tracks objects or non-registered symbols and supports membership operations, but no enumeration or size. Use it for identity-based “seen” tracking when retaining the tracked value would be undesirable. / WeakSet 弱持有对象或非注册 Symbol，只提供成员操作，没有枚举或 size。若不希望跟踪操作本身延长对象生命周期，可用它按身份记录“已见过”的对象。
 
 ```javascript
-const unique = [...new Set([1, 2, 2, 3, 3, 3])];
-// [1, 2, 3]
+const processed = new WeakSet();
+
+function processOnce(value) {
+  if (processed.has(value)) return;
+  processed.add(value);
+  // perform work once for this identity
+}
 ```
 
-**Fast set-difference:**
+A normal Set or Map strongly retains its members or keys. Use one when iteration, counting, or deterministic lifetime management matters. / 普通 Set 或 Map 会强持有成员或键。需要枚举、计数或确定生命周期时应使用普通集合。
+
+#### WeakRef and FinalizationRegistry / 弱引用与最终化注册表
+
+`WeakRef` and `FinalizationRegistry` were standardized in ES2021. A WeakRef lets a program try to access a target without making that target strongly reachable through the reference. `deref()` returns the target if it is still available, otherwise `undefined`. A FinalizationRegistry may schedule cleanup after a target becomes unreachable. Neither the collection time nor the callback time is guaranteed; cleanup may be delayed or omitted before program exit. Do not use either API for correctness-critical resource release, accounting, or prompt UI updates. / `WeakRef` 和 `FinalizationRegistry` 于 ES2021 标准化。WeakRef 允许程序尝试访问目标，但不会通过该引用强持有目标。`deref()` 在目标仍可用时返回它，否则返回 `undefined`。FinalizationRegistry 可能在目标不可达后安排清理回调，但回收和回调时机都没有保证；程序退出前回调也可能未执行。不要把这些 API 用于正确性关键的资源释放、计数或及时 UI 更新。
+
+If `deref()` returns a target, ECMAScript keeps it alive until the current job completes. This provides consistency within that job; it does not promise that the target remains afterward. / 如果 `deref()` 返回目标，ECMAScript 会使它至少存活到当前 job 结束，以保证该 job 内行为一致；这不承诺目标之后仍然存活。
+
+See [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-weakmap-objects) and [weak references and finalization](https://tc39.es/ecma262/2025/multipage/managing-memory.html). The specification explicitly permits implementation-dependent collection latency. / 详见 [ECMAScript 键控集合规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-weakmap-objects) 和 [弱引用与最终化规范](https://tc39.es/ecma262/2025/multipage/managing-memory.html)。规范明确允许回收延迟由实现决定。
+
+**Interview answer / 面试回答:** WeakMap and WeakSet let object identity be associated or tracked without the collection itself keeping the key alive. Their lack of enumeration prevents programs from depending on nondeterministic garbage-collection timing. WeakRef and finalization callbacks are likewise nondeterministic, so use them only for opportunistic behavior. / WeakMap 和 WeakSet 可关联或跟踪对象身份，而不会由集合本身强持有键。它们不能枚举，避免程序依赖不确定的垃圾回收时机。WeakRef 和最终化回调同样不确定，只适合可有可无的优化行为。
+
+Related: [Map and Set / JavaScript 中的 Map 与 Set](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
+## 13. JavaScript Arrays / JavaScript 数组
+
+### JavaScript Arrays / JavaScript 数组
+
+**Key terms / 关键词:** iterable 可迭代对象 · sparse array 稀疏数组 · SameValueZero 相同值零 · shallow copy 浅拷贝
+
+Arrays are ordered objects with indexed properties and an iterable interface. Choose an operation by its contract: iteration protocol, holes, mutation, and equality can change the result. / 数组是带索引属性并实现可迭代协议的有序对象。选择操作时要看清迭代协议、空位、是否修改原数组及相等规则，这些都会影响结果。
+
+#### Iterating keys or values / 遍历键还是值
+
+Use `for...of` for values from an iterable. Use `for...in` only when enumerating property names, usually on a plain object. A normal dense array’s own index keys are visited in ascending order, but `for...in` can also include custom and inherited enumerable string properties. / 用 `for...of` 遍历可迭代对象的值；`for...in` 遍历属性名，通常用于普通对象。普通稠密数组的自有索引键按升序枚举，但 `for...in` 也可能包含自定义属性和原型链上的可枚举字符串属性。
 
 ```javascript
-const a = new Set([1, 2, 3]);
-const b = new Set([2, 3, 4]);
-const only = [...a].filter(x => !b.has(x));
-// [1]
+const values = [10, 20];
+for (const key in values) console.log(key); // "0", "1"
+for (const value of values) console.log(value); // 10, 20
+
+const record = { name: "Ada", age: 36 };
+for (const [key, value] of Object.entries(record)) {
+  console.log(key, value); // own enumerable string-keyed properties
+}
 ```
 
-**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20Memory%20in%20JS,%20WeakMap%20and%20WeakSet%20/%20JavaScript%E5%86%85%E5%AD%98%E3%80%81WeakMap%E4%B8%8EWeakSet) for the garbage-collection-aware variants (`WeakMap` / `WeakSet`), [`3.2 Javascript Types`](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B) for why plain objects are unreliable as dictionaries.
-## 12. Memory in JS, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet
+An array hole is different from an own property whose value is `undefined`: `for...of` reads a hole as `undefined`; methods such as `map` and `filter` skip absent indices. `for...in` lists only existing enumerable properties. Avoid using it when the array’s positional values are intended. / 数组空位不同于值为 `undefined` 的自有属性：`for...of` 读取空位时得到 `undefined`，而 `map`、`filter` 等方法会跳过不存在的索引。`for...in` 只列出现存的可枚举属性。需要按位置处理数组值时不要用它。
 
-Three interview questions this note prepares you for:
+The ordering and inheritance behavior follows the [ECMAScript for-in/for-of rules](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html#sec-for-in-and-for-of-statements). / 顺序与继承行为遵循 [ECMAScript for-in/for-of 规范](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html#sec-for-in-and-for-of-statements)。
 
-1. **How does JavaScript manage memory? What's the difference between the stack and the heap?**
-2. **What is a `WeakMap`, and when would you use one instead of a regular `Map`?**
-3. **What is a `WeakSet`, and when would you use one?**
+#### Removing duplicates / 数组去重
 
-For the garbage collection mechanism itself (mark-and-sweep, reference counting), see [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
-
----
-
-#### How does JavaScript manage memory?
-
-**Headline (30s):** JavaScript stores primitives directly on the **stack** — a fast, LIFO region managed automatically with each function call. Reference types (objects, arrays, functions) are allocated on the **heap**, with the variable on the stack holding only a pointer to the heap slot. The engine's garbage collector reclaims heap memory once nothing references the object.
-
-##### The stack
-
-Operates on a Last-In-First-Out principle. When a function is called, its parameters and local primitives are pushed onto the stack; on return, they're popped. Quick to allocate, quick to free. But limited in size — deep recursion or huge local arrays can trigger `Maximum call stack size exceeded`.
-
-##### The heap
-
-A larger, unstructured memory pool for dynamically allocated data — every object, array, and function body lives here. Allocation and freeing are handled by the JS engine's garbage collector (see [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the reference-counting and mark-and-sweep mechanisms). The stack holds pointers into the heap; the heap holds the actual data.
-
-**Gotcha — "primitive means stack":** Short strings and inlined number literals commonly live on the stack, but the JS engine is free to intern large strings or box values into heap slots for optimization. The specification doesn't mandate stack vs heap; what *is* guaranteed is the semantic: primitives copy, references share.
-
----
-
-#### What is a `WeakMap`, and when would you use one?
-
-**Headline (30s):** A `WeakMap` is a key-value collection where **the keys must be objects** and are held **weakly** — they don't prevent garbage collection. Once no other reference to a key exists, the engine is free to remove the entry automatically. `WeakMap` is ideal for attaching private data to objects you don't own (DOM nodes, class instances), so the metadata disappears when the object is freed.
-
-**Key differences from `Map`:**
-
-- **Keys must be objects** (not primitives).
-- **Keys are held weakly** — no strong reference from the `WeakMap` back to the key.
-- **Not enumerable** — no `.keys()`, `.values()`, `.entries()`, `.size`, `.forEach()`. Only `set`, `get`, `has`, `delete`.
-- **No access to garbage-collection timing** — you can't observe when entries are reclaimed.
-
-##### When to reach for a `WeakMap`
-
-- **Private fields on class instances** — before class private fields (`#field`) shipped, `WeakMap` was the canonical workaround.
-- **Metadata keyed by DOM nodes** — when the node goes away, your metadata goes with it.
-- **Caches keyed by objects** — no manual cleanup code; the cache entry disappears once the key is collected.
-
-##### Example — private data on a class instance
+For primitive values, `[...new Set(values)]` keeps the first occurrence in iteration order. Set uses SameValueZero: `NaN` matches `NaN`, and `+0` matches `-0`. Objects compare by identity, so two different objects with the same fields remain distinct. / 对原始值，`[...new Set(values)]` 会按迭代顺序保留首次出现的值。Set 使用 SameValueZero：`NaN` 与自身相同，`+0` 与 `-0` 相同。对象按引用身份比较，因此字段相同但引用不同的对象仍会保留。
 
 ```javascript
-const privateData = new WeakMap();
+[...new Set([1, 1, NaN, NaN, -0, +0])]; // [1, NaN, 0]
+[...new Set([{ id: 1 }, { id: 1 }])].length; // 2: distinct references
+```
 
-class MyClass {
-  constructor() {
-    privateData.set(this, { secret: 'hidden' });
+For object deduplication by a field, a Map is concise. In this example the last value for an id wins, while the key retains the order of its first insertion. / 按对象字段去重时可用 Map。以下实现中相同 id 的最后一个对象胜出，但键的遍历位置仍按首次插入顺序保留。
+
+```javascript
+function uniqueById(items) {
+  const byId = new Map();
+  for (const item of items) byId.set(item.id, item);
+  return [...byId.values()];
+}
+```
+
+A Set/Map approach is commonly linear in practical runtimes, but ECMAScript requires average access to be sublinear, not a specific O(1) implementation or end-to-end complexity. Linear `indexOf`/accumulator searches can be quadratic; choose them only when the input size or other requirements justify them. A sort-based approach changes order and needs a comparator whose equality matches the deduplication rule. / Set/Map 在常见运行时中通常表现为线性处理，但 ECMAScript 只要求平均访问复杂度优于线性，并未规定必须 O(1)，整体复杂度也取决于运行时。反复用 `indexOf` 或累加器查找可能达到平方复杂度。排序去重会改变顺序，且比较器的相等规则必须符合去重需求。
+
+See the [ECMAScript keyed collections specification](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) for Set and Map equality and ordering semantics. / Set 与 Map 的相等和顺序语义见 [ECMAScript 键控集合规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html)。
+
+#### Array methods: mutation and holes / 数组方法：修改行为与空位
+
+- `map` transforms each present index and returns a new array; it skips holes and preserves those holes in the result. / `map` 转换每个已存在的索引并返回新数组；它跳过空位，结果中也保留对应空位。
+- `filter` returns the present values that pass the predicate; holes are skipped and are not copied. / `filter` 返回通过判断的现存值；空位会跳过，也不会复制。
+- `some` and `every` stop when the answer is known; both skip holes. On an empty array, `some` is false and `every` is true. / `some` 和 `every` 在结论已确定时停止；二者都会跳过空位。空数组上 `some` 为 false，`every` 为 true。
+- `reduce` folds present elements; provide an initial value when the empty-array case matters. / `reduce` 折叠现存元素；若空数组也需有定义的结果，应提供初始值。
+- `concat` returns a shallow new array and can consult `Symbol.isConcatSpreadable`; spread syntax follows the iterable protocol instead. / `concat` 返回浅拷贝新数组，并可能遵循 `Symbol.isConcatSpreadable`；展开语法则使用可迭代协议。
+- `sort` and `reverse` mutate the receiver; `toSorted` and `toReversed` (ES2023) return copies. Sorting is stable since ES2019. Default `sort()` compares string forms, not numeric values. / `sort` 和 `reverse` 会修改原数组；ES2023 的 `toSorted`、`toReversed` 返回副本。ES2019 起排序稳定。默认 `sort()` 比较字符串形式，而非数值大小。
+
+```javascript
+[1, 11, 2].sort(); // [1, 11, 2] — lexicographic string ordering
+[1, 11, 2].toSorted((a, b) => a - b); // [1, 2, 11]; receiver is unchanged
+
+const sparse = [, "x"];
+[...sparse]; // [undefined, "x"] — spread consumes the array iterator
+sparse.map(value => value); // [ <1 empty item>, "x" ]
+sparse.filter(() => true); // ["x"]
+sparse.flat(); // ["x"] — flat removes holes at flattened levels
+```
+
+#### Spread and copying / 展开与拷贝
+
+Array spread consumes an iterable and copies its yielded values shallowly. Nested objects are still shared. Object spread is a separate operation: it copies an object’s own enumerable properties into a new object. / 数组展开会消费可迭代对象并浅拷贝其产出的值；嵌套对象仍然共享。对象展开是另一种操作：把对象的自有可枚举属性复制到新对象。
+
+```javascript
+const original = [{ score: 1 }];
+const copy = [...original];
+copy[0].score = 2;
+original[0].score; // 2 — the nested object is shared
+
+const merged = { ...defaults, ...overrides }; // later properties replace earlier ones
+```
+
+Transpilers may lower spread in different ways according to the target and helper settings. Do not treat one Babel output such as `[].concat(value)` as the language semantics: array spread uses the iterator, while `concat` has different behavior for sparse arrays and spreadable objects. / 转译器会按目标环境与配置选择不同实现。不要把某一种 Babel 输出（如 `[].concat(value)`）当作语言语义：数组展开消费迭代器，而 `concat` 对稀疏数组和可展开对象的处理不同。
+
+#### Flattening nested arrays / 展平嵌套数组
+
+`flat(depth)` (ES2019) returns a shallowly flattened copy and defaults to depth 1. Use `flat(Infinity)` when arbitrary nesting is intended; it removes holes at levels it flattens and does not recursively flatten non-array iterables. / ES2019 的 `flat(depth)` 返回浅层展平副本，默认深度为 1。确实需要展平任意嵌套时可用 `flat(Infinity)`；它会移除被展平层级中的空位，不会递归展平非数组可迭代对象。
+
+A recursive implementation makes the rule explicit, but can exceed the call-stack limit on deeply nested input. This version visits every numeric position, so a hole becomes `undefined`, unlike `flat`. / 递归实现能直观表达规则，但极深输入可能超出调用栈限制。以下版本逐个访问数值索引，因此空位会变成 `undefined`，与 `flat` 不同。
+
+```javascript
+function flattenNested(items) {
+  const result = [];
+  for (let i = 0; i < items.length; i++) {
+    const value = items[i];
+    if (Array.isArray(value)) result.push(...flattenNested(value));
+    else result.push(value);
   }
-
-  getSecret() {
-    return privateData.get(this).secret;
-  }
+  return result;
 }
 
-const instance = new MyClass();
-console.log(instance.getSecret()); // 'hidden'
-
-// When `instance` goes out of scope, the entry in privateData
-// can be garbage-collected — no manual cleanup needed.
+flattenNested([1, [2, [3]], 4]); // [1, 2, 3, 4]
+[1, [2, [3]], 4].flat(Infinity); // [1, 2, 3, 4]
 ```
 
-**Gotcha — "I can't iterate a WeakMap":** That's deliberate. Iteration would require keeping strong references, defeating the purpose. If you need iteration, you need a regular `Map` plus manual cleanup.
-
----
-
-#### What is a `WeakSet`, and when would you use one?
-
-**Headline (30s):** A `WeakSet` holds a collection of **objects** weakly — objects can drop out when no other reference holds them. It has just three methods (`add`, `has`, `delete`) and no iteration. Use it to track "have I seen this object?" without preventing the object from being garbage-collected.
-
-**Key properties:**
-
-- **Members must be objects.**
-- **Weak references** — no ownership; objects are GC-eligible.
-- **Not enumerable** — `add`, `has`, `delete` only.
-
-##### When to reach for a `WeakSet`
-
-- **Tracking "processed" objects** without preventing cleanup.
-- **Tagging nodes** visually (e.g., "these DOM elements already have listeners attached") where the tag should vanish with the element.
-
-##### Example — dedupe work by object identity
+The historical iterative `[].concat(...items)` pattern flattens one level per pass. It can hit argument-count limits, repeatedly copy large arrays, and has different sparse-array behavior from `flat`; it may also return the original input when no nested array exists. / 传统迭代写法 `[].concat(...items)` 每轮展平一层，但可能触发参数数量限制、反复复制大数组，而且稀疏数组行为与 `flat` 不同；若没有嵌套数组，它还可能直接返回原数组。
 
 ```javascript
-const processedObjects = new WeakSet();
-
-function process(obj) {
-  if (processedObjects.has(obj)) return;
-  // ...actual work...
-  processedObjects.add(obj);
-}
-
-const obj1 = {};
-process(obj1);
-process(obj1); // no-op — already seen
-
-// When obj1 goes out of scope, it's eligible for GC,
-// and disappears from processedObjects automatically.
-```
-
-**Gotcha — not suitable for counting or batch operations:** No `.size`, no iteration. For anything beyond "is this one object present?", use a regular `Set`.
-
----
-
-#### Summary
-
-| | `Map` / `Set` | `WeakMap` / `WeakSet` |
-|---|---|---|
-| **Keys / members** | any type | **objects only** |
-| **GC behavior** | prevents GC (strong refs) | allows GC (weak refs) |
-| **Iterable?** | yes | **no** |
-| **Size property?** | yes | no |
-| **Typical use** | general dictionary / set | lifecycle-scoped metadata, caches |
-
-**See also:** [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for garbage collection mechanics, [`3.3 Map & Set in JS`](#11.%20Map%20&%20Set%20in%20JS%20/%20JavaScript%E4%B8%AD%E7%9A%84Map%E4%B8%8ESet) for the strong-reference variants.
-## 13. Array in JS / JavaScript数组
-
-### What's the difference between `for..in` and `for..of`?
-
-**Headline (30s):** `for..in` iterates **enumerable keys** — that's property names on objects, or *string indices* on arrays ("0", "1", "2"). `for..of` iterates **values** from anything iterable — arrays, strings, `Map`, `Set`, `NodeList`, `arguments`. If you want values from an array, use `for..of` (or a plain `for` with index). Reach for `for..in` only when you actually want keys of a plain object.
-
-#### `for..in` — iterates enumerable keys
-
-```javascript
-const arr = [10, 20, 30];
-for (let i in arr) {
-  console.log(i); // 0, 1, 2  (indexes as strings)
-}
-
-const str = 'abc';
-for (let i in str) {
-  console.log(i); // 0, 1, 2
-}
-
-const obj = { name: 'aaa', age: 30 };
-for (let key in obj) {
-  console.log(key); // 'name', 'age'
+function flattenByLevels(items) {
+  while (items.some(Array.isArray)) items = [].concat(...items);
+  return items;
 }
 ```
 
-**Gotcha — `for..in` on arrays yields string indices, not values:** Don't use it on arrays. The indexes come back as strings, and the iteration order is not guaranteed for arrays (it usually *happens* to be numeric for dense arrays, but the spec doesn't require it).
+Prefer `flat` when its hole and depth semantics match the task. / 若 `flat` 的空位和深度语义符合需求，应优先使用。
 
-**Gotcha — inherited enumerable properties:** `for..in` walks the prototype chain. A property added to `Object.prototype` shows up in every `for..in` loop. In modern code this rarely happens, but `Object.keys(obj)` or `for..of` over `Object.entries(obj)` is safer.
-
-#### `for..of` — iterates values from iterables
-
-```javascript
-const arr = [10, 20, 30];
-for (let v of arr) console.log(v); // 10, 20, 30
-
-const str = 'abc';
-for (let ch of str) console.log(ch); // 'a', 'b', 'c'
-
-function fn() {
-  for (let arg of arguments) console.log(arg);
-}
-fn(100, 200, 'aaa'); // 100, 200, 'aaa'
-
-const s = new Set([10, 20, 30]);
-for (let v of s) console.log(v); // 10, 20, 30
-
-const m = new Map([['x', 100], ['y', 200]]);
-for (let [key, value] of m) console.log(key, value);
-```
-
-**Gotcha — `for..of` doesn't work on plain objects:** Plain objects aren't iterable by default. Convert first: `for (const [k, v] of Object.entries(obj))`.
-
----
-
-### How do you remove duplicates from an array?
-
-**Headline (30s):** `[...new Set(arr)]` for primitives — O(n) time, one line, impossible to get wrong. For objects keyed by a property, loop + `Map` using that property as the key. Older idioms (`filter + indexOf`, `reduce + includes`) are O(n²) and should only be cited for how *not* to do it.
-
-#### 1. Using a Set — the default answer
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return [...new Set(arr)];
-}
-```
-
-**Time:** O(n). **Space:** O(n).
-
-#### 2.1 Filter + `indexOf` — O(n²), avoid
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return arr.filter((item, index) => arr.indexOf(item) === index);
-}
-```
-
-**Time:** O(n²) — `indexOf` scans the whole array for each element. **Space:** O(n).
-
-#### 2.2 Filter + Set — O(n) optimization of 2.1
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  const seen = new Set<T>();
-  return arr.filter(item => {
-    if (!seen.has(item)) {
-      seen.add(item);
-      return true;
-    }
-    return false;
-  });
-}
-```
-
-**Time:** O(n). **Space:** O(n).
-
-#### 3. `Map` for dedupe-by-key of objects
-
-```typescript
-interface CustomObject {
-  id: number;
-  name: string;
-}
-
-function removeDuplicates(arr: CustomObject[]): CustomObject[] {
-  const unique = new Map<number, CustomObject>();
-  arr.forEach(obj => unique.set(obj.id, obj));
-  return Array.from(unique.values());
-}
-```
-
-**Time:** O(n). **Space:** O(n). **Note:** the *last* object with a given `id` wins (later `set` overrides earlier).
-
-#### 4.1 Reduce + `includes` — O(n²), avoid
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return arr.reduce((acc, current) => {
-    if (!acc.includes(current)) acc.push(current);
-    return acc;
-  }, [] as T[]);
-}
-```
-
-**Time:** O(n²).
-
-#### 4.2 Reduce + Set — O(n) optimization
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  const seen = new Set<T>();
-  return arr.reduce((acc, current) => {
-    if (!seen.has(current)) {
-      seen.add(current);
-      acc.push(current);
-    }
-    return acc;
-  }, [] as T[]);
-}
-```
-
-**Time:** O(n). **Space:** O(n).
-
-#### 5. Sort + reduce — O(n log n), preserves nothing
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return arr.sort().reduce((acc, current) => {
-    if (acc.length === 0 || acc[acc.length - 1] !== current) acc.push(current);
-    return acc;
-  }, [] as T[]);
-}
-```
-
-**Time:** O(n log n). **Note:** destroys original order. Useful only when you already need the array sorted.
-
-#### 6. `Array.from(new Set(arr))` — equivalent to option 1
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return Array.from(new Set(arr));
-}
-```
-
-**Gotcha — `Set` compares by reference for objects:** `new Set([{id: 1}, {id: 1}])` keeps both entries because they're different references. Dedupe-by-key with a `Map` is the right tool for objects.
-
----
-
-### What is the spread operator, and how does it compile?
-
-**Headline (30s):** `...` expands an iterable (most commonly an array) in places where multiple values are expected — function calls, array literals, object literals. For older targets, Babel compiles array spread to `.concat()` or `Array.prototype.slice.call(arguments)`.
-
-```typescript
-const baseArray = [1, 2, 3, 4];
-const array = [...baseArray];
-```
-
-Babel compiles this down to something like:
-
-```javascript
-var baseArray = [1, 2, 3, 4];
-var array = [].concat(baseArray);
-```
-
-That transpilation preserves the "shallow copy into a new array" semantic in environments that don't support ES6 syntax.
-
-#### BabelJS overview
-
-Babel is a JavaScript compiler that transforms ECMAScript 2015+ code into a version compatible with older browsers and environments. Plugins and presets (`@babel/preset-env`) target a specific set of browsers, so you can write modern syntax and ship compatible output.
-
-**Gotcha — spread is shallow:** `[...arr]` copies top-level elements by reference. Nested objects are shared. For deep copy, use `structuredClone()` (see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)).
-
----
-
-### What are the most-used Array methods?
-
-**Headline (30s):** A small core handles most real-world array work: `map` transforms, `filter` selects, `reduce` folds, `some` / `every` test, `concat` joins, `indexOf` / `lastIndexOf` locate, `sort` and `reverse` reorder in place. Learn the signatures (especially `reduce` and `sort`'s comparator) and you can derive the rest from docs.
-
-#### Concatenation — `concat`
-
-Joins two or more arrays into a new array without mutating the originals.
-
-```javascript
-const a = ['a', 'b', 'c'];
-const b = ['d', 'e', 'f'];
-a.concat(b); // ['a', 'b', 'c', 'd', 'e', 'f']
-```
-
-#### Element checking — `every` / `some`
-
-- `every(fn)` — `true` if **all** elements pass.
-- `some(fn)` — `true` if **any** element passes.
-
-```javascript
-const isBelow40 = n => n < 40;
-const nums = [1, 30, 39, 29, 10, 13];
-nums.every(isBelow40); // true
-nums.some(isBelow40);  // true
-```
-
-#### Filtering — `filter`
-
-Returns a new array of elements that pass the predicate.
-
-```javascript
-const words = ['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present'];
-words.filter(w => w.length > 6); // ['exuberant', 'destruction', 'present']
-```
-
-#### Mapping — `map`
-
-Returns a new array of transformed values.
-
-```javascript
-[1, 4, 9, 16].map(Math.sqrt); // [1, 2, 3, 4]
-```
-
-#### Sorting — `sort`
-
-Sorts **in place**. Default compares by UTF-16 code unit, **not** numerically.
-
-```javascript
-['March', 'Jan', 'Feb', 'Dec'].sort(); // ['Dec', 'Feb', 'Jan', 'March']
-
-[1, 11, 2, 22].sort();                   // [1, 11, 2, 22] — string sort!
-[1, 11, 2, 22].sort((a, b) => a - b);    // [1, 2, 11, 22] — numeric sort
-```
-
-**Gotcha — default `sort` on numbers is wrong for most use cases.** Always pass a comparator when sorting numbers: `(a, b) => a - b`.
-
-#### Reversing — `reverse`
-
-Reverses in place.
-
-```javascript
-['one', 'two', 'three'].reverse(); // ['three', 'two', 'one']
-```
-
-#### Conversion to string — `toString`
-
-```javascript
-[1, 2, 'a', '1a'].toString(); // '1,2,a,1a'
-```
-
-#### Index finding — `indexOf` / `lastIndexOf`
-
-```javascript
-const beasts = ['ant', 'bison', 'camel', 'duck', 'bison'];
-beasts.indexOf('bison');     // 1
-beasts.lastIndexOf('bison'); // 4
-```
-
-**See also:** [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for `Array.at()`, `Array.from()`, and other newer methods.
-
----
-
-### How do you flatten a nested array?
-
-**Headline (30s):** `arr.flat(Infinity)` is the one-liner — supported in all modern environments. The recursive, reduce-based, and iterative variants below are worth recognizing because they show up in interview "implement this yourself" scenarios.
-
-#### Recursive approach
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  let flattened = [];
-  for (let i = 0; i < arr.length; i++) {
-    if (Array.isArray(arr[i])) {
-      flattened = flattened.concat(arrayFlatten(arr[i]));
-    } else {
-      flattened.push(arr[i]);
-    }
-  }
-  return flattened;
-}
-```
-
-**Pros:** works anywhere, easy to explain. **Cons:** recursion stack — can fail on very deep arrays.
-
-#### Functional (reduce + recursion)
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  return arr.reduce((prev, cur) =>
-    prev.concat(Array.isArray(cur) ? arrayFlatten(cur) : cur), []);
-}
-```
-
-**Pros:** declarative and concise. **Cons:** same recursion depth concern.
-
-#### Iterative approach
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  while (arr.some(Array.isArray)) {
-    arr = [].concat(...arr);
-  }
-  return arr;
-}
-```
-
-**Pros:** no recursion — safe on deep arrays. **Cons:** quadratic in the worst case if the array is very jagged.
-
-#### ES6 `.flat()` method
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  return arr.flat(Infinity);
-}
-```
-
-**Pros:** concise, optimized natively. **Cons:** not available in IE11 and earlier (no longer relevant in most codebases).
-
-**Gotcha — `.flat()` without an argument only flattens one level:** `.flat()` defaults to depth 1; use `.flat(Infinity)` for fully-nested input. Don't rely on the default for unknown nesting depths.
+**Interview answer / 面试回答:** `for...of` reads array values; Set deduplicates by SameValueZero while preserving first-seen order; array methods differ on holes and mutation; spread is shallow; and `flat` is the built-in flattening operation. / `for...of` 读取数组值；Set 按 SameValueZero 去重并保留首次出现顺序；数组方法对空位和原数组修改的行为不同；展开是浅拷贝；内置展平方法是 `flat`。
 ## 14. ES6 New Methods / ES6新增方法
 
 Reach for this when you need a quick reference for the `Object.*` and `Array.*` utility methods introduced in ES6. For newer additions (`Object.hasOwn`, `Array.at`, `structuredClone`), see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
@@ -2518,7 +2159,7 @@ Array.of(3);   // creates [3] — one element, value 3
 
 **Reach for it when:** constructing an array from a known set of elements and at least one could be a number — `Array.of()` disambiguates the intent.
 
-**See also:** [`3.5 Array in JS`](#13.%20Array%20in%20JS%20/%20JavaScript%E6%95%B0%E7%BB%84) for array iteration and transformation methods, [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for post-ES6 additions.
+**See also:** [`3.5 Array in JS`](#13.%20JavaScript%20Arrays%20/%20JavaScript%20%E6%95%B0%E7%BB%84) for array iteration and transformation methods, [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for post-ES6 additions.
 ## 15. Other JavaScript Topics / JavaScript其他内容
 
 A grab-bag of short interview-favorite JavaScript topics. Reach for this when someone asks about strict mode, floating-point math, equality operators, or the `!!` idiom.
@@ -3920,7 +3561,7 @@ A runner would call `.next()` with each resolved value. Today, `async/await` doe
 
 **Reach for generators when:** the sequence has interesting control flow (branching, recursion via `yield*`, infinite streams). Use a hand-written iterator only when you need to precisely control memory layout or can't use generator syntax.
 
-**See also:** [`3.5 Array in JS`](#13.%20Array%20in%20JS%20/%20JavaScript%E6%95%B0%E7%BB%84) for `for...of` vs `for...in` semantics, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for `for await...of` and async iteration.
+**See also:** [`3.5 Array in JS`](#13.%20JavaScript%20Arrays%20/%20JavaScript%20%E6%95%B0%E7%BB%84) for `for...of` vs `for...in` semantics, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for `for await...of` and async iteration.
 ## 21. Error Handling / 错误处理
 
 #### How should you handle errors in modern JavaScript?
@@ -4926,7 +4567,7 @@ function area(shape: Shape): number {
 }
 ~~~
 
-**See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#12.%20Memory%20in%20JS,%20WeakMap%20and%20WeakSet%20/%20JavaScript%E5%86%85%E5%AD%98%E3%80%81WeakMap%E4%B8%8EWeakSet) for object identity and proxies; [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
+**See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for object identity and proxies; [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
 
 **Sources checked 2026-10-15:** [TypeScript: Basic Types](https://www.typescriptlang.org/docs/handbook/2/basic-types), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
 ## 26. Event Loop / 事件循环
@@ -5085,7 +4726,7 @@ Most leaks are the same pattern: something unreachable from your mental model is
 
 **Rule of thumb:** Every subscription, listener, and timer needs a matching cleanup. In React, that's your `useEffect` return function. In vanilla JS, that's discipline — save the reference and remove it when done.
 
-**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20Memory%20in%20JS,%20WeakMap%20and%20WeakSet%20/%20JavaScript%E5%86%85%E5%AD%98%E3%80%81WeakMap%E4%B8%8EWeakSet) for how WeakMap/WeakSet help avoid leaks, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise microtask scheduling details.
+**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for how WeakMap/WeakSet help avoid leaks, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise microtask scheduling details.
 ## 27. Build Tools / 构建工具
 
 Reach for this when you need a quick reference for Webpack's core concepts, loaders, plugins, source maps, and adjacent tooling like Corepack. For ESM vs. CommonJS and dynamic imports, see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).

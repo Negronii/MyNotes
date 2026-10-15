@@ -22,9 +22,9 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 - [JavaScript Basics / JavaScript基础](javascript/javascript-basics.md)
 - [JavaScript Types / JavaScript类型](javascript/javascript-types.md)
-- [Map & Set in JS / JavaScript中的Map与Set](javascript/map-and-set.md)
-- [Memory in JS, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](javascript/javascript-memory-weakmap-and-weakset.md)
-- [Array in JS / JavaScript数组](javascript/arrays.md)
+- [Map and Set in JavaScript / JavaScript 中的 Map 与 Set](javascript/map-and-set.md)
+- [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](javascript/javascript-memory-weakmap-and-weakset.md)
+- [JavaScript Arrays / JavaScript 数组](javascript/arrays.md)
 - [ES6 New Methods / ES6新增方法](javascript/es6-new-methods.md)
 - [Other JavaScript Topics / JavaScript其他内容](javascript/other-javascript-topics.md)
 - [Modern JavaScript Features / 现代JavaScript特性](javascript/modern-javascript-features.md)
