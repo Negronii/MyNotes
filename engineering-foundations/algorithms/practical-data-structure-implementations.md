@@ -1,47 +1,59 @@
-Reach for this when you need canonical JavaScript implementations of the data structures that come up in interviews — LRU cache, queue, stack — plus a note on how React Fiber uses linked-list structures internally.
+# Practical Data Structure Implementations / 常用数据结构实现
+
+These examples make the empty and capacity cases explicit. Built-in collections are usually the simplest production choice; implement the underlying links when the data structure itself is what you need to understand.
+
+选用内建集合还是手写结构取决于需求；实现需要明确容量、空状态与错误行为，并用存在性检查保留 `undefined` 等有效数据。
 
 ## LRU Cache
 
-Least Recently Used cache evicts the least recently accessed item when the cache reaches capacity. A classic interview question testing hash maps and ordering.
+**最近最少使用缓存 / Least Recently Used cache** evicts the least recently accessed entry when full.
 
-### Using `Map` (insertion order)
+### Using `Map`
 
-JavaScript's `Map` preserves insertion order — we can exploit this by deleting and re-inserting on access, so the "oldest" key is always first.
+`Map` preserves insertion order. Deleting and reinserting a hit moves it to the newest position. This API supports arbitrary keys and values; use `has` to distinguish a stored `undefined` from a missing key. A zero-capacity cache remains empty.
 
-```javascript
+~~~javascript
 class LRUCache {
   constructor(capacity) {
+    if (!Number.isInteger(capacity) || capacity < 0) {
+      throw new RangeError('capacity must be a non-negative integer');
+    }
     this.capacity = capacity;
     this.cache = new Map();
   }
 
+  has(key) {
+    return this.cache.has(key);
+  }
+
   get(key) {
-    if (!this.cache.has(key)) return -1;
+    if (!this.cache.has(key)) return undefined;
     const value = this.cache.get(key);
-    this.cache.delete(key);   // remove...
-    this.cache.set(key, value); // ...and re-insert as most recent
+    this.cache.delete(key);
+    this.cache.set(key, value);
     return value;
   }
 
   put(key, value) {
+    if (this.capacity === 0) return;
     if (this.cache.has(key)) {
       this.cache.delete(key);
-    } else if (this.cache.size >= this.capacity) {
+    } else if (this.cache.size === this.capacity) {
       const oldestKey = this.cache.keys().next().value;
       this.cache.delete(oldestKey);
     }
     this.cache.set(key, value);
   }
 }
-```
+~~~
 
-**Simpler to write, all operations O(1)** thanks to `Map`'s built-in ordering.
+Map operations are commonly treated as expected constant-time in application analysis, but the ECMAScript specification requires average access to be sublinear rather than promising a precise O(1) bound. This version is concise and avoids maintaining a second ordering structure.
 
-### Using doubly linked list + hash table (the "classic" form)
+### Doubly linked list plus map
 
-The canonical textbook implementation: a hash table for O(1) key lookup, a doubly linked list for O(1) ordering. Most recently used items move to the head; the tail is evicted when full. Interviewers who want to see the "real" DS pattern expect this one.
+A linked list makes moving an existing entry to the front and evicting the tail a pointer update. The map locates each node. Both structures are needed to keep the operations efficient; using an ordinary object for arbitrary cache keys can collide with inherited property names.
 
-```javascript
+~~~javascript
 class ListNode {
   constructor(key, value) {
     this.key = key;
@@ -51,43 +63,52 @@ class ListNode {
   }
 }
 
-class LRUCache {
+class LinkedLRUCache {
   constructor(capacity) {
+    if (!Number.isInteger(capacity) || capacity < 0) {
+      throw new RangeError('capacity must be a non-negative integer');
+    }
     this.capacity = capacity;
-    this.map = {};
-    this.head = new ListNode(0, 0); // sentinel
-    this.tail = new ListNode(0, 0); // sentinel
+    this.nodes = new Map();
+    this.head = new ListNode(null, null);
+    this.tail = new ListNode(null, null);
     this.head.next = this.tail;
     this.tail.prev = this.head;
   }
 
+  has(key) {
+    return this.nodes.has(key);
+  }
+
   get(key) {
-    if (!(key in this.map)) return -1;
-    const node = this.map[key];
+    const node = this.nodes.get(key);
+    if (!node) return undefined;
     this._remove(node);
-    this._addToHead(node);
+    this._addToFront(node);
     return node.value;
   }
 
   put(key, value) {
-    if (key in this.map) {
-      const node = this.map[key];
-      node.value = value;
-      this._remove(node);
-      this._addToHead(node);
-    } else {
-      if (Object.keys(this.map).length >= this.capacity) {
-        const lru = this.tail.prev;
-        this._remove(lru);
-        delete this.map[lru.key];
-      }
-      const newNode = new ListNode(key, value);
-      this.map[key] = newNode;
-      this._addToHead(newNode);
+    if (this.capacity === 0) return;
+    const existing = this.nodes.get(key);
+    if (existing) {
+      existing.value = value;
+      this._remove(existing);
+      this._addToFront(existing);
+      return;
     }
+
+    if (this.nodes.size === this.capacity) {
+      const oldest = this.tail.prev;
+      this._remove(oldest);
+      this.nodes.delete(oldest.key);
+    }
+    const node = new ListNode(key, value);
+    this.nodes.set(key, node);
+    this._addToFront(node);
   }
 
-  _addToHead(node) {
+  _addToFront(node) {
     node.next = this.head.next;
     node.prev = this.head;
     this.head.next.prev = node;
@@ -99,21 +120,17 @@ class LRUCache {
     node.next.prev = node.prev;
   }
 }
-```
+~~~
 
-**Reach for the `Map`-based version** in code reviews and production; reach for the linked-list version in interviews that specifically ask you to implement it from scratch.
+With a map that provides expected constant-time lookup, the linked-list version has expected O(1) get and put operations. Use the simpler map-based version when the linked-list mechanics are not part of the requirement.
 
 ---
 
 ## Queue (FIFO)
 
-First In, First Out. Used in BFS, task scheduling, message processing.
+**队列 / Queue** processes values in first-in, first-out order. This linked-list version throws on an empty read so every value, including `null` and `undefined`, remains distinguishable from the empty state.
 
-### Linked-list implementation
-
-Array-based `shift()` is **O(n)** because elements shift down. A linked-list queue is O(1) for both enqueue and dequeue.
-
-```javascript
+~~~javascript
 class Queue {
   constructor() {
     this.head = null;
@@ -121,57 +138,78 @@ class Queue {
     this.length = 0;
   }
 
-  enqueue(val) {
-    const node = { val, next: null };
+  get isEmpty() {
+    return this.length === 0;
+  }
+
+  enqueue(value) {
+    const node = { value, next: null };
     if (this.tail) this.tail.next = node;
-    else           this.head = node;
+    else this.head = node;
     this.tail = node;
     this.length++;
   }
 
   dequeue() {
-    if (!this.head) return null;
-    const val = this.head.val;
+    if (this.isEmpty) throw new RangeError('queue is empty');
+    const value = this.head.value;
     this.head = this.head.next;
     if (!this.head) this.tail = null;
     this.length--;
-    return val;
+    return value;
+  }
+
+  peek() {
+    if (this.isEmpty) throw new RangeError('queue is empty');
+    return this.head.value;
   }
 }
-```
+~~~
 
-**Gotcha — don't use `arr.shift()` for a queue** in tight loops. It's O(n) because every element has to shift down a slot. Either use a linked list or track a head index and skip over consumed slots.
+Enqueue, dequeue, and peek take O(1) time. Array `shift` removes the first element but may move the remaining indexed elements, so a linked queue or a head index is preferable for a queue that grows large. Breadth-first traversal with a head index appears in [Core Data Structures](./core-data-structures.md).
 
 ---
 
 ## Stack (LIFO)
 
-Last In, First Out. Used in DFS, undo/redo, expression parsing, browser history.
+**栈 / Stack** processes values in last-in, first-out order. An array provides a compact stack; this version also throws on empty `pop` or `peek` so stored `undefined` is not confused with an empty stack.
 
-```javascript
+~~~javascript
 class Stack {
-  constructor() { this.items = []; }
-  push(val)  { this.items.push(val); }
-  pop()      { return this.items.pop(); }
-  peek()     { return this.items[this.items.length - 1]; }
-  isEmpty()  { return this.items.length === 0; }
-}
-```
+  constructor() {
+    this.items = [];
+  }
 
-`push` and `pop` on a JavaScript array are O(1), so a plain array is the canonical implementation.
+  get isEmpty() {
+    return this.items.length === 0;
+  }
+
+  push(value) {
+    this.items.push(value);
+  }
+
+  pop() {
+    if (this.isEmpty) throw new RangeError('stack is empty');
+    return this.items.pop();
+  }
+
+  peek() {
+    if (this.isEmpty) throw new RangeError('stack is empty');
+    return this.items[this.items.length - 1];
+  }
+}
+~~~
+
+Array `push` and `pop` are the natural stack operations. Their exact growth costs are runtime implementation details; a dynamic array may occasionally resize.
 
 ---
 
-## Linked lists in frontend — React Fiber
+## Linked structure in React Fiber
 
-**Headline:** React Fiber represents the component tree as a **linked structure** (each fiber node has `child`, `sibling`, and `return` pointers) rather than a traditional tree. This enables:
+React represents its work tree with Fiber nodes linked through fields such as `child`, `sibling`, and `return`. The nodes still form a tree; sibling pointers encode the ordered children. This structure lets the reconciler keep work units and progress between scheduling steps.
 
-- **Incremental rendering** — work can be split into small units and spread across frames.
-- **Priority-based scheduling** — high-priority updates (input, animations) can interrupt lower-priority rendering.
-- **Pause and resume** — rendering yields to the browser for layout and paint, then resumes where it left off.
+**Concurrent rendering is conditional.** React can pause or restart render work for updates using concurrent features such as transitions. An update rendered without such features can remain synchronous. React applies DOM mutations during commit after rendering work is ready, so do not describe every render or commit as freely interruptible. Fiber is an implementation detail; use React's public APIs rather than depending on its internal node layout.
 
-The linked-list-ish structure is chosen precisely because it's *easy to traverse one unit at a time* — walk to the child, record position, yield. Traditional recursive traversal would block the main thread until the whole tree was done.
+**See also:** [Algorithms and Complexity](./algorithms-and-complexity.md) for complexity patterns, [Core Data Structures](./core-data-structures.md) for traversals, and [Virtual DOM and Framework Selection](../../frontend/frameworks/virtual-dom-and-framework-selection.md) for reconciliation context.
 
-**Reach for this knowledge when:** interviewers ask about React's Fiber reconciler, concurrent mode, or how React 18's scheduler works under the hood.
-
-**See also:** [`10.1 Algorithms and Complexity`](./algorithms-and-complexity.md) for algorithmic patterns, [`10.2 Core Data Structures`](./core-data-structures.md) for tree-based structures, [`9.1 Virtual DOM and Framework Selection`](../../frontend/frameworks/virtual-dom-and-framework-selection.md) for VDOM reconciliation details.
+Sources: [ECMAScript 2020 Map objects](https://tc39.es/ecma262/2020/#sec-map-objects), [React 18: What is Concurrent React?](https://react.dev/blog/2022/03/29/react-v18), and the [React reconciler Fiber types](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js).

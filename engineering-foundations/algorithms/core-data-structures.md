@@ -1,44 +1,52 @@
-Reach for this when you need a quick reference for tree-based data structures — traversals, balanced trees, tries, DOM traversal patterns, and the array↔tree conversion that comes up in real frontend work.
+# Core Data Structures / 核心数据结构
+
+A tree organizes values through parent-child links. Complexity claims below assume the stated structure and operation; an unbalanced search tree or a search that must find a node by scanning does not get balanced-tree bounds.
+
+数据结构决定数据的组织方式和常见操作的代价；选择时要看实际访问模式以及平衡、前驱链接等表示条件，不能把某种结构下的复杂度推广到所有实现。
 
 ## Tree traversals
 
-Three depth-first orders for a binary tree. Choose based on what you're doing:
+For a binary tree, depth-first orders differ in when the current node is visited:
 
-- **In-order** (Left → Root → Right) — produces **sorted output** for BSTs.
-- **Pre-order** (Root → Left → Right) — useful for **copying** or **serializing** trees.
-- **Post-order** (Left → Right → Root) — useful for **deletion** (children before parent).
+- **In-order / 中序**: left, node, right. This yields ascending values only when the tree satisfies the binary-search-tree ordering rule.
+- **Pre-order / 前序**: node, left, right. Useful when serializing a tree with enough structure to recover its shape.
+- **Post-order / 后序**: left, right, node. Useful when computing or releasing children before their parent.
 
 ### Kth smallest in a BST
 
-In-order traversal visits BST nodes in ascending order. Stop at the k-th node.
+This iterative in-order traversal uses O(h) stack space for tree height h. It assumes node values are non-null numbers and the tree obeys the BST ordering rule. It returns null when k is invalid or the tree has fewer than k nodes.
 
-```javascript
+~~~javascript
 function kthSmallest(root, k) {
-  let count = 0, result = null;
+  if (!Number.isInteger(k) || k <= 0) return null;
+  const stack = [];
+  let node = root;
 
-  function inorder(node) {
-    if (!node || result !== null) return;
-    inorder(node.left);
-    if (++count === k) { result = node.val; return; }
-    inorder(node.right);
+  while (node || stack.length) {
+    while (node) {
+      stack.push(node);
+      node = node.left;
+    }
+    node = stack.pop();
+    if (--k === 0) return node.val;
+    node = node.right;
   }
-
-  inorder(root);
-  return result;
+  return null;
 }
-```
+~~~
 
 ---
 
-## Why use binary trees?
+## Trees and operation costs
 
-| Structure | Access | Insert/Delete |
+| Structure | Indexed access / search | Insert or delete |
 |---|---|---|
-| Array | O(1) | O(n) |
-| Linked list | O(n) | O(1) |
-| Balanced BST | O(log n) | O(log n) |
+| Array | Index access O(1); value search O(n) | Middle insert/delete O(n) because elements move |
+| Linked list | Finding by value or index O(n) | O(1) insertion at a known link; deletion needs the predecessor link (singly linked) or target node (doubly linked), otherwise O(n) worst case |
+| Height-balanced BST | Search O(log n) | O(log n) |
+| Unbalanced BST | Worst-case search O(n) | Worst-case O(n) |
 
-A balanced binary tree is the "best of both worlds" between arrays and linked lists — O(log n) for both lookup and modification. **An unbalanced tree degrades to a linked list** with O(n) operations, which is why production code uses self-balancing variants.
+A balanced search tree gives logarithmic operations by keeping height logarithmic. If insertions produce a chain, those operations degrade to linear time. Array access remains fast by index, while inserting into the middle shifts later elements.
 
 ---
 
@@ -46,121 +54,145 @@ A balanced binary tree is the "best of both worlds" between arrays and linked li
 
 ### Red-Black Tree
 
-A BST with coloring rules that keep the tree approximately balanced. Properties:
+A red-black tree is a binary search tree with coloring invariants that bound its height. Red nodes have black children, and every path from a node to a descendant leaf has the same black height; implementations also treat the root and leaf sentinels as black. These rules give O(log n) worst-case search, insertion, and deletion.
 
-- Each node is red or black.
-- The root is black.
-- No two consecutive red nodes on any path.
-- All paths from root to leaf have the same number of black nodes.
+Java's `TreeMap` explicitly documents a red-black-tree implementation. C++ `std::map` specifies ordered associative behavior and logarithmic lookup, insertion, and key-removal bounds, but its standard does not prescribe a tree shape. Check the language and library documentation before inferring a product's internal structure: [Java `TreeMap`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/TreeMap.html) and [C++ associative containers](https://eel.is/c++draft/associative.reqmts).
 
-**Used in:** `std::map` (C++), `TreeMap` (Java), Linux kernel scheduler.
+### B-Tree and B+ Tree
 
-### B-Tree / B+ Tree
+B-trees are multi-way search trees designed to reduce storage-page reads by keeping several keys in each node.
 
-Multi-way search trees optimized for disk I/O. Each node contains multiple keys and children, minimizing the number of disk reads needed.
+- In a B-tree, records or record references may be stored in internal nodes as well as leaves.
+- In a B+ tree, internal nodes guide the search and records are stored at leaves; leaf links commonly support ordered range scans.
 
-- **B-Tree** — keys and data in all nodes.
-- **B+ Tree** — data only in leaf nodes; leaves are linked for efficient range queries.
-
-**Used in:** database indexes (MySQL InnoDB, PostgreSQL), file systems.
+These are family descriptions, not a guarantee that every database index uses the same variant or layout. Check the database's manual for its index type and behavior.
 
 ---
 
 ## Trie (prefix tree)
 
-A tree where each node represents a character. Paths from the root spell prefixes. Checking if a string is a prefix takes O(m) time where m is the string length — independent of the dictionary size.
+A trie shares prefixes between keys. Lookup takes O(m) steps for a key of length m when each next edge can be selected in constant expected time; the cost depends on the node's child representation. Tries can use substantial memory when keys share few prefixes.
 
-**Reach for a trie when:** building autocomplete, spell-check, IP routing tables, or any prefix-based lookup.
+Use one when prefix traversal or prefix queries are central, such as autocomplete or routing tables; a hash map may be simpler for exact-key lookup.
 
 ---
 
 ## DOM tree traversal
 
+A DOM tree is a hierarchy of Node objects. Pass an explicit visit callback and a node or null root. Snapshot each node's children before walking so the traversal has a clear view if callbacks mutate the DOM.
+
 ### DFS — depth-first search
 
-Visit the deepest descendants first, then backtrack.
-
-```javascript
-function dfs(node) {
-  visit(node);
-  node.childNodes.forEach(child => dfs(child));
+~~~javascript
+function dfs(root, visit) {
+  if (!root) return;
+  visit(root);
+  for (const child of Array.from(root.childNodes)) {
+    dfs(child, visit);
+  }
 }
 
-// Iterative with an explicit stack
-function dfsIterative(node) {
-  const stack = [node];
+function dfsIterative(root, visit) {
+  if (!root) return;
+  const stack = [root];
   while (stack.length) {
-    const n = stack.pop();
-    visit(n);
-    const children = Array.from(n.childNodes);
+    const node = stack.pop();
+    visit(node);
+    const children = Array.from(node.childNodes);
     for (let i = children.length - 1; i >= 0; i--) {
       stack.push(children[i]);
     }
   }
 }
-```
+~~~
 
 ### BFS — breadth-first search
 
-Visit all siblings level by level.
-
-```javascript
-function bfs(node) {
-  const queue = [node];
-  while (queue.length) {
-    const n = queue.shift();
-    visit(n);
-    n.childNodes.forEach(child => queue.push(child));
+~~~javascript
+function bfs(root, visit) {
+  if (!root) return;
+  const queue = [root];
+  for (let head = 0; head < queue.length; head++) {
+    const node = queue[head];
+    visit(node);
+    for (const child of Array.from(node.childNodes)) {
+      queue.push(child);
+    }
   }
 }
-```
+~~~
 
-**Reach for DFS** when the order of traversal matters (pre/post) or you want to accumulate something recursively. **Reach for BFS** when you need the shortest path in an unweighted graph or "find the nearest match" semantics.
+A queue implemented with repeated `Array.prototype.shift` can move all remaining elements on each removal and make a traversal quadratic. Advancing a head index keeps this traversal O(n) in the number of visited nodes, with O(n) queue space.
+
+DFS is useful when depth-first order or a path is needed. BFS is useful for level order and shortest paths in an unweighted graph; a DOM tree has one unique path from the root to each node.
 
 ---
 
 ## Array ↔ Tree conversion
 
-A classic interview problem — and a real problem that comes up any time you have to map relational data (flat rows) to hierarchical UI (tree components).
+Flat rows with parent identifiers can be transformed into a hierarchy for a tree UI or converted back for an API or database representation. This example expects unique IDs, one root whose parent ID is 0, and each other row to reference an existing parent.
 
 ### Array to tree
 
-```javascript
-function arrayToTree(arr) {
-  const map = new Map();
-  let root = null;
+~~~javascript
+function arrayToTree(rows) {
+  if (!Array.isArray(rows)) throw new TypeError('rows must be an array');
 
-  arr.forEach(item => map.set(item.id, { ...item, children: [] }));
+  const nodes = new Map();
+  for (const row of rows) {
+    if (!row || nodes.has(row.id)) throw new RangeError('rows must have unique IDs');
+    nodes.set(row.id, { ...row, children: [] });
+  }
 
-  arr.forEach(item => {
-    const node = map.get(item.id);
-    if (item.parentId === 0) {
-      root = node;
-    } else {
-      map.get(item.parentId)?.children.push(node);
+  const roots = [];
+  for (const row of rows) {
+    const node = nodes.get(row.id);
+    if (row.parentId === 0) {
+      roots.push(node);
+      continue;
     }
-  });
+    const parent = nodes.get(row.parentId);
+    if (!parent) throw new RangeError('parent ID does not exist');
+    parent.children.push(node);
+  }
 
+  if (roots.length !== 1) throw new RangeError('expected exactly one root');
+  const root = roots[0];
+
+  const seen = new Set();
+  const stack = [root];
+  while (stack.length) {
+    const node = stack.pop();
+    if (seen.has(node)) throw new RangeError('rows contain a cycle');
+    seen.add(node);
+    for (const child of node.children) stack.push(child);
+  }
+  if (seen.size !== nodes.size) throw new RangeError('rows contain a disconnected cycle');
   return root;
 }
-```
+~~~
 
-Two-pass O(n): first pass creates all nodes with empty `children`; second pass links children to parents.
+The two passes take O(n) expected time and O(n) space with a map. Reserve ID 0 for the root marker, or change the marker to match the data format.
 
 ### Tree to array
 
-```javascript
-function treeToArray(tree) {
-  const result = [];
-  function traverse(node, parentId) {
-    result.push({ id: node.id, parentId, name: node.name });
-    node.children?.forEach(child => traverse(child, node.id));
+~~~javascript
+function treeToArray(root) {
+  if (!root) return [];
+  const rows = [];
+  const stack = [{ node: root, parentId: 0 }];
+  while (stack.length) {
+    const { node, parentId } = stack.pop();
+    rows.push({ id: node.id, parentId, name: node.name });
+    const children = node.children ?? [];
+    for (let i = children.length - 1; i >= 0; i--) {
+      stack.push({ node: children[i], parentId: node.id });
+    }
   }
-  traverse(tree, 0);
-  return result;
+  return rows;
 }
-```
+~~~
 
-**Reach for this pattern when:** persisting tree state to a database (array form is easier), loading tree data from a REST API, or reshaping data for a tree UI component.
+This conversion expects an acyclic tree with a single root. Preserve application-specific fields deliberately; this example emits only `id`, `parentId`, and `name`.
 
-**See also:** [`10.1 Algorithms and Complexity`](./algorithms-and-complexity.md) for sorts, searches, and DP patterns, [`10.3 Practical Data Structure Implementations`](./practical-data-structure-implementations.md) for LRU cache, queues, and stacks.
+**See also:** [Algorithms and Complexity](./algorithms-and-complexity.md) for searches and dynamic programming, and [Practical Data Structure Implementations](./practical-data-structure-implementations.md) for LRU caches, queues, and stacks.

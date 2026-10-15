@@ -214,292 +214,281 @@ preload应只用于当前页面确实需要的资源，并填写匹配的as类�
 - [Web安全与身份认证 / Web Security and Authentication](#2.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81)：CORS之外的认证、Cookie与请求保护。
 ## 2. Web Security and Authentication / Web安全与身份认证
 
-A bundle of interview questions on authentication, HTTPS, and the common web-security attacks you'll be asked about in any frontend interview.
+### Web Security and Authentication / Web安全与身份认证
 
-### Cookies vs. tokens — which to use for authentication?
+**身份认证 / Authentication** establishes which identity or credential is presenting a request. **授权 / Authorization** decides whether that identity may perform this action on this resource. Authentication alone does not grant every permission; enforce authorization on the server for each protected operation. Client checks can improve the interface but cannot decide access.
 
-**Headline (30s):** Both are valid; pick based on architecture. **Cookie-based auth** (server-side sessions) is simple, secure against XSS when you use `HttpOnly`, and works automatically with every request — but doesn't scale as cleanly across domains or microservices. **Token-based auth** (JWT) is stateless, works naturally across domains, and scales horizontally — but requires you to handle storage carefully (XSS risk if in `localStorage`) and has no built-in revocation. Pick cookies for classic server-rendered apps, tokens for SPAs with cross-domain APIs or microservices.
+身份认证回答请求以谁的凭据发出，授权则逐项决定该身份能否访问资源或执行操作；浏览器编码、Cookie属性、CORS、CSRF和CSP处理的是不同边界，不能替代服务端授权或彼此替代。
 
-#### Cookie-based authentication
+#### Cookies vs. tokens — which to use for authentication?
 
-1. User logs in with credentials.
-2. Server creates a session, stores it server-side, sets `Set-Cookie` with the session ID.
-3. Browser automatically sends the cookie with every request.
-4. Server looks up the session by ID.
+**Cookie 会话与令牌 / Cookie sessions and tokens** are transport and session choices, not two complete security models. Choose according to the clients, domain boundaries, revocation needs, and threat model.
 
-**Properties:**
+A server-side session commonly works like this:
 
-- Automatic transmission with every request (including CORS when `withCredentials`).
-- ~4KB size limit.
-- `HttpOnly` — blocks JavaScript access (XSS mitigation).
-- `Secure` — HTTPS only.
-- `SameSite=Strict|Lax|None` — CSRF protection.
+1. The user authenticates; the server creates a session and stores its state.
+2. The server returns an opaque session identifier in a cookie.
+3. The browser sends that cookie only when its domain, path, security, SameSite, and request rules match.
+4. The server resolves the session and performs authorization for the requested action.
 
-#### Token-based authentication (JWT)
+For a session cookie, consider:
 
-1. User logs in with credentials.
-2. Server generates a signed JWT containing claims, returns it in the response body.
-3. Client stores the token (in memory or `localStorage`) and sends it via `Authorization: Bearer <token>`.
-4. Server verifies the signature — no server-side session storage needed.
+- **HttpOnly** prevents page JavaScript from reading the cookie through APIs such as `document.cookie`. It does not stop injected JavaScript from making authenticated requests as the user.
+- **Secure** limits transmission to secure channels such as HTTPS.
+- **SameSite=Strict, Lax, or None** controls cookie sending in cross-site contexts. It is a site-level browser rule, not an origin or authorization boundary. Specify the value; browser defaults can vary. `SameSite=None` requires `Secure`.
+- Cookie scope and size have implementation constraints; do not use `Domain` or `Path` as authorization checks.
 
-**Advantages:**
+A bearer token is presented by the client, commonly in an `Authorization: Bearer` header. A JWT is one token format: a signed JWT normally protects integrity, but its claims are readable unless it is encrypted. A valid signature proves that a trusted key signed the token; it does not by itself authorize every action. Verifiers must validate the expected algorithm, issuer, audience, token type, and time claims according to the application protocol. Use short-lived tokens and a deliberate rotation or revocation strategy where needed.
 
-- Stateless — no server-side session store.
-- Works across domains (no same-origin cookie restrictions).
-- Self-contained — carries user data in the payload.
-- Scales in distributed/microservice architectures.
-
-**Trade-offs:**
-
-- Can't be revoked before expiry without a blocklist (Redis, etc.).
-- Larger than a session ID.
-
-**Gotcha — JWT in `localStorage` is XSS-vulnerable.** Any XSS payload can read the token. Prefer `HttpOnly` cookies for the token itself; the cost is that you need CSRF protection. If you must store in JS, use short lifetimes + refresh tokens.
+A JWT can carry claims without a per-request session lookup, but revocation and fresh permission changes then need an explicit design. The JWT format does not bypass browser origin rules or CORS. A token stored in browser-accessible storage can be read by injected JavaScript; an HttpOnly cookie reduces that direct theft path but still needs a CSRF design. Neither storage choice fixes XSS or authorization flaws.
 
 ---
 
-### What is Single Sign-On (SSO), and how does it work?
+#### What is Single Sign-On (SSO), and how does it work?
 
-**Headline (30s):** SSO lets a user authenticate once with a central provider and access multiple systems without re-entering credentials. The provider issues a signed token that other systems trust. Common protocols: **SAML** (enterprise), **OAuth 2.0** (delegated API access), **OpenID Connect** (OAuth 2.0 + identity layer — the modern default for SSO).
+**单点登录 / Single Sign-On** lets a user authenticate through an identity provider and establish sessions with multiple relying applications. Each application still validates the protocol response and applies its own authorization rules.
 
-#### Typical flow
+OAuth 2.0 is an authorization framework for delegated access; OAuth alone is not an authentication protocol. **OpenID Connect / OpenID Connect 身份层** builds an identity layer on OAuth 2.0 and defines the ID Token. An access token and an ID Token serve different purposes: do not treat either as proof for an unrelated audience.
 
-1. User visits System A → no session → redirect to SSO provider.
-2. User authenticates at the SSO provider.
-3. SSO provider issues a token/ticket and redirects back to System A.
-4. System A validates the token (signature, expiry) and creates its own session.
-5. User visits System B → SSO cookie already exists → automatic login.
+In a typical redirect flow, the relying application creates a login request, the identity provider authenticates the user, and the application validates the response before creating its own session. Protocol details matter: validate the redirect target and issuer, and apply the relevant state, nonce, signature, and audience checks for the flow.
 
-**Reach for SSO when:** managing auth across multiple internal systems or integrating with enterprise identity providers (Okta, Auth0, Azure AD).
+See [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
 
 ---
 
-### How does HTTPS protect against man-in-the-middle attacks?
+#### How does HTTPS protect against man-in-the-middle attacks?
 
-**Headline (30s):** HTTPS encrypts traffic using a *hybrid* of asymmetric and symmetric cryptography. The server presents a public-key certificate issued by a trusted Certificate Authority (CA). The client verifies the certificate, uses the public key to exchange a symmetric session key, then both sides encrypt all subsequent data with that key. Because the attacker can't present a valid CA-signed certificate for the target domain, the browser rejects the connection — that's the "This site is not secure" warning.
+**HTTPS / TLS** protects data in transit against network eavesdropping and tampering when the connection is correctly configured and the client validates the server. In a certificate-authenticated TLS 1.3 handshake, key agreement derives traffic keys; the server's certificate and handshake signature authenticate the server's key. The server does not simply encrypt a session key with its public key as in older textbook handshake descriptions.
 
-#### Symmetric vs. asymmetric encryption
+A client checks the certificate chain and that the certificate is valid for the requested hostname, then verifies the handshake. Certificate status and revocation handling depend on the client and deployment, so do not describe revocation checking as a universal guaranteed browser step. A trusted certificate does not authenticate the application's user; application authentication and authorization remain separate.
 
-- **Symmetric** — same key encrypts and decrypts. Fast. Used for bulk data transfer.
-- **Asymmetric** — public key encrypts, private key decrypts. Slower, expensive. Used only to establish the symmetric session key.
+- **Symmetric cryptography / 对称密码** protects application traffic efficiently after handshake keys are established.
+- **Public-key cryptography / 公钥密码** supports key agreement and authentication in the handshake; the TLS 1.3 suite and configuration determine the exact mechanisms.
 
-#### The HTTPS handshake (simplified)
-
-1. Client receives the server's public key (inside an SSL/TLS certificate).
-2. Client generates a random session key, encrypts it with the server's public key, sends it.
-3. Server decrypts with its private key.
-4. Both sides use the session key for symmetric encryption of everything that follows.
-
-#### The MitM attack vector
-
-An attacker sits between client and server. If the client blindly accepted any public key, the attacker could substitute their own and read everything.
-
-**Prevention — trusted CAs:**
-
-- Certificates are signed by CAs the browser trusts.
-- Browser verifies:
-  1. The certificate is signed by a trusted CA (chain of trust).
-  2. The domain name matches the certificate's subject.
-  3. The certificate hasn't expired or been revoked.
-
-If any check fails, the browser blocks the connection.
-
-**Gotcha — self-signed certificates in production:** Users see a scary warning. Use Let's Encrypt for free CA-signed certs; there's no reason to self-sign in production.
+See [RFC 8446, TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html).
 
 ---
 
-### XSS (Cross-Site Scripting) — what is it, how do you prevent it?
+#### XSS (Cross-Site Scripting) — what is it, how do you prevent it?
 
-**Headline (30s):** XSS happens when an attacker injects JavaScript into a page that other users view. The injected script runs with the full privileges of the site — it can read cookies, send authenticated requests, rewrite the DOM, anything the user could do. Prevention: **escape user content on render**, **use a framework that does it for you** (React escapes strings by default), and **set `Content-Security-Policy`** to restrict script sources.
+**跨站脚本 / XSS** occurs when untrusted data is interpreted as active content in a page. Script that executes in an origin can read data available to that script and make requests from that origin; an HttpOnly cookie blocks direct cookie reading but does not stop such requests.
 
-#### Common sinks
+Use the defense that matches the output context:
 
-- `innerHTML` / `outerHTML` — never concatenate user input here.
-- `document.write` — same.
-- `eval`, `new Function(...)` — never run strings from users.
-- `<a href="javascript:...">` — validate URLs.
-- React's `dangerouslySetInnerHTML` — the name is a warning.
+1. Render plain text through framework APIs that treat it as text, and encode values for their HTML, attribute, URL, JavaScript, or CSS context.
+2. If user-authored rich HTML is required, sanitize it with a maintained HTML sanitizer and keep the allowed markup narrow.
+3. Avoid inserting untrusted strings into `innerHTML`, `document.write`, inline event handlers, `eval`, or `new Function`. Framework escape defaults do not protect deliberate raw-HTML escape hatches.
+4. Add a carefully tested Content Security Policy as defense in depth. Nonce- or hash-based strict policies can restrict script execution; an allowlist such as `script-src 'self'` alone is not a universal XSS fix.
 
-#### Prevention layers
+Before assigning an untrusted value to `href` or `src`, validate the complete URL's scheme and destination against the application's policy (for example, reject `javascript:`); output encoding for the attribute does not replace URL validation.
 
-1. **Escape output** — `<` → `&lt;`, `>` → `&gt;`, `"` → `&quot;`, etc. Frameworks like React, Vue, and templating engines do this by default. **Don't defeat the default.**
-2. **Content-Security-Policy (CSP)** — restrict where scripts can load from (`script-src 'self'`), block inline scripts unless allowlisted. Even if XSS is injected, the browser refuses to run it.
-3. **`HttpOnly` cookies** — session tokens can't be stolen from `document.cookie`.
-4. **Input validation** — allowlist the characters you expect (belt + suspenders, not a replacement for escaping).
+CSP can reduce the impact of some injection paths, but it does not replace safe rendering and sanitization. See OWASP's [XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html) and [Content Security Policy](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html) guidance.
 
 ---
 
-### CSRF (Cross-Site Request Forgery) — what is it, how do you prevent it?
+#### CSRF (Cross-Site Request Forgery) — what is it, how do you prevent it?
 
-**Headline (30s):** CSRF tricks a logged-in user's browser into sending unwanted authenticated requests to your site. The malicious site embeds a form or image that posts to your domain; because the browser attaches the user's cookies automatically, the request looks legitimate to your server. Prevention: **anti-CSRF tokens** (random tokens per form that the attacker can't guess), **`SameSite` cookies** (modern default, blocks cross-site cookie sends), and **origin/referer checks**.
+**跨站请求伪造 / CSRF** abuses ambient browser credentials: a site can cause a browser to send some cross-site requests, and the browser may attach cookies that match the destination. The attacker often cannot read the response, but reading it is not required to cause a state change.
 
-#### Prevention
+For state-changing cookie-authenticated requests, use an application-validated CSRF token or an equivalent well-reviewed pattern. Check the request origin where appropriate, and use SameSite as defense in depth. Do not mutate state on safe methods such as GET. SameSite=Lax still permits some top-level safe-method navigations, and sibling subdomains can be same-site; it does not replace authorization or every CSRF defense.
 
-- **Anti-CSRF tokens** — include a random token in forms; verify server-side. Attacker doesn't have it, can't forge a valid request.
-- **`SameSite=Strict` / `SameSite=Lax`** — cookie not sent on cross-origin POSTs. Modern browsers default to `Lax`, which handles most cases.
-- **Origin / Referer check** — reject state-changing requests whose `Origin` header doesn't match your domain.
-
-**Gotcha — `SameSite=None` requires `Secure`:** Modern browsers reject `SameSite=None` cookies served over HTTP.
+**SameSite=None requires Secure.** Also account for legitimate cross-site login and embedded flows rather than silently weakening checks. See the [OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 ---
 
-### Clickjacking — what is it, how do you prevent it?
+#### What is CORS?
 
-**Headline:** Clickjacking overlays a transparent iframe of your site on top of a decoy page — the user thinks they're clicking "Win a prize", but actually they're clicking "Transfer money" on your site with their authenticated session. Prevention: tell the browser to refuse to be framed by another origin.
+**跨源资源共享 / Cross-Origin Resource Sharing (CORS)** is a browser protocol that controls when a script may read a cross-origin response. It is not authentication, authorization, or a general firewall: some cross-origin requests can still be sent even when browser JavaScript cannot read the response, and non-browser clients do not enforce CORS.
 
-**Prevention headers:**
+For a credentialed browser request, the client must opt in to credentials and the response must name an allowed origin rather than `Access-Control-Allow-Origin: *`, with `Access-Control-Allow-Credentials: true`. Preflight requests are checked separately. Use an explicit origin allowlist; reflecting arbitrary Origin values can expose credentialed responses.
 
-```
-X-Frame-Options: SAMEORIGIN         (or DENY)
-Content-Security-Policy: frame-ancestors 'self'
-```
-
-CSP's `frame-ancestors` is the modern approach; `X-Frame-Options` is the legacy one. Set both during migration, then drop `X-Frame-Options`.
+CORS does not make an endpoint private. Authenticate and authorize the server request even if the intended browser client is the only one expected to call it. See the [WHATWG Fetch Standard, CORS protocol and credentials](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials).
 
 ---
 
-### DDoS — what is it, what can you actually do?
+#### Clickjacking — what is it, how do you prevent it?
 
-**Headline:** Distributed Denial of Service floods your server with traffic from a botnet. It's not solvable in application code — the volume is too big. Prevention lives at the edge: **CDN-based DDoS protection** (Cloudflare, AWS Shield, Akamai), **rate limiting** at ingress, and **Web Application Firewalls** (WAFs) to filter known-bad patterns.
+**点击劫持 / Clickjacking** tricks a user into interacting with a page framed beneath or inside deceptive content. Use the CSP `frame-ancestors` directive to state which sites may embed the page; use `X-Frame-Options` where legacy client support requires it. These headers control framing, not user authorization.
 
-What you *can* do in application code: respond quickly with minimal work to known-abusive traffic, cache aggressively so legitimate traffic is cheap, and avoid expensive endpoints that could amplify an attack.
+For example, `Content-Security-Policy: frame-ancestors 'self'` permits framing by the same origin. Set a policy that fits legitimate embedding requirements and test the application paths that must remain embeddable.
 
 ---
 
-### SQL injection — frontend's role?
+#### DDoS — what is it, what can you actually do?
 
-**Headline:** SQL injection is a backend vulnerability — user input concatenated into raw SQL queries lets attackers manipulate the database. The frontend's role is mostly limited: validate input, but never rely on client-side validation for security. The real fix is on the server: **parameterized queries** / **prepared statements**, which separate SQL from data so injection becomes impossible.
+**分布式拒绝服务 / Distributed Denial of Service** uses traffic or expensive requests to exhaust network, service, or application resources. Mitigation depends on the attack layer and capacity available; no single application control guarantees protection.
 
-**Prevention layers (backend-owned, but worth knowing):**
+Use layered measures such as provider or edge traffic filtering, rate limits and quotas, caching, bounded work, and monitoring. Application code can reject abusive work early and keep expensive endpoints bounded, but large traffic floods need network and provider capacity as well.
 
-- Parameterized queries / prepared statements.
-- ORM tools that parameterize by default (Sequelize, TypeORM, Prisma).
-- Principle of least privilege on database accounts (read-only service account can't drop tables).
-- Input validation (defense in depth, not primary defense).
+---
 
-**See also:** [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) for CORS and HTTPS handshake basics, [`5.2 Browser Storage and Communication`](../../frontend/browser-apis/browser-storage-and-communication.md) for `postMessage` and storage security.
+#### SQL injection — frontend's role?
+
+**SQL 注入 / SQL injection** happens when data is interpreted as part of a SQL command. The frontend can validate inputs for usability, but client-side validation is bypassable and is not a security boundary.
+
+On the server, use parameterized queries so values are supplied separately from SQL syntax. For identifiers or sort directions that cannot be bound as values, choose from a fixed allowlist. An ORM helps only when the query path uses its safe parameterization; raw query construction can still be vulnerable. Authorization is a separate check: a parameterized query does not prove that the caller may access the selected record.
+
+Give each application database account only the tables and operations it needs; query parameterization does not justify connecting as a database administrator.
+
+---
+
+#### How should passwords be stored?
+
+**密码存储 / Password storage** must remain resistant to offline guessing if a database is exposed. Store a salted password hash produced by a password-storage algorithm designed to be expensive to guess, such as Argon2id; use a maintained library and tune its cost for the deployment. A unique random salt is stored with each hash; it is not a secret. A fast general-purpose digest such as SHA-256 alone is not an appropriate password-storage scheme.
+
+An optional pepper is a secret kept separately from the password database; it is defense in depth, not a substitute for a suitable password hash. Pair storage with online attempt throttling and a policy that avoids easily guessed passwords. See the [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html).
+
+**See also:** [HTTP Protocols and WebSockets](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) for browser request and transport context, and [Browser Storage and Communication](../../frontend/browser-apis/browser-storage-and-communication.md) for browser storage and messaging security.
+
+Sources: [OWASP Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#least-privilege), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP CSP](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), [WHATWG Fetch](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials), [RFC 8446 TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html), [RFC 8725 JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html). Security guidance checked 2026-10-15.
 ## 3. Algorithms and Complexity / 算法与复杂度分析
 
-Reach for this when you need a quick reference for the common algorithmic patterns that show up in frontend interviews — dynamic programming, binary search, two pointers, sorting, and string algorithms. Each section gives the canonical implementation with complexity analysis.
+### Algorithms and Complexity / 算法与复杂度分析
+
+Use this reference for common algorithmic patterns. The code states its input assumptions; Big-O describes growth with input size, not a promise about constant factors or a particular runtime.
+
+先根据输入约束和不变量选择算法，再用时间与空间复杂度评估输入规模增长带来的成本；复杂度描述增长趋势，不等于实际耗时。
 
 #### Dynamic programming
 
-Dynamic programming solves problems by breaking them into overlapping subproblems and storing results to avoid redundant computation. Two implementation styles: **top-down (memoization)** and **bottom-up (iterative)** — bottom-up is usually preferred for constant-space optimizations.
+**动态规划 / Dynamic programming** stores results for overlapping subproblems. Top-down memoization follows the recursive definition; bottom-up iteration computes states in dependency order and can often retain only the state still needed.
 
 ##### Fibonacci
 
-**Recursive** — O(2^n) time, O(n) stack space. Exponential because the same subproblems are re-solved.
+For non-negative integer n, naive recursion repeats subproblems and takes O(2^n) time with O(n) call-stack space. The iterative form takes O(n) time and O(1) auxiliary space. These examples use Number; use BigInt when exact results beyond Number's safe-integer range are needed.
 
-```javascript
-function fib(n) {
+~~~javascript
+function fibRecursive(n) {
+  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
   if (n <= 1) return n;
-  return fib(n - 1) + fib(n - 2);
+  return fibRecursive(n - 1) + fibRecursive(n - 2);
 }
-```
 
-**DP (iterative)** — O(n) time, O(1) space.
-
-```javascript
 function fib(n) {
+  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
   if (n <= 1) return n;
-  let prev = 0, curr = 1;
+  let previous = 0;
+  let current = 1;
   for (let i = 2; i <= n; i++) {
-    [prev, curr] = [curr, prev + curr];
+    [previous, current] = [current, previous + current];
   }
-  return curr;
+  return current;
 }
-```
+~~~
 
 ##### Climbing stairs (frog jump)
 
-Count the ways to reach step `n` by jumping 1 or 2 steps at a time. Same recurrence as Fibonacci: `dp[i] = dp[i-1] + dp[i-2]`.
+Count ordered sequences of allowed positive step sizes that sum to n. The empty sequence is one way to reach step 0. Require distinct positive integer steps; repeated entries would count the same step size more than once.
 
-Generalized to variable step sizes:
-
-```javascript
+~~~javascript
 function climbStairs(n, steps) {
-  const dp = new Array(n + 1).fill(0);
-  dp[0] = 1;
-  for (let i = 1; i <= n; i++) {
+  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
+  if (!Array.isArray(steps) || steps.some(step => !Number.isInteger(step) || step <= 0)) {
+    throw new TypeError('steps must contain positive integers');
+  }
+  if (new Set(steps).size !== steps.length) throw new RangeError('steps must be distinct');
+
+  const ways = new Array(n + 1).fill(0);
+  ways[0] = 1;
+  for (let total = 1; total <= n; total++) {
     for (const step of steps) {
-      if (i >= step) dp[i] += dp[i - step];
+      if (total >= step) ways[total] += ways[total - step];
     }
   }
-  return dp[n];
+  return ways[n];
 }
-```
+~~~
+
+This counts order as meaningful: with steps [1, 2], reaching 3 has three sequences: 1+1+1, 1+2, and 2+1. Time is O(nk), where k is the number of allowed steps; space is O(n).
 
 ##### 0/1 Knapsack
 
-Maximize total value without exceeding weight capacity. Each item can be used at most once. Iterate capacities **in reverse** so each item isn't reused.
+Choose each item at most once to maximize value within a weight capacity. Iterate capacities downward so the current item cannot be selected again during the same pass.
 
-```javascript
-function knapsack(W, weights, values) {
-  const dp = new Array(W + 1).fill(0);
+~~~javascript
+function knapsack(capacity, weights, values) {
+  if (!Number.isInteger(capacity) || capacity < 0) throw new RangeError('capacity must be a non-negative integer');
+  if (!Array.isArray(weights) || !Array.isArray(values) || weights.length !== values.length) {
+    throw new TypeError('weights and values must be arrays of equal length');
+  }
+  if (weights.some(weight => !Number.isInteger(weight) || weight < 0)) {
+    throw new RangeError('weights must be non-negative integers');
+  }
+
+  const best = new Array(capacity + 1).fill(0);
   for (let i = 0; i < weights.length; i++) {
-    for (let w = W; w >= weights[i]; w--) {
-      dp[w] = Math.max(dp[w], dp[w - weights[i]] + values[i]);
+    for (let remaining = capacity; remaining >= weights[i]; remaining--) {
+      best[remaining] = Math.max(best[remaining], best[remaining - weights[i]] + values[i]);
     }
   }
-  return dp[W];
+  return best[capacity];
 }
-```
+~~~
+
+Time is O(nW) and space O(W), for n items and integer capacity W. The zero-filled state means the result may leave capacity unused; it assumes there is no required minimum value or exact-fill constraint.
 
 ---
 
 #### Binary search
 
-O(log n). **Requires a sorted array**. Halves the search space each iteration.
+Binary search locates a matching item in O(log n) time when the input is sorted in ascending order and comparisons are consistent. This version returns any matching index, or -1 for an empty array or a missing value.
 
-```javascript
-function binarySearch(nums, target) {
-  let left = 0, right = nums.length - 1;
+~~~javascript
+function binarySearch(values, target) {
+  let left = 0;
+  let right = values.length - 1;
   while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    if (nums[mid] === target) return mid;
-    if (nums[mid] < target) left = mid + 1;
-    else right = mid - 1;
+    const middle = left + Math.floor((right - left) / 2);
+    if (values[middle] === target) return middle;
+    if (values[middle] < target) left = middle + 1;
+    else right = middle - 1;
   }
   return -1;
 }
-```
+~~~
 
-**Gotcha — integer overflow (other languages):** `(left + right) / 2` can overflow in languages with fixed-width ints. Use `left + (right - left) / 2` to be safe. Not an issue for JS `Number`, but interviewers notice.
+For fixed-width integer languages, computing the midpoint as left + (right - left) / 2 avoids overflow in left + right. JavaScript array indices are far smaller than Number's exact-integer limit, but the difference form states the safer general pattern.
 
 ---
 
 #### Two pointers
 
-A broad family of techniques where two indices sweep through an array — often O(n) replacements for naive O(n²) nested loops.
+**双指针 / Two pointers** uses two positions to reduce repeated scans when the input structure provides an ordering or movement invariant. It is not a general replacement for nested loops; the invariant must justify discarding part of the search space.
 
-##### Two Sum on sorted array
+##### Two Sum on a sorted array
 
-```javascript
-function twoSum(nums, target) {
-  let left = 0, right = nums.length - 1;
+Returns a pair of indices or null when no pair exists. Equal values at different positions are valid.
+
+~~~javascript
+function twoSumSorted(values, target) {
+  let left = 0;
+  let right = values.length - 1;
   while (left < right) {
-    const sum = nums[left] + nums[right];
+    const sum = values[left] + values[right];
     if (sum === target) return [left, right];
     if (sum < target) left++;
     else right--;
   }
-  return [-1, -1];
+  return null;
 }
-```
+~~~
 
-##### Move zeros to end (in-place)
+##### Move zeros to the end
 
-```javascript
-function moveZeros(nums) {
-  let insertPos = 0;
-  for (let i = 0; i < nums.length; i++) {
-    if (nums[i] !== 0) {
-      [nums[insertPos], nums[i]] = [nums[i], nums[insertPos]];
-      insertPos++;
+Moves numeric zeroes in place while keeping the order of non-zero values. It returns the same mutated array.
+
+~~~javascript
+function moveZeros(values) {
+  let next = 0;
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] !== 0) {
+      [values[next], values[i]] = [values[i], values[next]];
+      next++;
     }
   }
+  return values;
 }
-```
+~~~
 
 ---
 
@@ -507,154 +496,170 @@ function moveZeros(nums) {
 
 ##### Quicksort
 
-Average O(n log n), worst O(n²). Pick a pivot, partition into smaller/larger subarrays, recurse.
+This array-building version is easy to inspect, but it is not in-place. With balanced partitions it takes O(n log n) time; an adversarial sequence of pivots can take O(n²) time and O(n) recursive stack space.
 
-```javascript
-function quickSort(arr) {
-  if (arr.length <= 1) return arr;
-  const pivot = arr[Math.floor(arr.length / 2)];
-  const left = [], mid = [], right = [];
-  for (const x of arr) {
-    if (x < pivot) left.push(x);
-    else if (x > pivot) right.push(x);
-    else mid.push(x);
+~~~javascript
+function quickSort(values) {
+  if (values.length <= 1) return values;
+  const pivot = values[Math.floor(values.length / 2)];
+  const lower = [];
+  const equal = [];
+  const higher = [];
+  for (const value of values) {
+    if (value < pivot) lower.push(value);
+    else if (value > pivot) higher.push(value);
+    else equal.push(value);
   }
-  return [...quickSort(left), ...mid, ...quickSort(right)];
+  return [...quickSort(lower), ...equal, ...quickSort(higher)];
 }
-```
+~~~
 
-**Reach for `Array.prototype.sort`** in production code — V8 uses TimSort (stable, O(n log n) worst case) as of Node 10+. Write your own only for an interview.
+For application code, prefer the built-in sort with an explicit comparator for numeric data: `values.sort((a, b) => a - b)` mutates the array, while `values.toSorted((a, b) => a - b)` returns a sorted copy where supported. Without a comparator, array elements are compared as strings. ECMAScript requires stable sorting; the engine's specific sorting algorithm is an implementation detail. See [ECMAScript 2020, Array.prototype.sort](https://tc39.es/ecma262/2020/#sec-array.prototype.sort).
 
 ---
 
 #### String algorithms
 
+The examples iterate Unicode code points with `Array.from`; that keeps surrogate pairs together. A user-perceived character can contain multiple code points, so grapheme-aware text operations need segmentation and may also need normalization.
+
 ##### Palindrome check
 
-```javascript
-function isPalindrome(n) {
-  const s = String(n);
-  let left = 0, right = s.length - 1;
-  while (left < right) {
-    if (s[left++] !== s[right--]) return false;
+~~~javascript
+function isPalindrome(value) {
+  const characters = Array.from(String(value));
+  for (let left = 0, right = characters.length - 1; left < right; left++, right--) {
+    if (characters[left] !== characters[right]) return false;
   }
   return true;
 }
-```
+~~~
 
 ##### Longest consecutive character
 
-```javascript
-function longestConsecutive(s) {
-  let maxChar = '', maxLen = 0;
-  let curLen = 1;
-  for (let i = 1; i <= s.length; i++) {
-    if (i < s.length && s[i] === s[i - 1]) {
-      curLen++;
+Returns the first longest run. Empty input returns an empty character and length zero.
+
+~~~javascript
+function longestConsecutive(value) {
+  const characters = Array.from(value);
+  if (characters.length === 0) return { char: '', len: 0 };
+
+  let bestChar = characters[0];
+  let bestLength = 1;
+  let currentLength = 1;
+  for (let i = 1; i <= characters.length; i++) {
+    if (i < characters.length && characters[i] === characters[i - 1]) {
+      currentLength++;
     } else {
-      if (curLen > maxLen) {
-        maxLen = curLen;
-        maxChar = s[i - 1];
+      if (currentLength > bestLength) {
+        bestLength = currentLength;
+        bestChar = characters[i - 1];
       }
-      curLen = 1;
+      currentLength = 1;
     }
   }
-  return { char: maxChar, len: maxLen };
+  return { char: bestChar, len: bestLength };
 }
-```
+~~~
 
 ##### Number formatting (thousand separators)
 
-```javascript
-function formatNumber(n) {
-  return n.toLocaleString();
+For display, use locale-aware formatting and specify a locale when output must be stable across machines. The manual version below accepts only strings containing an optional minus sign and decimal digits; use locale-aware formatting for numeric values and localized output.
+
+~~~javascript
+function formatNumber(value, locale = 'en-US') {
+  return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatNumber(n) {
-  const s = String(n);
-  let result = '';
-  let count = 0;
-  for (let i = s.length - 1; i >= 0; i--) {
-    result = s[i] + result;
-    if (++count % 3 === 0 && i > 0) result = ',' + result;
-  }
-  return result;
+function formatIntegerThousands(text) {
+  if (typeof text !== 'string' || !/^-?\d+$/.test(text)) throw new TypeError('expected an integer string');
+  const sign = text.startsWith('-') ? '-' : '';
+  const digits = sign ? text.slice(1) : text;
+  return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
-```
+~~~
 
-**Reach for `toLocaleString`** in real code — it handles locales automatically. The manual version is what interviewers want to see.
+##### Switch ASCII letter case
 
-##### Switch letter case
+This example changes only the English ASCII letters A-Z and a-z; other code points are preserved.
 
-```javascript
-function switchCase(s) {
-  return s.split('').map(ch => {
-    const code = ch.charCodeAt(0);
-    if (code >= 65 && code <= 90)  return String.fromCharCode(code + 32); // A-Z → a-z
-    if (code >= 97 && code <= 122) return String.fromCharCode(code - 32); // a-z → A-Z
-    return ch;
+~~~javascript
+function switchAsciiCase(value) {
+  return Array.from(value, character => {
+    const code = character.codePointAt(0);
+    if (code >= 65 && code <= 90) return String.fromCodePoint(code + 32);
+    if (code >= 97 && code <= 122) return String.fromCodePoint(code - 32);
+    return character;
   }).join('');
 }
-```
+~~~
 
 ---
 
-#### Big-O cheat sheet
+#### Big-O reference
 
-| Complexity | Example |
-|---|---|
-| O(1) | Hash map lookup, array index access |
-| O(log n) | Binary search, balanced BST operations |
-| O(n) | Single pass over array, linear scan |
-| O(n log n) | Efficient sorts (merge, quicksort avg, heap) |
-| O(n²) | Nested loops, naive sorts (bubble, insertion) |
-| O(2^n) | Naive recursive Fibonacci, power set enumeration |
-| O(n!) | Generating all permutations |
+| Complexity | Typical example | Condition |
+|---|---|---|
+| O(1) | Array index access | Indexed access, not search |
+| O(1) average | Hash-table lookup | Expected under ordinary hash distribution |
+| O(log n) | Binary search; balanced BST operation | Sorted input or bounded tree height |
+| O(n) | Linear scan | One pass |
+| O(n log n) | Merge sort; balanced quicksort | Quicksort can degrade to O(n²) |
+| O(n²) | Nested scan; simple quadratic sort | Depends on input size and algorithm |
+| O(2^n) | Naive recursive Fibonacci; subset enumeration | Exponential growth |
+| O(n!) | Permutation enumeration | Factorial growth |
 
-**See also:** [`10.2 Core Data Structures`](#4.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) for trees, BSTs, and trie references, [`10.3 Practical Data Structure Implementations`](#5.%20Practical%20Data%20Structure%20Implementations%20/%20%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%AE%9E%E7%8E%B0) for LRU, queues, and stacks.
+**See also:** [Core Data Structures](#4.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) for trees and tries, and [Practical Data Structure Implementations](#5.%20Practical%20Data%20Structure%20Implementations%20/%20%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%AE%9E%E7%8E%B0) for LRU caches, queues, and stacks.
 ## 4. Core Data Structures / 核心数据结构
 
-Reach for this when you need a quick reference for tree-based data structures — traversals, balanced trees, tries, DOM traversal patterns, and the array↔tree conversion that comes up in real frontend work.
+### Core Data Structures / 核心数据结构
+
+A tree organizes values through parent-child links. Complexity claims below assume the stated structure and operation; an unbalanced search tree or a search that must find a node by scanning does not get balanced-tree bounds.
+
+数据结构决定数据的组织方式和常见操作的代价；选择时要看实际访问模式以及平衡、前驱链接等表示条件，不能把某种结构下的复杂度推广到所有实现。
 
 #### Tree traversals
 
-Three depth-first orders for a binary tree. Choose based on what you're doing:
+For a binary tree, depth-first orders differ in when the current node is visited:
 
-- **In-order** (Left → Root → Right) — produces **sorted output** for BSTs.
-- **Pre-order** (Root → Left → Right) — useful for **copying** or **serializing** trees.
-- **Post-order** (Left → Right → Root) — useful for **deletion** (children before parent).
+- **In-order / 中序**: left, node, right. This yields ascending values only when the tree satisfies the binary-search-tree ordering rule.
+- **Pre-order / 前序**: node, left, right. Useful when serializing a tree with enough structure to recover its shape.
+- **Post-order / 后序**: left, right, node. Useful when computing or releasing children before their parent.
 
 ##### Kth smallest in a BST
 
-In-order traversal visits BST nodes in ascending order. Stop at the k-th node.
+This iterative in-order traversal uses O(h) stack space for tree height h. It assumes node values are non-null numbers and the tree obeys the BST ordering rule. It returns null when k is invalid or the tree has fewer than k nodes.
 
-```javascript
+~~~javascript
 function kthSmallest(root, k) {
-  let count = 0, result = null;
+  if (!Number.isInteger(k) || k <= 0) return null;
+  const stack = [];
+  let node = root;
 
-  function inorder(node) {
-    if (!node || result !== null) return;
-    inorder(node.left);
-    if (++count === k) { result = node.val; return; }
-    inorder(node.right);
+  while (node || stack.length) {
+    while (node) {
+      stack.push(node);
+      node = node.left;
+    }
+    node = stack.pop();
+    if (--k === 0) return node.val;
+    node = node.right;
   }
-
-  inorder(root);
-  return result;
+  return null;
 }
-```
+~~~
 
 ---
 
-#### Why use binary trees?
+#### Trees and operation costs
 
-| Structure | Access | Insert/Delete |
+| Structure | Indexed access / search | Insert or delete |
 |---|---|---|
-| Array | O(1) | O(n) |
-| Linked list | O(n) | O(1) |
-| Balanced BST | O(log n) | O(log n) |
+| Array | Index access O(1); value search O(n) | Middle insert/delete O(n) because elements move |
+| Linked list | Finding by value or index O(n) | O(1) insertion at a known link; deletion needs the predecessor link (singly linked) or target node (doubly linked), otherwise O(n) worst case |
+| Height-balanced BST | Search O(log n) | O(log n) |
+| Unbalanced BST | Worst-case search O(n) | Worst-case O(n) |
 
-A balanced binary tree is the "best of both worlds" between arrays and linked lists — O(log n) for both lookup and modification. **An unbalanced tree degrades to a linked list** with O(n) operations, which is why production code uses self-balancing variants.
+A balanced search tree gives logarithmic operations by keeping height logarithmic. If insertions produce a chain, those operations degrade to linear time. Array access remains fast by index, while inserting into the middle shifts later elements.
 
 ---
 
@@ -662,170 +667,206 @@ A balanced binary tree is the "best of both worlds" between arrays and linked li
 
 ##### Red-Black Tree
 
-A BST with coloring rules that keep the tree approximately balanced. Properties:
+A red-black tree is a binary search tree with coloring invariants that bound its height. Red nodes have black children, and every path from a node to a descendant leaf has the same black height; implementations also treat the root and leaf sentinels as black. These rules give O(log n) worst-case search, insertion, and deletion.
 
-- Each node is red or black.
-- The root is black.
-- No two consecutive red nodes on any path.
-- All paths from root to leaf have the same number of black nodes.
+Java's `TreeMap` explicitly documents a red-black-tree implementation. C++ `std::map` specifies ordered associative behavior and logarithmic lookup, insertion, and key-removal bounds, but its standard does not prescribe a tree shape. Check the language and library documentation before inferring a product's internal structure: [Java `TreeMap`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/TreeMap.html) and [C++ associative containers](https://eel.is/c++draft/associative.reqmts).
 
-**Used in:** `std::map` (C++), `TreeMap` (Java), Linux kernel scheduler.
+##### B-Tree and B+ Tree
 
-##### B-Tree / B+ Tree
+B-trees are multi-way search trees designed to reduce storage-page reads by keeping several keys in each node.
 
-Multi-way search trees optimized for disk I/O. Each node contains multiple keys and children, minimizing the number of disk reads needed.
+- In a B-tree, records or record references may be stored in internal nodes as well as leaves.
+- In a B+ tree, internal nodes guide the search and records are stored at leaves; leaf links commonly support ordered range scans.
 
-- **B-Tree** — keys and data in all nodes.
-- **B+ Tree** — data only in leaf nodes; leaves are linked for efficient range queries.
-
-**Used in:** database indexes (MySQL InnoDB, PostgreSQL), file systems.
+These are family descriptions, not a guarantee that every database index uses the same variant or layout. Check the database's manual for its index type and behavior.
 
 ---
 
 #### Trie (prefix tree)
 
-A tree where each node represents a character. Paths from the root spell prefixes. Checking if a string is a prefix takes O(m) time where m is the string length — independent of the dictionary size.
+A trie shares prefixes between keys. Lookup takes O(m) steps for a key of length m when each next edge can be selected in constant expected time; the cost depends on the node's child representation. Tries can use substantial memory when keys share few prefixes.
 
-**Reach for a trie when:** building autocomplete, spell-check, IP routing tables, or any prefix-based lookup.
+Use one when prefix traversal or prefix queries are central, such as autocomplete or routing tables; a hash map may be simpler for exact-key lookup.
 
 ---
 
 #### DOM tree traversal
 
+A DOM tree is a hierarchy of Node objects. Pass an explicit visit callback and a node or null root. Snapshot each node's children before walking so the traversal has a clear view if callbacks mutate the DOM.
+
 ##### DFS — depth-first search
 
-Visit the deepest descendants first, then backtrack.
-
-```javascript
-function dfs(node) {
-  visit(node);
-  node.childNodes.forEach(child => dfs(child));
+~~~javascript
+function dfs(root, visit) {
+  if (!root) return;
+  visit(root);
+  for (const child of Array.from(root.childNodes)) {
+    dfs(child, visit);
+  }
 }
 
-// Iterative with an explicit stack
-function dfsIterative(node) {
-  const stack = [node];
+function dfsIterative(root, visit) {
+  if (!root) return;
+  const stack = [root];
   while (stack.length) {
-    const n = stack.pop();
-    visit(n);
-    const children = Array.from(n.childNodes);
+    const node = stack.pop();
+    visit(node);
+    const children = Array.from(node.childNodes);
     for (let i = children.length - 1; i >= 0; i--) {
       stack.push(children[i]);
     }
   }
 }
-```
+~~~
 
 ##### BFS — breadth-first search
 
-Visit all siblings level by level.
-
-```javascript
-function bfs(node) {
-  const queue = [node];
-  while (queue.length) {
-    const n = queue.shift();
-    visit(n);
-    n.childNodes.forEach(child => queue.push(child));
+~~~javascript
+function bfs(root, visit) {
+  if (!root) return;
+  const queue = [root];
+  for (let head = 0; head < queue.length; head++) {
+    const node = queue[head];
+    visit(node);
+    for (const child of Array.from(node.childNodes)) {
+      queue.push(child);
+    }
   }
 }
-```
+~~~
 
-**Reach for DFS** when the order of traversal matters (pre/post) or you want to accumulate something recursively. **Reach for BFS** when you need the shortest path in an unweighted graph or "find the nearest match" semantics.
+A queue implemented with repeated `Array.prototype.shift` can move all remaining elements on each removal and make a traversal quadratic. Advancing a head index keeps this traversal O(n) in the number of visited nodes, with O(n) queue space.
+
+DFS is useful when depth-first order or a path is needed. BFS is useful for level order and shortest paths in an unweighted graph; a DOM tree has one unique path from the root to each node.
 
 ---
 
 #### Array ↔ Tree conversion
 
-A classic interview problem — and a real problem that comes up any time you have to map relational data (flat rows) to hierarchical UI (tree components).
+Flat rows with parent identifiers can be transformed into a hierarchy for a tree UI or converted back for an API or database representation. This example expects unique IDs, one root whose parent ID is 0, and each other row to reference an existing parent.
 
 ##### Array to tree
 
-```javascript
-function arrayToTree(arr) {
-  const map = new Map();
-  let root = null;
+~~~javascript
+function arrayToTree(rows) {
+  if (!Array.isArray(rows)) throw new TypeError('rows must be an array');
 
-  arr.forEach(item => map.set(item.id, { ...item, children: [] }));
+  const nodes = new Map();
+  for (const row of rows) {
+    if (!row || nodes.has(row.id)) throw new RangeError('rows must have unique IDs');
+    nodes.set(row.id, { ...row, children: [] });
+  }
 
-  arr.forEach(item => {
-    const node = map.get(item.id);
-    if (item.parentId === 0) {
-      root = node;
-    } else {
-      map.get(item.parentId)?.children.push(node);
+  const roots = [];
+  for (const row of rows) {
+    const node = nodes.get(row.id);
+    if (row.parentId === 0) {
+      roots.push(node);
+      continue;
     }
-  });
+    const parent = nodes.get(row.parentId);
+    if (!parent) throw new RangeError('parent ID does not exist');
+    parent.children.push(node);
+  }
 
+  if (roots.length !== 1) throw new RangeError('expected exactly one root');
+  const root = roots[0];
+
+  const seen = new Set();
+  const stack = [root];
+  while (stack.length) {
+    const node = stack.pop();
+    if (seen.has(node)) throw new RangeError('rows contain a cycle');
+    seen.add(node);
+    for (const child of node.children) stack.push(child);
+  }
+  if (seen.size !== nodes.size) throw new RangeError('rows contain a disconnected cycle');
   return root;
 }
-```
+~~~
 
-Two-pass O(n): first pass creates all nodes with empty `children`; second pass links children to parents.
+The two passes take O(n) expected time and O(n) space with a map. Reserve ID 0 for the root marker, or change the marker to match the data format.
 
 ##### Tree to array
 
-```javascript
-function treeToArray(tree) {
-  const result = [];
-  function traverse(node, parentId) {
-    result.push({ id: node.id, parentId, name: node.name });
-    node.children?.forEach(child => traverse(child, node.id));
+~~~javascript
+function treeToArray(root) {
+  if (!root) return [];
+  const rows = [];
+  const stack = [{ node: root, parentId: 0 }];
+  while (stack.length) {
+    const { node, parentId } = stack.pop();
+    rows.push({ id: node.id, parentId, name: node.name });
+    const children = node.children ?? [];
+    for (let i = children.length - 1; i >= 0; i--) {
+      stack.push({ node: children[i], parentId: node.id });
+    }
   }
-  traverse(tree, 0);
-  return result;
+  return rows;
 }
-```
+~~~
 
-**Reach for this pattern when:** persisting tree state to a database (array form is easier), loading tree data from a REST API, or reshaping data for a tree UI component.
+This conversion expects an acyclic tree with a single root. Preserve application-specific fields deliberately; this example emits only `id`, `parentId`, and `name`.
 
-**See also:** [`10.1 Algorithms and Complexity`](#3.%20Algorithms%20and%20Complexity%20/%20%E7%AE%97%E6%B3%95%E4%B8%8E%E5%A4%8D%E6%9D%82%E5%BA%A6%E5%88%86%E6%9E%90) for sorts, searches, and DP patterns, [`10.3 Practical Data Structure Implementations`](#5.%20Practical%20Data%20Structure%20Implementations%20/%20%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%AE%9E%E7%8E%B0) for LRU cache, queues, and stacks.
+**See also:** [Algorithms and Complexity](#3.%20Algorithms%20and%20Complexity%20/%20%E7%AE%97%E6%B3%95%E4%B8%8E%E5%A4%8D%E6%9D%82%E5%BA%A6%E5%88%86%E6%9E%90) for searches and dynamic programming, and [Practical Data Structure Implementations](#5.%20Practical%20Data%20Structure%20Implementations%20/%20%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%AE%9E%E7%8E%B0) for LRU caches, queues, and stacks.
 ## 5. Practical Data Structure Implementations / 常用数据结构实现
 
-Reach for this when you need canonical JavaScript implementations of the data structures that come up in interviews — LRU cache, queue, stack — plus a note on how React Fiber uses linked-list structures internally.
+### Practical Data Structure Implementations / 常用数据结构实现
+
+These examples make the empty and capacity cases explicit. Built-in collections are usually the simplest production choice; implement the underlying links when the data structure itself is what you need to understand.
+
+选用内建集合还是手写结构取决于需求；实现需要明确容量、空状态与错误行为，并用存在性检查保留 `undefined` 等有效数据。
 
 #### LRU Cache
 
-Least Recently Used cache evicts the least recently accessed item when the cache reaches capacity. A classic interview question testing hash maps and ordering.
+**最近最少使用缓存 / Least Recently Used cache** evicts the least recently accessed entry when full.
 
-##### Using `Map` (insertion order)
+##### Using `Map`
 
-JavaScript's `Map` preserves insertion order — we can exploit this by deleting and re-inserting on access, so the "oldest" key is always first.
+`Map` preserves insertion order. Deleting and reinserting a hit moves it to the newest position. This API supports arbitrary keys and values; use `has` to distinguish a stored `undefined` from a missing key. A zero-capacity cache remains empty.
 
-```javascript
+~~~javascript
 class LRUCache {
   constructor(capacity) {
+    if (!Number.isInteger(capacity) || capacity < 0) {
+      throw new RangeError('capacity must be a non-negative integer');
+    }
     this.capacity = capacity;
     this.cache = new Map();
   }
 
+  has(key) {
+    return this.cache.has(key);
+  }
+
   get(key) {
-    if (!this.cache.has(key)) return -1;
+    if (!this.cache.has(key)) return undefined;
     const value = this.cache.get(key);
-    this.cache.delete(key);   // remove...
-    this.cache.set(key, value); // ...and re-insert as most recent
+    this.cache.delete(key);
+    this.cache.set(key, value);
     return value;
   }
 
   put(key, value) {
+    if (this.capacity === 0) return;
     if (this.cache.has(key)) {
       this.cache.delete(key);
-    } else if (this.cache.size >= this.capacity) {
+    } else if (this.cache.size === this.capacity) {
       const oldestKey = this.cache.keys().next().value;
       this.cache.delete(oldestKey);
     }
     this.cache.set(key, value);
   }
 }
-```
+~~~
 
-**Simpler to write, all operations O(1)** thanks to `Map`'s built-in ordering.
+Map operations are commonly treated as expected constant-time in application analysis, but the ECMAScript specification requires average access to be sublinear rather than promising a precise O(1) bound. This version is concise and avoids maintaining a second ordering structure.
 
-##### Using doubly linked list + hash table (the "classic" form)
+##### Doubly linked list plus map
 
-The canonical textbook implementation: a hash table for O(1) key lookup, a doubly linked list for O(1) ordering. Most recently used items move to the head; the tail is evicted when full. Interviewers who want to see the "real" DS pattern expect this one.
+A linked list makes moving an existing entry to the front and evicting the tail a pointer update. The map locates each node. Both structures are needed to keep the operations efficient; using an ordinary object for arbitrary cache keys can collide with inherited property names.
 
-```javascript
+~~~javascript
 class ListNode {
   constructor(key, value) {
     this.key = key;
@@ -835,43 +876,52 @@ class ListNode {
   }
 }
 
-class LRUCache {
+class LinkedLRUCache {
   constructor(capacity) {
+    if (!Number.isInteger(capacity) || capacity < 0) {
+      throw new RangeError('capacity must be a non-negative integer');
+    }
     this.capacity = capacity;
-    this.map = {};
-    this.head = new ListNode(0, 0); // sentinel
-    this.tail = new ListNode(0, 0); // sentinel
+    this.nodes = new Map();
+    this.head = new ListNode(null, null);
+    this.tail = new ListNode(null, null);
     this.head.next = this.tail;
     this.tail.prev = this.head;
   }
 
+  has(key) {
+    return this.nodes.has(key);
+  }
+
   get(key) {
-    if (!(key in this.map)) return -1;
-    const node = this.map[key];
+    const node = this.nodes.get(key);
+    if (!node) return undefined;
     this._remove(node);
-    this._addToHead(node);
+    this._addToFront(node);
     return node.value;
   }
 
   put(key, value) {
-    if (key in this.map) {
-      const node = this.map[key];
-      node.value = value;
-      this._remove(node);
-      this._addToHead(node);
-    } else {
-      if (Object.keys(this.map).length >= this.capacity) {
-        const lru = this.tail.prev;
-        this._remove(lru);
-        delete this.map[lru.key];
-      }
-      const newNode = new ListNode(key, value);
-      this.map[key] = newNode;
-      this._addToHead(newNode);
+    if (this.capacity === 0) return;
+    const existing = this.nodes.get(key);
+    if (existing) {
+      existing.value = value;
+      this._remove(existing);
+      this._addToFront(existing);
+      return;
     }
+
+    if (this.nodes.size === this.capacity) {
+      const oldest = this.tail.prev;
+      this._remove(oldest);
+      this.nodes.delete(oldest.key);
+    }
+    const node = new ListNode(key, value);
+    this.nodes.set(key, node);
+    this._addToFront(node);
   }
 
-  _addToHead(node) {
+  _addToFront(node) {
     node.next = this.head.next;
     node.prev = this.head;
     this.head.next.prev = node;
@@ -883,21 +933,17 @@ class LRUCache {
     node.next.prev = node.prev;
   }
 }
-```
+~~~
 
-**Reach for the `Map`-based version** in code reviews and production; reach for the linked-list version in interviews that specifically ask you to implement it from scratch.
+With a map that provides expected constant-time lookup, the linked-list version has expected O(1) get and put operations. Use the simpler map-based version when the linked-list mechanics are not part of the requirement.
 
 ---
 
 #### Queue (FIFO)
 
-First In, First Out. Used in BFS, task scheduling, message processing.
+**队列 / Queue** processes values in first-in, first-out order. This linked-list version throws on an empty read so every value, including `null` and `undefined`, remains distinguishable from the empty state.
 
-##### Linked-list implementation
-
-Array-based `shift()` is **O(n)** because elements shift down. A linked-list queue is O(1) for both enqueue and dequeue.
-
-```javascript
+~~~javascript
 class Queue {
   constructor() {
     this.head = null;
@@ -905,172 +951,206 @@ class Queue {
     this.length = 0;
   }
 
-  enqueue(val) {
-    const node = { val, next: null };
+  get isEmpty() {
+    return this.length === 0;
+  }
+
+  enqueue(value) {
+    const node = { value, next: null };
     if (this.tail) this.tail.next = node;
-    else           this.head = node;
+    else this.head = node;
     this.tail = node;
     this.length++;
   }
 
   dequeue() {
-    if (!this.head) return null;
-    const val = this.head.val;
+    if (this.isEmpty) throw new RangeError('queue is empty');
+    const value = this.head.value;
     this.head = this.head.next;
     if (!this.head) this.tail = null;
     this.length--;
-    return val;
+    return value;
+  }
+
+  peek() {
+    if (this.isEmpty) throw new RangeError('queue is empty');
+    return this.head.value;
   }
 }
-```
+~~~
 
-**Gotcha — don't use `arr.shift()` for a queue** in tight loops. It's O(n) because every element has to shift down a slot. Either use a linked list or track a head index and skip over consumed slots.
+Enqueue, dequeue, and peek take O(1) time. Array `shift` removes the first element but may move the remaining indexed elements, so a linked queue or a head index is preferable for a queue that grows large. Breadth-first traversal with a head index appears in [Core Data Structures](#4.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84).
 
 ---
 
 #### Stack (LIFO)
 
-Last In, First Out. Used in DFS, undo/redo, expression parsing, browser history.
+**栈 / Stack** processes values in last-in, first-out order. An array provides a compact stack; this version also throws on empty `pop` or `peek` so stored `undefined` is not confused with an empty stack.
 
-```javascript
+~~~javascript
 class Stack {
-  constructor() { this.items = []; }
-  push(val)  { this.items.push(val); }
-  pop()      { return this.items.pop(); }
-  peek()     { return this.items[this.items.length - 1]; }
-  isEmpty()  { return this.items.length === 0; }
-}
-```
+  constructor() {
+    this.items = [];
+  }
 
-`push` and `pop` on a JavaScript array are O(1), so a plain array is the canonical implementation.
+  get isEmpty() {
+    return this.items.length === 0;
+  }
+
+  push(value) {
+    this.items.push(value);
+  }
+
+  pop() {
+    if (this.isEmpty) throw new RangeError('stack is empty');
+    return this.items.pop();
+  }
+
+  peek() {
+    if (this.isEmpty) throw new RangeError('stack is empty');
+    return this.items[this.items.length - 1];
+  }
+}
+~~~
+
+Array `push` and `pop` are the natural stack operations. Their exact growth costs are runtime implementation details; a dynamic array may occasionally resize.
 
 ---
 
-#### Linked lists in frontend — React Fiber
+#### Linked structure in React Fiber
 
-**Headline:** React Fiber represents the component tree as a **linked structure** (each fiber node has `child`, `sibling`, and `return` pointers) rather than a traditional tree. This enables:
+React represents its work tree with Fiber nodes linked through fields such as `child`, `sibling`, and `return`. The nodes still form a tree; sibling pointers encode the ordered children. This structure lets the reconciler keep work units and progress between scheduling steps.
 
-- **Incremental rendering** — work can be split into small units and spread across frames.
-- **Priority-based scheduling** — high-priority updates (input, animations) can interrupt lower-priority rendering.
-- **Pause and resume** — rendering yields to the browser for layout and paint, then resumes where it left off.
+**Concurrent rendering is conditional.** React can pause or restart render work for updates using concurrent features such as transitions. An update rendered without such features can remain synchronous. React applies DOM mutations during commit after rendering work is ready, so do not describe every render or commit as freely interruptible. Fiber is an implementation detail; use React's public APIs rather than depending on its internal node layout.
 
-The linked-list-ish structure is chosen precisely because it's *easy to traverse one unit at a time* — walk to the child, record position, yield. Traditional recursive traversal would block the main thread until the whole tree was done.
+**See also:** [Algorithms and Complexity](#3.%20Algorithms%20and%20Complexity%20/%20%E7%AE%97%E6%B3%95%E4%B8%8E%E5%A4%8D%E6%9D%82%E5%BA%A6%E5%88%86%E6%9E%90) for complexity patterns, [Core Data Structures](#4.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) for traversals, and [Virtual DOM and Framework Selection](../../frontend/frameworks/virtual-dom-and-framework-selection.md) for reconciliation context.
 
-**Reach for this knowledge when:** interviewers ask about React's Fiber reconciler, concurrent mode, or how React 18's scheduler works under the hood.
-
-**See also:** [`10.1 Algorithms and Complexity`](#3.%20Algorithms%20and%20Complexity%20/%20%E7%AE%97%E6%B3%95%E4%B8%8E%E5%A4%8D%E6%9D%82%E5%BA%A6%E5%88%86%E6%9E%90) for algorithmic patterns, [`10.2 Core Data Structures`](#4.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) for tree-based structures, [`9.1 Virtual DOM and Framework Selection`](../../frontend/frameworks/virtual-dom-and-framework-selection.md) for VDOM reconciliation details.
+Sources: [ECMAScript 2020 Map objects](https://tc39.es/ecma262/2020/#sec-map-objects), [React 18: What is Concurrent React?](https://react.dev/blog/2022/03/29/react-v18), and the [React reconciler Fiber types](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js).
 ## 6. Node.js Fundamentals / Node.js基础
 
-A bundle of interview questions about Node.js's runtime model — threads vs. processes, multi-core utilization, and serverless.
+### Node.js Fundamentals / Node.js基础
 
-### What's the difference between a process and a thread?
+Node.js runs JavaScript outside a browser and provides server-side APIs. Its event-loop model is efficient for many I/O workloads, but a long synchronous callback still blocks JavaScript work on that event-loop thread.
 
-**Headline (30s):** A **process** is the OS's unit of isolation — it gets its own memory space and can't directly touch another process's data. A **thread** is a unit of execution *inside* a process; threads share memory with their siblings. Node.js runs user JavaScript on a single thread, so you can't naively use multiple CPU cores without spawning more processes (`cluster`, `fork`) or using worker threads for CPU-bound work.
+Node 的异步 I/O、事件循环、工作线程和子进程解决不同问题：I/O 等待通常使用异步 API，CPU 并行、进程隔离或共享状态则要按线程与进程边界选择，并处理通信和关闭。
 
-- **Process** — own memory, isolated, heavier to create, safer.
-- **Thread** — shared memory, lighter, data races possible without locks.
+#### What's the difference between a process and a thread?
 
-Why Node chose a single thread: the event loop model makes I/O-bound code fast and avoids the entire class of threading bugs (races, deadlocks) at the cost of not scaling across CPU cores without extra machinery.
+**进程 / Process** is an operating-system execution boundary with its own virtual address space. **线程 / Thread** is an execution path inside a process; threads can share process memory, so shared mutable data needs coordination.
+
+Node has a JavaScript event-loop thread for each isolate, not one JavaScript thread for the whole machine. A worker thread runs JavaScript in another isolate in the same process. It can exchange messages, transfer an ArrayBuffer, or share a SharedArrayBuffer; shared memory requires explicit synchronization such as Atomics. A child process has a separate process address space and communicates through IPC or other operating-system channels.
+
+Node also uses background mechanisms for asynchronous work: network I/O is commonly driven by the operating system, while selected APIs such as filesystem operations, cryptography, compression, and some name-resolution work use libuv's worker pool. Their JavaScript callbacks run on the event-loop thread. CPU-heavy JavaScript on that thread delays other callbacks.
+
+This distinction is reusable across runtimes; this note focuses on Node's event-loop and worker choices.
 
 ---
 
-### How do you use multiple CPU cores in Node.js?
+#### How do you use multiple CPU cores in Node.js?
 
-**Headline (30s):** Three options: **`child_process.fork()`** for spawning independent Node.js processes (usually for one-off CPU work), **`cluster`** for sharing a server port across worker processes (the classic "one process per core" web server pattern), and **worker threads** (`worker_threads`) for sharing memory with the parent. In production, most teams wrap `cluster` with **PM2** instead of managing workers manually.
+Choose based on the work and isolation needed:
 
-#### `child_process.fork()` — spawn a Node.js process
+- **Worker threads / 工作线程** run CPU-intensive JavaScript in parallel and can communicate by message or shared memory. Use a bounded worker pool for repeated tasks rather than creating one thread per small job.
+- **Child processes / 子进程** run in separate process memory and provide stronger isolation; IPC messages are a boundary to account for.
+- **Cluster / 多进程服务** starts multiple Node processes that can accept connections on the same server port. It is one deployment option for multi-core servers, not a guarantee of linear throughput scaling or balanced work.
 
-Creates a child process running another JS file. Parent and child communicate via IPC (`send` / `message`).
+Built-in asynchronous I/O is usually a better choice for I/O-bound work than worker threads. For process or worker choices and shared-state trade-offs, see the linked Node.js API documentation.
 
-```javascript
-// main.js
-const { fork } = require('child_process');
+An external process manager is optional. PM2 is one choice for starting and observing clustered workers:
 
-const child = fork('./compute.js');
-child.send({ task: 'fibonacci', n: 40 });
+~~~bash
+pm2 start app.js --name api -i max
+pm2 list
+pm2 monit
+pm2 reload api
+~~~
 
-child.on('message', (result) => {
-  console.log('Result:', result);
-});
+PM2 may fall back from a cluster reload to a restart if it cannot complete it. The application must handle shutdown and drain or close its own work; availability during reload is not guaranteed.
 
-// compute.js
-process.on('message', (msg) => {
-  if (msg.task === 'fibonacci') {
-    process.send(fib(msg.n));
-  }
-});
-```
+##### Child process example
 
-**Reach for `fork`** when you have a one-off CPU-intensive task (image processing, a heavy computation) that would otherwise block the event loop. The cost: process spawn time (tens of milliseconds) and serialization overhead.
+This compact CommonJS example runs the same file in a child process and sends one task over the fork IPC channel. It is illustrative; production code also needs workload limits, error handling, and shutdown policy.
 
-#### `cluster` — load-balanced HTTP workers
+~~~javascript
+const { fork } = require('node:child_process');
 
-Creates worker processes that all listen on the same port. Incoming connections are load-balanced across them automatically.
-
-```javascript
-const cluster = require('cluster');
-const http    = require('http');
-const numCPUs = require('os').cpus().length;
-
-if (cluster.isMaster) {
-  for (let i = 0; i < numCPUs; i++) cluster.fork();
-  cluster.on('exit', (worker) => {
-    console.log(`Worker ${worker.process.pid} died, restarting...`);
-    cluster.fork();
+if (process.argv[2] === 'worker') {
+  process.on('message', ({ n }) => {
+    let a = 0;
+    let b = 1;
+    for (let i = 0; i < n; i++) [a, b] = [b, a + b];
+    process.send({ result: a });
   });
 } else {
-  http.createServer((_, res) => {
-    res.writeHead(200);
-    res.end('Hello');
+  const child = fork(__filename, ['worker']);
+  child.on('message', message => {
+    console.log(message.result);
+    child.disconnect();
+  });
+  child.send({ n: 10 });
+}
+~~~
+
+##### Cluster example
+
+Each worker is a separate process. Restarting workers, health checks, graceful shutdown, and shared session state are application or process-manager responsibilities; the cluster module does not make in-memory state shared.
+
+~~~javascript
+const cluster = require('node:cluster');
+const http = require('node:http');
+const { availableParallelism } = require('node:os');
+
+if (cluster.isPrimary) {
+  for (let i = 0; i < availableParallelism(); i++) cluster.fork();
+  cluster.on('exit', (worker, code, signal) => {
+    console.error('worker exited', worker.id, code, signal);
+  });
+} else {
+  http.createServer((request, response) => {
+    response.end('Hello');
   }).listen(8000);
 }
-```
+~~~
 
-**Reach for `cluster`** for Node HTTP servers on multi-core machines — you get near-linear throughput scaling with CPUs and automatic restart on crashes.
-
-#### PM2 — production-grade process manager
-
-Don't manage `cluster` by hand in production. PM2 wraps it with health checks, zero-downtime restarts, log rotation, and monitoring.
-
-```bash
-pm2 start app.js -i max   # one process per CPU
-pm2 list                  # view running processes
-pm2 monit                 # real-time metrics
-pm2 reload app            # zero-downtime restart
-```
-
-**Gotcha — shared state between workers:** Each worker has its own memory. In-memory caches, sessions, or WebSocket connection maps need external storage (Redis) or a broadcast mechanism if you need cross-worker consistency.
+Workers have separate heaps. If a session, cache, or connection map must be shared, choose a deliberate external store, routing strategy, or message-broadcast mechanism. A Redis store is one option, not a universal requirement.
 
 ---
 
-### What is serverless / cloud functions, and when would you use them?
+#### How do CommonJS and ES modules affect nextTick ordering?
 
-**Headline (30s):** Serverless (AWS Lambda, Google Cloud Functions, Vercel Edge Functions) runs your code without you managing servers — the cloud provider spins up a process, runs your handler, and tears it down when traffic subsides. You pay per execution, not per idle hour. The big trade-offs: **cold-start latency** (first invocation after idle can take hundreds of ms), hard **execution-time limits** (typically 10–60 seconds), and **no persistent in-memory state** between invocations.
+Node's scheduling details depend on where work is queued. At top level, `process.nextTick` runs before Promise callbacks in this CommonJS example:
 
-#### Advantages over traditional deployment
+~~~javascript
+// Save as example.cjs
+Promise.resolve().then(() => console.log('promise'));
+process.nextTick(() => console.log('nextTick'));
+~~~
 
-- **Cost** — pay only for execution time; no idle servers.
-- **Auto-scaling** — the platform handles traffic spikes without capacity planning.
-- **Operational overhead** — no patching, provisioning, or process management.
-- **Deployment speed** — push code directly; no infra pipeline for simple functions.
+The same calls have the opposite order at the top level of an ES module:
 
-#### Trade-offs
+~~~javascript
+// Save as example.mjs
+import { nextTick } from 'node:process';
 
-- **Cold starts** — a fresh container costs hundreds of ms on first invocation. Mitigations: provisioned concurrency, smaller bundles, avoid heavy init.
-- **Execution limits** — long-running work (reports, data migrations) needs a different compute model.
-- **Statelessness** — every invocation might land on a new container. Keep persistent state in a database or cache.
-- **Vendor lock-in** — handler signatures, auth, and tooling vary between providers.
+Promise.resolve().then(() => console.log('promise'));
+nextTick(() => console.log('nextTick'));
+~~~
 
-#### When to reach for serverless
+This difference is about the module's execution context; it is not a universal ordering rule for every callback or event-loop phase. Use the current [Node.js process documentation](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick) when an ordering dependency matters.
 
-- **API endpoints** — thin, stateless handlers.
-- **Webhooks** — receive events from third-party services.
-- **Scheduled jobs** — cron-like tasks (cleanup, reports).
-- **Event-driven processing** — react to file uploads, DB changes, message queues.
+---
 
-**When not:** persistent connections (WebSocket servers — though providers now offer variants), long-running batch jobs, or workloads where cold-start latency is unacceptable (some user-facing APIs).
+#### What is serverless or function-as-a-service?
 
-**See also:** [`7.1 Event Loop`](../../frontend/runtime/event-loop.md) for the single-threaded runtime model that shapes these choices, [`12.1 Software Design Principles`](#7.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for where serverless fits in overall application architecture.
+**无服务器计算 / Serverless** means the provider manages the underlying execution infrastructure through a function or managed runtime interface. Servers still exist; the provider controls how execution environments are created, reused, and scaled.
+
+Timeouts, concurrency limits, billing, cold-start latency, and state-reuse behavior depend on the provider, product, runtime, region, and configuration. Do not treat in-memory state as durable or assume an execution environment is discarded after every invocation. For example, AWS Lambda documents that environments can be reused while advising applications to treat state as temporary and persist durable changes externally.
+
+It can suit event-triggered handlers or variable workloads when the provider's limits and cost model fit. Long-running work, persistent connections, predictable latency, and vendor-specific integrations require a comparison against other deployment models.
+
+**See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](#7.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for choosing boundaries around runtime-specific infrastructure.
+
+Sources: [Node.js v24 worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [process scheduling](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html) documentation; [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/); plus [AWS Lambda execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html). PM2 and AWS references checked 2026-10-15; provider limits change over time.
 ## 7. Software Design Principles / 软件设计原则
 
 ### Software Design Principles / 软件设计原则
@@ -1212,155 +1292,163 @@ Reach for this when independent teams or release schedules are a concrete requir
 Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).
 ## 8. Design Patterns in Practice / 设计模式实践
 
-A bundle of interview questions on the design patterns that come up most in frontend work — plus two system-design mini-problems (low-code editor, RBAC) that exercise those patterns.
+### Design Patterns in Practice / 设计模式实践
 
-### When do you use the Factory pattern?
+A design pattern names a recurring design choice and its trade-offs. **设计模式是可复用的设计思路，不是必须套用的模板。** Choose one when it clarifies a real variation or dependency; extra indirection also has a cost.
 
-**Headline (30s):** A factory is a function that encapsulates object creation — hiding `new`, hiding conditional logic, and allowing the factory to return different subtypes based on input. Reach for it when construction is non-trivial or when callers shouldn't need to know which concrete class they're getting. It's arguably the most common pattern in JS because it plays nicely with the language's bias toward plain functions.
+#### When do you use the Factory pattern?
 
-```javascript
+**工厂 / Factory** centralizes object creation when construction rules or the concrete type should not be repeated at call sites. A simple factory function is useful in JavaScript, but it is not automatically the GoF Factory Method or Abstract Factory pattern.
+
+~~~javascript
 function createButton(type) {
-  if (type === 'primary')   return new PrimaryButton();
+  if (type === 'primary') return new PrimaryButton();
   if (type === 'secondary') return new SecondaryButton();
   return new DefaultButton();
 }
-```
+~~~
 
-**Real-world examples:** `React.createElement()`, jQuery's `$()`, `document.createElement()`, `Array.of`.
+Use this when the creation decision belongs in one place or construction has meaningful setup. If construction is already a single uncomplicated expression, a factory can add little value.
 
 ---
 
-### When do you use the Singleton pattern?
+#### When do you use the Singleton pattern?
 
-**Headline:** Guarantees one instance across the app, with a single global access point. Reach for it when a shared resource (store, event bus, cache, connection pool) must be consistent across consumers.
+**单例 / Singleton** constrains access to one instance within a chosen scope. A class-level static instance, for example, is one per loaded class in a JavaScript realm; it is not automatically one instance across workers, processes, duplicated module copies, or machines.
 
-```javascript
+~~~javascript
 class Store {
   static instance;
 
   static getInstance() {
-    if (!Store.instance) {
-      Store.instance = new Store();
-    }
+    if (!Store.instance) Store.instance = new Store();
     return Store.instance;
   }
 }
-```
+~~~
 
-**Real-world examples:** Redux/Vuex store, global event bus, database connection pool, `window` object.
+Repeated calls to `getInstance()` share one instance through that accessor; because `Store` has a public constructor, `new Store()` can still create additional instances.
 
-**Gotcha — singletons hurt testability.** Global state is hard to isolate in tests. Modern apps often sidestep the pattern with **context providers** (React) or **module-scoped singletons** (one instance per module, but injectable in tests). Ask yourself whether "one instance" is the real requirement, or whether "shared instance for this context" would work — the latter is usually better.
+A shared cache, event bus, or connection pool may need one instance per process or module. Consider whether explicit dependency injection or a scoped shared instance is easier to test and reason about. A singleton's global access can hide dependencies and couple tests.
 
 ---
 
-### When do you use the Strategy pattern?
+#### When do you use the Strategy pattern?
 
-**Headline (30s):** Defines a family of interchangeable algorithms, each encapsulated behind the same interface. Pick one by key instead of writing a giant switch/if-else. Reach for it when you have multiple algorithms for the same concern (sort, validate, format, price) and callers need to pick at runtime.
+**策略 / Strategy** puts interchangeable behavior behind a common contract. It is useful when callers must choose among algorithms or policies; a small conditional is often clearer when there is only one simple branch.
 
-```javascript
-const strategies = {
-  express:   pkg => pkg.weight * 10,
-  standard:  pkg => pkg.weight * 5,
-  overnight: pkg => pkg.weight * 20,
-};
+~~~javascript
+const strategies = new Map([
+  ['express', pkg => pkg.weight * 10],
+  ['standard', pkg => pkg.weight * 5],
+  ['overnight', pkg => pkg.weight * 20],
+]);
 
-function calculateShipping(strategy, pkg) {
-  return strategies[strategy](pkg);
+function calculateShipping(name, pkg) {
+  const strategy = strategies.get(name);
+  if (!strategy) throw new RangeError('unknown shipping strategy');
+  return strategy(pkg);
 }
+~~~
 
-calculateShipping('express', { weight: 3 }); // 30
-```
-
-**Use cases:** form validation rules, sort algorithms, pricing tiers, authentication methods.
-
-Strategy is the natural implementation of the **Open/Closed Principle** (see [`12.1 Software Design Principles`](#7.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99)) — add new strategies without touching the dispatcher.
+Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#7.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99).
 
 ---
 
-### What's the difference between Observer and Publish-Subscribe?
+#### What's the difference between Observer and Publish-Subscribe?
 
-**Headline (30s):** Both let something react to something else, but differ in **coupling**. **Observer** — the subject holds a direct reference to its observers and calls them itself (`element.addEventListener` fits this model). **Publish-Subscribe** — a central channel mediates; publishers and subscribers never know about each other (event bus). Pub-Sub is more decoupled and flexible; Observer is simpler and easier to trace.
+**观察者 / Observer** and **发布订阅 / Publish-Subscribe** both route notifications. In the common distinction, an observer subject knows its observers and notifies them directly; a publish-subscribe broker routes messages by topic, so publishers and subscribers need not know each other. Real libraries can combine these arrangements, so use the concrete API's contract rather than relying on the label.
 
-#### Observer
+##### Observer
 
-```javascript
+~~~javascript
 class Subject {
-  constructor() { this.observers = []; }
-  subscribe(observer) { this.observers.push(observer); }
-  notify(data) { this.observers.forEach(obs => obs.update(data)); }
+  constructor() {
+    this.observers = new Set();
+  }
+
+  subscribe(observer) {
+    this.observers.add(observer);
+    return () => this.observers.delete(observer);
+  }
+
+  notify(data) {
+    for (const observer of this.observers) observer.update(data);
+  }
 }
-```
+~~~
 
-**Coupling:** direct. The subject knows its observers.
+The subject owns the subscriptions. Returning an unsubscribe function makes the lifetime of a listener explicit.
 
-**Example:** DOM event listeners — the element "knows" every handler it fires.
+##### Publish-Subscribe
 
-#### Publish-Subscribe
+~~~javascript
+class EventBus {
+  constructor() {
+    this.listeners = new Map();
+  }
 
-```javascript
+  on(topic, listener) {
+    const subscribers = this.listeners.get(topic) ?? new Set();
+    subscribers.add(listener);
+    this.listeners.set(topic, subscribers);
+    return () => subscribers.delete(listener);
+  }
+
+  emit(topic, data) {
+    for (const listener of this.listeners.get(topic) ?? []) listener(data);
+  }
+}
+
 const eventBus = new EventBus();
-eventBus.on('user:login', updateDashboard);       // subscriber
-eventBus.emit('user:login', { name: 'Alice' });   // publisher
-```
+eventBus.on('user:login', user => { /* update the UI with user data */ });
+eventBus.emit('user:login', { name: 'Alice' });
+~~~
 
-**Coupling:** indirect — both parties know only the event channel and event name.
+A broker can reduce direct coupling, but distributed or global event buses can make the flow harder to trace. DOM `EventTarget` is observer-like: listeners register on a target that dispatches events.
 
-**Key difference:** Observer is easier to debug (you can find observers by inspecting the subject); Pub-Sub is more flexible but harder to trace because the wiring is scattered across the codebase.
-
-See [`5.1 DOM Manipulation and Events`](../../frontend/browser-apis/dom-manipulation-and-events.md) for a concrete EventBus implementation.
+See [DOM Manipulation and Events](../../frontend/browser-apis/dom-manipulation-and-events.md) for browser event APIs.
 
 ---
 
-### How would you design the data model for a low-code editor?
+#### How would you design the data model for a low-code editor?
 
-**Headline (30s):** A drag-and-drop page builder needs four systems: **a component tree** (each node has id, type, props, style, children), **layer ordering** (z-index via array position), **undo/redo** (command pattern with a history stack), and **real-time collaboration** (WebSocket state sync with conflict resolution, usually OT or CRDT).
+A page builder can model a document as a component tree, with each node carrying an ID, type, properties, style, and children. The editor can derive its canvas and side panels from that model, then serialize it for persistence.
 
-#### Component model
-
-```javascript
+~~~javascript
 const component = {
-  id:    'comp_001',
-  type:  'Button',
+  id: 'comp_001',
+  type: 'Button',
   props: { text: 'Click me', variant: 'primary' },
   style: { position: 'absolute', top: 100, left: 200 },
   children: [],
 };
-```
+~~~
 
-The tree is the source of truth. Rendering walks the tree; the sidebar edits the tree; persistence serializes the tree.
+Keep document order and visual stacking as explicit concepts. Child order can be one input to rendering, but CSS stacking contexts mean it is not universally equivalent to the final z-order; each stacking context is painted as a unit within its parent context ([CSS 2.2 visual formatting model](https://www.w3.org/TR/CSS22/zindex.html)).
 
-#### Key requirements
-
-- **Component registry** — a map of `type → renderer` so new component types can be added without touching the core.
-- **Layer management** — z-index is the array order within `children`; reordering is a splice.
-- **Undo/redo** — command pattern with a history stack. Each mutation pushes a reversible command; undo pops and inverts.
-- **Real-time collaboration** — WebSocket broadcasts mutations; OT/CRDT resolves conflicts (see [`5.2 Browser Storage and Communication`](../../frontend/browser-apis/browser-storage-and-communication.md)).
+- **Component registry / 组件注册表**: map a validated component type to its renderer and schema.
+- **Layer order / 图层顺序**: define how siblings are ordered and translate that order into the chosen rendering model.
+- **Undo and redo / 撤销与重做**: store inverse commands or immutable document snapshots; choose based on history size and operation complexity.
+- **Collaboration / 协作**: a WebSocket transports updates, but does not resolve concurrent edits. A server-authoritative order, locks, operational transformation, or a CRDT may fit different conflict and offline requirements.
 
 ---
 
-### How does Role-Based Access Control (RBAC) work?
+#### How does Role-Based Access Control (RBAC) work?
 
-**Headline:** RBAC assigns permissions to **roles**, not users. Users are then assigned one or more roles. Adding a new role or changing a role's permissions doesn't require touching user records or app code — only the role and permission tables.
+**基于角色的访问控制 / Role-Based Access Control** associates permissions with roles and assigns users to roles. It is one authorization model; it does not determine whether a particular user may access every object of a type.
 
-#### Data model
+A relational model commonly includes:
 
-- **User** — `id`, `username`, `password_hash`
-- **Role** — `id`, `role_name` (e.g., admin, editor, viewer)
-- **Permission** — `id`, `permission_name` (e.g., read, write, delete)
-- **UserRole** — `user_id`, `role_id` (many-to-many)
-- **RolePermission** — `role_id`, `permission_id` (many-to-many)
+- **User / 用户**: identity and credential reference.
+- **Role / 角色**: named job or application role.
+- **Permission / 权限**: action on a resource or capability.
+- **UserRole / 用户角色**: many-to-many user-to-role assignment.
+- **RolePermission / 角色权限**: many-to-many role-to-permission assignment.
 
-#### Access check flow
+A request is authenticated first, then the server checks whether the resulting subject may perform the requested action on the requested object. Check every protected operation and resource; hiding a button or trusting a client-supplied role is not authorization. Role changes simplify policy administration only when the application's permission model fits roles.
 
-```
-User → UserRole → Role → RolePermission → Permission
-```
-
-To check "can this user write?", look up their roles, then the permissions on those roles, then check if `write` is in the set.
-
-**Why this structure:** the indirection through `Role` is what makes RBAC scalable. Assigning a permission to a role changes it for everyone with that role. Assigning a role to a user gives them every permission the role has. No code changes needed.
-
-**See also:** [`12.1 Software Design Principles`](#7.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for the SOLID foundations these patterns implement, [`5.1 DOM Manipulation and Events`](../../frontend/browser-apis/dom-manipulation-and-events.md) for a concrete EventBus.
+See [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) for authorization boundaries and [Design Patterns: Elements of Reusable Object-Oriented Software](https://www.informit.com/store/design-patterns-elements-of-reusable-object-oriented-software-9780201633610) for the original GoF catalog.
 ## 9. Interview Tips / 面试准备
 
 ### Interview Tips / 面试准备
@@ -1439,514 +1527,419 @@ Thank the interviewer, restate a specific reason for your interest, and ask abou
 **See also:** [Agile and Scrum](#10.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
 ## 10. Agile and Scrum / 敏捷与Scrum
 
-**Reach for this when** you need a quick reference for how most modern engineering teams organize work — Agile principles, the Scrum framework (roles, events, artifacts), and the common failure modes.
+### Agile and Scrum / 敏捷与Scrum
 
-**Headline:** **Agile** is a philosophy — iterative delivery, continuous feedback, adaptability. **Scrum** is the most widely used framework for practicing Agile, with defined **roles** (Product Owner, Scrum Master, Dev Team), **events** (Sprint, Planning, Standup, Review, Retro), and **artifacts** (Product Backlog, Sprint Backlog, Increment). Interviewers usually want to know you understand both the theory and the real-world tradeoffs.
+**Agile / 敏捷** describes values and principles for software development; it is not one prescribed workflow. **Scrum / Scrum 框架** is a specific framework with defined accountabilities, events, artifacts, and commitments. The Scrum details below follow the official November 2020 Scrum Guide, listed as the current version when checked 2026-10-15.
+
+敏捷是一组价值与原则，Scrum则是包含明确职责、事件、工件和承诺的框架；这些结构用于检查和调整工作，并不保证照流程执行就会自动提升交付效果。
 
 #### Agile principles
 
-From the Agile Manifesto:
+The Agile Manifesto values:
 
-- **Working software** over comprehensive documentation.
-- **Customer collaboration** over contract negotiation.
-- **Responding to change** over following a rigid plan.
-- **Individuals and interactions** over processes and tools.
+- Individuals and interactions over processes and tools.
+- Working software over comprehensive documentation.
+- Customer collaboration over contract negotiation.
+- Responding to change over following a plan.
 
-##### In practice
-
-- Deliver working software in short iterations (1–4 weeks).
-- Welcome changing requirements, even late in development.
-- Business and development teams work together daily.
-- Build projects around motivated individuals; trust them to deliver.
-- Maintain a sustainable development pace.
-- Regularly reflect and adjust processes.
-
-##### Benefits
-
-- **Flexibility** — adapt to changing requirements without derailing the project.
-- **Quality** — frequent testing and integration catch issues early.
-- **Visibility** — regular demos and retrospectives keep stakeholders informed.
-- **Reduced risk** — short iterations surface problems quickly.
+The items on the right still have value; the Manifesto gives greater weight to the items on the left. Its principles also emphasize frequent delivery, sustainable pace, technical excellence, simplicity, and regular reflection. How a team applies these ideas depends on its product, people, and constraints.
 
 #### Scrum framework
 
-Scrum is the most widely used Agile framework. It defines roles, events, and artifacts for organizing iterative work.
+Scrum uses empiricism and lean thinking to help a Scrum Team generate value through adaptive solutions. Its defined structure is not a promise that adopting the framework will automatically improve delivery.
 
 ##### Roles
 
+The Scrum Guide describes three **accountabilities / 职责** within one Scrum Team; these are responsibilities, not a required set of job titles.
+
 ###### Product Owner
 
-- Defines and prioritizes the **product backlog**.
-- Represents stakeholder interests.
-- Decides **what** to build and in what order.
+Accountable for maximizing product value and effective Product Backlog management. The Product Owner may delegate backlog work but remains accountable for the result.
 
 ###### Scrum Master
 
-- Facilitates the Scrum process; removes impediments.
-- Coaches the team on Scrum practices.
-- Shields the team from external interruptions.
-- **Does not** manage the team — the team is self-organizing.
+Accountable for establishing Scrum as defined in the Guide and for the Scrum Team's effectiveness. This includes coaching, helping remove impediments, and supporting the wider organization in its use of Scrum; it does not make the Scrum Master the team's line manager.
 
-###### Development Team
+###### Developers
 
-- Cross-functional group that designs, builds, and tests the product.
-- Typically 3–9 people.
-- Self-organizing: the team decides **how** to accomplish sprint goals.
+The people who create a usable Increment during each Sprint. They create and adapt the Sprint Backlog plan, uphold the Definition of Done, and hold one another accountable as professionals.
 
 ##### Events
 
+The five events are the **Sprint**, **Sprint Planning**, **Daily Scrum**, **Sprint Review**, and **Sprint Retrospective**. The Sprint is the container for the other events and activities.
+
 ###### Sprint
 
-A fixed time-box (usually 2 weeks) during which a potentially shippable increment is created.
+A fixed-length event of one month or less. Teams choose a duration that supports inspection and adaptation; two weeks is common in some teams but is not prescribed by Scrum. The Sprint Goal provides a coherent objective while allowing the exact work to be clarified as learning occurs.
 
 ###### Sprint Planning
 
-The team selects backlog items for the sprint and breaks them into tasks. Outcome: a sprint goal + a sprint backlog.
+The Scrum Team plans why the Sprint is valuable, what can be done, and how the selected work will be completed. The output includes a Sprint Goal and the Developers' plan in the Sprint Backlog.
 
-###### Daily Standup
+###### Daily Scrum
 
-A 15-minute daily meeting where each member answers:
-
-1. What did I do yesterday?
-2. What will I do today?
-3. Are there any blockers?
+A 15-minute event for the Developers to inspect progress toward the Sprint Goal and adapt their plan. The Guide does not require each person to answer a fixed set of status questions. Developers choose a format that serves the purpose and may meet more often as needed.
 
 ###### Sprint Review
 
-End-of-sprint demo to stakeholders. Gather feedback and update the product backlog.
+The Scrum Team and stakeholders inspect the Sprint's outcome and discuss adaptations. It is a working session to inform what to do next, not only a demonstration.
 
 ###### Sprint Retrospective
 
-The team reflects on the sprint process:
-
-- What went well?
-- What could be improved?
-- What actions will we take?
+The Scrum Team inspects how the last Sprint went with regard to people, interactions, processes, tools, and the Definition of Done, then identifies useful improvements. It is one of the Scrum events and occurs within the Sprint cadence.
 
 ##### Artifacts
 
-- **Product Backlog** — ordered list of everything needed in the product.
-- **Sprint Backlog** — items selected for the current sprint + the delivery plan.
-- **Increment** — the sum of completed backlog items, in a usable state.
+| Artifact / 工件 | Commitment / 承诺 | Purpose |
+|---|---|---|
+| Product Backlog / 产品待办列表 | Product Goal / 产品目标 | An ordered source of work for evolving the product |
+| Sprint Backlog / Sprint 待办列表 | Sprint Goal / Sprint 目标 | The Sprint Goal, selected Product Backlog items, and the Developers' plan |
+| Increment / 增量 | Definition of Done / 完成定义 | A usable step toward the Product Goal that meets the shared quality measure |
+
+The commitments focus the artifact without replacing it. Multiple Increments may be created during a Sprint; the Sprint Review is not a release gate.
 
 #### Common challenges
 
-- **Scope creep** — adding items mid-sprint undermines the sprint commitment. Use the backlog for new requests; slot into future sprints.
-- **Resistance to change** — teams used to waterfall may struggle with iterative planning. Start with pilot teams and demonstrate results.
-- **Skipping retrospectives** — without reflection, the same problems recur. Retrospectives are **not optional**.
-- **"Status-report standups"** — standups that become PM status updates defeat the purpose. Keep the "blockers" slot prominent.
+- **Treating Scrum as a status-report schedule:** the events exist to inspect and adapt work toward goals, not merely to report individual activity.
+- **Treating the Sprint Backlog as an unchangeable contract:** the Developers adapt their plan as they learn, while working toward the Sprint Goal. The Product Owner and Developers can clarify and renegotiate scope without endangering that goal.
+- **Skipping inspection and improvement:** omitting defined events loses their intended opportunities and means the team is not using the framework as described.
+- **Assuming Scrum fits every problem:** choose a way of working that fits the product, feedback cycle, and organizational constraints. Regulated work can also use iterative development when its evidence and control requirements are built into the process.
 
-**Gotcha — Scrum isn't a silver bullet.** It works best for teams building iterative products with changing requirements. For heavily regulated work (e.g., hardware, medical devices) or teams with fixed requirements, waterfall or hybrid models may still fit. Interviewers appreciate candidates who understand *when* Agile helps, not just how to recite the ceremonies.
+**See also:** [Interview Tips](#9.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for discussing team practices accurately.
 
-**See also:** [`14.1 Interview Tips`](#9.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for how to discuss Agile experience in interviews.
+Sources: [The Scrum Guide, November 2020](https://scrumguides.org/scrum-guide.html) and the [Agile Manifesto](https://agilemanifesto.org/).
 ## 11. Git Essentials / Git日常基础
 
-**Reach for this when** you need a quick reference for day-to-day Git — core commands, branching, merge vs. rebase, conflict resolution, and the PR workflow.
+### Git Essentials / Git日常基础
 
-**Headline:** Six buckets. **Core commands** (init, clone, add, commit, status, log, diff). **Remote operations** (push, pull, fetch). **Branching** (branch, checkout, switch). **Merge vs. rebase** (merge for shared branches, rebase for local). **Recovery tools** (stash, reset vs. revert, reflog). **PR workflow** (feature branches, clear messages, squash-merge).
+Git records project snapshots and lets branches point to different lines of history. **工作区 / working tree**, **暂存区 / index**, **提交 / commit**, **分支 / branch**, **远端 / remote**, **合并 / merge**, and **变基 / rebase** are the core terms used below. Branches are movable references to commits. Inspect status before changing or discarding work.
+
+Git用提交保存项目快照，分支是指向提交的可移动引用；合并、变基和撤销应按历史是否共享及工作区状态选择，改写或丢弃内容前先检查并保护本地改动。
 
 #### Core commands
 
 | Command | Purpose |
 |---|---|
-| `git init` | Initialize a new repository |
-| `git clone <url>` | Clone a remote repository |
-| `git add <file>` | Stage changes (`git add .` for all) |
-| `git commit -m "msg"` | Commit staged changes |
-| `git status` | Show working tree status |
-| `git log --oneline` | Compact commit history |
-| `git diff` | Unstaged changes (`--staged` for staged) |
+| `git init` | Create an empty repository in the current directory |
+| `git clone <url>` | Copy a repository and its history |
+| `git status` | Show branch and working-tree state |
+| `git add <path>` | Stage changes for the next commit |
+| `git diff` | Show unstaged changes; use `--staged` for staged changes |
+| `git commit -m "message"` | Record the staged snapshot |
+| `git log --oneline --graph --decorate` | Inspect recent history and branch references |
+
+Stage deliberately. `git add .` stages changes under the current directory; `git add -A` stages additions, modifications, and deletions in the repository. Review `git diff --staged` before committing.
 
 #### Remote operations
 
-```bash
+~~~bash
 git remote add origin <url>
-git push -u origin main        # first push, sets upstream
-git push                       # subsequent pushes
-git pull                       # fetch + merge
-git fetch                      # download without merging
-```
+git fetch origin
+git push -u origin main
+git pull
+~~~
 
-`git pull` = `git fetch` + `git merge`. **Reach for `git fetch`** when you want to inspect remote changes before integrating them; **reach for `git pull`** for the common "get me up to date" case.
+`git fetch` updates remote-tracking references without integrating them into the current branch. `git pull` fetches and then integrates the selected upstream using the configured or requested fast-forward, merge, or rebase behavior; inspect its options when the result matters. Fetch first when you want to review incoming commits before integrating them.
 
 #### Branching
 
-```bash
-git branch feature/login       # create branch
-git checkout feature/login     # switch to branch
-git checkout -b feature/login  # create + switch (shorthand)
-git switch -c feature/login    # modern alternative to checkout -b
-git branch -d feature/login    # delete branch (safe — prevents deleting unmerged)
-git branch -D feature/login    # force delete
-```
+~~~bash
+git branch feature/login       # create a branch
+git switch feature/login       # switch branches
+git switch -c feature/login    # create and switch
+git branch -d feature/login    # delete only when Git considers it merged
+git branch -D feature/login    # force-delete the branch reference
+~~~
 
-##### Branching strategies
-
-**Feature branches:** each feature/bugfix gets its own branch off `main`. Merged back via PR. Dominant in modern trunk-based development.
-
-**Git Flow** (simplified):
-
-- `main` — production-ready code.
-- `develop` — integration branch.
-- `feature/*` — new features branch off `develop`.
-- `hotfix/*` — urgent fixes branch off `main`.
-
-**When to reach for Git Flow** — long release cycles, heavy QA gates. **When to avoid** — teams doing CI/CD with continuous deploys; feature-branch-on-`main` is simpler.
+A feature branch is one collaboration approach. A team can instead integrate small changes directly or use a release-branch strategy. Git Flow adds long-lived branches such as `develop`; it can suit scheduled releases but adds merging and coordination. Choose according to release and integration needs rather than treating one strategy as universal.
 
 #### Merge vs. rebase
 
 ##### `git merge`
 
-Combines branches by creating a **merge commit** that ties the two histories together. Non-destructive — original branch history is preserved.
+Merge integrates another branch into the current branch. If possible, Git may fast-forward the current branch reference; otherwise it creates a merge commit that records both parent histories.
 
-```bash
-git checkout main
+~~~bash
+git switch main
 git merge feature/login
-```
+~~~
 
-```
-A---B---C  (main)
-     \       \
-      D---E   M  (merge commit)
-```
+~~~
+A---B---C---M  main
+     \     /
+      D---E    feature/login
+~~~
 
 ##### `git rebase`
 
-Replays commits from one branch **on top of** another, creating a linear history. **Rewrites commit hashes.**
+Rebase replays commits onto a new base. The replayed commits have new IDs because their parent history changes.
 
-```bash
-git checkout feature/login
+~~~bash
+git switch feature/login
 git rebase main
-```
+~~~
 
-```
-A---B---C  (main)
+~~~
+A---B---C              main
          \
-          D'---E'  (feature/login, rebased)
-```
+          D'---E'      feature/login
+~~~
 
-##### When to use each
+| Situation | A common choice | Why |
+|---|---|---|
+| Integrating work while keeping both branch histories visible | Merge | Records the integration point when a merge commit is created |
+| Updating an unpublished local branch | Rebase | Replays local commits on the updated base |
+| Commits others have already based work on | Coordinate before rebasing | Rebase changes commit IDs and requires collaborators to reconcile history |
 
-| Scenario | Use |
-|---|---|
-| Merging a feature branch into `main` via PR | `merge` (preserves context) |
-| Updating a feature branch with latest `main` | `rebase` (keeps history clean) |
-| Shared/public branches | `merge` (never rebase shared branches) |
-| Local-only branches | `rebase` (cleaner log) |
+A rebase can be useful on a shared branch only when the team coordinates the history rewrite and remote update. The practical rule is to avoid rewriting commits others may rely on.
 
-**Golden rule:** never rebase commits that have been pushed and shared with others. Rebasing rewrites history, and anyone with the old history will get a painful conflict when they try to pull.
+#### Resolving conflicts
 
-#### Resolving merge conflicts
+When Git cannot combine edits automatically, it marks the affected file:
 
-When Git can't auto-merge, it marks conflicts in the file:
-
-```
+~~~
 <<<<<<< HEAD
 const timeout = 3000;
 =======
 const timeout = 5000;
 >>>>>>> feature/login
-```
+~~~
 
-Steps:
+1. Inspect the conflict and decide how the changes should combine.
+2. Remove the conflict markers and edit the final content.
+3. Stage the resolved path with `git add <path>`.
+4. Finish with `git commit` after a merge, or `git rebase --continue` during a rebase.
 
-1. Open conflicted files; choose the correct code (or combine both).
-2. Remove conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
-3. `git add <file>` to mark as resolved.
-4. `git commit` (or `git rebase --continue` if rebasing).
+Use `git merge --abort` or `git rebase --abort` to stop an integration that is still in progress.
 
 #### Useful commands
 
 ##### `git stash`
 
-Temporarily shelves uncommitted changes — useful when you need to switch branches mid-change.
+Save tracked working-tree changes temporarily when switching tasks or branches.
 
-```bash
-git stash                  # stash changes
-git stash list             # see all stashes
-git stash pop              # apply most recent and remove
-git stash apply            # apply without removing
-git stash drop             # discard most recent
-```
+~~~bash
+git stash push -m "work in progress"
+git stash list
+git stash apply       # keep the stash entry
+git stash pop         # apply and remove the stash entry if successful
+git stash drop        # discard a stash entry
+~~~
+
+Untracked files are not included by default; use `-u` when they should be included.
 
 ##### `git cherry-pick`
 
-Apply a specific commit from another branch onto the current branch.
+Apply the change introduced by a selected commit to the current branch, creating a new commit.
 
-```bash
-git cherry-pick <commit-hash>
-```
+~~~bash
+git cherry-pick <commit>
+~~~
 
-##### `git reset` vs `git revert`
+##### `git reset` vs. `git revert`
 
-| | `git reset` | `git revert` |
-|---|---|---|
-| **What it does** | Moves HEAD backward, discarding commits | Creates a new commit that undoes a previous one |
-| **History** | Rewrites history (destructive) | Preserves history (safe) |
-| **Use case** | Undo local, unpushed commits | Undo a commit that's already pushed |
+In its commit form, `git reset` moves the current branch reference and optionally resets the index and working tree. The mode controls which state changes:
 
-```bash
-git reset --soft HEAD~1    # undo commit, keep changes staged
-git reset --mixed HEAD~1   # undo commit, keep changes unstaged (default)
-git reset --hard HEAD~1    # undo commit, discard all changes
+| Mode | Branch reference | Index | Tracked working-tree changes |
+|---|---|---|---|
+| `--soft` | Moves to target | Kept | Kept |
+| `--mixed` (default) | Moves to target | Reset to target | Kept |
+| `--hard` | Moves to target | Reset to target | Reset to target; conflicting tracked edits are discarded |
 
-git revert <commit-hash>   # create a new "undo" commit
-```
+~~~bash
+git reset --soft HEAD~1
+git reset --mixed HEAD~1
+git reset --hard HEAD~1
+~~~
 
-**Gotcha — `git reset --hard` loses work.** It deletes your uncommitted changes. Combine with `git reflog` to recover if you slipped.
+Use reset to adjust local history or staging when that is the intended scope. `--hard` replaces the working tree and index with the target state and may overwrite untracked files; check `git status` and preserve needed work first. It does not mean “delete every untracked file.”
+
+`git revert <commit>` creates a new commit that applies the inverse of an earlier commit. It is often a better fit for undoing changes already shared in a branch, although conflicts may still need resolution. Reverting a merge commit requires selecting a mainline parent.
 
 ##### `git reflog`
 
-Shows a log of all HEAD movements — invaluable for recovering from accidental `reset --hard` or deleted branches.
+The reflog records recent local updates to references such as `HEAD` and branch tips. It can help locate a commit after an accidental reset or branch deletion while the commit remains available.
 
-```bash
+~~~bash
 git reflog
-git checkout <lost-commit-hash>
-```
+git branch recovery <commit>
+~~~
 
-#### PR / code review workflow
+Creating a branch preserves the recovered commit under a name; checking out a raw commit instead leaves HEAD detached. Reflogs are local and expire, so they are not a backup.
 
-1. Create a feature branch from `main`.
-2. Make commits with clear, descriptive messages.
-3. Push the branch and open a Pull Request.
-4. Reviewers comment, request changes, or approve.
-5. Address feedback with **new commits** (avoid force-pushing during review — it invalidates review state).
-6. Squash-merge or merge into `main`.
-7. Delete the feature branch.
+#### Pull request and code review workflow
 
-##### Commit message conventions
+A common workflow is to branch from the repository's integration branch, commit focused changes, push, open a pull request, review and revise, then merge using the repository's chosen method. The exact branch name and merge policy vary by project.
 
-Conventional Commits format — widely adopted, friendly to auto-generated changelogs.
+For commits, concise messages that describe the change help future readers. **Conventional Commits** is one optional convention, often paired with tooling that reads its prefixes:
 
-```
-type(scope): short description
-
-feat(auth): add JWT token refresh
-fix(api): handle 404 in user endpoint
+~~~
+feat(auth): refresh access tokens
+fix(api): handle missing user
 refactor(utils): extract date formatting
-docs(readme): update setup instructions
-```
+docs(readme): clarify setup
+~~~
 
-**Common types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`.
+**See also:** [Agile and Scrum](#10.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
 
-**See also:** [`14.2 Agile and Scrum`](#10.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for how PR review fits into sprint work, [`15.1 Frontend Testing`](../../frontend/testing/frontend-testing.md) for CI test setup on PRs.
+Sources: [Git pull](https://git-scm.com/docs/git-pull), [Git merge](https://git-scm.com/docs/git-merge), [Git rebase](https://git-scm.com/docs/git-rebase), [Git reset](https://git-scm.com/docs/git-reset), [Git revert](https://git-scm.com/docs/git-revert), [Git reflog](https://git-scm.com/docs/git-reflog), [Git stash](https://git-scm.com/docs/git-stash), and [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick). Git manuals checked 2026-10-15.
 ## 12. Docker Operations / Docker操作参考
 
-#### Docker Operations
+### Docker Operations / Docker操作参考
 
-Docker is a powerful tool for managing containers, allowing you to package your applications and dependencies into a portable container that can easily be transferred and run across systems. Understanding Docker operations is crucial for developers to ensure their applications can be deployed consistently and efficiently.
+**镜像 / Image** is a read-only template of filesystem layers and configuration. **容器 / Container** is a created or running instance with a writable layer and optional mounts. Removing a container removes its writable layer; named volumes persist outside that container lifecycle.
 
-##### Downloading Images from Docker Hub
-- **Command:** `docker pull <image name>`
-- **Example:** `docker pull redis`
-- This command downloads an image from Docker Hub to your local machine. Images are pre-configured environments that contain your application and all of its dependencies.
+镜像定义运行环境，容器承载一次运行实例；持久数据、网络访问和运行时凭据要分别配置，删除容器也不等于备份数据。
 
-##### Checking All Downloaded Images
-- **Command:** `docker images`
-- **Example:** `docker images`
-- Lists all Docker images that have been downloaded or built on your machine.
+Before starting a fresh `postgres:16` instance in the examples below, provide a non-empty `POSTGRES_PASSWORD` through the shell environment or a secret manager. The official image requires it to initialize an empty data directory; it can be passed at runtime without placing a credential in the image or source file. Changing the variable later does not rotate a password in an already initialized volume.
 
-##### Starting a Container from an Image
-- **Command:** `docker run <image name>`
-- **Example:** `docker run redis`
-- This command creates a new container from a specified image and starts it. If the image is not available locally, Docker will attempt to pull it from Docker Hub.
+#### Common operations
 
-##### Stopping a Running Container
-- **Command:** `docker stop <container ID>`
-- **Example:** `docker stop 8381867e8242`
-- Stops a running container. You can get the container ID by using the `docker ps` command.
+| Task | Command | Notes |
+|---|---|---|
+| Download an image | `docker pull redis:7` | Pin a tag or digest when repeatability matters; a tag may move. |
+| List local images | `docker image ls` | Images can have multiple tags. |
+| Create and start a container | `docker run --name cache -d redis:7` | Pulls the image if it is not available locally. |
+| List running containers | `docker ps` | Add `-a` to include stopped containers. |
+| Stop / start a container | `docker stop cache` / `docker start cache` | A stopped container still exists. |
+| Read container logs | `docker logs cache` | Add `-f` to follow new output. |
+| Run a command in a running container | `docker exec -it cache /bin/sh` | Run only when the image includes `/bin/sh`; minimal images may contain no shell. |
+| Remove a stopped container | `docker rm cache` | `-f` also stops and removes a running container. |
+| Remove an image | `docker image rm redis:7` | Refer to an image tag or image ID, not a container ID. |
 
-##### Checking the State of Running Containers
-- **Command:** `docker ps`
-- **Example:** `docker ps`
-- Lists all currently running containers.
+Detached mode (such as `docker run -d`) returns the terminal while the container's main process runs. It does not supervise an application or guarantee that the container stays healthy. Use `docker ps` and `docker logs` to inspect it.
 
-##### Checking the State of All Containers
-- **Command:** `docker ps -a`
-- **Example:** `docker ps -a`
-- Lists all containers, including those that are stopped.
+---
 
-##### Running a Stopped Container
-- **Command:** `docker start <container ID>`
-- **Example:** `docker start 8381867e8242`
-- Starts a previously stopped container.
+#### Publish ports
 
-##### Binding Ports to Solve Port Conflicts
-- **Command:** `docker run -p <host port>:<container port> --name <defined name>`
-- **Example:** `docker run -d -p 6000:6379 --name redis-new redis`
-- This command maps a port on the host to a port on the container, allowing you to avoid port conflicts and access the container's services from the host.
+A port mapping forwards a host port to a port in the container. This publishes a container service to the host network; it does not make the service healthy or authenticated.
 
-##### Showing Logs of a Container
-- **Command:** `docker logs <container ID or name>`
-- **Example:** `docker logs ppppp`
-- Retrieves logs from a container. Useful for debugging and monitoring container activity.
+~~~bash
+docker run -d --name cache -p 127.0.0.1:6000:6379 redis:7
+~~~
 
-##### Naming a Container
-- **Command:** `docker run --name <name> <image name>`
-- **Example:** `docker run --name redis-latest redis`
-- Allows you to assign a custom name to your container, making it easier to reference than the default generated ID.
+Binding to `127.0.0.1` limits host access to the local machine. Omitting the host IP generally publishes on all host interfaces, subject to the host and Docker networking configuration. Container-to-container traffic on a shared Docker network normally uses the container port directly, not a published host port.
 
-##### Setting a Tag (Version) for an Image
-- **Command:** `docker tag <image name>:<version name> <desired name>:<desired version name>`
-- **Example:** `docker tag my-app:1.0 my-app-on-aws-cloud:1.1`
-- Tags an image with a version or a name, useful for version control and organizing images.
+---
 
-##### Accessing a Container
-- **Command:** `docker exec -it <container ID> <path>`
-- **Example:** `docker exec -it cae903a74202 /bin/bash`
-- Executes a command inside a running container, such as opening a bash shell. Use `exit` to leave the shell.
+#### Networks
 
-##### Creating a Docker Network
-- **Command:** `docker network create <name>`
-- **Example:** `docker network create mongo-network`
-- Creates a new network, allowing containers to communicate with each other more securely and efficiently.
+A user-defined bridge network lets attached containers communicate by container or service name through Docker's embedded DNS. Network membership controls which containers can connect at the Docker network layer; it is not application authentication or authorization.
 
-##### Running an Image Within a Network
-- **Command:** `docker run --net <network name> <image name>`
-- **Example:** `docker run --net mongo-network mongo`
-- Starts a container within a specified network, facilitating communication between containers within the same network.
+~~~bash
+docker network create app-net
+docker run -d --name db --network app-net \
+  --env POSTGRES_PASSWORD postgres:16
+~~~
 
-##### Deleting a Container
-- **Command:** `docker rm <container ID>`
-- **Example:** `docker rm cae903a74202`
-- Removes a stopped container from your machine.
+Only expose a host port when a process outside the network needs to connect. In Compose, services join a project network by default and can usually use each other's service names as hostnames.
 
-##### Deleting an Image
-- **Command:** `docker rmi <Image ID>`
-- **Example:** `docker rmi cae903a74202`
-- Removes an image from your local machine, freeing up space.
+---
 
-##### Running a Container with a Named Volume
-- **Command:** `docker run -v <name for data>:<container data address>`
-- **Example:** `docker run -v db-data:/var/lib/mysql/data`
-- Mounts a named volume at a specified path within the container. This is useful for persistent or shared data between containers.
+#### Volumes and persistent data
 
-##### Running a Container in Detached Mode
-- **Command:** `docker run -d <image name>`
-- **Example:** `docker run -d redis`
-- This command runs the container in the background (detached mode), allowing it to run as a background process. When a container is started in detached mode, it does not block the terminal session that started it. This is particularly useful when running applications or services that should continue running without active supervision.
+Container writable layers are removed with their containers. A **named volume / 命名卷** is managed by Docker and remains after the container is removed. A **bind mount / 绑定挂载** maps a host path into the container and is useful when both host and container need the files. A volume is not a backup; plan backups and restore tests separately.
 
-Running a container in detached mode is essential for services that need to run continuously, such as web servers, databases, or any application that should be accessible at all times without tying up a terminal session. It also helps in managing multiple containers efficiently, allowing developers and system administrators to start, stop, and inspect services without having to keep a terminal window open for each.
+Omitting the volume source creates an anonymous volume with a generated name; it normally persists after container removal but is not automatically reused by a later container.
 
-When running in detached mode, you won't see any output from the container directly in your terminal. To check on the container's logs or status, you'll need to use commands like `docker logs` for output or `docker ps` to see running containers.
+~~~bash
+docker volume create db-data
+docker run -d --name db --env POSTGRES_PASSWORD \
+  --mount type=volume,src=db-data,dst=/var/lib/postgresql/data postgres:16
+~~~
 
-This mode is particularly relevant in production environments or when deploying services on a server, where direct interaction with the container is not required for normal operation. It's also handy during development for services that don't need constant monitoring, allowing developers to focus on other tasks while the services remain available.
+The destination path belongs to the image or application, so check that product's documentation. Compose declares named volumes at the top level:
 
-#### Run Docker with YAML
-
-Docker Compose allows you to define and run multi-container Docker applications. With a YAML file, you can configure your application’s services, networks, and volumes.
-
-##### Important Points
-- **Network Creation**: There is no need to manually create a network when using a YAML file to define a series of containers. Docker Compose automatically creates a network for the services defined in the `docker-compose.yml` file, facilitating communication between containers without specifying IP addresses and ports. You can reference services by their names (e.g., `admin.xxx.@mongodb` instead of `admin.xxx.@localhost:27017`).
-
-##### Template
-```yaml
-services: 
-  <service-name>:
-    image: <image-name>
-    ports:
-      - "<port-on-host>:<port-in-container>"
+~~~yaml
+services:
+  db:
+    image: postgres:16
     environment:
-      - <ENV_VAR_NAME>=<value>
-```
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
 
-> The top-level `version` key (e.g., `version: '3'`) is **obsolete** in Docker Compose V2 and is ignored. You can safely omit it.
+volumes:
+  db-data:
+~~~
 
-##### Example
-```yaml
-services: 
-  mongodb:
-    image: mongo
-    ports:
-      - "27017:27017"
+Compose normally preserves declared named volumes on `docker compose down`. Adding `-v` removes project volumes and their data; review that effect before using it.
+
+---
+
+#### Compose
+
+Compose describes a multi-container application in a YAML file. The default project network provides service-name discovery, so an application container can address the database as `db` on its container port. Publish a port only when the host or another external network needs access.
+
+~~~yaml
+services:
+  app:
+    build: .
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-  mongo-express:
-    image: mongo-express
-    ports:
-      - "8080:8080"
+      DATABASE_HOST: db
+  db:
+    image: postgres:16
     environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=password
-```
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
 
-##### How to Run This YAML
-- **Start Containers**: `docker compose -f <filename> up` (e.g., `docker compose -f my_compose.yaml up`)
-- **Stop Containers**: `docker compose -f <filename> down` (e.g., `docker compose -f my_compose.yaml down`)
+volumes:
+  db-data:
+~~~
 
-> **`docker compose` vs `docker-compose`**: The hyphenated `docker-compose` is the standalone Python-based V1 tool (deprecated). The space-separated `docker compose` is the V2 plugin built into the Docker CLI. Use `docker compose` going forward.
+~~~bash
+docker compose up -d
+docker compose ps
+docker compose logs -f app
+docker compose down
+~~~
 
-#### Dockerfile
+The current Compose Specification is used by Compose V2. Its top-level `version` field is obsolete and does not select a schema version. The older standalone `docker-compose` command is a legacy interface; use `docker compose` with the Compose CLI plugin.
 
-A Dockerfile is a text document that contains all the commands a user could call on the command line to assemble an image. It is often used in continuous integration pipelines, such as setting up a Jenkins pipeline.
+---
 
-##### Template
-```dockerfile
-FROM <base-image>
-ENV <environment-variables>
-RUN <command>
-COPY . <destination-in-container>
-CMD ["<entrypoint-command>"]
-```
+#### Dockerfile and image builds
 
-##### Example
-```dockerfile
-FROM node
-ENV MONGO_DB_USERNAME=admin \ 
-    MONGO_DB_PWD=password
-RUN mkdir -p /home/app
-COPY . /home/app
-CMD ["node", "/home/app/server.js"]
-```
+A Dockerfile describes image build steps. `RUN` executes during build; `CMD` supplies a default command or arguments when a container starts; `ENTRYPOINT` defines the executable to run. A runtime command can override `CMD`.
 
-##### Key Differences
-- **RUN**: Executes commands in a new layer on top of the current image and commits the results. Used for installing software packages.
-- **CMD**: Sets the default command to execute when the container starts. It can be overridden by providing a different command when starting the container.
-
-#### Building an Image
-- Command: `docker build -t <image-name>:<tag> .`
-- Example: `docker build -t my-app:1.0 .`
-
-#### Multi-Stage Builds
-
-Multi-stage builds use multiple `FROM` statements to keep the final image small by separating the build environment from the runtime environment.
-
-```dockerfile
-# Stage 1: Build
-FROM node:20-alpine AS build
+~~~dockerfile
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine
+FROM node:22-alpine AS runtime
 WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
 CMD ["node", "dist/index.js"]
-```
+~~~
 
-Only the final stage ends up in the image. Build tools, source code, and dev dependencies from earlier stages are discarded, resulting in significantly smaller images.
+Build with `docker build -t my-app:1.0 .`. This example assumes a package lockfile. The build context is the set of files sent to the builder; use a `.dockerignore` file to exclude files such as local dependencies, version-control data, and secrets. Multi-stage builds keep build-only stages out of the final image unless files are copied from them. Copy only the runtime files and dependencies the application needs.
 
-#### Use Amazon Elastic Container Registry (ECR)
-- Create a repository on Amazon ECR for each image.
-- Ensure AWS CLI is installed on the host.
-- Use the repository URI provided by Amazon ECR to push images.
+Do not put credentials in a Dockerfile's `ENV` or `ARG` values. Use a BuildKit secret mount for a credential needed during build; it is made available to the build instruction without baking it into the image. At runtime, Compose secrets can be granted to selected services and mounted as files; protect the source secret file and host.
 
-#### Docker Volumes
-Docker volumes are used to persist data generated by and used by Docker containers.
+~~~dockerfile
+# syntax=docker/dockerfile:1
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
+~~~
 
-##### Types of Volumes
-- **Host Volumes**: Specify an explicit location on the host for the volume (`docker run -v <host-path>:<container-path>`).
-- **Anonymous Volumes**: Docker automatically assigns a location on the host (`docker run -v <container-path>`).
-- **Named Volumes** (Preferred): Specify a name for the volume which Docker manages (`docker run -v <volume-name>:<container-path>`). Preferred in production for ease of management.
+~~~bash
+docker build --secret id=npmrc,src=.npmrc -t my-app:1.0 .
+~~~
 
-##### Usage in Docker Compose
-In `docker-compose.yml`, volumes can be declared as follows:
-```yaml
-volumes: 
-  db-data:/var/lib/mysql/data
-```
+To push an image to a registry, authenticate with that registry, tag the image with its repository address, and push the tag. These commands use placeholders; `docker login` prompts or uses configured credentials, which should not be committed:
+
+~~~bash
+docker login registry.example.com
+docker tag my-app:1.0 registry.example.com/team/my-app:1.0
+docker push registry.example.com/team/my-app:1.0
+~~~
+
+Sources: [official PostgreSQL image environment variables and secrets](https://github.com/docker-library/docs/blob/master/postgres/README.md#environment-variables), [Docker image and container concepts](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/), [Docker networking](https://docs.docker.com/engine/network/), [port publishing](https://docs.docker.com/engine/network/port-publishing/), [Docker volumes](https://docs.docker.com/engine/storage/volumes/), [Compose file reference](https://docs.docker.com/compose/compose-file/), [Compose variable interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [`docker run` environment variables](https://docs.docker.com/reference/cli/docker/container/run/#set-environment-variables--e---env), [Docker build secrets](https://docs.docker.com/build/building/secrets/), [Docker Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/), [`docker login`](https://docs.docker.com/reference/cli/docker/login/), [`docker tag`](https://docs.docker.com/reference/cli/docker/image/tag/), and [`docker push`](https://docs.docker.com/reference/cli/docker/image/push/). Docker documentation checked 2026-10-15.

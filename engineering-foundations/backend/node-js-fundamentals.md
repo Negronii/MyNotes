@@ -1,110 +1,123 @@
-A bundle of interview questions about Node.js's runtime model — threads vs. processes, multi-core utilization, and serverless.
+# Node.js Fundamentals / Node.js基础
 
-# What's the difference between a process and a thread?
+Node.js runs JavaScript outside a browser and provides server-side APIs. Its event-loop model is efficient for many I/O workloads, but a long synchronous callback still blocks JavaScript work on that event-loop thread.
 
-**Headline (30s):** A **process** is the OS's unit of isolation — it gets its own memory space and can't directly touch another process's data. A **thread** is a unit of execution *inside* a process; threads share memory with their siblings. Node.js runs user JavaScript on a single thread, so you can't naively use multiple CPU cores without spawning more processes (`cluster`, `fork`) or using worker threads for CPU-bound work.
+Node 的异步 I/O、事件循环、工作线程和子进程解决不同问题：I/O 等待通常使用异步 API，CPU 并行、进程隔离或共享状态则要按线程与进程边界选择，并处理通信和关闭。
 
-- **Process** — own memory, isolated, heavier to create, safer.
-- **Thread** — shared memory, lighter, data races possible without locks.
+## What's the difference between a process and a thread?
 
-Why Node chose a single thread: the event loop model makes I/O-bound code fast and avoids the entire class of threading bugs (races, deadlocks) at the cost of not scaling across CPU cores without extra machinery.
+**进程 / Process** is an operating-system execution boundary with its own virtual address space. **线程 / Thread** is an execution path inside a process; threads can share process memory, so shared mutable data needs coordination.
+
+Node has a JavaScript event-loop thread for each isolate, not one JavaScript thread for the whole machine. A worker thread runs JavaScript in another isolate in the same process. It can exchange messages, transfer an ArrayBuffer, or share a SharedArrayBuffer; shared memory requires explicit synchronization such as Atomics. A child process has a separate process address space and communicates through IPC or other operating-system channels.
+
+Node also uses background mechanisms for asynchronous work: network I/O is commonly driven by the operating system, while selected APIs such as filesystem operations, cryptography, compression, and some name-resolution work use libuv's worker pool. Their JavaScript callbacks run on the event-loop thread. CPU-heavy JavaScript on that thread delays other callbacks.
+
+This distinction is reusable across runtimes; this note focuses on Node's event-loop and worker choices.
 
 ---
 
-# How do you use multiple CPU cores in Node.js?
+## How do you use multiple CPU cores in Node.js?
 
-**Headline (30s):** Three options: **`child_process.fork()`** for spawning independent Node.js processes (usually for one-off CPU work), **`cluster`** for sharing a server port across worker processes (the classic "one process per core" web server pattern), and **worker threads** (`worker_threads`) for sharing memory with the parent. In production, most teams wrap `cluster` with **PM2** instead of managing workers manually.
+Choose based on the work and isolation needed:
 
-## `child_process.fork()` — spawn a Node.js process
+- **Worker threads / 工作线程** run CPU-intensive JavaScript in parallel and can communicate by message or shared memory. Use a bounded worker pool for repeated tasks rather than creating one thread per small job.
+- **Child processes / 子进程** run in separate process memory and provide stronger isolation; IPC messages are a boundary to account for.
+- **Cluster / 多进程服务** starts multiple Node processes that can accept connections on the same server port. It is one deployment option for multi-core servers, not a guarantee of linear throughput scaling or balanced work.
 
-Creates a child process running another JS file. Parent and child communicate via IPC (`send` / `message`).
+Built-in asynchronous I/O is usually a better choice for I/O-bound work than worker threads. For process or worker choices and shared-state trade-offs, see the linked Node.js API documentation.
 
-```javascript
-// main.js
-const { fork } = require('child_process');
+An external process manager is optional. PM2 is one choice for starting and observing clustered workers:
 
-const child = fork('./compute.js');
-child.send({ task: 'fibonacci', n: 40 });
+~~~bash
+pm2 start app.js --name api -i max
+pm2 list
+pm2 monit
+pm2 reload api
+~~~
 
-child.on('message', (result) => {
-  console.log('Result:', result);
-});
+PM2 may fall back from a cluster reload to a restart if it cannot complete it. The application must handle shutdown and drain or close its own work; availability during reload is not guaranteed.
 
-// compute.js
-process.on('message', (msg) => {
-  if (msg.task === 'fibonacci') {
-    process.send(fib(msg.n));
-  }
-});
-```
+### Child process example
 
-**Reach for `fork`** when you have a one-off CPU-intensive task (image processing, a heavy computation) that would otherwise block the event loop. The cost: process spawn time (tens of milliseconds) and serialization overhead.
+This compact CommonJS example runs the same file in a child process and sends one task over the fork IPC channel. It is illustrative; production code also needs workload limits, error handling, and shutdown policy.
 
-## `cluster` — load-balanced HTTP workers
+~~~javascript
+const { fork } = require('node:child_process');
 
-Creates worker processes that all listen on the same port. Incoming connections are load-balanced across them automatically.
-
-```javascript
-const cluster = require('cluster');
-const http    = require('http');
-const numCPUs = require('os').cpus().length;
-
-if (cluster.isMaster) {
-  for (let i = 0; i < numCPUs; i++) cluster.fork();
-  cluster.on('exit', (worker) => {
-    console.log(`Worker ${worker.process.pid} died, restarting...`);
-    cluster.fork();
+if (process.argv[2] === 'worker') {
+  process.on('message', ({ n }) => {
+    let a = 0;
+    let b = 1;
+    for (let i = 0; i < n; i++) [a, b] = [b, a + b];
+    process.send({ result: a });
   });
 } else {
-  http.createServer((_, res) => {
-    res.writeHead(200);
-    res.end('Hello');
+  const child = fork(__filename, ['worker']);
+  child.on('message', message => {
+    console.log(message.result);
+    child.disconnect();
+  });
+  child.send({ n: 10 });
+}
+~~~
+
+### Cluster example
+
+Each worker is a separate process. Restarting workers, health checks, graceful shutdown, and shared session state are application or process-manager responsibilities; the cluster module does not make in-memory state shared.
+
+~~~javascript
+const cluster = require('node:cluster');
+const http = require('node:http');
+const { availableParallelism } = require('node:os');
+
+if (cluster.isPrimary) {
+  for (let i = 0; i < availableParallelism(); i++) cluster.fork();
+  cluster.on('exit', (worker, code, signal) => {
+    console.error('worker exited', worker.id, code, signal);
+  });
+} else {
+  http.createServer((request, response) => {
+    response.end('Hello');
   }).listen(8000);
 }
-```
+~~~
 
-**Reach for `cluster`** for Node HTTP servers on multi-core machines — you get near-linear throughput scaling with CPUs and automatic restart on crashes.
-
-## PM2 — production-grade process manager
-
-Don't manage `cluster` by hand in production. PM2 wraps it with health checks, zero-downtime restarts, log rotation, and monitoring.
-
-```bash
-pm2 start app.js -i max   # one process per CPU
-pm2 list                  # view running processes
-pm2 monit                 # real-time metrics
-pm2 reload app            # zero-downtime restart
-```
-
-**Gotcha — shared state between workers:** Each worker has its own memory. In-memory caches, sessions, or WebSocket connection maps need external storage (Redis) or a broadcast mechanism if you need cross-worker consistency.
+Workers have separate heaps. If a session, cache, or connection map must be shared, choose a deliberate external store, routing strategy, or message-broadcast mechanism. A Redis store is one option, not a universal requirement.
 
 ---
 
-# What is serverless / cloud functions, and when would you use them?
+## How do CommonJS and ES modules affect nextTick ordering?
 
-**Headline (30s):** Serverless (AWS Lambda, Google Cloud Functions, Vercel Edge Functions) runs your code without you managing servers — the cloud provider spins up a process, runs your handler, and tears it down when traffic subsides. You pay per execution, not per idle hour. The big trade-offs: **cold-start latency** (first invocation after idle can take hundreds of ms), hard **execution-time limits** (typically 10–60 seconds), and **no persistent in-memory state** between invocations.
+Node's scheduling details depend on where work is queued. At top level, `process.nextTick` runs before Promise callbacks in this CommonJS example:
 
-## Advantages over traditional deployment
+~~~javascript
+// Save as example.cjs
+Promise.resolve().then(() => console.log('promise'));
+process.nextTick(() => console.log('nextTick'));
+~~~
 
-- **Cost** — pay only for execution time; no idle servers.
-- **Auto-scaling** — the platform handles traffic spikes without capacity planning.
-- **Operational overhead** — no patching, provisioning, or process management.
-- **Deployment speed** — push code directly; no infra pipeline for simple functions.
+The same calls have the opposite order at the top level of an ES module:
 
-## Trade-offs
+~~~javascript
+// Save as example.mjs
+import { nextTick } from 'node:process';
 
-- **Cold starts** — a fresh container costs hundreds of ms on first invocation. Mitigations: provisioned concurrency, smaller bundles, avoid heavy init.
-- **Execution limits** — long-running work (reports, data migrations) needs a different compute model.
-- **Statelessness** — every invocation might land on a new container. Keep persistent state in a database or cache.
-- **Vendor lock-in** — handler signatures, auth, and tooling vary between providers.
+Promise.resolve().then(() => console.log('promise'));
+nextTick(() => console.log('nextTick'));
+~~~
 
-## When to reach for serverless
+This difference is about the module's execution context; it is not a universal ordering rule for every callback or event-loop phase. Use the current [Node.js process documentation](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick) when an ordering dependency matters.
 
-- **API endpoints** — thin, stateless handlers.
-- **Webhooks** — receive events from third-party services.
-- **Scheduled jobs** — cron-like tasks (cleanup, reports).
-- **Event-driven processing** — react to file uploads, DB changes, message queues.
+---
 
-**When not:** persistent connections (WebSocket servers — though providers now offer variants), long-running batch jobs, or workloads where cold-start latency is unacceptable (some user-facing APIs).
+## What is serverless or function-as-a-service?
 
-**See also:** [`7.1 Event Loop`](../../frontend/runtime/event-loop.md) for the single-threaded runtime model that shapes these choices, [`12.1 Software Design Principles`](../architecture/software-design-principles.md) for where serverless fits in overall application architecture.
+**无服务器计算 / Serverless** means the provider manages the underlying execution infrastructure through a function or managed runtime interface. Servers still exist; the provider controls how execution environments are created, reused, and scaled.
+
+Timeouts, concurrency limits, billing, cold-start latency, and state-reuse behavior depend on the provider, product, runtime, region, and configuration. Do not treat in-memory state as durable or assume an execution environment is discarded after every invocation. For example, AWS Lambda documents that environments can be reused while advising applications to treat state as temporary and persist durable changes externally.
+
+It can suit event-triggered handlers or variable workloads when the provider's limits and cost model fit. Long-running work, persistent connections, predictable latency, and vendor-specific integrations require a comparison against other deployment models.
+
+**See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](../architecture/software-design-principles.md) for choosing boundaries around runtime-specific infrastructure.
+
+Sources: [Node.js v24 worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [process scheduling](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html) documentation; [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/); plus [AWS Lambda execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html). PM2 and AWS references checked 2026-10-15; provider limits change over time.

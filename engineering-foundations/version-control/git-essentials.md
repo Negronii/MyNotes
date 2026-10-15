@@ -1,189 +1,173 @@
-**Reach for this when** you need a quick reference for day-to-day Git — core commands, branching, merge vs. rebase, conflict resolution, and the PR workflow.
+# Git Essentials / Git日常基础
 
-**Headline:** Six buckets. **Core commands** (init, clone, add, commit, status, log, diff). **Remote operations** (push, pull, fetch). **Branching** (branch, checkout, switch). **Merge vs. rebase** (merge for shared branches, rebase for local). **Recovery tools** (stash, reset vs. revert, reflog). **PR workflow** (feature branches, clear messages, squash-merge).
+Git records project snapshots and lets branches point to different lines of history. **工作区 / working tree**, **暂存区 / index**, **提交 / commit**, **分支 / branch**, **远端 / remote**, **合并 / merge**, and **变基 / rebase** are the core terms used below. Branches are movable references to commits. Inspect status before changing or discarding work.
+
+Git用提交保存项目快照，分支是指向提交的可移动引用；合并、变基和撤销应按历史是否共享及工作区状态选择，改写或丢弃内容前先检查并保护本地改动。
 
 ## Core commands
 
 | Command | Purpose |
 |---|---|
-| `git init` | Initialize a new repository |
-| `git clone <url>` | Clone a remote repository |
-| `git add <file>` | Stage changes (`git add .` for all) |
-| `git commit -m "msg"` | Commit staged changes |
-| `git status` | Show working tree status |
-| `git log --oneline` | Compact commit history |
-| `git diff` | Unstaged changes (`--staged` for staged) |
+| `git init` | Create an empty repository in the current directory |
+| `git clone <url>` | Copy a repository and its history |
+| `git status` | Show branch and working-tree state |
+| `git add <path>` | Stage changes for the next commit |
+| `git diff` | Show unstaged changes; use `--staged` for staged changes |
+| `git commit -m "message"` | Record the staged snapshot |
+| `git log --oneline --graph --decorate` | Inspect recent history and branch references |
+
+Stage deliberately. `git add .` stages changes under the current directory; `git add -A` stages additions, modifications, and deletions in the repository. Review `git diff --staged` before committing.
 
 ## Remote operations
 
-```bash
+~~~bash
 git remote add origin <url>
-git push -u origin main        # first push, sets upstream
-git push                       # subsequent pushes
-git pull                       # fetch + merge
-git fetch                      # download without merging
-```
+git fetch origin
+git push -u origin main
+git pull
+~~~
 
-`git pull` = `git fetch` + `git merge`. **Reach for `git fetch`** when you want to inspect remote changes before integrating them; **reach for `git pull`** for the common "get me up to date" case.
+`git fetch` updates remote-tracking references without integrating them into the current branch. `git pull` fetches and then integrates the selected upstream using the configured or requested fast-forward, merge, or rebase behavior; inspect its options when the result matters. Fetch first when you want to review incoming commits before integrating them.
 
 ## Branching
 
-```bash
-git branch feature/login       # create branch
-git checkout feature/login     # switch to branch
-git checkout -b feature/login  # create + switch (shorthand)
-git switch -c feature/login    # modern alternative to checkout -b
-git branch -d feature/login    # delete branch (safe — prevents deleting unmerged)
-git branch -D feature/login    # force delete
-```
+~~~bash
+git branch feature/login       # create a branch
+git switch feature/login       # switch branches
+git switch -c feature/login    # create and switch
+git branch -d feature/login    # delete only when Git considers it merged
+git branch -D feature/login    # force-delete the branch reference
+~~~
 
-### Branching strategies
-
-**Feature branches:** each feature/bugfix gets its own branch off `main`. Merged back via PR. Dominant in modern trunk-based development.
-
-**Git Flow** (simplified):
-
-- `main` — production-ready code.
-- `develop` — integration branch.
-- `feature/*` — new features branch off `develop`.
-- `hotfix/*` — urgent fixes branch off `main`.
-
-**When to reach for Git Flow** — long release cycles, heavy QA gates. **When to avoid** — teams doing CI/CD with continuous deploys; feature-branch-on-`main` is simpler.
+A feature branch is one collaboration approach. A team can instead integrate small changes directly or use a release-branch strategy. Git Flow adds long-lived branches such as `develop`; it can suit scheduled releases but adds merging and coordination. Choose according to release and integration needs rather than treating one strategy as universal.
 
 ## Merge vs. rebase
 
 ### `git merge`
 
-Combines branches by creating a **merge commit** that ties the two histories together. Non-destructive — original branch history is preserved.
+Merge integrates another branch into the current branch. If possible, Git may fast-forward the current branch reference; otherwise it creates a merge commit that records both parent histories.
 
-```bash
-git checkout main
+~~~bash
+git switch main
 git merge feature/login
-```
+~~~
 
-```
-A---B---C  (main)
-     \       \
-      D---E   M  (merge commit)
-```
+~~~
+A---B---C---M  main
+     \     /
+      D---E    feature/login
+~~~
 
 ### `git rebase`
 
-Replays commits from one branch **on top of** another, creating a linear history. **Rewrites commit hashes.**
+Rebase replays commits onto a new base. The replayed commits have new IDs because their parent history changes.
 
-```bash
-git checkout feature/login
+~~~bash
+git switch feature/login
 git rebase main
-```
+~~~
 
-```
-A---B---C  (main)
+~~~
+A---B---C              main
          \
-          D'---E'  (feature/login, rebased)
-```
+          D'---E'      feature/login
+~~~
 
-### When to use each
+| Situation | A common choice | Why |
+|---|---|---|
+| Integrating work while keeping both branch histories visible | Merge | Records the integration point when a merge commit is created |
+| Updating an unpublished local branch | Rebase | Replays local commits on the updated base |
+| Commits others have already based work on | Coordinate before rebasing | Rebase changes commit IDs and requires collaborators to reconcile history |
 
-| Scenario | Use |
-|---|---|
-| Merging a feature branch into `main` via PR | `merge` (preserves context) |
-| Updating a feature branch with latest `main` | `rebase` (keeps history clean) |
-| Shared/public branches | `merge` (never rebase shared branches) |
-| Local-only branches | `rebase` (cleaner log) |
+A rebase can be useful on a shared branch only when the team coordinates the history rewrite and remote update. The practical rule is to avoid rewriting commits others may rely on.
 
-**Golden rule:** never rebase commits that have been pushed and shared with others. Rebasing rewrites history, and anyone with the old history will get a painful conflict when they try to pull.
+## Resolving conflicts
 
-## Resolving merge conflicts
+When Git cannot combine edits automatically, it marks the affected file:
 
-When Git can't auto-merge, it marks conflicts in the file:
-
-```
+~~~
 <<<<<<< HEAD
 const timeout = 3000;
 =======
 const timeout = 5000;
 >>>>>>> feature/login
-```
+~~~
 
-Steps:
+1. Inspect the conflict and decide how the changes should combine.
+2. Remove the conflict markers and edit the final content.
+3. Stage the resolved path with `git add <path>`.
+4. Finish with `git commit` after a merge, or `git rebase --continue` during a rebase.
 
-1. Open conflicted files; choose the correct code (or combine both).
-2. Remove conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
-3. `git add <file>` to mark as resolved.
-4. `git commit` (or `git rebase --continue` if rebasing).
+Use `git merge --abort` or `git rebase --abort` to stop an integration that is still in progress.
 
 ## Useful commands
 
 ### `git stash`
 
-Temporarily shelves uncommitted changes — useful when you need to switch branches mid-change.
+Save tracked working-tree changes temporarily when switching tasks or branches.
 
-```bash
-git stash                  # stash changes
-git stash list             # see all stashes
-git stash pop              # apply most recent and remove
-git stash apply            # apply without removing
-git stash drop             # discard most recent
-```
+~~~bash
+git stash push -m "work in progress"
+git stash list
+git stash apply       # keep the stash entry
+git stash pop         # apply and remove the stash entry if successful
+git stash drop        # discard a stash entry
+~~~
+
+Untracked files are not included by default; use `-u` when they should be included.
 
 ### `git cherry-pick`
 
-Apply a specific commit from another branch onto the current branch.
+Apply the change introduced by a selected commit to the current branch, creating a new commit.
 
-```bash
-git cherry-pick <commit-hash>
-```
+~~~bash
+git cherry-pick <commit>
+~~~
 
-### `git reset` vs `git revert`
+### `git reset` vs. `git revert`
 
-| | `git reset` | `git revert` |
-|---|---|---|
-| **What it does** | Moves HEAD backward, discarding commits | Creates a new commit that undoes a previous one |
-| **History** | Rewrites history (destructive) | Preserves history (safe) |
-| **Use case** | Undo local, unpushed commits | Undo a commit that's already pushed |
+In its commit form, `git reset` moves the current branch reference and optionally resets the index and working tree. The mode controls which state changes:
 
-```bash
-git reset --soft HEAD~1    # undo commit, keep changes staged
-git reset --mixed HEAD~1   # undo commit, keep changes unstaged (default)
-git reset --hard HEAD~1    # undo commit, discard all changes
+| Mode | Branch reference | Index | Tracked working-tree changes |
+|---|---|---|---|
+| `--soft` | Moves to target | Kept | Kept |
+| `--mixed` (default) | Moves to target | Reset to target | Kept |
+| `--hard` | Moves to target | Reset to target | Reset to target; conflicting tracked edits are discarded |
 
-git revert <commit-hash>   # create a new "undo" commit
-```
+~~~bash
+git reset --soft HEAD~1
+git reset --mixed HEAD~1
+git reset --hard HEAD~1
+~~~
 
-**Gotcha — `git reset --hard` loses work.** It deletes your uncommitted changes. Combine with `git reflog` to recover if you slipped.
+Use reset to adjust local history or staging when that is the intended scope. `--hard` replaces the working tree and index with the target state and may overwrite untracked files; check `git status` and preserve needed work first. It does not mean “delete every untracked file.”
+
+`git revert <commit>` creates a new commit that applies the inverse of an earlier commit. It is often a better fit for undoing changes already shared in a branch, although conflicts may still need resolution. Reverting a merge commit requires selecting a mainline parent.
 
 ### `git reflog`
 
-Shows a log of all HEAD movements — invaluable for recovering from accidental `reset --hard` or deleted branches.
+The reflog records recent local updates to references such as `HEAD` and branch tips. It can help locate a commit after an accidental reset or branch deletion while the commit remains available.
 
-```bash
+~~~bash
 git reflog
-git checkout <lost-commit-hash>
-```
+git branch recovery <commit>
+~~~
 
-## PR / code review workflow
+Creating a branch preserves the recovered commit under a name; checking out a raw commit instead leaves HEAD detached. Reflogs are local and expire, so they are not a backup.
 
-1. Create a feature branch from `main`.
-2. Make commits with clear, descriptive messages.
-3. Push the branch and open a Pull Request.
-4. Reviewers comment, request changes, or approve.
-5. Address feedback with **new commits** (avoid force-pushing during review — it invalidates review state).
-6. Squash-merge or merge into `main`.
-7. Delete the feature branch.
+## Pull request and code review workflow
 
-### Commit message conventions
+A common workflow is to branch from the repository's integration branch, commit focused changes, push, open a pull request, review and revise, then merge using the repository's chosen method. The exact branch name and merge policy vary by project.
 
-Conventional Commits format — widely adopted, friendly to auto-generated changelogs.
+For commits, concise messages that describe the change help future readers. **Conventional Commits** is one optional convention, often paired with tooling that reads its prefixes:
 
-```
-type(scope): short description
-
-feat(auth): add JWT token refresh
-fix(api): handle 404 in user endpoint
+~~~
+feat(auth): refresh access tokens
+fix(api): handle missing user
 refactor(utils): extract date formatting
-docs(readme): update setup instructions
-```
+docs(readme): clarify setup
+~~~
 
-**Common types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`.
+**See also:** [Agile and Scrum](../teamwork/agile-and-scrum.md) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
 
-**See also:** [`14.2 Agile and Scrum`](../teamwork/agile-and-scrum.md) for how PR review fits into sprint work, [`15.1 Frontend Testing`](../../frontend/testing/frontend-testing.md) for CI test setup on PRs.
+Sources: [Git pull](https://git-scm.com/docs/git-pull), [Git merge](https://git-scm.com/docs/git-merge), [Git rebase](https://git-scm.com/docs/git-rebase), [Git reset](https://git-scm.com/docs/git-reset), [Git revert](https://git-scm.com/docs/git-revert), [Git reflog](https://git-scm.com/docs/git-reflog), [Git stash](https://git-scm.com/docs/git-stash), and [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick). Git manuals checked 2026-10-15.
