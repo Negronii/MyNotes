@@ -18,6 +18,6 @@ These source packs are preserved for reference and later review. Their placement
 
 The Docker command and operations reference moved to [`Docker Operations / Docker操作参考`](../engineering-foundations/infrastructure/docker-operations.md). The mixed `Backend-Concepts.md`, framework notes (ASP.NET Core and Spring), and shell setup note remain in the archive because they do not form one reviewed general topic.
 
-## Course Markdown awaiting review / 待审课程笔记
+## Course notes / 课程笔记
 
-The five Markdown files under `uni-subjects/` are recorded individually in `maintenance/knowledge-inventory.tsv` and remain unreviewed. This inventory records migration facts, not learning status.
+The five Markdown files under `uni-subjects/` are recorded individually in `maintenance/knowledge-inventory.tsv`: [week 1](<uni-subjects/COMP90050ADBS/condensed-note-w1.md>), [week 2](<uni-subjects/COMP90050ADBS/condensed-note-w2.md>), and [week 3](<uni-subjects/COMP90050ADBS/condensed-note-w3.md>) have passed scoped content review; [week 4](<uni-subjects/COMP90050ADBS/condensed-note-w4.md>) and the [aggregate notes](<uni-subjects/COMP90050ADBS/readme.md>) remain unreviewed. The inventory records migration facts, not learning status.
