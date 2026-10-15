@@ -110,6 +110,118 @@ This difference is about the module's execution context; it is not a universal o
 
 ---
 
+## How does stream backpressure limit buffering? / 流背压如何限制缓冲？
+
+**核心解释 / Core explanation：** A stream moves data in chunks from a producer to a consumer. A `Readable` supplies chunks; a `Writable` accepts them; a `Transform` reads and writes while changing them; a `Duplex` does both. When `writable.write(chunk)` returns `false`, stop producing until `'drain'` says writing can resume. `pipeline()` connects stages and propagates a slow consumer's backpressure upstream.
+
+**中文说明：** 流按数据块从生产者流向消费者；`write()` 返回 `false` 时，生产者应暂停并等待 `'drain'` 再继续。`pipeline()` 会把下游变慢的背压传回上游。`highWaterMark` 是暂停阈值而非内存上限；单个大数据块、各阶段缓冲和链路外队列仍可能增加内存。读取端的 `'end'` 表示输入结束，写入端的 `'finish'` 表示 `end()` 后已处理已接收写入；`'close'` 表示资源关闭，`'error'` 表示失败。`destroy()` 用于中止或失败，额外拥有的游标等资源应在 `finally` 中释放；写入完成也不代表远端应用已处理数据或文件已持久化。
+
+**面试简答 / Interview answer：** If `write()` returns `false`, stop calling it until `'drain'`; continuing to submit chunks can grow the writable's queue and memory use. Use `pipeline()` for a source/transform/destination chain, or wait for `'drain'` in a manual producer. `highWaterMark` is a pause threshold, not a hard memory cap; a large chunk, transform buffers, or queues outside the pipeline can still use more memory.
+
+~~~javascript
+const { createWriteStream } = require('node:fs');
+const { Readable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
+const { createGzip } = require('node:zlib');
+
+async function* rows() {
+  for (let id = 1; id <= 10_000; id++) yield { id };
+}
+
+async function exportRows(signal) {
+  const lines = (async function* () {
+    for await (const row of rows()) yield `${JSON.stringify(row)}\n`;
+  })();
+
+  await pipeline(
+    Readable.from(lines),
+    createGzip(),
+    createWriteStream('rows.ndjson.gz', { highWaterMark: 32 * 1024 }),
+    { signal }
+  );
+}
+
+const controller = new AbortController();
+// The owner can call controller.abort(reason) to cancel the export.
+exportRows(controller.signal).catch((error) => {
+  console.error('export failed:', error.message);
+});
+~~~
+
+Here the async generator produces one row at a time, and `pipeline()` resolves after the output finishes. If a stage errors or the signal aborts, the promise rejects and the pipeline destroys its participating streams. A producer that owns an extra resource, such as a database cursor, should release it in `finally`; pipeline cleanup cannot close resources hidden outside its stages. For manual writes, the same rule is `if (!writable.write(chunk)) await once(writable, 'drain')`.
+
+The terminal signals describe different outcomes: a readable `'end'` means no more input chunks remain; a writable `'finish'` means its accepted writes have completed after `end()`; `'close'` reports resource closure when that stream emits it; `'error'` reports failure. Use `destroy(error)` to abort or fail a stream, not as a synonym for successful end-of-input. A writable finishing does not prove that a remote application processed the bytes or that a file is durable on storage.
+
+## How does a Node.js service drain on shutdown? / Node.js服务如何排空并关闭？
+
+Graceful shutdown is an application lifecycle, not something the event loop or HTTP server performs for every dependency. On a shutdown signal, mark the instance unready and have each request handler reject work before enqueueing it; this also catches requests on already-open keep-alive connections. Then stop accepting connections, let tracked handlers and response streams finish, cancel work at the deadline, and close pools, workers, timers, and other owned resources after their users have stopped. Pass `workAbort.signal` to cancellable handlers and track accepted work so `waitForInFlightWork()` has a real completion condition.
+
+**核心解释（中文）：** 收到关闭信号后先摘除就绪并拒绝新任务，再停止接入、等待已接收请求和后台工作排空；到期后发出协作取消并强制关闭 HTTP 连接。服务端关闭与跟踪任务都结算后，再回收它们使用的资源；即使其中一项失败，也要完成清理并报告错误，且在生命周期和清理报告结束前保留截止计时器。
+
+~~~javascript
+const workAbort = new AbortController();
+let draining = false;
+
+function rejectWhileDraining(res) {
+  if (!draining) return false;
+  res.writeHead(503, { Connection: 'close' });
+  res.end();
+  return true;
+}
+// Call first in each request handler: if (rejectWhileDraining(res)) return;
+
+async function shutdown() {
+  draining = true;
+  markReadiness(false);
+
+  const deadline = setTimeout(() => {
+    workAbort.abort(new Error('shutdown deadline'));
+    server.closeAllConnections();
+  }, 10_000).unref();
+
+  const serverClosed = new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  });
+
+  try {
+    const lifecycle = await Promise.allSettled([
+      serverClosed,
+      waitForInFlightWork(),
+    ]);
+    const lifecycleFailures = lifecycle.filter((result) => result.status === 'rejected');
+
+    let cleanupFailure;
+    let cleanupFailed = false;
+    try {
+      await closeOwnedResources();
+    } catch (error) {
+      cleanupFailed = true;
+      cleanupFailure = error;
+    }
+
+    for (const { reason } of lifecycleFailures) {
+      console.error('shutdown lifecycle failed:', reason);
+      process.exitCode = 1;
+    }
+    if (cleanupFailed) {
+      console.error('resource cleanup failed:', cleanupFailure);
+      process.exitCode = 1;
+    }
+  } finally {
+    clearTimeout(deadline);
+  }
+}
+
+process.once('SIGTERM', () => {
+  void shutdown().catch((error) => {
+    console.error('shutdown failed:', error);
+    process.exitCode = 1;
+  });
+});
+~~~
+
+`markReadiness`, `waitForInFlightWork`, and `closeOwnedResources` stand for application-owned health, task, and resource hooks. `waitForInFlightWork()` must settle only after tracked work has stopped using its dependencies; a rejection reports failed work, not permission to clean up while that work still runs. `Promise.allSettled()` keeps the server-close deadline active while both the server and tracked work settle, and the code still attempts owned-resource cleanup before reporting lifecycle or cleanup failures. `server.close()` stops new connections and, in Node.js 26.11.1, closes idle connections while waiting for the rest. `closeAllConnections()` is the deadline's forceful HTTP(S) fallback; call it after `server.close()` as shown, and close upgraded WebSocket or HTTP/2 sessions through their own owners. The task abort is cooperative: if a handler ignores its signal or another handle keeps the process alive, the service supervisor must enforce the final hard stop. A signal listener also replaces Node's default signal exit behavior on supported POSIX systems, so the handler must complete or deliberately set a failure exit code.
+
 ## What is serverless or function-as-a-service?
 
 **无服务器计算 / Serverless** means the provider manages the underlying execution infrastructure through a function or managed runtime interface. Servers still exist; the provider controls how execution environments are created, reused, and scaled.
@@ -121,3 +233,5 @@ It can suit event-triggered handlers or variable workloads when the provider's l
 **See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](../architecture/software-design-principles.md) for choosing boundaries around runtime-specific infrastructure.
 
 Sources: [Node.js v24 worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [process scheduling](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html) documentation; [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/); plus [AWS Lambda execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html). PM2 and AWS references checked 2026-10-15; provider limits change over time.
+
+The stream and shutdown sections were checked against [Node.js v26.11.1 stream](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html), [HTTP](https://nodejs.org/download/release/v26.11.1/docs/api/http.html), and [process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html) documentation on 2026-10-15.
