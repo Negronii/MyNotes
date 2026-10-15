@@ -1,16 +1,22 @@
 
+# TypeScript All-in-One / TypeScript 综合笔记
+
+**Core idea / 核心概念：** TypeScript type annotations are checked at compile time and erased from emitted JavaScript. The array, Map, string, Math, and Promise examples below describe JavaScript runtime or host APIs. / TypeScript 类型标注在编译期检查，并在生成的 JavaScript 中擦除；以下数组、Map、字符串、Math 与 Promise 示例描述的是 JavaScript 运行时或宿主 API。 See the [TypeScript handbook](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [JavaScript arrays](../../../../frontend/javascript/arrays.md), [Map and Set](../../../../frontend/javascript/map-and-set.md), and [asynchronous JavaScript](../../../../frontend/javascript/asynchronous-javascript.md).
+
 # array.md
 
-# Array Operations in TypeScript
+# Array Operations in TypeScript / TypeScript 数组操作
 
 ## **Declaring an Array**
+
+`new Array<number>(3)` creates three empty slots (holes), not three explicit `undefined` values. Methods such as `map`, `forEach`, `reduce`, `every`, and `some` skip holes; `for...of` yields `undefined` for a hole.
 - Empty Array with Fixed Length:
   ```javascript
   const arr_1 = new Array(3);
   console.log(arr_1);     // [, , ]
   ```
 - Typed Array with Fixed Length:
-  ```javascript
+  ```typescript
   const arr_2 = new Array<number>(3);
   console.log(arr_2);     // [, , ]
   ```
@@ -55,6 +61,8 @@
   ```
 
 ## Frequent used APIs
+
+`push`, `pop`, `shift`, `unshift`, `reverse`, `sort`, and `splice` mutate the array. `concat`, `slice`, `map`, and `filter` return new arrays; copies are shallow, so object elements still refer to the same objects.
 1. **length**
    - **Type:** Number
    - **Description:** Returns the length of the array.
@@ -79,7 +87,7 @@
    - **Type:** T | undefined
    - **Description:** Removes the last element from an array and returns it.
    - **Example:** `const arr = [1, 2, 3]; console.log(arr.pop()); // Output: 3`
-   - **Example:** `console.log(emptyarr.pop());    // undefined, return undefined when array is empty`
+   - **Example:** `const emptyarr: number[] = []; console.log(emptyarr.pop()); // undefined for an empty array`
 
 6. **concat()**
    - **Type:** T[]
@@ -97,7 +105,7 @@
    - **Example:** `const arr = [1, 2, 3]; console.log(arr.reverse()); // Output: [3, 2, 1]`
 
 9. **shift()**
-   - **Type:** T
+   - **Type:** T | undefined
    - **Description:** Removes the first element from an array and returns it.
    - **Example:** `const arr = [1, 2, 3]; console.log(arr.shift()); // Output: 1`
 
@@ -113,9 +121,9 @@
 
 12. **sort()**
     - **Type:** this
-    - **Description:** Sorts the elements of an array in place and returns the sorted array.
+    - **Description:** Sorts the elements of an array in place and returns it. Without a comparator, elements are sorted by their string forms; numeric arrays usually need a comparator.
     - **Example:** `const arr = [3, 1, 4, 1, 5]; console.log(arr.sort()); // Output: [1, 1, 3, 4, 5]`
-    - **Example:** `numList.sort((a, b) => b - a); console.log(numList);       // [5, 4, 3, 1, 1] `
+    - **Example:** `const numList = [3, 10, 2]; console.log(numList.sort((a, b) => a - b)); // [2, 3, 10]`
 
 13. **splice()**
     - **Type:** T[]
@@ -155,16 +163,18 @@
 20. **filter()**
     - **Type:** T[]
     - **Description:** Creates a new array with all elements that pass the test implemented by the provided function.
-    - **Example:** `const arr = [1, 2, 3, 4, 5, 6]; console.log(arr.filter(num => num % 2 == 0)); // Output: [2, 4, 6]`
+    - **Example:** `const arr = [1, 2, 3, 4, 5, 6]; console.log(arr.filter(num => num % 2 === 0)); // Output: [2, 4, 6]`
 
 21. **reduce()**
-    - **Type:** T
+    - **Type:** accumulator type (inferred, or selected with the overload/generic)
     - **Description:** Applies a function against an accumulator and each element in the array (from left to right) to reduce it to a single value.
     - **Example:** `const arr = [1, 2, 3, 4]; console.log(arr.reduce((acc, val) => acc + val, 0)); // Output: 10`
+    - Without an initial value, reducing an empty array (or an array with no present elements) throws a `TypeError`; an initial value makes the empty case well-defined.
 
 22. **reduceRight()**
-    - **Type:** T
+    - **Type:** accumulator type (inferred, or selected with the overload/generic)
     - **Description:** Applies a function against an accumulator and each element in the array (from right to left) to reduce it to a single value.
+    - Without an initial value, reducing an empty array (or an array with no present elements) throws a `TypeError`.
     - **Example:** `const arr = [[0, 1], [2, 3], [4, 5]]; console.log(arr.reduceRight((acc, val) => acc.concat(val))); // Output: [4, 5, 2, 3, 0, 1]`
 
 ## **Array Traverse**
@@ -213,7 +223,7 @@
 
 ## Deep Dive: `array.map()`
 
-- **Purpose**: Transforms each array element and returns a new array without altering the original array.
+- **Purpose**: Builds a new result array from callback results without itself mutating the source; the callback can mutate the source, and an identity callback returns the same object references.
 - **Syntax**:
   ```typescript
   array.map(callback(currentValue[, index[, array]])[, thisArg])
@@ -273,7 +283,7 @@ The nested square brackets like [, index[, array]] signify that if you want to i
 
 ## Stack with array:
 ```ts
-const stack = []
+const stack: number[] = [];
 stack.push(200) //push an element
 const num = stack.pop() //pop an element
 stack.length // size of stack
@@ -281,16 +291,18 @@ stack.length // size of stack
 
 # closure.md
 
-# Closure
+# Closure / 闭包
+
+**Core idea / 核心概念：** A closure is a function together with access to the lexical bindings it uses. Those bindings can remain reachable after the outer call returns; they are not “dead” values. / 闭包是函数及其对所用词法绑定的访问；外层函数返回后，只要仍可达，这些绑定就会保留，而不是“已死亡”的值。 See [JavaScript scope and closures](../../../../frontend/javascript/scope-and-closure.md) and [ECMAScript function objects and execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html).
 
 - A closure is formed when an inner function, defined within an outer function, references variables from the outer function's scope.
 - Even after the outer function completes execution, the inner function maintains access to those variables due to closure.
 
-**When to Use Closures?**
+**When to Use Closures? / 闭包的用途**
 
-- Closures enable retrieval of "dead" values which have gone out of scope.
+- Closures keep needed lexical bindings available to a returned function after the outer call finishes.
 - They can be leveraged for:
-  - Data privacy (private variables or functions).
+  - Encapsulation through a function API (not a security boundary).
   - Partial function application.
   - Maintaining state in asynchronous code.
 - The technical term for the closure's encompassing context is the "lexical environment".
@@ -314,7 +326,7 @@ stack.length // size of stack
    counter(); // logs 3
    ```
 
-   - `makeCounter` returns a function that closes over the `count` variable, effectively making it private.
+   - `makeCounter` returns a function that closes over the `count` binding, so callers can change it only through the returned API.
 
 2. **Partial Function Application:**
 
@@ -339,7 +351,7 @@ stack.length // size of stack
 
      const update = () => {
        let time = performance.now() - start;
-       let progress = time / duration;
+       let progress = Math.min(time / duration, 1);
        let value = from + (to - from) * progress;
 
        element.style.left = value + "px";
@@ -362,7 +374,9 @@ Closures are a fundamental aspect of JavaScript, enabling developers to manage a
 
 # map.md
 
-# Map Operations
+# Map Operations / Map 操作
+
+**Core idea / 核心概念：** A `Map` accepts keys of any type, compares them with `SameValueZero` (objects by identity), and iterates entries in insertion order. Setting an existing key updates its value without moving it; deleting and re-adding it places it at the end. / `Map` 的键可以是任意类型；比较采用 `SameValueZero`（对象按引用身份比较），迭代顺序为插入顺序。更新已有键不会改变其顺序；删除后重新添加会移到末尾。 See [JavaScript Map and Set](../../../../frontend/javascript/map-and-set.md) and [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html).
 
 **1. Creating a Map**
 
@@ -423,20 +437,19 @@ let size = myMap.size; // returns 1 (after deleting 'key1')
   - Map: Allows any type, including functions, objects, and primitives.
 - **Order of Keys**:
   - Map: Keys stay in insertion order.
-  - Object: No guaranteed order, especially for numeric keys.
+  - Ordinary objects: Own property-key order is specified: array-index keys first in numeric order, then other strings in creation order, then symbols in creation order.
 - **API Methods**:
   - Map: Offers `set`, `get`, `has`, `delete`, etc.
   - Object: Uses dot or bracket notation for property access.
 - **Performance**:
-  - Map: Better for frequent addition/removal of key-value pairs.
-  - Object: Optimized for static key set operations.
+  - Choose by key and API semantics; performance depends on workload and engine, so measure before making a performance claim.
 
 **Note on Key Choices**
-Arrays and objects are compared by reference. Even if two arrays/objects have identical values, they're different unless they point to the same reference. Using `JSON.stringify(array/object)` can help create unique keys.
+Objects and arrays used as `Map` keys compare by identity, not by contents: two separately created `{ id: 1 }` objects are distinct keys. `JSON.stringify` is not a general structural-key solution (for example, it can be ambiguous or fail for cyclic data); define a canonical key explicitly when value-based lookup is required.
 
 **Defining Types**
 
-```javascript
+```typescript
 let userRoles: Map<number, string> = new Map();
 userRoles.set(1, "admin");
 userRoles.set(2, "user");
@@ -444,32 +457,36 @@ userRoles.set(2, "user");
 
 # math.md
 
-In TypeScript, which is a superset of JavaScript, there isn't a dedicated `Math.max()` function in a separate Math library as in Java. However, JavaScript (and thus TypeScript) has a global `Math` object that provides various mathematical functions and constants, similar to Java's `Math` class.
+# Math / 数学函数
 
-The `Math.max()` function in TypeScript/JavaScript works quite similarly to Java's `Math.max()` method. It returns the largest of the zero or more numbers given as input parameters.
+**Core idea / 核心概念：** `Math` is a built-in ECMAScript object; TypeScript types it but does not provide a separate runtime math library. / `Math` 是 ECMAScript 内置对象；TypeScript 为它提供类型，但不会提供另一套运行时数学库。 See [ECMAScript numbers and dates](https://tc39.es/ecma262/2025/multipage/numbers-and-dates.html).
 
-Here are some frequently used math functions available in TypeScript/JavaScript, similar to those in Java's `Math` class:
+`Math.max()` returns the largest of the supplied numbers. With no arguments it returns `-Infinity`; `Math.min()` returns `Infinity` with no arguments.
+
+Frequently used functions:
 
 1. **Math.max(...values)**: Returns the largest of zero or more numbers.
 2. **Math.min(...values)**: Returns the smallest of zero or more numbers.
-3. **Math.round(value)**: Rounds a number to the nearest integer.
+3. **Math.round(value)**: Rounds a number to the nearest integer; a half-way tie goes toward positive infinity (for example, `Math.round(-1.5) === -1`).
 4. **Math.ceil(value)**: Rounds a number upward to its nearest integer.
 5. **Math.floor(value)**: Rounds a number downward to its nearest integer.
 6. **Math.abs(value)**: Returns the absolute value of a number.
 7. **Math.sqrt(value)**: Returns the square root of a number.
 8. **Math.pow(base, exponent)**: Returns the base to the exponent power, that is, base^exponent.
-9. **Math.random()**: Returns a pseudo-random number between 0 and 1.
+9. **Math.random()**: Returns a pseudo-random number in the half-open range `[0, 1)`; it can be `0` but is less than `1`.
 10. **Math.sin(value)**, **Math.cos(value)**, **Math.tan(value)**: Trigonometric functions (sin, cos, tan).
 11. **Math.log(value)**: Returns the natural logarithm (base e) of a number.
 
-These functions are part of the ECMAScript standard and are available in any environment that supports JavaScript, including browsers and Node.js environments. They are accessed through the `Math` object, e.g., `Math.max(1, 2, 3)`.
+These functions are part of ECMAScript and are available in JavaScript hosts such as browsers and Node.js. For example: `Math.max(1, 2, 3)`.
 # promise.md
 
-## Promises in TypeScript
+# Promises in TypeScript / TypeScript 中的 Promise
+
+**Core idea / 核心概念：** A Promise is a JavaScript runtime object; TypeScript’s generic type parameter is erased and does not validate values at runtime. The Promise executor runs synchronously, while reactions run later as Promise jobs (microtasks in web hosts). / Promise 是 JavaScript 运行时对象；TypeScript 泛型参数会在编译后擦除，也不会在运行时验证值。Promise 执行器同步运行，后续处理函数作为 Promise 作业（Web 宿主中的微任务）稍后运行。 See [TypeScript’s handbook](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [asynchronous JavaScript](../../../../frontend/javascript/asynchronous-javascript.md), and the [ECMAScript Promise specification](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects).
 
 **1. Introduction to Promises**
 
-- Definition: Represents a future value.
+- Definition: Represents the eventual outcome of an asynchronous operation.
 - States:
   - Pending: Initial state.
   - Fulfilled: Operation completed successfully.
@@ -505,6 +522,7 @@ promise
 const failingPromise = new Promise<string>((resolve, reject) => {
   setTimeout(() => reject(new Error("Promise failed!")), 2000);
 });
+failingPromise.catch((error) => console.error(error.message));
 ```
 
 **5. Chaining Promises**
@@ -512,6 +530,10 @@ const failingPromise = new Promise<string>((resolve, reject) => {
 - Chain multiple `.then()`.
 
 ```typescript
+function getNumber() {
+  return Promise.resolve(21);
+}
+
 getNumber()
   .then((num) => num * 2)
   .then((result) => console.log(result));
@@ -519,18 +541,18 @@ getNumber()
 
 **6. Promise Utility Functions**
 
-- **6.1. Promise.all()**: Waits for all promises.
+- **6.1. `Promise.all()`**: Fulfills with values in input order when all inputs fulfill; rejects when an input first rejects. An empty input fulfills with `[]`. Rejection does not cancel the other operations.
 
 ```typescript
-Promise.all([promise1, promise2, promise3]).then((values) =>
-  console.log(values)
-);
+Promise.all([Promise.resolve(1), Promise.resolve(2), Promise.resolve(3)])
+  .then((values) => console.log(values)); // [1, 2, 3]
 ```
 
-- **6.2. Promise.race()**: First promise to resolve/reject.
+- **6.2. `Promise.race()`**: Adopts the first input to settle (fulfill or reject); an empty input remains pending.
 
 ```typescript
-Promise.race([promiseA, promiseB]).then((value) => console.log(value));
+Promise.race([Promise.resolve("first"), Promise.resolve("second")])
+  .then((value) => console.log(value)); // "first"
 ```
 
 **7. Async/Await**
@@ -538,6 +560,10 @@ Promise.race([promiseA, promiseB]).then((value) => console.log(value));
 - Syntactic sugar over Promises.
 
 ```typescript
+async function fetchNumber(): Promise<number> {
+  return 42;
+}
+
 async function main() {
   try {
     const number = await fetchNumber();
@@ -551,19 +577,23 @@ main();
 
 **Intervals and Timeouts**
 
-- Both can be cancelled.
+- Timer APIs are host-provided (browser and Node handle types differ). Pass a callback; cancellation clears the scheduled callback but does not stop work that has already started.
 
 ```typescript
-let intervalId = setInterval(1000);
+const intervalId = setInterval(() => console.log("tick"), 1000);
 clearInterval(intervalId);
 ```
 
+`setInterval` is a host timer, not part of the ECMAScript Promise API. See the [WHATWG HTML timers section](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers) for browsers and [Node.js timers](https://nodejs.org/docs/latest-v24.x/api/timers.html) for Node.
+
 # string.md
 
-# String
+# String / 字符串
+
+**Core idea / 核心概念：** JavaScript strings are sequences of UTF-16 code units; `.length` counts code units, not user-perceived characters. / JavaScript 字符串由 UTF-16 代码单元组成；`.length` 统计代码单元，不等于用户感知的字符数。 See [ECMAScript text processing](https://tc39.es/ecma262/2025/multipage/text-processing.html).
 
 ### 1. `length`
-- **Description**: Get the length of the String object.
+- **Description**: Returns the number of UTF-16 code units in the string.
 - **Return Type**: `number`
 - **Example**:
   ```javascript
@@ -581,7 +611,7 @@ clearInterval(intervalId);
   ```
 
 ### 3. `charAt(pos: number)`
-- **Description**: Returns the character at the specified position.
+- **Description**: Returns the one-code-unit string at the specified index, or `""` when the index is out of range.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
@@ -590,7 +620,7 @@ clearInterval(intervalId);
   ```
 
 ### 4. `charCodeAt(index: number)`
-- **Description**: Returns the Unicode of the character at the specified index. NaN if no character at the index.
+- **Description**: Returns the UTF-16 code-unit value at the specified index, or `NaN` when the index is out of range.
 - **Return Type**: `number`
 - **Example**:
   ```javascript
@@ -633,7 +663,8 @@ clearInterval(intervalId);
   ```javascript
   let str1 = "a";
   let str2 = "b";
-  console.log(str1.localeCompare(str2)); // Output: -1
+  const comparison = str1.localeCompare(str2);
+  console.log(comparison < 0); // true when str1 sorts before str2 in the active locale
   ```
 
 ### 9. `match(regexp: string | RegExp)`
@@ -682,9 +713,7 @@ clearInterval(intervalId);
   ```
 
 ### 14. `substr(start: number, length?: number)`
-- **Description**: Returns the characters in a string
-
-beginning at the specified location through the specified number of characters.
+- **Description**: Legacy Annex B method; prefer `slice()` for new code. Returns up to `length` code units beginning at `start`.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
@@ -711,12 +740,11 @@ beginning at the specified location through the specified number of characters.
   ```
 
 ### 17. `toLocaleLowerCase(locales?: string | string[])`
-- **Description**: Converts a string to lowercase, considering the host's current locale.
+- **Description**: Converts a string to lowercase using the supplied locale, or the host default when omitted.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
-  let str = "HELLO WORLD";
-  console.log(str.toLocaleLowerCase('tr')); // Output: "hello world" (with Turkish locale)
+  console.log("I".toLocaleLowerCase('tr')); // Output: "ı"
   ```
 
 ### 18. `toUpperCase()`
@@ -729,12 +757,11 @@ beginning at the specified location through the specified number of characters.
   ```
 
 ### 19. `toLocaleUpperCase(locales?: string | string[])`
-- **Description**: Converts a string to uppercase, considering the host's current locale.
+- **Description**: Converts a string to uppercase using the supplied locale, or the host default when omitted.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
-  let str = "hello world";
-  console.log(str.toLocaleUpperCase('tr')); // Output: "HELLO WORLD" (with Turkish locale)
+  console.log("i".toLocaleUpperCase('tr')); // Output: "İ"
   ```
 
 ### 20. `trim()`
@@ -764,13 +791,22 @@ beginning at the specified location through the specified number of characters.
   ```
 
 ### `String.fromCharCode(...codes: number[])`
-- **Description**: Converts Unicode values into characters.
+- **Description**: Converts UTF-16 code-unit values into a string. Use `String.fromCodePoint()` for Unicode code points above `0xFFFF`.
 - **Example**:
   ```javascript
   console.log(String.fromCharCode(72, 101, 108, 108, 111)); // Output: "Hello"
   ```
 
 ## Traverse String
+
+Indexing and `charAt()` use code units and can split surrogate pairs. `for...of` yields code points, but grapheme clusters (“user-perceived characters”) can span multiple code points ([Unicode Standard Annex #29](https://www.unicode.org/reports/tr29/)).
+
+```javascript
+const face = "😀";
+console.log(face.length); // 2 UTF-16 code units
+console.log([...face]);  // ["😀"]: one code point
+console.log(String.fromCodePoint(0x1F600)); // "😀"
+```
 ```ts
 const str = "Hello"
 

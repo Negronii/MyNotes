@@ -1,18 +1,27 @@
-# General
+# HTML and Web Basics / HTML 与网页基础
+
+**Key terms / 关键词：** HTML element（元素）, attribute（属性）, semantic markup（语义化标记）, form control（表单控件）.
+
+**Core / 核心：** HTML structures content through elements, semantics, and content models; form controls expose named values for interaction and submission, while CSS controls presentation and cannot supply missing HTML semantics.
+HTML 通过元素、语义和内容模型组织文档；表单控件以名称和值参与交互与提交，而 CSS 控制呈现，不能补上缺失的 HTML 语义。
+
+These archived notes retain introductory examples and reference tables. For current focused notes, see [HTML and CSS basics](../../../../frontend/html-css/html-and-css-basics.md) and [browser HTML and CSS](../../../../frontend/html-css/browser-html-and-css.md).
+
+## General
 
 ## Paths
 
 ### Absolute Path
 
-An absolute path points directly to a location in the file system or web structure. It starts from the root directory or a full URL. While not commonly used in front-end development due to its rigidity, it's essential to understand its structure.
+An absolute filesystem path starts from a filesystem root. An absolute URL has a scheme and does not necessarily have a host (for example, `mailto:hello@example.com`); HTTP(S) URLs normally include a host. A root-relative URL starts at the site's origin but is not an absolute URL. Filesystem paths are examples only and are not directly usable as public web URLs unless the server maps them.
 
 **Example:**
-- File System: `/Users/r/Desktop/Front-end-learning/cat.jpeg`
+- File System: `/projects/site/images/cat.jpeg`
 - URL: `https://www.example.com/images/logo.gif`
 
 ### Relative Path
 
-Relative paths are commonly used because they are flexible and easier to maintain. They define the path to a resource relative to the current file's location.
+Relative paths are commonly used because they are flexible and easier to maintain. In an HTML document, a relative URL resolves against the document's base URL (normally the page URL; a `<base>` element can change it).
 
 **Types:**
 - **Same-level files:** In the same folder as the HTML file. Example: `filename.extension`
@@ -20,7 +29,9 @@ Relative paths are commonly used because they are flexible and easier to maintai
 - **Upper-level files:** In the parent folder of the current folder. Example: `../filename.extension`
 - **Two levels up:** Example: `../../filename.extension`
 
-## Standard Stream
+## CSS Display: Block, Inline, and Inline-block
+
+“Block” and “inline” here describe common CSS `display` behavior, not categories that HTML elements permanently belong to. User-agent stylesheets provide defaults, which CSS can change; formatting details also depend on the surrounding formatting context. Replaced elements such as images have their own inline-level behavior, so the lists below are teaching examples rather than a complete current element taxonomy.
 
 ### Block-level Elements
 
@@ -38,7 +49,7 @@ Inline elements occupy only the space bounded by the tags defining the element. 
 
 **Key Points:**
 - Do not start on a new line.
-- Width and height settings are generally ineffective.
+- For non-replaced inline boxes, `width` and `height` do not set the inline box size; replaced inline elements such as images have intrinsic dimensions and can be sized.
 - Examples: `a`, `span`, `b`, `u`, `i`, `strong`, `em`, `img`.
 
 ### Inline-block Elements
@@ -48,7 +59,7 @@ Inline-block elements combine features of both inline and block-level elements. 
 **Key Points:**
 - Display inline with other elements.
 - Allow width and height settings.
-- Examples: `input`, `textarea`, `button`, `select`, `img`.
+- Examples in common user-agent styles: `input`, `textarea`, `button`, `select`.
 
 ## Project Structure
 
@@ -93,7 +104,7 @@ Organizing files in a clear, logical structure helps manage and maintain the pro
 
 ## Sprites
 
-Sprites combine multiple images into one, reducing the number of server requests and improving load times.
+Sprites combine multiple images into one. They can reduce request count in some setups, but do not guarantee faster loading; image size, caching, compression, and how the assets are used also matter. This remains a useful technique for fixed icon sheets and legacy projects.
 
 ### Steps to Use Sprites
 
@@ -113,7 +124,7 @@ Sprites combine multiple images into one, reducing the number of server requests
 
 ## Banner
 
-For creating a banner with multiple images:
+For creating a banner with multiple images, this small CSS example shows a static selected slide. It does not implement rotation, controls, keyboard behavior, or an accessible carousel pattern. A production carousel needs visible controls, a way to pause automatic movement, and content that remains usable with assistive technology.
 
 1. Use an unordered list (`<ul>`) with list items (`<li>`) for each image.
 2. Position the list items using CSS.
@@ -122,8 +133,8 @@ For creating a banner with multiple images:
 **Example:**
 ```html
 <ul class="banner">
-  <li class="current"><a href="#"><img src="image1.jpg" alt="Image 1"></a></li>
-  <li><a href="#"><img src="image2.jpg" alt="Image 2"></a></li>
+  <li class="current"><a href="image1.jpg"><img src="image1.jpg" alt="Image 1"></a></li>
+  <li><a href="image2.jpg"><img src="image2.jpg" alt="Image 2"></a></li>
   <!-- Additional images -->
 </ul>
 ```
@@ -149,7 +160,7 @@ For creating a banner with multiple images:
 
 ### Responsive Design Principles
 
-1. **Viewport Meta Tag:** Ensures proper scaling on mobile devices.
+1. **Viewport Meta Tag:** Sets the layout viewport and initial scale used by mobile browsers; responsive CSS is still needed to adapt the layout.
    ```html
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    ```
@@ -165,7 +176,7 @@ For creating a banner with multiple images:
 
 ### Common Screen Sizes
 
-- **iPhone 6/7/8:** 375x667 logical resolution (750x1334 physical).
+- **Historical example:** iPhone 6/7/8 had a 375×667 logical CSS-pixel display (750×1334 device pixels at DPR 2); with a `width=device-width` viewport, that logical width is the layout viewport. Treat this as a pixels-and-scale example, not a current device target.
 - **Adaptive Layout:** Use relative units like percentages and rem for layout.
 
 ### Development Tools
@@ -193,12 +204,25 @@ Isolate experimental or polyfill-required code to ensure future compatibility.
 **Example:**
 ```html
 <script>
-  if (!window.Promise) {
-    // Load a Promise polyfill
-    document.write('<script src="https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.min.js"><\/script>');
+  function startApp() {
+    // Start code that depends on Promise.
+  }
+
+  if (typeof window.Promise === "function") {
+    startApp();
+  } else {
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.min.js";
+    script.onload = startApp;
+    script.onerror = function () {
+      /* Report the failure through the application's error handling. */
+    };
+    document.head.appendChild(script);
   }
 </script>
 ```
+
+This loads the fallback before starting dependent code; in a real application, use the application's script loader and an actively maintained polyfill source.
 
 # HTML Basics
 
@@ -223,13 +247,13 @@ Isolate experimental or polyfill-required code to ensure future compatibility.
    ```html
    <!DOCTYPE html>
    ```
-   - Declares the document type and version as HTML5. Ensures the browser renders the page correctly and consistently.
+   - The modern `<!DOCTYPE html>` declaration selects standards mode; it does not encode a numbered HTML version. Omitting it can put browsers into quirks mode.
 
 2. **HTML Tag:**
    ```html
    <html lang="en">
    ```
-   - The `lang` attribute specifies the language of the document, which is important for accessibility and SEO.
+   - The `lang` attribute declares the language of the document's text, helping browsers, speech output, and assistive technology interpret it. It is not a search-ranking switch.
 
 3. **Head Section:**
    ```html
@@ -240,10 +264,10 @@ Isolate experimental or polyfill-required code to ensure future compatibility.
    </head>
    ```
    - **Meta Tags:**
-     - `charset="UTF-8"` ensures proper encoding of the document, supporting most characters.
-     - `viewport` meta tag is crucial for responsive web design, ensuring the page scales correctly on different devices.
+     - `charset="UTF-8"` declares the document's character encoding; the file's bytes must actually be encoded as UTF-8.
+     - The `viewport` meta tag sets the layout viewport and initial scale used on mobile devices; it does not make a fixed-width layout responsive by itself.
    - **Title Tag:**
-     - The `title` tag specifies the page title, shown on the browser tab and in search engine results. It should be concise and relevant.
+     - The `title` element gives the document a title used by browser interfaces and as a possible input to search-result title links. Search engines may rewrite how it appears, so keep it concise and relevant.
 
 4. **Body Section:**
    ```html
@@ -274,19 +298,19 @@ To improve the visibility of your site in search engine results, consider the fo
    ```html
    <meta name="description" content="Example Website offers the best products online with great discounts and free shipping.">
    ```
-   - Provides a brief summary of the webpage content. It appears in search results below the title.
+   - Provides a brief summary that a search engine may use for a result snippet; engines can instead generate a snippet from page content, and may show different snippets for different searches.
 
-3. **Meta Keywords (Deprecated):**
+3. **Meta Keywords (not used by Google Search):**
    ```html
    <meta name="keywords" content="online shopping, best products, discounts, free shipping">
    ```
-   - Historically used for specifying keywords, but now largely ignored by major search engines.
+   - Google Search does not use this tag for indexing or ranking. It is generally unnecessary; do not confuse it with visible page content or other metadata.
 
 ### Set Up Icon (Favicon)
 
 - **Favicon:**
   ```html
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
   ```
   - A small icon displayed in the browser tab, bookmark list, etc.
 
@@ -313,20 +337,19 @@ To improve the visibility of your site in search engine results, consider the fo
   ```html
   <div id="header"></div>
   ```
-  - Unique within a page, used for styling and manipulating specific elements.
-  - Should only be used once per page.
+  - Used to identify an element for fragment navigation, CSS, or script access.
+  - Each `id` value must be unique in the document; the `id` attribute itself can appear on many elements with different values.
 
 ## Semantic Wrapping
 
-Using semantic HTML elements improves accessibility, SEO, and readability:
+Semantic elements express document roles and structure, helping people and software understand the content. CSS display defaults do not determine which elements may be nested; follow each element's HTML content model.
 
-1. **Block-Level Elements:**
-   - Examples: `<div>`, `<p>`, `<h1>`, `<section>`, `<article>`, etc.
-   - Act as containers for other elements.
+1. **Common block-display examples:**
+   - User-agent styles commonly display `<div>`, `<p>`, `<h1>`, `<section>`, and `<article>` as block boxes. CSS can change those display values.
 
 2. **Nesting Rules:**
-   - Avoid nesting block-level elements like `<p>` inside other block-level elements like `<div>`, `<h1>`, etc.
-   - Example of incorrect nesting:
+   - A `<p>` can contain phrasing content, not a `<div>` or another `<p>`; a `<div>` can contain paragraphs. A heading also accepts phrasing content, so do not put a `<div>` inside `<h1>`.
+   - Invalid example: the parser closes the paragraph when it reaches the `<div>` start tag.
      ```html
      <p>This is a paragraph <div>This should not be here</div></p>
      ```
@@ -353,8 +376,8 @@ Using semantic HTML elements improves accessibility, SEO, and readability:
 
 ### Non-Semantic Elements
 
-- `<div>`: Used as a container for other elements, often for styling purposes.
-- `<span>`: Used to apply styles to inline text or elements.
+- `<div>`: Generic flow-content container used when no more meaningful element fits; often used as a styling/layout hook.
+- `<span>`: Generic phrasing-content container used when no more meaningful phrasing element fits; often used for styling.
 
 ### Semantic Elements
 
@@ -370,9 +393,7 @@ Semantic elements clearly describe their meaning in a way that is understandable
 
 # Basic tags
 
-If the heading has a start tag and an end tag, it must have a start tag and an end tag.
-
-If the heading has a start tag and no end tag, it must have a start tag and no end tag.
+Most HTML elements have a start tag and an end tag. Void elements such as `<img>`, `<input>`, and `<br>` have a start tag but no end tag; do not write an XHTML-style closing slash as if it were required in HTML.
 
 ## Heading Element `<h1></h1>`
 
@@ -382,13 +403,13 @@ If the heading has a start tag and no end tag, it must have a start tag and no e
 <h6>title</h6>
 ```
 
-The titles are bold, exclusive lines. The font size gets smaller as the number increases. In development, we can manage size in CSS, so always use `<h1>` for the main title, h2 for headings, and h3 for sub-headings. (Semantic tags)
+User-agent styles commonly render headings as bold block boxes with decreasing default sizes, but CSS can change their appearance. Choose heading levels for the document outline rather than their default font size; use a logical hierarchy for sections and subsections.
 
 ## Paragraph element `<p></p>`
 
 `<p>context</p>`
 
-Exclusive lines. There is a space between tags.
+Browsers commonly style paragraphs as block boxes with vertical margins. Those are CSS defaults, not whitespace added to the text by the HTML tags.
 
 ## The Line Break element `<br>`
 
@@ -400,15 +421,14 @@ It represents a thematic break between paragraph-level elements and draws a hori
 
 ## Font elements
 
-`<b>context</b>` or `<strong>context</strong>`: bold
+These elements are not interchangeable synonyms. Use CSS for purely visual styling; choose the HTML element that matches the meaning.
 
-`<u>context</u>` or `<ins>context</ins>`: underline
+- `<b>context</b>` draws attention without adding importance; `<strong>context</strong>` indicates strong importance.
+- `<u>context</u>` marks a non-textual annotation; `<ins>context</ins>` marks inserted content.
+- `<i>context</i>` marks text in an alternate voice or technical term; `<em>context</em>` marks stress emphasis.
+- `<s>context</s>` marks content that is no longer accurate or relevant; `<del>context</del>` marks deleted content.
 
-`<i>context</i>` or `<em>context</em>`: italic
-
-`<s>context</s>` or `<del>context</del>`: deleteline
-
-All the font elements can be used inside paragraphs.
+These elements may appear in phrasing content, including inside paragraphs, when their semantics fit.
 
 ## Image element `<img src="">`
 
@@ -419,27 +439,27 @@ Must have a start tag and must not have an end tag.
 Attribute: `<attribute name>="<value>"`
 
 Useful attributes:
-src: The path of the image. See General-Path for path info. `src="<path>"`
+src: The path of the image. See the [Paths](#paths) section above for path types. `src="<path>"`
 
-alt: Alternative text when the image fails to load. `alt="<text>"`
+alt: Text alternative for the image's information or function, not merely a fallback for a failed download. Use `alt=""` when an image is decorative; when an image is the only content of a link, describe the link's purpose. `alt="<text>"`
 
-title: The text shown when mouse hovering the image. Not only images can use but also other elements. `title="<text>"`
+title: Advisory text that some browsers may show as a tooltip; it is not a reliable replacement for alt text or a form label. Other elements can also have a `title` attribute. `title="<text>"`
 
 Height and width:
 width: Width of the image. `width="<integer>"`
 
 height: Height of the image. `height="<integer>"`
 
-If only one of the width or height is set, the other will be proportionally enlarged and reduced. If both are set, it may cause the picture to be deformed.
+When an image has intrinsic dimensions, setting only one dimension normally preserves its aspect ratio. Supplying both dimensions with a ratio that differs from the image can distort it; CSS `aspect-ratio` and `object-fit` provide additional layout/cropping controls.
 
 ## Audio element `<audio src="" controls></audio>`
 
 Useful attributes:
-src: the path of the audio supports MP3. See General-path for more info.
+src: the path of an audio resource. Playback depends on the format/codec and browser/platform support; provide `<source>` alternatives when the target browsers need them. See the [Paths](#paths) section above for path types.
 
 controls: display playback controls, no attribute value required
 
-autoplay: autoplay, no attribute value required
+autoplay: requests automatic playback; the user agent may not start playback under its autoplay policy. No attribute value is required.
 
 loop: loop playback, no attribute value required
 
@@ -448,11 +468,11 @@ e.g. `<audio src="hello.mp3" controls autoplay loop></audio>`
 ## Video element `<video src="" controls></video>`
 
 Useful attributes:
-src: path of the video, support mp4. See General-path for more info.
+src: path of a video resource. MP4 is a container; playback depends on the codecs and browser/platform support. See the [Paths](#paths) section above for path types.
 
 controls: display playback controls; no attribute value required
 
-autoplay: autoplay, no attribute value required (Google Chrome must cooperate with muted to play automatically)
+autoplay: requests automatic playback; browsers apply autoplay policies. Muted video is permitted by some browser policies, but playback is not guaranteed.
 
 loop: loop playback, no attribute value required
 
@@ -460,26 +480,22 @@ muted: play muted
 
 e.g. `<video src="hello.mp4" controls autoplay loop muted></video>`
 
-## The Anchor element `<a href="landing page full path"></a>`
+## The Anchor element `<a href="destination"></a>`
 
 e.g. `<a href="https://www.google.com">open Google</a>`
 
 **Output**
 <a href="https://www.google.com">open Google</a>
 
-The full path of the landing page:
-The website contains https://www., e.g. https://www.baidu.com
-or file path, e.g. filename.html
-Or empty link: #, the function is that you don't know where to jump to in the early stage of development. You can use this instead of
-
-changing it in the future.
+`href` can be an absolute URL such as `https://example.com/page`, a root-relative or document-relative path such as `/products` or `filename.html`, or a fragment such as `#section-id`.
+`href="#"` points to the top of the current document and is not a neutral placeholder. Use a real destination for navigation, or a `<button>` for an action; a bare `#` can cause unwanted scrolling and history changes.
 
 Useful attributes:
 target: the opening form of the target page, the value could be:
 \_self: the default value, jump directly from the current page
-\_blank: open in new window
+\_blank: request a new browsing context (often a tab); consider `rel="noopener"` when supporting older browsers or when explicitly severing access through `window.opener`.
 
-e.g. `<a href="https://www.baidu.com" target="_blank">Open Baidu</a>`
+e.g. `<a href="https://www.baidu.com" target="_blank" rel="noopener">Open Baidu</a>`
 
 # HTML Lists and Tables
 
@@ -634,10 +650,12 @@ Tables are used to display data in a structured format with rows and columns. Mo
   </tbody>
 </table>
 
+The raw Markdown-rendered table examples retain `border="1"` only to make their cells visible here. For page styling, use CSS borders rather than presentational HTML attributes.
+
 **Best** Practices
 
 - **Accessibility**: Use `<thead>`, `<tbody>`, and `<tfoot>` to group table sections. Provide clear and concise captions and headers.
-- **Responsive Design**: Ensure tables are responsive using CSS (e.g., setting `overflow-x` to `auto` for small screens).
+- **Responsive Design**: On narrow screens, a wrapper with `overflow-x: auto` can keep a wide data table usable without forcing the whole page to scroll horizontally.
 
 ### Table Elements
 
@@ -671,6 +689,7 @@ Tables are used to display data in a structured format with rows and columns. Mo
     </tr>
     <tr>
       <td>Pear</td>
+      <!-- The rowspan cell above occupies the Weight column in this row. -->
       <td>Good</td>
     </tr>
     <tr>
@@ -700,6 +719,7 @@ Tables are used to display data in a structured format with rows and columns. Mo
     </tr>
     <tr>
       <td>Pear</td>
+      <!-- The rowspan cell above occupies the Weight column in this row. -->
       <td>Good</td>
     </tr>
     <tr>
@@ -713,7 +733,7 @@ Tables are used to display data in a structured format with rows and columns. Mo
 
 - Use the `rowspan` attribute to merge cells vertically.
 - Use the `colspan` attribute to merge cells horizontally.
-- Follow the top-left rule: merged cells should remain aligned to the top and left.
+- A spanning cell occupies a rectangle starting at its row and column; following cells fill the remaining slots. Use CSS to control how the cell's content is visually aligned.
 
 # HTML Form Elements
 
@@ -732,7 +752,7 @@ A single-line text field. Line breaks are automatically removed from the input v
 
 #### `password`
 
-A single-line text field whose value is obscured. It alerts the user if the site is not secure.
+A single-line text field whose displayed value is obscured. This does not encrypt the value or make an insecure connection safe; transport security and server-side handling are separate concerns.
 ```html
 <input type="password">
 ```
@@ -747,7 +767,7 @@ A radio button allows a single value to be selected out of multiple choices with
 
 #### `checkbox`
 
-A checkbox allows single values to be selected or deselected. Suitable when more than one answer can be selected.
+A checkbox allows a value to be selected or deselected. Several checkboxes may be selected; give related choices the same `name` when the submitted form should send multiple values for one field, or distinct names when they are independent fields.
 ```html
 <input type="checkbox" name="example1"> Option 1
 <input type="checkbox" name="example2"> Option 2
@@ -755,7 +775,7 @@ A checkbox allows single values to be selected or deselected. Suitable when more
 
 #### `file`
 
-A control that lets the user select a file. Use the `accept` attribute to define the types of files that the control can select.
+A control that lets the user select a file. The `accept` attribute is a browser hint/filter for likely file types, not validation or a security boundary; validate uploaded files on the server.
 ```html
 <input type="file" accept=".jpg, .jpeg, .png">
 ```
@@ -786,13 +806,14 @@ A push-button with no default behavior. Use JavaScript to add functionality.
 #### `placeholder`
 
 Provides a hint to the user of what can be entered in the field.
+It does not replace a visible, programmatically associated label.
 ```html
 <input type="text" placeholder="Enter your name">
 ```
 
 #### `name`
 
-Groups radio buttons together so that only one can be selected at a time.
+Provides the form-field name used when submitting a control. Radio buttons with the same name form a group in which one choice can be selected; checkboxes can share a name when multiple values belong to one field.
 ```html
 <input type="radio" name="gender" value="male"> Male
 <input type="radio" name="gender" value="female"> Female
@@ -824,13 +845,15 @@ Allows multiple files to be selected in a file input.
   <input type="radio" name="gender" value="male"> Male
   <input type="radio" name="gender" value="female" checked> Female<br><br>
   Interests:
-  <input type="checkbox" name="interest1" value="coding"> Coding
-  <input type="checkbox" name="interest2" value="music" checked> Music<br><br>
+  <input type="checkbox" name="interest" value="coding"> Coding
+  <input type="checkbox" name="interest" value="music" checked> Music<br><br>
   Upload files: <input type="file" name="files" multiple><br><br>
   <input type="submit" value="Submit">
   <input type="reset" value="Reset">
 </form>
 ```
+
+For a usable form, associate each control with a `<label>` (using a matching `for`/`id` pair or by wrapping the control). The text placed next to a control in this compact example is not itself a programmatic label.
 
 ## The `button` Element
 
@@ -841,6 +864,7 @@ The `<button>` element is used to create clickable buttons.
 #### `type`
 
 Defines the behavior of the button. It can be `submit`, `reset`, or `button`.
+Inside a form, a `<button>` without a `type` defaults to submit; set the intended type explicitly.
 
 ```html
 <button type="submit">Submit</button>
@@ -940,9 +964,9 @@ Labels are used to bind a text description to a form element, enhancing accessib
 
 **Method 1: Using `for` Attribute**
 
-- Wrap the form element with a label tag.
-- Add an `id` attribute to the form element.
-- Set the `for` attribute of the label tag to the same value as the form element's `id`.
+- Give the form control an `id`, then set the label's `for` attribute to that exact value. The control may sit inside the label or elsewhere in the document.
+
+The `label` element should identify the control's purpose; adjacent text alone does not create that programmatic association.
 
 **Method 2: Wrapping the Form Element**
 
@@ -953,8 +977,8 @@ Labels are used to bind a text description to a form element, enhancing accessib
 
 ```html
 gender:
-<input type="radio" name="gender" id="male"> <label for="male">male</label>
-<label><input type="radio" name="gender"> female</label>
+<input type="radio" name="gender" id="male" value="male"> <label for="male">male</label>
+<label><input type="radio" name="gender" value="female"> female</label>
 ```
 
 ## Useful Character Entities
@@ -982,3 +1006,14 @@ gender:
 ```html
 <p>This is a paragraph with a special character: &amp;.</p>
 ```
+
+## References
+
+- [WHATWG HTML Living Standard](https://html.spec.whatwg.org/multipage/)
+- [WHATWG HTML: Document base URLs](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#document-base-urls)
+- [WHATWG HTML: Audio and video elements](https://html.spec.whatwg.org/multipage/media.html)
+- [CSS Device Adaptation Level 1](https://www.w3.org/TR/css-device-adapt-1/)
+- [W3C WAI: Images tutorial](https://www.w3.org/WAI/tutorials/images/)
+- [W3C WAI: Forms labels tutorial](https://www.w3.org/WAI/tutorials/forms/labels/)
+- [Google Search Central: Control snippets in search results](https://developers.google.com/search/docs/appearance/snippet)
+- [Google Search Central: Meta tags it supports](https://developers.google.com/search/docs/crawling-indexing/special-tags)

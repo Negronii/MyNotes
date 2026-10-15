@@ -1,13 +1,15 @@
-# Closure
+# Closure / 闭包
+
+**Core idea / 核心概念：** A closure is a function together with access to the lexical bindings it uses. Those bindings can remain reachable after the outer call returns; they are not “dead” values. / 闭包是函数及其对所用词法绑定的访问；外层函数返回后，只要仍可达，这些绑定就会保留，而不是“已死亡”的值。 See [JavaScript scope and closures](../../../../frontend/javascript/scope-and-closure.md) and [ECMAScript function objects and execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html).
 
 - A closure is formed when an inner function, defined within an outer function, references variables from the outer function's scope.
 - Even after the outer function completes execution, the inner function maintains access to those variables due to closure.
 
-**When to Use Closures?**
+**When to Use Closures? / 闭包的用途**
 
-- Closures enable retrieval of "dead" values which have gone out of scope.
+- Closures keep needed lexical bindings available to a returned function after the outer call finishes.
 - They can be leveraged for:
-  - Data privacy (private variables or functions).
+  - Encapsulation through a function API (not a security boundary).
   - Partial function application.
   - Maintaining state in asynchronous code.
 - The technical term for the closure's encompassing context is the "lexical environment".
@@ -31,7 +33,7 @@
    counter(); // logs 3
    ```
 
-   - `makeCounter` returns a function that closes over the `count` variable, effectively making it private.
+   - `makeCounter` returns a function that closes over the `count` binding, so callers can change it only through the returned API.
 
 2. **Partial Function Application:**
 
@@ -56,7 +58,7 @@
 
      const update = () => {
        let time = performance.now() - start;
-       let progress = time / duration;
+       let progress = Math.min(time / duration, 1);
        let value = from + (to - from) * progress;
 
        element.style.left = value + "px";

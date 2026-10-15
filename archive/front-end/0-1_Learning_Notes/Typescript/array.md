@@ -1,13 +1,17 @@
-# Array Operations in TypeScript
+# Array Operations in TypeScript / TypeScript 数组操作
+
+**Core idea / 核心概念：** TypeScript checks array element types at compile time; arrays, holes, sorting, and iteration follow JavaScript runtime semantics. / TypeScript 在编译期检查数组元素类型；数组、空槽、排序与遍历遵循 JavaScript 运行时语义。 See [JavaScript arrays](../../../../frontend/javascript/arrays.md) and [ECMAScript indexed collections](https://tc39.es/ecma262/2025/multipage/indexed-collections.html).
 
 ## **Declaring an Array**
+
+`new Array<number>(3)` creates three empty slots (holes), not three explicit `undefined` values. Methods such as `map`, `forEach`, `reduce`, `every`, and `some` skip holes; `for...of` yields `undefined` for a hole.
 - Empty Array with Fixed Length:
   ```javascript
   const arr_1 = new Array(3);
   console.log(arr_1);     // [, , ]
   ```
 - Typed Array with Fixed Length:
-  ```javascript
+  ```typescript
   const arr_2 = new Array<number>(3);
   console.log(arr_2);     // [, , ]
   ```
@@ -52,6 +56,8 @@
   ```
 
 ## Frequent used APIs
+
+`push`, `pop`, `shift`, `unshift`, `reverse`, `sort`, and `splice` mutate the array. `concat`, `slice`, `map`, and `filter` return new arrays; copies are shallow, so object elements still refer to the same objects.
 1. **length**
    - **Type:** Number
    - **Description:** Returns the length of the array.
@@ -76,7 +82,7 @@
    - **Type:** T | undefined
    - **Description:** Removes the last element from an array and returns it.
    - **Example:** `const arr = [1, 2, 3]; console.log(arr.pop()); // Output: 3`
-   - **Example:** `console.log(emptyarr.pop());    // undefined, return undefined when array is empty`
+   - **Example:** `const emptyarr: number[] = []; console.log(emptyarr.pop()); // undefined for an empty array`
 
 6. **concat()**
    - **Type:** T[]
@@ -94,7 +100,7 @@
    - **Example:** `const arr = [1, 2, 3]; console.log(arr.reverse()); // Output: [3, 2, 1]`
 
 9. **shift()**
-   - **Type:** T
+   - **Type:** T | undefined
    - **Description:** Removes the first element from an array and returns it.
    - **Example:** `const arr = [1, 2, 3]; console.log(arr.shift()); // Output: 1`
 
@@ -110,9 +116,9 @@
 
 12. **sort()**
     - **Type:** this
-    - **Description:** Sorts the elements of an array in place and returns the sorted array.
+    - **Description:** Sorts the elements of an array in place and returns it. Without a comparator, elements are sorted by their string forms; numeric arrays usually need a comparator.
     - **Example:** `const arr = [3, 1, 4, 1, 5]; console.log(arr.sort()); // Output: [1, 1, 3, 4, 5]`
-    - **Example:** `numList.sort((a, b) => b - a); console.log(numList);       // [5, 4, 3, 1, 1] `
+    - **Example:** `const numList = [3, 10, 2]; console.log(numList.sort((a, b) => a - b)); // [2, 3, 10]`
 
 13. **splice()**
     - **Type:** T[]
@@ -152,16 +158,18 @@
 20. **filter()**
     - **Type:** T[]
     - **Description:** Creates a new array with all elements that pass the test implemented by the provided function.
-    - **Example:** `const arr = [1, 2, 3, 4, 5, 6]; console.log(arr.filter(num => num % 2 == 0)); // Output: [2, 4, 6]`
+    - **Example:** `const arr = [1, 2, 3, 4, 5, 6]; console.log(arr.filter(num => num % 2 === 0)); // Output: [2, 4, 6]`
 
 21. **reduce()**
-    - **Type:** T
+    - **Type:** accumulator type (inferred, or selected with the overload/generic)
     - **Description:** Applies a function against an accumulator and each element in the array (from left to right) to reduce it to a single value.
     - **Example:** `const arr = [1, 2, 3, 4]; console.log(arr.reduce((acc, val) => acc + val, 0)); // Output: 10`
+    - Without an initial value, reducing an empty array (or an array with no present elements) throws a `TypeError`; an initial value makes the empty case well-defined.
 
 22. **reduceRight()**
-    - **Type:** T
+    - **Type:** accumulator type (inferred, or selected with the overload/generic)
     - **Description:** Applies a function against an accumulator and each element in the array (from right to left) to reduce it to a single value.
+    - Without an initial value, reducing an empty array (or an array with no present elements) throws a `TypeError`.
     - **Example:** `const arr = [[0, 1], [2, 3], [4, 5]]; console.log(arr.reduceRight((acc, val) => acc.concat(val))); // Output: [4, 5, 2, 3, 0, 1]`
 
 ## **Array Traverse**
@@ -210,7 +218,7 @@
 
 ## Deep Dive: `array.map()`
 
-- **Purpose**: Transforms each array element and returns a new array without altering the original array.
+- **Purpose**: Builds a new result array from callback results without itself mutating the source; the callback can mutate the source, and an identity callback returns the same object references.
 - **Syntax**:
   ```typescript
   array.map(callback(currentValue[, index[, array]])[, thisArg])
@@ -270,7 +278,7 @@ The nested square brackets like [, index[, array]] signify that if you want to i
 
 ## Stack with array:
 ```ts
-const stack = []
+const stack: number[] = [];
 stack.push(200) //push an element
 const num = stack.pop() //pop an element
 stack.length // size of stack
