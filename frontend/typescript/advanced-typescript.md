@@ -2,6 +2,78 @@
 
 TypeScript checks relationships between values while editing and compiling JavaScript. Type declarations are erased from emitted JavaScript, so a successful typecheck does not validate untrusted runtime values. The type system also makes deliberate soundness tradeoffs; values typed with any or an unchecked assertion can bypass useful checks.
 
+## How do types meet untrusted JSON? / 类型如何处理不可信 JSON？
+
+**Core answer / 核心回答：** Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, validate the shape and values with JavaScript checks, and only then construct a trusted typed value. A type annotation or assertion changes what the checker believes; it does not inspect the data. / API 响应和浏览器存储都应视为不可信运行时数据。先将解析结果放入 `unknown`，再用 JavaScript 检查结构和值，最后才构造可信的类型化对象。类型注解或断言只会改变检查器的判断，不会检查数据本身。
+
+`JSON.parse` can throw for malformed JSON and, on success, still says nothing about the object's shape. `unknown` keeps that boundary visible: every property read must follow a runtime guard. This example handles both syntax and shape failures without an unchecked cast; the storage adapter also makes a missing key explicit.
+
+~~~typescript
+type Profile = {
+  id: string;
+  label: string;
+  role: "admin" | "reader";
+};
+
+type ParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: string };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseProfile(text: string): ParseResult<Profile> {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "Invalid JSON syntax" };
+  }
+
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.label !== "string" ||
+    (value.role !== "admin" && value.role !== "reader")
+  ) {
+    return { ok: false, error: "Expected id, label, and a known role" };
+  }
+
+  return {
+    ok: true,
+    value: { id: value.id, label: value.label, role: value.role }
+  };
+}
+
+function readStoredProfile(storage: Storage): ParseResult<Profile> {
+  const text = storage.getItem("profile");
+  if (text === null) return { ok: false, error: "No saved profile" };
+  return parseProfile(text);
+}
+
+const valid = parseProfile('{"id":"u-7","label":"Ada","role":"reader"}');
+const malformed = parseProfile('{"id":7,"label":"Ada","role":"reader"}');
+// valid.ok is true; malformed.ok is false with a structural error.
+~~~
+
+After validation, ordinary control-flow narrowing applies to the declared model. An exhaustive switch protects the code that consumes the validated role; it does not prove that the parser itself is correct.
+
+~~~typescript
+function roleLabel(profile: Profile): string {
+  switch (profile.role) {
+    case "admin": return "Administrator";
+    case "reader": return "Reader";
+    default: {
+      const unreachable: never = profile.role;
+      return unreachable;
+    }
+  }
+}
+~~~
+
+The union lets the checker require narrowing before type-safe access to `value`, but it does not require every caller to inspect the result. The `never` assignment checks exhaustiveness only in this `roleLabel` switch; it does not force every switch over `Profile.role` to include the same guard. Only the runtime checks establish that this particular JSON value is a `Profile`. If the server later adds a role, the parser deliberately rejects it until the application accepts that value; update the validator and exhaustive consumers together.
+
 ## What are utility types? / 什么是工具类型？
 
 **Core answer / 核心回答：** Utility types transform an existing type so related shapes stay connected instead of copying property declarations. They are compile-time descriptions: Readonly does not freeze an object, and Partial does not validate an incoming request. / 工具类型可以转换已有类型，让相关数据结构保持关联，避免重复声明字段。它们只描述编译期类型：Readonly 不会冻结对象，Partial 也不会验证传入的请求。
@@ -166,4 +238,4 @@ function area(shape: Shape): number {
 
 **See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](../javascript/javascript-memory-weakmap-and-weakset.md) for object identity and proxies; [React Basics / React基础](../frameworks/react-basics.md) for component API examples.
 
-**Sources checked 2026-10-15:** [TypeScript: Basic Types](https://www.typescriptlang.org/docs/handbook/2/basic-types), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
+**Sources checked 2026-10-15:** [TypeScript: Basic Types and `unknown`](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).

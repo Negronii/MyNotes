@@ -23,6 +23,175 @@ function Toolbar() {
 
 A child can notify its parent through a callback prop. Use Context for values such as theme or locale that are needed across a subtree; a store can help when shared state and update patterns grow more complex. Custom Hooks share stateful logic, but each call has its own Hook state unless the Hook deliberately connects to shared state. Avoid using an event bus as a default substitute for React's data flow.
 
+## Who owns server data and local UI state? / 服务端数据与本地界面状态由谁管理？
+
+**Core answer / 核心回答：** Keep transient choices such as the selected row, open dialog, or draft input in local React state. Treat records owned by a server as server state: identify each query by all inputs that affect it, define when cached data is fresh, and invalidate or update affected entries after a mutation. A query cache is a client read model, not the source of truth. / 将选中行、打开的对话框和输入草稿等临时选择保存在 React 本地状态中。服务器拥有的记录属于服务端状态：查询键要包含所有影响结果的输入，缓存需要明确新鲜期，变更后要更新或失效相关缓存。查询缓存是客户端读模型，不是数据的权威来源。
+
+For example, selecting a row is local UI state, while the list and selected record come from the server. Separate query keys encode their identities; include filters, page, or account identifiers too when they change the result. In TanStack Query v5, `staleTime` defines how long a result is considered fresh. Once stale, it can refetch on configured events; targeted invalidation marks matching entries stale and refetches active observers. The value is a freshness policy, not a promise that the server data cannot change.
+
+~~~tsx
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+type Task = { id: string; title: string; done: boolean };
+type TaskPatch = Pick<Task, "id"> & Partial<Pick<Task, "title" | "done">>;
+
+// These request functions parse and validate their responses at the API boundary.
+declare function listTasks(): Promise<Task[]>;
+declare function getTask(id: string, signal: AbortSignal): Promise<Task>;
+declare function saveTask(patch: TaskPatch): Promise<Task>;
+
+const taskKeys = {
+  list: ["tasks", "list"] as const,
+  detail: (id: string) => ["tasks", "detail", id] as const
+};
+
+function useTaskList() {
+  return useQuery({
+    queryKey: taskKeys.list,
+    queryFn: listTasks,
+    staleTime: 30_000
+  });
+}
+
+function useTaskDetail(id: string) {
+  return useQuery({
+    queryKey: taskKeys.detail(id),
+    queryFn: ({ signal }) => getTask(id, signal)
+  });
+}
+
+function TaskWorkspace() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const list = useTaskList();
+
+  if (list.isPending) return <p>Loading tasks…</p>;
+  if (list.isError) return <p role="alert">Could not load tasks.</p>;
+
+  return (
+    <div>
+      <ul>
+        {list.data.map(task => (
+          <li key={task.id}>
+            <button type="button" onClick={() => setSelectedId(task.id)}>
+              {task.title}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {selectedId !== null && <TaskDetail id={selectedId} />}
+    </div>
+  );
+}
+
+function TaskDetail({ id }: { id: string }) {
+  const detail = useTaskDetail(id);
+  if (detail.isPending) return <p>Loading selected task…</p>;
+  if (detail.isError) return <p role="alert">Could not load this task.</p>;
+  return <p>{detail.data.title}</p>;
+}
+
+function useSaveTask() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: saveTask,
+    onMutate: async patch => {
+      const detailKey = taskKeys.detail(patch.id);
+      await Promise.all([
+        client.cancelQueries({ queryKey: taskKeys.list }),
+        client.cancelQueries({ queryKey: detailKey })
+      ]);
+
+      const previousList = client.getQueryData<Task[]>(taskKeys.list);
+      const previousDetail = client.getQueryData<Task>(detailKey);
+      client.setQueryData<Task[]>(taskKeys.list, old =>
+        old?.map(task => task.id === patch.id ? { ...task, ...patch } : task)
+      );
+      if (previousDetail !== undefined) {
+        client.setQueryData<Task>(detailKey, { ...previousDetail, ...patch });
+      }
+      return { previousList, previousDetail };
+    },
+    onError: (_error, patch, previous) => {
+      if (previous?.previousList !== undefined) {
+        client.setQueryData(taskKeys.list, previous.previousList);
+      }
+      if (previous?.previousDetail !== undefined) {
+        client.setQueryData(taskKeys.detail(patch.id), previous.previousDetail);
+      }
+    },
+    onSuccess: saved => {
+      client.setQueryData(taskKeys.detail(saved.id), saved);
+      client.setQueryData<Task[]>(taskKeys.list, old =>
+        old?.map(task => task.id === saved.id ? saved : task)
+      );
+    },
+    onSettled: (_data, _error, patch) => Promise.all([
+      client.invalidateQueries({ queryKey: taskKeys.list }),
+      client.invalidateQueries({ queryKey: taskKeys.detail(patch.id) })
+    ])
+  });
+}
+~~~
+
+The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; the `useWindowSize` Effect in the custom Hook section below shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](../typescript/advanced-typescript.md) for validating API JSON before treating it as a `Task`.
+
+## How do concurrent UI updates and Suspense work? / 并发界面更新与 Suspense 如何工作？
+
+**Core answer / 核心回答：** Keep input state urgent so each keystroke appears immediately; defer expensive result rendering or mark a navigation-like state update as a Transition. React can interrupt and retry that render work so urgent updates get priority. A Suspense boundary gives one part of the screen a fallback while a Suspense-enabled child is not ready. / 输入状态应保持紧急，以便每次按键都立即显示；可以延后昂贵结果区域的渲染，或把类似导航的状态更新标记为 Transition。React 可以中断并重试这部分渲染，让紧急更新优先。Suspense 边界则在支持 Suspense 的子树尚未就绪时，为该区域显示 fallback。
+
+This search panel keeps the text input responsive and places the loading fallback around only the result list. `useSuspenseQuery` is the TanStack Query v5 data source that suspends here; a normal query or fetch started in an Effect does not automatically suspend. The memoized result boundary allows React to skip this child when an urgent parent render leaves `deferredQuery` and `tab` unchanged; without it, the child still renders on each parent input update even though the deferred value is old. It renders again when either deferred prop advances.
+
+~~~tsx
+import { memo, Suspense, useDeferredValue, useState, useTransition } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+
+type SearchHit = { id: string; title: string };
+declare function searchTasks(query: string, tab: "tasks" | "summary"): Promise<SearchHit[]>;
+
+function TaskSearch() {
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<"tasks" | "summary">("tasks");
+  const [isPending, startTransition] = useTransition();
+  const deferredQuery = useDeferredValue(query);
+  const showingOlderResults = query !== deferredQuery;
+
+  function selectTab(next: "tasks" | "summary") {
+    startTransition(() => setTab(next));
+  }
+
+  return (
+    <section>
+      <input
+        aria-label="Search tasks"
+        value={query}
+        onChange={event => setQuery(event.target.value)}
+      />
+      <button type="button" onClick={() => selectTab("summary")}>Summary</button>
+      {isPending && <span>Updating view…</span>}
+      <Suspense fallback={<p>Loading results…</p>}>
+        <div aria-busy={showingOlderResults}>
+          <TaskSearchResults query={deferredQuery} tab={tab} />
+        </div>
+      </Suspense>
+    </section>
+  );
+}
+
+const TaskSearchResults = memo(
+  function TaskSearchResults({ query, tab }: { query: string; tab: "tasks" | "summary" }) {
+    const { data } = useSuspenseQuery({
+      queryKey: ["tasks", "search", query, tab],
+      queryFn: () => searchTasks(query, tab)
+    });
+    return <ul>{data.map(hit => <li key={hit.id}>{hit.title}</li>)}</ul>;
+  }
+);
+~~~
+
+`useTransition` exposes `isPending` and marks state updates inside `startTransition` as non-urgent; its callback runs immediately, and it cannot control a text input. With an async action, wrap state updates after each `await` in another `startTransition` to mark them as transitions. `useDeferredValue` lets a child keep seeing the previous value while React prepares an interruptible background render. It has no fixed delay and does not suppress network requests, so use an explicit debounce when the goal is fewer requests. Neither API parallelizes JavaScript on another CPU thread or makes a long synchronous calculation faster; use a better algorithm, memoization, or a worker when computation itself blocks. `Suspense` only shows this fallback when its child suspends through a supported source such as `use` with a cached Promise or a Suspense-enabled framework/library. Pair data errors with an Error Boundary or use explicit pending/error states; Suspense is not a request error handler. Keep renders pure because React may retry interrupted work.
+
 ## When should you use memo, useMemo, or useCallback? / 何时使用 memo、useMemo和useCallback？
 
 **Core answer / 核心回答：** These are performance tools, not correctness tools. React.memo can skip rendering when props compare equal; useMemo caches a calculated value; useCallback caches a function reference. Add them when profiling or a specific identity boundary shows they help. / 这些 API 是性能工具，不是正确性工具。React.memo 可在 props 比较相等时跳过渲染；useMemo 缓存计算值；useCallback 缓存函数引用。只有性能分析或明确的引用边界表明它们有帮助时再使用。
@@ -149,4 +318,4 @@ Because React renders numbers, a numeric left operand can leak into the output: 
 
 **See also:** [React Basics / React基础](./react-basics.md) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](../performance/rendering-and-computation-optimization.md) for profiling and memoization limits.
 
-**Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects).
+**Sources checked 2026-10-15:** [React: `useTransition`](https://react.dev/reference/react/useTransition), [`useDeferredValue`](https://react.dev/reference/react/useDeferredValue), [`Suspense`](https://react.dev/reference/react/Suspense), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [TanStack Query React v5: Queries](https://tanstack.com/query/latest/docs/framework/react/guides/queries), [Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys), [Important Defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults), [Query Invalidation](https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation), [Optimistic Updates](https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates), [Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense), [Cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation), [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use).
