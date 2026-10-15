@@ -12,7 +12,7 @@ Node has a JavaScript event-loop thread for each isolate, not one JavaScript thr
 
 Node also uses background mechanisms for asynchronous work: network I/O is commonly driven by the operating system, while selected APIs such as filesystem operations, cryptography, compression, and some name-resolution work use libuv's worker pool. Their JavaScript callbacks run on the event-loop thread. CPU-heavy JavaScript on that thread delays other callbacks.
 
-This distinction is reusable across runtimes; this note focuses on Node's event-loop and worker choices.
+For the reusable process/thread model of address spaces, shared resources, concurrency, I/O, and cancellation, see [Processes, Threads, and Concurrency / 进程、线程与并发](../operating-systems/processes-threads-and-concurrency.md); this note applies it to Node's event loop and worker choices.
 
 ---
 
