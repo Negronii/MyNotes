@@ -133,343 +133,158 @@ Common words like "transformer" stay whole; less common ones like "revolutionize
 **Gotcha:** `temperature=0` is **not** guaranteed identical to `top_k=1` across providers. Some APIs still break ties stochastically at T=0; some rescale differently. For deterministic output, set temperature near 0 **and** fix the `seed` parameter if the provider supports it.
 ## 2. Model Selection and Ecosystem / 模型选择与生态
 
-### Model Selection and Ecosystem
+### Model Selection and Ecosystem / 模型选择与生态
 
-> **Last updated:** 2026-04-21.
-> **Aging content warning:** specific model names (Claude Opus, GPT-4, Gemini Pro, Llama 3) change every few months. The **capability tiers** and **selection principles** below are stable; the specific SKU in each tier is an example, not a fixed fact. When an interviewer names a model you haven't heard of, map it to the nearest tier from context (size, price, benchmark claims) and reason from there.
+**Core explanation / 核心解释：** Select a model for a defined task and deployment context, then compare candidates on representative examples and operating constraints. Model names, rankings, context limits, supported inputs, and prices change; a public benchmark or provider label is evidence to investigate, not a permanent selection rule. / 先明确任务和部署条件，再用有代表性的样本和运行约束比较候选模型。模型名称、排名、上下文限制、输入能力和价格都会变化；公开基准或供应商标签可以帮助缩小范围，但不能作为长期固定的选择规则。
 
-This is a reference page. Reach for it when:
+**30-second answer / 30 秒回答**
 
-- You're picking a provider or routing traffic between tiers.
-- An interviewer asks "why this model?" and you need the tradeoffs to cite.
-- You need the open-vs-closed decision rule.
-- You're estimating cost or explaining why KV-cache hit rate matters.
+- **English:** I define the quality bar and hard constraints first, then compare a small set of eligible models on the same held-out task set. I measure task quality, latency, total cost, tool or format reliability, and data-handling requirements. I choose the least costly option that meets the agreed bar, and re-evaluate routing or fallbacks against the same criteria.
+- **中文：** 我先定义质量要求和硬性约束，再用同一组保留样本比较少量候选模型。我会测量任务质量、时延、总成本、工具或格式可靠性以及数据处理要求，选择能够达到约定标准且总成本合适的模型，并用相同标准评估路由和回退方案。
 
----
+#### Start with the task contract / 从任务要求开始
 
-#### Capability tiers (stable abstraction)
+Record what a successful result must do, what errors matter, and which operating conditions are fixed. Compare candidates on the same prompt, data, tools, and evaluation protocol where possible.
 
-Models come in three consistent tiers regardless of provider. Route by tier, not by specific model — the tier is what you're really picking, the SKU just changes under the hood.
+| Dimension | Questions to answer |
+|---|---|
+| **Task quality / 任务质量** | What counts as correct or useful? Which edge cases and refusal cases matter? |
+| **Latency and availability / 时延与可用性** | Is the constraint about time to first response, full completion, or uptime? Which workload and region are representative? |
+| **Cost / 成本** | Include input and output usage, retries, retrieval, hosting, support, and evaluation—not just one token rate. |
+| **Inputs and outputs / 输入与输出** | Does the task require text, image, audio, or other modalities? Are schemas or tools supported for this exact model and API? |
+| **Data handling / 数据处理** | What does the contract, configuration, retention policy, and deployment boundary allow? “Hosted” or “open-weight” alone does not answer this. |
+| **Operations / 运维** | Who owns scaling, updates, monitoring, security patches, and incident response? |
 
-| Tier | Capability descriptor | Used for | Examples (as of 2026-04-21) |
-|---|---|---|---|
-| **Frontier** | Top-end reasoning, long context, highest quality | Complex reasoning, code generation, deep analysis | Claude Opus, GPT-4, Gemini Pro |
-| **Balanced** | Good reasoning, reasonable price | General chat, moderate reasoning, summarization | Claude Sonnet, GPT-4o |
-| **Fast/cheap** | Low latency, low cost | Classification, extraction, high-volume routing | Claude Haiku, GPT-4o-mini |
+Public benchmarks can help generate a shortlist when their task and protocol are relevant. They do not establish performance on a different prompt, data distribution, API configuration, or deployment. Keep an application-specific held-out set and report its sample scope and uncertainty; see [LLM Evaluation Methods / 大语言模型评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95).
 
-**How interviewers probe it:** "Why not just use the frontier tier everywhere?" → cost and latency scale linearly with usage; the fast tier is often 10–20× cheaper. Use frontier where quality matters; route the rest down.
+#### Model tiers are shorthand, not a catalog / 模型档位只是简称，不是目录
 
----
+Teams sometimes use labels such as **frontier**, **balanced**, and **fast** to describe rough cost/latency/capability tradeoffs within a provider's current catalog. Those labels are not shared standards: a “fast” model can be the better choice on a narrow task, and a “frontier” label does not prove quality on yours. Avoid copying an undated model list or treating a prior ranking as a current fact. Verify the exact model ID, supported API features, context limit, and pricing in the provider's current documentation when making a real selection.
 
-#### Provider catalog (examples, date-stamped)
+#### Hosted API, open-weight, or hybrid? / 托管 API、开放权重还是混合部署？
 
-| Provider | Model | Open/Closed | Context Window | Strengths |
-|---|---|---|---|---|
-| OpenAI | GPT-4, GPT-4o, GPT-4.1 | Closed | 128k | Strong reasoning, coding, instruction following; multimodal (4o, 4.1) |
-| Anthropic | Claude Opus, Sonnet, Haiku | Closed | 200k | Long context, strong safety, nuanced reasoning; Opus for hard tasks |
-| Google | Gemini Pro, Gemini Flash | Closed | 1M+ (Pro) | Very long context, multimodal, good for retrieval-heavy workflows |
-| Meta | Llama 3 (8B, 70B, 405B) | Open-weight | 8k–128k | Self-hostable, fine-tunable, strong open baseline |
-| Mistral AI | Mistral 7B, Mixtral 8x7B | Open-weight | 32k | Efficient MoE, good quality/size tradeoff |
-
-**Gotcha:** Cited benchmark numbers age faster than the models. A "best at coding" claim from six months ago rarely holds today. Recheck on your own task before committing.
-
----
-
-#### Open-source vs. closed-source — how to choose (tradeoff)
-
-**Headline (30s):** **Closed-source** when you want top performance, minimal ops, and can accept data leaving your environment under a DPA. **Open-source** (open-weight) when data must stay on-prem, you need fine-tuning or custom architectures, or you want to avoid per-token costs at sufficient scale.
-
-| Factor | Open-Source | Closed-Source |
+| Approach | Potential advantages | Costs and constraints to compare |
 |---|---|---|
-| **Cost** | No per-token API fees; pay for compute/infra | Pay per token; varies by model and provider |
-| **Data privacy** | Data stays on your infra | Data sent to provider; check DPA and retention |
-| **Customization** | Fine-tune, modify architecture, change weights | Limited to API params; some providers offer fine-tuning |
-| **Performance** | Often behind frontier models; improving | Typically best on benchmarks |
-| **Maintenance** | You manage updates, security, scaling | Provider handles ops and updates |
-| **Compliance** | Full control for HIPAA, SOC2, etc. | Depends on provider certifications |
+| **Hosted API / 托管 API** | Quick access to managed inference and model updates; less serving infrastructure to operate. | Data flows and retention depend on the provider's terms and configuration; usage, rate limits, availability, and model lifecycle are provider-controlled. |
+| **Open-weight deployment / 开放权重部署** | More control over serving location, model version, and infrastructure choices. | A weight license is not automatically an open-source license or permission for every use. The operator owns hardware, serving, security, scaling, and updates. |
+| **Hybrid / 混合部署** | Different models or environments can serve distinct workload classes. | Adds routing, evaluation, observability, policy consistency, and failure paths across systems. |
 
-**Decision rule:**
+Do not pick a hosting pattern from API spend alone. A useful estimate is:
 
-1. Does data need to stay on-prem (regulatory, contractual)? → open-source.
-2. Is API spend projected above ~$10K/month *and* the task doesn't need frontier quality? → open-source may amortize.
-3. Otherwise → closed-source. Speed to ship and quality-per-dollar are hard to beat below that volume.
+$$
+\text{total cost} \approx \text{inference usage} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and risk controls}
+$$
 
-**Tiebreaker question (to ask the interviewer):** "What's the compliance requirement, and what's the expected monthly LLM spend?" These two answers usually pin the decision.
+Compare the same workload, quality target, peak traffic, and data constraints. A provider API may suit rapid iteration; self-hosting may suit a real data-control or workload need; edge deployment can help when offline operation or device constraints dominate. The break-even point depends on the actual workload and people costs.
 
-**Gotcha:** Self-hosting math often looks attractive at high volume but ignores hidden costs — MLOps headcount, GPU availability, internal eval infrastructure. The break-even is typically later than teams expect. See [9.1 AI Application Architecture → Deployment patterns](#API,%20self-hosted,%20edge,%20or%20hybrid%20%E2%80%94%20how%20do%20you%20pick%20a%20deployment%20pattern?) for the full picture.
+#### Route by measured need / 按实测需求路由
 
----
+Routing can send simple, low-risk requests to a cheaper model and reserve a more capable option for cases that benefit from it. First measure whether the router's errors, added latency, and maintenance are outweighed by the savings. Use a task-relevant fallback when routing confidence is insufficient, and ensure high-impact operations still pass application-side authorization. Do not label “classification,” “reasoning,” or “extraction” as automatically easy or hard across all models.
 
-#### Model sizing strategy
+#### Multimodal capability / 多模态能力
 
-##### Establish baseline first
+“Multimodal” does not specify which input or output a model supports or how well it handles a task. Test the actual modality and input shape—such as a chart, scanned document, spoken utterance, or video sample—under the target API. Check model documentation for supported formats, limits, and feature combinations at the time of deployment.
 
-1. Start with the most capable model (frontier tier) for your task.
-2. Measure quality and latency to define a baseline.
-3. Swap to smaller models **only where** quality remains acceptable.
+#### Related notes / 相关笔记
 
-##### Avoid premature optimization
+- [AI Application Architecture / AI应用架构](#13.%20AI%20Application%20Architecture%20/%20AI%E5%BA%94%E7%94%A8%E6%9E%B6%E6%9E%84) covers routing, cost, monitoring, and deployment choices.
+- [Context Engineering Principles / 上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99) covers token budgets and provider-specific prompt caching.
+- [Fine-tuning Strategies / 微调策略](#11.%20Fine-tuning%20Strategies%20/%20%E5%BE%AE%E8%B0%83%E7%AD%96%E7%95%A5) distinguishes behavior adaptation from maintained external knowledge.
+- [RAG Architecture and Implementation / 检索增强生成](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) covers current or access-controlled external evidence.
 
-Do not default to the cheapest model before validating quality. Downgrading too early hides capability gaps and makes debugging harder — you can't tell whether a failure is your prompt or a weaker model.
+#### Sources / 来源
 
-##### Task-level routing
-
-Route by task, not by a single global model choice:
-
-| Task Type | Example | Suggested Tier |
-|---|---|---|
-| Simple classification | Sentiment, intent | Fast/cheap |
-| Extraction | NER, structured output | Balanced |
-| Reasoning | Math, code, analysis | Frontier |
-| High-volume, low-stakes | Log parsing, simple routing | Fast/cheap |
-
-**How interviewers probe it:** "How do you know when to downgrade?" → run both models on a held-out eval; downgrade when quality delta is within your task's tolerance. "Who decides the tolerance?" → product and ops; it's a business call informed by eval data.
-
----
-
-#### Multimodal capabilities
-
-| Capability | Description | Models (examples) |
-|---|---|---|
-| **Vision** | Image understanding, OCR, diagrams | GPT-4o, GPT-4.1, Claude 3, Gemini Pro |
-| **Audio (STT)** | Speech-to-text | Whisper (OpenAI), Gemini |
-| **Audio (TTS)** | Text-to-speech | OpenAI TTS, ElevenLabs, Google |
-| **Video** | Video understanding, frames | GPT-4o, Gemini 1.5 Pro |
-
-##### Support by family (as of date stamp)
-
-- **GPT-4o / 4.1:** vision, audio in/out.
-- **Claude 3:** vision (images).
-- **Gemini Pro / Flash:** vision, audio, video.
-- **Llama, Mistral:** text-only (unless extended with adapters).
-
-**Gotcha:** "Multimodal" is a one-word label for a wide capability range. A model that OCRs text from screenshots isn't necessarily good at parsing engineering diagrams; "video understanding" at 1 frame/sec is different from real-time video. Probe specifically for the modality and task you need.
-
----
-
-#### Token economics
-
-##### How pricing works
-
-Most APIs charge separately for:
-
-- **Input tokens:** prompt + system message + any retrieved context.
-- **Output tokens:** generated completion.
-
-Output tokens are usually more expensive than input tokens (2–3× typical).
-
-##### Cached vs. uncached pricing
-
-Some providers (Anthropic, OpenAI) offer lower prices for cached context:
-
-| Model | Uncached (input) | Cached (input) | Output |
-|---|---|---|---|
-| Claude Sonnet (example) | ~$3/MTok | ~$0.30/MTok | ~$15/MTok |
-
-Cached pricing can be ~**10× cheaper** for repeated context (e.g., RAG documents, long system prompts).
-
-##### Why KV-cache hit rate matters
-
-- **KV-cache:** key-value cache for attention; avoids recomputing representations for unchanged prefix tokens.
-- **Cache hit:** user sends the same or extended prompt; provider reuses cached prefix.
-- **Cache miss:** new or changed prompt; full recomputation.
-
-Higher cache hit rate → more requests billed at cached rates → lower cost. Design prompts and retrieval so that the long, stable prefix (system prompt + docs) is reused across requests. See [3.1 Context Engineering → KV-Cache Optimization](#How%20do%20you%20use%20the%20KV%20cache%20to%20cut%20inference%20cost?) for the practices.
-
-**Gotcha:** Dynamic content (timestamps, session IDs) at the top of the prompt invalidates the cache for everything that follows. Push dynamic content **below** the static prefix, or inject via tool results instead of the system prompt.
-
----
-
-**See also:** [9.1 AI Application Architecture](#13.%20AI%20Application%20Architecture%20/%20AI%E5%BA%94%E7%94%A8%E6%9E%B6%E6%9E%84) for cost management, routing, and monitoring; [3.1 Context Engineering Principles](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99) for KV-cache practices; [7.1 Fine-tuning Strategies](#11.%20Fine-tuning%20Strategies%20/%20%E5%BE%AE%E8%B0%83%E7%AD%96%E7%95%A5) for when the open-source + fine-tune path makes sense.
+- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Its guidance treats prompting, context, fine-tuning, and evaluation as task-specific optimization levers rather than a universal linear ladder.
+- For current OpenAI model IDs and feature support, consult the changing [Models documentation](https://developers.openai.com/api/docs/models), checked 2026-10-15.
 ## 3. Prompt Engineering Fundamentals / 提示工程基础
 
-### Prompt Engineering Fundamentals
+### Prompt Engineering Fundamentals / 提示工程基础
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** A useful prompt makes the task, necessary context, constraints, and expected output clear. Add examples or structure when they address a measured failure. Prompt text can guide model behavior, but it cannot enforce access control, guarantee factual accuracy, or replace validation in the application. / 有效提示词要清楚说明任务、必要背景、约束和输出要求。只有在它们能解决实测问题时，才增加示例或结构。提示词能引导模型，但不能执行访问控制、保证事实正确，也不能替代应用校验。
 
-- What makes a prompt work, and what's the "capable intern" heuristic?
-- What are the four principles that prevent most agent failures?
-- How do you structure a system prompt? (The 7-layer architecture)
-- How do you get reliable structured output from an LLM?
+**30-second answer / 30 秒回答**
 
----
+- **English:** I write instructions for a capable reader who does not know my application’s unstated rules. I provide relevant context, define what success and uncertainty look like, and specify the output contract. I test the prompt on representative and boundary cases; permissions and business rules remain enforced by code.
+- **中文：** 我会把提示词写给一位聪明但不了解应用隐含规则的读者，补充必要背景，说明成功条件、不确定时的处理方式和输出约定，再用有代表性和边界样本评估。权限与业务规则仍由代码执行。
 
-#### What makes a prompt work, and what's the "capable intern" heuristic?
+**Key terms / 关键术语：** instruction / 指令；context / 上下文；few-shot example / 少样本示例；output contract / 输出约定；structured output / 结构化输出；validation / 校验。
 
-**Headline (30s):** Good prompts share three traits — **clarity** (unambiguous language), **specificity** (concrete requirements on length, format, and constraints), and **structure** (sections, bullets, numbered steps the model can parse). The mental model is the **capable intern**: write for someone smart who follows instructions precisely but lacks your system's context. Assume competence; do not assume context.
+#### The “capable intern” heuristic / “能干的实习生”启发式
 
-**Why it's asked:** Tests whether you treat prompting as an engineering problem (removing ambiguity) or a magic-words problem.
+Treat the model as capable of using the information and tools actually supplied, but unaware of unstated product rules, source freshness, user permissions, or the format expected by a downstream system. State those requirements explicitly when they matter.
 
-**What the model does and doesn't have:**
-
-- Has — broad knowledge, reasoning ability, instruction-following.
-- Doesn't have — your product's business rules, your API schemas and tool names, your preferred output formats, your domain-specific terminology.
-
-Supply the missing context explicitly.
-
-**Gotcha:** Candidates describe prompting as "finding the right words" — prompts that work aren't clever, they're **unambiguous**. If two engineers could interpret the prompt differently, the model can too.
-
----
-
-#### The 4 principles that prevent 80% of agent failures
-
-**Headline (30s):** Write for a capable intern → be descriptive, not concise → define the negative space → show, don't tell. In that order. Most agent failures come from violating one of these four; almost none come from anything more exotic.
-
-The four principles, as slots to memorize:
-
-1. **Write for a capable intern** — supply product context, tool names, and business rules explicitly.
-2. **Be descriptive, not concise** — vague instructions cause retries, which cost more tokens than a longer prompt.
-3. **Define the negative space** — what NOT to do prevents more failures than what TO do.
-4. **Show, don't tell** — one concrete example beats a paragraph of description.
-
-##### Principle 1: Write for a capable intern
-
-| Bad | Good |
+| Vague request | More useful instruction |
 |---|---|
-| "Handle the refund." | "You are a support agent. When the user requests a refund, call `process_refund(order_id)` with the order ID from the conversation. Confirm the refund amount before calling." |
-| "Fix the bug." | "You are a code reviewer. Identify the bug in the `validate_input` function. Output a patch in unified diff format." |
+| “Handle the refund.” | “Look up the sample order, check the current refund policy, and explain the next step. The application must authorize any refund action before execution.” |
+| “Classify the ticket.” | “Choose billing, technical, or general. If the message does not contain enough evidence, return needs_review.” |
+| “Summarize the document.” | “Return three bullets about the decisions and open questions. Do not add claims absent from the supplied document.” |
 
-##### Principle 2: Be descriptive, not concise
+These examples illustrate clarity; they do not imply that a prompt can verify an order, authorize a refund, or make a summary factually correct. The runtime must perform those checks.
 
-| Bad | Good |
-|---|---|
-| "Be helpful." | "Respond in 2–4 sentences. Prioritize actionable next steps. Do not speculate about causes the user did not mention." |
-| "Format the output." | "Return a JSON object with keys `summary` (string, max 100 chars), `confidence` (float 0–1), and `actions` (array of strings)." |
+#### A practical prompt checklist / 提示词检查清单
 
-##### Principle 3: Define the negative space
+Include only what helps this task:
 
-| Bad | Good |
-|---|---|
-| "Summarize the document." | "Summarize the document in 3 bullet points. Do NOT include direct quotes. Do NOT add information not present in the source." |
-| "Classify the ticket." | "Classify as `billing`, `technical`, or `general`. Do NOT invent new categories. If unclear, use `general`." |
+1. **Goal / 目标：** State the requested result and audience.
+2. **Relevant context / 相关背景：** Supply rules, terminology, source material, or assumptions the model cannot infer.
+3. **Inputs / 输入：** Identify the content to transform and delimit untrusted source text.
+4. **Constraints / 约束：** Explain required coverage, exclusions, uncertainty handling, and what should trigger a question or handoff.
+5. **Examples / 示例：** Add aligned positive, negative, or edge examples when they reduce ambiguity.
+6. **Output contract / 输出约定：** Specify fields, format, length, language, and validation expectations.
+7. **Tools and side effects / 工具与副作用：** Explain intended tool use, while the application independently enforces permissions and business conditions.
 
-##### Principle 4: Show, don't tell
+This list is an organizing aid, not a universal seven-layer prompt architecture. Some APIs distinguish system, developer, and user messages; use the roles and precedence defined by the exact API. Put dynamic data in the request context rather than hard-coding user records in reusable instructions.
 
-| Bad | Good |
-|---|---|
-| "Output dates in ISO format." | "Output dates in ISO format. Example: `2024-03-15`" |
-| "Respond professionally." | "Respond professionally. Good: 'I'd be happy to help with that.' Bad: 'Sure thing lol'" |
+#### Make constraints and examples useful / 让约束和示例真正有用
 
-**Gotcha:** Candidates reach for few-shot examples (principle 4) first and add rules reluctantly. In practice, **defining the negative space** (principle 3) eliminates more production failures than any other single change — the model defaults to plausible-but-wrong behaviors when you haven't explicitly forbidden them.
+“Be concise” may be sufficient for a simple chat. A downstream parser may need a precise schema, while a support response may need an uncertainty path. More text is not automatically better: conflicting examples, repeated rules, or irrelevant context can hurt.
 
----
+Use an example that demonstrates the intended boundary, not only the easiest typical input. If examples and instructions disagree, the model may follow the wrong pattern. Keep examples synthetic and avoid real customer records or secrets.
 
-#### The 7-layer system prompt architecture
+#### Structured output / 结构化输出
 
-**Headline (30s):** Structure system prompts in seven layers, general → specific. Each layer narrows behavior more than the last; deeper layers only matter if the higher ones are set first.
+For machine-consumed output, prefer an API-supported schema-constrained mode when it fits the task. In the OpenAI API documentation checked on 2026-10-15, Structured Outputs supports schema adherence for supported schemas and models; JSON mode guarantees valid JSON syntax but not adherence to an application schema. Refusals, incomplete responses, unsupported schema features, and semantic errors still need handling. Schema conformance does not prove that a field is true, authorized, or safe to execute. If the chosen API cannot enforce the schema, parse, validate, and use a bounded retry or explicit failure path.
 
-The seven layers, as slots to memorize:
+For human-readable output, headings, bullets, XML tags, or code fences can make sections easier to interpret. Delimiters help organize content; they are not a security boundary and do not guarantee valid machine output.
 
-1. **Identity & context** — role, environment, primary objective
-2. **Behavioral guidelines** — tone, professional standards, communication style
-3. **Tool usage policies** — general rules for when to use which tool
-4. **Domain procedures** — workflows for specific scenarios (refunds, escalations, etc.)
-5. **Output formatting** — response structure, data formats, length constraints
-6. **Safety guardrails** — safeguards for destructive or sensitive operations
-7. **Runtime context** — dynamic info injected per request (user profile, session state)
+**Small output contract / 简单输出约定:**
 
-##### Layer 1: Identity & context
-
-```
-You are a customer support agent for Acme SaaS. You operate in a live chat environment. Your primary objective is to resolve issues within 3 exchanges when possible.
-```
-
-##### Layer 2: Behavioral guidelines
-
-```
-Maintain a friendly, professional tone. Use the customer's name when known. Never make promises about timelines you cannot guarantee.
-```
-
-##### Layer 3: Tool usage policies
-
-```
-Use `lookup_order` before discussing order details. Use `create_ticket` only when the issue cannot be resolved in chat. Prefer read-only tools when the user's intent is unclear.
-```
-
-##### Layer 4: Domain procedures
-
-```
-Refund workflow: 1) Confirm order ID and amount. 2) Call `check_refund_eligibility`. 3) If eligible, call `process_refund`. 4) Confirm completion to the user.
-Escalation: If the user requests a manager or mentions legal action, immediately call `escalate_to_tier2` and inform the user a specialist will follow up.
-```
-
-##### Layer 5: Output formatting
-
-```
-Structure responses as: [Brief acknowledgment] [Action taken or next step] [Closing]. Keep each response under 150 words. Use bullet points for lists of 3+ items.
-```
-
-##### Layer 6: Safety guardrails
-
-```
-NEVER execute `delete_account` without explicit user confirmation including the phrase "delete my account". NEVER share internal ticket IDs or agent notes with the user.
-```
-
-##### Layer 7: Runtime context
-
-```
-Current user: Jane Doe (premium). Open tickets: #4521. Last interaction: 2 hours ago, billing question.
-```
-
-**Gotcha:** Stuffing everything into layer 1 (identity + tone + procedures + formatting) is the most common failure. The layering isn't decorative — it lets you edit behavior without rewriting the whole prompt, and it lets runtime context (layer 7) change per request without invalidating the KV-cache on the rest (see [3.1 Context Engineering → KV-Cache Optimization](#How%20do%20you%20use%20the%20KV%20cache%20to%20cut%20inference%20cost?)).
-
----
-
-#### How do you get reliable structured output from an LLM?
-
-**Headline (30s):** Three levers, in order of strength: **JSON mode** (provider API forces syntactically valid JSON), **XML/markdown delimiters** (easy to parse; works on any model), and **constrained decoding** (masks invalid tokens during generation — forces output to conform to a schema/regex/grammar). Pick constrained decoding when downstream systems require strict parsing and retries are costly.
-
-**How each works:**
-
-- **JSON mode** (OpenAI): `response_format: { "type": "json_object" }`. Forces valid JSON syntax. Does NOT guarantee the output matches your schema.
-- **Tool use as a structure hack** (Anthropic and others): define a tool whose only purpose is to receive the structured output. The provider's tool-use validator gives you near-guaranteed schema compliance.
-- **XML tags:** `<summary>...</summary>`, `<analysis>...</analysis>`. No API support needed; works on any model. Anthropic models are explicitly trained on XML, making this the most reliable approach for Claude.
-- **Markdown headers / code fences:** human-readable AND parseable. Good when the same output has to serve both human reviewers and programmatic consumers.
-- **Constrained / guided decoding:** OpenAI's "Structured Outputs" (`response_format: { "type": "json_schema", ... }`), or self-hosted via vLLM, llama.cpp, Outlines, etc. Invalid tokens are masked during generation, so output is guaranteed to match the schema/grammar.
-
-**Example outputs:**
-
-```json
+~~~json
 {
-  "summary": "The customer reported a billing discrepancy.",
+  "summary": "A short account of the supplied text",
   "category": "billing",
-  "priority": "high",
-  "suggested_actions": ["verify_payment", "check_invoice"]
+  "needs_review": false
 }
-```
+~~~
 
-```
-<summary>
-Brief overview of the issue.
-</summary>
+Application code should check allowed categories and required fields, and verify any consequential claim against its source.
 
-<analysis>
-Detailed reasoning and evidence.
-</analysis>
+#### Optional organization pattern / 可选组织方式
 
-<recommendation>
-Concrete next steps.
-</recommendation>
-```
+Some teams group a long instruction by general-to-specific concerns. The following is a checklist, not a standard that every prompt needs:
 
-**Gotcha:** JSON mode guarantees **valid JSON syntax**, not **schema compliance**. The model can still return `{"category": "urgent"}` when your schema only allows `billing | technical | general`. Either use constrained decoding with a JSON Schema, or validate the parsed JSON yourself and retry on schema mismatch.
+| Section | What it contains |
+|---|---|
+| **Role and task context / 角色与任务背景** | Work setting and goal. |
+| **Behavior / 行为** | Tone and response style. |
+| **Tool guidance / 工具说明** | Intended use and limits of available tools. |
+| **Procedure / 流程** | Steps that are useful to explain to the model. |
+| **Output / 输出** | Format and length. |
+| **Safety reminders / 安全提醒** | Human-readable reminders; code still enforces authorization and stop conditions. |
+| **Request-specific context / 本轮背景** | Current task data and state, supplied only when needed. |
 
----
+Do not put real names, ticket numbers, secrets, or private histories in a reusable prompt. Use a synthetic record when illustrating the format.
 
-#### Emphasis techniques (reference)
+#### Related notes / 相关笔记
 
-Reach for this when you need to signal priority within a prompt — "this rule is hard" vs. "this is a nice-to-have."
+- [Advanced Prompting Techniques / 高级提示技巧](#4.%20Advanced%20Prompting%20Techniques%20/%20%E9%AB%98%E7%BA%A7%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7) covers few-shot examples, reasoning cues, self-consistency, and workflows.
+- [Context Engineering Principles / 上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99) explains how to select and update the information for each inference.
+- [AI Safety in Production / 生产环境中的 AI 安全](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8) explains why prompts cannot replace runtime authorization.
 
-| Technique | Use Case | Example |
-|---|---|---|
-| **CAPS** | Critical rules, hard constraints | NEVER share API keys. ALWAYS validate input. |
-| **Bold** | Important concepts, priorities | **Always** confirm before destructive actions. |
-| `Backticks` | Code, field names, literals | Call `get_user_profile` with `user_id`. |
-| `<example>` tags | Demonstrations, templates | `<example>Good: "I'll look into that." Bad: "idk"</example>` |
+#### Sources / 来源
 
-Combine for hierarchy: CAPS for must-follow rules, bold for emphasis, backticks for technical terms.
-
-**See also:** [2.2 Advanced Prompting Techniques](#4.%20Advanced%20Prompting%20Techniques%20/%20%E9%AB%98%E7%BA%A7%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7) for CoT, few-shot, ReAct, and other technique-level patterns.
+- OpenAI, [Model optimization: write effective prompts](https://developers.openai.com/api/docs/guides/model-optimization#write-effective-prompts), checked 2026-10-15.
+- OpenAI, [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. API behavior and supported schema features can change.
 ## 4. Advanced Prompting Techniques / 高级提示技巧
 
 ### Advanced Prompting Techniques
