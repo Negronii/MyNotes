@@ -4,6 +4,10 @@
 
 ## 1. Browser Basics / 浏览器基础
 
+**Browser Basics / 浏览器基础**
+
+Think in stages—fetch, parse, compute style and layout, paint, then present—but treat the exact architecture as engine-specific. 浏览器常可按获取、解析、样式与布局、绘制和合成来理解；具体流水线属于实现，不是跨浏览器 API 保证。
+
 Two interview questions this note prepares you for:
 
 1. **What are the major components of a browser, and what do they do?**
@@ -15,36 +19,34 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 
 #### What are the major components of a modern browser?
 
-**Headline (30s):** A browser is four cooperating subsystems: a **rendering engine** (parses HTML/CSS into a render tree and paints pixels), a **JavaScript engine** (executes JS, manages async with the event loop), a **networking layer** (fetches resources, enforces TLS/CORS/cache), and **storage** (cookies, localStorage, sessionStorage, IndexedDB, the Cache API for service workers).
+**Headline (30s):** A useful high-level model separates rendering, JavaScript execution, networking, and storage. The browser coordinates them, but process boundaries, worker threads, cache layers, and the rendering pipeline vary by engine and platform. **中文：** 可按渲染、脚本执行、网络和存储建立心智模型；进程和线程划分由实现决定。
 
 **Why it's asked:** The interviewer wants to hear that you have a mental model of where work happens. Candidates who can't separate "rendering" from "JS execution" tend to write code that surprises them later (layout thrashing, stale caches, blocking scripts).
 
 ##### Rendering engine
 
 - **Engines**: Blink (Chrome, Edge), WebKit (Safari), Gecko (Firefox).
-- **Critical tasks**:
-  - Parse HTML/CSS → DOM / CSSOM (reentrant parsing handles malformed HTML).
-  - Combine DOM + CSSOM into the **render tree**, excluding non-visual nodes (`<script>`, `<meta>`, `display: none`).
-  - **Layout** (compute position/size) → **paint** (fill pixels) → **composite** (layer the painted parts).
-- Illustrative: `display: none` removes an element from the render tree; `visibility: hidden` keeps it but hides the pixels.
+- **Typical work**: parse HTML into the DOM; parse CSS rules and compute styles; determine boxes and geometry (layout); produce paint instructions; then present the result. Engines use different internal trees and may skip stages when a change does not require them.
+- `display: none` generates no principal box; `visibility: hidden` keeps layout space while hiding the element. These are CSS box-generation and visibility rules, not a promise about a particular internal “render tree.”
 
 ##### JavaScript engine
 
 - **Runtimes**: V8 (Chrome, Node), SpiderMonkey (Firefox), JavaScriptCore (Safari).
 - **Key pieces**:
-  - **JIT compilation** — JS compiled to machine code at runtime.
-  - **Event loop + callback queue** — schedules async work (`setTimeout`, promises, I/O). See [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
+- **Execution and optimization** — engines interpret and/or compile code using implementation-specific strategies; JIT is common but not a language guarantee.
+- **Event loop and task queues** — the host schedules timers, promises, networking, and rendering callbacks. See [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF); browser and Node host scheduling differ.
   - **Memory heap + call stack** — object allocation and function execution.
 
 ##### Networking layer
 
-- **HTTP/2 multiplexing** — parallel requests over one TCP connection.
-- **HSTS** forces HTTPS; **CORS** preflights validate cross-origin requests.
-- **Cache directives** — `Cache-Control`, `ETag`. See [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
+- **HTTP, TLS, and caches** — requests may be served by browser caches or a service worker before reaching the network. HTTP/2 multiplexes streams over a connection; HTTP/3 uses QUIC over UDP.
+- **HSTS** tells a user agent to use HTTPS for a host under the policy's rules.
+- **CORS controls response sharing with script, not whether every cross-origin request is sent.** Some requests are sent without a preflight; a preflight is used for requests outside the safelisted cases. A server may already have received a request even when the browser does not expose its response to script. See the [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol).
+- See [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md) for HTTP details.
 
 ##### Storage
 
-- **cookies** (sent on every request), **localStorage** (persistent, ~5MB), **sessionStorage** (per-tab, cleared on tab close), **IndexedDB** (transactional NoSQL for large data), **Cache API** via service workers (offline-first). See [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1).
+- **Cookies** may accompany matching requests; **localStorage** and **sessionStorage** are synchronous Web Storage; **IndexedDB** supports transactions; **Cache API** stores request/response pairs. Quotas, persistence, and embedded-context access are subject to browser policy. See [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1).
 
 **See also:** [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF), [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
 
@@ -52,31 +54,31 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 
 #### What happens when you type a URL and press Enter?
 
-**Headline (30s):** The browser resolves the domain via DNS, opens a TCP connection (plus TLS for HTTPS), sends an HTTP request, and streams the response back. As HTML arrives it builds the DOM; as CSS arrives it builds the CSSOM. The two merge into a render tree, which is laid out, painted into layers, and composited to the screen. JavaScript execution and network fetches happen throughout.
+**Headline (30s):** A navigation may consult caches or a service worker, resolve a host, establish or reuse a connection, and request a document. The browser can parse streamed HTML and start fetching discovered resources while parsing continues. Style, layout, script, paint, and presentation can overlap; this is a simplified model, not a single mandatory sequence. **中文：** 导航可能命中缓存或 Service Worker；解析和资源获取可以交叠，渲染阶段也不必严格串行。
 
 **Why it's asked:** This is the "show me your whole mental model in one question" probe. Interviewers want to hear the three big phases (fetch → parse → render) and at least one intelligent follow-up-worthy detail per phase.
 
 ##### Phase 1 — Resource fetching
 
-- **DNS lookup** — browser cache → OS cache → ISP's recursive resolver. Preload with `<link rel="dns-prefetch">`.
-- **TCP handshake** — 3-way (SYN, SYN-ACK, ACK). HTTPS adds a TLS handshake (client/server hello, key exchange).
-- **HTTP/3** uses **QUIC** over UDP to eliminate head-of-line blocking.
+- **Name resolution and connection setup** — a network navigation may require DNS and a new connection, but caches, connection reuse, proxies, or service workers can change the path.
+- **Transport and security** — HTTP/1.1 and HTTP/2 commonly use TCP; HTTPS authenticates and encrypts with TLS. HTTP/3 uses QUIC over UDP and avoids TCP's cross-stream transport head-of-line blocking.
+- Resource hints such as `dns-prefetch` and `preconnect` are hints; the user agent decides how to act on them.
 
 ##### Phase 2 — Parsing and the critical rendering path
 
 1. **DOM construction**: bytes → characters → tokens → nodes → DOM tree.
-2. **CSSOM construction**: CSS rules are cascaded into a CSSOM tree for style computation.
-3. **Render tree**: DOM + CSSOM, minus non-rendered nodes.
+2. **Style computation**: CSS is parsed and the cascade determines computed styles; box generation follows the resulting styles and layout mode.
+3. **Layout**: the engine computes boxes and geometry. The specifications define layout results; the internal representation is engine-specific.
 
-**Gotcha — the render-blocking trap:** CSS blocks rendering (the browser won't paint until the CSSOM is ready, or you get FOUC). A synchronous `<script>` blocks **both** parsing and rendering, because the script could `document.write` or mutate the DOM before more HTML is parsed.
+**Gotcha — parser-blocking scripts:** A parser-inserted classic script without `async` or `defer` can pause HTML parsing while it is fetched and run. Earlier blocking stylesheets can delay script execution when the script may inspect styles. Stylesheets and scripts can therefore delay visible content, but “the browser waits for a complete CSSOM before every first paint” is too broad.
 
 ##### Phase 3 — Layout, paint, composite
 
-- **Layout (reflow)** — compute exact position/size (`%` → pixels). Triggered by resize, font changes, DOM mutation, and *reading* geometry (like `offsetHeight`) after a write.
-- **Paint** — produce paint records for backgrounds, text, borders, shadows.
-- **Composite** — merge layers in the correct stacking order. **GPU acceleration** kicks in for layers with `transform`, `opacity`, or `will-change`.
+- **Style and layout** — compute styles and the geometry needed for the current presentation. DOM or CSS changes can invalidate work; a geometry read after a write may force pending style/layout work to be calculated synchronously.
+- **Paint and presentation** — engines create and update paint output, then present it. A change may skip layout or paint when the engine can reuse existing work.
+- **Compositing** — engines may composite layers separately. `transform` and `opacity` can be compositor-friendly for some elements and engines, but do not guarantee a layer or GPU execution.
 
-**Follow-up — "Is it fetch, then parse, then render, strictly in order?"** No. The browser streams: it starts parsing before all HTML arrives, kicks off speculative fetches for `<img>`/`<script>`/`<link>` it sees early, and paints incrementally. The three phases overlap in time.
+**Follow-up — “Is it fetch, then parse, then render, strictly in order?”** No. Parsing can begin before the response completes, and an engine may discover and fetch resources early. Script execution and stylesheets can pause parts of that work; presentation can update incrementally.
 
 **See also:** [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
 
@@ -84,120 +86,126 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 
 #### Why does a `<script>` tag block HTML parsing? What do `async` and `defer` change?
 
-**Headline (30s):** A plain `<script>` pauses parsing because the script might call `document.write` or mutate the DOM the parser is still building. `defer` keeps the script in document order but waits until parsing is done (runs before `DOMContentLoaded`). `async` runs as soon as the script is downloaded, regardless of parser state or document order.
+**Headline (30s):** A parser-inserted classic script without `async`, `defer`, or another applicable scheduling rule can pause parsing while it is fetched and executed. For classic external scripts, `defer` preserves order and runs after parsing before `DOMContentLoaded`; `async` runs when ready without preserving order. Module scripts are deferred by default unless `async` is present. **中文：** classic `defer` 保序并在解析后执行；`async` 不保序；模块脚本默认延后执行。
 
 **How it works:**
 
 | Attribute | Downloaded | Executed | Blocks parser? | Order preserved? |
 |---|---|---|---|---|
-| none (default) | inline with parser | immediately | yes | yes |
-| `defer` | in parallel | after parsing | no | yes |
-| `async` | in parallel | when ready | no | **no** |
+| Classic parser-inserted, no attribute | inline or fetched by parser | when parser reaches and can run it | yes | parser order |
+| Classic external `defer` | in parallel | after parsing, before `DOMContentLoaded` | no | yes among deferred scripts |
+| Classic external `async` | in parallel | when ready | no | no |
+| Module script | module graph fetched | deferred by default; `async` changes scheduling | no for normal module scripts | module graph rules apply |
 
-**Gotcha — "async is always faster":** Not for scripts that depend on each other. `async` runs in download-completion order, so a library and its consumer can execute in the wrong sequence. Use `defer` when order matters.
+**Gotcha — `defer` applies to classic external scripts:** It has no effect on classic inline scripts; module scripts are deferred by default. Use `async` only when execution order is unimportant.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20-%20HTML%20&%20CSS%20Part%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84HTML%E4%B8%8ECSS) for placement strategy and more `<script>` gotchas.
+**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for placement strategy and more `<script>` gotchas.
 
 ---
 
 #### Reflow vs. repaint vs. composite — what triggers each, and which is cheapest?
 
-**Headline (30s):** Changing geometry (width, position, DOM insertion) causes **reflow** → repaint → composite. Changing non-geometric visuals (color, background) skips reflow but still repaints. Changing **transform** or **opacity** only touches compositing and can run on the GPU — the cheapest path.
+**Headline (30s):** Geometry changes commonly require layout; paint-only changes can skip layout; some composited changes can skip both. Which stages run, how much work they cover, and whether a GPU participates depend on the changed property, page, and engine. **中文：** 属性变化可能使布局、绘制或合成失效；实际成本必须按页面和浏览器测量。
 
-**Cost ladder (cheap → expensive):**
+**Typical invalidation paths (implementation-dependent):**
 
-1. **Composite only** — `transform`, `opacity` on a composited layer.
-2. **Paint + composite** — `background-color`, `visibility`, `color`.
-3. **Layout + paint + composite** — `width`, `height`, `top`, `left`, adding/removing DOM, font-size changes.
+1. **Style + layout + paint + presentation** — changes affecting geometry or wrapping, such as many width or font changes.
+2. **Style + paint + presentation** — visual changes that do not affect geometry, such as many color changes.
+3. **Style + compositor update** — some `transform` / `opacity` changes on elements already suitable for compositing.
 
-**Gotcha — layout thrashing:** Reading a geometry property (`offsetHeight`, `getBoundingClientRect`) right after a write forces a **synchronous** layout — the browser must flush pending style/layout work before it can answer. In a loop, this goes quadratic. Batch your reads before your writes, or use FastDOM / `requestAnimationFrame`.
+These paths are examples, not CSS guarantees. Layer setup, affected-area size, and GPU use depend on the engine and page.
+
+**Gotcha — forced synchronous layout:** Reading current geometry (`offsetHeight`, `getBoundingClientRect`) after a write can force pending style/layout work to be calculated before the value is returned. Repeating write/read pairs can repeat that work. `scrollTop` is a scroll position rather than a geometry measurement. Batch reads before writes when that fits the task, and inspect a performance trace to confirm the issue.
 
 ```javascript
-// bad — 100 synchronous layouts
+// may repeatedly force pending style/layout work
 for (const el of items) {
   el.style.width = el.offsetWidth + 10 + 'px';
 }
 
-// good — 1 layout, 100 writes
+// collect measurements before writing
 const widths = items.map(el => el.offsetWidth);
 items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 ```
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20-%20HTML%20&%20CSS%20Part%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84HTML%E4%B8%8ECSS) for deeper triggers and optimization tactics, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
+**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering triggers and optimization tactics, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
 
 ---
 
 #### How do you optimize the critical rendering path?
 
-**Headline (30s):** Three levers: cut render-blocking resources (inline critical CSS, `defer`/`async` JS), start network work earlier (`preconnect`, `dns-prefetch`, lazy-load offscreen images), and keep runtime cheap (debounce scroll handlers, `requestAnimationFrame` for animations, avoid layout thrashing).
+**Headline (30s):** Reduce blocking work, let the browser discover critical resources early, and avoid repeated synchronous layout. Validate the result with page-level measurements; `preconnect`, critical CSS, image loading policy, and animation choices all depend on the page and target browsers. **中文：** 优化应从减少阻塞、尽早发现关键资源和避免重复同步布局入手，并用页面测量验证。
 
 **Tactics:**
 
-- **Render-blocking mitigation** — inline critical CSS; defer non-critical JS; use `content-visibility: auto` to skip offscreen rendering.
-- **Network** — `<link rel="preconnect">` for early TCP/TLS; `loading="lazy"` on images; modern formats (WebP, AVIF); HTTP/2 or HTTP/3.
-- **Runtime** — debounce scroll/resize handlers; use `requestAnimationFrame` for visual updates; use `transform`/`opacity` over `top`/`left`.
+- **Render-blocking mitigation** — defer scripts whose work is not needed during parsing; critical CSS can reduce a separate blocking request but increases HTML and affects caching; use `content-visibility: auto` only when its rendering semantics fit.
+- **Network** — `<link rel="preconnect">` can warm up a connection; use `loading="lazy"` for genuinely off-screen images, not likely LCP images; select image formats and HTTP versions based on target support and measurements.
+- **Runtime** — debounce or throttle only when event frequency requires it; use `requestAnimationFrame` for visual updates; profile before preferring `transform`/`opacity` over layout properties.
 - **SSR + hydration** — serve HTML first, let client JS attach listeners on top (as in React hydration).
-- **Speculative parsing** — modern browsers pre-scan HTML for resources to start downloads even while a script is blocking the main parser. You don't call this directly, but it's worth knowing the name.
+- **Early resource discovery** — some engines use speculative loading while parsing is blocked. This is an implementation optimization, not a page-level guarantee.
 
-**See also:** [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90), [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
-## 2. HTML & CSS Basics / HTML与CSS基础
+**See also:** [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90), [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
 
-A grab-bag reference for five CSS foundations that show up constantly in interviews: units, selectors/specificity, responsive techniques, inheritance, and text-overflow tricks. Reach for this when you need to refresh the vocabulary — for mechanism-heavy deep dives, cross-links are at the end of each section.
+**Standards and implementation notes / 标准与实现资料：** [WHATWG HTML scripting](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element), [Fetch Standard: CORS](https://fetch.spec.whatwg.org/#http-cors-protocol), [CSS Display](https://www.w3.org/TR/css-display-3/), [Chrome RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), [Chrome forced-reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
+## 2. HTML and CSS Basics / HTML 与 CSS 基础
+
+**HTML and CSS Basics / HTML 与 CSS 基础**
+
+A compact reference for five CSS foundations that show up constantly in interviews: units, selectors/specificity, responsive techniques, inheritance, and text-overflow tricks. Reach for this when you need to refresh the vocabulary — for mechanism-heavy deep dives, cross-links are at the end of each section.
+
+**中文：** 重点区分单位及其参照、级联优先级、属性继承、文本截断与语义 HTML 的职责边界。
 
 #### CSS Units — which to use when
 
 | Unit | Relative to | Use for | Avoid for |
 |---|---|---|---|
-| `px` | physical pixels | borders, 1-off precise control | body text, layout (accessibility) |
-| `%` | parent | widths in grid layouts | nesting widths (unpredictable overflow) |
+| `px` | CSS reference pixels | borders, precise spacing, sizing | treating them as device pixels |
+| `%` | property-specific reference, often a containing block | fluid sizing | assuming every percentage uses the parent's width |
 | `em` | parent `font-size` (or own, for non-`font-size`) | spacing relative to text | deep nesting (compounds) |
 | `rem` | root `font-size` | scalable UIs, most typography | fine-grained per-component control |
-| `vw` / `vh` | viewport | hero sections, fullscreen elements | full-width inside scrollable pages |
-| `dvh` | viewport **minus** mobile UI | mobile hero / full-height on phones | where you need static viewport height |
+| `vw` / `vh` | default (large) viewport size | viewport-relative layout | assuming `100vw` always equals the content box |
+| `svh` / `lvh` / `dvh` | small / large / dynamic viewport height | choose based on browser UI behavior | assuming they are interchangeable |
 | `vmin` / `vmax` | smaller / larger viewport dim | keeping elements square across orientations | anything that needs a single axis |
 
 Usage notes:
 
-- **`px`** — precise but not accessibility-friendly at larger zoom levels.
-- **`%`** — context-dependent (`width: 50%` = 50% of parent). Nesting `%` widths leads to unexpected overflows.
-- **`em`** — relative to parent `font-size`; compounds in nested lists (`1.2em` inside `1.2em` is `1.44em`).
-- **`rem`** — root-relative. Setting `html { font-size: 62.5%; }` makes `1rem = 10px` while still respecting user preferences.
-- **`100vw`** includes the scrollbar on most desktop browsers — use `width: 100%` inside a body-width container to avoid horizontal overflow.
-- **`vh`** doesn't shrink when the mobile browser's address bar shows/hides. Use `dvh` for true full-viewport height on mobile.
+- **`px`** — a CSS reference pixel, not necessarily one physical/device pixel. Page zoom and `devicePixelRatio` affect how CSS pixels map to the output surface; CSS px itself doesn't prevent page zoom.
+- **`%`** — its reference depends on the property. For `width`, it is generally based on the containing block's width; percentages in other properties can resolve differently or remain unresolved until layout.
+- **`em`** — for most properties, relative to the element's computed font size; in `font-size`, relative to the inherited font size. It compounds when nested font sizes are set in `em`.
+- **`rem`** — relative to the root element's font size. Avoid resetting the root to a fixed pixel size when a design should follow user font preferences.
+- **`100vw`** — viewport units are based on the viewport, not necessarily the available content box; classic scrollbars and root overflow settings can make a `100vw` child overflow horizontally. Use the containing block's `width: 100%` for ordinary full-width content.
+- **`vh`** — the default `vh` maps to the large viewport. On devices with retractable browser UI it can extend behind that UI. `svh` fits the small viewport; `dvh` follows dynamic UI and can resize while scrolling.
 - **`vmin` / `vmax`** — `50vmin` always references the smaller dimension, useful for square elements that adapt to orientation.
 
 #### CSS Selectors — specificity and performance
 
-##### Specificity hierarchy (highest to lowest)
+##### Selector specificity
 
-1. **Inline styles** (`style="..."`)
-2. **IDs** (`#id`)
-3. **Classes, attributes, pseudo-classes** (`.class`, `[type="text"]`, `:hover`)
-4. **Elements, pseudo-elements** (`div`, `::before`)
+For selector specificity, compare the ID, class/attribute/pseudo-class, and type/pseudo-element columns from left to right. The cascade resolves origin, importance, context, attached styles, and cascade layer before specificity; specificity is not the only priority rule. Inline `style` attributes have a separate precedence step for declarations of the same importance.
 
-Specificity is calculated as a tuple `(inline, id, class, element)` and compared left-to-right: `(0, 1, 0, 0)` > `(0, 0, 2, 0)` even if the right side has more selectors. The universal selector (`*`) and combinators (`>`, `+`, `~`) carry zero specificity.
+For a simple author-style-sheet comparison, the tuple `(id, class, type)` is compared left-to-right: `(1, 0, 0)` > `(0, 2, 0)` even if the second selector has more classes. The universal selector (`*`) and combinators (`>`, `+`, `~`) carry zero specificity. `:not()`, `:is()`, and `:has()` take the specificity of their most specific argument; `:where()` contributes zero.
 
 **Specificity battle example:**
 
 ```css
-/* Specificity: (0, 1, 1, 0) — wins, because ID weight dominates */
+/* Specificity: (1, 1, 0) — wins, because ID weight dominates */
 #sidebar .menu-item { color: red; }
 
-/* Specificity: (0, 0, 2, 0) — loses, even with more classes */
+/* Specificity: (0, 3, 0) — loses, even with more classes */
 .menu .menu-item.active { color: blue; }
 ```
 
-More classes don't overcome a single ID — the `(0, 1, x, x)` tuple always beats any `(0, 0, y, z)`.
+More classes don't overcome a single ID within the same cascade context. Importance, layer order, and origin can still decide which declaration participates.
 
-**`:not()` quirk:** `:not()` itself adds no specificity, but its argument does. `div:not(.sidebar)` is `(0, 0, 1, 1)` (element + class).
+**`:not()` detail:** `:not()` itself adds no specificity; its most-specific argument does. `div:not(.sidebar)` is `(0, 1, 1)` (class + element).
 
 ##### Performance and maintainability tactics
 
 - **Attribute selectors** — `[data-state="active"]` lets CSS react to JS state without class juggling.
 - **BEM** (`.block__element--modifier`) — flat specificity, trivially overridable by a more specific class.
-- **Cascade layers (`@layer`)** — group styles (`@layer base, components, utilities;`) so an author never has to win a specificity war; later layers always beat earlier ones, regardless of selector weight.
-- **CSS-in-JS** (styled-components, Emotion) — generates unique class names, sidestepping the specificity game entirely.
-- **Critical CSS** — inline selectors for above-the-fold content (`body > .header`) to paint faster.
+- **Cascade layers (`@layer`)** — organize styles (`@layer reset, components, utilities;`). For normal declarations, later layers win and unlayered author rules outrank layered author rules; for `!important`, layer order reverses. Specificity still matters within the winning layer.
+- **CSS-in-JS** (styled-components, Emotion) — often generates classes, but it still participates in the same cascade and specificity rules.
+- **Critical CSS** — inlining genuinely critical styles can reduce a render-blocking stylesheet dependency, but it adds bytes to HTML and should be measured against caching and delivery costs.
 
 #### Responsive design beyond media queries
 
@@ -240,6 +248,14 @@ Media queries still work, but modern CSS gives cleaner options for common cases:
 
 **See also:** [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for the full Grid / Flexbox reference.
 
+#### Semantic HTML and accessibility
+
+Choose elements for their meaning and built-in behavior. Use headings to express the page outline, landmarks such as `<main>` and `<nav>` to identify regions, a `<button>` for an action, and an `<a href>` for navigation. Semantic controls provide keyboard and assistive-technology behavior that a styled `<div>` does not provide by default.
+
+Give form controls programmatic labels with `<label for="…">` or a properly nested label. Give informative images useful alternative text; use `alt=""` for decorative images so they do not add noise to the text alternative. Do not use color or visual positioning as the only way to convey a required state or relationship.
+
+Keep the source order meaningful. CSS can change visual placement without changing the underlying document sequence used by nonvisual presentation.
+
 #### Inherited CSS properties
 
 Some properties cascade to children by default; most do not. Knowing the short list saves you from reaching for `inherit` unnecessarily.
@@ -247,11 +263,13 @@ Some properties cascade to children by default; most do not. Knowing the short l
 **Inherited by default:**
 
 - **Font** — `font-family`, `font-size`, `font-style`, `font-weight`, `line-height`
-- **Text formatting** — `text-align`, `text-indent`, `text-transform`, `text-decoration`, `text-shadow`
+- **Text formatting** — `text-align`, `text-indent`, `text-transform`, `text-shadow`
 - **Spacing** — `letter-spacing`, `word-spacing`
 - **Visibility** — `visibility`
 
-Most layout / box-model properties (`margin`, `padding`, `border`, `width`, `height`, `display`, `position`) do **not** inherit — you'd never want them to.
+Most layout / box-model properties (`margin`, `padding`, `border`, `width`, `height`, `display`, `position`) do **not** inherit; they usually apply to the element's own box.
+
+`text-decoration` is not inherited. A decoration drawn by an ancestor can continue across descendant text, which can make it look inherited; changing the child's `text-decoration` does not simply override the ancestor's line.
 
 #### Truncating text with ellipsis
 
@@ -280,8 +298,14 @@ All three properties are needed: `nowrap` keeps text on one line, `overflow: hid
 }
 ```
 
-Uses the old `-webkit-box` layout, but is very widely supported (Chromium, Safari, modern Firefox). For pure-spec alternatives, `line-clamp` is now in CSS Overflow Module Level 4 — ship when browser support matures.
-## 3. Box Model and BFC / 盒模型与BFC
+This is the legacy `-webkit-line-clamp` form, with the `-webkit-box` display and orientation declarations required by that syntax. CSS Overflow Module Level 4 specifies a `line-clamp` shorthand and also describes the legacy form for compatibility, but remains a Working Draft; check the exact behavior and support in target browsers before choosing a form.
+
+**Specifications / guidance:** [HTML Standard](https://html.spec.whatwg.org/), [CSS Values and Units](https://www.w3.org/TR/css-values/), [CSS Selectors](https://www.w3.org/TR/selectors-4/), [CSS Cascading and Inheritance](https://www.w3.org/TR/css-cascade-5/), [CSS Display and visual ordering](https://www.w3.org/TR/css-display-3/#order-property), [CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/), [CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/), [WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/), [WAI form labels](https://www.w3.org/WAI/tutorials/forms/labels/), and [WAI image alternatives](https://www.w3.org/WAI/tutorials/images/).
+## 3. Box Model and BFC / 盒模型与块格式化上下文
+
+**Box Model and BFC / 盒模型与块格式化上下文**
+
+The box model measures each generated box; a block formatting context (BFC) controls specific float and margin interactions. A BFC is not a stacking context or a general rendering-containment boundary. **中文：** 盒模型描述盒子的尺寸；BFC 主要管理浮动和外边距交互，不等于堆叠上下文或通用布局隔离。
 
 Interview questions this note prepares you for:
 
@@ -357,29 +381,28 @@ Under `border-box`, padding and border stay inside the 100×100 footprint. Under
 
 #### What is a Block Formatting Context, and what triggers one?
 
-**Headline (30s):** A Block Formatting Context (BFC) is an isolated layout region where internal elements don't interact with elements outside it. Inside a BFC: block boxes stack vertically, floats don't escape, adjacent margins collapse *with each other* but not across the BFC boundary, and the BFC's height grows to contain any floated children. You trigger one by setting certain properties on a container — the most common is `overflow: hidden` or `display: flow-root`.
+**Headline (30s):** A Block Formatting Context (BFC) is a flow-layout context with defined interactions with floats and vertical margin collapsing. A BFC root's auto height includes floats in that context, and its child margins do not collapse through its boundary. That does not make it a stacking context, a containing block for every positioned descendant, or a general layout-containment boundary. **中文：** BFC 会约束浮动与子级外边距的流动；它本身不保证堆叠或定位隔离。
 
 **Rules that apply inside a BFC:**
 
 - Block-level boxes stack vertically along the block axis.
-- Floated children do **not** overlap the BFC's boundary.
-- The BFC's height adjusts to include any floated children (float no longer collapses the parent).
-- Vertical margin collapse occurs between adjacent siblings *inside* the BFC, but never crosses the BFC boundary.
-- The BFC is a containing block for absolutely positioned descendants.
+- Floats outside a BFC do not intrude into its contents; a BFC root's auto height includes floats contained by that context.
+- Vertical margins of adjacent in-flow block siblings can collapse within the BFC. Child margins do not collapse through the BFC root's boundary; the root's own margins can still participate in its parent context.
+- A BFC is not, by itself, a containing block for absolutely positioned descendants. Positioned containing blocks have separate rules.
+- A BFC does not by itself create a stacking context or contain all layout invalidation.
 
 **How to create a BFC** (any of these on the container):
 
-- `overflow: hidden` / `auto` / `scroll` (anything other than `visible`)
-- `display: flow-root` — the "modern, side-effect-free" trigger (no clipping, no scroll)
-- `display: flex` / `grid` / `inline-block` / `table-cell`
-- `position: absolute` / `fixed`
-- `float: left` / `right` (but that makes the container itself float — rarely what you want)
+- `display: flow-root` — explicitly establishes a BFC without clipping content or adding a scroll container.
+- A block container with `overflow: hidden`, `auto`, or `scroll` (but not `overflow: clip`); hidden/scrolling overflow has its own clipping or scrolling effects.
+- Floats, absolutely positioned boxes, inline blocks, and table cells/captions establish independent formatting contexts for their contents.
+- `display: flex` and `display: grid` establish flex/grid formatting contexts, not BFCs. Their items also do not participate in block margin collapsing or allow floats to intrude in the usual way.
 
-**Gotcha — "`overflow: hidden` can clip your content":** It triggers a BFC, yes, but it also crops anything that overflows. If you need the BFC behavior without clipping, use `display: flow-root` instead.
+**Gotcha — BFC vs. overflow:** `overflow: hidden` can clip content and establish a scroll container. If the goal is only to contain floats and separate child margins, use `display: flow-root`.
 
 #### How do you fix vertical margin collapse?
 
-**Headline (30s):** Adjacent block siblings' vertical margins collapse into the larger of the two — so two boxes with `margin: 50px` each don't produce a 100px gap, they produce a 50px gap. To prevent collapse between boxes, wrap one of them in a container that creates a new BFC; margins never collapse across a BFC boundary.
+**Headline (30s):** Positive vertical margins of adjacent block siblings in the same block formatting context collapse to the larger margin, so two `50px` margins produce a `50px` gap. A formatting-context boundary can prevent a child's margin from collapsing through its container; the container's own margins still follow the parent context's rules.
 
 **Before** (margin collapse strikes):
 
@@ -390,7 +413,7 @@ Under `border-box`, padding and border stay inside the 100×100 footprint. Under
 
 ```css
 section { margin: 50px; }
-/* Gap between sections: 50px (collapsed), not 100px */
+/* The adjacent positive margins collapse to a 50px gap. */
 ```
 
 **After** (wrap one in a BFC):
@@ -404,15 +427,15 @@ section { margin: 50px; }
 
 ```css
 section { margin: 50px; }
-.bfc { display: flow-root; } /* or overflow: hidden */
-/* Gap is now the full 100px */
+.bfc { display: flow-root; }
+/* The child's top margin stays inside the BFC; the outer gap is 100px. */
 ```
 
-**Gotcha — padding on the parent doesn't help if the parent itself isn't a BFC:** A top margin on the first child will "escape" through a non-BFC parent and collapse with the parent's own top margin. Either add padding/border to the parent, or make it a BFC.
+**Gotcha — parent/first-child collapse:** If a parent has no border, padding, inline content, clearance, or new formatting context, its first child's top margin can collapse through it. A border, padding, or formatting-context boundary separates those margins.
 
 #### How do you contain floating children so the parent doesn't collapse?
 
-**Headline (30s):** When a parent contains only floated children, its height collapses to zero because floats are removed from the normal flow. Fix by making the parent a BFC (the clean modern way) or by using a clearfix pseudo-element (the legacy way).
+**Headline (30s):** Floats are out of normal flow, so a regular block parent with only floated children may have no height from those children. Make the parent a BFC with `display: flow-root`, or use a clearfix where legacy support requires it.
 
 **Before** (parent collapses):
 
@@ -439,9 +462,11 @@ The `.container` has no height — it's a red stripe, not a red rectangle around
 }
 ```
 
-Both make the parent's height include the floated children. Prefer `flow-root` in new code.
+Both make the parent's height include the floated children. Prefer `flow-root` when a BFC is the intended behavior.
 
-**See also:** [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for more clear-floats patterns and layout interview scenarios.
+**See also:** [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for float-clearing patterns and layout interview scenarios.
+
+**Specifications / 规范：** [CSS Display: formatting contexts](https://www.w3.org/TR/css-display-3/), [CSS 2.2: block formatting contexts](https://www.w3.org/TR/CSS22/visuren.html#block-formatting), [CSS 2.2: box model](https://www.w3.org/TR/CSS22/box.html#box-dimensions).
 ## 4. Flex & Grid Layout / Flex与Grid布局
 
 Reach for this when you need to remember the property names and what each one does. For "how should I approach this layout?" style interview answers, the patterns live in [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98).
@@ -572,8 +597,12 @@ Track sizes can be absolute (`100px`), flexible (`1fr`), content-based (`auto`, 
 - **Grid** — page-level layouts, card grids, forms with aligned labels/inputs, anything 2D.
 - **Both together** — Grid for the page structure, Flexbox inside each cell for horizontal clusters.
 
-**See also:** [`2.1 HTML & CSS Basics`](#2.%20HTML%20&%20CSS%20Basics%20/%20HTML%E4%B8%8ECSS%E5%9F%BA%E7%A1%80) for CSS units used with `fr`/`minmax`, [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for worked interview examples using these layouts.
-## 5. Browser - HTML & CSS Part / 浏览器中的HTML与CSS
+**See also:** [`2.1 HTML & CSS Basics`](#2.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for CSS units used with `fr`/`minmax`, [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for worked interview examples using these layouts.
+## 5. Browser HTML and CSS / 浏览器中的 HTML 与 CSS
+
+**Browser HTML and CSS / 浏览器中的 HTML 与 CSS**
+
+Layout, paint, and compositing describe common rendering work, not fixed performance guarantees. `async`, `defer`, and module scripts have distinct scheduling rules. **中文：** 布局、绘制和合成是常见实现阶段，不是固定成本保证；脚本属性的执行时序需按类型区分。
 
 ### Reflow, Repaint, and the `<script>` Tag
 
@@ -590,22 +619,22 @@ For the big-picture render pipeline these topics fit into, see [`1.1 Browser Bas
 
 #### Reflow vs. repaint vs. composite — what triggers each?
 
-**Headline (30s):** Reflow (also called *layout*) recalculates positions and sizes — expensive because it can cascade across the whole page. Repaint redraws visual styles — cheaper, no layout work. Composite merges already-painted layers on the GPU — cheapest. Every reflow triggers a repaint; every repaint triggers a composite. A pure composite is the fastest path.
+**Headline (30s):** Layout recomputes geometry; paint updates visual output; compositing combines content for presentation. A change may require one stage or several. The affected area, thread, layer, and GPU use depend on the page and engine, so the stage names are not a universal cost ranking.
 
-**Cost ladder:**
+**Typical invalidation paths:**
 
-| Phase | Triggered by | Cost |
+| Stage pattern | Examples | Boundary |
 |---|---|---|
-| **Composite only** | `transform`, `opacity` (on a composited layer) | cheap — GPU |
-| **Paint + composite** | `color`, `background-color`, `visibility`, shadows | moderate — CPU |
-| **Reflow + paint + composite** | `width`, `height`, `top`, `left`, DOM insert/remove, font-size, resize | expensive — can cascade |
+| Style + layout + paint + presentation | Changes affecting geometry or line wrapping, such as many width or font changes | Can affect related boxes; extent depends on layout and engine |
+| Style + paint + presentation | Visual changes that do not affect geometry, such as many color changes | Layout may be reused |
+| Style + compositor update | Some `transform` / `opacity` changes on an element suitable for compositing | May avoid layout and paint; layer setup and GPU use are not guaranteed |
 
 ##### What triggers reflow
 
 - Window resize.
 - Adding, removing, or reordering DOM nodes.
 - Changes to layout-affecting styles: `width`, `height`, `margin`, `padding`, `border`, `display`, `position`, `font-*`, `line-height`, `text-align`.
-- **Reading** geometry properties (`offsetHeight`, `scrollTop`, `getBoundingClientRect`) after a write — this forces a *synchronous* reflow so the browser can return an accurate answer.
+- **Reading** geometry properties (`offsetHeight`, `getBoundingClientRect`) after a write can force pending style/layout work synchronously. `scrollTop` is a scroll position, not a geometry measurement.
 
 ##### What triggers repaint (without reflow)
 
@@ -613,43 +642,42 @@ For the big-picture render pipeline these topics fit into, see [`1.1 Browser Bas
 - `visibility` (going between `visible` and `hidden`)
 - `box-shadow`, `outline`, `border-color` (but not `border-width`, which changes layout)
 
-##### What stays on the compositor
+##### Compositor-friendly properties (conditional)
 
-- `transform: translate / scale / rotate`
-- `opacity`
-- `filter` (in modern browsers, with `will-change` hint)
+- `transform` and `opacity` can be good candidates for visual animation when a trace shows layout or paint is the bottleneck.
+- `filter`, `will-change`, and other properties have property- and engine-specific effects; none guarantees compositor-only work.
 
-**Gotcha — "just animate `top` and `left`":** These trigger reflow on every frame. Use `transform: translate(...)` instead — same visual effect, pure composite, runs on the GPU.
+**Gotcha — avoid a promised “GPU path”:** `transform` can avoid layout in common cases, but may still require paint, layer setup, or other work. Compare traces on target browsers and devices.
 
 #### How do you minimize the cost of reflow?
 
-**Headline (30s):** Batch writes, then reads (never interleave them); change classes rather than individual styles; pull heavy-DOM work off-screen with document fragments; use BFC to isolate layout; debounce high-frequency events; animate only `transform` and `opacity`.
+**Headline (30s):** Reduce unnecessary DOM work, group geometry reads before writes when that fits the task, and profile forced synchronous layout. A BFC manages float and margin interactions; it is not a layout-containment guarantee. CSS containment has distinct behavior and should be applied intentionally.
 
 **Tactics:**
 
-- **Batch style changes.** Add or remove a class with many rules rather than setting `element.style.x` individually. A single class swap = one reflow.
-- **Minimize DOM access.** Build subtrees in a `DocumentFragment` or an off-screen element, then attach in one operation.
-- **Leverage BFC.** Isolating a subtree in a [Block Formatting Context](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8EBFC) prevents its reflows from cascading outside.
+- **Group writes.** A class change or a series of style writes may be batched by the browser; it does not guarantee exactly one layout.
+- **Avoid interleaving writes and geometry reads.** A `DocumentFragment` can clarify subtree construction, but is not automatically faster than direct DOM operations.
+- **Use containment only for a real boundary.** See [Block Formatting Context](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for float and margin behavior; do not treat it as CSS layout containment.
 - **Debounce or throttle** `resize` / `scroll` handlers — see [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
-- **CSS animations + `requestAnimationFrame`.** Prefer CSS-declarative animations; for JS-driven animations, align writes with `requestAnimationFrame` so the browser batches them into one frame.
-- **Avoid layout thrashing.** Don't read a geometry property after writing one in the same loop — the browser is forced to flush layout between every read/write pair.
+- **Schedule visual updates deliberately.** CSS animations and `requestAnimationFrame` can align visual work with rendering; neither makes expensive work free.
+- **Avoid repeated forced layout.** Do not read a geometry property after every write in a loop; the browser may have to flush pending layout each time.
 
 ```javascript
-// bad — N synchronous reflows
+// may repeatedly force pending style/layout work
 for (const el of items) {
   el.style.width = el.offsetWidth + 10 + 'px';
 }
 
-// good — 1 reflow
+// collect measurements before writing
 const widths = items.map(el => el.offsetWidth);
 items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 ```
 
-**Gotcha — `visibility: hidden` vs `display: none` cost:** `display: none` causes a reflow because the element leaves/rejoins the layout tree. `visibility: hidden` only causes a repaint because the element keeps its space. If you're toggling frequently, prefer `visibility` (or `opacity` + `pointer-events: none`).
+**Gotcha — hidden styles have different semantics:** `display: none` generates no box; `visibility: hidden` keeps layout space. Their rendering and accessibility effects differ, so choose by behavior rather than a universal cost claim.
 
 #### What does the `<script>` tag do?
 
-**Headline (30s):** It embeds or references executable JavaScript. By default, encountering a `<script>` pauses HTML parsing until the script is fetched, parsed, and executed — because the script could call `document.write` or mutate the DOM the parser is still building.
+**Headline (30s):** A parser-inserted classic script without `async`, `defer`, or another applicable scheduling rule can pause parsing while it is fetched and executed. The parser must account for scripts that can affect the document as parsing continues.
 
 **Inline:**
 
@@ -667,28 +695,29 @@ items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 
 #### `async` vs. `defer` — which to use when?
 
-**Headline (30s):** Both download the script in parallel with HTML parsing (non-blocking). `defer` then waits until parsing finishes and runs scripts **in document order**. `async` runs each script as soon as it's downloaded, in **whatever order** downloads complete. Use `defer` when you need order (most cases). Use `async` only for scripts that are totally independent — analytics, ads.
+**Headline (30s):** For classic external scripts, `defer` fetches in parallel and executes after parsing in document order; `async` fetches in parallel and executes when ready without preserving order. Module scripts are deferred by default. Choose based on dependencies and when the script must run.
 
 | Attribute | Downloads | Executes | Blocks parser? | Preserves order? |
 |---|---|---|---|---|
-| none | inline with parser | immediately | yes | yes |
-| `defer` | in parallel | after `DOMContentLoaded` | no | yes |
-| `async` | in parallel | as soon as downloaded | no | **no** |
+| Classic parser-inserted, no attribute | inline or fetched by parser | when parser reaches and can run it | yes | parser order |
+| Classic external `defer` | in parallel | after parsing, before `DOMContentLoaded` | no | yes among deferred scripts |
+| Classic external `async` | in parallel | when ready | no | no |
+| Module script | module graph fetched | deferred by default; `async` changes scheduling | no for normal module scripts | module graph rules apply |
 
-**Gotcha — "`async` is always the fastest":** For scripts that depend on each other, `async` can execute them in the wrong order, causing `undefined is not a function` bugs. Use `defer` unless you're certain the script has zero ordering requirements.
+**Gotcha — `defer` applies to classic external scripts:** It has no effect on classic inline scripts; module scripts are deferred by default. Use `async` only when execution order is unimportant.
 
 **Gotcha — `defer` doesn't work on inline scripts:** `defer` is ignored if the `<script>` has no `src`. Move the code into an external file or use `DOMContentLoaded`.
 
 #### Where should you place `<script>` tags?
 
-**Headline (30s):** The modern answer: in the `<head>` with `defer`. That starts the download as early as possible (parallel with HTML parsing) while guaranteeing execution after the DOM is ready. The old "put scripts before `</body>`" advice is a workaround for environments without `defer`.
+**Headline (30s):** Choose placement and attributes from the script's dependencies. An external classic `defer` script in `<head>` can fetch while parsing and run after parsing; a module script is deferred by default. There is no single best placement for every script.
 
-**Ranked, best to worst:**
+**Common choices:**
 
-1. `<head>` with `defer` — parallel download, in-order execution after parsing.
-2. `<head>` with `async` — parallel download, but ordering isn't guaranteed.
-3. Just before `</body>` — legacy safe default; HTML is fully parsed by the time the script runs.
-4. `<head>` with no attribute — **worst**; blocks HTML parsing while downloading and executing.
+1. `<head>` with classic external `defer` — download in parallel, execute after parsing in document order.
+2. `<head>` with `async` — useful when order does not matter; executes when ready.
+3. A script near `</body>` — parsing has reached that point, though earlier styles or scripts may still affect readiness.
+4. A parser-inserted classic script without an attribute — can block the parser while fetching and running.
 
 **Best practices beyond placement:**
 
@@ -696,10 +725,12 @@ items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 - Minify and compress in production.
 - Use non-blocking loading (`defer` / `async`) whenever possible.
 
-**See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for the full URL→render pipeline that these topics fit into, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for deeper animation/scroll optimization.
+**See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for the high-level pipeline, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for animation and scroll optimization.
+
+**Standards and implementation notes / 标准与实现资料：** [WHATWG HTML scripting](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element), [CSS Display](https://www.w3.org/TR/css-display-3/), [Chrome RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), [Chrome forced-reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
 ## 6. DOM Properties / DOM属性
 
-Reach for this when you need to measure an element in JavaScript and can't remember which property includes which layers of the box model. These are all geometry properties — reading them forces a layout flush, so use sparingly in tight loops (see [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20-%20HTML%20&%20CSS%20Part%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84HTML%E4%B8%8ECSS) for layout thrashing).
+Reach for this when you need to measure an element in JavaScript and can't remember which property includes which layers of the box model. These are all geometry properties — reading them forces a layout flush, so use sparingly in tight loops (see [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for layout thrashing).
 
 #### Quick comparison
 
@@ -795,7 +826,7 @@ function isInViewport(element) {
 }
 ```
 
-For real visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` — it doesn't force layout. See [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
+For real visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` — it doesn't force layout. See [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
 
 #### When to reach for which
 
@@ -806,7 +837,7 @@ For real visibility tracking (e.g., lazy loading, analytics), prefer `Intersecti
 - Need **viewport-relative position** (for tooltips, drag, scroll effects)? → `getBoundingClientRect()`.
 - Need **position within parent** (for layout math)? → `offsetTop` / `offsetLeft` (watch out: relative to `offsetParent`, not necessarily the direct parent).
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20-%20HTML%20&%20CSS%20Part%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84HTML%E4%B8%8ECSS) on layout thrashing when reading these in loops, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for `IntersectionObserver`-based visibility.
+**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) on layout thrashing when reading these in loops, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for `IntersectionObserver`-based visibility.
 ## 7. CSS Interview Questions / CSS面试题
 
 ### How do you clear floats, and why do you need to?
@@ -887,7 +918,7 @@ The legacy fallback: insert a clearing `<div>` at the end.
 
 **Gotcha — why floats even need clearing:** Floats were designed for wrapping text around images, not for page layout. They leave the normal flow, so height collapses in their parent. Flexbox and Grid solve layout problems directly and don't have this issue — float-based layouts are legacy.
 
-**See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8EBFC) on how BFCs contain floats, [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for modern alternatives.
+**See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) on how BFCs contain floats, [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for modern alternatives.
 
 ---
 
@@ -1477,7 +1508,7 @@ Individual properties:
 
 #### GPU compositing and hardware acceleration
 
-Animating `transform` and `opacity` runs on the **compositor** (GPU) instead of triggering layout/paint. `will-change` hints to the browser to pre-promote the element to its own layer. See [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20-%20HTML%20&%20CSS%20Part%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84HTML%E4%B8%8ECSS) for the full cost ladder.
+Animating `transform` and `opacity` runs on the **compositor** (GPU) instead of triggering layout/paint. `will-change` hints to the browser to pre-promote the element to its own layer. See [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for the full cost ladder.
 
 ```css
 .animated {
@@ -1490,7 +1521,7 @@ Animating `transform` and `opacity` runs on the **compositor** (GPU) instead of 
 
 **Gotcha — `transform: translateZ(0)` is a blunt instrument:** It pre-promotes to a GPU layer but burns memory. `will-change: transform` is the modern, intention-revealing equivalent, but both should only be used when you've measured a performance problem.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20-%20HTML%20&%20CSS%20Part%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84HTML%E4%B8%8ECSS) for the reflow/repaint cost ladder, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for when GPU acceleration does and doesn't help.
+**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for the reflow/repaint cost ladder, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for when GPU acceleration does and doesn't help.
 ## 9. JavaScript Basics / JavaScript基础
 
 ### `var`, `let`, and `const`
@@ -4051,7 +4082,7 @@ for (let i = 1; i < arr.length; i++) {
 
 **Gotcha — empty arrays:** `Math.max()` with no arguments returns `-Infinity`. `reduce` without an initial value throws. Provide a sensible default for either approach.
 
-**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer (the modern replacement for scroll-event DOM watchers), [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the task/microtask scheduling model that rAF and rIC sit inside.
+**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer (the modern replacement for scroll-event DOM watchers), [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the task/microtask scheduling model that rAF and rIC sit inside.
 ## 23. Browser Storage and Communication / 浏览器存储与通信
 
 A bundle of interview questions about storing data in the browser and sending messages between tabs, iframes, and native shells.
@@ -4271,11 +4302,15 @@ Feels like normal JS — synchronous or callback-based depending on what the nat
 **Gotcha — security:** Never trust data coming from the web side. The bridge can be invoked by any page loaded in the WebView — including malicious ones — unless you restrict the allowed origins.
 
 **See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for where storage and messaging fit into the browser architecture, [`8.2 Web Security and Authentication`](../../engineering-foundations/security/web-security-and-authentication.md) for auth storage and CSRF concerns.
-## 24. Image Lazy Loading / 图片懒加载
+## 24. Image Lazy Loading / 浏览器图片懒加载
+
+**Image Lazy Loading / 浏览器图片懒加载**
+
+Use native lazy loading for ordinary off-screen images; choose `IntersectionObserver` only when code must control the loading decision. 原生懒加载适合普通图片；只有确实需要自定义加载时机时才引入观察器。
 
 #### How do you lazy-load images in the browser?
 
-**Headline (30s):** Three techniques, in order of preference: (1) the native `loading="lazy"` HTML attribute — one line, no JS; (2) the `IntersectionObserver` API for anything the native attribute can't cover; (3) throttled scroll-event listeners as a last-resort legacy fallback. Modern sites use the native attribute as the default, with an `IntersectionObserver` fallback for older browsers.
+**Headline (30s):** Prefer native `loading="lazy"` for an image with a real `src` or `srcset`. Use `IntersectionObserver` when you need custom thresholds, roots, or non-image work. A scroll handler is a fallback only when the observer is unavailable. **中文：** 原生属性必须配合图片源；观察器用于自定义交集策略；滚动监听只作兼容性回退。
 
 **Why interviewers ask this:** It's a common real-world perf question and a great filter for "do you know modern browser APIs or are you still writing jQuery-era scroll listeners?" The follow-up usually digs into CLS (Cumulative Layout Shift) and how to avoid jank when images pop in.
 
@@ -4283,7 +4318,7 @@ Feels like normal JS — synchronous or callback-based depending on what the nat
 
 #### 1. Native lazy loading (preferred)
 
-Modern browsers (Chrome, Edge, Firefox, Safari 15.4+) support the `loading` attribute on `<img>` and `<iframe>`:
+Current browser engines support `loading="lazy"` for `<img>` and `<iframe>`; check the browsers your product targets when supporting older engines:
 
 ```html
 <img src="image.jpg" alt="Description" loading="lazy" width="800" height="600">
@@ -4291,26 +4326,26 @@ Modern browsers (Chrome, Edge, Firefox, Safari 15.4+) support the `loading` attr
 
 Values:
 
-- `lazy` — defer loading until the image approaches the viewport.
-- `eager` — load immediately (default).
-- `auto` — let the browser decide.
+- `lazy` — ask the user agent to defer fetching until its visibility conditions are met.
+- `eager` — request loading without lazy deferral (the default state).
+- `data-src` is not a native loading source. An `<img>` needs `src` or `srcset`; the browser cannot load the URL stored only in a `data-*` attribute.
 
 **Why this is the first choice:**
 
 - Zero JavaScript, zero bundle cost.
-- The browser knows best when to prefetch (it considers connection speed, device memory, user preferences).
-- Tested and optimized by browser vendors.
+- The browser controls the deferral threshold, which may vary by implementation.
+- No JavaScript observer or scroll listener is required for this common case.
 
-**Always include `width` and `height`:** they reserve space before the image loads, preventing Cumulative Layout Shift (CLS) when the image pops in.
+**Include intrinsic `width` and `height`:** together they let the browser reserve an aspect ratio before the image loads, reducing layout shifts. CSS can still change the rendered size.
 
 ---
 
 #### 2. `IntersectionObserver` (JS fallback / more control)
 
-When you need behaviors the native attribute doesn't cover — custom thresholds, background images, non-`<img>` elements — use `IntersectionObserver`. It efficiently reports when elements enter or leave the viewport *without* firing a callback on every scroll event.
+When you need behaviors the native attribute does not cover—such as a custom root, a threshold, or loading work beyond an `<img>`—use `IntersectionObserver`. It reports queued intersection changes; the API does not promise that callback code runs off the main thread.
 
 ```html
-<img src="placeholder.png" data-src="actual-image.jpg" alt="Description">
+<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" data-src="actual-image.jpg" alt="Description" width="800" height="600">
 ```
 
 ```javascript
@@ -4320,30 +4355,32 @@ const observer = new IntersectionObserver((entries) => {
       const img = entry.target;
       img.src = img.dataset.src;
       img.removeAttribute('data-src');
-      observer.unobserve(img);    // stop observing once loaded
+      observer.unobserve(img);    // stop observing after scheduling the request
     }
   });
 }, {
-  rootMargin: '200px' // start loading 200px before entering the viewport
+  rootMargin: '200px' // expand the root rectangle by 200px on each side
 });
 
 document.querySelectorAll('img[data-src]').forEach(img => {
   observer.observe(img);
 });
+
+// Call observer.disconnect() when the component or page owning it is disposed.
 ```
 
 **Key options:**
 
-- **`rootMargin`** — expand the "viewport" by N pixels so images start loading before they're visible. `'200px'` is a good default for fast connections; shrink it on slow networks.
-- **`threshold`** — how much of the element must be visible to trigger. `0` (default) fires as soon as any pixel is visible; `1` waits until fully visible.
+- **`rootMargin`** — expand or shrink the root rectangle; positive values can trigger before the target reaches the root. Choose the distance from measured product behavior, not a universal constant.
+- **`threshold`** — intersection ratios at which entries are queued. With `0`, an edge-adjacent intersection can have a zero-area intersection rectangle, so `isIntersecting` does not mean “at least one pixel is visible.”
 
-**Why `IntersectionObserver` beats scroll listeners:** the browser does the visibility calculation off the main thread and batches callbacks. Scroll handlers run on every scroll event and force layout reads.
+**Why `IntersectionObserver` can help:** the browser batches intersection notifications instead of requiring application code to poll geometry on every scroll event. A geometry read can force style or layout work when rendering state is dirty; neither mechanism has a universal cost guarantee.
 
 ---
 
 #### 3. Scroll + throttle (legacy fallback only)
 
-For environments without `IntersectionObserver` (rare today — IE only), throttle a scroll listener and check `getBoundingClientRect()`.
+For a required environment without `IntersectionObserver`, a scroll/resize fallback can check `getBoundingClientRect()`. Feature-detect the API and test this fallback in the actual target browser.
 
 ```javascript
 function throttle(fn, delay) {
@@ -4357,17 +4394,22 @@ function throttle(fn, delay) {
   };
 }
 
-window.addEventListener('scroll', throttle(() => {
+const checkImages = throttle(() => {
   document.querySelectorAll('img[data-src]').forEach(img => {
-    if (img.getBoundingClientRect().top < window.innerHeight) {
+    const rect = img.getBoundingClientRect();
+    if (rect.bottom > 0 && rect.top < window.innerHeight) {
       img.src = img.dataset.src;
       img.removeAttribute('data-src');
     }
   });
-}, 100));
+}, 100);
+
+window.addEventListener('scroll', checkImages, { passive: true });
+window.addEventListener('resize', checkImages, { passive: true });
+checkImages(); // also handle images already near the viewport
 ```
 
-**Gotcha — `getBoundingClientRect()` forces layout:** Calling it inside a scroll handler makes every scroll tick expensive. This is why `IntersectionObserver` won.
+**Gotcha — geometry reads are conditional work:** `getBoundingClientRect()` returns current geometry and may force pending style/layout updates. Avoid alternating DOM writes and reads in a hot loop; do not assume every call forces a full-page layout.
 
 ---
 
@@ -4375,30 +4417,31 @@ window.addEventListener('scroll', throttle(() => {
 
 Lazy-loading images is great — unless you introduce layout shift every time one appears. Rules to follow:
 
-- **Load above-the-fold images eagerly** (`loading="eager"` or omit the attribute). If the user can see it on first paint, don't lazy-load it.
-- **Always reserve space** with explicit `width` / `height` attributes or CSS `aspect-ratio`. Without these, the page jumps when the image arrives — hurting CLS (a Core Web Vital).
+- **Do not lazy-load likely LCP or immediately visible images.** Deferring a critical image can delay presentation; use `loading="eager"` or omit the attribute when appropriate.
+- **Reserve an aspect ratio** with intrinsic `width` / `height` or CSS `aspect-ratio` to reduce layout shifts.
 - **Combine with `srcset` + modern formats** (WebP, AVIF). Lazy-loading an over-sized JPEG still wastes bandwidth.
 - **Use a placeholder** (low-quality image placeholder, LQIP, or a solid color) so the user sees something while the real image loads.
 
 ```html
 <img
-  src="placeholder.webp"
-  data-src="full.webp"
+  src="full-800.webp"
   srcset="full-400.webp 400w, full-800.webp 800w, full-1600.webp 1600w"
   sizes="(max-width: 600px) 100vw, 50vw"
   loading="lazy"
   width="800"
   height="600"
-  alt="...">
+  alt="Describe the image's purpose">
 ```
 
 **Rule of thumb:**
 
-1. Start with `loading="lazy"` + correct `width` / `height`.
-2. Layer an `IntersectionObserver` fallback if you need to support older Safari or non-`<img>` elements.
-3. Profile CLS and Largest Contentful Paint after — lazy-loading the wrong images makes both worse.
+1. Use `loading="lazy"` with an actual `src` or `srcset`, appropriate `alt`, and intrinsic dimensions.
+2. Use `IntersectionObserver` for a concrete custom-loading need; unobserve loaded targets and disconnect the observer when its owner is disposed.
+3. Check layout stability and LCP in the page's real loading context; lazy-loading the wrong images can delay important content.
 
 **See also:** [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#22.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
+
+**Standards / 规范：** [WHATWG `img` element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element), [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes), [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/), [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/).
 ## 25. Advanced TypeScript / TypeScript进阶
 
 ### Advanced TypeScript / TypeScript进阶
@@ -5714,7 +5757,7 @@ function throttle(fn, interval) {
 
 **Rule of thumb:** The first screen should render from the minimum amount of JS and CSS needed. Everything else — analytics, chat widgets, secondary content — should be deferred to after LCP.
 
-**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD), [`9.4 Next.js`](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for SSR/SSG strategies.
+**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD), [`9.4 Next.js`](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for SSR/SSG strategies.
 
 ---
 
@@ -5762,7 +5805,7 @@ setInterval(flush, 10_000);
 window.addEventListener('beforeunload', flush);
 ```
 
-**See also:** [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for rendering-side perf, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for a focused image-perf playbook.
+**See also:** [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for rendering-side perf, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for a focused image-perf playbook.
 ## 33. Rendering and Computation Optimization / 渲染与计算优化
 
 A bundle of interview questions on optimizing render performance — virtual scrolling, React-specific techniques, and CSS tips.
@@ -5920,7 +5963,7 @@ See [`2.7 CSS Position, Display, and Animations`](#8.%20CSS%20Position,%20Displa
 - Avoid deep DOM trees; flatten when possible.
 - Drop unused CSS — modern bundlers (PurgeCSS, Tailwind's JIT) can do this automatically.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20-%20HTML%20&%20CSS%20Part%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84HTML%E4%B8%8ECSS) for reflow/repaint/composite fundamentals, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for how to measure what you're optimizing.
+**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for reflow/repaint/composite fundamentals, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for how to measure what you're optimizing.
 ## 34. Lodash / Lodash工具库
 
 **Reach for this when** you need a quick reference for Lodash utilities — the functions that still earn their place in a modern codebase (`_.get`, `_.cloneDeep`, `_.debounce`) versus the ones that are now one-liners with native JS.
