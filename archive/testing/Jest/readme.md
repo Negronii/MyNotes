@@ -1,189 +1,172 @@
-# Jest
+# Jest Reference / Jest参考
 
-1. **Descriptive Test Suites (`describe()` Blocks)**
-   - **Purpose**: Group related tests for better organization and readability.
-   - **Example**: 
-     ```javascript
-     describe('Array operations', () => {
-       // Your test cases for array operations go here
-     });
-     ```
+This note gives compact test, lifecycle, matcher, and mock examples. Jest behavior depends on the module system and transformer; examples that use CommonJS should not be generalized to native ESM.
 
-2. **Individual Test Cases (`it()` or `test()` Blocks)**
-   - **Purpose**: Define individual test cases, making them specific and concise.
-   - **Best Practice**: Start the description with "should" for clarity.
-   - **Example**: 
-     ```javascript
-     it('should add two numbers correctly', () => {
-       expect(add(2, 3)).toBe(5);
-     });
-     ```
+**Core answer / 核心回答：** Keep each test focused on observable behavior: arrange its inputs, act once, and assert the result. Mock only boundaries that the test does not intend to exercise, and restore spies so state does not leak between tests. / 每个测试聚焦于可观察行为：准备输入、执行一次操作并断言结果。只模拟测试不准备覆盖的边界，并恢复 spy，避免状态泄漏到其他测试。
 
-3. **Consistent Naming Conventions**
-   - **File Naming**: Name test files with a `.test.js` or `.spec.js` suffix (e.g., `app.test.js`).
-   - **Describe Naming**: Use clear, descriptive names for `describe()` blocks.
-   - **It/Test Naming**: Use concise, descriptive names for `it()`/`test()` blocks.
+## Suites and cases / 测试套件与用例
 
-4. **Mocking and Spies**
-   - **Usage**: Isolate the testing environment by mocking functions, modules, or network requests.
-   - **Jest Functions**: Utilize `jest.fn()`, `jest.mock()`, and `jest.spyOn()` for mocking and spying.
+describe groups related tests; test and its alias it define a case. Use clear names that describe behavior. Starting a name with “should” is a style choice, not a Jest requirement.
 
-5. **Asynchronous Testing**
-   - **Support**: Handle promises, async/await, and callbacks in tests.
-   - **Example**: 
-     ```javascript
-     it('should fetch user data', async () => {
-       const user = await getUser(1);
-       expect(user).toHaveProperty('id', 1);
-     });
-     ```
-
-6. **Coverage Reports**
-   - **Generating Reports**: Use `--coverage` flag to generate test coverage reports.
-   - **Goal**: Aim for high test coverage to ensure robustness of the code.
-
-
-Certainly! Combining `describe` and `it` blocks is a common practice in Jest to organize and structure your tests effectively. Here's an example:
-
-### **Example: Testing a Simple Calculator Function**
-
-Let's say we have a simple calculator module with functions for addition and subtraction. We'll write tests for these functions using `describe` and `it` blocks.
-
-#### **Calculator Module (calculator.js)**
-```javascript
-function add(a, b) {
-  return a + b;
+~~~javascript
+function add(left, right) {
+  return left + right;
 }
 
-function subtract(a, b) {
-  return a - b;
+function subtract(left, right) {
+  return left - right;
 }
 
-module.exports = { add, subtract };
-```
-
-#### **Test File (calculator.test.js)**
-```javascript
-const { add, subtract } = require('./calculator');
-
-// Describe block for grouping all tests related to the calculator module
-describe('Calculator Module', () => {
-
-  // Nested describe block for addition function tests
-  describe('Addition', () => {
-    it('should add two positive numbers correctly', () => {
-      expect(add(5, 3)).toBe(8);
-    });
-
-    it('should add two negative numbers correctly', () => {
-      expect(add(-1, -3)).toBe(-4);
-    });
-
-    it('should add a positive and a negative number correctly', () => {
-      expect(add(-2, 5)).toBe(3);
-    });
+describe('calculator', () => {
+  test('adds two numbers', () => {
+    expect(add(2, 3)).toBe(5);
   });
 
-  // Nested describe block for subtraction function tests
-  describe('Subtraction', () => {
-    it('should subtract two numbers correctly', () => {
-      expect(subtract(10, 5)).toBe(5);
-    });
-
-    it('should handle negative result correctly', () => {
-      expect(subtract(5, 10)).toBe(-5);
-    });
-  });
-
-});
-```
-
-#### **Explanation**
-- **Outer `describe` Block**: Represents the group of tests for the calculator module.
-- **Nested `describe` Blocks**: Each nested `describe` block groups tests for a specific function (e.g., addition and subtraction).
-- **`it` Blocks**: Each `it` block contains an individual test case with a clear, descriptive name indicating what the test is verifying.
-
-This structure helps in organizing tests logically and makes it easier to understand what each part of the module is supposed to do, based on the tests.
-
-## Setup and Teardown
-
-Use lifecycle hooks to set up preconditions and clean up after tests.
-
-```javascript
-describe('Database', () => {
-  let db;
-
-  beforeAll(() => {
-    db = connectToTestDB();
-  });
-
-  afterAll(() => {
-    db.close();
-  });
-
-  beforeEach(() => {
-    db.clear();
-  });
-
-  it('should insert a record', () => {
-    db.insert({ id: 1, name: 'Alice' });
-    expect(db.count()).toBe(1);
+  test('subtracts a larger value', () => {
+    expect(subtract(5, 10)).toBe(-5);
   });
 });
-```
+~~~
 
-- `beforeAll` / `afterAll` — run once per `describe` block
-- `beforeEach` / `afterEach` — run before/after every `it` block
+Arrange–Act–Assert makes setup, behavior, and verification easy to scan. A small test may not need a separate variable for every phase.
 
-## Mocking in Practice
+Common file names include .test.js and .spec.js; the project’s Jest configuration determines which files are collected.
 
-### `jest.fn()` — Create a Mock Function
+## Async tests / 异步测试
 
-```javascript
+Return or await the Promise so Jest waits for the assertion. For rejected Promises, use the rejects matcher.
+
+~~~javascript
+test('loads a user', async () => {
+  const user = await getUser(1);
+  expect(user).toHaveProperty('id', 1);
+});
+
+test('reports a failed request', async () => {
+  await expect(getUser(-1)).rejects.toThrow('not found');
+});
+~~~
+
+A test that starts an asynchronous operation but neither awaits it nor returns its Promise can finish before the assertion runs.
+
+## Setup and cleanup / 准备与清理
+
+beforeAll and afterAll run once around a test scope; beforeEach and afterEach run around each test in that scope. Use cleanup hooks for resources that tests actually open.
+
+~~~javascript
+describe('temporary resource', () => {
+  let resource;
+
+  beforeAll(async () => {
+    resource = await openResource();
+  });
+
+  afterAll(async () => {
+    await resource.close();
+  });
+
+  beforeEach(async () => {
+    await resource.clear();
+  });
+
+  test('stores a record', async () => {
+    await resource.insert({ id: 1, name: 'Ada' });
+    expect(await resource.count()).toBe(1);
+  });
+});
+~~~
+
+## Mock functions and spies / Mock 函数与 spy
+
+### jest.fn
+
+jest.fn creates a mock function whose calls and results can be inspected.
+
+~~~javascript
 const callback = jest.fn();
-callback('hello');
+callback('saved');
 
-expect(callback).toHaveBeenCalledWith('hello');
+expect(callback).toHaveBeenCalledWith('saved');
 expect(callback).toHaveBeenCalledTimes(1);
-```
+~~~
 
-### `jest.mock()` — Mock an Entire Module
+### jest.mock in a CommonJS/transformed setup
 
-```javascript
-jest.mock('./api');
+This example uses CommonJS require with a test configuration that transforms or otherwise supports this mocking pattern. In Babel-transformed tests, jest.mock calls are hoisted by the Jest transformer, so the mock is registered before the module is required.
+
+~~~javascript
+jest.mock('./api', () => ({
+  fetchUser: jest.fn(),
+}));
+
 const api = require('./api');
+const { loadUser } = require('./userService'); // userService delegates to api.fetchUser
 
-api.fetchUser.mockResolvedValue({ id: 1, name: 'Alice' });
+test('uses the API boundary', async () => {
+  api.fetchUser.mockResolvedValue({ id: 1, name: 'Ada' });
 
-it('should fetch user', async () => {
-  const user = await api.fetchUser(1);
-  expect(user.name).toBe('Alice');
+  await expect(loadUser(1)).resolves.toEqual({ id: 1, name: 'Ada' });
 });
-```
+~~~
 
-### `jest.spyOn()` — Spy on an Existing Method
+A module mock replaces a dependency at the module boundary. The test should still assert the behavior of the code under test rather than only reasserting the mock configuration.
 
-```javascript
-const obj = { greet: (name) => `Hi ${name}` };
-const spy = jest.spyOn(obj, 'greet');
+### Native ESM modules
 
-obj.greet('Bob');
+Native ESM evaluates static imports before the test body, so the CommonJS-style hoisting example does not apply. Jest's documentation provides jest.unstable_mockModule followed by dynamic import for ESM mocking. The API name is marked unstable; check the Jest version and runtime configuration.
 
+~~~javascript
+import { jest } from '@jest/globals';
+
+jest.unstable_mockModule('./api.js', () => ({
+  fetchUser: jest.fn(),
+}));
+
+const { fetchUser } = await import('./api.js');
+~~~
+
+### jest.spyOn
+
+jest.spyOn observes an existing object method and calls the original implementation by default. Provide a mock implementation or return value when the test needs replacement behavior. Restore the spy after use.
+
+~~~javascript
+const service = {
+  greet: name => 'Hello ' + name,
+};
+
+const spy = jest.spyOn(service, 'greet').mockReturnValue('Hi Bob');
+
+expect(service.greet('Bob')).toBe('Hi Bob');
 expect(spy).toHaveBeenCalledWith('Bob');
+
 spy.mockRestore();
-```
+~~~
 
-## Common Matchers
+mockRestore restores a spy created by jest.spyOn. Use clearAllMocks, resetAllMocks, or restoreAllMocks according to whether the test needs to clear call history, reset implementations, or restore replaced properties; these operations are not interchangeable.
 
-| Matcher | Purpose |
+## Common matchers / 常见 matcher
+
+| Matcher | Use |
 |---|---|
-| `toBe(value)` | Strict equality (`===`) |
-| `toEqual(value)` | Deep equality (objects/arrays) |
-| `toBeTruthy()` / `toBeFalsy()` | Boolean coercion check |
-| `toBeNull()` / `toBeUndefined()` | Null/undefined check |
-| `toContain(item)` | Array contains item or string contains substring |
-| `toThrow()` | Function throws an error |
-| `toHaveLength(n)` | Array/string length |
-| `toMatchObject(obj)` | Object contains subset of properties |
-| `toHaveBeenCalled()` | Mock was called |
-| `toHaveBeenCalledWith(args)` | Mock was called with specific args |
+| **toBe(value)** | Compare with Object.is semantics. |
+| **toEqual(value)** | Compare nested object or array values. |
+| **toMatchObject(value)** | Check that an object contains the expected subset. |
+| **toBeTruthy / toBeFalsy** | Check the Boolean coercion of a value. |
+| **toBeNull / toBeUndefined** | Distinguish null from undefined. |
+| **toContain(value)** | Check an array item or string substring. |
+| **toHaveLength(n)** | Check a length property. |
+| **toThrow(error)** | Check a synchronous function for a thrown error; pass the function, not its already-evaluated result. |
+| **toHaveBeenCalled()** | Check that a mock or spy was called. |
+| **toHaveBeenCalledWith(args)** | Check arguments recorded by a mock or spy. |
+
+## Coverage / 覆盖率
+
+Run Jest with the project’s configured coverage option, commonly --coverage. Coverage reports which statements, branches, functions, and lines ran; a high percentage does not prove that assertions check meaningful behavior or edge cases.
+
+## References / 参考资料
+
+- [Jest 30.0 documentation](https://jestjs.io/docs/30.0/getting-started)
+- [Jest: ECMAScript Modules](https://jestjs.io/docs/30.0/ecmascript-modules)
+- [Jest: The Jest Object](https://jestjs.io/docs/30.0/jest-object)
+- [Jest: Mock Functions](https://jestjs.io/docs/30.0/mock-functions)
+- [Frontend Testing / 前端测试](../../../frontend/testing/frontend-testing.md)

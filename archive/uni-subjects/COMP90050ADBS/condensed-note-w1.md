@@ -1,4 +1,6 @@
-# Database Performance Metrics
+# Database Performance and Reliability / 数据库性能与可靠性
+
+核心概念：数据库性能由存储层级、数据访问、查询计划与资源配置共同决定；可靠性分析要区分固定时段故障概率、恒定故障率/MTTF和可修复系统的可用度。RAID 的容量、冗余和读写表现取决于布局、工作负载及修复假设。
 
 The performance of a database system is evaluated based on:
 
@@ -7,7 +9,6 @@ The performance of a database system is evaluated based on:
 3. **Security & Reliability**
 
 ## Efficiency
-
 Efficiency of a database system is influenced by both hardware and software aspects:
 
 - **Hardware**
@@ -22,14 +23,12 @@ Efficiency of a database system is influenced by both hardware and software aspe
   - Query optimisation
 
 ## Effectiveness
-
 Effectiveness of a database system is determined by:
 
 - Concurrent users: Users reading and writing over the same data
 - Transactions: Required tasks are all done together
 
 ## Reliability
-
 Reliability of a database system is ensured by:
 
 - Crash recovery
@@ -40,26 +39,23 @@ Reliability of a database system is ensured by:
 - Fault tolerance
 - Data duplication
 
-# Hard Disk & Memory Hierarchy
-
-## Hard Disk Drive
-
+## Hard Disk & Memory Hierarchy
+### Hard Disk Drive
 ![Physical Architecture](./physicalArchitecture.png)
 
 A **hard disk drive (HDD)** is a crucial component of computing systems that provides data storage. Its structure comprises of several key elements:
 
 - **Platter**: The entire circular disk.
-- **Disk Sector**: The blue shaded area in the image above is one such example. Sectors are the smallest accessible units on a disk.
-- **Track**: These are the circular rings on the platter. The red highlighted area in the image above is an example of a track.
-- **Cluster**: This refers to a group of tracks and sectors, as demonstrated by the green shaded area in the image.
+- **Sector**: A device exposes sectors as addressable units; logical and physical sector sizes can differ.
+- **Track**: A circular path on a platter. The red highlighted area in the image is one track.
+- **Cylinder**: Tracks at the same radial position across platters. A file-system cluster is an allocation unit made of sectors, not a mechanical disk component.
 - **Actuator Arm**: The component that moves the head to the required position.
 - **Head**: This component is responsible for reading and writing data on the disk.
 
 Note that the disk rotates at high speed, allowing the head to read and write data at different locations.
 
-### Disk Access Time in HDD
-
-The formula to calculate the disk access time is as follows:
+#### Disk Access Time in HDD
+In this simplified model, estimate the transfer delay as:
 
 $$
 \text{Disk Access Time} = \text{Seek Time} + \text{Rotational Delay} + \frac{\text{Transfer Length}}{\text{Bandwidth}}
@@ -72,45 +68,34 @@ Where:
 - **Transfer Length**: This refers to the amount of data to be transferred. The units for this measure can vary, such as KB, MB, GB, etc.
 - **Bandwidth**: This measures the amount of data that can be transferred within a given timeframe. Its unit is Storage/Time (e.g., 4MB/S).
 
-### Exercise
+#### Exercise
+What is the disk access time for a 4 KB transfer when average seek time is 12 ms, rotational delay is 4 ms, and transfer rate is 4 MB/s?
 
-What is the Disk access time for a transfer size of 4KB, when average seek time is 12 ms, rotation delay 4 ms, transfer rate 4MB/sec?
-$12ms + 4ms + \frac{4KB}{4MB/S \times 1000KB/MB}\times1000ms/S = 17ms$.
+Using decimal units (1 MB = 1000 KB), transfer time is 4 KB / 4000 KB/s = 0.001 s = 1 ms, so the estimate is 12 + 4 + 1 = 17 ms. This model omits controller and queueing delays and assumes the request is not already cached.
 
-## Solid-State Drives (SSD)
+### Solid-State Drives (SSD)
+Solid-state drives (SSDs) store data in flash memory and have no moving head or rotating platter. They avoid HDD seek and rotational delay, but still have controller, flash, queueing, and write-management latency. Read and write performance depends on the device, workload, and queue depth; overwrites are not universally slower. Flash pages are erased in larger blocks and the flash translation layer manages remapping and wear leveling ([Database System Concepts, 7e, ch. 12](https://www.db-book.com/Previous-editions/db7/slides-dir/PDF-dir/ch12.pdf)).
 
-Solid-State Drives (SSDs) are a type of storage device that do not have any moving parts
-
-- **No seek/rotational latency**
-- No start-up times
-- Silent operation
-- Faster random access times
-
-However, SSDs also have their drawbacks. They are relatively more expensive and have certain read/write limitations. For instance, SSDs tend to be slower when overwriting data.
-
-### Disk Access Time in SSDs
-
-The formula to calculate the disk access time is as follows:
+#### Disk Access Time in SSDs
+A bandwidth-only estimate for a transfer is:
 
 $$
 \text{Disk Access Time} = \frac{\text{Transfer Length}}{\text{Bandwidth}}
 $$
 
-## Memory Hierarchy
-
+### Memory Hierarchy
 ![Memory Hierarchy](./Mem-hierarchy.png)
 
 - Reg: Register
-- The cache, both on-chip and off-chip, facilitates faster access by reducing the frequency of hard disk accesses. The unit of measurement for cache is typically in MB.
+- CPU caches (L1/L2 and other levels) reduce the average cost of CPU memory access; they do not directly cache hard-disk blocks. Operating-system file caches, storage-device caches, and a DBMS buffer pool are separate layers with different units and behavior.
 - Main Memory: If the system is shut down, data stored in the main memory (but not in the hard disk) will be lost. The unit of measurement for Main Memory is typically in GB.
 - Hard Disk: The unit of measurement is usually in TB.
 - Speed: Cache > Main Memory > Hard Disk
 - Storage Capacity: Cache (in MB) < Main Memory (in GB) < Hard Disk (in TB)
-- Access Sequence: Data is first requested from the cache, if not found, then from the main memory, and if still not found, finally from the hard disk.
+- Simplified CPU path: check the CPU cache hierarchy, then access DRAM on a miss. A page fault or database storage request may involve an OS file cache, DBMS buffer pool, controller cache, and persistent storage; these are not one universal linear path.
 
-### Effective Memory Access Time
-
-The effective memory access time (EA) can be calculated using the following formula:
+#### Effective Memory Access Time
+For a single cache level, if $M$ is the full cost of the miss path, including lookup, then:
 
 $$
 EA = H \times C + (1 - H) \times M
@@ -120,18 +105,17 @@ where:
 
 - $H$ is the hit ratio (the percentage probability of finding data in the cache)
 - $C$ is the cache access time
-- $M$ is the memory access time
-  Please note that here we are referring to the L1 and L2 caches as shown in the image. This is different from the cache embedded in the hard disk, which we will discuss later.
+- $M$ is the full miss-path cost. If $M$ means only lower-memory access time, use $EA = H C + (1-H)(C+M)$ instead.
+
+The CPU-cache example concerns L1/L2 memory hierarchy. It is distinct from both a storage-device/controller cache and the DBMS buffer pool, which caches database pages in main memory. The latter is the buffer model used in query-cost calculations.
 
 Why don't we have larger caches?
 
 1. They are expensive.
 2. If the processor and the cache are not on the same chip, the access time increases.
 
-### Effective Disk Buffer Access Time
-
-The disk cache is embedded in the disk and is different from the cache in the memory hierarchy. In other words, it's NOT the L1 or L2 cache shown in the image. It is part of the hard disk!
-The effective disk buffer access time can be calculated using a similar formula:
+#### Effective Disk Buffer Access Time
+A device or controller cache is different from the DBMS buffer pool in main memory. In this one-level model, BC is the hit-path cost and D is the full miss-path cost; the estimate excludes other caching levels and queueing:
 
 $$
 EA = HB \times BC + (1 - HB) \times D
@@ -143,64 +127,40 @@ where:
 - $BC$ is the buffer access time
 - $D$ is the disk access time
 
-### Example
-
+#### Example
 e.g., Assume disk access time is S, buffer access time is C, hit ratio is H, and S = 1000C. What is the effective access time, EA, expressed as a multiple of C when H = 30%?
 
 $EA = 30\% \times C + (1 - 30\%) \times S = 0.3C + 0.7 \times 1000C = 700.3C$
 
-# Type of DB systems and DB Architectures
-
-## Database Types
-
-### Simple File
-
+## Type of DB systems and DB Architectures
+### Database Types
+#### Simple File
 - **Definition**: A data storage system where data is stored as a plain text file. Each line represents one record, with fields separated by delimiters (e.g., commas or tabs).
-- **Strengths**: Fast for simple applications.
-- **Weaknesses**:
-  - Less reliable
-  - Slow for complex applications.
-  - Requires additional code development for features that exist in relational databases.
-  - Concurrency problems for maintainging.
-- **Use Cases**: Suitable for simple applications where speed is a priority.
+- **Tradeoffs**: A flat-file design can be sufficient for a small, single-process workload. Schema enforcement, indexes, transactions, and concurrent updates then need to be supplied by the application or another layer; speed and reliability depend on the implementation.
 
-### Relational Database Systems (RDBS)
+#### Relational Database Management Systems (RDBMS)
+- **Definition**: A relational database represents data as relations (commonly shown as tables) and provides operations for querying and updating them. Primary and foreign keys are constraints that a schema may declare; tables need not all be joined by such constraints.
+- **Tradeoffs**: A DBMS can provide query planning, indexes, transactions, and constraint enforcement, but performance and reliability depend on the engine, schema, workload, and configuration.
 
-- **Definition**:
-  - A data storage system where data is stored as a collection of tables (relations) consisting of rows and columns.
-  - Tables in a database are related using primary/foreign key relationships. Primary key could be combination of items.
-- **Strengths**:
-  - Very reliable,
-  - application independent optimisation,
-  - well suited to many applications,
-  - very fast due to large main memory machines and SSDs.
-- **Weaknesses**: Can be slow for some simple applications.
-- **Use Cases**: Suitable for applications requiring high reliability and speed, and those that can benefit from application independent optimisation.
-
-### Object Oriented Database Systems (OODB)
-
+#### Object Oriented Database Systems (OODB)
 - **Definition**: A data storage system where data is stored in the form of 'objects' directly, similar to Object Oriented Programming (OOP).
 - **Strengths**: Reliable, well suited for applications requiring complex data.
 - **Weaknesses**: Can be slow on some applications, limited application independent optimisation.
 - **Use Cases**: Suitable for applications requiring complex data structures and methods.
 
-### NoSQL Databases - Key-value Storage
+#### NoSQL Databases - Key-value Storage
+- **Definition**: Stores values addressed by keys. Key uniqueness, atomicity, transactions, and query features depend on the product.
+- **Related idea**: MapReduce is a distributed data-processing model, and Hadoop is an ecosystem that includes MapReduce; neither is itself a definition of a key-value database.
 
-- **Definition**: Stores data as a collection of key–value pairs, where each key is unique. Atomic updates at Key-value pair level (row update) only
-- **Use Cases**: building very fast, highly parallel processing of
-  large data - MapReduce and Hadoop are examples
-
-### Deductive Database Systems (DDBS)
-
+#### Deductive Database Systems (DDBS)
 - **Definition**: A database system that can make deductions based on rules and facts stored in the database.
-- **Strengths**: Most of the application can be developed entirely using DDBS.
-- **Weaknesses**: Many applications do not require the expressive power of these systems.
+- **Tradeoffs**: Rule languages can express derived relations and queries. Whether that model is useful depends on the application and implementation.
 - **Use Cases**: Applications that require rule-based deductions.
 
-## Database Architectures
+### Database Architectures
+These are broad course categories, not guarantees about performance, availability, consistency, or security. Those properties depend on the particular design and workload.
 
-### Centralized (Client-Server) Database Architecture
-
+#### Centralized (Client-Server) Database Architecture
 - **Description**:
   - The central server is with database in one location.
   - The client and server can be in different locations.
@@ -212,90 +172,61 @@ $EA = 30\% \times C + (1 - 30\%) \times S = 0.3C + 0.7 \times 1000C = 700.3C$
 - **Disadvantages**: May not scale well, limited to one location.
 - **Use Cases**: Suitable for applications that can be managed centrally, such as PC/Cluster Computing/data centres.
 
-### Distributed Database Architecture
-
+#### Distributed Database Architecture
 - **Description**:
   - Data is distributed across several nodes in different locations.
   - Communicate with each other using network.
 - **Advantages**:
   - Scalable, can handle large data sets, databases can be in different locations
   - provides concurrency, recovery, and transaction processing.
-- **Disadvantages**:
-  - System administration and crash recovery are difficult,
-  - potential **inconsistency** due to data replication.
-- **Use Cases**: Suitable for large-scale applications that require data distribution and concurrency.
+- **Tradeoffs**: Distribution can improve locality or capacity and can add network, coordination, replication, and recovery costs. Replication can create stale or conflicting views unless the chosen protocol prevents or resolves them.
 
-### World Wide Web (WWW) Database Architecture
-
+#### World Wide Web (WWW) Database Architecture
 - **Description**: In the WWW database architecture, data is stored in many locations with **several owners** of data.
 - **Advantages**: Very convenient to access and share data, wide data availability.
-- **Disadvantages**:
-  - Has security issues, extreme levels of administration issues.
-  - no guarantee on availability or consistency,
-  - ineffective optimization process,
-- **Use Cases**: Suitable for applications that require wide data availability and can tolerate inconsistency.
+- **Tradeoffs**: Independent ownership and network boundaries make authority, availability, consistency, and query planning depend on the participating services and protocols; there is no single universal WWW database architecture or guarantee.
 
-### Grid Database Architecture
-
+#### Grid Database Architecture
 - **Description**: In a grid database architecture, data and processing are shared among a group of computer systems which may be geographically separated.
 - **Advantages**:
   - High processing capability,
   - access at different locations,
   - shared data and processing.
-- **Disadvantages**: Similar issues to distributed databases
-  - less used nowadays,
-  - administration done locally by each owner,
-  - reliability and security not well developed or studied.
-- **Use Cases**: Scientific applications.
+- **Tradeoffs**: Grid computing shares distributed compute and data resources under multiple administrative domains. Reliability and security depend on the participating systems; this model is not a claim that all grid deployments use a database architecture.
 
-### Peer-to-Peer (P2P) Database Architecture
-
+#### Peer-to-Peer (P2P) Database Architecture
 - **Description**: Data and processing are shared among a group of computer systems which may be **geographically separated**. **Nodes can join and leave the network at will**. Administration is done by owner.
 - **Advantages**: Suitable when the nodes of the network cannot be planned in advance, or some may leave and join frequently, shared data and processing, flexible network membership.
-- **Disadvantages**: Difficult to design transaction models due to flexible network membership, applications are usually limited to simple file sharing.
-- **Use Cases**: Specific applications, such as scientific applications, where nodes need the flexibility to join and leave the network.
+- **Tradeoffs**: Membership changes make coordination and replica management harder. A peer-to-peer design can serve workloads beyond file sharing; its guarantees depend on the protocol and trust model.
 
-### Cloud-Based Database Architecture
-
+#### Cloud-Based Database Architecture
 - **Description**: Cloud-based database architecture offers online computing, storage, and a range of new services for data and devices that are accessible through the Internet.
 - **Advantages**:
   - Pay as you go, On-demand resources, cost-effective,
   - maintenance done externally by the cloud provider,
   - user pays for the services just like phone services, electricity, etc., huge potential for developing applications with minimal infrastructure costs.
-- **Disadvantages**: Has some privacy and confidentiality issues – but most trusted providers can address any issues emerging on this type relatively easily, e.g., Amazon etc., dependence on internet connectivity.
-- **Use Cases**: Suitable for applications that require on-demand resources and services, and can benefit from the pay-as-you-go model.
+- **Tradeoffs**: A provider may manage infrastructure and offer on-demand resources, while the customer still needs to evaluate access control, data location, availability, cost, and provider dependency. Cloud services differ in their contracts and behavior.
 
-# Fault Tolerance Introduction
+## Fault Tolerance Introduction
+### Basic Probability and Mean Time to Event
+Let $p_A$ and $p_B$ be independent probabilities that events occur during the same fixed observation interval. Then:
 
-## Basic Probability and Mean Time to Event
+- $P(A \cap B) = p_A p_B$
+- $P(A \cup B) = p_A + p_B - p_A p_B$
 
-The probability of an event and the mean time to an event are fundamental concepts in understanding system reliability. Here are some key formulas:
+For small probabilities, $P(A \cup B) \approx p_A+p_B$. A probability over a fixed interval is not itself a time or a failure rate. If a component has a constant failure rate $\lambda$ per unit time (an exponential lifetime model), its MTTF is $1/\lambda$. For rare failures over an interval of length $\Delta t$, $p \approx \lambda \Delta t$.
 
-- Probability of an event A happening in a certain period: $P(A)$
-- Probability of both events A and B happening in that period (assuming A and B are independent events): $P(A \text{ and } B) = P(A) \times P(B)$
-- Probability of either event A or B happening in that period: $P(A \text{ or } B) = P(A) + P(B) - P(A \times B)$ (assuming $P(A)$ and $P(B)$ are very small)
-- Mean time to event A: $MT(A) = \frac{1}{P(A)}$
-- If events A and B have mean times $MT(A)$ and $MT(B)$, then the mean time to the first event $MT(A \text{ or } B) = \frac{1}{P(A \text{ or } B)}$
+For $n$ independent modules with the same per-interval failure probability $p$, the exact chance of at least one failure in that interval is $1-(1-p)^n$, approximately $np$ when $p$ is small. Under the constant-rate model, the rate of the first failure is $n\lambda$, so the time to the first failure has mean $1/(n\lambda)$.
 
-If there are $n$ events, each with the same probability $p$, then:
-
-- Probability that one of the events occur: $n \times p$ (assuming $p$ is small)
-- Mean time to one of the events (i.e., mean time to the first event): $\frac{1}{n \times p} = \frac{1}{p} \times \frac{1}{n} = m \times \frac{1}{n} = \frac{m}{n}$(where $m = \frac{1}{p}$ is the mean time to an event)
-
-## Module Availability
-
+### Module Availability
 Module availability is the ratio of service accomplishment to elapsed time.
 ![Module Availability](./module-availability.png)
-It can be calculated as:
-$$\text{Module Availability} = \frac{MTTF}{MTTF + MTTR}$$
-where:
+For a repairable module that alternates between up and down periods, long-run availability is:
+$$\text{Availability} = \frac{MTTF}{MTTF + MTTR}$$
+Here MTTF is the mean up-time and MTTR is the mean time spent repairing. This is a long-run average under the stated up/down model, not a probability of avoiding failure forever.
 
-- $MTTF$ is the Mean Time To Failure, which is **up time** before a failure happens
-- $MTTR$ is the Mean Time To Repair, which is **down time** after a failure happens
-
-# Redundant Array of Independent Disks (RAID)
-
-RAID is a method of combining multiple disks as a unit for fault tolerance or performance improvement, or both, of a database system.
+## Redundant Array of Independent Disks (RAID) / 独立磁盘冗余阵列
+RAID is a method of combining multiple disks as a unit for fault tolerance or performance improvement, or both, of a database system ([Patterson, Gibson, and Katz's 1988 paper](https://www.cs.cmu.edu/~garth/RAIDpaper/Patterson88.pdf); [Database System Concepts, 7e, ch. 12](https://www.db-book.com/Previous-editions/db7/slides-dir/PDF-dir/ch12.pdf)).
 
 For graphs below, we use the following conventions:
 
@@ -306,73 +237,62 @@ For graphs below, we use the following conventions:
 
 Please note that the RAID levels are not exhaustive and there are other RAID levels such as RAID 10, RAID 50, etc. that combine the features of the basic RAID levels for additional redundancy or performance.
 
-Baseline: One Disk
+Reliability model for the calculations below: let $p$ be the probability that one disk fails within one fixed observation interval, and assume independent disk failures. If a disk has constant failure rate $\lambda$ per hour, then $MTTF_{disk}=1/\lambda$; $1/p$ is not a time unless the interval and rate model are specified. For $N$ disks, the probability of at least $k$ failures during an interval with no repair is
+$$P(\text{at least }k)=\sum_{j=k}^{N}\binom{N}{j}p^j(1-p)^{N-j}.$$
+These mission-interval probabilities are not MTTF estimates for a repaired array.
 
-- MTTF (Mean Time To Failure): 1/p
-- p: Probability of failure of a disk, MTTF(disk) = 1/p
-
-## RAID 0 (Block Level Striping)
-
+### RAID 0 (Block Level Striping)
 <image alt="RAID0" src="raid0.png" width=300/>
 
 - Data is split into blocks and spread across multiple disks.
 - Note the data is stored in a zig-zag way (A0, A2, A4, A6 in Disk 1, A1, A3, A5, A7 in Disk 2)
-- Advantages: Balanced I/O of disk drives, throughput approximately doubles. It has double throughput compared to one disk.
-- Drawbacks: Any disk failure is catastrophic, and MTTF reduces by a factor of 2. The probability of failure is $P(failure) = P(A) + P(B) = 2p$. Thus, MTTF(Raid0) = 1/(2p) = 1/2 x MTTF(disk).
+- Advantages: Independent block requests can run in parallel; a large sequential transfer may use both disks.
+- Drawbacks: There is no redundancy, so either disk failing loses the array. With two independent disks and failure probability $p$ per fixed interval, $P(\text{loss})=1-(1-p)^2=2p-p^2\approx2p$. With constant per-disk failure rate $\lambda$ and no repair, array MTTF is $1/(2\lambda)=MTTF_{disk}/2$. Throughput gains depend on workload and bottlenecks.
 
-## RAID 1 (Mirroring)
-
+### RAID 1 (Mirroring)
 <image alt="RAID1" src="raid1.png" width=300/>
 
 - Data is duplicated across two or more disks.
-- Advantages: Higher read throughput, continues to operate as long as one disk is functional, MTTF increases substantially. It has better fault tolerance, as it fails only if both disks fail.
-- Drawbacks: Lower write throughput, half storage utilization, requires double storage. The probability of failure is $P(failure) = P(A and B) = P(A) * P(B) = p^2$. Hence, $MTTF(RAID1) = (1/p)^2 = MTTF(disk)^2$.
+- Advantages: Two copies can serve reads, and data remains available after one independent disk failure if the surviving copy is sound.
+- Drawbacks: Usable capacity is about half for a two-disk mirror. Both disks must receive writes, so write performance depends on workload and implementation.
+- In a no-repair observation interval, both disks failing has probability $p^2$. In a repairable two-disk mirror with independent constant failure rate $\lambda$, rare failures, and mean repair/rebuild time $r$, the approximate mean time to data loss is $1/(2\lambda^2r)=MTTF_{disk}^2/(2r)$. This assumes independent failures and ignores common causes; it is not $MTTF_{disk}^2$ ([Database System Concepts, 7e, ch. 12](https://www.db-book.com/Previous-editions/db7/slides-dir/PDF-dir/ch12.pdf)).
 
-## RAID 2 (Bit Level Striping)
-
+### RAID 2 (Bit Level Striping)
 <image alt="RAID2" src="raid2.png" width=300/>
 
-- Data is split into bits and spread across multiple disks.
-- Advantages: Higher transfer rate. Similar to RAID 0, but stores data at the bit level.
-- Drawbacks: MTTF reduced by half as in RAID 0, rarely used. MTTF for RAID 2 is the same as that for RAID 0.
+- Data is striped at bit level and protected by a memory-style error-correcting code (ECC); the redundancy disks are not shown in the preserved data-only sketch.
+- Protection and failure tolerance depend on the code and array layout. RAID 2 is largely of historical/teaching interest; it is not equivalent to nonredundant RAID 0.
 
-## RAID 3 (Byte Level Striping)
-
+### RAID 3 (Byte Level Striping)
 <image alt="RAID3" src="raid3.png" width=300/>
 
-- Data is split into bytes and spread across multiple disks, with a parity byte for error detection.
-- Advantages: Higher transfer rate than RAID 0, MTTF increases substantially as **one disk failure can be recovered from the data of the other disks**. The system fails if any two of the three disks fail.
-- Drawbacks: Rarely used. The probability of failure is $P(failure) = {3 \choose 2}p^2 = 3p^2$. Hence, $MTTF(RAID3) = 1/3 \times (1/p)^2 = 1/3 \times MTTF(disk)^2$. Compared to RAID1, $MTTF(RAID3) = MTTF(RAID1)/3$, which indicates RAID1 is better.
+- As drawn, consecutive data units are striped across two data drives with a dedicated parity drive; RAID 3 uses fine-grained (commonly byte-level or bit-interleaved) striping. One failed drive can be reconstructed; two simultaneous failures exceed this layout's single parity.
+- In a no-repair observation interval, loss probability is $\binom{3}{2}p^2(1-p)+p^3=3p^2-2p^3\approx3p^2$. For a repairable array under the same independent constant-rate assumptions, the rare-event approximation is $MTTDL\approx1/(6\lambda^2r)=MTTF_{disk}^2/(6r)$, where $r$ is the time to restore redundancy. This is a model, not a field guarantee.
 
-## RAID 4 (Block Level Striping)
-
+### RAID 4 (Block Level Striping)
 <image alt="RAID4" src="raid4.png" width=300/>
 
 - Data is split into blocks and spread across multiple disks, with a dedicated disk for parity blocks.
-- Advantages: Higher throughput, MTTF increases substantially. The throughput is higher as the data is stored at the block level.
-- Drawbacks: Very slow writes, the dedicated parity disk has more writes as parity needs to be updated for every data write.
+- Block striping with one dedicated parity disk can serve independent reads in parallel and reconstruct one failed disk.
+- Small random writes update parity and can make the dedicated parity disk a bottleneck; large sequential writes behave differently. There is no generic throughput or MTTF value independent of the workload and repair model.
 
-## RAID 5 (Block Level Striping with Parity Striping)
-
+### RAID 5 (Block Level Striping with Parity Striping)
 <image alt="RAID5" src="raid5.png" width=300/>
 
-- Data and parity blocks are both split and spread across multiple disks. Similar to RAID 4, but Parity is distributed among all disks.
-- Advantages: Higher throughput, slower writes but better than RAID 4 as parity bits are distributed among all disks and the number of write operations on average equal among all disks, MTTF increases substantially. The write speed is better compared to RAID 4.
+- Data and parity blocks are distributed across the drives, avoiding RAID 4's single dedicated parity drive. One failed drive can be reconstructed from the remaining data and parity.
+- A single-parity array loses data after two unrecoverable drive failures before redundancy is restored. Small random writes still incur parity work; the relative performance of RAID 4 and RAID 5 depends on workload and implementation.
 - Drawbacks: Complex to implement and manage.
 
-## RAID 6 (Block Level Striping with Double Parity)
-
+### RAID 6 (Block Level Striping with Double Parity)
 <image alt="RAID6" src="raid6.png" width=500/>
 
-- Similar to RAID 5 except two parity blocks are used. This is an extension of RAID 5 with two more disks.
-- Advantages: Any two disk failures can be safe to recover the data, reliability is of the order of $MTTF^3/10$. Parities are stored in a way to insure recovery in the case of two failures, providing higher throughput.
-- P0 and P1 are parity blocks for blocks A0, A1 and A2. These are computed in such way that any two disk failures can be safe to recover the data.
-- Drawbacks: More complex parity calculation, slower writes due to double parity. The probability of failure is $P(Failure) = {5 \choose 3}p^3 = 10p^3$, leading to a longer MTTF: $MTTF = 1/10 x (1/p)^3 = 1/10 x MTTF(disk)^3$.
+- This five-drive illustration has three data drives and two independent parity streams (P and Q). The second parity lets this layout reconstruct up to two failed drives; writes must maintain both parity values.
+- With independent per-drive failure probability $p$ in one fixed interval and no repair, loss requires at least three failed drives:
+$$P(\text{loss})=\binom{5}{3}p^3(1-p)^2+\binom{5}{4}p^4(1-p)+p^5=10p^3-15p^4+6p^5\approx10p^3.$$
+This is an interval probability, not an MTTF. Repaired-array MTTDL also depends on repair/rebuild time, correlated failures, and latent errors.
 
-## Choosing RAID Level
-
-Tradeoff here:
-**Higher throughput at the cost of increased vulnerability to failures.**
+### Choosing RAID Level
+The tradeoff depends on layout and workload: striping can improve parallel reads or writes, while RAID 0 has no redundancy; mirroring and parity consume capacity and add write work to tolerate specified failures. Compare usable capacity, tolerated failures, rebuild exposure, workload, and system support.
 When choosing the suitable RAID level, the following factors should be considered:
 
 - **Reliability**: The ability of the system to handle and recover from hardware failure.
@@ -380,73 +300,33 @@ When choosing the suitable RAID level, the following factors should be considere
 - **Storage Utilization**: The amount of storage space that is effectively used.
 - **Price/Number of Disks**: The cost and the number of disks required.
 
-# Fault Tolerance by Voting
-
+## Fault Tolerance by Voting / 多数表决容错
 ### Definition of majority here
-
 if n nodes, then:
 
 - if n is odd, majority means $\frac{(n + 1)}{2}$
 - if n is even, majority means $\frac{n}{2} + 1$
 
-## Failvote
+### Failvote
+In the fail-vote/fail-fast model described by [Saltzer and Kaashoek, ch. 8](https://live.ocw.mit.edu/courses/res-6-004-principles-of-computer-system-design-an-introduction-spring-2009/6b31587ec59b1b002cb7a710d9781453_faults_open_5_0.pdf), a failvote voter accepts an output only when a strict majority of all configured replicas agrees. For three replicas, two matching outputs suffice; for four, three are required. A replica being powered on does not prove that its output is correct.
 
-The system works as long as majority of them are working, stops if there are no majority agreement.
+### Failfast
+A self-checking fail-fast replica model can continue with one surviving replica after failed replicas are detected. An ordinary untrusted survivor cannot validate its answer by comparison with another result, so this is a model prerequisite rather than a guarantee for every fail-fast design. Detection errors and common-mode failures remain outside this simple model.
 
-e.g. 3 node.
+### Supermodule
+A supermodule combines modules with a voter or comparator. Its failure condition depends on the design: a design that remains usable with one self-checking module fails only when all modules are unavailable; failvote has a stricter output-agreement threshold. Do not use the all-modules-down formula below for a failvote system.
 
-- Majority = (3 + 1) / 2 = 2,
-- 1 is down, 2 is up, then system works
-- 2 is down, 1 is up, then system stops
+#### Fault Tolerance with Repair
+Assume independent module failures with a constant rate, immediate detection, and repair time with mean MTTR. In a two-state up/down model, one module's long-run unavailability is
+$$q = \frac{MTTR}{MTTF + MTTR} \approx \frac{MTTR}{MTTF}$$
+when MTTR is much smaller than MTTF. Values such as MTTR of a few hours to one day and MTTF of 750,000 hours (about 85.6 years) are illustrative inputs for this model, not a general current disk specification.
 
-e.g. 4 node
+#### Approximate Failure Rate of a One-Available-Module Supermodule
+For a supermodule that can operate with any one self-checking module available, the approximate rate of total failure is
+$$\lambda_{sys} \approx n\lambda q^{n-1}, \qquad \lambda=1/MTTF,$$
+when failures are rare, independent, and repaired independently. This follows because any of the n modules can fail while the other n-1 are unavailable. The result has units of failures per time; its reciprocal is an approximate MTTDL. It excludes common-cause failures, repair queues, latent errors, and voter failures. Failvote/failfast systems with a different voting threshold need a different failure-state calculation.
 
-- Majority = 4 / 2 + 1 = 3
-- 1 is down, 3 is up, then system works
-- 2 is down, 2 is up, then system stops
-
-## Failfast
-
-The system stop if there are no majority of available modules/nodes. Here available means not down.
-
-e.g. 3 node.
-
-- 1 is down, 2 is up, Majority = 2 / 2 + 1 = 2, then system works
-- 2 is down, 1 is up, Majority = (1 + 1) / 2 = 1, then system stops as **nothing to compare**
-
-e.g. 4 node
-
-- 1 is down, 3 is up, Majority = (3 + 1) / 2 = 2, then system works
-- 2 is down, 2 is up, Majority = 2 / 2 + 1 = 2, then system works
-- 3 is down, 1 is up, Majority = 1, then system stops as **nothing to compare**
-
-## Supermodule
-
-The system stops if all nodes are down, a Supermodule can still function even when only one disk is available. This adaptability allows for significant fault tolerance.
-
-### Fault Tolerance with Repair
-
-In systems with repair of modules, the faulty equipment is repaired with an average time of MTTR (mean time to repair) as soon as a fault is detected. Sometimes, MTTR is just the time needed to replace the faulty module. Typical values for recent disks are:
-
-- MTTR = Few hours (assuming we stock spare disks) to 1 Day
-- MTTF = 750000 hours (~ 86 years) [hard fault]
-
-The probability of a particular module not being available is given by $\frac{MTTR}{MTTF+MTTR}$, which approximates to $\frac{MTTR}{MTTF}$ if MTTF >> MTTR.
-
-### Fault Tolerance of a Supermodule with Repair
-
-The probability that $n-1$ modules are unavailable, denoted as $P_{n-1}$, is given by $\left(\frac{MTTR}{MTTF}\right)^{n-1}$.
-
-The probability that a particular $i^{th}$ module fails, denoted as $P_f$, is $\frac{1}{MTTF}$.
-
-The probability that the system fails with a particular $i^{th}$ module failing last equals $P_f \times P_{n-1} = \frac{1}{MTTF} \times \left(\frac{MTTR}{MTTF}\right)^{n-1}$.
-
-The probability that a supermodule fails due to any one of the $n$ modules failing last, when other $(n-1)$ modules are unavailable, is $\frac{n}{MTTF} \times \left(\frac{MTTR}{MTTF}\right)^{n-1}$.
-
-The values for this probability differ for failvote and failfast systems.
-
-# Communication Reliability
-
+## Communication Reliability / 通信可靠性
 In a reliable message passing system, the communication between two nodes can be represented as a series of states. The key components of this system include:
 
 - **Out**: Number of messages sent
@@ -458,35 +338,23 @@ For example, the communication between Node A and Node B can be represented as f
 <image alt="State 1: Node B sends message 7, Node A (In:6, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_02.png" width=600/>
 <image alt="State 2: Node A sends acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:6, In:3)" src="com_03.png" width=600/>
 <image alt="State 3: Node B receives acknowledge 7, Node A (In:7, Ack:3, Out:3), Node B (Out:7, Ack:7, In:3)" src="com_04.png" width=600/>
-In above example, if B did not receive 7: ack, B will wait for some time, then send 7:msg again. Keep doing this until receive 7: ack.
+If B does not receive the acknowledgement, it may retry message 7. Retries can deliver the same message more than once; acknowledgements alone do not guarantee exactly-once effects. Applications that need deduplication use message identifiers or sequence numbers and durable receiver-side state.
 
 If two nodes want to communicate with each other, how to make sure the data sent is correctly?
 
 - Stable storage – data in stable storage is durable and not be lost easily
 - Acknowledgement info
 
-# Duplex Write & Logged Write
+## Duplex Write & Logged Write / 双写与日志写入
+### Atomicity
+Atomicity means a transaction's changes are committed as a unit or rolled back as a unit. A redundant disk write is a storage technique, not by itself transaction atomicity. For a transfer of $100, the debit, credit, and recovery record must be coordinated so recovery cannot expose only one side.
 
-## Atomicity
+### Atomic Disk Write – Duplex Write
+- A duplex-write scheme keeps redundant copies, often with version or sequence metadata, and may consult a log during recovery.
+- A checksum such as CRC can detect many accidental corruptions, but it does not correct data or prove that a copy is the latest valid one.
+- Two sequential writes are not an atomic transaction and do not guarantee that one good copy always exists: a crash, torn write, shared failure, or undetected corruption can affect both copies. The recovery protocol and its failure assumptions determine what can be recovered.
 
-All changes to data are performed as if they are a single operation. That is, all the changes are performed, or none of them are.
-
-e.g., A transfer $100 to B.
-
-- A -100
-- B +100
-- log A transfer $100 to B.
-
-## Atomic Disk Write – Duplex Write
-
-- Each block of data is written in two places sequentially
-- If one of the writes fail, system can issue another write
-- Each block is associated with a version number. The block with the latest version number contains the most recent data.
-- While reading - we can determine error of a disk block by its **CRC**.
-- It always guarantees at least one block has consistent data.
-
-## Example
-
+### Example
 State 0: Main Memory (empty), Hard Disk (100 700 (v#7) Block 123)
 ![](./update_disk_block_00.png)
 State 1: Operation: read, Main Memory (100 700), Hard Disk (100 700 (v#7) Block 123)
@@ -498,22 +366,20 @@ State 2: Operation: Modify contents in memory to say 200, contents modified to 2
 State 3: Operation: Write to disk in a different block, Written to a different block, Next update will take place to Block 123 and the version number V#7 will be changed to v#9. (Two different physical disks can be used for duplex writes as well), Main Memory (200 700), Hard Disk (100 700 (v#7) Block 123; 200 700 (v#8) Block 475)
 ![](update_disk_block_05.png)
 
-## Logged write
-
+### Logged write
 - similar to duplex write, except one of the writes goes to a log.
 - Log – durable & can be read quickly
-- This method is very efficient if the changes to a block are small.
+- If the log stores a compact change record, logging a small update may avoid rewriting a full block. Durability and replay still depend on the log protocol.
 
-# CRC Calculation
-
+## CRC Calculation / 循环冗余校验
 To compute an n-bit binary CRC, follow these steps:
 
-1. **Padding**: Add n zero bits as 'padding' to the right of the input bits. For example, a 3-bit CRC with a polynomial $x^3 + x + 1$ should add 000 to the right ofthe input bits.
+1. **Padding**: Add n zero bits to the right of the input bits. For example, a 3-bit CRC with polynomial $x^3 + x + 1$ appends 000 before division.
 2. **Compute Polynomial**: Compute the (n + 1)-bit pattern representing the CRC's divisor (called a "polynomial"). For example, a 3-bit CRC with a polynomial $x^3 + x + 1$ would have the coefficients 1, 0, 1, and 1. i.e. $1 \times x^3 + 0 \times x^2 + 1 \times x^1 + 1 \times x^0$
 
 3. **Position Polynomial**: Position the (n + 1)-bit pattern representing the CRC's divisor underneath the left-hand end of the input bits.
 
-4. **Perform XOR Operations**: The algorithm acts on the bits directly above the divisor in each step. The result for each iteration is the bitwise XOR of the polynomial divisor with the bits above it. The bits not above the divisor are copied directly below for that step. The divisor is then shifted one bit to the right, and the process is repeated until the bits of the input message become zero. The remainder will be the value of the CRC function.
+4. **Perform XOR Operations**: Starting at the leftmost bit, XOR the divisor with the current message window when its leading bit is 1; otherwise shift to the next position. Continue polynomial long division over GF(2) across the padded message. The final n-bit remainder is the CRC. A CRC detects many transmission or storage errors but does not repair data or authenticate its source; detection strength depends on the chosen polynomial and error pattern.
 
 Example:
 
