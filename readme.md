@@ -10,19 +10,10 @@ A Markdown knowledge base for AI engineering, frontend, and shared engineering f
 - [Engineering foundations topics / 工程基础主题](engineering-foundations/index.md)
 - [Archive / 归档区](archive/index.md)
 - [Writing guide / 写作规范](maintenance/writing-guide.md)
+- [Full knowledge review audit / 全库知识审查](maintenance/knowledge-review-audit.md) — reviewed scope, source-backed corrections, and validation limits.
 - [Migration notes / 迁移说明](maintenance/migration-notes.md)
 
 The other domain roots are `archive`, for low-frequency or paused material, `review`, for navigation, and `maintenance`, for repository guidance and tools.
-
-## Review coverage / 审核范围与进度
-
-The migrated baseline had 62 active notes: 14 in AI engineering, 36 in frontend, and 12 in engineering foundations. Three accepted foundations notes bring the current active inventory to 65 (14, 36, and 15). The broader review scope covers 116 existing originals—53 active and 63 archived—with nine previously reviewed active notes protected outside that count. Inventory and migration counts do not imply content review.
-
-The first deep-review batch covers four AI/agent notes and one sample each from frontend and engineering foundations. All six have received full-text review, key fact checks, and bilingual revision, and have passed final review. See the [AI/agent audit / AI Agent 审计](maintenance/ai-agent-audit.md) and [bilingual samples audit / 双语样板审计](maintenance/bilingual-samples-audit.md) for the reviewed scope and evidence.
-
-The second batch covers [RAG](ai-engineering/rag/rag-architecture-and-implementation.md), [LLM evaluation](ai-engineering/evaluation/llm-evaluation-methods.md), and [production safety](ai-engineering/safety/ai-safety-in-production.md). These three notes have received full-text review, key source checks, bilingual revision, and final content review. See the [RAG, evaluation, and production safety audit / RAG、评估与生产安全审计](maintenance/ai-quality-audit.md) for its scope and validation limits. Together, the two earlier batches reviewed nine of the 62-note baseline. The [review map / 面试复习地图](review/index.md) links to selected interview topics.
-
-All 36 active Frontend notes have completed content review. The broader review has accepted all 116 substantive original notes in its fixed scope (53 active and 63 archived). All three new foundations notes have also passed review and are tracked separately from those 116 originals. See the [full knowledge review audit / 全库知识审查](maintenance/knowledge-review-audit.md) for the reviewed scope and checks.
 
 ## Continuous-reading documents / 连续阅读稿
 
