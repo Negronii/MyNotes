@@ -20,7 +20,7 @@ This map preserves the original 14 substantive AI notes under stable topic paths
 
 ### Retrieval-augmented generation / 检索增强生成
 
-- [RAG Architecture and Implementation / RAG架构与实现](rag/rag-architecture-and-implementation.md)
+- [Retrieval-Augmented Generation (RAG) / 检索增强生成](rag/rag-architecture-and-implementation.md)
 
 ### Agents / 智能体
 

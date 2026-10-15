@@ -1,247 +1,171 @@
-# RAG Architecture and Implementation
+# Retrieval-Augmented Generation (RAG) / 检索增强生成
 
-This note prepares you to answer:
+**Retrieval-augmented generation (RAG) / 检索增强生成** adds evidence from an external source to the context of a language model at request time. A retriever selects candidate evidence; the application assembles an authorized, relevant context; a generator produces an answer from that context. RAG connects a model’s **parametric memory / 参数化记忆** with **non-parametric memory / 外部可检索知识**. Its usefulness depends on the source, retrieval, context assembly, and the model’s use of evidence. It does not guarantee correctness, freshness, privacy, low latency, or low cost. [Lewis et al.](https://arxiv.org/abs/2005.11401)
 
-- When should you reach for RAG instead of fine-tuning or a longer context?
-- Walk me through a RAG pipeline
-- How do you pick an embedding model and similarity metric?
-- How do you chunk documents for retrieval?
-- Dense, sparse, or hybrid retrieval?
-- What's re-ranking, and when is it worth the latency?
-- What are the common RAG upgrades that turn a demo into production?
-- Why does my RAG system hallucinate even when it retrieves?
+**Interview answer / 面试简答：**
 
----
+> **EN:** RAG retrieves external evidence for a query and supplies selected passages to a language model as context. Retrieval determines what evidence is available; generation determines how the model uses it. This can make external knowledge easier to update than model weights, but answer quality still depends on source coverage, access controls, retrieval, and evidence use. RAG does not guarantee a correct answer or lower total cost and latency.
+>
+> **中文：** RAG 根据查询从外部来源检索证据，再把筛选后的内容作为上下文交给语言模型。检索决定哪些证据可用，生成决定模型如何使用这些证据。它可以让外部知识比模型权重更容易更新，但回答质量仍取决于来源覆盖、访问控制、检索和模型对证据的使用；RAG 不保证答案正确，也不保证总成本或时延更低。
 
-## When should you reach for RAG instead of fine-tuning or a longer context?
+## When to use retrieval, long context, or fine-tuning / 如何选择检索、长上下文或微调
 
-**Headline (30s):** Use RAG when your knowledge is **fresh, private, or changing** — things the base model can't see and that evolve too fast (or are too sensitive) to bake in via fine-tuning. Use a **longer context** when the relevant knowledge fits in the window and you don't want retrieval complexity. Use **fine-tuning** when you need to change *style/format/behavior*, not to inject facts.
+These techniques solve different constraints and can be combined:
 
-**Decision rule (in order):**
-
-1. Is the knowledge small enough to stuff into the prompt (≤ few thousand tokens) and stable? → skip RAG, use long context.
-2. Is the knowledge large, changing, or private? → RAG.
-3. Do you need to change *how* the model speaks/behaves, not *what* it knows? → fine-tuning (see [7.1 Fine-tuning Strategies](../fine-tuning/fine-tuning-strategies.md)).
-4. Both facts and behavior? → fine-tune for behavior, RAG for facts.
-
-**What RAG buys you:**
-
-| Benefit | Description |
-|---|---|
-| **Fresh / private data** | Access documents, APIs, databases beyond the training cutoff |
-| **Reduced hallucination** | Grounding in retrieved context constrains model output |
-| **Domain-specific accuracy** | Inject expert knowledge without fine-tuning |
-| **Updatability** | Re-index, don't re-train, when knowledge changes |
-
-**Tiebreaker question (to ask the interviewer):** "Does the knowledge update on a schedule faster than we'd re-fine-tune?" If yes, RAG. If no, either could work, and fine-tuning might be simpler in inference.
-
-**Gotcha:** Candidates say "RAG reduces hallucination." Closer to the truth: **RAG gives the model a chance not to hallucinate** by providing grounded context. The model can still ignore or contradict the retrieved context — see the debugging section below.
-
----
-
-## Walk me through a RAG pipeline
-
-**Headline (30s):** Five steps: embed the query → retrieve top-k from a vector store via similarity search → augment the prompt with the retrieved chunks → generate a response. Indexing (embed documents → store vectors) happens offline; the hot path is query-time.
-
-**Hot path:**
-
-```
-Query → Embed Query → Retrieve from Vector Store → Augment Prompt with Retrieved Context → Generate Response
-```
-
-| Step | Description |
-|---|---|
-| **Query** | User input (question or instruction) |
-| **Embed Query** | Convert query to a dense vector using the same embedding model used for documents |
-| **Retrieve** | Find the top-k most similar document chunks via similarity search |
-| **Augment** | Prepend retrieved chunks to the prompt as context |
-| **Generate** | LLM produces a response conditioned on the augmented prompt |
-
-**Minimal implementation:**
-
-```python
-def rag(query: str, vector_store, llm, top_k: int = 5) -> str:
-    query_embedding = embed(query)
-    chunks = vector_store.similarity_search(query_embedding, k=top_k)
-    context = "\n\n".join(chunk.text for chunk in chunks)
-    prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-    return llm.generate(prompt)
-```
-
-**Gotcha:** "Same embedding model at index and query time" is non-negotiable. Changing the embedding model requires re-embedding the entire corpus. Candidates treat this as a detail; it's a hard operational constraint that dictates how often you can upgrade.
-
----
-
-## How do you pick an embedding model and similarity metric?
-
-**Headline (30s):** Default to a managed model (OpenAI `text-embedding-3-small` or Cohere `embed-v3`) for speed to launch. Move to an open-source model (BGE, E5, GTE) when you need to control cost at scale, run on-prem, or fine-tune on domain data. Use **cosine similarity** for normalized embeddings — it's the near-universal default.
-
-**Popular models:**
-
-| Model | Provider | Dimensions | Notes |
-|---|---|---|---|
-| text-embedding-3-small | OpenAI | 1536 | Cost-effective, strong performance |
-| text-embedding-3-large | OpenAI | 3072 | Higher quality, higher cost |
-| embed-v3 | Cohere | 1024 | Multilingual, supports input types |
-| all-MiniLM-L6-v2 | sentence-transformers | 384 | Fast, local, open-source |
-| BGE-large-en-v1.5 | BAAI | 1024 | Strong open-source baseline |
-
-**Similarity measures:**
-
-| Measure | Formula | When to Use |
+| Approach | Useful when | Main tradeoff |
 |---|---|---|
-| **Cosine similarity** | \(\frac{A \cdot B}{\|A\| \|B\|}\) | Most common; invariant to vector magnitude |
-| **Dot product** | \(A \cdot B\) | When embedding magnitudes carry meaning |
-| **Euclidean distance** | \(\|A - B\|\) | Less common for normalized embeddings |
+| **RAG / 检索增强** | The application needs to select evidence from a source that is larger than one prompt, changes over time, or has source-level access rules. | Adds ingestion/synchronization and retrieval work. Retrieval can miss, return stale or conflicting material, or select content the generator does not use well. |
+| **Long context / 长上下文** | The relevant material can be supplied together and the task benefits from reasoning across that material without a separate search step. | The model must still find and use the relevant parts. Context length, position effects, and input-token cost depend on the model and workload. |
+| **Fine-tuning / 微调** | Repeated examples can teach a desired response pattern, task behavior, or format. | It does not by itself provide a reliable, current source of external facts. Use retrieval as well when answers must cite or reflect a maintained corpus. |
 
-Use the same measure at index and query time. Most vector DBs default to cosine for normalized embeddings.
+There is no universal token-count cutoff. Compare the methods on representative questions, including required evidence, source updates and permissions, answer quality, end-to-end latency, and cost. In one EMNLP 2024 comparison, long-context models had higher average performance when sufficiently resourced, while RAG cost less in that evaluated setting; this result is not a general ranking of all systems. Long-context models can also be position-sensitive on tested tasks. [Li et al.](https://arxiv.org/abs/2407.16833), [Liu et al.](https://arxiv.org/abs/2307.03172)
 
-**Gotcha:** High-dimensional embeddings aren't always better. Going from 1536 → 3072 dimensions doubles storage and retrieval cost for often marginal recall gains. Benchmark on your actual corpus before paying the dimensional tax.
+## Pipeline / 检索增强生成的流程
 
----
+A RAG request has two connected paths. The corpus path parses and indexes content; the query path retrieves evidence and uses it for generation. This note focuses on text corpora. A system can also fetch live records or call APIs at query time.
 
-## How do you chunk documents for retrieval?
+```text
+Corpus path: source documents → parse and preserve metadata → split into chunks → encode and/or build lexical index
+Query path: question + caller → authorization filter → retrieve candidates → optional reranking → assemble evidence → generate
+```
 
-**Headline (30s):** Default to **recursive chunking** with 256–1024 tokens and 10–20% overlap. Upgrade to **document-aware** (respect headers, sections) when source documents are structured. Reach for **semantic chunking** only when naive approaches produce incoherent chunks and you're willing to pay the indexing-time embedding cost.
+Indexing is often asynchronous or performed ahead of user requests, but that is an implementation choice, not part of the definition of RAG. Preserve enough provenance to identify each chunk’s source and version. If source documents change, the application must synchronize those changes and define how it handles old versions, deletion, and revoked access.
 
-**Chunking strategies:**
-
-| Strategy | How It Works | Pros | Cons |
-|---|---|---|---|
-| **Fixed-size** | Split by character/token count with optional overlap | Simple, predictable | May split mid-sentence or mid-concept |
-| **Recursive** | Split by separators (paragraphs → sentences → words) recursively | Respects natural boundaries | Can produce uneven chunk sizes |
-| **Semantic** | Split when embedding similarity between adjacent sentences drops | Coherent semantic units | Slower, requires embedding during indexing |
-| **Document-aware** | Respect structure (headers, sections, pages) | Preserves hierarchy | Requires structured source docs |
-
-**Recommended defaults:**
-
-- **Chunk size:** 256–1024 tokens (roughly 200–800 words). Smaller = more precise retrieval, larger = more context per chunk.
-- **Overlap:** 10–20% to avoid losing context at boundaries.
+A framework-neutral sketch of the query path:
 
 ```python
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+# Synthetic example: answer a question about a sample policy.
+# The application computes and enforces this caller's scope.
+query = "What is the sample policy's cancellation window?"
+allowed_scope = authorization_scope(caller)
+candidates = retrieve(query, scope=allowed_scope, limit=40)  # illustrative candidate count
+ranked = rerank(query, candidates)
+evidence = select_passages(ranked, limit=5)                  # illustrative passage count
+answer = generate(query=query, context=evidence)             # also enforce the model's token budget
+```
+
+The limits above illustrate **wide candidate retrieval → reranking → finite evidence**; they are not recommended values. The example selects at most five passages and must also fit them within the model's token budget. Reranking can reorder only candidates already retrieved. If the needed passage is absent from the candidate set, reranking cannot recover it. The application should retain source metadata through assembly and validate any required citations separately. This sketch omits implementation details such as filtering syntax, source synchronization, and citation validation.
+
+Treat retrieved text as untrusted input; the access and trust-boundary section below covers prompt injection and application-side controls.
+
+## Embeddings and similarity / 向量表示与相似度
+
+An embedding maps text to a vector for retrieval. Query and document encodings must follow a **compatible encoding contract / 兼容的编码契约**: their vector dimensions and learned space must support comparison, and each model’s query/document input format must be respected. This does not require identical encoder weights. Dense Passage Retrieval (DPR), for example, uses separate question and passage encoders. [Karpukhin et al.](https://arxiv.org/abs/2004.04906)
+
+Changing document-side encoding, output dimensions, normalization, or preprocessing may require re-embedding or migrating the affected document vectors if they no longer meet the query/document contract. A query-side change alone does not necessarily require rebuilding the document index, but its compatibility and retrieval quality must be re-evaluated. Model choice should account for the language and task, query/document format, deployment and privacy constraints, input limits, latency, price, and performance on the target corpus. Avoid treating a model list or benchmark ranking as a permanent recommendation.
+
+Common similarity measures are:
+
+| Measure | Formula | Interpretation |
+|---|---|---|
+| **Cosine similarity / 余弦相似度** | $\frac{A \cdot B}{\lVert A \rVert \lVert B \rVert}$ | Compares vector direction and is invariant to vector magnitude. |
+| **Dot product / 点积** | $A \cdot B$ | Depends on both direction and magnitude unless vectors are normalized. |
+| **Euclidean distance / 欧氏距离** | $\lVert A-B \rVert_2$ | Measures distance; smaller values indicate closer vectors. |
+
+The metric must match the model’s representation and the vector index configuration. For OpenAI’s normalized embeddings, cosine similarity and dot product produce the same ranking, and Euclidean distance also produces identical rankings; this equivalence should not be assumed for arbitrary embeddings. [OpenAI embeddings guide](https://developers.openai.com/api/docs/guides/embeddings)
+
+## Chunking / 文档分块
+
+A **chunk / 文档块** is a retrievable unit derived from a source document. Chunking trades retrieval precision against context completeness: small chunks can isolate evidence but lose nearby qualifications; large chunks preserve surrounding context but can include irrelevant material. The useful size depends on source structure, parser quality, query mix, embedding model, and the generator’s context budget. There is no generally optimal token size or overlap ratio; evaluate choices on representative queries. A 2025 ACL Findings study documents how segmentation choices affect RAG behavior, while a 2026 chunking preprint found different tradeoffs in one SPLADE/Mistral-8B/Natural Questions setup. [Wang et al.](https://aclanthology.org/2025.findings-acl.422/), [Bennani & Moslonka](https://arxiv.org/abs/2601.14123)
+
+| Strategy | Mechanism | Useful when | Limitation |
+|---|---|---|---|
+| **Fixed-size / 定长分块** | Split at a character or tokenizer-token limit; optionally retain overlap at boundaries. | A simple, predictable baseline is needed. | May cut across a sentence, table, code block, or concept. State whether the limit is characters or tokens. |
+| **Recursive / 递归分块** | Try separators in order (for example, section breaks, newlines, then spaces) until parts fit a target length. | Text has natural separators and a generic baseline is appropriate. | The resulting chunk sizes vary and the separator hierarchy may not match the source structure. |
+| **Semantic / 语义分块** | Group nearby sentences or passages and split at a semantic boundary, often using embedding similarity. | Boundary coherence is a measured problem worth extra indexing work. | Similarity thresholds and model choice affect results; it is not automatically more accurate. |
+| **Document-aware / 结构感知分块** | Split on source structure such as headings, pages, sections, tables, or code syntax. | Structure carries meaning or links evidence across a document. | Depends on successful parsing and may still need size limits or a fallback splitter. |
+
+**Character-count example / 字符长度示例：** LangChain’s current Python documentation shows `RecursiveCharacterTextSplitter` from the separate `langchain_text_splitters` package. With its default length function, `chunk_size` and `chunk_overlap` count characters, not tokens. The values below mirror a documentation example and illustrate the API; they are not universal RAG settings. Use a tokenizer-aware length function if the target constraint is model tokens. [LangChain documentation](https://docs.langchain.com/oss/python/langchain/knowledge-base)
+
+```python
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 splitter = RecursiveCharacterTextSplitter(
-    chunk_size=512,
-    chunk_overlap=50,
-    separators=["\n\n", "\n", ". ", " ", ""]
+    chunk_size=1000,       # characters with the default length function
+    chunk_overlap=200,     # characters retained across adjacent chunks
+    add_start_index=True,  # preserve the source character offset
 )
-chunks = splitter.split_text(document)
+chunks = splitter.split_documents(documents)
 ```
 
-**Gotcha:** The right chunk size is **query-dependent**, not document-dependent. Short factual queries want small chunks (precision); synthesis/reasoning queries want larger chunks (context). When users ask both types, consider **parent-child chunking** (embed small, return large).
+Overlap can retain context across boundaries, but it also duplicates text and increases indexed content. Treat overlap as an evaluation parameter, not a mandatory fix. The right chunking choice can also depend on the query’s evidence shape; “query-dependent” does not mean document structure is irrelevant.
 
----
+For the parent-child chunking design and its trade-offs, see “Parent-child retrieval / 父子分块检索” under Retrieval upgrades below.
 
-## Dense, sparse, or hybrid retrieval?
+## Dense, sparse, and hybrid retrieval / 稠密、稀疏与混合检索
 
-**Headline (30s):** Default to **hybrid**. Dense (vector) retrieval handles semantic similarity and paraphrasing; sparse (BM25/TF-IDF) handles exact terms and rare entities that embeddings blur. Most production systems combine both with **Reciprocal Rank Fusion (RRF)** because each catches failures the other makes.
+**Dense retrieval / 稠密检索** embeds the query and chunks, then ranks chunks by vector similarity. It can match related phrasing even when wording differs, depending on the model and task. It can still miss exact identifiers, rare names, or relevant evidence.
 
-**The tradeoff:**
+**Sparse retrieval / 稀疏检索** ranks using lexical features. BM25 is a common term-based retriever and can be useful for exact strings such as error codes, product identifiers, and names. It may miss paraphrases whose vocabulary differs from the document.
 
-| Strategy | Mechanism | Strengths | Weaknesses |
-|---|---|---|---|
-| **Dense retrieval** | Embed query, find nearest neighbors in vector space | Semantic similarity, handles paraphrasing | Weak on exact terms, rare entities |
-| **Sparse (BM25/TF-IDF)** | Keyword matching via term frequency | Exact term matching, no embedding cost | No semantic understanding |
-| **Hybrid** | Combine dense + sparse scores (e.g., RRF or weighted sum) | Best of both; handles semantic + keyword queries | More complexity, tuning required |
+**Hybrid retrieval / 混合检索** combines dense and sparse candidates or rankings. The methods can complement one another, but hybrid retrieval is not a universal default. A heterogeneous retrieval benchmark found BM25 to be a robust baseline; it also found that reranking and late-interaction systems performed strongly on average at higher computational cost. Results vary across tasks, so compare retrieval methods on the application’s queries. [BEIR](https://arxiv.org/abs/2104.08663)
 
-**When to deviate from hybrid:**
+One fusion method is **Reciprocal Rank Fusion (RRF) / 倒数排名融合**. It combines rankings rather than directly combining raw scores:
 
-- **Pure dense:** small corpus, queries are paraphrase-heavy, infrastructure simplicity matters.
-- **Pure sparse:** exact-match queries dominate (product SKUs, error codes), latency is critical, no GPU for embeddings.
+$$
+\operatorname{RRF}(d) = \sum_i \frac{1}{k + r_i(d)}
+$$
 
-**Hybrid implementation sketch:**
+Here, $r_i(d)$ is document $d$’s rank in result list $i$; a document absent from a list contributes nothing. RRF avoids requiring the raw score scales to match, but the smoothing constant $k$, retrieval depths, and systems being combined still affect the result. Treat it as a useful baseline and evaluate it against alternatives, not as a calibration-free guarantee. [Cormack, Clarke & Büttcher](https://cormack.uwaterloo.ca/cormack/cormacksigir09-rrf.pdf)
 
-```python
-def hybrid_retrieve(query: str, vector_store, bm25_index, k: int = 10):
-    dense_results = vector_store.similarity_search(query, k=k)
-    sparse_results = bm25_index.search(query, k=k)
-    return reciprocal_rank_fusion(dense_results, sparse_results)
-```
+## Reranking / 重排
 
-**Gotcha:** Fusion score normalization is where teams waste weeks. RRF sidesteps the normalization problem by fusing **ranks** instead of scores — no calibration needed. Start with RRF before tuning weighted sums.
+A **bi-encoder / 双编码器** independently encodes a query and each document, allowing document vectors to be indexed and searched efficiently. A **cross-encoder / 交叉编码器** processes a query-document pair together and returns a relevance score. Joint input permits a richer pairwise comparison, but scoring many candidates costs more than a vector lookup. Retrieval-plus-reranking is therefore a **recall then precision** pattern: retrieval proposes candidates, and reranking changes their order.
 
----
+For example, a synthetic question about a sample policy might retrieve a broad candidate set, rerank those chunks against the question, then pass only a few supported passages to generation. Candidate depth and final context size are workload parameters. If evidence is not among the retrieved candidates, the reranker cannot add it. If reranking keeps the entire candidate set (candidate count equals final returned count), reordering alone does not change set-based precision@k, though it can affect rank-sensitive metrics and the order in which evidence reaches generation. Compare quality and latency across candidate depths instead of assuming a particular top-k is best. BEIR found strong average zero-shot performance for reranking architectures in its evaluated benchmark, with higher computational cost. [BEIR](https://arxiv.org/abs/2104.08663)
 
-## What's re-ranking, and when is it worth the latency?
+## Retrieval upgrades / 检索增强策略
 
-**Headline (30s):** Retrieve broadly (top-100) with a cheap bi-encoder, then **re-rank** with a cross-encoder that scores query-document pairs jointly. Cross-encoders are more accurate because they attend to query and document together, but they're too slow to run over the full corpus — so they only rank a shortlist. Worth the latency whenever precision@k matters and the base retriever returns too much noise.
+Use these techniques to address a diagnosed failure, and evaluate each on the affected query set before combining them.
 
-**Pipeline:**
+### Query transformation / 查询改写
 
-1. Retrieve broadly (e.g., top-100) with a fast bi-encoder or hybrid search.
-2. Re-rank with a cross-encoder or dedicated reranker (Cohere Rerank, BGE-reranker, etc.) to get top-k (e.g., top-5).
-3. Pass top-k into the LLM prompt.
+Rewrite or expand a query when the user’s wording does not align with the corpus vocabulary or when a compound request needs clearer subqueries. Query expansion can run several variants and merge results. Rewriting can also alter the user’s intent, so retain the original query and compare retrieval outcomes.
 
-**Why it helps:**
+### HyDE (Hypothetical Document Embeddings) / 假设文档嵌入
 
-- Bi-encoders embed query and docs **independently** → fast, but the model never sees them together.
-- Cross-encoders **jointly** attend to query and doc → catches subtle mismatches that pure similarity misses.
-- Two-stage pipeline: retrieval covers recall, re-ranking fixes precision.
+HyDE asks a language model to generate a hypothetical document in response to a query, embeds that hypothetical text, and uses the vector to retrieve real corpus documents. The generated document is a **retrieval intermediary, not answer evidence**; the original paper notes it may contain false details. HyDE was proposed for zero-shot dense retrieval when relevance labels are unavailable. It is not based on a general rule that short queries embed poorly near long passages. [Gao et al.](https://arxiv.org/abs/2212.10496)
 
-**Gotcha:** Re-ranking a top-5 shortlist gives you almost no benefit — the precision gap shows up when you re-rank top-50 or top-100. If you can only afford to re-rank top-5, the re-ranker likely isn't your bottleneck; go fix retrieval instead.
+### Parent-child retrieval / 父子分块检索
 
----
+Embed and retrieve child passages, then return their parent section as context. This can recover nearby definitions or qualifications that are useful to interpret the child evidence. Deduplicate parent sections and keep the final context within a budget; evaluate whether the broader passages help the query set.
 
-## What are the common RAG upgrades that turn a demo into production?
+### Multi-step retrieval / 多步检索
 
-**Headline (30s):** Four upgrades cover most of the gap: **query transformation** (fix query/corpus vocabulary mismatch), **HyDE** (bridge short queries to long documents), **parent-child chunking** (precision at retrieval, context at generation), and **multi-step retrieval** (multi-hop questions). Each targets a specific failure the naive pipeline produces.
+For a question whose answer requires evidence from more than one source, retrieve an initial set, identify the unresolved relation or sub-question, and retrieve again. This can support multi-hop questions, but it adds retrieval or generation work. Stop when the needed evidence is present or when the remaining uncertainty should be reported rather than hidden by another search.
 
-### Query transformation
+## Operations, evaluation, and failure diagnosis / 运行边界、评估与故障定位
 
-Rephrase or expand the user query before retrieval. Improves recall when the query is vague or uses different vocabulary than the corpus.
+### Access, freshness, and trust boundaries / 权限、新鲜度与信任边界
 
-- **Query expansion:** generate multiple query variants, retrieve for each, dedupe.
-- **Question-form rewriting:** turn a statement into a question for better matching.
+RAG does not make a corpus private. Compute the caller’s permissions in trusted application code and enforce them in the retrieval/data-access layer before evidence reaches the model. Metadata filters can express attributes such as tenant, region, source, or date, but correctness of the policy and its enforcement belongs to the application. Track document identity and version so updates, deletions, and permission revocations do not leave stale chunks available. The index is only as fresh as its synchronization and processing path. [OWASP LLM08:2025](https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/), [OpenAI retrieval guide](https://developers.openai.com/api/docs/guides/retrieval)
 
-### HyDE (Hypothetical Document Embeddings)
+Treat all retrieved text as untrusted content. A document can contain direct or indirect instructions that influence the model. Delimiters and prompts may reduce confusion, but they do not guarantee protection. Do not let a retrieved passage authorize a data access or tool action; enforce permissions and validate actions outside the model. [OWASP LLM01:2025](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). For more on prompt injection and application boundaries, see [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md).
 
-1. Generate a hypothetical answer to the query using the LLM.
-2. Embed the hypothetical answer.
-3. Retrieve documents similar to the **hypothetical answer**, not the query.
+### Evaluation / 评估
 
-Useful when queries are short and the corpus contains long, detailed passages — the short query embeds poorly near long passages, but a hypothetical long answer embeds well.
+Measure retrieval and generation separately, then compare the complete system:
 
-### Parent-child chunking
+- **Retrieval:** Did the authorized candidate set contain the necessary evidence, and where was it ranked?
+- **Generation:** Is the answer correct for the task, supported by the supplied evidence, responsive to the question, and appropriately abstaining when evidence is missing or conflicting?
+- **System:** What are end-to-end latency and cost, including query transforms, embedding, retrieval, reranking, context tokens, and indexing/update work where relevant?
 
-- **Child chunks:** small units for embedding and retrieval (e.g., 256 tokens) — precision.
-- **Parent chunks:** larger units returned as context (e.g., full section or page) — richness.
+RAGAS and ARES illustrate multi-dimensional evaluation, including context relevance, answer faithfulness, and answer relevance; they are evaluation frameworks, not a complete universal score. Automated judges are useful signals and should be checked against representative human-reviewed examples. See [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md). [RAGAS](https://arxiv.org/abs/2309.15217), [ARES](https://arxiv.org/abs/2311.09476)
 
-Embed and retrieve children; return parents. Reduces context fragmentation while keeping retrieval precise.
+### Diagnose from evidence / 根据证据定位故障
 
-### Multi-step retrieval
-
-1. Retrieve initial chunks.
-2. Extract key entities or refine the query from results.
-3. Retrieve again with the refined query.
-
-Useful for multi-hop questions where the first retrieval gives you pointers to the real evidence.
-
-**Gotcha:** Each upgrade adds latency. Stack them in the wrong order and you pay for query transformation, HyDE, and multi-step even when the naive retrieval would have worked. Benchmark each upgrade in isolation against your failure cases before stacking.
-
----
-
-## Why does my RAG system hallucinate even when it retrieves?
-
-**Headline (30s):** Three root causes: **irrelevant retrieval** (the model was given nothing useful), **missing context** (relevant info exists but got split across chunks), and **model override** (the model ignores good context in favor of parametric knowledge). The fix depends on which one is happening — diagnose before tuning.
-
-**Failure modes and mitigations:**
-
-| Problem | Cause | Mitigation |
+| Symptom | Inspect | Possible next step |
 |---|---|---|
-| **Irrelevant retrieval** | Poor chunking, embedding model mismatch, wrong similarity metric | Tune chunk size, use hybrid search, align embedding model with domain |
-| **Missing context** | Chunk too small, no overlap, key info split across chunks | Increase chunk size, add overlap, use parent-child chunking |
-| **Hallucination despite retrieval** | Model ignores or overrides context | Strengthen prompt (e.g., "Answer ONLY from the context"), add citations, use smaller/more instruction-tuned models |
-| **Stale data** | No re-indexing when source documents change | Build incremental indexing pipeline, version documents, schedule periodic full re-index |
+| The source does not contain the needed fact, or the current version is missing. | Source coverage, parsing, synchronization, deletion/version state. | Fix source ingestion or freshness; if the evidence is unavailable, report that limitation. |
+| The evidence exists but is absent from retrieved candidates. | Caller filters, query interpretation, chunk boundaries, embedding/lexical retrieval, candidate recall. | Correct scope or ingestion first; then compare retrieval and chunking choices on the failing queries. |
+| A useful candidate is retrieved but absent from the prompt. | Reranker order, deduplication, context assembly, and truncation. | Adjust ranking or evidence selection and verify that citations still map to source passages. |
+| Evidence is in the prompt, but the answer is unsupported or contradicts it. | Conflicting passages, prompt instructions, model output, citation support, and whether the question is answerable. | Test prompt/model/evidence changes against the same cases; do not infer a specific internal cause from the answer alone. |
 
-**How to diagnose:**
+A practical debugging loop is: inspect the source and authorized candidates; inspect what reached the model; check answer claims against those passages; then change one retrieval or generation factor and evaluate the same cases. More context can add missing evidence or add noise, so “retrieve more” is a hypothesis to test, not a universal fix. Long-context performance can also depend on where relevant information appears. [Liu et al.](https://arxiv.org/abs/2307.03172)
 
-1. Log retrieved chunks for each query alongside the generated answer.
-2. For failures, read the chunks: was the answer actually in there?
-   - **Yes, and the model ignored it** → model override. Strengthen grounding prompts, try a different (more instruction-tuned) model, add explicit citation requirements.
-   - **No** → retrieval problem. Is chunking too small? Is hybrid search on? Is the embedding model appropriate for the domain?
-3. Route mitigations based on root cause, not symptoms.
+## Related notes / 相关笔记
 
-**Gotcha:** "Add more retrieved chunks" is the wrong default fix. More chunks dilute attention (see [3.1 Context Engineering → Context as a Finite Resource](../context/context-engineering-principles.md#why-is-context-a-finite-resource-and-whats-lost-in-the-middle)). The right fix is usually **better** retrieval, not more retrieval.
-
-**See also:** [3.1 Context Engineering Principles](../context/context-engineering-principles.md) for why retrieved context size matters, [6.1 LLM Evaluation Methods](../evaluation/llm-evaluation-methods.md) for RAG-specific eval metrics (faithfulness, context relevance, answer relevance).
+- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) explains context budgets and how placement can affect use of evidence.
+- [Fine-tuning Strategies / 微调策略](../fine-tuning/fine-tuning-strategies.md) discusses adapting model behavior and combining it with external knowledge.
+- [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) covers evaluation datasets, metrics, and review methods.
+- [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md) covers prompt injection, permission boundaries, and runtime controls.

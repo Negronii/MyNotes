@@ -8,6 +8,9 @@ This map links to the canonical notes for an interview route through AI applicat
 2. [Orchestration patterns / 编排模式](../ai-engineering/agents/orchestration-patterns.md) — compare ways to compose AI tasks and agents.
 3. [Tool design and function calling / 工具设计与函数调用](../ai-engineering/agents/tool-design-and-function-calling.md) — connect model decisions to safe, usable tools.
 4. [Context engineering principles / 上下文工程原则](../ai-engineering/context/context-engineering-principles.md) — organize the information available to a model.
+5. [Retrieval-Augmented Generation (RAG) / 检索增强生成](../ai-engineering/rag/rag-architecture-and-implementation.md) — follow how retrieval supplies evidence and where system boundaries affect answers.
+6. [LLM Evaluation / 大语言模型评估方法](../ai-engineering/evaluation/llm-evaluation-methods.md) — choose task-scoped measures and locate failures across retrieval, generation, and end-to-end tasks.
+7. [AI Safety in Production / 生产环境 AI 安全](../ai-engineering/safety/ai-safety-in-production.md) — connect trust boundaries to runtime controls, stop paths, and testing.
 
 ## Frontend and full-stack foundations / 前端与全栈基础
 
