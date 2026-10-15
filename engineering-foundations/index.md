@@ -33,6 +33,7 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 ### Backend and runtime / 后端与运行时
 
 - [Node.js Fundamentals / Node.js基础](backend/node-js-fundamentals.md)
+- [Python Fundamentals / Python基础](backend/python-fundamentals.md)
 
 ### Architecture / 架构
 
