@@ -583,7 +583,7 @@ Two nearby concepts are useful boundaries, not a distributed-systems survey:
 
 **Core model / 核心模型：** Every network or queue boundary can delay, lose, duplicate, or ambiguously report work. Bound how long and how much work is admitted; make retries safe for the operation's semantics; acknowledge only at the intended completion boundary; expose failures so that a timeout or growing queue cannot silently become data loss. / 每个网络或队列边界都可能延迟、丢失、重复或含糊地报告工作。应限制等待时间与准入工作量；重试必须符合操作语义；只在达到预期完成边界后确认；并显式暴露失败，避免超时或不断增长的队列悄然演变成数据丢失。
 
-**Key terms / 关键术语：** timeout / 超时；deadline / 截止时间；cancellation / 取消；unknown outcome / 结果未知；retry / 重试；backoff / 退避；jitter / 抖动；idempotency / 幂等性；backpressure / 背压；acknowledgement / 确认；redelivery / 再投递。
+**Key terms / 关键术语：** timeout / 超时；deadline / 截止时间；cancellation / 取消；unknown outcome / 结果未知；retry / 重试；backoff / 退避；jitter / 抖动；idempotency / 幂等性；backpressure / 背压；admission control / 准入控制；Little’s Law / Little 定律；tail latency / 尾部时延；acknowledgement / 确认；redelivery / 再投递。
 
 #### Timeouts, deadlines, and cancellation / 超时、截止时间与取消
 
@@ -614,6 +614,37 @@ Bound in-flight requests, worker count, and any waiting queue. A queue that can 
 
 Under steady-state conditions, Little's Law, `average in-flight requests = arrival rate × average time in system`, gives a planning check rather than a capacity guarantee. For example, a hypothetical average arrival rate of 40 requests/second and 0.2 seconds of average time in the chosen system—including its queue and service—implies about `40 × 0.2 = 8` average in-flight requests. Bursts, latency distribution, retries, and downstream limits still require measurement; eight is not a universal concurrency cap.
 
+#### Estimating capacity before scaling / 扩容前的容量估算
+
+**Core explanation / 核心解释：** Estimate the arrival rate, work per request, resource time, and retained data; then identify the first bounded resource and test that hypothesis. Little’s Law estimates mean work in flight for a stable system boundary. It does not turn average traffic into a peak, mean latency into a tail-latency promise, or concurrency into a replica count. / 先估算到达速率、单次工作量、资源占用时间和留存数据，再找出最先触顶的有界资源并验证这一假设。Little 定律估算稳定系统边界内的平均在途工作量；它不能把平均流量变成峰值、把平均时延变成尾部时延承诺，也不能直接推出副本数量。
+
+**Hypothetical sizing example / 假设估算示例：** Consider an account-report job. Assume an average of 5 submissions per second and a 10-minute peak of 20 per second. Each validated request is 8 KiB; its submission transaction holds a database connection for 10 ms. The worker makes 12 sequential indexed reads holding a database connection for 20 ms each; mean worker time is 6 s, the report is 128 KiB, and job metadata is 2 KiB. These are teaching inputs, not observed traffic, service measurements, an SLO, or a recommended default.
+
+At the average arrival rate, mean worker concurrency is 5 jobs/s × 6 s = 30 jobs. At the stated peak, the offered load would require 20 × 6 = 120 concurrent jobs if every request were admitted. A plan with 4 worker replicas × 2 processes per replica × 8 active job slots per process has 64 slots. Even if those slots were continuously full, the estimate is 64 / 6 = 10.67 jobs/s; at a planning utilization of 70%, it is 64 × 0.70 / 6 = 7.47 jobs/s. A 7 jobs/s token-bucket admission rate uses an estimated 7 × 6 / 64 = 65.6% of slots. This is a starting limit to test, not a measured capacity guarantee.
+
+Bound acceptance separately from waiting work. For this example, allow a sustained 7 submissions/s with a burst of 30 and at most 240 accepted-but-not-started jobs across the outbox and broker queue. Reserve one shared slot per job before returning 202; moving the job from outbox to broker does not count it twice. Release the reservation once when work starts or becomes terminal before starting; the linked design case covers the atomic state transition. If all workers stop, the bound fills after a short interruption; once the shared waiting allowance is full or the rate limit is exhausted, return a documented overload response without claiming the request was accepted. At 20 offered submissions/s for 600 s, 12,000 requests arrive; the token bucket admits at most 7 × 600 + 30 = 4,230, so at least 7,770 are not admitted, assuming the shared waiting allowance and other limits do not reject sooner. Retrying a rejected or ambiguous submission still follows the deadline and idempotency rules above.
+
+Budget every process-local pool, including overflow, before increasing replicas:
+
+| Process group | Maximum calculation | Possible connections |
+|---|---:|---:|
+| API: 4 replicas, 2 processes each, pool 8 + overflow 2 | 4 × 2 × (8 + 2) | 80 |
+| Workers: 4 replicas, 2 processes each, pool 8 + overflow 2 | 4 × 2 × (8 + 2) | 80 |
+| Other services using the same database | Assumed allocation | 40 |
+| Configured application total | 80 + 80 + 40 | 200 |
+| Example database connection budget | Assumed total | 240 |
+| Unallocated headroom | 240 − 200 | 40 |
+
+This pool ceiling is not a prediction that 200 connections will be busy. Each report uses 12 sequential reads × 0.020 connection-seconds = 0.24 connection-seconds. That implies 5 × 0.24 = 1.2 average checked-out connections for report reads at the average arrival rate, or 20 × 0.24 = 4.8 if the offered peak were admitted; a 10 ms submission transaction adds 0.05 average or 0.2 at that peak. Query fan-out, connection hold time, and real pool behavior must be measured before treating these estimates as resource headroom.
+
+At 5 completed reports/s, 128 KiB per report produces 640 KiB/s of results. Seven days of output retention is 128 KiB × 5/s × 604,800 s ÷ 1,048,576 KiB/GiB ≈ 369 GiB, before compression, replication, and cleanup lag. Two KiB of metadata per job adds about 5.8 GiB per seven days before indexes. At a sustained 7 completions/s, result volume averages 0.875 MiB/s; this is a long-run planning rate, not an instantaneous upper bound. The permitted 30-job burst could produce 3.75 MiB if all reports complete in one interval, and backlog drain can exceed the current admission rate. At a sustained 20 completions/s, the corresponding long-run result volume is 2.5 MiB/s. Measure result downloads separately from generation and retention. / 稳定每秒完成 7 个任务时，结果体量长期平均为 0.875 MiB/s；这不是瞬时上限。允许的 30 个突发任务若在同一时段完成，可产生 3.75 MiB；排空积压时的完成速率也可能高于当前准入速率。若持续每秒完成 20 个任务，对应长期平均结果体量为 2.5 MiB/s。结果下载应与生成和留存分别测量。
+
+Under these assumptions, worker slots bind before the estimated database connection count: peak demand needs 120 active jobs while the plan has 64 slots. That does not prove database CPU, storage I/O, or network have spare capacity. Load-test the representative 8 KiB input, 12-read fan-out, and output sizes; ramp average traffic, apply the 20/s burst, then test rate rejection, a full queue, slow reads, retries, and worker loss. Record request acceptance latency separately from job queue wait and completion time; use distributions such as p50, p95, and p99 for each user-visible stage. The 6 s mean belongs in the concurrency estimate, not as a p95 promise. Compare sustained throughput, queue age, busy slots, database checkout wait/CPU, retained bytes, and completed-job outcomes with the service objective before changing pool size or replicas.
+
+**How would you answer “How many workers do we need?” / 如何回答“需要多少个 worker？”** I would state the workload and service-time assumptions, use Little’s Law for mean in-flight jobs, and compare that with a bounded worker plan and pool budget. Here the mean suggests 30 active jobs, but peak demand suggests 120; 64 slots and a 7/s admission limit are hypotheses to test under the expected payload and fan-out. I would measure queue age and stage latency distributions before adding replicas, because the first limit could move to the database or storage. / 我会先说明工作负载和处理时长假设，用 Little 定律估算平均在途任务，再与有界 worker 和连接池预算比较。此例平均负载约需 30 个并发任务，但峰值需求约为 120；64 个槽位和每秒准入 7 个是待压测的假设，应按预期 payload 和扇出测量队列等待及各阶段时延分布，再决定是否扩容，因为首个瓶颈也可能转移到数据库或存储。
+
+For a different worked latency allocation and model-stage concurrency estimate, see [AI System Design Interview Questions / AI 系统设计面试题](../../ai-engineering/systems/ai-system-design-interview-questions.md). The same hypothetical account-report service is traced end to end in [System Design Fundamentals / 系统设计基础](#20.%20System%20Design%20Fundamentals%20/%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E5%9F%BA%E7%A1%80).
+
 #### Queue acknowledgements, duplicates, and order / 队列确认、重复与顺序
 
 Publishing and consuming have separate failure boundaries. A publisher confirm covers publisher-to-broker acceptance under that broker's rules; it does not say that a consumer applied the business change. A consumer acknowledgement should follow the work that the system defines as complete. If the consumer commits a change and crashes before acknowledging, a broker may redeliver the message; make processing idempotent or deduplicate by a stable message or operation key. If it acknowledges before durable work, a crash can lose the work.
@@ -622,9 +653,9 @@ Delivery and ordering semantics belong to a particular broker, queue type, ackno
 
 Observe each boundary separately: accepted and rejected requests, timeout and cancellation counts, in-flight work, queue depth and oldest-message age, retries and redeliveries, acknowledgements, dead-letter volume, and completed business outcomes. A queue that keeps accepting messages while its oldest item grows is accumulating delay, not demonstrating health.
 
-**Related notes / 相关笔记：** [Database Fundamentals / 数据库基础](#3.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) covers the transaction boundary used to persist business effects and idempotency records, plus the limited CAP and 2PC context; [Node.js Fundamentals / Node.js基础](#11.%20Node.js%20Fundamentals%20/%20Node.js%E5%9F%BA%E7%A1%80) applies concurrency and shutdown limits to a Node service; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) covers the transport and request semantics.
+**Related notes / 相关笔记：** [Database Fundamentals / 数据库基础](#3.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) covers the transaction boundary used to persist business effects and idempotency records, plus the limited CAP and 2PC context; [Data Access and Connection Pools / 数据访问与连接池](#15.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains process-local pool limits; [Node.js Fundamentals / Node.js基础](#11.%20Node.js%20Fundamentals%20/%20Node.js%E5%9F%BA%E7%A1%80) applies concurrency and shutdown limits to a Node service; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) covers the transport and request semantics.
 
-**Sources / 来源：** [RFC 9110, HTTP Semantics §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2); [AWS Builders' Library: Timeouts, retries, and backoff with jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/) and [Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/), checked 2026-10-15; gRPC [Deadlines](https://grpc.io/docs/guides/deadlines/) and [Cancellation](https://grpc.io/docs/guides/cancellation/) guides; RabbitMQ 4.3 [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms), checked 2026-10-15, for its manual-ack requeue and publisher-confirm boundaries; Little and Graves, [“Little’s Law Deals with Queuing Systems”](https://web.eng.ucsd.edu/~massimo/ECE158A/Handouts_files/Little.pdf), in *Building Intuition* (2008), pp. 81–82, for the steady-state relation and the queue-plus-service system boundary.
+**Sources / 来源：** [RFC 9110, HTTP Semantics §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2); [AWS Builders' Library: Timeouts, retries, and backoff with jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/) and [Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/), checked 2026-10-15; [Google SRE Workbook: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15, for latency histograms and percentile-based SLIs; gRPC [Deadlines](https://grpc.io/docs/guides/deadlines/) and [Cancellation](https://grpc.io/docs/guides/cancellation/) guides; RabbitMQ 4.3 [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms), checked 2026-10-15, for its manual-ack requeue and publisher-confirm boundaries; Little and Graves, [“Little’s Law Deals with Queuing Systems”](https://web.eng.ucsd.edu/~massimo/ECE158A/Handouts_files/Little.pdf), in *Building Intuition* (2008), pp. 81–82, for the steady-state relation and the queue-plus-service system boundary.
 ## 5. Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应
 
 ### Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应
@@ -3201,7 +3232,95 @@ The review is complete when the observed failure, its cause, the changed behavio
 **Interview answer / 面试回答：** I first state the expected behavior, trace the entry point through the relevant dependency and data access, and build the smallest request that can disprove my hypothesis. Here, the other tenant receives the row because the generated refactor drops the tenant condition. Restoring that condition and running both owner and non-owner requests is the focused fix and regression check. I read the generated implementation and tests independently because their shared assumptions can omit the same requirement. / 我先明确预期行为，再沿入口、依赖和数据访问追踪调用路径，并构造能够推翻假设的最小请求。这个例子中，另一租户读到了任务，是因为生成式重构删掉了租户条件。恢复该条件并分别运行所有者和非所有者请求，就是聚焦的修复与回归验证。我会独立阅读生成实现和测试，因为二者可能共享同一个遗漏假设。
 
 **Sources checked 2026-10-15:** GitHub's official [reviewing proposed changes](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests) documentation describes inspecting commits and diffs, and its [review concepts](https://docs.github.com/en/pull-requests/concepts/giving-reviews) explain review feedback and deeper inspection. The reproduced tenant behavior and query correction are exercised in the linked synthetic API example; no personal project or generated artifact is used.
-## 20. Interview Tips / 面试准备
+## 20. System Design Fundamentals / 系统设计基础
+
+### System Design Fundamentals / 系统设计基础
+
+**Core explanation / 核心解释：** Start with a user's outcome and hard constraints, draw the request and data paths, then choose the smallest architecture that meets them. In this worked example, a bounded account report is submitted as a durable job because generation can outlive an HTTP request. The job and outbox commit together; a scoped idempotency key maps a same-request retry to the same job, whose stored normalized parameters let a worker rebuild its input. Each attempt writes a distinct immutable result key, and only the current attempt can conditionally commit the terminal state and visible result reference. Exhausted attempts record a terminal error, and a conditional transition resolves a cancellation/completion race. / 从用户要完成的事情和硬约束开始，画出请求与数据路径，再选择满足它们的最小架构。本例中的账户报表可能超过一次 HTTP 请求时限，因此作为持久化任务提交。job 与 outbox 在同一事务中提交；有明确作用域的幂等键使相同请求的重试返回同一个 job，已保存的规范化参数让 worker 能重建输入。每次尝试写入不同且不可变的结果 key，只有当前尝试能通过条件更新提交终态和对外可见的结果引用。重试耗尽后记录终态错误；取消与完成发生竞态时，由条件状态转换裁决。客户端断连后查询任务记录，不能用响应是否丢失或消息是否投递来判断结果。
+
+**Key terms / 关键术语：** requirement / 需求；constraint / 约束；data ownership / 数据所有权；job / 任务；idempotency / 幂等性；transactional outbox / 事务型发件箱；admission control / 准入控制.
+
+#### A shared way to structure a design / 通用设计思路
+
+Use the sequence in [AI System Design Interview Questions / AI 系统设计面试题](../../ai-engineering/systems/ai-system-design-interview-questions.md) as a general discussion method: clarify the task and success criteria; state workload, latency, privacy, budget, and ownership constraints; trace the end-to-end path; examine the few risks that can change correctness or capacity; then specify evaluation, rollout, and rollback. It is a method, not a reason to import an AI component into an unrelated service.
+
+#### Worked case: asynchronous account report / 案例：异步生成账户报表
+
+##### Requirements and constraints / 需求与约束
+
+A user asks for a CSV report over a bounded account time range. The report reads account activity, may take several seconds, and should remain retrievable for seven days even if the browser closes. Users can check progress and request cancellation. Reports are read-only: they do not change account activity. The input range and query are validated and bounded to at most 12 sequential reads; oversize requests are rejected before work is accepted.
+
+Use the synthetic estimates in [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98): average 5 submissions/s, a 10-minute 20/s peak, 6 s mean worker time, 8 KiB request, 12 sequential database reads, 128 KiB average result, and a 7-day result-retention target. These are assumptions for comparing choices, not production measurements. The required constraints are: account authorization on every user-facing path; no accepted request disappears between the database and queue; bounded queueing and connection use; and a job result or explicit failure that can be looked up after disconnect.
+
+##### API, data, and ownership / API、数据与所有权
+
+One chosen API contract is:
+
+~~~http
+POST /v1/accounts/acct-17/reports
+Idempotency-Key: report-demo-208
+Content-Type: application/json
+
+{"period":"2026-Q2","format":"csv"}
+
+HTTP/1.1 202 Accepted
+Location: /v1/jobs/job-demo-731
+
+{"jobId":"job-demo-731","status":"queued","statusUrl":"/v1/jobs/job-demo-731"}
+~~~
+
+The 202 response means the request was accepted for processing, not that processing completed or will necessarily succeed. `GET /v1/jobs/{jobId}` returns the job's current state; `DELETE /v1/jobs/{jobId}` records a cancellation request; and `GET /v1/jobs/{jobId}/result` returns the private result only after authorization and completion. The status resource is how the client learns the later result; the HTTP connection is not the job. Scope an idempotency key to `(account, requesting principal, key)` and enforce that scope with a database unique constraint. First check an existing key: return its job when the normalized-request fingerprint matches, and report a conflict when it differs. If absent, insert the job under that unique constraint, add the outbox row, and conditionally reserve a waiting slot in one transaction before commit. If a concurrent same-key insert wins, the loser rolls back before reserving, loads the existing job, and compares fingerprints; lookup-then-insert alone is racy. These are explicit choices for this example, not rules every API must use. Define the success and error schema as part of the service's endpoint contract.
+
+The API authenticates first, then checks that the principal may create a report for the account in the path. A caller-supplied account ID is a resource selector, not proof of permission. Every later status, cancellation, and result request checks access to the job's stored account; knowing a job ID does not grant access. The worker uses a narrowly scoped service identity to read only the stored account and report range. See [Web Security and Authentication / Web安全与身份认证](#6.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81) for the shared authorization boundary.
+
+Store a job row with a stable job ID, account ID, requesting principal, validated normalized report parameters such as period/range/format, normalized request fingerprint, idempotency key, current status, creation/expiry times, cancellation request, attempt number and lease expiry, waiting-slot reservation state, private result reference, and a bounded error code. The parameters let a restarted worker rebuild its input; the fingerprint only compares requests and cannot recover them. Do not retain the raw request body or put sensitive filters in queue messages. A separate outbox row holds the job ID and publication state.
+
+Use one database-backed counter for the 240 shared waiting-job reservations. Commit the new unique job, outbox row, and one slot reservation together only when the count is below 240; otherwise roll back and reject before 202. If the unique-key insert loses a concurrent race, its transaction rolls back without consuming a slot before resolving the existing job. The reservation follows that logical job while it is unpublished in the outbox or waiting in the broker, so publishing a broker copy does not add another slot. A guarded state transition releases it once when a worker first starts the job or when it becomes terminal before starting. A retry or lease-expiry recovery that returns work to waiting must reserve a slot again before requeueing; if none is available, record a visible terminal failure instead of growing the backlog beyond the bound.
+
+##### Request and data path / 请求与数据路径
+
+~~~text
+Client
+  → API: authenticate, authorize account, validate bounded range
+  → database transaction: insert unique job row + outbox row + reserve one waiting slot
+  ← 202 with stable job ID and status URL
+
+Outbox relay
+  → durable queue: publish job ID, then mark outbox row delivered
+  → worker: atomically claim an attempt and release its waiting slot, load stored parameters, read authorized account pages, build CSV
+  → private object storage: write an immutable job-and-attempt-specific result
+  → database: conditionally publish the winning result reference and terminal state
+  ← queue acknowledgement after durable job outcome
+
+Client
+  → API: GET status or request cancellation
+  → API: GET result only after authorization and completed status
+~~~
+
+The job row and outbox row commit together. Otherwise a process can commit the job and crash before publishing it, or publish a message for a transaction that later rolls back. The outbox relay retries publication; it may publish twice if it crashes after broker acceptance but before recording delivery. Therefore the worker deduplicates by job ID rather than relying on a single delivery. This is the transactional outbox trade-off: a small amount of durable relay state avoids a dual write, while duplicate handling and outbox cleanup remain necessary. PostgreSQL transactions provide an all-or-nothing boundary for the two database rows; they do not extend that transaction to the queue or object store.
+
+Before doing work, a worker reloads the job and acknowledges a delivery immediately if the job is already terminal. If another unexpired attempt owns it, the worker does not start duplicate work and defers the delivery according to the broker's retry/redelivery contract. Otherwise a conditional update claims an eligible waiting job by incrementing its attempt number, setting a bounded lease, and releasing its reserved waiting slot. After a worker loss, recovery can return the job to waiting only after the lease expires and another slot has been reserved; a redelivery cannot bypass that bound. The attempt number fences late workers. Each claim writes to a create-only, never-reused object key containing both job ID and attempt number. A result becomes visible only when a conditional database update still matches the running job's current attempt, with cancellation not already won, and commits the private object reference with the terminal state. If the update affects no row, that attempt lost and its object remains unreferenced for retention cleanup; it cannot replace the winner.
+
+For example, worker A claims attempt 1 and stalls until its lease expires. Worker B claims attempt 2, writes a different result key, and commits the completed state and attempt-2 reference. If A later resumes, its attempt-1 key cannot overwrite B's object, and its conditional job update no longer matches; the completed job short-circuits any later duplicate delivery. A crash after upload but before the conditional update similarly leaves only an unreferenced attempt object. Acknowledge the winning attempt after the durable outcome; queue delivery alone is not user-visible completion. The retry and acknowledgement boundaries reuse [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98).
+
+Cancellation is a request, not proof that work stopped. The API records it; a worker checks between bounded pages and before publishing the result. Completion and cancellation can race, so the terminal update checks both the current attempt number and cancellation state; only the winning transition becomes authoritative. A disconnected client must query the job state rather than infer cancellation or completion from a lost response. For workflows that need durable checkpoints or reconciliation of an external side effect with an unknown outcome, see [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md).
+
+##### Why queue this work? / 为什么使用队列？
+
+If representative reports consistently fit within the caller's request deadline and an acceptable tail-latency target, a synchronous endpoint is simpler: validate, run the bounded reads, return the CSV, and remove the queue, outbox relay, worker deployment, status polling, and result cleanup lifecycle. Use the asynchronous path when a request may exceed that deadline, results must survive a disconnect, or measured bursts require work to be admitted and drained independently of API processes. The queue adds durable waiting and failure isolation, but also adds operational state and delay; it does not create processing capacity.
+
+##### Sizing and operation / 容量与运维
+
+For this workload, use the 64 worker slots, 7/s sustained admission rate, 30-job burst, shared 240 accepted-but-not-started-job bound, and 200-connection application pool ceiling from the linked sizing example rather than copying its arithmetic here. At sustained 20/s offered traffic, the service must reject work after its admission bound; accepting it all would require about 120 concurrent workers at the assumed 6 s mean service time. Before changing the design, measure API acceptance latency, queue age and depth, active worker slots, job completion percentiles, database checkout wait and query time, object bytes retained, retries, cancellation outcomes, and completed reports. An old queue with rising oldest-message age is overload even if the API still accepts requests.
+
+Deploy API, relay, and workers with compatible job schemas so old jobs can finish during a rollout. Retain result objects for seven days, delete expired objects and metadata according to the chosen retention policy, and bound retries/deadlines so a bad report cannot occupy a worker forever. If the queue is unavailable, accepted-but-not-started jobs stay in the outbox and continue consuming the same reserved slots; once all 240 are reserved, reject new submissions before 202. If the database is unavailable, the API cannot durably accept a job and must return an error rather than imply success. Roll out with health checks and a rollback path that accounts for jobs already accepted under the previous schema.
+
+**How would you design a report that may take longer than an HTTP request? / 如何设计一个可能超过 HTTP 请求时限的报表任务？** I would first confirm the report size, response deadline, retention, access owner, and acceptable failure behavior. If measured tail latency fits the request budget, I would keep it synchronous. For the stated multi-second report, I would persist the job and outbox in one database transaction, return a stable status URL, and let a bounded worker create a private result. The worker can be retried, so it uses the job ID for idempotency and records completion before acknowledging delivery. Cancellation remains a request until the authoritative job state confirms its outcome. / 我会先确认报表规模、响应期限、结果留存、数据所有者和可接受的失败行为。如果实测尾部时延满足请求预算，就保持同步。对于本例需要数秒的任务，我会在同一数据库事务中保存 job 与 outbox，返回稳定的状态 URL，再由有界 worker 生成私有结果。worker 可能重试，因此按 job ID 保证幂等，并在确认完成后再确认消息；取消只是请求，直到权威任务状态记录结果才算确定。
+
+**Related notes / 相关笔记：** [HTTP API Contracts / HTTP API契约](#14.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6) covers shared endpoint and error-response conventions; [Data Access and Connection Pools / 数据访问与连接池](#15.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains request transactions and process-local connection limits; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98) preserves deadlines, retries, idempotency, backpressure, and acknowledgements; [Web Security and Authentication / Web安全与身份认证](#6.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81) owns principal and resource authorization; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) owns transport and reconnect semantics; [Observability, SLOs, and Incident Response / 可观测性、SLO 与事件响应](#5.%20Observability,%20SLOs,%20and%20Incident%20Response%20/%20%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7%E3%80%81%E6%9C%8D%E5%8A%A1%E7%9B%AE%E6%A0%87%E4%B8%8E%E4%BA%8B%E4%BB%B6%E5%93%8D%E5%BA%94) covers stage-level service indicators and alerting; [Application Deployment and CI/CD / 应用部署与持续集成](#25.%20Application%20Deployment%20and%20CI/CD%20/%20%E5%BA%94%E7%94%A8%E9%83%A8%E7%BD%B2%E4%B8%8E%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%98) covers staged rollout and rollback controls.
+
+**Sources / 来源：** [RFC 9110 §15.3.3, 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3); [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html) for the database-local all-or-nothing boundary; [PostgreSQL 18: Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) for scoped uniqueness and [Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html) for concurrent transaction behavior; [AWS Prescriptive Guidance: Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html) for dual-write failure and duplicate-publication boundaries; [Amazon S3 conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) as one create-only object-write mechanism, not a requirement to choose S3; [Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework) for workload requirements, operational focus, and keeping an initial design simple, checked 2026-10-15.
+## 21. Interview Tips / 面试准备
 
 ### Interview Tips / 面试准备
 
@@ -3276,8 +3395,8 @@ Prepare questions that help you understand the work. Choose the ones that remain
 
 Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
 
-**See also:** [Agile and Scrum](#21.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
-## 21. Agile and Scrum / 敏捷与Scrum
+**See also:** [Agile and Scrum](#22.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
+## 22. Agile and Scrum / 敏捷与Scrum
 
 ### Agile and Scrum / 敏捷与Scrum
 
@@ -3357,10 +3476,10 @@ The commitments focus the artifact without replacing it. Multiple Increments may
 - **Skipping inspection and improvement:** omitting defined events loses their intended opportunities and means the team is not using the framework as described.
 - **Assuming Scrum fits every problem:** choose a way of working that fits the product, feedback cycle, and organizational constraints. Regulated work can also use iterative development when its evidence and control requirements are built into the process.
 
-**See also:** [Interview Tips](#20.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for discussing team practices accurately.
+**See also:** [Interview Tips](#21.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for discussing team practices accurately.
 
 Sources: [The Scrum Guide, November 2020](https://scrumguides.org/scrum-guide.html) and the [Agile Manifesto](https://agilemanifesto.org/).
-## 22. Git Essentials / Git日常基础
+## 23. Git Essentials / Git日常基础
 
 ### Git Essentials / Git日常基础
 
@@ -3532,10 +3651,10 @@ refactor(utils): extract date formatting
 docs(readme): clarify setup
 ~~~
 
-**See also:** [Agile and Scrum](#21.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
+**See also:** [Agile and Scrum](#22.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
 
 Sources: [Git pull](https://git-scm.com/docs/git-pull), [Git merge](https://git-scm.com/docs/git-merge), [Git rebase](https://git-scm.com/docs/git-rebase), [Git reset](https://git-scm.com/docs/git-reset), [Git revert](https://git-scm.com/docs/git-revert), [Git reflog](https://git-scm.com/docs/git-reflog), [Git stash](https://git-scm.com/docs/git-stash), and [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick). Git manuals checked 2026-10-15.
-## 23. Docker Operations / Docker操作参考
+## 24. Docker Operations / Docker操作参考
 
 ### Docker Operations / Docker操作参考
 
@@ -3695,7 +3814,7 @@ docker push registry.example.com/team/my-app:1.0
 ~~~
 
 Sources: [official PostgreSQL image environment variables and secrets](https://github.com/docker-library/docs/blob/master/postgres/README.md#environment-variables), [Docker image and container concepts](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/), [Docker networking](https://docs.docker.com/engine/network/), [port publishing](https://docs.docker.com/engine/network/port-publishing/), [Docker volumes](https://docs.docker.com/engine/storage/volumes/), [Compose file reference](https://docs.docker.com/compose/compose-file/), [Compose variable interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [`docker run` environment variables](https://docs.docker.com/reference/cli/docker/container/run/#set-environment-variables--e---env), [Docker build secrets](https://docs.docker.com/build/building/secrets/), [Docker Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/), [`docker login`](https://docs.docker.com/reference/cli/docker/login/), [`docker tag`](https://docs.docker.com/reference/cli/docker/image/tag/), and [`docker push`](https://docs.docker.com/reference/cli/docker/image/push/). Docker documentation checked 2026-10-15.
-## 24. Application Deployment and CI/CD / 应用部署与持续交付
+## 25. Application Deployment and CI/CD / 应用部署与持续交付
 
 ### Application Deployment and CI/CD / 应用部署与持续交付
 
@@ -3768,7 +3887,7 @@ Readiness is a traffic gate: an instance should receive requests only when it ca
 
 Database changes need an independent compatibility plan. A common expand-and-contract sequence adds a backward-compatible schema shape, deploys code that tolerates both shapes, backfills or dual-writes as needed, switches reads, and removes the old shape only after old code and the rollback window are gone. Run migrations as a controlled step rather than once per replica. Redeploying an older image does not reverse a schema migration, sent email, payment, or other external side effect; rollback may require a forward fix, an idempotent compensating action, or a tested restore plan. Restoring a backup can discard writes made after that backup, so it is a recovery decision rather than a routine application rollback.
 
-For the frontend-specific type/test/build and critical-browser-check sequence, see [Frontend Testing / 前端测试](../../frontend/testing/frontend-testing.md). The existing [Docker Operations / Docker操作参考](#23.%20Docker%20Operations%20/%20Docker%E6%93%8D%E4%BD%9C%E5%8F%82%E8%80%83) note covers image construction and local container mechanics.
+For the frontend-specific type/test/build and critical-browser-check sequence, see [Frontend Testing / 前端测试](../../frontend/testing/frontend-testing.md). The existing [Docker Operations / Docker操作参考](#24.%20Docker%20Operations%20/%20Docker%E6%93%8D%E4%BD%9C%E5%8F%82%E8%80%83) note covers image construction and local container mechanics.
 
 **Interview answer / 面试回答：** Start with the request/data path and trust boundaries, then choose the least operational runtime that meets workload constraints. Build and verify one immutable artifact, inject runtime configuration and secrets, release behind readiness and monitored thresholds, and keep schema or external-state recovery separate from image rollback. / 先画出请求和数据路径及信任边界，再按负载约束选择运维负担最低的运行时。构建并验证一个不可变产物，运行时注入配置和密钥，在就绪检查与监控阈值保护下发布，并把数据库和外部状态的恢复方案与镜像回滚分开。
 
