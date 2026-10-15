@@ -16,7 +16,7 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 - Keep the shape that serves the material. Concept notes explain how or why something works. Reference notes keep useful tables, commands, and catalogs easy to scan. System-design questions explain requirements, architecture, key decisions, and tradeoffs. Do not force every note into interview questions or a fixed template.
 - Use bilingual titles, key terms, core explanations, and interview answers. Detailed derivations, mechanisms, and examples may use whichever one language makes them clearest; do not translate every paragraph just for symmetry.
 - Preserve useful knowledge and distinctive examples when rewriting, merging, or splitting notes. Remove genuine duplication, but do not delete lasting material only because it is not currently an interview topic.
-- Cross-link related notes when the connection helps the reader, and say why the link matters. Link to the canonical explanation instead of copying it.
+- Cross-link related notes when the connection helps the reader, and say why the link matters. Prefer file-level links between notes; use a section fragment only when it helps navigation and has been checked in the intended readers. Link to the canonical explanation instead of copying it.
 - Do not manufacture a gotcha, code example, or interview framing. Every example should clarify a point or show a real use.
 
 ## Check factual claims
