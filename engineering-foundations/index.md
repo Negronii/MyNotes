@@ -34,6 +34,8 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 - [Node.js Fundamentals / Node.js基础](backend/node-js-fundamentals.md)
 - [Python Fundamentals / Python基础](backend/python-fundamentals.md)
+- [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](backend/python-async-and-fastapi.md)
+- [HTTP API Contracts / HTTP API契约](backend/http-api-contracts.md)
 - [Data Access and Connection Pools / 数据访问与连接池](backend/data-access-and-connection-pools.md)
 - [Caching and Redis / 缓存与 Redis](backend/caching-and-redis.md)
 

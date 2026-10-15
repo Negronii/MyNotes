@@ -574,7 +574,7 @@ Two nearby concepts are useful boundaries, not a distributed-systems survey:
 
 **Course material kept in the archive / 保留在归档中的课程内容：** the detailed RAID calculations, R-tree/spatial-index examples, snapshot-isolation exercises, and recovery derivations remain in [week 1 RAID calculations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w1.md), [week 2 R-tree/spatial-index examples](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w2.md), [week 3 snapshot-isolation exercises](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w3.md), and [week 4 recovery derivations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4.md). The active note provides the shared model; the course files preserve their derivations and exercises.
 
-**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#11.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains request-scoped ORM work and connection budgeting; [Caching and Redis / 缓存与 Redis](#12.%20Caching%20and%20Redis%20/%20%E7%BC%93%E5%AD%98%E4%B8%8E%20Redis) explains a cache in front of the database. [Core Data Structures / 核心数据结构](#7.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) introduces the tree structures behind common indexes; the [archived database course](../../archive/uni-subjects/COMP90050ADBS/readme.md) preserves its broader sequence of worked examples.
+**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#13.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains request-scoped ORM work and connection budgeting; [Caching and Redis / 缓存与 Redis](#14.%20Caching%20and%20Redis%20/%20%E7%BC%93%E5%AD%98%E4%B8%8E%20Redis) explains a cache in front of the database. [Core Data Structures / 核心数据结构](#7.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) introduces the tree structures behind common indexes; the [archived database course](../../archive/uni-subjects/COMP90050ADBS/readme.md) preserves its broader sequence of worked examples.
 
 **Sources and verification / 来源与验证：** PostgreSQL 18 documentation checked 2026-10-15: [SQL tutorial](https://www.postgresql.org/docs/18/tutorial-sql.html), [comparison predicates](https://www.postgresql.org/docs/18/functions-comparison.html), [table expressions and joins](https://www.postgresql.org/docs/18/queries-table-expressions.html), [aggregate functions](https://www.postgresql.org/docs/18/functions-aggregate.html), [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [indexes](https://www.postgresql.org/docs/18/indexes.html), [EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html), [MVCC](https://www.postgresql.org/docs/18/mvcc-intro.html), [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html), [WAL](https://www.postgresql.org/docs/18/wal-intro.html), [WAL configuration and recovery](https://www.postgresql.org/docs/18/wal.html), and [prepared transactions](https://www.postgresql.org/docs/18/sql-prepare-transaction.html). SQLite's [foreign-key](https://www.sqlite.org/foreignkeys.html), [transaction](https://www.sqlite.org/lang_transaction.html), [SELECT](https://www.sqlite.org/lang_select.html), [expressions](https://www.sqlite.org/lang_expr.html), [aggregate functions](https://www.sqlite.org/lang_aggfunc.html), [query planner](https://www.sqlite.org/queryplanner.html), and [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html) documentation support the examples; plan wording is diagnostic output, not an API. The customer/order result queries, existing schema/query example, and reservation transaction were run with Python's `sqlite3` module against SQLite 3.51.0, with foreign-key enforcement enabled. For 1,000 synthetic orders, the existing plan run changed from a table scan plus temporary sort to an index search after adding the composite index. That is one planner observation, not a stable output contract. The original recovery method is Mohan et al., [ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging); its DPT and `recLSN` mechanism is explained in the [CMU database recovery notes (pp. 1, 4–6)](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf).
 ## 4. API Reliability and Asynchronous Delivery / API可靠性与异步交付
@@ -1814,7 +1814,7 @@ Timeouts, concurrency limits, billing, cold-start latency, and state-reuse behav
 
 It can suit event-triggered handlers or variable workloads when the provider's limits and cost model fit. Long-running work, persistent connections, predictable latency, and vendor-specific integrations require a comparison against other deployment models.
 
-**See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](#13.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for choosing boundaries around runtime-specific infrastructure.
+**See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](#15.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for choosing boundaries around runtime-specific infrastructure.
 
 Sources: [Node.js v24 worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [process scheduling](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html) documentation; [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/); plus [AWS Lambda execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html). PM2 and AWS references checked 2026-10-15; provider limits change over time.
 
@@ -1988,7 +1988,9 @@ For a project with a `requirements.txt`, install its declared packages with `.ve
 
 **Verified run / 运行验证：** The file-processing example ran with CPython 3.11.13 and printed the expected output above. This verifies the example on that interpreter; it is not a claim that every Python implementation or platform has identical implementation details.
 
-**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98) explains timeout, cancellation, retries, and bounded work at network and queue boundaries; those correctness concerns also apply to Python services. Python-specific coroutine and framework behavior belongs in a separate async/API note.
+**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98) explains timeout, cancellation, retries, and bounded work at network and queue boundaries; those correctness concerns also apply to Python services.
+Python-specific coroutine and framework behavior is explained in [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](#11.%20Python%20Async%20and%20FastAPI%20Request%20Lifecycle%20/%20Python%E5%BC%82%E6%AD%A5%E4%B8%8EFastAPI%E8%AF%B7%E6%B1%82%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F).
+Application-level request, response, error, and pagination contracts are covered in [HTTP API Contracts / HTTP API契约](#12.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6).
 
 **Sources / 来源：** Python 3.11 [Tutorial](https://docs.python.org/3.11/tutorial/) and [Language Reference](https://docs.python.org/3.11/reference/), including [objects and types](https://docs.python.org/3.11/reference/datamodel.html#objects-values-and-types), [function definitions](https://docs.python.org/3.11/reference/compound_stmts.html#function-definitions), [iterators and generators](https://docs.python.org/3.11/reference/datamodel.html#generator-functions), and [`with` statements](https://docs.python.org/3.11/reference/compound_stmts.html#the-with-statement); [`typing`](https://docs.python.org/3.11/library/typing.html); and the Python Packaging User Guide's [installing packages](https://packaging.python.org/en/latest/tutorials/installing-packages/) and [managing application dependencies](https://packaging.python.org/en/latest/tutorials/managing-dependencies/) tutorials. Checked 2026-10-15.
 
@@ -2005,7 +2007,439 @@ For a project with a `requirements.txt`, install its declared packages with `.ve
 **What do Python type hints guarantee at runtime? / Python 类型提示在运行时保证什么？** By themselves, they guarantee nothing about the values passed or returned. They communicate expected shapes to humans and static tools. Programs still parse and validate untrusted or external data where it enters the application, and use explicit runtime checks when runtime enforcement is required.
 
 类型提示本身不会在运行时保证输入值或返回值的类型。它们向读者和静态工具传达预期的数据形状。程序仍需在外部数据进入应用时解析与校验；需要运行时强制时，应添加显式检查或使用专门的校验库。
-## 11. Data Access and Connection Pools / 数据访问与连接池
+## 11. Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期
+
+### Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期
+
+**Core idea / 核心模型：** `asyncio` lets one event-loop thread make progress on other tasks while the current task waits for asynchronous I/O. An `async def` declaration alone does not make blocking work asynchronous: choose `def` for synchronous libraries that block, and `async def` when awaited libraries can suspend. Tie every acquired resource to a clear cleanup boundary, and treat cancellation as a cooperative request to stop. / `asyncio`让事件循环线程在当前任务等待异步I/O时推进其他任务。仅仅声明`async def`不会让阻塞操作异步：使用同步阻塞库时可选择`def`，使用能通过`await`挂起的库时选择`async def`。资源应绑定明确的清理边界；取消是要求任务协作停止，而非强制终止。
+
+**Key terms / 关键术语：** coroutine function / 协程函数；coroutine object / 协程对象；awaitable / 可等待对象；task / 任务；event loop / 事件循环；cooperative scheduling / 协作式调度；blocking I/O / 阻塞I/O；deadline / 截止时间；cancellation / 取消；yield dependency / `yield`依赖；worker thread / 工作线程。
+
+#### From `async def` to a running task / 从`async def`到运行中的任务
+
+An `async def` **coroutine function** describes work. Calling it creates a **coroutine object**; it does not run the body. `await coro()` drives that coroutine as part of the current task. `asyncio.create_task(coro())` schedules it as a separate **Task**, so it can progress concurrently with other tasks. Keep and await created tasks; starting work without collecting its result makes failures and shutdown hard to control. In Python 3.11, `asyncio.TaskGroup` is a structured way to create related tasks and wait for them together.
+
+An **awaitable** is any object accepted by `await`, including coroutine objects, Tasks, and Futures. During an incomplete await, the current task suspends and the event loop can run another ready task or service I/O. This is cooperative: code runs until it reaches a suspension point. A synchronous call such as `time.sleep()`, a blocking database driver, or a long CPU loop prevents the event-loop thread from serving other tasks during that call.
+
+An `async def` function containing `yield` is an **async-generator function**; calling it returns an **async-generator object**, not a coroutine object. FastAPI manages that object's dependency lifecycle to run cleanup after yielding the resource.
+
+#### Choose the boundary by the library you call / 按所调用的库选择边界
+
+For an awaited database or HTTP client, use an `async def` route and await its I/O. A synchronous `def` route or dependency that FastAPI calls is run in its worker thread pool, so a legacy synchronous client can fit that boundary. Conversely, a synchronous helper called directly from inside an `async def` route is just a normal function call; FastAPI does not automatically move that nested call to a thread.
+
+`asyncio.to_thread()` is useful for blocking I/O that cannot yet be replaced, and it keeps the event loop available while the thread waits. It is not a general CPU-parallelism switch: in CPython, the GIL usually limits simultaneous execution of pure-Python CPU work. A process pool or separate worker can run CPU work in parallel, with serialization, startup, memory, and queueing costs. Native extensions that release the GIL and other Python implementations can differ; measure the actual workload. Bound thread/process concurrency so offloading does not merely move an unbounded queue.
+
+#### Cancellation, deadlines, and cleanup / 取消、截止时间与清理
+
+`Task.cancel()` arranges for `CancelledError` to be raised in the task at a later opportunity, commonly at an `await`. Use `try/finally` to release resources and normally let cancellation propagate after cleanup. Do not catch `BaseException` or suppress `CancelledError` as a generic error; structured concurrency and timeout scopes rely on cancellation being visible.
+
+In Python 3.11, `asyncio.timeout(seconds)` cancels the current task when its time budget expires and raises `TimeoutError` outside the context manager. It is cooperative: a blocking synchronous function prevents the event loop from delivering that cancellation until the function returns. A timeout around `await asyncio.to_thread(...)` stops waiting in the coroutine but cannot forcibly stop a thread function already running. A client timeout also does not prove that a remote operation stopped or had no side effect. Pass remaining request budget to supported downstream calls and use the broader [API reliability guidance](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98) for end-to-end deadlines and unknown outcomes.
+
+For a FastAPI dependency using `yield`, FastAPI owns the exit path. In the verified FastAPI 0.128.0 behavior, the default yield dependency scope is `"request"`: cleanup runs after the response body is sent. `scope="function"` closes it after the route function returns but before the response is sent, which is suitable only when response serialization and streaming no longer need the resource. A stream that consumes a dependency during body generation needs request scope. A `finally` block in the dependency runs on ordinary completion and on an explicit task cancellation that reaches the ASGI app; a real network disconnect is not guaranteed to cancel every server task in the same way, so verify the chosen server and response mode. The test below checks explicit cancellation, not every disconnect path.
+
+#### Runnable request example / 可运行的请求示例
+
+This small app has a sync settings dependency, an async resource dependency, an awaited route with a deadline, a streaming route that needs request-scoped cleanup, a deliberately bad blocking route, and a thread-offloaded I/O route. Save the complete block as `async_api_demo.py`; it is an executable smoke check rather than a production server.
+
+~~~python
+import asyncio
+import threading
+import time
+
+from fastapi import Depends, FastAPI
+from fastapi.responses import StreamingResponse
+from httpx import ASGITransport, AsyncClient
+
+trace = []
+slow_started = []
+quick_seen = []
+
+
+def load_settings():
+    # FastAPI runs a sync dependency it calls in its worker thread pool.
+    return {"region": "demo", "thread": threading.get_ident()}
+
+
+class Store:
+    async def get(self, item_id: int, region: str):
+        await asyncio.sleep(0)  # stand-in for an async driver wait
+        return {"id": item_id, "region": region}
+
+
+async def get_store():
+    trace.append("open")
+    try:
+        yield Store()
+    finally:
+        trace.append("close")
+
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_item(
+    item_id: int,
+    settings=Depends(load_settings),
+    store=Depends(get_store, scope="function"),
+):
+    assert settings["thread"] != threading.get_ident()
+    async with asyncio.timeout(0.5):
+        return await store.get(item_id, settings["region"])
+
+
+def blocking_io():
+    time.sleep(0.06)
+    return "done"
+
+
+@app.get("/bad")
+async def bad_route():
+    slow_started.append(time.monotonic())
+    blocking_io()  # blocks the event-loop thread
+    return {"ok": True}
+
+
+@app.get("/quick")
+async def quick_route():
+    quick_seen.append(time.monotonic())
+    return {"ok": True}
+
+
+@app.get("/offloaded")
+async def offloaded_route():
+    return {"result": await asyncio.to_thread(blocking_io)}
+
+
+@app.get("/stream")
+async def stream(store=Depends(get_store)):  # default yield scope is request
+    async def body():
+        trace.append("body")
+        yield "x"
+
+    return StreamingResponse(body(), media_type="text/plain")
+
+
+@app.get("/wait")
+async def wait_forever(store=Depends(get_store)):
+    await asyncio.Event().wait()
+
+
+async def check():
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://example.test"
+    ) as client:
+        trace.clear()
+        response = await client.get("/items/7")
+        assert response.json() == {"id": 7, "region": "demo"}
+        assert trace == ["open", "close"]  # function scope closes before send
+
+        trace.clear()
+        response = await client.get("/stream")
+        assert response.text == "x"
+        assert trace == ["open", "body", "close"]  # request scope covers body
+
+        trace.clear()
+        task = asyncio.create_task(client.get("/wait"))
+        await asyncio.sleep(0.01)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        else:
+            raise AssertionError("request task was expected to be cancelled")
+        assert trace == ["open", "close"]
+
+        slow_started.clear()
+        quick_seen.clear()
+        bad = asyncio.create_task(client.get("/bad"))
+        await asyncio.sleep(0)  # let /bad block before /quick is scheduled
+        quick = await client.get("/quick")
+        await bad
+        assert quick.status_code == 200
+        assert quick_seen[0] - slow_started[0] >= 0.05
+
+        response = await client.get("/offloaded")
+        assert response.json() == {"result": "done"}
+
+
+asyncio.run(check())
+~~~
+
+The `/bad` route delays the next event-loop request because it calls a blocking helper directly. Use a synchronous route for a synchronous I/O stack, or explicitly offload a blocking call; when possible prefer a native async client. The `/items` route awaits I/O and receives the sync and async dependencies through FastAPI's respective boundaries. Its 0.5-second timeout is only a local teaching budget, not a recommended service-wide setting.
+
+#### Python and runtime versions / Python与运行时版本
+
+`async`/`await` syntax is part of Python; `asyncio` is a standard-library API. This example was checked with **CPython 3.11.13**, FastAPI **0.128.0**, Starlette **0.47.2**, and HTTPX **0.28.1**. `asyncio.timeout()` and `asyncio.TaskGroup` require Python 3.11; `asyncio.to_thread()` requires Python 3.9+. CPython is one Python implementation, so GIL statements above are explicitly CPython-specific. Verify framework lifecycle options against the installed FastAPI version: newer live documentation may describe behavior absent in an older release.
+
+#### Interview answers / 面试回答
+
+**Why can an `async def` endpoint still stall other requests? / 为什么`async def`接口仍会拖慢其他请求？** An async function only yields when it awaits an operation that actually suspends. Calling a synchronous network/file helper or doing a long CPU loop inline keeps the event-loop thread busy. I would use an async driver, a sync route/dependency that FastAPI can offload, or a bounded thread/process worker chosen for the workload; then I would measure queueing and latency.
+
+异步函数只有在等待一个确实会挂起的操作时才让出执行权。在函数内直接调用同步网络/文件操作，或执行很长的CPU循环，都会占住事件循环线程。我会使用异步驱动、由FastAPI代为卸载的同步路由/依赖，或根据工作负载选择有界线程/进程工作池，并测量排队与延迟。
+
+**What happens when a request is cancelled while it owns a resource? / 请求持有资源时被取消会怎样？** Cancellation is delivered cooperatively, so I put release logic in `finally` and let `CancelledError` propagate. For FastAPI `yield` dependencies I choose request scope if response streaming still consumes the resource, and function scope if cleanup should happen before sending the response. I would not assume a client timeout or disconnect proves remote work stopped; I would keep downstream deadlines and side-effect handling explicit.
+
+取消通过协作方式传递，因此我会把释放逻辑放进`finally`并让`CancelledError`继续传播。若响应流仍要使用FastAPI的`yield`依赖，我会选择request scope；若资源应在响应发送前关闭，则选择function scope。我不会因为客户端超时或断开就认定远端工作已停止；下游截止时间与副作用处理仍需显式定义。
+
+**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#10.%20Python%20Fundamentals%20/%20Python%E5%9F%BA%E7%A1%80), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket), and [Database Fundamentals / 数据库基础](#3.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80). [HTTP API Contracts / HTTP API契约](#12.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#13.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) expands the resource example into database-session, transaction, and pool-lifetime choices.
+## 12. HTTP API Contracts / HTTP API契约
+
+### HTTP API Contracts / HTTP API契约
+
+**Core idea / 核心模型：** An API contract makes a boundary predictable: it says which request shapes are accepted, which success representation is returned, and how clients recognize failures. Validate input at the boundary, keep response and error shapes intentional, and document pagination and evolution rules so clients do not infer behavior from implementation details. / API契约让接口边界可预期：明确接受哪些请求形状、成功时返回什么表示，以及客户端如何识别失败。在边界校验输入，明确设计响应与错误形状，并说明分页和演进规则，避免客户端依赖实现细节。
+
+**Key terms / 关键术语：** request schema / 请求结构；response schema / 响应结构；boundary validation / 边界校验；problem details / 问题详情；machine-readable error / 机器可读错误；OpenAPI / OpenAPI描述；opaque cursor / 不透明游标；compatible evolution / 兼容演进。
+
+#### Separate HTTP semantics from API policy / 区分HTTP语义与API策略
+
+An API contract sits above the transport: a route and method, its path/query/body inputs, response schemas, status outcomes, and pagination rules. HTTP defines the common message and status-code semantics; the API chooses the domain-specific representations and which status applies to each outcome. See [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) for method, status, and transport basics and [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98) for timeouts, retries, and unknown write outcomes.
+
+A type annotation helps the application and framework understand values; it is not proof that an untrusted request has the right shape or meaning. Define request models and constraints at the boundary. Return a deliberate response model as well. Structural validation can reject a missing field or out-of-range number, but it cannot decide permission, resource ownership, uniqueness under concurrency, or whether a business action is allowed. Those rules need trusted authorization and domain logic; durable uniqueness belongs at the data boundary (see [Database Fundamentals / 数据库基础](#3.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80)).
+
+[OpenAPI](https://spec.openapis.org/oas/latest.html) describes operations, inputs, response codes, media types, and schemas in a machine-readable document. In FastAPI, request models and `response_model` contribute generated schemas; custom error handlers must also be represented in each operation's declared responses, or the runtime response and published contract can diverge. OpenAPI documents a contract; it does not validate deployed behavior by itself.
+
+#### Give failures a stable machine identity / 为错误提供稳定的机器标识
+
+An API can use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html) with `Content-Type: application/problem+json`. Its `type` URI is the primary identifier for a problem category; `status` in the body must match the HTTP response; `title` and `detail` are human-readable. Clients should not parse prose in `detail`. Put any stable client-action data in documented extension fields, such as a small `errors` array with a field path and an application-owned code. Avoid echoing raw request values or internal exception text.
+
+The following status mapping is one API's policy, not a universal template:
+
+| Outcome | Example response | Meaning in this API |
+|---|---|---|
+| Valid create | `201` + `Item` | A new item was created and its representation is returned. |
+| Invalid body/query | `422` + problem | The JSON shape or a declared value constraint failed. This sample groups boundary-validation failures here. |
+| Missing item | `404` + problem | No item currently has the requested ID. |
+| Duplicate name | `409` + problem | The requested create conflicts with the current collection state. |
+| Unknown cursor | `400` + problem | The client supplied a continuation token this process does not recognize. |
+
+RFC 9110 describes `422` for syntactically valid content whose instructions cannot be processed and `409` for a conflict with current resource state. A different API may separate malformed JSON syntax as `400`, use a different validation status, or choose another duplicate policy; document the actual behavior and keep it consistent. The transport note covers the status definitions.
+
+#### Bound and continue a listing / 限制并继续分页
+
+A list response should cap the number of returned records. This example accepts `limit` from 1 through 100, defaults it to 2 for the demonstration, and rejects a value above the maximum with a validation problem. Other API styles may clamp it to the maximum; [Google AIP-158](https://google.aip.dev/158) is one example that specifies coercion for oversized page sizes. The choice is policy: publish the default, maximum, and whether an oversized value is rejected or reduced.
+
+This example includes `next_cursor` in every page: it is an opaque string when more results are available and JSON `null` at the end. Here, `null` is the terminal signal, so the client sends a non-null cursor back unchanged and stops when the value is null. A page may contain fewer rows than the requested limit without proving that the collection has ended. A token says where to continue, not who may read the rows: authenticate and authorize every page request. Use a stable order with a tie-breaker. If records can change during a long listing, define whether pages reflect a moving collection or a consistent snapshot.
+
+The runnable example stores random cursor-to-offset mappings in memory for a tiny synthetic list. This makes the token opaque to the caller, but the token stops working after process restart and the in-memory list is not a scalable storage query. A production cursor needs a documented lifetime/consistency policy and a bounded storage query; the data-access design is separate from this note.
+
+#### Runnable contract example / 可运行的契约示例
+
+The API uses a synthetic inventory collection. A Pydantic before-validator strips string input before the field's length constraints run, so whitespace-only input cannot become an empty stored name. / API使用合成库存集合。Pydantic前置验证器先去除字符串两端空白，再执行字段长度约束，因此全空白输入不会变成已保存的空名称。 The complete script below validates request and query boundaries, exposes success and error schemas, and checks the resulting HTTP behavior and OpenAPI document. Save it as `api_contract_demo.py` and run it in an environment with FastAPI and its TestClient dependencies.
+
+~~~python
+import secrets
+
+from fastapi import FastAPI, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator
+
+PROBLEM_BASE = "https://api.example/problems/"
+
+
+class CreateItem(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    quantity: int = Field(ge=1, le=1000)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, value: Any) -> Any:
+        return value.strip() if isinstance(value, str) else value
+
+
+class Item(BaseModel):
+    id: int
+    name: str
+    quantity: int
+
+
+class Page(BaseModel):
+    items: list[Item]
+    next_cursor: str | None = None
+
+
+class Problem(BaseModel):
+    type: str
+    title: str
+    status: int
+    detail: str
+    errors: list[dict[str, str]] | None = None
+
+
+class ApiProblem(Exception):
+    def __init__(self, status: int, kind: str, title: str, detail: str):
+        self.status, self.kind, self.title, self.detail = status, kind, title, detail
+
+
+def problem_content(description: str):
+    return {
+        "description": description,
+        "content": {
+            "application/problem+json": {"schema": Problem.model_json_schema()}
+        },
+    }
+
+
+PROBLEM_RESPONSES = {
+    400: problem_content("Unknown cursor"),
+    404: problem_content("Item does not exist"),
+    409: problem_content("Name already exists"),
+    422: problem_content("Request validation failed"),
+}
+SEED = {
+    1: Item(id=1, name="notebook", quantity=4),
+    2: Item(id=2, name="pencil", quantity=8),
+    3: Item(id=3, name="folder", quantity=2),
+}
+items = dict(SEED)
+cursor_offsets: dict[str, int] = {}
+next_id = 4
+app = FastAPI()
+
+
+def problem_response(status, kind, title, detail, **extensions):
+    return JSONResponse(
+        status_code=status,
+        media_type="application/problem+json",
+        content={
+            "type": PROBLEM_BASE + kind,
+            "title": title,
+            "status": status,
+            "detail": detail,
+            **extensions,
+        },
+    )
+
+
+@app.exception_handler(ApiProblem)
+async def api_problem_handler(request: Request, exc: ApiProblem):
+    return problem_response(exc.status, exc.kind, exc.title, exc.detail)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_handler(request: Request, exc: RequestValidationError):
+    errors = [
+        {"field": ".".join(str(part) for part in error["loc"]), "code": "invalid_value"}
+        for error in exc.errors()
+    ]
+    return problem_response(
+        422, "validation", "Request validation failed",
+        "Correct the fields listed in errors and resubmit.", errors=errors,
+    )
+
+
+@app.get("/items", response_model=Page, responses=PROBLEM_RESPONSES)
+async def list_items(limit: int = Query(default=2, ge=1, le=100), cursor: str | None = None):
+    if cursor is None:
+        offset = 0
+    elif cursor in cursor_offsets:
+        offset = cursor_offsets[cursor]
+    else:
+        raise ApiProblem(400, "invalid-cursor", "Invalid cursor", "Start a new listing.")
+
+    ordered = [items[key] for key in sorted(items)]
+    page = ordered[offset : offset + limit]
+    next_cursor = None
+    if offset + len(page) < len(ordered):
+        next_cursor = secrets.token_urlsafe(12)
+        cursor_offsets[next_cursor] = offset + len(page)
+    return Page(items=page, next_cursor=next_cursor)
+
+
+@app.get("/items/{item_id}", response_model=Item, responses=PROBLEM_RESPONSES)
+async def get_item(item_id: int):
+    if item_id not in items:
+        raise ApiProblem(404, "not-found", "Item not found", "No item has this ID.")
+    return items[item_id]
+
+
+@app.post("/items", status_code=201, response_model=Item, responses=PROBLEM_RESPONSES)
+async def create_item(payload: CreateItem):
+    global next_id
+    name = payload.name
+    if any(item.name.casefold() == name.casefold() for item in items.values()):
+        raise ApiProblem(409, "duplicate-name", "Name already exists", "Choose another name.")
+    item = Item(id=next_id, name=name, quantity=payload.quantity)
+    items[next_id] = item
+    next_id += 1
+    return item
+
+
+def check():
+    client = TestClient(app)
+    first = client.get("/items?limit=2")
+    assert first.status_code == 200 and len(first.json()["items"]) == 2
+    cursor = first.json()["next_cursor"]
+    assert cursor
+    second = client.get("/items", params={"limit": 2, "cursor": cursor})
+    assert second.status_code == 200
+    assert [x["id"] for x in second.json()["items"]] == [3]
+    second_body = second.json()
+    assert "next_cursor" in second_body and second_body["next_cursor"] is None
+
+    bad_page = client.get("/items?limit=101")
+    assert bad_page.status_code == 422
+    assert bad_page.headers["content-type"].startswith("application/problem+json")
+    assert bad_page.json()["type"] == PROBLEM_BASE + "validation"
+    assert bad_page.json()["errors"]
+
+    malformed = client.post("/items", json={"name": "stapler", "quantity": 0})
+    assert malformed.status_code == 422 and malformed.json()["type"] == PROBLEM_BASE + "validation"
+    missing_field = client.post("/items", json={"name": "stapler"})
+    assert missing_field.status_code == 422
+
+    whitespace_name = client.post("/items", json={"name": "   ", "quantity": 1})
+    assert whitespace_name.status_code == 422 and whitespace_name.json()["type"] == PROBLEM_BASE + "validation"
+
+    created = client.post("/items", json={"name": " stapler ", "quantity": 2})
+    assert created.status_code == 201 and created.json()["id"] == 4
+    assert created.json()["name"] == "stapler"
+    conflict = client.post("/items", json={"name": "Stapler", "quantity": 3})
+    assert conflict.status_code == 409
+    assert conflict.json()["type"] == PROBLEM_BASE + "duplicate-name"
+
+    missing = client.get("/items/999")
+    assert missing.status_code == 404
+    assert missing.json()["type"] == PROBLEM_BASE + "not-found"
+    invalid_cursor = client.get("/items?cursor=unknown-token")
+    assert invalid_cursor.status_code == 400
+
+    operation = app.openapi()["paths"]["/items"]["post"]
+    assert operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert operation["responses"]["409"]["content"]["application/problem+json"]["schema"]
+    print("201 success trims names; invalid, missing, and whitespace-only input and limit 101 -> 422; missing item -> 404; duplicate -> 409")
+    print("two pages contain 2+1 items; unknown cursor -> 400; final page includes next_cursor=null")
+    print("OpenAPI", app.openapi()["openapi"], "documents JSON success and problem+json errors")
+
+
+check()
+~~~
+
+The client reads a successful body according to `Item`/`Page`; on failure it checks the HTTP status and the stable problem `type`, then uses a documented extension such as `errors` to associate an issue with a field. It displays or logs `detail` for people without parsing it as a code. To continue, it passes a non-null `next_cursor` back unchanged and stops when the field's value is JSON `null`.
+
+#### Evolve the contract deliberately / 有计划地演进契约
+
+Adding an optional response field is often compatible when clients ignore unknown fields, but generated clients and strict decoders can reject it. Removing or renaming a field, changing its type or meaning, making an optional request field required, changing a problem `type`, or changing pagination meaning can break callers. Treat these as contract changes: publish the compatibility policy, test representative old and new clients, and use a versioning or migration window when an incompatible change is necessary. There is no single mandatory versioning scheme.
+
+#### Interview answers / 面试回答
+
+**How would you make an API failure usable by both a client and a person? / 如何让API错误同时适合程序与人阅读？** I would keep the HTTP status meaningful, return a stable problem `type`, and document the response media type and schema in OpenAPI. Human text can explain the immediate issue, but clients branch on the stable identifier or a documented extension rather than parsing that text. I would avoid reflecting secrets or exception details and test that runtime responses match the published schema.
+
+我会让HTTP状态码有明确含义，返回稳定的问题`type`，并在OpenAPI中说明响应媒体类型和结构。人类可读文本可以解释当前问题，但客户端应根据稳定标识或有文档约定的扩展字段分支，而不是解析这段文本。我会避免回显机密或异常细节，并测试运行时响应是否符合已发布的结构。
+
+**How should a client know when a page is finished? / 客户端如何判断分页结束？** It should follow the server-issued opaque cursor and stop when `next_cursor` is present with JSON `null`; page length alone is not a reliable end signal. The API should bound the page size, order records deterministically, and re-check authorization for every page. Cursor lifetime and behavior during concurrent updates are explicit API choices.
+
+客户端应原样传回服务端签发的不透明游标，并在`next_cursor`字段存在且值为JSON`null`时停止；单靠当前页长度不能可靠判断结束。API应限制页大小、按确定顺序排列记录，并对每一页重新授权。游标有效期以及并发更新时的行为都应作为明确的接口策略定义。
+
+**Sources / 来源：** [OpenAPI Specification, latest](https://spec.openapis.org/oas/latest.html); IETF [RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html); [RFC 9110 §15.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5) for 404, 409, and 422 semantics; Google [AIP-158, Pagination](https://google.aip.dev/158) as one pagination style; FastAPI [request bodies and validation](https://fastapi.tiangolo.com/tutorial/body/), [response models](https://fastapi.tiangolo.com/tutorial/response-model/), and [handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/); Pydantic 2.11 [field validators](https://docs.pydantic.dev/2.11/concepts/validators/), checked against a FastAPI 0.128.0 / Pydantic 2.11.7 runtime on 2026-10-15. In that installed runtime, `app.openapi()["openapi"]` returned `3.1.0`; the live OpenAPI `latest` document resolved to `3.2.1`, so the sample reports its actual generated version instead of assuming the framework emits the newest specification.
+
+**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) covers the transport and generic status semantics; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#4.%20API%20Reliability%20and%20Asynchronous%20Delivery%20/%20API%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%BA%A4%E4%BB%98) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](#3.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) covers durable uniqueness and transaction boundaries.
+## 13. Data Access and Connection Pools / 数据访问与连接池
 
 ### Data Access and Connection Pools / 数据访问与连接池
 
@@ -2084,7 +2518,7 @@ Give each request a short-lived session and frame each write unit with one trans
 为每个请求创建短生命周期的 Session，并用一个事务界定每组需要原子完成的写入。成功时提交，异常时回滚，并始终关闭 Session，使借出的连接归还连接池。ORM 负责跟踪映射对象；数据库事务决定原子性；连接池限制并发连接数。先按所有副本和工作进程计算连接总上限，再检查连接等待和长事务，之后再决定是否调整连接池。需要明确查询形态时使用参数化 SQL。
 
 **Sources and verification / 来源与验证：** SQLAlchemy 2.0 [Session Basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html) and [Connection Pooling](https://docs.sqlalchemy.org/en/20/core/pooling.html), and the FastAPI [SQL (Relational) Databases tutorial](https://fastapi.tiangolo.com/tutorial/sql-databases/), checked 2026-10-15. The documented synchronous `Session`/transaction pattern and bounded pool behavior were exercised locally with SQLAlchemy 2.0.44 and SQLite 3.51.0: a successful block committed; an exception rolled back; session close reduced checked-out connections from one to zero; a second checkout against a full one-connection pool timed out, then succeeded after the first connection was returned. The docs page identifies SQLAlchemy 2.0.54 as the current 2.0 docs build; the verification above names the installed runtime version. No network database or asynchronous driver was used.
-## 12. Caching and Redis / 缓存与 Redis
+## 14. Caching and Redis / 缓存与 Redis
 
 ### Caching and Redis / 缓存与 Redis
 
@@ -2125,7 +2559,7 @@ I would keep the database authoritative and use cache-aside: read the cache, loa
 我会让数据库保持事实来源，并采用 cache-aside：先读缓存，未命中时查数据库，写入缓存时设置 TTL，并只在数据库写入提交后执行失效。我会根据接口的新鲜度要求选择 TTL，考虑失效失败和陈旧回填窗口，并合并热点键的并发未命中请求。Redis 故障时，我会用截止时间和并发上限约束数据库回退；缓存丢失应增加负载，但不能悄悄改变事实来源。只有在业务明确接受最大陈旧时间时才提供旧值。
 
 **Sources and verification / 来源与验证：** Redis [cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/) and [node-redis cache-aside example](https://redis.io/docs/latest/develop/use-cases/cache-aside/nodejs/), checked 2026-10-15. The official examples demonstrate cache-first reads, TTL-bearing writes, invalidation, and a short-lived stampede lock. The flow above is a generic application design; no Redis server was deployed, so Redis commands and outage behavior were not runtime-tested. TTL and `DEL` are implementation tools, not a cross-store consistency protocol.
-## 13. Software Design Principles / 软件设计原则
+## 15. Software Design Principles / 软件设计原则
 
 ### Software Design Principles / 软件设计原则
 
@@ -2183,7 +2617,7 @@ class StandardShipping {
 }
 ~~~
 
-A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#14.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5).
+A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#16.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5).
 
 ##### Liskov Substitution Principle (LSP)
 
@@ -2261,10 +2695,10 @@ Micro-frontends divide a frontend into parts that can have separate ownership or
 
 Reach for this when independent teams or release schedules are a concrete requirement and the organization can support the shared navigation, styling, accessibility, observability, and runtime boundaries. For a smaller application, a modular single frontend usually has less coordination and deployment overhead.
 
-**See also:** [Design Patterns in Practice](#14.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5) for reusable patterns that can support these principles.
+**See also:** [Design Patterns in Practice](#16.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5) for reusable patterns that can support these principles.
 
 Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).
-## 14. Design Patterns in Practice / 设计模式实践
+## 16. Design Patterns in Practice / 设计模式实践
 
 ### Design Patterns in Practice / 设计模式实践
 
@@ -2325,7 +2759,7 @@ function calculateShipping(name, pkg) {
 }
 ~~~
 
-Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#13.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99).
+Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#15.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99).
 
 ---
 
@@ -2423,7 +2857,7 @@ A relational model commonly includes:
 A request is authenticated first, then the server checks whether the resulting subject may perform the requested action on the requested object. Check every protected operation and resource; hiding a button or trusting a client-supplied role is not authorization. Role changes simplify policy administration only when the application's permission model fits roles.
 
 See [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) for authorization boundaries and [Design Patterns: Elements of Reusable Object-Oriented Software](https://www.informit.com/store/design-patterns-elements-of-reusable-object-oriented-software-9780201633610) for the original GoF catalog.
-## 15. Interview Tips / 面试准备
+## 17. Interview Tips / 面试准备
 
 ### Interview Tips / 面试准备
 
@@ -2498,8 +2932,8 @@ Prepare questions that help you understand the work. Choose the ones that remain
 
 Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
 
-**See also:** [Agile and Scrum](#16.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
-## 16. Agile and Scrum / 敏捷与Scrum
+**See also:** [Agile and Scrum](#18.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
+## 18. Agile and Scrum / 敏捷与Scrum
 
 ### Agile and Scrum / 敏捷与Scrum
 
@@ -2579,10 +3013,10 @@ The commitments focus the artifact without replacing it. Multiple Increments may
 - **Skipping inspection and improvement:** omitting defined events loses their intended opportunities and means the team is not using the framework as described.
 - **Assuming Scrum fits every problem:** choose a way of working that fits the product, feedback cycle, and organizational constraints. Regulated work can also use iterative development when its evidence and control requirements are built into the process.
 
-**See also:** [Interview Tips](#15.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for discussing team practices accurately.
+**See also:** [Interview Tips](#17.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for discussing team practices accurately.
 
 Sources: [The Scrum Guide, November 2020](https://scrumguides.org/scrum-guide.html) and the [Agile Manifesto](https://agilemanifesto.org/).
-## 17. Git Essentials / Git日常基础
+## 19. Git Essentials / Git日常基础
 
 ### Git Essentials / Git日常基础
 
@@ -2754,10 +3188,10 @@ refactor(utils): extract date formatting
 docs(readme): clarify setup
 ~~~
 
-**See also:** [Agile and Scrum](#16.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
+**See also:** [Agile and Scrum](#18.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
 
 Sources: [Git pull](https://git-scm.com/docs/git-pull), [Git merge](https://git-scm.com/docs/git-merge), [Git rebase](https://git-scm.com/docs/git-rebase), [Git reset](https://git-scm.com/docs/git-reset), [Git revert](https://git-scm.com/docs/git-revert), [Git reflog](https://git-scm.com/docs/git-reflog), [Git stash](https://git-scm.com/docs/git-stash), and [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick). Git manuals checked 2026-10-15.
-## 18. Docker Operations / Docker操作参考
+## 20. Docker Operations / Docker操作参考
 
 ### Docker Operations / Docker操作参考
 
