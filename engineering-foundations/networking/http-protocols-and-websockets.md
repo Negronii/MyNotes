@@ -3,8 +3,8 @@
 > **核心解释 / Core idea：** HTTP定义客户端与服务器交换表示、状态和元数据的语义；TCP、QUIC等传输机制决定字节或流如何送达。HTTP版本改变了连接复用与多路复用方式，但不会让请求自动安全、可重试或跨域可读。  
 > **Core idea:** HTTP defines the semantics for exchanging representations, status, and metadata between clients and servers; transports such as TCP and QUIC determine how bytes or streams are delivered. HTTP versions change connection reuse and multiplexing, but do not by themselves make requests safe to retry or readable across origins.
 >
-> **面试简答 / Interview answer：** REST是约束式架构风格，HTTP API通常用资源URI和标准方法表达操作；判断重试要看方法语义和业务副作用。HTTP/1.1默认复用连接，HTTP/2在TCP连接上多路复用但仍受TCP丢包队头阻塞影响，HTTP/3通过QUIC独立流减轻跨流阻塞。浏览器CORS控制跨源响应能否被页面读取；传统WebSocket通过HTTP/1.1 Upgrade建立双向通道，HTTP/2、HTTP/3也有扩展连接机制。  
-> **Interview answer:** REST is a constrained architectural style, and HTTP APIs commonly express operations through resource URIs and standard methods; retry decisions depend on method semantics and application side effects. HTTP/1.1 reuses connections by default, HTTP/2 multiplexes over TCP but still has TCP-level head-of-line blocking, and HTTP/3 uses QUIC streams to reduce cross-stream blocking. Browser CORS controls whether a page can read a cross-origin response. Traditional WebSockets use an HTTP/1.1 Upgrade handshake, while HTTP/2 and HTTP/3 define extended connection mechanisms.
+> **面试简答 / Interview answer：** REST是约束式架构风格，HTTP方法语义决定重试边界；HTTP/1.1复用连接，HTTP/2在TCP上多路复用，HTTP/3基于QUIC流，浏览器CORS控制跨源读取。需要新建连接且没有可用地址时才需解析主机名；已有连接可直接复用，无须为每个请求重新查询。HTTPS还需TLS；DNS、连接、TLS与HTTP故障应分层判断。实时更新按方向和请求契约选择：轮询简单但有开销，SSE/EventSource单向推送并可自动重连，Fetch流支持自定义请求方法/头但应用负责解析恢复，WebSocket双向且恢复由应用约定。  
+> **Interview answer:** REST is a constrained style, and HTTP method semantics set retry boundaries. HTTP/1.1 reuses connections, HTTP/2 multiplexes over TCP, and HTTP/3 uses QUIC streams; browser CORS controls cross-origin reads. Resolve the name when a new connection needs an address; an existing usable connection can be reused without a fresh lookup. Apply TLS for HTTPS, and diagnose DNS, connection, TLS, and HTTP failures separately. Choose live-update transport by direction and request contract: polling is simple but adds overhead; SSE/EventSource is one-way with automatic reconnect; Fetch streams allow custom request methods/headers but leave parsing and recovery to the application; WebSocket is bidirectional and leaves recovery to the application.
 
 ## REST与HTTP方法 / REST and HTTP methods
 
@@ -107,6 +107,16 @@ TCP提供有序、可靠的字节流，不保留应用程序一次write对应一
 
 建立连接通常经过SYN、SYN-ACK、ACK三个TCP段；正常关闭时，两个方向分别结束，常见情形会看到FIN与ACK组成的四段交换。但这不是固定的四个报文：ACK与FIN可能合并，双方同时关闭、异常复位等情况也不同。TCP状态与关闭过程见 [RFC 9293](https://www.rfc-editor.org/rfc/rfc9293.html)。
 
+## DNS名称解析与故障边界 / DNS resolution and failure boundaries
+
+**核心解释 / Core explanation：** DNS把名称映射到资源记录，例如IPv4/IPv6地址。常见路径是客户端的本地解析器先查可用缓存；缓存未命中时，请求递归解析器。递归解析器再从缓存回答，或沿根、顶级域到权威服务器的委派查找记录。记录TTL限制缓存可保留该记录的时间；名称错误也可能被缓存。具体客户端可能命中浏览器/系统缓存、hosts文件或已有连接，因而每次请求不一定都走完整解析路径。
+
+**Core explanation (English):** DNS maps names to records such as IP addresses. A local resolver checks available caches first; on a miss, a recursive resolver may follow referrals from the root through a top-level domain to an authoritative server. A record's TTL limits how long it may be cached, and negative answers may also be cached. Browser or system caches, a hosts file, or an already usable connection can bypass a fresh lookup for a particular request.
+
+**面试简答 / Interview answer：** 先确认名称解析是否给出了可用地址，再按连接建立、TLS握手和HTTP响应分别定位错误。解析器可能返回名称错误或临时错误，也可能在上游无响应时超时；这些都发生在HTTP状态码出现之前。改DNS记录也不会立刻清除所有缓存副本，变更速度受已缓存TTL和解析器策略影响。
+
+在浏览器导航中，缓存、Service Worker和连接复用可能绕过一次新的DNS查询；[Browser Basics / 浏览器基础](../../frontend/browser/browser-basics.md)介绍导航时的整体请求路径。DNS只提供名称解析结果，不负责传输加密；[Web Security and Authentication / Web安全与身份认证](../security/web-security-and-authentication.md)中的TLS说明解释了HTTPS验证服务器并保护传输的边界。
+
 ## HTTP/1.1、HTTP/2与HTTP/3 / HTTP versions
 
 | 版本 Version | 连接与多路复用 Connection and multiplexing | 关键边界 Key caveat |
@@ -180,7 +190,77 @@ socket.addEventListener('message', (event) => console.log('Received:', event.dat
 socket.addEventListener('close', () => console.log('Disconnected'));
 ~~~
 
-HTTP持久连接（keep-alive）可以在多个HTTP请求/响应间重用连接，但服务器仍需等待请求，不能在没有请求时任意推送HTTP响应。WebSocket提供双方都可发消息的通道。若只需服务器到浏览器的单向事件流，可比较EventSource（Server-Sent Events）；更新稀少时，轮询也可能更简单。[ws项目文档](https://github.com/websockets/ws)。
+HTTP持久连接（keep-alive）可以在多个HTTP请求/响应间重用连接，但服务器仍需等待请求，不能在没有请求时任意推送HTTP响应。WebSocket提供双方都可发消息的通道；[ws项目文档](https://github.com/websockets/ws)是Node.js服务端实现示例。轮询、SSE和流式Fetch各自使用HTTP请求/响应，适用的方向与恢复能力见下表。
+
+## 轮询、SSE、流式Fetch与WebSocket / Polling, SSE, streaming Fetch, and WebSocket
+
+| 方式 Transport | 方向与请求契约 Direction and request contract | 连接恢复 Recovery | 适用场景与边界 Fit and boundary |
+|---|---|---|---|
+| 轮询 Polling | 客户端按间隔发起普通HTTP请求；长轮询会让服务端暂挂一次请求直到有事件或超时。 | 客户端决定频率、退避和何时重试；若需续传，由API定义游标或事件ID。 | 实现简单、适合低频更新；短轮询带来请求开销，长轮询占用等待中的请求。 |
+| SSE格式 + `EventSource` API | 服务端向客户端单向发送HTTP `text/event-stream`；EventSource用URL建立GET请求，可选择`withCredentials`。 | EventSource会自动重连；带`id:`的事件会在重连请求中作为`Last-Event-ID`回传。服务器只有保留可重放的事件历史，才能按该ID续传。 | 适合单向事件；原生EventSource接口没有自定义请求头或请求体，不能把传输断线等同于事件已恢复。 |
+| 流式Fetch / Fetch response stream | 一次Fetch请求在响应有body时提供可逐块读取的`Response.body`；请求可使用API允许的方法、请求头、请求体和取消信号。 | Fetch不会替应用实现SSE式自动重连或重放；应用解析协议帧并定义游标、重试和取消策略。 | 需要自定义请求契约或一次性POST后流式返回时合适；字节块不是消息边界。跨源读取仍受CORS约束。 |
+| WebSocket | 握手后，客户端和服务端都能沿同一连接发送带消息边界的帧。 | 重连、身份过期、事件序号、确认和恢复均由应用协议定义。 | 双向低延迟交互合适；长期连接需要连接生命周期管理。浏览器构造器没有任意请求头参数，握手认证要按浏览器可用契约设计。 |
+
+SSE既是`text/event-stream`线格式，也是浏览器EventSource接口的常见后端协议。线格式用UTF-8字段行表示事件，并以空行结束一条事件；常见字段为`event`、`data`、`id`和`retry`。例如：
+
+~~~text
+Content-Type: text/event-stream
+
+event: progress
+id: 42
+data: {"stage":"working"}
+
+~~~
+
+`id`只提供重连游标；它本身不保存事件，也不保证服务器能重放断线期间的数据。EventSource接口只公开URL和凭据选项；当请求需要自定义Authorization头、非GET方法或请求体时，可用Fetch读取同一类流格式，但解析、重试和恢复都由应用实现。Fetch的响应体是`ReadableStream`；一次`read()`得到的块可能切在UTF-8字符或应用事件中间，所以要用增量解码器并按协议帧边界拼装，不要把每个块直接当成一个事件。
+
+~~~javascript
+const response = await fetch('/api/events', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ filter }),
+  signal,
+});
+if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+let endedNormally = false;
+let cancelAttempted = false;
+try {
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      endedNormally = true;
+      break;
+    }
+    // This parser placeholder returns false when the caller intentionally stops before EOF.
+    if (parser.feed(decoder.decode(value, { stream: true })) === false) {
+      cancelAttempted = true;
+      await reader.cancel();
+      break;
+    }
+  }
+  if (endedNormally) parser.feed(decoder.decode());
+} catch (error) {
+  if (!cancelAttempted) {
+    cancelAttempted = true;
+    try {
+      await reader.cancel(error);
+    } catch {
+      // Preserve the original parser or read error.
+    }
+  }
+  throw error;
+} finally {
+  reader.releaseLock();
+}
+~~~
+
+这里的`parser.feed`代表按已约定的线格式增量解析；示例约定它在调用方已获得所需完整结果、决定提前停止时返回`false`，代码随即取消未读响应体。若解析或读取抛错，也会尝试取消响应流；取消本身若失败，仍保留原始解析/读取错误，并在所有路径释放reader锁。若用户取消操作，传入的`AbortSignal`会取消Fetch。传输层提供请求契约、分块、结束和失败信号，不定义界面如何呈现部分内容，也不保证服务端任务状态能跨重连保留。选择时先回答四件事：消息方向是什么、请求是否要带方法/头/体、连接由谁关闭、恢复是否只需重连还是必须按游标重放。
 
 ## 浏览器资源提示 / Browser resource hints
 
@@ -206,4 +286,6 @@ preload应只用于当前页面确实需要的资源，并填写匹配的as类�
 
 - [浏览器基础 / Browser Basics](../../frontend/browser/browser-basics.md)：浏览器的请求、渲染和安全边界。
 - [Web安全与身份认证 / Web Security and Authentication](../security/web-security-and-authentication.md)：CORS之外的认证、Cookie与请求保护。
+
+DNS and streaming sections checked against [RFC 1034](https://www.rfc-editor.org/rfc/rfc1034.html), the [WHATWG HTML Server-sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html), [Fetch Standard](https://fetch.spec.whatwg.org/), [Streams Standard](https://streams.spec.whatwg.org/), and [WebSockets Standard](https://websockets.spec.whatwg.org/) on 2026-10-15.
 
