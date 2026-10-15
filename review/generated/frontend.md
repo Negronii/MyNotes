@@ -84,6 +84,55 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 
 ---
 
+#### How do URLs and same-document navigation work? / URL 与同文档导航如何工作？
+
+**Core answer / 核心回答：** `URL` parses and serializes a complete address; `URLSearchParams` reads and edits its query pairs. An anchor or `location.assign()` requests navigation to a URL: it normally loads another document, but a fragment-only navigation can remain in the current document. `history.pushState()` and `replaceState()` instead update the current document's session history and URL without loading another document. Those History API calls do not dispatch `popstate`; Back/Forward traversal does, so an app should read the current URL then and synchronize its displayed state. / `URL` 负责解析和序列化完整地址，`URLSearchParams` 读写查询参数。链接或 `location.assign()` 会请求导航到某个 URL：通常会加载新文档，但仅改变片段时可以留在当前文档。`history.pushState()` 和 `replaceState()` 则在当前文档内更新会话历史和 URL，不会加载新文档。它们本身不会触发 `popstate`；浏览器前进或后退遍历历史记录时才会触发，因此应用应在该事件中读取当前 URL 并同步界面。
+
+##### Parse query state and choose the navigation operation
+
+- Start from `new URL(location.href)` rather than splitting a URL string by `?` or `&`. Read a single value with `searchParams.get(name)` and repeated values with `getAll(name)`. `set(name, value)` replaces existing pairs with that name; use `append()` when duplicates are intentional. Serializing through `url.search` or `url.href` applies URL encoding.
+- An anchor or `location.assign(url)` asks the browser to navigate to a URL and normally creates a history entry; `location.replace(url)` navigates while replacing the current entry. The browser may reuse a document for a same-document fragment navigation, so “navigation” does not always mean a new network request.
+- `pushState(state, "", url)` adds a same-document history entry; `replaceState(state, "", url)` edits the current one. The URL must remain same-origin. Neither method fetches that URL or emits `popstate`; update the UI directly after calling it. On Back/Forward traversal, handle `popstate` by deriving the view from `location` (and `event.state` if the app uses it).
+
+This makes filters and tabs linkable and restorable through Back/Forward. Treat query values as untrusted input, validate them against supported options, and avoid putting secrets in a URL.
+
+```html
+<label for="sort">Sort results</label>
+<select id="sort">
+  <option value="recent">Most recent</option>
+  <option value="oldest">Oldest first</option>
+</select>
+<p id="summary"></p>
+
+<script>
+const sortSelect = document.querySelector("#sort");
+const summary = document.querySelector("#summary");
+
+function syncFromUrl() {
+  const url = new URL(location.href);
+  const sort = url.searchParams.get("sort") === "oldest" ? "oldest" : "recent";
+  sortSelect.value = sort;
+  summary.textContent = sort === "oldest" ? "Oldest results first" : "Most recent results first";
+}
+
+sortSelect.addEventListener("change", () => {
+  const url = new URL(location.href);
+  url.searchParams.set("sort", sortSelect.value);
+  history.pushState(null, "", url.href);
+  syncFromUrl(); // pushState does not dispatch popstate
+});
+
+window.addEventListener("popstate", syncFromUrl);
+syncFromUrl();
+</script>
+```
+
+**See also:** [React Router / React 路由](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) uses browser history for client-side routes; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) explains `DOMContentLoaded` and `load`; the [archived URL, location, and History reference](../../archive/front-end/0-1_Learning_Notes/Javascript/readme.md) retains the broader property and method catalog.
+
+**Sources checked 2026-10-15:** [WHATWG URL Standard](https://url.spec.whatwg.org/#urlsearchparams-class) (Living Standard updated 2026-10-07) and [WHATWG HTML Standard: History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface) (Living Standard updated 2026-10-14).
+
+---
+
 #### Why does a `<script>` tag block HTML parsing? What do `async` and `defer` change?
 
 **Headline (30s):** A parser-inserted classic script without `async`, `defer`, or another applicable scheduling rule can pause parsing while it is fetched and executed. For classic external scripts, `defer` preserves order and runs after parsing before `DOMContentLoaded`; `async` runs when ready without preserving order. Module scripts are deferred by default unless `async` is present. **中文：** classic `defer` 保序并在解析后执行；`async` 不保序；模块脚本默认延后执行。
@@ -248,13 +297,68 @@ Media queries still work, but modern CSS gives cleaner options for common cases:
 
 **See also:** [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for the full Grid / Flexbox reference.
 
-#### Semantic HTML and accessibility
+#### Semantic HTML and accessibility / 语义化 HTML 与无障碍交互
 
 Choose elements for their meaning and built-in behavior. Use headings to express the page outline, landmarks such as `<main>` and `<nav>` to identify regions, a `<button>` for an action, and an `<a href>` for navigation. Semantic controls provide keyboard and assistive-technology behavior that a styled `<div>` does not provide by default.
 
 Give form controls programmatic labels with `<label for="…">` or a properly nested label. Give informative images useful alternative text; use `alt=""` for decorative images so they do not add noise to the text alternative. Do not use color or visual positioning as the only way to convey a required state or relationship.
 
 Keep the source order meaningful. CSS can change visual placement without changing the underlying document sequence used by nonvisual presentation.
+
+##### Keyboard, focus, and validation feedback / 键盘、焦点与校验反馈
+
+**Core answer / 核心回答：** Start with native HTML controls: a label gives an input its accessible name, and native buttons and fields already support expected focus and keyboard behavior. Keep keyboard focus visible. Describe errors in text, associate the text with its field using `aria-describedby`, and expose the invalid state with `aria-invalid`. ARIA adds meaning for assistive technology; it does not add focusability, keyboard activation, or validation behavior to a generic element. / 优先使用原生 HTML 控件：标签提供输入框的无障碍名称，原生按钮和表单字段自带预期的焦点与键盘行为。键盘焦点应清晰可见。错误要用文字说明，通过 `aria-describedby` 与字段关联，并用 `aria-invalid` 表达错误状态。ARIA 为辅助技术补充语义，但不会让普通元素自动获得焦点、键盘操作或校验行为。
+
+This form keeps native constraints as the no-JavaScript fallback. Once its custom handler is installed, an invalid submission shows a text error, marks the field, and focuses it; the visible outline identifies where the keyboard user landed. The same error text is in the field's accessible description.
+
+```html
+<form id="subscribe" action="/subscribe" method="post">
+  <label for="email">Email address</label>
+  <input id="email" name="email" type="email" required
+         aria-describedby="email-help email-error">
+  <p id="email-help">Enter an address such as name@example.com.</p>
+  <p id="email-error" hidden></p>
+  <button type="submit">Subscribe</button>
+</form>
+
+<style>
+  :focus { outline: 3px solid currentColor; outline-offset: 2px; }
+</style>
+
+<script>
+const form = document.querySelector("#subscribe");
+const email = form.elements.namedItem("email");
+const error = document.querySelector("#email-error");
+
+function clearError() {
+  error.textContent = "";
+  error.hidden = true;
+  email.removeAttribute("aria-invalid");
+}
+
+email.addEventListener("input", () => {
+  if (email.validity.valid) clearError();
+});
+
+form.addEventListener("submit", event => {
+  if (email.validity.valid) {
+    clearError();
+    return;
+  }
+
+  event.preventDefault();
+  error.textContent = email.validity.valueMissing
+    ? "Enter an email address."
+    : "Enter a valid email address.";
+  error.hidden = false;
+  email.setAttribute("aria-invalid", "true");
+  email.focus();
+});
+form.noValidate = true; // use the custom path only after its handler is ready
+</script>
+```
+
+Without JavaScript, the browser's `required` and `type="email"` constraints remain active. With JavaScript, Tab reaches the field and then the submit button; submitting an invalid value by keyboard returns focus to the field and exposes the associated error. Clear the error as the value becomes valid, and validate again on the server before accepting submitted data. This is a focused interaction pattern, not a conformance claim for an entire page.
 
 #### Inherited CSS properties
 
@@ -301,6 +405,8 @@ All three properties are needed: `nowrap` keeps text on one line, `overflow: hid
 This is the legacy `-webkit-line-clamp` form, with the `-webkit-box` display and orientation declarations required by that syntax. CSS Overflow Module Level 4 specifies a `line-clamp` shorthand and also describes the legacy form for compatibility, but remains a Working Draft; check the exact behavior and support in target browsers before choosing a form.
 
 **Specifications / guidance:** [HTML Standard](https://html.spec.whatwg.org/), [CSS Values and Units](https://www.w3.org/TR/css-values/), [CSS Selectors](https://www.w3.org/TR/selectors-4/), [CSS Cascading and Inheritance](https://www.w3.org/TR/css-cascade-5/), [CSS Display and visual ordering](https://www.w3.org/TR/css-display-3/#order-property), [CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/), [CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/), [WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/), [WAI form labels](https://www.w3.org/WAI/tutorials/forms/labels/), and [WAI image alternatives](https://www.w3.org/WAI/tutorials/images/).
+
+**Accessibility sources checked 2026-10-15:** [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/) (including visible focus and text error identification), [WAI Forms: Notifications](https://www.w3.org/WAI/tutorials/forms/notifications/), [ARIA Authoring Practices Guide: Keyboard Interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/), and [ARIA Authoring Practices Guide: Read Me First](https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/) (ARIA 1.2 role and behavior guidance).
 ## 3. Box Model and BFC / 盒模型与块格式化上下文
 
 **Box Model and BFC / 盒模型与块格式化上下文**
@@ -3813,6 +3919,78 @@ Lazy-loading images is great — unless you introduce layout shift every time on
 
 TypeScript checks relationships between values while editing and compiling JavaScript. Type declarations are erased from emitted JavaScript, so a successful typecheck does not validate untrusted runtime values. The type system also makes deliberate soundness tradeoffs; values typed with any or an unchecked assertion can bypass useful checks.
 
+#### How do types meet untrusted JSON? / 类型如何处理不可信 JSON？
+
+**Core answer / 核心回答：** Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, validate the shape and values with JavaScript checks, and only then construct a trusted typed value. A type annotation or assertion changes what the checker believes; it does not inspect the data. / API 响应和浏览器存储都应视为不可信运行时数据。先将解析结果放入 `unknown`，再用 JavaScript 检查结构和值，最后才构造可信的类型化对象。类型注解或断言只会改变检查器的判断，不会检查数据本身。
+
+`JSON.parse` can throw for malformed JSON and, on success, still says nothing about the object's shape. `unknown` keeps that boundary visible: every property read must follow a runtime guard. This example handles both syntax and shape failures without an unchecked cast; the storage adapter also makes a missing key explicit.
+
+~~~typescript
+type Profile = {
+  id: string;
+  label: string;
+  role: "admin" | "reader";
+};
+
+type ParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: string };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseProfile(text: string): ParseResult<Profile> {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "Invalid JSON syntax" };
+  }
+
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.label !== "string" ||
+    (value.role !== "admin" && value.role !== "reader")
+  ) {
+    return { ok: false, error: "Expected id, label, and a known role" };
+  }
+
+  return {
+    ok: true,
+    value: { id: value.id, label: value.label, role: value.role }
+  };
+}
+
+function readStoredProfile(storage: Storage): ParseResult<Profile> {
+  const text = storage.getItem("profile");
+  if (text === null) return { ok: false, error: "No saved profile" };
+  return parseProfile(text);
+}
+
+const valid = parseProfile('{"id":"u-7","label":"Ada","role":"reader"}');
+const malformed = parseProfile('{"id":7,"label":"Ada","role":"reader"}');
+// valid.ok is true; malformed.ok is false with a structural error.
+~~~
+
+After validation, ordinary control-flow narrowing applies to the declared model. An exhaustive switch protects the code that consumes the validated role; it does not prove that the parser itself is correct.
+
+~~~typescript
+function roleLabel(profile: Profile): string {
+  switch (profile.role) {
+    case "admin": return "Administrator";
+    case "reader": return "Reader";
+    default: {
+      const unreachable: never = profile.role;
+      return unreachable;
+    }
+  }
+}
+~~~
+
+The union lets the checker require narrowing before type-safe access to `value`, but it does not require every caller to inspect the result. The `never` assignment checks exhaustiveness only in this `roleLabel` switch; it does not force every switch over `Profile.role` to include the same guard. Only the runtime checks establish that this particular JSON value is a `Profile`. If the server later adds a role, the parser deliberately rejects it until the application accepts that value; update the validator and exhaustive consumers together.
+
 #### What are utility types? / 什么是工具类型？
 
 **Core answer / 核心回答：** Utility types transform an existing type so related shapes stay connected instead of copying property declarations. They are compile-time descriptions: Readonly does not freeze an object, and Partial does not validate an incoming request. / 工具类型可以转换已有类型，让相关数据结构保持关联，避免重复声明字段。它们只描述编译期类型：Readonly 不会冻结对象，Partial 也不会验证传入的请求。
@@ -3977,7 +4155,7 @@ function area(shape: Shape): number {
 
 **See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for object identity and proxies; [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
 
-**Sources checked 2026-10-15:** [TypeScript: Basic Types](https://www.typescriptlang.org/docs/handbook/2/basic-types), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
+**Sources checked 2026-10-15:** [TypeScript: Basic Types and `unknown`](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
 ## 26. Event Loop / 事件循环
 
 ### Event Loop and Host Scheduling / 事件循环与宿主调度
@@ -4388,6 +4566,175 @@ function Toolbar() {
 
 A child can notify its parent through a callback prop. Use Context for values such as theme or locale that are needed across a subtree; a store can help when shared state and update patterns grow more complex. Custom Hooks share stateful logic, but each call has its own Hook state unless the Hook deliberately connects to shared state. Avoid using an event bus as a default substitute for React's data flow.
 
+#### Who owns server data and local UI state? / 服务端数据与本地界面状态由谁管理？
+
+**Core answer / 核心回答：** Keep transient choices such as the selected row, open dialog, or draft input in local React state. Treat records owned by a server as server state: identify each query by all inputs that affect it, define when cached data is fresh, and invalidate or update affected entries after a mutation. A query cache is a client read model, not the source of truth. / 将选中行、打开的对话框和输入草稿等临时选择保存在 React 本地状态中。服务器拥有的记录属于服务端状态：查询键要包含所有影响结果的输入，缓存需要明确新鲜期，变更后要更新或失效相关缓存。查询缓存是客户端读模型，不是数据的权威来源。
+
+For example, selecting a row is local UI state, while the list and selected record come from the server. Separate query keys encode their identities; include filters, page, or account identifiers too when they change the result. In TanStack Query v5, `staleTime` defines how long a result is considered fresh. Once stale, it can refetch on configured events; targeted invalidation marks matching entries stale and refetches active observers. The value is a freshness policy, not a promise that the server data cannot change.
+
+~~~tsx
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+type Task = { id: string; title: string; done: boolean };
+type TaskPatch = Pick<Task, "id"> & Partial<Pick<Task, "title" | "done">>;
+
+// These request functions parse and validate their responses at the API boundary.
+declare function listTasks(): Promise<Task[]>;
+declare function getTask(id: string, signal: AbortSignal): Promise<Task>;
+declare function saveTask(patch: TaskPatch): Promise<Task>;
+
+const taskKeys = {
+  list: ["tasks", "list"] as const,
+  detail: (id: string) => ["tasks", "detail", id] as const
+};
+
+function useTaskList() {
+  return useQuery({
+    queryKey: taskKeys.list,
+    queryFn: listTasks,
+    staleTime: 30_000
+  });
+}
+
+function useTaskDetail(id: string) {
+  return useQuery({
+    queryKey: taskKeys.detail(id),
+    queryFn: ({ signal }) => getTask(id, signal)
+  });
+}
+
+function TaskWorkspace() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const list = useTaskList();
+
+  if (list.isPending) return <p>Loading tasks…</p>;
+  if (list.isError) return <p role="alert">Could not load tasks.</p>;
+
+  return (
+    <div>
+      <ul>
+        {list.data.map(task => (
+          <li key={task.id}>
+            <button type="button" onClick={() => setSelectedId(task.id)}>
+              {task.title}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {selectedId !== null && <TaskDetail id={selectedId} />}
+    </div>
+  );
+}
+
+function TaskDetail({ id }: { id: string }) {
+  const detail = useTaskDetail(id);
+  if (detail.isPending) return <p>Loading selected task…</p>;
+  if (detail.isError) return <p role="alert">Could not load this task.</p>;
+  return <p>{detail.data.title}</p>;
+}
+
+function useSaveTask() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: saveTask,
+    onMutate: async patch => {
+      const detailKey = taskKeys.detail(patch.id);
+      await Promise.all([
+        client.cancelQueries({ queryKey: taskKeys.list }),
+        client.cancelQueries({ queryKey: detailKey })
+      ]);
+
+      const previousList = client.getQueryData<Task[]>(taskKeys.list);
+      const previousDetail = client.getQueryData<Task>(detailKey);
+      client.setQueryData<Task[]>(taskKeys.list, old =>
+        old?.map(task => task.id === patch.id ? { ...task, ...patch } : task)
+      );
+      if (previousDetail !== undefined) {
+        client.setQueryData<Task>(detailKey, { ...previousDetail, ...patch });
+      }
+      return { previousList, previousDetail };
+    },
+    onError: (_error, patch, previous) => {
+      if (previous?.previousList !== undefined) {
+        client.setQueryData(taskKeys.list, previous.previousList);
+      }
+      if (previous?.previousDetail !== undefined) {
+        client.setQueryData(taskKeys.detail(patch.id), previous.previousDetail);
+      }
+    },
+    onSuccess: saved => {
+      client.setQueryData(taskKeys.detail(saved.id), saved);
+      client.setQueryData<Task[]>(taskKeys.list, old =>
+        old?.map(task => task.id === saved.id ? saved : task)
+      );
+    },
+    onSettled: (_data, _error, patch) => Promise.all([
+      client.invalidateQueries({ queryKey: taskKeys.list }),
+      client.invalidateQueries({ queryKey: taskKeys.detail(patch.id) })
+    ])
+  });
+}
+~~~
+
+The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; the `useWindowSize` Effect in the custom Hook section below shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#25.%20Advanced%20TypeScript%20/%20TypeScript%E8%BF%9B%E9%98%B6) for validating API JSON before treating it as a `Task`.
+
+#### How do concurrent UI updates and Suspense work? / 并发界面更新与 Suspense 如何工作？
+
+**Core answer / 核心回答：** Keep input state urgent so each keystroke appears immediately; defer expensive result rendering or mark a navigation-like state update as a Transition. React can interrupt and retry that render work so urgent updates get priority. A Suspense boundary gives one part of the screen a fallback while a Suspense-enabled child is not ready. / 输入状态应保持紧急，以便每次按键都立即显示；可以延后昂贵结果区域的渲染，或把类似导航的状态更新标记为 Transition。React 可以中断并重试这部分渲染，让紧急更新优先。Suspense 边界则在支持 Suspense 的子树尚未就绪时，为该区域显示 fallback。
+
+This search panel keeps the text input responsive and places the loading fallback around only the result list. `useSuspenseQuery` is the TanStack Query v5 data source that suspends here; a normal query or fetch started in an Effect does not automatically suspend. The memoized result boundary allows React to skip this child when an urgent parent render leaves `deferredQuery` and `tab` unchanged; without it, the child still renders on each parent input update even though the deferred value is old. It renders again when either deferred prop advances.
+
+~~~tsx
+import { memo, Suspense, useDeferredValue, useState, useTransition } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+
+type SearchHit = { id: string; title: string };
+declare function searchTasks(query: string, tab: "tasks" | "summary"): Promise<SearchHit[]>;
+
+function TaskSearch() {
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<"tasks" | "summary">("tasks");
+  const [isPending, startTransition] = useTransition();
+  const deferredQuery = useDeferredValue(query);
+  const showingOlderResults = query !== deferredQuery;
+
+  function selectTab(next: "tasks" | "summary") {
+    startTransition(() => setTab(next));
+  }
+
+  return (
+    <section>
+      <input
+        aria-label="Search tasks"
+        value={query}
+        onChange={event => setQuery(event.target.value)}
+      />
+      <button type="button" onClick={() => selectTab("summary")}>Summary</button>
+      {isPending && <span>Updating view…</span>}
+      <Suspense fallback={<p>Loading results…</p>}>
+        <div aria-busy={showingOlderResults}>
+          <TaskSearchResults query={deferredQuery} tab={tab} />
+        </div>
+      </Suspense>
+    </section>
+  );
+}
+
+const TaskSearchResults = memo(
+  function TaskSearchResults({ query, tab }: { query: string; tab: "tasks" | "summary" }) {
+    const { data } = useSuspenseQuery({
+      queryKey: ["tasks", "search", query, tab],
+      queryFn: () => searchTasks(query, tab)
+    });
+    return <ul>{data.map(hit => <li key={hit.id}>{hit.title}</li>)}</ul>;
+  }
+);
+~~~
+
+`useTransition` exposes `isPending` and marks state updates inside `startTransition` as non-urgent; its callback runs immediately, and it cannot control a text input. With an async action, wrap state updates after each `await` in another `startTransition` to mark them as transitions. `useDeferredValue` lets a child keep seeing the previous value while React prepares an interruptible background render. It has no fixed delay and does not suppress network requests, so use an explicit debounce when the goal is fewer requests. Neither API parallelizes JavaScript on another CPU thread or makes a long synchronous calculation faster; use a better algorithm, memoization, or a worker when computation itself blocks. `Suspense` only shows this fallback when its child suspends through a supported source such as `use` with a cached Promise or a Suspense-enabled framework/library. Pair data errors with an Error Boundary or use explicit pending/error states; Suspense is not a request error handler. Keep renders pure because React may retry interrupted work.
+
 #### When should you use memo, useMemo, or useCallback? / 何时使用 memo、useMemo和useCallback？
 
 **Core answer / 核心回答：** These are performance tools, not correctness tools. React.memo can skip rendering when props compare equal; useMemo caches a calculated value; useCallback caches a function reference. Add them when profiling or a specific identity boundary shows they help. / 这些 API 是性能工具，不是正确性工具。React.memo 可在 props 比较相等时跳过渲染；useMemo 缓存计算值；useCallback 缓存函数引用。只有性能分析或明确的引用边界表明它们有帮助时再使用。
@@ -4514,7 +4861,7 @@ Because React renders numbers, a numeric left operand can leak into the output: 
 
 **See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
 
-**Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects).
+**Sources checked 2026-10-15:** [React: `useTransition`](https://react.dev/reference/react/useTransition), [`useDeferredValue`](https://react.dev/reference/react/useDeferredValue), [`Suspense`](https://react.dev/reference/react/Suspense), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [TanStack Query React v5: Queries](https://tanstack.com/query/latest/docs/framework/react/guides/queries), [Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys), [Important Defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults), [Query Invalidation](https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation), [Optimistic Updates](https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates), [Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense), [Cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation), [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use).
 ## 31. Next.js / Next.js开发
 
 ### Next.js / Next.js开发
@@ -4605,6 +4952,54 @@ In the current Next.js 16.4.1 documentation checked on 2026-10-15, App Router fe
 
 A Client Component can receive data from a Server Component through props, but props crossing the boundary must be serializable. Keep secrets and server-only dependencies on the server.
 
+#### How do hydration and streaming fit together? / Hydration 与流式渲染如何衔接？
+
+**Core answer / 核心回答：** Server-rendered HTML can appear before the client JavaScript is ready. Hydration makes that existing markup interactive by matching it to React's initial client render and attaching behavior; the two initial outputs must agree. Effects run only in the browser after a component commits. In the App Router, a `Suspense` boundary can show a useful fallback while a slower child waits, then stream that region into the page. / 服务端 HTML 可以先于客户端 JavaScript 显示。Hydration 将已有标记与 React 客户端的首次渲染匹配并附加交互行为；两端首次输出必须一致。Effect 只在浏览器中、组件提交后运行。App Router 中的 `Suspense` 边界可以先显示有用的占位内容，再把等待中的子区域流式送入页面。
+
+##### Hydration timeline and one mismatch diagnostic
+
+1. The server sends HTML. The browser can display it before React's client code runs; React-specific handlers and state are not attached yet, although ordinary HTML behavior still works.
+2. The client loads React and hydrates the existing DOM. React expects the first client render to match the server HTML, then attaches component behavior.
+3. After the client commit, `useEffect` can read browser-only state and schedule a later render. Effects do not run during server rendering, so they cannot supply initial server HTML.
+
+A diagnostic example is `new Date().toLocaleDateString()` rendered during both server and initial client rendering: the clock, locale, or time zone can make the strings differ. Start with the hydration warning and compare the server output with the first client render; trace values that depend on time, randomness, browser APIs, or independently changing data. Prefer a stable value shared by both renders. If content must be browser-specific, render a stable initial placeholder and update after hydration, accepting that the user may see a second pass. `suppressHydrationWarning` is a narrow escape hatch for an unavoidable one-level text or attribute difference, not a fix for a mismatched subtree.
+
+##### Place a Suspense boundary around a useful streamed region
+
+In Next.js 16.4.1 App Router, the fetching guide documents route-level `loading.tsx` and smaller `<Suspense>` boundaries. Content outside a boundary can render while the child inside waits. Start independent data work before awaiting it, then let the child suspend so the boundary has time to show its fallback. The example follows the existing archived [App Router data-fetching and Suspense example](../../archive/front-end/0-1_Learning_Notes/next.js/readme.md); `getPosts()` is an application data function returning a promise.
+
+```tsx
+import { Suspense } from "react";
+
+type Post = { id: number; title: string };
+
+async function getPosts(): Promise<Post[]> {
+  const response = await fetch("https://api.example.com/posts");
+  if (!response.ok) throw new Error("Post request failed");
+  return response.json();
+}
+
+export default function Page() {
+  const posts = getPosts(); // start the request without blocking the page
+
+  return (
+    <main>
+      <h1>Latest posts</h1>
+      <Suspense fallback={<p>Loading posts…</p>}>
+        <PostList posts={posts} />
+      </Suspense>
+    </main>
+  );
+}
+
+async function PostList({ posts }: { posts: Promise<Post[]> }) {
+  const items = await posts;
+  return <ul>{items.map(post => <li key={post.id}>{post.title}</li>)}</ul>;
+}
+```
+
+If the page awaits `getPosts()` before returning this tree, that request cannot be streamed inside the boundary. Place boundaries around independently useful parts: a boundary that is too high can hold back the whole page, while a boundary around a tiny fragment can create a choppy reveal. A fallback is visible page content, so give it meaningful text. If an update needs an assistive-technology announcement, add the appropriate live-region semantics; that does not move keyboard focus or create interaction behavior. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#2.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for the focused keyboard, naming, and error model. A pending fallback also does not make a failed request successful; provide a separate error path.
+
 #### How does file-based routing work? / 文件系统路由如何工作？
 
 **Core answer / 核心回答：** The route tree follows files, but the conventions differ between routers. Pages Router uses files such as pages/about.js and pages/posts/[id].js. App Router uses route segments containing page.tsx and can add layout.tsx, loading.tsx, and error.tsx. / 路由树由文件结构决定，但两种路由器的约定不同。Pages Router 使用 pages/about.js、pages/posts/[id].js 等文件；App Router 使用包含 page.tsx 的路由段，并可加入 layout.tsx、loading.tsx 和 error.tsx。
@@ -4626,7 +5021,7 @@ Use framework endpoints for colocated, bounded server work such as webhooks or a
 
 **See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
-**Sources checked 2026-10-15:** [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
+**Sources checked 2026-10-15:** [React 19.3 versions and release](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
 ## 32. Performance Metrics and Analysis / 性能指标与分析
 
 ### Performance Metrics and Analysis / 性能指标与分析
@@ -5125,9 +5520,9 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 
 **Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
 
-**See also:** [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
+**See also:** [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup plus the generic server-state cache, mutation, concurrency, and Suspense lifecycle; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
 
-**Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
+**Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
 ## 36. Frontend Testing / 前端测试
 
 ### Frontend Testing / 前端测试

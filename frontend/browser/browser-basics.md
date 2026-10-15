@@ -78,6 +78,55 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 
 ---
 
+## How do URLs and same-document navigation work? / URL 与同文档导航如何工作？
+
+**Core answer / 核心回答：** `URL` parses and serializes a complete address; `URLSearchParams` reads and edits its query pairs. An anchor or `location.assign()` requests navigation to a URL: it normally loads another document, but a fragment-only navigation can remain in the current document. `history.pushState()` and `replaceState()` instead update the current document's session history and URL without loading another document. Those History API calls do not dispatch `popstate`; Back/Forward traversal does, so an app should read the current URL then and synchronize its displayed state. / `URL` 负责解析和序列化完整地址，`URLSearchParams` 读写查询参数。链接或 `location.assign()` 会请求导航到某个 URL：通常会加载新文档，但仅改变片段时可以留在当前文档。`history.pushState()` 和 `replaceState()` 则在当前文档内更新会话历史和 URL，不会加载新文档。它们本身不会触发 `popstate`；浏览器前进或后退遍历历史记录时才会触发，因此应用应在该事件中读取当前 URL 并同步界面。
+
+### Parse query state and choose the navigation operation
+
+- Start from `new URL(location.href)` rather than splitting a URL string by `?` or `&`. Read a single value with `searchParams.get(name)` and repeated values with `getAll(name)`. `set(name, value)` replaces existing pairs with that name; use `append()` when duplicates are intentional. Serializing through `url.search` or `url.href` applies URL encoding.
+- An anchor or `location.assign(url)` asks the browser to navigate to a URL and normally creates a history entry; `location.replace(url)` navigates while replacing the current entry. The browser may reuse a document for a same-document fragment navigation, so “navigation” does not always mean a new network request.
+- `pushState(state, "", url)` adds a same-document history entry; `replaceState(state, "", url)` edits the current one. The URL must remain same-origin. Neither method fetches that URL or emits `popstate`; update the UI directly after calling it. On Back/Forward traversal, handle `popstate` by deriving the view from `location` (and `event.state` if the app uses it).
+
+This makes filters and tabs linkable and restorable through Back/Forward. Treat query values as untrusted input, validate them against supported options, and avoid putting secrets in a URL.
+
+```html
+<label for="sort">Sort results</label>
+<select id="sort">
+  <option value="recent">Most recent</option>
+  <option value="oldest">Oldest first</option>
+</select>
+<p id="summary"></p>
+
+<script>
+const sortSelect = document.querySelector("#sort");
+const summary = document.querySelector("#summary");
+
+function syncFromUrl() {
+  const url = new URL(location.href);
+  const sort = url.searchParams.get("sort") === "oldest" ? "oldest" : "recent";
+  sortSelect.value = sort;
+  summary.textContent = sort === "oldest" ? "Oldest results first" : "Most recent results first";
+}
+
+sortSelect.addEventListener("change", () => {
+  const url = new URL(location.href);
+  url.searchParams.set("sort", sortSelect.value);
+  history.pushState(null, "", url.href);
+  syncFromUrl(); // pushState does not dispatch popstate
+});
+
+window.addEventListener("popstate", syncFromUrl);
+syncFromUrl();
+</script>
+```
+
+**See also:** [React Router / React 路由](../frameworks/react-basics.md) uses browser history for client-side routes; [Performance Metrics and Analysis / 性能指标与分析](../performance/performance-metrics-and-analysis.md) explains `DOMContentLoaded` and `load`; the [archived URL, location, and History reference](../../archive/front-end/0-1_Learning_Notes/Javascript/readme.md) retains the broader property and method catalog.
+
+**Sources checked 2026-10-15:** [WHATWG URL Standard](https://url.spec.whatwg.org/#urlsearchparams-class) (Living Standard updated 2026-10-07) and [WHATWG HTML Standard: History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface) (Living Standard updated 2026-10-14).
+
+---
+
 ## Why does a `<script>` tag block HTML parsing? What do `async` and `defer` change?
 
 **Headline (30s):** A parser-inserted classic script without `async`, `defer`, or another applicable scheduling rule can pause parsing while it is fetched and executed. For classic external scripts, `defer` preserves order and runs after parsing before `DOMContentLoaded`; `async` runs when ready without preserving order. Module scripts are deferred by default unless `async` is present. **中文：** classic `defer` 保序并在解析后执行；`async` 不保序；模块脚本默认延后执行。
