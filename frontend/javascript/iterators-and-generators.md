@@ -1,0 +1,196 @@
+## What's the iteration protocol, and why does it matter?
+
+**Headline (30s):** JavaScript defines two protocols — **iterable** and **iterator** — that any object can implement to participate in `for...of`, spread (`...`), destructuring, and `Array.from`. A generator is a function that implements both protocols automatically via `yield`. Understanding the protocol is the key to building custom data structures that "just work" with the language's iteration features.
+
+**Why interviewers ask this:** It's the mechanism behind `for...of`, spread syntax, async iteration, and tree/graph traversal patterns. A candidate who can implement a custom iterable shows they understand the language at the protocol level, not just as a collection of built-ins.
+
+---
+
+## Iterable and iterator protocols
+
+### Iterable
+
+An object is iterable if it has a `[Symbol.iterator]` method that returns an iterator. Built-in iterables: **Array, String, Map, Set, TypedArray, `arguments`, NodeList**. Plain objects are *not* iterable by default.
+
+### Iterator
+
+An iterator is any object with a `next()` method that returns `{ value, done }`:
+
+- `value` — the next item.
+- `done` — `true` when the sequence is exhausted; `false` otherwise.
+
+```javascript
+const arr = [10, 20, 30];
+const it = arr[Symbol.iterator]();
+
+it.next(); // { value: 10, done: false }
+it.next(); // { value: 20, done: false }
+it.next(); // { value: 30, done: false }
+it.next(); // { value: undefined, done: true }
+```
+
+### Building a custom iterable
+
+```javascript
+class Range {
+  constructor(start, end) {
+    this.start = start;
+    this.end = end;
+  }
+
+  [Symbol.iterator]() {
+    let current = this.start;
+    const end = this.end;
+    return {
+      next() {
+        if (current <= end) {
+          return { value: current++, done: false };
+        }
+        return { value: undefined, done: true };
+      }
+    };
+  }
+}
+
+for (const n of new Range(1, 5)) console.log(n); // 1 2 3 4 5
+[...new Range(3, 6)];                             // [3, 4, 5, 6]
+```
+
+Once an object implements `[Symbol.iterator]`, *all* iteration features work — `for...of`, spread, destructuring, `Array.from`, `Map` / `Set` construction. That's the payoff.
+
+**Gotcha — iterators are "one-shot" by default:** Once `done: true`, most iterators can't be restarted. Always re-call `[Symbol.iterator]()` for a fresh iterator. Built-in arrays follow this pattern: `const it = arr[Symbol.iterator](); it.next(); // later: can't restart it`.
+
+---
+
+## Generators — iterators with cleaner syntax
+
+**Headline (30s):** A generator function (`function*`) returns a generator object — an iterator that's also iterable. Inside the function, `yield` pauses execution and emits a value; the next call to `.next()` resumes from the paused point. The engine automatically manages all the state that a hand-written iterator would have to track manually.
+
+### Declaration and basic use
+
+```javascript
+function* countdown(n) {
+  while (n > 0) {
+    yield n;
+    n--;
+  }
+}
+
+const gen = countdown(3);
+gen.next(); // { value: 3, done: false }
+gen.next(); // { value: 2, done: false }
+gen.next(); // { value: 1, done: false }
+gen.next(); // { value: undefined, done: true }
+
+for (const v of countdown(3)) console.log(v); // 3 2 1
+```
+
+### Passing values *into* a generator
+
+The argument to `.next(value)` becomes the result of the paused `yield` expression:
+
+```javascript
+function* conversation() {
+  const name = yield 'What is your name?';
+  const hobby = yield `Hello, ${name}! What is your hobby?`;
+  return `${name} likes ${hobby}`;
+}
+
+const chat = conversation();
+chat.next().value;         // 'What is your name?'
+chat.next('Alice').value;  // 'Hello, Alice! What is your hobby?'
+chat.next('coding').value; // 'Alice likes coding'
+```
+
+**Mental model:** `yield x` is a two-way door — it emits `x` out, then waits until the next `.next(y)` call sends `y` back in.
+
+### `yield*` — delegating to another iterable
+
+`yield*` delegates to another iterable or generator, "inlining" all its values:
+
+```javascript
+function* flatten(arr) {
+  for (const item of arr) {
+    if (Array.isArray(item)) {
+      yield* flatten(item);   // recursive delegation
+    } else {
+      yield item;
+    }
+  }
+}
+
+[...flatten([1, [2, [3, 4]], 5])]; // [1, 2, 3, 4, 5]
+```
+
+---
+
+## Practical use cases
+
+### Lazy evaluation of infinite sequences
+
+Generators produce values on demand — perfect for sequences too large (or infinite) to store:
+
+```javascript
+function* fibonacci() {
+  let a = 0, b = 1;
+  while (true) {
+    yield a;
+    [a, b] = [b, a + b];
+  }
+}
+
+const fib = fibonacci();
+fib.next().value; // 0
+fib.next().value; // 1
+fib.next().value; // 1
+fib.next().value; // 2
+```
+
+Nothing is computed until you ask. Take as many values as you need and stop — no wasted work.
+
+### Unique ID factory
+
+```javascript
+function* idGenerator(prefix = 'id') {
+  let n = 0;
+  while (true) {
+    yield `${prefix}_${n++}`;
+  }
+}
+
+const gen = idGenerator('user');
+gen.next().value; // 'user_0'
+gen.next().value; // 'user_1'
+```
+
+Cleaner than keeping a mutable counter in module scope.
+
+### Historical note: async flow control
+
+Before `async/await`, generators + a promise runner (like the `co` library) gave you synchronous-looking async code:
+
+```javascript
+function* fetchUser(id) {
+  const response = yield fetch(`/api/users/${id}`);
+  const user = yield response.json();
+  return user;
+}
+```
+
+A runner would call `.next()` with each resolved value. Today, `async/await` does exactly this under the hood and is what you should use in production — but the pattern is worth recognizing in legacy code.
+
+---
+
+## Generators vs. hand-written iterators
+
+| Feature | Custom iterator | Generator |
+|---|---|---|
+| Syntax | Manual `next()` method | `function*` with `yield` |
+| State management | Manual (closure variables) | Automatic (execution paused/resumed) |
+| Code complexity | Higher for non-trivial sequences | Simpler and more readable |
+| Bidirectional data | Not built-in | `next(value)` passes data in |
+| Early termination | Manual `return()` method | Built-in `return()` and `throw()` |
+
+**Reach for generators when:** the sequence has interesting control flow (branching, recursion via `yield*`, infinite streams). Use a hand-written iterator only when you need to precisely control memory layout or can't use generator syntax.
+
+**See also:** [`3.5 Array in JS`](./arrays.md) for `for...of` vs `for...in` semantics, [`4.3 Asynchronous JavaScript`](./asynchronous-javascript.md) for `for await...of` and async iteration.

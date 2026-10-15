@@ -1,0 +1,488 @@
+# How do you clear floats, and why do you need to?
+
+**Headline (30s):** Floated children are removed from the normal flow, so their parent collapses to zero height. You "clear" the float by either (a) making the parent a Block Formatting Context — `display: flow-root` or `overflow: hidden` — so it contains its floats, or (b) adding a clearing pseudo-element that forces the parent to extend past them.
+
+Floating elements removes them from the normal flow of a document, causing parent containers to collapse if not properly handled. It's crucial for front-end developers to understand the methods available to manage this behavior effectively.
+
+## Methods of clearing floats — pure CSS
+
+### Pseudo-element method (legacy clearfix)
+
+Use a CSS pseudo-element so you don't need extra markup.
+
+```css
+.parent::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+```
+
+**Pros:** Keeps HTML clean. Well supported.
+**Cons:** One more indirection than `flow-root`; not needed in modern code.
+
+### Block Formatting Context — the modern way
+
+Set a BFC-triggering property on the parent so it contains its floats.
+
+```css
+.parent {
+  display: flow-root; /* clean, no side effects */
+}
+
+/* Legacy alternative */
+.parent {
+  overflow: hidden;
+}
+```
+
+**Pros:** One line, no pseudo-element, clean semantics.
+**Cons:** `overflow: hidden` clips content that extends past the parent — use `flow-root` when clipping isn't wanted.
+
+### Fixed dimensions
+
+Straightforward but inflexible.
+
+```css
+.parent {
+  width: 300px;
+  height: 200px;
+}
+```
+
+**Pros:** Trivial, universal support.
+**Cons:** Breaks if child content grows — any overflow is your problem.
+
+## Clearing element — extra HTML
+
+The legacy fallback: insert a clearing `<div>` at the end.
+
+```html
+<div class="parent">
+  <div class="child">Content</div>
+  <div class="child">Content</div>
+  <div class="clearfix"></div>
+</div>
+```
+
+```css
+.clearfix {
+  clear: both;
+}
+```
+
+**Pros:** Works everywhere.
+**Cons:** Extra non-semantic markup. Don't use in new code.
+
+**Gotcha — why floats even need clearing:** Floats were designed for wrapping text around images, not for page layout. They leave the normal flow, so height collapses in their parent. Flexbox and Grid solve layout problems directly and don't have this issue — float-based layouts are legacy.
+
+**See also:** [`2.2 Box Model and BFC`](./box-model-and-bfc.md) on how BFCs contain floats, [`2.3 Flex & Grid Layout`](./flex-and-grid-layout.md) for modern alternatives.
+
+---
+
+# How do you build a three-column layout with fixed sides and a fluid middle?
+
+**Headline (30s):** Six valid approaches, ranked modern → legacy: Flexbox (`flex-grow: 1` on the middle), Grid (`grid-template-columns: 100px 1fr 100px`), absolute positioning, table-cell, float + `calc()`, and inline-block + `calc()`. For new code, use Grid or Flex. Know the others so you can read legacy CSS.
+
+The layout includes two fixed-width divs on the sides (`left` and `right`) and a dynamically adjusting center div (`center`).
+
+## HTML structure
+
+```html
+<div class="parent">
+  <div class="left">Left</div>
+  <div class="center">Center</div>
+  <div class="right">Right</div>
+</div>
+```
+
+## CSS resets
+
+Consistent styling across browsers begins with CSS resets:
+
+```css
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+div {
+  height: 100px;  /* visualization only */
+}
+
+.parent {
+  width: 100%;
+}
+
+.left, .right {
+  width: 100px;
+}
+
+.left   { background-color: lightblue; }
+.center { background-color: lightgreen; }
+```
+
+## Float-based layout
+
+```css
+.left  { float: left; }
+.right { float: right; }
+
+.center {
+  width: calc(100% - 200px);
+  margin: 0 100px;
+}
+```
+
+Or with a clearing BFC:
+
+```css
+.parent { overflow: hidden; } /* creates a BFC */
+
+.left   { float: left; }
+.right  { float: right; }
+.center { float: left; width: calc(100% - 100px); }
+```
+
+**Pros:** Broad compatibility with older browsers.
+**Cons:** Needs `clear` fixes; brittle.
+
+## Table display layout
+
+```css
+.parent { display: table; }
+.left, .center, .right { display: table-cell; }
+```
+
+**Pros:** Stable and predictable rendering.
+**Cons:** Semantically wrong for non-tabular data.
+
+## Absolute positioning layout
+
+```css
+.parent { position: relative; }
+
+.left  { position: absolute; left: 0; }
+.right { position: absolute; right: 0; }
+
+.center {
+  margin: 0 100px;
+  width: calc(100% - 200px);
+}
+```
+
+**Pros:** Complete positional control.
+**Cons:** Elements leave the normal flow; parent can collapse; responsiveness is harder.
+
+## Flexbox layout
+
+```css
+.parent { display: flex; }
+.center { flex-grow: 1; }
+```
+
+**Pros:** Modern, responsive, minimal code.
+**Cons:** Only a concern for very old-browser support.
+
+## Grid layout
+
+```css
+.parent {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+}
+```
+
+**Pros:** Cleanest, intention-revealing.
+**Cons:** Not supported in truly ancient browsers.
+
+**Gotcha — `calc(100% - 200px)` + `box-sizing: content-box`:** If `.parent` has padding and you're using content-box, `100%` doesn't mean what you think. Always normalize with `box-sizing: border-box`.
+
+**See also:** [`2.3 Flex & Grid Layout`](./flex-and-grid-layout.md) for the property reference.
+
+---
+
+# How do you build a two-column layout with one fixed and one responsive side?
+
+**Headline (30s):** Same ladder as the three-column layout but simpler. Flexbox (`flex-grow: 1` on the fluid side) or Grid (`grid-template-columns: 200px 1fr`) for modern code. Float, absolute positioning, and inline-block are legacy fallbacks.
+
+```html
+<div class="container">
+  <div class="left-side">Fixed width</div>
+  <div class="right-side">Responsive width</div>
+</div>
+```
+
+```css
+.container {
+  width: 100%;
+  height: 200px; /* visualization */
+}
+
+.left-side  { width: 200px; background-color: lightblue; }
+.right-side { background-color: lightgreen; }
+```
+
+## Strict responsive solutions (reflow with viewport)
+
+**Flexbox:**
+
+```css
+.container  { display: flex; }
+.right-side { flex-grow: 1; }
+```
+
+**Grid:**
+
+```css
+.container {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+}
+```
+
+**Table:**
+
+```css
+.container  { display: table; width: 100%; }
+.left-side,
+.right-side { display: table-cell; }
+```
+
+## Non-strict solutions (need `calc` or manual math)
+
+**Float:**
+
+```css
+.left-side { float: left; }
+.right-side {
+  margin-left: 200px;
+  width: calc(100% - 200px);
+}
+```
+
+Or with both floated:
+
+```css
+.container  { overflow: hidden; }
+.left-side  { float: left; width: 200px; }
+.right-side { float: left; width: calc(100% - 200px); }
+```
+
+**Absolute positioning:**
+
+```css
+.container  { position: relative; }
+.left-side  { position: absolute; left: 0; }
+.right-side {
+  margin-left: 200px;
+  width: calc(100% - 200px);
+}
+```
+
+**Inline-block:**
+
+```css
+.container  { font-size: 0; /* eat whitespace between inline-blocks */ }
+.left-side,
+.right-side { display: inline-block; vertical-align: top; }
+.right-side { width: calc(100% - 200px); }
+```
+
+**Gotcha — the whitespace between inline-blocks:** Browsers render whitespace (including newlines) between inline-block elements as a space character, which shifts your layout. `font-size: 0` on the parent is the classic workaround. Flexbox and Grid have no such quirk.
+
+---
+
+# How do you center an element in CSS?
+
+**Headline (30s):** Flexbox or Grid for modern code (`place-items: center` / `justify-content + align-items: center`). If you need to support ancient browsers, fall back to absolute + `transform: translate(-50%, -50%)` (works for unknown dimensions) or absolute + negative margins (fixed dimensions only).
+
+```html
+<div class="container">
+  <div class="center-fixed"></div>
+  <div class="center-auto"></div>
+  <div class="center-dynamic"></div>
+  <div class="center-flex"></div>
+  <div class="center-grid"></div>
+  <div class="center-table"></div>
+</div>
+
+<style>
+  .container {
+    width: 300px;
+    height: 300px;
+    border: 1px solid black;
+  }
+</style>
+```
+
+## Centering with dynamic dimensions (element size unknown)
+
+**Flexbox (preferred):**
+
+```css
+.center-flex {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+```
+
+**CSS Grid:**
+
+```css
+.center-grid {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+}
+```
+
+**Absolute + transform:**
+
+```css
+.container { position: relative; }
+
+.center-dynamic {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+```
+
+**Table-cell:**
+
+```css
+.container   { display: table; }
+.center-table {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+```
+
+## Centering with fixed dimensions
+
+**Absolute + negative margin:**
+
+```css
+.container { position: relative; }
+
+.center-fixed {
+  position: absolute;
+  width: 200px;
+  height: 100px;
+  top: 50%;
+  left: 50%;
+  margin-top: -50px;   /* half of height */
+  margin-left: -100px; /* half of width */
+}
+```
+
+**Absolute + auto margins:**
+
+```css
+.container { position: relative; }
+
+.center-auto {
+  position: absolute;
+  width: 200px;
+  height: 100px;
+  top: 0; right: 0; bottom: 0; left: 0;
+  margin: auto;
+}
+```
+
+Setting `top/right/bottom/left: 0` expands the element's margin box to fill the container; `margin: auto` then distributes the leftover space evenly on all sides because the element has fixed dimensions.
+
+**Gotcha — `transform: translate(-50%, -50%)` on a percentage parent:** `transform` uses the element's *own* size, so this centers correctly even when the element's size is unknown. The negative-margin trick only works if you know the exact dimensions ahead of time.
+
+---
+
+# How do you draw a triangle with pure CSS?
+
+**Headline (30s):** Give a zero-size element thick borders, make three of them transparent, and color the fourth. The "visible" border forms the triangle. No image, no HTTP request, trivially recolorable.
+
+CSS-based triangles improve loading times and reduce bandwidth by eliminating an HTTP request. Scalable, easily recolorable.
+
+```html
+<div class="triangle"></div>
+```
+
+```css
+.triangle {
+  width: 0;
+  height: 0;
+  border: 10px solid transparent;
+  border-left: 10px solid red; /* points right */
+}
+```
+
+**How it works:**
+
+- A 20×20 "element" made of borders only (content is zero size).
+- Four borders meet at 45° diagonals. Three transparent borders + one colored = a triangle pointing in the direction opposite the colored side.
+
+**Customization:**
+
+- `border-bottom` solid → triangle points **up**.
+- `border-top` solid → triangle points **down**.
+- `border-left` solid → triangle points **right**.
+- `border-right` solid → triangle points **left**.
+
+**Gotcha — modern alternative:** `clip-path: polygon(50% 0, 100% 100%, 0 100%)` is often cleaner when the triangle size is dynamic. Use borders for tiny fixed-size arrow indicators, `clip-path` for scalable shapes.
+
+---
+
+# How do you render a crisp 1px line on Retina / high-DPR screens?
+
+**Headline (30s):** On a 2x DPR screen, 1 CSS pixel maps to 2 physical pixels, so a `border: 1px` line appears "chunky". The classic fix is a pseudo-element at 100% of the container width + `transform: scaleY(0.5)`, which lets you render a half-CSS-pixel (i.e. one physical pixel) line without running into the browser's handling of fractional px values.
+
+## Using a pseudo-element + transform
+
+```css
+.box::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: #d9d9d9;
+  transform: scaleY(0.5);
+  transform-origin: 0 0;
+}
+```
+
+## Handling borders with `border-radius`
+
+When the element has `border-radius`, borders and scales interact awkwardly. Use `box-shadow` instead:
+
+```css
+.box {
+  box-shadow: 0 0 0 0.5px #d9d9d9;
+}
+```
+
+`box-shadow` at fractional values is handled more consistently across modern browsers than a fractional `border-width`.
+
+**Gotcha — `1px solid` on devices with variable DPR:** A single line might look 1px on a laptop (DPR 1), 2px on a 2x phone, or 3px on a 3x phone. If visual consistency matters, feature-detect DPR with `window.devicePixelRatio` and adjust — or use SVG for scale-invariant strokes.
+
+---
+
+# How do you prevent the 300ms tap delay on mobile?
+
+**Headline (30s):** Modern browsers disable the 300ms double-tap-to-zoom delay automatically once they see `<meta name="viewport" content="width=device-width, initial-scale=1">`. That's usually all you need. Libraries like FastClick are legacy — don't add them in new code.
+
+On mobile web apps, browsers historically waited ~300ms after a tap to check whether a second tap was coming (zoom gesture). This delay used to be worked around with libraries like FastClick. Modern browsers detect responsive intent from the viewport meta tag and skip the delay.
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1">
+```
+
+**Why this works:** A site that declares `width=device-width` is telling the browser "I'm designed for mobile; don't pinch-zoom me." Without that signal, the browser assumes it might need the zoom gesture and waits to see if a second tap is coming.
+
+**Gotcha — FastClick is obsolete and harmful:** On modern browsers, FastClick can actually *cause* double-firing of events because it dispatches synthetic clicks on top of native ones. Remove it from new projects.

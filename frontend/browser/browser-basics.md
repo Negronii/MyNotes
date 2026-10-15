@@ -1,0 +1,136 @@
+Two interview questions this note prepares you for:
+
+1. **What are the major components of a browser, and what do they do?**
+2. **What happens when you type a URL and press Enter?** — the single most-asked frontend interview question.
+
+Along the way it covers the follow-ups most candidates hit next: why `<script>` blocks HTML parsing, reflow vs. paint vs. composite, and how to optimize the critical rendering path.
+
+---
+
+## What are the major components of a modern browser?
+
+**Headline (30s):** A browser is four cooperating subsystems: a **rendering engine** (parses HTML/CSS into a render tree and paints pixels), a **JavaScript engine** (executes JS, manages async with the event loop), a **networking layer** (fetches resources, enforces TLS/CORS/cache), and **storage** (cookies, localStorage, sessionStorage, IndexedDB, the Cache API for service workers).
+
+**Why it's asked:** The interviewer wants to hear that you have a mental model of where work happens. Candidates who can't separate "rendering" from "JS execution" tend to write code that surprises them later (layout thrashing, stale caches, blocking scripts).
+
+### Rendering engine
+
+- **Engines**: Blink (Chrome, Edge), WebKit (Safari), Gecko (Firefox).
+- **Critical tasks**:
+  - Parse HTML/CSS → DOM / CSSOM (reentrant parsing handles malformed HTML).
+  - Combine DOM + CSSOM into the **render tree**, excluding non-visual nodes (`<script>`, `<meta>`, `display: none`).
+  - **Layout** (compute position/size) → **paint** (fill pixels) → **composite** (layer the painted parts).
+- Illustrative: `display: none` removes an element from the render tree; `visibility: hidden` keeps it but hides the pixels.
+
+### JavaScript engine
+
+- **Runtimes**: V8 (Chrome, Node), SpiderMonkey (Firefox), JavaScriptCore (Safari).
+- **Key pieces**:
+  - **JIT compilation** — JS compiled to machine code at runtime.
+  - **Event loop + callback queue** — schedules async work (`setTimeout`, promises, I/O). See [`7.1 Event Loop`](../runtime/event-loop.md).
+  - **Memory heap + call stack** — object allocation and function execution.
+
+### Networking layer
+
+- **HTTP/2 multiplexing** — parallel requests over one TCP connection.
+- **HSTS** forces HTTPS; **CORS** preflights validate cross-origin requests.
+- **Cache directives** — `Cache-Control`, `ETag`. See [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
+
+### Storage
+
+- **cookies** (sent on every request), **localStorage** (persistent, ~5MB), **sessionStorage** (per-tab, cleared on tab close), **IndexedDB** (transactional NoSQL for large data), **Cache API** via service workers (offline-first). See [`5.2 Browser Storage and Communication`](../browser-apis/browser-storage-and-communication.md).
+
+**See also:** [`7.1 Event Loop`](../runtime/event-loop.md), [`5.2 Browser Storage and Communication`](../browser-apis/browser-storage-and-communication.md), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
+
+---
+
+## What happens when you type a URL and press Enter?
+
+**Headline (30s):** The browser resolves the domain via DNS, opens a TCP connection (plus TLS for HTTPS), sends an HTTP request, and streams the response back. As HTML arrives it builds the DOM; as CSS arrives it builds the CSSOM. The two merge into a render tree, which is laid out, painted into layers, and composited to the screen. JavaScript execution and network fetches happen throughout.
+
+**Why it's asked:** This is the "show me your whole mental model in one question" probe. Interviewers want to hear the three big phases (fetch → parse → render) and at least one intelligent follow-up-worthy detail per phase.
+
+### Phase 1 — Resource fetching
+
+- **DNS lookup** — browser cache → OS cache → ISP's recursive resolver. Preload with `<link rel="dns-prefetch">`.
+- **TCP handshake** — 3-way (SYN, SYN-ACK, ACK). HTTPS adds a TLS handshake (client/server hello, key exchange).
+- **HTTP/3** uses **QUIC** over UDP to eliminate head-of-line blocking.
+
+### Phase 2 — Parsing and the critical rendering path
+
+1. **DOM construction**: bytes → characters → tokens → nodes → DOM tree.
+2. **CSSOM construction**: CSS rules are cascaded into a CSSOM tree for style computation.
+3. **Render tree**: DOM + CSSOM, minus non-rendered nodes.
+
+**Gotcha — the render-blocking trap:** CSS blocks rendering (the browser won't paint until the CSSOM is ready, or you get FOUC). A synchronous `<script>` blocks **both** parsing and rendering, because the script could `document.write` or mutate the DOM before more HTML is parsed.
+
+### Phase 3 — Layout, paint, composite
+
+- **Layout (reflow)** — compute exact position/size (`%` → pixels). Triggered by resize, font changes, DOM mutation, and *reading* geometry (like `offsetHeight`) after a write.
+- **Paint** — produce paint records for backgrounds, text, borders, shadows.
+- **Composite** — merge layers in the correct stacking order. **GPU acceleration** kicks in for layers with `transform`, `opacity`, or `will-change`.
+
+**Follow-up — "Is it fetch, then parse, then render, strictly in order?"** No. The browser streams: it starts parsing before all HTML arrives, kicks off speculative fetches for `<img>`/`<script>`/`<link>` it sees early, and paints incrementally. The three phases overlap in time.
+
+**See also:** [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
+
+---
+
+## Why does a `<script>` tag block HTML parsing? What do `async` and `defer` change?
+
+**Headline (30s):** A plain `<script>` pauses parsing because the script might call `document.write` or mutate the DOM the parser is still building. `defer` keeps the script in document order but waits until parsing is done (runs before `DOMContentLoaded`). `async` runs as soon as the script is downloaded, regardless of parser state or document order.
+
+**How it works:**
+
+| Attribute | Downloaded | Executed | Blocks parser? | Order preserved? |
+|---|---|---|---|---|
+| none (default) | inline with parser | immediately | yes | yes |
+| `defer` | in parallel | after parsing | no | yes |
+| `async` | in parallel | when ready | no | **no** |
+
+**Gotcha — "async is always faster":** Not for scripts that depend on each other. `async` runs in download-completion order, so a library and its consumer can execute in the wrong sequence. Use `defer` when order matters.
+
+**See also:** [`2.4 Browser - HTML & CSS part`](../html-css/browser-html-and-css.md) for placement strategy and more `<script>` gotchas.
+
+---
+
+## Reflow vs. repaint vs. composite — what triggers each, and which is cheapest?
+
+**Headline (30s):** Changing geometry (width, position, DOM insertion) causes **reflow** → repaint → composite. Changing non-geometric visuals (color, background) skips reflow but still repaints. Changing **transform** or **opacity** only touches compositing and can run on the GPU — the cheapest path.
+
+**Cost ladder (cheap → expensive):**
+
+1. **Composite only** — `transform`, `opacity` on a composited layer.
+2. **Paint + composite** — `background-color`, `visibility`, `color`.
+3. **Layout + paint + composite** — `width`, `height`, `top`, `left`, adding/removing DOM, font-size changes.
+
+**Gotcha — layout thrashing:** Reading a geometry property (`offsetHeight`, `getBoundingClientRect`) right after a write forces a **synchronous** layout — the browser must flush pending style/layout work before it can answer. In a loop, this goes quadratic. Batch your reads before your writes, or use FastDOM / `requestAnimationFrame`.
+
+```javascript
+// bad — 100 synchronous layouts
+for (const el of items) {
+  el.style.width = el.offsetWidth + 10 + 'px';
+}
+
+// good — 1 layout, 100 writes
+const widths = items.map(el => el.offsetWidth);
+items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
+```
+
+**See also:** [`2.4 Browser - HTML & CSS part`](../html-css/browser-html-and-css.md) for deeper triggers and optimization tactics, [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md).
+
+---
+
+## How do you optimize the critical rendering path?
+
+**Headline (30s):** Three levers: cut render-blocking resources (inline critical CSS, `defer`/`async` JS), start network work earlier (`preconnect`, `dns-prefetch`, lazy-load offscreen images), and keep runtime cheap (debounce scroll handlers, `requestAnimationFrame` for animations, avoid layout thrashing).
+
+**Tactics:**
+
+- **Render-blocking mitigation** — inline critical CSS; defer non-critical JS; use `content-visibility: auto` to skip offscreen rendering.
+- **Network** — `<link rel="preconnect">` for early TCP/TLS; `loading="lazy"` on images; modern formats (WebP, AVIF); HTTP/2 or HTTP/3.
+- **Runtime** — debounce scroll/resize handlers; use `requestAnimationFrame` for visual updates; use `transform`/`opacity` over `top`/`left`.
+- **SSR + hydration** — serve HTML first, let client JS attach listeners on top (as in React hydration).
+- **Speculative parsing** — modern browsers pre-scan HTML for resources to start downloads even while a script is blocking the main parser. You don't call this directly, but it's worth knowing the name.
+
+**See also:** [`11.1 Performance Metrics and Analysis`](../performance/performance-metrics-and-analysis.md), [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md), [`5.3 Image Lazy Loading`](../browser-apis/image-lazy-loading.md).

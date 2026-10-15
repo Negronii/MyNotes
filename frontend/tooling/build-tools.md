@@ -1,0 +1,137 @@
+Reach for this when you need a quick reference for Webpack's core concepts, loaders, plugins, source maps, and adjacent tooling like Corepack. For ESM vs. CommonJS and dynamic imports, see [`3.8 Modern JavaScript Features`](../javascript/modern-javascript-features.md).
+
+## Webpack — core concepts
+
+Webpack is a static module bundler. It starts at an entry file, walks the import graph, and produces one or more optimized bundles the browser can load.
+
+| Concept | What it is |
+|---|---|
+| **Entry** | Starting file(s) for dependency resolution (e.g., `./src/index.js`) |
+| **Output** | Where bundles are written and how they're named |
+| **Loaders** | Transform non-JS files (CSS, TS, images) into modules Webpack can ingest |
+| **Plugins** | Hook into the build lifecycle (optimization, asset emission, env injection) |
+| **Mode** | `development` (fast, readable) or `production` (minified, tree-shaken) |
+
+## The build pipeline
+
+1. **Merge config** — combine CLI flags with config file.
+2. **Initialize compiler** — create the compiler, load plugins, call each plugin's `apply`.
+3. **Resolve entries** — start from entry points, build a dependency graph.
+4. **Apply loaders** — transform each source file through its matching loader chain.
+5. **Emit output** — combine modules, optimize (minification, code splitting), write files.
+
+---
+
+## Loaders
+
+Loaders run **right-to-left** — the last entry in `use` executes first, its output feeds the previous one, and so on.
+
+```javascript
+module: {
+  rules: [
+    { test: /\.tsx?$/, use: ['babel-loader', 'ts-loader'] },
+    { test: /\.css$/,  use: ['style-loader', 'css-loader'] },
+    { test: /\.scss$/, use: ['style-loader', 'css-loader', 'sass-loader'] }
+  ]
+}
+```
+
+For `.tsx`: `ts-loader` compiles TS → ES, then `babel-loader` transpiles ES → target ES.
+
+### Common loaders
+
+| File type | Loaders |
+|---|---|
+| JS / TS | `babel-loader`, `ts-loader` |
+| CSS | `css-loader`, `style-loader`, `postcss-loader`, `sass-loader` |
+| Assets | `file-loader`, `url-loader`, `image-webpack-loader` |
+
+### Writing a custom loader
+
+A loader is just a function `(source) => transformedSource`:
+
+```javascript
+// loaders/strip-comments-loader.js
+module.exports = function (source) {
+  return source.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+};
+```
+
+Register it via `resolveLoader.modules` so Webpack can find it from a local directory.
+
+---
+
+## Plugins
+
+Plugins hook into `compiler.hooks` — events fired at specific lifecycle points (`beforeCompile`, `emit`, `done`, etc.).
+
+### Common plugins
+
+| Plugin | What it does |
+|---|---|
+| `HtmlWebpackPlugin` | Generates HTML with injected `<script>` / `<link>` tags |
+| `MiniCssExtractPlugin` | Extracts CSS into separate files (replaces `style-loader` in production) |
+| `DefinePlugin` | Compile-time globals (e.g., `process.env.NODE_ENV`) |
+| `TerserWebpackPlugin` | Minifies JS output |
+| `CleanWebpackPlugin` | Removes old build artifacts before each build |
+| `HotModuleReplacementPlugin` | Enables HMR during development |
+
+### Writing a custom plugin
+
+A plugin is a class with an `apply(compiler)` method:
+
+```javascript
+class BuildStatsPlugin {
+  apply(compiler) {
+    compiler.hooks.done.tapAsync('BuildStats', (stats, callback) => {
+      const json = JSON.stringify(stats.toJson({ modules: false }), null, 2);
+      require('fs').writeFileSync('build-stats.json', json);
+      callback();
+    });
+  }
+}
+```
+
+Use `tap` for synchronous hooks, `tapAsync` / `tapPromise` for async ones.
+
+---
+
+## Source maps
+
+Source maps map minified/bundled code back to your original source for debugging. Controlled by Webpack's `devtool` option.
+
+| `devtool` | Rebuild speed | Quality | Use case |
+|---|---|---|---|
+| `eval` | Fastest | Generated code | Dev (fast iteration) |
+| `eval-source-map` | Slow | Original source | Dev (accurate) |
+| `cheap-source-map` | Medium | Lines only | CI / staging |
+| `source-map` | Slowest | Full quality | Production + error tracking |
+
+**Best practices:**
+
+- **Development** — `eval-source-map` gives accurate stack traces with tolerable rebuild time.
+- **Production** — emit `source-map` files, upload to your error tracker (Sentry, Bugsnag), but don't serve them publicly in closed-source projects.
+
+---
+
+## Corepack (Node 16.10+)
+
+Built-in Node.js tool for pinning the package manager version per project.
+
+```bash
+corepack enable                              # install shims for yarn/pnpm
+corepack prepare pnpm@latest --activate      # pin a specific version
+```
+
+With `"packageManager": "pnpm@8.15.0"` in `package.json`, any team member running `pnpm install` automatically gets that exact version — no more "works on my machine" from manager-version drift.
+
+---
+
+## When to reach for which
+
+- **Webpack** — full-featured, everything pluggable, the default for large legacy codebases.
+- **Vite** — ES modules + esbuild for development, Rollup for production. Dramatically faster dev server. First choice for new projects.
+- **Rollup** — optimized for libraries (cleanest output), smaller ecosystem.
+- **esbuild / swc / Turbopack** — native-speed bundlers / transpilers, still maturing plugin ecosystems.
+
+**See also:** [`3.8 Modern JavaScript Features`](../javascript/modern-javascript-features.md) for ES modules and dynamic `import()`, [`11.1 Performance Metrics and Analysis`](../performance/performance-metrics-and-analysis.md) for bundle-size and code-splitting strategy.

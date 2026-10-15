@@ -1,0 +1,100 @@
+**Reach for this when** you need a quick reference for how most modern engineering teams organize work — Agile principles, the Scrum framework (roles, events, artifacts), and the common failure modes.
+
+**Headline:** **Agile** is a philosophy — iterative delivery, continuous feedback, adaptability. **Scrum** is the most widely used framework for practicing Agile, with defined **roles** (Product Owner, Scrum Master, Dev Team), **events** (Sprint, Planning, Standup, Review, Retro), and **artifacts** (Product Backlog, Sprint Backlog, Increment). Interviewers usually want to know you understand both the theory and the real-world tradeoffs.
+
+## Agile principles
+
+From the Agile Manifesto:
+
+- **Working software** over comprehensive documentation.
+- **Customer collaboration** over contract negotiation.
+- **Responding to change** over following a rigid plan.
+- **Individuals and interactions** over processes and tools.
+
+### In practice
+
+- Deliver working software in short iterations (1–4 weeks).
+- Welcome changing requirements, even late in development.
+- Business and development teams work together daily.
+- Build projects around motivated individuals; trust them to deliver.
+- Maintain a sustainable development pace.
+- Regularly reflect and adjust processes.
+
+### Benefits
+
+- **Flexibility** — adapt to changing requirements without derailing the project.
+- **Quality** — frequent testing and integration catch issues early.
+- **Visibility** — regular demos and retrospectives keep stakeholders informed.
+- **Reduced risk** — short iterations surface problems quickly.
+
+## Scrum framework
+
+Scrum is the most widely used Agile framework. It defines roles, events, and artifacts for organizing iterative work.
+
+### Roles
+
+#### Product Owner
+
+- Defines and prioritizes the **product backlog**.
+- Represents stakeholder interests.
+- Decides **what** to build and in what order.
+
+#### Scrum Master
+
+- Facilitates the Scrum process; removes impediments.
+- Coaches the team on Scrum practices.
+- Shields the team from external interruptions.
+- **Does not** manage the team — the team is self-organizing.
+
+#### Development Team
+
+- Cross-functional group that designs, builds, and tests the product.
+- Typically 3–9 people.
+- Self-organizing: the team decides **how** to accomplish sprint goals.
+
+### Events
+
+#### Sprint
+
+A fixed time-box (usually 2 weeks) during which a potentially shippable increment is created.
+
+#### Sprint Planning
+
+The team selects backlog items for the sprint and breaks them into tasks. Outcome: a sprint goal + a sprint backlog.
+
+#### Daily Standup
+
+A 15-minute daily meeting where each member answers:
+
+1. What did I do yesterday?
+2. What will I do today?
+3. Are there any blockers?
+
+#### Sprint Review
+
+End-of-sprint demo to stakeholders. Gather feedback and update the product backlog.
+
+#### Sprint Retrospective
+
+The team reflects on the sprint process:
+
+- What went well?
+- What could be improved?
+- What actions will we take?
+
+### Artifacts
+
+- **Product Backlog** — ordered list of everything needed in the product.
+- **Sprint Backlog** — items selected for the current sprint + the delivery plan.
+- **Increment** — the sum of completed backlog items, in a usable state.
+
+## Common challenges
+
+- **Scope creep** — adding items mid-sprint undermines the sprint commitment. Use the backlog for new requests; slot into future sprints.
+- **Resistance to change** — teams used to waterfall may struggle with iterative planning. Start with pilot teams and demonstrate results.
+- **Skipping retrospectives** — without reflection, the same problems recur. Retrospectives are **not optional**.
+- **"Status-report standups"** — standups that become PM status updates defeat the purpose. Keep the "blockers" slot prominent.
+
+**Gotcha — Scrum isn't a silver bullet.** It works best for teams building iterative products with changing requirements. For heavily regulated work (e.g., hardware, medical devices) or teams with fixed requirements, waterfall or hybrid models may still fit. Interviewers appreciate candidates who understand *when* Agile helps, not just how to recite the ceremonies.
+
+**See also:** [`14.1 Interview Tips`](../career/interview-preparation.md) for how to discuss Agile experience in interviews.

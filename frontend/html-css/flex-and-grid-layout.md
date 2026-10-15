@@ -1,0 +1,129 @@
+Reach for this when you need to remember the property names and what each one does. For "how should I approach this layout?" style interview answers, the patterns live in [`2.6 CSS Interview Questions`](./css-interview-questions.md).
+
+Rule of thumb: **Flexbox for 1D** (rows *or* columns), **Grid for 2D** (rows *and* columns). In practice they compose — a grid item can itself be a flex container.
+
+## Flexbox
+
+`display: flex` (or `inline-flex`) turns an element into a **flex container**; its direct children become **flex items**. Flex items are laid out along a *main axis* (controlled by `flex-direction`) and a perpendicular *cross axis*.
+
+### Container properties
+
+| Property | What it controls | Values |
+|---|---|---|
+| `display` | declare flex container | `flex`, `inline-flex` |
+| `flex-direction` | main-axis direction | `row` (default), `row-reverse`, `column`, `column-reverse` |
+| `flex-wrap` | allow items to wrap | `nowrap` (default), `wrap`, `wrap-reverse` |
+| `justify-content` | main-axis alignment | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly` |
+| `align-items` | cross-axis alignment (per line) | `flex-start`, `flex-end`, `center`, `baseline`, `stretch` |
+| `align-content` | cross-axis alignment (between lines, when wrapping) | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `stretch` |
+| `gap` | spacing between items | any length |
+
+`align-content` only has a visible effect when items wrap onto multiple lines.
+
+### Item properties
+
+| Property | What it controls |
+|---|---|
+| `flex-grow` | share of *extra* space (unitless proportion) |
+| `flex-shrink` | share of *deficit* space when items don't fit |
+| `flex-basis` | starting size before grow/shrink (length or `auto`) |
+| `flex` | shorthand: `flex: <grow> <shrink> <basis>` |
+| `align-self` | override `align-items` for one item |
+| `order` | reorder items visually (without changing DOM order) |
+
+### Common flexbox patterns
+
+**Perfect centering:**
+
+```css
+.container {
+  display: flex;
+  justify-content: center;  /* horizontal */
+  align-items: center;      /* vertical */
+  height: 200px;
+}
+```
+
+**Nav bar spacing:**
+
+```css
+.nav { display: flex; justify-content: space-between; }
+```
+
+**Equal-height columns** — flex items automatically stretch to match the tallest sibling in their cross-axis direction.
+
+## CSS Grid
+
+`display: grid` (or `inline-grid`) creates a **grid container**. Grids have explicit **tracks** (rows and columns), **lines** (between tracks), **cells** (single row × column), and **areas** (named regions spanning multiple cells).
+
+### Container properties
+
+| Property | What it controls |
+|---|---|
+| `display` | declare grid container (`grid`, `inline-grid`) |
+| `grid-template-columns` | column track sizes |
+| `grid-template-rows` | row track sizes |
+| `grid-template-areas` | named areas laid out as ASCII art |
+| `gap` / `row-gap` / `column-gap` | spacing between tracks |
+| `justify-items` / `align-items` / `place-items` | how items align *within* their cells |
+| `justify-content` / `align-content` / `place-content` | how the grid itself sits *within* the container |
+
+Track sizes can be absolute (`100px`), flexible (`1fr`), content-based (`auto`, `min-content`, `max-content`), or intrinsic (`minmax(200px, 1fr)`, `repeat(auto-fit, minmax(200px, 1fr))`).
+
+### Item properties
+
+| Property | What it controls |
+|---|---|
+| `grid-column-start` / `grid-column-end` | column span |
+| `grid-row-start` / `grid-row-end` | row span |
+| `grid-column` / `grid-row` | shorthand (`grid-column: 1 / 3`) |
+| `grid-area` | name this item, or shorthand for all four line values |
+| `justify-self` / `align-self` | override cell alignment for one item |
+
+### Common grid patterns
+
+**Three-column layout with fixed sides:**
+
+```css
+.layout {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  gap: 10px;
+}
+```
+
+**Responsive card grid (no media queries):**
+
+```css
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+```
+
+**Named template areas:**
+
+```css
+.page {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+}
+
+.page-header  { grid-area: header; }
+.page-sidebar { grid-area: sidebar; }
+.page-main    { grid-area: main; }
+.page-footer  { grid-area: footer; }
+```
+
+## When to reach for which
+
+- **Flexbox** — nav bars, toolbars, button groups, anything that's a line of stuff that might wrap.
+- **Grid** — page-level layouts, card grids, forms with aligned labels/inputs, anything 2D.
+- **Both together** — Grid for the page structure, Flexbox inside each cell for horizontal clusters.
+
+**See also:** [`2.1 HTML & CSS Basics`](./html-and-css-basics.md) for CSS units used with `fr`/`minmax`, [`2.6 CSS Interview Questions`](./css-interview-questions.md) for worked interview examples using these layouts.

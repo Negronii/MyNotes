@@ -52,3 +52,11 @@ build/
 # Backup files (e.g., from editors or version control systems)
 *~
 *\#*
+
+# Python bytecode cache
+__pycache__/
+
+# Obsidian local window and default UI state
+/.obsidian/workspace.json
+/.obsidian/appearance.json
+/.obsidian/core-plugins.json

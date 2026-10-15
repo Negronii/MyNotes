@@ -1,0 +1,122 @@
+# Reflow, Repaint, and the `<script>` Tag
+
+Interview questions this note answers:
+
+1. **Reflow vs. repaint vs. composite — what triggers each, and which is cheapest?**
+2. **How do you minimize the cost of reflow?**
+3. **What does `<script>` do in HTML, and how do `async` and `defer` change its behavior?**
+4. **Where should you place `<script>` tags, and why?**
+
+For the big-picture render pipeline these topics fit into, see [`1.1 Browser Basics`](../browser/browser-basics.md).
+
+---
+
+## Reflow vs. repaint vs. composite — what triggers each?
+
+**Headline (30s):** Reflow (also called *layout*) recalculates positions and sizes — expensive because it can cascade across the whole page. Repaint redraws visual styles — cheaper, no layout work. Composite merges already-painted layers on the GPU — cheapest. Every reflow triggers a repaint; every repaint triggers a composite. A pure composite is the fastest path.
+
+**Cost ladder:**
+
+| Phase | Triggered by | Cost |
+|---|---|---|
+| **Composite only** | `transform`, `opacity` (on a composited layer) | cheap — GPU |
+| **Paint + composite** | `color`, `background-color`, `visibility`, shadows | moderate — CPU |
+| **Reflow + paint + composite** | `width`, `height`, `top`, `left`, DOM insert/remove, font-size, resize | expensive — can cascade |
+
+### What triggers reflow
+
+- Window resize.
+- Adding, removing, or reordering DOM nodes.
+- Changes to layout-affecting styles: `width`, `height`, `margin`, `padding`, `border`, `display`, `position`, `font-*`, `line-height`, `text-align`.
+- **Reading** geometry properties (`offsetHeight`, `scrollTop`, `getBoundingClientRect`) after a write — this forces a *synchronous* reflow so the browser can return an accurate answer.
+
+### What triggers repaint (without reflow)
+
+- `color`, `background`, `background-color`, `background-image`
+- `visibility` (going between `visible` and `hidden`)
+- `box-shadow`, `outline`, `border-color` (but not `border-width`, which changes layout)
+
+### What stays on the compositor
+
+- `transform: translate / scale / rotate`
+- `opacity`
+- `filter` (in modern browsers, with `will-change` hint)
+
+**Gotcha — "just animate `top` and `left`":** These trigger reflow on every frame. Use `transform: translate(...)` instead — same visual effect, pure composite, runs on the GPU.
+
+## How do you minimize the cost of reflow?
+
+**Headline (30s):** Batch writes, then reads (never interleave them); change classes rather than individual styles; pull heavy-DOM work off-screen with document fragments; use BFC to isolate layout; debounce high-frequency events; animate only `transform` and `opacity`.
+
+**Tactics:**
+
+- **Batch style changes.** Add or remove a class with many rules rather than setting `element.style.x` individually. A single class swap = one reflow.
+- **Minimize DOM access.** Build subtrees in a `DocumentFragment` or an off-screen element, then attach in one operation.
+- **Leverage BFC.** Isolating a subtree in a [Block Formatting Context](./box-model-and-bfc.md) prevents its reflows from cascading outside.
+- **Debounce or throttle** `resize` / `scroll` handlers — see [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md).
+- **CSS animations + `requestAnimationFrame`.** Prefer CSS-declarative animations; for JS-driven animations, align writes with `requestAnimationFrame` so the browser batches them into one frame.
+- **Avoid layout thrashing.** Don't read a geometry property after writing one in the same loop — the browser is forced to flush layout between every read/write pair.
+
+```javascript
+// bad — N synchronous reflows
+for (const el of items) {
+  el.style.width = el.offsetWidth + 10 + 'px';
+}
+
+// good — 1 reflow
+const widths = items.map(el => el.offsetWidth);
+items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
+```
+
+**Gotcha — `visibility: hidden` vs `display: none` cost:** `display: none` causes a reflow because the element leaves/rejoins the layout tree. `visibility: hidden` only causes a repaint because the element keeps its space. If you're toggling frequently, prefer `visibility` (or `opacity` + `pointer-events: none`).
+
+## What does the `<script>` tag do?
+
+**Headline (30s):** It embeds or references executable JavaScript. By default, encountering a `<script>` pauses HTML parsing until the script is fetched, parsed, and executed — because the script could call `document.write` or mutate the DOM the parser is still building.
+
+**Inline:**
+
+```html
+<script>
+  // JavaScript here
+</script>
+```
+
+**External:**
+
+```html
+<script src="path/to/script.js"></script>
+```
+
+## `async` vs. `defer` — which to use when?
+
+**Headline (30s):** Both download the script in parallel with HTML parsing (non-blocking). `defer` then waits until parsing finishes and runs scripts **in document order**. `async` runs each script as soon as it's downloaded, in **whatever order** downloads complete. Use `defer` when you need order (most cases). Use `async` only for scripts that are totally independent — analytics, ads.
+
+| Attribute | Downloads | Executes | Blocks parser? | Preserves order? |
+|---|---|---|---|---|
+| none | inline with parser | immediately | yes | yes |
+| `defer` | in parallel | after `DOMContentLoaded` | no | yes |
+| `async` | in parallel | as soon as downloaded | no | **no** |
+
+**Gotcha — "`async` is always the fastest":** For scripts that depend on each other, `async` can execute them in the wrong order, causing `undefined is not a function` bugs. Use `defer` unless you're certain the script has zero ordering requirements.
+
+**Gotcha — `defer` doesn't work on inline scripts:** `defer` is ignored if the `<script>` has no `src`. Move the code into an external file or use `DOMContentLoaded`.
+
+## Where should you place `<script>` tags?
+
+**Headline (30s):** The modern answer: in the `<head>` with `defer`. That starts the download as early as possible (parallel with HTML parsing) while guaranteeing execution after the DOM is ready. The old "put scripts before `</body>`" advice is a workaround for environments without `defer`.
+
+**Ranked, best to worst:**
+
+1. `<head>` with `defer` — parallel download, in-order execution after parsing.
+2. `<head>` with `async` — parallel download, but ordering isn't guaranteed.
+3. Just before `</body>` — legacy safe default; HTML is fully parsed by the time the script runs.
+4. `<head>` with no attribute — **worst**; blocks HTML parsing while downloading and executing.
+
+**Best practices beyond placement:**
+
+- Keep JS in external files (cacheable, easier to maintain).
+- Minify and compress in production.
+- Use non-blocking loading (`defer` / `async`) whenever possible.
+
+**See also:** [`1.1 Browser Basics`](../browser/browser-basics.md) for the full URL→render pipeline that these topics fit into, [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md) for deeper animation/scroll optimization.

@@ -1,0 +1,247 @@
+# AI Application Architecture
+
+This note prepares you to answer:
+
+- What changes when you move an LLM app from prototype to production?
+- How do you reduce inference latency and cost?
+- How do you manage LLM costs at scale?
+- What should you monitor in an LLM system?
+- How do you design user feedback loops that actually improve the product?
+- API, self-hosted, edge, or hybrid — how do you pick a deployment pattern?
+
+---
+
+## What changes when you move an LLM app from prototype to production?
+
+**Headline (30s):** The jump is massive and underestimated. Six dimensions all shift from "good enough for a demo" to "real-world-ready": error handling, scale, monitoring, cost management, security, and reliability. A prototype validates the approach; a production system has to withstand adversarial users, traffic spikes, and provider outages.
+
+| Dimension | Prototype | Production |
+|---|---|---|
+| **Error handling** | Fail fast, manual recovery | Graceful degradation, retries, fallbacks |
+| **Scale** | Single user, low throughput | Multi-tenant, high concurrency |
+| **Monitoring** | Print statements, ad-hoc | Structured logging, metrics, alerts |
+| **Cost management** | Ignored | Budgets, quotas, optimization |
+| **Security** | Minimal | Auth, data isolation, PII handling |
+| **Reliability** | Best-effort | SLAs, redundancy, failover |
+
+**Don't skip the prototype.** Use it to validate the approach before investing in production infrastructure. A prototype that proves the core idea fails is cheaper than a production system built on a flawed assumption.
+
+**Gotcha:** The biggest prototype-to-production failure isn't any single dimension; it's that teams treat the LLM as a stable dependency. LLMs silently drift (provider model updates, policy tweaks) in ways traditional APIs don't. Build eval, monitoring, and rollback *first* — you'll need them sooner than you think.
+
+---
+
+## How do you reduce inference latency and cost?
+
+**Headline (30s):** Six levers, from cheapest to most invasive: **streaming** (perceived latency only), **KV-cache** (reuse prefix computation), **semantic caching** (reuse full responses for similar queries), **request batching** (GPU throughput), **quantization** (smaller precision = faster, cheaper, slight quality loss), and **model distillation** (train a smaller model to mimic a bigger one). Stack in order of complexity; measure after each.
+
+**The techniques:**
+
+### KV-cache
+
+Reuse computed key-value pairs across requests with shared prefixes. Stable system prompts increase cache hit rate dramatically.
+
+```python
+# Requests with same system prompt share cached KV pairs
+# Higher hit rate = fewer tokens recomputed = lower latency and cost
+```
+
+### Semantic caching
+
+Cache responses for semantically similar queries, not just exact matches. Use embedding similarity with a threshold.
+
+```python
+def get_cached_response(query: str, threshold: float = 0.95) -> str | None:
+    query_embedding = embed(query)
+    for cached in cache:
+        if cosine_similarity(query_embedding, cached.embedding) >= threshold:
+            return cached.response
+    return None
+```
+
+### Request batching
+
+Group multiple requests to maximize GPU throughput. Trades per-request latency for overall throughput.
+
+### Quantization
+
+Reduce model precision: FP32 → FP16 → INT8 → INT4. Tradeoff: lower memory and faster inference, slight quality loss. Common formats: GPTQ, AWQ, GGUF.
+
+### Model distillation
+
+Train a smaller model to mimic a larger one. The smaller model is cheaper and faster in production; requires training effort upfront.
+
+### Streaming
+
+Return tokens as they're generated for better perceived latency (time-to-first-token).
+
+### Comparison
+
+| Technique | Latency Impact | Cost Impact | Complexity | Best For |
+|---|---|---|---|---|
+| KV-cache | High (prefix reuse) | High | Low | Repeated system prompts |
+| Semantic caching | High (cache hits) | High | Medium | Similar user queries |
+| Request batching | Neutral/negative | Medium | Medium | High-throughput batch workloads |
+| Quantization | Medium (faster compute) | High | Medium | Self-hosted, memory-bound |
+| Model distillation | High (smaller model) | High | High | Production at scale |
+| Streaming | Perceived only (TTFT) | None | Low | Real-time UX |
+
+**Gotcha:** Semantic caching with too loose a threshold (e.g., 0.85) serves wrong answers — two semantically similar queries can have different correct answers ("what's the refund policy for US?" vs. "for EU?"). Start at 0.95+ threshold, and always eval cache hits against fresh generations before shipping.
+
+---
+
+## How do you manage LLM costs at scale?
+
+**Headline (30s):** Four levers: **model routing** (cheap models for simple tasks, expensive only where needed), **token optimization** (shorter prompts, compressed context), **caching ROI** (measure and maximize hit rate), and **batch processing** (async APIs are often ~50% cheaper). Treat tokens-per-query as a KPI; track it across releases.
+
+### Model routing
+
+Route by task complexity:
+
+```
+Simple (Haiku / small)      → classification, extraction, simple Q&A
+Medium (Sonnet / mid)       → summarization, multi-step reasoning
+Complex (Opus / large)      → creative writing, deep analysis, code generation
+```
+
+Classify the task first (cheap LLM call or rules), then route to the right size.
+
+### Token optimization
+
+- Shorter prompts.
+- Compressed context (summarization, selective retrieval).
+- Efficient templates with minimal boilerplate.
+- Measure **tokens-per-query** as a KPI per feature.
+
+### Caching ROI
+
+Track hit rates. Even 50% hit rate can halve costs on cached paths.
+
+### Batch processing
+
+Non-real-time tasks can use batch APIs (often ~50% cheaper than real-time).
+
+### Cost estimation example
+
+| Component | Volume | Unit Cost | Monthly Cost |
+|---|---|---|---|
+| Input tokens (GPT-4) | 100M/month | $2.50/1M | $250 |
+| Output tokens (GPT-4) | 20M/month | $10/1M | $200 |
+| Cache hits (50%) | — | — | -$225 |
+| **Net** | | | **$225** |
+
+With semantic caching at 50% hit rate, effective cost drops by ~50%.
+
+**Gotcha:** "Route everything to the cheap model" destroys quality on hard tasks, but "route everything to the expensive model" burns budget on easy ones. The sweet spot requires real data on task-complexity distribution — instrument your traffic before tuning the routing rules.
+
+---
+
+## What should you monitor in an LLM system?
+
+**Headline (30s):** Six categories: **latency** (P50/P95/P99, TTFT), **token usage** (per request, per user, total), **error rates** (API errors, timeouts, rate limits, malformed responses), **quality** (hallucination rate, task completion, satisfaction), **cost** (daily spend, cost/request), and **cache** (hit rate). Set alerts on thresholds and **quality drift** — LLM behavior changes silently over time.
+
+### Latency
+
+- **P50, P95, P99** response times.
+- **Time to first token (TTFT)** for streaming UX.
+
+### Token usage
+
+- Input/output tokens per request.
+- Total daily consumption.
+- Tokens per user/session (catches runaway sessions).
+
+### Error rates
+
+- API errors (4xx, 5xx).
+- Timeouts.
+- Rate limits.
+- Malformed responses (parse failures, truncation).
+
+### Quality metrics
+
+- Hallucination rate.
+- User satisfaction scores.
+- Task completion rate.
+
+### Quality drift
+
+Model behavior can change over time due to provider updates or data drift. Track quality metrics week-over-week and alert on degradation.
+
+### Monitoring dashboard checklist
+
+| Category | Metrics | Alerts |
+|---|---|---|
+| Latency | P50, P95, P99, TTFT | P99 > threshold |
+| Throughput | Requests/sec, tokens/sec | Drops below baseline |
+| Errors | Error rate by type | Error rate > 1% |
+| Cost | Daily spend, cost/request | Budget threshold |
+| Quality | Satisfaction, completion rate | Week-over-week decline |
+| Cache | Hit rate | Hit rate < threshold |
+
+**Gotcha:** Provider-side silent model updates are the hardest drift to catch. An "imperceptible" improvement upstream can change output format or tone enough to break your downstream parsers and regression test suite. Pin model versions explicitly (`gpt-4-0613` not `gpt-4`) whenever the provider allows, and run weekly evals on fixed test sets to catch drift.
+
+---
+
+## How do you design user feedback loops that actually improve the product?
+
+**Headline (30s):** Capture both **implicit signals** (time on response, follow-ups, acceptance rate) and **explicit feedback** (thumbs, ratings, corrections). Feed into an **RLHF flywheel** (preferences → reward model → improved model → deploy → repeat) or simpler update cycles. Design the feedback UX to minimize friction — a one-tap thumbs gets 100× more data than a form.
+
+### Implicit signals
+
+- Time spent on response.
+- Follow-up questions (indicates confusion).
+- Acceptance / rejection of suggestions (autocomplete, code suggestions).
+
+### Explicit feedback
+
+- Thumbs up/down.
+- Star ratings.
+- Correction submissions.
+
+### RLHF flywheel
+
+1. Collect preferences (A vs. B, thumbs up/down).
+2. Train reward model on preferences.
+3. Improve base model (RLHF, DPO) or add fine-tuning.
+4. Deploy improved model.
+5. Repeat.
+
+### Designing feedback UX
+
+| Principle | Implementation |
+|---|---|
+| Minimize friction | One-tap feedback (thumbs), not forms |
+| Contextual timing | Prompt after action (after copy, after 5s) |
+| Avoid survey fatigue | Sample users, limit frequency |
+| Capture intent | Optional free-text for downvotes |
+| Link to outcome | Correlate feedback with task success |
+
+**Gotcha:** Explicit feedback is heavily biased — users who loved it don't bother; angry users always rate. Don't interpret "30% thumbs down" as "30% failure rate"; it's a skewed sample. Pair explicit feedback with implicit signals (retention, task completion, session length) for a real picture.
+
+---
+
+## API, self-hosted, edge, or hybrid — how do you pick a deployment pattern?
+
+**Headline (30s):** Start with **API** for speed to ship. Move to **self-hosted** once volume or data residency makes the math work (rough threshold: ~$10K/month API spend or strict compliance). Choose **edge** for latency-sensitive or offline use cases. Use **hybrid** when workloads split cleanly into "expensive hard" and "cheap simple/sensitive."
+
+### The tradeoff
+
+| Pattern | Pros | Cons | When to Choose |
+|---|---|---|---|
+| **API-based** (OpenAI, Anthropic) | Fastest to ship, no infra management | Ongoing per-token cost, data sent to provider | MVP, low volume, rapid iteration |
+| **Self-hosted** (vLLM, TGI, Ollama) | Full control, predictable cost at scale | Significant infra burden, data stays private | High volume, data sovereignty, cost optimization |
+| **Edge deployment** | On-device inference, latency, privacy | Limited model size, device constraints | Mobile, offline, privacy-critical |
+| **Hybrid** | API for complex + local for simple/sensitive | More moving parts | Mixed workload, cost + privacy balance |
+
+### Decision guide
+
+- **API-based:** start here. Move off when cost or data concerns justify the switch.
+- **Self-hosted:** volume > ~$10K/month API spend, or strict data residency requirements.
+- **Edge:** latency-sensitive, offline-first, or device-level privacy.
+- **Hybrid:** API for hard tasks, local model for simple/sensitive ones.
+
+**Tiebreaker question (to ask the interviewer):** "What's the data residency requirement, and what's our expected monthly LLM spend?" These two answers narrow the pattern to one or two options.
+
+**Gotcha:** Self-hosting math often looks attractive at volume but ignores the hidden costs — MLOps headcount, GPU availability risk, model update cadence, internal eval infrastructure. The break-even point is typically **later than you think**, not earlier. Get a real quote including people costs before committing.
+
+**See also:** [3.1 Context Engineering → KV-Cache Optimization](../context/context-engineering-principles.md#how-do-you-use-the-kv-cache-to-cut-inference-cost) for the KV-cache mechanics; [1.2 Model Selection and Ecosystem](../foundations/model-selection-and-ecosystem.md) for model choices behind the routing decisions.

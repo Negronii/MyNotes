@@ -1,0 +1,179 @@
+**Reach for this when** you need a quick reference for ahooks — the React hooks library that covers the hooks people keep rewriting in every project (data fetching, debounced state, localStorage sync, stable callbacks, virtual lists).
+
+**Headline:** ahooks is an Alibaba-maintained React hooks library with production-ready hooks in five buckets — **Data fetching** (`useRequest`, `usePagination`, `useInfiniteScroll`), **State** (`useBoolean`, `useToggle`, `useMap`, `useLocalStorageState`, `useLatest`), **Performance** (`useMemoizedFn`, `useCreation`, `useVirtualList`), **Lifecycle/timing** (`useMount`, `useUnmount`, `useDebounce`, `useThrottle`), and **Dynamic lists** (`useDynamicList`). Install with `npm install ahooks`.
+
+## Data fetching
+
+### `useRequest`
+
+Core data-fetching hook with loading states, error handling, polling, debouncing, throttling, caching, retry, and pagination built in.
+
+```javascript
+import { useRequest } from 'ahooks';
+
+const { data, loading, error, run } = useRequest(fetchUserData, {
+  manual: false,
+  pollingInterval: 5000,
+  debounceWait: 300,
+  retryCount: 3,
+  onSuccess: (data) => console.log(data),
+  onError: (error) => console.error(error),
+});
+```
+
+**Reach for it when** you'd otherwise write 20+ lines of fetching boilerplate per component. Replaces most hand-rolled `useEffect + fetch` patterns.
+
+### `usePagination`
+
+Extends `useRequest` for paginated lists with automatic page state management.
+
+```javascript
+const { data, loading, pagination } = usePagination(fetchUsers, {
+  defaultPageSize: 20,
+});
+
+pagination.changeCurrent(2);
+pagination.changePageSize(50);
+```
+
+### `useInfiniteScroll`
+
+Infinite scroll loading with threshold detection.
+
+```javascript
+const { data, loading, noMore } = useInfiniteScroll(
+  d => fetchMoreItems(d?.nextCursor),
+  { target: containerRef, threshold: 100 }
+);
+```
+
+## State hooks
+
+### `useToggle` / `useBoolean`
+
+```javascript
+const [state, { toggle, setTrue, setFalse }] = useBoolean(false);
+```
+
+`useToggle` generalizes to any two values.
+
+### `useMap` / `useSet`
+
+State management for `Map` and `Set` with convenient mutation helpers.
+
+```javascript
+const [map, { set, remove, reset }] = useMap([['key1', 'value1']]);
+set('key2', 'value2');
+remove('key1');
+```
+
+### `useLocalStorageState`
+
+State that auto-syncs with `localStorage`, handles serialization and errors.
+
+```javascript
+const [theme, setTheme] = useLocalStorageState('theme', {
+  defaultValue: 'light',
+});
+```
+
+### `useLatest`
+
+Returns a ref that always holds the latest value. Solves **stale closure** bugs in `setInterval`/`setTimeout` callbacks.
+
+```javascript
+const latestCount = useLatest(count);
+
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log(latestCount.current);
+  }, 1000);
+  return () => clearInterval(timer);
+}, []);
+```
+
+## Performance hooks
+
+### `useMemoizedFn`
+
+Like `useCallback` but without a dependency array. Returns a stable function reference that always invokes the *latest* version of the function. No stale closures, no manual dep tracking.
+
+```javascript
+const handleClick = useMemoizedFn(() => {
+  console.log(count);
+});
+```
+
+**Reach for it instead of `useCallback`** when you want a stable reference but always the freshest state. Significantly safer in practice.
+
+### `useCreation`
+
+A more reliable `useMemo` that guarantees referential stability and never recalculates unnecessarily (unlike `useMemo`, which the React docs warn may re-run even without dep changes).
+
+### `useVirtualList`
+
+Virtualizes long lists — renders only visible items.
+
+```javascript
+const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
+  originalList,
+  { itemHeight: 50, overscan: 5 }
+);
+```
+
+See [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md) for virtual scrolling background.
+
+## Lifecycle hooks
+
+### `useMount` / `useUnmount`
+
+Cleaner alternatives to `useEffect` for mount-only or unmount-only logic.
+
+```javascript
+useMount(() => { console.log('mounted'); });
+useUnmount(() => { console.log('unmounted'); });
+```
+
+### `useDebounce` / `useDebounceFn`
+
+```javascript
+const debouncedValue = useDebounce(searchTerm, { wait: 300 });
+const { run: debouncedSearch } = useDebounceFn(search, { wait: 300 });
+```
+
+### `useThrottle`
+
+```javascript
+const throttledValue = useThrottle(scrollPosition, { wait: 100 });
+```
+
+## Dynamic lists
+
+### `useDynamicList`
+
+Manages ordered lists with immutable operations and **stable keys** for rendering.
+
+```javascript
+const { list, push, remove, move, insert, getKey } = useDynamicList([
+  { name: 'Alice' },
+  { name: 'Bob' },
+]);
+```
+
+Each item gets a stable key via `getKey(index)` — solves the "what do I use as key?" problem for dynamic forms and sortable lists.
+
+## When to reach for ahooks (vs. hand-rolled)
+
+Reach for ahooks when:
+
+- You're writing the same fetching/debouncing/storage patterns across multiple components.
+- You need **production-ready edge-case handling** (cancellation, error retry, stale closures).
+- You want **stable references** without fiddling with `useCallback` dependencies.
+
+**Alternatives worth considering:**
+
+- `react-query` / `@tanstack/query` — more focused, richer caching than `useRequest` for server state.
+- `swr` — similar philosophy, lighter API surface.
+- `zustand` — for shared state rather than per-component hook state.
+
+**See also:** [`9.3 Advanced React`](../frameworks/advanced-react.md) for custom hook patterns, [`11.1 Performance Metrics and Analysis`](../performance/performance-metrics-and-analysis.md) for debounce/throttle conceptual background.

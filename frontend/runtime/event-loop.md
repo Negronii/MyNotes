@@ -1,0 +1,155 @@
+## How does JavaScript run asynchronous code on a single thread?
+
+**Headline (30s):** JavaScript has one thread and one call stack — it can't truly do two things at once. The **event loop** is the scheduler that makes single-threaded JS feel concurrent. It pulls *one* macrotask from a queue (a `setTimeout` callback, an I/O completion, a UI event), runs it to completion, then drains all queued microtasks (Promise callbacks), then repeats. Asynchronous APIs don't "run in parallel" — they hand work off to the browser or OS, which queues a callback when the work is done.
+
+**Why interviewers ask this:** It's the mental model behind every async bug. A candidate who can walk through a mixed `setTimeout`/Promise/sync example in order demonstrates real understanding of the runtime — not just memorized "`async` is for async stuff".
+
+---
+
+## The execution model
+
+Imagine three data structures and one loop:
+
+1. **Call stack** — what's currently executing (synchronous code).
+2. **Microtask queue** — Promise callbacks, `queueMicrotask`, `MutationObserver`.
+3. **Macrotask queue** — `setTimeout`, `setInterval`, I/O completions, UI events, `setImmediate` (Node).
+
+The loop cycle:
+
+1. Run all synchronous code until the call stack is empty.
+2. Drain the entire microtask queue (running any microtasks those create too).
+3. Pick *one* macrotask from the macrotask queue, execute it.
+4. Go to step 2.
+
+**Key insight — microtasks drain completely between macrotasks.** Adding a microtask from inside another microtask will run before the next macrotask. This is why `Promise.then` always runs before `setTimeout(fn, 0)`.
+
+---
+
+## Microtasks vs. macrotasks — the cheat sheet
+
+| Microtasks | Macrotasks |
+|---|---|
+| `Promise.then` / `.catch` / `.finally` | `setTimeout`, `setInterval` |
+| `async`/`await` continuations | I/O callbacks (fetch response, file read) |
+| `queueMicrotask(fn)` | UI events (`click`, `scroll`) |
+| `MutationObserver` | Rendering callbacks |
+| | `setImmediate` (Node only) |
+
+Microtasks have **higher priority** — the whole microtask queue drains between every pair of macrotasks.
+
+---
+
+## Walk-through — what does this print?
+
+```javascript
+console.log('Start');
+
+setTimeout(() => console.log('Timeout'), 0);
+
+new Promise((resolve) => {
+  console.log('Promise constructor');
+  resolve();
+}).then(() => console.log('Promise then'));
+
+console.log('End');
+```
+
+Output:
+
+```
+Start
+Promise constructor
+End
+Promise then
+Timeout
+```
+
+Trace:
+
+1. `console.log('Start')` — sync, logs immediately.
+2. `setTimeout(..., 0)` — queues a macrotask.
+3. `new Promise(...)` — the executor runs *synchronously*, so `'Promise constructor'` logs now. `.then()` queues a microtask.
+4. `console.log('End')` — sync.
+5. Call stack empty → drain microtasks → `'Promise then'`.
+6. One macrotask → `'Timeout'`.
+
+**Gotcha — the Promise constructor is synchronous.** `new Promise(fn)` runs `fn` immediately. Only `.then` / `.catch` callbacks are microtasks.
+
+---
+
+## Browser vs. Node.js — similar but not identical
+
+### Browser
+
+The event loop runs on the main thread alongside rendering. Between macrotasks, the browser may *render* — recalculate styles, layout, paint. This is why long-running synchronous code freezes the UI.
+
+Cycle: **macrotask → drain microtasks → maybe render → macrotask → ...**
+
+### Node.js — phased macrotask queue
+
+Node organizes macrotasks into six phases that run in order every tick:
+
+1. **Timers** — `setTimeout` / `setInterval` callbacks whose time is up.
+2. **Pending callbacks** — a few system-level I/O errors.
+3. **Idle / prepare** — internal.
+4. **Poll** — retrieve new I/O events.
+5. **Check** — `setImmediate` callbacks.
+6. **Close callbacks** — `socket.on('close')` etc.
+
+Between *each phase*, Node drains microtasks. Among microtasks, **`process.nextTick`** has the highest priority — it runs before Promise callbacks.
+
+```javascript
+setTimeout(() => console.log('timeout'), 0);
+setImmediate(() => console.log('immediate'));
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('promise'));
+
+// Output (deterministic for first two):
+// nextTick
+// promise
+// timeout / immediate (order depends on timing of the top-level call)
+```
+
+**Reach for `process.nextTick`** when you need to defer work to "right after the current operation" with higher priority than Promise callbacks. Use sparingly — recursive `nextTick` calls can starve I/O.
+
+---
+
+## Garbage collection — how does the engine free memory?
+
+**Headline:** Modern JS engines use **mark-and-sweep** — starting from root references (globals, call stack locals), the GC walks every reachable object and marks them; unmarked objects are collected. This handles circular references that the older **reference counting** algorithm can't.
+
+### Reference counting (historical)
+
+Each object stored its incoming reference count. When the count hit zero, the memory freed. Simple, but **circular references leak forever** — two objects pointing to each other keep each other alive even after nothing else references them. Old IE had this problem; modern engines don't.
+
+### Mark-and-sweep (modern)
+
+Used by V8 (Chrome, Node) and SpiderMonkey (Firefox):
+
+1. Find all *roots* — globals, in-scope locals, the call stack.
+2. Mark every object reachable from a root.
+3. Sweep — anything unmarked is garbage, free it.
+
+V8 in particular uses **generational GC** (young generation collected frequently, old generation rarely) and **incremental marking** (interleaved with JS execution to avoid long pauses).
+
+---
+
+## Common memory leak sources
+
+Most leaks are the same pattern: something unreachable from your mental model is *actually* reachable through an unexpected reference.
+
+- **Uncleared timers** — a `setInterval` callback holds a closure; the interval keeps a reference to the callback; no one ever clears it.
+- **Detached DOM nodes** — JS variable still points to a DOM node that was removed from the tree. Neither the tree nor the JS can be freed.
+- **Closures over large scopes** — a returned function keeps the entire enclosing scope alive, including big objects you don't actually use.
+- **Accidental globals** — `foo = 1` (no `let`/`const`) at the top level creates a `window.foo`. Never freed.
+- **Event listeners not removed** — attached on mount, never removed on unmount, keeps the component alive forever.
+
+### Detecting leaks
+
+- **Chrome DevTools → Performance tab** — record for a few minutes; if heap usage keeps climbing without drops, there's a leak.
+- **Memory tab → heap snapshots** — take one snapshot, do the suspect action, take another, compare. Look for objects that grew between snapshots.
+- **Memory tab → allocation timeline** — records new allocations over time, marks which ones weren't freed.
+
+**Rule of thumb:** Every subscription, listener, and timer needs a matching cleanup. In React, that's your `useEffect` return function. In vanilla JS, that's discipline — save the reference and remove it when done.
+
+**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](../javascript/javascript-memory-weakmap-and-weakset.md) for how WeakMap/WeakSet help avoid leaks, [`4.3 Asynchronous JavaScript`](../javascript/asynchronous-javascript.md) for Promise microtask scheduling details.

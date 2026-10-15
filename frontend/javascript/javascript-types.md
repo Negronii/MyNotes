@@ -1,0 +1,214 @@
+Four interview questions this note prepares you for:
+
+1. **What are the primitive types in JavaScript?**
+2. **What's the difference between primitive and reference types?** (with the classic `a.x = a = {}` gotcha)
+3. **How do you reliably check a variable's type?**
+4. **What types can be used as object keys, and what happens if you use something else?**
+
+---
+
+## What are the primitive types in JavaScript?
+
+**Headline (30s):** Seven primitives: `undefined`, `null`, `boolean`, `number`, `string`, `symbol`, `bigint`. Primitives are immutable and compared by value. Everything else (`object`, `array`, `function`, `Date`, `Map`, ...) is a reference type, compared by reference.
+
+| Type | Represents | Quirk worth knowing |
+|---|---|---|
+| `undefined` | uninitialized value | default for declared-but-unset variables |
+| `null` | intentional absence | `typeof null === 'object'` (historical bug) |
+| `boolean` | `true` / `false` | falsy values: `false`, `0`, `-0`, `''`, `null`, `undefined`, `NaN` |
+| `number` | IEEE 754 double | `NaN !== NaN`; use `Number.isNaN()` |
+| `string` | character sequence | immutable |
+| `symbol` (ES6) | unique identifier | `Symbol('x') !== Symbol('x')` even with same description |
+| `bigint` (ES11) | arbitrary-precision integer | literal suffix `n` (`123n`) |
+
+### Type-coercion cheat sheet
+
+**To boolean:**
+
+- Falsy: `false`, `0`, `-0`, `''`, `null`, `undefined`, `NaN`.
+- Everything else is truthy — including `'0'`, `'false'`, `{}`, `[]`.
+
+**To number:**
+
+| Input | Result |
+|---|---|
+| `Number('')` | `0` |
+| `Number('123')` | `123` |
+| `Number('abc')` | `NaN` |
+| `Number(true)` | `1` |
+| `Number(false)` | `0` |
+| `Number(null)` | `0` |
+| `Number(undefined)` | `NaN` |
+| `Number({})` | `NaN` |
+
+**Gotcha — `NaN !== NaN`:** The only value in JavaScript not equal to itself. To test, use `Number.isNaN(x)` (or `Object.is(x, NaN)`) — never `x === NaN`.
+
+**Gotcha — `typeof null === 'object'`:** A bug from the first version of JavaScript that's too widely depended on to fix. When you need to detect `null`, check `x === null` explicitly.
+
+---
+
+## Primitive vs reference types — what's the difference?
+
+**Headline (30s):** Primitives live on the stack and are compared by value — copying a primitive duplicates the data. Reference types live on the heap; a variable stores a pointer to that heap slot. Assigning one reference variable to another makes both point to the same object; mutating through one reference shows up through the other.
+
+| | Primitive | Reference |
+|---|---|---|
+| **Stored in** | stack | heap (variable holds a pointer) |
+| **Compared** | by value | by reference |
+| **Copy on assignment?** | yes (duplicate data) | no (share the same object) |
+| **Mutable?** | no | yes |
+
+### The classic "right-to-left assignment" gotcha
+
+**What does this print, and why?**
+
+```javascript
+let a = {n: 1};
+let b = a;
+a.x = a = {n: 2};
+console.log(a.x);
+console.log(b.x);
+```
+
+**Output:**
+
+```text
+undefined
+{n: 2}
+```
+
+**Why** — two rules do the heavy lifting:
+
+1. **Sequential assignments execute right-to-left.** `a.x = a = {n: 2}` is `a = {n: 2}` first, then `a.x = (result of that)`.
+2. **Dot notation (`a.x`) captures its target at the moment it's evaluated.** Before JS evaluates the right side, it's already decided which object `a.x` refers to — the *original* object (still held by `b`).
+
+**Step by step:**
+
+1. After `let a = {n: 1}; let b = a;` — both `a` and `b` point to `{n: 1}`.
+2. JS evaluates `a.x` on the left side, reserving a slot on the original object (now it's `{n: 1, x: undefined}`, still held by both `a` and `b`).
+3. JS evaluates the right side: `a = {n: 2}` — `a` now points to a *new* object `{n: 2}`. `b` still points to the old one.
+4. JS assigns the right side's value (`{n: 2}`) to the slot it reserved in step 2. That slot is on the *original* object, which only `b` holds now.
+
+**Final state:**
+
+- `a` → `{n: 2}` (no `x` property)
+- `b` → `{n: 1, x: {n: 2}}`
+
+So `a.x` is `undefined`; `b.x` is `{n: 2}`.
+
+**Gotcha — do not write code like this in production.** If you see it in an interview, slow down, draw the heap, and walk through each step.
+
+---
+
+## How do you reliably check a variable's type?
+
+**Headline (30s):** `typeof` works for primitives but misidentifies `null` as `'object'` and treats arrays and plain objects identically. `instanceof` works for objects from a specific constructor (within its prototype chain). The reliable-for-everything answer is `Object.prototype.toString.call(x)` — it returns strings like `'[object Array]'`, `'[object Null]'`, `'[object Date]'` — or a thin wrapper around it like a custom `getType()`.
+
+### `typeof` — fast, primitive-friendly, lies about `null` and arrays
+
+```javascript
+typeof 1;          // 'number'
+typeof 'test';     // 'string'
+typeof true;       // 'boolean'
+typeof undefined;  // 'undefined'
+typeof function(){}; // 'function'
+typeof null;       // 'object'  ← historical bug
+typeof [];         // 'object'  ← arrays look the same as plain objects
+typeof {};         // 'object'
+```
+
+**Reach for it when:** you just need to verify a primitive, and you're not worried about `null`.
+
+### `instanceof` — constructor-based, no help for primitives
+
+Checks whether the constructor's `prototype` appears in the value's prototype chain. Under the hood, it invokes `Constructor[Symbol.hasInstance]`.
+
+```javascript
+[] instanceof Array;     // true
+({}) instanceof Object;  // true
+'x' instanceof String;   // false  (primitive string ≠ String object)
+```
+
+**Reach for it when:** checking whether an object came from a specific class.
+
+**Gotcha — cross-realm objects:** `instanceof` can return `false` for arrays from another iframe or worker because each realm has its own `Array.prototype`. Use `Array.isArray(x)` for arrays specifically.
+
+### `Object.prototype.toString.call()` — works for everything
+
+```javascript
+Object.prototype.toString.call([1, 2, 3]);   // '[object Array]'
+Object.prototype.toString.call(null);         // '[object Null]'
+Object.prototype.toString.call(new Date());   // '[object Date]'
+Object.prototype.toString.call(/regex/);      // '[object RegExp]'
+```
+
+**Reach for it when:** you need a definitive type string that works across realms, handles `null` and `undefined`, and distinguishes built-in object types.
+
+### A custom `getType` combining all three
+
+```javascript
+function getType(val) {
+  const t = typeof val;
+  if (t !== 'object') return t;        // primitives
+  if (val === null) return 'null';
+  return Object.prototype.toString.call(val).slice(8, -1).toLowerCase();
+}
+
+getType(null);         // 'null'
+getType([1, 2, 3]);    // 'array'
+getType(new Date());   // 'date'
+```
+
+**Reach for it when:** you want one function that gives clean names for everything.
+
+---
+
+## What types can be used as object keys?
+
+**Headline (30s):** Only **strings** and **symbols**. Anything else is coerced to a string via the value's `toString()`. This means numeric keys are *actually* strings, and two different plain objects used as keys both become `"[object Object]"` — overwriting each other. If you need non-string keys, use `Map` instead.
+
+### Key conversion rules
+
+- **String or symbol:** used directly.
+- **Any other type:** converted via `toString()`.
+  - Numeric keys: `obj[123]` and `obj['123']` access the same slot.
+  - Plain objects: all become `"[object Object]"` — they collide.
+  - Arrays: `[1, 2]` becomes `"1,2"`.
+- **`Map`:** keys of **any** type are preserved without coercion.
+
+### Example 1 — numeric keys collide with string keys
+
+```javascript
+const o = {};
+const strKey = '123';
+const numKey = 123;
+o[strKey] = 'string-valued';
+o[numKey] = 'number-valued';
+console.log(o[strKey]); // 'number-valued'  (both wrote to the same string key)
+```
+
+### Example 2 — Symbol uniqueness
+
+```javascript
+const o = {};
+const s1 = Symbol('id');
+const s2 = Symbol('id');
+o[s1] = 'one';
+o[s2] = 'two';
+console.log(o[s1]); // 'one'  (symbols with the same description are still different)
+```
+
+### Example 3 — two objects as keys collide
+
+```javascript
+const o = {};
+const k1 = { key: '123' };
+const k2 = { key: '456' };
+o[k1] = 'one';
+o[k2] = 'two';
+console.log(o[k1]); // 'two'  (both keys coerced to "[object Object]")
+```
+
+**Gotcha — reaching for `Map` when object keys matter:** If you need to associate data with objects without this collision (or without coercion at all), use `Map`. See [`3.3 Map & Set in JS`](./map-and-set.md).
+
+**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](./javascript-memory-weakmap-and-weakset.md) for how primitives and references interact with the stack and heap.

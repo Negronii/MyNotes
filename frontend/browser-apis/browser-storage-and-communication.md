@@ -1,0 +1,217 @@
+A bundle of interview questions about storing data in the browser and sending messages between tabs, iframes, and native shells.
+
+# What's the difference between `localStorage`, `sessionStorage`, and cookies?
+
+**Headline (30s):** All three store client-side data, but differ in capacity, lifetime, and whether the server sees them. `localStorage` persists indefinitely, `sessionStorage` is per-tab, both are client-only (never sent in requests). **Cookies** are tiny (~4KB) but automatically included in every HTTP request, which is why authentication lives there. Pick based on *who needs to read the data* (server vs. client) and *how long it should live*.
+
+**Why interviewers ask this:** This comes up in any question about auth flows, session management, or persistence. Candidates who conflate the three write insecure auth code.
+
+## `localStorage`
+
+- **Capacity:** ~5MB per origin.
+- **Lifetime:** persists until cleared by script or user.
+- **Access:** synchronous, same-origin, client-only (never sent in HTTP requests).
+- **Use for:** user preferences (theme, language), cached client state, offline data.
+
+## `sessionStorage`
+
+Identical API, tab-scoped lifetime.
+
+- **Capacity:** ~5MB per origin.
+- **Lifetime:** cleared when the tab closes (survives reloads).
+- **Access:** synchronous, same-origin, tab-isolated.
+- **Use for:** multi-step form state, wizard progress, temporary SPA state.
+
+## Cookies
+
+- **Capacity:** ~4KB per cookie, ~20 cookies per domain.
+- **Lifetime:** configurable with `Expires` / `Max-Age`; session cookies die with the browser.
+- **Access:** sent with every HTTP request to the matching domain; readable via `document.cookie` unless `HttpOnly`.
+- **Security flags:** `HttpOnly` (blocks JS access), `Secure` (HTTPS only), `SameSite=Strict|Lax|None` (CSRF protection).
+- **Use for:** session IDs, CSRF tokens, server-side personalization.
+
+## Quick comparison
+
+| Feature | localStorage | sessionStorage | Cookies |
+|---|---|---|---|
+| Capacity | ~5MB | ~5MB | ~4KB |
+| Sent with requests | No | No | Yes |
+| Lifetime | Permanent | Tab session | Configurable |
+| Server access | No | No | Yes |
+| Accessible to JS | Yes | Yes | Only without `HttpOnly` |
+
+**Gotcha — don't store auth tokens in `localStorage`:** Anything in `localStorage` is readable by any script on the page. An XSS vulnerability becomes a full account takeover. Use `HttpOnly` + `Secure` + `SameSite` cookies for session tokens.
+
+**See also:** [`8.2 Web Security and Authentication`](../../engineering-foundations/security/web-security-and-authentication.md) for XSS/CSRF mitigation and cookie flag deep dives.
+
+---
+
+# `HTMLCollection` vs. `NodeList` — what's the difference?
+
+**Headline (30s):** Both are array-like collections of DOM nodes, but differ in what they contain and how they update. **`HTMLCollection`** holds only `Element` nodes and is **always live** — it reflects DOM changes automatically. **`NodeList`** can hold any node type (Elements, Text, Comments). It's **usually static** (from `querySelectorAll`) but occasionally live (`childNodes`).
+
+## `HTMLCollection`
+
+- Returned by `getElementsByClassName`, `getElementsByTagName`, `.children`.
+- Contains only `Element` nodes.
+- Always live — queries re-run on each access.
+
+## `NodeList`
+
+- Returned by `querySelectorAll` (static), `childNodes` (live).
+- Can contain any node type: `Element`, `Text`, `Comment`.
+- Static or live depending on source.
+
+## `.children` vs `.childNodes`
+
+```html
+<p id="p1">
+  <em>hello</em> world <b>bold</b><!-- comment -->
+</p>
+```
+
+- `p.children` → `HTMLCollection`: `[<em>, <b>]` — elements only.
+- `p.childNodes` → `NodeList`: `[<em>, " world ", <b>, <!-- comment -->]` — everything.
+
+**Gotcha — mutating while iterating a live collection:** Removing elements from a live `HTMLCollection` during a `for` loop makes the indexes shift underneath you. Either iterate backwards, or convert to an array first (`Array.from(collection)`).
+
+**Rule of thumb:** Reach for `querySelectorAll` by default — the static snapshot is easier to reason about. Fall back to `getElementsByClassName` when you explicitly need live updates.
+
+---
+
+# How can tabs of the same origin communicate?
+
+**Headline (30s):** Four main options, roughly in order of complexity. For most same-origin cases, **`BroadcastChannel`** is the cleanest modern answer. The `localStorage` + `storage` event trick works everywhere but feels hacky. `SharedWorker` is powerful but has Safari caveats. `WebSocket` through a server is the only cross-origin option.
+
+## 1. `localStorage` + `storage` event
+
+The simplest cross-browser approach. Writing to `localStorage` fires a `storage` event in *other* same-origin tabs (not the tab that wrote).
+
+```javascript
+// Tab A listens
+window.addEventListener('storage', (e) => {
+  if (e.key === 'message') console.log('Received:', e.newValue);
+});
+
+// Tab B sends
+localStorage.setItem('message', JSON.stringify({ text: 'hello', ts: Date.now() }));
+```
+
+**Gotcha — only fires in *other* tabs:** The tab that called `setItem` does NOT receive its own event. Works only between tabs, not within one tab.
+
+## 2. `BroadcastChannel` API
+
+Purpose-built for same-origin tab messaging. Much cleaner than the storage hack.
+
+```javascript
+const channel = new BroadcastChannel('app_channel');
+
+// Listen
+channel.onmessage = (e) => console.log('Received:', e.data);
+
+// Send
+channel.postMessage({ type: 'update', payload: { id: 1 } });
+```
+
+Supported in all modern browsers. First choice for new code.
+
+## 3. `SharedWorker`
+
+A Web Worker that survives across tabs and can hold shared state. Each tab connects via a port.
+
+```javascript
+// worker.js
+const ports = new Set();
+onconnect = (e) => {
+  const port = e.ports[0];
+  ports.add(port);
+  port.onmessage = (msg) => {
+    // broadcast to all other tabs
+    ports.forEach(p => { if (p !== port) p.postMessage(msg.data); });
+  };
+};
+```
+
+**Gotcha — not supported in Safari on iOS.** Avoid if you need universal support.
+
+## 4. WebSockets (cross-origin or real-time)
+
+When tabs need to share updates with a server too (chat, collaborative editing), all tabs connect to the same WebSocket; the server broadcasts.
+
+**Rule of thumb:** Same-origin, simple → `BroadcastChannel`. Same-origin, broad support → `localStorage` + `storage` event. Cross-origin or server-driven → WebSocket.
+
+---
+
+# How do you communicate with an iframe?
+
+**Headline (30s):** Use `window.postMessage(data, targetOrigin)`. It's the *only* safe way to cross origin boundaries. The parent calls `iframe.contentWindow.postMessage(...)`; the iframe calls `window.parent.postMessage(...)`. Both sides listen with `window.addEventListener('message', ...)`. **Critical:** always validate `event.origin` — never trust incoming messages without checking the sender.
+
+```javascript
+// Parent → iframe
+const iframe = document.getElementById('myIframe');
+iframe.contentWindow.postMessage(
+  { action: 'update' },
+  'https://child-origin.com'
+);
+
+// Iframe → parent
+window.parent.postMessage(
+  { status: 'ready' },
+  'https://parent-origin.com'
+);
+
+// Receiving (both sides)
+window.addEventListener('message', (e) => {
+  if (e.origin !== 'https://trusted-origin.com') return; // ALWAYS check
+  console.log('Received:', e.data);
+});
+```
+
+**Gotcha — never use `'*'` as the target origin in production:** `'*'` sends the message to any origin, exposing you if the iframe is hijacked or navigated to a hostile page. Always specify the exact origin you expect.
+
+**Gotcha — origin validation is mandatory:** Without `if (e.origin !== ...)`, any page can embed your iframe and send it malicious messages. Treat incoming `message` events like untrusted input.
+
+---
+
+# What's a JS-Bridge, and how does it work?
+
+**Headline (30s):** A JS-Bridge is a communication layer between native mobile code and JavaScript running inside a `WebView`. Web content is sandboxed and can't call native APIs directly, so the bridge routes calls through one of two mechanisms: **URL-scheme hijacking** (the iframe-src trick) or **global API injection** (the native app exposes functions on `window`). Modern apps usually use global injection for sync calls and URL schemes for legacy support.
+
+## URL scheme method
+
+The native app registers a custom scheme (e.g., `myapp://`). The web side loads a URL matching that scheme in a hidden iframe, which the native app intercepts before it actually navigates.
+
+```javascript
+const bridge = {
+  invoke(path, data, onSuccess, onError) {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = `myapp://${path}?data=${encodeURIComponent(JSON.stringify(data))}`;
+    document.body.appendChild(iframe);
+    setTimeout(() => iframe.remove(), 100);
+  },
+  getLocation(onSuccess, onError) {
+    this.invoke('api/location', {}, onSuccess, onError);
+  }
+};
+```
+
+**Limitation:** URL length caps, no direct response — callbacks must be stored by ID and invoked by the native side.
+
+## Global API injection
+
+The native side evaluates JavaScript into the WebView to expose functions on `window`:
+
+```javascript
+// Native injects window.NativeBridge beforehand
+const version = window.NativeBridge.getVersion();
+window.NativeBridge.requestLocation((loc) => console.log(loc));
+```
+
+Feels like normal JS — synchronous or callback-based depending on what the native side supports.
+
+**Reach for it when:** building a hybrid app (WebView + native shell). For pure web, use standard browser APIs (`navigator.geolocation`, etc.).
+
+**Gotcha — security:** Never trust data coming from the web side. The bridge can be invoked by any page loaded in the WebView — including malicious ones — unless you restrict the allowed origins.
+
+**See also:** [`1.1 Browser Basics`](../browser/browser-basics.md) for where storage and messaging fit into the browser architecture, [`8.2 Web Security and Authentication`](../../engineering-foundations/security/web-security-and-authentication.md) for auth storage and CSRF concerns.

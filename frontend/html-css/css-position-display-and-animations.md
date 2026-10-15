@@ -1,0 +1,192 @@
+# How do the CSS `position` values differ?
+
+**Headline (30s):** Five values. `static` is the default (normal flow, offsets do nothing). `relative` reserves its spot in the flow but lets you offset it visually. `absolute` is removed from the flow, positioned relative to its nearest *positioned* ancestor. `fixed` is removed from the flow, positioned relative to the viewport. `sticky` is a hybrid — it flows normally until it crosses a scroll threshold, then sticks like `fixed`.
+
+| Value | In flow? | Positioned relative to | Scrolls with page? |
+|---|---|---|---|
+| `static` (default) | yes | — (offsets ignored) | yes |
+| `relative` | yes (original space reserved) | its own original position | yes |
+| `absolute` | no | nearest positioned ancestor | yes (relative to ancestor) |
+| `fixed` | no | viewport | no |
+| `sticky` | yes → no (after threshold) | scroll container | yes, until sticky |
+
+## `static` (default)
+
+Element flows normally in document order. `top`, `right`, `bottom`, `left`, and `z-index` have no effect.
+
+```css
+.box { position: static; }
+```
+
+## `relative`
+
+Element stays in normal flow; space is reserved as if it were not positioned. Offset properties shift it *visually* without affecting sibling layout. Also establishes a positioning context for absolutely positioned descendants.
+
+```css
+.box { position: relative; top: 10px; left: 20px; }
+```
+
+## `absolute`
+
+Element removed from normal flow — no space reserved. Positioned relative to its nearest **positioned ancestor** (any ancestor with `position: relative`, `absolute`, `fixed`, or `sticky`). With no positioned ancestor, the initial containing block (usually `<html>`) is used.
+
+```css
+.parent { position: relative; } /* creates positioning context */
+.child  { position: absolute; top: 0; right: 0; }
+```
+
+## `fixed`
+
+Removed from normal flow; positioned relative to the **viewport**. Stays put while the page scrolls.
+
+```css
+.navbar { position: fixed; top: 0; left: 0; right: 0; }
+```
+
+**Gotcha — `fixed` inside a `transform`ed ancestor:** If any ancestor has `transform`, `filter`, or `perspective` set (even just `translateZ(0)`), the ancestor becomes the new containing block — and your `fixed` element now scrolls with the ancestor instead of the viewport. Easy to miss until you debug why your header isn't sticky on a page with CSS animations.
+
+## `sticky`
+
+Element starts in normal flow; behaves like `fixed` once scroll crosses a threshold defined by `top`, `right`, `bottom`, or `left`. At least one of those must be set.
+
+```css
+.header { position: sticky; top: 0; }
+```
+
+**Gotcha — `overflow: hidden` on an ancestor kills `sticky`:** `sticky` only works if its scroll container has `overflow: visible` (or has no overflow set). A `sticky` child inside `overflow: hidden` silently behaves like `relative`. Check the entire ancestor chain when debugging.
+
+## Stacking context and `z-index`
+
+`z-index` controls stacking order along the z-axis, but **only within the same stacking context**. Elements with `position` other than `static` create a stacking context when `z-index` is set; so do elements with `opacity < 1`, `transform`, `filter`, `will-change`, and a few others.
+
+```css
+.layer-a { position: relative; z-index: 1; }
+.layer-b { position: relative; z-index: 2; } /* above layer-a */
+```
+
+**Gotcha — "my `z-index: 9999` isn't on top":** A stacking context is an isolation boundary. A descendant's `z-index` can never escape to compete with elements outside its context — no matter how high the value. If `.modal` sits inside a parent with `transform: translateZ(0)`, any `z-index` on the modal only competes with *siblings inside that parent*. To fix, raise the `z-index` (or create a stacking context) on an ancestor shared with the element you're trying to overlap.
+
+---
+
+# When should you use `display: none` vs `visibility: hidden` vs `opacity: 0`?
+
+**Headline (30s):** `display: none` removes the element from layout entirely (causes reflow; screen readers ignore it; can't animate). `visibility: hidden` keeps the layout space but hides the pixels (cheaper — repaint only; screen readers still ignore). `opacity: 0` keeps the layout and pixels "there" but invisible — the element still receives clicks and is still announced by screen readers unless you add `aria-hidden`.
+
+| Aspect | `display: none` | `visibility: hidden` | `opacity: 0` |
+|---|---|---|---|
+| **Space in layout** | removed | reserved | reserved |
+| **Receives clicks / events** | no | no | **yes** (add `pointer-events: none` to disable) |
+| **Announced by screen readers** | no | no | often yes (add `aria-hidden`) |
+| **Can animate** | no (all-or-nothing) | yes, on `visibility` | yes, on `opacity` |
+| **Cost when toggled** | reflow + paint | paint only | paint only (composite if promoted) |
+| **Affects children** | children hidden | children inherit (can override with `visibility: visible`) | children inherit |
+
+### Decision guide
+
+- Need the element **gone** — no space, no a11y, responsive toggle? → `display: none`.
+- Need to **hide visually but preserve layout** (keep siblings stable)? → `visibility: hidden`.
+- Need to **fade in/out** with a transition? → `opacity: 0` (with `pointer-events: none` when hidden, and `aria-hidden` for a11y).
+
+```css
+.hidden-flow        { display: none; }
+.hidden-space       { visibility: hidden; }
+.hidden-transparent { opacity: 0; pointer-events: none; }
+```
+
+**Gotcha — transitioning from `display: none`:** You can't fade in something from `display: none` because the element has no "before" frame to animate from. Either use `visibility` + `opacity`, or use the modern `transition-behavior: allow-discrete` (spec-level; Chromium first, with limited older-browser support at time of writing).
+
+---
+
+# How do CSS transitions and animations work, and when should you prefer one over the other?
+
+**Headline (30s):** A **transition** interpolates between two states triggered by a property change (e.g., hover). An **animation** runs independently from defined keyframes and can loop, pause, and control fill state. Use transitions for simple state-to-state interactions (hover, focus, click). Use animations for complex, multi-step, or looping motion.
+
+## Transitions
+
+```css
+.element { transition: property duration timing-function delay; }
+
+.button { transition: background-color 0.3s ease-in-out 0.1s; }
+```
+
+Individual properties:
+
+| Property | Purpose |
+|---|---|
+| `transition-property` | which properties animate (`all`, `color`, `transform`, etc.) |
+| `transition-duration` | length (e.g., `0.3s`, `300ms`) |
+| `transition-timing-function` | easing (`ease`, `linear`, `ease-in`, `ease-out`, `cubic-bezier(...)`) |
+| `transition-delay` | delay before start |
+
+```css
+.element {
+  transition-property: transform, opacity;
+  transition-duration: 0.3s, 0.2s;
+  transition-timing-function: ease-out, linear;
+  transition-delay: 0s, 0.1s;
+}
+```
+
+## `@keyframes` and `animation`
+
+Keyframes define intermediate states; `animation` applies them.
+
+```css
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideIn {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(10%); }
+  100% { transform: translateX(0); }
+}
+
+.box { animation: fadeIn 0.5s ease-out forwards; }
+```
+
+Individual properties:
+
+| Property | Purpose |
+|---|---|
+| `animation-name` | keyframes name |
+| `animation-duration` | length of one cycle |
+| `animation-timing-function` | easing (can vary per keyframe) |
+| `animation-delay` | delay before start |
+| `animation-iteration-count` | `1`, `infinite`, or a number |
+| `animation-direction` | `normal`, `reverse`, `alternate`, `alternate-reverse` |
+| `animation-fill-mode` | `none`, `forwards`, `backwards`, `both` |
+| `animation-play-state` | `running` or `paused` |
+
+## `transform` properties
+
+| Function | Effect |
+|---|---|
+| `translate(x, y)` | move |
+| `translateX(x)` / `translateY(y)` / `translateZ(z)` | move on one axis (Z needs 3D context) |
+| `rotate(angle)` | 2D rotate |
+| `rotateX/Y/Z(angle)` | 3D rotate |
+| `scale(x, y)` | resize |
+| `scaleX(x)` / `scaleY(y)` | resize per axis |
+
+```css
+.card { transform: translate(10px, 20px) rotate(5deg) scale(1.05); }
+```
+
+## GPU compositing and hardware acceleration
+
+Animating `transform` and `opacity` runs on the **compositor** (GPU) instead of triggering layout/paint. `will-change` hints to the browser to pre-promote the element to its own layer. See [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for the full cost ladder.
+
+```css
+.animated {
+  will-change: transform;
+  transform: translateZ(0); /* force GPU layer without visible movement */
+}
+```
+
+**Gotcha — don't `will-change` everything:** Each hinted element becomes its own compositor layer and eats memory. Use `will-change` only for the element you're actively animating; remove it after the animation is done (via class toggle) if the element persists. Over-hinting can hurt performance on low-end devices.
+
+**Gotcha — `transform: translateZ(0)` is a blunt instrument:** It pre-promotes to a GPU layer but burns memory. `will-change: transform` is the modern, intention-revealing equivalent, but both should only be used when you've measured a performance problem.
+
+**See also:** [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for the reflow/repaint cost ladder, [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md) for when GPU acceleration does and doesn't help.

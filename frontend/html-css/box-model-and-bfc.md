@@ -1,0 +1,159 @@
+Interview questions this note prepares you for:
+
+1. **What is the CSS box model?**
+2. **Content-box vs border-box — which should you use, and why?**
+3. **What is a Block Formatting Context (BFC), and what triggers one?**
+4. **How do you fix vertical margin collapse?**
+5. **How do you contain floating children so the parent doesn't collapse?**
+
+## What is the CSS box model?
+
+**Headline (30s):** Every element is rendered as a rectangular box with four concentric layers — content, padding, border, margin. The content is the innermost rectangle; padding adds space inside the border; the border wraps the padding; the margin is transparent space pushing away other elements.
+
+```text
+┌───────── margin ─────────┐
+│ ┌────── border ────────┐ │
+│ │ ┌── padding ──────┐  │ │
+│ │ │ [  content  ]   │  │ │
+│ │ └─────────────────┘  │ │
+│ └──────────────────────┘ │
+└──────────────────────────┘
+```
+
+**Padding and margin shorthand** accept 1–4 values, clockwise from top:
+
+| Values | Applies to |
+|---|---|
+| 1 value | all four sides |
+| 2 values | top/bottom, left/right |
+| 3 values | top, left/right, bottom |
+| 4 values | top, right, bottom, left |
+
+Individual sides can be targeted with `padding-top`, `margin-left`, etc.
+
+**Border shorthand** is `border: <width> <style> <color>`:
+
+```css
+.box-a { border: 1px solid black; }
+.box-b { border: 3px dashed red; }
+```
+
+## Content-box vs border-box — which should you use?
+
+**Headline (30s):** `content-box` (the CSS default) sets `width` / `height` on the **content only** — padding and border are added *on top*, making the element bigger than declared. `border-box` includes padding and border *inside* the declared size, so a `width: 100px` element is exactly 100px wide regardless of padding. Most modern codebases reset everything to `border-box` because it's the sane default.
+
+| Property | `content-box` (default) | `border-box` |
+|---|---|---|
+| `width` includes | content only | content + padding + border |
+| Result of `width: 100px; padding: 10px; border: 5px;` | 130px actual width | exactly 100px |
+| Friendlier for math | no | yes |
+
+**The recommended reset:**
+
+```css
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+```
+
+**Example — fitting a box into exactly 100×100:**
+
+```css
+.box {
+  width: 100px;
+  height: 100px;
+  padding: 10px;
+  border: 5px solid black;
+  box-sizing: border-box;
+}
+```
+
+Under `border-box`, padding and border stay inside the 100×100 footprint. Under `content-box`, the same declaration produces a 130×130 element.
+
+## What is a Block Formatting Context, and what triggers one?
+
+**Headline (30s):** A Block Formatting Context (BFC) is an isolated layout region where internal elements don't interact with elements outside it. Inside a BFC: block boxes stack vertically, floats don't escape, adjacent margins collapse *with each other* but not across the BFC boundary, and the BFC's height grows to contain any floated children. You trigger one by setting certain properties on a container — the most common is `overflow: hidden` or `display: flow-root`.
+
+**Rules that apply inside a BFC:**
+
+- Block-level boxes stack vertically along the block axis.
+- Floated children do **not** overlap the BFC's boundary.
+- The BFC's height adjusts to include any floated children (float no longer collapses the parent).
+- Vertical margin collapse occurs between adjacent siblings *inside* the BFC, but never crosses the BFC boundary.
+- The BFC is a containing block for absolutely positioned descendants.
+
+**How to create a BFC** (any of these on the container):
+
+- `overflow: hidden` / `auto` / `scroll` (anything other than `visible`)
+- `display: flow-root` — the "modern, side-effect-free" trigger (no clipping, no scroll)
+- `display: flex` / `grid` / `inline-block` / `table-cell`
+- `position: absolute` / `fixed`
+- `float: left` / `right` (but that makes the container itself float — rarely what you want)
+
+**Gotcha — "`overflow: hidden` can clip your content":** It triggers a BFC, yes, but it also crops anything that overflows. If you need the BFC behavior without clipping, use `display: flow-root` instead.
+
+## How do you fix vertical margin collapse?
+
+**Headline (30s):** Adjacent block siblings' vertical margins collapse into the larger of the two — so two boxes with `margin: 50px` each don't produce a 100px gap, they produce a 50px gap. To prevent collapse between boxes, wrap one of them in a container that creates a new BFC; margins never collapse across a BFC boundary.
+
+**Before** (margin collapse strikes):
+
+```html
+<section>box-one</section>
+<section>box-two</section>
+```
+
+```css
+section { margin: 50px; }
+/* Gap between sections: 50px (collapsed), not 100px */
+```
+
+**After** (wrap one in a BFC):
+
+```html
+<section>box-one</section>
+<div class="bfc">
+  <section>box-two</section>
+</div>
+```
+
+```css
+section { margin: 50px; }
+.bfc { display: flow-root; } /* or overflow: hidden */
+/* Gap is now the full 100px */
+```
+
+**Gotcha — padding on the parent doesn't help if the parent itself isn't a BFC:** A top margin on the first child will "escape" through a non-BFC parent and collapse with the parent's own top margin. Either add padding/border to the parent, or make it a BFC.
+
+## How do you contain floating children so the parent doesn't collapse?
+
+**Headline (30s):** When a parent contains only floated children, its height collapses to zero because floats are removed from the normal flow. Fix by making the parent a BFC (the clean modern way) or by using a clearfix pseudo-element (the legacy way).
+
+**Before** (parent collapses):
+
+```css
+.container { background: red; }
+.box { float: left; width: 100px; height: 100px; }
+```
+
+The `.container` has no height — it's a red stripe, not a red rectangle around its floats.
+
+**Fix — the modern way (BFC):**
+
+```css
+.container { display: flow-root; }
+```
+
+**Fix — the legacy clearfix:**
+
+```css
+.container::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+```
+
+Both make the parent's height include the floated children. Prefer `flow-root` in new code.
+
+**See also:** [`2.6 CSS Interview Questions`](./css-interview-questions.md) for more clear-floats patterns and layout interview scenarios.
