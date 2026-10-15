@@ -1,6 +1,6 @@
 # Archive index / 归档索引
 
-These source packs are preserved for reference and later review. Their placement records migration scope; it does not label their contents obsolete. Relative structure and file bytes remain unchanged inside archived packs.
+These source packs are preserved for reference and later review. Their placement records migration scope; it does not label their contents obsolete. Folder structure and attachments remain in place; Markdown notes may receive scoped review and edits.
 
 ## Preserved packs / 保留材料
 
