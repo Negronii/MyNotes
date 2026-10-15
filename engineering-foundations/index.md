@@ -34,6 +34,8 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 - [Node.js Fundamentals / Node.js基础](backend/node-js-fundamentals.md)
 - [Python Fundamentals / Python基础](backend/python-fundamentals.md)
+- [Data Access and Connection Pools / 数据访问与连接池](backend/data-access-and-connection-pools.md)
+- [Caching and Redis / 缓存与 Redis](backend/caching-and-redis.md)
 
 ### Architecture / 架构
 

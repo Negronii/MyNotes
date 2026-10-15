@@ -38,6 +38,147 @@ In a typical redirect flow, the relying application creates a login request, the
 
 See [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
 
+### Authorization-code + PKCE callback / 授权码 + PKCE 回调
+
+When an application needs federated sign-in, OpenID Connect uses OAuth's authorization-code flow with the `openid` scope. Plain OAuth grants delegated API access; it does not define an ID Token or an authentication result for the client.
+
+1. The client creates a one-time `code_verifier` and derives `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))` using `S256`. It keeps the verifier with the browser's pending login transaction. It also normally creates an unpredictable `state` value bound to that browser transaction; an OIDC client may create a `nonce` if it wants to bind the returned ID Token to this request.
+2. The client redirects the browser to the authorization endpoint with `response_type=code`, its `client_id`, an exactly registered `redirect_uri`, `scope=openid` (plus only the API scopes it needs), `state`, `code_challenge`, and `code_challenge_method=S256`. It includes `nonce` only if the flow uses it.
+3. After authenticating the user and obtaining any required consent, the authorization server redirects to the registered callback with a short-lived, one-use authorization code and the `state` value, if sent. The callback checks and consumes its stored `state` before continuing. If the client uses multiple authorization servers, it also applies an issuer or equivalent mix-up defense.
+4. The client sends the code, the same `redirect_uri`, and its original `code_verifier` to the token endpoint; a confidential client also authenticates there when required. The authorization server recomputes the challenge and rejects a code redemption whose verifier does not match. The code alone is therefore insufficient for an interceptor to redeem.
+5. In the selected OIDC Authorization Code Flow, a successful token response includes an ID Token and an Access Token; a Refresh Token is optional. The client validates the ID Token before establishing its own session. The API validates the access token it receives separately.
+
+These values solve different problems and are not all mandatory in every flow:
+
+- **`state` / 请求状态** is an opaque value for correlating a redirect with the initiating browser transaction and often restoring a local return path. OAuth clients must prevent callback CSRF, but a literal `state` parameter is not the only permitted defense: RFC 9700 allows a client that has confirmed PKCE support to rely on PKCE for CSRF protection; in OIDC, `nonce` can also provide that protection. If the client sends `state`, it must bind and check it instead of trusting a callback value.
+- **`nonce` / 随机数** binds an ID Token to an OIDC authentication request and helps detect replay. It is optional in the OIDC Authorization Code Flow; when sent, the provider must return it in the ID Token and the client must compare it. Other OIDC flows have different requirements.
+- **`code_verifier` / PKCE验证值** is the secret the client keeps and later presents at the token endpoint. The authorization request carries only its derived challenge. RFC 9700 requires PKCE for public clients and recommends it for confidential clients; use `S256`, not a method that reveals the verifier.
+
+**Token use and lifecycle / 令牌用途与生命周期：** An **ID Token / 身份令牌** tells the OIDC client about an authentication event; it is not an API credential. Validate it under the OIDC profile: exact expected issuer, a trusted audience containing this client's ID (and `azp` when applicable), expiration, cryptographic validation with the issuer's keys and registered algorithm, and a matching `nonce` when one was sent. An **access token / 访问令牌** is for a resource server. That server checks the expected issuer, its own API audience, expiration, and allowed scope/action; follow the issuer's contract, verifying the signature and claims for a JWT access-token profile or using the trusted introspection/lookup mechanism for an opaque token. Decoding a JWT is not validation.
+
+A refresh token is presented to the authorization server's token endpoint to obtain a replacement access token; it is not sent to the API. Treat it as a high-value credential. RFC 9700 requires public clients to use refresh-token rotation or sender constraint. If the authorization server supports a revocation endpoint, a client can request revocation of a token; resource servers may learn of that change at different times. A locally verified, self-contained access token may remain accepted until its expiry unless the resource server also checks revocation state. Ending the application's own session and ending an identity-provider session are separate operations.
+
+**Core idea / 核心要点：** OAuth authorization grants access to an API; OIDC tells a client who authenticated; the application still decides whether that identity may perform an action now. PKCE protects code redemption, and runtime authorization protects application data.
+
+**Mechanism in Chinese / 机制要点：** PKCE 把授权码与客户端保留的 verifier 配对；state 关联回调与发起的登录事务，若发送就必须校验，而已确认支持 PKCE 的客户端可按 RFC 9700 依 PKCE 防回调 CSRF。OIDC Code Flow 的 nonce 可选，若发送则须与 ID Token 中的值匹配。客户端验证 ID Token 后建立自己的会话，API 则独立验证面向自身的 access token，并按当前主体、租户和权限做运行时授权。refresh token 只向授权服务器换取新 access token；撤销传播可能有延迟，应用会话、IdP 会话和 API 对已签发 access token 的接受边界要分别处理。
+
+See [OpenID Connect Core 1.0, incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice (January 2025)](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 7636, Proof Key for Code Exchange (September 2015)](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009, OAuth 2.0 Token Revocation (August 2013)](https://www.rfc-editor.org/rfc/rfc7009.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
+
+## Tenant-owned resources / 租户资源授权
+
+Authentication yields a validated subject; it does not prove access to every tenant or object. Build a **principal / 请求主体** from the verified identity plus the user's current membership and permissions in the selected tenant. A tenant ID in a URL or request body is only a requested context: resolve it against trusted membership before constructing the principal. Enforce the resource and action together on every API path.
+
+For one synthetic document service, the path is: verified credential → current tenant membership → `GET /documents/{id}` authorization → query constrained by both `tenant_id` and document ID → cache lookup scoped by tenant, subject, and document after authorization → optional job row storing the authorized tenant, requester, and document. The worker loads that canonical job row, rechecks current membership, and calls the same tenant-scoped data function. A worker's broad database role does not make a job payload or object ID trustworthy.
+
+This standard-library example uses SQLite to exercise the API and worker data boundaries. The identity inputs below stand in for a principal produced by a real authentication layer; they are not token validation code.
+
+```python
+import sqlite3
+
+db = sqlite3.connect(":memory:")
+db.executescript("""
+CREATE TABLE memberships (
+    tenant_id TEXT NOT NULL, subject TEXT NOT NULL, role TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, subject)
+);
+CREATE TABLE documents (
+    id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, body TEXT NOT NULL
+);
+CREATE TABLE jobs (
+    id INTEGER PRIMARY KEY, tenant_id TEXT NOT NULL,
+    requester TEXT NOT NULL, document_id TEXT NOT NULL
+);
+INSERT INTO memberships VALUES ('tenant-a', 'alice', 'reader');
+INSERT INTO memberships VALUES ('tenant-b', 'bob', 'reader');
+INSERT INTO documents VALUES ('doc-a', 'tenant-a', 'A private sample');
+INSERT INTO documents VALUES ('doc-b', 'tenant-b', 'B private sample');
+""")
+
+def principal_for(tenant_id, subject):
+    # A requested tenant becomes trusted only after this current membership lookup.
+    row = db.execute(
+        "SELECT role FROM memberships WHERE tenant_id=? AND subject=?",
+        (tenant_id, subject),
+    ).fetchone()
+    if row is None or row[0] not in {"reader", "admin"}:
+        return None
+    return {"tenant_id": tenant_id, "subject": subject, "role": row[0]}
+
+def read_document(principal, document_id, cache):
+    if principal is None or principal["role"] not in {"reader", "admin"}:
+        raise PermissionError("no current read permission")
+    key = (principal["tenant_id"], principal["subject"], document_id)
+    if key not in cache:
+        row = db.execute(
+            "SELECT body FROM documents WHERE tenant_id=? AND id=?",
+            (principal["tenant_id"], document_id),
+        ).fetchone()
+        if row is None:
+            return None
+        cache[key] = row[0]
+    return cache[key]
+
+def read_api(principal, document_id, cache):
+    body = read_document(principal, document_id, cache)
+    return (404, None) if body is None else (200, body)
+
+def enqueue(principal, document_id, cache):
+    if read_document(principal, document_id, cache) is None:
+        raise PermissionError("cannot enqueue an unreadable document")
+    cursor = db.execute(
+        "INSERT INTO jobs (tenant_id, requester, document_id) VALUES (?, ?, ?)",
+        (principal["tenant_id"], principal["subject"], document_id),
+    )
+    db.commit()
+    return cursor.lastrowid
+
+def run_job(job_id, cache):
+    # The queue carries only an ID; tenant, actor, and object come from the stored job.
+    job = db.execute(
+        "SELECT tenant_id, requester, document_id FROM jobs WHERE id=?", (job_id,)
+    ).fetchone()
+    if job is None:
+        raise PermissionError("unknown job")
+    tenant_id, requester, document_id = job
+    principal = principal_for(tenant_id, requester)  # current membership, not enqueue-time trust
+    body = read_document(principal, document_id, cache)
+    if body is None:
+        raise PermissionError("job target is outside its tenant")
+    return body
+
+cache = {}
+alice = principal_for("tenant-a", "alice")
+bob = principal_for("tenant-b", "bob")
+assert read_api(alice, "doc-a", cache) == (200, "A private sample")
+assert read_api(bob, "doc-a", cache) == (404, None)  # API boundary
+assert run_job(enqueue(alice, "doc-a", cache), cache) == "A private sample"
+
+# Simulate a stale or malformed job row created through a privileged service path.
+cursor = db.execute(
+    "INSERT INTO jobs (tenant_id, requester, document_id) VALUES (?, ?, ?)",
+    ("tenant-b", "bob", "doc-a"),
+)
+db.commit()
+try:
+    run_job(cursor.lastrowid, cache)
+except PermissionError:
+    pass  # worker boundary still rejects the cross-tenant object
+else:
+    raise AssertionError("worker exposed a cross-tenant document")
+```
+
+The query always carries the principal's tenant, and authorization runs before a cache hit. This example gives each principal a separate cache entry; a system with finer-grained permissions must check those permissions on cache hits and include every access-relevant scope or policy version in its cache design. Database row-level security or tenant-scoped credentials can add another boundary, but the application still needs correct authorization and job ownership.
+
+Permission-aware retrieval uses the same boundary before evidence reaches a model; see [Retrieval-Augmented Generation / 检索增强生成](../../ai-engineering/rag/rag-architecture-and-implementation.md) for that application.
+
+**Interview answer / 面试回答：**
+
+> **EN:** I derive the subject from a validated credential, then resolve its current membership in the requested tenant. The API checks the action and scopes the database query by tenant and object ID. I authorize before cache lookup and carry only a server-created job ID into the queue; the worker reloads the job, rechecks membership, and uses the same scoped query. A service account's broad database access does not grant the caller cross-tenant access.
+>
+> **中文：** 我先从已验证的凭据得到用户身份，再校验其当前租户成员关系。API 同时检查操作权限，并用租户 ID 和对象 ID 限定查询；缓存命中前也要授权。队列只传递服务端创建的任务 ID，worker 重新读取任务、检查成员关系，并复用租户范围查询。服务账号拥有较广数据库权限，不代表调用者可以跨租户访问。
+
+See [AWS Well-Architected SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html) for the distinction between isolated resources and pooled resources that rely on runtime tenant scoping.
+
 ---
 
 ## How does HTTPS protect against man-in-the-middle attacks?
@@ -124,4 +265,4 @@ An optional pepper is a secret kept separately from the password database; it is
 
 **See also:** [HTTP Protocols and WebSockets](../networking/http-protocols-and-websockets.md) for browser request and transport context, and [Browser Storage and Communication](../../frontend/browser-apis/browser-storage-and-communication.md) for browser storage and messaging security.
 
-Sources: [OWASP Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#least-privilege), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP CSP](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), [WHATWG Fetch](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials), [RFC 8446 TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html), [RFC 8725 JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html). Security guidance checked 2026-10-15.
+Sources: [OWASP Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#least-privilege), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP CSP](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), [WHATWG Fetch](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials), [RFC 7636 PKCE](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009 Token Revocation](https://www.rfc-editor.org/rfc/rfc7009.html), [RFC 8446 TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html), [RFC 8725 JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), [AWS SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html), and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html). Security guidance checked 2026-10-15.
