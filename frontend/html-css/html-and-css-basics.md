@@ -1,59 +1,60 @@
-A grab-bag reference for five CSS foundations that show up constantly in interviews: units, selectors/specificity, responsive techniques, inheritance, and text-overflow tricks. Reach for this when you need to refresh the vocabulary — for mechanism-heavy deep dives, cross-links are at the end of each section.
+**HTML and CSS Basics / HTML 与 CSS 基础**
+
+A compact reference for five CSS foundations that show up constantly in interviews: units, selectors/specificity, responsive techniques, inheritance, and text-overflow tricks. Reach for this when you need to refresh the vocabulary — for mechanism-heavy deep dives, cross-links are at the end of each section.
+
+**中文：** 重点区分单位及其参照、级联优先级、属性继承、文本截断与语义 HTML 的职责边界。
 
 ## CSS Units — which to use when
 
 | Unit | Relative to | Use for | Avoid for |
 |---|---|---|---|
-| `px` | physical pixels | borders, 1-off precise control | body text, layout (accessibility) |
-| `%` | parent | widths in grid layouts | nesting widths (unpredictable overflow) |
+| `px` | CSS reference pixels | borders, precise spacing, sizing | treating them as device pixels |
+| `%` | property-specific reference, often a containing block | fluid sizing | assuming every percentage uses the parent's width |
 | `em` | parent `font-size` (or own, for non-`font-size`) | spacing relative to text | deep nesting (compounds) |
 | `rem` | root `font-size` | scalable UIs, most typography | fine-grained per-component control |
-| `vw` / `vh` | viewport | hero sections, fullscreen elements | full-width inside scrollable pages |
-| `dvh` | viewport **minus** mobile UI | mobile hero / full-height on phones | where you need static viewport height |
+| `vw` / `vh` | default (large) viewport size | viewport-relative layout | assuming `100vw` always equals the content box |
+| `svh` / `lvh` / `dvh` | small / large / dynamic viewport height | choose based on browser UI behavior | assuming they are interchangeable |
 | `vmin` / `vmax` | smaller / larger viewport dim | keeping elements square across orientations | anything that needs a single axis |
 
 Usage notes:
 
-- **`px`** — precise but not accessibility-friendly at larger zoom levels.
-- **`%`** — context-dependent (`width: 50%` = 50% of parent). Nesting `%` widths leads to unexpected overflows.
-- **`em`** — relative to parent `font-size`; compounds in nested lists (`1.2em` inside `1.2em` is `1.44em`).
-- **`rem`** — root-relative. Setting `html { font-size: 62.5%; }` makes `1rem = 10px` while still respecting user preferences.
-- **`100vw`** includes the scrollbar on most desktop browsers — use `width: 100%` inside a body-width container to avoid horizontal overflow.
-- **`vh`** doesn't shrink when the mobile browser's address bar shows/hides. Use `dvh` for true full-viewport height on mobile.
+- **`px`** — a CSS reference pixel, not necessarily one physical/device pixel. Page zoom and `devicePixelRatio` affect how CSS pixels map to the output surface; CSS px itself doesn't prevent page zoom.
+- **`%`** — its reference depends on the property. For `width`, it is generally based on the containing block's width; percentages in other properties can resolve differently or remain unresolved until layout.
+- **`em`** — for most properties, relative to the element's computed font size; in `font-size`, relative to the inherited font size. It compounds when nested font sizes are set in `em`.
+- **`rem`** — relative to the root element's font size. Avoid resetting the root to a fixed pixel size when a design should follow user font preferences.
+- **`100vw`** — viewport units are based on the viewport, not necessarily the available content box; classic scrollbars and root overflow settings can make a `100vw` child overflow horizontally. Use the containing block's `width: 100%` for ordinary full-width content.
+- **`vh`** — the default `vh` maps to the large viewport. On devices with retractable browser UI it can extend behind that UI. `svh` fits the small viewport; `dvh` follows dynamic UI and can resize while scrolling.
 - **`vmin` / `vmax`** — `50vmin` always references the smaller dimension, useful for square elements that adapt to orientation.
 
 ## CSS Selectors — specificity and performance
 
-### Specificity hierarchy (highest to lowest)
+### Selector specificity
 
-1. **Inline styles** (`style="..."`)
-2. **IDs** (`#id`)
-3. **Classes, attributes, pseudo-classes** (`.class`, `[type="text"]`, `:hover`)
-4. **Elements, pseudo-elements** (`div`, `::before`)
+For selector specificity, compare the ID, class/attribute/pseudo-class, and type/pseudo-element columns from left to right. The cascade resolves origin, importance, context, attached styles, and cascade layer before specificity; specificity is not the only priority rule. Inline `style` attributes have a separate precedence step for declarations of the same importance.
 
-Specificity is calculated as a tuple `(inline, id, class, element)` and compared left-to-right: `(0, 1, 0, 0)` > `(0, 0, 2, 0)` even if the right side has more selectors. The universal selector (`*`) and combinators (`>`, `+`, `~`) carry zero specificity.
+For a simple author-style-sheet comparison, the tuple `(id, class, type)` is compared left-to-right: `(1, 0, 0)` > `(0, 2, 0)` even if the second selector has more classes. The universal selector (`*`) and combinators (`>`, `+`, `~`) carry zero specificity. `:not()`, `:is()`, and `:has()` take the specificity of their most specific argument; `:where()` contributes zero.
 
 **Specificity battle example:**
 
 ```css
-/* Specificity: (0, 1, 1, 0) — wins, because ID weight dominates */
+/* Specificity: (1, 1, 0) — wins, because ID weight dominates */
 #sidebar .menu-item { color: red; }
 
-/* Specificity: (0, 0, 2, 0) — loses, even with more classes */
+/* Specificity: (0, 3, 0) — loses, even with more classes */
 .menu .menu-item.active { color: blue; }
 ```
 
-More classes don't overcome a single ID — the `(0, 1, x, x)` tuple always beats any `(0, 0, y, z)`.
+More classes don't overcome a single ID within the same cascade context. Importance, layer order, and origin can still decide which declaration participates.
 
-**`:not()` quirk:** `:not()` itself adds no specificity, but its argument does. `div:not(.sidebar)` is `(0, 0, 1, 1)` (element + class).
+**`:not()` detail:** `:not()` itself adds no specificity; its most-specific argument does. `div:not(.sidebar)` is `(0, 1, 1)` (class + element).
 
 ### Performance and maintainability tactics
 
 - **Attribute selectors** — `[data-state="active"]` lets CSS react to JS state without class juggling.
 - **BEM** (`.block__element--modifier`) — flat specificity, trivially overridable by a more specific class.
-- **Cascade layers (`@layer`)** — group styles (`@layer base, components, utilities;`) so an author never has to win a specificity war; later layers always beat earlier ones, regardless of selector weight.
-- **CSS-in-JS** (styled-components, Emotion) — generates unique class names, sidestepping the specificity game entirely.
-- **Critical CSS** — inline selectors for above-the-fold content (`body > .header`) to paint faster.
+- **Cascade layers (`@layer`)** — organize styles (`@layer reset, components, utilities;`). For normal declarations, later layers win and unlayered author rules outrank layered author rules; for `!important`, layer order reverses. Specificity still matters within the winning layer.
+- **CSS-in-JS** (styled-components, Emotion) — often generates classes, but it still participates in the same cascade and specificity rules.
+- **Critical CSS** — inlining genuinely critical styles can reduce a render-blocking stylesheet dependency, but it adds bytes to HTML and should be measured against caching and delivery costs.
 
 ## Responsive design beyond media queries
 
@@ -96,6 +97,14 @@ Media queries still work, but modern CSS gives cleaner options for common cases:
 
 **See also:** [`2.3 Flex & Grid Layout`](./flex-and-grid-layout.md) for the full Grid / Flexbox reference.
 
+## Semantic HTML and accessibility
+
+Choose elements for their meaning and built-in behavior. Use headings to express the page outline, landmarks such as `<main>` and `<nav>` to identify regions, a `<button>` for an action, and an `<a href>` for navigation. Semantic controls provide keyboard and assistive-technology behavior that a styled `<div>` does not provide by default.
+
+Give form controls programmatic labels with `<label for="…">` or a properly nested label. Give informative images useful alternative text; use `alt=""` for decorative images so they do not add noise to the text alternative. Do not use color or visual positioning as the only way to convey a required state or relationship.
+
+Keep the source order meaningful. CSS can change visual placement without changing the underlying document sequence used by nonvisual presentation.
+
 ## Inherited CSS properties
 
 Some properties cascade to children by default; most do not. Knowing the short list saves you from reaching for `inherit` unnecessarily.
@@ -103,11 +112,13 @@ Some properties cascade to children by default; most do not. Knowing the short l
 **Inherited by default:**
 
 - **Font** — `font-family`, `font-size`, `font-style`, `font-weight`, `line-height`
-- **Text formatting** — `text-align`, `text-indent`, `text-transform`, `text-decoration`, `text-shadow`
+- **Text formatting** — `text-align`, `text-indent`, `text-transform`, `text-shadow`
 - **Spacing** — `letter-spacing`, `word-spacing`
 - **Visibility** — `visibility`
 
-Most layout / box-model properties (`margin`, `padding`, `border`, `width`, `height`, `display`, `position`) do **not** inherit — you'd never want them to.
+Most layout / box-model properties (`margin`, `padding`, `border`, `width`, `height`, `display`, `position`) do **not** inherit; they usually apply to the element's own box.
+
+`text-decoration` is not inherited. A decoration drawn by an ancestor can continue across descendant text, which can make it look inherited; changing the child's `text-decoration` does not simply override the ancestor's line.
 
 ## Truncating text with ellipsis
 
@@ -136,4 +147,6 @@ All three properties are needed: `nowrap` keeps text on one line, `overflow: hid
 }
 ```
 
-Uses the old `-webkit-box` layout, but is very widely supported (Chromium, Safari, modern Firefox). For pure-spec alternatives, `line-clamp` is now in CSS Overflow Module Level 4 — ship when browser support matures.
+This is the legacy `-webkit-line-clamp` form, with the `-webkit-box` display and orientation declarations required by that syntax. CSS Overflow Module Level 4 specifies a `line-clamp` shorthand and also describes the legacy form for compatibility, but remains a Working Draft; check the exact behavior and support in target browsers before choosing a form.
+
+**Specifications / guidance:** [HTML Standard](https://html.spec.whatwg.org/), [CSS Values and Units](https://www.w3.org/TR/css-values/), [CSS Selectors](https://www.w3.org/TR/selectors-4/), [CSS Cascading and Inheritance](https://www.w3.org/TR/css-cascade-5/), [CSS Display and visual ordering](https://www.w3.org/TR/css-display-3/#order-property), [CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/), [CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/), [WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/), [WAI form labels](https://www.w3.org/WAI/tutorials/forms/labels/), and [WAI image alternatives](https://www.w3.org/WAI/tutorials/images/).

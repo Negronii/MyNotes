@@ -1,3 +1,7 @@
+**Box Model and BFC / 盒模型与块格式化上下文**
+
+The box model measures each generated box; a block formatting context (BFC) controls specific float and margin interactions. A BFC is not a stacking context or a general rendering-containment boundary. **中文：** 盒模型描述盒子的尺寸；BFC 主要管理浮动和外边距交互，不等于堆叠上下文或通用布局隔离。
+
 Interview questions this note prepares you for:
 
 1. **What is the CSS box model?**
@@ -72,29 +76,28 @@ Under `border-box`, padding and border stay inside the 100×100 footprint. Under
 
 ## What is a Block Formatting Context, and what triggers one?
 
-**Headline (30s):** A Block Formatting Context (BFC) is an isolated layout region where internal elements don't interact with elements outside it. Inside a BFC: block boxes stack vertically, floats don't escape, adjacent margins collapse *with each other* but not across the BFC boundary, and the BFC's height grows to contain any floated children. You trigger one by setting certain properties on a container — the most common is `overflow: hidden` or `display: flow-root`.
+**Headline (30s):** A Block Formatting Context (BFC) is a flow-layout context with defined interactions with floats and vertical margin collapsing. A BFC root's auto height includes floats in that context, and its child margins do not collapse through its boundary. That does not make it a stacking context, a containing block for every positioned descendant, or a general layout-containment boundary. **中文：** BFC 会约束浮动与子级外边距的流动；它本身不保证堆叠或定位隔离。
 
 **Rules that apply inside a BFC:**
 
 - Block-level boxes stack vertically along the block axis.
-- Floated children do **not** overlap the BFC's boundary.
-- The BFC's height adjusts to include any floated children (float no longer collapses the parent).
-- Vertical margin collapse occurs between adjacent siblings *inside* the BFC, but never crosses the BFC boundary.
-- The BFC is a containing block for absolutely positioned descendants.
+- Floats outside a BFC do not intrude into its contents; a BFC root's auto height includes floats contained by that context.
+- Vertical margins of adjacent in-flow block siblings can collapse within the BFC. Child margins do not collapse through the BFC root's boundary; the root's own margins can still participate in its parent context.
+- A BFC is not, by itself, a containing block for absolutely positioned descendants. Positioned containing blocks have separate rules.
+- A BFC does not by itself create a stacking context or contain all layout invalidation.
 
 **How to create a BFC** (any of these on the container):
 
-- `overflow: hidden` / `auto` / `scroll` (anything other than `visible`)
-- `display: flow-root` — the "modern, side-effect-free" trigger (no clipping, no scroll)
-- `display: flex` / `grid` / `inline-block` / `table-cell`
-- `position: absolute` / `fixed`
-- `float: left` / `right` (but that makes the container itself float — rarely what you want)
+- `display: flow-root` — explicitly establishes a BFC without clipping content or adding a scroll container.
+- A block container with `overflow: hidden`, `auto`, or `scroll` (but not `overflow: clip`); hidden/scrolling overflow has its own clipping or scrolling effects.
+- Floats, absolutely positioned boxes, inline blocks, and table cells/captions establish independent formatting contexts for their contents.
+- `display: flex` and `display: grid` establish flex/grid formatting contexts, not BFCs. Their items also do not participate in block margin collapsing or allow floats to intrude in the usual way.
 
-**Gotcha — "`overflow: hidden` can clip your content":** It triggers a BFC, yes, but it also crops anything that overflows. If you need the BFC behavior without clipping, use `display: flow-root` instead.
+**Gotcha — BFC vs. overflow:** `overflow: hidden` can clip content and establish a scroll container. If the goal is only to contain floats and separate child margins, use `display: flow-root`.
 
 ## How do you fix vertical margin collapse?
 
-**Headline (30s):** Adjacent block siblings' vertical margins collapse into the larger of the two — so two boxes with `margin: 50px` each don't produce a 100px gap, they produce a 50px gap. To prevent collapse between boxes, wrap one of them in a container that creates a new BFC; margins never collapse across a BFC boundary.
+**Headline (30s):** Positive vertical margins of adjacent block siblings in the same block formatting context collapse to the larger margin, so two `50px` margins produce a `50px` gap. A formatting-context boundary can prevent a child's margin from collapsing through its container; the container's own margins still follow the parent context's rules.
 
 **Before** (margin collapse strikes):
 
@@ -105,7 +108,7 @@ Under `border-box`, padding and border stay inside the 100×100 footprint. Under
 
 ```css
 section { margin: 50px; }
-/* Gap between sections: 50px (collapsed), not 100px */
+/* The adjacent positive margins collapse to a 50px gap. */
 ```
 
 **After** (wrap one in a BFC):
@@ -119,15 +122,15 @@ section { margin: 50px; }
 
 ```css
 section { margin: 50px; }
-.bfc { display: flow-root; } /* or overflow: hidden */
-/* Gap is now the full 100px */
+.bfc { display: flow-root; }
+/* The child's top margin stays inside the BFC; the outer gap is 100px. */
 ```
 
-**Gotcha — padding on the parent doesn't help if the parent itself isn't a BFC:** A top margin on the first child will "escape" through a non-BFC parent and collapse with the parent's own top margin. Either add padding/border to the parent, or make it a BFC.
+**Gotcha — parent/first-child collapse:** If a parent has no border, padding, inline content, clearance, or new formatting context, its first child's top margin can collapse through it. A border, padding, or formatting-context boundary separates those margins.
 
 ## How do you contain floating children so the parent doesn't collapse?
 
-**Headline (30s):** When a parent contains only floated children, its height collapses to zero because floats are removed from the normal flow. Fix by making the parent a BFC (the clean modern way) or by using a clearfix pseudo-element (the legacy way).
+**Headline (30s):** Floats are out of normal flow, so a regular block parent with only floated children may have no height from those children. Make the parent a BFC with `display: flow-root`, or use a clearfix where legacy support requires it.
 
 **Before** (parent collapses):
 
@@ -154,6 +157,8 @@ The `.container` has no height — it's a red stripe, not a red rectangle around
 }
 ```
 
-Both make the parent's height include the floated children. Prefer `flow-root` in new code.
+Both make the parent's height include the floated children. Prefer `flow-root` when a BFC is the intended behavior.
 
-**See also:** [`2.6 CSS Interview Questions`](./css-interview-questions.md) for more clear-floats patterns and layout interview scenarios.
+**See also:** [`2.6 CSS Interview Questions`](./css-interview-questions.md) for float-clearing patterns and layout interview scenarios.
+
+**Specifications / 规范：** [CSS Display: formatting contexts](https://www.w3.org/TR/css-display-3/), [CSS 2.2: block formatting contexts](https://www.w3.org/TR/CSS22/visuren.html#block-formatting), [CSS 2.2: box model](https://www.w3.org/TR/CSS22/box.html#box-dimensions).

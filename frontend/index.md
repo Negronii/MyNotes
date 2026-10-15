@@ -10,10 +10,10 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### HTML and CSS / HTML与CSS
 
-- [HTML & CSS Basics / HTML与CSS基础](html-css/html-and-css-basics.md)
-- [Box Model and BFC / 盒模型与BFC](html-css/box-model-and-bfc.md)
+- [HTML and CSS Basics / HTML 与 CSS 基础](html-css/html-and-css-basics.md)
+- [Box Model and BFC / 盒模型与块格式化上下文](html-css/box-model-and-bfc.md)
 - [Flex & Grid Layout / Flex与Grid布局](html-css/flex-and-grid-layout.md)
-- [Browser - HTML & CSS Part / 浏览器中的HTML与CSS](html-css/browser-html-and-css.md)
+- [Browser HTML and CSS / 浏览器中的 HTML 与 CSS](html-css/browser-html-and-css.md)
 - [DOM Properties / DOM属性](html-css/dom-properties.md)
 - [CSS Interview Questions / CSS面试题](html-css/css-interview-questions.md)
 - [CSS Position, Display, and Animations / CSS定位、显示与动画](html-css/css-position-display-and-animations.md)
@@ -41,7 +41,7 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 - [DOM Manipulation and Events / DOM操作与事件](browser-apis/dom-manipulation-and-events.md)
 - [Browser Storage and Communication / 浏览器存储与通信](browser-apis/browser-storage-and-communication.md)
-- [Image Lazy Loading / 图片懒加载](browser-apis/image-lazy-loading.md)
+- [Image Lazy Loading / 浏览器图片懒加载](browser-apis/image-lazy-loading.md)
 
 ### TypeScript / TypeScript
 
