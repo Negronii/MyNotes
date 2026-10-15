@@ -1,4 +1,11 @@
-# CSS Basics
+# CSS Basics / CSS 基础
+
+**Key terms / 关键术语:** cascade / 层叠, specificity / 优先级, box model / 盒模型, formatting context / 格式化上下文.
+
+**Core / 核心：** The cascade selects declarations; formatting contexts govern how boxes participate in layout, and box edges plus intrinsic and available sizes shape geometry and space allocation.
+层叠决定哪些声明生效；格式化上下文决定盒子如何参与布局，盒边界以及固有尺寸和可用空间共同影响几何尺寸与空间分配。
+
+This archived learning note preserves its original selectors, property catalogs, worked layouts, diagrams, and lesson sequence. For the focused current explanations, see [CSS basics, selectors, and text overflow](../../../../frontend/html-css/html-and-css-basics.md), [box model and BFC](../../../../frontend/html-css/box-model-and-bfc.md), [Flexbox and Grid](../../../../frontend/html-css/flex-and-grid-layout.md), and [position, display, and animations](../../../../frontend/html-css/css-position-display-and-animations.md).
 
 ## Commenting in CSS
 
@@ -31,7 +38,7 @@ p {
 
 ## Overwriting Properties
 
-- When the same property is defined multiple times for an element, the last definition overwrites the previous ones.
+- When two declarations tie on origin, importance, cascade layer, specificity, and (for scoped style rules) scoping proximity, the later declaration in source order wins. The cascade evaluates those criteria before source order; “last declaration wins” is not a general rule.
 - Example:
   ```css
   p {
@@ -56,7 +63,7 @@ p {
 ### Cascading
 
 - CSS rules cascade, meaning multiple rules can apply to an element.
-- When conflicting rules are applied, the rule with higher specificity or the one that appears last takes precedence.
+- When conflicting declarations apply, the cascade compares origin and importance, layer, specificity, scoped-rule proximity where applicable, and then source order. Source order matters only after the earlier criteria tie.
 - Example:
   ```css
   p {
@@ -71,23 +78,24 @@ p {
 
 ### Specificity Hierarchy
 
-1. Inline styles (`style` attribute) - highest priority
-2. ID selectors (`#id`)
-3. Class selectors (`.class`), attribute selectors (`[type="text"]`), and pseudo-classes (`:hover`)
-4. Type selectors (`div`, `p`, `h1`) and pseudo-elements (`::before`, `::after`)
-5. Universal selector (`*`), combinators (`+`, `>`, `~`), and negation pseudo-class (`:not()`)
+1. ID selectors (`#id`)
+2. Class selectors (`.class`), attribute selectors (`[type="text"]`), and pseudo-classes (`:hover`)
+3. Type selectors (`div`, `p`, `h1`) and pseudo-elements (`::before`, `::after`)
+4. Universal selector (`*`), combinators (`+`, `>`, `~`), and `:where()` contribute zero specificity.
+
+Declarations in a `style` attribute outrank style-rule declarations of the same importance before selector specificity is compared, but they are still subject to origin and importance. Specificity is conventionally written as `(ID, class/attribute/pseudo-class, type/pseudo-element)` and compared left to right. `:is()`, `:not()`, and `:has()` take the greatest specificity of their argument list; `:where()` contributes zero.
 
 ### Specificity Calculation
 
 - Specificity is calculated based on the count of selectors in each category.
 - Example:
   ```css
-  /* Specificity: 0-1-1-0 */
+  /* Specificity: (1, 1, 1) */
   #main .content p {
     color: green;
   }
 
-  /* Specificity: 0-1-0-1 */
+  /* Specificity: (0, 1, 1) */
   .content p {
     color: blue; /* This will be overridden by the previous rule */
   }
@@ -95,7 +103,7 @@ p {
 
 ### `!important` Declaration
 
-- Overrides all other declarations, regardless of specificity.
+- Changes the declaration's importance in the cascade; it does not override every origin or an active transition. User-important declarations can override author-important declarations, and user-agent-important declarations outrank both.
 - Example:
   ```css
   p {
@@ -110,12 +118,12 @@ p {
 - When using composite selectors, the one with the higher specificity takes effect.
 - Example:
   ```css
-  /* Specificity: 0-1-0-0 */
+  /* Specificity: (0, 1, 0) */
   .box {
     color: blue;
   }
 
-  /* Specificity: 0-1-1-0 */
+  /* Specificity: (0, 2, 1) */
   .box:hover::before {
     color: green; /* This will be applied */
   }
@@ -135,7 +143,7 @@ p {
 
 ## HTML Height 100%
 
-- To ensure the HTML and body elements occupy the full height of the viewport:
+- This common height chain lets a percentage-height child resolve against the viewport-sized root. Percentage heights require a definite containing-block height chain; for a minimum page height, a viewport unit may fit better.
   ```css
   html, body {
     height: 100%;
@@ -430,7 +438,7 @@ In the example above, the `style` attribute is added to the `<p>` tag, and the C
       font-size: 30px;
   }
   ```
-- **Default Value:** If not set, the default is `16px`.
+- **Default Value:** Many user-agent defaults are 16 CSS px, but the user's settings and browser defaults can differ; `1rem` follows the root element's computed size.
 - **Best Practices:**
   - Use relative units like `em` or `rem` for responsive design.
   - **Example:**
@@ -447,7 +455,7 @@ In the example above, the `style` attribute is added to the `<p>` tag, and the C
 ### Property: `font-weight`
 - **Value:** 
   - Keywords: `normal`, `bold`
-  - Numeric: `100` to `900`
+  - Numeric: `1` to `1000`; many common font faces expose weights in 100-step increments.
 - **Examples:**
   ```css
   p {
@@ -706,12 +714,11 @@ Property value: `default` (default small arrow), `pointer` (small hand, promptin
 ## `border-radius`
 
 Scene: Make the border rounded, increase page details, and improve user experience
-Property values: `<number>px` or percentage
-Value: starting from the upper left, take the opposite corner if there is no number provided
-One value: All four corners are equally rounded. e.g. `border-radius: 20px;`
-Two values: top left, bottom right is the first value, top right, bottom left is the second value
-Three values: the first from the upper left, the second from the upper right, the third from the lower right, and the fourth from the lower left
-Four values: the four corners are different in size, the order is upper left, upper right, lower right, lower left, etc. e.g. `border-radius: 10px 20px 40px 80px;`
+Property values: lengths or percentages; each corner can specify separate horizontal and vertical radii with a slash.
+One value: All four corners use the same radius. e.g. `border-radius: 20px;`
+Two values: top-left and bottom-right use the first value; top-right and bottom-left use the second.
+Three values: top-left uses the first value; top-right and bottom-left use the second; bottom-right uses the third.
+Four values: top-left, top-right, bottom-right, bottom-left. e.g. `border-radius: 10px 20px 40px 80px;`
 Common scenes: draw a circle with a border and rounded corners
 1. Create a square box
 2. Set `border-radius: 50%;`
@@ -727,9 +734,11 @@ Overflow part: refers to the area where the content of the box exceeds the scope
 Property values:
 - `visible` (default value, the overflow part is visible)
 - `hidden` (the overflow part is invisible)
-- `scroll` (the scroll bar is selected whether it overflows or not)
-- `auto` (the scroll bar is automatically displayed or hidden according to whether it overflows or not)
-The most commonly used in work is `hidden`, to solve the problems caused by the collapse and excessive floating of the word element in the parent element
+- `scroll` (creates a scroll container whether or not content currently overflows; visible scrollbar behavior varies by platform)
+- `auto` (creates a scroll container and allows scrolling when needed)
+- `clip` (clips overflow without creating a scroll container)
+
+For a block box, `hidden`, `auto`, and `scroll` establish a new block formatting context; `clip` does not. `hidden` can clip shadows and menus, and `auto`/`scroll` can create scrolling, so use `display: flow-root` when the specific goal is float containment without clipping or scrolling.
 
 ## Visibility and display
 
@@ -738,7 +747,7 @@ Scenario: Make an element itself invisible. For example, the element is hidden a
 Common properties:
 - `visibility: hidden;` (placeholder hiding effect, not commonly used)
 - `display: none;` (no placeholder hidden, commonly used)
-Difference: visibility will occupy the standard stream, the display will be off-label  
+`visibility: hidden` keeps the box's layout space; `display: none` removes the box from layout. With hidden content, also consider whether it should remain available to assistive technology and whether it can receive focus.
 E.g. Mouse over to display the image
 ```css
 img {display:none}
@@ -747,7 +756,7 @@ a:hover img {display:block}
 
 ## `opacity`
 
-Element transparency  
+Element transparency; the element and its children are composited with that opacity. A value of `0` does not remove the box or automatically disable its pointer or keyboard interaction.
 Scenario: Make an element transparent as a whole  
 Attribute value: a number between 0 and 1, 1 means fully opaque, 0 means fully transparent  
 `opacity` will make the element transparent as a whole, including its content and child elements
@@ -756,15 +765,15 @@ Attribute value: a number between 0 and 1, 1 means fully opaque, 0 means fully t
 
 Transition - let the style of the element change slowly, often used with hover to enhance the interactive experience of the web page
 Property values:
-- Transition properties: `all` (all properties that can be transitioned are transitioned, or a single property such as `width` (only the width is transitioned)
-- The duration of the transition: `number + s` (how many seconds)
+- Transition property: `all` (all transitionable properties) or a named property such as `width` (only that property).
+- The duration of the transition: a time value such as `250ms` or `0.5s`.
 
 Be careful:
 - If multiple properties transition together, they can be separated by commas, e.g. `transition: width 1s, background-color 2s;`
 - The transition needs to have different styles between the default state and the hover state in order to have a transition effect
 - The transition property adds to the element itself that needs to be transitioned
-- Set to the default state, there is a transition effect when the mouse moves in and out
-- Set the hover state, there is a transition effect when the mouse is moved in, and there is no transition effect when the mouse is moved out
+- Put a shared transition on the base state when it should animate both on entry and on exit.
+- If the transition is declared only in the hover state, it applies while entering that state; leaving it may snap back because the non-hover state has no transition declaration.
 
 # Box Model
 
@@ -925,7 +934,7 @@ The `box-shadow` property adds shadows to elements, enhancing their visual appea
 
 ## Margin Collapsing Phenomenon
 
-When vertical margins of adjacent block-level elements meet, they collapse, resulting in a combined margin that is the greater of the two.
+In block layout, adjoining vertical margins can collapse when the boxes meet in the same block formatting context and no separating border, padding, content, clearance, or other rule prevents it. Two positive margins collapse to the larger one; negative margins participate in the calculation, so the result is not always the larger value. A BFC boundary prevents child margins from collapsing through its parent, but the BFC root's own margins can still collapse with siblings in its outer context.
 
 ### Solution to Margin Collapsing
 
@@ -936,12 +945,13 @@ When vertical margins of adjacent block-level elements meet, they collapse, resu
    }
    ```
 
-2. **Use Overflow Property:**
+2. **Create a BFC:**
    ```css
    .parent {
-       overflow: hidden;
+       display: flow-root;
    }
    ```
+   `overflow: hidden` also establishes a BFC, but clips overflow; `overflow: auto` may create a scroll container. `overflow: clip` does not establish a BFC.
 
 3. **Convert to Inline-Block:**
    ```css
@@ -997,14 +1007,14 @@ Adds content after the element's actual content.
 
 # Float
 
-The `float` property in CSS is used to position elements horizontally, allowing them to be placed side by side, either to the left or right of their container. While float was a popular method for creating multi-column layouts in the past, modern CSS layout techniques like Flexbox and Grid have largely replaced its usage.
+The `float` property takes a box out of normal block flow and places it to a side; line boxes wrap around it. Floats remain useful for text wrapping and legacy columns, while Flexbox and Grid are generally clearer for application layout.
 
 ## Floating Features
 
 - **Standard Flow Impact:** Floating elements are removed from the standard document flow, allowing other elements to wrap around them.
-- **Stacking Context:** Floating elements create a new stacking context, appearing above standard flow elements but below positioned elements.
+- **Stacking Context:** A float does not create a stacking context by itself; stacking order follows the applicable painting rules.
 - **Alignment:** Floating elements align to the top of their containing element.
-- **Display Characteristics:** Floating elements behave like inline-block elements, allowing multiple elements to appear on the same line and enabling the setting of width and height.
+- **Display Characteristics:** A float is blockified and can be sized, while inline content and line boxes wrap around it. It is not an inline-block.
 
 ## Example
 
@@ -1077,13 +1087,14 @@ When elements are floated, their parent element may collapse if the parent does 
    }
    ```
 
-4. **Overflow Method (Recommended):**
-   Set `overflow: hidden;` on the parent element.
+4. **Overflow Method (Legacy):**
+   Set `overflow: hidden;` on the parent element when clipping overflow is acceptable.
    ```css
    .parent {
        overflow: hidden;
    }
    ```
+   Prefer `display: flow-root` for containment without clipping; `overflow: auto` can add scrolling.
 
 ## Modern Alternatives
 
@@ -1109,6 +1120,8 @@ When elements are floated, their parent element may collapse if the parent does 
       background-color: skyblue;
   }
   ```
+
+Grid tracks also have intrinsic minimum sizing. A bare `1fr` track can be kept wide by an item's min-content size; use `minmax(0, 1fr)` when the track should shrink below that minimum, and handle the item's overflow deliberately.
 
 # Positioning
 
@@ -1141,8 +1154,8 @@ CSS positioning allows elements to be positioned in a specific place on the page
    ```css
    position: absolute;
    ```
-   - Elements are positioned relative to their nearest positioned ancestor (not static).
-   - If no such ancestor exists, they are positioned relative to the initial containing block (viewport).
+   - Elements use the nearest ancestor that establishes an absolute-positioning containing block. A positioned ancestor is common, but transforms and containment can also establish one.
+   - If no such ancestor exists, the initial containing block is used.
    - They are removed from the normal document flow.
    - Example:
      ```css
@@ -1157,8 +1170,8 @@ CSS positioning allows elements to be positioned in a specific place on the page
    ```css
    position: fixed;
    ```
-   - Elements are positioned relative to the viewport.
-   - They do not move when the page is scrolled.
+   - Elements use the nearest fixed-positioning containing block, usually the viewport. An ancestor such as one with a non-`none` transform can establish a different containing block.
+   - Relative to that containing block, they remain fixed during scrolling.
    - Example:
      ```css
      .fixed {
@@ -1172,8 +1185,8 @@ CSS positioning allows elements to be positioned in a specific place on the page
    ```css
    position: sticky;
    ```
-   - Elements are positioned based on the user's scroll position.
-   - They switch between relative and fixed positioning depending on the scroll position.
+   - Elements remain in normal flow and are offset relative to the nearest scrollport when they reach the inset threshold, within the limits of their containing block.
+   - Set a non-`auto` inset such as `top: 0` on the axis where the element should stick. An ancestor scroll container can change which scrollport it follows.
    - Example:
      ```css
      .sticky {
@@ -1198,7 +1211,7 @@ CSS positioning allows elements to be positioned in a specific place on the page
 
 - The `z-index` property specifies the stack order of elements.
 - Higher values are displayed in front of lower values.
-- Only works on positioned elements (position other than static).
+- Applies to positioned boxes and also flex/grid items; it orders boxes only within their stacking context. A large `z-index` cannot escape an ancestor stacking context.
   ```css
   .example {
       position: relative;
@@ -1279,7 +1292,7 @@ If the icons in the design draft are not available in Iconfont, you can upload y
 
 # CSS Transforms
 
-CSS transforms allow you to modify the coordinate space of the CSS visual formatting model. They include various functions like translate, rotate, scale, and more.
+CSS transforms modify the visual coordinate space without changing the surrounding normal-flow layout. A non-`none` transform creates a stacking context and a containing block for absolutely and fixed-positioned descendants; it can also affect overflow. Transform lists compose into a matrix, so changing function order can change the result.
 
 ## Displacement (Translate)
 
@@ -1290,7 +1303,7 @@ CSS transforms allow you to modify the coordinate space of the CSS visual format
 - **Example:**
   ```css
   transform: translate(50px, 100px); /* Moves right by 50px and down by 100px */
-  transform: translate(-50%, -100%); /* Moves left by 50% and up by 100% */
+  transform: translate(-50%, -100%); /* Moves by percentages of the transform reference box */
   ```
 - **Single Axis:**
   ```css
@@ -1375,6 +1388,8 @@ CSS transforms allow you to modify the coordinate space of the CSS visual format
 
 ## Stereoscopic Presentation (3D)
 
+The following original example positions only front and back faces, so it is a two-sided flip-card demonstration rather than a complete six-face cube. A usable interactive version also needs keyboard-accessible controls and should not rely on hover alone.
+
 - **Syntax:**
   ```css
   transform-style: preserve-3d;
@@ -1394,6 +1409,7 @@ CSS transforms allow you to modify the coordinate space of the CSS visual format
           position: absolute;
           width: 200px;
           height: 200px;
+          backface-visibility: hidden;
       }
       .cube .front {
           background-color: skyblue;
@@ -1420,6 +1436,8 @@ CSS transforms allow you to modify the coordinate space of the CSS visual format
 2. Position child elements to form the faces of the cube.
 3. Apply 3D transforms to position and rotate the faces as needed.
 4. Use CSS transitions for smooth animations.
+
+Animating `transform` or `opacity` can avoid repeated layout in suitable cases, but neither property guarantees a GPU-only path or a performance win. Rendering cost depends on the animated content, surface size, browser, and device; profile before adding transforms as an optimization.
 
 # Animation
 
@@ -1542,19 +1560,19 @@ CSS transforms allow you to modify the coordinate space of the CSS visual format
 
 ### Continuous Scrolling Images
 
-A box holding images that scroll from right to left seamlessly.
+A box holding two identical three-image groups that scroll from right to left. The animation must move exactly one group's width so the second group takes the first group's place at the loop boundary.
 
 #### HTML Structure
 ```html
-<div class="carousel">
+<div class="carousel" role="group" aria-label="Featured images">
     <ul class="carousel-list">
         <li><img src="image1.jpg" alt="Image 1"></li>
         <li><img src="image2.jpg" alt="Image 2"></li>
         <li><img src="image3.jpg" alt="Image 3"></li>
-        <!-- Repeat images for seamless effect -->
-        <li><img src="image1.jpg" alt="Image 1"></li>
-        <li><img src="image2.jpg" alt="Image 2"></li>
-        <li><img src="image3.jpg" alt="Image 3"></li>
+        <!-- Duplicate group is visual only; do not announce it twice. -->
+        <li aria-hidden="true"><img src="image1.jpg" alt=""></li>
+        <li aria-hidden="true"><img src="image2.jpg" alt=""></li>
+        <li aria-hidden="true"><img src="image3.jpg" alt=""></li>
     </ul>
 </div>
 ```
@@ -1568,13 +1586,21 @@ A box holding images that scroll from right to left seamlessly.
 
 .carousel-list {
     display: flex;
-    width: calc(100% * 6); /* Adjust based on number of images */
+    width: 600%; /* Two groups of three slides; adjust for a different group size. */
+    margin: 0;
+    padding: 0;
+    list-style: none;
     animation: scroll 10s linear infinite;
 }
 
 .carousel-list li {
-    width: calc(100% / 6); /* Adjust based on number of images */
-    list-style: none;
+    flex: 0 0 calc(100% / 6); /* Each item is one viewport wide in this six-item track. */
+}
+
+.carousel-list img {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 @keyframes scroll {
@@ -1582,7 +1608,7 @@ A box holding images that scroll from right to left seamlessly.
         transform: translateX(0);
     }
     100% {
-        transform: translateX(-100%);
+        transform: translateX(-50%); /* Exactly one of the two equal groups. */
     }
 }
 ```
@@ -1601,7 +1627,7 @@ A box holding images that scroll from right to left seamlessly.
    ```css
    .carousel-list {
        display: flex;
-       width: calc(100% * 6);
+        width: 600%;
        animation: scroll 10s linear infinite;
    }
    ```
@@ -1615,11 +1641,20 @@ A box holding images that scroll from right to left seamlessly.
            transform: translateX(0);
        }
        100% {
-           transform: translateX(-100%);
+           transform: translateX(-50%);
        }
    }
    ```
    - Animates the list from its original position to the left, creating a scrolling effect.
+
+For users who request reduced motion, stop the animation and hide the duplicate items. A production carousel also needs an explicit pause control and interaction model.
+
+```css
+@media (prefers-reduced-motion: reduce) {
+    .carousel-list { animation: none; }
+    .carousel-list li[aria-hidden="true"] { display: none; }
+}
+```
 
 
 # Flex Layout
@@ -1637,8 +1672,8 @@ Flexbox, or the Flexible Box Layout Module, is designed to help developers creat
 
 ### Axes
 
-- **Main Axis:** The primary axis along which flex items are laid out. It is horizontal by default.
-- **Cross Axis:** The perpendicular axis to the main axis. It is vertical by default.
+- **Main Axis:** The primary axis along which flex items are laid out. With the default `flex-direction: row` in the usual horizontal writing mode, it is horizontal; in other writing modes it follows the inline direction.
+- **Cross Axis:** The axis perpendicular to the main axis; its physical direction follows the writing mode and `flex-direction`.
 
 ### Basic Usage
 
@@ -1733,6 +1768,8 @@ Allows flex items to wrap onto multiple lines.
 
 Aligns lines of flex items along the cross axis when there is extra space.
 
+It aligns flex lines. It has no effect in a single-line flex container (`flex-wrap: nowrap`); a multi-line container (`wrap` or `wrap-reverse`) can align one currently occupied line when cross-axis free space exists.
+
 - **Values:**
   - `flex-start`: Lines are packed toward the start of the cross axis.
   - `flex-end`: Lines are packed toward the end of the cross axis.
@@ -1752,6 +1789,8 @@ Aligns lines of flex items along the cross axis when there is extra space.
 ### `order`
 
 Controls the order of flex items. By default, all items have an order value of 0. Items with a lower order value will appear first.
+
+This changes visual order only, not DOM, reading, or keyboard order; keep source order meaningful.
 
 ```css
 .flex-item {
@@ -1794,7 +1833,7 @@ Defines the default size of an element before the remaining space is distributed
 Allows the default alignment (or the one specified by `align-items`) to be overridden for individual flex items.
 
 - **Values:**
-  - `auto`: Default. Inherits the value of `align-items` from the parent flex container.
+  - `auto`: Default. Uses the flex container's `align-items` value for this item.
   - `flex-start`: Aligns the item to the start of the cross axis.
   - `flex-end`: Aligns the item to the end of the cross axis.
   - `center`: Centers the item along the cross axis.
@@ -1903,8 +1942,11 @@ Allows the default alignment (or the one specified by `align-items`) to be overr
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0; /* Override the content-based automatic minimum when shrinking is intended. */
 }
 ```
+
+Flex items often have a content-based automatic minimum size, so long unbreakable text may prevent the expected shrink. Use `min-width: 0` for a row item or `min-height: 0` for a column item when it should shrink, and decide whether its contents wrap, clip, or scroll.
 
 ### Multi-line Text Ellipsis
 
@@ -1993,9 +2035,8 @@ In this example, when the viewport width is exactly 320px, the font size of the 
 3. **Resolution:**
    ```css
    @media (min-resolution: 2dppx) {
-       img {
-           width: 100px;
-           height: 100px;
+       .icon {
+           background-image: url("icon@2x.png");
        }
    }
    ```
@@ -2003,7 +2044,7 @@ In this example, when the viewport width is exactly 320px, the font size of the 
 
 ### Responsive Font Size
 
-Setting the font size relative to the viewport width:
+This media-query example sets one size at and above a threshold; it does not scale proportionally with viewport width. For bounded fluid scaling, use a relative expression such as `clamp()` and test text zoom and narrow screens.
 
 ```css
 @media (min-width: 375px) {
@@ -2013,7 +2054,7 @@ Setting the font size relative to the viewport width:
 }
 ```
 
-This approach ensures that the font size scales proportionally with the viewport width.
+At 375px and wider, this rule sets the root size to 37.5px. A fixed value at a minimum-width breakpoint is a step change, not continuous viewport scaling.
 
 ## Example of a Responsive Website
 
@@ -2060,7 +2101,7 @@ A full media query consists of the `@media` keyword, media type, and media featu
 
 - `screen`: Used for computer screens, tablets, smartphones, etc.
 - `print`: Used for printers.
-- `speech`: Used for screen readers.
+- `speech`: Speech output media; it does not mean “screen reader.” Screen readers are assistive technology, not a media type.
 - `all`: Suitable for all devices.
 
 ### Media Features
@@ -2088,7 +2129,7 @@ You can link different CSS files for different screen widths using the `media` a
 **Notes:**
 
 - Media features should be written directly within parentheses.
-- Double quotes around media features in the `link` element should not be omitted.
+- Quote attribute values that contain spaces; the shown media value can also be written with single quotes or, where valid HTML syntax permits, without quotes.
 
 ## Best Practices
 
@@ -2135,7 +2176,7 @@ You can link different CSS files for different screen widths using the `media` a
 
 ## REM - Relative Unit
 
-- **REM (Root EM):** A scalable unit in CSS used for responsive design.
+- **REM (Root EM):** A scalable unit in CSS used for type and spacing.
   - 1rem = Computed value of `font-size` of the root element (`<html>`).
   - Allows for scalable and consistent sizing across elements.
 
@@ -2146,7 +2187,7 @@ You can link different CSS files for different screen widths using the `media` a
       font-size: 20px;
   }
   ```
-  - All rem units will be relative to this root size. For instance, `2rem` would be equal to 40px.
+  - All rem units will be relative to this computed root size. For instance, `2rem` is 40 CSS px here. A fixed pixel root size can limit user text-size preferences, so many sites leave the root size at its browser default.
 
 ### Usage in CSS
 - Example:
@@ -2166,7 +2207,7 @@ You can link different CSS files for different screen widths using the `media` a
 ### Definition and Usage
 - **Viewport Width (vw) and Viewport Height (vh):**
   - `1vw` = 1% of the viewport width.
-  - `1vh` = 1% of the viewport height.
+  - `1vh` = 1% of the large viewport height in current viewport-unit definitions. On mobile, browser UI can change the visible area; `svh`, `lvh`, or `dvh` can express the intended viewport size more directly.
   
 **Example:**
   ```css
@@ -2195,8 +2236,8 @@ You can link different CSS files for different screen widths using the `media` a
 
 ## Bootstrap
 
-- **Official Website:** [Bootstrap v3.4.1 Documentation](https://v3.bootcss.com/css/)
-- **Version:** 3.4.1 (most stable for legacy projects)
+- **Official Website:** [Bootstrap 3.4 CSS documentation](https://getbootstrap.com/docs/3.4/css/)
+- **Version:** 3.4.1, a legacy version useful when maintaining existing projects; choose a supported current release for new work.
 
 ### Grid System
 - **Concept:**
@@ -2217,12 +2258,16 @@ You can link different CSS files for different screen widths using the `media` a
 - **Classes:**
   - `.container` and `.container-fluid`: Define the fixed or fluid container.
   - `.row`: Defines a row in the grid.
-  - `.col-lg-*`: Defines column span based on screen size (e.g., `.col-lg-3` spans 3 out of 12 columns).
+  - `.col-xs-*`, `.col-sm-*`, `.col-md-*`, and `.col-lg-*`: Define column spans at Bootstrap 3's extra-small, small (≥768px), medium (≥992px), and large (≥1200px) breakpoints. For example, `.col-lg-3` spans 3 out of 12 columns from the large breakpoint upward.
 
 ### Responsive Design
 - **Containers:**
   - `.container`: Fixed width with responsive behavior.
   - `.container-fluid`: Full-width container spanning the entire viewport.
+
+The `grid.png` illustration below depicts Bootstrap 4's grid tiers (`.col-`, `.col-sm-`, `.col-md-`, `.col-lg-`, and `.col-xl-`, with 576/768/992/1200px breakpoints), not the Bootstrap 3 class names and breakpoints used in the example above.
+
+![Bootstrap 4 responsive grid tiers](grid.png)
   
 ### Components and Utilities
 - **Components:**
@@ -2240,9 +2285,26 @@ You can link different CSS files for different screen widths using the `media` a
 
 ## Introducing JavaScript in Bootstrap
 - **Dependencies:**
-  - jQuery must be included before Bootstrap's JavaScript.
+  - Bootstrap 3's JavaScript plugins require jQuery, which must load first. Its CSS and grid system do not require jQuery.
   - Example:
     ```html
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="path/to/bootstrap.min.js"></script>
     ```
+
+## References
+
+- [CSS Cascading and Inheritance Level 5](https://www.w3.org/TR/css-cascade-5/)
+- [CSS Cascading and Inheritance Level 6 (Editor’s Draft)](https://drafts.csswg.org/css-cascade-6/)
+- [Selectors Level 4](https://www.w3.org/TR/selectors-4/)
+- [CSS Display Level 3](https://www.w3.org/TR/css-display-3/)
+- [CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/)
+- [CSS Positioned Layout Level 3](https://www.w3.org/TR/css-position-3/)
+- [CSS Transforms Level 1](https://www.w3.org/TR/css-transforms-1/)
+- [CSS Flexible Box Layout Level 1](https://www.w3.org/TR/css-flexbox-1/)
+- [CSS Grid Layout Level 2](https://www.w3.org/TR/css-grid-2/)
+- [CSS Values and Units Level 4](https://www.w3.org/TR/css-values-4/)
+- [Chrome: Avoid large, complex layouts and layout thrashing](https://developer.chrome.com/docs/performance/insights/forced-reflow)
+- [Chrome: Avoid non-composited animations](https://developer.chrome.com/docs/lighthouse/performance/non-composited-animations)
+- [Bootstrap 3.4 documentation](https://getbootstrap.com/docs/3.4/)
+- [Bootstrap 4.6 grid documentation](https://getbootstrap.com/docs/4.6/layout/grid/)
