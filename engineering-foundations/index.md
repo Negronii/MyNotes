@@ -49,6 +49,7 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 - [Software Design Principles / 软件设计原则](architecture/software-design-principles.md)
 - [Design Patterns in Practice / 设计模式实践](architecture/design-patterns-in-practice.md)
 - [Reading, Debugging, and Reviewing Code / 阅读、调试与审查代码](architecture/reading-debugging-and-reviewing-code.md)
+- [System Design Fundamentals / 系统设计基础](architecture/system-design-fundamentals.md)
 
 ### Career / 职业发展
 
