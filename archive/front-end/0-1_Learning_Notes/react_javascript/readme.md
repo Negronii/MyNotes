@@ -1,8 +1,18 @@
-# Setting Up a React Application
+# React with JavaScript / React 与 JavaScript
 
-To create a new React application, you can use the `create-react-app` tool, which sets up everything you need for a React project automatically. This tool ensures you have the latest build settings and configurations, making it easier to start coding right away.
+This course moves from project setup and JSX to props, state, controlled forms, Effects, and browser storage. / 本课程从项目配置和 JSX 开始，依次介绍 props、state、受控表单、Effect 与浏览器存储。
 
-## Create React App
+**Core model / 核心模型：** A component describes UI from the props and state snapshot for one render. A state update asks React to render again; React then commits only the host changes that are needed. / 组件根据某次 render 中的 props 和 state 快照描述 UI。state 更新会请求 React 再次 render，之后 React 只提交必要的宿主界面变更。
+
+**Key terms / 关键词：** element 元素 · component 组件 · props 属性 · state 状态 · render 渲染 · commit 提交 · controlled input 受控输入 · Effect 外部同步
+
+**See also / 另见：** [React Basics / React基础](../../../../frontend/frameworks/react-basics.md) for identity, lifecycle, and error boundaries; [Advanced React / React进阶](../../../../frontend/frameworks/advanced-react.md) for Hooks and memoization conditions.
+
+## Setting Up a React Application / 配置React应用
+
+The commands below preserve the Create React App (CRA) workflow used by this course. CRA is a legacy setup and no longer promises the latest build configuration; use it to recognize existing CRA projects, and follow the current React project-start guide when choosing a new setup.
+
+### Create React App / Create React App
 
 To create a new React app, use the following commands:
 
@@ -68,7 +78,7 @@ yarn remove <package-name>
 npm uninstall eslint
 ```
 
-# Creating and Rendering React Elements
+## Creating and Rendering React Elements / 创建并渲染React元素
 
 React elements are the building blocks of a React application. Here’s how you can create and render them.
 
@@ -77,12 +87,15 @@ React elements are the building blocks of a React application. Here’s how you 
 Assuming you have a `<div id="root"></div>` in your HTML:
 
 ```javascript
+import React from "react";
+import { createRoot } from "react-dom/client";
+
 // Create a React element
 const title = React.createElement("h1", null, "Hello React");
 
 // Create a root from the DOM
 const domContainer = document.getElementById("root");
-const root = ReactDOM.createRoot(domContainer);
+const root = createRoot(domContainer);
 
 // Render the title we just created
 root.render(title);
@@ -138,7 +151,7 @@ export default Header;
 
 ```jsx
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import Header from './components/Header';
 
 function App() {
@@ -155,7 +168,7 @@ function App() {
 }
 
 const domContainer = document.getElementById('root');
-const root = ReactDOM.createRoot(domContainer);
+const root = createRoot(domContainer);
 root.render(<App />);
 ```
 
@@ -165,9 +178,9 @@ root.render(<App />);
 2. **File Structure**: Organize components into a `components` folder.
 3. **Functional Components**: Prefer functional components over class components.
 4. **Hooks**: Utilize React hooks for state management and side effects.
-5. **Prop Types**: Use PropTypes for type-checking props.
+5. **Prop Types**: In React 18 and earlier, PropTypes provided development-time checks for component props. React 19 silently ignores function-component `propTypes`; use TypeScript or another type checker for current component APIs. Component prop checks do not automatically validate untrusted API responses; validate those separately when needed. See the [React 19 upgrade guide](https://react.dev/blog/2024/04/25/react-19-upgrade-guide#removed-proptypes-and-defaultprops-for-functions).
 
-### Example
+### Historical Example (React 18 and Earlier) / React 18及更早版本的历史示例
 
 ```jsx
 import PropTypes from 'prop-types';
@@ -183,7 +196,7 @@ Greeting.propTypes = {
 export default Greeting;
 ```
 
-# JSX Grammars
+## JSX Syntax and Composition / JSX语法与组合
 
 ## Recommended JSX Formatting
 
@@ -191,11 +204,11 @@ export default Greeting;
    - Wrap HTML-like JSX code in parentheses for readability and to avoid automatic semicolon insertion issues.
 
 2. **Functional Components**
-   - Components are functions that return JSX. This is efficient as functions are not stored in RAM like variables.
+   - Function components return React elements from their inputs. Choose them for their component API and composition, not as a memory-saving trick.
    - Use UpperCamelCase for component names, e.g., `NavItem`, `HeaderIntro`.
 
 3. **Single Root Node**
-   - A React component must return a single root node. Use a `div` or React Fragment (`<>...</>`) to wrap multiple child nodes.
+   - A component can return one React node, including a fragment (`<>...</>`). A fragment groups siblings without adding a DOM wrapper; React also accepts arrays of nodes.
 
 4. **Rendering Components**
    - Use JSX syntax to render components: `<ComponentName />`.
@@ -264,7 +277,7 @@ export default Greeting;
       cat="cat"
       boolean={true}
       val={2}
-      object={{ author: "Ron", body: "hello" }}
+      object={{ author: "Example", body: "hello" }}
     />
     ```
 
@@ -338,7 +351,7 @@ export default Greeting;
 
     ```jsx
     const fruits = [{ color: "red", size: 15 }, { color: "orange", size: 10 }];
-    const fruitElement = fruits.map(item => <Fruit color={item.color} size={item.size} />);
+    const fruitElement = fruits.map(item => <Fruit key={item.color} color={item.color} size={item.size} />);
 
     export default function App() {
       return <div>{fruitElement}</div>;
@@ -364,7 +377,7 @@ export default Greeting;
       { color: "red", size: 15 },
       { color: "orange", size: 10 },
     ];
-    const fruitElement = fruits.map(item => <Fruit {...item} />);
+    const fruitElement = fruits.map(item => <Fruit key={item.color} {...item} />);
 
     export default function App() {
       return <div>{fruitElement}</div>;
@@ -373,7 +386,7 @@ export default Greeting;
 
   - While convenient, explicit prop passing is more readable and preferred for clarity.
 
-## Event Listeners
+## Event Handlers / 事件处理器
 
 - **Event Handling**
   - React uses camelCase for event handlers:
@@ -394,16 +407,16 @@ export default Greeting;
     }
     ```
 
-  - Refer to the [React documentation](https://reactjs.org/docs/events.html#mouse-events) for more event types.
+  - These are React event-handler props, not calls to `addEventListener`. See the [React common component events reference](https://react.dev/reference/react-dom/components/common#events).
 
-# State in React
+## State in React / React中的State
 
 Managing state in React is crucial for building dynamic and interactive applications. Let's explore how state works in React, including best practices and examples.
 
 ## State vs. Props
 
-- **Props** are immutable and used to pass data from a parent component to a child component. They allow for component reusability.
-- **State** refers to variables managed within a component that can change over time. It enables components to create and manage their own data.
+- **Props** are inputs supplied by a parent. A child should treat them as read-only rather than mutate them.
+- **State** is React-managed data that can change over time. Treat objects and arrays stored in state as immutable and pass a replacement value to the setter.
 
 ## How to Use State
 
@@ -496,8 +509,8 @@ Updating a nested property in a state object:
 
 ```jsx
 const [contact, setContact] = React.useState({
-  firstName: "Ron",
-  lastName: "Xie",
+  firstName: "Alex",
+  lastName: "Example",
   isFavorite: true,
 });
 
@@ -509,9 +522,9 @@ function toggleFavorite() {
 }
 ```
 
-## State Feature: Re-rendering on Change
+## State Feature: Rendering After an Update / State更新后的渲染
 
-Updating state triggers a re-render of the component and all its descendants.
+A state setter schedules a render using the next state snapshot. React may call descendant components while producing the next tree, but a render does not guarantee a DOM change; React commits only the changes required by the result.
 
 ## Child Component Updating Parent's State
 
@@ -663,28 +676,36 @@ export default function Form() {
 
   return (
     <form onSubmit={handleSubmit}>
+      <label htmlFor="firstName">First name</label>
       <input
         type="text"
+        id="firstName"
         placeholder="First Name"
         onChange={handleChange}
         name="firstName"
         value={formData.firstName}
       />
+      <label htmlFor="lastName">Last name</label>
       <input
         type="text"
+        id="lastName"
         placeholder="Last Name"
         onChange={handleChange}
         name="lastName"
         value={formData.lastName}
       />
+      <label htmlFor="email">Email</label>
       <input
         type="email"
+        id="email"
         placeholder="Email"
         onChange={handleChange}
         name="email"
         value={formData.email}
       />
+      <label htmlFor="comment">Comment</label>
       <textarea
+        id="comment"
         placeholder="Comment"
         onChange={handleChange}
         name="comment"
@@ -735,6 +756,7 @@ export default function Form() {
         onChange={handleChange}
         name="favColor"
       >
+        <option value="">Choose a color</option>
         <option value="red">Red</option>
         <option value="blue">Blue</option>
         <option value="green">Green</option>
@@ -748,13 +770,13 @@ export default function Form() {
 
 In this form example, the state `formData` manages multiple inputs, including text fields, checkboxes, radio buttons, and a select dropdown. The `handleChange` function updates the state based on the input values. The `handleSubmit` function handles form submission, where you can add logic to send the form data to a backend.
 
-# Dealing with APIs in Modern Front-End Development
+## Fetching Data with Effects / 使用Effect获取数据
 
-## Fetching Data (fetch, axios)
+### Fetching Data (`fetch`, Axios)
 
-Fetching data from APIs is a common task in modern web development. Here are the best practices and methods using both `fetch` and `axios`.
+These examples show a one-time request and a changing request. Check `response.ok` because `fetch` resolves for HTTP error statuses; when a dependency changes, clean up the previous request so an older response cannot replace newer state.
 
-### Using Fetch
+#### Using Fetch
 
 The `fetch` API provides a simple interface for fetching resources. Here's an example of fetching data and storing it in a state:
 
@@ -763,19 +785,35 @@ import React, { useEffect, useState } from 'react';
 
 export default function Fetch() {
   const [starWarsData, setStarwarsData] = useState({});
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("https://swapi.dev/api/people/1")
-      .then(response => response.json())
-      .then(data => setStarwarsData(data))
-      .catch(error => console.error('Error fetching data:', error));
+    const controller = new AbortController();
+
+    async function loadPerson() {
+      try {
+        const response = await fetch("https://swapi.dev/api/people/1", {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setStarwarsData(await response.json());
+      } catch (cause) {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause.message : String(cause));
+        }
+      }
+    }
+
+    loadPerson();
+    return () => controller.abort();
   }, []);
 
+  if (error) return <p role="alert">{error}</p>;
   return <div>{JSON.stringify(starWarsData, null, 2)}</div>;
 }
 ```
 
-### Using Axios
+#### Using Axios
 
 `axios` is a popular HTTP client that offers a more powerful and flexible approach to making HTTP requests.
 
@@ -785,39 +823,75 @@ import axios from 'axios';
 
 export default function Fetch() {
   const [starWarsData, setStarwarsData] = useState({});
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    let ignore = false;
+
     axios.get("https://swapi.dev/api/people/1")
-      .then(response => setStarwarsData(response.data))
-      .catch(error => console.error('Error fetching data:', error));
+      .then(response => {
+        if (!ignore) setStarwarsData(response.data);
+      })
+      .catch(cause => {
+        if (!ignore) setError(cause instanceof Error ? cause.message : String(cause));
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
+  if (error) return <p role="alert">{error}</p>;
   return <div>{JSON.stringify(starWarsData, null, 2)}</div>;
 }
 ```
 
-### Avoiding Infinite Loops
+#### Avoiding Infinite Loops and Stale Results / 避免循环与过期结果
 
-When fetching data inside a component, it is crucial to avoid infinite loops. The following example demonstrates how to fetch data without triggering an infinite loop:
+When a request depends on changing state, clean up the previous synchronization so a slower, older response cannot overwrite the latest result:
 
 ```jsx
 import React, { useEffect, useState } from 'react';
 
 export default function Fetch() {
-  const [starWarsData, setStarwarsData] = useState({});
+  const [starWarsData, setStarwarsData] = useState(null);
+  const [error, setError] = useState(null);
+  const [personId, setPersonId] = useState(1);
 
   useEffect(() => {
-    fetch("https://swapi.dev/api/people/1")
-      .then(response => response.json())
-      .then(data => setStarwarsData(data))
-      .catch(error => console.error('Error fetching data:', error));
-  }, []); // Empty dependency array ensures this runs only once after the initial render
+    let ignore = false;
 
-  return <div>{JSON.stringify(starWarsData, null, 2)}</div>;
+    async function loadPerson() {
+      try {
+        const response = await fetch(`https://swapi.dev/api/people/${personId}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!ignore) {
+          setStarwarsData(data);
+          setError(null);
+        }
+      } catch (cause) {
+        if (!ignore) setError(cause instanceof Error ? cause.message : String(cause));
+      }
+    }
+
+    loadPerson();
+    return () => {
+      ignore = true;
+    };
+  }, [personId]);
+
+  return (
+    <div>
+      <button onClick={() => setPersonId(id => id + 1)}>Next person</button>
+      {error && <p role="alert">{error}</p>}
+      <pre>{JSON.stringify(starWarsData, null, 2)}</pre>
+    </div>
+  );
 }
 ```
 
-## Managing Side Effects with `useEffect`
+## Managing Side Effects with `useEffect` / 使用`useEffect`管理副作用
 
 ### What is a Side Effect?
 
@@ -830,27 +904,22 @@ A side effect is any operation that affects something outside the scope of the f
 
 ### Using `useEffect` to Handle Side Effects
 
-The `useEffect` hook in React allows you to perform side effects in function components. Here's the syntax and usage:
+`useEffect` synchronizes a component with an external system after a commit. With no dependency list, it runs after each commit; with a dependency list, it re-runs when a listed value changes. Cleanup runs before the next setup and when the component unmounts. This example keeps the browser document title synchronized with state; use an event handler for work caused directly by a user action, and derive values during render instead of copying them into state.
 
 ```jsx
 import React, { useEffect, useState } from 'react';
 
-export default function Fetch() {
-  const [starWarsData, setStarwarsData] = useState({});
+export default function PageTitle() {
   const [count, setCount] = useState(1);
 
   useEffect(() => {
-    fetch(`https://swapi.dev/api/people/${count}`)
-      .then(response => response.json())
-      .then(data => setStarwarsData(data))
-      .catch(error => console.error('Error fetching data:', error));
-  }, [count]); // Dependency array ensures this runs whenever `count` changes
+    document.title = `You clicked ${count} times`;
+  }, [count]);
 
   return (
     <div>
-      <button onClick={() => setCount(prevCount => prevCount + 1)}>count++</button>
-      {count}
-      <pre>{JSON.stringify(starWarsData, null, 2)}</pre>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(previous => previous + 1)}>Increment</button>
     </div>
   );
 }
@@ -858,7 +927,7 @@ export default function Fetch() {
 
 ### Cleaning Up Side Effects
 
-To avoid memory leaks and unwanted behavior, it is important to clean up side effects. You can do this by returning a cleanup function from `useEffect`:
+Remove subscriptions and listeners during cleanup. For requests, cleanup can ignore stale results as above; it does not itself abort network traffic. Pass an `AbortSignal` when stopping the request is also required.
 
 ```jsx
 import React, { useEffect } from 'react';
@@ -881,9 +950,11 @@ export default function WindowResizeListener() {
 }
 ```
 
-## Using Local Storage
+## Using Local Storage / 使用Local Storage
 
 Local storage is a way to store data on the client's browser. Here are some best practices for using local storage in modern web development:
+
+`localStorage` is available only in a browser. This lazy initializer assumes a browser-only app; in server-rendered apps, read storage after hydration and keep the server and initial client render consistent. `JSON.parse` can also throw if stored text is malformed.
 
 ### Storing and Retrieving Data
 
@@ -915,3 +986,7 @@ export default function LocalStorageExample() {
 
 - Data stored in local storage must be a string. Use `JSON.stringify` to store objects or arrays.
 - Use `JSON.parse` to retrieve and convert the string back to its original format.
+
+In React 18+ and 19, a root wrapped in `<React.StrictMode>` gets an extra Effect setup-and-cleanup cycle in development. This check is absent in production; it exposes missing cleanup, while any network request already sent still needs an abort signal if it must be stopped.
+
+**Sources checked 2026-10-15:** [React: Start a New React Project](https://react.dev/learn/start-a-new-react-project), [Render and Commit](https://react.dev/learn/render-and-commit), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [StrictMode](https://react.dev/reference/react/StrictMode), [Common DOM Component Events](https://react.dev/reference/react-dom/components/common#events), and [input](https://react.dev/reference/react-dom/components/input), [textarea](https://react.dev/reference/react-dom/components/textarea), and [select](https://react.dev/reference/react-dom/components/select) references. React behavior was checked against React 19.2 documentation; the Create React App section is retained as a legacy setup example.

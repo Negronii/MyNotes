@@ -1,29 +1,36 @@
-## Create React App with TypeScript Template
+# React with TypeScript / React 与 TypeScript
 
-To create a React app with the TypeScript template, use the following command:
+This long-form course moves from typed components and class state through event handling, Hooks, Context, React Router v6, Redux, Redux Toolkit, internationalization, and HTTP clients. Keep each example tied to the package and router version it uses; the snippets are lesson-sized examples rather than one installable application. / 本课程从带类型的组件和类组件状态开始，依次介绍事件处理、Hooks、Context、React Router v6、Redux、Redux Toolkit、国际化和 HTTP 客户端。每个示例都应对应其使用的包与路由版本；这些代码是分节教学示例，并非一个可直接安装的完整应用。
+
+**Core model / 核心模型：** TypeScript checks component and data relationships during type checking, while React state belongs to a component's identity in the rendered tree. A type annotation does not validate a network response at runtime. / TypeScript 在类型检查期间检查组件和数据之间的关系；React state 则属于渲染树中组件的身份。类型标注不会在运行时验证网络响应。
+
+**Key terms / 关键词：** props 属性 · state 状态 · updater 更新函数 · Effect 外部同步 · Context 上下文 · route 路由 · reducer 归约器 · thunk 异步 action
+
+**See also / 另见：** [React Basics / React基础](../../../../frontend/frameworks/react-basics.md) and [Advanced React / React进阶](../../../../frontend/frameworks/advanced-react.md) for current React semantics; [Advanced TypeScript / TypeScript进阶](../../../../frontend/typescript/advanced-typescript.md) for type erasure and runtime validation.
+
+## Create React App with TypeScript Template / 使用TypeScript模板创建CRA应用
+
+This command records the legacy Create React App (CRA) workflow used by the course. CRA is deprecated for new projects; keep this setup for understanding older repositories rather than treating it as the current React starter:
 
 ```bash
 npx create-react-app react-ts --template typescript
 ```
 
-This command sets up a new React project configured with TypeScript, providing type safety and enhanced development experience.
+## TypeScript Configuration / TypeScript配置
 
-## TypeScript Configuration
-
-To enable TypeScript to accept the `any` type, modify the `tsconfig.json` file by adding `"noImplicitAny": false` in the `compilerOptions` section. This configuration allows the use of the `any` type without compiler errors:
+`noImplicitAny` controls whether TypeScript reports values that would otherwise receive an inferred `any`; it does not prohibit explicit `any`. Setting it to `true`, as below, catches missing annotations. See the TypeScript [`noImplicitAny` option](https://www.typescriptlang.org/tsconfig/#noImplicitAny).
 
 ```json
 {
-    "compilerOptions": {
-        "noImplicitAny": false,
-        ...
-    }
+  "compilerOptions": {
+    "noImplicitAny": true
+  }
 }
 ```
 
-However, it's generally recommended to avoid using `any` and instead use specific types to maintain type safety and code quality.
+Prefer a specific type or `unknown` over `any`; narrow `unknown` before using its value.
 
-## Creating a Component in TypeScript
+## Creating a Component in TypeScript / 使用TypeScript定义组件
 
 Here's an example of a React component written in TypeScript:
 
@@ -51,8 +58,8 @@ export default Robot;
 
 ### Key Points:
 
-- `React.FC` is a generic type provided by React for defining function components. It includes type-checking for props and other component features.
-- Defining the type of `React.FC` using an interface (e.g., `RobotProps`) ensures that prop types are validated by TypeScript.
+- `React.FC` is a component type that checks the declared props. With current React type definitions, it does not add a `children` prop implicitly; declare children explicitly when part of the component API ([React types](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts)).
+- Defining the props type (e.g., `RobotProps`) lets TypeScript check component calls.
 
 ## Using the Component in App.tsx
 
@@ -79,7 +86,7 @@ export default function App() {
 - Use the `.map()` function to render a list of components.
 - Always provide a `key` prop when rendering lists in React to ensure efficient updates.
 
-## CSS in TypeScript
+## CSS in TypeScript / TypeScript中的CSS
 
 When using CSS modules with TypeScript, follow this approach:
 
@@ -100,7 +107,7 @@ When using CSS modules with TypeScript, follow this approach:
    Create a file called `custom.d.ts` to declare CSS modules for TypeScript:
 
    ```tsx
-   declare module "*.css" {
+   declare module "*.module.css" {
      const styles: { [className: string]: string };
      export default styles;
    }
@@ -139,7 +146,7 @@ To import an image:
 import logo from "./assets/images/logo.svg";
 ```
 
-React automatically handles common image types (`.svg`, `.jpg`, `.jpeg`, `.png`), so no additional declaration is needed.
+React does not load image files. Whether an image import works depends on the bundler and its TypeScript declarations; public assets can instead be referenced by URL.
 
 #### Importing Fonts:
 
@@ -169,7 +176,7 @@ React automatically handles common image types (`.svg`, `.jpg`, `.jpeg`, `.png`)
    }
    ```
 
-## Class in TypeScript
+## Class in TypeScript / TypeScript中的类组件
 
 In TypeScript, `React.Component` is a generic type that can take up to three parameters: `Props`, `State`, and an optional `Snapshot`. Using TypeScript with React ensures type safety, which helps catch errors during development.
 
@@ -235,22 +242,22 @@ const App = () => (
 export default App;
 ```
 
-## State vs Props in Component Class
+## State vs. Props in a Class Component / 类组件中的State与Props
 
 ### Props
 - **Definition**: Props (short for properties) are read-only attributes that are passed to components by their parent component.
 - **Usage**: Used for passing data and event handlers down the component tree.
-- **Immutability**: Props are immutable; they cannot be changed by the child component.
+- **Read-only input**: A child should not mutate its props; the parent supplies new values through the next render.
 
 ### State
 - **Definition**: State is a built-in object that holds data that may change over the component's lifecycle.
 - **Usage**: Used for managing internal component data that can change over time.
-- **Mutability**: State is mutable; it can be updated using `setState()`.
+- **Updates**: Treat state as read-only and use `setState()` to provide a replacement or an updater function.
 - **Initialization**: State is typically initialized in the constructor.
 
 ### Key Differences
 - **Source**: Props are passed from parent to child, whereas state is managed within the component.
-- **Mutability**: Props are immutable, while state is mutable.
+- **Update path**: A child treats props as read-only; state changes go through `setState()` rather than direct mutation.
 
 ### Example:
 
@@ -294,9 +301,9 @@ const ChildComponent: React.FC<ChildProps> = ({ count }) => (
 );
 ```
 
-## Synchronization Problem in `setState()`
+## Updates Based on Previous Class State / 基于前一次类组件State更新
 
-Since `setState()` is asynchronous, it can lead to issues when trying to update state based on the current state. To handle this, use the updater function form of `setState()`, which provides the previous state and props.
+`setState()` queues an update; do not read `this.state` immediately after calling it and expect the new value. When the next value depends on the previous one, use the updater form, which receives the previous state and props.
 
 ### Syntax:
 
@@ -350,18 +357,18 @@ class Counter extends React.Component<{}, State> {
 
 ### Explanation:
 - **Updater Function**: The first argument to `setState()` is a function that receives `prevState` and `prevProps`.
-- **Callback**: The second argument is a callback function that is executed after the state has been updated.
+- **Callback**: The second argument runs after the update has been committed.
 
 Using this pattern ensures that state updates are based on the most recent state, avoiding potential synchronization issues.
-# Event Handling
+## Event Handling / 事件处理
 
 ## The "this" Pointing Problem
 
-In React class components, the `this` keyword can often be misinterpreted when used inside event handlers. By default, `this` inside an event handler will not refer to the class instance but to the function itself, leading to errors when attempting to access the class instance’s properties or methods.
+In a class component, an unbound instance method loses its receiver when React calls it as an event handler. In strict mode, `this` is `undefined`; it does not refer to the class instance.
 
 ### Incorrect Usage
 
-The following code inside a class will trigger an error because `this` points to the function `handleClick`, not the class instance, resulting in no `setState` method being available:
+The following method is not bound, so `this.setState` fails when the button calls it:
 
 ```tsx
 class MyComponent extends React.Component {
@@ -412,15 +419,15 @@ import React, { useState } from 'react';
 const MyComponent = () => {
   const [isHidden, setIsHidden] = useState(false);
 
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    setIsHidden(!isHidden);
+  const handleClick = () => {
+    setIsHidden(previous => !previous);
   };
 
   return <button onClick={handleClick}>Click me</button>;
 };
 ```
 
-## `e.target` and `e.currentTarget`
+## `e.target` and `e.currentTarget` / 事件目标与监听元素
 
 When handling events, it's important to distinguish between `e.target` and `e.currentTarget`:
 
@@ -458,33 +465,56 @@ When the span is clicked:
 
 This allows you to differentiate the element that triggered the event from the element that is handling the event.
 
-## Request Data in Lifecycle Methods
+## Request Data in Lifecycle Methods / 在生命周期中请求数据
 
-In class components, `componentDidMount()` is a lifecycle method that is invoked immediately after a component is mounted (inserted into the tree). It's a common place to initiate network requests to fetch data.
+In class components, `componentDidMount()` is a lifecycle method that is invoked immediately after a component is mounted (inserted into the tree). It's a common place to initiate network requests to fetch data. Root StrictMode can exercise a development-only mount, unmount, and mount sequence, so each mount below creates its own request controller; see the [React Component lifecycle reference](https://react.dev/reference/react/Component#componentdidmount).
 
 ### Example
 
 ```tsx
-class MyComponent extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { data: null };
-  }
+interface State {
+  data: unknown;
+  error: string | null;
+}
+
+class MyComponent extends React.Component<{}, State> {
+  private controller: AbortController | null = null;
+
+  state: State = { data: null, error: null };
 
   componentDidMount() {
-    fetch("https://api.example.com/data")
-      .then(response => response.json())
-      .then(data => this.setState({ data }));
+    const controller = new AbortController();
+    this.controller = controller;
+
+    fetch("https://api.example.com/data", { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        if (!controller.signal.aborted) this.setState({ data, error: null });
+      })
+      .catch(cause => {
+        if (!controller.signal.aborted) {
+          this.setState({ error: cause instanceof Error ? cause.message : String(cause) });
+        }
+      });
+  }
+
+  componentWillUnmount() {
+    this.controller?.abort();
+    this.controller = null;
   }
 
   render() {
-    const { data } = this.state;
-    return data ? <div>{data}</div> : <div>Loading...</div>;
+    const { data, error } = this.state;
+    if (error) return <p role="alert">{error}</p>;
+    return data === null ? <p>Loading...</p> : <pre>{JSON.stringify(data, null, 2)}</pre>;
   }
 }
 ```
 
-In functional components, the `useEffect` hook is used to handle side effects such as data fetching:
+In function components, an Effect can synchronize with a request. This example checks the HTTP status and ignores stale results during cleanup; it leaves response validation to application code because `response.json()` does not validate a TypeScript shape at runtime:
 
 ### Example with Hooks
 
@@ -492,36 +522,55 @@ In functional components, the `useEffect` hook is used to handle side effects su
 import React, { useState, useEffect } from 'react';
 
 const MyComponent = () => {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<unknown>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("https://api.example.com/data")
-      .then(response => response.json())
-      .then(data => setData(data));
-  }, []); // The empty array ensures this effect runs only once after the initial render
+    let ignore = false;
 
-  return data ? <div>{data}</div> : <div>Loading...</div>;
+    async function load() {
+      try {
+        const response = await fetch("https://api.example.com/data");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result: unknown = await response.json();
+        if (!ignore) {
+          setData(result);
+          setError(null);
+        }
+      } catch (cause) {
+        if (!ignore) setError(cause instanceof Error ? cause.message : String(cause));
+      }
+    }
+
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  if (error) return <p role="alert">{error}</p>;
+  return data === null ? <div>Loading...</div> : <pre>{JSON.stringify(data, null, 2)}</pre>;
 };
 ```
 
-# Hooks
+## Hooks / Hooks
 
-Hooks help to monitor processes and add state to functional components. They allow you to "hook" external code when the process requires side effects. Using hooks, you can substitute class components with functional components. Here are some frequently used hooks:
+Hooks let function components use React state, context, refs, and synchronization with external systems. They are an alternative component API, not a requirement to replace every class component. Common Hooks include:
 
 - `useState`: Manages state in a functional component.
 - `useEffect`: Performs side effects in a functional component.
 - `useReducer`: Manages state with complex logic.
 - `useContext`: Accesses context in a functional component.
 
-All hooks are named using the `useXXX` convention.
+Custom Hooks must start with `use`; they may call other Hooks at the top level. React 19's `use(usable)` API is the exception: it may appear in a condition or loop, while other Hooks must preserve call order. See [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks) and [`use`](https://react.dev/reference/react/use).
 
-## useState
+## `useState` / `useState`
 
 The `useState` hook allows you to add state to functional components. It returns an array with two elements: the current state and a function to update it.
 
 ### Example
 
-```jsx
+```tsx
 import React, { useState } from 'react';
 
 const Counter: React.FC = () => {
@@ -546,13 +595,13 @@ In the example above:
 - `useState(0)` initializes the state variable `count` to 0.
 - `setCount` is the function to update the state.
 
-## useEffect
+## `useEffect` / `useEffect`
 
-The `useEffect` hook lets you perform side effects in function components. It takes two arguments: a function and a dependency array. The function runs after the first render and after every update.
+`useEffect` synchronizes with an external system after a commit. With no dependency list it runs after each commit; with a dependency list it runs after the initial commit and again when a listed value changes. React runs the previous cleanup before the next setup and when the component unmounts.
 
 ### Example
 
-```jsx
+```tsx
 import React, { useState, useEffect } from 'react';
 
 const EffectDemo: React.FC = () => {
@@ -581,13 +630,13 @@ In the example above:
 - The function inside `useEffect` runs after every render where `count` changes.
 - The dependency array `[count]` ensures the effect only runs when `count` changes.
 
-## useReducer
+## `useReducer` / `useReducer`
 
 The `useReducer` hook is used for managing state with complex logic. It is an alternative to `useState` and is usually preferable when you have multiple state variables that rely on complex logic.
 
 ### Example
 
-```jsx
+```tsx
 import React, { useReducer } from 'react';
 
 type Action = { type: 'increment' } | { type: 'decrement' };
@@ -624,13 +673,13 @@ In the example above:
 - `useReducer(reducer, 0)` initializes the state to 0 and provides a `dispatch` function to update the state.
 - The `reducer` function defines how the state changes in response to actions.
 
-## useContext
+## `useContext` / `useContext`
 
 The `useContext` hook allows you to access the context in a functional component. It makes it easy to pass data through the component tree without passing props down manually at every level.
 
 ### Example
 
-```jsx
+```tsx
 import React, { useContext, createContext } from 'react';
 
 const CountContext = createContext(0);
@@ -659,7 +708,7 @@ In the example above:
 
 ## Best Practices for Using Hooks
 
-1. **Keep Hooks at the Top Level**: Always call hooks at the top level of your component. Avoid calling hooks inside loops, conditions, or nested functions.
+1. **Keep Hooks at the Top Level**: Call Hooks at the top level of a component or custom Hook so their order is stable. The React 19 `use(usable)` API is the exception and may be called conditionally or in loops; see the Rules of Hooks link above.
 
 2. **Use Multiple State Variables if Needed**: Instead of combining state variables, use multiple `useState` or `useReducer` calls.
 
@@ -669,30 +718,36 @@ In the example above:
 
 ### Custom Hook Example
 
-```jsx
+```tsx
 import { useState, useEffect } from 'react';
 
 const useFetch = (url: string) => {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<unknown>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+    setError(null);
+
     const fetchData = async () => {
       try {
         const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
-        setData(result);
+        if (!ignore) setData(result);
       } catch (e) {
-        if (e instanceof Error) {
-          setError(e.message);
-        }
+        if (!ignore) setError(e instanceof Error ? e.message : String(e));
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [url]);
 
   return { data, loading, error };
@@ -707,12 +762,12 @@ In the custom hook example above:
 - `useFetch` encapsulates the logic for fetching data.
 - It returns the fetched data, loading state, and any error encountered.
 
-Using hooks effectively can greatly simplify your code and make it more readable and maintainable. Always follow best practices to ensure optimal performance and scalability in your React applications.
+The cleanup ignores stale results when `url` changes or the component unmounts; it does not cancel the network request. Pass an `AbortSignal` when the underlying request must also be stopped. In React 18+ and 19, root StrictMode runs an additional Effect setup-and-cleanup cycle in development to expose incomplete cleanup; that development check is absent in production.
 
-## Context and useContext
+## Context and `useContext` / Context与`useContext`
 
 ### Introduction
-In React, context provides a way to pass data through the component tree without having to pass props down manually at every level. This is useful for global data that many components need to access, such as user information, theme settings, or application state.
+Context provides a value to a subtree without passing it through every intermediate component. It can distribute shared state, but it does not itself define how that state is stored or updated; the provider owns that behavior.
 
 ### Creating Context
 
@@ -722,13 +777,13 @@ To create a context, you use the `createContext` function. This function takes a
 import { createContext } from "react";
 
 const defaultContextValue = {
-  username: "Ron",
+  username: "reader",
 };
 
 export const appContext = createContext(defaultContextValue);
 ```
 
-Here, `defaultContextValue` provides a default value for the context. This value is used when a component does not have a matching `Provider` above it in the tree.
+Here, `defaultContextValue` is used only when a component has no matching provider above it in the tree.
 
 ### Providing Context
 
@@ -736,14 +791,14 @@ To use the context in child components, wrap the part of your component tree tha
 
 ```tsx
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import { appContext } from "./context";
 
 const defaultContextValue = {
-  username: "Ron",
+  username: "reader",
 };
 
-const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+const root = createRoot(document.getElementById("root") as HTMLElement);
 
 root.render(
   <React.StrictMode>
@@ -827,7 +882,7 @@ interface AppStateValue {
 }
 
 const defaultContextValue: AppStateValue = {
-  username: "Ron",
+  username: "reader",
   shoppingCart: { items: [] },
 };
 
@@ -855,11 +910,11 @@ Wrap your app in the `AppStateProvider` component to provide the global state to
 
 ```tsx
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import { AppStateProvider } from "./AppState";
 import App from "./App";
 
-const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+const root = createRoot(document.getElementById("root") as HTMLElement);
 
 root.render(
   <React.StrictMode>
@@ -959,7 +1014,7 @@ A Higher-Order Component (HOC) is a function that takes a component and returns 
 #### Example
 Below is an example of a HOC that adds a function to handle adding items to a shopping cart:
 
-```jsx
+```tsx
 // withAddToCart.tsx
 import React, { useContext } from 'react';
 
@@ -1027,7 +1082,7 @@ Custom hooks are functions that start with `use` and allow you to encapsulate an
 #### Example
 Here’s an example of a custom hook to handle adding items to a shopping cart:
 
-```jsx
+```tsx
 // useAddToCart.tsx
 import React, { useContext } from 'react';
 
@@ -1157,7 +1212,7 @@ src/
 ## Using Ant Design
 
 ### Overview
-Ant Design is a popular React UI framework that provides a rich set of high-quality components out of the box. It is widely used in enterprise applications due to its comprehensive design system and ease of use.
+Ant Design is a React component library. The examples below use its Layout, Menu, Typography, and icon components; component APIs can differ between Ant Design versions, so pin the package version used by the application.
 
 ### Installation
 To use Ant Design, you need to install the core library along with the icons package. Run the following command to install both:
@@ -1224,20 +1279,20 @@ For more examples and detailed documentation on how to use different Ant Design 
 - **Theming and Customization:** Use Ant Design's theming capabilities to customize the appearance to match your brand.
 - **Responsive Design:** Utilize the responsive grid system and other responsive components to ensure your application works well on different screen sizes.
 
-# Routing in React
+## Routing in React with React Router v6 / 使用React Router v6进行路由
 
 ## Overview
 
-Routing in React involves managing the navigation between different components and views in a React application by tracking the URL. This is crucial for building single-page applications (SPAs) where different views are rendered based on the URL path without reloading the entire page.
+Routing maps URL changes to React UI. With client-side routing, matching navigation can update the view without a full document reload; a server-rendered or hybrid framework has different routing and rendering boundaries. These examples use the [React Router v6.3 API](https://github.com/remix-run/react-router/blob/v6.3.0/docs/api.md).
 
-The `react-router` package is a popular library for implementing routing in React. It provides various components and hooks to manage navigation, URL parameters, and more.
+The examples use React Router v6.3's declarative API (`BrowserRouter`, `Routes`, `Route` with `element`, and navigation Hooks). Pin the version for this lesson; React Router v7 adds other modes and package guidance.
 
 ## Installation
 
 To install `react-router`, use the following command:
 
 ```bash
-npm install react-router-dom@latest
+npm install react-router-dom@6.3.0
 ```
 
 ## Key Components and Hooks
@@ -1250,7 +1305,7 @@ npm install react-router-dom@latest
 ### `<HashRouter>`
 
 - Uses the URL hash (e.g., `example.com/#/path`) to keep the UI in sync with the URL.
-- Useful for older browsers that do not support the HTML5 History API.
+- Useful when the hosting environment cannot serve the application entry point for arbitrary paths.
 
 ### `<Routes>` and `<Route>`
 
@@ -1277,7 +1332,7 @@ npm install react-router-dom@latest
 
 Example: Display the `HomePage` component when the URL path is `/`, `LoginPage` when it is `/login`, and so on. Show a "page not found" message if the URL does not match any defined routes.
 
-```jsx
+```tsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import LoginPage from './LoginPage';
@@ -1312,17 +1367,18 @@ Example: Passing an ID as a parameter to the detail page.
 
 In `App.tsx`:
 
-```jsx
+```tsx
 <Route path="/detail/:touristRouteId" element={<DetailPage />} />
 ```
 
 In `DetailPage.tsx`:
 
-```jsx
+```tsx
 import { useParams } from 'react-router-dom';
 
 export const DetailPage: React.FC = () => {
-  const { touristRouteId } = useParams<{ touristRouteId: string }>();
+  const { touristRouteId } = useParams<"touristRouteId">();
+  if (!touristRouteId) return <p>Route parameter is missing.</p>;
   return <h1>Detail page, id: {touristRouteId}</h1>;
 };
 ```
@@ -1333,22 +1389,22 @@ Example: Passing multiple parameters.
 
 In `App.tsx`:
 
-```jsx
+```tsx
 <Route path="/detail/:touristRouteId/:other" element={<DetailPage />} />
 ```
 
 In `DetailPage.tsx`:
 
-```jsx
+```tsx
 import { useParams } from 'react-router-dom';
 
-type MatchParams = {
-  touristRouteId: string;
-  other: string;
-};
+type MatchParams = "touristRouteId" | "other";
 
 export const DetailPage: React.FC = () => {
   const params = useParams<MatchParams>();
+  if (!params.touristRouteId || !params.other) {
+    return <p>Route parameters are missing.</p>;
+  }
   return (
     <h1>
       Detail page, id: {params.touristRouteId}, other: {params.other}
@@ -1363,7 +1419,7 @@ export const DetailPage: React.FC = () => {
 
 Example:
 
-```jsx
+```tsx
 import { useNavigate } from 'react-router-dom';
 
 const MyComponent: React.FC = () => {
@@ -1381,7 +1437,7 @@ const MyComponent: React.FC = () => {
 
 An alternative way is to use `<Link>` from `'react-router-dom'`:
 
-```jsx
+```tsx
 import { Link } from 'react-router-dom';
 
 const MyComponent: React.FC = () => {
@@ -1393,10 +1449,10 @@ const MyComponent: React.FC = () => {
 
 1. **Use `<Link>` for Navigation:** It is preferred over `useNavigate` for simple navigational links because it creates a semantic `<a>` element and avoids the need for an additional event handler.
 2. **Define Routes Clearly:** Group related routes together and define a clear structure to make the routing configuration easy to read and maintain.
-3. **Handle 404s Gracefully:** Always include a catch-all route (`path="*"`) to handle unknown URLs and provide a user-friendly message or redirect.
+3. **Handle 404s Gracefully:** Add a catch-all route (`path="*"`) when the app should render its own not-found UI for unknown paths.
 4. **Use Hooks for Parameters and Navigation:** Utilize `useParams`, `useNavigate`, and `useLocation` hooks to access URL parameters and navigate programmatically within your components.
 
-# Redux
+## Redux / Redux
 
 Redux is a state management library often used with React to manage and centralize application state. It follows the principles of a unidirectional data flow and provides a predictable state container for JavaScript apps.
 
@@ -1420,7 +1476,7 @@ Examples include:
 
 ## Redux Architecture
 
-![Redux Architecture](redux_architecture.png)
+![Redux architecture](reduce_architecture.png)
 
 ## Core Concepts
 
@@ -1497,23 +1553,18 @@ export default store;
 
 Middleware provides a third-party extension point between dispatching an action and the moment it reaches the reducer. It can be used for logging, crash reporting, or handling asynchronous actions.
 
-Example using `redux-thunk`:
-
-```bash
-npm install redux-thunk
-```
+Redux Toolkit's default middleware already includes thunk. Configure additional middleware by extending that list; do not replace the defaults just to add one middleware:
 
 ```tsx
 // store.ts
 import { configureStore } from "@reduxjs/toolkit";
-import thunk from "redux-thunk";
 import languageReducer from "./language/languageReducer";
 
 const store = configureStore({
   reducer: {
     language: languageReducer,
   },
-  middleware: [thunk],
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware(),
 });
 
 export default store;
@@ -1567,7 +1618,7 @@ For larger applications, it is common to split the state and reducers into small
 Example:
 
 ```tsx
-import { combineReducers } from "@reduxjs/toolkit";
+import { combineReducers } from "redux";
 import languageReducer from "./language/languageReducer";
 import themeReducer from "./theme/themeReducer";
 
@@ -1581,29 +1632,24 @@ export default rootReducer;
 
 ### Using Redux DevTools
 
-Redux DevTools is a powerful tool for debugging application state changes. To integrate it, use the `redux-devtools-extension` package.
-
-```bash
-npm install redux-devtools-extension
-```
+`configureStore` enables Redux DevTools integration by default (`devTools` defaults to `true`). The explicit option below disables it in production; the separate `redux-devtools-extension` package is not needed for this setup. See the [Redux Toolkit 2.11.0 implementation](https://raw.githubusercontent.com/reduxjs/redux-toolkit/v2.11.0/packages/toolkit/src/configureStore.ts).
 
 ```tsx
 // store.ts
 import { configureStore } from "@reduxjs/toolkit";
-import { composeWithDevTools } from "redux-devtools-extension";
 import rootReducer from "./rootReducer";
 
 const store = configureStore({
   reducer: rootReducer,
-  enhancers: [composeWithDevTools()],
+  devTools: process.env.NODE_ENV !== "production",
 });
 
 export default store;
 ```
 
-# i18Next: A Comprehensive Guide
+## Internationalization with i18next / 使用i18next实现国际化
 
-This guide will walk you through the process of setting up i18Next for your React application. i18Next is a powerful internationalization framework for JavaScript, compatible with React, and widely used in modern front-end development.
+This guide shows a basic i18next configuration and its React bindings from `react-i18next`.
 
 ## Installation
 
@@ -1660,7 +1706,7 @@ i18n
     lng: "en",
     fallbackLng: "en", // Fallback language if the current language translation is not available
     interpolation: {
-      escapeValue: false, // React already safes from XSS
+        escapeValue: false, // React escapes text output; this does not make HTML injection safe.
     },
   });
 
@@ -1823,9 +1869,9 @@ const LanguageSwitcher: React.FC = () => {
 export default LanguageSwitcher;
 ```
 
-# React-Redux Integration: Class and Function Components
+## React-Redux Integration: Class and Function Components / 类组件与函数组件中的React-Redux
 
-This guide will walk you through the process of integrating React-Redux with both class and function components using modern best practices.
+This section preserves both the older `connect`/higher-order-component integration and the Hooks-based integration. The class example uses React Router v5 APIs; keep that version boundary explicit when maintaining an existing application.
 
 ## Prerequisites
 
@@ -1835,11 +1881,13 @@ Before you start, make sure you have the React-Redux library installed. If not, 
 npm install react-redux
 ```
 
-For TypeScript support, install the necessary types:
+Older React-Redux releases relied on a separate DefinitelyTyped package. Current React-Redux releases include their own types, so check the installed major before adding this legacy package:
 
 ```bash
 npm install @types/react-redux --save-dev
 ```
+
+The class example below also uses React Router v5's `withRouter` API; it is kept as a legacy integration example, separate from the v6 declarative routing section above.
 
 ## React-Redux with Class Components
 
@@ -1849,12 +1897,12 @@ The `<Provider />` component makes the Redux store available to the rest of your
 
 ```tsx
 import React from "react";
-import ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import store from "./redux/store";
 import App from "./App";
 
-const root = ReactDOM.createRoot(
+const root = createRoot(
   document.getElementById("root") as HTMLElement
 );
 root.render(
@@ -1936,6 +1984,7 @@ import languageReducer from "./redux/language/languageReducer";
 const store = createStore(languageReducer);
 
 export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
 
 export default store;
 ```
@@ -1990,9 +2039,9 @@ This guide covers the integration of React-Redux with both class and function co
 
 For more information and advanced usage, refer to the official [React-Redux documentation](https://react-redux.js.org/introduction/getting-started).
 
-# Fetching Data with Axios
+## Fetching Data with Axios / 使用Axios获取数据
 
-Axios is a popular HTTP client for making requests in JavaScript and TypeScript applications. It is particularly favored in modern front-end development for its ease of use, promise-based API, and compatibility with older browsers such as IE7. This guide covers the installation, usage, and best practices for using Axios, especially in a React environment.
+Axios is a promise-based HTTP client for JavaScript and TypeScript. Browser support depends on the Axios version and its adapter; this course makes no compatibility claim for obsolete browsers. The examples show basic requests, loading/error state, defaults, and interceptors.
 
 ## Installation
 
@@ -2076,7 +2125,7 @@ class HomePageComponent extends Component<WithTranslation, State> {
 
   async componentDidMount() {
     try {
-      const response = await axios.get('http://123.56.149.216:8080/api/productCollections');
+      const response = await axios.get('https://api.example.com/product-collections');
       this.setState({
         loading: false,
         productList: response.data
@@ -2087,6 +2136,8 @@ class HomePageComponent extends Component<WithTranslation, State> {
           loading: false,
           error: error.message
         });
+      } else {
+        this.setState({ loading: false, error: 'Unexpected request error' });
       }
     }
   }
@@ -2107,18 +2158,18 @@ class HomePageComponent extends Component<WithTranslation, State> {
       <>
         <Row>
           <ProductCollection
-            title={<Typography.Title level={3} type="warning">{t('home_page.hot_recommended')}</Typography.Title>}
-            sideImage="path/to/sideImage1.jpg"
+            title={<Typography.Title level={3} type="warning">{t('products.featured')}</Typography.Title>}
+            sideImage="/images/featured-products.jpg"
             products={productList[0]?.touristRoutes || []}
           />
           <ProductCollection
-            title={<Typography.Title level={3} type="danger">{t('home_page.new_arrival')}</Typography.Title>}
-            sideImage="path/to/sideImage2.jpg"
+            title={<Typography.Title level={3} type="danger">{t('products.new')}</Typography.Title>}
+            sideImage="/images/new-products.jpg"
             products={productList[1]?.touristRoutes || []}
           />
           <ProductCollection
-            title={<Typography.Title level={3} type="success">{t('home_page.domestic_travel')}</Typography.Title>}
-            sideImage="path/to/sideImage3.jpg"
+            title={<Typography.Title level={3} type="success">{t('products.popular')}</Typography.Title>}
+            sideImage="/images/popular-products.jpg"
             products={productList[2]?.touristRoutes || []}
           />
         </Row>
@@ -2137,8 +2188,8 @@ For headers that should be included in every request, you can set them globally 
 ```typescript
 import axios from 'axios';
 
-axios.defaults.headers.common['x-icode'] = 'BF10F5C62A274A1C';
-axios.defaults.baseURL = 'http://123.56.149.216:8080/api';
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.baseURL = 'https://api.example.com/api';
 axios.defaults.timeout = 10000; // 10 seconds
 ```
 
@@ -2164,12 +2215,12 @@ axios.interceptors.request.use(
 // Response Interceptor
 axios.interceptors.response.use(
   response => {
-    // Any status code within the range of 2xx causes this function to trigger
+    // With Axios's default validateStatus setting, 2xx responses resolve here.
     return response;
   },
   error => {
-    // Any status codes outside the range of 2xx cause this function to trigger
-    if (error.response.status === 401) {
+    // With the default validateStatus setting, other HTTP statuses reject here.
+    if (error.response?.status === 401) {
       // Handle unauthorized error
     }
     return Promise.reject(error);
@@ -2197,7 +2248,7 @@ axios.get('https://api.example.com/data')
   });
 ```
 
-# Redux vs MVC
+## Redux vs. MVC / Redux与MVC
 
 ## Introduction
 
@@ -2215,14 +2266,14 @@ Redux is a predictable state container for JavaScript apps, commonly used with l
 
 ### Comparison
 
-In MVC, managing state and render logic can become complex and difficult to maintain, especially as applications grow. Redux simplifies state management by providing a single source of truth and enforcing strict separation of concerns.
+MVC describes roles for organizing an application's model, view, and controller. Redux describes a shared state container and unidirectional update flow. They are not competing versions of the same pattern; Redux can be used inside an MVC-style application, and simpler state may not need a store.
 
-## Advantages of Redux over MVC
+## When Redux Helps / Redux适用场景
 
-1. **Single Source of Truth**: The entire state of your application is stored in a single object tree within a single store.
-2. **Predictable State Updates**: Actions and reducers make state transitions predictable.
-3. **Easier Debugging**: Tools like Redux DevTools provide powerful capabilities to inspect every state and action.
-4. **Middleware for Side Effects**: Middleware like Redux-Thunk and Redux-Saga manage asynchronous operations and side effects effectively.
+1. **Shared State**: A store centralizes state that several parts of the application must read or update; local UI state can remain in a component.
+2. **Explicit Transitions**: Actions and reducers make state changes inspectable and testable.
+3. **Debugging**: Redux DevTools can inspect actions and state transitions when configured.
+4. **Middleware**: Middleware can coordinate asynchronous work or other dispatch-time concerns.
 
 ## Best Practices
 
@@ -2231,14 +2282,15 @@ In MVC, managing state and render logic can become complex and difficult to main
 3. **Normalized State Shape**: Avoid deeply nested state to simplify data manipulation and improve performance.
 4. **Use Redux Toolkit**: Simplifies store setup and provides good defaults.
 
-# Redux Store with Multiple Reducers
+## Redux Store with Multiple Reducers / 使用多个Reducer拆分Store
 
 In a large application, it's common to split the reducer logic into multiple smaller reducers. These smaller reducers manage specific parts of the state and are combined into a single root reducer.
 
 ## Example: Redux Store with Multiple Reducers
 
 ```typescript
-import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import { configureStore } from "@reduxjs/toolkit";
+import { combineReducers } from "redux";
 import languageReducer from "./language/languageReducer";
 import recommendProductsReducer from "./recommendProducts/recommendProductsReducer";
 
@@ -2253,6 +2305,7 @@ const store = configureStore({
 });
 
 export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
 
 export default store;
 ```
@@ -2284,13 +2337,13 @@ const Header: React.FC = () => {
 };
 ```
 
-# Redux-Thunk
+## Thunks with Redux / Redux中的Thunk
 
-Redux-Thunk is a middleware that allows Redux actions to handle asynchronous operations and side effects. It extends Redux's `dispatch` function to support function types, enabling more complex actions.
+Redux Thunk lets dispatched functions perform asynchronous work and dispatch plain actions as results. Redux Toolkit includes thunk in `configureStore` by default; install and add it manually only when using a bare Redux store. The typed examples below use the `RootState` and `AppDispatch` from their matching thunk-enabled stores, following the [Redux TypeScript thunk guidance](https://redux.js.org/usage/usage-with-typescript#type-checking-redux-thunks).
 
 ## Installation
 
-First, install redux-thunk:
+For a bare Redux store, install redux-thunk:
 
 ```bash
 npm install redux-thunk
@@ -2310,6 +2363,9 @@ const store = configureStore({
   reducer: rootReducer,
 });
 
+// This store includes the default thunk middleware.
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
 export default store;
 ```
 
@@ -2317,12 +2373,14 @@ export default store;
 
 ```typescript
 import { createStore, applyMiddleware } from "redux";
-import thunk from "redux-thunk";
+import { thunk } from "redux-thunk";
 import rootReducer from "./reducers";
 
-const store = createStore(rootReducer, applyMiddleware(thunk));
+const manualStore = createStore(rootReducer, applyMiddleware(thunk));
 
-export default store;
+export type ManualRootState = ReturnType<typeof manualStore.getState>;
+export type ManualAppDispatch = typeof manualStore.dispatch;
+export default manualStore;
 ```
 
 ## Usage
@@ -2333,15 +2391,16 @@ To use Redux-Thunk, create action creators that return functions instead of acti
 
 ```typescript
 import axios from "axios";
-import { ThunkAction } from "redux-thunk";
-import { RootState } from "../store";
+import type { ThunkAction } from "redux-thunk";
+import type { UnknownAction } from "redux";
+import type { RootState } from "../store";
 import {
   fetchRecommendProductsStart,
   fetchRecommendProductsSuccess,
   fetchRecommendProductsFail,
 } from "./actions";
 
-export const fetchRecommendProducts = (): ThunkAction<void, RootState, unknown, any> => async (dispatch, getState) => {
+export const fetchRecommendProducts = (): ThunkAction<Promise<void>, RootState, unknown, UnknownAction> => async (dispatch) => {
   dispatch(fetchRecommendProductsStart());
   try {
     const { data } = await axios.get("http://example.com/api/products");
@@ -2358,11 +2417,12 @@ Dispatch the thunk action from your React component.
 
 ```typescript
 import { useDispatch } from "react-redux";
+import type { AppDispatch } from "./store";
 import { useEffect } from "react";
 import { fetchRecommendProducts } from "./actions";
 
 const ProductList: React.FC = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     dispatch(fetchRecommendProducts());
@@ -2372,7 +2432,7 @@ const ProductList: React.FC = () => {
 };
 ```
 
-# Redux Middleware
+## Redux Middleware / Redux中间件
 
 In Redux, middleware is a higher-order function that wraps the dispatch function, allowing you to execute code in between the action being dispatched and the action reaching the reducer. Middleware is commonly used for handling asynchronous actions, logging, error reporting, and more.
 
@@ -2449,12 +2509,16 @@ In this code:
 Middleware is particularly useful for handling asynchronous actions. For example, the popular `redux-thunk` middleware allows you to write action creators that return a function instead of an action:
 
 ```typescript
-import { ThunkAction } from "redux-thunk";
-import { Action } from "redux";
-import { RootState } from "./store";
+import type { ThunkAction } from "redux-thunk";
+import type { ManualRootState } from "./store";
 
 // An example of an asynchronous action using redux-thunk
-export const fetchUserData = (): ThunkAction<void, RootState, unknown, Action<string>> => async (dispatch) => {
+type FetchUserAction =
+  | { type: "FETCH_USER_REQUEST" }
+  | { type: "FETCH_USER_SUCCESS"; payload: unknown }
+  | { type: "FETCH_USER_FAILURE"; error: unknown };
+
+export const fetchUserData = (): ThunkAction<Promise<void>, ManualRootState, unknown, FetchUserAction> => async (dispatch) => {
   dispatch({ type: "FETCH_USER_REQUEST" });
   try {
     const response = await fetch("/api/user");
@@ -2515,43 +2579,49 @@ const asyncMiddleware: Middleware = (store) => (next) => async (action) => {
 };
 ```
 
-# HATEOAS: Hypertext As The Engine Of Application State
+## HATEOAS: Hypermedia as the Engine of Application State / 超媒体作为应用状态引擎
 
-HATEOAS (Hypertext As The Engine Of Application State) is a constraint of the REST application architecture that implies that a client interacts with a network application entirely through hypermedia provided dynamically by application servers.
+HATEOAS (Hypertext As The Engine Of Application State) is the REST interface constraint by which a client discovers application-state transitions through hypermedia in server representations. It is one of REST's interface constraints, alongside resource identification, manipulation through representations, and self-descriptive messages ([Fielding, REST dissertation, §5](https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm)).
 
 ## Key Concepts
 
 ### Hypermedia Driven
 
-HATEOAS allows the client to navigate the application state through hypermedia (links), making the client less dependent on the server's implementation. This means that the server provides all the information the client needs to understand how to interact with the application.
+HATEOAS lets a client discover available transitions through links or action affordances in the server's representations. The client still understands the media type and link relations, but need not hard-code every target URL.
 
 ### Example Scenario
 
-Consider an e-commerce application where a client makes a POST request to buy a product. The server should return not only the status of the request but also links (URLs) to:
+Consider an e-commerce application where a client makes a POST request to buy a product. The server can return the order representation and advertise available navigation or actions, such as:
 
-- Get the details of the product.
-- Cancel the purchase.
-- Update the purchase details.
+- View the order details through a `self` or details link.
+- A cancellation action when cancellation is currently allowed.
+- An update action when editing is currently allowed.
 
-This way, the client does not need to hard-code these URLs; they are provided dynamically by the server. This decouples the client from the server and makes the application more flexible and easier to maintain.
+The response can expose the transitions currently available for the order. A client follows a relation when present; it does not infer every target from the resource's identifier. The action's HTTP method and request shape must come from the API's advertised affordance or contract.
 
 ### Implementation in React
 
-If the backend returns an HTML string directly, you can insert it into a React component using the following code:
+For example, a JSON representation can carry link relations that a component renders as ordinary links:
 
-```typescript
-<div dangerouslySetInnerHTML={{ __html: data }}></div>
+```tsx
+type ApiLink = { rel: string; href: string };
+type Order = { status: string; links: ApiLink[] };
+
+function OrderDetailsLink({ order }: { order: Order }) {
+  const self = order.links.find(link => link.rel === "self");
+  return self ? <a href={self.href}>View order details</a> : null;
+}
 ```
 
-**Note**: Be cautious when using `dangerouslySetInnerHTML` as it can expose your application to XSS (Cross-Site Scripting) attacks. Always sanitize the HTML content before inserting it.
+An ordinary `<a>` follows a `GET` link and is appropriate for safe navigation such as viewing details. Do not make it perform cancellation or another state change: expose that as an API-defined operation and send its declared method, for example from a button or form. [HTTP defines GET as a safe method](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.1). HATEOAS is a representation and navigation convention; it does not require returning HTML. Do not inject untrusted HTML with `dangerouslySetInnerHTML`; see [Web Security and Authentication / Web安全与身份验证](../../../../engineering-foundations/security/web-security-and-authentication.md) for the separate XSS boundary.
 
-# Redux Toolkit (RTK)
+## Redux Toolkit / Redux Toolkit
 
-Redux Toolkit (RTK) is the official, recommended way to write Redux logic. It is designed to simplify common tasks like store setup, defining reducers, and handling immutable updates.
+Redux Toolkit is the official, recommended way to write Redux logic. It simplifies store setup, reducers, and immutable updates; the API examples below were checked against [Redux Toolkit 2.11.0](https://github.com/reduxjs/redux-toolkit/blob/v2.11.0/docs/usage/usage-with-typescript.md).
 
 ## Creating an App with RTK
 
-You can create a new React app with Redux Toolkit using the following commands:
+These commands preserve the course's legacy CRA template setup; CRA is deprecated for new projects:
 
 ```sh
 # Redux + Plain JS template
@@ -2610,10 +2680,10 @@ const userSlice = createSlice({
       state.name = action.payload; // Using Immer to handle state mutations
     },
   },
-  extraReducers: {
-    [counterSlice.actions.increment.type]: (state) => {
+  extraReducers: (builder) => {
+    builder.addCase(counterSlice.actions.increment, (state) => {
       state.age += 1;
-    },
+    });
   },
 });
 
@@ -2671,6 +2741,7 @@ const store = configureStore({
 });
 
 export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
 export default store;
 ```
 
@@ -2689,7 +2760,7 @@ import axios from "axios";
 interface ProductDetailsState {
   loading: boolean;
   error: string | null;
-  data: any;
+  data: { name: string } | null;
 }
 
 const initialState: ProductDetailsState = {
@@ -2701,7 +2772,8 @@ const initialState: ProductDetailsState = {
 export const fetchProductDetails = createAsyncThunk(
   "productDetails/fetchProductDetails",
   async (productId: string) => {
-    const response = await axios.get(`/api/products/${productId}`);
+    const response = await axios.get<{ name: string }>(`/api/products/${productId}`);
+    // The generic describes the expected payload; it does not validate the JSON at runtime.
     return response.data;
   }
 );
@@ -2722,7 +2794,7 @@ const productDetailsSlice = createSlice({
       })
       .addCase(fetchProductDetails.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error = action.error.message ?? "Request failed";
       });
   },
 });
@@ -2734,14 +2806,16 @@ export const { reducer: productDetailsReducer } = productDetailsSlice;
 
 To use the `fetchProductDetails` thunk in a React component:
 
+This example assumes the store registers `productDetailsSlice.reducer` under the `productDetails` key; derive `RootState` and `AppDispatch` from that configured store.
+
 ```typescript
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchProductDetails } from "./productDetailsSlice";
-import { RootState } from "./store";
+import type { RootState, AppDispatch } from "./store";
 
 const ProductDetails = ({ productId }: { productId: string }) => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { data, loading, error } = useSelector(
     (state: RootState) => state.productDetails
   );
@@ -2773,3 +2847,5 @@ export const useDispatch = () => useReduxDispatch<AppDispatch>();
 ```
 
 Then, import `useDispatch` from this custom hook file instead of directly from `react-redux`.
+
+**Sources checked 2026-10-15:** React 19.2 [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [`use`](https://react.dev/reference/react/use), [Effects](https://react.dev/learn/synchronizing-with-effects), [StrictMode](https://react.dev/reference/react/StrictMode), and [React type definitions](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts); TypeScript 5.9.3 [`noImplicitAny`](https://www.typescriptlang.org/tsconfig/#noImplicitAny) and [erased types](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types); [React Router v6.3.0 API](https://github.com/remix-run/react-router/blob/v6.3.0/docs/api.md); [Redux Toolkit 2.11.0 TypeScript usage](https://github.com/reduxjs/redux-toolkit/blob/v2.11.0/docs/usage/usage-with-typescript.md); [React-Redux TypeScript usage](https://react-redux.js.org/using-react-redux/usage-with-typescript); [Axios error handling](https://axios-http.com/docs/handling_errors); [i18next interpolation](https://www.i18next.com/translation-function/interpolation); [Fielding's REST dissertation](https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm).

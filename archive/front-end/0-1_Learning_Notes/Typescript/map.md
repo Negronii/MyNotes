@@ -1,4 +1,6 @@
-# Map Operations
+# Map Operations / Map 操作
+
+**Core idea / 核心概念：** A `Map` accepts keys of any type, compares them with `SameValueZero` (objects by identity), and iterates entries in insertion order. Setting an existing key updates its value without moving it; deleting and re-adding it places it at the end. / `Map` 的键可以是任意类型；比较采用 `SameValueZero`（对象按引用身份比较），迭代顺序为插入顺序。更新已有键不会改变其顺序；删除后重新添加会移到末尾。 See [JavaScript Map and Set](../../../../frontend/javascript/map-and-set.md) and [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html).
 
 **1. Creating a Map**
 
@@ -59,20 +61,19 @@ let size = myMap.size; // returns 1 (after deleting 'key1')
   - Map: Allows any type, including functions, objects, and primitives.
 - **Order of Keys**:
   - Map: Keys stay in insertion order.
-  - Object: No guaranteed order, especially for numeric keys.
+  - Ordinary objects: Own property-key order is specified: array-index keys first in numeric order, then other strings in creation order, then symbols in creation order.
 - **API Methods**:
   - Map: Offers `set`, `get`, `has`, `delete`, etc.
   - Object: Uses dot or bracket notation for property access.
 - **Performance**:
-  - Map: Better for frequent addition/removal of key-value pairs.
-  - Object: Optimized for static key set operations.
+  - Choose by key and API semantics; performance depends on workload and engine, so measure before making a performance claim.
 
 **Note on Key Choices**
-Arrays and objects are compared by reference. Even if two arrays/objects have identical values, they're different unless they point to the same reference. Using `JSON.stringify(array/object)` can help create unique keys.
+Objects and arrays used as `Map` keys compare by identity, not by contents: two separately created `{ id: 1 }` objects are distinct keys. `JSON.stringify` is not a general structural-key solution (for example, it can be ambiguous or fail for cyclic data); define a canonical key explicitly when value-based lookup is required.
 
 **Defining Types**
 
-```javascript
+```typescript
 let userRoles: Map<number, string> = new Map();
 userRoles.set(1, "admin");
 userRoles.set(2, "user");

@@ -1,7 +1,9 @@
-# String
+# String / 字符串
+
+**Core idea / 核心概念：** JavaScript strings are sequences of UTF-16 code units; `.length` counts code units, not user-perceived characters. / JavaScript 字符串由 UTF-16 代码单元组成；`.length` 统计代码单元，不等于用户感知的字符数。 See [ECMAScript text processing](https://tc39.es/ecma262/2025/multipage/text-processing.html).
 
 ### 1. `length`
-- **Description**: Get the length of the String object.
+- **Description**: Returns the number of UTF-16 code units in the string.
 - **Return Type**: `number`
 - **Example**:
   ```javascript
@@ -19,7 +21,7 @@
   ```
 
 ### 3. `charAt(pos: number)`
-- **Description**: Returns the character at the specified position.
+- **Description**: Returns the one-code-unit string at the specified index, or `""` when the index is out of range.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
@@ -28,7 +30,7 @@
   ```
 
 ### 4. `charCodeAt(index: number)`
-- **Description**: Returns the Unicode of the character at the specified index. NaN if no character at the index.
+- **Description**: Returns the UTF-16 code-unit value at the specified index, or `NaN` when the index is out of range.
 - **Return Type**: `number`
 - **Example**:
   ```javascript
@@ -71,7 +73,8 @@
   ```javascript
   let str1 = "a";
   let str2 = "b";
-  console.log(str1.localeCompare(str2)); // Output: -1
+  const comparison = str1.localeCompare(str2);
+  console.log(comparison < 0); // true when str1 sorts before str2 in the active locale
   ```
 
 ### 9. `match(regexp: string | RegExp)`
@@ -120,9 +123,7 @@
   ```
 
 ### 14. `substr(start: number, length?: number)`
-- **Description**: Returns the characters in a string
-
-beginning at the specified location through the specified number of characters.
+- **Description**: Legacy Annex B method; prefer `slice()` for new code. Returns up to `length` code units beginning at `start`.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
@@ -149,12 +150,11 @@ beginning at the specified location through the specified number of characters.
   ```
 
 ### 17. `toLocaleLowerCase(locales?: string | string[])`
-- **Description**: Converts a string to lowercase, considering the host's current locale.
+- **Description**: Converts a string to lowercase using the supplied locale, or the host default when omitted.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
-  let str = "HELLO WORLD";
-  console.log(str.toLocaleLowerCase('tr')); // Output: "hello world" (with Turkish locale)
+  console.log("I".toLocaleLowerCase('tr')); // Output: "ı"
   ```
 
 ### 18. `toUpperCase()`
@@ -167,12 +167,11 @@ beginning at the specified location through the specified number of characters.
   ```
 
 ### 19. `toLocaleUpperCase(locales?: string | string[])`
-- **Description**: Converts a string to uppercase, considering the host's current locale.
+- **Description**: Converts a string to uppercase using the supplied locale, or the host default when omitted.
 - **Return Type**: `string`
 - **Example**:
   ```javascript
-  let str = "hello world";
-  console.log(str.toLocaleUpperCase('tr')); // Output: "HELLO WORLD" (with Turkish locale)
+  console.log("i".toLocaleUpperCase('tr')); // Output: "İ"
   ```
 
 ### 20. `trim()`
@@ -202,13 +201,22 @@ beginning at the specified location through the specified number of characters.
   ```
 
 ### `String.fromCharCode(...codes: number[])`
-- **Description**: Converts Unicode values into characters.
+- **Description**: Converts UTF-16 code-unit values into a string. Use `String.fromCodePoint()` for Unicode code points above `0xFFFF`.
 - **Example**:
   ```javascript
   console.log(String.fromCharCode(72, 101, 108, 108, 111)); // Output: "Hello"
   ```
 
 ## Traverse String
+
+Indexing and `charAt()` use code units and can split surrogate pairs. `for...of` yields code points, but grapheme clusters (“user-perceived characters”) can span multiple code points ([Unicode Standard Annex #29](https://www.unicode.org/reports/tr29/)).
+
+```javascript
+const face = "😀";
+console.log(face.length); // 2 UTF-16 code units
+console.log([...face]);  // ["😀"]: one code point
+console.log(String.fromCodePoint(0x1F600)); // "😀"
+```
 ```ts
 const str = "Hello"
 
