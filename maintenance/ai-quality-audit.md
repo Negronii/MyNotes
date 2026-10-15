@@ -14,4 +14,4 @@
 
 ## 核验范围与限制
 
-已重新生成三份连续阅读文档；`python3 maintenance/build-reading-docs.py --check` 验证了领域地图、源文链接、生成链接与输出。两条旧 section fragment 已改为文件级相关链接；当前活跃 Markdown 中未发现指向这两条旧 fragment 的剩余入链。本批新增公式渲染与导航点击的原生检查尚未完成，本文不宣称通过。资料审查不代表复现了论文实验、运行了部署基准或完成了生产环境渗透测试。
+已重新生成三份连续阅读文档；`python3 maintenance/build-reading-docs.py --check` 验证了领域地图、源文链接、生成链接与输出。两条旧 section fragment 已改为文件级相关链接；当前活跃 Markdown 中未发现指向这两条旧 fragment 的剩余入链。2026-10-15 在 Obsidian Reading Mode 定向抽查了 RAG 的三个相似度行内公式、RRF 块公式、代码、表格及中文可读性；连续阅读稿中的 RAG→Evaluation 导航和 review/index 第 5 项→RAG 正文的两次真实点击均通过。这是指定片段抽查，不是全库逐节原生验证，也不覆盖 Safety 全文的原生呈现。资料审查不代表复现了论文实验、运行了部署基准或完成了生产环境渗透测试。
