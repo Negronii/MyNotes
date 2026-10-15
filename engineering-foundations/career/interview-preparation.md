@@ -1,79 +1,74 @@
-**Reach for this when** you need a quick reference for the behavioral side of a frontend interview — framing your strengths/weaknesses, answering "why us", discussing salary, and asking good questions back.
+# Interview Tips / 面试准备
 
-**Headline:** Strong behavioral answers share three qualities — **concrete** (backed by specific examples), **relevant** (tied to the role), and **self-aware** (honest about gaps with a plan to close them). Avoid generic phrasing; interviewers hear "I'm a perfectionist" from 90% of candidates.
+Use this note to prepare clear, evidence-based answers for behavioral interview questions. **面试回答应具体、贴合岗位，并如实说明个人贡献与结果。** Adapt each template to facts you can support; do not borrow another person's story or invent outcomes.
 
 ## Discussing strengths and weaknesses
 
 ### Strengths
 
-Focus on qualities directly relevant to the role. Back each with a concrete example:
+Choose a strength that matters for the role, then support it with one real example. A compact structure is **context → action you took → result or evidence**.
 
-- "I'm detail-oriented — in my last project, I caught a data race condition during code review that would have caused intermittent production failures."
-- "I learn quickly — I picked up TypeScript and migrated our codebase within two weeks of joining."
+- “I work carefully with edge cases. In [specific situation], I [action I personally took], which led to [verifiable result].”
+- “I learn unfamiliar tools by [specific method]. For example, I used that approach to [real task] and [what changed or what I learned].”
+
+Replace each bracketed part with your own evidence. If the result is qualitative, describe what changed without inventing a metric.
 
 ### Weaknesses
 
-Pick real weaknesses that don't conflict with core job requirements, and show how you're addressing them:
+**诚实说明一个真实的发展方向，并说明正在采取的步骤。** Choose something you are actively improving and explain how you notice progress. Avoid presenting a disguised strength or claiming a weakness that would prevent you from doing the role's core work.
 
-- "I sometimes spend too long optimizing code before shipping. I've learned to set time-boxed goals and ship iteratively."
-- "I'm less experienced with backend systems. I've been building side projects with Node.js to broaden my skills."
-
-**Avoid** clichés like "I'm a perfectionist" or "I work too hard."
+- “I am still developing [skill]. I have been improving it by [specific practice], and I can now [observable progress].”
 
 ## Salary expectations
 
-- **Research** market rates for your role, level, and location before the interview.
-- **Express genuine interest first:** "I'm most interested in the technical challenges and growth opportunities."
-- **Provide a range**, not a fixed number: "Based on my research and experience, I'm looking at X–Y, open to discussion based on the full package."
-- **If pressed early:** "I'd prefer to understand the role better before discussing numbers."
+- Research a current range for the role, seniority, location, and total compensation before the conversation.
+- If you are ready to give a number, state a range and the assumptions behind it; leave room to discuss the full package.
+- If the responsibilities are not yet clear, ask about the role's level and compensation range before giving a precise expectation.
 
 ## Why are you a good fit?
 
-Three pillars:
+Connect the role's stated needs to evidence you actually have:
 
-1. **Skills match** — map your technical skills to their requirements.
-2. **Experience alignment** — relevant projects and outcomes.
-3. **Cultural fit** — understanding of their product, mission, or engineering culture.
+1. **Skills match / 技能匹配** — identify the relevant requirement.
+2. **Evidence / 事实依据** — give a project, responsibility, or result that demonstrates it.
+3. **Motivation / 求职动机** — explain which part of this role you want to work on.
 
-> "Your team is building a high-traffic React application with a focus on performance. I've spent the last two years optimizing rendering performance and implementing virtual scrolling at scale, which directly aligns with your challenges."
+Template: “This role needs [requirement]. In [real example], I [specific contribution] and [result or learning]. I am interested in applying that experience to [specific part of the role].”
 
 ## Company research
 
-Show you've done your homework:
-
-- Understand the company's product, market position, and recent developments.
-- Connect your skills to their specific needs.
-- If you're less familiar, be honest: "I've read about your recent launch of X. I'd love to learn more about the technical stack behind it."
+- Understand the product, users, and the role's team from current company materials.
+- Connect your experience to a specific need instead of reciting company slogans.
+- If you do not know a detail, say what you have learned so far and ask a focused question.
 
 ## Addressing lack of experience
 
-- Acknowledge that experience matters, then pivot to your strengths.
-- Emphasize transferable skills, learning ability, concrete rapid-ramp examples.
+State the gap plainly, then describe related experience and a realistic learning plan. Avoid guaranteeing that you will master an unfamiliar area by a fixed date unless you have a basis for that estimate.
 
-> "While I haven't worked with GraphQL in production, I've built several projects with it and understand the patterns. I'm confident I can be productive within the first sprint."
+Template: “I have not used [technology] in [relevant context]. I have used [related skill] for [real example], and I would start by [specific way to learn or validate the new system].”
 
 ## Questions to ask the interviewer
 
+Prepare questions that help you understand the work. Choose the ones that remain unanswered by the conversation.
+
 **About the role:**
 
-- "What does a typical day look like for someone in this role?"
-- "What are the biggest technical challenges the team is facing right now?"
-- "How do you measure success for this position in the first 6 months?"
+- “What are the most important outcomes for this role in the first few months?”
+- “What technical challenges would this person work on?”
+- “How do you measure success for the position?”
 
 **About the team:**
 
-- "What's the team's approach to code review and knowledge sharing?"
-- "How are technical decisions made — top-down or consensus-driven?"
+- “How does the team approach code review and knowledge sharing?”
+- “How are technical decisions made, and who is involved?”
 
 **About growth:**
 
-- "What learning and development opportunities are available?"
-- "What does the career progression path look like for engineers here?"
+- “What opportunities are there to deepen or broaden engineering skills?”
+- “How does the team support progression for engineers?”
 
 ## Closing the interview
 
-- Thank the interviewer for their time.
-- Reiterate interest: "This conversation reinforced my excitement about the role. I'd love the opportunity to contribute to the team."
-- Ask about next steps: "What does the rest of the process look like?"
+Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
 
-**Gotcha — don't skip asking questions.** "No questions" signals lack of interest. Prepare 3–5 in advance, even if your core questions got answered; you can always add "I was curious about X, but you covered it earlier — can you expand on Y?"
+**See also:** [Agile and Scrum](../teamwork/agile-and-scrum.md) for the current Scrum vocabulary used in team-process discussions.

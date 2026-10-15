@@ -1073,116 +1073,143 @@ pm2 reload app            # zero-downtime restart
 **See also:** [`7.1 Event Loop`](../../frontend/runtime/event-loop.md) for the single-threaded runtime model that shapes these choices, [`12.1 Software Design Principles`](#7.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for where serverless fits in overall application architecture.
 ## 7. Software Design Principles / 软件设计原则
 
-A bundle of interview questions on the design principles that separate maintainable frontend code from the kind that rots.
+### Software Design Principles / 软件设计原则
 
-### What are the SOLID principles, and what does each mean?
+Design principles are lenses for reasoning about change, not laws that guarantee maintainability. **设计原则帮助讨论变化与依赖的成本，不是保证正确架构的公式。** Apply a principle when it reduces a concrete source of coupling without creating unnecessary abstraction.
 
-**Headline (30s):** Five principles — **S**ingle responsibility (one reason to change), **O**pen/closed (extend via new code, not modification), **L**iskov substitution (subtypes work as base types), **I**nterface segregation (many small interfaces beat one fat one), **D**ependency inversion (depend on abstractions, not concretes). Together they push you toward small, decoupled pieces that are easy to change without breaking the rest of the system.
+#### What are the SOLID principles, and what does each mean?
 
-#### Single Responsibility Principle (SRP)
+**SOLID / 面向对象设计原则** is a mnemonic for five related guidelines:
 
-A class or module should have only one reason to change.
+- **S — Single Responsibility Principle / 单一职责原则**: keep a module cohesive around one responsibility or axis of change.
+- **O — Open/Closed Principle / 开闭原则**: make a stable part of the design extensible at expected variation points, rather than editing that core for every new case.
+- **L — Liskov Substitution Principle / 里氏替换原则**: a subtype must preserve the behavioral expectations clients rely on from its base type.
+- **I — Interface Segregation Principle / 接口隔离原则**: clients should depend only on the operations they need.
+- **D — Dependency Inversion Principle / 依赖倒置原则**: high-level policy should not depend directly on low-level details; both should depend on abstractions where that boundary pays for itself.
 
-```javascript
-// Violates SRP: handles both data fetching and rendering
+These guidelines can help isolate changes, but applying all of them mechanically can produce needless interfaces and indirection.
+
+##### Single Responsibility Principle (SRP)
+
+A module should group behavior that changes for the same reason. This is not a rule that every method or data field needs a separate class.
+
+~~~javascript
+class UserRepository {
+  async findById(id) { /* persistence details */ }
+}
+
 class UserPage {
-  fetchUser() { /* ... */ }
-  renderUser() { /* ... */ }
+  render(user) { /* presentation */ }
 }
+~~~
 
-// Follows SRP: separate concerns
-class UserService { fetchUser() { /* ... */ } }
-class UserView    { render(user) { /* ... */ } }
-```
+Separating persistence from presentation can help when those concerns change independently. A small component that performs a request and renders a result may still be cohesive if the application has no independent reason to change those pieces.
 
-**Frontend example:** A React component that fetches data, transforms it, and renders UI violates SRP. Split into a data hook + a dumb presentational component.
+##### Open/Closed Principle (OCP)
 
-#### Open/Closed Principle (OCP)
+An extension point is useful when a kind of variation is known and likely; it is not practical to close a system against every future change.
 
-Open for extension, closed for modification. Add behavior by writing new code, not changing existing code.
-
-```javascript
+~~~javascript
 class ShippingCalculator {
-  constructor(strategy) { this.strategy = strategy; }
-  calculate(pkg) { return this.strategy.calculate(pkg); }
+  constructor(strategy) {
+    this.strategy = strategy;
+  }
+
+  calculate(pkg) {
+    return this.strategy.calculate(pkg);
+  }
 }
 
-class ExpressShipping  { calculate(pkg) { return pkg.weight * 10; } }
-class StandardShipping { calculate(pkg) { return pkg.weight * 5; } }
-```
+class ExpressShipping {
+  calculate(pkg) { return pkg.weight * 10; }
+}
 
-New shipping types? Add a new strategy class — no change to `ShippingCalculator`.
+class StandardShipping {
+  calculate(pkg) { return pkg.weight * 5; }
+}
+~~~
 
-#### Liskov Substitution Principle (LSP)
+A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#8.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5).
 
-Subtypes must be substitutable for their base types without breaking correctness. A classic violation: `Bird` has `fly()`, `Penguin extends Bird` throws on `fly()` — `Penguin` is not a proper subtype of `Bird` in that design. The fix is usually to rethink the hierarchy (composition, or narrower base classes).
+##### Liskov Substitution Principle (LSP)
 
-#### Interface Segregation Principle (ISP)
+A subtype should preserve the behavioral contract clients expect. For example, if a base type promises that every value can fly, a penguin subtype that throws from `fly` breaks that contract. A narrower abstraction such as `Bird` for shared bird behavior and `FlyingBird` for birds that can fly may model the domain more accurately.
 
-Clients shouldn't be forced to depend on methods they don't use. Prefer many small, focused interfaces over one giant one. In TypeScript, this often means splitting a 20-field type into several 3–5 field types composed via intersection.
+##### Interface Segregation Principle (ISP)
 
-#### Dependency Inversion Principle (DIP)
+Clients should not be forced to depend on operations they never use. In TypeScript, this can mean separating unrelated capabilities into small interfaces and composing them where needed; there is no universal field-count threshold.
 
-High-level modules depend on abstractions, not concrete implementations.
+##### Dependency Inversion Principle (DIP)
 
-```javascript
+High-level policy and low-level details depend on an abstraction when that boundary reduces coupling. Constructor injection is one way to supply an implementation; **dependency injection is a technique, not the definition of DIP**.
+
+~~~javascript
 class NotificationService {
-  constructor(sender) { this.sender = sender; }
-  notify(message) { this.sender.send(message); }
+  constructor(sender) {
+    this.sender = sender;
+  }
+
+  notify(message) {
+    this.sender.send(message);
+  }
 }
 
-class EmailSender { send(msg) { /* send email */ } }
-class SmsSender   { send(msg) { /* send SMS   */ } }
+class EmailSender {
+  send(message) { /* send email */ }
+}
 
-new NotificationService(new EmailSender());
-new NotificationService(new SmsSender());
-```
+class SmsSender {
+  send(message) { /* send SMS */ }
+}
 
-**DIP is the foundation of dependency injection** — testable code, swappable implementations, no hard-coded dependencies.
+const notifications = new NotificationService(new EmailSender());
+~~~
 
----
-
-### What are DRY, KISS, and YAGNI?
-
-**Headline:** Three pragmatic rules. **DRY** — every piece of knowledge has one canonical representation, duplication is a smell. **KISS** — simpler is better than clever. **YAGNI** — don't build it until you actually need it.
-
-#### DRY (Don't Repeat Yourself)
-
-Extract repeated logic into shared functions, hooks, or modules. But be careful — coupling is a cost. Sometimes two functions that *look* similar should stay separate because they represent different concepts that happen to share syntax today. **Premature DRY creates false abstractions** that are harder to maintain than the duplication they replaced.
-
-#### KISS (Keep It Simple, Stupid)
-
-Prefer the simplest solution that works. Complexity should be justified by concrete requirements, not anticipated future needs. A common frontend failure: pulling in a state-management library for a page that needs three pieces of local state.
-
-#### YAGNI (You Aren't Gonna Need It)
-
-Don't implement functionality until it's actually needed. Premature abstraction adds maintenance burden without delivering value. The framework you're planning to swap to in six months? Build for what you need today; refactor when the day comes.
-
-**How to apply all three:** Write the obvious, simple code first. When you see a real duplication pattern (three or more, different places), extract. When you need flexibility (not before), add the seam.
+The service can use another implementation or a test double through the same contract. Add an abstraction when the variation or test boundary is real.
 
 ---
 
-### What are common frontend architecture patterns?
+#### What are DRY, KISS, and YAGNI?
 
-**Headline:** Three patterns dominate modern frontends. **Component-based architecture** — UIs as trees of self-contained components (the React / Vue model). **Unidirectional data flow (Flux)** — data flows one way, making state changes predictable (Redux, Zustand, Pinia). **Micro-frontends** — split the app into independently deployable pieces, trading complexity for team autonomy.
+**DRY, KISS, and YAGNI / 不重复、保持简单、暂不实现未需功能** are practical heuristics. They help manage complexity but should not be interpreted as absolute prohibitions.
 
-#### Component-based architecture
+##### DRY (Don't Repeat Yourself)
 
-Modern frameworks organize UIs as trees of reusable, self-contained components. Each component owns its state, rendering logic, and (optionally) side effects. Benefits: reusability, isolation, clear responsibility boundaries.
+Avoid duplicating the same rule or knowledge in places that must stay synchronized. Similar-looking code can represent different concepts, though; extracting it into one abstraction may couple changes that should remain independent.
 
-#### Flux / unidirectional data flow
+##### KISS (Keep It Simple)
 
-Data flows one way: **Action → Dispatcher → Store → View**. The view can dispatch new actions, but cannot mutate the store directly. Predictability makes debugging and testing easier.
+Prefer the simplest design that satisfies current requirements. A simple implementation is easier to explain and change; complexity should have a concrete payoff.
 
-Implementations: Redux, Zustand, MobX (variant), Pinia. See [`9.3 Advanced React`](../../frontend/frameworks/advanced-react.md) for context + patterns that replace Redux in simpler apps.
+##### YAGNI (You Aren't Gonna Need It)
 
-#### Micro-frontends
+Do not build speculative features before a need is established. Keep the option to add an extension point when a real use case appears, and avoid confusing “not yet needed” with “never needed.”
 
-Splitting a large frontend into independently deployable apps, each owned by a different team. Common approaches: module federation (Webpack 5), iframes, web components, and build-time composition.
+---
 
-**When to reach for it:** large orgs with multiple teams that need deployment autonomy. **When to avoid it:** most apps. The infrastructure complexity, cross-app consistency issues, and runtime overhead almost always dwarf the benefits until you're at significant org scale.
+#### What are common frontend architecture patterns?
 
-**See also:** [`12.2 Design Patterns in Practice`](#8.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5) for the GoF patterns that implement these principles.
+These are common design shapes, not a required architecture. Choose based on product boundaries, change frequency, and team ownership.
+
+##### Component-based architecture
+
+A UI can be composed from reusable components with explicit inputs and outputs. State and side effects may live in a component, a hook, or a separate service depending on its lifecycle and reuse needs; they are not inherently owned by every component.
+
+##### Unidirectional data flow
+
+In the classic Flux model, actions pass through a dispatcher to stores, which notify views. Other state libraries use different contracts. The useful goal is to make state changes and their causes traceable; the particular library does not guarantee that by itself.
+
+See [Advanced React](../../frontend/frameworks/advanced-react.md) for React-specific state and component patterns.
+
+##### Micro-frontends
+
+Micro-frontends divide a frontend into parts that can have separate ownership or release paths. Integration can use build-time composition, runtime module loading, iframes, or web components, each with different isolation and deployment properties.
+
+Reach for this when independent teams or release schedules are a concrete requirement and the organization can support the shared navigation, styling, accessibility, observability, and runtime boundaries. For a smaller application, a modular single frontend usually has less coordination and deployment overhead.
+
+**See also:** [Design Patterns in Practice](#8.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5) for reusable patterns that can support these principles.
+
+Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).
 ## 8. Design Patterns in Practice / 设计模式实践
 
 A bundle of interview questions on the design patterns that come up most in frontend work — plus two system-design mini-problems (low-code editor, RBAC) that exercise those patterns.
@@ -1336,85 +1363,80 @@ To check "can this user write?", look up their roles, then the permissions on th
 **See also:** [`12.1 Software Design Principles`](#7.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for the SOLID foundations these patterns implement, [`5.1 DOM Manipulation and Events`](../../frontend/browser-apis/dom-manipulation-and-events.md) for a concrete EventBus.
 ## 9. Interview Tips / 面试准备
 
-**Reach for this when** you need a quick reference for the behavioral side of a frontend interview — framing your strengths/weaknesses, answering "why us", discussing salary, and asking good questions back.
+### Interview Tips / 面试准备
 
-**Headline:** Strong behavioral answers share three qualities — **concrete** (backed by specific examples), **relevant** (tied to the role), and **self-aware** (honest about gaps with a plan to close them). Avoid generic phrasing; interviewers hear "I'm a perfectionist" from 90% of candidates.
+Use this note to prepare clear, evidence-based answers for behavioral interview questions. **面试回答应具体、贴合岗位，并如实说明个人贡献与结果。** Adapt each template to facts you can support; do not borrow another person's story or invent outcomes.
 
 #### Discussing strengths and weaknesses
 
 ##### Strengths
 
-Focus on qualities directly relevant to the role. Back each with a concrete example:
+Choose a strength that matters for the role, then support it with one real example. A compact structure is **context → action you took → result or evidence**.
 
-- "I'm detail-oriented — in my last project, I caught a data race condition during code review that would have caused intermittent production failures."
-- "I learn quickly — I picked up TypeScript and migrated our codebase within two weeks of joining."
+- “I work carefully with edge cases. In [specific situation], I [action I personally took], which led to [verifiable result].”
+- “I learn unfamiliar tools by [specific method]. For example, I used that approach to [real task] and [what changed or what I learned].”
+
+Replace each bracketed part with your own evidence. If the result is qualitative, describe what changed without inventing a metric.
 
 ##### Weaknesses
 
-Pick real weaknesses that don't conflict with core job requirements, and show how you're addressing them:
+**诚实说明一个真实的发展方向，并说明正在采取的步骤。** Choose something you are actively improving and explain how you notice progress. Avoid presenting a disguised strength or claiming a weakness that would prevent you from doing the role's core work.
 
-- "I sometimes spend too long optimizing code before shipping. I've learned to set time-boxed goals and ship iteratively."
-- "I'm less experienced with backend systems. I've been building side projects with Node.js to broaden my skills."
-
-**Avoid** clichés like "I'm a perfectionist" or "I work too hard."
+- “I am still developing [skill]. I have been improving it by [specific practice], and I can now [observable progress].”
 
 #### Salary expectations
 
-- **Research** market rates for your role, level, and location before the interview.
-- **Express genuine interest first:** "I'm most interested in the technical challenges and growth opportunities."
-- **Provide a range**, not a fixed number: "Based on my research and experience, I'm looking at X–Y, open to discussion based on the full package."
-- **If pressed early:** "I'd prefer to understand the role better before discussing numbers."
+- Research a current range for the role, seniority, location, and total compensation before the conversation.
+- If you are ready to give a number, state a range and the assumptions behind it; leave room to discuss the full package.
+- If the responsibilities are not yet clear, ask about the role's level and compensation range before giving a precise expectation.
 
 #### Why are you a good fit?
 
-Three pillars:
+Connect the role's stated needs to evidence you actually have:
 
-1. **Skills match** — map your technical skills to their requirements.
-2. **Experience alignment** — relevant projects and outcomes.
-3. **Cultural fit** — understanding of their product, mission, or engineering culture.
+1. **Skills match / 技能匹配** — identify the relevant requirement.
+2. **Evidence / 事实依据** — give a project, responsibility, or result that demonstrates it.
+3. **Motivation / 求职动机** — explain which part of this role you want to work on.
 
-> "Your team is building a high-traffic React application with a focus on performance. I've spent the last two years optimizing rendering performance and implementing virtual scrolling at scale, which directly aligns with your challenges."
+Template: “This role needs [requirement]. In [real example], I [specific contribution] and [result or learning]. I am interested in applying that experience to [specific part of the role].”
 
 #### Company research
 
-Show you've done your homework:
-
-- Understand the company's product, market position, and recent developments.
-- Connect your skills to their specific needs.
-- If you're less familiar, be honest: "I've read about your recent launch of X. I'd love to learn more about the technical stack behind it."
+- Understand the product, users, and the role's team from current company materials.
+- Connect your experience to a specific need instead of reciting company slogans.
+- If you do not know a detail, say what you have learned so far and ask a focused question.
 
 #### Addressing lack of experience
 
-- Acknowledge that experience matters, then pivot to your strengths.
-- Emphasize transferable skills, learning ability, concrete rapid-ramp examples.
+State the gap plainly, then describe related experience and a realistic learning plan. Avoid guaranteeing that you will master an unfamiliar area by a fixed date unless you have a basis for that estimate.
 
-> "While I haven't worked with GraphQL in production, I've built several projects with it and understand the patterns. I'm confident I can be productive within the first sprint."
+Template: “I have not used [technology] in [relevant context]. I have used [related skill] for [real example], and I would start by [specific way to learn or validate the new system].”
 
 #### Questions to ask the interviewer
 
+Prepare questions that help you understand the work. Choose the ones that remain unanswered by the conversation.
+
 **About the role:**
 
-- "What does a typical day look like for someone in this role?"
-- "What are the biggest technical challenges the team is facing right now?"
-- "How do you measure success for this position in the first 6 months?"
+- “What are the most important outcomes for this role in the first few months?”
+- “What technical challenges would this person work on?”
+- “How do you measure success for the position?”
 
 **About the team:**
 
-- "What's the team's approach to code review and knowledge sharing?"
-- "How are technical decisions made — top-down or consensus-driven?"
+- “How does the team approach code review and knowledge sharing?”
+- “How are technical decisions made, and who is involved?”
 
 **About growth:**
 
-- "What learning and development opportunities are available?"
-- "What does the career progression path look like for engineers here?"
+- “What opportunities are there to deepen or broaden engineering skills?”
+- “How does the team support progression for engineers?”
 
 #### Closing the interview
 
-- Thank the interviewer for their time.
-- Reiterate interest: "This conversation reinforced my excitement about the role. I'd love the opportunity to contribute to the team."
-- Ask about next steps: "What does the rest of the process look like?"
+Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
 
-**Gotcha — don't skip asking questions.** "No questions" signals lack of interest. Prepare 3–5 in advance, even if your core questions got answered; you can always add "I was curious about X, but you covered it earlier — can you expand on Y?"
+**See also:** [Agile and Scrum](#10.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
 ## 10. Agile and Scrum / 敏捷与Scrum
 
 **Reach for this when** you need a quick reference for how most modern engineering teams organize work — Agile principles, the Scrum framework (roles, events, artifacts), and the common failure modes.

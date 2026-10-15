@@ -1,110 +1,137 @@
-A bundle of interview questions on the design principles that separate maintainable frontend code from the kind that rots.
+# Software Design Principles / 软件设计原则
 
-# What are the SOLID principles, and what does each mean?
+Design principles are lenses for reasoning about change, not laws that guarantee maintainability. **设计原则帮助讨论变化与依赖的成本，不是保证正确架构的公式。** Apply a principle when it reduces a concrete source of coupling without creating unnecessary abstraction.
 
-**Headline (30s):** Five principles — **S**ingle responsibility (one reason to change), **O**pen/closed (extend via new code, not modification), **L**iskov substitution (subtypes work as base types), **I**nterface segregation (many small interfaces beat one fat one), **D**ependency inversion (depend on abstractions, not concretes). Together they push you toward small, decoupled pieces that are easy to change without breaking the rest of the system.
+## What are the SOLID principles, and what does each mean?
 
-## Single Responsibility Principle (SRP)
+**SOLID / 面向对象设计原则** is a mnemonic for five related guidelines:
 
-A class or module should have only one reason to change.
+- **S — Single Responsibility Principle / 单一职责原则**: keep a module cohesive around one responsibility or axis of change.
+- **O — Open/Closed Principle / 开闭原则**: make a stable part of the design extensible at expected variation points, rather than editing that core for every new case.
+- **L — Liskov Substitution Principle / 里氏替换原则**: a subtype must preserve the behavioral expectations clients rely on from its base type.
+- **I — Interface Segregation Principle / 接口隔离原则**: clients should depend only on the operations they need.
+- **D — Dependency Inversion Principle / 依赖倒置原则**: high-level policy should not depend directly on low-level details; both should depend on abstractions where that boundary pays for itself.
 
-```javascript
-// Violates SRP: handles both data fetching and rendering
+These guidelines can help isolate changes, but applying all of them mechanically can produce needless interfaces and indirection.
+
+### Single Responsibility Principle (SRP)
+
+A module should group behavior that changes for the same reason. This is not a rule that every method or data field needs a separate class.
+
+~~~javascript
+class UserRepository {
+  async findById(id) { /* persistence details */ }
+}
+
 class UserPage {
-  fetchUser() { /* ... */ }
-  renderUser() { /* ... */ }
+  render(user) { /* presentation */ }
 }
+~~~
 
-// Follows SRP: separate concerns
-class UserService { fetchUser() { /* ... */ } }
-class UserView    { render(user) { /* ... */ } }
-```
+Separating persistence from presentation can help when those concerns change independently. A small component that performs a request and renders a result may still be cohesive if the application has no independent reason to change those pieces.
 
-**Frontend example:** A React component that fetches data, transforms it, and renders UI violates SRP. Split into a data hook + a dumb presentational component.
+### Open/Closed Principle (OCP)
 
-## Open/Closed Principle (OCP)
+An extension point is useful when a kind of variation is known and likely; it is not practical to close a system against every future change.
 
-Open for extension, closed for modification. Add behavior by writing new code, not changing existing code.
-
-```javascript
+~~~javascript
 class ShippingCalculator {
-  constructor(strategy) { this.strategy = strategy; }
-  calculate(pkg) { return this.strategy.calculate(pkg); }
+  constructor(strategy) {
+    this.strategy = strategy;
+  }
+
+  calculate(pkg) {
+    return this.strategy.calculate(pkg);
+  }
 }
 
-class ExpressShipping  { calculate(pkg) { return pkg.weight * 10; } }
-class StandardShipping { calculate(pkg) { return pkg.weight * 5; } }
-```
+class ExpressShipping {
+  calculate(pkg) { return pkg.weight * 10; }
+}
 
-New shipping types? Add a new strategy class — no change to `ShippingCalculator`.
+class StandardShipping {
+  calculate(pkg) { return pkg.weight * 5; }
+}
+~~~
 
-## Liskov Substitution Principle (LSP)
+A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](./design-patterns-in-practice.md).
 
-Subtypes must be substitutable for their base types without breaking correctness. A classic violation: `Bird` has `fly()`, `Penguin extends Bird` throws on `fly()` — `Penguin` is not a proper subtype of `Bird` in that design. The fix is usually to rethink the hierarchy (composition, or narrower base classes).
+### Liskov Substitution Principle (LSP)
 
-## Interface Segregation Principle (ISP)
+A subtype should preserve the behavioral contract clients expect. For example, if a base type promises that every value can fly, a penguin subtype that throws from `fly` breaks that contract. A narrower abstraction such as `Bird` for shared bird behavior and `FlyingBird` for birds that can fly may model the domain more accurately.
 
-Clients shouldn't be forced to depend on methods they don't use. Prefer many small, focused interfaces over one giant one. In TypeScript, this often means splitting a 20-field type into several 3–5 field types composed via intersection.
+### Interface Segregation Principle (ISP)
 
-## Dependency Inversion Principle (DIP)
+Clients should not be forced to depend on operations they never use. In TypeScript, this can mean separating unrelated capabilities into small interfaces and composing them where needed; there is no universal field-count threshold.
 
-High-level modules depend on abstractions, not concrete implementations.
+### Dependency Inversion Principle (DIP)
 
-```javascript
+High-level policy and low-level details depend on an abstraction when that boundary reduces coupling. Constructor injection is one way to supply an implementation; **dependency injection is a technique, not the definition of DIP**.
+
+~~~javascript
 class NotificationService {
-  constructor(sender) { this.sender = sender; }
-  notify(message) { this.sender.send(message); }
+  constructor(sender) {
+    this.sender = sender;
+  }
+
+  notify(message) {
+    this.sender.send(message);
+  }
 }
 
-class EmailSender { send(msg) { /* send email */ } }
-class SmsSender   { send(msg) { /* send SMS   */ } }
+class EmailSender {
+  send(message) { /* send email */ }
+}
 
-new NotificationService(new EmailSender());
-new NotificationService(new SmsSender());
-```
+class SmsSender {
+  send(message) { /* send SMS */ }
+}
 
-**DIP is the foundation of dependency injection** — testable code, swappable implementations, no hard-coded dependencies.
+const notifications = new NotificationService(new EmailSender());
+~~~
 
----
-
-# What are DRY, KISS, and YAGNI?
-
-**Headline:** Three pragmatic rules. **DRY** — every piece of knowledge has one canonical representation, duplication is a smell. **KISS** — simpler is better than clever. **YAGNI** — don't build it until you actually need it.
-
-## DRY (Don't Repeat Yourself)
-
-Extract repeated logic into shared functions, hooks, or modules. But be careful — coupling is a cost. Sometimes two functions that *look* similar should stay separate because they represent different concepts that happen to share syntax today. **Premature DRY creates false abstractions** that are harder to maintain than the duplication they replaced.
-
-## KISS (Keep It Simple, Stupid)
-
-Prefer the simplest solution that works. Complexity should be justified by concrete requirements, not anticipated future needs. A common frontend failure: pulling in a state-management library for a page that needs three pieces of local state.
-
-## YAGNI (You Aren't Gonna Need It)
-
-Don't implement functionality until it's actually needed. Premature abstraction adds maintenance burden without delivering value. The framework you're planning to swap to in six months? Build for what you need today; refactor when the day comes.
-
-**How to apply all three:** Write the obvious, simple code first. When you see a real duplication pattern (three or more, different places), extract. When you need flexibility (not before), add the seam.
+The service can use another implementation or a test double through the same contract. Add an abstraction when the variation or test boundary is real.
 
 ---
 
-# What are common frontend architecture patterns?
+## What are DRY, KISS, and YAGNI?
 
-**Headline:** Three patterns dominate modern frontends. **Component-based architecture** — UIs as trees of self-contained components (the React / Vue model). **Unidirectional data flow (Flux)** — data flows one way, making state changes predictable (Redux, Zustand, Pinia). **Micro-frontends** — split the app into independently deployable pieces, trading complexity for team autonomy.
+**DRY, KISS, and YAGNI / 不重复、保持简单、暂不实现未需功能** are practical heuristics. They help manage complexity but should not be interpreted as absolute prohibitions.
 
-## Component-based architecture
+### DRY (Don't Repeat Yourself)
 
-Modern frameworks organize UIs as trees of reusable, self-contained components. Each component owns its state, rendering logic, and (optionally) side effects. Benefits: reusability, isolation, clear responsibility boundaries.
+Avoid duplicating the same rule or knowledge in places that must stay synchronized. Similar-looking code can represent different concepts, though; extracting it into one abstraction may couple changes that should remain independent.
 
-## Flux / unidirectional data flow
+### KISS (Keep It Simple)
 
-Data flows one way: **Action → Dispatcher → Store → View**. The view can dispatch new actions, but cannot mutate the store directly. Predictability makes debugging and testing easier.
+Prefer the simplest design that satisfies current requirements. A simple implementation is easier to explain and change; complexity should have a concrete payoff.
 
-Implementations: Redux, Zustand, MobX (variant), Pinia. See [`9.3 Advanced React`](../../frontend/frameworks/advanced-react.md) for context + patterns that replace Redux in simpler apps.
+### YAGNI (You Aren't Gonna Need It)
 
-## Micro-frontends
+Do not build speculative features before a need is established. Keep the option to add an extension point when a real use case appears, and avoid confusing “not yet needed” with “never needed.”
 
-Splitting a large frontend into independently deployable apps, each owned by a different team. Common approaches: module federation (Webpack 5), iframes, web components, and build-time composition.
+---
 
-**When to reach for it:** large orgs with multiple teams that need deployment autonomy. **When to avoid it:** most apps. The infrastructure complexity, cross-app consistency issues, and runtime overhead almost always dwarf the benefits until you're at significant org scale.
+## What are common frontend architecture patterns?
 
-**See also:** [`12.2 Design Patterns in Practice`](./design-patterns-in-practice.md) for the GoF patterns that implement these principles.
+These are common design shapes, not a required architecture. Choose based on product boundaries, change frequency, and team ownership.
+
+### Component-based architecture
+
+A UI can be composed from reusable components with explicit inputs and outputs. State and side effects may live in a component, a hook, or a separate service depending on its lifecycle and reuse needs; they are not inherently owned by every component.
+
+### Unidirectional data flow
+
+In the classic Flux model, actions pass through a dispatcher to stores, which notify views. Other state libraries use different contracts. The useful goal is to make state changes and their causes traceable; the particular library does not guarantee that by itself.
+
+See [Advanced React](../../frontend/frameworks/advanced-react.md) for React-specific state and component patterns.
+
+### Micro-frontends
+
+Micro-frontends divide a frontend into parts that can have separate ownership or release paths. Integration can use build-time composition, runtime module loading, iframes, or web components, each with different isolation and deployment properties.
+
+Reach for this when independent teams or release schedules are a concrete requirement and the organization can support the shared navigation, styling, accessibility, observability, and runtime boundaries. For a smaller application, a modular single frontend usually has less coordination and deployment overhead.
+
+**See also:** [Design Patterns in Practice](./design-patterns-in-practice.md) for reusable patterns that can support these principles.
+
+Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).
