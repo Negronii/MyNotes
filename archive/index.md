@@ -20,4 +20,4 @@ The Docker command and operations reference moved to [`Docker Operations / Docke
 
 ## Course notes / 课程笔记
 
-The five Markdown files under `uni-subjects/` are recorded individually in `maintenance/knowledge-inventory.tsv`: [week 1](<uni-subjects/COMP90050ADBS/condensed-note-w1.md>), [week 2](<uni-subjects/COMP90050ADBS/condensed-note-w2.md>), and [week 3](<uni-subjects/COMP90050ADBS/condensed-note-w3.md>) have passed scoped content review; [week 4](<uni-subjects/COMP90050ADBS/condensed-note-w4.md>) and the [aggregate notes](<uni-subjects/COMP90050ADBS/readme.md>) remain unreviewed. The inventory records migration facts, not learning status.
+The five Markdown files under `uni-subjects/` are recorded individually in `maintenance/knowledge-inventory.tsv`: [week 1](<uni-subjects/COMP90050ADBS/condensed-note-w1.md>), [week 2](<uni-subjects/COMP90050ADBS/condensed-note-w2.md>), [week 3](<uni-subjects/COMP90050ADBS/condensed-note-w3.md>), [week 4](<uni-subjects/COMP90050ADBS/condensed-note-w4.md>), and the [aggregate notes](<uni-subjects/COMP90050ADBS/readme.md>) have received scoped content review. Course PDFs and images remain with their folders.
