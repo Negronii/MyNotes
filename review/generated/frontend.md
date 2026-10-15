@@ -469,7 +469,11 @@ Both make the parent's height include the floated children. Prefer `flow-root` w
 **Specifications / 规范：** [CSS Display: formatting contexts](https://www.w3.org/TR/css-display-3/), [CSS 2.2: block formatting contexts](https://www.w3.org/TR/CSS22/visuren.html#block-formatting), [CSS 2.2: box model](https://www.w3.org/TR/CSS22/box.html#box-dimensions).
 ## 4. Flex & Grid Layout / Flex与Grid布局
 
+**Flexbox and Grid Layout / Flexbox 与 Grid 布局**
+
 Reach for this when you need to remember the property names and what each one does. For "how should I approach this layout?" style interview answers, the patterns live in [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98).
+
+**中文：** Flexbox 适合单轴排列，Grid 适合二维轨道；遇到内容最小尺寸造成溢出时，可显式使用 `min-width: 0` 或 `minmax(0, 1fr)`。
 
 Rule of thumb: **Flexbox for 1D** (rows *or* columns), **Grid for 2D** (rows *and* columns). In practice they compose — a grid item can itself be a flex container.
 
@@ -486,10 +490,10 @@ Rule of thumb: **Flexbox for 1D** (rows *or* columns), **Grid for 2D** (rows *an
 | `flex-wrap` | allow items to wrap | `nowrap` (default), `wrap`, `wrap-reverse` |
 | `justify-content` | main-axis alignment | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly` |
 | `align-items` | cross-axis alignment (per line) | `flex-start`, `flex-end`, `center`, `baseline`, `stretch` |
-| `align-content` | cross-axis alignment (between lines, when wrapping) | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `stretch` |
+| `align-content` | cross-axis alignment among lines in a multi-line container | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `stretch` |
 | `gap` | spacing between items | any length |
 
-`align-content` only has a visible effect when items wrap onto multiple lines.
+In a `wrap` or `wrap-reverse` container, `align-content` aligns flex lines when there is extra cross-axis space; it can have an effect even when the items currently form just one line. A `nowrap` container is single-line, so `align-content` has no effect.
 
 ##### Item properties
 
@@ -500,7 +504,7 @@ Rule of thumb: **Flexbox for 1D** (rows *or* columns), **Grid for 2D** (rows *an
 | `flex-basis` | starting size before grow/shrink (length or `auto`) |
 | `flex` | shorthand: `flex: <grow> <shrink> <basis>` |
 | `align-self` | override `align-items` for one item |
-| `order` | reorder items visually (without changing DOM order) |
+| `order` | change an item's visual placement order (without changing source order) |
 
 ##### Common flexbox patterns
 
@@ -521,7 +525,19 @@ Rule of thumb: **Flexbox for 1D** (rows *or* columns), **Grid for 2D** (rows *an
 .nav { display: flex; justify-content: space-between; }
 ```
 
-**Equal-height columns** — flex items automatically stretch to match the tallest sibling in their cross-axis direction.
+**Equal-height columns** — with the default `align-items: stretch`, row items whose cross size is `auto` and whose cross-axis margins are not `auto` stretch to their line's cross size. Min/max constraints can limit that stretch, so this is not a guarantee for every item.
+
+##### Intrinsic minimum sizes
+
+Flex items and grid tracks can keep their content-based minimum size, so a long word, URL, or wide table may force overflow instead of shrinking. For a flex item that should be allowed to shrink below its min-content width, use `min-width: 0`; in a column flex layout, the corresponding block-axis fix is often `min-height: 0`.
+
+```css
+.row { display: flex; }
+.main { flex: 1; min-width: 0; }
+.main img { max-width: 100%; }
+```
+
+This changes the item's minimum constraint; it does not guarantee that all of its descendants will wrap or fit, so give overflowing content its own policy.
 
 #### CSS Grid
 
@@ -539,7 +555,18 @@ Rule of thumb: **Flexbox for 1D** (rows *or* columns), **Grid for 2D** (rows *an
 | `justify-items` / `align-items` / `place-items` | how items align *within* their cells |
 | `justify-content` / `align-content` / `place-content` | how the grid itself sits *within* the container |
 
-Track sizes can be absolute (`100px`), flexible (`1fr`), content-based (`auto`, `min-content`, `max-content`), or intrinsic (`minmax(200px, 1fr)`, `repeat(auto-fit, minmax(200px, 1fr))`).
+Track sizes can be fixed (`100px`), flexible (`1fr`), or content-based (`auto`, `min-content`, `max-content`). `minmax(min, max)` sets a track's lower and upper sizing functions, for example `minmax(200px, 1fr)`; `repeat(auto-fit, minmax(200px, 1fr))` combines that range with automatic repetition.
+
+An `fr` track with an automatic minimum can still be held open by its items' min-content contribution. If the track must shrink below that content width, make its minimum explicit, commonly `minmax(0, 1fr)`, and decide how the item content should wrap or overflow.
+
+```css
+.content-first-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16rem;
+}
+
+.content-first-grid > main { min-width: 0; }
+```
 
 ##### Item properties
 
@@ -568,10 +595,12 @@ Track sizes can be absolute (`100px`), flexible (`1fr`), content-based (`auto`, 
 ```css
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   gap: 16px;
 }
 ```
+
+The minimum is capped at the container width so the track can still fit on a narrow container.
 
 **Named template areas:**
 
@@ -597,7 +626,11 @@ Track sizes can be absolute (`100px`), flexible (`1fr`), content-based (`auto`, 
 - **Grid** — page-level layouts, card grids, forms with aligned labels/inputs, anything 2D.
 - **Both together** — Grid for the page structure, Flexbox inside each cell for horizontal clusters.
 
+Keep meaningful source order in the HTML. Flex `order`, reverse directions, and grid placement change visual layout without rewriting the document's logical/speech order; don't use them to repair incorrect content order.
+
 **See also:** [`2.1 HTML & CSS Basics`](#2.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for CSS units used with `fr`/`minmax`, [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for worked interview examples using these layouts.
+
+**Specifications / 规范：** [CSS Flexible Box Layout](https://www.w3.org/TR/css-flexbox-1/) defines flex sizing and the automatic minimum size; [CSS Grid Layout](https://www.w3.org/TR/css-grid-2/) defines track sizing and grid-item minimums; [CSS Display](https://www.w3.org/TR/css-display-3/#order-property) describes visual reordering and accessibility.
 ## 5. Browser HTML and CSS / 浏览器中的 HTML 与 CSS
 
 **Browser HTML and CSS / 浏览器中的 HTML 与 CSS**
@@ -730,7 +763,9 @@ items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 **Standards and implementation notes / 标准与实现资料：** [WHATWG HTML scripting](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element), [CSS Display](https://www.w3.org/TR/css-display-3/), [Chrome RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), [Chrome forced-reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
 ## 6. DOM Properties / DOM属性
 
-Reach for this when you need to measure an element in JavaScript and can't remember which property includes which layers of the box model. These are all geometry properties — reading them forces a layout flush, so use sparingly in tight loops (see [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for layout thrashing).
+**DOM Geometry Properties / DOM 几何属性**
+
+These APIs expose different CSSOM measurements. Their values use CSS pixels, but their box, coordinate space, fragment handling, and transform behavior differ. A read may force pending style/layout work to finish; it does not necessarily do so when layout is already current. **中文：** 读取几何值可能同步完成尚未刷新的布局，但不意味着每次读取都会重新布局。
 
 #### Quick comparison
 
@@ -746,47 +781,48 @@ Reach for this when you need to measure an element in JavaScript and can't remem
 │ └─────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────┘
 
-offsetHeight  = border + padding + content (+ scrollbar)   — total visible size
-clientHeight  = padding + content                          — inside space
-scrollHeight  = padding + FULL content (incl. overflowed)  — total scrollable size
+offsetHeight  = border-box measurement, including scrollbar — integer CSS px, ignores transforms
+clientHeight  = padding box minus rendered scrollbar        — integer CSS px
+scrollHeight  = scrolling area                              — integer CSS px, includes overflow
 ```
 
 | Property | Includes | Excludes | Writable? |
 |---|---|---|---|
-| `offsetHeight` / `offsetWidth` | content, padding, border, scrollbar | margin | no |
-| `clientHeight` / `clientWidth` | content, padding | border, scrollbar, margin | no |
-| `scrollHeight` / `scrollWidth` | content (including overflowed), padding | border, scrollbar, margin | no |
+| `offsetHeight` / `offsetWidth` | border box; normally includes a rendered scrollbar | margin | no |
+| `clientHeight` / `clientWidth` | padding box, excluding a rendered scrollbar | border, scrollbar, margin | no |
+| `scrollHeight` / `scrollWidth` | scrolling area, including overflowed content and contributing generated content | border; generally not the scrollbar | no |
 | `scrollTop` / `scrollLeft` | current scroll offset | — | **yes** |
-| `offsetTop` / `offsetLeft` | distance from element border to `offsetParent`'s inner border | — | no |
-| `getBoundingClientRect()` → `.width` / `.height` | same as `offsetWidth` / `offsetHeight` (viewport-relative) | margin | no |
+| `offsetTop` / `offsetLeft` | offset from the `offsetParent` padding edge to the element's border edge | — | no |
+| `getBoundingClientRect()` → `.width` / `.height` | viewport-relative union of transformed border-box fragments | margin | no |
 
 #### `offsetHeight` / `offsetWidth`
 
-Total visible size including padding, border, and rendered scrollbar — excludes margin.
+Returns an integer CSS-pixel measure of the border-box fragments, ignoring CSS transforms. A rendered scrollbar is included in the familiar layout-box measurement; margin is excluded. It can be zero when the element has no associated box.
 
 ```text
-offsetHeight = content height + padding-top + padding-bottom + border-top + border-bottom (+ scrollbar)
+offsetHeight ≈ content height + padding + border (+ rendered scrollbar)
 ```
 
 #### `clientHeight` / `clientWidth`
 
-Visible content area plus padding — excludes border, scrollbar, and margin. This is the space actually available *for* content.
+Returns an integer CSS-pixel measure of the padding edge, excluding a scrollbar rendered between the padding and border edges. Border and margin are excluded. Root-element behavior maps to the viewport in standards mode.
 
 ```text
-clientHeight = content height + padding-top + padding-bottom
+clientHeight ≈ content height + padding - rendered scrollbar
 ```
 
 #### `scrollHeight` / `scrollWidth`
 
-Full size of the element's content including anything hidden by overflow. When content fits inside, `scrollHeight === clientHeight`.
+Returns the integer CSS-pixel height of the scrolling area, which covers content beyond the visible client area. It may differ from `clientHeight` because of overflow; it is not simply a count of text or a guarantee that overflow is user-scrollable. In standards mode, the root element returns `max(viewport scrolling-area height, viewport height)`, not the viewport's visible height.
 
 ```text
-scrollHeight = total content height + padding (includes overflow beyond viewport)
+ordinary element: scrolling-area height (includes overflow beyond the client area)
+root element in standards mode: max(viewport scrolling-area height, viewport height)
 ```
 
 #### `scrollTop` / `scrollLeft`
 
-Pixels the content has been scrolled vertically / horizontally. **Writable** — set it to control scroll programmatically.
+Current scroll offset in CSS pixels. **Writable** — set it to control scroll programmatically. Values can be fractional or outside the usual range in some layouts (for example, reverse-direction scrolling or elastic overscroll).
 
 ```javascript
 const el = document.getElementById('container');
@@ -796,11 +832,11 @@ el.scrollTop = 0;  // scroll to top
 
 #### `offsetTop` / `offsetLeft`
 
-Distance from the element's outer border to its `offsetParent`'s inner border. `offsetParent` is the nearest positioned ancestor (`position` other than `static`), defaulting to `<body>` if none exists.
+`offsetTop` / `offsetLeft` measure from the element's border edge to its `offsetParent`'s padding edge. `offsetParent` is not simply the nearest positioned ancestor: tables, containing blocks, fixed positioning, zoom, shadow-tree boundaries, and elements without boxes affect the result. If there is no `offsetParent`, offsets are relative to the initial containing block; some elements such as `body` return zero.
 
 #### `getBoundingClientRect()`
 
-Returns a `DOMRect` with the element's size and position **relative to the viewport**. The go-to method for scroll-aware positioning (tooltips, visibility checks, drag handles).
+Returns a `DOMRect` for the smallest rectangle enclosing the element's non-empty client rects, **relative to the viewport**. It includes CSS transforms and may differ from offset dimensions; a fragmented inline can have multiple client rects while this method returns their union. The returned object is a snapshot, not a live object.
 
 ```javascript
 const rect = element.getBoundingClientRect();
@@ -808,14 +844,14 @@ const rect = element.getBoundingClientRect();
 // rect.bottom  - distance from viewport top to element bottom
 // rect.left    - distance from viewport left to element left
 // rect.right   - distance from viewport left to element right
-// rect.width   - element width (including border)
-// rect.height  - element height (including border)
+// rect.width   - union width in CSS pixels, including border and transforms
+// rect.height  - union height in CSS pixels, including border and transforms
 ```
 
 **Common pattern — checking if an element is in the viewport:**
 
 ```javascript
-function isInViewport(element) {
+function overlapsViewport(element) {
   const rect = element.getBoundingClientRect();
   return (
     rect.top < window.innerHeight &&
@@ -826,25 +862,30 @@ function isInViewport(element) {
 }
 ```
 
-For real visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` — it doesn't force layout. See [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
+This is a simple rectangle-overlap check, not a test for occlusion, opacity, or assistive-technology visibility. Zero-area boxes need a separate policy.
+
+For threshold-based visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` over repeatedly polling geometry. It reports asynchronously; it is not a guarantee that the browser performs no layout work. See [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
 
 #### When to reach for which
 
-- Need **total rendered size** including border? → `offsetHeight` / `offsetWidth` or `getBoundingClientRect().height/width`.
+- Need an **untransformed integer layout-box size**? → `offsetHeight` / `offsetWidth`.
+- Need a **viewport-relative transformed rectangle**? → `getBoundingClientRect()`.
 - Need **inner content area** (for sizing children)? → `clientHeight` / `clientWidth`.
 - Need to know if **overflow exists**? → compare `scrollHeight > clientHeight`.
 - Need **current scroll position**, or to **scroll programmatically**? → `scrollTop` / `scrollLeft`.
 - Need **viewport-relative position** (for tooltips, drag, scroll effects)? → `getBoundingClientRect()`.
 - Need **position within parent** (for layout math)? → `offsetTop` / `offsetLeft` (watch out: relative to `offsetParent`, not necessarily the direct parent).
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) on layout thrashing when reading these in loops, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for `IntersectionObserver`-based visibility.
+**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) on layout thrashing when reads follow writes, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for `IntersectionObserver`-based visibility.
+
+**Specifications / 规范：** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.
 ## 7. CSS Interview Questions / CSS面试题
+
+**CSS Interview Questions / CSS 面试题**
 
 ### How do you clear floats, and why do you need to?
 
-**Headline (30s):** Floated children are removed from the normal flow, so their parent collapses to zero height. You "clear" the float by either (a) making the parent a Block Formatting Context — `display: flow-root` or `overflow: hidden` — so it contains its floats, or (b) adding a clearing pseudo-element that forces the parent to extend past them.
-
-Floating elements removes them from the normal flow of a document, causing parent containers to collapse if not properly handled. It's crucial for front-end developers to understand the methods available to manage this behavior effectively.
+**Headline (30s):** A BFC root's auto height includes its floats; `display: flow-root` is the direct modern choice. A clearfix is a legacy alternative. **中文：** 让父级建立 BFC（通常用 `flow-root`）即可包含浮动子项。
 
 #### Methods of clearing floats — pure CSS
 
@@ -869,7 +910,7 @@ Set a BFC-triggering property on the parent so it contains its floats.
 
 ```css
 .parent {
-  display: flow-root; /* clean, no side effects */
+  display: flow-root; /* establishes a BFC without clipping or scrolling */
 }
 
 /* Legacy alternative */
@@ -880,20 +921,6 @@ Set a BFC-triggering property on the parent so it contains its floats.
 
 **Pros:** One line, no pseudo-element, clean semantics.
 **Cons:** `overflow: hidden` clips content that extends past the parent — use `flow-root` when clipping isn't wanted.
-
-##### Fixed dimensions
-
-Straightforward but inflexible.
-
-```css
-.parent {
-  width: 300px;
-  height: 200px;
-}
-```
-
-**Pros:** Trivial, universal support.
-**Cons:** Breaks if child content grows — any overflow is your problem.
 
 #### Clearing element — extra HTML
 
@@ -916,7 +943,7 @@ The legacy fallback: insert a clearing `<div>` at the end.
 **Pros:** Works everywhere.
 **Cons:** Extra non-semantic markup. Don't use in new code.
 
-**Gotcha — why floats even need clearing:** Floats were designed for wrapping text around images, not for page layout. They leave the normal flow, so height collapses in their parent. Flexbox and Grid solve layout problems directly and don't have this issue — float-based layouts are legacy.
+**Gotcha — why floats even need clearing:** Floats are taken out of normal flow for surrounding inline content, but text still flows around them. A normal-flow parent can therefore fail to include their height. Flexbox and Grid are usually simpler for page layout.
 
 **See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) on how BFCs contain floats, [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for modern alternatives.
 
@@ -924,7 +951,7 @@ The legacy fallback: insert a clearing `<div>` at the end.
 
 ### How do you build a three-column layout with fixed sides and a fluid middle?
 
-**Headline (30s):** Six valid approaches, ranked modern → legacy: Flexbox (`flex-grow: 1` on the middle), Grid (`grid-template-columns: 100px 1fr 100px`), absolute positioning, table-cell, float + `calc()`, and inline-block + `calc()`. For new code, use Grid or Flex. Know the others so you can read legacy CSS.
+**Headline (30s):** Use Grid (`100px minmax(0, 1fr) 100px`) when the columns are a page/grid structure, or Flexbox when they form a row of items. Float/table/absolute techniques are useful to recognize in legacy code. **中文：** 新布局优先考虑 Grid 或 Flex，并确认中间列是否需要突破内容最小宽度。
 
 The layout includes two fixed-width divs on the sides (`left` and `right`) and a dynamically adjusting center div (`center`).
 
@@ -984,7 +1011,7 @@ Or with a clearing BFC:
 
 .left   { float: left; }
 .right  { float: right; }
-.center { float: left; width: calc(100% - 100px); }
+.center { float: left; width: calc(100% - 200px); }
 ```
 
 **Pros:** Broad compatibility with older browsers.
@@ -998,7 +1025,7 @@ Or with a clearing BFC:
 ```
 
 **Pros:** Stable and predictable rendering.
-**Cons:** Semantically wrong for non-tabular data.
+**Cons:** Table layout couples sizing across cells in a column, which can be harder to tune in a responsive content layout than Flexbox or Grid. `display: table` changes visual formatting only; it does not make the `<div>` elements semantic table markup.
 
 #### Absolute positioning layout
 
@@ -1021,7 +1048,8 @@ Or with a clearing BFC:
 
 ```css
 .parent { display: flex; }
-.center { flex-grow: 1; }
+.left, .right { flex: 0 0 100px; }
+.center { flex: 1; min-width: 0; }
 ```
 
 **Pros:** Modern, responsive, minimal code.
@@ -1032,7 +1060,7 @@ Or with a clearing BFC:
 ```css
 .parent {
   display: grid;
-  grid-template-columns: 100px 1fr 100px;
+  grid-template-columns: 100px minmax(0, 1fr) 100px;
 }
 ```
 
@@ -1043,11 +1071,13 @@ Or with a clearing BFC:
 
 **See also:** [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for the property reference.
 
+If the center content must wrap or scroll instead of setting a minimum width, specify that policy on the item (for example, `overflow-wrap: anywhere` for long URLs). Flex/grid intrinsic minimum sizing can otherwise keep the middle track wider than its available space.
+
 ---
 
 ### How do you build a two-column layout with one fixed and one responsive side?
 
-**Headline (30s):** Same ladder as the three-column layout but simpler. Flexbox (`flex-grow: 1` on the fluid side) or Grid (`grid-template-columns: 200px 1fr`) for modern code. Float, absolute positioning, and inline-block are legacy fallbacks.
+**Headline (30s):** Use Flexbox (`flex: 1` on the fluid side) or Grid (`200px minmax(0, 1fr)`) for modern code; legacy methods need more width and overflow care. **中文：** 先选 Flex 或 Grid，再决定内容过长时是否换行、裁切或滚动。
 
 ```html
 <div class="container">
@@ -1072,7 +1102,8 @@ Or with a clearing BFC:
 
 ```css
 .container  { display: flex; }
-.right-side { flex-grow: 1; }
+.left-side  { flex: 0 0 200px; }
+.right-side { flex: 1; min-width: 0; }
 ```
 
 **Grid:**
@@ -1080,7 +1111,7 @@ Or with a clearing BFC:
 ```css
 .container {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 200px minmax(0, 1fr);
 }
 ```
 
@@ -1128,26 +1159,21 @@ Or with both floated:
 ```css
 .container  { font-size: 0; /* eat whitespace between inline-blocks */ }
 .left-side,
-.right-side { display: inline-block; vertical-align: top; }
+.right-side { display: inline-block; vertical-align: top; font-size: 1rem; }
 .right-side { width: calc(100% - 200px); }
 ```
 
-**Gotcha — the whitespace between inline-blocks:** Browsers render whitespace (including newlines) between inline-block elements as a space character, which shifts your layout. `font-size: 0` on the parent is the classic workaround. Flexbox and Grid have no such quirk.
+**Gotcha — the whitespace between inline-blocks:** Browsers render whitespace (including newlines) between inline-block elements as a space character, which shifts your layout. `font-size: 0` on the parent is the classic workaround; restore a nonzero font size on the children so their labels remain visible. Flexbox and Grid have no such quirk.
 
 ---
 
 ### How do you center an element in CSS?
 
-**Headline (30s):** Flexbox or Grid for modern code (`place-items: center` / `justify-content + align-items: center`). If you need to support ancient browsers, fall back to absolute + `transform: translate(-50%, -50%)` (works for unknown dimensions) or absolute + negative margins (fixed dimensions only).
+**Headline (30s):** Put `place-items: center` on a Grid container, or use `justify-content` and `align-items` on a Flex container. Absolute positioning with a translate works when you need a positioned overlay. **中文：** Flex/Grid 居中时，布局声明应放在父容器上。
 
 ```html
 <div class="container">
-  <div class="center-fixed"></div>
-  <div class="center-auto"></div>
-  <div class="center-dynamic"></div>
-  <div class="center-flex"></div>
-  <div class="center-grid"></div>
-  <div class="center-table"></div>
+  <div class="center-item">Centered content</div>
 </div>
 
 <style>
@@ -1161,24 +1187,24 @@ Or with both floated:
 
 #### Centering with dynamic dimensions (element size unknown)
 
+The layout properties go on the container; the item remains a normal child.
+
 **Flexbox (preferred):**
 
 ```css
-.center-flex {
+.container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
 }
 ```
 
 **CSS Grid:**
 
 ```css
-.center-grid {
+.container {
   display: grid;
   place-items: center;
-  height: 100vh;
 }
 ```
 
@@ -1187,7 +1213,7 @@ Or with both floated:
 ```css
 .container { position: relative; }
 
-.center-dynamic {
+.center-item {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -1199,7 +1225,7 @@ Or with both floated:
 
 ```css
 .container   { display: table; }
-.center-table {
+.center-item {
   display: table-cell;
   vertical-align: middle;
   text-align: center;
@@ -1213,7 +1239,7 @@ Or with both floated:
 ```css
 .container { position: relative; }
 
-.center-fixed {
+.center-item {
   position: absolute;
   width: 200px;
   height: 100px;
@@ -1229,7 +1255,7 @@ Or with both floated:
 ```css
 .container { position: relative; }
 
-.center-auto {
+.center-item {
   position: absolute;
   width: 200px;
   height: 100px;
@@ -1238,7 +1264,7 @@ Or with both floated:
 }
 ```
 
-Setting `top/right/bottom/left: 0` expands the element's margin box to fill the container; `margin: auto` then distributes the leftover space evenly on all sides because the element has fixed dimensions.
+With definite width and height, setting all four insets to `0` and `margin: auto` distributes the remaining space and centers the item. This is still an out-of-flow solution: the item does not size the container.
 
 **Gotcha — `transform: translate(-50%, -50%)` on a percentage parent:** `transform` uses the element's *own* size, so this centers correctly even when the element's size is unknown. The negative-margin trick only works if you know the exact dimensions ahead of time.
 
@@ -1246,9 +1272,9 @@ Setting `top/right/bottom/left: 0` expands the element's margin box to fill the 
 
 ### How do you draw a triangle with pure CSS?
 
-**Headline (30s):** Give a zero-size element thick borders, make three of them transparent, and color the fourth. The "visible" border forms the triangle. No image, no HTTP request, trivially recolorable.
+**Headline (30s):** Give a zero-size element thick borders, make three transparent, and color the fourth; the colored border forms a triangle. **中文：** 零尺寸盒子的彩色边框可以组成小三角形。
 
-CSS-based triangles improve loading times and reduce bandwidth by eliminating an HTTP request. Scalable, easily recolorable.
+The shape needs no image asset, and its border color can be changed in CSS.
 
 ```html
 <div class="triangle"></div>
@@ -1265,7 +1291,7 @@ CSS-based triangles improve loading times and reduce bandwidth by eliminating an
 
 **How it works:**
 
-- A 20×20 "element" made of borders only (content is zero size).
+- A 20×20 border box made of borders only (the content box is zero size).
 - Four borders meet at 45° diagonals. Three transparent borders + one colored = a triangle pointing in the direction opposite the colored side.
 
 **Customization:**
@@ -1275,17 +1301,19 @@ CSS-based triangles improve loading times and reduce bandwidth by eliminating an
 - `border-left` solid → triangle points **right**.
 - `border-right` solid → triangle points **left**.
 
-**Gotcha — modern alternative:** `clip-path: polygon(50% 0, 100% 100%, 0 100%)` is often cleaner when the triangle size is dynamic. Use borders for tiny fixed-size arrow indicators, `clip-path` for scalable shapes.
+**Gotcha — alternative:** `clip-path: polygon(50% 0, 100% 100%, 0 100%)` can express a scalable triangle. Choose based on the shape and its sizing needs.
 
 ---
 
 ### How do you render a crisp 1px line on Retina / high-DPR screens?
 
-**Headline (30s):** On a 2x DPR screen, 1 CSS pixel maps to 2 physical pixels, so a `border: 1px` line appears "chunky". The classic fix is a pseudo-element at 100% of the container width + `transform: scaleY(0.5)`, which lets you render a half-CSS-pixel (i.e. one physical pixel) line without running into the browser's handling of fractional px values.
+**Headline (30s):** A CSS pixel is not a device pixel. A `1px` border remains one CSS pixel and may cover multiple device pixels; a half-pixel technique can target one device pixel at a particular scale, but alignment and zoom affect rasterization. **中文：** 不同 DPR 下 CSS 像素映射到设备像素不同，不能保证某种写法处处是一条物理像素线。
 
 #### Using a pseudo-element + transform
 
 ```css
+.box { position: relative; }
+
 .box::before {
   content: '';
   position: absolute;
@@ -1295,13 +1323,15 @@ CSS-based triangles improve loading times and reduce bandwidth by eliminating an
   height: 1px;
   background: #d9d9d9;
   transform: scaleY(0.5);
-  transform-origin: 0 0;
+  transform-origin: 0 100%;
 }
 ```
 
+At an effective 2× device-pixel ratio and 1:1 CSS scaling, this makes the painted thickness 0.5 CSS px (nominally one device px). Test the actual device/zoom: subpixel position and scaling can still spread the paint across device pixels.
+
 #### Handling borders with `border-radius`
 
-When the element has `border-radius`, borders and scales interact awkwardly. Use `box-shadow` instead:
+When the element has `border-radius`, a scaled pseudo-element may not follow the corner shape. A fractional shadow is another option to test:
 
 ```css
 .box {
@@ -1309,38 +1339,53 @@ When the element has `border-radius`, borders and scales interact awkwardly. Use
 }
 ```
 
-`box-shadow` at fractional values is handled more consistently across modern browsers than a fractional `border-width`.
+Fractional `box-shadow` or border widths are not a cross-device guarantee of a crisp physical-pixel line; their rasterization depends on scale and alignment.
 
-**Gotcha — `1px solid` on devices with variable DPR:** A single line might look 1px on a laptop (DPR 1), 2px on a 2x phone, or 3px on a 3x phone. If visual consistency matters, feature-detect DPR with `window.devicePixelRatio` and adjust — or use SVG for scale-invariant strokes.
+**Gotcha — device ratio and zoom:** A 1 CSS px stroke may cover roughly one device pixel at 1×, two at 2×, or three at 3× before accounting for page zoom and OS scaling. SVG is useful for scalable geometry, but it also rasterizes onto device pixels; it does not promise a one-device-pixel stroke.
 
 ---
 
 ### How do you prevent the 300ms tap delay on mobile?
 
-**Headline (30s):** Modern browsers disable the 300ms double-tap-to-zoom delay automatically once they see `<meta name="viewport" content="width=device-width, initial-scale=1">`. That's usually all you need. Libraries like FastClick are legacy — don't add them in new code.
+**Headline (30s):** The historical delay is not a universal behavior. An optimized mobile viewport avoids Chrome's documented delay condition; on a specific control, `touch-action: manipulation` allows panning/pinch zoom while excluding double-tap gestures. **中文：** 先检查移动 viewport；只有需要控制手势时才设置 `touch-action`。
 
-On mobile web apps, browsers historically waited ~300ms after a tap to check whether a second tap was coming (zoom gesture). This delay used to be worked around with libraries like FastClick. Modern browsers detect responsive intent from the viewport meta tag and skip the delay.
+Some mobile browsers historically delayed click dispatch while waiting to distinguish a tap from a double-tap zoom gesture. Modern engines commonly avoid that wait in responsive-viewport cases, but behavior depends on the browser, viewport, and input target; do not assume every mobile click has a fixed 300 ms delay.
 
 ```html
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ```
 
-**Why this works:** A site that declares `width=device-width` is telling the browser "I'm designed for mobile; don't pinch-zoom me." Without that signal, the browser assumes it might need the zoom gesture and waits to see if a second tap is coming.
+The viewport declaration sets the layout viewport to the device width. It does not disable pinch zoom, and authors should not disable user zoom to remove a historical delay. Chrome currently documents a possible delay of up to 300 ms when the initial viewport is not optimized for mobile.
 
-**Gotcha — FastClick is obsolete and harmful:** On modern browsers, FastClick can actually *cause* double-firing of events because it dispatches synthetic clicks on top of native ones. Remove it from new projects.
+For an interactive region where the desired policy is to allow panning and pinch zoom but not double-tap zoom, Pointer Events defines `touch-action: manipulation`:
+
+```css
+button,
+[role="button"] {
+  touch-action: manipulation;
+}
+```
+
+**Gotcha — synthetic clicks:** A legacy tap library that dispatches its own click can conflict with the browser's native click. Avoid adding one unless a tested target still requires it; do not pair touch-end activation with a second click activation.
+
+**Specifications / references:** [CSS Display](https://www.w3.org/TR/css-display-3/#the-display-properties) defines the separation between visual formatting and document semantics; [CSS 2.2 tables](https://www.w3.org/TR/CSS22/tables.html) and [CSS 2.1 floats](https://www.w3.org/TR/CSS22/visuren.html#floats) cover the legacy layout mechanisms; [CSS Flexbox](https://www.w3.org/TR/css-flexbox-1/) and [CSS Grid](https://www.w3.org/TR/css-grid-2/) define the modern layout examples; [CSS Values and Units](https://www.w3.org/TR/css-values/) defines CSS pixels and viewport units; [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines `devicePixelRatio`; [Pointer Events](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property) defines `touch-action`; [Chrome's mobile viewport guidance](https://developer.chrome.com/docs/performance/insights/viewport) describes its current tap-delay condition.
 ## 8. CSS Position, Display, and Animations / CSS定位、显示与动画
+
+**CSS Position, Display, and Animations / CSS 定位、显示与动画**
+
+Positioning, stacking contexts, visibility, and compositing answer different questions. A containing block controls coordinates; a stacking context controls paint ordering; a BFC controls flow interactions. **中文：** 定位坐标、堆叠顺序、可见性和格式化上下文不可混为一谈。
 
 ### How do the CSS `position` values differ?
 
-**Headline (30s):** Five values. `static` is the default (normal flow, offsets do nothing). `relative` reserves its spot in the flow but lets you offset it visually. `absolute` is removed from the flow, positioned relative to its nearest *positioned* ancestor. `fixed` is removed from the flow, positioned relative to the viewport. `sticky` is a hybrid — it flows normally until it crosses a scroll threshold, then sticks like `fixed`.
+**Headline (30s):** `static` and `relative` stay in flow; `absolute` and `fixed` are out of flow; `sticky` stays in flow and is offset relative to a scrollport while scrolling. Absolute/fixed containing blocks are established by specific ancestor properties, not only by `position`. **中文：** sticky 保持在文档流中；absolute/fixed 的定位包含块也可能由 transform 或 containment 等属性建立。
 
 | Value | In flow? | Positioned relative to | Scrolls with page? |
 |---|---|---|---|
 | `static` (default) | yes | — (offsets ignored) | yes |
-| `relative` | yes (original space reserved) | its own original position | yes |
-| `absolute` | no | nearest positioned ancestor | yes (relative to ancestor) |
-| `fixed` | no | viewport | no |
-| `sticky` | yes → no (after threshold) | scroll container | yes, until sticky |
+| `relative` | yes (original space reserved) | its original position | yes |
+| `absolute` | no | nearest ancestor establishing its absolute-position containing block | follows that containing block |
+| `fixed` | no | nearest fixed-position containing block, usually the viewport | fixed to that containing block |
+| `sticky` | yes | nearest scrollport in the relevant axis, constrained by its containing block | yes; its visual offset changes while sticking |
 
 #### `static` (default)
 
@@ -1360,7 +1405,7 @@ Element stays in normal flow; space is reserved as if it were not positioned. Of
 
 #### `absolute`
 
-Element removed from normal flow — no space reserved. Positioned relative to its nearest **positioned ancestor** (any ancestor with `position: relative`, `absolute`, `fixed`, or `sticky`). With no positioned ancestor, the initial containing block (usually `<html>`) is used.
+Element removed from normal flow — no space reserved. Its containing block is established by the nearest qualifying ancestor; a non-static `position` value is common, and properties such as `transform` or `contain` can also establish one. Without such an ancestor, the initial containing block is used.
 
 ```css
 .parent { position: relative; } /* creates positioning context */
@@ -1369,27 +1414,27 @@ Element removed from normal flow — no space reserved. Positioned relative to i
 
 #### `fixed`
 
-Removed from normal flow; positioned relative to the **viewport**. Stays put while the page scrolls.
+Removed from normal flow; positioned relative to a fixed-position containing block, usually the viewport. It stays fixed as the document scrolls only when that viewport is the containing block.
 
 ```css
 .navbar { position: fixed; top: 0; left: 0; right: 0; }
 ```
 
-**Gotcha — `fixed` inside a `transform`ed ancestor:** If any ancestor has `transform`, `filter`, or `perspective` set (even just `translateZ(0)`), the ancestor becomes the new containing block — and your `fixed` element now scrolls with the ancestor instead of the viewport. Easy to miss until you debug why your header isn't sticky on a page with CSS animations.
+**Gotcha — fixed descendants:** Properties including `transform`, `perspective`, `filter`, and some `contain` / `will-change` values can establish a fixed-position containing block. A fixed descendant may then move with that ancestor instead of the viewport.
 
 #### `sticky`
 
-Element starts in normal flow; behaves like `fixed` once scroll crosses a threshold defined by `top`, `right`, `bottom`, or `left`. At least one of those must be set.
+Element remains in normal flow. In an axis where a non-`auto` inset is specified, it is offset relative to the nearest scrollport as scrolling would move it past the sticky view rectangle, subject to its containing block.
 
 ```css
 .header { position: sticky; top: 0; }
 ```
 
-**Gotcha — `overflow: hidden` on an ancestor kills `sticky`:** `sticky` only works if its scroll container has `overflow: visible` (or has no overflow set). A `sticky` child inside `overflow: hidden` silently behaves like `relative`. Check the entire ancestor chain when debugging.
+**Gotcha — overflow ancestors:** An ancestor with `overflow: hidden`, `auto`, or `scroll` can become the nearest scroll container even when it does not visibly scroll. Sticky positioning then uses that ancestor's scrollport; it may not respond to the page's scroll as expected. Inspect the scroll-container chain and the sticky element's containing block.
 
 #### Stacking context and `z-index`
 
-`z-index` controls stacking order along the z-axis, but **only within the same stacking context**. Elements with `position` other than `static` create a stacking context when `z-index` is set; so do elements with `opacity < 1`, `transform`, `filter`, `will-change`, and a few others.
+`z-index` affects stacking order within stacking contexts. Positioned elements with a non-`auto` `z-index` create a stacking context; fixed and sticky boxes create one even with `z-index: auto`. Other triggers include `opacity` below `1`, transforms, filters, `isolation: isolate`, and some containment or `will-change` values.
 
 ```css
 .layer-a { position: relative; z-index: 1; }
@@ -1402,22 +1447,24 @@ Element starts in normal flow; behaves like `fixed` once scroll crosses a thresh
 
 ### When should you use `display: none` vs `visibility: hidden` vs `opacity: 0`?
 
-**Headline (30s):** `display: none` removes the element from layout entirely (causes reflow; screen readers ignore it; can't animate). `visibility: hidden` keeps the layout space but hides the pixels (cheaper — repaint only; screen readers still ignore). `opacity: 0` keeps the layout and pixels "there" but invisible — the element still receives clicks and is still announced by screen readers unless you add `aria-hidden`.
+**Headline (30s):** `display: none` generates no box; `visibility: hidden` keeps layout space but hides the element; `opacity: 0` makes it transparent while it remains in layout and can still receive focus and pointer input. Their accessibility effects differ too. **中文：** 视觉隐藏不一定等于从交互或无障碍树中移除。
 
 | Aspect | `display: none` | `visibility: hidden` | `opacity: 0` |
 |---|---|---|---|
 | **Space in layout** | removed | reserved | reserved |
 | **Receives clicks / events** | no | no | **yes** (add `pointer-events: none` to disable) |
-| **Announced by screen readers** | no | no | often yes (add `aria-hidden`) |
-| **Can animate** | no (all-or-nothing) | yes, on `visibility` | yes, on `opacity` |
-| **Cost when toggled** | reflow + paint | paint only | paint only (composite if promoted) |
-| **Affects children** | children hidden | children inherit (can override with `visibility: visible`) | children inherit |
+| **Accessibility tree** | generally omitted | generally omitted | often still exposed; inspect semantics and assistive technology |
+| **Can animate** | discrete display transitions are possible in supporting browsers | visibility is discrete | opacity is interpolated |
+| **Rendering work** | removes/recreates the box | keeps layout space | keeps the box; compositing is implementation-dependent |
+| **Affects children** | children hidden | children inherit (can override with `visibility: visible`) | group opacity includes descendants; the value is not inherited |
+
+`opacity` is not inherited, but the element and its descendants are composited as one group. A child with `opacity: 1` cannot undo a transparent parent.
 
 ##### Decision guide
 
-- Need the element **gone** — no space, no a11y, responsive toggle? → `display: none`.
+- Need the element **gone** from layout and generally from the accessibility tree? → `display: none`.
 - Need to **hide visually but preserve layout** (keep siblings stable)? → `visibility: hidden`.
-- Need to **fade in/out** with a transition? → `opacity: 0` (with `pointer-events: none` when hidden, and `aria-hidden` for a11y).
+- Need to **fade in/out** with a transition? → animate `opacity`; also manage keyboard focus, pointer input, and accessibility semantics while hidden. `pointer-events: none` alone does not remove an element from keyboard focus.
 
 ```css
 .hidden-flow        { display: none; }
@@ -1425,7 +1472,7 @@ Element starts in normal flow; behaves like `fixed` once scroll crosses a thresh
 .hidden-transparent { opacity: 0; pointer-events: none; }
 ```
 
-**Gotcha — transitioning from `display: none`:** You can't fade in something from `display: none` because the element has no "before" frame to animate from. Either use `visibility` + `opacity`, or use the modern `transition-behavior: allow-discrete` (spec-level; Chromium first, with limited older-browser support at time of writing).
+**Gotcha — discrete display transitions:** `display` is not interpolated like `opacity`; CSS Transitions can opt into a discrete transition with `transition-behavior: allow-discrete` and a starting style in supporting browsers. Check target-browser support before relying on it.
 
 ---
 
@@ -1506,22 +1553,24 @@ Individual properties:
 .card { transform: translate(10px, 20px) rotate(5deg) scale(1.05); }
 ```
 
-#### GPU compositing and hardware acceleration
+#### Compositing and `will-change`
 
-Animating `transform` and `opacity` runs on the **compositor** (GPU) instead of triggering layout/paint. `will-change` hints to the browser to pre-promote the element to its own layer. See [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for the full cost ladder.
+Animating `transform` and `opacity` can let an engine update presentation without recalculating layout, but neither property guarantees compositor-only or GPU work. `will-change` is a hint that may have memory and stacking effects; it does not guarantee layer promotion. See [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for typical invalidation paths.
 
 ```css
 .animated {
   will-change: transform;
-  transform: translateZ(0); /* force GPU layer without visible movement */
+  transform: translateZ(0); /* may affect compositing; it does not guarantee GPU acceleration */
 }
 ```
 
-**Gotcha — don't `will-change` everything:** Each hinted element becomes its own compositor layer and eats memory. Use `will-change` only for the element you're actively animating; remove it after the animation is done (via class toggle) if the element persists. Over-hinting can hurt performance on low-end devices.
+**Gotcha — don't `will-change` everything:** Browsers may allocate extra resources or alter stacking behavior for hinted properties. Apply it only after measurement, keep the hinted region small, and remove it when no longer needed.
 
-**Gotcha — `transform: translateZ(0)` is a blunt instrument:** It pre-promotes to a GPU layer but burns memory. `will-change: transform` is the modern, intention-revealing equivalent, but both should only be used when you've measured a performance problem.
+**Gotcha — `transform: translateZ(0)` is not a GPU switch:** It changes transform behavior and may affect stacking/containing blocks; it does not guarantee a faster path. Use neither it nor `will-change` as a substitute for profiling.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for the reflow/repaint cost ladder, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for when GPU acceleration does and doesn't help.
+**See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for measurement guidance.
+
+**Specifications / 规范：** [CSS Positioned Layout](https://www.w3.org/TR/css-position-3/), [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color opacity](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transforms](https://www.w3.org/TR/css-transforms-1/), [CSS Transitions](https://www.w3.org/TR/css-transitions-2/), [W3C WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/).
 ## 9. JavaScript Basics / JavaScript基础
 
 ### `var`, `let`, and `const`
@@ -3850,74 +3899,100 @@ A production app uses all of them. Missing any layer lets bugs go silent.
 **See also:** [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promises and `async/await` fundamentals, [`9.2 React Basics`](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for the React lifecycle context around error boundaries.
 ## 22. DOM Manipulation and Events / DOM操作与事件
 
-A bundle of interview questions around DOM events, runtime scheduling, and utility patterns that commonly come up.
+**DOM Manipulation and Events / DOM 操作与事件**
+
+DOM APIs expose tree mutation, events, and scheduling, but API guarantees differ from framework behavior and browser rendering choices. DOM 标准规定树与事件语义；框架事件系统和渲染性能细节另有版本与实现边界。
 
 ### How do you write a proper deep copy?
 
-**Headline (30s):** `JSON.parse(JSON.stringify(obj))` is the one-liner — cheap, often good enough, but silently wrong for anything beyond plain objects and primitives. A robust deep copy needs to dispatch on type (`Date`, `RegExp`, `Map`, `Set`, `Array`, plain object), recurse, and use a `WeakMap` to break circular references. Modern code can reach for `structuredClone` for built-in support.
+**Headline (30s):** JSON round-tripping only copies JSON-compatible data: it drops or changes values and rejects cycles. `structuredClone` handles cycles and supported built-in types; a handwritten clone is a domain-specific policy, not a universal deep-copy algorithm. **中文：** JSON 往返只适用于有限的数据形状；结构化克隆覆盖更多内建类型；手写克隆必须明确支持范围。
 
 **Why interviewers ask this:** It tests your grasp of reference semantics, edge cases (cycles, special types), and whether you can design a recursive function with proper memoization.
 
 #### Why `JSON.parse(JSON.stringify(x))` is insufficient
 
-- **Lost types:** `Map`, `Set`, `Date`, `RegExp` become plain objects or strings.
-- **Circular references:** `JSON.stringify` throws.
-- **Missing values:** `undefined`, functions, and symbols are stripped.
+- **Changed values:** a `Date` serializes to a string; a typical `Map` or `Set` becomes `{}`.
+- **Unsupported values:** object properties whose values are `undefined`, functions, or symbols are omitted; such array entries become `null`; a top-level unsupported value can make parsing fail.
+- **Circular references and `BigInt`:** `JSON.stringify` throws.
 
-Reach for `structuredClone(value)` (see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)) — it handles all of the above natively. Use a handwritten deep copy only when you need to customize behavior (e.g., skip certain keys).
+Reach for `structuredClone(value)` (see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)) for supported structured-cloneable values. Functions and DOM nodes are not cloneable, and cloning does not preserve arbitrary class behavior. Use a handwritten clone only for a deliberately bounded data model or a custom policy (for example, omitting selected fields).
 
 #### Handwritten deep copy
 
-```typescript
-function deepCopy(obj: any, map = new WeakMap()): any {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (map.has(obj)) return map.get(obj);
+```javascript
+function deepCopy(value, seen = new WeakMap()) {
+  if (value === null || typeof value !== 'object') return value;
+  if (seen.has(value)) return seen.get(value);
 
-  let copy: any;
-
-  if (obj instanceof Date) {
-    copy = new Date(obj.getTime());
-  } else if (obj instanceof RegExp) {
-    copy = new RegExp(obj.source, obj.flags);
-  } else if (obj instanceof Map) {
+  let copy;
+  if (value instanceof Date) {
+    copy = new Date(value.getTime());
+  } else if (value instanceof RegExp) {
+    copy = new RegExp(value.source, value.flags);
+    copy.lastIndex = value.lastIndex;
+  } else if (value instanceof Map) {
     copy = new Map();
-    map.set(obj, copy);
-    obj.forEach((value, key) => copy.set(key, deepCopy(value, map)));
-  } else if (obj instanceof Set) {
+    seen.set(value, copy);
+    for (const [key, item] of value) {
+      copy.set(deepCopy(key, seen), deepCopy(item, seen));
+    }
+    return copy;
+  } else if (value instanceof Set) {
     copy = new Set();
-    map.set(obj, copy);
-    obj.forEach(value => copy.add(deepCopy(value, map)));
+    seen.set(value, copy);
+    for (const item of value) copy.add(deepCopy(item, seen));
+    return copy;
+  } else if (Array.isArray(value)) {
+    copy = new Array(value.length);
   } else {
-    copy = Array.isArray(obj) ? [] : {};
-    map.set(obj, copy);
-    Object.keys(obj).forEach(key => {
-      copy[key] = deepCopy(obj[key], map);
-    });
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError('Unsupported object type');
+    }
+    copy = Object.create(prototype);
   }
 
+  seen.set(value, copy);
+  if (value instanceof Date || value instanceof RegExp) return copy;
+
+  // This example copies enumerable own string-keyed data in arrays/plain objects.
+  for (const key of Object.keys(value)) {
+    Object.defineProperty(copy, key, {
+      value: deepCopy(value[key], seen),
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  }
   return copy;
 }
 ```
 
-**Gotcha — `Date` and `RegExp`:** Their state is internal, not enumerable property slots. Iterating keys on them gives you `{}`. You *must* special-case them.
+This sample handles same-realm `Date`, `RegExp`, `Map`, `Set`, arrays, and plain objects with enumerable string keys. It does not preserve symbols, descriptors, accessors, arbitrary prototypes, or custom properties on the special built-ins. The `WeakMap` preserves cycles and repeated references; `Map` keys must be cloned as well as values.
 
-**Gotcha — circular references:** The `WeakMap` stores already-copied objects so that when you hit the same reference twice, you return the existing copy instead of recursing forever.
+```javascript
+const trailingHoles = deepCopy([1, , ,]);
+console.assert(trailingHoles.length === 3 && 0 in trailingHoles && !(1 in trailingHoles) && !(2 in trailingHoles));
+
+const emptySparse = deepCopy(new Array(3));
+console.assert(emptySparse.length === 3 && Object.keys(emptySparse).length === 0);
+```
 
 ---
 
 ### How do DOM events propagate?
 
-**Headline (30s):** Every DOM event travels through three phases: **capture** (from root down to target), **target** (at the element), then **bubble** (back up to root). Most listeners run in the bubble phase by default. Bubbling enables *event delegation* — one listener on a parent handles events from many children, which is how React implements its event system.
+**Headline (30s):** Events with a propagation path can invoke capture listeners on the way to the target and bubble listeners on the way back. Whether an event bubbles or crosses a shadow boundary depends on its flags. Most `addEventListener` handlers use bubble mode by default. **中文：** 事件传播分捕获、目标和冒泡阶段，但是否冒泡、是否跨越 Shadow DOM 边界取决于事件标志。
 
 #### The three phases
 
-1. **Capture** — event descends from `document` → `html` → `body` → ... → target's parent.
-2. **Target** — event reaches the element that was acted on.
-3. **Bubble** — event ascends back up the same path to `document`.
+1. **Capture** — capture listeners run along the path toward the target.
+2. **Target** — listeners on the target run.
+3. **Bubble** — if `event.bubbles` is true, bubble listeners run back along the path.
 
 ```javascript
 document.body.addEventListener('click', () => console.log('body (bubble)'));
-document.body.addEventListener('click', () => console.log('body (capture)'), true);
+document.body.addEventListener('click', () => console.log('body (capture)'), { capture: true });
 button.addEventListener('click', () => console.log('button'));
 
 // Clicking the button logs:
@@ -3926,69 +4001,95 @@ button.addEventListener('click', () => console.log('button'));
 // body (bubble)   → bubble phase
 ```
 
+`event.target` is the event's target; `event.currentTarget` is the object whose listener is currently running. Shadow DOM can retarget `target` for listeners outside a shadow tree.
+
+##### Default actions and listener options / 默认行为与监听器选项
+
+Propagation and the browser's default action are separate. `preventDefault()` only cancels a cancelable event when called from a non-passive listener; it does not stop propagation. `stopPropagation()` stops the event reaching later objects on the path, while `stopImmediatePropagation()` also stops later listeners on the current object.
+
+Use `{ passive: true }` for scroll/touch listeners that never cancel scrolling. In a passive listener, `preventDefault()` is ignored. The DOM Standard defines passive defaults for certain `touchstart`, `touchmove`, `wheel`, and `mousewheel` listeners on `Window`, `Document`, and document root/body targets; set the option explicitly when cancellation is required.
+
 #### Event delegation
 
-Don't attach 1000 listeners to 1000 list items — attach one to the parent and match on the target.
+For many child controls, one parent listener can handle bubbled events. Match a descendant of the event target; delegation only works for event types that bubble.
 
 ```javascript
 parent.addEventListener('click', (e) => {
-  const item = e.target.closest('.item');
+  const target = e.target instanceof Element ? e.target : null;
+  const item = target?.closest('.item');
   if (!item) return;
   console.log('Item clicked:', item.textContent);
 });
 ```
 
-Benefits: fewer listeners (lower memory), works for dynamically added children (no rebinding).
+Benefits: fewer per-item registrations and dynamically added descendants need no rebinding. Choose based on the event's propagation behavior and the needed target checks.
 
 #### React's synthetic event system
 
-React implements event delegation at the root container: a single listener catches every click, then dispatches to the right component. The event object you receive is a **SyntheticEvent** — a cross-browser wrapper around the native event.
+React DOM exposes a **SyntheticEvent** with familiar event properties and JSX handlers for capture and bubble phases. Its internal delegation strategy is a framework implementation detail; React 17 changed the delegation root, so do not use one version's internals as a DOM rule.
 
 Handler naming:
 
 - `onClick` — bubble phase (default).
 - `onClickCapture` — capture phase.
 
-**Gotcha — SyntheticEvent pooling (React ≤ 16):** In older React versions, the event object was reused; accessing `e.target` inside `setTimeout` returned `null`. Fixed in React 17+. If you hit this in legacy code, call `e.persist()`.
+**Historical note — event pooling:** React DOM versions before 17 pooled SyntheticEvent objects; React 17 removed that behavior. `persist()` is not needed for current React DOM handlers. React Native has separate event behavior.
 
 ---
 
 ### Implement an EventBus / EventEmitter
 
-**Headline (30s):** An EventBus is a simple publish/subscribe store: `on` registers a listener, `emit` fires an event with arguments, `off` removes. The standard interview version also supports `once`. The trick with `once` is to wrap the listener so it removes itself after the first call — passing the wrapper (not the original) to `on` so `off` can find it.
+**Headline (30s):** An EventBus stores listeners by event name. A `once` wrapper must remove itself before calling user code so recursion or a thrown error cannot make it run a second time. **中文：** 一次性监听器应在调用用户回调前注销，避免递归触发或异常导致重复调用。
 
-```typescript
+```javascript
 class EventBus {
-  private events: Record<string, Function[]> = {};
+  events = new Map();
 
-  on(event: string, listener: Function): void {
-    if (!this.events[event]) this.events[event] = [];
-    this.events[event].push(listener);
+  on(event, listener) {
+    if (!this.events.has(event)) this.events.set(event, new Set());
+    this.events.get(event).add(listener);
   }
 
-  once(event: string, listener: Function): void {
-    const wrapper = (...args: any[]) => {
+  once(event, listener) {
+    let fired = false;
+    const wrapper = (...args) => {
+      if (fired) return;
+      fired = true;
+      this.off(event, wrapper); // remove before user code, including recursive emits
       listener(...args);
-      this.off(event, wrapper);  // remove the wrapper, not the original
     };
     this.on(event, wrapper);
   }
 
-  emit(event: string, ...args: any[]): void {
-    this.events[event]?.forEach(listener => listener(...args));
+  emit(event, ...args) {
+    // Snapshot listeners: changes during this emit affect the next emit.
+    for (const listener of [...(this.events.get(event) ?? [])]) listener(...args);
   }
 
-  off(event: string, listener: Function): void {
-    if (this.events[event]) {
-      this.events[event] = this.events[event].filter(l => l !== listener);
-    }
+  off(event, listener) {
+    const listeners = this.events.get(event);
+    if (!listeners) return;
+    listeners.delete(listener);
+    if (listeners.size === 0) this.events.delete(event);
   }
 }
 ```
 
+**Reentrancy regression:** the outer `emit` keeps its listener snapshot while a nested `emit` uses the updated listener set. A later `once` wrapper can therefore still appear in the outer snapshot after the nested call removes it; its `fired` guard makes that second snapshot entry a no-op.
+
+```javascript
+const bus = new EventBus();
+let firstCalls = 0;
+let laterCalls = 0;
+bus.once('x', () => { firstCalls += 1; bus.emit('x'); });
+bus.once('x', () => { laterCalls += 1; });
+bus.emit('x');
+console.assert(firstCalls === 1 && laterCalls === 1);
+```
+
 **Gotcha — anonymous listeners:** `bus.on('x', () => {...})` can't be removed later because you don't have a reference to the function. Always save the reference if you'll need `off`.
 
-**Gotcha — listener errors:** A listener that throws in your `emit` loop will stop subsequent listeners. Wrap the call in `try/catch` if you want graceful handling.
+**Contract of this small example:** a thrown listener stops the current `emit`; the listener snapshot means additions/removals during dispatch affect the next emission. A production emitter should document its error and mutation policy.
 
 ---
 
@@ -4022,7 +4123,7 @@ A topic string names the event channel; anyone can publish, anyone can subscribe
 
 ### `requestAnimationFrame` vs. `requestIdleCallback` — when do you use each?
 
-**Headline (30s):** `requestAnimationFrame` runs your callback right before the next repaint (~every 16ms at 60fps) — perfect for animation and visual updates. `requestIdleCallback` runs during leftover time at the end of a frame — perfect for *non-urgent* work (analytics, prefetching) that shouldn't compete with user input or rendering.
+**Headline (30s):** `requestAnimationFrame` schedules visual work for a rendering opportunity. Its cadence follows the user agent and display; it is not a fixed 16 ms timer. `requestIdleCallback` offers an idle-time opportunity for non-critical work, but it can be delayed and needs a deliberate fallback when unavailable. **中文：** rAF 与绘制节奏关联；rIC 适合可延后任务，但两者都不是固定间隔定时器。
 
 #### `requestAnimationFrame`
 
@@ -4034,100 +4135,119 @@ function animate() {
 requestAnimationFrame(animate);
 ```
 
-- Synchronized with the display refresh rate.
-- Paused when the tab is hidden (battery friendly).
+- Runs before a rendering update when the user agent schedules one; timing varies with refresh rate and page visibility.
 - The first callback receives a high-resolution timestamp.
 
 #### `requestIdleCallback`
 
 ```javascript
-requestIdleCallback((deadline) => {
-  while (deadline.timeRemaining() > 0 && workQueue.length) {
+function runIdleSlice(deadline) {
+  if (!workQueue.length) return;
+
+  // Process one bounded unit; a timeout is not permission to drain the queue.
+  if (deadline.didTimeout || deadline.timeRemaining() > 0) {
     processNext(workQueue.shift());
   }
-}, { timeout: 2000 }); // fallback if idle time never arrives
+
+  if (workQueue.length) {
+    requestIdleCallback(runIdleSlice, { timeout: 2000 });
+  }
+}
+
+requestIdleCallback(runIdleSlice, { timeout: 2000 });
 ```
 
-- `deadline.timeRemaining()` tells you how many ms you have before the frame budget expires.
-- The `timeout` option forces execution after that many ms even if the browser is busy.
-- Not supported in Safari — use `setTimeout` as a fallback if you need it.
+- `deadline.timeRemaining()` is the user agent's estimate of idle time remaining; do not treat it as a hard frame budget.
+- `{ timeout }` asks the user agent not to leave the callback waiting indefinitely; `deadline.didTimeout` identifies that path.
+- Keep each `processNext` unit bounded. A timeout callback still processes only one unit, then reschedules any remaining work.
+- Feature-detect the API. `setTimeout` can be a functional fallback, but it is not an idle scheduler and gives no equivalent scheduling guarantee.
 
-React Fiber uses a similar idea: split rendering into small chunks and yield back to the browser between them, so high-priority work (input, animation) isn't blocked.
+Framework schedulers may also split work and yield, but they are separate scheduling systems; do not equate React's scheduler with `requestIdleCallback`.
 
 **Rule of thumb:**
 
 - Must happen this frame? → `requestAnimationFrame`.
-- Low priority, whenever the browser is free? → `requestIdleCallback` (with a fallback for Safari).
+- Low priority, whenever the browser has idle time? → `requestIdleCallback` when available, with a fallback chosen for the task's guarantees.
 
 ---
 
 ### Finding the maximum in an array — which technique is safe for huge arrays?
 
-**Headline (30s):** `Math.max(...arr)` and `Math.max.apply(null, arr)` are concise but push every element onto the call stack — they throw `RangeError: Maximum call stack size exceeded` on arrays of ~100k+ elements. For production code with potentially large arrays, use `reduce`. It's slightly more typing but works for any size.
+**Headline (30s):** Spread and `apply` pass each array element as a function argument, so very large calls can exceed an implementation's argument limit. The limit varies; it is not a portable “100k” boundary. A loop or reduction avoids that argument-list limit. **中文：** 展开数组会形成大型实参列表，限制因实现而异；循环或归约不受该限制。
 
 ```javascript
-// Concise but stack-limited
+// Concise, but very large argument lists may exceed an implementation limit
 Math.max(...arr);
 Math.max.apply(null, arr);
 
-// Safe for arrays of any size
-arr.reduce((max, cur) => cur > max ? cur : max, arr[0]);
-
-// Also safe (simple loop)
-let max = arr[0];
-for (let i = 1; i < arr.length; i++) {
-  if (arr[i] > max) max = arr[i];
-}
+// Iterates without building a large argument list; for numeric arrays,
+// an empty array matches Math.max() by producing -Infinity.
+let max = -Infinity;
+for (const value of arr) max = Math.max(max, value);
 ```
 
-**Gotcha — empty arrays:** `Math.max()` with no arguments returns `-Infinity`. `reduce` without an initial value throws. Provide a sensible default for either approach.
+**Gotcha — input semantics:** `Math.max()` with no arguments returns `-Infinity`, and any `NaN` input makes its result `NaN`. If the application wants a different empty-input or non-number policy, handle that explicitly.
 
-**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer (the modern replacement for scroll-event DOM watchers), [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the task/microtask scheduling model that rAF and rIC sit inside.
+**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer, [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the task/microtask scheduling model around browser callbacks.
+
+**Standards and current docs / 规范与文档：** [WHATWG DOM events](https://dom.spec.whatwg.org/#concept-event-dispatch), [ECMAScript array objects](https://tc39.es/ecma262/multipage/indexed-collections.html), [WHATWG structured data](https://html.spec.whatwg.org/multipage/structured-data.html), [React DOM event handlers](https://react.dev/learn/responding-to-events), [React 17 event delegation change](https://react.dev/blog/2020/08/10/react-v17-rc#changes-to-event-delegation), [requestIdleCallback specification](https://w3c.github.io/requestidlecallback/), [Chrome `requestIdleCallback` guide](https://developer.chrome.com/blog/using-requestidlecallback), [CSSOM View](https://www.w3.org/TR/cssom-view-1/).
 ## 23. Browser Storage and Communication / 浏览器存储与通信
 
-A bundle of interview questions about storing data in the browser and sending messages between tabs, iframes, and native shells.
+**Browser Storage and Communication / 浏览器存储与通信**
+
+Browser storage is scoped by origin and browsing context, subject to browser quota and privacy policy. Cookies can accompany matching requests; Web Storage does not. 浏览器存储受源、浏览上下文、配额和隐私策略约束；只有符合条件的 Cookie 会随请求发送。
 
 ### What's the difference between `localStorage`, `sessionStorage`, and cookies?
 
-**Headline (30s):** All three store client-side data, but differ in capacity, lifetime, and whether the server sees them. `localStorage` persists indefinitely, `sessionStorage` is per-tab, both are client-only (never sent in requests). **Cookies** are tiny (~4KB) but automatically included in every HTTP request, which is why authentication lives there. Pick based on *who needs to read the data* (server vs. client) and *how long it should live*.
+**Headline (30s):** `localStorage` and `sessionStorage` are synchronous, origin-scoped key/value stores that scripts read explicitly. Cookies have domain, path, and cross-site sending rules, and matching cookies can be attached to requests. `localStorage` usually outlives a page session; `sessionStorage` is tied to a top-level browsing context. Choose from the data's lifetime, reader, and threat model. **中文：** Web Storage 由脚本显式读取；符合域、路径及跨站策略的 Cookie 会随请求发送。应按数据生命周期、读取方和威胁模型选择。
 
 **Why interviewers ask this:** This comes up in any question about auth flows, session management, or persistence. Candidates who conflate the three write insecure auth code.
 
 #### `localStorage`
 
-- **Capacity:** ~5MB per origin.
-- **Lifetime:** persists until cleared by script or user.
-- **Access:** synchronous, same-origin, client-only (never sent in HTTP requests).
+- **Scope:** the origin's storage area; third-party contexts may be further partitioned or restricted by browser privacy policy.
+- **Capacity:** the Storage Standard recommends a 5 MiB quota for the `localStorage` endpoint; actual availability can vary with user-agent policy and browser mode.
+- **Lifetime:** persists until cleared or evicted; there is no per-entry expiration API.
+- **Access:** synchronous string key/value operations, initiated by script; values are not automatically attached to HTTP requests.
 - **Use for:** user preferences (theme, language), cached client state, offline data.
 
 #### `sessionStorage`
 
-Identical API, tab-scoped lifetime.
+Same API, scoped to an origin and a top-level browsing context. A new tab normally has its own area; an auxiliary window opened by a page can start with a copy of the opener's session storage, after which the two diverge.
 
-- **Capacity:** ~5MB per origin.
-- **Lifetime:** cleared when the tab closes (survives reloads).
-- **Access:** synchronous, same-origin, tab-isolated.
+- **Capacity:** the Storage Standard recommends a 5 MiB quota for the `sessionStorage` endpoint; actual availability can vary with user-agent policy and browser mode.
+- **Lifetime:** survives reloads and same-tab navigation; cleared when the top-level browsing context's session ends (session restoration is user-agent-dependent).
+- **Access:** synchronous string key/value operations; it does not automatically attach values to requests.
 - **Use for:** multi-step form state, wizard progress, temporary SPA state.
 
 #### Cookies
 
-- **Capacity:** ~4KB per cookie, ~20 cookies per domain.
-- **Lifetime:** configurable with `Expires` / `Max-Age`; session cookies die with the browser.
-- **Access:** sent with every HTTP request to the matching domain; readable via `document.cookie` unless `HttpOnly`.
-- **Security flags:** `HttpOnly` (blocks JS access), `Secure` (HTTPS only), `SameSite=Strict|Lax|None` (CSRF protection).
-- **Use for:** session IDs, CSRF tokens, server-side personalization.
+- **Capacity:** small per-cookie and per-site limits apply; exact usable limits vary by browser, so do not rely on a fixed cookie count or byte capacity.
+- **Lifetime:** `Expires` / `Max-Age` set persistence; a session cookie normally ends with the browser session, whose restoration behavior varies.
+- **Access:** a matching cookie may be sent with a request according to `Domain`, `Path`, `Secure`, `SameSite`, and the request's credentials policy. Script can read non-`HttpOnly` cookies through `document.cookie`.
+- **Security attributes:** `HttpOnly` hides a cookie from non-HTTP APIs such as `document.cookie`; `Secure` restricts it to secure transport; `SameSite=Strict|Lax|None` controls cross-site sending. `SameSite` can reduce some CSRF exposure but is not a complete CSRF defense; `SameSite=None` requires `Secure` in current cookie rules.
+- **Use for:** server-managed session identifiers when the application is designed around cookie authentication. Add CSRF defenses suited to the request flow.
 
 #### Quick comparison
 
-| Feature | localStorage | sessionStorage | Cookies |
+| Feature | `localStorage` | `sessionStorage` | Cookies |
 |---|---|---|---|
-| Capacity | ~5MB | ~5MB | ~4KB |
-| Sent with requests | No | No | Yes |
-| Lifetime | Permanent | Tab session | Configurable |
-| Server access | No | No | Yes |
-| Accessible to JS | Yes | Yes | Only without `HttpOnly` |
+| Scope | Origin storage area, subject to browser privacy policy | Origin + top-level browsing context | Domain/path and cookie policy |
+| Capacity | Storage Standard recommends 5 MiB per endpoint; actual availability is browser-policy dependent | Storage Standard recommends 5 MiB per endpoint; actual availability is browser-policy dependent | Small; browser limits vary |
+| Sent with requests | No automatic attachment | No automatic attachment | Matching cookies may be attached, subject to request and cookie policy |
+| Lifetime | Persists until removed or evicted | Browsing-context session | Session or configured expiration |
+| Server access | Only if page code sends it | Only if page code sends it | Yes, when the cookie is included |
+| Accessible to JS | Yes | Yes | Unless `HttpOnly` |
 
-**Gotcha — don't store auth tokens in `localStorage`:** Anything in `localStorage` is readable by any script on the page. An XSS vulnerability becomes a full account takeover. Use `HttpOnly` + `Secure` + `SameSite` cookies for session tokens.
+**Security trade-off:** Any script running in the page can read Web Storage, so an XSS flaw can expose stored bearer tokens. `HttpOnly` cookies keep the cookie value out of page JavaScript, but cookies introduce request-forgery and cross-site policy concerns. Choose the session design deliberately; neither storage choice fixes XSS.
+
+#### Quotas, partitioning, and coordination / 配额、分区与协调
+
+The Storage Standard recommends 5 MiB quotas for the `localStorage` and `sessionStorage` endpoints. A recommended endpoint quota is not a guarantee of usable space in every browser mode: user-agent policy can restrict or disable access, and larger storage APIs use implementation-defined quotas. `navigator.storage.estimate()` reports approximate usage and quota; best-effort storage can be evicted under pressure. Use IndexedDB for larger structured data or transactions, and handle quota and access errors.
+
+The standard's baseline storage key is the origin, while browser privacy behavior can further partition or gate storage in embedded third-party contexts. Do not assume an embedded site shares the same storage it sees when opened as a top-level page; this is browser- and policy-dependent.
+
+Web Storage has no multi-key transaction or cross-tab lock. A read-modify-write sequence can race across tabs, and the `storage` event is a notification after a change, not a lock. Use IndexedDB transactions or an explicit coordination mechanism when updates must be atomic.
 
 **See also:** [`8.2 Web Security and Authentication`](../../engineering-foundations/security/web-security-and-authentication.md) for XSS/CSRF mitigation and cookie flag deep dives.
 
@@ -4135,19 +4255,19 @@ Identical API, tab-scoped lifetime.
 
 ### `HTMLCollection` vs. `NodeList` — what's the difference?
 
-**Headline (30s):** Both are array-like collections of DOM nodes, but differ in what they contain and how they update. **`HTMLCollection`** holds only `Element` nodes and is **always live** — it reflects DOM changes automatically. **`NodeList`** can hold any node type (Elements, Text, Comments). It's **usually static** (from `querySelectorAll`) but occasionally live (`childNodes`).
+**Headline (30s):** Both are array-like collections of DOM nodes, but differ in what they contain and how they update. **`HTMLCollection`** holds only `Element` nodes and is live — it reflects matching DOM changes. **`NodeList`** can hold any node type (Elements, Text, Comments); whether it is live depends on the API that returned it (`querySelectorAll` is static, while `childNodes` is live).
 
 #### `HTMLCollection`
 
 - Returned by `getElementsByClassName`, `getElementsByTagName`, `.children`.
 - Contains only `Element` nodes.
-- Always live — queries re-run on each access.
+- Live — its items reflect changes to the underlying tree; this does not promise that an engine reruns a query on every property access.
 
 #### `NodeList`
 
 - Returned by `querySelectorAll` (static), `childNodes` (live).
 - Can contain any node type: `Element`, `Text`, `Comment`.
-- Static or live depending on source.
+- Its liveness depends on the API that returned it.
 
 #### `.children` vs `.childNodes`
 
@@ -4168,11 +4288,11 @@ Identical API, tab-scoped lifetime.
 
 ### How can tabs of the same origin communicate?
 
-**Headline (30s):** Four main options, roughly in order of complexity. For most same-origin cases, **`BroadcastChannel`** is the cleanest modern answer. The `localStorage` + `storage` event trick works everywhere but feels hacky. `SharedWorker` is powerful but has Safari caveats. `WebSocket` through a server is the only cross-origin option.
+**Headline (30s):** Four common options. For eligible same-origin contexts, **`BroadcastChannel`** is often the simplest. `localStorage` + `storage` is a broadly available persistence-backed workaround; `SharedWorker` can share in-memory state but should be feature-detected. Use `WebSocket` for server-mediated updates, not simply because two contexts have different origins.
 
 #### 1. `localStorage` + `storage` event
 
-The simplest cross-browser approach. Writing to `localStorage` fires a `storage` event in *other* same-origin tabs (not the tab that wrote).
+Writing to `localStorage` queues a `storage` event for other documents that share that storage area; the document making the change does not receive its own event. Privacy partitioning can affect which embedded documents share an area.
 
 ```javascript
 // Tab A listens
@@ -4184,11 +4304,11 @@ window.addEventListener('storage', (e) => {
 localStorage.setItem('message', JSON.stringify({ text: 'hello', ts: Date.now() }));
 ```
 
-**Gotcha — only fires in *other* tabs:** The tab that called `setItem` does NOT receive its own event. Works only between tabs, not within one tab.
+**Gotcha — the writer gets no event:** The document that called `setItem` does not receive its own event. This is cross-document notification, not a same-document event bus.
 
 #### 2. `BroadcastChannel` API
 
-Purpose-built for same-origin tab messaging. Much cleaner than the storage hack.
+Purpose-built for messaging among eligible same-origin contexts, subject to the browser's storage partition and privacy rules. It transmits structured-clone data without persisting it.
 
 ```javascript
 const channel = new BroadcastChannel('app_channel');
@@ -4200,11 +4320,11 @@ channel.onmessage = (e) => console.log('Received:', e.data);
 channel.postMessage({ type: 'update', payload: { id: 1 } });
 ```
 
-Supported in all modern browsers. First choice for new code.
+Feature-detect it for the target browsers. Close the channel when its owner is done.
 
 #### 3. `SharedWorker`
 
-A Web Worker that survives across tabs and can hold shared state. Each tab connects via a port.
+A worker instance shared by connected same-origin contexts can hold in-memory state while clients remain connected. It is not durable storage; feature-detect it where browser coverage matters.
 
 ```javascript
 // worker.js
@@ -4219,19 +4339,20 @@ onconnect = (e) => {
 };
 ```
 
-**Gotcha — not supported in Safari on iOS.** Avoid if you need universal support.
+Do not treat a shared worker as a durable store or assume it survives after every client disconnects.
+This small broadcast sketch omits port cleanup; a real worker needs an explicit client-disconnect and stale-port policy.
 
-#### 4. WebSockets (cross-origin or real-time)
+#### 4. WebSockets for server-mediated updates
 
-When tabs need to share updates with a server too (chat, collaborative editing), all tabs connect to the same WebSocket; the server broadcasts.
+Use WebSocket when the application needs a persistent, bidirectional connection to a server. A difference in origin alone does not make it the only or default channel between contexts. The WebSocket protocol is not CORS: validate the handshake `Origin` and authenticate and authorize each connection on the server.
 
-**Rule of thumb:** Same-origin, simple → `BroadcastChannel`. Same-origin, broad support → `localStorage` + `storage` event. Cross-origin or server-driven → WebSocket.
+**Rule of thumb:** Ephemeral same-origin messages → `BroadcastChannel`; persist-and-notify use cases → `localStorage` plus `storage`; cross-origin frame messaging → `postMessage` with origin checks; server-mediated updates → WebSocket or another authenticated server channel.
 
 ---
 
 ### How do you communicate with an iframe?
 
-**Headline (30s):** Use `window.postMessage(data, targetOrigin)`. It's the *only* safe way to cross origin boundaries. The parent calls `iframe.contentWindow.postMessage(...)`; the iframe calls `window.parent.postMessage(...)`. Both sides listen with `window.addEventListener('message', ...)`. **Critical:** always validate `event.origin` — never trust incoming messages without checking the sender.
+**Headline (30s):** Use `window.postMessage(data, targetOrigin)` for window-to-window messaging across origins. The parent calls `iframe.contentWindow.postMessage(...)`; the iframe calls `window.parent.postMessage(...)`. Both sides listen for `message`, check `event.origin` and the expected `event.source`, and validate the message shape. **中文：** 跨源窗口通信可用 `postMessage`；接收方必须核验来源、窗口和数据格式。
 
 ```javascript
 // Parent → iframe
@@ -4247,16 +4368,19 @@ window.parent.postMessage(
   'https://parent-origin.com'
 );
 
-// Receiving (both sides)
+// Receiving inside the iframe; on the parent page compare against iframe.contentWindow.
+const expectedOrigin = 'https://parent-origin.com';
+const expectedWindow = window.parent;
 window.addEventListener('message', (e) => {
-  if (e.origin !== 'https://trusted-origin.com') return; // ALWAYS check
+  if (e.origin !== expectedOrigin || e.source !== expectedWindow) return;
+  if (!e.data || typeof e.data !== 'object' || typeof e.data.action !== 'string') return;
   console.log('Received:', e.data);
 });
 ```
 
-**Gotcha — never use `'*'` as the target origin in production:** `'*'` sends the message to any origin, exposing you if the iframe is hijacked or navigated to a hostile page. Always specify the exact origin you expect.
+**Gotcha — avoid `'*'` for confidential messages:** A wildcard can deliver to a window after it has navigated to another origin. Specify the expected scheme, host, and port.
 
-**Gotcha — origin validation is mandatory:** Without `if (e.origin !== ...)`, any page can embed your iframe and send it malicious messages. Treat incoming `message` events like untrusted input.
+**Gotcha — origin checks do not validate data:** A trusted origin can still be compromised. Parse and validate the message before acting on it; `postMessage` payloads use structured cloning, not shared object references.
 
 ---
 
@@ -4299,9 +4423,11 @@ Feels like normal JS — synchronous or callback-based depending on what the nat
 
 **Reach for it when:** building a hybrid app (WebView + native shell). For pure web, use standard browser APIs (`navigator.geolocation`, etc.).
 
-**Gotcha — security:** Never trust data coming from the web side. The bridge can be invoked by any page loaded in the WebView — including malicious ones — unless you restrict the allowed origins.
+**Gotcha — security:** Treat bridge calls as privileged input. Restrict which frames and origins can reach the bridge, validate each operation and argument natively, and avoid exposing capabilities to arbitrary page content.
 
 **See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for where storage and messaging fit into the browser architecture, [`8.2 Web Security and Authentication`](../../engineering-foundations/security/web-security-and-authentication.md) for auth storage and CSRF concerns.
+
+**Standards and current guidance / 标准与文档：** [WHATWG Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html), [WHATWG Storage Standard](https://storage.spec.whatwg.org/), [WHATWG DOM collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection), [MDN storage quotas and eviction](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria), [WHATWG cross-document messaging and BroadcastChannel](https://html.spec.whatwg.org/multipage/web-messaging.html), [WHATWG WebSockets](https://websockets.spec.whatwg.org/), [IETF cookies draft (work in progress)](https://datatracker.ietf.org/doc/draft-ietf-httpbis-rfc6265bis/).
 ## 24. Image Lazy Loading / 浏览器图片懒加载
 
 **Image Lazy Loading / 浏览器图片懒加载**

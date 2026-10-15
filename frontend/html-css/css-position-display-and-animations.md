@@ -1,14 +1,18 @@
+**CSS Position, Display, and Animations / CSS 定位、显示与动画**
+
+Positioning, stacking contexts, visibility, and compositing answer different questions. A containing block controls coordinates; a stacking context controls paint ordering; a BFC controls flow interactions. **中文：** 定位坐标、堆叠顺序、可见性和格式化上下文不可混为一谈。
+
 # How do the CSS `position` values differ?
 
-**Headline (30s):** Five values. `static` is the default (normal flow, offsets do nothing). `relative` reserves its spot in the flow but lets you offset it visually. `absolute` is removed from the flow, positioned relative to its nearest *positioned* ancestor. `fixed` is removed from the flow, positioned relative to the viewport. `sticky` is a hybrid — it flows normally until it crosses a scroll threshold, then sticks like `fixed`.
+**Headline (30s):** `static` and `relative` stay in flow; `absolute` and `fixed` are out of flow; `sticky` stays in flow and is offset relative to a scrollport while scrolling. Absolute/fixed containing blocks are established by specific ancestor properties, not only by `position`. **中文：** sticky 保持在文档流中；absolute/fixed 的定位包含块也可能由 transform 或 containment 等属性建立。
 
 | Value | In flow? | Positioned relative to | Scrolls with page? |
 |---|---|---|---|
 | `static` (default) | yes | — (offsets ignored) | yes |
-| `relative` | yes (original space reserved) | its own original position | yes |
-| `absolute` | no | nearest positioned ancestor | yes (relative to ancestor) |
-| `fixed` | no | viewport | no |
-| `sticky` | yes → no (after threshold) | scroll container | yes, until sticky |
+| `relative` | yes (original space reserved) | its original position | yes |
+| `absolute` | no | nearest ancestor establishing its absolute-position containing block | follows that containing block |
+| `fixed` | no | nearest fixed-position containing block, usually the viewport | fixed to that containing block |
+| `sticky` | yes | nearest scrollport in the relevant axis, constrained by its containing block | yes; its visual offset changes while sticking |
 
 ## `static` (default)
 
@@ -28,7 +32,7 @@ Element stays in normal flow; space is reserved as if it were not positioned. Of
 
 ## `absolute`
 
-Element removed from normal flow — no space reserved. Positioned relative to its nearest **positioned ancestor** (any ancestor with `position: relative`, `absolute`, `fixed`, or `sticky`). With no positioned ancestor, the initial containing block (usually `<html>`) is used.
+Element removed from normal flow — no space reserved. Its containing block is established by the nearest qualifying ancestor; a non-static `position` value is common, and properties such as `transform` or `contain` can also establish one. Without such an ancestor, the initial containing block is used.
 
 ```css
 .parent { position: relative; } /* creates positioning context */
@@ -37,27 +41,27 @@ Element removed from normal flow — no space reserved. Positioned relative to i
 
 ## `fixed`
 
-Removed from normal flow; positioned relative to the **viewport**. Stays put while the page scrolls.
+Removed from normal flow; positioned relative to a fixed-position containing block, usually the viewport. It stays fixed as the document scrolls only when that viewport is the containing block.
 
 ```css
 .navbar { position: fixed; top: 0; left: 0; right: 0; }
 ```
 
-**Gotcha — `fixed` inside a `transform`ed ancestor:** If any ancestor has `transform`, `filter`, or `perspective` set (even just `translateZ(0)`), the ancestor becomes the new containing block — and your `fixed` element now scrolls with the ancestor instead of the viewport. Easy to miss until you debug why your header isn't sticky on a page with CSS animations.
+**Gotcha — fixed descendants:** Properties including `transform`, `perspective`, `filter`, and some `contain` / `will-change` values can establish a fixed-position containing block. A fixed descendant may then move with that ancestor instead of the viewport.
 
 ## `sticky`
 
-Element starts in normal flow; behaves like `fixed` once scroll crosses a threshold defined by `top`, `right`, `bottom`, or `left`. At least one of those must be set.
+Element remains in normal flow. In an axis where a non-`auto` inset is specified, it is offset relative to the nearest scrollport as scrolling would move it past the sticky view rectangle, subject to its containing block.
 
 ```css
 .header { position: sticky; top: 0; }
 ```
 
-**Gotcha — `overflow: hidden` on an ancestor kills `sticky`:** `sticky` only works if its scroll container has `overflow: visible` (or has no overflow set). A `sticky` child inside `overflow: hidden` silently behaves like `relative`. Check the entire ancestor chain when debugging.
+**Gotcha — overflow ancestors:** An ancestor with `overflow: hidden`, `auto`, or `scroll` can become the nearest scroll container even when it does not visibly scroll. Sticky positioning then uses that ancestor's scrollport; it may not respond to the page's scroll as expected. Inspect the scroll-container chain and the sticky element's containing block.
 
 ## Stacking context and `z-index`
 
-`z-index` controls stacking order along the z-axis, but **only within the same stacking context**. Elements with `position` other than `static` create a stacking context when `z-index` is set; so do elements with `opacity < 1`, `transform`, `filter`, `will-change`, and a few others.
+`z-index` affects stacking order within stacking contexts. Positioned elements with a non-`auto` `z-index` create a stacking context; fixed and sticky boxes create one even with `z-index: auto`. Other triggers include `opacity` below `1`, transforms, filters, `isolation: isolate`, and some containment or `will-change` values.
 
 ```css
 .layer-a { position: relative; z-index: 1; }
@@ -70,22 +74,24 @@ Element starts in normal flow; behaves like `fixed` once scroll crosses a thresh
 
 # When should you use `display: none` vs `visibility: hidden` vs `opacity: 0`?
 
-**Headline (30s):** `display: none` removes the element from layout entirely (causes reflow; screen readers ignore it; can't animate). `visibility: hidden` keeps the layout space but hides the pixels (cheaper — repaint only; screen readers still ignore). `opacity: 0` keeps the layout and pixels "there" but invisible — the element still receives clicks and is still announced by screen readers unless you add `aria-hidden`.
+**Headline (30s):** `display: none` generates no box; `visibility: hidden` keeps layout space but hides the element; `opacity: 0` makes it transparent while it remains in layout and can still receive focus and pointer input. Their accessibility effects differ too. **中文：** 视觉隐藏不一定等于从交互或无障碍树中移除。
 
 | Aspect | `display: none` | `visibility: hidden` | `opacity: 0` |
 |---|---|---|---|
 | **Space in layout** | removed | reserved | reserved |
 | **Receives clicks / events** | no | no | **yes** (add `pointer-events: none` to disable) |
-| **Announced by screen readers** | no | no | often yes (add `aria-hidden`) |
-| **Can animate** | no (all-or-nothing) | yes, on `visibility` | yes, on `opacity` |
-| **Cost when toggled** | reflow + paint | paint only | paint only (composite if promoted) |
-| **Affects children** | children hidden | children inherit (can override with `visibility: visible`) | children inherit |
+| **Accessibility tree** | generally omitted | generally omitted | often still exposed; inspect semantics and assistive technology |
+| **Can animate** | discrete display transitions are possible in supporting browsers | visibility is discrete | opacity is interpolated |
+| **Rendering work** | removes/recreates the box | keeps layout space | keeps the box; compositing is implementation-dependent |
+| **Affects children** | children hidden | children inherit (can override with `visibility: visible`) | group opacity includes descendants; the value is not inherited |
+
+`opacity` is not inherited, but the element and its descendants are composited as one group. A child with `opacity: 1` cannot undo a transparent parent.
 
 ### Decision guide
 
-- Need the element **gone** — no space, no a11y, responsive toggle? → `display: none`.
+- Need the element **gone** from layout and generally from the accessibility tree? → `display: none`.
 - Need to **hide visually but preserve layout** (keep siblings stable)? → `visibility: hidden`.
-- Need to **fade in/out** with a transition? → `opacity: 0` (with `pointer-events: none` when hidden, and `aria-hidden` for a11y).
+- Need to **fade in/out** with a transition? → animate `opacity`; also manage keyboard focus, pointer input, and accessibility semantics while hidden. `pointer-events: none` alone does not remove an element from keyboard focus.
 
 ```css
 .hidden-flow        { display: none; }
@@ -93,7 +99,7 @@ Element starts in normal flow; behaves like `fixed` once scroll crosses a thresh
 .hidden-transparent { opacity: 0; pointer-events: none; }
 ```
 
-**Gotcha — transitioning from `display: none`:** You can't fade in something from `display: none` because the element has no "before" frame to animate from. Either use `visibility` + `opacity`, or use the modern `transition-behavior: allow-discrete` (spec-level; Chromium first, with limited older-browser support at time of writing).
+**Gotcha — discrete display transitions:** `display` is not interpolated like `opacity`; CSS Transitions can opt into a discrete transition with `transition-behavior: allow-discrete` and a starting style in supporting browsers. Check target-browser support before relying on it.
 
 ---
 
@@ -174,19 +180,21 @@ Individual properties:
 .card { transform: translate(10px, 20px) rotate(5deg) scale(1.05); }
 ```
 
-## GPU compositing and hardware acceleration
+## Compositing and `will-change`
 
-Animating `transform` and `opacity` runs on the **compositor** (GPU) instead of triggering layout/paint. `will-change` hints to the browser to pre-promote the element to its own layer. See [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for the full cost ladder.
+Animating `transform` and `opacity` can let an engine update presentation without recalculating layout, but neither property guarantees compositor-only or GPU work. `will-change` is a hint that may have memory and stacking effects; it does not guarantee layer promotion. See [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for typical invalidation paths.
 
 ```css
 .animated {
   will-change: transform;
-  transform: translateZ(0); /* force GPU layer without visible movement */
+  transform: translateZ(0); /* may affect compositing; it does not guarantee GPU acceleration */
 }
 ```
 
-**Gotcha — don't `will-change` everything:** Each hinted element becomes its own compositor layer and eats memory. Use `will-change` only for the element you're actively animating; remove it after the animation is done (via class toggle) if the element persists. Over-hinting can hurt performance on low-end devices.
+**Gotcha — don't `will-change` everything:** Browsers may allocate extra resources or alter stacking behavior for hinted properties. Apply it only after measurement, keep the hinted region small, and remove it when no longer needed.
 
-**Gotcha — `transform: translateZ(0)` is a blunt instrument:** It pre-promotes to a GPU layer but burns memory. `will-change: transform` is the modern, intention-revealing equivalent, but both should only be used when you've measured a performance problem.
+**Gotcha — `transform: translateZ(0)` is not a GPU switch:** It changes transform behavior and may affect stacking/containing blocks; it does not guarantee a faster path. Use neither it nor `will-change` as a substitute for profiling.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for the reflow/repaint cost ladder, [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md) for when GPU acceleration does and doesn't help.
+**See also:** [`2.2 Box Model and BFC`](./box-model-and-bfc.md) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md) for measurement guidance.
+
+**Specifications / 规范：** [CSS Positioned Layout](https://www.w3.org/TR/css-position-3/), [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color opacity](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transforms](https://www.w3.org/TR/css-transforms-1/), [CSS Transitions](https://www.w3.org/TR/css-transitions-2/), [W3C WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/).
