@@ -16,6 +16,9 @@ This map links to the canonical notes for an interview route through AI applicat
 
 1. [Scope and closure / 作用域与闭包](../frontend/javascript/scope-and-closure.md) — revisit JavaScript variable lookup and captured bindings.
 2. [HTTP protocols and WebSockets / HTTP 协议与 WebSocket](../engineering-foundations/networking/http-protocols-and-websockets.md) — connect web application behavior to its network protocols.
+3. [Processes, Threads, and Concurrency / 进程、线程与并发](../engineering-foundations/operating-systems/processes-threads-and-concurrency.md) — distinguish process isolation, shared thread state, and concurrency.
+4. [Database Fundamentals / 数据库基础](../engineering-foundations/databases/database-fundamentals.md) — review constraints, transaction boundaries, indexes, and recovery.
+5. [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../engineering-foundations/reliability/api-reliability-and-async-delivery.md) — connect deadlines and retries with idempotency, backpressure, and queue acknowledgements.
 
 ## Domain maps / 领域地图
 

@@ -1184,6 +1184,8 @@ There is no universal spend threshold for switching to self-hosting. Estimate wi
 - [Context Engineering Principles / 上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99) covers context budgets and caching.
 - [LLM Evaluation Methods / 大语言模型评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95) covers offline and production evaluation.
 - [AI Safety in Production / 生产环境中的 AI 安全](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8) covers runtime boundaries and controls.
+- [Database Fundamentals / 数据库基础](../../engineering-foundations/databases/database-fundamentals.md) covers durable application state, keys, index plans, transactions, isolation, and WAL.
+- [API Reliability and Async Delivery / API 可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) covers deadlines, unknown outcomes, retry idempotency, bounded work, and queues for tool and service calls.
 
 #### Sources / 来源
 

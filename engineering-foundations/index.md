@@ -8,6 +8,18 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 - [HTTP Protocols and WebSockets / HTTP协议与WebSocket](networking/http-protocols-and-websockets.md)
 
+### Operating systems / 操作系统
+
+- [Processes, Threads, and Concurrency / 进程、线程与并发](operating-systems/processes-threads-and-concurrency.md)
+
+### Databases / 数据库
+
+- [Database Fundamentals / 数据库基础](databases/database-fundamentals.md)
+
+### Reliability and asynchronous delivery / 可靠性与异步交付
+
+- [API Reliability and Asynchronous Delivery / API可靠性与异步交付](reliability/api-reliability-and-async-delivery.md)
+
 ### Security / 安全
 
 - [Web Security and Authentication / Web安全与身份认证](security/web-security-and-authentication.md)
