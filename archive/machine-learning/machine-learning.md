@@ -1,292 +1,118 @@
-## Decision Tree
+# Core Machine Learning Notes / 机器学习核心笔记
 
-A flowchart-like model that splits data into subgroups using **decision nodes** (conditional statements) and ends with **leaf nodes** (final predictions).
+> Key terms / 关键词: decision tree 决策树, boosting 提升法, residual 残差, regularization 正则化, feature selection 特征选择. A model description is a mechanism, not a guarantee of accuracy or generalization.
 
-### Key Components:
+模型要点：树分裂看加权子节点损失；AdaBoost 调整样本权重以关注误分，梯度提升沿选定损失的负梯度逐轮更新；Ridge、Lasso 和 Elastic Net 改变系数惩罚，而 XGBoost 参数还分别控制树结构、迭代步长、样本/特征采样和叶权重正则化。
 
-- **Root Node**: Topmost node representing the entire dataset.
-- **Decision Node**: Splits data based on a condition (e.g., "Age > 30?").
-- **Leaf Node**: Final prediction (classification) or value (regression).
+## Decision Trees / 决策树
 
-### Splitting Data with Gini Impurity
+A **decision tree** repeatedly splits observations by feature conditions. Internal nodes apply conditions; leaf nodes return a class or a numeric prediction. A shallow one-split tree is a **decision stump** and can serve as a base learner in an ensemble.
 
-**Gini Impurity** measures how "mixed" a group of data is. It answers: _“What’s the probability of misclassifying a random data point?”_
+For a classification node with class proportions `p_k`, Gini impurity is:
 
-#### Formula:
+```text
+Gini = 1 - Σ_k p_k²
+```
 
-$$
-\text{Gini} = 1 - \sum\_{i=1}^{n} (p_i)^2
-$$
+This equals the probability that two labels sampled independently from the node's class distribution differ. It is zero for a pure node and, for two equally common classes, 0.5. A split is evaluated by the weighted impurity of its child nodes relative to the parent; comparing an unweighted child Gini alone can favor an unhelpful split.
 
-- \( p_i \): Fraction of data points in class \( i \).
-- **Lower Gini** = More homogeneity → Better split.
+Example: with three red and one blue observation, `Gini = 1 - (3/4)² - (1/4)² = 0.375`.
 
-#### Example:
+For **regression trees**, a common criterion is within-node squared error. For observations `y_i` in a node with mean prediction `ȳ`, the mean squared error is:
 
-- 3 red marbles, 1 blue marble:
-  $$
-  \text{Gini} = 1 - \left(\frac{3}{4}\right)^2 - \left(\frac{1}{4}\right)^2 = 0.375
-  $$
+```text
+MSE = (1/n) Σ_i (y_i - ȳ)²
+```
 
----
+Candidate splits reduce the weighted sum of child errors. Depth limits, minimum leaf sizes, and pruning can control model complexity; their settings depend on the data and validation design.
 
-## Forest of Stumps
+## AdaBoost and Stumps / AdaBoost 与树桩
 
-A collection of **stumps** (1-level decision trees). Stumps are "weak learners" (slightly better than random guessing).
+AdaBoost fits weak classifiers sequentially while changing the training weights: observations that the current classifier gets wrong receive more weight, and each classifier's vote depends on its weighted error. A stump is one possible base learner; a sequence of boosted stumps is not the same method as a random forest.
 
----
+For the classic binary AdaBoost form with labels and predictions in `{-1, +1}`, let `w_i` be normalized example weights and `ε_t` the weighted error of learner `h_t`. When `0 < ε_t < 0.5`:
 
-## AdaBoost
+```text
+α_t = 1/2 ln((1 - ε_t) / ε_t)
+w_i ← w_i exp(-α_t y_i h_t(x_i))   # normalize the weights after the update
+H(x) = sign(Σ_t α_t h_t(x))
+```
 
-- **Key Idea**: Combine multiple weak learners (stumps) into a strong model.
-- **Process**:
-  1. Assign equal weights to all data points.
-  2. Train a stump; increase weights for misclassified points.
-  3. Repeat, focusing on errors from previous stumps.
-  4. Final prediction: Weighted vote of all stumps.
+The update emphasizes mistakes while the final prediction is a weighted vote. Multiclass and other AdaBoost variants use different formulas.
 
----
+## Gradient Boosting / 梯度提升
 
-## Regression Trees
+Gradient boosting builds an additive model one learner at a time. At each round, the next learner approximates the negative gradient of the chosen loss with respect to the current predictions (often called **pseudo-residuals**). With squared-error loss, this is proportional to the ordinary residual `y - prediction`; for other losses it is generally not the raw residual.
 
-Predicts **continuous values** (e.g., house prices).
+```text
+F_m(x) = F_(m-1)(x) + η · ρ_m · h_m(x)
+```
 
-- **Splitting Criteria**: Minimize **Mean Squared Error (MSE)**.
-  $$
-  \text{MSE} = \frac{1}{n} \sum\_{i=1}^{n} (y_i - \hat{y}\_i)^2
-  $$
-- **Avoid Overfitting**:
-  - Set minimum samples to split (e.g., 20 observations).
-  - Limit tree depth.
+`h_m` is the new learner, `η` is a shrinkage or learning-rate factor, and `ρ_m` is a step size chosen for the loss. A smaller `η` often requires more rounds, but neither setting guarantees better generalization.
 
----
+Squared-error example for house prices: start with the training-set mean, `$300k`. If a house's actual price is `$350k`, its residual is `$50k`. If the fitted tree predicts `$50k` for that region and the step size is `0.1`, the updated prediction is `$300k + 0.1 × $50k = $305k`. Later rounds fit the remaining loss gradient.
 
-## Gradient Boosting
+Shallow trees are common base learners, but depth is a tuning choice. Validation, early stopping, and regularization can help control overfitting; a validation set should remain separate from final evaluation.
 
-**Gradient Boosting** builds an ensemble of **weak learners** (usually shallow trees) sequentially, where each new tree corrects errors from the previous ones using gradient descent.
+## Ridge, Lasso, and Elastic Net / Ridge、Lasso 与 Elastic Net
 
-### How It Works:
+For linear regression with an intercept `β₀`, a common squared-error objective is:
 
-1. **Initial Prediction**:
+```text
+Ridge: min  (1/(2n)) Σ_i (y_i - β₀ - x_iᵀβ)² + λ Σ_j β_j²
+Lasso: min  (1/(2n)) Σ_i (y_i - β₀ - x_iᵀβ)² + λ Σ_j |β_j|
+```
 
-   - Start with a simple guess (e.g., mean of target values for regression).
+The intercept is usually left unpenalized. `λ` controls the penalty; predictors are commonly standardized so the penalty treats their scales comparably.
 
-2. **Calculate Residuals**:
+- **Ridge / L2** shrinks coefficients and usually keeps them nonzero; it does not perform sparse feature selection. It can stabilize estimates when predictors are correlated.
+- **Lasso / L1** can set coefficients exactly to zero, producing a sparse model. With correlated predictors, which variables remain can be unstable; a selected feature is not thereby shown to be causal or uniquely important.
+- **Elastic Net** combines L1 and L2 penalties. It can retain groups of correlated predictors while also allowing sparsity.
 
-   - For each data point:
-     $$
-     \text{Residual} = \text{Actual Value} - \text{Predicted Value}
-     $$
+Choose penalty strength using validation inside the training process, such as cross-validation. For temporal data, use a split that respects time. Too much regularization can underfit; too little can overfit, but the useful range depends on the data and objective. Lasso selection is a modeling result, not an automatic ranking of the most important variables.
 
-3. **Train a Weak Learner**:
+| Aspect / 方面 | Ridge (L2) | Lasso (L1) |
+| --- | --- | --- |
+| Coefficients / 系数 | Shrinks coefficients; generally not sparse | May set some coefficients to zero |
+| Correlated predictors / 相关特征 | Often distributes weight across them | May select one or a subset unstably |
+| Scaling / 尺度 | Standardize predictors for comparable penalties | Standardize predictors for comparable penalties |
 
-   - Fit a tree to predict the residuals (errors).
+## XGBoost / 极端梯度提升
 
-4. **Update Predictions**:
+XGBoost is a scalable system for regularized tree boosting. At round `t`, it adds a tree `f_t` and approximately minimizes a second-order expansion of the training objective:
 
-   - Add the new tree’s predictions to the previous model’s output, scaled by a **learning rate** (e.g., 0.1).
-     $$
-     \text{New Prediction} = \text{Old Prediction} + \lambda \times \text{Tree Prediction}
-     $$
+```text
+Obj^(t) ≈ Σ_i [g_i f_t(x_i) + 1/2 h_i f_t(x_i)²]
+          + γT + 1/2 reg_lambda Σ_j w_j² + reg_alpha Σ_j |w_j|
+```
 
-5. **Repeat**:
-   - Iterate steps 2–4 for a fixed number of trees or until errors stop improving.
+Here `g_i` and `h_i` are the first and second derivatives of the loss at the current prediction; `T` is the number of leaves and `w_j` is a leaf score. The complexity terms penalize additional leaves and large leaf scores. This is more precise than saying every new tree simply fits raw residuals: that description is exact only for particular losses and updates.
 
-### Key Features:
+The original system paper describes sparsity-aware split finding for sparse inputs, approximate split search, and parallel work over features. Missing values are handled through learned default split directions; this is not general-purpose imputation, and data meaning still determines whether a missing value is informative.
 
-- **Loss Function**: Minimized via gradient descent (e.g., MSE for regression, log-loss for classification).
-- **Learning Rate (\(\lambda\))**: Controls step size to prevent overfitting (smaller \(\lambda\) = more trees needed).
-- **Tree Depth**: Typically shallow (3–6 levels) to avoid overfitting.
+Important parameters change different parts of the model; the meanings below follow XGBoost 3.4.2 documentation, not fixed tuning advice:
 
-### Example:
+| Parameter | Meaning |
+| --- | --- |
+| `objective` | Selects the learning task and loss, such as squared-error regression or a classification objective. |
+| `learning_rate` (`eta`) | Shrinks each boosting update, making additions more conservative; smaller steps often need more rounds. |
+| `max_depth` | Limits tree depth; deeper trees are more complex and can overfit. |
+| `n_estimators` | In the scikit-learn wrapper, the number of boosted trees/rounds. |
+| `subsample` | Fraction of training rows sampled for each boosting iteration. |
+| `colsample_bytree` | Fraction of feature columns sampled when constructing each tree. |
+| `reg_lambda` (`lambda`) | L2 penalty on leaf weights in tree boosting. |
+| `reg_alpha` (`alpha`) | L1 penalty on leaf weights in tree boosting. |
 
-Predict house prices:
+These effects interact, so the meanings are not a recipe for choosing values. Feature-importance summaries describe model use under a chosen metric; they do not show causal impact.
 
-1. Initial prediction: Average price = $300k.
-2. Residuals: Actual prices - $300k.
-3. Train a tree to predict residuals (e.g., houses with >3 bedrooms have +$50k residuals).
-4. Update predictions: $300k + (0.1 × $50k) = $305k.
-5. Repeat with new residuals.
+Tree boosting is useful to evaluate when tabular data may contain nonlinear effects or interactions. Compare it with a simple baseline on an appropriate validation set; speed and accuracy depend on dataset, features, hardware, objective, and tuning.
 
-### Advantages:
+## Sources / 参考资料
 
-- Handles complex patterns.
-- Flexible (works with any differentiable loss function).
-- Often achieves high accuracy.
+- Breiman, Friedman, Olshen, and Stone, *Classification and Regression Trees* (1984), the foundational CART treatment of impurity-based tree splitting.
+- Freund and Schapire (1997), [A Decision-Theoretic Generalization of On-Line Learning and an Application to Boosting](https://doi.org/10.1006/jcss.1997.1504).
+- Friedman (2001), [Greedy Function Approximation: A Gradient Boosting Machine](https://doi.org/10.1214/aos/1013203451).
+- Hoerl and Kennard (1970), [Ridge Regression: Biased Estimation for Nonorthogonal Problems](https://doi.org/10.1080/00401706.1970.10488634); Tibshirani (1996), [Regression Shrinkage and Selection via the Lasso](https://doi.org/10.1111/j.2517-6161.1996.tb02080.x); Zou and Hastie (2005), [Regularization and Variable Selection via the Elastic Net](https://doi.org/10.1111/j.1467-9868.2005.00503.x).
+- Chen and Guestrin (2016), [XGBoost: A Scalable Tree Boosting System](https://doi.org/10.1145/2939672.2939785), for the second-order tree objective. For API parameter meanings, see the [XGBoost 3.4.2 parameter reference](https://xgboost.readthedocs.io/en/stable/parameter.html) and its [scikit-learn API](https://xgboost.readthedocs.io/en/stable/python/python_api.html#xgboost.XGBRegressor).
 
-### vs. AdaBoost:
-
-- AdaBoost adjusts weights of misclassified points; Gradient Boosting fits trees to residuals.
-- Gradient Boosting uses **arbitrary loss functions**; AdaBoost uses exponential loss.
-
----
-
-## Regularization: Ridge vs. Lasso
-
-**Regularization** prevents overfitting in regression models by adding a penalty term to the loss function. This shrinks coefficients (slopes) toward zero, trading slight bias for lower variance.
-
----
-
-## 1. **Ridge Regression (L2 Regularization)**
-
-- **Goal**: Reduce overfitting by shrinking coefficients, but not to zero.
-- **Penalty Term**: Adds the **squared magnitude** of coefficients to the loss function.
-  $$
-  \text{Loss} = \text{MSE} + \lambda \sum\_{i=1}^{n} \beta_i^2
-  $$
-  - \(\lambda\) (lambda): Controls regularization strength (higher \(\lambda\) → more shrinkage).
-  - \(\beta_i\): Coefficients of the model.
-
-### Key Features:
-
-- **All features stay in the model** (no feature selection).
-- Works well when predictors are **correlated** (multicollinearity).
-- Sensitive to feature scaling—**standardize data first**.
-
-### Use Case:
-
-Predict house prices using all features (e.g., size, bedrooms, age) where all variables are relevant.
-
----
-
-## 2. **Lasso Regression (L1 Regularization)**
-
-- **Goal**: Reduce overfitting + **automatically select important features** by shrinking some coefficients to zero.
-- **Penalty Term**: Adds the **absolute magnitude** of coefficients to the loss function.
-  $$
-  \text{Loss} = \text{MSE} + \lambda \sum\_{i=1}^{n} |\beta_i|
-  $$
-
-### Key Features:
-
-- **Sparsity**: Forces some coefficients to **exactly zero**, performing feature selection.
-- Useful for high-dimensional data (many features, few observations).
-- Also requires **standardization**.
-
-### Use Case:
-
-Predicting disease risk using 100+ genetic markers; Lasso identifies the 5 most impactful markers.
-
----
-
-## Comparison
-
-| **Aspect**           | **Ridge (L2)**                          | **Lasso (L1)**                           |
-| -------------------- | --------------------------------------- | ---------------------------------------- |
-| **Coefficients**     | Shrinks, but never zero                 | Shrinks some to zero (sparse model)      |
-| **Use Case**         | Multicollinearity, all features matter  | Feature selection, high-dimensional data |
-| **Interpretability** | Less interpretable (keeps all features) | More interpretable (selects features)    |
-
----
-
-## Choosing \(\lambda\)
-
-- **Cross-validation** (e.g., grid search) is used to find the optimal \(\lambda\).
-- Too high \(\lambda\) → **underfitting** (overshrinking coefficients).
-- Too low \(\lambda\) → **overfitting**.
-
----
-
-## Intuition with Analogy
-
-Imagine fitting a model with a "budget" for coefficients:
-
-- **Ridge**: Spreads the budget evenly, keeping all features but making them smaller.
-- **Lasso**: Spends the budget on the most important features, ignoring the rest.
-
----
-
-## Elastic Net (Bonus)
-
-Combines **L1 + L2 penalties** for a balance between Ridge and Lasso. Useful when features are correlated _and_ some need to be eliminated.
-
----
-
-## XGBoost (Extreme Gradient Boosting)
-
-**XGBoost** is a powerful, optimized version of gradient boosting designed for speed and performance. It’s widely used in competitions (like Kaggle) and industry for structured data problems.
-
----
-
-### Key Ideas
-
-1. **Boosting**: Builds trees **sequentially**; each new tree corrects errors from previous trees.
-2. **Regularization**: Adds penalties (L1/L2) to avoid overfitting.
-3. **Efficiency**: Handles missing data, parallel processing, and smart tree-building.
-
----
-
-### How It Works
-
-1. **Start Simple**: Begin with an initial prediction (e.g., mean value for regression).
-2. **Calculate Residuals**: Compute errors (actual – predicted) for each data point.
-3. **Build Trees**:
-   - Train a weak tree to predict residuals (errors).
-   - Trees are shallow (e.g., depth 3–6) to prevent overfitting.
-4. **Update Model**:
-   - Combine the new tree’s predictions with previous ones, scaled by a **learning rate** (e.g., 0.1).
-   - Formula:
-     $$
-     \text{New Prediction} = \text{Old Prediction} + \lambda \times \text{Tree Prediction}
-     $$
-5. **Repeat**: Keep adding trees until no improvement (or set number of rounds).
-
----
-
-### Key Features
-
-- **Regularization**:
-  - **L1 (Lasso)** and **L2 (Ridge)** penalties shrink coefficients.
-  - Loss Function Example (Simplified):
-    $$
-    \text{Loss} = \text{MSE} + \lambda \sum \beta^2 + \alpha \sum |\beta|
-    $$
-- **Handles Missing Data**: Automatically learns to impute missing values.
-- **Parallel Processing**: Builds trees faster using multiple CPU cores.
-- **Early Stopping**: Stops training if validation score doesn’t improve.
-- **Custom Objectives**: Works for regression, classification, ranking, etc.
-
----
-
-### Important Hyperparameters
-
-| **Parameter**      | **What It Does**                               | **Typical Value** |
-| ------------------ | ---------------------------------------------- | ----------------- |
-| `learning_rate`    | Scales tree contributions (small = more trees) | 0.01–0.3          |
-| `max_depth`        | Maximum tree depth                             | 3–6               |
-| `n_estimators`     | Number of trees                                | 100–1000          |
-| `subsample`        | % of data used per tree (prevents overfitting) | 0.8–1.0           |
-| `colsample_bytree` | % of features used per tree                    | 0.8–1.0           |
-| `lambda` (L2)      | Shrinks coefficients                           | 0–1               |
-| `alpha` (L1)       | Forces sparsity (some coefficients to zero)    | 0–1               |
-
----
-
-## Advantages Over Classic Gradient Boosting
-
-1. **Faster Training**: Optimized code + parallel processing.
-2. **Built-in Regularization**: Less prone to overfitting.
-3. **Handles Missing Data**: No need to preprocess gaps.
-4. **Flexible**: Custom objectives (e.g., tweak for rare classes).
-
----
-
-### When to Use XGBoost
-
-- **Structured Data**: Tables with rows (samples) and columns (features).
-- **Medium/Large Datasets**: Efficient even with 100k+ rows.
-- **Need for Speed**: Faster than most other boosting tools.
-- **Interpretability**: Feature importance scores show which variables matter.
-
----
-
-### Example Analogy
-
-Think of XGBoost as a **team of experts** solving a puzzle:
-
-1. The first expert makes a guess.
-2. The next expert focuses on the mistakes the first one made.
-3. Repeat, with each expert correcting residual errors.
-4. The final answer combines all experts’ opinions, but each contributes a small amount (learning rate).
-
----
+Source checks: the cited original papers and author/publisher records were reviewed 2026-10-15. General algorithm descriptions above do not claim a result for any particular dataset or implementation version.

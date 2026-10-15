@@ -1,6 +1,10 @@
-# SwiftUI Notes
+# Swift and SwiftUI Notes / Swift 与 SwiftUI 笔记
 
-## Declaring constant and variables
+Core idea / 核心概念: Swift value types express independent values; class instances carry shared reference identity. SwiftUI view values describe a hierarchy, while state and bindings connect that hierarchy to mutable data. Property-wrapper choice depends on who owns the data and which observation system the model uses.
+
+核心要点：Swift struct 采用值语义，class 实例则可共享引用身份；SwiftUI 的 view 值可以重建，而状态由 view identity 管理。`@State` 持有本地状态，`Binding` 让子视图编辑同一数据源；`ObservableObject` 和新 Observation 系统各有匹配的所有权与环境注入方式。
+
+## Constants and variables / 常量与变量
 
 ```swift
 let a = 0 //this is a constant
@@ -9,9 +13,7 @@ a = 2 // report error, constant cannot be re-assigned values
 b = 2 // valid
 ```
 
-## Functions
-
-Certainly! Here's a structured note on Swift functions, drawing comparisons with Java, React (JavaScript/TypeScript), and Python where relevant.
+## Functions / 函数
 
 ### Swift Functions Overview
 
@@ -29,18 +31,18 @@ func functionName(parameter1: Type, parameter2: Type) -> ReturnType {
 **Parameters:**
 
 - Parameters are strongly typed, just like in Java and TypeScript.
-- Each parameter has both a name for internal use within the function and an argument label for use when calling the function, which can be omitted with `_`.
+- A parameter can have an internal name and a distinct call-site argument label; `_` omits the external label.
 
 ```swift
-func exampleWithParams(internalName externalLabel: Type, _ noLabel: Type) {
+func exampleWithParams(argumentLabel parameterName: Type, _ noLabel: Type) {
     // function body
 }
 ```
 
 **Argument Labels:**
 
-- Swift uses argument labels to give context to the arguments, making function calls read like sentences.
-- This is unique to Swift, as JavaScript/TypeScript, Java, and Python typically do not use argument labels.
+- The external/call-site argument label comes first; the internal parameter name used in the function body follows it. Swift uses labels to give context to arguments, making calls read like sentences.
+- Argument labels are part of Swift call syntax; other languages provide different forms of named arguments.
 
 **Omitting Argument Labels:**
 
@@ -95,7 +97,7 @@ func sum(_ numbers: Int...) -> Int {
 **In-Out Parameters:**
 
 - Swift functions can also have in-out parameters, which allows them to modify the values of passed-in variables.
-- This is somewhat akin to passing an object or array in JavaScript/TypeScript or Python, where the changes are reflected outside the function.
+- An `inout` argument must be a variable and is written with `&` at the call site. Swift describes it as a value copied in, modified by the function, and copied back out; it is not an analogy for mutating a reference-type object.
 
 ```swift
 func swapTwoInts(_ a: inout Int, _ b: inout Int) {
@@ -146,7 +148,7 @@ struct Calculator {
 
 In this example, `addTwoNumbers` does not change the value of any properties of `Calculator`. It simply takes two numbers, adds them, and returns the result.
 
-### Mutating Functions
+### Mutating methods / 可变方法
 
 Mutating functions are explicitly marked with the `mutating` keyword, which allows them to modify the properties of the instance on which they're called. This is necessary because, by default, the instance methods of value types cannot modify the properties of their instance.
 
@@ -171,9 +173,9 @@ var somePoint = Point(x: 1, y: 1)
 somePoint.moveBy(x: 2, y: 3) // somePoint is now (3, 4)
 ```
 
-The `mutating` keyword tells the compiler that this method is going to modify the instance it belongs to. Without the `mutating` keyword, you would not be able to compile this code because structs are immutable by default.
+For a value type, `mutating` marks an instance method that changes `self` or one of its stored properties. Without the keyword, this method cannot mutate the value.
 
-## Struct vs Classes
+## Structures and classes / 结构体与类
 
 In Swift, both classes and structs are building blocks of your code. They allow you to create complex data types by combining properties and methods. Since you're familiar with Java, you'll recognize many OOP principles in Swift classes, but there are key differences and unique features in Swift, particularly when it comes to structs.
 
@@ -216,9 +218,9 @@ dog.makeSound() // Prints "Woof"
 
 Structs in Swift are quite different from what you might expect if you're coming from a Java background:
 
-- **Value Types**: Structs are value types, which means they are copied when they are passed around in your code, and they do not use reference counting.
+- **Value Types**: Structs have value semantics: assignment or argument passing behaves as an independent value. The standard library can use copy-on-write storage, so the semantic copy does not mean every value is physically copied immediately.
 - **No Inheritance**: Structs do not support inheritance. They cannot inherit from another struct or class.
-- **Memberwise Initializers**: Swift structs automatically receive a memberwise initializer if you do not provide one, which initializes new struct instances with the default values you provide.
+- **Memberwise Initializers**: A struct receives a synthesized memberwise initializer when it defines no custom initializer in its declaration. A custom initializer can change which synthesized initializers are available.
 - **Mutability Control**: If an instance of a struct is constant (`let`), all of its properties are also constant, regardless of how they were declared. Properties of a struct instance can only be changed if the instance itself is variable (`var`).
 
 ```swift
@@ -237,27 +239,100 @@ print(p2.x) // Prints "30"
 
 ### Choosing Between Classes and Structs
 
-In Swift, structs are preferred over classes in many cases due to their simplicity and performance characteristics. Use a class when you need to control the identity of the data you're modeling (for example, if you need to compare instances, manage shared state, or use inheritance). Otherwise, default to using a struct.
+Swift documentation recommends considering a struct by default when its value semantics fit the model. Use a class when shared identity, inheritance, or reference semantics are part of the design; choose based on behavior rather than a blanket performance rule.
 
 Keep in mind the following considerations:
 
-- Use a class if you need to control the identity of your object or if your object's lifecycle needs to be managed.
-- Use structs for small data values that will be copied rather than shared.
-- Structs are preferable when they are going to be passed around a lot in your code, and you want to ensure they remain immutable.
+- Use a class when several parts of a program must observe the same instance identity or a class hierarchy is required.
+- Use a struct for independent values; declare an instance with `let` when its stored properties should not be mutated.
 
 Swift also includes features like protocols and extensions, which can provide some of the functionality of inheritance for structs, allowing you to write very flexible and reusable code without the overhead that can come with classes.
 
-## Image Literal
+## SwiftUI state and data flow / SwiftUI 状态与数据流
 
-_Image literal_ which is a convenient way to insert images directly into your code.
+SwiftUI view structs are values that the framework may recreate as inputs change. SwiftUI-managed state is stored by **view identity**, so its lifetime follows the identity of the view in the hierarchy, not one particular struct value. Keep local view state private and put it at the highest view that owns it. When a view's identity changes, its state storage is recreated.
+
+`@State` owns a value for a view hierarchy; `Binding` is a read/write connection to state owned elsewhere. Passing a plain property gives a child read-only input, while `$property` passes a binding that lets the child edit the same source of truth:
+
+```swift
+struct CounterView: View {
+    @State private var count = 0
+
+    var body: some View {
+        VStack {
+            Text("Count: \(count)")
+            CounterButton(count: $count)
+        }
+    }
+}
+
+struct CounterButton: View {
+    @Binding var count: Int
+
+    var body: some View {
+        Button("Add one") { count += 1 }
+    }
+}
+```
+
+For the older `ObservableObject` model system, use `@StateObject` where a view creates and owns a reference model for its identity, and pass that model to child views with `@ObservedObject`. The child observes an input; it should not create the owned model itself. `@EnvironmentObject` is another legacy `ObservableObject` path for an ancestor-supplied model; the ancestor must inject it with `.environmentObject(model)`.
+
+```swift
+final class LegacyModel: ObservableObject {
+    @Published var title = "Sample"
+}
+
+struct LegacyOwner: View {
+    @StateObject private var model = LegacyModel()
+
+    var body: some View {
+        LegacyChild(model: model)
+    }
+}
+
+struct LegacyChild: View {
+    @ObservedObject var model: LegacyModel
+
+    var body: some View { Text(model.title) }
+}
+```
+
+Starting with iOS 17, iPadOS 17, macOS 14, tvOS 17, and watchOS 10, SwiftUI supports the Observation system. An `@Observable` reference model can be owned in `@State`, injected with `.environment(model)`, and read using `@Environment(Model.self)`. SwiftUI tracks observable properties that a view's body reads; use `@EnvironmentObject`/`@ObservedObject` for `ObservableObject` models, not as interchangeable wrappers for every reference type.
+
+```swift
+import Observation
+import SwiftUI
+
+@Observable final class ModernModel {
+    var title = "Sample"
+}
+
+struct ModernOwner: View {
+    @State private var model = ModernModel()
+
+    var body: some View {
+        ModernChild().environment(model)
+    }
+}
+
+struct ModernChild: View {
+    @Environment(ModernModel.self) private var model
+
+    var body: some View { Text(model.title) }
+}
+```
+
+If an `@Environment(Model.self)` or `@EnvironmentObject` lookup has no matching ancestor value, the view fails at runtime. Add the matching environment modifier at the appropriate app, scene, or parent boundary.
+
+## UIKit image literals and SwiftUI images / UIKit 图像字面量与 SwiftUI 图像
+
+UIKit provides `UIImage(imageLiteralResourceName:)`, which Xcode has historically exposed through `#imageLiteral` completion. The result is a UIKit `UIImage`, not a SwiftUI `Image` view. For SwiftUI, store images in an asset catalog and display them with `Image("assetName")`.
 
 ### Key Points
 
-- **Usage**: Image literals are used for inserting image references in Swift code without the need for explicit string-based filenames.
-- **React Comparison**: This is somewhat similar to using `<Image src={ImportedImage}>` in React, where `ImportedImage` would typically be imported at the top of your file.
-- **Array of Image Literals**: In Swift, you can store multiple image literals in an array, which allows for a collection of images to be handled programmatically.
+- The resource name resolves to an image file or asset in the app bundle; using a literal is optional.
 
-### How to Use Image Literal in Swift
+### Xcode image-literal example / Xcode 字面量示例
 
 To use an image literal in Xcode:
 
@@ -268,18 +343,12 @@ To use an image literal in Xcode:
 ### Example
 
 ```swift
+import UIKit
+
 let image: UIImage = #imageLiteral(resourceName: "your_image_name")
 ```
 
-In the above code, `"your_image_name"` is the name of the image in your asset catalog. At runtime, the `UIImage` object will be created with the specified image.
-
-### Array Example
-
-```swift
-let images: [UIImage] = [#imageLiteral(resourceName: "image1"), #imageLiteral(resourceName: "image2"), #imageLiteral(resourceName: "image3")]
-```
-
-Here, `images` is an array containing three image literals, which can be iterated over or accessed via their index.
+`UIImage` belongs to UIKit. The literal's resource name must resolve in the target's resources; for a SwiftUI `Image` view, prefer `Image("your_image_name")` and verify the corresponding image set is included in the target.
 
 ## String Interpolation
 
@@ -372,7 +441,7 @@ repeat {
 
 Swift also provides control transfer statements that change the order in which your code is executed, by transferring control from one piece of code to another. Here are a few:
 
-- `break` is used to end the execution of a loop, switch, or conditional statement prematurely.
+- `break` ends the current loop or switch early.
 - `continue` is used within a loop to stop the current iteration and start the next iteration from the beginning.
 
 ```swift
@@ -393,26 +462,22 @@ for i in 1...10 {
 }
 ```
 
-## Xcode Interface Builder Tips
+## Xcode editors: Interface Builder and SwiftUI / Xcode 编辑器：Interface Builder 与 SwiftUI
 
-### Using the '+' Button for Attributes and Components
+### Interface Builder (storyboards and XIBs) / Interface Builder（storyboard 与 XIB）
 
-- The '+' button located in the top-right corner of the Xcode interface is a versatile tool.
-- It allows you to add new components to your storyboard or Swift UI canvas.
-- You can also add various attributes to your existing components through this menu.
+- In storyboard or XIB editing, Xcode's library controls let you add UIKit/AppKit views and related objects. The control's position and appearance vary across Xcode versions.
 
 ### Embedding Components in Stack Views
 
-- Right-click on any UI component within the Interface Builder.
-- Choose the option to 'Embed in' from the context menu.
-- You can select between VStack (Vertical Stack), HStack (Horizontal Stack), or ZStack (Depth Stack) depending on your layout needs.
+- UIKit storyboards use `UIStackView` for arranged subviews. SwiftUI has separate `VStack`, `HStack`, and `ZStack` view types, authored in Swift code and optionally shown in the SwiftUI canvas; they are not Interface Builder stack views.
 
 ## SwiftUI Image Scaling
 
 ### Making an Image Scalable
 
 - Use `.resizable()` modifier to make images scalable within SwiftUI.
-- This can be done by manually typing it or by dragging the attribute from the 'Modifiers' section in the '+' add bar.
+- The modifier can be written in code; Xcode's canvas/editor controls vary between releases.
 
 ### Maintaining Aspect Ratio
 
@@ -431,7 +496,7 @@ Image("diamond")
 #### Example for a Scalable Avatar Image
 
 ```swift
-Image("YourImageName in Assets")
+Image("avatar")
     .resizable()
     .aspectRatio(contentMode: .fit)
     .frame(height: 150)
@@ -441,10 +506,9 @@ Image("YourImageName in Assets")
     )
 ```
 
-### Understanding Predefined Values
+### Leading-dot member shorthand / 点号成员简写
 
-- Values that start with a '.' (dot) are predefined in SwiftUI, such as some fonts and colors.
-- These provide a convenient way to use standard system values without memorizing specific parameters.
+Swift's leading-dot syntax is an implicit member expression: the surrounding type context tells the compiler which static member to use. For example, `.blue` is shorthand for `Color.blue` when a `Color` is expected, and `.largeTitle` is shorthand for `Font.largeTitle` in a font position. A user-defined type can provide static members usable the same way; leading-dot values are not limited to predefined SwiftUI members.
 
 ## Setting a Full-Screen Background Color in SwiftUI
 
@@ -452,22 +516,22 @@ To have a background color that fills the entire screen in SwiftUI, including th
 
 ```swift
 ZStack {
-    Color(.blue).ignoresSafeArea()
+    Color.blue.ignoresSafeArea()
     // Your other components here
 }
 ```
 
-> `edgesIgnoringSafeArea(_:)` was deprecated in iOS 16. Use `ignoresSafeArea(_:edges:)` instead.
+`edgesIgnoringSafeArea(_:)` is deprecated; use `ignoresSafeArea(_:edges:)`. `Color.blue.ignoresSafeArea()` extends the background view. Apply the modifier to the view that should expand; a surrounding container may affect the resulting layout.
 
 This code snippet places a `Color` view as the base layer of a `ZStack` and extends it beyond the safe area to fill the entire screen.
 
-## Accessing the `info.plist` File in the Latest Version of Xcode
+## Editing app information in Xcode / 在 Xcode 中编辑应用信息
 
-In newer versions of Xcode, the `info.plist` file might not be immediately visible if no changes have been made to it yet. To find and modify the `info.plist`:
+Xcode commonly generates the bundle's information property list from target build settings, so an editable `Info.plist` file may not exist in the project. To add or change an app information value:
 
-1. Double-click on the project name in the Xcode navigator (look for the app icon, not the folder icon).
-2. In the main area on the right, click on the "Info" tab.
-3. To add a new property, click on the "+" button next to any existing property.
+1. Select the project in the Project navigator, then select the target.
+2. Use the target's **Info** pane to edit supported property-list values; Xcode maps these to build settings or a generated plist.
+3. If the target requires a manually managed `Info.plist`, configure that workflow in Build Settings rather than assuming every project has a physical file.
 
 ## Using Custom Fonts in SwiftUI
 
@@ -475,28 +539,23 @@ To incorporate custom fonts into your SwiftUI app, follow these steps:
 
 #### Download and Add the Font to Your Project
 
-1. Download your desired font, for example, from [Google Fonts](https://fonts.google.com/specimen/Pacifico?query=paci).
-2. Right-click on your project folder in Xcode and create a new Group named `Fonts`.
-3. Drag the downloaded font file, such as `Pacifico-Regular.ttf`, into this group. Ensure you check "Copy items if needed" so the file is copied to your project.
+1. Add a font file you are licensed to distribute to the app target and ensure target membership is enabled.
+2. For iOS-family targets, register the font file under `UIAppFonts` (shown as "Fonts provided by application" in Xcode's property-list editor). The value is the file path within the bundle.
+3. For macOS targets, Apple's documented key is `ATSApplicationFontsPath`; check the platform-specific font instructions.
 
 #### Register the Font in the `info.plist`
 
-4. Open `info.plist` and add a new entry called "Fonts provided by application".
-5. For the value, enter the name of the font file, such as "Pacifico-Regular.ttf".
-
-#### Ensure the Font is Included in the Build
-
-6. In the `info.plist`, double-click the added font entry. In the rightmost panel, make sure to check the target membership box for the current project to include the font in the build process.
+Xcode may generate the final plist from target settings instead of keeping a visible `Info.plist` source file. Configure the key through the target's supported Info/build settings when applicable.
 
 #### Use the Font in SwiftUI Code
 
-7. Apply the custom font in your SwiftUI views like this:
+Apply the font using its **PostScript name**, which may differ from the filename:
 
 ```swift
-Text("Ruiming Xie").font(Font.custom("Pacifico-Regular", size: 40))
+Text("Sample text").font(.custom("SamplePostScriptName", size: 40))
 ```
 
-This code creates a `Text` view and applies the custom font `Pacifico-Regular` with a font size of 40.
+This applies the custom font with a base size of 40 points. For text that should scale with Dynamic Type, use the appropriate scalable custom-font initializer. Verify the PostScript name in Font Book.
 
 ## Shapes and Colors
 
@@ -509,20 +568,20 @@ RoundedRectangle(cornerRadius: 25)
     .fill(Color.white)
 ```
 
-### ForegroundColor for Text
+### Foreground style for text / 文本前景样式
 
-For text elements, applying color is straightforward with the `foregroundColor()` modifier.
+Use `foregroundStyle(_:)` for a color or style applied to text and other foreground elements. `foregroundColor(_:)` is deprecated.
 
 ```swift
 Text("Hello, World!")
-    .foregroundColor(.white)
+    .foregroundStyle(.white)
 ```
 
 ## SF Symbols
 
 ### Downloading SF Symbols
 
-To use SF Symbols, first download SF Symbols 5 from Apple's official website.
+Use Apple's SF Symbols app and documentation to find a symbol name supported by the deployment target. Symbol availability varies by platform release; the name in a code example is not guaranteed to exist on every target.
 
 ### Searching and Using an SF Symbol
 
@@ -534,20 +593,18 @@ Image(systemName: "phone.fill")
 
 ### Coloring SF Symbols
 
-Change the color of an SF Symbol using `foregroundColor()`.
+Apply a foreground style to an SF Symbol using the same style system as text.
 
 ```swift
 Image(systemName: "phone.fill")
-    .foregroundColor(.green)
+    .foregroundStyle(.green)
 ```
 
 ## Padding and Margins
 
-Padding in SwiftUI might not behave as you expect if you're coming from a CSS background.
+Padding is a layout modifier. Modifier order matters: in the example below, padding wraps the composed shape, so it creates space around that view in its parent. It is not a separate CSS-style `margin` property.
 
 ### Understanding Padding in SwiftUI
-
-Padding in SwiftUI often acts more like what we would consider margins in CSS.
 
 ```swift
 RoundedRectangle(cornerRadius: 25)
@@ -556,12 +613,12 @@ RoundedRectangle(cornerRadius: 25)
     .overlay(
         HStack {
             Image(systemName: "phone.fill")
-                .foregroundColor(.green)
-            Text("+61 402 369 915")
-                .foregroundColor(.black)
+                .foregroundStyle(.green)
+            Text("Contact")
+                .foregroundStyle(.black)
         }
     )
-    .padding(.all) // This adds space around the RoundedRectangle, like a CSS margin.
+    .padding() // Adds space around the composed view in its parent.
 ```
 
 ## Code Reusability
@@ -592,9 +649,9 @@ struct InfoView: View {
             .overlay(
                 HStack {
                     Image(systemName: imageName)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     Text(text)
-                        .foregroundColor(.black)
+                        .foregroundStyle(.black)
                 }
             )
             .padding(.all)
@@ -607,16 +664,16 @@ struct InfoView: View {
 Instantiate and use the new view by passing in the required parameters.
 
 ```swift
-InfoView(text: "+61 402 369 915", imageName: "phone.fill")
+InfoView(text: "Contact", imageName: "phone.fill")
 ```
 
 ## Organizing UI Components
 
-Maintaining an organized codebase is crucial when developing complex applications in SwiftUI. The Model-View-Controller (MVC) design pattern can help with this organization.
+SwiftUI does not require a particular project-folder layout or a Model-View-Controller (MVC) architecture. Organize view files and models around the app's boundaries; an Xcode `View` group is a project convention, not a framework requirement.
 
-### Using the View Folder in MVC
+### Optional view folder / 可选的 View 文件夹
 
-In the MVC design pattern, it’s a common practice to place UI components in a dedicated `View` folder. This helps in keeping the project organized and the MVC layers separated.
+Some projects place SwiftUI view types in a `Views` folder. Choose folders that make the project easier to navigate; the folder name does not change SwiftUI behavior.
 
 ### Creating a New SwiftUI View
 
@@ -624,7 +681,7 @@ When adding a new UI component, you should:
 
 1. Click on `New File...` in Xcode.
 2. Choose `SwiftUI View` from the template options.
-3. Save the new file in the `View` folder to adhere to MVC principles.
+3. Save the file in the group or folder used by the project.
 
 ### Example: InfoView.swift
 
@@ -641,13 +698,13 @@ struct InfoView: View {
         RoundedRectangle(cornerRadius: 25)
             .fill(Color.white)
             .frame(height: 50)
-            // .foregroundColor(.white) // This line is commented out because we use .fill
+            // The shape uses fill; foregroundStyle below colors its child views.
             .overlay(
                 HStack {
                     Image(systemName: imageName)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     Text(text)
-                        .foregroundColor(.black)
+                        .foregroundStyle(.black)
                 }
             )
             .padding(.all)
@@ -655,9 +712,17 @@ struct InfoView: View {
 }
 
 // MARK: - Preview
+#Preview {
+    InfoView(text: "Contact", imageName: "phone.fill")
+}
+```
+
+Xcode's preview macro is the current concise form. `PreviewProvider` remains available when a project or toolchain needs the manual form:
+
+```swift
 struct InfoView_Previews: PreviewProvider {
     static var previews: some View {
-        InfoView(text: "+61 402 369 915", imageName: "phone.fill")
+        InfoView(text: "Contact", imageName: "phone.fill")
     }
 }
 ```
@@ -668,4 +733,11 @@ To increase readability and organization of your SwiftUI views, use `// MARK: -`
 
 ### Previews Section
 
-SwiftUI allows you to preview your custom views with different data directly within Xcode. The `PreviewProvider` protocol enables you to see a live preview of your views with sample data.
+Previews let you inspect a view with sample data in Xcode without changing the runtime data source.
+
+## Sources / 参考资料
+
+- Swift Language Guide: [functions](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/functions/), [structures and classes](https://docs.swift.org/swift-book/LanguageGuide/ClassesAndStructures.html), and [initialization](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/). The in-out parameter description follows Swift's [declaration reference](https://docs.swift.org/latest/documentation/the-swift-programming-language/declarations/); leading-dot shorthand is specified as an [implicit member expression](https://docs.swift.org/swift-book/ReferenceManual/Expressions.html#implicit-member-expression).
+- Apple SwiftUI: [State](https://developer.apple.com/documentation/swiftui/state), [Binding](https://developer.apple.com/documentation/swiftui/binding), [StateObject](https://developer.apple.com/documentation/swiftui/stateobject), [ObservedObject](https://developer.apple.com/documentation/swiftui/observedobject), and [EnvironmentObject](https://developer.apple.com/documentation/swiftui/environmentobject). The newer Observation availability and environment pattern are scoped in Apple's [migration guide](https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro) and [model-data guide](https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app).
+- Apple Developer Documentation: [SwiftUI images](https://developer.apple.com/documentation/swiftui/image), [adding images to an Xcode project](https://developer.apple.com/documentation/xcode/adding-images-to-your-xcode-project), [custom fonts](https://developer.apple.com/documentation/swiftui/applying-custom-fonts-to-text), [managing app information property-list values](https://developer.apple.com/documentation/bundleresources/managing-your-app-s-information-property-list), [foregroundColor deprecation](https://developer.apple.com/documentation/swiftui/view/foregroundcolor%28_%3A%29), [safe-area expansion](https://developer.apple.com/documentation/swiftui/view/ignoressafearea%28_%3Aedges%3A%29), and [Xcode previews](https://developer.apple.com/documentation/xcode/adding-previews-to-your-interface-files).
+- `#imageLiteral` maps to UIKit's documented [`UIImage(imageLiteralResourceName:)`](https://developer.apple.com/documentation/uikit/uiimage/init%28imageliteralresourcename%3A%29); use SwiftUI `Image` for SwiftUI view hierarchies. Platform/API availability checked 2026-10-15.
