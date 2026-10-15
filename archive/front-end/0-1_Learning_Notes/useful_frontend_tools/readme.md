@@ -1,235 +1,141 @@
-# Google debug tool
+# Frontend Tools and Editor Workflow / 前端工具与编辑器工作流
+
+This is a compact reference for browser inspection, Less, design handoff, and common editor shortcuts. The examples describe reusable workflows; extension settings and keyboard shortcuts can vary by tool version and operating system.
+
+**Core answer / 核心回答：** Use browser tools to inspect the rendered page, Less to express reusable CSS rules, and editor abbreviations to reduce repetitive typing. Confirm the compiled CSS and rendered result instead of treating a shortcut or preprocessor output as proof of correctness. / 用浏览器工具检查实际渲染结果，用 Less 表达可复用的 CSS 规则，用编辑器缩写减少重复输入。仍要检查编译后的 CSS 和页面效果，不能把快捷键或预处理器输出当作正确性的证明。
+
+## Chrome DevTools / Chrome 开发者工具
+
+Open DevTools with F12 or the browser menu, then use **Elements** to inspect an element and edit its live styles. These edits are temporary until copied into source code. Console icons distinguish errors, warnings, and informational messages; a warning marker does not always mean that a CSS declaration is invalid.
 
 ![Google Debug Tool](google-inspect.png)
 
-Press F12 or the right mouse button in Google Chrome -> Check
+Useful workflow:
 
-If the right CSS has a yellow triangle, there is an error
+1. Select the affected element in **Elements** and inspect the matched rules and computed styles.
+2. Toggle declarations or adjust values to test a hypothesis.
+3. Check **Console** for runtime errors and warnings.
+4. Use **Network** for request status, timing, and transferred size; use **Performance** to record scripting, rendering, and layout work.
 
-Select the number in CSS such as width and then press the keyboard up and down to adjust the size
+## Less / Less 预处理器
 
-You can also directly write CSS by pressing the tab in the CSS area
+Less is a CSS preprocessor. Nesting, variables, and arithmetic are compiled to ordinary CSS before the browser uses the stylesheet.
 
-Tick: click to cancel the use of a line of CSS
+~~~less
+@brand-color: #c35;
+@design-root: 37.5; // A 375px-wide design whose root font size is 37.5px.
 
-# Less syntax
+.card {
+  color: @brand-color;
+  width: (68 / @design-root) * 1rem;
 
-Less syntax target: `less` is essentially a CSS preprocessor, which can quickly compile and generate CSS code. Use the Less operation to complete the conversion from `px` to `rem` units.
+  .title {
+    font-weight: bold;
+  }
 
-## How it works?
-
-Vscode downloads the plugin `easyless`, then creates `less1.less` and writes it in the file.
-
-```less
-.father {
-  color: pink;
-  width: (68 / 37.5rem);
-  .son {
-    background-color: skyblue;
+  &:hover {
+    color: #99334d;
   }
 }
-```
+~~~
 
-Press Save, and the `less1.css` file will be automatically generated as follows:
+A Less compiler emits selectors and calculated values such as:
 
-```css
-.father {
-  color: pink;
-  width: 1.81333333rem;
+~~~css
+.card {
+  color: #c35;
+  width: 1.813333rem;
 }
-.father .son {
-  background-color: skyblue;
+.card .title {
+  font-weight: bold;
 }
-```
-
-Comment in LESS
-
-Less comment single line `//` commented out or `command + /`. Less multi-line comments: `/* comment block content */` or `shift + alt(option) + A`. Single-line comments won't render into auto-generated CSS when saving, but multi-line comments will.
-
-LESS provides computability
-
-Addition, subtraction, and multiplication do not require parentheses, and division requires `()` or `.`.
-
-e.g.
-
-```less
-width: 100 + 50px;
-width: 10 * 50px;
-width: (100 / 4px);
-width: 100 ./ 4px;
-```
-
-Usage of `&` symbol
-
-`&` represents the current selector, which is similar to the 'this' keyword in Java.
-
-```less
-.father {
-  color: pink;
-  .son {
-    background-color: skyblue;
-    &:hover {
-      background-color: green;
-    }
-  }
+.card:hover {
+  color: #99334d;
 }
-```
+~~~
 
-```css
-.father {
-  color: pink;
-}
-.father .son {
-  background-color: skyblue;
-}
-.father .son:hover {
-  background-color: green;
-}
-```
+The pixel-to-rem calculation assumes that the document root font size follows the design scale. For example, 37.5 CSS pixels per rem at a 375px design width makes a 68px design measurement equal to about 1.813rem. The application still needs to set the root font size consistently.
 
-You can also use `&::after`, `&::before`, `&.class` name, etc. to store the color in a container in advance and set the property value to this container name.
+- Nested selectors use a space to form descendants; the ampersand refers to the parent selector, as in &:hover, &::before, or &.active.
+- Variables use @name: value;. Reuse them for repeated colors, spacing, and other design tokens.
+- Less supports arithmetic. Parentheses make division explicit, and unit behavior should be checked in the generated CSS.
+- // is a Less-only line comment and is omitted from the CSS output. Block comments are emitted.
+- @import "tokens.less"; includes another Less file. The import path and build configuration determine which source is compiled.
+- Easy LESS can compile on save and configure output through its `less.compile` VS Code setting. In the project `.vscode/settings.json`, for example, `"less.compile": { "out": "${workspaceFolder}/dist/css/" }` sends each file's CSS to that folder; keep the trailing slash. A specific path such as `"out": "${workspaceFolder}/dist/app.css"` names one output file. Paths are relative to the Less source unless expanded from `${workspaceFolder}`.
+- For an imported Easy LESS partial that should not emit its own CSS file, put `// out: false` on the first line of that `.less` file. This is extension configuration, not Less language syntax; a build pipeline can instead compile Less as part of the application build.
 
-Define variable: `@variable name: value;`
+For a design that scales with the viewport width, a ratio can be written directly in Less:
 
-Use variables: CSS property name: `@variable name;`
-
-Function: easy maintenance
-
-Import part of CSS from other `.less` files
-
-`@import '.less file path';`
-
-Note that there is a space after `import`, single quotes for the path, and a semicolon at the end.
-
-Replacing the Less file export address with `easyless`
-
-Find `easyless` in the extension, click edit settings, and add the `"less.compile"{}` braces in the JSON that comes out.
-
-```json
-"out": "Export path, e.g. ../css/"
-```
-
-The `/` after the folder name cannot be lost to indicate that this is a folder.
-
-Replace the Less file export address by commenting
-
-Add `// out: ../css/` to the first line of the file.
-
-You can also use `../css/` as the export target path, which can be another.
-
-Add `// out: ../css/halo.css` to the beginning of the file.
-
-You can confirm which folder to save to and name the file.
-
-Disable export `.css` file
-
-For less files that are not exported, add `//out: false` to the first line of the file.
-
-Transfer `px` unit to `rem` unit
-
-When writing the Less file in the project, you can first define the variable `@rootSize: one-tenth of the viewport width rem;`
-
-Then, after all units with pixels, such as width, height, left and top of position, margin, font-size
-
-, line-height are all written as `(the length in the design drawing has no unit/@rootSize);`
-
-The unit of the automatically generated CSS will be `rem`.
-
-Transfer `px` unit to `vw/vh`
-
-e.g. The viewport width is 375px, to convert a box with a width of 68px and a height of 29px
-
-```less
-@vw: 3.75vw;
+~~~less
+@design-width: 375;
 .box {
-  width: (68 / @vw);
-  height: (29 / @vw);
+  width: (68 / @design-width) * 100vw;
 }
-```
+~~~
 
-e.g. The viewport height is 667px, and a box with a width of 68px and a height of 29px needs to be converted
+This yields approximately 18.133vw for a 68px measurement in a 375px-wide design. Document the design viewport and formula near the conversion; avoid applying a fixed ratio when the project uses a different scaling rule.
 
-```less
-@vh: 6.67vh;
-.box {
-  width: (68 / @vh);
-  height: (29 / @vh);
-}
-```
+## Design inspection / 设计稿检查
 
-# PxCook
+In PxCook or a similar design-inspection tool, use the ruler to read a measurement and the color picker to inspect a color value. Confirm whether the design value is expressed in CSS pixels, device pixels, or a scaled viewport before copying it into the page.
 
-## Design Mode Import Image
+## VS Code and Emmet / VS Code 与 Emmet
 
-- Point ruler can measure the length of how many pixels
-- Click the straw to get the RGB value
+VS Code enables Emmet abbreviations in HTML and CSS by default for common file types. In an HTML file, ! can expand to a starter document. For example:
 
-# VSCode
+| Abbreviation | Typical HTML expansion |
+|---|---|
+| **div** | Empty div element |
+| **.red** | Div with class red |
+| **#one** | Div with id one |
+| **p.red#one** | Paragraph with class red and id one |
+| **ul>li*3** | A list with three list items |
+| **ul>li{item $}*3** | Three list items containing item 1, item 2, and item 3 |
 
-After creating a new one in vscode, type an English `!` to get the skeleton.
+Common CSS abbreviations include these default snippets and shorter forms that Emmet may resolve through fuzzy search; inspect the editor preview:
 
-## Quick comment
+| Abbreviation | Typical CSS expansion |
+|---|---|
+| **bgc** | `background-color: #fff;` |
+| **bgi** | `background-image: url(...);` |
+| **bgr** | `background-repeat: no-repeat;` with other repeat values available in the snippet choices |
+| **bgp** | `background-position: 0 0;` |
+| **bg** | `background: #000;` |
+| **ta** | `text-align: left;` with center, right, and justify choices |
+| **pos** | `position: relative;` with other position choices |
+| **bd** | `border: 1px solid #000;` |
+| **tac** *(fuzzy-search candidate)* | May resolve to `text-align: center;`; confirm the editor suggestion. |
+| **por** *(fuzzy-search candidate)* | May resolve to `position: relative;`; confirm the editor suggestion. |
 
-Use `command + /` to quickly comment or uncomment a line of code.
+The checked default snippets provide `ta` and `pos` with the listed value choices. Emmet fuzzy search can match unknown abbreviations against predefined snippet names; inspect the editor preview before relying on a shorter form.
 
-## Auto wrap
+On the default macOS keymap, common editing actions include:
 
-Press `option + z` to enable or disable automatic word wrapping in the editor.
+- **⌘+/** toggles a line comment.
+- **Option+Z** toggles word wrap.
+- **Option+Shift+Down** duplicates the current line or selection.
+- **Option+Click** adds another cursor.
 
-## Copy and paste current line
+Keymaps can be changed. Check **Keyboard Shortcuts** if a binding differs. In a CSS file, **w100+h100** expands to `width: 100px; height: 100px;`; **w100p** expands to `width: 100%;`, and **m10-20** to `margin: 10px 20px;`. Emmet also accepts explicit units and multi-value shorthands. Inspect the suggestion preview when a project has custom snippets or editor settings.
 
-Use `alt + shift + down arrow` to copy and paste the current line.
+A favicon can be declared in the document head:
 
-## Modify multiple lines simultaneously
+~~~html
+<link rel="icon" href="/favicon.ico">
+~~~
 
-Hold `alt` and click on multiple lines to make changes to all of them at the same time.
+Split the editor into panes when comparing related HTML and CSS files; the layout is an editor convenience, not a build requirement.
 
-## Emmet syntax
+## References / 参考资料
 
-Emmet allows you to write code quickly using shorthand notations.
+- [Chrome DevTools overview](https://developer.chrome.com/docs/devtools/overview/)
+- [Less documentation](https://lesscss.org/)
+- [Easy LESS extension settings](https://github.com/mrcrowl/vscode-easy-less#readme)
+- [VS Code Emmet](https://code.visualstudio.com/docs/languages/emmet)
+- [Emmet CSS abbreviations](https://docs.emmet.io/css-abbreviations/)
+- [Emmet CSS fuzzy search](https://docs.emmet.io/css-abbreviations/fuzzy-search/)
+- [Emmet default CSS snippets](https://github.com/emmetio/snippets/blob/master/css.json)
+- [WHATWG HTML: `rel="icon"`](https://html.spec.whatwg.org/multipage/links.html#rel-icon)
+- [VS Code keyboard shortcuts](https://code.visualstudio.com/docs/getstarted/keybindings)
 
-Syntax: `+`
-
-| Example                 | Effect                                 |
-| ----------------------- | -------------------------------------- |
-| `div`                   | `<div></div>`                          |
-| `.red`                  | `<div class="red"></div>`              |
-| `#one`                  | `<div id="one"></div>`                 |
-| `p.red#one`             | `<div class="red" id="one"></div>`     |
-| `ul>li`                 | `<ul><li></li></ul>`                   |
-| `ul>li{i’m li content}` | `<ul><li>i’m li content</li></ul>`     |
-| `ul>li*3`               | `<ul><li></li><li></li><li></li></ul>` |
-
-## Background shortcuts
-
-- `bgc`: `background-color`
-- `bgi`: `background-image`
-- `bgr`: `background-repeat`
-- `bgp`: `background-position`
-- `bg`: `background`
-
-## Text alignment
-
-Use `tac` for `text-align: center`.
-
-## Positioning
-
-Use `por` for `position: relative;`.
-
-## Border shortcut
-
-Type `bd` and press `tab` to quickly generate a border.
-
-## Width and height shortcuts
-
-Use `w100+h100` for `width: 100; height: 100;`.
-
-## Favicon
-
-To specify a favicon for your webpage, use the following HTML tag:
-
-```
-<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-```
-
-When working on a web app, you can use VSCode split-screen with HTML on the left and CSS on the right.
+For a broader build-pipeline explanation, see [Build Tools / 构建工具](../../../../frontend/tooling/build-tools.md).
