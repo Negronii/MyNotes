@@ -329,6 +329,120 @@ ORDER BY placed_at DESC;
 
 An index is a maintained access path, not a promise that every query will be faster. It uses storage and adds work to inserts, updates, and deletes. A multicolumn B-tree index is ordered by its leading columns, so `(customer_id, placed_at)` can support a lookup by customer and then a time ordering; the best plan still depends on the query, table size, data distribution, statistics, and database engine. Inspect a plan with that engine's `EXPLAIN` facility and compare it with representative data. In PostgreSQL, `EXPLAIN ANALYZE` executes the statement and reports observed work, while plain `EXPLAIN` shows the planner's estimated strategy. Plan output and choices are product- and version-specific.
 
+#### SQL result semantics / SQL 查询结果语义
+
+SQL predicates can evaluate to **TRUE, FALSE, or UNKNOWN**. An ordinary comparison such as `=` or `<>` with `NULL` evaluates to UNKNOWN; null-aware predicates such as `IS NULL` and `IS DISTINCT FROM` have their own rules. `WHERE` keeps only rows for which its predicate is TRUE. Use `IS NULL` to test for a missing value; `column = NULL` does not find it. The same rule explains why a right-table filter in `WHERE` can remove the null-extended rows of a `LEFT JOIN`. / SQL 谓词可以得出 **TRUE、FALSE 或 UNKNOWN**。`=` 或 `<>` 这类普通比较遇到 `NULL` 时结果为 UNKNOWN；`IS NULL`、`IS DISTINCT FROM` 等空值判定或相异性谓词有各自的规则。`WHERE` 只保留谓词为 TRUE 的行。用 `IS NULL` 检查缺失值；`column = NULL` 不会查到它。这个规则也解释了为什么 `WHERE` 中的右表筛选条件会移除 `LEFT JOIN` 生成的空扩展行。
+
+Run this compact customer/order dataset in a fresh, separate teaching database/schema; it is independent of the earlier example, which also uses tables named `customers` and `orders` with a different schema. Ben's region and one order amount are `NULL`; Dia has no orders.
+
+~~~sql
+CREATE TABLE customers (
+    customer_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    region TEXT
+);
+
+CREATE TABLE orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(customer_id),
+    amount_cents INTEGER,
+    status TEXT NOT NULL
+);
+
+INSERT INTO customers VALUES
+    (1, 'Ava', 'North'),
+    (2, 'Ben', NULL),
+    (3, 'Cy', 'South'),
+    (4, 'Dia', 'North');
+
+INSERT INTO orders VALUES
+    (101, 1, 1200, 'paid'),
+    (102, 1, 800, 'pending'),
+    (103, 2, NULL, 'paid'),
+    (104, 3, 500, 'paid');
+~~~
+
+The first query returns no rows because `region = NULL` is UNKNOWN. `IS NULL` returns Ben; `region <> 'North'` returns only Cy because Ben's comparison is UNKNOWN. To include missing regions in that search, say so explicitly with `OR region IS NULL`.
+
+~~~sql
+SELECT name FROM customers WHERE region = NULL;
+-- no rows
+
+SELECT name FROM customers WHERE region IS NULL ORDER BY customer_id;
+-- Ben
+
+SELECT name FROM customers WHERE region <> 'North' ORDER BY customer_id;
+-- Cy
+
+SELECT name FROM customers
+WHERE region <> 'North' OR region IS NULL
+ORDER BY customer_id;
+-- Ben
+-- Cy
+~~~
+
+`LEFT JOIN` first preserves each left-side customer, putting `NULL` in the order columns when no matching order remains. A right-side predicate in `ON` limits which orders count as matches, so Dia is kept. The same predicate in `WHERE` is applied after the join; Dia's null-extended row does not pass `o.status = 'paid'`, so it disappears.
+
+~~~sql
+SELECT c.name, o.order_id
+FROM customers AS c
+LEFT JOIN orders AS o
+  ON o.customer_id = c.customer_id AND o.status = 'paid'
+ORDER BY c.customer_id;
+-- Ava | 101
+-- Ben | 103
+-- Cy  | 104
+-- Dia | NULL
+
+SELECT c.name, o.order_id
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+WHERE o.status = 'paid'
+ORDER BY c.customer_id;
+-- Ava | 101
+-- Ben | 103
+-- Cy  | 104
+~~~
+
+`COUNT(*)` counts input rows; `COUNT(column)` counts only rows whose value in that column is not `NULL`. Aggregates such as `SUM` ignore null inputs and return `NULL` when a group has no non-null inputs. The grouped result makes the outer-join detail visible: Dia has one joined row, but no order ID; Ben has an order but no priced order.
+
+~~~sql
+SELECT COUNT(*) AS order_rows, COUNT(amount_cents) AS priced_orders
+FROM orders;
+-- 4 | 3
+
+SELECT c.name,
+       COUNT(*) AS joined_rows,
+       COUNT(o.order_id) AS orders,
+       COUNT(o.amount_cents) AS priced_orders,
+       SUM(o.amount_cents) AS total_cents
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+GROUP BY c.customer_id, c.name
+ORDER BY c.customer_id;
+-- Ava | 2 | 2 | 2 | 2000
+-- Ben | 1 | 1 | 0 | NULL
+-- Cy  | 1 | 1 | 1 | 500
+-- Dia | 1 | 0 | 0 | NULL
+~~~
+
+`WHERE` filters rows before grouping; `HAVING` filters completed groups. This query keeps groups whose non-null total is at least 500 cents. Ben's sum is `NULL`, so the comparison is UNKNOWN and his group is not kept.
+
+~~~sql
+SELECT c.name, COUNT(o.order_id) AS orders, SUM(o.amount_cents) AS total_cents
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+GROUP BY c.customer_id, c.name
+HAVING SUM(o.amount_cents) >= 500
+ORDER BY c.customer_id;
+-- Ava | 2 | 2000
+-- Cy  | 1 | 500
+~~~
+
+**How do NULL, outer joins, and grouping change a query result? / NULL、外连接和分组会怎样改变查询结果？** An ordinary comparison such as `=` or `<>` with `NULL` is UNKNOWN; null-aware predicates such as `IS NULL` and `IS DISTINCT FROM` have their own rules. Use `IS NULL` for missing values, and remember that `WHERE` keeps only TRUE. Put a right-side condition in `LEFT JOIN ... ON` when unmatched left rows must remain; a `WHERE` condition can remove those rows. `COUNT(*)` counts joined rows, `COUNT(column)` skips nulls, `WHERE` filters input rows, and `HAVING` filters completed groups. Inspect query plans with the chosen engine and version. / `=` 或 `<>` 这类普通比较遇到 `NULL` 时结果为 UNKNOWN；`IS NULL`、`IS DISTINCT FROM` 等空值判定或相异性谓词有各自的规则。缺失值应使用 `IS NULL`，并记住 `WHERE` 只保留 TRUE。若要保留没有匹配右表记录的左表行，应把右表条件放在 `LEFT JOIN ... ON` 中；放在 `WHERE` 中可能移除这些行。`COUNT(*)` 统计连接后的行数，`COUNT(column)` 跳过空值；`WHERE` 筛选分组前的输入行，`HAVING` 筛选已完成的分组。查询计划应使用所选数据库及其版本来检查。
+
+These result rules are shared by the examples' SQLite run; optimizer plans are not. Use the selected engine's `EXPLAIN` tool on representative data, and label any plan observation with its engine and version.
+
 #### Transactions and isolation / 事务与隔离
 
 A transaction gives a set of statements one commit or rollback boundary. **ACID** is a useful vocabulary, with each property still bounded by implementation and configuration:
@@ -378,9 +492,9 @@ Two nearby concepts are useful boundaries, not a distributed-systems survey:
 
 **Course material kept in the archive / 保留在归档中的课程内容：** the detailed RAID calculations, R-tree/spatial-index examples, snapshot-isolation exercises, and recovery derivations remain in [week 1 RAID calculations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w1.md), [week 2 R-tree/spatial-index examples](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w2.md), [week 3 snapshot-isolation exercises](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w3.md), and [week 4 recovery derivations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4.md). The active note provides the shared model; the course files preserve their derivations and exercises.
 
-**Related notes / 相关笔记：** [Core Data Structures / 核心数据结构](#7.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) introduces the tree structures behind common indexes; the [archived database course](../../archive/uni-subjects/COMP90050ADBS/readme.md) preserves its broader sequence of worked examples.
+**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#11.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains request-scoped ORM work and connection budgeting; [Caching and Redis / 缓存与 Redis](#12.%20Caching%20and%20Redis%20/%20%E7%BC%93%E5%AD%98%E4%B8%8E%20Redis) explains a cache in front of the database. [Core Data Structures / 核心数据结构](#7.%20Core%20Data%20Structures%20/%20%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84) introduces the tree structures behind common indexes; the [archived database course](../../archive/uni-subjects/COMP90050ADBS/readme.md) preserves its broader sequence of worked examples.
 
-**Sources and verification / 来源与验证：** PostgreSQL 18 documentation checked 2026-10-15: [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [indexes](https://www.postgresql.org/docs/18/indexes.html), [EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html), [MVCC](https://www.postgresql.org/docs/18/mvcc-intro.html), [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html), [WAL](https://www.postgresql.org/docs/18/wal-intro.html), [WAL configuration and recovery](https://www.postgresql.org/docs/18/wal.html), and [prepared transactions](https://www.postgresql.org/docs/18/sql-prepare-transaction.html). SQLite's [foreign-key](https://www.sqlite.org/foreignkeys.html), [transaction](https://www.sqlite.org/lang_transaction.html), [query planner](https://www.sqlite.org/queryplanner.html), and [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html) documentation support the SQL examples; plan wording is diagnostic output, not an API. The schema/query and reservation transaction were run with Python's sqlite3 module against SQLite 3.51.0, with foreign-key enforcement enabled; for 1,000 synthetic orders, this run changed from a table scan plus temporary sort to an index search after adding the composite index. That is one planner observation, not a stable output contract. The original recovery method is Mohan et al., [ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging); its DPT and `recLSN` mechanism is explained in the [CMU database recovery notes (pp. 1, 4–6)](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf).
+**Sources and verification / 来源与验证：** PostgreSQL 18 documentation checked 2026-10-15: [SQL tutorial](https://www.postgresql.org/docs/18/tutorial-sql.html), [comparison predicates](https://www.postgresql.org/docs/18/functions-comparison.html), [table expressions and joins](https://www.postgresql.org/docs/18/queries-table-expressions.html), [aggregate functions](https://www.postgresql.org/docs/18/functions-aggregate.html), [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [indexes](https://www.postgresql.org/docs/18/indexes.html), [EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html), [MVCC](https://www.postgresql.org/docs/18/mvcc-intro.html), [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html), [WAL](https://www.postgresql.org/docs/18/wal-intro.html), [WAL configuration and recovery](https://www.postgresql.org/docs/18/wal.html), and [prepared transactions](https://www.postgresql.org/docs/18/sql-prepare-transaction.html). SQLite's [foreign-key](https://www.sqlite.org/foreignkeys.html), [transaction](https://www.sqlite.org/lang_transaction.html), [SELECT](https://www.sqlite.org/lang_select.html), [expressions](https://www.sqlite.org/lang_expr.html), [aggregate functions](https://www.sqlite.org/lang_aggfunc.html), [query planner](https://www.sqlite.org/queryplanner.html), and [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html) documentation support the examples; plan wording is diagnostic output, not an API. The customer/order result queries, existing schema/query example, and reservation transaction were run with Python's `sqlite3` module against SQLite 3.51.0, with foreign-key enforcement enabled. For 1,000 synthetic orders, the existing plan run changed from a table scan plus temporary sort to an index search after adding the composite index. That is one planner observation, not a stable output contract. The original recovery method is Mohan et al., [ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging); its DPT and `recLSN` mechanism is explained in the [CMU database recovery notes (pp. 1, 4–6)](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf).
 ## 4. API Reliability and Asynchronous Delivery / API可靠性与异步交付
 
 ### API Reliability and Asynchronous Delivery / API可靠性与异步交付
@@ -471,6 +585,147 @@ In a typical redirect flow, the relying application creates a login request, the
 
 See [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
 
+##### Authorization-code + PKCE callback / 授权码 + PKCE 回调
+
+When an application needs federated sign-in, OpenID Connect uses OAuth's authorization-code flow with the `openid` scope. Plain OAuth grants delegated API access; it does not define an ID Token or an authentication result for the client.
+
+1. The client creates a one-time `code_verifier` and derives `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))` using `S256`. It keeps the verifier with the browser's pending login transaction. It also normally creates an unpredictable `state` value bound to that browser transaction; an OIDC client may create a `nonce` if it wants to bind the returned ID Token to this request.
+2. The client redirects the browser to the authorization endpoint with `response_type=code`, its `client_id`, an exactly registered `redirect_uri`, `scope=openid` (plus only the API scopes it needs), `state`, `code_challenge`, and `code_challenge_method=S256`. It includes `nonce` only if the flow uses it.
+3. After authenticating the user and obtaining any required consent, the authorization server redirects to the registered callback with a short-lived, one-use authorization code and the `state` value, if sent. The callback checks and consumes its stored `state` before continuing. If the client uses multiple authorization servers, it also applies an issuer or equivalent mix-up defense.
+4. The client sends the code, the same `redirect_uri`, and its original `code_verifier` to the token endpoint; a confidential client also authenticates there when required. The authorization server recomputes the challenge and rejects a code redemption whose verifier does not match. The code alone is therefore insufficient for an interceptor to redeem.
+5. In the selected OIDC Authorization Code Flow, a successful token response includes an ID Token and an Access Token; a Refresh Token is optional. The client validates the ID Token before establishing its own session. The API validates the access token it receives separately.
+
+These values solve different problems and are not all mandatory in every flow:
+
+- **`state` / 请求状态** is an opaque value for correlating a redirect with the initiating browser transaction and often restoring a local return path. OAuth clients must prevent callback CSRF, but a literal `state` parameter is not the only permitted defense: RFC 9700 allows a client that has confirmed PKCE support to rely on PKCE for CSRF protection; in OIDC, `nonce` can also provide that protection. If the client sends `state`, it must bind and check it instead of trusting a callback value.
+- **`nonce` / 随机数** binds an ID Token to an OIDC authentication request and helps detect replay. It is optional in the OIDC Authorization Code Flow; when sent, the provider must return it in the ID Token and the client must compare it. Other OIDC flows have different requirements.
+- **`code_verifier` / PKCE验证值** is the secret the client keeps and later presents at the token endpoint. The authorization request carries only its derived challenge. RFC 9700 requires PKCE for public clients and recommends it for confidential clients; use `S256`, not a method that reveals the verifier.
+
+**Token use and lifecycle / 令牌用途与生命周期：** An **ID Token / 身份令牌** tells the OIDC client about an authentication event; it is not an API credential. Validate it under the OIDC profile: exact expected issuer, a trusted audience containing this client's ID (and `azp` when applicable), expiration, cryptographic validation with the issuer's keys and registered algorithm, and a matching `nonce` when one was sent. An **access token / 访问令牌** is for a resource server. That server checks the expected issuer, its own API audience, expiration, and allowed scope/action; follow the issuer's contract, verifying the signature and claims for a JWT access-token profile or using the trusted introspection/lookup mechanism for an opaque token. Decoding a JWT is not validation.
+
+A refresh token is presented to the authorization server's token endpoint to obtain a replacement access token; it is not sent to the API. Treat it as a high-value credential. RFC 9700 requires public clients to use refresh-token rotation or sender constraint. If the authorization server supports a revocation endpoint, a client can request revocation of a token; resource servers may learn of that change at different times. A locally verified, self-contained access token may remain accepted until its expiry unless the resource server also checks revocation state. Ending the application's own session and ending an identity-provider session are separate operations.
+
+**Core idea / 核心要点：** OAuth authorization grants access to an API; OIDC tells a client who authenticated; the application still decides whether that identity may perform an action now. PKCE protects code redemption, and runtime authorization protects application data.
+
+**Mechanism in Chinese / 机制要点：** PKCE 把授权码与客户端保留的 verifier 配对；state 关联回调与发起的登录事务，若发送就必须校验，而已确认支持 PKCE 的客户端可按 RFC 9700 依 PKCE 防回调 CSRF。OIDC Code Flow 的 nonce 可选，若发送则须与 ID Token 中的值匹配。客户端验证 ID Token 后建立自己的会话，API 则独立验证面向自身的 access token，并按当前主体、租户和权限做运行时授权。refresh token 只向授权服务器换取新 access token；撤销传播可能有延迟，应用会话、IdP 会话和 API 对已签发 access token 的接受边界要分别处理。
+
+See [OpenID Connect Core 1.0, incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice (January 2025)](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 7636, Proof Key for Code Exchange (September 2015)](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009, OAuth 2.0 Token Revocation (August 2013)](https://www.rfc-editor.org/rfc/rfc7009.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
+
+#### Tenant-owned resources / 租户资源授权
+
+Authentication yields a validated subject; it does not prove access to every tenant or object. Build a **principal / 请求主体** from the verified identity plus the user's current membership and permissions in the selected tenant. A tenant ID in a URL or request body is only a requested context: resolve it against trusted membership before constructing the principal. Enforce the resource and action together on every API path.
+
+For one synthetic document service, the path is: verified credential → current tenant membership → `GET /documents/{id}` authorization → query constrained by both `tenant_id` and document ID → cache lookup scoped by tenant, subject, and document after authorization → optional job row storing the authorized tenant, requester, and document. The worker loads that canonical job row, rechecks current membership, and calls the same tenant-scoped data function. A worker's broad database role does not make a job payload or object ID trustworthy.
+
+This standard-library example uses SQLite to exercise the API and worker data boundaries. The identity inputs below stand in for a principal produced by a real authentication layer; they are not token validation code.
+
+```python
+import sqlite3
+
+db = sqlite3.connect(":memory:")
+db.executescript("""
+CREATE TABLE memberships (
+    tenant_id TEXT NOT NULL, subject TEXT NOT NULL, role TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, subject)
+);
+CREATE TABLE documents (
+    id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, body TEXT NOT NULL
+);
+CREATE TABLE jobs (
+    id INTEGER PRIMARY KEY, tenant_id TEXT NOT NULL,
+    requester TEXT NOT NULL, document_id TEXT NOT NULL
+);
+INSERT INTO memberships VALUES ('tenant-a', 'alice', 'reader');
+INSERT INTO memberships VALUES ('tenant-b', 'bob', 'reader');
+INSERT INTO documents VALUES ('doc-a', 'tenant-a', 'A private sample');
+INSERT INTO documents VALUES ('doc-b', 'tenant-b', 'B private sample');
+""")
+
+def principal_for(tenant_id, subject):
+    # A requested tenant becomes trusted only after this current membership lookup.
+    row = db.execute(
+        "SELECT role FROM memberships WHERE tenant_id=? AND subject=?",
+        (tenant_id, subject),
+    ).fetchone()
+    if row is None or row[0] not in {"reader", "admin"}:
+        return None
+    return {"tenant_id": tenant_id, "subject": subject, "role": row[0]}
+
+def read_document(principal, document_id, cache):
+    if principal is None or principal["role"] not in {"reader", "admin"}:
+        raise PermissionError("no current read permission")
+    key = (principal["tenant_id"], principal["subject"], document_id)
+    if key not in cache:
+        row = db.execute(
+            "SELECT body FROM documents WHERE tenant_id=? AND id=?",
+            (principal["tenant_id"], document_id),
+        ).fetchone()
+        if row is None:
+            return None
+        cache[key] = row[0]
+    return cache[key]
+
+def read_api(principal, document_id, cache):
+    body = read_document(principal, document_id, cache)
+    return (404, None) if body is None else (200, body)
+
+def enqueue(principal, document_id, cache):
+    if read_document(principal, document_id, cache) is None:
+        raise PermissionError("cannot enqueue an unreadable document")
+    cursor = db.execute(
+        "INSERT INTO jobs (tenant_id, requester, document_id) VALUES (?, ?, ?)",
+        (principal["tenant_id"], principal["subject"], document_id),
+    )
+    db.commit()
+    return cursor.lastrowid
+
+def run_job(job_id, cache):
+    # The queue carries only an ID; tenant, actor, and object come from the stored job.
+    job = db.execute(
+        "SELECT tenant_id, requester, document_id FROM jobs WHERE id=?", (job_id,)
+    ).fetchone()
+    if job is None:
+        raise PermissionError("unknown job")
+    tenant_id, requester, document_id = job
+    principal = principal_for(tenant_id, requester)  # current membership, not enqueue-time trust
+    body = read_document(principal, document_id, cache)
+    if body is None:
+        raise PermissionError("job target is outside its tenant")
+    return body
+
+cache = {}
+alice = principal_for("tenant-a", "alice")
+bob = principal_for("tenant-b", "bob")
+assert read_api(alice, "doc-a", cache) == (200, "A private sample")
+assert read_api(bob, "doc-a", cache) == (404, None)  # API boundary
+assert run_job(enqueue(alice, "doc-a", cache), cache) == "A private sample"
+
+# Simulate a stale or malformed job row created through a privileged service path.
+cursor = db.execute(
+    "INSERT INTO jobs (tenant_id, requester, document_id) VALUES (?, ?, ?)",
+    ("tenant-b", "bob", "doc-a"),
+)
+db.commit()
+try:
+    run_job(cursor.lastrowid, cache)
+except PermissionError:
+    pass  # worker boundary still rejects the cross-tenant object
+else:
+    raise AssertionError("worker exposed a cross-tenant document")
+```
+
+The query always carries the principal's tenant, and authorization runs before a cache hit. This example gives each principal a separate cache entry; a system with finer-grained permissions must check those permissions on cache hits and include every access-relevant scope or policy version in its cache design. Database row-level security or tenant-scoped credentials can add another boundary, but the application still needs correct authorization and job ownership.
+
+Permission-aware retrieval uses the same boundary before evidence reaches a model; see [Retrieval-Augmented Generation / 检索增强生成](../../ai-engineering/rag/rag-architecture-and-implementation.md) for that application.
+
+**Interview answer / 面试回答：**
+
+> **EN:** I derive the subject from a validated credential, then resolve its current membership in the requested tenant. The API checks the action and scopes the database query by tenant and object ID. I authorize before cache lookup and carry only a server-created job ID into the queue; the worker reloads the job, rechecks membership, and uses the same scoped query. A service account's broad database access does not grant the caller cross-tenant access.
+>
+> **中文：** 我先从已验证的凭据得到用户身份，再校验其当前租户成员关系。API 同时检查操作权限，并用租户 ID 和对象 ID 限定查询；缓存命中前也要授权。队列只传递服务端创建的任务 ID，worker 重新读取任务、检查成员关系，并复用租户范围查询。服务账号拥有较广数据库权限，不代表调用者可以跨租户访问。
+
+See [AWS Well-Architected SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html) for the distinction between isolated resources and pooled resources that rely on runtime tenant scoping.
+
 ---
 
 #### How does HTTPS protect against man-in-the-middle attacks?
@@ -557,7 +812,7 @@ An optional pepper is a secret kept separately from the password database; it is
 
 **See also:** [HTTP Protocols and WebSockets](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) for browser request and transport context, and [Browser Storage and Communication](../../frontend/browser-apis/browser-storage-and-communication.md) for browser storage and messaging security.
 
-Sources: [OWASP Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#least-privilege), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP CSP](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), [WHATWG Fetch](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials), [RFC 8446 TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html), [RFC 8725 JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html). Security guidance checked 2026-10-15.
+Sources: [OWASP Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#least-privilege), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP CSP](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), [WHATWG Fetch](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials), [RFC 7636 PKCE](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009 Token Revocation](https://www.rfc-editor.org/rfc/rfc7009.html), [RFC 8446 TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html), [RFC 8725 JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), [AWS SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html), and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html). Security guidance checked 2026-10-15.
 ## 6. Algorithms and Complexity / 算法与复杂度分析
 
 ### Algorithms and Complexity / 算法与复杂度分析
@@ -1365,7 +1620,7 @@ Timeouts, concurrency limits, billing, cold-start latency, and state-reuse behav
 
 It can suit event-triggered handlers or variable workloads when the provider's limits and cost model fit. Long-running work, persistent connections, predictable latency, and vendor-specific integrations require a comparison against other deployment models.
 
-**See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](#11.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for choosing boundaries around runtime-specific infrastructure.
+**See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](#13.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99) for choosing boundaries around runtime-specific infrastructure.
 
 Sources: [Node.js v24 worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [process scheduling](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html) documentation; [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/); plus [AWS Lambda execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html). PM2 and AWS references checked 2026-10-15; provider limits change over time.
 ## 10. Python Fundamentals / Python基础
@@ -1554,7 +1809,127 @@ For a project with a `requirements.txt`, install its declared packages with `.ve
 **What do Python type hints guarantee at runtime? / Python 类型提示在运行时保证什么？** By themselves, they guarantee nothing about the values passed or returned. They communicate expected shapes to humans and static tools. Programs still parse and validate untrusted or external data where it enters the application, and use explicit runtime checks when runtime enforcement is required.
 
 类型提示本身不会在运行时保证输入值或返回值的类型。它们向读者和静态工具传达预期的数据形状。程序仍需在外部数据进入应用时解析与校验；需要运行时强制时，应添加显式检查或使用专门的校验库。
-## 11. Software Design Principles / 软件设计原则
+## 11. Data Access and Connection Pools / 数据访问与连接池
+
+### Data Access and Connection Pools / 数据访问与连接池
+
+**Core explanation / 核心解释：** An ORM session is a short-lived unit of work that tracks mapped objects and coordinates SQL within a transaction. Its lifetime, the transaction lifetime, and the database connection lifetime are related but distinct: a session may acquire a pooled connection only when it first needs the database, and commit or rollback returns that connection for reuse. / ORM Session 是短生命周期的工作单元，负责跟踪映射对象并协调事务中的 SQL。Session、事务和数据库连接的生命周期彼此相关但并不相同：Session 通常在首次访问数据库时才从连接池取连接，提交或回滚后会将连接归还以便复用。
+
+**Key terms / 关键术语：** ORM mapping / ORM 映射；identity map / 身份映射；unit of work / 工作单元；session / 会话；transaction / 事务；connection checkout / 连接借出；connection pool / 连接池；pool timeout / 连接池等待超时。
+
+#### Generalize the existing EF Core example / 推广已有 EF Core 示例
+
+The existing [ASP.NET Core note](../../archive/back-end/ASP.NET-Core.md) is a concrete reference for entity mapping, `DbContext` tracking, dependency-injection scope, and disposal. It shows that a `DbSet<T>` exposes an entity set rather than declaring a table, that the model controls mapping, and that `AddDbContext` is scoped by default in the typical request flow. When the scope ends, its `DbContext` is disposed. The reusable rule is to give each request or job a bounded unit of work, keep its tracked objects local to that unit, and dispose it when the work ends.
+
+Keep four boundaries separate:
+
+- **Session / `DbContext`:** identity map plus change tracking and query coordination for mapped objects. It is not a durable application cache or a database connection.
+- **Transaction:** the atomic commit/rollback boundary for statements that must succeed together. A session can span more than one transaction if deliberately reused, so a request scope alone does not define atomicity.
+- **Connection:** the driver-level handle used to talk to the database. It is commonly checked out lazily from a pool when a transaction executes SQL.
+- **Pool:** process-local reuse and concurrency limit for those connections. Closing a checked-out connection normally returns it to the pool; it need not close the underlying network socket.
+
+#### One request, one bounded transaction / 一个请求与一个有界事务
+
+This synchronous SQLAlchemy 2.0 example assumes `Customer` and `Order` are mapped classes. `session.begin()` commits on a clean exit and rolls back if an exception escapes. The outer session context closes the session on both paths.
+
+~~~python
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
+
+engine = create_engine(
+    database_url,
+    pool_size=8,
+    max_overflow=2,
+    pool_timeout=2,
+)
+
+def place_order(customer_id: int, sku: str, quantity: int) -> int:
+    with Session(engine) as session, session.begin():
+        customer = session.get(Customer, customer_id)
+        if customer is None:
+            raise LookupError("customer not found")
+
+        order = Order(customer_id=customer_id, sku=sku, quantity=quantity)
+        session.add(order)
+        session.flush()  # emits the INSERT inside this transaction
+        order_id = order.id
+
+    return order_id
+~~~
+
+The ORM operation still has an SQL contract: conceptually it emits an insert such as `INSERT INTO orders (customer_id, sku, quantity) VALUES (:customer_id, :sku, :quantity)`. For a report or a database-specific operation, make the SQL explicit and bind values rather than concatenating them:
+
+~~~python
+with Session(engine) as session:
+    rows = session.execute(
+        text("SELECT order_id, amount_cents FROM orders WHERE customer_id = :id"),
+        {"id": customer_id},
+    ).all()
+~~~
+
+Use an ORM for common mapping, relationship loading, and change tracking when its generated queries are clear. Use SQL directly when a bulk operation, specialized SQL feature, or plan shape needs explicit control. Either way, keep parameter binding and the same transaction/constraint rules; inspect generated or handwritten SQL with the selected database's plan tool.
+
+The [Database Fundamentals / 数据库基础](#3.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) note explains SQL result semantics, constraints, query plans, transactions, and isolation independently of the ORM.
+
+#### Follow the checkout and cleanup / 跟踪借出与清理
+
+The request path is: create a fresh session → the first query or flush starts database work and checks out a connection → load or change mapped objects → commit on success or rollback on error → return the connection → close the session. SQLAlchemy sessions use autobegin by default, so a read can also open a transaction. A `Session` context manager closes the session; `Session.begin()` frames the transaction and handles rollback before propagating an exception. The official FastAPI SQL database example uses a generator dependency with `with Session(engine)` to provide one session per request.
+
+Avoid holding an active transaction while waiting on a remote API, streaming a slow response, or doing other work that does not need the database. While a connection is checked out, another request may wait for a pool slot. If all slots are busy, the pool waits up to its configured timeout; then the request fails with a pool timeout. A forgotten session, unclosed result/connection, or transaction left open can therefore look like database slowness and eventually exhaust the pool. Observe checkout wait/timeouts, checked-out counts, and long transaction duration; increasing the pool without checking database capacity can move the queue into the database.
+
+For a synchronous SQLAlchemy `QueuePool`, the maximum concurrent connections per process is `pool_size + max_overflow`. If an application has 4 replicas, 3 worker processes per replica, and a pool configured as 8 plus 2 overflow connections, the upper bound is `4 × 3 × (8 + 2) = 120` connections if every process fills its pool. Pools grow on demand rather than pre-opening all those connections. Compare the aggregate with the database's application budget and leave capacity for migrations, administration, and other services. This multiplication assumes each process owns its pool; SQLAlchemy warns against sharing live pooled connections across a process fork.
+
+#### Representative answer / 代表性面试回答
+
+**How would you scope an ORM session and diagnose pool exhaustion? / 你会怎样限定 ORM Session 的作用域并排查连接池耗尽？**
+
+Give each request a short-lived session and frame each write unit with one transaction. Commit on success; roll back on an exception; always close the session so checked-out connections return to the pool. The ORM tracks mapped state, while the database transaction defines atomicity and the pool controls concurrent connections. Compute the possible connection total across every replica and worker process, then inspect checkout waits and long-held transactions before changing pool size. Use parameterized SQL for operations where explicit query shape matters.
+
+为每个请求创建短生命周期的 Session，并用一个事务界定每组需要原子完成的写入。成功时提交，异常时回滚，并始终关闭 Session，使借出的连接归还连接池。ORM 负责跟踪映射对象；数据库事务决定原子性；连接池限制并发连接数。先按所有副本和工作进程计算连接总上限，再检查连接等待和长事务，之后再决定是否调整连接池。需要明确查询形态时使用参数化 SQL。
+
+**Sources and verification / 来源与验证：** SQLAlchemy 2.0 [Session Basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html) and [Connection Pooling](https://docs.sqlalchemy.org/en/20/core/pooling.html), and the FastAPI [SQL (Relational) Databases tutorial](https://fastapi.tiangolo.com/tutorial/sql-databases/), checked 2026-10-15. The documented synchronous `Session`/transaction pattern and bounded pool behavior were exercised locally with SQLAlchemy 2.0.44 and SQLite 3.51.0: a successful block committed; an exception rolled back; session close reduced checked-out connections from one to zero; a second checkout against a full one-connection pool timed out, then succeeded after the first connection was returned. The docs page identifies SQLAlchemy 2.0.54 as the current 2.0 docs build; the verification above names the installed runtime version. No network database or asynchronous driver was used.
+## 12. Caching and Redis / 缓存与 Redis
+
+### Caching and Redis / 缓存与 Redis
+
+**Core explanation / 核心解释：** In cache-aside, the database remains the source of truth: reads check the cache first and load the database on a miss; writes commit to the database and then invalidate the cached copy. A TTL bounds how long one cached value can live, but invalidation races and cache failures still need an explicit freshness and load policy. / 在 cache-aside 模式中，数据库仍是事实来源：读取先查缓存，未命中时再读取数据库；写入先提交数据库，然后使缓存副本失效。TTL 限制单个缓存值的存活时间，但失效竞态和缓存故障仍需要明确的新鲜度与负载策略。
+
+**Key terms / 关键术语：** cache-aside / 旁路缓存；source of truth / 事实来源；time to live (TTL) / 存活时间；invalidation / 失效；cache stampede / 缓存击穿；negative caching / 负缓存；stale data / 陈旧数据。
+
+#### One record, one read/write lifecycle / 一个记录的读写过程
+
+Suppose `products` is authoritative and the cache key is `product:42`. A typical read is:
+
+1. `GET product:42`. On a hit, return the cached representation after applying the same authorization and response rules as a database read.
+2. On a miss, query the primary database. If the product exists, cache the representation with a TTL, for example `SET product:42 "..." EX 30`, then return it.
+3. If it does not exist, an optional short negative entry can reduce repeated misses: cache a “not found” sentinel for a few seconds. Keep this TTL shorter than the normal entry, and invalidate it when the product is created. Do not cache a database timeout or error as “not found.”
+
+For a write, update the authoritative row and commit first; only then issue `DEL product:42`. The next read repopulates from the database. Redis `GET`, `SET ... EX`, `DEL`, and `TTL` are useful implementation primitives, but these commands do not make a Redis mutation atomic with the database transaction.
+
+The [Database Fundamentals / 数据库基础](#3.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) note covers the constraints and transaction boundary that protect the source-of-truth write.
+
+##### Make the freshness window explicit / 明确新鲜度窗口
+
+With a 30-second TTL, a value that was filled before an update can remain visible until its entry expires if the post-commit invalidation fails. But TTL is not an end-to-end consistency guarantee: a reader can load the old database value just before a concurrent write commits, then populate the cache after the writer's `DEL`; that stale fill receives a fresh TTL. Each entry's lifetime is bounded, but repeated or delayed stale fills can extend the period in which clients see stale data. If read-after-write freshness is required, bypass the cache for that read or use a versioned/ordered invalidation design; do not assume Redis alone coordinates the two stores.
+
+Include every dimension that changes the returned value in the cache key, such as tenant or locale, and keep authorization checks outside an untrusted cached payload. The existing [AI response-cache explanation](../../ai-engineering/systems/ai-application-architecture.md) applies the same key-isolation and freshness discipline to exact or semantic response reuse; semantic similarity does not establish that data is current or authorized.
+
+#### Expiration bursts and cache outages / 集中过期与缓存故障
+
+When a popular key expires, many requests can miss together and send duplicate reads to the database. Coalesce concurrent misses for the same key inside each application process, and add small random jitter to TTLs so many keys do not expire together. Local coalescing reduces one process to roughly one loader per key at a time; it does not coordinate other processes. A Redis-backed short lock is another option at higher fan-out, but it needs a bounded lease and wait, plus safe owner-only release.
+
+A cache outage does not by itself corrupt the authoritative row. If a cache lookup fails, an application may read through to the database only within a deliberate bound: use a request deadline, cap concurrent fallback reads or apply admission control, and fail quickly when the database budget is exhausted. Otherwise a cache outage can turn every request into a database request and exhaust database connections. Serve stale cached data only when that endpoint has a stated maximum acceptable age; for authorization, balances, or other correctness-sensitive decisions, read the authoritative source or fail closed. Cache-fill and invalidation failures should be visible as operational errors rather than silently treated as valid data.
+
+#### Representative answer / 代表性面试回答
+
+**How would you add a cache in front of a database, and what happens if Redis fails? / 如何在数据库前增加缓存，Redis 故障时应怎样处理？**
+
+I would keep the database authoritative and use cache-aside: read the cache, load on a miss, write with a TTL, and invalidate only after a database write commits. I would choose the TTL from the endpoint's freshness requirement, account for the failed-invalidation and stale-fill windows, and coalesce concurrent misses for hot keys. If Redis fails, I would bound database fallback by deadlines and concurrency limits; cache loss should increase load, not silently change the source of truth. I would serve stale data only where its maximum age is acceptable.
+
+我会让数据库保持事实来源，并采用 cache-aside：先读缓存，未命中时查数据库，写入缓存时设置 TTL，并只在数据库写入提交后执行失效。我会根据接口的新鲜度要求选择 TTL，考虑失效失败和陈旧回填窗口，并合并热点键的并发未命中请求。Redis 故障时，我会用截止时间和并发上限约束数据库回退；缓存丢失应增加负载，但不能悄悄改变事实来源。只有在业务明确接受最大陈旧时间时才提供旧值。
+
+**Sources and verification / 来源与验证：** Redis [cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/) and [node-redis cache-aside example](https://redis.io/docs/latest/develop/use-cases/cache-aside/nodejs/), checked 2026-10-15. The official examples demonstrate cache-first reads, TTL-bearing writes, invalidation, and a short-lived stampede lock. The flow above is a generic application design; no Redis server was deployed, so Redis commands and outage behavior were not runtime-tested. TTL and `DEL` are implementation tools, not a cross-store consistency protocol.
+## 13. Software Design Principles / 软件设计原则
 
 ### Software Design Principles / 软件设计原则
 
@@ -1612,7 +1987,7 @@ class StandardShipping {
 }
 ~~~
 
-A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#12.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5).
+A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#14.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5).
 
 ##### Liskov Substitution Principle (LSP)
 
@@ -1690,10 +2065,10 @@ Micro-frontends divide a frontend into parts that can have separate ownership or
 
 Reach for this when independent teams or release schedules are a concrete requirement and the organization can support the shared navigation, styling, accessibility, observability, and runtime boundaries. For a smaller application, a modular single frontend usually has less coordination and deployment overhead.
 
-**See also:** [Design Patterns in Practice](#12.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5) for reusable patterns that can support these principles.
+**See also:** [Design Patterns in Practice](#14.%20Design%20Patterns%20in%20Practice%20/%20%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%AE%9E%E8%B7%B5) for reusable patterns that can support these principles.
 
 Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).
-## 12. Design Patterns in Practice / 设计模式实践
+## 14. Design Patterns in Practice / 设计模式实践
 
 ### Design Patterns in Practice / 设计模式实践
 
@@ -1754,7 +2129,7 @@ function calculateShipping(name, pkg) {
 }
 ~~~
 
-Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#11.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99).
+Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#13.%20Software%20Design%20Principles%20/%20%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99).
 
 ---
 
@@ -1852,7 +2227,7 @@ A relational model commonly includes:
 A request is authenticated first, then the server checks whether the resulting subject may perform the requested action on the requested object. Check every protected operation and resource; hiding a button or trusting a client-supplied role is not authorization. Role changes simplify policy administration only when the application's permission model fits roles.
 
 See [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) for authorization boundaries and [Design Patterns: Elements of Reusable Object-Oriented Software](https://www.informit.com/store/design-patterns-elements-of-reusable-object-oriented-software-9780201633610) for the original GoF catalog.
-## 13. Interview Tips / 面试准备
+## 15. Interview Tips / 面试准备
 
 ### Interview Tips / 面试准备
 
@@ -1927,8 +2302,8 @@ Prepare questions that help you understand the work. Choose the ones that remain
 
 Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
 
-**See also:** [Agile and Scrum](#14.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
-## 14. Agile and Scrum / 敏捷与Scrum
+**See also:** [Agile and Scrum](#16.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for the current Scrum vocabulary used in team-process discussions.
+## 16. Agile and Scrum / 敏捷与Scrum
 
 ### Agile and Scrum / 敏捷与Scrum
 
@@ -2008,10 +2383,10 @@ The commitments focus the artifact without replacing it. Multiple Increments may
 - **Skipping inspection and improvement:** omitting defined events loses their intended opportunities and means the team is not using the framework as described.
 - **Assuming Scrum fits every problem:** choose a way of working that fits the product, feedback cycle, and organizational constraints. Regulated work can also use iterative development when its evidence and control requirements are built into the process.
 
-**See also:** [Interview Tips](#13.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for discussing team practices accurately.
+**See also:** [Interview Tips](#15.%20Interview%20Tips%20/%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87) for discussing team practices accurately.
 
 Sources: [The Scrum Guide, November 2020](https://scrumguides.org/scrum-guide.html) and the [Agile Manifesto](https://agilemanifesto.org/).
-## 15. Git Essentials / Git日常基础
+## 17. Git Essentials / Git日常基础
 
 ### Git Essentials / Git日常基础
 
@@ -2183,10 +2558,10 @@ refactor(utils): extract date formatting
 docs(readme): clarify setup
 ~~~
 
-**See also:** [Agile and Scrum](#14.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
+**See also:** [Agile and Scrum](#16.%20Agile%20and%20Scrum%20/%20%E6%95%8F%E6%8D%B7%E4%B8%8EScrum) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
 
 Sources: [Git pull](https://git-scm.com/docs/git-pull), [Git merge](https://git-scm.com/docs/git-merge), [Git rebase](https://git-scm.com/docs/git-rebase), [Git reset](https://git-scm.com/docs/git-reset), [Git revert](https://git-scm.com/docs/git-revert), [Git reflog](https://git-scm.com/docs/git-reflog), [Git stash](https://git-scm.com/docs/git-stash), and [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick). Git manuals checked 2026-10-15.
-## 16. Docker Operations / Docker操作参考
+## 18. Docker Operations / Docker操作参考
 
 ### Docker Operations / Docker操作参考
 
