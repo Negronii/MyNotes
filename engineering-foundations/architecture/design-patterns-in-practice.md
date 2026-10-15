@@ -1,149 +1,157 @@
-A bundle of interview questions on the design patterns that come up most in frontend work — plus two system-design mini-problems (low-code editor, RBAC) that exercise those patterns.
+# Design Patterns in Practice / 设计模式实践
 
-# When do you use the Factory pattern?
+A design pattern names a recurring design choice and its trade-offs. **设计模式是可复用的设计思路，不是必须套用的模板。** Choose one when it clarifies a real variation or dependency; extra indirection also has a cost.
 
-**Headline (30s):** A factory is a function that encapsulates object creation — hiding `new`, hiding conditional logic, and allowing the factory to return different subtypes based on input. Reach for it when construction is non-trivial or when callers shouldn't need to know which concrete class they're getting. It's arguably the most common pattern in JS because it plays nicely with the language's bias toward plain functions.
+## When do you use the Factory pattern?
 
-```javascript
+**工厂 / Factory** centralizes object creation when construction rules or the concrete type should not be repeated at call sites. A simple factory function is useful in JavaScript, but it is not automatically the GoF Factory Method or Abstract Factory pattern.
+
+~~~javascript
 function createButton(type) {
-  if (type === 'primary')   return new PrimaryButton();
+  if (type === 'primary') return new PrimaryButton();
   if (type === 'secondary') return new SecondaryButton();
   return new DefaultButton();
 }
-```
+~~~
 
-**Real-world examples:** `React.createElement()`, jQuery's `$()`, `document.createElement()`, `Array.of`.
+Use this when the creation decision belongs in one place or construction has meaningful setup. If construction is already a single uncomplicated expression, a factory can add little value.
 
 ---
 
-# When do you use the Singleton pattern?
+## When do you use the Singleton pattern?
 
-**Headline:** Guarantees one instance across the app, with a single global access point. Reach for it when a shared resource (store, event bus, cache, connection pool) must be consistent across consumers.
+**单例 / Singleton** constrains access to one instance within a chosen scope. A class-level static instance, for example, is one per loaded class in a JavaScript realm; it is not automatically one instance across workers, processes, duplicated module copies, or machines.
 
-```javascript
+~~~javascript
 class Store {
   static instance;
 
   static getInstance() {
-    if (!Store.instance) {
-      Store.instance = new Store();
-    }
+    if (!Store.instance) Store.instance = new Store();
     return Store.instance;
   }
 }
-```
+~~~
 
-**Real-world examples:** Redux/Vuex store, global event bus, database connection pool, `window` object.
+Repeated calls to `getInstance()` share one instance through that accessor; because `Store` has a public constructor, `new Store()` can still create additional instances.
 
-**Gotcha — singletons hurt testability.** Global state is hard to isolate in tests. Modern apps often sidestep the pattern with **context providers** (React) or **module-scoped singletons** (one instance per module, but injectable in tests). Ask yourself whether "one instance" is the real requirement, or whether "shared instance for this context" would work — the latter is usually better.
+A shared cache, event bus, or connection pool may need one instance per process or module. Consider whether explicit dependency injection or a scoped shared instance is easier to test and reason about. A singleton's global access can hide dependencies and couple tests.
 
 ---
 
-# When do you use the Strategy pattern?
+## When do you use the Strategy pattern?
 
-**Headline (30s):** Defines a family of interchangeable algorithms, each encapsulated behind the same interface. Pick one by key instead of writing a giant switch/if-else. Reach for it when you have multiple algorithms for the same concern (sort, validate, format, price) and callers need to pick at runtime.
+**策略 / Strategy** puts interchangeable behavior behind a common contract. It is useful when callers must choose among algorithms or policies; a small conditional is often clearer when there is only one simple branch.
 
-```javascript
-const strategies = {
-  express:   pkg => pkg.weight * 10,
-  standard:  pkg => pkg.weight * 5,
-  overnight: pkg => pkg.weight * 20,
-};
+~~~javascript
+const strategies = new Map([
+  ['express', pkg => pkg.weight * 10],
+  ['standard', pkg => pkg.weight * 5],
+  ['overnight', pkg => pkg.weight * 20],
+]);
 
-function calculateShipping(strategy, pkg) {
-  return strategies[strategy](pkg);
+function calculateShipping(name, pkg) {
+  const strategy = strategies.get(name);
+  if (!strategy) throw new RangeError('unknown shipping strategy');
+  return strategy(pkg);
 }
+~~~
 
-calculateShipping('express', { weight: 3 }); // 30
-```
-
-**Use cases:** form validation rules, sort algorithms, pricing tiers, authentication methods.
-
-Strategy is the natural implementation of the **Open/Closed Principle** (see [`12.1 Software Design Principles`](./software-design-principles.md)) — add new strategies without touching the dispatcher.
+Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](./software-design-principles.md).
 
 ---
 
-# What's the difference between Observer and Publish-Subscribe?
+## What's the difference between Observer and Publish-Subscribe?
 
-**Headline (30s):** Both let something react to something else, but differ in **coupling**. **Observer** — the subject holds a direct reference to its observers and calls them itself (`element.addEventListener` fits this model). **Publish-Subscribe** — a central channel mediates; publishers and subscribers never know about each other (event bus). Pub-Sub is more decoupled and flexible; Observer is simpler and easier to trace.
+**观察者 / Observer** and **发布订阅 / Publish-Subscribe** both route notifications. In the common distinction, an observer subject knows its observers and notifies them directly; a publish-subscribe broker routes messages by topic, so publishers and subscribers need not know each other. Real libraries can combine these arrangements, so use the concrete API's contract rather than relying on the label.
 
-## Observer
+### Observer
 
-```javascript
+~~~javascript
 class Subject {
-  constructor() { this.observers = []; }
-  subscribe(observer) { this.observers.push(observer); }
-  notify(data) { this.observers.forEach(obs => obs.update(data)); }
+  constructor() {
+    this.observers = new Set();
+  }
+
+  subscribe(observer) {
+    this.observers.add(observer);
+    return () => this.observers.delete(observer);
+  }
+
+  notify(data) {
+    for (const observer of this.observers) observer.update(data);
+  }
 }
-```
+~~~
 
-**Coupling:** direct. The subject knows its observers.
+The subject owns the subscriptions. Returning an unsubscribe function makes the lifetime of a listener explicit.
 
-**Example:** DOM event listeners — the element "knows" every handler it fires.
+### Publish-Subscribe
 
-## Publish-Subscribe
+~~~javascript
+class EventBus {
+  constructor() {
+    this.listeners = new Map();
+  }
 
-```javascript
+  on(topic, listener) {
+    const subscribers = this.listeners.get(topic) ?? new Set();
+    subscribers.add(listener);
+    this.listeners.set(topic, subscribers);
+    return () => subscribers.delete(listener);
+  }
+
+  emit(topic, data) {
+    for (const listener of this.listeners.get(topic) ?? []) listener(data);
+  }
+}
+
 const eventBus = new EventBus();
-eventBus.on('user:login', updateDashboard);       // subscriber
-eventBus.emit('user:login', { name: 'Alice' });   // publisher
-```
+eventBus.on('user:login', user => { /* update the UI with user data */ });
+eventBus.emit('user:login', { name: 'Alice' });
+~~~
 
-**Coupling:** indirect — both parties know only the event channel and event name.
+A broker can reduce direct coupling, but distributed or global event buses can make the flow harder to trace. DOM `EventTarget` is observer-like: listeners register on a target that dispatches events.
 
-**Key difference:** Observer is easier to debug (you can find observers by inspecting the subject); Pub-Sub is more flexible but harder to trace because the wiring is scattered across the codebase.
-
-See [`5.1 DOM Manipulation and Events`](../../frontend/browser-apis/dom-manipulation-and-events.md) for a concrete EventBus implementation.
+See [DOM Manipulation and Events](../../frontend/browser-apis/dom-manipulation-and-events.md) for browser event APIs.
 
 ---
 
-# How would you design the data model for a low-code editor?
+## How would you design the data model for a low-code editor?
 
-**Headline (30s):** A drag-and-drop page builder needs four systems: **a component tree** (each node has id, type, props, style, children), **layer ordering** (z-index via array position), **undo/redo** (command pattern with a history stack), and **real-time collaboration** (WebSocket state sync with conflict resolution, usually OT or CRDT).
+A page builder can model a document as a component tree, with each node carrying an ID, type, properties, style, and children. The editor can derive its canvas and side panels from that model, then serialize it for persistence.
 
-## Component model
-
-```javascript
+~~~javascript
 const component = {
-  id:    'comp_001',
-  type:  'Button',
+  id: 'comp_001',
+  type: 'Button',
   props: { text: 'Click me', variant: 'primary' },
   style: { position: 'absolute', top: 100, left: 200 },
   children: [],
 };
-```
+~~~
 
-The tree is the source of truth. Rendering walks the tree; the sidebar edits the tree; persistence serializes the tree.
+Keep document order and visual stacking as explicit concepts. Child order can be one input to rendering, but CSS stacking contexts mean it is not universally equivalent to the final z-order; each stacking context is painted as a unit within its parent context ([CSS 2.2 visual formatting model](https://www.w3.org/TR/CSS22/zindex.html)).
 
-## Key requirements
-
-- **Component registry** — a map of `type → renderer` so new component types can be added without touching the core.
-- **Layer management** — z-index is the array order within `children`; reordering is a splice.
-- **Undo/redo** — command pattern with a history stack. Each mutation pushes a reversible command; undo pops and inverts.
-- **Real-time collaboration** — WebSocket broadcasts mutations; OT/CRDT resolves conflicts (see [`5.2 Browser Storage and Communication`](../../frontend/browser-apis/browser-storage-and-communication.md)).
+- **Component registry / 组件注册表**: map a validated component type to its renderer and schema.
+- **Layer order / 图层顺序**: define how siblings are ordered and translate that order into the chosen rendering model.
+- **Undo and redo / 撤销与重做**: store inverse commands or immutable document snapshots; choose based on history size and operation complexity.
+- **Collaboration / 协作**: a WebSocket transports updates, but does not resolve concurrent edits. A server-authoritative order, locks, operational transformation, or a CRDT may fit different conflict and offline requirements.
 
 ---
 
-# How does Role-Based Access Control (RBAC) work?
+## How does Role-Based Access Control (RBAC) work?
 
-**Headline:** RBAC assigns permissions to **roles**, not users. Users are then assigned one or more roles. Adding a new role or changing a role's permissions doesn't require touching user records or app code — only the role and permission tables.
+**基于角色的访问控制 / Role-Based Access Control** associates permissions with roles and assigns users to roles. It is one authorization model; it does not determine whether a particular user may access every object of a type.
 
-## Data model
+A relational model commonly includes:
 
-- **User** — `id`, `username`, `password_hash`
-- **Role** — `id`, `role_name` (e.g., admin, editor, viewer)
-- **Permission** — `id`, `permission_name` (e.g., read, write, delete)
-- **UserRole** — `user_id`, `role_id` (many-to-many)
-- **RolePermission** — `role_id`, `permission_id` (many-to-many)
+- **User / 用户**: identity and credential reference.
+- **Role / 角色**: named job or application role.
+- **Permission / 权限**: action on a resource or capability.
+- **UserRole / 用户角色**: many-to-many user-to-role assignment.
+- **RolePermission / 角色权限**: many-to-many role-to-permission assignment.
 
-## Access check flow
+A request is authenticated first, then the server checks whether the resulting subject may perform the requested action on the requested object. Check every protected operation and resource; hiding a button or trusting a client-supplied role is not authorization. Role changes simplify policy administration only when the application's permission model fits roles.
 
-```
-User → UserRole → Role → RolePermission → Permission
-```
-
-To check "can this user write?", look up their roles, then the permissions on those roles, then check if `write` is in the set.
-
-**Why this structure:** the indirection through `Role` is what makes RBAC scalable. Assigning a permission to a role changes it for everyone with that role. Assigning a role to a user gives them every permission the role has. No code changes needed.
-
-**See also:** [`12.1 Software Design Principles`](./software-design-principles.md) for the SOLID foundations these patterns implement, [`5.1 DOM Manipulation and Events`](../../frontend/browser-apis/dom-manipulation-and-events.md) for a concrete EventBus.
+See [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) for authorization boundaries and [Design Patterns: Elements of Reusable Object-Oriented Software](https://www.informit.com/store/design-patterns-elements-of-reusable-object-oriented-software-9780201633610) for the original GoF catalog.

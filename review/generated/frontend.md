@@ -1573,305 +1573,154 @@ Animating `transform` and `opacity` can let an engine update presentation withou
 **Specifications / 规范：** [CSS Positioned Layout](https://www.w3.org/TR/css-position-3/), [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color opacity](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transforms](https://www.w3.org/TR/css-transforms-1/), [CSS Transitions](https://www.w3.org/TR/css-transitions-2/), [W3C WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/).
 ## 9. JavaScript Basics / JavaScript基础
 
-### `var`, `let`, and `const`
+### JavaScript Variable Declarations / JavaScript 变量声明
 
-Reach for this when you need to remember the difference between the three variable declarations, including scoping, hoisting, and the Temporal Dead Zone.
+**Key terms / 关键词:** binding 绑定 · function scope 函数作用域 · block scope 块级作用域 · hoisting 提升 · Temporal Dead Zone 暂时性死区
 
-#### Quick comparison
+The main choice is whether a binding may be reassigned and how long it is visible. Prefer `const` when the binding stays fixed, use `let` when it must be reassigned, and recognize `var` when maintaining older code. / 选择声明方式时，重点看绑定是否需要重新赋值以及它的可见范围。绑定不需重新赋值时优先用 `const`，需要重新赋值时用 `let`，维护旧代码时识别 `var` 的作用域行为。
 
-| | `var` | `let` | `const` |
+| Behavior / 行为 | `var` | `let` | `const` |
 |---|---|---|---|
-| **Scope** | function | block | block |
-| **Hoisted?** | yes, initialized to `undefined` | yes, but uninitialized (TDZ) | yes, but uninitialized (TDZ) |
-| **Redeclaration in same scope** | allowed | `SyntaxError` | `SyntaxError` |
-| **Reassignment** | allowed | allowed | **not** allowed (binding is frozen) |
-| **Must be initialized?** | no | no | yes |
+| Scope / 作用域 | Function scope; top-level context depends on script, module, or host / 函数作用域；顶层由脚本、模块或宿主决定 | Lexical block / 词法块 | Lexical block / 词法块 |
+| Before declaration / 声明前访问 | Initialized to `undefined` when its binding is created / 绑定创建时初始化为 `undefined` | TDZ; access throws / TDZ，访问会抛错 | TDZ; access throws / TDZ，访问会抛错 |
+| Same-scope redeclaration / 同作用域重复声明 | Often allowed for `var` / 通常允许 | Syntax error / 语法错误 | Syntax error / 语法错误 |
+| Reassignment / 重新赋值 | Allowed / 允许 | Allowed / 允许 | Binding cannot be reassigned / 绑定不能重新赋值 |
+| Initializer required / 是否必须初始化 | No / 否 | No / 否 | Yes / 是 |
 
-**Default:** use `const`; switch to `let` only when the binding must be reassigned; avoid `var` in new code.
+#### `var`: function scope / 函数作用域
 
-#### `var` — function-scoped, hoisted to `undefined`
-
-A `var` declaration is hoisted to the top of its enclosing function (or global scope), but it's only *initialized* at its declaration line. Accessing before initialization returns `undefined` rather than throwing.
+A `var` declaration belongs to the nearest function scope, or the top-level variable environment provided by the current script, module, or host wrapper; a surrounding `if` or `for` block does not create a new `var` scope. The binding exists before the declaration executes and starts as `undefined`; its initializer still runs at its written position. / `var` 属于最近的函数作用域；若代码位于顶层，则属于当前脚本、模块或宿主包装器提供的顶层变量环境。外层的 `if` 或 `for` 块不会创建新的 `var` 作用域。绑定在声明执行前已经存在，初值为 `undefined`；初始化表达式仍在代码写出的位置执行。
 
 ```javascript
-console.log(a); // undefined
-var a = 10;
-console.log(a); // 10
-
-function foo() {
-  console.log(a); // undefined  (hoisted function-scoped a, not the outer a)
-  var a = 20;
-  console.log(a); // 20
+function example() {
+  console.log(value); // undefined
+  if (true) {
+    var value = 10;
+  }
+  console.log(value); // 10
 }
 ```
 
-**Quirks worth knowing:**
+#### `let` and `const`: lexical scope / 词法作用域
 
-- Can be redeclared in the same scope without error.
-- Ignores block boundaries — a `var` declared inside `if` or `for` leaks to the enclosing function.
-
-#### `let` — block-scoped, Temporal Dead Zone
-
-A `let` declaration is hoisted to the top of its block, but lives in the **Temporal Dead Zone (TDZ)** from the start of the block until the declaration is reached. Access inside the TDZ throws `ReferenceError`.
+A lexical binding is in the Temporal Dead Zone from entry into its scope until its declaration is evaluated. The binding is not usable during that interval. `const` also requires an initializer and prevents reassignment of the binding; it does not freeze an object stored in that binding. / 词法绑定从进入作用域开始，到声明执行之前处于暂时性死区（TDZ），这段时间不能访问。`const` 还要求声明时初始化，并禁止重新赋值绑定；它不会冻结绑定所指向的对象。
 
 ```javascript
-console.log(a); // ReferenceError: Cannot access 'a' before initialization
-let a = 10;
-console.log(a); // 10
+const settings = { theme: "light" };
+settings.theme = "dark"; // allowed: the object is mutable
+// settings = {};        // TypeError: the binding cannot be reassigned
 
-function foo() {
-  console.log(a); // ReferenceError (inner a shadows the outer one and is in TDZ)
-  let a = 20;
-  console.log(a); // 20
-  // let a = 30; // SyntaxError: 'a' already declared
+{
+  // console.log(count); // ReferenceError: still in the TDZ
+  let count = 1;
 }
 ```
 
-**Key properties:**
+At the top level, script, module, and host environments differ. In a classic browser script, a global `var` can create a property on the global object, while `let` and `const` create global lexical bindings instead. Do not assume this browser-script behavior for ES modules or Node modules. / 顶层行为会因脚本、模块和宿主环境而异。在浏览器经典脚本中，全局 `var` 可以在全局对象上创建属性，而 `let`、`const` 创建的是全局词法绑定。不要把该浏览器脚本行为直接套用到 ES 模块或 Node 模块。
 
-- Block-scoped — lives only inside the `{ ... }` it was declared in. (Unlike `var`, `let` doesn't leak out of `if` / `for` blocks.)
-- Cannot be redeclared in the same block.
+**Interview answer / 面试回答:** `var` is function-scoped and initialized to `undefined` when its binding is created. `let` and `const` are block-scoped and inaccessible in the TDZ before declaration evaluation. `const` protects the binding from reassignment, not the referenced object from mutation. / `var` 是函数作用域，绑定创建时会初始化为 `undefined`。`let` 和 `const` 是块级词法作用域，声明执行前处于 TDZ。 `const` 保护的是绑定，不能阻止对象内容被修改。
 
-#### `const` — block-scoped, binding frozen
+See [ECMAScript declarations and environments](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html), including [Module Environment Records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records), for the language rules. / 变量声明与环境记录规则见 [ECMAScript 声明和执行上下文规范](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html)，包括[模块环境记录](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records)。
 
-`const` behaves like `let` (block scope, TDZ) **plus**: the variable must be initialized at declaration, and its binding cannot be reassigned. The *contents* of a mutable object pointed to by a `const` binding can still be modified.
-
-```javascript
-console.log(a); // ReferenceError (TDZ)
-// const a;   // SyntaxError: missing initializer
-const a = 10;
-// a = 20;   // TypeError: assignment to constant variable
-
-const b = [];
-b[0] = 10; // fine — mutating the array
-// b = [10]; // TypeError — reassigning the binding
-```
-
-**Common misconception:** `const` does not make the value immutable — it makes the *binding* immutable. For deep immutability, use `Object.freeze`, or reach for immutable-data libraries.
-
-#### Best practice
-
-1. **Default to `const`** — most bindings don't need to change after initialization.
-2. **Use `let`** only where reassignment is actually needed (loop counters, accumulators).
-3. **Don't use `var` in new code.** ES6 made `let`/`const` available everywhere; `var` only remains for extreme legacy-browser support.
-
-**See also:** [`Scope & Closure / 作用域与闭包`](#18.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85) for how scope interacts with closures.
+Related: [Scope and Closure / 作用域与闭包](#18.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85).
 ## 10. JavaScript Types / JavaScript类型
 
-Four interview questions this note prepares you for:
+### JavaScript Types and Coercion / JavaScript 类型与类型转换
 
-1. **What are the primitive types in JavaScript?**
-2. **What's the difference between primitive and reference types?** (with the classic `a.x = a = {}` gotcha)
-3. **How do you reliably check a variable's type?**
-4. **What types can be used as object keys, and what happens if you use something else?**
+**Key terms / 关键词:** primitive 原始值 · object 对象 · coercion 隐式转换 · property key 属性键 · realm 执行领域
 
----
+JavaScript has seven primitive types: `undefined`, `null`, `boolean`, `number`, `bigint`, `string`, and `symbol`. Other values are objects, including functions. A value’s language semantics are specified; whether an engine stores it on a stack, heap, or elsewhere is an implementation detail. / JavaScript 有七种原始类型：`undefined`、`null`、`boolean`、`number`、`bigint`、`string` 和 `symbol`。其他值都是对象，函数也属于对象。语言规范定义的是值的行为；引擎是否把值放在栈、堆或其他位置属于实现细节。
 
-#### What are the primitive types in JavaScript?
-
-**Headline (30s):** Seven primitives: `undefined`, `null`, `boolean`, `number`, `string`, `symbol`, `bigint`. Primitives are immutable and compared by value. Everything else (`object`, `array`, `function`, `Date`, `Map`, ...) is a reference type, compared by reference.
-
-| Type | Represents | Quirk worth knowing |
-|---|---|---|
-| `undefined` | uninitialized value | default for declared-but-unset variables |
-| `null` | intentional absence | `typeof null === 'object'` (historical bug) |
-| `boolean` | `true` / `false` | falsy values: `false`, `0`, `-0`, `''`, `null`, `undefined`, `NaN` |
-| `number` | IEEE 754 double | `NaN !== NaN`; use `Number.isNaN()` |
-| `string` | character sequence | immutable |
-| `symbol` (ES6) | unique identifier | `Symbol('x') !== Symbol('x')` even with same description |
-| `bigint` (ES11) | arbitrary-precision integer | literal suffix `n` (`123n`) |
-
-##### Type-coercion cheat sheet
-
-**To boolean:**
-
-- Falsy: `false`, `0`, `-0`, `''`, `null`, `undefined`, `NaN`.
-- Everything else is truthy — including `'0'`, `'false'`, `{}`, `[]`.
-
-**To number:**
-
-| Input | Result |
+| Type / 类型 | Useful fact / 要点 |
 |---|---|
-| `Number('')` | `0` |
-| `Number('123')` | `123` |
-| `Number('abc')` | `NaN` |
-| `Number(true)` | `1` |
-| `Number(false)` | `0` |
-| `Number(null)` | `0` |
-| `Number(undefined)` | `NaN` |
-| `Number({})` | `NaN` |
+| `undefined` | Default value of an uninitialized `var` binding or missing result / 未初始化的 `var` 绑定或缺失结果的默认值 |
+| `null` | Intentional absence; `typeof null` is the historical string `"object"` / 表示有意为空；`typeof null` 因历史兼容结果为 `"object"` |
+| `boolean` | Falsy values include `false`, `0`, `-0`, `0n`, `""`, `null`, `undefined`, and `NaN` / 假值包括这些值 |
+| `number` | IEEE 754 binary64; includes `NaN` and infinities / IEEE 754 binary64，包含 `NaN` 与无穷值 |
+| `bigint` | Arbitrary-precision integers; cannot be mixed with Number arithmetic without conversion / 任意精度整数；算术运算不能直接与 Number 混用 |
+| `string` | Immutable sequence of UTF-16 code units / 不可变的 UTF-16 码元序列 |
+| `symbol` | Unique primitive value, often used as a property key / 唯一原始值，常用作属性键 |
 
-**Gotcha — `NaN !== NaN`:** The only value in JavaScript not equal to itself. To test, use `Number.isNaN(x)` (or `Object.is(x, NaN)`) — never `x === NaN`.
+Objects and functions are mutable or callable according to their own behavior; “reference type” is a useful description of assignment and identity, not a guarantee about physical memory layout. / 对象和函数的可变性、可调用性由各自行为决定。“引用类型”可以帮助解释赋值与身份，但不代表固定的物理内存布局。
 
-**Gotcha — `typeof null === 'object'`:** A bug from the first version of JavaScript that's too widely depended on to fix. When you need to detect `null`, check `x === null` explicitly.
+#### Coercion essentials / 类型转换要点
 
----
-
-#### Primitive vs reference types — what's the difference?
-
-**Headline (30s):** Primitives live on the stack and are compared by value — copying a primitive duplicates the data. Reference types live on the heap; a variable stores a pointer to that heap slot. Assigning one reference variable to another makes both point to the same object; mutating through one reference shows up through the other.
-
-| | Primitive | Reference |
-|---|---|---|
-| **Stored in** | stack | heap (variable holds a pointer) |
-| **Compared** | by value | by reference |
-| **Copy on assignment?** | yes (duplicate data) | no (share the same object) |
-| **Mutable?** | no | yes |
-
-##### The classic "right-to-left assignment" gotcha
-
-**What does this print, and why?**
+Truthiness and numeric conversion are separate operations. Empty arrays and objects are truthy; `Number("")` and `Number(null)` are zero; `Number(undefined)` is `NaN`. Use explicit conversions where the input contract matters. / 布尔转换与数值转换是不同操作。空数组和空对象都是真值；`Number("")` 与 `Number(null)` 为 0；`Number(undefined)` 为 `NaN`。输入契约重要时应显式转换。
 
 ```javascript
-let a = {n: 1};
-let b = a;
-a.x = a = {n: 2};
-console.log(a.x);
-console.log(b.x);
+Boolean("false"); // true: nonempty string
+Boolean([]);      // true
+Number("");       // 0
+Number(null);     // 0
+Number(undefined);// NaN
+
+Number.isNaN(NaN); // true
+NaN === NaN;       // false
+Object.is(NaN, NaN); // true
+Object.is(+0, -0);   // false
 ```
 
-**Output:**
+Use `x === null` to test specifically for null. `Number.isNaN(x)` tests NaN without first coercing non-number inputs. / 若要专门判断 null，使用 `x === null`。`Number.isNaN(x)` 不会先把非数值输入强制转换。
 
-```text
-undefined
-{n: 2}
-```
+#### Assignment and object identity / 赋值与对象身份
 
-**Why** — two rules do the heavy lifting:
-
-1. **Sequential assignments execute right-to-left.** `a.x = a = {n: 2}` is `a = {n: 2}` first, then `a.x = (result of that)`.
-2. **Dot notation (`a.x`) captures its target at the moment it's evaluated.** Before JS evaluates the right side, it's already decided which object `a.x` refers to — the *original* object (still held by `b`).
-
-**Step by step:**
-
-1. After `let a = {n: 1}; let b = a;` — both `a` and `b` point to `{n: 1}`.
-2. JS evaluates `a.x` on the left side, reserving a slot on the original object (now it's `{n: 1, x: undefined}`, still held by both `a` and `b`).
-3. JS evaluates the right side: `a = {n: 2}` — `a` now points to a *new* object `{n: 2}`. `b` still points to the old one.
-4. JS assigns the right side's value (`{n: 2}`) to the slot it reserved in step 2. That slot is on the *original* object, which only `b` holds now.
-
-**Final state:**
-
-- `a` → `{n: 2}` (no `x` property)
-- `b` → `{n: 1, x: {n: 2}}`
-
-So `a.x` is `undefined`; `b.x` is `{n: 2}`.
-
-**Gotcha — do not write code like this in production.** If you see it in an interview, slow down, draw the heap, and walk through each step.
-
----
-
-#### How do you reliably check a variable's type?
-
-**Headline (30s):** `typeof` works for primitives but misidentifies `null` as `'object'` and treats arrays and plain objects identically. `instanceof` works for objects from a specific constructor (within its prototype chain). The reliable-for-everything answer is `Object.prototype.toString.call(x)` — it returns strings like `'[object Array]'`, `'[object Null]'`, `'[object Date]'` — or a thin wrapper around it like a custom `getType()`.
-
-##### `typeof` — fast, primitive-friendly, lies about `null` and arrays
+Assigning an object value to another binding makes both bindings refer to the same object. A property assignment evaluates and remembers its base object before evaluating the right side; it does not create an “undefined slot” in advance. / 把对象值赋给另一个绑定后，两个绑定会引用同一个对象。属性赋值会先求值并记录基对象，再求值右侧表达式；这时还不会提前创建一个值为 `undefined` 的属性槽。
 
 ```javascript
-typeof 1;          // 'number'
-typeof 'test';     // 'string'
-typeof true;       // 'boolean'
-typeof undefined;  // 'undefined'
-typeof function(){}; // 'function'
-typeof null;       // 'object'  ← historical bug
-typeof [];         // 'object'  ← arrays look the same as plain objects
-typeof {};         // 'object'
+let a = { n: 1 };
+const b = a;
+a.x = a = { n: 2 };
+
+a.x; // undefined
+b.x; // { n: 2 }
 ```
 
-**Reach for it when:** you just need to verify a primitive, and you're not worried about `null`.
+Evaluation first captures the old object as the base of `a.x`. The right side then reassigns `a` to a new object; the final property write still targets the captured old object, which `b` references. / 求值先把旧对象记录为 `a.x` 的基对象；右侧随后把 `a` 重新绑定到新对象；最后写入仍作用于之前记录的旧对象，也就是 `b` 引用的对象。
 
-##### `instanceof` — constructor-based, no help for primitives
+#### Choosing a type check / 如何选择类型判断方式
 
-Checks whether the constructor's `prototype` appears in the value's prototype chain. Under the hood, it invokes `Constructor[Symbol.hasInstance]`.
+- `typeof` is useful for primitives and functions, with the `null` quirk shown above. / `typeof` 适合判断原始值和函数，但要记住 null 的历史特例。
+- `Array.isArray(value)` is the robust array check, including arrays from another realm. / `Array.isArray(value)` 能可靠识别来自其他 realm 的数组。
+- By default, `instanceof` checks whether the RHS constructor’s `.prototype` occurs in the LHS value’s prototype chain ([`OrdinaryHasInstance`](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance)). Constructors from different realms normally have different prototype objects, so a foreign value can fail against the local constructor but pass against its own realm’s constructor. `Symbol.hasInstance` can customize the check. / 默认情况下，`instanceof` 检查右侧构造函数的 `.prototype` 是否出现在左侧值的原型链中（见 [`OrdinaryHasInstance`](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance)）。不同 realm 中的构造函数通常有不同原型对象，因此跨 realm 的值可能无法通过本地构造函数判断，却能通过其所属 realm 的构造函数判断。`Symbol.hasInstance` 可自定义该检查。
+- `Object.prototype.toString.call(value)` is a useful built-in tag, not a definitive type oracle: `Symbol.toStringTag` can change the displayed tag. / `Object.prototype.toString.call(value)` 可读取内置标签，但不是绝对可靠的类型证明：`Symbol.toStringTag` 可以改变显示标签。
 
 ```javascript
-[] instanceof Array;     // true
-({}) instanceof Object;  // true
-'x' instanceof String;   // false  (primitive string ≠ String object)
+typeof null; // "object"
+Array.isArray([]); // true
+
+const custom = { [Symbol.toStringTag]: "Array" };
+Object.prototype.toString.call(custom); // "[object Array]" — a spoofable tag
 ```
 
-**Reach for it when:** checking whether an object came from a specific class.
+For application validation, prefer a check for the behavior or data shape the code actually requires, rather than a generic display string. / 应用校验应检查代码实际依赖的行为或数据结构，不要只依赖通用类型字符串。
 
-**Gotcha — cross-realm objects:** `instanceof` can return `false` for arrays from another iframe or worker because each realm has its own `Array.prototype`. Use `Array.isArray(x)` for arrays specifically.
+See [ECMAScript Object.prototype.toString](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring) and its use of `Symbol.toStringTag`. / 详见 [ECMAScript Object.prototype.toString 规范](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring)及其对 `Symbol.toStringTag` 的处理。
 
-##### `Object.prototype.toString.call()` — works for everything
+#### Object property keys / 对象属性键
+
+A property key is a string or a symbol. When another value is used in bracket notation, JavaScript applies `ToPropertyKey`: objects may run `Symbol.toPrimitive` or other conversion hooks before producing a string or symbol. This is more precise than saying every key simply calls `toString()`. / 属性键是字符串或 Symbol。方括号中使用其他值时，JavaScript 会执行 `ToPropertyKey`：对象可能先运行 `Symbol.toPrimitive` 等转换钩子，再得到字符串或 Symbol。因此“其他键都直接调用 `toString()`”并不准确。
 
 ```javascript
-Object.prototype.toString.call([1, 2, 3]);   // '[object Array]'
-Object.prototype.toString.call(null);         // '[object Null]'
-Object.prototype.toString.call(new Date());   // '[object Date]'
-Object.prototype.toString.call(/regex/);      // '[object RegExp]'
+const record = {};
+record[123] = "number";
+record["123"]; // "number"
+
+const key = { [Symbol.toPrimitive]: () => "account" };
+record[key] = "Ada";
+record.account; // "Ada"
+
+const map = new Map();
+map[{ id: 1 }] = "property key conversion";
+map.set({ id: 1 }, "object identity key"); // Map does not coerce keys
 ```
 
-**Reach for it when:** you need a definitive type string that works across realms, handles `null` and `undefined`, and distinguishes built-in object types.
+Use `Map` when distinct object identities or uncoerced non-string keys matter. For plain-object dictionaries, use `Object.hasOwn` for ownership checks; `Object.create(null)` avoids an inherited prototype but still uses property-key conversion. / 需要区分对象身份或避免键转换时使用 `Map`。普通对象字典可用 `Object.hasOwn` 判断自有属性；`Object.create(null)` 可去掉继承原型，但仍会转换属性键。
 
-##### A custom `getType` combining all three
+**Interview answer / 面试回答:** JavaScript has seven primitive types. Objects are assigned and compared by identity, but stack-versus-heap layout is engine-specific. Use `typeof` for basic primitive checks, `Array.isArray` for arrays, and `instanceof` for a constructor’s prototype-chain relationship, accounting for realm-specific constructor identity. Object keys are strings or symbols after `ToPropertyKey` conversion. / JavaScript 有七种原始类型。对象按身份赋值和比较，但栈与堆的布局由引擎决定。基础类型判断可用 `typeof`，数组用 `Array.isArray`；使用 `instanceof` 判断构造函数的原型链关系时，应考虑 realm 中构造函数身份的差异。对象键经过 `ToPropertyKey` 后只能是字符串或 Symbol。
 
-```javascript
-function getType(val) {
-  const t = typeof val;
-  if (t !== 'object') return t;        // primitives
-  if (val === null) return 'null';
-  return Object.prototype.toString.call(val).slice(8, -1).toLowerCase();
-}
+See [ECMAScript types and values](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html) and [property key conversion](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey). / 详见 [ECMAScript 类型和值](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html) 与 [属性键转换](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey)。
 
-getType(null);         // 'null'
-getType([1, 2, 3]);    // 'array'
-getType(new Date());   // 'date'
-```
-
-**Reach for it when:** you want one function that gives clean names for everything.
-
----
-
-#### What types can be used as object keys?
-
-**Headline (30s):** Only **strings** and **symbols**. Anything else is coerced to a string via the value's `toString()`. This means numeric keys are *actually* strings, and two different plain objects used as keys both become `"[object Object]"` — overwriting each other. If you need non-string keys, use `Map` instead.
-
-##### Key conversion rules
-
-- **String or symbol:** used directly.
-- **Any other type:** converted via `toString()`.
-  - Numeric keys: `obj[123]` and `obj['123']` access the same slot.
-  - Plain objects: all become `"[object Object]"` — they collide.
-  - Arrays: `[1, 2]` becomes `"1,2"`.
-- **`Map`:** keys of **any** type are preserved without coercion.
-
-##### Example 1 — numeric keys collide with string keys
-
-```javascript
-const o = {};
-const strKey = '123';
-const numKey = 123;
-o[strKey] = 'string-valued';
-o[numKey] = 'number-valued';
-console.log(o[strKey]); // 'number-valued'  (both wrote to the same string key)
-```
-
-##### Example 2 — Symbol uniqueness
-
-```javascript
-const o = {};
-const s1 = Symbol('id');
-const s2 = Symbol('id');
-o[s1] = 'one';
-o[s2] = 'two';
-console.log(o[s1]); // 'one'  (symbols with the same description are still different)
-```
-
-##### Example 3 — two objects as keys collide
-
-```javascript
-const o = {};
-const k1 = { key: '123' };
-const k2 = { key: '456' };
-o[k1] = 'one';
-o[k2] = 'two';
-console.log(o[k1]); // 'two'  (both keys coerced to "[object Object]")
-```
-
-**Gotcha — reaching for `Map` when object keys matter:** If you need to associate data with objects without this collision (or without coercion at all), use `Map`. See [`3.3 Map & Set in JS`](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set).
-
-**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for how primitives and references interact with the stack and heap.
+Related: [Map and Set / JavaScript 中的 Map 与 Set](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Memory, WeakMap and WeakSet / JavaScript 内存、WeakMap 与 WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
 ## 11. Map and Set in JavaScript / JavaScript 中的 Map 与 Set
 
 ### Map and Set in JavaScript / JavaScript 中的 Map 与 Set
@@ -2143,804 +1992,493 @@ Prefer `flat` when its hole and depth semantics match the task. / 若 `flat` 的
 **Interview answer / 面试回答:** `for...of` reads array values; Set deduplicates by SameValueZero while preserving first-seen order; array methods differ on holes and mutation; spread is shallow; and `flat` is the built-in flattening operation. / `for...of` 读取数组值；Set 按 SameValueZero 去重并保留首次出现顺序；数组方法对空位和原数组修改的行为不同；展开是浅拷贝；内置展平方法是 `flat`。
 ## 14. ES6 New Methods / ES6新增方法
 
-Reach for this when you need a quick reference for the `Object.*` and `Array.*` utility methods introduced in ES6. For newer additions (`Object.hasOwn`, `Array.at`, `structuredClone`), see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
+### Object and Array Methods / 对象与数组方法
 
-#### Object methods
+**Key terms / 关键词:** own property 自有属性 · enumerable 可枚举 · shallow copy 浅拷贝 · array-like 类数组对象
 
-##### `Object.assign(target, ...sources)`
+This is a focused reference for selected Object and Array methods and their edition boundaries. Newer additions such as Object.hasOwn and Array.at are covered in [Modern JavaScript Features / 现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7). / 本笔记选列部分 Object 与 Array 方法，并标明其版本边界。Object.hasOwn、Array.at 等后续新增方法见[现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)。
 
-Copies enumerable own properties from one or more source objects into the target. Returns the target. **Shallow** copy; later sources win for duplicate keys.
+#### Object methods / Object 方法
+
+##### Object.assign(target, ...sources)
+
+Copies enumerable own string and symbol properties from each source to target, mutates and returns target. Later sources overwrite earlier properties. The copy is shallow. Reading a source may invoke getters; writing to the target may invoke setters. / 把各个来源对象的自有可枚举字符串键和 Symbol 键复制到 target，修改并返回 target。后面的来源会覆盖前面的同名属性。该操作是浅拷贝；读取来源对象可能触发 getter，写入 target 可能触发 setter。
 
 ```javascript
 const target = { a: 1, b: 2 };
-const source = { b: 3, c: 4 };
-Object.assign(target, source);
-// target is now { a: 1, b: 3, c: 4 }
+Object.assign(target, { b: 3, c: 4 });
+// target is { a: 1, b: 3, c: 4 }
 
-// Common idiom: merge without mutating any input
-const merged = Object.assign({}, obj1, obj2);
+const merged = Object.assign({}, defaults, overrides);
 ```
 
-**Modern alternative:** object spread — `{ ...obj1, ...obj2 }` — is usually cleaner for this use case.
+Object spread is often more concise, but is not identical in every detail: it creates own data properties in a new object, while Object.assign writes to its existing target and can invoke target setters. / 对象展开通常更简洁，但细节并非处处等价：展开会在新对象上创建自有数据属性；Object.assign 则写入已有目标对象，可能触发目标 setter。
 
-##### `Object.is(a, b)`
+##### Object.is(a, b)
 
-Same as `===`, with two exceptions:
-
-- `Object.is(NaN, NaN)` is `true` (strict equality would be `false`).
-- `Object.is(+0, -0)` is `false` (strict equality would be `true`).
+Uses SameValue equality. It differs from === for NaN and signed zero: / 使用 SameValue 相等规则。它对 NaN 和有符号零的处理与 === 不同：
 
 ```javascript
 Object.is(NaN, NaN); // true
 Object.is(+0, -0);   // false
+NaN === NaN;         // false
++0 === -0;           // true
 ```
 
-Reach for it when you need to distinguish `+0` from `-0` (rare) or detect `NaN` without `Number.isNaN`.
+##### Object.keys, Object.values, and Object.entries
 
-##### `Object.keys(obj)`
-
-Array of the object's own enumerable string-keyed property names, in insertion order (with integer keys numerically ordered first).
+Object.keys was standardized in ES5; Object.values and Object.entries were added in ES2017. They return an object’s own enumerable string-keyed property names, values, or pairs. Symbol-keyed properties are excluded. For ordinary objects, array-index string keys come first in ascending numeric order, followed by other string keys in creation order. This ordinary-object order is not a guarantee for proxies or every exotic object. / Object.keys 属于 ES5；Object.values 和 Object.entries 于 ES2017 加入。它们分别返回对象的自有可枚举字符串键、值或键值对数组。Symbol 键不会包含在结果中。对普通对象，数组索引字符串键先按数值升序排列，其余字符串键按创建顺序排列。代理或其他特殊对象不一定遵循普通对象的顺序。
 
 ```javascript
-Object.keys({ a: 1, b: 2, c: 3 }); // ['a', 'b', 'c']
-```
+const record = { name: "Ada", age: 36 };
+Object.keys(record);   // ["name", "age"]
+Object.values(record); // ["Ada", 36]
 
-##### `Object.values(obj)`
+const keyOrder = {};
+keyOrder["4294967296"] = "large integer, not an array index";
+keyOrder["4294967295"] = "one past the maximum array index";
+keyOrder["2"] = "array index";
+Object.keys(keyOrder); // ["2", "4294967296", "4294967295"]
 
-Array of the own enumerable values.
-
-```javascript
-Object.values({ a: 1, b: 2, c: 3 }); // [1, 2, 3]
-```
-
-##### `Object.entries(obj)`
-
-Array of `[key, value]` pairs. Enables iteration with `for...of` destructuring.
-
-```javascript
-Object.entries({ a: 1, b: 2, c: 3 });
-// [['a', 1], ['b', 2], ['c', 3]]
-
-for (const [key, value] of Object.entries(obj)) {
+for (const [key, value] of Object.entries(record)) {
   console.log(key, value);
 }
 ```
 
-These three methods are the go-to for iterating a plain object — preferred over `for..in`, which walks the prototype chain.
+For a plain dictionary, remember that own-property checks and inherited properties are different questions. See [JavaScript Types and Coercion / JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B). / 普通对象作字典时，要区分自有属性与继承属性。详见[JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B)。
 
-#### Array methods
+#### Array methods / Array 方法
 
-##### `Array.from(arrayLike, mapFn?)`
+##### Array.from(arrayLikeOrIterable, mapFn?)
 
-Creates a new, shallow-copied array from an array-like or iterable object. Optional mapping function transforms each element during creation.
+Creates a new array from an iterable or array-like input, optionally mapping each value as it is created. Array-like input is read by index, so a missing index is observed as undefined in the result. / 从可迭代对象或类数组输入创建新数组，并可在创建时映射元素。类数组输入按索引读取，因此缺失索引会在结果中表现为 undefined。
 
 ```javascript
-// From an array-like
-const arrayLike = { 0: 'a', 1: 'b', length: 2 };
-Array.from(arrayLike); // ['a', 'b']
+const arrayLike = { 0: "a", 1: "b", length: 2 };
+Array.from(arrayLike); // ["a", "b"]
 
-// From a Set (dedupe idiom)
 Array.from(new Set([1, 2, 2, 3])); // [1, 2, 3]
+Array.from({ length: 3 }, (_, index) => index * 2); // [0, 2, 4]
 
-// With a map function
-Array.from({ length: 3 }, (_, i) => i * 2); // [0, 2, 4]
+Array.from([, "x"]); // [undefined, "x"]
 ```
 
-##### `Array.of(...elements)`
+##### Array.of(...items)
 
-Creates an array from its arguments — bypasses the `Array(n)` constructor's "single number means length" quirk.
+Creates an array from its arguments. It avoids the Array constructor’s special treatment of a single numeric argument as a requested length. / 根据参数创建数组，避免 Array 构造器把单个数字参数特殊解释为数组长度。
 
 ```javascript
+Array(3);    // an array of length 3 with three holes
+Array.of(3); // [3]
 Array.of(1, 2, 3); // [1, 2, 3]
-
-Array(3);      // creates [ <3 empty slots> ] — length 3, no values
-Array.of(3);   // creates [3] — one element, value 3
 ```
 
-**Reach for it when:** constructing an array from a known set of elements and at least one could be a number — `Array.of()` disambiguates the intent.
+See [ECMAScript OrdinaryOwnPropertyKeys](https://tc39.es/ecma262/2025/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryownpropertykeys) for the ordinary-object order, plus [fundamental objects](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html) and [indexed collections](https://tc39.es/ecma262/2025/multipage/indexed-collections.html) for the other methods. / 普通对象的属性顺序见 [ECMAScript OrdinaryOwnPropertyKeys](https://tc39.es/ecma262/2025/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryownpropertykeys)；其他方法见 [基础对象](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html) 与 [索引集合](https://tc39.es/ecma262/2025/multipage/indexed-collections.html)。
 
-**See also:** [`3.5 Array in JS`](#13.%20JavaScript%20Arrays%20/%20JavaScript%20%E6%95%B0%E7%BB%84) for array iteration and transformation methods, [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for post-ES6 additions.
+**Interview answer / 面试回答:** Object.assign mutates its target and shallow-copies enumerable own string and symbol properties. Object.keys/values/entries inspect own enumerable string-keyed properties. Array.from accepts iterables and array-like objects; Array.of treats each argument as an element, including a single number. / Object.assign 会修改目标对象，并浅拷贝自有可枚举字符串键和 Symbol 键。Object.keys/values/entries 只处理自有可枚举字符串键。Array.from 接受可迭代对象和类数组对象；Array.of 把每个参数都作为元素，包括单个数字参数。
+
+Related: [JavaScript Arrays / JavaScript 数组](#13.%20JavaScript%20Arrays%20/%20JavaScript%20%E6%95%B0%E7%BB%84); [Modern JavaScript Features / 现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
 ## 15. Other JavaScript Topics / JavaScript其他内容
 
-A grab-bag of short interview-favorite JavaScript topics. Reach for this when someone asks about strict mode, floating-point math, equality operators, or the `!!` idiom.
+### Other JavaScript Topics / JavaScript 其他主题
 
-#### What does `'use strict';` do?
+**Key terms / 关键词:** strict mode 严格模式 · floating-point binary64 浮点数 · equality 相等比较 · truthiness 真值转换
 
-Strict mode enforces stricter parsing and error handling. Activate it by adding `'use strict';` at the top of a script or function. It has different semantics from regular code, aimed at improving reliability and performance. Modern modules (ES modules and classes) run in strict mode automatically.
+This note collects a few distinct language details that are useful when reading or reviewing JavaScript: strict mode, floating-point comparison, equality, and boolean conversion. / 本笔记收录几项阅读或审查 JavaScript 时常用的语言知识：严格模式、浮点比较、相等比较与布尔转换。
 
-##### Features of strict mode
+#### Strict mode / 严格模式
 
-1. **Mandatory variable declarations.** Assigning to an undeclared variable throws `ReferenceError`, preventing accidental global creation from typos.
-2. **Disallows `with` statements.** `with` creates unpredictable scope, hurts performance, and complicates debugging.
-3. **Scoped `eval()`.** Declarations inside `eval` no longer leak into the surrounding scope, making `eval` marginally safer.
-4. **Secure `this` binding.** A plain function call (not as a method) has `this === undefined`, instead of `this === window`. Prevents accidental global mutation.
-5. **No duplicate parameter names.** `function f(a, a) {}` throws. Eliminates a class of typos.
-6. **Immutable non-writable properties.** Writing to a non-writable property throws `TypeError` instead of silently failing.
-7. **Restrictions on deleting.** `delete` on non-deletable properties throws, protecting language core.
-8. **No octal literals.** `010` is a syntax error. Use `0o10` for octal explicitly; use `'\u0061'` instead of `'\141'` for escape sequences.
-
-**Reach for it when:** working in non-module scripts or legacy code where strict mode isn't implicit. In ES modules, classes, and any modern tooling, strict mode is the default.
-
-#### Why doesn't `0.1 + 0.2 === 0.3`?
-
-**Headline:** IEEE 754 floating-point can't represent `0.1` or `0.2` exactly in binary. The tiny representation errors accumulate, so `0.1 + 0.2` lands at `0.30000000000000004`.
-
-To compare floating-point numbers safely, check whether they're within a small tolerance:
+Strict mode changes selected language behaviors, including undeclared assignment, duplicate parameter names, and the default `this` value for a plain function call. ES modules and class bodies are automatically strict. A classic script can opt in with a directive; a function can opt in with a directive at the start of its body. / 严格模式会改变部分语言行为，包括未声明赋值、重复形参，以及普通函数调用时的默认 `this`。ES 模块和 class 函数体自动采用严格模式；经典脚本可在开头添加指令，函数也可在函数体开头添加指令。
 
 ```javascript
-const tolerance = 0.0001;
-const sum = 0.1 + 0.2;
-const target = 0.3;
+"use strict";
+undeclaredName = 1; // ReferenceError
 
-if (Math.abs(sum - target) < tolerance) {
-  console.log('Equal');
-} else {
-  console.log('Not Equal');
+function inspectThis() {
+  return this;
 }
+inspectThis(); // undefined in strict mode
 ```
 
-For currency calculations, avoid floating-point entirely — work in integer cents (or use a decimal library).
+Strict mode does not make `eval` safe, and class or module code is already strict. / 严格模式不会让 `eval` 变安全；class 和模块代码本身已经是严格模式。
 
-#### What's the difference between `==` and `===`?
+Other recognizable differences include rejecting `with`, rejecting legacy octal numeric literals and duplicate parameter names in strict functions, and throwing rather than silently ignoring some writes to non-writable properties. / 其他常见差异包括禁止 `with`、禁止旧式八进制数字字面量和严格函数中的重复形参，以及对某些不可写属性的赋值由静默忽略改为抛错。
 
-- `==` (loose equality) performs **type coercion** before comparing. Values are converted to a common type.
-- `===` (strict equality) compares **value and type** without conversion.
+#### Floating-point comparison / 浮点数比较
+
+JavaScript Number uses IEEE 754 binary64. Many decimal fractions, including 0.1 and 0.2, have no exact finite binary representation, so arithmetic can produce a nearby representable value. The acceptable error depends on the domain and magnitude; choose a domain-specific tolerance instead of a universal epsilon. / JavaScript Number 使用 IEEE 754 binary64。许多十进制小数（如 0.1、0.2）无法用有限二进制位精确表示，因此计算结果可能是邻近的可表示值。可接受误差取决于领域和数值大小，应按具体场景设定容差，而不是套用统一 epsilon。
 
 ```javascript
-5 == '5';          // true  — string '5' coerced to number
-null == undefined; // true  — special rule
-0 == false;        // true  — false coerced to 0
-'' == false;       // true  — both coerced to 0
+0.1 + 0.2 === 0.3; // false
+Math.abs((0.1 + 0.2) - 0.3) < 1e-12; // true for this scale and example
+```
 
-5 === '5';          // false
+For money, use integer minor units when the currency’s rules allow it, or use a decimal arithmetic library with an explicit rounding policy. / 金额计算可在币种规则允许时使用整数最小单位，或使用明确指定舍入策略的十进制运算库。
+
+#### Equality: `==`, `===`, and `Object.is` / 相等比较
+
+`===` avoids coercion between different types. `==` follows a set of conversion rules rather than one simple “convert both to the same type” rule; it includes the special `null == undefined` case. Prefer `===` unless coercion is an intentional part of the condition. / `===` 不会在不同类型之间进行隐式转换。`==` 遵循一组转换规则，不能简单概括为“双方都转成同一类型”；其中包括特殊规则 `null == undefined`。除非有意依赖转换规则，否则优先用 `===`。
+
+```javascript
+5 == "5";           // true
+5 === "5";          // false
+null == undefined;  // true
 null === undefined; // false
-0 === false;        // false
+NaN === NaN;        // false
+Object.is(NaN, NaN); // true
+Object.is(+0, -0);   // false
 ```
 
-**Rule of thumb:** always use `===`, with one common exception — `value == null` is a concise way to check for both `null` and `undefined` in one expression.
+For ordinary values, the deliberate nullish check `value == null` matches `null` or `undefined`; use it only when both are meant to share a branch. `Object.is` differs from strict equality for NaN and signed zero; Map and Set use SameValueZero instead. / 对普通值而言，有意使用的空值判断 `value == null` 会匹配 `null` 或 `undefined`；仅在二者确实走同一分支时使用。`Object.is` 与严格相等对 NaN 和有符号零的处理不同；Map 与 Set 则使用 SameValueZero。
 
-**Gotcha — "`==` with `NaN`":** `NaN == anything` is always `false`, including `NaN == NaN`. Use `Number.isNaN(x)` to detect it.
+#### Boolean conversion / 布尔转换
 
-#### What does `!!` do?
+`Boolean(value)` and `!!value` both apply truthiness conversion. For ordinary values, empty strings, zero, `NaN`, `null`, `undefined`, and `false` are falsy; ordinary objects, including empty arrays and empty objects, are truthy. Choose either spelling according to the surrounding code style; no useful general speed claim follows from the syntax. / `Boolean(value)` 和 `!!value` 都执行真值转换。对普通值而言，空字符串、零、`NaN`、`null`、`undefined` 和 `false` 为假值；包括空数组和空对象在内的普通对象都是真值。按代码风格选择写法，不应据此作普遍性能判断。
 
-Converts any value to its boolean equivalent. The first `!` coerces to boolean and negates; the second `!` negates back.
+Browser compatibility exception: `document.all` has the legacy `[[IsHTMLDDA]]` behavior: it is falsy, `typeof document.all` is `"undefined"`, and it loosely equals both nullish values (`document.all == null`). It is not an ordinary object. / 浏览器兼容性例外：`document.all` 具有历史 `[[IsHTMLDDA]]` 行为，会被判为假值，`typeof document.all` 为 `"undefined"`，且与两种空值都宽松相等（`document.all == null`）。它不是普通对象。
 
-```javascript
-!!'hello';    // true
-!!0;          // false
-!!null;       // false
-!!undefined;  // false
-!!NaN;        // false
-!!'';         // false
-!!{};         // true
-!![];         // true
-```
+See [ECMAScript Annex B `[[IsHTMLDDA]]`](https://tc39.es/ecma262/2025/multipage/additional-ecmascript-features-for-web-browsers.html#sec-IsHTMLDDA-internal-slot). / 详见 [ECMAScript 附录 B `[[IsHTMLDDA]]`](https://tc39.es/ecma262/2025/multipage/additional-ecmascript-features-for-web-browsers.html#sec-IsHTMLDDA-internal-slot)。
 
-##### Why this matters in React
-
-React renders the literal value `0` in the DOM but ignores `false`. So short-circuiting with `&&` can leak an unwanted `0`:
+When rendering with React, `&&` returns one of its operands rather than a Boolean. If the left operand is `0`, that `0` may be rendered. Use an explicit Boolean condition when the result should be either a component or nothing. / 在 React 中，`&&` 返回操作数之一，而不是布尔值。若左侧为 `0`，结果中的 `0` 可能被渲染。希望结果只能是组件或空内容时，应显式转换为布尔条件。
 
 ```jsx
-{list.length && <ItemList items={list} />}
-// when list is empty: renders `0` in the DOM
+{items.length > 0 && <ItemList items={items} />}
 ```
 
-The fix is to coerce to boolean first:
+See React’s [conditional rendering documentation](https://react.dev/learn/conditional-rendering). / 详见 React 的[条件渲染文档](https://react.dev/learn/conditional-rendering)。
 
-```jsx
-{!!list.length && <ItemList items={list} />}
-// when list is empty: renders nothing
-```
+**Interview answer / 面试回答:** Strict mode removes selected legacy behaviors but is not a security sandbox. Number comparisons need domain-specific tolerance because decimal fractions may not be represented exactly. Use `===` by default; use `== null` only when intentionally matching nullish values. Ordinary objects are truthy, with the legacy browser `document.all` exception. / 严格模式移除部分历史行为，但不是安全沙箱。由于十进制小数可能无法精确表示，数值比较应按领域选择容差。默认使用 `===`；只有在有意匹配空值时才使用 `== null`。普通对象都是真值，浏览器历史兼容对象 `document.all` 是例外。
 
-**Gotcha — `!!` vs. `Boolean()`:** Functionally identical — pick whichever your team's lint rules prefer. `!!` is slightly faster in micro-benchmarks, but the difference is irrelevant in practice.
+See [ECMAScript equality and coercion](https://tc39.es/ecma262/2025/multipage/abstract-operations.html) for the normative rules. / 相等与类型转换的规范规则见 [ECMAScript 抽象操作](https://tc39.es/ecma262/2025/multipage/abstract-operations.html)。
 ## 16. Modern JavaScript Features / 现代JavaScript特性
 
-Reach for this when you need a quick reference for optional chaining, nullish coalescing, destructuring, promise combinators, and other post-ES6 language additions that come up constantly in interviews. For pre-ES2020 additions (`Object.keys`, `Array.from`, etc.), see [`3.6 ES6 New Methods`](#14.%20ES6%20New%20Methods%20/%20ES6%E6%96%B0%E5%A2%9E%E6%96%B9%E6%B3%95).
+### Modern JavaScript Features / 现代 JavaScript 特性
 
-#### 1. Optional chaining (`?.`)
+**Key terms / 关键词:** optional chaining 可选链 · nullish coalescing 空值合并 · promise combinator Promise 组合方法 · structured clone 结构化克隆 · module 模块
 
-Short-circuits when the left-hand side is `null` or `undefined`, returning `undefined` instead of throwing.
+This is a selected reference to commonly used standardized features, not a complete catalog of “modern JavaScript.” A feature’s edition and its runtime availability are separate questions: check the runtime or build target before relying on it. / 这里选列常用的标准化特性，并非“现代 JavaScript”完整目录。特性属于哪个版本与目标运行时是否支持是两个问题；依赖某项特性前应检查运行时或构建目标。
 
-##### Syntax
+#### Optional chaining and nullish coalescing / 可选链与空值合并
 
-```javascript
-obj?.prop
-obj?.[expr]
-func?.(args)
-```
-
-##### Use cases
-
-**Objects:**
+Optional chaining stops only when the value immediately before the chain is `null` or `undefined`; it does not test general falsiness. A missing root identifier still throws, and grouping ends a chain. / 可选链只在链上前一个值为 `null` 或 `undefined` 时短路，不判断一般假值。根标识符不存在时仍会抛错，括号分组也会结束链式短路。
 
 ```javascript
-const user = { address: { city: 'NYC' } };
-user?.address?.city;    // 'NYC'
-user?.profile?.avatar;  // undefined (no error)
-```
-
-**Methods:**
-
-```javascript
-const obj = { greet: () => 'hi' };
-obj.greet?.();  // 'hi'
-obj.missing?.(); // undefined
-```
-
-**Arrays:**
-
-```javascript
-const arr = [1, 2, 3];
-arr?.[0];   // 1
-arr?.[10];  // undefined
-```
-
-**Nested optional access:**
-
-```javascript
-const data = { items: [{ name: 'a' }] };
-data?.items?.[0]?.name; // 'a'
-```
-
-**Gotcha — `?.` only short-circuits on `null` and `undefined`:** Any other falsy value (like `0` or `''`) does *not* trigger short-circuit, which is the point — `?.` checks structural existence, not truthiness.
-
----
-
-#### 2. Nullish coalescing (`??`)
-
-Returns the right-hand side only when the left-hand side is `null` or `undefined`. Unlike `||`, does **not** treat `0`, `''`, or `false` as falsy.
-
-| Left value | `a \|\| b` | `a ?? b` |
-|---|---|---|
-| `null` | `b` | `b` |
-| `undefined` | `b` | `b` |
-| `0` | `b` | `0` |
-| `''` | `b` | `''` |
-| `false` | `b` | `false` |
-| `NaN` | `b` | `NaN` |
-
-**When to use each:**
-
-- `??` — defaulting where `0`, `''`, or `false` are valid values.
-- `||` — defaulting where any falsy value should trigger the fallback.
-
-```javascript
+const user = { profile: null };
+user.profile?.name; // undefined
 const count = 0;
-count || 10;   // 10
-count ?? 10;   // 0
+count?.toFixed(0); // "0"
 
-const name = '';
-name || 'Anonymous';   // 'Anonymous'
-name ?? 'Anonymous';   // ''
+const key = "value";
+const object = { value: 1 };
+object?.[key]; // 1
+const maybeCall = undefined;
+maybeCall?.(); // undefined
+
+const settings = {};
+settings.timeout ?? 1000; // 1000
+settings.timeout || 1000; // 1000
+0 ?? 1000; // 0
+0 || 1000; // 1000
 ```
 
----
+Use `??` when only nullish values should trigger a fallback; use `||` when all falsy values should. Parenthesize when mixing `??` with `||` or `&&`; unparenthesized mixing is a syntax error. / 只有 nullish 值应触发默认值时用 `??`；所有假值都应触发时用 `||`。`??` 与 `||` 或 `&&` 混用时应加括号，不加括号会产生语法错误。
 
-#### 3. Destructuring
+#### Destructuring, rest, and template literals / 解构、剩余项与模板字符串
 
-##### Object destructuring
+Destructuring and template literals were standardized in ES2015; object rest/spread was standardized in ES2018. Destructuring reads properties or iterable values into bindings. Defaults apply when the extracted value is `undefined`, not for every falsy value. Object rest gathers remaining own enumerable properties; array rest consumes the remaining iterable values. / 解构和模板字符串属于 ES2015；对象剩余项/展开属于 ES2018。解构把属性或可迭代值读入绑定。默认值只在取出的值为 `undefined` 时生效，不适用于所有假值。对象剩余项收集其余自有可枚举属性；数组剩余项消费迭代器中的剩余值。
 
 ```javascript
-const { a, b } = obj;
-const { a: alias, b = 10 } = obj;   // rename + default
-const { a, ...rest } = obj;         // rest pattern
+const { name: displayName, active = true, ...extra } = user;
+const [first, , ...tail] = ["a", "b", "c"];
+const greeting = `Hello, ${displayName}!`
 ```
 
-##### Array destructuring
+Tagged templates pass cooked string segments and interpolated values separately. They are useful for formatting or domain-specific processing; they do not sanitize input automatically. / 带标签模板会分别传入处理后的字符串片段和插值。它可用于格式化或特定领域处理，但不会自动净化输入。
 
-```javascript
-const [first, second] = arr;
-const [a, , c] = arr;        // skip element
-const [x, ...tail] = arr;    // rest
-const [a = 0, b = 0] = arr;  // defaults
-```
+#### Promise combinators / Promise 组合方法
 
-##### Nested destructuring
-
-```javascript
-const { user: { name, address: { city } } } = data;
-const [[a, b], [c, d]] = nested;
-```
-
-##### Renaming
-
-```javascript
-const { name: userName, id: userId } = user;
-```
-
-##### Rest pattern
-
-```javascript
-const { a, b, ...others } = obj;   // others = remaining props
-const [head, ...rest] = arr;       // rest = remaining elements
-```
-
----
-
-#### 4. Template literals
-
-##### Basic interpolation
-
-```javascript
-const name = 'World';
-`Hello, ${name}!`;
-`2 + 2 = ${2 + 2}`;
-```
-
-##### Tagged templates
-
-The tag function receives an array of string segments and the interpolated values. Useful for sanitization, i18n, or DSLs.
-
-```javascript
-function tag(strings, ...values) {
-  return strings.reduce((acc, str, i) => acc + str + (values[i] ?? ''), '');
-}
-tag`Hello ${'World'}!`;  // 'Hello World!'
-```
-
-**Signature:** `tag(strings: TemplateStringsArray, ...values: any[])`
-
----
-
-#### 5. Promise combinators
-
-| Method | Resolves when | Rejects when | Return type |
+| Method / 方法 | Edition / 版本 | Fulfillment / 成功条件 | Rejection / 失败条件 |
 |---|---|---|---|
-| `Promise.all` | All fulfill | Any rejects | `[results]` or first rejection |
-| `Promise.allSettled` | All settle (fulfill or reject) | Never | `[{status, value?}, {status, reason?}]` |
-| `Promise.any` | Any fulfills | All reject | First fulfilled value or `AggregateError` |
-| `Promise.race` | First settles (either way) | First rejects | First result or first rejection |
+| `Promise.all` | ES2015 | Every input fulfills / 全部成功 | An input rejects / 某项失败 |
+| `Promise.allSettled` | ES2020 | Every input settles; returns each outcome / 全部结束并返回每项结果 | Normally does not reject for an input rejection / 不因某项输入拒绝而拒绝 |
+| `Promise.any` | ES2021 | First input fulfills / 首个成功项 | All inputs reject; rejects with `AggregateError` / 全部失败时以 `AggregateError` 拒绝 |
+| `Promise.race` | ES2015 | First settlement is fulfillment / 首个完成项成功 | First settlement is rejection / 首个完成项拒绝 |
 
-##### Behavior on rejection
+The specification installs both fulfillment and rejection reactions for each input in [`PerformPromiseRace`](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-performpromiserace). / 规范中的 [`PerformPromiseRace`](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-performpromiserace) 会为每项输入同时安装成功和拒绝处理器。
 
-```javascript
-// Promise.all — short-circuits on first rejection
-Promise.all([p1, p2, p3]).catch(e => e);  // rejects with p1's error if p1 rejects
+`all`, `any`, and `race` settle the returned promise early when their condition is met, but do not cancel the other work. Passing promises usually starts their underlying operations before the combinator is called. Use an explicit cancellation mechanism, such as AbortController when supported by the API, if losing work should stop. / 当满足条件时，`all`、`any` 和 `race` 会提前完成返回的 Promise，但不会取消其他任务。传入的 Promise 通常已在调用组合方法前启动底层操作。若需停止未获胜的任务，应使用 API 支持的取消机制，例如 AbortController。
 
-// Promise.allSettled — never rejects
-Promise.allSettled([p1, p2, p3]).then(results => {
-  // results: [{status:'fulfilled', value}, {status:'rejected', reason}, ...]
-});
+#### Selected APIs and editions / 部分 API 与版本
 
-// Promise.any — rejects only if all reject (AggregateError)
-Promise.any([p1, p2, p3]).then(v => v);   // first fulfilled value
-
-// Promise.race — first to settle wins (fulfill or reject)
-Promise.race([p1, p2, p3]);               // first result or first error
-```
-
-**Reach for them when:**
-
-- Parallel work, everything must succeed → `Promise.all`.
-- Parallel work, collect all outcomes → `Promise.allSettled`.
-- Parallel work, first success wins → `Promise.any`.
-- Parallel work with a timeout → `Promise.race` (racing against a timeout promise).
-
-**See also:** [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise fundamentals and error handling.
-
----
-
-#### 6. Newer APIs
-
-##### `globalThis`
-
-Cross-environment reference to the global object (`window` in browsers, `global` in Node, `self` in workers).
+- `globalThis` — ES2020 access to the current realm’s global object; its host-specific properties differ. / ES2020 提供当前 realm 的全局对象入口；其属性因宿主环境而异。
+- `Array.prototype.at(index)` — ES2022 indexing with negative offsets from the end. / ES2022 索引方法，支持从末尾反向计数。
+- `Object.hasOwn(object, key)` — ES2022 own-property test that works with null-prototype objects and overridden `hasOwnProperty`. / ES2022 自有属性判断，可用于 null 原型对象或覆盖了 `hasOwnProperty` 的对象。
+- `structuredClone(value)` — a host API, not an ECMAScript edition feature. Browsers and current Node releases expose it ([Node global API](https://nodejs.org/api/globals.html#structuredclonevalue-options)). It clones structured-cloneable values and supports cycles and built-in data such as Map, Set, and Date. It does not preserve custom class prototypes or clone functions; unsupported values can throw `DataCloneError`. Do not assume it is faster than another method. / 这是宿主 API，不属于某个 ECMAScript 版本特性；浏览器和当前 Node 版本均提供该方法（见 [Node 全局 API](https://nodejs.org/api/globals.html#structuredclonevalue-options)）。它可复制结构化克隆支持的值，支持循环引用以及 Map、Set、Date 等内置数据；不会保留自定义类原型，也不能克隆函数；不支持的值可能抛出 `DataCloneError`。不要假设它必然比其他方法快。
+- `Object.assign` and `Object.is` are ES2015. `Object.keys` is ES5; `Object.values` and `Object.entries` are ES2017. / `Object.assign` 和 `Object.is` 属于 ES2015。`Object.keys` 属于 ES5；`Object.values` 和 `Object.entries` 属于 ES2017。
 
 ```javascript
-globalThis.setTimeout === window.setTimeout; // true in a browser
+const values = ["first", "last"];
+values.at(-1); // "last"
+
+const options = Object.create(null);
+options.enabled = false;
+Object.hasOwn(options, "enabled"); // true
 ```
 
-##### `Array.at(index)`
+#### Modules: language and host boundaries / 模块：语言与宿主边界
 
-Index access with support for negative indices counting from the end.
+ECMAScript modules are part of the language: static `import` / `export`, module-scoped bindings, strict mode, and top-level `this === undefined`. Top-level await was standardized in ES2022. Dynamic `import()` returns a Promise and is supported by both Node module systems. CommonJS (`require`, `module.exports`) is Node’s module wrapper, not ECMAScript module syntax. / ECMAScript 模块属于语言规范：使用静态 `import` / `export`，绑定具有模块作用域，自动采用严格模式，顶层 `this === undefined`。顶层 await 于 ES2022 标准化。动态 `import()` 返回 Promise，Node 两种模块系统都可使用。CommonJS（`require`、`module.exports`）是 Node 的模块包装机制，不是 ECMAScript 模块语法。
+
+These two `.mjs` files show static imports/exports and a dynamic import of the same module. / 以下两个 `.mjs` 文件演示静态导入/导出，以及对同一模块进行动态导入。
 
 ```javascript
-const arr = [1, 2, 3];
-arr.at(0);   // 1
-arr.at(-1);  // 3
-arr.at(-2);  // 2
+// features.mjs
+export const featureName = "search";
+export default function createFeature() {
+  return featureName;
+}
 ```
-
-Cleaner than `arr[arr.length - 1]` for "last element".
-
-##### `Object.hasOwn(obj, prop)`
-
-Replacement for `obj.hasOwnProperty(prop)` that avoids prototype-lookup edge cases (e.g., when `obj` overrides `hasOwnProperty` or has `null` prototype).
 
 ```javascript
-const o = { a: 1 };
-Object.hasOwn(o, 'a');        // true
-Object.hasOwn(o, 'toString'); // false
+// app.mjs
+import createFeature, { featureName } from "./features.mjs";
+export { featureName };
+
+createFeature(); // "search"
+import("./features.mjs").then(({ featureName }) => featureName);
 ```
 
-##### `structuredClone(value)`
-
-Deep clone of serializable values. Handles objects, arrays, `Map`, `Set`, `Date`, typed arrays, and circular references — but **not** functions, symbols, DOM nodes, or class instances.
-
-```javascript
-const original = { a: 1, nested: { b: 2 } };
-const copy = structuredClone(original);
-copy.nested.b = 3;
-original.nested.b; // still 2
-```
-
-Reach for it instead of `JSON.parse(JSON.stringify(x))` — it's faster, handles cycles, and preserves `Date` / `Map` / `Set`.
-
----
-
-#### 7. Modules
-
-##### CommonJS vs ES Modules
-
-| Aspect | CommonJS | ES Modules |
+| Concern / 维度 | ECMAScript module / ES 模块 | Node CommonJS / Node CommonJS |
 |---|---|---|
-| Syntax | `require()`, `module.exports` | `import`, `export` |
-| Loading | synchronous | asynchronous (static analysis) |
-| Top-level `await` | no | yes |
-| Tree-shaking | limited | supported |
-| `this` at top level | `exports` | `undefined` |
+| Static syntax / 静态语法 | `import`, `export` | `require()`, `module.exports` |
+| Top-level await / 顶层 await | Supported / 支持 | Not supported in a CJS wrapper / CJS 包装器中不支持 |
+| Top-level `this` / 顶层 `this` | `undefined` | Node wrapper’s `exports` value / Node 包装器的 `exports` 值 |
+| Tree shaking / Tree shaking | Depends on bundler and package metadata / 取决于打包器和包元数据 | Not guaranteed by the format / 模块格式不保证 |
 
-##### CommonJS
+A bundler may analyze ESM imports for tree shaking, but ESM syntax alone does not guarantee code removal. Node decides whether a file is ESM or CJS using extensions, package settings, or explicit input flags; browser module loading follows browser rules. / 打包器可以分析 ESM 导入以执行 tree shaking，但仅使用 ESM 语法不保证代码一定被移除。Node 会根据扩展名、包设置或显式输入参数确定文件属于 ESM 还是 CJS；浏览器模块加载则遵循浏览器规则。
 
-```javascript
-const { foo } = require('./module');
-module.exports = { bar };
-```
+**Interview answer / 面试回答:** Optional chaining checks nullish values, while `??` preserves valid falsy values. Promise combinators aggregate outcomes but do not cancel work. ESM is standardized JavaScript syntax; CommonJS is a Node module system, and bundler behavior such as tree shaking depends on tooling. / 可选链检查 nullish 值，`??` 会保留有效的假值。Promise 组合方法聚合结果，但不会取消任务。ESM 是标准 JavaScript 模块语法；CommonJS 是 Node 模块系统，tree shaking 等行为取决于工具链。
 
-##### ES Modules
+See the [ECMAScript language specification](https://tc39.es/ecma262/2025/) for edition-specific features and the [HTML structured clone algorithm](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) for the host API. / 版本相关语言特性见 [ECMAScript 语言规范](https://tc39.es/ecma262/2025/)；宿主结构化克隆 API 见 [HTML 结构化克隆算法](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning)。
 
-```javascript
-import { foo } from './module.js';
-import * as ns from './module.js';
-export { bar };
-export default baz;
-```
-
-##### Dynamic `import()`
-
-Returns a Promise; use for code-splitting or conditional loading.
-
-```javascript
-const load = async () => {
-  const { default: Component } = await import('./Component.js');
-  return Component;
-};
-```
-
-**Key differences:** `import` is static (parsed at compile time, enables tree-shaking); `import()` is dynamic and returns a Promise (enables lazy loading).
-
-**See also:** [`7.3 Build Tools`](#27.%20Build%20Tools%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7) for module bundling strategies, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promises and async/await fundamentals.
+Related: [Object and Array Methods / 对象与数组方法](#14.%20ES6%20New%20Methods%20/%20ES6%E6%96%B0%E5%A2%9E%E6%96%B9%E6%B3%95); [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript).
 ## 17. Object, Function, and Prototype / 对象、函数与原型
 
-A bundle of classic interview questions about JavaScript's prototype system, `this`, `new`, and property descriptors.
+### Objects, Functions, and Prototypes / 对象、函数与原型
 
-### What is the JavaScript prototype chain?
+**Key terms / 关键词:** internal prototype 内部原型 · constructor 构造函数 · receiver 接收者 · property descriptor 属性描述符 · constructible 可构造
 
-**Headline (30s):** Every object has an internal `[[Prototype]]` link (exposed as `__proto__`) pointing to another object. When you access a property that doesn't exist on the object, the engine walks up this chain until it finds the property or reaches `null`. This is how objects inherit behavior in JavaScript — not by copying, but by linking.
+JavaScript objects delegate property lookup through an internal prototype link. Function call syntax determines the receiver for ordinary functions; arrow functions capture it lexically. These rules explain inheritance, this, new, and descriptors without assuming a particular engine memory layout. / JavaScript 对象通过内部原型链接委托属性查找。普通函数的调用语法决定接收者；箭头函数从词法作用域捕获接收者。这些规则可解释继承、this、new 和属性描述符，无需假设特定引擎的内存布局。
 
-**Why interviewers ask this:** Prototypes explain inheritance, `class`, `instanceof`, and why polyfills work the way they do. A candidate who can't describe the chain struggles with React class components, library internals, and debugging "where did this method come from?" questions.
+#### Prototype lookup / 原型查找
 
-#### `prototype` vs. `__proto__`
+Each ordinary object has an internal `[[Prototype]]` value, which may be null. If a property is not found on the object, lookup continues through that prototype chain. Use Object.getPrototypeOf and Object.create for explicit work with the chain. / 每个普通对象都有一个内部 `[[Prototype]]` 值，也可能为 null。对象上找不到属性时，会沿原型链继续查找。显式操作原型链时应使用 Object.getPrototypeOf 和 Object.create。
 
-Two closely related properties that trip up almost everyone:
-
-- **`prototype`** — a property that exists *only on functions*. It's the object that will become `__proto__` of any instance created with `new`.
-- **`__proto__`** — a property on *every* object. It points to the object's prototype. Reading it walks up the chain.
-
-#### How the chain is formed
-
-1. A constructor function has a `.prototype` object.
-2. Calling the constructor with `new` creates a new object whose `__proto__` is set to the constructor's `.prototype`.
-3. That prototype object has its own `__proto__` pointing to `Object.prototype`.
-4. `Object.prototype.__proto__` is `null` — end of chain.
+Many constructible function objects have an own property named `prototype`, which supplies the prototype for instances created by `new` when its value is an object. It is not present on every function: arrow functions and methods are not constructible and do not have it. The expression `__proto__` is a legacy accessor inherited from Object.prototype, not a special own property on every object. Prefer `Object.getPrototypeOf(obj)`. / 许多可构造函数对象都有名为 `prototype` 的自有属性；当其值为对象时，`new` 会将其用作实例原型。并非所有函数都有该属性：箭头函数和方法不可构造。表达式 `__proto__` 是从 Object.prototype 继承的历史访问器，并非每个对象都有的特殊自有属性。优先使用 `Object.getPrototypeOf(obj)`。
 
 ```javascript
 function Person(name) {
   this.name = name;
 }
-
-Person.prototype.sayHello = function() {
-  console.log(`Hello, my name is ${this.name}`);
+Person.prototype.greet = function () {
+  return "Hello, " + this.name;
 };
 
-const alice = new Person('Alice');
-alice.sayHello(); // 'Hello, my name is Alice'
-
-alice.__proto__ === Person.prototype;                  // true
-Person.prototype.__proto__ === Object.prototype;       // true
-Object.prototype.__proto__;                            // null
+const ada = new Person("Ada");
+ada.greet(); // "Hello, Ada"
+Object.getPrototypeOf(ada) === Person.prototype; // true
+Object.getPrototypeOf(Person.prototype) === Object.prototype; // true
+Object.getPrototypeOf(Object.prototype); // null
 ```
 
-When `alice.sayHello()` is called, the engine searches `alice` → `Person.prototype` (found!) and invokes it.
-
-**Gotcha — `class` is syntactic sugar:** `class Foo {}` is essentially `function Foo() {}` with a prototype, so `typeof Foo === 'function'`. Understanding the chain helps debug transpiled output.
-
----
-
-### What's the difference between `{}` and `Object.create(proto)`?
-
-**Headline (30s):** `{}` creates an object whose prototype is `Object.prototype`. `Object.create(proto)` lets you choose any prototype (including `null`). Use `Object.create` when you need custom inheritance or a "clean" dictionary with no inherited keys.
-
 ```javascript
-const obj1 = {};
-obj1.__proto__ === Object.prototype; // true
+const ordinary = {};
+Object.getPrototypeOf(ordinary) === Object.prototype; // true
 
-const obj2 = Object.create({ greet: 'hi' });
-obj2.greet;                          // 'hi' (inherited)
-obj2.__proto__ === Object.prototype; // false
+const custom = Object.create({ greet: "hello" });
+custom.greet; // inherited value
 
-const bag = Object.create(null);     // no prototype at all
-bag.toString;                        // undefined — no inherited methods
+const dictionary = Object.create(null);
+dictionary.toString; // undefined
 ```
 
-**Reach for `Object.create(null)` when:** building a hash map where keys might collide with inherited names like `toString` or `hasOwnProperty`. The modern alternative is `Map`.
+The legacy Object.prototype.__proto__ accessor is documented as normative optional and legacy in ECMAScript. / ECMAScript 将历史 Object.prototype.__proto__ 访问器标为可选实现的历史特性，详见[规范](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.__proto__)。
 
----
+#### this is determined by the call / this 由调用方式决定
 
-### What is `this` in JavaScript?
+For an ordinary function, the call expression supplies the receiver. A method call obj.fn() supplies obj; a plain call to a strict function supplies undefined, while a plain sloppy-mode call substitutes the host’s global this value. In browser classic scripts that global is generally window; Node module wrappers have their own top-level conventions. / 对普通函数而言，调用表达式提供接收者。obj.fn() 这样的调用以 obj 为接收者；严格模式下普通函数调用的接收者是 undefined，非严格模式下则替换为宿主的全局 this。浏览器经典脚本中的全局对象通常是 window；Node 模块包装器有自己的顶层约定。
 
-**Headline (30s):** `this` is a special binding that is decided **at call time**, not at definition time. Its value depends on *how* a function is called: as a plain function (`fn()`), as a method (`obj.fn()`), as a constructor (`new Fn()`), or explicitly (`fn.call(ctx)`). Arrow functions are the exception — they capture `this` lexically.
-
-**Why interviewers ask this:** It's the #1 source of bugs in hand-rolled code. Understanding `this` is prerequisite to understanding `bind`, `call`, `apply`, class methods, React class components, and event handlers.
-
-#### The rules (in precedence order)
-
-1. **`new` binding** — `new Fn()` creates a new object, `this` is that object.
-2. **Explicit binding** — `fn.call(ctx)`, `fn.apply(ctx)`, `fn.bind(ctx)` — `this` is `ctx`.
-3. **Implicit binding** — `obj.fn()` — `this` is `obj`.
-4. **Default binding** — `fn()` — `this` is the global object (`window`) in non-strict mode, or `undefined` in strict mode.
-5. **Arrow functions** — ignore all rules above; `this` is inherited lexically from the enclosing scope.
-
-#### Examples covering each case
+new creates a receiver; call/apply pass an explicit this value; bind creates a function with a bound receiver and leading arguments. A bound function used with new ignores its bound receiver, but keeps the bound arguments. Arrow functions use the surrounding this and cannot be rebound with call/apply/bind. / new 会创建接收者；call/apply 显式传入 this；bind 创建带绑定接收者和前置参数的新函数。绑定函数通过 new 调用时会忽略绑定接收者，但仍使用绑定参数。箭头函数使用外层 this，call/apply/bind 无法重新绑定它。
 
 ```javascript
-// 1. Default
-function f() { return this; }
-f();                          // window (sloppy) / undefined (strict)
-
-// 2. Implicit (method call)
-const obj = { f, name: 'obj' };
-obj.f();                      // obj
-
-// 3. Explicit
-f.call({ name: 'ctx' });      // { name: 'ctx' }
-
-// 4. new
-function Person(n) { this.name = n; }
-new Person('Alice');          // { name: 'Alice' }
-
-// 5. Arrow — captures lexically
-const wrapper = {
-  name: 'outer',
-  run() {
-    const arrow = () => this.name;
-    return arrow();           // 'outer' — `this` is `wrapper`
-  }
-};
-```
-
-**Gotcha — losing `this`:** Passing a method as a callback drops the binding:
-
-```javascript
-const api = {
-  url: '/data',
+const service = {
+  url: "/data",
   fetch() { return this.url; }
 };
-const f = api.fetch;
-f();                          // undefined in strict mode — `this` is no longer `api`
 
-// Fix options:
-api.fetch.bind(api);          // pre-bind
-() => api.fetch();            // wrap in arrow
+service.fetch(); // "/data"
+const detached = service.fetch;
+detached(); // no longer uses service as its receiver
+
+function describe(prefix, name) {
+  return prefix + " " + name + " (" + this.role + ")";
+}
+describe.call({ role: "admin" }, "Hello", "Ada");
+describe.apply({ role: "admin" }, ["Hello", "Ada"]);
+const greetAdmin = describe.bind({ role: "admin" }, "Hello");
+greetAdmin("Ada");
 ```
 
----
+##### Small binding exercise / 简化绑定练习
 
-### Implement `bind` (and `call` / `apply`)
-
-**Headline (30s):** `bind` returns a new function with a fixed `this` and optionally pre-filled arguments. `call` / `apply` invoke immediately with a given `this` — `call` takes args individually, `apply` takes an array. The classic implementation trick: `call` and `apply` temporarily attach the function as a method on the context object, invoke it, then delete it.
-
-#### `bind`
+This helper demonstrates partial application for functions called with object receivers. It is not a replacement for Function.prototype.bind: native bind also handles constructor calls, constructibility, and function metadata. / 以下辅助函数演示对象接收者上的部分应用，并非 Function.prototype.bind 的替代品：原生 bind 还处理构造调用、可构造性和函数元数据。
 
 ```javascript
-Function.prototype.myBind = function (context, ...preBoundArgs) {
-  const originalFn = this;
-  return function (...newArgs) {
-    return originalFn.apply(context, preBoundArgs.concat(newArgs));
+function bindForObjectReceiver(fn, receiver, ...leadingArgs) {
+  return function (...laterArgs) {
+    return fn.apply(receiver, [...leadingArgs, ...laterArgs]);
   };
-};
-
-function greet(greeting, name) {
-  return `${greeting}, ${name}! I'm ${this.role}`;
 }
-
-const boundGreet = greet.myBind({ role: 'admin' }, 'Hello');
-boundGreet('Alice'); // 'Hello, Alice! I'm admin'
 ```
 
-#### `call` and `apply`
-
-The trick: assign the function to a unique key on the context, call it as a method (so `this` binds to the context), then delete the key.
+Likewise, assigning a function to a temporary property can explain how a method call supplies this. This limited example only accepts an extensible object receiver and does not model primitive receivers or all exotic objects. A complete call/apply polyfill must also model strict functions, null/undefined, exceptions, and proxies. Use the built-ins in application code. / 把函数临时赋给对象属性可以说明方法调用如何提供 this。以下简化示例只接受可扩展对象接收者，不能处理原始值接收者或所有特殊对象。完整模拟 call/apply 还必须处理严格函数、null/undefined、异常和代理。应用代码应使用内置方法。
 
 ```javascript
-Function.prototype.myCall = function (context = globalThis, ...args) {
-  const key = Symbol();
-  context[key] = this;
-  const result = context[key](...args);
-  delete context[key];
-  return result;
-};
-
-Function.prototype.myApply = function (context = globalThis, args = []) {
-  const key = Symbol();
-  context[key] = this;
-  const result = context[key](...args);
-  delete context[key];
-  return result;
-};
+function callWithObjectReceiver(fn, receiver, ...args) {
+  if (receiver === null ||
+      (typeof receiver !== "object" && typeof receiver !== "function")) {
+    throw new TypeError("This example requires an object receiver");
+  }
+  const key = Symbol("temporary method");
+  Object.defineProperty(receiver, key, { value: fn, configurable: true });
+  try {
+    return receiver[key](...args);
+  } finally {
+    delete receiver[key];
+  }
+}
 ```
 
-**Gotcha — `bind` + arrow functions:** Arrow functions don't have their own `this`, so `bind` can't change `this` for an arrow function (only the pre-bound arguments take effect).
+#### What new does / new 的行为
 
-**Gotcha — `bind` + `new`:** If a bound function is used as a constructor with `new`, the `new` binding wins — the pre-bound `this` is ignored, but pre-bound arguments are still applied.
+For a constructible function, new creates an object with the constructor’s effective prototype, calls the constructor with that object as this, and returns the explicit object/function result if one is returned. Primitive return values are ignored. Classes and built-ins have additional construction semantics. / 对可构造函数，new 会创建一个原型为构造函数有效原型的对象，以该对象作为 this 调用构造函数；若构造函数返回对象或函数，则返回该值，否则返回新对象。原始值返回会被忽略。class 和内置构造器还有额外语义。
 
----
+The specification’s [`GetPrototypeFromConstructor`](https://tc39.es/ecma262/2025/multipage/ordinary-and-exotic-objects-behaviours.html#sec-getprototypefromconstructor) operation accepts any object-valued `prototype`, including a function, and otherwise uses the constructor realm’s intrinsic fallback. / 规范的 [`GetPrototypeFromConstructor`](https://tc39.es/ecma262/2025/multipage/ordinary-and-exotic-objects-behaviours.html#sec-getprototypefromconstructor) 会接受任何对象类型的 `prototype`（包括函数）；若不是对象，则使用构造函数所在 realm 的内置回退原型。
 
-### How does `new` work, and how would you implement it?
-
-**Headline (30s):** `new Fn(...args)` does four things: (1) creates a new object whose prototype is `Fn.prototype`; (2) calls `Fn` with `this` set to the new object; (3) if `Fn` explicitly returns an object, that's the result; otherwise the new object is returned.
+The following is a teaching model for ordinary constructors from the current realm; it is not a full polyfill for classes, bound functions, built-ins, proxies, or new.target. / 以下仅为当前 realm 中普通构造函数的教学模型，并非 class、绑定函数、内置构造器、代理或 new.target 的完整 polyfill。
 
 ```javascript
-function _new(fn, ...args) {
-  const obj = Object.create(fn.prototype);        // 1. new object linked to prototype
-  const result = fn.apply(obj, args);             // 2. run constructor
-  return result instanceof Object ? result : obj; // 3. explicit object return wins
+function emulateNew(fn, ...args) {
+  const candidate = fn.prototype;
+  const prototype =
+    candidate !== null &&
+    (typeof candidate === "object" || typeof candidate === "function")
+      ? candidate
+      : Object.prototype;
+  const instance = Object.create(prototype);
+  const result = fn.apply(instance, args);
+  const isObject =
+    result !== null &&
+    (typeof result === "object" || typeof result === "function");
+  return isObject ? result : instance;
 }
 
-function Person(name) {
-  this.name = name;
-}
-const p = _new(Person, 'Tom');
-p.name;                          // 'Tom'
-p instanceof Person;             // true
+function CallablePrototype() {}
+function Example() {}
+Example.prototype = CallablePrototype;
+const example = emulateNew(Example);
+Object.getPrototypeOf(example) === CallablePrototype; // true
 ```
 
-**Gotcha — returning a primitive:** Returning a string/number/boolean from a constructor is ignored. Returning an object overrides the default `this` return.
+#### Methods and fields / 方法与字段
 
----
-
-### What are hidden classes?
-
-**Headline (30s):** V8 (and similar engines) assign each JS object a "hidden class" that records its shape — which properties it has and in what order. Objects with the same shape share the same hidden class, which makes property access fast. Creating objects with consistent property order helps the engine optimize; adding/removing properties dynamically creates new hidden classes and costs performance.
+A function assigned in a constructor creates an own function property for each instance; a prototype method is shared through lookup. Choose based on per-instance state, identity, and behavior rather than assuming the prototype version is always faster. In class syntax, ordinary methods are placed on the prototype; instance fields create own properties on each instance; static methods and fields belong to the class constructor. / 在构造函数中赋值的函数会为每个实例创建自有函数属性；原型方法通过查找共享。应按实例状态、身份和行为选择，而不要假设原型方法一定更快。class 语法中的普通方法放在原型上；实例字段为每个实例创建自有属性；静态方法和字段属于类构造函数。
 
 ```javascript
-function createPoint(x, y) {
-  return { x, y };               // every call produces same shape → same hidden class
+class User {
+  label = "member"; // own instance field
+  greet() { return "Hi"; } // shared prototype method
+  static category = "account"; // property on the class constructor
 }
 
-// Good: consistent shape
-const p1 = createPoint(1, 2);
-const p2 = createPoint(3, 4);
-
-// Bad: different construction order creates different hidden classes
-const a = {};
-a.x = 1;
-a.y = 2;
-
-const b = {};
-b.y = 2;
-b.x = 1;                         // different hidden class than `a`!
+const user = new User();
+Object.hasOwn(user, "label"); // true
+Object.hasOwn(user, "greet"); // false
+Object.hasOwn(User, "category"); // true
 ```
 
-**Reach for this knowledge when:** writing hot-path code that allocates many similar objects (game engines, data pipelines). For typical app code, hidden classes are an implementation detail you don't need to worry about.
+#### Hidden classes are engine internals / 隐藏类属于引擎实现
 
----
+V8 uses HiddenClasses (also called Maps) to track object shapes and optimize property access. Objects initialized with the same named properties in the same order can share a shape in V8. This is implementation-specific and may change; optimize object layouts only when profiling shows a real cost. / V8 使用 HiddenClasses（也称 Maps）跟踪对象形状并优化属性访问。在 V8 中，以相同顺序初始化相同命名属性的对象可能共享形状。这是实现细节，未来可能改变；只有性能分析显示确有成本时才优化对象布局。
 
-### Why define methods on the prototype instead of in the constructor?
+The V8-specific mechanism and examples are described in [Fast properties in V8](https://v8.dev/blog/fast-properties). They are not ECMAScript guarantees. / V8 的具体机制与示例见 [V8 快速属性说明](https://v8.dev/blog/fast-properties)，这些不是 ECMAScript 保证。
 
-**Headline (30s):** Methods defined inside the constructor are copied into **every** instance, wasting memory. Methods on the prototype are **shared** — all instances look them up through the prototype chain. Prototype methods also support proper inheritance and can be monkey-patched to update all existing instances at once.
+#### Static, instance, and prototype properties / 静态、实例与原型属性
+
+Constructor properties, own instance properties, and prototype properties live on different objects. Own properties are found before inherited properties; a static property on the constructor is not part of an instance’s prototype lookup. / 构造函数属性、实例自有属性和原型属性属于不同对象。查找时先看自有属性，再看继承属性；构造函数上的静态属性不属于实例的原型查找链。
 
 ```javascript
-// Bad: a new `greet` function is created for every instance
-function Person(name) {
-  this.name = name;
-  this.greet = function() { console.log(`Hi, ${this.name}`); };
+function Example() {
+  Example.value = function () { return 1; };
+  this.value = function () { return 2; };
 }
+Example.prototype.value = function () { return 3; };
+Example.value = function () { return 4; };
 
-// Good: one shared function on the prototype
-function Person(name) {
-  this.name = name;
-}
-Person.prototype.greet = function() { console.log(`Hi, ${this.name}`); };
+Example.value(); // 4
+const instance = new Example();
+instance.value(); // 2: own property shadows the prototype method
+Example.value(); // 1: constructor body replaced the static property
 ```
 
-In modern code, write `class` — it does this for you. `class Foo { method() {} }` puts `method` on `Foo.prototype` automatically; fields declared outside the constructor also go on the prototype.
+#### Property descriptors / 属性描述符
 
----
+Own properties have attributes. Data properties use value and writable; accessor properties use get and set. Both kinds have enumerable and configurable. Object.defineProperty lets code set these explicitly. / 自有属性有属性特征。数据属性使用 value 和 writable；访问器属性使用 get 和 set。两类属性都有 enumerable 和 configurable。Object.defineProperty 可显式设置这些特征。
 
-### How do static, instance, and prototype properties interact?
-
-This appears as an execution-order puzzle. Walk through it step by step.
-
-```javascript
-function Foo() {
-  Foo.a = function() { console.log(1); };
-  this.a = function() { console.log(2); };
-}
-Foo.prototype.a = function() { console.log(3); };
-Foo.a = function() { console.log(4); };
-
-Foo.a();           // 4
-const obj = new Foo();
-obj.a();           // 2
-Foo.a();           // 1
-```
-
-**Breakdown:**
-
-1. After definition, `Foo.a` is the "logs 4" function, so `Foo.a()` prints `4`.
-2. `new Foo()` runs the body: it **reassigns** `Foo.a` to "logs 1" and creates an instance property `obj.a` = "logs 2".
-3. `obj.a()` — instance property takes precedence over prototype, so it prints `2`.
-4. `Foo.a()` — now prints `1`, because the constructor overwrote the static property.
-
-**Precedence lookup order for `obj.a`:**
-
-1. Own (instance) properties.
-2. Prototype chain (`Foo.prototype`, `Object.prototype`, ...).
-
-Static properties (`Foo.a`) are entirely separate — they live on the constructor function itself, not on the instance chain.
-
----
-
-### What are property descriptors?
-
-**Headline (30s):** Every property on an object has a set of *attributes* (configurable, enumerable, writable, value/get/set) that control its behavior. `Object.defineProperty` lets you set them explicitly. This is how libraries implement read-only properties, computed getters, and non-enumerable "internal" fields.
-
-#### Data properties
-
-| Attribute | Meaning |
+| Attribute / 特征 | Meaning / 含义 |
 |---|---|
-| `value` | The property's actual value |
-| `writable` | Whether the value can be reassigned |
-| `enumerable` | Whether the property shows up in `for...in` / `Object.keys` |
-| `configurable` | Whether the property can be deleted or redefined |
+| value | Stored value / 存储值 |
+| writable | Whether assignment may change a data property / 赋值是否可修改数据属性 |
+| get / set | Accessor functions used on read or write / 读取或写入时调用的访问器函数 |
+| enumerable | Included by own enumerable key APIs; for...in also walks the prototype chain / 自有可枚举键 API 会包含；for...in 还会遍历原型链 |
+| configurable | Whether the property can generally be deleted or reconfigured / 通常能否删除或重新配置 |
 
 ```javascript
-const obj = {};
-Object.defineProperty(obj, 'name', {
-  value: 'John',
+const record = {};
+Object.defineProperty(record, "id", {
+  value: 7,
   writable: false,
   enumerable: true,
-  configurable: true
+  configurable: false
 });
-obj.name = 'Jane';   // silently fails (or throws in strict mode)
-obj.name;            // 'John'
+
+Object.getOwnPropertyDescriptor(record, "id");
+// { value: 7, writable: false, enumerable: true, configurable: false }
 ```
 
-#### Accessor properties (`get` / `set`)
+An accessor can compute or validate a value on read or write. / 访问器可在读取或写入时计算或校验值。
 
 ```javascript
-const obj = { _name: 'John' };
-Object.defineProperty(obj, 'name', {
+const profile = { _name: "John" };
+Object.defineProperty(profile, "name", {
   get() { return this._name; },
-  set(v) { this._name = v; },
+  set(value) { this._name = value; },
   enumerable: true,
   configurable: true
 });
-obj.name;         // 'John' (calls get)
-obj.name = 'Jo';  // calls set
+
+profile.name; // "John" — calls the getter
+profile.name = "Jo"; // calls the setter
+profile._name; // "Jo"
 ```
 
-#### Inspecting descriptors
+An assignment to a non-writable property is ignored in sloppy code and throws in strict code. / 非严格代码中，对不可写属性赋值会被忽略；严格代码中会抛错。
 
-```javascript
-Object.getOwnPropertyDescriptor(obj, 'name');
-// { value: 'John', writable: false, enumerable: true, configurable: true }
-```
+**Interview answer / 面试回答:** Objects inherit through an internal prototype link. An object created by `constructorFn` normally inherits from that constructor’s object-valued `constructorFn.prototype`; this differs from `Function.prototype`, which function objects themselves typically inherit through their internal prototype link. `__proto__` is a legacy accessor. For ordinary functions, `this` follows the call form; arrows capture it lexically. `new` constructs an instance, and own properties shadow prototype properties. / 对象通过内部原型链接继承属性。由 `constructorFn` 创建的对象通常继承自其对象类型的 `constructorFn.prototype`；这与函数对象自身通常通过内部原型链接继承的 `Function.prototype` 不同。`__proto__` 是历史访问器。普通函数的 `this` 由调用方式决定；箭头函数从外层词法捕获。`new` 构造实例，自有属性会遮蔽原型属性。
 
-**Reach for this when:** implementing reactive frameworks (Vue 2 used `defineProperty` pre-Proxy), enforcing API contracts (read-only IDs), or making fields non-enumerable so they don't leak in logs.
+See the [ECMAScript Object and Function sections](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html) for normative behavior. / 规范行为详见 [ECMAScript Object 与 Function 章节](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html)。
 
-**See also:** [`Scope & Closure / 作用域与闭包`](#18.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85) for how `this` interacts with scope, [`3.2 JavaScript Types`](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B) for primitive vs. reference fundamentals.
+Related: [JavaScript Types and Coercion / JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B); [Scope and Closure / 作用域与闭包](#18.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85).
 ## 18. Scope & Closure / 作用域与闭包
 
 ### Scope & Closure / 作用域与闭包
@@ -3140,443 +2678,289 @@ console.log(callbacks.map((callback) => callback())); // [0, 1, 2, 3, 4]
 **延伸阅读：** [JavaScript 基础](#9.%20JavaScript%20Basics%20/%20JavaScript%E5%9F%BA%E7%A1%80)说明声明差异；[对象、函数与原型](#17.%20Object,%20Function,%20and%20Prototype%20/%20%E5%AF%B9%E8%B1%A1%E3%80%81%E5%87%BD%E6%95%B0%E4%B8%8E%E5%8E%9F%E5%9E%8B)解释 `this` 的调用规则为何不同于词法作用域。
 ## 19. Asynchronous JavaScript / 异步JavaScript
 
-#### Why did JavaScript evolve from callbacks to Promises to `async/await`?
+### Asynchronous JavaScript / 异步 JavaScript
 
-**Headline (30s):** JavaScript is single-threaded — it can't block while waiting for I/O, so every async API has to defer completion. The three generations of async APIs (callbacks → Promises → `async/await`) are all attempts to solve the same problem: *how to express "do this, then that, then that" without creating unreadable spaghetti*. Each generation is strictly more expressive than the last; `async/await` is today's answer.
+**Key terms / 关键词:** callback 回调 · Promise Promise 对象 · microtask 微任务 · async iterable 异步可迭代对象 · concurrency 并发
 
-**Why interviewers ask this:** Async handling is the #1 source of production bugs in frontend code. Interviewers want to see that you can reason about control flow, error propagation, and concurrency — not just memorize `.then()`.
+Asynchronous APIs let a program continue while work is pending, but “async” does not itself mean that JavaScript executes CPU work in parallel or that the host uses one thread. Promises were standardized in ES2015, async functions/await in ES2017, and async iteration in ES2018. Callbacks, Promises, and async/await express deferred control flow with different composition and error-handling styles. / 异步 API 让程序在等待任务时继续推进，但“异步”本身不表示 JavaScript 会并行执行 CPU 计算，也不表示宿主只有一个线程。Promise 属于 ES2015，async 函数/await 属于 ES2017，异步迭代属于 ES2018。回调、Promise 和 async/await 是表达延后控制流的不同方式，在组合能力和错误处理上各有特点。
 
----
+#### Callbacks, Promises, and async/await / 回调、Promise 与 async/await
 
-#### Callbacks — the original async pattern
-
-A callback is a function you pass to another function to be invoked when an async operation finishes.
+A callback passes a function to an API to be called later. Dependent callback nesting can make control flow and error paths hard to follow; callbacks are still appropriate for event handlers and many host APIs. / 回调把函数传给 API，供其稍后调用。依赖关系层层嵌套时，控制流和错误路径会难以跟踪；事件处理器和许多宿主 API 仍适合使用回调。
 
 ```javascript
-function fetchData(url, callback) {
-  const xhr = new XMLHttpRequest();
-  xhr.open('GET', url);
-  xhr.onload = () => callback(null, xhr.responseText);
-  xhr.onerror = () => callback(new Error('Request failed'));
-  xhr.send();
-}
-```
-
-##### Why callbacks hurt: callback hell
-
-When async operations depend on each other, callbacks nest:
-
-```javascript
-getUser(userId, (user) => {
-  getOrders(user.id, (orders) => {
-    getOrderDetails(orders[0].id, (details) => {
-      // indent continues forever...
-    });
+readUser(userId, (error, user) => {
+  if (error) return handle(error);
+  readOrders(user.id, (error, orders) => {
+    if (error) return handle(error);
+    renderOrders(orders);
   });
 });
 ```
 
-Three real problems: (1) hard to read, (2) error handling must be repeated at every level, (3) no way to compose (e.g., "run these in parallel, wait for all"). Promises were introduced to fix all three.
-
----
-
-#### Promises — the composable abstraction
-
-**Headline:** A Promise is an object representing a future value — it's in one of three states (`pending`, `fulfilled`, `rejected`), and once settled it never changes. Chaining via `.then()` flattens nested callbacks and gives you a single error channel via `.catch()`.
-
-##### States
-
-- **Pending** — initial; the operation is still running.
-- **Fulfilled** — completed successfully, with a value.
-- **Rejected** — failed, with a reason (usually an Error).
-
-Once fulfilled or rejected, the state is locked. A rejected promise cannot later resolve; a fulfilled one cannot later fail.
-
-##### Creating and consuming a Promise
+A Promise represents a future fulfillment or rejection. Once settled, its state does not change. then returns another Promise, so success and failure can be composed; catch handles a rejection by recovering with a value or propagating with a throw. / Promise 表示未来的成功结果或拒绝原因。状态一旦确定就不会改变。then 返回新的 Promise，因此成功和失败流程可以组合；catch 可以通过返回值恢复，也可以通过再次抛出错误继续传播。
 
 ```javascript
-const promise = new Promise((resolve, reject) => {
-  setTimeout(() => resolve('Success!'), 1000);
-});
-
-promise.then(value => console.log(value)); // 'Success!' after 1s
+const result = getUser(userId)
+  .then(user => getOrders(user.id))
+  .then(renderOrders)
+  .catch(handleError);
 ```
 
-##### Prototype methods
-
-- **`.then(onFulfilled, onRejected)`** — register handlers. Returns a new promise, so chains compose.
-- **`.catch(onRejected)`** — shorthand for `.then(undefined, onRejected)`.
-- **`.finally(onSettled)`** — runs no matter what; useful for cleanup (hide loading spinner, release resources).
+An async function always returns a Promise. await suspends that function until its operand settles, then resumes with the fulfillment value or throws the rejection into the surrounding control flow. Code before the first suspension runs synchronously. / async 函数始终返回 Promise。await 会暂停该函数，直到操作数完成，再以成功值继续或把拒绝原因抛入当前控制流。第一个暂停点之前的代码仍同步执行。
 
 ```javascript
-fetchData('/api/users')
-  .then(text => JSON.parse(text))
-  .then(users => console.log(users))
-  .catch(err => console.error(err))
-  .finally(() => console.log('Done'));
-```
-
-##### Static methods (combinators)
-
-Summary: see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for the comparison table. Short version:
-
-- **`Promise.all`** — parallel, fails fast.
-- **`Promise.allSettled`** — parallel, never fails; returns every outcome.
-- **`Promise.any`** — first success wins.
-- **`Promise.race`** — first settlement wins (success or failure).
-
-```javascript
-const [users, posts, comments] = await Promise.all([
-  fetch('/api/users').then(r => r.json()),
-  fetch('/api/posts').then(r => r.json()),
-  fetch('/api/comments').then(r => r.json())
-]);
-```
-
----
-
-#### `async` / `await` — syntactic sugar that looks synchronous
-
-**Headline:** An `async` function automatically returns a Promise. `await` pauses the function body until the Promise settles, then resumes with the value (or throws if rejected). This lets you write sequential async code using `try/catch` — no callback nesting, no `.then()` chains.
-
-```javascript
-async function loadUser(userId) {
+async function loadOrders(userId) {
   try {
     const user = await getUser(userId);
-    const orders = await getOrders(user.id);
-    const details = await getOrderDetails(orders[0].id);
-    return details;
-  } catch (err) {
-    console.error('Failed:', err);
+    return await getOrders(user.id);
+  } catch (error) {
+    handleError(error);
+    throw error; // the returned Promise remains rejected
   }
 }
 ```
 
-Compare with the callback hell example above — same logic, no nesting, errors flow to a single `catch`.
+#### Promise states and combinators / Promise 状态与组合方法
 
-##### Sequential vs. parallel with `await` — the trap
+A Promise executor runs immediately when new Promise(executor) is called; reactions registered through then run asynchronously as Promise jobs. finally normally passes the original outcome through; if its callback throws or returns a rejected Promise, the resulting chain rejects with that new failure. / 调用 new Promise(executor) 时，executor 会立即运行；通过 then 注册的处理器则作为 Promise job 异步执行。finally 通常保留原结果；若回调抛错或返回拒绝的 Promise，后续链会以新错误拒绝。
 
-`await` pauses the function. If you chain `await`s for independent operations, you serialize them by accident:
+| Method / 方法 | Returned Promise fulfills when / 成功条件 | Returned Promise rejects when / 拒绝条件 |
+|---|---|---|
+| Promise.all | Every input fulfills; values keep input order / 全部成功，值按输入顺序排列 | An input rejects / 任一输入拒绝 |
+| Promise.allSettled | All inputs settle; each outcome is returned / 全部完成并返回每项状态 | Not because an input rejects / 不会因某项输入拒绝 |
+| Promise.any | First input fulfills / 首个输入成功 | All inputs reject; AggregateError is returned / 全部拒绝时返回 AggregateError |
+| Promise.race | First settlement is fulfillment / 首个完成项成功 | First settlement is rejection / 首个完成项拒绝 |
+
+The specification installs both fulfillment and rejection reactions for each input in [`PerformPromiseRace`](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-performpromiserace). / 规范中的 [`PerformPromiseRace`](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-performpromiserace) 会为每项输入同时安装成功和拒绝处理器。
+
+These methods coordinate already-created work; they do not cancel losing operations. If an API supports cancellation and abandoned work should stop, use its explicit mechanism, such as AbortController with Fetch. / 这些方法只协调已经创建的任务，不会取消未获胜的操作。若 API 支持取消且希望停止无用任务，应使用显式取消机制，例如 Fetch 配合 AbortController。
+
+#### Sequential and concurrent work / 顺序执行与并发启动
+
+Await independent operations together when they may proceed concurrently. This is concurrency, not necessarily parallel JavaScript computation: the host may overlap I/O while each JavaScript agent still runs one job at a time. / 相互独立且可同时推进的操作可一起等待。这是并发，不一定是 JavaScript 计算并行：宿主可以重叠处理 I/O，而每个 JavaScript agent 仍一次执行一个 job。
 
 ```javascript
-// Bad: sequential when they could be parallel
-const users = await fetch('/api/users');
-const posts = await fetch('/api/posts');
-// Total time = users + posts
+// Dependent: the second operation needs the first result.
+const user = await fetchUser(id);
+const orders = await fetchOrders(user.id);
 
-// Good: kick both off, then await
+// Independent: start both before awaiting either.
 const [users, posts] = await Promise.all([
-  fetch('/api/users'),
-  fetch('/api/posts')
+  fetchUsers(),
+  fetchPosts()
 ]);
-// Total time = max(users, posts)
 ```
 
-**Rule of thumb:** If two `await`s don't depend on each other's results, you probably want `Promise.all`.
+for await...of awaits values from an async iterable in iteration order. It can also adapt a synchronous iterable of Promises, but awaits each yielded value before continuing. If all operations are independent, Promise.all usually expresses both concurrency and rejection handling more directly. / for await...of 按迭代顺序等待异步可迭代对象产出的值。它也能适配由 Promise 组成的同步可迭代对象，但会在继续前等待当前值。若操作彼此独立，Promise.all 通常更直接地表达并发启动和拒绝处理。
 
-##### `for await...of`
+#### Promise-job order / Promise job 顺序
 
-Iterates over an async iterable, awaiting each value. Order of processing is guaranteed, but promises can be created eagerly and awaited lazily:
-
-```javascript
-async function processAll() {
-  const p1 = fetch('/api/1');
-  const p2 = fetch('/api/2');
-  const p3 = fetch('/api/3');
-
-  for await (const response of [p1, p2, p3]) {
-    const data = await response.json();
-    console.log(data);
-  }
-}
-```
-
-The three fetches start concurrently (they're created before the loop). `for await` only controls when each *result* is processed, not when each promise starts.
-
----
-
-#### Microtasks: why this logs `0 2 1 3`
-
-**Headline:** Every `.then()` callback is scheduled as a *microtask*. The event loop drains the entire microtask queue between tasks (and between rendering frames). When two promise chains exist in parallel, their `.then()` callbacks interleave round-robin.
+Promise reactions are queued as jobs; when one handler queues another reaction, already-queued jobs run first. This explains the interleaving below. Exact checkpoints are provided by the host, so keep browser event-loop and Node scheduling rules separate. / Promise 处理器会排入 job 队列；某个处理器新增后续处理器时，队列中已存在的 job 会先运行。下面的交错顺序由此产生。具体检查点由宿主提供，因此应区分浏览器事件循环和 Node 调度规则。
 
 ```javascript
 Promise.resolve().then(() => console.log(0)).then(() => console.log(1));
 Promise.resolve().then(() => console.log(2)).then(() => console.log(3));
-// 0 2 1 3
+// 0, 2, 1, 3
 ```
 
-Walk-through: both chains' first `.then()` are queued right away. After `0` runs, its second `.then()` gets queued — but chain 2's first `.then()` is already ahead of it.
-
-##### Returning a Promise from `.then()` adds ticks
-
-When a `.then()` callback returns another Promise, the chain waits an extra microtask tick for it to unwrap:
+Returning a Promise from a handler makes the next Promise adopt its eventual state. The timing of visible reactions follows the job queue, not a portable count of “ticks”; use a runnable example only for the runtime and context tested. / 处理器返回 Promise 时，后续 Promise 会采用它最终的状态。可观察到的处理顺序取决于 job 队列，不宜用跨环境固定的“tick 数”描述；具体示例只代表实际测试过的运行时和上下文。
 
 ```javascript
 Promise.resolve().then(() => {
   console.log(0);
   return Promise.resolve(4);
-}).then(res => console.log(res));
+}).then(value => console.log(value));
 
 Promise.resolve().then(() => console.log(1))
-                 .then(() => console.log(2))
-                 .then(() => console.log(3));
-// 0 1 2 3 4
+  .then(() => console.log(2))
+  .then(() => console.log(3));
+// Node.js v26.11.1, CommonJS: 0, 1, 2, 3, 4
 ```
 
-The extra hop lets chains without inner Promises "catch up" two ticks.
+The returned Promise is adopted by the chained Promise; its reactions join the same job queue as the second chain. Do not model this as one universal “extra tick.” / 后续 Promise 会采用处理器返回的 Promise 状态；其处理器也会进入第二条链所在的 job 队列。不要把它概括为跨宿主通用的“多一个 tick”。
 
-**See also:** [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the full microtask / macrotask model.
+See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering is documented separately in [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF). / 详见 [ECMAScript Promise job 规范](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) 与 [浏览器事件循环规范](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)。Node 队列顺序在 [事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) 中单独说明。
 
----
+#### Currying / 柯里化
 
-#### Function patterns: currying
-
-Currying transforms `fn(a, b, c)` into `fn(a)(b)(c)`. Useful for partial application, reusable specialized functions, and functional composition.
+Currying adapts a multi-argument function into a sequence of calls, allowing partial application. This compact implementation uses fn.length as the arity and supports ordinary positional functions; defaults, rest parameters, placeholders, and other arity rules need a different contract. / 柯里化把多参数函数改造成一系列调用，以支持部分应用。以下简化实现用 fn.length 作为元数，适用于普通位置参数函数；默认参数、剩余参数、占位符及其他元数规则需要另行设计。
 
 ```javascript
 function curry(fn) {
   return function curried(...args) {
-    if (args.length >= fn.length) {
-      return fn.apply(this, args);
-    }
+    if (args.length >= fn.length) return fn.apply(this, args);
     return function (...next) {
-      return curried.apply(this, args.concat(next));
+      return curried.apply(this, [...args, ...next]);
     };
   };
 }
 
 const sum = (a, b, c) => a + b + c;
 const curriedSum = curry(sum);
-curriedSum(1)(2)(3);    // 6
-curriedSum(1, 2)(3);    // 6
-curriedSum(1)(2, 3);    // 6
+curriedSum(1)(2)(3); // 6
+curriedSum(1, 2)(3); // 6
 ```
 
-Uses: configuration helpers (`http.get(headers)(url)`), event handler factories, and building composition pipelines (Ramda, lodash/fp).
+#### A chainable task queue / 链式异步任务队列
 
----
-
-#### Interview-favorite: implement `LazyMan` (chainable async task queue)
-
-**Headline:** Build a chainable API where `eat` / `sleep` queue actions and run in order. The trick: queue a task list inside the constructor, defer execution with `setTimeout(0)` so the entire chain is built first, and give each task responsibility for calling `next()` when it's done.
+This LazyMan example queues actions and defers the first step so the synchronous method chain is built before execution begins. Each action calls next() only when its work is complete. Time is in milliseconds. / 这个 LazyMan 示例把操作加入队列，并延后首步执行，以便先完成同步方法链。每个任务只在自身完成后调用 next()。时间单位为毫秒。
 
 ```javascript
 class LazyMan {
   constructor(name) {
     this.name = name;
-    this.taskList = [];
+    this.tasks = [];
     setTimeout(() => this.next(), 0);
   }
 
   eat(food) {
-    this.taskList.push(() => {
-      console.log(`eat ${food}`);
+    this.tasks.push(() => {
+      console.log("eat " + food);
       this.next();
     });
     return this;
   }
 
-  sleep(time) {
-    this.taskList.push(() => {
+  sleep(ms) {
+    this.tasks.push(() => {
       setTimeout(() => {
-        console.log(`wake up after ${time}ms`);
+        console.log("wake up after " + ms + "ms");
         this.next();
-      }, time);
+      }, ms);
     });
     return this;
   }
 
   next() {
-    const task = this.taskList.shift();
-    task && task();
+    const task = this.tasks.shift();
+    if (task) task();
   }
 }
 
-new LazyMan('ronron').eat('apple').sleep(1000).eat('banana');
-// eat apple → wake up after 1000ms → eat banana
+new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
+// eat fruit → wake up after 10ms → eat bread
 ```
 
-Key ideas:
+This is a teaching example, not a cancellation-aware production queue. A production design should define failure handling, cancellation, and what happens when a task never completes. / 这是讲解示例，不是带取消能力的生产队列。生产实现还需定义失败处理、取消方式，以及任务永不完成时的行为。
 
-- **Chainable API** — each method returns `this`.
-- **Deferred start** — `setTimeout(0)` in the constructor makes sure `.eat().sleep().eat()` finish pushing before `next()` runs.
-- **Sequential async flow** — each task calls `next()` only when it's truly done; async tasks (like `sleep`) call it inside their own `setTimeout`.
+#### Arrow functions / 箭头函数
 
----
-
-#### Arrow functions: four things they can't do
-
-Arrow functions are concise and lexically bind `this`, but they have real limits:
-
-1. **No own `this`** — they inherit from the enclosing scope. Unsuitable as object methods when you want `this` to be the object.
-
-    ```javascript
-    const obj = {
-      name: 'Alice',
-      greet: () => console.log(this.name) // `this` is NOT obj
-    };
-    ```
-
-2. **No `arguments` object** — use rest parameters instead: `(...args) => ...`.
-
-3. **Cannot be used with `new`** — throws `TypeError`.
-
-4. **Not suitable as prototype methods** — same problem as (1); `this` won't be the instance.
-
----
-
-#### Classic gotcha: `['1', '2', '3'].map(parseInt)`
-
-**Headline:** Result is `[1, NaN, NaN]`, not `[1, 2, 3]`. Reason: `map` passes three arguments `(value, index, array)` to the callback, and `parseInt` accepts `(string, radix)` — so it becomes `parseInt('2', 1)` (radix 1 is invalid) and `parseInt('3', 2)` (`'3'` isn't a binary digit).
+Arrow functions capture this lexically; they do not have their own this or arguments, are not constructible with new, and do not have a prototype property. Use method syntax when a method needs its receiver as this; use rest parameters for a local argument list. / 箭头函数从外层词法作用域捕获 this；它没有自己的 this 或 arguments，不能用 new 构造，也没有 prototype 属性。方法需要把接收者作为 this 时使用方法语法；需要函数自己的参数列表时使用剩余参数。
 
 ```javascript
-['1', '2', '3'].map(parseInt);
-// parseInt('1', 0) → 1     (radix 0 defaults to base 10)
-// parseInt('2', 1) → NaN   (radix 1 is invalid)
-// parseInt('3', 2) → NaN   ('3' is not a binary digit)
-// [1, NaN, NaN]
-
-// Fix:
-['1', '2', '3'].map(s => parseInt(s, 10)); // [1, 2, 3]
-['1', '2', '3'].map(Number);               // [1, 2, 3]
+const counter = {
+  value: 1,
+  read() { return this.value; },
+  readArrow: () => this.value // captures surrounding this, not counter
+};
 ```
 
-**Gotcha — why this matters:** Any time you pass a unary-argument function to `.map`/`.forEach`/`.filter` and the function actually accepts a second argument, you can hit this. Always wrap with an arrow if the callback shape doesn't match.
+An arrow function can still be useful as an instance field when lexical capture is intentional; call, apply, and bind cannot replace its captured this. / 若确实需要词法捕获，箭头函数也可作为实例字段；call、apply 和 bind 无法替换捕获到的 this。
 
-**See also:** [`4.5 Error Handling`](#21.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86) for error handling patterns with Promises and async/await, [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for Promise combinator comparison, [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the microtask scheduling model.
+#### Callback arity gotcha / 回调参数个数陷阱
+
+The `Array.prototype.map` callback receives the value, index, and array. `parseInt` interprets its second parameter as a radix, so passing it directly to `map` changes the radix for later items. / `Array.prototype.map` 的回调会收到值、索引和数组。`parseInt` 把第二个参数解释为基数，因此直接传给 `map` 会让后续元素使用不同基数。
+
+See the [ECMAScript `Array.prototype.map` algorithm](https://tc39.es/ecma262/2025/multipage/indexed-collections.html#sec-array.prototype.map). / 详见 [ECMAScript `Array.prototype.map` 规范算法](https://tc39.es/ecma262/2025/multipage/indexed-collections.html#sec-array.prototype.map)。
+
+```javascript
+["1", "2", "3"].map(parseInt); // [1, NaN, NaN]
+["1", "2", "3"].map(text => parseInt(text, 10)); // [1, 2, 3]
+["1", "2", "3"].map(Number); // [1, 2, 3]
+```
+
+**Interview answer / 面试回答:** Promises compose asynchronous outcomes and provide a rejection channel; async/await expresses that control flow in sequential syntax. Use Promise.all for independent operations that must all succeed, but remember it does not cancel sibling work. Promise reactions are jobs; host event-loop ordering depends on the environment. / Promise 可组合异步结果并提供拒绝传播通道；async/await 用顺序语法表达这种控制流。多个独立操作都必须成功时可用 Promise.all，但它不会取消其他任务。Promise 处理器以 job 执行，宿主事件循环顺序因环境而异。
+
+Related: [Error Handling / JavaScript 错误处理](#21.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86); [Iterators and Generators / 迭代器与生成器](#20.%20Iterators%20and%20Generators%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8); [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
 ## 20. Iterators and Generators / 迭代器与生成器
 
-#### What's the iteration protocol, and why does it matter?
+### Iterators and Generators / 迭代器与生成器
 
-**Headline (30s):** JavaScript defines two protocols — **iterable** and **iterator** — that any object can implement to participate in `for...of`, spread (`...`), destructuring, and `Array.from`. A generator is a function that implements both protocols automatically via `yield`. Understanding the protocol is the key to building custom data structures that "just work" with the language's iteration features.
+**Key terms / 关键词:** iterable 可迭代对象 · iterator 迭代器 · iterator result 迭代结果 · generator 生成器 · async iteration 异步迭代
 
-**Why interviewers ask this:** It's the mechanism behind `for...of`, spread syntax, async iteration, and tree/graph traversal patterns. A candidate who can implement a custom iterable shows they understand the language at the protocol level, not just as a collection of built-ins.
+The iterable/iterator protocols were standardized in ES2015. An iterable supplies an iterator through Symbol.iterator. An iterator supplies successive results through next(). This protocol powers for...of, array spread, and array destructuring; Array.from accepts either an iterable or an array-like input. An object is not iterable just because it has numeric keys or a length. / 可迭代对象/迭代器协议属于 ES2015。可迭代对象通过 Symbol.iterator 提供迭代器；迭代器通过 next() 提供后续结果。for...of、数组展开和数组解构都使用该协议；Array.from 接受可迭代对象或类数组输入。对象有数字键或 length 并不自动意味着它可迭代。
 
----
+#### Iterable and iterator protocols / 可迭代协议与迭代器协议
 
-#### Iterable and iterator protocols
+An iterator result is an object. The consumer converts its `done` property to Boolean; if that property is absent, it acts as `false`. `value` supplies the current item and may be absent when iteration is complete. For example, `{ value: 42 }` is a non-complete result. / 迭代结果是一个对象。消费者会把其 `done` 属性转换为布尔值；若属性缺失，则按 `false` 处理。`value` 提供当前项，迭代完成时可以省略。例如，`{ value: 42 }` 表示尚未完成的结果。
 
-##### Iterable
-
-An object is iterable if it has a `[Symbol.iterator]` method that returns an iterator. Built-in iterables: **Array, String, Map, Set, TypedArray, `arguments`, NodeList**. Plain objects are *not* iterable by default.
-
-##### Iterator
-
-An iterator is any object with a `next()` method that returns `{ value, done }`:
-
-- `value` — the next item.
-- `done` — `true` when the sequence is exhausted; `false` otherwise.
+Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. NodeList is iterable in modern browser DOM implementations, but it is a host API rather than a JavaScript-language collection. Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象是语言提供的可迭代对象。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它属于宿主 API，而非 JavaScript 语言集合。普通对象默认不可迭代。
 
 ```javascript
-const arr = [10, 20, 30];
-const it = arr[Symbol.iterator]();
+const values = [10, 20];
+const iterator = values[Symbol.iterator]();
 
-it.next(); // { value: 10, done: false }
-it.next(); // { value: 20, done: false }
-it.next(); // { value: 30, done: false }
-it.next(); // { value: undefined, done: true }
+iterator.next(); // { value: 10, done: false }
+iterator.next(); // { value: 20, done: false }
+iterator.next(); // { value: undefined, done: true }
+
+for (const [key, value] of new Map([["x", 1], ["y", 2]])) {
+  console.log(key, value);
+}
 ```
 
-##### Building a custom iterable
+This reusable range iterable is designed to return a fresh iterator on each Symbol.iterator call. The protocol does not require that: iterator objects and generators often return themselves and are one-shot. The optional return method gives resource-owning iterators a cleanup hook; for...of closes an iterator when `break` or an abrupt completion of the loop body exits iteration. / 这个可重复使用的 range 可迭代对象设计为每次调用 Symbol.iterator 都返回新迭代器；协议并不要求如此：迭代器对象和生成器常常返回自身，因此只能消费一次。可选的 return 方法为持有资源的迭代器提供清理钩子；`break` 或循环体发生异常等控制流离开迭代时，for...of 会关闭迭代器。
 
 ```javascript
-class Range {
-  constructor(start, end) {
-    this.start = start;
-    this.end = end;
-  }
-
+const range = {
+  start: 1,
+  end: 3,
   [Symbol.iterator]() {
     let current = this.start;
     const end = this.end;
     return {
       next() {
-        if (current <= end) {
-          return { value: current++, done: false };
-        }
+        if (current <= end) return { value: current++, done: false };
         return { value: undefined, done: true };
       }
     };
   }
-}
+};
 
-for (const n of new Range(1, 5)) console.log(n); // 1 2 3 4 5
-[...new Range(3, 6)];                             // [3, 4, 5, 6]
+[...range]; // [1, 2, 3]
 ```
-
-Once an object implements `[Symbol.iterator]`, *all* iteration features work — `for...of`, spread, destructuring, `Array.from`, `Map` / `Set` construction. That's the payoff.
-
-**Gotcha — iterators are "one-shot" by default:** Once `done: true`, most iterators can't be restarted. Always re-call `[Symbol.iterator]()` for a fresh iterator. Built-in arrays follow this pattern: `const it = arr[Symbol.iterator](); it.next(); // later: can't restart it`.
-
----
-
-#### Generators — iterators with cleaner syntax
-
-**Headline (30s):** A generator function (`function*`) returns a generator object — an iterator that's also iterable. Inside the function, `yield` pauses execution and emits a value; the next call to `.next()` resumes from the paused point. The engine automatically manages all the state that a hand-written iterator would have to track manually.
-
-##### Declaration and basic use
 
 ```javascript
-function* countdown(n) {
-  while (n > 0) {
-    yield n;
-    n--;
-  }
-}
-
-const gen = countdown(3);
-gen.next(); // { value: 3, done: false }
-gen.next(); // { value: 2, done: false }
-gen.next(); // { value: 1, done: false }
-gen.next(); // { value: undefined, done: true }
-
-for (const v of countdown(3)) console.log(v); // 3 2 1
+const oneShot = (function* values() { yield 1; })();
+oneShot[Symbol.iterator]() === oneShot; // true: the iterator is its own iterable
 ```
 
-##### Passing values *into* a generator
+See the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration), [IteratorComplete](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteratorcomplete), and [IteratorClose](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteratorclose) algorithms. / 可迭代接口见 [ECMAScript 迭代规范](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)，结果完成判断和迭代器关闭算法分别见 [IteratorComplete](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteratorcomplete) 与 [IteratorClose](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteratorclose)。
 
-The argument to `.next(value)` becomes the result of the paused `yield` expression:
+#### Generators / 生成器
+
+A generator function returns an object that is both iterable and an iterator. yield pauses it and produces a value; the next() call resumes it. The first next(value) argument is ignored because execution has not paused at a yield yet; later values become the result of the suspended yield expression. / 生成器函数返回同时具备可迭代对象和迭代器特征的对象。yield 会暂停函数并产出值；下一次调用 next() 时继续执行。首次 next(value) 的参数会被忽略，因为函数尚未暂停在 yield 表达式上；之后传入的值会成为暂停处 yield 表达式的结果。
 
 ```javascript
 function* conversation() {
-  const name = yield 'What is your name?';
-  const hobby = yield `Hello, ${name}! What is your hobby?`;
-  return `${name} likes ${hobby}`;
+  const name = yield "What is your name?";
+  const hobby = yield "Hello, " + name + "! What do you enjoy?";
+  return name + " likes " + hobby;
 }
 
 const chat = conversation();
-chat.next().value;         // 'What is your name?'
-chat.next('Alice').value;  // 'Hello, Alice! What is your hobby?'
-chat.next('coding').value; // 'Alice likes coding'
+chat.next();          // { value: "What is your name?", done: false }
+chat.next("Ada");     // { value: "Hello, Ada! What do you enjoy?", done: false }
+chat.next("coding");  // { value: "Ada likes coding", done: true }
 ```
 
-**Mental model:** `yield x` is a two-way door — it emits `x` out, then waits until the next `.next(y)` call sends `y` back in.
-
-##### `yield*` — delegating to another iterable
-
-`yield*` delegates to another iterable or generator, "inlining" all its values:
+yield* delegates iteration to another iterable or generator, including its completion result. It is useful for composing traversals. / yield* 把迭代委托给另一个可迭代对象或生成器，也会接收其完成结果，适合组合遍历逻辑。
 
 ```javascript
-function* flatten(arr) {
-  for (const item of arr) {
-    if (Array.isArray(item)) {
-      yield* flatten(item);   // recursive delegation
-    } else {
-      yield item;
-    }
+function* flatten(items) {
+  for (const item of items) {
+    if (Array.isArray(item)) yield* flatten(item);
+    else yield item;
   }
 }
 
 [...flatten([1, [2, [3, 4]], 5])]; // [1, 2, 3, 4, 5]
 ```
 
----
+#### Lazy sequences and control flow / 惰性序列与控制流
 
-#### Practical use cases
-
-##### Lazy evaluation of infinite sequences
-
-Generators produce values on demand — perfect for sequences too large (or infinite) to store:
+Generators compute on demand, which can represent large or infinite sequences without storing every value. The consumer controls how many values to request. / 生成器按需计算，可表示很大或无限的序列，而不必预先保存所有值。消费者决定请求多少项。
 
 ```javascript
 function* fibonacci() {
@@ -3594,309 +2978,164 @@ fib.next().value; // 1
 fib.next().value; // 2
 ```
 
-Nothing is computed until you ask. Take as many values as you need and stop — no wasted work.
-
-##### Unique ID factory
+The same lazy state can produce identifiers without storing an unbounded array of them. / 同样的惰性状态也可逐个生成标识符，而无需预先保存一个不断增长的数组。
 
 ```javascript
-function* idGenerator(prefix = 'id') {
-  let n = 0;
-  while (true) {
-    yield `${prefix}_${n++}`;
-  }
+function* ids(prefix = "id") {
+  let next = 0;
+  while (true) yield prefix + "_" + next++;
 }
 
-const gen = idGenerator('user');
-gen.next().value; // 'user_0'
-gen.next().value; // 'user_1'
+const userIds = ids("user");
+userIds.next().value; // "user_0"
+userIds.next().value; // "user_1"
 ```
 
-Cleaner than keeping a mutable counter in module scope.
-
-##### Historical note: async flow control
-
-Before `async/await`, generators + a promise runner (like the `co` library) gave you synchronous-looking async code:
+Before async/await, libraries such as co used a runner to yield Promises from generators and resume with their results. This is a historical control-flow pattern; async functions standardize a different syntax and runtime protocol, rather than literally exposing a generator implementation. / async/await 出现之前，co 等库会通过 runner 执行生成器：yield Promise，再用结果恢复执行。这是一种历史控制流模式；async 函数标准化了不同的语法和运行时协议，并非直接暴露生成器实现。
 
 ```javascript
-function* fetchUser(id) {
-  const response = yield fetch(`/api/users/${id}`);
-  const user = yield response.json();
-  return user;
+function* legacyFlow() {
+  const response = yield fetch("/api/user");
+  return response.json();
 }
+// A runner must await each yielded value and resume the generator.
 ```
 
-A runner would call `.next()` with each resolved value. Today, `async/await` does exactly this under the hood and is what you should use in production — but the pattern is worth recognizing in legacy code.
+#### Async iteration / 异步迭代
 
----
+An async iterable (standardized in ES2018) supplies Symbol.asyncIterator; each next() call makes its iterator result available asynchronously. for await...of waits for each next result in sequence, which is useful for streams whose next value becomes available over time. For a synchronous array of independent Promises, Promise.all is usually simpler and handles all rejections together. / ES2018 标准化的异步可迭代对象通过 Symbol.asyncIterator 提供迭代器；每次调用 next() 都会异步提供迭代结果。for await...of 按顺序等待每次 next() 的结果，适用于后续值逐步到达的数据流。同步数组中相互独立的 Promise 通常用 Promise.all 更简单，也能统一处理拒绝。
 
-#### Generators vs. hand-written iterators
+See [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise aggregation and host scheduling.
 
-| Feature | Custom iterator | Generator |
-|---|---|---|
-| Syntax | Manual `next()` method | `function*` with `yield` |
-| State management | Manual (closure variables) | Automatic (execution paused/resumed) |
-| Code complexity | Higher for non-trivial sequences | Simpler and more readable |
-| Bidirectional data | Not built-in | `next(value)` passes data in |
-| Early termination | Manual `return()` method | Built-in `return()` and `throw()` |
-
-**Reach for generators when:** the sequence has interesting control flow (branching, recursion via `yield*`, infinite streams). Use a hand-written iterator only when you need to precisely control memory layout or can't use generator syntax.
-
-**See also:** [`3.5 Array in JS`](#13.%20JavaScript%20Arrays%20/%20JavaScript%20%E6%95%B0%E7%BB%84) for `for...of` vs `for...in` semantics, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for `for await...of` and async iteration.
+**Interview answer / 面试回答:** An iterable returns an iterator from Symbol.iterator; an iterator’s next() returns value/done results. Generators implement both protocols and suspend at yield. Async iterables use Symbol.asyncIterator and are consumed with for await...of. / 可迭代对象通过 Symbol.iterator 返回迭代器；迭代器的 next() 返回 value/done 结果。生成器自动实现这两种协议，并在 yield 处暂停。异步迭代器使用 Symbol.asyncIterator，通过 for await...of 消费。
 ## 21. Error Handling / 错误处理
 
-#### How should you handle errors in modern JavaScript?
+### Error Handling in JavaScript / JavaScript 错误处理
 
-**Headline (30s):** There are five layers to cover — synchronous `try/catch/finally`, custom error classes, promise rejection handling (`.catch` / `try/await`), global handlers (`onerror` / `unhandledrejection`), and framework-level boundaries (React error boundaries). A production app needs *all of them*, because each only catches a specific category of error.
+**Key terms / 关键词:** throw 抛出 · rejection Promise 拒绝 · error boundary 错误边界 · error cause 错误原因 · uncaught error 未捕获错误
 
-**Why interviewers ask this:** Error handling separates candidates who've shipped to production from those who haven't. Interviewers want to see that you know *which* tool to reach for, that you propagate (not swallow) errors, and that you understand the async-vs-sync distinction.
+Handle an error at the layer that owns enough context to recover, add information, or report it. A catch handler that only logs and then returns can silently convert failure into success; propagate failures when the caller must decide what to do. Browser globals, Node process handlers, and React boundaries have different scopes. / 应在拥有足够上下文进行恢复、补充信息或上报的层级处理错误。若 catch 只记录日志后正常返回，就可能把失败悄悄转换成成功；调用方仍需决策时应继续传播错误。浏览器全局处理器、Node 进程处理器和 React 错误边界的作用范围不同。
 
----
+#### Synchronous code and cleanup / 同步代码与清理
 
-#### `try / catch / finally` — synchronous errors
+try/catch handles exceptions thrown while its protected code runs. finally runs when control leaves the block, including return or throw, unless control flow is overridden by finally itself. Avoid returning or throwing from finally because it replaces an earlier completion. / try/catch 处理受保护代码执行期间抛出的异常。控制流离开代码块时 finally 会运行，包括 return 或 throw；但 finally 自己也可以覆盖原控制流。应避免在 finally 中 return 或 throw，以免替换之前的结果。
 
 ```javascript
 try {
   riskyOperation();
 } catch (error) {
-  console.error(error.message);
+  throw error; // rethrow the same error
 } finally {
-  cleanup(); // always runs — even if try returns or throws
+  releaseResource();
 }
 ```
 
-- **`finally`** runs regardless — after `return`, after `throw`, after `catch`. Use it for cleanup (close files, reset UI state, clear timers).
-- **Rethrowing** — `throw error` (not bare `throw`) preserves the original error object and stack trace.
-- **Nested try/catch** — inner `catch` can rethrow to the outer one.
+Use finally for cleanup that must happen on either outcome. If adding context while propagating, preserve the original as cause with Error options supported in current runtimes (standardized in ES2022): new Error("Request failed", { cause: error }). / finally 适合用于无论成功或失败都必须执行的清理。若需补充上下文并继续传播，可使用当前运行时支持的 Error options（ES2022 标准化）保留 cause：new Error("Request failed", { cause: error })。
 
-```javascript
-try {
-  try {
-    throw new Error('inner');
-  } catch (e) {
-    console.log('inner caught');
-    throw e; // propagate to outer
-  }
-} catch (e) {
-  console.log('outer caught:', e.message);
-}
-```
+A try/catch does not catch a throw that happens later in a timer or other callback. It does catch a rejected Promise when the code awaits it inside the try block. / try/catch 不会捕获稍后在计时器或其他回调中抛出的错误；若在 try 块中 await 被拒绝的 Promise，则可以捕获该拒绝。
 
-**Gotcha — `try/catch` doesn't catch async errors:** A `throw` inside a `setTimeout` callback, unhandled promise rejection, or unhandled async function escapes `try/catch` entirely. Each async mechanism has its own catching mechanism (see below).
+#### Custom errors / 自定义错误
 
----
-
-#### Custom error classes
-
-**Headline:** Extend `Error`, call `super(message)`, set `this.name`, and optionally attach structured context. Custom error classes let you distinguish error types at the catch site (`if (e instanceof ValidationError)`) and attach domain-specific fields.
+Extend Error when callers need a stable category or structured context. Modern JavaScript engines support built-in Error subclassing directly; Object.setPrototypeOf workarounds belong only to specific legacy transpilation targets. instanceof is realm- and constructor-dependent, so use stable error codes or fields when errors cross package or realm boundaries. / 调用方需要稳定错误类别或结构化上下文时可继承 Error。现代 JavaScript 引擎可直接继承内置 Error；只有特定旧转译目标才需要 Object.setPrototypeOf 补丁。instanceof 依赖 realm 和构造函数身份，错误跨包或跨 realm 时可改用稳定错误代码或字段。
 
 ```javascript
 class ValidationError extends Error {
   constructor(message, field) {
     super(message);
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
     this.field = field;
-    Object.setPrototypeOf(this, ValidationError.prototype);
   }
 }
 
-// Throwing
-throw new ValidationError('Invalid email', 'email');
-
-// Catching and branching
 try {
   validate(input);
-} catch (e) {
-  if (e instanceof ValidationError) {
-    showFieldError(e.field, e.message);
+} catch (error) {
+  if (error instanceof ValidationError) {
+    showFieldError(error.field, error.message);
   } else {
-    throw e; // don't swallow unexpected errors
+    throw error; // do not swallow an unexpected failure
   }
 }
 ```
 
-**Why `Object.setPrototypeOf`?** In some transpiled or pre-ES6 environments, extending built-in classes loses the prototype chain — `e instanceof ValidationError` returns `false` unexpectedly. Manually setting the prototype fixes it. In modern environments you can usually omit this, but it's defensive.
+#### Promise rejections and Fetch / Promise 拒绝与 Fetch
 
-**Rule of thumb:** If you're going to branch on error type at the catch site, define a class for it. If you're just surfacing the message, a plain `Error` is fine.
+A catch handler recovers if it returns normally; the next then receives that value. Throwing or returning Promise.reject keeps the chain rejected. Around await, use try/catch and decide whether to recover or rethrow. / catch 处理器正常返回时会恢复，后续 then 收到它返回的值。再次抛错或返回 Promise.reject 会使链保持拒绝状态。await 周围可用 try/catch，再决定恢复还是继续抛出。
 
----
-
-#### Promise rejection handling
-
-##### `.catch()` on chains
-
-```javascript
-fetch('/api/data')
-  .then(res => res.json())
-  .catch(err => console.error('Fetch failed:', err))
-  .then(data => process(data)); // runs even after catch — with `undefined` if catch ran
-```
-
-Two things to know:
-
-1. A `.catch()` returns a *resolved* promise unless it rethrows — subsequent `.then()` calls still run.
-2. To stop a chain after a caught error, rethrow or `return Promise.reject(...)` from the `.catch`.
-
-##### `try / catch` around `await`
-
-The cleanest pattern: write linear code, handle errors with regular `try / catch`.
+Fetch rejects for network-level failures, but an HTTP 404 or 500 is still a fulfilled Response. Check response.ok or status when HTTP success is required. / Fetch 遇到网络层失败时会拒绝，但 HTTP 404 或 500 仍会得到成功完成的 Response。需要 HTTP 成功状态时应检查 response.ok 或 status。
 
 ```javascript
 async function loadData() {
-  try {
-    const res = await fetch('/api/data');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.error(err);
-    throw err; // reject the returned promise
+  const response = await fetch("/api/data");
+  if (!response.ok) {
+    throw new Error("HTTP " + response.status);
   }
-}
-```
-
-**Gotcha — `fetch` doesn't reject on HTTP errors:** A 404 or 500 response is still a *successful* promise. You must check `res.ok` (or `res.status`) manually and throw if needed.
-
-##### Unhandled rejection = silent failure
-
-A promise rejection with no `.catch()` (and no `try/catch` around `await`) becomes an **unhandled rejection**. Browsers log a warning; Node.js may exit the process. In either case, the real bug is usually invisible.
-
-```javascript
-// BAD — if fetch fails, the rejection is unhandled
-async function bad() {
-  const res = await fetch('/api');
-  return res.json();
+  return response.json();
 }
 
-// GOOD
-async function good() {
-  try {
-    const res = await fetch('/api');
-    return res.json();
-  } catch (e) {
-    handleError(e);
-  }
-}
+loadData().catch(reportFailure);
 ```
 
-**Rule of thumb:** Every `await` in a real app should have a `try/catch` at some level — either the function itself or a caller. Every `.then()` chain should end in a `.catch()`.
+Every rejection needs an owner somewhere in the call chain. A global unhandled-rejection event is useful for diagnostics, but it is a late signal and should not replace local recovery or deliberate propagation. The host controls its reporting and process behavior. / 每个拒绝都应在调用链某处由明确责任方处理。全局未处理拒绝事件可用于诊断，但它只是较晚的信号，不能替代局部恢复或明确传播。具体上报和进程行为由宿主决定。
 
----
+#### Browser-global reporting / 浏览器全局上报
 
-#### Global error handlers — your last line of defense
+These are browser APIs, not JavaScript-language or Node guarantees. Use them for last-resort reporting, not as a substitute for handling expected errors near the operation. / 以下是浏览器 API，不是 JavaScript 语言或 Node 的通用保证。它们适合最后兜底上报，不应代替在操作附近处理预期错误。
 
-##### `window.onerror` — uncaught synchronous errors
+- window.onerror reports uncaught script errors; returning true suppresses the browser’s default error reporting. Cross-origin scripts may expose limited details unless the script uses `crossorigin="anonymous"` and the response grants the requesting origin access with CORS. / window.onerror 上报未捕获脚本错误；返回 true 会抑制浏览器默认错误报告。跨域脚本可能只暴露有限信息；需添加 `crossorigin="anonymous"`，并由响应通过 CORS 授权请求来源。
+- The unhandledrejection event exposes an unhandled Promise rejection; preventDefault suppresses its default browser reporting behavior. / unhandledrejection 事件暴露未处理的 Promise 拒绝；preventDefault 可抑制浏览器默认报告行为。
+- Image load failures fire an `error` event at the image element. These events do not bubble, so a capturing listener may be needed. / 图片加载失败时会在图片元素上触发 `error` 事件。该事件不会冒泡，因此可能需要捕获阶段监听器。
 
-```javascript
-window.onerror = function (message, source, lineno, colno, error) {
-  logToMonitoring({ message, source, lineno, colno, stack: error?.stack });
-  return true; // suppress default browser error UI
-};
-```
+The [HTML image algorithm](https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data) fires the failure event at the image element; the [DOM event rules](https://dom.spec.whatwg.org/#concept-event-dispatch) make capture listeners useful even when an event does not bubble. See also the HTML Standard’s [runtime-error](https://html.spec.whatwg.org/multipage/webappapis.html#runtime-script-errors) and [unhandled-rejection](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections) sections. / [HTML 图片算法](https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data) 会在图片元素上触发失败事件；根据 [DOM 事件规则](https://dom.spec.whatwg.org/#concept-event-dispatch)，即使事件不冒泡，捕获阶段监听器仍可观察到它。另见 HTML 标准的[运行时错误](https://html.spec.whatwg.org/multipage/webappapis.html#runtime-script-errors)与[未处理 Promise 拒绝](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections)章节。
 
-- Returns `true` to suppress the default console output.
-- **Cross-origin gotcha:** Scripts loaded from another origin (a CDN, typically) yield `"Script error."` with no stack trace due to CORS. Fix: serve the script with a permissive CORS header and add `crossorigin="anonymous"` to the `<script>` tag.
-
-##### `window.addEventListener('unhandledrejection')`
-
-Catches promise rejections that weren't handled by `.catch` or `try/catch`.
+These browser listeners show two reporting paths. The reporting functions below are illustrative placeholders; replace them with application-owned handling. / 以下浏览器监听器展示两种上报路径。示例中的上报函数仅用于说明，应替换为应用自己的处理。
 
 ```javascript
-window.addEventListener('unhandledrejection', event => {
-  console.error('Unhandled rejection:', event.reason);
-  event.preventDefault(); // suppress console warning
+function reportRejection(reason) { console.error(reason); }
+function reportResourceFailure(target) { console.error(target); }
+
+window.addEventListener("unhandledrejection", event => {
+  reportRejection(event.reason);
+  // event.preventDefault(); // use only when suppressing default browser reporting
 });
-```
 
-- `event.reason` — the rejection reason (usually an Error).
-- `event.promise` — the rejected promise itself.
-
-##### `window.addEventListener('error')` (capture phase) — resource load errors
-
-`onerror` doesn't fire when `<img>`, `<script>`, or `<link>` fail to load. Listen for `error` events in capture phase to catch them.
-
-```javascript
-window.addEventListener('error', event => {
+window.addEventListener("error", event => {
   if (event.target !== window) {
-    console.error('Resource failed:', event.target.src || event.target.href);
+    reportResourceFailure(event.target); // resource element is the event target
   }
-}, true); // `true` = capture phase; required for resource errors
+}, true); // capture non-bubbling resource error events
 ```
 
-**Production setup — three listeners:**
+#### React error boundaries / React 错误边界
 
-1. `window.onerror` — uncaught JS errors.
-2. `unhandledrejection` — async rejections.
-3. `error` in capture — resource load failures.
-
-Wire all three to your monitoring backend (Sentry, Datadog, custom). Without all three, you'll miss real production bugs.
-
----
-
-#### React error boundaries
-
-**Headline:** React catches rendering / lifecycle / constructor errors inside the component tree via *error boundaries*, which are class components implementing `getDerivedStateFromError` and/or `componentDidCatch`. They render a fallback UI instead of letting the whole tree unmount.
+A React error boundary displays fallback UI for errors thrown while rendering its descendant tree. The documented API uses a class component with static getDerivedStateFromError and optionally componentDidCatch for reporting. / React 错误边界可在后代组件树渲染抛错时显示备用 UI。官方 API 使用 class 组件实现 static getDerivedStateFromError，并可选用 componentDidCatch 上报。
 
 ```jsx
 class ErrorBoundary extends React.Component {
-  state = { hasError: false, error: null };
+  state = { failed: false };
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { failed: true };
   }
 
-  componentDidCatch(error, errorInfo) {
-    logErrorToService(error, errorInfo.componentStack);
+  componentDidCatch(error, info) {
+    reportError(error, info.componentStack);
   }
 
   render() {
-    if (this.state.hasError) {
-      return <h1>Something went wrong.</h1>;
-    }
+    if (this.state.failed) return <p>Something went wrong.</p>;
     return this.props.children;
   }
 }
 ```
 
-- **`getDerivedStateFromError`** — sync, returns a state patch for the fallback UI.
-- **`componentDidCatch`** — effects (logging, telemetry).
+React documents that boundaries do not catch errors from event handlers, ordinary asynchronous callbacks, server-side rendering, or the boundary itself. Current React documentation describes an exception for errors thrown inside a transition started with the function returned by useTransition. Verify the React version and framework behavior for the application in question. / React 文档说明，错误边界不会捕获事件处理器、普通异步回调、服务端渲染或边界自身的错误。当前 React 文档对 useTransition 返回函数启动的 transition 中抛出的错误说明了例外情况。应按应用所用 React 版本和框架行为核实。
 
-##### What error boundaries do **not** catch
+See [React Error Boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary) for current behavior and limitations. / 当前行为和限制见 [React 错误边界文档](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)。
 
-- **Event handler errors** — the handler is called from DOM event dispatch, not React's render pipeline. Wrap in `try/catch`.
-- **Async code** (`setTimeout`, `fetch.then`, `await` inside `useEffect`). Wrap in `try/catch`.
-- **Server-side rendering errors** — the SSR renderer throws directly.
-- **Errors thrown inside the boundary itself** — bubble up to a parent boundary.
+**Interview answer / 面试回答:** try/catch handles synchronous throws and awaited Promise rejections; Promise catch handles a chain’s rejection; global handlers provide host-specific diagnostics; React boundaries handle render failures in descendant components. Recover only when the current layer can decide what recovery means, and otherwise propagate the failure. / try/catch 处理同步抛错和 await 的 Promise 拒绝；Promise catch 处理链式拒绝；全局处理器提供宿主级诊断；React 错误边界处理后代组件渲染失败。只有当前层能决定恢复含义时才恢复，否则应继续传播错误。
 
-##### Function components
-
-There's no hook equivalent. Use the community library `react-error-boundary`:
-
-```jsx
-import { ErrorBoundary } from 'react-error-boundary';
-
-<ErrorBoundary fallback={<div>Error!</div>} onError={logError}>
-  <MyComponent />
-</ErrorBoundary>
-```
-
-**Reach for error boundaries when:** rendering third-party components, dynamic content from user input, or async-loaded modules — anywhere a render error shouldn't take down the whole page.
-
----
-
-#### Defense in depth — which layer catches what?
-
-| Error source | Caught by |
-|---|---|
-| Sync throw in function body | `try / catch` in caller |
-| `await`ed promise rejection | `try / catch` around `await` |
-| `.then()` chain rejection | `.catch()` in chain |
-| Uncaught anything | `window.onerror` / `unhandledrejection` |
-| Image / script failed to load | `window.addEventListener('error', ..., true)` |
-| React render / lifecycle throw | Error boundary |
-| React event handler throw | `try / catch` in handler |
-
-A production app uses all of them. Missing any layer lets bugs go silent.
-
-**See also:** [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promises and `async/await` fundamentals, [`9.2 React Basics`](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for the React lifecycle context around error boundaries.
+Related: [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript); [Modern JavaScript Features / 现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
 ## 22. DOM Manipulation and Events / DOM操作与事件
 
 **DOM Manipulation and Events / DOM 操作与事件**
@@ -4741,161 +3980,85 @@ function area(shape: Shape): number {
 **Sources checked 2026-10-15:** [TypeScript: Basic Types](https://www.typescriptlang.org/docs/handbook/2/basic-types), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
 ## 26. Event Loop / 事件循环
 
-#### How does JavaScript run asynchronous code on a single thread?
+### Event Loop and Host Scheduling / 事件循环与宿主调度
 
-**Headline (30s):** JavaScript has one thread and one call stack — it can't truly do two things at once. The **event loop** is the scheduler that makes single-threaded JS feel concurrent. It pulls *one* macrotask from a queue (a `setTimeout` callback, an I/O completion, a UI event), runs it to completion, then drains all queued microtasks (Promise callbacks), then repeats. Asynchronous APIs don't "run in parallel" — they hand work off to the browser or OS, which queues a callback when the work is done.
+**Key terms / 关键词:** JavaScript agent JavaScript 执行代理 · task 任务 · microtask 微任务 · event loop 事件循环 · libuv libuv
 
-**Why interviewers ask this:** It's the mental model behind every async bug. A candidate who can walk through a mixed `setTimeout`/Promise/sync example in order demonstrates real understanding of the runtime — not just memorized "`async` is for async stuff".
+ECMAScript defines language execution and Promise jobs; the host defines event loops, timers, I/O, and rendering. A JavaScript agent executes its jobs one at a time, but browsers and Node can create additional workers or agents. Asynchronous I/O may be handled by the host or operating system; “async” does not mean all work runs on one thread. / ECMAScript 定义语言执行和 Promise job；宿主定义事件循环、计时器、I/O 和渲染。单个 JavaScript agent 一次执行一个 job，但浏览器和 Node 可以创建其他 worker 或 agent。异步 I/O 可能由宿主或操作系统处理；“异步”不表示所有工作都在同一线程运行。
 
----
+#### Browser event loop / 浏览器事件循环
 
-#### The execution model
-
-Imagine three data structures and one loop:
-
-1. **Call stack** — what's currently executing (synchronous code).
-2. **Microtask queue** — Promise callbacks, `queueMicrotask`, `MutationObserver`.
-3. **Macrotask queue** — `setTimeout`, `setInterval`, I/O completions, UI events, `setImmediate` (Node).
-
-The loop cycle:
-
-1. Run all synchronous code until the call stack is empty.
-2. Drain the entire microtask queue (running any microtasks those create too).
-3. Pick *one* macrotask from the macrotask queue, execute it.
-4. Go to step 2.
-
-**Key insight — microtasks drain completely between macrotasks.** Adding a microtask from inside another microtask will run before the next macrotask. This is why `Promise.then` always runs before `setTimeout(fn, 0)`.
-
----
-
-#### Microtasks vs. macrotasks — the cheat sheet
-
-| Microtasks | Macrotasks |
-|---|---|
-| `Promise.then` / `.catch` / `.finally` | `setTimeout`, `setInterval` |
-| `async`/`await` continuations | I/O callbacks (fetch response, file read) |
-| `queueMicrotask(fn)` | UI events (`click`, `scroll`) |
-| `MutationObserver` | Rendering callbacks |
-| | `setImmediate` (Node only) |
-
-Microtasks have **higher priority** — the whole microtask queue drains between every pair of macrotasks.
-
----
-
-#### Walk-through — what does this print?
+In the HTML event loop, a task such as a script or timer callback runs to completion. A microtask checkpoint then drains queued microtasks, including newly queued microtasks, before the loop proceeds. Promise reactions and queueMicrotask use this queue. Rendering is a separate opportunity controlled by the browser; it is not guaranteed after every task or at a fixed frame boundary. / 在 HTML 事件循环中，脚本或计时器回调等任务会执行到完成。随后进行微任务检查点，清空队列中的微任务（包括执行过程中新增的微任务），再继续循环。Promise 处理器和 queueMicrotask 使用该队列。渲染由浏览器在独立机会中处理；不保证每个任务后立即渲染，也不保证固定帧边界。
 
 ```javascript
-console.log('Start');
+console.log("start");
 
-setTimeout(() => console.log('Timeout'), 0);
+setTimeout(() => console.log("timer task"), 0);
 
-new Promise((resolve) => {
-  console.log('Promise constructor');
+new Promise(resolve => {
+  console.log("Promise executor runs synchronously");
   resolve();
-}).then(() => console.log('Promise then'));
+}).then(() => console.log("Promise reaction"));
 
-console.log('End');
+console.log("end");
+
+// Typical browser ordering:
+// start
+// Promise executor runs synchronously
+// end
+// Promise reaction
+// timer task
 ```
 
-Output:
+A zero-delay timer is eligible only after its minimum delay and when the host schedules its timer task; it does not mean “run immediately.” The Promise-versus-timer ordering above describes the browser task and microtask model, not the precise timing of rendering. / 零延迟计时器要等到最小延迟满足且宿主调度相应计时器任务后才可运行，并不表示“立即执行”。上例中 Promise 与计时器的先后关系描述浏览器任务和微任务模型，不代表渲染时机。
 
-```
-Start
-Promise constructor
-End
-Promise then
-Timeout
-```
+The [WHATWG HTML event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops) defines browser tasks, microtask checkpoints, and rendering opportunities. These browser rules should not be inferred from a Node run. / [WHATWG HTML 事件循环标准](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops) 定义浏览器任务、微任务检查点和渲染机会。不能通过 Node 执行结果推断浏览器规则。
 
-Trace:
+#### Node.js event loop / Node.js 事件循环
 
-1. `console.log('Start')` — sync, logs immediately.
-2. `setTimeout(..., 0)` — queues a macrotask.
-3. `new Promise(...)` — the executor runs *synchronously*, so `'Promise constructor'` logs now. `.then()` queues a microtask.
-4. `console.log('End')` — sync.
-5. Call stack empty → drain microtasks → `'Promise then'`.
-6. One macrotask → `'Timeout'`.
+Node uses libuv phases to coordinate timers and I/O callbacks. A useful simplified outline is timers, pending callbacks, poll, check, and close callbacks; idle/prepare are internal phases. The poll phase handles I/O, and setImmediate callbacks run in the check phase. Timer callbacks become eligible after their threshold, not at an exact deadline. / Node 使用 libuv 阶段协调计时器和 I/O 回调。简化来看包括 timers、pending callbacks、poll、check 和 close callbacks；idle/prepare 是内部阶段。poll 阶段处理 I/O，setImmediate 回调在 check 阶段运行。计时器达到阈值后才具备运行资格，并不保证精确截止时间执行。
 
-**Gotcha — the Promise constructor is synchronous.** `new Promise(fn)` runs `fn` immediately. Only `.then` / `.catch` callbacks are microtasks.
+Since libuv 1.45.0 (Node.js 20), timers run after the poll phase in each loop iteration; earlier versions also ran timers before poll. This affects some timer/setImmediate interactions. At top level, do not rely on a fixed order between setTimeout(fn, 0) and setImmediate(fn); context and timing matter. / 从 libuv 1.45.0（Node.js 20）开始，每轮事件循环中计时器在 poll 阶段之后运行；较早版本还会在 poll 前运行计时器。这会影响部分 timer/setImmediate 交互。在顶层不要依赖 setTimeout(fn, 0) 和 setImmediate(fn) 的固定顺序；上下文和时序都会影响结果。
 
----
+#### Node nextTick and Promise jobs / Node nextTick 与 Promise job
 
-#### Browser vs. Node.js — similar but not identical
-
-##### Browser
-
-The event loop runs on the main thread alongside rendering. Between macrotasks, the browser may *render* — recalculate styles, layout, paint. This is why long-running synchronous code freezes the UI.
-
-Cycle: **macrotask → drain microtasks → maybe render → macrotask → ...**
-
-##### Node.js — phased macrotask queue
-
-Node organizes macrotasks into six phases that run in order every tick:
-
-1. **Timers** — `setTimeout` / `setInterval` callbacks whose time is up.
-2. **Pending callbacks** — a few system-level I/O errors.
-3. **Idle / prepare** — internal.
-4. **Poll** — retrieve new I/O events.
-5. **Check** — `setImmediate` callbacks.
-6. **Close callbacks** — `socket.on('close')` etc.
-
-Between *each phase*, Node drains microtasks. Among microtasks, **`process.nextTick`** has the highest priority — it runs before Promise callbacks.
+Node has a next-tick queue in addition to the Promise/queueMicrotask queue. Current Node documentation specifies different top-level ordering for CommonJS and ES modules: in CommonJS, nextTick callbacks run before Promise and queueMicrotask callbacks; during ES module evaluation, Promise reactions and queueMicrotask callbacks run before nextTick callbacks. Do not state a module-independent ordering. / 除 Promise/queueMicrotask 队列外，Node 还有 nextTick 队列。当前 Node 文档明确说明 CommonJS 与 ES 模块顶层顺序不同：CommonJS 中 nextTick 回调先于 Promise 和 queueMicrotask 回调；ES 模块求值期间，Promise 和 queueMicrotask 回调先于 nextTick 回调。不能写成与模块类型无关的固定顺序。
 
 ```javascript
-setTimeout(() => console.log('timeout'), 0);
-setImmediate(() => console.log('immediate'));
-process.nextTick(() => console.log('nextTick'));
-Promise.resolve().then(() => console.log('promise'));
-
-// Output (deterministic for first two):
-// nextTick
-// promise
-// timeout / immediate (order depends on timing of the top-level call)
+// CommonJS top level (for example, a .cjs file)
+Promise.resolve().then(() => console.log("promise"));
+queueMicrotask(() => console.log("microtask"));
+process.nextTick(() => console.log("nextTick"));
+// Node.js v26.11.1: nextTick, promise, microtask
 ```
 
-**Reach for `process.nextTick`** when you need to defer work to "right after the current operation" with higher priority than Promise callbacks. Use sparingly — recursive `nextTick` calls can starve I/O.
+```javascript
+// ES module top level (for example, a .mjs file)
+Promise.resolve().then(() => console.log("promise"));
+queueMicrotask(() => console.log("microtask"));
+process.nextTick(() => console.log("nextTick"));
+// Node.js v26.11.1: promise, microtask, nextTick
+```
 
----
+Node marks process.nextTick as Legacy starting in Node v20.18.0 and v22.7.0; for most userland deferrals, its current docs recommend queueMicrotask unless nextTick-specific behavior is required. Recursively scheduling nextTick can starve I/O. These are Node runtime rules, not browser behavior. / Node 从 v20.18.0 和 v22.7.0 开始把 process.nextTick 标为 Legacy；当前文档建议大多数用户态延迟场景使用 queueMicrotask，除非确实需要 nextTick 的专有行为。递归调度 nextTick 可能饿死 I/O。这些属于 Node 运行时规则，不是浏览器行为。
 
-#### Garbage collection — how does the engine free memory?
+The queue examples were run with Node v26.11.1. Current official Node v26 documentation was checked on 2026-10-15: [process.nextTick and queueMicrotask](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [event-loop phases and the Node 20 timer change](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick). / 队列示例在 Node v26.11.1 中执行。2026-10-15 核对了当前官方 Node v26 文档：[process.nextTick 与 queueMicrotask](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)、[事件循环阶段与 Node 20 计时器变更](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick)。
 
-**Headline:** Modern JS engines use **mark-and-sweep** — starting from root references (globals, call stack locals), the GC walks every reachable object and marks them; unmarked objects are collected. This handles circular references that the older **reference counting** algorithm can't.
+#### Garbage collection and retained objects / 垃圾回收与对象保留
 
-##### Reference counting (historical)
+ECMAScript does not specify whether an engine uses mark-and-sweep, reference counting, a stack, or a heap, and programs cannot rely on collection at a chosen time. An object that remains reachable through a long-lived reference cannot be reclaimed; cycles alone do not imply a leak. / ECMAScript 不规定引擎必须使用标记清除、引用计数、栈或堆，程序也不能依赖在指定时刻完成回收。对象若仍能从长期存活的引用到达，就不能回收；仅有循环引用并不意味着泄漏。
 
-Each object stored its incoming reference count. When the count hit zero, the memory freed. Simple, but **circular references leak forever** — two objects pointing to each other keep each other alive even after nothing else references them. Old IE had this problem; modern engines don't.
+One implementation model traces from roots such as the global object and active execution state, marks reachable objects, and reclaims unreachable ones; an unreachable cycle can therefore be collected. V8's Orinoco overview describes generations and parallel, incremental, and concurrent GC work. These are engine mechanisms that may change, not ECMAScript requirements. / 一种引擎实现模型是从全局对象、活动执行状态等根开始追踪，标记可达对象并回收不可达对象；因此不可达的循环引用也可回收。V8 的 Orinoco 说明介绍了分代回收，以及并行、增量和并发 GC 工作。这些是可能演进的引擎机制，不是 ECMAScript 要求。
 
-##### Mark-and-sweep (modern)
+See V8's [Orinoco garbage collector overview](https://v8.dev/blog/trash-talk) for this implementation example. / 这一实现示例见 V8 的 [Orinoco 垃圾回收器说明](https://v8.dev/blog/trash-talk)。
 
-Used by V8 (Chrome, Node) and SpiderMonkey (Firefox):
+Common retention paths include an uncleared interval, a listener attached to a long-lived object, a detached DOM node still referenced by application code, or a closure retained with values it actually captures. These are investigation leads, not proof that a leak exists. In browser tools, compare heap snapshots around a repeatable action and inspect retained paths. / 常见保留路径包括未清除的 interval、挂在长期存活对象上的监听器、仍被应用代码引用的脱离 DOM 树节点，或闭包实际捕获并长期持有的值。这些只是排查线索，并不能证明已发生泄漏。浏览器工具中可围绕可重复操作比较堆快照，并检查保留路径。
 
-1. Find all *roots* — globals, in-scope locals, the call stack.
-2. Mark every object reachable from a root.
-3. Sweep — anything unmarked is garbage, free it.
+If a subscription, listener, or timer should end before the owning object does, keep its handle and release it at that lifetime boundary. For weak references and their nondeterministic cleanup behavior, see [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef). / 若订阅、监听器或计时器应早于所属对象结束，就保存其句柄并在生命周期边界释放。弱引用及其不确定的清理时机见[JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef)。
 
-V8 in particular uses **generational GC** (young generation collected frequently, old generation rarely) and **incremental marking** (interleaved with JS execution to avoid long pauses).
+**Interview answer / 面试回答:** The event loop is host-defined. In browsers, tasks run to completion and a microtask checkpoint drains Promise reactions before the host continues; rendering is scheduled separately. Node uses libuv phases and adds nextTick scheduling, whose order relative to Promise jobs differs between top-level CJS and ESM. Always state the host and module context. / 事件循环由宿主定义。浏览器任务执行到完成后会进行微任务检查点，清空 Promise 处理器，再由宿主继续调度；渲染单独安排。Node 使用 libuv 阶段并增加 nextTick 调度，其与 Promise job 的相对顺序在 CJS 和 ESM 顶层不同。说明结论时应给出宿主和模块上下文。
 
----
-
-#### Common memory leak sources
-
-Most leaks are the same pattern: something unreachable from your mental model is *actually* reachable through an unexpected reference.
-
-- **Uncleared timers** — a `setInterval` callback holds a closure; the interval keeps a reference to the callback; no one ever clears it.
-- **Detached DOM nodes** — JS variable still points to a DOM node that was removed from the tree. Neither the tree nor the JS can be freed.
-- **Closures over large scopes** — a returned function keeps the entire enclosing scope alive, including big objects you don't actually use.
-- **Accidental globals** — `foo = 1` (no `let`/`const`) at the top level creates a `window.foo`. Never freed.
-- **Event listeners not removed** — attached on mount, never removed on unmount, keeps the component alive forever.
-
-##### Detecting leaks
-
-- **Chrome DevTools → Performance tab** — record for a few minutes; if heap usage keeps climbing without drops, there's a leak.
-- **Memory tab → heap snapshots** — take one snapshot, do the suspect action, take another, compare. Look for objects that grew between snapshots.
-- **Memory tab → allocation timeline** — records new allocations over time, marks which ones weren't freed.
-
-**Rule of thumb:** Every subscription, listener, and timer needs a matching cleanup. In React, that's your `useEffect` return function. In vanilla JS, that's discipline — save the reference and remove it when done.
-
-**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for how WeakMap/WeakSet help avoid leaks, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise microtask scheduling details.
+Related: [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript); [Memory, WeakMap and WeakSet / JavaScript 内存、WeakMap 与 WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
 ## 27. Build Tools / 构建工具
 
 ### Build Tools / 构建工具
@@ -5466,199 +4629,146 @@ Use framework endpoints for colocated, bounded server work such as webhooks or a
 **Sources checked 2026-10-15:** [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
 ## 32. Performance Metrics and Analysis / 性能指标与分析
 
-A bundle of interview questions about how to measure, diagnose, and optimize web app performance.
+### Performance Metrics and Analysis / 性能指标与分析
 
-### What are the Core Web Vitals, and what do they measure?
+#### What are the Core Web Vitals? / 什么是Core Web Vitals？
 
-**Headline (30s):** Core Web Vitals are a small set of user-centric performance metrics Google uses to score page quality. The three key ones: **LCP** (how fast does the main content appear?), **FID/INP** (how responsive does the page feel to input?), and **CLS** (how stable is the layout?). Each has a target threshold that's considered "good". Missing them hurts SEO and user retention.
+**Core answer / 核心回答：** The current Core Web Vitals are LCP for loading, INP for responsiveness, and CLS for visual stability. “Good” thresholds are LCP at or below 2.5 seconds, INP at or below 200 ms, and CLS at or below 0.1, evaluated at the 75th percentile of real page visits, segmented by mobile and desktop. / 当前 Core Web Vitals 包括衡量加载的 LCP、衡量响应性的 INP，以及衡量视觉稳定性的 CLS。“良好”阈值为 LCP 不超过 2.5 秒、INP 不超过 200 毫秒、CLS 不超过 0.1，并按真实访问数据的第 75 百分位评估。
 
-| Metric | Description | Target |
-|---|---|---|
-| **FP** (First Paint) | First pixel rendered on screen | — |
-| **FCP** (First Contentful Paint) | First DOM content visible (text, image) | < 1.8s |
-| **LCP** (Largest Contentful Paint) | Largest visible element rendered | < 2.5s |
-| **FID** (First Input Delay) | Time from first interaction to response | < 100ms |
-| **INP** (Interaction to Next Paint) | Replacing FID; worst-case responsiveness | < 200ms |
-| **CLS** (Cumulative Layout Shift) | Visual stability during loading | < 0.1 |
-| **DCL** (DOMContentLoaded) | DOM fully parsed (no stylesheets/images) | — |
-| **Load** | Page + all resources fully loaded | — |
+| Metric | What it measures | Good threshold |
+|---|---|---:|
+| **LCP** | When the largest image or text block in the viewport is rendered. | ≤ 2.5 s |
+| **INP** | A latency intended to represent all or nearly all interactions during a page visit. | ≤ 200 ms |
+| **CLS** | Unexpected visual instability from layout shifts. | ≤ 0.1 |
 
-Loading order: FP → FCP → LCP → DCL → Load.
+##### Other render and navigation milestones / 其他渲染与导航里程碑
 
-**Gotcha — FID is being replaced by INP.** INP measures the *worst* interaction latency instead of just the first — more representative of real user experience. Update your dashboards.
-
----
-
-### How do you profile a page in Chrome DevTools?
-
-**Headline (30s):** Three tabs cover 90% of perf work. **Performance** — record a flame chart of CPU/network/rendering to find long tasks and layout thrash. **Network** — waterfall view to find slow/blocking requests. **React DevTools Profiler** — component render times and wasted re-renders. Use Lighthouse (or its CLI) for automated scoring and a ranked list of issues.
-
-- **Performance tab** — record CPU, memory, network, rendering. Screenshots at intervals show when content actually appears.
-- **Network tab** — request waterfall, timing breakdown, size analysis.
-- **React DevTools** — "Highlight updates when components render" visualizes re-renders.
-
-#### Lighthouse
-
-Automated auditing tool that scores Performance, Accessibility, Best Practices, and SEO.
-
-```bash
-npx lighthouse https://example.com --view --preset=desktop
-```
-
-Lighthouse gives actionable suggestions: modern image formats (WebP/AVIF), eliminate render-blocking resources, reduce unused JavaScript, set explicit image dimensions.
-
----
-
-### How do you diagnose and fix slow pages?
-
-**Headline:** Split the problem into *slow loading* (network, bundle size, server response) and *slow rendering* (long tasks, bad component structure). Diagnose with the Performance tab; apply the right fix per category.
-
-#### Slow loading
-
-- Optimize server response time (backend or edge caching).
-- Use a CDN for static assets.
-- Enable HTTP caching (`Cache-Control`, `ETag`).
-- Route-based code splitting (`React.lazy` + `Suspense`).
-- Compress assets (gzip, Brotli).
-- Preload critical resources (`<link rel="preload">`).
-
-#### Slow rendering
-
-- Profile with DevTools to find long tasks (anything > 50ms).
-- Optimize API response times; show loading UI for anything > 200ms.
-- Use SSR/SSG for content-heavy pages (see [`9.4 Next.js`](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91)).
-- Virtualize long lists (see [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96)).
-
----
-
-### How does HTTP caching work?
-
-**Headline (30s):** Two mechanisms work together: **`Cache-Control: max-age=N`** tells the browser to reuse the cached copy for N seconds without asking (strong cache). **`ETag`** (or `Last-Modified`) gives the server a fingerprint — when max-age expires, the browser asks "still valid?"; if yes, the server responds 304 with no body, saving bandwidth (negotiated cache). Done right, users never re-download unchanged assets.
-
-| Header | Purpose |
+| Milestone | Meaning |
 |---|---|
-| `Cache-Control: max-age=31536000` | Cache for 1 year; use content-hashed filenames for cache busting |
-| `ETag` | Version identifier; server returns 304 if unchanged |
-| `Last-Modified` | Timestamp-based validation |
+| **FCP** | First Contentful Paint: the first text or image content is rendered. |
+| **DOMContentLoaded (DCL)** | The HTML is parsed and deferred/module scripts have executed; it does not wait for images or async scripts. |
+| **load** | The document and dependent resources such as scripts, stylesheets, frames, and non-lazy images have loaded. |
 
-**Strategy:**
+These milestones have different scopes; do not treat them as a fixed sequence with LCP. DCL is useful when DOM readiness matters, while load waits for dependent resources.
 
-- **Immutable assets** (JS/CSS bundles with content hash in the filename) — long `max-age`, never revalidated.
-- **HTML** — `no-cache` (or short `max-age`) with `ETag` so the browser always checks for updates but avoids re-downloading if nothing changed.
+FID was retired as a Core Web Vital in March 2024 and replaced by INP. FCP, TTFB, long tasks, and TBT remain useful diagnostic metrics, but they are not Core Web Vitals.
 
-**Gotcha — `no-cache` ≠ "don't cache".** `no-cache` means "cache, but always revalidate with the server". Use `no-store` if you truly never want caching (rarely right outside sensitive pages).
+##### Field data and lab data / 真实用户数据与实验室数据
 
----
+Core Web Vitals are primarily field metrics. Real-user monitoring shows the experience across actual devices, networks, routes, and interactions. Lab tools such as Lighthouse and DevTools help reproduce and diagnose issues before release, but their results do not equal field results.
 
-### What's the difference between debounce and throttle?
+Lighthouse cannot measure a page's real INP without user interactions; Total Blocking Time is a lab proxy, not the same metric. A load-only lab run may also miss layout shifts caused later by interaction. Compare field data at the same percentile and device segment when checking whether users improved.
 
-**Headline (30s):** Both rate-limit a function but with different strategies. **Debounce** — wait until the caller has stopped calling for N ms, then run once. Good when only the final value matters (search input). **Throttle** — run at most once every N ms, ignoring calls in between. Good when steady updates matter (scroll handlers, mousemove).
+#### How do you profile a page? / 如何分析页面性能？
 
-#### Debounce
+Use tools that answer a specific question:
 
-Fires after a period of inactivity. Each call resets the timer.
+- **Performance panel:** inspect main-thread tasks, rendering, layout, and interaction traces.
+- **Network panel:** inspect request timing, blocking, transfer size, and cache behavior.
+- **React Profiler:** inspect which components render during a recorded interaction.
+- **Lighthouse:** collect a repeatable lab trace and diagnostic opportunities.
 
-```javascript
-function debounce(fn, delay) {
+Record the route, device and network conditions, browser, and whether the measurement is field or lab. A score is a signal; inspect the trace and user impact before choosing a fix.
+
+#### How do you diagnose a slow page? / 如何诊断页面变慢？
+
+**Core answer / 核心回答：** Separate slow initial display from slow interaction, then identify the dominant cost before changing code. The cause may be server response, network transfer, JavaScript execution, layout, rendering, or a specific event handler. / 先区分首屏显示慢和交互响应慢，再找出主要成本后修改代码。原因可能是服务端响应、网络传输、JavaScript 执行、布局、绘制或特定事件处理器。
+
+| Symptom | Inspect first |
+|---|---|
+| Main content appears late | TTFB, redirects, critical requests, LCP resource discovery and render delay. |
+| Input feels delayed | Long main-thread tasks, event-handler work, and work scheduled after input. |
+| Content jumps | Missing image or embed dimensions, late injected content, and font swaps. |
+| Route bundle is large | Emitted chunk composition and whether deferred code is actually split. |
+
+Potential changes include caching immutable assets, reducing unnecessary JavaScript, splitting rarely used routes, reserving image space, and virtualizing a measured long list. Re-measure the same user-visible interaction after the change.
+
+#### How does HTTP caching help? / HTTP缓存如何帮助性能？
+
+A fresh cached response can be reused according to its freshness policy. After it becomes stale, validators such as ETag can let a client ask whether the representation changed; the server can answer that the stored response remains valid. Content-hashed assets can use a long freshness lifetime because a changed file receives a different URL.
+
+- **Cache-Control: max-age=N** sets a freshness lifetime.
+- **Cache-Control: no-cache** permits storage but requires validation before reuse.
+- **Cache-Control: no-store** instructs caches not to store the response.
+- **ETag** is a validator used with conditional requests; it is not itself a cache lifetime.
+
+Choose policy by resource and user-data sensitivity. Do not apply one cache rule to both versioned static assets and personalized responses.
+
+#### What is the difference between debounce and throttle? / debounce和throttle有什么区别？
+
+**Core answer / 核心回答：** Debounce waits until calls pause for a chosen interval; throttle limits how often work runs while calls continue. Both have leading and trailing variants, so state which edge runs and whether a final call is retained. / debounce 等调用停止一段指定时间后再执行；throttle 在调用持续发生时限制执行频率。两者都有 leading 和 trailing 变体，因此要说明在哪个边缘执行，以及是否保留最后一次调用。
+
+This minimal implementation is trailing-only debounce. It does not include leading behavior or maxWait; a library utility is easier to use when those options or cancellation are needed.
+
+~~~javascript
+function debounceTrailing(fn, wait) {
   let timer;
-  return function (...args) {
+
+  function debounced(...args) {
     clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), delay);
-  };
-}
-```
-
-**Use cases:** search input (fire the API call only when the user pauses typing), form validation, window resize handling.
-
-#### Throttle
-
-Fires at most once per interval.
-
-```javascript
-function throttle(fn, interval) {
-  let lastTime = 0;
-  return function (...args) {
-    const now = Date.now();
-    if (now - lastTime >= interval) {
-      lastTime = now;
-      fn.apply(this, args);
-    }
-  };
-}
-```
-
-**Use cases:** scroll handlers, mousemove tracking, rate-limited API calls.
-
-| | Debounce | Throttle |
-|---|---|---|
-| Fires | After inactivity period | At regular intervals |
-| Best for | Final value matters (search) | Steady updates matter (scroll) |
-
-**Gotcha — leading vs. trailing edge:** "Trailing" debounce fires at the *end* of inactivity (the common implementation above). "Leading" fires at the *start*. Some APIs need both — lodash's `debounce(fn, delay, { leading: true, trailing: true })` handles it.
-
----
-
-### How do you optimize first-screen render?
-
-**Headline:** Do less work, do it sooner, defer the rest. Five tactics to apply in order:
-
-1. **Route lazy loading** — split SPA bundles per route, load on demand (`React.lazy` + `Suspense`).
-2. **SSR / SSG** — pre-render HTML on the server for immediate content display.
-3. **Above-the-fold prioritization** — inline critical CSS, defer non-critical JS, eager-load LCP image.
-4. **Image optimization** — lazy-load below-fold images, use `srcset`, modern formats (WebP/AVIF), explicit dimensions.
-5. **Pagination / infinite scroll** — load data incrementally instead of all at once.
-
-**Rule of thumb:** The first screen should render from the minimum amount of JS and CSS needed. Everything else — analytics, chat widgets, secondary content — should be deferred to after LCP.
-
-**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD), [`9.4 Next.js`](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for SSR/SSG strategies.
-
----
-
-### How would you design an analytics SDK with minimal perf impact?
-
-**Headline (30s):** Three design principles: **don't block rendering** (fire-and-forget, no sync work), **batch events** (collect locally, flush periodically), and **use the right transport** (`navigator.sendBeacon` for reliability including page unload; image beacons as fallback). Track page views, custom events, performance metrics, and errors.
-
-#### What to track
-
-- **Page Views (PV)** — navigation events via the History API.
-- **Custom Events** — business-specific (button clicks, form submissions).
-- **Performance Data** — `performance.timing`, Core Web Vitals.
-- **Errors** — `window.onerror`, `unhandledrejection` (see [`4.5 Error Handling`](#21.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86)).
-
-#### Reporting strategy
-
-```javascript
-function report(url, data) {
-  const body = JSON.stringify(data);
-  if (navigator.sendBeacon) {
-    navigator.sendBeacon(url, body); // reliable even during unload
-  } else {
-    new Image().src = `${url}?data=${encodeURIComponent(body)}`; // fallback
+    timer = setTimeout(() => fn.apply(this, args), wait);
   }
+
+  debounced.cancel = () => clearTimeout(timer);
+  return debounced;
 }
-```
+~~~
 
-**Why `sendBeacon`:** it's designed for this. Fires the request in the background without waiting; works even when the page is about to close; doesn't block navigation.
+Use debounce when only the settled value matters, such as a search query. Use throttle when periodic updates matter, such as pointer position during scrolling. If a component removes the listener, also cancel any pending trailing call.
 
-#### Batching
+#### How do you improve first-screen rendering? / 如何改善首屏呈现？
 
-Collect events in memory; flush every 10 seconds or on `beforeunload`. Reduces request count drastically.
+Start with the actual LCP element and critical path. Make that resource discoverable promptly, avoid lazy-loading the LCP image, and reserve dimensions for images or embeds to prevent layout shifts. Defer below-the-fold images and non-critical code when the measurement shows they compete with critical work. SSR or static output can help in some routes, but does not by itself guarantee a good LCP or INP.
 
-```javascript
+#### How can an analytics SDK limit work during navigation? / 如何降低分析SDK对页面的影响？
+
+Batch events in a bounded in-memory queue, flush a small batch at a threshold or on a timer, and try a final flush when the document becomes hidden. The limits below are example configuration, not recommended universal thresholds.
+
+~~~javascript
+const MAX_PENDING = 200;
+const BATCH_SIZE = 50;
 const queue = [];
-function track(event) {
-  queue.push({ event, ts: Date.now() });
-  if (queue.length >= 50) flush();
-}
-function flush() {
-  if (queue.length === 0) return;
-  report('/analytics', queue.splice(0));
-}
-setInterval(flush, 10_000);
-window.addEventListener('beforeunload', flush);
-```
+let flushScheduled = false;
 
-**See also:** [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for rendering-side perf, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for a focused image-perf playbook.
+function report(url, events) {
+  const body = new Blob([JSON.stringify(events)], { type: "application/json" });
+  if (navigator.sendBeacon && navigator.sendBeacon(url, body)) return;
+  void fetch(url, { method: "POST", body, keepalive: true }).catch(() => {});
+}
+
+function trackEvent(event) {
+  if (queue.length === MAX_PENDING) queue.shift(); // Drop the oldest item to stay bounded.
+  queue.push({ event, ts: Date.now() });
+  if (queue.length >= BATCH_SIZE) scheduleFlush();
+}
+
+function scheduleFlush() {
+  if (flushScheduled) return;
+  flushScheduled = true;
+  setTimeout(() => {
+    flushScheduled = false;
+    flushEvents();
+    if (queue.length >= BATCH_SIZE) scheduleFlush();
+  }, 0);
+}
+
+function flushEvents() {
+  if (queue.length === 0) return;
+  const batch = queue.splice(0, BATCH_SIZE);
+  report("/analytics", batch); // Best effort; report does not mean server acknowledgement.
+}
+
+setInterval(flushEvents, 10_000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushEvents();
+});
+~~~
+
+The report helper above uses sendBeacon when the browser accepts the payload for queuing, then falls back to fetch with keepalive when Beacon is unavailable or declines it. Neither path guarantees server receipt. A bounded queue also needs an explicit overflow policy; this example drops the oldest pending event. Avoid blocking navigation or making application correctness depend on analytics delivery.
+
+**See also:** [Image Lazy Loading / 图片懒加载](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for image loading choices; [Rendering and Computation Optimization / 渲染与计算优化](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for React and long-list work.
+
+**Sources checked 2026-10-15:** [PerformancePaintTiming (FP/FCP)](https://developer.mozilla.org/en-US/docs/Web/API/PerformancePaintTiming), [DOMContentLoaded event](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event), [Window load event](https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event), [Web Vitals](https://web.dev/articles/vitals), [INP](https://web.dev/articles/inp), [LCP](https://web.dev/articles/lcp), [CLS](https://web.dev/articles/cls), [Lab and Field Data Differences](https://web.dev/articles/lab-and-field-data-differences), [HTTP Caching (RFC 9111)](https://www.rfc-editor.org/rfc/rfc9111.html), [ETag (RFC 9110)](https://www.rfc-editor.org/rfc/rfc9110.html#name-etag), [Beacon specification](https://w3c.github.io/beacon/).
 ## 33. Rendering and Computation Optimization / 渲染与计算优化
 
 ### Rendering and Computation Optimization / 渲染与计算优化
@@ -5849,90 +4959,67 @@ Use the library when its edge-case behavior or object/path API simplifies real c
 **Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
 ## 35. ahooks / ahooks Hook库
 
-**Reach for this when** you need a quick reference for ahooks — the React hooks library that covers the hooks people keep rewriting in every project (data fetching, debounced state, localStorage sync, stable callbacks, virtual lists).
+### ahooks / ahooks Hook库
 
-**Headline:** ahooks is an Alibaba-maintained React hooks library with production-ready hooks in five buckets — **Data fetching** (`useRequest`, `usePagination`, `useInfiniteScroll`), **State** (`useBoolean`, `useToggle`, `useMap`, `useLocalStorageState`, `useLatest`), **Performance** (`useMemoizedFn`, `useCreation`, `useVirtualList`), **Lifecycle/timing** (`useMount`, `useUnmount`, `useDebounce`, `useThrottle`), and **Dynamic lists** (`useDynamicList`). Install with `npm install ahooks`.
+ahooks is a collection of React Hooks for recurring UI and data-fetching patterns. The APIs below follow the current documentation checked on 2026-10-15; verify them against the package version installed in a project.
 
-#### Data fetching
+**Core answer / 核心回答：** ahooks packages common React state, effect, request, and list patterns into Hooks; its helpers still follow React’s render and Effect rules, and each API must match the installed version. / ahooks 将常见的 React 状态、Effect、请求和列表模式封装成 Hook；这些工具仍遵守 React 的 render 与 Effect 规则，每个 API 都应与项目安装版本一致。
 
-##### `useRequest`
+#### Data fetching / 数据请求
 
-Core data-fetching hook with loading states, error handling, polling, debouncing, throttling, caching, retry, and pagination built in.
+##### useRequest
 
-```javascript
-import { useRequest } from 'ahooks';
+useRequest wraps an asynchronous service and exposes request state and controls. It runs on mount by default; manual: true makes the caller start it with run or runAsync.
 
-const { data, loading, error, run } = useRequest(fetchUserData, {
-  manual: false,
-  pollingInterval: 5000,
-  debounceWait: 300,
-  retryCount: 3,
-  onSuccess: (data) => console.log(data),
-  onError: (error) => console.error(error),
-});
-```
+~~~jsx
+function UserButton({ userId }) {
+  const { data, loading, error, run } = useRequest(fetchUser, {
+    manual: true,
+    retryCount: 2,
+    onSuccess(user) {
+      console.log(user);
+    }
+  });
 
-**Reach for it when** you'd otherwise write 20+ lines of fetching boilerplate per component. Replaces most hand-rolled `useEffect + fetch` patterns.
+  return (
+    <button type="button" disabled={loading} onClick={() => run(userId)}>
+      {loading ? "Loading" : "Load user"}
+    </button>
+  );
+}
+~~~
 
-##### `usePagination`
+Choose polling, debounce, or retry options for the specific request. The useRequest cancel method ignores data and errors from the current Promise; it does not stop that Promise. In debounce mode, cancel can stop a call that has not started. Pass an AbortSignal to the service when the network transport itself must stop.
 
-Extends `useRequest` for paginated lists with automatic page state management.
+##### usePagination and useInfiniteScroll
 
-```javascript
-const { data, loading, pagination } = usePagination(fetchUsers, {
-  defaultPageSize: 20,
-});
+usePagination expects a service that returns a total count and list, and exposes pagination state and change methods.
+
+~~~javascript
+const { data, loading, pagination } = usePagination(
+  ({ current, pageSize }) => fetchUsers({ current, pageSize }),
+  { defaultPageSize: 20 }
+);
 
 pagination.changeCurrent(2);
-pagination.changePageSize(50);
-```
+~~~
 
-##### `useInfiniteScroll`
+useInfiniteScroll expects a service that returns a data object containing a list. Its result includes data, loading, loadingMore, noMore, and loadMore. Configure the scroll target and no-more condition to match the UI; it cannot determine the product's pagination contract for you.
 
-Infinite scroll loading with threshold detection.
+#### State and browser storage / 状态与浏览器存储
 
-```javascript
-const { data, loading, noMore } = useInfiniteScroll(
-  d => fetchMoreItems(d?.nextCursor),
-  { target: containerRef, threshold: 100 }
-);
-```
-
-#### State hooks
-
-##### `useToggle` / `useBoolean`
-
-```javascript
-const [state, { toggle, setTrue, setFalse }] = useBoolean(false);
-```
-
-`useToggle` generalizes to any two values.
-
-##### `useMap` / `useSet`
-
-State management for `Map` and `Set` with convenient mutation helpers.
-
-```javascript
-const [map, { set, remove, reset }] = useMap([['key1', 'value1']]);
-set('key2', 'value2');
-remove('key1');
-```
-
-##### `useLocalStorageState`
-
-State that auto-syncs with `localStorage`, handles serialization and errors.
-
-```javascript
-const [theme, setTheme] = useLocalStorageState('theme', {
-  defaultValue: 'light',
+~~~javascript
+const [enabled, { toggle, setTrue, setFalse }] = useBoolean(false);
+const [settings, setSettings] = useLocalStorageState("settings", {
+  defaultValue: {}
 });
-```
+~~~
 
-##### `useLatest`
+Other state utilities include useToggle, useMap, and useSet. useLocalStorageState serializes browser storage and can optionally synchronize changes from other tabs. Storage is browser-local and can fail or be unavailable in server rendering, so treat it as persistence convenience rather than a source of trusted data.
 
-Returns a ref that always holds the latest value. Solves **stale closure** bugs in `setInterval`/`setTimeout` callbacks.
+useLatest returns a ref whose current value is refreshed to the latest input. It can help a long-lived callback read current data without rebuilding a timer or listener on every render.
 
-```javascript
+~~~javascript
 const latestCount = useLatest(count);
 
 useEffect(() => {
@@ -5941,93 +5028,106 @@ useEffect(() => {
   }, 1000);
   return () => clearInterval(timer);
 }, []);
-```
+~~~
 
-#### Performance hooks
+#### Function identity and list rendering / 函数引用与列表渲染
 
-##### `useMemoizedFn`
+useMemoizedFn returns a stable function reference that calls the latest function body. It can simplify a callback identity boundary, but it does not remove the need to understand which state a callback should observe.
 
-Like `useCallback` but without a dependency array. Returns a stable function reference that always invokes the *latest* version of the function. No stale closures, no manual dep tracking.
+~~~javascript
+function SaveButton({ currentRecordId }) {
+  const saveLatest = useMemoizedFn(() => save(currentRecordId));
+  return <button onClick={saveLatest}>Save</button>;
+}
+~~~
 
-```javascript
-const handleClick = useMemoizedFn(() => {
-  console.log(count);
+useCreation(factory, deps) is an ahooks helper for creating a value with dependency-based reuse. Treat it as a library convenience rather than a resource-lifecycle primitive or a correctness guarantee.
+
+useVirtualList renders a visible window and a buffer from a larger array. In ahooks 3.10.0, it returns the tuple [list, scrollTo(index)]; each list entry is shaped as { data, index }. Pass containerTarget and wrapperTarget refs in the options.
+
+~~~jsx
+const containerRef = useRef(null);
+const wrapperRef = useRef(null);
+const [list, scrollTo] = useVirtualList(users, {
+  containerTarget: containerRef,
+  wrapperTarget: wrapperRef,
+  itemHeight: 48,
+  overscan: 5
 });
-```
 
-**Reach for it instead of `useCallback`** when you want a stable reference but always the freshest state. Significantly safer in practice.
-
-##### `useCreation`
-
-A more reliable `useMemo` that guarantees referential stability and never recalculates unnecessarily (unlike `useMemo`, which the React docs warn may re-run even without dep changes).
-
-##### `useVirtualList`
-
-Virtualizes long lists — renders only visible items.
-
-```javascript
-const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
-  originalList,
-  { itemHeight: 50, overscan: 5 }
+return (
+  <>
+    <button type="button" onClick={() => scrollTo(40)}>Jump to row</button>
+    <div ref={containerRef} style={{ height: 360, overflow: "auto" }}>
+      <div ref={wrapperRef}>
+        {list.map(({ data, index }) => (
+          <div key={data.id} style={{ height: 48 }}>{data.name}</div>
+        ))}
+      </div>
+    </div>
+  </>
 );
-```
+~~~
 
-See [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for virtual scrolling background.
+ahooks v2.6.0 uses a different useVirtualList result shape with containerProps and wrapperProps; v3 redesigned this API. Do not mix the versions. The v2.6.0 package returns these props for the scroll container and wrapper:
 
-#### Lifecycle hooks
+~~~jsx
+// ahooks 2.6.0 result shape; use only with the matching installed version.
+const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(users, {
+  itemHeight: 48,
+  overscan: 5
+});
 
-##### `useMount` / `useUnmount`
+return (
+  <div
+    {...containerProps}
+    style={{ ...containerProps.style, height: 360 }}
+  >
+    <div {...wrapperProps}>
+      {list.map(({ data, index }) => (
+        <div key={data.id} style={{ height: 48 }}>{data.name}</div>
+      ))}
+    </div>
+  </div>
+);
+~~~
 
-Cleaner alternatives to `useEffect` for mount-only or unmount-only logic.
+Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
 
-```javascript
-useMount(() => { console.log('mounted'); });
-useUnmount(() => { console.log('unmounted'); });
-```
+useDynamicList exposes list and operations such as push, remove, move, insert, and getKey(index). Use getKey(index) as the React key so item identity survives edits; callbacks receive the current index.
 
-##### `useDebounce` / `useDebounceFn`
-
-```javascript
-const debouncedValue = useDebounce(searchTerm, { wait: 300 });
-const { run: debouncedSearch } = useDebounceFn(search, { wait: 300 });
-```
-
-##### `useThrottle`
-
-```javascript
-const throttledValue = useThrottle(scrollPosition, { wait: 100 });
-```
-
-#### Dynamic lists
-
-##### `useDynamicList`
-
-Manages ordered lists with immutable operations and **stable keys** for rendering.
-
-```javascript
-const { list, push, remove, move, insert, getKey } = useDynamicList([
-  { name: 'Alice' },
-  { name: 'Bob' },
+~~~jsx
+const { list, push, remove, insert, getKey } = useDynamicList([
+  { name: "Ada" }
 ]);
-```
 
-Each item gets a stable key via `getKey(index)` — solves the "what do I use as key?" problem for dynamic forms and sortable lists.
+return (
+  <>
+    {list.map((item, index) => (
+      <div key={getKey(index)}>
+        {item.name}
+        <button type="button" onClick={() => remove(index)}>Remove</button>
+      </div>
+    ))}
+    <button type="button" onClick={() => insert(0, { name: "Grace" })}>
+      Add first
+    </button>
+    <button type="button" onClick={() => push({ name: "Lin" })}>Add</button>
+  </>
+);
+~~~
 
-#### When to reach for ahooks (vs. hand-rolled)
+#### Effects and timing / Effect与时机
 
-Reach for ahooks when:
+useMount and useUnmount package common Effect setup and cleanup. Their behavior follows React's Effect lifecycle, including the extra development setup-and-cleanup cycle under root StrictMode. They do not mean “run once for the lifetime of this process.”
 
-- You're writing the same fetching/debouncing/storage patterns across multiple components.
-- You need **production-ready edge-case handling** (cancellation, error retry, stale closures).
-- You want **stable references** without fiddling with `useCallback` dependencies.
+useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn and useThrottleFn wrap functions. Check whether the chosen hook returns a value, run function, or cancellation control before relying on an example from another version.
 
-**Alternatives worth considering:**
+**Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
 
-- `react-query` / `@tanstack/query` — more focused, richer caching than `useRequest` for server state.
-- `swr` — similar philosophy, lighter API surface.
-- `zustand` — for shared state rather than per-component hook state.
+**See also:** [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
 
-**See also:** [`9.3 Advanced React`](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom hook patterns, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce/throttle conceptual background.
+**Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
 ## 36. Frontend Testing / 前端测试
 
 ### Frontend Testing / 前端测试

@@ -1,123 +1,149 @@
-Reach for this when you need a quick reference for the common algorithmic patterns that show up in frontend interviews — dynamic programming, binary search, two pointers, sorting, and string algorithms. Each section gives the canonical implementation with complexity analysis.
+# Algorithms and Complexity / 算法与复杂度分析
+
+Use this reference for common algorithmic patterns. The code states its input assumptions; Big-O describes growth with input size, not a promise about constant factors or a particular runtime.
+
+先根据输入约束和不变量选择算法，再用时间与空间复杂度评估输入规模增长带来的成本；复杂度描述增长趋势，不等于实际耗时。
 
 ## Dynamic programming
 
-Dynamic programming solves problems by breaking them into overlapping subproblems and storing results to avoid redundant computation. Two implementation styles: **top-down (memoization)** and **bottom-up (iterative)** — bottom-up is usually preferred for constant-space optimizations.
+**动态规划 / Dynamic programming** stores results for overlapping subproblems. Top-down memoization follows the recursive definition; bottom-up iteration computes states in dependency order and can often retain only the state still needed.
 
 ### Fibonacci
 
-**Recursive** — O(2^n) time, O(n) stack space. Exponential because the same subproblems are re-solved.
+For non-negative integer n, naive recursion repeats subproblems and takes O(2^n) time with O(n) call-stack space. The iterative form takes O(n) time and O(1) auxiliary space. These examples use Number; use BigInt when exact results beyond Number's safe-integer range are needed.
 
-```javascript
-function fib(n) {
+~~~javascript
+function fibRecursive(n) {
+  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
   if (n <= 1) return n;
-  return fib(n - 1) + fib(n - 2);
+  return fibRecursive(n - 1) + fibRecursive(n - 2);
 }
-```
 
-**DP (iterative)** — O(n) time, O(1) space.
-
-```javascript
 function fib(n) {
+  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
   if (n <= 1) return n;
-  let prev = 0, curr = 1;
+  let previous = 0;
+  let current = 1;
   for (let i = 2; i <= n; i++) {
-    [prev, curr] = [curr, prev + curr];
+    [previous, current] = [current, previous + current];
   }
-  return curr;
+  return current;
 }
-```
+~~~
 
 ### Climbing stairs (frog jump)
 
-Count the ways to reach step `n` by jumping 1 or 2 steps at a time. Same recurrence as Fibonacci: `dp[i] = dp[i-1] + dp[i-2]`.
+Count ordered sequences of allowed positive step sizes that sum to n. The empty sequence is one way to reach step 0. Require distinct positive integer steps; repeated entries would count the same step size more than once.
 
-Generalized to variable step sizes:
-
-```javascript
+~~~javascript
 function climbStairs(n, steps) {
-  const dp = new Array(n + 1).fill(0);
-  dp[0] = 1;
-  for (let i = 1; i <= n; i++) {
+  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
+  if (!Array.isArray(steps) || steps.some(step => !Number.isInteger(step) || step <= 0)) {
+    throw new TypeError('steps must contain positive integers');
+  }
+  if (new Set(steps).size !== steps.length) throw new RangeError('steps must be distinct');
+
+  const ways = new Array(n + 1).fill(0);
+  ways[0] = 1;
+  for (let total = 1; total <= n; total++) {
     for (const step of steps) {
-      if (i >= step) dp[i] += dp[i - step];
+      if (total >= step) ways[total] += ways[total - step];
     }
   }
-  return dp[n];
+  return ways[n];
 }
-```
+~~~
+
+This counts order as meaningful: with steps [1, 2], reaching 3 has three sequences: 1+1+1, 1+2, and 2+1. Time is O(nk), where k is the number of allowed steps; space is O(n).
 
 ### 0/1 Knapsack
 
-Maximize total value without exceeding weight capacity. Each item can be used at most once. Iterate capacities **in reverse** so each item isn't reused.
+Choose each item at most once to maximize value within a weight capacity. Iterate capacities downward so the current item cannot be selected again during the same pass.
 
-```javascript
-function knapsack(W, weights, values) {
-  const dp = new Array(W + 1).fill(0);
+~~~javascript
+function knapsack(capacity, weights, values) {
+  if (!Number.isInteger(capacity) || capacity < 0) throw new RangeError('capacity must be a non-negative integer');
+  if (!Array.isArray(weights) || !Array.isArray(values) || weights.length !== values.length) {
+    throw new TypeError('weights and values must be arrays of equal length');
+  }
+  if (weights.some(weight => !Number.isInteger(weight) || weight < 0)) {
+    throw new RangeError('weights must be non-negative integers');
+  }
+
+  const best = new Array(capacity + 1).fill(0);
   for (let i = 0; i < weights.length; i++) {
-    for (let w = W; w >= weights[i]; w--) {
-      dp[w] = Math.max(dp[w], dp[w - weights[i]] + values[i]);
+    for (let remaining = capacity; remaining >= weights[i]; remaining--) {
+      best[remaining] = Math.max(best[remaining], best[remaining - weights[i]] + values[i]);
     }
   }
-  return dp[W];
+  return best[capacity];
 }
-```
+~~~
+
+Time is O(nW) and space O(W), for n items and integer capacity W. The zero-filled state means the result may leave capacity unused; it assumes there is no required minimum value or exact-fill constraint.
 
 ---
 
 ## Binary search
 
-O(log n). **Requires a sorted array**. Halves the search space each iteration.
+Binary search locates a matching item in O(log n) time when the input is sorted in ascending order and comparisons are consistent. This version returns any matching index, or -1 for an empty array or a missing value.
 
-```javascript
-function binarySearch(nums, target) {
-  let left = 0, right = nums.length - 1;
+~~~javascript
+function binarySearch(values, target) {
+  let left = 0;
+  let right = values.length - 1;
   while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    if (nums[mid] === target) return mid;
-    if (nums[mid] < target) left = mid + 1;
-    else right = mid - 1;
+    const middle = left + Math.floor((right - left) / 2);
+    if (values[middle] === target) return middle;
+    if (values[middle] < target) left = middle + 1;
+    else right = middle - 1;
   }
   return -1;
 }
-```
+~~~
 
-**Gotcha — integer overflow (other languages):** `(left + right) / 2` can overflow in languages with fixed-width ints. Use `left + (right - left) / 2` to be safe. Not an issue for JS `Number`, but interviewers notice.
+For fixed-width integer languages, computing the midpoint as left + (right - left) / 2 avoids overflow in left + right. JavaScript array indices are far smaller than Number's exact-integer limit, but the difference form states the safer general pattern.
 
 ---
 
 ## Two pointers
 
-A broad family of techniques where two indices sweep through an array — often O(n) replacements for naive O(n²) nested loops.
+**双指针 / Two pointers** uses two positions to reduce repeated scans when the input structure provides an ordering or movement invariant. It is not a general replacement for nested loops; the invariant must justify discarding part of the search space.
 
-### Two Sum on sorted array
+### Two Sum on a sorted array
 
-```javascript
-function twoSum(nums, target) {
-  let left = 0, right = nums.length - 1;
+Returns a pair of indices or null when no pair exists. Equal values at different positions are valid.
+
+~~~javascript
+function twoSumSorted(values, target) {
+  let left = 0;
+  let right = values.length - 1;
   while (left < right) {
-    const sum = nums[left] + nums[right];
+    const sum = values[left] + values[right];
     if (sum === target) return [left, right];
     if (sum < target) left++;
     else right--;
   }
-  return [-1, -1];
+  return null;
 }
-```
+~~~
 
-### Move zeros to end (in-place)
+### Move zeros to the end
 
-```javascript
-function moveZeros(nums) {
-  let insertPos = 0;
-  for (let i = 0; i < nums.length; i++) {
-    if (nums[i] !== 0) {
-      [nums[insertPos], nums[i]] = [nums[i], nums[insertPos]];
-      insertPos++;
+Moves numeric zeroes in place while keeping the order of non-zero values. It returns the same mutated array.
+
+~~~javascript
+function moveZeros(values) {
+  let next = 0;
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] !== 0) {
+      [values[next], values[i]] = [values[i], values[next]];
+      next++;
     }
   }
+  return values;
 }
-```
+~~~
 
 ---
 
@@ -125,108 +151,116 @@ function moveZeros(nums) {
 
 ### Quicksort
 
-Average O(n log n), worst O(n²). Pick a pivot, partition into smaller/larger subarrays, recurse.
+This array-building version is easy to inspect, but it is not in-place. With balanced partitions it takes O(n log n) time; an adversarial sequence of pivots can take O(n²) time and O(n) recursive stack space.
 
-```javascript
-function quickSort(arr) {
-  if (arr.length <= 1) return arr;
-  const pivot = arr[Math.floor(arr.length / 2)];
-  const left = [], mid = [], right = [];
-  for (const x of arr) {
-    if (x < pivot) left.push(x);
-    else if (x > pivot) right.push(x);
-    else mid.push(x);
+~~~javascript
+function quickSort(values) {
+  if (values.length <= 1) return values;
+  const pivot = values[Math.floor(values.length / 2)];
+  const lower = [];
+  const equal = [];
+  const higher = [];
+  for (const value of values) {
+    if (value < pivot) lower.push(value);
+    else if (value > pivot) higher.push(value);
+    else equal.push(value);
   }
-  return [...quickSort(left), ...mid, ...quickSort(right)];
+  return [...quickSort(lower), ...equal, ...quickSort(higher)];
 }
-```
+~~~
 
-**Reach for `Array.prototype.sort`** in production code — V8 uses TimSort (stable, O(n log n) worst case) as of Node 10+. Write your own only for an interview.
+For application code, prefer the built-in sort with an explicit comparator for numeric data: `values.sort((a, b) => a - b)` mutates the array, while `values.toSorted((a, b) => a - b)` returns a sorted copy where supported. Without a comparator, array elements are compared as strings. ECMAScript requires stable sorting; the engine's specific sorting algorithm is an implementation detail. See [ECMAScript 2020, Array.prototype.sort](https://tc39.es/ecma262/2020/#sec-array.prototype.sort).
 
 ---
 
 ## String algorithms
 
+The examples iterate Unicode code points with `Array.from`; that keeps surrogate pairs together. A user-perceived character can contain multiple code points, so grapheme-aware text operations need segmentation and may also need normalization.
+
 ### Palindrome check
 
-```javascript
-function isPalindrome(n) {
-  const s = String(n);
-  let left = 0, right = s.length - 1;
-  while (left < right) {
-    if (s[left++] !== s[right--]) return false;
+~~~javascript
+function isPalindrome(value) {
+  const characters = Array.from(String(value));
+  for (let left = 0, right = characters.length - 1; left < right; left++, right--) {
+    if (characters[left] !== characters[right]) return false;
   }
   return true;
 }
-```
+~~~
 
 ### Longest consecutive character
 
-```javascript
-function longestConsecutive(s) {
-  let maxChar = '', maxLen = 0;
-  let curLen = 1;
-  for (let i = 1; i <= s.length; i++) {
-    if (i < s.length && s[i] === s[i - 1]) {
-      curLen++;
+Returns the first longest run. Empty input returns an empty character and length zero.
+
+~~~javascript
+function longestConsecutive(value) {
+  const characters = Array.from(value);
+  if (characters.length === 0) return { char: '', len: 0 };
+
+  let bestChar = characters[0];
+  let bestLength = 1;
+  let currentLength = 1;
+  for (let i = 1; i <= characters.length; i++) {
+    if (i < characters.length && characters[i] === characters[i - 1]) {
+      currentLength++;
     } else {
-      if (curLen > maxLen) {
-        maxLen = curLen;
-        maxChar = s[i - 1];
+      if (currentLength > bestLength) {
+        bestLength = currentLength;
+        bestChar = characters[i - 1];
       }
-      curLen = 1;
+      currentLength = 1;
     }
   }
-  return { char: maxChar, len: maxLen };
+  return { char: bestChar, len: bestLength };
 }
-```
+~~~
 
 ### Number formatting (thousand separators)
 
-```javascript
-function formatNumber(n) {
-  return n.toLocaleString();
+For display, use locale-aware formatting and specify a locale when output must be stable across machines. The manual version below accepts only strings containing an optional minus sign and decimal digits; use locale-aware formatting for numeric values and localized output.
+
+~~~javascript
+function formatNumber(value, locale = 'en-US') {
+  return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatNumber(n) {
-  const s = String(n);
-  let result = '';
-  let count = 0;
-  for (let i = s.length - 1; i >= 0; i--) {
-    result = s[i] + result;
-    if (++count % 3 === 0 && i > 0) result = ',' + result;
-  }
-  return result;
+function formatIntegerThousands(text) {
+  if (typeof text !== 'string' || !/^-?\d+$/.test(text)) throw new TypeError('expected an integer string');
+  const sign = text.startsWith('-') ? '-' : '';
+  const digits = sign ? text.slice(1) : text;
+  return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
-```
+~~~
 
-**Reach for `toLocaleString`** in real code — it handles locales automatically. The manual version is what interviewers want to see.
+### Switch ASCII letter case
 
-### Switch letter case
+This example changes only the English ASCII letters A-Z and a-z; other code points are preserved.
 
-```javascript
-function switchCase(s) {
-  return s.split('').map(ch => {
-    const code = ch.charCodeAt(0);
-    if (code >= 65 && code <= 90)  return String.fromCharCode(code + 32); // A-Z → a-z
-    if (code >= 97 && code <= 122) return String.fromCharCode(code - 32); // a-z → A-Z
-    return ch;
+~~~javascript
+function switchAsciiCase(value) {
+  return Array.from(value, character => {
+    const code = character.codePointAt(0);
+    if (code >= 65 && code <= 90) return String.fromCodePoint(code + 32);
+    if (code >= 97 && code <= 122) return String.fromCodePoint(code - 32);
+    return character;
   }).join('');
 }
-```
+~~~
 
 ---
 
-## Big-O cheat sheet
+## Big-O reference
 
-| Complexity | Example |
-|---|---|
-| O(1) | Hash map lookup, array index access |
-| O(log n) | Binary search, balanced BST operations |
-| O(n) | Single pass over array, linear scan |
-| O(n log n) | Efficient sorts (merge, quicksort avg, heap) |
-| O(n²) | Nested loops, naive sorts (bubble, insertion) |
-| O(2^n) | Naive recursive Fibonacci, power set enumeration |
-| O(n!) | Generating all permutations |
+| Complexity | Typical example | Condition |
+|---|---|---|
+| O(1) | Array index access | Indexed access, not search |
+| O(1) average | Hash-table lookup | Expected under ordinary hash distribution |
+| O(log n) | Binary search; balanced BST operation | Sorted input or bounded tree height |
+| O(n) | Linear scan | One pass |
+| O(n log n) | Merge sort; balanced quicksort | Quicksort can degrade to O(n²) |
+| O(n²) | Nested scan; simple quadratic sort | Depends on input size and algorithm |
+| O(2^n) | Naive recursive Fibonacci; subset enumeration | Exponential growth |
+| O(n!) | Permutation enumeration | Factorial growth |
 
-**See also:** [`10.2 Core Data Structures`](./core-data-structures.md) for trees, BSTs, and trie references, [`10.3 Practical Data Structure Implementations`](./practical-data-structure-implementations.md) for LRU, queues, and stacks.
+**See also:** [Core Data Structures](./core-data-structures.md) for trees and tries, and [Practical Data Structure Implementations](./practical-data-structure-implementations.md) for LRU caches, queues, and stacks.

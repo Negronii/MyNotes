@@ -1,100 +1,81 @@
-**Reach for this when** you need a quick reference for how most modern engineering teams organize work — Agile principles, the Scrum framework (roles, events, artifacts), and the common failure modes.
+# Agile and Scrum / 敏捷与Scrum
 
-**Headline:** **Agile** is a philosophy — iterative delivery, continuous feedback, adaptability. **Scrum** is the most widely used framework for practicing Agile, with defined **roles** (Product Owner, Scrum Master, Dev Team), **events** (Sprint, Planning, Standup, Review, Retro), and **artifacts** (Product Backlog, Sprint Backlog, Increment). Interviewers usually want to know you understand both the theory and the real-world tradeoffs.
+**Agile / 敏捷** describes values and principles for software development; it is not one prescribed workflow. **Scrum / Scrum 框架** is a specific framework with defined accountabilities, events, artifacts, and commitments. The Scrum details below follow the official November 2020 Scrum Guide, listed as the current version when checked 2026-10-15.
+
+敏捷是一组价值与原则，Scrum则是包含明确职责、事件、工件和承诺的框架；这些结构用于检查和调整工作，并不保证照流程执行就会自动提升交付效果。
 
 ## Agile principles
 
-From the Agile Manifesto:
+The Agile Manifesto values:
 
-- **Working software** over comprehensive documentation.
-- **Customer collaboration** over contract negotiation.
-- **Responding to change** over following a rigid plan.
-- **Individuals and interactions** over processes and tools.
+- Individuals and interactions over processes and tools.
+- Working software over comprehensive documentation.
+- Customer collaboration over contract negotiation.
+- Responding to change over following a plan.
 
-### In practice
-
-- Deliver working software in short iterations (1–4 weeks).
-- Welcome changing requirements, even late in development.
-- Business and development teams work together daily.
-- Build projects around motivated individuals; trust them to deliver.
-- Maintain a sustainable development pace.
-- Regularly reflect and adjust processes.
-
-### Benefits
-
-- **Flexibility** — adapt to changing requirements without derailing the project.
-- **Quality** — frequent testing and integration catch issues early.
-- **Visibility** — regular demos and retrospectives keep stakeholders informed.
-- **Reduced risk** — short iterations surface problems quickly.
+The items on the right still have value; the Manifesto gives greater weight to the items on the left. Its principles also emphasize frequent delivery, sustainable pace, technical excellence, simplicity, and regular reflection. How a team applies these ideas depends on its product, people, and constraints.
 
 ## Scrum framework
 
-Scrum is the most widely used Agile framework. It defines roles, events, and artifacts for organizing iterative work.
+Scrum uses empiricism and lean thinking to help a Scrum Team generate value through adaptive solutions. Its defined structure is not a promise that adopting the framework will automatically improve delivery.
 
 ### Roles
 
+The Scrum Guide describes three **accountabilities / 职责** within one Scrum Team; these are responsibilities, not a required set of job titles.
+
 #### Product Owner
 
-- Defines and prioritizes the **product backlog**.
-- Represents stakeholder interests.
-- Decides **what** to build and in what order.
+Accountable for maximizing product value and effective Product Backlog management. The Product Owner may delegate backlog work but remains accountable for the result.
 
 #### Scrum Master
 
-- Facilitates the Scrum process; removes impediments.
-- Coaches the team on Scrum practices.
-- Shields the team from external interruptions.
-- **Does not** manage the team — the team is self-organizing.
+Accountable for establishing Scrum as defined in the Guide and for the Scrum Team's effectiveness. This includes coaching, helping remove impediments, and supporting the wider organization in its use of Scrum; it does not make the Scrum Master the team's line manager.
 
-#### Development Team
+#### Developers
 
-- Cross-functional group that designs, builds, and tests the product.
-- Typically 3–9 people.
-- Self-organizing: the team decides **how** to accomplish sprint goals.
+The people who create a usable Increment during each Sprint. They create and adapt the Sprint Backlog plan, uphold the Definition of Done, and hold one another accountable as professionals.
 
 ### Events
 
+The five events are the **Sprint**, **Sprint Planning**, **Daily Scrum**, **Sprint Review**, and **Sprint Retrospective**. The Sprint is the container for the other events and activities.
+
 #### Sprint
 
-A fixed time-box (usually 2 weeks) during which a potentially shippable increment is created.
+A fixed-length event of one month or less. Teams choose a duration that supports inspection and adaptation; two weeks is common in some teams but is not prescribed by Scrum. The Sprint Goal provides a coherent objective while allowing the exact work to be clarified as learning occurs.
 
 #### Sprint Planning
 
-The team selects backlog items for the sprint and breaks them into tasks. Outcome: a sprint goal + a sprint backlog.
+The Scrum Team plans why the Sprint is valuable, what can be done, and how the selected work will be completed. The output includes a Sprint Goal and the Developers' plan in the Sprint Backlog.
 
-#### Daily Standup
+#### Daily Scrum
 
-A 15-minute daily meeting where each member answers:
-
-1. What did I do yesterday?
-2. What will I do today?
-3. Are there any blockers?
+A 15-minute event for the Developers to inspect progress toward the Sprint Goal and adapt their plan. The Guide does not require each person to answer a fixed set of status questions. Developers choose a format that serves the purpose and may meet more often as needed.
 
 #### Sprint Review
 
-End-of-sprint demo to stakeholders. Gather feedback and update the product backlog.
+The Scrum Team and stakeholders inspect the Sprint's outcome and discuss adaptations. It is a working session to inform what to do next, not only a demonstration.
 
 #### Sprint Retrospective
 
-The team reflects on the sprint process:
-
-- What went well?
-- What could be improved?
-- What actions will we take?
+The Scrum Team inspects how the last Sprint went with regard to people, interactions, processes, tools, and the Definition of Done, then identifies useful improvements. It is one of the Scrum events and occurs within the Sprint cadence.
 
 ### Artifacts
 
-- **Product Backlog** — ordered list of everything needed in the product.
-- **Sprint Backlog** — items selected for the current sprint + the delivery plan.
-- **Increment** — the sum of completed backlog items, in a usable state.
+| Artifact / 工件 | Commitment / 承诺 | Purpose |
+|---|---|---|
+| Product Backlog / 产品待办列表 | Product Goal / 产品目标 | An ordered source of work for evolving the product |
+| Sprint Backlog / Sprint 待办列表 | Sprint Goal / Sprint 目标 | The Sprint Goal, selected Product Backlog items, and the Developers' plan |
+| Increment / 增量 | Definition of Done / 完成定义 | A usable step toward the Product Goal that meets the shared quality measure |
+
+The commitments focus the artifact without replacing it. Multiple Increments may be created during a Sprint; the Sprint Review is not a release gate.
 
 ## Common challenges
 
-- **Scope creep** — adding items mid-sprint undermines the sprint commitment. Use the backlog for new requests; slot into future sprints.
-- **Resistance to change** — teams used to waterfall may struggle with iterative planning. Start with pilot teams and demonstrate results.
-- **Skipping retrospectives** — without reflection, the same problems recur. Retrospectives are **not optional**.
-- **"Status-report standups"** — standups that become PM status updates defeat the purpose. Keep the "blockers" slot prominent.
+- **Treating Scrum as a status-report schedule:** the events exist to inspect and adapt work toward goals, not merely to report individual activity.
+- **Treating the Sprint Backlog as an unchangeable contract:** the Developers adapt their plan as they learn, while working toward the Sprint Goal. The Product Owner and Developers can clarify and renegotiate scope without endangering that goal.
+- **Skipping inspection and improvement:** omitting defined events loses their intended opportunities and means the team is not using the framework as described.
+- **Assuming Scrum fits every problem:** choose a way of working that fits the product, feedback cycle, and organizational constraints. Regulated work can also use iterative development when its evidence and control requirements are built into the process.
 
-**Gotcha — Scrum isn't a silver bullet.** It works best for teams building iterative products with changing requirements. For heavily regulated work (e.g., hardware, medical devices) or teams with fixed requirements, waterfall or hybrid models may still fit. Interviewers appreciate candidates who understand *when* Agile helps, not just how to recite the ceremonies.
+**See also:** [Interview Tips](../career/interview-preparation.md) for discussing team practices accurately.
 
-**See also:** [`14.1 Interview Tips`](../career/interview-preparation.md) for how to discuss Agile experience in interviews.
+Sources: [The Scrum Guide, November 2020](https://scrumguides.org/scrum-guide.html) and the [Agile Manifesto](https://agilemanifesto.org/).
