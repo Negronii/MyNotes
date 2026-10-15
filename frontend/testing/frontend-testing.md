@@ -1,276 +1,140 @@
-**Reach for this when** you need a quick reference for frontend testing — the test pyramid, Jest/Vitest APIs, mocking, React Testing Library, and patterns like Arrange-Act-Assert.
+# Frontend Testing / 前端测试
 
-**Headline:** Five buckets. **Testing pyramid** (unit-heavy, e2e-light). **Jest fundamentals** (`describe`, `it`, matchers, setup/teardown). **Mocking** (`jest.fn`, `jest.mock`, `jest.spyOn`). **React Testing Library** (user-facing queries, `userEvent`, async utilities). **Testing patterns** (AAA, async, custom hooks, snapshots).
+## How should frontend tests be divided? / 前端测试如何分层？
 
-## Testing pyramid
+**Core answer / 核心回答：** Put each assertion at the lowest layer that can verify the behavior reliably. Unit tests isolate pure logic, integration tests exercise boundaries between components and services, and browser tests verify important end-to-end flows. This is a risk and feedback-cost heuristic, not a required test-count pyramid. / 在能够可靠验证行为的最低层测试。单元测试隔离纯逻辑，集成测试覆盖组件与服务之间的边界，浏览器测试验证重要端到端流程。这是权衡风险和反馈成本的经验方法，不是固定的测试数量金字塔。
 
-Tests should distribute with many fast unit tests at the base, fewer integration tests in the middle, fewest expensive e2e tests at the top.
+| Layer | Useful for | Example tools |
+|---|---|---|
+| Unit | Pure functions and isolated behavior | Jest, Vitest |
+| Integration | Components, hooks, context, and API boundaries together | React Testing Library with Jest or Vitest |
+| End-to-end | Browser navigation, persistence, and critical user journeys | Playwright, Cypress |
 
-| Level | Count | Scope | Tools |
-|---|---|---|---|
-| **Unit** | Most | Single function/component in isolation | Jest, Vitest |
-| **Integration** | Middle | Multiple units working together | Jest + RTL, Vitest + Testing Library |
-| **E2E** | Fewest | Full app in real browser | Playwright, Cypress, Puppeteer |
+Keep browser tests for behavior that depends on the real browser or application wiring. A test pyramid is a planning aid; a project's distribution should follow its actual risks and feedback costs.
 
-- **Unit tests** — fast, cheap, isolate logic. Test pure functions, utilities, individual component behavior.
-- **Integration tests** — verify components interact correctly with hooks, context, API mocks.
-- **E2E tests** — slow, expensive. Catch real user flows; use sparingly on critical paths.
+## Jest fundamentals / Jest基础
 
-**Gotcha — inverted pyramids are a common anti-pattern.** Teams over-relying on e2e tests get slow, flaky suites. Push tests down the pyramid whenever possible.
-
-## Jest fundamentals
-
-### `describe`, `it` / `test`
-
-```javascript
-describe('Calculator', () => {
-  it('adds two numbers', () => {
-    expect(1 + 2).toBe(3);
+~~~javascript
+describe("calculator", () => {
+  test("adds two numbers", () => {
+    expect(2 + 2).toBe(4);
   });
 
-  test('subtracts two numbers', () => {
-    expect(5 - 3).toBe(2);
+  test("compares object values", () => {
+    expect({ count: 2 }).toEqual({ count: 2 });
   });
 });
-```
+~~~
 
-`describe` groups tests; `it` and `test` are interchangeable.
+toBe uses Object.is semantics. toEqual compares nested values; toStrictEqual also distinguishes cases such as missing properties and undefined values. Common matchers include toContain, toHaveLength, toThrow, and toHaveBeenCalledWith.
 
-### Common matchers
+Setup hooks run at different scopes: beforeAll and afterAll surround a suite, while beforeEach and afterEach run around each test. Restore state that could leak between tests.
 
-| Matcher | Use Case |
+### Mock functions / Mock函数
+
+~~~javascript
+const save = jest.fn();
+save({ id: 1 });
+
+expect(save).toHaveBeenCalledWith({ id: 1 });
+
+save.mockResolvedValue({ ok: true });
+await expect(save()).resolves.toEqual({ ok: true });
+~~~
+
+jest.spyOn wraps an existing method and can be restored. The cleanup operations differ:
+
+- **mockClear** clears call history while keeping the implementation.
+- **mockReset** clears call history and the mock implementation.
+- **mockRestore** restores the original implementation for a function created by spyOn. restoreAllMocks also restores spies and properties replaced with replaceProperty.
+
+For a CommonJS test transformed with babel-jest, jest.mock is hoisted by the transformer and the module can be required after the mock declaration:
+
+~~~javascript
+// CommonJS / babel-jest transformed module test.
+jest.mock("./api", () => ({ fetchUser: jest.fn() }));
+const { fetchUser } = require("./api");
+
+test("loads a user", async () => {
+  fetchUser.mockResolvedValue({ id: 1, name: "Ada" });
+  await expect(fetchUser(1)).resolves.toMatchObject({ name: "Ada" });
+});
+~~~
+
+Native ESM evaluates static imports before test code, so the CJS hoisting example does not transfer directly; Jest documents unstable_mockModule followed by dynamic import for ESM. A spy created with jest.spyOn calls the original method by default; mockImplementation replaces it, and mockRestore restores the original:
+
+~~~javascript
+const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+// assertions using the spy
+warnSpy.mockRestore();
+~~~
+
+## React Testing Library / React Testing Library
+
+Test through user-visible roles, labels, text, and interactions. Queries have different timing contracts:
+
+| Query | Use when |
 |---|---|
-| `toBe(value)` | Strict equality (`===`). Use for primitives. |
-| `toEqual(value)` | Deep equality. Use for objects/arrays. |
-| `toBeTruthy()` / `toBeFalsy()` | Boolean coercion |
-| `toBeNull()` / `toBeUndefined()` | Null/undefined checks |
-| `toThrow()` / `toThrow(error)` | Exception assertion |
-| `toContain(item)` | Array/string contains |
-| `toHaveLength(n)` | Array/string length |
-| `toMatch(regex)` | String matches regex |
-| `toBeGreaterThan(n)` / `toBeLessThan(n)` | Number comparison |
+| getBy... | The element should exist now; throws if absent or ambiguous. |
+| queryBy... | Checking that an element is absent; returns null if absent. |
+| findBy... | The element should appear asynchronously; returns a Promise. |
 
-```javascript
-expect(2 + 2).toBe(4);
-expect({ a: 1 }).toEqual({ a: 1 });
-expect([1, 2, 3]).toContain(2);
-expect(() => fn()).toThrow('error message');
-```
+Prefer getByRole with an accessible name when it represents the user's interaction. Use getByLabelText for form controls. A test ID is an escape hatch when the UI has no suitable user-facing query.
 
-### Setup and teardown
+~~~jsx
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom";
 
-```javascript
-describe('Database', () => {
-  beforeAll(()  => { /* runs once before all tests */ });
-  afterAll(()   => { /* runs once after all tests */ });
-  beforeEach(() => { /* runs before each test */ });
-  afterEach(()  => { /* runs after each test */ });
-});
-```
-
-## Mocking
-
-### `jest.fn()`
-
-Creates a mock function that tracks calls and return values.
-
-```javascript
-const mockFn = jest.fn();
-mockFn(1, 2);
-expect(mockFn).toHaveBeenCalled();
-expect(mockFn).toHaveBeenCalledWith(1, 2);
-expect(mockFn).toHaveBeenCalledTimes(1);
-
-mockFn.mockReturnValue(42);
-expect(mockFn()).toBe(42);
-```
-
-### `jest.mock()`
-
-Mocks an entire module. Hoisted to the top of the file.
-
-```javascript
-jest.mock('./api');
-import { fetchUser } from './api';
-
-test('uses mocked fetchUser', async () => {
-  fetchUser.mockResolvedValue({ id: 1, name: 'Alice' });
-  const user = await fetchUser();
-  expect(user.name).toBe('Alice');
-});
-```
-
-### `jest.spyOn()`
-
-Spies on an existing method without replacing the module. Restore with `mockRestore()`.
-
-```javascript
-const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
-// ... test
-spy.mockRestore();
-```
-
-### Async mocks
-
-```javascript
-const mockFetch = jest.fn();
-
-mockFetch.mockResolvedValue({ data: 'success' });
-mockFetch.mockRejectedValue(new Error('Network error'));
-
-mockFetch
-  .mockResolvedValueOnce({ page: 1 })
-  .mockResolvedValueOnce({ page: 2 });
-```
-
-## React Testing Library (RTL)
-
-### Philosophy
-
-Test from the user's perspective: what they see and do. **Avoid testing implementation details** (state, props, internal methods). Implementation changes shouldn't break tests; user-visible behavior changes should.
-
-### Core API
-
-```jsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-
-render(<MyComponent />);
-
-screen.getByText('Submit');        // throws if not found
-screen.queryByText('Optional');    // returns null if not found
-screen.findByText('Async');        // returns Promise; waits for element
-screen.getByRole('button', { name: /submit/i });
-screen.getByTestId('custom-id');   // last resort
-```
-
-### Query priority
-
-1. `getByRole` — accessibility-first, closest to real users.
-2. `getByLabelText` — forms.
-3. `getByPlaceholderText` — forms (fallback).
-4. `getByText` — non-interactive content.
-5. `getByDisplayValue` — form values.
-6. `getByAltText` — images.
-7. `getByTitle` — title attribute.
-8. `getByTestId` — last resort.
-
-### User interactions
-
-Prefer `userEvent` over `fireEvent` — `userEvent` simulates real user behavior including proper event order, focus changes, and keyboard events.
-
-```jsx
-import userEvent from '@testing-library/user-event';
-
-await userEvent.click(screen.getByRole('button'));
-await userEvent.type(screen.getByLabelText('Email'), 'test@example.com');
-
-fireEvent.click(button); // lower-level, avoid unless needed
-fireEvent.change(input, { target: { value: 'text' } });
-```
-
-### Async utilities
-
-```jsx
-import { waitFor } from '@testing-library/react';
-
-// waitFor — retries until assertion passes or timeout
-await waitFor(() => {
-  expect(screen.getByText('Loaded')).toBeInTheDocument();
-});
-
-// findBy* — shorthand for waitFor + getBy
-const button = await screen.findByRole('button', { name: 'Submit' });
-```
-
-### Example: form submission
-
-```jsx
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import LoginForm from './LoginForm';
-
-test('submits form with email and password', async () => {
-  const onSubmit = jest.fn();
-  render(<LoginForm onSubmit={onSubmit} />);
-
-  await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com');
-  await userEvent.type(screen.getByLabelText(/password/i), 'secret123');
-  await userEvent.click(screen.getByRole('button', { name: /submit/i }));
-
-  await waitFor(() => {
-    expect(onSubmit).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'secret123',
-    });
-  });
-});
-```
-
-## Testing patterns
-
-### Arrange-Act-Assert (AAA)
-
-Structure tests in three clear phases for readability.
-
-```jsx
-test('increments counter', async () => {
+test("submits the entered email", async () => {
   // Arrange
-  render(<Counter />);
-  const button = screen.getByRole('button', { name: /increment/i });
+  const user = userEvent.setup();
+  const onSubmit = jest.fn();
+  render(<EmailForm onSubmit={onSubmit} />);
 
   // Act
-  await userEvent.click(button);
+  await user.type(
+    screen.getByRole("textbox", { name: /email/i }),
+    "person@example.com"
+  );
+  await user.click(screen.getByRole("button", { name: /submit/i }));
 
   // Assert
-  expect(screen.getByText('1')).toBeInTheDocument();
+  expect(onSubmit).toHaveBeenCalledWith("person@example.com");
 });
-```
+~~~
 
-### Testing async operations
+userEvent models a higher-level interaction sequence, including keyboard and focus behavior. It is not a real browser. fireEvent dispatches a lower-level event and can be useful when a test specifically needs that event boundary.
 
-```jsx
-test('loads user data', async () => {
-  jest.spyOn(api, 'fetchUser').mockResolvedValue({ name: 'Alice' });
+The form test above follows Arrange–Act–Assert (AAA): prepare the user and component, perform the interaction, then check the observable result.
 
-  render(<UserProfile userId={1} />);
+For an asynchronous appearance, prefer findBy...:
 
-  expect(screen.getByText(/loading/i)).toBeInTheDocument();
+~~~javascript
+const result = await screen.findByText("Loaded");
+expect(result).toBeInTheDocument();
+~~~
 
-  const name = await screen.findByText('Alice');
-  expect(name).toBeInTheDocument();
-});
-```
+Use waitFor when the assertion itself needs retrying. Its callback must throw for a retry; returning false does not request another attempt. Avoid placing side effects inside waitFor because the callback can run more than once.
 
-### Testing custom hooks with `renderHook`
+## Testing custom Hooks and snapshots / 测试自定义Hook与快照
 
-```javascript
-import { renderHook, act } from '@testing-library/react';
-import { useCounter } from './useCounter';
+React Testing Library exports renderHook from @testing-library/react. It renders a test component around the Hook. Most Testing Library render and interaction helpers already use React act; use act for an update initiated outside those helpers when the test needs to flush it.
 
-test('increments counter', () => {
+~~~javascript
+import { act, renderHook } from "@testing-library/react";
+
+test("increments the counter", () => {
   const { result } = renderHook(() => useCounter(0));
 
-  act(() => {
-    result.current.increment();
-  });
+  act(() => result.current.increment());
 
   expect(result.current.count).toBe(1);
 });
-```
+~~~
 
-### Snapshot testing
+Snapshots can capture stable structure, but a large snapshot does not explain which behavior matters. Use focused assertions for user-visible behavior and update snapshots intentionally when the expected output changes.
 
-**Use when** — stable UI components, layout/structure regression.
-**Avoid when** — frequently changing UI, large snapshots, behavior testing.
+**See also:** [Advanced React / React进阶](../frameworks/advanced-react.md) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
 
-```jsx
-test('matches snapshot', () => {
-  const { container } = render(<Header />);
-  expect(container).toMatchSnapshot();
-});
-```
-
-Prefer explicit assertions over snapshots when testing behavior. Update snapshots intentionally with `jest -u`.
-
-**See also:** [`9.3 Advanced React`](../frameworks/advanced-react.md) for custom-hook patterns under test, [`16.1 Git Essentials`](../../engineering-foundations/version-control/git-essentials.md) for PR workflow that integrates CI tests.
+**Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/).

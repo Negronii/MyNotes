@@ -1,156 +1,84 @@
-A bundle of interview questions on optimizing render performance — virtual scrolling, React-specific techniques, and CSS tips.
+# Rendering and Computation Optimization / 渲染与计算优化
 
-# How does virtual scrolling work, and when should you use it?
+## How does virtual scrolling work? / 虚拟滚动如何工作？
 
-**Headline (30s):** Rendering a DOM node for every item in a large list (thousands of rows) tanks performance. Virtual scrolling **only renders the visible items plus a small buffer** — the rest is simulated with a spacer element that gives the scrollbar its correct length. As the user scrolls, items off-screen are recycled and new ones enter. Rendering cost becomes O(visible window) instead of O(list size).
+**Core answer / 核心回答：** Virtual scrolling keeps a scrollable viewport but mounts only the visible rows and a small overscan buffer. The list's full data may still take memory or computation; virtualization mainly reduces the rendered DOM and related layout work. / 虚拟滚动保留可滚动视口，但只挂载可见行和少量缓冲行。完整列表的数据仍可能占用内存或计算时间；虚拟化主要减少渲染的 DOM 和相关布局工作。
 
-## How it works
+A fixed-height implementation can estimate the visible range directly. The outer spacer represents the full list height so the scrollbar has the right extent; the mounted window is offset by the height of the skipped rows. Variable-height rows need measurement or estimates, and all virtualizers need correct container dimensions and scroll behavior.
 
-1. Container has a fixed height with `overflow: auto`.
-2. A spacer element creates the full scrollable height.
-3. Only items in the visible viewport (plus a few buffer rows) are actually rendered.
-4. On scroll, off-screen items unmount and new ones mount.
+~~~jsx
+function VirtualWindow({ items, scrollTop, viewportHeight, rowHeight = 40 }) {
+  const overscan = 3;
+  const start = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+  const end = Math.min(
+    items.length,
+    Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan
+  );
 
-## Libraries
-
-- **React** — `react-virtualized`, `react-window`, `@tanstack/virtual`.
-- **Vue** — `vue-virtual-scroll-list`.
-
-**Trade-off:** Extra implementation complexity for rendering performance that's independent of list size. **Reach for virtual scrolling when** you have more than ~500 items that render eagerly, or any time lists can grow unbounded.
-
-**Gotcha — variable-height items:** Simpler libraries assume fixed row height. Variable heights require measuring each item or using an estimate; `@tanstack/virtual` handles this well, `react-window` requires extra config.
-
----
-
-# What are the main React performance-tuning techniques?
-
-**Headline (30s):** Focus on three levers: **avoid unnecessary re-renders** (`React.memo` + stable props via `useCallback` / `useMemo`), **keep reconciliation cheap** (stable keys, fragments, reasonable component depth), and **preserve state where mounting is expensive** (toggle with CSS instead of unmounting). Profile before optimizing — most "slow" React is fast enough; the wins come from fixing the specific hotspot.
-
-## Toggle visibility with CSS instead of unmounting
-
-`display: none` keeps the component tree alive but hidden — the component doesn't unmount (state preserved, no re-mount cost). Reach for this when the component is expensive to mount and will toggle back soon.
-
-```jsx
-<ExpensiveComponent style={{ display: isVisible ? 'block' : 'none' }} />
-```
-
-**Trade-off:** the tree still runs lifecycle and occupies memory. Unmount (via conditional rendering) for truly long-term hidden states.
-
-## Use stable keys in lists
-
-Always use unique, stable IDs as keys. Array indices cause incorrect reconciliation when items are reordered or filtered.
-
-```jsx
-{items.map(item => <Item key={item.id} data={item} />)}
-```
-
-See [`9.2 React Basics`](../frameworks/react-basics.md) for why index keys fail.
-
-## Use fragments to cut DOM depth
-
-```jsx
-return (
-  <>
-    <Header />
-    <Content />
-  </>
-);
-```
-
-Less DOM depth = less layout and paint work.
-
-## Avoid inline function definitions in JSX
-
-Inline arrow functions in JSX create new references on every render, bypassing `React.memo` on child components:
-
-```jsx
-// Bad: new function reference every render
-<Button onClick={() => handleClick(id)} />
-
-// Good: stable reference, memo works as expected
-const handleItemClick = useCallback(() => handleClick(id), [id]);
-<Button onClick={handleItemClick} />
-```
-
-**Gotcha — don't `useCallback` everything.** The cost of `useCallback` itself (closure retention, dependency array check) often exceeds what it saves. Only memoize callbacks that are passed to memoized children on hot paths.
-
-## `shouldComponentUpdate`, `PureComponent`, `React.memo`
-
-**Class components:**
-
-```javascript
-shouldComponentUpdate(nextProps, nextState) {
-  return nextProps.id !== this.props.id;
+  return (
+    <div style={{ height: items.length * rowHeight, position: "relative" }}>
+      <div style={{ position: "absolute", top: start * rowHeight, left: 0, right: 0 }}>
+        {items.slice(start, end).map(item => (
+          <div key={item.id} style={{ height: rowHeight }}>{item.label}</div>
+        ))}
+      </div>
+    </div>
+  );
 }
+~~~
 
-// Or extend React.PureComponent for automatic shallow comparison
-```
+Here scrollTop and viewportHeight are measured from the scroll container; production code must keep those measurements synchronized and account for focus, keyboard navigation, and screen-reader expectations.
 
-**Function components:**
+| Use when | Cost to account for |
+|---|---|
+| Profiling shows DOM or layout cost from a large rendered list. | More complex focus, accessibility, measurement, and scroll restoration behavior. |
+| A list is unbounded or grows with user activity. | Data transformation may still be O(n), even when mounted rows are limited. |
 
-```javascript
-const MemoizedComponent = React.memo(MyComponent);
+For React, packages include react-window and @tanstack/react-virtual. Choose an adapter and API version supported by the application.
 
-// With custom comparator
-const MemoizedComponent = React.memo(MyComponent, (prev, next) => {
-  return prev.id === next.id;
+## How do you tune React rendering? / 如何优化React渲染？
+
+**Core answer / 核心回答：** First identify which interaction is expensive. Keep state close to the components that use it, avoid unnecessary update chains, and measure before adding memoization. A component render is not automatically a DOM mutation. / 先确认哪个交互成本高。将 state 放在实际使用它的组件附近，避免不必要的更新链，并在添加 memoization 前进行测量。组件 render 不等于一定修改 DOM。
+
+- **Stable keys:** use a data identity when sibling items can change order or membership. Use an index only for fixed lists.
+- **Memoization:** React.memo, useMemo, and useCallback can help at measured boundaries; state and context changes can still render a memoized component.
+- **State placement:** local transient state can often stay near its consumers instead of making a large subtree observe every update.
+- **Hidden versus removed:** CSS display:none keeps the component in the React tree. Its state and Effects remain active while hidden. Conditional removal unmounts it and runs cleanup; remounting creates a new instance.
+- **Fragments:** avoid an extra DOM wrapper when one is not needed. A fragment does not guarantee a measurable performance improvement.
+- **Profiler:** record the actual interaction with browser and React profiling tools before changing architecture.
+
+~~~jsx
+const MemoizedRow = memo(function Row({ item, onSelect }) {
+  return (
+    <button onClick={() => onSelect(item.id)}>
+      {item.name}
+    </button>
+  );
 });
-```
+~~~
 
-See [`9.3 Advanced React`](../frameworks/advanced-react.md) for how to combine `React.memo` with `useCallback` / `useMemo`.
+A new callback or object prop can prevent a memoized child from skipping its render, but inline functions are not inherently wrong. Add useCallback or useMemo when the child is expensive and the identity boundary matters, not as a blanket rule.
 
-## Debugging workflow
+## CSS sprites and rendering changes / CSS Sprite与渲染改动
 
-1. **Chrome DevTools Performance tab** — record interactions, find long tasks.
-2. **React DevTools Profiler** — visualize component render times, identify wasted re-renders.
-3. **"Highlight updates"** — see which components re-render on state changes.
-4. **Isolate the problem** — move state closer to where it's needed, split large components, memoize expensive computations.
+A CSS sprite combines small images into one image. Give each icon a fixed-size element and use background-position to expose its rectangle, for example background-position: -32px -16px. This can reduce separate image requests when request overhead matters, but it couples assets to one file: updating one icon invalidates the combined image and coordinates are harder to maintain. HTTP/2 multiplexes multiple requests over one connection, so request count alone is not enough reason to build a sprite; compare cache behavior, bytes, and maintenance cost for the actual asset set.
 
-**Rule of thumb:** Profile first, optimize second. Most perf work is about finding the hotspot — the fix is usually simple once you know where it is.
-
----
-
-# What CSS performance tips actually matter?
-
-**Headline:** Three patterns with clear wins: **shorthand properties** (smaller files, faster parse), **`will-change` on elements about to animate** (tells the browser to promote to its own compositor layer), and **reduce total DOM size + selector complexity** (directly affects layout time). CSS sprites are mostly obsolete in HTTP/2 world but still useful for icon sets.
-
-## Shorthand properties
-
-```css
-/* Verbose */
-margin-top: 10px;
-margin-right: 20px;
-margin-bottom: 30px;
-margin-left: 40px;
-
-/* Shorthand */
-margin: 10px 20px 30px 40px;
-```
-
-Smaller file, less parsing, same result.
-
-## CSS sprites
-
-Combine many small images into one file, use `background-position` to show each. Reduces HTTP requests. **Less relevant with HTTP/2 multiplexing**, but still useful for icon sets where you want atomic loading.
-
-## `will-change`
-
-Hints that a property is about to change, so the browser can promote the element to its own compositor layer ahead of time.
-
-```css
-.animated-element {
-  will-change: transform, opacity;
+~~~css
+.icon-edit {
+  width: 16px;
+  height: 16px;
+  background-image: url("/icons.png");
+  background-repeat: no-repeat;
+  background-position: -32px -16px;
 }
-```
+~~~
 
-**Use sparingly.** Every `will-change` element uses GPU memory. Apply right before the animation; remove after. Applying to many elements backfires.
+## Which CSS changes are worth testing? / 哪些CSS改动值得测试？
 
-See [`2.7 CSS Position, Display, and Animations`](../html-css/css-position-display-and-animations.md) for how GPU compositing and `transform`/`opacity` avoid layout/paint.
+Layout, paint, compositing, and JavaScript can all affect a frame. Animate transform or opacity when that fits the design, but confirm the result in a trace; these properties do not make every animation free. Avoid forcing synchronous layout by reading layout and then writing layout repeatedly in the same task.
 
-## Reduce selector complexity and DOM depth
+will-change is a hint, not a command to allocate a compositor layer. Use it narrowly and only when a measured animation benefits; unnecessary use can consume memory and make performance worse. Reducing DOM work and measuring real interactions are more reliable than assuming a shorter selector or shorthand property will speed up a page.
 
-- Prefer class selectors over descendant chains (`.btn-primary` beats `div.card > ul > li > a`).
-- Avoid deep DOM trees; flatten when possible.
-- Drop unused CSS — modern bundlers (PurgeCSS, Tailwind's JIT) can do this automatically.
+**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](../html-css/browser-html-and-css.md) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](./performance-metrics-and-analysis.md) for measurement.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](../html-css/browser-html-and-css.md) for reflow/repaint/composite fundamentals, [`11.1 Performance Metrics and Analysis`](./performance-metrics-and-analysis.md) for how to measure what you're optimizing.
+**Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [React: useMemo](https://react.dev/reference/react/useMemo), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction), [CSS Will Change Module](https://www.w3.org/TR/css-will-change-1/), [MDN background-position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/background-position), [HTTP/2 RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).

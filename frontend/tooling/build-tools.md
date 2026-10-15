@@ -1,137 +1,117 @@
-Reach for this when you need a quick reference for Webpack's core concepts, loaders, plugins, source maps, and adjacent tooling like Corepack. For ESM vs. CommonJS and dynamic imports, see [`3.8 Modern JavaScript Features`](../javascript/modern-javascript-features.md).
+# Build Tools / 构建工具
 
-## Webpack — core concepts
+Build tools resolve modules, transform source files, and produce output for development or deployment. The exact pipeline depends on the tool and version.
 
-Webpack is a static module bundler. It starts at an entry file, walks the import graph, and produces one or more optimized bundles the browser can load.
+**Core answer / 核心回答：** A bundler follows the module graph, transforms selected modules, and emits assets; loaders transform modules while plugins use broader compiler hooks. / 打包器沿模块依赖图处理文件、转换选定模块并输出资源；loader 转换模块，plugin 则可通过更广泛的 compiler hooks 扩展构建过程。
 
-| Concept | What it is |
+## Webpack concepts / Webpack核心概念
+
+Webpack starts from configured entries, resolves their dependency graph, applies loaders to modules, and emits assets. Its configuration names entry points, output, mode, module rules, plugins, and optimization.
+
+| Term | Role |
 |---|---|
-| **Entry** | Starting file(s) for dependency resolution (e.g., `./src/index.js`) |
-| **Output** | Where bundles are written and how they're named |
-| **Loaders** | Transform non-JS files (CSS, TS, images) into modules Webpack can ingest |
-| **Plugins** | Hook into the build lifecycle (optimization, asset emission, env injection) |
-| **Mode** | `development` (fast, readable) or `production` (minified, tree-shaken) |
+| Entry | Starting point for dependency resolution. |
+| Output | Destination and naming for emitted assets. |
+| Loader | Transforms one module's source before bundling. |
+| Plugin | Hooks into compiler or compilation stages to add broader build behavior. |
+| Mode | Enables development or production defaults; explicit settings can override them. |
 
-## The build pipeline
+### Loader order / Loader执行顺序
 
-1. **Merge config** — combine CLI flags with config file.
-2. **Initialize compiler** — create the compiler, load plugins, call each plugin's `apply`.
-3. **Resolve entries** — start from entry points, build a dependency graph.
-4. **Apply loaders** — transform each source file through its matching loader chain.
-5. **Emit output** — combine modules, optimize (minification, code splitting), write files.
+Normal loader functions execute right to left. Pitch functions, when present, run left to right.
 
----
-
-## Loaders
-
-Loaders run **right-to-left** — the last entry in `use` executes first, its output feeds the previous one, and so on.
-
-```javascript
+~~~javascript
 module: {
   rules: [
-    { test: /\.tsx?$/, use: ['babel-loader', 'ts-loader'] },
-    { test: /\.css$/,  use: ['style-loader', 'css-loader'] },
-    { test: /\.scss$/, use: ['style-loader', 'css-loader', 'sass-loader'] }
+    {
+      test: /\.tsx?$/,
+      use: ["babel-loader", "ts-loader"]
+    },
+    {
+      test: /\.scss$/,
+      use: ["style-loader", "css-loader", "sass-loader"]
+    }
   ]
 }
-```
+~~~
 
-For `.tsx`: `ts-loader` compiles TS → ES, then `babel-loader` transpiles ES → target ES.
+For the TypeScript rule, ts-loader runs first and its output is then passed to babel-loader. A real project should choose one clear TypeScript transform pipeline; running overlapping transforms can add cost or change output unexpectedly.
 
-### Common loaders
+| Common loader role | Examples | Typical work |
+|---|---|---|
+| JavaScript or TypeScript transform | babel-loader, ts-loader | Transpile syntax or TypeScript according to the configured toolchain. |
+| Styles | sass-loader, css-loader, style-loader | Compile Sass, resolve CSS imports and URLs, then inject styles in a development page. Production builds may extract CSS into files. |
+| Static assets | Webpack 5 Asset Modules | Emit or inline resources using built-in module types instead of older file-loader or url-loader setups. |
 
-| File type | Loaders |
-|---|---|
-| JS / TS | `babel-loader`, `ts-loader` |
-| CSS | `css-loader`, `style-loader`, `postcss-loader`, `sass-loader` |
-| Assets | `file-loader`, `url-loader`, `image-webpack-loader` |
+### Loader and plugin examples / Loader与插件示例
 
-### Writing a custom loader
+A small text replacement shows the loader shape. It is not a JavaScript parser; use a syntax-aware transform when source structure matters.
 
-A loader is just a function `(source) => transformedSource`:
-
-```javascript
-// loaders/strip-comments-loader.js
-module.exports = function (source) {
-  return source.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+~~~javascript
+module.exports = function replaceBuildLabel(source) {
+  return source.replaceAll("__BUILD_LABEL__", "demo");
 };
-```
+~~~
 
-Register it via `resolveLoader.modules` so Webpack can find it from a local directory.
+A plugin can subscribe to a compiler hook. The done hook runs after compilation and is an AsyncSeriesHook. A synchronous handler may register with tap; asynchronous handlers may use tapAsync or tapPromise so the hook waits for their work.
 
----
-
-## Plugins
-
-Plugins hook into `compiler.hooks` — events fired at specific lifecycle points (`beforeCompile`, `emit`, `done`, etc.).
-
-### Common plugins
-
-| Plugin | What it does |
-|---|---|
-| `HtmlWebpackPlugin` | Generates HTML with injected `<script>` / `<link>` tags |
-| `MiniCssExtractPlugin` | Extracts CSS into separate files (replaces `style-loader` in production) |
-| `DefinePlugin` | Compile-time globals (e.g., `process.env.NODE_ENV`) |
-| `TerserWebpackPlugin` | Minifies JS output |
-| `CleanWebpackPlugin` | Removes old build artifacts before each build |
-| `HotModuleReplacementPlugin` | Enables HMR during development |
-
-### Writing a custom plugin
-
-A plugin is a class with an `apply(compiler)` method:
-
-```javascript
+~~~javascript
 class BuildStatsPlugin {
   apply(compiler) {
-    compiler.hooks.done.tapAsync('BuildStats', (stats, callback) => {
-      const json = JSON.stringify(stats.toJson({ modules: false }), null, 2);
-      require('fs').writeFileSync('build-stats.json', json);
-      callback();
+    compiler.hooks.done.tap("BuildStatsPlugin", stats => {
+      const json = stats.toJson({ modules: false });
+      require("node:fs").writeFileSync(
+        "build-stats.json",
+        JSON.stringify(json, null, 2)
+      );
     });
   }
 }
-```
+~~~
 
-Use `tap` for synchronous hooks, `tapAsync` / `tapPromise` for async ones.
+Production plugins should write to an explicit destination and handle concurrent or watch builds deliberately; the example is a minimal local illustration.
 
----
+| Plugin | Typical role |
+|---|---|
+| HtmlWebpackPlugin | Generates an HTML document and injects emitted script or stylesheet references. |
+| DefinePlugin | Replaces configured expressions at compile time; it does not read a runtime environment variable from the browser. |
+| MiniCssExtractPlugin | Emits CSS into separate files when the build needs extracted styles. |
 
-## Source maps
+These are examples, not a required plugin stack; a framework may provide equivalent build features. As of the Webpack docs checked on 2026-10-15, the HtmlWebpackPlugin README marks it deprecated; the native HTML guide describes experiments.html and output.html as alternatives for generated pages, and still labels native HTML experimental. Check the installed Webpack version and template needs before migrating.
 
-Source maps map minified/bundled code back to your original source for debugging. Controlled by Webpack's `devtool` option.
+### Source maps / Source map
 
-| `devtool` | Rebuild speed | Quality | Use case |
-|---|---|---|---|
-| `eval` | Fastest | Generated code | Dev (fast iteration) |
-| `eval-source-map` | Slow | Original source | Dev (accurate) |
-| `cheap-source-map` | Medium | Lines only | CI / staging |
-| `source-map` | Slowest | Full quality | Production + error tracking |
+A source map relates emitted code to source files for debugging and error reporting. Select devtool based on rebuild speed, trace detail, artifact size, and whether the map is published. A map that is uploaded privately can still be exposed if the deployment serves it publicly; configuration alone does not set the access policy.
 
-**Best practices:**
+| devtool example | Output meaning |
+|---|---|
+| eval-source-map | Evaluates modules with source maps for development debugging. |
+| source-map | Emits an external map with a sourceMappingURL reference. |
+| hidden-source-map | Emits an external map without the reference comment; useful when a release pipeline uploads maps separately. |
+| nosources-source-map | Omits embedded source content, but mappings and source paths may still be present. |
 
-- **Development** — `eval-source-map` gives accurate stack traces with tolerable rebuild time.
-- **Production** — emit `source-map` files, upload to your error tracker (Sentry, Bugsnag), but don't serve them publicly in closed-source projects.
+These names describe different map delivery and detail choices; compare the configured output rather than treating them as a fixed speed ranking or a security boundary.
 
----
+## Vite and the development/production split / Vite与开发、生产构建的区别
 
-## Corepack (Node 16.10+)
+Vite's development server serves native ES modules with on-demand transforms and HMR. In Vite 8, the production build uses Rolldown to produce optimized assets. Earlier Vite releases used a different production bundler pipeline, so state the major version when the distinction matters.
 
-Built-in Node.js tool for pinning the package manager version per project.
+A fast dev server is not evidence that the production output has the same graph or performance. Run the configured production build and inspect its assets when validating deployment behavior.
 
-```bash
-corepack enable                              # install shims for yarn/pnpm
-corepack prepare pnpm@latest --activate      # pin a specific version
-```
+## Corepack and package-manager pinning / Corepack与包管理器版本固定
 
-With `"packageManager": "pnpm@8.15.0"` in `package.json`, any team member running `pnpm install` automatically gets that exact version — no more "works on my machine" from manager-version drift.
+A package.json packageManager field records the package manager and version a project expects. Corepack can use that field to select a matching manager when its shims are installed. Corepack was bundled with Node.js through Node 24, but Node 25 and later no longer distribute it by default; a current project may need to install or provision Corepack separately.
 
----
+~~~json
+{
+  "packageManager": "pnpm@10.0.0"
+}
+~~~
 
-## When to reach for which
+The field alone does not install a package manager or guarantee that every environment honors it. Pin and provision the tool through the project's supported runtime and CI setup.
 
-- **Webpack** — full-featured, everything pluggable, the default for large legacy codebases.
-- **Vite** — ES modules + esbuild for development, Rollup for production. Dramatically faster dev server. First choice for new projects.
-- **Rollup** — optimized for libraries (cleanest output), smaller ecosystem.
-- **esbuild / swc / Turbopack** — native-speed bundlers / transpilers, still maturing plugin ecosystems.
+**Choosing a tool / 工具选择：** Compare plugin and loader needs, ecosystem, output constraints, team familiarity, and build behavior for the project. No single bundler is the right choice for every application or library.
 
-**See also:** [`3.8 Modern JavaScript Features`](../javascript/modern-javascript-features.md) for ES modules and dynamic `import()`, [`11.1 Performance Metrics and Analysis`](../performance/performance-metrics-and-analysis.md) for bundle-size and code-splitting strategy.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](../javascript/modern-javascript-features.md) for modules and dynamic imports; [Performance Metrics and Analysis / 性能指标与分析](../performance/performance-metrics-and-analysis.md) for measuring bundle and load behavior.
+
+**Sources checked 2026-10-15:** [Webpack: Loaders](https://webpack.js.org/concepts/loaders/), [Asset Modules](https://webpack.js.org/guides/asset-modules/), [Webpack: Plugins](https://webpack.js.org/concepts/plugins/), [DefinePlugin](https://webpack.js.org/plugins/define-plugin/), [HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme), [Webpack Native HTML guide](https://webpack.js.org/guides/native-html/), [style-loader](https://github.com/webpack/style-loader#readme), [css-loader](https://github.com/webpack/css-loader#readme), [MiniCssExtractPlugin](https://github.com/webpack/mini-css-extract-plugin#readme), [Webpack: Writing a Plugin](https://webpack.js.org/contribute/writing-a-plugin/), [Webpack Compiler Hooks](https://webpack.js.org/api/compiler-hooks/), [Webpack devtool](https://webpack.js.org/configuration/devtool/), [Vite 8 guide](https://vite.dev/guide/), [Vite 8.0.10 source](https://github.com/vitejs/vite/blob/v8.0.10/README.md), [Node.js 25 Corepack docs](https://nodejs.org/download/release/v25.8.0/docs/api/corepack.html), [Corepack project README](https://github.com/nodejs/corepack#readme).
