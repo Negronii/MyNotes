@@ -73,7 +73,7 @@ Accepted notes are grouped by domain:
 - [Week 4](<../archive/uni-subjects/COMP90050ADBS/condensed-note-w4.md>) and the [aggregate course notes](<../archive/uni-subjects/COMP90050ADBS/readme.md>) retain WAL/ARIES and two-phase commit material, with loser undo following each chain to completion and redo of LSN 30 explicitly conditional on the pageLSN. The aggregate keeps the detailed weekly lessons, their bilingual cores, and its distinct END analysis rule.
 - **Jest reference / Jest 参考:** [Jest notes](<../archive/testing/Jest/readme.md>) preserve the matcher, setup/cleanup, mock, and coverage guidance while clarifying async assertions and the CommonJS/native-ESM mocking split.
 
-At this checkpoint, 111 of the 116 existing substantive originals in this phase are accepted: all 53 active and 58 archived. The three new foundations notes are accepted separately; the remaining five archive originals still need review.
+Content review is complete for all 116 existing substantive originals in this phase: 53 active and 63 archived. The three new foundations notes are accepted separately; see the validation limits below for the checks performed and their scope.
 
 ## Validation / 核验范围
 
