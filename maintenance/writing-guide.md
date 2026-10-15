@@ -6,6 +6,7 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 
 - A note covers one coherent topic that a reader can understand and reuse on its own. Do not force every detail into an atomic note.
 - Use the six domain roots as the top-level boundary: `ai-engineering`, `frontend`, `engineering-foundations`, `archive`, `review`, and `maintenance`. Engineering foundations holds shared networking, operating systems, databases, API reliability, security, testing, deployment, backend, and system-design knowledge. Create topic folders when substantive notes need them; authorized, source-backed additions may fill knowledge gaps.
+- Keep this open-source repository to general, reusable knowledge. Exclude personal résumé or project-experience material, internal project, system, code, or organization details, and unpublished results or data.
 - Use English kebab-case filenames without numeric prefixes. Use a small number of subdirectories where they clarify topic ownership. Put reading and interview sequences in the domain map rather than encoding order in filenames. Do not add empty topic folders.
 - Keep original attachments, source files, and prompts intact as a classified package. Course Markdown is part of the knowledge review.
 
