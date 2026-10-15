@@ -98,6 +98,8 @@ Vite's development server serves native ES modules with on-demand transforms and
 
 A fast dev server is not evidence that the production output has the same graph or performance. Run the configured production build and inspect its assets when validating deployment behavior.
 
+For release verification, serve and check the generated production output; HMR validates the development loop, not the deployed asset paths or chunks. Source maps help connect production errors to source only when their release mapping and access are controlled. See [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path and [Frontend Testing / 前端测试](../testing/frontend-testing.md) for a critical browser check against built output.
+
 ## Corepack and package-manager pinning / Corepack与包管理器版本固定
 
 A package.json packageManager field records the package manager and version a project expects. Corepack can use that field to select a matching manager when its shims are installed. Corepack was bundled with Node.js through Node 24, but Node 25 and later no longer distribute it by default; a current project may need to install or provision Corepack separately.

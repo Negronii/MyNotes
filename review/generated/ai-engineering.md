@@ -1195,6 +1195,56 @@ There is no universal spend threshold for switching to self-hosting. Estimate wi
 - Frantar et al., [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323); Lin et al., [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978).
 - Hinton et al., [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531).
 - Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu), for iteration-level scheduling and selective batching. OpenAI, [Batch API](https://developers.openai.com/api/docs/guides/batch), checked 2026-10-15, documents its separate asynchronous job interface.
+
+#### Durable runs, checkpoints, and recovery / 持久化运行、检查点与恢复
+
+**Core explanation / 核心解释：** The application owns the meaning and current state of a model run; an HTTP response or token stream is only one way to deliver updates. Give a logical submission a stable runId, persist its state and useful checkpoints, and let clients look up the same run after a timeout or reconnect. A lost connection says that delivery stopped; it does not say whether work completed. / 应用负责定义模型运行的含义和当前状态；HTTP 响应或 token 流只是传递更新的一种方式。为一次逻辑提交分配稳定的 runId，持久化其状态和有用检查点，并允许客户端在超时或重连后查询同一次运行。连接丢失只表示交付中断，不能说明任务是否完成。
+
+**Key terms / 关键术语：** run/job ID / 运行或作业标识；authoritative state / 权威状态；checkpoint / 检查点；resume / 恢复；idempotency key / 幂等键；unknown outcome / 结果未知；terminal state / 终态.
+
+##### Choose a completion shape / 选择完成方式
+
+All three shapes can refer to one stable run identity, but they make different promises about waiting, early output, and recovery:
+
+| Shape | What the caller sees | Trade-off |
+|---|---|---|
+| **Direct response / 直接响应** | One request waits for a final response. Its runId can be correlated or queried if the application persists the run. | Few moving parts and a simple client; long waits are vulnerable to deadline and connection limits. If the server does not retain state, a lost response leaves no status to recover. |
+| **Provisional stream / 临时流式响应** | The same run emits partial text or progress before its terminal result. | Better perceived responsiveness, but streamed text is provisional until a terminal frame and authoritative run state agree. A disconnect can leave a useful partial answer and an unknown outcome. |
+| **Queued/background completion / 排队或后台完成** | Submission returns a run identity and current state; a worker completes it later, and the client polls or reconnects for updates. | Fits longer work and bounded admission, but adds durable state, queue/worker operations, status handling, and retention policy. 202 Accepted means processing was accepted, not completed. |
+
+For example, a synthetic API can accept POST /runs with a stable idempotency key, return 202 and runId, expose GET /runs/{runId} for current state, and stream events from GET /runs/{runId}/events?after=12. The record is authoritative; event delivery is a view. The after cursor is useful only while the server retains the corresponding event history. This example is an application contract, not an HTTP requirement.
+
+Model the server-side lifecycle explicitly. accepted, queued, and running are nonterminal states. cancel_requested records a request that still needs handling. completed, failed, and canceled are terminal states. Keep the terminal result or error summary with the run long enough for clients to resolve retries and refreshes. A reconnect should fetch the run's status before claiming success; replayed progress is safe only when the service defines a cursor and retains the events needed to fill gaps.
+
+##### Submission, side effects, and cancellation races / 提交、副作用与取消竞态
+
+A timeout after POST /runs creates an **unknown submission outcome**: the server may have created the run even though its response never reached the client. The client should query by its stable submission key or repeat the same request with that key. The server must bind a key to the same request parameters and return the existing run for a duplicate; reusing the key with different input must be rejected or have an explicit contract. Starting a new run with a fresh key can duplicate model cost or side effects.
+
+Worker recovery has a second ambiguity around external side effects. Checkpoints tell the application what it recorded; they cannot reveal whether an unrecorded remote effect committed:
+
+1. A worker records that an export run is at create-artifact, then crashes **before** calling the artifact service. Recovery can retry that step with the same operation key.
+2. The artifact service creates the file, but the worker crashes **before** saving the returned artifact ID as the next checkpoint. The application cannot infer failure from the missing checkpoint. Retry with the same key if the receiving service deduplicates it, or query that service by operation key and then save the result. If neither is supported, mark the outcome unknown and reconcile it; blindly repeating may create a duplicate.
+
+This is not a promise of exactly-once external effects. Persist a local effect and its deduplication record in one transaction when both share a database; for another service, use that service's idempotency contract, a queryable operation key, or a compensation/reconciliation path. See [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) for retry budgets, key scope, deadlines, and queue acknowledgements.
+
+Cancellation also races with normal completion. Persist a cancel_requested transition and let the worker observe it at a safe point. If completion committed first, report completed; if cancellation wins, report canceled only when the run can no longer perform its work. A cancel endpoint acknowledging receipt is not that terminal confirmation. Cancellation cannot undo an already committed external action unless the application has a defined compensating operation.
+
+| Failure point | What is known | Safe next step |
+|---|---|---|
+| Request or stream disconnects before a terminal result | The caller's view is incomplete; the run may still be active or already terminal. | Query GET /runs/{runId}. Resume events only with a defined, retained cursor; do not resubmit under a new key. |
+| Worker crashes before a side effect | The checkpoint says the step did not finish, but another worker can retry it. | Use the same stable operation key and persist the result before advancing the checkpoint. |
+| Worker crashes after an external effect but before its result is recorded | The external outcome is unknown to the run record. | Deduplicate or query at the receiver, then reconcile the checkpoint; do not infer that the effect failed. |
+| Cancel request races with completion | Either transition may win the authoritative state update. | Serialize the transition and return the state that actually won; treat a pending request as nonterminal. |
+
+##### Replay is a runtime choice / 重放是运行时选择
+
+Some workflow runtimes persist an ordered event history and replay deterministic orchestration code to rebuild its in-memory state. In such a runtime, completed external activities can return their recorded results during replay; a model call is not made deterministic by this mechanism. A model call that was still in flight before its result was recorded may be attempted again and can cost more or return different text. Decide whether that retry is acceptable and checkpoint the result when it completes. Deterministic event-history replay is a runtime-specific implementation option, not a requirement that an LLM recompute identical output after a crash.
+
+**Representative answer / 代表性回答：** I give each logical AI run a stable ID and persist its state independently of the response connection. A direct request, provisional stream, or queued worker can all expose that same run. On reconnect, the client checks status and resumes from a retained cursor only if the service supports it. A worker checkpoints completed steps, but it retries a side effect only with a deduplication or reconciliation contract because a crash after the effect can hide its outcome. Cancellation is terminal only after the authoritative state says the work stopped; a client disconnect or cancel acknowledgement is not enough. / 我会为每次逻辑 AI 运行分配稳定标识，并独立于响应连接持久化运行状态。直接响应、临时流式响应和排队 worker 都可以暴露同一运行。重连时客户端先查询状态，只有服务端支持保留游标时才按游标续传。worker 为已完成步骤保存检查点；副作用只能在具备去重或结果对账契约时重试，因为副作用完成后发生崩溃会让结果变得未知。只有权威状态确认工作已停止，取消才是终态；客户端断线或收到取消请求确认都不足以证明这一点。
+
+**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) owns DNS, polling/SSE/Fetch/WebSocket transport behavior and wire framing. The [streaming UX note / 流式交互笔记](../../frontend/browser-apis/streaming-ux.md) applies a run contract to browser consumption, partial output, and teardown.
+
+**Sources checked 2026-10-15 / 来源核对日期：** [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) defines idempotent HTTP method semantics, and [§15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3) says 202 Accepted does not mean processing is complete. Temporal's [Workflow replay guide](https://docs.temporal.io/workflows) and [Event History guide](https://docs.temporal.io/encyclopedia/event-history) describe one runtime's deterministic orchestration replay and recorded activity results. These sources support the mechanisms above; the example API and state names are synthetic application choices.
 ## 14. AI System Design Interview Questions / AI系统设计面试题
 
 ### AI System Design Interview Questions / AI 系统设计面试题
