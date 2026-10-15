@@ -1,35 +1,24 @@
-# Backend Concepts
+# Backend Concepts / 后端概念
 
-## Understanding Deadlocks
-Deadlocks can occur in any system where shared resources are accessed concurrently. However, in the context of front-end development, this typically relates to asynchronous tasks and resource loading.
+核心要点：判断死锁要找真实资源等待环，普通异步 I/O 等待本身不是死锁；HashMap 的公开契约与 OpenJDK 17 的负载因子、树化阈值等实现细节必须分开看，不能推广为所有 map 的保证。
 
-##### Necessary Conditions for Deadlock
-To grasp how deadlocks occur and prevent them, it's essential to understand the following conditions, adapted from general computing to the web development context:
+## Deadlocks / 死锁
 
-- **Mutual Exclusion**: A resource cannot be shared and is exclusively held by one process at a time. In web development, this could translate to exclusive access to the DOM or single-threaded operations in JavaScript where certain operations cannot run simultaneously due to browser limitations.
+A deadlock is a state in which a set of processes or threads cannot proceed because each waits for a resource held by another member of the set. In the classic resource-allocation model, the four conditions are **mutual exclusion**, **hold and wait**, **no preemption**, and **circular wait**. For that model, breaking any one condition prevents deadlock; the conditions are not a checklist that makes every slow or waiting operation a deadlock.
 
-- **Hold and Wait**: A process is holding at least one resource and is waiting to acquire additional resources that are currently being held by other processes. For example, a JavaScript event loop might be waiting for a fetch API response while holding onto DOM access until the fetch is completed.
+Example: thread A locks resource `R1` and then waits for `R2`; thread B holds `R2` and waits for `R1`. Neither can release its first lock while blocked on the second. A consistent global lock order, shorter lock scopes, or avoiding nested locks can remove this cycle, depending on the design.
 
-- **No Preemption**: A resource can only be released voluntarily by the process holding it, not forcibly taken away. This is akin to JavaScript promises which cannot be canceled once initiated; they must resolve or reject.
+An asynchronous request waiting for I/O is not by itself a deadlock. JavaScript's event loop does not hold exclusive DOM access while a `fetch` is pending, and a Promise is a representation of eventual completion rather than a lock. An application can still stall because of a dependency cycle, an unresolved Promise, or exhausted resources; identify the actual dependency/resource graph before calling it a deadlock. For the corresponding operating-system view of process and thread waits, see [Processes, threads, and concurrency](../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md).
 
-- **Circular Wait**: There exists a set of processes, each of which is waiting for a resource held by another process in the set, creating a circular chain of dependencies. In the context of web applications, this might happen when multiple asynchronous JavaScript operations are waiting on each other to release some resource, like API data or access to IndexedDB.
+## Java `HashMap` / Java `HashMap`
 
-## Java HashMap Overview
+The following implementation details are scoped to **OpenJDK 17's `java.util.HashMap`**, not the `Map` interface or every hash-table implementation. The Java SE 17 API documents the default initial capacity of 16 and load factor of 0.75. When size exceeds `capacity × loadFactor`, this implementation grows and rebuilds its table; the API describes roughly doubling the bucket count. A lower load factor trades more space for fewer collisions, while a higher one trades space for more lookup work.
 
-#### Storage Structure
-**Key Storage:** Java's `HashMap` stores data in an array of nodes, each node being a "bucket." These buckets may contain multiple entries linked together by a common array index, resulting in a structure known as chained bucketing.
-**Node Composition:** Each node in the chain comprises a key-value pair, the key's hash code, and a reference to the next node, enabling efficient navigation and retrieval.
+OpenJDK 17 spreads a key's hash bits before selecting a bucket. Colliding entries share a bucket, usually as a linked chain; heavily populated bins can be represented as red-black trees to improve lookup under suitable conditions. In this source version, `TREEIFY_THRESHOLD` is 8 and `MIN_TREEIFY_CAPACITY` is 64: when a bin reaches the treeification path, a table smaller than 64 is resized instead. These are implementation thresholds, not API guarantees; do not infer a fixed transition from bucket size alone.
 
-#### Hash Function
-**Initial Hashing:** Keys are first processed using their `hashCode()` method, which generates a preliminary hash code.
-**Supplemental Hashing:** To minimize clustering—an issue with some native hash functions—a supplemental hash function further processes the initial hash. This determines the exact index in the array where the entry should be stored, enhancing key distribution across the buckets.
+`HashMap` relies on keys' `hashCode()` and `equals()` implementations being consistent, permits one `null` key and `null` values, and does not guarantee iteration order. It is unsynchronized; concurrent structural modification requires external synchronization or a suitable concurrent collection. Its basic `get`/`put` operations have expected constant-time performance only when hashes disperse keys adequately.
 
-#### Handling Key Conflicts
-**Chaining Mechanism:** When multiple keys hash to the same index, the `HashMap` utilizes a linked list to manage these collisions. Each new entry is added to the end of the list at that particular index, maintaining a retrievable sequence of entries.
+## Sources / 参考资料
 
-#### Expansion of Array Length
-**Trigger for Expansion:** The array is resized—typically doubling in size—when the number of entries exceeds 75% of the array's current capacity. This threshold is known as the load factor.
-**Rehashing Process:** Post-expansion, all existing entries must be rehashed to the new, larger array. This ensures entries are redistributed according to the new array size, though it is computationally demanding.
-
-#### Conversion to Red-Black Tree
-**Conditions for Conversion:** If a bucket becomes overly populated (typically when it holds more than eight entries), it is converted from a linked list to a red-black tree. This enhances search efficiency within that bucket.
+- Coffman, Elphick, and Shoshani (1971), [System Deadlocks](https://doi.org/10.1145/356586.356588), for the classic resource-allocation conditions.
+- [Java SE 17 `HashMap` API](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/HashMap.html) for the public contract and documented defaults; [OpenJDK 17 `HashMap` source](https://github.com/openjdk/jdk17u/blob/master/src/java.base/share/classes/java/util/HashMap.java) for implementation thresholds and mechanics.
