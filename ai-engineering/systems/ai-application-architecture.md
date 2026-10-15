@@ -1,247 +1,100 @@
-# AI Application Architecture
+# AI Application Architecture / AI 应用架构
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** A production LLM application is a software system around a model call: it manages identity, context, tools, validation, timeouts, retries, cost, monitoring, and recovery. Choose optimizations and deployment boundaries from measured quality, workload, privacy, and operations requirements. / 生产级 LLM 应用是围绕模型调用构建的软件系统，需要管理身份、上下文、工具、校验、超时、重试、成本、监控与恢复。应根据实测质量、工作负载、隐私和运维要求选择优化与部署边界。
 
-- What changes when you move an LLM app from prototype to production?
-- How do you reduce inference latency and cost?
-- How do you manage LLM costs at scale?
-- What should you monitor in an LLM system?
-- How do you design user feedback loops that actually improve the product?
-- API, self-hosted, edge, or hybrid — how do you pick a deployment pattern?
+**Key terms / 关键术语：** latency / 时延；time to first token (TTFT) / 首 token 时延；routing / 路由；caching / 缓存；fallback / 回退；observability / 可观测性；feedback loop / 反馈闭环。
 
----
+## What changes from prototype to production? / 从原型到生产会发生什么变化？
 
-## What changes when you move an LLM app from prototype to production?
+A prototype tests whether an approach can solve a task. A production service must also handle concurrent users, malformed or incomplete responses, provider and tool failures, changing inputs, permissions, privacy, cost, and rollback. Design the surrounding controls before relying on the model in a consequential workflow.
 
-**Headline (30s):** The jump is massive and underestimated. Six dimensions all shift from "good enough for a demo" to "real-world-ready": error handling, scale, monitoring, cost management, security, and reliability. A prototype validates the approach; a production system has to withstand adversarial users, traffic spikes, and provider outages.
+~~~text
+Request → authenticate and authorize → assemble context
+        → model and/or tools → validate result → respond or escalate
+        ↘ trace, metrics, and privacy-reviewed logs
+~~~
 
-| Dimension | Prototype | Production |
-|---|---|---|
-| **Error handling** | Fail fast, manual recovery | Graceful degradation, retries, fallbacks |
-| **Scale** | Single user, low throughput | Multi-tenant, high concurrency |
-| **Monitoring** | Print statements, ad-hoc | Structured logging, metrics, alerts |
-| **Cost management** | Ignored | Budgets, quotas, optimization |
-| **Security** | Minimal | Auth, data isolation, PII handling |
-| **Reliability** | Best-effort | SLAs, redundancy, failover |
+For tool use, the application receives a proposed call and executes it only after its own argument checks and authorization. A model response or schema-constrained output does not itself grant access or establish that an action is valid. See [Tool Design and Function Calling / 工具设计与函数调用](../agents/tool-design-and-function-calling.md) and [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md).
 
-**Don't skip the prototype.** Use it to validate the approach before investing in production infrastructure. A prototype that proves the core idea fails is cheaper than a production system built on a flawed assumption.
+Useful production controls include explicit timeouts, bounded retries, idempotency for retried writes, cancellation, rate and budget limits, an error path, and a way to disable or roll back a model or prompt version. Retry only failures that can safely be retried; a timeout does not prove a write did not happen.
 
-**Gotcha:** The biggest prototype-to-production failure isn't any single dimension; it's that teams treat the LLM as a stable dependency. LLMs silently drift (provider model updates, policy tweaks) in ways traditional APIs don't. Build eval, monitoring, and rollback *first* — you'll need them sooner than you think.
+## How can you reduce latency and cost? / 如何降低时延与成本？
 
----
+First measure where time and cost accumulate: queueing, context assembly, retrieval, model input/output, tools, and retries. Then test a change against a fixed quality bar; savings that break the task are not an optimization.
 
-## How do you reduce inference latency and cost?
+- **Shorten or select context / 缩短或筛选上下文：** include relevant material and limit unnecessary history. Measure for lost evidence or task quality; see [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md).
+- **Use caching / 使用缓存：** exact-response or semantic caches can avoid work for repeat requests, but require freshness, permission, and key-isolation rules. For example, “What is the refund policy in the US?” and “What is the refund policy in the EU?” can have similar embeddings but different correct answers. Include relevant locale, tenant, permission, and policy-version boundaries in cache design; semantic similarity alone is not proof that a response is reusable.
+- **Route requests / 请求路由：** use a lower-cost candidate only for cases where it meets the measured quality bar. Include classifier errors, added latency, fallback frequency, and maintenance in the comparison. See [Model Selection and Ecosystem / 模型选择与生态](../foundations/model-selection-and-ecosystem.md).
+- **Inference batching / 推理批处理：** a serving engine can combine work from concurrent requests into accelerator batches. Iteration-level or continuous batching can admit and retire sequences between token-generation steps, improving hardware utilization and aggregate throughput on suitable workloads. Queueing and batch formation can add per-request delay, so measure throughput, queue time, and latency together. This is distinct from an asynchronous provider Batch API, where requests are submitted as a job and results arrive later; that interface is for work that tolerates delayed completion, not a promise about how an inference engine batches live traffic.
+- **Quantization / 量化：** represent weights, and in some methods activations, with fewer bits. This can reduce model memory and data movement, and may improve inference speed when the hardware and kernels support the chosen format. Quantization error can affect task quality, and lower precision does not guarantee faster end-to-end service; evaluate the exact model, quantizer, hardware, and workload.
+- **Distillation / 蒸馏：** train a smaller student on outputs or softened targets from a larger teacher over chosen inputs. A student may reduce serving cost or latency, but can lose capabilities or fail outside the distillation set. Include teacher/data generation and evaluation in the cost, and test the student on held-out tasks before replacing the teacher.
+- **Stream responses / 流式返回：** streaming can improve perceived responsiveness and time to first token; it does not necessarily reduce total generation time or work.
 
-**Headline (30s):** Six levers, from cheapest to most invasive: **streaming** (perceived latency only), **KV-cache** (reuse prefix computation), **semantic caching** (reuse full responses for similar queries), **request batching** (GPU throughput), **quantization** (smaller precision = faster, cheaper, slight quality loss), and **model distillation** (train a smaller model to mimic a bigger one). Stack in order of complexity; measure after each.
+Provider features such as prompt caching, batch jobs, context limits, and pricing vary by model and API and can change. Verify current documentation for the exact deployment. Compare total cost, including inference, retrieval, storage, engineering, evaluation, and operations.
 
-**The techniques:**
+### A teaching calculation for cache cost / 缓存成本教学算例
 
-### KV-cache
+Assume 1,000 model calls, each with 1,000 input tokens and 200 output tokens. For this arithmetic example only, assume uncached input costs $2 per million tokens, cached input costs $1 per million, and output costs $8 per million. These are invented teaching values, not current provider prices; ignore cache-write, storage, retrieval, and other fees.
 
-Reuse computed key-value pairs across requests with shared prefixes. Stable system prompts increase cache hit rate dramatically.
+Without caching, the token charge is 1,000 × [(1,000 × $2) + (200 × $8)] / 1,000,000 = $3.60.
 
-```python
-# Requests with same system prompt share cached KV pairs
-# Higher hit rate = fewer tokens recomputed = lower latency and cost
-```
+Suppose 400 calls share a 500-token prompt prefix and receive the assumed cached-input rate for that prefix. Prompt caching still processes the remaining input and generates all 200 output tokens. The assumed token charge becomes 600 × $0.0036 + 400 × [$0.0005 + $0.001 + $0.0016] = $3.40: the $0.20 saving comes only from the lower rate on 400 × 500 cached input tokens. The output is still generated and billed.
 
-### Semantic caching
+An application-level response-cache hit is different: if 400 requests can safely reuse an exact, current response, those requests skip the model call, so the remaining 600 model calls cost 600 × $0.0036 = $2.16 in token charges, before cache infrastructure costs. This calculation assumes a valid exact response hit; a semantic cache needs its own correctness and authorization checks. OpenAI's current [prompt caching documentation](https://developers.openai.com/api/docs/guides/prompt-caching), checked 2026-10-15, likewise describes reuse of a prompt prefix while the model still generates a new response; its supported models, rates, and cache rules are provider-specific and change.
 
-Cache responses for semantically similar queries, not just exact matches. Use embedding similarity with a threshold.
+## How should an application monitor behavior? / 应用应监控哪些行为？
 
-```python
-def get_cached_response(query: str, threshold: float = 0.95) -> str | None:
-    query_embedding = embed(query)
-    for cached in cache:
-        if cosine_similarity(query_embedding, cached.embedding) >= threshold:
-            return cached.response
-    return None
-```
+Track technical operation and task outcomes together. Useful measures include latency distributions and TTFT, throughput and queue time, errors and timeouts by stage, input/output usage, cost per completed task, tool success and authorization denials, cache hit correctness, task completion, escalation, and user feedback.
 
-### Request batching
+Set thresholds from the service's requirements and baseline; no universal error-rate or latency threshold fits every application. Record prompt, model, and relevant configuration versions so a change can be investigated. Keep logs proportionate: redact or avoid sensitive content and apply retention controls. Use sampled traces or derived metrics where full payload logging is unnecessary.
 
-Group multiple requests to maximize GPU throughput. Trades per-request latency for overall throughput.
+Model behavior, external data, prompts, and provider implementations can change. Re-run an evaluation set when a material component changes and compare results by important task slices; see [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md). Maintain a rollback or fallback path when a release violates the product's agreed quality bar.
 
-### Quantization
+## How can feedback improve the product? / 如何让反馈改进产品？
 
-Reduce model precision: FP32 → FP16 → INT8 → INT4. Tradeoff: lower memory and faster inference, slight quality loss. Common formats: GPTQ, AWQ, GGUF.
+Collect explicit signals such as ratings or corrections and implicit signals such as task completion, accepted suggestions, repeated requests, and escalation. These signals are incomplete and biased: a rating reflects who chose to respond, while time spent can indicate either engagement or confusion. Interpret them alongside representative task evaluation and user research.
 
-### Model distillation
+A practical loop is:
 
-Train a smaller model to mimic a larger one. The smaller model is cheaper and faster in production; requires training effort upfront.
+1. Capture feedback with the relevant task and version context, subject to privacy and retention rules.
+2. Review a sample and classify the failure mode.
+3. Fix the appropriate layer: source data, retrieval, prompt, tool, model choice, interface, or policy.
+4. Test the change on held-out cases and monitor the relevant production outcome.
+5. Keep or roll back the change based on the agreed criteria.
 
-### Streaming
-
-Return tokens as they're generated for better perceived latency (time-to-first-token).
-
-### Comparison
-
-| Technique | Latency Impact | Cost Impact | Complexity | Best For |
-|---|---|---|---|---|
-| KV-cache | High (prefix reuse) | High | Low | Repeated system prompts |
-| Semantic caching | High (cache hits) | High | Medium | Similar user queries |
-| Request batching | Neutral/negative | Medium | Medium | High-throughput batch workloads |
-| Quantization | Medium (faster compute) | High | Medium | Self-hosted, memory-bound |
-| Model distillation | High (smaller model) | High | High | Production at scale |
-| Streaming | Perceived only (TTFT) | None | Low | Real-time UX |
-
-**Gotcha:** Semantic caching with too loose a threshold (e.g., 0.85) serves wrong answers — two semantically similar queries can have different correct answers ("what's the refund policy for US?" vs. "for EU?"). Start at 0.95+ threshold, and always eval cache hits against fresh generations before shipping.
-
----
-
-## How do you manage LLM costs at scale?
-
-**Headline (30s):** Four levers: **model routing** (cheap models for simple tasks, expensive only where needed), **token optimization** (shorter prompts, compressed context), **caching ROI** (measure and maximize hit rate), and **batch processing** (async APIs are often ~50% cheaper). Treat tokens-per-query as a KPI; track it across releases.
-
-### Model routing
-
-Route by task complexity:
-
-```
-Simple (Haiku / small)      → classification, extraction, simple Q&A
-Medium (Sonnet / mid)       → summarization, multi-step reasoning
-Complex (Opus / large)      → creative writing, deep analysis, code generation
-```
-
-Classify the task first (cheap LLM call or rules), then route to the right size.
-
-### Token optimization
-
-- Shorter prompts.
-- Compressed context (summarization, selective retrieval).
-- Efficient templates with minimal boilerplate.
-- Measure **tokens-per-query** as a KPI per feature.
-
-### Caching ROI
-
-Track hit rates. Even 50% hit rate can halve costs on cached paths.
-
-### Batch processing
-
-Non-real-time tasks can use batch APIs (often ~50% cheaper than real-time).
-
-### Cost estimation example
-
-| Component | Volume | Unit Cost | Monthly Cost |
-|---|---|---|---|
-| Input tokens (GPT-4) | 100M/month | $2.50/1M | $250 |
-| Output tokens (GPT-4) | 20M/month | $10/1M | $200 |
-| Cache hits (50%) | — | — | -$225 |
-| **Net** | | | **$225** |
-
-With semantic caching at 50% hit rate, effective cost drops by ~50%.
-
-**Gotcha:** "Route everything to the cheap model" destroys quality on hard tasks, but "route everything to the expensive model" burns budget on easy ones. The sweet spot requires real data on task-complexity distribution — instrument your traffic before tuning the routing rules.
-
----
-
-## What should you monitor in an LLM system?
-
-**Headline (30s):** Six categories: **latency** (P50/P95/P99, TTFT), **token usage** (per request, per user, total), **error rates** (API errors, timeouts, rate limits, malformed responses), **quality** (hallucination rate, task completion, satisfaction), **cost** (daily spend, cost/request), and **cache** (hit rate). Set alerts on thresholds and **quality drift** — LLM behavior changes silently over time.
-
-### Latency
-
-- **P50, P95, P99** response times.
-- **Time to first token (TTFT)** for streaming UX.
-
-### Token usage
-
-- Input/output tokens per request.
-- Total daily consumption.
-- Tokens per user/session (catches runaway sessions).
-
-### Error rates
-
-- API errors (4xx, 5xx).
-- Timeouts.
-- Rate limits.
-- Malformed responses (parse failures, truncation).
-
-### Quality metrics
-
-- Hallucination rate.
-- User satisfaction scores.
-- Task completion rate.
-
-### Quality drift
-
-Model behavior can change over time due to provider updates or data drift. Track quality metrics week-over-week and alert on degradation.
-
-### Monitoring dashboard checklist
-
-| Category | Metrics | Alerts |
-|---|---|---|
-| Latency | P50, P95, P99, TTFT | P99 > threshold |
-| Throughput | Requests/sec, tokens/sec | Drops below baseline |
-| Errors | Error rate by type | Error rate > 1% |
-| Cost | Daily spend, cost/request | Budget threshold |
-| Quality | Satisfaction, completion rate | Week-over-week decline |
-| Cache | Hit rate | Hit rate < threshold |
-
-**Gotcha:** Provider-side silent model updates are the hardest drift to catch. An "imperceptible" improvement upstream can change output format or tone enough to break your downstream parsers and regression test suite. Pin model versions explicitly (`gpt-4-0613` not `gpt-4`) whenever the provider allows, and run weekly evals on fixed test sets to catch drift.
-
----
-
-## How do you design user feedback loops that actually improve the product?
-
-**Headline (30s):** Capture both **implicit signals** (time on response, follow-ups, acceptance rate) and **explicit feedback** (thumbs, ratings, corrections). Feed into an **RLHF flywheel** (preferences → reward model → improved model → deploy → repeat) or simpler update cycles. Design the feedback UX to minimize friction — a one-tap thumbs gets 100× more data than a form.
-
-### Implicit signals
-
-- Time spent on response.
-- Follow-up questions (indicates confusion).
-- Acceptance / rejection of suggestions (autocomplete, code suggestions).
-
-### Explicit feedback
-
-- Thumbs up/down.
-- Star ratings.
-- Correction submissions.
-
-### RLHF flywheel
-
-1. Collect preferences (A vs. B, thumbs up/down).
-2. Train reward model on preferences.
-3. Improve base model (RLHF, DPO) or add fine-tuning.
-4. Deploy improved model.
-5. Repeat.
-
-### Designing feedback UX
-
-| Principle | Implementation |
-|---|---|
-| Minimize friction | One-tap feedback (thumbs), not forms |
-| Contextual timing | Prompt after action (after copy, after 5s) |
-| Avoid survey fatigue | Sample users, limit frequency |
-| Capture intent | Optional free-text for downvotes |
-| Link to outcome | Correlate feedback with task success |
-
-**Gotcha:** Explicit feedback is heavily biased — users who loved it don't bother; angry users always rate. Don't interpret "30% thumbs down" as "30% failure rate"; it's a skewed sample. Pair explicit feedback with implicit signals (retention, task completion, session length) for a real picture.
-
----
+Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](../fine-tuning/fine-tuning-strategies.md).
 
 ## API, self-hosted, edge, or hybrid — how do you pick a deployment pattern?
 
-**Headline (30s):** Start with **API** for speed to ship. Move to **self-hosted** once volume or data residency makes the math work (rough threshold: ~$10K/month API spend or strict compliance). Choose **edge** for latency-sensitive or offline use cases. Use **hybrid** when workloads split cleanly into "expensive hard" and "cheap simple/sensitive."
+Compare the same workload and quality bar across patterns, including data flow, service terms, operations, peak capacity, update ownership, and failure recovery.
 
-### The tradeoff
+| Pattern | Useful when | Costs and constraints |
+|---|---|---|
+| **Hosted API / 托管 API** | Managed inference and quick iteration fit the task. | Provider terms, model lifecycle, feature support, rate limits, availability, and per-use costs need review. |
+| **Self-hosted / 自托管** | Control over serving location, version, and infrastructure is a real requirement. | The team owns capacity, scaling, security updates, model serving, observability, and on-call response. |
+| **Edge / 端侧** | Offline use, local latency, or device-level data handling matters. | Compute, battery, memory, device coverage, updates, and supported model size constrain the design. |
+| **Hybrid / 混合** | Distinct workloads need different data or serving boundaries. | Routing and duplicated operations add complexity; define fallback and consistent policy behavior. |
 
-| Pattern | Pros | Cons | When to Choose |
-|---|---|---|---|
-| **API-based** (OpenAI, Anthropic) | Fastest to ship, no infra management | Ongoing per-token cost, data sent to provider | MVP, low volume, rapid iteration |
-| **Self-hosted** (vLLM, TGI, Ollama) | Full control, predictable cost at scale | Significant infra burden, data stays private | High volume, data sovereignty, cost optimization |
-| **Edge deployment** | On-device inference, latency, privacy | Limited model size, device constraints | Mobile, offline, privacy-critical |
-| **Hybrid** | API for complex + local for simple/sensitive | More moving parts | Mixed workload, cost + privacy balance |
+A useful comparison is:
 
-### Decision guide
+$$
+\text{total cost} = \text{inference} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and controls}
+$$
 
-- **API-based:** start here. Move off when cost or data concerns justify the switch.
-- **Self-hosted:** volume > ~$10K/month API spend, or strict data residency requirements.
-- **Edge:** latency-sensitive, offline-first, or device-level privacy.
-- **Hybrid:** API for hard tasks, local model for simple/sensitive ones.
+There is no universal spend threshold for switching to self-hosting. Estimate with actual traffic, peak demand, staffing, quality requirements, and the full operating burden. Edge and hybrid choices likewise depend on device and data constraints, not just latency labels.
 
-**Tiebreaker question (to ask the interviewer):** "What's the data residency requirement, and what's our expected monthly LLM spend?" These two answers narrow the pattern to one or two options.
+## Related notes / 相关笔记
 
-**Gotcha:** Self-hosting math often looks attractive at volume but ignores the hidden costs — MLOps headcount, GPU availability risk, model update cadence, internal eval infrastructure. The break-even point is typically **later than you think**, not earlier. Get a real quote including people costs before committing.
+- [Model Selection and Ecosystem / 模型选择与生态](../foundations/model-selection-and-ecosystem.md) covers candidate comparison and routing.
+- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) covers context budgets and caching.
+- [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) covers offline and production evaluation.
+- [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md) covers runtime boundaries and controls.
 
-**See also:** [3.1 Context Engineering → KV-Cache Optimization](../context/context-engineering-principles.md#how-do-you-use-the-kv-cache-to-cut-inference-cost) for the KV-cache mechanics; [1.2 Model Selection and Ecosystem](../foundations/model-selection-and-ecosystem.md) for model choices behind the routing decisions.
+## Sources / 来源
+
+- OpenAI, [Function calling](https://developers.openai.com/api/docs/guides/function-calling), checked 2026-10-15. Tool calls are proposed by the model and handled by application code.
+- OpenAI, [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. Schema adherence applies to supported schemas and models; semantic validation and failure handling remain application concerns.
+- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Current capabilities and recommendations are API-specific and may change.
+- Frantar et al., [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323); Lin et al., [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978).
+- Hinton et al., [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531).
+- Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu), for iteration-level scheduling and selective batching. OpenAI, [Batch API](https://developers.openai.com/api/docs/guides/batch), checked 2026-10-15, documents its separate asynchronous job interface.

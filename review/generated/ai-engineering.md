@@ -4,133 +4,88 @@
 
 ## 1. How LLMs Work / 大语言模型如何工作
 
-### How LLMs Work
+### How LLMs Work / 大语言模型如何工作
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** An autoregressive text-generating language model processes token IDs and repeatedly predicts a distribution for the next token. Many widely used generators use a Transformer decoder with causal self-attention, but model families differ in architecture, tokenizer, training, and decoding API. / 自回归文本生成模型把文本转换为 token ID，并反复预测下一个 token 的概率分布。许多常见生成模型使用带因果自注意力的 Transformer 解码器，但不同模型的结构、分词器、训练方式和解码接口各不相同。
 
-- Why are modern LLMs autoregressive, not masked like BERT?
-- What's a token, and why don't LLMs just use words?
-- Walk me through how a transformer generates one token
-- How does temperature actually work, and how is it different from top-k and top-p?
+**30-second answer / 30 秒回答**
 
----
+- **English:** A tokenizer maps text to model-specific tokens. A causal language model uses the prompt and generated prefix to produce next-token scores; a decoding rule selects the next token, which is appended and processed again. The Transformer is a common architecture, while its exact blocks, position method, and serving optimizations vary.
+- **中文：** 分词器把文本映射为特定模型的 token。因果语言模型根据提示和已生成前缀计算下一个 token 的分数，再由解码策略选出 token 并追加到序列中。Transformer 是常见架构，但具体模块、位置编码和服务端优化会因模型而异。
 
-#### Why are modern LLMs autoregressive, not masked like BERT?
+**Key terms / 关键术语：** token / 词元；tokenizer / 分词器；autoregressive / 自回归；causal mask / 因果掩码；logit / 未归一化分数；decoding / 解码；context window / 上下文窗口。
 
-**Headline (30s):** Modern LLMs are **autoregressive** — they predict the next token from left-to-right context under a causal mask (each position can't attend to future tokens). Masked models like BERT see **bidirectional** context and excel at embeddings and classification, but they can't generate text at inference time because generation requires producing tokens without seeing the "future" tokens you're about to produce.
+#### What is a token? / 什么是 token？
 
-**Why it's asked:** Tests whether you understand the training objective behind GPT / Claude / Llama vs. BERT, and why decoder-only architectures dominate modern generation.
+A tokenizer converts text into a sequence of model-specific units and their IDs. A unit can correspond to a whole word, part of a word, bytes, or another learned piece; whitespace and punctuation may be included in a token. The model's input is not a universal word vocabulary, and different tokenizers can split the same text differently.
 
-**How it works:**
+#### How does BPE build subword tokens? / BPE 如何构建子词 token？
 
-- **Autoregressive** (GPT, Claude, Llama, Mistral): at every position, the model predicts the next token. During training, a causal mask prevents each position from attending to tokens on its right. At inference, tokens are generated one at a time and appended to the sequence.
-- **Masked** (BERT, RoBERTa, ALBERT): during training, random tokens are replaced with `[MASK]` and the model predicts them using both left and right context. At inference, there's no "future" text to condition on for generation.
-- Autoregressive training matches the generation task (sequential, left-to-right), which is why it won out for chat, completion, and instruction-following.
+Byte pair encoding (BPE) is one family of subword tokenization methods, not a rule used by every tokenizer. In a common training procedure, text is represented as basic symbols, adjacent symbol pairs are counted, and frequent pairs are merged iteratively; the learned merge sequence builds a vocabulary that includes multi-symbol pieces. Exact variants differ, including whether the basic symbols are bytes or characters.
 
-**Common follow-ups:**
+At encoding time, the tokenizer starts from the model's basic symbols and applies learned merge priorities to the input before mapping resulting pieces to IDs. A rare word can therefore be represented as several learned pieces rather than an unknown whole word. This is a model-specific encoding procedure; merge ranks, vocabulary, and token boundaries differ across tokenizers. See Sennrich et al. for a BPE-based subword method in machine translation.
 
-- "Why can't BERT generate?" — generation needs a model that can produce tokens without seeing future context. BERT was trained assuming it always has both sides, so at inference there's nothing to the right to condition on.
-- "Decoder-only vs. encoder-decoder?" — decoder-only (GPT family) is simpler and scales well for generation. Encoder-decoder (T5, BART, original Transformer) is better for classic seq2seq tasks like translation where the input and output are distinct sequences.
+**Concrete example / 具体例子。** With the cl100k_base encoding in tiktoken 0.12.0, the text “The transformer architecture revolutionized NLP.” becomes the token sequence [“The”, “ transformer”, “ architecture”, “ revolution”, “ized”, “ N”, “LP”, “.”] (8 tokens). This is one encoding's result, not a promise about every current model or the full serialized API request. Exact counts can also include message structure, tools, images, or other inputs; use the target model's tokenizer or token-counting API when the count matters. [OpenAI's token guide](https://developers.openai.com/api/docs/concepts) gives a rough English estimate, but it is not a substitute for counting the actual input.
 
-**Gotcha:** Many candidates say "GPT uses attention" as the distinguishing feature — true, but BERT uses attention too. The actual distinguisher is the **causal mask**: that's what prevents future-token leakage during training and what makes the model generable at inference.
+#### Autoregressive generation and masked language models / 自回归生成与掩码语言模型
 
----
-
-#### What's a token, and why don't LLMs just use words?
-
-**Headline (30s):** Tokens are **subword units** built via Byte-Pair Encoding (BPE). The model never sees raw characters or words — only integer IDs from a fixed vocabulary (~30k–100k entries). Subwords handle unknown/rare words, keep the vocabulary tractable across many languages, and let common morphemes ("un-", "-ing") reuse across words.
-
-**How BPE works:**
-
-1. Start with a character-level vocabulary.
-2. Find the most frequent pair of adjacent symbols.
-3. Merge them into a new symbol; add to vocabulary.
-4. Repeat until the vocabulary reaches the target size.
-
-The result is a mix of whole words, subwords, and common character sequences.
-
-**Example** (using GPT-4's `cl100k_base` tokenizer):
-
-```
-Input:  "The transformer architecture revolutionized NLP."
-Tokens: ["The", " transformer", " architecture", " revolution", "ized", " N", "LP", "."]
-```
-
-Common words like "transformer" stay whole; less common ones like "revolutionized" split into morphemes ("revolution" + "ized"); rare acronyms like "NLP" split into characters.
-
-**Rule of thumb:** ~1 token ≈ 0.75 words in English. Varies by language and text style.
-
-**Vocabulary size by model:**
-
-| Model | Vocabulary |
-|---|---|
-| BERT | ~30k |
-| Llama 1 / 2 | 32k |
-| Llama 3 | ~128k |
-| GPT-2 / GPT-3 | ~50k |
-| GPT-3.5 / GPT-4 (`cl100k_base`) | ~100k |
-
-**Gotcha:** Don't count tokens by eyeballing character count. Use the model's actual tokenizer (e.g., `tiktoken` for OpenAI). Emojis, non-English characters, and rare symbols can each be several tokens — emoji-heavy or CJK input can eat your context budget much faster than the character count suggests.
-
----
-
-#### Walk me through how a transformer generates one token
-
-**Headline (30s):** Encode the prompt into token IDs → run a forward pass through a stack of self-attention + feed-forward layers → take the logits for the **last position** → softmax into a probability distribution over the full vocabulary → sample (or greedily pick) the next token → append to the sequence → repeat until a stop condition.
-
-**How it works:**
-
-- **Self-attention:** each token attends to every other token in the sequence and produces a weighted combination of their representations.
-- **Multi-head attention:** multiple attention computations run in parallel so different heads can focus on different relationships (syntax, long-range dependencies, semantics). Outputs are concatenated and projected.
-- **Positional encoding:** attention itself is permutation-invariant. Positional encodings (learned or sinusoidal) inject position info so the model knows token order.
-- **Feed-forward + layer norm:** applied per token after attention. Two linear layers with a non-linearity (e.g., GELU), typically 4× the hidden dimension. Layer norm stabilizes training.
-- **Stop conditions:** a stop sequence is produced (e.g., `"\n\n"`, `"Human:"`), the end-of-sequence token is sampled, or `max_tokens` is hit.
-
-**Next-token loop:**
-
-1. Encode prompt → token IDs.
-2. Forward pass.
-3. Logits for last position → softmax → probability distribution.
-4. Sample (or argmax) the next token.
-5. Append to the sequence.
-6. Repeat until stop.
-
-**Common follow-ups:**
-
-- "Why is long context expensive?" — self-attention is **O(n²) in sequence length**. Doubling the context quadruples attention cost. This is the core scaling constraint for long-context models.
-- "Encoder-decoder vs. decoder-only?" — modern LLMs are almost all decoder-only (simpler, scales better for generation). T5 and BART use encoder-decoder for classic seq2seq like translation.
-
-**Gotcha:** Candidates often say attention cost scales with vocabulary size — wrong. Vocabulary only affects the final projection layer and the embedding table. The quadratic cost is in **sequence length**, which is why 1M-token context windows are expensive even with a small vocab.
-
----
-
-#### How does temperature actually work, and how is it different from top-k and top-p?
-
-**Headline (30s):** Temperature **scales logits before softmax** — `T=0` becomes deterministic greedy decoding, `T=1` is unchanged, `T>1` flattens the distribution (more random). **Top-k** restricts sampling to the k highest-probability tokens. **Top-p** (nucleus) samples from the smallest set of tokens whose cumulative probability ≥ p, adapting to the distribution's shape. You usually pick one of top-k / top-p and pair it with a temperature.
-
-**How it works:**
-
-- **Softmax with temperature:** `P(token_i) = exp(logit_i / T) / Σ exp(logit_j / T)`. Lower T sharpens toward the max; higher T flattens.
-- **Temperature sweet spots:**
-  - `0 – 0.3` — factual, structured output, code
-  - `0.5 – 0.8` — balanced chat, creative writing
-  - `1.0+` — exploratory, risk of incoherence
-- **Top-k:** `k=1` is equivalent to greedy. `k=50` is a common default.
-- **Top-p:** `p=0.9` typical. Adaptively shrinks the sampling set on peaky distributions and widens on flat ones, which top-k can't do.
-
-##### Sampling parameters (reference)
-
-| Parameter | What it does | Typical range |
+| Objective | What the model learns | Typical use |
 |---|---|---|
-| `temperature` | Scales logits before softmax. Lower = more deterministic. | 0 (greedy) to 2.0; 0.7 for chat |
-| `top_p` | Nucleus sampling: smallest set with cumulative prob ≥ p | 0.1–1.0; 1.0 = no filtering |
-| `top_k` | Sample only from top k tokens by probability | 1 (greedy) to 100 |
-| `max_tokens` | Hard limit on tokens generated | Task-dependent; 100–4096+ |
-| `stop` | Sequences that halt generation | `["\n\n", "Human:"]` |
-| `frequency_penalty` | Penalize tokens by how often they appear in output | -2.0 to 2.0; 0 = no penalty |
-| `presence_penalty` | Penalize tokens that have already appeared | -2.0 to 2.0; 0 = no penalty |
+| **Autoregressive / 自回归** | Predict the next token from preceding tokens, usually with a causal attention mask during training. | Left-to-right text generation and completion. |
+| **Masked language modeling / 掩码语言建模** | Predict selected masked tokens using surrounding left and right context. | Bidirectional text representations and downstream understanding tasks. |
 
-**Gotcha:** `temperature=0` is **not** guaranteed identical to `top_k=1` across providers. Some APIs still break ties stochastically at T=0; some rescale differently. For deterministic output, set temperature near 0 **and** fix the `seed` parameter if the provider supports it.
+BERT is a well-known bidirectional masked-language model. It is not trained as a standard left-to-right next-token generator, but “cannot generate text” is too absolute: Wang and Cho formulate BERT as a Markov random field language model and describe a sampling procedure for generating sentences. That is an adapted procedure, not ordinary left-to-right decoding. Encoder-decoder models are another common design when input and output are distinct sequences, such as translation. [BERT](https://arxiv.org/abs/1810.04805); [Wang and Cho, BERT as a Markov random field language model](https://arxiv.org/abs/1902.04094); [Transformer](https://arxiv.org/abs/1706.03762).
+
+#### What happens inside a Transformer block? / Transformer block 内部如何工作？
+
+In the original Transformer, an attention sublayer forms queries, keys, and values from the token representations. A scaled dot product between a query and keys becomes weights after softmax; the model uses those weights to combine the corresponding values. A decoder's causal mask prevents a position from attending to later tokens.
+
+Multi-head attention repeats attention with distinct learned projections, concatenates the head outputs, then projects the combined representation. This lets the block combine information from different learned representation subspaces; a head should not automatically be read as a human-defined concept.
+
+Attention mixes information across positions. Position encodings supply order information. A position-wise feed-forward sublayer then transforms each position separately with shared weights. In the original architecture, residual connections wrap each sublayer and layer normalization follows it. Later Transformer variants change these details, so this is a common mechanism, not a specification for every model. See [Attention Is All You Need, §§3.1–3.5](https://arxiv.org/html/1706.03762v7).
+
+#### How one generated token is produced / 如何生成一个 token
+
+A simplified decoder-only generation pass is:
+
+1. Encode the prompt as token IDs and map them to representations.
+2. Process the sequence through attention and feed-forward blocks. Position information and a causal mask let each position use permitted context.
+3. Project the final-position representation to **logits**, one score per candidate next token.
+4. Convert scores into a distribution and select a token, for example by greedy selection or sampling.
+5. Append the token and repeat until a stop condition, output limit, or another runtime condition is reached.
+
+This is an explanatory sketch, not a specification of every model. Implementations may use different attention layouts, position schemes, normalization, output constraints, caching, or non-text input paths. A text token sequence also does not imply that images or audio are handled as ordinary words.
+
+For standard dense self-attention, forming pairwise attention scores over a sequence of length n has quadratic dependence on n. This describes that operation, not necessarily the total latency or cost of a deployed model: feed-forward work, attention variants, hardware, batching, and caching also matter.
+
+#### Temperature, top-k, and top-p / 温度、top-k 与 top-p
+
+Given next-token logits z_i, temperature T > 0 changes their sharpness before softmax:
+
+$$
+P(i) = \frac{\exp(z_i/T)}{\sum_j \exp(z_j/T)}
+$$
+
+Lower T concentrates probability on high-scoring tokens; higher T flattens it. In the idealized limit as T approaches zero, selection approaches argmax, but API support and reproducibility behavior are provider- and model-specific.
+
+- **Top-k / 前 k 项：** keep only the k highest-probability candidates, then decode from them.
+- **Top-p / nucleus sampling / 核采样：** keep the smallest ranked set whose cumulative probability reaches p, then decode from that set.
+- **Greedy decoding / 贪心解码：** choose the highest-scoring candidate instead of sampling.
+
+These controls change decoding behavior; none makes an answer more factual. Parameter availability and interactions vary. For example, the OpenAI Responses API reference checked on 2026-10-15 documents temperature and top_p and recommends changing one rather than both for that API; do not assume another provider exposes the same parameters. [Nucleus sampling paper](https://arxiv.org/abs/1904.09751), [OpenAI Responses API reference](https://developers.openai.com/api/reference/resources/responses/methods/create).
+
+#### Related notes / 相关笔记
+
+- [Model Selection and Ecosystem / 模型选择与生态](#2.%20Model%20Selection%20and%20Ecosystem%20/%20%E6%A8%A1%E5%9E%8B%E9%80%89%E6%8B%A9%E4%B8%8E%E7%94%9F%E6%80%81) compares candidates against task requirements.
+- [Context Engineering Principles / 上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99) explains context limits, token cost, and prompt caching.
+
+#### Sources / 来源
+
+- Vaswani et al., [Attention Is All You Need](https://arxiv.org/abs/1706.03762).
+- Devlin et al., [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805).
+- Wang and Cho, [BERT has a Mouth, and It Must Speak: BERT as a Markov Random Field Language Model](https://arxiv.org/abs/1902.04094).
+- Sennrich et al., [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909).
+- OpenAI, [Key concepts: Tokens](https://developers.openai.com/api/docs/concepts), checked 2026-10-15. The tokenization above was reproduced locally with Python 3.11.13 and tiktoken 0.12.0 using cl100k_base.
 ## 2. Model Selection and Ecosystem / 模型选择与生态
 
 ### Model Selection and Ecosystem / 模型选择与生态
@@ -287,273 +242,137 @@ Do not put real names, ticket numbers, secrets, or private histories in a reusab
 - OpenAI, [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. API behavior and supported schema features can change.
 ## 4. Advanced Prompting Techniques / 高级提示技巧
 
-### Advanced Prompting Techniques
+### Advanced Prompting Techniques / 高级提示技巧
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** Few-shot examples, reasoning prompts, self-consistency, tool loops, prompt chains, and prompt generation are optional methods for particular failure modes. They add tokens, calls, or control-flow complexity, so compare them with a simpler prompt and application-side checks on representative cases. Published results establish benefits only for the evaluated tasks and setups, not a general performance guarantee. / 少样本示例、推理提示、自一致性、工具循环、提示词链和提示词生成都是针对特定失败模式的可选方法。它们会增加 token、调用或控制流复杂度，因此应在有代表性的样本上与简单提示和应用校验做比较。论文结果只说明其评估任务和设置下的效果，不构成普遍性能保证。
 
-- When should you use few-shot vs. zero-shot prompting?
-- What is chain-of-thought, and when is it worth the extra tokens?
-- What is self-consistency, and how is it different from CoT?
-- What is the ReAct pattern, and why is it the default for tool-using agents?
-- When should you chain prompts instead of using one?
-- What is meta-prompting, and when does it pay off?
+**Key terms / 关键术语：** zero-shot / 零样本；few-shot / 少样本；chain-of-thought (CoT) / 思维链；self-consistency / 自一致性；ReAct / 推理与行动；prompt chaining / 提示词链；meta-prompting / 元提示。
 
----
+#### When should you use few-shot vs. zero-shot prompting? / 何时使用少样本或零样本提示？
 
-#### When should you use few-shot vs. zero-shot prompting?
+Start with a clear zero-shot instruction for a simple, well-defined task. Add a few examples when they resolve ambiguity, demonstrate a non-obvious label boundary, or show a required output format. Keep examples representative and include meaningful edge cases. More examples can consume context and can also bias the model toward an accidental pattern.
 
-**Headline (30s):** Default to **zero-shot** for simple, well-defined tasks with strong instruction-following models. Reach for **few-shot** when zero-shot is inconsistent, when the mapping is non-obvious, when you need a custom output format, or when edge cases matter. Few-shot costs tokens per call; zero-shot costs you in retries and format drift.
+**Zero-shot / 零样本:**
 
-**How each works:**
+~~~text
+Classify the sentiment as positive, negative, or neutral.
+Review: "The product arrived late, but the quality exceeded expectations."
+Return one label.
+~~~
 
-- **Zero-shot:** only instructions, no examples.
+**Few-shot / 少样本:**
 
-```
-Classify the sentiment of the following review as positive, negative, or neutral.
-Review: "The product arrived late but the quality exceeded expectations."
-```
+~~~text
+Classify each review as positive, negative, or neutral.
+"Terrible experience, never buying again." → negative
+"Exactly what I needed. Fast shipping." → positive
+"It's okay. Nothing special." → neutral
+"The product arrived late, but the quality exceeded expectations." →
+~~~
 
-- **Few-shot:** demonstrate expected input-output pairs so the model picks up the pattern.
+For extraction, examples can demonstrate how a date or amount should be normalized. Keep them synthetic; validate required fields, allowed values, and source evidence in application code. Measure the example/no-example variants on the same held-out cases rather than assuming few-shot is more reliable.
 
-```
-Classify the sentiment of each review as positive, negative, or neutral.
+#### What is chain-of-thought, and when is it useful? / 什么是思维链，何时有用？
 
-Review: "Terrible experience, never buying again."
-Sentiment: negative
+Chain-of-thought (CoT) prompting asks for intermediate reasoning text before a final answer, often through examples or an instruction. Research found gains on some multi-step arithmetic and reasoning benchmarks under particular model and prompt conditions. The result is task- and model-dependent: asking for step-by-step text does not guarantee correct reasoning, and a written rationale is not proof that it faithfully describes the model's internal computation.
 
-Review: "Exactly what I needed. Fast shipping."
-Sentiment: positive
+A small arithmetic illustration is 4 × $2 + 2 × $3 = $8 + $6 = $14. A model may give a concise answer, a worked explanation, or an incorrect derivation. Verify consequential arithmetic with code or another trusted method.
 
-Review: "It's okay. Nothing special."
-Sentiment: neutral
+OpenAI's reasoning-model guidance, checked 2026-10-15, recommends trying a straightforward prompt first; asking for step-by-step reasoning can be unnecessary or counterproductive for those models. API behavior differs by provider and model, so evaluate the actual target rather than carrying a prompt recipe across systems.
 
-Review: "The product arrived late but the quality exceeded expectations."
-Sentiment:
-```
+#### What is self-consistency? / 什么是自一致性？
 
-**Few-shot for structured extraction:**
+Self-consistency samples multiple candidate reasoning answers and aggregates their final answers, often by a majority vote. The research paper reported improvements on several tested reasoning benchmarks. It can help when the candidates make partly independent errors, but repeated samples can agree on the same wrong answer. Use a task-specific verifier for important results.
 
-```python
-def build_extraction_prompt(text: str) -> str:
-    return """Extract the following fields from the text. Return JSON.
+**Illustration, not model output / 示意，不是模型实测输出：** For 17 × 23, two valid decompositions are 17 × (20 + 3) = 340 + 51 = 391 and (10 + 7) × 23 = 230 + 161 = 391. If sampling several candidates, normalize equivalent answers before aggregation; voting does not replace checking.
 
-Example 1:
-Text: "John Smith ordered 3 widgets on March 10. Total: $45.99."
-Output: {"name": "John Smith", "quantity": 3, "date": "2024-03-10", "total": 45.99}
+Multiple samples increase token use and usually require more inference work. Exact cost and wall-clock impact depend on batching, provider behavior, and the selected model. Compare accuracy, latency, and cost with a single answer on the target task.
 
-Example 2:
-Text: "Jane Doe, 2 items, paid $120.00 on 3/15."
-Output: {"name": "Jane Doe", "quantity": 2, "date": "2024-03-15", "total": 120.00}
+#### What is ReAct, and when should an application use a tool loop? / 什么是 ReAct，应用何时应使用工具循环？
 
-Now extract from:
-Text: """ + text
-```
+ReAct is a research prompting pattern that interleaves a model's reasoning text, an action, and an observation from an environment. Its paper evaluated it on specific knowledge and interactive tasks. It is one design option for tasks that need successive observations and actions, not a universal default for tool use. A one-shot function call or a developer-controlled workflow may be simpler when the path is known.
 
-**Gotcha:** Few-shot examples should cover the **edges**, not the middle. Three easy examples teach the model less than one easy + one ambiguous + one near-miss, because near-misses are exactly where production fails.
+**Synthetic flight-search illustration / 虚构的航班搜索示例:**
 
----
+~~~text
+User: Find the lowest listed fare from NYC to LA for next Tuesday.
+Action: search_flights(origin="NYC", destination="LA", date=<resolved date>)
+Observation: The search service returned three fares: $189, $210, and $175.
+Answer: The lowest fare returned by that search was $175.
+~~~
 
-#### What is chain-of-thought (CoT), and when is it worth the extra tokens?
+This example assumes a real search service would resolve airport codes, date, currency, freshness, and availability. The model must not invent those observations. The application should validate tool arguments, authorize side effects, limit tool access and turns, record outcomes, and stop safely on errors. Treat retrieved pages and tool output as untrusted input; see [Agent Fundamentals / 智能体基础](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80), [Tool Design and Function Calling / 工具设计与函数调用](#9.%20Tool%20Design%20and%20Function%20Calling%20/%20%E5%B7%A5%E5%85%B7%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8), and [AI Safety in Production / 生产环境中的 AI 安全](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8).
 
-**Headline (30s):** CoT elicits **intermediate reasoning tokens** before the final answer. The model "thinks aloud," which reduces errors on math, logic, and multi-step tasks by decomposing the problem and by surfacing the reasoning for debugging. Worth it for anything where the answer isn't a direct lookup — not worth it for simple classification where it just burns tokens.
+#### When should you chain prompts? / 何时串联提示词？
 
-**Two flavors:**
+Use a fixed prompt chain when the task has separable steps and code can validate, branch, retry, or stop between them. If the sequence is known, developer-controlled stages can be easier to inspect than an open-ended agent loop. Each model call can still be wrong; validate intermediate outputs and test the whole chain.
 
-- **Zero-shot CoT** — add a trigger like "Let's think step by step" and let the model produce reasoning unguided.
+**Outline → validate → write / 大纲 → 校验 → 写作:**
 
-```
-A store sells apples for $2 each and oranges for $3 each. If I buy 4 apples and 2 oranges, how much do I pay? Let's think step by step.
-```
+1. Ask for an outline in a declared schema.
+2. Parse it and check required sections and constraints in application code.
+3. If valid, ask for a draft based on the outline; otherwise return an explicit failure or a bounded correction request.
 
-- **Few-shot CoT** — show worked examples so the model learns the reasoning style you want.
+~~~python
+outline = call_model(make_outline_prompt(topic))
+parsed = parse_schema(outline)
+if not parsed.ok:
+    return validation_error(parsed.issues)
+if not deterministic_checks(parsed.value):
+    return validation_error("outline violates required section rules")
+return call_model(make_draft_prompt(parsed.value))
+~~~
 
-```
-Q: A shirt costs $25. There's a 20% discount. How much do I pay?
-A: First, 20% of $25 = $5. So the discount is $5. $25 - $5 = $20. I pay $20.
+If five stages each succeed with probability 0.95 and failures are independent, the probability that all five succeed is 0.95⁵ ≈ 0.774. Real failures may be correlated, and retries or gates change the result; measure the actual workflow instead of treating this illustration as a reliability estimate.
 
-Q: A book costs $40. There's a 15% discount. How much do I pay?
-A: First, 15% of $40 = $6. So the discount is $6. $40 - $6 = $34. I pay $34.
+#### What is meta-prompting? / 什么是元提示？
 
-Q: A laptop costs $800. There's a 25% discount. How much do I pay?
-A:
-```
+Meta-prompting uses a model to generate candidate instructions or revise an existing prompt in response to concrete failures. Treat either output as a candidate. Evaluate variants on development examples, inspect failures, and keep a final held-out set untouched until selection; repeated tuning against the same set can overfit it.
 
-**When it helps:**
+Automatic Prompt Engineer (APE) is one research approach to generating and selecting instruction candidates for evaluated tasks. The templates here are a lightweight human-directed workflow, not a reproduction of that method or its reported results.
 
-- Multi-step math, logic, or deduction
-- Problems where the answer depends on intermediate facts
-- Any task where you want to audit the reasoning
+**Candidate generation / 生成候选提示词:**
 
-**Gotcha:** On "reasoning" models (o1, Claude with extended thinking, etc.), **don't manually add "think step by step"** — the model already does internal chain-of-thought. Adding explicit CoT instructions can actually hurt performance by double-reasoning. Reserve explicit CoT for non-reasoning models.
+~~~text
+Task: Classify a support message as billing, technical, or general.
+Success: Choose the supported category; return needs_review when evidence is insufficient.
+Inputs: Only the supplied message and category definitions.
+Output: Return the category and needs_review as JSON.
+Generate three materially different candidate instructions. For each, state which ambiguity it addresses. Do not claim the candidates have been tested.
+~~~
 
----
+**Failure-driven revision / 根据失败样例修订:**
 
-#### What is self-consistency, and how is it different from CoT?
+~~~text
+Current prompt:
+[insert the current synthetic prompt]
 
-**Headline (30s):** Self-consistency generates **multiple reasoning paths** for the same question and takes the **majority answer**. It sits on top of CoT — CoT is one path, self-consistency is N paths with voting. Improves reliability on reasoning tasks where single-path errors are common, at the cost of N× prompt + N× response tokens.
+Observed failure:
+[insert a synthetic input and the incorrect output]
 
-**How it works:**
+Expected behavior:
+[state the correct output and why]
 
-```
-For each of the following 5 reasoning attempts, solve: "What is 17 * 23?"
-Take the most common final answer.
-```
+Revise only the instruction needed to address this failure. Preserve the task, output contract, and other constraints. Return the revised prompt and a short change note. This candidate still requires evaluation on examples not used to write it.
+~~~
 
-| Attempt | Reasoning Path | Answer |
-|---|---|---|
-| 1 | 17×20=340, 17×3=51, 340+51=391 | 391 |
-| 2 | 17×23 = (20-3)×23 = 460-69 = 391 | 391 |
-| 3 | 17×23 ≈ 400... (error) | 391 |
-| 4 | 17×23 = 391 | 391 |
-| 5 | 17×23 = 391 | 391 |
+A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task.
 
-**Majority answer:** 391.
+#### Related notes / 相关笔记
 
-**Tradeoffs:**
+- [Prompt Engineering Fundamentals / 提示工程基础](#3.%20Prompt%20Engineering%20Fundamentals%20/%20%E6%8F%90%E7%A4%BA%E5%B7%A5%E7%A8%8B%E5%9F%BA%E7%A1%80) covers clear instructions, examples, and output contracts.
+- [Context Engineering Principles / 上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99) covers the information available to each inference.
+- [Agent Fundamentals / 智能体基础](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80), [Orchestration Patterns / 编排模式](#8.%20Orchestration%20Patterns%20/%20%E7%BC%96%E6%8E%92%E6%A8%A1%E5%BC%8F), and [Tool Design and Function Calling / 工具设计与函数调用](#9.%20Tool%20Design%20and%20Function%20Calling%20/%20%E5%B7%A5%E5%85%B7%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8) cover runtime tool loops and control flow.
 
-- **Pro:** smooths out single-path errors; improves reliability on reasoning-heavy tasks.
-- **Con:** N× tokens, N× latency, N× cost.
+#### Sources / 来源
 
-Use when correctness matters more than speed (code generation, math, critical classification).
-
-**Gotcha:** Majority vote only works when the correct answer is **dominant**. If the model is systematically biased toward a wrong answer (e.g., a common misconception), all N paths agree on the wrong answer and self-consistency confirms the mistake. Pair with a separate evaluator (LLM-as-judge or rule-based check) when stakes are high.
-
----
-
-#### What is the ReAct pattern, and why is it the default for tool-using agents?
-
-**Headline (30s):** **Re**asoning + **Act**ing. The model alternates between `Thought` (reason about next step), `Action` (tool call), and `Observation` (tool result), in a loop, until done. ReAct is the default tool-using agent pattern because the explicit Thought step reduces hallucination (model must justify each action) and Observations keep it grounded in real data instead of pattern-matching.
-
-**Pattern structure:**
-
-```
-Thought: [reasoning about current state and next step]
-Action: [tool_name]([args])
-Observation: [tool result]
-
-Thought: [reasoning based on observation]
-Action: [tool_name]([args])
-Observation: [tool result]
-
-...
-
-Thought: I now have enough information to answer.
-Answer: [final response]
-```
-
-**Concrete example — flight lookup:**
-
-```
-User: What's the cheapest flight from NYC to LA next Tuesday?
-
-Thought: I need to find flights. I'll search for flights from NYC airports to LA airports on the user's specified date.
-Action: search_flights(origin="NYC", destination="LA", date="2024-03-19")
-Observation: Found 3 flights: Delta $189, United $210, JetBlue $175
-
-Thought: JetBlue at $175 is the cheapest. I'll present this to the user.
-Answer: The cheapest flight from NYC to LA on Tuesday March 19 is JetBlue at $175.
-```
-
-**Why it works:**
-
-- Explicit reasoning reduces hallucination — the model must justify each action.
-- Observations ground the model in real data rather than pattern-matching.
-- The loop naturally supports multi-step tool use without custom orchestration.
-
-**Common follow-ups:**
-
-- "How do you prevent infinite loops?" — cap max iterations (e.g., 10–20 turns) and add an exit condition on repeated identical actions.
-- "How is this different from plain function calling?" — plain function calling is one turn: request → tool call → response. ReAct is the iterative loop on top, with explicit Thought steps.
-
-**Gotcha:** Don't pollute the context with verbose Observations. If a tool returns 10KB of JSON, truncate or summarize before the next Thought — otherwise long agent runs degrade from context rot (see [3.1 Context Engineering → Context as a Finite Resource](#Why%20is%20context%20a%20finite%20resource,%20and%20what%27s%20%22lost-in-the-middle%22?)).
-
----
-
-#### When should you chain prompts instead of using one?
-
-**Headline (30s):** Use prompt chaining when a task has **clearly separable steps**, benefits from **programmatic gates** between them (validation, retry, branching), or when a single mega-prompt is so long it confuses the model. Each step's output feeds the next; gates catch failures early instead of propagating them downstream.
-
-**Example — outline → validate → write:**
-
-```
-Step 1 (Generate Outline):
-Given the topic "Introduction to RAG", produce a 5-section outline with bullet points per section.
-Output format: JSON with keys "sections" (array of {title, bullets}).
-
-Step 2 (Validate):
-Check the outline for: (a) logical flow, (b) no redundant sections, (c) each section has 2-4 bullets.
-If invalid, return {"valid": false, "issues": [...]}. If valid, return {"valid": true}.
-
-Step 3 (Write Content):
-Given the validated outline, write 200-300 words per section. Use markdown. Do not deviate from the outline.
-```
-
-**Programmatic gates:**
-
-| Gate | Purpose |
-|---|---|
-| Validation | Reject malformed output before passing to next step |
-| Filtering | Remove irrelevant content before expensive steps |
-| Branching | Route to different chains based on classification |
-| Retry | Re-run a step with corrected input on failure |
-
-**Implementation sketch:**
-
-```python
-def chain_with_gate(topic: str) -> str:
-    outline = llm_call(step1_prompt(topic))
-    validation = llm_call(step2_prompt(outline))
-    if not validation["valid"]:
-        return retry_step1(topic, validation["issues"])
-    return llm_call(step3_prompt(outline))
-```
-
-**Common follow-ups:**
-
-- "How is this different from a ReAct agent?" — ReAct is model-directed: the LLM decides what to do next each turn. Chaining is developer-directed: you hard-code the sequence of prompts. Use chaining when the path is known, ReAct when it's emergent. See also [5.2 Orchestration Patterns → Prompt Chaining vs. Orchestrator-Workers](#8.%20Orchestration%20Patterns%20/%20%E7%BC%96%E6%8E%92%E6%A8%A1%E5%BC%8F).
-
-**Gotcha:** Chaining multiplies failure modes — each step has its own failure rate, and errors compound. A 95% success rate per step means only 77% over 5 steps. Budget for retries at each gate, or fail loudly and log the failing step.
-
----
-
-#### What is meta-prompting, and when does it pay off?
-
-**Headline (30s):** Meta-prompting uses an LLM to **generate or improve prompts**. Pays off when you're at scale (many prompts to maintain), adapting prompts to new domains, or running A/B tests — anywhere the cost of the LLM-as-prompt-engineer is lower than paying a human to manually tune.
-
-**Two modes:**
-
-- **Prompt generation:**
-
-```
-You are a prompt engineer. Given this task description, produce a system prompt that would elicit high-quality responses from an LLM.
-
-Task: Extract customer name, order ID, and complaint type from support emails. Output JSON. Handle typos and informal language.
-```
-
-- **Prompt improvement:**
-
-```
-Here is a prompt that sometimes produces incorrect outputs:
-[original prompt]
-
-Here are 3 examples where it failed:
-[failure 1]
-[failure 2]
-[failure 3]
-
-Revise the prompt to address these failure modes. Preserve the original intent. Output only the revised prompt.
-```
-
-**Optimization loop:**
-
-1. Define success criteria (accuracy, format compliance, user satisfaction).
-2. Generate N prompt variants via meta-prompting.
-3. Evaluate each variant on a held-out set.
-4. Select the best; feed failures back for another round.
-
-**Gotcha:** Meta-prompting is **not** a replacement for human judgment. The optimizer can converge on prompts that game your eval but break in production, or produce brittle prompts that only work on the exact distribution of your held-out set. Treat it as prompt *exploration*, not prompt *optimization* — human review is still required before deploying.
-
-**See also:** [2.1 Prompt Engineering Fundamentals](#3.%20Prompt%20Engineering%20Fundamentals%20/%20%E6%8F%90%E7%A4%BA%E5%B7%A5%E7%A8%8B%E5%9F%BA%E7%A1%80) for the 4 principles and 7-layer system prompt architecture.
+- Wei et al., [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903).
+- Kojima et al., [Large Language Models are Zero-Shot Reasoners](https://arxiv.org/abs/2205.11916).
+- Wang et al., [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171).
+- Yao et al., [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629).
+- Zhou et al., [Large Language Models Are Human-Level Prompt Engineers](https://arxiv.org/abs/2211.01910), for the APE instruction-generation and selection approach.
+- OpenAI, [Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices), checked 2026-10-15. These instructions describe OpenAI reasoning models and should not be generalized to other APIs.
+- OpenAI, [Prompt generation](https://developers.openai.com/api/docs/guides/prompt-generation), checked 2026-10-15. This is an OpenAI-specific example of generating or revising prompt text, not evidence that a generated prompt performs better without task evaluation.
 ## 5. Context Engineering Principles / 上下文工程原则
 
 ### Context Engineering Principles | 上下文工程原则
@@ -1103,199 +922,102 @@ Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例
 - Xia et al., [*Evaluation-Driven Development and Operations of LLM Agents: A Process Model and Reference Architecture*](https://arxiv.org/abs/2411.13768) — 提出连接离线与线上评估的流程模型，并不保证两者分数一致。
 ## 11. Fine-tuning Strategies / 微调策略
 
-### Fine-tuning Strategies
+### Fine-tuning Strategies / 微调策略
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** Fine-tuning updates a pretrained model using examples or preferences to change task behavior. It is worth testing when a repeatable behavior gap remains after prompt, context, retrieval, and workflow improvements. It is not a reliable database for fresh or access-controlled facts; choose the method and data through held-out evaluation and account for training, serving, and maintenance. / 微调用示例或偏好更新预训练模型，以改变特定任务行为。当提示词、上下文、检索和工作流改进后仍存在稳定的行为差距，才值得评估微调。它不是可靠的实时或权限控制数据库；应通过保留集评估选择方法和数据，并计入训练、部署及维护成本。
 
-- Should you fine-tune, or is prompting/RAG enough?
-- Which fine-tuning method should you pick (LoRA vs. full vs. QLoRA)?
-- How much data do you need, and what does "quality over quantity" actually mean?
-- Walk me through a fine-tuning training pipeline
-- How do you evaluate a fine-tuned model to know it worked?
-- What is RLHF, and where does it fit?
+**Key terms / 关键术语：** supervised fine-tuning (SFT) / 监督微调；LoRA / 低秩适配；QLoRA / 量化低秩适配；preference optimization / 偏好优化；RLHF / 基于人类反馈的强化学习；DPO / 直接偏好优化。
 
----
+#### Should you fine-tune, or use prompting and retrieval? / 应微调，还是使用提示和检索？
 
-#### Should you fine-tune, or is prompting/RAG enough?
+First identify the error. Missing or changing facts call for an authoritative data source and retrieval or a direct API. Unclear instructions may be fixed with a prompt or workflow. A persistent style, label convention, or response pattern may be suitable for fine-tuning if examples can teach it and evaluation confirms the gain. These are useful starting points, not mutually exclusive categories.
 
-**Headline (30s):** Climb the **escalation ladder** first — prompting → few-shot → RAG → fine-tuning. Fine-tuning is slow to iterate and expensive to maintain; only reach for it when cheaper approaches demonstrably fail, and only for the right *reason*. The golden rule: **fine-tune for behavior, RAG for knowledge.** If the model needs new facts, use RAG; if it needs to speak/act differently, fine-tune.
+Fine-tuning does not make facts stored in weights reliably addressable, current, or permission-aware. Retrieval still needs source freshness, access checks, and evidence validation. A fine-tuned model can also be paired with retrieval. [RAG Architecture and Implementation / 检索增强生成](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) covers external evidence; [LLM Evaluation Methods / 大语言模型评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95) covers task evaluation.
 
-**The escalation ladder:**
+Before training, compare a prompt-only baseline and any relevant retrieval or workflow baseline. Consider fine-tuning when the remaining gap is repeatable, the training data represents the target behavior, and the expected improvement justifies training, deployment, and future update work.
 
-| Step | Approach | Effort | When It Works |
-|---|---|---|---|
-| 1 | **Prompting** | Low | Simple tasks, general knowledge, one-off queries |
-| 2 | **Few-shot examples** | Low | Pattern demonstration, format consistency |
-| 3 | **RAG** | Medium | Knowledge gaps, up-to-date info, proprietary docs |
-| 4 | **Fine-tuning** | High | Persistent behavior change, format enforcement, domain adaptation |
+#### Which method should you choose? / 如何选择微调方法？
 
-Try each in order. Move to the next only when the current approach demonstrably fails.
+- **Full fine-tuning / 全量微调：** updates the base model's trainable weights. It offers broad adaptation capacity, with higher memory, compute, and artifact costs.
+- **LoRA / 低秩适配：** freezes the base weights and trains low-rank matrices for selected weight updates. This reduces the number of trainable parameters; resulting quality and memory needs depend on model, rank, target modules, data, and training setup.
+- **QLoRA / 量化低秩适配：** keeps a quantized base model frozen while training LoRA adapters. The QLoRA paper studies 4-bit quantization and memory-saving methods in a specific experimental setup; quantization and adapter choices still require task evaluation.
+- **Adapters / 适配器：** add small trainable modules, often bottleneck layers within Transformer blocks, while the main model weights stay frozen.
+- **Prefix tuning / 前缀微调：** learns continuous task-specific vectors that are supplied as prefix representations at Transformer layers; these are not ordinary visible text tokens.
+- **Prompt tuning / 软提示微调：** learns a small set of continuous input-embedding vectors prepended to the input while keeping the model frozen. This differs from prompt engineering, which edits ordinary instruction text.
 
-**Good reasons to fine-tune:**
+These methods alter different parts of a model's computation and have different trainer and serving support. Their results depend on the model, task, and implementation; compare them by evaluation rather than assuming one dominates.
 
-- **Output format consistency** — need a specific JSON schema, tone, or structure that prompting cannot reliably enforce.
-- **Domain-specific terminology/behavior** — legal, medical, or technical jargon; industry conventions.
-- **Latency-sensitive applications** — a fine-tuned small model can outperform a prompted large model.
-- **Cost optimization at scale** — smaller fine-tuned model is cheaper than repeatedly prompting a large one.
-- **Proprietary behavior** — logic or style that cannot be expressed in prompts.
+A common LoRA parameterization writes an update as a product of two low-rank matrices:
 
-**Bad reasons to fine-tune:**
+$$
+W' = W + \Delta W,\qquad \Delta W = BA
+$$
 
-- **Model lacks knowledge** → use RAG instead. Fine-tuning bakes facts in fragile ways; RAG keeps them current and swappable.
-- **Small dataset** → insufficient for meaningful adaptation; high overfitting risk.
-- **Rapidly changing requirements** → fine-tuning is slow; prompts or RAG iterate faster.
+Here, if W maps from input dimension k to output dimension d, A can have shape r × k and B shape d × r, with rank r smaller than k and d. This is a schematic form; implementations may scale or target different modules. Some serving stacks can merge adapters into the base weights, while other configurations keep adapter operations at inference. Verify the target stack instead of assuming zero latency overhead.
 
-**Tiebreaker question (to ask the interviewer):** "What do we need the model to do that prompting + RAG can't achieve?" If the answer is "know more facts," don't fine-tune. If it's "behave differently / follow a format reliably," fine-tune.
+**One-matrix count illustration / 单个矩阵参数量示例:** Suppose one target projection is 4096 × 4096 and r = 8. The two LoRA matrices contain r(k + d) = 8(4096 + 4096) = 65,536 trainable values, while the original dense matrix has dk = 4096 × 4096 = 16,777,216 values. This compares one adapted matrix only; a model's total depends on how many layers and matrices are targeted, and the count alone predicts neither quality nor the whole model's trainable-parameter fraction.
 
-**Gotcha:** Teams fine-tune for knowledge because the problem feels like "the model doesn't know X." That's a knowledge problem — RAG. If you fine-tune, you've now locked the facts into the weights, which means re-fine-tuning every time the facts change. Expensive trap.
+There is no universal rank, method, or “default” that guarantees quality. Compare feasible approaches using the same data splits, task metrics, deployment constraints, and base model.
 
----
+#### How much and what kind of data? / 需要多少数据，数据应是什么样？
 
-#### Which fine-tuning method should you pick? (LoRA vs. full vs. QLoRA)
+There is no general example count that predicts success. A small clean set may reveal whether a behavior is learnable, while broader or rarer cases may need more coverage. Track which behaviors and input patterns each example represents; do not treat raw volume as evidence of quality.
 
-**Headline (30s):** **LoRA is the default** — trains ~1% of parameters, good quality, moderate memory. Go to **QLoRA** (LoRA on a 4-bit quantized base) when GPU memory is tight. Reach for **full fine-tuning** only when LoRA plateaus for your task and you have the GPU budget, which is rare for LLMs.
+Possible supervised example / 监督样例:
 
-**The tradeoff:**
-
-| Method | Parameters Trained | Memory | Quality | Use Case |
-|---|---|---|---|---|
-| **Full fine-tuning** | All (~100%) | Very high | Highest | Rarely used with LLMs; requires massive GPU memory |
-| **LoRA** (Low-Rank Adaptation) | ~1% (rank-decomposition matrices) | Moderate | High | Most popular; freeze base, train small adapters |
-| **QLoRA** | ~1% on quantized base | Low | Good | LoRA + 4-bit quantized base; memory-constrained setups |
-| **Adapters** | Small modules between layers | Low–Moderate | Good | Modular; swap adapters per task |
-| **Prefix tuning** | Trainable vectors prepended to layers | Low | Good | Lightweight; minimal parameter updates |
-
-**How LoRA works:**
-
-```python
-# Freeze base model, add low-rank matrices
-# W' = W + ΔW, where ΔW = A @ B  (A: d×r, B: r×k, r << d,k)
-# Only A and B are trained; W is frozen
-```
-
-- Freeze base model weights.
-- Train small rank-decomposition matrices (typically r = 8–64).
-- Merge adapters into base at inference for zero latency overhead.
-
-**Decision rule:**
-
-1. Start with LoRA. Rank 8–16 is a fine default.
-2. If memory is the bottleneck (single consumer GPU, large base model), move to QLoRA.
-3. If LoRA plateaus and you have the GPU budget, try full fine-tuning.
-4. Adapters and prefix tuning are niche — reach for them when you need to swap specializations at runtime (one base, many adapters).
-
-**Gotcha:** "Higher rank = better quality" is mostly a myth. Past r = 16–32, quality plateaus or regresses (overfitting on small datasets). Don't tune rank; tune data quality and learning rate first.
-
----
-
-#### How much data do you need, and what does "quality over quantity" actually mean?
-
-**Headline (30s):** **100–1000 high-quality examples** can be effective with LoRA — often more useful than 100k mediocre ones. The dataset has to be **diverse** (cover edge cases), **representative** (match production distribution), **correct** (labels are right), and **consistently formatted**. Bad data produces a model worse than the base.
-
-**Data formats:**
-
-**Instruction-response pairs** (instruction tuning):
-
-```json
-{
-  "instruction": "Summarize the following contract clause.",
-  "input": "The party of the first part...",
-  "output": "The seller agrees to deliver..."
-}
-```
-
-**Conversation format** (chat models):
-
-```json
+~~~json
 {
   "messages": [
-    {"role": "user", "content": "What is the refund policy?"},
-    {"role": "assistant", "content": "Refunds are available within 30 days..."}
+    {"role": "user", "content": "Summarize this sample clause: The supplier will deliver the parts by June 1."},
+    {"role": "assistant", "content": "The supplier must deliver the parts by June 1."}
   ]
 }
-```
+~~~
 
-**Data quality checklist:**
+This is synthetic demonstration data, not legal advice or a recommended training format for every API. Follow the chosen trainer's current format and include only data you are authorized to use.
 
-| Criterion | Description |
-|---|---|
-| **Diverse** | Covers edge cases and variations |
-| **Representative** | Matches production distribution |
-| **Correct** | Labels/answers are accurate |
-| **Consistent format** | Same structure across examples |
+Review data for correctness, representative coverage, consistent labels, duplicates, sensitive information, and rights to use. Split training and evaluation data to reduce leakage; near-duplicates or examples from the same source can make a nominally held-out score misleading. Synthetic examples can expand coverage, but verify them because generation can introduce unsupported facts, errors, and bias.
 
-**Synthetic data:** use a stronger model (GPT-4, Claude) to generate training data for a smaller model. Effective when human-labeled data is scarce, but validate quality — models generating training data inherit the generator's biases and errors.
+#### A training and evaluation workflow / 训练与评估流程
 
-**Gotcha:** "My dataset has 10,000 examples" is not a quality signal. A model trained on 10k near-duplicates learns a single pattern and fails on everything outside it. Coverage of the input distribution matters more than raw count.
+1. **Define the failure and success criteria.** Record the current behavior, target behavior, operational constraints, and unacceptable regressions.
+2. **Build and review examples.** Remove duplicates and unauthorized or sensitive material; check labels and coverage.
+3. **Create separated data splits.** Separate training and validation examples, and reserve a representative final test set until the method and training controls are fixed. Document the split method and known leakage risks.
+4. **Choose a base model and method.** Confirm current training support, data format, license or service terms, and serving compatibility.
+5. **Train and tune a baseline experiment.** Track the learning rate and schedule, epoch count, effective batch size, gradient accumulation, training-data version, checkpoints, and validation results. These are experiment-specific controls, not portable defaults.
+6. **Compare with the untuned baseline.** Use validation cases for iterative comparisons; after choices are fixed, compare the selected model with the baseline on the untouched test set. Report quality by important slices, format and tool behavior, safety outcomes, and regressions.
+7. **Deploy cautiously and monitor.** Version the model and rollback path; monitor the same outcomes on real traffic, respecting data retention and consent rules.
 
----
+A successful training job only shows that optimization ran. It does not establish better generalization. Do not call a score gain “memorization” or “generalization” without checking data overlap, task slices, and independent evidence.
 
-#### Walk me through a fine-tuning training pipeline
+The **learning rate** sets the scale of optimizer updates; a rate that is too large for a setup can destabilize learning, while one that is too small can fail to adapt within the chosen training budget. **Epochs** count passes over the training examples; more passes may improve fit or begin to overfit. **Batch size** controls how many examples contribute to an optimizer update, with memory and gradient-variance tradeoffs; gradient accumulation can change the effective batch without changing the per-device batch.
 
-**Headline (30s):** Six steps: **prepare dataset** (clean, format, split) → **choose base model and method** → **set hyperparameters** → **train and monitor loss** (watch for overfitting) → **evaluate on held-out set** → **deploy and monitor**. The dataset-preparation step usually dominates; training itself is a commoditized script for LoRA.
+Use training data to fit weights, a validation split to compare training controls and support early stopping, and a final held-out test set only after choices are fixed. Repeatedly selecting against the final test set leaks it into development. Compare task outcomes and important slices against the untuned baseline; training and validation loss are useful signals, not substitutes for the target behavior.
 
-**The pipeline:**
+#### What are SFT, RLHF, and DPO? / 什么是 SFT、RLHF 与 DPO？
 
-1. **Prepare dataset** — format, clean, split train/validation (e.g., 90/10). Deduplicate. Verify label quality.
-2. **Choose base model and method** — e.g., Llama 3 + LoRA. Pick the smallest base that might work; upgrade only if it underperforms.
-3. **Set hyperparameters** — learning rate is method-dependent: ~1e-5–5e-5 for full fine-tuning (small updates), ~1e-4–5e-4 for LoRA (small param count tolerates a higher LR). Epochs 1–3 is typical; batch size as large as memory allows.
-4. **Train and monitor loss** — watch training vs. validation loss. Validation loss rising = overfitting. Use early stopping.
-5. **Evaluate on held-out set** — task-specific metrics, format compliance, no regression on general capabilities.
-6. **Deploy and monitor** — A/B test, track latency, error rates, user feedback.
+**Supervised fine-tuning (SFT)** trains on desired responses or demonstrations. It can teach response patterns represented by the examples; it does not guarantee that the model follows every instruction or is safe in unseen situations.
 
-**Cost considerations:**
+In the InstructGPT research pipeline, human-written demonstrations were used for supervised fine-tuning, human preference comparisons trained a reward model, and reinforcement learning optimized the policy against that reward. This describes that paper's method, not every assistant model's training process.
 
-| Option | Approx. Cost | When It Makes Sense |
-|---|---|---|
-| **API fine-tuning** (OpenAI, Anthropic) | $8–$80+ per 1M tokens (varies by model) | Quick iteration, no infra; vendor lock-in |
-| **Cloud GPU rental** (AWS, GCP, Lambda) | $1–$4/hr (A10G, A100) | Full control, custom models, one-off or batch jobs |
-| **Local training** | Hardware cost only | Repeated experiments, data privacy, long-term savings |
+**Direct Preference Optimization (DPO)** is a preference-learning method that optimizes from chosen and rejected responses without fitting a separate reward model in the same way as the classic RLHF pipeline. It still depends on preference data, a training objective, and modeling assumptions; it is not automatically more accurate or safer than PPO. Choose based on the available data, infrastructure, and evaluation.
 
-- **API fine-tuning:** simplest; limited to vendor models and formats.
-- **Cloud GPU:** flexible; requires MLOps and cost management.
-- **Local:** highest upfront cost; best for sensitive data and heavy repeated usage.
+Preference labels can be inconsistent or reflect the annotators and rubric. Evaluate the resulting model for the intended task and relevant failure cases; do not infer safety from a preference-training label alone.
 
-**Gotcha:** Candidates skip the "monitor after deploy" step because training completed successfully. Fine-tuned models drift as user behavior drifts; the eval set you trained against becomes stale within months. Treat fine-tuning as the start of a monitoring commitment, not a shipping milestone.
+#### Related notes / 相关笔记
 
----
+- [RAG Architecture and Implementation / 检索增强生成](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) covers retrieval for external and changing evidence.
+- [LLM Evaluation Methods / 大语言模型评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95) covers held-out evaluation and failure analysis.
+- [AI Safety in Production / 生产环境中的 AI 安全](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8) covers runtime controls that training does not replace.
 
-#### How do you evaluate a fine-tuned model to know it worked?
+#### Sources / 来源
 
-**Headline (30s):** Four checks: **compare against the base model** on the same eval set (did fine-tuning actually help?), **check for regression** on general capabilities (math, reasoning — fine-tuning can degrade them), **test edge cases** and adversarial inputs, and **A/B test in production** where real users catch what offline evals miss.
-
-**The four checks:**
-
-- **Compare against base model** — same eval set, both models, show the delta. A fine-tuned model "works" only relative to what you started with.
-- **Check for regression** on general capabilities — run math, reasoning, and safety benchmarks before and after. Specialization often degrades generalization.
-- **Test edge cases and adversarial inputs** — prompt injections, malformed requests, boundary cases. Fine-tuned models can regress on safety.
-- **A/B test in production** — offline evals predict, online usage confirms. Real-user satisfaction and task completion are the ultimate signals.
-
-**Gotcha:** "Eval metric went up" alone is not proof of success. If your eval set drew heavily from your training distribution, you measured memorization, not generalization. Hold out a genuinely unseen eval slice — and ideally, gather one *after* training started, so contamination is physically impossible.
-
----
-
-#### What is RLHF, and where does it fit?
-
-**Headline (30s):** **Reinforcement Learning from Human Feedback** aligns models with human preferences *after* supervised fine-tuning. It's a three-step process: SFT on demonstrations → train a **reward model** on human pairwise preferences → optimize the policy against that reward model (PPO, or DPO as a simpler alternative). RLHF is what turns a capable model into a helpful one — responsible for most of the "feels aligned" behavior of ChatGPT-like models.
-
-**The process:**
-
-1. **SFT** (Supervised Fine-Tuning) — train on high-quality human demonstrations. This gives the model a baseline of the desired style.
-2. **Reward model training** — humans rate pairs of model outputs (A better than B). Train a model to predict these preferences.
-3. **PPO / DPO optimization** — optimize the policy against the reward model. PPO is the classic approach; DPO (Direct Preference Optimization) sidesteps the reward model by optimizing directly on preference pairs — simpler to implement.
-
-**Why it matters:**
-
-Alignment is what makes models helpful, harmless, and honest rather than merely capable. Without it, base models produce grammatical text that doesn't necessarily do what you want.
-
-**What you're expected to know vs. do:**
-
-- **Know conceptually** — what SFT, reward model, and PPO/DPO do; why SFT alone is insufficient.
-- **Rarely run yourself** — full RLHF is expensive and data-hungry; most teams use RLHF'd base models (Claude, GPT-4, Llama Instruct) and add LoRA fine-tuning on top.
-
-**Gotcha:** DPO is often taught as "simpler PPO" and picked for that reason, but it has its own failure modes (reward hacking, preference noise propagating directly into policy updates). If you're in an interview and asked "why DPO over PPO," cite implementation simplicity and avoiding reward model drift — not "DPO is better."
-
-**See also:** [4.1 RAG Architecture and Implementation](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) for when knowledge problems should be solved by retrieval instead of fine-tuning; [6.1 LLM Evaluation Methods](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95) for how to build evals that measure whether fine-tuning actually worked.
+- Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685).
+- Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314).
+- Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751); Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190); Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691).
+- Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155).
+- Rafailov et al., [Direct Preference Optimization: Your Language Model is Secretly a Reward Model](https://arxiv.org/abs/2305.18290).
+- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), [Supervised fine-tuning](https://developers.openai.com/api/docs/guides/supervised-fine-tuning), [Direct preference optimization](https://developers.openai.com/api/docs/guides/direct-preference-optimization), and [Deprecations](https://developers.openai.com/api/docs/deprecations), checked 2026-10-15. The SFT/DPO pages describe OpenAI-specific methods, not general availability: the optimization page marks fine-tuning docs as legacy and says the platform is winding down. The deprecations page says organizations that had not previously run fine-tuning cannot create jobs; since 2026-07-02, organizations that have not run inference on a fine-tuned model in the prior 60 days also cannot create jobs. Active existing customers lose job creation on 2027-01-06, while inference continues until the base model is deprecated. Check current availability before treating OpenAI API fine-tuning as an option.
 ## 12. AI Safety in Production / 生产环境中的AI安全
 
 ### AI Safety in Production / 生产环境 AI 安全
@@ -1371,523 +1093,245 @@ Keep regression cases tied to the application’s actual capabilities:
 Red-team findings should record the attack path, whether an unauthorized action or disclosure occurred, and the fix. Add a minimized case to regression tests when appropriate. In production, monitor tool invocations and denials, unexpected state changes, repeated failures, human overrides, and reports of harm; use these signals to investigate and update tests rather than treating any single rate as a target.
 ## 13. AI Application Architecture / AI应用架构
 
-### AI Application Architecture
+### AI Application Architecture / AI 应用架构
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** A production LLM application is a software system around a model call: it manages identity, context, tools, validation, timeouts, retries, cost, monitoring, and recovery. Choose optimizations and deployment boundaries from measured quality, workload, privacy, and operations requirements. / 生产级 LLM 应用是围绕模型调用构建的软件系统，需要管理身份、上下文、工具、校验、超时、重试、成本、监控与恢复。应根据实测质量、工作负载、隐私和运维要求选择优化与部署边界。
 
-- What changes when you move an LLM app from prototype to production?
-- How do you reduce inference latency and cost?
-- How do you manage LLM costs at scale?
-- What should you monitor in an LLM system?
-- How do you design user feedback loops that actually improve the product?
-- API, self-hosted, edge, or hybrid — how do you pick a deployment pattern?
+**Key terms / 关键术语：** latency / 时延；time to first token (TTFT) / 首 token 时延；routing / 路由；caching / 缓存；fallback / 回退；observability / 可观测性；feedback loop / 反馈闭环。
 
----
+#### What changes from prototype to production? / 从原型到生产会发生什么变化？
 
-#### What changes when you move an LLM app from prototype to production?
+A prototype tests whether an approach can solve a task. A production service must also handle concurrent users, malformed or incomplete responses, provider and tool failures, changing inputs, permissions, privacy, cost, and rollback. Design the surrounding controls before relying on the model in a consequential workflow.
 
-**Headline (30s):** The jump is massive and underestimated. Six dimensions all shift from "good enough for a demo" to "real-world-ready": error handling, scale, monitoring, cost management, security, and reliability. A prototype validates the approach; a production system has to withstand adversarial users, traffic spikes, and provider outages.
+~~~text
+Request → authenticate and authorize → assemble context
+        → model and/or tools → validate result → respond or escalate
+        ↘ trace, metrics, and privacy-reviewed logs
+~~~
 
-| Dimension | Prototype | Production |
-|---|---|---|
-| **Error handling** | Fail fast, manual recovery | Graceful degradation, retries, fallbacks |
-| **Scale** | Single user, low throughput | Multi-tenant, high concurrency |
-| **Monitoring** | Print statements, ad-hoc | Structured logging, metrics, alerts |
-| **Cost management** | Ignored | Budgets, quotas, optimization |
-| **Security** | Minimal | Auth, data isolation, PII handling |
-| **Reliability** | Best-effort | SLAs, redundancy, failover |
+For tool use, the application receives a proposed call and executes it only after its own argument checks and authorization. A model response or schema-constrained output does not itself grant access or establish that an action is valid. See [Tool Design and Function Calling / 工具设计与函数调用](#9.%20Tool%20Design%20and%20Function%20Calling%20/%20%E5%B7%A5%E5%85%B7%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8) and [AI Safety in Production / 生产环境中的 AI 安全](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8).
 
-**Don't skip the prototype.** Use it to validate the approach before investing in production infrastructure. A prototype that proves the core idea fails is cheaper than a production system built on a flawed assumption.
+Useful production controls include explicit timeouts, bounded retries, idempotency for retried writes, cancellation, rate and budget limits, an error path, and a way to disable or roll back a model or prompt version. Retry only failures that can safely be retried; a timeout does not prove a write did not happen.
 
-**Gotcha:** The biggest prototype-to-production failure isn't any single dimension; it's that teams treat the LLM as a stable dependency. LLMs silently drift (provider model updates, policy tweaks) in ways traditional APIs don't. Build eval, monitoring, and rollback *first* — you'll need them sooner than you think.
+#### How can you reduce latency and cost? / 如何降低时延与成本？
 
----
+First measure where time and cost accumulate: queueing, context assembly, retrieval, model input/output, tools, and retries. Then test a change against a fixed quality bar; savings that break the task are not an optimization.
 
-#### How do you reduce inference latency and cost?
+- **Shorten or select context / 缩短或筛选上下文：** include relevant material and limit unnecessary history. Measure for lost evidence or task quality; see [Context Engineering Principles / 上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99).
+- **Use caching / 使用缓存：** exact-response or semantic caches can avoid work for repeat requests, but require freshness, permission, and key-isolation rules. For example, “What is the refund policy in the US?” and “What is the refund policy in the EU?” can have similar embeddings but different correct answers. Include relevant locale, tenant, permission, and policy-version boundaries in cache design; semantic similarity alone is not proof that a response is reusable.
+- **Route requests / 请求路由：** use a lower-cost candidate only for cases where it meets the measured quality bar. Include classifier errors, added latency, fallback frequency, and maintenance in the comparison. See [Model Selection and Ecosystem / 模型选择与生态](#2.%20Model%20Selection%20and%20Ecosystem%20/%20%E6%A8%A1%E5%9E%8B%E9%80%89%E6%8B%A9%E4%B8%8E%E7%94%9F%E6%80%81).
+- **Inference batching / 推理批处理：** a serving engine can combine work from concurrent requests into accelerator batches. Iteration-level or continuous batching can admit and retire sequences between token-generation steps, improving hardware utilization and aggregate throughput on suitable workloads. Queueing and batch formation can add per-request delay, so measure throughput, queue time, and latency together. This is distinct from an asynchronous provider Batch API, where requests are submitted as a job and results arrive later; that interface is for work that tolerates delayed completion, not a promise about how an inference engine batches live traffic.
+- **Quantization / 量化：** represent weights, and in some methods activations, with fewer bits. This can reduce model memory and data movement, and may improve inference speed when the hardware and kernels support the chosen format. Quantization error can affect task quality, and lower precision does not guarantee faster end-to-end service; evaluate the exact model, quantizer, hardware, and workload.
+- **Distillation / 蒸馏：** train a smaller student on outputs or softened targets from a larger teacher over chosen inputs. A student may reduce serving cost or latency, but can lose capabilities or fail outside the distillation set. Include teacher/data generation and evaluation in the cost, and test the student on held-out tasks before replacing the teacher.
+- **Stream responses / 流式返回：** streaming can improve perceived responsiveness and time to first token; it does not necessarily reduce total generation time or work.
 
-**Headline (30s):** Six levers, from cheapest to most invasive: **streaming** (perceived latency only), **KV-cache** (reuse prefix computation), **semantic caching** (reuse full responses for similar queries), **request batching** (GPU throughput), **quantization** (smaller precision = faster, cheaper, slight quality loss), and **model distillation** (train a smaller model to mimic a bigger one). Stack in order of complexity; measure after each.
+Provider features such as prompt caching, batch jobs, context limits, and pricing vary by model and API and can change. Verify current documentation for the exact deployment. Compare total cost, including inference, retrieval, storage, engineering, evaluation, and operations.
 
-**The techniques:**
+##### A teaching calculation for cache cost / 缓存成本教学算例
 
-##### KV-cache
+Assume 1,000 model calls, each with 1,000 input tokens and 200 output tokens. For this arithmetic example only, assume uncached input costs $2 per million tokens, cached input costs $1 per million, and output costs $8 per million. These are invented teaching values, not current provider prices; ignore cache-write, storage, retrieval, and other fees.
 
-Reuse computed key-value pairs across requests with shared prefixes. Stable system prompts increase cache hit rate dramatically.
+Without caching, the token charge is 1,000 × [(1,000 × $2) + (200 × $8)] / 1,000,000 = $3.60.
 
-```python
-# Requests with same system prompt share cached KV pairs
-# Higher hit rate = fewer tokens recomputed = lower latency and cost
-```
+Suppose 400 calls share a 500-token prompt prefix and receive the assumed cached-input rate for that prefix. Prompt caching still processes the remaining input and generates all 200 output tokens. The assumed token charge becomes 600 × $0.0036 + 400 × [$0.0005 + $0.001 + $0.0016] = $3.40: the $0.20 saving comes only from the lower rate on 400 × 500 cached input tokens. The output is still generated and billed.
 
-##### Semantic caching
+An application-level response-cache hit is different: if 400 requests can safely reuse an exact, current response, those requests skip the model call, so the remaining 600 model calls cost 600 × $0.0036 = $2.16 in token charges, before cache infrastructure costs. This calculation assumes a valid exact response hit; a semantic cache needs its own correctness and authorization checks. OpenAI's current [prompt caching documentation](https://developers.openai.com/api/docs/guides/prompt-caching), checked 2026-10-15, likewise describes reuse of a prompt prefix while the model still generates a new response; its supported models, rates, and cache rules are provider-specific and change.
 
-Cache responses for semantically similar queries, not just exact matches. Use embedding similarity with a threshold.
+#### How should an application monitor behavior? / 应用应监控哪些行为？
 
-```python
-def get_cached_response(query: str, threshold: float = 0.95) -> str | None:
-    query_embedding = embed(query)
-    for cached in cache:
-        if cosine_similarity(query_embedding, cached.embedding) >= threshold:
-            return cached.response
-    return None
-```
+Track technical operation and task outcomes together. Useful measures include latency distributions and TTFT, throughput and queue time, errors and timeouts by stage, input/output usage, cost per completed task, tool success and authorization denials, cache hit correctness, task completion, escalation, and user feedback.
 
-##### Request batching
+Set thresholds from the service's requirements and baseline; no universal error-rate or latency threshold fits every application. Record prompt, model, and relevant configuration versions so a change can be investigated. Keep logs proportionate: redact or avoid sensitive content and apply retention controls. Use sampled traces or derived metrics where full payload logging is unnecessary.
 
-Group multiple requests to maximize GPU throughput. Trades per-request latency for overall throughput.
+Model behavior, external data, prompts, and provider implementations can change. Re-run an evaluation set when a material component changes and compare results by important task slices; see [LLM Evaluation Methods / 大语言模型评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95). Maintain a rollback or fallback path when a release violates the product's agreed quality bar.
 
-##### Quantization
+#### How can feedback improve the product? / 如何让反馈改进产品？
 
-Reduce model precision: FP32 → FP16 → INT8 → INT4. Tradeoff: lower memory and faster inference, slight quality loss. Common formats: GPTQ, AWQ, GGUF.
+Collect explicit signals such as ratings or corrections and implicit signals such as task completion, accepted suggestions, repeated requests, and escalation. These signals are incomplete and biased: a rating reflects who chose to respond, while time spent can indicate either engagement or confusion. Interpret them alongside representative task evaluation and user research.
 
-##### Model distillation
+A practical loop is:
 
-Train a smaller model to mimic a larger one. The smaller model is cheaper and faster in production; requires training effort upfront.
+1. Capture feedback with the relevant task and version context, subject to privacy and retention rules.
+2. Review a sample and classify the failure mode.
+3. Fix the appropriate layer: source data, retrieval, prompt, tool, model choice, interface, or policy.
+4. Test the change on held-out cases and monitor the relevant production outcome.
+5. Keep or roll back the change based on the agreed criteria.
 
-##### Streaming
-
-Return tokens as they're generated for better perceived latency (time-to-first-token).
-
-##### Comparison
-
-| Technique | Latency Impact | Cost Impact | Complexity | Best For |
-|---|---|---|---|---|
-| KV-cache | High (prefix reuse) | High | Low | Repeated system prompts |
-| Semantic caching | High (cache hits) | High | Medium | Similar user queries |
-| Request batching | Neutral/negative | Medium | Medium | High-throughput batch workloads |
-| Quantization | Medium (faster compute) | High | Medium | Self-hosted, memory-bound |
-| Model distillation | High (smaller model) | High | High | Production at scale |
-| Streaming | Perceived only (TTFT) | None | Low | Real-time UX |
-
-**Gotcha:** Semantic caching with too loose a threshold (e.g., 0.85) serves wrong answers — two semantically similar queries can have different correct answers ("what's the refund policy for US?" vs. "for EU?"). Start at 0.95+ threshold, and always eval cache hits against fresh generations before shipping.
-
----
-
-#### How do you manage LLM costs at scale?
-
-**Headline (30s):** Four levers: **model routing** (cheap models for simple tasks, expensive only where needed), **token optimization** (shorter prompts, compressed context), **caching ROI** (measure and maximize hit rate), and **batch processing** (async APIs are often ~50% cheaper). Treat tokens-per-query as a KPI; track it across releases.
-
-##### Model routing
-
-Route by task complexity:
-
-```
-Simple (Haiku / small)      → classification, extraction, simple Q&A
-Medium (Sonnet / mid)       → summarization, multi-step reasoning
-Complex (Opus / large)      → creative writing, deep analysis, code generation
-```
-
-Classify the task first (cheap LLM call or rules), then route to the right size.
-
-##### Token optimization
-
-- Shorter prompts.
-- Compressed context (summarization, selective retrieval).
-- Efficient templates with minimal boilerplate.
-- Measure **tokens-per-query** as a KPI per feature.
-
-##### Caching ROI
-
-Track hit rates. Even 50% hit rate can halve costs on cached paths.
-
-##### Batch processing
-
-Non-real-time tasks can use batch APIs (often ~50% cheaper than real-time).
-
-##### Cost estimation example
-
-| Component | Volume | Unit Cost | Monthly Cost |
-|---|---|---|---|
-| Input tokens (GPT-4) | 100M/month | $2.50/1M | $250 |
-| Output tokens (GPT-4) | 20M/month | $10/1M | $200 |
-| Cache hits (50%) | — | — | -$225 |
-| **Net** | | | **$225** |
-
-With semantic caching at 50% hit rate, effective cost drops by ~50%.
-
-**Gotcha:** "Route everything to the cheap model" destroys quality on hard tasks, but "route everything to the expensive model" burns budget on easy ones. The sweet spot requires real data on task-complexity distribution — instrument your traffic before tuning the routing rules.
-
----
-
-#### What should you monitor in an LLM system?
-
-**Headline (30s):** Six categories: **latency** (P50/P95/P99, TTFT), **token usage** (per request, per user, total), **error rates** (API errors, timeouts, rate limits, malformed responses), **quality** (hallucination rate, task completion, satisfaction), **cost** (daily spend, cost/request), and **cache** (hit rate). Set alerts on thresholds and **quality drift** — LLM behavior changes silently over time.
-
-##### Latency
-
-- **P50, P95, P99** response times.
-- **Time to first token (TTFT)** for streaming UX.
-
-##### Token usage
-
-- Input/output tokens per request.
-- Total daily consumption.
-- Tokens per user/session (catches runaway sessions).
-
-##### Error rates
-
-- API errors (4xx, 5xx).
-- Timeouts.
-- Rate limits.
-- Malformed responses (parse failures, truncation).
-
-##### Quality metrics
-
-- Hallucination rate.
-- User satisfaction scores.
-- Task completion rate.
-
-##### Quality drift
-
-Model behavior can change over time due to provider updates or data drift. Track quality metrics week-over-week and alert on degradation.
-
-##### Monitoring dashboard checklist
-
-| Category | Metrics | Alerts |
-|---|---|---|
-| Latency | P50, P95, P99, TTFT | P99 > threshold |
-| Throughput | Requests/sec, tokens/sec | Drops below baseline |
-| Errors | Error rate by type | Error rate > 1% |
-| Cost | Daily spend, cost/request | Budget threshold |
-| Quality | Satisfaction, completion rate | Week-over-week decline |
-| Cache | Hit rate | Hit rate < threshold |
-
-**Gotcha:** Provider-side silent model updates are the hardest drift to catch. An "imperceptible" improvement upstream can change output format or tone enough to break your downstream parsers and regression test suite. Pin model versions explicitly (`gpt-4-0613` not `gpt-4`) whenever the provider allows, and run weekly evals on fixed test sets to catch drift.
-
----
-
-#### How do you design user feedback loops that actually improve the product?
-
-**Headline (30s):** Capture both **implicit signals** (time on response, follow-ups, acceptance rate) and **explicit feedback** (thumbs, ratings, corrections). Feed into an **RLHF flywheel** (preferences → reward model → improved model → deploy → repeat) or simpler update cycles. Design the feedback UX to minimize friction — a one-tap thumbs gets 100× more data than a form.
-
-##### Implicit signals
-
-- Time spent on response.
-- Follow-up questions (indicates confusion).
-- Acceptance / rejection of suggestions (autocomplete, code suggestions).
-
-##### Explicit feedback
-
-- Thumbs up/down.
-- Star ratings.
-- Correction submissions.
-
-##### RLHF flywheel
-
-1. Collect preferences (A vs. B, thumbs up/down).
-2. Train reward model on preferences.
-3. Improve base model (RLHF, DPO) or add fine-tuning.
-4. Deploy improved model.
-5. Repeat.
-
-##### Designing feedback UX
-
-| Principle | Implementation |
-|---|---|
-| Minimize friction | One-tap feedback (thumbs), not forms |
-| Contextual timing | Prompt after action (after copy, after 5s) |
-| Avoid survey fatigue | Sample users, limit frequency |
-| Capture intent | Optional free-text for downvotes |
-| Link to outcome | Correlate feedback with task success |
-
-**Gotcha:** Explicit feedback is heavily biased — users who loved it don't bother; angry users always rate. Don't interpret "30% thumbs down" as "30% failure rate"; it's a skewed sample. Pair explicit feedback with implicit signals (retention, task completion, session length) for a real picture.
-
----
+Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](#11.%20Fine-tuning%20Strategies%20/%20%E5%BE%AE%E8%B0%83%E7%AD%96%E7%95%A5).
 
 #### API, self-hosted, edge, or hybrid — how do you pick a deployment pattern?
 
-**Headline (30s):** Start with **API** for speed to ship. Move to **self-hosted** once volume or data residency makes the math work (rough threshold: ~$10K/month API spend or strict compliance). Choose **edge** for latency-sensitive or offline use cases. Use **hybrid** when workloads split cleanly into "expensive hard" and "cheap simple/sensitive."
+Compare the same workload and quality bar across patterns, including data flow, service terms, operations, peak capacity, update ownership, and failure recovery.
 
-##### The tradeoff
+| Pattern | Useful when | Costs and constraints |
+|---|---|---|
+| **Hosted API / 托管 API** | Managed inference and quick iteration fit the task. | Provider terms, model lifecycle, feature support, rate limits, availability, and per-use costs need review. |
+| **Self-hosted / 自托管** | Control over serving location, version, and infrastructure is a real requirement. | The team owns capacity, scaling, security updates, model serving, observability, and on-call response. |
+| **Edge / 端侧** | Offline use, local latency, or device-level data handling matters. | Compute, battery, memory, device coverage, updates, and supported model size constrain the design. |
+| **Hybrid / 混合** | Distinct workloads need different data or serving boundaries. | Routing and duplicated operations add complexity; define fallback and consistent policy behavior. |
 
-| Pattern | Pros | Cons | When to Choose |
-|---|---|---|---|
-| **API-based** (OpenAI, Anthropic) | Fastest to ship, no infra management | Ongoing per-token cost, data sent to provider | MVP, low volume, rapid iteration |
-| **Self-hosted** (vLLM, TGI, Ollama) | Full control, predictable cost at scale | Significant infra burden, data stays private | High volume, data sovereignty, cost optimization |
-| **Edge deployment** | On-device inference, latency, privacy | Limited model size, device constraints | Mobile, offline, privacy-critical |
-| **Hybrid** | API for complex + local for simple/sensitive | More moving parts | Mixed workload, cost + privacy balance |
+A useful comparison is:
 
-##### Decision guide
+$$
+\text{total cost} = \text{inference} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and controls}
+$$
 
-- **API-based:** start here. Move off when cost or data concerns justify the switch.
-- **Self-hosted:** volume > ~$10K/month API spend, or strict data residency requirements.
-- **Edge:** latency-sensitive, offline-first, or device-level privacy.
-- **Hybrid:** API for hard tasks, local model for simple/sensitive ones.
+There is no universal spend threshold for switching to self-hosting. Estimate with actual traffic, peak demand, staffing, quality requirements, and the full operating burden. Edge and hybrid choices likewise depend on device and data constraints, not just latency labels.
 
-**Tiebreaker question (to ask the interviewer):** "What's the data residency requirement, and what's our expected monthly LLM spend?" These two answers narrow the pattern to one or two options.
+#### Related notes / 相关笔记
 
-**Gotcha:** Self-hosting math often looks attractive at volume but ignores the hidden costs — MLOps headcount, GPU availability risk, model update cadence, internal eval infrastructure. The break-even point is typically **later than you think**, not earlier. Get a real quote including people costs before committing.
+- [Model Selection and Ecosystem / 模型选择与生态](#2.%20Model%20Selection%20and%20Ecosystem%20/%20%E6%A8%A1%E5%9E%8B%E9%80%89%E6%8B%A9%E4%B8%8E%E7%94%9F%E6%80%81) covers candidate comparison and routing.
+- [Context Engineering Principles / 上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99) covers context budgets and caching.
+- [LLM Evaluation Methods / 大语言模型评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95) covers offline and production evaluation.
+- [AI Safety in Production / 生产环境中的 AI 安全](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8) covers runtime boundaries and controls.
 
-**See also:** [3.1 Context Engineering → KV-Cache Optimization](#How%20do%20you%20use%20the%20KV%20cache%20to%20cut%20inference%20cost?) for the KV-cache mechanics; [1.2 Model Selection and Ecosystem](#2.%20Model%20Selection%20and%20Ecosystem%20/%20%E6%A8%A1%E5%9E%8B%E9%80%89%E6%8B%A9%E4%B8%8E%E7%94%9F%E6%80%81) for model choices behind the routing decisions.
+#### Sources / 来源
+
+- OpenAI, [Function calling](https://developers.openai.com/api/docs/guides/function-calling), checked 2026-10-15. Tool calls are proposed by the model and handled by application code.
+- OpenAI, [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. Schema adherence applies to supported schemas and models; semantic validation and failure handling remain application concerns.
+- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Current capabilities and recommendations are API-specific and may change.
+- Frantar et al., [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323); Lin et al., [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978).
+- Hinton et al., [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531).
+- Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu), for iteration-level scheduling and selective batching. OpenAI, [Batch API](https://developers.openai.com/api/docs/guides/batch), checked 2026-10-15, documents its separate asynchronous job interface.
 ## 14. AI System Design Interview Questions / AI系统设计面试题
 
-### AI System Design Interview Questions
+### AI System Design Interview Questions / AI 系统设计面试题
 
-Capstone: how to structure answers to AI system design questions, plus three worked examples with probes and tradeoffs.
+Capstone: a reusable way to scope AI system design problems, compare alternatives, and explain three illustrative designs. The Q&A budget and traffic values below are explicitly hypothetical teaching assumptions, not production measurements or universal defaults. / 本篇提供 AI 系统设计题的通用拆解方法、权衡维度，以及三个示例方案。下方问答系统的时延与流量数字是明确标注的教学假设，并非生产测量值或通用默认值。
 
-This note prepares you to answer:
+**Key terms / 关键术语：** requirements / 需求；data flow / 数据流；failure mode / 失败模式；trade-off / 权衡；evaluation / 评估；rollback / 回滚。
 
-- How do you structure an AI system design interview answer?
-- What tradeoffs come up repeatedly in AI system design?
-- Design a RAG-based enterprise Q&A system
-- Design a customer support agent
-- Design a code review assistant
+#### How should you structure an AI system design answer? / 如何组织 AI 系统设计回答？
 
----
+Use the following sequence as a set of discussion slots, not a fixed interview timetable:
 
-#### The 5-step framework for AI system design questions
+1. **Clarify the task.** Identify users, inputs and outputs, success criteria, unacceptable errors, data sensitivity, freshness, and human review needs.
+2. **Establish constraints.** Ask about expected workload and peaks, latency and availability goals, budget, deployment boundary, existing systems, and operational ownership. State assumptions when information is unavailable.
+3. **Draw the end-to-end path.** Include ingestion if needed, request handling, model or retrieval calls, tools, validation, response or escalation, storage, and observability.
+4. **Deep-dive on the binding risks.** Choose two or three components whose failure would most affect correctness, privacy, latency, cost, or safety. Explain alternatives and failure handling.
+5. **Explain evaluation and rollout.** Define offline cases, production measures, staged release, rollback, and who responds to incidents.
 
-**Headline (30s):** Spend the first 5 minutes clarifying requirements; sketch the architecture in 10; deep-dive on 2–3 critical components for 15; spend 5 on tradeoffs and alternatives; close with 5 on scaling and monitoring. The trap is diving into implementation before nailing requirements — every interviewer has seen it.
+Do not invent scale or latency targets to fill silence. Ask for them or label an assumption, then show how the design would change if it differs.
 
-**The five steps, as slots to memorize:**
+#### Common trade-offs / 常见权衡
 
-##### Step 1: Requirements gathering (5 min)
-
-- **Functional requirements:** what does the system do? Inputs, outputs, user flows.
-- **Non-functional requirements:** latency, throughput, availability, consistency.
-- **Scale:** users, documents, requests per second, data volume.
-- **Constraints:** budget, compliance, existing infrastructure.
-
-##### Step 2: High-level architecture (10 min)
-
-- Draw components and data flow.
-- Identify external systems (APIs, databases, queues).
-- Show the request path end-to-end.
-
-##### Step 3: Component deep-dive (15 min)
-
-- Detail the 2–3 most critical components.
-- Explain design choices and algorithms.
-- Address edge cases and failure modes.
-
-##### Step 4: Tradeoffs and alternatives (5 min)
-
-- What you chose and why.
-- Alternatives considered and why they were rejected.
-
-##### Step 5: Scaling and monitoring (5 min)
-
-- Horizontal vs. vertical scaling.
-- Caching, sharding, async processing.
-- Metrics, alerts, feedback loops.
-
-**Gotcha:** Candidates skip Step 1 because it "feels slow." That's the fastest way to fail. Interviewers are testing whether you can scope the problem; rushing to architecture signals that you'll build the wrong thing in real life too. Use the 5 minutes.
-
----
-
-#### Common tradeoffs
-
-Reach for these framings when an interviewer asks "what are the tradeoffs?" — they cover most AI system design decisions.
-
-| Tradeoff | Option A | Option B | Decision Factor |
+| Decision | Option A | Option B | What should drive it |
 |---|---|---|---|
-| Latency vs. Quality | Smaller/faster model | Larger/better model | User tolerance |
-| Cost vs. Accuracy | Fewer retrieval steps | More retrieval + re-ranking | Budget |
-| Autonomy vs. Control | Full agent autonomy | Human-in-the-loop | Risk level |
-| Real-time vs. Batch | Stream responses | Process in background | Use case |
-| Privacy vs. Capability | Self-hosted model | API provider | Data sensitivity |
+| Latency and cost | Smaller or fewer model calls | More capable model or additional checks | Measured task quality, workload, and response-time needs |
+| Retrieval | Lower-cost candidate set | More recall or reranking work | Miss cost, corpus, and evaluation results |
+| Autonomy | Model-directed tool loop | Fixed workflow or human review | Task variability, action risk, and control needs |
+| Response mode | Immediate response | Queued or batch completion | User expectation and throughput |
+| Deployment | Hosted service | Self-hosted or edge | Data boundary, operations, device, availability, and full cost |
 
-**Gotcha:** Don't present tradeoffs as "A is better." Interviewers want to hear "A when X, B when Y." Absolute claims flag shallow thinking; conditional claims show engineering judgment.
+Present each choice conditionally: explain when each option would fit, what evidence would change your decision, and how the alternative could be tested.
 
----
+#### Design: enterprise question answering over documents / 企业文档问答
 
-#### Design: RAG-based enterprise Q&A system
+**Clarify first:** Which user groups and repositories are in scope? How often do documents change? What is the source of truth for permissions? What answer freshness and citation behavior are required? What happens when evidence is missing or conflicting?
 
-##### Requirements probes
+**Illustrative request path / 请求路径示意:**
 
-- Who are the users? — Employees asking about internal docs (HR policies, engineering, product specs).
-- Scale? — 10K employees, 100K documents.
-- Latency target? — Sub-5s response time.
-- Access control? — Yes, filter chunks by user permissions.
+~~~text
+Document sources → parse and version → chunk and index
+User query → authenticate → permission-aware retrieval
+            → rank evidence → generate answer with source references
+            → validate and return, or abstain/escalate
+~~~
 
-##### High-level architecture
+**Deep-dive topics:**
 
-```
-Document Ingestion → Chunking → Embedding → Vector DB
-                                              ↓
-User Query → Query Service → Retrieval → LLM + Context → Response
-```
+- **Ingestion and freshness:** retain source identifiers and versions; reprocess changed or deleted material and make indexing status observable.
+- **Retrieval:** compare keyword, vector, or hybrid retrieval on representative questions. Tune chunking and reranking against recall, relevance, latency, and cost; there is no universal chunk size or top-k.
+- **Authorization:** derive the caller's access from the trusted identity system and enforce it during retrieval, before evidence reaches the model. A prompt is not an access-control boundary.
+- **Grounded answers:** carry source identifiers alongside retrieved passages. Validate that citations refer to retrieved evidence and evaluate whether claims are supported; asking for citations alone does not prove correctness.
+- **Failure paths:** stale or empty results, permission-service outage, conflicting documents, malformed output, and model timeout should have explicit behavior.
 
-##### Deep-dive (pick 2–3)
+**Evaluation and operations:** test retrieval and answer quality separately; include permission-boundary cases, updates and deletions, unanswerable questions, and citation checks. Monitor latency by stage, indexing freshness, retrieval metrics, answer support, abstentions, and access-control failures.
 
-**Chunking strategy**
+Lewis et al.'s RAG paper describes combining parametric generation with retrieved non-parametric memory; a production enterprise design must add current data ownership, authorization, and evaluation. See [RAG Architecture and Implementation / 检索增强生成](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) for implementation detail.
 
-- Document-aware: respect sections, tables, lists.
-- Preserve structure (headers, hierarchy).
-- Overlap for continuity; typical chunk size 256–512 tokens.
+##### One worked budget and design choice / 一组预算推导与方案选择
 
-**Retrieval**
+Assume a fictional enterprise team has a pre-indexed policy corpus; employee questions include both natural-language policy questions and exact policy IDs; peak load is 6 queries per second; the p95 end-to-end target is 4 seconds; a hosted model API is allowed; and the team has no capacity allocated to operating GPU inference for this workload. These are interview assumptions, not observed traffic or latency.
 
-- Hybrid: dense embeddings + BM25 for keyword recall.
-- Re-ranking with cross-encoder for top-k (e.g., top 20 → top 5).
-- **Access control:** filter by user permissions *before* returning chunks — critical for enterprise data.
+One proposed latency budget is 0.2 s for authentication and request setup + 0.6 s for permission-aware retrieval + 2.5 s for model generation + 0.2 s for validation and response handling + 0.5 s reserved for network and queueing = 4.0 s. These are allocations to validate, not measured stage percentiles; the sum of component p95s is not itself a statistical p95 guarantee. Instrument each stage and load-test the composed service.
 
-**Citation generation**
+For a rough capacity check, use Little's Law L = λW for the mean number of requests in a stable system. Suppose the explicit design assumption is an admitted 6 requests/s and 1.2 s mean time spent in the model stage, including any internal wait. Then L = 6 × 1.2 = 7.2, or about 8 requests in flight in that stage. This is an average, not 8 active model slots or a replica count; queueing, bursts, and service limits need load tests with the real model, request lengths, and latency target. Size executing slots from measured service demand and the target utilization.
 
-- Attach source doc + chunk ID to each retrieved passage.
-- Instruct LLM to cite sources in the answer.
+For these mixed exact-ID and natural-language questions, I would start with hybrid keyword and vector retrieval, enforce document permissions before context assembly, and evaluate retrieval and answer quality separately. Given the stated hosted-service permission and lack of capacity for operating GPU inference, I would put a hosted model behind that retrieval service, keep authorization outside the prompt, and bound queueing so overload does not silently consume the latency budget. If the data boundary changed, I would compare a private or self-hosted endpoint and include its operations cost; if retrieval or generation cannot fit the measured budget, I would revisit context selection, candidate ranking, and the model before relaxing answer-quality checks.
 
-##### Tradeoffs considered
+#### Design: customer support assistant with tools / 带工具的客服助手
 
-- **Pure dense vs. hybrid:** pure dense misses rare jargon and specific IDs that matter in enterprise docs; hybrid costs slightly more but catches both.
-- **Chunk size 256 vs. 512:** larger chunks give more context per retrieval but retrieve fewer distinct topics. Chose 512 for enterprise docs where context matters more than topic diversity.
-- **Re-ranking top-20 vs. top-50:** top-50 catches more relevant chunks but doubles re-rank cost. Chose top-20 because retrieval recall is already high.
+**Clarify first:** Which intents can be automated? Which actions change customer accounts or money? What policy and order systems are authoritative? Which requests require explicit consent or human review? What is the handoff path?
 
-##### Scaling and monitoring
+**Worked choice / 方案选择：** Suppose the supported flow is checking an order and requesting a refund, and policy disputes or tool failures need a person. I would use a fixed sequence: authenticate the customer; read the order and current policy; have application code check eligibility; show the proposed refund and ask for confirmation; call an idempotent refund operation; verify its result; then report the outcome or hand off. The sequence is predictable and changes financial state, so a fixed workflow makes authorization and stop points explicit. An agent loop would need evidence that dynamic tool choice materially helps before adding that control surface.
 
-- Horizontal scaling of the retrieval service.
-- Caching for frequent queries (query embedding → cached results).
-- Async document indexing with a queue-based ingestion pipeline.
-- Monitor: retrieval recall@k, faithfulness of answers to retrieved chunks, latency P95, access-control errors (should be zero).
+**Illustrative architecture / 架构示意:**
 
-##### Interviewer probes to prepare for
+~~~text
+Customer → intent and risk handling → assistant workflow
+                                      ↙          ↘
+                          read-only order/FAQ    bounded action tools
+                                      ↘          ↙
+                              validation → response or human handoff
+~~~
 
-- "How do you handle a doc update?" → partial re-indexing; keep a version table; re-embed changed chunks only.
-- "What if retrieval returns the wrong chunk?" → add citations, strengthen grounding prompt, and instrument faithfulness eval.
-- "How do you onboard a new department?" → new docs flow through the same ingestion pipeline; permission filter tagged at ingest.
+**Tool and policy design:**
 
-**Gotcha:** Candidates forget access control until asked — in enterprise Q&A, it's the **first** design question, not the last. A working RAG that leaks docs across permission boundaries is a security incident, not a shipped feature.
+- Separate read-only lookup from actions that change state.
+- Give the runtime—not the model—responsibility for identity, authorization, business limits, confirmation requirements, and final tool execution.
+- Make retryable writes idempotent where the underlying system supports it; log the request outcome without exposing unnecessary personal data.
+- Use a fixed workflow for a predictable sequence. Consider an agent loop only where dynamic tool selection adds value and can be bounded, observed, and stopped.
+- Provide explicit handling for ambiguous intent, unavailable tools, policy conflicts, and user requests for a person.
 
----
+**Evaluation and operations:** use reviewed examples for common intents, boundary cases, policy changes, tool failures, and escalation. Track task completion, human handoff, tool errors, unauthorized-action attempts, user feedback, and cost per resolved interaction. Treat the automation target as a product decision supported by evaluation, not a fixed percentage.
 
-#### Design: Customer support AI agent
+A tool-call schema can constrain the shape of a proposed call; the application must still check whether the user and action are permitted. See [Agent Fundamentals / 智能体基础](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80), [Tool Design and Function Calling / 工具设计与函数调用](#9.%20Tool%20Design%20and%20Function%20Calling%20/%20%E5%B7%A5%E5%85%B7%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8), and [AI Safety in Production / 生产环境中的 AI 安全](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8).
 
-##### Requirements probes
+#### Design: code review assistant / 代码审查助手
 
-- What's the automation target? — ~80% of queries handled automatically; escalate complex cases.
-- Conversation shape? — Multi-turn.
-- Tool surface? — Order DB, refund system, FAQ.
-- Budget for failures? — Refunds are reversible (chargebacks) but costly; require confirmation.
+**Clarify first:** Which languages and review types are in scope? Should findings be advisory or posted automatically? How is repository context selected? What level of false positives will developers tolerate? Which code or metadata may leave the repository boundary?
 
-##### High-level architecture
+**Worked choice / 方案选择：** Suppose the team has low tolerance for noisy comments and wants a human to retain review authority. I would begin with advisory draft comments, require each finding to point to changed lines and cite the relevant code evidence, and suppress weak findings rather than posting every possible concern. I would not auto-approve or block a pull request. This favors developer trust and gives the team dismissal data before considering more automation.
 
-```
-User → Routing Classifier → Agent (tools) → Response / Human Escalation
-         ↓
-    Tools: order lookup, refund processing, FAQ retrieval
-```
+**Illustrative architecture / 架构示意:**
 
-##### Deep-dive (pick 2–3)
+~~~text
+Pull request event → diff and repository context
+                   → one or more review passes
+                   → schema and location validation
+                   → deduplicate and rank findings
+                   → draft comments for human review
+                   → collect feedback and measure outcomes
+~~~
 
-**Orchestration**
+**Deep-dive topics:**
 
-- Single agent with routing; the agent selects tools.
-- A fast routing classifier does quick escalation detection (explicit "speak to human" requests, sentiment triggers).
+- **Context selection:** include changed lines, nearby code, relevant callers, and repository guidance as available. Record what was omitted when size limits require truncation.
+- **Review passes:** separate correctness, security, and style checks when that makes evaluation or prompts clearer. Keep each pass tied to a defined review rubric.
+- **Output validation:** require a finding category, explanation, location within the diff, and actionable suggestion; reject locations or structures that do not match the submitted change.
+- **Noise management:** rank or suppress uncertain findings, show evidence, and make dismissal easy. The acceptable precision/recall balance depends on developer workflow and risk.
+- **Large or generated changes:** segment by file or coherent unit, avoid irrelevant generated content, then deduplicate before presenting results.
 
-**Tool design**
+**Evaluation and operations:** build a held-out set of reviewed changes with known issues and clean examples. Measure issue detection by category, false positives, location validity, developer acceptance or dismissal, cost per review, and delay added to the workflow. Compare against a no-assistant baseline; do not claim to outperform human review without evidence.
 
-- **Read-only tools:** order lookup, FAQ retrieval — no confirmation needed.
-- **Write tools (e.g., refund):** require explicit confirmation before execution.
-- **Idempotency for refunds;** audit logs for all writes.
+#### Practice / 练习
 
-**Guardrails**
-
-- Refund limits (amount, frequency) — hard-coded, not trusted to the model.
-- PII protection: no raw SSN/CC in logs or responses.
-- Blocked intents: legal advice, medical advice.
-
-**Escalation triggers**
-
-- Low confidence (< threshold).
-- Customer frustration (sentiment, repeated "agent" requests).
-- Sensitive topics (legal, complaints, executive escalation).
-
-##### Tradeoffs considered
-
-- **Full agent vs. workflow:** full agent adapts to novel queries but burns more tokens and introduces goal drift. Chose agent because queries are open-ended and fixed workflows would need dozens of branches.
-- **Single agent vs. multi-agent manager pattern:** single agent is simpler; multi-agent adds isolation but handoff cost. Chose single for this volume; revisit if tool count exceeds ~15.
-
-##### Scaling and monitoring
-
-- **Resolution rate** (handled without human).
-- **Escalation rate** (drift in either direction is bad).
-- **CSAT / NPS.**
-- **Cost per interaction** (API calls, tokens).
-- **Max turns cap** on the agent loop; repeated-identical-action detection to break infinite loops.
-
-##### Interviewer probes to prepare for
-
-- "What happens if the refund tool fails mid-conversation?" → audit log captures attempt; inform user; retry path with idempotency key.
-- "How do you prevent prompt injection via customer messages?" → tool-level privilege separation (refund requires explicit confirmation and bounded amount); output validation; monitor canary tokens.
-- "What if the agent hallucinates a refund?" → the tool call schema is validated, so the model can only call `process_refund(order_id, amount)` with a real order_id it looked up first; business logic enforces bounds.
-
-**Gotcha:** "The agent should be fully autonomous" is the wrong framing for support. Autonomous agents with refund access will eventually issue a refund they shouldn't. Design around the assumption of occasional failure: reversibility, audit logs, rate limits, and explicit confirmation on high-stakes actions.
-
----
-
-#### Design: Code review assistant
-
-##### Requirements probes
-
-- What does it review? — Pull requests: bugs, improvements, style.
-- Integration? — GitHub.
-- Input shape? — Processes diffs.
-- Noise tolerance? — Low; false positives train reviewers to ignore the bot.
-
-##### High-level architecture
-
-```
-GitHub Webhook → PR Diff Parser → Context Builder → LLM Analysis → Inline Comments → GitHub API
-                                      ↓
-                    (relevant files, style guide, prior reviews)
-```
-
-##### Deep-dive (pick 2–3)
-
-**Context engineering**
-
-- Fit diff + relevant files within context window.
-- Prioritize changed files and their callers.
-- Truncate or summarize when over limit.
-
-**Prompt design**
-
-- Separate passes: bugs → style → security. Each pass is cheaper to get right than one mega-prompt.
-- Structured output: severity, location, suggestion, code snippet.
-
-**Avoiding false positives**
-
-- Prefer **high precision over high recall** — silence is better than noise.
-- Confidence thresholds; only surface high-confidence issues.
-- Allow "dismiss" and feedback to tune thresholds over time.
-
-**Large PRs**
-
-- Chunk into logical units (by file or by feature).
-- Review each chunk; aggregate and deduplicate comments.
-
-##### Tradeoffs considered
-
-| Dimension | Option A | Option B | Choice |
-|---|---|---|---|
-| Comment frequency | Fewer, high-signal | More, comprehensive | Balance noise vs. coverage |
-| Confidence threshold | Strict | Lenient | Depends on team tolerance |
-| Model selection | Fast model for style | Strong model for bugs | Use both for different passes |
-
-##### Scaling and monitoring
-
-- **Comment acceptance rate** (developers marking comments as helpful).
-- **Dismissal rate** (inverse signal for noise).
-- **Bug detection rate** on seeded bugs.
-- **Cost per PR** reviewed.
-- **Time from PR open to review** (latency matters for developer workflow).
-
-##### Interviewer probes to prepare for
-
-- "How do you know it's better than a human reviewer?" → don't claim it is; measure acceptance rate and bug detection rate, compare to no-bot baseline.
-- "What if the style guide changes?" → style guide lives in the prompt or a retrieved doc; changes update a single source, not re-fine-tune.
-- "How do you handle PRs with 5000 lines?" → chunk by file or feature; summarize unchanged files; skip generated code (lockfiles, etc.).
-
-**Gotcha:** Code review assistants that optimize for recall become noise generators and get ignored. The binding constraint is **developer trust**. A reviewer that flags 30 things where only 5 matter trains developers to dismiss without reading — the bot is effectively off. Target precision first; recall is a ratchet to open up once the false-positive rate is low.
-
----
-
-#### Practice tips
-
-1. **Ask clarifying questions first** — don't assume scale, constraints, or priorities.
-2. **Draw the architecture before diving in** — use a whiteboard or diagram; iterate.
-3. **State assumptions explicitly** — "Assuming 1000 QPS," "Assuming documents are pre-indexed."
-4. **Discuss tradeoffs, not just "the answer"** — show reasoning, not memorized solutions.
-5. **Show awareness of cost, latency, and failure modes** — token cost, retries, fallbacks.
-6. **Mention monitoring and feedback loops** — metrics, alerts, A/B tests, user feedback.
-
-**See also:** [9.1 AI Application Architecture](#13.%20AI%20Application%20Architecture%20/%20AI%E5%BA%94%E7%94%A8%E6%9E%B6%E6%9E%84) for production concerns that back every answer; [4.1 RAG Architecture and Implementation](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) for the RAG primitives you'll reach for in design questions; [5.1 Agent Fundamentals](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80) for agent patterns.
+- Ask clarifying questions before fixing assumed scale or targets.
+- Draw the request and data paths, including trust boundaries and failures.
+- State assumptions and what evidence could change the design.
+- Discuss quality, latency, cost, permissions, and operational ownership together.
+- Explain how the system is evaluated, rolled out, monitored, and rolled back.
+
+#### Related notes / 相关笔记
+
+- [AI Application Architecture / AI 应用架构](#13.%20AI%20Application%20Architecture%20/%20AI%E5%BA%94%E7%94%A8%E6%9E%B6%E6%9E%84) covers production controls and deployment.
+- [RAG Architecture and Implementation / 检索增强生成](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) covers retrieval implementation and grounding.
+- [LLM Evaluation Methods / 大语言模型评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95) covers evaluation design.
+- [Agent Fundamentals / 智能体基础](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80) covers runtime agent patterns.
+
+#### Sources / 来源
+
+- Lewis et al., [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401).
+- OpenAI, [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. These describe OpenAI API behavior; validate tool calls and application semantics in the target system.
+- Little, [A Proof for the Queuing Formula: L = λW](https://doi.org/10.1287/opre.9.3.383), for the steady-state average-concurrency relation used in the hypothetical capacity check.

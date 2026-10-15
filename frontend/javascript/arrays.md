@@ -1,330 +1,116 @@
-# What's the difference between `for..in` and `for..of`?
+# JavaScript Arrays / JavaScript 数组
 
-**Headline (30s):** `for..in` iterates **enumerable keys** — that's property names on objects, or *string indices* on arrays ("0", "1", "2"). `for..of` iterates **values** from anything iterable — arrays, strings, `Map`, `Set`, `NodeList`, `arguments`. If you want values from an array, use `for..of` (or a plain `for` with index). Reach for `for..in` only when you actually want keys of a plain object.
+**Key terms / 关键词:** iterable 可迭代对象 · sparse array 稀疏数组 · SameValueZero 相同值零 · shallow copy 浅拷贝
 
-## `for..in` — iterates enumerable keys
+Arrays are ordered objects with indexed properties and an iterable interface. Choose an operation by its contract: iteration protocol, holes, mutation, and equality can change the result. / 数组是带索引属性并实现可迭代协议的有序对象。选择操作时要看清迭代协议、空位、是否修改原数组及相等规则，这些都会影响结果。
 
-```javascript
-const arr = [10, 20, 30];
-for (let i in arr) {
-  console.log(i); // 0, 1, 2  (indexes as strings)
-}
+## Iterating keys or values / 遍历键还是值
 
-const str = 'abc';
-for (let i in str) {
-  console.log(i); // 0, 1, 2
-}
-
-const obj = { name: 'aaa', age: 30 };
-for (let key in obj) {
-  console.log(key); // 'name', 'age'
-}
-```
-
-**Gotcha — `for..in` on arrays yields string indices, not values:** Don't use it on arrays. The indexes come back as strings, and the iteration order is not guaranteed for arrays (it usually *happens* to be numeric for dense arrays, but the spec doesn't require it).
-
-**Gotcha — inherited enumerable properties:** `for..in` walks the prototype chain. A property added to `Object.prototype` shows up in every `for..in` loop. In modern code this rarely happens, but `Object.keys(obj)` or `for..of` over `Object.entries(obj)` is safer.
-
-## `for..of` — iterates values from iterables
+Use `for...of` for values from an iterable. Use `for...in` only when enumerating property names, usually on a plain object. A normal dense array’s own index keys are visited in ascending order, but `for...in` can also include custom and inherited enumerable string properties. / 用 `for...of` 遍历可迭代对象的值；`for...in` 遍历属性名，通常用于普通对象。普通稠密数组的自有索引键按升序枚举，但 `for...in` 也可能包含自定义属性和原型链上的可枚举字符串属性。
 
 ```javascript
-const arr = [10, 20, 30];
-for (let v of arr) console.log(v); // 10, 20, 30
+const values = [10, 20];
+for (const key in values) console.log(key); // "0", "1"
+for (const value of values) console.log(value); // 10, 20
 
-const str = 'abc';
-for (let ch of str) console.log(ch); // 'a', 'b', 'c'
-
-function fn() {
-  for (let arg of arguments) console.log(arg);
-}
-fn(100, 200, 'aaa'); // 100, 200, 'aaa'
-
-const s = new Set([10, 20, 30]);
-for (let v of s) console.log(v); // 10, 20, 30
-
-const m = new Map([['x', 100], ['y', 200]]);
-for (let [key, value] of m) console.log(key, value);
-```
-
-**Gotcha — `for..of` doesn't work on plain objects:** Plain objects aren't iterable by default. Convert first: `for (const [k, v] of Object.entries(obj))`.
-
----
-
-# How do you remove duplicates from an array?
-
-**Headline (30s):** `[...new Set(arr)]` for primitives — O(n) time, one line, impossible to get wrong. For objects keyed by a property, loop + `Map` using that property as the key. Older idioms (`filter + indexOf`, `reduce + includes`) are O(n²) and should only be cited for how *not* to do it.
-
-## 1. Using a Set — the default answer
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return [...new Set(arr)];
+const record = { name: "Ada", age: 36 };
+for (const [key, value] of Object.entries(record)) {
+  console.log(key, value); // own enumerable string-keyed properties
 }
 ```
 
-**Time:** O(n). **Space:** O(n).
+An array hole is different from an own property whose value is `undefined`: `for...of` reads a hole as `undefined`; methods such as `map` and `filter` skip absent indices. `for...in` lists only existing enumerable properties. Avoid using it when the array’s positional values are intended. / 数组空位不同于值为 `undefined` 的自有属性：`for...of` 读取空位时得到 `undefined`，而 `map`、`filter` 等方法会跳过不存在的索引。`for...in` 只列出现存的可枚举属性。需要按位置处理数组值时不要用它。
 
-## 2.1 Filter + `indexOf` — O(n²), avoid
+The ordering and inheritance behavior follows the [ECMAScript for-in/for-of rules](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html#sec-for-in-and-for-of-statements). / 顺序与继承行为遵循 [ECMAScript for-in/for-of 规范](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html#sec-for-in-and-for-of-statements)。
 
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return arr.filter((item, index) => arr.indexOf(item) === index);
-}
-```
+## Removing duplicates / 数组去重
 
-**Time:** O(n²) — `indexOf` scans the whole array for each element. **Space:** O(n).
-
-## 2.2 Filter + Set — O(n) optimization of 2.1
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  const seen = new Set<T>();
-  return arr.filter(item => {
-    if (!seen.has(item)) {
-      seen.add(item);
-      return true;
-    }
-    return false;
-  });
-}
-```
-
-**Time:** O(n). **Space:** O(n).
-
-## 3. `Map` for dedupe-by-key of objects
-
-```typescript
-interface CustomObject {
-  id: number;
-  name: string;
-}
-
-function removeDuplicates(arr: CustomObject[]): CustomObject[] {
-  const unique = new Map<number, CustomObject>();
-  arr.forEach(obj => unique.set(obj.id, obj));
-  return Array.from(unique.values());
-}
-```
-
-**Time:** O(n). **Space:** O(n). **Note:** the *last* object with a given `id` wins (later `set` overrides earlier).
-
-## 4.1 Reduce + `includes` — O(n²), avoid
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return arr.reduce((acc, current) => {
-    if (!acc.includes(current)) acc.push(current);
-    return acc;
-  }, [] as T[]);
-}
-```
-
-**Time:** O(n²).
-
-## 4.2 Reduce + Set — O(n) optimization
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  const seen = new Set<T>();
-  return arr.reduce((acc, current) => {
-    if (!seen.has(current)) {
-      seen.add(current);
-      acc.push(current);
-    }
-    return acc;
-  }, [] as T[]);
-}
-```
-
-**Time:** O(n). **Space:** O(n).
-
-## 5. Sort + reduce — O(n log n), preserves nothing
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return arr.sort().reduce((acc, current) => {
-    if (acc.length === 0 || acc[acc.length - 1] !== current) acc.push(current);
-    return acc;
-  }, [] as T[]);
-}
-```
-
-**Time:** O(n log n). **Note:** destroys original order. Useful only when you already need the array sorted.
-
-## 6. `Array.from(new Set(arr))` — equivalent to option 1
-
-```typescript
-function removeDuplicates<T>(arr: T[]): T[] {
-  return Array.from(new Set(arr));
-}
-```
-
-**Gotcha — `Set` compares by reference for objects:** `new Set([{id: 1}, {id: 1}])` keeps both entries because they're different references. Dedupe-by-key with a `Map` is the right tool for objects.
-
----
-
-# What is the spread operator, and how does it compile?
-
-**Headline (30s):** `...` expands an iterable (most commonly an array) in places where multiple values are expected — function calls, array literals, object literals. For older targets, Babel compiles array spread to `.concat()` or `Array.prototype.slice.call(arguments)`.
-
-```typescript
-const baseArray = [1, 2, 3, 4];
-const array = [...baseArray];
-```
-
-Babel compiles this down to something like:
+For primitive values, `[...new Set(values)]` keeps the first occurrence in iteration order. Set uses SameValueZero: `NaN` matches `NaN`, and `+0` matches `-0`. Objects compare by identity, so two different objects with the same fields remain distinct. / 对原始值，`[...new Set(values)]` 会按迭代顺序保留首次出现的值。Set 使用 SameValueZero：`NaN` 与自身相同，`+0` 与 `-0` 相同。对象按引用身份比较，因此字段相同但引用不同的对象仍会保留。
 
 ```javascript
-var baseArray = [1, 2, 3, 4];
-var array = [].concat(baseArray);
+[...new Set([1, 1, NaN, NaN, -0, +0])]; // [1, NaN, 0]
+[...new Set([{ id: 1 }, { id: 1 }])].length; // 2: distinct references
 ```
 
-That transpilation preserves the "shallow copy into a new array" semantic in environments that don't support ES6 syntax.
-
-## BabelJS overview
-
-Babel is a JavaScript compiler that transforms ECMAScript 2015+ code into a version compatible with older browsers and environments. Plugins and presets (`@babel/preset-env`) target a specific set of browsers, so you can write modern syntax and ship compatible output.
-
-**Gotcha — spread is shallow:** `[...arr]` copies top-level elements by reference. Nested objects are shared. For deep copy, use `structuredClone()` (see [`3.8 Modern JavaScript Features`](./modern-javascript-features.md)).
-
----
-
-# What are the most-used Array methods?
-
-**Headline (30s):** A small core handles most real-world array work: `map` transforms, `filter` selects, `reduce` folds, `some` / `every` test, `concat` joins, `indexOf` / `lastIndexOf` locate, `sort` and `reverse` reorder in place. Learn the signatures (especially `reduce` and `sort`'s comparator) and you can derive the rest from docs.
-
-## Concatenation — `concat`
-
-Joins two or more arrays into a new array without mutating the originals.
+For object deduplication by a field, a Map is concise. In this example the last value for an id wins, while the key retains the order of its first insertion. / 按对象字段去重时可用 Map。以下实现中相同 id 的最后一个对象胜出，但键的遍历位置仍按首次插入顺序保留。
 
 ```javascript
-const a = ['a', 'b', 'c'];
-const b = ['d', 'e', 'f'];
-a.concat(b); // ['a', 'b', 'c', 'd', 'e', 'f']
+function uniqueById(items) {
+  const byId = new Map();
+  for (const item of items) byId.set(item.id, item);
+  return [...byId.values()];
+}
 ```
 
-## Element checking — `every` / `some`
+A Set/Map approach is commonly linear in practical runtimes, but ECMAScript requires average access to be sublinear, not a specific O(1) implementation or end-to-end complexity. Linear `indexOf`/accumulator searches can be quadratic; choose them only when the input size or other requirements justify them. A sort-based approach changes order and needs a comparator whose equality matches the deduplication rule. / Set/Map 在常见运行时中通常表现为线性处理，但 ECMAScript 只要求平均访问复杂度优于线性，并未规定必须 O(1)，整体复杂度也取决于运行时。反复用 `indexOf` 或累加器查找可能达到平方复杂度。排序去重会改变顺序，且比较器的相等规则必须符合去重需求。
 
-- `every(fn)` — `true` if **all** elements pass.
-- `some(fn)` — `true` if **any** element passes.
+See the [ECMAScript keyed collections specification](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) for Set and Map equality and ordering semantics. / Set 与 Map 的相等和顺序语义见 [ECMAScript 键控集合规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html)。
+
+## Array methods: mutation and holes / 数组方法：修改行为与空位
+
+- `map` transforms each present index and returns a new array; it skips holes and preserves those holes in the result. / `map` 转换每个已存在的索引并返回新数组；它跳过空位，结果中也保留对应空位。
+- `filter` returns the present values that pass the predicate; holes are skipped and are not copied. / `filter` 返回通过判断的现存值；空位会跳过，也不会复制。
+- `some` and `every` stop when the answer is known; both skip holes. On an empty array, `some` is false and `every` is true. / `some` 和 `every` 在结论已确定时停止；二者都会跳过空位。空数组上 `some` 为 false，`every` 为 true。
+- `reduce` folds present elements; provide an initial value when the empty-array case matters. / `reduce` 折叠现存元素；若空数组也需有定义的结果，应提供初始值。
+- `concat` returns a shallow new array and can consult `Symbol.isConcatSpreadable`; spread syntax follows the iterable protocol instead. / `concat` 返回浅拷贝新数组，并可能遵循 `Symbol.isConcatSpreadable`；展开语法则使用可迭代协议。
+- `sort` and `reverse` mutate the receiver; `toSorted` and `toReversed` (ES2023) return copies. Sorting is stable since ES2019. Default `sort()` compares string forms, not numeric values. / `sort` 和 `reverse` 会修改原数组；ES2023 的 `toSorted`、`toReversed` 返回副本。ES2019 起排序稳定。默认 `sort()` 比较字符串形式，而非数值大小。
 
 ```javascript
-const isBelow40 = n => n < 40;
-const nums = [1, 30, 39, 29, 10, 13];
-nums.every(isBelow40); // true
-nums.some(isBelow40);  // true
+[1, 11, 2].sort(); // [1, 11, 2] — lexicographic string ordering
+[1, 11, 2].toSorted((a, b) => a - b); // [1, 2, 11]; receiver is unchanged
+
+const sparse = [, "x"];
+[...sparse]; // [undefined, "x"] — spread consumes the array iterator
+sparse.map(value => value); // [ <1 empty item>, "x" ]
+sparse.filter(() => true); // ["x"]
+sparse.flat(); // ["x"] — flat removes holes at flattened levels
 ```
 
-## Filtering — `filter`
+## Spread and copying / 展开与拷贝
 
-Returns a new array of elements that pass the predicate.
+Array spread consumes an iterable and copies its yielded values shallowly. Nested objects are still shared. Object spread is a separate operation: it copies an object’s own enumerable properties into a new object. / 数组展开会消费可迭代对象并浅拷贝其产出的值；嵌套对象仍然共享。对象展开是另一种操作：把对象的自有可枚举属性复制到新对象。
 
 ```javascript
-const words = ['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present'];
-words.filter(w => w.length > 6); // ['exuberant', 'destruction', 'present']
+const original = [{ score: 1 }];
+const copy = [...original];
+copy[0].score = 2;
+original[0].score; // 2 — the nested object is shared
+
+const merged = { ...defaults, ...overrides }; // later properties replace earlier ones
 ```
 
-## Mapping — `map`
+Transpilers may lower spread in different ways according to the target and helper settings. Do not treat one Babel output such as `[].concat(value)` as the language semantics: array spread uses the iterator, while `concat` has different behavior for sparse arrays and spreadable objects. / 转译器会按目标环境与配置选择不同实现。不要把某一种 Babel 输出（如 `[].concat(value)`）当作语言语义：数组展开消费迭代器，而 `concat` 对稀疏数组和可展开对象的处理不同。
 
-Returns a new array of transformed values.
+## Flattening nested arrays / 展平嵌套数组
+
+`flat(depth)` (ES2019) returns a shallowly flattened copy and defaults to depth 1. Use `flat(Infinity)` when arbitrary nesting is intended; it removes holes at levels it flattens and does not recursively flatten non-array iterables. / ES2019 的 `flat(depth)` 返回浅层展平副本，默认深度为 1。确实需要展平任意嵌套时可用 `flat(Infinity)`；它会移除被展平层级中的空位，不会递归展平非数组可迭代对象。
+
+A recursive implementation makes the rule explicit, but can exceed the call-stack limit on deeply nested input. This version visits every numeric position, so a hole becomes `undefined`, unlike `flat`. / 递归实现能直观表达规则，但极深输入可能超出调用栈限制。以下版本逐个访问数值索引，因此空位会变成 `undefined`，与 `flat` 不同。
 
 ```javascript
-[1, 4, 9, 16].map(Math.sqrt); // [1, 2, 3, 4]
-```
-
-## Sorting — `sort`
-
-Sorts **in place**. Default compares by UTF-16 code unit, **not** numerically.
-
-```javascript
-['March', 'Jan', 'Feb', 'Dec'].sort(); // ['Dec', 'Feb', 'Jan', 'March']
-
-[1, 11, 2, 22].sort();                   // [1, 11, 2, 22] — string sort!
-[1, 11, 2, 22].sort((a, b) => a - b);    // [1, 2, 11, 22] — numeric sort
-```
-
-**Gotcha — default `sort` on numbers is wrong for most use cases.** Always pass a comparator when sorting numbers: `(a, b) => a - b`.
-
-## Reversing — `reverse`
-
-Reverses in place.
-
-```javascript
-['one', 'two', 'three'].reverse(); // ['three', 'two', 'one']
-```
-
-## Conversion to string — `toString`
-
-```javascript
-[1, 2, 'a', '1a'].toString(); // '1,2,a,1a'
-```
-
-## Index finding — `indexOf` / `lastIndexOf`
-
-```javascript
-const beasts = ['ant', 'bison', 'camel', 'duck', 'bison'];
-beasts.indexOf('bison');     // 1
-beasts.lastIndexOf('bison'); // 4
-```
-
-**See also:** [`3.8 Modern JavaScript Features`](./modern-javascript-features.md) for `Array.at()`, `Array.from()`, and other newer methods.
-
----
-
-# How do you flatten a nested array?
-
-**Headline (30s):** `arr.flat(Infinity)` is the one-liner — supported in all modern environments. The recursive, reduce-based, and iterative variants below are worth recognizing because they show up in interview "implement this yourself" scenarios.
-
-## Recursive approach
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  let flattened = [];
-  for (let i = 0; i < arr.length; i++) {
-    if (Array.isArray(arr[i])) {
-      flattened = flattened.concat(arrayFlatten(arr[i]));
-    } else {
-      flattened.push(arr[i]);
-    }
+function flattenNested(items) {
+  const result = [];
+  for (let i = 0; i < items.length; i++) {
+    const value = items[i];
+    if (Array.isArray(value)) result.push(...flattenNested(value));
+    else result.push(value);
   }
-  return flattened;
+  return result;
+}
+
+flattenNested([1, [2, [3]], 4]); // [1, 2, 3, 4]
+[1, [2, [3]], 4].flat(Infinity); // [1, 2, 3, 4]
+```
+
+The historical iterative `[].concat(...items)` pattern flattens one level per pass. It can hit argument-count limits, repeatedly copy large arrays, and has different sparse-array behavior from `flat`; it may also return the original input when no nested array exists. / 传统迭代写法 `[].concat(...items)` 每轮展平一层，但可能触发参数数量限制、反复复制大数组，而且稀疏数组行为与 `flat` 不同；若没有嵌套数组，它还可能直接返回原数组。
+
+```javascript
+function flattenByLevels(items) {
+  while (items.some(Array.isArray)) items = [].concat(...items);
+  return items;
 }
 ```
 
-**Pros:** works anywhere, easy to explain. **Cons:** recursion stack — can fail on very deep arrays.
+Prefer `flat` when its hole and depth semantics match the task. / 若 `flat` 的空位和深度语义符合需求，应优先使用。
 
-## Functional (reduce + recursion)
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  return arr.reduce((prev, cur) =>
-    prev.concat(Array.isArray(cur) ? arrayFlatten(cur) : cur), []);
-}
-```
-
-**Pros:** declarative and concise. **Cons:** same recursion depth concern.
-
-## Iterative approach
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  while (arr.some(Array.isArray)) {
-    arr = [].concat(...arr);
-  }
-  return arr;
-}
-```
-
-**Pros:** no recursion — safe on deep arrays. **Cons:** quadratic in the worst case if the array is very jagged.
-
-## ES6 `.flat()` method
-
-```typescript
-function arrayFlatten(arr: any[]): any[] {
-  return arr.flat(Infinity);
-}
-```
-
-**Pros:** concise, optimized natively. **Cons:** not available in IE11 and earlier (no longer relevant in most codebases).
-
-**Gotcha — `.flat()` without an argument only flattens one level:** `.flat()` defaults to depth 1; use `.flat(Infinity)` for fully-nested input. Don't rely on the default for unknown nesting depths.
+**Interview answer / 面试回答:** `for...of` reads array values; Set deduplicates by SameValueZero while preserving first-seen order; array methods differ on holes and mutation; spread is shallow; and `flat` is the built-in flattening operation. / `for...of` 读取数组值；Set 按 SameValueZero 去重并保留首次出现顺序；数组方法对空位和原数组修改的行为不同；展开是浅拷贝；内置展平方法是 `flat`。

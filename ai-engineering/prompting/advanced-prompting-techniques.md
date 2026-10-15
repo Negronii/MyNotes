@@ -1,267 +1,131 @@
-# Advanced Prompting Techniques
+# Advanced Prompting Techniques / 高级提示技巧
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** Few-shot examples, reasoning prompts, self-consistency, tool loops, prompt chains, and prompt generation are optional methods for particular failure modes. They add tokens, calls, or control-flow complexity, so compare them with a simpler prompt and application-side checks on representative cases. Published results establish benefits only for the evaluated tasks and setups, not a general performance guarantee. / 少样本示例、推理提示、自一致性、工具循环、提示词链和提示词生成都是针对特定失败模式的可选方法。它们会增加 token、调用或控制流复杂度，因此应在有代表性的样本上与简单提示和应用校验做比较。论文结果只说明其评估任务和设置下的效果，不构成普遍性能保证。
 
-- When should you use few-shot vs. zero-shot prompting?
-- What is chain-of-thought, and when is it worth the extra tokens?
-- What is self-consistency, and how is it different from CoT?
-- What is the ReAct pattern, and why is it the default for tool-using agents?
-- When should you chain prompts instead of using one?
-- What is meta-prompting, and when does it pay off?
+**Key terms / 关键术语：** zero-shot / 零样本；few-shot / 少样本；chain-of-thought (CoT) / 思维链；self-consistency / 自一致性；ReAct / 推理与行动；prompt chaining / 提示词链；meta-prompting / 元提示。
 
----
+## When should you use few-shot vs. zero-shot prompting? / 何时使用少样本或零样本提示？
 
-## When should you use few-shot vs. zero-shot prompting?
+Start with a clear zero-shot instruction for a simple, well-defined task. Add a few examples when they resolve ambiguity, demonstrate a non-obvious label boundary, or show a required output format. Keep examples representative and include meaningful edge cases. More examples can consume context and can also bias the model toward an accidental pattern.
 
-**Headline (30s):** Default to **zero-shot** for simple, well-defined tasks with strong instruction-following models. Reach for **few-shot** when zero-shot is inconsistent, when the mapping is non-obvious, when you need a custom output format, or when edge cases matter. Few-shot costs tokens per call; zero-shot costs you in retries and format drift.
+**Zero-shot / 零样本:**
 
-**How each works:**
+~~~text
+Classify the sentiment as positive, negative, or neutral.
+Review: "The product arrived late, but the quality exceeded expectations."
+Return one label.
+~~~
 
-- **Zero-shot:** only instructions, no examples.
+**Few-shot / 少样本:**
 
-```
-Classify the sentiment of the following review as positive, negative, or neutral.
-Review: "The product arrived late but the quality exceeded expectations."
-```
+~~~text
+Classify each review as positive, negative, or neutral.
+"Terrible experience, never buying again." → negative
+"Exactly what I needed. Fast shipping." → positive
+"It's okay. Nothing special." → neutral
+"The product arrived late, but the quality exceeded expectations." →
+~~~
 
-- **Few-shot:** demonstrate expected input-output pairs so the model picks up the pattern.
+For extraction, examples can demonstrate how a date or amount should be normalized. Keep them synthetic; validate required fields, allowed values, and source evidence in application code. Measure the example/no-example variants on the same held-out cases rather than assuming few-shot is more reliable.
 
-```
-Classify the sentiment of each review as positive, negative, or neutral.
+## What is chain-of-thought, and when is it useful? / 什么是思维链，何时有用？
 
-Review: "Terrible experience, never buying again."
-Sentiment: negative
+Chain-of-thought (CoT) prompting asks for intermediate reasoning text before a final answer, often through examples or an instruction. Research found gains on some multi-step arithmetic and reasoning benchmarks under particular model and prompt conditions. The result is task- and model-dependent: asking for step-by-step text does not guarantee correct reasoning, and a written rationale is not proof that it faithfully describes the model's internal computation.
 
-Review: "Exactly what I needed. Fast shipping."
-Sentiment: positive
+A small arithmetic illustration is 4 × $2 + 2 × $3 = $8 + $6 = $14. A model may give a concise answer, a worked explanation, or an incorrect derivation. Verify consequential arithmetic with code or another trusted method.
 
-Review: "It's okay. Nothing special."
-Sentiment: neutral
+OpenAI's reasoning-model guidance, checked 2026-10-15, recommends trying a straightforward prompt first; asking for step-by-step reasoning can be unnecessary or counterproductive for those models. API behavior differs by provider and model, so evaluate the actual target rather than carrying a prompt recipe across systems.
 
-Review: "The product arrived late but the quality exceeded expectations."
-Sentiment:
-```
+## What is self-consistency? / 什么是自一致性？
 
-**Few-shot for structured extraction:**
+Self-consistency samples multiple candidate reasoning answers and aggregates their final answers, often by a majority vote. The research paper reported improvements on several tested reasoning benchmarks. It can help when the candidates make partly independent errors, but repeated samples can agree on the same wrong answer. Use a task-specific verifier for important results.
 
-```python
-def build_extraction_prompt(text: str) -> str:
-    return """Extract the following fields from the text. Return JSON.
+**Illustration, not model output / 示意，不是模型实测输出：** For 17 × 23, two valid decompositions are 17 × (20 + 3) = 340 + 51 = 391 and (10 + 7) × 23 = 230 + 161 = 391. If sampling several candidates, normalize equivalent answers before aggregation; voting does not replace checking.
 
-Example 1:
-Text: "John Smith ordered 3 widgets on March 10. Total: $45.99."
-Output: {"name": "John Smith", "quantity": 3, "date": "2024-03-10", "total": 45.99}
+Multiple samples increase token use and usually require more inference work. Exact cost and wall-clock impact depend on batching, provider behavior, and the selected model. Compare accuracy, latency, and cost with a single answer on the target task.
 
-Example 2:
-Text: "Jane Doe, 2 items, paid $120.00 on 3/15."
-Output: {"name": "Jane Doe", "quantity": 2, "date": "2024-03-15", "total": 120.00}
+## What is ReAct, and when should an application use a tool loop? / 什么是 ReAct，应用何时应使用工具循环？
 
-Now extract from:
-Text: """ + text
-```
+ReAct is a research prompting pattern that interleaves a model's reasoning text, an action, and an observation from an environment. Its paper evaluated it on specific knowledge and interactive tasks. It is one design option for tasks that need successive observations and actions, not a universal default for tool use. A one-shot function call or a developer-controlled workflow may be simpler when the path is known.
 
-**Gotcha:** Few-shot examples should cover the **edges**, not the middle. Three easy examples teach the model less than one easy + one ambiguous + one near-miss, because near-misses are exactly where production fails.
+**Synthetic flight-search illustration / 虚构的航班搜索示例:**
 
----
+~~~text
+User: Find the lowest listed fare from NYC to LA for next Tuesday.
+Action: search_flights(origin="NYC", destination="LA", date=<resolved date>)
+Observation: The search service returned three fares: $189, $210, and $175.
+Answer: The lowest fare returned by that search was $175.
+~~~
 
-## What is chain-of-thought (CoT), and when is it worth the extra tokens?
+This example assumes a real search service would resolve airport codes, date, currency, freshness, and availability. The model must not invent those observations. The application should validate tool arguments, authorize side effects, limit tool access and turns, record outcomes, and stop safely on errors. Treat retrieved pages and tool output as untrusted input; see [Agent Fundamentals / 智能体基础](../agents/agent-fundamentals.md), [Tool Design and Function Calling / 工具设计与函数调用](../agents/tool-design-and-function-calling.md), and [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md).
 
-**Headline (30s):** CoT elicits **intermediate reasoning tokens** before the final answer. The model "thinks aloud," which reduces errors on math, logic, and multi-step tasks by decomposing the problem and by surfacing the reasoning for debugging. Worth it for anything where the answer isn't a direct lookup — not worth it for simple classification where it just burns tokens.
+## When should you chain prompts? / 何时串联提示词？
 
-**Two flavors:**
+Use a fixed prompt chain when the task has separable steps and code can validate, branch, retry, or stop between them. If the sequence is known, developer-controlled stages can be easier to inspect than an open-ended agent loop. Each model call can still be wrong; validate intermediate outputs and test the whole chain.
 
-- **Zero-shot CoT** — add a trigger like "Let's think step by step" and let the model produce reasoning unguided.
+**Outline → validate → write / 大纲 → 校验 → 写作:**
 
-```
-A store sells apples for $2 each and oranges for $3 each. If I buy 4 apples and 2 oranges, how much do I pay? Let's think step by step.
-```
+1. Ask for an outline in a declared schema.
+2. Parse it and check required sections and constraints in application code.
+3. If valid, ask for a draft based on the outline; otherwise return an explicit failure or a bounded correction request.
 
-- **Few-shot CoT** — show worked examples so the model learns the reasoning style you want.
+~~~python
+outline = call_model(make_outline_prompt(topic))
+parsed = parse_schema(outline)
+if not parsed.ok:
+    return validation_error(parsed.issues)
+if not deterministic_checks(parsed.value):
+    return validation_error("outline violates required section rules")
+return call_model(make_draft_prompt(parsed.value))
+~~~
 
-```
-Q: A shirt costs $25. There's a 20% discount. How much do I pay?
-A: First, 20% of $25 = $5. So the discount is $5. $25 - $5 = $20. I pay $20.
+If five stages each succeed with probability 0.95 and failures are independent, the probability that all five succeed is 0.95⁵ ≈ 0.774. Real failures may be correlated, and retries or gates change the result; measure the actual workflow instead of treating this illustration as a reliability estimate.
 
-Q: A book costs $40. There's a 15% discount. How much do I pay?
-A: First, 15% of $40 = $6. So the discount is $6. $40 - $6 = $34. I pay $34.
+## What is meta-prompting? / 什么是元提示？
 
-Q: A laptop costs $800. There's a 25% discount. How much do I pay?
-A:
-```
+Meta-prompting uses a model to generate candidate instructions or revise an existing prompt in response to concrete failures. Treat either output as a candidate. Evaluate variants on development examples, inspect failures, and keep a final held-out set untouched until selection; repeated tuning against the same set can overfit it.
 
-**When it helps:**
+Automatic Prompt Engineer (APE) is one research approach to generating and selecting instruction candidates for evaluated tasks. The templates here are a lightweight human-directed workflow, not a reproduction of that method or its reported results.
 
-- Multi-step math, logic, or deduction
-- Problems where the answer depends on intermediate facts
-- Any task where you want to audit the reasoning
+**Candidate generation / 生成候选提示词:**
 
-**Gotcha:** On "reasoning" models (o1, Claude with extended thinking, etc.), **don't manually add "think step by step"** — the model already does internal chain-of-thought. Adding explicit CoT instructions can actually hurt performance by double-reasoning. Reserve explicit CoT for non-reasoning models.
+~~~text
+Task: Classify a support message as billing, technical, or general.
+Success: Choose the supported category; return needs_review when evidence is insufficient.
+Inputs: Only the supplied message and category definitions.
+Output: Return the category and needs_review as JSON.
+Generate three materially different candidate instructions. For each, state which ambiguity it addresses. Do not claim the candidates have been tested.
+~~~
 
----
+**Failure-driven revision / 根据失败样例修订:**
 
-## What is self-consistency, and how is it different from CoT?
+~~~text
+Current prompt:
+[insert the current synthetic prompt]
 
-**Headline (30s):** Self-consistency generates **multiple reasoning paths** for the same question and takes the **majority answer**. It sits on top of CoT — CoT is one path, self-consistency is N paths with voting. Improves reliability on reasoning tasks where single-path errors are common, at the cost of N× prompt + N× response tokens.
+Observed failure:
+[insert a synthetic input and the incorrect output]
 
-**How it works:**
+Expected behavior:
+[state the correct output and why]
 
-```
-For each of the following 5 reasoning attempts, solve: "What is 17 * 23?"
-Take the most common final answer.
-```
+Revise only the instruction needed to address this failure. Preserve the task, output contract, and other constraints. Return the revised prompt and a short change note. This candidate still requires evaluation on examples not used to write it.
+~~~
 
-| Attempt | Reasoning Path | Answer |
-|---|---|---|
-| 1 | 17×20=340, 17×3=51, 340+51=391 | 391 |
-| 2 | 17×23 = (20-3)×23 = 460-69 = 391 | 391 |
-| 3 | 17×23 ≈ 400... (error) | 391 |
-| 4 | 17×23 = 391 | 391 |
-| 5 | 17×23 = 391 | 391 |
+A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task.
 
-**Majority answer:** 391.
+## Related notes / 相关笔记
 
-**Tradeoffs:**
+- [Prompt Engineering Fundamentals / 提示工程基础](./prompt-engineering-fundamentals.md) covers clear instructions, examples, and output contracts.
+- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) covers the information available to each inference.
+- [Agent Fundamentals / 智能体基础](../agents/agent-fundamentals.md), [Orchestration Patterns / 编排模式](../agents/orchestration-patterns.md), and [Tool Design and Function Calling / 工具设计与函数调用](../agents/tool-design-and-function-calling.md) cover runtime tool loops and control flow.
 
-- **Pro:** smooths out single-path errors; improves reliability on reasoning-heavy tasks.
-- **Con:** N× tokens, N× latency, N× cost.
+## Sources / 来源
 
-Use when correctness matters more than speed (code generation, math, critical classification).
-
-**Gotcha:** Majority vote only works when the correct answer is **dominant**. If the model is systematically biased toward a wrong answer (e.g., a common misconception), all N paths agree on the wrong answer and self-consistency confirms the mistake. Pair with a separate evaluator (LLM-as-judge or rule-based check) when stakes are high.
-
----
-
-## What is the ReAct pattern, and why is it the default for tool-using agents?
-
-**Headline (30s):** **Re**asoning + **Act**ing. The model alternates between `Thought` (reason about next step), `Action` (tool call), and `Observation` (tool result), in a loop, until done. ReAct is the default tool-using agent pattern because the explicit Thought step reduces hallucination (model must justify each action) and Observations keep it grounded in real data instead of pattern-matching.
-
-**Pattern structure:**
-
-```
-Thought: [reasoning about current state and next step]
-Action: [tool_name]([args])
-Observation: [tool result]
-
-Thought: [reasoning based on observation]
-Action: [tool_name]([args])
-Observation: [tool result]
-
-...
-
-Thought: I now have enough information to answer.
-Answer: [final response]
-```
-
-**Concrete example — flight lookup:**
-
-```
-User: What's the cheapest flight from NYC to LA next Tuesday?
-
-Thought: I need to find flights. I'll search for flights from NYC airports to LA airports on the user's specified date.
-Action: search_flights(origin="NYC", destination="LA", date="2024-03-19")
-Observation: Found 3 flights: Delta $189, United $210, JetBlue $175
-
-Thought: JetBlue at $175 is the cheapest. I'll present this to the user.
-Answer: The cheapest flight from NYC to LA on Tuesday March 19 is JetBlue at $175.
-```
-
-**Why it works:**
-
-- Explicit reasoning reduces hallucination — the model must justify each action.
-- Observations ground the model in real data rather than pattern-matching.
-- The loop naturally supports multi-step tool use without custom orchestration.
-
-**Common follow-ups:**
-
-- "How do you prevent infinite loops?" — cap max iterations (e.g., 10–20 turns) and add an exit condition on repeated identical actions.
-- "How is this different from plain function calling?" — plain function calling is one turn: request → tool call → response. ReAct is the iterative loop on top, with explicit Thought steps.
-
-**Gotcha:** Don't pollute the context with verbose Observations. If a tool returns 10KB of JSON, truncate or summarize before the next Thought — otherwise long agent runs degrade from context rot (see [3.1 Context Engineering → Context as a Finite Resource](../context/context-engineering-principles.md#why-is-context-a-finite-resource-and-whats-lost-in-the-middle)).
-
----
-
-## When should you chain prompts instead of using one?
-
-**Headline (30s):** Use prompt chaining when a task has **clearly separable steps**, benefits from **programmatic gates** between them (validation, retry, branching), or when a single mega-prompt is so long it confuses the model. Each step's output feeds the next; gates catch failures early instead of propagating them downstream.
-
-**Example — outline → validate → write:**
-
-```
-Step 1 (Generate Outline):
-Given the topic "Introduction to RAG", produce a 5-section outline with bullet points per section.
-Output format: JSON with keys "sections" (array of {title, bullets}).
-
-Step 2 (Validate):
-Check the outline for: (a) logical flow, (b) no redundant sections, (c) each section has 2-4 bullets.
-If invalid, return {"valid": false, "issues": [...]}. If valid, return {"valid": true}.
-
-Step 3 (Write Content):
-Given the validated outline, write 200-300 words per section. Use markdown. Do not deviate from the outline.
-```
-
-**Programmatic gates:**
-
-| Gate | Purpose |
-|---|---|
-| Validation | Reject malformed output before passing to next step |
-| Filtering | Remove irrelevant content before expensive steps |
-| Branching | Route to different chains based on classification |
-| Retry | Re-run a step with corrected input on failure |
-
-**Implementation sketch:**
-
-```python
-def chain_with_gate(topic: str) -> str:
-    outline = llm_call(step1_prompt(topic))
-    validation = llm_call(step2_prompt(outline))
-    if not validation["valid"]:
-        return retry_step1(topic, validation["issues"])
-    return llm_call(step3_prompt(outline))
-```
-
-**Common follow-ups:**
-
-- "How is this different from a ReAct agent?" — ReAct is model-directed: the LLM decides what to do next each turn. Chaining is developer-directed: you hard-code the sequence of prompts. Use chaining when the path is known, ReAct when it's emergent. See also [5.2 Orchestration Patterns → Prompt Chaining vs. Orchestrator-Workers](../agents/orchestration-patterns.md).
-
-**Gotcha:** Chaining multiplies failure modes — each step has its own failure rate, and errors compound. A 95% success rate per step means only 77% over 5 steps. Budget for retries at each gate, or fail loudly and log the failing step.
-
----
-
-## What is meta-prompting, and when does it pay off?
-
-**Headline (30s):** Meta-prompting uses an LLM to **generate or improve prompts**. Pays off when you're at scale (many prompts to maintain), adapting prompts to new domains, or running A/B tests — anywhere the cost of the LLM-as-prompt-engineer is lower than paying a human to manually tune.
-
-**Two modes:**
-
-- **Prompt generation:**
-
-```
-You are a prompt engineer. Given this task description, produce a system prompt that would elicit high-quality responses from an LLM.
-
-Task: Extract customer name, order ID, and complaint type from support emails. Output JSON. Handle typos and informal language.
-```
-
-- **Prompt improvement:**
-
-```
-Here is a prompt that sometimes produces incorrect outputs:
-[original prompt]
-
-Here are 3 examples where it failed:
-[failure 1]
-[failure 2]
-[failure 3]
-
-Revise the prompt to address these failure modes. Preserve the original intent. Output only the revised prompt.
-```
-
-**Optimization loop:**
-
-1. Define success criteria (accuracy, format compliance, user satisfaction).
-2. Generate N prompt variants via meta-prompting.
-3. Evaluate each variant on a held-out set.
-4. Select the best; feed failures back for another round.
-
-**Gotcha:** Meta-prompting is **not** a replacement for human judgment. The optimizer can converge on prompts that game your eval but break in production, or produce brittle prompts that only work on the exact distribution of your held-out set. Treat it as prompt *exploration*, not prompt *optimization* — human review is still required before deploying.
-
-**See also:** [2.1 Prompt Engineering Fundamentals](./prompt-engineering-fundamentals.md) for the 4 principles and 7-layer system prompt architecture.
+- Wei et al., [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903).
+- Kojima et al., [Large Language Models are Zero-Shot Reasoners](https://arxiv.org/abs/2205.11916).
+- Wang et al., [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171).
+- Yao et al., [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629).
+- Zhou et al., [Large Language Models Are Human-Level Prompt Engineers](https://arxiv.org/abs/2211.01910), for the APE instruction-generation and selection approach.
+- OpenAI, [Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices), checked 2026-10-15. These instructions describe OpenAI reasoning models and should not be generalized to other APIs.
+- OpenAI, [Prompt generation](https://developers.openai.com/api/docs/guides/prompt-generation), checked 2026-10-15. This is an OpenAI-specific example of generating or revising prompt text, not evidence that a generated prompt performs better without task evaluation.

@@ -1,193 +1,96 @@
-# Fine-tuning Strategies
+# Fine-tuning Strategies / 微调策略
 
-This note prepares you to answer:
+**Core explanation / 核心解释：** Fine-tuning updates a pretrained model using examples or preferences to change task behavior. It is worth testing when a repeatable behavior gap remains after prompt, context, retrieval, and workflow improvements. It is not a reliable database for fresh or access-controlled facts; choose the method and data through held-out evaluation and account for training, serving, and maintenance. / 微调用示例或偏好更新预训练模型，以改变特定任务行为。当提示词、上下文、检索和工作流改进后仍存在稳定的行为差距，才值得评估微调。它不是可靠的实时或权限控制数据库；应通过保留集评估选择方法和数据，并计入训练、部署及维护成本。
 
-- Should you fine-tune, or is prompting/RAG enough?
-- Which fine-tuning method should you pick (LoRA vs. full vs. QLoRA)?
-- How much data do you need, and what does "quality over quantity" actually mean?
-- Walk me through a fine-tuning training pipeline
-- How do you evaluate a fine-tuned model to know it worked?
-- What is RLHF, and where does it fit?
+**Key terms / 关键术语：** supervised fine-tuning (SFT) / 监督微调；LoRA / 低秩适配；QLoRA / 量化低秩适配；preference optimization / 偏好优化；RLHF / 基于人类反馈的强化学习；DPO / 直接偏好优化。
 
----
+## Should you fine-tune, or use prompting and retrieval? / 应微调，还是使用提示和检索？
 
-## Should you fine-tune, or is prompting/RAG enough?
+First identify the error. Missing or changing facts call for an authoritative data source and retrieval or a direct API. Unclear instructions may be fixed with a prompt or workflow. A persistent style, label convention, or response pattern may be suitable for fine-tuning if examples can teach it and evaluation confirms the gain. These are useful starting points, not mutually exclusive categories.
 
-**Headline (30s):** Climb the **escalation ladder** first — prompting → few-shot → RAG → fine-tuning. Fine-tuning is slow to iterate and expensive to maintain; only reach for it when cheaper approaches demonstrably fail, and only for the right *reason*. The golden rule: **fine-tune for behavior, RAG for knowledge.** If the model needs new facts, use RAG; if it needs to speak/act differently, fine-tune.
+Fine-tuning does not make facts stored in weights reliably addressable, current, or permission-aware. Retrieval still needs source freshness, access checks, and evidence validation. A fine-tuned model can also be paired with retrieval. [RAG Architecture and Implementation / 检索增强生成](../rag/rag-architecture-and-implementation.md) covers external evidence; [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) covers task evaluation.
 
-**The escalation ladder:**
+Before training, compare a prompt-only baseline and any relevant retrieval or workflow baseline. Consider fine-tuning when the remaining gap is repeatable, the training data represents the target behavior, and the expected improvement justifies training, deployment, and future update work.
 
-| Step | Approach | Effort | When It Works |
-|---|---|---|---|
-| 1 | **Prompting** | Low | Simple tasks, general knowledge, one-off queries |
-| 2 | **Few-shot examples** | Low | Pattern demonstration, format consistency |
-| 3 | **RAG** | Medium | Knowledge gaps, up-to-date info, proprietary docs |
-| 4 | **Fine-tuning** | High | Persistent behavior change, format enforcement, domain adaptation |
+## Which method should you choose? / 如何选择微调方法？
 
-Try each in order. Move to the next only when the current approach demonstrably fails.
+- **Full fine-tuning / 全量微调：** updates the base model's trainable weights. It offers broad adaptation capacity, with higher memory, compute, and artifact costs.
+- **LoRA / 低秩适配：** freezes the base weights and trains low-rank matrices for selected weight updates. This reduces the number of trainable parameters; resulting quality and memory needs depend on model, rank, target modules, data, and training setup.
+- **QLoRA / 量化低秩适配：** keeps a quantized base model frozen while training LoRA adapters. The QLoRA paper studies 4-bit quantization and memory-saving methods in a specific experimental setup; quantization and adapter choices still require task evaluation.
+- **Adapters / 适配器：** add small trainable modules, often bottleneck layers within Transformer blocks, while the main model weights stay frozen.
+- **Prefix tuning / 前缀微调：** learns continuous task-specific vectors that are supplied as prefix representations at Transformer layers; these are not ordinary visible text tokens.
+- **Prompt tuning / 软提示微调：** learns a small set of continuous input-embedding vectors prepended to the input while keeping the model frozen. This differs from prompt engineering, which edits ordinary instruction text.
 
-**Good reasons to fine-tune:**
+These methods alter different parts of a model's computation and have different trainer and serving support. Their results depend on the model, task, and implementation; compare them by evaluation rather than assuming one dominates.
 
-- **Output format consistency** — need a specific JSON schema, tone, or structure that prompting cannot reliably enforce.
-- **Domain-specific terminology/behavior** — legal, medical, or technical jargon; industry conventions.
-- **Latency-sensitive applications** — a fine-tuned small model can outperform a prompted large model.
-- **Cost optimization at scale** — smaller fine-tuned model is cheaper than repeatedly prompting a large one.
-- **Proprietary behavior** — logic or style that cannot be expressed in prompts.
+A common LoRA parameterization writes an update as a product of two low-rank matrices:
 
-**Bad reasons to fine-tune:**
+$$
+W' = W + \Delta W,\qquad \Delta W = BA
+$$
 
-- **Model lacks knowledge** → use RAG instead. Fine-tuning bakes facts in fragile ways; RAG keeps them current and swappable.
-- **Small dataset** → insufficient for meaningful adaptation; high overfitting risk.
-- **Rapidly changing requirements** → fine-tuning is slow; prompts or RAG iterate faster.
+Here, if W maps from input dimension k to output dimension d, A can have shape r × k and B shape d × r, with rank r smaller than k and d. This is a schematic form; implementations may scale or target different modules. Some serving stacks can merge adapters into the base weights, while other configurations keep adapter operations at inference. Verify the target stack instead of assuming zero latency overhead.
 
-**Tiebreaker question (to ask the interviewer):** "What do we need the model to do that prompting + RAG can't achieve?" If the answer is "know more facts," don't fine-tune. If it's "behave differently / follow a format reliably," fine-tune.
+**One-matrix count illustration / 单个矩阵参数量示例:** Suppose one target projection is 4096 × 4096 and r = 8. The two LoRA matrices contain r(k + d) = 8(4096 + 4096) = 65,536 trainable values, while the original dense matrix has dk = 4096 × 4096 = 16,777,216 values. This compares one adapted matrix only; a model's total depends on how many layers and matrices are targeted, and the count alone predicts neither quality nor the whole model's trainable-parameter fraction.
 
-**Gotcha:** Teams fine-tune for knowledge because the problem feels like "the model doesn't know X." That's a knowledge problem — RAG. If you fine-tune, you've now locked the facts into the weights, which means re-fine-tuning every time the facts change. Expensive trap.
+There is no universal rank, method, or “default” that guarantees quality. Compare feasible approaches using the same data splits, task metrics, deployment constraints, and base model.
 
----
+## How much and what kind of data? / 需要多少数据，数据应是什么样？
 
-## Which fine-tuning method should you pick? (LoRA vs. full vs. QLoRA)
+There is no general example count that predicts success. A small clean set may reveal whether a behavior is learnable, while broader or rarer cases may need more coverage. Track which behaviors and input patterns each example represents; do not treat raw volume as evidence of quality.
 
-**Headline (30s):** **LoRA is the default** — trains ~1% of parameters, good quality, moderate memory. Go to **QLoRA** (LoRA on a 4-bit quantized base) when GPU memory is tight. Reach for **full fine-tuning** only when LoRA plateaus for your task and you have the GPU budget, which is rare for LLMs.
+Possible supervised example / 监督样例:
 
-**The tradeoff:**
-
-| Method | Parameters Trained | Memory | Quality | Use Case |
-|---|---|---|---|---|
-| **Full fine-tuning** | All (~100%) | Very high | Highest | Rarely used with LLMs; requires massive GPU memory |
-| **LoRA** (Low-Rank Adaptation) | ~1% (rank-decomposition matrices) | Moderate | High | Most popular; freeze base, train small adapters |
-| **QLoRA** | ~1% on quantized base | Low | Good | LoRA + 4-bit quantized base; memory-constrained setups |
-| **Adapters** | Small modules between layers | Low–Moderate | Good | Modular; swap adapters per task |
-| **Prefix tuning** | Trainable vectors prepended to layers | Low | Good | Lightweight; minimal parameter updates |
-
-**How LoRA works:**
-
-```python
-# Freeze base model, add low-rank matrices
-# W' = W + ΔW, where ΔW = A @ B  (A: d×r, B: r×k, r << d,k)
-# Only A and B are trained; W is frozen
-```
-
-- Freeze base model weights.
-- Train small rank-decomposition matrices (typically r = 8–64).
-- Merge adapters into base at inference for zero latency overhead.
-
-**Decision rule:**
-
-1. Start with LoRA. Rank 8–16 is a fine default.
-2. If memory is the bottleneck (single consumer GPU, large base model), move to QLoRA.
-3. If LoRA plateaus and you have the GPU budget, try full fine-tuning.
-4. Adapters and prefix tuning are niche — reach for them when you need to swap specializations at runtime (one base, many adapters).
-
-**Gotcha:** "Higher rank = better quality" is mostly a myth. Past r = 16–32, quality plateaus or regresses (overfitting on small datasets). Don't tune rank; tune data quality and learning rate first.
-
----
-
-## How much data do you need, and what does "quality over quantity" actually mean?
-
-**Headline (30s):** **100–1000 high-quality examples** can be effective with LoRA — often more useful than 100k mediocre ones. The dataset has to be **diverse** (cover edge cases), **representative** (match production distribution), **correct** (labels are right), and **consistently formatted**. Bad data produces a model worse than the base.
-
-**Data formats:**
-
-**Instruction-response pairs** (instruction tuning):
-
-```json
-{
-  "instruction": "Summarize the following contract clause.",
-  "input": "The party of the first part...",
-  "output": "The seller agrees to deliver..."
-}
-```
-
-**Conversation format** (chat models):
-
-```json
+~~~json
 {
   "messages": [
-    {"role": "user", "content": "What is the refund policy?"},
-    {"role": "assistant", "content": "Refunds are available within 30 days..."}
+    {"role": "user", "content": "Summarize this sample clause: The supplier will deliver the parts by June 1."},
+    {"role": "assistant", "content": "The supplier must deliver the parts by June 1."}
   ]
 }
-```
+~~~
 
-**Data quality checklist:**
+This is synthetic demonstration data, not legal advice or a recommended training format for every API. Follow the chosen trainer's current format and include only data you are authorized to use.
 
-| Criterion | Description |
-|---|---|
-| **Diverse** | Covers edge cases and variations |
-| **Representative** | Matches production distribution |
-| **Correct** | Labels/answers are accurate |
-| **Consistent format** | Same structure across examples |
+Review data for correctness, representative coverage, consistent labels, duplicates, sensitive information, and rights to use. Split training and evaluation data to reduce leakage; near-duplicates or examples from the same source can make a nominally held-out score misleading. Synthetic examples can expand coverage, but verify them because generation can introduce unsupported facts, errors, and bias.
 
-**Synthetic data:** use a stronger model (GPT-4, Claude) to generate training data for a smaller model. Effective when human-labeled data is scarce, but validate quality — models generating training data inherit the generator's biases and errors.
+## A training and evaluation workflow / 训练与评估流程
 
-**Gotcha:** "My dataset has 10,000 examples" is not a quality signal. A model trained on 10k near-duplicates learns a single pattern and fails on everything outside it. Coverage of the input distribution matters more than raw count.
+1. **Define the failure and success criteria.** Record the current behavior, target behavior, operational constraints, and unacceptable regressions.
+2. **Build and review examples.** Remove duplicates and unauthorized or sensitive material; check labels and coverage.
+3. **Create separated data splits.** Separate training and validation examples, and reserve a representative final test set until the method and training controls are fixed. Document the split method and known leakage risks.
+4. **Choose a base model and method.** Confirm current training support, data format, license or service terms, and serving compatibility.
+5. **Train and tune a baseline experiment.** Track the learning rate and schedule, epoch count, effective batch size, gradient accumulation, training-data version, checkpoints, and validation results. These are experiment-specific controls, not portable defaults.
+6. **Compare with the untuned baseline.** Use validation cases for iterative comparisons; after choices are fixed, compare the selected model with the baseline on the untouched test set. Report quality by important slices, format and tool behavior, safety outcomes, and regressions.
+7. **Deploy cautiously and monitor.** Version the model and rollback path; monitor the same outcomes on real traffic, respecting data retention and consent rules.
 
----
+A successful training job only shows that optimization ran. It does not establish better generalization. Do not call a score gain “memorization” or “generalization” without checking data overlap, task slices, and independent evidence.
 
-## Walk me through a fine-tuning training pipeline
+The **learning rate** sets the scale of optimizer updates; a rate that is too large for a setup can destabilize learning, while one that is too small can fail to adapt within the chosen training budget. **Epochs** count passes over the training examples; more passes may improve fit or begin to overfit. **Batch size** controls how many examples contribute to an optimizer update, with memory and gradient-variance tradeoffs; gradient accumulation can change the effective batch without changing the per-device batch.
 
-**Headline (30s):** Six steps: **prepare dataset** (clean, format, split) → **choose base model and method** → **set hyperparameters** → **train and monitor loss** (watch for overfitting) → **evaluate on held-out set** → **deploy and monitor**. The dataset-preparation step usually dominates; training itself is a commoditized script for LoRA.
+Use training data to fit weights, a validation split to compare training controls and support early stopping, and a final held-out test set only after choices are fixed. Repeatedly selecting against the final test set leaks it into development. Compare task outcomes and important slices against the untuned baseline; training and validation loss are useful signals, not substitutes for the target behavior.
 
-**The pipeline:**
+## What are SFT, RLHF, and DPO? / 什么是 SFT、RLHF 与 DPO？
 
-1. **Prepare dataset** — format, clean, split train/validation (e.g., 90/10). Deduplicate. Verify label quality.
-2. **Choose base model and method** — e.g., Llama 3 + LoRA. Pick the smallest base that might work; upgrade only if it underperforms.
-3. **Set hyperparameters** — learning rate is method-dependent: ~1e-5–5e-5 for full fine-tuning (small updates), ~1e-4–5e-4 for LoRA (small param count tolerates a higher LR). Epochs 1–3 is typical; batch size as large as memory allows.
-4. **Train and monitor loss** — watch training vs. validation loss. Validation loss rising = overfitting. Use early stopping.
-5. **Evaluate on held-out set** — task-specific metrics, format compliance, no regression on general capabilities.
-6. **Deploy and monitor** — A/B test, track latency, error rates, user feedback.
+**Supervised fine-tuning (SFT)** trains on desired responses or demonstrations. It can teach response patterns represented by the examples; it does not guarantee that the model follows every instruction or is safe in unseen situations.
 
-**Cost considerations:**
+In the InstructGPT research pipeline, human-written demonstrations were used for supervised fine-tuning, human preference comparisons trained a reward model, and reinforcement learning optimized the policy against that reward. This describes that paper's method, not every assistant model's training process.
 
-| Option | Approx. Cost | When It Makes Sense |
-|---|---|---|
-| **API fine-tuning** (OpenAI, Anthropic) | $8–$80+ per 1M tokens (varies by model) | Quick iteration, no infra; vendor lock-in |
-| **Cloud GPU rental** (AWS, GCP, Lambda) | $1–$4/hr (A10G, A100) | Full control, custom models, one-off or batch jobs |
-| **Local training** | Hardware cost only | Repeated experiments, data privacy, long-term savings |
+**Direct Preference Optimization (DPO)** is a preference-learning method that optimizes from chosen and rejected responses without fitting a separate reward model in the same way as the classic RLHF pipeline. It still depends on preference data, a training objective, and modeling assumptions; it is not automatically more accurate or safer than PPO. Choose based on the available data, infrastructure, and evaluation.
 
-- **API fine-tuning:** simplest; limited to vendor models and formats.
-- **Cloud GPU:** flexible; requires MLOps and cost management.
-- **Local:** highest upfront cost; best for sensitive data and heavy repeated usage.
+Preference labels can be inconsistent or reflect the annotators and rubric. Evaluate the resulting model for the intended task and relevant failure cases; do not infer safety from a preference-training label alone.
 
-**Gotcha:** Candidates skip the "monitor after deploy" step because training completed successfully. Fine-tuned models drift as user behavior drifts; the eval set you trained against becomes stale within months. Treat fine-tuning as the start of a monitoring commitment, not a shipping milestone.
+## Related notes / 相关笔记
 
----
+- [RAG Architecture and Implementation / 检索增强生成](../rag/rag-architecture-and-implementation.md) covers retrieval for external and changing evidence.
+- [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) covers held-out evaluation and failure analysis.
+- [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md) covers runtime controls that training does not replace.
 
-## How do you evaluate a fine-tuned model to know it worked?
+## Sources / 来源
 
-**Headline (30s):** Four checks: **compare against the base model** on the same eval set (did fine-tuning actually help?), **check for regression** on general capabilities (math, reasoning — fine-tuning can degrade them), **test edge cases** and adversarial inputs, and **A/B test in production** where real users catch what offline evals miss.
-
-**The four checks:**
-
-- **Compare against base model** — same eval set, both models, show the delta. A fine-tuned model "works" only relative to what you started with.
-- **Check for regression** on general capabilities — run math, reasoning, and safety benchmarks before and after. Specialization often degrades generalization.
-- **Test edge cases and adversarial inputs** — prompt injections, malformed requests, boundary cases. Fine-tuned models can regress on safety.
-- **A/B test in production** — offline evals predict, online usage confirms. Real-user satisfaction and task completion are the ultimate signals.
-
-**Gotcha:** "Eval metric went up" alone is not proof of success. If your eval set drew heavily from your training distribution, you measured memorization, not generalization. Hold out a genuinely unseen eval slice — and ideally, gather one *after* training started, so contamination is physically impossible.
-
----
-
-## What is RLHF, and where does it fit?
-
-**Headline (30s):** **Reinforcement Learning from Human Feedback** aligns models with human preferences *after* supervised fine-tuning. It's a three-step process: SFT on demonstrations → train a **reward model** on human pairwise preferences → optimize the policy against that reward model (PPO, or DPO as a simpler alternative). RLHF is what turns a capable model into a helpful one — responsible for most of the "feels aligned" behavior of ChatGPT-like models.
-
-**The process:**
-
-1. **SFT** (Supervised Fine-Tuning) — train on high-quality human demonstrations. This gives the model a baseline of the desired style.
-2. **Reward model training** — humans rate pairs of model outputs (A better than B). Train a model to predict these preferences.
-3. **PPO / DPO optimization** — optimize the policy against the reward model. PPO is the classic approach; DPO (Direct Preference Optimization) sidesteps the reward model by optimizing directly on preference pairs — simpler to implement.
-
-**Why it matters:**
-
-Alignment is what makes models helpful, harmless, and honest rather than merely capable. Without it, base models produce grammatical text that doesn't necessarily do what you want.
-
-**What you're expected to know vs. do:**
-
-- **Know conceptually** — what SFT, reward model, and PPO/DPO do; why SFT alone is insufficient.
-- **Rarely run yourself** — full RLHF is expensive and data-hungry; most teams use RLHF'd base models (Claude, GPT-4, Llama Instruct) and add LoRA fine-tuning on top.
-
-**Gotcha:** DPO is often taught as "simpler PPO" and picked for that reason, but it has its own failure modes (reward hacking, preference noise propagating directly into policy updates). If you're in an interview and asked "why DPO over PPO," cite implementation simplicity and avoiding reward model drift — not "DPO is better."
-
-**See also:** [4.1 RAG Architecture and Implementation](../rag/rag-architecture-and-implementation.md) for when knowledge problems should be solved by retrieval instead of fine-tuning; [6.1 LLM Evaluation Methods](../evaluation/llm-evaluation-methods.md) for how to build evals that measure whether fine-tuning actually worked.
+- Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685).
+- Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314).
+- Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751); Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190); Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691).
+- Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155).
+- Rafailov et al., [Direct Preference Optimization: Your Language Model is Secretly a Reward Model](https://arxiv.org/abs/2305.18290).
+- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), [Supervised fine-tuning](https://developers.openai.com/api/docs/guides/supervised-fine-tuning), [Direct preference optimization](https://developers.openai.com/api/docs/guides/direct-preference-optimization), and [Deprecations](https://developers.openai.com/api/docs/deprecations), checked 2026-10-15. The SFT/DPO pages describe OpenAI-specific methods, not general availability: the optimization page marks fine-tuning docs as legacy and says the platform is winding down. The deprecations page says organizations that had not previously run fine-tuning cannot create jobs; since 2026-07-02, organizations that have not run inference on a fine-tuned model in the prior 60 days also cannot create jobs. Active existing customers lose job creation on 2027-01-06, while inference continues until the base model is deprecated. Check current availability before treating OpenAI API fine-tuning as an option.
