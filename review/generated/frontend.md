@@ -4760,261 +4760,175 @@ Lazy-loading images is great — unless you introduce layout shift every time on
 **See also:** [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#22.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
 ## 25. Advanced TypeScript / TypeScript进阶
 
-A bundle of interview questions about TypeScript's more powerful features — utility types, generics, `Proxy`, and decorators.
+### Advanced TypeScript / TypeScript进阶
 
-### What are TypeScript utility types, and when do you use them?
+TypeScript checks relationships between values while editing and compiling JavaScript. Type declarations are erased from emitted JavaScript, so a successful typecheck does not validate untrusted runtime values. The type system also makes deliberate soundness tradeoffs; values typed with any or an unchecked assertion can bypass useful checks.
 
-**Headline (30s):** Utility types are built-in generic type transformers that save you from hand-writing common variations (`Partial<T>`, `Pick<T, K>`, `Omit<T, K>`, etc.). They compose — `Partial<Pick<User, 'name' | 'email'>>` is a valid, readable expression. Knowing them is the difference between a TS developer who copy-pastes interface fields and one who writes maintainable types.
+#### What are utility types? / 什么是工具类型？
 
-**Why interviewers ask this:** Every medium-size TS codebase relies on utility types. Fluency with them signals you can *design* types, not just annotate variables.
+**Core answer / 核心回答：** Utility types transform an existing type so related shapes stay connected instead of copying property declarations. They are compile-time descriptions: Readonly does not freeze an object, and Partial does not validate an incoming request. / 工具类型可以转换已有类型，让相关数据结构保持关联，避免重复声明字段。它们只描述编译期类型：Readonly 不会冻结对象，Partial 也不会验证传入的请求。
 
-#### Transforming object types
-
-| Utility | Does what |
+| Utility | Result |
 |---|---|
-| `Partial<T>` | All properties optional |
-| `Required<T>` | All properties required (opposite of `Partial`) |
-| `Readonly<T>` | All properties read-only |
-| `Pick<T, Keys>` | Subset of properties |
-| `Omit<T, Keys>` | All properties except the listed ones |
-| `Record<Keys, T>` | Object type with specified keys and value type |
+| Partial<T> | Makes each property optional. |
+| Required<T> | Makes each property required. |
+| Readonly<T> | Makes each property readonly at compile time; it is shallow. |
+| Pick<T, K> / Omit<T, K> | Selects or removes a set of keys. |
+| Record<K, V> | Describes an object whose keys and values follow the supplied types. |
+| Exclude<U, X> / Extract<U, X> | Removes from or selects members of a union. |
+| NonNullable<T> | Removes null and undefined from a type. |
+| ReturnType<F> / Parameters<F> | Extracts a function's return type or parameter tuple. |
+| InstanceType<C> / ConstructorParameters<C> | Extracts a class instance type or constructor parameter tuple. |
 
-```typescript
-interface User { id: number; name: string; email: string; }
-
-// Partial — useful for PATCH payloads
-function updateUser(user: Partial<User>) { /* ... */ }
-updateUser({ name: 'Alice' }); // valid, even though id/email are missing
-
-// Readonly — useful for props or frozen state
-const user: Readonly<User> = { id: 1, name: 'Alice', email: 'a@b.com' };
-user.name = 'Bob'; // Error: Cannot assign to 'name'
-
-// Pick / Omit — subsetting
-type UserPreview = Pick<User, 'id' | 'name'>;
-type UserWithoutEmail = Omit<User, 'email'>;
-
-// Record — dictionary typed by a union of keys
-type Role = 'admin' | 'user' | 'guest';
-const permissions: Record<Role, string[]> = {
-  admin: ['read', 'write', 'delete'],
-  user:  ['read', 'write'],
-  guest: ['read']
-};
-```
-
-#### Transforming union types
-
-| Utility | Does what |
-|---|---|
-| `Exclude<Union, X>` | Remove members of `X` from `Union` |
-| `Extract<Union, X>` | Keep only members that match `X` |
-| `NonNullable<T>` | Remove `null` and `undefined` |
-
-```typescript
-type A = Exclude<'a' | 'b' | 'c', 'a'>;        // 'b' | 'c'
-type B = Extract<'a' | 'b' | 'c', 'a' | 'b'>;  // 'a' | 'b'
-type C = NonNullable<string | null | undefined>; // string
-```
-
-#### Extracting from functions and classes
-
-| Utility | Does what |
-|---|---|
-| `ReturnType<T>` | Return type of a function |
-| `Parameters<T>` | Parameters of a function as a tuple |
-| `InstanceType<T>` | Instance type of a class constructor |
-| `ConstructorParameters<T>` | Constructor parameters as a tuple |
-
-```typescript
-function getUser() { return { id: 1, name: 'Alice' }; }
-
-type User = ReturnType<typeof getUser>;   // { id: number; name: string }
-type P    = Parameters<typeof getUser>;   // []
-```
-
-**Reach for them when:** deriving a type from an existing source of truth (an API function, another type) instead of duplicating the shape. The `typeof` operator in type position + `ReturnType` is the power combo.
-
----
-
-### How do generics work in TypeScript?
-
-**Headline (30s):** Generics let you write functions and types that work for *any* type while still preserving type safety. A generic function takes a type parameter (`<T>`) that gets filled in at call site — either explicitly (`identity<string>('hi')`) or inferred (`identity(42)` → `T = number`). Constraints (`extends`) narrow what `T` can be.
-
-#### The basics
-
-```typescript
-function identity<T>(value: T): T {
-  return value;
+~~~typescript
+interface User {
+  id: number;
+  name: string;
+  email: string;
 }
 
-identity<string>('hello'); // T = string
-identity(42);              // T = number (inferred)
-```
+type UserPreview = Pick<User, "id" | "name">;
+type UserPatch = Partial<Pick<User, "name" | "email">>;
 
-Without generics, you'd have to write `identity(value: any): any` — which tells the type checker nothing.
+type Role = "admin" | "editor" | "reader";
+const permissions: Record<Role, string[]> = {
+  admin: ["read", "write"],
+  editor: ["read", "write"],
+  reader: ["read"]
+};
+~~~
 
-#### Constraints with `extends`
+A type such as UserPatch is useful for expressing an allowed shape, but runtime code still needs to check that a parsed JSON value contains valid fields and values.
 
-Restrict `T` to types that have certain properties. The classic example: a property-access helper.
+#### How do generics work? / 泛型如何工作？
 
-```typescript
+**Core answer / 核心回答：** A generic preserves a relationship between input and output types. TypeScript can infer a type parameter from a call, and an extends constraint limits which values are accepted. / 泛型用于保留输入和输出类型之间的关系。TypeScript 可以根据调用推断类型参数；extends 约束用于限制可接受的类型。
+
+~~~typescript
 function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
   return obj[key];
 }
 
-const user = { name: 'Alice', age: 30 };
-getProperty(user, 'name');  // string
-getProperty(user, 'phone'); // Error: 'phone' is not a key of user
-```
+const user = { name: "Alice", age: 30 };
+const userName = getProperty(user, "name"); // string
+// getProperty(user, "phone"); // Type error: no such key
+~~~
 
-`K extends keyof T` says "K must be one of the keys of T". The return type `T[K]` picks out the property type for that key — so `getProperty(user, 'name')` is known to return `string`, not `any`.
+A generic interface can keep that relationship across a group of operations:
 
-#### Generic interfaces and classes
-
-```typescript
+~~~typescript
 interface Repository<T> {
   getById(id: string): T;
   getAll(): T[];
   save(item: T): void;
 }
+~~~
 
-class UserRepository implements Repository<User> {
-  getById(id: string): User { /* ... */ }
-  getAll(): User[] { /* ... */ }
-  save(user: User): void { /* ... */ }
-}
-```
+Use generics when the same logic should preserve specific types across multiple callers. A type parameter is not a runtime check; it describes the contract enforced by the checker where type information is available.
 
-Once you pin `T = User`, every method signature resolves automatically.
+#### What is Proxy? / Proxy是什么？
 
-**Reach for generics when:** a function or type logic is identical across multiple types but you still want to preserve the specific type at each call site. If you find yourself writing `any`, try a generic first.
+**Core answer / 核心回答：** JavaScript Proxy wraps an object and lets a handler intercept operations such as property reads, writes, deletion, or membership checks. It is a runtime JavaScript feature, not a TypeScript type feature. Reflect methods forward operations while preserving their normal semantics. / JavaScript Proxy 包装一个对象，并让 handler 拦截属性读取、写入、删除和成员检查等操作。它是 JavaScript 的运行时功能，不是 TypeScript 类型功能。Reflect 方法可按正常语义转发这些操作。
 
-**Gotcha — default type parameters:** `function f<T = string>(x: T) {}` gives `T` a default when you don't pass one. Useful for API ergonomics.
-
----
-
-### What is `Proxy`, and when do you use it?
-
-**Headline (30s):** A `Proxy` wraps an object and intercepts fundamental operations on it — property reads, writes, deletions, enumeration, and more. You provide a handler object with "traps" (`get`, `set`, `deleteProperty`, `has`, ...) that run when those operations happen. `Proxy` is how modern reactive frameworks (Vue 3) implement observable state and how validators / debuggers add cross-cutting behavior without changing call sites.
-
-#### Basic usage
-
-```javascript
+~~~javascript
 const handler = {
-  get(target, prop) {
-    console.log(`Accessing ${prop}`);
-    return Reflect.get(target, prop);
+  get(target, property, receiver) {
+    console.log("read", property);
+    return Reflect.get(target, property, receiver);
   },
-  set(target, prop, value) {
-    console.log(`Setting ${prop} = ${value}`);
-    return Reflect.set(target, prop, value);
+  set(target, property, value, receiver) {
+    console.log("write", property);
+    return Reflect.set(target, property, value, receiver);
   }
 };
 
 const data = new Proxy({ count: 0 }, handler);
-data.count;     // logs: Accessing count
-data.count = 1; // logs: Setting count = 1
-```
+data.count;
+data.count = 1;
+~~~
 
-The `Reflect.*` helpers are the canonical way to forward the operation to the underlying target — they always do the default thing for that trap.
+Common uses include reactive state, validation, and instrumentation. A proxy only observes operations that pass through it; references to the original target can bypass its traps. Unlike defining a getter for each known property, a proxy can intercept later-added properties, but compatibility and object behavior still matter. Vue 2 used property getters and setters for reactivity; Vue 3 uses proxies for reactive objects.
 
-#### Use cases
+#### What are decorators? / 什么是装饰器？
 
-- **Change detection** (reactivity) — re-render UI when any property changes.
-- **Validation** — throw if `value` doesn't pass a schema check.
-- **Logging / debugging** — trace every access in a development wrapper.
-- **Default values** — return a computed fallback when a property is `undefined`.
-- **Read-only wrappers** — throw from `set` / `deleteProperty` to make an object tamper-proof.
+**Core answer / 核心回答：** Decorators run at class-definition time and can wrap or register class elements. TypeScript supports standard ECMAScript decorators and a separate legacy mode. Their signatures and capabilities differ; use the mode required by the framework rather than copying a decorator from another configuration. / 装饰器在类定义时运行，可包装或注册类成员。TypeScript 支持标准 ECMAScript 装饰器和另一套旧版模式。两种模式的签名和能力不同；应使用框架要求的模式，不要直接复制其他配置中的装饰器。
 
-#### `Object.defineProperty` vs. `Proxy`
+##### Standard decorators in TypeScript 5.0+ / TypeScript 5.0+标准装饰器
 
-Vue 2 used `Object.defineProperty` to define getters/setters on every property of an observed object. Vue 3 switched to `Proxy`. Why?
+Standard decorators receive the original method and a context object. A method decorator may return a replacement method.
 
-| | `Object.defineProperty` | `Proxy` |
-|---|---|---|
-| What it covers | Per-property getters/setters | Whole-object operations |
-| Added properties | Not tracked (need `Vue.set`) | Tracked automatically |
-| Arrays | Needs array-method patching | Handled natively |
-| Browser support | IE9+ | IE not supported |
-| Performance (large objects) | Many getters, slow setup | Single proxy wrapper |
+~~~typescript
+function loggedMethod<This, Args extends unknown[], Return>(
+  original: (this: This, ...args: Args) => Return,
+  context: ClassMethodDecoratorContext<
+    This,
+    (this: This, ...args: Args) => Return
+  >
+) {
+  const name = String(context.name);
 
-**Interview-flavored brainteaser using `defineProperty`:**
-
-```javascript
-Object.defineProperty(window, 'a', {
-  get() {
-    this.value = this.value || 0;
-    return ++this.value;
-  }
-});
-
-console.log(a === 1 && a === 2 && a === 3); // true
-```
-
-Every read of `a` runs the getter and returns a new incremented value, so the three comparisons each see `1`, `2`, `3` respectively.
-
-**Reach for `Proxy` when:** building frameworks, instrumentation, or APIs that need behavior woven into many properties. Avoid for hot paths — proxy calls are measurably slower than direct access.
-
----
-
-### What are decorators, and what are they for?
-
-**Headline (30s):** Decorators are functions that attach metadata or modify behavior at *declaration time* — on classes, methods, or properties. The `@decorator` syntax is syntactic sugar for "call this function with the target at class-creation time". Frameworks like Angular, NestJS, and TypeORM use decorators for dependency injection, routing, and ORM annotations. It's the TypeScript/JS take on Aspect-Oriented Programming.
-
-#### Method decorator
-
-Wrap a method with cross-cutting behavior (logging, caching, timing):
-
-```typescript
-function log(target: any, key: string, descriptor: PropertyDescriptor) {
-  const original = descriptor.value;
-  descriptor.value = function (...args: any[]) {
-    console.log(`Calling ${key} with`, args);
-    return original.apply(this, args);
+  return function (this: This, ...args: Args): Return {
+    console.log("calling", name);
+    return original.call(this, ...args);
   };
 }
 
 class Calculator {
-  @log
-  add(a: number, b: number) { return a + b; }
+  @loggedMethod
+  add(a: number, b: number) {
+    return a + b;
+  }
 }
+~~~
 
-new Calculator().add(1, 2); // logs: Calling add with [1, 2]
-```
+Standard decorators do not support parameter decorators and are not compatible with emitDecoratorMetadata.
 
-The decorator receives:
+##### Legacy decorators / 旧版装饰器
 
-1. `target` — the class prototype (for instance methods) or constructor (for static).
-2. `key` — the method name.
-3. `descriptor` — the property descriptor. Mutating `descriptor.value` replaces the method.
+Existing Angular, NestJS, and ORM projects may use the legacy decorator mode enabled by experimentalDecorators. A legacy method decorator receives a target, property key, and property descriptor. That signature is different from the standard form; the legacy emitDecoratorMetadata option also belongs to this mode.
 
-#### Class decorator
-
-Run code at class creation, add metadata, or even replace the class:
-
-```typescript
-function sealed(constructor: Function) {
-  Object.seal(constructor);
-  Object.seal(constructor.prototype);
+~~~typescript
+function legacyLog(
+  target: object,
+  key: string | symbol,
+  descriptor: PropertyDescriptor
+) {
+  const original = descriptor.value;
+  descriptor.value = function (...args: unknown[]) {
+    console.log("calling", key);
+    return original.apply(this, args);
+  };
 }
+~~~
 
-@sealed
-class Greeter { /* instances / prototype can't have properties added or removed */ }
-```
+Do not use decorator metadata as general runtime validation. For an external JSON value, parse and validate the actual value with runtime logic or a validation library.
 
-#### Where decorators show up in practice
+#### How do you check every member of a union? / 如何确保联合类型分支完整？
 
-- **Angular** — `@Component`, `@Injectable`, `@Input`, `@Output`.
-- **NestJS** — `@Controller`, `@Get('/users')`, `@Body()`.
-- **TypeORM** — `@Entity`, `@Column`, `@OneToMany`.
-- **MobX** — `@observable`, `@action`.
+**Core answer / 核心回答：** Narrow a discriminated union by its tag, then assign the final branch to never. If a new union member is added without a branch, the assignment becomes a type error. / 通过判别字段缩小联合类型；最后将剩余分支赋给 never。如果新增联合成员却没有增加对应分支，该赋值就会产生类型错误。
 
-**Reach for them when:** you're building or using a framework that's designed around them. Don't invent decorator-heavy patterns in a plain TS app — regular composition is usually clearer.
+~~~typescript
+type Shape =
+  | { kind: "circle"; radius: number }
+  | { kind: "square"; side: number };
 
-**Gotcha — stage 3 vs. legacy decorators:** The decorator proposal has been through multiple iterations. TypeScript's `experimentalDecorators` flag enables the *legacy* (stage 1) syntax. Modern TS (5.0+) also supports the *standard* (stage 3) syntax, which has a different signature. Framework code is usually legacy; new library code should target stage 3.
+function area(shape: Shape): number {
+  switch (shape.kind) {
+    case "circle":
+      return Math.PI * shape.radius ** 2;
+    case "square":
+      return shape.side ** 2;
+    default: {
+      const exhaustive: never = shape;
+      return exhaustive;
+    }
+  }
+}
+~~~
 
-**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20Memory%20in%20JS,%20WeakMap%20and%20WeakSet%20/%20JavaScript%E5%86%85%E5%AD%98%E3%80%81WeakMap%E4%B8%8EWeakSet) for how reactive proxies interact with GC, [`9.2 React Basics`](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for TS patterns common in React codebases.
+**See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#12.%20Memory%20in%20JS,%20WeakMap%20and%20WeakSet%20/%20JavaScript%E5%86%85%E5%AD%98%E3%80%81WeakMap%E4%B8%8EWeakSet) for object identity and proxies; [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
+
+**Sources checked 2026-10-15:** [TypeScript: Basic Types](https://www.typescriptlang.org/docs/handbook/2/basic-types), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
 ## 26. Event Loop / 事件循环
 
 #### How does JavaScript run asynchronous code on a single thread?
@@ -5313,74 +5227,49 @@ With `"packageManager": "pnpm@8.15.0"` in `package.json`, any team member runnin
 **See also:** [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for ES modules and dynamic `import()`, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for bundle-size and code-splitting strategy.
 ## 28. Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
-#### How does the Virtual DOM work, and is it actually fast?
+### Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
-**Headline (30s):** The Virtual DOM is a JavaScript object tree that mirrors the real DOM. On state change, the framework rebuilds the virtual tree, **diffs** it against the previous one, and applies only the minimal set of changes to the real DOM in a batched update. It's *not* automatically faster than hand-optimized direct DOM manipulation — the real value is **predictable performance at scale** and a **component model** that lets you describe UI declaratively without writing your own DOM diff code.
+#### How does reconciliation work, and does a Virtual DOM make an app faster? / React如何协调界面，虚拟DOM是否天然更快？
 
-**Why interviewers ask this:** It separates candidates who understand *why* React and Vue work the way they do from those who just use them. A good answer covers the tradeoff — VDOM is not a silver bullet, it's a productivity and consistency tool.
+**Core answer / 核心回答：** React components describe the UI for a particular set of props and state. React compares the next element description with the previous one, then commits the necessary host changes. “Virtual DOM” is a useful shorthand for this model, not a speed guarantee: the cost depends on the component tree, update, browser work, and framework implementation. / React 组件根据当前 props 和 state 描述界面。React 将新的元素描述与之前的结果协调，再提交必要的宿主环境变更。“虚拟 DOM”是这种模型的常见简称，不代表它天然更快；实际成本取决于组件树、更新内容、浏览器工作和框架实现。
 
-##### The three-step reconciliation loop
+##### A practical React model / React中的实用模型
 
-1. **Render** — component re-renders, producing a new virtual tree (plain JS objects).
-2. **Diff** — the framework compares the new tree with the previous one. Strategies vary; React's is O(n) heuristic-based, not a full tree-diff (that would be O(n³)).
-3. **Commit** — only the changed DOM nodes are touched, in a single batched update.
+1. **Render / 渲染：** React calls components to calculate the next UI description. Rendering should be pure; concurrent work may be restarted or discarded.
+2. **Reconciliation / 协调：** React matches the new description to the previous tree. Element type, position, and sibling keys help determine whether identity and state are preserved.
+3. **Commit / 提交：** React applies the completed changes to the host tree, such as the DOM. Effects run in their documented phase; they are not part of render.
 
-##### Where VDOM actually helps
+Keys identify siblings across renders. A stable data ID is a good key when list items can move, be inserted, or be removed. An array index can be acceptable for a fixed list whose order and membership never change. Changing a component's type or key can reset its state.
 
-- **Batching** — many state updates during one render collapse into one DOM update.
-- **Minimal updates** — only changed nodes are touched (no wholesale re-renders).
-- **Developer ergonomics** — you describe "what the UI should look like", the framework handles "which DOM operations get there".
+~~~jsx
+{items.map(item => <ListItem key={item.id} item={item} />)}
+~~~
 
-##### Where VDOM loses
+The reconciler uses heuristics instead of a general-purpose minimum-edit tree algorithm. Treat complexity claims as implementation-specific; the useful takeaway is that stable identity lets React preserve the right component state while updating a changing tree.
 
-- **Simple isolated updates** — vanilla JS / jQuery can be faster for "toggle this one class on one element"; no diff overhead.
-- **Hot paths** — games, canvases, huge lists — skip VDOM and work directly (React's `useSyncExternalStore`, Vue 3's `createApp` with manual render, or raw canvas/WebGL).
+##### Where the model helps / 适用范围
 
-**Reach for VDOM when:** the UI has many components with changing state, and correctness / maintainability matters more than saving a few ms per update.
+Declarative rendering keeps UI descriptions aligned with state and lets the framework manage host updates. It can also add work for tiny isolated changes, and it does not remove browser layout, paint, or scripting costs. Use the browser and framework profilers to identify a real bottleneck before choosing a different rendering model.
 
-##### Common VDOM-based frameworks
+React and Vue use virtual-tree reconciliation in their standard component models. Other approaches compile templates or update fine-grained dependencies. These are implementation choices, not a universal ranking.
 
-- **React** — the original popularizer, uses Fiber architecture for interruptible rendering.
-- **Vue** — similar VDOM + reactivity system based on Proxy (Vue 3).
-- **Preact** — smaller, React-compatible.
-- **Inferno / Mithril** — niche but highly optimized.
+#### How do you choose a frontend framework? / 如何选择前端框架？
 
-Non-VDOM reactive frameworks exist too — **Svelte** compiles away reactivity at build time (no runtime diff), **Solid** uses fine-grained reactivity (tracks cell-level updates without VDOM).
+**Core answer / 核心回答：** Choose for the product's rendering and interaction needs, the team's ability to maintain it, required integrations, accessibility, deployment constraints, and the framework's support horizon. Evaluate a representative feature before migrating; popularity or a benchmark alone cannot predict project fit. / 根据产品的渲染与交互需求、团队维护能力、所需集成、无障碍要求、部署约束和框架支持周期来选择。迁移前先实现一个有代表性的功能；流行度或单项基准测试不足以判断项目是否适合。
 
----
+| Decision factor | Questions to answer |
+|---|---|
+| Rendering and routing | Does the product need client-only navigation, server rendering, static output, or a mix? |
+| Team and codebase | Which framework and language can the team debug, test, and upgrade? |
+| Ecosystem | Are the needed router, form, data, accessibility, and build tools supported? |
+| Operations | Can the chosen runtime, hosting model, and release process support it? |
+| Migration cost | What working behavior, tests, and integrations would need to be replaced? |
 
-#### How do you choose a frontend framework?
+TypeScript adds static checking and editor support, but its types are erased and do not validate runtime data. Consider the language and migration cost alongside project size and contributor turnover; there is no reliable “six-month” or “three-person” threshold.
 
-**Headline (30s):** There is no universally correct answer. Pick based on **team experience**, **ecosystem maturity**, and **project requirements** — not on which framework is "hot" right now. React has the biggest ecosystem and the most jobs; Vue is easier to learn and has excellent docs; Angular is opinionated and popular in enterprise. For TypeScript vs. JavaScript: TS almost always wins for codebases that will live more than six months, despite the initial overhead.
+**See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for element identity and component state; [Next.js / Next.js开发](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering models.
 
-**Why interviewers ask this:** A senior candidate should be able to reason about trade-offs, not just parrot "we use X because X is popular." Anti-pattern: switching frameworks mid-project because of an online hype wave.
-
-##### Framework options
-
-- **React / Next.js** — largest ecosystem, best for complex apps with heavy state and interactivity. The default pick in most hiring pools.
-- **Vue / Nuxt** — gentle learning curve, excellent docs, great for teams transitioning from jQuery or working on smaller apps.
-- **Angular** — opinionated, batteries-included, common in enterprise. Steeper learning curve.
-- **Svelte / SvelteKit** — minimal runtime, compile-time reactivity; rapidly growing but smaller ecosystem.
-- **Solid / Qwik / others** — emerging frameworks with interesting performance properties; know they exist, don't bet a career-defining project on them.
-
-##### Language: JavaScript or TypeScript?
-
-- **JavaScript** — maximum flexibility, faster onboarding, largest ecosystem.
-- **TypeScript** — type safety, better refactoring, fewer runtime bugs. Default for long-lived codebases and teams over ~3 people.
-
-**Rule of thumb:** Any codebase you expect to maintain for more than six months should be TypeScript. The initial learning cost pays for itself the first time you rename a property.
-
-##### The real decision factors
-
-- **Team experience** — a team that ships React in a week will struggle with Svelte for a month. Productivity is dominated by familiarity.
-- **Ecosystem size** — does the framework have the libraries you need (routing, forms, data layer, UI kits)?
-- **Hiring pool** — can you find engineers who already know it?
-- **Project requirements** — SSR needs (Next.js, Nuxt), mobile (React Native, NativeScript), perf ceiling (Solid, Svelte).
-- **Long-term bet** — React's momentum is unmatched; Vue's is strong; Svelte's is growing; others are riskier.
-
-**Gotcha — "framework fatigue":** Most teams don't need to move off the framework they're already on. The best framework is usually the one your team already knows.
-
-**See also:** [`9.2 React Basics`](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for JSX, the diff algorithm, and the React component model, [`9.4 Next.js`](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for SSR/SSG/ISR rendering strategies.
+**Sources checked 2026-10-15:** [React Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html), [Vue Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism), [React: Render and Commit](https://react.dev/learn/render-and-commit), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TypeScript: erased structural types](https://www.typescriptlang.org/docs/handbook/typescript-for-oopers.html#erased-structural-types).
 ## 29. React Basics / React基础
 
 A bundle of interview questions every React developer should be able to answer on the spot — JSX, the diff algorithm, the lifecycle, `setState` behavior, routing, and the SPA/MPA distinction.

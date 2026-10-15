@@ -1,68 +1,43 @@
-## How does the Virtual DOM work, and is it actually fast?
+# Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
-**Headline (30s):** The Virtual DOM is a JavaScript object tree that mirrors the real DOM. On state change, the framework rebuilds the virtual tree, **diffs** it against the previous one, and applies only the minimal set of changes to the real DOM in a batched update. It's *not* automatically faster than hand-optimized direct DOM manipulation — the real value is **predictable performance at scale** and a **component model** that lets you describe UI declaratively without writing your own DOM diff code.
+## How does reconciliation work, and does a Virtual DOM make an app faster? / React如何协调界面，虚拟DOM是否天然更快？
 
-**Why interviewers ask this:** It separates candidates who understand *why* React and Vue work the way they do from those who just use them. A good answer covers the tradeoff — VDOM is not a silver bullet, it's a productivity and consistency tool.
+**Core answer / 核心回答：** React components describe the UI for a particular set of props and state. React compares the next element description with the previous one, then commits the necessary host changes. “Virtual DOM” is a useful shorthand for this model, not a speed guarantee: the cost depends on the component tree, update, browser work, and framework implementation. / React 组件根据当前 props 和 state 描述界面。React 将新的元素描述与之前的结果协调，再提交必要的宿主环境变更。“虚拟 DOM”是这种模型的常见简称，不代表它天然更快；实际成本取决于组件树、更新内容、浏览器工作和框架实现。
 
-### The three-step reconciliation loop
+### A practical React model / React中的实用模型
 
-1. **Render** — component re-renders, producing a new virtual tree (plain JS objects).
-2. **Diff** — the framework compares the new tree with the previous one. Strategies vary; React's is O(n) heuristic-based, not a full tree-diff (that would be O(n³)).
-3. **Commit** — only the changed DOM nodes are touched, in a single batched update.
+1. **Render / 渲染：** React calls components to calculate the next UI description. Rendering should be pure; concurrent work may be restarted or discarded.
+2. **Reconciliation / 协调：** React matches the new description to the previous tree. Element type, position, and sibling keys help determine whether identity and state are preserved.
+3. **Commit / 提交：** React applies the completed changes to the host tree, such as the DOM. Effects run in their documented phase; they are not part of render.
 
-### Where VDOM actually helps
+Keys identify siblings across renders. A stable data ID is a good key when list items can move, be inserted, or be removed. An array index can be acceptable for a fixed list whose order and membership never change. Changing a component's type or key can reset its state.
 
-- **Batching** — many state updates during one render collapse into one DOM update.
-- **Minimal updates** — only changed nodes are touched (no wholesale re-renders).
-- **Developer ergonomics** — you describe "what the UI should look like", the framework handles "which DOM operations get there".
+~~~jsx
+{items.map(item => <ListItem key={item.id} item={item} />)}
+~~~
 
-### Where VDOM loses
+The reconciler uses heuristics instead of a general-purpose minimum-edit tree algorithm. Treat complexity claims as implementation-specific; the useful takeaway is that stable identity lets React preserve the right component state while updating a changing tree.
 
-- **Simple isolated updates** — vanilla JS / jQuery can be faster for "toggle this one class on one element"; no diff overhead.
-- **Hot paths** — games, canvases, huge lists — skip VDOM and work directly (React's `useSyncExternalStore`, Vue 3's `createApp` with manual render, or raw canvas/WebGL).
+### Where the model helps / 适用范围
 
-**Reach for VDOM when:** the UI has many components with changing state, and correctness / maintainability matters more than saving a few ms per update.
+Declarative rendering keeps UI descriptions aligned with state and lets the framework manage host updates. It can also add work for tiny isolated changes, and it does not remove browser layout, paint, or scripting costs. Use the browser and framework profilers to identify a real bottleneck before choosing a different rendering model.
 
-### Common VDOM-based frameworks
+React and Vue use virtual-tree reconciliation in their standard component models. Other approaches compile templates or update fine-grained dependencies. These are implementation choices, not a universal ranking.
 
-- **React** — the original popularizer, uses Fiber architecture for interruptible rendering.
-- **Vue** — similar VDOM + reactivity system based on Proxy (Vue 3).
-- **Preact** — smaller, React-compatible.
-- **Inferno / Mithril** — niche but highly optimized.
+## How do you choose a frontend framework? / 如何选择前端框架？
 
-Non-VDOM reactive frameworks exist too — **Svelte** compiles away reactivity at build time (no runtime diff), **Solid** uses fine-grained reactivity (tracks cell-level updates without VDOM).
+**Core answer / 核心回答：** Choose for the product's rendering and interaction needs, the team's ability to maintain it, required integrations, accessibility, deployment constraints, and the framework's support horizon. Evaluate a representative feature before migrating; popularity or a benchmark alone cannot predict project fit. / 根据产品的渲染与交互需求、团队维护能力、所需集成、无障碍要求、部署约束和框架支持周期来选择。迁移前先实现一个有代表性的功能；流行度或单项基准测试不足以判断项目是否适合。
 
----
+| Decision factor | Questions to answer |
+|---|---|
+| Rendering and routing | Does the product need client-only navigation, server rendering, static output, or a mix? |
+| Team and codebase | Which framework and language can the team debug, test, and upgrade? |
+| Ecosystem | Are the needed router, form, data, accessibility, and build tools supported? |
+| Operations | Can the chosen runtime, hosting model, and release process support it? |
+| Migration cost | What working behavior, tests, and integrations would need to be replaced? |
 
-## How do you choose a frontend framework?
+TypeScript adds static checking and editor support, but its types are erased and do not validate runtime data. Consider the language and migration cost alongside project size and contributor turnover; there is no reliable “six-month” or “three-person” threshold.
 
-**Headline (30s):** There is no universally correct answer. Pick based on **team experience**, **ecosystem maturity**, and **project requirements** — not on which framework is "hot" right now. React has the biggest ecosystem and the most jobs; Vue is easier to learn and has excellent docs; Angular is opinionated and popular in enterprise. For TypeScript vs. JavaScript: TS almost always wins for codebases that will live more than six months, despite the initial overhead.
+**See also:** [React Basics / React基础](./react-basics.md) for element identity and component state; [Next.js / Next.js开发](./next-js.md) for router-specific rendering models.
 
-**Why interviewers ask this:** A senior candidate should be able to reason about trade-offs, not just parrot "we use X because X is popular." Anti-pattern: switching frameworks mid-project because of an online hype wave.
-
-### Framework options
-
-- **React / Next.js** — largest ecosystem, best for complex apps with heavy state and interactivity. The default pick in most hiring pools.
-- **Vue / Nuxt** — gentle learning curve, excellent docs, great for teams transitioning from jQuery or working on smaller apps.
-- **Angular** — opinionated, batteries-included, common in enterprise. Steeper learning curve.
-- **Svelte / SvelteKit** — minimal runtime, compile-time reactivity; rapidly growing but smaller ecosystem.
-- **Solid / Qwik / others** — emerging frameworks with interesting performance properties; know they exist, don't bet a career-defining project on them.
-
-### Language: JavaScript or TypeScript?
-
-- **JavaScript** — maximum flexibility, faster onboarding, largest ecosystem.
-- **TypeScript** — type safety, better refactoring, fewer runtime bugs. Default for long-lived codebases and teams over ~3 people.
-
-**Rule of thumb:** Any codebase you expect to maintain for more than six months should be TypeScript. The initial learning cost pays for itself the first time you rename a property.
-
-### The real decision factors
-
-- **Team experience** — a team that ships React in a week will struggle with Svelte for a month. Productivity is dominated by familiarity.
-- **Ecosystem size** — does the framework have the libraries you need (routing, forms, data layer, UI kits)?
-- **Hiring pool** — can you find engineers who already know it?
-- **Project requirements** — SSR needs (Next.js, Nuxt), mobile (React Native, NativeScript), perf ceiling (Solid, Svelte).
-- **Long-term bet** — React's momentum is unmatched; Vue's is strong; Svelte's is growing; others are riskier.
-
-**Gotcha — "framework fatigue":** Most teams don't need to move off the framework they're already on. The best framework is usually the one your team already knows.
-
-**See also:** [`9.2 React Basics`](./react-basics.md) for JSX, the diff algorithm, and the React component model, [`9.4 Next.js`](./next-js.md) for SSR/SSG/ISR rendering strategies.
+**Sources checked 2026-10-15:** [React Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html), [Vue Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism), [React: Render and Commit](https://react.dev/learn/render-and-commit), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TypeScript: erased structural types](https://www.typescriptlang.org/docs/handbook/typescript-for-oopers.html#erased-structural-types).
