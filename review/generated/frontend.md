@@ -34,7 +34,7 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 - **Runtimes**: V8 (Chrome, Node), SpiderMonkey (Firefox), JavaScriptCore (Safari).
 - **Key pieces**:
 - **Execution and optimization** — engines interpret and/or compile code using implementation-specific strategies; JIT is common but not a language guarantee.
-- **Event loop and task queues** — the host schedules timers, promises, networking, and rendering callbacks. See [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF); browser and Node host scheduling differ.
+- **Event loop and task queues** — the host schedules timers, promises, networking, and rendering callbacks. See [`7.1 Event Loop`](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF); browser and Node host scheduling differ.
   - **Memory heap + call stack** — object allocation and function execution.
 
 ##### Networking layer
@@ -48,7 +48,7 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 
 - **Cookies** may accompany matching requests; **localStorage** and **sessionStorage** are synchronous Web Storage; **IndexedDB** supports transactions; **Cache API** stores request/response pairs. Quotas, persistence, and embedded-context access are subject to browser policy. See [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1).
 
-**See also:** [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF), [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
+**See also:** [`7.1 Event Loop`](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF), [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
 
 ---
 
@@ -80,7 +80,7 @@ Along the way it covers the follow-ups most candidates hit next: why `<script>` 
 
 **Follow-up — “Is it fetch, then parse, then render, strictly in order?”** No. Parsing can begin before the response completes, and an engine may discover and fetch resources early. Script execution and stylesheets can pause parts of that work; presentation can update incrementally.
 
-**See also:** [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
+**See also:** [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
 
 ---
 
@@ -127,7 +127,7 @@ syncFromUrl();
 </script>
 ```
 
-**See also:** [React Router / React 路由](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) uses browser history for client-side routes; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) explains `DOMContentLoaded` and `load`; the [archived URL, location, and History reference](../../archive/front-end/0-1_Learning_Notes/Javascript/readme.md) retains the broader property and method catalog.
+**See also:** [React Router / React 路由](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) uses browser history for client-side routes; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) explains `DOMContentLoaded` and `load`; the [archived URL, location, and History reference](../../archive/front-end/0-1_Learning_Notes/Javascript/readme.md) retains the broader property and method catalog.
 
 **Sources checked 2026-10-15:** [WHATWG URL Standard](https://url.spec.whatwg.org/#urlsearchparams-class) (Living Standard updated 2026-10-07) and [WHATWG HTML Standard: History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface) (Living Standard updated 2026-10-14).
 
@@ -177,7 +177,7 @@ const widths = items.map(el => el.offsetWidth);
 items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 ```
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering triggers and optimization tactics, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
+**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering triggers and optimization tactics, [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
 
 ---
 
@@ -193,7 +193,7 @@ items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 - **SSR + hydration** — serve HTML first, let client JS attach listeners on top (as in React hydration).
 - **Early resource discovery** — some engines use speculative loading while parsing is blocked. This is an implementation optimization, not a page-level guarantee.
 
-**See also:** [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90), [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
+**See also:** [`11.1 Performance Metrics and Analysis`](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90), [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
 
 **Standards and implementation notes / 标准与实现资料：** [WHATWG HTML scripting](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element), [Fetch Standard: CORS](https://fetch.spec.whatwg.org/#http-cors-protocol), [CSS Display](https://www.w3.org/TR/css-display-3/), [Chrome RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), [Chrome forced-reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
 ## 2. HTML and CSS Basics / HTML 与 CSS 基础
@@ -797,7 +797,7 @@ For the big-picture render pipeline these topics fit into, see [`1.1 Browser Bas
 - **Group writes.** A class change or a series of style writes may be batched by the browser; it does not guarantee exactly one layout.
 - **Avoid interleaving writes and geometry reads.** A `DocumentFragment` can clarify subtree construction, but is not automatically faster than direct DOM operations.
 - **Use containment only for a real boundary.** See [Block Formatting Context](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for float and margin behavior; do not treat it as CSS layout containment.
-- **Debounce or throttle** `resize` / `scroll` handlers — see [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
+- **Debounce or throttle** `resize` / `scroll` handlers — see [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
 - **Schedule visual updates deliberately.** CSS animations and `requestAnimationFrame` can align visual work with rendering; neither makes expensive work free.
 - **Avoid repeated forced layout.** Do not read a geometry property after every write in a loop; the browser may have to flush pending layout each time.
 
@@ -864,7 +864,7 @@ items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
 - Minify and compress in production.
 - Use non-blocking loading (`defer` / `async`) whenever possible.
 
-**See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for the high-level pipeline, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for animation and scroll optimization.
+**See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for the high-level pipeline, [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for animation and scroll optimization.
 
 **Standards and implementation notes / 标准与实现资料：** [WHATWG HTML scripting](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element), [CSS Display](https://www.w3.org/TR/css-display-3/), [Chrome RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), [Chrome forced-reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
 ## 6. DOM Properties / DOM属性
@@ -1674,7 +1674,7 @@ Animating `transform` and `opacity` can let an engine update presentation withou
 
 **Gotcha — `transform: translateZ(0)` is not a GPU switch:** It changes transform behavior and may affect stacking/containing blocks; it does not guarantee a faster path. Use neither it nor `will-change` as a substitute for profiling.
 
-**See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for measurement guidance.
+**See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for measurement guidance.
 
 **Specifications / 规范：** [CSS Positioned Layout](https://www.w3.org/TR/css-position-3/), [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color opacity](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transforms](https://www.w3.org/TR/css-transforms-1/), [CSS Transitions](https://www.w3.org/TR/css-transitions-2/), [W3C WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/).
 ## 9. JavaScript Basics / JavaScript基础
@@ -1977,7 +1977,7 @@ See [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-
 
 **Interview answer / 面试回答:** WeakMap and WeakSet let object identity be associated or tracked without the collection itself keeping the key alive. Their lack of enumeration prevents programs from depending on nondeterministic garbage-collection timing. WeakRef and finalization callbacks are likewise nondeterministic, so use them only for opportunistic behavior. / WeakMap 和 WeakSet 可关联或跟踪对象身份，而不会由集合本身强持有键。它们不能枚举，避免程序依赖不确定的垃圾回收时机。WeakRef 和最终化回调同样不确定，只适合可有可无的优化行为。
 
-Related: [Map and Set / JavaScript 中的 Map 与 Set](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
+Related: [Map and Set / JavaScript 中的 Map 与 Set](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Event Loop and Host Scheduling / 事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
 ## 13. JavaScript Arrays / JavaScript 数组
 
 ### JavaScript Arrays / JavaScript 数组
@@ -2886,7 +2886,7 @@ Promise.resolve().then(() => console.log(1))
 
 The returned Promise is adopted by the chained Promise; its reactions join the same job queue as the second chain. Do not model this as one universal “extra tick.” / 后续 Promise 会采用处理器返回的 Promise 状态；其处理器也会进入第二条链所在的 job 队列。不要把它概括为跨宿主通用的“多一个 tick”。
 
-See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering is documented separately in [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF). / 详见 [ECMAScript Promise job 规范](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) 与 [浏览器事件循环规范](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)。Node 队列顺序在 [事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) 中单独说明。
+See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering is documented separately in [Event Loop and Host Scheduling / 事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF). / 详见 [ECMAScript Promise job 规范](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) 与 [浏览器事件循环规范](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)。Node 队列顺序在 [事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) 中单独说明。
 
 #### Currying / 柯里化
 
@@ -2978,7 +2978,7 @@ See the [ECMAScript `Array.prototype.map` algorithm](https://tc39.es/ecma262/202
 
 **Interview answer / 面试回答:** Promises compose asynchronous outcomes and provide a rejection channel; async/await expresses that control flow in sequential syntax. Use Promise.all for independent operations that must all succeed, but remember it does not cancel sibling work. Promise reactions are jobs; host event-loop ordering depends on the environment. / Promise 可组合异步结果并提供拒绝传播通道；async/await 用顺序语法表达这种控制流。多个独立操作都必须成功时可用 Promise.all，但它不会取消其他任务。Promise 处理器以 job 执行，宿主事件循环顺序因环境而异。
 
-Related: [Error Handling / JavaScript 错误处理](#21.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86); [Iterators and Generators / 迭代器与生成器](#20.%20Iterators%20and%20Generators%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8); [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
+Related: [Error Handling / JavaScript 错误处理](#21.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86); [Iterators and Generators / 迭代器与生成器](#20.%20Iterators%20and%20Generators%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8); [Event Loop and Host Scheduling / 事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
 ## 20. Iterators and Generators / 迭代器与生成器
 
 ### Iterators and Generators / 迭代器与生成器
@@ -3533,7 +3533,7 @@ for (const value of arr) max = Math.max(max, value);
 
 **Gotcha — input semantics:** `Math.max()` with no arguments returns `-Infinity`, and any `NaN` input makes its result `NaN`. If the application wants a different empty-input or non-number policy, handle that explicitly.
 
-**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer, [`7.1 Event Loop`](#26.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the task/microtask scheduling model around browser callbacks.
+**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer, [`7.1 Event Loop`](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the task/microtask scheduling model around browser callbacks.
 
 **Standards and current docs / 规范与文档：** [WHATWG DOM events](https://dom.spec.whatwg.org/#concept-event-dispatch), [ECMAScript array objects](https://tc39.es/ecma262/multipage/indexed-collections.html), [WHATWG structured data](https://html.spec.whatwg.org/multipage/structured-data.html), [React DOM event handlers](https://react.dev/learn/responding-to-events), [React 17 event delegation change](https://react.dev/blog/2020/08/10/react-v17-rc#changes-to-event-delegation), [requestIdleCallback specification](https://w3c.github.io/requestidlecallback/), [Chrome `requestIdleCallback` guide](https://developer.chrome.com/blog/using-requestidlecallback), [CSSOM View](https://www.w3.org/TR/cssom-view-1/).
 ## 23. Browser Storage and Communication / 浏览器存储与通信
@@ -3910,10 +3910,400 @@ Lazy-loading images is great — unless you introduce layout shift every time on
 2. Use `IntersectionObserver` for a concrete custom-loading need; unobserve loaded targets and disconnect the observer when its owner is disposed.
 3. Check layout stability and LCP in the page's real loading context; lazy-loading the wrong images can delay important content.
 
-**See also:** [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#22.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
+**See also:** [`11.1 Performance Metrics and Analysis`](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#22.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
 
 **Standards / 规范：** [WHATWG `img` element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element), [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes), [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/), [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/).
-## 25. Advanced TypeScript / TypeScript进阶
+## 25. Streaming UX / 流式交互
+
+### Streaming UX / 流式交互
+
+**Core explanation / 核心解释：** A stream is an incremental view of a server operation, not a promise that the operation finished. The interface should preserve useful partial text, decode and frame bytes incrementally, bound pending work, and make completion depend on an explicit terminal event. Stopping the browser reader ends the local view; server cancellation needs its own request and authoritative acknowledgement. / 流是服务器操作的增量视图，不代表操作已经完成。界面应保留可用的部分文本，增量解码和组帧，限制待处理工作，并只在收到明确终态事件后显示完成。停止浏览器读取只会结束本地视图；取消服务端任务需要单独请求和权威确认。
+
+**Key terms / 关键术语：** incremental decoding / 增量解码；frame / 帧；partial output / 部分输出；terminal event / 终态事件；backpressure / 背压；teardown / 清理；resume cursor / 恢复游标.
+
+#### State belongs in the interaction / 交互需要明确状态
+
+Keep the view's state separate from the server's run state. A useful browser lifecycle is:
+
+| View state | Meaning and behavior |
+|---|---|
+| idle / 空闲 | No request is active. |
+| connecting / 连接中 | Submitting, opening the event response, or making an allowed resume request. |
+| streaming / 接收中 | At least one validated progress or text frame has arrived. Keep showing it as partial. |
+| completed / 已完成 | A valid complete frame for this runId arrived. This is the only streamed success path. |
+| failed / 失败 | The server sent a terminal error, the protocol was malformed, or the bounded recovery policy ended. Keep usable partial text and show whether the run's final state is still unknown. |
+| canceled / 已停止 | The user stopped this view or the route was torn down. The run may still be queued or running unless the server confirms cancellation. |
+
+The server's durable run record can still say queued, running, cancel_requested, completed, failed, or canceled. A browser failed transport and a server failed run are different facts; query status before presenting one as the other. See [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) for stable run IDs, authoritative state, idempotent submission, and cancellation races.
+
+#### A small application protocol / 简洁的应用协议
+
+This example uses Fetch to read newline-delimited JSON records. It is a synthetic application contract; it does not add another transport or redefine SSE. POST /api/runs accepts an Idempotency-Key and returns 202 with a stable runId. The client then reads GET /api/runs/{runId}/events?after=12. Each event is one UTF-8 JSON object followed by LF (CRLF is also accepted); records carry a monotonically increasing seq. A delta adds partial text, while complete or error is terminal. The server can replay older sequence numbers around reconnect races; the client drops duplicates and treats a gap as a failed stream. GET /api/runs/{runId} remains the authority for status.
+
+~~~text
+POST /api/runs
+Idempotency-Key: submit-7f2a
+{"prompt":"Summarize the public release notes"}
+
+202 Accepted
+{"runId":"run-7f2a","status":"queued"}
+
+GET /api/runs/run-7f2a/events?after=0
+Content-Type: application/x-ndjson
+
+{"type":"delta","seq":1,"text":"The release adds "}
+{"type":"delta","seq":2,"text":"a search filter."}
+{"type":"complete","seq":3,"runId":"run-7f2a"}
+~~~
+
+The complete frame is the success boundary for this example. EOF before a terminal frame is an incomplete response, even when it follows valid text. A terminal error preserves earlier deltas as partial output. A timeout or disconnect may be retried only within the contract: for example, at most two event reconnections during a short deadline, using the same runId and last accepted seq. Never create a replacement run merely because the event request failed. If the cursor expired or the run is still active after the retry budget, query current status and explain that the visible text is partial.
+
+The HTTP body yields byte chunks. A read can split inside UTF-8 characters, inside one JSON record, or between records; one read can also contain several records. TextDecoder with stream mode carries an incomplete multibyte sequence into the next decode call. The parser below independently buffers until LF and therefore does not mistake a transport chunk for a record. It caps each frame and its incomplete line buffer at 8,192 UTF-16 code units (the units counted by JavaScript `String.length`), not 8 KiB of encoded bytes, and total displayed text at 64 Ki UTF-16 code units. These are example product limits, not browser or protocol defaults.
+
+#### Executable protocol model / 可执行协议模型
+
+The following standalone snippet uses Node's Web Streams and Response APIs to exercise the parser and interaction states. It is a protocol model, not a test in a real browser and not proof of any production server behavior. The parser awaits onText; a browser can use that point to batch updates on requestAnimationFrame and pause reading while a small render queue drains.
+
+~~~javascript
+import assert from "node:assert/strict";
+
+const MAX_FRAME_CHARS = 8 * 1024;
+const MAX_OUTPUT_CHARS = 64 * 1024;
+const DECODE_SLICE_BYTES = 4 * 1024;
+
+function readWithSignal(reader, signal) {
+  if (!signal) return reader.read();
+  const abortReason = () => signal.reason ?? new DOMException("Aborted", "AbortError");
+  if (signal.aborted) return Promise.reject(abortReason());
+
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(abortReason());
+    signal.addEventListener("abort", onAbort, { once: true });
+    reader.read().then(resolve, reject).finally(() => {
+      signal.removeEventListener("abort", onAbort);
+    });
+  });
+}
+
+async function consumeRun(response, {
+  runId,
+  signal,
+  afterSequence = 0,
+  currentOutputChars = 0,
+  onState = () => {},
+  onText = async () => {},
+} = {}) {
+  let state = "idle";
+  let sequence = afterSequence;
+  let outputChars = currentOutputChars;
+  let carry = "";
+  let terminal = false;
+  let errorCode;
+  let detail;
+  let reader;
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+
+  const transition = next => {
+    const allowed = {
+      idle: ["connecting", "canceled"],
+      connecting: ["streaming", "completed", "failed", "canceled"],
+      streaming: ["connecting", "completed", "failed", "canceled"],
+    };
+    if (state === next) return;
+    if (!allowed[state]?.includes(next)) {
+      throw new Error("Invalid view-state transition: " + state + " -> " + next);
+    }
+    state = next;
+    onState(state);
+  };
+
+  const result = () => ({ state, sequence, outputChars, errorCode, detail });
+
+  async function acceptLine(line) {
+    signal?.throwIfAborted();
+    if (terminal) throw new Error("Frame received after a terminal frame");
+    if (!line) throw new Error("Empty frame");
+    if (line.length > MAX_FRAME_CHARS) throw new Error("Frame exceeds the size limit");
+
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      throw new Error("Malformed JSON frame");
+    }
+
+    if (!event || Array.isArray(event) || typeof event !== "object") {
+      throw new Error("Frame must be a JSON object");
+    }
+    if (!Number.isSafeInteger(event.seq) || event.seq < 1) {
+      throw new Error("Frame has an invalid sequence number");
+    }
+    if (event.seq <= sequence) return; // replayed event already applied
+    if (event.seq !== sequence + 1) throw new Error("Event sequence gap");
+    if (typeof event.type !== "string") throw new Error("Frame has no event type");
+
+    if (event.type === "delta") {
+      if (typeof event.text !== "string") throw new Error("Delta text must be a string");
+      if (outputChars + event.text.length > MAX_OUTPUT_CHARS) {
+        throw new Error("Output exceeds the display limit");
+      }
+      sequence = event.seq;
+      outputChars += event.text.length;
+      if (state === "connecting") transition("streaming");
+      await onText(event.text);
+      signal?.throwIfAborted();
+      return;
+    }
+
+    if (event.type === "complete") {
+      if (event.runId !== runId) throw new Error("Terminal frame has the wrong runId");
+      sequence = event.seq;
+      terminal = true;
+      transition("completed");
+      return;
+    }
+
+    if (event.type === "error") {
+      if (typeof event.code !== "string" || !event.code) {
+        throw new Error("Error frame has no error code");
+      }
+      sequence = event.seq;
+      errorCode = event.code;
+      terminal = true;
+      transition("failed");
+      return;
+    }
+
+    throw new Error("Unknown event type");
+  }
+
+  async function feedText(text) {
+    carry += text;
+    let newline;
+    while ((newline = carry.indexOf("\n")) !== -1) {
+      let line = carry.slice(0, newline);
+      carry = carry.slice(newline + 1);
+      if (line.endsWith("\r")) line = line.slice(0, -1);
+      await acceptLine(line);
+      if (terminal) return;
+    }
+    if (carry.length > MAX_FRAME_CHARS) throw new Error("Frame exceeds the size limit");
+  }
+
+  transition("connecting");
+  try {
+    if (!response.body) throw new Error("Response has no body");
+    reader = response.body.getReader();
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    if (!response.headers.get("content-type")?.toLowerCase().includes("application/x-ndjson")) {
+      throw new Error("Unexpected response content type");
+    }
+
+    while (true) {
+      const { done, value } = await readWithSignal(reader, signal);
+      if (done) {
+        await feedText(decoder.decode());
+        if (terminal) return result();
+        if (carry.length) throw new Error("EOF inside an unterminated frame");
+        throw new Error("EOF before a terminal frame");
+      }
+
+      for (let offset = 0; offset < value.byteLength; offset += DECODE_SLICE_BYTES) {
+        const part = value.subarray(offset, offset + DECODE_SLICE_BYTES);
+        await feedText(decoder.decode(part, { stream: true }));
+        if (terminal) return result();
+      }
+    }
+  } catch (error) {
+    detail = error instanceof Error ? error.message : String(error);
+    if (signal?.aborted && signal.reason?.name === "TimeoutError") {
+      transition("failed");
+    } else if (signal?.aborted) {
+      transition("canceled");
+    } else {
+      transition("failed");
+    }
+    return result();
+  } finally {
+    if (reader) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Preserve the parse, read, timeout, or abort result.
+      }
+      reader.releaseLock();
+    }
+  }
+}
+
+const encoder = new TextEncoder();
+const asBytes = text => encoder.encode(text);
+
+function responseFrom(chunks, { open = false, status = 200 } = {}) {
+  const body = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      if (!open) controller.close();
+    },
+  });
+  return new Response(body, {
+    status,
+    headers: { "content-type": "application/x-ndjson; charset=utf-8" },
+  });
+}
+
+function responseDisconnectAfter(chunk) {
+  let sent = false;
+  const body = new ReadableStream({
+    pull(controller) {
+      if (!sent) {
+        sent = true;
+        controller.enqueue(chunk);
+      } else {
+        controller.error(new Error("Connection dropped"));
+      }
+    },
+  }, { highWaterMark: 0 });
+  return new Response(body, {
+    headers: { "content-type": "application/x-ndjson; charset=utf-8" },
+  });
+}
+
+async function check(name, response, expectedState, expectedText = "", options = {}) {
+  const states = [];
+  let text = "";
+  const result = await consumeRun(response, {
+    runId: "run-7",
+    ...options,
+    onState: state => states.push(state),
+    onText: chunk => { text += chunk; },
+  });
+  assert.equal(result.state, expectedState, name);
+  assert.equal(text, expectedText, name + " partial text");
+  return { result, states };
+}
+
+// Split one multibyte character and one record across reads; the final read
+// also contains a coalesced complete record.
+const multibyte = asBytes("好");
+const normal = await check(
+  "split UTF-8 and coalesced frames",
+  responseFrom([
+    asBytes('{"type":"delta","seq":1,"text":"你'),
+    multibyte.slice(0, 1),
+    multibyte.slice(1),
+    asBytes('"}\n{"type":"complete","seq":2,"runId":"run-7"}\n'),
+  ]),
+  "completed",
+  "你好",
+);
+assert.deepEqual(normal.states, ["connecting", "streaming", "completed"]);
+console.log("PASS normal, multibyte split, frame split, and coalesced frames");
+
+const serverError = await check(
+  "server error frame",
+  responseFrom([asBytes('{"type":"error","seq":1,"code":"MODEL_UNAVAILABLE"}\n')]),
+  "failed",
+);
+assert.equal(serverError.result.errorCode, "MODEL_UNAVAILABLE");
+console.log("PASS terminal server-error frame");
+
+const malformed = await check(
+  "malformed JSON",
+  responseFrom([asBytes("{not-"), asBytes("json}\n")]),
+  "failed",
+);
+assert.match(malformed.result.detail, /Malformed JSON/);
+console.log("PASS malformed frame split across reads");
+
+const prematureEof = await check(
+  "premature EOF",
+  responseFrom([asBytes('{"type":"delta","seq":1,"text":"partial"}\n')]),
+  "failed",
+  "partial",
+);
+assert.match(prematureEof.result.detail, /EOF before a terminal frame/);
+console.log("PASS EOF preserves partial text but does not complete");
+
+const disconnected = await check(
+  "abrupt disconnect",
+  responseDisconnectAfter(asBytes('{"type":"delta","seq":1,"text":"partial"}\n')),
+  "failed",
+  "partial",
+);
+assert.match(disconnected.result.detail, /Connection dropped/);
+console.log("PASS abrupt disconnect preserves partial text but does not complete");
+
+const timeoutController = new AbortController();
+const timeoutTimer = setTimeout(() => {
+  timeoutController.abort(new DOMException("Deadline exceeded", "TimeoutError"));
+}, 5);
+const timeout = await check(
+  "timeout",
+  responseFrom([], { open: true }),
+  "failed",
+  "",
+  { signal: timeoutController.signal },
+);
+clearTimeout(timeoutTimer);
+assert.match(timeout.result.detail, /Deadline exceeded/);
+console.log("PASS timeout remains a failure, not completion");
+
+const stopController = new AbortController();
+const stopTimer = setTimeout(() => {
+  stopController.abort(new DOMException("Stopped by user", "AbortError"));
+}, 5);
+const stopped = await check(
+  "explicit abort after partial text",
+  responseFrom([asBytes('{"type":"delta","seq":1,"text":"partial"}\n')], { open: true }),
+  "canceled",
+  "partial",
+  { signal: stopController.signal },
+);
+clearTimeout(stopTimer);
+assert.match(stopped.result.detail, /Stopped by user/);
+console.log("PASS explicit abort keeps partial text and marks only the local view canceled");
+
+const bufferedRaceController = new AbortController();
+const bufferedRaceStates = [];
+let bufferedRaceText = "";
+const bufferedRace = await consumeRun(responseFrom([
+  asBytes('{"type":"delta","seq":1,"text":"partial"}\n{"type":"complete","seq":2,"runId":"run-7"}\n'),
+]), {
+  runId: "run-7",
+  signal: bufferedRaceController.signal,
+  onState: state => bufferedRaceStates.push(state),
+  onText: async chunk => {
+    bufferedRaceText += chunk;
+    await Promise.resolve();
+    bufferedRaceController.abort(new DOMException("Stopped while rendering", "AbortError"));
+  },
+});
+assert.equal(bufferedRace.state, "canceled");
+assert.equal(bufferedRace.sequence, 1);
+assert.equal(bufferedRace.outputChars, "partial".length);
+assert.equal(bufferedRaceText, "partial");
+assert.deepEqual(bufferedRaceStates, ["connecting", "streaming", "canceled"]);
+assert.match(bufferedRace.detail, /Stopped while rendering/);
+console.log("PASS abort during awaited text handling prevents a buffered complete frame");
+~~~
+
+For a browser, create one AbortController for the active event request and pass its signal to Fetch. The stop button and route cleanup should abort that request and release its reader. If the product also wants to stop server work, send POST /api/runs/{runId}/cancel and keep showing a pending cancellation until GET /api/runs/{runId} reports a terminal state. AbortController.abort() and reader.cancel() affect the local fetch/body consumption; neither proves the worker stopped.
+
+Keep render work bounded as well as network buffering. Accumulate adjacent delta text and update the output once per animation frame rather than rerendering the component for every token. Cap the pending render string; because the parser awaits onText, it can pause its next read while the UI drains that small queue. The sample also caps the full visible answer. A larger product can persist output by run and render a bounded window instead of keeping an ever-growing DOM.
+
+Leave partial output visible when it remains useful, but label it as incomplete and avoid actions that require a finished result. Expose a concise state message in a dedicated status region, for example a native element with role=status and aria-live=polite. Announce connection, completion, failure, or stop transitions and perhaps occasional long-running progress; do not announce every token. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#2.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for native controls and status semantics.
+
+**Representative answer / 代表性回答：** I treat streamed output as framed bytes that may arrive in arbitrary chunks. The client incrementally decodes UTF-8, validates sequence numbers, keeps partial text, and displays completion only after a valid terminal event. It batches rendering, bounds memory and retries, and tears down the local reader on stop or route change. A client abort does not prove the server run stopped, so I query the run record or request cancellation separately. / 我会把流式输出视为可能以任意分块到达的带帧字节。客户端增量解码 UTF-8、校验序号、保留部分文本，并且只在收到有效终态事件后显示完成。界面合并渲染、限制内存和重试次数，并在用户停止或路由卸载时清理本地读取器。客户端中止不能证明服务端运行已停止，因此还要查询运行记录或单独请求取消。
+
+#### Related notes / 相关笔记
+
+- [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) owns transport selection, SSE framing, EventSource limits, and Fetch stream boundaries.
+- [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, cancellation, retry safety, and unknown outcomes.
+- [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) owns run identity, durable state, checkpoints, side effects, and server cancellation.
+
+**Sources checked 2026-10-15 / 来源核对日期：** The [WHATWG Streams Standard](https://streams.spec.whatwg.org/) defines readable-stream readers and local consumer cancellation; the [DOM Standard's AbortController](https://dom.spec.whatwg.org/#interface-abortcontroller) defines signaling abort to an API that accepts an AbortSignal, and [AbortSignal.throwIfAborted()](https://dom.spec.whatwg.org/#dom-abortsignal-throwifaborted) provides checkpoints between asynchronous operations; the [WHATWG Encoding Standard](https://encoding.spec.whatwg.org/) defines streaming UTF-8 decode behavior. The [WHATWG Server-sent Events section](https://html.spec.whatwg.org/multipage/server-sent-events.html) defines EventSource reconnection and event IDs; this note's parser instead exercises its explicitly synthetic newline-delimited JSON application contract. Browser behavior was not tested here.
+## 26. Advanced TypeScript / TypeScript进阶
 
 ### Advanced TypeScript / TypeScript进阶
 
@@ -4153,10 +4543,10 @@ function area(shape: Shape): number {
 }
 ~~~
 
-**See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for object identity and proxies; [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
+**See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for object identity and proxies; [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
 
 **Sources checked 2026-10-15:** [TypeScript: Basic Types and `unknown`](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
-## 26. Event Loop / 事件循环
+## 27. Event Loop / 事件循环
 
 ### Event Loop and Host Scheduling / 事件循环与宿主调度
 
@@ -4237,7 +4627,7 @@ If a subscription, listener, or timer should end before the owning object does, 
 **Interview answer / 面试回答:** The event loop is host-defined. In browsers, tasks run to completion and a microtask checkpoint drains Promise reactions before the host continues; rendering is scheduled separately. Node uses libuv phases and adds nextTick scheduling, whose order relative to Promise jobs differs between top-level CJS and ESM. Always state the host and module context. / 事件循环由宿主定义。浏览器任务执行到完成后会进行微任务检查点，清空 Promise 处理器，再由宿主继续调度；渲染单独安排。Node 使用 libuv 阶段并增加 nextTick 调度，其与 Promise job 的相对顺序在 CJS 和 ESM 顶层不同。说明结论时应给出宿主和模块上下文。
 
 Related: [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript); [Memory, WeakMap and WeakSet / JavaScript 内存、WeakMap 与 WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
-## 27. Build Tools / 构建工具
+## 28. Build Tools / 构建工具
 
 ### Build Tools / 构建工具
 
@@ -4339,6 +4729,8 @@ Vite's development server serves native ES modules with on-demand transforms and
 
 A fast dev server is not evidence that the production output has the same graph or performance. Run the configured production build and inspect its assets when validating deployment behavior.
 
+For release verification, serve and check the generated production output; HMR validates the development loop, not the deployed asset paths or chunks. Source maps help connect production errors to source only when their release mapping and access are controlled. See [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path and [Frontend Testing / 前端测试](#37.%20Frontend%20Testing%20/%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95) for a critical browser check against built output.
+
 #### Corepack and package-manager pinning / Corepack与包管理器版本固定
 
 A package.json packageManager field records the package manager and version a project expects. Corepack can use that field to select a matching manager when its shims are installed. Corepack was bundled with Node.js through Node 24, but Node 25 and later no longer distribute it by default; a current project may need to install or provision Corepack separately.
@@ -4353,10 +4745,10 @@ The field alone does not install a package manager or guarantee that every envir
 
 **Choosing a tool / 工具选择：** Compare plugin and loader needs, ecosystem, output constraints, team familiarity, and build behavior for the project. No single bundler is the right choice for every application or library.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for modules and dynamic imports; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measuring bundle and load behavior.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for modules and dynamic imports; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measuring bundle and load behavior.
 
 **Sources checked 2026-10-15:** [Webpack: Loaders](https://webpack.js.org/concepts/loaders/), [Asset Modules](https://webpack.js.org/guides/asset-modules/), [Webpack: Plugins](https://webpack.js.org/concepts/plugins/), [DefinePlugin](https://webpack.js.org/plugins/define-plugin/), [HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme), [Webpack Native HTML guide](https://webpack.js.org/guides/native-html/), [style-loader](https://github.com/webpack/style-loader#readme), [css-loader](https://github.com/webpack/css-loader#readme), [MiniCssExtractPlugin](https://github.com/webpack/mini-css-extract-plugin#readme), [Webpack: Writing a Plugin](https://webpack.js.org/contribute/writing-a-plugin/), [Webpack Compiler Hooks](https://webpack.js.org/api/compiler-hooks/), [Webpack devtool](https://webpack.js.org/configuration/devtool/), [Vite 8 guide](https://vite.dev/guide/), [Vite 8.0.10 source](https://github.com/vitejs/vite/blob/v8.0.10/README.md), [Node.js 25 Corepack docs](https://nodejs.org/download/release/v25.8.0/docs/api/corepack.html), [Corepack project README](https://github.com/nodejs/corepack#readme).
-## 28. Virtual DOM and Framework Selection / 虚拟DOM与框架选择
+## 29. Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
 ### Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
@@ -4398,10 +4790,10 @@ React and Vue use virtual-tree reconciliation in their standard component models
 
 TypeScript adds static checking and editor support, but its types are erased and do not validate runtime data. Consider the language and migration cost alongside project size and contributor turnover; there is no reliable “six-month” or “three-person” threshold.
 
-**See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for element identity and component state; [Next.js / Next.js开发](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering models.
+**See also:** [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for element identity and component state; [Next.js / Next.js开发](#32.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering models.
 
 **Sources checked 2026-10-15:** [React Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html), [Vue Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism), [React: Render and Commit](https://react.dev/learn/render-and-commit), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TypeScript: erased structural types](https://www.typescriptlang.org/docs/handbook/typescript-for-oopers.html#erased-structural-types).
-## 29. React Basics / React基础
+## 30. React Basics / React基础
 
 ### React Basics / React基础
 
@@ -4536,10 +4928,10 @@ Use Link for navigation users can follow and useNavigate for programmatic naviga
 | Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
 | SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
 
-**See also:** [Next.js / Next.js开发](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering; [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hooks, refs, and component composition.
+**See also:** [Next.js / Next.js开发](#32.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering; [Advanced React / React进阶](#31.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hooks, refs, and component composition.
 
 **Sources checked 2026-10-15:** [React: Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform), [React: Render and Commit](https://react.dev/learn/render-and-commit), [StrictMode](https://react.dev/reference/react/StrictMode), [Component and lifecycle methods](https://react.dev/reference/react/Component), [Error Boundary caveats](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary), [useTransition Error Boundary example](https://react.dev/reference/react/useTransition#displaying-an-error-to-users-with-an-error-boundary), [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Queueing State Updates](https://react.dev/learn/queueing-a-series-of-state-updates), [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
-## 30. Advanced React / React进阶
+## 31. Advanced React / React进阶
 
 ### Advanced React / React进阶
 
@@ -4678,7 +5070,7 @@ function useSaveTask() {
 }
 ~~~
 
-The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; the `useWindowSize` Effect in the custom Hook section below shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#25.%20Advanced%20TypeScript%20/%20TypeScript%E8%BF%9B%E9%98%B6) for validating API JSON before treating it as a `Task`.
+The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; the `useWindowSize` Effect in the custom Hook section below shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#26.%20Advanced%20TypeScript%20/%20TypeScript%E8%BF%9B%E9%98%B6) for validating API JSON before treating it as a `Task`.
 
 #### How do concurrent UI updates and Suspense work? / 并发界面更新与 Suspense 如何工作？
 
@@ -4859,10 +5251,10 @@ function Profile({ user }) {
 
 Because React renders numbers, a numeric left operand can leak into the output: an empty list's length is 0, so {items.length && <List />} displays 0. Use {items.length > 0 && <List />} when that is not intended.
 
-**See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
+**See also:** [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
 
 **Sources checked 2026-10-15:** [React: `useTransition`](https://react.dev/reference/react/useTransition), [`useDeferredValue`](https://react.dev/reference/react/useDeferredValue), [`Suspense`](https://react.dev/reference/react/Suspense), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [TanStack Query React v5: Queries](https://tanstack.com/query/latest/docs/framework/react/guides/queries), [Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys), [Important Defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults), [Query Invalidation](https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation), [Optimistic Updates](https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates), [Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense), [Cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation), [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use).
-## 31. Next.js / Next.js开发
+## 32. Next.js / Next.js开发
 
 ### Next.js / Next.js开发
 
@@ -5019,10 +5411,10 @@ export async function GET() {
 
 Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
 
-**See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+**See also:** [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
 **Sources checked 2026-10-15:** [React 19.3 versions and release](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
-## 32. Performance Metrics and Analysis / 性能指标与分析
+## 33. Performance Metrics and Analysis / 性能指标与分析
 
 ### Performance Metrics and Analysis / 性能指标与分析
 
@@ -5161,10 +5553,10 @@ document.addEventListener("visibilitychange", () => {
 
 The report helper above uses sendBeacon when the browser accepts the payload for queuing, then falls back to fetch with keepalive when Beacon is unavailable or declines it. Neither path guarantees server receipt. A bounded queue also needs an explicit overflow policy; this example drops the oldest pending event. Avoid blocking navigation or making application correctness depend on analytics delivery.
 
-**See also:** [Image Lazy Loading / 图片懒加载](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for image loading choices; [Rendering and Computation Optimization / 渲染与计算优化](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for React and long-list work.
+**See also:** [Image Lazy Loading / 图片懒加载](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for image loading choices; [Rendering and Computation Optimization / 渲染与计算优化](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for React and long-list work.
 
 **Sources checked 2026-10-15:** [PerformancePaintTiming (FP/FCP)](https://developer.mozilla.org/en-US/docs/Web/API/PerformancePaintTiming), [DOMContentLoaded event](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event), [Window load event](https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event), [Web Vitals](https://web.dev/articles/vitals), [INP](https://web.dev/articles/inp), [LCP](https://web.dev/articles/lcp), [CLS](https://web.dev/articles/cls), [Lab and Field Data Differences](https://web.dev/articles/lab-and-field-data-differences), [HTTP Caching (RFC 9111)](https://www.rfc-editor.org/rfc/rfc9111.html), [ETag (RFC 9110)](https://www.rfc-editor.org/rfc/rfc9110.html#name-etag), [Beacon specification](https://w3c.github.io/beacon/).
-## 33. Rendering and Computation Optimization / 渲染与计算优化
+## 34. Rendering and Computation Optimization / 渲染与计算优化
 
 ### Rendering and Computation Optimization / 渲染与计算优化
 
@@ -5247,10 +5639,10 @@ Layout, paint, compositing, and JavaScript can all affect a frame. Animate trans
 
 will-change is a hint, not a command to allocate a compositor layer. Use it narrowly and only when a measured animation benefits; unnecessary use can consume memory and make performance worse. Reducing DOM work and measuring real interactions are more reliable than assuming a shorter selector or shorthand property will speed up a page.
 
-**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measurement.
+**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measurement.
 
 **Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [React: useMemo](https://react.dev/reference/react/useMemo), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction), [CSS Will Change Module](https://www.w3.org/TR/css-will-change-1/), [MDN background-position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/background-position), [HTTP/2 RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).
-## 34. Lodash / Lodash工具库
+## 35. Lodash / Lodash工具库
 
 ### Lodash / Lodash工具库
 
@@ -5349,10 +5741,10 @@ Lodash's debounced function also has flush() to invoke a pending call immediatel
 
 Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for choosing debounce or throttle by workload.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for choosing debounce or throttle by workload.
 
 **Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
-## 35. ahooks / ahooks Hook库
+## 36. ahooks / ahooks Hook库
 
 ### ahooks / ahooks Hook库
 
@@ -5487,7 +5879,7 @@ return (
 );
 ~~~
 
-Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
+Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
 
 useDynamicList exposes list and operations such as push, remove, move, insert, and getKey(index). Use getKey(index) as the React key so item identity survives edits; callbacks receive the current index.
 
@@ -5520,10 +5912,10 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 
 **Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
 
-**See also:** [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup plus the generic server-state cache, mutation, concurrency, and Suspense lifecycle; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
+**See also:** [Advanced React / React进阶](#31.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup plus the generic server-state cache, mutation, concurrency, and Suspense lifecycle; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
 
 **Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
-## 36. Frontend Testing / 前端测试
+## 37. Frontend Testing / 前端测试
 
 ### Frontend Testing / 前端测试
 
@@ -5662,6 +6054,23 @@ test("increments the counter", () => {
 
 Snapshots can capture stable structure, but a large snapshot does not explain which behavior matters. Use focused assertions for user-visible behavior and update snapshots intentionally when the expected output changes.
 
-**See also:** [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
+#### Release checks / 发布检查
 
-**Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/).
+CI should connect fast source checks to the exact production output. A small frontend release path is:
+
+**核心原则 / Core idea：** 先完成类型、单元和组件检查，再生成生产构建；用接近生产的服务运行这份构建产物，执行关键浏览器流程，最后晋级同一份已验证产物，避免重新构建后发布了另一份代码。HMR 只验证开发热更新链路，不能证明生产资源路径、分块或发布产物正常；Vite preview 可以本地预览刚生成的 `dist`，但官方定位不是生产服务器。Source map 应关联到具体发布版本并受控上传；`hidden` 只隐藏源码映射注释，不阻止他人直接访问映射文件。
+
+~~~text
+lockfile install -> type check -> unit/component tests -> production build
+  -> serve the built output -> one critical browser smoke -> retain/promote that output
+~~~
+
+For example, a project can run `npm run typecheck`, `npm run test:ci`, and `npm run build`, then `npx playwright test tests/release-smoke.spec.ts`. Configure Playwright's `webServer.command` to start `npm run preview` (or the framework's built-output server) after the build so this browser test sees emitted assets rather than the HMR server; script names are project-specific.
+
+Type checks catch static contract errors; unit and component tests catch local logic and UI wiring; a production build catches transforms, asset emission, and chunk or base-path issues that a dev server may not exercise. Then serve the generated output with a production-like static server and run one browser test for a critical journey, such as opening search, submitting a query, and seeing results. A Playwright `webServer` can start the local artifact server for the test; with Vite, `vite preview` serves the just-built `dist` locally for this check, but is not a production server. Promote the tested output rather than rebuilding it for release.
+
+Use browser checks where real routing, asset URLs, browser behavior, or app/service wiring matters. A passing HMR session proves the development loop works; it does not prove production chunks load from the deployed base path or that the published artifact works. Source maps can translate minified error locations back to original source when tied to a release and uploaded to a controlled error-reporting system. A hidden map removes the source-map comment, not the file or access risk; do not leave private maps at a public asset URL. The shared [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) note owns artifact promotion, runtime secrets, and rollout gates.
+
+**See also:** [Advanced React / React进阶](#31.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
+
+**Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/), [Vite static deployment](https://vite.dev/guide/static-deploy.html), [Playwright web server](https://playwright.dev/docs/test-webserver).

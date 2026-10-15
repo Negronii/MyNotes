@@ -42,6 +42,7 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 - [DOM Manipulation and Events / DOM操作与事件](browser-apis/dom-manipulation-and-events.md)
 - [Browser Storage and Communication / 浏览器存储与通信](browser-apis/browser-storage-and-communication.md)
 - [Image Lazy Loading / 浏览器图片懒加载](browser-apis/image-lazy-loading.md)
+- [Streaming UX / 流式交互](browser-apis/streaming-ux.md)
 
 ### TypeScript / TypeScript
 

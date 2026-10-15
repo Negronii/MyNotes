@@ -19,10 +19,15 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 ### Reliability and asynchronous delivery / 可靠性与异步交付
 
 - [API Reliability and Asynchronous Delivery / API可靠性与异步交付](reliability/api-reliability-and-async-delivery.md)
+- [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](reliability/observability-slos-and-incident-response.md)
 
 ### Security / 安全
 
 - [Web Security and Authentication / Web安全与身份认证](security/web-security-and-authentication.md)
+
+### Testing / 测试
+
+- [Software Testing Strategy / 软件测试策略](testing/software-testing-strategy.md)
 
 ### Algorithms and data structures / 算法与数据结构
 
@@ -43,6 +48,7 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 - [Software Design Principles / 软件设计原则](architecture/software-design-principles.md)
 - [Design Patterns in Practice / 设计模式实践](architecture/design-patterns-in-practice.md)
+- [Reading, Debugging, and Reviewing Code / 阅读、调试与审查代码](architecture/reading-debugging-and-reviewing-code.md)
 
 ### Career / 职业发展
 
@@ -59,6 +65,7 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 ### Infrastructure / 基础设施
 
 - [Docker Operations / Docker操作参考](infrastructure/docker-operations.md)
+- [Application Deployment and CI/CD / 应用部署与持续交付](infrastructure/application-deployment-and-ci-cd.md)
 
 ## Related domains / 相关领域
 
