@@ -1,17 +1,11 @@
-A bundle of intermediate/advanced React interview questions — component communication, hooks, and reusable component patterns.
+# Advanced React / React进阶
 
-# How can components communicate in React?
+## How can components communicate? / React组件如何通信？
 
-**Headline (30s):** Four patterns, picked by *direction* and *distance*: **parent→child via props**, **child→parent via callback props** (or refs for imperative access), **cross-cutting via Context API** for shared state that many components need, and **cross-component via state management libraries** (Redux, Zustand) for complex app-wide state. The rule of thumb: start with props, reach for context when you'd otherwise drill the same prop through 3+ levels, reach for a library only when context becomes unwieldy.
+**Core answer / 核心回答：** Keep data flow explicit: pass data down with props, send events up with callback props, and use Context or a store when many distant consumers need shared state. Refs expose imperative capabilities; they are not a substitute for state that drives visible UI. / 保持数据流清晰：用 props 向下传数据，用回调 props 向上传事件；多个较远组件需要共享状态时再考虑 Context 或 store。ref 用于暴露命令式能力，不应替代驱动界面的 state。
 
-## Parent → Child
-
-- **Props** — standard unidirectional data flow.
-- **Refs** — for imperative access (focus an input, call a child method). Use sparingly.
-- **Context API** — shared data without prop drilling; parent `Provider`, consumer `useContext`.
-
-```jsx
-const ThemeContext = createContext('light');
+~~~jsx
+const ThemeContext = createContext("light");
 
 function App() {
   return (
@@ -23,219 +17,136 @@ function App() {
 
 function Toolbar() {
   const theme = useContext(ThemeContext);
-  return <div className={theme}>...</div>;
+  return <div className={theme}>Toolbar</div>;
 }
-```
+~~~
 
-## Child → Parent
+A child can notify its parent through a callback prop. Use Context for values such as theme or locale that are needed across a subtree; a store can help when shared state and update patterns grow more complex. Custom Hooks share stateful logic, but each call has its own Hook state unless the Hook deliberately connects to shared state. Avoid using an event bus as a default substitute for React's data flow.
 
-- **Callback props** — parent passes a function; child calls it with data.
-- **`forwardRef` + `useImperativeHandle`** — child exposes specific methods via ref.
-- **Event bubbling** — parent listens on a wrapper; child's event bubbles up.
+## When should you use memo, useMemo, or useCallback? / 何时使用 memo、useMemo和useCallback？
 
-## Cross-component (not parent-child)
+**Core answer / 核心回答：** These are performance tools, not correctness tools. React.memo can skip rendering when props compare equal; useMemo caches a calculated value; useCallback caches a function reference. Add them when profiling or a specific identity boundary shows they help. / 这些 API 是性能工具，不是正确性工具。React.memo 可在 props 比较相等时跳过渲染；useMemo 缓存计算值；useCallback 缓存函数引用。只有性能分析或明确的引用边界表明它们有帮助时再使用。
 
-- **State management libraries** — Redux, Zustand, Jotai, MobX. Pick based on complexity and team familiarity.
-- **Custom hooks** — extract stateful logic, call from anywhere.
-- **Event systems** — custom EventBus for decoupled pub/sub (rarely the right answer in React).
+~~~jsx
+import { memo, useCallback, useMemo } from "react";
 
-**Rule of thumb:** Props for parent→child. Callbacks for child→parent. Context for deep sharing that's cross-cutting (theme, auth, locale). A store library when state is truly global and complex.
+function ListContainer({ items, onSelect }) {
+  const sortedItems = useMemo(
+    () => [...items].sort((a, b) => a.name.localeCompare(b.name)),
+    [items]
+  );
 
----
+  const handleSelect = useCallback((id) => {
+    onSelect(id);
+  }, [onSelect]);
 
-# When do you use `useCallback`, `useMemo`, and `React.memo`?
-
-**Headline (30s):** These three work together to skip unnecessary re-renders. **`React.memo`** wraps a component and skips re-render if its props are shallowly equal. **`useMemo`** memoizes a computed value. **`useCallback`** memoizes a function reference. You typically need all three together: `React.memo` on the child, `useCallback` for the function props you pass it, `useMemo` for any computed objects you pass. Without that matching, the child re-renders anyway because the props change reference identity every render.
-
-## `useCallback`
-
-Memoizes a function reference. The child that receives it skips re-rendering when the parent re-renders.
-
-```javascript
-const handleClick = useCallback(() => {
-  doSomething(id);
-}, [id]);
-```
-
-## `useMemo`
-
-Memoizes a computed value. Only recomputes when dependencies change.
-
-```javascript
-const sortedList = useMemo(
-  () => items.sort((a, b) => a.name.localeCompare(b.name)),
-  [items]
-);
-```
-
-## `React.memo`
-
-Higher-order component that skips re-render when props are shallowly equal.
-
-```javascript
-const ExpensiveList = React.memo(({ items }) => (
-  items.map(item => <Item key={item.id} data={item} />)
-));
-```
-
-**Combining the three for maximum effect:**
-
-```jsx
-function Parent({ data }) {
-  const handleClick = useCallback(() => console.log('clicked'), []);
-  const processed  = useMemo(() => heavyProcess(data), [data]);
-  return <ExpensiveChild onClick={handleClick} items={processed} />;
+  return <ItemList items={sortedItems} onSelect={handleSelect} />;
 }
 
-const ExpensiveChild = React.memo(({ onClick, items }) => { /* ... */ });
-```
+const ItemList = memo(function ItemList({ items, onSelect }) {
+  return items.map(item => (
+    <button key={item.id} onClick={() => onSelect(item.id)}>
+      {item.name}
+    </button>
+  ));
+});
+~~~
 
-**Gotcha — don't memoize everything.** Memoization has its own cost (equality checks, closure retention). The framework will re-render fast if the subtree is small. Profile first; memoize only the components that actually re-render expensively.
+React.memo's default prop comparison uses Object.is per prop. A component can still render when its own state or consumed context changes; one newly created object or function prop can also prevent a skip. Inline handlers are ordinary JavaScript and are not automatically a performance bug. Keep state near its consumers, avoid unnecessary Effects that trigger render chains, and use the React Profiler to find a real hotspot.
 
----
+React may discard a useMemo cache in documented circumstances. Do not depend on memoization for resource lifetime, semantic identity, or correctness.
 
-# How do you use `useRef`?
+## What does useRef do? / useRef有什么作用？
 
-**Headline (30s):** `useRef` returns a mutable object (`{ current }`) that persists across renders **without triggering re-renders** when mutated. Three common use cases: accessing a DOM node imperatively, storing mutable values (timer IDs, previous values) that don't belong in state, and holding non-reactive external instances (WebSocket, observer).
+**Core answer / 核心回答：** useRef returns a stable object whose current field can hold a value between renders. Changing current does not request a render, so use refs for DOM access and bookkeeping, not for displayed state. / useRef 返回一个在多次渲染间保持稳定的对象，其 current 字段可保存可变值。修改 current 不会请求重新渲染，因此 ref 适合 DOM 访问和内部记录，不适合驱动可见界面的状态。
 
-```javascript
-const inputRef = useRef(null);
-const focusInput = () => inputRef.current.focus();
+~~~jsx
+function SearchBox() {
+  const inputRef = useRef(null);
 
-return <input ref={inputRef} />;
-```
+  return (
+    <>
+      <input ref={inputRef} />
+      <button onClick={() => inputRef.current?.focus()}>
+        Focus
+      </button>
+    </>
+  );
+}
+~~~
 
-**Common patterns:**
+Other suitable values include a timer ID or an external instance. Do not read or write refs during rendering except for initialization. Use state when a change must update the screen.
 
-- **DOM access** — focusing, measuring, imperative library integration (charts, maps, animations).
-- **Previous value** — `useRef` + `useEffect` to remember the last value.
-- **Timer / subscription IDs** — store the ID so you can clear it in cleanup.
-- **Mutable flags** — "has been initialized", "is currently dragging" — without re-rendering.
+## What do forwardRef and useImperativeHandle do? / forwardRef和useImperativeHandle有什么作用？
 
-**Gotcha — mutating `.current` doesn't re-render.** That's usually the point (it's what makes refs different from state), but it means you can't drive UI with ref values. Use state for anything the UI displays; use refs for bookkeeping.
+**Core answer / 核心回答：** In React 18 and earlier, forwardRef lets a component accept and forward a parent's ref; useImperativeHandle can expose a narrow command API. In React 19, a function component can receive ref as a prop, so forwardRef is no longer necessary for new React 19-only components. / React 18 及更早版本中，forwardRef 让组件接收并转发父组件传入的 ref；useImperativeHandle 可暴露范围较小的命令式 API。React 19 的函数组件可以把 ref 作为 prop 接收，因此仅面向 React 19 的新组件不再需要 forwardRef。
 
----
+~~~jsx
+const FancyInput = forwardRef(function FancyInput(props, ref) {
+  return <input {...props} ref={ref} className="fancy" />;
+});
+~~~
 
-# What does `forwardRef` do?
+Prefer declarative props and callbacks when they express the interaction clearly. Use an imperative ref for cases such as focusing an input or coordinating a third-party widget.
 
-**Headline (30s):** By default, refs don't pass through custom components — `<MyInput ref={r} />` does nothing useful. `forwardRef` wraps a component so it explicitly forwards its `ref` argument to an underlying DOM element (or uses `useImperativeHandle` to expose a custom API). You need this any time a parent wants imperative access to something inside a custom component.
+## What is a custom Hook? / 什么是自定义Hook？
 
-```javascript
-const FancyInput = forwardRef((props, ref) => (
-  <input ref={ref} className="fancy" {...props} />
-));
+**Core answer / 核心回答：** A custom Hook is a function whose name starts with use and that calls other Hooks at the top level. It packages reusable stateful logic; it does not share one state instance across callers by itself. / 自定义 Hook 是名称以 use 开头、并在顶层调用其他 Hook 的函数。它封装可复用的有状态逻辑；仅仅复用 Hook 本身不会让多个调用共享同一份 state。
 
-// Parent:
-const ref = useRef(null);
-<FancyInput ref={ref} />
-ref.current.focus();
-```
-
-**Reach for `forwardRef`** when building a reusable component that should feel like a DOM element (inputs, buttons, custom scroll containers). Combine with `useImperativeHandle` to expose only specific methods instead of the raw DOM node.
-
----
-
-# What are custom hooks, and when do they differ from regular functions?
-
-**Headline (30s):** A custom hook is a function whose name starts with `use` that *calls other hooks internally*. That's it — the `use` prefix is a convention that lints can enforce. Custom hooks let you reuse stateful logic (state, effects, refs, subscriptions) across components without HOCs or render props. Regular functions can't use hooks — they can only do pure computation or utilities.
-
-| Custom hooks | Regular functions |
-|---|---|
-| Can call `useState`, `useEffect`, etc. | Cannot call hooks |
-| Manage state and side effects | Pure computation only |
-| Re-run on every render of the component | Called explicitly |
-| Named `useX` by convention | Any name |
-
-## Example: window size hook
-
-```javascript
+~~~jsx
 function useWindowSize() {
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [size, setSize] = useState({
+    width: 0,
+    height: 0
+  });
+
   useEffect(() => {
-    const handler = () => setSize({
-      width:  window.innerWidth,
-      height: window.innerHeight
-    });
-    window.addEventListener('resize', handler);
-    handler();
-    return () => window.removeEventListener('resize', handler);
+    function update() {
+      setSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    }
+
+    window.addEventListener("resize", update);
+    update();
+    return () => window.removeEventListener("resize", update);
   }, []);
+
   return size;
 }
-```
+~~~
 
-Any component can call `const { width, height } = useWindowSize()` — the subscription and cleanup are packaged up.
+Ordinary Hooks must be called in the same order on every render, at the top level of a component or another Hook. React 19’s use API is an exception: it may appear in a condition or loop, but it still belongs inside a component or Hook and cannot be wrapped in try/catch. The lint plugin checks these Rules of Hooks. An Effect's cleanup releases the listener; root StrictMode deliberately repeats setup and cleanup once in development.
 
-**Gotcha — Rules of Hooks:** Hooks must be called at the top level of a component or custom hook, in the same order every render. No `if`, no loops, no early returns before a hook. If you need conditional logic, branch *inside* the hook's callbacks.
+## What are render props and higher-order components? / 什么是 render props 和高阶组件？
 
----
+**Core answer / 核心回答：** Render props pass a function that chooses what to render from data supplied by a component. A higher-order component takes a component and returns a wrapped component. Both remain useful API shapes in some libraries and legacy code; custom Hooks are another way to share logic, not a universal replacement. / render props 通过函数接收组件提供的数据并决定渲染内容。高阶组件接收一个组件并返回包装后的组件。它们仍适用于某些库 API 和旧代码；自定义 Hook 是共享逻辑的另一种方式，并非对二者的通用替代。
 
-# What is the "render props" pattern?
-
-**Headline (30s):** Render props pass a function as a prop that returns JSX — letting the consumer control what to render using data the component provides. It was the main reusability pattern before hooks; today, **custom hooks replace it** for nearly all cases. You'll see it in legacy codebases and in libraries that want a hookless public API.
-
-```jsx
+~~~jsx
 <MouseTracker render={({ x, y }) => (
-  <p>Mouse position: {x}, {y}</p>
+  <p>Pointer: {x}, {y}</p>
 )} />
-```
+~~~
 
-The `MouseTracker` manages state (mouse position); the parent supplies the render function. Pre-hooks, this was how you shared "track the mouse and render something" across components. Post-hooks, `const { x, y } = useMouse()` does the same with less ceremony.
+A wrapper component can add authorization or instrumentation, but nested wrappers may make the component tree and prop flow harder to follow. Choose the API that makes ownership and behavior clear.
 
----
+## What are common conditional-rendering patterns? / 常见的条件渲染写法有哪些？
 
-# What are Higher-Order Components (HOCs)?
+**Core answer / 核心回答：** Use a ternary for either-or, logical AND for render-or-nothing, and an early return for a clear guard. Choose the form that makes the branches easiest to read. / 二选一可用三元表达式；只在条件成立时渲染可用逻辑 AND；明确的前置检查可用 early return。选择最容易读懂分支的写法。
 
-**Headline (30s):** An HOC is a function that takes a component and returns a new component with added behavior — like decorators for React. They were the classic pattern for cross-cutting concerns (auth, logging, routing) before hooks. Today, **custom hooks are usually cleaner**; HOCs are still relevant for cases where you need to *modify rendering behavior* rather than share logic (e.g., `React.memo`, `connect` from Redux).
-
-```javascript
-function withAuth(WrappedComponent) {
-  return function AuthenticatedComponent(props) {
-    const user = useAuth();
-    if (!user) return <Redirect to="/login" />;
-    return <WrappedComponent {...props} user={user} />;
-  };
-}
-
-const ProtectedPage = withAuth(Dashboard);
-```
-
-**Trade-offs:**
-
-- Clean syntax at the use site (`withAuth(Dashboard)`).
-- But multiple HOCs produce "wrapper hell" in React DevTools.
-- Props can collide unexpectedly.
-- Types are awkward in TypeScript.
-
-**Rule of thumb:** Custom hooks for logic reuse, HOCs only when you need to actually wrap/alter rendering behavior (`React.memo`, `connect`, `observer` from MobX).
-
----
-
-# What are common conditional-rendering patterns?
-
-Four idiomatic patterns — pick based on readability at the call site.
-
-```jsx
-// 1. Ternary — for either-or
+~~~jsx
 {isLoggedIn ? <Dashboard /> : <Login />}
-
-// 2. Logical AND — for render-or-nothing
 {showBanner && <Banner />}
 
-// 3. Early return — for guard clauses in a component
-function Component({ data }) {
-  if (!data) return <Loading />;
-  return <Content data={data} />;
+function Profile({ user }) {
+  if (!user) return <Loading />;
+  return <Content user={user} />;
 }
+~~~
 
-// 4. Element variable — for many branches
-let content;
-if (error)        content = <Error />;
-else if (loading) content = <Spinner />;
-else              content = <Data />;
-return <div>{content}</div>;
-```
+Because React renders numbers, a numeric left operand can leak into the output: an empty list's length is 0, so {items.length && <List />} displays 0. Use {items.length > 0 && <List />} when that is not intended.
 
-**Gotcha — `&&` with numbers:** `{list.length && <List items={list} />}` renders the literal `0` when the list is empty (because React renders numbers but not `false`). Coerce to boolean: `{!!list.length && ...}` or `{list.length > 0 && ...}`.
+**See also:** [React Basics / React基础](./react-basics.md) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](../performance/rendering-and-computation-optimization.md) for profiling and memoization limits.
 
-**See also:** [`9.2 React Basics`](./react-basics.md) for JSX, lifecycle, `setState`, and router basics, [`4.1 Object, Function, and Prototype`](../javascript/objects-functions-and-prototypes.md) for the `this`/`bind` behavior underneath class components.
+**Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects).

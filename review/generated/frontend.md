@@ -4772,143 +4772,123 @@ Most leaks are the same pattern: something unreachable from your mental model is
 **See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for how WeakMap/WeakSet help avoid leaks, [`4.3 Asynchronous JavaScript`](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise microtask scheduling details.
 ## 27. Build Tools / 构建工具
 
-Reach for this when you need a quick reference for Webpack's core concepts, loaders, plugins, source maps, and adjacent tooling like Corepack. For ESM vs. CommonJS and dynamic imports, see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
+### Build Tools / 构建工具
 
-#### Webpack — core concepts
+Build tools resolve modules, transform source files, and produce output for development or deployment. The exact pipeline depends on the tool and version.
 
-Webpack is a static module bundler. It starts at an entry file, walks the import graph, and produces one or more optimized bundles the browser can load.
+**Core answer / 核心回答：** A bundler follows the module graph, transforms selected modules, and emits assets; loaders transform modules while plugins use broader compiler hooks. / 打包器沿模块依赖图处理文件、转换选定模块并输出资源；loader 转换模块，plugin 则可通过更广泛的 compiler hooks 扩展构建过程。
 
-| Concept | What it is |
+#### Webpack concepts / Webpack核心概念
+
+Webpack starts from configured entries, resolves their dependency graph, applies loaders to modules, and emits assets. Its configuration names entry points, output, mode, module rules, plugins, and optimization.
+
+| Term | Role |
 |---|---|
-| **Entry** | Starting file(s) for dependency resolution (e.g., `./src/index.js`) |
-| **Output** | Where bundles are written and how they're named |
-| **Loaders** | Transform non-JS files (CSS, TS, images) into modules Webpack can ingest |
-| **Plugins** | Hook into the build lifecycle (optimization, asset emission, env injection) |
-| **Mode** | `development` (fast, readable) or `production` (minified, tree-shaken) |
+| Entry | Starting point for dependency resolution. |
+| Output | Destination and naming for emitted assets. |
+| Loader | Transforms one module's source before bundling. |
+| Plugin | Hooks into compiler or compilation stages to add broader build behavior. |
+| Mode | Enables development or production defaults; explicit settings can override them. |
 
-#### The build pipeline
+##### Loader order / Loader执行顺序
 
-1. **Merge config** — combine CLI flags with config file.
-2. **Initialize compiler** — create the compiler, load plugins, call each plugin's `apply`.
-3. **Resolve entries** — start from entry points, build a dependency graph.
-4. **Apply loaders** — transform each source file through its matching loader chain.
-5. **Emit output** — combine modules, optimize (minification, code splitting), write files.
+Normal loader functions execute right to left. Pitch functions, when present, run left to right.
 
----
-
-#### Loaders
-
-Loaders run **right-to-left** — the last entry in `use` executes first, its output feeds the previous one, and so on.
-
-```javascript
+~~~javascript
 module: {
   rules: [
-    { test: /\.tsx?$/, use: ['babel-loader', 'ts-loader'] },
-    { test: /\.css$/,  use: ['style-loader', 'css-loader'] },
-    { test: /\.scss$/, use: ['style-loader', 'css-loader', 'sass-loader'] }
+    {
+      test: /\.tsx?$/,
+      use: ["babel-loader", "ts-loader"]
+    },
+    {
+      test: /\.scss$/,
+      use: ["style-loader", "css-loader", "sass-loader"]
+    }
   ]
 }
-```
+~~~
 
-For `.tsx`: `ts-loader` compiles TS → ES, then `babel-loader` transpiles ES → target ES.
+For the TypeScript rule, ts-loader runs first and its output is then passed to babel-loader. A real project should choose one clear TypeScript transform pipeline; running overlapping transforms can add cost or change output unexpectedly.
 
-##### Common loaders
+| Common loader role | Examples | Typical work |
+|---|---|---|
+| JavaScript or TypeScript transform | babel-loader, ts-loader | Transpile syntax or TypeScript according to the configured toolchain. |
+| Styles | sass-loader, css-loader, style-loader | Compile Sass, resolve CSS imports and URLs, then inject styles in a development page. Production builds may extract CSS into files. |
+| Static assets | Webpack 5 Asset Modules | Emit or inline resources using built-in module types instead of older file-loader or url-loader setups. |
 
-| File type | Loaders |
-|---|---|
-| JS / TS | `babel-loader`, `ts-loader` |
-| CSS | `css-loader`, `style-loader`, `postcss-loader`, `sass-loader` |
-| Assets | `file-loader`, `url-loader`, `image-webpack-loader` |
+##### Loader and plugin examples / Loader与插件示例
 
-##### Writing a custom loader
+A small text replacement shows the loader shape. It is not a JavaScript parser; use a syntax-aware transform when source structure matters.
 
-A loader is just a function `(source) => transformedSource`:
-
-```javascript
-// loaders/strip-comments-loader.js
-module.exports = function (source) {
-  return source.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+~~~javascript
+module.exports = function replaceBuildLabel(source) {
+  return source.replaceAll("__BUILD_LABEL__", "demo");
 };
-```
+~~~
 
-Register it via `resolveLoader.modules` so Webpack can find it from a local directory.
+A plugin can subscribe to a compiler hook. The done hook runs after compilation and is an AsyncSeriesHook. A synchronous handler may register with tap; asynchronous handlers may use tapAsync or tapPromise so the hook waits for their work.
 
----
-
-#### Plugins
-
-Plugins hook into `compiler.hooks` — events fired at specific lifecycle points (`beforeCompile`, `emit`, `done`, etc.).
-
-##### Common plugins
-
-| Plugin | What it does |
-|---|---|
-| `HtmlWebpackPlugin` | Generates HTML with injected `<script>` / `<link>` tags |
-| `MiniCssExtractPlugin` | Extracts CSS into separate files (replaces `style-loader` in production) |
-| `DefinePlugin` | Compile-time globals (e.g., `process.env.NODE_ENV`) |
-| `TerserWebpackPlugin` | Minifies JS output |
-| `CleanWebpackPlugin` | Removes old build artifacts before each build |
-| `HotModuleReplacementPlugin` | Enables HMR during development |
-
-##### Writing a custom plugin
-
-A plugin is a class with an `apply(compiler)` method:
-
-```javascript
+~~~javascript
 class BuildStatsPlugin {
   apply(compiler) {
-    compiler.hooks.done.tapAsync('BuildStats', (stats, callback) => {
-      const json = JSON.stringify(stats.toJson({ modules: false }), null, 2);
-      require('fs').writeFileSync('build-stats.json', json);
-      callback();
+    compiler.hooks.done.tap("BuildStatsPlugin", stats => {
+      const json = stats.toJson({ modules: false });
+      require("node:fs").writeFileSync(
+        "build-stats.json",
+        JSON.stringify(json, null, 2)
+      );
     });
   }
 }
-```
+~~~
 
-Use `tap` for synchronous hooks, `tapAsync` / `tapPromise` for async ones.
+Production plugins should write to an explicit destination and handle concurrent or watch builds deliberately; the example is a minimal local illustration.
 
----
+| Plugin | Typical role |
+|---|---|
+| HtmlWebpackPlugin | Generates an HTML document and injects emitted script or stylesheet references. |
+| DefinePlugin | Replaces configured expressions at compile time; it does not read a runtime environment variable from the browser. |
+| MiniCssExtractPlugin | Emits CSS into separate files when the build needs extracted styles. |
 
-#### Source maps
+These are examples, not a required plugin stack; a framework may provide equivalent build features. As of the Webpack docs checked on 2026-10-15, the HtmlWebpackPlugin README marks it deprecated; the native HTML guide describes experiments.html and output.html as alternatives for generated pages, and still labels native HTML experimental. Check the installed Webpack version and template needs before migrating.
 
-Source maps map minified/bundled code back to your original source for debugging. Controlled by Webpack's `devtool` option.
+##### Source maps / Source map
 
-| `devtool` | Rebuild speed | Quality | Use case |
-|---|---|---|---|
-| `eval` | Fastest | Generated code | Dev (fast iteration) |
-| `eval-source-map` | Slow | Original source | Dev (accurate) |
-| `cheap-source-map` | Medium | Lines only | CI / staging |
-| `source-map` | Slowest | Full quality | Production + error tracking |
+A source map relates emitted code to source files for debugging and error reporting. Select devtool based on rebuild speed, trace detail, artifact size, and whether the map is published. A map that is uploaded privately can still be exposed if the deployment serves it publicly; configuration alone does not set the access policy.
 
-**Best practices:**
+| devtool example | Output meaning |
+|---|---|
+| eval-source-map | Evaluates modules with source maps for development debugging. |
+| source-map | Emits an external map with a sourceMappingURL reference. |
+| hidden-source-map | Emits an external map without the reference comment; useful when a release pipeline uploads maps separately. |
+| nosources-source-map | Omits embedded source content, but mappings and source paths may still be present. |
 
-- **Development** — `eval-source-map` gives accurate stack traces with tolerable rebuild time.
-- **Production** — emit `source-map` files, upload to your error tracker (Sentry, Bugsnag), but don't serve them publicly in closed-source projects.
+These names describe different map delivery and detail choices; compare the configured output rather than treating them as a fixed speed ranking or a security boundary.
 
----
+#### Vite and the development/production split / Vite与开发、生产构建的区别
 
-#### Corepack (Node 16.10+)
+Vite's development server serves native ES modules with on-demand transforms and HMR. In Vite 8, the production build uses Rolldown to produce optimized assets. Earlier Vite releases used a different production bundler pipeline, so state the major version when the distinction matters.
 
-Built-in Node.js tool for pinning the package manager version per project.
+A fast dev server is not evidence that the production output has the same graph or performance. Run the configured production build and inspect its assets when validating deployment behavior.
 
-```bash
-corepack enable                              # install shims for yarn/pnpm
-corepack prepare pnpm@latest --activate      # pin a specific version
-```
+#### Corepack and package-manager pinning / Corepack与包管理器版本固定
 
-With `"packageManager": "pnpm@8.15.0"` in `package.json`, any team member running `pnpm install` automatically gets that exact version — no more "works on my machine" from manager-version drift.
+A package.json packageManager field records the package manager and version a project expects. Corepack can use that field to select a matching manager when its shims are installed. Corepack was bundled with Node.js through Node 24, but Node 25 and later no longer distribute it by default; a current project may need to install or provision Corepack separately.
 
----
+~~~json
+{
+  "packageManager": "pnpm@10.0.0"
+}
+~~~
 
-#### When to reach for which
+The field alone does not install a package manager or guarantee that every environment honors it. Pin and provision the tool through the project's supported runtime and CI setup.
 
-- **Webpack** — full-featured, everything pluggable, the default for large legacy codebases.
-- **Vite** — ES modules + esbuild for development, Rollup for production. Dramatically faster dev server. First choice for new projects.
-- **Rollup** — optimized for libraries (cleanest output), smaller ecosystem.
-- **esbuild / swc / Turbopack** — native-speed bundlers / transpilers, still maturing plugin ecosystems.
+**Choosing a tool / 工具选择：** Compare plugin and loader needs, ecosystem, output constraints, team familiarity, and build behavior for the project. No single bundler is the right choice for every application or library.
 
-**See also:** [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for ES modules and dynamic `import()`, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for bundle-size and code-splitting strategy.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for modules and dynamic imports; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measuring bundle and load behavior.
+
+**Sources checked 2026-10-15:** [Webpack: Loaders](https://webpack.js.org/concepts/loaders/), [Asset Modules](https://webpack.js.org/guides/asset-modules/), [Webpack: Plugins](https://webpack.js.org/concepts/plugins/), [DefinePlugin](https://webpack.js.org/plugins/define-plugin/), [HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme), [Webpack Native HTML guide](https://webpack.js.org/guides/native-html/), [style-loader](https://github.com/webpack/style-loader#readme), [css-loader](https://github.com/webpack/css-loader#readme), [MiniCssExtractPlugin](https://github.com/webpack/mini-css-extract-plugin#readme), [Webpack: Writing a Plugin](https://webpack.js.org/contribute/writing-a-plugin/), [Webpack Compiler Hooks](https://webpack.js.org/api/compiler-hooks/), [Webpack devtool](https://webpack.js.org/configuration/devtool/), [Vite 8 guide](https://vite.dev/guide/), [Vite 8.0.10 source](https://github.com/vitejs/vite/blob/v8.0.10/README.md), [Node.js 25 Corepack docs](https://nodejs.org/download/release/v25.8.0/docs/api/corepack.html), [Corepack project README](https://github.com/nodejs/corepack#readme).
 ## 28. Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
 ### Virtual DOM and Framework Selection / 虚拟DOM与框架选择
@@ -4956,252 +4936,152 @@ TypeScript adds static checking and editor support, but its types are erased and
 **Sources checked 2026-10-15:** [React Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html), [Vue Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism), [React: Render and Commit](https://react.dev/learn/render-and-commit), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TypeScript: erased structural types](https://www.typescriptlang.org/docs/handbook/typescript-for-oopers.html#erased-structural-types).
 ## 29. React Basics / React基础
 
-A bundle of interview questions every React developer should be able to answer on the spot — JSX, the diff algorithm, the lifecycle, `setState` behavior, routing, and the SPA/MPA distinction.
+### React Basics / React基础
 
-### What is JSX, and what does it compile to?
+React components describe UI from props and state. These notes focus on JSX, element identity, class lifecycle methods, state updates, and routing.
 
-**Headline (30s):** JSX is a syntax extension that lets you write HTML-like markup inside JavaScript. It's not HTML and it's not a string — the transpiler (Babel, SWC, esbuild) rewrites every JSX expression into a `React.createElement(type, props, ...children)` call. That's why you need React in scope historically, and why JSX can embed any JS expression with `{}`.
+#### What is JSX, and what does it compile to? / JSX是什么，最终会编译成什么？
 
-```jsx
+**Core answer / 核心回答：** JSX is syntax for describing elements inside JavaScript; it is not HTML text. A configured compiler transforms JSX using either the classic factory runtime or the automatic JSX runtime. The emitted calls depend on the compiler and its configuration. / JSX 是在 JavaScript 中描述元素的语法，不是 HTML 字符串。配置好的编译器会使用经典工厂模式或自动 JSX runtime 转换它；实际生成的调用取决于编译器和配置。
+
+~~~jsx
 const element = <h1 className="title">Hello</h1>;
+~~~
 
-// Transpiles to:
-const element = React.createElement('h1', { className: 'title' }, 'Hello');
-```
+With the automatic runtime, a React compiler can emit calls to helpers from react/jsx-runtime. With the classic runtime, it can emit React.createElement calls. The automatic transform means React does not need to be imported solely for JSX when the project is configured for it.
 
-**Rules:**
+- Lowercase tags such as **div** name built-in elements; uppercase identifiers such as **Profile** name component values.
+- Curly braces insert JavaScript expressions into JSX.
+- React DOM uses names such as **className** and **onClick** rather than HTML attribute spelling.
 
-- **Custom components must start with an uppercase letter** (`MyComponent`). Lowercase tags are treated as HTML strings.
-- **Expressions go in `{}`** — anything that's a valid JS expression.
-- **Attributes are camelCase** (`className`, `onClick`) — because `class` and similar are reserved words.
+#### How does React match elements between renders? / React如何判断哪些元素需要更新？
 
-**Gotcha — "New JSX transform" (React 17+):** You no longer need to `import React from 'react'` in every file just for JSX. The compiler injects the right import automatically.
+**Core answer / 核心回答：** React uses element type, tree position, and keys among siblings to match elements and preserve component state. Stable keys should represent item identity when a list can change; an index is suitable only when the list's membership and order are fixed. / React 使用元素类型、树中的位置和兄弟元素间的 key 来匹配元素并保留组件 state。列表可能变化时，稳定 key 应代表数据项身份；只有列表成员和顺序固定时，索引才适合作为 key。
 
----
+~~~jsx
+{items.map(item => <ListItem key={item.id} item={item} />)}
+~~~
 
-### How does React's diff algorithm decide what to update?
+Keys are local to one set of siblings; they do not need to be unique across the entire application. React may preserve state for a matching element and reset it when its type or key changes. This is why an index key can attach local state to the wrong data after an insertion, deletion, or reorder.
 
-**Headline (30s):** React's reconciler uses three heuristics to keep diffing fast (O(n) instead of the classic O(n³)): (1) elements at the same position of the same type are updated, not recreated; (2) elements with different types have their entire subtree replaced; (3) for lists, `key` props identify which items moved, were added, or removed. The takeaway: **keys must be stable and unique** — using array indices causes subtle bugs when the list reorders.
+#### What are class lifecycle methods? / 类组件的生命周期方法是什么？
 
-#### The three rules
+**Core answer / 核心回答：** Class components have mount, update, and unmount lifecycles. Rendering can be repeated or abandoned, so keep render pure and put external synchronization in lifecycle methods or Effects. Function component Effects have setup and cleanup semantics; there is no exact one-to-one mapping from each class method to a Hook. / 类组件有挂载、更新和卸载阶段。render 可能重复执行或被放弃，因此应保持纯净，并将外部同步放在生命周期方法或 Effect 中。函数组件 Effect 有自己的 setup 和 cleanup 语义，不能把每个类方法与 Hook 一一对应。
 
-1. **Same position, same type** — reuse the DOM node, just update props.
-2. **Different types** — unmount the old subtree completely, mount the new one.
-3. **Lists need keys** — without stable keys, React falls back to index-based matching and misidentifies moved items.
-
-#### Keys — the rule you'll be tested on
-
-```jsx
-// Good: stable ID as key
-{items.map(item => <ListItem key={item.id} data={item} />)}
-
-// Bad: index as key — breaks on insert, delete, or reorder
-{items.map((item, i) => <ListItem key={i} data={item} />)}
-```
-
-**Why index keys fail:** When you delete item 0, all subsequent indices shift down. React sees "item at key=1 changed its data" instead of "item at key=1 was removed." Any local state in those list items ends up attached to the *wrong* data.
-
-**Gotcha — keys are not globally unique, just unique among siblings.** `key="foo"` in one list doesn't conflict with `key="foo"` in another.
-
----
-
-### What's the class component lifecycle?
-
-**Headline (30s):** Three phases — **mounting** (first render), **updating** (re-render from props/state change), and **unmounting** (removal). Each phase has well-defined hooks. Most of this is legacy knowledge: function components + hooks replaced it, but interviewers still ask, and you'll still see class components in existing codebases.
-
-#### Mounting
-
-```
-constructor → getDerivedStateFromProps → render → componentDidMount
-```
-
-- **`constructor`** — set initial state, bind methods.
-- **`getDerivedStateFromProps`** (rare) — derive state from props, static method.
-- **`render`** — return JSX.
-- **`componentDidMount`** — DOM is now available; fetch data, start timers, subscribe.
-
-#### Updating
-
-```
-getDerivedStateFromProps → shouldComponentUpdate → render → getSnapshotBeforeUpdate → componentDidUpdate
-```
-
-- **`shouldComponentUpdate`** — return `false` to skip re-render (perf optimization).
-- **`componentDidUpdate`** — react to new props/state, e.g. re-fetch if an ID changed.
-
-#### Unmounting
-
-```
-componentWillUnmount
-```
-
-The one place to clean up timers, subscriptions, event listeners — whatever the component set up during mount.
-
-#### Error handling
-
-- **`getDerivedStateFromError`** — sync; updates state to render a fallback UI.
-- **`componentDidCatch`** — effects like logging.
-
-**Mapping to hooks:**
-
-| Class | Hook |
+| Class lifecycle | Purpose |
 |---|---|
-| `constructor` + `componentDidMount` | `useState` + `useEffect(fn, [])` |
-| `componentDidUpdate` | `useEffect(fn, [deps])` |
-| `componentWillUnmount` | `useEffect` cleanup return |
-| `shouldComponentUpdate` | `React.memo` |
+| **constructor** | Initialize state and instance fields. |
+| **getDerivedStateFromProps** | Runs before render on mount and updates; rarely derives state from incoming props. |
+| **render** | Return the next UI description; do not perform side effects here. |
+| **shouldComponentUpdate** | Runs before an update render and can skip it as a performance optimization. |
+| **getSnapshotBeforeUpdate** | Runs after render but before DOM mutations; its return value is passed to componentDidUpdate. |
+| **componentDidMount** | Synchronize with external systems after the component commits. |
+| **componentDidUpdate** | React to committed prop or state changes; guard against unnecessary loops. |
+| **componentWillUnmount** | Release subscriptions, timers, and other resources. |
+| **getDerivedStateFromError / componentDidCatch** | Render fallback UI and report errors from a descendant subtree. |
 
----
+An Effect runs after a commit; React runs its previous cleanup before setting up the Effect again when dependencies change, and on unmount. In development, root StrictMode adds an extra setup-and-cleanup cycle to help expose incomplete cleanup. This is a development check, not an extra production lifecycle.
 
-### What is an Error Boundary, and what does it catch?
+#### What does an Error Boundary catch? / Error Boundary能捕获哪些错误？
 
-**Headline (30s):** An Error Boundary is a class component that catches JavaScript errors in its subtree during rendering, lifecycle methods, and constructors — and renders a fallback UI instead of letting the whole tree unmount. It does **not** catch errors in event handlers, async code, or SSR. No hook equivalent yet; use the `react-error-boundary` library for function components.
+**Core answer / 核心回答：** A React Error Boundary is a class component that displays fallback UI for errors thrown while rendering descendants, in their constructors, or in their React lifecycle methods. It does not catch event-handler errors, ordinary asynchronous callbacks, server-rendering errors, or errors thrown by the boundary itself. One documented exception is an error thrown inside the function passed to the startTransition function returned by useTransition (including a rejected Promise returned by that function). / React Error Boundary 是类组件，可在后代树渲染、构造函数或 React 生命周期方法抛错时显示备用 UI。它不会捕获事件处理器、普通异步回调、服务端渲染或边界自身抛出的错误。一个文档列出的例外是 useTransition 返回的 startTransition 所执行函数抛错（包括该函数返回的 rejected Promise）。
 
-```jsx
+~~~jsx
+import React from "react";
+
 class ErrorBoundary extends React.Component {
   state = { hasError: false };
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
-  componentDidCatch(error, errorInfo) {
-    logErrorToService(error, errorInfo);
+  componentDidCatch(error, info) {
+    console.error(error, info.componentStack);
   }
 
   render() {
-    if (this.state.hasError) return <h1>Something went wrong.</h1>;
-    return this.props.children;
+    return this.state.hasError
+      ? <p>Something went wrong.</p>
+      : this.props.children;
   }
 }
-```
+~~~
 
-**What it does NOT catch:**
+The built-in React boundary API is class-based. A library can make boundary composition easier, but try/catch around JSX does not catch rendering failures.
 
-- Event handler errors (wrap in `try/catch`).
-- Async code (`setTimeout`, Promises, `await` inside `useEffect`).
-- SSR errors.
-- Errors thrown inside the boundary itself.
+#### Is setState synchronous? / setState是同步还是异步？
 
-**See also:** [`4.5 Error Handling`](#21.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86) for the full layered error handling model.
+**Core answer / 核心回答：** A state setter requests another render; it does not mutate the state snapshot held by the current render or event handler. React 18+ with createRoot also batches updates from timeouts, promises, and native event handlers. React 17 and React 18's legacy ReactDOM.render path batch fewer contexts. / state setter 会请求下一次渲染，不会改写当前 render 或事件处理器持有的 state 快照。React 18+ 使用 createRoot 时，也会批处理 timeout、Promise 和原生事件处理器中的更新。React 17 以及 React 18 的旧 ReactDOM.render 路径会批处理较少的场景。
 
----
-
-### Is `setState` sync or async?
-
-**Headline (30s):** In React 17 and earlier, `setState` was **batched** (async) inside React-controlled code (event handlers, lifecycle methods) but **synchronous** in `setTimeout`, native DOM events, and Promise callbacks. In **React 18+, batching is automatic everywhere** — including async contexts. The practical rule: always treat `setState` as async and never read the new state from `this.state` (class) or a captured closure variable (function) immediately after calling it.
-
-#### React 17 and earlier
-
-- Inside React (handlers, lifecycle) — batched, async.
-- In `setTimeout`, Promises, native events — synchronous.
-
-#### React 18+
-
-- Automatic batching everywhere. All `setState` calls within the same tick collapse into one re-render.
-
-```javascript
-// React 18 entry point
-import { createRoot } from 'react-dom/client';
-createRoot(document.getElementById('root')).render(<App />);
-```
-
-**Gotcha — reading state right after setState:**
-
-```javascript
-// This does NOT work — state is a closure over the old value
+~~~jsx
 setCount(count + 1);
-console.log(count);        // still the old value
-console.log(count + 1);    // compute locally if you need the new value
+console.log(count); // This render's snapshot is unchanged.
 
-// If you need the updated value in an effect, use useEffect
-useEffect(() => { console.log(count); }, [count]);
-```
+setCount(previous => previous + 1);
+setCount(previous => previous + 1); // Queued updates build on each other.
+~~~
 
-#### Updater form for correctness
+Use an updater when the next value depends on the previous value. Read the new state during a later render or in an Effect when appropriate; do not expect the variable in the current handler to change.
 
-If multiple updates reference the previous state, use the updater form — it handles batching correctly:
+#### How does React Router work? / React Router如何工作？
 
-```javascript
-// Bad: all three see the same count, so final state is count+1
-setCount(count + 1);
-setCount(count + 1);
-setCount(count + 1);
+**Core answer / 核心回答：** React Router matches the current location to a route and renders the configured UI. The example below uses the React Router v6 declarative API; current releases also offer data and framework modes with additional APIs. A browser-history router needs the host to serve the application entry point for client-side paths. / React Router 将当前地址匹配到路由并渲染对应界面。下面的例子使用 React Router v6 声明式 API；当前版本还提供数据模式和框架模式。浏览器历史路由要求服务器将客户端路径回退到应用入口文件。
 
-// Good: each reads the previous result, final state is count+3
-setCount(prev => prev + 1);
-setCount(prev => prev + 1);
-setCount(prev => prev + 1);
-```
+~~~jsx
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 
----
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/posts/:postId" element={<Post />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
-### How does React Router work?
+function Home() {
+  return <h1>Home</h1>;
+}
 
-**Headline (30s):** React Router is the de facto SPA routing library. You declare routes in JSX; the router matches the current URL, renders the matching component, and lets you navigate without full page reloads using `<Link>` or the `useNavigate` hook. Three router modes: `BrowserRouter` (clean URLs, needs server config), `HashRouter` (hash-based, no server config needed), `MemoryRouter` (in-memory, for tests).
-
-#### Declarative routes
-
-```jsx
-<BrowserRouter>
-  <Routes>
-    <Route path="/" element={<Home />} />
-    <Route path="/posts/:postId" element={<Post />} />
-  </Routes>
-</BrowserRouter>
-```
-
-```jsx
 function Post() {
   const { postId } = useParams();
   return <h1>Post {postId}</h1>;
 }
-```
+~~~
 
-#### Router modes
+- **BrowserRouter** uses the browser History API and clean paths.
+- **HashRouter** stores the route after the URL hash; it can fit hosting where server fallback configuration is unavailable.
+- **MemoryRouter** stores location in memory and is useful in tests or non-browser contexts.
 
-- **`BrowserRouter`** — uses the History API (`/path`). Requires server config so `/posts/123` returns `index.html` (otherwise 404). Default for production.
-- **`HashRouter`** — uses URL hash (`/#/path`). Works without any server config, at the cost of ugly URLs.
-- **`MemoryRouter`** — no URL changes; used for testing and non-browser environments (React Native, isolated tests).
+Use Link for navigation users can follow and useNavigate for programmatic navigation. Route API and package imports vary by React Router version; follow the version installed by the project.
 
-**Reach for `HashRouter`** when you can't configure the server (e.g., static hosting that only serves `index.html` at `/`). Otherwise use `BrowserRouter`.
+#### What is the difference between an SPA and an MPA? / SPA和MPA有什么区别？
 
----
+**Core answer / 核心回答：** An MPA navigation requests another document; an SPA typically keeps one document loaded and updates route content in the client. Server rendering and client navigation can be combined, so many current applications use a hybrid model. Choose based on content delivery, interaction, accessibility, and operational needs rather than the label alone. / MPA 导航会请求另一个文档；SPA 通常保留一个文档并在客户端更新路由内容。服务端渲染和客户端导航可以组合，因此许多现代应用采用混合模式。应根据内容交付、交互、无障碍和运维需求选择，而非只看标签。
 
-### What's the difference between SPA and MPA?
-
-**Headline (30s):** A **Single Page Application** loads one HTML shell and updates the view client-side via JavaScript; no full page reloads. A **Multi-Page Application** serves a new HTML document on every navigation. SPAs win on app-like UX and state preservation; MPAs win on first-load speed, SEO-out-of-the-box, and lower complexity per page. Most modern "SPAs" are actually hybrids — Next.js, Nuxt, Remix use SSR/SSG to get MPA-style first paint with SPA interactivity.
-
-| Aspect | SPA | MPA |
+| Aspect | SPA pattern | MPA pattern |
 |---|---|---|
-| Navigation | Client-side routing, no full reload | Full page reload per navigation |
-| Initial load | Slower (downloads entire app bundle) | Faster (smaller per-page bundles) |
-| SEO | Challenging (needs SSR/SSG) | Native SEO support |
-| UX | Smooth, app-like transitions | Traditional page transitions |
-| Complexity | Higher (state, routing, auth flows) | Lower per page |
-| Examples | Gmail, Figma, Notion | News sites, e-commerce (pre-hybrid) |
+| Navigation | Client router updates the current document | Browser requests another document |
+| State | Client state can persist between route changes | State often needs URL, storage, or server persistence |
+| Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
+| SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
 
-**Reach for SPA when:** the app has rich stateful interactions, reuses most UI across routes, and SEO isn't the primary acquisition channel.
+**See also:** [Next.js / Next.js开发](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering; [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hooks, refs, and component composition.
 
-**Reach for MPA (or hybrid SSR)** when: content needs to be indexable, sessions are short, and each page is mostly independent.
-
-**See also:** [`9.4 Next.js`](#31.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for hybrid SPA/MPA rendering strategies (SSR/SSG/ISR), [`9.3 Advanced React`](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for hooks, refs, and component composition patterns.
+**Sources checked 2026-10-15:** [React: Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform), [React: Render and Commit](https://react.dev/learn/render-and-commit), [StrictMode](https://react.dev/reference/react/StrictMode), [Component and lifecycle methods](https://react.dev/reference/react/Component), [Error Boundary caveats](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary), [useTransition Error Boundary example](https://react.dev/reference/react/useTransition#displaying-an-error-to-users-with-an-error-boundary), [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Queueing State Updates](https://react.dev/learn/queueing-a-series-of-state-updates), [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
 ## 30. Advanced React / React进阶
 
-A bundle of intermediate/advanced React interview questions — component communication, hooks, and reusable component patterns.
+### Advanced React / React进阶
 
-### How can components communicate in React?
+#### How can components communicate? / React组件如何通信？
 
-**Headline (30s):** Four patterns, picked by *direction* and *distance*: **parent→child via props**, **child→parent via callback props** (or refs for imperative access), **cross-cutting via Context API** for shared state that many components need, and **cross-component via state management libraries** (Redux, Zustand) for complex app-wide state. The rule of thumb: start with props, reach for context when you'd otherwise drill the same prop through 3+ levels, reach for a library only when context becomes unwieldy.
+**Core answer / 核心回答：** Keep data flow explicit: pass data down with props, send events up with callback props, and use Context or a store when many distant consumers need shared state. Refs expose imperative capabilities; they are not a substitute for state that drives visible UI. / 保持数据流清晰：用 props 向下传数据，用回调 props 向上传事件；多个较远组件需要共享状态时再考虑 Context 或 store。ref 用于暴露命令式能力，不应替代驱动界面的 state。
 
-#### Parent → Child
-
-- **Props** — standard unidirectional data flow.
-- **Refs** — for imperative access (focus an input, call a child method). Use sparingly.
-- **Context API** — shared data without prop drilling; parent `Provider`, consumer `useContext`.
-
-```jsx
-const ThemeContext = createContext('light');
+~~~jsx
+const ThemeContext = createContext("light");
 
 function App() {
   return (
@@ -5213,404 +5093,251 @@ function App() {
 
 function Toolbar() {
   const theme = useContext(ThemeContext);
-  return <div className={theme}>...</div>;
+  return <div className={theme}>Toolbar</div>;
 }
-```
+~~~
 
-#### Child → Parent
+A child can notify its parent through a callback prop. Use Context for values such as theme or locale that are needed across a subtree; a store can help when shared state and update patterns grow more complex. Custom Hooks share stateful logic, but each call has its own Hook state unless the Hook deliberately connects to shared state. Avoid using an event bus as a default substitute for React's data flow.
 
-- **Callback props** — parent passes a function; child calls it with data.
-- **`forwardRef` + `useImperativeHandle`** — child exposes specific methods via ref.
-- **Event bubbling** — parent listens on a wrapper; child's event bubbles up.
+#### When should you use memo, useMemo, or useCallback? / 何时使用 memo、useMemo和useCallback？
 
-#### Cross-component (not parent-child)
+**Core answer / 核心回答：** These are performance tools, not correctness tools. React.memo can skip rendering when props compare equal; useMemo caches a calculated value; useCallback caches a function reference. Add them when profiling or a specific identity boundary shows they help. / 这些 API 是性能工具，不是正确性工具。React.memo 可在 props 比较相等时跳过渲染；useMemo 缓存计算值；useCallback 缓存函数引用。只有性能分析或明确的引用边界表明它们有帮助时再使用。
 
-- **State management libraries** — Redux, Zustand, Jotai, MobX. Pick based on complexity and team familiarity.
-- **Custom hooks** — extract stateful logic, call from anywhere.
-- **Event systems** — custom EventBus for decoupled pub/sub (rarely the right answer in React).
+~~~jsx
+import { memo, useCallback, useMemo } from "react";
 
-**Rule of thumb:** Props for parent→child. Callbacks for child→parent. Context for deep sharing that's cross-cutting (theme, auth, locale). A store library when state is truly global and complex.
+function ListContainer({ items, onSelect }) {
+  const sortedItems = useMemo(
+    () => [...items].sort((a, b) => a.name.localeCompare(b.name)),
+    [items]
+  );
 
----
+  const handleSelect = useCallback((id) => {
+    onSelect(id);
+  }, [onSelect]);
 
-### When do you use `useCallback`, `useMemo`, and `React.memo`?
-
-**Headline (30s):** These three work together to skip unnecessary re-renders. **`React.memo`** wraps a component and skips re-render if its props are shallowly equal. **`useMemo`** memoizes a computed value. **`useCallback`** memoizes a function reference. You typically need all three together: `React.memo` on the child, `useCallback` for the function props you pass it, `useMemo` for any computed objects you pass. Without that matching, the child re-renders anyway because the props change reference identity every render.
-
-#### `useCallback`
-
-Memoizes a function reference. The child that receives it skips re-rendering when the parent re-renders.
-
-```javascript
-const handleClick = useCallback(() => {
-  doSomething(id);
-}, [id]);
-```
-
-#### `useMemo`
-
-Memoizes a computed value. Only recomputes when dependencies change.
-
-```javascript
-const sortedList = useMemo(
-  () => items.sort((a, b) => a.name.localeCompare(b.name)),
-  [items]
-);
-```
-
-#### `React.memo`
-
-Higher-order component that skips re-render when props are shallowly equal.
-
-```javascript
-const ExpensiveList = React.memo(({ items }) => (
-  items.map(item => <Item key={item.id} data={item} />)
-));
-```
-
-**Combining the three for maximum effect:**
-
-```jsx
-function Parent({ data }) {
-  const handleClick = useCallback(() => console.log('clicked'), []);
-  const processed  = useMemo(() => heavyProcess(data), [data]);
-  return <ExpensiveChild onClick={handleClick} items={processed} />;
+  return <ItemList items={sortedItems} onSelect={handleSelect} />;
 }
 
-const ExpensiveChild = React.memo(({ onClick, items }) => { /* ... */ });
-```
+const ItemList = memo(function ItemList({ items, onSelect }) {
+  return items.map(item => (
+    <button key={item.id} onClick={() => onSelect(item.id)}>
+      {item.name}
+    </button>
+  ));
+});
+~~~
 
-**Gotcha — don't memoize everything.** Memoization has its own cost (equality checks, closure retention). The framework will re-render fast if the subtree is small. Profile first; memoize only the components that actually re-render expensively.
+React.memo's default prop comparison uses Object.is per prop. A component can still render when its own state or consumed context changes; one newly created object or function prop can also prevent a skip. Inline handlers are ordinary JavaScript and are not automatically a performance bug. Keep state near its consumers, avoid unnecessary Effects that trigger render chains, and use the React Profiler to find a real hotspot.
 
----
+React may discard a useMemo cache in documented circumstances. Do not depend on memoization for resource lifetime, semantic identity, or correctness.
 
-### How do you use `useRef`?
+#### What does useRef do? / useRef有什么作用？
 
-**Headline (30s):** `useRef` returns a mutable object (`{ current }`) that persists across renders **without triggering re-renders** when mutated. Three common use cases: accessing a DOM node imperatively, storing mutable values (timer IDs, previous values) that don't belong in state, and holding non-reactive external instances (WebSocket, observer).
+**Core answer / 核心回答：** useRef returns a stable object whose current field can hold a value between renders. Changing current does not request a render, so use refs for DOM access and bookkeeping, not for displayed state. / useRef 返回一个在多次渲染间保持稳定的对象，其 current 字段可保存可变值。修改 current 不会请求重新渲染，因此 ref 适合 DOM 访问和内部记录，不适合驱动可见界面的状态。
 
-```javascript
-const inputRef = useRef(null);
-const focusInput = () => inputRef.current.focus();
+~~~jsx
+function SearchBox() {
+  const inputRef = useRef(null);
 
-return <input ref={inputRef} />;
-```
+  return (
+    <>
+      <input ref={inputRef} />
+      <button onClick={() => inputRef.current?.focus()}>
+        Focus
+      </button>
+    </>
+  );
+}
+~~~
 
-**Common patterns:**
+Other suitable values include a timer ID or an external instance. Do not read or write refs during rendering except for initialization. Use state when a change must update the screen.
 
-- **DOM access** — focusing, measuring, imperative library integration (charts, maps, animations).
-- **Previous value** — `useRef` + `useEffect` to remember the last value.
-- **Timer / subscription IDs** — store the ID so you can clear it in cleanup.
-- **Mutable flags** — "has been initialized", "is currently dragging" — without re-rendering.
+#### What do forwardRef and useImperativeHandle do? / forwardRef和useImperativeHandle有什么作用？
 
-**Gotcha — mutating `.current` doesn't re-render.** That's usually the point (it's what makes refs different from state), but it means you can't drive UI with ref values. Use state for anything the UI displays; use refs for bookkeeping.
+**Core answer / 核心回答：** In React 18 and earlier, forwardRef lets a component accept and forward a parent's ref; useImperativeHandle can expose a narrow command API. In React 19, a function component can receive ref as a prop, so forwardRef is no longer necessary for new React 19-only components. / React 18 及更早版本中，forwardRef 让组件接收并转发父组件传入的 ref；useImperativeHandle 可暴露范围较小的命令式 API。React 19 的函数组件可以把 ref 作为 prop 接收，因此仅面向 React 19 的新组件不再需要 forwardRef。
 
----
+~~~jsx
+const FancyInput = forwardRef(function FancyInput(props, ref) {
+  return <input {...props} ref={ref} className="fancy" />;
+});
+~~~
 
-### What does `forwardRef` do?
+Prefer declarative props and callbacks when they express the interaction clearly. Use an imperative ref for cases such as focusing an input or coordinating a third-party widget.
 
-**Headline (30s):** By default, refs don't pass through custom components — `<MyInput ref={r} />` does nothing useful. `forwardRef` wraps a component so it explicitly forwards its `ref` argument to an underlying DOM element (or uses `useImperativeHandle` to expose a custom API). You need this any time a parent wants imperative access to something inside a custom component.
+#### What is a custom Hook? / 什么是自定义Hook？
 
-```javascript
-const FancyInput = forwardRef((props, ref) => (
-  <input ref={ref} className="fancy" {...props} />
-));
+**Core answer / 核心回答：** A custom Hook is a function whose name starts with use and that calls other Hooks at the top level. It packages reusable stateful logic; it does not share one state instance across callers by itself. / 自定义 Hook 是名称以 use 开头、并在顶层调用其他 Hook 的函数。它封装可复用的有状态逻辑；仅仅复用 Hook 本身不会让多个调用共享同一份 state。
 
-// Parent:
-const ref = useRef(null);
-<FancyInput ref={ref} />
-ref.current.focus();
-```
-
-**Reach for `forwardRef`** when building a reusable component that should feel like a DOM element (inputs, buttons, custom scroll containers). Combine with `useImperativeHandle` to expose only specific methods instead of the raw DOM node.
-
----
-
-### What are custom hooks, and when do they differ from regular functions?
-
-**Headline (30s):** A custom hook is a function whose name starts with `use` that *calls other hooks internally*. That's it — the `use` prefix is a convention that lints can enforce. Custom hooks let you reuse stateful logic (state, effects, refs, subscriptions) across components without HOCs or render props. Regular functions can't use hooks — they can only do pure computation or utilities.
-
-| Custom hooks | Regular functions |
-|---|---|
-| Can call `useState`, `useEffect`, etc. | Cannot call hooks |
-| Manage state and side effects | Pure computation only |
-| Re-run on every render of the component | Called explicitly |
-| Named `useX` by convention | Any name |
-
-#### Example: window size hook
-
-```javascript
+~~~jsx
 function useWindowSize() {
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [size, setSize] = useState({
+    width: 0,
+    height: 0
+  });
+
   useEffect(() => {
-    const handler = () => setSize({
-      width:  window.innerWidth,
-      height: window.innerHeight
-    });
-    window.addEventListener('resize', handler);
-    handler();
-    return () => window.removeEventListener('resize', handler);
+    function update() {
+      setSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    }
+
+    window.addEventListener("resize", update);
+    update();
+    return () => window.removeEventListener("resize", update);
   }, []);
+
   return size;
 }
-```
+~~~
 
-Any component can call `const { width, height } = useWindowSize()` — the subscription and cleanup are packaged up.
+Ordinary Hooks must be called in the same order on every render, at the top level of a component or another Hook. React 19’s use API is an exception: it may appear in a condition or loop, but it still belongs inside a component or Hook and cannot be wrapped in try/catch. The lint plugin checks these Rules of Hooks. An Effect's cleanup releases the listener; root StrictMode deliberately repeats setup and cleanup once in development.
 
-**Gotcha — Rules of Hooks:** Hooks must be called at the top level of a component or custom hook, in the same order every render. No `if`, no loops, no early returns before a hook. If you need conditional logic, branch *inside* the hook's callbacks.
+#### What are render props and higher-order components? / 什么是 render props 和高阶组件？
 
----
+**Core answer / 核心回答：** Render props pass a function that chooses what to render from data supplied by a component. A higher-order component takes a component and returns a wrapped component. Both remain useful API shapes in some libraries and legacy code; custom Hooks are another way to share logic, not a universal replacement. / render props 通过函数接收组件提供的数据并决定渲染内容。高阶组件接收一个组件并返回包装后的组件。它们仍适用于某些库 API 和旧代码；自定义 Hook 是共享逻辑的另一种方式，并非对二者的通用替代。
 
-### What is the "render props" pattern?
-
-**Headline (30s):** Render props pass a function as a prop that returns JSX — letting the consumer control what to render using data the component provides. It was the main reusability pattern before hooks; today, **custom hooks replace it** for nearly all cases. You'll see it in legacy codebases and in libraries that want a hookless public API.
-
-```jsx
+~~~jsx
 <MouseTracker render={({ x, y }) => (
-  <p>Mouse position: {x}, {y}</p>
+  <p>Pointer: {x}, {y}</p>
 )} />
-```
+~~~
 
-The `MouseTracker` manages state (mouse position); the parent supplies the render function. Pre-hooks, this was how you shared "track the mouse and render something" across components. Post-hooks, `const { x, y } = useMouse()` does the same with less ceremony.
+A wrapper component can add authorization or instrumentation, but nested wrappers may make the component tree and prop flow harder to follow. Choose the API that makes ownership and behavior clear.
 
----
+#### What are common conditional-rendering patterns? / 常见的条件渲染写法有哪些？
 
-### What are Higher-Order Components (HOCs)?
+**Core answer / 核心回答：** Use a ternary for either-or, logical AND for render-or-nothing, and an early return for a clear guard. Choose the form that makes the branches easiest to read. / 二选一可用三元表达式；只在条件成立时渲染可用逻辑 AND；明确的前置检查可用 early return。选择最容易读懂分支的写法。
 
-**Headline (30s):** An HOC is a function that takes a component and returns a new component with added behavior — like decorators for React. They were the classic pattern for cross-cutting concerns (auth, logging, routing) before hooks. Today, **custom hooks are usually cleaner**; HOCs are still relevant for cases where you need to *modify rendering behavior* rather than share logic (e.g., `React.memo`, `connect` from Redux).
-
-```javascript
-function withAuth(WrappedComponent) {
-  return function AuthenticatedComponent(props) {
-    const user = useAuth();
-    if (!user) return <Redirect to="/login" />;
-    return <WrappedComponent {...props} user={user} />;
-  };
-}
-
-const ProtectedPage = withAuth(Dashboard);
-```
-
-**Trade-offs:**
-
-- Clean syntax at the use site (`withAuth(Dashboard)`).
-- But multiple HOCs produce "wrapper hell" in React DevTools.
-- Props can collide unexpectedly.
-- Types are awkward in TypeScript.
-
-**Rule of thumb:** Custom hooks for logic reuse, HOCs only when you need to actually wrap/alter rendering behavior (`React.memo`, `connect`, `observer` from MobX).
-
----
-
-### What are common conditional-rendering patterns?
-
-Four idiomatic patterns — pick based on readability at the call site.
-
-```jsx
-// 1. Ternary — for either-or
+~~~jsx
 {isLoggedIn ? <Dashboard /> : <Login />}
-
-// 2. Logical AND — for render-or-nothing
 {showBanner && <Banner />}
 
-// 3. Early return — for guard clauses in a component
-function Component({ data }) {
-  if (!data) return <Loading />;
-  return <Content data={data} />;
+function Profile({ user }) {
+  if (!user) return <Loading />;
+  return <Content user={user} />;
 }
+~~~
 
-// 4. Element variable — for many branches
-let content;
-if (error)        content = <Error />;
-else if (loading) content = <Spinner />;
-else              content = <Data />;
-return <div>{content}</div>;
-```
+Because React renders numbers, a numeric left operand can leak into the output: an empty list's length is 0, so {items.length && <List />} displays 0. Use {items.length > 0 && <List />} when that is not intended.
 
-**Gotcha — `&&` with numbers:** `{list.length && <List items={list} />}` renders the literal `0` when the list is empty (because React renders numbers but not `false`). Coerce to boolean: `{!!list.length && ...}` or `{list.length > 0 && ...}`.
+**See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
 
-**See also:** [`9.2 React Basics`](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for JSX, lifecycle, `setState`, and router basics, [`4.1 Object, Function, and Prototype`](#17.%20Object,%20Function,%20and%20Prototype%20/%20%E5%AF%B9%E8%B1%A1%E3%80%81%E5%87%BD%E6%95%B0%E4%B8%8E%E5%8E%9F%E5%9E%8B) for the `this`/`bind` behavior underneath class components.
+**Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects).
 ## 31. Next.js / Next.js开发
 
-#### Why pick Next.js over plain React?
+### Next.js / Next.js开发
 
-**Headline (30s):** Plain React is purely client-side — you ship JavaScript, the browser renders the UI. That's fine for app-like experiences but poor for SEO and first-paint performance. Next.js adds **server-side rendering (SSR)**, **static generation (SSG)**, and **incremental regeneration (ISR)** on top of React, plus file-based routing, API routes, and built-in optimizations (image, font, bundle). It lets you pick the right rendering strategy per page instead of committing the whole app to CSR.
+#### What does Next.js add to React? / Next.js为React增加了什么？
 
-**Why interviewers ask this:** SSR vs SSG vs ISR is a *common* frontend systems-design question. Candidates who can't articulate when each applies struggle to architect performant Next.js apps.
+**Core answer / 核心回答：** Next.js is a React framework that combines routing, server and client rendering, data access, and deployment integrations. Its Pages Router and App Router have different file conventions and rendering APIs, so name the router and version when describing behavior. / Next.js 是 React 框架，整合路由、服务端与客户端渲染、数据访问和部署集成。Pages Router 与 App Router 的文件约定和渲染 API 不同，说明行为时要注明路由器和版本。
 
-##### What Next.js adds over React
+Next.js can produce HTML on the server or ahead of a request, and it can update route content in the browser. These options are not one global switch: choose based on the route's data freshness, user-specific content, runtime, and caching needs.
 
-- **Server-Side Rendering (SSR)** — HTML generated per request for SEO and fast first paint.
-- **Static Site Generation (SSG)** — pre-built HTML at build time for maximum performance.
-- **Incremental Static Regeneration (ISR)** — SSG + periodic revalidation.
-- **File-based routing** — pages map to file paths, no manual route config.
-- **API routes** — backend endpoints colocated with frontend (`pages/api/` or `app/api/`).
-- **Built-in optimizations** — automatic code splitting, image optimization (`next/image`), font optimization (`next/font`).
+#### Pages Router: SSR, SSG, and ISR / Pages Router：SSR、SSG和ISR
 
----
+The following APIs belong to the **Pages Router** under the pages directory.
 
-#### SSR, SSG, ISR, CSR — when do you use each?
+| Strategy | API | When it fits |
+|---|---|---|
+| Server rendering per request | getServerSideProps | Request-specific data or authorization must be resolved on the server for each request. |
+| Static generation | getStaticProps and, for dynamic paths, getStaticPaths | Output can be produced before a request and reused. |
+| Incremental Static Regeneration | getStaticProps with revalidate | A generated page can be refreshed after a time window or on demand. |
+| Client-side data | Browser fetch or a client data library | Data is user-specific or does not need to be in the initial server-rendered response. |
 
-**Headline (30s):** Pick the rendering strategy per page based on *how fresh the data needs to be* and *who needs to see it*. **CSR** (plain React) — internal apps, no SEO needs. **SSR** — dynamic content that changes per request, must be indexable. **SSG** — content that rarely changes (blogs, docs, marketing). **ISR** — content that updates periodically (e-commerce catalogs, news) — fast like SSG, but refreshes in the background.
+~~~jsx
+// pages/posts/[id].js — Pages Router
+export async function getServerSideProps({ params }) {
+  const response = await fetch(
+    "https://api.example.com/posts/" + params.id
+  );
 
-##### SSR — Server-Side Rendering
+  if (response.status === 404) return { notFound: true };
+  if (!response.ok) throw new Error("Post request failed: " + response.status);
 
-HTML generated **per request**. React **hydrates** the client to make it interactive.
-
-```javascript
-export async function getServerSideProps(context) {
-  const res = await fetch(`https://api.example.com/posts`);
-  const posts = await res.json();
-  return { props: { posts } };
-}
-```
-
-**When:** dynamic content that needs SEO — product pages, dashboards with personalized content, anything that changes every request.
-
-**Cost:** server CPU per request. First byte is slower than SSG because the server has to render before responding.
-
-##### SSG — Static Site Generation
-
-HTML generated at **build time**. Served as static files from a CDN — the fastest possible delivery.
-
-```javascript
-export async function getStaticProps() {
-  const res = await fetch('https://api.example.com/posts');
-  const posts = await res.json();
-  return { props: { posts } };
+  return { props: { post: await response.json() } };
 }
 
+export default function PostPage({ post }) {
+  return <article><h1>{post.title}</h1></article>;
+}
+~~~
+
+For ISR, a successful getStaticProps result can return revalidate: 60. This is a minimum interval before a request can trigger regeneration, not a timer that regenerates every minute. After the interval, a request can receive the stale page while regeneration runs; a successful new result replaces the cached version. Dynamic paths also need getStaticPaths and a deliberate fallback policy. In this Pages Router example, fallback: false makes paths omitted from the build-time list return 404; fallback: "blocking" generates an omitted path on its first request before returning HTML.
+
+~~~jsx
+// pages/posts/[id].js — Pages Router
 export async function getStaticPaths() {
-  const res = await fetch('https://api.example.com/posts');
-  const posts = await res.json();
+  const response = await fetch("https://api.example.com/posts");
+  if (!response.ok) throw new Error("Could not list posts");
+  const posts = await response.json();
+
   return {
-    paths: posts.map(post => ({ params: { id: post.id.toString() } })),
-    fallback: false
+    paths: posts.map(post => ({ params: { id: String(post.id) } })),
+    fallback: "blocking"
   };
 }
-```
 
-**When:** content that rarely changes (blogs, docs, marketing pages).
+export async function getStaticProps({ params }) {
+  const response = await fetch("https://api.example.com/posts/" + params.id);
+  if (response.status === 404) return { notFound: true };
+  if (!response.ok) throw new Error("Post request failed: " + response.status);
 
-**Cost:** build time scales with number of pages. Stale until the next build.
-
-##### ISR — Incremental Static Regeneration
-
-SSG + **on-demand revalidation**. The first visitor after the revalidation window gets the stale cached page; in the background, a fresh version is built and cached for everyone else.
-
-```javascript
-export async function getStaticProps() {
-  const res = await fetch('https://api.example.com/posts');
-  const posts = await res.json();
-  return {
-    props: { posts },
-    revalidate: 60 // at most every 60 seconds
-  };
+  return { props: { post: await response.json() }, revalidate: 60 };
 }
-```
+~~~
 
-**When:** content that updates periodically but doesn't need real-time freshness — e-commerce catalogs, news feeds, social feeds.
+#### App Router: Server Components and caching / App Router：Server Components与缓存
 
-**Cost:** nearly as fast as SSG, slightly stale windows are possible.
+Under the app directory, pages and layouts are Server Components by default. They can fetch on the server and pass serializable data to a Client Component. A file marked use client creates a client boundary for Hooks, event handlers, and browser APIs. Client Components may still contribute to initial HTML; use client does not mean the whole route is client-only.
 
-##### CSR — Client-Side Rendering (plain React)
-
-Ship a minimal HTML shell + JS bundle; the browser renders everything. Next.js supports this too — just use `useEffect` to fetch.
-
-**When:** internal tools, authenticated dashboards where SEO doesn't matter.
-
-**Cost:** slowest first paint, worst SEO.
-
-##### Strategy comparison
-
-| Strategy | Build time | Request time | Freshness | SEO |
-|---|---|---|---|---|
-| CSR | Fast | Slow (JS renders) | Real-time | Poor |
-| SSR | N/A | Moderate (server renders) | Real-time | Good |
-| SSG | Slow | Fast (pre-built) | Stale until rebuild | Good |
-| ISR | Moderate | Fast (cached) | Periodic | Good |
-
-**Rule of thumb:**
-
-- SEO-required, per-request data → SSR.
-- SEO-required, rarely changing → SSG.
-- SEO-required, periodic updates → ISR.
-- No SEO, interactive → CSR.
-
-**Gotcha — mixing strategies within one app:** Next.js lets you choose per page. Your marketing pages can be SSG; your product pages can be ISR; your dashboard can be CSR. Don't commit the whole app to one strategy.
-
-**Note on the App Router (Next.js 13+):** The newer `app/` directory uses **React Server Components** and replaces `getStaticProps` / `getServerSideProps` with default-server-component rendering + `fetch` options for caching. The mental model maps: server components are implicit SSR, `revalidate` replaces ISR, `cache: 'no-store'` forces SSR freshness.
-
----
-
-#### How does Next.js routing work?
-
-**Headline (30s):** Next.js uses **file-based routing** — the directory structure *is* the route table. A file at `pages/about.js` serves `/about`; `pages/posts/[id].js` serves `/posts/123` with `id='123'`; `pages/[...slug].js` catches any nested path. Navigate with `<Link>` for client-side transitions (Next prefetches linked pages in the background).
-
-##### File-based routing
-
-```
-pages/
-  index.js          →  /
-  about.js          →  /about
-  posts/[id].js     →  /posts/123
-  [...slug].js      →  /docs/a/b/c  (catch-all)
-```
-
-##### Dynamic routes
-
-```jsx
-import { useRouter } from 'next/router';
-
-function Post() {
-  const router = useRouter();
-  const { id } = router.query;
-  return <h1>Post {id}</h1>;
+~~~tsx
+// app/posts/page.tsx — App Router
+async function getPosts() {
+  const response = await fetch("https://api.example.com/posts", {
+    cache: "no-store"
+  });
+  return response.json();
 }
-```
 
-##### Navigation
-
-```jsx
-import Link from 'next/link';
-
-<Link href="/posts/1">Read Post</Link>
-
-// Programmatic
-const router = useRouter();
-router.push('/posts/1');
-```
-
-**Prefetching:** `<Link>` prefetches linked pages in the background (only in production). Client-side navigation is instant because the bundle is already there.
-
-**App Router note:** The new `app/` directory uses slightly different conventions — `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx` per route — but the file-based concept is the same.
-
----
-
-#### What are API routes, and when should you use them?
-
-**Headline (30s):** API routes let you define server-side endpoints inside the Next.js project — handy for form submissions, proxying external APIs, and small backend logic without spinning up a separate server. They become serverless functions in production (on Vercel), so they scale automatically but share serverless trade-offs (cold starts, execution limits).
-
-```javascript
-// pages/api/hello.js
-export default function handler(req, res) {
-  if (req.method === 'POST') {
-    // ...
-  }
-  res.status(200).json({ message: 'Hello from Next.js' });
+export default async function PostsPage() {
+  const posts = await getPosts();
+  return (
+    <ul>
+      {posts.map(post => <li key={post.id}>{post.title}</li>)}
+    </ul>
+  );
 }
-```
+~~~
 
-Supports all HTTP methods. Use for:
+In the current Next.js 16.4.1 documentation checked on 2026-10-15, App Router fetch requests are not cached by default. Set caching deliberately, for example with a fetch revalidation option; with Cache Components enabled, a use cache directive can cache a component or function. Request-time data and static shells can be combined with Suspense and streaming. Older Next.js App Router versions had different fetch defaults, so do not carry a versionless caching rule between projects.
 
-- **Form handling** — receive `POST`s without a separate backend.
-- **Proxying external APIs** — hide API keys, aggregate multiple calls, work around CORS.
-- **Lightweight backend** — webhooks, auth callbacks, simple CRUD.
+A Client Component can receive data from a Server Component through props, but props crossing the boundary must be serializable. Keep secrets and server-only dependencies on the server.
 
-**Reach for them when:** you need a small amount of server logic colocated with your frontend. For serious backends (complex business logic, queues, databases at scale), use a dedicated backend service.
+#### How does file-based routing work? / 文件系统路由如何工作？
 
-**App Router note:** The App Router uses `app/api/*/route.ts` with named HTTP-method exports (`export async function GET(request) {...}`) — the file-based concept is the same, the handler signature is different.
+**Core answer / 核心回答：** The route tree follows files, but the conventions differ between routers. Pages Router uses files such as pages/about.js and pages/posts/[id].js. App Router uses route segments containing page.tsx and can add layout.tsx, loading.tsx, and error.tsx. / 路由树由文件结构决定，但两种路由器的约定不同。Pages Router 使用 pages/about.js、pages/posts/[id].js 等文件；App Router 使用包含 page.tsx 的路由段，并可加入 layout.tsx、loading.tsx 和 error.tsx。
 
-**See also:** [`9.2 React Basics`](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for the SPA/MPA distinction that SSR/SSG blur, [`7.2 Node.js Fundamentals`](../../engineering-foundations/backend/node-js-fundamentals.md) for serverless cold starts and execution limits that constrain API routes.
+Use Link for navigation. Prefetching is production-only and differs by router: App Router can fully prefetch static routes and partially prefetch dynamic routes to a loading boundary; Pages Router's default behavior differs. Treat prefetch as an optimization, not a guarantee that a destination is already loaded.
+
+#### What are API routes and Route Handlers? / API routes和Route Handler是什么？
+
+**Core answer / 核心回答：** Pages Router API routes use a default handler in pages/api. App Router Route Handlers use named HTTP method exports in a route.ts file. The runtime and deployment model depend on configuration and hosting; an endpoint is not automatically a serverless function just because it is in a Next.js app. / Pages Router 的 API route 在 pages/api 中使用默认 handler；App Router 的 Route Handler 在 route.ts 中导出 HTTP 方法函数。运行时和部署模型取决于配置与托管平台；接口不会因为位于 Next.js 应用中就自动成为 serverless function。
+
+~~~ts
+// app/api/hello/route.ts — App Router
+export async function GET() {
+  return Response.json({ message: "Hello from Next.js" });
+}
+~~~
+
+Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
+
+**See also:** [React Basics / React基础](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+
+**Sources checked 2026-10-15:** [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
 ## 32. Performance Metrics and Analysis / 性能指标与分析
 
 A bundle of interview questions about how to measure, diagnose, and optimize web app performance.
@@ -5808,263 +5535,192 @@ window.addEventListener('beforeunload', flush);
 **See also:** [`11.2 Rendering and Computation Optimization`](#33.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for rendering-side perf, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for a focused image-perf playbook.
 ## 33. Rendering and Computation Optimization / 渲染与计算优化
 
-A bundle of interview questions on optimizing render performance — virtual scrolling, React-specific techniques, and CSS tips.
+### Rendering and Computation Optimization / 渲染与计算优化
 
-### How does virtual scrolling work, and when should you use it?
+#### How does virtual scrolling work? / 虚拟滚动如何工作？
 
-**Headline (30s):** Rendering a DOM node for every item in a large list (thousands of rows) tanks performance. Virtual scrolling **only renders the visible items plus a small buffer** — the rest is simulated with a spacer element that gives the scrollbar its correct length. As the user scrolls, items off-screen are recycled and new ones enter. Rendering cost becomes O(visible window) instead of O(list size).
+**Core answer / 核心回答：** Virtual scrolling keeps a scrollable viewport but mounts only the visible rows and a small overscan buffer. The list's full data may still take memory or computation; virtualization mainly reduces the rendered DOM and related layout work. / 虚拟滚动保留可滚动视口，但只挂载可见行和少量缓冲行。完整列表的数据仍可能占用内存或计算时间；虚拟化主要减少渲染的 DOM 和相关布局工作。
 
-#### How it works
+A fixed-height implementation can estimate the visible range directly. The outer spacer represents the full list height so the scrollbar has the right extent; the mounted window is offset by the height of the skipped rows. Variable-height rows need measurement or estimates, and all virtualizers need correct container dimensions and scroll behavior.
 
-1. Container has a fixed height with `overflow: auto`.
-2. A spacer element creates the full scrollable height.
-3. Only items in the visible viewport (plus a few buffer rows) are actually rendered.
-4. On scroll, off-screen items unmount and new ones mount.
+~~~jsx
+function VirtualWindow({ items, scrollTop, viewportHeight, rowHeight = 40 }) {
+  const overscan = 3;
+  const start = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+  const end = Math.min(
+    items.length,
+    Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan
+  );
 
-#### Libraries
-
-- **React** — `react-virtualized`, `react-window`, `@tanstack/virtual`.
-- **Vue** — `vue-virtual-scroll-list`.
-
-**Trade-off:** Extra implementation complexity for rendering performance that's independent of list size. **Reach for virtual scrolling when** you have more than ~500 items that render eagerly, or any time lists can grow unbounded.
-
-**Gotcha — variable-height items:** Simpler libraries assume fixed row height. Variable heights require measuring each item or using an estimate; `@tanstack/virtual` handles this well, `react-window` requires extra config.
-
----
-
-### What are the main React performance-tuning techniques?
-
-**Headline (30s):** Focus on three levers: **avoid unnecessary re-renders** (`React.memo` + stable props via `useCallback` / `useMemo`), **keep reconciliation cheap** (stable keys, fragments, reasonable component depth), and **preserve state where mounting is expensive** (toggle with CSS instead of unmounting). Profile before optimizing — most "slow" React is fast enough; the wins come from fixing the specific hotspot.
-
-#### Toggle visibility with CSS instead of unmounting
-
-`display: none` keeps the component tree alive but hidden — the component doesn't unmount (state preserved, no re-mount cost). Reach for this when the component is expensive to mount and will toggle back soon.
-
-```jsx
-<ExpensiveComponent style={{ display: isVisible ? 'block' : 'none' }} />
-```
-
-**Trade-off:** the tree still runs lifecycle and occupies memory. Unmount (via conditional rendering) for truly long-term hidden states.
-
-#### Use stable keys in lists
-
-Always use unique, stable IDs as keys. Array indices cause incorrect reconciliation when items are reordered or filtered.
-
-```jsx
-{items.map(item => <Item key={item.id} data={item} />)}
-```
-
-See [`9.2 React Basics`](#29.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for why index keys fail.
-
-#### Use fragments to cut DOM depth
-
-```jsx
-return (
-  <>
-    <Header />
-    <Content />
-  </>
-);
-```
-
-Less DOM depth = less layout and paint work.
-
-#### Avoid inline function definitions in JSX
-
-Inline arrow functions in JSX create new references on every render, bypassing `React.memo` on child components:
-
-```jsx
-// Bad: new function reference every render
-<Button onClick={() => handleClick(id)} />
-
-// Good: stable reference, memo works as expected
-const handleItemClick = useCallback(() => handleClick(id), [id]);
-<Button onClick={handleItemClick} />
-```
-
-**Gotcha — don't `useCallback` everything.** The cost of `useCallback` itself (closure retention, dependency array check) often exceeds what it saves. Only memoize callbacks that are passed to memoized children on hot paths.
-
-#### `shouldComponentUpdate`, `PureComponent`, `React.memo`
-
-**Class components:**
-
-```javascript
-shouldComponentUpdate(nextProps, nextState) {
-  return nextProps.id !== this.props.id;
+  return (
+    <div style={{ height: items.length * rowHeight, position: "relative" }}>
+      <div style={{ position: "absolute", top: start * rowHeight, left: 0, right: 0 }}>
+        {items.slice(start, end).map(item => (
+          <div key={item.id} style={{ height: rowHeight }}>{item.label}</div>
+        ))}
+      </div>
+    </div>
+  );
 }
+~~~
 
-// Or extend React.PureComponent for automatic shallow comparison
-```
+Here scrollTop and viewportHeight are measured from the scroll container; production code must keep those measurements synchronized and account for focus, keyboard navigation, and screen-reader expectations.
 
-**Function components:**
+| Use when | Cost to account for |
+|---|---|
+| Profiling shows DOM or layout cost from a large rendered list. | More complex focus, accessibility, measurement, and scroll restoration behavior. |
+| A list is unbounded or grows with user activity. | Data transformation may still be O(n), even when mounted rows are limited. |
 
-```javascript
-const MemoizedComponent = React.memo(MyComponent);
+For React, packages include react-window and @tanstack/react-virtual. Choose an adapter and API version supported by the application.
 
-// With custom comparator
-const MemoizedComponent = React.memo(MyComponent, (prev, next) => {
-  return prev.id === next.id;
+#### How do you tune React rendering? / 如何优化React渲染？
+
+**Core answer / 核心回答：** First identify which interaction is expensive. Keep state close to the components that use it, avoid unnecessary update chains, and measure before adding memoization. A component render is not automatically a DOM mutation. / 先确认哪个交互成本高。将 state 放在实际使用它的组件附近，避免不必要的更新链，并在添加 memoization 前进行测量。组件 render 不等于一定修改 DOM。
+
+- **Stable keys:** use a data identity when sibling items can change order or membership. Use an index only for fixed lists.
+- **Memoization:** React.memo, useMemo, and useCallback can help at measured boundaries; state and context changes can still render a memoized component.
+- **State placement:** local transient state can often stay near its consumers instead of making a large subtree observe every update.
+- **Hidden versus removed:** CSS display:none keeps the component in the React tree. Its state and Effects remain active while hidden. Conditional removal unmounts it and runs cleanup; remounting creates a new instance.
+- **Fragments:** avoid an extra DOM wrapper when one is not needed. A fragment does not guarantee a measurable performance improvement.
+- **Profiler:** record the actual interaction with browser and React profiling tools before changing architecture.
+
+~~~jsx
+const MemoizedRow = memo(function Row({ item, onSelect }) {
+  return (
+    <button onClick={() => onSelect(item.id)}>
+      {item.name}
+    </button>
+  );
 });
-```
+~~~
 
-See [`9.3 Advanced React`](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for how to combine `React.memo` with `useCallback` / `useMemo`.
+A new callback or object prop can prevent a memoized child from skipping its render, but inline functions are not inherently wrong. Add useCallback or useMemo when the child is expensive and the identity boundary matters, not as a blanket rule.
 
-#### Debugging workflow
+#### CSS sprites and rendering changes / CSS Sprite与渲染改动
 
-1. **Chrome DevTools Performance tab** — record interactions, find long tasks.
-2. **React DevTools Profiler** — visualize component render times, identify wasted re-renders.
-3. **"Highlight updates"** — see which components re-render on state changes.
-4. **Isolate the problem** — move state closer to where it's needed, split large components, memoize expensive computations.
+A CSS sprite combines small images into one image. Give each icon a fixed-size element and use background-position to expose its rectangle, for example background-position: -32px -16px. This can reduce separate image requests when request overhead matters, but it couples assets to one file: updating one icon invalidates the combined image and coordinates are harder to maintain. HTTP/2 multiplexes multiple requests over one connection, so request count alone is not enough reason to build a sprite; compare cache behavior, bytes, and maintenance cost for the actual asset set.
 
-**Rule of thumb:** Profile first, optimize second. Most perf work is about finding the hotspot — the fix is usually simple once you know where it is.
-
----
-
-### What CSS performance tips actually matter?
-
-**Headline:** Three patterns with clear wins: **shorthand properties** (smaller files, faster parse), **`will-change` on elements about to animate** (tells the browser to promote to its own compositor layer), and **reduce total DOM size + selector complexity** (directly affects layout time). CSS sprites are mostly obsolete in HTTP/2 world but still useful for icon sets.
-
-#### Shorthand properties
-
-```css
-/* Verbose */
-margin-top: 10px;
-margin-right: 20px;
-margin-bottom: 30px;
-margin-left: 40px;
-
-/* Shorthand */
-margin: 10px 20px 30px 40px;
-```
-
-Smaller file, less parsing, same result.
-
-#### CSS sprites
-
-Combine many small images into one file, use `background-position` to show each. Reduces HTTP requests. **Less relevant with HTTP/2 multiplexing**, but still useful for icon sets where you want atomic loading.
-
-#### `will-change`
-
-Hints that a property is about to change, so the browser can promote the element to its own compositor layer ahead of time.
-
-```css
-.animated-element {
-  will-change: transform, opacity;
+~~~css
+.icon-edit {
+  width: 16px;
+  height: 16px;
+  background-image: url("/icons.png");
+  background-repeat: no-repeat;
+  background-position: -32px -16px;
 }
-```
+~~~
 
-**Use sparingly.** Every `will-change` element uses GPU memory. Apply right before the animation; remove after. Applying to many elements backfires.
+#### Which CSS changes are worth testing? / 哪些CSS改动值得测试？
 
-See [`2.7 CSS Position, Display, and Animations`](#8.%20CSS%20Position,%20Display,%20and%20Animations%20/%20CSS%E5%AE%9A%E4%BD%8D%E3%80%81%E6%98%BE%E7%A4%BA%E4%B8%8E%E5%8A%A8%E7%94%BB) for how GPU compositing and `transform`/`opacity` avoid layout/paint.
+Layout, paint, compositing, and JavaScript can all affect a frame. Animate transform or opacity when that fits the design, but confirm the result in a trace; these properties do not make every animation free. Avoid forcing synchronous layout by reading layout and then writing layout repeatedly in the same task.
 
-#### Reduce selector complexity and DOM depth
+will-change is a hint, not a command to allocate a compositor layer. Use it narrowly and only when a measured animation benefits; unnecessary use can consume memory and make performance worse. Reducing DOM work and measuring real interactions are more reliable than assuming a shorter selector or shorthand property will speed up a page.
 
-- Prefer class selectors over descendant chains (`.btn-primary` beats `div.card > ul > li > a`).
-- Avoid deep DOM trees; flatten when possible.
-- Drop unused CSS — modern bundlers (PurgeCSS, Tailwind's JIT) can do this automatically.
+**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measurement.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for reflow/repaint/composite fundamentals, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for how to measure what you're optimizing.
+**Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [React: useMemo](https://react.dev/reference/react/useMemo), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction), [CSS Will Change Module](https://www.w3.org/TR/css-will-change-1/), [MDN background-position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/background-position), [HTTP/2 RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).
 ## 34. Lodash / Lodash工具库
 
-**Reach for this when** you need a quick reference for Lodash utilities — the functions that still earn their place in a modern codebase (`_.get`, `_.cloneDeep`, `_.debounce`) versus the ones that are now one-liners with native JS.
+### Lodash / Lodash工具库
 
-**Headline:** Lodash is a utility library covering four buckets — **Array**, **Collection**, **Object**, **Function**, **String**. Most of its value today lives in **deep-object helpers** (`_.get`, `_.set`, `_.merge`, `_.cloneDeep`) and **robust debounce/throttle**. Many simpler utilities have native equivalents; check before adding the dependency.
+Lodash provides utilities for arrays, collections, objects, functions, and strings. Use this page as a lookup; compare simple operations with the language's built-in APIs and check the installed Lodash version.
 
-#### Array utilities
+#### Common utilities / 常用工具
 
-| Function | Description | Example |
-|---|---|---|
-| `_.chunk(arr, size)` | Split into chunks of `size` | `_.chunk([1,2,3,4], 2)` → `[[1,2],[3,4]]` |
-| `_.compact(arr)` | Remove falsy values | `_.compact([0,1,false,2,'',3])` → `[1,2,3]` |
-| `_.difference(arr, values)` | Elements in `arr` not in `values` | `_.difference([2,1],[2,3])` → `[1]` |
-| `_.drop(arr, n)` | Remove first `n` elements | `_.drop([1,2,3], 2)` → `[3]` |
-| `_.flatten(arr)` | Flatten one level | `_.flatten([1,[2,[3]]])` → `[1,2,[3]]` |
-| `_.flattenDeep(arr)` | Flatten recursively | `_.flattenDeep([1,[2,[3]]])` → `[1,2,3]` |
-| `_.uniq(arr)` | Remove duplicates | `_.uniq([1,1,2,3,3])` → `[1,2,3]` |
-| `_.intersection(a, b)` | Common elements | `_.intersection([1,2],[2,3])` → `[2]` |
+**Core answer / 核心回答：** Lodash is most useful when its path, collection, or timing contract saves repeated edge-case code; check the exact method signature before substituting a native operation. / Lodash 在其路径、集合或定时语义能够减少重复边界处理时最有价值；替换为原生方法前应核对具体方法的签名与行为。
 
-#### Collection utilities
+##### Arrays / 数组
 
-| Function | Description |
+| Signature | Behavior |
 |---|---|
-| `_.filter(col, predicate)` | Keep elements where predicate is truthy |
-| `_.find(col, predicate)` | First matching element |
-| `_.map(col, iteratee)` | Transform each element |
-| `_.reduce(col, iteratee, acc)` | Reduce to single value |
-| `_.groupBy(col, iteratee)` | Group by key |
-| `_.sortBy(col, iteratees)` | Sort by one or more criteria |
-| `_.orderBy(col, keys, orders)` | Sort with explicit asc/desc |
+| _.chunk(array, size) | Split into groups of up to size items. |
+| _.compact(array) | Remove false, null, 0, empty string, undefined, and NaN. |
+| _.difference(array, values) | Keep values from the first array that are absent from the other array; returns a new array. |
+| _.intersection(array, ...arrays) | Return values present in all arrays. |
+| _.flatten(array) / _.flattenDeep(array) | Flatten one level / recursively flatten nested arrays. |
+| _.uniq(array) | Return a new array with duplicate values removed. |
 
-#### Object utilities
+~~~javascript
+_.chunk([1, 2, 3, 4], 2);          // [[1, 2], [3, 4]]
+_.difference([2, 1], [2, 3]);     // [1]
+_.intersection([1, 2], [2, 3]);   // [2]
+_.flatten([1, [2, [3]]]);         // [1, 2, [3]]
+~~~
 
-| Function | Description |
+Native Array.prototype.flat() defaults to depth 1; flat(Infinity) recursively flattens. That corresponds to the one-level and recursive distinction above, not a universal replacement for all Lodash collection semantics.
+
+##### Collections / 集合
+
+| Signature | Behavior |
 |---|---|
-| `_.get(obj, path, default)` | Safe deep property access |
-| `_.set(obj, path, value)` | Set nested property |
-| `_.merge(target, ...sources)` | Deep recursive merge |
-| `_.omit(obj, paths)` | New object without specified keys |
-| `_.pick(obj, paths)` | New object with only specified keys |
-| `_.assign(target, ...sources)` | Shallow copy own properties |
-| `_.cloneDeep(obj)` | Deep clone |
+| _.filter(collection, predicate) | Return every matching value. |
+| _.find(collection, predicate) | Return the first matching value, or undefined. |
+| _.map(collection, iteratee) | Transform values in arrays or object collections. |
+| _.reduce(collection, iteratee, accumulator) | Accumulate values into one result. |
+| _.groupBy(collection, iteratee) | Build an object whose keys come from the iteratee and whose values are matching arrays. |
+| _.sortBy(collection, iteratees) | Sort ascending by one or more criteria. |
+| _.orderBy(collection, iteratees, orders) | Sort by criteria with explicit asc/desc directions. |
 
-`_.get` is especially valuable for safely accessing deeply nested properties:
+~~~javascript
+_.groupBy([6.1, 4.2, 6.3], Math.floor); // { "4": [4.2], "6": [6.1, 6.3] }
+_.orderBy(users, ["age", "name"], ["desc", "asc"]);
+~~~
 
-```javascript
-const city = _.get(user, 'address.city', 'Unknown');
-```
+##### Objects / 对象
 
-#### Function utilities
-
-##### `_.debounce(fn, wait, options)`
-
-Delays invocation until `wait` ms after the last call. Options: `leading` (invoke on first call), `trailing` (invoke after wait), `maxWait` (maximum delay before forced invocation).
-
-```javascript
-const search = _.debounce(fetchResults, 300);
-input.addEventListener('input', search);
-```
-
-##### `_.throttle(fn, wait, options)`
-
-Invokes at most once per `wait` ms. Options: `leading`, `trailing`.
-
-```javascript
-window.addEventListener('scroll', _.throttle(updatePosition, 100));
-```
-
-**Why Lodash's versions beat a hand-rolled debounce:** proper `cancel()`/`flush()` methods, `leading` + `trailing` combinations, and `maxWait` (which guarantees eventual execution even under constant calls).
-
-#### String utilities
-
-| Function | Example |
+| Signature | Behavior |
 |---|---|
-| `_.camelCase('foo bar')` | `'fooBar'` |
-| `_.kebabCase('fooBar')` | `'foo-bar'` |
-| `_.snakeCase('fooBar')` | `'foo_bar'` |
-| `_.capitalize('hello')` | `'Hello'` |
-| `_.startCase('fooBar')` | `'Foo Bar'` |
+| _.get(object, path, defaultValue) | Read a deep path; use the default only when the resolved value is undefined. |
+| _.set(object, path, value) | Create path segments as needed and mutate the target object. |
+| _.merge(target, ...sources) | Recursively merge enumerable properties and mutate target. |
+| _.assign(target, ...sources) | Shallow-assign own enumerable properties and mutate target. |
+| _.pick(object, paths) / _.omit(object, paths) | Return a new object with selected / excluded paths. |
+| _.cloneDeep(value) | Recursively clone values supported by Lodash's clone rules. |
 
-#### When to reach for Lodash (vs. native)
+~~~javascript
+const city = _.get(user, "address.city", "Unknown");
+const nullableCity = { address: { city: null } };
+_.get(nullableCity, "address.city", "Unknown"); // null
+nullableCity.address?.city ?? "Unknown";       // "Unknown"
+~~~
 
-Lodash earns its place when:
+The difference matters: Lodash's get default handles an absent path or undefined value, while JavaScript's nullish coalescing operator also falls back for null. For a statically known path, optional chaining plus an explicit fallback may be clearer.
 
-- Working with **deeply nested data** (`_.get`, `_.set`, `_.merge`).
-- Needing **reliable debounce/throttle** with edge options.
-- **Collection transformations** that would need multiple native chained methods.
+##### Strings / 字符串
 
-**Native equivalents worth checking first:**
-
-| Lodash | Native |
+| Signature | Example result |
 |---|---|
-| `_.flatten`, `_.flattenDeep` | `arr.flat(Infinity)` |
-| `_.get(obj, 'a.b.c')` | `obj?.a?.b?.c` (optional chaining) |
-| `_.uniq([...])` | `[...new Set([...])]` |
-| `_.pick`, `_.omit` | Destructuring + rest |
-| `_.keys`, `_.values`, `_.entries` | `Object.keys`, etc. |
+| _.camelCase(string) | _.camelCase("Foo BAR") → "fooBar" |
+| _.kebabCase(string) | _.kebabCase("fooBar") → "foo-bar" |
+| _.snakeCase(string) | _.snakeCase("fooBar") → "foo_bar" |
+| _.capitalize(string) | _.capitalize("hello") → "Hello" |
+| _.startCase(string) | _.startCase("fooBar") → "Foo Bar" |
 
-**Bundle-size gotcha:** `import _ from 'lodash'` pulls in the whole library. Prefer `import get from 'lodash/get'` or switch to `lodash-es` + tree-shaking, which can cut bundles by hundreds of KB.
+#### Debounce and throttle / 防抖与节流
 
-**See also:** [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for native alternatives like `structuredClone`, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce/throttle decision guide.
+**Core answer / 核心回答：** Debounce delays work until calls stop for a wait period; throttle limits calls to at most once per interval. Leading, trailing, and maxWait options change the contract, so describe the configuration being used. / debounce 会等到调用静止一段时间后再执行；throttle 将执行限制为每个时间间隔至多一次。leading、trailing 和 maxWait 选项会改变具体行为，因此要说明配置。
+
+~~~javascript
+const debouncedSearch = _.debounce(search, 300, {
+  trailing: true,
+  maxWait: 1000
+});
+
+input.addEventListener("input", debouncedSearch);
+
+// When the listener is removed or the component is disposed:
+debouncedSearch.cancel();
+~~~
+
+Lodash's debounced function also has flush() to invoke a pending call immediately. When both leading and trailing are enabled, a trailing invocation occurs only if there was another call during the wait period. Throttled functions also expose cancel() and flush(). Review the exact leading/trailing settings when a delayed call must not run after unmount or navigation.
+
+#### When should you use Lodash? / 何时使用Lodash？
+
+Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
+
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for choosing debounce or throttle by workload.
+
+**Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
 ## 35. ahooks / ahooks Hook库
 
 **Reach for this when** you need a quick reference for ahooks — the React hooks library that covers the hooks people keep rewriting in every project (data fetching, debounced state, localStorage sync, stable callbacks, virtual lists).
@@ -6248,279 +5904,143 @@ Reach for ahooks when:
 **See also:** [`9.3 Advanced React`](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom hook patterns, [`11.1 Performance Metrics and Analysis`](#32.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce/throttle conceptual background.
 ## 36. Frontend Testing / 前端测试
 
-**Reach for this when** you need a quick reference for frontend testing — the test pyramid, Jest/Vitest APIs, mocking, React Testing Library, and patterns like Arrange-Act-Assert.
+### Frontend Testing / 前端测试
 
-**Headline:** Five buckets. **Testing pyramid** (unit-heavy, e2e-light). **Jest fundamentals** (`describe`, `it`, matchers, setup/teardown). **Mocking** (`jest.fn`, `jest.mock`, `jest.spyOn`). **React Testing Library** (user-facing queries, `userEvent`, async utilities). **Testing patterns** (AAA, async, custom hooks, snapshots).
+#### How should frontend tests be divided? / 前端测试如何分层？
 
-#### Testing pyramid
+**Core answer / 核心回答：** Put each assertion at the lowest layer that can verify the behavior reliably. Unit tests isolate pure logic, integration tests exercise boundaries between components and services, and browser tests verify important end-to-end flows. This is a risk and feedback-cost heuristic, not a required test-count pyramid. / 在能够可靠验证行为的最低层测试。单元测试隔离纯逻辑，集成测试覆盖组件与服务之间的边界，浏览器测试验证重要端到端流程。这是权衡风险和反馈成本的经验方法，不是固定的测试数量金字塔。
 
-Tests should distribute with many fast unit tests at the base, fewer integration tests in the middle, fewest expensive e2e tests at the top.
+| Layer | Useful for | Example tools |
+|---|---|---|
+| Unit | Pure functions and isolated behavior | Jest, Vitest |
+| Integration | Components, hooks, context, and API boundaries together | React Testing Library with Jest or Vitest |
+| End-to-end | Browser navigation, persistence, and critical user journeys | Playwright, Cypress |
 
-| Level | Count | Scope | Tools |
-|---|---|---|---|
-| **Unit** | Most | Single function/component in isolation | Jest, Vitest |
-| **Integration** | Middle | Multiple units working together | Jest + RTL, Vitest + Testing Library |
-| **E2E** | Fewest | Full app in real browser | Playwright, Cypress, Puppeteer |
+Keep browser tests for behavior that depends on the real browser or application wiring. A test pyramid is a planning aid; a project's distribution should follow its actual risks and feedback costs.
 
-- **Unit tests** — fast, cheap, isolate logic. Test pure functions, utilities, individual component behavior.
-- **Integration tests** — verify components interact correctly with hooks, context, API mocks.
-- **E2E tests** — slow, expensive. Catch real user flows; use sparingly on critical paths.
+#### Jest fundamentals / Jest基础
 
-**Gotcha — inverted pyramids are a common anti-pattern.** Teams over-relying on e2e tests get slow, flaky suites. Push tests down the pyramid whenever possible.
-
-#### Jest fundamentals
-
-##### `describe`, `it` / `test`
-
-```javascript
-describe('Calculator', () => {
-  it('adds two numbers', () => {
-    expect(1 + 2).toBe(3);
+~~~javascript
+describe("calculator", () => {
+  test("adds two numbers", () => {
+    expect(2 + 2).toBe(4);
   });
 
-  test('subtracts two numbers', () => {
-    expect(5 - 3).toBe(2);
+  test("compares object values", () => {
+    expect({ count: 2 }).toEqual({ count: 2 });
   });
 });
-```
+~~~
 
-`describe` groups tests; `it` and `test` are interchangeable.
+toBe uses Object.is semantics. toEqual compares nested values; toStrictEqual also distinguishes cases such as missing properties and undefined values. Common matchers include toContain, toHaveLength, toThrow, and toHaveBeenCalledWith.
 
-##### Common matchers
+Setup hooks run at different scopes: beforeAll and afterAll surround a suite, while beforeEach and afterEach run around each test. Restore state that could leak between tests.
 
-| Matcher | Use Case |
+##### Mock functions / Mock函数
+
+~~~javascript
+const save = jest.fn();
+save({ id: 1 });
+
+expect(save).toHaveBeenCalledWith({ id: 1 });
+
+save.mockResolvedValue({ ok: true });
+await expect(save()).resolves.toEqual({ ok: true });
+~~~
+
+jest.spyOn wraps an existing method and can be restored. The cleanup operations differ:
+
+- **mockClear** clears call history while keeping the implementation.
+- **mockReset** clears call history and the mock implementation.
+- **mockRestore** restores the original implementation for a function created by spyOn. restoreAllMocks also restores spies and properties replaced with replaceProperty.
+
+For a CommonJS test transformed with babel-jest, jest.mock is hoisted by the transformer and the module can be required after the mock declaration:
+
+~~~javascript
+// CommonJS / babel-jest transformed module test.
+jest.mock("./api", () => ({ fetchUser: jest.fn() }));
+const { fetchUser } = require("./api");
+
+test("loads a user", async () => {
+  fetchUser.mockResolvedValue({ id: 1, name: "Ada" });
+  await expect(fetchUser(1)).resolves.toMatchObject({ name: "Ada" });
+});
+~~~
+
+Native ESM evaluates static imports before test code, so the CJS hoisting example does not transfer directly; Jest documents unstable_mockModule followed by dynamic import for ESM. A spy created with jest.spyOn calls the original method by default; mockImplementation replaces it, and mockRestore restores the original:
+
+~~~javascript
+const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+// assertions using the spy
+warnSpy.mockRestore();
+~~~
+
+#### React Testing Library / React Testing Library
+
+Test through user-visible roles, labels, text, and interactions. Queries have different timing contracts:
+
+| Query | Use when |
 |---|---|
-| `toBe(value)` | Strict equality (`===`). Use for primitives. |
-| `toEqual(value)` | Deep equality. Use for objects/arrays. |
-| `toBeTruthy()` / `toBeFalsy()` | Boolean coercion |
-| `toBeNull()` / `toBeUndefined()` | Null/undefined checks |
-| `toThrow()` / `toThrow(error)` | Exception assertion |
-| `toContain(item)` | Array/string contains |
-| `toHaveLength(n)` | Array/string length |
-| `toMatch(regex)` | String matches regex |
-| `toBeGreaterThan(n)` / `toBeLessThan(n)` | Number comparison |
+| getBy... | The element should exist now; throws if absent or ambiguous. |
+| queryBy... | Checking that an element is absent; returns null if absent. |
+| findBy... | The element should appear asynchronously; returns a Promise. |
 
-```javascript
-expect(2 + 2).toBe(4);
-expect({ a: 1 }).toEqual({ a: 1 });
-expect([1, 2, 3]).toContain(2);
-expect(() => fn()).toThrow('error message');
-```
+Prefer getByRole with an accessible name when it represents the user's interaction. Use getByLabelText for form controls. A test ID is an escape hatch when the UI has no suitable user-facing query.
 
-##### Setup and teardown
+~~~jsx
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom";
 
-```javascript
-describe('Database', () => {
-  beforeAll(()  => { /* runs once before all tests */ });
-  afterAll(()   => { /* runs once after all tests */ });
-  beforeEach(() => { /* runs before each test */ });
-  afterEach(()  => { /* runs after each test */ });
-});
-```
-
-#### Mocking
-
-##### `jest.fn()`
-
-Creates a mock function that tracks calls and return values.
-
-```javascript
-const mockFn = jest.fn();
-mockFn(1, 2);
-expect(mockFn).toHaveBeenCalled();
-expect(mockFn).toHaveBeenCalledWith(1, 2);
-expect(mockFn).toHaveBeenCalledTimes(1);
-
-mockFn.mockReturnValue(42);
-expect(mockFn()).toBe(42);
-```
-
-##### `jest.mock()`
-
-Mocks an entire module. Hoisted to the top of the file.
-
-```javascript
-jest.mock('./api');
-import { fetchUser } from './api';
-
-test('uses mocked fetchUser', async () => {
-  fetchUser.mockResolvedValue({ id: 1, name: 'Alice' });
-  const user = await fetchUser();
-  expect(user.name).toBe('Alice');
-});
-```
-
-##### `jest.spyOn()`
-
-Spies on an existing method without replacing the module. Restore with `mockRestore()`.
-
-```javascript
-const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
-// ... test
-spy.mockRestore();
-```
-
-##### Async mocks
-
-```javascript
-const mockFetch = jest.fn();
-
-mockFetch.mockResolvedValue({ data: 'success' });
-mockFetch.mockRejectedValue(new Error('Network error'));
-
-mockFetch
-  .mockResolvedValueOnce({ page: 1 })
-  .mockResolvedValueOnce({ page: 2 });
-```
-
-#### React Testing Library (RTL)
-
-##### Philosophy
-
-Test from the user's perspective: what they see and do. **Avoid testing implementation details** (state, props, internal methods). Implementation changes shouldn't break tests; user-visible behavior changes should.
-
-##### Core API
-
-```jsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-
-render(<MyComponent />);
-
-screen.getByText('Submit');        // throws if not found
-screen.queryByText('Optional');    // returns null if not found
-screen.findByText('Async');        // returns Promise; waits for element
-screen.getByRole('button', { name: /submit/i });
-screen.getByTestId('custom-id');   // last resort
-```
-
-##### Query priority
-
-1. `getByRole` — accessibility-first, closest to real users.
-2. `getByLabelText` — forms.
-3. `getByPlaceholderText` — forms (fallback).
-4. `getByText` — non-interactive content.
-5. `getByDisplayValue` — form values.
-6. `getByAltText` — images.
-7. `getByTitle` — title attribute.
-8. `getByTestId` — last resort.
-
-##### User interactions
-
-Prefer `userEvent` over `fireEvent` — `userEvent` simulates real user behavior including proper event order, focus changes, and keyboard events.
-
-```jsx
-import userEvent from '@testing-library/user-event';
-
-await userEvent.click(screen.getByRole('button'));
-await userEvent.type(screen.getByLabelText('Email'), 'test@example.com');
-
-fireEvent.click(button); // lower-level, avoid unless needed
-fireEvent.change(input, { target: { value: 'text' } });
-```
-
-##### Async utilities
-
-```jsx
-import { waitFor } from '@testing-library/react';
-
-// waitFor — retries until assertion passes or timeout
-await waitFor(() => {
-  expect(screen.getByText('Loaded')).toBeInTheDocument();
-});
-
-// findBy* — shorthand for waitFor + getBy
-const button = await screen.findByRole('button', { name: 'Submit' });
-```
-
-##### Example: form submission
-
-```jsx
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import LoginForm from './LoginForm';
-
-test('submits form with email and password', async () => {
-  const onSubmit = jest.fn();
-  render(<LoginForm onSubmit={onSubmit} />);
-
-  await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com');
-  await userEvent.type(screen.getByLabelText(/password/i), 'secret123');
-  await userEvent.click(screen.getByRole('button', { name: /submit/i }));
-
-  await waitFor(() => {
-    expect(onSubmit).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'secret123',
-    });
-  });
-});
-```
-
-#### Testing patterns
-
-##### Arrange-Act-Assert (AAA)
-
-Structure tests in three clear phases for readability.
-
-```jsx
-test('increments counter', async () => {
+test("submits the entered email", async () => {
   // Arrange
-  render(<Counter />);
-  const button = screen.getByRole('button', { name: /increment/i });
+  const user = userEvent.setup();
+  const onSubmit = jest.fn();
+  render(<EmailForm onSubmit={onSubmit} />);
 
   // Act
-  await userEvent.click(button);
+  await user.type(
+    screen.getByRole("textbox", { name: /email/i }),
+    "person@example.com"
+  );
+  await user.click(screen.getByRole("button", { name: /submit/i }));
 
   // Assert
-  expect(screen.getByText('1')).toBeInTheDocument();
+  expect(onSubmit).toHaveBeenCalledWith("person@example.com");
 });
-```
+~~~
 
-##### Testing async operations
+userEvent models a higher-level interaction sequence, including keyboard and focus behavior. It is not a real browser. fireEvent dispatches a lower-level event and can be useful when a test specifically needs that event boundary.
 
-```jsx
-test('loads user data', async () => {
-  jest.spyOn(api, 'fetchUser').mockResolvedValue({ name: 'Alice' });
+The form test above follows Arrange–Act–Assert (AAA): prepare the user and component, perform the interaction, then check the observable result.
 
-  render(<UserProfile userId={1} />);
+For an asynchronous appearance, prefer findBy...:
 
-  expect(screen.getByText(/loading/i)).toBeInTheDocument();
+~~~javascript
+const result = await screen.findByText("Loaded");
+expect(result).toBeInTheDocument();
+~~~
 
-  const name = await screen.findByText('Alice');
-  expect(name).toBeInTheDocument();
-});
-```
+Use waitFor when the assertion itself needs retrying. Its callback must throw for a retry; returning false does not request another attempt. Avoid placing side effects inside waitFor because the callback can run more than once.
 
-##### Testing custom hooks with `renderHook`
+#### Testing custom Hooks and snapshots / 测试自定义Hook与快照
 
-```javascript
-import { renderHook, act } from '@testing-library/react';
-import { useCounter } from './useCounter';
+React Testing Library exports renderHook from @testing-library/react. It renders a test component around the Hook. Most Testing Library render and interaction helpers already use React act; use act for an update initiated outside those helpers when the test needs to flush it.
 
-test('increments counter', () => {
+~~~javascript
+import { act, renderHook } from "@testing-library/react";
+
+test("increments the counter", () => {
   const { result } = renderHook(() => useCounter(0));
 
-  act(() => {
-    result.current.increment();
-  });
+  act(() => result.current.increment());
 
   expect(result.current.count).toBe(1);
 });
-```
+~~~
 
-##### Snapshot testing
+Snapshots can capture stable structure, but a large snapshot does not explain which behavior matters. Use focused assertions for user-visible behavior and update snapshots intentionally when the expected output changes.
 
-**Use when** — stable UI components, layout/structure regression.
-**Avoid when** — frequently changing UI, large snapshots, behavior testing.
+**See also:** [Advanced React / React进阶](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
 
-```jsx
-test('matches snapshot', () => {
-  const { container } = render(<Header />);
-  expect(container).toMatchSnapshot();
-});
-```
-
-Prefer explicit assertions over snapshots when testing behavior. Update snapshots intentionally with `jest -u`.
-
-**See also:** [`9.3 Advanced React`](#30.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom-hook patterns under test, [`16.1 Git Essentials`](../../engineering-foundations/version-control/git-essentials.md) for PR workflow that integrates CI tests.
+**Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/).
