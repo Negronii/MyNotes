@@ -1,0 +1,241 @@
+A bundle of intermediate/advanced React interview questions — component communication, hooks, and reusable component patterns.
+
+# How can components communicate in React?
+
+**Headline (30s):** Four patterns, picked by *direction* and *distance*: **parent→child via props**, **child→parent via callback props** (or refs for imperative access), **cross-cutting via Context API** for shared state that many components need, and **cross-component via state management libraries** (Redux, Zustand) for complex app-wide state. The rule of thumb: start with props, reach for context when you'd otherwise drill the same prop through 3+ levels, reach for a library only when context becomes unwieldy.
+
+## Parent → Child
+
+- **Props** — standard unidirectional data flow.
+- **Refs** — for imperative access (focus an input, call a child method). Use sparingly.
+- **Context API** — shared data without prop drilling; parent `Provider`, consumer `useContext`.
+
+```jsx
+const ThemeContext = createContext('light');
+
+function App() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Toolbar />
+    </ThemeContext.Provider>
+  );
+}
+
+function Toolbar() {
+  const theme = useContext(ThemeContext);
+  return <div className={theme}>...</div>;
+}
+```
+
+## Child → Parent
+
+- **Callback props** — parent passes a function; child calls it with data.
+- **`forwardRef` + `useImperativeHandle`** — child exposes specific methods via ref.
+- **Event bubbling** — parent listens on a wrapper; child's event bubbles up.
+
+## Cross-component (not parent-child)
+
+- **State management libraries** — Redux, Zustand, Jotai, MobX. Pick based on complexity and team familiarity.
+- **Custom hooks** — extract stateful logic, call from anywhere.
+- **Event systems** — custom EventBus for decoupled pub/sub (rarely the right answer in React).
+
+**Rule of thumb:** Props for parent→child. Callbacks for child→parent. Context for deep sharing that's cross-cutting (theme, auth, locale). A store library when state is truly global and complex.
+
+---
+
+# When do you use `useCallback`, `useMemo`, and `React.memo`?
+
+**Headline (30s):** These three work together to skip unnecessary re-renders. **`React.memo`** wraps a component and skips re-render if its props are shallowly equal. **`useMemo`** memoizes a computed value. **`useCallback`** memoizes a function reference. You typically need all three together: `React.memo` on the child, `useCallback` for the function props you pass it, `useMemo` for any computed objects you pass. Without that matching, the child re-renders anyway because the props change reference identity every render.
+
+## `useCallback`
+
+Memoizes a function reference. The child that receives it skips re-rendering when the parent re-renders.
+
+```javascript
+const handleClick = useCallback(() => {
+  doSomething(id);
+}, [id]);
+```
+
+## `useMemo`
+
+Memoizes a computed value. Only recomputes when dependencies change.
+
+```javascript
+const sortedList = useMemo(
+  () => items.sort((a, b) => a.name.localeCompare(b.name)),
+  [items]
+);
+```
+
+## `React.memo`
+
+Higher-order component that skips re-render when props are shallowly equal.
+
+```javascript
+const ExpensiveList = React.memo(({ items }) => (
+  items.map(item => <Item key={item.id} data={item} />)
+));
+```
+
+**Combining the three for maximum effect:**
+
+```jsx
+function Parent({ data }) {
+  const handleClick = useCallback(() => console.log('clicked'), []);
+  const processed  = useMemo(() => heavyProcess(data), [data]);
+  return <ExpensiveChild onClick={handleClick} items={processed} />;
+}
+
+const ExpensiveChild = React.memo(({ onClick, items }) => { /* ... */ });
+```
+
+**Gotcha — don't memoize everything.** Memoization has its own cost (equality checks, closure retention). The framework will re-render fast if the subtree is small. Profile first; memoize only the components that actually re-render expensively.
+
+---
+
+# How do you use `useRef`?
+
+**Headline (30s):** `useRef` returns a mutable object (`{ current }`) that persists across renders **without triggering re-renders** when mutated. Three common use cases: accessing a DOM node imperatively, storing mutable values (timer IDs, previous values) that don't belong in state, and holding non-reactive external instances (WebSocket, observer).
+
+```javascript
+const inputRef = useRef(null);
+const focusInput = () => inputRef.current.focus();
+
+return <input ref={inputRef} />;
+```
+
+**Common patterns:**
+
+- **DOM access** — focusing, measuring, imperative library integration (charts, maps, animations).
+- **Previous value** — `useRef` + `useEffect` to remember the last value.
+- **Timer / subscription IDs** — store the ID so you can clear it in cleanup.
+- **Mutable flags** — "has been initialized", "is currently dragging" — without re-rendering.
+
+**Gotcha — mutating `.current` doesn't re-render.** That's usually the point (it's what makes refs different from state), but it means you can't drive UI with ref values. Use state for anything the UI displays; use refs for bookkeeping.
+
+---
+
+# What does `forwardRef` do?
+
+**Headline (30s):** By default, refs don't pass through custom components — `<MyInput ref={r} />` does nothing useful. `forwardRef` wraps a component so it explicitly forwards its `ref` argument to an underlying DOM element (or uses `useImperativeHandle` to expose a custom API). You need this any time a parent wants imperative access to something inside a custom component.
+
+```javascript
+const FancyInput = forwardRef((props, ref) => (
+  <input ref={ref} className="fancy" {...props} />
+));
+
+// Parent:
+const ref = useRef(null);
+<FancyInput ref={ref} />
+ref.current.focus();
+```
+
+**Reach for `forwardRef`** when building a reusable component that should feel like a DOM element (inputs, buttons, custom scroll containers). Combine with `useImperativeHandle` to expose only specific methods instead of the raw DOM node.
+
+---
+
+# What are custom hooks, and when do they differ from regular functions?
+
+**Headline (30s):** A custom hook is a function whose name starts with `use` that *calls other hooks internally*. That's it — the `use` prefix is a convention that lints can enforce. Custom hooks let you reuse stateful logic (state, effects, refs, subscriptions) across components without HOCs or render props. Regular functions can't use hooks — they can only do pure computation or utilities.
+
+| Custom hooks | Regular functions |
+|---|---|
+| Can call `useState`, `useEffect`, etc. | Cannot call hooks |
+| Manage state and side effects | Pure computation only |
+| Re-run on every render of the component | Called explicitly |
+| Named `useX` by convention | Any name |
+
+## Example: window size hook
+
+```javascript
+function useWindowSize() {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const handler = () => setSize({
+      width:  window.innerWidth,
+      height: window.innerHeight
+    });
+    window.addEventListener('resize', handler);
+    handler();
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return size;
+}
+```
+
+Any component can call `const { width, height } = useWindowSize()` — the subscription and cleanup are packaged up.
+
+**Gotcha — Rules of Hooks:** Hooks must be called at the top level of a component or custom hook, in the same order every render. No `if`, no loops, no early returns before a hook. If you need conditional logic, branch *inside* the hook's callbacks.
+
+---
+
+# What is the "render props" pattern?
+
+**Headline (30s):** Render props pass a function as a prop that returns JSX — letting the consumer control what to render using data the component provides. It was the main reusability pattern before hooks; today, **custom hooks replace it** for nearly all cases. You'll see it in legacy codebases and in libraries that want a hookless public API.
+
+```jsx
+<MouseTracker render={({ x, y }) => (
+  <p>Mouse position: {x}, {y}</p>
+)} />
+```
+
+The `MouseTracker` manages state (mouse position); the parent supplies the render function. Pre-hooks, this was how you shared "track the mouse and render something" across components. Post-hooks, `const { x, y } = useMouse()` does the same with less ceremony.
+
+---
+
+# What are Higher-Order Components (HOCs)?
+
+**Headline (30s):** An HOC is a function that takes a component and returns a new component with added behavior — like decorators for React. They were the classic pattern for cross-cutting concerns (auth, logging, routing) before hooks. Today, **custom hooks are usually cleaner**; HOCs are still relevant for cases where you need to *modify rendering behavior* rather than share logic (e.g., `React.memo`, `connect` from Redux).
+
+```javascript
+function withAuth(WrappedComponent) {
+  return function AuthenticatedComponent(props) {
+    const user = useAuth();
+    if (!user) return <Redirect to="/login" />;
+    return <WrappedComponent {...props} user={user} />;
+  };
+}
+
+const ProtectedPage = withAuth(Dashboard);
+```
+
+**Trade-offs:**
+
+- Clean syntax at the use site (`withAuth(Dashboard)`).
+- But multiple HOCs produce "wrapper hell" in React DevTools.
+- Props can collide unexpectedly.
+- Types are awkward in TypeScript.
+
+**Rule of thumb:** Custom hooks for logic reuse, HOCs only when you need to actually wrap/alter rendering behavior (`React.memo`, `connect`, `observer` from MobX).
+
+---
+
+# What are common conditional-rendering patterns?
+
+Four idiomatic patterns — pick based on readability at the call site.
+
+```jsx
+// 1. Ternary — for either-or
+{isLoggedIn ? <Dashboard /> : <Login />}
+
+// 2. Logical AND — for render-or-nothing
+{showBanner && <Banner />}
+
+// 3. Early return — for guard clauses in a component
+function Component({ data }) {
+  if (!data) return <Loading />;
+  return <Content data={data} />;
+}
+
+// 4. Element variable — for many branches
+let content;
+if (error)        content = <Error />;
+else if (loading) content = <Spinner />;
+else              content = <Data />;
+return <div>{content}</div>;
+```
+
+**Gotcha — `&&` with numbers:** `{list.length && <List items={list} />}` renders the literal `0` when the list is empty (because React renders numbers but not `false`). Coerce to boolean: `{!!list.length && ...}` or `{list.length > 0 && ...}`.
+
+**See also:** [`9.2 React Basics`](./react-basics.md) for JSX, lifecycle, `setState`, and router basics, [`4.1 Object, Function, and Prototype`](../javascript/objects-functions-and-prototypes.md) for the `this`/`bind` behavior underneath class components.

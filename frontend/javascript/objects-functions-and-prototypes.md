@@ -1,0 +1,329 @@
+A bundle of classic interview questions about JavaScript's prototype system, `this`, `new`, and property descriptors.
+
+# What is the JavaScript prototype chain?
+
+**Headline (30s):** Every object has an internal `[[Prototype]]` link (exposed as `__proto__`) pointing to another object. When you access a property that doesn't exist on the object, the engine walks up this chain until it finds the property or reaches `null`. This is how objects inherit behavior in JavaScript — not by copying, but by linking.
+
+**Why interviewers ask this:** Prototypes explain inheritance, `class`, `instanceof`, and why polyfills work the way they do. A candidate who can't describe the chain struggles with React class components, library internals, and debugging "where did this method come from?" questions.
+
+## `prototype` vs. `__proto__`
+
+Two closely related properties that trip up almost everyone:
+
+- **`prototype`** — a property that exists *only on functions*. It's the object that will become `__proto__` of any instance created with `new`.
+- **`__proto__`** — a property on *every* object. It points to the object's prototype. Reading it walks up the chain.
+
+## How the chain is formed
+
+1. A constructor function has a `.prototype` object.
+2. Calling the constructor with `new` creates a new object whose `__proto__` is set to the constructor's `.prototype`.
+3. That prototype object has its own `__proto__` pointing to `Object.prototype`.
+4. `Object.prototype.__proto__` is `null` — end of chain.
+
+```javascript
+function Person(name) {
+  this.name = name;
+}
+
+Person.prototype.sayHello = function() {
+  console.log(`Hello, my name is ${this.name}`);
+};
+
+const alice = new Person('Alice');
+alice.sayHello(); // 'Hello, my name is Alice'
+
+alice.__proto__ === Person.prototype;                  // true
+Person.prototype.__proto__ === Object.prototype;       // true
+Object.prototype.__proto__;                            // null
+```
+
+When `alice.sayHello()` is called, the engine searches `alice` → `Person.prototype` (found!) and invokes it.
+
+**Gotcha — `class` is syntactic sugar:** `class Foo {}` is essentially `function Foo() {}` with a prototype, so `typeof Foo === 'function'`. Understanding the chain helps debug transpiled output.
+
+---
+
+# What's the difference between `{}` and `Object.create(proto)`?
+
+**Headline (30s):** `{}` creates an object whose prototype is `Object.prototype`. `Object.create(proto)` lets you choose any prototype (including `null`). Use `Object.create` when you need custom inheritance or a "clean" dictionary with no inherited keys.
+
+```javascript
+const obj1 = {};
+obj1.__proto__ === Object.prototype; // true
+
+const obj2 = Object.create({ greet: 'hi' });
+obj2.greet;                          // 'hi' (inherited)
+obj2.__proto__ === Object.prototype; // false
+
+const bag = Object.create(null);     // no prototype at all
+bag.toString;                        // undefined — no inherited methods
+```
+
+**Reach for `Object.create(null)` when:** building a hash map where keys might collide with inherited names like `toString` or `hasOwnProperty`. The modern alternative is `Map`.
+
+---
+
+# What is `this` in JavaScript?
+
+**Headline (30s):** `this` is a special binding that is decided **at call time**, not at definition time. Its value depends on *how* a function is called: as a plain function (`fn()`), as a method (`obj.fn()`), as a constructor (`new Fn()`), or explicitly (`fn.call(ctx)`). Arrow functions are the exception — they capture `this` lexically.
+
+**Why interviewers ask this:** It's the #1 source of bugs in hand-rolled code. Understanding `this` is prerequisite to understanding `bind`, `call`, `apply`, class methods, React class components, and event handlers.
+
+## The rules (in precedence order)
+
+1. **`new` binding** — `new Fn()` creates a new object, `this` is that object.
+2. **Explicit binding** — `fn.call(ctx)`, `fn.apply(ctx)`, `fn.bind(ctx)` — `this` is `ctx`.
+3. **Implicit binding** — `obj.fn()` — `this` is `obj`.
+4. **Default binding** — `fn()` — `this` is the global object (`window`) in non-strict mode, or `undefined` in strict mode.
+5. **Arrow functions** — ignore all rules above; `this` is inherited lexically from the enclosing scope.
+
+## Examples covering each case
+
+```javascript
+// 1. Default
+function f() { return this; }
+f();                          // window (sloppy) / undefined (strict)
+
+// 2. Implicit (method call)
+const obj = { f, name: 'obj' };
+obj.f();                      // obj
+
+// 3. Explicit
+f.call({ name: 'ctx' });      // { name: 'ctx' }
+
+// 4. new
+function Person(n) { this.name = n; }
+new Person('Alice');          // { name: 'Alice' }
+
+// 5. Arrow — captures lexically
+const wrapper = {
+  name: 'outer',
+  run() {
+    const arrow = () => this.name;
+    return arrow();           // 'outer' — `this` is `wrapper`
+  }
+};
+```
+
+**Gotcha — losing `this`:** Passing a method as a callback drops the binding:
+
+```javascript
+const api = {
+  url: '/data',
+  fetch() { return this.url; }
+};
+const f = api.fetch;
+f();                          // undefined in strict mode — `this` is no longer `api`
+
+// Fix options:
+api.fetch.bind(api);          // pre-bind
+() => api.fetch();            // wrap in arrow
+```
+
+---
+
+# Implement `bind` (and `call` / `apply`)
+
+**Headline (30s):** `bind` returns a new function with a fixed `this` and optionally pre-filled arguments. `call` / `apply` invoke immediately with a given `this` — `call` takes args individually, `apply` takes an array. The classic implementation trick: `call` and `apply` temporarily attach the function as a method on the context object, invoke it, then delete it.
+
+## `bind`
+
+```javascript
+Function.prototype.myBind = function (context, ...preBoundArgs) {
+  const originalFn = this;
+  return function (...newArgs) {
+    return originalFn.apply(context, preBoundArgs.concat(newArgs));
+  };
+};
+
+function greet(greeting, name) {
+  return `${greeting}, ${name}! I'm ${this.role}`;
+}
+
+const boundGreet = greet.myBind({ role: 'admin' }, 'Hello');
+boundGreet('Alice'); // 'Hello, Alice! I'm admin'
+```
+
+## `call` and `apply`
+
+The trick: assign the function to a unique key on the context, call it as a method (so `this` binds to the context), then delete the key.
+
+```javascript
+Function.prototype.myCall = function (context = globalThis, ...args) {
+  const key = Symbol();
+  context[key] = this;
+  const result = context[key](...args);
+  delete context[key];
+  return result;
+};
+
+Function.prototype.myApply = function (context = globalThis, args = []) {
+  const key = Symbol();
+  context[key] = this;
+  const result = context[key](...args);
+  delete context[key];
+  return result;
+};
+```
+
+**Gotcha — `bind` + arrow functions:** Arrow functions don't have their own `this`, so `bind` can't change `this` for an arrow function (only the pre-bound arguments take effect).
+
+**Gotcha — `bind` + `new`:** If a bound function is used as a constructor with `new`, the `new` binding wins — the pre-bound `this` is ignored, but pre-bound arguments are still applied.
+
+---
+
+# How does `new` work, and how would you implement it?
+
+**Headline (30s):** `new Fn(...args)` does four things: (1) creates a new object whose prototype is `Fn.prototype`; (2) calls `Fn` with `this` set to the new object; (3) if `Fn` explicitly returns an object, that's the result; otherwise the new object is returned.
+
+```javascript
+function _new(fn, ...args) {
+  const obj = Object.create(fn.prototype);        // 1. new object linked to prototype
+  const result = fn.apply(obj, args);             // 2. run constructor
+  return result instanceof Object ? result : obj; // 3. explicit object return wins
+}
+
+function Person(name) {
+  this.name = name;
+}
+const p = _new(Person, 'Tom');
+p.name;                          // 'Tom'
+p instanceof Person;             // true
+```
+
+**Gotcha — returning a primitive:** Returning a string/number/boolean from a constructor is ignored. Returning an object overrides the default `this` return.
+
+---
+
+# What are hidden classes?
+
+**Headline (30s):** V8 (and similar engines) assign each JS object a "hidden class" that records its shape — which properties it has and in what order. Objects with the same shape share the same hidden class, which makes property access fast. Creating objects with consistent property order helps the engine optimize; adding/removing properties dynamically creates new hidden classes and costs performance.
+
+```javascript
+function createPoint(x, y) {
+  return { x, y };               // every call produces same shape → same hidden class
+}
+
+// Good: consistent shape
+const p1 = createPoint(1, 2);
+const p2 = createPoint(3, 4);
+
+// Bad: different construction order creates different hidden classes
+const a = {};
+a.x = 1;
+a.y = 2;
+
+const b = {};
+b.y = 2;
+b.x = 1;                         // different hidden class than `a`!
+```
+
+**Reach for this knowledge when:** writing hot-path code that allocates many similar objects (game engines, data pipelines). For typical app code, hidden classes are an implementation detail you don't need to worry about.
+
+---
+
+# Why define methods on the prototype instead of in the constructor?
+
+**Headline (30s):** Methods defined inside the constructor are copied into **every** instance, wasting memory. Methods on the prototype are **shared** — all instances look them up through the prototype chain. Prototype methods also support proper inheritance and can be monkey-patched to update all existing instances at once.
+
+```javascript
+// Bad: a new `greet` function is created for every instance
+function Person(name) {
+  this.name = name;
+  this.greet = function() { console.log(`Hi, ${this.name}`); };
+}
+
+// Good: one shared function on the prototype
+function Person(name) {
+  this.name = name;
+}
+Person.prototype.greet = function() { console.log(`Hi, ${this.name}`); };
+```
+
+In modern code, write `class` — it does this for you. `class Foo { method() {} }` puts `method` on `Foo.prototype` automatically; fields declared outside the constructor also go on the prototype.
+
+---
+
+# How do static, instance, and prototype properties interact?
+
+This appears as an execution-order puzzle. Walk through it step by step.
+
+```javascript
+function Foo() {
+  Foo.a = function() { console.log(1); };
+  this.a = function() { console.log(2); };
+}
+Foo.prototype.a = function() { console.log(3); };
+Foo.a = function() { console.log(4); };
+
+Foo.a();           // 4
+const obj = new Foo();
+obj.a();           // 2
+Foo.a();           // 1
+```
+
+**Breakdown:**
+
+1. After definition, `Foo.a` is the "logs 4" function, so `Foo.a()` prints `4`.
+2. `new Foo()` runs the body: it **reassigns** `Foo.a` to "logs 1" and creates an instance property `obj.a` = "logs 2".
+3. `obj.a()` — instance property takes precedence over prototype, so it prints `2`.
+4. `Foo.a()` — now prints `1`, because the constructor overwrote the static property.
+
+**Precedence lookup order for `obj.a`:**
+
+1. Own (instance) properties.
+2. Prototype chain (`Foo.prototype`, `Object.prototype`, ...).
+
+Static properties (`Foo.a`) are entirely separate — they live on the constructor function itself, not on the instance chain.
+
+---
+
+# What are property descriptors?
+
+**Headline (30s):** Every property on an object has a set of *attributes* (configurable, enumerable, writable, value/get/set) that control its behavior. `Object.defineProperty` lets you set them explicitly. This is how libraries implement read-only properties, computed getters, and non-enumerable "internal" fields.
+
+## Data properties
+
+| Attribute | Meaning |
+|---|---|
+| `value` | The property's actual value |
+| `writable` | Whether the value can be reassigned |
+| `enumerable` | Whether the property shows up in `for...in` / `Object.keys` |
+| `configurable` | Whether the property can be deleted or redefined |
+
+```javascript
+const obj = {};
+Object.defineProperty(obj, 'name', {
+  value: 'John',
+  writable: false,
+  enumerable: true,
+  configurable: true
+});
+obj.name = 'Jane';   // silently fails (or throws in strict mode)
+obj.name;            // 'John'
+```
+
+## Accessor properties (`get` / `set`)
+
+```javascript
+const obj = { _name: 'John' };
+Object.defineProperty(obj, 'name', {
+  get() { return this._name; },
+  set(v) { this._name = v; },
+  enumerable: true,
+  configurable: true
+});
+obj.name;         // 'John' (calls get)
+obj.name = 'Jo';  // calls set
+```
+
+## Inspecting descriptors
+
+```javascript
+Object.getOwnPropertyDescriptor(obj, 'name');
+// { value: 'John', writable: false, enumerable: true, configurable: true }
+```
+
+**Reach for this when:** implementing reactive frameworks (Vue 2 used `defineProperty` pre-Proxy), enforcing API contracts (read-only IDs), or making fields non-enumerable so they don't leak in logs.
+
+**See also:** [`Scope & Closure / 作用域与闭包`](./scope-and-closure.md) for how `this` interacts with scope, [`3.2 JavaScript Types`](./javascript-types.md) for primitive vs. reference fundamentals.

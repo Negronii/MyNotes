@@ -1,0 +1,330 @@
+# What's the difference between `for..in` and `for..of`?
+
+**Headline (30s):** `for..in` iterates **enumerable keys** — that's property names on objects, or *string indices* on arrays ("0", "1", "2"). `for..of` iterates **values** from anything iterable — arrays, strings, `Map`, `Set`, `NodeList`, `arguments`. If you want values from an array, use `for..of` (or a plain `for` with index). Reach for `for..in` only when you actually want keys of a plain object.
+
+## `for..in` — iterates enumerable keys
+
+```javascript
+const arr = [10, 20, 30];
+for (let i in arr) {
+  console.log(i); // 0, 1, 2  (indexes as strings)
+}
+
+const str = 'abc';
+for (let i in str) {
+  console.log(i); // 0, 1, 2
+}
+
+const obj = { name: 'aaa', age: 30 };
+for (let key in obj) {
+  console.log(key); // 'name', 'age'
+}
+```
+
+**Gotcha — `for..in` on arrays yields string indices, not values:** Don't use it on arrays. The indexes come back as strings, and the iteration order is not guaranteed for arrays (it usually *happens* to be numeric for dense arrays, but the spec doesn't require it).
+
+**Gotcha — inherited enumerable properties:** `for..in` walks the prototype chain. A property added to `Object.prototype` shows up in every `for..in` loop. In modern code this rarely happens, but `Object.keys(obj)` or `for..of` over `Object.entries(obj)` is safer.
+
+## `for..of` — iterates values from iterables
+
+```javascript
+const arr = [10, 20, 30];
+for (let v of arr) console.log(v); // 10, 20, 30
+
+const str = 'abc';
+for (let ch of str) console.log(ch); // 'a', 'b', 'c'
+
+function fn() {
+  for (let arg of arguments) console.log(arg);
+}
+fn(100, 200, 'aaa'); // 100, 200, 'aaa'
+
+const s = new Set([10, 20, 30]);
+for (let v of s) console.log(v); // 10, 20, 30
+
+const m = new Map([['x', 100], ['y', 200]]);
+for (let [key, value] of m) console.log(key, value);
+```
+
+**Gotcha — `for..of` doesn't work on plain objects:** Plain objects aren't iterable by default. Convert first: `for (const [k, v] of Object.entries(obj))`.
+
+---
+
+# How do you remove duplicates from an array?
+
+**Headline (30s):** `[...new Set(arr)]` for primitives — O(n) time, one line, impossible to get wrong. For objects keyed by a property, loop + `Map` using that property as the key. Older idioms (`filter + indexOf`, `reduce + includes`) are O(n²) and should only be cited for how *not* to do it.
+
+## 1. Using a Set — the default answer
+
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return [...new Set(arr)];
+}
+```
+
+**Time:** O(n). **Space:** O(n).
+
+## 2.1 Filter + `indexOf` — O(n²), avoid
+
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return arr.filter((item, index) => arr.indexOf(item) === index);
+}
+```
+
+**Time:** O(n²) — `indexOf` scans the whole array for each element. **Space:** O(n).
+
+## 2.2 Filter + Set — O(n) optimization of 2.1
+
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  const seen = new Set<T>();
+  return arr.filter(item => {
+    if (!seen.has(item)) {
+      seen.add(item);
+      return true;
+    }
+    return false;
+  });
+}
+```
+
+**Time:** O(n). **Space:** O(n).
+
+## 3. `Map` for dedupe-by-key of objects
+
+```typescript
+interface CustomObject {
+  id: number;
+  name: string;
+}
+
+function removeDuplicates(arr: CustomObject[]): CustomObject[] {
+  const unique = new Map<number, CustomObject>();
+  arr.forEach(obj => unique.set(obj.id, obj));
+  return Array.from(unique.values());
+}
+```
+
+**Time:** O(n). **Space:** O(n). **Note:** the *last* object with a given `id` wins (later `set` overrides earlier).
+
+## 4.1 Reduce + `includes` — O(n²), avoid
+
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return arr.reduce((acc, current) => {
+    if (!acc.includes(current)) acc.push(current);
+    return acc;
+  }, [] as T[]);
+}
+```
+
+**Time:** O(n²).
+
+## 4.2 Reduce + Set — O(n) optimization
+
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  const seen = new Set<T>();
+  return arr.reduce((acc, current) => {
+    if (!seen.has(current)) {
+      seen.add(current);
+      acc.push(current);
+    }
+    return acc;
+  }, [] as T[]);
+}
+```
+
+**Time:** O(n). **Space:** O(n).
+
+## 5. Sort + reduce — O(n log n), preserves nothing
+
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return arr.sort().reduce((acc, current) => {
+    if (acc.length === 0 || acc[acc.length - 1] !== current) acc.push(current);
+    return acc;
+  }, [] as T[]);
+}
+```
+
+**Time:** O(n log n). **Note:** destroys original order. Useful only when you already need the array sorted.
+
+## 6. `Array.from(new Set(arr))` — equivalent to option 1
+
+```typescript
+function removeDuplicates<T>(arr: T[]): T[] {
+  return Array.from(new Set(arr));
+}
+```
+
+**Gotcha — `Set` compares by reference for objects:** `new Set([{id: 1}, {id: 1}])` keeps both entries because they're different references. Dedupe-by-key with a `Map` is the right tool for objects.
+
+---
+
+# What is the spread operator, and how does it compile?
+
+**Headline (30s):** `...` expands an iterable (most commonly an array) in places where multiple values are expected — function calls, array literals, object literals. For older targets, Babel compiles array spread to `.concat()` or `Array.prototype.slice.call(arguments)`.
+
+```typescript
+const baseArray = [1, 2, 3, 4];
+const array = [...baseArray];
+```
+
+Babel compiles this down to something like:
+
+```javascript
+var baseArray = [1, 2, 3, 4];
+var array = [].concat(baseArray);
+```
+
+That transpilation preserves the "shallow copy into a new array" semantic in environments that don't support ES6 syntax.
+
+## BabelJS overview
+
+Babel is a JavaScript compiler that transforms ECMAScript 2015+ code into a version compatible with older browsers and environments. Plugins and presets (`@babel/preset-env`) target a specific set of browsers, so you can write modern syntax and ship compatible output.
+
+**Gotcha — spread is shallow:** `[...arr]` copies top-level elements by reference. Nested objects are shared. For deep copy, use `structuredClone()` (see [`3.8 Modern JavaScript Features`](./modern-javascript-features.md)).
+
+---
+
+# What are the most-used Array methods?
+
+**Headline (30s):** A small core handles most real-world array work: `map` transforms, `filter` selects, `reduce` folds, `some` / `every` test, `concat` joins, `indexOf` / `lastIndexOf` locate, `sort` and `reverse` reorder in place. Learn the signatures (especially `reduce` and `sort`'s comparator) and you can derive the rest from docs.
+
+## Concatenation — `concat`
+
+Joins two or more arrays into a new array without mutating the originals.
+
+```javascript
+const a = ['a', 'b', 'c'];
+const b = ['d', 'e', 'f'];
+a.concat(b); // ['a', 'b', 'c', 'd', 'e', 'f']
+```
+
+## Element checking — `every` / `some`
+
+- `every(fn)` — `true` if **all** elements pass.
+- `some(fn)` — `true` if **any** element passes.
+
+```javascript
+const isBelow40 = n => n < 40;
+const nums = [1, 30, 39, 29, 10, 13];
+nums.every(isBelow40); // true
+nums.some(isBelow40);  // true
+```
+
+## Filtering — `filter`
+
+Returns a new array of elements that pass the predicate.
+
+```javascript
+const words = ['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present'];
+words.filter(w => w.length > 6); // ['exuberant', 'destruction', 'present']
+```
+
+## Mapping — `map`
+
+Returns a new array of transformed values.
+
+```javascript
+[1, 4, 9, 16].map(Math.sqrt); // [1, 2, 3, 4]
+```
+
+## Sorting — `sort`
+
+Sorts **in place**. Default compares by UTF-16 code unit, **not** numerically.
+
+```javascript
+['March', 'Jan', 'Feb', 'Dec'].sort(); // ['Dec', 'Feb', 'Jan', 'March']
+
+[1, 11, 2, 22].sort();                   // [1, 11, 2, 22] — string sort!
+[1, 11, 2, 22].sort((a, b) => a - b);    // [1, 2, 11, 22] — numeric sort
+```
+
+**Gotcha — default `sort` on numbers is wrong for most use cases.** Always pass a comparator when sorting numbers: `(a, b) => a - b`.
+
+## Reversing — `reverse`
+
+Reverses in place.
+
+```javascript
+['one', 'two', 'three'].reverse(); // ['three', 'two', 'one']
+```
+
+## Conversion to string — `toString`
+
+```javascript
+[1, 2, 'a', '1a'].toString(); // '1,2,a,1a'
+```
+
+## Index finding — `indexOf` / `lastIndexOf`
+
+```javascript
+const beasts = ['ant', 'bison', 'camel', 'duck', 'bison'];
+beasts.indexOf('bison');     // 1
+beasts.lastIndexOf('bison'); // 4
+```
+
+**See also:** [`3.8 Modern JavaScript Features`](./modern-javascript-features.md) for `Array.at()`, `Array.from()`, and other newer methods.
+
+---
+
+# How do you flatten a nested array?
+
+**Headline (30s):** `arr.flat(Infinity)` is the one-liner — supported in all modern environments. The recursive, reduce-based, and iterative variants below are worth recognizing because they show up in interview "implement this yourself" scenarios.
+
+## Recursive approach
+
+```typescript
+function arrayFlatten(arr: any[]): any[] {
+  let flattened = [];
+  for (let i = 0; i < arr.length; i++) {
+    if (Array.isArray(arr[i])) {
+      flattened = flattened.concat(arrayFlatten(arr[i]));
+    } else {
+      flattened.push(arr[i]);
+    }
+  }
+  return flattened;
+}
+```
+
+**Pros:** works anywhere, easy to explain. **Cons:** recursion stack — can fail on very deep arrays.
+
+## Functional (reduce + recursion)
+
+```typescript
+function arrayFlatten(arr: any[]): any[] {
+  return arr.reduce((prev, cur) =>
+    prev.concat(Array.isArray(cur) ? arrayFlatten(cur) : cur), []);
+}
+```
+
+**Pros:** declarative and concise. **Cons:** same recursion depth concern.
+
+## Iterative approach
+
+```typescript
+function arrayFlatten(arr: any[]): any[] {
+  while (arr.some(Array.isArray)) {
+    arr = [].concat(...arr);
+  }
+  return arr;
+}
+```
+
+**Pros:** no recursion — safe on deep arrays. **Cons:** quadratic in the worst case if the array is very jagged.
+
+## ES6 `.flat()` method
+
+```typescript
+function arrayFlatten(arr: any[]): any[] {
+  return arr.flat(Infinity);
+}
+```
+
+**Pros:** concise, optimized natively. **Cons:** not available in IE11 and earlier (no longer relevant in most codebases).
+
+**Gotcha — `.flat()` without an argument only flattens one level:** `.flat()` defaults to depth 1; use `.flat(Infinity)` for fully-nested input. Don't rely on the default for unknown nesting depths.

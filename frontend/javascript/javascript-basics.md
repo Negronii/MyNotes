@@ -1,0 +1,83 @@
+# `var`, `let`, and `const`
+
+Reach for this when you need to remember the difference between the three variable declarations, including scoping, hoisting, and the Temporal Dead Zone.
+
+## Quick comparison
+
+| | `var` | `let` | `const` |
+|---|---|---|---|
+| **Scope** | function | block | block |
+| **Hoisted?** | yes, initialized to `undefined` | yes, but uninitialized (TDZ) | yes, but uninitialized (TDZ) |
+| **Redeclaration in same scope** | allowed | `SyntaxError` | `SyntaxError` |
+| **Reassignment** | allowed | allowed | **not** allowed (binding is frozen) |
+| **Must be initialized?** | no | no | yes |
+
+**Default:** use `const`; switch to `let` only when the binding must be reassigned; avoid `var` in new code.
+
+## `var` — function-scoped, hoisted to `undefined`
+
+A `var` declaration is hoisted to the top of its enclosing function (or global scope), but it's only *initialized* at its declaration line. Accessing before initialization returns `undefined` rather than throwing.
+
+```javascript
+console.log(a); // undefined
+var a = 10;
+console.log(a); // 10
+
+function foo() {
+  console.log(a); // undefined  (hoisted function-scoped a, not the outer a)
+  var a = 20;
+  console.log(a); // 20
+}
+```
+
+**Quirks worth knowing:**
+
+- Can be redeclared in the same scope without error.
+- Ignores block boundaries — a `var` declared inside `if` or `for` leaks to the enclosing function.
+
+## `let` — block-scoped, Temporal Dead Zone
+
+A `let` declaration is hoisted to the top of its block, but lives in the **Temporal Dead Zone (TDZ)** from the start of the block until the declaration is reached. Access inside the TDZ throws `ReferenceError`.
+
+```javascript
+console.log(a); // ReferenceError: Cannot access 'a' before initialization
+let a = 10;
+console.log(a); // 10
+
+function foo() {
+  console.log(a); // ReferenceError (inner a shadows the outer one and is in TDZ)
+  let a = 20;
+  console.log(a); // 20
+  // let a = 30; // SyntaxError: 'a' already declared
+}
+```
+
+**Key properties:**
+
+- Block-scoped — lives only inside the `{ ... }` it was declared in. (Unlike `var`, `let` doesn't leak out of `if` / `for` blocks.)
+- Cannot be redeclared in the same block.
+
+## `const` — block-scoped, binding frozen
+
+`const` behaves like `let` (block scope, TDZ) **plus**: the variable must be initialized at declaration, and its binding cannot be reassigned. The *contents* of a mutable object pointed to by a `const` binding can still be modified.
+
+```javascript
+console.log(a); // ReferenceError (TDZ)
+// const a;   // SyntaxError: missing initializer
+const a = 10;
+// a = 20;   // TypeError: assignment to constant variable
+
+const b = [];
+b[0] = 10; // fine — mutating the array
+// b = [10]; // TypeError — reassigning the binding
+```
+
+**Common misconception:** `const` does not make the value immutable — it makes the *binding* immutable. For deep immutability, use `Object.freeze`, or reach for immutable-data libraries.
+
+## Best practice
+
+1. **Default to `const`** — most bindings don't need to change after initialization.
+2. **Use `let`** only where reassignment is actually needed (loop counters, accumulators).
+3. **Don't use `var` in new code.** ES6 made `let`/`const` available everywhere; `var` only remains for extreme legacy-browser support.
+
+**See also:** [`Scope & Closure / 作用域与闭包`](./scope-and-closure.md) for how scope interacts with closures.

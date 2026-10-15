@@ -1,0 +1,180 @@
+## Why pick Next.js over plain React?
+
+**Headline (30s):** Plain React is purely client-side — you ship JavaScript, the browser renders the UI. That's fine for app-like experiences but poor for SEO and first-paint performance. Next.js adds **server-side rendering (SSR)**, **static generation (SSG)**, and **incremental regeneration (ISR)** on top of React, plus file-based routing, API routes, and built-in optimizations (image, font, bundle). It lets you pick the right rendering strategy per page instead of committing the whole app to CSR.
+
+**Why interviewers ask this:** SSR vs SSG vs ISR is a *common* frontend systems-design question. Candidates who can't articulate when each applies struggle to architect performant Next.js apps.
+
+### What Next.js adds over React
+
+- **Server-Side Rendering (SSR)** — HTML generated per request for SEO and fast first paint.
+- **Static Site Generation (SSG)** — pre-built HTML at build time for maximum performance.
+- **Incremental Static Regeneration (ISR)** — SSG + periodic revalidation.
+- **File-based routing** — pages map to file paths, no manual route config.
+- **API routes** — backend endpoints colocated with frontend (`pages/api/` or `app/api/`).
+- **Built-in optimizations** — automatic code splitting, image optimization (`next/image`), font optimization (`next/font`).
+
+---
+
+## SSR, SSG, ISR, CSR — when do you use each?
+
+**Headline (30s):** Pick the rendering strategy per page based on *how fresh the data needs to be* and *who needs to see it*. **CSR** (plain React) — internal apps, no SEO needs. **SSR** — dynamic content that changes per request, must be indexable. **SSG** — content that rarely changes (blogs, docs, marketing). **ISR** — content that updates periodically (e-commerce catalogs, news) — fast like SSG, but refreshes in the background.
+
+### SSR — Server-Side Rendering
+
+HTML generated **per request**. React **hydrates** the client to make it interactive.
+
+```javascript
+export async function getServerSideProps(context) {
+  const res = await fetch(`https://api.example.com/posts`);
+  const posts = await res.json();
+  return { props: { posts } };
+}
+```
+
+**When:** dynamic content that needs SEO — product pages, dashboards with personalized content, anything that changes every request.
+
+**Cost:** server CPU per request. First byte is slower than SSG because the server has to render before responding.
+
+### SSG — Static Site Generation
+
+HTML generated at **build time**. Served as static files from a CDN — the fastest possible delivery.
+
+```javascript
+export async function getStaticProps() {
+  const res = await fetch('https://api.example.com/posts');
+  const posts = await res.json();
+  return { props: { posts } };
+}
+
+export async function getStaticPaths() {
+  const res = await fetch('https://api.example.com/posts');
+  const posts = await res.json();
+  return {
+    paths: posts.map(post => ({ params: { id: post.id.toString() } })),
+    fallback: false
+  };
+}
+```
+
+**When:** content that rarely changes (blogs, docs, marketing pages).
+
+**Cost:** build time scales with number of pages. Stale until the next build.
+
+### ISR — Incremental Static Regeneration
+
+SSG + **on-demand revalidation**. The first visitor after the revalidation window gets the stale cached page; in the background, a fresh version is built and cached for everyone else.
+
+```javascript
+export async function getStaticProps() {
+  const res = await fetch('https://api.example.com/posts');
+  const posts = await res.json();
+  return {
+    props: { posts },
+    revalidate: 60 // at most every 60 seconds
+  };
+}
+```
+
+**When:** content that updates periodically but doesn't need real-time freshness — e-commerce catalogs, news feeds, social feeds.
+
+**Cost:** nearly as fast as SSG, slightly stale windows are possible.
+
+### CSR — Client-Side Rendering (plain React)
+
+Ship a minimal HTML shell + JS bundle; the browser renders everything. Next.js supports this too — just use `useEffect` to fetch.
+
+**When:** internal tools, authenticated dashboards where SEO doesn't matter.
+
+**Cost:** slowest first paint, worst SEO.
+
+### Strategy comparison
+
+| Strategy | Build time | Request time | Freshness | SEO |
+|---|---|---|---|---|
+| CSR | Fast | Slow (JS renders) | Real-time | Poor |
+| SSR | N/A | Moderate (server renders) | Real-time | Good |
+| SSG | Slow | Fast (pre-built) | Stale until rebuild | Good |
+| ISR | Moderate | Fast (cached) | Periodic | Good |
+
+**Rule of thumb:**
+
+- SEO-required, per-request data → SSR.
+- SEO-required, rarely changing → SSG.
+- SEO-required, periodic updates → ISR.
+- No SEO, interactive → CSR.
+
+**Gotcha — mixing strategies within one app:** Next.js lets you choose per page. Your marketing pages can be SSG; your product pages can be ISR; your dashboard can be CSR. Don't commit the whole app to one strategy.
+
+**Note on the App Router (Next.js 13+):** The newer `app/` directory uses **React Server Components** and replaces `getStaticProps` / `getServerSideProps` with default-server-component rendering + `fetch` options for caching. The mental model maps: server components are implicit SSR, `revalidate` replaces ISR, `cache: 'no-store'` forces SSR freshness.
+
+---
+
+## How does Next.js routing work?
+
+**Headline (30s):** Next.js uses **file-based routing** — the directory structure *is* the route table. A file at `pages/about.js` serves `/about`; `pages/posts/[id].js` serves `/posts/123` with `id='123'`; `pages/[...slug].js` catches any nested path. Navigate with `<Link>` for client-side transitions (Next prefetches linked pages in the background).
+
+### File-based routing
+
+```
+pages/
+  index.js          →  /
+  about.js          →  /about
+  posts/[id].js     →  /posts/123
+  [...slug].js      →  /docs/a/b/c  (catch-all)
+```
+
+### Dynamic routes
+
+```jsx
+import { useRouter } from 'next/router';
+
+function Post() {
+  const router = useRouter();
+  const { id } = router.query;
+  return <h1>Post {id}</h1>;
+}
+```
+
+### Navigation
+
+```jsx
+import Link from 'next/link';
+
+<Link href="/posts/1">Read Post</Link>
+
+// Programmatic
+const router = useRouter();
+router.push('/posts/1');
+```
+
+**Prefetching:** `<Link>` prefetches linked pages in the background (only in production). Client-side navigation is instant because the bundle is already there.
+
+**App Router note:** The new `app/` directory uses slightly different conventions — `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx` per route — but the file-based concept is the same.
+
+---
+
+## What are API routes, and when should you use them?
+
+**Headline (30s):** API routes let you define server-side endpoints inside the Next.js project — handy for form submissions, proxying external APIs, and small backend logic without spinning up a separate server. They become serverless functions in production (on Vercel), so they scale automatically but share serverless trade-offs (cold starts, execution limits).
+
+```javascript
+// pages/api/hello.js
+export default function handler(req, res) {
+  if (req.method === 'POST') {
+    // ...
+  }
+  res.status(200).json({ message: 'Hello from Next.js' });
+}
+```
+
+Supports all HTTP methods. Use for:
+
+- **Form handling** — receive `POST`s without a separate backend.
+- **Proxying external APIs** — hide API keys, aggregate multiple calls, work around CORS.
+- **Lightweight backend** — webhooks, auth callbacks, simple CRUD.
+
+**Reach for them when:** you need a small amount of server logic colocated with your frontend. For serious backends (complex business logic, queues, databases at scale), use a dedicated backend service.
+
+**App Router note:** The App Router uses `app/api/*/route.ts` with named HTTP-method exports (`export async function GET(request) {...}`) — the file-based concept is the same, the handler signature is different.
+
+**See also:** [`9.2 React Basics`](./react-basics.md) for the SPA/MPA distinction that SSR/SSG blur, [`7.2 Node.js Fundamentals`](../../engineering-foundations/backend/node-js-fundamentals.md) for serverless cold starts and execution limits that constrain API routes.

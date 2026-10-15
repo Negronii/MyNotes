@@ -1,0 +1,189 @@
+**Reach for this when** you need a quick reference for day-to-day Git — core commands, branching, merge vs. rebase, conflict resolution, and the PR workflow.
+
+**Headline:** Six buckets. **Core commands** (init, clone, add, commit, status, log, diff). **Remote operations** (push, pull, fetch). **Branching** (branch, checkout, switch). **Merge vs. rebase** (merge for shared branches, rebase for local). **Recovery tools** (stash, reset vs. revert, reflog). **PR workflow** (feature branches, clear messages, squash-merge).
+
+## Core commands
+
+| Command | Purpose |
+|---|---|
+| `git init` | Initialize a new repository |
+| `git clone <url>` | Clone a remote repository |
+| `git add <file>` | Stage changes (`git add .` for all) |
+| `git commit -m "msg"` | Commit staged changes |
+| `git status` | Show working tree status |
+| `git log --oneline` | Compact commit history |
+| `git diff` | Unstaged changes (`--staged` for staged) |
+
+## Remote operations
+
+```bash
+git remote add origin <url>
+git push -u origin main        # first push, sets upstream
+git push                       # subsequent pushes
+git pull                       # fetch + merge
+git fetch                      # download without merging
+```
+
+`git pull` = `git fetch` + `git merge`. **Reach for `git fetch`** when you want to inspect remote changes before integrating them; **reach for `git pull`** for the common "get me up to date" case.
+
+## Branching
+
+```bash
+git branch feature/login       # create branch
+git checkout feature/login     # switch to branch
+git checkout -b feature/login  # create + switch (shorthand)
+git switch -c feature/login    # modern alternative to checkout -b
+git branch -d feature/login    # delete branch (safe — prevents deleting unmerged)
+git branch -D feature/login    # force delete
+```
+
+### Branching strategies
+
+**Feature branches:** each feature/bugfix gets its own branch off `main`. Merged back via PR. Dominant in modern trunk-based development.
+
+**Git Flow** (simplified):
+
+- `main` — production-ready code.
+- `develop` — integration branch.
+- `feature/*` — new features branch off `develop`.
+- `hotfix/*` — urgent fixes branch off `main`.
+
+**When to reach for Git Flow** — long release cycles, heavy QA gates. **When to avoid** — teams doing CI/CD with continuous deploys; feature-branch-on-`main` is simpler.
+
+## Merge vs. rebase
+
+### `git merge`
+
+Combines branches by creating a **merge commit** that ties the two histories together. Non-destructive — original branch history is preserved.
+
+```bash
+git checkout main
+git merge feature/login
+```
+
+```
+A---B---C  (main)
+     \       \
+      D---E   M  (merge commit)
+```
+
+### `git rebase`
+
+Replays commits from one branch **on top of** another, creating a linear history. **Rewrites commit hashes.**
+
+```bash
+git checkout feature/login
+git rebase main
+```
+
+```
+A---B---C  (main)
+         \
+          D'---E'  (feature/login, rebased)
+```
+
+### When to use each
+
+| Scenario | Use |
+|---|---|
+| Merging a feature branch into `main` via PR | `merge` (preserves context) |
+| Updating a feature branch with latest `main` | `rebase` (keeps history clean) |
+| Shared/public branches | `merge` (never rebase shared branches) |
+| Local-only branches | `rebase` (cleaner log) |
+
+**Golden rule:** never rebase commits that have been pushed and shared with others. Rebasing rewrites history, and anyone with the old history will get a painful conflict when they try to pull.
+
+## Resolving merge conflicts
+
+When Git can't auto-merge, it marks conflicts in the file:
+
+```
+<<<<<<< HEAD
+const timeout = 3000;
+=======
+const timeout = 5000;
+>>>>>>> feature/login
+```
+
+Steps:
+
+1. Open conflicted files; choose the correct code (or combine both).
+2. Remove conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+3. `git add <file>` to mark as resolved.
+4. `git commit` (or `git rebase --continue` if rebasing).
+
+## Useful commands
+
+### `git stash`
+
+Temporarily shelves uncommitted changes — useful when you need to switch branches mid-change.
+
+```bash
+git stash                  # stash changes
+git stash list             # see all stashes
+git stash pop              # apply most recent and remove
+git stash apply            # apply without removing
+git stash drop             # discard most recent
+```
+
+### `git cherry-pick`
+
+Apply a specific commit from another branch onto the current branch.
+
+```bash
+git cherry-pick <commit-hash>
+```
+
+### `git reset` vs `git revert`
+
+| | `git reset` | `git revert` |
+|---|---|---|
+| **What it does** | Moves HEAD backward, discarding commits | Creates a new commit that undoes a previous one |
+| **History** | Rewrites history (destructive) | Preserves history (safe) |
+| **Use case** | Undo local, unpushed commits | Undo a commit that's already pushed |
+
+```bash
+git reset --soft HEAD~1    # undo commit, keep changes staged
+git reset --mixed HEAD~1   # undo commit, keep changes unstaged (default)
+git reset --hard HEAD~1    # undo commit, discard all changes
+
+git revert <commit-hash>   # create a new "undo" commit
+```
+
+**Gotcha — `git reset --hard` loses work.** It deletes your uncommitted changes. Combine with `git reflog` to recover if you slipped.
+
+### `git reflog`
+
+Shows a log of all HEAD movements — invaluable for recovering from accidental `reset --hard` or deleted branches.
+
+```bash
+git reflog
+git checkout <lost-commit-hash>
+```
+
+## PR / code review workflow
+
+1. Create a feature branch from `main`.
+2. Make commits with clear, descriptive messages.
+3. Push the branch and open a Pull Request.
+4. Reviewers comment, request changes, or approve.
+5. Address feedback with **new commits** (avoid force-pushing during review — it invalidates review state).
+6. Squash-merge or merge into `main`.
+7. Delete the feature branch.
+
+### Commit message conventions
+
+Conventional Commits format — widely adopted, friendly to auto-generated changelogs.
+
+```
+type(scope): short description
+
+feat(auth): add JWT token refresh
+fix(api): handle 404 in user endpoint
+refactor(utils): extract date formatting
+docs(readme): update setup instructions
+```
+
+**Common types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`.
+
+**See also:** [`14.2 Agile and Scrum`](../teamwork/agile-and-scrum.md) for how PR review fits into sprint work, [`15.1 Frontend Testing`](../../frontend/testing/frontend-testing.md) for CI test setup on PRs.

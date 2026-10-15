@@ -1,0 +1,174 @@
+Reach for this when you need the API reference for `Map` or `Set` — what methods they expose, how to iterate them, and when to pick them over plain objects and arrays.
+
+## When to use `Map` vs plain object
+
+- **`Map`** — keys of any type (including objects and functions), preserved insertion order, `.size` property, direct iteration with `for...of`. Slightly slower than plain objects for string-only keys but far more predictable.
+- **Object** — only string and symbol keys, shape-optimized by the JS engine, but prototype pollution and the `"[object Object]"` coercion trap (see [`3.2 JavaScript Types`](./javascript-types.md)) make it risky as a general-purpose dictionary.
+
+Rule of thumb: **if keys are anything other than fixed identifiers, use `Map`**.
+
+## When to use `Set` vs array
+
+- **`Set`** — O(1) uniqueness checks, automatic dedupe on insert, `.has()` is constant time.
+- **Array** — ordered, index-addressable, rich iteration methods (`map`, `filter`, `reduce`).
+
+Rule of thumb: **if the primary operation is "is this value present?", use `Set`**. If you need order or positional access, use an array.
+
+---
+
+## `Map`
+
+### Creating a Map
+
+```javascript
+let myMap = new Map();
+let fromPairs = new Map([['a', 1], ['b', 2]]);
+```
+
+### Core methods
+
+| Method | What it does |
+|---|---|
+| `set(key, value)` | add or update an entry |
+| `get(key)` | return the value, or `undefined` |
+| `has(key)` | boolean check |
+| `delete(key)` | remove an entry |
+| `clear()` | empty the map |
+| `size` | number of entries (property, not method) |
+
+```javascript
+myMap.set('key1', 'value1');
+myMap.set('key2', 'value2');
+myMap.set(3, 'value3'); // any type of key
+
+myMap.get('key1');  // 'value1'
+myMap.has('key1');  // true
+myMap.delete('key2');
+myMap.clear();
+```
+
+### Traversing a Map
+
+```javascript
+// Entry iteration (for...of with destructuring)
+for (const [key, value] of myMap) {
+  console.log(key, value);
+}
+
+// forEach — value, key, map (note the unusual order)
+myMap.forEach((value, key) => {
+  console.log(key, value);
+});
+
+// Keys only
+for (const key of myMap.keys()) { console.log(key); }
+
+// Values only
+for (const value of myMap.values()) { console.log(value); }
+
+// Entries (same as default iteration)
+for (const [key, value] of myMap.entries()) { console.log(key, value); }
+```
+
+### Example end-to-end
+
+```javascript
+let myMap = new Map();
+
+myMap.set('name', 'Alice');
+myMap.set('age', 30);
+myMap.set('job', 'developer');
+
+myMap.get('name');   // 'Alice'
+myMap.has('job');    // true
+myMap.delete('age');
+
+myMap.forEach((value, key) => {
+  console.log(`${key}: ${value}`);
+});
+
+myMap.clear();
+console.log(myMap.size); // 0
+```
+
+---
+
+## `Set`
+
+A `Set` holds unique values — assigning a duplicate is a no-op. Keys and values are the same thing.
+
+### Core methods
+
+| Method | What it does |
+|---|---|
+| `add(value)` | insert a value (no-op if duplicate) |
+| `has(value)` | boolean check |
+| `delete(value)` | remove a value |
+| `clear()` | empty the set |
+| `size` | number of entries |
+
+```javascript
+const mySet = new Set();
+mySet.add(1);
+mySet.add(5);
+mySet.add('some text');
+
+mySet.has(1);  // true
+mySet.has(3);  // false
+mySet.delete(5);
+mySet.clear();
+```
+
+### Traversing a Set
+
+```javascript
+// for...of yields values in insertion order
+for (const value of mySet) { console.log(value); }
+
+// forEach — value, value, set (value given twice for API consistency with Map)
+mySet.forEach(value => console.log(value));
+
+// values() and keys() return the same iterator
+for (const value of mySet.values()) { console.log(value); }
+
+// entries() yields [value, value] for Map API parity
+for (const [v1, v2] of mySet.entries()) { console.log(v1, v2); }
+```
+
+### Example end-to-end
+
+```javascript
+const mySet = new Set([1, 2, 3, 4]);
+
+mySet.add(5);
+mySet.add(5); // ignored — already present
+
+mySet.has(1);  // true
+mySet.has(6);  // false
+mySet.delete(3);
+
+mySet.forEach(v => console.log(v)); // 1, 2, 4, 5
+
+mySet.clear();
+console.log(mySet.size); // 0
+```
+
+## Common idioms
+
+**Remove duplicates from an array:**
+
+```javascript
+const unique = [...new Set([1, 2, 2, 3, 3, 3])];
+// [1, 2, 3]
+```
+
+**Fast set-difference:**
+
+```javascript
+const a = new Set([1, 2, 3]);
+const b = new Set([2, 3, 4]);
+const only = [...a].filter(x => !b.has(x));
+// [1]
+```
+
+**See also:** [`3.4 Memory in JS, WeakMap and WeakSet`](./javascript-memory-weakmap-and-weakset.md) for the garbage-collection-aware variants (`WeakMap` / `WeakSet`), [`3.2 Javascript Types`](./javascript-types.md) for why plain objects are unreliable as dictionaries.

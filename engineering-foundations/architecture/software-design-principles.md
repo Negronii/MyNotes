@@ -1,0 +1,110 @@
+A bundle of interview questions on the design principles that separate maintainable frontend code from the kind that rots.
+
+# What are the SOLID principles, and what does each mean?
+
+**Headline (30s):** Five principles — **S**ingle responsibility (one reason to change), **O**pen/closed (extend via new code, not modification), **L**iskov substitution (subtypes work as base types), **I**nterface segregation (many small interfaces beat one fat one), **D**ependency inversion (depend on abstractions, not concretes). Together they push you toward small, decoupled pieces that are easy to change without breaking the rest of the system.
+
+## Single Responsibility Principle (SRP)
+
+A class or module should have only one reason to change.
+
+```javascript
+// Violates SRP: handles both data fetching and rendering
+class UserPage {
+  fetchUser() { /* ... */ }
+  renderUser() { /* ... */ }
+}
+
+// Follows SRP: separate concerns
+class UserService { fetchUser() { /* ... */ } }
+class UserView    { render(user) { /* ... */ } }
+```
+
+**Frontend example:** A React component that fetches data, transforms it, and renders UI violates SRP. Split into a data hook + a dumb presentational component.
+
+## Open/Closed Principle (OCP)
+
+Open for extension, closed for modification. Add behavior by writing new code, not changing existing code.
+
+```javascript
+class ShippingCalculator {
+  constructor(strategy) { this.strategy = strategy; }
+  calculate(pkg) { return this.strategy.calculate(pkg); }
+}
+
+class ExpressShipping  { calculate(pkg) { return pkg.weight * 10; } }
+class StandardShipping { calculate(pkg) { return pkg.weight * 5; } }
+```
+
+New shipping types? Add a new strategy class — no change to `ShippingCalculator`.
+
+## Liskov Substitution Principle (LSP)
+
+Subtypes must be substitutable for their base types without breaking correctness. A classic violation: `Bird` has `fly()`, `Penguin extends Bird` throws on `fly()` — `Penguin` is not a proper subtype of `Bird` in that design. The fix is usually to rethink the hierarchy (composition, or narrower base classes).
+
+## Interface Segregation Principle (ISP)
+
+Clients shouldn't be forced to depend on methods they don't use. Prefer many small, focused interfaces over one giant one. In TypeScript, this often means splitting a 20-field type into several 3–5 field types composed via intersection.
+
+## Dependency Inversion Principle (DIP)
+
+High-level modules depend on abstractions, not concrete implementations.
+
+```javascript
+class NotificationService {
+  constructor(sender) { this.sender = sender; }
+  notify(message) { this.sender.send(message); }
+}
+
+class EmailSender { send(msg) { /* send email */ } }
+class SmsSender   { send(msg) { /* send SMS   */ } }
+
+new NotificationService(new EmailSender());
+new NotificationService(new SmsSender());
+```
+
+**DIP is the foundation of dependency injection** — testable code, swappable implementations, no hard-coded dependencies.
+
+---
+
+# What are DRY, KISS, and YAGNI?
+
+**Headline:** Three pragmatic rules. **DRY** — every piece of knowledge has one canonical representation, duplication is a smell. **KISS** — simpler is better than clever. **YAGNI** — don't build it until you actually need it.
+
+## DRY (Don't Repeat Yourself)
+
+Extract repeated logic into shared functions, hooks, or modules. But be careful — coupling is a cost. Sometimes two functions that *look* similar should stay separate because they represent different concepts that happen to share syntax today. **Premature DRY creates false abstractions** that are harder to maintain than the duplication they replaced.
+
+## KISS (Keep It Simple, Stupid)
+
+Prefer the simplest solution that works. Complexity should be justified by concrete requirements, not anticipated future needs. A common frontend failure: pulling in a state-management library for a page that needs three pieces of local state.
+
+## YAGNI (You Aren't Gonna Need It)
+
+Don't implement functionality until it's actually needed. Premature abstraction adds maintenance burden without delivering value. The framework you're planning to swap to in six months? Build for what you need today; refactor when the day comes.
+
+**How to apply all three:** Write the obvious, simple code first. When you see a real duplication pattern (three or more, different places), extract. When you need flexibility (not before), add the seam.
+
+---
+
+# What are common frontend architecture patterns?
+
+**Headline:** Three patterns dominate modern frontends. **Component-based architecture** — UIs as trees of self-contained components (the React / Vue model). **Unidirectional data flow (Flux)** — data flows one way, making state changes predictable (Redux, Zustand, Pinia). **Micro-frontends** — split the app into independently deployable pieces, trading complexity for team autonomy.
+
+## Component-based architecture
+
+Modern frameworks organize UIs as trees of reusable, self-contained components. Each component owns its state, rendering logic, and (optionally) side effects. Benefits: reusability, isolation, clear responsibility boundaries.
+
+## Flux / unidirectional data flow
+
+Data flows one way: **Action → Dispatcher → Store → View**. The view can dispatch new actions, but cannot mutate the store directly. Predictability makes debugging and testing easier.
+
+Implementations: Redux, Zustand, MobX (variant), Pinia. See [`9.3 Advanced React`](../../frontend/frameworks/advanced-react.md) for context + patterns that replace Redux in simpler apps.
+
+## Micro-frontends
+
+Splitting a large frontend into independently deployable apps, each owned by a different team. Common approaches: module federation (Webpack 5), iframes, web components, and build-time composition.
+
+**When to reach for it:** large orgs with multiple teams that need deployment autonomy. **When to avoid it:** most apps. The infrastructure complexity, cross-app consistency issues, and runtime overhead almost always dwarf the benefits until you're at significant org scale.
+
+**See also:** [`12.2 Design Patterns in Practice`](./design-patterns-in-practice.md) for the GoF patterns that implement these principles.

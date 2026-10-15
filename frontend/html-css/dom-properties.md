@@ -1,0 +1,108 @@
+Reach for this when you need to measure an element in JavaScript and can't remember which property includes which layers of the box model. These are all geometry properties — reading them forces a layout flush, so use sparingly in tight loops (see [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for layout thrashing).
+
+## Quick comparison
+
+```text
+┌─────────────────────────── margin ───────────────┐
+│ ┌───────────────────── border ────────────────┐  │
+│ │ ┌────────────── padding ────────────────┐   │  │
+│ │ │ ┌────────── content ────────────────┐ │   │  │
+│ │ │ │                                   │ │   │  │
+│ │ │ │                                   │ │   │  │
+│ │ │ └───────────────────────────────────┘ │   │  │
+│ │ └───────────────────────────────────────┘   │  │
+│ └─────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────┘
+
+offsetHeight  = border + padding + content (+ scrollbar)   — total visible size
+clientHeight  = padding + content                          — inside space
+scrollHeight  = padding + FULL content (incl. overflowed)  — total scrollable size
+```
+
+| Property | Includes | Excludes | Writable? |
+|---|---|---|---|
+| `offsetHeight` / `offsetWidth` | content, padding, border, scrollbar | margin | no |
+| `clientHeight` / `clientWidth` | content, padding | border, scrollbar, margin | no |
+| `scrollHeight` / `scrollWidth` | content (including overflowed), padding | border, scrollbar, margin | no |
+| `scrollTop` / `scrollLeft` | current scroll offset | — | **yes** |
+| `offsetTop` / `offsetLeft` | distance from element border to `offsetParent`'s inner border | — | no |
+| `getBoundingClientRect()` → `.width` / `.height` | same as `offsetWidth` / `offsetHeight` (viewport-relative) | margin | no |
+
+## `offsetHeight` / `offsetWidth`
+
+Total visible size including padding, border, and rendered scrollbar — excludes margin.
+
+```text
+offsetHeight = content height + padding-top + padding-bottom + border-top + border-bottom (+ scrollbar)
+```
+
+## `clientHeight` / `clientWidth`
+
+Visible content area plus padding — excludes border, scrollbar, and margin. This is the space actually available *for* content.
+
+```text
+clientHeight = content height + padding-top + padding-bottom
+```
+
+## `scrollHeight` / `scrollWidth`
+
+Full size of the element's content including anything hidden by overflow. When content fits inside, `scrollHeight === clientHeight`.
+
+```text
+scrollHeight = total content height + padding (includes overflow beyond viewport)
+```
+
+## `scrollTop` / `scrollLeft`
+
+Pixels the content has been scrolled vertically / horizontally. **Writable** — set it to control scroll programmatically.
+
+```javascript
+const el = document.getElementById('container');
+console.log(el.scrollTop);
+el.scrollTop = 0;  // scroll to top
+```
+
+## `offsetTop` / `offsetLeft`
+
+Distance from the element's outer border to its `offsetParent`'s inner border. `offsetParent` is the nearest positioned ancestor (`position` other than `static`), defaulting to `<body>` if none exists.
+
+## `getBoundingClientRect()`
+
+Returns a `DOMRect` with the element's size and position **relative to the viewport**. The go-to method for scroll-aware positioning (tooltips, visibility checks, drag handles).
+
+```javascript
+const rect = element.getBoundingClientRect();
+// rect.top     - distance from viewport top to element top
+// rect.bottom  - distance from viewport top to element bottom
+// rect.left    - distance from viewport left to element left
+// rect.right   - distance from viewport left to element right
+// rect.width   - element width (including border)
+// rect.height  - element height (including border)
+```
+
+**Common pattern — checking if an element is in the viewport:**
+
+```javascript
+function isInViewport(element) {
+  const rect = element.getBoundingClientRect();
+  return (
+    rect.top < window.innerHeight &&
+    rect.bottom > 0 &&
+    rect.left < window.innerWidth &&
+    rect.right > 0
+  );
+}
+```
+
+For real visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` — it doesn't force layout. See [`5.3 Image Lazy Loading`](../browser-apis/image-lazy-loading.md).
+
+## When to reach for which
+
+- Need **total rendered size** including border? → `offsetHeight` / `offsetWidth` or `getBoundingClientRect().height/width`.
+- Need **inner content area** (for sizing children)? → `clientHeight` / `clientWidth`.
+- Need to know if **overflow exists**? → compare `scrollHeight > clientHeight`.
+- Need **current scroll position**, or to **scroll programmatically**? → `scrollTop` / `scrollLeft`.
+- Need **viewport-relative position** (for tooltips, drag, scroll effects)? → `getBoundingClientRect()`.
+- Need **position within parent** (for layout math)? → `offsetTop` / `offsetLeft` (watch out: relative to `offsetParent`, not necessarily the direct parent).
+
+**See also:** [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) on layout thrashing when reading these in loops, [`5.3 Image Lazy Loading`](../browser-apis/image-lazy-loading.md) for `IntersectionObserver`-based visibility.

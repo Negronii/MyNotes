@@ -1,0 +1,304 @@
+## Why did JavaScript evolve from callbacks to Promises to `async/await`?
+
+**Headline (30s):** JavaScript is single-threaded — it can't block while waiting for I/O, so every async API has to defer completion. The three generations of async APIs (callbacks → Promises → `async/await`) are all attempts to solve the same problem: *how to express "do this, then that, then that" without creating unreadable spaghetti*. Each generation is strictly more expressive than the last; `async/await` is today's answer.
+
+**Why interviewers ask this:** Async handling is the #1 source of production bugs in frontend code. Interviewers want to see that you can reason about control flow, error propagation, and concurrency — not just memorize `.then()`.
+
+---
+
+## Callbacks — the original async pattern
+
+A callback is a function you pass to another function to be invoked when an async operation finishes.
+
+```javascript
+function fetchData(url, callback) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', url);
+  xhr.onload = () => callback(null, xhr.responseText);
+  xhr.onerror = () => callback(new Error('Request failed'));
+  xhr.send();
+}
+```
+
+### Why callbacks hurt: callback hell
+
+When async operations depend on each other, callbacks nest:
+
+```javascript
+getUser(userId, (user) => {
+  getOrders(user.id, (orders) => {
+    getOrderDetails(orders[0].id, (details) => {
+      // indent continues forever...
+    });
+  });
+});
+```
+
+Three real problems: (1) hard to read, (2) error handling must be repeated at every level, (3) no way to compose (e.g., "run these in parallel, wait for all"). Promises were introduced to fix all three.
+
+---
+
+## Promises — the composable abstraction
+
+**Headline:** A Promise is an object representing a future value — it's in one of three states (`pending`, `fulfilled`, `rejected`), and once settled it never changes. Chaining via `.then()` flattens nested callbacks and gives you a single error channel via `.catch()`.
+
+### States
+
+- **Pending** — initial; the operation is still running.
+- **Fulfilled** — completed successfully, with a value.
+- **Rejected** — failed, with a reason (usually an Error).
+
+Once fulfilled or rejected, the state is locked. A rejected promise cannot later resolve; a fulfilled one cannot later fail.
+
+### Creating and consuming a Promise
+
+```javascript
+const promise = new Promise((resolve, reject) => {
+  setTimeout(() => resolve('Success!'), 1000);
+});
+
+promise.then(value => console.log(value)); // 'Success!' after 1s
+```
+
+### Prototype methods
+
+- **`.then(onFulfilled, onRejected)`** — register handlers. Returns a new promise, so chains compose.
+- **`.catch(onRejected)`** — shorthand for `.then(undefined, onRejected)`.
+- **`.finally(onSettled)`** — runs no matter what; useful for cleanup (hide loading spinner, release resources).
+
+```javascript
+fetchData('/api/users')
+  .then(text => JSON.parse(text))
+  .then(users => console.log(users))
+  .catch(err => console.error(err))
+  .finally(() => console.log('Done'));
+```
+
+### Static methods (combinators)
+
+Summary: see [`3.8 Modern JavaScript Features`](./modern-javascript-features.md) for the comparison table. Short version:
+
+- **`Promise.all`** — parallel, fails fast.
+- **`Promise.allSettled`** — parallel, never fails; returns every outcome.
+- **`Promise.any`** — first success wins.
+- **`Promise.race`** — first settlement wins (success or failure).
+
+```javascript
+const [users, posts, comments] = await Promise.all([
+  fetch('/api/users').then(r => r.json()),
+  fetch('/api/posts').then(r => r.json()),
+  fetch('/api/comments').then(r => r.json())
+]);
+```
+
+---
+
+## `async` / `await` — syntactic sugar that looks synchronous
+
+**Headline:** An `async` function automatically returns a Promise. `await` pauses the function body until the Promise settles, then resumes with the value (or throws if rejected). This lets you write sequential async code using `try/catch` — no callback nesting, no `.then()` chains.
+
+```javascript
+async function loadUser(userId) {
+  try {
+    const user = await getUser(userId);
+    const orders = await getOrders(user.id);
+    const details = await getOrderDetails(orders[0].id);
+    return details;
+  } catch (err) {
+    console.error('Failed:', err);
+  }
+}
+```
+
+Compare with the callback hell example above — same logic, no nesting, errors flow to a single `catch`.
+
+### Sequential vs. parallel with `await` — the trap
+
+`await` pauses the function. If you chain `await`s for independent operations, you serialize them by accident:
+
+```javascript
+// Bad: sequential when they could be parallel
+const users = await fetch('/api/users');
+const posts = await fetch('/api/posts');
+// Total time = users + posts
+
+// Good: kick both off, then await
+const [users, posts] = await Promise.all([
+  fetch('/api/users'),
+  fetch('/api/posts')
+]);
+// Total time = max(users, posts)
+```
+
+**Rule of thumb:** If two `await`s don't depend on each other's results, you probably want `Promise.all`.
+
+### `for await...of`
+
+Iterates over an async iterable, awaiting each value. Order of processing is guaranteed, but promises can be created eagerly and awaited lazily:
+
+```javascript
+async function processAll() {
+  const p1 = fetch('/api/1');
+  const p2 = fetch('/api/2');
+  const p3 = fetch('/api/3');
+
+  for await (const response of [p1, p2, p3]) {
+    const data = await response.json();
+    console.log(data);
+  }
+}
+```
+
+The three fetches start concurrently (they're created before the loop). `for await` only controls when each *result* is processed, not when each promise starts.
+
+---
+
+## Microtasks: why this logs `0 2 1 3`
+
+**Headline:** Every `.then()` callback is scheduled as a *microtask*. The event loop drains the entire microtask queue between tasks (and between rendering frames). When two promise chains exist in parallel, their `.then()` callbacks interleave round-robin.
+
+```javascript
+Promise.resolve().then(() => console.log(0)).then(() => console.log(1));
+Promise.resolve().then(() => console.log(2)).then(() => console.log(3));
+// 0 2 1 3
+```
+
+Walk-through: both chains' first `.then()` are queued right away. After `0` runs, its second `.then()` gets queued — but chain 2's first `.then()` is already ahead of it.
+
+### Returning a Promise from `.then()` adds ticks
+
+When a `.then()` callback returns another Promise, the chain waits an extra microtask tick for it to unwrap:
+
+```javascript
+Promise.resolve().then(() => {
+  console.log(0);
+  return Promise.resolve(4);
+}).then(res => console.log(res));
+
+Promise.resolve().then(() => console.log(1))
+                 .then(() => console.log(2))
+                 .then(() => console.log(3));
+// 0 1 2 3 4
+```
+
+The extra hop lets chains without inner Promises "catch up" two ticks.
+
+**See also:** [`7.1 Event Loop`](../runtime/event-loop.md) for the full microtask / macrotask model.
+
+---
+
+## Function patterns: currying
+
+Currying transforms `fn(a, b, c)` into `fn(a)(b)(c)`. Useful for partial application, reusable specialized functions, and functional composition.
+
+```javascript
+function curry(fn) {
+  return function curried(...args) {
+    if (args.length >= fn.length) {
+      return fn.apply(this, args);
+    }
+    return function (...next) {
+      return curried.apply(this, args.concat(next));
+    };
+  };
+}
+
+const sum = (a, b, c) => a + b + c;
+const curriedSum = curry(sum);
+curriedSum(1)(2)(3);    // 6
+curriedSum(1, 2)(3);    // 6
+curriedSum(1)(2, 3);    // 6
+```
+
+Uses: configuration helpers (`http.get(headers)(url)`), event handler factories, and building composition pipelines (Ramda, lodash/fp).
+
+---
+
+## Interview-favorite: implement `LazyMan` (chainable async task queue)
+
+**Headline:** Build a chainable API where `eat` / `sleep` queue actions and run in order. The trick: queue a task list inside the constructor, defer execution with `setTimeout(0)` so the entire chain is built first, and give each task responsibility for calling `next()` when it's done.
+
+```javascript
+class LazyMan {
+  constructor(name) {
+    this.name = name;
+    this.taskList = [];
+    setTimeout(() => this.next(), 0);
+  }
+
+  eat(food) {
+    this.taskList.push(() => {
+      console.log(`eat ${food}`);
+      this.next();
+    });
+    return this;
+  }
+
+  sleep(time) {
+    this.taskList.push(() => {
+      setTimeout(() => {
+        console.log(`wake up after ${time}ms`);
+        this.next();
+      }, time);
+    });
+    return this;
+  }
+
+  next() {
+    const task = this.taskList.shift();
+    task && task();
+  }
+}
+
+new LazyMan('ronron').eat('apple').sleep(1000).eat('banana');
+// eat apple → wake up after 1000ms → eat banana
+```
+
+Key ideas:
+
+- **Chainable API** — each method returns `this`.
+- **Deferred start** — `setTimeout(0)` in the constructor makes sure `.eat().sleep().eat()` finish pushing before `next()` runs.
+- **Sequential async flow** — each task calls `next()` only when it's truly done; async tasks (like `sleep`) call it inside their own `setTimeout`.
+
+---
+
+## Arrow functions: four things they can't do
+
+Arrow functions are concise and lexically bind `this`, but they have real limits:
+
+1. **No own `this`** — they inherit from the enclosing scope. Unsuitable as object methods when you want `this` to be the object.
+
+    ```javascript
+    const obj = {
+      name: 'Alice',
+      greet: () => console.log(this.name) // `this` is NOT obj
+    };
+    ```
+
+2. **No `arguments` object** — use rest parameters instead: `(...args) => ...`.
+
+3. **Cannot be used with `new`** — throws `TypeError`.
+
+4. **Not suitable as prototype methods** — same problem as (1); `this` won't be the instance.
+
+---
+
+## Classic gotcha: `['1', '2', '3'].map(parseInt)`
+
+**Headline:** Result is `[1, NaN, NaN]`, not `[1, 2, 3]`. Reason: `map` passes three arguments `(value, index, array)` to the callback, and `parseInt` accepts `(string, radix)` — so it becomes `parseInt('2', 1)` (radix 1 is invalid) and `parseInt('3', 2)` (`'3'` isn't a binary digit).
+
+```javascript
+['1', '2', '3'].map(parseInt);
+// parseInt('1', 0) → 1     (radix 0 defaults to base 10)
+// parseInt('2', 1) → NaN   (radix 1 is invalid)
+// parseInt('3', 2) → NaN   ('3' is not a binary digit)
+// [1, NaN, NaN]
+
+// Fix:
+['1', '2', '3'].map(s => parseInt(s, 10)); // [1, 2, 3]
+['1', '2', '3'].map(Number);               // [1, 2, 3]
+```
+
+**Gotcha — why this matters:** Any time you pass a unary-argument function to `.map`/`.forEach`/`.filter` and the function actually accepts a second argument, you can hit this. Always wrap with an arrow if the callback shape doesn't match.
+
+**See also:** [`4.5 Error Handling`](./error-handling.md) for error handling patterns with Promises and async/await, [`3.8 Modern JavaScript Features`](./modern-javascript-features.md) for Promise combinator comparison, [`7.1 Event Loop`](../runtime/event-loop.md) for the microtask scheduling model.
