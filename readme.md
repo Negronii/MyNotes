@@ -22,7 +22,7 @@ The first deep-review batch covers four AI/agent notes and one sample each from 
 
 The second batch covers [RAG](ai-engineering/rag/rag-architecture-and-implementation.md), [LLM evaluation](ai-engineering/evaluation/llm-evaluation-methods.md), and [production safety](ai-engineering/safety/ai-safety-in-production.md). These three notes have received full-text review, key source checks, bilingual revision, and final content review. See the [RAG, evaluation, and production safety audit / RAG、评估与生产安全审计](maintenance/ai-quality-audit.md) for its scope and validation limits. Together, the two earlier batches reviewed nine of the 62-note baseline. The [review map / 面试复习地图](review/index.md) links to selected interview topics.
 
-All 36 active Frontend notes have completed content review. The broader review remains in progress: 70 of the 116 substantive original notes in its fixed scope have been accepted (53 active and 17 archived). All three new foundations notes have also passed review and are tracked separately from those 116 originals. See the [full knowledge review audit / 全库知识审查](maintenance/knowledge-review-audit.md) for accepted work and checks. This is not a completion claim for the broader scope.
+All 36 active Frontend notes have completed content review. The broader review remains in progress: 77 of the 116 substantive original notes in its fixed scope have been accepted (53 active and 24 archived). All three new foundations notes have also passed review and are tracked separately from those 116 originals. See the [full knowledge review audit / 全库知识审查](maintenance/knowledge-review-audit.md) for accepted work and checks. This is not a completion claim for the broader scope.
 
 ## Continuous-reading documents / 连续阅读稿
 

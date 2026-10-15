@@ -5,7 +5,7 @@ These source packs are preserved for reference and later review. Their placement
 ## Preserved packs / 保留材料
 
 - [`ai/`](ai/design-agent-prompts-tools/SKILL.md) — AI source snapshots, prompt collections, and skill material; preserved as a complete pack.
-- [`front-end/`](front-end/0-1_Learning_Notes/react_javascript/readme.md) — earlier frontend learning notes and interview collection; retained without content consolidation.
+- [`front-end/`](front-end/0-1_Learning_Notes/react_javascript/readme.md) — earlier frontend learning notes and interview collection. Selected course references include [Next.js App Router data fetching](<front-end/0-1_Learning_Notes/next.js/readme.md>), [React with JavaScript](<front-end/0-1_Learning_Notes/react_javascript/readme.md>), [React with TypeScript](<front-end/0-1_Learning_Notes/react_typescript/readme.md>), [TypeScript Map](<front-end/0-1_Learning_Notes/Typescript/map.md>), [Math](<front-end/0-1_Learning_Notes/Typescript/math.md>), [Promises](<front-end/0-1_Learning_Notes/Typescript/promise.md>), and [String](<front-end/0-1_Learning_Notes/Typescript/string.md>); the material remains in the archive.
 - [`mobile/`](mobile/SwiftUI/readme.md) — Swift and SwiftUI notes.
 - [`machine-learning/`](machine-learning/machine-learning.md) — machine-learning study notes.
 - [`Quantitative Trading/`](Quantitative%20Trading/notes.md) — quantitative-trading notes.
