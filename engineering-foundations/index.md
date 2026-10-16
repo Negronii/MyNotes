@@ -11,6 +11,7 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 ### Operating systems / 操作系统
 
 - [Processes, Threads, and Concurrency / 进程、线程与并发](operating-systems/processes-threads-and-concurrency.md)
+- [Memory Hierarchy and Data Locality / 内存层次与数据局部性](operating-systems/memory-hierarchy-and-data-locality.md)
 
 ### Databases / 数据库
 

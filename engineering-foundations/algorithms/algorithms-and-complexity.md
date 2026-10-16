@@ -4,6 +4,8 @@ Use this reference for common algorithmic patterns. The code states its input as
 
 先根据输入约束和不变量选择算法，再用时间与空间复杂度评估输入规模增长带来的成本；复杂度描述增长趋势，不等于实际耗时。
 
+Big-O leaves out cache locality, memory bandwidth, and dependent loads. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](../operating-systems/memory-hierarchy-and-data-locality.md) for the hardware costs that can change elapsed time without changing an operation's asymptotic bound.
+
 ## Dynamic programming
 
 **动态规划 / Dynamic programming** stores results for overlapping subproblems. Top-down memoization follows the recursive definition; bottom-up iteration computes states in dependency order and can often retain only the state still needed.
