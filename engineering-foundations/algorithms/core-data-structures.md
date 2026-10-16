@@ -48,6 +48,8 @@ function kthSmallest(root, k) {
 
 A balanced search tree gives logarithmic operations by keeping height logarithmic. If insertions produce a chain, those operations degrade to linear time. Array access remains fast by index, while inserting into the middle shifts later elements.
 
+These bounds do not capture cache locality or dependency chains. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](../operating-systems/memory-hierarchy-and-data-locality.md) for why contiguous scans can outperform pointer-based traversal and when a known-node list update is actually O(1).
+
 ---
 
 ## Self-balancing trees
