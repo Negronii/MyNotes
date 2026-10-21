@@ -1,6 +1,6 @@
-# Interview Review / 面试复习入口
+# Knowledge Navigator / 知识导航
 
-This map links to the canonical notes for an interview route through AI applications and agents, then frontend/full-stack foundations. Read the linked notes for the explanations; this page does not duplicate their answers.
+This map links to the canonical notes for learning and knowledge lookup across AI applications and agents, then frontend/full-stack foundations. Read the linked notes for the explanations; this page does not duplicate their answers.
 
 ## AI applications and agents / AI 应用与 Agent
 

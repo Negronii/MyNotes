@@ -4,7 +4,7 @@ A Markdown knowledge base for AI engineering, frontend, and shared engineering f
 
 ## Start here / 从这里开始
 
-- [Interview review map / 面试复习地图](review/index.md) — a short route through selected AI/agent, frontend, and networking topics.
+- [Knowledge Navigator / 知识导航](review/index.md) — a short learning and reference route through selected AI/agent, frontend, and networking topics.
 - [AI engineering topics / AI 工程主题](ai-engineering/index.md)
 - [Frontend topics / 前端主题](frontend/index.md)
 - [Engineering foundations topics / 工程基础主题](engineering-foundations/index.md)
