@@ -2,6 +2,10 @@
 
 This map links to the canonical notes for learning and knowledge lookup across AI applications and agents, then frontend/full-stack foundations. Read the linked notes for the explanations; this page does not duplicate their answers.
 
+## Reading progress / 本轮复习进度
+
+Use [Reading progress / 本轮复习进度](reading-progress.md) to mark notes read during the current pass. Sync follows the domain reading maps and preserves checked paths when entries are added or reordered; `--status` reports counts after validating the list.
+
 ## AI applications and agents / AI 应用与 Agent
 
 1. [Agent fundamentals / Agent 基础](../ai-engineering/agents/agent-fundamentals.md) — start with the agent loop and its core components.
