@@ -97,7 +97,7 @@ Important parameters change different parts of the model; the meanings below fol
 | `objective` | Selects the learning task and loss, such as squared-error regression or a classification objective. |
 | `learning_rate` (`eta`) | Shrinks each boosting update, making additions more conservative; smaller steps often need more rounds. |
 | `max_depth` | Limits tree depth; deeper trees are more complex and can overfit. |
-| `n_estimators` | In the scikit-learn wrapper, the number of boosted trees/rounds. |
+| `n_estimators` | For `XGBClassifier` and `XGBRegressor`, the maximum number of boosting rounds. A round can add multiple trees depending on `num_parallel_tree` and the objective/output strategy, so this is not generally the total tree count. Early stopping may end training before the configured limit. |
 | `subsample` | Fraction of training rows sampled for each boosting iteration. |
 | `colsample_bytree` | Fraction of feature columns sampled when constructing each tree. |
 | `reg_lambda` (`lambda`) | L2 penalty on leaf weights in tree boosting. |

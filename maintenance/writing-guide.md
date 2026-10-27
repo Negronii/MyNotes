@@ -26,7 +26,7 @@ Model memory is a prompt to investigate, not evidence. For uncertain or conseque
 ## Keep maintenance lightweight
 
 - Obsidian is a reading interface; notes remain ordinary Markdown and should work outside Obsidian. For targeted native checks after link, path, or rendering changes, follow the [MyNotes maintenance workflow](../.agents/skills/mynotes-maintainer/SKILL.md).
-- Do not add blanket YAML metadata, learning or mastery status, or scheduled per-note review dates.
+- Do not add blanket YAML metadata, per-note learning or mastery status, or scheduled per-note review dates. When the user authorizes a central current-round checklist, it may record only read/not-read for that round; it is not a mastery claim or durable per-note status and must not be expanded into per-note YAML or scheduled reviews.
 - `archive` means low-frequency or paused maintenance. It does not imply that content is wrong, obsolete, or deprecated.
 - Domain `index.md` files are topic maps. Their one `## Reading order / 阅读顺序` section is the complete ordered list used to build continuous-reading documents. Keep each eligible article there once, with a working relative Markdown link. The map also handles navigation; do not create a second ordering source.
 - If an included note's content, title, or link changes, or its reading order changes, regenerate continuous-reading documents with `python3 maintenance/build-reading-docs.py` from the repository root. Treat `review/generated/` as generated output: review it after generation, and do not edit it by hand. Run the same command with `--check` to validate the maps, source notes, and generated links without building output.

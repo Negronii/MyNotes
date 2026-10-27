@@ -1,5 +1,7 @@
 # Full knowledge review / 全库知识审查
 
+> Historical record: this page preserves the 2026-10-15 review and its dated supplements. For the current 2026-10-27 review of 140 substantive notes, including per-file evidence, later source corrections, scope exclusions, and limitations, see the [current knowledge review](knowledge-review-2026-10-27.md) and its [structured JSON evidence](knowledge-review-2026-10-27.json).
+
 The preceding 2026-10-15 full review covered 116 existing substantive knowledge Markdown notes—53 active and 63 archived—plus three new Engineering Foundations notes, counted separately. Nine previously reviewed active notes were protected and excluded from the 116-note scope. At that review point, the active inventory was 65: 53 reviewed originals, nine protected notes, and three additions. Each of the 116 originals and three additions received a full-text read and independent editorial review. Corrections were checked against primary standards, official documentation, or original papers where accessible. Worked examples, equations, course structure, diagrams, and image references were retained when sound. Raw source and prompt packs, scripts, PDFs, images, and other attachments were outside the prose review and were not individually audited.
 
 ## Findings by domain / 按领域归纳

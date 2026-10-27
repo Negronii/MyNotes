@@ -1077,7 +1077,7 @@ Custom hooks are functions that start with `use` and allow you to encapsulate an
 - **Naming Convention**: Always start the custom hook's name with `use`, e.g., `useFetchData`, `useFormValidation`.
 - **Single Responsibility**: Each custom hook should do one thing well and be as focused as possible.
 - **Return Values**: Return an array or object containing values and functions that the component needs.
-- **Avoid Side Effects in Return**: Do not include side effects (e.g., setting state) in the returned functions or values.
+- **Keep render pure**: Do not run side effects while rendering. A custom Hook may return an event handler or callback that updates state or performs another side effect when invoked; React allows side effects in event handlers and Effects. See [Components and Hooks must be pure](https://react.dev/reference/rules/components-and-hooks-must-be-pure) and [Responding to Events](https://react.dev/learn/responding-to-events).
 
 #### Example
 Here’s an example of a custom hook to handle adding items to a shopping cart:
@@ -1803,7 +1803,6 @@ export const changeLanguageActionCreator = (
 1. In your reducer, handle different actions by setting the action type to `LanguageActionTypes`:
 
 ```tsx
-import i18n from "i18next";
 import { CHANGE_LANGUAGE, LanguageActionTypes } from "./languageActions";
 
 export interface LanguageState {
@@ -1822,7 +1821,6 @@ const defaultState: LanguageState = {
 export default (state = defaultState, action: LanguageActionTypes): LanguageState => {
   switch (action.type) {
     case CHANGE_LANGUAGE:
-      i18n.changeLanguage(action.payload);
       return { ...state, language: action.payload };
     default:
       return state;
@@ -1832,11 +1830,15 @@ export default (state = defaultState, action: LanguageActionTypes): LanguageStat
 
 ### Usage in Components
 
-1. Use `changeLanguageActionCreator` to create a strongly-typed action in your components:
+1. Change the i18next language in the event handler, then dispatch the plain action. Keep the reducer pure; it only updates Redux state ([Redux reducer rules](https://redux.js.org/style-guide/#reducers-must-not-have-side-effects)):
 
 ```typescript
-const menuClickHandler = (e: any) => {
-  store.dispatch(changeLanguageActionCreator(e.key));
+import i18n from "./configs";
+
+const menuClickHandler = async (e: any) => {
+  const languageCode = e.key as "zh" | "en";
+  await i18n.changeLanguage(languageCode);
+  store.dispatch(changeLanguageActionCreator(languageCode));
 };
 ```
 
@@ -1849,13 +1851,16 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Menu } from "antd";
 import { changeLanguageActionCreator } from "./languageActions";
+import i18n from "./configs";
 
 const LanguageSwitcher: React.FC = () => {
   const dispatch = useDispatch();
   const language = useSelector((state: any) => state.language);
 
-  const handleMenuClick = (e: any) => {
-    dispatch(changeLanguageActionCreator(e.key));
+  const handleMenuClick = async (e: any) => {
+    const languageCode = e.key as "zh" | "en";
+    await i18n.changeLanguage(languageCode);
+    dispatch(changeLanguageActionCreator(languageCode));
   };
 
   return (
@@ -1921,6 +1926,7 @@ Use the `connect` function to connect your component to the Redux store. This in
 ```tsx
 import { connect } from "react-redux";
 import { Dispatch } from "redux";
+import i18n from "../../configs";
 import { changeLanguageActionCreator } from "./redux/language/languageActions";
 import { RootState } from "./redux/store";
 
@@ -1930,7 +1936,8 @@ const mapStateToProps = (state: RootState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch) => ({
-  changeLanguage: (code: "zh" | "en") => {
+  changeLanguage: async (code: "zh" | "en") => {
+    await i18n.changeLanguage(code);
     const action = changeLanguageActionCreator(code);
     dispatch(action);
   },
@@ -2010,6 +2017,7 @@ In functional components, use `useSelector` to access the state and `useDispatch
 import React from "react";
 import { useSelector } from "../../redux/hooks";
 import { useDispatch } from "react-redux";
+import i18n from "../../configs";
 import { changeLanguageActionCreator } from "../../redux/language/languageActions";
 
 export const Header: React.FC = () => {
@@ -2017,8 +2025,10 @@ export const Header: React.FC = () => {
   const languageList = useSelector((state) => state.languageList);
   const dispatch = useDispatch();
 
-  const menuClickHandler = (e: any) => {
-    dispatch(changeLanguageActionCreator(e.key));
+  const menuClickHandler = async (e: any) => {
+    const languageCode = e.key as "zh" | "en";
+    await i18n.changeLanguage(languageCode);
+    dispatch(changeLanguageActionCreator(languageCode));
   };
 
   return (

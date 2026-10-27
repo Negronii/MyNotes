@@ -17,13 +17,20 @@ Oh My Zsh reads the `plugins` array when its startup script is sourced; array it
 
 ## Optional external plugins / 可选外部插件
 
-`zsh-autosuggestions`, `zsh-syntax-highlighting`, and `zsh-completions` are separate projects. Listing their names does not install them: first follow each project's installation instructions and put its files where Oh My Zsh can load them. Add only plugins that are present:
+`zsh-autosuggestions`, `zsh-syntax-highlighting`, and `zsh-completions` are separate projects. Listing their names does not install them: first follow each project's installation instructions and put its files where Zsh can load them. Add only installed Oh My Zsh plugins to `plugins`:
 
 ```zsh
-plugins=(git zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 ```
 
-Load `zsh-syntax-highlighting` last; its maintainers require that order. `zsh-completions` has an `fpath` setup step that belongs before Oh My Zsh is sourced; follow its current instructions rather than assuming the array alone enables every completion definition. Restart the shell after changing the plugin list.
+Load `zsh-syntax-highlighting` last; its maintainers require that order. `zsh-completions` provides completion definitions through `fpath`, not as a regular entry in the plugin list. Following its [Oh My Zsh installation instructions](https://github.com/zsh-users/zsh-completions#oh-my-zsh), add the installed `src` directory to `fpath` before the existing `source "$ZSH/oh-my-zsh.sh"` line:
+
+```zsh
+# Replace this with the installed zsh-completions/src directory.
+fpath=(/path/to/zsh-completions/src $fpath)
+```
+
+Restart the shell after changing the plugin list or completion path.
 
 ## pnpm on the command path / pnpm 命令路径
 

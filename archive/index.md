@@ -1,6 +1,6 @@
 # Archive index / 归档索引
 
-Archived material is kept for low-frequency or paused reference; archive placement is not a claim that content is incorrect or deprecated. All 63 substantive knowledge Markdown notes in the content-review scope received full-text review; see the [full knowledge review audit](../maintenance/knowledge-review-audit.md). Raw source, prompt, and skill packs, scripts, PDFs, images, and other attachments remain preserved but were not individually audited as prose.
+Archived material is kept for low-frequency or paused reference; archive placement is not a claim that content is incorrect or deprecated. All 63 substantive knowledge Markdown notes in the content-review scope received full-text review; see the [current 2026-10-27 knowledge review](../maintenance/knowledge-review-2026-10-27.md) for per-file records and limits. Raw source, prompt, and skill packs, scripts, PDFs, images, and other attachments remain preserved but were not individually audited as prose.
 
 ## Preserved packs / 保留材料
 
