@@ -5,6 +5,7 @@ A Markdown knowledge base for AI engineering, frontend, and shared engineering f
 ## Start here / 从这里开始
 
 - [Knowledge Navigator / 知识导航](review/index.md) — a short learning and reference route through selected AI/agent, frontend, and networking topics.
+- [Reading progress / 本轮复习进度](review/reading-progress.md) — track notes read in this pass from the canonical domain reading orders.
 - [AI engineering topics / AI 工程主题](ai-engineering/index.md)
 - [Frontend topics / 前端主题](frontend/index.md)
 - [Engineering foundations topics / 工程基础主题](engineering-foundations/index.md)
@@ -37,6 +38,18 @@ To validate that domain maps, source notes, and generated links are current with
 ```sh
 python3 maintenance/build-reading-docs.py --check
 ```
+
+## Reading progress / 本轮复习进度
+
+The checklist in `review/reading-progress.md` records only whether each note was read in the current pass. Sync it after changing a domain reading order, and inspect validated counts with:
+
+```sh
+python3 maintenance/sync-reading-progress.py
+python3 maintenance/sync-reading-progress.py --status
+```
+
+Sync preserves checked notes and adds new entries unchecked. Before a new pass, back up the page and manually clear the checkboxes.
+If a note is renamed or removed, sync stops to protect its reading state. Back up the progress page outside the vault, move the current page aside, run sync to create a fresh checklist, then use the backup to recheck the corresponding current paths and restore personal notes. Do not edit paths inside the managed block: its snapshot guard will reject the edit.
 
 ## Obsidian
 
