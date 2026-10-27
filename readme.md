@@ -11,7 +11,7 @@ A Markdown knowledge base for AI engineering, frontend, and shared engineering f
 - [Engineering foundations topics / 工程基础主题](engineering-foundations/index.md)
 - [Archive / 归档区](archive/index.md)
 - [Writing guide / 写作规范](maintenance/writing-guide.md)
-- [Full knowledge review audit / 全库知识审查](maintenance/knowledge-review-audit.md) — reviewed scope, source-backed corrections, and validation limits.
+- [Current knowledge review / 本轮全库知识审查](maintenance/knowledge-review-2026-10-27.md) — 140 substantive notes, per-file evidence, corrections, exclusions, and limitations. The [2026-10-15 review](maintenance/knowledge-review-audit.md) remains as a historical snapshot.
 - [Migration notes / 迁移说明](maintenance/migration-notes.md)
 - [Agent Prompt & Tool Design / Agent 提示词与工具设计](.agents/skills/design-agent-prompts-tools/SKILL.md) — an active reusable Skill maintained in this repository.
 

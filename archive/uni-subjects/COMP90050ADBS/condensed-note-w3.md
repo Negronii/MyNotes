@@ -174,49 +174,41 @@ For correct execution, we need to impose exclusive access to the shared variable
 - To preserve database consistency
 
 ### Different ways for concurrency control
-- **Dekker's algorithm (using code)** - needs almost no hardware support, but the code is very complicated to implement for more than two transactions/processes
-- **OS supported primitives** (through interruption call) - expensive, independent of number of processes, machine independent
-- **Spin locks** (using atomic lock/unlock instructions) – most commonly used
+- **Peterson's algorithm (two-process pseudocode)** demonstrates mutual exclusion under atomic, sequentially consistent shared-register assumptions; it busy-waits and is not a multi-process solution.
+- **OS-supported blocking primitives**, such as mutexes and semaphores, can park waiters instead of busy-waiting; implementations may use a user-space atomic fast path and involve the kernel only when needed ([Linux futex manual](https://man7.org/linux/man-pages/man2/futex.2.html)).
+- **Spin locks** use atomic operations to busy-wait; they can suit short waits in an appropriate environment but consume CPU while contended.
 
-### Dekker's algorithm
-int c1, c2, turn = 1; /_ global variable_/
+### Peterson's algorithm (two processes)
+This is Peterson's two-process algorithm, not Dekker's: each process raises its flag, gives the other process priority, and waits while the other flag is raised and it is the other process's turn. The pseudocode assumes atomic, sequentially consistent shared-register reads and writes; ordinary shared C `int` variables do not by themselves provide those concurrent-memory guarantees ([Peterson's mutual-exclusion algorithm](https://www.cs.yale.edu/homes/aspnes/pinewiki/MutualExclusion.html)). Repeat each process's entry, critical-section, exit, and remainder sequence as needed.
 
-T1
-{ some code T1}
+```text
+Shared state, initialized before either process runs:
+    flag[1] = 0
+    flag[2] = 0
+    turn = 1
 
-```c
-/* T1 wants exclusive access to the resource and we assume initially c1 = = 0*/
-c1 = 1; turn = 2;
-repeat until { c2 == 0 or turn == 1}
-/* Start of exclusive access to the shared resource (successfully changed variables) */
-use the resource
-counter = counter+1;
-/* release the resource */
-c1 = 0;
-{some other code of T1}
+Process 1:
+    flag[1] = 1
+    turn = 2
+    while flag[2] == 1 and turn == 2:
+        wait
+    # critical section
+    counter = counter + 1
+    flag[1] = 0
+    # remainder section
+
+Process 2:
+    flag[2] = 1
+    turn = 1
+    while flag[1] == 1 and turn == 1:
+        wait
+    # critical section
+    counter = counter + 1
+    flag[2] = 0
+    # remainder section
 ```
 
-T2
-{ some code T2}
-
-```c
-/* T2 wants exclusive access to the resource and we assume initially c2 = = 0 */
-c2 = 1; turn = 1;
-repeat until { c1 == 0 or turn == 2}
-/* Start of exclusive access to the shared resource */
-use the resource
-counter = counter+1;
-/* release the resource */
-c2 = 0 ;
-{some other code of T2}
-```
-
-- needs almost no hardware support although it needs atomic reads and writes to main memory
-- the code is very complicated to implement if more than two transactions/ process are involved
-- harder to understand the algorithm for more than two process
-  takes lot of storage space
-- uses busy waiting
-- efficient if the lock contention (that is frequency of access to the locks) is low
+- The protocol uses busy waiting. Its performance depends on the workload and platform; this teaching pseudocode is not a substitute for language or operating-system synchronization primitives in application code.
 
 ### OS supported primitives
 - A blocking mutex or semaphore may ask the OS scheduler to park a waiting thread and wake it later; this avoids spinning while blocked but has scheduling and context-switch overhead. The implementation may still use hardware atomic operations internally. It is not necessarily an interrupt on every lock request.

@@ -699,8 +699,9 @@ Ordered indices – Search keys are stored in some order
 - Hash indices – Search keys are distributed
 - **B+ tree**
 - Bitmap index
-- Trees for maps
-  - Quadtree (k-d tree)
+- Trees for spatial data
+  - Quadtree
+  - k-d tree
   - R-tree
 
 ### Clustering Index / Primary Index
@@ -716,14 +717,12 @@ Ordered indices – Search keys are stored in some order
   As shown in graph, the search key here is the major
 
 ### Hash indices
-- search keys are distributed hopefully uniformly across “buckets” using a “function”
+- A hash function aims to spread distinct search-key values approximately uniformly across buckets.
 - A hash index organizes the search keys, with their associated record pointers, into a hash file structure. Order is not important.
-- Given a key the aim is to find the related record on file in one shot which is important.
-- An ideal hash function is **uniform**, i.e., each bucket is assigned the same number of search-key values from the set of all possible values.
-- Ideal hash function is **random**, so each bucket will have the same number of records assigned to it irrespective of the actual distribution of search-key values in the file.
+- Equal search-key values still hash to the same bucket. Skew or many duplicate records can overload a bucket and require overflow pages; bucket record counts need not be equal, and lookup is not guaranteed to take one I/O ([PostgreSQL hash indexes](https://www.postgresql.org/docs/18/hash-index.html)).
 - Typical hash functions perform computation on the internal binary representation of the search-key.
   ![hash-indices](./hash-indice.png)
-- The expected hash function should return 0-6 evenly since there are 7 buckets.
+- With seven buckets, a hash function should distribute distinct keys across bucket values 0–6 approximately evenly; this does not guarantee the same number of records per bucket when keys repeat.
 - Goes to which bucket here determined by Hash function return value, e.g. Hash(A-215) = 1
 
 ### Bitmap index
@@ -826,6 +825,9 @@ It is keep spliting into squares until no more than n (1 in this example) leaf n
 
 #### Quadtree – e.g., run NN (nearest neighbor) query
 ![NN on quad tree](NNonQuadtree.png)
+
+### k-d Tree / k-d 树
+A k-d tree is a binary spatial search tree. Each internal node splits the current region into two using an axis-aligned boundary, often cycling through dimensions; unlike a quadtree, it does not divide every region into four quadrants ([Princeton, Geometric Applications of BSTs](https://algs4.cs.princeton.edu/92search/)).
 
 #### 2022S1 Exam Question 5: k-d Tree Example
 Given the k-d tree below with point data, where black labeled dots represent spatial coordinate data, and the rectangular area is divided into regions with the division order given with numbers: draw the associated k-d tree as a tree structure with leaves labeled as the data labels given below. Assume **left subarea** of a division goes to a **left subtree**, and **lower subarea** of a division also goes to a **left subtree**. The figure for the k-tree follows:  
@@ -1063,49 +1065,41 @@ For correct execution, we need to impose exclusive access to the shared variable
 - To preserve database consistency
 
 ### Different ways for concurrency control
-- **Dekker's algorithm (using code)** - needs almost no hardware support, but the code is very complicated to implement for more than two transactions/processes
-- **OS supported primitives** (through interruption call) - expensive, independent of number of processes, machine independent
-- **Spin locks** (using atomic lock/unlock instructions) – most commonly used
+- **Peterson's algorithm (two-process pseudocode)** demonstrates mutual exclusion under atomic, sequentially consistent shared-register assumptions; it busy-waits and is not a multi-process solution.
+- **OS-supported blocking primitives**, such as mutexes and semaphores, can park waiters instead of busy-waiting; implementations may use a user-space atomic fast path and involve the kernel only when needed ([Linux futex manual](https://man7.org/linux/man-pages/man2/futex.2.html)).
+- **Spin locks** use atomic operations to busy-wait; they can suit short waits in an appropriate environment but consume CPU while contended.
 
-### Dekker's algorithm
-int c1, c2, turn = 1; /_ global variable_/
+### Peterson's algorithm (two processes)
+This is Peterson's two-process algorithm, not Dekker's: each process raises its flag, gives the other process priority, and waits while the other flag is raised and it is the other process's turn. The pseudocode assumes atomic, sequentially consistent shared-register reads and writes; ordinary shared C `int` variables do not by themselves provide those concurrent-memory guarantees ([Peterson's mutual-exclusion algorithm](https://www.cs.yale.edu/homes/aspnes/pinewiki/MutualExclusion.html)). Repeat each process's entry, critical-section, exit, and remainder sequence as needed.
 
-T1
-{ some code T1}
+```text
+Shared state, initialized before either process runs:
+    flag[1] = 0
+    flag[2] = 0
+    turn = 1
 
-```c
-/* T1 wants exclusive access to the resource and we assume initially c1 = = 0*/
-c1 = 1; turn = 2;
-repeat until { c2 == 0 or turn == 1}
-/* Start of exclusive access to the shared resource (successfully changed variables) */
-use the resource
-counter = counter+1;
-/* release the resource */
-c1 = 0;
-{some other code of T1}
+Process 1:
+    flag[1] = 1
+    turn = 2
+    while flag[2] == 1 and turn == 2:
+        wait
+    # critical section
+    counter = counter + 1
+    flag[1] = 0
+    # remainder section
+
+Process 2:
+    flag[2] = 1
+    turn = 1
+    while flag[1] == 1 and turn == 1:
+        wait
+    # critical section
+    counter = counter + 1
+    flag[2] = 0
+    # remainder section
 ```
 
-T2
-{ some code T2}
-
-```c
-/* T2 wants exclusive access to the resource and we assume initially c2 = = 0 */
-c2 = 1; turn = 1;
-repeat until { c1 == 0 or turn == 2}
-/* Start of exclusive access to the shared resource */
-use the resource
-counter = counter+1;
-/* release the resource */
-c2 = 0 ;
-{some other code of T2}
-```
-
-- needs almost no hardware support although it needs atomic reads and writes to main memory
-- the code is very complicated to implement if more than two transactions/ process are involved
-- harder to understand the algorithm for more than two process
-  takes lot of storage space
-- uses busy waiting
-- efficient if the lock contention (that is frequency of access to the locks) is low
+- The protocol uses busy waiting. Its performance depends on the workload and platform; this teaching pseudocode is not a substitute for language or operating-system synchronization primitives in application code.
 
 ### OS supported primitives
 - A blocking mutex or semaphore may ask the OS scheduler to park a waiting thread and wake it later; this avoids spinning while blocked but has scheduling and context-switch overhead. The implementation may still use hardware atomic operations internally. It is not necessarily an interrupt on every lock request.
@@ -1999,7 +1993,7 @@ PACELC asks: if there is a partition (P), does the design favor availability (A)
 - e.g., bank transactions in different branches
 
 ### Two-Phase Commit Protocol (2PC), distinct from Two-Phase Locking (2PL)
-2PC coordinates the atomic outcome across participants; it does not itself provide transaction isolation. [PostgreSQL's two-phase transaction documentation](https://www.postgresql.org/docs/18/two-phase.html) describes durable prepared transactions; [Gray and Lamport's commit paper](https://arxiv.org/abs/cs/0408036) notes that classic 2PC blocks if its coordinator fails.
+2PC coordinates the atomic outcome across participants; it does not itself provide transaction isolation. [PostgreSQL's two-phase transaction documentation](https://www.postgresql.org/docs/18/two-phase.html) describes durable prepared transactions; [Gray and Lamport's transaction-commit paper](https://lamport.azurewebsites.net/video/consensus-on-transaction-commit.pdf) explains why the coordinator waits for all resource managers before committing.
 
 - Goal: either all of the servers commit the transaction, or all of them abort the transaction
 - One of the servers becomes the coordinator who must ensures the same outcome at all of the servers
@@ -2024,12 +2018,12 @@ Phase 2 (completion phase)
 2. `Participant -> Coordinator`: `Yes / No`  
    The participant replies with its vote on whether it can commit the transaction.
 
-3. Depending on the participant's response:
+3. The coordinator makes one global decision: COMMIT requires every required YES vote, while a NO vote or a pre-decision timeout can lead to ABORT:
 
    - `Coordinator -> Participant`: `doCommit (trans)`  
-      If the participant has voted Yes, the coordinator instructs the participant to commit the transaction.
+      Only when every required participant has voted YES does the coordinator durably record the global COMMIT decision and then notify all participants to commit.
    - `Coordinator -> Participant`: `doAbort (trans)`  
-      If the participant has voted No, the coordinator instructs the participant to abort the transaction.
+      If any participant votes NO, or a required vote is still missing when the coordinator times out before making a commit decision, the coordinator durably records global ABORT and notifies all participants to abort, including participants that already voted YES.
 
 4. `Participant -> Coordinator`: `haveCommitted (trans, participant)`  
    The participant confirms that it has committed the transaction, notifying the coordinator.

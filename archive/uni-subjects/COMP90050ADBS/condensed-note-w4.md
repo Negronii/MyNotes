@@ -373,7 +373,7 @@ PACELC asks: if there is a partition (P), does the design favor availability (A)
 - e.g., bank transactions in different branches
 
 ### Two-Phase Commit Protocol (2PC), distinct from Two-Phase Locking (2PL)
-2PC coordinates the atomic outcome across participants; it does not itself provide transaction isolation. [PostgreSQL's two-phase transaction documentation](https://www.postgresql.org/docs/18/two-phase.html) describes durable prepared transactions; [Gray and Lamport's commit paper](https://arxiv.org/abs/cs/0408036) notes that classic 2PC blocks if its coordinator fails.
+2PC coordinates the atomic outcome across participants; it does not itself provide transaction isolation. [PostgreSQL's two-phase transaction documentation](https://www.postgresql.org/docs/18/two-phase.html) describes durable prepared transactions; [Gray and Lamport's transaction-commit paper](https://lamport.azurewebsites.net/video/consensus-on-transaction-commit.pdf) explains why the coordinator waits for all resource managers before committing.
 
 
 - Goal: either all of the servers commit the transaction, or all of them abort the transaction
@@ -399,12 +399,12 @@ Phase 2 (completion phase)
 2. `Participant -> Coordinator`: `Yes / No`  
    The participant replies with its vote on whether it can commit the transaction.
 
-3. Depending on the participant's response:
+3. The coordinator makes one global decision: COMMIT requires every required YES vote, while a NO vote or a pre-decision timeout can lead to ABORT:
 
    - `Coordinator -> Participant`: `doCommit (trans)`  
-      If the participant has voted Yes, the coordinator instructs the participant to commit the transaction.
+      Only when every required participant has voted YES does the coordinator durably record the global COMMIT decision and then notify all participants to commit.
    - `Coordinator -> Participant`: `doAbort (trans)`  
-      If the participant has voted No, the coordinator instructs the participant to abort the transaction.
+      If any participant votes NO, or a required vote is still missing when the coordinator times out before making a commit decision, the coordinator durably records global ABORT and notifies all participants to abort, including participants that already voted YES.
 
 4. `Participant -> Coordinator`: `haveCommitted (trans, participant)`  
    The participant confirms that it has committed the transaction, notifying the coordinator.

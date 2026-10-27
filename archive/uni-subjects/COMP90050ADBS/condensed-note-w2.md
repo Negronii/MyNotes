@@ -313,8 +313,9 @@ Ordered indices – Search keys are stored in some order
 - Hash indices – Search keys are distributed
 - **B+ tree**
 - Bitmap index
-- Trees for maps
-  - Quadtree (k-d tree)
+- Trees for spatial data
+  - Quadtree
+  - k-d tree
   - R-tree
 
 ### Clustering Index / Primary Index
@@ -330,14 +331,12 @@ Ordered indices – Search keys are stored in some order
   As shown in graph, the search key here is the major
 
 ### Hash indices
-- search keys are distributed hopefully uniformly across “buckets” using a “function”
+- A hash function aims to spread distinct search-key values approximately uniformly across buckets.
 - A hash index organizes the search keys, with their associated record pointers, into a hash file structure. Order is not important.
-- Given a key the aim is to find the related record on file in one shot which is important.
-- An ideal hash function is **uniform**, i.e., each bucket is assigned the same number of search-key values from the set of all possible values.
-- Ideal hash function is **random**, so each bucket will have the same number of records assigned to it irrespective of the actual distribution of search-key values in the file.
+- Equal search-key values still hash to the same bucket. Skew or many duplicate records can overload a bucket and require overflow pages; bucket record counts need not be equal, and lookup is not guaranteed to take one I/O ([PostgreSQL hash indexes](https://www.postgresql.org/docs/18/hash-index.html)).
 - Typical hash functions perform computation on the internal binary representation of the search-key.
   ![hash-indices](./hash-indice.png)
-- The expected hash function should return 0-6 evenly since there are 7 buckets.
+- With seven buckets, a hash function should distribute distinct keys across bucket values 0–6 approximately evenly; this does not guarantee the same number of records per bucket when keys repeat.
 - Goes to which bucket here determined by Hash function return value, e.g. Hash(A-215) = 1
 
 ### Bitmap index
@@ -440,6 +439,9 @@ It is keep spliting into squares until no more than n (1 in this example) leaf n
 
 #### Quadtree – e.g., run NN (nearest neighbor) query
 ![NN on quad tree](NNonQuadtree.png)
+
+### k-d Tree / k-d 树
+A k-d tree is a binary spatial search tree. Each internal node splits the current region into two using an axis-aligned boundary, often cycling through dimensions; unlike a quadtree, it does not divide every region into four quadrants ([Princeton, Geometric Applications of BSTs](https://algs4.cs.princeton.edu/92search/)).
 
 #### 2022S1 Exam Question 5: k-d Tree Example
 Given the k-d tree below with point data, where black labeled dots represent spatial coordinate data, and the rectangular area is divided into regions with the division order given with numbers: draw the associated k-d tree as a tree structure with leaves labeled as the data labels given below. Assume **left subarea** of a division goes to a **left subtree**, and **lower subarea** of a division also goes to a **left subtree**. The figure for the k-tree follows:
