@@ -11,7 +11,7 @@
 
 ## Minimal sufficient context
 
-Assume the target model understands common language, programming concepts, and routine reasoning only when its observed behavior supports that assumption. Supply context that changes the answer:
+Supply non-obvious context that changes the answer or execution:
 
 - the outcome and audience;
 - non-obvious domain facts;
@@ -20,9 +20,9 @@ Assume the target model understands common language, programming concepts, and r
 - required evidence or output structure;
 - known failure cases.
 
-Do not add explanations merely because they are true. A paragraph earns its place when removing it causes a measurable regression, violates a product requirement, or leaves a material ambiguity. For model-specific scaffold selection, read [model-adaptation.md](model-adaptation.md).
+Retain a paragraph when it serves a requirement, changes a decision or action, resolves a material ambiguity, or addresses a relevant reported failure. Omit explanations of common knowledge unless the task needs them. For model-specific scaffold selection, read [model-adaptation.md](model-adaptation.md).
 
-Prefer outcome-focused instructions over prescribing a complete internal strategy. Prescribe steps only when order is a real dependency, the workflow is fragile, or the path itself must be audited.
+Prefer outcome-focused instructions. Prescribe steps only for a real ordering dependency or required workflow; otherwise let the task owner choose the method.
 
 ## Prompt components
 
@@ -51,7 +51,7 @@ Place a rule at the narrowest layer that owns it:
 | One request's preference | User prompt/runtime context |
 | Long domain detail | Retrieved reference |
 
-State each rule once. Repeat only when an evaluation demonstrates that deliberate reinforcement fixes a recurring failure without creating regressions.
+State each rule once at its owning layer. If repetition is proposed to fix recurring behavior, validate that reinforcement rather than treating it as a default.
 
 ## Constraints and examples
 
@@ -62,7 +62,9 @@ Write constraints around real failure modes:
 - Give a recovery path when a constraint can fail.
 - Avoid large collections of `NEVER` rules. Move detectable prohibitions into code.
 
-Use examples when they define a format, resolve an ambiguity, or repair a measured gap. Keep examples consistent and minimal for the selected model profile. For a model that misses implicit boundaries, add one positive and one near-miss example before adding a large example bank. More examples do not necessarily help smaller models more.
+Use examples when they define a format, resolve an ambiguity, or address a relevant failure. Keep them consistent and minimal. For a model that misses implicit boundaries, try a positive and a near-miss example before adding a large example bank. More examples do not necessarily help smaller models more.
+
+State the desired action or result directly. Explain a limitation, distinction, or counterexample when it affects the current decision; avoid rebutting an interpretation the user has not raised and that the task does not imply.
 
 Do not assume XML, Markdown, JSON, or another delimiter is universally optimal. Choose a clear, consistent structure and compare alternatives when format materially affects performance.
 
@@ -70,14 +72,13 @@ Do not request exposed chain-of-thought. Ask for concise rationale, cited eviden
 
 ## Review procedure
 
-1. Restate the expected outcome in observable terms.
-2. Mark every instruction as objective, context, boundary, procedure, style, or output.
-3. Find duplicates, conflicts, vague qualifiers, hidden defaults, and platform assumptions.
-4. Identify instructions that belong in a tool, schema, validator, permission layer, or reference.
-5. Delete information the target model already knows unless it repairs a measured failure.
-6. Select a lean or scaffolded profile from model-specific evidence.
-7. Produce the smallest coherent revision for that profile.
-8. Replay the same evaluation cases and inspect both final outcomes and traces.
+Scale the review to the artifact and uncertainty:
+
+- Identify the observable outcome, necessary boundaries, and relevant failure evidence.
+- Remove duplicates, conflicts, vague defaults, irrelevant context, and requirements owned by another layer.
+- Keep only the guidance needed for the task. Model-profile selection is relevant when adapting models or resolving model-specific behavior.
+- Make the smallest coherent revision. For clear, small edits, inspect consistency and decisive scenarios. If a conclusion depends on unresolved material behavior, run the smallest actual case that resolves it. For quantified gains, model migrations, or reliability comparisons, follow [evaluation.md](evaluation.md).
+- Report static review, actual runs, and measured comparisons accurately.
 
 ## Anti-patterns
 

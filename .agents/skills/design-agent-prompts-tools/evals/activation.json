@@ -9,6 +9,7 @@
   {"id":"a08","query":"Analyze these agent traces and explain why invalid tool arguments increased.","should_trigger":true,"reason":"Trace-based tool contract diagnosis."},
   {"id":"a09","query":"Adapt this lean GPT-5.6 agent prompt for GLM-4.7-Flash without losing the cost advantage.","should_trigger":true,"reason":"Model-specific prompt scaffolding and cost-adjusted evaluation."},
   {"id":"a10","query":"Our cheap model ignores edge cases unless the prompt includes steps and examples. Design and test a scaffolded variant.","should_trigger":true,"reason":"Capability-conditioned prompt design."},
+  {"id":"a11","query":"Revise our reusable subagent delegation contract to stop copying parent history and let the owner choose independent execution steps.","should_trigger":true,"reason":"Reusable agent handoff instruction design."},
   {"id":"n01","query":"Create a reusable Codex Skill directory for processing invoices.","should_trigger":false,"reason":"Skill architecture belongs to skill creation/system engineering."},
   {"id":"n02","query":"Audit this Skill's folder layout, activation description, and reference routing.","should_trigger":false,"reason":"General Skill lifecycle audit, not a standalone prompt/tool artifact."},
   {"id":"n03","query":"Fix the failing GitHub Actions workflow on my pull request.","should_trigger":false,"reason":"CI debugging task."},
@@ -17,5 +18,7 @@
   {"id":"n06","query":"Research recent prompt-injection incidents and summarize the news.","should_trigger":false,"reason":"Research request, not prompt/tool engineering."},
   {"id":"n07","query":"Implement OAuth authorization and rate limiting for this MCP server.","should_trigger":false,"reason":"Runtime/server implementation rather than prompt or schema design."},
   {"id":"n08","query":"Explain what a system prompt is to a beginner.","should_trigger":false,"reason":"General explanation does not require specialized design workflow."},
-  {"id":"n09","query":"Which low-cost model has the cheapest API price today?","should_trigger":false,"reason":"Current model pricing research without a prompt or tool change."}
+  {"id":"n09","query":"Which low-cost model has the cheapest API price today?","should_trigger":false,"reason":"Current model pricing research without a prompt or tool change."},
+  {"id":"n10","query":"Apply the one-line fix we already identified and run its focused check. Global instructions mention the prompt design skill.","should_trigger":false,"reason":"Ordinary execution does not activate the skill through a conditional global reference."},
+  {"id":"n11","query":"Ask a subagent to inspect the two source files relevant to this temporary task and return its finding.","should_trigger":false,"reason":"A temporary task handoff follows ordinary delegation rules; it is not reusable contract design."}
 ]

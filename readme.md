@@ -12,6 +12,7 @@ A Markdown knowledge base for AI engineering, frontend, and shared engineering f
 - [Writing guide / 写作规范](maintenance/writing-guide.md)
 - [Full knowledge review audit / 全库知识审查](maintenance/knowledge-review-audit.md) — reviewed scope, source-backed corrections, and validation limits.
 - [Migration notes / 迁移说明](maintenance/migration-notes.md)
+- [Agent Prompt & Tool Design / Agent 提示词与工具设计](.agents/skills/design-agent-prompts-tools/SKILL.md) — an active reusable Skill maintained in this repository.
 
 The other domain roots are `archive`, for low-frequency or paused material, `review`, for navigation, and `maintenance`, for repository guidance and tools.
 

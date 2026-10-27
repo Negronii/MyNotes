@@ -4,16 +4,24 @@ Provider behavior changes. Last reviewed: 2026-08-05. Re-check official document
 
 ## Portable guidance
 
-The following principles are broadly portable but still require task-specific evaluation:
+Apply these principles where they affect the task, with validation matched to the uncertainty and claims:
 
 - state the observable outcome and hard boundaries clearly;
 - keep context relevant and remove repetition;
 - use precise tool names and schemas;
 - validate arguments and authorization at runtime;
-- test positive, negative, edge, and recovery cases;
+- choose positive, near-miss, edge, or recovery cases that exercise the affected behavior;
 - measure outcomes before token or latency optimizations.
 
 ## OpenAI
+
+Codex customization references checked on 2026-10-27:
+
+- Instruction layers and on-demand Skill context: https://learn.chatgpt.com/docs/customization/overview
+- Subagent context, model selection, and delegation cost: https://learn.chatgpt.com/docs/agent-configuration/subagents
+- Skill construction and progressive disclosure: https://learn.chatgpt.com/docs/build-skills
+
+Keep persistent guidance small and load task-specific Skill detail on demand. The subagent guide describes context isolation, parallel work, model choice, and added token and coordination costs. Use those tradeoffs to decide whether delegation helps the assignment. These checks apply to the Codex pages above; other provider review dates are unchanged.
 
 Official references:
 

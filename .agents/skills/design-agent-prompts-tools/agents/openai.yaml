@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Prompt & Tool Design"
+  short_description: "Design model-adaptive prompts and tool contracts"
+  default_prompt: "Use $design-agent-prompts-tools to review or revise this agent instruction or tool contract, then validate it according to the material uncertainty and claims."

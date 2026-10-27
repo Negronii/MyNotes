@@ -3,6 +3,7 @@
 ## Contents
 
 - Context as a budget
+- Delegation and handoffs
 - Stable and dynamic context
 - Long-running state
 - Autonomy boundaries
@@ -22,6 +23,12 @@ Reduce context by:
 - exposing only relevant tools when the runtime permits it.
 
 Do not quote a context-window size, cache discount, or truncation limit as universal. These values change by provider and model.
+
+## Delegation and handoffs
+
+Delegate when independent parallel work, noise isolation, or a distinct work package justifies handoff and integration cost. An owner who already understands a small, bounded task should usually finish it directly.
+
+Default to an independent context. Give one owner the outcome, scope, acceptance criteria, and only the facts, constraints, and source paths that change that assignment's decisions or execution. For a settled plan, supply its conclusion and necessary rationale. Prescribe steps only for real ordering dependencies or a required workflow; let the owner choose the rest. Add missing context on demand instead of copying the parent conversation or its full investigation.
 
 ## Stable and dynamic context
 
