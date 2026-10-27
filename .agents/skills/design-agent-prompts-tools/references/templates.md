@@ -1,6 +1,6 @@
 # Templates
 
-Adapt these templates to the task. Remove unused sections.
+Adapt these templates to the task. Remove unused sections, including empty risks or unknowns. A small edit can be reported in a few sentences; it does not require the full audit template or a benchmark.
 
 ## Lean agent prompt
 
@@ -57,24 +57,24 @@ Translate the contract into the provider's supported JSON Schema and runtime val
 [What the system must achieve]
 
 ## Evidence
-[Observed failures, traces, and baseline]
+[Relevant requirements, reported failures, inspection, or actual runs]
 
 ## Confirmed findings
 - [Finding with exact artifact location]
 
 ## Risks
-- [Plausible issue not yet reproduced]
+- [Only a material risk affecting the decision; omit otherwise]
 
 ## Unknowns
-- [Missing evidence]
+- [Only missing evidence affecting the decision; omit otherwise]
 
 ## Minimal change
 | Change | Owner | Failure addressed | Verification |
 | --- | --- | --- | --- |
 | ... | ... | ... | ... |
 
-## Evaluation
-[Cases, metrics, trials, and acceptance threshold]
+## Validation
+[Checks appropriate to the uncertainty and claims; distinguish inspection, actual runs, and controlled comparisons]
 ```
 
 ## Evaluation case

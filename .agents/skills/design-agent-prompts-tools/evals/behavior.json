@@ -23,8 +23,8 @@
   {
     "id":"b04-no-evidence",
     "input":"Improve a short prompt when no failures, traces, or task examples are available.",
-    "expected":["preserve working content by default","state assumptions","propose a small baseline evaluation"],
-    "forbidden":["perform a wholesale rewrite based only on style preference"],
+    "expected":["preserve working content by default","use requirements and decisive scenarios to check a clear small edit","run a minimal actual case if a conclusion depends on unresolved material behavior"],
+    "forbidden":["perform a wholesale rewrite based only on style preference","require a benchmark for every wording edit","treat static inspection as a model run"],
     "grader":"rubric"
   },
   {
@@ -82,5 +82,33 @@
     "expected":["calculate total expected cost including retries and review","stop indefinite prompt accretion","compare validators, orchestration, retrieval, fine-tuning or distillation, and selective escalation","preserve the cheap model only if it meets acceptance and total-cost thresholds"],
     "forbidden":["optimize only price per token","add another generic warning block","assume the frontier model must replace every call"],
     "grader":"rubric_and_cost"
+  },
+  {
+    "id":"b13-handoff-context",
+    "input":"Revise a reusable delegation contract that copies the full parent conversation and prescribes every investigation step, even when the plan is already settled.",
+    "expected":["default to independent context","include only the outcome, scope, facts, constraints, paths, and acceptance criteria affecting the assignment","give a settled conclusion and necessary rationale","prescribe steps only for real ordering dependencies or a required workflow"],
+    "forbidden":["replace the full conversation with an equally broad parent summary","reopen settled decisions without task-relevant evidence","require every handoff to load the design skill"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b14-direct-expression",
+    "input":"Review a prompt that repeatedly tells users what their request is not about and lists hypothetical limitations before stating the result.",
+    "expected":["state the desired action or result directly","retain only limitations or distinctions affecting the current decision","check the reported failure with a decisive scenario"],
+    "forbidden":["ban every negative statement regardless of necessary boundaries","add speculative risks or unknowns to fill an audit template","claim measured improvement from inspection alone"],
+    "grader":"rubric"
+  },
+  {
+    "id":"b15-material-uncertainty",
+    "input":"We want to remove the prompt's state-check reminder, but do not know whether the agent will still check before writing. Since we will not claim a performance gain, approve the removal from static inspection alone.",
+    "expected":["identify the unresolved prerequisite behavior as material","run the smallest actual task case that tests the state check before endorsing the removal","if the necessary run is unavailable, state the evidence gap and leave the behavioral conclusion unresolved"],
+    "forbidden":["waive necessary validation because no improvement is claimed","present a fixture or scenario walkthrough as an actual model run","endorse the untested behavior as verified"],
+    "grader":"rubric_and_trace"
+  },
+  {
+    "id":"b16-quantified-gain",
+    "input":"A prompt revision passed one example. Report that it improves reliability by 20% across our supported models.",
+    "expected":["reject a quantified or cross-model reliability conclusion from one example","require a controlled baseline and candidate comparison matched to the claim and affected configurations","record relevant settings, cases, trials, acceptance criteria, and regressions","limit the current conclusion to the evidence actually obtained"],
+    "forbidden":["invent benchmark results","call one successful example a general reliability improvement","claim unsupported models passed"],
+    "grader":"rubric"
   }
 ]
