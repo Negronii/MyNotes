@@ -46,7 +46,9 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 
 不论哪种结构，都要约定交接输入、输出契约、状态归属、最大交接深度和失败回退。否则专家之间可能反复转交、丢失客户/订单 ID，或对同一副作用重复执行。
 
-## 什么时候拆分
+## 先尝试单主循环，再验证拆分 / Start with one loop, then test delegation
+
+**核心建议 / Core guidance：** 后续步骤仍依赖同一任务状态时，先尝试一个主循环；只有可独立并行、需要隔离验证或具备真实能力边界的子任务显示出收益时，再拆分。When later steps depend on shared task state, start with one main loop; split only when independent parallel work, isolated verification, or an enforced capability boundary provides a measured benefit.
 
 拆分的理由是具体的任务边界，而不是某个工具数量阈值：
 
@@ -55,7 +57,9 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 - **策略或权限应隔离：** 不同工作者拥有不同的知识范围、工具和访问权限。
 - **单个上下文过于混杂：** 实测表明工具重叠、指令冲突或长历史降低了成功率。
 
-额外 agent 会增加模型调用、数据传递、追踪和协调点。开始时先用单 agent 加清晰的工具和上下文；只有离线评估或生产观测显示分拆能改善质量、时延或可靠性，才保留复杂结构。不要把“15 个工具”或其他固定数写成普适分界线。
+技能和工具搜索可渐进地把程序或能力载入主上下文；并行工具调用本身不要求新建 subagent。[Anthropic / Diane Sarkis 的 folding 文章（2026-10-22，“Using an agent loop with progressive disclosure”“Task-completion evals”等章节）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)建议先建立端到端基线，再逐个折叠 subagent，检查任务成败变化、生产链路和必须遵守的规则，并在重复运行中比较；合并时保留领域流程。独立研究、并行探索和验证仍可适合独立 worker；权限隔离只有在运行时真正限制能力时才成立。额外 agent 会增加模型调用、数据传递、追踪和协调点。不要把“15 个工具”或其他固定数写成普适分界线。
+
+GitSwarm 提供了适用范围不同的例子：异步 worker 自主选择工作，在可分支的共享 Git 仓库中发布可组合产物；执行 harness 仍负责调度和发布验证，该验证检查提交要求而不认证产物正确性。[GitSwarm（v1，2026-10-04，§§2.1–2.3）](https://arxiv.org/html/2610.04862v1)不设中央“intellectual planner”（智能规划器）替 workers 指派探索方向，也不取消执行协调；它支持把独立、可检查的产物作为拆分条件，但不证明普通任务都应使用多 agent。状态取舍见[上下文工程原则](../context/context-engineering-principles.md)，比较拆分效果见[LLM 评估方法](../evaluation/llm-evaluation-methods.md)。
 
 ## 提示模板仍是单 agent 的选项
 
@@ -69,3 +73,5 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 
 - [智能体基础](./agent-fundamentals.md)：工作流与 agent 的控制流边界及运行循环。
 - [工具设计与函数调用](./tool-design-and-function-calling.md)：定义被编排结构调用的能力与执行边界。
+- [上下文工程原则](../context/context-engineering-principles.md)：决定在交接中保留什么、何时按需载入或重启探索。
+- [LLM 评估方法](../evaluation/llm-evaluation-methods.md)：用端到端任务证据比较主循环、委托和交接。
