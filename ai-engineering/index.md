@@ -1,6 +1,8 @@
 # AI Engineering / AI 工程
 
-This map preserves the original 14 substantive AI notes under stable topic paths. Core article prose has not been rewritten in this migration.
+This map organizes durable, reusable AI engineering knowledge by topic. The agent, orchestration, context, and evaluation notes connect what can change, how work is structured, what information reaches each inference, and how changes are accepted.
+
+本地图按主题组织可复用的 AI 工程知识。智能体基础、编排、上下文和评估条目分别说明改进对象、任务结构、推理可见信息与变更验收。
 
 ## Reading order / 阅读顺序
 

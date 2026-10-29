@@ -59,6 +59,8 @@ Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例
 
 需要外部事实时，尽可能对照适当、可信且及时的依据。评估来源忠实度时，应对照指定的上下文检查说法。NLI 分类器、再次检索和 self-consistency 可帮助筛选待检查内容，但都可能出错：多次回答一致不能证明为真，二次检索也可能返回过期或不相关来源。应报告检查了什么、依据何在，而不要把检测器分数写成事实已核实。
 
+同样，提交被引用、标成依赖或获提名投票（nomination），只能说明来源声明或选择过程；不能代替任务结果的正确性检查。[GitSwarm v1（2026-10-04，§§2.2、2.5、3.4、4）](https://arxiv.org/html/2610.04862v1)将依赖声明、执行轨迹中的实际产物使用和最终候选的提交祖先链分开分析，并明确这些指标不单独证明因果收益。
+
 ## Build a comparable regression set / 建立可比较的回归集
 
 - 定义符合条件的任务总体，并抽取常见样本、重要切片和已知失败类型。记录样例如何选择、标注和版本化；方便取得的样例集不一定有代表性。
@@ -66,6 +68,20 @@ Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例
 - 明确分母。例如，报告“所有符合条件的尝试中成功完成任务的比例”，并单独报告回答覆盖率。若任务要求拒答，正确拒答计为成功；未回答或不当拒答也应作为结果保留。如果 faithfulness 只在已回答样本上计算，应标明这是“已回答样本中的条件分数”，并同时报告回答覆盖率或任务完成率。
 - 在相同协议下与基线比较。对于随机输出，重复足够次数以观察有实际意义的波动；报告样本数与不确定性，不要把微小分差说成确定结论。ARES 展示了一种将自动评委、人类标注样例与统计估计结合的方法，但不是每种评估都必须采用。[ARES](https://aclanthology.org/2024.naacl-long.20/)；另见 [Towards Reproducible LLM Evaluation](https://www.turing.ac.uk/sites/default/files/2025-11/towards_reproducible_llm_evaluation.pdf)。
 - 只让快速检查拦截它有能力发现的问题；根据变更风险安排更完整的评估。线上失败在原因查明、数据适合保留后可进入回归集；盲目加入每起事件会造成重复、数据泄漏或隐私风险。
+
+## 架构迁移与更新验收 / Architecture migration and update acceptance
+
+**核心解释 / Core explanation：** 在固定任务与验收契约下比较端到端结果；行为变化、预测分数或复用记录都不能单独证明改进。Compare end-to-end outcomes under fixed task and acceptance contracts; behavioral changes, forecast scores, or reuse records alone do not establish improvement.
+
+比较 agent loop、harness 或上下文策略时，覆盖完整生产链路、强制规则和发生变化的任务切片，并报告新增成功与回归的任务成败翻转（task flips）、成本及重复运行波动。先记录现有架构的端到端基线，再一次折叠一个 subagent 重复比较，单主循环是待评估的候选方案。这是工程建议，参照 [Anthropic 的 folding 文章（2026-10-22，“Task-completion evals”“Folding subagents into the main agent via skills and tools”）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)。
+
+若更新策略（policy）与预测器（predictor），应分别检验各自效果和配对兼容性；配对门禁失败时保留已接受组合，并让开发/更新、门禁和最终审计数据承担不同用途。[RSI-Anything v1（2026-10-09，§2.5）](https://arxiv.org/html/2610.13912v1#S2.SS5)
+
+若要测试清空历史是否有助于搜索，从同一候选检查点比较继续运行（continuation）与清空后重启（reset），同时报告候选质量、方案提案数（proposals）、实际 token/费用或时间及重复波动。[*Scaling Discovery Requires Forgetting* v1（2026-10-14，§4、§4.3 / Table 3）](https://arxiv.org/abs/2610.20563v1)的主实验固定三次重置；AHC014 对照按提案数匹配而非等花费或时长，且同时清除 session 和候选历史。该重置数只是实验设置；结果不能归因于其中一种记忆，也不建立通用重置周期。
+
+Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（2026-10-09，§2.2.1、Appendix F）](https://arxiv.org/html/2610.14224v1)也指出额外执行成本、随机性和共同偏差的影响。工程上仍需单独限制 Probe 的外部写入权限与副作用，不能把它当成无成本、无影响的预测。
+
+**工程建议 / Engineering advice：** 若系统用预测器排序候选，应分别记录预测与随后实测的误差，以及所选 policy/version 在固定验收契约下的任务结果和成本。
 
 ## Use public benchmarks as evidence, not a deployment proxy / 公共基准是证据，不是上线代理
 
@@ -75,6 +91,8 @@ Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例
 
 ## Related notes / 相关笔记
 
+- [Agent fundamentals](../agents/agent-fundamentals.md) — distinguish task feedback from an accepted change that persists across runs.
+- [Orchestration patterns](../agents/orchestration-patterns.md) — compare the single-loop baseline with tested delegation or parallel work.
 - [RAG architecture and implementation](../rag/rag-architecture-and-implementation.md) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
 - [AI safety in production](../safety/ai-safety-in-production.md) — 了解需要单独设计任务检查的安全边界和生产控制。
 

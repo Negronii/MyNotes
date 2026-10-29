@@ -8,12 +8,12 @@ Use [Reading progress / 本轮复习进度](reading-progress.md) to mark notes r
 
 ## AI applications and agents / AI 应用与 Agent
 
-1. [Agent fundamentals / Agent 基础](../ai-engineering/agents/agent-fundamentals.md) — start with the agent loop and its core components.
-2. [Orchestration patterns / 编排模式](../ai-engineering/agents/orchestration-patterns.md) — compare ways to compose AI tasks and agents.
+1. [Agent fundamentals / Agent 基础](../ai-engineering/agents/agent-fundamentals.md) — start with the agent loop, task feedback, and changes accepted for later runs.
+2. [Orchestration patterns / 编排模式](../ai-engineering/agents/orchestration-patterns.md) — choose among a main loop, routing, parallel work, delegation, and ownership handoff.
 3. [Tool design and function calling / 工具设计与函数调用](../ai-engineering/agents/tool-design-and-function-calling.md) — connect model decisions to safe, usable tools.
-4. [Context engineering principles / 上下文工程原则](../ai-engineering/context/context-engineering-principles.md) — organize the information available to a model.
+4. [Context engineering principles / 上下文工程原则](../ai-engineering/context/context-engineering-principles.md) — manage active context, persistent artifacts, selective reset, and just-in-time retrieval.
 5. [Retrieval-Augmented Generation (RAG) / 检索增强生成](../ai-engineering/rag/rag-architecture-and-implementation.md) — follow how retrieval supplies evidence and where system boundaries affect answers.
-6. [LLM Evaluation / 大语言模型评估方法](../ai-engineering/evaluation/llm-evaluation-methods.md) — choose task-scoped measures and locate failures across retrieval, generation, and end-to-end tasks.
+6. [LLM Evaluation / 大语言模型评估方法](../ai-engineering/evaluation/llm-evaluation-methods.md) — compare architectures and accepted versions with task-level evidence.
 7. [AI Safety in Production / 生产环境 AI 安全](../ai-engineering/safety/ai-safety-in-production.md) — connect trust boundaries to runtime controls, stop paths, and testing.
 8. [AI Application Architecture / AI 应用架构](../ai-engineering/systems/ai-application-architecture.md) — bring identity, context, tools, cost, observability, and recovery together around a production model call.
 

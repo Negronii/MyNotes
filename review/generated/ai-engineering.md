@@ -412,7 +412,9 @@ A practical loop is to define success criteria, generate or revise candidates, c
 
 **按需加载（just-in-time retrieval）：** 保留轻量引用，在需要时再读取文件、网页或数据库，而非预先加载全集。这减少无关 token，但每次探索需要额外工具调用，并依赖检索能力和可用权限。对经常需要的稳定资料，也可先加载摘要，再按需查原文。[Anthropic 对按需检索与混合策略有详细说明。](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
 
-**隔离上下文：** 子智能体不会天然共享同一份记忆。清楚传递目标、必要背景和结果格式；需要一致决策时，明确由主 agent 汇总和核对。切分依据应是任务边界、权限或可验证的并行收益，而不是把完整历史复制给每个工作者。
+Skills 与工具搜索也可渐进载入程序或能力；并行工具调用可以留在同一主循环中，不必因此创建 subagent。[Anthropic 关于把 subagent 折回主循环的文章（2026-10-22，“Using an agent loop with progressive disclosure”）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)描述了这种按需暴露方式。
+
+**隔离上下文：** 子智能体不会天然共享同一份记忆。清楚传递目标、必要背景和结果格式；需要一致决策时，明确由主 agent 汇总和核对。切分依据应是任务边界、权限或可验证的并行收益，而不是把完整历史复制给每个工作者。按问题类型交接时，若下一步仍依赖先前约束或发现，摘要可能丢失细节；可先尝试在主循环中保留共享状态并按需加载专业流程，再评估是否需要分拆。[Anthropic 的 folding 文章，“Combining domain agents”](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)；决策方法见[编排模式](#8.%20Orchestration%20Patterns%20/%20%E7%BC%96%E6%8E%92%E6%A8%A1%E5%BC%8F)。
 
 #### How do you use the KV cache to cut inference cost?
 
@@ -439,9 +441,31 @@ Manus 的[上下文工程经验](https://www.manus.im/blog/Context-Engineering-f
 
 **历史会变成示例：** 上下文里重复的动作—观察模式可能影响模型下一步模仿什么。Manus 描述了在批量审核 20 份简历时观察到重复操作，并提出用结构化变体打破模式；这仍是该团队的实践假设，没有足够证据把“改变格式”当作普遍解决方案。保持规范、易解析的序列化通常更利于复现与缓存；若评测发现重复行为，先精简或组织历史，再用任务集比较不同表示，不要无依据地注入格式噪声。
 
+#### 何时保留状态，何时重启探索 / Retain state or reset exploration
+
+**核心解释 / Core explanation：** 保留可复用资产，与把全部历史带入每轮上下文，是不同的选择。Keeping reusable assets and carrying all past history into every context are separate choices.
+
+下表是跨源工程综合，用于比较信息可见性与持久化选择，不构成统一架构或共同实验结论。
+
+| 情形 | 状态选择与证据边界 |
+|---|---|
+| **同一任务的后续步骤** | 保留目标、接口、权限、验收条件、操作状态和影响安全重试的失败事实；将原始记录外置并保留可查 ID。步骤依赖同一约束时，先考虑主循环或明确交接。 |
+| **有外部评分的开放搜索停滞** | 可从同一候选比较重启与继续搜索，并明确各自保留/移除的信息；停滞不自动构成通用重置规则。 |
+| **跨 worker 复用产物** | 将带版本与来源的代码、测试、实验记录外置；按当前任务读取相关产物，不载入完整历史。持久资产和每轮可见上下文是不同选择。[GitSwarm v1（2026-10-04，§§2.2、3.3–3.4、4）](https://arxiv.org/html/2610.04862v1) |
+| **跨任务复用 harness 经验** | 保存可复用组件和经验；新任务从共同基线开始，再检索与适配。[Harness² v1（2026-10-09，§2.3）](https://arxiv.org/html/2610.14224v1) |
+| **接受系统级变更** | 保留已验收配置及其证据；后续候选仍需[重新验收](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95)。 |
+
+[*Scaling Discovery Requires Forgetting* v1（2026-10-14，§§3.1–4.3、Appendix B p. 13、§6）](https://arxiv.org/abs/2610.20563v1) 的 Forget 同时清空 session 与候选搜索历史，只保留最佳候选及分数，以相同首轮指令重启。证据来自四项外部评分的优化任务、一个 harness/model 配置；它没有建立适用于一般任务的重置规则。
+
+GitSwarm 用可分支的共享 Git 仓库和原子提交（atomic commit）保存中间产物。Git 的物理父提交（physical parent）记录开始工作的树；强制字段 `informed_by=` 记录 worker 声明的语义来源，且必须包含 parent、可增加其他分支来源。这是来源追踪，不是因果证明。主要积累证据来自同题跨 episode；单独把已完成搜索的获胜提交作为种子，仍是同一 RMT 任务，不能外推成任意跨任务迁移。worker 使用的 LLM 在 run 中保持固定；架构搜索改进的是被研究的另一模型，不能写成 worker 权重自行学习。[GitSwarm v1（2026-10-04，§§2.2、3.3–3.4、4）](https://arxiv.org/html/2610.04862v1)
+
+**工程建议 / Engineering advice：** 将代码、测试、实验结果和负面发现作为候选经验资产外存，并记录版本、适用条件与检查依据，按当前任务检索后复验。重启探索不应删除权威任务契约或未决外部操作状态；把审计记录留在提示词之外，并重新载入目标、接口、测试、权限、验收条件和必要的失败/副作用状态。“被读取或引用”不等于提升结果。外部资产持续保留而当前上下文选择性清理，是跨源工程综合，不是论文共同评测过的方案。
+
 #### 相关知识
 
 - [智能体基础](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80)：上下文、环境反馈和智能体执行循环如何连接。
+- [编排模式](#8.%20Orchestration%20Patterns%20/%20%E7%BC%96%E6%8E%92%E6%A8%A1%E5%BC%8F)：判断主循环、并行工具与独立 worker 的边界。
+- [LLM 评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95)：比较历史保留、重启与跨运行变更。
 - [工具设计与函数调用](#9.%20Tool%20Design%20and%20Function%20Calling%20/%20%E5%B7%A5%E5%85%B7%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8)：工具 schema 与执行结果也是上下文的一部分。
 - [RAG 架构与实现](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90)：了解何时预先检索、何时按需检索。
 ## 6. Retrieval-Augmented Generation (RAG) / 检索增强生成
@@ -669,6 +693,16 @@ A practical debugging loop is: inspect the source and authorized candidates; ins
 
 停止条件应在系统里实现，而不只写在提示词里：完成、需要补充信息、转交人工、不可恢复的错误或预算耗尽都应有明确结果。最大轮数、总调用数、超时和费用上限能限制失控运行；监测重复调用可作为额外信号，但不能代替业务停止条件。
 
+#### 反馈循环与持久改进 / Feedback loops and persistent improvement
+
+**核心解释 / Core explanation：** 任务内反馈改变当前状态；持久改进则把经评估接受的策略、预测器或 harness 变更作为后续系统版本保留。Task feedback updates current state; persistent improvement retains evaluated and accepted policy, predictor, or harness changes as later system versions.
+
+[RSI-Anything v1（2026-10-09，§2.1）](https://arxiv.org/html/2610.13912v1#S2.SS1) 将任务规格、预算、验收和停止条件视为固定契约；积累经验本身不会修改策略或模型。其 JEPA-Anything/OPF 世界模型（world model）先预测潜变量表示，再由领域读出（readout）转换成任务结果预测，用来排序候选并交给外部测量；相关机制见[§2.2](https://arxiv.org/html/2610.13912v1#S2.SS2)与[§2.3](https://arxiv.org/html/2610.13912v1#S2.SS3)。应区分规则、模型预测、模拟器输出和实测结果。外部反馈可以促成策略/工作流（policy/workflow）更新；只有在已观察候选显示预测器不可靠、且数据与预算足够时，才考虑更新预测器。观测覆盖不足也不等于可靠性已经成立。[§2.4](https://arxiv.org/html/2610.13912v1#S2.SS4)与[§2.5](https://arxiv.org/html/2610.13912v1#S2.SS5)分别说明更新门槛和配对验收。[Table 4](https://arxiv.org/html/2610.13912v1#S6.T4)与[§5](https://arxiv.org/html/2610.13912v1#S5)中各应用的更新范围不同；持续互相改进仍需联合的多轮评估。
+
+**工程建议 / Engineering advice：** 对有清楚任务指标的工作流，可以尝试用脚本、模拟器或范围受限的 agent 预测候选效果并据此预筛，再与后续实测比较、验收版本。单纯语法检查仍是规则校验，agent 的文字预判仍是预测。这些是实现选项，尚无替代上述学习型 world model 的等价实证；单步排序也不证明多步状态模拟有效。
+
+另一类改进改变的是运行脚手架（harness），而非基础模型。[Harness²（v1，2026-10-09，§§2.1–2.3）](https://arxiv.org/html/2610.14224v1) 在同一任务上实际执行候选 harness，比较编辑前后的行为，再将采用的 harness 组件和有依据的经验存入库；新任务从共同的 `H₀` 起步并按需检索。该研究保持 editor 模型、阶段指令和决策规则不变，因此它展示的是任务级 harness 与经验库的演进，不是模型权重或 editor 自行改写。执行对照可支持针对性修改，但不单独证明答案正确；验收边界见[LLM 评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95)。
+
 #### 可用动作空间 / Action space
 
 工具是智能体能观察和改变环境的接口，也是系统的权限边界之一。优先提供用途清楚、彼此少重叠、能直接支持目标流程的能力；名称空间如 browser_search、file_read 有助于识别工具归属，但名称本身不构成安全控制。[Anthropic 的工具评估发现，不同命名方式对不同模型的影响有差异，建议按自己的任务评估。](https://www.anthropic.com/engineering/writing-tools-for-agents)
@@ -679,6 +713,7 @@ A practical debugging loop is: inspect the source and authorized candidates; ins
 
 - [编排模式](#8.%20Orchestration%20Patterns%20/%20%E7%BC%96%E6%8E%92%E6%A8%A1%E5%BC%8F)：选择顺序、并行、路由或多智能体结构。
 - [上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99)：管理长任务中的历史、外部状态与缓存。
+- [LLM 评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95)：区分任务反馈、变更验收与持久版本。
 ## 8. Orchestration Patterns / 编排模式
 
 ### Orchestration Patterns | 编排模式
@@ -729,7 +764,9 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 
 不论哪种结构，都要约定交接输入、输出契约、状态归属、最大交接深度和失败回退。否则专家之间可能反复转交、丢失客户/订单 ID，或对同一副作用重复执行。
 
-#### 什么时候拆分
+#### 先尝试单主循环，再验证拆分 / Start with one loop, then test delegation
+
+**核心建议 / Core guidance：** 后续步骤仍依赖同一任务状态时，先尝试一个主循环；只有可独立并行、需要隔离验证或具备真实能力边界的子任务显示出收益时，再拆分。When later steps depend on shared task state, start with one main loop; split only when independent parallel work, isolated verification, or an enforced capability boundary provides a measured benefit.
 
 拆分的理由是具体的任务边界，而不是某个工具数量阈值：
 
@@ -738,7 +775,9 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 - **策略或权限应隔离：** 不同工作者拥有不同的知识范围、工具和访问权限。
 - **单个上下文过于混杂：** 实测表明工具重叠、指令冲突或长历史降低了成功率。
 
-额外 agent 会增加模型调用、数据传递、追踪和协调点。开始时先用单 agent 加清晰的工具和上下文；只有离线评估或生产观测显示分拆能改善质量、时延或可靠性，才保留复杂结构。不要把“15 个工具”或其他固定数写成普适分界线。
+技能和工具搜索可渐进地把程序或能力载入主上下文；并行工具调用本身不要求新建 subagent。[Anthropic / Diane Sarkis 的 folding 文章（2026-10-22，“Using an agent loop with progressive disclosure”“Task-completion evals”等章节）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)建议先建立端到端基线，再逐个折叠 subagent，检查任务成败变化、生产链路和必须遵守的规则，并在重复运行中比较；合并时保留领域流程。独立研究、并行探索和验证仍可适合独立 worker；权限隔离只有在运行时真正限制能力时才成立。额外 agent 会增加模型调用、数据传递、追踪和协调点。不要把“15 个工具”或其他固定数写成普适分界线。
+
+GitSwarm 提供了适用范围不同的例子：异步 worker 自主选择工作，在可分支的共享 Git 仓库中发布可组合产物；执行 harness 仍负责调度和发布验证，该验证检查提交要求而不认证产物正确性。[GitSwarm（v1，2026-10-04，§§2.1–2.3）](https://arxiv.org/html/2610.04862v1)不设中央“intellectual planner”（智能规划器）替 workers 指派探索方向，也不取消执行协调；它支持把独立、可检查的产物作为拆分条件，但不证明普通任务都应使用多 agent。状态取舍见[上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99)，比较拆分效果见[LLM 评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95)。
 
 #### 提示模板仍是单 agent 的选项
 
@@ -752,6 +791,8 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 
 - [智能体基础](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80)：工作流与 agent 的控制流边界及运行循环。
 - [工具设计与函数调用](#9.%20Tool%20Design%20and%20Function%20Calling%20/%20%E5%B7%A5%E5%85%B7%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8)：定义被编排结构调用的能力与执行边界。
+- [上下文工程原则](#5.%20Context%20Engineering%20Principles%20/%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B%E5%8E%9F%E5%88%99)：决定在交接中保留什么、何时按需载入或重启探索。
+- [LLM 评估方法](#10.%20LLM%20Evaluation%20Methods%20/%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%AF%84%E4%BC%B0%E6%96%B9%E6%B3%95)：用端到端任务证据比较主循环、委托和交接。
 ## 9. Tool Design and Function Calling / 工具设计与函数调用
 
 ### Tool Design and Function Calling | 工具设计与函数调用
@@ -894,6 +935,8 @@ Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例
 
 需要外部事实时，尽可能对照适当、可信且及时的依据。评估来源忠实度时，应对照指定的上下文检查说法。NLI 分类器、再次检索和 self-consistency 可帮助筛选待检查内容，但都可能出错：多次回答一致不能证明为真，二次检索也可能返回过期或不相关来源。应报告检查了什么、依据何在，而不要把检测器分数写成事实已核实。
 
+同样，提交被引用、标成依赖或获提名投票（nomination），只能说明来源声明或选择过程；不能代替任务结果的正确性检查。[GitSwarm v1（2026-10-04，§§2.2、2.5、3.4、4）](https://arxiv.org/html/2610.04862v1)将依赖声明、执行轨迹中的实际产物使用和最终候选的提交祖先链分开分析，并明确这些指标不单独证明因果收益。
+
 #### Build a comparable regression set / 建立可比较的回归集
 
 - 定义符合条件的任务总体，并抽取常见样本、重要切片和已知失败类型。记录样例如何选择、标注和版本化；方便取得的样例集不一定有代表性。
@@ -901,6 +944,20 @@ Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例
 - 明确分母。例如，报告“所有符合条件的尝试中成功完成任务的比例”，并单独报告回答覆盖率。若任务要求拒答，正确拒答计为成功；未回答或不当拒答也应作为结果保留。如果 faithfulness 只在已回答样本上计算，应标明这是“已回答样本中的条件分数”，并同时报告回答覆盖率或任务完成率。
 - 在相同协议下与基线比较。对于随机输出，重复足够次数以观察有实际意义的波动；报告样本数与不确定性，不要把微小分差说成确定结论。ARES 展示了一种将自动评委、人类标注样例与统计估计结合的方法，但不是每种评估都必须采用。[ARES](https://aclanthology.org/2024.naacl-long.20/)；另见 [Towards Reproducible LLM Evaluation](https://www.turing.ac.uk/sites/default/files/2025-11/towards_reproducible_llm_evaluation.pdf)。
 - 只让快速检查拦截它有能力发现的问题；根据变更风险安排更完整的评估。线上失败在原因查明、数据适合保留后可进入回归集；盲目加入每起事件会造成重复、数据泄漏或隐私风险。
+
+#### 架构迁移与更新验收 / Architecture migration and update acceptance
+
+**核心解释 / Core explanation：** 在固定任务与验收契约下比较端到端结果；行为变化、预测分数或复用记录都不能单独证明改进。Compare end-to-end outcomes under fixed task and acceptance contracts; behavioral changes, forecast scores, or reuse records alone do not establish improvement.
+
+比较 agent loop、harness 或上下文策略时，覆盖完整生产链路、强制规则和发生变化的任务切片，并报告新增成功与回归的任务成败翻转（task flips）、成本及重复运行波动。先记录现有架构的端到端基线，再一次折叠一个 subagent 重复比较，单主循环是待评估的候选方案。这是工程建议，参照 [Anthropic 的 folding 文章（2026-10-22，“Task-completion evals”“Folding subagents into the main agent via skills and tools”）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)。
+
+若更新策略（policy）与预测器（predictor），应分别检验各自效果和配对兼容性；配对门禁失败时保留已接受组合，并让开发/更新、门禁和最终审计数据承担不同用途。[RSI-Anything v1（2026-10-09，§2.5）](https://arxiv.org/html/2610.13912v1#S2.SS5)
+
+若要测试清空历史是否有助于搜索，从同一候选检查点比较继续运行（continuation）与清空后重启（reset），同时报告候选质量、方案提案数（proposals）、实际 token/费用或时间及重复波动。[*Scaling Discovery Requires Forgetting* v1（2026-10-14，§4、§4.3 / Table 3）](https://arxiv.org/abs/2610.20563v1)的主实验固定三次重置；AHC014 对照按提案数匹配而非等花费或时长，且同时清除 session 和候选历史。该重置数只是实验设置；结果不能归因于其中一种记忆，也不建立通用重置周期。
+
+Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（2026-10-09，§2.2.1、Appendix F）](https://arxiv.org/html/2610.14224v1)也指出额外执行成本、随机性和共同偏差的影响。工程上仍需单独限制 Probe 的外部写入权限与副作用，不能把它当成无成本、无影响的预测。
+
+**工程建议 / Engineering advice：** 若系统用预测器排序候选，应分别记录预测与随后实测的误差，以及所选 policy/version 在固定验收契约下的任务结果和成本。
 
 #### Use public benchmarks as evidence, not a deployment proxy / 公共基准是证据，不是上线代理
 
@@ -910,6 +967,8 @@ Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例
 
 #### Related notes / 相关笔记
 
+- [Agent fundamentals](#7.%20Agent%20Fundamentals%20/%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%9F%BA%E7%A1%80) — distinguish task feedback from an accepted change that persists across runs.
+- [Orchestration patterns](#8.%20Orchestration%20Patterns%20/%20%E7%BC%96%E6%8E%92%E6%A8%A1%E5%BC%8F) — compare the single-loop baseline with tested delegation or parallel work.
 - [RAG architecture and implementation](#6.%20Retrieval-Augmented%20Generation%20%28RAG%29%20/%20%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA%E7%94%9F%E6%88%90) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
 - [AI safety in production](#12.%20AI%20Safety%20in%20Production%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84AI%E5%AE%89%E5%85%A8) — 了解需要单独设计任务检查的安全边界和生产控制。
 
