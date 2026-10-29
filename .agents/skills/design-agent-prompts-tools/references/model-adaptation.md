@@ -31,7 +31,7 @@ Begin at level 0 for each new model or major version. Add one layer at a time on
 | 4. Recovery guidance | Known failure signal, retry rule, workaround | Repeated dead ends or invalid tool use | Encoding stale incidents |
 | 5. Verification gates | Observable checklist, validator, bounded retry | Premature completion or silent errors | Loops, latency, and over-verification |
 
-Prefer schema constraints, deterministic validators, state machines, or orchestrator-owned retries when a failure is machine-detectable. Prompt repetition is a last-mile adapter, not an enforcement mechanism.
+Use schema constraints, validators, state machines, or orchestrator-owned retries when a concrete requirement or reachable failure calls for reliable enforcement. Reuse existing mechanisms; machine-detectability alone does not justify a new one. Ordinary trusted-agent coordination may remain in instructions; required guarantees still need an appropriate enforcement owner.
 
 ## Profile heuristics
 

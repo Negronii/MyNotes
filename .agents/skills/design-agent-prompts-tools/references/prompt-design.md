@@ -60,7 +60,7 @@ Write constraints around real failure modes:
 - Replace “be careful” with the action, trigger, and observable boundary.
 - Explain the consequence when it helps generalization.
 - Give a recovery path when a constraint can fail.
-- Avoid large collections of `NEVER` rules. Move detectable prohibitions into code.
+- Avoid large collections of `NEVER` rules. Use appropriate code boundaries for required business, data, permission, or external-effect guarantees; ordinary coordination may remain in instructions. Reuse existing mechanisms rather than adding enforcement merely because a rule is detectable.
 
 Use examples when they define a format, resolve an ambiguity, or address a relevant failure. Keep them consistent and minimal. For a model that misses implicit boundaries, try a positive and a near-miss example before adding a large example bank. More examples do not necessarily help smaller models more.
 

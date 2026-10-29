@@ -49,6 +49,8 @@ Preserve task state outside prose when work spans many turns:
 
 Compaction should retain facts needed to resume, not reproduce the entire trace. Keep failures when they prevent repeated mistakes. Use structured state or files for machine-consumed continuity and validate them where practical.
 
+When repeated attempts add no useful information and a valuable question remains within scope and budget, the same owner may delegate an alternative investigation to a fresh-context worker. Supply the objective, reliable baseline, decisive facts, constraints, and remaining budget; separate observations from interpretations and retrieve detailed evidence on demand. Preserve durable records, cumulative attempts, selection/exposure history, and existing closure or validation restrictions. Assess the resulting work and total effort before reusing this approach; a context reset alone is not evidence of improvement.
+
 ## Autonomy boundaries
 
 Define authorization by request type and consequence:

@@ -51,7 +51,7 @@ Finish only when:
 
 - every retained instruction has a clear owner and purpose;
 - repeated or conflicting rules are removed;
-- detectable constraints are enforced outside prose where feasible;
+- required deterministic guarantees have an appropriate enforcement owner; reuse existing mechanisms and add runtime enforcement only for a concrete requirement or reachable failure within scope;
 - context, examples, and scaffolding serve a requirement, resolve a material ambiguity, or address a relevant failure;
 - provider-specific detail is verified when needed and routed on demand;
 - validation matches the material uncertainty and claims, with any incomplete checks stated; and
