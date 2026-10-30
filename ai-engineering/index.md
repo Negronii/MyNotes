@@ -4,6 +4,10 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 
 本地图按主题组织可复用的 AI 工程知识。智能体基础、编排、上下文和评估条目分别说明改进对象、任务结构、推理可见信息与变更验收。
 
+## Literature / 论文与文章
+
+- [AI Literature Index / AI 论文与文章索引](../review/ai-literature-index.md) — 按来源查找核心贡献与知识落点。
+
 ## Reading order / 阅读顺序
 
 ### Foundation models / 基础模型

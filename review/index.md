@@ -17,6 +17,8 @@ Use [Reading progress / 本轮复习进度](reading-progress.md) to mark notes r
 7. [AI Safety in Production / 生产环境 AI 安全](../ai-engineering/safety/ai-safety-in-production.md) — connect trust boundaries to runtime controls, stop paths, and testing.
 8. [AI Application Architecture / AI 应用架构](../ai-engineering/systems/ai-application-architecture.md) — bring identity, context, tools, cost, observability, and recovery together around a production model call.
 
+[AI Literature Index / AI 论文与文章索引](ai-literature-index.md) — 按来源查找论文与文章的核心贡献，以及它们融入的主题笔记。
+
 ## Frontend and full-stack foundations / 前端与全栈基础
 
 1. [Scope and closure / 作用域与闭包](../frontend/javascript/scope-and-closure.md) — revisit JavaScript variable lookup and captured bindings.
