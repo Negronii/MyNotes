@@ -20,7 +20,7 @@ The [Database Fundamentals / 数据库基础](../databases/database-fundamentals
 
 With a 30-second TTL, a value that was filled before an update can remain visible until its entry expires if the post-commit invalidation fails. But TTL is not an end-to-end consistency guarantee: a reader can load the old database value just before a concurrent write commits, then populate the cache after the writer's `DEL`; that stale fill receives a fresh TTL. Each entry's lifetime is bounded, but repeated or delayed stale fills can extend the period in which clients see stale data. If read-after-write freshness is required, bypass the cache for that read or use a versioned/ordered invalidation design; do not assume Redis alone coordinates the two stores.
 
-Include every dimension that changes the returned value in the cache key, such as tenant or locale, and keep authorization checks outside an untrusted cached payload. The existing [AI response-cache explanation](../../ai-engineering/systems/ai-application-architecture.md) applies the same key-isolation and freshness discipline to exact or semantic response reuse; semantic similarity does not establish that data is current or authorized.
+Include every dimension that changes the returned value in the cache key, such as tenant or locale, and keep authorization checks outside an untrusted cached payload. The [AI response-cache explanation](../../ai-engineering/systems/ai-latency-and-cost-optimization.md) applies the same key-isolation and freshness discipline to exact or semantic response reuse. Semantic similarity cannot establish that data is current or authorized.
 
 ## Expiration bursts and cache outages / 集中过期与缓存故障
 

@@ -3913,32 +3913,70 @@ Lazy-loading images is great — unless you introduce layout shift every time on
 **See also:** [`11.1 Performance Metrics and Analysis`](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#22.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
 
 **Standards / 规范：** [WHATWG `img` element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element), [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes), [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/), [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/).
-## 25. Streaming UX / 流式交互
+## 25. How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
 
-### Streaming UX / 流式交互
+### How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
 
-**Core explanation / 核心解释：** A stream is an incremental view of a server operation, not a promise that the operation finished. The interface should preserve useful partial text, decode and frame bytes incrementally, bound pending work, and make completion depend on an explicit terminal event. Stopping the browser reader ends the local view; server cancellation needs its own request and authoritative acknowledgement. / 流是服务器操作的增量视图，不代表操作已经完成。界面应保留可用的部分文本，增量解码和组帧，限制待处理工作，并只在收到明确终态事件后显示完成。停止浏览器读取只会结束本地视图；取消服务端任务需要单独请求和权威确认。
+**Core answer / 核心回答：** Treat a streamed answer as partial until the client receives and validates an explicit terminal event for the same run. Keep useful deltas visible, label them as incomplete, and bound decoding, buffering, rendering, and recovery. If the event connection ends without a terminal event, preserve the text but treat the result as unknown and query the run's authoritative status. Stopping the local reader cancels this view; stopping server work requires a separate cancellation request and confirmation. / 收到并验证同一次运行的明确终态事件之前，都应把流式回答视为部分结果。保留有用的增量文本并标记为未完成，同时限制解码、缓冲、渲染和恢复的资源。如果事件连接在终态事件前结束，应保留文本、把结果视为未知并查询运行的权威状态。停止本地读取只会取消当前视图；停止服务端工作需要单独发出取消请求并确认。
 
-**Key terms / 关键术语：** incremental decoding / 增量解码；frame / 帧；partial output / 部分输出；terminal event / 终态事件；backpressure / 背压；teardown / 清理；resume cursor / 恢复游标.
+**Key terms / 关键术语：** partial output / 部分输出；terminal event / 终态事件；run state / 运行状态；resume cursor / 恢复游标；backpressure / 背压；local cancellation / 本地取消。
 
-#### State belongs in the interaction / 交互需要明确状态
+#### Which state can the interface safely show? / 界面可以准确显示哪些状态？
 
-Keep the view's state separate from the server's run state. A useful browser lifecycle is:
+The browser view tracks what this page has received and can render. The [durable run record / 持久运行记录](../../ai-engineering/systems/ai-application-architecture.md) owns the server's queued, running, completed, failed, and canceled states. A text delta moves the view into `streaming`. A valid `complete` event for the expected `runId` confirms success in this example, while a terminal `error` frame confirms that the server reported failure. When a disconnect, timeout, or framing error interrupts the read, preserve partial text and query the run record. The same [unknown outcome / 结果未知](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) matters when deciding whether to retry a regular request.
 
-| View state | Meaning and behavior |
+| View state | What the user can infer |
 |---|---|
-| idle / 空闲 | No request is active. |
-| connecting / 连接中 | Submitting, opening the event response, or making an allowed resume request. |
-| streaming / 接收中 | At least one validated progress or text frame has arrived. Keep showing it as partial. |
-| completed / 已完成 | A valid complete frame for this runId arrived. This is the only streamed success path. |
-| failed / 失败 | The server sent a terminal error, the protocol was malformed, or the bounded recovery policy ended. Keep usable partial text and show whether the run's final state is still unknown. |
-| canceled / 已停止 | The user stopped this view or the route was torn down. The run may still be queued or running unless the server confirms cancellation. |
+| `idle` | No stream is being viewed. |
+| `connecting` | Submission, event connection, or an allowed resume request is in progress. |
+| `streaming` | At least one valid delta arrived. The visible answer is partial. |
+| `completed` | A valid `complete` frame for this `runId` arrived. |
+| `failed` | The view cannot continue normally. A valid error frame reports server failure; a transport, framing, timeout, or recovery failure leaves the run's final server state unknown until queried. Keep useful text labeled as incomplete. |
+| `canceled` | The local reader or view was stopped. The server may still be queued or running unless its status confirms cancellation. |
 
-The server's durable run record can still say queued, running, cancel_requested, completed, failed, or canceled. A browser failed transport and a server failed run are different facts; query status before presenting one as the other. See [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) for stable run IDs, authoritative state, idempotent submission, and cancellation races.
+The sequence below shows the main success and recovery paths. Status queries answer what happened to the run; they do not make a broken event stream complete. A cancellation request can remain pending until the server reports a terminal status.
+
+~~~mermaid
+sequenceDiagram
+    actor User
+    participant UI as Browser view
+    participant Events as Event endpoint
+    participant Runs as Run status API
+
+    User->>UI: Submit prompt
+    UI->>Runs: POST /api/runs (idempotency key)
+    Runs-->>UI: 202 + stable runId
+    UI->>Events: GET /api/runs/{runId}/events?after=seq
+    loop Valid progress
+        Events-->>UI: delta(seq, text)
+        UI-->>User: Append text, label as partial
+    end
+    alt Valid completion event
+        Events-->>UI: complete(seq, runId)
+        UI-->>User: Mark answer complete
+    else Valid error event
+        Events-->>UI: error(seq, runId)
+        UI-->>User: Keep partial text and show the failure
+    else Disconnect, EOF, timeout, or invalid stream
+        Events--xUI: No valid terminal event
+        UI->>Runs: GET /api/runs/{runId}
+        Runs-->>UI: Authoritative status
+        UI-->>User: Keep partial text and show known or unknown run state
+    else User stops this view
+        User->>UI: Stop
+        UI->>Events: Abort local fetch and reader
+        UI-->>User: Mark this view stopped
+        opt Also ask the server to stop work
+            UI->>Runs: POST /api/runs/{runId}/cancel
+            Runs-->>UI: Cancellation accepted or current status
+            UI->>Runs: Query within the recovery budget
+        end
+    end
+~~~
 
 #### A small application protocol / 简洁的应用协议
 
-This example uses Fetch to read newline-delimited JSON records. It is a synthetic application contract; it does not add another transport or redefine SSE. POST /api/runs accepts an Idempotency-Key and returns 202 with a stable runId. The client then reads GET /api/runs/{runId}/events?after=12. Each event is one UTF-8 JSON object followed by LF (CRLF is also accepted); records carry a monotonically increasing seq. A delta adds partial text, while complete or error is terminal. The server can replay older sequence numbers around reconnect races; the client drops duplicates and treats a gap as a failed stream. GET /api/runs/{runId} remains the authority for status.
+This example uses Fetch to read newline-delimited JSON records. It is a synthetic application contract, not an additional transport standard and not a redefinition of Server-Sent Events (SSE). `POST /api/runs` accepts an `Idempotency-Key` and returns `202` with a stable `runId`; the client then reads `GET /api/runs/{runId}/events?after={lastSequence}`. Each event is one UTF-8 JSON object followed by LF (CRLF is also accepted), and carries a monotonically increasing `seq`. A `delta` adds partial text; `complete` and `error` are terminal. On reconnect the server may replay older sequence numbers, which the client drops, while a gap fails the stream. `GET /api/runs/{runId}` remains authoritative for run status.
 
 ~~~text
 POST /api/runs
@@ -4287,6 +4325,8 @@ assert.deepEqual(bufferedRaceStates, ["connecting", "streaming", "canceled"]);
 assert.match(bufferedRace.detail, /Stopped while rendering/);
 console.log("PASS abort during awaited text handling prevents a buffered complete frame");
 ~~~
+
+**Executable proof / 可执行验证：** The standalone model above ran with Node.js v26.11.1 on 2026-11-05. All eight assertion-backed case groups passed: split UTF-8 and frame boundaries with coalesced frames, terminal server error, malformed JSON, premature EOF, abrupt disconnect, timeout, explicit local abort, and abort during awaited rendering. This exercises the synthetic stream model; it does not test a browser or production server. / 上述独立模型于 2026-11-05 使用 Node.js v26.11.1 运行，所有八组断言场景均通过：拆分 UTF-8、跨帧读取与合并帧的正常路径、服务端终态错误、格式错误的 JSON、过早 EOF、连接中断、超时、显式本地中止以及渲染等待期间中止。此验证针对合成流模型，不覆盖真实浏览器或生产服务端。
 
 For a browser, create one AbortController for the active event request and pass its signal to Fetch. The stop button and route cleanup should abort that request and release its reader. If the product also wants to stop server work, send POST /api/runs/{runId}/cancel and keep showing a pending cancellation until GET /api/runs/{runId} reports a terminal state. AbortController.abort() and reader.cancel() affect the local fetch/body consumption; neither proves the worker stopped.
 

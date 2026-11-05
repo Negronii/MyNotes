@@ -42,7 +42,7 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 - [DOM Manipulation and Events / DOM操作与事件](browser-apis/dom-manipulation-and-events.md)
 - [Browser Storage and Communication / 浏览器存储与通信](browser-apis/browser-storage-and-communication.md)
 - [Image Lazy Loading / 浏览器图片懒加载](browser-apis/image-lazy-loading.md)
-- [Streaming UX / 流式交互](browser-apis/streaming-ux.md)
+- [How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？](browser-apis/streaming-ux.md)
 
 ### TypeScript / TypeScript
 

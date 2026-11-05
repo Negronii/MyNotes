@@ -19,7 +19,9 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 ### Reliability and asynchronous delivery / 可靠性与异步交付
 
-- [API Reliability and Asynchronous Delivery / API可靠性与异步交付](reliability/api-reliability-and-async-delivery.md)
+- [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
+- [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
+- [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](reliability/queue-delivery-and-acknowledgement.md)
 - [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](reliability/observability-slos-and-incident-response.md)
 
 ### Security / 安全
@@ -50,7 +52,7 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 - [Software Design Principles / 软件设计原则](architecture/software-design-principles.md)
 - [Design Patterns in Practice / 设计模式实践](architecture/design-patterns-in-practice.md)
 - [Reading, Debugging, and Reviewing Code / 阅读、调试与审查代码](architecture/reading-debugging-and-reviewing-code.md)
-- [System Design Fundamentals / 系统设计基础](architecture/system-design-fundamentals.md)
+- [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 
 ### Career / 职业发展
 

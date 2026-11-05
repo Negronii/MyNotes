@@ -48,7 +48,10 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 
 ### Production systems / 生产系统
 
-- [AI Application Architecture / AI应用架构](systems/ai-application-architecture.md)
+- [How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？](systems/ai-application-architecture.md)
+- [How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？](systems/ai-latency-and-cost-optimization.md)
+- [When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？](systems/ai-deployment-patterns.md)
+- [How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
 - [AI System Design Interview Questions / AI系统设计面试题](systems/ai-system-design-interview-questions.md)
 
 ## Cross-domain context / 跨域脉络

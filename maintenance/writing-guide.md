@@ -4,19 +4,19 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 
 ## Organize knowledge
 
-- A note covers one coherent topic that a reader can understand and reuse on its own. Do not force every detail into an atomic note.
+- A knowledge note answers one coherent question. Give the reader a complete answer on the page. Give a follow-up its own page when it can support an independent explanation or be reused in other questions.
 - Use the six domain roots as the top-level boundary: `ai-engineering`, `frontend`, `engineering-foundations`, `archive`, `review`, and `maintenance`. Engineering foundations holds shared networking, operating systems, databases, API reliability, security, testing, deployment, backend, and system-design knowledge. Create topic folders when substantive notes need them; authorized, source-backed additions may fill knowledge gaps.
 - Keep this open-source repository to general, reusable knowledge. Exclude personal résumé or project-experience material, internal project, system, code, or organization details, and unpublished results or data.
-- Use English kebab-case filenames without numeric prefixes. Use a small number of subdirectories where they clarify topic ownership. Put reading and interview sequences in the domain map rather than encoding order in filenames. Do not add empty topic folders.
+- Use English kebab-case filenames without numeric prefixes for new pages. Use subdirectories where they clarify ownership. Domain maps own the complete reading order. The knowledge navigator offers shorter routes through shared questions.
 - Keep original attachments, source files, and prompts intact as a classified package. Course Markdown is part of the knowledge review.
 
 ## Write for understanding and reuse
 
-- Lead with the conclusion or useful mental model, then explain the mechanism and evidence. Prefer concrete examples and concise explanations; remove setup that does not help understanding.
-- Keep the shape that serves the material. Concept notes explain how or why something works. Reference notes keep useful tables, commands, and catalogs easy to scan. System-design questions explain requirements, architecture, key decisions, and tradeoffs. Do not force every note into interview questions or a fixed template.
-- Use bilingual titles, key terms, core explanations, and interview answers. Detailed derivations, mechanisms, and examples may use whichever one language makes them clearest; do not translate every paragraph just for symmetry.
+- Put the question in the title and give a short answer first. For a process, explain what enters each step, what changes, why it matters, and what comes out. For a decision, connect the constraints to the choices and their tradeoffs. Keep tables, commands, and worked examples in the form the reader can best use.
+- Use bilingual titles, short answers, key terms, and interview answers where included. Detailed derivations, mechanisms, and examples may use whichever language makes them clearest.
 - Preserve useful knowledge and distinctive examples when rewriting, merging, or splitting notes. Remove genuine duplication, but do not delete lasting material only because it is not currently an interview topic.
-- Cross-link related notes when the connection helps the reader, and say why the link matters. Prefer file-level links between notes; use a section fragment only when it helps navigation and has been checked in the intended readers. Link to the canonical explanation instead of copying it.
+- Explain a linked mechanism's role at the point where the reader needs it. Link to the page that owns the detailed answer. Use a section link when it helps the reader find a particular part, and verify the heading in the intended readers.
+- Use Mermaid when a flow, state change, or interaction is easier to follow visually. Put new static assets in a nearby `resources` folder and use relative Markdown links. Explain the main point in prose so the page remains usable without the figure.
 - Do not manufacture a gotcha, code example, or interview framing. Every example should clarify a point or show a real use.
 
 ## Check factual claims

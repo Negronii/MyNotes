@@ -128,7 +128,7 @@ Pull request event → diff and repository context
 
 ## Related notes / 相关笔记
 
-- [AI Application Architecture / AI 应用架构](./ai-application-architecture.md) covers production controls and deployment.
+- [Durable AI runs / 持久化 AI 运行](./ai-application-architecture.md) covers production run controls. [AI deployment choices / AI 部署选择](./ai-deployment-patterns.md) compares where to run the model.
 - [RAG Architecture and Implementation / 检索增强生成](../rag/rag-architecture-and-implementation.md) covers retrieval implementation and grounding.
 - [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) covers evaluation design.
 - [Agent Fundamentals / 智能体基础](../agents/agent-fundamentals.md) covers runtime agent patterns.

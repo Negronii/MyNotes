@@ -165,7 +165,7 @@ For a project with a `requirements.txt`, install its declared packages with `.ve
 
 **Verified run / 运行验证：** The file-processing example ran with CPython 3.11.13 and printed the expected output above. This verifies the example on that interpreter; it is not a claim that every Python implementation or platform has identical implementation details.
 
-**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../reliability/api-reliability-and-async-delivery.md) explains timeout, cancellation, retries, and bounded work at network and queue boundaries; those correctness concerns also apply to Python services.
+**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../reliability/api-reliability-and-async-delivery.md) explains timeouts, cancellation, and safe retries. [Capacity and backpressure](../reliability/api-capacity-and-backpressure.md) covers bounded work.
 Python-specific coroutine and framework behavior is explained in [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](python-async-and-fastapi.md).
 Application-level request, response, error, and pagination contracts are covered in [HTTP API Contracts / HTTP API契约](http-api-contracts.md).
 

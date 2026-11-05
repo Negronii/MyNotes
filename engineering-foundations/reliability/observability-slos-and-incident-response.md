@@ -48,12 +48,12 @@ For the example SLO, a focused alert could fire when at least 100 eligible looku
 When it fires:
 
 1. **Confirm impact and scope.** Check event counts, SLI trend, error types, route/region, and recent changes. Make sure telemetry is arriving and the denominator still matches the SLI definition.
-2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age, depth, retries, and completion outcomes in the existing [API reliability and asynchronous delivery](api-reliability-and-async-delivery.md) note.
+2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age and depth as part of [capacity and backpressure](api-capacity-and-backpressure.md). [Broker delivery](queue-delivery-and-acknowledgement.md) explains the acknowledgement boundary.
 3. **Mitigate the user impact.** Choose the smallest safe action supported by evidence, such as rolling back a change that matches the onset or temporarily reducing load on a saturated dependency. Record the action and its expected effect; do not add retries blindly if they can amplify overload.
 4. **Verify recovery.** Confirm that the user-facing SLI returns above the alert threshold with adequate traffic, and check the affected stage and dependency signals for continuing saturation or error growth. A quiet alert alone is not evidence that the service recovered.
 5. **Follow up.** Record the user impact and time window, the causal mechanism, the mitigation, and a small set of owned changes to prevent recurrence or improve detection. Link the incident to relevant tests and telemetry gaps.
 
-Use the SLO to guide tradeoffs. For AI-backed flows, pair operational signals with task quality and cost measures already covered in [AI application architecture](../../ai-engineering/systems/ai-application-architecture.md) and [LLM evaluation methods](../../ai-engineering/evaluation/llm-evaluation-methods.md). A healthy HTTP success and latency SLI does not prove that generated answers are useful or correct.
+Use the SLO to guide tradeoffs. For AI-backed flows, pair [production signals](../../ai-engineering/systems/ai-production-observability-and-feedback.md) with task-quality measures from [LLM evaluation](../../ai-engineering/evaluation/llm-evaluation-methods.md). HTTP success and latency describe delivery. Task evaluation establishes whether generated answers are useful or correct.
 
 ## Sources / 来源
 

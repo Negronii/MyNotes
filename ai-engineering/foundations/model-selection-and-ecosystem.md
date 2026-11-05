@@ -52,7 +52,7 @@ Routing can send simple, low-risk requests to a cheaper model and reserve a more
 
 ## Related notes / 相关笔记
 
-- [AI Application Architecture / AI应用架构](../systems/ai-application-architecture.md) covers routing, cost, monitoring, and deployment choices.
+- Compare [serving cost](../systems/ai-latency-and-cost-optimization.md), [deployment patterns](../systems/ai-deployment-patterns.md), and [production signals](../systems/ai-production-observability-and-feedback.md) when choosing how to operate a model.
 - [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) covers token budgets and provider-specific prompt caching.
 - [Fine-tuning Strategies / 微调策略](../fine-tuning/fine-tuning-strategies.md) distinguishes behavior adaptation from maintained external knowledge.
 - [RAG Architecture and Implementation / 检索增强生成](../rag/rag-architecture-and-implementation.md) covers current or access-controlled external evidence.
