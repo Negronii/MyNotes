@@ -1,8 +1,6 @@
 # AI Engineering / AI 工程
 
-This map organizes durable, reusable AI engineering knowledge by topic. The agent, orchestration, context, and evaluation notes connect what can change, how work is structured, what information reaches each inference, and how changes are accepted.
-
-本地图按主题组织可复用的 AI 工程知识。智能体基础、编排、上下文和评估条目分别说明改进对象、任务结构、推理可见信息与变更验收。
+Follow the model from tokens to generation, then design what the application supplies and which actions it allows. Use the evaluation and production questions to check whether the resulting system works reliably. / 从词元到文本生成，再到应用提供哪些信息、允许哪些动作。最后用评估和生产问题检验系统能否可靠工作。
 
 ## Literature / 论文与文章
 
@@ -14,9 +12,9 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 
 - [How does a language model turn a prompt into text? / 语言模型怎样把一段 prompt 变成文本？](foundations/how-llms-work.md)
 - [How does a tokenizer map text to token IDs? / 分词器怎样把文本变成 token ID？](foundations/llm-tokenization.md)
-- [What does a language model learn to predict during training? / 语言模型训练时学习预测什么？](foundations/language-model-training-objectives.md)
 - [How does a Transformer block update a token using context? / Transformer block 怎样利用上下文更新词元表示？](foundations/transformer-context-updates.md)
 - [How does a decoder choose the next token from model scores? / 解码器怎样根据模型分数选出下一个词元？](foundations/next-token-decoding.md)
+- [What does a language model learn to predict during training? / 语言模型训练时学习预测什么？](foundations/language-model-training-objectives.md)
 - [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](foundations/model-selection-and-ecosystem.md)
 
 ### Prompting / 提示工程
@@ -38,17 +36,18 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 - [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](agents/orchestration-patterns.md)
 - [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](agents/tool-design-and-function-calling.md)
 
-### Evaluation / 评估
+### Safety / 安全
+
+- [How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？](safety/ai-safety-in-production.md)
+
+### Evaluation and improvement / 评估与改进
 
 - [How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)
+- [How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](agents/agent-improvement-and-version-acceptance.md)
 
 ### Fine-tuning / 微调
 
 - [When should you fine-tune to close a repeatable behavior gap? / 何时应通过微调弥补稳定的行为差距？](fine-tuning/fine-tuning-strategies.md)
-
-### Safety / 安全
-
-- [How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？](safety/ai-safety-in-production.md)
 
 ### Production systems / 生产系统
 

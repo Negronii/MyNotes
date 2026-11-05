@@ -5,7 +5,7 @@ Use the current HTML/CSS notes for the core mechanisms, then consult the focused
 - [HTML and CSS Basics / HTML 与 CSS 基础](../../../../frontend/html-css/html-and-css-basics.md) — selectors, inheritance, units, responsive design, semantics, and text truncation.
 - [Box Model and BFC / 盒模型与块格式化上下文](../../../../frontend/html-css/box-model-and-bfc.md) — box sizing, formatting contexts, and margin collapse. The original diagram remains in [the box-model visual note](box-model-visual.md).
 - [Flex & Grid Layout / Flex与Grid布局](../../../../frontend/html-css/flex-and-grid-layout.md) — Flexbox and Grid fundamentals; the archived navbar and ellipsis examples are in [flexbox navigation examples](flexbox-navigation-and-ellipsis-examples.md).
-- [CSS Interview Questions / CSS面试题](../../../../frontend/html-css/css-interview-questions.md) — float clearing and layout patterns.
+- [Centering an element of unknown size / 居中尺寸未知的元素](../../../../frontend/html-css/css-interview-questions.md) — in-flow alignment and overlays.
 - [CSS Position, Display, and Animations / CSS定位、显示与动画](../../../../frontend/html-css/css-position-display-and-animations.md) — positioning, visibility, transitions, and animation basics; the archived 3D and scrolling-image examples remain in [transforms and animation examples](transforms-and-animation-examples.md).
 - [DOM Properties / DOM属性](../../../../frontend/html-css/dom-properties.md) — browser measurements.
 - [Browser HTML and CSS / 浏览器中的 HTML 与 CSS](../../../../frontend/html-css/browser-html-and-css.md) — script loading and rendering effects.

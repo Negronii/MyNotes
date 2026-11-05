@@ -39,4 +39,4 @@ COMP90050 studies access cost, query execution, concurrency, and recovery across
 
 ## Reading boundary / 阅读边界
 
-The active [Database Fundamentals](../../../engineering-foundations/databases/database-fundamentals.md) note owns reusable schema, query, transaction, isolation, logging, CAP, and 2PC explanations. This pack retains RAID calculations, join-cost exercises, spatial-index diagrams, historical lock classifications, ARIES recovery tables, and exam-specific worked questions. / 活跃的数据库基础笔记负责可复用 schema、查询、事务、隔离、日志、CAP 与 2PC 解释。本课程材料保留 RAID 计算、连接成本练习、空间索引图、历史锁分类、ARIES 恢复表和考试题演算。
+For the general mechanisms, start with [SQL query results / SQL 查询结果](../../../engineering-foundations/databases/sql-null-joins-and-aggregates.md), [constraints and indexes / 约束与索引](../../../engineering-foundations/databases/database-constraints-and-indexes.md), or [transactions, isolation, and recovery / 事务、隔离与恢复](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md). Use the [last inventory unit / 最后一件库存](../../../engineering-foundations/databases/database-fundamentals.md) to see those mechanisms work together in one application.

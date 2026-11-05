@@ -10,4 +10,4 @@ Recovery preserves durable committed work and finishes reversing incomplete work
 - [How do data warehouses collect, integrate, and summarize source data? / 数据仓库如何采集、整合并汇总源数据？](condensed-note-w4-data-warehousing.md)
 - [How does two-phase commit reach one outcome across participants? / 两阶段提交如何让多个参与者得到同一结果？](condensed-note-w4-two-phase-commit-and-replicated-data.md)
 
-The active [Database Fundamentals](../../../engineering-foundations/databases/database-fundamentals.md) note owns the shared database model; this course pack keeps the detailed recovery and distributed-systems exercises. / 活跃的数据库基础笔记负责共享数据库模型；本课程材料保留详细恢复与分布式系统练习。
+Use [transaction isolation and WAL / 事务隔离与 WAL](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) for the general guarantees. The questions above work through the course's ARIES recovery and distributed-systems exercises. / 通用保证见[事务隔离与 WAL](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)；上面各篇保留课程里的 ARIES 恢复与分布式系统演算。

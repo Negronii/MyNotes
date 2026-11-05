@@ -4,14 +4,14 @@ A Markdown knowledge base for AI engineering, frontend, and shared engineering f
 
 ## Start here / 从这里开始
 
-- [Knowledge Navigator / 知识导航](review/index.md) — a short learning and reference route through selected AI/agent, frontend, and networking topics.
+- [Knowledge Navigator / 知识导航](review/index.md) — five routes through connected questions, from UI updates and reliable operations to AI applications and data access.
 - [Reading progress / 本轮复习进度](review/reading-progress.md) — track notes read in this pass from the canonical domain reading orders.
 - [AI engineering topics / AI 工程主题](ai-engineering/index.md)
 - [Frontend topics / 前端主题](frontend/index.md)
 - [Engineering foundations topics / 工程基础主题](engineering-foundations/index.md)
 - [Archive / 归档区](archive/index.md)
 - [Writing guide / 写作规范](maintenance/writing-guide.md)
-- [Current knowledge review / 本轮全库知识审查](maintenance/knowledge-review-2026-10-27.md) — 140 substantive notes, per-file evidence, corrections, exclusions, and limitations. The [2026-10-15 review](maintenance/knowledge-review-audit.md) remains as a historical snapshot.
+- [2026-10-27 knowledge review / 全库知识审查记录](maintenance/knowledge-review-2026-10-27.md) — the review of the 140 original articles, with per-file evidence, corrections, and scope.
 - [Migration notes / 迁移说明](maintenance/migration-notes.md)
 - [Agent Prompt & Tool Design / Agent 提示词与工具设计](.agents/skills/design-agent-prompts-tools/SKILL.md) — an active reusable Skill maintained in this repository.
 

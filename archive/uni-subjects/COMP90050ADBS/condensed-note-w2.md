@@ -10,4 +10,4 @@ Each question below is a full course explanation; its formulas, worked examples,
 - [How do spatial indexes find candidates for geometric queries? / 空间索引如何为几何查询筛选候选对象？](condensed-note-w2-spatial-indexes.md)
 - [Which index statements here are specific to SQL Server? / 此处哪些索引语句专属于 SQL Server？](condensed-note-w2-sql-server-index-examples.md)
 
-Related current explanations: [Database Fundamentals](../../../engineering-foundations/databases/database-fundamentals.md), [Core Data Structures](../../../engineering-foundations/algorithms/core-data-structures.md), and [Memory Hierarchy and Data Locality](../../../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md). / 相关通用说明：数据库基础、核心数据结构、内存层次与局部性。
+Related questions / 相关问题 — [SQL joins and grouping / SQL 连接与分组](../../../engineering-foundations/databases/sql-null-joins-and-aggregates.md), [constraints and indexes / 约束与索引](../../../engineering-foundations/databases/database-constraints-and-indexes.md), and [memory hierarchy and data locality / 内存层次与局部性](../../../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md).

@@ -83,7 +83,7 @@ Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（20
 
 ## Related notes / 相关笔记
 
-- [Agent fundamentals](../agents/agent-fundamentals.md) — distinguish task feedback from an accepted change that persists across runs.
+- [Agent improvement and version acceptance / Agent 改进与版本验收](../agents/agent-improvement-and-version-acceptance.md) — connect feedback on a task to a change that persists across runs.
 - [Orchestration patterns](../agents/orchestration-patterns.md) — compare the single-loop baseline with tested delegation or parallel work.
 - [RAG architecture and implementation](../rag/rag-architecture-and-implementation.md) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
 - [AI safety in production](../safety/ai-safety-in-production.md) — 了解需要单独设计任务检查的安全边界和生产控制。

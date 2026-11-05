@@ -146,39 +146,7 @@ The inner `min(100%, 250px)` lets the minimum fit a container narrower than 250p
 
 Grid item properties include `grid-column`/`grid-row` placement and `justify-self`/`align-self` alignment.
 
-## Centering / 居中
-
-For unknown item dimensions, put alignment on the parent. Grid's `place-items: center` and Flexbox's `justify-content` plus `align-items` keep the child in normal flow:
-
-~~~html
-<div class="center-grid"><div>Centered content</div></div>
-~~~
-
-~~~css
-.center-grid { display: grid; place-items: center; }
-~~~
-
-~~~css
-.center-flex {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-~~~
-
-An overlay can use absolute positioning with a transform when it should not take normal-flow space:
-
-~~~css
-.overlay { position: relative; }
-.overlay__content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-~~~
-
-The transform percentages use the element's own size, so this works when dimensions are unknown. For definite width and height, setting all four insets to zero and auto margins also centers the out-of-flow box; the box does not size its parent. Negative-margin technique requires known dimensions. Table-cell vertical alignment is a legacy alternative.
+For two-axis alignment in one region, use a [centering rule that works with unknown content size / 尺寸未知时的居中规则](css-interview-questions.md).
 
 ## Legacy layout patterns / 旧式布局模式
 

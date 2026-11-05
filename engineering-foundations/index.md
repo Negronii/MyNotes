@@ -1,45 +1,8 @@
 # Engineering Foundations / 工程基础
 
-This map gathers shared engineering topics, backend runtime basics, and reusable architecture and team practices.
+Start with the costs of representing and accessing data. Then follow work across runtimes, databases, and service boundaries before deciding how to design, test, and deliver a change. / 先理解数据表示与访问的成本，再看任务如何经过运行时、数据库和服务边界，最后把这些原理用到设计、测试和交付。
 
 ## Reading order / 阅读顺序
-
-### Networking / 网络
-
-- [How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？](networking/http-protocols-and-websockets.md)
-- [When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
-
-### Operating systems / 操作系统
-
-- [When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？](operating-systems/processes-threads-and-concurrency.md)
-- [Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？](operating-systems/memory-hierarchy-and-data-locality.md)
-
-### Databases / 数据库
-
-- [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](databases/database-fundamentals.md)
-- [How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？](databases/sql-null-joins-and-aggregates.md)
-- [How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？](databases/database-constraints-and-indexes.md)
-- [What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？](databases/database-transactions-isolation-and-recovery.md)
-
-### Reliability and asynchronous delivery / 可靠性与异步交付
-
-- [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
-- [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
-- [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](reliability/queue-delivery-and-acknowledgement.md)
-- [How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？](reliability/observability-slos-and-incident-response.md)
-
-### Security / 安全
-
-- [How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？](security/web-security-and-authentication.md)
-- [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](security/web-sessions-and-oidc.md)
-- [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](security/web-browser-security-boundaries.md)
-- [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
-- [How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？](security/sql-injection-prevention.md)
-- [How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？](security/password-storage.md)
-
-### Testing / 测试
-
-- [How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？](testing/software-testing-strategy.md)
 
 ### Algorithms and data structures / 算法与数据结构
 
@@ -51,6 +14,24 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 - [Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？](algorithms/core-data-structures.md)
 - [How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？](algorithms/practical-data-structure-implementations.md)
 - [How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？](algorithms/queue-and-stack-representations.md)
+
+### Operating systems / 操作系统
+
+- [When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？](operating-systems/processes-threads-and-concurrency.md)
+- [Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？](operating-systems/memory-hierarchy-and-data-locality.md)
+- [Why does the Linux kernel embed list nodes in their objects? / Linux 内核为什么把链表节点嵌入对象？](operating-systems/intrusive-lists-in-linux.md)
+
+### Databases / 数据库
+
+- [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](databases/database-fundamentals.md)
+- [How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？](databases/sql-null-joins-and-aggregates.md)
+- [How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？](databases/database-constraints-and-indexes.md)
+- [What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？](databases/database-transactions-isolation-and-recovery.md)
+
+### Networking / 网络
+
+- [How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？](networking/http-protocols-and-websockets.md)
+- [When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 
 ### Backend and runtime / 后端与运行时
 
@@ -67,6 +48,22 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 - [How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？](backend/data-access-and-connection-pools.md)
 - [How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？](backend/caching-and-redis.md)
 
+### Security / 安全
+
+- [How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？](security/web-security-and-authentication.md)
+- [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](security/web-sessions-and-oidc.md)
+- [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](security/web-browser-security-boundaries.md)
+- [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
+- [How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？](security/sql-injection-prevention.md)
+- [How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？](security/password-storage.md)
+
+### Reliability and asynchronous delivery / 可靠性与异步交付
+
+- [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
+- [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
+- [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](reliability/queue-delivery-and-acknowledgement.md)
+- [How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？](reliability/observability-slos-and-incident-response.md)
+
 ### Architecture / 架构
 
 - [How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？](architecture/software-design-principles.md)
@@ -77,13 +74,9 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 - [How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？](architecture/reading-debugging-and-reviewing-code.md)
 - [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 
-### Career / 职业发展
+### Testing / 测试
 
-- [How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？](career/interview-preparation.md)
-
-### Teamwork / 团队协作
-
-- [How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？](teamwork/agile-and-scrum.md)
+- [How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？](testing/software-testing-strategy.md)
 
 ### Version control / 版本控制
 
@@ -95,6 +88,14 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 - [How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？](infrastructure/docker-operations.md)
 - [How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？](infrastructure/application-deployment-and-ci-cd.md)
 - [How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？](infrastructure/production-application-runtime.md)
+
+### Teamwork / 团队协作
+
+- [How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？](teamwork/agile-and-scrum.md)
+
+### Career / 职业发展
+
+- [How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？](career/interview-preparation.md)
 
 ## Related domains / 相关领域
 

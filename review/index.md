@@ -31,10 +31,11 @@ For a model, prompt, or agent change, establish the baseline and compare outcome
 
 ## How can a model answer from evidence and take action? / 模型怎样凭证据回答和采取行动？
 
-1. [How does a language model generate text? / 语言模型怎样生成文本？](../ai-engineering/foundations/how-llms-work.md) — Start here for the generation mechanism, or enter at the application question below.
-2. [What information should reach the model for this task? / 这项任务应该把哪些信息交给模型？](../ai-engineering/context/context-engineering-principles.md) — Decide what to keep, load, and retrieve. Follow [RAG / 检索增强生成](../ai-engineering/rag/rag-architecture-and-implementation.md) for retrieval and evidence.
-3. [How does an agent decide and act? / Agent 怎样决定下一步并采取行动？](../ai-engineering/agents/agent-fundamentals.md) — Follow the loop, then read [tool design / 工具设计](../ai-engineering/agents/tool-design-and-function-calling.md) and [production safety / 生产安全](../ai-engineering/safety/ai-safety-in-production.md) for the action boundary.
-4. [How do you tell whether a change helped? / 怎样判断改动有效？](../ai-engineering/evaluation/llm-evaluation-methods.md) — Choose the tasks, scoring rules, and acceptance evidence before comparing behavior.
+1. [How does a language model generate text? / 语言模型怎样生成文本？](../ai-engineering/foundations/how-llms-work.md) — Follow the generation mechanism.
+2. [How do you choose a model for the task? / 如何为任务选模型？](../ai-engineering/foundations/model-selection-and-ecosystem.md) — Start from the expected outcome and constraints, then write [testable instructions / 可检验的提示词](../ai-engineering/prompting/prompt-engineering-fundamentals.md).
+3. [What information should reach the model for this task? / 这项任务应该把哪些信息交给模型？](../ai-engineering/context/context-engineering-principles.md) — Decide what to keep, load, and retrieve. Follow [RAG / 检索增强生成](../ai-engineering/rag/rag-architecture-and-implementation.md) for retrieval and evidence.
+4. [How does an agent decide and act? / Agent 怎样决定下一步并采取行动？](../ai-engineering/agents/agent-fundamentals.md) — Follow the loop, then read [tool design / 工具设计](../ai-engineering/agents/tool-design-and-function-calling.md) and [production safety / 生产安全](../ai-engineering/safety/ai-safety-in-production.md) for the action boundary.
+5. [How do you tell whether a change helped? / 怎样判断改动有效？](../ai-engineering/evaluation/llm-evaluation-methods.md) — Define acceptance evidence before comparing behavior. For changes across runs, follow [Agent improvement and version acceptance / Agent 改进与版本验收](../ai-engineering/agents/agent-improvement-and-version-acceptance.md).
 
 ## Where does the cost of accessing data come from? / 访问数据的成本从哪来？
 

@@ -10,4 +10,4 @@ Each question below is a complete course explanation, preserving its worked exam
 - [What do shared, exclusive, and granular locks guarantee? / 共享锁、排他锁与粒度锁能保证什么？](condensed-note-w3-locks-and-isolation-levels.md)
 - [When do optimistic validation and snapshot isolation allow concurrent updates? / 乐观验证与快照隔离何时允许并发更新？](condensed-note-w3-optimistic-snapshot-and-timestamp-concurrency.md)
 
-Related current explanations: [Database Fundamentals](../../../engineering-foundations/databases/database-fundamentals.md) and [Processes, Threads, and Concurrency](../../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md). / 相关通用说明：数据库基础、进程线程与并发。
+Related questions / 相关问题 — [Transaction isolation and MVCC / 事务隔离与 MVCC](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) and [processes, threads, and concurrency / 进程、线程与并发](../../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md).
