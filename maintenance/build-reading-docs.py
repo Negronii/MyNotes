@@ -94,6 +94,7 @@ class SourceNote:
     heading_by_line: dict[int, Heading] = field(default_factory=dict)
     underline_by_line: dict[int, Heading] = field(default_factory=dict)
     anchors_by_line: dict[int, list[ExplicitAnchor]] = field(default_factory=dict)
+    collapsed_title_heading: Heading | None = None
 
 
 def display_path(path: Path, root: Path) -> str:
@@ -304,6 +305,24 @@ def source_anchor_names(content: str) -> set[str]:
     return names
 
 
+def has_inline_anchor_or_link(line: str) -> bool:
+    searchable = mask_inline_code(line)
+    if html_anchor_attributes(searchable):
+        return True
+    if any(
+        re.match(r"<\s*a\b", tag.group(0), re.IGNORECASE)
+        for tag in HTML_TAG.finditer(searchable)
+    ):
+        return True
+    return bool(
+        re.search(
+            r"!?\[[^\]]*\]\s*\(|\{\s*#[^}]+\}|<(?:https?://|mailto:)[^>]+>",
+            searchable,
+            re.IGNORECASE,
+        )
+    )
+
+
 def make_note(
     domain: str,
     source_path: Path,
@@ -345,6 +364,17 @@ def make_note(
         note.headings.append(heading)
         register_fragment(source_slug, f"{temporary_prefix}-h{len(note.headings)}", index + 1)
 
+    source_h1s = [heading for heading in note.headings if heading.level == 1]
+    if (
+        len(source_h1s) == 1
+        and note.headings[0] is source_h1s[0]
+        and source_h1s[0].title == title
+        and not has_inline_anchor_or_link(
+            without_line_ending(note.lines[source_h1s[0].line_index])
+        )
+    ):
+        note.collapsed_title_heading = source_h1s[0]
+
     seen_explicit: set[str] = set()
     for index, line in enumerate(note.lines):
         if note.fenced[index]:
@@ -378,6 +408,9 @@ def assign_native_targets(plan: DomainPlan) -> None:
         note.section_native_title = native_title(note.title)
         heading_counts[note.section_native_title] = heading_counts.get(note.section_native_title, 0) + 1
         for heading in note.headings:
+            if heading is note.collapsed_title_heading:
+                heading.output_native_title = note.section_native_title
+                continue
             heading.output_native_title = native_title(heading.title)
             heading_counts[heading.output_native_title] = (
                 heading_counts.get(heading.output_native_title, 0) + 1
@@ -801,14 +834,20 @@ def render_note(
 ) -> str:
     rewrite = make_rewriter(note.source_path, output, note, notes_by_path, root, issues)
     output_lines: list[str] = []
+    heading_level_offset = 1 if note.collapsed_title_heading else 2
     for index, original in enumerate(note.lines):
         if note.fenced[index]:
             output_lines.append(original)
             continue
         heading = note.heading_by_line.get(index)
+        if note.collapsed_title_heading is not None and heading is note.collapsed_title_heading:
+            continue
+        anchors = note.anchors_by_line.get(index)
+        if anchors:
+            original = rewrite_explicit_ids(original, anchors)
         if heading and heading.underline_index is not None:
-            marker = "#" * min(6, heading.level + 2)
-            heading_line = f"{marker} {heading.title}{line_ending(original)}"
+            marker = "#" * min(6, heading.level + heading_level_offset)
+            heading_line = f"{marker} {without_line_ending(original).strip()}{line_ending(original)}"
             heading_line = rewrite_html_links(heading_line, index + 1, rewrite, note.source_path, issues)
             heading_line = rewrite_markdown_links(
                 heading_line, index + 1, rewrite, issues, note.source_path
@@ -821,12 +860,9 @@ def render_note(
             plain = without_line_ending(original)
             match = ATX_HEADING.match(plain)
             if match:
-                marker = "#" * min(6, heading.level + 2)
+                marker = "#" * min(6, heading.level + heading_level_offset)
                 transformed = " " * (len(plain) - len(plain.lstrip(" "))) + marker + " " + match.group(2)
                 original = transformed + line_ending(original)
-        anchors = note.anchors_by_line.get(index)
-        if anchors:
-            original = rewrite_explicit_ids(original, anchors)
         rewritten = rewrite_html_links(original, index + 1, rewrite, note.source_path, issues)
         rewritten = rewrite_markdown_links(rewritten, index + 1, rewrite, issues, note.source_path)
         if WIKILINK.search(mask_inline_code(without_line_ending(original))):

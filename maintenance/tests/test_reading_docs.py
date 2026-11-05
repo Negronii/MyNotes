@@ -164,6 +164,41 @@ class ReadingDocsTests(unittest.TestCase):
         self.assertIn("stale", check.stderr)
         self.assertEqual(generated.read_bytes(), broken, "--check must not write")
 
+    def test_matching_source_title_is_rendered_once_and_remaps_fragments(self):
+        write(
+            self.root / "frontend/index.md",
+            """# Frontend
+
+## Reading order / 阅读顺序
+[Scope and Closure](javascript/scope-and-closure.md)
+[<a id="linked-title" href="https://example.test/">Linked note</a>](javascript/linked-note.md)
+""",
+        )
+        write(
+            self.root / "frontend/javascript/scope-and-closure.md",
+            "# Scope and Closure\n"
+            "[Source H1](#scope-and-closure)\n"
+            "## Child\n### Grandchild\n",
+        )
+        write(
+            self.root / "frontend/javascript/linked-note.md",
+            '# <a id="linked-title" href="https://example.test/">Linked note</a>\n'
+            "## Child\n",
+        )
+
+        result = self.run_generator()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        content = (self.root / "review/generated/frontend.md").read_text(encoding="utf-8")
+
+        self.assertEqual(content.count("## 1. Scope and Closure"), 1)
+        self.assertNotIn("### Scope and Closure", content)
+        self.assertIn("[Source H1](#1.%20Scope%20and%20Closure)", content)
+        self.assertIn("### Child\n#### Grandchild", content)
+        self.assertRegex(
+            content,
+            r'### <a id="note-[0-9a-f]{12}-a1" href="https://example\.test/">Linked note</a>',
+        )
+
     def test_check_rejects_gfm_or_mismatched_native_fragments(self):
         first = self.run_generator()
         self.assertEqual(first.returncode, 0, first.stderr)
