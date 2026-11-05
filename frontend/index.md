@@ -11,14 +11,23 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### HTML and CSS / HTML与CSS
 
-- [HTML and CSS Basics / HTML 与 CSS 基础](html-css/html-and-css-basics.md)
-- [Box Model and BFC / 盒模型与块格式化上下文](html-css/box-model-and-bfc.md)
-- [Flex & Grid Layout / Flex与Grid布局](html-css/flex-and-grid-layout.md)
+- [How does the CSS cascade decide which declaration applies? / CSS 级联如何决定最终生效的声明？](html-css/html-and-css-basics.md)
+- [Which CSS properties inherit their values from a parent? / 哪些 CSS 属性会从父元素继承值？](html-css/css-inheritance.md)
+- [Which CSS units and responsive layout rules fit the available space? / 哪些 CSS 单位与响应式布局规则适合当前空间？](html-css/responsive-css-units-and-layout.md)
+- [How do semantic HTML forms support keyboard and assistive-technology users? / 语义化 HTML 表单如何支持键盘与辅助技术用户？](html-css/accessible-html-forms.md)
+- [How can CSS truncate one or several lines of text? / CSS 如何截断单行或多行文本？](html-css/css-text-overflow-and-line-clamp.md)
+- [How does CSS calculate an element's box size? / CSS 如何计算元素盒子的尺寸？](html-css/box-model-and-bfc.md)
+- [How does a block formatting context contain floats and margins? / 块格式化上下文如何约束浮动和外边距？](html-css/bfc-and-flow-containment.md)
+- [Which CSS layout tool fits fixed and fluid content? / 固定与流动内容适合哪种 CSS 布局？](html-css/flex-and-grid-layout.md)
 - [How do scripts affect HTML parsing and document readiness? / 脚本如何影响 HTML 解析与文档就绪？](html-css/browser-html-and-css.md)
 - [Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？](html-css/rendering-pipeline-and-forced-layout.md)
-- [DOM Properties / DOM属性](html-css/dom-properties.md)
-- [CSS Interview Questions / CSS面试题](html-css/css-interview-questions.md)
-- [CSS Position, Display, and Animations / CSS定位、显示与动画](html-css/css-position-display-and-animations.md)
+- [Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？](html-css/dom-properties.md)
+- [Where did the CSS interview examples go? / CSS 面试示例现在放在哪里？](html-css/css-interview-questions.md)
+- [How can CSS draw a small triangle without an image? / 如何不用图片用 CSS 绘制小三角形？](html-css/css-border-triangles.md)
+- [How should a mobile page handle tap gestures and the historical 300 ms delay? / 移动页面应如何处理点按手势与历史上的 300 毫秒延迟？](html-css/mobile-tap-delay-and-touch-action.md)
+- [How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？](html-css/css-position-display-and-animations.md)
+- [What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？](html-css/css-visibility-and-accessibility.md)
+- [When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？](html-css/css-transitions-and-animations.md)
 
 ### JavaScript / JavaScript
 
@@ -48,9 +57,15 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### Browser APIs / 浏览器API
 
-- [DOM Manipulation and Events / DOM操作与事件](browser-apis/dom-manipulation-and-events.md)
-- [Browser Storage and Communication / 浏览器存储与通信](browser-apis/browser-storage-and-communication.md)
-- [Image Lazy Loading / 浏览器图片懒加载](browser-apis/image-lazy-loading.md)
+- [How do DOM events propagate, and when does delegation work? / DOM 事件如何传播，何时适合事件委托？](browser-apis/dom-manipulation-and-events.md)
+- [How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？](browser-apis/event-bus-and-observer-patterns.md)
+- [How do you deep-copy a JavaScript value safely? / 如何安全地深拷贝 JavaScript 值？](javascript/deep-copy-and-structured-clone.md)
+- [What is a safe way to find a maximum in a huge array? / 如何安全地求超大数组中的最大值？](javascript/maximum-in-large-arrays.md)
+- [Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？](browser-apis/browser-storage-and-communication.md)
+- [What is the difference between an HTMLCollection and a NodeList? / HTMLCollection 与 NodeList 有什么区别？](browser-apis/dom-collections.md)
+- [How do browser contexts communicate? / 浏览上下文之间如何通信？](browser-apis/browser-context-communication.md)
+- [How does a native app expose capabilities to WebView JavaScript? / 原生应用如何向 WebView JavaScript 暴露能力？](browser-apis/webview-javascript-bridge.md)
+- [How should a browser page lazy-load images without hurting LCP or layout stability? / 如何延迟加载图片而不损害 LCP 或布局稳定性？](browser-apis/image-lazy-loading.md)
 - [How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？](browser-apis/streaming-ux.md)
 
 ### TypeScript / TypeScript
@@ -80,8 +95,11 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### Performance / 性能
 
-- [Performance Metrics and Analysis / 性能指标与分析](performance/performance-metrics-and-analysis.md)
-- [Rendering and Computation Optimization / 渲染与计算优化](performance/rendering-and-computation-optimization.md)
+- [How do you measure and diagnose web performance problems? / 如何测量和诊断网页性能问题？](performance/performance-metrics-and-analysis.md)
+- [How can an analytics client reduce work and try to send events during navigation? / 分析客户端如何降低工作量并尝试在导航时发送事件？](performance/analytics-event-delivery-on-navigation.md)
+- [When does virtual scrolling help a long list? / 长列表何时适合使用虚拟滚动？](performance/rendering-and-computation-optimization.md)
+- [How should you reduce unnecessary React rendering work? / 如何减少不必要的 React 渲染工作？](performance/react-rendering-optimization.md)
+- [When should small images be combined into a CSS sprite? / 何时应把多个小图片合并为 CSS Sprite？](performance/css-sprites-and-image-caching.md)
 
 ### Libraries / 库
 

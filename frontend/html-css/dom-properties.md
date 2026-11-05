@@ -1,8 +1,6 @@
-**DOM Geometry Properties / DOM 几何属性**
+# Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？
 
-These APIs expose different CSSOM measurements. Their values use CSS pixels, but their box, coordinate space, fragment handling, and transform behavior differ. A read may force pending style/layout work to finish; it does not necessarily do so when layout is already current. **中文：** 读取几何值可能同步完成尚未刷新的布局，但不意味着每次读取都会重新布局。
-
-## Quick comparison
+These DOM APIs measure different boxes and coordinate spaces. Use `offset*` values for integer, untransformed layout dimensions; `client*` for the inner padding area; `scroll*` for scrolling extent and position; and `getBoundingClientRect()` for a transformed viewport-relative rectangle. A read may force pending style or layout work to finish, but does not necessarily cause a new layout when the measurements are already current. / 这些 DOM API 测量的盒子和坐标空间不同。`offset*` 提供整数、未变换的布局尺寸；`client*` 提供内侧 padding 区域；`scroll*` 提供滚动范围和位置；`getBoundingClientRect()` 提供相对于视口且受变换影响的矩形。读取可能迫使尚未完成的样式或布局工作同步完成，但如果测量值已经是最新的，不一定会触发新布局。
 
 ```text
 ┌─────────────────────────── margin ───────────────┐
@@ -10,80 +8,69 @@ These APIs expose different CSSOM measurements. Their values use CSS pixels, but
 │ │ ┌────────────── padding ────────────────┐   │  │
 │ │ │ ┌────────── content ────────────────┐ │   │  │
 │ │ │ │                                   │ │   │  │
-│ │ │ │                                   │ │   │  │
 │ │ │ └───────────────────────────────────┘ │   │  │
 │ │ └───────────────────────────────────────┘   │  │
 │ └─────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────┘
-
-offsetHeight  = border-box measurement, including scrollbar — integer CSS px, ignores transforms
-clientHeight  = padding box minus rendered scrollbar        — integer CSS px
-scrollHeight  = scrolling area                              — integer CSS px, includes overflow
 ```
 
-| Property | Includes | Excludes | Writable? |
+## Quick comparison
+
+| Property | Includes | Excludes or caveat | Writable? |
 |---|---|---|---|
-| `offsetHeight` / `offsetWidth` | border box; normally includes a rendered scrollbar | margin | no |
-| `clientHeight` / `clientWidth` | padding box, excluding a rendered scrollbar | border, scrollbar, margin | no |
-| `scrollHeight` / `scrollWidth` | scrolling area, including overflowed content and contributing generated content | border; generally not the scrollbar | no |
-| `scrollTop` / `scrollLeft` | current scroll offset | — | **yes** |
-| `offsetTop` / `offsetLeft` | offset from the `offsetParent` padding edge to the element's border edge | — | no |
-| `getBoundingClientRect()` → `.width` / `.height` | viewport-relative union of transformed border-box fragments | margin | no |
+| `offsetHeight` / `offsetWidth` | Border box; ordinarily a rendered scrollbar | Margin; ignores transforms; integer CSS px | No |
+| `clientHeight` / `clientWidth` | Padding area | Border and rendered scrollbar; integer CSS px | No |
+| `scrollHeight` / `scrollWidth` | Scrolling area, including overflow | Border; integer CSS px; not a guarantee the content is user-scrollable | No |
+| `scrollTop` / `scrollLeft` | Current scroll offset | Values may be fractional or outside usual range in some layouts | Yes |
+| `offsetTop` / `offsetLeft` | Offset from `offsetParent` padding edge to element border edge | Not necessarily relative to the direct parent | No |
+| `getBoundingClientRect()` | Viewport-relative union of transformed border-box fragments | Excludes margin; a snapshot | No |
 
-## `offsetHeight` / `offsetWidth`
+Dimensions are in CSS pixels, not device pixels. Scrollbars differ by platform: a rendered scrollbar consumes layout space on some configurations but overlays content on others. Do not derive a physical-device-pixel measurement from these values.
 
-Returns an integer CSS-pixel measure of the border-box fragments, ignoring CSS transforms. A rendered scrollbar is included in the familiar layout-box measurement; margin is excluded. It can be zero when the element has no associated box.
+## Choose by the box or coordinate space
+
+### Layout box and inner client area
+
+`offsetHeight` and `offsetWidth` return integer layout dimensions for the border box, normally including a rendered scrollbar and excluding margin. They ignore CSS transforms.
 
 ```text
 offsetHeight ≈ content height + padding + border (+ rendered scrollbar)
 ```
 
-## `clientHeight` / `clientWidth`
-
-Returns an integer CSS-pixel measure of the padding edge, excluding a scrollbar rendered between the padding and border edges. Border and margin are excluded. Root-element behavior maps to the viewport in standards mode.
+`clientHeight` and `clientWidth` return the padding area minus a rendered scrollbar; the border and margin are excluded. In standards mode, the root element's client dimensions correspond to the viewport dimensions.
 
 ```text
 clientHeight ≈ content height + padding - rendered scrollbar
 ```
 
-## `scrollHeight` / `scrollWidth`
+### Scrolling area and current offset
 
-Returns the integer CSS-pixel height of the scrolling area, which covers content beyond the visible client area. It may differ from `clientHeight` because of overflow; it is not simply a count of text or a guarantee that overflow is user-scrollable. In standards mode, the root element returns `max(viewport scrolling-area height, viewport height)`, not the viewport's visible height.
-
-```text
-ordinary element: scrolling-area height (includes overflow beyond the client area)
-root element in standards mode: max(viewport scrolling-area height, viewport height)
-```
-
-## `scrollTop` / `scrollLeft`
-
-Current scroll offset in CSS pixels. **Writable** — set it to control scroll programmatically. Values can be fractional or outside the usual range in some layouts (for example, reverse-direction scrolling or elastic overscroll).
+`scrollHeight` measures the scrolling area, including content outside the visible client area. It can exceed `clientHeight` when content overflows. In standards mode, the root element's `scrollHeight` is the maximum of the viewport scrolling-area height and viewport height.
 
 ```javascript
-const el = document.getElementById('container');
-console.log(el.scrollTop);
-el.scrollTop = 0;  // scroll to top
+const hasOverflow = element.scrollHeight > element.clientHeight;
+const y = element.scrollTop;
+element.scrollTop = 0; // scroll to the top
 ```
 
-## `offsetTop` / `offsetLeft`
+`scrollTop` and `scrollLeft` are writable. Reverse-direction scrolling and elastic overscroll can produce values outside the familiar range, so avoid assuming every result is a nonnegative integer.
 
-`offsetTop` / `offsetLeft` measure from the element's border edge to its `offsetParent`'s padding edge. `offsetParent` is not simply the nearest positioned ancestor: tables, containing blocks, fixed positioning, zoom, shadow-tree boundaries, and elements without boxes affect the result. If there is no `offsetParent`, offsets are relative to the initial containing block; some elements such as `body` return zero.
+### Position relative to the offset parent
 
-## `getBoundingClientRect()`
+`offsetTop` and `offsetLeft` measure from the element's border edge to the padding edge of its `offsetParent`. The offset parent is not simply the nearest positioned ancestor: tables, containing blocks, fixed positioning, zoom, shadow-tree boundaries, and missing boxes can affect which element is returned. Some elements, including `body` in common cases, return zero.
 
-Returns a `DOMRect` for the smallest rectangle enclosing the element's non-empty client rects, **relative to the viewport**. It includes CSS transforms and may differ from offset dimensions; a fragmented inline can have multiple client rects while this method returns their union. The returned object is a snapshot, not a live object.
+### Viewport-relative visual rectangle
+
+`getBoundingClientRect()` returns the smallest rectangle enclosing the element's nonempty client rects, relative to the viewport. It includes CSS transforms. Fragmented inline content can produce several client rects; this method returns their union. Its result is a snapshot, not a live object.
 
 ```javascript
 const rect = element.getBoundingClientRect();
-// rect.top     - distance from viewport top to element top
-// rect.bottom  - distance from viewport top to element bottom
-// rect.left    - distance from viewport left to element left
-// rect.right   - distance from viewport left to element right
-// rect.width   - union width in CSS pixels, including border and transforms
-// rect.height  - union height in CSS pixels, including border and transforms
+// rect.top / bottom: distance from viewport top to each edge
+// rect.left / right: distance from viewport left to each edge
+// rect.width / height: transformed border-box union in CSS px
 ```
 
-**Common pattern — checking if an element is in the viewport:**
+A basic viewport-overlap check is:
 
 ```javascript
 function overlapsViewport(element) {
@@ -97,20 +84,12 @@ function overlapsViewport(element) {
 }
 ```
 
-This is a simple rectangle-overlap check, not a test for occlusion, opacity, or assistive-technology visibility. Zero-area boxes need a separate policy.
+This checks rectangle overlap, not whether the element is occluded, transparent, or exposed to assistive technology. Decide separately how zero-area rectangles should behave.
 
-For threshold-based visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` over repeatedly polling geometry. It reports asynchronously; it is not a guarantee that the browser performs no layout work. See [`5.3 Image Lazy Loading`](../browser-apis/image-lazy-loading.md).
+## Measurement without repeated layout work
 
-## When to reach for which
+For an occasional measurement, choose the API whose box and coordinate system match the task. For threshold-based visibility such as lazy loading or analytics, prefer [IntersectionObserver](../browser-apis/image-lazy-loading.md) over repeatedly polling geometry. It reports asynchronously and is not a blanket guarantee that no layout work occurs.
 
-- Need an **untransformed integer layout-box size**? → `offsetHeight` / `offsetWidth`.
-- Need a **viewport-relative transformed rectangle**? → `getBoundingClientRect()`.
-- Need **inner content area** (for sizing children)? → `clientHeight` / `clientWidth`.
-- Need to know if **overflow exists**? → compare `scrollHeight > clientHeight`.
-- Need **current scroll position**, or to **scroll programmatically**? → `scrollTop` / `scrollLeft`.
-- Need **viewport-relative position** (for tooltips, drag, scroll effects)? → `getBoundingClientRect()`.
-- Need **position within parent** (for layout math)? → `offsetTop` / `offsetLeft` (watch out: relative to `offsetParent`, not necessarily the direct parent).
+A write followed by a geometry read can force pending layout; alternating writes and reads in a loop can repeat that work. See [Rendering pipeline and forced layout](./rendering-pipeline-and-forced-layout.md) for the read/write batching example.
 
-**See also:** [`2.4 Browser - HTML & CSS part`](./rendering-pipeline-and-forced-layout.md) on layout thrashing when reads follow writes, [`5.3 Image Lazy Loading`](../browser-apis/image-lazy-loading.md) for `IntersectionObserver`-based visibility.
-
-**Specifications / 规范：** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.
+**Specifications:** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.

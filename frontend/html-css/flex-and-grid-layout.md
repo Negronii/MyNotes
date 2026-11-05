@@ -1,139 +1,135 @@
-**Flexbox and Grid Layout / Flexbox 与 Grid 布局**
+# Which CSS layout tool fits fixed and fluid content? / 固定与流动内容适合哪种 CSS 布局？
 
-Reach for this when you need to remember the property names and what each one does. For "how should I approach this layout?" style interview answers, the patterns live in [`2.6 CSS Interview Questions`](./css-interview-questions.md).
+Use Flexbox for a one-dimensional row or column of items and Grid when rows and columns form a two-dimensional structure. For a fixed side with a fluid region, set the fixed track explicitly and make the flexible minimum shrinkable: for example, Grid's `minmax(0, 1fr)` or a Flex item with `min-width: 0`. Choose from the relationship among content, then define what should happen to overflow. / 一行或一列的项目优先考虑 Flexbox；需要同时安排行与列的二维结构时考虑 Grid。固定侧栏加流动区域时，明确固定轨道，并让弹性部分的最小值可以收缩，例如 Grid 的 `minmax(0, 1fr)` 或 Flex 子项的 `min-width: 0`。先根据内容关系选择布局，再规定溢出时如何处理。
 
-**中文：** Flexbox 适合单轴排列，Grid 适合二维轨道；遇到内容最小尺寸造成溢出时，可显式使用 `min-width: 0` 或 `minmax(0, 1fr)`。
-
-Rule of thumb: **Flexbox for 1D** (rows *or* columns), **Grid for 2D** (rows *and* columns). In practice they compose — a grid item can itself be a flex container.
-
-## Flexbox
-
-`display: flex` (or `inline-flex`) turns an element into a **flex container**; its direct children become **flex items**. Flex items are laid out along a *main axis* (controlled by `flex-direction`) and a perpendicular *cross axis*.
-
-### Container properties
-
-| Property | What it controls | Values |
+| Layout problem | Good starting point | Why |
 |---|---|---|
-| `display` | declare flex container | `flex`, `inline-flex` |
-| `flex-direction` | main-axis direction | `row` (default), `row-reverse`, `column`, `column-reverse` |
-| `flex-wrap` | allow items to wrap | `nowrap` (default), `wrap`, `wrap-reverse` |
-| `justify-content` | main-axis alignment | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly` |
-| `align-items` | cross-axis alignment (per line) | `flex-start`, `flex-end`, `center`, `baseline`, `stretch` |
-| `align-content` | cross-axis alignment among lines in a multi-line container | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `stretch` |
-| `gap` | spacing between items | any length |
+| Toolbar or row of items | Flexbox | One main axis, with optional wrapping |
+| Page with fixed sidebars and a fluid center | Grid | The three column tracks are explicit |
+| One fixed column and one fluid column | Grid or Flexbox | Both express the fixed/flexible relationship |
+| Content of unknown size centered in a region | Grid or Flexbox | Alignment stays in normal flow |
+| Legacy browser/layout constraints | Float, table, absolute, or inline-block patterns | Recognize their tradeoffs and existing formatting model |
 
-In a `wrap` or `wrap-reverse` container, `align-content` aligns flex lines when there is extra cross-axis space; it can have an effect even when the items currently form just one line. A `nowrap` container is single-line, so `align-content` has no effect.
+## Fixed and fluid columns / 固定与流动列
 
-### Item properties
+For a fixed-width sidebar and flexible content, Grid makes the track relationship explicit. The HTML source order remains meaningful for reading and keyboard navigation:
 
-| Property | What it controls |
-|---|---|
-| `flex-grow` | share of *extra* space (unitless proportion) |
-| `flex-shrink` | share of *deficit* space when items don't fit |
-| `flex-basis` | starting size before grow/shrink (length or `auto`) |
-| `flex` | shorthand: `flex: <grow> <shrink> <basis>` |
-| `align-self` | override `align-items` for one item |
-| `order` | change an item's visual placement order (without changing source order) |
+~~~html
+<div class="two-column">
+  <aside>Navigation</aside>
+  <main>Article content</main>
+</div>
 
-### Common flexbox patterns
+<div class="three-column">
+  <aside>Left rail</aside>
+  <main>Main content</main>
+  <aside>Right rail</aside>
+</div>
+~~~
 
-**Perfect centering:**
-
-```css
-.container {
-  display: flex;
-  justify-content: center;  /* horizontal */
-  align-items: center;      /* vertical */
-  height: 200px;
+~~~css
+.two-column {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px;
 }
-```
+.two-column > main { min-width: 0; }
+~~~
 
-**Nav bar spacing:**
+For a row of items, Flex expresses the same decision:
 
-```css
-.nav { display: flex; justify-content: space-between; }
-```
+~~~css
+.two-column { display: flex; gap: 16px; }
+.two-column > aside { flex: 0 0 200px; }
+.two-column > main { flex: 1; min-width: 0; }
+~~~
 
-**Equal-height columns** — with the default `align-items: stretch`, row items whose cross size is `auto` and whose cross-axis margins are not `auto` stretch to their line's cross size. Min/max constraints can limit that stretch, so this is not a guarantee for every item.
+For fixed side columns around a flexible center:
 
-### Intrinsic minimum sizes
+~~~css
+.three-column {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) 100px;
+  gap: 10px;
+}
+~~~
 
-Flex items and grid tracks can keep their content-based minimum size, so a long word, URL, or wide table may force overflow instead of shrinking. For a flex item that should be allowed to shrink below its min-content width, use `min-width: 0`; in a column flex layout, the corresponding block-axis fix is often `min-height: 0`.
+The middle region's min-content width can otherwise prevent it from shrinking around a long URL, word, or wide table. `min-width: 0` lets the item shrink; it does not decide whether descendants wrap, clip, or scroll. Give content a policy such as `overflow-wrap: anywhere` for long URLs or a scroll container for wide tables. In a column Flex layout the analogous block-axis constraint is often `min-height: 0`.
 
-```css
+## Why can Flexbox and Grid still overflow? / Flexbox 与 Grid 为什么仍可能溢出？
+
+Flex items and Grid tracks have intrinsic minimum sizing behavior. Long words, fixed-size descendants, and wide tables can contribute a content-based minimum larger than the available space. Lower the relevant minimum only when the design permits it; do not treat `min-width: 0` or `minmax(0, 1fr)` as automatic wrapping.
+
+~~~css
 .row { display: flex; }
-.main { flex: 1; min-width: 0; }
-.main img { max-width: 100%; }
-```
+.row > main { flex: 1; min-width: 0; }
+.row > main img { max-width: 100%; }
 
-This changes the item's minimum constraint; it does not guarantee that all of its descendants will wrap or fit, so give overflowing content its own policy.
-
-## CSS Grid
-
-`display: grid` (or `inline-grid`) creates a **grid container**. Grids have explicit **tracks** (rows and columns), **lines** (between tracks), **cells** (single row × column), and **areas** (named regions spanning multiple cells).
-
-### Container properties
-
-| Property | What it controls |
-|---|---|
-| `display` | declare grid container (`grid`, `inline-grid`) |
-| `grid-template-columns` | column track sizes |
-| `grid-template-rows` | row track sizes |
-| `grid-template-areas` | named areas laid out as ASCII art |
-| `gap` / `row-gap` / `column-gap` | spacing between tracks |
-| `justify-items` / `align-items` / `place-items` | how items align *within* their cells |
-| `justify-content` / `align-content` / `place-content` | how the grid itself sits *within* the container |
-
-Track sizes can be fixed (`100px`), flexible (`1fr`), or content-based (`auto`, `min-content`, `max-content`). `minmax(min, max)` sets a track's lower and upper sizing functions, for example `minmax(200px, 1fr)`; `repeat(auto-fit, minmax(200px, 1fr))` combines that range with automatic repetition.
-
-An `fr` track with an automatic minimum can still be held open by its items' min-content contribution. If the track must shrink below that content width, make its minimum explicit, commonly `minmax(0, 1fr)`, and decide how the item content should wrap or overflow.
-
-```css
 .content-first-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 16rem;
 }
-
 .content-first-grid > main { min-width: 0; }
-```
+~~~
 
-### Item properties
+## Flexbox essentials / Flexbox 要点
 
-| Property | What it controls |
+`display: flex` or `inline-flex` makes direct children flex items arranged on a main axis and a perpendicular cross axis.
+
+| Container property | Controls |
 |---|---|
-| `grid-column-start` / `grid-column-end` | column span |
-| `grid-row-start` / `grid-row-end` | row span |
-| `grid-column` / `grid-row` | shorthand (`grid-column: 1 / 3`) |
-| `grid-area` | name this item, or shorthand for all four line values |
-| `justify-self` / `align-self` | override cell alignment for one item |
+| `flex-direction` | Main-axis direction: row, row-reverse, column, column-reverse |
+| `flex-wrap` | Whether items wrap |
+| `justify-content` | Alignment/distribution along the main axis |
+| `align-items` | Alignment within each line on the cross axis |
+| `align-content` | Distribution of multiple flex lines when cross-axis space is available |
+| `gap` | Space between items |
 
-### Common grid patterns
+In a wrapping flex container, `align-content` aligns flex lines when extra cross-axis space exists and can affect a single line. In a `nowrap` container there is only one line, so `align-content` has no effect.
 
-**Three-column layout with fixed sides:**
+| Item property | Controls |
+|---|---|
+| `flex-grow` / `flex-shrink` / `flex-basis` | Growth, shrinking, and starting size |
+| `flex` | Shorthand for grow, shrink, and basis |
+| `align-self` | Cross-axis alignment of one item |
+| `order` | Visual order without changing document order |
 
-```css
-.layout {
-  display: grid;
-  grid-template-columns: 100px 1fr 100px;
-  gap: 10px;
+The shorthand and common values differ: `flex: 1` uses a zero basis and shares free space; `flex: auto` starts from the item's size; `flex: none` is inflexible. Do not assume every item can shrink below its minimum content size.
+
+~~~css
+.toolbar { display: flex; justify-content: space-between; gap: 1rem; }
+.centered-flex {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-```
+~~~
 
-**Responsive card grid (no media queries):**
+## Grid essentials / Grid 要点
 
-```css
+`display: grid` or `inline-grid` creates explicit or implicit row and column tracks.
+
+| Container property | Controls |
+|---|---|
+| `grid-template-columns` / `grid-template-rows` | Track sizes |
+| `grid-template-areas` | Named regions |
+| `gap` | Space between tracks |
+| `justify-items` / `align-items` / `place-items` | Item alignment inside cells |
+| `justify-content` / `align-content` / `place-content` | Grid alignment inside the container |
+
+Tracks can be fixed, flexible (`fr`), or content-sized (`min-content`, `max-content`, `auto`). `minmax(min, max)` sets lower and upper track sizing functions; `repeat(auto-fit, minmax(200px, 1fr))` creates responsive tracks. An `fr` track with an automatic minimum can still be held open by min-content contributions; use `minmax(0, 1fr)` when the design needs it to shrink below them, then choose a wrapping or overflow policy.
+
+~~~css
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   gap: 16px;
 }
-```
+~~~
 
-The minimum is capped at the container width so the track can still fit on a narrow container.
+The inner `min(100%, 250px)` lets the minimum fit a container narrower than 250px. Named areas can describe page structure:
 
-**Named template areas:**
-
-```css
+~~~css
 .page {
   display: grid;
   grid-template-columns: 200px 1fr;
@@ -142,21 +138,78 @@ The minimum is capped at the container width so the track can still fit on a nar
     "sidebar main"
     "footer footer";
 }
-
 .page-header  { grid-area: header; }
 .page-sidebar { grid-area: sidebar; }
 .page-main    { grid-area: main; }
 .page-footer  { grid-area: footer; }
-```
+~~~
 
-## When to reach for which
+Grid item properties include `grid-column`/`grid-row` placement and `justify-self`/`align-self` alignment.
 
-- **Flexbox** — nav bars, toolbars, button groups, anything that's a line of stuff that might wrap.
-- **Grid** — page-level layouts, card grids, forms with aligned labels/inputs, anything 2D.
-- **Both together** — Grid for the page structure, Flexbox inside each cell for horizontal clusters.
+## Centering / 居中
 
-Keep meaningful source order in the HTML. Flex `order`, reverse directions, and grid placement change visual layout without rewriting the document's logical/speech order; don't use them to repair incorrect content order.
+For unknown item dimensions, put alignment on the parent. Grid's `place-items: center` and Flexbox's `justify-content` plus `align-items` keep the child in normal flow:
 
-**See also:** [`2.1 HTML & CSS Basics`](./html-and-css-basics.md) for CSS units used with `fr`/`minmax`, [`2.6 CSS Interview Questions`](./css-interview-questions.md) for worked interview examples using these layouts.
+~~~html
+<div class="center-grid"><div>Centered content</div></div>
+~~~
 
-**Specifications / 规范：** [CSS Flexible Box Layout](https://www.w3.org/TR/css-flexbox-1/) defines flex sizing and the automatic minimum size; [CSS Grid Layout](https://www.w3.org/TR/css-grid-2/) defines track sizing and grid-item minimums; [CSS Display](https://www.w3.org/TR/css-display-3/#order-property) describes visual reordering and accessibility.
+~~~css
+.center-grid { display: grid; place-items: center; }
+~~~
+
+~~~css
+.center-flex {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+~~~
+
+An overlay can use absolute positioning with a transform when it should not take normal-flow space:
+
+~~~css
+.overlay { position: relative; }
+.overlay__content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+~~~
+
+The transform percentages use the element's own size, so this works when dimensions are unknown. For definite width and height, setting all four insets to zero and auto margins also centers the out-of-flow box; the box does not size its parent. Negative-margin technique requires known dimensions. Table-cell vertical alignment is a legacy alternative.
+
+## Legacy layout patterns / 旧式布局模式
+
+Use these to understand existing layouts; choose Flex/Grid for ordinary new row, column, and page-structure work.
+
+| Technique | Example pattern | Tradeoff |
+|---|---|---|
+| Float | `float: left` and `float: right` around a center with margins | Needs float containment/clearing and width math; see [BFC containment](./bfc-and-flow-containment.md) |
+| Table display | `display: table` / `table-cell` | Cell sizing couples content; visual display does not create semantic table markup |
+| Absolute positioning | Fixed edges with a fluid center | Children leave normal flow; the parent does not grow around them |
+| Inline-block | Two inline-block columns | Whitespace between elements can create a gap; legacy workarounds set parent font-size to 0 |
+
+~~~css
+/* Legacy 3-column float pattern; width math assumes normalized box sizing. */
+.left { float: left; width: 100px; }
+.right { float: right; width: 100px; }
+.center { margin: 0 100px; width: calc(100% - 200px); }
+
+/* Table-style 3-column layout. */
+.table-layout { display: table; width: 100%; }
+.table-layout > * { display: table-cell; }
+
+/* Inline-block two-column layout; restore child text size. */
+.inline-layout { font-size: 0; }
+.inline-layout > * { display: inline-block; vertical-align: top; font-size: 1rem; }
+~~~
+
+Absolute positioning can also form fixed side columns around a center with matching margins and width math. Use it only when out-of-flow placement is intended.
+
+Keep meaningful document order in the HTML. Flex `order`, reverse directions, and Grid placement change visual order without changing source or assistive-technology order; do not use them to repair incorrect content order.
+
+**See also:** [Responsive CSS units and pixels](./responsive-css-units-and-layout.md) for container queries and viewport sizing; [Box sizing](./box-model-and-bfc.md) for dimensions; [CSS position and stacking](./css-position-display-and-animations.md) for out-of-flow placement.
+
+**Specifications:** [CSS Flexible Box Layout](https://www.w3.org/TR/css-flexbox-1/) defines flex sizing and automatic minimum sizes; [CSS Grid Layout](https://www.w3.org/TR/css-grid-2/) defines track sizing and grid-item minimums; [CSS Display](https://www.w3.org/TR/css-display-3/#order-property) describes formatting contexts and visual reordering; checked 2026-11-05.

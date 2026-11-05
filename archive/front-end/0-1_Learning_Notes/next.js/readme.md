@@ -1,4 +1,4 @@
-# Next.js App Router Data Fetching / Next.js App Router数据获取
+# How does App Router streaming handle independent data requests? / App Router 流式渲染如何处理独立数据请求？
 
 This example starts independent requests together, then lets a nested Server Component suspend while its data resolves. It covers the **App Router**; Pages Router APIs such as `getServerSideProps`, `getStaticProps`, and `getStaticPaths` belong to the separate `pages/` router. / 示例并行启动互不依赖的请求，再由嵌套 Server Component 在数据就绪前挂起。这里介绍的是 **App Router**；`getServerSideProps`、`getStaticProps` 和 `getStaticPaths` 属于独立的 `pages/` 路由器。
 
