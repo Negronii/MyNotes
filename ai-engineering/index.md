@@ -34,9 +34,9 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 
 ### Agents / 智能体
 
-- [Agent Fundamentals / 智能体基础](agents/agent-fundamentals.md)
-- [Orchestration Patterns / 编排模式](agents/orchestration-patterns.md)
-- [Tool Design and Function Calling / 工具设计与函数调用](agents/tool-design-and-function-calling.md)
+- [When should a model control the next step? / 何时应让模型决定下一步？](agents/agent-fundamentals.md)
+- [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](agents/orchestration-patterns.md)
+- [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](agents/tool-design-and-function-calling.md)
 
 ### Evaluation / 评估
 
@@ -48,7 +48,7 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 
 ### Safety / 安全
 
-- [AI Safety in Production / 生产环境中的AI安全](safety/ai-safety-in-production.md)
+- [How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？](safety/ai-safety-in-production.md)
 
 ### Production systems / 生产系统
 

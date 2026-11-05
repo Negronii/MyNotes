@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=968d11b3aa61a3e59a2c45c7af00d8366a459f7e699f44b91cda78275202845f -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=af8e573eb518c80ba0abcb6c59de37a6773c33f4eb58bc81009e2aedece27f0d -->
 ## AI Engineering
 
 - [ ] 1. [How does a language model turn a prompt into text? / 语言模型怎样把一段 prompt 变成文本？](../ai-engineering/foundations/how-llms-work.md)
@@ -20,12 +20,12 @@
 - [ ] 8. [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](../ai-engineering/prompting/advanced-prompting-techniques.md)
 - [ ] 9. [What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？](../ai-engineering/context/context-engineering-principles.md)
 - [ ] 10. [How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？](../ai-engineering/rag/rag-architecture-and-implementation.md)
-- [ ] 11. [Agent Fundamentals / 智能体基础](../ai-engineering/agents/agent-fundamentals.md)
-- [ ] 12. [Orchestration Patterns / 编排模式](../ai-engineering/agents/orchestration-patterns.md)
-- [ ] 13. [Tool Design and Function Calling / 工具设计与函数调用](../ai-engineering/agents/tool-design-and-function-calling.md)
+- [ ] 11. [When should a model control the next step? / 何时应让模型决定下一步？](../ai-engineering/agents/agent-fundamentals.md)
+- [ ] 12. [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](../ai-engineering/agents/orchestration-patterns.md)
+- [ ] 13. [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](../ai-engineering/agents/tool-design-and-function-calling.md)
 - [ ] 14. [How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？](../ai-engineering/evaluation/llm-evaluation-methods.md)
 - [ ] 15. [When should you fine-tune to close a repeatable behavior gap? / 何时应通过微调弥补稳定的行为差距？](../ai-engineering/fine-tuning/fine-tuning-strategies.md)
-- [ ] 16. [AI Safety in Production / 生产环境中的AI安全](../ai-engineering/safety/ai-safety-in-production.md)
+- [ ] 16. [How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？](../ai-engineering/safety/ai-safety-in-production.md)
 - [ ] 17. [How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？](../ai-engineering/systems/ai-application-architecture.md)
 - [ ] 18. [How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？](../ai-engineering/systems/ai-latency-and-cost-optimization.md)
 - [ ] 19. [When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？](../ai-engineering/systems/ai-deployment-patterns.md)
