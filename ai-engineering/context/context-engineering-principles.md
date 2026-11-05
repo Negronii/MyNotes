@@ -1,11 +1,6 @@
-# Context Engineering Principles | 上下文工程原则
+# What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？
 
-**核心解释 / Core explanation：** 上下文工程（context engineering）是在每次模型推理时，选择、组织和更新模型可用的信息，以支持当前目标。Context engineering selects, organizes, and updates the information available to a model for each inference step.
-
-**30 秒面试回答 / 30-second interview answer**
-
-- **中文：** 提示工程主要优化指令；上下文工程还管理工具、对话历史、检索结果、执行观察和外部任务状态。上下文既受窗口、成本和时延限制，也可能因噪声、信息位置或过度压缩而降低有效性，因此要围绕任务评估结果，保留高价值信息并按需加载其余资料。
-- **English:** Prompt engineering focuses on instructions; context engineering also manages tools, conversation history, retrieved evidence, observations, and external task state. Context is constrained by the window, cost, and latency, and its usefulness can fall with noise, position effects, or lossy compaction. I measure task outcomes, keep high-value information, and load the rest when needed.
+**Core explanation / 核心解释：** Context engineering selects, orders, and updates the instructions, tool definitions, history, retrieved evidence, observations, and relevant task state available to one inference. The application should keep authoritative long-term state outside the prompt and load only the information needed for the next step. Measure usefulness on the task: more context can add evidence, but also cost, delay, noise, and lossy summaries. / 上下文工程是在一次推理中选择、排序和更新模型可用的指令、工具定义、历史、检索证据、观察结果及相关任务状态。应用应把权威长期状态保存在提示词之外，只为下一步加载所需信息。应根据任务结果衡量上下文是否有用：更多内容可能补充证据，也会增加成本、时延、噪声和有损摘要风险。
 
 ## 提示工程与上下文工程
 

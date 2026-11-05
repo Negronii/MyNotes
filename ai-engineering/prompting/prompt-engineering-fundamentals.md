@@ -1,11 +1,6 @@
-# Prompt Engineering Fundamentals / 提示工程基础
+# How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？
 
-**Core explanation / 核心解释：** A useful prompt makes the task, necessary context, constraints, and expected output clear. Add examples or structure when they address a measured failure. Prompt text can guide model behavior, but it cannot enforce access control, guarantee factual accuracy, or replace validation in the application. / 有效提示词要清楚说明任务、必要背景、约束和输出要求。只有在它们能解决实测问题时，才增加示例或结构。提示词能引导模型，但不能执行访问控制、保证事实正确，也不能替代应用校验。
-
-**30-second answer / 30 秒回答**
-
-- **English:** I write instructions for a capable reader who does not know my application’s unstated rules. I provide relevant context, define what success and uncertainty look like, and specify the output contract. I test the prompt on representative and boundary cases; permissions and business rules remain enforced by code.
-- **中文：** 我会把提示词写给一位聪明但不了解应用隐含规则的读者，补充必要背景，说明成功条件、不确定时的处理方式和输出约定，再用有代表性和边界样本评估。权限与业务规则仍由代码执行。
+A useful prompt makes the task, necessary context, constraints, and expected output clear. Add examples or structure when they address a measured failure. Prompt text can guide model behavior, but it cannot enforce access control, guarantee factual accuracy, or replace application validation. / 有效提示词要清楚说明任务、必要背景、约束和输出要求。只有在示例或结构能解决实测问题时，才加入它们。提示词能引导模型，但不能执行访问控制、保证事实正确，也不能替代应用校验。
 
 **Key terms / 关键术语：** instruction / 指令；context / 上下文；few-shot example / 少样本示例；output contract / 输出约定；structured output / 结构化输出；validation / 校验。
 
@@ -57,7 +52,7 @@ For human-readable output, headings, bullets, XML tags, or code fences can make 
 }
 ~~~
 
-Application code should check allowed categories and required fields, and verify any consequential claim against its source.
+Application code should check allowed categories and required fields, and verify any consequential claim against its source. For the broader distinction between task success, factual correctness, source support, and instruction adherence, see [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md).
 
 ## Optional organization pattern / 可选组织方式
 
@@ -77,9 +72,9 @@ Do not put real names, ticket numbers, secrets, or private histories in a reusab
 
 ## Related notes / 相关笔记
 
-- [Advanced Prompting Techniques / 高级提示技巧](./advanced-prompting-techniques.md) covers few-shot examples, reasoning cues, self-consistency, and workflows.
-- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) explains how to select and update the information for each inference.
-- [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md) explains why prompts cannot replace runtime authorization.
+- [Advanced Prompting Techniques / 高级提示技巧](./advanced-prompting-techniques.md) covers optional methods for failures that a clear baseline prompt does not resolve.
+- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) explains how to select and update the full information available to each inference.
+- [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md) explains why prompts cannot replace runtime authorization and stop controls.
 
 ## Sources / 来源
 

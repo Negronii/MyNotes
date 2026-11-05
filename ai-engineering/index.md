@@ -12,21 +12,25 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 
 ### Foundation models / 基础模型
 
-- [How LLMs Work / 大语言模型如何工作](foundations/how-llms-work.md)
-- [Model Selection and Ecosystem / 模型选择与生态](foundations/model-selection-and-ecosystem.md)
+- [How does a language model turn a prompt into text? / 语言模型怎样把一段 prompt 变成文本？](foundations/how-llms-work.md)
+- [How does a tokenizer map text to token IDs? / 分词器怎样把文本变成 token ID？](foundations/llm-tokenization.md)
+- [What does a language model learn to predict during training? / 语言模型训练时学习预测什么？](foundations/language-model-training-objectives.md)
+- [How does a Transformer block update a token using context? / Transformer block 怎样利用上下文更新词元表示？](foundations/transformer-context-updates.md)
+- [How does a decoder choose the next token from model scores? / 解码器怎样根据模型分数选出下一个词元？](foundations/next-token-decoding.md)
+- [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](foundations/model-selection-and-ecosystem.md)
 
 ### Prompting / 提示工程
 
-- [Prompt Engineering Fundamentals / 提示工程基础](prompting/prompt-engineering-fundamentals.md)
-- [Advanced Prompting Techniques / 高级提示技巧](prompting/advanced-prompting-techniques.md)
+- [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](prompting/prompt-engineering-fundamentals.md)
+- [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](prompting/advanced-prompting-techniques.md)
 
 ### Context / 上下文
 
-- [Context Engineering Principles / 上下文工程原则](context/context-engineering-principles.md)
+- [What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？](context/context-engineering-principles.md)
 
 ### Retrieval-augmented generation / 检索增强生成
 
-- [Retrieval-Augmented Generation (RAG) / 检索增强生成](rag/rag-architecture-and-implementation.md)
+- [How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？](rag/rag-architecture-and-implementation.md)
 
 ### Agents / 智能体
 
@@ -36,11 +40,11 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 
 ### Evaluation / 评估
 
-- [LLM Evaluation Methods / 大语言模型评估方法](evaluation/llm-evaluation-methods.md)
+- [How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)
 
 ### Fine-tuning / 微调
 
-- [Fine-tuning Strategies / 微调策略](fine-tuning/fine-tuning-strategies.md)
+- [When should you fine-tune to close a repeatable behavior gap? / 何时应通过微调弥补稳定的行为差距？](fine-tuning/fine-tuning-strategies.md)
 
 ### Safety / 安全
 
@@ -52,7 +56,10 @@ This map organizes durable, reusable AI engineering knowledge by topic. The agen
 - [How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？](systems/ai-latency-and-cost-optimization.md)
 - [When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？](systems/ai-deployment-patterns.md)
 - [How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
-- [AI System Design Interview Questions / AI系统设计面试题](systems/ai-system-design-interview-questions.md)
+- [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](systems/ai-system-design-interview-questions.md)
+- [How do you design permission-aware enterprise document question answering? / 如何设计具备权限意识的企业文档问答？](systems/ai-enterprise-document-qa-design.md)
+- [How do you design a customer-support assistant that can safely issue refunds? / 如何设计能够安全处理退款的客服助手？](systems/ai-customer-support-agent-design.md)
+- [How do you design a code-review assistant developers can trust? / 如何设计开发者愿意信任的代码审查助手？](systems/ai-code-review-assistant-design.md)
 
 ## Cross-domain context / 跨域脉络
 

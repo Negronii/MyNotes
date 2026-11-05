@@ -1,14 +1,6 @@
-# LLM Evaluation / 大语言模型评估方法
+# How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？
 
-LLM evaluation measures whether a system meets a defined task contract on relevant examples, using evidence and criteria appropriate to that task. No single score captures task success, truth, source support, relevance, safety, and operating cost.
-
-LLM 评估要先说明系统要完成什么、用哪些样本检验、依据什么判断。任务成功、事实正确、来源支持、相关性、安全性和运行成本是不同问题，不能压成一个分数。
-
-## Core answer / 核心回答
-
-**English.** Define success for the task, then evaluate representative examples at the retrieval, generation, or agent level where the behavior occurs. Combine objective task checks with source or factual verification, a clearly anchored rubric or calibrated judge where quality is open-ended, and latency/cost measures. Keep a held-out regression set, report the denominator and uncertainty, and use live outcomes alongside offline tests.
-
-**中文。** 先定义任务成功条件，再在检索、生成或 agent 端到端层级评估相关行为。可客观判定的部分用任务指标；开放质量用明确的评分准则或评分量表（rubric）、经人工校准的 judge，并单独核验事实和来源支持；同时记录延迟与成本。保留独立回归集，报告分母与波动，并结合离线测试和线上结果。
+**Core explanation / 核心解释：** Define success in observable terms, then evaluate representative cases at the layer where the behavior occurs—retrieval, generation, or an end-to-end agent. Use objective checks where there is a defensible answer, verify facts and source support separately, and use an explicit rubric or calibrated judge for open-ended quality. Keep a held-out regression set, report the denominator and uncertainty, and pair offline comparisons with production outcomes. No single score captures task success, truth, relevance, safety, and operating cost. / 先把成功定义为可观察的条件，再在行为实际发生的层级评估代表性案例：检索、生成或 agent 端到端。存在可辩护答案时使用客观检查；事实正确与来源支持分别核验；开放式质量使用明确 rubric 或经校准的 judge。保留独立回归集，报告分母与波动，并把离线比较与生产结果结合。单一分数无法同时代表任务成功、事实、相关性、安全和运行成本。
 
 ## Define each dimension / 分别定义各评估维度
 

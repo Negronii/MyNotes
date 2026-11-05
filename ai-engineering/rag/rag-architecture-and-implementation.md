@@ -1,12 +1,6 @@
-# Retrieval-Augmented Generation (RAG) / 检索增强生成
+# How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？
 
-**Retrieval-augmented generation (RAG) / 检索增强生成** adds evidence from an external source to the context of a language model at request time. A retriever selects candidate evidence; the application assembles an authorized, relevant context; a generator produces an answer from that context. RAG connects a model’s **parametric memory / 参数化记忆** with **non-parametric memory / 外部可检索知识**. Its usefulness depends on the source, retrieval, context assembly, and the model’s use of evidence. It does not guarantee correctness, freshness, privacy, low latency, or low cost. [Lewis et al.](https://arxiv.org/abs/2005.11401)
-
-**Interview answer / 面试简答：**
-
-> **EN:** RAG retrieves external evidence for a query and supplies selected passages to a language model as context. Retrieval determines what evidence is available; generation determines how the model uses it. This can make external knowledge easier to update than model weights, but answer quality still depends on source coverage, access controls, retrieval, and evidence use. RAG does not guarantee a correct answer or lower total cost and latency.
->
-> **中文：** RAG 根据查询从外部来源检索证据，再把筛选后的内容作为上下文交给语言模型。检索决定哪些证据可用，生成决定模型如何使用这些证据。它可以让外部知识比模型权重更容易更新，但回答质量仍取决于来源覆盖、访问控制、检索和模型对证据的使用；RAG 不保证答案正确，也不保证总成本或时延更低。
+**Core explanation / 核心解释：** Retrieval-augmented generation (RAG) retrieves candidate material from an external source, applies caller permissions, selects relevant evidence, and adds that evidence to the model's context for answer generation. It joins non-parametric, updateable sources with a model's parametric knowledge, but correctness still depends on source quality, synchronization, retrieval, evidence use, and application-side authorization. RAG does not guarantee freshness, privacy, correctness, low latency, or low cost. / 检索增强生成（RAG）从外部来源检索候选材料，根据调用者权限筛选内容，再把相关证据加入模型上下文以生成回答。它让可更新的外部知识与模型的参数化知识协作，但正确性仍取决于来源质量、同步、检索、证据使用和应用侧授权。RAG 不保证内容新鲜、隐私、答案正确，也不保证低时延或低成本。[Lewis et al.](https://arxiv.org/abs/2005.11401)
 
 ## When to use retrieval, long context, or fine-tuning / 如何选择检索、长上下文或微调
 
