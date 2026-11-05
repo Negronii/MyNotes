@@ -182,7 +182,7 @@ Individual properties:
 
 ## Compositing and `will-change`
 
-Animating `transform` and `opacity` can let an engine update presentation without recalculating layout, but neither property guarantees compositor-only or GPU work. `will-change` is a hint that may have memory and stacking effects; it does not guarantee layer promotion. See [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for typical invalidation paths.
+Animating `transform` and `opacity` can let an engine update presentation without recalculating layout, but neither property guarantees compositor-only or GPU work. `will-change` is a hint that may have memory and stacking effects; it does not guarantee layer promotion. See [`2.4 Browser - HTML & CSS part`](./rendering-pipeline-and-forced-layout.md) for typical invalidation paths.
 
 ```css
 .animated {
@@ -195,6 +195,6 @@ Animating `transform` and `opacity` can let an engine update presentation withou
 
 **Gotcha — `transform: translateZ(0)` is not a GPU switch:** It changes transform behavior and may affect stacking/containing blocks; it does not guarantee a faster path. Use neither it nor `will-change` as a substitute for profiling.
 
-**See also:** [`2.2 Box Model and BFC`](./box-model-and-bfc.md) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md) for measurement guidance.
+**See also:** [`2.2 Box Model and BFC`](./box-model-and-bfc.md) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](./rendering-pipeline-and-forced-layout.md) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](../performance/rendering-and-computation-optimization.md) for measurement guidance.
 
 **Specifications / 规范：** [CSS Positioned Layout](https://www.w3.org/TR/css-position-3/), [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color opacity](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transforms](https://www.w3.org/TR/css-transforms-1/), [CSS Transitions](https://www.w3.org/TR/css-transitions-2/), [W3C WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/).

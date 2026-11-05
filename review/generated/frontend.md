@@ -2,101 +2,61 @@
 
 > Generated from the [frontend reading map](../../frontend/index.md). Edit the map and its linked source notes. Internal section links use Obsidian heading fragments; source notes remain standard Markdown.
 
-## 1. Browser Basics / 浏览器基础
+## 1. How does a browser turn a URL into pixels? / 浏览器如何把 URL 变成屏幕像素？
 
-**Browser Basics / 浏览器基础**
+### How does a browser turn a URL into pixels? / 浏览器如何把 URL 变成屏幕像素？
 
-Think in stages—fetch, parse, compute style and layout, paint, then present—but treat the exact architecture as engine-specific. 浏览器常可按获取、解析、样式与布局、绘制和合成来理解；具体流水线属于实现，不是跨浏览器 API 保证。
+A URL entry is first interpreted as an input or navigation request; only a cross-document navigation switches documents, and only some paths need a network fetch. For a document navigation, fetching and parsing can overlap, discovered resources can load in parallel, and scripts can pause selected parsing work. The browser computes styles and geometry, produces paint output, rasterizes content, composites a frame, and hands it to the platform for display. Rendering engines such as Blink, WebKit, and Gecko and JavaScript engines such as V8, JavaScriptCore, and SpiderMonkey occupy different implementation boundaries. The broad path is useful for diagnosis, but its exact stages and process architecture are implementation details. / 输入 URL 后，浏览器先判断它是搜索还是导航；只有跨文档导航才需要新文档，也只有部分路径需要网络。文档导航中的获取与解析可以交叠，解析会发现并行加载的资源，脚本可暂停特定解析工作。浏览器随后计算样式与几何、生成绘制输出、栅格化内容、合成画面并交给平台显示。这个概览适合定位问题，但具体阶段和进程架构属于实现。
 
-Two interview questions this note prepares you for:
+~~~mermaid
+flowchart TD
+    A[Address input] --> B{Search or URL?}
+    B -->|search terms| S[Search provider]
+    B -->|URL| C{Same document or new document?}
+    C -->|fragment or History API update| H[Update URL and session history]
+    C -->|cross-document navigation| F["Fetch path: service worker, cache, or network"]
+    F --> P[Stream and parse HTML]
+    P --> R[Discover and fetch subresources]
+    P --> J{Parser-blocking script?}
+    J -->|yes| W[Wait for required fetch/style conditions and run script]
+    W --> P
+    J -->|no| D[Build document and style data incrementally]
+    R --> D
+    D --> L[Compute style and layout as needed]
+    L --> O[Paint output / drawing records]
+    O --> T["Rasterize paint output into pixels (engine-specific)"]
+    T --> K["Composite and submit frame (engine-specific)"]
+    K --> X[Platform displays at a suitable presentation time]
+    H --> U[Same document UI may update]
+    U --> L
+~~~
 
-1. **What are the major components of a browser, and what do they do?**
-2. **What happens when you type a URL and press Enter?** — the single most-asked frontend interview question.
+The network lane is conditional. A service worker or HTTP cache can satisfy a request; a redirect can change the target; DNS and connection setup are needed only when the chosen fetch path lacks a usable result or reusable connection. Resource hints request early work, but do not guarantee it. See [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) for DNS, HTTP versions, caching, CORS, and resource hints.
 
-Along the way it covers the follow-ups most candidates hit next: why `<script>` blocks HTML parsing, reflow vs. paint vs. composite, and how to optimize the critical rendering path.
+The document lane is incremental, not a queue of stages that each finish once. The parser can discover stylesheets, scripts, images, and other resources before reaching the end of the response. A parser-inserted classic script may pause parsing; `async`, `defer`, and module scripts have distinct schedules. See [How do scripts affect HTML parsing and readiness?](#6.%20How%20do%20scripts%20affect%20HTML%20parsing%20and%20document%20readiness?%20/%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F).
 
----
+Layout produces geometry; paint produces drawing output, not a bitmap. Rasterization makes pixel content from drawing records, and compositing arranges content into a frame. Engines may reuse existing work, run parts in parallel, or use different stage names. Chromium's RenderingNG documentation is one implementation example, not a requirement for WebKit, Gecko, or the web platform. See [Why can a CSS change trigger layout, paint, or compositing work?](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F).
 
-#### What are the major components of a modern browser?
+A URL change is not always a new document. Same-document fragment navigation and History API updates have their own behavior; see [Does every URL change load a new document?](#2.%20Does%20every%20URL%20change%20load%20a%20new%20document?%20/%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F). To investigate a slow or unstable page, use measurements and traces rather than assuming a stage name identifies the cause; see [How should browser performance be measured and diagnosed?](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90).
 
-**Headline (30s):** A useful high-level model separates rendering, JavaScript execution, networking, and storage. The browser coordinates them, but process boundaries, worker threads, cache layers, and the rendering pipeline vary by engine and platform. **中文：** 可按渲染、脚本执行、网络和存储建立心智模型；进程和线程划分由实现决定。
+**Evidence / 资料：** [WHATWG HTML: navigation and session history](https://html.spec.whatwg.org/multipage/nav-history-apis.html); [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/); [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), checked 2026-11-05.
+## 2. Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？
 
-**Why it's asked:** The interviewer wants to hear that you have a mental model of where work happens. Candidates who can't separate "rendering" from "JS execution" tend to write code that surprises them later (layout thrashing, stale caches, blocking scripts).
+### Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？
 
-##### Rendering engine
+No. A cross-document navigation switches to another `Document` and may fetch a response; a fragment navigation can add a session-history entry that shares the current document; `history.pushState()` and `replaceState()` update the current document's URL and history without fetching that address. Use the URL as the shareable source of route state, and synchronize the UI when the user traverses Back or Forward. / 不会。跨文档导航会切换到另一个 `Document`，并可能获取响应；片段导航可新增历史条目但仍共享当前文档；`history.pushState()` 和 `replaceState()` 则在当前文档内更新 URL 与历史记录，不会请求该地址。让 URL 保存可分享的路由状态，并在用户前进或后退时同步界面。
 
-- **Engines**: Blink (Chrome, Edge), WebKit (Safari), Gecko (Firefox).
-- **Typical work**: parse HTML into the DOM; parse CSS rules and compute styles; determine boxes and geometry (layout); produce paint instructions; then present the result. Engines use different internal trees and may skip stages when a change does not require them.
-- `display: none` generates no principal box; `visibility: hidden` keeps layout space while hiding the element. These are CSS box-generation and visibility rules, not a promise about a particular internal “render tree.”
+#### Parse query state and choose an operation / 解析查询状态并选择操作
 
-##### JavaScript engine
+Create a `URL` from the current address instead of splitting strings on `?` and `&`. `searchParams.get()` reads one value, `getAll()` reads repeated values, `set()` replaces values with that name, and `append()` deliberately adds another pair. Serialization handles URL encoding. Query parameters are untrusted input: validate values and keep secrets out of URLs.
 
-- **Runtimes**: V8 (Chrome, Node), SpiderMonkey (Firefox), JavaScriptCore (Safari).
-- **Key pieces**:
-- **Execution and optimization** — engines interpret and/or compile code using implementation-specific strategies; JIT is common but not a language guarantee.
-- **Event loop and task queues** — the host schedules timers, promises, networking, and rendering callbacks. See [`7.1 Event Loop`](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF); browser and Node host scheduling differ.
-  - **Memory heap + call stack** — object allocation and function execution.
+- Use an anchor or `location.assign(url)` for a normal navigation that should create a history entry. Use `location.replace(url)` when the current entry should be replaced.
+- Use `pushState(state, "", url)` to add a same-document entry, or `replaceState(...)` to edit the current entry. The URL must be same-origin. These calls do not fetch the URL or fire `popstate` or `hashchange`.
+- On Back/Forward traversal, handle `popstate` and derive the displayed route from `location` (and `event.state` when the application uses it). Fragment navigation is distinct: history traversal involving fragment changes can dispatch `popstate`; a fragment change can also dispatch `hashchange`.
 
-##### Networking layer
+This sorting example keeps its selected value and summary in step with the query string. It updates the view directly after `pushState`, then re-reads the address after history traversal.
 
-- **HTTP, TLS, and caches** — requests may be served by browser caches or a service worker before reaching the network. HTTP/2 multiplexes streams over a connection; HTTP/3 uses QUIC over UDP.
-- **HSTS** tells a user agent to use HTTPS for a host under the policy's rules.
-- **CORS controls response sharing with script, not whether every cross-origin request is sent.** Some requests are sent without a preflight; a preflight is used for requests outside the safelisted cases. A server may already have received a request even when the browser does not expose its response to script. See the [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol).
-- See [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md) for HTTP details.
-
-##### Storage
-
-- **Cookies** may accompany matching requests; **localStorage** and **sessionStorage** are synchronous Web Storage; **IndexedDB** supports transactions; **Cache API** stores request/response pairs. Quotas, persistence, and embedded-context access are subject to browser policy. See [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1).
-
-**See also:** [`7.1 Event Loop`](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF), [`5.2 Browser Storage and Communication`](#23.%20Browser%20Storage%20and%20Communication%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%9A%E4%BF%A1), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
-
----
-
-#### What happens when you type a URL and press Enter?
-
-**Headline (30s):** A navigation may consult caches or a service worker, resolve a host, establish or reuse a connection, and request a document. The browser can parse streamed HTML and start fetching discovered resources while parsing continues. Style, layout, script, paint, and presentation can overlap; this is a simplified model, not a single mandatory sequence. **中文：** 导航可能命中缓存或 Service Worker；解析和资源获取可以交叠，渲染阶段也不必严格串行。
-
-**Why it's asked:** This is the "show me your whole mental model in one question" probe. Interviewers want to hear the three big phases (fetch → parse → render) and at least one intelligent follow-up-worthy detail per phase.
-
-##### Phase 1 — Resource fetching
-
-- **Name resolution and connection setup** — a network navigation may require DNS and a new connection, but caches, connection reuse, proxies, or service workers can change the path.
-- **Transport and security** — HTTP/1.1 and HTTP/2 commonly use TCP; HTTPS authenticates and encrypts with TLS. HTTP/3 uses QUIC over UDP and avoids TCP's cross-stream transport head-of-line blocking.
-- Resource hints such as `dns-prefetch` and `preconnect` are hints; the user agent decides how to act on them.
-
-##### Phase 2 — Parsing and the critical rendering path
-
-1. **DOM construction**: bytes → characters → tokens → nodes → DOM tree.
-2. **Style computation**: CSS is parsed and the cascade determines computed styles; box generation follows the resulting styles and layout mode.
-3. **Layout**: the engine computes boxes and geometry. The specifications define layout results; the internal representation is engine-specific.
-
-**Gotcha — parser-blocking scripts:** A parser-inserted classic script without `async` or `defer` can pause HTML parsing while it is fetched and run. Earlier blocking stylesheets can delay script execution when the script may inspect styles. Stylesheets and scripts can therefore delay visible content, but “the browser waits for a complete CSSOM before every first paint” is too broad.
-
-##### Phase 3 — Layout, paint, composite
-
-- **Style and layout** — compute styles and the geometry needed for the current presentation. DOM or CSS changes can invalidate work; a geometry read after a write may force pending style/layout work to be calculated synchronously.
-- **Paint and presentation** — engines create and update paint output, then present it. A change may skip layout or paint when the engine can reuse existing work.
-- **Compositing** — engines may composite layers separately. `transform` and `opacity` can be compositor-friendly for some elements and engines, but do not guarantee a layer or GPU execution.
-
-**Follow-up — “Is it fetch, then parse, then render, strictly in order?”** No. Parsing can begin before the response completes, and an engine may discover and fetch resources early. Script execution and stylesheets can pause parts of that work; presentation can update incrementally.
-
-**See also:** [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`HTTP Protocols and WebSockets / HTTP 协议与 WebSocket`](../../engineering-foundations/networking/http-protocols-and-websockets.md).
-
----
-
-#### How do URLs and same-document navigation work? / URL 与同文档导航如何工作？
-
-**Core answer / 核心回答：** `URL` parses and serializes a complete address; `URLSearchParams` reads and edits its query pairs. An anchor or `location.assign()` requests navigation to a URL: it normally loads another document, but a fragment-only navigation can remain in the current document. `history.pushState()` and `replaceState()` instead update the current document's session history and URL without loading another document. Those History API calls do not dispatch `popstate`; Back/Forward traversal does, so an app should read the current URL then and synchronize its displayed state. / `URL` 负责解析和序列化完整地址，`URLSearchParams` 读写查询参数。链接或 `location.assign()` 会请求导航到某个 URL：通常会加载新文档，但仅改变片段时可以留在当前文档。`history.pushState()` 和 `replaceState()` 则在当前文档内更新会话历史和 URL，不会加载新文档。它们本身不会触发 `popstate`；浏览器前进或后退遍历历史记录时才会触发，因此应用应在该事件中读取当前 URL 并同步界面。
-
-##### Parse query state and choose the navigation operation
-
-- Start from `new URL(location.href)` rather than splitting a URL string by `?` or `&`. Read a single value with `searchParams.get(name)` and repeated values with `getAll(name)`. `set(name, value)` replaces existing pairs with that name; use `append()` when duplicates are intentional. Serializing through `url.search` or `url.href` applies URL encoding.
-- An anchor or `location.assign(url)` asks the browser to navigate to a URL and normally creates a history entry; `location.replace(url)` navigates while replacing the current entry. The browser may reuse a document for a same-document fragment navigation, so “navigation” does not always mean a new network request.
-- `pushState(state, "", url)` adds a same-document history entry; `replaceState(state, "", url)` edits the current one. The URL must remain same-origin. Neither method fetches that URL or emits `popstate`; update the UI directly after calling it. On Back/Forward traversal, handle `popstate` by deriving the view from `location` (and `event.state` if the app uses it).
-
-This makes filters and tabs linkable and restorable through Back/Forward. Treat query values as untrusted input, validate them against supported options, and avoid putting secrets in a URL.
-
-```html
+~~~html
 <label for="sort">Sort results</label>
 <select id="sort">
   <option value="recent">Most recent</option>
@@ -119,84 +79,20 @@ sortSelect.addEventListener("change", () => {
   const url = new URL(location.href);
   url.searchParams.set("sort", sortSelect.value);
   history.pushState(null, "", url.href);
-  syncFromUrl(); // pushState does not dispatch popstate
+  syncFromUrl();
 });
 
 window.addEventListener("popstate", syncFromUrl);
 syncFromUrl();
 </script>
-```
+~~~
 
-**See also:** [React Router / React 路由](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) uses browser history for client-side routes; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) explains `DOMContentLoaded` and `load`; the [archived URL, location, and History reference](../../archive/front-end/0-1_Learning_Notes/Javascript/readme.md) retains the broader property and method catalog.
+A client-side router can use these same-document entries to change views, but it owns rendering and route restoration. Browser History API behavior is not the same as a document navigation, even when the visible URL changes.
 
-**Sources checked 2026-10-15:** [WHATWG URL Standard](https://url.spec.whatwg.org/#urlsearchparams-class) (Living Standard updated 2026-10-07) and [WHATWG HTML Standard: History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface) (Living Standard updated 2026-10-14).
+**See also:** [React Router / React 路由](#33.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) builds client-side routes on browser history; [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) covers network requests once navigation takes a fetching path.
 
----
-
-#### Why does a `<script>` tag block HTML parsing? What do `async` and `defer` change?
-
-**Headline (30s):** A parser-inserted classic script without `async`, `defer`, or another applicable scheduling rule can pause parsing while it is fetched and executed. For classic external scripts, `defer` preserves order and runs after parsing before `DOMContentLoaded`; `async` runs when ready without preserving order. Module scripts are deferred by default unless `async` is present. **中文：** classic `defer` 保序并在解析后执行；`async` 不保序；模块脚本默认延后执行。
-
-**How it works:**
-
-| Attribute | Downloaded | Executed | Blocks parser? | Order preserved? |
-|---|---|---|---|---|
-| Classic parser-inserted, no attribute | inline or fetched by parser | when parser reaches and can run it | yes | parser order |
-| Classic external `defer` | in parallel | after parsing, before `DOMContentLoaded` | no | yes among deferred scripts |
-| Classic external `async` | in parallel | when ready | no | no |
-| Module script | module graph fetched | deferred by default; `async` changes scheduling | no for normal module scripts | module graph rules apply |
-
-**Gotcha — `defer` applies to classic external scripts:** It has no effect on classic inline scripts; module scripts are deferred by default. Use `async` only when execution order is unimportant.
-
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for placement strategy and more `<script>` gotchas.
-
----
-
-#### Reflow vs. repaint vs. composite — what triggers each, and which is cheapest?
-
-**Headline (30s):** Geometry changes commonly require layout; paint-only changes can skip layout; some composited changes can skip both. Which stages run, how much work they cover, and whether a GPU participates depend on the changed property, page, and engine. **中文：** 属性变化可能使布局、绘制或合成失效；实际成本必须按页面和浏览器测量。
-
-**Typical invalidation paths (implementation-dependent):**
-
-1. **Style + layout + paint + presentation** — changes affecting geometry or wrapping, such as many width or font changes.
-2. **Style + paint + presentation** — visual changes that do not affect geometry, such as many color changes.
-3. **Style + compositor update** — some `transform` / `opacity` changes on elements already suitable for compositing.
-
-These paths are examples, not CSS guarantees. Layer setup, affected-area size, and GPU use depend on the engine and page.
-
-**Gotcha — forced synchronous layout:** Reading current geometry (`offsetHeight`, `getBoundingClientRect`) after a write can force pending style/layout work to be calculated before the value is returned. Repeating write/read pairs can repeat that work. `scrollTop` is a scroll position rather than a geometry measurement. Batch reads before writes when that fits the task, and inspect a performance trace to confirm the issue.
-
-```javascript
-// may repeatedly force pending style/layout work
-for (const el of items) {
-  el.style.width = el.offsetWidth + 10 + 'px';
-}
-
-// collect measurements before writing
-const widths = items.map(el => el.offsetWidth);
-items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
-```
-
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering triggers and optimization tactics, [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
-
----
-
-#### How do you optimize the critical rendering path?
-
-**Headline (30s):** Reduce blocking work, let the browser discover critical resources early, and avoid repeated synchronous layout. Validate the result with page-level measurements; `preconnect`, critical CSS, image loading policy, and animation choices all depend on the page and target browsers. **中文：** 优化应从减少阻塞、尽早发现关键资源和避免重复同步布局入手，并用页面测量验证。
-
-**Tactics:**
-
-- **Render-blocking mitigation** — defer scripts whose work is not needed during parsing; critical CSS can reduce a separate blocking request but increases HTML and affects caching; use `content-visibility: auto` only when its rendering semantics fit.
-- **Network** — `<link rel="preconnect">` can warm up a connection; use `loading="lazy"` for genuinely off-screen images, not likely LCP images; select image formats and HTTP versions based on target support and measurements.
-- **Runtime** — debounce or throttle only when event frequency requires it; use `requestAnimationFrame` for visual updates; profile before preferring `transform`/`opacity` over layout properties.
-- **SSR + hydration** — serve HTML first, let client JS attach listeners on top (as in React hydration).
-- **Early resource discovery** — some engines use speculative loading while parsing is blocked. This is an implementation optimization, not a page-level guarantee.
-
-**See also:** [`11.1 Performance Metrics and Analysis`](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90), [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96), [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
-
-**Standards and implementation notes / 标准与实现资料：** [WHATWG HTML scripting](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element), [Fetch Standard: CORS](https://fetch.spec.whatwg.org/#http-cors-protocol), [CSS Display](https://www.w3.org/TR/css-display-3/), [Chrome RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), [Chrome forced-reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
-## 2. HTML and CSS Basics / HTML 与 CSS 基础
+**Standards / 规范：** [WHATWG URL Standard: `URLSearchParams`](https://url.spec.whatwg.org/#urlsearchparams-class); [WHATWG HTML: same-document navigation and History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface), checked 2026-11-05.
+## 3. HTML and CSS Basics / HTML 与 CSS 基础
 
 **HTML and CSS Basics / HTML 与 CSS 基础**
 
@@ -295,7 +191,7 @@ Media queries still work, but modern CSS gives cleaner options for common cases:
   }
   ```
 
-**See also:** [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for the full Grid / Flexbox reference.
+**See also:** [`2.3 Flex & Grid Layout`](#5.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for the full Grid / Flexbox reference.
 
 #### Semantic HTML and accessibility / 语义化 HTML 与无障碍交互
 
@@ -407,7 +303,7 @@ This is the legacy `-webkit-line-clamp` form, with the `-webkit-box` display and
 **Specifications / guidance:** [HTML Standard](https://html.spec.whatwg.org/), [CSS Values and Units](https://www.w3.org/TR/css-values/), [CSS Selectors](https://www.w3.org/TR/selectors-4/), [CSS Cascading and Inheritance](https://www.w3.org/TR/css-cascade-5/), [CSS Display and visual ordering](https://www.w3.org/TR/css-display-3/#order-property), [CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/), [CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/), [WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/), [WAI form labels](https://www.w3.org/WAI/tutorials/forms/labels/), and [WAI image alternatives](https://www.w3.org/WAI/tutorials/images/).
 
 **Accessibility sources checked 2026-10-15:** [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/) (including visible focus and text error identification), [WAI Forms: Notifications](https://www.w3.org/WAI/tutorials/forms/notifications/), [ARIA Authoring Practices Guide: Keyboard Interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/), and [ARIA Authoring Practices Guide: Read Me First](https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/) (ARIA 1.2 role and behavior guidance).
-## 3. Box Model and BFC / 盒模型与块格式化上下文
+## 4. Box Model and BFC / 盒模型与块格式化上下文
 
 **Box Model and BFC / 盒模型与块格式化上下文**
 
@@ -570,14 +466,14 @@ The `.container` has no height — it's a red stripe, not a red rectangle around
 
 Both make the parent's height include the floated children. Prefer `flow-root` when a BFC is the intended behavior.
 
-**See also:** [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for float-clearing patterns and layout interview scenarios.
+**See also:** [`2.6 CSS Interview Questions`](#9.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for float-clearing patterns and layout interview scenarios.
 
 **Specifications / 规范：** [CSS Display: formatting contexts](https://www.w3.org/TR/css-display-3/), [CSS 2.2: block formatting contexts](https://www.w3.org/TR/CSS22/visuren.html#block-formatting), [CSS 2.2: box model](https://www.w3.org/TR/CSS22/box.html#box-dimensions).
-## 4. Flex & Grid Layout / Flex与Grid布局
+## 5. Flex & Grid Layout / Flex与Grid布局
 
 **Flexbox and Grid Layout / Flexbox 与 Grid 布局**
 
-Reach for this when you need to remember the property names and what each one does. For "how should I approach this layout?" style interview answers, the patterns live in [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98).
+Reach for this when you need to remember the property names and what each one does. For "how should I approach this layout?" style interview answers, the patterns live in [`2.6 CSS Interview Questions`](#9.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98).
 
 **中文：** Flexbox 适合单轴排列，Grid 适合二维轨道；遇到内容最小尺寸造成溢出时，可显式使用 `min-width: 0` 或 `minmax(0, 1fr)`。
 
@@ -734,140 +630,94 @@ The minimum is capped at the container width so the track can still fit on a nar
 
 Keep meaningful source order in the HTML. Flex `order`, reverse directions, and grid placement change visual layout without rewriting the document's logical/speech order; don't use them to repair incorrect content order.
 
-**See also:** [`2.1 HTML & CSS Basics`](#2.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for CSS units used with `fr`/`minmax`, [`2.6 CSS Interview Questions`](#7.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for worked interview examples using these layouts.
+**See also:** [`2.1 HTML & CSS Basics`](#3.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for CSS units used with `fr`/`minmax`, [`2.6 CSS Interview Questions`](#9.%20CSS%20Interview%20Questions%20/%20CSS%E9%9D%A2%E8%AF%95%E9%A2%98) for worked interview examples using these layouts.
 
 **Specifications / 规范：** [CSS Flexible Box Layout](https://www.w3.org/TR/css-flexbox-1/) defines flex sizing and the automatic minimum size; [CSS Grid Layout](https://www.w3.org/TR/css-grid-2/) defines track sizing and grid-item minimums; [CSS Display](https://www.w3.org/TR/css-display-3/#order-property) describes visual reordering and accessibility.
-## 5. Browser HTML and CSS / 浏览器中的 HTML 与 CSS
+## 6. How do scripts affect HTML parsing and document readiness? / 脚本如何影响 HTML 解析与文档就绪？
 
-**Browser HTML and CSS / 浏览器中的 HTML 与 CSS**
+### How do scripts affect HTML parsing and document readiness? / 脚本如何影响 HTML 解析与文档就绪？
 
-Layout, paint, and compositing describe common rendering work, not fixed performance guarantees. `async`, `defer`, and module scripts have distinct scheduling rules. **中文：** 布局、绘制和合成是常见实现阶段，不是固定成本保证；脚本属性的执行时序需按类型区分。
+A parser-inserted classic script without `async` or `defer` can pause HTML parsing while it is fetched and run; it may also wait for an earlier stylesheet when it can inspect style. `defer` and ordinary module scripts fetch while parsing continues, then execute after parsing in their specified order; `async` scripts execute when ready without preserving relative order. Choose a mode from the script's dependencies and required start time, not from one placement rule. / 未带 `async` 或 `defer` 的解析器插入经典脚本可能在获取和执行期间暂停 HTML 解析；如果脚本能读取样式，它也可能等待之前的样式表。`defer` 与普通模块脚本会在解析期间获取，再按相应顺序于解析完成后执行；`async` 脚本就绪后即执行，不保持相对顺序。应根据依赖关系和所需运行时机选择模式，而不是依赖单一的位置口诀。
 
-### Reflow, Repaint, and the `<script>` Tag
+#### Script scheduling / 脚本调度
 
-Interview questions this note answers:
+| Script | Fetch | Execution | Relative order |
+|---|---|---|---|
+| Parser-inserted classic, no scheduling attribute | Parser fetches it; parser pauses | When available and eligible to run | Parser order |
+| External classic `defer` | In parallel with parsing | After parsing, before `DOMContentLoaded` | Document order among deferred classic scripts |
+| External classic `async` | In parallel with parsing | As soon as available; parsing can pause to run it | Not preserved |
+| Module without `async` | Module graph loads in parallel with parsing | Deferred until parsing is complete | Module and dependency rules |
+| Module with `async` | Module graph loads in parallel | As soon as its graph is ready | Not preserved relative to other async work |
+| Classic inline with `defer` | No fetch | Runs when parser reaches it | `defer` has no effect without `src` |
 
-1. **Reflow vs. repaint vs. composite — what triggers each, and which is cheapest?**
-2. **How do you minimize the cost of reflow?**
-3. **What does `<script>` do in HTML, and how do `async` and `defer` change its behavior?**
-4. **Where should you place `<script>` tags, and why?**
+`DOMContentLoaded` fires after the document has been parsed and deferred and ordinary module scripts have executed; it does not wait for images or `async` scripts. A deferred script can itself wait for a stylesheet that blocks scripts, so stylesheet loading can delay that script and therefore `DOMContentLoaded`. `load` waits on a wider set of dependent resources. These milestones do not promise that every image is decoded or that the page is visually complete.
 
-For the big-picture render pipeline these topics fit into, see [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80).
+Use `defer` for ordered external classic scripts that need the parsed document. Use `async` for a script whose execution does not depend on other scripts or parser output. Module scripts are deferred by default; adding `async` changes that schedule. Dynamically inserted scripts have different defaults from parser-inserted ones, so state which case you mean.
 
----
+#### Why scripts can pause the parser / 脚本为何会暂停解析
 
-#### Reflow vs. repaint vs. composite — what triggers each?
+A classic script can inspect or modify the document while the parser is constructing it; it can also write markup that changes parsing. The browser therefore cannot always continue as if the script were an independent resource. A parser-blocking script's fetch can overlap resource discovery and other downloads, but its execution creates a dependency point.
 
-**Headline (30s):** Layout recomputes geometry; paint updates visual output; compositing combines content for presentation. A change may require one stage or several. The affected area, thread, layer, and GPU use depend on the page and engine, so the stage names are not a universal cost ranking.
+Stylesheets matter when a pending script can read style information: the browser may delay that script until a blocking stylesheet is available. This is why “all CSS must finish before first paint” is inaccurate; the relevant blocking relationships depend on the script and style state.
 
-**Typical invalidation paths:**
+~~~html
+<head>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+~~~
 
-| Stage pattern | Examples | Boundary |
+Here HTML parsing and script fetching can proceed together. Once parsing ends, `app.js` executes before `DOMContentLoaded`; it can rely on the parsed document, but should not assume images have loaded.
+
+**See also:** [How does a browser turn a URL into pixels?](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F) places script scheduling in the navigation path; [When does browser JavaScript run relative to a frame?](#29.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) explains tasks, microtasks, and rendering opportunities; [How should browser performance be measured and diagnosed?](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) distinguishes readiness events from user-visible performance.
+
+**Standards / 规范：** [WHATWG HTML: the script element and script preparation](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element); [WHATWG HTML: DOMContentLoaded](https://html.spec.whatwg.org/multipage/dom.html#the-end); checked 2026-11-05.
+## 7. Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？
+
+### Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？
+
+A DOM or style change invalidates only the work needed for the next correct presentation, but that dependency may include style recalculation, layout, paint, rasterization, and compositing. Layout computes geometry; paint records drawing operations; rasterization turns paint output into pixel content; compositing arranges content for a frame. Reading geometry after a write can synchronously force stale style or layout to become current, but a geometry read does not always cause a new layout. / DOM 或样式变化会使下一次正确呈现所需的工作失效，依赖链可能包含样式重算、布局、绘制、栅格化和合成。布局计算几何；绘制记录绘图操作；栅格化把绘制输出转为像素内容；合成将内容组织成画面。写入后读取几何值可能同步刷新尚未更新的样式或布局，但几何读取并不总会触发布局。
+
+#### Which work may be invalidated? / 哪些工作可能失效？
+
+| Change (examples) | Work often needed | Boundary |
 |---|---|---|
-| Style + layout + paint + presentation | Changes affecting geometry or line wrapping, such as many width or font changes | Can affect related boxes; extent depends on layout and engine |
-| Style + paint + presentation | Visual changes that do not affect geometry, such as many color changes | Layout may be reused |
-| Style + compositor update | Some `transform` / `opacity` changes on an element suitable for compositing | May avoid layout and paint; layer setup and GPU use are not guaranteed |
+| Geometry or line-wrap change (`width`, font metrics, inserting a node) | Style, layout, paint, then presentation | Extent depends on layout dependencies and engine |
+| Visual-only style change (`color`, many backgrounds) | Style, paint, then presentation | Geometry can be reused |
+| Suitable `transform` or `opacity` update | Style or compositor update, then presentation | May avoid layout and paint; layer or GPU use is not guaranteed |
+| Read current geometry after DOM/style writes | Potential synchronous style/layout flush | No flush is needed if relevant state is already current |
 
-##### What triggers reflow
+“Reflow” and “repaint” are convenient shorthand, not portable performance scores. A small element can trigger work beyond itself, while a large subtree can be cheap when relevant data is unchanged. `transform` and `opacity` often make good animation candidates, but do not guarantee compositor-only updates, layer promotion, or GPU execution. Profile the target page and browser.
 
-- Window resize.
-- Adding, removing, or reordering DOM nodes.
-- Changes to layout-affecting styles: `width`, `height`, `margin`, `padding`, `border`, `display`, `position`, `font-*`, `line-height`, `text-align`.
-- **Reading** geometry properties (`offsetHeight`, `getBoundingClientRect`) after a write can force pending style/layout work synchronously. `scrollTop` is a scroll position, not a geometry measurement.
+#### How does a layout read become forced work? / 布局读取如何变成同步刷新？
 
-##### What triggers repaint (without reflow)
+When script changes the DOM or a layout-affecting style, the browser may mark style or layout data dirty and defer recalculation until it needs a current result. A later API that returns current geometry—such as `offsetWidth` or `getBoundingClientRect()`—can require that pending work to run before returning. If the relevant data is already current, the same API need not trigger layout.
 
-- `color`, `background`, `background-color`, `background-image`
-- `visibility` (going between `visible` and `hidden`)
-- `box-shadow`, `outline`, `border-color` (but not `border-width`, which changes layout)
+This loop repeatedly asks for current geometry after changing style, creating repeated flush opportunities:
 
-##### Compositor-friendly properties (conditional)
-
-- `transform` and `opacity` can be good candidates for visual animation when a trace shows layout or paint is the bottleneck.
-- `filter`, `will-change`, and other properties have property- and engine-specific effects; none guarantees compositor-only work.
-
-**Gotcha — avoid a promised “GPU path”:** `transform` can avoid layout in common cases, but may still require paint, layer setup, or other work. Compare traces on target browsers and devices.
-
-#### How do you minimize the cost of reflow?
-
-**Headline (30s):** Reduce unnecessary DOM work, group geometry reads before writes when that fits the task, and profile forced synchronous layout. A BFC manages float and margin interactions; it is not a layout-containment guarantee. CSS containment has distinct behavior and should be applied intentionally.
-
-**Tactics:**
-
-- **Group writes.** A class change or a series of style writes may be batched by the browser; it does not guarantee exactly one layout.
-- **Avoid interleaving writes and geometry reads.** A `DocumentFragment` can clarify subtree construction, but is not automatically faster than direct DOM operations.
-- **Use containment only for a real boundary.** See [Block Formatting Context](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for float and margin behavior; do not treat it as CSS layout containment.
-- **Debounce or throttle** `resize` / `scroll` handlers — see [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
-- **Schedule visual updates deliberately.** CSS animations and `requestAnimationFrame` can align visual work with rendering; neither makes expensive work free.
-- **Avoid repeated forced layout.** Do not read a geometry property after every write in a loop; the browser may have to flush pending layout each time.
-
-```javascript
-// may repeatedly force pending style/layout work
-for (const el of items) {
-  el.style.width = el.offsetWidth + 10 + 'px';
+~~~javascript
+for (const item of items) {
+  item.style.width = (item.offsetWidth + 10) + "px";
 }
+~~~
 
-// collect measurements before writing
-const widths = items.map(el => el.offsetWidth);
-items.forEach((el, i) => { el.style.width = widths[i] + 10 + 'px'; });
-```
+Collect measurements before writing. This avoids the obvious read-write-read pattern; it does not promise that every later change collapses to one layout or that batching is faster for every workload.
 
-**Gotcha — hidden styles have different semantics:** `display: none` generates no box; `visibility: hidden` keeps layout space. Their rendering and accessibility effects differ, so choose by behavior rather than a universal cost claim.
+~~~javascript
+const widths = items.map(item => item.offsetWidth);
+items.forEach((item, index) => {
+  item.style.width = (widths[index] + 10) + "px";
+});
+~~~
 
-#### What does the `<script>` tag do?
+Choose a geometry API from the box and coordinate system needed: see [Which DOM geometry API returns the size or coordinate I need?](#8.%20DOM%20Properties%20/%20DOM%E5%B1%9E%E6%80%A7). For a measured performance problem, inspect a rendering trace; [How should browser performance be measured and diagnosed?](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) connects the trace to the user-visible symptom.
 
-**Headline (30s):** A parser-inserted classic script without `async`, `defer`, or another applicable scheduling rule can pause parsing while it is fetched and executed. The parser must account for scripts that can affect the document as parsing continues.
+#### Standards versus an implementation pipeline / 标准行为与引擎流水线的界限
 
-**Inline:**
+CSS and CSSOM View define observable layout results and geometry APIs. They do not require every browser to expose internal stages called “render tree,” “reflow,” “raster,” or “composite,” or require the same process and thread arrangement. Chromium's RenderingNG is one implementation example: Blink produces paint artifacts, Chromium schedules raster work into tiles, compositor components assemble frames, and Viz submits frames for display. Those names and steps describe Chromium, not all browser engines; operating-system composition and display timing also sit outside the web platform's CSS layout contract.
 
-```html
-<script>
-  // JavaScript here
-</script>
-```
-
-**External:**
-
-```html
-<script src="path/to/script.js"></script>
-```
-
-#### `async` vs. `defer` — which to use when?
-
-**Headline (30s):** For classic external scripts, `defer` fetches in parallel and executes after parsing in document order; `async` fetches in parallel and executes when ready without preserving order. Module scripts are deferred by default. Choose based on dependencies and when the script must run.
-
-| Attribute | Downloads | Executes | Blocks parser? | Preserves order? |
-|---|---|---|---|---|
-| Classic parser-inserted, no attribute | inline or fetched by parser | when parser reaches and can run it | yes | parser order |
-| Classic external `defer` | in parallel | after parsing, before `DOMContentLoaded` | no | yes among deferred scripts |
-| Classic external `async` | in parallel | when ready | no | no |
-| Module script | module graph fetched | deferred by default; `async` changes scheduling | no for normal module scripts | module graph rules apply |
-
-**Gotcha — `defer` applies to classic external scripts:** It has no effect on classic inline scripts; module scripts are deferred by default. Use `async` only when execution order is unimportant.
-
-**Gotcha — `defer` doesn't work on inline scripts:** `defer` is ignored if the `<script>` has no `src`. Move the code into an external file or use `DOMContentLoaded`.
-
-#### Where should you place `<script>` tags?
-
-**Headline (30s):** Choose placement and attributes from the script's dependencies. An external classic `defer` script in `<head>` can fetch while parsing and run after parsing; a module script is deferred by default. There is no single best placement for every script.
-
-**Common choices:**
-
-1. `<head>` with classic external `defer` — download in parallel, execute after parsing in document order.
-2. `<head>` with `async` — useful when order does not matter; executes when ready.
-3. A script near `</body>` — parsing has reached that point, though earlier styles or scripts may still affect readiness.
-4. A parser-inserted classic script without an attribute — can block the parser while fetching and running.
-
-**Best practices beyond placement:**
-
-- Keep JS in external files (cacheable, easier to maintain).
-- Minify and compress in production.
-- Use non-blocking loading (`defer` / `async`) whenever possible.
-
-**See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for the high-level pipeline, [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for animation and scroll optimization.
-
-**Standards and implementation notes / 标准与实现资料：** [WHATWG HTML scripting](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element), [CSS Display](https://www.w3.org/TR/css-display-3/), [Chrome RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), [Chrome forced-reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
-## 6. DOM Properties / DOM属性
+**Sources checked 2026-11-05:** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) for geometry APIs; [CSS Display](https://www.w3.org/TR/css-display-3/) for box and formatting behavior; [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture) for the illustrative implementation pipeline; [Chrome forced reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
+## 8. DOM Properties / DOM属性
 
 **DOM Geometry Properties / DOM 几何属性**
 
@@ -970,7 +820,7 @@ function overlapsViewport(element) {
 
 This is a simple rectangle-overlap check, not a test for occlusion, opacity, or assistive-technology visibility. Zero-area boxes need a separate policy.
 
-For threshold-based visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` over repeatedly polling geometry. It reports asynchronously; it is not a guarantee that the browser performs no layout work. See [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
+For threshold-based visibility tracking (e.g., lazy loading, analytics), prefer `IntersectionObserver` over repeatedly polling geometry. It reports asynchronously; it is not a guarantee that the browser performs no layout work. See [`5.3 Image Lazy Loading`](#26.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD).
 
 #### When to reach for which
 
@@ -982,10 +832,10 @@ For threshold-based visibility tracking (e.g., lazy loading, analytics), prefer 
 - Need **viewport-relative position** (for tooltips, drag, scroll effects)? → `getBoundingClientRect()`.
 - Need **position within parent** (for layout math)? → `offsetTop` / `offsetLeft` (watch out: relative to `offsetParent`, not necessarily the direct parent).
 
-**See also:** [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) on layout thrashing when reads follow writes, [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for `IntersectionObserver`-based visibility.
+**See also:** [`2.4 Browser - HTML & CSS part`](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) on layout thrashing when reads follow writes, [`5.3 Image Lazy Loading`](#26.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for `IntersectionObserver`-based visibility.
 
 **Specifications / 规范：** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.
-## 7. CSS Interview Questions / CSS面试题
+## 9. CSS Interview Questions / CSS面试题
 
 **CSS Interview Questions / CSS 面试题**
 
@@ -1051,7 +901,7 @@ The legacy fallback: insert a clearing `<div>` at the end.
 
 **Gotcha — why floats even need clearing:** Floats are taken out of normal flow for surrounding inline content, but text still flows around them. A normal-flow parent can therefore fail to include their height. Flexbox and Grid are usually simpler for page layout.
 
-**See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) on how BFCs contain floats, [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for modern alternatives.
+**See also:** [`2.2 Box Model and BFC`](#4.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) on how BFCs contain floats, [`2.3 Flex & Grid Layout`](#5.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for modern alternatives.
 
 ---
 
@@ -1175,7 +1025,7 @@ Or with a clearing BFC:
 
 **Gotcha — `calc(100% - 200px)` + `box-sizing: content-box`:** If `.parent` has padding and you're using content-box, `100%` doesn't mean what you think. Always normalize with `box-sizing: border-box`.
 
-**See also:** [`2.3 Flex & Grid Layout`](#4.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for the property reference.
+**See also:** [`2.3 Flex & Grid Layout`](#5.%20Flex%20&%20Grid%20Layout%20/%20Flex%E4%B8%8EGrid%E5%B8%83%E5%B1%80) for the property reference.
 
 If the center content must wrap or scroll instead of setting a minimum width, specify that policy on the item (for example, `overflow-wrap: anywhere` for long URLs). Flex/grid intrinsic minimum sizing can otherwise keep the middle track wider than its available space.
 
@@ -1475,7 +1325,7 @@ button,
 **Gotcha — synthetic clicks:** A legacy tap library that dispatches its own click can conflict with the browser's native click. Avoid adding one unless a tested target still requires it; do not pair touch-end activation with a second click activation.
 
 **Specifications / references:** [CSS Display](https://www.w3.org/TR/css-display-3/#the-display-properties) defines the separation between visual formatting and document semantics; [CSS 2.2 tables](https://www.w3.org/TR/CSS22/tables.html) and [CSS 2.1 floats](https://www.w3.org/TR/CSS22/visuren.html#floats) cover the legacy layout mechanisms; [CSS Flexbox](https://www.w3.org/TR/css-flexbox-1/) and [CSS Grid](https://www.w3.org/TR/css-grid-2/) define the modern layout examples; [CSS Values and Units](https://www.w3.org/TR/css-values/) defines CSS pixels and viewport units; [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines `devicePixelRatio`; [Pointer Events](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property) defines `touch-action`; [Chrome's mobile viewport guidance](https://developer.chrome.com/docs/performance/insights/viewport) describes its current tap-delay condition.
-## 8. CSS Position, Display, and Animations / CSS定位、显示与动画
+## 10. CSS Position, Display, and Animations / CSS定位、显示与动画
 
 **CSS Position, Display, and Animations / CSS 定位、显示与动画**
 
@@ -1661,7 +1511,7 @@ Individual properties:
 
 #### Compositing and `will-change`
 
-Animating `transform` and `opacity` can let an engine update presentation without recalculating layout, but neither property guarantees compositor-only or GPU work. `will-change` is a hint that may have memory and stacking effects; it does not guarantee layer promotion. See [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for typical invalidation paths.
+Animating `transform` and `opacity` can let an engine update presentation without recalculating layout, but neither property guarantees compositor-only or GPU work. `will-change` is a hint that may have memory and stacking effects; it does not guarantee layer promotion. See [`2.4 Browser - HTML & CSS part`](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for typical invalidation paths.
 
 ```css
 .animated {
@@ -1674,10 +1524,10 @@ Animating `transform` and `opacity` can let an engine update presentation withou
 
 **Gotcha — `transform: translateZ(0)` is not a GPU switch:** It changes transform behavior and may affect stacking/containing blocks; it does not guarantee a faster path. Use neither it nor `will-change` as a substitute for profiling.
 
-**See also:** [`2.2 Box Model and BFC`](#3.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for measurement guidance.
+**See also:** [`2.2 Box Model and BFC`](#4.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](#37.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for measurement guidance.
 
 **Specifications / 规范：** [CSS Positioned Layout](https://www.w3.org/TR/css-position-3/), [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color opacity](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transforms](https://www.w3.org/TR/css-transforms-1/), [CSS Transitions](https://www.w3.org/TR/css-transitions-2/), [W3C WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/).
-## 9. JavaScript Basics / JavaScript基础
+## 11. JavaScript Basics / JavaScript基础
 
 ### JavaScript Variable Declarations / JavaScript 变量声明
 
@@ -1728,8 +1578,8 @@ At the top level, script, module, and host environments differ. In a classic bro
 
 See [ECMAScript declarations and environments](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html), including [Module Environment Records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records), for the language rules. / 变量声明与环境记录规则见 [ECMAScript 声明和执行上下文规范](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html)，包括[模块环境记录](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records)。
 
-Related: [Scope and Closure / 作用域与闭包](#18.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85).
-## 10. JavaScript Types / JavaScript类型
+Related: [Scope and Closure / 作用域与闭包](#20.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85).
+## 12. JavaScript Types / JavaScript类型
 
 ### JavaScript Types and Coercion / JavaScript 类型与类型转换
 
@@ -1826,8 +1676,8 @@ Use `Map` when distinct object identities or uncoerced non-string keys matter. F
 
 See [ECMAScript types and values](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html) and [property key conversion](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey). / 详见 [ECMAScript 类型和值](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html) 与 [属性键转换](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey)。
 
-Related: [Map and Set / JavaScript 中的 Map 与 Set](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Memory, WeakMap and WeakSet / JavaScript 内存、WeakMap 与 WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
-## 11. Map and Set in JavaScript / JavaScript 中的 Map 与 Set
+Related: [Map and Set / JavaScript 中的 Map 与 Set](#13.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Memory, WeakMap and WeakSet / JavaScript 内存、WeakMap 与 WeakSet](#14.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
+## 13. Map and Set in JavaScript / JavaScript 中的 Map 与 Set
 
 ### Map and Set in JavaScript / JavaScript 中的 Map 与 Set
 
@@ -1916,8 +1766,8 @@ For repeated membership checks, build the lookup Set once rather than inside the
 
 See [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) and [Set methods](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set-objects). / 详见 [ECMAScript 键控集合规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) 与 [Set 方法规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set-objects)。
 
-Related: [JavaScript Types and Coercion / JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B); [Memory and weak collections / JavaScript 内存与弱集合](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
-## 12. JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef
+Related: [JavaScript Types and Coercion / JavaScript 类型与类型转换](#12.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B); [Memory and weak collections / JavaScript 内存与弱集合](#14.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
+## 14. JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef
 
 ### JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef
 
@@ -1977,8 +1827,8 @@ See [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-
 
 **Interview answer / 面试回答:** WeakMap and WeakSet let object identity be associated or tracked without the collection itself keeping the key alive. Their lack of enumeration prevents programs from depending on nondeterministic garbage-collection timing. WeakRef and finalization callbacks are likewise nondeterministic, so use them only for opportunistic behavior. / WeakMap 和 WeakSet 可关联或跟踪对象身份，而不会由集合本身强持有键。它们不能枚举，避免程序依赖不确定的垃圾回收时机。WeakRef 和最终化回调同样不确定，只适合可有可无的优化行为。
 
-Related: [Map and Set / JavaScript 中的 Map 与 Set](#11.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Event Loop and Host Scheduling / 事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
-## 13. JavaScript Arrays / JavaScript 数组
+Related: [Map and Set / JavaScript 中的 Map 与 Set](#13.%20Map%20and%20Set%20in%20JavaScript%20/%20JavaScript%20%E4%B8%AD%E7%9A%84%20Map%20%E4%B8%8E%20Set); [Event Loop and Host Scheduling / 事件循环与宿主调度](#29.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F).
+## 15. JavaScript Arrays / JavaScript 数组
 
 ### JavaScript Arrays / JavaScript 数组
 
@@ -2096,13 +1946,13 @@ function flattenByLevels(items) {
 Prefer `flat` when its hole and depth semantics match the task. / 若 `flat` 的空位和深度语义符合需求，应优先使用。
 
 **Interview answer / 面试回答:** `for...of` reads array values; Set deduplicates by SameValueZero while preserving first-seen order; array methods differ on holes and mutation; spread is shallow; and `flat` is the built-in flattening operation. / `for...of` 读取数组值；Set 按 SameValueZero 去重并保留首次出现顺序；数组方法对空位和原数组修改的行为不同；展开是浅拷贝；内置展平方法是 `flat`。
-## 14. ES6 New Methods / ES6新增方法
+## 16. ES6 New Methods / ES6新增方法
 
 ### Object and Array Methods / 对象与数组方法
 
 **Key terms / 关键词:** own property 自有属性 · enumerable 可枚举 · shallow copy 浅拷贝 · array-like 类数组对象
 
-This is a focused reference for selected Object and Array methods and their edition boundaries. Newer additions such as Object.hasOwn and Array.at are covered in [Modern JavaScript Features / 现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7). / 本笔记选列部分 Object 与 Array 方法，并标明其版本边界。Object.hasOwn、Array.at 等后续新增方法见[现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)。
+This is a focused reference for selected Object and Array methods and their edition boundaries. Newer additions such as Object.hasOwn and Array.at are covered in [Modern JavaScript Features / 现代 JavaScript 特性](#18.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7). / 本笔记选列部分 Object 与 Array 方法，并标明其版本边界。Object.hasOwn、Array.at 等后续新增方法见[现代 JavaScript 特性](#18.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)。
 
 #### Object methods / Object 方法
 
@@ -2151,7 +2001,7 @@ for (const [key, value] of Object.entries(record)) {
 }
 ```
 
-For a plain dictionary, remember that own-property checks and inherited properties are different questions. See [JavaScript Types and Coercion / JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B). / 普通对象作字典时，要区分自有属性与继承属性。详见[JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B)。
+For a plain dictionary, remember that own-property checks and inherited properties are different questions. See [JavaScript Types and Coercion / JavaScript 类型与类型转换](#12.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B). / 普通对象作字典时，要区分自有属性与继承属性。详见[JavaScript 类型与类型转换](#12.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B)。
 
 #### Array methods / Array 方法
 
@@ -2183,8 +2033,8 @@ See [ECMAScript OrdinaryOwnPropertyKeys](https://tc39.es/ecma262/2025/multipage/
 
 **Interview answer / 面试回答:** Object.assign mutates its target and shallow-copies enumerable own string and symbol properties. Object.keys/values/entries inspect own enumerable string-keyed properties. Array.from accepts iterables and array-like objects; Array.of treats each argument as an element, including a single number. / Object.assign 会修改目标对象，并浅拷贝自有可枚举字符串键和 Symbol 键。Object.keys/values/entries 只处理自有可枚举字符串键。Array.from 接受可迭代对象和类数组对象；Array.of 把每个参数都作为元素，包括单个数字参数。
 
-Related: [JavaScript Arrays / JavaScript 数组](#13.%20JavaScript%20Arrays%20/%20JavaScript%20%E6%95%B0%E7%BB%84); [Modern JavaScript Features / 现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
-## 15. Other JavaScript Topics / JavaScript其他内容
+Related: [JavaScript Arrays / JavaScript 数组](#15.%20JavaScript%20Arrays%20/%20JavaScript%20%E6%95%B0%E7%BB%84); [Modern JavaScript Features / 现代 JavaScript 特性](#18.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
+## 17. Other JavaScript Topics / JavaScript其他内容
 
 ### Other JavaScript Topics / JavaScript 其他主题
 
@@ -2256,7 +2106,7 @@ See React’s [conditional rendering documentation](https://react.dev/learn/cond
 **Interview answer / 面试回答:** Strict mode removes selected legacy behaviors but is not a security sandbox. Number comparisons need domain-specific tolerance because decimal fractions may not be represented exactly. Use `===` by default; use `== null` only when intentionally matching nullish values. Ordinary objects are truthy, with the legacy browser `document.all` exception. / 严格模式移除部分历史行为，但不是安全沙箱。由于十进制小数可能无法精确表示，数值比较应按领域选择容差。默认使用 `===`；只有在有意匹配空值时才使用 `== null`。普通对象都是真值，浏览器历史兼容对象 `document.all` 是例外。
 
 See [ECMAScript equality and coercion](https://tc39.es/ecma262/2025/multipage/abstract-operations.html) for the normative rules. / 相等与类型转换的规范规则见 [ECMAScript 抽象操作](https://tc39.es/ecma262/2025/multipage/abstract-operations.html)。
-## 16. Modern JavaScript Features / 现代JavaScript特性
+## 18. Modern JavaScript Features / 现代JavaScript特性
 
 ### Modern JavaScript Features / 现代 JavaScript 特性
 
@@ -2367,8 +2217,8 @@ A bundler may analyze ESM imports for tree shaking, but ESM syntax alone does no
 
 See the [ECMAScript language specification](https://tc39.es/ecma262/2025/) for edition-specific features and the [HTML structured clone algorithm](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) for the host API. / 版本相关语言特性见 [ECMAScript 语言规范](https://tc39.es/ecma262/2025/)；宿主结构化克隆 API 见 [HTML 结构化克隆算法](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning)。
 
-Related: [Object and Array Methods / 对象与数组方法](#14.%20ES6%20New%20Methods%20/%20ES6%E6%96%B0%E5%A2%9E%E6%96%B9%E6%B3%95); [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript).
-## 17. Object, Function, and Prototype / 对象、函数与原型
+Related: [Object and Array Methods / 对象与数组方法](#16.%20ES6%20New%20Methods%20/%20ES6%E6%96%B0%E5%A2%9E%E6%96%B9%E6%B3%95); [Asynchronous JavaScript / 异步 JavaScript](#21.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript).
+## 19. Object, Function, and Prototype / 对象、函数与原型
 
 ### Objects, Functions, and Prototypes / 对象、函数与原型
 
@@ -2584,8 +2434,8 @@ An assignment to a non-writable property is ignored in sloppy code and throws in
 
 See the [ECMAScript Object and Function sections](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html) for normative behavior. / 规范行为详见 [ECMAScript Object 与 Function 章节](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html)。
 
-Related: [JavaScript Types and Coercion / JavaScript 类型与类型转换](#10.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B); [Scope and Closure / 作用域与闭包](#18.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85).
-## 18. Scope & Closure / 作用域与闭包
+Related: [JavaScript Types and Coercion / JavaScript 类型与类型转换](#12.%20JavaScript%20Types%20/%20JavaScript%E7%B1%BB%E5%9E%8B); [Scope and Closure / 作用域与闭包](#20.%20Scope%20&%20Closure%20/%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85).
+## 20. Scope & Closure / 作用域与闭包
 
 ### Scope & Closure / 作用域与闭包
 
@@ -2630,7 +2480,7 @@ function example() {
 }
 ~~~
 
-`let` 和 `const` 声明也会在进入作用域时建立绑定，但在执行到声明前处于暂时性死区（temporal dead zone）；此时读取会抛出 `ReferenceError`。因此，更准确的做法是“用 `let` / `const` 获得块级作用域和更早的错误检查”，而不是说它们完全没有提升。`const` 禁止重新给绑定赋值，但若绑定指向对象，对象内容仍可变。更完整的声明对比见 [JavaScript 基础](#9.%20JavaScript%20Basics%20/%20JavaScript%E5%9F%BA%E7%A1%80)。
+`let` 和 `const` 声明也会在进入作用域时建立绑定，但在执行到声明前处于暂时性死区（temporal dead zone）；此时读取会抛出 `ReferenceError`。因此，更准确的做法是“用 `let` / `const` 获得块级作用域和更早的错误检查”，而不是说它们完全没有提升。`const` 禁止重新给绑定赋值，但若绑定指向对象，对象内容仍可变。更完整的声明对比见 [JavaScript 基础](#11.%20JavaScript%20Basics%20/%20JavaScript%E5%9F%BA%E7%A1%80)。
 
 ##### 词法作用域（lexical scope）与作用域链（scope chain）
 
@@ -2781,8 +2631,8 @@ console.log(callbacks.map((callback) => callback())); // [0, 1, 2, 3, 4]
 - 闭包保留对绑定的访问，读到的可以是后续更新后的值。
 - 生命周期由可达引用决定；函数离开词法作用域不等于相关数据立即释放。
 
-**延伸阅读：** [JavaScript 基础](#9.%20JavaScript%20Basics%20/%20JavaScript%E5%9F%BA%E7%A1%80)说明声明差异；[对象、函数与原型](#17.%20Object,%20Function,%20and%20Prototype%20/%20%E5%AF%B9%E8%B1%A1%E3%80%81%E5%87%BD%E6%95%B0%E4%B8%8E%E5%8E%9F%E5%9E%8B)解释 `this` 的调用规则为何不同于词法作用域。
-## 19. Asynchronous JavaScript / 异步JavaScript
+**延伸阅读：** [JavaScript 基础](#11.%20JavaScript%20Basics%20/%20JavaScript%E5%9F%BA%E7%A1%80)说明声明差异；[对象、函数与原型](#19.%20Object,%20Function,%20and%20Prototype%20/%20%E5%AF%B9%E8%B1%A1%E3%80%81%E5%87%BD%E6%95%B0%E4%B8%8E%E5%8E%9F%E5%9E%8B)解释 `this` 的调用规则为何不同于词法作用域。
+## 21. Asynchronous JavaScript / 异步JavaScript
 
 ### Asynchronous JavaScript / 异步 JavaScript
 
@@ -2886,7 +2736,7 @@ Promise.resolve().then(() => console.log(1))
 
 The returned Promise is adopted by the chained Promise; its reactions join the same job queue as the second chain. Do not model this as one universal “extra tick.” / 后续 Promise 会采用处理器返回的 Promise 状态；其处理器也会进入第二条链所在的 job 队列。不要把它概括为跨宿主通用的“多一个 tick”。
 
-See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering is documented separately in [Event Loop and Host Scheduling / 事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF). / 详见 [ECMAScript Promise job 规范](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) 与 [浏览器事件循环规范](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)。Node 队列顺序在 [事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) 中单独说明。
+See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering is documented separately in [Event Loop and Host Scheduling / 事件循环与宿主调度](#29.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F). / 详见 [ECMAScript Promise job 规范](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) 与 [浏览器事件循环规范](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)。Node 队列顺序在 [事件循环与宿主调度](#29.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) 中单独说明。
 
 #### Currying / 柯里化
 
@@ -2978,8 +2828,8 @@ See the [ECMAScript `Array.prototype.map` algorithm](https://tc39.es/ecma262/202
 
 **Interview answer / 面试回答:** Promises compose asynchronous outcomes and provide a rejection channel; async/await expresses that control flow in sequential syntax. Use Promise.all for independent operations that must all succeed, but remember it does not cancel sibling work. Promise reactions are jobs; host event-loop ordering depends on the environment. / Promise 可组合异步结果并提供拒绝传播通道；async/await 用顺序语法表达这种控制流。多个独立操作都必须成功时可用 Promise.all，但它不会取消其他任务。Promise 处理器以 job 执行，宿主事件循环顺序因环境而异。
 
-Related: [Error Handling / JavaScript 错误处理](#21.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86); [Iterators and Generators / 迭代器与生成器](#20.%20Iterators%20and%20Generators%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8); [Event Loop and Host Scheduling / 事件循环与宿主调度](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF).
-## 20. Iterators and Generators / 迭代器与生成器
+Related: [Error Handling / JavaScript 错误处理](#23.%20Error%20Handling%20/%20%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86); [Iterators and Generators / 迭代器与生成器](#22.%20Iterators%20and%20Generators%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8); [Event Loop and Host Scheduling / 事件循环与宿主调度](#29.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F).
+## 22. Iterators and Generators / 迭代器与生成器
 
 ### Iterators and Generators / 迭代器与生成器
 
@@ -3111,10 +2961,10 @@ function* legacyFlow() {
 
 An async iterable (standardized in ES2018) supplies Symbol.asyncIterator; each next() call makes its iterator result available asynchronously. for await...of waits for each next result in sequence, which is useful for streams whose next value becomes available over time. For a synchronous array of independent Promises, Promise.all is usually simpler and handles all rejections together. / ES2018 标准化的异步可迭代对象通过 Symbol.asyncIterator 提供迭代器；每次调用 next() 都会异步提供迭代结果。for await...of 按顺序等待每次 next() 的结果，适用于后续值逐步到达的数据流。同步数组中相互独立的 Promise 通常用 Promise.all 更简单，也能统一处理拒绝。
 
-See [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise aggregation and host scheduling.
+See [Asynchronous JavaScript / 异步 JavaScript](#21.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) for Promise aggregation and host scheduling.
 
 **Interview answer / 面试回答:** An iterable returns an iterator from Symbol.iterator; an iterator’s next() returns value/done results. Generators implement both protocols and suspend at yield. Async iterables use Symbol.asyncIterator and are consumed with for await...of. / 可迭代对象通过 Symbol.iterator 返回迭代器；迭代器的 next() 返回 value/done 结果。生成器自动实现这两种协议，并在 yield 处暂停。异步迭代器使用 Symbol.asyncIterator，通过 for await...of 消费。
-## 21. Error Handling / 错误处理
+## 23. Error Handling / 错误处理
 
 ### Error Handling in JavaScript / JavaScript 错误处理
 
@@ -3241,8 +3091,8 @@ See [React Error Boundaries](https://react.dev/reference/react/Component#catchin
 
 **Interview answer / 面试回答:** try/catch handles synchronous throws and awaited Promise rejections; Promise catch handles a chain’s rejection; global handlers provide host-specific diagnostics; React boundaries handle render failures in descendant components. Recover only when the current layer can decide what recovery means, and otherwise propagate the failure. / try/catch 处理同步抛错和 await 的 Promise 拒绝；Promise catch 处理链式拒绝；全局处理器提供宿主级诊断；React 错误边界处理后代组件渲染失败。只有当前层能决定恢复含义时才恢复，否则应继续传播错误。
 
-Related: [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript); [Modern JavaScript Features / 现代 JavaScript 特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
-## 22. DOM Manipulation and Events / DOM操作与事件
+Related: [Asynchronous JavaScript / 异步 JavaScript](#21.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript); [Modern JavaScript Features / 现代 JavaScript 特性](#18.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7).
+## 24. DOM Manipulation and Events / DOM操作与事件
 
 **DOM Manipulation and Events / DOM 操作与事件**
 
@@ -3260,7 +3110,7 @@ DOM APIs expose tree mutation, events, and scheduling, but API guarantees differ
 - **Unsupported values:** object properties whose values are `undefined`, functions, or symbols are omitted; such array entries become `null`; a top-level unsupported value can make parsing fail.
 - **Circular references and `BigInt`:** `JSON.stringify` throws.
 
-Reach for `structuredClone(value)` (see [`3.8 Modern JavaScript Features`](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)) for supported structured-cloneable values. Functions and DOM nodes are not cloneable, and cloning does not preserve arbitrary class behavior. Use a handwritten clone only for a deliberately bounded data model or a custom policy (for example, omitting selected fields).
+Reach for `structuredClone(value)` (see [`3.8 Modern JavaScript Features`](#18.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7)) for supported structured-cloneable values. Functions and DOM nodes are not cloneable, and cloning does not preserve arbitrary class behavior. Use a handwritten clone only for a deliberately bounded data model or a custom policy (for example, omitting selected fields).
 
 #### Handwritten deep copy
 
@@ -3533,10 +3383,10 @@ for (const value of arr) max = Math.max(max, value);
 
 **Gotcha — input semantics:** `Math.max()` with no arguments returns `-Infinity`, and any `NaN` input makes its result `NaN`. If the application wants a different empty-input or non-number policy, handle that explicitly.
 
-**See also:** [`5.3 Image Lazy Loading`](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer, [`7.1 Event Loop`](#27.%20Event%20Loop%20/%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF) for the task/microtask scheduling model around browser callbacks.
+**See also:** [`5.3 Image Lazy Loading`](#26.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for Intersection Observer, [`7.1 Event Loop`](#29.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) for the task/microtask scheduling model around browser callbacks.
 
 **Standards and current docs / 规范与文档：** [WHATWG DOM events](https://dom.spec.whatwg.org/#concept-event-dispatch), [ECMAScript array objects](https://tc39.es/ecma262/multipage/indexed-collections.html), [WHATWG structured data](https://html.spec.whatwg.org/multipage/structured-data.html), [React DOM event handlers](https://react.dev/learn/responding-to-events), [React 17 event delegation change](https://react.dev/blog/2020/08/10/react-v17-rc#changes-to-event-delegation), [requestIdleCallback specification](https://w3c.github.io/requestidlecallback/), [Chrome `requestIdleCallback` guide](https://developer.chrome.com/blog/using-requestidlecallback), [CSSOM View](https://www.w3.org/TR/cssom-view-1/).
-## 23. Browser Storage and Communication / 浏览器存储与通信
+## 25. Browser Storage and Communication / 浏览器存储与通信
 
 **Browser Storage and Communication / 浏览器存储与通信**
 
@@ -3770,10 +3620,10 @@ Feels like normal JS — synchronous or callback-based depending on what the nat
 
 **Gotcha — security:** Treat bridge calls as privileged input. Restrict which frames and origins can reach the bridge, validate each operation and argument natively, and avoid exposing capabilities to arbitrary page content.
 
-**See also:** [`1.1 Browser Basics`](#1.%20Browser%20Basics%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9F%BA%E7%A1%80) for where storage and messaging fit into the browser architecture, [`8.2 Web Security and Authentication`](../../engineering-foundations/security/web-security-and-authentication.md) for auth storage and CSRF concerns.
+**See also:** [`1.1 Browser Basics`](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F) for the navigation path that creates a new document, [`8.2 Web Security and Authentication`](../../engineering-foundations/security/web-security-and-authentication.md) for auth storage and CSRF concerns.
 
 **Standards and current guidance / 标准与文档：** [WHATWG Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html), [WHATWG Storage Standard](https://storage.spec.whatwg.org/), [WHATWG DOM collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection), [MDN storage quotas and eviction](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria), [WHATWG cross-document messaging and BroadcastChannel](https://html.spec.whatwg.org/multipage/web-messaging.html), [WHATWG WebSockets](https://websockets.spec.whatwg.org/), [IETF cookies draft (work in progress)](https://datatracker.ietf.org/doc/draft-ietf-httpbis-rfc6265bis/).
-## 24. Image Lazy Loading / 浏览器图片懒加载
+## 26. Image Lazy Loading / 浏览器图片懒加载
 
 **Image Lazy Loading / 浏览器图片懒加载**
 
@@ -3910,10 +3760,10 @@ Lazy-loading images is great — unless you introduce layout shift every time on
 2. Use `IntersectionObserver` for a concrete custom-loading need; unobserve loaded targets and disconnect the observer when its owner is disposed.
 3. Check layout stability and LCP in the page's real loading context; lazy-loading the wrong images can delay important content.
 
-**See also:** [`11.1 Performance Metrics and Analysis`](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#22.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
+**See also:** [`11.1 Performance Metrics and Analysis`](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#24.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
 
 **Standards / 规范：** [WHATWG `img` element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element), [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes), [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/), [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/).
-## 25. How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
+## 27. How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
 
 ### How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
 
@@ -4332,7 +4182,7 @@ For a browser, create one AbortController for the active event request and pass 
 
 Keep render work bounded as well as network buffering. Accumulate adjacent delta text and update the output once per animation frame rather than rerendering the component for every token. Cap the pending render string; because the parser awaits onText, it can pause its next read while the UI drains that small queue. The sample also caps the full visible answer. A larger product can persist output by run and render a bounded window instead of keeping an ever-growing DOM.
 
-Leave partial output visible when it remains useful, but label it as incomplete and avoid actions that require a finished result. Expose a concise state message in a dedicated status region, for example a native element with role=status and aria-live=polite. Announce connection, completion, failure, or stop transitions and perhaps occasional long-running progress; do not announce every token. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#2.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for native controls and status semantics.
+Leave partial output visible when it remains useful, but label it as incomplete and avoid actions that require a finished result. Expose a concise state message in a dedicated status region, for example a native element with role=status and aria-live=polite. Announce connection, completion, failure, or stop transitions and perhaps occasional long-running progress; do not announce every token. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#3.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for native controls and status semantics.
 
 **Representative answer / 代表性回答：** I treat streamed output as framed bytes that may arrive in arbitrary chunks. The client incrementally decodes UTF-8, validates sequence numbers, keeps partial text, and displays completion only after a valid terminal event. It batches rendering, bounds memory and retries, and tears down the local reader on stop or route change. A client abort does not prove the server run stopped, so I query the run record or request cancellation separately. / 我会把流式输出视为可能以任意分块到达的带帧字节。客户端增量解码 UTF-8、校验序号、保留部分文本，并且只在收到有效终态事件后显示完成。界面合并渲染、限制内存和重试次数，并在用户停止或路由卸载时清理本地读取器。客户端中止不能证明服务端运行已停止，因此还要查询运行记录或单独请求取消。
 
@@ -4343,7 +4193,7 @@ Leave partial output visible when it remains useful, but label it as incomplete 
 - [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) owns run identity, durable state, checkpoints, side effects, and server cancellation.
 
 **Sources checked 2026-10-15 / 来源核对日期：** The [WHATWG Streams Standard](https://streams.spec.whatwg.org/) defines readable-stream readers and local consumer cancellation; the [DOM Standard's AbortController](https://dom.spec.whatwg.org/#interface-abortcontroller) defines signaling abort to an API that accepts an AbortSignal, and [AbortSignal.throwIfAborted()](https://dom.spec.whatwg.org/#dom-abortsignal-throwifaborted) provides checkpoints between asynchronous operations; the [WHATWG Encoding Standard](https://encoding.spec.whatwg.org/) defines streaming UTF-8 decode behavior. The [WHATWG Server-sent Events section](https://html.spec.whatwg.org/multipage/server-sent-events.html) defines EventSource reconnection and event IDs; this note's parser instead exercises its explicitly synthetic newline-delimited JSON application contract. Browser behavior was not tested here.
-## 26. Advanced TypeScript / TypeScript进阶
+## 28. Advanced TypeScript / TypeScript进阶
 
 ### Advanced TypeScript / TypeScript进阶
 
@@ -4583,91 +4433,88 @@ function area(shape: Shape): number {
 }
 ~~~
 
-**See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for object identity and proxies; [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
+**See also:** [JavaScript Memory, WeakMap and WeakSet / JavaScript内存、WeakMap与WeakSet](#14.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) for object identity and proxies; [React Basics / React基础](#33.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for component API examples.
 
 **Sources checked 2026-10-15:** [TypeScript: Basic Types and `unknown`](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), [Narrowing and Exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking), [TypeScript: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html), [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness), [TypeScript 5.0 Decorators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators), [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth).
-## 27. Event Loop / 事件循环
+## 29. When does browser JavaScript run relative to a frame? / 浏览器 JavaScript 如何与每一帧交错？
 
-### Event Loop and Host Scheduling / 事件循环与宿主调度
+### When does browser JavaScript run relative to a frame? / 浏览器 JavaScript 如何与每一帧交错？
 
-**Key terms / 关键词:** JavaScript agent JavaScript 执行代理 · task 任务 · microtask 微任务 · event loop 事件循环 · libuv libuv
+A browser runs one task on a JavaScript agent to completion, then performs a microtask checkpoint that drains Promise reactions and other microtasks, including newly queued ones. A rendering opportunity is a separate user-agent decision: it may update rendering between tasks, but it need not produce a frame after every task or on a fixed 16 ms cadence. `requestAnimationFrame` is for work tied to a rendering update; `requestIdleCallback` is for deferrable work when an idle opportunity is available. / 浏览器中的一个 JavaScript agent 会把当前任务执行完，再进行微任务检查点，清空 Promise 处理器和其他微任务，包括期间新加入的微任务。渲染机会由用户代理单独决定：浏览器可在任务之间更新画面，但不必每个任务后都生成一帧，也不保证固定的 16 毫秒节奏。`requestAnimationFrame` 用于与渲染更新同步的工作；`requestIdleCallback` 用于有空闲机会时可延后的工作。
 
-ECMAScript defines language execution and Promise jobs; the host defines event loops, timers, I/O, and rendering. A JavaScript agent executes its jobs one at a time, but browsers and Node can create additional workers or agents. Asynchronous I/O may be handled by the host or operating system; “async” does not mean all work runs on one thread. / ECMAScript 定义语言执行和 Promise job；宿主定义事件循环、计时器、I/O 和渲染。单个 JavaScript agent 一次执行一个 job，但浏览器和 Node 可以创建其他 worker 或 agent。异步 I/O 可能由宿主或操作系统处理；“异步”不表示所有工作都在同一线程运行。
+~~~mermaid
+flowchart TD
+    T[Run one task to completion] --> M[Microtask checkpoint]
+    M -->|more microtasks queued| M
+    M --> D{Rendering opportunity now?}
+    D -->|no| I[Possible idle callback opportunity]
+    D -->|yes| R[Run requestAnimationFrame callbacks]
+    R --> U[Update rendering as needed]
+    U --> I
+    I --> N[Select another task]
+    N --> T
+~~~
 
-#### Browser event loop / 浏览器事件循环
+This is a mental model, not a promise that every pass includes rendering or idle callbacks. A long task or endless microtask chain can keep the browser from reaching a rendering opportunity. A zero-delay timer is eligible after its minimum delay; it is not an immediate yield.
 
-In the HTML event loop, a task such as a script or timer callback runs to completion. A microtask checkpoint then drains queued microtasks, including newly queued microtasks, before the loop proceeds. Promise reactions and queueMicrotask use this queue. Rendering is a separate opportunity controlled by the browser; it is not guaranteed after every task or at a fixed frame boundary. / 在 HTML 事件循环中，脚本或计时器回调等任务会执行到完成。随后进行微任务检查点，清空队列中的微任务（包括执行过程中新增的微任务），再继续循环。Promise 处理器和 queueMicrotask 使用该队列。渲染由浏览器在独立机会中处理；不保证每个任务后立即渲染，也不保证固定帧边界。
-
-```javascript
+~~~javascript
 console.log("start");
-
 setTimeout(() => console.log("timer task"), 0);
-
-new Promise(resolve => {
-  console.log("Promise executor runs synchronously");
-  resolve();
-}).then(() => console.log("Promise reaction"));
-
+Promise.resolve().then(() => console.log("Promise reaction"));
+queueMicrotask(() => console.log("microtask"));
 console.log("end");
 
-// Typical browser ordering:
+// In a typical browser task:
 // start
-// Promise executor runs synchronously
 // end
 // Promise reaction
+// microtask
 // timer task
-```
+~~~
 
-A zero-delay timer is eligible only after its minimum delay and when the host schedules its timer task; it does not mean “run immediately.” The Promise-versus-timer ordering above describes the browser task and microtask model, not the precise timing of rendering. / 零延迟计时器要等到最小延迟满足且宿主调度相应计时器任务后才可运行，并不表示“立即执行”。上例中 Promise 与计时器的先后关系描述浏览器任务和微任务模型，不代表渲染时机。
+The Promise executor runs synchronously. Promise reactions and `queueMicrotask` callbacks run as microtasks; the host later chooses when the timer task runs. A microtask added during a checkpoint is processed before the next task.
 
-The [WHATWG HTML event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops) defines browser tasks, microtask checkpoints, and rendering opportunities. These browser rules should not be inferred from a Node run. / [WHATWG HTML 事件循环标准](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops) 定义浏览器任务、微任务检查点和渲染机会。不能通过 Node 执行结果推断浏览器规则。
+#### Visual updates and `requestAnimationFrame` / 视觉更新与 rAF
 
-#### Node.js event loop / Node.js 事件循环
+Use `requestAnimationFrame(callback)` for an update that should be made before a browser rendering update. Its callback receives a high-resolution timestamp useful for time-based animation. The callback rate follows available rendering opportunities and can vary with refresh rate and page visibility; it is not a fixed 60 Hz timer. Updating a transform in rAF can coordinate a write with rendering, but does not make the work free or guarantee a compositor path.
 
-Node uses libuv phases to coordinate timers and I/O callbacks. A useful simplified outline is timers, pending callbacks, poll, check, and close callbacks; idle/prepare are internal phases. The poll phase handles I/O, and setImmediate callbacks run in the check phase. Timer callbacks become eligible after their threshold, not at an exact deadline. / Node 使用 libuv 阶段协调计时器和 I/O 回调。简化来看包括 timers、pending callbacks、poll、check 和 close callbacks；idle/prepare 是内部阶段。poll 阶段处理 I/O，setImmediate 回调在 check 阶段运行。计时器达到阈值后才具备运行资格，并不保证精确截止时间执行。
+#### Deferrable work and `requestIdleCallback` / 可延后工作与 rIC
 
-Since libuv 1.45.0 (Node.js 20), timers run after the poll phase in each loop iteration; earlier versions also ran timers before poll. This affects some timer/setImmediate interactions. At top level, do not rely on a fixed order between setTimeout(fn, 0) and setImmediate(fn); context and timing matter. / 从 libuv 1.45.0（Node.js 20）开始，每轮事件循环中计时器在 poll 阶段之后运行；较早版本还会在 poll 前运行计时器。这会影响部分 timer/setImmediate 交互。在顶层不要依赖 setTimeout(fn, 0) 和 setImmediate(fn) 的固定顺序；上下文和时序都会影响结果。
+`requestIdleCallback(callback, {timeout})` lets the user agent schedule work during an idle period. `deadline.timeRemaining()` is an estimate, not a hard budget. Process a bounded unit and yield again; a timeout is not a reason to drain an unbounded queue. Support varies, so feature-detect it. A `setTimeout` fallback runs at a later timer opportunity but does not provide an idle-time guarantee.
 
-#### Node nextTick and Promise jobs / Node nextTick 与 Promise job
+~~~javascript
+function runIdleSlice(deadline) {
+  if (!workQueue.length) return;
+  if (deadline.didTimeout || deadline.timeRemaining() > 0) {
+    processNext(workQueue.shift()); // keep each unit bounded
+  }
+  if (workQueue.length) requestIdleCallback(runIdleSlice, { timeout: 2000 });
+}
+requestIdleCallback(runIdleSlice, { timeout: 2000 });
+~~~
 
-Node has a next-tick queue in addition to the Promise/queueMicrotask queue. Current Node documentation specifies different top-level ordering for CommonJS and ES modules: in CommonJS, nextTick callbacks run before Promise and queueMicrotask callbacks; during ES module evaluation, Promise reactions and queueMicrotask callbacks run before nextTick callbacks. Do not state a module-independent ordering. / 除 Promise/queueMicrotask 队列外，Node 还有 nextTick 队列。当前 Node 文档明确说明 CommonJS 与 ES 模块顶层顺序不同：CommonJS 中 nextTick 回调先于 Promise 和 queueMicrotask 回调；ES 模块求值期间，Promise 和 queueMicrotask 回调先于 nextTick 回调。不能写成与模块类型无关的固定顺序。
+Framework schedulers such as React's scheduler are separate policies layered on host scheduling. Do not treat them as browser task queues or promise that rendering occurs between chunks.
 
-```javascript
-// CommonJS top level (for example, a .cjs file)
-Promise.resolve().then(() => console.log("promise"));
-queueMicrotask(() => console.log("microtask"));
-process.nextTick(() => console.log("nextTick"));
-// Node.js v26.11.1: nextTick, promise, microtask
-```
+**See also:** [How do scripts affect HTML parsing and document readiness?](#6.%20How%20do%20scripts%20affect%20HTML%20parsing%20and%20document%20readiness?%20/%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) describes parser scheduling; [Why can a CSS change trigger layout, paint, or compositing work?](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) describes rendering work after DOM changes; [Asynchronous JavaScript / 异步 JavaScript](#21.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript) covers language-level Promise behavior.
 
-```javascript
-// ES module top level (for example, a .mjs file)
-Promise.resolve().then(() => console.log("promise"));
-queueMicrotask(() => console.log("microtask"));
-process.nextTick(() => console.log("nextTick"));
-// Node.js v26.11.1: promise, microtask, nextTick
-```
+**Standards / references:** [WHATWG HTML event loops and rendering opportunities](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops); [W3C requestIdleCallback](https://www.w3.org/TR/requestidlecallback/); [Chrome requestIdleCallback guide](https://developer.chrome.com/blog/using-requestidlecallback), checked 2026-11-05.
 
-Node marks process.nextTick as Legacy starting in Node v20.18.0 and v22.7.0; for most userland deferrals, its current docs recommend queueMicrotask unless nextTick-specific behavior is required. Recursively scheduling nextTick can starve I/O. These are Node runtime rules, not browser behavior. / Node 从 v20.18.0 和 v22.7.0 开始把 process.nextTick 标为 Legacy；当前文档建议大多数用户态延迟场景使用 queueMicrotask，除非确实需要 nextTick 的专有行为。递归调度 nextTick 可能饿死 I/O。这些属于 Node 运行时规则，不是浏览器行为。
 
-The queue examples were run with Node v26.11.1. Current official Node v26 documentation was checked on 2026-10-15: [process.nextTick and queueMicrotask](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [event-loop phases and the Node 20 timer change](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick). / 队列示例在 Node v26.11.1 中执行。2026-10-15 核对了当前官方 Node v26 文档：[process.nextTick 与 queueMicrotask](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)、[事件循环阶段与 Node 20 计时器变更](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick)。
+For the host-specific server contrast, see [Node runtime and scheduling / Node 运行时与调度](../../engineering-foundations/backend/node-js-fundamentals.md).
+## 30. How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？
 
-#### Garbage collection and retained objects / 垃圾回收与对象保留
+### How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？
 
-ECMAScript does not specify whether an engine uses mark-and-sweep, reference counting, a stack, or a heap, and programs cannot rely on collection at a chosen time. An object that remains reachable through a long-lived reference cannot be reclaimed; cycles alone do not imply a leak. / ECMAScript 不规定引擎必须使用标记清除、引用计数、栈或堆，程序也不能依赖在指定时刻完成回收。对象若仍能从长期存活的引用到达，就不能回收；仅有循环引用并不意味着泄漏。
+JavaScript does not promise when memory is reclaimed or require a particular garbage-collection algorithm. An object becomes eligible for collection when it is unreachable from the runtime's roots; cycles alone are collectable, but a long-lived reference to a detached node, listener, timer, closure-captured value, or cache entry can keep an object reachable. Diagnose the retaining path in a repeatable heap comparison, then release the reference at the correct lifetime boundary. / JavaScript 不承诺何时回收内存，也不要求某种垃圾回收算法。对象从运行时根不可达时才具备回收资格；循环引用本身可以回收，但长期存活的脱离 DOM 节点、监听器、计时器、闭包捕获值或缓存项会让对象仍可达。应通过可重复操作前后的堆快照检查保留路径，并在正确的生命周期边界释放引用。
 
-One implementation model traces from roots such as the global object and active execution state, marks reachable objects, and reclaims unreachable ones; an unreachable cycle can therefore be collected. V8's Orinoco overview describes generations and parallel, incremental, and concurrent GC work. These are engine mechanisms that may change, not ECMAScript requirements. / 一种引擎实现模型是从全局对象、活动执行状态等根开始追踪，标记可达对象并回收不可达对象；因此不可达的循环引用也可回收。V8 的 Orinoco 说明介绍了分代回收，以及并行、增量和并发 GC 工作。这些是可能演进的引擎机制，不是 ECMAScript 要求。
+A tracing collector is one implementation strategy: it starts from roots such as globals and active execution state, marks reachable objects, and can reclaim unmarked objects, including unreachable cycles. V8's Orinoco collector is a concrete example with generational, parallel, incremental, and concurrent work; those details can change and are not JavaScript language requirements.
 
-See V8's [Orinoco garbage collector overview](https://v8.dev/blog/trash-talk) for this implementation example. / 这一实现示例见 V8 的 [Orinoco 垃圾回收器说明](https://v8.dev/blog/trash-talk)。
+For practical diagnosis, reproduce the same action, compare heap snapshots, and inspect retaining paths. Common leads include an uncleared interval, a listener on a long-lived object, a detached DOM node still referenced by application code, or a closure holding a large value. These patterns are investigation clues, not proof by themselves. Keep a listener, timer, subscription, or cache handle when its lifetime should end earlier than its owner, and release it at that boundary.
 
-Common retention paths include an uncleared interval, a listener attached to a long-lived object, a detached DOM node still referenced by application code, or a closure retained with values it actually captures. These are investigation leads, not proof that a leak exists. In browser tools, compare heap snapshots around a repeatable action and inspect retained paths. / 常见保留路径包括未清除的 interval、挂在长期存活对象上的监听器、仍被应用代码引用的脱离 DOM 树节点，或闭包实际捕获并长期持有的值。这些只是排查线索，并不能证明已发生泄漏。浏览器工具中可围绕可重复操作比较堆快照，并检查保留路径。
+**See also:** [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#14.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef) covers weak-reference use and nondeterministic cleanup; [How do DOM events propagate?](#24.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) covers listener lifetimes.
 
-If a subscription, listener, or timer should end before the owning object does, keep its handle and release it at that lifetime boundary. For weak references and their nondeterministic cleanup behavior, see [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef). / 若订阅、监听器或计时器应早于所属对象结束，就保存其句柄并在生命周期边界释放。弱引用及其不确定的清理时机见[JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef)。
-
-**Interview answer / 面试回答:** The event loop is host-defined. In browsers, tasks run to completion and a microtask checkpoint drains Promise reactions before the host continues; rendering is scheduled separately. Node uses libuv phases and adds nextTick scheduling, whose order relative to Promise jobs differs between top-level CJS and ESM. Always state the host and module context. / 事件循环由宿主定义。浏览器任务执行到完成后会进行微任务检查点，清空 Promise 处理器，再由宿主继续调度；渲染单独安排。Node 使用 libuv 阶段并增加 nextTick 调度，其与 Promise job 的相对顺序在 CJS 和 ESM 顶层不同。说明结论时应给出宿主和模块上下文。
-
-Related: [Asynchronous JavaScript / 异步 JavaScript](#19.%20Asynchronous%20JavaScript%20/%20%E5%BC%82%E6%AD%A5JavaScript); [Memory, WeakMap and WeakSet / JavaScript 内存、WeakMap 与 WeakSet](#12.%20JavaScript%20Memory,%20WeakMap,%20WeakSet,%20and%20WeakRef%20/%20JavaScript%20%E5%86%85%E5%AD%98%E3%80%81WeakMap%E3%80%81WeakSet%20%E4%B8%8E%20WeakRef).
-## 28. Build Tools / 构建工具
+**Evidence:** [ECMAScript 2026 weak-reference processing model](https://tc39.es/ecma262/2026/#sec-processing-model-of-weakref-and-finalizationregistry-targets) explicitly makes no guarantee that an object will be collected at a particular time; [V8 Orinoco overview](https://v8.dev/blog/trash-talk), checked 2026-11-05, is an implementation illustration.
+## 31. Build Tools / 构建工具
 
 ### Build Tools / 构建工具
 
@@ -4769,7 +4616,7 @@ Vite's development server serves native ES modules with on-demand transforms and
 
 A fast dev server is not evidence that the production output has the same graph or performance. Run the configured production build and inspect its assets when validating deployment behavior.
 
-For release verification, serve and check the generated production output; HMR validates the development loop, not the deployed asset paths or chunks. Source maps help connect production errors to source only when their release mapping and access are controlled. See [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path and [Frontend Testing / 前端测试](#37.%20Frontend%20Testing%20/%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95) for a critical browser check against built output.
+For release verification, serve and check the generated production output; HMR validates the development loop, not the deployed asset paths or chunks. Source maps help connect production errors to source only when their release mapping and access are controlled. See [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path and [Frontend Testing / 前端测试](#40.%20Frontend%20Testing%20/%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95) for a critical browser check against built output.
 
 #### Corepack and package-manager pinning / Corepack与包管理器版本固定
 
@@ -4785,10 +4632,10 @@ The field alone does not install a package manager or guarantee that every envir
 
 **Choosing a tool / 工具选择：** Compare plugin and loader needs, ecosystem, output constraints, team familiarity, and build behavior for the project. No single bundler is the right choice for every application or library.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for modules and dynamic imports; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measuring bundle and load behavior.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#18.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for modules and dynamic imports; [Performance Metrics and Analysis / 性能指标与分析](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measuring bundle and load behavior.
 
 **Sources checked 2026-10-15:** [Webpack: Loaders](https://webpack.js.org/concepts/loaders/), [Asset Modules](https://webpack.js.org/guides/asset-modules/), [Webpack: Plugins](https://webpack.js.org/concepts/plugins/), [DefinePlugin](https://webpack.js.org/plugins/define-plugin/), [HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme), [Webpack Native HTML guide](https://webpack.js.org/guides/native-html/), [style-loader](https://github.com/webpack/style-loader#readme), [css-loader](https://github.com/webpack/css-loader#readme), [MiniCssExtractPlugin](https://github.com/webpack/mini-css-extract-plugin#readme), [Webpack: Writing a Plugin](https://webpack.js.org/contribute/writing-a-plugin/), [Webpack Compiler Hooks](https://webpack.js.org/api/compiler-hooks/), [Webpack devtool](https://webpack.js.org/configuration/devtool/), [Vite 8 guide](https://vite.dev/guide/), [Vite 8.0.10 source](https://github.com/vitejs/vite/blob/v8.0.10/README.md), [Node.js 25 Corepack docs](https://nodejs.org/download/release/v25.8.0/docs/api/corepack.html), [Corepack project README](https://github.com/nodejs/corepack#readme).
-## 29. Virtual DOM and Framework Selection / 虚拟DOM与框架选择
+## 32. Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
 ### Virtual DOM and Framework Selection / 虚拟DOM与框架选择
 
@@ -4830,10 +4677,10 @@ React and Vue use virtual-tree reconciliation in their standard component models
 
 TypeScript adds static checking and editor support, but its types are erased and do not validate runtime data. Consider the language and migration cost alongside project size and contributor turnover; there is no reliable “six-month” or “three-person” threshold.
 
-**See also:** [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for element identity and component state; [Next.js / Next.js开发](#32.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering models.
+**See also:** [React Basics / React基础](#33.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for element identity and component state; [Next.js / Next.js开发](#35.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering models.
 
 **Sources checked 2026-10-15:** [React Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html), [Vue Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism), [React: Render and Commit](https://react.dev/learn/render-and-commit), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TypeScript: erased structural types](https://www.typescriptlang.org/docs/handbook/typescript-for-oopers.html#erased-structural-types).
-## 30. React Basics / React基础
+## 33. React Basics / React基础
 
 ### React Basics / React基础
 
@@ -4968,10 +4815,10 @@ Use Link for navigation users can follow and useNavigate for programmatic naviga
 | Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
 | SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
 
-**See also:** [Next.js / Next.js开发](#32.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering; [Advanced React / React进阶](#31.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hooks, refs, and component composition.
+**See also:** [Next.js / Next.js开发](#35.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering; [Advanced React / React进阶](#34.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hooks, refs, and component composition.
 
 **Sources checked 2026-10-15:** [React: Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform), [React: Render and Commit](https://react.dev/learn/render-and-commit), [StrictMode](https://react.dev/reference/react/StrictMode), [Component and lifecycle methods](https://react.dev/reference/react/Component), [Error Boundary caveats](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary), [useTransition Error Boundary example](https://react.dev/reference/react/useTransition#displaying-an-error-to-users-with-an-error-boundary), [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Queueing State Updates](https://react.dev/learn/queueing-a-series-of-state-updates), [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
-## 31. Advanced React / React进阶
+## 34. Advanced React / React进阶
 
 ### Advanced React / React进阶
 
@@ -5110,7 +4957,7 @@ function useSaveTask() {
 }
 ~~~
 
-The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; the `useWindowSize` Effect in the custom Hook section below shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#26.%20Advanced%20TypeScript%20/%20TypeScript%E8%BF%9B%E9%98%B6) for validating API JSON before treating it as a `Task`.
+The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; the `useWindowSize` Effect in the custom Hook section below shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#28.%20Advanced%20TypeScript%20/%20TypeScript%E8%BF%9B%E9%98%B6) for validating API JSON before treating it as a `Task`.
 
 #### How do concurrent UI updates and Suspense work? / 并发界面更新与 Suspense 如何工作？
 
@@ -5291,10 +5138,10 @@ function Profile({ user }) {
 
 Because React renders numbers, a numeric left operand can leak into the output: an empty list's length is 0, so {items.length && <List />} displays 0. Use {items.length > 0 && <List />} when that is not intended.
 
-**See also:** [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
+**See also:** [React Basics / React基础](#33.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](#37.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
 
 **Sources checked 2026-10-15:** [React: `useTransition`](https://react.dev/reference/react/useTransition), [`useDeferredValue`](https://react.dev/reference/react/useDeferredValue), [`Suspense`](https://react.dev/reference/react/Suspense), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [TanStack Query React v5: Queries](https://tanstack.com/query/latest/docs/framework/react/guides/queries), [Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys), [Important Defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults), [Query Invalidation](https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation), [Optimistic Updates](https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates), [Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense), [Cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation), [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use).
-## 32. Next.js / Next.js开发
+## 35. Next.js / Next.js开发
 
 ### Next.js / Next.js开发
 
@@ -5430,7 +5277,7 @@ async function PostList({ posts }: { posts: Promise<Post[]> }) {
 }
 ```
 
-If the page awaits `getPosts()` before returning this tree, that request cannot be streamed inside the boundary. Place boundaries around independently useful parts: a boundary that is too high can hold back the whole page, while a boundary around a tiny fragment can create a choppy reveal. A fallback is visible page content, so give it meaningful text. If an update needs an assistive-technology announcement, add the appropriate live-region semantics; that does not move keyboard focus or create interaction behavior. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#2.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for the focused keyboard, naming, and error model. A pending fallback also does not make a failed request successful; provide a separate error path.
+If the page awaits `getPosts()` before returning this tree, that request cannot be streamed inside the boundary. Place boundaries around independently useful parts: a boundary that is too high can hold back the whole page, while a boundary around a tiny fragment can create a choppy reveal. A fallback is visible page content, so give it meaningful text. If an update needs an assistive-technology announcement, add the appropriate live-region semantics; that does not move keyboard focus or create interaction behavior. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#3.%20HTML%20and%20CSS%20Basics%20/%20HTML%20%E4%B8%8E%20CSS%20%E5%9F%BA%E7%A1%80) for the focused keyboard, naming, and error model. A pending fallback also does not make a failed request successful; provide a separate error path.
 
 #### How does file-based routing work? / 文件系统路由如何工作？
 
@@ -5451,10 +5298,10 @@ export async function GET() {
 
 Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
 
-**See also:** [React Basics / React基础](#30.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+**See also:** [React Basics / React基础](#33.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
 **Sources checked 2026-10-15:** [React 19.3 versions and release](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
-## 33. Performance Metrics and Analysis / 性能指标与分析
+## 36. Performance Metrics and Analysis / 性能指标与分析
 
 ### Performance Metrics and Analysis / 性能指标与分析
 
@@ -5593,10 +5440,10 @@ document.addEventListener("visibilitychange", () => {
 
 The report helper above uses sendBeacon when the browser accepts the payload for queuing, then falls back to fetch with keepalive when Beacon is unavailable or declines it. Neither path guarantees server receipt. A bounded queue also needs an explicit overflow policy; this example drops the oldest pending event. Avoid blocking navigation or making application correctness depend on analytics delivery.
 
-**See also:** [Image Lazy Loading / 图片懒加载](#24.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for image loading choices; [Rendering and Computation Optimization / 渲染与计算优化](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for React and long-list work.
+**See also:** [Image Lazy Loading / 图片懒加载](#26.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for image loading choices; [Rendering and Computation Optimization / 渲染与计算优化](#37.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for React and long-list work.
 
 **Sources checked 2026-10-15:** [PerformancePaintTiming (FP/FCP)](https://developer.mozilla.org/en-US/docs/Web/API/PerformancePaintTiming), [DOMContentLoaded event](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event), [Window load event](https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event), [Web Vitals](https://web.dev/articles/vitals), [INP](https://web.dev/articles/inp), [LCP](https://web.dev/articles/lcp), [CLS](https://web.dev/articles/cls), [Lab and Field Data Differences](https://web.dev/articles/lab-and-field-data-differences), [HTTP Caching (RFC 9111)](https://www.rfc-editor.org/rfc/rfc9111.html), [ETag (RFC 9110)](https://www.rfc-editor.org/rfc/rfc9110.html#name-etag), [Beacon specification](https://w3c.github.io/beacon/).
-## 34. Rendering and Computation Optimization / 渲染与计算优化
+## 37. Rendering and Computation Optimization / 渲染与计算优化
 
 ### Rendering and Computation Optimization / 渲染与计算优化
 
@@ -5679,10 +5526,10 @@ Layout, paint, compositing, and JavaScript can all affect a frame. Animate trans
 
 will-change is a hint, not a command to allocate a compositor layer. Use it narrowly and only when a measured animation benefits; unnecessary use can consume memory and make performance worse. Reducing DOM work and measuring real interactions are more reliable than assuming a shorter selector or shorthand property will speed up a page.
 
-**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](#5.%20Browser%20HTML%20and%20CSS%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E4%B8%AD%E7%9A%84%20HTML%20%E4%B8%8E%20CSS) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measurement.
+**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measurement.
 
 **Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [React: useMemo](https://react.dev/reference/react/useMemo), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction), [CSS Will Change Module](https://www.w3.org/TR/css-will-change-1/), [MDN background-position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/background-position), [HTTP/2 RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).
-## 35. Lodash / Lodash工具库
+## 38. Lodash / Lodash工具库
 
 ### Lodash / Lodash工具库
 
@@ -5781,10 +5628,10 @@ Lodash's debounced function also has flush() to invoke a pending call immediatel
 
 Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#16.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for choosing debounce or throttle by workload.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#18.%20Modern%20JavaScript%20Features%20/%20%E7%8E%B0%E4%BB%A3JavaScript%E7%89%B9%E6%80%A7) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for choosing debounce or throttle by workload.
 
 **Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
-## 36. ahooks / ahooks Hook库
+## 39. ahooks / ahooks Hook库
 
 ### ahooks / ahooks Hook库
 
@@ -5919,7 +5766,7 @@ return (
 );
 ~~~
 
-Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#34.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
+Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#37.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
 
 useDynamicList exposes list and operations such as push, remove, move, insert, and getKey(index). Use getKey(index) as the React key so item identity survives edits; callbacks receive the current index.
 
@@ -5952,10 +5799,10 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 
 **Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
 
-**See also:** [Advanced React / React进阶](#31.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup plus the generic server-state cache, mutation, concurrency, and Suspense lifecycle; [Performance Metrics and Analysis / 性能指标与分析](#33.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
+**See also:** [Advanced React / React进阶](#34.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup plus the generic server-state cache, mutation, concurrency, and Suspense lifecycle; [Performance Metrics and Analysis / 性能指标与分析](#36.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
 
 **Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
-## 37. Frontend Testing / 前端测试
+## 40. Frontend Testing / 前端测试
 
 ### Frontend Testing / 前端测试
 
@@ -6111,6 +5958,6 @@ Type checks catch static contract errors; unit and component tests catch local l
 
 Use browser checks where real routing, asset URLs, browser behavior, or app/service wiring matters. A passing HMR session proves the development loop works; it does not prove production chunks load from the deployed base path or that the published artifact works. Source maps can translate minified error locations back to original source when tied to a release and uploaded to a controlled error-reporting system. A hidden map removes the source-map comment, not the file or access risk; do not leave private maps at a public asset URL. The shared [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) note owns artifact promotion, runtime secrets, and rollout gates.
 
-**See also:** [Advanced React / React进阶](#31.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
+**See also:** [Advanced React / React进阶](#34.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
 
 **Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/), [Vite static deployment](https://vite.dev/guide/static-deploy.html), [Playwright web server](https://playwright.dev/docs/test-webserver).

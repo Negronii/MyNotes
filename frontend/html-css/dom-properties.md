@@ -111,6 +111,6 @@ For threshold-based visibility tracking (e.g., lazy loading, analytics), prefer 
 - Need **viewport-relative position** (for tooltips, drag, scroll effects)? → `getBoundingClientRect()`.
 - Need **position within parent** (for layout math)? → `offsetTop` / `offsetLeft` (watch out: relative to `offsetParent`, not necessarily the direct parent).
 
-**See also:** [`2.4 Browser - HTML & CSS part`](./browser-html-and-css.md) on layout thrashing when reads follow writes, [`5.3 Image Lazy Loading`](../browser-apis/image-lazy-loading.md) for `IntersectionObserver`-based visibility.
+**See also:** [`2.4 Browser - HTML & CSS part`](./rendering-pipeline-and-forced-layout.md) on layout thrashing when reads follow writes, [`5.3 Image Lazy Loading`](../browser-apis/image-lazy-loading.md) for `IntersectionObserver`-based visibility.
 
 **Specifications / 规范：** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.

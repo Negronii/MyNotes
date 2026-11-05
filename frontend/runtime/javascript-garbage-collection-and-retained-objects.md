@@ -1,0 +1,11 @@
+# How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？
+
+JavaScript does not promise when memory is reclaimed or require a particular garbage-collection algorithm. An object becomes eligible for collection when it is unreachable from the runtime's roots; cycles alone are collectable, but a long-lived reference to a detached node, listener, timer, closure-captured value, or cache entry can keep an object reachable. Diagnose the retaining path in a repeatable heap comparison, then release the reference at the correct lifetime boundary. / JavaScript 不承诺何时回收内存，也不要求某种垃圾回收算法。对象从运行时根不可达时才具备回收资格；循环引用本身可以回收，但长期存活的脱离 DOM 节点、监听器、计时器、闭包捕获值或缓存项会让对象仍可达。应通过可重复操作前后的堆快照检查保留路径，并在正确的生命周期边界释放引用。
+
+A tracing collector is one implementation strategy: it starts from roots such as globals and active execution state, marks reachable objects, and can reclaim unmarked objects, including unreachable cycles. V8's Orinoco collector is a concrete example with generational, parallel, incremental, and concurrent work; those details can change and are not JavaScript language requirements.
+
+For practical diagnosis, reproduce the same action, compare heap snapshots, and inspect retaining paths. Common leads include an uncleared interval, a listener on a long-lived object, a detached DOM node still referenced by application code, or a closure holding a large value. These patterns are investigation clues, not proof by themselves. Keep a listener, timer, subscription, or cache handle when its lifetime should end earlier than its owner, and release it at that boundary.
+
+**See also:** [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](../javascript/javascript-memory-weakmap-and-weakset.md) covers weak-reference use and nondeterministic cleanup; [How do DOM events propagate?](../browser-apis/dom-manipulation-and-events.md) covers listener lifetimes.
+
+**Evidence:** [ECMAScript 2026 weak-reference processing model](https://tc39.es/ecma262/2026/#sec-processing-model-of-weakref-and-finalizationregistry-targets) explicitly makes no guarantee that an object will be collected at a particular time; [V8 Orinoco overview](https://v8.dev/blog/trash-talk), checked 2026-11-05, is an implementation illustration.

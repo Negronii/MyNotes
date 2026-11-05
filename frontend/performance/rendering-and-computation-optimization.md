@@ -79,6 +79,6 @@ Layout, paint, compositing, and JavaScript can all affect a frame. Animate trans
 
 will-change is a hint, not a command to allocate a compositor layer. Use it narrowly and only when a measured animation benefits; unnecessary use can consume memory and make performance worse. Reducing DOM work and measuring real interactions are more reliable than assuming a shorter selector or shorthand property will speed up a page.
 
-**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](../html-css/browser-html-and-css.md) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](./performance-metrics-and-analysis.md) for measurement.
+**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](../html-css/rendering-pipeline-and-forced-layout.md) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](./performance-metrics-and-analysis.md) for measurement.
 
 **Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [React: useMemo](https://react.dev/reference/react/useMemo), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction), [CSS Will Change Module](https://www.w3.org/TR/css-will-change-1/), [MDN background-position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/background-position), [HTTP/2 RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).

@@ -9,7 +9,7 @@ Choose the question closest to what you want to understand. Each route starts wi
 1. [What happens to the view when input and results update at different speeds? / 输入和结果更新速度不同时，界面怎样处理？](../frontend/frameworks/advanced-react.md) — Start with the task search and separate input state from result rendering.
 2. [When does JavaScript get a turn to handle the event? / JavaScript 什么时候处理这个事件？](../frontend/runtime/event-loop.md) — Connect the handler, queued work, and the browser's opportunity to render.
 3. [How does React turn state into a committed update? / React 怎样把状态变成提交的界面更新？](../frontend/frameworks/react-basics.md) — Follow state, rendering, and the DOM changes that reach the browser.
-4. [How does the browser turn a document into pixels? / 浏览器怎样把文档变成像素？](../frontend/browser/browser-basics.md) — Follow the rendering work shared by the first view and later updates.
+4. [What browser work can an update trigger? / 一次更新会触发哪些浏览器工作？](../frontend/html-css/rendering-pipeline-and-forced-layout.md) — Follow layout, paint, and composition after a change. [From navigation to pixels / 从导航到像素](../frontend/browser/browser-basics.md) covers the initial document path.
 
 ## How do you confirm an operation's result? / 怎样确认一次跨系统操作的结果？
 

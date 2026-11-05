@@ -6,14 +6,16 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### Browser / 浏览器
 
-- [Browser Basics / 浏览器基础](browser/browser-basics.md)
+- [How does a browser turn a URL into pixels? / 浏览器如何把 URL 变成屏幕像素？](browser/browser-basics.md)
+- [Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？](browser/browser-navigation-and-history.md)
 
 ### HTML and CSS / HTML与CSS
 
 - [HTML and CSS Basics / HTML 与 CSS 基础](html-css/html-and-css-basics.md)
 - [Box Model and BFC / 盒模型与块格式化上下文](html-css/box-model-and-bfc.md)
 - [Flex & Grid Layout / Flex与Grid布局](html-css/flex-and-grid-layout.md)
-- [Browser HTML and CSS / 浏览器中的 HTML 与 CSS](html-css/browser-html-and-css.md)
+- [How do scripts affect HTML parsing and document readiness? / 脚本如何影响 HTML 解析与文档就绪？](html-css/browser-html-and-css.md)
+- [Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？](html-css/rendering-pipeline-and-forced-layout.md)
 - [DOM Properties / DOM属性](html-css/dom-properties.md)
 - [CSS Interview Questions / CSS面试题](html-css/css-interview-questions.md)
 - [CSS Position, Display, and Animations / CSS定位、显示与动画](html-css/css-position-display-and-animations.md)
@@ -50,7 +52,8 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### Runtime and tooling / 运行时与工具链
 
-- [Event Loop / 事件循环](runtime/event-loop.md)
+- [When does browser JavaScript run relative to a frame? / 浏览器 JavaScript 如何与每一帧交错？](runtime/event-loop.md)
+- [How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？](runtime/javascript-garbage-collection-and-retained-objects.md)
 - [Build Tools / 构建工具](tooling/build-tools.md)
 
 ### React and frameworks / React与框架
