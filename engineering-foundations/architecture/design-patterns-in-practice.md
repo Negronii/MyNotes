@@ -1,6 +1,6 @@
-# Design Patterns in Practice / 设计模式实践
+# When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？
 
-A design pattern names a recurring design choice and its trade-offs. **设计模式是可复用的设计思路，不是必须套用的模板。** Choose one when it clarifies a real variation or dependency; extra indirection also has a cost.
+A design pattern names a recurring choice about construction, variation, notification, or ownership. Use it when the named boundary makes an actual change easier to localize or explain; then account for the added indirection and lifetime rules. A pattern does not remove a need to define scope, contracts, or authorization. **设计模式概括对象创建、行为变化、通知或所有权中的常见选择。只有当它能把真实变化收拢到更清晰的边界时才使用，并同时考虑新增的间接层和生命周期规则。模式不会替代对作用范围、契约和授权边界的定义。**
 
 ## When do you use the Factory pattern?
 
@@ -117,41 +117,4 @@ See [DOM Manipulation and Events](../../frontend/browser-apis/dom-manipulation-a
 
 ---
 
-## How would you design the data model for a low-code editor?
-
-A page builder can model a document as a component tree, with each node carrying an ID, type, properties, style, and children. The editor can derive its canvas and side panels from that model, then serialize it for persistence.
-
-~~~javascript
-const component = {
-  id: 'comp_001',
-  type: 'Button',
-  props: { text: 'Click me', variant: 'primary' },
-  style: { position: 'absolute', top: 100, left: 200 },
-  children: [],
-};
-~~~
-
-Keep document order and visual stacking as explicit concepts. Child order can be one input to rendering, but CSS stacking contexts mean it is not universally equivalent to the final z-order; each stacking context is painted as a unit within its parent context ([CSS 2.2 visual formatting model](https://www.w3.org/TR/CSS22/zindex.html)).
-
-- **Component registry / 组件注册表**: map a validated component type to its renderer and schema.
-- **Layer order / 图层顺序**: define how siblings are ordered and translate that order into the chosen rendering model.
-- **Undo and redo / 撤销与重做**: store inverse commands or immutable document snapshots; choose based on history size and operation complexity.
-- **Collaboration / 协作**: a WebSocket transports updates, but does not resolve concurrent edits. A server-authoritative order, locks, operational transformation, or a CRDT may fit different conflict and offline requirements.
-
----
-
-## How does Role-Based Access Control (RBAC) work?
-
-**基于角色的访问控制 / Role-Based Access Control** associates permissions with roles and assigns users to roles. It is one authorization model; it does not determine whether a particular user may access every object of a type.
-
-A relational model commonly includes:
-
-- **User / 用户**: identity and credential reference.
-- **Role / 角色**: named job or application role.
-- **Permission / 权限**: action on a resource or capability.
-- **UserRole / 用户角色**: many-to-many user-to-role assignment.
-- **RolePermission / 角色权限**: many-to-many role-to-permission assignment.
-
-A request is authenticated first, then the server checks whether the resulting subject may perform the requested action on the requested object. Check every protected operation and resource; hiding a button or trusting a client-supplied role is not authorization. Role changes simplify policy administration only when the application's permission model fits roles.
-
-See [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) for authorization boundaries and [Design Patterns: Elements of Reusable Object-Oriented Software](https://www.informit.com/store/design-patterns-elements-of-reusable-object-oriented-software-9780201633610) for the original GoF catalog.
+See [how to model an editable component tree](low-code-editor-data-model.md) for a system-design example and [how roles control feature access](role-based-access-design.md) for a distinct authorization decision.

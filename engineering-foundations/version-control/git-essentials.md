@@ -1,8 +1,6 @@
-# Git Essentials / Git日常基础
+# How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？
 
-Git records project snapshots and lets branches point to different lines of history. **工作区 / working tree**, **暂存区 / index**, **提交 / commit**, **分支 / branch**, **远端 / remote**, **合并 / merge**, and **变基 / rebase** are the core terms used below. Branches are movable references to commits. Inspect status before changing or discarding work.
-
-Git用提交保存项目快照，分支是指向提交的可移动引用；合并、变基和撤销应按历史是否共享及工作区状态选择，改写或丢弃内容前先检查并保护本地改动。
+Git stores snapshots behind movable branch references, while the working tree and index hold changes not yet committed. Choose merge or rebase based on whether others rely on the commits, and choose reset, revert, or reflog recovery according to which local or shared history state must change. These commands repair repository history and files; they do not roll back a deployed application, database migration, or external side effect. / Git 用提交保存快照，分支是可移动引用；工作区和暂存区保存尚未提交的修改。根据提交是否已被他人依赖选择合并或变基，再根据需要改变的是哪部分本地或共享历史选择 reset、revert 或 reflog 恢复。这些命令修复的是仓库历史和文件，不会回滚已部署应用、数据库迁移或外部副作用；生产恢复见[应用部署与持续交付](../infrastructure/application-deployment-and-ci-cd.md)。
 
 ## Core commands
 
@@ -124,36 +122,7 @@ Apply the change introduced by a selected commit to the current branch, creating
 git cherry-pick <commit>
 ~~~
 
-### `git reset` vs. `git revert`
-
-In its commit form, `git reset` moves the current branch reference and optionally resets the index and working tree. The mode controls which state changes:
-
-| Mode | Branch reference | Index | Tracked working-tree changes |
-|---|---|---|---|
-| `--soft` | Moves to target | Kept | Kept |
-| `--mixed` (default) | Moves to target | Reset to target | Kept |
-| `--hard` | Moves to target | Reset to target | Reset to target; conflicting tracked edits are discarded |
-
-~~~bash
-git reset --soft HEAD~1
-git reset --mixed HEAD~1
-git reset --hard HEAD~1
-~~~
-
-Use reset to adjust local history or staging when that is the intended scope. `--hard` replaces the working tree and index with the target state and may overwrite untracked files; check `git status` and preserve needed work first. It does not mean “delete every untracked file.”
-
-`git revert <commit>` creates a new commit that applies the inverse of an earlier commit. It is often a better fit for undoing changes already shared in a branch, although conflicts may still need resolution. Reverting a merge commit requires selecting a mainline parent.
-
-### `git reflog`
-
-The reflog records recent local updates to references such as `HEAD` and branch tips. It can help locate a commit after an accidental reset or branch deletion while the commit remains available.
-
-~~~bash
-git reflog
-git branch recovery <commit>
-~~~
-
-Creating a branch preserves the recovered commit under a name; checking out a raw commit instead leaves HEAD detached. Reflogs are local and expire, so they are not a backup.
+For a mistake in existing changes or commits, see [undo and recovery in Git / Git 撤销与找回](git-undo-and-recovery.md).
 
 ## Pull request and code review workflow
 

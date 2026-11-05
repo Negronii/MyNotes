@@ -1,6 +1,6 @@
-# Reading, Debugging, and Reviewing Code / 阅读、调试与审查代码
+# How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？
 
-**Core explanation / 核心解释：** Debugging and review start from expected behavior, then trace values and side effects through the actual call path. A minimal reproduction tests one falsifiable hypothesis; evidence points to the cause; the smallest coherent fix restores the lost behavior; a focused regression check distinguishes the fix from the failure. Read generated code and tests independently because both may share the same mistaken assumption. / 先写出可以观察的预期，再沿入口、调用者、依赖、数据访问和副作用追踪值，并用最小请求检验一个可证伪假设。证据指向哪一步丢掉了约束，就在那一步做最小一致修复，再用相反边界验证。生成代码和测试要分开读，尤其检查测试是否只覆盖 happy path；测试通过不能替代对需求的独立核对。
+**核心回答 / Core answer：** Start with an observable expected outcome, trace the request through its entry point, dependencies, data access, and side effects, then build the smallest counterexample that can disprove a specific hypothesis. If the failure occurs at a lost tenant predicate, restore that predicate and test both owner and non-owner requests. Review the implementation and its tests independently: they can pass together while sharing the same missing assumption. / 先写出可观察的预期结果，再沿入口、依赖、数据访问和副作用追踪请求，并构造足以推翻某个具体假设的最小反例。如果故障来自丢失租户条件，就恢复该条件，并分别检查所有者与非所有者请求。实现和测试要独立审查：两者可能共享同一个遗漏假设，即使一起通过也不能证明需求已满足。
 
 **Key terms / 关键术语：** expected behavior / 预期行为；entry point / 入口；call path / 调用路径；minimal reproduction / 最小复现；falsifiable hypothesis / 可证伪假设；root cause / 根因；regression check / 回归检查；generated change / 生成式改动。
 

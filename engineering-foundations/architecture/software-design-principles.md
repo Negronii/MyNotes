@@ -1,6 +1,6 @@
-# Software Design Principles / 软件设计原则
+# How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？
 
-Design principles are lenses for reasoning about change, not laws that guarantee maintainability. **设计原则帮助讨论变化与依赖的成本，不是保证正确架构的公式。** Apply a principle when it reduces a concrete source of coupling without creating unnecessary abstraction.
+Design principles help identify where a likely change would force unrelated code to change. Use a principle when it points to a concrete coupling cost and a boundary that reduces it; adding interfaces, classes, or extension points without a real source of variation merely moves complexity around. **设计原则用于判断一次可能的变化会不会迫使无关代码跟着修改。只有当原则指出了具体耦合成本，并能据此建立有价值的边界时才应用；没有真实变化点却增加接口、类或扩展点，只会把复杂度挪到别处。**
 
 ## What are the SOLID principles, and what does each mean?
 
@@ -112,26 +112,6 @@ Do not build speculative features before a need is established. Keep the option 
 
 ---
 
-## What are common frontend architecture patterns?
-
-These are common design shapes, not a required architecture. Choose based on product boundaries, change frequency, and team ownership.
-
-### Component-based architecture
-
-A UI can be composed from reusable components with explicit inputs and outputs. State and side effects may live in a component, a hook, or a separate service depending on its lifecycle and reuse needs; they are not inherently owned by every component.
-
-### Unidirectional data flow
-
-In the classic Flux model, actions pass through a dispatcher to stores, which notify views. Other state libraries use different contracts. The useful goal is to make state changes and their causes traceable; the particular library does not guarantee that by itself.
-
-See [Advanced React](../../frontend/frameworks/advanced-react.md) for React-specific state and component patterns.
-
-### Micro-frontends
-
-Micro-frontends divide a frontend into parts that can have separate ownership or release paths. Integration can use build-time composition, runtime module loading, iframes, or web components, each with different isolation and deployment properties.
-
-Reach for this when independent teams or release schedules are a concrete requirement and the organization can support the shared navigation, styling, accessibility, observability, and runtime boundaries. For a smaller application, a modular single frontend usually has less coordination and deployment overhead.
-
-**See also:** [Design Patterns in Practice](./design-patterns-in-practice.md) for reusable patterns that can support these principles.
+See [frontend architecture boundaries](frontend-architecture-boundaries.md) for presentation and deployment ownership examples.
 
 Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).

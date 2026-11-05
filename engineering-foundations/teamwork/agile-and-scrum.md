@@ -1,8 +1,6 @@
-# Agile and Scrum / 敏捷与Scrum
+# How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？
 
-**Agile / 敏捷** describes values and principles for software development; it is not one prescribed workflow. **Scrum / Scrum 框架** is a specific framework with defined accountabilities, events, artifacts, and commitments. The Scrum details below follow the official November 2020 Scrum Guide, listed as the current version when checked 2026-10-15.
-
-敏捷是一组价值与原则，Scrum则是包含明确职责、事件、工件和承诺的框架；这些结构用于检查和调整工作，并不保证照流程执行就会自动提升交付效果。
+**核心回答 / Core answer：** Agile names values and principles that favor collaboration, usable software, customer feedback, and adapting to change; Scrum is one framework that gives a team accountabilities, events, artifacts, and commitments to inspect progress and adjust its next steps. Product Goals, Sprint Goals, and the Definition of Done orient decisions, while a Sprint Backlog plan can change as the Developers learn. A Sprint Review examines outcomes and next adaptations; it is not a release gate. The framework creates opportunities for feedback but does not guarantee good delivery by itself. / 敏捷描述重视协作、可用软件、客户反馈和响应变化的价值与原则；Scrum 则用职责、事件、工件和承诺，帮助团队检查进展并调整下一步。产品目标、Sprint 目标和完成定义为决策提供方向，Developers 可随着学习调整 Sprint Backlog 计划。Sprint Review 检视成果并讨论后续调整，它不是发布审批关卡。框架提供反馈机会，但本身不能保证交付效果。
 
 ## Agile principles
 

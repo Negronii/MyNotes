@@ -30,13 +30,18 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 ### Testing / 测试
 
-- [Software Testing Strategy / 软件测试策略](testing/software-testing-strategy.md)
+- [How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？](testing/software-testing-strategy.md)
 
 ### Algorithms and data structures / 算法与数据结构
 
-- [Algorithms and Complexity / 算法与复杂度分析](algorithms/algorithms-and-complexity.md)
-- [Core Data Structures / 核心数据结构](algorithms/core-data-structures.md)
-- [Practical Data Structure Implementations / 常用数据结构实现](algorithms/practical-data-structure-implementations.md)
+- [How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？](algorithms/algorithms-and-complexity.md)
+- [How do you choose a dynamic programming state and update order? / 动态规划怎样选择状态和更新顺序？](algorithms/dynamic-programming-state-and-order.md)
+- [How do ordered inputs enable binary search and two pointers? / 有序输入怎样支持二分查找和双指针？](algorithms/ordered-array-search.md)
+- [Why do partition choices change quicksort costs? / 分区选择为什么会改变快速排序的代价？](algorithms/partitioning-and-sorting-costs.md)
+- [Which units should a text algorithm count and compare? / 文本算法应按什么单位计数和比较？](algorithms/text-units-and-algorithms.md)
+- [Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？](algorithms/core-data-structures.md)
+- [How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？](algorithms/practical-data-structure-implementations.md)
+- [How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？](algorithms/queue-and-stack-representations.md)
 
 ### Backend and runtime / 后端与运行时
 
@@ -49,27 +54,32 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 ### Architecture / 架构
 
-- [Software Design Principles / 软件设计原则](architecture/software-design-principles.md)
-- [Design Patterns in Practice / 设计模式实践](architecture/design-patterns-in-practice.md)
-- [Reading, Debugging, and Reviewing Code / 阅读、调试与审查代码](architecture/reading-debugging-and-reviewing-code.md)
+- [How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？](architecture/software-design-principles.md)
+- [How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？](architecture/frontend-architecture-boundaries.md)
+- [When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？](architecture/design-patterns-in-practice.md)
+- [How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？](architecture/low-code-editor-data-model.md)
+- [How should roles control access to a feature? / 角色怎样控制对功能的访问？](architecture/role-based-access-design.md)
+- [How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？](architecture/reading-debugging-and-reviewing-code.md)
 - [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 
 ### Career / 职业发展
 
-- [Interview Tips / 面试准备](career/interview-preparation.md)
+- [How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？](career/interview-preparation.md)
 
 ### Teamwork / 团队协作
 
-- [Agile and Scrum / 敏捷与Scrum](teamwork/agile-and-scrum.md)
+- [How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？](teamwork/agile-and-scrum.md)
 
 ### Version control / 版本控制
 
-- [Git Essentials / Git日常基础](version-control/git-essentials.md)
+- [How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？](version-control/git-essentials.md)
+- [How do you undo or recover a Git change safely? / 怎样安全撤销或找回 Git 改动？](version-control/git-undo-and-recovery.md)
 
 ### Infrastructure / 基础设施
 
-- [Docker Operations / Docker操作参考](infrastructure/docker-operations.md)
-- [Application Deployment and CI/CD / 应用部署与持续交付](infrastructure/application-deployment-and-ci-cd.md)
+- [How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？](infrastructure/docker-operations.md)
+- [How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？](infrastructure/application-deployment-and-ci-cd.md)
+- [How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？](infrastructure/production-application-runtime.md)
 
 ## Related domains / 相关领域
 

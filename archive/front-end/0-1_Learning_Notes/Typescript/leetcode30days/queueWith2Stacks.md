@@ -6,7 +6,7 @@
 
 Use one stack for incoming items and one for outgoing items. When the outgoing stack is empty, move all incoming items to it; reversing their order makes the oldest item the next to leave. The tagged return distinguishes an empty queue from a queued `undefined`. / 一个栈接收新元素，另一个栈提供出队元素。出队栈为空时，把入队栈中的元素全部移入；顺序反转后，最早进入的元素会最先离开。带标签的返回值可以区分空队列与队列中实际存放的 `undefined`。
 
-See [practical data-structure implementations / 实用数据结构实现](../../../../../engineering-foundations/algorithms/practical-data-structure-implementations.md) for related stack and queue tradeoffs.
+See [queue and stack representations / 队列与栈的表示](../../../../../engineering-foundations/algorithms/queue-and-stack-representations.md) for related stack and queue tradeoffs.
 
 ```ts
 type PopResult<T> = { value: T } | undefined;

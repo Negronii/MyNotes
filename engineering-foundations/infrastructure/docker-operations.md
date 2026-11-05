@@ -1,8 +1,6 @@
-# Docker Operations / Docker操作参考
+# How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？
 
-**镜像 / Image** is a read-only template of filesystem layers and configuration. **容器 / Container** is a created or running instance with a writable layer and optional mounts. Removing a container removes its writable layer; named volumes persist outside that container lifecycle.
-
-镜像定义运行环境，容器承载一次运行实例；持久数据、网络访问和运行时凭据要分别配置，删除容器也不等于备份数据。
+An image supplies the read-only filesystem and configuration template; a container adds a writable runtime layer; a volume stores data beyond container replacement; and a shared network gives services a path to reach one another. Port publishing exposes a container port through the host, while secrets belong in the build or runtime channel that needs them. The commands and Compose examples below show what survives removal and how services connect. / 镜像提供只读文件系统和配置模板，容器增加运行时可写层，卷让数据独立于容器替换而留存，共享网络则让服务彼此连通。端口发布通过宿主机暴露容器端口；密钥应只进入实际需要它的构建或运行时通道。下面的命令和 Compose 示例说明删除容器后什么会保留，以及服务如何通信。
 
 Before starting a fresh `postgres:16` instance in the examples below, provide a non-empty `POSTGRES_PASSWORD` through the shell environment or a secret manager. The official image requires it to initialize an empty data directory; it can be passed at runtime without placing a credential in the image or source file. Changing the variable later does not rotate a password in an already initialized volume.
 
