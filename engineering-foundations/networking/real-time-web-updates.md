@@ -7,7 +7,7 @@
 
 WebSocket握手不是用CORS响应字段授权的Fetch请求。浏览器会带上Origin，服务器应按应用策略验证来源并认证连接；浏览器WebSocket构造器接受URL和可选子协议，不提供任意请求头参数。适用的Cookie可能参与握手，仍受Cookie规则约束。[MDN WebSocket构造器](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket)。
 
-Node.js可用第三方ws库提供服务；浏览器使用内置WebSocket API。下面服务端向除发送者之外的已连接客户端广播，并在连接关闭时清理集合：
+Node.js 可用第三方 `ws` 库提供服务，浏览器使用内置 WebSocket API。示例向除发送者之外的已连接客户端广播，保留文本或二进制消息类型，并在连接关闭时清理集合。 [`ws` 广播示例](https://github.com/websockets/ws#server-broadcast)
 
 ~~~javascript
 const { WebSocketServer, WebSocket } = require('ws');
@@ -17,10 +17,10 @@ const clients = new Set();
 server.on('connection', (socket) => {
   clients.add(socket);
 
-  socket.on('message', (message) => {
+  socket.on('message', (data, isBinary) => {
     for (const client of clients) {
       if (client !== socket && client.readyState === WebSocket.OPEN) {
-        client.send(message.toString());
+        client.send(data, { binary: isBinary });
       }
     }
   });
@@ -65,7 +65,7 @@ flowchart TD
 | 轮询 Polling | 客户端按间隔发起普通HTTP请求；长轮询会让服务端暂挂一次请求直到有事件或超时。 | 客户端决定频率、退避和何时重试；若需续传，由API定义游标或事件ID。 | 实现简单、适合低频更新；短轮询带来请求开销，长轮询占用等待中的请求。 |
 | SSE格式 + `EventSource` API | 服务端向客户端单向发送HTTP `text/event-stream`；EventSource用URL建立GET请求，可选择`withCredentials`。 | EventSource通常会在连接中断后自动重连；服务端可用HTTP 204告知客户端停止重连。带`id:`的事件会在后续重连请求中作为`Last-Event-ID`回传。服务器只有保留可重放的事件历史，才能按该ID续传。 | 适合单向事件；原生EventSource接口没有自定义请求头或请求体，不能把传输断线等同于事件已恢复。 |
 | 流式Fetch / Fetch response stream | 一次Fetch请求在响应有body时提供可逐块读取的`Response.body`；请求可使用API允许的方法、请求头、请求体和取消信号。 | Fetch不会替应用实现SSE式自动重连或重放；应用解析协议帧并定义游标、重试和取消策略。 | 需要自定义请求契约或一次性POST后流式返回时合适；字节块不是消息边界。跨源读取仍受CORS约束。 |
-| WebSocket | 握手后，客户端和服务端都能沿同一连接发送带消息边界的帧。 | 重连、身份过期、事件序号、确认和恢复均由应用协议定义。 | 双向低延迟交互合适；长期连接需要连接生命周期管理。浏览器构造器没有任意请求头参数，握手认证要按浏览器可用契约设计。 |
+| WebSocket | 握手后，客户端和服务端都能沿同一连接发送消息。应用收到的是完整消息，传输层可将一条消息拆成多个帧。 | 重连、身份过期、事件序号、确认和恢复均由应用协议定义。 | 双向低延迟交互合适；长期连接需要连接生命周期管理。浏览器构造器没有任意请求头参数，握手认证要按浏览器可用契约设计。 |
 
 SSE既是`text/event-stream`线格式，也是浏览器EventSource接口的常见后端协议。线格式用UTF-8字段行表示事件，并以空行结束一条事件；常见字段为`event`、`data`、`id`和`retry`。例如：
 

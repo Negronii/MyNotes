@@ -49,4 +49,4 @@ A favicon can be declared in the document head:
 
 Split the editor into panes when comparing related HTML and CSS files; the layout is an editor convenience, not a build requirement.
 
-**References checked 2026-10-15:** [VS Code Emmet](https://code.visualstudio.com/docs/languages/emmet), [Emmet CSS abbreviations](https://docs.emmet.io/css-abbreviations/), [Emmet fuzzy search](https://docs.emmet.io/css-abbreviations/fuzzy-search/), [VS Code keyboard shortcuts](https://code.visualstudio.com/docs/getstarted/keybindings).
+**References checked 2026-10-15** — [VS Code Emmet](https://code.visualstudio.com/docs/languages/emmet), [Emmet CSS abbreviations](https://docs.emmet.io/css-abbreviations/), [default CSS snippet definitions](https://github.com/emmetio/snippets/blob/master/css.json), [Emmet fuzzy search](https://docs.emmet.io/css-abbreviations/fuzzy-search/), [VS Code keyboard shortcuts](https://code.visualstudio.com/docs/getstarted/keybindings).

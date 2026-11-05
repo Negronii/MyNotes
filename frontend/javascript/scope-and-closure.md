@@ -6,6 +6,8 @@
 
 An identifier lookup starts in the current lexical environment and continues through its enclosing environments. The caller’s local variables are not inserted into a function’s lookup chain. Execution contexts and lexical environment records are the specification model for this behavior; engines need not allocate objects with those exact names or shapes. / 标识符先在当前词法环境中查找，再逐层向外查找。调用者的局部变量不会插入被调用函数的查找链。执行上下文和词法环境记录是规范描述这种行为的模型；引擎不必创建名称和结构完全相同的对象。
 
+See the [ECMAScript execution-context and environment-record specification](https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html). / 详见 [ECMAScript 执行上下文与环境记录规范](https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html)。
+
 ~~~javascript
 const label = "global";
 
@@ -37,7 +39,7 @@ flowchart LR
 
 ## What a closure retains / 闭包保留了什么
 
-A closure is a function together with its access to the lexical bindings it uses. It does not copy the value present when the function was created. / 闭包是函数及其对所用词法绑定的访问能力；创建函数时的值不会被定格为一份副本。
+A closure is a function together with its access to the lexical bindings it uses. It does not copy the value present when the function was created. / 闭包是函数及其对所用词法绑定的访问能力；创建函数时的值不会被定格为一份副本。 MDN’s [closure guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures) demonstrates this behavior. / MDN 的[闭包指南](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures)展示了这一行为。
 
 ~~~javascript
 function makeReader() {
@@ -76,11 +78,18 @@ function multiplyBy(factor) {
   return number => number * factor;
 }
 const double = multiplyBy(2);
+const triple = multiplyBy(3);
 double(5); // 10
+triple(5); // 15
 
-function attachLogger(element, label) {
-  element.addEventListener("click", () => console.log("Clicked: " + label));
+function attachLogger(elementId, label) {
+  document.getElementById(elementId).addEventListener("click", () => {
+    console.log("Clicked: " + label);
+  });
 }
+
+attachLogger("btn1", "primary");
+attachLogger("btn2", "secondary");
 ~~~
 
 ## Why loop callbacks differ / 循环回调为什么读到不同值
@@ -114,6 +123,6 @@ callbacks.map(fn => fn()); // [0, 1, 2]
 
 An outer call returning does not make a captured binding immediately unusable. As long as a reachable closure can observe it, the program must preserve the behavior. This does not mean every variable in the entire outer scope must occupy memory forever; implementations can optimize unobservable values. / 外层调用返回并不意味着捕获的绑定立即失效。只要可达闭包仍能观察它，程序就必须保留可观察行为；但这不表示外层作用域中的所有变量都必然永久占用内存，引擎可以优化不可观察的值。
 
-Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](../runtime/event-loop.md). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](../runtime/event-loop.md)。
+Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; MDN discusses [closure performance considerations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#performance_considerations); the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](../runtime/event-loop.md). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](../runtime/event-loop.md)。
 
 **See also:** [JavaScript Basics / JavaScript 基础](./javascript-basics.md) explains the binding and temporal-dead-zone rules that determine which environment a closure can capture. Ordinary function this is determined by call form, not lexical name lookup; see [Function this and Binding / 函数 this 与绑定](./this-and-function-binding.md).

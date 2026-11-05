@@ -84,14 +84,32 @@ Other suitable values include a timer ID or an external instance. Do not read or
 **Core answer / 核心回答：** In React 18 and earlier, forwardRef lets a component accept and forward a parent's ref; useImperativeHandle can expose a narrow command API. In React 19, a function component can receive ref as a prop, so forwardRef is no longer necessary for new React 19-only components. / React 18 及更早版本中，forwardRef 让组件接收并转发父组件传入的 ref；useImperativeHandle 可暴露范围较小的命令式 API。React 19 的函数组件可以把 ref 作为 prop 接收，因此仅面向 React 19 的新组件不再需要 forwardRef。
 
 ~~~jsx
-const FancyInput = forwardRef(function FancyInput(props, ref) {
-  return <input {...props} ref={ref} className="fancy" />;
+import { forwardRef, useImperativeHandle, useRef } from "react";
+
+const SearchInput = forwardRef(function SearchInput(props, forwardedRef) {
+  const input = useRef(null);
+  useImperativeHandle(forwardedRef, () => ({
+    focus() {
+      input.current?.focus();
+    }
+  }), []);
+  return <input {...props} ref={input} />;
 });
+
+function SearchForm() {
+  const search = useRef(null);
+  return (
+    <>
+      <SearchInput ref={search} aria-label="Search" />
+      <button type="button" onClick={() => search.current?.focus()}>Focus</button>
+    </>
+  );
+}
 ~~~
 
-Prefer declarative props and callbacks when they express the interaction clearly. Use an imperative ref for cases such as focusing an input or coordinating a third-party widget.
+The parent receives the `focus()` capability and the child retains ownership of its DOM node. React 19 supports receiving `ref` as a prop in the same pattern. [React `useImperativeHandle`](https://react.dev/reference/react/useImperativeHandle)
 
-## What is a custom Hook? / 什么是自定义Hook？
+## Custom Hooks and Effect cleanup / 自定义 Hook 与 Effect 清理
 
 **Core answer / 核心回答：** A custom Hook is a function whose name starts with use and that calls other Hooks at the top level. It packages reusable stateful logic; it does not share one state instance across callers by itself. / 自定义 Hook 是名称以 use 开头、并在顶层调用其他 Hook 的函数。它封装可复用的有状态逻辑；仅仅复用 Hook 本身不会让多个调用共享同一份 state。
 
@@ -126,9 +144,25 @@ Ordinary Hooks must be called in the same order on every render, at the top leve
 **Core answer / 核心回答：** Render props pass a function that chooses what to render from data supplied by a component. A higher-order component takes a component and returns a wrapped component. Both remain useful API shapes in some libraries and legacy code; custom Hooks are another way to share logic, not a universal replacement. / render props 通过函数接收组件提供的数据并决定渲染内容。高阶组件接收一个组件并返回包装后的组件。它们仍适用于某些库 API 和旧代码；自定义 Hook 是共享逻辑的另一种方式，并非对二者的通用替代。
 
 ~~~jsx
-<MouseTracker render={({ x, y }) => (
-  <p>Pointer: {x}, {y}</p>
-)} />
+import { useEffect, useState } from "react";
+
+function MouseTracker({ render }) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    function handleMove(event) {
+      setPosition({ x: event.clientX, y: event.clientY });
+    }
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, []);
+
+  return render(position);
+}
+
+function PointerReadout() {
+  return <MouseTracker render={({ x, y }) => <p>Pointer: {x}, {y}</p>} />;
+}
 ~~~
 
 A wrapper component can add authorization or instrumentation, but nested wrappers may make the component tree and prop flow harder to follow. Choose the API that makes ownership and behavior clear.

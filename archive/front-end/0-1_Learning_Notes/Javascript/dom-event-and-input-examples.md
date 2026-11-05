@@ -180,4 +180,4 @@ if (title) {
 }
 ```
 
-**See also / 另见：** [DOM Manipulation and Events / DOM 操作与事件](../../../../frontend/browser-apis/dom-manipulation-and-events.md) for propagation phases, listener options, and event delegation.
+**See also / 另见** — [DOM Manipulation and Events / DOM 操作与事件](../../../../frontend/browser-apis/dom-manipulation-and-events.md) for propagation, listener options, and delegation. [W3C UI Events](https://w3c.github.io/uievents/) defines keyboard event types and properties.

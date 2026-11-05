@@ -63,4 +63,14 @@ function emulateNew(fn, ...args) {
 }
 ~~~
 
-Classes and built-in constructors have additional construction semantics, so use new or class syntax in application code rather than this teaching helper. For property lookup and the roles of instance, prototype, and static members, see [Objects and Prototypes / 对象与原型](./objects-functions-and-prototypes.md).
+The helper also models a function-valued prototype, because functions are objects and are accepted as prototype objects by Object.create and the constructor operation. / 该辅助函数也能处理函数类型的 prototype，因为函数是对象，Object.create 与构造算法都接受函数作为原型对象。
+
+~~~javascript
+function CallablePrototype() {}
+function Example() {}
+Example.prototype = CallablePrototype;
+const example = emulateNew(Example);
+Object.getPrototypeOf(example) === CallablePrototype; // true
+~~~
+
+Class constructors have semantics beyond ordinary functions, including restrictions on how they are called; see the [ECMAScript class-definition rules](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions). Built-in constructors also have additional construction semantics, so use new or class syntax in application code rather than this teaching helper. For property lookup and the roles of instance, prototype, and static members, see [Objects and Prototypes / 对象与原型](./objects-functions-and-prototypes.md). / class 构造器拥有普通函数所没有的语义，包括调用方式限制；详见 [ECMAScript 类定义规则](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions)。内置构造器也有额外构造语义，因此应用代码应使用 new 或 class 语法，而不是此教学辅助函数。属性查找及实例、原型、静态成员的作用见[对象与原型](./objects-functions-and-prototypes.md)。

@@ -2,13 +2,27 @@
 
 Keep analytics off the application's critical path: collect events in a bounded in-memory queue, send small batches on a threshold or timer, and try one final batch when the document becomes hidden. This reduces per-event work and gives the client a best-effort delivery opportunity. It cannot guarantee server receipt, and pending events can be lost if the page exits. / 不要让分析采集阻塞应用关键路径：先把事件放入有界内存队列，达到阈值或定时发送小批次，并在文档转为隐藏时尝试发送最后一批。这可以减少逐事件开销，并提供尽力发送的机会；它无法保证服务器收到，页面退出时仍可能丢失未发送事件。
 
-The limits below are example configuration, not universal recommendations. The example drops the oldest pending item when the queue is full and sends one bounded batch from the visibility-change handler.
+## Decide what can enter the queue / 决定哪些事件可以进入队列
+
+Define the purpose and the fields it needs before adding instrumentation. For optional analytics, use the application's collection preference, allowlist event names and screen values, and leave raw input, full URLs, and identifiers out of the event payload. If the user opts out, stop accepting events and discard the pending queue.
+
+## Batch without blocking navigation / 批量发送并保持导航顺畅
+
+The example drops the oldest pending item when the queue is full and sends one bounded batch from the visibility-change handler. Tune the limits to payload size and the loss the application can tolerate.
 
 ```javascript
 const MAX_PENDING = 200;
 const BATCH_SIZE = 50;
+const eventNames = new Set(["report_opened", "filter_applied"]);
+const screens = new Set(["report_list", "report_detail"]);
 const queue = [];
+let collectionEnabled = false;
 let flushScheduled = false;
+
+function setCollectionEnabled(enabled) {
+  collectionEnabled = enabled;
+  if (!enabled) queue.length = 0;
+}
 
 function report(url, events) {
   const body = new Blob([JSON.stringify(events)], { type: "application/json" });
@@ -16,9 +30,10 @@ function report(url, events) {
   void fetch(url, { method: "POST", body, keepalive: true }).catch(() => {});
 }
 
-function trackEvent(event) {
+function trackEvent(name, screen) {
+  if (!collectionEnabled || !eventNames.has(name) || !screens.has(screen)) return;
   if (queue.length === MAX_PENDING) queue.shift(); // Drop the oldest item to stay bounded.
-  queue.push({ event, ts: Date.now() });
+  queue.push({ name, screen, ts: Date.now() });
   if (queue.length >= BATCH_SIZE) scheduleFlush();
 }
 

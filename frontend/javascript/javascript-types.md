@@ -14,6 +14,8 @@
 | string | Immutable sequence of UTF-16 code units / 不可变的 UTF-16 码元序列 |
 | symbol | Unique primitive value, often used as a property key / 唯一原始值，常用作属性键 |
 
+
+These value categories are specified in [ECMAScript types and values](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html). / 类型和值定义见 [ECMAScript 类型和值规范](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html)。
 Whether an engine stores values on a stack, heap, or elsewhere is an implementation detail. “Reference type” is useful shorthand for object identity and assignment, not a physical memory guarantee. / 值在栈、堆或其他位置存储属于引擎实现细节。“引用类型”适合描述对象身份和赋值语义，不是物理内存保证。
 
 ## Truthiness is not numeric conversion / 真值转换不等于数值转换
@@ -46,6 +48,8 @@ See [React conditional rendering](https://react.dev/learn/conditional-rendering)
 ## How equality rules differ / 相等比较规则有何差别
 
 Strict equality === does not coerce across different types. Loose equality == follows several conversion rules, including the special null == undefined case; it is not simply “convert both sides to the same type.” Prefer === unless coercion is intentional. For ordinary values, value == null intentionally tests both null and undefined. / 严格相等 === 不会在不同类型间转换。宽松相等 == 遵循多条转换规则，包括 null == undefined 这一特殊情况；它并非简单地“把双方转成相同类型”。除非有意依赖转换，否则优先使用 ===。对普通值而言，value == null 可有意同时判断 null 和 undefined。
+
+The normative equality and coercion operations are in [ECMAScript abstract operations](https://tc39.es/ecma262/2025/multipage/abstract-operations.html). / 规范的相等与转换操作见 [ECMAScript 抽象操作](https://tc39.es/ecma262/2025/multipage/abstract-operations.html)。
 
 | Comparison / 比较 | NaN with itself / NaN 自身比较 | +0 with -0 / 有符号零比较 | Object values / 对象值 |
 |---|---|---|---|
@@ -89,6 +93,22 @@ b.x; // { n: 2 }
 
 The left side captures the original object before the right side reassigns a. The final write still targets that captured original object, now also named b. / 左侧在右侧重新绑定 a 前就记录了旧对象；最终写入仍作用于该旧对象，此时它也由 b 引用。
 
+Function arguments follow the same value rule: a parameter receives a copy of its argument value. When that value is an object reference, property mutation is visible through the caller’s reference, but assigning a different object to the parameter does not reassign the caller’s binding. / 函数实参同样按值传递：形参接收实参值的副本。若该值是对象引用，修改属性可通过调用方的引用观察到；但把形参重新赋为另一个对象不会重新绑定调用方变量。
+
+~~~javascript
+function update(count, profile) {
+  count += 1;
+  profile.name = "Grace";
+  profile = { name: "Replacement" };
+}
+
+let count = 1;
+const profile = { name: "Ada" };
+update(count, profile);
+count;        // 1: the primitive argument value was copied
+profile.name; // "Grace": the object reference value was copied
+~~~
+
 ## How to check a value’s type / 如何判断值的类型
 
 - typeof is useful for primitives and functions, with the historical null result shown above.
@@ -104,11 +124,13 @@ const custom = { [Symbol.toStringTag]: "Array" };
 Object.prototype.toString.call(custom); // "[object Array]" — a spoofable tag
 ~~~
 
-Validate the shape or behavior the program actually requires instead of relying on a generic display string. The normative [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance) algorithm describes the default instanceof rule. / 应按程序实际需要验证结构或行为，不要只依赖通用显示字符串。默认 instanceof 规则见规范的 [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance)。
+Validate the shape or behavior the program actually requires instead of relying on a generic display string. The normative [Object.prototype.toString](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring) algorithm defines the built-in tag operation; the normative [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance) algorithm describes the default instanceof rule. / 应按程序实际需要验证结构或行为，不要只依赖通用显示字符串。规范的 [Object.prototype.toString](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring) 算法定义内置标签操作；[OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance) 描述默认 instanceof 规则。
 
 ## How bracket notation converts object keys / 方括号属性如何转换键
 
 An ordinary property key is a string or a symbol. When another value is used inside brackets, JavaScript applies ToPropertyKey; an object can run Symbol.toPrimitive or other conversion hooks before producing a string or symbol. It is not accurate to say every key simply calls toString(). / 普通属性键是字符串或 Symbol。方括号中使用其他值时，JavaScript 执行 ToPropertyKey；对象可在生成字符串或 Symbol 前运行 Symbol.toPrimitive 等转换钩子。不能简单说所有键都会直接调用 toString()。
+
+The [ToPropertyKey abstract operation](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey) defines this conversion. / [ToPropertyKey 抽象操作](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey)定义了这一转换。
 
 ~~~javascript
 const record = {};

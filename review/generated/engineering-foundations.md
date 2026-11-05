@@ -1440,7 +1440,7 @@ DNS resolution and TTL behavior were checked against [RFC 1034](https://www.rfc-
 
 WebSocket握手不是用CORS响应字段授权的Fetch请求。浏览器会带上Origin，服务器应按应用策略验证来源并认证连接；浏览器WebSocket构造器接受URL和可选子协议，不提供任意请求头参数。适用的Cookie可能参与握手，仍受Cookie规则约束。[MDN WebSocket构造器](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket)。
 
-Node.js可用第三方ws库提供服务；浏览器使用内置WebSocket API。下面服务端向除发送者之外的已连接客户端广播，并在连接关闭时清理集合：
+Node.js 可用第三方 `ws` 库提供服务，浏览器使用内置 WebSocket API。示例向除发送者之外的已连接客户端广播，保留文本或二进制消息类型，并在连接关闭时清理集合。 [`ws` 广播示例](https://github.com/websockets/ws#server-broadcast)
 
 ~~~javascript
 const { WebSocketServer, WebSocket } = require('ws');
@@ -1450,10 +1450,10 @@ const clients = new Set();
 server.on('connection', (socket) => {
   clients.add(socket);
 
-  socket.on('message', (message) => {
+  socket.on('message', (data, isBinary) => {
     for (const client of clients) {
       if (client !== socket && client.readyState === WebSocket.OPEN) {
-        client.send(message.toString());
+        client.send(data, { binary: isBinary });
       }
     }
   });
@@ -1498,7 +1498,7 @@ flowchart TD
 | 轮询 Polling | 客户端按间隔发起普通HTTP请求；长轮询会让服务端暂挂一次请求直到有事件或超时。 | 客户端决定频率、退避和何时重试；若需续传，由API定义游标或事件ID。 | 实现简单、适合低频更新；短轮询带来请求开销，长轮询占用等待中的请求。 |
 | SSE格式 + `EventSource` API | 服务端向客户端单向发送HTTP `text/event-stream`；EventSource用URL建立GET请求，可选择`withCredentials`。 | EventSource通常会在连接中断后自动重连；服务端可用HTTP 204告知客户端停止重连。带`id:`的事件会在后续重连请求中作为`Last-Event-ID`回传。服务器只有保留可重放的事件历史，才能按该ID续传。 | 适合单向事件；原生EventSource接口没有自定义请求头或请求体，不能把传输断线等同于事件已恢复。 |
 | 流式Fetch / Fetch response stream | 一次Fetch请求在响应有body时提供可逐块读取的`Response.body`；请求可使用API允许的方法、请求头、请求体和取消信号。 | Fetch不会替应用实现SSE式自动重连或重放；应用解析协议帧并定义游标、重试和取消策略。 | 需要自定义请求契约或一次性POST后流式返回时合适；字节块不是消息边界。跨源读取仍受CORS约束。 |
-| WebSocket | 握手后，客户端和服务端都能沿同一连接发送带消息边界的帧。 | 重连、身份过期、事件序号、确认和恢复均由应用协议定义。 | 双向低延迟交互合适；长期连接需要连接生命周期管理。浏览器构造器没有任意请求头参数，握手认证要按浏览器可用契约设计。 |
+| WebSocket | 握手后，客户端和服务端都能沿同一连接发送消息。应用收到的是完整消息，传输层可将一条消息拆成多个帧。 | 重连、身份过期、事件序号、确认和恢复均由应用协议定义。 | 双向低延迟交互合适；长期连接需要连接生命周期管理。浏览器构造器没有任意请求头参数，握手认证要按浏览器可用契约设计。 |
 
 SSE既是`text/event-stream`线格式，也是浏览器EventSource接口的常见后端协议。线格式用UTF-8字段行表示事件，并以空行结束一条事件；常见字段为`event`、`data`、`id`和`retry`。例如：
 
@@ -3633,7 +3633,7 @@ See [how to model an editable component tree](#43.%20How%20should%20a%20low-code
 
 Keep an editable component tree with typed configuration and stable identity. Derive rendering and published output from that schema so editing, validation, and release can each use the representation appropriate to their lifecycle. / 维护带类型配置和稳定身份的可编辑组件树。渲染和发布结果从该结构派生，让编辑、校验和发布可以各自使用适合其生命周期的表示。
 
-### How would you design the data model for a low-code editor?
+### Separate page content from the editing session / 分开页面内容与编辑会话
 
 A page builder can model a document as a component tree, with each node carrying an ID, type, properties, style, and children. The editor can derive its canvas and side panels from that model, then serialize it for persistence.
 
@@ -3649,14 +3649,29 @@ const component = {
 
 Keep document order and visual stacking as explicit concepts. Child order can be one input to rendering, but CSS stacking contexts mean it is not universally equivalent to the final z-order; each stacking context is painted as a unit within its parent context ([CSS 2.2 visual formatting model](https://www.w3.org/TR/CSS22/zindex.html)).
 
+Selection, hover, and panel state belong to the editing session. A selection change can update the inspector without editing the document, saving a draft, or adding an undo step.
+
+~~~javascript
+const editor = {
+  document: { schemaVersion: 1, nodes: [component] },
+  session: { selectedId: null },
+};
+
+function selectComponent(state, id) {
+  return { ...state, session: { ...state.session, selectedId: id } };
+}
+
+const draftJson = JSON.stringify(selectComponent(editor, component.id).document);
+~~~
+
 - **Component registry / 组件注册表**: map a validated component type to its renderer and schema.
 - **Layer order / 图层顺序**: define how siblings are ordered and translate that order into the chosen rendering model.
 - **Undo and redo / 撤销与重做**: store inverse commands or immutable document snapshots; choose based on history size and operation complexity.
 - **Collaboration / 协作**: a WebSocket transports updates, but does not resolve concurrent edits. A server-authoritative order, locks, operational transformation, or a CRDT may fit different conflict and offline requirements.
 
----
+### Publish a validated revision / 发布已校验的修订
 
-[Back to the main question / 返回主问题](#42.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
+Validate a particular document revision against the registry and derive the public output from that revision. Keep the artifact or a versioned rendering recipe tied to its source revision so preview, release, and rollback can refer to the same content. Draft edits and session selections can then continue independently. [Design patterns and change boundaries / 设计模式与变化边界](#42.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F)
 ## 44. How should roles control access to a feature? / 角色怎样控制对功能的访问？
 
 Map roles to permissions and evaluate them for the actual request and resource. A menu can reflect what the user may do, while the service enforces the same policy for each action. / 把角色映射为权限，并针对实际请求与资源评估。界面菜单可以反映用户可执行的操作，服务仍需在每次操作时实施策略。

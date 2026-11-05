@@ -90,7 +90,7 @@ To improve the visibility of your site in search engine results, consider the fo
   ```html
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   ```
-  - A small icon displayed in the browser tab, bookmark list, etc.
+  - The browser can use the icon in its tab or bookmark UI. [HTML Standard on `rel="icon"`](https://html.spec.whatwg.org/multipage/links.html#rel-icon)
 
 ## Commenting in HTML
 

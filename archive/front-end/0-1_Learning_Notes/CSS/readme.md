@@ -3,6 +3,7 @@
 Use the current HTML/CSS notes for the core mechanisms, then consult the focused archive references below for examples that remain useful when maintaining existing projects. / 核心机制请阅读当前 HTML/CSS 笔记；维护已有项目时，可再查看下面保留的专题归档示例。
 
 - [HTML and CSS Basics / HTML 与 CSS 基础](../../../../frontend/html-css/html-and-css-basics.md) — selectors, inheritance, units, responsive design, semantics, and text truncation.
+- [Structural pseudo-classes and generated content / 结构伪类与生成内容](css-structural-pseudo-selectors.md)
 - [Box Model and BFC / 盒模型与块格式化上下文](../../../../frontend/html-css/box-model-and-bfc.md) — box sizing, formatting contexts, and margin collapse. The original diagram remains in [the box-model visual note](box-model-visual.md).
 - [Flex & Grid Layout / Flex与Grid布局](../../../../frontend/html-css/flex-and-grid-layout.md) — Flexbox and Grid fundamentals; the archived navbar and ellipsis examples are in [flexbox navigation examples](flexbox-navigation-and-ellipsis-examples.md).
 - [Centering an element of unknown size / 居中尺寸未知的元素](../../../../frontend/html-css/css-interview-questions.md) — in-flow alignment and overlays.

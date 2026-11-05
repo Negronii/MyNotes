@@ -24,7 +24,7 @@ function example() {
 }
 ~~~
 
-let and const belong to the nearest lexical block, including if, switch, loops, and a standalone brace block. Their bindings are established with the block but remain in the Temporal Dead Zone until declaration evaluation. The precise description is not “they are never hoisted”; it is that they cannot be accessed before initialization. / let 和 const 属于最近的词法块，包括 if、switch、循环和独立代码块。进入代码块时绑定已经建立，但在声明执行前仍处于暂时性死区。准确说法不是“它们不会提升”，而是初始化前不能访问。
+let and const belong to the nearest lexical block, including if, switch, loops, and a standalone brace block. Their bindings are established with the block but remain in the Temporal Dead Zone until declaration evaluation. The precise description is not “they are never hoisted”; it is that they cannot be accessed before initialization. / let 和 const 属于最近的词法块，包括 if、switch、循环和独立代码块。进入代码块时绑定已经建立，但在声明执行前仍处于暂时性死区。准确说法不是“它们不会提升”，而是初始化前不能访问。 See MDN’s [let reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let) for the temporal-dead-zone behavior.
 
 ~~~javascript
 {
@@ -39,4 +39,18 @@ settings.theme = "dark"; // allowed: the object can still mutate
 
 At the top level, a classic browser script, an ES module, and a Node module have different environments. In a classic browser script, global var can create a property on the global object, while top-level let and const create global lexical bindings instead. Do not apply that script behavior to modules. / 经典浏览器脚本、ES 模块和 Node 模块的顶层环境不同。在经典浏览器脚本中，全局 var 可在全局对象上创建属性；顶层 let 和 const 则创建全局词法绑定。不要把脚本行为套用到模块。
 
-The declaration and environment rules are defined by the [ECMAScript specification](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html), including [module environment records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records). For how outer lexical environments form the name-lookup chain and how a closure continues to access a binding, see [Scope and Closure / 作用域与闭包](./scope-and-closure.md).
+Across hosts, globalThis refers to the current global object. A browser window normally provides window on the main thread, while workers have their own global object. In a classic browser script, the difference between global var and lexical bindings is observable through window: / 跨宿主访问当前全局对象时可使用 globalThis。浏览器主线程通常提供 window，worker 则有自己的全局对象。在经典浏览器脚本中，可通过 window 观察全局 var 与词法绑定的区别：
+
+~~~html
+<script>
+  var scriptVar = 'global object property';
+  let scriptBinding = 'global lexical binding';
+
+  console.log(window.scriptVar);     // 'global object property'
+  console.log(window.scriptBinding); // undefined
+</script>
+~~~
+
+See MDN on the [global object](https://developer.mozilla.org/en-US/docs/Glossary/Global_object) for the host boundary.
+
+The binding rules for var, let, and const are specified in [ECMAScript statements and declarations](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html); the environment model, including [module environment records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records), is described in [ECMAScript execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html). For how outer lexical environments form the name-lookup chain and how a closure continues to access a binding, see [Scope and Closure / 作用域与闭包](./scope-and-closure.md). / var、let、const 的绑定规则见 [ECMAScript 语句与声明](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html)；包括[模块环境记录](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records)在内的环境模型见 [ECMAScript 执行上下文](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html)。外层词法环境如何形成名称查找链、闭包如何继续访问绑定，见[作用域与闭包](./scope-and-closure.md)。

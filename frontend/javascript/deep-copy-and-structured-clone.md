@@ -8,7 +8,7 @@ Choose a copy policy from the value's data model. JSON round-tripping only suppo
 
 ## A bounded handwritten clone / 有限范围的手写克隆
 
-This example supports same-realm `Date`, `RegExp`, `Map`, `Set`, arrays, and plain objects with enumerable own string keys. It preserves sparse array holes, cycles, and repeated references. It deliberately rejects arbitrary prototypes and does not preserve symbols, descriptors, accessors, or custom properties on special built-ins.
+This example supports same-realm `Date`, `RegExp`, `Map`, `Set`, arrays, and plain objects with enumerable own string keys. It preserves sparse array holes, cycles, and repeated references. It deliberately rejects arbitrary prototypes and does not preserve symbols, descriptors, accessors, or custom properties on special built-ins. `Date.prototype.getTime()` supplies the time value copied by this branch; see the [ECMAScript definition](https://tc39.es/ecma262/2025/multipage/numbers-and-dates.html#sec-date.prototype.gettime). / `Date.prototype.getTime()` 提供此分支复制的时间值，详见 [ECMAScript 定义](https://tc39.es/ecma262/2025/multipage/numbers-and-dates.html#sec-date.prototype.gettime)。
 
 ~~~javascript
 function deepCopy(value, seen = new WeakMap()) {

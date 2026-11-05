@@ -103,6 +103,8 @@ export default store;
 
 Middleware provides a third-party extension point between dispatching an action and the moment it reaches the reducer. It can be used for logging, crash reporting, or handling asynchronous actions.
 
+For a plain action that reaches the core store, `dispatch` calls the reducer synchronously and saves the new state before returning. Middleware can intercept a thunk, wait for I/O, and dispatch a result action later. Add a separate work queue when the application needs explicit ordering or backpressure across asynchronous jobs. [Redux Store API](https://redux.js.org/api/store)
+
 Redux Toolkit's default middleware already includes thunk. Configure additional middleware by extending that list; do not replace the defaults just to add one middleware:
 
 ```tsx

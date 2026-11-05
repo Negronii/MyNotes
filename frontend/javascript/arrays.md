@@ -2,6 +2,25 @@
 
 **Core answer / 核心回答：** Choose an array operation by whether it reads values or keys, skips holes, mutates the receiver, consumes an iterator, or makes a shallow copy. These details affect the result even when two operations look like equivalent ways to “loop” or “copy.” / 选择数组操作时要看它遍历值还是键、是否跳过空位、是否修改原数组、是否消费迭代器，以及是否只做浅拷贝。即使两个操作看起来都在“遍历”或“复制”，细节也会影响结果。
 
+## How can an array be deduplicated? / 如何对数组去重？
+
+For primitive values, `[...new Set(values)]` keeps the first occurrence in iteration order. Set uses SameValueZero; see [Map and Set / JavaScript 中的 Map 与 Set](./map-and-set.md) for the equality rule and its limits. Objects compare by identity, so two different objects with the same fields remain distinct. / 对原始值，`[...new Set(values)]` 按迭代顺序保留首次出现的值。Set 使用 SameValueZero；相等规则及其边界见[Map 与 Set](./map-and-set.md)。对象按身份比较，因此字段相同但引用不同的对象仍会保留。
+
+~~~javascript
+[...new Set([1, 1, NaN, NaN, -0, +0])]; // [1, NaN, 0]
+[...new Set([{ id: 1 }, { id: 1 }])].length; // 2: distinct references
+~~~
+
+For object deduplication by a field, a Map is concise. The last value for an id wins, while the key retains the order of its first insertion. / 按对象字段去重时可用 Map。相同 id 的最后一个对象胜出，但键的遍历位置按首次插入顺序保留。
+
+~~~javascript
+function uniqueById(items) {
+  const byId = new Map();
+  for (const item of items) byId.set(item.id, item);
+  return [...byId.values()];
+}
+~~~
+
 ## Should I iterate keys or values? / 应遍历键还是值？
 
 Use for...of for values from an iterable. Use for...in only when enumerating property names, usually on a plain object. A normal dense array’s own index keys are visited in ascending order, but for...in can also include custom and inherited enumerable string properties. / 用 for...of 遍历可迭代对象的值。for...in 用于枚举属性名，通常用于普通对象。普通稠密数组的自有索引键按升序访问，但 for...in 也可能包含自定义及继承的可枚举字符串属性。
@@ -28,7 +47,7 @@ See the [ECMAScript for-in/for-of rules](https://tc39.es/ecma262/2025/multipage/
 - some and every stop when the answer is known; both skip holes. On an empty array, some is false and every is true.
 - reduce folds present elements and skips holes. Supply an initial value when the empty-array case needs a defined result.
 - concat returns a shallow new array and can consult Symbol.isConcatSpreadable. Spread syntax instead follows the iterable protocol.
-- sort and reverse mutate the receiver; ES2023 toSorted and toReversed return copies. Sorting is stable since ES2019. Default sort compares string forms, not numeric values.
+- sort and reverse mutate the receiver; ES2023 toSorted and toReversed return copies. Sorting is stable since ES2019. Default sort compares string forms, not numeric values. The normative [Array.prototype.sort algorithm](https://tc39.es/ecma262/2025/multipage/indexed-collections.html#sec-array.prototype.sort) defines the default comparison and stability behavior.
 
 ~~~javascript
 [1, 11, 2].sort(); // [1, 11, 2]: string ordering

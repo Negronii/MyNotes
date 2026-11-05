@@ -31,4 +31,6 @@ Object.hasOwn(options, "enabled"); // true
 
 structuredClone is exposed by browsers and current Node releases, but it does not preserve custom class prototypes or clone functions; unsupported values can throw DataCloneError. Do not assume it is faster than another copying method. See the [HTML structured clone algorithm](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) and [Node global API](https://nodejs.org/api/globals.html#structuredclonevalue-options). Sources checked 2026-10-15. / structuredClone 可由浏览器和当前 Node 版本使用，但不会保留自定义类原型或复制函数；不支持的值可能抛出 DataCloneError。不要假设它必然比其他复制方法快。见 [HTML 结构化克隆算法](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) 与 [Node 全局 API](https://nodejs.org/api/globals.html#structuredclonevalue-options)。来源核对日期：2026-10-15。
 
+For edition-specific language features, see the [ECMAScript 2025 specification](https://tc39.es/ecma262/2025/). / 版本相关语言特性见 [ECMAScript 2025 规范](https://tc39.es/ecma262/2025/)。
+
 **See also:** [Optional Chaining and Destructuring / 可选链与解构](./optional-chaining-and-destructuring.md) explains syntax semantics; [Modules and Host Boundaries / 模块与宿主边界](./modules-and-host-boundaries.md) explains ESM and CommonJS; [Object and Array Methods / 对象与数组方法](./es6-new-methods.md) covers property-copying and enumeration behavior.

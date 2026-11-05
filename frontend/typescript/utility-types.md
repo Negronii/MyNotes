@@ -13,6 +13,7 @@
 | NonNullable<T> | Removes null and undefined / 移除 null 和 undefined |
 | ReturnType<F> / Parameters<F> | Extracts a function return type or parameter tuple / 提取返回类型或参数元组 |
 | InstanceType<C> / ConstructorParameters<C> | Extracts a class instance type or constructor parameter tuple / 提取类实例类型或构造参数元组 |
+| ThisType<T> | Contextual `this` type marker for object-literal methods; it does not change runtime values / 对象字面量方法的上下文 `this` 类型标记；不改变运行时值 |
 
 ~~~typescript
 interface User {
@@ -33,3 +34,36 @@ const permissions: Record<Role, string[]> = {
 ~~~
 
 UserPatch expresses an allowed shape to the checker; runtime code still needs to validate parsed JSON. For that boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](./advanced-typescript.md). See the [TypeScript Utility Types reference](https://www.typescriptlang.org/docs/handbook/utility-types.html).
+
+## How does ThisType contextually type this? / ThisType 如何提供 this 的上下文类型？
+
+`ThisType<T>` is a contextual-typing marker for `this` inside object-literal methods. It does not add a property or bind a runtime receiver, and the check depends on `noImplicitThis`. An explicit `this: Person` parameter is a separate compile-time receiver annotation. / `ThisType<T>` 是对象字面量方法中 `this` 的上下文类型标记。它不会添加属性或绑定运行时接收者，相关检查依赖 `noImplicitThis`。显式的 `this: Person` 参数则是另一种编译期接收者注解。
+
+~~~typescript
+type ObjectDescriptor<Data, Methods> = {
+  data: Data;
+  methods: Methods & ThisType<Data & Methods>;
+};
+
+function makeObject<Data, Methods>(descriptor: ObjectDescriptor<Data, Methods>): Data & Methods {
+  return { ...descriptor.data, ...descriptor.methods };
+}
+
+const counter = makeObject({
+  data: { value: 0 },
+  methods: { increment() { this.value += 1; } }
+});
+counter.increment(); // this.value is contextually typed as number
+~~~
+
+~~~typescript
+interface Person {
+  name: string;
+  greet(this: Person): void;
+}
+
+const person: Person = {
+  name: "Ada",
+  greet() { console.log(this.name); }
+};
+~~~

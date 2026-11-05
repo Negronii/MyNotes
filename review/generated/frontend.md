@@ -28,7 +28,7 @@ function example() {
 }
 ~~~
 
-let and const belong to the nearest lexical block, including if, switch, loops, and a standalone brace block. Their bindings are established with the block but remain in the Temporal Dead Zone until declaration evaluation. The precise description is not “they are never hoisted”; it is that they cannot be accessed before initialization. / let 和 const 属于最近的词法块，包括 if、switch、循环和独立代码块。进入代码块时绑定已经建立，但在声明执行前仍处于暂时性死区。准确说法不是“它们不会提升”，而是初始化前不能访问。
+let and const belong to the nearest lexical block, including if, switch, loops, and a standalone brace block. Their bindings are established with the block but remain in the Temporal Dead Zone until declaration evaluation. The precise description is not “they are never hoisted”; it is that they cannot be accessed before initialization. / let 和 const 属于最近的词法块，包括 if、switch、循环和独立代码块。进入代码块时绑定已经建立，但在声明执行前仍处于暂时性死区。准确说法不是“它们不会提升”，而是初始化前不能访问。 See MDN’s [let reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let) for the temporal-dead-zone behavior.
 
 ~~~javascript
 {
@@ -43,7 +43,21 @@ settings.theme = "dark"; // allowed: the object can still mutate
 
 At the top level, a classic browser script, an ES module, and a Node module have different environments. In a classic browser script, global var can create a property on the global object, while top-level let and const create global lexical bindings instead. Do not apply that script behavior to modules. / 经典浏览器脚本、ES 模块和 Node 模块的顶层环境不同。在经典浏览器脚本中，全局 var 可在全局对象上创建属性；顶层 let 和 const 则创建全局词法绑定。不要把脚本行为套用到模块。
 
-The declaration and environment rules are defined by the [ECMAScript specification](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html), including [module environment records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records). For how outer lexical environments form the name-lookup chain and how a closure continues to access a binding, see [Scope and Closure / 作用域与闭包](#15.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F).
+Across hosts, globalThis refers to the current global object. A browser window normally provides window on the main thread, while workers have their own global object. In a classic browser script, the difference between global var and lexical bindings is observable through window: / 跨宿主访问当前全局对象时可使用 globalThis。浏览器主线程通常提供 window，worker 则有自己的全局对象。在经典浏览器脚本中，可通过 window 观察全局 var 与词法绑定的区别：
+
+~~~html
+<script>
+  var scriptVar = 'global object property';
+  let scriptBinding = 'global lexical binding';
+
+  console.log(window.scriptVar);     // 'global object property'
+  console.log(window.scriptBinding); // undefined
+</script>
+~~~
+
+See MDN on the [global object](https://developer.mozilla.org/en-US/docs/Glossary/Global_object) for the host boundary.
+
+The binding rules for var, let, and const are specified in [ECMAScript statements and declarations](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html); the environment model, including [module environment records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records), is described in [ECMAScript execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html). For how outer lexical environments form the name-lookup chain and how a closure continues to access a binding, see [Scope and Closure / 作用域与闭包](#15.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F). / var、let、const 的绑定规则见 [ECMAScript 语句与声明](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html)；包括[模块环境记录](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records)在内的环境模型见 [ECMAScript 执行上下文](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html)。外层词法环境如何形成名称查找链、闭包如何继续访问绑定，见[作用域与闭包](#15.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F)。
 ## 2. How do JavaScript values convert, compare, and become property keys? / JavaScript 值如何转换、比较并成为属性键？
 
 **Core answer / 核心回答：** JavaScript has seven primitive types; all other values are objects, including functions. Conversions are operation-specific, equality operators use different rules, and ordinary object properties accept only strings or symbols after key conversion. Objects assigned to variables retain identity rather than being copied. / JavaScript 有七种原始类型，其余值都是对象，包括函数。转换取决于具体操作，相等运算符采用不同规则，普通对象属性键经过转换后只能是字符串或 Symbol。赋值对象时保留的是身份，不是对象副本。
@@ -60,6 +74,8 @@ The declaration and environment rules are defined by the [ECMAScript specificati
 | string | Immutable sequence of UTF-16 code units / 不可变的 UTF-16 码元序列 |
 | symbol | Unique primitive value, often used as a property key / 唯一原始值，常用作属性键 |
 
+
+These value categories are specified in [ECMAScript types and values](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html). / 类型和值定义见 [ECMAScript 类型和值规范](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html)。
 Whether an engine stores values on a stack, heap, or elsewhere is an implementation detail. “Reference type” is useful shorthand for object identity and assignment, not a physical memory guarantee. / 值在栈、堆或其他位置存储属于引擎实现细节。“引用类型”适合描述对象身份和赋值语义，不是物理内存保证。
 
 ### Truthiness is not numeric conversion / 真值转换不等于数值转换
@@ -92,6 +108,8 @@ See [React conditional rendering](https://react.dev/learn/conditional-rendering)
 ### How equality rules differ / 相等比较规则有何差别
 
 Strict equality === does not coerce across different types. Loose equality == follows several conversion rules, including the special null == undefined case; it is not simply “convert both sides to the same type.” Prefer === unless coercion is intentional. For ordinary values, value == null intentionally tests both null and undefined. / 严格相等 === 不会在不同类型间转换。宽松相等 == 遵循多条转换规则，包括 null == undefined 这一特殊情况；它并非简单地“把双方转成相同类型”。除非有意依赖转换，否则优先使用 ===。对普通值而言，value == null 可有意同时判断 null 和 undefined。
+
+The normative equality and coercion operations are in [ECMAScript abstract operations](https://tc39.es/ecma262/2025/multipage/abstract-operations.html). / 规范的相等与转换操作见 [ECMAScript 抽象操作](https://tc39.es/ecma262/2025/multipage/abstract-operations.html)。
 
 | Comparison / 比较 | NaN with itself / NaN 自身比较 | +0 with -0 / 有符号零比较 | Object values / 对象值 |
 |---|---|---|---|
@@ -135,6 +153,22 @@ b.x; // { n: 2 }
 
 The left side captures the original object before the right side reassigns a. The final write still targets that captured original object, now also named b. / 左侧在右侧重新绑定 a 前就记录了旧对象；最终写入仍作用于该旧对象，此时它也由 b 引用。
 
+Function arguments follow the same value rule: a parameter receives a copy of its argument value. When that value is an object reference, property mutation is visible through the caller’s reference, but assigning a different object to the parameter does not reassign the caller’s binding. / 函数实参同样按值传递：形参接收实参值的副本。若该值是对象引用，修改属性可通过调用方的引用观察到；但把形参重新赋为另一个对象不会重新绑定调用方变量。
+
+~~~javascript
+function update(count, profile) {
+  count += 1;
+  profile.name = "Grace";
+  profile = { name: "Replacement" };
+}
+
+let count = 1;
+const profile = { name: "Ada" };
+update(count, profile);
+count;        // 1: the primitive argument value was copied
+profile.name; // "Grace": the object reference value was copied
+~~~
+
 ### How to check a value’s type / 如何判断值的类型
 
 - typeof is useful for primitives and functions, with the historical null result shown above.
@@ -150,11 +184,13 @@ const custom = { [Symbol.toStringTag]: "Array" };
 Object.prototype.toString.call(custom); // "[object Array]" — a spoofable tag
 ~~~
 
-Validate the shape or behavior the program actually requires instead of relying on a generic display string. The normative [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance) algorithm describes the default instanceof rule. / 应按程序实际需要验证结构或行为，不要只依赖通用显示字符串。默认 instanceof 规则见规范的 [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance)。
+Validate the shape or behavior the program actually requires instead of relying on a generic display string. The normative [Object.prototype.toString](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring) algorithm defines the built-in tag operation; the normative [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance) algorithm describes the default instanceof rule. / 应按程序实际需要验证结构或行为，不要只依赖通用显示字符串。规范的 [Object.prototype.toString](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring) 算法定义内置标签操作；[OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance) 描述默认 instanceof 规则。
 
 ### How bracket notation converts object keys / 方括号属性如何转换键
 
 An ordinary property key is a string or a symbol. When another value is used inside brackets, JavaScript applies ToPropertyKey; an object can run Symbol.toPrimitive or other conversion hooks before producing a string or symbol. It is not accurate to say every key simply calls toString(). / 普通属性键是字符串或 Symbol。方括号中使用其他值时，JavaScript 执行 ToPropertyKey；对象可在生成字符串或 Symbol 前运行 Symbol.toPrimitive 等转换钩子。不能简单说所有键都会直接调用 toString()。
+
+The [ToPropertyKey abstract operation](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey) defines this conversion. / [ToPropertyKey 抽象操作](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey)定义了这一转换。
 
 ~~~javascript
 const record = {};
@@ -307,6 +343,25 @@ The [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-
 
 **Core answer / 核心回答：** Choose an array operation by whether it reads values or keys, skips holes, mutates the receiver, consumes an iterator, or makes a shallow copy. These details affect the result even when two operations look like equivalent ways to “loop” or “copy.” / 选择数组操作时要看它遍历值还是键、是否跳过空位、是否修改原数组、是否消费迭代器，以及是否只做浅拷贝。即使两个操作看起来都在“遍历”或“复制”，细节也会影响结果。
 
+### How can an array be deduplicated? / 如何对数组去重？
+
+For primitive values, `[...new Set(values)]` keeps the first occurrence in iteration order. Set uses SameValueZero; see [Map and Set / JavaScript 中的 Map 与 Set](#3.%20When%20should%20I%20use%20Map,%20Set,%20or%20an%20object?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F) for the equality rule and its limits. Objects compare by identity, so two different objects with the same fields remain distinct. / 对原始值，`[...new Set(values)]` 按迭代顺序保留首次出现的值。Set 使用 SameValueZero；相等规则及其边界见[Map 与 Set](#3.%20When%20should%20I%20use%20Map,%20Set,%20or%20an%20object?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。对象按身份比较，因此字段相同但引用不同的对象仍会保留。
+
+~~~javascript
+[...new Set([1, 1, NaN, NaN, -0, +0])]; // [1, NaN, 0]
+[...new Set([{ id: 1 }, { id: 1 }])].length; // 2: distinct references
+~~~
+
+For object deduplication by a field, a Map is concise. The last value for an id wins, while the key retains the order of its first insertion. / 按对象字段去重时可用 Map。相同 id 的最后一个对象胜出，但键的遍历位置按首次插入顺序保留。
+
+~~~javascript
+function uniqueById(items) {
+  const byId = new Map();
+  for (const item of items) byId.set(item.id, item);
+  return [...byId.values()];
+}
+~~~
+
 ### Should I iterate keys or values? / 应遍历键还是值？
 
 Use for...of for values from an iterable. Use for...in only when enumerating property names, usually on a plain object. A normal dense array’s own index keys are visited in ascending order, but for...in can also include custom and inherited enumerable string properties. / 用 for...of 遍历可迭代对象的值。for...in 用于枚举属性名，通常用于普通对象。普通稠密数组的自有索引键按升序访问，但 for...in 也可能包含自定义及继承的可枚举字符串属性。
@@ -333,7 +388,7 @@ See the [ECMAScript for-in/for-of rules](https://tc39.es/ecma262/2025/multipage/
 - some and every stop when the answer is known; both skip holes. On an empty array, some is false and every is true.
 - reduce folds present elements and skips holes. Supply an initial value when the empty-array case needs a defined result.
 - concat returns a shallow new array and can consult Symbol.isConcatSpreadable. Spread syntax instead follows the iterable protocol.
-- sort and reverse mutate the receiver; ES2023 toSorted and toReversed return copies. Sorting is stable since ES2019. Default sort compares string forms, not numeric values.
+- sort and reverse mutate the receiver; ES2023 toSorted and toReversed return copies. Sorting is stable since ES2019. Default sort compares string forms, not numeric values. The normative [Array.prototype.sort algorithm](https://tc39.es/ecma262/2025/multipage/indexed-collections.html#sec-array.prototype.sort) defines the default comparison and stability behavior.
 
 ~~~javascript
 [1, 11, 2].sort(); // [1, 11, 2]: string ordering
@@ -517,6 +572,8 @@ Object.hasOwn(options, "enabled"); // true
 ~~~
 
 structuredClone is exposed by browsers and current Node releases, but it does not preserve custom class prototypes or clone functions; unsupported values can throw DataCloneError. Do not assume it is faster than another copying method. See the [HTML structured clone algorithm](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) and [Node global API](https://nodejs.org/api/globals.html#structuredclonevalue-options). Sources checked 2026-10-15. / structuredClone 可由浏览器和当前 Node 版本使用，但不会保留自定义类原型或复制函数；不支持的值可能抛出 DataCloneError。不要假设它必然比其他复制方法快。见 [HTML 结构化克隆算法](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) 与 [Node 全局 API](https://nodejs.org/api/globals.html#structuredclonevalue-options)。来源核对日期：2026-10-15。
+
+For edition-specific language features, see the [ECMAScript 2025 specification](https://tc39.es/ecma262/2025/). / 版本相关语言特性见 [ECMAScript 2025 规范](https://tc39.es/ecma262/2025/)。
 
 **See also:** [Optional Chaining and Destructuring / 可选链与解构](#9.%20How%20do%20optional%20access%20and%20destructuring%20handle%20missing%20values?%20/%20%E5%8F%AF%E9%80%89%E8%AE%BF%E9%97%AE%E5%92%8C%E8%A7%A3%E6%9E%84%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%BC%BA%E5%A4%B1%E5%80%BC%EF%BC%9F) explains syntax semantics; [Modules and Host Boundaries / 模块与宿主边界](#10.%20How%20do%20ECMAScript%20modules%20and%20CommonJS%20differ?%20/%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%20%E6%9C%89%E4%BD%95%E5%8C%BA%E5%88%AB%EF%BC%9F) explains ESM and CommonJS; [Object and Array Methods / 对象与数组方法](#6.%20How%20do%20Object%20and%20Array%20helper%20APIs%20copy%20or%20enumerate%20data?%20/%20Object%20%E4%B8%8E%20Array%20%E8%BE%85%E5%8A%A9%E6%96%B9%E6%B3%95%E5%A6%82%E4%BD%95%E5%A4%8D%E5%88%B6%E6%88%96%E6%9E%9A%E4%B8%BE%E6%95%B0%E6%8D%AE%EF%BC%9F) covers property-copying and enumeration behavior.
 ## 9. How do optional access and destructuring handle missing values? / 可选访问和解构如何处理缺失值？
@@ -775,6 +832,18 @@ const counter = {
 };
 ~~~
 
+A host API can supply a receiver when it invokes a callback. The DOM calls an ordinary event listener with this set to event.currentTarget; an arrow keeps its surrounding this, so use the event property explicitly. See the [WHATWG DOM listener-invocation algorithm](https://dom.spec.whatwg.org/#concept-event-listener-invoke) and [DOM event propagation / DOM 事件传播](#47.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) for the surrounding event contract. / 宿主 API 调用回调时也可提供接收者。DOM 调用普通事件监听器时会把 this 设为 event.currentTarget；箭头函数保留外层 this，因此应显式读取事件属性。详见 [WHATWG DOM 监听器调用算法](https://dom.spec.whatwg.org/#concept-event-listener-invoke)及 [DOM 事件传播](#47.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)中的相关契约。
+
+~~~javascript
+const button = document.querySelector("button"); // assume a button exists
+button.addEventListener("click", function (event) {
+  this === event.currentTarget; // true
+});
+button.addEventListener("click", event => {
+  event.currentTarget === button; // true: arrow this is not the listener receiver
+});
+~~~
+
 Lexical name lookup and lexical this are separate ideas: closures capture outer bindings, while an ordinary function’s this depends on its invocation. See [Scope and Closure / 作用域与闭包](#15.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F).
 
 ### Why a small bind helper is not a polyfill / 简化 bind 模型为何不是 polyfill
@@ -807,7 +876,7 @@ function callWithObjectReceiver(fn, receiver, ...args) {
 }
 ~~~
 
-Ordinary function call behavior is specified by ECMAScript’s [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call), [bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind), and arrow-function definitions. / 普通函数调用行为见 ECMAScript 的 [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call)、[bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind) 和箭头函数定义。
+Ordinary function call behavior is specified by ECMAScript’s [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call), [Function.prototype.apply](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.apply), [Function.prototype.bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind), and [arrow-function definitions](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions). / 普通函数调用行为见 ECMAScript 的 [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call)、[Function.prototype.apply](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.apply)、[Function.prototype.bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind) 和[箭头函数定义](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions)。
 ## 13. What does new do when it constructs an object? / new 构造对象时做了什么？
 
 **Core answer / 核心回答：** For a constructible function, new creates a receiver whose prototype comes from the constructor’s effective prototype, calls the constructor with that receiver as this, then returns an explicit object or function result if supplied. A primitive return is ignored. / 对可构造函数，new 会创建一个原型取自构造函数有效 prototype 的接收者，以它作为 this 调用构造函数；若构造函数显式返回对象或函数，则返回该值，否则返回新接收者。原始值返回会被忽略。
@@ -873,7 +942,17 @@ function emulateNew(fn, ...args) {
 }
 ~~~
 
-Classes and built-in constructors have additional construction semantics, so use new or class syntax in application code rather than this teaching helper. For property lookup and the roles of instance, prototype, and static members, see [Objects and Prototypes / 对象与原型](#11.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F).
+The helper also models a function-valued prototype, because functions are objects and are accepted as prototype objects by Object.create and the constructor operation. / 该辅助函数也能处理函数类型的 prototype，因为函数是对象，Object.create 与构造算法都接受函数作为原型对象。
+
+~~~javascript
+function CallablePrototype() {}
+function Example() {}
+Example.prototype = CallablePrototype;
+const example = emulateNew(Example);
+Object.getPrototypeOf(example) === CallablePrototype; // true
+~~~
+
+Class constructors have semantics beyond ordinary functions, including restrictions on how they are called; see the [ECMAScript class-definition rules](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions). Built-in constructors also have additional construction semantics, so use new or class syntax in application code rather than this teaching helper. For property lookup and the roles of instance, prototype, and static members, see [Objects and Prototypes / 对象与原型](#11.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F). / class 构造器拥有普通函数所没有的语义，包括调用方式限制；详见 [ECMAScript 类定义规则](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions)。内置构造器也有额外构造语义，因此应用代码应使用 new 或 class 语法，而不是此教学辅助函数。属性查找及实例、原型、静态成员的作用见[对象与原型](#11.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F)。
 ## 14. How does JavaScript Proxy intercept object operations? / JavaScript Proxy 如何拦截对象操作？
 
 **Core answer / 核心回答：** A Proxy pairs a target object with a handler. When code operates through the proxy, matching handler traps can intercept reads, writes, deletion, membership checks, and other operations; Reflect methods forward an operation with its normal semantics. Proxy is a JavaScript runtime feature, not a TypeScript type feature. / Proxy 将目标对象与 handler 配对。代码通过代理执行操作时，对应 trap 可拦截读取、写入、删除、成员检查等行为；Reflect 方法可按正常语义转发操作。Proxy 是 JavaScript 运行时功能，不是 TypeScript 类型特性。
@@ -910,6 +989,8 @@ See [ECMAScript Proxy objects](https://tc39.es/ecma262/2025/multipage/proxy-obje
 
 An identifier lookup starts in the current lexical environment and continues through its enclosing environments. The caller’s local variables are not inserted into a function’s lookup chain. Execution contexts and lexical environment records are the specification model for this behavior; engines need not allocate objects with those exact names or shapes. / 标识符先在当前词法环境中查找，再逐层向外查找。调用者的局部变量不会插入被调用函数的查找链。执行上下文和词法环境记录是规范描述这种行为的模型；引擎不必创建名称和结构完全相同的对象。
 
+See the [ECMAScript execution-context and environment-record specification](https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html). / 详见 [ECMAScript 执行上下文与环境记录规范](https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html)。
+
 ~~~javascript
 const label = "global";
 
@@ -941,7 +1022,7 @@ flowchart LR
 
 ### What a closure retains / 闭包保留了什么
 
-A closure is a function together with its access to the lexical bindings it uses. It does not copy the value present when the function was created. / 闭包是函数及其对所用词法绑定的访问能力；创建函数时的值不会被定格为一份副本。
+A closure is a function together with its access to the lexical bindings it uses. It does not copy the value present when the function was created. / 闭包是函数及其对所用词法绑定的访问能力；创建函数时的值不会被定格为一份副本。 MDN’s [closure guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures) demonstrates this behavior. / MDN 的[闭包指南](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures)展示了这一行为。
 
 ~~~javascript
 function makeReader() {
@@ -980,11 +1061,18 @@ function multiplyBy(factor) {
   return number => number * factor;
 }
 const double = multiplyBy(2);
+const triple = multiplyBy(3);
 double(5); // 10
+triple(5); // 15
 
-function attachLogger(element, label) {
-  element.addEventListener("click", () => console.log("Clicked: " + label));
+function attachLogger(elementId, label) {
+  document.getElementById(elementId).addEventListener("click", () => {
+    console.log("Clicked: " + label);
+  });
 }
+
+attachLogger("btn1", "primary");
+attachLogger("btn2", "secondary");
 ~~~
 
 ### Why loop callbacks differ / 循环回调为什么读到不同值
@@ -1018,12 +1106,27 @@ callbacks.map(fn => fn()); // [0, 1, 2]
 
 An outer call returning does not make a captured binding immediately unusable. As long as a reachable closure can observe it, the program must preserve the behavior. This does not mean every variable in the entire outer scope must occupy memory forever; implementations can optimize unobservable values. / 外层调用返回并不意味着捕获的绑定立即失效。只要可达闭包仍能观察它，程序就必须保留可观察行为；但这不表示外层作用域中的所有变量都必然永久占用内存，引擎可以优化不可观察的值。
 
-Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](#26.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F)。
+Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; MDN discusses [closure performance considerations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#performance_considerations); the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](#26.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F)。
 
 **See also:** [JavaScript Basics / JavaScript 基础](#1.%20How%20do%20var,%20let,%20and%20const%20differ?%20/%20var%E3%80%81let%20%E4%B8%8E%20const%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) explains the binding and temporal-dead-zone rules that determine which environment a closure can capture. Ordinary function this is determined by call form, not lexical name lookup; see [Function this and Binding / 函数 this 与绑定](#12.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
 ## 16. How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？
 
 **Core answer / 核心回答：** A callback gives an API a function to call later. A Promise represents one future fulfillment or rejection and composes with then and catch. An async function returns a Promise, while await writes the same control flow in sequential syntax. Promise combinators coordinate already-started work; they do not cancel it. / 回调把函数交给 API 供其稍后调用。Promise 表示未来的一次成功或拒绝，并可通过 then 和 catch 组合。async 函数返回 Promise，await 用顺序语法表达同一控制流。Promise 组合方法协调已经启动的任务，但不会取消它们。
+
+
+### How callbacks express deferred work / 回调如何表达延后执行
+
+A callback passes a function to an API to be called later. Dependent callback nesting can make control flow and error paths hard to follow; callbacks still fit event handlers and many host APIs. / 回调把函数交给 API，供其稍后调用。若任务相互依赖，层层嵌套会让控制流和错误路径难以跟踪；事件处理器和许多宿主 API 仍适合用回调。
+
+~~~javascript
+readUser(userId, (error, user) => {
+  if (error) return handle(error);
+  readOrders(user.id, (error, orders) => {
+    if (error) return handle(error);
+    renderOrders(orders);
+  });
+});
+~~~
 
 Promises were standardized in ES2015, async functions and await in ES2017, and async iteration in ES2018. Asynchronous APIs allow a program to continue while work is pending; that does not by itself imply parallel JavaScript computation. / Promise 于 ES2015 标准化，async 函数与 await 于 ES2017 标准化，异步迭代于 ES2018 标准化。异步 API 让程序在等待任务时继续推进，但这本身不表示 JavaScript 计算并行执行。
 
@@ -1197,6 +1300,8 @@ For standard Promise composition, rejection propagation, and concurrency, see [A
 
 The iterable protocol exposes Symbol.iterator, which returns an iterator. The iterator’s next() method returns an object. The consumer converts its done property to Boolean; if done is missing, it acts as false. value supplies the current item and can be absent on completion. An object is not iterable just because it has numeric keys or a length. / 可迭代协议通过 Symbol.iterator 返回迭代器。迭代器的 next() 返回对象。消费者把 done 转为布尔值；若缺少 done，按 false 处理。value 提供当前项，完成时可以省略。有数字键或 length 的对象不会自动变成可迭代对象。
 
+The protocol is defined by the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration). / 协议定义见 [ECMAScript 迭代接口](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)。
+
 Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. NodeList is iterable in modern browser DOM implementations, but it is a host API rather than a JavaScript-language collection. Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
 
 ~~~javascript
@@ -1344,6 +1449,19 @@ Before async/await, libraries such as co used a runner to yield Promises from ge
 ### How async iteration differs / 异步迭代有何不同
 
 An async iterable (standardized in ES2018) supplies Symbol.asyncIterator. Each next() call makes its iterator result available asynchronously; for await...of waits for each result in sequence. This suits streams whose next value becomes available over time. A synchronous array of independent Promises is usually clearer with Promise.all. / 异步可迭代对象（ES2018 标准化）通过 Symbol.asyncIterator 提供迭代器，每次 next() 异步提供迭代结果；for await...of 按顺序等待各项，适合后续值逐渐到达的流。同步数组中相互独立的 Promise 通常用 Promise.all 更清晰。
+
+`for await...of` can also consume a synchronous iterable of Promises, awaiting each yielded value before requesting the next one. If the Promises have already started, this preserves input order rather than yielding whichever finishes first. / `for await...of` 也能消费由 Promise 组成的同步可迭代对象；每项完成后才继续请求下一项。即使 Promise 已经启动，结果仍按输入顺序处理，而非按最快完成顺序产出。
+
+~~~javascript
+async function collectInOrder(tasks) {
+  const values = [];
+  for await (const value of tasks) values.push(value);
+  return values;
+}
+
+collectInOrder([Promise.resolve("first"), Promise.resolve("second")])
+  .then(values => console.log(values)); // ["first", "second"]
+~~~
 
 See [Asynchronous JavaScript / 异步 JavaScript](#16.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#26.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F).
 ## 20. Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？
@@ -1550,6 +1668,7 @@ Utility types and generics describe compile-time relationships, not runtime guar
 | NonNullable<T> | Removes null and undefined / 移除 null 和 undefined |
 | ReturnType<F> / Parameters<F> | Extracts a function return type or parameter tuple / 提取返回类型或参数元组 |
 | InstanceType<C> / ConstructorParameters<C> | Extracts a class instance type or constructor parameter tuple / 提取类实例类型或构造参数元组 |
+| ThisType<T> | Contextual `this` type marker for object-literal methods; it does not change runtime values / 对象字面量方法的上下文 `this` 类型标记；不改变运行时值 |
 
 ~~~typescript
 interface User {
@@ -1570,6 +1689,39 @@ const permissions: Record<Role, string[]> = {
 ~~~
 
 UserPatch expresses an allowed shape to the checker; runtime code still needs to validate parsed JSON. For that boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#21.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Utility Types reference](https://www.typescriptlang.org/docs/handbook/utility-types.html).
+
+### How does ThisType contextually type this? / ThisType 如何提供 this 的上下文类型？
+
+`ThisType<T>` is a contextual-typing marker for `this` inside object-literal methods. It does not add a property or bind a runtime receiver, and the check depends on `noImplicitThis`. An explicit `this: Person` parameter is a separate compile-time receiver annotation. / `ThisType<T>` 是对象字面量方法中 `this` 的上下文类型标记。它不会添加属性或绑定运行时接收者，相关检查依赖 `noImplicitThis`。显式的 `this: Person` 参数则是另一种编译期接收者注解。
+
+~~~typescript
+type ObjectDescriptor<Data, Methods> = {
+  data: Data;
+  methods: Methods & ThisType<Data & Methods>;
+};
+
+function makeObject<Data, Methods>(descriptor: ObjectDescriptor<Data, Methods>): Data & Methods {
+  return { ...descriptor.data, ...descriptor.methods };
+}
+
+const counter = makeObject({
+  data: { value: 0 },
+  methods: { increment() { this.value += 1; } }
+});
+counter.increment(); // this.value is contextually typed as number
+~~~
+
+~~~typescript
+interface Person {
+  name: string;
+  greet(this: Person): void;
+}
+
+const person: Person = {
+  name: "Ada",
+  greet() { console.log(this.name); }
+};
+~~~
 ## 23. How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？
 
 **Core answer / 核心回答：** A generic type parameter preserves a relationship between inputs and outputs. TypeScript can infer a parameter from a call, while an extends constraint limits the values it accepts. Use generics when the same logic should preserve specific types across multiple callers. / 泛型参数用于保留输入与输出之间的关系。TypeScript 可从调用中推断类型参数；extends 约束限制可接受的值。当同一逻辑需要为不同调用者保留各自具体类型时，使用泛型。
@@ -1745,7 +1897,7 @@ JavaScript does not promise when memory is reclaimed or require a particular gar
 
 A tracing collector is one implementation strategy: it starts from roots such as globals and active execution state, marks reachable objects, and can reclaim unmarked objects, including unreachable cycles. V8's Orinoco collector is a concrete example with generational, parallel, incremental, and concurrent work; those details can change and are not JavaScript language requirements.
 
-For practical diagnosis, reproduce the same action, compare heap snapshots, and inspect retaining paths. Common leads include an uncleared interval, a listener on a long-lived object, a detached DOM node still referenced by application code, or a closure holding a large value. These patterns are investigation clues, not proof by themselves. Keep a listener, timer, subscription, or cache handle when its lifetime should end earlier than its owner, and release it at that boundary.
+For practical diagnosis, reproduce the same action, compare heap snapshots, and inspect retaining paths. Common leads include an uncleared interval, a listener on a long-lived object, a detached DOM node still referenced by application code, or a closure holding a large value. These patterns are investigation clues, not proof by themselves. Keep a listener, timer, subscription, or cache handle when its lifetime should end earlier than its owner, and release it at that boundary. [Chrome DevTools memory diagnostics](https://developer.chrome.com/docs/devtools/memory-problems)
 
 **See also:** [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#4.%20What%20do%20weak%20collections%20and%20weak%20references%20guarantee?%20/%20%E5%BC%B1%E9%9B%86%E5%90%88%E5%92%8C%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F) covers weak-reference use and nondeterministic cleanup; [How do DOM events propagate?](#47.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) covers listener lifetimes.
 
@@ -3031,7 +3183,7 @@ Choose a copy policy from the value's data model. JSON round-tripping only suppo
 
 ### A bounded handwritten clone / 有限范围的手写克隆
 
-This example supports same-realm `Date`, `RegExp`, `Map`, `Set`, arrays, and plain objects with enumerable own string keys. It preserves sparse array holes, cycles, and repeated references. It deliberately rejects arbitrary prototypes and does not preserve symbols, descriptors, accessors, or custom properties on special built-ins.
+This example supports same-realm `Date`, `RegExp`, `Map`, `Set`, arrays, and plain objects with enumerable own string keys. It preserves sparse array holes, cycles, and repeated references. It deliberately rejects arbitrary prototypes and does not preserve symbols, descriptors, accessors, or custom properties on special built-ins. `Date.prototype.getTime()` supplies the time value copied by this branch; see the [ECMAScript definition](https://tc39.es/ecma262/2025/multipage/numbers-and-dates.html#sec-date.prototype.gettime). / `Date.prototype.getTime()` 提供此分支复制的时间值，详见 [ECMAScript 定义](https://tc39.es/ecma262/2025/multipage/numbers-and-dates.html#sec-date.prototype.gettime)。
 
 ~~~javascript
 function deepCopy(value, seen = new WeakMap()) {
@@ -3206,22 +3358,50 @@ channel.postMessage({ type: "update", payload: { id: 1 } });
 channel.close();
 ~~~
 
-A `SharedWorker` can coordinate connected contexts through ports, but its state is not durable and it needs a client-disconnect policy. It is a good fit only when a shared in-memory worker solves a real coordination problem.
+A `SharedWorker` can coordinate connected contexts through ports. Its state lasts only as long as the worker, and a collection of ports needs a policy for removing stale entries. Use a disconnect message when a page can cooperate, then remove and close the worker's port. / SharedWorker 可以通过端口协调多个页面。状态随 worker 生命周期结束。页面能主动退出时，先发断开消息，worker 再移除并关闭对应端口。
 
 ~~~javascript
-// worker.js — illustrative broadcast; production code must remove disconnected ports.
+// worker.js
 const ports = new Set();
-onconnect = (event) => {
+self.onconnect = (event) => {
   const port = event.ports[0];
   ports.add(port);
+  function dropPort() {
+    ports.delete(port);
+    port.close();
+  }
   port.onmessage = (message) => {
+    if (message.data?.type === "disconnect") {
+      dropPort();
+      return;
+    }
     ports.forEach((other) => {
       if (other !== port) other.postMessage(message.data);
     });
   };
-  port.start();
+  port.onmessageerror = dropPort; // This example closes a port after a decode failure.
 };
 ~~~
+
+~~~javascript
+// Page
+function connect() {
+  const connection = new SharedWorker("./worker.js").port;
+  connection.onmessage = (event) => console.log("Received:", event.data);
+  return connection;
+}
+
+let port = connect();
+window.addEventListener("pagehide", () => {
+  port.postMessage({ type: "disconnect" });
+  port.close();
+});
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) port = connect();
+});
+~~~
+
+`pagehide` is best effort. For abrupt tab exits, expire connections after a bounded period without a reply, and let a resumed client register again. The HTML standard defines `close()` and the `messageerror` event for a deserialization failure. It provides no portable peer-close notification for this cleanup. [HTML Standard on MessagePort and broadcast cleanup](https://html.spec.whatwg.org/multipage/web-messaging.html#broadcasting-to-many-ports)
 
 ### Cross-origin windows / 跨源窗口
 
@@ -4099,14 +4279,32 @@ Other suitable values include a timer ID or an external instance. Do not read or
 **Core answer / 核心回答：** In React 18 and earlier, forwardRef lets a component accept and forward a parent's ref; useImperativeHandle can expose a narrow command API. In React 19, a function component can receive ref as a prop, so forwardRef is no longer necessary for new React 19-only components. / React 18 及更早版本中，forwardRef 让组件接收并转发父组件传入的 ref；useImperativeHandle 可暴露范围较小的命令式 API。React 19 的函数组件可以把 ref 作为 prop 接收，因此仅面向 React 19 的新组件不再需要 forwardRef。
 
 ~~~jsx
-const FancyInput = forwardRef(function FancyInput(props, ref) {
-  return <input {...props} ref={ref} className="fancy" />;
+import { forwardRef, useImperativeHandle, useRef } from "react";
+
+const SearchInput = forwardRef(function SearchInput(props, forwardedRef) {
+  const input = useRef(null);
+  useImperativeHandle(forwardedRef, () => ({
+    focus() {
+      input.current?.focus();
+    }
+  }), []);
+  return <input {...props} ref={input} />;
 });
+
+function SearchForm() {
+  const search = useRef(null);
+  return (
+    <>
+      <SearchInput ref={search} aria-label="Search" />
+      <button type="button" onClick={() => search.current?.focus()}>Focus</button>
+    </>
+  );
+}
 ~~~
 
-Prefer declarative props and callbacks when they express the interaction clearly. Use an imperative ref for cases such as focusing an input or coordinating a third-party widget.
+The parent receives the `focus()` capability and the child retains ownership of its DOM node. React 19 supports receiving `ref` as a prop in the same pattern. [React `useImperativeHandle`](https://react.dev/reference/react/useImperativeHandle)
 
-### What is a custom Hook? / 什么是自定义Hook？
+### Custom Hooks and Effect cleanup / 自定义 Hook 与 Effect 清理
 
 **Core answer / 核心回答：** A custom Hook is a function whose name starts with use and that calls other Hooks at the top level. It packages reusable stateful logic; it does not share one state instance across callers by itself. / 自定义 Hook 是名称以 use 开头、并在顶层调用其他 Hook 的函数。它封装可复用的有状态逻辑；仅仅复用 Hook 本身不会让多个调用共享同一份 state。
 
@@ -4141,9 +4339,25 @@ Ordinary Hooks must be called in the same order on every render, at the top leve
 **Core answer / 核心回答：** Render props pass a function that chooses what to render from data supplied by a component. A higher-order component takes a component and returns a wrapped component. Both remain useful API shapes in some libraries and legacy code; custom Hooks are another way to share logic, not a universal replacement. / render props 通过函数接收组件提供的数据并决定渲染内容。高阶组件接收一个组件并返回包装后的组件。它们仍适用于某些库 API 和旧代码；自定义 Hook 是共享逻辑的另一种方式，并非对二者的通用替代。
 
 ~~~jsx
-<MouseTracker render={({ x, y }) => (
-  <p>Pointer: {x}, {y}</p>
-)} />
+import { useEffect, useState } from "react";
+
+function MouseTracker({ render }) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    function handleMove(event) {
+      setPosition({ x: event.clientX, y: event.clientY });
+    }
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, []);
+
+  return render(position);
+}
+
+function PointerReadout() {
+  return <MouseTracker render={({ x, y }) => <p>Pointer: {x}, {y}</p>} />;
+}
 ~~~
 
 A wrapper component can add authorization or instrumentation, but nested wrappers may make the component tree and prop flow harder to follow. Choose the API that makes ownership and behavior clear.
@@ -4347,7 +4561,7 @@ function useSaveTask() {
 }
 ~~~
 
-The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; [the `useWindowSize` Effect example](#What%20is%20a%20custom%20Hook?%20/%20%E4%BB%80%E4%B9%88%E6%98%AF%E8%87%AA%E5%AE%9A%E4%B9%89Hook%EF%BC%9F) shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#21.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F) for validating API JSON before treating it as a `Task`.
+The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; [the `useWindowSize` Effect example](#Custom%20Hooks%20and%20Effect%20cleanup%20/%20%E8%87%AA%E5%AE%9A%E4%B9%89%20Hook%20%E4%B8%8E%20Effect%20%E6%B8%85%E7%90%86) shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#21.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F) for validating API JSON before treating it as a `Task`.
 
 **Related task / 相关任务：** The [responsive React search question / React搜索响应问题](#62.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) shows how the result view stays responsive while its query key follows the user's inputs. This page explains the cache identity, freshness, optimistic mutation, rollback, and concurrency rules used by that UI. / [React搜索响应问题](#62.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F)说明结果查询如何跟随用户输入、同时保持界面响应；本文说明该界面所需的缓存身份、新鲜度、乐观变更、回滚与并发规则。
 
@@ -4498,6 +4712,8 @@ If the page awaits `getPosts()` before returning this tree, that request cannot 
 **Core answer / 核心回答：** The route tree follows files, but the conventions differ between routers. Pages Router uses files such as pages/about.js and pages/posts/[id].js. App Router uses route segments containing page.tsx and can add layout.tsx, loading.tsx, and error.tsx. / 路由树由文件结构决定，但两种路由器的约定不同。Pages Router 使用 pages/about.js、pages/posts/[id].js 等文件；App Router 使用包含 page.tsx 的路由段，并可加入 layout.tsx、loading.tsx 和 error.tsx。
 
 Use Link for navigation. Prefetching is production-only and differs by router: App Router can fully prefetch static routes and partially prefetch dynamic routes to a loading boundary; Pages Router's default behavior differs. Treat prefetch as an optimization, not a guarantee that a destination is already loaded.
+
+In the Pages Router, an automatically statically optimized page may have an empty `router.query` during prerendering. In a client Effect that depends on those fields, check `router.isReady` before using them. [Versioned route-parameter examples / 路由参数版本示例](../../archive/front-end/Deprecated_Interview_Notes/react-router-v5-and-next-pages-router-parameters.md) · [Next.js Pages Router `useRouter`](https://nextjs.org/docs/pages/api-reference/functions/use-router)
 
 ### What are API routes and Route Handlers? / API routes和Route Handler是什么？
 
@@ -4656,7 +4872,7 @@ const { data, loading, pagination } = usePagination(
 pagination.changeCurrent(2);
 ~~~
 
-useInfiniteScroll expects a service that returns a data object containing a list. Its result includes data, loading, loadingMore, noMore, and loadMore. Configure the scroll target and no-more condition to match the UI; it cannot determine the product's pagination contract for you.
+`useInfiniteScroll` passes the accumulated data to the service when loading more. For downward loading, return the next page's `list` and cursor so the Hook can append the page. Configure the scroll target and stopping rule for the UI. The [archive's list-loading example / 归档列表加载示例](../../archive/front-end/Deprecated_Interview_Notes/ahooks-list-loading-contracts.md) shows the complete service contract. [ahooks v3.10.0 source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useInfiniteScroll/index.tsx)
 
 ### State and browser storage / 状态与浏览器存储
 
@@ -4777,7 +4993,7 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 
 **Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
 
-**See also:** [Advanced React / React进阶](#62.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for Hook rules, Effect cleanup, deferred rendering, and Suspense; [React Server State and Optimistic Updates / React服务端状态与乐观更新](#63.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query-cache and mutation rules; [Performance Metrics and Analysis / 性能指标与分析](#67.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for debounce and throttle tradeoffs.
+**See also / 另见** — [React component composition / React 组件组合](#61.%20How%20do%20I%20compose%20components%20and%20reusable%20behavior%20around%20an%20interaction?%20/%20%E5%A6%82%E4%BD%95%E5%9B%B4%E7%BB%95%E4%BA%A4%E4%BA%92%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%8F%AF%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F) for Hook rules and Effect cleanup, [React server state / React 服务端状态](#63.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query and mutation rules, and [Performance Metrics and Analysis / 性能指标与分析](#67.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for debounce and throttle tradeoffs.
 
 **Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
 ## 67. How do you measure and diagnose web performance problems? / 如何测量和诊断网页性能问题？
@@ -4831,13 +5047,27 @@ HTTP freshness and validation are separate mechanisms; see [HTTP protocols and c
 
 Keep analytics off the application's critical path: collect events in a bounded in-memory queue, send small batches on a threshold or timer, and try one final batch when the document becomes hidden. This reduces per-event work and gives the client a best-effort delivery opportunity. It cannot guarantee server receipt, and pending events can be lost if the page exits. / 不要让分析采集阻塞应用关键路径：先把事件放入有界内存队列，达到阈值或定时发送小批次，并在文档转为隐藏时尝试发送最后一批。这可以减少逐事件开销，并提供尽力发送的机会；它无法保证服务器收到，页面退出时仍可能丢失未发送事件。
 
-The limits below are example configuration, not universal recommendations. The example drops the oldest pending item when the queue is full and sends one bounded batch from the visibility-change handler.
+### Decide what can enter the queue / 决定哪些事件可以进入队列
+
+Define the purpose and the fields it needs before adding instrumentation. For optional analytics, use the application's collection preference, allowlist event names and screen values, and leave raw input, full URLs, and identifiers out of the event payload. If the user opts out, stop accepting events and discard the pending queue.
+
+### Batch without blocking navigation / 批量发送并保持导航顺畅
+
+The example drops the oldest pending item when the queue is full and sends one bounded batch from the visibility-change handler. Tune the limits to payload size and the loss the application can tolerate.
 
 ```javascript
 const MAX_PENDING = 200;
 const BATCH_SIZE = 50;
+const eventNames = new Set(["report_opened", "filter_applied"]);
+const screens = new Set(["report_list", "report_detail"]);
 const queue = [];
+let collectionEnabled = false;
 let flushScheduled = false;
+
+function setCollectionEnabled(enabled) {
+  collectionEnabled = enabled;
+  if (!enabled) queue.length = 0;
+}
 
 function report(url, events) {
   const body = new Blob([JSON.stringify(events)], { type: "application/json" });
@@ -4845,9 +5075,10 @@ function report(url, events) {
   void fetch(url, { method: "POST", body, keepalive: true }).catch(() => {});
 }
 
-function trackEvent(event) {
+function trackEvent(name, screen) {
+  if (!collectionEnabled || !eventNames.has(name) || !screens.has(screen)) return;
   if (queue.length === MAX_PENDING) queue.shift(); // Drop the oldest item to stay bounded.
-  queue.push({ event, ts: Date.now() });
+  queue.push({ name, screen, ts: Date.now() });
   if (queue.length >= BATCH_SIZE) scheduleFlush();
 }
 
@@ -5322,7 +5553,7 @@ class BuildStatsPlugin {
 
 Example plugins have distinct roles: HtmlWebpackPlugin can generate HTML and inject emitted assets; DefinePlugin replaces configured expressions at compile time rather than reading a browser runtime environment variable; MiniCssExtractPlugin can emit CSS files. They are examples, not a required stack. As of the Webpack docs checked on 2026-10-15, the HtmlWebpackPlugin README marks it deprecated while the native HTML guide describes experiments.html and output.html as alternatives and still labels native HTML experimental. Check installed Webpack version and template needs before migrating. / 插件示例作用不同：HtmlWebpackPlugin 可生成 HTML 并注入输出资源；DefinePlugin 在编译时替换配置表达式，不会读取浏览器运行时环境变量；MiniCssExtractPlugin 可把 CSS 输出为独立文件。它们只是示例，不是必需组合。根据 2026-10-15 核对的 Webpack 文档，HtmlWebpackPlugin README 标记已弃用；原生 HTML 指南介绍 experiments.html 与 output.html 作为替代方案，同时仍标为实验性。迁移前应检查所用 Webpack 版本和模板需求。
 
-Sources checked 2026-10-15: [Webpack Loaders](https://webpack.js.org/concepts/loaders/), [Asset Modules](https://webpack.js.org/guides/asset-modules/), [Webpack Plugins](https://webpack.js.org/concepts/plugins/), [DefinePlugin](https://webpack.js.org/plugins/define-plugin/), [HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme), [Webpack Native HTML guide](https://webpack.js.org/guides/native-html/), [style-loader](https://github.com/webpack/style-loader#readme), [css-loader](https://github.com/webpack-contrib/css-loader#readme), [MiniCssExtractPlugin](https://github.com/webpack/mini-css-extract-plugin#readme), [Compiler hooks](https://webpack.js.org/api/compiler-hooks/).
+Sources checked 2026-10-15: [Webpack Loaders](https://webpack.js.org/concepts/loaders/), [Asset Modules](https://webpack.js.org/guides/asset-modules/), [Webpack Plugins](https://webpack.js.org/concepts/plugins/), [DefinePlugin](https://webpack.js.org/plugins/define-plugin/), [HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme), [Webpack Native HTML guide](https://webpack.js.org/guides/native-html/), [style-loader](https://github.com/webpack/style-loader#readme), [css-loader](https://github.com/webpack-contrib/css-loader#readme), [MiniCssExtractPlugin](https://github.com/webpack/mini-css-extract-plugin#readme), [Webpack: Writing a Plugin](https://webpack.js.org/contribute/writing-a-plugin/), [Compiler hooks](https://webpack.js.org/api/compiler-hooks/).
 
 ### Why Vite development and production need separate checks / 为什么 Vite 开发与生产需要分别检查
 

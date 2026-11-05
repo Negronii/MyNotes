@@ -143,6 +143,8 @@ If the page awaits `getPosts()` before returning this tree, that request cannot 
 
 Use Link for navigation. Prefetching is production-only and differs by router: App Router can fully prefetch static routes and partially prefetch dynamic routes to a loading boundary; Pages Router's default behavior differs. Treat prefetch as an optimization, not a guarantee that a destination is already loaded.
 
+In the Pages Router, an automatically statically optimized page may have an empty `router.query` during prerendering. In a client Effect that depends on those fields, check `router.isReady` before using them. [Versioned route-parameter examples / 路由参数版本示例](../../archive/front-end/Deprecated_Interview_Notes/react-router-v5-and-next-pages-router-parameters.md) · [Next.js Pages Router `useRouter`](https://nextjs.org/docs/pages/api-reference/functions/use-router)
+
 ## What are API routes and Route Handlers? / API routes和Route Handler是什么？
 
 **Core answer / 核心回答：** Pages Router API routes use a default handler in pages/api. App Router Route Handlers use named HTTP method exports in a route.ts file. The runtime and deployment model depend on configuration and hosting; an endpoint is not automatically a serverless function just because it is in a Next.js app. / Pages Router 的 API route 在 pages/api 中使用默认 handler；App Router 的 Route Handler 在 route.ts 中导出 HTTP 方法函数。运行时和部署模型取决于配置与托管平台；接口不会因为位于 Next.js 应用中就自动成为 serverless function。

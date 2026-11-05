@@ -34,22 +34,50 @@ channel.postMessage({ type: "update", payload: { id: 1 } });
 channel.close();
 ~~~
 
-A `SharedWorker` can coordinate connected contexts through ports, but its state is not durable and it needs a client-disconnect policy. It is a good fit only when a shared in-memory worker solves a real coordination problem.
+A `SharedWorker` can coordinate connected contexts through ports. Its state lasts only as long as the worker, and a collection of ports needs a policy for removing stale entries. Use a disconnect message when a page can cooperate, then remove and close the worker's port. / SharedWorker 可以通过端口协调多个页面。状态随 worker 生命周期结束。页面能主动退出时，先发断开消息，worker 再移除并关闭对应端口。
 
 ~~~javascript
-// worker.js — illustrative broadcast; production code must remove disconnected ports.
+// worker.js
 const ports = new Set();
-onconnect = (event) => {
+self.onconnect = (event) => {
   const port = event.ports[0];
   ports.add(port);
+  function dropPort() {
+    ports.delete(port);
+    port.close();
+  }
   port.onmessage = (message) => {
+    if (message.data?.type === "disconnect") {
+      dropPort();
+      return;
+    }
     ports.forEach((other) => {
       if (other !== port) other.postMessage(message.data);
     });
   };
-  port.start();
+  port.onmessageerror = dropPort; // This example closes a port after a decode failure.
 };
 ~~~
+
+~~~javascript
+// Page
+function connect() {
+  const connection = new SharedWorker("./worker.js").port;
+  connection.onmessage = (event) => console.log("Received:", event.data);
+  return connection;
+}
+
+let port = connect();
+window.addEventListener("pagehide", () => {
+  port.postMessage({ type: "disconnect" });
+  port.close();
+});
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) port = connect();
+});
+~~~
+
+`pagehide` is best effort. For abrupt tab exits, expire connections after a bounded period without a reply, and let a resumed client register again. The HTML standard defines `close()` and the `messageerror` event for a deserialization failure. It provides no portable peer-close notification for this cleanup. [HTML Standard on MessagePort and broadcast cleanup](https://html.spec.whatwg.org/multipage/web-messaging.html#broadcasting-to-many-ports)
 
 ## Cross-origin windows / 跨源窗口
 
