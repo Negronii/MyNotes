@@ -82,10 +82,10 @@ Some workflow runtimes persist an ordered event history and replay deterministic
 
 ## Related notes / 相关笔记
 
-- [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) owns transport selection, SSE framing, and wire behavior.
+- [Real-time web updates / 实时网页更新](../../engineering-foundations/networking/real-time-web-updates.md) explains transport selection, SSE framing, and wire behavior.
 - [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) owns browser-side partial output, terminal events, and local cancellation.
 - [Confirming request outcomes / 确认请求结果](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, retry, and idempotency.
-- [Database Fundamentals / 数据库基础](../../engineering-foundations/databases/database-fundamentals.md) covers durable application state, transactions, isolation, and recovery.
+- [Database transactions and recovery / 数据库事务与恢复](../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) explains the boundary for durable application state.
 - [AI System Design Interview Questions / AI 系统设计面试题](./ai-system-design-interview-questions.md) applies these production mechanisms to end-to-end design cases.
 
 **Sources / 来源：** [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) defines idempotent HTTP method semantics, and [§15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3) says `202 Accepted` does not mean processing is complete. Temporal's [Workflow replay guide](https://docs.temporal.io/workflows) and [Event History guide](https://docs.temporal.io/encyclopedia/event-history) describe one runtime's deterministic orchestration replay and recorded activity results. These sources support the mechanisms described here; the example API, states, and names are synthetic application choices.

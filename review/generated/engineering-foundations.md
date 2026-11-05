@@ -2,15 +2,15 @@
 
 > Generated from the [engineering-foundations reading map](../../engineering-foundations/index.md). Edit the map and its linked source notes. Internal section links use Obsidian heading fragments; source notes remain standard Markdown.
 
-## 1. HTTP Protocols and WebSockets / HTTP协议与WebSocket
+## 1. How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？
 
-### HTTP Protocols and WebSockets / HTTP协议与WebSocket
+### How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？
 
-> **核心解释 / Core idea：** HTTP定义客户端与服务器交换表示、状态和元数据的语义；TCP、QUIC等传输机制决定字节或流如何送达。HTTP版本改变了连接复用与多路复用方式，但不会让请求自动安全、可重试或跨域可读。  
+> **核心解释 / Core idea：** HTTP定义客户端与服务器交换表示、状态和元数据的语义；TCP、QUIC等传输机制决定字节或流如何送达。HTTP版本改变了连接复用与多路复用方式，但不会让请求自动安全、可重试或跨域可读。
 > **Core idea:** HTTP defines the semantics for exchanging representations, status, and metadata between clients and servers; transports such as TCP and QUIC determine how bytes or streams are delivered. HTTP versions change connection reuse and multiplexing, but do not by themselves make requests safe to retry or readable across origins.
 >
-> **面试简答 / Interview answer：** REST是约束式架构风格，HTTP方法语义决定重试边界；HTTP/1.1复用连接，HTTP/2在TCP上多路复用，HTTP/3基于QUIC流，浏览器CORS控制跨源读取。需要新建连接且没有可用地址时才需解析主机名；已有连接可直接复用，无须为每个请求重新查询。HTTPS还需TLS；DNS、连接、TLS与HTTP故障应分层判断。实时更新按方向和请求契约选择：轮询简单但有开销，SSE/EventSource单向推送并可自动重连，Fetch流支持自定义请求方法/头但应用负责解析恢复，WebSocket双向且恢复由应用约定。  
-> **Interview answer:** REST is a constrained style, and HTTP method semantics set retry boundaries. HTTP/1.1 reuses connections, HTTP/2 multiplexes over TCP, and HTTP/3 uses QUIC streams; browser CORS controls cross-origin reads. Resolve the name when a new connection needs an address; an existing usable connection can be reused without a fresh lookup. Apply TLS for HTTPS, and diagnose DNS, connection, TLS, and HTTP failures separately. Choose live-update transport by direction and request contract: polling is simple but adds overhead; SSE/EventSource is one-way with automatic reconnect; Fetch streams allow custom request methods/headers but leave parsing and recovery to the application; WebSocket is bidirectional and leaves recovery to the application.
+> **面试简答 / Interview answer：** REST是约束式架构风格，HTTP方法语义决定重试边界；HTTP/1.1复用连接，HTTP/2在TCP上多路复用，HTTP/3基于QUIC流，浏览器CORS控制跨源读取。需要新建连接且没有可用地址时才需解析主机名；已有连接可直接复用，无须为每个请求重新查询。HTTPS还需TLS；DNS、连接、TLS与HTTP故障应分层判断。实时更新的协议选择单独见[轮询、SSE、流式Fetch与WebSocket](#2.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
+> **Interview answer:** REST is a constrained style, and HTTP method semantics set retry boundaries. HTTP/1.1 reuses connections, HTTP/2 multiplexes over TCP, and HTTP/3 uses QUIC streams; browser CORS controls cross-origin reads. Resolve the name when a new connection needs an address; an existing usable connection can be reused without a fresh lookup. Apply TLS for HTTPS, and diagnose DNS, connection, TLS, and HTTP failures separately. Choose a live-update transport by direction and request contract; [the comparison note](#2.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F) explains its recovery limits.
 
 #### REST与HTTP方法 / REST and HTTP methods
 
@@ -121,7 +121,7 @@ TCP提供有序、可靠的字节流，不保留应用程序一次write对应一
 
 **面试简答 / Interview answer：** 先确认名称解析是否给出了可用地址，再按连接建立、TLS握手和HTTP响应分别定位错误。解析器可能返回名称错误或临时错误，也可能在上游无响应时超时；这些都发生在HTTP状态码出现之前。改DNS记录也不会立刻清除所有缓存副本，变更速度受已缓存TTL和解析器策略影响。
 
-在浏览器导航中，缓存、Service Worker和连接复用可能绕过一次新的DNS查询；[Browser Basics / 浏览器基础](../../frontend/browser/browser-basics.md)介绍导航时的整体请求路径。DNS只提供名称解析结果，不负责传输加密；[Web Security and Authentication / Web安全与身份认证](#9.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81)中的TLS说明解释了HTTPS验证服务器并保护传输的边界。
+在浏览器导航中，缓存、Service Worker和连接复用可能绕过一次新的DNS查询；[Browser Basics / 浏览器基础](../../frontend/browser/browser-basics.md)介绍导航时的整体请求路径。DNS只提供名称解析结果，不负责传输加密；[Web Security and Authentication / Web安全与身份认证](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F)中的TLS说明解释了HTTPS验证服务器并保护传输的边界。
 
 #### HTTP/1.1、HTTP/2与HTTP/3 / HTTP versions
 
@@ -158,7 +158,42 @@ location /api/ {
 }
 ~~~
 
-#### WebSocket：握手与双向消息 / WebSocket handshake and full-duplex messaging
+
+**Related question / 相关问题：** [When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？](#2.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F) compares live-update transports and disconnect recovery.
+
+#### 浏览器资源提示 / Browser resource hints
+
+资源提示让浏览器提前处理可能重要的网络工作。它们是提示，浏览器可根据资源与连接状况调整或忽略：
+
+| 提示 Hint | 用途 Purpose | 典型场景 Typical use |
+|---|---|---|
+| preload | 提前获取当前页面确定需要的关键资源 | 首屏字体、稍后才被发现的关键图片或脚本 |
+| prefetch | 低优先级预取可能用于后续导航的资源 | 预测下一页 |
+| dns-prefetch | 提前解析域名 | 后续可能访问的第三方域 |
+| preconnect | 提前完成目标源连接准备 | 很快要使用的关键第三方源 |
+
+~~~html
+<link rel="preload" href="/fonts/main.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="prefetch" href="/next-page.js">
+<link rel="dns-prefetch" href="//analytics.example">
+<link rel="preconnect" href="https://api.example">
+~~~
+
+preload应只用于当前页面确实需要的资源，并填写匹配的as类型；字体通常需要crossorigin，以便预加载与CSS字体请求使用一致的CORS模式，避免重复下载。preconnect只适合关键且即将使用的来源，过多提示会消耗连接资源。[web.dev资源提示指南](https://web.dev/learn/performance/resource-hints)。
+
+#### 相关主题 / Related notes
+
+- [浏览器基础 / Browser Basics](../../frontend/browser/browser-basics.md)：浏览器的请求、渲染和安全边界。
+- [Web安全与身份认证 / Web Security and Authentication](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F)：CORS之外的认证、Cookie与请求保护。
+- [实时Web更新 / Real-time Web Updates](#2.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)：轮询、SSE、流式Fetch与WebSocket的选择和恢复边界。
+
+DNS resolution and TTL behavior were checked against [RFC 1034](https://www.rfc-editor.org/rfc/rfc1034.html) on 2026-10-15.
+## 2. When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？
+
+### When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？
+
+**Core answer / 核心回答：** Choose by message direction, request shape, connection lifetime, and recovery contract. Polling is a series of ordinary HTTP requests; SSE/EventSource provides one-way server events over GET; Fetch streams allow a custom method, headers, body, and cancellation but leave parsing and reconnection to the application; WebSocket supports bidirectional messages and leaves reconnect/replay rules to the application. A reconnect is not recovery unless the server can replay from a retained cursor or the client can query authoritative state. / 根据消息方向、请求形状、连接生命周期和恢复契约选择方式。轮询是一系列普通 HTTP 请求；SSE/EventSource 通过 GET 单向发送服务端事件；Fetch 流允许自定义方法、请求头、请求体和取消信号，但解析和重连由应用负责；WebSocket 支持双向消息，重连和重放规则也由应用定义。若服务端不能按保留游标重放，或客户端不能查询权威状态，重新连接本身不等于恢复。
+#### WebSocket handshake and bidirectional messages / WebSocket 握手与双向消息
 
 传统浏览器WebSocket使用HTTP/1.1 Upgrade握手：客户端发送Upgrade相关字段，服务器接受后以101 Switching Protocols切换协议；之后双方可在同一TCP连接上主动发送帧，而不再是普通HTTP请求/响应。WebSocket还有跨HTTP/2、HTTP/3的扩展连接方式，分别通过Extended CONNECT和HTTP/3的对应机制承载，因此不应把所有WebSocket描述为HTTP/1.1的TCP升级。[RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)、[RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html)、[RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html)。
 
@@ -197,6 +232,23 @@ socket.addEventListener('close', () => console.log('Disconnected'));
 ~~~
 
 HTTP持久连接（keep-alive）可以在多个HTTP请求/响应间重用连接，但服务器仍需等待请求，不能在没有请求时任意推送HTTP响应。WebSocket提供双方都可发消息的通道；[ws项目文档](https://github.com/websockets/ws)是Node.js服务端实现示例。轮询、SSE和流式Fetch各自使用HTTP请求/响应，适用的方向与恢复能力见下表。
+
+**Key terms / 关键术语：** polling / 轮询；Server-sent Events (SSE) / 服务端事件；EventSource / EventSource 接口；Fetch response stream / Fetch 响应流；WebSocket / WebSocket；replay cursor / 重放游标。
+
+~~~mermaid
+flowchart TD
+    Direction{Which update direction?}
+    Direction -->|occasional or client-controlled| Poll[Polling or long polling]
+    Direction -->|server to client only| RequestShape{Need custom method, headers, or body?}
+    RequestShape -->|no; GET and simple contract| SSE[SSE with EventSource]
+    RequestShape -->|yes| Fetch[Fetch response stream]
+    Direction -->|both directions| WS[WebSocket]
+    Poll --> Resume[Define cursor, status lookup, or replay]
+    SSE --> Resume
+    Fetch --> Resume
+    WS --> Resume
+    Resume --> UI[Client reconstructs authoritative state]
+~~~
 
 #### 轮询、SSE、流式Fetch与WebSocket / Polling, SSE, streaming Fetch, and WebSocket
 
@@ -268,37 +320,23 @@ try {
 
 这里的`parser.feed`代表按已约定的线格式增量解析；示例约定它在调用方已获得所需完整结果、决定提前停止时返回`false`，代码随即取消未读响应体。若解析或读取抛错，也会尝试取消响应流；取消本身若失败，仍保留原始解析/读取错误，并在所有路径释放reader锁。若用户取消操作，传入的`AbortSignal`会取消Fetch。传输层提供请求契约、分块、结束和失败信号，不定义界面如何呈现部分内容，也不保证服务端任务状态能跨重连保留。选择时先回答四件事：消息方向是什么、请求是否要带方法/头/体、连接由谁关闭、恢复是否只需重连还是必须按游标重放。
 
-#### 浏览器资源提示 / Browser resource hints
 
-资源提示让浏览器提前处理可能重要的网络工作。它们是提示，浏览器可根据资源与连接状况调整或忽略：
+**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers request methods, caches, CORS, DNS, and transport behavior; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the interface represents partial, reconnecting, cancelled, and terminal states; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) uses persistent run state to recover after a client disconnect.
 
-| 提示 Hint | 用途 Purpose | 典型场景 Typical use |
-|---|---|---|
-| preload | 提前获取当前页面确定需要的关键资源 | 首屏字体、稍后才被发现的关键图片或脚本 |
-| prefetch | 低优先级预取可能用于后续导航的资源 | 预测下一页 |
-| dns-prefetch | 提前解析域名 | 后续可能访问的第三方域 |
-| preconnect | 提前完成目标源连接准备 | 很快要使用的关键第三方源 |
+**Sources / 来源：** [RFC 6455, The WebSocket Protocol](https://www.rfc-editor.org/rfc/rfc6455.html), [RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html), [RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html), [WHATWG HTML Server-sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html), [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/), [WHATWG Streams Standard](https://streams.spec.whatwg.org/), and [WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/) checked 2026-10-15. The SSE reconnection and HTTP 204 boundary was rechecked against the current WHATWG HTML standard on 2026-10-27. See also the MDN [WebSocket constructor](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket) and the Node.js [ws implementation](https://github.com/websockets/ws).
+## 3. When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？
 
-~~~html
-<link rel="preload" href="/fonts/main.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="prefetch" href="/next-page.js">
-<link rel="dns-prefetch" href="//analytics.example">
-<link rel="preconnect" href="https://api.example">
-~~~
-
-preload应只用于当前页面确实需要的资源，并填写匹配的as类型；字体通常需要crossorigin，以便预加载与CSS字体请求使用一致的CORS模式，避免重复下载。preconnect只适合关键且即将使用的来源，过多提示会消耗连接资源。[web.dev资源提示指南](https://web.dev/learn/performance/resource-hints)。
-
-#### 相关主题 / Related notes
-
-- [浏览器基础 / Browser Basics](../../frontend/browser/browser-basics.md)：浏览器的请求、渲染和安全边界。
-- [Web安全与身份认证 / Web Security and Authentication](#9.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81)：CORS之外的认证、Cookie与请求保护。
-
-DNS and streaming sections checked against [RFC 1034](https://www.rfc-editor.org/rfc/rfc1034.html), the [WHATWG HTML Server-sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html), [Fetch Standard](https://fetch.spec.whatwg.org/), [Streams Standard](https://streams.spec.whatwg.org/), and [WebSockets Standard](https://websockets.spec.whatwg.org/) on 2026-10-15. The SSE reconnection and HTTP 204 boundary was rechecked against the current WHATWG HTML standard on 2026-10-27.
-## 2. Processes, Threads, and Concurrency / 进程、线程与并发
-
-### Processes, Threads, and Concurrency / 进程、线程与并发
+### When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？
 
 **Core model / 核心模型：** A process is an operating-system resource and protection boundary; a thread is an execution path inside a process. Threads share much of that process's memory and therefore need coordination when they update shared state. Concurrency means work overlaps in time; parallelism means work executes at the same time on multiple processing units. Asynchronous I/O can provide concurrency without assigning one thread to every waiting operation. / 进程是操作系统管理资源并隔离地址空间的边界；线程是在进程内执行指令的路径。线程共享进程中的许多内存，因此并发修改共享状态时需要协调。并发表示任务的执行时间重叠；并行表示多个处理单元同时执行任务。异步 I/O 可以在不为每个等待中的操作分配一个线程的情况下提高并发能力。
+
+~~~mermaid
+flowchart LR
+    Wait[Many tasks waiting for I/O] --> Async[Async I/O lets one thread schedule progress]
+    CPU[CPU-heavy work] --> Parallel[Worker thread or process for parallel execution]
+    Shared{Must share mutable state?} -->|yes| Thread[Thread plus synchronization]
+    Shared -->|no, or stronger isolation needed| Process[Separate process plus IPC]
+~~~
 
 **Key terms / 关键术语：** process / 进程；thread / 线程；address space / 地址空间；concurrency / 并发；parallelism / 并行；blocking I/O / 阻塞 I/O；non-blocking I/O / 非阻塞 I/O；asynchronous I/O / 异步 I/O；race condition / 竞态；deadlock / 死锁；cancellation / 取消。
 
@@ -310,7 +348,7 @@ DNS and streaming sections checked against [RFC 1034](https://www.rfc-editor.org
 | Communication / 通信 | Uses an explicit boundary such as a pipe, socket, message, or shared mapping. / 通过管道、套接字、消息或共享映射等显式边界通信。 | Can pass references through shared memory, but concurrent access must follow a synchronization rule. / 可通过共享内存传递引用，但并发访问必须遵循同步规则。 |
 | Typical choice / 常见选择 | Prefer when a fault or trust boundary matters, or work needs separate process lifetime. / 当故障或信任隔离、独立进程生命周期很重要时考虑使用。 | Prefer when work benefits from shared process state or CPU-parallel execution and the program can manage synchronization. / 当工作需要共享进程状态或 CPU 并行执行，且程序能管理同步时考虑使用。 |
 
-These are useful defaults, not cost or isolation guarantees for every operating system. A process can deliberately share memory or handles; a thread does not automatically make CPU work faster. For Node-specific choices among its event loop, worker threads, and child processes, see [Node.js Fundamentals / Node.js基础](#19.%20Node.js%20Fundamentals%20/%20Node.js%E5%9F%BA%E7%A1%80).
+These are useful defaults, not cost or isolation guarantees for every operating system. A process can deliberately share memory or handles; a thread does not automatically make CPU work faster. For Node-specific choices among its event loop, worker threads, and child processes, see [Node.js Fundamentals / Node.js基础](#28.%20How%20does%20Node.js%20schedule%20work%20across%20its%20event%20loop,%20workers,%20and%20processes?%20/%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F).
 
 #### Concurrency, parallelism, and I/O / 并发、并行与 I/O
 
@@ -370,16 +408,25 @@ if (isMainThread) {
 
 Verified with Node.js v26.11.1; observed output: `200000`. This checks one local runtime example, not performance scaling or every platform's worker implementation.
 
-**Related notes / 相关笔记：** [Node.js Fundamentals / Node.js基础](#19.%20Node.js%20Fundamentals%20/%20Node.js%E5%9F%BA%E7%A1%80) applies these process and worker boundaries to Node's APIs; [Event Loop / 事件循环](../../frontend/runtime/event-loop.md) explains how queued callbacks make progress on a JavaScript thread.
+**Related notes / 相关笔记：** [Node.js Fundamentals / Node.js基础](#28.%20How%20does%20Node.js%20schedule%20work%20across%20its%20event%20loop,%20workers,%20and%20processes?%20/%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F) applies these process and worker boundaries to Node's APIs; [Event Loop / 事件循环](../../frontend/runtime/event-loop.md) explains how queued callbacks make progress on a JavaScript thread.
 
 **Sources / 来源：** POSIX.1-2024 [General Information, process and thread model](https://pubs.opengroup.org/onlinepubs/9799919799/functions/V2_chap02.html); Linux [`pthreads(7)`](https://man7.org/linux/man-pages/man7/pthreads.7.html), for Linux/POSIX thread-sharing and cancellation-point details; Node.js v24 [worker_threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html) and [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html#threadpool-usage) documentation, checked 2026-10-15. The filesystem docs specify that callback and promise APIs except `fs.FSWatcher` use libuv's thread pool.
-## 3. Memory Hierarchy and Data Locality / 内存层次与数据局部性
+## 4. Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？
 
-### Memory Hierarchy and Data Locality / 内存层次与数据局部性
+### Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？
 
 Big-O describes how work grows, but data layout and dependency determine how quickly a processor can obtain that work. A contiguous scan often runs efficiently because its addresses are predictable and independent loads can overlap; a linked-list walk has a dependent pointer chain, but a cache miss does not automatically stop every part of the CPU.
 
 复杂度描述工作量如何随输入增长，数据布局与依赖关系则影响处理器能多快拿到数据。连续扫描通常更容易利用预取、并行访存和 SIMD；链表遍历受逐节点地址依赖限制，但一次 Cache Miss 不等于整个 CPU 必然停摆。
+
+~~~mermaid
+flowchart LR
+    A[Array element i] -->|known address| A2[Adjacent element i+1]
+    A2 -->|regular access can prefetch and overlap| A3[Next independent load]
+    L[Current list node] -->|load next pointer| P[Wait for pointer value]
+    P -->|only then know address| L2[Next list node]
+    L -->|cache miss| Other[Independent CPU work may still continue]
+~~~
 
 #### Key terms / 核心术语
 
@@ -497,7 +544,7 @@ static void dequeue_job(struct job *job)
 | 结构体填充 | 对齐要求会插入填充字节并增大对象；字段顺序也可能影响空间，仍受 ABI 与访问模式约束。`sizeof` 与成员偏移是否显示出实际空间问题？ |
 | 增加核心数 | 独立工作可扩展，直到共享内存带宽、一致性流量或同步争用成为瓶颈。增加核心后，负载是计算受限、带宽受限还是争用受限？[Intel 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)、[Linux 伪共享指南](https://docs.kernel.org/kernel-hacking/false-sharing.html) |
 
-**Related notes / 相关笔记：** [Core Data Structures](#16.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) explains tree structure and list-operation bounds; [Practical Data Structure Implementations](#17.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) shows an LRU cache locating a list node through a map before moving that known node.
+**Related notes / 相关笔记：** [Core Data Structures](#25.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) explains tree structure and list-operation bounds; [Practical Data Structure Implementations](#26.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) shows an LRU cache locating a list node through a map before moving that known node.
 
 #### Sources / 来源
 
@@ -513,43 +560,67 @@ static void dequeue_job(struct job *job)
 - [GCC libstdc++ `stl_list.h`](https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_list.h) — 一个标准库实现中，链表节点将 `T` 存在自身节点内的对齐存储。
 - [ECMAScript 2024：Indexed Collections](https://tc39.es/ecma262/2024/multipage/indexed-collections.html) 与 [V8：Elements kinds](https://v8.dev/blog/elements-kinds) — JavaScript Array 语义、TypedArray 数据缓冲视图，以及一种引擎的实现选择。
 - [PostgreSQL：B-tree 索引](https://www.postgresql.org/docs/current/btree.html) 与 [Abseil：Swiss Tables](https://abseil.io/about/design/swisstables) — 页式树与密集哈希元数据的实际例子。
-## 4. Database Fundamentals / 数据库基础
+## 5. How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？
 
-### Database Fundamentals / 数据库基础
+### How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？
 
-**Core model / 核心模型：** A database schema names the data and constraints that every writer must respect. Queries describe the result; a planner chooses how to produce it, using indexes when their cost is worthwhile. Transactions group changes, while an isolation policy defines what concurrent transactions can observe. A write-ahead log (WAL) helps a database recover after a crash, subject to that product's durability and backup configuration. / 数据库模式描述数据及所有写入方都必须遵守的约束。查询描述所需结果，执行计划器再选择实现方式，并在成本合适时使用索引。事务将多个变更组合起来；隔离级别定义并发事务能够观察到什么。预写日志（WAL）帮助数据库在崩溃后恢复，但具体保证取决于产品的持久性与备份配置。
+Read the invariant at the place where concurrent writes meet: update inventory only when availability remains positive, check that exactly one row changed, and create the reservation in the same transaction. A separate read followed by an unconditional write lets two requests act on the same old value. Enforce request identity with a unique constraint so a repeated logical request cannot reserve the same unit twice. / 在并发写入发生的数据库边界检查不变量：只有库存仍大于零时才更新，并确认恰好更新一行，再在同一事务中创建预留。先单独读取、再无条件写入会让两个请求都基于同一个旧值操作。用唯一约束维护请求身份，避免同一逻辑请求重复预留库存。
 
-**Key terms / 关键术语：** schema / 模式；primary key / 主键；foreign key / 外键；constraint / 约束；index / 索引；query plan / 查询计划；transaction / 事务；isolation level / 隔离级别；MVCC / 多版本并发控制；write-ahead log (WAL) / 预写日志。
+**Key terms / 关键术语：** conditional update / 条件更新；transaction / 事务；unique constraint / 唯一约束；idempotency key / 幂等键；rollback / 回滚。
 
-#### Schema and constraints / 模式与约束
-
-A relational schema defines tables, columns, types, and relationships. A **primary key** identifies a row; a **unique constraint** prevents duplicate key values; a **foreign key** requires a reference to an existing key (subject to the constraint's null and deferral rules); and `NOT NULL` and `CHECK` constrain allowed values. Put durable business invariants in database constraints as well as validating input in the application: another job, script, or service may write the same tables. Referential actions such as `ON DELETE CASCADE` encode an additional lifecycle rule and should match the data relationship.
-
-The following SQL uses common table and constraint syntax. It describes customers and orders, ensures an order has a customer and a non-negative amount, and adds an access path for a customer's recent orders. The query asks for rows; the database decides whether and how to use the index. The `?` is a bound-parameter placeholder used by SQLite; other drivers use their own placeholder notation.
-
-~~~sql
-CREATE TABLE customers (
-    customer_id INTEGER PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE orders (
-    order_id INTEGER PRIMARY KEY,
-    customer_id INTEGER NOT NULL REFERENCES customers(customer_id),
-    amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
-    placed_at TEXT NOT NULL
-);
-
-CREATE INDEX orders_by_customer_and_time
-    ON orders(customer_id, placed_at);
-
-SELECT order_id, amount_cents, placed_at
-FROM orders
-WHERE customer_id = ?
-ORDER BY placed_at DESC;
+~~~mermaid
+flowchart TD
+    Begin[Begin transaction] --> Update[Conditional update: available > 0]
+    Update --> Count{Exactly one row changed?}
+    Count -->|yes| Reserve[Insert reservation with unique request ID]
+    Reserve --> Commit[Commit both changes]
+    Count -->|no| Rollback[Rollback and report unavailable]
+    Reserve -->|insert or constraint failure| Rollback
 ~~~
 
-An index is a maintained access path, not a promise that every query will be faster. It uses storage and adds work to inserts, updates, and deletes. A multicolumn B-tree index is ordered by its leading columns, so `(customer_id, placed_at)` can support a lookup by customer and then a time ordering; the best plan still depends on the query, table size, data distribution, statistics, and database engine. Inspect a plan with that engine's `EXPLAIN` facility and compare it with representative data. In PostgreSQL, `EXPLAIN ANALYZE` executes the statement and reports observed work, while plain `EXPLAIN` shows the planner's estimated strategy. Plan output and choices are product- and version-specific.
+Assume an inventory table has one row per unique SKU. Do not read the count in the application and then issue an unconditional write: competing requests can both act on the same old value. Let the database perform the condition and decrement as one write:
+
+~~~sql
+BEGIN;
+
+UPDATE inventory
+SET available = available - 1
+WHERE sku = ? AND available > 0;
+
+-- Continue only if exactly one row was updated.
+INSERT INTO reservations (request_id, sku) VALUES (?, ?);
+
+COMMIT;
+~~~
+
+Continue only if the update changed exactly one row. Insert the reservation under a unique request ID in the same transaction; if no row changed or the insert fails, roll back. This protects the local invariant only under the selected engine's atomic-update and transaction semantics. A unique request constraint also prevents duplicate local reservations. It does not make an external payment or message publish atomic with the database; use a downstream idempotency contract or durable outbox for that boundary.
+
+This example relies on the database transaction and row-update contract. The detailed meaning of isolation, MVCC, and WAL is in [Database transactions, isolation, and recovery / 数据库事务、隔离与恢复](#8.%20What%20do%20transaction%20isolation%20and%20WAL%20guarantee?%20/%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%20WAL%20%E5%88%86%E5%88%AB%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F). For the constraints and indexes used to express invariants and access paths, see [Database constraints and indexes / 数据库约束与索引](#7.%20How%20do%20database%20constraints%20and%20indexes%20shape%20data%20access?%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E7%BA%A6%E6%9D%9F%E5%92%8C%E7%B4%A2%E5%BC%95%E5%A6%82%E4%BD%95%E5%A1%91%E9%80%A0%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%EF%BC%9F). For examples of how SQL NULL and outer joins affect query results, see [SQL NULLs, joins, and aggregates / SQL NULL、连接与聚合](#6.%20How%20do%20NULLs,%20joins,%20and%20grouping%20change%20SQL%20results?%20/%20NULL%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%20SQL%20%E6%9F%A5%E8%AF%A2%E7%BB%93%E6%9E%9C%EF%BC%9F).
+
+**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains how operation keys handle unknown request outcomes; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#46.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies job-key uniqueness and transactional outbox to asynchronous work.
+
+**Sources and verification / 来源与验证：** PostgreSQL 18 [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) and [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html); SQLite [transactions](https://www.sqlite.org/lang_transaction.html) and [foreign keys](https://www.sqlite.org/foreignkeys.html). The conditional reservation transaction was run with Python sqlite3 against SQLite 3.51.0 with foreign-key enforcement enabled. This is evidence for that local SQLite run, not a universal concurrency guarantee.
+## 6. How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？
+
+### How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？
+
+**How do NULL, outer joins, and grouping change a query result? / NULL、外连接和分组会怎样改变查询结果？** An ordinary comparison such as `=` or `<>` with `NULL` is UNKNOWN; null-aware predicates such as `IS NULL` and `IS DISTINCT FROM` have their own rules. Use `IS NULL` for missing values, and remember that `WHERE` keeps only TRUE. Put a right-side condition in `LEFT JOIN ... ON` when unmatched left rows must remain; a `WHERE` condition can remove those rows. `COUNT(*)` counts joined rows, `COUNT(column)` skips nulls, `WHERE` filters input rows, and `HAVING` filters completed groups. Inspect query plans with the chosen engine and version. / `=` 或 `<>` 这类普通比较遇到 `NULL` 时结果为 UNKNOWN；`IS NULL`、`IS DISTINCT FROM` 等空值判定或相异性谓词有各自的规则。缺失值应使用 `IS NULL`，并记住 `WHERE` 只保留 TRUE。若要保留没有匹配右表记录的左表行，应把右表条件放在 `LEFT JOIN ... ON` 中；放在 `WHERE` 中可能移除这些行。`COUNT(*)` 统计连接后的行数，`COUNT(column)` 跳过空值；`WHERE` 筛选分组前的输入行，`HAVING` 筛选已完成的分组。查询计划应使用所选数据库及其版本来检查。
+
+~~~mermaid
+flowchart LR
+    Predicate[SQL comparison with NULL] --> Unknown[UNKNOWN]
+    Predicate -->|ordinary non-null comparison| TrueFalse[TRUE or FALSE]
+    Unknown --> Where[WHERE keeps only TRUE]
+    TrueFalse --> Where
+    Left[Left-side row] --> On{ON finds a match?}
+    On -->|no| NullRow[Null-extended right columns]
+    On -->|yes| Joined[Joined row]
+    NullRow --> PostWhere{Post-join WHERE is TRUE?}
+    Joined --> PostWhere
+    PostWhere -->|no: FALSE or UNKNOWN| Drop[Row disappears]
+~~~
+
+**Key terms / 关键术语：** NULL / 空值；three-valued logic / 三值逻辑；LEFT JOIN / 左外连接；null-extended row / 空扩展行；aggregate / 聚合；HAVING / 分组筛选。
 
 #### SQL result semantics / SQL 查询结果语义
 
@@ -661,9 +732,83 @@ ORDER BY c.customer_id;
 -- Cy  | 1 | 500
 ~~~
 
-**How do NULL, outer joins, and grouping change a query result? / NULL、外连接和分组会怎样改变查询结果？** An ordinary comparison such as `=` or `<>` with `NULL` is UNKNOWN; null-aware predicates such as `IS NULL` and `IS DISTINCT FROM` have their own rules. Use `IS NULL` for missing values, and remember that `WHERE` keeps only TRUE. Put a right-side condition in `LEFT JOIN ... ON` when unmatched left rows must remain; a `WHERE` condition can remove those rows. `COUNT(*)` counts joined rows, `COUNT(column)` skips nulls, `WHERE` filters input rows, and `HAVING` filters completed groups. Inspect query plans with the chosen engine and version. / `=` 或 `<>` 这类普通比较遇到 `NULL` 时结果为 UNKNOWN；`IS NULL`、`IS DISTINCT FROM` 等空值判定或相异性谓词有各自的规则。缺失值应使用 `IS NULL`，并记住 `WHERE` 只保留 TRUE。若要保留没有匹配右表记录的左表行，应把右表条件放在 `LEFT JOIN ... ON` 中；放在 `WHERE` 中可能移除这些行。`COUNT(*)` 统计连接后的行数，`COUNT(column)` 跳过空值；`WHERE` 筛选分组前的输入行，`HAVING` 筛选已完成的分组。查询计划应使用所选数据库及其版本来检查。
+
 
 These result rules are shared by the examples' SQLite run; optimizer plans are not. Use the selected engine's `EXPLAIN` tool on representative data, and label any plan observation with its engine and version.
+
+
+**Sources / 来源：** PostgreSQL 18 [SQL tutorial](https://www.postgresql.org/docs/18/tutorial-sql.html), [comparison predicates](https://www.postgresql.org/docs/18/functions-comparison.html), [table expressions and joins](https://www.postgresql.org/docs/18/queries-table-expressions.html), and [aggregate functions](https://www.postgresql.org/docs/18/functions-aggregate.html), checked 2026-10-15; SQLite [SELECT](https://www.sqlite.org/lang_select.html), [expressions](https://www.sqlite.org/lang_expr.html), and [aggregate functions](https://www.sqlite.org/lang_aggfunc.html). The customer/order result queries ran with Python sqlite3 against SQLite 3.51.0 with foreign-key enforcement enabled.
+## 7. How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？
+
+### How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？
+
+Constraints enforce durable invariants for every writer, while indexes maintain access paths the planner may choose when their cost is worthwhile. A unique or foreign-key rule protects correctness; an index can speed a representative query but consumes storage and adds write work. Inspect the chosen engine's plan on representative data rather than treating an index definition as a performance promise. / 约束为所有写入方强制执行持久不变量；索引维护执行计划器可能按成本选择的访问路径。唯一约束或外键保护正确性；索引可能加速有代表性的查询，但会占用存储并增加写入成本。应使用真实代表性数据检查所选数据库的计划，不能把创建索引当成性能保证。
+
+**Key terms / 关键术语：** primary key / 主键；unique constraint / 唯一约束；foreign key / 外键；CHECK / 检查约束；B-tree index / B 树索引；query plan / 查询计划；EXPLAIN / 查询计划解释。
+
+~~~mermaid
+flowchart LR
+    Query[Query and predicates] --> Planner[Database planner]
+    Planner --> Estimate[Estimate cost from data and statistics]
+    Estimate -->|useful path| Index[Index scan or lookup]
+    Estimate -->|not useful| Scan[Table scan or other plan]
+    Index --> Result[Rows in requested order]
+    Scan --> Result
+~~~
+
+#### Schema and constraints / 模式与约束
+
+A relational schema defines tables, columns, types, and relationships. A **primary key** identifies a row; a **unique constraint** prevents duplicate key values; a **foreign key** requires a reference to an existing key (subject to the constraint's null and deferral rules); and `NOT NULL` and `CHECK` constrain allowed values. Put durable business invariants in database constraints as well as validating input in the application: another job, script, or service may write the same tables. Referential actions such as `ON DELETE CASCADE` encode an additional lifecycle rule and should match the data relationship.
+
+The following SQL uses common table and constraint syntax. It describes customers and orders, ensures an order has a customer and a non-negative amount, and adds an access path for a customer's recent orders. The query asks for rows; the database decides whether and how to use the index. The `?` is a bound-parameter placeholder used by SQLite; other drivers use their own placeholder notation.
+
+~~~sql
+CREATE TABLE customers (
+    customer_id INTEGER PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(customer_id),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+    placed_at TEXT NOT NULL
+);
+
+CREATE INDEX orders_by_customer_and_time
+    ON orders(customer_id, placed_at);
+
+SELECT order_id, amount_cents, placed_at
+FROM orders
+WHERE customer_id = ?
+ORDER BY placed_at DESC;
+~~~
+
+An index is a maintained access path, not a promise that every query will be faster. It uses storage and adds work to inserts, updates, and deletes. A multicolumn B-tree index is ordered by its leading columns, so `(customer_id, placed_at)` can support a lookup by customer and then a time ordering; the best plan still depends on the query, table size, data distribution, statistics, and database engine. Inspect a plan with that engine's `EXPLAIN` facility and compare it with representative data. In PostgreSQL, `EXPLAIN ANALYZE` executes the statement and reports observed work, while plain `EXPLAIN` shows the planner's estimated strategy. Plan output and choices are product- and version-specific.
+
+
+**Sources and verification / 来源与验证：** PostgreSQL 18 [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [indexes](https://www.postgresql.org/docs/18/indexes.html), and [EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html), checked 2026-10-15; SQLite [foreign keys](https://www.sqlite.org/foreignkeys.html), [query planner](https://www.sqlite.org/queryplanner.html), and [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html). The schema/query example was run with Python sqlite3 against SQLite 3.51.0. For 1,000 synthetic orders, adding the composite index changed the observed plan from a table scan plus temporary sort to an index search. This is one planner observation, not a stable output contract.
+
+
+**Related notes / 相关笔记：** [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) applies a conditional update and a unique request key; [Database transactions, isolation, and recovery / 数据库事务、隔离与恢复](#8.%20What%20do%20transaction%20isolation%20and%20WAL%20guarantee?%20/%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%20WAL%20%E5%88%86%E5%88%AB%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F) explains the transaction boundary.
+## 8. What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？
+
+### What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？
+
+A database transaction gives statements one commit/rollback boundary. The isolation policy determines which concurrent changes a transaction may observe; MVCC is one way engines manage versions. Write-ahead logging lets recovery redo changes after a crash only within the database's durability and storage assumptions. Point-in-time recovery additionally needs a suitable base backup and required log history. Product, version, and configuration determine the exact guarantee. / 数据库事务为一组语句提供共同的提交或回滚边界；隔离策略定义事务能观察到哪些并发变更，MVCC 是数据库管理版本的一种机制。预写日志支持在崩溃后重做变更，但保证受数据库持久性和存储配置约束。时间点恢复还需要合适的基础备份和所需日志。具体保证取决于产品、版本与配置。
+
+**Key terms / 关键术语：** transaction / 事务；isolation level / 隔离级别；MVCC / 多版本并发控制；write-ahead log (WAL) / 预写日志；crash recovery / 崩溃恢复；point-in-time recovery / 时间点恢复。
+
+~~~mermaid
+flowchart LR
+    Tx[Transaction changes] --> Log[Append corresponding WAL records]
+    Log --> Flush[Flush log under configured durability policy]
+    Flush --> Commit[Report commit]
+    Commit --> Page[Data pages may be written later]
+    Crash[Crash] --> Recovery[Redo durable logged changes]
+    Recovery --> Data[Database recovers committed state]
+    Backup[Base backup plus archived log range] --> PITR[Point-in-time recovery]
+~~~
 
 #### Transactions and isolation / 事务与隔离
 
@@ -714,10 +859,11 @@ Two nearby concepts are useful boundaries, not a distributed-systems survey:
 
 **Course material kept in the archive / 保留在归档中的课程内容：** the detailed RAID calculations, R-tree/spatial-index examples, snapshot-isolation exercises, and recovery derivations remain in [week 1 RAID calculations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w1.md), [week 2 R-tree/spatial-index examples](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w2.md), [week 3 snapshot-isolation exercises](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w3.md), and [week 4 recovery derivations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4.md). The active note provides the shared model; the course files preserve their derivations and exercises.
 
-**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#23.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains request-scoped ORM work and connection budgeting; [Caching and Redis / 缓存与 Redis](#24.%20Caching%20and%20Redis%20/%20%E7%BC%93%E5%AD%98%E4%B8%8E%20Redis) explains a cache in front of the database. [Core Data Structures / 核心数据结构](#16.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) introduces the tree structures behind common indexes; the [archived database course](../../archive/uni-subjects/COMP90050ADBS/readme.md) preserves its broader sequence of worked examples.
 
-**Sources and verification / 来源与验证：** PostgreSQL 18 documentation checked 2026-10-15: [SQL tutorial](https://www.postgresql.org/docs/18/tutorial-sql.html), [comparison predicates](https://www.postgresql.org/docs/18/functions-comparison.html), [table expressions and joins](https://www.postgresql.org/docs/18/queries-table-expressions.html), [aggregate functions](https://www.postgresql.org/docs/18/functions-aggregate.html), [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [indexes](https://www.postgresql.org/docs/18/indexes.html), [EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html), [MVCC](https://www.postgresql.org/docs/18/mvcc-intro.html), [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html), [WAL](https://www.postgresql.org/docs/18/wal-intro.html), [WAL configuration and recovery](https://www.postgresql.org/docs/18/wal.html), and [prepared transactions](https://www.postgresql.org/docs/18/sql-prepare-transaction.html). SQLite's [foreign-key](https://www.sqlite.org/foreignkeys.html), [transaction](https://www.sqlite.org/lang_transaction.html), [SELECT](https://www.sqlite.org/lang_select.html), [expressions](https://www.sqlite.org/lang_expr.html), [aggregate functions](https://www.sqlite.org/lang_aggfunc.html), [query planner](https://www.sqlite.org/queryplanner.html), and [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html) documentation support the examples; plan wording is diagnostic output, not an API. The customer/order result queries, existing schema/query example, and reservation transaction were run with Python's `sqlite3` module against SQLite 3.51.0, with foreign-key enforcement enabled. For 1,000 synthetic orders, the existing plan run changed from a table scan plus temporary sort to an index search after adding the composite index. That is one planner observation, not a stable output contract. The original recovery method is Mohan et al., [ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging); its DPT and `recLSN` mechanism is explained in the [CMU database recovery notes (pp. 1, 4–6)](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf).
-## 5. A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？
+**Related notes / 相关笔记：** [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) shows a conditional transaction for a local business invariant; [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains why a database transaction cannot atomically include an unrelated remote side effect; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#46.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies an outbox to the database-to-queue boundary.
+
+**Sources / 来源：** PostgreSQL 18 [MVCC](https://www.postgresql.org/docs/18/mvcc-intro.html), [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html), [WAL introduction](https://www.postgresql.org/docs/18/wal-intro.html), [WAL configuration and recovery](https://www.postgresql.org/docs/18/wal.html), and [prepared transactions](https://www.postgresql.org/docs/18/sql-prepare-transaction.html), checked 2026-10-15; SQLite [transactions](https://www.sqlite.org/lang_transaction.html). The archived database course retains the detailed ARIES DPT/recLSN derivation and examples: [week 4 recovery](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4.md). CAP and 2PC are boundaries, not local transaction substitutes: see Gilbert and Lynch's [CAP result](https://www.cs.princeton.edu/courses/archive/spring24/cos418/papers/cap.pdf), PostgreSQL's [prepared transaction documentation](https://www.postgresql.org/docs/18/sql-prepare-transaction.html), and the archived [CAP / 2PC course notes](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4.md). The original ARIES method is Mohan et al., [ARIES](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging), with DPT and recLSN explained in the [CMU database recovery notes (pp. 1, 4–6)](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf).
+## 9. A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？
 
 ### A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？
 
@@ -729,7 +875,7 @@ A timeout or disconnected connection means the caller did not receive a result; 
 
 A **timeout** limits one wait or operation. An end-to-end **deadline** is the latest time the whole request may finish. Starting a new full timeout for each downstream call can let a multi-hop request run far beyond the caller's budget. Pass a deadline or remaining time downstream, reserve time for cleanup and the response, and choose limits from measured latency and the product's failure policy; there is no universal timeout value. Connection setup and response waiting may need separate limits when a client library treats them separately.
 
-When a write is accepted but the response is lost, the caller's **outcome is unknown**. It cannot distinguish “the request never arrived” from “the effect committed and only the response was lost.” A **202 Accepted** response is a different, explicit contract: it says processing was accepted but is not complete. Return a stable operation or job URL so the client can query later; HTTP does not send a later response over the original connection. The endpoint's response and error shapes belong to [HTTP API Contracts / HTTP API契约](#22.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6), while method-level semantics belong to [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket).
+When a write is accepted but the response is lost, the caller's **outcome is unknown**. It cannot distinguish “the request never arrived” from “the effect committed and only the response was lost.” A **202 Accepted** response is a different, explicit contract: it says processing was accepted but is not complete. Return a stable operation or job URL so the client can query later; HTTP does not send a later response over the original connection. The endpoint's response and error shapes belong to [HTTP API Contracts / HTTP API契约](#36.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F), while method-level semantics belong to [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F).
 
 ~~~mermaid
 sequenceDiagram
@@ -779,16 +925,16 @@ The base delay, cap, attempt limit, and total retry budget are service choices d
 
 Cancellation tells work that its result is no longer needed. Propagate it to downstream calls and check it at safe points so unnecessary computation stops and resources are released. Support depends on each runtime and API; cancellation is often cooperative. It does not prove a remote service stopped or undid a side effect. A client disconnect can trigger a local cancellation signal in some frameworks, but the server must still rely on authoritative operation state to determine whether a write committed.
 
-The account-report example shows the full durable contract: the client receives **202** and a status URL, retries return one job for the same scoped key, and the job record remains authoritative after disconnect. See [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#31.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F). For a durable AI run and its checkpoint/reconciliation boundary, see [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md); for how a browser presents disconnect, reconnect, and final states, see [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md).
+The account-report example shows the full durable contract: the client receives **202** and a status URL, retries return one job for the same scoped key, and the job record remains authoritative after disconnect. See [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#46.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F). For a durable AI run and its checkpoint/reconciliation boundary, see [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md); for how a browser presents disconnect, reconnect, and final states, see [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md).
 
 Observe the request boundary separately: accepted and rejected requests, deadline exhaustion, timeout and cancellation counts, idempotent replays and key conflicts, and final operation or job outcomes. These show whether users received a result, an explicit pending state, an overload response, or an unresolved outcome. Queue depth, oldest-message age, worker slots, redelivery, and acknowledgement signals belong to the corresponding capacity and broker boundaries.
 
-Capacity and queue delivery are separate questions. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#6.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) covers admission, backpressure, and the full synthetic report estimate. [Publisher confirms and consumer acknowledgements / 发布者确认和消费者确认分别证明什么？](#7.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker confirmation and redelivery boundaries.
+Capacity and queue delivery are separate questions. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) covers admission, backpressure, and the full synthetic report estimate. [Publisher confirms and consumer acknowledgements / 发布者确认和消费者确认分别证明什么？](#11.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker confirmation and redelivery boundaries.
 
-**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#23.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains how request and transaction lifetimes borrow database connections; [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) covers the constraints and transaction semantics that make a local deduplication boundary possible.
+**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#38.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains how request and transaction lifetimes borrow database connections; [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers the constraints and transaction semantics that make a local deduplication boundary possible.
 
 **Sources / 来源：** [RFC 9110 §9.2.2, Idempotent Methods](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) and [§15.3.3, 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3), checked 2026-11-05; AWS Builders' Library, [Timeouts, retries, and backoff with jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/) and [Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/), checked 2026-10-15; gRPC guides to [Deadlines](https://grpc.io/docs/guides/deadlines/) and [Cancellation](https://grpc.io/docs/guides/cancellation/).
-## 6. How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？
+## 10. How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？
 
 ### How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？
 
@@ -813,7 +959,7 @@ flowchart LR
     Outbox -->|publish retry or broker copy| Outbox
 ~~~
 
-For a durable job, count the logical job once while it is in the outbox or waiting in the broker. Moving the same job between those systems does not consume a second waiting slot. Release the reservation through a guarded transition when the job starts or becomes terminal before starting. If a retry or lease recovery returns it to waiting, reserve a slot again before requeueing. The account-report case uses this rule and defines the database transitions in [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#31.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F).
+For a durable job, count the logical job once while it is in the outbox or waiting in the broker. Moving the same job between those systems does not consume a second waiting slot. Release the reservation through a guarded transition when the job starts or becomes terminal before starting. If a retry or lease recovery returns it to waiting, reserve a slot again before requeueing. The account-report case uses this rule and defines the database transitions in [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#46.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F).
 
 Under steady-state conditions, Little's Law is:
 
@@ -835,7 +981,7 @@ A plan with 4 worker replicas × 2 processes per replica × 8 active job slots p
 
 Bound acceptance separately from waiting work. In this example, allow a sustained 7 submissions/s with a burst of 30 and at most 240 accepted-but-not-started jobs across the outbox and broker queue. Reserve one shared slot per job before returning **202 Accepted**; moving a job from outbox to broker does not count it twice. Release the reservation once when work starts or becomes terminal before starting. If all workers stop, the bound fills after a short interruption; once the waiting allowance is full or the rate limit is exhausted, return a documented overload response without claiming the request was accepted.
 
-At 20 offered submissions/s for 600 s, 12,000 requests arrive. A token bucket admitting at most 7 × 600 + 30 = 4,230 in that interval leaves at least 7,770 not admitted, assuming the shared waiting allowance and other limits do not reject sooner. A rejected or ambiguous submission still follows the deadline and idempotency rules in [API timeout and safe retry / API 超时后的结果确认与安全重试](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F).
+At 20 offered submissions/s for 600 s, 12,000 requests arrive. A token bucket admitting at most 7 × 600 + 30 = 4,230 in that interval leaves at least 7,770 not admitted, assuming the shared waiting allowance and other limits do not reject sooner. A rejected or ambiguous submission still follows the deadline and idempotency rules in [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F).
 
 ##### Budget database connections / 预算数据库连接
 
@@ -850,7 +996,7 @@ Budget every process-local pool, including overflow, before increasing replicas:
 | Example database connection budget | Assumed total | 240 |
 | Unallocated headroom | 240 − 200 | 40 |
 
-This pool ceiling is not a prediction that 200 connections will be busy. Each report uses 12 sequential reads × 0.020 connection-seconds = 0.24 connection-seconds. That implies 5 × 0.24 = 1.2 average checked-out connections for report reads at the average arrival rate, or 20 × 0.24 = 4.8 if the offered peak were admitted; a 10 ms submission transaction adds 0.05 average or 0.2 at that peak. Query fan-out, connection hold time, and real pool behavior must be measured before treating these estimates as resource headroom. The application-level pool ceiling and its per-process scope are explained in [Data Access and Connection Pools / 数据访问与连接池](#23.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0).
+This pool ceiling is not a prediction that 200 connections will be busy. Each report uses 12 sequential reads × 0.020 connection-seconds = 0.24 connection-seconds. That implies 5 × 0.24 = 1.2 average checked-out connections for report reads at the average arrival rate, or 20 × 0.24 = 4.8 if the offered peak were admitted; a 10 ms submission transaction adds 0.05 average or 0.2 at that peak. Query fan-out, connection hold time, and real pool behavior must be measured before treating these estimates as resource headroom. The application-level pool ceiling and its per-process scope are explained in [Data Access and Connection Pools / 数据访问与连接池](#38.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F).
 
 ##### Estimate result bytes and retention / 估算结果体量与留存
 
@@ -868,14 +1014,14 @@ At a sustained 7 completions/s, result volume averages 0.875 MiB/s; this is a lo
 
 Under these assumptions, worker slots bind before the estimated database connection count: peak demand needs 120 active jobs while the plan has 64 slots. That does not prove database CPU, storage I/O, or network has spare capacity.
 
-Load-test the representative 8 KiB input, 12-read fan-out, and output sizes. Ramp average traffic, apply the 20/s burst, then test rate rejection, a full queue, slow reads, retries, and worker loss. Record request acceptance latency separately from job queue wait and completion time. Compare distributions such as p50, p95, and p99 for each user-visible stage; the 6 s mean belongs in the concurrency estimate, not as a p95 promise. Track sustained throughput, queue age, busy slots, database checkout wait and CPU, retained bytes, and completed-job outcomes against the service objective before changing pool size or replicas. [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#8.%20Observability,%20SLOs,%20and%20Incident%20Response%20/%20%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7%E3%80%81%E6%9C%8D%E5%8A%A1%E7%9B%AE%E6%A0%87%E4%B8%8E%E4%BA%8B%E4%BB%B6%E5%93%8D%E5%BA%94) explains how to turn these signals into useful service indicators.
+Load-test the representative 8 KiB input, 12-read fan-out, and output sizes. Ramp average traffic, apply the 20/s burst, then test rate rejection, a full queue, slow reads, retries, and worker loss. Record request acceptance latency separately from job queue wait and completion time. Compare distributions such as p50, p95, and p99 for each user-visible stage; the 6 s mean belongs in the concurrency estimate, not as a p95 promise. Track sustained throughput, queue age, busy slots, database checkout wait and CPU, retained bytes, and completed-job outcomes against the service objective before changing pool size or replicas. [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#12.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F) explains how to turn these signals into useful service indicators.
 
 **How would you answer “How many workers do we need?” / 如何回答“需要多少个 worker？”** I would state the workload and service-time assumptions, use Little's Law for mean in-flight jobs, and compare that with a bounded worker plan and pool budget. Here the mean suggests 30 active jobs, but peak demand suggests 120; 64 slots and a 7/s admission limit are hypotheses to test under the expected payload and fan-out. I would measure queue age and stage latency distributions before adding replicas, because the first limit could move to the database or storage. / 我会先说明工作负载和处理时长假设，用 Little 定律估算平均在途任务，再与有界 worker 和连接池预算比较。此例平均负载约需 30 个并发任务，但峰值需求约为 120；64 个槽位和每秒准入 7 个是待压测的假设，应按预期 payload 和扇出测量队列等待及各阶段时延分布，再决定是否扩容，因为首个瓶颈也可能转移到数据库或存储。
 
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers deadline and unknown-outcome policy; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#31.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies these bounds to a complete service contract; [Queue delivery acknowledgements / 队列确认与重投](#7.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) covers broker delivery state; [AI System Design Interview Questions / AI 系统设计面试题](../../ai-engineering/systems/ai-system-design-interview-questions.md) has a different worked latency allocation and model-stage concurrency estimate.
+**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers deadline and unknown-outcome policy; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#46.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies these bounds to a complete service contract; [Queue delivery acknowledgements / 队列确认与重投](#11.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) covers broker delivery state; [AI System Design Interview Questions / AI 系统设计面试题](../../ai-engineering/systems/ai-system-design-interview-questions.md) has a different worked latency allocation and model-stage concurrency estimate.
 
 **Sources / 来源：** Little and Graves, [“Little’s Law Deals with Queuing Systems”](https://web.eng.ucsd.edu/~massimo/ECE158A/Handouts_files/Little.pdf), in *Building Intuition* (2008), pp. 81–82, for the steady-state relation and system boundary; [Google SRE Workbook: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15, for latency distributions and percentile-based indicators. The numeric workload and all capacity figures above are synthetic calculations from the stated assumptions.
-## 7. What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？
+## 11. What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？
 
 ### What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？
 
@@ -905,7 +1051,7 @@ The sequence has two separate ambiguity windows. If the broker accepted a publis
 
 Publisher confirms cover the publisher-to-broker boundary under the broker's rules. They do not know whether a consumer received, acknowledged, or completed the message. The publisher must also distinguish a broker confirmation from a routing guarantee: depending on broker and configuration, acceptance by an exchange may not mean that the message reached the intended queue.
 
-With RabbitMQ, a publisher that has not received a confirm when a connection fails cannot know whether the message was accepted; retrying may duplicate it. For routable persistent messages, what the confirm means depends on the message and queue type; consult the configured queue's durability and replication semantics. A confirm is not a transaction across the publisher's database and the broker. Persisting business state and an outbox row together, then publishing from that outbox, handles that separate database-to-broker dual-write problem. The account-report implementation is in [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#31.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F).
+With RabbitMQ, a publisher that has not received a confirm when a connection fails cannot know whether the message was accepted; retrying may duplicate it. For routable persistent messages, what the confirm means depends on the message and queue type; consult the configured queue's durability and replication semantics. A confirm is not a transaction across the publisher's database and the broker. Persisting business state and an outbox row together, then publishing from that outbox, handles that separate database-to-broker dual-write problem. The account-report implementation is in [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#46.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F).
 
 #### Consumer acknowledgement and redelivery / 消费者确认与重投
 
@@ -919,20 +1065,29 @@ A dead-letter queue makes repeatedly failed messages visible only if it is monit
 
 Concurrent consumers may finish messages in a different order from delivery. A FIFO queue does not automatically serialize all effects across multiple consumers, retries, or partitions. If completion order is a correctness rule, define its scope—often per account or key—and enforce it with a single ordered partition, per-key sequence, conditional state transition, or serialization at the worker. Confirm the chosen broker's exact delivery and ordering contract.
 
-Observe each boundary separately: publish attempts and confirms, unroutable messages, queue depth and oldest-message age, unacknowledged deliveries, retries and redeliveries, acknowledgements, dead-letter volume, and completed business outcomes. A growing oldest-message age indicates delay even while a queue continues accepting work. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#6.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains how to constrain the work waiting behind those boundaries.
+Observe each boundary separately: publish attempts and confirms, unroutable messages, queue depth and oldest-message age, unacknowledged deliveries, retries and redeliveries, acknowledgements, dead-letter volume, and completed business outcomes. A growing oldest-message age indicates delay even while a queue continues accepting work. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains how to constrain the work waiting behind those boundaries.
 
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers ambiguous request outcomes and operation idempotency; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#31.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies outbox, attempt fencing, and post-outcome acknowledgement to a report job; [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) covers the local transaction boundary used to persist business effects.
+**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers ambiguous request outcomes and operation idempotency; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#46.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies outbox, attempt fencing, and post-outcome acknowledgement to a report job; [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers the local transaction boundary used to persist business effects.
 
 **Sources / 来源：** RabbitMQ 4.3, [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and [Reliability Guide](https://www.rabbitmq.com/docs/reliability), checked 2026-11-05. These references document RabbitMQ's confirm, manual-ack, redelivery, and publisher retry behavior; other brokers have different contracts.
-## 8. Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应
+## 12. How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？
 
-### Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应
+### How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？
 
 **Core model / 核心模型:** Start from the outcome users need, measure it with a clear service-level indicator, and use correlated metrics, traces, and logs to find which stage is failing. Metrics show the aggregate shape; a trace follows one request across stages; logs explain specific events. / 从用户需要的结果开始，用明确定义的服务等级指标衡量它，再用相互关联的指标、追踪和日志定位故障阶段。指标显示整体趋势，追踪串起单个请求的各阶段，日志说明具体事件。
 
 **Key terms / 关键术语:** service-level indicator (SLI) / 服务等级指标；service-level objective (SLO) / 服务等级目标；service-level agreement (SLA) / 服务等级协议；error budget / 错误预算；trace / 分布式追踪；span / 跨度；cardinality / 基数。
 
 **Core answer / 核心回答：** SLI 是符合资格的用户请求中“好事件 / 总事件”的实测比例；SLO 是该比例在指定时间窗内应达到的目标；SLA 是对外业务协议，可能规定计量方式和未达标后果。例：30 天内 10,000 次有效请求中，9,940 次在 400 ms 内成功，SLI 为 99.4%；若 SLO 为 99.5%，错误预算是 `(1 − 99.5%) × 10,000 = 50` 次坏事件，实际 60 次即超出 10 次。告警后先确认用户影响和分母，再沿 trace 定位慢/失败阶段并查关联日志；根据证据缓解，以用户 SLI 和依赖信号验证恢复，并记录原因与后续改进。
+
+~~~mermaid
+flowchart LR
+    Metrics[Metric shows user-impact window and scope] --> Trace[Representative trace locates slow or failed stage]
+    Trace --> Logs[Correlated logs explain that event]
+    Logs --> Mitigate[Choose evidence-based mitigation]
+    Mitigate --> Verify[Verify user SLI and dependency recovery]
+    Verify --> Learn[Record cause and follow-up]
+~~~
 
 #### Follow one request through three signals / 用三种信号跟踪一个请求
 
@@ -976,7 +1131,7 @@ For the example SLO, a focused alert could fire when at least 100 eligible looku
 When it fires:
 
 1. **Confirm impact and scope.** Check event counts, SLI trend, error types, route/region, and recent changes. Make sure telemetry is arriving and the denominator still matches the SLI definition.
-2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age and depth as part of [capacity and backpressure](#6.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). [Broker delivery](#7.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains the acknowledgement boundary.
+2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age and depth as part of [capacity and backpressure](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). [Broker delivery](#11.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains the acknowledgement boundary.
 3. **Mitigate the user impact.** Choose the smallest safe action supported by evidence, such as rolling back a change that matches the onset or temporarily reducing load on a saturated dependency. Record the action and its expected effect; do not add retries blindly if they can amplify overload.
 4. **Verify recovery.** Confirm that the user-facing SLI returns above the alert threshold with adequate traffic, and check the affected stage and dependency signals for continuing saturation or error growth. A quiet alert alone is not evidence that the service recovered.
 5. **Follow up.** Record the user impact and time window, the causal mechanism, the mitigation, and a small set of owned changes to prevent recurrence or improve detection. Link the incident to relevant tests and telemetry gaps.
@@ -987,73 +1142,27 @@ Use the SLO to guide tradeoffs. For AI-backed flows, pair [production signals](.
 
 - OpenTelemetry's unversioned concept pages, checked 2026-10-15: [Signals](https://opentelemetry.io/docs/concepts/signals/) (last modified 2026-03-10), [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) (2026-04-23), [Traces](https://opentelemetry.io/docs/concepts/signals/traces/) (2026-01-14), [Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/) (2026-07-02), [Logs](https://opentelemetry.io/docs/concepts/signals/logs/) (2026-08-07), and [Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/) (2026-08-10).
 - [Google SRE Workbook, Chapter 2: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15.
-## 9. Web Security and Authentication / Web安全与身份认证
+## 13. How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？
 
-### Web Security and Authentication / Web安全与身份认证
+### How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？
 
 **身份认证 / Authentication** establishes which identity or credential is presenting a request. **授权 / Authorization** decides whether that identity may perform this action on this resource. Authentication alone does not grant every permission; enforce authorization on the server for each protected operation. Client checks can improve the interface but cannot decide access.
 
 身份认证回答请求以谁的凭据发出，授权则逐项决定该身份能否访问资源或执行操作；浏览器编码、Cookie属性、CORS、CSRF和CSP处理的是不同边界，不能替代服务端授权或彼此替代。
+**Key terms / 关键术语：** authenticated subject / 已认证主体；tenant membership / 租户成员关系；authorization / 授权；resource scope / 资源范围；tenant-scoped query / 租户范围查询；worker revalidation / worker 重新验证。
 
-#### Cookies vs. tokens — which to use for authentication?
-
-**Cookie 会话与令牌 / Cookie sessions and tokens** are transport and session choices, not two complete security models. Choose according to the clients, domain boundaries, revocation needs, and threat model.
-
-A server-side session commonly works like this:
-
-1. The user authenticates; the server creates a session and stores its state.
-2. The server returns an opaque session identifier in a cookie.
-3. The browser sends that cookie only when its domain, path, security, SameSite, and request rules match.
-4. The server resolves the session and performs authorization for the requested action.
-
-For a session cookie, consider:
-
-- **HttpOnly** prevents page JavaScript from reading the cookie through APIs such as `document.cookie`. It does not stop injected JavaScript from making authenticated requests as the user.
-- **Secure** limits transmission to secure channels such as HTTPS.
-- **SameSite=Strict, Lax, or None** controls cookie sending in cross-site contexts. It is a site-level browser rule, not an origin or authorization boundary. Specify the value; browser defaults can vary. `SameSite=None` requires `Secure`.
-- Cookie scope and size have implementation constraints; do not use `Domain` or `Path` as authorization checks.
-
-A bearer token is presented by the client, commonly in an `Authorization: Bearer` header. A JWT is one token format: a signed JWT normally protects integrity, but its claims are readable unless it is encrypted. A valid signature proves that a trusted key signed the token; it does not by itself authorize every action. Verifiers must validate the expected algorithm, issuer, audience, token type, and time claims according to the application protocol. Use short-lived tokens and a deliberate rotation or revocation strategy where needed.
-
-A JWT can carry claims without a per-request session lookup, but revocation and fresh permission changes then need an explicit design. The JWT format does not bypass browser origin rules or CORS. A token stored in browser-accessible storage can be read by injected JavaScript; an HttpOnly cookie reduces that direct theft path but still needs a CSRF design. Neither storage choice fixes XSS or authorization flaws.
-
----
-
-#### What is Single Sign-On (SSO), and how does it work?
-
-**单点登录 / Single Sign-On** lets a user authenticate through an identity provider and establish sessions with multiple relying applications. Each application still validates the protocol response and applies its own authorization rules.
-
-OAuth 2.0 is an authorization framework for delegated access; OAuth alone is not an authentication protocol. **OpenID Connect / OpenID Connect 身份层** builds an identity layer on OAuth 2.0 and defines the ID Token. An access token and an ID Token serve different purposes: do not treat either as proof for an unrelated audience.
-
-In a typical redirect flow, the relying application creates a login request, the identity provider authenticates the user, and the application validates the response before creating its own session. Protocol details matter: validate the redirect target and issuer, and apply the relevant state, nonce, signature, and audience checks for the flow.
-
-See [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
-
-##### Authorization-code + PKCE callback / 授权码 + PKCE 回调
-
-When an application needs federated sign-in, OpenID Connect uses OAuth's authorization-code flow with the `openid` scope. Plain OAuth grants delegated API access; it does not define an ID Token or an authentication result for the client.
-
-1. The client creates a one-time `code_verifier` and derives `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))` using `S256`. It keeps the verifier with the browser's pending login transaction. It also normally creates an unpredictable `state` value bound to that browser transaction; an OIDC client may create a `nonce` if it wants to bind the returned ID Token to this request.
-2. The client redirects the browser to the authorization endpoint with `response_type=code`, its `client_id`, an exactly registered `redirect_uri`, `scope=openid` (plus only the API scopes it needs), `state`, `code_challenge`, and `code_challenge_method=S256`. It includes `nonce` only if the flow uses it.
-3. After authenticating the user and obtaining any required consent, the authorization server redirects to the registered callback with a short-lived, one-use authorization code and the `state` value, if sent. The callback checks and consumes its stored `state` before continuing. If the client uses multiple authorization servers, it also applies an issuer or equivalent mix-up defense.
-4. The client sends the code, the same `redirect_uri`, and its original `code_verifier` to the token endpoint; a confidential client also authenticates there when required. The authorization server recomputes the challenge and rejects a code redemption whose verifier does not match. The code alone is therefore insufficient for an interceptor to redeem.
-5. In the selected OIDC Authorization Code Flow, a successful token response includes an ID Token and an Access Token; a Refresh Token is optional. The client validates the ID Token before establishing its own session. The API validates the access token it receives separately.
-
-These values solve different problems and are not all mandatory in every flow:
-
-- **`state` / 请求状态** is an opaque value for correlating a redirect with the initiating browser transaction and often restoring a local return path. OAuth clients must prevent callback CSRF, but a literal `state` parameter is not the only permitted defense: RFC 9700 allows a client that has confirmed PKCE support to rely on PKCE for CSRF protection; in OIDC, `nonce` can also provide that protection. If the client sends `state`, it must bind and check it instead of trusting a callback value.
-- **`nonce` / 随机数** binds an ID Token to an OIDC authentication request and helps detect replay. It is optional in the OIDC Authorization Code Flow; when sent, the provider must return it in the ID Token and the client must compare it. Other OIDC flows have different requirements.
-- **`code_verifier` / PKCE验证值** is the secret the client keeps and later presents at the token endpoint. The authorization request carries only its derived challenge. RFC 9700 requires PKCE for public clients and recommends it for confidential clients; use `S256`, not a method that reveals the verifier.
-
-**Token use and lifecycle / 令牌用途与生命周期：** An **ID Token / 身份令牌** tells the OIDC client about an authentication event; it is not an API credential. Validate it under the OIDC profile: exact expected issuer, a trusted audience containing this client's ID (and `azp` when applicable), expiration, a matching `nonce` when one was sent, and normally its signature with the configured algorithm and appropriate verification key. OIDC Core §3.1.3.7(6) permits a narrow exception in the Authorization Code Flow: if the client receives the ID Token by direct communication with the Token Endpoint and validates that endpoint's TLS server identity, it may use that TLS validation to validate the issuer instead of checking the token signature. The other ID Token checks still apply, and ID Tokens received through other paths require signature validation. An **access token / 访问令牌** is for a resource server. That server checks the expected issuer, its own API audience, expiration, and allowed scope/action; follow the issuer's contract, verifying the signature and claims for a JWT access-token profile or using the trusted introspection/lookup mechanism for an opaque token. Decoding a JWT is not validation.
-
-A refresh token is presented to the authorization server's token endpoint to obtain a replacement access token; it is not sent to the API. Treat it as a high-value credential. RFC 9700 requires public clients to use refresh-token rotation or sender constraint. If the authorization server supports a revocation endpoint, a client can request revocation of a token; resource servers may learn of that change at different times. A locally verified, self-contained access token may remain accepted until its expiry unless the resource server also checks revocation state. Ending the application's own session and ending an identity-provider session are separate operations.
-
-**Core idea / 核心要点：** OAuth authorization grants access to an API; OIDC tells a client who authenticated; the application still decides whether that identity may perform an action now. PKCE protects code redemption, and runtime authorization protects application data.
-
-**Mechanism in Chinese / 机制要点：** PKCE 把授权码与客户端保留的 verifier 配对；state 关联回调与发起的登录事务，若发送就必须校验，而已确认支持 PKCE 的客户端可按 RFC 9700 依 PKCE 防回调 CSRF。OIDC Code Flow 的 nonce 可选，若发送则须与 ID Token 中的值匹配。客户端验证 ID Token 后建立自己的会话，API 则独立验证面向自身的 access token，并按当前主体、租户和权限做运行时授权。refresh token 只向授权服务器换取新 access token；撤销传播可能有延迟，应用会话、IdP 会话和 API 对已签发 access token 的接受边界要分别处理。
-
-See [OpenID Connect Core 1.0, incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice (January 2025)](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 7636, Proof Key for Code Exchange (September 2015)](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009, OAuth 2.0 Token Revocation (August 2013)](https://www.rfc-editor.org/rfc/rfc7009.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
+~~~mermaid
+flowchart LR
+    Credential[Validate credential] --> Subject[Authenticated subject]
+    Subject --> Membership[Resolve current tenant membership]
+    Membership --> Action[Authorize action and resource]
+    Action --> Query[Tenant-scoped database query]
+    Action --> Cache[Authorize before cache lookup]
+    Action --> Job[Persist authorized job context]
+    Job --> Queue[Queue carries only job ID]
+    Queue --> Worker[Worker reloads job and rechecks membership]
+    Worker --> Query
+~~~
 
 #### Tenant-owned resources / 租户资源授权
 
@@ -1172,6 +1281,101 @@ See [AWS Well-Architected SaaS Lens: Preventing cross-tenant access](https://doc
 
 ---
 
+
+**Related questions / 相关问题：** [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](#14.%20How%20do%20cookie%20sessions%20and%20OIDC%20tokens%20establish%20identity?%20/%20Cookie%20%E4%BC%9A%E8%AF%9D%E4%B8%8E%20OIDC%20%E4%BB%A4%E7%89%8C%E5%A6%82%E4%BD%95%E5%BB%BA%E7%AB%8B%E8%BA%AB%E4%BB%BD%EF%BC%9F) covers credentials and login; [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](#15.%20Which%20web%20security%20control%20protects%20each%20browser%20boundary?%20/%20%E5%93%AA%E7%A7%8D%20Web%20%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E4%BF%9D%E6%8A%A4%E5%93%AA%E6%9D%A1%E6%B5%8F%E8%A7%88%E5%99%A8%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F) separates TLS, XSS, CSRF, CORS, and framing; [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](#16.%20How%20do%20web%20services%20limit%20denial-of-service%20impact?%20/%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) covers bounded public work; [How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？](#17.%20How%20do%20parameterized%20queries%20prevent%20SQL%20injection?%20/%20%E5%8F%82%E6%95%B0%E5%8C%96%E6%9F%A5%E8%AF%A2%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20SQL%20%E6%B3%A8%E5%85%A5%EF%BC%9F) and [How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？](#18.%20How%20should%20passwords%20be%20stored%20against%20offline%20guessing?%20/%20%E5%A6%82%E4%BD%95%E5%AD%98%E5%82%A8%E5%AF%86%E7%A0%81%E4%BB%A5%E6%8A%B5%E6%8A%97%E7%A6%BB%E7%BA%BF%E7%8C%9C%E6%B5%8B%EF%BC%9F) cover server-side data and credential boundaries.
+
+**See also / 另见：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers browser request and transport context; [Browser Storage and Communication / 浏览器存储与通信](../../frontend/browser-apis/browser-storage-and-communication.md) covers client storage and messaging risks.
+
+**Sources / 来源：** [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [AWS SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html). Security guidance checked 2026-10-15. The SQLite example uses synthetic identities and data; it is not credential-validation code.
+## 14. How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？
+
+### How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？
+
+**Core answer / 核心回答：** A cookie usually carries an opaque session identifier that the server resolves; a bearer token carries a credential the resource server validates. OIDC adds an identity layer to OAuth, while the application still creates its own session and authorizes each protected action. Choose storage, lifetime, revocation, and callback checks for the client and threat model. / Cookie 通常承载由服务端解析的不透明会话标识；Bearer token 则携带资源服务器验证的凭据。OIDC 在 OAuth 上加入身份层，但应用仍要建立自己的会话，并逐项授权受保护操作。应按客户端和威胁模型设计凭据存储、生命周期、撤销与回调校验。
+
+**Key terms / 关键术语：** session identifier / 会话标识；bearer token / Bearer 令牌；JWT / JSON Web Token；OIDC / OpenID Connect；authorization code / 授权码；PKCE / 授权码交换证明；state / 状态值；nonce / 随机数；refresh token / 刷新令牌。
+
+#### Cookies vs. tokens — which to use for authentication? / Cookie 会话与令牌应如何选择？
+
+**Cookie 会话与令牌 / Cookie sessions and tokens** are transport and session choices, not two complete security models. Choose according to the clients, domain boundaries, revocation needs, and threat model.
+
+A server-side session commonly works like this:
+
+1. The user authenticates; the server creates a session and stores its state.
+2. The server returns an opaque session identifier in a cookie.
+3. The browser sends that cookie only when its domain, path, security, SameSite, and request rules match.
+4. The server resolves the session and performs authorization for the requested action.
+
+For a session cookie, consider:
+
+- **HttpOnly** prevents page JavaScript from reading the cookie through APIs such as `document.cookie`. It does not stop injected JavaScript from making authenticated requests as the user.
+- **Secure** limits transmission to secure channels such as HTTPS.
+- **SameSite=Strict, Lax, or None** controls cookie sending in cross-site contexts. It is a site-level browser rule, not an origin or authorization boundary. Specify the value; browser defaults can vary. `SameSite=None` requires `Secure`.
+- Cookie scope and size have implementation constraints; do not use `Domain` or `Path` as authorization checks.
+
+A bearer token is presented by the client, commonly in an `Authorization: Bearer` header. A JWT is one token format: a signed JWT normally protects integrity, but its claims are readable unless it is encrypted. A valid signature proves that a trusted key signed the token; it does not by itself authorize every action. Verifiers must validate the expected algorithm, issuer, audience, token type, and time claims according to the application protocol. Use short-lived tokens and a deliberate rotation or revocation strategy where needed.
+
+A JWT can carry claims without a per-request session lookup, but revocation and fresh permission changes then need an explicit design. The JWT format does not bypass browser origin rules or CORS. A token stored in browser-accessible storage can be read by injected JavaScript; an HttpOnly cookie reduces that direct theft path but still needs a CSRF design. Neither storage choice fixes XSS or authorization flaws.
+
+---
+
+#### What is Single Sign-On (SSO), and how does it work?
+
+**单点登录 / Single Sign-On** lets a user authenticate through an identity provider and establish sessions with multiple relying applications. Each application still validates the protocol response and applies its own authorization rules.
+
+OAuth 2.0 is an authorization framework for delegated access; OAuth alone is not an authentication protocol. **OpenID Connect / OpenID Connect 身份层** builds an identity layer on OAuth 2.0 and defines the ID Token. An access token and an ID Token serve different purposes: do not treat either as proof for an unrelated audience.
+
+In a typical redirect flow, the relying application creates a login request, the identity provider authenticates the user, and the application validates the response before creating its own session. Protocol details matter: validate the redirect target and issuer, and apply the relevant state, nonce, signature, and audience checks for the flow.
+
+See [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
+
+##### Authorization-code + PKCE callback / 授权码 + PKCE 回调
+
+When an application needs federated sign-in, OpenID Connect uses OAuth's authorization-code flow with the `openid` scope. Plain OAuth grants delegated API access; it does not define an ID Token or an authentication result for the client.
+
+1. The client creates a one-time `code_verifier` and derives `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))` using `S256`. It keeps the verifier with the browser's pending login transaction. It also normally creates an unpredictable `state` value bound to that browser transaction; an OIDC client may create a `nonce` if it wants to bind the returned ID Token to this request.
+2. The client redirects the browser to the authorization endpoint with `response_type=code`, its `client_id`, an exactly registered `redirect_uri`, `scope=openid` (plus only the API scopes it needs), `state`, `code_challenge`, and `code_challenge_method=S256`. It includes `nonce` only if the flow uses it.
+3. After authenticating the user and obtaining any required consent, the authorization server redirects to the registered callback with a short-lived, one-use authorization code and the `state` value, if sent. The callback checks and consumes its stored `state` before continuing. If the client uses multiple authorization servers, it also applies an issuer or equivalent mix-up defense.
+4. The client sends the code, the same `redirect_uri`, and its original `code_verifier` to the token endpoint; a confidential client also authenticates there when required. The authorization server recomputes the challenge and rejects a code redemption whose verifier does not match. The code alone is therefore insufficient for an interceptor to redeem.
+5. In the selected OIDC Authorization Code Flow, a successful token response includes an ID Token and an Access Token; a Refresh Token is optional. The client validates the ID Token before establishing its own session. The API validates the access token it receives separately.
+
+These values solve different problems and are not all mandatory in every flow:
+
+- **`state` / 请求状态** is an opaque value for correlating a redirect with the initiating browser transaction and often restoring a local return path. OAuth clients must prevent callback CSRF, but a literal `state` parameter is not the only permitted defense: RFC 9700 allows a client that has confirmed PKCE support to rely on PKCE for CSRF protection; in OIDC, `nonce` can also provide that protection. If the client sends `state`, it must bind and check it instead of trusting a callback value.
+- **`nonce` / 随机数** binds an ID Token to an OIDC authentication request and helps detect replay. It is optional in the OIDC Authorization Code Flow; when sent, the provider must return it in the ID Token and the client must compare it. Other OIDC flows have different requirements.
+- **`code_verifier` / PKCE验证值** is the secret the client keeps and later presents at the token endpoint. The authorization request carries only its derived challenge. RFC 9700 requires PKCE for public clients and recommends it for confidential clients; use `S256`, not a method that reveals the verifier.
+
+**Token use and lifecycle / 令牌用途与生命周期：** An **ID Token / 身份令牌** tells the OIDC client about an authentication event; it is not an API credential. Validate it under the OIDC profile: exact expected issuer, a trusted audience containing this client's ID (and `azp` when applicable), expiration, a matching `nonce` when one was sent, and normally its signature with the configured algorithm and appropriate verification key. OIDC Core §3.1.3.7(6) permits a narrow exception in the Authorization Code Flow: if the client receives the ID Token by direct communication with the Token Endpoint and validates that endpoint's TLS server identity, it may use that TLS validation to validate the issuer instead of checking the token signature. The other ID Token checks still apply, and ID Tokens received through other paths require signature validation. An **access token / 访问令牌** is for a resource server. That server checks the expected issuer, its own API audience, expiration, and allowed scope/action; follow the issuer's contract, verifying the signature and claims for a JWT access-token profile or using the trusted introspection/lookup mechanism for an opaque token. Decoding a JWT is not validation.
+
+A refresh token is presented to the authorization server's token endpoint to obtain a replacement access token; it is not sent to the API. Treat it as a high-value credential. RFC 9700 requires public clients to use refresh-token rotation or sender constraint. If the authorization server supports a revocation endpoint, a client can request revocation of a token; resource servers may learn of that change at different times. A locally verified, self-contained access token may remain accepted until its expiry unless the resource server also checks revocation state. Ending the application's own session and ending an identity-provider session are separate operations.
+
+**Core idea / 核心要点：** OAuth authorization grants access to an API; OIDC tells a client who authenticated; the application still decides whether that identity may perform an action now. PKCE protects code redemption, and runtime authorization protects application data.
+
+**Mechanism in Chinese / 机制要点：** PKCE 把授权码与客户端保留的 verifier 配对；state 关联回调与发起的登录事务，若发送就必须校验，而已确认支持 PKCE 的客户端可按 RFC 9700 依 PKCE 防回调 CSRF。OIDC Code Flow 的 nonce 可选，若发送则须与 ID Token 中的值匹配。客户端验证 ID Token 后建立自己的会话，API 则独立验证面向自身的 access token，并按当前主体、租户和权限做运行时授权。refresh token 只向授权服务器换取新 access token；撤销传播可能有延迟，应用会话、IdP 会话和 API 对已签发 access token 的接受边界要分别处理。
+
+See [OpenID Connect Core 1.0, incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice (January 2025)](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 7636, Proof Key for Code Exchange (September 2015)](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009, OAuth 2.0 Token Revocation (August 2013)](https://www.rfc-editor.org/rfc/rfc7009.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
+
+
+**Related notes / 相关笔记：** [Cross-tenant authorization / 跨租户资源授权](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) uses the validated subject to resolve current tenant membership; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers cookie fields and browser-origin transport.
+
+**Sources / 来源：** [OpenID Connect Core 1.0 incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 7636, PKCE](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009, Token Revocation](https://www.rfc-editor.org/rfc/rfc7009.html), [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), and [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html). Guidance checked 2026-10-15. The Authorization Code Flow ID Token validation exception was checked against OIDC Core on 2026-10-27.
+## 15. Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？
+
+### Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？
+
+These controls address different threats: TLS protects data in transit and authenticates a server; output handling prevents injected script from becoming active content; CSRF defenses protect cookie-authenticated actions; CORS controls whether browser script may read a cross-origin response; framing policy limits deceptive embedding. None substitutes for server-side authentication or authorization. / 这些控制处理不同威胁：TLS 保护传输并认证服务器；输出处理避免注入脚本成为活动内容；CSRF 防护保护使用 Cookie 凭据的操作；CORS 控制浏览器脚本能否读取跨源响应；框架策略限制欺骗性嵌入。它们都不能替代服务端身份认证或授权。
+
+**Key terms / 关键术语：** TLS / 传输层安全；XSS / 跨站脚本；CSRF / 跨站请求伪造；CORS / 跨源资源共享；CSP / 内容安全策略；frame-ancestors / 可嵌入来源策略。
+
+~~~mermaid
+flowchart LR
+    Network[Network attacker] -->|TLS| Channel[Confidential and integrity-protected channel]
+    Untrusted[Untrusted output] -->|context encoding and sanitization| Page[Rendered page]
+    CrossSite[Cross-site action with ambient cookie] -->|CSRF token and origin checks| StateChange[Authorized state change]
+    OtherOrigin[Other origin script] -->|CORS response policy| Read[Browser may expose response]
+    Frame[Deceptive framing site] -->|frame-ancestors| Embed[Allowed embedding only]
+~~~
+
 #### How does HTTPS protect against man-in-the-middle attacks?
 
 **HTTPS / TLS** protects data in transit against network eavesdropping and tampering when the connection is correctly configured and the client validates the server. In a certificate-authenticated TLS 1.3 handshake, key agreement derives traffic keys; the server's certificate and handshake signature authenticate the server's key. The server does not simply encrypt a session key with its public key as in older textbook handshake descriptions.
@@ -1230,34 +1434,50 @@ For example, `Content-Security-Policy: frame-ancestors 'self'` permits framing b
 
 ---
 
-#### DDoS — what is it, what can you actually do?
 
-**分布式拒绝服务 / Distributed Denial of Service** uses traffic or expensive requests to exhaust network, service, or application resources. Mitigation depends on the attack layer and capacity available; no single application control guarantees protection.
+**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) owns TLS handshake and CORS browser mechanics; [Cross-tenant authorization / 跨租户资源授权](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) owns user identity and server-side permission checks.
 
-Use layered measures such as provider or edge traffic filtering, rate limits and quotas, caching, bounded work, and monitoring. Application code can reject abusive work early and keep expensive endpoints bounded, but large traffic floods need network and provider capacity as well.
+**Sources / 来源：** [RFC 8446, TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html); OWASP [XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [Content Security Policy](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), and [CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html); [WHATWG Fetch, CORS protocol and credentials](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials). Security guidance checked 2026-10-15.
+## 16. How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？
 
----
+### How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？
 
-#### SQL injection — frontend's role?
+Distributed denial-of-service attacks use traffic or expensive requests to exhaust network, service, or application resources. Mitigation depends on the attack layer and available capacity; no single application control guarantees protection. Use layered edge filtering and provider capacity, rate limits and quotas, caching where it is safe, bounded work, and monitoring. Application code can reject abusive work early, but large traffic floods need network and provider-level capacity as well. / 分布式拒绝服务攻击通过流量或高成本请求耗尽网络、服务或应用资源。缓解措施取决于攻击层级和可用容量，单一应用控制不能保证防护。应组合边缘流量过滤与服务商容量、速率限制和配额、安全场景中的缓存、有界工作及监控。应用代码可以尽早拒绝滥用请求，但大规模流量洪峰还需要网络和服务商层的容量。
 
-**SQL 注入 / SQL injection** happens when data is interpreted as part of a SQL command. The frontend can validate inputs for usability, but client-side validation is bypassable and is not a security boundary.
+**Key terms / 关键术语：** denial of service / 拒绝服务；rate limit / 速率限制；quota / 配额；admission control / 准入控制；bounded work / 有界工作。
 
-On the server, use parameterized queries so values are supplied separately from SQL syntax. For identifiers or sort directions that cannot be bound as values, choose from a fixed allowlist. An ORM helps only when the query path uses its safe parameterization; raw query construction can still be vulnerable. Authorization is a separate check: a parameterized query does not prove that the caller may access the selected record.
+**Sources / 来源：** CISA [Understanding and Responding to Distributed Denial-of-Service Attacks](https://www.cisa.gov/sites/default/files/2024-03/understanding-and-responding-to-distributed-denial-of-service-attacks_508c.pdf), checked 2026-11-05, for layered mitigation and rate limitation.
 
-Give each application database account only the tables and operations it needs; query parameterization does not justify connecting as a database administrator.
+**Related notes / 相关笔记：** [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains worker slots, admission, and queue limits; [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains how retries can amplify overload.
+## 17. How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？
 
----
+### How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？
 
-#### How should passwords be stored?
+SQL injection happens when untrusted data is interpreted as part of SQL syntax. Validate input for usability, but make the security boundary at the server: parameterized queries supply values separately from SQL text. Identifiers or sort directions that cannot be bound as values must come from a fixed allowlist. Query parameterization prevents one class of command injection; authorization is a separate decision. / SQL 注入发生在不可信数据被解释为 SQL 语法的一部分时。输入校验可以改善可用性，但安全边界应在服务端：参数化查询把值与 SQL 文本分开提供。无法作为值绑定的标识符或排序方向必须来自固定白名单。参数化查询防止一类命令注入；授权仍是独立判断。
 
-**密码存储 / Password storage** must remain resistant to offline guessing if a database is exposed. Store a salted password hash produced by a password-storage algorithm designed to be expensive to guess, such as Argon2id; use a maintained library and tune its cost for the deployment. A unique random salt is stored with each hash; it is not a secret. A fast general-purpose digest such as SHA-256 alone is not an appropriate password-storage scheme.
+**Key terms / 关键术语：** parameterized query / 参数化查询；SQL syntax / SQL 语法；allowlist / 白名单；authorization / 授权；least privilege / 最小权限。
 
-An optional pepper is a secret kept separately from the password database; it is defense in depth, not a substitute for a suitable password hash. Pair storage with online attempt throttling and a policy that avoids easily guessed passwords. See the [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html).
+On the server, bind values instead of concatenating them into the query. An ORM helps only when its query path uses safe parameterization; raw query construction can still be vulnerable. Parameterization does not prove that the caller may read or modify the selected record. Give each database account only the tables and operations it needs; safe values do not justify connecting as an administrator.
 
-**See also:** [HTTP Protocols and WebSockets](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) for browser request and transport context, and [Browser Storage and Communication](../../frontend/browser-apis/browser-storage-and-communication.md) for browser storage and messaging security.
+The frontend can validate inputs for usability, but client-side checks are bypassable and are not a security boundary. Validate and authorize again where the server constructs the data operation.
 
-Sources: [OWASP Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#least-privilege), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP CSP](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), [WHATWG Fetch](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials), [RFC 7636 PKCE](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009 Token Revocation](https://www.rfc-editor.org/rfc/rfc7009.html), [RFC 8446 TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html), [RFC 8725 JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), [AWS SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html), and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html). Security guidance checked 2026-10-15. The Authorization Code Flow ID Token validation exception was checked against [OpenID Connect Core 1.0 incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html) on 2026-10-27.
-## 10. How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？
+**Related notes / 相关笔记：** [Database constraints and indexes / 数据库约束与索引](#7.%20How%20do%20database%20constraints%20and%20indexes%20shape%20data%20access?%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E7%BA%A6%E6%9D%9F%E5%92%8C%E7%B4%A2%E5%BC%95%E5%A6%82%E4%BD%95%E5%A1%91%E9%80%A0%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%EF%BC%9F) explains engine-side data invariants; [Cross-tenant authorization / 跨租户资源授权](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) explains authorization that parameter binding cannot provide.
+
+**Sources / 来源：** OWASP [SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html) and its [least-privilege guidance](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#least-privilege), checked 2026-10-15.
+## 18. How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？
+
+### How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？
+
+Store a salted password hash from a password-storage algorithm designed to make guessing expensive, such as Argon2id. A unique random salt is stored with each hash; it is not a secret. A fast digest such as SHA-256 alone is not a password-storage scheme. Use a maintained library and tune its cost for the deployment, then combine it with online attempt throttling. / 使用专为提高猜测成本而设计的密码存储算法保存带盐哈希，例如 Argon2id。每个哈希保存一个唯一随机 salt；salt 不是秘密。单独使用 SHA-256 这类快速摘要并非密码存储方案。使用维护良好的库并根据部署调节成本，再配合在线尝试限速。
+
+**Key terms / 关键术语：** password hash / 密码哈希；salt / 盐；Argon2id / Argon2id 算法；pepper / 秘密 pepper；offline guessing / 离线猜测；rate limiting / 速率限制。
+
+A pepper may add defense in depth when stored separately from the password database, but it is not a replacement for a suitable password hash. Keep the pepper in a secret store with its own rotation and access policy. Use password policy and attempt throttling to reduce online guessing as well.
+
+**Related notes / 相关笔记：** [Web Security and Authentication / Web安全与身份认证](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) covers the login/session context; [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](#16.%20How%20do%20web%20services%20limit%20denial-of-service%20impact?%20/%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) covers request rate and resource limits.
+
+**Sources / 来源：** OWASP [Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) and [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html), checked 2026-10-15.
+## 19. How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？
 
 ### How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？
 
@@ -1282,7 +1502,7 @@ These are complementary boundaries, not a required test-count pyramid. Keep quic
 
 The small example below creates a tenant-owned job. `POST /jobs` validates a request and gives the same tenant's request key a database uniqueness rule. `GET /jobs/{id}` scopes lookup by the current tenant. A worker delivery changes `pending` to `done` with one conditional database update; replaying the same job ID must not increment the effect counter twice.
 
-The fixture creates a fresh in-memory SQLite database for each test and keeps it on one shared connection so the in-process test client and the test's database inspection see the same database. The `Session` dependency and worker's session-factory argument are deliberate seams: they control database lifetime while still executing real SQL against SQLite. `X-Tenant-ID` stands in for a principal supplied by trusted authentication middleware; it is a test input, not an authentication scheme to trust in a deployed service. For the general authorization rule, see [Web Security and Authentication / Web安全与身份认证](#9.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81). The queue call is represented by calling the worker twice; no broker is present.
+The fixture creates a fresh in-memory SQLite database for each test and keeps it on one shared connection so the in-process test client and the test's database inspection see the same database. The `Session` dependency and worker's session-factory argument are deliberate seams: they control database lifetime while still executing real SQL against SQLite. `X-Tenant-ID` stands in for a principal supplied by trusted authentication middleware; it is a test input, not an authentication scheme to trust in a deployed service. For the general authorization rule, see [Web Security and Authentication / Web安全与身份认证](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F). The queue call is represented by calling the worker twice; no broker is present.
 
 ~~~python
 from typing import Annotated
@@ -1496,12 +1716,12 @@ def test_replayed_worker_delivery_changes_database_once(client, app):
 
 Extract that block into `test_jobs.py` and run `python -m pytest -q test_jobs.py`. The tests assert visible API behavior, the request and response schema exposed by this app, an actual SQLite uniqueness violation with rollback, and a repeated worker call against the same database. The OpenAPI assertion checks this version's declared shape; a compatibility gate should compare with a released schema or exercise a real supported consumer before claiming an older client remains compatible.
 
-The database is SQLite 3.51.0 through SQLAlchemy 2.0.44. This is a real database engine and the test executes its unique constraint and transaction, but its locking, typing, SQL dialect, and concurrency behavior do not establish PostgreSQL behavior. `TestClient` exercises FastAPI through an in-process ASGI transport, not a live server, network, production authentication provider, or deployed application. `deliver_job` exercises a repeated database operation; it does not prove a broker's redelivery, acknowledgement, ordering, or outage guarantees. Those claims need a broker-backed integration test using the selected broker's configuration. External side effects such as email or payment also need an outbox or downstream idempotency boundary; this example changes only local database state. See [safe retries](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) and [broker acknowledgements](#7.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) for the separate contracts. For the session and transaction lifecycle, see [Data Access and Connection Pools / 数据访问与连接池](#23.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0).
+The database is SQLite 3.51.0 through SQLAlchemy 2.0.44. This is a real database engine and the test executes its unique constraint and transaction, but its locking, typing, SQL dialect, and concurrency behavior do not establish PostgreSQL behavior. `TestClient` exercises FastAPI through an in-process ASGI transport, not a live server, network, production authentication provider, or deployed application. `deliver_job` exercises a repeated database operation; it does not prove a broker's redelivery, acknowledgement, ordering, or outage guarantees. Those claims need a broker-backed integration test using the selected broker's configuration. External side effects such as email or payment also need an outbox or downstream idempotency boundary; this example changes only local database state. See [safe retries](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) and [broker acknowledgements](#11.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) for the separate contracts. For the session and transaction lifecycle, see [Data Access and Connection Pools / 数据访问与连接池](#38.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F).
 
 **Interview answer / 面试回答：** I start from the failure risk and choose the lowest boundary that can prove it. Here the API tests verify validation, public response shape, and tenant-scoped access; a real SQLite database verifies uniqueness and rollback; the repeated worker call verifies the local idempotent state transition. I would add a contract comparison for compatibility and a broker-backed test before claiming delivery or acknowledgement guarantees. / 我先从故障风险出发，选择能够证明该风险的最低边界。这个例子用 API 测试验证输入校验、公开响应结构和租户范围访问，用真实 SQLite 验证唯一性约束与回滚，再用重复 worker 调用验证本地幂等状态变更。要声称兼容既有客户端或消息投递确认语义，还需要契约对比和真实 broker 测试。
 
 **Sources checked 2026-10-15:** [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/) and [testing dependencies with overrides](https://fastapi.tiangolo.com/advanced/testing-dependencies/) for in-process request checks and dependency seams; [pytest fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html) for function-scoped setup and cleanup; SQLAlchemy 2.0 [constraints](https://docs.sqlalchemy.org/en/20/core/constraints.html), [session transactions](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html), and [SQLite pooling](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines); SQLite [CREATE TABLE and UNIQUE constraints](https://www.sqlite.org/lang_createtable.html) and [transactions](https://www.sqlite.org/lang_transaction.html). Runtime behavior was checked with the versions recorded above; the live FastAPI documentation is not a substitute for the named runtime check.
-## 11. How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？
+## 20. How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？
 
 ### How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？
 
@@ -1509,14 +1729,14 @@ Choose an algorithm by the invariant the input provides, then count the work and
 
 先利用输入所提供的不变量选择算法，再计算输入规模增长时所需的操作和存储。动态规划复用重叠子问题，二分查找利用有序性缩小搜索区间，双指针则只在排序等条件足以证明某一段不含答案时移动。Big-O 概括这些前提下的增长趋势；表示方式、分配、内存局部性和运行时常数仍会影响实际耗时。
 
-Big-O leaves out cache locality, memory bandwidth, and dependent loads. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](#3.%20Memory%20Hierarchy%20and%20Data%20Locality%20/%20%E5%86%85%E5%AD%98%E5%B1%82%E6%AC%A1%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%B1%80%E9%83%A8%E6%80%A7) for the hardware costs that can change elapsed time without changing an operation's asymptotic bound.
+Big-O leaves out cache locality, memory bandwidth, and dependent loads. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](#4.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F) for the hardware costs that can change elapsed time without changing an operation's asymptotic bound.
 
 #### Match the technique to the input / 按输入约束选择方法
 
-- When several states repeat and each can be defined from earlier ones, choose a [dynamic programming state and update order](#12.%20How%20do%20you%20choose%20a%20dynamic%20programming%20state%20and%20update%20order?%20/%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E7%8A%B6%E6%80%81%E5%92%8C%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F).
-- When order rules out a group of candidates, use [binary search or two pointers](#13.%20How%20do%20ordered%20inputs%20enable%20binary%20search%20and%20two%20pointers?%20/%20%E6%9C%89%E5%BA%8F%E8%BE%93%E5%85%A5%E6%80%8E%E6%A0%B7%E6%94%AF%E6%8C%81%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%EF%BC%9F) and prove why the discarded range is safe to ignore.
-- If the job is reordering, inspect how [partition balance and copying change sorting cost](#14.%20Why%20do%20partition%20choices%20change%20quicksort%20costs?%20/%20%E5%88%86%E5%8C%BA%E9%80%89%E6%8B%A9%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E4%BB%A3%E4%BB%B7%EF%BC%9F).
-- For text, choose [the units that define length and equality](#15.%20Which%20units%20should%20a%20text%20algorithm%20count%20and%20compare?%20/%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E4%BB%80%E4%B9%88%E5%8D%95%E4%BD%8D%E8%AE%A1%E6%95%B0%E5%92%8C%E6%AF%94%E8%BE%83%EF%BC%9F) before analyzing a loop.
+- When several states repeat and each can be defined from earlier ones, choose a [dynamic programming state and update order](#21.%20How%20do%20you%20choose%20a%20dynamic%20programming%20state%20and%20update%20order?%20/%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E7%8A%B6%E6%80%81%E5%92%8C%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F).
+- When order rules out a group of candidates, use [binary search or two pointers](#22.%20How%20do%20ordered%20inputs%20enable%20binary%20search%20and%20two%20pointers?%20/%20%E6%9C%89%E5%BA%8F%E8%BE%93%E5%85%A5%E6%80%8E%E6%A0%B7%E6%94%AF%E6%8C%81%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%EF%BC%9F) and prove why the discarded range is safe to ignore.
+- If the job is reordering, inspect how [partition balance and copying change sorting cost](#23.%20Why%20do%20partition%20choices%20change%20quicksort%20costs?%20/%20%E5%88%86%E5%8C%BA%E9%80%89%E6%8B%A9%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E4%BB%A3%E4%BB%B7%EF%BC%9F).
+- For text, choose [the units that define length and equality](#24.%20Which%20units%20should%20a%20text%20algorithm%20count%20and%20compare?%20/%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E4%BB%80%E4%B9%88%E5%8D%95%E4%BD%8D%E8%AE%A1%E6%95%B0%E5%92%8C%E6%AF%94%E8%BE%83%EF%BC%9F) before analyzing a loop.
 
 #### Big-O reference
 
@@ -1531,8 +1751,8 @@ Big-O leaves out cache locality, memory bandwidth, and dependent loads. See [Mem
 | O(2^n) | Naive recursive Fibonacci; subset enumeration | Exponential growth |
 | O(n!) | Permutation enumeration | Factorial growth |
 
-**See also:** [Core Data Structures](#16.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) for trees and tries, and [Practical Data Structure Implementations](#17.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) for LRU caches and [queues and stacks](#18.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) for removal-order implementations.
-## 12. How do you choose a dynamic programming state and update order? / 动态规划怎样选择状态和更新顺序？
+**See also:** [Core Data Structures](#25.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) for trees and tries, and [Practical Data Structure Implementations](#26.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) for LRU caches and [queues and stacks](#27.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) for removal-order implementations.
+## 21. How do you choose a dynamic programming state and update order? / 动态规划怎样选择状态和更新顺序？
 
 ### How do you choose a dynamic programming state and update order? / 动态规划怎样选择状态和更新顺序？
 
@@ -1618,8 +1838,8 @@ Time is O(nW) and space O(W), for n items and integer capacity W. The zero-fille
 
 ---
 
-[Back to the main question / 返回主问题](#11.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
-## 13. How do ordered inputs enable binary search and two pointers? / 有序输入怎样支持二分查找和双指针？
+[Back to the main question / 返回主问题](#20.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
+## 22. How do ordered inputs enable binary search and two pointers? / 有序输入怎样支持二分查找和双指针？
 
 ### How do ordered inputs enable binary search and two pointers? / 有序输入怎样支持二分查找和双指针？
 
@@ -1688,8 +1908,8 @@ function moveZeros(values) {
 
 ---
 
-[Back to the main question / 返回主问题](#11.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
-## 14. Why do partition choices change quicksort costs? / 分区选择为什么会改变快速排序的代价？
+[Back to the main question / 返回主问题](#20.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
+## 23. Why do partition choices change quicksort costs? / 分区选择为什么会改变快速排序的代价？
 
 ### Why do partition choices change quicksort costs? / 分区选择为什么会改变快速排序的代价？
 
@@ -1721,8 +1941,8 @@ For application code, prefer the built-in sort with an explicit comparator for n
 
 ---
 
-[Back to the main question / 返回主问题](#11.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
-## 15. Which units should a text algorithm count and compare? / 文本算法应按什么单位计数和比较？
+[Back to the main question / 返回主问题](#20.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
+## 24. Which units should a text algorithm count and compare? / 文本算法应按什么单位计数和比较？
 
 ### Which units should a text algorithm count and compare? / 文本算法应按什么单位计数和比较？
 
@@ -1805,8 +2025,8 @@ function switchAsciiCase(value) {
 
 ---
 
-[Back to the main question / 返回主问题](#11.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
-## 16. Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？
+[Back to the main question / 返回主问题](#20.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
+## 25. Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？
 
 ### Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？
 
@@ -1858,7 +2078,7 @@ function kthSmallest(root, k) {
 
 A balanced search tree gives logarithmic operations by keeping height logarithmic. If insertions produce a chain, those operations degrade to linear time. Array access remains fast by index, while inserting into the middle shifts later elements.
 
-These bounds do not capture cache locality or dependency chains. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](#3.%20Memory%20Hierarchy%20and%20Data%20Locality%20/%20%E5%86%85%E5%AD%98%E5%B1%82%E6%AC%A1%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%B1%80%E9%83%A8%E6%80%A7) for why contiguous scans can outperform pointer-based traversal and when a known-node list update is actually O(1).
+These bounds do not capture cache locality or dependency chains. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](#4.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F) for why contiguous scans can outperform pointer-based traversal and when a known-node list update is actually O(1).
 
 ---
 
@@ -2015,8 +2235,8 @@ React represents its work tree with Fiber nodes linked through fields such as `c
 
 See [React 18](https://react.dev/blog/2022/03/29/react-v18) for concurrent rendering behavior and [React's Fiber types](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js) for the illustrative implementation.
 
-**See also:** [Algorithms and Complexity](#11.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F) for searches and dynamic programming, and [Practical Data Structure Implementations](#17.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) for LRU caches and [queues and stacks](#18.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) for removal-order implementations.
-## 17. How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？
+**See also:** [Algorithms and Complexity](#20.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F) for searches and dynamic programming, and [Practical Data Structure Implementations](#26.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) for LRU caches and [queues and stacks](#27.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) for removal-order implementations.
+## 26. How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？
 
 ### How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？
 
@@ -2144,8 +2364,8 @@ class LinkedLRUCache {
 
 With a map that provides expected constant-time lookup, the linked-list version has expected O(1) get and put operations. Use the simpler map-based version when the linked-list mechanics are not part of the requirement.
 
-Compare [FIFO and LIFO representations / 队列和栈的表示](#18.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) when work is removed in arrival or nesting order. [ECMAScript Map](https://tc39.es/ecma262/2020/#sec-map-objects) specifies observable key iteration order.
-## 18. How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？
+Compare [FIFO and LIFO representations / 队列和栈的表示](#27.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) when work is removed in arrival or nesting order. [ECMAScript Map](https://tc39.es/ecma262/2020/#sec-map-objects) specifies observable key iteration order.
+## 27. How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？
 
 ### How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？
 
@@ -2191,7 +2411,7 @@ class Queue {
 }
 ~~~
 
-Enqueue, dequeue, and peek take O(1) time. Array `shift` removes the first element but may move the remaining indexed elements, so a linked queue or a head index is preferable for a queue that grows large. Breadth-first traversal with a head index appears in [Core Data Structures](#16.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F).
+Enqueue, dequeue, and peek take O(1) time. Array `shift` removes the first element but may move the remaining indexed elements, so a linked queue or a head index is preferable for a queue that grows large. Breadth-first traversal with a head index appears in [Core Data Structures](#25.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F).
 
 ---
 
@@ -2227,14 +2447,14 @@ class Stack {
 
 Array `push` and `pop` are the natural stack operations. Their exact growth costs are runtime implementation details; a dynamic array may occasionally resize.
 
-[Back to the main question / 返回主问题](#17.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F).
-## 19. Node.js Fundamentals / Node.js基础
+[Back to the main question / 返回主问题](#26.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F).
+## 28. How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？
 
-### Node.js Fundamentals / Node.js基础
+### How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？
 
-Node.js runs JavaScript outside a browser and provides server-side APIs. Its event-loop model is efficient for many I/O workloads, but a long synchronous callback still blocks JavaScript work on that event-loop thread.
+**Core answer / 核心回答：** Use asynchronous APIs for I/O waits; one event-loop thread runs JavaScript callbacks and a long synchronous callback blocks it. Move CPU-heavy JavaScript to a bounded worker pool, and use child processes when process isolation matters. The choice changes memory sharing, communication, fault boundaries, and shutdown duties. A worker pool also needs a bounded admission policy; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). / I/O 等待通常使用异步 API；JavaScript 回调在事件循环线程上运行，长时间同步回调会阻塞它。CPU 密集型 JavaScript 可交给有界 worker 池；需要进程隔离时可使用子进程。不同选择会改变内存共享、通信、故障边界与关闭责任。
 
-Node 的异步 I/O、事件循环、工作线程和子进程解决不同问题：I/O 等待通常使用异步 API，CPU 并行、进程隔离或共享状态则要按线程与进程边界选择，并处理通信和关闭。
+**Key terms / 关键术语：** event loop / 事件循环；isolate / 隔离环境；worker thread / 工作线程；child process / 子进程；cluster / 多进程服务；IPC / 进程间通信。
 
 #### What's the difference between a process and a thread?
 
@@ -2244,7 +2464,7 @@ Node has a JavaScript event-loop thread for each isolate, not one JavaScript thr
 
 Node also uses background mechanisms for asynchronous work: network I/O is commonly driven by the operating system, while selected APIs such as filesystem operations, cryptography, compression, and some name-resolution work use libuv's worker pool. Their JavaScript callbacks run on the event-loop thread. CPU-heavy JavaScript on that thread delays other callbacks.
 
-For the reusable process/thread model of address spaces, shared resources, concurrency, I/O, and cancellation, see [Processes, Threads, and Concurrency / 进程、线程与并发](#2.%20Processes,%20Threads,%20and%20Concurrency%20/%20%E8%BF%9B%E7%A8%8B%E3%80%81%E7%BA%BF%E7%A8%8B%E4%B8%8E%E5%B9%B6%E5%8F%91); this note applies it to Node's event loop and worker choices.
+For the reusable process/thread model of address spaces, shared resources, concurrency, I/O, and cancellation, see [Processes, Threads, and Concurrency / 进程、线程与并发](#3.%20When%20should%20work%20use%20a%20thread,%20process,%20or%20asynchronous%20I/O?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E6%88%96%E5%BC%82%E6%AD%A5%20I/O%EF%BC%9F); this note applies it to Node's event loop and worker choices.
 
 ---
 
@@ -2318,35 +2538,133 @@ Workers have separate heaps. If a session, cache, or connection map must be shar
 
 ---
 
-#### How do CommonJS and ES modules affect nextTick ordering?
 
-Node's scheduling details depend on where work is queued. At top level, `process.nextTick` runs before Promise callbacks in this CommonJS example:
+**Related questions / 相关问题：** [Node.js event-loop phases and microtasks / Node.js 事件循环阶段与微任务](#29.%20How%20do%20Node.js%20event-loop%20phases%20and%20microtask%20queues%20interact?%20/%20Node.js%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E9%98%B6%E6%AE%B5%E4%B8%8E%E5%BE%AE%E4%BB%BB%E5%8A%A1%E9%98%9F%E5%88%97%E5%A6%82%E4%BD%95%E4%BA%A4%E4%BA%92%EF%BC%9F) explains host scheduling; [How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？](#30.%20How%20do%20Node.js%20streams%20propagate%20backpressure?%20/%20Node.js%20%E6%B5%81%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%E8%83%8C%E5%8E%8B%EF%BC%9F) explains chunk flow and cleanup; [How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？](#31.%20How%20should%20a%20Node.js%20service%20drain%20on%20shutdown?%20/%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F) covers in-flight work and resource closure; [What does serverless leave to the application? / 无服务器计算仍要求应用负责什么？](#32.%20What%20does%20serverless%20leave%20to%20the%20application?%20/%20%E6%97%A0%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%AE%A1%E7%AE%97%E4%BB%8D%E8%A6%81%E6%B1%82%E5%BA%94%E7%94%A8%E8%B4%9F%E8%B4%A3%E4%BB%80%E4%B9%88%EF%BC%9F) describes provider-managed execution environments.
+**Sources / 来源：** Node.js v24 documentation for [worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html); [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/), checked 2026-10-15.
+## 29. How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？
+
+### How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？
+
+Node runs JavaScript callbacks on an event-loop thread while libuv coordinates timers and I/O through phases. Node's next-tick queue and the Promise/queueMicrotask microtask queue are separate scheduling mechanisms; their order depends on where code runs. Give the Node version and execution context before stating an order. / Node 在事件循环线程上运行 JavaScript 回调，libuv 则通过多个阶段协调计时器和 I/O。Node 的 nextTick 队列与 Promise/queueMicrotask 微任务队列是不同的调度机制，执行上下文会影响它们的先后顺序。说明 Node 版本与执行位置后，再给出顺序规则。
+
+**Key terms / 关键术语：** event-loop phase / 事件循环阶段；poll / 轮询阶段；microtask / 微任务；process.nextTick / nextTick 队列；CommonJS / CommonJS 模块；ES module / ES 模块；timer threshold / 计时器阈值。
+
+~~~mermaid
+    subgraph loop[libuv event-loop phases]
+        Timers[Timers] --> Pending[Pending callbacks]
+        Pending --> Poll[Poll: I/O]
+        Poll --> Check[Check: setImmediate]
+        Check --> Close[Close callbacks]
+        Close --> Timers
+    end
+    Operation[Current JavaScript operation completes] --> Tick[Node drains nextTick queue]
+    Tick --> Micro[Node drains microtask queue]
+    Micro --> LoopNext[Event loop continues]
+~~~
+
+The diagram is a simplified loop outline. The idle and prepare phases are internal. A JavaScript operation's completion handling occurs around the loop and is not itself another libuv phase. ES module evaluation already runs within microtask processing, which explains why the top-level CommonJS and ES module examples below differ.
+
+#### What the event-loop phases do / 事件循环阶段各自做什么
+
+| Phase | Main role |
+|---|---|
+| Timers | Run timer callbacks once their minimum delay threshold has passed; the requested delay is not an exact deadline. |
+| Pending callbacks | Run certain I/O callbacks deferred from an earlier loop iteration. |
+| Poll | Retrieve and process I/O events; it may wait for I/O when appropriate. |
+| Check | Run callbacks scheduled with setImmediate. |
+| Close callbacks | Run selected close events, such as a socket close after abrupt destruction. |
+| Idle and prepare | Internal libuv phases. |
+
+In libuv 1.45.0, used by Node.js 20 and later, timers run after poll on each loop iteration; earlier versions also ran timers before poll. This changes some timer/immediate timing relationships. At top level, do not rely on a fixed order between setTimeout(fn, 0) and setImmediate(fn). Inside an I/O callback, setImmediate runs in the check phase after poll; the official guide describes it as running before the timer in that situation.
+
+~~~javascript
+const fs = require('node:fs');
+
+// At top level, the order can vary.
+setTimeout(() => console.log('timeout'), 0);
+setImmediate(() => console.log('immediate'));
+
+// Inside an I/O callback, setImmediate runs in the check phase.
+fs.readFile(__filename, () => {
+  setTimeout(() => console.log('timer after I/O'), 0);
+  setImmediate(() => console.log('immediate after I/O'));
+});
+~~~
+
+#### How do nextTick and microtasks differ by module context? / nextTick 与微任务顺序如何受模块上下文影响？
+
+The nextTick queue is drained after the current JavaScript operation finishes and before the event loop continues. Promise handlers and queueMicrotask callbacks use the microtask queue. In CommonJS top-level execution, nextTick callbacks run before Promise/queueMicrotask callbacks. ES module evaluation itself runs as microtask work, so its top-level Promise/queueMicrotask callbacks run before nextTick callbacks.
+
+| Context | Ordering for the calls below |
+|---|---|
+| CommonJS top level | process.nextTick, Promise reaction, queueMicrotask |
+| ES module top level | Promise reaction, queueMicrotask, process.nextTick |
 
 ~~~javascript
 // Save as example.cjs
-Promise.resolve().then(() => console.log('promise'));
-process.nextTick(() => console.log('nextTick'));
-~~~
+const { nextTick } = require('node:process');
 
-The same calls have the opposite order at the top level of an ES module:
+Promise.resolve().then(() => console.log('promise'));
+queueMicrotask(() => console.log('microtask'));
+nextTick(() => console.log('nextTick'));
+// Checked output on Node.js v26.11.1:
+// nextTick
+// promise
+// microtask
+~~~
 
 ~~~javascript
 // Save as example.mjs
 import { nextTick } from 'node:process';
 
 Promise.resolve().then(() => console.log('promise'));
+queueMicrotask(() => console.log('microtask'));
 nextTick(() => console.log('nextTick'));
+// Checked output on Node.js v26.11.1:
+// promise
+// microtask
+// nextTick
 ~~~
 
-This difference is about the module's execution context; it is not a universal ordering rule for every callback or event-loop phase. Use the current [Node.js process documentation](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick) when an ordering dependency matters.
+Current Node.js documentation marks process.nextTick as Legacy and recommends queueMicrotask for most userland deferrals. A recursively replenished nextTick queue can starve I/O because the loop cannot reach poll until the queue drains. Keep nextTick only when its particular scheduling boundary is required by existing API behavior.
 
----
+One historical use is making a callback-based API consistently asynchronous, including validation errors, so the caller can finish setting up state before the callback runs. Another is emitting a readiness event on the next tick so callers can register a listener after construction:
 
-#### How does stream backpressure limit buffering? / 流背压如何限制缓冲？
+~~~javascript
+const { EventEmitter } = require('node:events');
+
+function createEmitter() {
+  const emitter = new EventEmitter();
+  process.nextTick(() => emitter.emit('ready'));
+  return emitter;
+}
+
+const emitter = createEmitter();
+emitter.on('ready', () => console.log('ready'));
+~~~
+
+Use queueMicrotask for ordinary portable deferral unless the API depends on nextTick-specific ordering. These rules describe Node's host queues; they do not define browser scheduling. [Asynchronous JavaScript / 异步 JavaScript](../../frontend/javascript/asynchronous-javascript.md) covers Promise behavior outside Node's host phases.
+
+**Related notes / 相关笔记：** [Node.js scheduling and worker choices / Node.js 调度与 worker 选择](#28.%20How%20does%20Node.js%20schedule%20work%20across%20its%20event%20loop,%20workers,%20and%20processes?%20/%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F) applies these host queues to server workloads; [Processes, Threads, and Concurrency / 进程、线程与并发](#3.%20When%20should%20work%20use%20a%20thread,%20process,%20or%20asynchronous%20I/O?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E6%88%96%E5%BC%82%E6%AD%A5%20I/O%EF%BC%9F) explains the execution resources used for CPU work.
+
+**Sources / 来源：** [Node.js event-loop phases and timer behavior](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick) and [Node.js v26 process.nextTick / queueMicrotask guidance](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), checked 2026-11-05. The CJS and ESM output examples were checked on Node.js v26.11.1; the libuv timer phase change is documented for libuv 1.45.0 (Node.js 20).
+## 30. How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？
+
+### How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？
 
 **核心解释 / Core explanation：** A stream moves data in chunks from a producer to a consumer. A `Readable` supplies chunks; a `Writable` accepts them; a `Transform` reads and writes while changing them; a `Duplex` does both. When `writable.write(chunk)` returns `false`, stop producing until `'drain'` says writing can resume. `pipeline()` connects stages and propagates a slow consumer's backpressure upstream.
 
 **中文说明：** 流按数据块从生产者流向消费者；`write()` 返回 `false` 时，生产者应暂停并等待 `'drain'` 再继续。`pipeline()` 会把下游变慢的背压传回上游。`highWaterMark` 是暂停阈值而非内存上限；单个大数据块、各阶段缓冲和链路外队列仍可能增加内存。读取端的 `'end'` 表示输入结束，写入端的 `'finish'` 表示 `end()` 后已处理已接收写入；`'close'` 表示资源关闭，`'error'` 表示失败。`destroy()` 用于中止或失败，额外拥有的游标等资源应在 `finally` 中释放；写入完成也不代表远端应用已处理数据或文件已持久化。
+
+**Key terms / 关键术语：** Readable / 可读流；Writable / 可写流；Transform / 转换流；backpressure / 背压；highWaterMark / 暂停阈值；pipeline / 流水线。
+
+~~~mermaid
+    Source[Readable source] --> Transform[Transform stages]
+    Transform --> Sink[Writable destination]
+    Sink -->|write returns false| Pause[Pause the producer]
+    Pause -->|drain| Sink
+    Pause -->|pipeline propagates backpressure| Transform
+~~~
 
 **面试简答 / Interview answer：** If `write()` returns `false`, stop calling it until `'drain'`; continuing to submit chunks can grow the writable's queue and memory use. Use `pipeline()` for a source/transform/destination chain, or wait for `'drain'` in a manual producer. `highWaterMark` is a pause threshold, not a hard memory cap; a large chunk, transform buffers, or queues outside the pipeline can still use more memory.
 
@@ -2384,11 +2702,32 @@ Here the async generator produces one row at a time, and `pipeline()` resolves a
 
 The terminal signals describe different outcomes: a readable `'end'` means no more input chunks remain; a writable `'finish'` means its accepted writes have completed after `end()`; `'close'` reports resource closure when that stream emits it; `'error'` reports failure. Use `destroy(error)` to abort or fail a stream, not as a synonym for successful end-of-input. A writable finishing does not prove that a remote application processed the bytes or that a file is durable on storage.
 
-#### How does a Node.js service drain on shutdown? / Node.js服务如何排空并关闭？
+
+**Sources / 来源：** The stream example and lifecycle behavior were checked against the version-pinned [Node.js v26.11.1 stream documentation](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html) on 2026-10-15. This version boundary matters for code and API behavior; the conceptual backpressure rule is not a memory cap.
+
+**Related notes / 相关笔记：** [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) applies the same bounded-work rule to requests, worker slots, and durable queues.
+## 31. How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？
+
+### How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？
 
 Graceful shutdown is an application lifecycle, not something the event loop or HTTP server performs for every dependency. On a shutdown signal, mark the instance unready and have each request handler reject work before enqueueing it; this also catches requests on already-open keep-alive connections. Then stop accepting connections, let tracked handlers and response streams finish, cancel work at the deadline, and close pools, workers, timers, and other owned resources after their users have stopped. Pass `workAbort.signal` to cancellable handlers and track accepted work so `waitForInFlightWork()` has a real completion condition.
 
 **核心解释（中文）：** 收到关闭信号后先摘除就绪并拒绝新任务，再停止接入、等待已接收请求和后台工作排空；到期后发出协作取消并强制关闭 HTTP 连接。服务端关闭与跟踪任务都结算后，再回收它们使用的资源；即使其中一项失败，也要完成清理并报告错误，且在生命周期和清理报告结束前保留截止计时器。
+
+**Key terms / 关键术语：** readiness / 就绪状态；in-flight work / 在途工作；graceful shutdown / 优雅关闭；deadline / 截止时间；cooperative cancellation / 协作式取消；owned resources / 应用拥有的资源。
+
+~~~mermaid
+    [*] --> Ready
+    Ready --> Draining: SIGTERM; mark unready
+    Draining --> Waiting: stop accepting new connections
+    Waiting --> Closed: in-flight work and server close
+    Waiting --> Deadline: deadline expires
+    Deadline --> Cancel: abort cooperative work
+    Cancel --> ForceClose: close remaining HTTP connections
+    Closed --> Cleanup: release owned resources
+    ForceClose --> Cleanup
+    Cleanup --> [*]
+~~~
 
 ~~~javascript
 const workAbort = new AbortController();
@@ -2454,24 +2793,42 @@ process.once('SIGTERM', () => {
 
 `markReadiness`, `waitForInFlightWork`, and `closeOwnedResources` stand for application-owned health, task, and resource hooks. `waitForInFlightWork()` must settle only after tracked work has stopped using its dependencies; a rejection reports failed work, not permission to clean up while that work still runs. The referenced deadline timer stays active while `Promise.allSettled()` awaits both server close and tracked work, and the code still attempts owned-resource cleanup before reporting lifecycle or cleanup failures. Keep the timer referenced until it fires or shutdown cleanup finishes; `unref()` would allow Node to exit before its callback when no other handle keeps the event loop active. `server.close()` stops new connections and, in Node.js 26.11.1, closes idle connections while waiting for the rest. `closeAllConnections()` is the deadline's forceful HTTP(S) fallback; call it after `server.close()` as shown, and close upgraded WebSocket or HTTP/2 sessions through their own owners. The task abort is cooperative: if a handler ignores its signal or another handle keeps the process alive, the service supervisor must enforce the final hard stop. A signal listener also replaces Node's default signal exit behavior on supported POSIX systems, so the handler must complete or deliberately set a failure exit code.
 
-#### What is serverless or function-as-a-service?
 
-**无服务器计算 / Serverless** means the provider manages the underlying execution infrastructure through a function or managed runtime interface. Servers still exist; the provider controls how execution environments are created, reused, and scaled.
+**Sources / 来源：** The shutdown example and lifecycle behavior were checked against [Node.js v26.11.1 HTTP](https://nodejs.org/download/release/v26.11.1/docs/api/http.html) and [process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html) documentation on 2026-10-15. The timer-reference behavior uses [Node.js v26.12.1 timers](https://nodejs.org/api/timers.html), checked 2026-10-27.
+
+**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains cancellation and ambiguous remote outcomes; [Queue delivery acknowledgements / 队列确认与重投](#11.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains why a consumer acknowledges only after its chosen durable boundary.
+## 32. What does serverless leave to the application? / 无服务器计算仍要求应用负责什么？
+
+### What does serverless leave to the application? / 无服务器计算仍要求应用负责什么？
+
+Serverless lets a provider manage execution infrastructure through a function or managed runtime interface; servers still exist. The application still owns durable state, idempotency, resource cleanup, and correctness across retries. Limits, concurrency, billing, cold starts, and environment reuse depend on the selected provider and configuration. / 无服务器计算让服务商通过函数或托管运行时管理执行基础设施，但服务器仍然存在。应用仍需负责持久状态、幂等性、资源清理和跨重试的正确性。限制、并发、计费、冷启动与环境复用取决于具体服务商和配置。
+
+**Key terms / 关键术语：** serverless / 无服务器计算；execution environment / 执行环境；cold start / 冷启动；ephemeral state / 临时状态。
+
+#### Provider-managed execution boundary / 服务商管理的执行边界
 
 Timeouts, concurrency limits, billing, cold-start latency, and state-reuse behavior depend on the provider, product, runtime, region, and configuration. Do not treat in-memory state as durable or assume an execution environment is discarded after every invocation. For example, AWS Lambda documents that environments can be reused while advising applications to treat state as temporary and persist durable changes externally.
 
-It can suit event-triggered handlers or variable workloads when the provider's limits and cost model fit. Long-running work, persistent connections, predictable latency, and vendor-specific integrations require a comparison against other deployment models.
+Serverless can suit event-triggered handlers or variable workloads when the provider's limits and cost model fit. Long-running work, persistent connections, predictable latency, and vendor-specific integrations require a comparison against other deployment models.
 
-**See also:** [Event Loop](../../frontend/runtime/event-loop.md) for browser and Node scheduling context, and [Software Design Principles](#25.%20How%20do%20design%20principles%20reduce%20the%20cost%20of%20change%20without%20adding%20needless%20abstraction?%20/%20%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%A6%82%E4%BD%95%E9%99%8D%E4%BD%8E%E5%8F%98%E5%8C%96%E6%88%90%E6%9C%AC%E8%80%8C%E4%B8%8D%E8%BF%87%E5%BA%A6%E6%8A%BD%E8%B1%A1%EF%BC%9F) for choosing boundaries around runtime-specific infrastructure.
+**Related notes / 相关笔记：** [Node.js runtime choices / Node.js 运行时选择](#28.%20How%20does%20Node.js%20schedule%20work%20across%20its%20event%20loop,%20workers,%20and%20processes?%20/%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F) covers worker and process boundaries; [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers durable operation state and idempotent retries.
 
-Sources: [Node.js v24 worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [process scheduling](https://nodejs.org/docs/latest-v24.x/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html) documentation; [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/); plus [AWS Lambda execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html). PM2 and AWS references checked 2026-10-15; provider limits change over time.
+**Sources / 来源：** AWS Lambda [execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html), checked 2026-10-15. Provider limits and runtime behavior change over time.
+## 33. How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？
 
-The stream and shutdown sections were checked against [Node.js v26.11.1 stream](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html), [HTTP](https://nodejs.org/download/release/v26.11.1/docs/api/http.html), and [process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html) documentation on 2026-10-15. The shutdown deadline's timer-reference behavior was checked against the [Node.js v26.12.1 timer documentation](https://nodejs.org/api/timers.html) on 2026-10-27.
-## 20. Python Fundamentals / Python基础
-
-### Python Fundamentals / Python基础
+### How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？
 
 **Core model / 核心模型：** Python names are bindings to objects. A collection may be changed in place or a name may be rebound to another object; those are different operations. Function defaults are evaluated when the function is defined, iterators produce values as they are requested, and context managers define cleanup around a block. Type hints describe intent to static tools but do not validate runtime input. A virtual environment separates a project's installed packages from other environments. / Python 名称绑定到对象。集合可以被原地修改，名称也可以重新绑定到另一个对象，这是两种不同操作。函数默认值在函数定义时求值，迭代器按需产生值，上下文管理器则为代码块定义资源清理。类型提示表达意图并帮助静态工具检查，但不会在运行时验证输入。虚拟环境将项目安装的包与其他环境隔离。
+
+~~~mermaid
+flowchart LR
+    File[CSV file] --> Iterator[Generator reads one row at a time]
+    Iterator -->|valid row| Yield[Yield row to consumer]
+    Iterator -->|later malformed row| Error[Raise parsing error]
+    Error --> Unwind[Exception unwinds nested with blocks]
+    Unwind --> Close[Close file and remove temporary directory]
+    Yield --> Partial[Earlier output may already have escaped]
+~~~
 
 **Key terms / 关键术语：** object / 对象；name binding / 名称绑定；mutable / 可变；immutable / 不可变；alias / 别名；shallow copy / 浅拷贝；default argument / 默认参数；iterable / 可迭代对象；iterator / 迭代器；generator / 生成器；exception / 异常；context manager / 上下文管理器；type hint / 类型提示；virtual environment / 虚拟环境。
 
@@ -2636,9 +2993,9 @@ For a project with a `requirements.txt`, install its declared packages with `.ve
 
 **Verified run / 运行验证：** The file-processing example ran with CPython 3.11.13 and printed the expected output above. This verifies the example on that interpreter; it is not a claim that every Python implementation or platform has identical implementation details.
 
-**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains timeouts, cancellation, and safe retries. [Capacity and backpressure](#6.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) covers bounded work.
-Python-specific coroutine and framework behavior is explained in [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](#21.%20Python%20Async%20and%20FastAPI%20Request%20Lifecycle%20/%20Python%E5%BC%82%E6%AD%A5%E4%B8%8EFastAPI%E8%AF%B7%E6%B1%82%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F).
-Application-level request, response, error, and pagination contracts are covered in [HTTP API Contracts / HTTP API契约](#22.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6).
+**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains timeouts, cancellation, and safe retries. [Capacity and backpressure](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) covers bounded work.
+Python-specific coroutine and framework behavior is explained in [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](#34.%20Why%20can%20an%20async%20FastAPI%20endpoint%20still%20block?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BC%82%E6%AD%A5%20FastAPI%20%E6%8E%A5%E5%8F%A3%E4%BB%8D%E4%BC%9A%E9%98%BB%E5%A1%9E%EF%BC%9F).
+Application-level request, response, error, and pagination contracts are covered in [HTTP API Contracts / HTTP API契约](#36.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F).
 
 **Sources / 来源：** Python 3.11 [Tutorial](https://docs.python.org/3.11/tutorial/) and [Language Reference](https://docs.python.org/3.11/reference/), including [objects and types](https://docs.python.org/3.11/reference/datamodel.html#objects-values-and-types), [function definitions](https://docs.python.org/3.11/reference/compound_stmts.html#function-definitions), [iterators and generators](https://docs.python.org/3.11/reference/datamodel.html#generator-functions), and [`with` statements](https://docs.python.org/3.11/reference/compound_stmts.html#the-with-statement); [`typing`](https://docs.python.org/3.11/library/typing.html); and the Python Packaging User Guide's [installing packages](https://packaging.python.org/en/latest/tutorials/installing-packages/) and [managing application dependencies](https://packaging.python.org/en/latest/tutorials/managing-dependencies/) tutorials. Checked 2026-10-15.
 
@@ -2655,9 +3012,9 @@ Application-level request, response, error, and pagination contracts are covered
 **What do Python type hints guarantee at runtime? / Python 类型提示在运行时保证什么？** By themselves, they guarantee nothing about the values passed or returned. They communicate expected shapes to humans and static tools. Programs still parse and validate untrusted or external data where it enters the application, and use explicit runtime checks when runtime enforcement is required.
 
 类型提示本身不会在运行时保证输入值或返回值的类型。它们向读者和静态工具传达预期的数据形状。程序仍需在外部数据进入应用时解析与校验；需要运行时强制时，应添加显式检查或使用专门的校验库。
-## 21. Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期
+## 34. Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？
 
-### Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期
+### Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？
 
 **Core idea / 核心模型：** `asyncio` lets one event-loop thread make progress on other tasks while the current task waits for asynchronous I/O. An `async def` declaration alone does not make blocking work asynchronous: choose `def` for synchronous libraries that block, and `async def` when awaited libraries can suspend. Tie every acquired resource to a clear cleanup boundary, and treat cancellation as a cooperative request to stop. / `asyncio`让事件循环线程在当前任务等待异步I/O时推进其他任务。仅仅声明`async def`不会让阻塞操作异步：使用同步阻塞库时可选择`def`，使用能通过`await`挂起的库时选择`async def`。资源应绑定明确的清理边界；取消是要求任务协作停止，而非强制终止。
 
@@ -2675,15 +3032,23 @@ An `async def` function containing `yield` is an **async-generator function**; c
 
 For an awaited database or HTTP client, use an `async def` route and await its I/O. A synchronous `def` route or dependency that FastAPI calls is run in its worker thread pool, so a legacy synchronous client can fit that boundary. Conversely, a synchronous helper called directly from inside an `async def` route is just a normal function call; FastAPI does not automatically move that nested call to a thread.
 
-`asyncio.to_thread()` is useful for blocking I/O that cannot yet be replaced, and it keeps the event loop available while the thread waits. It is not a general CPU-parallelism switch: in CPython, the GIL usually limits simultaneous execution of pure-Python CPU work. A process pool or separate worker can run CPU work in parallel, with serialization, startup, memory, and queueing costs. Native extensions that release the GIL and other Python implementations can differ; measure the actual workload. Bound thread/process concurrency so offloading does not merely move an unbounded queue.
+`asyncio.to_thread()` is useful for blocking I/O that cannot yet be replaced, and it keeps the event loop available while the thread waits. It is not a general CPU-parallelism switch: in CPython, the GIL usually limits simultaneous execution of pure-Python CPU work. A process pool or separate worker can run CPU work in parallel, with serialization, startup, memory, and queueing costs. Native extensions that release the GIL and other Python implementations can differ; measure the actual workload. Bound thread/process concurrency so offloading does not merely move an unbounded queue; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) for admission and backpressure.
 
 #### Cancellation, deadlines, and cleanup / 取消、截止时间与清理
 
 `Task.cancel()` arranges for `CancelledError` to be raised in the task at a later opportunity, commonly at an `await`. Use `try/finally` to release resources and normally let cancellation propagate after cleanup. Do not catch `BaseException` or suppress `CancelledError` as a generic error; structured concurrency and timeout scopes rely on cancellation being visible.
 
-In Python 3.11, `asyncio.timeout(seconds)` cancels the current task when its time budget expires and raises `TimeoutError` outside the context manager. It is cooperative: a blocking synchronous function prevents the event loop from delivering that cancellation until the function returns. A timeout around `await asyncio.to_thread(...)` stops waiting in the coroutine but cannot forcibly stop a thread function already running. A client timeout also does not prove that a remote operation stopped or had no side effect. Pass remaining request budget to supported downstream calls and use the broader [API reliability guidance](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) for end-to-end deadlines and unknown outcomes.
+In Python 3.11, `asyncio.timeout(seconds)` cancels the current task when its time budget expires and raises `TimeoutError` outside the context manager. It is cooperative: a blocking synchronous function prevents the event loop from delivering that cancellation until the function returns. A timeout around `await asyncio.to_thread(...)` stops waiting in the coroutine but cannot forcibly stop a thread function already running. A client timeout also does not prove that a remote operation stopped or had no side effect. Pass remaining request budget to supported downstream calls and use the broader [API reliability guidance](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) for end-to-end deadlines and unknown outcomes.
 
-For a FastAPI dependency using `yield`, FastAPI owns the exit path. In the verified FastAPI 0.128.0 behavior, the default yield dependency scope is `"request"`: cleanup runs after the response body is sent. `scope="function"` closes it after the route function returns but before the response is sent, which is suitable only when response serialization and streaming no longer need the resource. A stream that consumes a dependency during body generation needs request scope. A `finally` block in the dependency runs on ordinary completion and on an explicit task cancellation that reaches the ASGI app; a real network disconnect is not guaranteed to cancel every server task in the same way, so verify the chosen server and response mode. The test below checks explicit cancellation, not every disconnect path.
+FastAPI yield dependencies add a resource-lifetime decision: request scope remains open through response streaming, while function scope closes before the response is sent. The version-specific lifecycle, cleanup order, and disconnect caveat are explained in [FastAPI yield-dependency lifetime / FastAPI yield 依赖的资源生命周期](#35.%20How%20long%20should%20a%20FastAPI%20dependency%20stay%20open%20during%20a%20response?%20/%20FastAPI%20%E4%BE%9D%E8%B5%96%E5%BA%94%E5%9C%A8%E5%93%8D%E5%BA%94%E6%9C%9F%E9%97%B4%E4%BF%9D%E6%8C%81%E5%A4%9A%E4%B9%85%EF%BC%9F). The smoke check below verifies explicit cancellation and streaming cleanup for the versions listed below; it does not establish how every ASGI server handles a real network disconnect.
+
+~~~mermaid
+flowchart LR
+    Sync[Blocking sync library] -->|def route or dependency| Pool[FastAPI worker thread pool]
+    Async[Async library] -->|await| Loop[Event loop can run other tasks]
+    Inline[Blocking call inside async route] -->|no suspension| Block[Event loop is blocked]
+    CPU[Pure-Python CPU work] -->|bounded process pool or worker| Parallel[Other execution resource]
+~~~
 
 #### Runnable request example / 可运行的请求示例
 
@@ -2831,10 +3196,45 @@ The `/bad` route delays the next event-loop request because it calls a blocking 
 
 取消通过协作方式传递，因此我会把释放逻辑放进`finally`并让`CancelledError`继续传播。若响应流仍要使用FastAPI的`yield`依赖，我会选择request scope；若资源应在响应发送前关闭，则选择function scope。我不会因为客户端超时或断开就认定远端工作已停止；下游截止时间与副作用处理仍需显式定义。
 
-**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#20.%20Python%20Fundamentals%20/%20Python%E5%9F%BA%E7%A1%80), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket), and [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80). [HTTP API Contracts / HTTP API契约](#22.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#23.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) expands the resource example into database-session, transaction, and pool-lifetime choices.
-## 22. HTTP API Contracts / HTTP API契约
+**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#33.%20How%20do%20Python%20values,%20iterators,%20and%20resource%20lifetimes%20behave?%20/%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F), and [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F). [HTTP API Contracts / HTTP API契约](#36.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#38.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) expands the resource example into database-session, transaction, and pool-lifetime choices.
+## 35. How long should a FastAPI dependency stay open during a response? / FastAPI 依赖应在响应期间保持多久？
 
-### HTTP API Contracts / HTTP API契约
+### How long should a FastAPI dependency stay open during a response? / FastAPI 依赖应在响应期间保持多久？
+
+A yielded dependency is a resource scope: FastAPI enters it before using the route, then runs its cleanup after the chosen scope ends. With request scope, cleanup waits until the response body has been sent, so a streaming body can keep using the resource. With function scope, cleanup runs after the route function returns but before the response is sent; use it only when serialization and streaming no longer need the resource. / yield 依赖定义了资源作用域：FastAPI 在路由使用它之前进入依赖，并在所选作用域结束时清理资源。request scope 会等到响应体发送后再清理，因此流式响应可以继续使用该资源。function scope 在路由函数返回后、响应发送前清理资源；只有序列化和流式传输不再需要该资源时才适用。
+
+**Key terms / 关键术语：** yield dependency / yield 依赖；request scope / 请求作用域；function scope / 函数作用域；streaming response / 流式响应；cleanup / 清理；disconnect / 连接断开。
+
+~~~mermaid
+    participant F as FastAPI
+    participant R as Route
+    participant D as Yield dependency
+    participant B as Streaming body
+    F->>D: Enter and acquire resource
+    F->>R: Call route with resource
+    R-->>F: Return response object
+    alt function scope
+        F->>D: Run cleanup before sending response
+        F->>B: Send response body
+    else request scope
+        F->>B: Generate and send response body
+        B->>D: Continue using resource
+        F->>D: Run cleanup after response body
+    end
+~~~
+
+#### Choose scope from the last use / 按最后一次使用选择作用域
+
+FastAPI 0.128.0 defaults yielded dependencies to request scope. An explicit function scope closes the dependency after the path operation function returns but before the response is sent. A streaming response that consumes a yielded dependency while its body is produced needs request scope; closing it at function return would end the resource too early.
+
+The dependency's finally block runs during ordinary cleanup and when explicit task cancellation reaches the ASGI application. A network disconnect is not guaranteed to cancel every server task in the same way. Verify the behavior of the chosen ASGI server, response class, and deployment mode rather than inferring it from a client timeout.
+
+The executable FastAPI smoke check in [Python Async and FastAPI Request Lifecycle / 为什么异步 FastAPI 接口仍会阻塞？](#34.%20Why%20can%20an%20async%20FastAPI%20endpoint%20still%20block?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BC%82%E6%AD%A5%20FastAPI%20%E6%8E%A5%E5%8F%A3%E4%BB%8D%E4%BC%9A%E9%98%BB%E5%A1%9E%EF%BC%9F) compares function-scope cleanup, request-scope streaming, and explicit cancellation. It checks FastAPI 0.128.0, Starlette 0.47.2, and HTTPX 0.28.1; its explicit task cancellation case does not claim to cover every real disconnect path.
+
+**Sources / 来源：** FastAPI [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/) and [advanced dependencies and streaming responses](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. The dependency scope and disconnect behavior are version and server specific.
+## 36. How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？
+
+### How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？
 
 **Core idea / 核心模型：** An API contract makes a boundary predictable: it says which request shapes are accepted, which success representation is returned, and how clients recognize failures. Validate input at the boundary, keep response and error shapes intentional, and document pagination and evolution rules so clients do not infer behavior from implementation details. / API契约让接口边界可预期：明确接受哪些请求形状、成功时返回什么表示，以及客户端如何识别失败。在边界校验输入，明确设计响应与错误形状，并说明分页和演进规则，避免客户端依赖实现细节。
 
@@ -2842,11 +3242,22 @@ The `/bad` route delays the next event-loop request because it calls a blocking 
 
 #### Separate HTTP semantics from API policy / 区分HTTP语义与API策略
 
-An API contract sits above the transport: a route and method, its path/query/body inputs, response schemas, status outcomes, and pagination rules. HTTP defines the common message and status-code semantics; the API chooses the domain-specific representations and which status applies to each outcome. See [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) for method, status, and transport basics and [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) for timeouts, retries, and unknown write outcomes.
+An API contract sits above the transport: a route and method, its path/query/body inputs, response schemas, status outcomes, and pagination rules. HTTP defines the common message and status-code semantics; the API chooses the domain-specific representations and which status applies to each outcome. See [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) for method, status, and transport basics and [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) for timeouts, retries, and unknown write outcomes.
 
-A type annotation helps the application and framework understand values; it is not proof that an untrusted request has the right shape or meaning. Define request models and constraints at the boundary. Return a deliberate response model as well. Structural validation can reject a missing field or out-of-range number, but it cannot decide permission, resource ownership, uniqueness under concurrency, or whether a business action is allowed. Those rules need trusted authorization and domain logic; durable uniqueness belongs at the data boundary (see [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80)).
+A type annotation helps the application and framework understand values; it is not proof that an untrusted request has the right shape or meaning. Define request models and constraints at the boundary. Return a deliberate response model as well. Structural validation can reject a missing field or out-of-range number, but it cannot decide permission, resource ownership, uniqueness under concurrency, or whether a business action is allowed. Those rules need trusted authorization and domain logic; durable uniqueness belongs at the data boundary (see [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F)).
 
 [OpenAPI](https://spec.openapis.org/oas/latest.html) describes operations, inputs, response codes, media types, and schemas in a machine-readable document. In FastAPI, request models and `response_model` contribute generated schemas; custom error handlers must also be represented in each operation's declared responses, or the runtime response and published contract can diverge. OpenAPI documents a contract; it does not validate deployed behavior by itself.
+
+~~~mermaid
+flowchart LR
+    Request[Request with path, query, and body] --> Validate[Validate shape and domain boundary]
+    Validate -->|valid| Success[Documented success status and schema]
+    Validate -->|invalid| Problem[Problem Details with stable type]
+    Validate -->|permission or conflict| Outcome[Documented policy outcome]
+    Outcome --> Problem
+    Success --> OpenAPI[OpenAPI describes both]
+    Problem --> OpenAPI
+~~~
 
 #### Give failures a stable machine identity / 为错误提供稳定的机器标识
 
@@ -2864,14 +3275,9 @@ The following status mapping is one API's policy, not a universal template:
 
 RFC 9110 describes `422` for syntactically valid content whose instructions cannot be processed and `409` for a conflict with current resource state. A different API may separate malformed JSON syntax as `400`, use a different validation status, or choose another duplicate policy; document the actual behavior and keep it consistent. The transport note covers the status definitions.
 
-#### Bound and continue a listing / 限制并继续分页
+#### Cursor pagination / 游标分页
 
-A list response should cap the number of returned records. This example accepts `limit` from 1 through 100, defaults it to 2 for the demonstration, and rejects a value above the maximum with a validation problem. Other API styles may clamp it to the maximum; [Google AIP-158](https://google.aip.dev/158) is one example that specifies coercion for oversized page sizes. The choice is policy: publish the default, maximum, and whether an oversized value is rejected or reduced.
-
-This example includes `next_cursor` in every page: it is an opaque string when more results are available and JSON `null` at the end. Here, `null` is the terminal signal, so the client sends a non-null cursor back unchanged and stops when the value is null. A page may contain fewer rows than the requested limit without proving that the collection has ended. A token says where to continue, not who may read the rows: authenticate and authorize every page request. Use a stable order with a tie-breaker. If records can change during a long listing, define whether pages reflect a moving collection or a consistent snapshot.
-
-The runnable example stores random cursor-to-offset mappings in memory for a tiny synthetic list. This makes the token opaque to the caller, but the token stops working after process restart and the in-memory list is not a scalable storage query. A production cursor needs a documented lifetime/consistency policy and a bounded storage query; the data-access design is separate from this note.
-
+For the separate question of page limits, cursors, and completion signals, see [How does cursor pagination continue safely? / 游标分页如何安全续读？](#37.%20How%20does%20cursor%20pagination%20continue%20safely?%20/%20%E6%B8%B8%E6%A0%87%E5%88%86%E9%A1%B5%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E7%BB%AD%E8%AF%BB%EF%BC%9F).
 #### Runnable contract example / 可运行的契约示例
 
 The API uses a synthetic inventory collection. A Pydantic before-validator strips string input before the field's length constraints run, so whitespace-only input cannot become an empty stored name. / API使用合成库存集合。Pydantic前置验证器先去除字符串两端空白，再执行字段长度约束，因此全空白输入不会变成已保存的空名称。 The complete script below validates request and query boundaries, exposes success and error schemas, and checks the resulting HTTP behavior and OpenAPI document. Save it as `api_contract_demo.py` and run it in an environment with FastAPI and its TestClient dependencies.
@@ -3080,16 +3486,48 @@ Adding an optional response field is often compatible when clients ignore unknow
 
 我会让HTTP状态码有明确含义，返回稳定的问题`type`，并在OpenAPI中说明响应媒体类型和结构。人类可读文本可以解释当前问题，但客户端应根据稳定标识或有文档约定的扩展字段分支，而不是解析这段文本。我会避免回显机密或异常细节，并测试运行时响应是否符合已发布的结构。
 
+
+
+**Sources / 来源：** [OpenAPI Specification, latest](https://spec.openapis.org/oas/latest.html); IETF [RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html); [RFC 9110 §15.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5) for 404, 409, and 422 semantics; Google [AIP-158, Pagination](https://google.aip.dev/158) as one pagination style; FastAPI [request bodies and validation](https://fastapi.tiangolo.com/tutorial/body/), [response models](https://fastapi.tiangolo.com/tutorial/response-model/), and [handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/); Pydantic 2.11 [field validators](https://docs.pydantic.dev/2.11/concepts/validators/), checked against a FastAPI 0.128.0 / Pydantic 2.11.7 runtime on 2026-10-15. In that installed runtime, `app.openapi()["openapi"]` returned `3.1.0`; the live OpenAPI `latest` document resolved to `3.2.1`, so the sample reports its actual generated version instead of assuming the framework emits the newest specification.
+
+**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers the transport and generic status semantics; [Cursor pagination / 游标分页](#37.%20How%20does%20cursor%20pagination%20continue%20safely?%20/%20%E6%B8%B8%E6%A0%87%E5%88%86%E9%A1%B5%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E7%BB%AD%E8%AF%BB%EF%BC%9F) owns page-size, cursor, and end-of-list behavior; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers durable uniqueness and transaction boundaries.
+## 37. How does cursor pagination continue safely? / 游标分页如何安全续读？
+
+**Core answer / 核心回答：** Bound each page, return an opaque continuation token, keep a deterministic order, and define how the token behaves when records change. The client passes a non-null token back unchanged and stops only when the response explicitly returns JSON null. Recheck authorization on every page; a cursor identifies where to continue, not who may read the data. / 限制每页大小，返回不透明的续读 token，使用确定排序，并说明记录变化时 token 的行为。客户端原样传回非空 token，只有响应明确返回 JSON null 时才停止。每一页都要重新授权；游标只标识从哪里继续，不证明调用者有读取权限。
+
+**Key terms / 关键术语：** page size / 页大小；opaque cursor / 不透明游标；stable ordering / 稳定排序；terminal null / 结束标记；authorization / 授权。
+
+~~~mermaid
+flowchart LR
+    Client[Client requests page] --> Auth[Authenticate and authorize this page]
+    Auth --> Bound[Validate maximum page size]
+    Bound --> Query[Fetch in stable order after cursor]
+    Query --> More{More matching rows?}
+    More -->|yes| Next[Return rows and opaque next_cursor]
+    More -->|no| End[Return rows and next_cursor: null]
+    Next --> Client
+    End --> Stop[Client stops]
+~~~
+
+### How does cursor pagination continue safely? / 游标分页如何安全续读？
+
+A list response should cap the number of returned records. This example accepts `limit` from 1 through 100, defaults it to 2 for the demonstration, and rejects a value above the maximum with a validation problem. Other API styles may clamp it to the maximum; [Google AIP-158](https://google.aip.dev/158) is one example that specifies coercion for oversized page sizes. The choice is policy: publish the default, maximum, and whether an oversized value is rejected or reduced.
+
+This example includes `next_cursor` in every page: it is an opaque string when more results are available and JSON `null` at the end. Here, `null` is the terminal signal, so the client sends a non-null cursor back unchanged and stops when the value is null. A page may contain fewer rows than the requested limit without proving that the collection has ended. A token says where to continue, not who may read the rows: authenticate and authorize every page request. Use a stable order with a tie-breaker. If records can change during a long listing, define whether pages reflect a moving collection or a consistent snapshot.
+
+The runnable example stores random cursor-to-offset mappings in memory for a tiny synthetic list. This makes the token opaque to the caller, but the token stops working after process restart and the in-memory list is not a scalable storage query. A production cursor needs a documented lifetime/consistency policy and a bounded storage query; the data-access design is separate from this note.
+
+
 **How should a client know when a page is finished? / 客户端如何判断分页结束？** It should follow the server-issued opaque cursor and stop when `next_cursor` is present with JSON `null`; page length alone is not a reliable end signal. The API should bound the page size, order records deterministically, and re-check authorization for every page. Cursor lifetime and behavior during concurrent updates are explicit API choices.
 
 客户端应原样传回服务端签发的不透明游标，并在`next_cursor`字段存在且值为JSON`null`时停止；单靠当前页长度不能可靠判断结束。API应限制页大小、按确定顺序排列记录，并对每一页重新授权。游标有效期以及并发更新时的行为都应作为明确的接口策略定义。
 
-**Sources / 来源：** [OpenAPI Specification, latest](https://spec.openapis.org/oas/latest.html); IETF [RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html); [RFC 9110 §15.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5) for 404, 409, and 422 semantics; Google [AIP-158, Pagination](https://google.aip.dev/158) as one pagination style; FastAPI [request bodies and validation](https://fastapi.tiangolo.com/tutorial/body/), [response models](https://fastapi.tiangolo.com/tutorial/response-model/), and [handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/); Pydantic 2.11 [field validators](https://docs.pydantic.dev/2.11/concepts/validators/), checked against a FastAPI 0.128.0 / Pydantic 2.11.7 runtime on 2026-10-15. In that installed runtime, `app.openapi()["openapi"]` returned `3.1.0`; the live OpenAPI `latest` document resolved to `3.2.1`, so the sample reports its actual generated version instead of assuming the framework emits the newest specification.
+**Runnable example / 可运行示例：** [HTTP API Contracts / How do you design a predictable HTTP API contract?](#36.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) contains the synthetic FastAPI cursor example and assertions. Its random in-memory cursor-to-offset table is intentionally not a production storage query: tokens expire at process restart and the data is not scalable.
 
-**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) covers the transport and generic status semantics; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) covers durable uniqueness and transaction boundaries.
-## 23. Data Access and Connection Pools / 数据访问与连接池
+**Sources / 来源：** Google [AIP-158, Pagination](https://google.aip.dev/158) is one pagination policy and specifies behavior for oversized page sizes; HTTP status and response contract conventions are described in [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) and [HTTP API Contracts / HTTP API契约](#36.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F). The parent note's tested cursor, terminal-null, authorization, and OpenAPI behavior remains tied to FastAPI 0.128.0 / Pydantic 2.11.7.
+## 38. How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？
 
-### Data Access and Connection Pools / 数据访问与连接池
+### How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？
 
 **Core explanation / 核心解释：** An ORM session is a short-lived unit of work that tracks mapped objects and coordinates SQL within a transaction. Its lifetime, the transaction lifetime, and the database connection lifetime are related but distinct: a session may acquire a pooled connection only when it first needs the database, and commit or rollback returns that connection for reuse. / ORM Session 是短生命周期的工作单元，负责跟踪映射对象并协调事务中的 SQL。Session、事务和数据库连接的生命周期彼此相关但并不相同：Session 通常在首次访问数据库时才从连接池取连接，提交或回滚后会将连接归还以便复用。
 
@@ -3147,7 +3585,19 @@ with Session(engine) as session:
 
 Use an ORM for common mapping, relationship loading, and change tracking when its generated queries are clear. Use SQL directly when a bulk operation, specialized SQL feature, or plan shape needs explicit control. Either way, keep parameter binding and the same transaction/constraint rules; inspect generated or handwritten SQL with the selected database's plan tool.
 
-The [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) note explains SQL result semantics, constraints, query plans, transactions, and isolation independently of the ORM.
+The [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) note explains SQL result semantics, constraints, query plans, transactions, and isolation independently of the ORM.
+
+~~~mermaid
+flowchart LR
+    Request[Request or job begins] --> Session[Create short-lived Session]
+    Session -->|first SQL| Checkout[Check out pooled connection]
+    Checkout --> Work[Queries and writes]
+    Work -->|success| Commit[Commit transaction]
+    Work -->|error| Rollback[Rollback transaction]
+    Commit --> Return[Return connection to pool]
+    Rollback --> Return
+    Return --> Close[Close Session]
+~~~
 
 #### Follow the checkout and cleanup / 跟踪借出与清理
 
@@ -3166,9 +3616,12 @@ Give each request a short-lived session and frame each write unit with one trans
 为每个请求创建短生命周期的 Session，并用一个事务界定每组需要原子完成的写入。成功时提交，异常时回滚，并始终关闭 Session，使借出的连接归还连接池。ORM 负责跟踪映射对象；数据库事务决定原子性；连接池限制并发连接数。先按所有副本和工作进程计算连接总上限，再检查连接等待和长事务，之后再决定是否调整连接池。需要明确查询形态时使用参数化 SQL。
 
 **Sources and verification / 来源与验证：** SQLAlchemy 2.0 [Session Basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html) and [Connection Pooling](https://docs.sqlalchemy.org/en/20/core/pooling.html), and the FastAPI [SQL (Relational) Databases tutorial](https://fastapi.tiangolo.com/tutorial/sql-databases/), checked 2026-10-15. The documented synchronous `Session`/transaction pattern and bounded pool behavior were exercised locally with SQLAlchemy 2.0.44 and SQLite 3.51.0: a successful block committed; an exception rolled back; session close reduced checked-out connections from one to zero; a second checkout against a full one-connection pool timed out, then succeeded after the first connection was returned. On 2026-10-27, the docs page identifies SQLAlchemy 2.0.55 as the current 2.0 docs build; the local verification above names the installed runtime version. No network database or asynchronous driver was used.
-## 24. Caching and Redis / 缓存与 Redis
 
-### Caching and Redis / 缓存与 Redis
+
+**Related notes / 相关笔记：** [Database Fundamentals / How do you reserve the last inventory unit safely?](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) owns the engine's constraint and transaction semantics. [API timeout and safe retry / API 超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers outcome and retry policy; pool growth and queue admission are sized in [the capacity and backpressure note](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F).
+## 39. How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？
+
+### How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？
 
 **Core explanation / 核心解释：** In cache-aside, the database remains the source of truth: reads check the cache first and load the database on a miss; writes commit to the database and then invalidate the cached copy. A TTL bounds how long one cached value can live, but invalidation races and cache failures still need an explicit freshness and load policy. / 在 cache-aside 模式中，数据库仍是事实来源：读取先查缓存，未命中时再读取数据库；写入先提交数据库，然后使缓存副本失效。TTL 限制单个缓存值的存活时间，但失效竞态和缓存故障仍需要明确的新鲜度与负载策略。
 
@@ -3184,7 +3637,21 @@ Suppose `products` is authoritative and the cache key is `product:42`. A typical
 
 For a write, update the authoritative row and commit first; only then issue `DEL product:42`. The next read repopulates from the database. Redis `GET`, `SET ... EX`, `DEL`, and `TTL` are useful implementation primitives, but these commands do not make a Redis mutation atomic with the database transaction.
 
-The [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) note covers the constraints and transaction boundary that protect the source-of-truth write.
+The [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) note covers the constraints and transaction boundary that protect the source-of-truth write.
+
+~~~mermaid
+sequenceDiagram
+    participant R as Reader
+    participant C as Cache
+    participant D as Database
+    participant W as Writer
+    R->>C: Cache miss
+    R->>D: Read old value
+    W->>D: Commit new value
+    W->>C: Delete cached value
+    R->>C: Fill old value after invalidation
+    Note over C: Stale value now has a fresh TTL
+~~~
 
 ##### Make the freshness window explicit / 明确新鲜度窗口
 
@@ -3207,7 +3674,10 @@ I would keep the database authoritative and use cache-aside: read the cache, loa
 我会让数据库保持事实来源，并采用 cache-aside：先读缓存，未命中时查数据库，写入缓存时设置 TTL，并只在数据库写入提交后执行失效。我会根据接口的新鲜度要求选择 TTL，考虑失效失败和陈旧回填窗口，并合并热点键的并发未命中请求。Redis 故障时，我会用截止时间和并发上限约束数据库回退；缓存丢失应增加负载，但不能悄悄改变事实来源。只有在业务明确接受最大陈旧时间时才提供旧值。
 
 **Sources and verification / 来源与验证：** Redis [cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/) and [node-redis cache-aside example](https://redis.io/docs/latest/develop/use-cases/cache-aside/nodejs/), checked 2026-10-15. The official examples demonstrate cache-first reads, TTL-bearing writes, invalidation, and a short-lived stampede lock. The flow above is a generic application design; no Redis server was deployed, so Redis commands and outage behavior were not runtime-tested. TTL and `DEL` are implementation tools, not a cross-store consistency protocol.
-## 25. How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？
+
+
+**Related notes / 相关笔记：** [Web Security and Authentication / Web安全与身份认证](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) owns principal and tenant authorization before cache lookup. [Data Access and Connection Pools / 数据访问与连接池](#38.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains the connection budget used by bounded database fallback.
+## 40. How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？
 
 ### How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？
 
@@ -3265,7 +3735,7 @@ class StandardShipping {
 }
 ~~~
 
-A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#27.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
+A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#42.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
 
 ##### Liskov Substitution Principle (LSP)
 
@@ -3323,10 +3793,10 @@ Do not build speculative features before a need is established. Keep the option 
 
 ---
 
-See [frontend architecture boundaries](#26.%20How%20can%20a%20frontend%20architecture%20divide%20presentation%20and%20behavior?%20/%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E4%B8%8E%E8%A1%8C%E4%B8%BA%E7%9A%84%E8%81%8C%E8%B4%A3%EF%BC%9F) for presentation and deployment ownership examples.
+See [frontend architecture boundaries](#41.%20How%20can%20a%20frontend%20architecture%20divide%20presentation%20and%20behavior?%20/%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E4%B8%8E%E8%A1%8C%E4%B8%BA%E7%9A%84%E8%81%8C%E8%B4%A3%EF%BC%9F) for presentation and deployment ownership examples.
 
 Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).
-## 26. How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？
+## 41. How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？
 
 ### How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？
 
@@ -3352,10 +3822,10 @@ Micro-frontends divide a frontend into parts that can have separate ownership or
 
 Reach for this when independent teams or release schedules are a concrete requirement and the organization can support the shared navigation, styling, accessibility, observability, and runtime boundaries. For a smaller application, a modular single frontend usually has less coordination and deployment overhead.
 
-**See also:** [Design Patterns in Practice](#27.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F) for reusable patterns that can support these principles.
+**See also:** [Design Patterns in Practice](#42.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F) for reusable patterns that can support these principles.
 
-[Back to the main question / 返回主问题](#25.%20How%20do%20design%20principles%20reduce%20the%20cost%20of%20change%20without%20adding%20needless%20abstraction?%20/%20%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%A6%82%E4%BD%95%E9%99%8D%E4%BD%8E%E5%8F%98%E5%8C%96%E6%88%90%E6%9C%AC%E8%80%8C%E4%B8%8D%E8%BF%87%E5%BA%A6%E6%8A%BD%E8%B1%A1%EF%BC%9F).
-## 27. When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？
+[Back to the main question / 返回主问题](#40.%20How%20do%20design%20principles%20reduce%20the%20cost%20of%20change%20without%20adding%20needless%20abstraction?%20/%20%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%A6%82%E4%BD%95%E9%99%8D%E4%BD%8E%E5%8F%98%E5%8C%96%E6%88%90%E6%9C%AC%E8%80%8C%E4%B8%8D%E8%BF%87%E5%BA%A6%E6%8A%BD%E8%B1%A1%EF%BC%9F).
+## 42. When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？
 
 ### When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？
 
@@ -3416,7 +3886,7 @@ function calculateShipping(name, pkg) {
 }
 ~~~
 
-Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#25.%20How%20do%20design%20principles%20reduce%20the%20cost%20of%20change%20without%20adding%20needless%20abstraction?%20/%20%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%A6%82%E4%BD%95%E9%99%8D%E4%BD%8E%E5%8F%98%E5%8C%96%E6%88%90%E6%9C%AC%E8%80%8C%E4%B8%8D%E8%BF%87%E5%BA%A6%E6%8A%BD%E8%B1%A1%EF%BC%9F).
+Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#40.%20How%20do%20design%20principles%20reduce%20the%20cost%20of%20change%20without%20adding%20needless%20abstraction?%20/%20%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%A6%82%E4%BD%95%E9%99%8D%E4%BD%8E%E5%8F%98%E5%8C%96%E6%88%90%E6%9C%AC%E8%80%8C%E4%B8%8D%E8%BF%87%E5%BA%A6%E6%8A%BD%E8%B1%A1%EF%BC%9F).
 
 ---
 
@@ -3476,8 +3946,8 @@ See [DOM Manipulation and Events](../../frontend/browser-apis/dom-manipulation-a
 
 ---
 
-See [how to model an editable component tree](#28.%20How%20should%20a%20low-code%20editor%20store%20editable%20structure%20and%20published%20output?%20/%20%E4%BD%8E%E4%BB%A3%E7%A0%81%E7%BC%96%E8%BE%91%E5%99%A8%E6%80%8E%E6%A0%B7%E4%BF%9D%E5%AD%98%E5%8F%AF%E7%BC%96%E8%BE%91%E7%BB%93%E6%9E%84%E4%B8%8E%E5%8F%91%E5%B8%83%E7%BB%93%E6%9E%9C%EF%BC%9F) for a system-design example and [how roles control feature access](#29.%20How%20should%20roles%20control%20access%20to%20a%20feature?%20/%20%E8%A7%92%E8%89%B2%E6%80%8E%E6%A0%B7%E6%8E%A7%E5%88%B6%E5%AF%B9%E5%8A%9F%E8%83%BD%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F) for a distinct authorization decision.
-## 28. How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？
+See [how to model an editable component tree](#43.%20How%20should%20a%20low-code%20editor%20store%20editable%20structure%20and%20published%20output?%20/%20%E4%BD%8E%E4%BB%A3%E7%A0%81%E7%BC%96%E8%BE%91%E5%99%A8%E6%80%8E%E6%A0%B7%E4%BF%9D%E5%AD%98%E5%8F%AF%E7%BC%96%E8%BE%91%E7%BB%93%E6%9E%84%E4%B8%8E%E5%8F%91%E5%B8%83%E7%BB%93%E6%9E%9C%EF%BC%9F) for a system-design example and [how roles control feature access](#44.%20How%20should%20roles%20control%20access%20to%20a%20feature?%20/%20%E8%A7%92%E8%89%B2%E6%80%8E%E6%A0%B7%E6%8E%A7%E5%88%B6%E5%AF%B9%E5%8A%9F%E8%83%BD%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F) for a distinct authorization decision.
+## 43. How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？
 
 ### How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？
 
@@ -3506,8 +3976,8 @@ Keep document order and visual stacking as explicit concepts. Child order can be
 
 ---
 
-[Back to the main question / 返回主问题](#27.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
-## 29. How should roles control access to a feature? / 角色怎样控制对功能的访问？
+[Back to the main question / 返回主问题](#42.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
+## 44. How should roles control access to a feature? / 角色怎样控制对功能的访问？
 
 ### How should roles control access to a feature? / 角色怎样控制对功能的访问？
 
@@ -3529,8 +3999,8 @@ A request is authenticated first, then the server checks whether the resulting s
 
 See [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) for authorization boundaries and [Design Patterns: Elements of Reusable Object-Oriented Software](https://www.informit.com/store/design-patterns-elements-of-reusable-object-oriented-software-9780201633610) for the original GoF catalog.
 
-[Back to the main question / 返回主问题](#27.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
-## 30. How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？
+[Back to the main question / 返回主问题](#42.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
+## 45. How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？
 
 ### How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？
 
@@ -3554,7 +4024,7 @@ job = session.scalar(
 )
 ~~~
 
-The root cause is the lost tenant predicate, not response serialization or a missing test fixture. Keep the owner success path, add the cross-tenant `404` assertion, and retain the missing-principal, invalid-request, duplicate-create, and repeated-worker checks from [Software Testing Strategy / 软件测试策略](#10.%20How%20should%20test%20boundaries%20prove%20the%20failure%20risks%20that%20matter?%20/%20%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E6%9D%A5%E8%AF%81%E6%98%8E%E5%85%B3%E9%94%AE%E6%95%85%E9%9A%9C%E9%A3%8E%E9%99%A9%EF%BC%9F). Those nearby checks show that the fix did not break the surrounding route and persistence behavior. They do not prove production identity validation or broker semantics, which were not part of this reproduction.
+The root cause is the lost tenant predicate, not response serialization or a missing test fixture. Keep the owner success path, add the cross-tenant `404` assertion, and retain the missing-principal, invalid-request, duplicate-create, and repeated-worker checks from [Software Testing Strategy / 软件测试策略](#19.%20How%20should%20test%20boundaries%20prove%20the%20failure%20risks%20that%20matter?%20/%20%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E6%9D%A5%E8%AF%81%E6%98%8E%E5%85%B3%E9%94%AE%E6%95%85%E9%9A%9C%E9%A3%8E%E9%99%A9%EF%BC%9F). Those nearby checks show that the fix did not break the surrounding route and persistence behavior. They do not prove production identity validation or broker semantics, which were not part of this reproduction.
 
 #### Read a generated change against the requirement / 对照需求独立阅读生成式改动
 
@@ -3567,7 +4037,7 @@ The review is complete when the observed failure, its cause, the changed behavio
 **Interview answer / 面试回答：** I first state the expected behavior, trace the entry point through the relevant dependency and data access, and build the smallest request that can disprove my hypothesis. Here, the other tenant receives the row because the generated refactor drops the tenant condition. Restoring that condition and running both owner and non-owner requests is the focused fix and regression check. I read the generated implementation and tests independently because their shared assumptions can omit the same requirement. / 我先明确预期行为，再沿入口、依赖和数据访问追踪调用路径，并构造能够推翻假设的最小请求。这个例子中，另一租户读到了任务，是因为生成式重构删掉了租户条件。恢复该条件并分别运行所有者和非所有者请求，就是聚焦的修复与回归验证。我会独立阅读生成实现和测试，因为二者可能共享同一个遗漏假设。
 
 **Sources checked 2026-10-15:** GitHub's official [reviewing proposed changes](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests) documentation describes inspecting commits and diffs, and its [review concepts](https://docs.github.com/en/pull-requests/concepts/giving-reviews) explain review feedback and deeper inspection. The reproduced tenant behavior and query correction are exercised in the linked synthetic API example; no personal project or generated artifact is used.
-## 31. How would you design a durable account report? / 怎样设计可持久查询的账户报表？
+## 46. How would you design a durable account report? / 怎样设计可持久查询的账户报表？
 
 ### How would you design a durable account report? / 怎样设计可持久查询的账户报表？
 
@@ -3583,7 +4053,7 @@ Clarify the task and success criteria; state workload, latency, privacy, budget,
 
 A user asks for a CSV report over a bounded account time range. The report reads account activity, may take several seconds, and should remain retrievable for seven days even if the browser closes. Users can check progress and request cancellation. Reports are read-only: they do not change account activity. Validate and bound the input range and query to at most 12 sequential reads; reject an oversize request before accepting work.
 
-Use the estimates in [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#6.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F): average 5 submissions/s and a 10-minute peak of 20/s; 6 s mean worker time; 8 KiB request; 12 sequential database reads; 128 KiB average result; and a seven-day result-retention target. These are teaching assumptions for comparing choices, not production measurements. The design constraints are: authorize every user-facing path; do not lose accepted work between the database and queue; bound waiting work and connection use; and preserve an explicit result or failure that can be queried after disconnect.
+Use the estimates in [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F): average 5 submissions/s and a 10-minute peak of 20/s; 6 s mean worker time; 8 KiB request; 12 sequential database reads; 128 KiB average result; and a seven-day result-retention target. These are teaching assumptions for comparing choices, not production measurements. The design constraints are: authorize every user-facing path; do not lose accepted work between the database and queue; bound waiting work and connection use; and preserve an explicit result or failure that can be queried after disconnect.
 
 #### API contract and data ownership / API 契约与数据所有权
 
@@ -3602,11 +4072,11 @@ Location: /v1/jobs/job-demo-731
 {"jobId":"job-demo-731","status":"queued","statusUrl":"/v1/jobs/job-demo-731"}
 ~~~
 
-The **202** response means the request was accepted for processing; it does not say that processing completed or will necessarily succeed. **GET /v1/jobs/{jobId}** returns current job state; **DELETE /v1/jobs/{jobId}** records a cancellation request; and **GET /v1/jobs/{jobId}/result** returns the private result only after authorization and completion. The status resource tells the client the later outcome. If the original response is lost, [work out what the caller can confirm / 判断调用方能确认什么](#Where%20a%20timeout%20leaves%20the%20caller%20/%20%E8%B6%85%E6%97%B6%E5%90%8E%E8%B0%83%E7%94%A8%E6%96%B9%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E7%8A%B6%E6%80%81) before repeating the operation. This follows [HTTP API Contracts / HTTP API契约](#22.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6) for endpoint shapes and [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) for protocol semantics.
+The **202** response means the request was accepted for processing; it does not say that processing completed or will necessarily succeed. **GET /v1/jobs/{jobId}** returns current job state; **DELETE /v1/jobs/{jobId}** records a cancellation request; and **GET /v1/jobs/{jobId}/result** returns the private result only after authorization and completion. The status resource tells the client the later outcome. If the original response is lost, [work out what the caller can confirm / 判断调用方能确认什么](#Where%20a%20timeout%20leaves%20the%20caller%20/%20%E8%B6%85%E6%97%B6%E5%90%8E%E8%B0%83%E7%94%A8%E6%96%B9%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E7%8A%B6%E6%80%81) before repeating the operation. This follows [HTTP API Contracts / HTTP API契约](#36.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) for endpoint shapes and [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) for protocol semantics.
 
 Scope an idempotency key to (account, requesting principal, key) and enforce that scope with a database unique constraint. First look up an existing key: return its job when the normalized-request fingerprint matches, and report a conflict when it differs. If absent, insert the job under the unique constraint, add the outbox row, and conditionally reserve a waiting slot in one transaction before commit. If a concurrent same-key insert wins, the loser rolls back before reserving, loads the existing job, and compares fingerprints; lookup-then-insert alone is racy. These are explicit choices for this example, not rules every API must use. Define the success and error schema as part of the service's endpoint contract.
 
-Authenticate first, then check that the principal may create a report for the account in the path. A caller-supplied account ID selects a resource; it does not prove permission. Every later status, cancellation, and result request checks access to the job's stored account; knowing a job ID does not grant access. The worker uses a narrowly scoped service identity to read only the stored account and report range. See [Web Security and Authentication / Web安全与身份认证](#9.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81) for the shared authorization boundary.
+Authenticate first, then check that the principal may create a report for the account in the path. A caller-supplied account ID selects a resource; it does not prove permission. Every later status, cancellation, and result request checks access to the job's stored account; knowing a job ID does not grant access. The worker uses a narrowly scoped service identity to read only the stored account and report range. See [Web Security and Authentication / Web安全与身份认证](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) for the shared authorization boundary.
 
 Store a job row with a stable job ID, account ID, requesting principal, validated normalized report parameters such as period/range/format, normalized request fingerprint, idempotency key, current status, creation/expiry times, cancellation request, attempt number and lease expiry, waiting-slot reservation state, private result reference, and a bounded error code. The parameters let a restarted worker rebuild its input; the fingerprint only compares requests and cannot recover them. Do not retain the raw request body or put sensitive filters in queue messages. A separate outbox row holds the job ID and publication state.
 
@@ -3644,7 +4114,7 @@ flowchart LR
     Visible --> Status
 ~~~
 
-This picture distinguishes three durable systems. The job and outbox rows share one database transaction; the queue confirms publication under its own rules; the private object is separate again and becomes visible only through the conditional job update. Acknowledgement follows the durable job outcome, not merely queue receipt. General broker confirmation and redelivery behavior is explained in [Publisher confirms and consumer acknowledgements / 发布者确认和消费者确认分别证明什么？](#7.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F).
+This picture distinguishes three durable systems. The job and outbox rows share one database transaction; the queue confirms publication under its own rules; the private object is separate again and becomes visible only through the conditional job update. Acknowledgement follows the durable job outcome, not merely queue receipt. General broker confirmation and redelivery behavior is explained in [Publisher confirms and consumer acknowledgements / 发布者确认和消费者确认分别证明什么？](#11.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F).
 
 ##### Outbox publication and worker attempts / Outbox 发布与 worker 尝试
 
@@ -3668,14 +4138,14 @@ If representative reports consistently fit within the caller's request deadline 
 
 For this workload, use the 64 worker slots, 7/s sustained admission rate, 30-job burst, shared 240 accepted-but-not-started-job bound, and 200-connection application-pool ceiling from the linked sizing example rather than copying its arithmetic here. At sustained 20/s offered traffic, the service must reject work after its admission bound; accepting all of it would require about 120 concurrent workers at the assumed 6 s mean service time. Before changing the design, measure API acceptance latency, queue age and depth, active worker slots, job completion percentiles, database checkout wait and query time, object bytes retained, retries, cancellation outcomes, and completed reports. An old queue with rising oldest-message age is overload even if the API still accepts requests.
 
-Deploy API, relay, and workers with compatible job schemas so old jobs can finish during a rollout. Retain result objects for seven days; delete expired objects and metadata under the chosen retention policy; and bound retries and deadlines so a bad report cannot occupy a worker forever. If the queue is unavailable, accepted-but-not-started jobs stay in the outbox and continue consuming the same reserved slots; once all 240 are reserved, reject new submissions before **202**. If the database is unavailable, the API cannot durably accept the job and must return an error rather than imply success. Roll out with health checks and a rollback path that accounts for jobs already accepted under the previous schema. For the arithmetic behind the worker, database, and retention budgets, see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#6.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). For stage-level indicators and alerting, see [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#8.%20Observability,%20SLOs,%20and%20Incident%20Response%20/%20%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7%E3%80%81%E6%9C%8D%E5%8A%A1%E7%9B%AE%E6%A0%87%E4%B8%8E%E4%BA%8B%E4%BB%B6%E5%93%8D%E5%BA%94).
+Deploy API, relay, and workers with compatible job schemas so old jobs can finish during a rollout. Retain result objects for seven days; delete expired objects and metadata under the chosen retention policy; and bound retries and deadlines so a bad report cannot occupy a worker forever. If the queue is unavailable, accepted-but-not-started jobs stay in the outbox and continue consuming the same reserved slots; once all 240 are reserved, reject new submissions before **202**. If the database is unavailable, the API cannot durably accept the job and must return an error rather than imply success. Roll out with health checks and a rollback path that accounts for jobs already accepted under the previous schema. For the arithmetic behind the worker, database, and retention budgets, see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). For stage-level indicators and alerting, see [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#12.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F).
 
 **How would you answer “How would you design a report that may outlive an HTTP request?” / 如何回答“如何设计一个可能超过 HTTP 请求时限的报表任务？”** I would first confirm report size, response deadline, retention, access owner, and acceptable failure behavior. If measured tail latency fits the request budget, I would keep it synchronous. For the stated multi-second report, I would persist the job and outbox in one database transaction, return a stable status URL, and let a bounded worker create a private result. Retries use the scoped idempotency key, and each worker attempt writes a distinct immutable object. A guarded update makes only the current, non-cancelled attempt visible; acknowledge the queue message after the durable outcome. The client queries job state after disconnect rather than inferring completion from a response or message delivery. / 我会先确认报表规模、响应期限、留存期、数据所有者和可接受的失败行为。如果实测尾部时延满足请求预算，就保持同步。对于本例需要数秒的任务，我会在同一数据库事务中保存 job 与 outbox 并返回稳定的状态 URL，再由有界 worker 生成私有结果。重试使用有作用域的幂等键，每个 worker 尝试写入不同且不可变的对象。只有当前且未被取消的尝试可以通过条件更新让结果可见，并在持久化业务结果后确认队列消息；客户端断连后应查询 job 状态，而不能从响应或消息是否投递推断完成。
 
-**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API超时后的结果确认与安全重试](#5.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) owns unknown outcomes and safe retries; [Sizing and bounding asynchronous work / 容量估算与背压](#6.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) retains the detailed estimates; [Publisher confirms and consumer acknowledgements / 队列确认与重投](#7.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker-level confirmation boundaries; [HTTP API Contracts / HTTP API契约](#22.%20HTTP%20API%20Contracts%20/%20HTTP%20API%E5%A5%91%E7%BA%A6) covers endpoint and error conventions; [Data Access and Connection Pools / 数据访问与连接池](#23.%20Data%20Access%20and%20Connection%20Pools%20/%20%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%E4%B8%8E%E8%BF%9E%E6%8E%A5%E6%B1%A0) explains ORM sessions and process-local pool limits; [Database Fundamentals / 数据库基础](#4.%20Database%20Fundamentals%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9F%BA%E7%A1%80) covers constraints and transaction semantics; [Web Security and Authentication / Web安全与身份认证](#9.%20Web%20Security%20and%20Authentication%20/%20Web%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81) owns identity and resource authorization; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20HTTP%20Protocols%20and%20WebSockets%20/%20HTTP%E5%8D%8F%E8%AE%AE%E4%B8%8EWebSocket) owns transport and reconnect semantics; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) shows a separate durable-run contract; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the client surfaces stream and disconnect state; [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#8.%20Observability,%20SLOs,%20and%20Incident%20Response%20/%20%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7%E3%80%81%E6%9C%8D%E5%8A%A1%E7%9B%AE%E6%A0%87%E4%B8%8E%E4%BA%8B%E4%BB%B6%E5%93%8D%E5%BA%94) covers stage-level production signals.
+**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API超时后的结果确认与安全重试](#9.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) owns unknown outcomes and safe retries; [Sizing and bounding asynchronous work / 容量估算与背压](#10.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) retains the detailed estimates; [Publisher confirms and consumer acknowledgements / 队列确认与重投](#11.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker-level confirmation boundaries; [HTTP API Contracts / HTTP API契约](#36.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) covers endpoint and error conventions; [Data Access and Connection Pools / 数据访问与连接池](#38.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains ORM sessions and process-local pool limits; [Database Fundamentals / 数据库基础](#5.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers constraints and transaction semantics; [Web Security and Authentication / Web安全与身份认证](#13.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) owns identity and resource authorization; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#1.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) owns transport and reconnect semantics; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) shows a separate durable-run contract; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the client surfaces stream and disconnect state; [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#12.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F) covers stage-level production signals.
 
 **Sources / 来源：** [RFC 9110 §15.3.3, 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3); [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html) for the database-local all-or-nothing boundary; [PostgreSQL 18: Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) for scoped uniqueness and [Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html) for concurrent transaction behavior; [AWS Prescriptive Guidance: Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html) for dual-write failure and duplicate-publication boundaries; [Amazon S3 conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) as one create-only object-write mechanism, not a requirement to choose S3; [Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework) for workload requirements, operational focus, and starting with a simple design, checked 2026-10-15.
-## 32. How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？
+## 47. How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？
 
 ### How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？
 
@@ -3750,8 +4220,8 @@ Prepare questions that help you understand the work. Choose the ones that remain
 
 Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
 
-**See also:** [Agile and Scrum](#33.%20How%20does%20Scrum%20help%20a%20team%20inspect%20and%20adapt%20work?%20/%20Scrum%20%E5%A6%82%E4%BD%95%E5%B8%AE%E5%8A%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the current Scrum vocabulary used in team-process discussions.
-## 33. How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？
+**See also:** [Agile and Scrum](#48.%20How%20does%20Scrum%20help%20a%20team%20inspect%20and%20adapt%20work?%20/%20Scrum%20%E5%A6%82%E4%BD%95%E5%B8%AE%E5%8A%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the current Scrum vocabulary used in team-process discussions.
+## 48. How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？
 
 ### How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？
 
@@ -3829,14 +4299,14 @@ The commitments focus the artifact without replacing it. Multiple Increments may
 - **Skipping inspection and improvement:** omitting defined events loses their intended opportunities and means the team is not using the framework as described.
 - **Assuming Scrum fits every problem:** choose a way of working that fits the product, feedback cycle, and organizational constraints. Regulated work can also use iterative development when its evidence and control requirements are built into the process.
 
-**See also:** [Interview Tips](#32.%20How%20do%20you%20prepare%20behavioral%20answers%20with%20evidence%20you%20can%20support?%20/%20%E5%A6%82%E4%BD%95%E5%87%86%E5%A4%87%E6%9C%89%E4%BA%8B%E5%AE%9E%E4%BE%9D%E6%8D%AE%E3%80%81%E7%BB%8F%E5%BE%97%E8%B5%B7%E6%A0%B8%E5%AE%9E%E7%9A%84%E8%A1%8C%E4%B8%BA%E9%9D%A2%E8%AF%95%E5%9B%9E%E7%AD%94%EF%BC%9F) for discussing team practices accurately.
+**See also:** [Interview Tips](#47.%20How%20do%20you%20prepare%20behavioral%20answers%20with%20evidence%20you%20can%20support?%20/%20%E5%A6%82%E4%BD%95%E5%87%86%E5%A4%87%E6%9C%89%E4%BA%8B%E5%AE%9E%E4%BE%9D%E6%8D%AE%E3%80%81%E7%BB%8F%E5%BE%97%E8%B5%B7%E6%A0%B8%E5%AE%9E%E7%9A%84%E8%A1%8C%E4%B8%BA%E9%9D%A2%E8%AF%95%E5%9B%9E%E7%AD%94%EF%BC%9F) for discussing team practices accurately.
 
 Sources: [The Scrum Guide, November 2020](https://scrumguides.org/scrum-guide.html) and the [Agile Manifesto](https://agilemanifesto.org/).
-## 34. How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？
+## 49. How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？
 
 ### How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？
 
-Git stores snapshots behind movable branch references, while the working tree and index hold changes not yet committed. Choose merge or rebase based on whether others rely on the commits, and choose reset, revert, or reflog recovery according to which local or shared history state must change. These commands repair repository history and files; they do not roll back a deployed application, database migration, or external side effect. / Git 用提交保存快照，分支是可移动引用；工作区和暂存区保存尚未提交的修改。根据提交是否已被他人依赖选择合并或变基，再根据需要改变的是哪部分本地或共享历史选择 reset、revert 或 reflog 恢复。这些命令修复的是仓库历史和文件，不会回滚已部署应用、数据库迁移或外部副作用；生产恢复见[应用部署与持续交付](#37.%20How%20do%20you%20promote%20one%20validated%20artifact%20and%20recover%20each%20state%20layer%20safely?%20/%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B7%B2%E9%AA%8C%E8%AF%81%E4%BA%A7%E7%89%A9%E5%B9%B6%E5%88%86%E5%88%AB%E6%81%A2%E5%A4%8D%E5%90%84%E5%B1%82%E7%8A%B6%E6%80%81%EF%BC%9F)。
+Git stores snapshots behind movable branch references, while the working tree and index hold changes not yet committed. Choose merge or rebase based on whether others rely on the commits, and choose reset, revert, or reflog recovery according to which local or shared history state must change. These commands repair repository history and files; they do not roll back a deployed application, database migration, or external side effect. / Git 用提交保存快照，分支是可移动引用；工作区和暂存区保存尚未提交的修改。根据提交是否已被他人依赖选择合并或变基，再根据需要改变的是哪部分本地或共享历史选择 reset、revert 或 reflog 恢复。这些命令修复的是仓库历史和文件，不会回滚已部署应用、数据库迁移或外部副作用；生产恢复见[应用部署与持续交付](#52.%20How%20do%20you%20promote%20one%20validated%20artifact%20and%20recover%20each%20state%20layer%20safely?%20/%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B7%B2%E9%AA%8C%E8%AF%81%E4%BA%A7%E7%89%A9%E5%B9%B6%E5%88%86%E5%88%AB%E6%81%A2%E5%A4%8D%E5%90%84%E5%B1%82%E7%8A%B6%E6%80%81%EF%BC%9F)。
 
 #### Core commands
 
@@ -3958,7 +4428,7 @@ Apply the change introduced by a selected commit to the current branch, creating
 git cherry-pick <commit>
 ~~~
 
-For a mistake in existing changes or commits, see [undo and recovery in Git / Git 撤销与找回](#35.%20How%20do%20you%20undo%20or%20recover%20a%20Git%20change%20safely?%20/%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%92%A4%E9%94%80%E6%88%96%E6%89%BE%E5%9B%9E%20Git%20%E6%94%B9%E5%8A%A8%EF%BC%9F).
+For a mistake in existing changes or commits, see [undo and recovery in Git / Git 撤销与找回](#50.%20How%20do%20you%20undo%20or%20recover%20a%20Git%20change%20safely?%20/%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%92%A4%E9%94%80%E6%88%96%E6%89%BE%E5%9B%9E%20Git%20%E6%94%B9%E5%8A%A8%EF%BC%9F).
 
 #### Pull request and code review workflow
 
@@ -3973,10 +4443,10 @@ refactor(utils): extract date formatting
 docs(readme): clarify setup
 ~~~
 
-**See also:** [Agile and Scrum](#33.%20How%20does%20Scrum%20help%20a%20team%20inspect%20and%20adapt%20work?%20/%20Scrum%20%E5%A6%82%E4%BD%95%E5%B8%AE%E5%8A%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
+**See also:** [Agile and Scrum](#48.%20How%20does%20Scrum%20help%20a%20team%20inspect%20and%20adapt%20work?%20/%20Scrum%20%E5%A6%82%E4%BD%95%E5%B8%AE%E5%8A%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
 
 Sources: [Git pull](https://git-scm.com/docs/git-pull), [Git merge](https://git-scm.com/docs/git-merge), [Git rebase](https://git-scm.com/docs/git-rebase), [Git reset](https://git-scm.com/docs/git-reset), [Git revert](https://git-scm.com/docs/git-revert), [Git reflog](https://git-scm.com/docs/git-reflog), [Git stash](https://git-scm.com/docs/git-stash), and [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick). Git manuals checked 2026-10-15.
-## 35. How do you undo or recover a Git change safely? / 怎样安全撤销或找回 Git 改动？
+## 50. How do you undo or recover a Git change safely? / 怎样安全撤销或找回 Git 改动？
 
 ### How do you undo or recover a Git change safely? / 怎样安全撤销或找回 Git 改动？
 
@@ -4013,8 +4483,8 @@ git branch recovery <commit>
 
 Creating a branch preserves the recovered commit under a name; checking out a raw commit instead leaves HEAD detached. Reflogs are local and expire, so they are not a backup.
 
-[Back to the main question / 返回主问题](#34.%20How%20do%20you%20integrate,%20revise,%20or%20recover%20Git%20history%20without%20losing%20work?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E4%B8%A2%E5%A4%B1%E5%B7%A5%E4%BD%9C%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%9B%86%E6%88%90%E3%80%81%E4%BF%AE%E6%94%B9%E6%88%96%E6%81%A2%E5%A4%8D%20Git%20%E5%8E%86%E5%8F%B2%EF%BC%9F).
-## 36. How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？
+[Back to the main question / 返回主问题](#49.%20How%20do%20you%20integrate,%20revise,%20or%20recover%20Git%20history%20without%20losing%20work?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E4%B8%A2%E5%A4%B1%E5%B7%A5%E4%BD%9C%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%9B%86%E6%88%90%E3%80%81%E4%BF%AE%E6%94%B9%E6%88%96%E6%81%A2%E5%A4%8D%20Git%20%E5%8E%86%E5%8F%B2%EF%BC%9F).
+## 51. How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？
 
 ### How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？
 
@@ -4172,13 +4642,13 @@ docker push registry.example.com/team/my-app:1.0
 ~~~
 
 Sources: [official PostgreSQL image environment variables and secrets](https://github.com/docker-library/docs/blob/master/postgres/README.md#environment-variables), [Docker image and container concepts](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/), [Docker networking](https://docs.docker.com/engine/network/), [port publishing](https://docs.docker.com/engine/network/port-publishing/), [Docker volumes](https://docs.docker.com/engine/storage/volumes/), [Compose file reference](https://docs.docker.com/compose/compose-file/), [Compose variable interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [`docker run` environment variables](https://docs.docker.com/reference/cli/docker/container/run/#set-environment-variables--e---env), [Docker build secrets](https://docs.docker.com/build/building/secrets/), [Docker Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/), [`docker login`](https://docs.docker.com/reference/cli/docker/login/), [`docker tag`](https://docs.docker.com/reference/cli/docker/image/tag/), and [`docker push`](https://docs.docker.com/reference/cli/docker/image/push/). Docker documentation checked 2026-10-15.
-## 37. How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？
+## 52. How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？
 
 ### How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？
 
 Build one immutable application artifact, test those exact bits, and promote the same artifact through staging to production with runtime configuration supplied separately. Readiness and gradual rollout protect traffic while error, latency, and saturation signals establish whether to stop or return to the last known-good application version. Persistent data and external effects have separate owners and recovery paths: image rollback cannot reverse a database migration, sent email, payment, or other completed action. / 构建一个不可变应用产物，验证这份确切产物，再把同一产物从预发环境晋级到生产，并单独注入运行时配置。就绪检查和渐进式放量保护流量，错误率、延迟和资源饱和信号决定是否暂停或恢复到上一个已知正常的应用版本。持久数据和外部副作用各有其所有者与恢复路径：镜像回滚不能撤销数据库迁移、已发送邮件、支付或其他已完成操作。
 
-The [production request path and responsibility model](#38.%20How%20do%20deployment%20components%20carry%20a%20request%20and%20share%20responsibilities?%20/%20%E9%83%A8%E7%BD%B2%E7%BB%84%E4%BB%B6%E6%80%8E%E6%A0%B7%E6%89%BF%E6%8E%A5%E8%AF%B7%E6%B1%82%E5%B9%B6%E5%88%86%E6%8B%85%E8%81%8C%E8%B4%A3%EF%BC%9F) explains which components run the service and own its data. The following steps focus on how a tested artifact safely replaces the one serving traffic.
+The [production request path and responsibility model](#53.%20How%20do%20deployment%20components%20carry%20a%20request%20and%20share%20responsibilities?%20/%20%E9%83%A8%E7%BD%B2%E7%BB%84%E4%BB%B6%E6%80%8E%E6%A0%B7%E6%89%BF%E6%8E%A5%E8%AF%B7%E6%B1%82%E5%B9%B6%E5%88%86%E6%8B%85%E8%81%8C%E8%B4%A3%EF%BC%9F) explains which components run the service and own its data. The following steps focus on how a tested artifact safely replaces the one serving traffic.
 
 #### One artifact from checks to production / 一个产物经过检查再到生产
 
@@ -4200,12 +4670,12 @@ Readiness is a traffic gate: an instance should receive requests only when it ca
 
 Database changes need an independent compatibility plan. A common expand-and-contract sequence adds a backward-compatible schema shape, deploys code that tolerates both shapes, backfills or dual-writes as needed, switches reads, and removes the old shape only after old code and the rollback window are gone. Run migrations as a controlled step rather than once per replica. Redeploying an older image does not reverse a schema migration, sent email, payment, or other external side effect; rollback may require a forward fix, an idempotent compensating action, or a tested restore plan. Restoring a backup can discard writes made after that backup, so it is a recovery decision rather than a routine application rollback.
 
-For the frontend-specific type/test/build and critical-browser-check sequence, see [Frontend Testing / 前端测试](../../frontend/testing/frontend-testing.md). The existing [Docker Operations / Docker操作参考](#36.%20How%20do%20images,%20containers,%20volumes,%20and%20networks%20determine%20state%20and%20connectivity?%20/%20%E9%95%9C%E5%83%8F%E3%80%81%E5%AE%B9%E5%99%A8%E3%80%81%E5%8D%B7%E5%92%8C%E7%BD%91%E7%BB%9C%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%8A%B6%E6%80%81%E7%95%99%E5%AD%98%E4%B8%8E%E6%9C%8D%E5%8A%A1%E8%BF%9E%E9%80%9A%EF%BC%9F) note covers image construction and local container mechanics.
+For the frontend-specific type/test/build and critical-browser-check sequence, see [Frontend Testing / 前端测试](../../frontend/testing/frontend-testing.md). The existing [Docker Operations / Docker操作参考](#51.%20How%20do%20images,%20containers,%20volumes,%20and%20networks%20determine%20state%20and%20connectivity?%20/%20%E9%95%9C%E5%83%8F%E3%80%81%E5%AE%B9%E5%99%A8%E3%80%81%E5%8D%B7%E5%92%8C%E7%BD%91%E7%BB%9C%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%8A%B6%E6%80%81%E7%95%99%E5%AD%98%E4%B8%8E%E6%9C%8D%E5%8A%A1%E8%BF%9E%E9%80%9A%EF%BC%9F) note covers image construction and local container mechanics.
 
 **Interview answer / 面试回答：** Start with the request/data path and trust boundaries, then choose the least operational runtime that meets workload constraints. Build and verify one immutable artifact, inject runtime configuration and secrets, release behind readiness and monitored thresholds, and keep schema or external-state recovery separate from image rollback. / 先画出请求和数据路径及信任边界，再按负载约束选择运维负担最低的运行时。构建并验证一个不可变产物，运行时注入配置和密钥，在就绪检查与监控阈值保护下发布，并把数据库和外部状态的恢复方案与镜像回滚分开。
 
 **Sources checked 2026-10-15:** [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html); [AWS VPC network example](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html); [ECS task IAM roles](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html); [Application Load Balancer health checks](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html); [ECS deployment circuit breaker](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html); [Kubernetes v1.37 probes](https://kubernetes.io/docs/concepts/workloads/pods/probes/); [Amazon RDS shared responsibility and query tuning](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/); [Amazon S3 access control](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-management.html); [S3 presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html); [Amazon SQS standard queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html); [SQS dead-letter queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html); [AWS Fargate pricing dimensions](https://aws.amazon.com/fargate/pricing/); [Amazon RDS pricing](https://aws.amazon.com/rds/pricing/); [Amazon S3 pricing](https://aws.amazon.com/s3/pricing/); [Docker Compose in production](https://docs.docker.com/compose/how-tos/production/); [Docker image digests](https://docs.docker.com/dhi/explore/security-concepts/digests/); [GitHub Actions deployment environments](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments); [CodeDeploy rollback behavior](https://docs.aws.amazon.com/codedeploy/latest/userguide/deployments-rollback-and-redeploy.html); [Vite static deployment](https://vite.dev/guide/static-deploy.html). AWS examples document one provider's current service boundaries and are not universal defaults; verify the selected provider, service, region, and configuration.
-## 38. How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？
+## 53. How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？
 
 ### How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？
 
@@ -4258,4 +4728,4 @@ Choose a runtime by workload constraints. A managed application platform or func
 
 Track each boundary with a useful signal: request errors and latency at ingress, ready replica count and saturation for compute, connection/query pressure for the database, request errors and object growth for storage, and oldest-message age plus dead-letter count for a queue. Cost estimates should include idle minimums and peak headroom as well as per-use storage, requests, and data movement; a service with a low unit price can still be expensive when retries or egress multiply the workload.
 
-[Back to the main question / 返回主问题](#37.%20How%20do%20you%20promote%20one%20validated%20artifact%20and%20recover%20each%20state%20layer%20safely?%20/%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B7%B2%E9%AA%8C%E8%AF%81%E4%BA%A7%E7%89%A9%E5%B9%B6%E5%88%86%E5%88%AB%E6%81%A2%E5%A4%8D%E5%90%84%E5%B1%82%E7%8A%B6%E6%80%81%EF%BC%9F).
+[Back to the main question / 返回主问题](#52.%20How%20do%20you%20promote%20one%20validated%20artifact%20and%20recover%20each%20state%20layer%20safely?%20/%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B7%B2%E9%AA%8C%E8%AF%81%E4%BA%A7%E7%89%A9%E5%B9%B6%E5%88%86%E5%88%AB%E6%81%A2%E5%A4%8D%E5%90%84%E5%B1%82%E7%8A%B6%E6%80%81%EF%BC%9F).

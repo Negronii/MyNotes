@@ -1,4 +1,4 @@
-# HTTP API Contracts / HTTP API契约
+# How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？
 
 **Core idea / 核心模型：** An API contract makes a boundary predictable: it says which request shapes are accepted, which success representation is returned, and how clients recognize failures. Validate input at the boundary, keep response and error shapes intentional, and document pagination and evolution rules so clients do not infer behavior from implementation details. / API契约让接口边界可预期：明确接受哪些请求形状、成功时返回什么表示，以及客户端如何识别失败。在边界校验输入，明确设计响应与错误形状，并说明分页和演进规则，避免客户端依赖实现细节。
 
@@ -11,6 +11,17 @@ An API contract sits above the transport: a route and method, its path/query/bod
 A type annotation helps the application and framework understand values; it is not proof that an untrusted request has the right shape or meaning. Define request models and constraints at the boundary. Return a deliberate response model as well. Structural validation can reject a missing field or out-of-range number, but it cannot decide permission, resource ownership, uniqueness under concurrency, or whether a business action is allowed. Those rules need trusted authorization and domain logic; durable uniqueness belongs at the data boundary (see [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md)).
 
 [OpenAPI](https://spec.openapis.org/oas/latest.html) describes operations, inputs, response codes, media types, and schemas in a machine-readable document. In FastAPI, request models and `response_model` contribute generated schemas; custom error handlers must also be represented in each operation's declared responses, or the runtime response and published contract can diverge. OpenAPI documents a contract; it does not validate deployed behavior by itself.
+
+~~~mermaid
+flowchart LR
+    Request[Request with path, query, and body] --> Validate[Validate shape and domain boundary]
+    Validate -->|valid| Success[Documented success status and schema]
+    Validate -->|invalid| Problem[Problem Details with stable type]
+    Validate -->|permission or conflict| Outcome[Documented policy outcome]
+    Outcome --> Problem
+    Success --> OpenAPI[OpenAPI describes both]
+    Problem --> OpenAPI
+~~~
 
 ## Give failures a stable machine identity / 为错误提供稳定的机器标识
 
@@ -28,14 +39,9 @@ The following status mapping is one API's policy, not a universal template:
 
 RFC 9110 describes `422` for syntactically valid content whose instructions cannot be processed and `409` for a conflict with current resource state. A different API may separate malformed JSON syntax as `400`, use a different validation status, or choose another duplicate policy; document the actual behavior and keep it consistent. The transport note covers the status definitions.
 
-## Bound and continue a listing / 限制并继续分页
+## Cursor pagination / 游标分页
 
-A list response should cap the number of returned records. This example accepts `limit` from 1 through 100, defaults it to 2 for the demonstration, and rejects a value above the maximum with a validation problem. Other API styles may clamp it to the maximum; [Google AIP-158](https://google.aip.dev/158) is one example that specifies coercion for oversized page sizes. The choice is policy: publish the default, maximum, and whether an oversized value is rejected or reduced.
-
-This example includes `next_cursor` in every page: it is an opaque string when more results are available and JSON `null` at the end. Here, `null` is the terminal signal, so the client sends a non-null cursor back unchanged and stops when the value is null. A page may contain fewer rows than the requested limit without proving that the collection has ended. A token says where to continue, not who may read the rows: authenticate and authorize every page request. Use a stable order with a tie-breaker. If records can change during a long listing, define whether pages reflect a moving collection or a consistent snapshot.
-
-The runnable example stores random cursor-to-offset mappings in memory for a tiny synthetic list. This makes the token opaque to the caller, but the token stops working after process restart and the in-memory list is not a scalable storage query. A production cursor needs a documented lifetime/consistency policy and a bounded storage query; the data-access design is separate from this note.
-
+For the separate question of page limits, cursors, and completion signals, see [How does cursor pagination continue safely? / 游标分页如何安全续读？](api-cursor-pagination.md).
 ## Runnable contract example / 可运行的契约示例
 
 The API uses a synthetic inventory collection. A Pydantic before-validator strips string input before the field's length constraints run, so whitespace-only input cannot become an empty stored name. / API使用合成库存集合。Pydantic前置验证器先去除字符串两端空白，再执行字段长度约束，因此全空白输入不会变成已保存的空名称。 The complete script below validates request and query boundaries, exposes success and error schemas, and checks the resulting HTTP behavior and OpenAPI document. Save it as `api_contract_demo.py` and run it in an environment with FastAPI and its TestClient dependencies.
@@ -244,10 +250,8 @@ Adding an optional response field is often compatible when clients ignore unknow
 
 我会让HTTP状态码有明确含义，返回稳定的问题`type`，并在OpenAPI中说明响应媒体类型和结构。人类可读文本可以解释当前问题，但客户端应根据稳定标识或有文档约定的扩展字段分支，而不是解析这段文本。我会避免回显机密或异常细节，并测试运行时响应是否符合已发布的结构。
 
-**How should a client know when a page is finished? / 客户端如何判断分页结束？** It should follow the server-issued opaque cursor and stop when `next_cursor` is present with JSON `null`; page length alone is not a reliable end signal. The API should bound the page size, order records deterministically, and re-check authorization for every page. Cursor lifetime and behavior during concurrent updates are explicit API choices.
 
-客户端应原样传回服务端签发的不透明游标，并在`next_cursor`字段存在且值为JSON`null`时停止；单靠当前页长度不能可靠判断结束。API应限制页大小、按确定顺序排列记录，并对每一页重新授权。游标有效期以及并发更新时的行为都应作为明确的接口策略定义。
 
 **Sources / 来源：** [OpenAPI Specification, latest](https://spec.openapis.org/oas/latest.html); IETF [RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html); [RFC 9110 §15.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5) for 404, 409, and 422 semantics; Google [AIP-158, Pagination](https://google.aip.dev/158) as one pagination style; FastAPI [request bodies and validation](https://fastapi.tiangolo.com/tutorial/body/), [response models](https://fastapi.tiangolo.com/tutorial/response-model/), and [handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/); Pydantic 2.11 [field validators](https://docs.pydantic.dev/2.11/concepts/validators/), checked against a FastAPI 0.128.0 / Pydantic 2.11.7 runtime on 2026-10-15. In that installed runtime, `app.openapi()["openapi"]` returned `3.1.0`; the live OpenAPI `latest` document resolved to `3.2.1`, so the sample reports its actual generated version instead of assuming the framework emits the newest specification.
 
-**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../networking/http-protocols-and-websockets.md) covers the transport and generic status semantics; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../reliability/api-reliability-and-async-delivery.md) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) covers durable uniqueness and transaction boundaries.
+**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../networking/http-protocols-and-websockets.md) covers the transport and generic status semantics; [Cursor pagination / 游标分页](api-cursor-pagination.md) owns page-size, cursor, and end-of-list behavior; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../reliability/api-reliability-and-async-delivery.md) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) covers durable uniqueness and transaction boundaries.

@@ -6,27 +6,36 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 ### Networking / 网络
 
-- [HTTP Protocols and WebSockets / HTTP协议与WebSocket](networking/http-protocols-and-websockets.md)
+- [How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？](networking/http-protocols-and-websockets.md)
+- [When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 
 ### Operating systems / 操作系统
 
-- [Processes, Threads, and Concurrency / 进程、线程与并发](operating-systems/processes-threads-and-concurrency.md)
-- [Memory Hierarchy and Data Locality / 内存层次与数据局部性](operating-systems/memory-hierarchy-and-data-locality.md)
+- [When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？](operating-systems/processes-threads-and-concurrency.md)
+- [Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？](operating-systems/memory-hierarchy-and-data-locality.md)
 
 ### Databases / 数据库
 
-- [Database Fundamentals / 数据库基础](databases/database-fundamentals.md)
+- [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](databases/database-fundamentals.md)
+- [How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？](databases/sql-null-joins-and-aggregates.md)
+- [How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？](databases/database-constraints-and-indexes.md)
+- [What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？](databases/database-transactions-isolation-and-recovery.md)
 
 ### Reliability and asynchronous delivery / 可靠性与异步交付
 
 - [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
 - [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
 - [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](reliability/queue-delivery-and-acknowledgement.md)
-- [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](reliability/observability-slos-and-incident-response.md)
+- [How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？](reliability/observability-slos-and-incident-response.md)
 
 ### Security / 安全
 
-- [Web Security and Authentication / Web安全与身份认证](security/web-security-and-authentication.md)
+- [How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？](security/web-security-and-authentication.md)
+- [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](security/web-sessions-and-oidc.md)
+- [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](security/web-browser-security-boundaries.md)
+- [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
+- [How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？](security/sql-injection-prevention.md)
+- [How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？](security/password-storage.md)
 
 ### Testing / 测试
 
@@ -45,12 +54,18 @@ This map gathers shared engineering topics, backend runtime basics, and reusable
 
 ### Backend and runtime / 后端与运行时
 
-- [Node.js Fundamentals / Node.js基础](backend/node-js-fundamentals.md)
-- [Python Fundamentals / Python基础](backend/python-fundamentals.md)
-- [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](backend/python-async-and-fastapi.md)
-- [HTTP API Contracts / HTTP API契约](backend/http-api-contracts.md)
-- [Data Access and Connection Pools / 数据访问与连接池](backend/data-access-and-connection-pools.md)
-- [Caching and Redis / 缓存与 Redis](backend/caching-and-redis.md)
+- [How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？](backend/node-js-fundamentals.md)
+- [How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？](backend/node-event-loop-and-microtasks.md)
+- [How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？](backend/node-stream-backpressure-and-cleanup.md)
+- [How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？](backend/node-service-shutdown.md)
+- [What does serverless leave to the application? / 无服务器计算仍要求应用负责什么？](backend/serverless-runtime-boundaries.md)
+- [How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？](backend/python-fundamentals.md)
+- [Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？](backend/python-async-and-fastapi.md)
+- [How long should a FastAPI dependency stay open during a response? / FastAPI 依赖应在响应期间保持多久？](backend/python-fastapi-resource-lifetimes.md)
+- [How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？](backend/http-api-contracts.md)
+- [How does cursor pagination continue safely? / 游标分页如何安全续读？](backend/api-cursor-pagination.md)
+- [How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？](backend/data-access-and-connection-pools.md)
+- [How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？](backend/caching-and-redis.md)
 
 ### Architecture / 架构
 

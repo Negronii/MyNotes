@@ -1,6 +1,14 @@
-# Processes, Threads, and Concurrency / 进程、线程与并发
+# When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？
 
 **Core model / 核心模型：** A process is an operating-system resource and protection boundary; a thread is an execution path inside a process. Threads share much of that process's memory and therefore need coordination when they update shared state. Concurrency means work overlaps in time; parallelism means work executes at the same time on multiple processing units. Asynchronous I/O can provide concurrency without assigning one thread to every waiting operation. / 进程是操作系统管理资源并隔离地址空间的边界；线程是在进程内执行指令的路径。线程共享进程中的许多内存，因此并发修改共享状态时需要协调。并发表示任务的执行时间重叠；并行表示多个处理单元同时执行任务。异步 I/O 可以在不为每个等待中的操作分配一个线程的情况下提高并发能力。
+
+~~~mermaid
+flowchart LR
+    Wait[Many tasks waiting for I/O] --> Async[Async I/O lets one thread schedule progress]
+    CPU[CPU-heavy work] --> Parallel[Worker thread or process for parallel execution]
+    Shared{Must share mutable state?} -->|yes| Thread[Thread plus synchronization]
+    Shared -->|no, or stronger isolation needed| Process[Separate process plus IPC]
+~~~
 
 **Key terms / 关键术语：** process / 进程；thread / 线程；address space / 地址空间；concurrency / 并发；parallelism / 并行；blocking I/O / 阻塞 I/O；non-blocking I/O / 非阻塞 I/O；asynchronous I/O / 异步 I/O；race condition / 竞态；deadlock / 死锁；cancellation / 取消。
 

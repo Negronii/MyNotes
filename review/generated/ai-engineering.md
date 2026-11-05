@@ -1243,10 +1243,10 @@ Some workflow runtimes persist an ordered event history and replay deterministic
 
 #### Related notes / 相关笔记
 
-- [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) owns transport selection, SSE framing, and wire behavior.
+- [Real-time web updates / 实时网页更新](../../engineering-foundations/networking/real-time-web-updates.md) explains transport selection, SSE framing, and wire behavior.
 - [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) owns browser-side partial output, terminal events, and local cancellation.
 - [Confirming request outcomes / 确认请求结果](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, retry, and idempotency.
-- [Database Fundamentals / 数据库基础](../../engineering-foundations/databases/database-fundamentals.md) covers durable application state, transactions, isolation, and recovery.
+- [Database transactions and recovery / 数据库事务与恢复](../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) explains the boundary for durable application state.
 - [AI System Design Interview Questions / AI 系统设计面试题](#21.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) applies these production mechanisms to end-to-end design cases.
 
 **Sources / 来源：** [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) defines idempotent HTTP method semantics, and [§15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3) says `202 Accepted` does not mean processing is complete. Temporal's [Workflow replay guide](https://docs.temporal.io/workflows) and [Event History guide](https://docs.temporal.io/encyclopedia/event-history) describe one runtime's deterministic orchestration replay and recorded activity results. These sources support the mechanisms described here; the example API, states, and names are synthetic application choices.

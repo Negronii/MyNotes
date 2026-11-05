@@ -1,6 +1,16 @@
-# Python Fundamentals / Python基础
+# How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？
 
 **Core model / 核心模型：** Python names are bindings to objects. A collection may be changed in place or a name may be rebound to another object; those are different operations. Function defaults are evaluated when the function is defined, iterators produce values as they are requested, and context managers define cleanup around a block. Type hints describe intent to static tools but do not validate runtime input. A virtual environment separates a project's installed packages from other environments. / Python 名称绑定到对象。集合可以被原地修改，名称也可以重新绑定到另一个对象，这是两种不同操作。函数默认值在函数定义时求值，迭代器按需产生值，上下文管理器则为代码块定义资源清理。类型提示表达意图并帮助静态工具检查，但不会在运行时验证输入。虚拟环境将项目安装的包与其他环境隔离。
+
+~~~mermaid
+flowchart LR
+    File[CSV file] --> Iterator[Generator reads one row at a time]
+    Iterator -->|valid row| Yield[Yield row to consumer]
+    Iterator -->|later malformed row| Error[Raise parsing error]
+    Error --> Unwind[Exception unwinds nested with blocks]
+    Unwind --> Close[Close file and remove temporary directory]
+    Yield --> Partial[Earlier output may already have escaped]
+~~~
 
 **Key terms / 关键术语：** object / 对象；name binding / 名称绑定；mutable / 可变；immutable / 不可变；alias / 别名；shallow copy / 浅拷贝；default argument / 默认参数；iterable / 可迭代对象；iterator / 迭代器；generator / 生成器；exception / 异常；context manager / 上下文管理器；type hint / 类型提示；virtual environment / 虚拟环境。
 

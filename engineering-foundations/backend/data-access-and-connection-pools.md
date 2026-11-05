@@ -1,4 +1,4 @@
-# Data Access and Connection Pools / 数据访问与连接池
+# How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？
 
 **Core explanation / 核心解释：** An ORM session is a short-lived unit of work that tracks mapped objects and coordinates SQL within a transaction. Its lifetime, the transaction lifetime, and the database connection lifetime are related but distinct: a session may acquire a pooled connection only when it first needs the database, and commit or rollback returns that connection for reuse. / ORM Session 是短生命周期的工作单元，负责跟踪映射对象并协调事务中的 SQL。Session、事务和数据库连接的生命周期彼此相关但并不相同：Session 通常在首次访问数据库时才从连接池取连接，提交或回滚后会将连接归还以便复用。
 
@@ -58,6 +58,18 @@ Use an ORM for common mapping, relationship loading, and change tracking when it
 
 The [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) note explains SQL result semantics, constraints, query plans, transactions, and isolation independently of the ORM.
 
+~~~mermaid
+flowchart LR
+    Request[Request or job begins] --> Session[Create short-lived Session]
+    Session -->|first SQL| Checkout[Check out pooled connection]
+    Checkout --> Work[Queries and writes]
+    Work -->|success| Commit[Commit transaction]
+    Work -->|error| Rollback[Rollback transaction]
+    Commit --> Return[Return connection to pool]
+    Rollback --> Return
+    Return --> Close[Close Session]
+~~~
+
 ## Follow the checkout and cleanup / 跟踪借出与清理
 
 The request path is: create a fresh session → the first query or flush starts database work and checks out a connection → load or change mapped objects → commit on success or rollback on error → return the connection → close the session. SQLAlchemy sessions use autobegin by default, so a read can also open a transaction. A `Session` context manager closes the session; `Session.begin()` frames the transaction and handles rollback before propagating an exception. The official FastAPI SQL database example uses a generator dependency with `with Session(engine)` to provide one session per request.
@@ -75,3 +87,6 @@ Give each request a short-lived session and frame each write unit with one trans
 为每个请求创建短生命周期的 Session，并用一个事务界定每组需要原子完成的写入。成功时提交，异常时回滚，并始终关闭 Session，使借出的连接归还连接池。ORM 负责跟踪映射对象；数据库事务决定原子性；连接池限制并发连接数。先按所有副本和工作进程计算连接总上限，再检查连接等待和长事务，之后再决定是否调整连接池。需要明确查询形态时使用参数化 SQL。
 
 **Sources and verification / 来源与验证：** SQLAlchemy 2.0 [Session Basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html) and [Connection Pooling](https://docs.sqlalchemy.org/en/20/core/pooling.html), and the FastAPI [SQL (Relational) Databases tutorial](https://fastapi.tiangolo.com/tutorial/sql-databases/), checked 2026-10-15. The documented synchronous `Session`/transaction pattern and bounded pool behavior were exercised locally with SQLAlchemy 2.0.44 and SQLite 3.51.0: a successful block committed; an exception rolled back; session close reduced checked-out connections from one to zero; a second checkout against a full one-connection pool timed out, then succeeded after the first connection was returned. On 2026-10-27, the docs page identifies SQLAlchemy 2.0.55 as the current 2.0 docs build; the local verification above names the installed runtime version. No network database or asynchronous driver was used.
+
+
+**Related notes / 相关笔记：** [Database Fundamentals / How do you reserve the last inventory unit safely?](../databases/database-fundamentals.md) owns the engine's constraint and transaction semantics. [API timeout and safe retry / API 超时后的结果确认与安全重试](../reliability/api-reliability-and-async-delivery.md) covers outcome and retry policy; pool growth and queue admission are sized in [the capacity and backpressure note](../reliability/api-capacity-and-backpressure.md).

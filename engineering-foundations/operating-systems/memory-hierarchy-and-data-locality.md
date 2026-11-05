@@ -1,8 +1,17 @@
-# Memory Hierarchy and Data Locality / 内存层次与数据局部性
+# Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？
 
 Big-O describes how work grows, but data layout and dependency determine how quickly a processor can obtain that work. A contiguous scan often runs efficiently because its addresses are predictable and independent loads can overlap; a linked-list walk has a dependent pointer chain, but a cache miss does not automatically stop every part of the CPU.
 
 复杂度描述工作量如何随输入增长，数据布局与依赖关系则影响处理器能多快拿到数据。连续扫描通常更容易利用预取、并行访存和 SIMD；链表遍历受逐节点地址依赖限制，但一次 Cache Miss 不等于整个 CPU 必然停摆。
+
+~~~mermaid
+flowchart LR
+    A[Array element i] -->|known address| A2[Adjacent element i+1]
+    A2 -->|regular access can prefetch and overlap| A3[Next independent load]
+    L[Current list node] -->|load next pointer| P[Wait for pointer value]
+    P -->|only then know address| L2[Next list node]
+    L -->|cache miss| Other[Independent CPU work may still continue]
+~~~
 
 ## Key terms / 核心术语
 

@@ -421,7 +421,7 @@ Leave partial output visible when it remains useful, but label it as incomplete 
 
 ## Related notes / 相关笔记
 
-- [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) owns transport selection, SSE framing, EventSource limits, and Fetch stream boundaries.
+- [Choosing a transport for real-time updates / 怎样选择实时传输](../../engineering-foundations/networking/real-time-web-updates.md) explains SSE framing, EventSource limits, and Fetch stream boundaries.
 - [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, cancellation, retry safety, and unknown outcomes.
 - [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) owns run identity, durable state, checkpoints, side effects, and server cancellation.
 

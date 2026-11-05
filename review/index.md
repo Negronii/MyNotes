@@ -18,7 +18,7 @@ Choose the question closest to what you want to understand. Each route starts wi
 3. [How can an AI run survive a disconnection? / AI 运行怎样在断线后继续或恢复？](../ai-engineering/systems/ai-application-architecture.md) — Connect model calls and tool actions to the service's run state.
 4. [How does a streaming interface show the right state? / 流式界面怎样准确展示任务状态？](../frontend/browser-apis/streaming-ux.md) — Follow incremental events, local cancellation, and the server's terminal outcome.
 
-For a short request, start with [what the API promises / API 对调用者作什么承诺](../engineering-foundations/backend/http-api-contracts.md), then follow its [data access / 数据访问](../engineering-foundations/backend/data-access-and-connection-pools.md) or [cache / 缓存](../engineering-foundations/backend/caching-and-redis.md). For connection and transfer behavior, see [how HTTP and streaming transports work / HTTP 与流式传输怎样工作](../engineering-foundations/networking/http-protocols-and-websockets.md).
+For a short request, start with [what the API promises / API 对调用者作什么承诺](../engineering-foundations/backend/http-api-contracts.md), then follow its [data access / 数据访问](../engineering-foundations/backend/data-access-and-connection-pools.md) or [cache / 缓存](../engineering-foundations/backend/caching-and-redis.md). Follow [how HTTP carries requests / HTTP 怎样传输请求](../engineering-foundations/networking/http-protocols-and-websockets.md) for a single exchange or [how to choose a real-time transport / 怎样选择实时传输](../engineering-foundations/networking/real-time-web-updates.md) for ongoing updates.
 
 ## What evidence makes a change safe to ship? / 怎样证明一次改动可以上线？
 
@@ -41,7 +41,7 @@ For a model, prompt, or agent change, establish the baseline and compare outcome
 1. [What does algorithmic complexity predict? / 算法复杂度能预测什么？](../engineering-foundations/algorithms/algorithms-and-complexity.md) — Use input size and access patterns to reason about the work.
 2. [Why can arrays and linked lists take different time? / 数组和链表的实际耗时为什么可能不同？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md) — Connect the access pattern to representation and memory locality.
 3. [How do you choose a data structure? / 怎样选数据结构？](../engineering-foundations/algorithms/core-data-structures.md) — Match the workload to the structure and its costs.
-4. [What makes a database query cheap or expensive? / 什么决定数据库查询的成本？](../engineering-foundations/databases/database-fundamentals.md) — Follow the query and its access path. The [database course map / 数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md) leads to worked examples of joins, indexes, isolation, and recovery.
+4. [How do indexes change a query’s access cost? / 索引怎样改变查询的访问成本？](../engineering-foundations/databases/database-constraints-and-indexes.md) — Follow the query and its access path. The [database course map / 数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md) leads to worked examples of joins, indexes, isolation, and recovery. [Transactions and recovery / 事务与恢复](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) connects these mechanisms to durable work.
 
 ## Read a domain or find a reference / 通读领域或查找资料
 

@@ -1,10 +1,19 @@
-# Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应
+# How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？
 
 **Core model / 核心模型:** Start from the outcome users need, measure it with a clear service-level indicator, and use correlated metrics, traces, and logs to find which stage is failing. Metrics show the aggregate shape; a trace follows one request across stages; logs explain specific events. / 从用户需要的结果开始，用明确定义的服务等级指标衡量它，再用相互关联的指标、追踪和日志定位故障阶段。指标显示整体趋势，追踪串起单个请求的各阶段，日志说明具体事件。
 
 **Key terms / 关键术语:** service-level indicator (SLI) / 服务等级指标；service-level objective (SLO) / 服务等级目标；service-level agreement (SLA) / 服务等级协议；error budget / 错误预算；trace / 分布式追踪；span / 跨度；cardinality / 基数。
 
 **Core answer / 核心回答：** SLI 是符合资格的用户请求中“好事件 / 总事件”的实测比例；SLO 是该比例在指定时间窗内应达到的目标；SLA 是对外业务协议，可能规定计量方式和未达标后果。例：30 天内 10,000 次有效请求中，9,940 次在 400 ms 内成功，SLI 为 99.4%；若 SLO 为 99.5%，错误预算是 `(1 − 99.5%) × 10,000 = 50` 次坏事件，实际 60 次即超出 10 次。告警后先确认用户影响和分母，再沿 trace 定位慢/失败阶段并查关联日志；根据证据缓解，以用户 SLI 和依赖信号验证恢复，并记录原因与后续改进。
+
+~~~mermaid
+flowchart LR
+    Metrics[Metric shows user-impact window and scope] --> Trace[Representative trace locates slow or failed stage]
+    Trace --> Logs[Correlated logs explain that event]
+    Logs --> Mitigate[Choose evidence-based mitigation]
+    Mitigate --> Verify[Verify user SLI and dependency recovery]
+    Verify --> Learn[Record cause and follow-up]
+~~~
 
 ## Follow one request through three signals / 用三种信号跟踪一个请求
 

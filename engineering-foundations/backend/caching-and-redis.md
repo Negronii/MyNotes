@@ -1,4 +1,4 @@
-# Caching and Redis / 缓存与 Redis
+# How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？
 
 **Core explanation / 核心解释：** In cache-aside, the database remains the source of truth: reads check the cache first and load the database on a miss; writes commit to the database and then invalidate the cached copy. A TTL bounds how long one cached value can live, but invalidation races and cache failures still need an explicit freshness and load policy. / 在 cache-aside 模式中，数据库仍是事实来源：读取先查缓存，未命中时再读取数据库；写入先提交数据库，然后使缓存副本失效。TTL 限制单个缓存值的存活时间，但失效竞态和缓存故障仍需要明确的新鲜度与负载策略。
 
@@ -15,6 +15,20 @@ Suppose `products` is authoritative and the cache key is `product:42`. A typical
 For a write, update the authoritative row and commit first; only then issue `DEL product:42`. The next read repopulates from the database. Redis `GET`, `SET ... EX`, `DEL`, and `TTL` are useful implementation primitives, but these commands do not make a Redis mutation atomic with the database transaction.
 
 The [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) note covers the constraints and transaction boundary that protect the source-of-truth write.
+
+~~~mermaid
+sequenceDiagram
+    participant R as Reader
+    participant C as Cache
+    participant D as Database
+    participant W as Writer
+    R->>C: Cache miss
+    R->>D: Read old value
+    W->>D: Commit new value
+    W->>C: Delete cached value
+    R->>C: Fill old value after invalidation
+    Note over C: Stale value now has a fresh TTL
+~~~
 
 ### Make the freshness window explicit / 明确新鲜度窗口
 
@@ -37,3 +51,6 @@ I would keep the database authoritative and use cache-aside: read the cache, loa
 我会让数据库保持事实来源，并采用 cache-aside：先读缓存，未命中时查数据库，写入缓存时设置 TTL，并只在数据库写入提交后执行失效。我会根据接口的新鲜度要求选择 TTL，考虑失效失败和陈旧回填窗口，并合并热点键的并发未命中请求。Redis 故障时，我会用截止时间和并发上限约束数据库回退；缓存丢失应增加负载，但不能悄悄改变事实来源。只有在业务明确接受最大陈旧时间时才提供旧值。
 
 **Sources and verification / 来源与验证：** Redis [cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/) and [node-redis cache-aside example](https://redis.io/docs/latest/develop/use-cases/cache-aside/nodejs/), checked 2026-10-15. The official examples demonstrate cache-first reads, TTL-bearing writes, invalidation, and a short-lived stampede lock. The flow above is a generic application design; no Redis server was deployed, so Redis commands and outage behavior were not runtime-tested. TTL and `DEL` are implementation tools, not a cross-store consistency protocol.
+
+
+**Related notes / 相关笔记：** [Web Security and Authentication / Web安全与身份认证](../security/web-security-and-authentication.md) owns principal and tenant authorization before cache lookup. [Data Access and Connection Pools / 数据访问与连接池](data-access-and-connection-pools.md) explains the connection budget used by bounded database fallback.

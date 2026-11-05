@@ -4123,7 +4123,7 @@ Leave partial output visible when it remains useful, but label it as incomplete 
 
 #### Related notes / 相关笔记
 
-- [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) owns transport selection, SSE framing, EventSource limits, and Fetch stream boundaries.
+- [Choosing a transport for real-time updates / 怎样选择实时传输](../../engineering-foundations/networking/real-time-web-updates.md) explains SSE framing, EventSource limits, and Fetch stream boundaries.
 - [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, cancellation, retry safety, and unknown outcomes.
 - [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) owns run identity, durable state, checkpoints, side effects, and server cancellation.
 
@@ -4416,7 +4416,7 @@ Framework schedulers such as React's scheduler are separate policies layered on 
 **Standards / references:** [WHATWG HTML event loops and rendering opportunities](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops); [W3C requestIdleCallback](https://www.w3.org/TR/requestidlecallback/); [Chrome requestIdleCallback guide](https://developer.chrome.com/blog/using-requestidlecallback), checked 2026-11-05.
 
 
-For the host-specific server contrast, see [Node runtime and scheduling / Node 运行时与调度](../../engineering-foundations/backend/node-js-fundamentals.md).
+For the host-specific server contrast, see [Node runtime and scheduling / Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md).
 ## 41. How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？
 
 ### How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？
