@@ -1,4 +1,4 @@
-# Promises in TypeScript / TypeScript 中的 Promise
+# What do Promise types guarantee in TypeScript? / TypeScript 中 Promise 类型能保证什么？
 
 **Core idea / 核心概念：** A Promise is a JavaScript runtime object; TypeScript’s generic type parameter is erased and does not validate values at runtime. The Promise executor runs synchronously, while reactions run later as Promise jobs (microtasks in web hosts). / Promise 是 JavaScript 运行时对象；TypeScript 泛型参数会在编译后擦除，也不会在运行时验证值。Promise 执行器同步运行，后续处理函数作为 Promise 作业（Web 宿主中的微任务）稍后运行。 See [TypeScript’s handbook](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [asynchronous JavaScript](../../../../frontend/javascript/asynchronous-javascript.md), and the [ECMAScript Promise specification](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects).
 

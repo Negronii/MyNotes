@@ -1,4 +1,4 @@
-# Array Operations in TypeScript / TypeScript 数组操作
+# How do you use arrays safely in TypeScript? / 如何在 TypeScript 中安全地使用数组？
 
 **Core idea / 核心概念：** TypeScript checks array element types at compile time; arrays, holes, sorting, and iteration follow JavaScript runtime semantics. / TypeScript 在编译期检查数组元素类型；数组、空槽、排序与遍历遵循 JavaScript 运行时语义。 See [JavaScript arrays](../../../../frontend/javascript/arrays.md) and [ECMAScript indexed collections](https://tc39.es/ecma262/2025/multipage/indexed-collections.html).
 

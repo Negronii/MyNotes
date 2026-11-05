@@ -1,4 +1,4 @@
-# String / 字符串
+# How should you choose JavaScript string operations? / 如何选择 JavaScript 字符串操作？
 
 **Core idea / 核心概念：** JavaScript strings are sequences of UTF-16 code units; `.length` counts code units, not user-perceived characters. / JavaScript 字符串由 UTF-16 代码单元组成；`.length` 统计代码单元，不等于用户感知的字符数。 See [ECMAScript text processing](https://tc39.es/ecma262/2025/multipage/text-processing.html).
 

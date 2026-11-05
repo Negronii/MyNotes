@@ -1,79 +1,116 @@
-# JavaScript Types and Coercion / JavaScript 类型与类型转换
+# How do JavaScript values convert, compare, and become property keys? / JavaScript 值如何转换、比较并成为属性键？
 
-**Key terms / 关键词:** primitive 原始值 · object 对象 · coercion 隐式转换 · property key 属性键 · realm 执行领域
+**Core answer / 核心回答：** JavaScript has seven primitive types; all other values are objects, including functions. Conversions are operation-specific, equality operators use different rules, and ordinary object properties accept only strings or symbols after key conversion. Objects assigned to variables retain identity rather than being copied. / JavaScript 有七种原始类型，其余值都是对象，包括函数。转换取决于具体操作，相等运算符采用不同规则，普通对象属性键经过转换后只能是字符串或 Symbol。赋值对象时保留的是身份，不是对象副本。
 
-JavaScript has seven primitive types: `undefined`, `null`, `boolean`, `number`, `bigint`, `string`, and `symbol`. Other values are objects, including functions. A value’s language semantics are specified; whether an engine stores it on a stack, heap, or elsewhere is an implementation detail. / JavaScript 有七种原始类型：`undefined`、`null`、`boolean`、`number`、`bigint`、`string` 和 `symbol`。其他值都是对象，函数也属于对象。语言规范定义的是值的行为；引擎是否把值放在栈、堆或其他位置属于实现细节。
+## Value types and useful facts / 类型与要点
 
 | Type / 类型 | Useful fact / 要点 |
 |---|---|
-| `undefined` | Default value of an uninitialized `var` binding or missing result / 未初始化的 `var` 绑定或缺失结果的默认值 |
-| `null` | Intentional absence; `typeof null` is the historical string `"object"` / 表示有意为空；`typeof null` 因历史兼容结果为 `"object"` |
-| `boolean` | Falsy values include `false`, `0`, `-0`, `0n`, `""`, `null`, `undefined`, and `NaN` / 假值包括这些值 |
-| `number` | IEEE 754 binary64; includes `NaN` and infinities / IEEE 754 binary64，包含 `NaN` 与无穷值 |
-| `bigint` | Arbitrary-precision integers; cannot be mixed with Number arithmetic without conversion / 任意精度整数；算术运算不能直接与 Number 混用 |
-| `string` | Immutable sequence of UTF-16 code units / 不可变的 UTF-16 码元序列 |
-| `symbol` | Unique primitive value, often used as a property key / 唯一原始值，常用作属性键 |
+| undefined | Default value of an uninitialized var binding or a missing result / 未初始化 var 绑定或缺失结果的默认值 |
+| null | Intentional absence; typeof null is the historical string "object" / 表示有意为空；typeof null 因历史兼容结果为 "object" |
+| boolean | Falsy values include false, 0, -0, 0n, "", null, undefined, and NaN / 假值包括这些值 |
+| number | IEEE 754 binary64; includes NaN and infinities / IEEE 754 binary64，包含 NaN 与无穷值 |
+| bigint | Arbitrary-precision integers; cannot mix with Number arithmetic without conversion / 任意精度整数；算术运算不能直接与 Number 混用 |
+| string | Immutable sequence of UTF-16 code units / 不可变的 UTF-16 码元序列 |
+| symbol | Unique primitive value, often used as a property key / 唯一原始值，常用作属性键 |
 
-Objects and functions are mutable or callable according to their own behavior; “reference type” is a useful description of assignment and identity, not a guarantee about physical memory layout. / 对象和函数的可变性、可调用性由各自行为决定。“引用类型”可以帮助解释赋值与身份，但不代表固定的物理内存布局。
+Whether an engine stores values on a stack, heap, or elsewhere is an implementation detail. “Reference type” is useful shorthand for object identity and assignment, not a physical memory guarantee. / 值在栈、堆或其他位置存储属于引擎实现细节。“引用类型”适合描述对象身份和赋值语义，不是物理内存保证。
 
-## Coercion essentials / 类型转换要点
+## Truthiness is not numeric conversion / 真值转换不等于数值转换
 
-Truthiness and numeric conversion are separate operations. Empty arrays and objects are truthy; `Number("")` and `Number(null)` are zero; `Number(undefined)` is `NaN`. Use explicit conversions where the input contract matters. / 布尔转换与数值转换是不同操作。空数组和空对象都是真值；`Number("")` 与 `Number(null)` 为 0；`Number(undefined)` 为 `NaN`。输入契约重要时应显式转换。
+Empty arrays and objects are truthy. An empty string and zero are falsy, while the nonempty string "false" is truthy. Number conversion follows different rules: Number("") and Number(null) are 0; Number(undefined) is NaN. Use explicit conversion when the input contract matters. / 空数组和空对象是真值。空字符串和零是假值，而非空字符串 "false" 是真值。数值转换遵循另一套规则：Number("") 和 Number(null) 为 0，Number(undefined) 为 NaN。输入契约重要时应显式转换。
 
-```javascript
-Boolean("false"); // true: nonempty string
+~~~javascript
+Boolean("false"); // true
 Boolean([]);      // true
 Number("");       // 0
 Number(null);     // 0
 Number(undefined);// NaN
 
-Number.isNaN(NaN); // true
-NaN === NaN;       // false
+Number.isNaN(NaN);  // true
+Number.isNaN("x"); // false: no coercion
+~~~
+
+For ordinary values, Boolean(value) and !!value both apply truthiness conversion. The legacy browser document.all exception has the special `[[IsHTMLDDA]]` behavior: it is falsy, typeof returns "undefined", and it loosely equals nullish values. It is not an ordinary object. / 对普通值而言，Boolean(value) 和 !!value 都执行真值转换。浏览器历史对象 document.all 具有特殊 `[[IsHTMLDDA]]` 行为：它是假值，typeof 返回 "undefined"，并且与 nullish 值宽松相等。它不是普通对象。
+
+See [ECMAScript Annex B IsHTMLDDA](https://tc39.es/ecma262/2025/multipage/additional-ecmascript-features-for-web-browsers.html#sec-IsHTMLDDA-internal-slot). / 详见 [ECMAScript 附录 B IsHTMLDDA](https://tc39.es/ecma262/2025/multipage/additional-ecmascript-features-for-web-browsers.html#sec-IsHTMLDDA-internal-slot)。
+
+Logical AND returns one of its operands, not a Boolean. In React, a numeric zero on the left can therefore render as zero; compare with zero explicitly when the result should be a component or nothing. / 逻辑与会返回其中一个操作数，而非布尔值。因此在 React 中，左侧数字 0 可能直接显示为 0；若结果应当是组件或空内容，就显式比较是否大于零。
+
+~~~jsx
+{items.length > 0 && <ItemList items={items} />}
+~~~
+
+See [React conditional rendering](https://react.dev/learn/conditional-rendering) and [Advanced React / React 进阶](../frameworks/advanced-react.md) for the rendered behavior.
+
+## How equality rules differ / 相等比较规则有何差别
+
+Strict equality === does not coerce across different types. Loose equality == follows several conversion rules, including the special null == undefined case; it is not simply “convert both sides to the same type.” Prefer === unless coercion is intentional. For ordinary values, value == null intentionally tests both null and undefined. / 严格相等 === 不会在不同类型间转换。宽松相等 == 遵循多条转换规则，包括 null == undefined 这一特殊情况；它并非简单地“把双方转成相同类型”。除非有意依赖转换，否则优先使用 ===。对普通值而言，value == null 可有意同时判断 null 和 undefined。
+
+| Comparison / 比较 | NaN with itself / NaN 自身比较 | +0 with -0 / 有符号零比较 | Object values / 对象值 |
+|---|---|---|---|
+| === | false | equal / 相等 | identity / 身份 |
+| Object.is (SameValue) | true | different / 不同 | identity / 身份 |
+| Map/Set (SameValueZero) | same / 相同 | equal / 相等 | identity / 身份 |
+
+~~~javascript
+5 == "5";            // true
+5 === "5";           // false
+null == undefined;   // true
+NaN === NaN;         // false
 Object.is(NaN, NaN); // true
 Object.is(+0, -0);   // false
-```
+new Set([NaN, NaN]).size; // 1
+~~~
 
-Use `x === null` to test specifically for null. `Number.isNaN(x)` tests NaN without first coercing non-number inputs. / 若要专门判断 null，使用 `x === null`。`Number.isNaN(x)` 不会先把非数值输入强制转换。
+## Why decimal comparisons need a domain rule / 十进制数值比较为何需要场景规则
 
-## Assignment and object identity / 赋值与对象身份
+Number uses binary64, so many decimal fractions such as 0.1 and 0.2 do not have exact finite binary representations. Arithmetic may therefore produce a nearby representable result. The acceptable tolerance depends on the value’s scale and domain; there is no universal epsilon that is correct for every comparison. / Number 使用 binary64，0.1、0.2 等许多十进制小数都无法用有限二进制位精确表示，算术结果可能是邻近的可表示值。可接受容差取决于数值尺度和业务领域，不存在适用于所有比较的统一 epsilon。
 
-Assigning an object value to another binding makes both bindings refer to the same object. A property assignment evaluates and remembers its base object before evaluating the right side; it does not create an “undefined slot” in advance. / 把对象值赋给另一个绑定后，两个绑定会引用同一个对象。属性赋值会先求值并记录基对象，再求值右侧表达式；这时还不会提前创建一个值为 `undefined` 的属性槽。
+~~~javascript
+0.1 + 0.2 === 0.3; // false
+Math.abs((0.1 + 0.2) - 0.3) < 1e-12; // true for this scale and example
+~~~
 
-```javascript
+For money, use integer minor units when the currency rules allow it, or use decimal arithmetic with an explicit rounding policy. / 金额计算可在币种规则允许时使用整数最小单位，或采用明确舍入规则的十进制运算。
+
+## Object assignment preserves identity / 对象赋值保留身份
+
+Assigning an object to another binding makes both bindings refer to the same object. In a property assignment, JavaScript evaluates and remembers the base object before it evaluates the right-hand side. / 把对象赋给另一绑定后，两者引用同一个对象。属性赋值会先求值并记录基对象，然后才求值右侧。
+
+~~~javascript
 let a = { n: 1 };
 const b = a;
 a.x = a = { n: 2 };
 
 a.x; // undefined
 b.x; // { n: 2 }
-```
+~~~
 
-Evaluation first captures the old object as the base of `a.x`. The right side then reassigns `a` to a new object; the final property write still targets the captured old object, which `b` references. / 求值先把旧对象记录为 `a.x` 的基对象；右侧随后把 `a` 重新绑定到新对象；最后写入仍作用于之前记录的旧对象，也就是 `b` 引用的对象。
+The left side captures the original object before the right side reassigns a. The final write still targets that captured original object, now also named b. / 左侧在右侧重新绑定 a 前就记录了旧对象；最终写入仍作用于该旧对象，此时它也由 b 引用。
 
-## Choosing a type check / 如何选择类型判断方式
+## How to check a value’s type / 如何判断值的类型
 
-- `typeof` is useful for primitives and functions, with the `null` quirk shown above. / `typeof` 适合判断原始值和函数，但要记住 null 的历史特例。
-- `Array.isArray(value)` is the robust array check, including arrays from another realm. / `Array.isArray(value)` 能可靠识别来自其他 realm 的数组。
-- By default, `instanceof` checks whether the RHS constructor’s `.prototype` occurs in the LHS value’s prototype chain ([`OrdinaryHasInstance`](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance)). Constructors from different realms normally have different prototype objects, so a foreign value can fail against the local constructor but pass against its own realm’s constructor. `Symbol.hasInstance` can customize the check. / 默认情况下，`instanceof` 检查右侧构造函数的 `.prototype` 是否出现在左侧值的原型链中（见 [`OrdinaryHasInstance`](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance)）。不同 realm 中的构造函数通常有不同原型对象，因此跨 realm 的值可能无法通过本地构造函数判断，却能通过其所属 realm 的构造函数判断。`Symbol.hasInstance` 可自定义该检查。
-- `Object.prototype.toString.call(value)` is a useful built-in tag, not a definitive type oracle: `Symbol.toStringTag` can change the displayed tag. / `Object.prototype.toString.call(value)` 可读取内置标签，但不是绝对可靠的类型证明：`Symbol.toStringTag` 可以改变显示标签。
+- typeof is useful for primitives and functions, with the historical null result shown above.
+- Array.isArray reliably recognizes arrays, including arrays from another realm.
+- instanceof normally checks whether the constructor’s .prototype occurs in the value’s prototype chain. Constructors from separate realms normally have distinct prototype objects, so a foreign value can fail against the local constructor but pass against its own realm’s constructor. Symbol.hasInstance can customize the check.
+- Object.prototype.toString.call(value) reports a built-in tag, but Symbol.toStringTag can change the displayed tag. It is not a definitive type proof.
 
-```javascript
+~~~javascript
 typeof null; // "object"
 Array.isArray([]); // true
 
 const custom = { [Symbol.toStringTag]: "Array" };
 Object.prototype.toString.call(custom); // "[object Array]" — a spoofable tag
-```
+~~~
 
-For application validation, prefer a check for the behavior or data shape the code actually requires, rather than a generic display string. / 应用校验应检查代码实际依赖的行为或数据结构，不要只依赖通用类型字符串。
+Validate the shape or behavior the program actually requires instead of relying on a generic display string. The normative [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance) algorithm describes the default instanceof rule. / 应按程序实际需要验证结构或行为，不要只依赖通用显示字符串。默认 instanceof 规则见规范的 [OrdinaryHasInstance](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-ordinaryhasinstance)。
 
-See [ECMAScript Object.prototype.toString](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring) and its use of `Symbol.toStringTag`. / 详见 [ECMAScript Object.prototype.toString 规范](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.tostring)及其对 `Symbol.toStringTag` 的处理。
+## How bracket notation converts object keys / 方括号属性如何转换键
 
-## Object property keys / 对象属性键
+An ordinary property key is a string or a symbol. When another value is used inside brackets, JavaScript applies ToPropertyKey; an object can run Symbol.toPrimitive or other conversion hooks before producing a string or symbol. It is not accurate to say every key simply calls toString(). / 普通属性键是字符串或 Symbol。方括号中使用其他值时，JavaScript 执行 ToPropertyKey；对象可在生成字符串或 Symbol 前运行 Symbol.toPrimitive 等转换钩子。不能简单说所有键都会直接调用 toString()。
 
-A property key is a string or a symbol. When another value is used in bracket notation, JavaScript applies `ToPropertyKey`: objects may run `Symbol.toPrimitive` or other conversion hooks before producing a string or symbol. This is more precise than saying every key simply calls `toString()`. / 属性键是字符串或 Symbol。方括号中使用其他值时，JavaScript 会执行 `ToPropertyKey`：对象可能先运行 `Symbol.toPrimitive` 等转换钩子，再得到字符串或 Symbol。因此“其他键都直接调用 `toString()`”并不准确。
-
-```javascript
+~~~javascript
 const record = {};
 record[123] = "number";
 record["123"]; // "number"
@@ -82,15 +119,16 @@ const key = { [Symbol.toPrimitive]: () => "account" };
 record[key] = "Ada";
 record.account; // "Ada"
 
+const first = { id: 1 };
+const second = { id: 1 };
+record[first] = "overwritten key";
+record[second]; // "overwritten key": both became the string "[object Object]"
+
 const map = new Map();
-map[{ id: 1 }] = "property key conversion";
-map.set({ id: 1 }, "object identity key"); // Map does not coerce keys
-```
+map.set(first, "first identity");
+map.set(second, "second identity"); // Map does not coerce object keys
+~~~
 
-Use `Map` when distinct object identities or uncoerced non-string keys matter. For plain-object dictionaries, use `Object.hasOwn` for ownership checks; `Object.create(null)` avoids an inherited prototype but still uses property-key conversion. / 需要区分对象身份或避免键转换时使用 `Map`。普通对象字典可用 `Object.hasOwn` 判断自有属性；`Object.create(null)` 可去掉继承原型，但仍会转换属性键。
+Use Map when object identity or uncoerced non-string keys matter. Plain-object dictionaries still convert property keys; Object.create(null) removes inherited prototype behavior, and Object.hasOwn tests own membership safely. See [Map and Set / JavaScript 中的 Map 与 Set](./map-and-set.md). / 若需要对象身份或未经转换的非字符串键，使用 Map。普通对象字典仍会转换键；Object.create(null) 可去掉继承原型，Object.hasOwn 可安全判断自有属性。另见 [Map and Set / JavaScript 中的 Map 与 Set](./map-and-set.md).
 
-**Interview answer / 面试回答:** JavaScript has seven primitive types. Objects are assigned and compared by identity, but stack-versus-heap layout is engine-specific. Use `typeof` for basic primitive checks, `Array.isArray` for arrays, and `instanceof` for a constructor’s prototype-chain relationship, accounting for realm-specific constructor identity. Object keys are strings or symbols after `ToPropertyKey` conversion. / JavaScript 有七种原始类型。对象按身份赋值和比较，但栈与堆的布局由引擎决定。基础类型判断可用 `typeof`，数组用 `Array.isArray`；使用 `instanceof` 判断构造函数的原型链关系时，应考虑 realm 中构造函数身份的差异。对象键经过 `ToPropertyKey` 后只能是字符串或 Symbol。
-
-See [ECMAScript types and values](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html) and [property key conversion](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey). / 详见 [ECMAScript 类型和值](https://tc39.es/ecma262/2025/multipage/ecmascript-data-types-and-values.html) 与 [属性键转换](https://tc39.es/ecma262/2025/multipage/abstract-operations.html#sec-topropertykey)。
-
-Related: [Map and Set / JavaScript 中的 Map 与 Set](./map-and-set.md); [Memory, WeakMap and WeakSet / JavaScript 内存、WeakMap 与 WeakSet](./javascript-memory-weakmap-and-weakset.md).
+**Related:** [Other JavaScript Topics / JavaScript 其他主题](./other-javascript-topics.md) covers strict mode; [Object and Array Methods / 对象与数组方法](./es6-new-methods.md) explains own enumerable keys and copying APIs.

@@ -1,24 +1,26 @@
-# Map and Set in JavaScript / JavaScript 中的 Map 与 Set
+# When should I use Map, Set, or an object? / 何时应使用 Map、Set 或普通对象？
 
-**Key terms / 关键词:** keyed collection 键控集合 · SameValueZero 相同值零 · insertion order 插入顺序 · set-like object 类 Set 对象
+**Core answer / 核心回答：** Use Map for key-value data when keys may be arbitrary values or identity matters; use Set when uniqueness or repeated membership checks are central; use arrays for ordered positions and duplicates; use ordinary objects when property-key conversion and object-shaped data are intended. Map and Set preserve insertion order and compare keys or members with SameValueZero. / 键可以是任意值或身份重要时使用 Map；唯一性或反复成员查询是重点时使用 Set；需要位置顺序或重复值时使用数组；确实需要属性键转换和对象形状时使用普通对象。Map 和 Set 保留插入顺序，并用 SameValueZero 比较键或成员。
 
-Use `Map` for key-value data when keys are not just fixed strings or symbols, or when direct iteration and a size property help. Use `Set` when uniqueness and membership are central. ECMAScript specifies observable ordering and equality, but not a particular hash-table implementation or constant-time performance. / 当键不只是固定字符串或 Symbol，或需要直接迭代与 size 属性时，可用 `Map` 保存键值数据；当重点是唯一性和成员判断时，可用 `Set`。ECMAScript 规定可观察到的顺序和相等规则，但不规定具体哈希表实现或恒定时间性能。
+## Choose by data shape / 按数据形状选择
 
-## Choosing a collection / 选择集合
+| Structure / 结构 | Use when / 适用场景 | Key or order behavior / 键与顺序 |
+|---|---|---|
+| Map | Arbitrary key-value pairs, object identity keys, direct iteration, or size / 任意键值、对象身份、直接遍历或 size | Any value can be a key; entries iterate in insertion order / 键可为任意值；条目按插入顺序遍历 |
+| Set | Unique values or repeated membership checks / 唯一值或反复成员查询 | Values are unique and iterate in insertion order / 值唯一并按插入顺序遍历 |
+| Array | Positional data, duplicates, indexed access / 位置数据、重复项、索引访问 | Each position is distinct / 每个位置都独立 |
+| Object | Fixed string/symbol properties or object-shaped records / 固定字符串/Symbol 属性或对象记录 | Other keys convert to strings or symbols; prototype behavior applies unless null-prototype / 其他键转为字符串或 Symbol；除非为 null 原型，否则有原型行为 |
 
-- `Map`: keys may be any value; object keys use identity; entries iterate in insertion order. Updating an existing key does not move its position. Delete then reinsert to place it at the end. / `Map`：键可以是任意值；对象键按身份比较；条目按插入顺序迭代。更新已有键不会改变位置；删除后重新插入才会移到末尾。
-- `Set`: stores unique values in insertion order. Deleting and adding a value again places it at the end. / `Set`：按插入顺序保存唯一值。删除后再次添加会移到末尾。
-- Plain objects coerce property keys to strings or symbols and include prototype behavior unless created with a null prototype. For ordinary dictionaries, `Object.hasOwn` avoids an overridden `hasOwnProperty`; `Map` is often simpler when keys are dynamic. / 普通对象会把属性键转换为字符串或 Symbol；除非创建为 null 原型对象，否则还有原型行为。对象字典可用 `Object.hasOwn` 避免被覆盖的 `hasOwnProperty`；键动态时通常 Map 更简单。
-- Arrays are suited to indexed, positional data. A Set is not a replacement when duplicate positions or random indexing matter. / 数组适合按索引排列的数据；若需要保留重复位置或随机索引，Set 不能替代数组。
+Ordinary dictionaries can use Object.hasOwn to distinguish own from inherited properties and avoid an overridden hasOwnProperty. Object.create(null) removes the inherited prototype but still applies property-key conversion. For that conversion rule, see [JavaScript Types / JavaScript 类型](./javascript-types.md). / 普通对象字典可用 Object.hasOwn 区分自有与继承属性，并避免被覆盖的 hasOwnProperty。Object.create(null) 去掉继承原型，但仍执行属性键转换。转换规则见 [JavaScript Types / JavaScript 类型](./javascript-types.md)。
 
-Both Map and Set use SameValueZero for keys or members: NaN matches NaN, and +0 and -0 are treated as the same key. Objects compare by identity. / Map 和 Set 对键或成员使用 SameValueZero：NaN 与自身相同，+0 与 -0 被视为同一个键；对象按身份比较。
+## How Map compares keys and iterates / Map 如何比较键并遍历
 
-## Map / 映射
+A Map key can be any value. Object keys are compared by identity, not by their fields. Number and string keys differ. Updating an existing key changes its value but not its insertion position; deleting and reinserting moves it to the end. / Map 的键可以是任意值。对象键按身份比较，不按字段比较；数字键和字符串键不同。更新已有键的值不会改变插入位置；删除再插入会移动到末尾。
 
-```javascript
+~~~javascript
 const userById = new Map();
 userById.set(7, { name: "Ada" });
-userById.set("7", { name: "Grace" }); // number and string keys differ
+userById.set("7", { name: "Grace" });
 
 userById.get(7); // { name: "Ada" }
 userById.has(8); // false
@@ -27,62 +29,44 @@ userById.size; // 2
 for (const [id, user] of userById) {
   console.log(id, user.name); // insertion order
 }
-```
 
-Core methods are `set`, `get`, `has`, `delete`, `clear`, and the `size` property. `keys()`, `values()`, and `entries()` return iterators; the default iterator is `entries()`. `forEach` receives `(value, key, map)`. / 常用方法包括 `set`、`get`、`has`、`delete`、`clear`，以及 `size` 属性。`keys()`、`values()`、`entries()` 返回迭代器；默认迭代器等同于 `entries()`。`forEach` 的参数顺序是 `(value, key, map)`。
+const first = { id: 1 };
+const second = { id: 1 };
+const byObject = new Map([[first, "first"]]);
+byObject.get(second); // undefined: different object identity
+~~~
 
-| Method / 方法 | Result / 返回值 |
-|---|---|
-| `set(key, value)` | The Map, for chaining / 返回 Map，可链式调用 |
-| `get(key)` | Value or `undefined` / 值或 `undefined` |
-| `has(key)` | Boolean / 布尔值 |
-| `delete(key)` | Whether an entry was removed / 是否删除了条目 |
-| `clear()` | Empties the Map / 清空 Map |
+Map uses SameValueZero: NaN matches NaN, and +0 and -0 represent the same key. Common methods are set, get, has, delete, clear, and size. keys(), values(), and entries() return iterators; the default iterator is entries(). forEach receives (value, key, map). / Map 使用 SameValueZero：NaN 与自身相同，+0 和 -0 表示同一个键。常用方法为 set、get、has、delete、clear 和 size。keys()、values() 和 entries() 返回迭代器；默认迭代器为 entries()。forEach 参数顺序为 (value, key, map)。
 
-## Set / 集合
+## How Set stores unique values / Set 如何保存唯一值
 
-```javascript
+A Set stores unique values in insertion order. Delete then add a value to move it to the end. It uses SameValueZero, so NaN matches NaN, signed zeroes match, and objects are unique by identity. / Set 按插入顺序存储唯一值。删除后再次添加可把值移到末尾。它使用 SameValueZero：NaN 匹配 NaN，有符号零相同，对象按身份去重。
+
+~~~javascript
 const tags = new Set(["js", "runtime", "js"]);
 tags.add("language");
 tags.has("js"); // true
 [...tags]; // ["js", "runtime", "language"]
-```
+~~~
 
-Core methods are `add`, `has`, `delete`, `clear`, and the `size` property. `keys()` and `values()` produce the same values; `entries()` yields `[value, value]` for compatibility with Map iteration. `forEach` receives `(value, value, set)`. / 常用方法包括 `add`、`has`、`delete`、`clear`，以及 `size` 属性。`keys()` 和 `values()` 产出相同的值；为兼容 Map 迭代，`entries()` 产出 `[value, value]`。`forEach` 的参数顺序是 `(value, value, set)`。
+Common methods are add, has, delete, clear, and size. keys() and values() produce the same values; entries() yields [value, value] for Map-iteration compatibility; forEach receives (value, value, set). / 常用方法为 add、has、delete、clear 和 size。keys() 与 values() 产出相同值；entries() 为兼容 Map 遍历产出 [value, value]；forEach 参数为 (value, value, set)。
 
-| Method / 方法 | Result / 返回值 |
-|---|---|
-| `add(value)` | The Set, for chaining / 返回 Set，可链式调用 |
-| `has(value)` | Boolean / 布尔值 |
-| `delete(value)` | Whether a value was removed / 是否删除了值 |
-| `clear()` | Empties the Set / 清空 Set |
+## Set composition and complexity / Set 运算与复杂度
 
-## Set composition methods / Set 集合运算
+ECMAScript 2025 standardized union, intersection, difference, symmetricDifference, isSubsetOf, isSupersetOf, and isDisjointFrom. They accept set-like inputs and return a Set or Boolean as indicated. Check support when targeting older engines. / ECMAScript 2025 标准化了 union、intersection、difference、symmetricDifference、isSubsetOf、isSupersetOf 和 isDisjointFrom。它们接受类 Set 输入，并按方法返回 Set 或布尔值。面向旧引擎时应检查支持情况。
 
-ECMAScript 2025 standardized `union`, `intersection`, `difference`, `symmetricDifference`, `isSubsetOf`, `isSupersetOf`, and `isDisjointFrom`. They accept set-like inputs and return a Set or boolean as indicated by the method. Check runtime support when targeting older engines. / ECMAScript 2025 标准化了 `union`、`intersection`、`difference`、`symmetricDifference`、`isSubsetOf`、`isSupersetOf` 和 `isDisjointFrom`。这些方法接受类 Set 输入，并按方法返回 Set 或布尔值。面向较旧引擎时需确认运行时支持。
-
-```javascript
+~~~javascript
 const enabled = new Set(["search", "export"]);
 const available = new Set(["search", "export", "admin"]);
 
 [...enabled.intersection(available)]; // ["search", "export"]
 enabled.isSubsetOf(available); // true
-```
-
-## Common patterns / 常见用法
-
-```javascript
-const unique = [...new Set([1, 2, 2, 3])]; // [1, 2, 3]
 
 const right = new Set([2, 3, 4]);
 const leftOnly = [...new Set([1, 2, 3])]
   .filter(value => !right.has(value)); // [1]
-```
+~~~
 
-For repeated membership checks, build the lookup Set once rather than inside the filter callback. / 需要反复查询成员时，应先创建一次 Set，而不是在 filter 回调中重复创建。
+For repeated membership checks, build the lookup Set once rather than inside the filter callback. A Set-based array deduplication example and its order requirements belong in [JavaScript Arrays / JavaScript 数组](./arrays.md). / 需要反复查询成员时，应先创建一次 Set，不要在 filter 回调中反复创建。Set 数组去重示例及其顺序要求见 [JavaScript Arrays / JavaScript 数组](./arrays.md)。
 
-**Interview answer / 面试回答:** Map preserves arbitrary key identity and insertion order; Set preserves unique values in insertion order. Both use SameValueZero, while plain object keys undergo property-key conversion. Their complexity depends on the implementation; the standard requires average sublinear access rather than a fixed O(1) guarantee. / Map 保留任意键的身份和插入顺序；Set 按插入顺序保存唯一值。二者使用 SameValueZero，普通对象键则会进行属性键转换。复杂度取决于实现；标准只要求平均访问优于线性，并不保证固定 O(1)。
-
-See [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) and [Set methods](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set-objects). / 详见 [ECMAScript 键控集合规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) 与 [Set 方法规范](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set-objects)。
-
-Related: [JavaScript Types and Coercion / JavaScript 类型与类型转换](./javascript-types.md); [Memory and weak collections / JavaScript 内存与弱集合](./javascript-memory-weakmap-and-weakset.md).
+ECMAScript requires average access to be sublinear, not a specific O(1) implementation. End-to-end cost also depends on the surrounding algorithm. See the [ECMAScript keyed collections specification](https://tc39.es/ecma262/2025/multipage/keyed-collections.html) and [Set methods](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set-objects).

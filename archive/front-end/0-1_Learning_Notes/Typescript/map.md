@@ -1,4 +1,4 @@
-# Map Operations / Map 操作
+# How do you choose and use a JavaScript `Map`? / 如何选择并使用 JavaScript `Map`？
 
 **Core idea / 核心概念：** A `Map` accepts keys of any type, compares them with `SameValueZero` (objects by identity), and iterates entries in insertion order. Setting an existing key updates its value without moving it; deleting and re-adding it places it at the end. / `Map` 的键可以是任意类型；比较采用 `SameValueZero`（对象按引用身份比较），迭代顺序为插入顺序。更新已有键不会改变其顺序；删除后重新添加会移到末尾。 See [JavaScript Map and Set](../../../../frontend/javascript/map-and-set.md) and [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html).
 

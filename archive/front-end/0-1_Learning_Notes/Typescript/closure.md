@@ -1,4 +1,4 @@
-# Closure / 闭包
+# How do closures preserve state in JavaScript? / JavaScript 闭包如何保留状态？
 
 **Core idea / 核心概念：** A closure is a function together with access to the lexical bindings it uses. Those bindings can remain reachable after the outer call returns; they are not “dead” values. / 闭包是函数及其对所用词法绑定的访问；外层函数返回后，只要仍可达，这些绑定就会保留，而不是“已死亡”的值。 See [JavaScript scope and closures](../../../../frontend/javascript/scope-and-closure.md) and [ECMAScript function objects and execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html).
 

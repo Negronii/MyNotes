@@ -1,4 +1,4 @@
-# Math / 数学函数
+# Which built-in `Math` methods cover common numeric tasks? / 哪些内置 `Math` 方法适合常见数值任务？
 
 **Core idea / 核心概念：** `Math` is a built-in ECMAScript object; TypeScript types it but does not provide a separate runtime math library. / `Math` 是 ECMAScript 内置对象；TypeScript 为它提供类型，但不会提供另一套运行时数学库。 See [ECMAScript numbers and dates](https://tc39.es/ecma262/2025/multipage/numbers-and-dates.html).
 
