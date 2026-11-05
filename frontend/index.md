@@ -70,10 +70,13 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### React and frameworks / React与框架
 
-- [Virtual DOM and Framework Selection / 虚拟DOM与框架选择](frameworks/virtual-dom-and-framework-selection.md)
-- [React Basics / React基础](frameworks/react-basics.md)
-- [Advanced React / React进阶](frameworks/advanced-react.md)
-- [Next.js / Next.js开发](frameworks/next-js.md)
+- [How should I choose a frontend framework for a product? / 如何为产品选择前端框架？](frameworks/virtual-dom-and-framework-selection.md)
+- [How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？](frameworks/react-basics.md)
+- [Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？](frameworks/react-error-boundaries.md)
+- [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](frameworks/react-routing-and-navigation.md)
+- [How can a React search interface stay responsive as results update? / React搜索界面如何在更新结果时保持响应？](frameworks/advanced-react.md)
+- [How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？](frameworks/react-server-state-and-optimistic-updates.md)
+- [How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？](frameworks/next-js.md)
 
 ### Performance / 性能
 
@@ -82,12 +85,13 @@ This map preserves the frontend-specific notes under stable topic paths. Shared 
 
 ### Libraries / 库
 
-- [Lodash / Lodash工具库](libraries/lodash.md)
-- [ahooks / ahooks Hook库](libraries/ahooks.md)
+- [When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？](libraries/lodash.md)
+- [When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？](libraries/ahooks.md)
 
 ### Testing / 测试
 
-- [Frontend Testing / 前端测试](testing/frontend-testing.md)
+- [What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？](testing/frontend-testing.md)
+- [How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？](testing/jest-async-tests-and-mocks.md)
 
 ## Shared foundations / 共享基础
 

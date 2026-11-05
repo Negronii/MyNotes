@@ -1,4 +1,7 @@
-# Next.js / Next.js开发
+# How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
+
+**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](../browser-apis/streaming-ux.md). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](../browser-apis/streaming-ux.md)。
+
 
 ## What does Next.js add to React? / Next.js为React增加了什么？
 
@@ -153,6 +156,6 @@ export async function GET() {
 
 Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
 
-**See also:** [React Basics / React基础](./react-basics.md) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+**See also:** [React Routing and Navigation / React路由与导航](./react-routing-and-navigation.md) for client navigation and SPA/MPA document models; [React Basics / React基础](./react-basics.md) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
 **Sources checked 2026-10-15:** [React 19.3 versions and release](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).

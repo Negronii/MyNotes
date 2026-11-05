@@ -1,8 +1,8 @@
-# Factor Research and Quantitative Trading / 因子研究与量化交易
+# What can factor research infer from historical returns? / 因子研究能从历史收益推断什么？
 
-> 核心概念 / Core idea: an empirical return pattern is a research question, not by itself a tradable edge or an explanation of why returns occurred. 因子研究先定义可检验的收益模式，再区分风险暴露、模型定价误差与可交易策略表现。
+Factor research defines a return pattern, sample, and test, then distinguishes realized factor returns, exposure prices, and model-conditional alpha. A historical spread or intercept does not establish causality, future persistence, or net profitability. / 因子研究先定义收益模式、样本与检验，再区分已实现因子收益、暴露价格与模型条件下的 alpha。历史价差或截距本身不能证明因果关系、未来延续或扣除成本后的盈利能力。
 
-## Anomalies and Factors / 异象与因子
+## What is an anomaly or factor in a return study? / 回报研究中的异象或因子是什么？
 
 An **anomaly / 异象** is a return pattern that departs from a specified benchmark model under a stated sample and test design. Historical persistence can strengthen the evidence, but persistence by itself, without a benchmark and test, does not make a pattern an anomaly. The label does not establish a causal mechanism, future persistence, or net profitability. A pattern may reflect omitted risk, mispricing, data choices, or selection from many trials.
 
@@ -16,7 +16,7 @@ Examples studied in the literature include:
 
 These are empirical findings, not guarantees that the same spreads will persist or survive implementation costs. Factor definitions, breakpoints, weighting, holding periods, and samples matter.
 
-## Exposure, Factor Return, and Alpha / 暴露、因子收益与 Alpha
+## How do exposure, realized factor return, and alpha differ? / 暴露、已实现因子收益与 alpha 有何不同？
 
 For asset or test portfolio `i` in period `t`, a time-series factor model is commonly written as:
 
@@ -34,7 +34,7 @@ The terms **factor return** and **factor premium** are related but not interchan
 
 An exposure-based portfolio decomposition is useful for attribution, but it is an estimate under a chosen factor set. A long-short portfolio can reduce selected exposures by construction; it does not eliminate all market, sector, liquidity, or other risks.
 
-## Portfolio Sorts / 排序组合
+## What does a portfolio sort compare? / 组合排序比较什么？
 
 A sort ranks assets by a characteristic known at portfolio-formation time, groups them, and compares later returns. Examples include size, book-to-market, and past return. The characteristic and all portfolio rules must be defined without using information that would not have been available at formation.
 
@@ -44,7 +44,7 @@ Double sorts can test whether a return spread remains within groups formed on a 
 
 Adding more sort variables creates more, smaller portfolios and can make estimates noisy. The number and construction of groups are design choices, not a universal recipe.
 
-## Factor Regressions / 因子回归
+## What do time-series and Fama–MacBeth regressions test? / 时间序列与 Fama–MacBeth 回归检验什么？
 
 For time-series regressions, estimate each test asset's exposure and intercept from its returns over time. A joint test of the intercepts asks whether the chosen model leaves pricing errors across the test assets; a failure to reject zero does not prove the model is true, and a significant intercept is conditional on the selected model, assets, and sample.
 
@@ -57,7 +57,7 @@ This asks whether exposure helps explain differences in returns across assets. I
 
 When many candidate signals have been tried, ordinary significance cutoffs can overstate evidence because of multiple testing and data selection. Record the tested universe and use an appropriate multiple-testing or out-of-sample design.
 
-## Summary / 小结
+## What conclusions can these research designs support? / 这些研究设计能支持哪些结论？
 
 Factor research moves from a clearly specified characteristic or return pattern to portfolio construction, exposure measurement, and model-based tests. A positive historical spread or nonzero alpha is conditional evidence; it does not alone identify skill, causality, or a forecast of future returns.
 

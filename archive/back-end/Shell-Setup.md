@@ -1,6 +1,6 @@
-# Shell Setup: Zsh and Oh My Zsh / Zsh 与 Oh My Zsh
+# How should Zsh plugin order and pnpm PATH be configured? / 如何配置 Zsh 插件顺序与 pnpm PATH？
 
-核心操作：先安装框架和外部插件，再把已存在的插件写入 `plugins` 数组；语法高亮最后加载，`zsh-completions` 的 `fpath` 配置放在 Oh My Zsh 启动前。`PNPM_HOME` 应指向实际安装目录，而 `zsh -n` 只检查语法。
+Core rule / 核心规则：install the framework and external plugin files first; load syntax highlighting last, configure `zsh-completions` on `fpath` before Oh My Zsh starts, and set `PNPM_HOME` to the installation’s actual directory. `zsh -n` checks syntax only. / 先安装框架和外部插件文件；语法高亮最后加载，`zsh-completions` 的 `fpath` 配置放在 Oh My Zsh 启动前，`PNPM_HOME` 指向实际安装目录。`zsh -n` 只检查语法。
 
 Oh My Zsh is an optional Zsh configuration framework. Installing the framework, enabling a plugin, and installing that plugin are separate steps. Review the current [official installation instructions](https://ohmyz.sh/#install) before choosing an install method; this note does not run an installer.
 

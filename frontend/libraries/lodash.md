@@ -1,10 +1,8 @@
-# Lodash / Lodash工具库
+# When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
 
-Lodash provides utilities for arrays, collections, objects, functions, and strings. Use this page as a lookup; compare simple operations with the language's built-in APIs and check the installed Lodash version.
+**Core answer / 核心回答：** Use Lodash when its documented path, collection, or timing contract removes repeated edge-case code. For a simple known shape, prefer the native operation when it expresses the same behavior more clearly; compare the exact semantics and installed version before substituting. This page is a method lookup, not a claim that one option is always smaller or faster. / Lodash 的路径、集合或定时语义能减少重复的边界处理时可使用它。对象结构简单明确时，如果原生操作能更清晰表达相同行为，就优先考虑原生 API；替换前要核对具体语义和安装版本。本文用于查找方法，不表示某种选择总是更小或更快。
 
 ## Common utilities / 常用工具
-
-**Core answer / 核心回答：** Lodash is most useful when its path, collection, or timing contract saves repeated edge-case code; check the exact method signature before substituting a native operation. / Lodash 在其路径、集合或定时语义能够减少重复边界处理时最有价值；替换为原生方法前应核对具体方法的签名与行为。
 
 ### Arrays / 数组
 

@@ -37,7 +37,7 @@ The document lane is incremental, not a queue of stages that each finish once. T
 
 Layout produces geometry; paint produces drawing output, not a bitmap. Rasterization makes pixel content from drawing records, and compositing arranges content into a frame. Engines may reuse existing work, run parts in parallel, or use different stage names. Chromium's RenderingNG documentation is one implementation example, not a requirement for WebKit, Gecko, or the web platform. See [Why can a CSS change trigger layout, paint, or compositing work?](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F).
 
-A URL change is not always a new document. Same-document fragment navigation and History API updates have their own behavior; see [Does every URL change load a new document?](#2.%20Does%20every%20URL%20change%20load%20a%20new%20document?%20/%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F). To investigate a slow or unstable page, use measurements and traces rather than assuming a stage name identifies the cause; see [How should browser performance be measured and diagnosed?](#48.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90).
+A URL change is not always a new document. Same-document fragment navigation and History API updates have their own behavior; see [Does every URL change load a new document?](#2.%20Does%20every%20URL%20change%20load%20a%20new%20document?%20/%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F). To investigate a slow or unstable page, use measurements and traces rather than assuming a stage name identifies the cause; see [How should browser performance be measured and diagnosed?](#51.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90).
 
 **Evidence / 资料：** [WHATWG HTML: navigation and session history](https://html.spec.whatwg.org/multipage/nav-history-apis.html); [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/); [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), checked 2026-11-05.
 ## 2. Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？
@@ -89,7 +89,7 @@ syncFromUrl();
 
 A client-side router can use these same-document entries to change views, but it owns rendering and route restoration. Browser History API behavior is not the same as a document navigation, even when the visible URL changes.
 
-**See also:** [React Router / React 路由](#45.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) builds client-side routes on browser history; [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) covers network requests once navigation takes a fetching path.
+**See also:** [React Router / React 路由](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) builds client-side routes on browser history; [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) covers network requests once navigation takes a fetching path.
 
 **Standards / 规范：** [WHATWG URL Standard: `URLSearchParams`](https://url.spec.whatwg.org/#urlsearchparams-class); [WHATWG HTML: same-document navigation and History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface), checked 2026-11-05.
 ## 3. HTML and CSS Basics / HTML 与 CSS 基础
@@ -669,7 +669,7 @@ Stylesheets matter when a pending script can read style information: the browser
 
 Here HTML parsing and script fetching can proceed together. Once parsing ends, `app.js` executes before `DOMContentLoaded`; it can rely on the parsed document, but should not assume images have loaded.
 
-**See also:** [How does a browser turn a URL into pixels?](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F) places script scheduling in the navigation path; [When does browser JavaScript run relative to a frame?](#40.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) explains tasks, microtasks, and rendering opportunities; [How should browser performance be measured and diagnosed?](#48.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) distinguishes readiness events from user-visible performance.
+**See also:** [How does a browser turn a URL into pixels?](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F) places script scheduling in the navigation path; [When does browser JavaScript run relative to a frame?](#40.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) explains tasks, microtasks, and rendering opportunities; [How should browser performance be measured and diagnosed?](#51.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) distinguishes readiness events from user-visible performance.
 
 **Standards / 规范：** [WHATWG HTML: the script element and script preparation](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element); [WHATWG HTML: DOMContentLoaded](https://html.spec.whatwg.org/multipage/dom.html#the-end); checked 2026-11-05.
 ## 7. Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？
@@ -710,7 +710,7 @@ items.forEach((item, index) => {
 });
 ~~~
 
-Choose a geometry API from the box and coordinate system needed: see [Which DOM geometry API returns the size or coordinate I need?](#8.%20DOM%20Properties%20/%20DOM%E5%B1%9E%E6%80%A7). For a measured performance problem, inspect a rendering trace; [How should browser performance be measured and diagnosed?](#48.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) connects the trace to the user-visible symptom.
+Choose a geometry API from the box and coordinate system needed: see [Which DOM geometry API returns the size or coordinate I need?](#8.%20DOM%20Properties%20/%20DOM%E5%B1%9E%E6%80%A7). For a measured performance problem, inspect a rendering trace; [How should browser performance be measured and diagnosed?](#51.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) connects the trace to the user-visible symptom.
 
 #### Standards versus an implementation pipeline / 标准行为与引擎流水线的界限
 
@@ -1524,7 +1524,7 @@ Animating `transform` and `opacity` can let an engine update presentation withou
 
 **Gotcha — `transform: translateZ(0)` is not a GPU switch:** It changes transform behavior and may affect stacking/containing blocks; it does not guarantee a faster path. Use neither it nor `will-change` as a substitute for profiling.
 
-**See also:** [`2.2 Box Model and BFC`](#4.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](#49.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for measurement guidance.
+**See also:** [`2.2 Box Model and BFC`](#4.%20Box%20Model%20and%20BFC%20/%20%E7%9B%92%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87) for formatting-context behavior, [`2.4 Browser - HTML & CSS part`](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for rendering invalidation, [`11.2 Rendering and Computation Optimization`](#52.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for measurement guidance.
 
 **Specifications / 规范：** [CSS Positioned Layout](https://www.w3.org/TR/css-position-3/), [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color opacity](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transforms](https://www.w3.org/TR/css-transforms-1/), [CSS Transitions](https://www.w3.org/TR/css-transitions-2/), [W3C WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/).
 ## 11. How do var, let, and const differ? / var、let 与 const 有什么区别？
@@ -1616,7 +1616,7 @@ Logical AND returns one of its operands, not a Boolean. In React, a numeric zero
 {items.length > 0 && <ItemList items={items} />}
 ~~~
 
-See [React conditional rendering](https://react.dev/learn/conditional-rendering) and [Advanced React / React 进阶](#46.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for the rendered behavior.
+See [React conditional rendering](https://react.dev/learn/conditional-rendering) and [Advanced React / React 进阶](#48.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for the rendered behavior.
 
 #### How equality rules differ / 相等比较规则有何差别
 
@@ -3695,7 +3695,7 @@ Lazy-loading images is great — unless you introduce layout shift every time on
 2. Use `IntersectionObserver` for a concrete custom-loading need; unobserve loaded targets and disconnect the observer when its owner is disposed.
 3. Check layout stability and LCP in the page's real loading context; lazy-loading the wrong images can delay important content.
 
-**See also:** [`11.1 Performance Metrics and Analysis`](#48.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#31.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
+**See also:** [`11.1 Performance Metrics and Analysis`](#51.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for Core Web Vitals and broader image-perf strategies, [`5.1 DOM Manipulation and Events`](#31.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6) for `IntersectionObserver` in other use cases.
 
 **Standards / 规范：** [WHATWG `img` element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element), [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes), [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/), [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/).
 ## 34. How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
@@ -4525,7 +4525,7 @@ A source map relates emitted code to source files for debugging and error report
 | hidden-source-map | Emits an external map without the reference comment; useful when a release process uploads maps separately / 输出外部 map 但无引用注释；适合由发布流程单独上传 |
 | nosources-source-map | Omits embedded source content, but mappings and source paths may remain / 不嵌入源码内容，但映射和源码路径仍可能存在 |
 
-These names represent different detail and delivery choices, not a universal speed ranking or security boundary. Pinning package-manager versions is a separate environment concern; see [Package Manager Pinning / 包管理器版本固定](#43.%20How%20does%20a%20project%20pin%20its%20package-manager%20version?%20/%20%E9%A1%B9%E7%9B%AE%E5%A6%82%E4%BD%95%E5%9B%BA%E5%AE%9A%E5%8C%85%E7%AE%A1%E7%90%86%E5%99%A8%E7%89%88%E6%9C%AC%EF%BC%9F). See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#52.%20Frontend%20Testing%20/%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
+These names represent different detail and delivery choices, not a universal speed ranking or security boundary. Pinning package-manager versions is a separate environment concern; see [Package Manager Pinning / 包管理器版本固定](#43.%20How%20does%20a%20project%20pin%20its%20package-manager%20version?%20/%20%E9%A1%B9%E7%9B%AE%E5%A6%82%E4%BD%95%E5%9B%BA%E5%AE%9A%E5%8C%85%E7%AE%A1%E7%90%86%E5%99%A8%E7%89%88%E6%9C%AC%EF%BC%9F). See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#55.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
 ## 43. How does a project pin its package-manager version? / 项目如何固定包管理器版本？
 
 ### How does a project pin its package-manager version? / 项目如何固定包管理器版本？
@@ -4541,9 +4541,12 @@ These names represent different detail and delivery choices, not a universal spe
 Corepack was bundled with Node.js through Node 24, but Node 25 and later no longer distribute it by default. A current project may need to install or provision Corepack separately. Pin and provision the tool through the project’s supported runtime and CI setup. / Corepack 随 Node.js 提供至 Node 24；Node 25 及之后的版本默认不再分发。当前项目可能需要单独安装或供应 Corepack。应通过项目支持的运行时和 CI 配置固定并供应工具。
 
 Sources checked 2026-10-15: [Node.js 25 Corepack documentation](https://nodejs.org/download/release/v25.8.0/docs/api/corepack.html) and [Corepack project README](https://github.com/nodejs/corepack#readme). The rest of the build pipeline is in [Build Tools / 构建工具](#42.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F).
-## 44. Virtual DOM and Framework Selection / 虚拟DOM与框架选择
+## 44. How should I choose a frontend framework for a product? / 如何为产品选择前端框架？
 
-### Virtual DOM and Framework Selection / 虚拟DOM与框架选择
+### How should I choose a frontend framework for a product? / 如何为产品选择前端框架？
+
+**Core answer / 核心回答：** Start from the route's rendering, interaction, accessibility, and operational needs, then compare how candidate frameworks express updates and what the team can maintain. Prototype one representative feature and measure its real bottleneck; a virtual DOM label or a standalone benchmark does not predict project fit by itself. / 先从页面的渲染、交互、无障碍和运维需求出发，再比较候选框架如何表达更新以及团队能否长期维护。用一个有代表性的功能做原型，并测量真实瓶颈；虚拟 DOM 这一标签或单项基准测试本身都不能判断项目是否适合。
+
 
 #### How does reconciliation work, and does a Virtual DOM make an app faster? / React如何协调界面，虚拟DOM是否天然更快？
 
@@ -4552,16 +4555,14 @@ Sources checked 2026-10-15: [Node.js 25 Corepack documentation](https://nodejs.o
 ##### A practical React model / React中的实用模型
 
 1. **Render / 渲染：** React calls components to calculate the next UI description. Rendering should be pure; concurrent work may be restarted or discarded.
-2. **Reconciliation / 协调：** React matches the new description to the previous tree. Element type, position, and sibling keys help determine whether identity and state are preserved.
+2. **Reconciliation / 协调：** React matches the new description to the previous tree. The exact type, position, and key rules that preserve or reset component state are explained in [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F); they should not be inferred from a generic “virtual DOM” slogan.
 3. **Commit / 提交：** React applies the completed changes to the host tree, such as the DOM. Effects run in their documented phase; they are not part of render.
-
-Keys identify siblings across renders. A stable data ID is a good key when list items can move, be inserted, or be removed. An array index can be acceptable for a fixed list whose order and membership never change. Changing a component's type or key can reset its state.
 
 ~~~jsx
 {items.map(item => <ListItem key={item.id} item={item} />)}
 ~~~
 
-The reconciler uses heuristics instead of a general-purpose minimum-edit tree algorithm. Treat complexity claims as implementation-specific; the useful takeaway is that stable identity lets React preserve the right component state while updating a changing tree.
+The reconciler uses heuristics rather than a general-purpose minimum-edit tree algorithm. Treat complexity claims as implementation-specific; the useful question for framework choice is what work a representative update actually causes in the framework and browser.
 
 ##### Where the model helps / 适用范围
 
@@ -4583,14 +4584,25 @@ React and Vue use virtual-tree reconciliation in their standard component models
 
 TypeScript adds static checking and editor support, but its types are erased and do not validate runtime data. Consider the language and migration cost alongside project size and contributor turnover; there is no reliable “six-month” or “three-person” threshold.
 
-**See also:** [React Basics / React基础](#45.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for element identity and component state; [Next.js / Next.js开发](#47.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering models.
+**See also:** [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) for element identity and component state; [Next.js / Next.js开发](#50.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) for router-specific rendering models.
 
 **Sources checked 2026-10-15:** [React Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html), [Vue Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism), [React: Render and Commit](https://react.dev/learn/render-and-commit), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TypeScript: erased structural types](https://www.typescriptlang.org/docs/handbook/typescript-for-oopers.html#erased-structural-types).
-## 45. React Basics / React基础
+## 45. How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？
 
-### React Basics / React基础
+### How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？
 
-React components describe UI from props and state. These notes focus on JSX, element identity, class lifecycle methods, state updates, and routing.
+**Core answer / 核心回答：** A user action reaches a React handler through the browser's event system. The handler requests a state update, but it continues to read the snapshot from its current render. React then renders the next component descriptions, matches them by type, position, and sibling keys, and commits the required host changes. The browser handles the later style, layout, and paint work. This route connects [DOM events / DOM事件](#31.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6), React state, and [browser rendering / 浏览器渲染](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F); it does not promise one paint for every setter call. / 用户操作经由浏览器事件系统到达 React 处理器。处理器请求状态更新，但仍读取当前这次 render 的快照。随后 React 重新计算组件描述，按元素类型、位置和兄弟 key 匹配，并提交必要的宿主环境变更。之后的样式、布局和绘制由浏览器处理。这条路线连接 [DOM events / DOM事件](#31.%20DOM%20Manipulation%20and%20Events%20/%20DOM%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%8B%E4%BB%B6)、React state 与[浏览器渲染](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F)；它不保证每次调用 setter 都对应一次绘制。
+
+~~~mermaid
+flowchart LR
+    A[User input event] --> B[Handler requests state update]
+    B --> C[Next render reads queued state]
+    C --> D[React matches elements and state identity]
+    D --> E[Commit necessary host changes]
+    E --> F[Browser updates pixels when needed]
+    B -. current handler keeps its render snapshot .-> C
+~~~
+
 
 #### What is JSX, and what does it compile to? / JSX是什么，最终会编译成什么？
 
@@ -4636,7 +4648,38 @@ An Effect runs after a commit; React runs its previous cleanup before setting up
 
 #### What does an Error Boundary catch? / Error Boundary能捕获哪些错误？
 
+**Core answer / 核心回答：** An Error Boundary can show fallback UI for errors in descendant rendering and React lifecycles, with documented exceptions such as event-handler and ordinary async errors. The exact scope, Transition exception, and class example are in [Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？](#46.%20Which%20errors%20can%20a%20React%20Error%20Boundary%20recover%20from?%20/%20React%20Error%20Boundary%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E9%94%99%E8%AF%AF%EF%BC%9F). / Error Boundary 可为后代渲染和 React 生命周期中的错误显示备用 UI，但事件处理器和普通异步错误等情况不在其范围内。完整范围、Transition 例外和类组件示例见[React Error Boundary能恢复哪些错误？](#46.%20Which%20errors%20can%20a%20React%20Error%20Boundary%20recover%20from?%20/%20React%20Error%20Boundary%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E9%94%99%E8%AF%AF%EF%BC%9F).
+
+#### Is setState synchronous? / setState是同步还是异步？
+
+**Core answer / 核心回答：** A state setter requests another render; it does not mutate the state snapshot held by the current render or event handler. React 18+ with createRoot also batches updates from timeouts, promises, and native event handlers. React 17 and React 18's legacy ReactDOM.render path batch fewer contexts. / state setter 会请求下一次渲染，不会改写当前 render 或事件处理器持有的 state 快照。React 18+ 使用 createRoot 时，也会批处理 timeout、Promise 和原生事件处理器中的更新。React 17 以及 React 18 的旧 ReactDOM.render 路径会批处理较少的场景。
+
+~~~jsx
+setCount(count + 1);
+console.log(count); // This render's snapshot is unchanged.
+
+setCount(previous => previous + 1);
+setCount(previous => previous + 1); // Queued updates build on each other.
+~~~
+
+Use an updater when the next value depends on the previous value. Read the new state during a later render or in an Effect when appropriate; do not expect the variable in the current handler to change.
+
+#### How does React Router work? / React Router如何工作？
+
+**Core answer / 核心回答：** React Router matches a location to a route, then renders its configured UI. The v6 declarative example, router choices, hosting fallback, and SPA/MPA tradeoffs are in [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](#47.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F). / React Router 将地址匹配到路由并渲染对应界面。v6 声明式示例、路由器选择、托管回退及 SPA/MPA 权衡见[React路由如何映射 URL 并选择导航模型？](#47.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F).
+
+#### What is the difference between an SPA and an MPA? / SPA和MPA有什么区别？
+
+**Core answer / 核心回答：** An SPA usually updates route content in one loaded document; an MPA requests another document. Rendering modes can be combined, so evaluate the actual delivery and operating needs. The comparison table and navigation example are in [the React routing question](#47.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F). / SPA 通常在已加载的文档中更新路由内容；MPA 会请求另一个文档。渲染模式可以组合，应结合内容交付和运维需求判断。比较表和路由示例见[React 路由问题](#47.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F).
+
+**Sources checked 2026-10-15:** [React: Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform), [React: Render and Commit](https://react.dev/learn/render-and-commit), [StrictMode](https://react.dev/reference/react/StrictMode), [Component and lifecycle methods](https://react.dev/reference/react/Component), [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Queueing State Updates](https://react.dev/learn/queueing-a-series-of-state-updates).
+## 46. Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？
+
+### Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？
+
 **Core answer / 核心回答：** A React Error Boundary is a class component that displays fallback UI for errors thrown while rendering descendants, in their constructors, or in their React lifecycle methods. It does not catch event-handler errors, ordinary asynchronous callbacks, server-rendering errors, or errors thrown by the boundary itself. One documented exception is an error thrown inside the function passed to the startTransition function returned by useTransition (including a rejected Promise returned by that function). / React Error Boundary 是类组件，可在后代树渲染、构造函数或 React 生命周期方法抛错时显示备用 UI。它不会捕获事件处理器、普通异步回调、服务端渲染或边界自身抛出的错误。一个文档列出的例外是 useTransition 返回的 startTransition 所执行函数抛错（包括该函数返回的 rejected Promise）。
+
+#### Boundary example and limits / 边界示例与范围
 
 ~~~jsx
 import React from "react";
@@ -4662,19 +4705,14 @@ class ErrorBoundary extends React.Component {
 
 The built-in React boundary API is class-based. A library can make boundary composition easier, but try/catch around JSX does not catch rendering failures.
 
-#### Is setState synchronous? / setState是同步还是异步？
+**See also:** [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) for state updates and render/commit; [Advanced React / React进阶](#48.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for Suspense loading and error states.
 
-**Core answer / 核心回答：** A state setter requests another render; it does not mutate the state snapshot held by the current render or event handler. React 18+ with createRoot also batches updates from timeouts, promises, and native event handlers. React 17 and React 18's legacy ReactDOM.render path batch fewer contexts. / state setter 会请求下一次渲染，不会改写当前 render 或事件处理器持有的 state 快照。React 18+ 使用 createRoot 时，也会批处理 timeout、Promise 和原生事件处理器中的更新。React 17 以及 React 18 的旧 ReactDOM.render 路径会批处理较少的场景。
+**Sources checked 2026-10-15:** [Component and lifecycle methods](https://react.dev/reference/react/Component), [Error Boundary caveats](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary), [useTransition Error Boundary example](https://react.dev/reference/react/useTransition#displaying-an-error-to-users-with-an-error-boundary).
+## 47. How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？
 
-~~~jsx
-setCount(count + 1);
-console.log(count); // This render's snapshot is unchanged.
+### How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？
 
-setCount(previous => previous + 1);
-setCount(previous => previous + 1); // Queued updates build on each other.
-~~~
-
-Use an updater when the next value depends on the previous value. Read the new state during a later render or in an Effect when appropriate; do not expect the variable in the current handler to change.
+**Core answer / 核心回答：** React Router matches the current location to a route, while SPA and MPA describe whether navigation updates the current document or requests another one. The choice depends on delivery, interaction, accessibility, hosting, and operations. / React Router 将当前地址匹配到路由；SPA 与 MPA 则描述导航是更新当前文档还是请求另一个文档。选择取决于内容交付、交互、无障碍、托管和运维需求。
 
 #### How does React Router work? / React Router如何工作？
 
@@ -4721,14 +4759,82 @@ Use Link for navigation users can follow and useNavigate for programmatic naviga
 | Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
 | SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
 
-**See also:** [Next.js / Next.js开发](#47.%20Next.js%20/%20Next.js%E5%BC%80%E5%8F%91) for router-specific rendering; [Advanced React / React进阶](#46.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hooks, refs, and component composition.
+**See also:** [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) for state-driven rendering; [Next.js / Next.js开发](#50.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) for server/client rendering and framework routing.
 
-**Sources checked 2026-10-15:** [React: Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform), [React: Render and Commit](https://react.dev/learn/render-and-commit), [StrictMode](https://react.dev/reference/react/StrictMode), [Component and lifecycle methods](https://react.dev/reference/react/Component), [Error Boundary caveats](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary), [useTransition Error Boundary example](https://react.dev/reference/react/useTransition#displaying-an-error-to-users-with-an-error-boundary), [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Queueing State Updates](https://react.dev/learn/queueing-a-series-of-state-updates), [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
-## 46. Advanced React / React进阶
+**Sources checked 2026-10-15:** [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
+## 48. How can a React search interface stay responsive as results update? / React搜索界面如何在更新结果时保持响应？
 
-### Advanced React / React进阶
+### How can a React search interface stay responsive as results update? / React搜索界面如何在更新结果时保持响应？
 
-#### How can components communicate? / React组件如何通信？
+**Core answer / 核心回答：** Keep the controlled input urgent, and let React defer the expensive result view or mark a navigation-like update as a Transition. A Suspense boundary can limit loading feedback to the result region. Include all result-changing inputs in the query key; use a separate debounce only when reducing request frequency is a product requirement. The state snapshot and commit path are explained in [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F). / 保持受控输入紧急更新，让 React 延后昂贵的结果视图，或把类似导航的更新标记为 Transition。Suspense 边界可以把加载反馈限制在结果区域。查询键要包含所有影响结果的输入；只有产品需要减少请求频率时才另做 debounce。state 快照与提交路径见[React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F)。
+
+This is the main interaction route: typing requests an urgent input update, while a deferred query value drives a Suspense-enabled result view. `useDeferredValue` schedules rendering; it is not a debounce and does not suppress requests. The [server-state deep question](#49.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) owns query identity, cache freshness, mutation, and rollback semantics.
+
+#### How do concurrent UI updates and Suspense work? / 并发界面更新与 Suspense 如何工作？
+
+**Core answer / 核心回答：** Keep input state urgent so each keystroke appears immediately; defer expensive result rendering or mark a navigation-like state update as a Transition. React can interrupt and retry that render work so urgent updates get priority. A Suspense boundary gives one part of the screen a fallback while a Suspense-enabled child is not ready. / 输入状态应保持紧急，以便每次按键都立即显示；可以延后昂贵结果区域的渲染，或把类似导航的状态更新标记为 Transition。React 可以中断并重试这部分渲染，让紧急更新优先。Suspense 边界则在支持 Suspense 的子树尚未就绪时，为该区域显示 fallback。
+
+This search panel keeps the text input responsive and places the loading fallback around only the result list. Query-key identity and server-cache freshness are explained in [the server-state deep question](#49.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F). `useSuspenseQuery` is the TanStack Query v5 data source that suspends here; a normal query or fetch started in an Effect does not automatically suspend. The memoized result boundary allows React to skip this child when an urgent parent render leaves `deferredQuery` and `tab` unchanged; without it, the child still renders on each parent input update even though the deferred value is old. It renders again when either deferred prop advances.
+
+~~~tsx
+import { memo, Suspense, useDeferredValue, useState, useTransition } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+
+type SearchHit = { id: string; title: string };
+declare function searchTasks(query: string, tab: "tasks" | "summary"): Promise<SearchHit[]>;
+
+function TaskSearch() {
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<"tasks" | "summary">("tasks");
+  const [isPending, startTransition] = useTransition();
+  const deferredQuery = useDeferredValue(query);
+  const showingOlderResults = query !== deferredQuery;
+
+  function selectTab(next: "tasks" | "summary") {
+    startTransition(() => setTab(next));
+  }
+
+  return (
+    <section>
+      <input
+        aria-label="Search tasks"
+        value={query}
+        onChange={event => setQuery(event.target.value)}
+      />
+      <button type="button" onClick={() => selectTab("summary")}>Summary</button>
+      {isPending && <span>Updating view…</span>}
+      <Suspense fallback={<p>Loading results…</p>}>
+        <div aria-busy={showingOlderResults}>
+          <TaskSearchResults query={deferredQuery} tab={tab} />
+        </div>
+      </Suspense>
+    </section>
+  );
+}
+
+const TaskSearchResults = memo(
+  function TaskSearchResults({ query, tab }: { query: string; tab: "tasks" | "summary" }) {
+    const { data } = useSuspenseQuery({
+      queryKey: ["tasks", "search", query, tab],
+      queryFn: () => searchTasks(query, tab)
+    });
+    return <ul>{data.map(hit => <li key={hit.id}>{hit.title}</li>)}</ul>;
+  }
+);
+~~~
+
+`useTransition` exposes `isPending` and marks state updates inside `startTransition` as non-urgent; its callback runs immediately, and it cannot control a text input. With an async action, wrap state updates after each `await` in another `startTransition` to mark them as transitions. `useDeferredValue` lets a child keep seeing the previous value while React prepares an interruptible background render. It has no fixed delay and does not suppress network requests, so use an explicit debounce when the goal is fewer requests. Neither API parallelizes JavaScript on another CPU thread or makes a long synchronous calculation faster; use a better algorithm, memoization, or a worker when computation itself blocks. `Suspense` only shows this fallback when its child suspends through a supported source such as `use` with a cached Promise or a Suspense-enabled framework/library. Pair data errors with an [Error Boundary](#46.%20Which%20errors%20can%20a%20React%20Error%20Boundary%20recover%20from?%20/%20React%20Error%20Boundary%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E9%94%99%E8%AF%AF%EF%BC%9F) or use explicit pending/error states; Suspense is not a request error handler. Keep renders pure because React may retry interrupted work.
+
+#### Who owns server data and local UI state? / 服务端数据与本地界面状态由谁管理？
+
+**Core answer / 核心回答：** Keep transient choices and drafts in local state; identify server queries by every result-changing input, give cached data an explicit freshness policy, and reconcile mutations with the server response. The complete query, optimistic-update, rollback-race, and A-to-B identity example is in [How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？](#49.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F). / 将临时选择和草稿保存在本地 state 中；查询键包含所有影响结果的输入，为缓存规定新鲜度，并用服务端响应协调变更。完整的查询、乐观更新、回滚竞态和 A→B 身份示例见[React界面如何维护服务端数据与乐观更新的正确性？](#49.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F).
+
+
+#### How do I compose components and reusable behavior around an interaction? / 如何围绕交互组合组件与可复用行为？
+
+**Core answer / 核心回答：** Use props and callbacks for direct data flow, Context or a store for shared values, custom Hooks for reusable stateful logic, and refs for narrow imperative actions. Use memoization only when profiling or an identity boundary shows a benefit; keep legacy render-prop and wrapper APIs when they make the contract clearer. / 直接数据流使用 props 与回调，共享值使用 Context 或 store，可复用有状态逻辑使用自定义 Hook，窄范围命令式操作使用 ref。只有性能分析或明确的引用边界证明有收益时才加 memo；当旧的 render-prop 或包装器 API 能更清楚表达契约时，可以继续使用。
+
+##### How can components communicate? / React组件如何通信？
 
 **Core answer / 核心回答：** Keep data flow explicit: pass data down with props, send events up with callback props, and use Context or a store when many distant consumers need shared state. Refs expose imperative capabilities; they are not a substitute for state that drives visible UI. / 保持数据流清晰：用 props 向下传数据，用回调 props 向上传事件；多个较远组件需要共享状态时再考虑 Context 或 store。ref 用于暴露命令式能力，不应替代驱动界面的 state。
 
@@ -4751,9 +4857,140 @@ function Toolbar() {
 
 A child can notify its parent through a callback prop. Use Context for values such as theme or locale that are needed across a subtree; a store can help when shared state and update patterns grow more complex. Custom Hooks share stateful logic, but each call has its own Hook state unless the Hook deliberately connects to shared state. Avoid using an event bus as a default substitute for React's data flow.
 
-#### Who owns server data and local UI state? / 服务端数据与本地界面状态由谁管理？
+##### When should you use memo, useMemo, or useCallback? / 何时使用 memo、useMemo和useCallback？
+
+**Core answer / 核心回答：** These are performance tools, not correctness tools. React.memo can skip rendering when props compare equal; useMemo caches a calculated value; useCallback caches a function reference. Add them when profiling or a specific identity boundary shows they help. / 这些 API 是性能工具，不是正确性工具。React.memo 可在 props 比较相等时跳过渲染；useMemo 缓存计算值；useCallback 缓存函数引用。只有性能分析或明确的引用边界表明它们有帮助时再使用。
+
+~~~jsx
+import { memo, useCallback, useMemo } from "react";
+
+function ListContainer({ items, onSelect }) {
+  const sortedItems = useMemo(
+    () => [...items].sort((a, b) => a.name.localeCompare(b.name)),
+    [items]
+  );
+
+  const handleSelect = useCallback((id) => {
+    onSelect(id);
+  }, [onSelect]);
+
+  return <ItemList items={sortedItems} onSelect={handleSelect} />;
+}
+
+const ItemList = memo(function ItemList({ items, onSelect }) {
+  return items.map(item => (
+    <button key={item.id} onClick={() => onSelect(item.id)}>
+      {item.name}
+    </button>
+  ));
+});
+~~~
+
+React.memo's default prop comparison uses Object.is per prop. A component can still render when its own state or consumed context changes; one newly created object or function prop can also prevent a skip. Inline handlers are ordinary JavaScript and are not automatically a performance bug. Keep state near its consumers, avoid unnecessary Effects that trigger render chains, and use the React Profiler to find a real hotspot.
+
+React may discard a useMemo cache in documented circumstances. Do not depend on memoization for resource lifetime, semantic identity, or correctness.
+
+##### What does useRef do? / useRef有什么作用？
+
+**Core answer / 核心回答：** useRef returns a stable object whose current field can hold a value between renders. Changing current does not request a render, so use refs for DOM access and bookkeeping, not for displayed state. / useRef 返回一个在多次渲染间保持稳定的对象，其 current 字段可保存可变值。修改 current 不会请求重新渲染，因此 ref 适合 DOM 访问和内部记录，不适合驱动可见界面的状态。
+
+~~~jsx
+function SearchBox() {
+  const inputRef = useRef(null);
+
+  return (
+    <>
+      <input ref={inputRef} />
+      <button onClick={() => inputRef.current?.focus()}>
+        Focus
+      </button>
+    </>
+  );
+}
+~~~
+
+Other suitable values include a timer ID or an external instance. Do not read or write refs during rendering except for initialization. Use state when a change must update the screen.
+
+##### What do forwardRef and useImperativeHandle do? / forwardRef和useImperativeHandle有什么作用？
+
+**Core answer / 核心回答：** In React 18 and earlier, forwardRef lets a component accept and forward a parent's ref; useImperativeHandle can expose a narrow command API. In React 19, a function component can receive ref as a prop, so forwardRef is no longer necessary for new React 19-only components. / React 18 及更早版本中，forwardRef 让组件接收并转发父组件传入的 ref；useImperativeHandle 可暴露范围较小的命令式 API。React 19 的函数组件可以把 ref 作为 prop 接收，因此仅面向 React 19 的新组件不再需要 forwardRef。
+
+~~~jsx
+const FancyInput = forwardRef(function FancyInput(props, ref) {
+  return <input {...props} ref={ref} className="fancy" />;
+});
+~~~
+
+Prefer declarative props and callbacks when they express the interaction clearly. Use an imperative ref for cases such as focusing an input or coordinating a third-party widget.
+
+##### What is a custom Hook? / 什么是自定义Hook？
+
+**Core answer / 核心回答：** A custom Hook is a function whose name starts with use and that calls other Hooks at the top level. It packages reusable stateful logic; it does not share one state instance across callers by itself. / 自定义 Hook 是名称以 use 开头、并在顶层调用其他 Hook 的函数。它封装可复用的有状态逻辑；仅仅复用 Hook 本身不会让多个调用共享同一份 state。
+
+~~~jsx
+function useWindowSize() {
+  const [size, setSize] = useState({
+    width: 0,
+    height: 0
+  });
+
+  useEffect(() => {
+    function update() {
+      setSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    }
+
+    window.addEventListener("resize", update);
+    update();
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return size;
+}
+~~~
+
+Ordinary Hooks must be called in the same order on every render, at the top level of a component or another Hook. React 19’s use API is an exception: it may appear in a condition or loop, but it still belongs inside a component or Hook and cannot be wrapped in try/catch. The lint plugin checks these Rules of Hooks. An Effect's cleanup releases the listener; root StrictMode deliberately repeats setup and cleanup once in development.
+
+##### What are render props and higher-order components? / 什么是 render props 和高阶组件？
+
+**Core answer / 核心回答：** Render props pass a function that chooses what to render from data supplied by a component. A higher-order component takes a component and returns a wrapped component. Both remain useful API shapes in some libraries and legacy code; custom Hooks are another way to share logic, not a universal replacement. / render props 通过函数接收组件提供的数据并决定渲染内容。高阶组件接收一个组件并返回包装后的组件。它们仍适用于某些库 API 和旧代码；自定义 Hook 是共享逻辑的另一种方式，并非对二者的通用替代。
+
+~~~jsx
+<MouseTracker render={({ x, y }) => (
+  <p>Pointer: {x}, {y}</p>
+)} />
+~~~
+
+A wrapper component can add authorization or instrumentation, but nested wrappers may make the component tree and prop flow harder to follow. Choose the API that makes ownership and behavior clear.
+
+##### What are common conditional-rendering patterns? / 常见的条件渲染写法有哪些？
+
+**Core answer / 核心回答：** Use a ternary for either-or, logical AND for render-or-nothing, and an early return for a clear guard. Choose the form that makes the branches easiest to read. / 二选一可用三元表达式；只在条件成立时渲染可用逻辑 AND；明确的前置检查可用 early return。选择最容易读懂分支的写法。
+
+~~~jsx
+{isLoggedIn ? <Dashboard /> : <Login />}
+{showBanner && <Banner />}
+
+function Profile({ user }) {
+  if (!user) return <Loading />;
+  return <Content user={user} />;
+}
+~~~
+
+Because React renders numbers, a numeric left operand can leak into the output: an empty list's length is 0, so {items.length && <List />} displays 0. Use {items.length > 0 && <List />} when that is not intended.
+
+**See also:** [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) for state snapshots and lifecycle context; [React Server State and Optimistic Updates / React服务端状态与乐观更新](#49.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query/cache and mutation rules; [React Error Boundaries / React错误边界](#46.%20Which%20errors%20can%20a%20React%20Error%20Boundary%20recover%20from?%20/%20React%20Error%20Boundary%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E9%94%99%E8%AF%AF%EF%BC%9F) for render-failure recovery; [Rendering and Computation Optimization / 渲染与计算优化](#52.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
+
+**Sources checked 2026-10-15:** [React: `useTransition`](https://react.dev/reference/react/useTransition), [`useDeferredValue`](https://react.dev/reference/react/useDeferredValue), [React `Suspense`](https://react.dev/reference/react/Suspense), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [TanStack Query React v5: Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense), [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use).
+## 49. How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？
+
+### How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？
 
 **Core answer / 核心回答：** Keep transient choices such as the selected row, open dialog, or draft input in local React state. Treat records owned by a server as server state: identify each query by all inputs that affect it, define when cached data is fresh, and invalidate or update affected entries after a mutation. A query cache is a client read model, not the source of truth. / 将选中行、打开的对话框和输入草稿等临时选择保存在 React 本地状态中。服务器拥有的记录属于服务端状态：查询键要包含所有影响结果的输入，缓存需要明确新鲜期，变更后要更新或失效相关缓存。查询缓存是客户端读模型，不是数据的权威来源。
+
+#### Identify ownership, freshness, and mutation effects / 区分数据归属、新鲜度和变更影响
 
 For example, selecting a row is local UI state, while the list and selected record come from the server. Separate query keys encode their identities; include filters, page, or account identifiers too when they change the result. In TanStack Query v5, `staleTime` defines how long a result is considered fresh. Once stale, it can refetch on configured events; targeted invalidation marks matching entries stale and refetches active observers. The value is a freshness policy, not a promise that the server data cannot change.
 
@@ -4863,193 +5100,19 @@ function useSaveTask() {
 }
 ~~~
 
-The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; the `useWindowSize` Effect in the custom Hook section below shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#35.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F) for validating API JSON before treating it as a `Task`.
+The mutation cancels in-flight reads before writing optimistically, saves snapshots for rollback, replaces both cached views with the server response on success, then invalidates them to reconcile other changes. A pending save can disable its button; on error, the snapshot restores the visible list/detail and the UI can show a retry message. Because rollback restores the whole list snapshot, this example requires at most one mutation in flight across the shared list—not merely one save per task. Otherwise A can fail after B succeeds and restore B's old row too. Broader concurrency needs operation-scoped or version-aware reconciliation instead of blindly restoring that snapshot. If the user switches from task A to B while A is loading, the detail key changes from `detail/A` to `detail/B`; A may finish into its own cache entry, but cannot become B's displayed record. Passing the query's `AbortSignal` to `fetch` can also stop obsolete network work when the service consumes it. A manually managed Effect needs its own stale-result guard or cleanup; [the `useWindowSize` Effect example](#What%20is%20a%20custom%20Hook?%20/%20%E4%BB%80%E4%B9%88%E6%98%AF%E8%87%AA%E5%AE%9A%E4%B9%89Hook%EF%BC%9F) shows cleanup, and an Effect fetch by itself does not activate Suspense. See [Advanced TypeScript / TypeScript进阶](#35.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F) for validating API JSON before treating it as a `Task`.
 
-#### How do concurrent UI updates and Suspense work? / 并发界面更新与 Suspense 如何工作？
+**Related task / 相关任务：** The [responsive React search question / React搜索响应问题](#48.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) shows how the result view stays responsive while its query key follows the user's inputs. This page explains the cache identity, freshness, optimistic mutation, rollback, and concurrency rules used by that UI. / [React搜索响应问题](#48.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F)说明结果查询如何跟随用户输入、同时保持界面响应；本文说明该界面所需的缓存身份、新鲜度、乐观变更、回滚与并发规则。
 
-**Core answer / 核心回答：** Keep input state urgent so each keystroke appears immediately; defer expensive result rendering or mark a navigation-like state update as a Transition. React can interrupt and retry that render work so urgent updates get priority. A Suspense boundary gives one part of the screen a fallback while a Suspense-enabled child is not ready. / 输入状态应保持紧急，以便每次按键都立即显示；可以延后昂贵结果区域的渲染，或把类似导航的状态更新标记为 Transition。React 可以中断并重试这部分渲染，让紧急更新优先。Suspense 边界则在支持 Suspense 的子树尚未就绪时，为该区域显示 fallback。
+**See also:** [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) for state snapshots and the render/commit path.
 
-This search panel keeps the text input responsive and places the loading fallback around only the result list. `useSuspenseQuery` is the TanStack Query v5 data source that suspends here; a normal query or fetch started in an Effect does not automatically suspend. The memoized result boundary allows React to skip this child when an urgent parent render leaves `deferredQuery` and `tab` unchanged; without it, the child still renders on each parent input update even though the deferred value is old. It renders again when either deferred prop advances.
+**Sources checked 2026-10-15:** [React: Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [TanStack Query React v5: Queries](https://tanstack.com/query/latest/docs/framework/react/guides/queries), [Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys), [Important Defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults), [Query Invalidation](https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation), [Optimistic Updates](https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates), [Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense), [Cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation).
+## 50. How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
 
-~~~tsx
-import { memo, Suspense, useDeferredValue, useState, useTransition } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+### How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
 
-type SearchHit = { id: string; title: string };
-declare function searchTasks(query: string, tab: "tasks" | "summary"): Promise<SearchHit[]>;
+**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#34.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#34.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F)。
 
-function TaskSearch() {
-  const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<"tasks" | "summary">("tasks");
-  const [isPending, startTransition] = useTransition();
-  const deferredQuery = useDeferredValue(query);
-  const showingOlderResults = query !== deferredQuery;
-
-  function selectTab(next: "tasks" | "summary") {
-    startTransition(() => setTab(next));
-  }
-
-  return (
-    <section>
-      <input
-        aria-label="Search tasks"
-        value={query}
-        onChange={event => setQuery(event.target.value)}
-      />
-      <button type="button" onClick={() => selectTab("summary")}>Summary</button>
-      {isPending && <span>Updating view…</span>}
-      <Suspense fallback={<p>Loading results…</p>}>
-        <div aria-busy={showingOlderResults}>
-          <TaskSearchResults query={deferredQuery} tab={tab} />
-        </div>
-      </Suspense>
-    </section>
-  );
-}
-
-const TaskSearchResults = memo(
-  function TaskSearchResults({ query, tab }: { query: string; tab: "tasks" | "summary" }) {
-    const { data } = useSuspenseQuery({
-      queryKey: ["tasks", "search", query, tab],
-      queryFn: () => searchTasks(query, tab)
-    });
-    return <ul>{data.map(hit => <li key={hit.id}>{hit.title}</li>)}</ul>;
-  }
-);
-~~~
-
-`useTransition` exposes `isPending` and marks state updates inside `startTransition` as non-urgent; its callback runs immediately, and it cannot control a text input. With an async action, wrap state updates after each `await` in another `startTransition` to mark them as transitions. `useDeferredValue` lets a child keep seeing the previous value while React prepares an interruptible background render. It has no fixed delay and does not suppress network requests, so use an explicit debounce when the goal is fewer requests. Neither API parallelizes JavaScript on another CPU thread or makes a long synchronous calculation faster; use a better algorithm, memoization, or a worker when computation itself blocks. `Suspense` only shows this fallback when its child suspends through a supported source such as `use` with a cached Promise or a Suspense-enabled framework/library. Pair data errors with an Error Boundary or use explicit pending/error states; Suspense is not a request error handler. Keep renders pure because React may retry interrupted work.
-
-#### When should you use memo, useMemo, or useCallback? / 何时使用 memo、useMemo和useCallback？
-
-**Core answer / 核心回答：** These are performance tools, not correctness tools. React.memo can skip rendering when props compare equal; useMemo caches a calculated value; useCallback caches a function reference. Add them when profiling or a specific identity boundary shows they help. / 这些 API 是性能工具，不是正确性工具。React.memo 可在 props 比较相等时跳过渲染；useMemo 缓存计算值；useCallback 缓存函数引用。只有性能分析或明确的引用边界表明它们有帮助时再使用。
-
-~~~jsx
-import { memo, useCallback, useMemo } from "react";
-
-function ListContainer({ items, onSelect }) {
-  const sortedItems = useMemo(
-    () => [...items].sort((a, b) => a.name.localeCompare(b.name)),
-    [items]
-  );
-
-  const handleSelect = useCallback((id) => {
-    onSelect(id);
-  }, [onSelect]);
-
-  return <ItemList items={sortedItems} onSelect={handleSelect} />;
-}
-
-const ItemList = memo(function ItemList({ items, onSelect }) {
-  return items.map(item => (
-    <button key={item.id} onClick={() => onSelect(item.id)}>
-      {item.name}
-    </button>
-  ));
-});
-~~~
-
-React.memo's default prop comparison uses Object.is per prop. A component can still render when its own state or consumed context changes; one newly created object or function prop can also prevent a skip. Inline handlers are ordinary JavaScript and are not automatically a performance bug. Keep state near its consumers, avoid unnecessary Effects that trigger render chains, and use the React Profiler to find a real hotspot.
-
-React may discard a useMemo cache in documented circumstances. Do not depend on memoization for resource lifetime, semantic identity, or correctness.
-
-#### What does useRef do? / useRef有什么作用？
-
-**Core answer / 核心回答：** useRef returns a stable object whose current field can hold a value between renders. Changing current does not request a render, so use refs for DOM access and bookkeeping, not for displayed state. / useRef 返回一个在多次渲染间保持稳定的对象，其 current 字段可保存可变值。修改 current 不会请求重新渲染，因此 ref 适合 DOM 访问和内部记录，不适合驱动可见界面的状态。
-
-~~~jsx
-function SearchBox() {
-  const inputRef = useRef(null);
-
-  return (
-    <>
-      <input ref={inputRef} />
-      <button onClick={() => inputRef.current?.focus()}>
-        Focus
-      </button>
-    </>
-  );
-}
-~~~
-
-Other suitable values include a timer ID or an external instance. Do not read or write refs during rendering except for initialization. Use state when a change must update the screen.
-
-#### What do forwardRef and useImperativeHandle do? / forwardRef和useImperativeHandle有什么作用？
-
-**Core answer / 核心回答：** In React 18 and earlier, forwardRef lets a component accept and forward a parent's ref; useImperativeHandle can expose a narrow command API. In React 19, a function component can receive ref as a prop, so forwardRef is no longer necessary for new React 19-only components. / React 18 及更早版本中，forwardRef 让组件接收并转发父组件传入的 ref；useImperativeHandle 可暴露范围较小的命令式 API。React 19 的函数组件可以把 ref 作为 prop 接收，因此仅面向 React 19 的新组件不再需要 forwardRef。
-
-~~~jsx
-const FancyInput = forwardRef(function FancyInput(props, ref) {
-  return <input {...props} ref={ref} className="fancy" />;
-});
-~~~
-
-Prefer declarative props and callbacks when they express the interaction clearly. Use an imperative ref for cases such as focusing an input or coordinating a third-party widget.
-
-#### What is a custom Hook? / 什么是自定义Hook？
-
-**Core answer / 核心回答：** A custom Hook is a function whose name starts with use and that calls other Hooks at the top level. It packages reusable stateful logic; it does not share one state instance across callers by itself. / 自定义 Hook 是名称以 use 开头、并在顶层调用其他 Hook 的函数。它封装可复用的有状态逻辑；仅仅复用 Hook 本身不会让多个调用共享同一份 state。
-
-~~~jsx
-function useWindowSize() {
-  const [size, setSize] = useState({
-    width: 0,
-    height: 0
-  });
-
-  useEffect(() => {
-    function update() {
-      setSize({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
-    }
-
-    window.addEventListener("resize", update);
-    update();
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  return size;
-}
-~~~
-
-Ordinary Hooks must be called in the same order on every render, at the top level of a component or another Hook. React 19’s use API is an exception: it may appear in a condition or loop, but it still belongs inside a component or Hook and cannot be wrapped in try/catch. The lint plugin checks these Rules of Hooks. An Effect's cleanup releases the listener; root StrictMode deliberately repeats setup and cleanup once in development.
-
-#### What are render props and higher-order components? / 什么是 render props 和高阶组件？
-
-**Core answer / 核心回答：** Render props pass a function that chooses what to render from data supplied by a component. A higher-order component takes a component and returns a wrapped component. Both remain useful API shapes in some libraries and legacy code; custom Hooks are another way to share logic, not a universal replacement. / render props 通过函数接收组件提供的数据并决定渲染内容。高阶组件接收一个组件并返回包装后的组件。它们仍适用于某些库 API 和旧代码；自定义 Hook 是共享逻辑的另一种方式，并非对二者的通用替代。
-
-~~~jsx
-<MouseTracker render={({ x, y }) => (
-  <p>Pointer: {x}, {y}</p>
-)} />
-~~~
-
-A wrapper component can add authorization or instrumentation, but nested wrappers may make the component tree and prop flow harder to follow. Choose the API that makes ownership and behavior clear.
-
-#### What are common conditional-rendering patterns? / 常见的条件渲染写法有哪些？
-
-**Core answer / 核心回答：** Use a ternary for either-or, logical AND for render-or-nothing, and an early return for a clear guard. Choose the form that makes the branches easiest to read. / 二选一可用三元表达式；只在条件成立时渲染可用逻辑 AND；明确的前置检查可用 early return。选择最容易读懂分支的写法。
-
-~~~jsx
-{isLoggedIn ? <Dashboard /> : <Login />}
-{showBanner && <Banner />}
-
-function Profile({ user }) {
-  if (!user) return <Loading />;
-  return <Content user={user} />;
-}
-~~~
-
-Because React renders numbers, a numeric left operand can leak into the output: an empty list's length is 0, so {items.length && <List />} displays 0. Use {items.length > 0 && <List />} when that is not intended.
-
-**See also:** [React Basics / React基础](#45.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for state snapshots and lifecycle context; [Rendering and Computation Optimization / 渲染与计算优化](#49.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for profiling and memoization limits.
-
-**Sources checked 2026-10-15:** [React: `useTransition`](https://react.dev/reference/react/useTransition), [`useDeferredValue`](https://react.dev/reference/react/useDeferredValue), [`Suspense`](https://react.dev/reference/react/Suspense), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects), [TanStack Query React v5: Queries](https://tanstack.com/query/latest/docs/framework/react/guides/queries), [Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys), [Important Defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults), [Query Invalidation](https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation), [Optimistic Updates](https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates), [Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense), [Cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation), [React: memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use).
-## 47. Next.js / Next.js开发
-
-### Next.js / Next.js开发
 
 #### What does Next.js add to React? / Next.js为React增加了什么？
 
@@ -5204,10 +5267,10 @@ export async function GET() {
 
 Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
 
-**See also:** [React Basics / React基础](#45.%20React%20Basics%20/%20React%E5%9F%BA%E7%A1%80) for client navigation and document models; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+**See also:** [React Routing and Navigation / React路由与导航](#47.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F) for client navigation and SPA/MPA document models; [React Basics / React基础](#45.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
 **Sources checked 2026-10-15:** [React 19.3 versions and release](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
-## 48. Performance Metrics and Analysis / 性能指标与分析
+## 51. Performance Metrics and Analysis / 性能指标与分析
 
 ### Performance Metrics and Analysis / 性能指标与分析
 
@@ -5346,10 +5409,10 @@ document.addEventListener("visibilitychange", () => {
 
 The report helper above uses sendBeacon when the browser accepts the payload for queuing, then falls back to fetch with keepalive when Beacon is unavailable or declines it. Neither path guarantees server receipt. A bounded queue also needs an explicit overflow policy; this example drops the oldest pending event. Avoid blocking navigation or making application correctness depend on analytics delivery.
 
-**See also:** [Image Lazy Loading / 图片懒加载](#33.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for image loading choices; [Rendering and Computation Optimization / 渲染与计算优化](#49.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for React and long-list work.
+**See also:** [Image Lazy Loading / 图片懒加载](#33.%20Image%20Lazy%20Loading%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%9B%BE%E7%89%87%E6%87%92%E5%8A%A0%E8%BD%BD) for image loading choices; [Rendering and Computation Optimization / 渲染与计算优化](#52.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96) for React and long-list work.
 
 **Sources checked 2026-10-15:** [PerformancePaintTiming (FP/FCP)](https://developer.mozilla.org/en-US/docs/Web/API/PerformancePaintTiming), [DOMContentLoaded event](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event), [Window load event](https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event), [Web Vitals](https://web.dev/articles/vitals), [INP](https://web.dev/articles/inp), [LCP](https://web.dev/articles/lcp), [CLS](https://web.dev/articles/cls), [Lab and Field Data Differences](https://web.dev/articles/lab-and-field-data-differences), [HTTP Caching (RFC 9111)](https://www.rfc-editor.org/rfc/rfc9111.html), [ETag (RFC 9110)](https://www.rfc-editor.org/rfc/rfc9110.html#name-etag), [Beacon specification](https://w3c.github.io/beacon/).
-## 49. Rendering and Computation Optimization / 渲染与计算优化
+## 52. Rendering and Computation Optimization / 渲染与计算优化
 
 ### Rendering and Computation Optimization / 渲染与计算优化
 
@@ -5432,18 +5495,16 @@ Layout, paint, compositing, and JavaScript can all affect a frame. Animate trans
 
 will-change is a hint, not a command to allocate a compositor layer. Use it narrowly and only when a measured animation benefits; unnecessary use can consume memory and make performance worse. Reducing DOM work and measuring real interactions are more reliable than assuming a shorter selector or shorthand property will speed up a page.
 
-**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](#48.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measurement.
+**See also:** [Browser HTML and CSS / 浏览器中的HTML与CSS](#7.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for rendering stages; [Performance Metrics and Analysis / 性能指标与分析](#51.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for measurement.
 
 **Sources checked 2026-10-15:** [React: memo](https://react.dev/reference/react/memo), [React: useMemo](https://react.dev/reference/react/useMemo), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction), [CSS Will Change Module](https://www.w3.org/TR/css-will-change-1/), [MDN background-position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/background-position), [HTTP/2 RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).
-## 50. Lodash / Lodash工具库
+## 53. When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
 
-### Lodash / Lodash工具库
+### When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
 
-Lodash provides utilities for arrays, collections, objects, functions, and strings. Use this page as a lookup; compare simple operations with the language's built-in APIs and check the installed Lodash version.
+**Core answer / 核心回答：** Use Lodash when its documented path, collection, or timing contract removes repeated edge-case code. For a simple known shape, prefer the native operation when it expresses the same behavior more clearly; compare the exact semantics and installed version before substituting. This page is a method lookup, not a claim that one option is always smaller or faster. / Lodash 的路径、集合或定时语义能减少重复的边界处理时可使用它。对象结构简单明确时，如果原生操作能更清晰表达相同行为，就优先考虑原生 API；替换前要核对具体语义和安装版本。本文用于查找方法，不表示某种选择总是更小或更快。
 
 #### Common utilities / 常用工具
-
-**Core answer / 核心回答：** Lodash is most useful when its path, collection, or timing contract saves repeated edge-case code; check the exact method signature before substituting a native operation. / Lodash 在其路径、集合或定时语义能够减少重复边界处理时最有价值；替换为原生方法前应核对具体方法的签名与行为。
 
 ##### Arrays / 数组
 
@@ -5534,16 +5595,14 @@ Lodash's debounced function also has flush() to invoke a pending call immediatel
 
 Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#18.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#48.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for choosing debounce or throttle by workload.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#18.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#51.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for choosing debounce or throttle by workload.
 
 **Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
-## 51. ahooks / ahooks Hook库
+## 54. When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
 
-### ahooks / ahooks Hook库
+### When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
 
-ahooks is a collection of React Hooks for recurring UI and data-fetching patterns. The APIs below follow the current documentation checked on 2026-10-15; verify them against the package version installed in a project.
-
-**Core answer / 核心回答：** ahooks packages common React state, effect, request, and list patterns into Hooks; its helpers still follow React’s render and Effect rules, and each API must match the installed version. / ahooks 将常见的 React 状态、Effect、请求和列表模式封装成 Hook；这些工具仍遵守 React 的 render 与 Effect 规则，每个 API 都应与项目安装版本一致。
+**Core answer / 核心回答：** Use ahooks when an existing helper matches the interaction's state, lifecycle, request, or list contract and the installed package version. A helper still follows React's render and Effect rules; it does not replace decisions about data ownership, cache freshness, transport cancellation, or item identity. The APIs here follow documentation checked on 2026-10-15. / 当现有 ahooks 工具符合交互的状态、生命周期、请求或列表语义，并且与项目安装版本一致时再使用。工具仍遵守 React 的 render 和 Effect 规则；它不会替代对数据归属、缓存新鲜度、传输取消或列表项身份的判断。此处 API 依据 2026-10-15 核对的文档。
 
 #### Data fetching / 数据请求
 
@@ -5672,7 +5731,7 @@ return (
 );
 ~~~
 
-Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#49.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
+Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#52.%20Rendering%20and%20Computation%20Optimization%20/%20%E6%B8%B2%E6%9F%93%E4%B8%8E%E8%AE%A1%E7%AE%97%E4%BC%98%E5%8C%96).
 
 useDynamicList exposes list and operations such as push, remove, move, insert, and getKey(index). Use getKey(index) as the React key so item identity survives edits; callbacks receive the current index.
 
@@ -5705,16 +5764,18 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 
 **Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
 
-**See also:** [Advanced React / React进阶](#46.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for Hook rules and Effect cleanup plus the generic server-state cache, mutation, concurrency, and Suspense lifecycle; [Performance Metrics and Analysis / 性能指标与分析](#48.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
+**See also:** [Advanced React / React进阶](#48.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for Hook rules, Effect cleanup, deferred rendering, and Suspense; [React Server State and Optimistic Updates / React服务端状态与乐观更新](#49.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query-cache and mutation rules; [Performance Metrics and Analysis / 性能指标与分析](#51.%20Performance%20Metrics%20and%20Analysis%20/%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87%E4%B8%8E%E5%88%86%E6%9E%90) for debounce and throttle tradeoffs.
 
 **Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
-## 52. Frontend Testing / 前端测试
+## 55. What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
 
-### Frontend Testing / 前端测试
+### What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
+
+**Core answer / 核心回答：** Build the production output, run a critical browser journey against that output on a production-like server, then promote the exact artifact that passed. A development server alone does not exercise emitted assets or deployment paths. The general risk-to-test-boundary principle belongs to [Software Testing Strategy / 软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md); the tool choices for local logic and component behavior are outlined below. / 构建生产产物，在接近生产环境的服务上用该产物运行关键浏览器流程，然后晋级同一份通过检查的产物。单独运行开发服务器无法覆盖实际生成的资源或部署路径。通用的风险与测试边界原则见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)；本地逻辑和组件行为的工具选择见下文。
 
 #### How should frontend tests be divided? / 前端测试如何分层？
 
-**Core answer / 核心回答：** Put each assertion at the lowest layer that can verify the behavior reliably. Unit tests isolate pure logic, integration tests exercise boundaries between components and services, and browser tests verify important end-to-end flows. This is a risk and feedback-cost heuristic, not a required test-count pyramid. / 在能够可靠验证行为的最低层测试。单元测试隔离纯逻辑，集成测试覆盖组件与服务之间的边界，浏览器测试验证重要端到端流程。这是权衡风险和反馈成本的经验方法，不是固定的测试数量金字塔。
+**Core answer / 核心回答：** Use a unit test for isolated logic, a component integration test for user-visible wiring, and a browser test when real navigation, persistence, browser behavior, emitted assets, or service wiring is part of the risk. Keep the feedback loop cheap where it can provide reliable evidence. / 隔离逻辑用单元测试，验证用户可见的组件连接用集成测试；当风险涉及真实导航、持久化、浏览器行为、生成资源或服务连接时使用浏览器测试。能可靠提供证据时，优先保持反馈成本较低。
 
 | Layer | Useful for | Example tools |
 |---|---|---|
@@ -5726,60 +5787,7 @@ Keep browser tests for behavior that depends on the real browser or application 
 
 #### Jest fundamentals / Jest基础
 
-~~~javascript
-describe("calculator", () => {
-  test("adds two numbers", () => {
-    expect(2 + 2).toBe(4);
-  });
-
-  test("compares object values", () => {
-    expect({ count: 2 }).toEqual({ count: 2 });
-  });
-});
-~~~
-
-toBe uses Object.is semantics. toEqual compares nested values; toStrictEqual also distinguishes cases such as missing properties and undefined values. Common matchers include toContain, toHaveLength, toThrow, and toHaveBeenCalledWith.
-
-Setup hooks run at different scopes: beforeAll and afterAll surround a suite, while beforeEach and afterEach run around each test. Restore state that could leak between tests.
-
-##### Mock functions / Mock函数
-
-~~~javascript
-const save = jest.fn();
-save({ id: 1 });
-
-expect(save).toHaveBeenCalledWith({ id: 1 });
-
-save.mockResolvedValue({ ok: true });
-await expect(save()).resolves.toEqual({ ok: true });
-~~~
-
-jest.spyOn wraps an existing method and can be restored. The cleanup operations differ:
-
-- **mockClear** clears call history while keeping the implementation.
-- **mockReset** clears call history and the mock implementation.
-- **mockRestore** restores the original implementation for a function created by spyOn. restoreAllMocks also restores spies and properties replaced with replaceProperty.
-
-For a CommonJS test transformed with babel-jest, jest.mock is hoisted by the transformer and the module can be required after the mock declaration:
-
-~~~javascript
-// CommonJS / babel-jest transformed module test.
-jest.mock("./api", () => ({ fetchUser: jest.fn() }));
-const { fetchUser } = require("./api");
-
-test("loads a user", async () => {
-  fetchUser.mockResolvedValue({ id: 1, name: "Ada" });
-  await expect(fetchUser(1)).resolves.toMatchObject({ name: "Ada" });
-});
-~~~
-
-Native ESM evaluates static imports before test code, so the CJS hoisting example does not transfer directly; Jest documents unstable_mockModule followed by dynamic import for ESM. A spy created with jest.spyOn calls the original method by default; mockImplementation replaces it, and mockRestore restores the original:
-
-~~~javascript
-const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-// assertions using the spy
-warnSpy.mockRestore();
-~~~
+Use Jest when the risk can be reproduced around logic, state, or a dependency boundary. A test that starts asynchronous work must return or await the Promise that contains its assertions. Place the mock at the dependency and assert the behavior of the caller. [How a Jest test verifies asynchronous behavior / Jest 怎样验证异步行为](#56.%20How%20can%20a%20Jest%20test%20verify%20behavior%20across%20an%20asynchronous%20boundary?%20/%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E8%B7%A8%E5%BC%82%E6%AD%A5%E8%BE%B9%E7%95%8C%E7%9A%84%E8%A1%8C%E4%B8%BA%EF%BC%9F) contains the complete async, lifecycle, matcher, CommonJS and native ESM examples.
 
 #### React Testing Library / React Testing Library
 
@@ -5864,6 +5872,181 @@ Type checks catch static contract errors; unit and component tests catch local l
 
 Use browser checks where real routing, asset URLs, browser behavior, or app/service wiring matters. A passing HMR session proves the development loop works; it does not prove production chunks load from the deployed base path or that the published artifact works. Source maps can translate minified error locations back to original source when tied to a release and uploaded to a controlled error-reporting system. A hidden map removes the source-map comment, not the file or access risk; do not leave private maps at a public asset URL. The shared [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) note owns artifact promotion, runtime secrets, and rollout gates.
 
-**See also:** [Advanced React / React进阶](#46.%20Advanced%20React%20/%20React%E8%BF%9B%E9%98%B6) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
+**See also:** [Advanced React / React进阶](#48.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
 
 **Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/), [Vite static deployment](https://vite.dev/guide/static-deploy.html), [Playwright web server](https://playwright.dev/docs/test-webserver).
+## 56. How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
+
+### How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
+
+Wait for the Promise that carries the assertion, give the code under test an explicit dependency boundary, and assert what the code does with the result. Set up and restore only the resources the test owns. Module mocking depends on the test's module system. / 等待承载断言的 Promise，在被测代码的依赖边界安排模拟，并断言被测代码如何处理结果。测试只负责准备和恢复自己拥有的资源。模块模拟方式取决于测试使用的模块系统。
+
+**Key terms / 关键术语** · observable behavior / 可观察行为 · dependency boundary / 依赖边界 · test lifecycle / 测试生命周期 · module mock / 模块模拟
+
+#### Suites and cases / 测试套件与用例
+
+describe groups related tests; test and its alias it define a case. Use clear names that describe behavior. Starting a name with “should” is a style choice, not a Jest requirement.
+
+~~~javascript
+function add(left, right) {
+  return left + right;
+}
+
+function subtract(left, right) {
+  return left - right;
+}
+
+describe('calculator', () => {
+  test('adds two numbers', () => {
+    expect(add(2, 3)).toBe(5);
+  });
+
+  test('subtracts a larger value', () => {
+    expect(subtract(5, 10)).toBe(-5);
+  });
+});
+~~~
+
+Arrange–Act–Assert makes setup, behavior, and verification easy to scan. A small test may not need a separate variable for every phase.
+
+Common file names include .test.js and .spec.js; the project’s Jest configuration determines which files are collected.
+
+#### Async tests / 异步测试
+
+Return or await the Promise so Jest waits for the assertion. For rejected Promises, use the rejects matcher.
+
+~~~javascript
+test('loads a user', async () => {
+  const user = await getUser(1);
+  expect(user).toHaveProperty('id', 1);
+});
+
+test('reports a failed request', async () => {
+  await expect(getUser(-1)).rejects.toThrow('not found');
+});
+~~~
+
+A test that starts an asynchronous operation but neither awaits it nor returns its Promise can finish before the assertion runs.
+
+#### Setup and cleanup / 准备与清理
+
+beforeAll and afterAll run once around a test scope; beforeEach and afterEach run around each test in that scope. Use cleanup hooks for resources that tests actually open.
+
+~~~javascript
+describe('temporary resource', () => {
+  let resource;
+
+  beforeAll(async () => {
+    resource = await openResource();
+  });
+
+  afterAll(async () => {
+    await resource.close();
+  });
+
+  beforeEach(async () => {
+    await resource.clear();
+  });
+
+  test('stores a record', async () => {
+    await resource.insert({ id: 1, name: 'Ada' });
+    expect(await resource.count()).toBe(1);
+  });
+});
+~~~
+
+#### Mock functions and spies / Mock 函数与 spy
+
+##### jest.fn
+
+jest.fn creates a mock function whose calls and results can be inspected.
+
+~~~javascript
+const callback = jest.fn();
+callback('saved');
+
+expect(callback).toHaveBeenCalledWith('saved');
+expect(callback).toHaveBeenCalledTimes(1);
+~~~
+
+##### jest.mock in a CommonJS/transformed setup
+
+This example uses CommonJS require with a test configuration that transforms or otherwise supports this mocking pattern. In Babel-transformed tests, jest.mock calls are hoisted by the Jest transformer, so the mock is registered before the module is required.
+
+~~~javascript
+jest.mock('./api', () => ({
+  fetchUser: jest.fn(),
+}));
+
+const api = require('./api');
+const { loadUser } = require('./userService'); // userService delegates to api.fetchUser
+
+test('uses the API boundary', async () => {
+  api.fetchUser.mockResolvedValue({ id: 1, name: 'Ada' });
+
+  await expect(loadUser(1)).resolves.toEqual({ id: 1, name: 'Ada' });
+});
+~~~
+
+A module mock replaces a dependency at the module boundary. The test should still assert the behavior of the code under test rather than only reasserting the mock configuration.
+
+##### Native ESM modules
+
+Native ESM evaluates static imports before the test body, so the CommonJS-style hoisting example does not apply. Jest's documentation provides jest.unstable_mockModule followed by dynamic import for ESM mocking. The API name is marked unstable; check the Jest version and runtime configuration.
+
+~~~javascript
+import { jest } from '@jest/globals';
+
+jest.unstable_mockModule('./api.js', () => ({
+  fetchUser: jest.fn(),
+}));
+
+const { fetchUser } = await import('./api.js');
+~~~
+
+##### jest.spyOn
+
+jest.spyOn observes an existing object method and calls the original implementation by default. Provide a mock implementation or return value when the test needs replacement behavior. Restore the spy after use.
+
+~~~javascript
+const service = {
+  greet: name => 'Hello ' + name,
+};
+
+const spy = jest.spyOn(service, 'greet').mockReturnValue('Hi Bob');
+
+expect(service.greet('Bob')).toBe('Hi Bob');
+expect(spy).toHaveBeenCalledWith('Bob');
+
+spy.mockRestore();
+~~~
+
+mockRestore restores a spy created by jest.spyOn. Use clearAllMocks, resetAllMocks, or restoreAllMocks according to whether the test needs to clear call history, reset implementations, or restore replaced properties; these operations are not interchangeable.
+
+#### Common matchers / 常见 matcher
+
+| Matcher | Use |
+|---|---|
+| **toBe(value)** | Compare with Object.is semantics. |
+| **toEqual(value)** | Compare nested object or array values. |
+| **toStrictEqual(value)** | Also distinguish missing properties from properties set to `undefined` and similar structural cases. |
+| **toMatchObject(value)** | Check that an object contains the expected subset. |
+| **toBeTruthy / toBeFalsy** | Check the Boolean coercion of a value. |
+| **toBeNull / toBeUndefined** | Distinguish null from undefined. |
+| **toContain(value)** | Check an array item or string substring. |
+| **toHaveLength(n)** | Check a length property. |
+| **toThrow(error)** | Check a synchronous function for a thrown error; pass the function, not its already-evaluated result. |
+| **toHaveBeenCalled()** | Check that a mock or spy was called. |
+| **toHaveBeenCalledWith(args)** | Check arguments recorded by a mock or spy. |
+
+#### Coverage / 覆盖率
+
+Run Jest with the project’s configured coverage option, commonly --coverage. Coverage reports which statements, branches, functions, and lines ran; a high percentage does not prove that assertions check meaningful behavior or edge cases.
+
+#### References / 参考资料
+
+- [Jest 30.0 documentation](https://jestjs.io/docs/30.0/getting-started)
+- [Jest: ECMAScript Modules](https://jestjs.io/docs/30.0/ecmascript-modules)
+- [Jest: The Jest Object](https://jestjs.io/docs/30.0/jest-object)
+- [Jest: Mock Functions](https://jestjs.io/docs/30.0/mock-functions)
+- [Frontend Testing / 前端测试](#55.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F)

@@ -1,8 +1,6 @@
-# Spring Boot Dependency-Injection Example / Spring Boot 依赖注入示例
+# How does constructor injection connect a Spring Boot API to a DAO? / 构造器注入如何把 Spring Boot API 接到 DAO？
 
-This note keeps a small Spring MVC example showing constructor injection, a DAO interface, request binding, validation, and an in-memory implementation. The validation/import examples below use Spring Boot 3.x conventions (`jakarta.validation`); Spring Boot 2.x uses the older `javax.validation` namespace.
-
-核心逻辑：构造器注入明确服务依赖，`@Qualifier` 选择具体 DAO Bean；`@Valid` 会触发已有约束，但不会自己创建约束，Boot 3 使用 `jakarta.validation` 且需要校验 provider。示例仓库只在单个进程内保存数据。
+Constructor injection wires `PersonService` to the qualified DAO; the MVC controller binds a request and delegates. Spring Boot 3 uses `jakarta.validation` plus a provider; Boot 2 uses `javax.validation`. The fake DAO stores data only in one process. / 构造器注入将 `PersonService` 接到指定 DAO，MVC 控制器绑定请求并委托给 service。Spring Boot 3 使用 `jakarta.validation` 且需要 provider；Boot 2 使用 `javax.validation`。fake DAO 只在单个进程中保存数据。
 
 ## Project Setup
 

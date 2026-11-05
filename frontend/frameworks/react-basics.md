@@ -1,6 +1,17 @@
-# React Basics / React基础
+# How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？
 
-React components describe UI from props and state. These notes focus on JSX, element identity, class lifecycle methods, state updates, and routing.
+**Core answer / 核心回答：** A user action reaches a React handler through the browser's event system. The handler requests a state update, but it continues to read the snapshot from its current render. React then renders the next component descriptions, matches them by type, position, and sibling keys, and commits the required host changes. The browser handles the later style, layout, and paint work. This route connects [DOM events / DOM事件](../browser-apis/dom-manipulation-and-events.md), React state, and [browser rendering / 浏览器渲染](../browser/browser-basics.md); it does not promise one paint for every setter call. / 用户操作经由浏览器事件系统到达 React 处理器。处理器请求状态更新，但仍读取当前这次 render 的快照。随后 React 重新计算组件描述，按元素类型、位置和兄弟 key 匹配，并提交必要的宿主环境变更。之后的样式、布局和绘制由浏览器处理。这条路线连接 [DOM events / DOM事件](../browser-apis/dom-manipulation-and-events.md)、React state 与[浏览器渲染](../browser/browser-basics.md)；它不保证每次调用 setter 都对应一次绘制。
+
+~~~mermaid
+flowchart LR
+    A[User input event] --> B[Handler requests state update]
+    B --> C[Next render reads queued state]
+    C --> D[React matches elements and state identity]
+    D --> E[Commit necessary host changes]
+    E --> F[Browser updates pixels when needed]
+    B -. current handler keeps its render snapshot .-> C
+~~~
+
 
 ## What is JSX, and what does it compile to? / JSX是什么，最终会编译成什么？
 
@@ -46,31 +57,7 @@ An Effect runs after a commit; React runs its previous cleanup before setting up
 
 ## What does an Error Boundary catch? / Error Boundary能捕获哪些错误？
 
-**Core answer / 核心回答：** A React Error Boundary is a class component that displays fallback UI for errors thrown while rendering descendants, in their constructors, or in their React lifecycle methods. It does not catch event-handler errors, ordinary asynchronous callbacks, server-rendering errors, or errors thrown by the boundary itself. One documented exception is an error thrown inside the function passed to the startTransition function returned by useTransition (including a rejected Promise returned by that function). / React Error Boundary 是类组件，可在后代树渲染、构造函数或 React 生命周期方法抛错时显示备用 UI。它不会捕获事件处理器、普通异步回调、服务端渲染或边界自身抛出的错误。一个文档列出的例外是 useTransition 返回的 startTransition 所执行函数抛错（包括该函数返回的 rejected Promise）。
-
-~~~jsx
-import React from "react";
-
-class ErrorBoundary extends React.Component {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, info) {
-    console.error(error, info.componentStack);
-  }
-
-  render() {
-    return this.state.hasError
-      ? <p>Something went wrong.</p>
-      : this.props.children;
-  }
-}
-~~~
-
-The built-in React boundary API is class-based. A library can make boundary composition easier, but try/catch around JSX does not catch rendering failures.
+**Core answer / 核心回答：** An Error Boundary can show fallback UI for errors in descendant rendering and React lifecycles, with documented exceptions such as event-handler and ordinary async errors. The exact scope, Transition exception, and class example are in [Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？](./react-error-boundaries.md). / Error Boundary 可为后代渲染和 React 生命周期中的错误显示备用 UI，但事件处理器和普通异步错误等情况不在其范围内。完整范围、Transition 例外和类组件示例见[React Error Boundary能恢复哪些错误？](./react-error-boundaries.md).
 
 ## Is setState synchronous? / setState是同步还是异步？
 
@@ -88,49 +75,10 @@ Use an updater when the next value depends on the previous value. Read the new s
 
 ## How does React Router work? / React Router如何工作？
 
-**Core answer / 核心回答：** React Router matches the current location to a route and renders the configured UI. The example below uses the React Router v6 declarative API; current releases also offer data and framework modes with additional APIs. A browser-history router needs the host to serve the application entry point for client-side paths. / React Router 将当前地址匹配到路由并渲染对应界面。下面的例子使用 React Router v6 声明式 API；当前版本还提供数据模式和框架模式。浏览器历史路由要求服务器将客户端路径回退到应用入口文件。
-
-~~~jsx
-import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/posts/:postId" element={<Post />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
-
-function Home() {
-  return <h1>Home</h1>;
-}
-
-function Post() {
-  const { postId } = useParams();
-  return <h1>Post {postId}</h1>;
-}
-~~~
-
-- **BrowserRouter** uses the browser History API and clean paths.
-- **HashRouter** stores the route after the URL hash; it can fit hosting where server fallback configuration is unavailable.
-- **MemoryRouter** stores location in memory and is useful in tests or non-browser contexts.
-
-Use Link for navigation users can follow and useNavigate for programmatic navigation. Route API and package imports vary by React Router version; follow the version installed by the project.
+**Core answer / 核心回答：** React Router matches a location to a route, then renders its configured UI. The v6 declarative example, router choices, hosting fallback, and SPA/MPA tradeoffs are in [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](./react-routing-and-navigation.md). / React Router 将地址匹配到路由并渲染对应界面。v6 声明式示例、路由器选择、托管回退及 SPA/MPA 权衡见[React路由如何映射 URL 并选择导航模型？](./react-routing-and-navigation.md).
 
 ## What is the difference between an SPA and an MPA? / SPA和MPA有什么区别？
 
-**Core answer / 核心回答：** An MPA navigation requests another document; an SPA typically keeps one document loaded and updates route content in the client. Server rendering and client navigation can be combined, so many current applications use a hybrid model. Choose based on content delivery, interaction, accessibility, and operational needs rather than the label alone. / MPA 导航会请求另一个文档；SPA 通常保留一个文档并在客户端更新路由内容。服务端渲染和客户端导航可以组合，因此许多现代应用采用混合模式。应根据内容交付、交互、无障碍和运维需求选择，而非只看标签。
+**Core answer / 核心回答：** An SPA usually updates route content in one loaded document; an MPA requests another document. Rendering modes can be combined, so evaluate the actual delivery and operating needs. The comparison table and navigation example are in [the React routing question](./react-routing-and-navigation.md). / SPA 通常在已加载的文档中更新路由内容；MPA 会请求另一个文档。渲染模式可以组合，应结合内容交付和运维需求判断。比较表和路由示例见[React 路由问题](./react-routing-and-navigation.md).
 
-| Aspect | SPA pattern | MPA pattern |
-|---|---|---|
-| Navigation | Client router updates the current document | Browser requests another document |
-| State | Client state can persist between route changes | State often needs URL, storage, or server persistence |
-| Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
-| SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
-
-**See also:** [Next.js / Next.js开发](./next-js.md) for router-specific rendering; [Advanced React / React进阶](./advanced-react.md) for Hooks, refs, and component composition.
-
-**Sources checked 2026-10-15:** [React: Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform), [React: Render and Commit](https://react.dev/learn/render-and-commit), [StrictMode](https://react.dev/reference/react/StrictMode), [Component and lifecycle methods](https://react.dev/reference/react/Component), [Error Boundary caveats](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary), [useTransition Error Boundary example](https://react.dev/reference/react/useTransition#displaying-an-error-to-users-with-an-error-boundary), [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Queueing State Updates](https://react.dev/learn/queueing-a-series-of-state-updates), [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
+**Sources checked 2026-10-15:** [React: Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform), [React: Render and Commit](https://react.dev/learn/render-and-commit), [StrictMode](https://react.dev/reference/react/StrictMode), [Component and lifecycle methods](https://react.dev/reference/react/Component), [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot), [Queueing State Updates](https://react.dev/learn/queueing-a-series-of-state-updates).
