@@ -85,15 +85,71 @@ specificity 按 <code>(ID, 类/属性/伪类, 元素/伪元素)</code> 从左向
 .status { color: #8a3b00; }
 ~~~
 
-<code>span</code> 自己的 <code>color</code> 声明胜出，并继承父级字体；父级 <code>margin</code> 不会继承。<code>color</code>、<code>font-family</code>、<code>line-height</code> 通常会继承；<code>width</code>、<code>padding</code>、<code>margin</code>、<code>display</code> 和 <code>position</code> 默认不会继承，具体仍以属性定义为准。父链接产生的下划线也可能沿后代文本绘制；对子 <code>em</code> 设置 <code>text-decoration: none</code> 不会抹掉由链接建立的装饰，应修改建立装饰的元素规则。
+<code>span</code> 自己的 <code>color</code> 声明胜出，并继承父级字体；父级 <code>margin</code> 不会继承。<code>color</code>、<code>font-family</code>、<code>line-height</code>（行高）通常会继承；<code>width</code>、<code>padding</code>、<code>margin</code>、<code>display</code> 和 <code>position</code> 默认不会继承，具体仍以属性定义为准。父链接产生的下划线也可能沿后代文本绘制；对子 <code>em</code> 设置 <code>text-decoration: none</code> 不会抹掉由链接建立的装饰，应修改建立装饰的元素规则。
+
+## 文本元素怎样表达不同含义？
+
+文档标题用 <code>h1</code>–<code>h6</code> 建立层级，段落用 <code>p</code> 表达完整文字；只有换行本身有意义时才用 <code>br</code>，<code>hr</code> 表示段落级内容的主题转换。<code>strong</code> 表示重要性，<code>b</code> 只是引起注意；<code>em</code> 表示语气重读，<code>i</code> 表示另一种语调或技术词。<code>del</code>/<code>ins</code> 标记删除和插入的内容，<code>s</code> 表示内容已不准确，<code>u</code> 标记非文本注记。CSS 可以改变这些元素的外观，不能替换它们表达的文档语义。
+
+## 报表文字和背景样式怎样组合？
+
+<code>font-family</code>（字体族）按书写顺序尝试字体，末尾应给出 <code>sans-serif</code>、<code>serif</code> 等通用族作为回退。<code>text-align</code>（文本对齐）对齐块内行文字，<code>text-indent</code>（首行缩进）设置段落首行的缩进；它们不会替代文本语义。只想调整已有字体的一个方面时，使用对应长属性，例如 <code>font-weight</code>（字重），不要顺手覆盖其他设置。
+
+> [!info] 字体简写会重置未写出的相关属性
+> <code>font</code>（字体简写）可在一条声明中设置样式、字重、字号、行高和字体族等。它也会把未显式给值的相关字体长属性重置为初始值；例如新声明可能把之前的斜体恢复为 <code>normal</code>。需要保留其他字体设置时，改用目标长属性。
+
+~~~css
+.report-title {
+  font: 600 1.25rem/1.3 system-ui, sans-serif;
+}
+
+.report-summary {
+  font-size: 1rem;
+  line-height: 1.5;
+  text-indent: 1em;
+}
+
+.report-total {
+  text-align: end;
+  font-weight: 700;
+}
+~~~
+
+> [!example] 无单位行高与长度行高的继承
+> 父元素字号为 `20px` 时，`line-height: 1.5` 作为数字继承；`12px` 子元素据此得到 `12 × 1.5 = 18px` 行高。若父元素写 `line-height: 30px`，子元素继承的是 `30px` 长度，字号即使降到 `12px`，行高仍是 `30px`。
+
+<code>background-image</code>（背景图像）既可用 <code>url()</code> 指向图片，也可用 <code>linear-gradient()</code>（线性渐变）生成渐变；两者都是图像层，绘制在 <code>background-color</code>（背景色）上方。背景色能在图片透明处露出，也能为图片加载失败提供底色。报表中的状态文字仍应直接保留在内容里，不能只靠背景颜色或渐变表达状态。
+
+background-size（背景尺寸）用 <code>cover</code> 等比缩放并覆盖整个背景区，因此可能裁掉图片边缘；<code>contain</code> 等比缩放以完整放入背景区，因此可能留下空白。简写中的斜线分隔位置和尺寸；同时，未写出的背景子属性会重置为初始值：
+
+~~~css
+.report-cover {
+  background: center / cover no-repeat url("/assets/report-cover.jpg");
+}
+~~~
+
+如果只想调整某一个背景属性，使用对应长属性，避免简写顺带重置其他图层设置。
+
+~~~css
+.report-status {
+  color: #704000;
+  background-color: #fff3d6;
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 35%), transparent);
+}
+~~~
 
 属性选择器例如 <code>[data-state="warning"]</code> 可把显式状态映射到样式；扁平、可维护的类选择器通常比层层增加 specificity 更容易覆盖。CSS-in-JS 生成类名也仍参与浏览器级联。
 
 内联关键 CSS 有时能让首屏关键样式不等待外部样式表，但会增加 HTML 字节并可能与后续 CSS 重复；是否值得应看实际载入路径和测量结果，而不是把它理解成选择器加速技巧，参见[网页性能测量与诊断](../performance/performance-metrics-and-analysis.md)。
 
 > [!info]- 来源
+> - 标题、段落、换行、主题分隔、强调与修订文本的 HTML 语义：WHATWG HTML Living Standard（2026-11-05 更新），[Sections](https://html.spec.whatwg.org/multipage/sections.html)、[Grouping content](https://html.spec.whatwg.org/multipage/grouping-content.html)、[Text-level semantics](https://html.spec.whatwg.org/multipage/text-level-semantics.html)，检查于 2026-11-06。
 > - 过滤、级联来源、元素附加样式、层顺序及 specificity 之前的比较：W3C CSS Cascading and Inheritance Level 5，§5–6，Candidate Recommendation Snapshot（2022-01-13，最新正式发布快照）：[CSS Cascade Level 5](https://www.w3.org/TR/css-cascade-5/)，检查于 2026-11-06。
 > - <code>@scope</code> 的作用域接近度：W3C CSS Cascading and Inheritance Level 6，§2，Working Draft（2024-09-06；仍是差异草案，基础级联以 Level 5 为参考）：[CSS Cascade Level 6](https://www.w3.org/TR/css-cascade-6/)，检查于 2026-11-06。
 > - specificity 与结构伪类：W3C Selectors Level 4，§13.3–13.4、§15，Working Draft（2026-01-22）：[Selectors Level 4](https://www.w3.org/TR/selectors-4/)，检查于 2026-11-06。
 > - 生成伪元素：W3C CSS Pseudo-Elements Level 4，§4，Working Draft（2025-06-27）：[CSS Pseudo-Elements](https://www.w3.org/TR/css-pseudo-4/#generated-content)，检查于 2026-11-06。
 > - 文本装饰传播：W3C CSS Text Decoration Level 3，§2，Candidate Recommendation Draft（2022-05-05）：[CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/#line-decoration)，检查于 2026-11-06。
+> - 字体属性、字体族回退和简写重置规则：W3C CSS Fonts Level 4，§2，Working Draft（2026-11-04）：[CSS Fonts](https://www.w3.org/TR/css-fonts-4/)，检查于 2026-11-06。
+> - 无单位与长度 `line-height` 的计算和继承：W3C CSS Inline Layout Level 3，§5.1，Working Draft（2024-12-18）：[CSS Inline Layout](https://www.w3.org/TR/css-inline-3/)，检查于 2026-11-06。
+> - 背景层、背景色、图像与简写：W3C CSS Backgrounds and Borders Level 3，§2.1–2.10、§3.9，Candidate Recommendation Draft（2024-03-11）：[CSS Backgrounds and Borders](https://www.w3.org/TR/css-backgrounds-3/)，检查于 2026-11-06。
+> - 状态不只用颜色表达：W3C Web Content Accessibility Guidelines 2.2，Success Criterion 1.4.1，Recommendation（2024-12-12）：[Use of Color](https://www.w3.org/TR/WCAG22/#use-of-color)，检查于 2026-11-06。

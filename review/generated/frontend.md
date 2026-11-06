@@ -1088,7 +1088,7 @@ items.forEach((item, index) => {
 });
 ~~~
 
-第二种顺序消除了显眼的交替读写，允许浏览器把后续更新合并处理；它不保证整段代码只发生一次布局，也不保证所有数据和页面上都更快。先确认页面确有强制刷新，再用性能录制定位写入与读取的位置。不同几何 API 返回的盒子与坐标系不同，按问题选择，见[哪个 DOM 几何 API 能回答哪种测量问题？](#24.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F)。
+第二种顺序消除了显眼的交替读写，允许浏览器把后续更新合并处理；它不保证整段代码只发生一次布局，也不保证所有数据和页面上都更快。先确认页面确有强制刷新，再用性能录制定位写入与读取的位置。不同几何 API 返回的盒子与坐标系不同，按问题选择，见[哪个 DOM 几何 API 能回答哪种测量问题？](#24.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。
 
 ### 引擎怎样实现这些步骤？
 
@@ -1154,7 +1154,7 @@ field data（现场数据）来自实际用户访问，包含设备、网络、�
 
 打开 Performance 或 Lighthouse 录制后，先确定本次视口中的实际 LCP 元素，再看它的资源从哪里发现、何时开始请求、何时响应、何时绘制。不同设备视口、URL 参数和缓存可能让同一路由的 LCP 元素不同，因此不要只按本机一次录制假定全体用户看见同一内容。若 LCP 是图片，不要对它使用延迟加载；为图片或嵌入内容声明尺寸可以提前留出空间，减少后续内容位移。
 
-只有录制显示某个非关键图片或脚本与关键路径竞争时，才考虑延后它。若阻塞样式表确实拖慢 LCP，可以比较内联首屏必需样式是否有收益；代价是 HTML 变大，而且首屏样式不能像独立样式表那样单独复用缓存。服务端渲染或静态输出可能让内容更早进入 HTML，但不会自动保证 LCP 或 INP 良好。HTTP 新鲜度、缓存验证与网络请求时序见[HTTP 协议与缓存](../../engineering-foundations/networking/http-protocols-and-websockets.md)；图片加载策略见[如何延迟加载图片而不损害 LCP 或布局稳定性？](#25.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F)。
+只有录制显示某个非关键图片或脚本与关键路径竞争时，才考虑延后它。若阻塞样式表确实拖慢 LCP，可以比较内联首屏必需样式是否有收益；代价是 HTML 变大，而且首屏样式不能像独立样式表那样单独复用缓存。服务端渲染或静态输出可能让内容更早进入 HTML，但不会自动保证 LCP 或 INP 良好。HTTP 新鲜度、缓存验证与网络请求时序见[HTTP 协议与缓存](../../engineering-foundations/networking/http-protocols-and-websockets.md)；图片加载策略见[如何延迟加载图片而不损害 LCP 或布局稳定性？](#25.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)。
 
 ### 大列表要先分辨数据成本与 DOM 成本
 
@@ -1562,18 +1562,74 @@ specificity 按 <code>(ID, 类/属性/伪类, 元素/伪元素)</code> 从左向
 .status { color: #8a3b00; }
 ~~~
 
-<code>span</code> 自己的 <code>color</code> 声明胜出，并继承父级字体；父级 <code>margin</code> 不会继承。<code>color</code>、<code>font-family</code>、<code>line-height</code> 通常会继承；<code>width</code>、<code>padding</code>、<code>margin</code>、<code>display</code> 和 <code>position</code> 默认不会继承，具体仍以属性定义为准。父链接产生的下划线也可能沿后代文本绘制；对子 <code>em</code> 设置 <code>text-decoration: none</code> 不会抹掉由链接建立的装饰，应修改建立装饰的元素规则。
+<code>span</code> 自己的 <code>color</code> 声明胜出，并继承父级字体；父级 <code>margin</code> 不会继承。<code>color</code>、<code>font-family</code>、<code>line-height</code>（行高）通常会继承；<code>width</code>、<code>padding</code>、<code>margin</code>、<code>display</code> 和 <code>position</code> 默认不会继承，具体仍以属性定义为准。父链接产生的下划线也可能沿后代文本绘制；对子 <code>em</code> 设置 <code>text-decoration: none</code> 不会抹掉由链接建立的装饰，应修改建立装饰的元素规则。
+
+### 文本元素怎样表达不同含义？
+
+文档标题用 <code>h1</code>–<code>h6</code> 建立层级，段落用 <code>p</code> 表达完整文字；只有换行本身有意义时才用 <code>br</code>，<code>hr</code> 表示段落级内容的主题转换。<code>strong</code> 表示重要性，<code>b</code> 只是引起注意；<code>em</code> 表示语气重读，<code>i</code> 表示另一种语调或技术词。<code>del</code>/<code>ins</code> 标记删除和插入的内容，<code>s</code> 表示内容已不准确，<code>u</code> 标记非文本注记。CSS 可以改变这些元素的外观，不能替换它们表达的文档语义。
+
+### 报表文字和背景样式怎样组合？
+
+<code>font-family</code>（字体族）按书写顺序尝试字体，末尾应给出 <code>sans-serif</code>、<code>serif</code> 等通用族作为回退。<code>text-align</code>（文本对齐）对齐块内行文字，<code>text-indent</code>（首行缩进）设置段落首行的缩进；它们不会替代文本语义。只想调整已有字体的一个方面时，使用对应长属性，例如 <code>font-weight</code>（字重），不要顺手覆盖其他设置。
+
+> [!info] 字体简写会重置未写出的相关属性
+> <code>font</code>（字体简写）可在一条声明中设置样式、字重、字号、行高和字体族等。它也会把未显式给值的相关字体长属性重置为初始值；例如新声明可能把之前的斜体恢复为 <code>normal</code>。需要保留其他字体设置时，改用目标长属性。
+
+~~~css
+.report-title {
+  font: 600 1.25rem/1.3 system-ui, sans-serif;
+}
+
+.report-summary {
+  font-size: 1rem;
+  line-height: 1.5;
+  text-indent: 1em;
+}
+
+.report-total {
+  text-align: end;
+  font-weight: 700;
+}
+~~~
+
+> [!example] 无单位行高与长度行高的继承
+> 父元素字号为 `20px` 时，`line-height: 1.5` 作为数字继承；`12px` 子元素据此得到 `12 × 1.5 = 18px` 行高。若父元素写 `line-height: 30px`，子元素继承的是 `30px` 长度，字号即使降到 `12px`，行高仍是 `30px`。
+
+<code>background-image</code>（背景图像）既可用 <code>url()</code> 指向图片，也可用 <code>linear-gradient()</code>（线性渐变）生成渐变；两者都是图像层，绘制在 <code>background-color</code>（背景色）上方。背景色能在图片透明处露出，也能为图片加载失败提供底色。报表中的状态文字仍应直接保留在内容里，不能只靠背景颜色或渐变表达状态。
+
+background-size（背景尺寸）用 <code>cover</code> 等比缩放并覆盖整个背景区，因此可能裁掉图片边缘；<code>contain</code> 等比缩放以完整放入背景区，因此可能留下空白。简写中的斜线分隔位置和尺寸；同时，未写出的背景子属性会重置为初始值：
+
+~~~css
+.report-cover {
+  background: center / cover no-repeat url("/assets/report-cover.jpg");
+}
+~~~
+
+如果只想调整某一个背景属性，使用对应长属性，避免简写顺带重置其他图层设置。
+
+~~~css
+.report-status {
+  color: #704000;
+  background-color: #fff3d6;
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 35%), transparent);
+}
+~~~
 
 属性选择器例如 <code>[data-state="warning"]</code> 可把显式状态映射到样式；扁平、可维护的类选择器通常比层层增加 specificity 更容易覆盖。CSS-in-JS 生成类名也仍参与浏览器级联。
 
 内联关键 CSS 有时能让首屏关键样式不等待外部样式表，但会增加 HTML 字节并可能与后续 CSS 重复；是否值得应看实际载入路径和测量结果，而不是把它理解成选择器加速技巧，参见[网页性能测量与诊断](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源
+> - 标题、段落、换行、主题分隔、强调与修订文本的 HTML 语义：WHATWG HTML Living Standard（2026-11-05 更新），[Sections](https://html.spec.whatwg.org/multipage/sections.html)、[Grouping content](https://html.spec.whatwg.org/multipage/grouping-content.html)、[Text-level semantics](https://html.spec.whatwg.org/multipage/text-level-semantics.html)，检查于 2026-11-06。
 > - 过滤、级联来源、元素附加样式、层顺序及 specificity 之前的比较：W3C CSS Cascading and Inheritance Level 5，§5–6，Candidate Recommendation Snapshot（2022-01-13，最新正式发布快照）：[CSS Cascade Level 5](https://www.w3.org/TR/css-cascade-5/)，检查于 2026-11-06。
 > - <code>@scope</code> 的作用域接近度：W3C CSS Cascading and Inheritance Level 6，§2，Working Draft（2024-09-06；仍是差异草案，基础级联以 Level 5 为参考）：[CSS Cascade Level 6](https://www.w3.org/TR/css-cascade-6/)，检查于 2026-11-06。
 > - specificity 与结构伪类：W3C Selectors Level 4，§13.3–13.4、§15，Working Draft（2026-01-22）：[Selectors Level 4](https://www.w3.org/TR/selectors-4/)，检查于 2026-11-06。
 > - 生成伪元素：W3C CSS Pseudo-Elements Level 4，§4，Working Draft（2025-06-27）：[CSS Pseudo-Elements](https://www.w3.org/TR/css-pseudo-4/#generated-content)，检查于 2026-11-06。
 > - 文本装饰传播：W3C CSS Text Decoration Level 3，§2，Candidate Recommendation Draft（2022-05-05）：[CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/#line-decoration)，检查于 2026-11-06。
+> - 字体属性、字体族回退和简写重置规则：W3C CSS Fonts Level 4，§2，Working Draft（2026-11-04）：[CSS Fonts](https://www.w3.org/TR/css-fonts-4/)，检查于 2026-11-06。
+> - 无单位与长度 `line-height` 的计算和继承：W3C CSS Inline Layout Level 3，§5.1，Working Draft（2024-12-18）：[CSS Inline Layout](https://www.w3.org/TR/css-inline-3/)，检查于 2026-11-06。
+> - 背景层、背景色、图像与简写：W3C CSS Backgrounds and Borders Level 3，§2.1–2.10、§3.9，Candidate Recommendation Draft（2024-03-11）：[CSS Backgrounds and Borders](https://www.w3.org/TR/css-backgrounds-3/)，检查于 2026-11-06。
+> - 状态不只用颜色表达：W3C Web Content Accessibility Guidelines 2.2，Success Criterion 1.4.1，Recommendation（2024-12-12）：[Use of Color](https://www.w3.org/TR/WCAG22/#use-of-color)，检查于 2026-11-06。
 ## 17. CSS 如何计算元素盒子的尺寸？
 
 先确定声明尺寸量到哪里，再把 padding、border 和 margin 加进布局预算。CSS 盒子从内到外依次是 content、padding、border、margin；<code>box-sizing</code> 决定声明宽高包含哪些边缘，但 margin 总是在声明尺寸之外。
@@ -1626,9 +1682,9 @@ specificity 按 <code>(ID, 类/属性/伪类, 元素/伪元素)</code> 从左向
 
 装饰性箭头可以对辅助技术隐藏；若箭头表达开合状态或方向，还要通过控件文字或其他语义暴露该信息。
 
-要看 float 和块之间的流式边界，请继续读[块格式化上下文如何约束浮动和外边距](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)。居中和浮层位置则分别见[Flex/Grid 对齐](#20.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)与[定位和堆叠](#21.%20How%20do%20CSS%20positioning%20and%20stacking%20determine%20where%20an%20element%20appears?%20/%20CSS%20%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%A0%86%E5%8F%A0%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%85%83%E7%B4%A0%E7%9A%84%E6%98%BE%E7%A4%BA%E4%BD%8D%E7%BD%AE%EF%BC%9F)。
+要看 float 和块之间的流式边界，请继续读[块格式化上下文如何约束浮动和外边距](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)。居中和浮层位置则分别见[Flex/Grid 对齐](#20.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)与[定位和堆叠](#21.%20%E5%AE%9A%E4%BD%8D%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%E5%85%83%E7%B4%A0%E4%BD%8D%E7%BD%AE%E4%B8%8E%E5%89%8D%E5%90%8E%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
 
-CSS 声明的盒尺寸和脚本读取到的几何值是不同问题：例如 <code>offsetWidth</code> 包含边框、通常还包含占位滚动条，但不含 margin，且忽略变换；各 API 的测量边界见 [DOM 几何 API](#24.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F)。
+CSS 声明的盒尺寸和脚本读取到的几何值是不同问题：例如 <code>offsetWidth</code> 包含边框、通常还包含占位滚动条，但不含 margin，且忽略变换；各 API 的测量边界见 [DOM 几何 API](#24.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。
 
 > [!info]- 来源
 > - <code>box-sizing</code> 以及 content-box / border-box 边缘：W3C CSS Box Sizing Module Level 3，§3.3，Working Draft（2026-09-04）：[CSS Sizing Level 3](https://www.w3.org/TR/css-sizing-3/#box-sizing)，检查于 2026-11-06。该模块为工作草案；这里的常见盒边缘规则也与 CSS 2.1/2.2 兼容。
@@ -1959,7 +2015,7 @@ block formatting context（BFC，块格式化上下文）是流式布局的一�
 
 <code>place-items: center</code> 将 Grid 项目在格内水平和垂直对齐；Flex 版分别沿主轴和交叉轴对齐。需要覆盖整个区域时，让容器本身拿到预期高度，例如由布局轨道或父级分配，而不是给子项写固定尺寸。
 
-居中浮层会离开普通流，需要先确定它的包含块，再用定位和 transform 让未知尺寸自身回移；规则见[CSS 定位与堆叠](#21.%20How%20do%20CSS%20positioning%20and%20stacking%20determine%20where%20an%20element%20appears?%20/%20CSS%20%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%A0%86%E5%8F%A0%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%85%83%E7%B4%A0%E7%9A%84%E6%98%BE%E7%A4%BA%E4%BD%8D%E7%BD%AE%EF%BC%9F)。本节讨论正常流居中，浮层的位置由定位机制决定。
+居中浮层会离开普通流，需要先确定它的包含块，再用定位和 transform 让未知尺寸自身回移；规则见[CSS 定位与堆叠](#21.%20%E5%AE%9A%E4%BD%8D%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%E5%85%83%E7%B4%A0%E4%BD%8D%E7%BD%AE%E4%B8%8E%E5%89%8D%E5%90%8E%E9%A1%BA%E5%BA%8F%EF%BC%9F)。本节讨论正常流居中，浮层的位置由定位机制决定。
 
 ### 看懂旧布局，不把它当新布局首选
 
@@ -1985,380 +2041,766 @@ block formatting context（BFC，块格式化上下文）是流式布局的一�
 > - Grid 轨道与自动最小轨道尺寸：W3C CSS Grid Layout Level 2，§6.6、§12，Candidate Recommendation Draft（2025-03-26）：[CSS Grid Level 2](https://www.w3.org/TR/css-grid-2/#min-size-auto)，检查于 2026-11-06。
 > - Flex 项目自动最小尺寸与 overflow 值的关系：W3C CSS Overflow Level 3，§3.1，Working Draft（2025-10-07）：[CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/#overflow-properties)，检查于 2026-11-06。
 > - Grid/Flex 视觉顺序与格式化模型：W3C CSS Display Module Level 3，§2（Candidate Recommendation Draft，2026-06-05）：[CSS Display Level 3](https://www.w3.org/TR/css-display-3/)，检查于 2026-11-06。
-## 21. How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？
+## 21. 定位如何确定元素位置与前后顺序？
 
-Positioning answers where a box is anchored and whether it occupies normal-flow space; stacking contexts answer which painted group is in front. `relative` and `sticky` preserve the element's flow slot, while `absolute` and `fixed` remove it from normal flow. A large `z-index` only competes inside its stacking context, so coordinates, flow, and paint order must be debugged separately. / 定位决定盒子的锚点及其是否占据普通流空间；堆叠上下文决定绘制的分组谁在前。`relative` 和 `sticky` 保留元素的流位置，`absolute` 和 `fixed` 则脱离普通流。很大的 `z-index` 也只在自身堆叠上下文内参与排序，因此应分别排查坐标、文档流和绘制顺序。
+报表卡片里的状态徽标要贴住卡片右上角，弹窗要位于视口中央，固定工具条则要在滚动时留在可视区域。定位先回答盒子相对哪个参照物放置、是否保留原来的流位置；stacking context（堆叠上下文）再决定一组盒子如何绘制到前后层。
 
-### Position values
+> [!info] 本页所说的几个边界
+> normal flow（普通流）是文档中块级、行内和流式布局的排版过程。containing block（包含块）为定位尺寸和偏移提供参照。inset properties（偏移属性）包括逻辑方向的 `inset-block-start`、`inset-inline-end`，也包括物理方向的 `top`、`right`、`bottom`、`left`。
 
-| Value | In normal flow? | Position reference | Typical scroll behavior |
-|---|---|---|---|
-| `static` | Yes | Normal flow; inset offsets do not apply | Moves with document |
-| `relative` | Yes; original space stays reserved | Its normal-flow position | Moves with document |
-| `absolute` | No | Nearest ancestor establishing an absolute-position containing block; otherwise initial containing block | Follows that containing block |
-| `fixed` | No | Nearest fixed-position containing block, often the viewport | Stays at that containing block as document scrolls |
-| `sticky` | Yes | Nearest scrollport in the inset axis, constrained by its containing block | Moves until constrained by sticky inset |
+### position（定位方式）值分别保留什么？
 
-`relative` offsets the box visually without moving siblings. It also establishes an absolute-position containing block for descendants:
+| `position` | 普通流中的位置 | 偏移参照 | 常见滚动表现 |
+| --- | --- | --- | --- |
+| `static`（静态） | 保留 | 普通流；`top` 等偏移不生效 | 随文档移动 |
+| `relative`（相对定位） | 保留原位置 | 元素自身原来的流位置 | 随文档移动；可为绝对定位后代建立包含块 |
+| `absolute`（绝对定位） | 不占原流位置 | 最近建立绝对定位包含块的祖先；若不存在则用初始包含块 | 随该包含块移动 |
+| `fixed`（固定定位） | 不占原流位置 | 最近建立固定定位包含块的祖先；通常是视口 | 相对该包含块固定 |
+| `sticky`（粘性定位） | 保留原位置 | 最近滚动容器的滚动视口，并受自身包含块约束 | 到达指定 inset 后贴住滚动视口边缘 |
 
-```css
-.card { position: relative; }
-.card__badge { position: absolute; inset-block-start: 0; inset-inline-end: 0; }
-```
+`absolute` 的常见参照是最近的非 `static` 定位祖先的 padding box（内边距盒）。transform（变换）、perspective（透视）、filter（滤镜）和 will-change（即将变化提示）的部分值也可能建立包含块。`contain: layout` 与 `contain: paint` 都会为绝对和固定定位后代建立包含块；它们同时建立堆叠上下文，`paint` 还会裁切内容。不要只看属性名称，应检查建立了哪种包含块以及随之产生的裁切和层叠效果。
 
-An ancestor with non-`static` positioning commonly establishes the absolute containing block. Other properties, including some transforms and containment values, can establish containing blocks too. A fixed element usually tracks the viewport, but an ancestor with transform, perspective, filter, or relevant containment/`will-change` values can establish a fixed-position containing block; a supposedly fixed descendant may then move with that ancestor.
+### 把徽标放到卡片右上角
 
-`sticky` remains in flow and sticks relative to the nearest scrollport when an inset such as `top: 0` is set. An ancestor's overflow can establish the relevant scroll container even when it does not visibly scroll, so inspect the scroll-container chain if sticky behavior differs from expectation. The containing block limits how far the sticky box can move.
+以下卡片没有 padding 或 border，因此默认 `content-box` 与其 padding box 都是 `320 × 180px`；徽标为 `32 × 24px`，距上、右边缘各 `8px`：
 
-### Stacking contexts and `z-index`
+~~~css
+.report-card {
+  position: relative;
+  width: 320px;
+  height: 180px;
+}
 
-Within a stacking context, stacking rules order its child contexts. A descendant cannot use a larger `z-index` to escape the ancestor context and compete directly with an outside sibling.
+.report-card__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 24px;
+}
+~~~
 
-```css
-.shell { position: relative; z-index: 1; }
+> [!example] 用包含块演算坐标
+> 卡片 padding box 左上角为 `(0, 0)`。徽标左坐标为 `320 − 8 − 32 = 280px`，上坐标为 `8px`，所以其左上角是 `(280, 8)`。徽标脱离普通流，卡片中的标题仍按自己的流位置排版。
+
+~~~text
+卡片 padding box：320 × 180
+┌────────────────────────────────────────┐
+│                                  ┌─────┐│  top = 8
+│                                  │徽标 ││  right = 8
+│                                  └─────┘│
+└────────────────────────────────────────┘
+                          x = 280
+~~~
+
+### 让未知尺寸的弹窗居中
+
+遮罩层可覆盖视口并用 Grid（网格布局）对齐弹窗。视口为 `1120 × 700px`，弹窗为 `320 × 160px` 时，视口中心是 `(560, 350)`；弹窗左上角因此是 `(560 − 160, 350 − 80) = (400, 270)`。
+
+~~~css
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.dialog {
+  width: 320px;
+  height: 160px;
+}
+~~~
+
+> [!example] 同一中心点用偏移表示
+> 若弹窗必须以 `position: absolute` 定位，可以令左上角在包含块的 `50% 50%`，再用 `translate(-50%, -50%)` 把自身宽高的一半移回去。使用 `fixed` 时，应检查祖先有没有建立固定定位包含块的属性；这时参照物可能不再是视口。
+
+### sticky 为什么没有贴住？
+
+`sticky` 需要在要粘住的轴上设置非 `auto` inset，例如 `top: 0`。它相对最近的滚动视口移动，并且不能超出其包含块。祖先的 `overflow` 可能建立滚动容器，即使那个祖先当前没有明显滚动条；因此应沿祖先链确认实际滚动容器及可用空间。
+
+### z-index 为什么仍然在下面？
+
+`z-index` 在当前堆叠上下文内排序。子元素不能只靠更大的数值跳出祖先堆叠上下文与外部兄弟直接比较：
+
+~~~css
+.shell  { position: relative; z-index: 1; }
 .dialog { position: absolute; z-index: 9999; }
-.other { position: relative; z-index: 2; }
-```
+.other  { position: relative; z-index: 2; }
+~~~
 
-Here `.dialog` remains inside `.shell`'s stacking context; the outside `.other` context can paint above the whole shell. Raise the relevant ancestor's stacking position or move the dialog to a context that can compete at the needed level.
+`.dialog` 仍属于 `.shell` 这一绘制组；`.other` 的组排在 `.shell` 上面时，里面的 `9999` 不会改变两组之间的顺序。应调整实际参与比较的祖先层级，或把弹窗放入能与目标组同层比较的结构。
 
-A positioned box with a non-`auto` `z-index` creates a stacking context. Fixed and sticky boxes also create one. Other common context creators include opacity below 1, transforms, filters, isolation, and some containment or `will-change` values. Check the property's own rules before assuming a stacking or containing-block effect.
+| 观察到的问题 | 先检查 |
+| --- | --- |
+| 兄弟节点被推开或覆盖 | 普通流位置、绝对定位包含块 |
+| 高 `z-index` 元素仍被遮住 | 最近共同堆叠上下文及其层级 |
+| 浮动没有计入父元素高度 | [BFC 与流式布局边界](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) |
 
-| Question | Relevant model |
-|---|---|
-| Why did this sibling move or overlap? | Normal flow and containing blocks |
-| Why did this large z-index stay underneath? | Stacking-context hierarchy |
-| Why did a float not increase its parent's height? | Block formatting context; see [BFC and flow containment](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) |
+> [!info] 常见堆叠上下文创建条件
+> 定位元素配合非 `auto` 的 `z-index`、`fixed`、`sticky`、小于 `1` 的 `opacity`、transform、filter、`isolation: isolate` 及部分 containment / `will-change` 值都可能创建堆叠上下文。一个属性是否同时建立包含块要分别看规范规则。
 
-**Specification:** [CSS Positioned Layout Level 3](https://www.w3.org/TR/css-position-3/) defines position, insets, sticky scrollports, and stacking behavior. See [BFC and flow containment](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) for the separate flow boundary; [CSS visibility](#22.%20What%20changes%20when%20an%20element%20is%20visually%20hidden%20with%20CSS?%20/%20%E7%94%A8%20CSS%20%E9%9A%90%E8%97%8F%E5%85%83%E7%B4%A0%E6%97%B6%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88%E5%8F%98%E5%8C%96%EF%BC%9F) for hidden-state effects; [CSS transitions and animations](#23.%20When%20should%20CSS%20use%20a%20transition%20or%20a%20keyframe%20animation?%20/%20CSS%20%E5%BA%94%E5%9C%A8%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20transition%20%E6%88%96%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F) for motion and profiling; and [rendering pipeline and forced layout](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) when a style change affects layout or paint.
-## 22. What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？
+> [!info]- 来源
+> - 定位、包含块、sticky 滚动视口和堆叠：W3C CSS Positioned Layout Level 3，Working Draft（2025-10-07），[CSS Positioned Layout](https://www.w3.org/TR/css-position-3/)，检查于 2026-11-06。
+> - 变换建立堆叠上下文和后代包含块：W3C CSS Transforms Level 1，Candidate Recommendation（2019-02-14），[CSS Transforms](https://www.w3.org/TR/css-transforms-1/)，检查于 2026-11-06。
+> - `filter` 建立后代定位包含块和堆叠上下文：W3C Filter Effects Level 1，Working Draft（2018-12-18），[Filter Effects](https://www.w3.org/TR/filter-effects-1/)，检查于 2026-11-06。
+> - `will-change` 提示与潜在布局影响：W3C CSS Will Change Level 1，Candidate Recommendation Draft（2022-05-05），[CSS Will Change](https://www.w3.org/TR/css-will-change-1/)，检查于 2026-11-06。
+> - 布局与绘制包含建立定位包含块、堆叠上下文和裁切：W3C CSS Containment Level 2，Working Draft（2022-09-17），[Layout containment](https://www.w3.org/TR/css-contain-2/#layout-containment) 与 [Paint containment](https://www.w3.org/TR/css-contain-2/#paint-containment)，检查于 2026-11-06。
+> - 相关布局边界另见[BFC 与流式布局边界](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)；隐藏状态见[隐藏与可访问性](#22.%20%E9%9A%90%E8%97%8F%E7%8A%B6%E6%80%81%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E7%84%A6%E7%82%B9%E4%B8%8E%E5%8F%AF%E8%AE%BF%E9%97%AE%E6%80%A7%EF%BC%9F)，运动见[CSS 过渡与动画](#23.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%BF%87%E6%B8%A1%EF%BC%8C%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F)，布局绘制路径见[渲染流水线与强制布局](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+## 22. 隐藏状态会怎样影响焦点与可访问性？
 
-Choose a hiding method by the state users should experience. `display: none` removes the box from layout and generally from the accessibility tree; `visibility: hidden` keeps layout space but suppresses visibility; `opacity: 0` makes a rendered box transparent while it can still receive focus and pointer input. Fading is only visual: also manage focus, input, and accessible state while the element is hidden. / 根据用户应体验的状态选择隐藏方式。`display: none` 会从布局中移除盒子，通常也从无障碍树中移除；`visibility: hidden` 保留布局空间但隐藏可见性；`opacity: 0` 让已布局的盒子透明，但它仍可能接收焦点和指针输入。淡出只改变视觉效果；元素隐藏时还要管理焦点、输入和无障碍状态。
+报表详情面板关闭时，用户不应看见它、Tab 不应进入里面，屏幕阅读器也不应继续把它当作当前可用内容。淡出只影响绘制；隐藏策略还要同时处理布局、指针、键盘焦点和 accessibility tree（无障碍树）。
 
-| Behavior | `display: none` | `visibility: hidden` | `opacity: 0` |
-|---|---|---|---|
-| Layout space | Removed | Reserved | Reserved |
-| Pointer activation | No rendered box to hit | Hidden | Can still receive input; pair with a deliberate input policy |
-| Keyboard focus | Not focusable while hidden | Not focusable while hidden | May remain focusable |
-| Accessibility tree | Generally omitted | Generally omitted | Usually remains exposed; inspect control semantics |
-| Visual interpolation | Display changes discretely | Visibility changes discretely | Opacity interpolates |
-| Children | Not rendered | Inherit hidden visibility, though a child may override it | Paint as one group; a child cannot undo parent transparency |
+### 几种隐藏方式留下什么？
 
-The element's opacity is not inherited, but opacity composites the element and its descendants as a group. A child set to `opacity: 1` cannot make itself visible through a parent at zero opacity.
+| 状态 | 布局空间 | 指针命中 | 键盘焦点 | 无障碍树 |
+| --- | --- | --- | --- | --- |
+| `display: none`（不生成显示盒）或普通 HTML `hidden`（未被作者样式覆盖） | 移除 | 不绘制、不命中 | 隐藏期间不能聚焦 | 通常不暴露 |
+| `visibility: hidden`（不可见） | 保留 | hidden 后代不命中；显式设为 `visible` 的后代可命中 | hidden 后代通常不能聚焦；visible 后代可以 | hidden 后代通常不暴露；visible 后代可能暴露 |
+| `opacity: 0`（不透明度为零） | 保留 | 仍可能命中 | 仍可能聚焦 | 通常仍暴露 |
+| `inert`（惰性子树） | 样式决定 | 子树不接收交互 | 子树不可聚焦 | 辅助技术通常忽略该子树；视觉仍由 CSS 决定 |
+| `aria-hidden="true"`（辅助技术隐藏状态） | 样式决定 | 样式决定 | 不会自行禁用焦点 | 从辅助技术呈现中隐藏子树 |
 
-```css
-.is-removed { display: none; }
-.is-space-preserved { visibility: hidden; }
-.is-faded-out { opacity: 0; pointer-events: none; }
-```
+`visibility:hidden` 只对仍保持隐藏值的盒子隐藏绘制和交互；后代显式设为 `visibility:visible` 后会重新绘制、参与指针命中，也可以接收焦点。父级 `visibility:hidden` 不等同于禁用整棵子树的 `inert`。
 
-`pointer-events: none` does not remove an element from keyboard focus or the accessibility tree. When a dialog or menu closes, also move or restore focus and update its accessible state; do not rely on opacity alone to make the control unavailable.
+> [!info] HTML `hidden` 的两种状态
+> 表中普通 `hidden` 指默认隐藏状态；如果作者规则把该元素的 `display` 改成可生成盒子的值，CSS 可以覆盖这项隐藏样式。`hidden="until-found"` 是另一种状态：内容仍隐藏，但保留布局盒，并可由页内查找或片段导航揭示；不要把它当作 `display:none` 的同义写法。
 
-### Can `display` transition while showing an element?
+`opacity` 不继承；浏览器把元素及其后代作为透明绘制组处理，因此子元素设为 `opacity: 1` 也无法穿透父元素的 `opacity: 0`。pointer-events（指针命中行为）只影响指针，`pointer-events: none` 不会关闭键盘焦点或无障碍呈现。
 
-`display` is not interpolated like opacity. CSS Transitions can opt into a discrete display transition in supporting browsers. A starting style defines the entry state, and `transition-behavior: allow-discrete` enables the discrete transition:
+> [!info] inert 与 aria-hidden 的责任不同
+> HTML `inert` 属性让整个子树暂时退出常规用户交互和顺序焦点导航，也让辅助技术忽略它。`aria-hidden` 只改变无障碍树，不负责取消焦点；不要把它放在仍有可聚焦后代的区域上。
 
-```css
-.panel {
+### 关闭面板时先处理焦点
+
+打开时移除 `hidden` 和 `inert` 并更新触发按钮的 `aria-expanded`；关闭时若焦点还在面板内，先把焦点移回触发按钮，再同步设置 `inert`、`hidden` 和折叠状态。CSS transition 负责进入与退出的视觉淡变，交互状态不等动画事件；关闭期间重新打开时，只要重新设为打开状态，当前过渡就会反向到新目标。
+
+~~~html
+<button type="button" aria-controls="report-details" aria-expanded="false">
+  查看详情
+</button>
+<section id="report-details" hidden inert>
+  <h2>筛选结果详情</h2>
+  <button type="button" data-close>关闭详情</button>
+</section>
+~~~
+
+~~~css
+#report-details {
   display: none;
   opacity: 0;
   transition: opacity 180ms ease, display 180ms allow-discrete;
 }
 
-.panel.is-open {
+#report-details:not([hidden]) {
   display: block;
   opacity: 1;
 }
 
 @starting-style {
-  .panel.is-open {
-    opacity: 0;
-  }
+  #report-details:not([hidden]) { opacity: 0; }
 }
-```
 
-Check target-browser support. Move focus and update accessible state as soon as the close action occurs; do not leave a transparent control interactive while waiting for `display` to switch. For a reduced-motion preference, shorten or remove nonessential movement and fades.
+@media (prefers-reduced-motion: reduce) {
+  #report-details { transition-duration: 0s; }
+}
+~~~
 
-**Specifications:** [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color transparency](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transitions Level 2](https://www.w3.org/TR/css-transitions-2/#transition-behavior-property), and [Media Queries: reduced motion](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-motion).
-## 23. When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？
+~~~javascript
+const trigger = document.querySelector('[aria-controls="report-details"]');
+const panel = document.querySelector("#report-details");
+const closeButton = panel.querySelector("[data-close]");
 
-A transition interpolates between two computed states after a property change, such as a hover or class toggle. A keyframe animation defines a sequence that can start independently, repeat, reverse, pause, or fill after its last keyframe. Prefer a transition for a simple state change; use keyframes for a multi-step or looping sequence. Respect reduced-motion preferences, and profile the actual effect instead of assuming a property is free to animate. / transition 在属性变化后于两个计算状态之间插值，例如 hover 或 class 切换。关键帧动画定义一段可独立启动、重复、反向、暂停或保留结束状态的序列。简单状态变化优先 transition；多阶段或循环序列使用关键帧。尊重减少动态效果偏好，并针对真实效果做性能分析，不要假定某属性动画没有成本。
+function setDetailsOpen(open) {
+  if (!open && panel.contains(document.activeElement)) trigger.focus();
+  panel.inert = !open;
+  panel.hidden = !open;
+  trigger.setAttribute("aria-expanded", String(open));
+}
 
-### Transitions: move between states
+trigger.addEventListener("click", () => setDetailsOpen(panel.hidden));
+closeButton.addEventListener("click", () => setDetailsOpen(false));
+~~~
 
-```css
-.button {
-  background-color: navy;
+这里的示例不等待 `transitionend` 才切换焦点、`inert` 或 `hidden`；所以减少动态效果时即时关闭也能完成，关闭过渡中重新打开也不会留下待执行的延时隐藏操作。
+
+### display 也能参与离散过渡
+
+`display` 不像 `opacity` 那样逐帧插值。CSS Transitions Level 2 允许在实现支持时用 `transition-behavior: allow-discrete` 参与离散切换，并用 `@starting-style` 定义新显示内容的起始样式。按 CSS Display Level 4 §2.9，从 `none` 进入其他显示值时，元素在过渡开始就生成显示盒；从其他值退出到 `none` 时，元素直到过渡结束才移出显示盒，所以可与透明度淡变配合。忽略过渡和动画这两个级联来源后，元素的 `display` 值若仍为 `none`，它就处于惰性状态；上面的例子在状态切换时也显式同步设置 `inert`，不等待淡变结束。
+
+> [!info]- 来源
+> - 显示盒生成和 <code>display</code>：W3C CSS Display Level 3，Candidate Recommendation Draft（2026-06-05），[CSS Display](https://www.w3.org/TR/css-display-3/)，检查于 2026-11-06。
+> - <code>display</code> 离散过渡中生成/移除显示盒的时点与 inert 行为：W3C CSS Display Level 4，§2.9，Working Draft（2025-11-06），[Animating and Interpolating display](https://www.w3.org/TR/css-display-4/#display-animation)，检查于 2026-11-06。
+> - `visibility` 的后代覆盖：W3C CSS Display Level 3，§4，Candidate Recommendation Draft（2026-06-05），[visibility](https://www.w3.org/TR/css-display-3/#visibility)，检查于 2026-11-06。
+> - `opacity` 的非继承性、整组透明绘制和命中测试：W3C CSS Color Level 4，Candidate Recommendation Draft（2026-11-03），[CSS Color](https://www.w3.org/TR/css-color-4/)，检查于 2026-11-06。
+> - `pointer-events` 对指针命中与顺序焦点导航的边界：W3C CSS Basic User Interface Level 4，Working Draft（2026-01-20），[CSS Basic User Interface](https://www.w3.org/TR/css-ui-4/)，检查于 2026-11-06。
+> - `inert` 子树与交互：WHATWG HTML Living Standard（2026-11-05 更新），[Inert subtrees](https://html.spec.whatwg.org/multipage/interaction.html#inert-subtrees)，检查于 2026-11-06。
+> - 普通 `hidden` 与 `until-found` 状态：WHATWG HTML Living Standard（2026-11-05 更新），[The `hidden` attribute](https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute)，检查于 2026-11-06。
+> - `aria-hidden` 和 `aria-expanded` 状态：W3C WAI-ARIA 1.2，Recommendation（2023-06-06），[WAI-ARIA](https://www.w3.org/TR/wai-aria-1.2/)，检查于 2026-11-06。
+> - 离散显示过渡：W3C CSS Transitions Level 2，Working Draft（2026-02-04），[transition-behavior](https://www.w3.org/TR/css-transitions-2/#transition-behavior-property)，检查于 2026-11-06。
+> - 减少动态效果：W3C Media Queries Level 5，Working Draft（2026-02-19），[prefers-reduced-motion](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-motion)，检查于 2026-11-06。
+> - 键盘操作和焦点管理：W3C WAI [ARIA APG Keyboard Interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)，检查于 2026-11-06。
+## 23. 何时使用过渡，何时使用关键帧动画？
+
+报表筛选按钮改变颜色、卡片从正面翻到背面，都是两个状态间的视觉过渡；先越过目标再回落的过冲效果需要指定中间状态，重复移动图片条带还需要控制循环。transition（过渡）在样式变化后插值；keyframe animation（关键帧动画）通过 `@keyframes` 定义时间点上的样式。
+
+> [!info] 先按状态模型选机制
+> 一个起点到一个终点，且由 hover、焦点或 class 状态变化触发，通常用 transition。需要多个中间步骤、自动开始、循环、反向或暂停时，用 keyframes。两种方式都要评估对阅读和操作的影响。
+
+### 状态变化用 transition
+
+~~~css
+.filter-button {
+  background-color: #17324d;
   transition: background-color 180ms ease-out;
 }
 
-.button:hover {
-  background-color: royalblue;
+.filter-button:hover,
+.filter-button:focus-visible {
+  background-color: #24547d;
 }
-```
+~~~
 
-| Property | Role |
-|---|---|
-| `transition-property` | Which properties to transition, such as `opacity` or `transform` |
-| `transition-duration` | Length of the interpolation |
-| `transition-timing-function` | Easing curve, such as `ease-out` or `cubic-bezier(...)` |
-| `transition-delay` | Wait before starting |
+| 属性 | 作用 |
+| --- | --- |
+| `transition-property` | 指定参与过渡的属性，如 `opacity`、`transform` |
+| `transition-duration` | 插值持续时间 |
+| `transition-timing-function` | 速度曲线，如 `ease-out`、`cubic-bezier(...)` |
+| `transition-delay` | 开始前等待的时间 |
 
-When multiple properties use different durations or delays, list their values in corresponding order:
+多个属性使用不同时间时，按逗号位置一一对应：
 
-```css
-.card {
+~~~css
+.result-card {
   transition-property: transform, opacity;
   transition-duration: 300ms, 200ms;
   transition-timing-function: ease-out, linear;
   transition-delay: 0ms, 100ms;
 }
-```
+~~~
 
-### Keyframes: define intermediate motion
+把过渡声明放在基础状态上，进入和离开状态都会应用。只把声明写在 `:hover` 规则中，离开 hover 时基础状态没有过渡声明，返回过程可能直接跳变。
 
-```css
-@keyframes slide-in {
-  0%   { transform: translateX(-100%); }
-  50%  { transform: translateX(10%); }
-  100% { transform: translateX(0); }
+### 多个时间点用 @keyframes
+
+~~~css
+@keyframes panel-enter {
+  0%   { transform: translateY(8px); opacity: 0; }
+  55%  { transform: translateY(-2px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
-.panel {
-  animation: slide-in 420ms ease-out both;
+.report-panel {
+  animation: panel-enter 240ms ease-out both;
 }
-```
+~~~
 
-| Property | Role |
-|---|---|
-| `animation-name` | Select the `@keyframes` rule |
-| `animation-duration` | Length of one cycle |
-| `animation-timing-function` | Easing for the cycle or keyframe segment |
-| `animation-delay` | Wait before the first cycle |
-| `animation-iteration-count` | Number of cycles or `infinite` |
-| `animation-direction` | `normal`, `reverse`, `alternate`, or `alternate-reverse` |
-| `animation-fill-mode` | Whether keyframe values apply before/after active motion |
-| `animation-play-state` | `running` or `paused` |
+55% 时面板先越过终点 `2px`，最后再回到原位；这个中间关键帧表现轻微过冲。
 
-CSS transforms can translate, rotate, and scale a box:
+| 属性 | 作用 |
+| --- | --- |
+| `animation-name` | 选择 `@keyframes` 规则 |
+| `animation-duration` | 一轮持续时间 |
+| `animation-timing-function` | 一轮或关键帧段的速度曲线 |
+| `animation-delay` | 第一轮开始前等待时间 |
+| `animation-iteration-count` | 轮数或 `infinite` |
+| `animation-direction` | 正向、反向或交替播放 |
+| `animation-fill-mode` | 活跃播放前后是否应用关键帧样式 |
+| `animation-play-state` | `running` 或 `paused` |
 
-| Function | Effect |
-|---|---|
-| `translate(x, y)`, `translateX(x)`, `translateY(y)` | Move in 2D |
-| `translateZ(z)`, `rotateX/Y/Z(angle)` | Move or rotate in 3D |
-| `rotate(angle)` | Rotate in 2D |
-| `scale(x, y)`, `scaleX(x)`, `scaleY(y)` | Resize visually |
+### 用两面翻牌理解 3D transform
 
-```css
-.card { transform: translate(10px, 20px) rotate(5deg) scale(1.05); }
-```
+transform（变换）可平移、旋转或缩放绘制盒子。原归档例子只有正面与背面两块，因此是两面翻牌示意，不是六面立方体。下面用类名控制角度，实际交互卡片还需单独提供按钮状态、焦点行为和内容语义；纯 CSS 的背面隐藏只影响绘制，不能代替内容可访问性处理。
 
-### What does animation cost?
+~~~html
+<div class="flip-demo" aria-hidden="true">
+  <div class="flip-demo__inner">
+    <div class="flip-demo__face flip-demo__front">正面</div>
+    <div class="flip-demo__face flip-demo__back">背面</div>
+  </div>
+</div>
+~~~
 
-A change can require style recalculation, layout, paint, rasterization, and compositing. Animating `transform` or `opacity` can let an engine update presentation without repeating layout, but neither guarantees compositor-only or GPU work. Consult a trace and the [rendering pipeline](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the observed invalidation path.
+~~~css
+.flip-demo {
+  width: 200px;
+  height: 120px;
+  perspective: 800px;
+}
 
-`will-change` is a hint, not a command to promote a layer. Some hints can consume memory or change stacking/containing-block behavior. Use it only on a small region after profiling shows it helps, then remove the hint when no longer needed. `transform: translateZ(0)` is not a universal GPU switch and may affect stacking and containing blocks.
+.flip-demo__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 600ms ease;
+}
 
-```css
+.flip-demo.is-flipped .flip-demo__inner { transform: rotateY(180deg); }
+
+.flip-demo__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  backface-visibility: hidden;
+  color: white;
+}
+
+.flip-demo__front { background: #24547d; }
+.flip-demo__back { background: #8c3d16; transform: rotateY(180deg); }
+~~~
+
+未加 `.is-flipped` 时，蓝色“正面”朝向读者；加入该类后，内层转过 `180deg`，正面背向读者，橙色“背面”转到前方。示例整体 `aria-hidden="true"`，文字只用于演示，不承载页面内容。
+
+`translate`（平移）移动，`rotate`（旋转）改变朝向，`scale`（缩放）改变绘制尺寸。`transform-origin`（变换原点）默认在盒子中心；旋转或缩放时改变它，会改变视觉效果所绕的参照点。多种变换函数组合时顺序会影响结果，交换平移和旋转的顺序可能得到不同位置。`transform` 不重新安排周围普通流项目，但可能扩展可滚动溢出区域，并为后代建立 containing block（包含块）与 stacking context（堆叠上下文）。
+
+### 无限滚动图片条带怎样无缝循环？
+
+以下例子沿用归档中的“双组三图”结构，用作纯装饰的 CSS 理想尺寸演算。视窗宽 `320px`，原图组三张、复制组三张，共六项；整条轨道宽度是视窗的 `600%`，移动 `50%` 对应其中一组三张的理论宽度。
+
+~~~html
+<div class="strip-window" aria-hidden="true">
+  <div class="strip-track">
+    <img src="a.jpg" alt="">
+    <img src="b.jpg" alt="">
+    <img src="c.jpg" alt="">
+    <img src="a.jpg" alt="">
+    <img src="b.jpg" alt="">
+    <img src="c.jpg" alt="">
+  </div>
+</div>
+~~~
+
+~~~css
+.strip-window { width: 320px; overflow: hidden; }
+
+.strip-track {
+  display: flex;
+  width: 600%;
+  animation: strip-loop 18s linear infinite;
+}
+
+.strip-track img {
+  flex: 0 0 calc(100% / 6);
+  width: 100%;
+  height: auto;
+}
+
+@keyframes strip-loop {
+  to { transform: translateX(-50%); }
+}
+~~~
+
+> [!example] 循环距离
+> 轨道宽 `6 × 320 = 1920px`；两个等宽图组各占 `960px`。`translateX(-50%)` 移动 `1920 × 0.5 = 960px = 3 × 320px`，在理想尺寸下，下一组占据原组的位置。实际 Flex 项可能因子像素尺寸取整出现极小接缝；要验证特定图片、浏览器和显示设备的结果，不把这组算式当作像素级无缝保证。素材宽高比不同不影响横向组宽；若卡片宽度或组数变化，需同步调整轨道和每项比例。
+
+这个循环没有控制按钮、键盘浏览、暂停机制或轮播语义，所以不能充当内容轮播。正式轮播应提供前后切换和停止/开始控制；自动播放在焦点进入轮播后停止，直到用户通过控制器显式重启；指针悬停时也停止。还要处理 prefers-reduced-motion（减少动态效果偏好）。若动画只是装饰，也要确保它不承载唯一信息。
+
+### 动画性能与减少动态效果
+
+样式变化可能触发样式计算、布局、绘制、栅格化和合成。`transform` 与 `opacity` 在某些场景可以避免重复布局，但不能保证只走合成器或 GPU 路径。应观察具体页面的渲染轨迹；[渲染流水线与强制布局](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明写入和几何读取如何影响布局工作。
+
+will-change（即将变化提示）是提前告知可能变化的提示，不是强制创建 GPU 图层的开关；部分提示还会创建堆叠上下文或包含块并占用内存。只在测量确认有收益时对小范围、短时间使用，结束后移除。`translateZ(0)` 也不是通用加速开关。
+
+~~~css
 @media (prefers-reduced-motion: reduce) {
-  .panel,
-  .card {
+  .report-panel,
+  .result-card {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
     transition-duration: 0.01ms;
   }
+
+  .flip-demo__inner { transition: none; }
+  .strip-track { animation: none; }
 }
-```
-
-This example reduces duration for selected motion. Choose a treatment that preserves necessary state feedback and avoids unexpected movement; not all motion should be removed indiscriminately.
-
-**Specifications:** [CSS Transitions Level 2](https://www.w3.org/TR/css-transitions-2/), [CSS Animations Level 1](https://www.w3.org/TR/css-animations-1/), [CSS Transforms Level 1](https://www.w3.org/TR/css-transforms-1/), [CSS Will Change](https://www.w3.org/TR/css-will-change-1/), and [Media Queries: reduced motion](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-motion).
-## 24. Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？
-
-These DOM APIs measure different boxes and coordinate spaces. Use `offset*` values for integer, untransformed layout dimensions; `client*` for the inner padding area; `scroll*` for scrolling extent and position; and `getBoundingClientRect()` for a transformed viewport-relative rectangle. A read may force pending style or layout work to finish, but does not necessarily cause a new layout when the measurements are already current. / 这些 DOM API 测量的盒子和坐标空间不同。`offset*` 提供整数、未变换的布局尺寸；`client*` 提供内侧 padding 区域；`scroll*` 提供滚动范围和位置；`getBoundingClientRect()` 提供相对于视口且受变换影响的矩形。读取可能迫使尚未完成的样式或布局工作同步完成，但如果测量值已经是最新的，不一定会触发新布局。
-
-```text
-┌─────────────────────────── margin ───────────────┐
-│ ┌───────────────────── border ────────────────┐  │
-│ │ ┌────────────── padding ────────────────┐   │  │
-│ │ │ ┌────────── content ────────────────┐ │   │  │
-│ │ │ │                                   │ │   │  │
-│ │ │ └───────────────────────────────────┘ │   │  │
-│ │ └───────────────────────────────────────┘   │  │
-│ └─────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────┘
-```
-
-### Quick comparison
-
-| Property | Includes | Excludes or caveat | Writable? |
-|---|---|---|---|
-| `offsetHeight` / `offsetWidth` | Border box; ordinarily a rendered scrollbar | Margin; ignores transforms; integer CSS px | No |
-| `clientHeight` / `clientWidth` | Padding area | Border and rendered scrollbar; integer CSS px | No |
-| `scrollHeight` / `scrollWidth` | Scrolling area, including overflow | Border; integer CSS px; not a guarantee the content is user-scrollable | No |
-| `scrollTop` / `scrollLeft` | Current scroll offset | Values may be fractional or outside usual range in some layouts | Yes |
-| `offsetTop` / `offsetLeft` | Offset from `offsetParent` padding edge to element border edge | Not necessarily relative to the direct parent | No |
-| `getBoundingClientRect()` | Viewport-relative union of transformed border-box fragments | Excludes margin; a snapshot | No |
-
-Dimensions are in CSS pixels, not device pixels. Scrollbars differ by platform: a rendered scrollbar consumes layout space on some configurations but overlays content on others. Do not derive a physical-device-pixel measurement from these values.
-
-### Choose by the box or coordinate space
-
-#### Layout box and inner client area
-
-`offsetHeight` and `offsetWidth` return integer layout dimensions for the border box, normally including a rendered scrollbar and excluding margin. They ignore CSS transforms.
-
-```text
-offsetHeight ≈ content height + padding + border (+ rendered scrollbar)
-```
-
-`clientHeight` and `clientWidth` return the padding area minus a rendered scrollbar; the border and margin are excluded. In standards mode, the root element's client dimensions correspond to the viewport dimensions.
-
-```text
-clientHeight ≈ content height + padding - rendered scrollbar
-```
-
-#### Scrolling area and current offset
-
-`scrollHeight` measures the scrolling area, including content outside the visible client area. It can exceed `clientHeight` when content overflows. In standards mode, the root element's `scrollHeight` is the maximum of the viewport scrolling-area height and viewport height.
-
-```javascript
-const hasOverflow = element.scrollHeight > element.clientHeight;
-const y = element.scrollTop;
-element.scrollTop = 0; // scroll to the top
-```
-
-`scrollTop` and `scrollLeft` are writable. Reverse-direction scrolling and elastic overscroll can produce values outside the familiar range, so avoid assuming every result is a nonnegative integer.
-
-#### Position relative to the offset parent
-
-`offsetTop` and `offsetLeft` measure from the element's border edge to the padding edge of its `offsetParent`. The offset parent is not simply the nearest positioned ancestor: tables, containing blocks, fixed positioning, zoom, shadow-tree boundaries, and missing boxes can affect which element is returned. Some elements, including `body` in common cases, return zero.
-
-#### Viewport-relative visual rectangle
-
-`getBoundingClientRect()` returns the smallest rectangle enclosing the element's nonempty client rects, relative to the viewport. It includes CSS transforms. Fragmented inline content can produce several client rects; this method returns their union. Its result is a snapshot, not a live object.
-
-```javascript
-const rect = element.getBoundingClientRect();
-// rect.top / bottom: distance from viewport top to each edge
-// rect.left / right: distance from viewport left to each edge
-// rect.width / height: transformed border-box union in CSS px
-```
-
-A basic viewport-overlap check is:
-
-```javascript
-function overlapsViewport(element) {
-  const rect = element.getBoundingClientRect();
-  return (
-    rect.top < window.innerHeight &&
-    rect.bottom > 0 &&
-    rect.left < window.innerWidth &&
-    rect.right > 0
-  );
-}
-```
-
-This checks rectangle overlap, not whether the element is occluded, transparent, or exposed to assistive technology. Decide separately how zero-area rectangles should behave.
-
-### Measurement without repeated layout work
-
-For an occasional measurement, choose the API whose box and coordinate system match the task. For threshold-based visibility such as lazy loading or analytics, prefer [IntersectionObserver](#25.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F) over repeatedly polling geometry. It reports asynchronously and is not a blanket guarantee that no layout work occurs.
-
-A write followed by a geometry read can force pending layout; alternating writes and reads in a loop can repeat that work. See [Rendering pipeline and forced layout](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the read/write batching example.
-
-**Specifications:** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.
-## 25. How should a browser page lazy-load images without hurting LCP or layout stability? / 如何延迟加载图片而不损害 LCP 或布局稳定性？
-
-For an ordinary off-screen image, prefer native `loading="lazy"` with a real `src` or `srcset`; the browser chooses its deferral threshold. Reserve the image's aspect ratio with `width`/`height` or CSS `aspect-ratio`. Use `IntersectionObserver` only when loading needs a custom root, threshold, or non-image action, and do not defer an image likely to be the page's LCP element. / 普通视口外图片优先使用带真实 `src` 或 `srcset` 的原生 `loading="lazy"`，由浏览器决定何时开始加载。通过 `width`/`height` 或 CSS `aspect-ratio` 预留图片纵横比。只有需要自定义 root、阈值或执行非图片操作时才使用 `IntersectionObserver`，且不要延迟可能成为页面 LCP 元素的图片。
-
-### Native lazy loading / 原生懒加载
-
-~~~html
-<img src="image.jpg" alt="Description" loading="lazy" width="800" height="600">
 ~~~
 
-`lazy` asks the user agent to defer fetching until its visibility conditions are met; `eager` requests without lazy deferral. A `data-src` attribute alone is not a loading source: the element needs `src` or `srcset`. Browser-selected thresholds vary by implementation. Intrinsic dimensions let the browser reserve the aspect ratio before bytes arrive; CSS can still change the rendered size.
+减少动态效果时仍保留必要的状态反馈，并避免内容因动画停止而不可见。
 
-### Custom loading with Intersection Observer / 用观察器自定义加载
+> [!info]- 来源
+> - 属性过渡与离散属性状态：W3C CSS Transitions Level 2，Working Draft（2026-02-04），[CSS Transitions](https://www.w3.org/TR/css-transitions-2/)，检查于 2026-11-06。
+> - 关键帧动画：W3C CSS Animations Level 1，Working Draft（2023-03-02），[CSS Animations](https://www.w3.org/TR/css-animations-1/)，检查于 2026-11-06。
+> - 变换、绘制溢出、包含块和堆叠上下文：W3C CSS Transforms Level 1，Candidate Recommendation（2019-02-14），[CSS Transforms](https://www.w3.org/TR/css-transforms-1/)，检查于 2026-11-06。
+> - 三维变换、透视、保留 3D 与两面翻牌：W3C CSS Transforms Level 2，Working Draft（2021-11-09），[backface-visibility](https://www.w3.org/TR/css-transforms-2/#backface-visibility)，检查于 2026-11-06。
+> - `will-change` 提示：W3C CSS Will Change Level 1，Candidate Recommendation Draft（2022-05-05），[CSS Will Change](https://www.w3.org/TR/css-will-change-1/)，检查于 2026-11-06。
+> - 减少动态效果偏好：W3C Media Queries Level 5，Working Draft（2026-02-19），[prefers-reduced-motion](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-motion)，检查于 2026-11-06。
+> - 轮播控制和自动播放行为：W3C WAI [ARIA APG Carousel Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/)，检查于 2026-11-06。
+## 24. 哪些网页几何接口能测量哪一种盒子？
 
-Use an observer for behavior the native attribute does not expose, such as a custom root margin, threshold, or work beyond an image request. It queues intersection changes; it does not promise that the callback runs off the main thread.
+Document Object Model（文档对象模型，DOM）提供多组几何 API，它们测量的盒子和坐标系不同。读布局偏移尺寸（`offset*`）或内客户区尺寸（`client*`），读滚动范围与偏移（`scroll*`），读包含 CSS transform（变换）后的视口矩形则用 `getBoundingClientRect()`（获取包围矩形）。一次几何读取可能迫使浏览器先完成尚未更新的样式或布局，但值已是最新时不一定产生新布局。
+
+```text
+┌────────────────────────── margin ──────────────────────────┐
+│ ┌────────────────────── border ─────────────────────────┐ │
+│ │ ┌────────────────── padding ───────────────────────┐  │ │
+│ │ │ ┌────────────── content ──────────────────────┐  │  │ │
+│ │ │ └────────────────────────────────────────────┘  │  │ │
+│ │ └─────────────────────────────────────────────────┘  │ │
+│ └──────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 先按测量目标选择属性
+
+| API | 返回内容 | 不包含或需留意 |
+| --- | --- | --- |
+| `offsetWidth` / `offsetHeight` | 整数布局尺寸，含 padding、border 和占空间的滚动条 | 不含 margin；不反映 CSS transform |
+| `clientWidth` / `clientHeight` | padding 区域尺寸 | 不含 border 和占空间的滚动条 |
+| `scrollWidth` / `scrollHeight` | 滚动区域尺寸，包含溢出的内容 | 不含 border；不是“用户一定能滚动”的保证 |
+| `scrollLeft` / `scrollTop` | 当前滚动偏移 | 可写；某些布局中数值可为小数或超出熟悉范围 |
+| `offsetLeft` / `offsetTop` | 相对 `offsetParent`（偏移父元素）的边缘位置 | 它不一定是直接父元素或最近定位祖先 |
+| `getBoundingClientRect()` | 相对视口、包含 transform 后的边框矩形联合范围 | 不含 margin；返回读取时的快照 |
+
+这些数字使用 CSS 像素，不是设备物理像素。占空间的滚动条会改变布局测量，覆盖式滚动条则可能不占空间；这取决于平台及浏览器设置。
+
+### 用固定数字对照布局尺寸
+
+假设一个内容盒宽 `320px`，左右 padding 各 `16px`，左右 border 各 `1px`，没有占空间的滚动条：
+
+~~~css
+.content-box {
+  box-sizing: content-box;
+  width: 320px;
+  padding-inline: 16px;
+  border: 1px solid;
+}
+~~~
+
+> [!example] 内容盒尺寸的计算
+> `offsetWidth = 320 + 16×2 + 1×2 = 354px`；`clientWidth = 320 + 16×2 = 352px`。前者含边框，后者含 padding 但不含边框。
+
+把声明宽度改为 `box-sizing: border-box; width: 320px`，则内容宽度为 `320 − 16×2 − 1×2 = 286px`；在同样无滚动条的条件下，`clientWidth = 318px`、`offsetWidth = 320px`。
+
+### 读滚动区域与当前偏移
+
+`scrollHeight` / `scrollWidth` 表示滚动区域尺寸。溢出内容可能使它大于可见的 `clientHeight` / `clientWidth`：
+
+~~~javascript
+const hasVerticalOverflow = element.scrollHeight > element.clientHeight;
+const currentY = element.scrollTop;
+element.scrollTop = 0; // 回到顶部
+~~~
+
+`scrollTop` 和 `scrollLeft` 可写。反向书写方向、弹性滚动及缩放等情形会使数值不符合“非负整数”的简单假设。
+
+在 standards mode（标准模式）下，根元素 `document.documentElement.scrollHeight` 特别返回视口滚动区域高度与视口高度的较大值；`clientHeight` 则是扣除占空间滚动条后的视口高度。对普通元素，`scrollHeight` 返回其自身滚动区域高度。
+
+### offset 相对哪个父元素？
+
+`offsetParent`（偏移父元素）由同名属性给出。`offsetTop` / `offsetLeft` 描述元素边框边缘相对该父元素 padding 边缘的位置；表格结构、固定定位、包含块和 Shadow DOM（影子 DOM）边界等都会影响返回的父元素。它不固定等同于最近的 `position` 祖先。
+
+### 读变换后的视口矩形
+
+`getBoundingClientRect()` 返回元素非空 client rect（客户端矩形）的最小包围矩形，坐标原点在当前视口左上角，尺寸受 transform 影响。行内内容跨多行时可能有多个 client rect，方法返回它们的联合矩形；结果是本次读取时的 DOMRect（DOM 矩形）快照。
+
+~~~javascript
+const rect = element.getBoundingClientRect();
+// rect.top / bottom：相对视口顶部的上下边缘
+// rect.left / right：相对视口左侧的左右边缘
+// rect.width / height：变换后边框盒联合范围，单位为 CSS px
+~~~
+
+~~~text
+视口左上角 (0, 0)
+┌──────────────────────────────────────────────┐
+│          ┌────── rect.left ──────┐            │
+│          │ 元素 transform 后的外接矩形 │            │
+│          └────────────────────────┘            │
+└──────────────────────────────────────────────┘
+~~~
+
+以矩形判断是否与视口相交，只能说明几何区域有正面积交叠，无法判断元素是否被其他内容遮挡、是否透明或辅助技术是否可见。`getBoundingClientRect()` 对退化的零宽或零高元素也可能返回矩形，因此必须单独检查宽高。下面假设文档处于 standards mode；根元素的 `clientWidth`/`clientHeight` 表示扣除占空间滚动条后的视口尺寸。
+
+~~~javascript
+function overlapsViewport(element) {
+  const rect = element.getBoundingClientRect();
+  const root = document.documentElement;
+  return rect.width > 0 && rect.height > 0 &&
+    rect.bottom > 0 && rect.top < root.clientHeight &&
+    rect.right > 0 && rect.left < root.clientWidth;
+}
+~~~
+
+### 把写入和读取分批
+
+偶尔读取一次几何属性时，选与问题相符的盒子和坐标系。滚动阈值通知或图片延迟加载优先使用 IntersectionObserver（相交观察器）[图片加载中的观察器示例](#25.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)，而不是反复轮询矩形；观察器会异步报告相交状态，但不承诺完全不触发布局工作。
+
+若先改样式再马上读几何值，浏览器可能同步完成待处理的样式或布局；循环交替执行写入和读取会重复付出这类成本。有关批量读取、批量写入的路径见[渲染流水线与强制布局](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+
+> [!info]- 来源
+> - 元素布局尺寸、滚动 API、视口矩形：W3C CSSOM View，Working Draft（2025-09-16），[CSSOM View](https://www.w3.org/TR/cssom-view-1/)，检查于 2026-11-06。其中 [Element.scrollHeight](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight) 说明根元素和普通元素的滚动高度规则。
+> - 异步相交通知：W3C [Intersection Observer](https://www.w3.org/TR/intersection-observer/)，Working Draft（2023-10-18），检查于 2026-11-06。
+## 25. 图片与媒体资源怎样加载并保持页面稳定？
+
+同一张图片可能是装饰、信息本身，也可能是链接或按钮的操作入口；资源何时请求则关系到首屏内容和网络开销。先按内容决定 HTML 语义与替代文本，再选择尺寸、候选资源和加载时机。
+
+> [!info] 替代文本由用途决定
+> alternative text（替代文本）通过 `alt` 提供。纯装饰图使用 `alt=""`；信息图用简洁文字传达页面所需信息；图片是链接或按钮唯一内容时，写出该控件的目的。`title` 不能代替替代文本或表单标签。
+
+### 先按内容选择图像与媒体元素
+
+图像内容用 `<img>`，到另一位置的导航用 `<a href>`，可播放音频和视频分别用 `<audio>`、`<video>`。先决定资源在文档中的语义与替代文本，再选择 URL、尺寸和加载时机。
+
+### 资源地址相对哪个基准？
+
+| 写法 | 示例 | 解析位置 |
+| --- | --- | --- |
+| 带 scheme 的 URL（统一资源定位符，网址） | `https://example.com/a.png` | 使用 URL 自身的方案和地址；`mailto:team@example.com` 有 scheme（方案）但没有主机 |
+| 根相对路径 | `/assets/chart.png` | 从文档基准 URL 的 origin（源）根目录解析；`<base>` 可能改变 origin |
+| 文档相对路径 | `../assets/chart.png` | 默认相对当前文档 URL；`<base>` 可改变文档基准 URL |
+
+`src` 指向要载入的图像资源；`href` 为链接提供导航目标。根相对 URL 不是永远相对页面原站：若 `<base href="https://cdn.example.net/reports/q4/">` 改变了文档基准，`/assets/chart.png` 会解析为 `https://cdn.example.net/assets/chart.png`，`../assets/chart.png` 则解析为 `https://cdn.example.net/reports/assets/chart.png`。Unix 风格的文件系统路径 `/project/site/image.png` 不是网络地址。用 `<a>` 导航，用 `<button>` 执行动作；`href="#"` 会改变片段位置并可能影响历史记录，不是无操作占位符。`target="_blank"` 请求新的浏览上下文，适合确需另开页面的导航；给出明确的链接文字，显式写 `rel="noopener"` 也能表明不向新页面暴露 opener。
+
+### 原生延迟加载适合什么图片？
+
+普通首屏之外的内容图片可以使用 HTML `loading="lazy"`。浏览器决定具体的延迟阈值；元素仍需真实的 `src` 或 `srcset`，单写 `data-src` 不会开始图片请求。
 
 ~~~html
-<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" data-src="actual-image.jpg" alt="Description" width="800" height="600">
+<img
+  src="/assets/monthly-report.webp"
+  alt="四月至六月的报表趋势图，六月达到最高值"
+  width="640"
+  height="360"
+  loading="lazy">
+~~~
+
+`width` 和 `height` 提供图像固有比例。`640 × 360` 的比例为 `16:9`；若 CSS 将图片显示为 `320px` 宽，预留高度约 `320 × 9 ÷ 16 = 180px`，图片数据到达前浏览器就有尺寸可用于布局。也可用 CSS `aspect-ratio: 16 / 9` 表达容器比例。
+
+对首屏可见、可能成为 Largest Contentful Paint（最大内容绘制，LCP）的主图不要盲目设置 lazy；延迟发现或请求会推迟它的呈现。
+
+### 响应式候选文件怎样被选中？
+
+`srcset` 中的 `640w`、`1280w` 描述候选图像文件的固有像素宽度；`sizes` 描述当前布局给图像留下的 CSS 像素宽度。下面的样式让图像在视口窄于 `640px` 时占满视口，宽屏上限为 `640px`，因此 `sizes` 与实际展示宽度相符：
+
+~~~html
+<img class="report-responsive"
+     src="/assets/report-640.webp"
+     srcset="/assets/report-640.webp 640w, /assets/report-1280.webp 1280w"
+     sizes="(max-width: 640px) 100vw, 640px"
+     width="640" height="360"
+     alt="四月至六月的报表趋势图，六月达到最高值">
+~~~
+
+~~~css
+.report-responsive {
+  display: block;
+  width: min(100vw, 640px);
+  height: auto;
+}
+~~~
+
+把布局宽度乘以设备像素比（DPR）可得到一个候选密度目标：`320px × DPR 2 = 640`，通常由 `640w` 资源满足；`640px × DPR 2 = 1280`，通常由 `1280w` 资源满足。浏览器结合可用候选、设备像素比和用户代理策略选文件；`sizes` 要反映页面实际留给图片的宽度。
+
+若窄屏需要不同裁切而不是同一画面的高低分辨率版本，使用 `<picture>` 的 `<source media>` 切换图像，再由 `<img>` 提供后备资源、尺寸和 `alt`。下面两个裁切都保持 `16:9`；若不同裁切有不同宽高比，也要按断点调整展示盒比例：
+
+~~~html
+<picture>
+  <source media="(max-width: 640px)" srcset="/assets/report-narrow-crop.webp">
+  <img src="/assets/report-wide-crop.webp"
+       width="640" height="360"
+       alt="四月至六月的报表趋势图，六月达到最高值">
+</picture>
+~~~
+
+### 何时用 IntersectionObserver（相交观察器）？
+
+IntersectionObserver（相交观察器）适合自定义滚动根、预加载边距、阈值，或目标进入范围时除了加载图片还要执行其他工作。普通图片优先让浏览器通过原生属性自行安排。
+
+~~~html
+<img src="/assets/placeholder.png"
+     data-src="/assets/offscreen-chart.png"
+     alt="报表图表"
+     width="640" height="360">
 ~~~
 
 ~~~javascript
 const observer = new IntersectionObserver((entries) => {
-  entries.forEach((entry) => {
-    if (!entry.isIntersecting) return;
-    const img = entry.target;
-    img.src = img.dataset.src;
-    img.removeAttribute("data-src");
-    observer.unobserve(img);
-  });
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+
+    const image = entry.target;
+    image.src = image.dataset.src;
+    image.removeAttribute("data-src");
+    observer.unobserve(image);
+  }
 }, { rootMargin: "200px" });
 
-document.querySelectorAll("img[data-src]").forEach((img) => observer.observe(img));
-// On teardown, call observer.disconnect() when this page/component owns the observer.
+document.querySelectorAll("img[data-src]").forEach((image) => observer.observe(image));
+// 组件卸载且拥有该观察器时，调用 observer.disconnect()。
 ~~~
 
-A positive `rootMargin` can begin work before the target reaches the root. `threshold: 0` has an edge-adjacent case: an intersecting target can have a zero-area intersection rectangle, so `isIntersecting` does not mean at least one pixel is visible. Do not use that flag as a visibility or occlusion test.
+正的 `rootMargin` 会在图片进入可视根之前启动加载。`threshold: 0` 下边缘相接也可能报告 `isIntersecting: true`，即使交集矩形面积为零；相交状态不是“至少一像素可见”或“未被遮挡”的证明。通知异步交付，但不保证回调在主线程之外执行。
 
-### Legacy scroll fallback / 旧环境滚动回退
+### 音频、视频和链接要保留什么语义？
 
-Use a scroll/resize fallback only when the required target browser lacks `IntersectionObserver`. It reads viewport geometry and should be throttled; geometry reads can force pending layout when state is dirty, but do not necessarily do so. See [DOM geometry APIs](#24.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F) for the exact box and coordinate returned, and [Debounce and throttle / 防抖与节流](#62.%20When%20should%20a%20UI%20use%20Lodash%20instead%20of%20a%20native%20JavaScript%20operation?%20/%20%E7%95%8C%E9%9D%A2%E4%BD%95%E6%97%B6%E5%BA%94%E4%BD%BF%E7%94%A8%20Lodash%20%E8%80%8C%E4%B8%8D%E6%98%AF%E5%8E%9F%E7%94%9F%20JavaScript%EF%BC%9F) for rate-limiting options.
+`<audio>` 与 `<video>` 用于可播放媒体；提供 `controls`，让用户能启动、暂停和调整播放。媒体格式和编解码器支持因浏览器与平台而异，可按目标环境提供多个 `<source>`。`preload` 是加载偏好提示，实际请求仍由用户代理策略决定；`autoplay` 也是播放请求，可能受自动播放策略限制。
 
-~~~javascript
-function checkImages() {
-  document.querySelectorAll("img[data-src]").forEach((img) => {
-    const rect = img.getBoundingClientRect();
-    if (rect.bottom > 0 && rect.top < window.innerHeight) {
-      img.src = img.dataset.src;
-      img.removeAttribute("data-src");
-    }
-  });
-}
+~~~html
+<audio controls preload="metadata">
+  <source src="/media/summary.ogg" type="audio/ogg">
+  <source src="/media/summary.mp3" type="audio/mpeg">
+</audio>
 
-let checkScheduled = false;
-function scheduleImageCheck() {
-  if (checkScheduled) return;
-  checkScheduled = true;
-  setTimeout(() => {
-    checkScheduled = false;
-    checkImages();
-  }, 100);
-}
-
-window.addEventListener("scroll", scheduleImageCheck, { passive: true });
-window.addEventListener("resize", scheduleImageCheck, { passive: true });
-checkImages();
+<video controls preload="metadata" width="640" height="360"
+       poster="/media/preview.jpg">
+  <source src="/media/demo.webm" type="video/webm">
+  <source src="/media/demo.mp4" type="video/mp4">
+  <track kind="captions" src="/media/demo.zh.vtt" srclang="zh" label="中文字幕">
+</video>
 ~~~
 
-### Protect loading speed and visual stability / 保护加载速度与视觉稳定性
+给视频标出宽高或比例，降低播放器加入布局时的跳动；字幕通过 `<track>` 提供。音频与视频用 controls 表达播放交互，不要把视觉样式当成媒体控件语义。
 
-Do not blindly lazy-load the first visible or likely LCP image: delaying its fetch can increase LCP. Reserve image space using intrinsic dimensions or an aspect ratio to reduce layout shift; choose an appropriate responsive candidate with `srcset`/`sizes`, rather than loading an oversized source. A placeholder can avoid a blank region but does not replace dimension reservation. Measure the actual route and device; see [browser performance measurement](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) and the [URL-to-pixels path](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F).
+对旧浏览器缺少 IntersectionObserver 的页面，才考虑滚动和 resize 几何检查作为回退；该方式应节流：挂载时先检查一次，在 scroll/resize 时合并检查；组件卸载时移除监听器并取消尚未执行的定时检查，避免保留 DOM 引用。矩形判断复用[DOM 几何 API](#24.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)中矩形的实际测量边界。性能比较应看真实路由和设备数据，见[浏览器性能测量](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)与[浏览器如何把 URL 绘制成像素](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
 
-**Standards / 规范：** [WHATWG image element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element); [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes); [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/); [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/), checked 2026-11-05.
-## 26. When should small images be combined into a CSS sprite? / 何时应把多个小图片合并为 CSS Sprite？
+> [!info]- 来源
+> - 文档基准 URL、相对 URL 解析与链接：WHATWG HTML Living Standard（2026-11-05 更新），[Document base URLs](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#document-base-urls)、[Links](https://html.spec.whatwg.org/multipage/links.html#link-type-noopener)；URL Standard，[Basic URL parser](https://url.spec.whatwg.org/#concept-basic-url-parser)。
+> - `picture`、`source`、`img`、音视频元素：同一 WHATWG HTML Living Standard，[Embedded content](https://html.spec.whatwg.org/multipage/embedded-content.html) 与 [Media elements](https://html.spec.whatwg.org/multipage/media.html)，检查于 2026-11-06。
+> - `loading` 与图片资源加载：WHATWG HTML Living Standard，[Lazy loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes)，检查于 2026-11-06。
+> - 图片信息、装饰图片和功能图片的 `alt`：W3C WAI [Images Tutorial](https://www.w3.org/WAI/tutorials/images/)，检查于 2026-11-06。
+> - 图片作为 LCP 内容与加载优先级：Google Chrome for Developers，[Optimize Largest Contentful Paint](https://web.dev/articles/optimize-lcp#optimize_when_the_lcp_element_is_an_image)，最后更新 2025-03-31，检查于 2026-11-06。
+> - 相交矩形、边缘相接和 `rootMargin`：W3C [Intersection Observer](https://www.w3.org/TR/intersection-observer/)，Working Draft，2023-10-18。
+> - 视口矩形 API：W3C [CSSOM View](https://www.w3.org/TR/cssom-view-1/)，Working Draft，2025-09-16。
+## 26. 怎样为报表图标选择资源形式？
 
-A CSS sprite places several small images in one file and reveals each image with a fixed-size element and `background-position`. It can reduce separate image requests in some delivery setups, but couples cache invalidation and coordinates: changing one icon replaces the combined asset. With HTTP/2 multiplexing, request count alone is not enough reason to create a sprite; compare transfer bytes, cache reuse, and maintenance cost for the actual assets. / CSS Sprite 把多个小图放进一个文件，再通过固定尺寸元素和 `background-position` 显示其中一块。它在某些传输方式下可以减少独立图片请求，但会把缓存失效与坐标耦合起来：改动一个图标就要替换整个合并资源。HTTP/2 支持多路复用，仅凭请求数量不足以决定是否合并；应结合实际资源的传输字节、缓存复用和维护成本比较。
+报表工具栏的图标可以内嵌 SVG（可缩放矢量图形）、使用可缓存的外部 SVG/图片、从雪碧图中裁取，或沿用图标字体。选择时要看图标颜色能否随状态改变、是否跨页面复用、下载与缓存边界，以及控件怎样获得可访问名称。
 
-```css
+### SVG 怎样兼顾颜色、复用与替代文本？
+
+同页面中的行内 SVG 是文档的一部分，可以用 CSS 设置颜色；让形状使用 `currentColor`（当前文字颜色），就能跟随按钮的 `color`（文字颜色）。按钮已有可见文字时，图标只是装饰：
+
+~~~html
+<button type="button" class="report-action">
+  <svg class="report-action__icon" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M7 2h2v5h5v2H9v5H7V9H2V7h5z" fill="currentColor" />
+  </svg>
+  <span>添加筛选条件</span>
+</button>
+~~~
+
+~~~css
+.report-action { color: #24547d; }
+.report-action__icon { width: 1em; height: 1em; }
+~~~
+
+如果图标内容固定、在多个页面复用，可把 SVG 作为独立资源交给 `<img>`，从而按 URL 单独缓存。宿主页面的 CSS 不能直接选择外部 SVG 文档中的路径，SVG 里的 `currentColor` 也不会继承按钮颜色；信息图像应在 `<img alt>` 写替代文本，按钮内已有可见名称时用 `alt=""`：
+
+~~~html
+<button type="button">
+  <img src="/assets/add-filter.svg" width="16" height="16" alt="">
+  <span>添加筛选条件</span>
+</button>
+~~~
+
+行内 SVG 便于按主题换色，但标记会随 HTML 一同传输；外部 SVG 可独立缓存和复用，缓存策略允许时多个页面可重用同一 URL、减少重复传输，却不适合直接由宿主页面逐路径改色。控件名称应来自控件内的可见文字、图片的替代文本，或显式关联的可访问名称；孤立的相邻文字不会自动成为控件名称。
+
+### CSS Sprite 怎样裁出图集中的一格？
+
+CSS Sprite（雪碧图）把多个小图排进同一张 sprite sheet（精灵图集），再用固定尺寸的盒子和 `background-position`（背景图像定位）露出目标区域。假设图集是 `64 × 32px`，每格 `16 × 16px`，共有 4 列、2 行：
+
+```text
+x →    0      16      32      48
+y   ┌──────┬──────┬──────┬──────┐
+0   │  1   │  2   │  3   │  4   │
+    ├──────┼──────┼──────┼──────┤
+16  │  5   │  6   │ [7]  │  8   │
+    └──────┴──────┴──────┴──────┘
+```
+
+> [!example] 第二行第三列的坐标
+> 以左上角为原点，该格左上角在 `(32, 16)`；背景向左、向上移动对应距离后，它落在 `16 × 16px` 的视窗内，所以两个定位偏移写成 `-32px -16px`。
+
+~~~css
 .icon-edit {
+  display: inline-block;
   width: 16px;
   height: 16px;
-  background-image: url("/icons.png");
+  background-image: url("/assets/report-icons.png");
   background-repeat: no-repeat;
   background-position: -32px -16px;
 }
-```
+~~~
 
-The offset exposes the desired sprite rectangle. Centralize coordinates or generate them as part of asset processing when the sprite has many entries. An independently cached icon can be a better fit when it changes often or is used on routes that should not download the full sprite.
+图集变化时，每个图标坐标都可能要更新；改动一个格子也会改变整张图集资源，页面需要获取更新后的整份图像。若用内容哈希命名，文件 URL 也随之变化。图标多时可由资源构建步骤生成坐标，避免人工维护数字。背景图本身不提供有意义的替代文本；功能图标要由按钮或链接的可访问名称表达。
 
-HTTP/2 multiplexes streams over a connection, so multiple assets need not imply one connection per image. That does not make every request free or settle the trade-off: measure the emitted files and cache behavior. See [HTTP protocols and caching](../../engineering-foundations/networking/http-protocols-and-websockets.md) for the shared transport explanation.
+若图片本身承载信息，使用 `<img>` 提供替代文本，并按[图片资源加载规则](#25.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)处理宽高、候选资源和加载时机。
 
-**References:** [CSS Backgrounds and Borders: background positioning](https://www.w3.org/TR/css-backgrounds-3/#the-background-position), [HTTP/2 RFC 9113, streams and multiplexing](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).
+### Sprite 是否一定比独立图片快？
+
+合并能减少一些独立资源请求，但并不自动减少总传输量：页面可能为一个图标下载整张图集。HTTP/2 可在一个连接上多路复用多个流，图片请求数也不等于每张图都新建连接。比较时按实际页面测总字节、压缩、缓存复用和更新频率；图标经常独立变化或只在少数页面出现时，分开缓存可能更合适。
+
+### 图标字体怎样保留可访问名称？
+
+icon font（图标字体）把图案映射到字体字形，因此可按文字方式用 CSS 控制颜色和尺寸。每个私用区码点只对配套字体文件有意义；字体载入失败时，外形可能缺失或变成替代符号。把图标保持为装饰，让按钮或链接文字承担功能名称：
+
+~~~css
+@font-face {
+  font-family: "report-icons";
+  src: url("/assets/report-icons.woff2") format("woff2");
+}
+
+.icon {
+  font-family: "report-icons";
+  font-size: 1.25rem;
+  line-height: 1;
+}
+~~~
+
+~~~html
+<button type="button">
+  <span class="icon" aria-hidden="true">&#xe900;</span>
+  <span>编辑报表</span>
+</button>
+~~~
+
+`aria-hidden="true"` 把纯装饰字形从辅助技术呈现中隐藏，按钮的可见文字仍提供名称。若设计确实是无文字图标按钮，应给按钮本身设置合适名称，例如 `aria-label="编辑报表"`；不要让私用区字符成为唯一可理解的名称。
+
+### 旧横幅图展示的是静态选中项
+
+雪碧图从同一张资源里裁出装饰性小图；横幅则按状态显示完整图片，图片角色不同会影响替代文本和加载时机。下面保留归档横幅图与 `.current` 片段，展示静态选中项。图片原件保持不变：
+
+![归档横幅原图](../../archive/front-end/0-1_Learning_Notes/HTML/banner.png)
+
+旧例用 `.current` 显示选中的一项，是静态横幅切换状态的 CSS 片段：
+
+~~~html
+<ul class="report-banner">
+  <li class="current">
+    <a href="/reports/monthly"><img src="/assets/monthly-banner.jpg" alt="查看月度订单报表"></a>
+  </li>
+  <li>
+    <a href="/reports/quarterly"><img src="/assets/quarterly-banner.jpg" alt="查看季度订单报表"></a>
+  </li>
+</ul>
+~~~
+
+~~~css
+.report-banner {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 5;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.report-banner li { position: absolute; inset: 0; display: none; }
+.report-banner li.current { display: block; }
+.report-banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+~~~
+
+这段代码只决定哪项显示；它没有自动轮换、前后按钮、键盘模式或暂停控制，因此不构成完整轮播。真正的自动轮播需提供操作控制并照顾焦点、悬停和减少动态效果；连续移动图片的装饰演算见[CSS 过渡与动画](#23.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%BF%87%E6%B8%A1%EF%BC%8C%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F)。
+
+> [!info]- 来源
+> - 背景图像坐标：W3C CSS Backgrounds and Borders Level 3，Candidate Recommendation Draft（2024-03-11），[background-position](https://www.w3.org/TR/css-backgrounds-3/#the-background-position)，检查于 2026-11-06。
+> - 多路复用：IETF RFC 9113，HTTP/2，Standards Track（2022-06），[Streams and multiplexing](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing)，检查于 2026-11-06。
+> - HTTP 缓存语义：IETF RFC 9111，HTTP Caching，Standards Track（2022-06），[HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111.html)，检查于 2026-11-06。
+> - 可下载字体及 <code>@font-face</code>：W3C CSS Fonts Level 4，Working Draft（2026-11-04），[CSS Fonts Level 4](https://www.w3.org/TR/css-fonts-4/)，检查于 2026-11-06。
+> - 隐藏装饰字形并保留控件名称：W3C WAI-ARIA 1.2，Recommendation（2023-06-06），[`aria-hidden`](https://www.w3.org/TR/wai-aria-1.2/#aria-hidden)，及 WAI [Images Tutorial](https://www.w3.org/WAI/tutorials/images/)，检查于 2026-11-06。
+> - SVG 文档、形状与呈现：W3C SVG 2，Candidate Recommendation Snapshot（2026-10-06），[SVG 2](https://www.w3.org/TR/SVG2/)，检查于 2026-11-06；该快照预计不早于 2026-12-01 进入 Recommendation 阶段。
+> - `currentColor` 值：W3C CSS Color Level 4，Candidate Recommendation Draft（2026-11-03），[currentcolor](https://www.w3.org/TR/css-color-4/#valdef-color-currentcolor)，检查于 2026-11-06。
+> - `<img>` 的替代文本和图标规则：WHATWG HTML Living Standard（2026-11-05 更新），[Images](https://html.spec.whatwg.org/multipage/images.html#the-img-element)，检查于 2026-11-06；外部 SVG 作为图像资源时的处理见 [SVG 2: embedded content](https://www.w3.org/TR/SVG2/embedded.html)。
+> - 自动轮播控制：W3C WAI [ARIA APG Carousel Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/)，检查于 2026-11-06。
 ## 27. JavaScript 值如何转换、比较，并成为属性键？
 
 报表结果里，金额 0、缺失的数组位置、两个字段相同的记录，看起来都像“没有数据”或“同一条记录”；JavaScript 会按不同规则处理它们。本章从一次结果导入开始，先分清值与对象身份，再说明比较和属性键转换。后续章节沿用这组输入：

@@ -1,95 +1,105 @@
-# Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？
+# 哪些网页几何接口能测量哪一种盒子？
 
-These DOM APIs measure different boxes and coordinate spaces. Use `offset*` values for integer, untransformed layout dimensions; `client*` for the inner padding area; `scroll*` for scrolling extent and position; and `getBoundingClientRect()` for a transformed viewport-relative rectangle. A read may force pending style or layout work to finish, but does not necessarily cause a new layout when the measurements are already current. / 这些 DOM API 测量的盒子和坐标空间不同。`offset*` 提供整数、未变换的布局尺寸；`client*` 提供内侧 padding 区域；`scroll*` 提供滚动范围和位置；`getBoundingClientRect()` 提供相对于视口且受变换影响的矩形。读取可能迫使尚未完成的样式或布局工作同步完成，但如果测量值已经是最新的，不一定会触发新布局。
-
-```text
-┌─────────────────────────── margin ───────────────┐
-│ ┌───────────────────── border ────────────────┐  │
-│ │ ┌────────────── padding ────────────────┐   │  │
-│ │ │ ┌────────── content ────────────────┐ │   │  │
-│ │ │ │                                   │ │   │  │
-│ │ │ └───────────────────────────────────┘ │   │  │
-│ │ └───────────────────────────────────────┘   │  │
-│ └─────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────┘
-```
-
-## Quick comparison
-
-| Property | Includes | Excludes or caveat | Writable? |
-|---|---|---|---|
-| `offsetHeight` / `offsetWidth` | Border box; ordinarily a rendered scrollbar | Margin; ignores transforms; integer CSS px | No |
-| `clientHeight` / `clientWidth` | Padding area | Border and rendered scrollbar; integer CSS px | No |
-| `scrollHeight` / `scrollWidth` | Scrolling area, including overflow | Border; integer CSS px; not a guarantee the content is user-scrollable | No |
-| `scrollTop` / `scrollLeft` | Current scroll offset | Values may be fractional or outside usual range in some layouts | Yes |
-| `offsetTop` / `offsetLeft` | Offset from `offsetParent` padding edge to element border edge | Not necessarily relative to the direct parent | No |
-| `getBoundingClientRect()` | Viewport-relative union of transformed border-box fragments | Excludes margin; a snapshot | No |
-
-Dimensions are in CSS pixels, not device pixels. Scrollbars differ by platform: a rendered scrollbar consumes layout space on some configurations but overlays content on others. Do not derive a physical-device-pixel measurement from these values.
-
-## Choose by the box or coordinate space
-
-### Layout box and inner client area
-
-`offsetHeight` and `offsetWidth` return integer layout dimensions for the border box, normally including a rendered scrollbar and excluding margin. They ignore CSS transforms.
+Document Object Model（文档对象模型，DOM）提供多组几何 API，它们测量的盒子和坐标系不同。读布局偏移尺寸（`offset*`）或内客户区尺寸（`client*`），读滚动范围与偏移（`scroll*`），读包含 CSS transform（变换）后的视口矩形则用 `getBoundingClientRect()`（获取包围矩形）。一次几何读取可能迫使浏览器先完成尚未更新的样式或布局，但值已是最新时不一定产生新布局。
 
 ```text
-offsetHeight ≈ content height + padding + border (+ rendered scrollbar)
+┌────────────────────────── margin ──────────────────────────┐
+│ ┌────────────────────── border ─────────────────────────┐ │
+│ │ ┌────────────────── padding ───────────────────────┐  │ │
+│ │ │ ┌────────────── content ──────────────────────┐  │  │ │
+│ │ │ └────────────────────────────────────────────┘  │  │ │
+│ │ └─────────────────────────────────────────────────┘  │ │
+│ └──────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────┘
 ```
 
-`clientHeight` and `clientWidth` return the padding area minus a rendered scrollbar; the border and margin are excluded. In standards mode, the root element's client dimensions correspond to the viewport dimensions.
+## 先按测量目标选择属性
 
-```text
-clientHeight ≈ content height + padding - rendered scrollbar
-```
+| API | 返回内容 | 不包含或需留意 |
+| --- | --- | --- |
+| `offsetWidth` / `offsetHeight` | 整数布局尺寸，含 padding、border 和占空间的滚动条 | 不含 margin；不反映 CSS transform |
+| `clientWidth` / `clientHeight` | padding 区域尺寸 | 不含 border 和占空间的滚动条 |
+| `scrollWidth` / `scrollHeight` | 滚动区域尺寸，包含溢出的内容 | 不含 border；不是“用户一定能滚动”的保证 |
+| `scrollLeft` / `scrollTop` | 当前滚动偏移 | 可写；某些布局中数值可为小数或超出熟悉范围 |
+| `offsetLeft` / `offsetTop` | 相对 `offsetParent`（偏移父元素）的边缘位置 | 它不一定是直接父元素或最近定位祖先 |
+| `getBoundingClientRect()` | 相对视口、包含 transform 后的边框矩形联合范围 | 不含 margin；返回读取时的快照 |
 
-### Scrolling area and current offset
+这些数字使用 CSS 像素，不是设备物理像素。占空间的滚动条会改变布局测量，覆盖式滚动条则可能不占空间；这取决于平台及浏览器设置。
 
-`scrollHeight` measures the scrolling area, including content outside the visible client area. It can exceed `clientHeight` when content overflows. In standards mode, the root element's `scrollHeight` is the maximum of the viewport scrolling-area height and viewport height.
+## 用固定数字对照布局尺寸
 
-```javascript
-const hasOverflow = element.scrollHeight > element.clientHeight;
-const y = element.scrollTop;
-element.scrollTop = 0; // scroll to the top
-```
+假设一个内容盒宽 `320px`，左右 padding 各 `16px`，左右 border 各 `1px`，没有占空间的滚动条：
 
-`scrollTop` and `scrollLeft` are writable. Reverse-direction scrolling and elastic overscroll can produce values outside the familiar range, so avoid assuming every result is a nonnegative integer.
+~~~css
+.content-box {
+  box-sizing: content-box;
+  width: 320px;
+  padding-inline: 16px;
+  border: 1px solid;
+}
+~~~
 
-### Position relative to the offset parent
+> [!example] 内容盒尺寸的计算
+> `offsetWidth = 320 + 16×2 + 1×2 = 354px`；`clientWidth = 320 + 16×2 = 352px`。前者含边框，后者含 padding 但不含边框。
 
-`offsetTop` and `offsetLeft` measure from the element's border edge to the padding edge of its `offsetParent`. The offset parent is not simply the nearest positioned ancestor: tables, containing blocks, fixed positioning, zoom, shadow-tree boundaries, and missing boxes can affect which element is returned. Some elements, including `body` in common cases, return zero.
+把声明宽度改为 `box-sizing: border-box; width: 320px`，则内容宽度为 `320 − 16×2 − 1×2 = 286px`；在同样无滚动条的条件下，`clientWidth = 318px`、`offsetWidth = 320px`。
 
-### Viewport-relative visual rectangle
+## 读滚动区域与当前偏移
 
-`getBoundingClientRect()` returns the smallest rectangle enclosing the element's nonempty client rects, relative to the viewport. It includes CSS transforms. Fragmented inline content can produce several client rects; this method returns their union. Its result is a snapshot, not a live object.
+`scrollHeight` / `scrollWidth` 表示滚动区域尺寸。溢出内容可能使它大于可见的 `clientHeight` / `clientWidth`：
 
-```javascript
+~~~javascript
+const hasVerticalOverflow = element.scrollHeight > element.clientHeight;
+const currentY = element.scrollTop;
+element.scrollTop = 0; // 回到顶部
+~~~
+
+`scrollTop` 和 `scrollLeft` 可写。反向书写方向、弹性滚动及缩放等情形会使数值不符合“非负整数”的简单假设。
+
+在 standards mode（标准模式）下，根元素 `document.documentElement.scrollHeight` 特别返回视口滚动区域高度与视口高度的较大值；`clientHeight` 则是扣除占空间滚动条后的视口高度。对普通元素，`scrollHeight` 返回其自身滚动区域高度。
+
+## offset 相对哪个父元素？
+
+`offsetParent`（偏移父元素）由同名属性给出。`offsetTop` / `offsetLeft` 描述元素边框边缘相对该父元素 padding 边缘的位置；表格结构、固定定位、包含块和 Shadow DOM（影子 DOM）边界等都会影响返回的父元素。它不固定等同于最近的 `position` 祖先。
+
+## 读变换后的视口矩形
+
+`getBoundingClientRect()` 返回元素非空 client rect（客户端矩形）的最小包围矩形，坐标原点在当前视口左上角，尺寸受 transform 影响。行内内容跨多行时可能有多个 client rect，方法返回它们的联合矩形；结果是本次读取时的 DOMRect（DOM 矩形）快照。
+
+~~~javascript
 const rect = element.getBoundingClientRect();
-// rect.top / bottom: distance from viewport top to each edge
-// rect.left / right: distance from viewport left to each edge
-// rect.width / height: transformed border-box union in CSS px
-```
+// rect.top / bottom：相对视口顶部的上下边缘
+// rect.left / right：相对视口左侧的左右边缘
+// rect.width / height：变换后边框盒联合范围，单位为 CSS px
+~~~
 
-A basic viewport-overlap check is:
+~~~text
+视口左上角 (0, 0)
+┌──────────────────────────────────────────────┐
+│          ┌────── rect.left ──────┐            │
+│          │ 元素 transform 后的外接矩形 │            │
+│          └────────────────────────┘            │
+└──────────────────────────────────────────────┘
+~~~
 
-```javascript
+以矩形判断是否与视口相交，只能说明几何区域有正面积交叠，无法判断元素是否被其他内容遮挡、是否透明或辅助技术是否可见。`getBoundingClientRect()` 对退化的零宽或零高元素也可能返回矩形，因此必须单独检查宽高。下面假设文档处于 standards mode；根元素的 `clientWidth`/`clientHeight` 表示扣除占空间滚动条后的视口尺寸。
+
+~~~javascript
 function overlapsViewport(element) {
   const rect = element.getBoundingClientRect();
-  return (
-    rect.top < window.innerHeight &&
-    rect.bottom > 0 &&
-    rect.left < window.innerWidth &&
-    rect.right > 0
-  );
+  const root = document.documentElement;
+  return rect.width > 0 && rect.height > 0 &&
+    rect.bottom > 0 && rect.top < root.clientHeight &&
+    rect.right > 0 && rect.left < root.clientWidth;
 }
-```
+~~~
 
-This checks rectangle overlap, not whether the element is occluded, transparent, or exposed to assistive technology. Decide separately how zero-area rectangles should behave.
+## 把写入和读取分批
 
-## Measurement without repeated layout work
+偶尔读取一次几何属性时，选与问题相符的盒子和坐标系。滚动阈值通知或图片延迟加载优先使用 IntersectionObserver（相交观察器）[图片加载中的观察器示例](../browser-apis/image-lazy-loading.md)，而不是反复轮询矩形；观察器会异步报告相交状态，但不承诺完全不触发布局工作。
 
-For an occasional measurement, choose the API whose box and coordinate system match the task. For threshold-based visibility such as lazy loading or analytics, prefer [IntersectionObserver](../browser-apis/image-lazy-loading.md) over repeatedly polling geometry. It reports asynchronously and is not a blanket guarantee that no layout work occurs.
+若先改样式再马上读几何值，浏览器可能同步完成待处理的样式或布局；循环交替执行写入和读取会重复付出这类成本。有关批量读取、批量写入的路径见[渲染流水线与强制布局](./rendering-pipeline-and-forced-layout.md)。
 
-A write followed by a geometry read can force pending layout; alternating writes and reads in a loop can repeat that work. See [Rendering pipeline and forced layout](./rendering-pipeline-and-forced-layout.md) for the read/write batching example.
-
-**Specifications:** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.
+> [!info]- 来源
+> - 元素布局尺寸、滚动 API、视口矩形：W3C CSSOM View，Working Draft（2025-09-16），[CSSOM View](https://www.w3.org/TR/cssom-view-1/)，检查于 2026-11-06。其中 [Element.scrollHeight](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight) 说明根元素和普通元素的滚动高度规则。
+> - 异步相交通知：W3C [Intersection Observer](https://www.w3.org/TR/intersection-observer/)，Working Draft（2023-10-18），检查于 2026-11-06。

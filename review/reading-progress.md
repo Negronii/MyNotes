@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=fcc47d4e952f4b78d441952bf06c3feecb611b79b9dbbf77acce401d46e4eb4e -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=90de88981e2d91af62345a3863f3b6da9324b02095d9df4abd52277a14dfea61 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -54,12 +54,12 @@
 - [ ] 40. [块格式化上下文如何约束浮动和外边距？](../frontend/html-css/bfc-and-flow-containment.md)
 - [ ] 41. [哪些 CSS 单位与响应式布局规则适合当前空间？](../frontend/html-css/responsive-css-units-and-layout.md)
 - [ ] 42. [固定与流动内容适合哪种 CSS 布局？](../frontend/html-css/flex-and-grid-layout.md)
-- [ ] 43. [How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？](../frontend/html-css/css-position-display-and-animations.md)
-- [ ] 44. [What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？](../frontend/html-css/css-visibility-and-accessibility.md)
-- [ ] 45. [When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？](../frontend/html-css/css-transitions-and-animations.md)
-- [ ] 46. [Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？](../frontend/html-css/dom-properties.md)
-- [ ] 47. [How should a browser page lazy-load images without hurting LCP or layout stability? / 如何延迟加载图片而不损害 LCP 或布局稳定性？](../frontend/browser-apis/image-lazy-loading.md)
-- [ ] 48. [When should small images be combined into a CSS sprite? / 何时应把多个小图片合并为 CSS Sprite？](../frontend/performance/css-sprites-and-image-caching.md)
+- [ ] 43. [定位如何确定元素位置与前后顺序？](../frontend/html-css/css-position-display-and-animations.md)
+- [ ] 44. [隐藏状态会怎样影响焦点与可访问性？](../frontend/html-css/css-visibility-and-accessibility.md)
+- [ ] 45. [何时使用过渡，何时使用关键帧动画？](../frontend/html-css/css-transitions-and-animations.md)
+- [ ] 46. [哪些网页几何接口能测量哪一种盒子？](../frontend/html-css/dom-properties.md)
+- [ ] 47. [图片与媒体资源怎样加载并保持页面稳定？](../frontend/browser-apis/image-lazy-loading.md)
+- [ ] 48. [怎样为报表图标选择资源形式？](../frontend/performance/css-sprites-and-image-caching.md)
 - [ ] 49. [JavaScript 值如何转换、比较，并成为属性键？](../frontend/javascript/javascript-types.md)
 - [ ] 50. [何时使用 Map、Set 或普通对象？](../frontend/javascript/map-and-set.md)
 - [ ] 51. [JavaScript 数组操作如何处理空位、修改与复制？](../frontend/javascript/arrays.md)

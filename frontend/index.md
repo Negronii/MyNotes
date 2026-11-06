@@ -38,12 +38,12 @@
 - [块格式化上下文如何约束浮动和外边距？](html-css/bfc-and-flow-containment.md)
 - [哪些 CSS 单位与响应式布局规则适合当前空间？](html-css/responsive-css-units-and-layout.md)
 - [固定与流动内容适合哪种 CSS 布局？](html-css/flex-and-grid-layout.md)
-- [How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？](html-css/css-position-display-and-animations.md)
-- [What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？](html-css/css-visibility-and-accessibility.md)
-- [When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？](html-css/css-transitions-and-animations.md)
-- [Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？](html-css/dom-properties.md)
-- [How should a browser page lazy-load images without hurting LCP or layout stability? / 如何延迟加载图片而不损害 LCP 或布局稳定性？](browser-apis/image-lazy-loading.md)
-- [When should small images be combined into a CSS sprite? / 何时应把多个小图片合并为 CSS Sprite？](performance/css-sprites-and-image-caching.md)
+- [定位如何确定元素位置与前后顺序？](html-css/css-position-display-and-animations.md)
+- [隐藏状态会怎样影响焦点与可访问性？](html-css/css-visibility-and-accessibility.md)
+- [何时使用过渡，何时使用关键帧动画？](html-css/css-transitions-and-animations.md)
+- [哪些网页几何接口能测量哪一种盒子？](html-css/dom-properties.md)
+- [图片与媒体资源怎样加载并保持页面稳定？](browser-apis/image-lazy-loading.md)
+- [怎样为报表图标选择资源形式？](performance/css-sprites-and-image-caching.md)
 
 ### JavaScript 的值、对象与调用
 
