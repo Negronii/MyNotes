@@ -1,82 +1,88 @@
-# How does an AI chat turn one message into a complete answer? / AI 聊天应用怎样把一条消息变成完整回答？
+# How does an AI service turn one message into a complete answer? / AI 服务怎样把一条消息变成完整回答？
 
-用户在聊天框里输入 `Why did build 42 fail?`，按下回车。对话里只有构建编号，能解释失败的日志还在另一个服务里。
+AI 服务收到 `Why did build 42 fail?`。用户给出了构建编号，失败记录保存在日志服务里。应用把这次运行记为 `r1`。
 
-## What reaches the model after Enter? / 按下回车后，哪些信息会交给模型？
+~~~mermaid
+flowchart TD
+    Input["1 组装输入 / Prepare input<br/>问题 + 工具定义"]
+    Model["2 模型推理 / Inference<br/>词元 → 隐层状态 → 生成输出"]
+    Choice{"运行时收到工具请求？"}
+    Tool["3 运行工具 / Execute tool<br/>授权并读取构建 42"]
+    Context["4 更新上下文 / Add observation<br/>把 c1 的结果交回模型"]
+    Answer["5 交付回答 / Return answer<br/>保存文本和运行结果"]
+    Input --> Model --> Choice
+    Choice -->|工具请求 c1| Tool
+    Tool -->|结果或错误| Context
+    Context -->|同一个 r1，下一轮推理| Model
+    Choice -->|本轮正常结束并给出答案| Answer
+~~~
 
-浏览器先把用户消息放进对话，发出包含会话标识和新消息的请求。应用从当前登录会话识别调用者，为这次请求创建运行标识（run ID）`r1`，并随响应交给浏览器。之后即使换了一条连接，浏览器也可以用 `r1` 查询同一次运行的结果。
+## 1. Prepare the model input / 组装模型输入
 
-应用为第一轮推理组装输入。除了用户的问题，还有应用指令、相关的对话历史，以及本轮可用的工具定义。这里的 `read_build_log` 说明它可以按整数 `build_id` 查构建日志。模型现在知道有这个查询入口，日志内容仍由日志服务保管。组装输入时筛选什么信息、把哪些状态留在应用侧，决定了模型这轮实际能看见什么。[每轮推理的上下文](../context/context-engineering-principles.md)
+应用运行时（harness）保存 `r1` 和调用者身份，再为第一轮推理选取信息。这个例子里没有需要带入的历史消息，模型先看到下面三样东西。
 
-## How does the first inference produce a tool request? / 第一轮推理怎样生成工具请求？
+| 第一轮输入 | 在 `r1` 中的内容 |
+| --- | --- |
+| 应用指令 | 根据可用证据解释构建失败。 |
+| 用户消息 | `Why did build 42 fail?` |
+| 工具定义 | `read_build_log` 接收整数 `build_id`，返回构建日志中的失败记录。 |
 
-推理服务按模型的输入格式组织角色、消息和工具定义，再由分词器（tokenizer）转换成一列整数 ID。比如用 `tiktoken 0.12.0` 的 `cl100k_base` 单独编码这句提问，可以得到 `["Why", " did", " build", " ", "42", " fail", "?"]`，对应 `[10445, 1550, 1977, 220, 2983, 3775, 30]`。这个例子里的字节级 BPE 会先把文本划为可分别处理的片段，再按训练得到的优先级反复合并相邻字节片段。词元可以包含前导空格。整轮输入的长度 `T` 还要计入角色、历史和工具说明。[分词算法与词表](../foundations/how-llms-work.md#How%20does%20the%20tokenizer%20choose%20token%20boundaries%3F%20/%20%E5%88%86%E8%AF%8D%E5%99%A8%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E8%BE%B9%E7%95%8C%EF%BC%9F)
+工具定义告诉模型可以请求什么，实际日志要等应用查询后才会出现。应用保存的调用者身份用于工具授权。在更长的对话里，应用还需要选择哪些历史和证据值得放进下一轮。[每轮推理应该看到哪些信息](../context/context-engineering-principles.md)
 
-用一个缩小的仅解码器 Transformer（decoder-only Transformer）跟踪这些 ID。假设词表有 `N` 项，模型宽度为 `8`。嵌入表（embedding table）的形状是 `N × 8`。每个 ID 取表中的一行，`T` 个 ID 便成为 `T × 8` 的初始隐层状态（hidden state）。此后每层仍按位置保留一行向量，并用训练得到的权重更新这些向量。
+## 2. Run inference and generate a tool request / 推理生成工具请求
 
-**注意力（attention）先让位置之间交换信息。** 这层用两个宽度为 `4` 的注意力头。对归一化后的 `T × 8` 输入，每个头用三个 `8 × 4` 的矩阵分别投影出 `Q`、`K`、`V`，三个结果都是 `T × 4`。位置也参与匹配。例如旋转位置编码（RoPE）在打分前按词元位置旋转 Q 和 K。[Transformer §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2) · [RoFormer §3](https://arxiv.org/abs/2104.09864)
+推理服务按模型的输入格式组织消息和工具定义，再由分词器（tokenizer）转成一列整数 ID。用 `tiktoken 0.12.0` 的 `cl100k_base` 单独编码这句提问，得到 `["Why", " did", " build", " ", "42", " fail", "?"]`，对应 `[10445, 1550, 1977, 220, 2983, 3775, 30]`。这里的字节级 BPE 按训练得到的优先级反复合并相邻片段，所以一个词元可以包含前导空格。下面的 `T` 表示模型收到的整个序列的长度，包含角色、消息和工具说明。[分词算法与词表](../foundations/how-llms-work.md#How%20does%20the%20tokenizer%20choose%20token%20boundaries%3F%20/%20%E5%88%86%E8%AF%8D%E5%99%A8%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E8%BE%B9%E7%95%8C%EF%BC%9F)
 
-因果掩码让一个位置只看到自身和更早的词元。当前位置的查询（query）跟各个可见位置的键（key）做点积，除以 `√4` 后沿键的位置做 softmax，再按所得权重对值（value）做加权求和。两个头可以在不同的特征空间里给前文不同权重，各得到一个 `T × 4` 的结果。沿特征维拼成 `T × 8`，乘 `8 × 8` 的输出投影混合各头的特征，再通过残差连接加回原状态。[多头注意力的矩阵推导](../foundations/how-llms-work.md#How%20do%20Q%2C%20K%2C%20and%20V%20produce%20the%20attention%20update%3F%20/%20Q%E3%80%81K%E3%80%81V%20%E6%80%8E%E6%A0%B7%E4%BA%A7%E7%94%9F%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9B%B4%E6%96%B0%EF%BC%9F)
+用一个宽度为 `8` 的缩小版仅解码器 Transformer（decoder-only Transformer）看中间状态。假设词表有 `N` 项，嵌入表（embedding table）的形状是 `N × 8`。查表时，`42` 对应的 ID `2983` 取索引为 `2983` 的行。把序列里的每个 ID 都查一遍，得到 `T × 8` 的初始隐层状态（hidden state）。之后每层仍为每个位置保留一行向量，以下选用户消息中问号所在的一行演示层内计算。
 
-**前馈网络（feed-forward network，FFN）再变换每个位置里的特征。** 归一化后的输入仍是 `T × 8`。以 SwiGLU 为例，两个 `8 × 16` 的投影分别产生候选值和门控输入。门控一路经过 SiLU 后与候选值逐元素相乘，再用 `16 × 8` 的投影把结果变回 `T × 8`，加回残差状态。例如一个门控通道的输入是 `0`，这个通道对应的候选值这次就乘以 `0`。[Shazeer, GLU Variants §2](https://arxiv.org/html/2002.05202#S2)
+~~~mermaid
+flowchart TD
+    X["构建 42 的输入状态<br/>T × 8，每个词元一行"]
+    H1["注意力头 1 / Head 1<br/>Q、K、V 各 T × 4<br/>加权输出 T × 4"]
+    H2["注意力头 2 / Head 2<br/>Q、K、V 各 T × 4<br/>加权输出 T × 4"]
+    A["沿特征维拼接 → 投影<br/>T × 8，加回输入状态"]
+    F["前馈网络 / FFN<br/>候选值和门控各 T × 16<br/>逐元素相乘"]
+    Y["投影回 T × 8<br/>加回注意力更新后的状态"]
+    X --> H1 & H2
+    H1 & H2 --> A
+    A --> F --> Y
+~~~
 
-注意力可以把 `build` 和 `42` 的线索汇到同一个位置，FFN 便可以根据这组特征的组合调整写回这一行的内容。每个位置使用同一组本层 FFN 权重，各自变换。注意力和 FFN 完成一个 Transformer 层的两次更新，后续层继续更新这份状态。这些更新最终会影响模型对接下来词元的打分。[FFN 与层堆叠](../foundations/how-llms-work.md#What%20does%20the%20FFN%20add%2C%20and%20how%20do%20blocks%20stack%3F%20/%20FFN%20%E5%A2%9E%E5%8A%A0%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E5%B1%82%E6%80%8E%E6%A0%B7%E5%A0%86%E5%8F%A0%EF%BC%9F)
+**注意力（attention）先在位置之间传递信息。** 归一化后的 `T × 8` 输入，在每个头里分别乘三个 `8 × 4` 的矩阵，得到形状均为 `T × 4` 的查询（Q）、键（K）和值（V）。若采用旋转位置编码（RoPE），模型在算分前按位置旋转 Q 和 K。某一行用自己的 Q 与可见位置的 K 做点积，除以 `√4`，再用 softmax 得到权重。因果掩码先屏蔽未来位置，因此问号所在的行能读取前面的 `build` 和 `42`。[注意力的矩阵推导](../foundations/how-llms-work.md#How%20do%20Q%2C%20K%2C%20and%20V%20produce%20the%20attention%20update%3F%20/%20Q%E3%80%81K%E3%80%81V%20%E6%80%8E%E6%A0%B7%E4%BA%A7%E7%94%9F%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9B%B4%E6%96%B0%EF%BC%9F) · [Transformer §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2) · [RoFormer §3.2](https://arxiv.org/html/2104.09864v5#S3.SS2)
 
-第一遍处理整段输入叫预填充（prefill）。模型用最后一个位置的输出向量预测第一个新词元。语言模型输出头（LM head）的 `8 × N` 投影给词表上每个候选 ID 打分，得到一行 logits。解码规则可以选最高分，也可以从分数导出的概率分布里采样。选出的 ID 追加到序列，成为下一步要处理的新位置。
+在问号这一行，简化成只对 `build` 和 `42` 两处求和。假设某个头给它们的权重是 `0.25`、`0.75`，两个 V 分别是 `(1, 0, 0, 0)` 和 `(0, 2, 0, 0)`，则该头在这一行的输出为 `(0.25, 1.5, 0, 0)`。两个头分别计算，每个位置得到两条宽度为 `4` 的结果。沿特征维拼成宽度 `8`，再用 `8 × 8` 的输出矩阵混合特征，最后把这次更新加回各位置的原向量。
 
-进入增量解码（incremental decoding）后，每层的新查询仍要给旧位置打分并取它们的值，因此同一前缀各层的 K 和 V 可以复用。旧位置的查询早已用于计算各自的输出，后续新位置用的是自己的 Q。解码循环直到遇到结束信号或达到输出上限。这也适用于生成工具请求的第一轮。[解码与 KV 缓存](llm-serving-and-kv-cache.md) · [Transformers 缓存机制](https://huggingface.co/docs/transformers/main/en/cache_explanation)
+**前馈网络（feed-forward network，FFN）接着在每一行内部变换特征。** 注意力已经把与构建和编号相关的信息写进问号的向量。以 SwiGLU 为例，归一化后的 `T × 8` 状态经过两个 `8 × 16` 投影，分别生成候选值和门控输入。对问号这一行，假设其中一个候选通道是 `3`，对应的门控输入是 `1`。SiLU 把 `1` 变成约 `0.73`，相乘后这一通道约为 `2.19`。门控由当前行里的特征共同决定，所以同一个 FFN 能根据上下文写回不同内容。用 `16 × 8` 的下投影把结果变回 `T × 8`，再加到注意力更新后的状态，交给下一个 Transformer 层。[FFN 与层堆叠](../foundations/how-llms-work.md#What%20does%20the%20FFN%20add%2C%20and%20how%20do%20blocks%20stack%3F%20/%20FFN%20%E5%A2%9E%E5%8A%A0%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E5%B1%82%E6%80%8E%E6%A0%B7%E5%A0%86%E5%8F%A0%EF%BC%9F) · [GLU Variants §2](https://arxiv.org/html/2002.05202#S2)
 
-这次生成结束时，模型接口交给应用一条结构化工具请求（tool request）。工具是 `read_build_log`，参数为 `build_id=42`，调用标识为 `c1`。`r1` 标识整次聊天运行，`c1` 只标识其中这一次工具调用。应用拿到的是一次要执行的查询，到了这一步才开始准备读取日志。[OpenAI 的工具调用生命周期](https://developers.openai.com/api/docs/guides/function-calling#the-tool-calling-flow) · [Claude 的应用端工具调用](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works#the-agentic-loop-client-tools)
+第一遍处理整段输入叫预填充（prefill）。预测首个新词元时，语言模型输出头（LM head）取完整格式化输入最后一个位置的最终隐层向量。输入模板决定这个位置是什么，例如模板可能在消息后追加一个回复起始标记。输出头用 `8 × N` 的矩阵为词表里的每个 ID 打分，得到 logits。解码可以选最高分，也可以把分数转成概率后采样。[聊天模板的回复起始标记](https://huggingface.co/docs/transformers/chat_templating#add_generation_prompt)
 
-## How does the tool request become evidence? / 工具请求怎样变成证据？
+选出的 ID 追加到序列，再用新位置的输出预测下一枚词元。带因果掩码的模型可以缓存各层旧位置的 K、V，因为新位置仍要读取它们。旧位置的 Q 已完成各自的计算，这一步用的是新位置的 Q。[解码与 KV 缓存](llm-serving-and-kv-cache.md) · [Transformers 缓存机制](https://huggingface.co/docs/transformers/main/en/cache_explanation)
 
-应用的运行时（harness）先确认 `read_build_log` 属于当前允许的工具，并检查参数确实是整数构建编号。随后根据应用已识别的用户检查能否读取构建 `42`。格式正确只说明运行时理解了这条请求。真正读取的是应用，访问权限按当前用户和目标资源判定，即使这个工具只有读操作。[工具契约与授权检查](../agents/tool-design-and-function-calling.md)
+这次，模型按工具调用格式生成了工具名和参数。推理接口识别出完整调用，把它作为带有调用标识的结构化项交给运行时。应用收到的内容可以写成 `tool_call(c1, read_build_log, {build_id: 42})`。运行时看到这是一次工具请求，进入图中的工具分支。[OpenAI 工具调用流程](https://developers.openai.com/api/docs/guides/function-calling#the-tool-calling-flow) · [Claude 应用端工具调用](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works#the-agentic-loop-client-tools)
 
-权限通过后，日志服务返回构建 `42` 的失败记录。运行时从中挑出与问题相关的片段，并把结果附到调用 `c1` 上。
+## 3. Execute the tool and collect evidence / 执行工具并取得证据
 
-| 来自同一条日志的字段 | 返回给模型的值 |
+运行时接到 `c1`，确认工具可用且参数是整数，再按 `r1` 的调用者身份检查对构建 `42` 的读取权限。格式校验确认运行时能按工具定义解析请求，授权检查决定当前用户能读取哪些资源。即使是只读工具，日志也必须在授权通过后才取出。[工具契约与授权检查](../agents/tool-design-and-function-calling.md)
+
+读取成功后，运行时把与问题相关的日志附在 `c1` 的结果里。`r1` 贯穿整次回答，`c1` 用来把这条观察对应到具体调用。
+
+| `c1` 的工具结果 | 从构建 `42` 的日志读到的值 |
 | --- | --- |
 | 失败步骤 | `unit-tests` |
 | 失败测试 | `reject_empty_name` |
 | 失败断言 | 空名称请求预期返回 `400`，实际返回 `200` |
-| 测试进程退出状态 | `1` |
+| 退出状态 | `1` |
 
-如果读取被拒绝，运行时可以把错误作为 `c1` 的结果送回，模型就能解释这次拿不到证据。若用户已经把同一段日志贴进消息，证据在第一轮就可用，可以省掉这次外部读取。证据若需要从一批文档中找，则可以在推理前或工具执行时先检索调用者有权使用的段落。[检索与证据的适用范围](../rag/rag-architecture-and-implementation.md)
+如果权限检查失败，运行时可以为 `c1` 返回读取失败的结果。下一轮模型便能说明证据为何不可用。这个例子按已知编号查一份日志。如果问题需要在一组文档里寻找相关段落，证据获取环节可以使用[检索增强生成（RAG）](../rag/rag-architecture-and-implementation.md)。
 
-## What changes in the second inference? / 第二轮推理多看到了什么？
+## 4. Feed the observation back to the model / 把观察交回模型
 
-运行时发起下一轮推理。这次输入需要保留原问题、模型此前提出的调用，以及标着 `c1` 的工具结果。调用标识把新证据与请求它的动作接起来。模型仍按相同方式逐词元解码，只是现在能根据日志解释测试为什么失败。如果结果还不足以回答，它可以提出下一次工具请求，由运行时继续同样的校验和执行流程。[动作、观察与下一步决策](../agents/agent-fundamentals.md#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF)
+下一轮仍处理 `r1`。在原有输入的基础上，应用带入模型提出的 `tool_call(c1, …)` 和工具返回的 `tool_result(c1, …)`。前者记录要查什么，后者把该调用实际读到的 `unit-tests`、`400` 与 `200` 带入这次推理。日志内容这时才被编码成模型输入，模型使用相同的推理机制和已训练的权重生成回答。如果证据不足以回答，模型也可以再提出一次查询，由运行时重复校验、执行与回填。[动作、观察与下一步决策](../agents/agent-fundamentals.md#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF)
 
-~~~mermaid
-sequenceDiagram
-    participant Browser
-    participant App as Chat application
-    participant Model
-    participant Logs as Build log store
-    Browser->>App: Submit question about build 42
-    App->>Model: Question and available tools
-    Model-->>App: Tool request c1 for build 42
-    App->>App: Validate c1 and authorize the read
-    App->>Logs: Read build 42
-    Logs-->>App: Test expected 400, got 200
-    App->>Model: Question, previous call and result c1
-    loop Answer text arrives
-        Model-->>App: Answer text delta
-        App-->>Browser: Text delta for r1
-    end
-    App-->>Browser: Complete r1
-~~~
+如果用户一开始就贴出了足够的日志，证据可以直接进入第一轮输入，图里的工具循环可以省去。这个例子中，日志已经在第二轮提供了足够证据，模型给出最终文本。
 
-## When is the answer visible and complete? / 回答什么时候出现在屏幕上，什么时候算完成？
+## 5. Finish the run and return the answer / 结束运行并交付回答
 
-模型接口交付可用的文本增量（text delta）后，应用把它转成浏览器能识别的事件。一个应用事件可以包含多个词元解码后的文本。浏览器从 HTTP 响应里增量解码字节、拼出完整事件，再把文本追加到 `r1` 的回答。网络读到的块可以只覆盖半个事件。比如采用服务端发送事件（SSE）时，浏览器按空行识别事件边界。界面框架随后提交 DOM 更新，浏览器按需布局、绘制和合成，用户在某个新帧里看到增加的文字。[SSE 的事件解析](https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream) · [界面更新怎样变成像素](../../frontend/html-css/rendering-pipeline-and-forced-layout.md)
+> 第 42 次构建在 `unit-tests` 步骤失败。`reject_empty_name` 期望空名称请求返回 `400`，实际返回 `200`，测试进程以 `1` 退出。要进一步定位原因，需要核对请求校验逻辑和测试预期。
 
-这次运行的浏览器事件可以长成下面这样。应用在确认模型正常结束并保存最终回答后，发送自己的完成事件。
-
-| `r1` 的事件顺序 | 浏览器拿到的内容 |
-| --- | --- |
-| `1 · delta` | 第 42 次构建在 `unit-tests` 步骤失败。 |
-| `2 · delta` | `reject_empty_name` 期望空名称请求返回 `400`，实际返回 `200`，测试进程以 `1` 退出。 |
-| `3 · complete` | 确认 `r1` 的回答已完成。 |
-
-浏览器在收到第 2 个事件时就可以显示这段解释，在收到第 3 个事件时才把回答标记为完成。若连接恰好在两者之间断开，界面保留已显示的文本，并用 `r1` 查询服务端保存的状态和结果。这里最终能解释的是哪项测试失败以及它观察到的行为差异。进一步定位到实现还是测试预期，需要相应的代码或测试证据。[流式界面的终态与断线恢复](../../frontend/browser-apis/streaming-ux.md) · [服务端如何保存和恢复同一次运行](ai-application-architecture.md)
+第一轮模型结束时，交出的是 `c1`，应用还有查询要做。第二轮正常结束并给出最终文本后，应用把答案和完成状态保存到 `r1`，再向调用方交付结果。若接口边生成边发送文本，运行记录仍要以应用确认的最终结果为准。[服务端的运行状态与恢复](ai-application-architecture.md)

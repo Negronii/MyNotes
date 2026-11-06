@@ -13,6 +13,7 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 ## Plan a reading route
 
 - Put a few questions at the top of each active domain map and identify a good first chapter. Each route follows one concrete run, failure, or decision from an observable starting point to an outcome. Carry the same case across steps and end once the question is answered.
+- Give adjacent domains enough context to explain their handoff. Stop the main route at the outcome owned by the chapter's question.
 - When changing a route, identify where readers first learn a mechanism, where they reuse it, and which material they can look up as needed.
 - Before reorganizing multiple domains, try the proposed reading experience on one existing chapter and one path the current chapters do not connect. Use forced jumps and points where a reader loses the causal chain to decide where better navigation or more explanation is needed.
 
@@ -23,7 +24,7 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 - Keep titles bilingual. Introduce Chinese and English terms at the point where they matter, and pair key explanations in the relevant paragraph or figure. Detailed derivations, mechanisms, and examples may use whichever language makes them clearest.
 - Preserve useful knowledge and distinctive examples when rewriting, merging, or splitting notes. Remove genuine duplication, but do not delete lasting material only because it is not currently an interview topic.
 - Explain a linked mechanism's role at the point where the reader needs it. Link to the page that owns the detailed answer. Use a section link when it helps the reader find a particular part, and verify the heading in the intended readers.
-- Use Mermaid when a flow, state change, or interaction is easier to follow visually. Put new static assets in a nearby `resources` folder and use relative Markdown links. Explain the main point in prose so the page remains usable without the figure.
+- Use Mermaid when a flow, state change, or interaction is easier to follow visually. For a multi-stage flow, put an overview near the start and label what each step produces and where it loops or branches. Use the same example in the overview, any detail figures, and the text. Put new static assets in a nearby `resources` folder and use relative Markdown links. Explain the main point in prose so the page remains usable without the figure.
 - Show examples readers can follow on the page, including what changes when a real condition changes. Include runnable code when the code's behavior is itself part of the explanation or the reader asks to run it. Reserve quizzes and exercises for explicit requests.
 
 ## Check factual claims

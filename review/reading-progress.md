@@ -7,10 +7,10 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=fe3039e1a44f3b6d354f6baf608d282f3cbf1f9154473fe093ca66c8b13038fc -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d3106fd27d714bfd8869d97f20e1f515bb5fe3da764a2ea7959649253e2e55fb -->
 ## AI Engineering
 
-- [ ] 1. [How does an AI chat turn one message into a complete answer? / AI 聊天应用怎样把一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
+- [ ] 1. [How does an AI service turn one message into a complete answer? / AI 服务怎样把一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
 - [ ] 2. [How does a language model turn a prompt into text? / 语言模型怎样把一段 prompt 变成文本？](../ai-engineering/foundations/how-llms-work.md)
 - [ ] 3. [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](../ai-engineering/foundations/model-selection-and-ecosystem.md)
 - [ ] 4. [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](../ai-engineering/prompting/prompt-engineering-fundamentals.md)
