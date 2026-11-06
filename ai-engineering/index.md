@@ -21,7 +21,8 @@
 ### 模型怎样计算，服务怎样承接请求
 
 - [语言模型如何把提示词变成文本？](foundations/how-llms-work.md)
-- [How do KV cache and scheduling determine LLM serving capacity? / KV 缓存与调度怎样决定模型推理容量？](systems/llm-serving-and-kv-cache.md)
+- [长上下文怎样少存、少读历史，同时保留需要的信息？](foundations/long-context-attention.md)
+- [KV 缓存与调度怎样决定大语言模型的服务容量？](systems/llm-serving-and-kv-cache.md)
 - [How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？](systems/ai-latency-and-cost-optimization.md)
 - [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](foundations/model-selection-and-ecosystem.md)
 - [When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？](systems/ai-deployment-patterns.md)

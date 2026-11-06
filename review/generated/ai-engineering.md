@@ -42,7 +42,7 @@ harness 是负责协调模型与工具的应用代码。它记录调用者身份
 
 工具定义描述了一个可用操作。只有应用取回日志后，日志内容才会进入对话。应用会保留调用者身份，用于权限检查。
 
-这些输入构成了本次调用的模型 context (上下文)。在较长的对话中，应用还需要决定包含哪些较早的消息和证据。这个选择很重要，因为模型只能依据实际提供的信息，以及训练参数中编码的知识来生成输出。[如何为每次模型调用选择信息](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)
+这些输入构成了本次调用的模型 context (上下文)。在较长的对话中，应用还需要决定包含哪些较早的消息和证据。这个选择很重要，因为模型只能依据实际提供的信息，以及训练参数中编码的知识来生成输出。[如何为每次模型调用选择信息](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)
 
 ### 2. 生成请求以获取缺失证据
 
@@ -60,7 +60,7 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 
 ### 3. 执行请求并读取日志
 
-应用会检查 `read_build_log` 是否可用、`build_id` 是否为所需的整数类型，以及调用者是否有权读取构建 `42`。参数校验确保请求可以被正确解释。authorization (授权) 则确定调用者可以访问哪个资源。只有这些检查全部通过后，应用才会读取日志。如果工具会改变外部状态，例如重启构建，那么重试时还需要考虑前一次尝试是否已经生效。[工具契约与授权](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
+应用会检查 `read_build_log` 是否可用、`build_id` 是否为所需的整数类型，以及调用者是否有权读取构建 `42`。参数校验确保请求可以被正确解释。authorization (授权) 则确定调用者可以访问哪个资源。只有这些检查全部通过后，应用才会读取日志。如果工具会改变外部状态，例如重启构建，那么重试时还需要考虑前一次尝试是否已经生效。[工具契约与授权](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
 
 取回的结果包含模型此前缺少的证据。
 
@@ -71,7 +71,7 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 | 失败断言 | 空名称请求应返回 HTTP `400`，但实际返回了 `200`。 |
 | 进程退出状态 | `1` |
 
-如果 authorization 失败，应用可以为 `c1` 返回失败结果，让模型在下一次调用时说明无法获取证据。本例中，工具按照 ID 查询一条已知日志。如果问题需要在大量文档中查找相关段落，应用可以先检索这些段落，再提供给模型生成回答。这个检索与生成过程称为 retrieval-augmented generation (检索增强生成)，简称 RAG。[如何检索证据并据此生成回答](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)
+如果 authorization 失败，应用可以为 `c1` 返回失败结果，让模型在下一次调用时说明无法获取证据。本例中，工具按照 ID 查询一条已知日志。如果问题需要在大量文档中查找相关段落，应用可以先检索这些段落，再提供给模型生成回答。这个检索与生成过程称为 retrieval-augmented generation (检索增强生成)，简称 RAG。[如何检索证据并据此生成回答](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)
 
 ### 4. 让模型利用检索到的证据
 
@@ -88,9 +88,9 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 > [!example] 根据日志返回说明
 > 构建 42 在 `unit-tests` 步骤失败。`reject_empty_name` 测试预期空名称请求返回 HTTP `400`，但实际收到 `200`。测试进程以状态 `1` 退出。若要确认底层原因，请对照测试的预期行为检查请求校验逻辑。
 
-第一次模型调用以工具请求结束，因此应用还需要继续工作。第二次调用则正常地以回答结束。在本例中，应用会先保存回答并将本次运行标记为完成，再把结果返回给调用者。如果应用在生成过程中流式传输文本，仍须跟踪生成最终是成功完成还是失败。[运行状态与恢复](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)
+第一次模型调用以工具请求结束，因此应用还需要继续工作。第二次调用则正常地以回答结束。在本例中，应用会先保存回答并将本次运行标记为完成，再把结果返回给调用者。如果应用在生成过程中流式传输文本，仍须跟踪生成最终是成功完成还是失败。[运行状态与恢复](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)
 
-区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) 会进一步说明验收标准和对比方法。
+区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) 会进一步说明验收标准和对比方法。
 
 本次服务运行到此结束。若想进一步了解任一次模型调用中的计算过程，可以继续阅读[语言模型如何将提示转换为文本](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)。该章节会依次展开前向计算、解码和训练。
 
@@ -149,7 +149,7 @@ token 是特定词表中的一个条目。它可以表示标点、一个字节�
 > [!info] 词元边界不一定是字符边界
 > 一个 Unicode 字符可能由多个 UTF-8 字节组成。字节级词元片段可能会拆开这些字节，因此逐个把词元当作完整字符串解码，可能得到损坏的字符。增量文本解码会暂存尚未完整的字节，直到后续字节到达。
 
-这会影响请求的 token 预算。统计输入时，要使用已部署模型的 tokenizer，并计入请求格式中的角色标记和工具定义。如果完整对话太长，接下来要决定的是[每次模型调用应保留哪些信息](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，而不是简单地数词。BPE 只是 tokenizer 的一种类型，并非后续 Transformer 计算的必需条件。
+这会影响请求的 token 预算。统计输入时，要使用已部署模型的 tokenizer，并计入请求格式中的角色标记和工具定义。如果完整对话太长，接下来要决定的是[每次模型调用应保留哪些信息](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，而不是简单地数词。BPE 只是 tokenizer 的一种类型，并非后续 Transformer 计算的必需条件。
 
 ### 第一个 Transformer 块接收什么？
 
@@ -218,7 +218,9 @@ $$
 
 上面的计算使用 multi-head attention (多头注意力，MHA)，每个 Q 头都有一个 K/V 头。grouped-query attention (分组查询注意力，GQA) 让一组 Q 头共享一个 K/V 头。如果仍保留两个 Q 头、但只使用一个 K/V 头，那么 `W_Q` 仍是 `8 × 8`，而 `W_K` 和 `W_V` 会变为 `8 × 4`。两个 Q 仍各自生成宽度为 `4` 的输出，所以拼接后的形状和 `W_O` 都不变。
 
-`Hkv` 表示 K/V 头数。生成时会保留每层各位置的 K 和 V，供后续 token 复用。MHA 中 `Hkv = Hq`；multi-query attention (多查询注意力，MQA) 则是 `Hkv = 1` 的情况。这些选择会影响所学权重，以及生成过程中存储的 K/V 数量。把 MHA checkpoint 转为其他结构会改变 K/V 权重和模型行为；GQA 论文评估了基于权重平均的转换以及后续训练。在这个例子中，缓存了三个位置时，每层的 MHA 会存储 `2 × 3 × 2 × 4 = 48` 个 K/V 数值，依次对应 K/V 两种表示、三个位置、两个头和每头四个坐标。共享一个 K/V 头后，数量降为 `2 × 3 × 1 × 4 = 24`，而两个 Q 头仍各自计算分数。若想了解服务环节的影响，请继续阅读[KV cache 和调度如何决定推理容量](#3.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F)。Dense attention 的两两计算量随 `T²` 增长，但实际时延还取决于 kernel (计算内核)、其他层和硬件。
+`Hkv` 表示 K/V 头数。生成时会保留每层各位置的 K 和 V，供后续 token 复用。MHA 中 `Hkv = Hq`；multi-query attention (多查询注意力，MQA) 则是 `Hkv = 1` 的情况。这些选择会影响所学权重，以及生成过程中存储的 K/V 数量。把 MHA checkpoint 转为其他结构会改变 K/V 权重和模型行为；GQA 论文评估了基于权重平均的转换以及后续训练。在这个例子中，缓存了三个位置时，每层的 MHA 会存储 `2 × 3 × 2 × 4 = 48` 个 K/V 数值，依次对应 K/V 两种表示、三个位置、两个头和每头四个坐标。共享一个 K/V 头后，数量降为 `2 × 3 × 1 × 4 = 24`，而两个 Q 头仍各自计算分数。若想了解服务环节的影响，请继续阅读[KV cache 和调度如何决定推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)。Dense attention 的两两计算量随 `T²` 增长，但实际时延还取决于 kernel (计算内核)、其他层和硬件。
+
+共享 K/V 头减少了每个位置的表示数量，却没有减少历史位置数。输入长到几十万甚至百万个 token 时，还可以追问：能否压缩每个位置的 K/V，或让当前 query 只读取部分历史？[长上下文的存储与读取](#3.%20%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E6%80%8E%E6%A0%B7%E5%B0%91%E5%AD%98%E3%80%81%E5%B0%91%E8%AF%BB%E5%8E%86%E5%8F%B2%EF%BC%8C%E5%90%8C%E6%97%B6%E4%BF%9D%E7%95%99%E9%9C%80%E8%A6%81%E7%9A%84%E4%BF%A1%E6%81%AF%EF%BC%9F)从这里展开 MLA 的矩阵吸收，以及选择、压缩历史各自会丢掉什么。
 
 ### FFN 增加了什么，多个块如何堆叠？
 
@@ -241,7 +243,7 @@ sigmoid `σ` 的取值介于 `0` 和 `1` 之间。SiLU 将输入乘以这个比�
 
 由于门控分支和候选分支都取决于当前行，同一套权重可以针对不同上下文产生不同更新。
 
-这有助于解释学习到的知识为何会影响预测。如果某一行代表篮球语境中的人名，学到的特征组合就可能激活某些方向，从而影响相关的输出词元。Geva 等人发现，他们所研究的部分 FFN 中存在文本模式关联和输出影响。这一发现适用于那些模型，并不表示每个 FFN 都是字面意义上的事实数据库。模型输出事实的能力也取决于 attention、多层计算和最终词表投影。若信息必须保持最新或能够核验，[检索与依据构建](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) 介绍了应用如何提供外部证据。
+这有助于解释学习到的知识为何会影响预测。如果某一行代表篮球语境中的人名，学到的特征组合就可能激活某些方向，从而影响相关的输出词元。Geva 等人发现，他们所研究的部分 FFN 中存在文本模式关联和输出影响。这一发现适用于那些模型，并不表示每个 FFN 都是字面意义上的事实数据库。模型输出事实的能力也取决于 attention、多层计算和最终词表投影。若信息必须保持最新或能够核验，[检索与依据构建](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) 介绍了应用如何提供外部证据。
 
 #### 把更新后的状态传给下一层
 
@@ -270,7 +272,26 @@ flowchart TD
 
 矩阵的参数数量等于行数乘以列数。在普通 MHA 且 `Hq·dh = d` 时，Q、K、V 和输出投影合计有 `4d²` 个参数。若 `d = 8`，则共有 `256` 个。三个 SwiGLU 投影合计有 `3d·dff` 个参数；若 `dff = 16`，则共有 `384` 个。
 
-完整模型还包含 embedding table、归一化权重，有时还包含单独的词表投影。每一层都有自己权重时，逐层重复计算；共享权重只计一次。hidden state 和缓存的 K/V 是根据这些参数计算出来的临时数据。因此，参数数量本身无法决定 GPU 上能同时容纳多少请求。这也是继续阅读[推理内存与调度章节](#3.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F) 的原因之一。
+完整模型还包含 embedding table、归一化权重，有时还包含单独的词表投影。每一层都有自己权重时，逐层重复计算；共享权重只计一次。hidden state 和缓存的 K/V 是根据这些参数计算出来的临时数据。因此，参数数量本身无法决定 GPU 上能同时容纳多少请求。这也是继续阅读[推理内存与调度章节](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) 的原因之一。
+
+### 有些模型为什么只运行部分 FFN？
+
+Mixture-of-Experts (MoE，混合专家)把一层 FFN 分成多个专家网络，再由 router（路由器）根据每个词元当前的 hidden state 选择其中一部分。它改变的是 FFN 子层的计算路径；attention 仍负责汇集位置间的信息。一个 MoE 层可把 shared expert（共享专家）用于所有词元，再把 routed experts（路由专家）的加权输出加到残差上。专家是学习到的 FFN 参数组，不是预先命名的知识类别或外部检索库。
+
+DeepSeek-V3 给出了具体配置：前 3 层仍用 dense FFN，其余 MoE 层各有 1 个共享专家和 256 个路由专家，每个词元选 8 个路由专家。为和前面的 pre-norm 块衔接，令 attention 残差后的状态为 `y_t`，FFN 前归一化后的路由/专家输入为 `u_t=Norm(y_t)`。路由器对 `u_t` 与专家向量 `e_i` 做点积，再经 sigmoid 得到亲和度 `s_i = sigmoid(u_tᵀe_i)`。`top-k` 决策选出亲和度最高的专家，选中项再按原始 `s_i` 归一化为混合权重 `g_i`；因此计算图中可以同时有“离散选谁”和“连续混多少”。为突出核心计算，下式与后面的手算均采用 `route_scale=1` 的简式，省略实际路由中的专家组、设备/节点限制。在只有一个共享专家时，这层更新为
+
+$$
+h'_t=y_t+\operatorname{FFN}_{shared}(u_t)+\sum_{i\in selected}g_i\operatorname{FFN}_i(u_t).
+$$
+
+> [!example] 偏置只参与选人，混合用原分数
+> 用 3 个专家、每词元选 2 个的玩具路由器。原始亲和度为 `s=(0.80, 0.70, 0.60)`，偏置为 `b=(0, 0, 0.25)`。不加偏置时 top-2 是专家 1 和专家 2；加偏置后按 `s+b=(0.80, 0.70, 0.85)` 排序，候选集合变为专家 3 和专家 1。混合权重仍用原始亲和度：分母是 `0.80+0.60=1.40`，所以专家 1 的权重为 `0.80/1.40≈0.571`，专家 3 为 `0.60/1.40≈0.429`。若这两个专家对归一化输入 `u_t` 的 FFN 输出分别为 `(1,0)` 和 `(0,2)`，路由分量就是 `0.571(1,0)+0.429(0,2)≈(0.571,0.857)`；完整层输出还要加上共享专家的输出和残差 `y_t`。分数和向量值是人为设定的。这个例子中偏置确实让专家 3 进入 top-2，但偏置值本身不参与输出混合权重。
+
+路由器中的专家向量是可学习参数。主任务损失可以沿被选专家的输出、归一化后的路由权重和 sigmoid 亲和度回传；但 `top-k` 返回的索引是离散值，普通反向传播不会直接求导“换选另一个专家”的效果。某个词元没有运行的专家不会从该词元的 FFN 输出获得主任务梯度。V3 还用 sequence-wise balance loss（序列级平衡损失）约束单条序列上的极端负载，所以未选路由的亲和度仍可经这项辅助损失受到训练信号。这是由论文公式和可学习 Gate 参数得到的梯度解释；论文没有公开其训练代码的完整自动微分路径。
+
+V3 的 batch-level load balancing（批次级负载平衡）另维护每个专家的偏置：每个训练批次统计选中量，过载专家的偏置减 `γ`，低于平均负载的偏置加 `γ`。在同一个三专家玩具例子中，若一个批次有 6 个词元且每个词元只选 1 个，实际负载 `[4,1,1]`，均匀目标为 `[2,2,2]`；若教学用 `γ=0.01`，这一步就把偏置从 `(0,0,0)` 更新为 `(-0.01,+0.01,+0.01)`。这些偏置是在训练批次间调节的路由校正，不是输出混合权重；部署时的固定偏置也不是按每个请求的瞬时 GPU 队列随机改派专家。V3 前 14.3T 训练词元使用 `γ=0.001`，最后 500B 设为 `0`。称为“aux-loss-free（无辅助损失）”只是在说主要批次级平衡机制不依赖传统负载损失；V3 仍用 `α=0.0001` 的序列级辅助项来抑制单条序列的极端失衡。
+
+路由也不是语义分类器。固定输入、权重和偏置时，top-k 路由是确定的；训练中不同领域可能使专家负载呈现统计上的专门化，但不保证某个专家只对应“数学”或“代码”。实际收益取决于稀疏计算节省能否覆盖专家分布、通信和热门专家带来的负载不平衡。服务容量需要按全部专家权重、路由通信和 KV 状态共同估算，可继续看[KV 缓存与调度怎样决定模型推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)。
 
 ### 模型如何选择词元并继续生成？
 
@@ -296,7 +317,7 @@ prefill (预填充) 会让初始序列通过各层。最后一个位置的 logit
 
 在 causal model (因果模型) 中，对于相同的前缀和推理配置，添加新位置不会改变先前位置的 hidden state。因此，KV cache (键值缓存) 会存储每一层此前算出的 K 和 V。在新位置，该层会计算新的 Q、K 和 V。新位置上的 Q 会关注缓存中的 K/V 以及当前位置的 K/V，再把新的 K/V 追加到缓存中。更早位置的 Q 向量已经参与过各自位置的计算，不会作为输入再参与这个新 query 的 attention 运算。
 
-每层的 cache 各自独立，因为每一层的输入表示和投影权重不同。输出变长时，cache 也会随之增大。生成会在模型结束词元、应用停止序列、长度上限或取消操作时结束。长度上限可能会截断尚未完成的回答，因此应用必须判断完成原因。[服务容量](#3.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F) 会进一步说明内存影响；[应用运行状态与恢复](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) 会展开生成结束或中断后的处理。
+每层的 cache 各自独立，因为每一层的输入表示和投影权重不同。输出变长时，cache 也会随之增大。生成会在模型结束词元、应用停止序列、长度上限或取消操作时结束。长度上限可能会截断尚未完成的回答，因此应用必须判断完成原因。[服务容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) 会进一步说明内存影响；[应用运行状态与恢复](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) 会展开生成结束或中断后的处理。
 
 #### 应用应如何选择解码设置？
 
@@ -312,9 +333,18 @@ prefill (预填充) 会让初始序列通过各层。最后一个位置的 logit
 
 #### 为每个位置设置目标
 
-前面使用的都是已经学到的权重。训练会根据“接下来应该是什么”的示例来调整这些权重。沿用玩具 tokenizer，训练样本 `ababcac` 会被分成 `[abab, c, a, c]`，即 `[257, 99, 97, 99]`。用前三个位置预测后一个：`abab → c`、`c → a`、`a → c`。这里末尾的 `c` 是训练语料中的真实目标，不是刚才生成步骤采出的结果。causal mask 允许并行计算这些预测，同时阻止每个位置读取右侧的目标 token。某些模型的训练格式还会加入 beginning-of-sequence marker (序列起始标记，BOS) 等特殊 token；它们需要由相应词表和模板定义，本例不额外加入。
+前面使用的都是已经学到的权重。训练会根据“接下来应该是什么”的示例来调整这些权重。沿用玩具 tokenizer，训练样本 `ababcac` 会被分成 `[abab, c, a, c]`，即 `[257, 99, 97, 99]`。用前三个位置预测后一个：前缀 `abab` 预测 `c`，前缀 `[abab, c]` 预测 `a`，前缀 `[abab, c, a]` 预测 `c`。后两个预测都能读取完整的左侧前缀，不是只看紧邻的前一个词元。这里末尾的 `c` 是训练语料中的真实目标，不是刚才生成步骤采出的结果。causal mask 允许并行计算这些位置，同时阻止每个位置读取右侧的目标词元。某些模型的训练格式还会加入 beginning-of-sequence marker (序列起始标记，BOS) 等特殊 token；它们需要由相应词表和模板定义，本例不额外加入。
 
 teacher forcing (教师强制) 指训练时使用训练样本中真实的前序词元。生成时，后续输入则包含模型实际选出的词元。这就是为什么生成序列开头的错误可能改变后续预测。
+
+#### 训练时如何预测多个未来词元？
+
+multi-token prediction（多词元预测，MTP）在 next-token prediction（下一个词元预测）之外增加未来位置的训练目标。DeepSeek-V3 的 MTP 深度 `D=1`：对位置 `i`，主模型表示 `h_i` 预测真实的 `t_{i+1}`；MTP 模块再把 `h_i` 与训练样本中真实的 `Emb(t_{i+1})` 分别做 RMSNorm 后拼接。投影 `M_1∈R^{d×2d}` 把宽度 `2d` 的拼接向量压回 `d`，再送入附加 Transformer block 和与主模型共享的 output head（输出头），预测 `t_{i+2}`；词元 embedding 也与主模型共享。它训练的是“已知正确前一个词元时再预测下一个”，不是让多个互不相干的输出头同时猜同一个前缀之后的词。
+
+> [!example] 同一训练串怎样多监督一个位置
+> 沿用样本 `ababcac → [abab, c, a, c]`，把位置编号为 1 到 4。主模型在位置 1 用 `h₁` 预测位置 2 的真实词元 `c`。MTP 将 `RMSNorm(h₁)` 和 `RMSNorm(Emb(c))` 拼接后投影，再经过附加块，预测位置 3 的 `a`。同样，位置 2 的 `h₂` 与真实 `Emb(a)` 一起预测位置 4 的 `c`。因此训练标签仍来自右移后的语料；位置维度的计算可以并行，而更深的 MTP 预测模块彼此按深度串接。V3 只设一个额外预测深度。
+
+每个深度各算一份交叉熵，深度间取平均，再乘训练权重 `λ`；总目标是主 next-token loss 加 MTP loss。V3 报告的 `λ` 前 10T 训练词元为 `0.3`，之后 4.8T 为 `0.1`。额外预测让每个训练位置提供更多监督，也可能帮助主模型形成对未来的表征；它不意味着推理时必须保留 MTP 模块。推理可以只运行主模型，也可把已训练的 MTP 模块用作推测解码的 proposer（提议器）。后者如何组织草稿状态、目标模型验证和缓存回滚，属于服务实现问题，见[推测解码如何验证候选并处理临时缓存](#%E6%8E%A8%E6%B5%8B%E8%A7%A3%E7%A0%81%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%80%99%E9%80%89%E5%B9%B6%E5%A4%84%E7%90%86%E4%B8%B4%E6%97%B6%E7%BC%93%E5%AD%98%EF%BC%9F)。
 
 #### 计算误差并反向传播更新
 
@@ -329,7 +359,7 @@ backpropagation (反向传播) 会把导数依次传过 LM head、残差相加�
 
 所选的训练目标也很重要。BERT 使用的 masked language modeling (掩码语言建模) 会根据左右两侧可见的上下文，预测选定的缺失位置。它的常规过程与上面从左向右的循环不同。研究者可以基于掩码模型构造迭代生成过程，但这需要另外的采样过程。
 
-如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
+如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
 
 > [!info]- 来源
 > 下列来源为所列机制提供依据。较小的张量维度、虚构的向量和构建日志调参场景都是教学示例或工程扩展。
@@ -342,71 +372,317 @@ backpropagation (反向传播) 会把导数依次传过 LM head、残差相加�
 > - **采样与部署控制。** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) 介绍 nucleus sampling。[Transformers generation configuration](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation) 记录了采样控制项。[OpenAI Responses parameters](https://developers.openai.com/api/reference/resources/responses/methods/create) 记录了托管 API 的契约。[OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) 和 [Claude model migration guidance](https://platform.claude.com/docs/en/about-claude/model-deprecations) (核对日期：2026-11-06) 展示了模型和 API 版本可能带来的限制。这里提出的调参比较是这些机制的一种工程应用，并非普遍适用的温度建议。
 > - **缓存生成。** [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) 解释了因果复用、逐层 K/V，以及新词元如何关注此前和当前位置。
 > - **训练。** [Llama 3, v3, §3](https://arxiv.org/html/2407.21783v3#S3) 涉及预训练；[PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 说明了损失函数。[BERT, 2019, §3.1](https://arxiv.org/abs/1810.04805) 支持掩码目标的描述；[Wang and Cho, 2019](https://arxiv.org/abs/1902.04094) 探索了一种不同的迭代生成过程。
+> - **MoE、路由学习与负载。** [DeepSeek-V3 Technical Report, arXiv v2, §§2.1.2、4.2、4.5.2–4.5.3](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS2) 给出 sigmoid 亲和度、top-k、路由偏置、序列级平衡损失、V3 的专家数量和训练系数。Gate 参数与推理路由可在 [DeepSeek-V3 官方参考实现 `inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 中核对（检查日期：2026-11-06）；关于 top-k 梯度的说明是基于上述公式和参数实现的数学推论。
+> - **MTP 训练。** [DeepSeek-V3 Technical Report, arXiv v2, §2.2、§4.2、§4.5.1](https://arxiv.org/html/2412.19437v2#S2.SS2) 给出真实右移词元、串接的预测深度、共享 embedding/output head 和损失；V3 深度与权重见 §4.2。该报告 §5.4.3 的第二词元接受率与吞吐结果仅适用于论文评估设置。
+> - **推测解码。** [Leviathan et al., ICML 2023, §2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 说明并行目标验证和拒绝采样校正；当前框架对原生 MTP 的支持范围随模型与版本变化，可参见 [vLLM MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)（检查日期：2026-11-06）。
 >
 > 浏览[AI 好文集](../ai-literature-index.md)，可按主题查找相关论文。
-## 3. How do KV cache and scheduling determine LLM serving capacity? / KV 缓存与调度怎样决定模型推理容量？
+## 3. 长上下文怎样少存、少读历史，同时保留需要的信息？
 
-**Short answer / 简答** — Prefill creates the prompt’s per-layer K/V state. Decode reuses it and appends new K/V, so active sequence length and concurrency drive memory. Use a tiled attention kernel to reduce GPU memory traffic, page the persistent cache to reduce allocation waste, and schedule prefill and decode under a latency target. Measure which limit dominates before tuning. / 预填充生成提示词在各层的 K/V。增量解码读取旧状态并追加新 K/V，因此活跃序列的长度和并发数决定显存用量。用分块计算内核减少显存读写，用分页管理持久缓存减少分配浪费，再按时延目标调度 prefill 与 decode。先测量瓶颈在哪一层，再选优化。
+设模型读入一份百万词元的长技术报告，随后要回答一个需要拼接相隔多处内容的问题：查询既可能需要远处线索，也依赖最近句子；逐层保存并读取全部历史 KV 会增加缓存与读取成本。本文看模型结构怎样压缩状态或挑候选以降低这些成本；摘要和选择都可能漏掉回答所需线索，不保证答案信息一定保留。
 
-**Key terms / 关键术语** · prefill / 提示预填充 · decode / 增量解码 · HBM / 高带宽显存 · KV cache / 键值缓存 · continuous batching / 连续批处理 · TTFT / 首词元时延 · ITL / 词元间时延
+自回归模型在 prefill（提示预填充）后进入 decode（增量解码）；每次处理一个新位置，每层都会计算当前位置的 query（查询）、key（键，K）和 value（值，V），并把新 KV 添入 key-value cache（键值缓存，KV cache）。更早位置的 K/V 则直接复用。但普通注意力仍会让新查询读取每个历史位置。长上下文因此有两种不同成本：缓存占多少空间，以及一次查询要从历史读取多少表示。不同模型通过共享 K/V 头、压缩每个位置的表示、按查询选择候选，或组合这些方法来降低成本；DeepSeek-V4 还把这些做法分配到不同层。
 
-### What stays on the GPU between decode steps? / 解码步之间哪些数据留在 GPU？
+> [!info] 先约定符号
+> `T` 是已处理的词元数，`H_q` 是查询头数，`H_kv` 是实际存储的 K/V 头数，`d_h` 是每头宽度，`b` 是每个缓存数值的字节数。向量点积要求两个向量坐标数相同；矩阵乘向量的结果维度等于矩阵的行数。这里的 KV cache 指同一请求生成过程中的状态，不是跨请求的提示缓存或应用的长期记忆。
 
-[生成机制](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)中的因果注意力解释了可缓存的条件。Prefill 把提示输入各层，写出全部提示位置的 K、V，并由最后一个位置的 logits 得到第一个输出 token。下一步把该 token 送进模型。每层为它计算新的 Q、K、V。新的 Q 对缓存里的旧 K 和当前 K 打分，再对对应 V 求加权和。在标准因果设置下，旧位置不受未来 token 影响，可以沿用旧 K/V。旧 Q 已经用于旧位置自己的更新；后续位置的 attention 不读取它。每层所需的投影来自该层自己的输入与权重，因此要存各层的 K/V。
+下图把两条优化轴放在一起：压缩改变“每个历史位置存什么”，选择改变“当前查询读哪些位置”。V3.2 将低维缓存表示与逐查询索引结合；V4 则在序列压缩后，对不同层采用稀疏或密集读取。
 
-| 阶段 | 注意力典型形状，单条请求 | 常见成本 |
-| --- | --- | --- |
-| Prefill $T$ 个提示 token | 每个 query 头处理 $T$ 个 query 和 $T$ 个 key，带因果掩码 | 大量投影与 FFN 矩阵乘法，长序列的全量注意力计算和内存流量 |
-| 带缓存的单步 decode | 每个 query 头只有 1 个 query，对长度 $C+1$ 的历史加当前 key/value 做注意力 | 读取模型权重和历史 K/V，追加当前 token 的 K/V。长前缀增大读取量，并发改变权重摊销和硬件利用率 |
-
-这里 $C$ 是这一轮之前已存的长度。对全量 dense attention，decode 单步在序列维上仍随历史长度增长。缓存避免重复为旧位置做投影和前向，不能免掉这一步对旧 K/V 的读取。Prefill 通常偏计算，低批量 decode 常受显存带宽限制，具体取决于模型、并发、长度、精度与硬件。 [Hugging Face Transformers 缓存机制](https://huggingface.co/docs/transformers/main/en/cache_explanation) · [Sarathi-Serve §§2–4](https://arxiv.org/abs/2403.02310)
-
-### Estimate memory before admitting requests / 先估显存，再决定并发
-
-对每层采用相同 K/V 形状、K 和 V 每元素占同样字节的普通全量注意力模型，单条序列的 KV 载荷约为
-
-$$
-\text{bytes} = 2 \cdot L \cdot T \cdot H_{kv} \cdot d_h \cdot b.
-$$
-
-$L$ 是层数，$T$ 是当前缓存长度，$H_{kv}$ 是实际存储的 KV 头数，$d_h$ 是头宽，$b$ 是每元素字节数。最前面的 2 对应 K 和 V。用 32 层、8 个 KV 头、头宽 128、BF16（2 bytes）的示例，得到 **128 KiB/token**。缓存到 8,192 token 时每条序列是 **1 GiB**，32 条同长度且没有前缀共享的序列就需要 **32 GiB** 的 KV 载荷。权重、临时激活、块尾空位和调度余量另算。张量并行可能拆分或复制部分状态，单卡预算应按实际分片和测量核对。
-
-GQA 从模型结构上减少要存的 K/V 头。KV 量化从存储表示上减少每个元素的字节数，两者可以同时存在。KV 量化还涉及缩放参数、精度损失和内核支持，不能把存储比直接当吞吐比。滑动窗口、混合状态或潜变量注意力的持久状态不同，应按层核算。 [GQA §2](https://aclanthology.org/2023.emnlp-main.298/) · [KIVI §3](https://arxiv.org/abs/2402.02750) · [vLLM KV cache 配置](https://docs.vllm.ai/en/latest/api/vllm/config/cache/)
-
-如果权重本身都放不进一张卡，分页只能减少缓存浪费。先比较能达到质量门槛的权重量化和多卡切分。**Tensor parallelism / 张量并行** 把同层的矩阵或注意力头分给多卡，层内需要交换或汇总结果。**Pipeline parallelism / 流水线并行** 把不同层放到不同卡上，阶段间传递激活，流水线未填满时会有空转。把模型装下以后，再按每卡的权重、KV 和临时缓冲预算接纳序列。分片策略要考虑互连带宽和 KV 头在各卡上的实际放置。 [vLLM 并行与扩展](https://docs.vllm.ai/en/latest/serving/parallelism_scaling/)
-
-### Separate kernel work from cache allocation / 区分内核计算和缓存分配
-
-**FlashAttention** 将 Q/K/V 分块，维护可增量合并的 softmax 统计量，避免把完整注意力分数矩阵写入 HBM。它针对一次 attention 运算的读写和临时显存，使用精确 dense attention 算法（浮点舍入可不同），也仍计算有效位置对。FlashAttention-4 进一步针对 Blackwell 的异步矩阵乘与流水线重叠优化，说明内核选择要看硬件和形状。 [FlashAttention §3](https://arxiv.org/abs/2205.14135) · [FlashAttention-4，2026](https://arxiv.org/abs/2603.05451)
-
-**PagedAttention** 管理跨解码步骤持久存在的 KV 状态。借鉴操作系统分页，每个请求的逻辑 KV 块按 token 顺序增长，块表把它们映射到可不连续的显存物理块。支持这种布局的 attention 内核按表访问历史 K/V，服务端按需申请块。原论文 §4.3 的例子是每块四个 token，七个提示 token 分别使用物理块 7 和 1，后者还剩一格。下一次 decode 填这一格，再往后增长才需要申请新的块。请求完成后可归还块，共享前缀可引用同一份块；若两个分支要向同一个共享块写入不同内容，写时复制（copy-on-write）隔离这些修改。
-
-~~~mermaid
+```mermaid
 flowchart LR
-    L0["Logical block 0 · token 1–4"] --> P7["Physical block 7 · full"]
-    L1["Logical block 1 · token 5–7"] --> P1["Physical block 1 · one free slot"]
-    L2["Logical block 2 · when token 9 is processed"] -.-> P3["Another physical block"]
-~~~
+    H["各层历史状态"] --> BASE["多头 / 分组查询注意力<br/>逐位置存 K、V<br/>密集查询读取完整历史"]
+    H --> MLA["每位置联合低秩压缩<br/>缓存潜变量 + 位置 key<br/>密集查询仍遍历全部位置"]
+    MLA --> DSA["逐查询索引选择<br/>扫描候选并打分<br/>主注意力只读前 k 项"]
+    H --> C4["V4 轻压缩层<br/>重叠压缩 + 前 k 项选择<br/>并读最近 128 个原始 KV"]
+    H --> C128["V4 重压缩层<br/>非重叠压缩后密集读取<br/>并读最近 128 个原始 KV"]
+```
 
-每个请求的最后一块仍可能有空位，块表与间接访问也有成本。好处是按实际长度增长，不必为每条请求预留连续的最大序列区。更多请求可以同时驻留并参与批处理。原论文报告的是其 2023 年工作负载和对照系统上的吞吐量与时延。其独立注意力内核的微基准也测到了额外延迟。现代引擎的分页思想仍可用，具体计算后端按模型、卡与引擎版本选择。vLLM 将原 CUDA 内核的设计页标为历史说明。 [Kwon et al., arXiv v1，§§4.2–4.5、§6](https://arxiv.org/html/2309.06180v1) · [§7.1、图 18(a)](https://arxiv.org/html/2309.06180v1#S7.SS1) · [vLLM 原 PagedAttention 内核说明](https://docs.vllm.ai/en/latest/design/paged_attention/)
+### 多头注意力和分组查询注意力缓存了什么？
 
-### Tune the stage that misses its target / 优先调超出目标的阶段
+Multi-Head Attention（多头注意力，MHA）为每个查询头保存各自的 K/V 表示。Grouped-Query Attention（分组查询注意力，GQA）让一组查询头共享一组 K/V 头；查询头数仍可不变，但每个历史词元需要保留的 K/V 坐标变少。
 
-| 观察到的限制 | 优先试什么 | 验证边界 |
+若每个 K/V 头宽 `d_h`、缓存精度占 `b` bytes，则每个词元、每层的数值载荷为
+
+$$
+\text{bytes/token/layer}=2H_{kv}d_hb,
+$$
+
+其中 `2` 分别代表 K 和 V。以一个合成例子说明：`H_q=32`、`d_h=128`、BF16 每数值 2 bytes。MHA 保存 32 组 K/V，每词元每层是 `2×32×128×2=16,384 bytes=16 KiB`；GQA 若用 8 组 K/V，则是 `2×8×128×2=4,096 bytes=4 KiB`。一百万词元时，两者分别约为 `15.26 GiB` 和 `3.81 GiB` **每层**；总量还要乘层数和活跃请求数。
+
+这减少的是**每个历史词元要存的 K/V 坐标数**，不改变历史位置数。dense attention（密集注意力）的新查询仍要逐头查看所有历史 K/V。GQA 改变模型所学的 K/V 投影；不能把头数变少就当作对任意 MHA checkpoint 的无损推理开关。生成阶段缓存让旧位置不必重复投影，但本身不改变注意力的历史读取集合。更完整的注意力计算见[语言模型如何把提示词变成文本？](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)。
+
+### 怎样把每位置的 K/V 收进一个潜变量？
+
+Multi-Head Latent Attention（多头潜注意力，MLA）用一组学习到的低秩投影共同生成各头的内容 K/V。`h_t∈R^d` 是当前层、当前位置的 hidden state（隐藏状态）；先把它投影成共享的低维表示 `z_t^KV=W_DKV h_t∈R^{d_c}`，其中 `W_DKV∈R^{d_c×d}`。如果具体实现会在展开前归一化 latent（潜变量），就令 `c_t^KV=Norm(z_t^KV)`。DeepSeek-V3 的 absorb 路径确实对 latent 调用 RMSNorm（均方根归一化）；为突出维度与乘法结合律，下文省略这个不改变形状的算子，并用 `c_t^KV` 表示模型实际使用的 latent。`d_c` 是一份共享表示的宽度；“低秩”指它可以比逐头 K/V 内容坐标总数 `H_q(d_k+d_v)` 小，不代表能无损压缩任意 MHA 缓存。对第 `i` 个注意力头，`d_k`、`d_v` 分别是内容 key、value 的每头宽度；`W^UK_i∈R^{d_k×d_c}` 与 `W^UV_i∈R^{d_v×d_c}` 分别展开内容 key 和 value：
+
+$$
+k^C_{t,i}=W^UK_i c_t^{KV},\qquad
+v^C_{t,i}=W^UV_i c_t^{KV}.
+$$
+
+如果把展开后的每头 K/V 内容都写入缓存，每位置要存 `H_q(d_k+d_v)` 个内容数值；latent 缓存路径只保留 `c_t^KV`，未来需要时再用同一组投影恢复该模型定义的 K/V。推理实现也不一定选择 latent 缓存：DeepSeek-V3 官方参考代码同时提供 `naive`（展开缓存路径）和默认 `absorb`（矩阵吸收路径）；前者缓存逐头 K/V，后者缓存经过 RMSNorm 的 latent 与独立位置 key。仅对后一路径，V3 配置示例每层缓存 512 维 latent 加 64 维位置 key，即 576 个数值；字节数还取决于两支的存储精度。它减少的是每位置缓存坐标，不是历史位置数；如果整段 latent 仍做 dense attention，候选位置数依旧随 `T` 增长。
+
+#### 怎样把 K/V 投影移到查询和输出侧？
+
+matrix absorption（矩阵吸收）利用的是乘法结合律：不用先把 `c_s^KV` 展开成每头的内容 key，再和查询点积。下式把模型规定的归一化视为已包含在 `c_s^KV` 中，并省略不会改变维度推导的其他算子。给定当前头的内容查询 `q^C_{t,i}∈R^{d_k}`，可将查询变换为 `q̃_{t,i}=(W^UK_i)^T q^C_{t,i}∈R^{d_c}`，于是
+
+$$
+(q^C_{t,i})^T k^C_{s,i}
+= (q^C_{t,i})^T W^UK_i c_s^{KV}
+= (q̃_{t,i})^T c_s^{KV}.
+$$
+
+维度可逐步核对。直接展开时，`W^UK_i` 的 `d_k×d_c` 矩阵乘 `d_c` 维 `c_s^KV` 得到 `d_k` 维 key，再与 `d_k` 维 query 点积成一个标量。吸收到 query 一侧时，`(W^UK_i)^T` 是 `d_c×d_k`，乘 `d_k` 维 query 得到 `d_c` 维 `q̃` 向量；它本身还不是分数，继续与 `d_c` 维缓存 latent 点积后才得到同一个标量。值侧同样可把上投影延后：
+
+$$
+\sum_s \alpha_{t,s,i} W^UV_i c_s^{KV}
+=W^UV_i\left(\sum_s \alpha_{t,s,i}c_s^{KV}\right).
+$$
+
+其中 `α_{t,s,i}` 是当前位置 `t` 的第 `i` 个 query head 分给历史位置 `s` 的注意力权重。因此推理可以先对缓存 latent 算注意力并做加权和，再把结果投影到该头的 value 空间；各头的 value 投影也可与输出投影合并。等式成立是因为同一个线性矩阵可以分配到加权和的每一项：先分别投影再相加，或先相加再投影，结果相同。这个计算重排减少了中间展开，不会缩短 dense attention 仍要扫描的历史长度。
+
+> [!example] 用 2 维向量手算矩阵吸收
+> 取 `q=[1,2]^T`、`c=[3,4]^T`，并令
+>
+> $$
+> W=\begin{bmatrix}2&1\\0&3\end{bmatrix}.
+> $$
+>
+> 先展开 key：`Wc=[10,12]^T`，所以 `q^T(Wc)=1×10+2×12=34`。反过来先吸收矩阵：`W^Tq=[2,7]^T`，再算 `(W^Tq)^Tc=2×3+7×4=34`。两条路径对这个线性投影得到相同分数。实际模型维度大得多，示例只展示形状与结合律。
+
+#### 为什么还要单独缓存位置 key？
+
+Rotary Position Embedding（旋转位置编码，RoPE）让查询和 key 的一部分坐标随位置旋转。若对已展开的内容 key 逐位置施加不同 RoPE，再把 `W^UK_i` 吸收到查询侧，位置相关旋转会夹在投影中；查询侧没有一个对全部历史位置都通用的单一变换可以替代它。
+
+MLA 因此把内容与位置分开。query latent（查询潜变量）`c_t^Q∈R^{d'_c}` 由当前位置的隐藏状态生成；MLA 论文写作 `c_t^Q=W_DQ h_t`，而 V3 参考实现把这条路径写成 `wq_b(RMSNorm(wq_a(h_t)))`。下式用 `c_t^Q` 指上投影实际接收的 latent；对 V3 参考实现，它已包含 RMSNorm。内容查询也从同一 latent 投影：`q^C_{t,i}=W^UQ_i c_t^Q∈R^{d_k}`，其中 `W^UQ_i∈R^{d_k×d'_c}`。令 `d_R` 为 RoPE 支路的宽度，`W^QR_i∈R^{d_R×d'_c}`；先由 query latent 投影出位置分量，再施加 RoPE，得到 `q^R_{t,i}=RoPE(W^QR_i c_t^Q)∈R^{d_R}`。每个历史位置则独立生成并保存 `k^R_s=RoPE(W^KR h_s)∈R^{d_R}`。每头打分可写为
+
+$$
+\text{score}_{t,s,i}=
+\frac{(q^C_{t,i})^T W^UK_i c_s^{KV}+(q^R_{t,i})^T k^R_s}{\sqrt{d_k+d_R}},
+\qquad
+\text{cache}_s=[c_s^{KV};k_s^R].
+$$
+
+这是基础的注意力分数缩放式，省略了长上下文实现可能采用的 YaRN 缩放修正和因果 mask。
+
+位置 key 单独保留，内容投影就能在另一侧吸收；代价是 latent 缓存还需要每位置的 RoPE 支路。查询 latent `c_t^Q` 只用于构造当前 query，不是每个历史词元的持久 KV 状态。若实现选择 latent 路径，MLA 降低每个位置要存和要读的坐标数；若仍对整段 latent 做 dense attention，候选位置数依旧随 `T` 增长。使用 naive 展开缓存的实现并不会获得同样的每位置坐标节省。
+
+### 怎样按当前查询挑历史？
+
+DeepSeek Sparse Attention（DeepSeek 稀疏注意力，DSA）在主注意力之前增加 lightning indexer（闪电索引器）：它用轻量的查询/key 表示给每个候选历史位置打分，再只取前 `k` 项（top-k）对应的主 KV 进入主注意力。索引 key 是单独生成、用于打分的状态；它既不是被选中后送入主注意力的 KV，也不是原始历史 KV 的另一个名字。其一类打分形式为
+
+$$
+I_{t,s}=\sum_{j=1}^{H^I}w^I_{t,j}\,\operatorname{ReLU}\!\left((q^I_{t,j})^Tk^I_s\right),
+\qquad
+\mathcal{S}_t=\operatorname{TopK}_s(I_{t,s}).
+$$
+
+`q^I` 来自当前查询，`k^I_s` 是缓存的索引 key，`w^I` 调整各索引头的贡献；ReLU（修正线性单元）把负分数截为零。比如玩具分数 `[2.3,1.9,0.3]`、`k=2` 时，主注意力只读取前两个候选对应的 K/V。这个选择由当前查询决定，不是全局固定窗口；不同查询可以挑不同位置。
+
+V3.2 的 top-k 单位是历史位置，选出的索引再指向对应的主 KV 条目；其解码 MQA 路径让所有查询头共享同一个 MLA latent 条目。短序列 prefill 则可用带掩码的 MHA 模拟 DSA，因此不要把索引单位与所有阶段的实体缓存表示画等号。它让主注意力从遍历 `T` 个位置变为处理 `k` 个位置，但索引器仍要为当前查询给全部候选打分：单步 decode 的打分工作随 `T` 增长，整段 prefill 对所有查询评分仍有近似 `T²` 的候选对。于是 **前 k 项选择减少主注意力的历史读取，不会自动让候选搜索成为常数成本**。精度/量化、索引器头数、选择条数、计算内核（kernel）和检索召回都会影响实际速度与任务质量；纸面复杂度不能替代端到端测量。
+
+### V4 怎样压缩后再选择或密集读取？
+
+V4 预览模型沿用“按查询选择历史”的 DSA 思路，但先沿序列轴把 KV 压成更少条目。轻压缩的稀疏层把条目交给索引器选择；重压缩层则对更短的压缩序列做密集注意力。CSA/HCA 压缩分支采用 Multi-Query Attention（多查询注意力，MQA）：所有查询头共享压缩 KV，每个 512 维条目同时作为 key 和 value。也就是说，后文的“512 维 KV 条目”是一个共享向量，不是独立的 512 维 key 加 512 维 value，也不应乘查询头数。两类层还各自保留最近 128 个未压缩 KV，补回局部细节；这个分支称为 Sliding Window Attention（滑动窗口注意力，SWA）。配置中的 `compress_ratio=0` 层只走这个局部分支。
+
+#### 轻压缩稀疏层怎样每 4 个位置出一条重叠摘要？
+
+Compressed Sparse Attention（压缩稀疏注意力，CSA）为每个原始位置生成两组学习投影 `a`、`b` 和对应的门控分数；分数还会加上可学习的块内位置偏置。令每块有 `m=4` 个位置：第 `i` 条压缩 KV 由当前块的 `a` 流和前一块的 `b` 流共同加权汇总，归一化权重在两组共 `2m` 个投影位置上做 softmax（归一化指数函数）。第一块前面没有 `b` 流，用零向量和 `−∞` 分数补齐。
+
+把三个连续输入块记为 `B0、B1、B2`，则输出关系可简写为 `C0≈a(B0)`、`C1≈b(B0)+a(B1)`、`C2≈b(B1)+a(B2)`。这里 `+` 代表带可学习权重的逐坐标求和，不是普通平均。虽然每条 `C_i` 汇总两块，共涉及 8 个投影位置，但相邻输出重叠，输出步长仍为 4，因此 `N` 个原始位置产生约 `N/4` 条可寻址条目，而不是 `N/8`。它增加压缩投影和状态管理，却避免块边界把相邻信息硬切成互不相关的摘要。
+
+CSA 也用同一分组方式得到独立的索引 key。每个 query 的索引器扫描所有已完成的 C4 候选，选出 `top-k` 条主 KV，再由多头查询与这些共享 KV 进行核心注意力。选择到的是压缩条目，不是精确还原出的原始词元；索引器候选数约降为 `N/4`，但仍须扫这些候选。
+
+#### 重压缩密集层怎样每 128 个位置保留一条摘要？
+
+Heavily Compressed Attention（重度压缩注意力，HCA）将 `m′=128` 个位置的 KV 投影汇总为一条压缩 KV，不做相邻块重叠，也不设稀疏索引器。对第 `i` 个 128 词元块，令 `u_j∈R^{512}` 是位置 `j` 的 KV 投影，`z_j` 是由输入计算并加上可学习块内位置偏置的压缩分数；对每个坐标分别沿块内 128 个位置做 softmax，得到权重向量 `s_j`。符号 `⊙` 表示逐坐标相乘：
+
+$$
+C_i^{\mathrm{comp}}=
+\sum_{j=128i}^{128(i+1)-1}s_j\odot u_j.
+$$
+
+后续查询会密集查看所有已完成的 HCA 条目，长度约 `N/128`。它的优点是远距离摘要不再经过前 k 项决策；代价是原来每个位置的独立地址被合并，细节只能通过这条学习到的摘要保留。CSA 和 HCA 都是模型学习的表示压缩，不是无损存档。
+
+#### 最近 128 个原始位置与未完成尾块
+
+压缩分支只让当前 query 访问截至当前词元已完成的压缩块：一个分组中途尚未凑齐时，尾块还不能供它读取；到组末词元时，参考实现先生成压缩条目，再运行 attention，所以这个刚完成的块可以被当前 query 看到，其中不含未来词元。以 C4 为例，从 0 计的位置 `t=2` 还看不到完整压缩条目，`t=3` 可见刚完成的第一条。临近词元关系通常需要细节，因此 CSA 和 HCA 还并行使用最近 128 个按词元区分的局部 KV；这些位置仍可能量化，且窗口无法替代任意远处词元的原文。
+
+这里有两类不同状态：局部注意力读取最近 128 个原始 KV；压缩分支则要留住未凑成一组、暂时还不能作为摘要寻址的尾部输入及其压缩状态。按逻辑上“尚未凑成一组”的输入位置计，尾部是每层 `N mod m`。`N=1,000,000` 时 C4 正好整除，C128 每个 HCA 层剩 64 个尾部位置；这些位置可能也在局部窗口里，但局部 KV 与压缩器尾部状态用途不同。尾部状态不是已完成的 HCA 条目，不能加进可供密集注意力搜索的压缩条目数。
+
+这个逻辑尾数不等于压缩器运行时工作缓冲的分配量。CSA 的重叠路径还需保留两条相邻投影流：DeepSeek 官方朴素参考实现为每层分配 `kv_state` 与 `score_state`，各有 `2m=8` 个时槽、每槽宽 `2×512=1024`；`score_state` 记录与投影逐坐标对应的门控分数。HCA 两个状态缓冲各有 128 个时槽、每槽宽 512。即使 `N` 恰好整除，固定工作缓冲仍可能存在。这里的槽位是压缩中间状态，不是已完成的 attention KV 条目；当前 serving backend 的 pool / layout 也可以不同。最大长度 `1,048,576` 同时可被 4 和 128 整除，表示没有未完成的逻辑分组，**不表示状态缓冲归零**。部署状态池、块对齐、回收与并发预算见[KV 缓存与调度怎样决定模型推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)。
+
+### 按层复算一百万词元时的状态
+
+以下计数对应 DeepSeek-V4 论文预览的目标解码主干，不把 Multi-Token Prediction（多词元预测，MTP）草稿 attention 混入主干。Pro 有 61 个目标层，其中 30 个 CSA、31 个 HCA；Flash 有 43 个目标层，其中 21 个 CSA、20 个 HCA、2 个仅局部层。配置还各有一个单独的 MTP 仅局部 attention 层。各层共享 KV 条目宽度为 512，其中最后 64 维带 RoPE；局部窗口为 128，参考实现中局部 KV 也使用每层一个 512 维共享条目。索引器有 64 个、每个宽 128 的 query 头；每条完成的 C4 压缩候选对应一条所有头共享的 128 维索引 key。Pro `top-k=1024`，Flash `top-k=512`。
+
+令 `N` 为当前已处理位置数。每个 CSA 层的完成条目数是 `⌊N/4⌋`，每个 HCA 层为 `⌊N/128⌋`；每个 target 层另有 `min(N,128)` 条局部原始 KV。于是主干的 512 维 KV 条目数为：
+
+$$
+\begin{aligned}
+E_{\text{Pro}} &=30\lfloor N/4\rfloor+31\lfloor N/128\rfloor+61\times\min(N,128),\\
+E_{\text{Flash}} &=21\lfloor N/4\rfloor+20\lfloor N/128\rfloor+43\times\min(N,128).
+\end{aligned}
+$$
+
+Indexer key 是独立状态；CSA 每层各有一条压缩候选流，所以其条目数分别为 `30⌊N/4⌋` 和 `21⌊N/4⌋`。压缩尾部则按层保留：Pro 为 `30×(N mod 4)+31×(N mod 128)` 个未完成输入位置，Flash 为 `21×(N mod 4)+20×(N mod 128)` 个。尾部计数不等同于尾部字节数，缓冲还含压缩所需的中间状态。
+
+| `N` | 模型 | 目标主干 KV 条目数 | C4 索引 key 条目数 | 未完成的逻辑输入位置（跨层） |
+| ---: | --- | ---: | ---: | ---: |
+| 1,000,000 | V4-Pro | 7,749,980 | 7,500,000 | 1,984（31 层各 64） |
+| 1,000,000 | V4-Flash | 5,411,744 | 5,250,000 | 1,280（20 层各 64） |
+| 1,048,576 | V4-Pro | 8,126,080 | 7,864,320 | 0 |
+| 1,048,576 | V4-Flash | 5,674,368 | 5,505,024 | 0 |
+
+压缩和 top-k 让主注意力读取更少，但索引器仍要比较全部 C4 候选。`N=1,000,000` 时，每个 CSA 层有 `250,000` 条候选；按 64 个、每个宽 128 的索引头计算，一条 decode query 需约 `250,000×64×128=2.048×10^9` 次乘加（multiply-accumulate，MAC）/CSA 层。Pro 的 30 个 CSA 层约为 `61.44×10^9 MAC`，若一个乘加按 2 浮点运算次数（floating-point operations，FLOPs）计约 `122.88 GFLOPs`；Flash 的 21 层约为 `43.008×10^9 MAC`、`86.016 GFLOPs`。随后主注意力每个 CSA query 才只处理至多 1,024 条（Pro）或 512 条（Flash）压缩 KV，再加 128 条局部 KV。到最大长度 `1,048,576` 时 C4 候选增至 `262,144` 条/层。这是从公开维度推算的算术量级，不含索引器投影、ReLU、top-k 排序、读写与 kernel 融合成本，也不是实测延迟。
+
+这里的主 KV 条目数已包含目标主干每层的 128 条局部窗口。MTP 层若启用，另加每请求 128 条局部 KV；它不属于表中目标解码主干的条目数。尾部输入的位置可能也在局部窗口中，但仍需留在压缩器状态里；不要把“位置数”直接当成不重复的压缩 KV 条目数。上一段所述固定工作缓冲另算，不纳入主 KV 条目数。
+
+按论文描述的混合精度，一个共享 KV 条目可粗略计为 `448×1 + 64×2 = 576 bytes`（非 RoPE 部分 FP8，RoPE 部分 BF16）；一条 128 维 FP4 索引 key 每个数值占 4 bit，数值载荷约为 `128×4/8=64 bytes`。以 `N=1,000,000`、不含 MTP 为例，Pro 的主 KV 数值载荷约 `7,749,980×576=4.464 GB`，索引器约 `7,500,000×64=0.480 GB`；Flash 分别约 `3.117 GB` 和 `0.336 GB`。这是论文精度口径下的纯数据载荷估算，不是参考 PyTorch 代码的实际分配量：该实现注释说明 KV 量化路径是在 BF16 中模拟，Indexer KV 当前也存 BF16。估算不含量化缩放元数据、逻辑尾部/固定工作缓冲、对齐、页空位、工作区、权重或并发请求，也不是实测显存占用。
+
+### “10% KV、27% FLOPs”比较的是什么？
+
+DeepSeek-V4 论文把 Pro 在 **约一百万词元上下文**的单步 decode 与 DeepSeek-V3.2 比较：单词元推理 FLOPs 约为 V3.2 的 27%（约 `1/3.7`），KV cache 约为 10%（约 `1/10`）。图 1 的终点为 1024K，这不同于上表用十进制 `N=1,000,000` 复算条目的场景。论文将 FLOPs 按 equivalent FP8 FLOPs 计。这两项是论文直接给出的配置估算，不由上面的层条目数单独重算；它不表示端到端时延、首 token latency、完整 GPU 显存或任意 MHA/GQA 模型都缩到同一比例。主文还另举了 BF16 GQA8、头宽 128 的通用 cache 基线，称 V4 在 1M 时约为其 2%；这个基线不是 V3.2，不能与 10% 混用。
+
+该差距来自多项共同作用：C4 压缩后再 top-k，C128 密集读取更短序列，近邻窗口只留 128 个原始位置，Indexer 使用 FP4，主 KV 混合 FP8/BF16，且 top-k 配置也低于 V3.2。论文给出的是特定配置下的比例；本节条目数是依据公开层配置复算，字节数是按论文精度估算，不足以推出某个 serving 后端的实占显存或端到端延迟。
+
+本文的输入是模型各层已经计算出的历史 hidden state 与当前 query；输出是各层压缩后的 KV、Indexer 候选、近期原始 KV 和必要的未完成尾部状态，以及供 query 使用的 attention 更新。应用层仍要决定哪些对话、工具结果和文档进入 prompt（提示词）；模型内部 KV cache 不替应用选历史，也不是持久记忆。应用上下文选择见[每次推理应看到什么、应用应持久化什么？](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，文档检索见[RAG 怎样检索并使用经过授权的外部证据？](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)。
+
+> [!info]- 来源
+> - **MHA/GQA 的每词元缓存量、MLA 的低秩 KV latent、矩阵吸收、RoPE 解耦与 query latent 边界：** DeepSeek-V2 最新公开版本 v5（2024-06-19），§2.1.1–2.1.4、式 (1)–(19)，[arXiv HTML](https://arxiv.org/html/2405.04434v5)。DeepSeek-V3 的 `d_c=512` 与 RoPE key 64 维参数见 [DeepSeek-V3 Technical Report v2](https://arxiv.org/html/2412.19437v2)，§2.1.1。实现路径上的限制由官方 [DeepSeek-V3 `inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/9b4e9788e4a3a731f7567338ed15d3ec549ce03b/inference/model.py) 核对：默认 `absorb` 见 [构造参数](https://github.com/deepseek-ai/DeepSeek-V3/blob/9b4e9788e4a3a731f7567338ed15d3ec549ce03b/inference/model.py#L17-L22)，`naive` 缓存展开 K/V、`absorb` 缓存归一化 latent 与独立位置 key 见[缓存和前向路径](https://github.com/deepseek-ai/DeepSeek-V3/blob/9b4e9788e4a3a731f7567338ed15d3ec549ce03b/inference/model.py#L430-L495)；该官方仓库 `main` commit `9b4e9788e4a3a731f7567338ed15d3ec549ce03b`，核对日期 2026-11-06。
+> - **DSA 的 indexer 分数、top-k 选择、基于 MLA 的构造，以及稀疏主注意力仍有全候选索引成本：** DeepSeek-V3.2 技术报告 v1（2025-12-02），§2.1、§2.3；arXiv 版本查询截至 2026-11-06 仍只有 v1，[arXiv HTML](https://arxiv.org/html/2512.02556v1)。官方实现 [DeepSeek-V3.2-Exp `inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3.2-Exp/blob/87e509a2e5a100d221c97df52c6e8be7835f0057/inference/model.py#L435)，核对该仓库 `main` commit：`87e509a2e5a100d221c97df52c6e8be7835f0057`（2026-11-06）。
+> - **CSA 的重叠双流压缩、每 `m` 个位置一个输出、压缩后 indexer/top-k 与共享 KV MQA；HCA 的非重叠 128 倍压缩、共享 KV MQA；RoPE、滑窗 128、状态尾部：** DeepSeek-V4 预览技术报告 v1（2026-04-26），§2.3.1–2.3.4、§3.5.1；截至 2026-11-06 arXiv API 仍只列 v1，[arXiv HTML](https://arxiv.org/html/2606.19348v1)。
+> - **V4-Pro/Flash 每层数、窗口、宽度、Index top-k 与压缩率：** DeepSeek 官方公开配置快照，Pro commit `b5968e9190ef611bbf34a7229255be88a0e937c1` 的 [`config.json`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/config.json) 与 [`inference/model.py`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py)；参考代码的压缩状态见 [`Compressor`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L279-L377)，索引掩码、FP4 模拟与 BF16 索引 KV 存储说明见 [`Indexer`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L398-L427)；Flash commit `60d8d70770c6776ff598c94bb586a859a38244f1` 的 [`config.json`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/config.json)。每层计数由 `num_hidden_layers` 与压缩率数组复算，额外 MTP 项单独列出。
+> - **V4 当前服务框架实现支持与状态布局核对：** 2026-11-06 的 vLLM `main` 快照 `86564975c5a5ba96b0bea94708101480ca18a2cd`，[attention.py](https://github.com/vllm-project/vllm/blob/86564975c5a5ba96b0bea94708101480ca18a2cd/vllm/models/deepseek_v4/attention.py)、[compressor.py](https://github.com/vllm-project/vllm/blob/86564975c5a5ba96b0bea94708101480ca18a2cd/vllm/models/deepseek_v4/compressor.py)；SGLang `main` 快照 `91fd6756e773ab857d5f6ddf3876fead1992b29b`，[deepseek_v4.py](https://github.com/sgl-project/sglang/blob/91fd6756e773ab857d5f6ddf3876fead1992b29b/python/sglang/srt/models/deepseek_v4.py)。这些是实现核对，不是本机运行测试或性能实测。
+> - **10% KV / 27% FLOPs 的适用条件与其他 baseline：** V4 报告 v1，§1 图 1、§2.3.4；比较对象是 V3.2、上下文约 1M，FLOPs 为 equivalent FP8，另一个 2% 数字使用 BF16 GQA8 头宽 128 基线，见同一 [arXiv 报告](https://arxiv.org/html/2606.19348v1)。公开的 V4.1 后续发布使用新的非对称因果 encoder-decoder 架构，因此本文层数和 cache 比例仅适用于 V4 预览配置；见[DeepSeek-V4.1 官方发布](https://www.deepseek.com/en/news/deepseek-v4-1-flash/)。
+## 4. KV 缓存与调度怎样决定大语言模型的服务容量？
+
+一台模型服务要同时回答 32 个报表助手请求，每条请求的提示与已生成内容合计约 8,192 个词元。模型权重已经能放进 GPU，但请求一多仍会耗尽显存；另一些时候显存够用，回答却迟迟不开始。这一章沿着请求进入、保存历史状态、调度生成、结束回收的过程，解释该怎样算容量，以及哪些优化能改变哪一段成本。
+
+### Prefill（提示预填充）和 decode（增量解码）为何有不同瓶颈？
+
+[模型生成章节](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)说明了因果 attention（注意力）为何能复用历史状态。服务端先对完整提示做 prefill：逐层处理所有提示词元，把各位置的 key/value（键/值，K/V）存入 KV cache（键值缓存），并从最后位置得到第一个输出词元的分布。之后每一步只把新词元送进各层，用新位置的 query（查询）与缓存中的 key（键）以及当前位置的 key 计算分数，再经 softmax 得到权重并聚合对应的 value（值），算出新的状态并追加缓存。因果掩码保证旧位置不读取未来，所以旧 K/V 可沿用；旧 query 不供后续位置读取。
+
+| 阶段 | 一条请求的典型注意力形状 | 常见成本 |
 | --- | --- | --- |
-| 请求已到但 GPU 尚未开始工作 | 分开测排队、输入组装、分词和传输 | 只有分词确实占关键路径时，再换 tokenizer 后端或提高 CPU 处理能力。保持相同 token 序列和特殊词元规则。 |
-| 冷请求的长 prompt 首 token 慢 | 用支持当前卡和模型的内核，减少无用输入，比较长 prefill 分块预算 | 记录 TTFT 和排队时间。把 prefill 切块可以让活跃 decode 插入，长 prompt 自己可能等更久。 |
-| 重复的长 prompt 首 token 慢 | 让稳定的聊天模板或文档放在共同前缀，用引擎的 prefix cache | 检查复用 token 数和命中率。只复用语义上相同还不够，缓存要匹配实际 token 序列和模型状态。 |
-| 活跃序列经常碰显存上限 | 先限制最大活跃长度和并发，再试支持的 KV 精度、合适的模型或更多设备 | 跟踪实际 KV 占用、抢占与重算。CPU offload 可用更慢的传输换容量，测长请求的尾部时延。 |
-| 短请求吞吐低，GPU 利用不足 | 连续批处理在迭代之间补进新请求并移除已完成请求 | 同时观察排队和 p95 首 token，扩大批次也可能让单条请求等更久。 |
-| Decode 的词元间隔过长 | 按输出长度、活跃序列数分桶。测带宽，再比较 KV 或权重量化、受支持的推测解码 | 推测解码先提议一批 token 再由目标模型验证。收益取决于接受率、批次和验证成本，需对质量与延迟共同回归。 |
+| Prefill `T` 个提示词元 | 每个 query 头并行处理 `T` 个 query 和 `T` 个 key，并使用因果掩码 | 多次投影和 FFN 矩阵乘法；长序列要计算大量有效位置对并读写中间状态 |
+| 带缓存的单步 decode | 每个 query 头只有一个新 query，与 `C` 个已缓存 key 和当前位置的 key 共 `C+1` 个 key 计算分数，再按权重聚合对应 value | 读取模型权重和历史 K/V，追加新位置的状态；更长前缀增大读取量，并发影响权重摊销与硬件利用率 |
 
-vLLM V1 启用 chunked prefill 后把大 prefill 切成小块、与 decode 混合调度，并优先处理已排队的 decode。其 token 预算影响 TTFT 和词元间隔，参数应按服务流量测试。vLLM 的跨请求 prefix cache 用已完成块及其前缀身份做复用，适配器、多模态内容和租户隔离都要与部署一致。可使用独立缓存范围或引擎支持的租户盐值隔离共享。跨请求命中减少 prefill 工作，仍要生成新结果。应用层的响应缓存是另一种优化，命中后可能跳过整个模型调用。文档核对于 2026-11-06。 [vLLM Optimization and Tuning](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill) · [vLLM v0.25.0 Prefix Caching](https://docs.vllm.ai/en/v0.25.0/design/prefix_caching/) · [vLLM Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/)
+`C` 是该步之前已缓存的词元数。普通 dense attention（稠密注意力）的 decode 注意力仍随历史长度增长；KV 缓存省去旧位置的重复投影与前向，但不省去新 query 对历史 K/V 的读取。Prefill 往往更受计算量影响，低批量 decode 往往更受显存带宽影响，实际瓶颈还取决于模型、并发、长度、精度与硬件。
 
-若分块后长 prefill 仍影响 decode 时延，可以评估预填充与解码分池（prefill/decode disaggregation）。分池可以独立调整两边容量，但每条请求的 KV 状态要从 prefill worker 传给 decode worker。把传输与排队纳入 TTFT 和吞吐测试。DistServe 的收益来自论文测试的请求分布、互连与时延目标。 [DistServe](https://arxiv.org/abs/2401.09670)
+### 先估 KV 显存，再决定并发
 
-做一组固定流量回放。记录模型版本、精度、GPU、输入和输出长度分布、并发与到达速率、冷暖缓存比例。比较 **TTFT**（请求到首词元）、**ITL**（输出词元之间的间隔）、端到端 p95、吞吐和满足时延目标的请求数。能处理更多请求但超出交互时延的批次没有解决交互负载的问题。测量由 [vLLM Benchmark CLI](https://docs.vllm.ai/en/latest/benchmarking/cli/) 示例和[应用级时延与成本](#4.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F)分别覆盖服务内和端到端两层。
-## 4. How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？
+前篇玩具 MHA 缓存三个位置时得到 `2×3×2×4=48` 个数；通用普通注意力模型可把位置数、K/V 头数、头宽和元素字节数扩展为下面的容量估算。对每层都缓存同形状 K/V、元素字节数相同的普通全量注意力模型，单条序列的 KV 数据载荷近似为
+
+$$
+\text{bytes}=2\cdot L\cdot T\cdot H_{kv}\cdot d_h\cdot b.
+$$
+
+`L` 是层数，`T` 是缓存长度，`Hkv` 是实际存储的 K/V 头数，`dh` 是头宽，`b` 是每个元素的字节数；前面的 `2` 对应 K 和 V。以 32 层、8 个 K/V 头、头宽 128、BF16（每个元素 2 bytes）为例，每词元占 `2×32×8×128×2=131,072 bytes=128 KiB`。缓存到 8,192 个词元，一条序列需要 `1 GiB`；32 条同长度且没有共享前缀的序列需要 `32 GiB` 的 KV 数据载荷。权重、临时激活、块尾空位、量化元数据和调度余量另算。张量并行可能拆分或复制状态，单卡预算要按实际分片和测量核对。
+
+Grouped-query attention (分组查询注意力，GQA) 从模型结构上减少缓存的 K/V 头；KV 量化则减少每个元素占用的字节数，两者可以同时使用。量化还会带来缩放参数、精度损失和内核支持条件，存储比例不能直接视为吞吐比例。滑动窗口、混合状态和潜变量注意力的每层持久状态不同，应按层核算。
+
+如果模型权重本身装不进单卡，分页无法解决权重容量。先比较达到质量门槛的权重量化与多卡切分：tensor parallelism（张量并行）把同层的矩阵或注意力头分给多卡，层内需要交换或汇总结果；pipeline parallelism（流水线并行）把不同层放到不同卡，阶段间传递激活，流水线未填满时会有空转。模型装下后，再按各卡上的权重、KV 和临时缓冲预算接纳序列，并检查互连带宽与 K/V 头的分布。
+
+### MLA 的实际缓存里保存什么？
+
+Multi-Head Latent Attention (MLA，多头潜注意力)把历史 key 和 value 的内容表示联合压到低秩 latent（潜变量）`c_t^KV=W_DKV h_t`，每头内容 key 与 value 都可由它上投影得到。DeepSeek-V3 报告说明压缩 latent 后还加 RMSNorm；旋转位置编码（RoPE）所需的位置相关 key 另从 hidden state（隐藏状态）得到，记为 `k_t^R=RoPE(W_KR h_t)`。具体缓存字段取决于 serving 路径：DeepSeek-V3 官方参考实现默认使用 `absorb`，缓存经 RMSNorm 的 KV latent 与独立 RoPE key；压缩 query 的 `c_t^Q` 是另一条计算路径，不能当作 KV cache 内容。
+
+> [!example] 复算 DeepSeek-V3 absorb 路径的缓存载荷
+> V3 报告给出的每层 KV latent 维度 `d_c=512`，共享给各注意力头的解耦 RoPE key 维度 `d_h^R=64`，层数 `L=61`。按 BF16 的压缩 `absorb` 缓存，每词元、每层存 `512+64=576` 个数值，即 `576×2=1,152 bytes`；61 层合计 `1,152×61=70,272 bytes/token`，约 `68.6 KiB/token`。8,192 个词元的单条序列约需 `0.536 GiB` 载荷；32 条无前缀共享的同长度序列约需 `17.16 GiB`。这些数不含缓存块元数据、对齐、临时缓冲或其他模型状态。
+>
+> 若拿一个假设的普通 multi-head attention（多头注意力，MHA）作量纲基线，并设 128 个注意力头、每头 K 和 V 各 128 维，每词元每层需 `2×128×128=32,768` 个数，即 `65,536 bytes`。它与本例 `absorb` 路径的 `1,152 bytes` 相比约为 `56.9:1`。这不是 DeepSeek-V3 `naive` MLA 路径的缓存大小：该路径会按头展开 K/V，并将其写入不同的缓存字段；参考实现的 `naive` 与 `absorb` 分支实际缓存布局不同。此处比较只对照假设的标准 MHA 配置与压缩 `absorb` 缓存，不是端到端显存或速度承诺；并行分片、量化和运行时开销都会改变实测结果。
+
+官方参考实现的 `absorb` 路径会把内容 K 上投影与 query 结合、把内容 V 上投影延后到 latent 加权之后；另一条 `naive` 路径则先展开逐头 K/V，再分别写入 `k_cache` 和 `v_cache`。因此 MLA 的持久缓存形状由具体计算路径决定，本例的 576 标量限定于参考实现的默认压缩 `absorb` 路径。这里关心容量估算与状态布局，矩阵吸收的投影代数见[长上下文注意力中的 MLA 与位置表示](#3.%20%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E6%80%8E%E6%A0%B7%E5%B0%91%E5%AD%98%E3%80%81%E5%B0%91%E8%AF%BB%E5%8E%86%E5%8F%B2%EF%BC%8C%E5%90%8C%E6%97%B6%E4%BF%9D%E7%95%99%E9%9C%80%E8%A6%81%E7%9A%84%E4%BF%A1%E6%81%AF%EF%BC%9F)。
+
+### 区分注意力内核与持久缓存分配
+
+FlashAttention 把 Q/K/V 分块，并在线合并 softmax 统计量，避免把完整注意力分数矩阵写入 HBM（高带宽显存）。它减少一次注意力运算的读写和临时显存，仍执行有效 query-key 对的 dense attention 计算，浮点舍入可能与直接实现不同。FlashAttention-4 进一步针对 Blackwell 的异步矩阵乘与流水线重叠优化；内核选择要看 GPU、形状和引擎版本。
+
+PagedAttention（分页注意力）管理跨解码步骤持久存在的 KV 状态。每条请求的逻辑块按词元顺序增长，块表将它们映射到可不连续的显存物理块；支持该布局的 attention kernel（注意力内核）按映射读取历史 K/V，服务端按需申请和回收物理块。原论文的手算例使用每块 4 个词元：7 个提示词元映射到物理块 7 和物理块 1，第二块尚有一个空位。下一次 decode 填满该槽；再接收一个词元才需申请新块。请求完成后可还块；共享前缀可引用同一块，若两个分支要向同一共享块写入不同内容，则用 copy-on-write（写时复制）隔离改动。
+
+```mermaid
+flowchart LR
+    L0["逻辑块 0 · 词元 1–4"] --> P7["物理块 7 · 已满"]
+    L1["逻辑块 1 · 词元 5–7"] --> P1["物理块 1 · 还剩一格"]
+    L2["逻辑块 2 · 处理词元 9 时需要"] -.-> P3["另一个物理块"]
+```
+
+最后一个块仍可能有空位，块表和间接访问也有成本；优势是按实际长度增长，不必为每条请求预留连续的最大序列区，因此可让更多请求驻留并批处理。原论文的吞吐与时延结论属于其 2023 年工作负载和对照系统，独立注意力内核的微基准也测到额外延迟。现代引擎保留分页思想，但计算后端应按模型、GPU 和引擎版本选择；vLLM 将原 CUDA 内核设计页标为历史说明。
+
+### 推测解码如何验证候选并处理临时缓存？
+
+[模型训练中的 MTP](#%E8%AE%AD%E7%BB%83%E6%97%B6%E5%A6%82%E4%BD%95%E9%A2%84%E6%B5%8B%E5%A4%9A%E4%B8%AA%E6%9C%AA%E6%9D%A5%E8%AF%8D%E5%85%83%EF%BC%9F)介绍了 MTP 的训练接口；服务端还需确定候选从哪里来。普通 draft model（草稿模型）可按 draft distribution（草稿分布）`q_i`逐步提出候选。DeepSeek-V3 的 `D=1` MTP 路径则先由主模型对当前前缀`C`给出$p_1=p(\cdot\mid C)$并产生下一词元`x_1`；MTP block 接收前缀最后位置的 hidden state（隐藏状态）和`Emb(x_1)`，再给出额外候选`x_2`的草稿分布$q_2(\cdot\mid C,x_1)$。因此这一配置的 MTP 模块不是从`C`独立提出任意长的候选串；多于一个额外未来词元需要更大的 MTP 深度或引擎提供的其他 proposer 路径。具体 MTP state（状态）接口和草稿长度随引擎变化。下文先用通用`q_i`说明随机接受与替换，再追踪目标模型的并行计算和 KV 状态。`p_i`是给定当前前缀和已接受候选后，第`i`个位置的目标分布，`q_i`是为该候选实际使用的草稿分布。
+
+#### 随机接受和残差替换怎样保留目标分布？
+
+从`q_i`抽到候选词元`x`时必有`q_i(x)>0`，再以`a_i(x)=min(1,p_i(x)/q_i(x))`的概率接受。若拒绝，则从归一化残差分布抽替换词元：
+
+$$
+r_i(y)=\frac{[p_i(y)-q_i(y)]_+}{\sum_z[p_i(z)-q_i(z)]_+},
+\qquad [u]_+=\max(0,u).
+$$
+
+对任意词元`y`，若`q_i(y)>0`，被接受候选贡献的无条件概率质量是`q_i(y)a_i(y)=min(p_i(y),q_i(y))`；若`q_i(y)=0`，草稿不会提出`y`，其接受质量为 0，也等于`min(p_i(y),0)`。拒绝分支补上的质量是`[p_i(y)-q_i(y)]_+`。两者相加正好是`p_i(y)`，所以每个位置经校正后的输出仍服从目标分布。若残差分母为零，说明`p_i=q_i`，候选不会被拒绝，残差分支不会被调用。
+
+> [!example] 复算一次拒绝与替换
+> 人为限定没有 EOS 的词表`{A,B,C}`，令`q=(0.6,0.3,0.1)`、`p=(0.3,0.4,0.3)`。若本次提议`A`，接受概率是`min(1,0.3/0.6)=0.5`。未归一化残差为`[p-q]_+=(0,0.1,0.2)`，总和`0.3`，所以拒绝后替换分布是`(0,1/3,2/3)`。仅以“已提议 A”为条件，本次输出会是 A 的概率`0.5`、B 的`1/6`、C 的`1/3`；这里不能加上其他草稿提议情形的质量。要得到总体分布，应分别对所有可能的草稿提议加总：提议 A 贡献`(A:0.3,B:0.1,C:0.2)`；提议 B 因`p(B)/q(B)>1`而必被接受，贡献`(0,0.3,0)`；提议 C 同理必被接受，贡献`(0,0,0.1)`。合并为`(0.3,0.4,0.3)=p`。
+>
+> 对串行依赖的多个候选，按位置逐个验证并在第一次拒绝处停下。接受到位置`j-1`后若拒绝`x_j`，从该位置的残差分布抽替换词元，并丢弃依赖`x_j`的后续草稿；若替换词元是 EOS，也立即结束生成。若某个候选`x_j`被接受且它是 EOS，同样立即结束，不验证后续草稿，也不抽 bonus。只有全部`m`个候选都被接受、尚未遇到停止词元且长度上限仍允许时，才从目标的下一位置分布抽 bonus token（额外词元）。这保证的是使用相同目标`p_i`时的采样分布；greedy decoding（贪心解码）可以用目标 argmax 匹配、失败时回退到 argmax 的规则，但那是确定性算法，不是这里的随机接受与残差校正。引擎若使用不同的采样过滤、温度或特殊 token 处理，目标分布`p_i`和 draft 分布`q_i`应按实际路径取得。
+
+#### 目标模型怎样并行计算整段候选？
+
+设目标模型已经处理并缓存前缀`C`，其最后位置的 logits 已给出$p_1=p(\cdot\mid C)$，可用来验证草稿提出的第一个候选`x_1`。目标模型将整段候选`[x_1,…,x_m]`作为新位置输入完整网络一次；因果掩码使第`j`个候选位置可以读取`C`、此前候选和当前位置`x_j`，该位置随后得到的 logits 是`p_{j+1}`。草稿`x_j`则由位置前的目标 logits `p_j`校正，因此这一轮并行算出`p_2,…,p_{m+1}`。若全数接受，`p_{m+1}`提供 bonus token（额外词元）的分布。对于 DeepSeek-V3 的`D=1` MTP，主模型先给出`p_1`并产生`x_1`，MTP 再提出`x_2`；完整目标前向处理`[x_1,x_2]`得到验证`x_2`所需的`p_2`，并可在接受时从`p_3`取 bonus。这里的`x_1`已按目标分布产生，`q_2`校正针对的是 MTP 提出的额外词元`x_2`。
+
+“并行验证”指候选位置的张量计算在同一轮目标前向中展开；目标模型仍为每个位置执行各层 attention、MoE/FFN 和输出头，层与层仍按顺序运行。这减少的是目标模型 token 步之间的串行等待，不会跳过目标模型对候选位置的计算。若采用抽样，前一小节的`p_i/q_i`校正仍是输出分布契约。
+
+```mermaid
+flowchart LR
+    C["前缀 C<br/>目标 KV 已提交"] --> D["Proposer 按 q_i<br/>依次提出 x₁,…,xₘ"]
+    D --> V["目标模型完整前向<br/>一次处理整段候选"]
+    V --> A{"从 x₁ 起逐个校正"}
+    A -->|全部接受| B["提交 x₁,…,xₘ<br/>从 pₘ₊₁ 取 bonus"]
+    A -->|位置 j 首次拒绝| R["保留 x₁,…,xⱼ₋₁<br/>按残差抽 z"]
+    B --> N["继续下一轮"]
+    R --> N
+```
+
+> [!example] 第一次拒绝时，哪些缓存状态有效？
+> 已提交前缀为`C`，proposer 提出`[x₁,x₂,x₃]`。目标模型一次前向为这三个输入位置计算了结果和临时 K/V。若`x₁`接受、`x₂`被拒，并从残差抽到替换词元`z`，输出会接在前缀后成为`C,x₁,z`。目标 KV 可以保留`C,x₁`的状态；`x₂`与`x₃`对应的 K/V 是在候选路径上暂存的，应从逻辑缓存长度回退或标记为无效。`z`虽已作为输出词元提交，但目标模型尚未把`z`输入前向，因此它的目标 K/V 要等下一步处理`z`时再计算。若三项候选全被接受，可提交到`x₃`的目标 KV；bonus token 也尚未进入目标缓存。底层物理块不一定立即释放，但逻辑长度和下次读取边界必须只覆盖有效前缀。proposer 自身缓存的回退方式取决于引擎实现。
+
+因此推测解码可同时占用目标与 proposer 的状态，以及候选对应的暂存目标 KV。若一次最多提议`m`个词元，单条活跃序列在目标侧新增的临时 KV 载荷上界约为每词元 KV 载荷乘`m`；峰值还包括 draft 状态、工作区、块尾空位及同批其他请求。以本章 V3 MLA 载荷为例，假设某实现一次输入 3 个候选位置，目标侧暂存上界约`3×70,272=210,816 bytes`（约 206 KiB）/请求；若`B`条序列同时验证，近似再乘`B`。这只是目标 KV 载荷估算，MTP block 状态和引擎分配粒度另算；容量不足时应测引擎如何降低草稿深度、推迟请求或回收缓存。
+
+速度收益来自少做几轮串行的目标模型调用，并让目标计算在多个候选位置上并行；目标模型仍为每个候选位置执行完整计算，proposer 也有成本，拒绝后未提交的后缀计算会浪费。假设词表里没有 EOS、尚未触及长度上限且每轮都能追加词元，固定提议`m`个候选所产生的词元数是已接受前缀长度加一个替换词元，或在全接受时再加一个 bonus；此时其期望为`1 + P(x₁ 接受) + P(x₁,x₂ 均接受) + … + P(x₁,…,x_m 均接受)`。实际生成若接受的候选、拒绝后的替换词元或 bonus 是 EOS，或长度上限阻止继续输出，就立即停止，后续候选和 bonus 不再产生；带停止事件时的实际期望需按这些事件截断。较长草稿只有在前缀联合接受概率足够高、验证成本与额外缓存可承受时才有用。V3 报告在其生成主题评估中，第二词元接受率为 85–90%，并报告 1.8× TPS；该段未提供足以复算所有 batch、硬件、采样和时延分解的细节，所以不能当作不同 serving 配置的加速承诺。
+
+### 按未达标的阶段调度和调优
+
+| 观察到的限制 | 优先尝试 | 验证边界 |
+| --- | --- | --- |
+| 请求已到但 GPU 尚未开始工作 | 分开测排队、输入组装、分词与传输 | 只有分词确实在关键路径时，才换 tokenizer 后端或提高 CPU 处理能力；保持词元序列和特殊词元规则相同。 |
+| 冷请求的长 prompt 首 token 慢 | 使用支持当前 GPU 与模型的内核，减少无用输入，比较长 prefill 的分块预算 | 同时记录 TTFT（请求至首词元时延）和排队时间。分块可让活跃 decode 插入，但长 prompt 本身可能要等更久。 |
+| 重复的长 prompt 首 token 慢 | 把稳定模板或文档放在共同前缀，试用引擎 prefix cache（前缀缓存） | 检查实际复用词元数和命中率。语义相同不够，缓存须匹配实际词元序列、模型和适配器状态。 |
+| 活跃序列经常碰显存上限 | 限制最大活跃长度与并发，再比较支持的 KV 精度、模型或设备数 | 跟踪实际 KV、抢占与重算。CPU offload（卸载）可用更慢传输换容量，需检查长请求尾时延。 |
+| 短请求吞吐低，GPU 利用不足 | 连续批处理在迭代间补入请求并移除已完成请求 | 同看排队和 p95 首词元时延；扩大批次可能让单条请求等待更久。 |
+| Decode 的词元间隔长 | 按输出长度与活跃数分桶，测显存带宽，再比较量化或推测解码 | 推测解码要同时测联合接受长度、每轮目标计算量、draft 成本、峰值暂存 KV 与拒绝比例。 |
+
+vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块并与 decode 混合调度，优先处理排队的 decode；词元预算影响 TTFT 和词元间隔，应按服务流量测试。跨请求 prefix cache 可以复用完整 KV 块与前缀身份。适配器、多模态内容和租户隔离要与部署一致，可用独立缓存范围或引擎支持的租户盐值隔离共享。跨请求命中减少 prefill 工作，但仍要生成新结果；应用层响应缓存则可能跳过整个模型调用。
+
+若分块后长 prefill 仍拉高 decode 时延，可评估 prefill/decode disaggregation（预填充与解码分池）。分池允许分别调整两边容量，但每条请求的 KV 状态要从 prefill worker 传给 decode worker；传输与排队也应计入 TTFT 和吞吐。DistServe 的收益来自论文测过的请求分布、互连与时延目标。
+
+做固定流量回放，记录模型版本、精度、GPU、输入输出长度分布、并发与到达速率、冷暖缓存比例。比较 TTFT、ITL（输出词元间隔）、端到端 p95、吞吐量和满足时延目标的请求数。能处理更多请求却超过交互时延目标的批次，不算解决了交互负载。服务内测量可从引擎基准命令的示例起步；应用级时延与成本见[应用端到端优化](#5.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F)。
+
+> [!info]- 来源
+> 来源支持的范围与对应章节如下；容量数值是按列明的架构维度与精度复算的载荷估算，不是硬件实测。
+>
+> - **因果缓存、prefill 与 decode。** [Transformers 缓存说明](https://huggingface.co/docs/transformers/main/en/cache_explanation)；[Sarathi-Serve, §§2–4](https://arxiv.org/abs/2403.02310)。
+> - **普通 K/V 容量、GQA 与量化。** [GQA, EMNLP 2023, §2](https://aclanthology.org/2023.emnlp-main.298/)；[KIVI, §3](https://arxiv.org/abs/2402.02750)；[vLLM KV cache 配置](https://docs.vllm.ai/en/latest/api/vllm/config/cache/)（文档核对日期：2026-11-06）。
+> - **MLA 缓存维度与实现分支。** [DeepSeek-V3 Technical Report, arXiv v2, §2.1.1、§4.2](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1) 给出联合 KV latent、独立 RoPE key、压缩 latent 后的 RMSNorm，以及 `d_c=512`、`d_h^R=64`、61 层等参数。官方 [`inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 默认 `attn_impl="absorb"`，在 `absorb` 分支缓存经 `kv_norm` 的 latent 和独立 `pe_cache`；`naive` 分支会展开逐头 K/V 并写入 `k_cache/v_cache`（检查日期：2026-11-06）。MLA 代数的唯一详解见长上下文注意力章节。
+> - **FlashAttention 内核。** [FlashAttention, §3](https://arxiv.org/abs/2205.14135)；[FlashAttention-4, 2026](https://arxiv.org/abs/2603.05451)。
+> - **分页缓存。** [Kwon et al., PagedAttention, arXiv v1, §§4.2–4.5、§§6–7](https://arxiv.org/html/2309.06180v1) 说明逻辑块、物理块、共享和性能边界；[vLLM 原 PagedAttention 内核说明](https://docs.vllm.ai/en/latest/design/paged_attention/) 将早期 CUDA 内核页标为历史说明。
+> - **推测采样与 MTP serving。** [Leviathan et al., ICML 2023, §§2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 支持目标分布校正；[DeepSeek-V3 Technical Report, arXiv v2, §§2.2、5.4.3](https://arxiv.org/html/2412.19437v2#S2.SS2) 报告 MTP 与论文评估结果；vLLM 当前的[原生 MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)和[`deepseek_mtp.py` 实现](https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/deepseek_mtp.py)展示了框架特定的草稿接口与配置（核对日期：2026-11-06）。
+> - **并行、分块预填充、前缀缓存与负载测试。** [vLLM 并行与扩展](https://docs.vllm.ai/en/latest/serving/parallelism_scaling/)；[vLLM Chunked Prefill](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill)；[vLLM v0.25.0 Prefix Caching](https://docs.vllm.ai/en/v0.25.0/design/prefix_caching/)；[vLLM Benchmark CLI](https://docs.vllm.ai/en/latest/benchmarking/cli/)。
+> - **Prefill/decode 分池。** [DistServe](https://arxiv.org/abs/2401.09670)；收益受论文测过的负载、硬件互连与时延目标约束。
+## 5. How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？
 
 **Core explanation / 核心解释：** First measure where end-to-end time and cost accumulate, then change one layer at a time against a fixed task-quality bar. Queueing, context assembly, retrieval, model input/output, tools, retries, and operations have different costs; token price alone is not total cost, and faster partial output is not necessarily faster completion. / 先测量端到端时间和成本分别累积在哪些环节，再以固定任务质量门槛为准逐层调整。排队、上下文组装、检索、模型输入与输出、工具、重试和运维成本各不相同；token 单价不等于总成本，更快看到部分输出也不代表更快完成。
 
@@ -416,14 +692,14 @@ vLLM V1 启用 chunked prefill 后把大 prefill 切成小块、与 decode 混�
 
 Measure queueing, context assembly, retrieval, model input and output, tools, and retries separately. Track latency distributions and TTFT alongside throughput, queue time, and cost per completed task. Hold the task-quality bar constant: a cheaper route that fails more often may increase retries, escalations, and human review.
 
-The application architecture owns run status, deadlines, and recovery; see [How can a production AI run survive disconnections and worker failures? / 生产运行如何经受断连与故障？](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F). Define the success measure before comparing optimizations with [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
+The application architecture owns run status, deadlines, and recovery; see [How can a production AI run survive disconnections and worker failures? / 生产运行如何经受断连与故障？](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F). Define the success measure before comparing optimizations with [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
 
 #### Which optimization should you test? / 应先测试哪种优化？
 
-- **Shorten or select context / 缩短或筛选上下文：** include relevant material and limit unnecessary history. Measure whether evidence or task quality is lost. See [Context Engineering Principles / 上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F).
+- **Shorten or select context / 缩短或筛选上下文：** include relevant material and limit unnecessary history. Measure whether evidence or task quality is lost. See [Context Engineering Principles / 上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F).
 - **Cache / 使用缓存：** exact-response or semantic response caches can avoid model work on a safe hit. Require compatible permissions, freshness, tenant, locale, and policy version. For example, “What is the refund policy in the US?” and “What is the refund policy in the EU?” can have similar embeddings but different correct answers. Similarity alone does not prove a response is reusable.
-- **Route requests / 请求路由：** use a lower-cost candidate only for cases where it meets the measured quality bar. Include classifier errors, added latency, fallback frequency, and maintenance in the comparison. Candidate fit belongs to [Model Selection and Ecosystem / 模型选择与生态](#5.%20How%20should%20you%20choose%20a%20model%20for%20a%20task%20and%20its%20deployment%20constraints?%20/%20%E5%A6%82%E4%BD%95%E6%A0%B9%E6%8D%AE%E4%BB%BB%E5%8A%A1%E4%B8%8E%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%9F).
-- **Inference batching / 推理批处理** — A serving engine can admit and retire sequences between decoding steps. [GPU serving capacity / GPU 推理容量](#3.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F) explains how that affects memory, throughput, and per-request latency. A provider's asynchronous Batch API is a job interface for requests that tolerate delayed completion. It exposes no live inference scheduling contract.
+- **Route requests / 请求路由：** use a lower-cost candidate only for cases where it meets the measured quality bar. Include classifier errors, added latency, fallback frequency, and maintenance in the comparison. Candidate fit belongs to [Model Selection and Ecosystem / 模型选择与生态](#6.%20How%20should%20you%20choose%20a%20model%20for%20a%20task%20and%20its%20deployment%20constraints?%20/%20%E5%A6%82%E4%BD%95%E6%A0%B9%E6%8D%AE%E4%BB%BB%E5%8A%A1%E4%B8%8E%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%9F).
+- **Inference batching / 推理批处理** — A serving engine can admit and retire sequences between decoding steps. [GPU serving capacity / GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) explains how that affects memory, throughput, and per-request latency. A provider's asynchronous Batch API is a job interface for requests that tolerate delayed completion. It exposes no live inference scheduling contract.
 - **Quantization / 量化：** represent weights, and in some methods activations, with fewer bits. This can reduce model memory and data movement, and may improve inference speed when the hardware and kernels support the chosen format. Quantization error can affect quality, and lower precision does not guarantee faster end-to-end service; evaluate the exact model, quantizer, hardware, and workload.
 - **Distillation / 蒸馏：** train a smaller student on outputs or softened targets from a larger teacher over chosen inputs. A student may reduce serving cost or latency, but can lose capabilities or fail outside the distillation set. Include teacher/data generation and evaluation in the cost, and test on held-out tasks before replacement.
 - **Stream responses / 流式返回：** streaming can improve perceived responsiveness and TTFT; it does not necessarily reduce total generation time or work. The browser's treatment of partial output is covered in [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md).
@@ -453,7 +729,7 @@ An application-level response-cache hit is different: if 400 requests can safely
 OpenAI's [prompt caching documentation](https://developers.openai.com/api/docs/guides/prompt-caching), checked 2026-10-15, likewise describes reuse of a prompt prefix while the model still generates a new response. Supported models, rates, and cache rules are provider-specific and change.
 
 **Sources / 来源：** OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Frantar et al., [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323); Lin et al., [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978). Hinton et al., [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531). Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu), on iteration-level scheduling and selective batching. OpenAI, [Batch API](https://developers.openai.com/api/docs/guides/batch), checked 2026-10-15, documents its separate asynchronous job interface.
-## 5. How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？
+## 6. How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？
 
 Choose from candidates that satisfy the task's hard constraints, then compare them on representative examples against an agreed quality bar. Measure latency, total cost, modality and format reliability, data handling, and operational fit. Model names, rankings, context limits, supported inputs, and prices change, so a public benchmark or provider label is a lead for investigation, not a lasting selection rule. / 先筛出符合任务硬性约束的候选模型，再用有代表性的样本和约定的质量门槛进行比较。测量任务效果、时延、总成本、模态与格式可靠性、数据处理和运维适配。模型名称、排名、上下文限制、输入能力和价格都会变化，因此公开基准或供应商标签只能帮助调查，不能作为长期固定的选择规则。
 
@@ -472,7 +748,7 @@ Record what a successful result must do, what errors matter, and which operating
 | **Data handling / 数据处理** | What do the contract, configuration, retention policy, and deployment boundary allow? “Hosted” or “open-weight” alone does not answer this. |
 | **Operations / 运维** | Who owns scaling, updates, monitoring, security patches, and incident response? |
 
-Public benchmarks can help generate a shortlist when their task and protocol are relevant. They do not establish performance on a different prompt, data distribution, API configuration, or deployment. Keep an application-specific held-out set and report its sample scope and uncertainty. [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) explains how to choose task criteria and compare changes.
+Public benchmarks can help generate a shortlist when their task and protocol are relevant. They do not establish performance on a different prompt, data distribution, API configuration, or deployment. Keep an application-specific held-out set and report its sample scope and uncertainty. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) explains how to choose task criteria and compare changes.
 
 ### Model tiers are shorthand, not a catalog / 模型档位只是简称，不是目录
 
@@ -486,7 +762,7 @@ Teams sometimes use labels such as **frontier**, **balanced**, and **fast** to d
 | **Open-weight deployment / 开放权重部署** | More control over serving location, model version, and infrastructure choices. | A weight license is not automatically an open-source license or permission for every use. The operator owns hardware, serving, security, scaling, and updates. |
 | **Hybrid / 混合部署** | Different models or environments can serve distinct workload classes. | Adds routing, evaluation, observability, policy consistency, and failure paths across systems. |
 
-This is an eligibility and trade-off comparison, not a universal deployment ranking. Edge, self-hosted capacity, and detailed operating responsibilities have their own constraints; see [AI Deployment Patterns / AI 部署模式](#6.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F).
+This is an eligibility and trade-off comparison, not a universal deployment ranking. Edge, self-hosted capacity, and detailed operating responsibilities have their own constraints; see [AI Deployment Patterns / AI 部署模式](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F).
 
 Do not pick a hosting pattern from API spend alone. A useful estimate is:
 
@@ -500,7 +776,7 @@ Compare the same workload, quality target, peak traffic, and data constraints. A
 
 Routing can send simple, low-risk requests to a cheaper model and reserve a more capable option for cases that benefit from it. First measure whether the router's errors, added latency, and maintenance are outweighed by the savings. Use a task-relevant fallback when routing confidence is insufficient, and ensure high-impact operations still pass application-side authorization. Do not label “classification,” “reasoning,” or “extraction” as automatically easy or hard across all models.
 
-Routing and other service optimizations need a fixed quality bar and end-to-end measurements; see [How to reduce AI application latency and cost / 如何降低 AI 应用时延与成本](#4.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F). To connect versioned results and user feedback to an improvement or rollback decision, see [Production observability and feedback / 生产可观测性与反馈](#20.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F).
+Routing and other service optimizations need a fixed quality bar and end-to-end measurements; see [How to reduce AI application latency and cost / 如何降低 AI 应用时延与成本](#5.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F). To connect versioned results and user feedback to an improvement or rollback decision, see [Production observability and feedback / 生产可观测性与反馈](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F).
 
 ### Multimodal capability / 多模态能力
 
@@ -508,17 +784,17 @@ Routing and other service optimizations need a fixed quality bar and end-to-end 
 
 ### Related notes / 相关笔记
 
-- [AI Deployment Patterns / AI 部署模式](#6.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares hosted, self-hosted, edge, and hybrid operating patterns.
-- [AI Application Architecture / AI 应用架构](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines run identity, persistence, and recovery behavior across request channels.
-- [Context Engineering Principles / 上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) covers token budgets and provider-specific prompt caching.
-- [Fine-tuning Strategies / 微调策略](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) distinguishes behavior adaptation from maintained external knowledge.
-- [RAG Architecture and Implementation / 检索增强生成](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers current or access-controlled external evidence.
+- [AI Deployment Patterns / AI 部署模式](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares hosted, self-hosted, edge, and hybrid operating patterns.
+- [AI Application Architecture / AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines run identity, persistence, and recovery behavior across request channels.
+- [Context Engineering Principles / 上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) covers token budgets and provider-specific prompt caching.
+- [Fine-tuning Strategies / 微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) distinguishes behavior adaptation from maintained external knowledge.
+- [RAG Architecture and Implementation / 检索增强生成](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers current or access-controlled external evidence.
 
 ### Sources / 来源
 
 - OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Its guidance treats prompting, context, fine-tuning, and evaluation as task-specific optimization levers rather than a universal linear ladder.
 - For current OpenAI model IDs and feature support, consult the changing [Models documentation](https://developers.openai.com/api/docs/models), checked 2026-10-15.
-## 6. When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？
+## 7. When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？
 
 **Core explanation / 核心解释：** Compare deployment patterns against the same workload, task-quality bar, data boundary, peak demand, and operational requirement. Hosted inference can reduce serving work; self-hosting increases control while transferring capacity and on-call responsibility to the team; edge and hybrid patterns answer distinct device or data-boundary needs. No deployment label by itself establishes lower total cost or better privacy. / 应在同一工作负载、任务质量门槛、数据边界、峰值需求和运维要求下比较部署方式。托管推理可以减少服务维护；自托管增加控制力，也把容量和 on-call 责任交给团队；端侧和混合部署分别回应设备或数据边界需求。仅凭部署名称不能证明总成本更低或隐私更好。
 
@@ -543,12 +819,12 @@ $$
 
 There is no universal spend threshold for switching to self-hosting. Estimate with actual traffic, peak demand, staffing, quality requirements, and the full operating burden. Edge and hybrid choices likewise depend on device and data constraints, not just a latency label.
 
-The choice also depends on which model candidates meet the task contract. See [Model Selection and Ecosystem / 模型选择与生态](#5.%20How%20should%20you%20choose%20a%20model%20for%20a%20task%20and%20its%20deployment%20constraints?%20/%20%E5%A6%82%E4%BD%95%E6%A0%B9%E6%8D%AE%E4%BB%BB%E5%8A%A1%E4%B8%8E%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%9F) for comparing task quality, modality, deployment constraints, and measured routing. For the run identity and recovery behavior that should remain stable across deployment patterns, see [AI Application Architecture / AI 应用架构](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F).
+The choice also depends on which model candidates meet the task contract. See [Model Selection and Ecosystem / 模型选择与生态](#6.%20How%20should%20you%20choose%20a%20model%20for%20a%20task%20and%20its%20deployment%20constraints?%20/%20%E5%A6%82%E4%BD%95%E6%A0%B9%E6%8D%AE%E4%BB%BB%E5%8A%A1%E4%B8%8E%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%9F) for comparing task quality, modality, deployment constraints, and measured routing. For the run identity and recovery behavior that should remain stable across deployment patterns, see [AI Application Architecture / AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F).
 
-For self-hosting, estimate the peak number and length of active sequences and then measure fit on the intended hardware. [GPU serving capacity / GPU 推理容量](#3.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F) shows how to size KV memory and compare batching under a latency target.
+For self-hosting, estimate the peak number and length of active sequences and then measure fit on the intended hardware. [GPU serving capacity / GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) shows how to size KV memory and compare batching under a latency target.
 
 **Source boundary / 来源边界：** This note summarizes the deployment comparison already present in the AI Application Architecture source. Provider features, terms, prices, capacity, and availability are time- and workload-specific; verify the exact provider or serving stack when making a current deployment decision. It does not make a universal cost or privacy ranking.
-## 7. How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？
+## 8. How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？
 
 A useful prompt makes the task, necessary context, constraints, and expected output clear. Add examples or structure when they address a measured failure. Prompt text can guide model behavior, but it cannot enforce access control, guarantee factual accuracy, or replace application validation. / 有效提示词要清楚说明任务、必要背景、约束和输出要求。只有在示例或结构能解决实测问题时，才加入它们。提示词能引导模型，但不能执行访问控制、保证事实正确，也不能替代应用校验。
 
@@ -602,7 +878,7 @@ For human-readable output, headings, bullets, XML tags, or code fences can make 
 }
 ~~~
 
-Application code should check allowed categories and required fields, and verify any consequential claim against its source. For the broader distinction between task success, factual correctness, source support, and instruction adherence, see [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
+Application code should check allowed categories and required fields, and verify any consequential claim against its source. For the broader distinction between task success, factual correctness, source support, and instruction adherence, see [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
 
 ### Optional organization pattern / 可选组织方式
 
@@ -622,15 +898,15 @@ Do not put real names, ticket numbers, secrets, or private histories in a reusab
 
 ### Related notes / 相关笔记
 
-- [Advanced Prompting Techniques / 高级提示技巧](#8.%20Which%20prompting%20technique%20should%20you%20try%20when%20a%20simple%20prompt%20fails?%20/%20%E7%AE%80%E5%8D%95%E6%8F%90%E7%A4%BA%E5%A4%B1%E8%B4%A5%E6%97%B6%E5%BA%94%E5%B0%9D%E8%AF%95%E5%93%AA%E7%A7%8D%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7%EF%BC%9F) covers optional methods for failures that a clear baseline prompt does not resolve.
-- [Context Engineering Principles / 上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains how to select and update the full information available to each inference.
-- [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) explains why prompts cannot replace runtime authorization and stop controls.
+- [Advanced Prompting Techniques / 高级提示技巧](#9.%20Which%20prompting%20technique%20should%20you%20try%20when%20a%20simple%20prompt%20fails?%20/%20%E7%AE%80%E5%8D%95%E6%8F%90%E7%A4%BA%E5%A4%B1%E8%B4%A5%E6%97%B6%E5%BA%94%E5%B0%9D%E8%AF%95%E5%93%AA%E7%A7%8D%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7%EF%BC%9F) covers optional methods for failures that a clear baseline prompt does not resolve.
+- [Context Engineering Principles / 上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains how to select and update the full information available to each inference.
+- [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) explains why prompts cannot replace runtime authorization and stop controls.
 
 ### Sources / 来源
 
 - OpenAI, [Model optimization: write effective prompts](https://developers.openai.com/api/docs/guides/model-optimization#write-effective-prompts), checked 2026-10-15.
 - OpenAI, [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. API behavior and supported schema features can change.
-## 8. Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？
+## 9. Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？
 
 Start with a clear, simple prompt, identify the failure on representative cases, and add only the method that addresses it. Few-shot examples, reasoning prompts, self-consistency, tool loops, prompt chains, and prompt generation can add tokens, calls, or control-flow complexity. Compare each change with the simpler baseline and application-side checks; published results support claims only for the tasks and setups actually evaluated. / 先用清楚、简单的提示词建立基线，再从有代表性的失败样本中定位问题，只增加能应对该问题的方法。少样本示例、推理提示、自一致性、工具循环、提示词链和提示词生成都会增加 token、调用或控制流复杂度。每种改动都应与简单基线及应用校验比较；论文结果只支持其实际评估过的任务和设置。
 
@@ -680,7 +956,7 @@ A model can also adapt its next action to a tool's observed result. See [the ReA
 
 ### When should you chain prompts? / 何时串联提示词？
 
-Use a fixed prompt chain when the task has separable steps and code can validate, branch, retry, or stop between them. If the sequence is known, developer-controlled stages can be easier to inspect than an open-ended agent loop. Each model call can still be wrong; validate intermediate outputs and test the whole chain. For broader workflow and delegation patterns, see [Orchestration Patterns / 编排模式](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F).
+Use a fixed prompt chain when the task has separable steps and code can validate, branch, retry, or stop between them. If the sequence is known, developer-controlled stages can be easier to inspect than an open-ended agent loop. Each model call can still be wrong; validate intermediate outputs and test the whole chain. For broader workflow and delegation patterns, see [Orchestration Patterns / 编排模式](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F).
 
 **Outline → validate → write / 大纲 → 校验 → 写作:**
 
@@ -731,13 +1007,13 @@ Expected behavior:
 Revise only the instruction needed to address this failure. Preserve the task, output contract, and other constraints. Return the revised prompt and a short change note. This candidate still requires evaluation on examples not used to write it.
 ~~~
 
-A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task. [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design and acceptance evidence.
+A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design and acceptance evidence.
 
 ### Related notes / 相关笔记
 
-- [Prompt Engineering Fundamentals / 提示工程基础](#7.%20How%20do%20you%20write%20a%20prompt%20that%20makes%20a%20task%20clear%20and%20testable?%20/%20%E5%A6%82%E4%BD%95%E7%BC%96%E5%86%99%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E6%A3%80%E9%AA%8C%E7%9A%84%E4%BB%BB%E5%8A%A1%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F) covers clear instructions, examples, and output contracts.
-- [Context Engineering Principles / 上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) covers the information available to each inference.
-- [Agent Fundamentals / 智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F), [Orchestration Patterns / 编排模式](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F), and [Tool Design and Function Calling / 工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F) cover runtime tool loops and control flow.
+- [Prompt Engineering Fundamentals / 提示工程基础](#8.%20How%20do%20you%20write%20a%20prompt%20that%20makes%20a%20task%20clear%20and%20testable?%20/%20%E5%A6%82%E4%BD%95%E7%BC%96%E5%86%99%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E6%A3%80%E9%AA%8C%E7%9A%84%E4%BB%BB%E5%8A%A1%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F) covers clear instructions, examples, and output contracts.
+- [Context Engineering Principles / 上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) covers the information available to each inference.
+- [Agent Fundamentals / 智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F), [Orchestration Patterns / 编排模式](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F), and [Tool Design and Function Calling / 工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F) cover runtime tool loops and control flow.
 
 ### Sources / 来源
 
@@ -747,7 +1023,7 @@ A practical loop is to define success criteria, generate or revise candidates, c
 - Zhou et al., [Large Language Models Are Human-Level Prompt Engineers](https://arxiv.org/abs/2211.01910), for the APE instruction-generation and selection approach.
 - OpenAI, [Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices), checked 2026-10-15. These instructions describe OpenAI reasoning models and should not be generalized to other APIs.
 - OpenAI, [Prompt generation](https://developers.openai.com/api/docs/guides/prompt-generation), checked 2026-10-15. This is an OpenAI-specific example of generating or revising prompt text, not evidence that a generated prompt performs better without task evaluation.
-## 9. What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？
+## 10. What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？
 
 **Core explanation / 核心解释：** Context engineering selects, orders, and updates the instructions, tool definitions, history, retrieved evidence, observations, and relevant task state available to one inference. The application should keep authoritative long-term state outside the prompt and load only the information needed for the next step. Measure usefulness on the task: more context can add evidence, but also cost, delay, noise, and lossy summaries. / 上下文工程是在一次推理中选择、排序和更新模型可用的指令、工具定义、历史、检索证据、观察结果及相关任务状态。应用应把权威长期状态保存在提示词之外，只为下一步加载所需信息。应根据任务结果衡量上下文是否有用：更多内容可能补充证据，也会增加成本、时延、噪声和有损摘要风险。
 
@@ -781,13 +1057,13 @@ A practical loop is to define success criteria, generate or revise candidates, c
 
 Skills 与工具搜索也可渐进载入程序或能力；并行工具调用可以留在同一主循环中，不必因此创建 subagent。[Anthropic 关于把 subagent 折回主循环的文章（2026-10-22，“Using an agent loop with progressive disclosure”）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)描述了这种按需暴露方式。
 
-**隔离上下文：** 子智能体不会天然共享同一份记忆。清楚传递目标、必要背景和结果格式；需要一致决策时，明确由主 agent 汇总和核对。切分依据应是任务边界、权限或可验证的并行收益，而不是把完整历史复制给每个工作者。按问题类型交接时，若下一步仍依赖先前约束或发现，摘要可能丢失细节；可先尝试在主循环中保留共享状态并按需加载专业流程，再评估是否需要分拆。[Anthropic 的 folding 文章，“Combining domain agents”](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)；决策方法见[编排模式](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
+**隔离上下文：** 子智能体不会天然共享同一份记忆。清楚传递目标、必要背景和结果格式；需要一致决策时，明确由主 agent 汇总和核对。切分依据应是任务边界、权限或可验证的并行收益，而不是把完整历史复制给每个工作者。按问题类型交接时，若下一步仍依赖先前约束或发现，摘要可能丢失细节；可先尝试在主循环中保留共享状态并按需加载专业流程，再评估是否需要分拆。[Anthropic 的 folding 文章，“Combining domain agents”](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)；决策方法见[编排模式](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
 
 ### How should a request preserve a reusable prefix? / 请求怎样保留可复用的前缀？
 
 **KV cache 与 prompt caching 是相关但不同的复用机制 / KV cache and prompt caching are related but distinct reuse mechanisms.**
 
-本节处理应用能控制的前缀布局。逐层 KV 载荷、分页和批处理见 [GPU 推理容量](#3.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F)。
+本节处理应用能控制的前缀布局。逐层 KV 载荷、分页和批处理见 [GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)。
 
 **KV cache** 是自回归模型生成时保存先前 token 的 key/value 表示，以供同一次生成后续 token 使用。**Prompt caching（提示缓存）** 通常指推理服务在后续请求中重用相同前缀的计算。后者可降低特定服务和配置下的输入成本或首 token 时延；两者都不是模型的长期记忆，也不意味着缓存 token 在所有供应商中都按同一价格收费。
 
@@ -822,7 +1098,7 @@ Manus 的[上下文工程经验](https://www.manus.im/blog/Context-Engineering-f
 | **有外部评分的开放搜索停滞** | 可从同一候选比较重启与继续搜索，并明确各自保留/移除的信息；停滞不自动构成通用重置规则。 |
 | **跨 worker 复用产物** | 将带版本与来源的代码、测试、实验记录外置；按当前任务读取相关产物，不载入完整历史。持久资产和每轮可见上下文是不同选择。[GitSwarm v1（2026-10-04，§§2.2、3.3–3.4、4）](https://arxiv.org/html/2610.04862v1) |
 | **跨任务复用 harness 经验** | 保存可复用组件和经验；新任务从共同基线开始，再检索与适配。[Harness² v1（2026-10-09，§2.3）](https://arxiv.org/html/2610.14224v1) |
-| **接受系统级变更** | 保留已验收配置及其证据；后续候选仍需[重新验收](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。 |
+| **接受系统级变更** | 保留已验收配置及其证据；后续候选仍需[重新验收](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。 |
 
 [*Scaling Discovery Requires Forgetting* v1（2026-10-14，§§3.1–4.3、Appendix B p. 13、§6）](https://arxiv.org/abs/2610.20563v1) 的 Forget 同时清空 session 与候选搜索历史，只保留最佳候选及分数，以相同首轮指令重启。证据来自四项外部评分的优化任务、一个 harness/model 配置；它没有建立适用于一般任务的重置规则。
 
@@ -832,12 +1108,12 @@ GitSwarm 用可分支的共享 Git 仓库和原子提交（atomic commit）保�
 
 ### 相关知识
 
-- [智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：上下文、环境反馈和智能体执行循环如何连接。
-- [编排模式](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：判断主循环、并行工具与独立 worker 的边界。
-- [LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：比较历史保留、重启与跨运行变更。
-- [工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：工具 schema 与执行结果也是上下文的一部分。
-- [RAG 架构与实现](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)：了解何时预先检索、何时按需检索。
-## 10. How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？
+- [智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：上下文、环境反馈和智能体执行循环如何连接。
+- [编排模式](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：判断主循环、并行工具与独立 worker 的边界。
+- [LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：比较历史保留、重启与跨运行变更。
+- [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：工具 schema 与执行结果也是上下文的一部分。
+- [RAG 架构与实现](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)：了解何时预先检索、何时按需检索。
+## 11. How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？
 
 **Short answer / 简答** — Define what sources the caller may use, retrieve from the eligible corpus, and give the model a small set of traceable passages. Validate each material claim against those passages and abstain when the evidence is missing or conflicting. Measure candidate recall, evidence selection, and final answers separately so you can fix the stage that failed. / 先确定调用者能使用哪些来源，再从有资格的文档中检索，把少量可追溯的证据交给模型。用原文核对关键主张，证据不足或冲突时说明无法确定。分别衡量候选召回、证据组装和最终回答，才能知道该修哪一层。
 
@@ -972,7 +1248,7 @@ RAG does not make a corpus private. Compute the caller’s permissions in truste
 
 A logical authorization filter and the search engine’s scan order are different concerns. In pgvector, a SQL `WHERE` condition still gates what rows can be returned, but approximate HNSW or IVFFlat may scan candidates before applying that filter. With selective filters, measure authorized recall and the count of eligible rows. If needed, test iterative scans, a scoped index or partition, or exact search over a small authorized subset. Never relax the policy to fill a candidate quota. [pgvector filtering and iterative scans](https://github.com/pgvector/pgvector#filtering)
 
-Treat all retrieved text as untrusted content. A document can contain direct or indirect instructions that influence the model. Delimiters and prompts may reduce confusion, but they do not guarantee protection. Do not let a retrieved passage authorize a data access or tool action; enforce permissions and validate actions outside the model. [OWASP LLM01:2025](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). For more on prompt injection and application boundaries, see [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
+Treat all retrieved text as untrusted content. A document can contain direct or indirect instructions that influence the model. Delimiters and prompts may reduce confusion, but they do not guarantee protection. Do not let a retrieved passage authorize a data access or tool action; enforce permissions and validate actions outside the model. [OWASP LLM01:2025](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). For more on prompt injection and application boundaries, see [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
 
 #### Evaluation / 评估
 
@@ -982,7 +1258,7 @@ Measure retrieval and generation separately, then compare the complete system:
 - **Evidence and generation / 证据与生成.** Track which needed passages survive assembly. Then assess factual correctness, support for each claim and citation, and whether the answer abstains when the passage is missing or conflicting. RAGChecker illustrates claim-level decomposition for retrieval and generation diagnosis. [RAGChecker §§3–4](https://arxiv.org/abs/2408.08067)
 - **System / 系统.** Track end-to-end latency and cost along with revocation and tenant-isolation regressions. Keep cases where the relevant-looking passage is unauthorized, expired, or for the wrong plan. Re-run the same cases across the lexical baseline, dense retrieval, hybrid fusion and reranking. Change one stage and retain the simplest configuration that meets the acceptance bar.
 
-RAGAS and ARES illustrate multi-dimensional evaluation, including context relevance, answer faithfulness, and answer relevance; they are evaluation frameworks, not a complete universal score. Automated judges are useful signals and should be checked against representative human-reviewed examples. See [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F). [RAGAS](https://arxiv.org/abs/2309.15217), [ARES](https://arxiv.org/abs/2311.09476)
+RAGAS and ARES illustrate multi-dimensional evaluation, including context relevance, answer faithfulness, and answer relevance; they are evaluation frameworks, not a complete universal score. Automated judges are useful signals and should be checked against representative human-reviewed examples. See [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F). [RAGAS](https://arxiv.org/abs/2309.15217), [ARES](https://arxiv.org/abs/2311.09476)
 
 #### Diagnose from evidence / 根据证据定位故障
 
@@ -1003,11 +1279,11 @@ Lewis 等人的 RAG 把可更新的非参数记忆（non-parametric memory）与
 
 ### Related notes / 相关笔记
 
-- [Context Engineering Principles / 上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains context budgets and how placement can affect use of evidence.
-- [Fine-tuning Strategies / 微调策略](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) discusses adapting model behavior and combining it with external knowledge.
-- [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation datasets, metrics, and review methods.
-- [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) covers prompt injection, permission boundaries, and runtime controls.
-## 11. How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？
+- [Context Engineering Principles / 上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains context budgets and how placement can affect use of evidence.
+- [Fine-tuning Strategies / 微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) discusses adapting model behavior and combining it with external knowledge.
+- [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation datasets, metrics, and review methods.
+- [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) covers prompt injection, permission boundaries, and runtime controls.
+## 12. How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？
 
 **Short answer / 简答：** A tool call is a structured request from the model, not code execution or permission. The application must parse and validate it, check the caller’s authorization and current business state, execute the function, then return a useful result. Design for dependencies, side effects, and uncertain outcomes so recovery does not repeat an action blindly.
 
@@ -1023,7 +1299,7 @@ Lewis 等人的 RAG 把可更新的非参数记忆（non-parametric memory）与
 4. 应用执行函数，将成功、错误或部分结果返回模型。
 5. 模型依据结果继续调用工具、交接，或生成答复。
 
-[OpenAI 函数调用指南](https://developers.openai.com/api/docs/guides/function-calling)将工具调用描述为模型请求与应用端执行之间的多步流程。结构化调用或严格 schema 可以减少格式错误，但不证明用户意图正确、权限充分、业务动作合理或外部操作已经成功。动作循环与控制权的整体关系见[智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)。
+[OpenAI 函数调用指南](https://developers.openai.com/api/docs/guides/function-calling)将工具调用描述为模型请求与应用端执行之间的多步流程。结构化调用或严格 schema 可以减少格式错误，但不证明用户意图正确、权限充分、业务动作合理或外部操作已经成功。动作循环与控制权的整体关系见[智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)。
 
 ### 工具选择模式：OpenAI API 示例
 
@@ -1058,7 +1334,7 @@ OpenAI API 的 tool_choice 可控制模型是否以及如何选择函数。下�
 
 Schema 是输入输出的结构合同，说明文字则解释语义、格式、单位、相互依赖和操作边界。可以用 required、enum、数值范围、格式约束或提供商支持的严格结构化模式，减少格式错误。不要假设 schema 的 default 字段会由每个 runtime 自动填入；运行时需要明确实现默认值和业务验证。
 
-以部分退款为例，refund_amount 的数值范围可以按订单状态和总额在服务端检查；refund_reason 可以有可选枚举；但“用户是否授权退款”并不是 JSON schema 能验证的。严格输出约束只解决结构层，仍需检查身份、资源归属、当前状态、业务规则和风险阈值。[生产环境 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)说明各运行控制的授权与隔离边界。
+以部分退款为例，refund_amount 的数值范围可以按订单状态和总额在服务端检查；refund_reason 可以有可选枚举；但“用户是否授权退款”并不是 JSON schema 能验证的。严格输出约束只解决结构层，仍需检查身份、资源归属、当前状态、业务规则和风险阈值。[生产环境 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)说明各运行控制的授权与隔离边界。
 
 ### 并发（concurrency）、依赖与副作用
 
@@ -1078,10 +1354,10 @@ MCP 减少每个 agent 平台都为每个服务单独定义连接协议的重复
 
 ### 相关知识
 
-- [智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：工具属于动作空间，但授权必须由运行时执行。
-- [编排模式](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：并行与串行编排取决于任务依赖和副作用。
-- [上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：工具定义与结果也是模型上下文的一部分。
-## 12. When should a model control the next step? / 何时应让模型决定下一步？
+- [智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：工具属于动作空间，但授权必须由运行时执行。
+- [编排模式](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：并行与串行编排取决于任务依赖和副作用。
+- [上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：工具定义与结果也是模型上下文的一部分。
+## 13. When should a model control the next step? / 何时应让模型决定下一步？
 
 **Short answer / 简答：** Use an AI agent when the task needs the model to choose among next steps from intermediate observations, and that flexibility is worth the added cost, latency, and operational risk. Keep fixed steps in code where they already meet the task’s success criteria.
 
@@ -1127,11 +1403,11 @@ ReAct 的关键是让外部观察改变下一步。论文在 PaLM 的少样本�
 
 用一笔退款跟踪循环。订单查询返回“已付款”，但缺少优惠券是否退回的信息。下一步选读适用规则或询问用户补齐资料。资料齐备后，由应用计算金额并验证审批条件。如果退款服务超时，观察结果是 `outcome_unknown`。此时应用以操作 ID 查询权威状态，在确定安全之前阻止再次写入。允许 Agent 选择查哪条资料，仍可让程序固定退款的授权和执行。相反，若任务只是查同一日期、同一币种的航班报价，查询返回 189、210、175 美元后，固定代码即可给出此次查询的最低报价 175 美元。
 
-每轮执行完检查完成条件、总调用数、时间与预算。持续收到同一无进展结果时，可以换一个已允许的查证动作，或停止并说明证据缺口。长任务将进度和真实结果持久化，恢复时读取原状态，不让模型靠对话回忆猜测写入是否发生。工具请求、幂等和错误语义见 [工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)，恢复与事件回放见 [持久化 AI 运行](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)。
+每轮执行完检查完成条件、总调用数、时间与预算。持续收到同一无进展结果时，可以换一个已允许的查证动作，或停止并说明证据缺口。长任务将进度和真实结果持久化，恢复时读取原状态，不让模型靠对话回忆猜测写入是否发生。工具请求、幂等和错误语义见 [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)，恢复与事件回放见 [持久化 AI 运行](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)。
 
 评估时，把同一组任务交给固定工作流和 Agent，比较完成率、写入结果、权限违规、重复动作、成本和延迟。τ-bench 同时检查任务结束后的数据库状态与必须告知用户的信息。后续 τ²-bench 的电信任务还让模拟用户与 Agent 使用不同工具操作同一个环境，暴露了只测试单方动作时看不到的协调失败。将这类变化变成自己的测试用例，例如用户改完设置后要重新读状态，再决定是否执行后续动作。 [Anthropic, Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) · [τ-bench](https://arxiv.org/abs/2406.12045) · [τ²-bench](https://arxiv.org/abs/2506.07982)
 
-An observation updates the current run. A change that should apply across later runs needs a baseline, external evidence, and a retained version. / 观察会更新当前运行。若变更要延续到后续运行，就需要基线、外部证据与可保留的版本。[How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](#19.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)
+An observation updates the current run. A change that should apply across later runs needs a baseline, external evidence, and a retained version. / 观察会更新当前运行。若变更要延续到后续运行，就需要基线、外部证据与可保留的版本。[How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](#20.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)
 
 ### 可用动作空间 / Action space
 
@@ -1141,17 +1417,17 @@ An observation updates the current run. A change that should apply across later 
 
 ### 相关知识
 
-- [编排模式](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：决定步骤、并行、路由或多智能体结构。
-- [上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：管理长任务中的历史、外部状态与缓存。
-- [工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：定义运行时如何执行模型请求。
-- [LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：区分任务反馈、变更验收与持久版本。
-## 13. How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？
+- [编排模式](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：决定步骤、并行、路由或多智能体结构。
+- [上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：管理长任务中的历史、外部状态与缓存。
+- [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：定义运行时如何执行模型请求。
+- [LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：区分任务反馈、变更验收与持久版本。
+## 14. How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？
 
 **Short answer / 简答：** Choose orchestration from the task’s dependencies, independence, and ownership. Use code for known steps, add model-driven decomposition only when the work cannot be specified in advance, and keep one main loop unless measured parallelism, isolation, or a real capability boundary justifies delegation.
 
 编排应根据任务依赖、子任务独立性和控制权选择：已知步骤由代码安排；只有工作无法预先列清时才考虑模型动态拆分；先保留单一主循环，只有实测并行、隔离或真实能力边界收益足以抵偿委托成本时才拆分。
 
-Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent，并指出模式可以组合，复杂度应由任务效果决定。[以下模式以其一手说明为依据。](https://www.anthropic.com/engineering/building-effective-agents) 本文回答“如何安排步骤和委托”，而[智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)回答“是否把下一步控制权交给模型”。
+Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent，并指出模式可以组合，复杂度应由任务效果决定。[以下模式以其一手说明为依据。](https://www.anthropic.com/engineering/building-effective-agents) 本文回答“如何安排步骤和委托”，而[智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)回答“是否把下一步控制权交给模型”。
 
 ### 固定流程：由代码决定控制流
 
@@ -1175,7 +1451,7 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 3. 可并发的任务同时运行；有依赖的步骤按序等待。
 4. 编排者核对结果、处理冲突与缺口，再交付结论。
 
-将工作交给另一个 agent 不会自动带来上下文隔离。运行时要明确决定共享哪些会话状态、传递哪些证据、工作者可以访问哪些工具，以及主流程接收完整记录还是摘要。相关权衡见[上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。
+将工作交给另一个 agent 不会自动带来上下文隔离。运行时要明确决定共享哪些会话状态、传递哪些证据、工作者可以访问哪些工具，以及主流程接收完整记录还是摘要。相关权衡见[上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### 多智能体：委托工具还是交接所有权
 
@@ -1188,7 +1464,7 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 
 例如，客服分类 agent 可将技术问题交给技术支持 agent；若客服 agent 还必须比较订单状态、退款政策与支持历史，则可把这些调查工作委托为工具并保留最终答复权。[OpenAI 编排文档以“交接”与“智能体作为工具”说明了这一控制权区别。](https://developers.openai.com/api/docs/guides/agents/orchestration)
 
-不论哪种结构，都要约定交接输入、输出契约、状态归属、最大交接深度和失败回退。否则专家之间可能反复转交、丢失客户或订单 ID，或对同一副作用重复执行。工具输入与执行契约见[工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
+不论哪种结构，都要约定交接输入、输出契约、状态归属、最大交接深度和失败回退。否则专家之间可能反复转交、丢失客户或订单 ID，或对同一副作用重复执行。工具输入与执行契约见[工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
 
 ### 先尝试单主循环，再验证拆分 / Start with one loop, then test delegation
 
@@ -1203,7 +1479,7 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 
 [Anthropic / Diane Sarkis 的 fold-subagents 文章（2026-10-22，“Using an agent loop with progressive disclosure”“Task-completion evals”等章节）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)讨论何时把依赖共享上下文的 subagent 流程折入主循环：先建立端到端基线，再逐个折叠 subagent，检查任务成败、生产链路和必须遵守的规则，并以重复运行比较；合并后仍保留领域流程。其讨论也将独立研究、并行探索和验证列为可能适合独立 worker 的工作。文章给出的是评估方法与工程经验，不是折叠 subagent 会普遍提高表现的因果证明，也没有普适的工具数量分界线。
 
-GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在可分支的共享 Git 仓库中发布可组合产物；执行 harness 仍负责调度和发布验证，而该验证检查提交要求、不认证产物正确性。[GitSwarm v1（2026-10-04，§§2.1–2.3）](https://arxiv.org/html/2610.04862v1)没有中央“intellectual planner”替 workers 指派探索方向，但不因此取消执行协调。它支持把独立、可检查的产物作为拆分条件，不证明普通任务都应使用多 agent。状态取舍见[上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，架构对照及其证据边界见[LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在可分支的共享 Git 仓库中发布可组合产物；执行 harness 仍负责调度和发布验证，而该验证检查提交要求、不认证产物正确性。[GitSwarm v1（2026-10-04，§§2.1–2.3）](https://arxiv.org/html/2610.04862v1)没有中央“intellectual planner”替 workers 指派探索方向，但不因此取消执行协调。它支持把独立、可检查的产物作为拆分条件，不证明普通任务都应使用多 agent。状态取舍见[上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，架构对照及其证据边界见[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 ### 提示模板仍是单 agent 的选项
 
@@ -1215,11 +1491,11 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 ### 相关知识
 
-- [智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：工作流与 agent 的控制流边界及运行循环。
-- [工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：定义被编排结构调用的能力与执行边界。
-- [上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定在交接中保留什么、何时按需载入或重启探索。
-- [LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：用端到端任务证据比较主循环、委托和交接。
-## 14. How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？
+- [智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：工作流与 agent 的控制流边界及运行循环。
+- [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：定义被编排结构调用的能力与执行边界。
+- [上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定在交接中保留什么、何时按需载入或重启探索。
+- [LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：用端到端任务证据比较主循环、委托和交接。
+## 15. How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？
 
 **Short answer / 简答：** Treat user and retrieved content as untrusted data and model outputs as proposals. The application enforces authorization, validates outputs for their next consumer, limits execution capabilities, and keeps a stop path outside the model loop. Test those boundaries against direct and indirect injection, review high-impact actions, and turn confirmed failures into regression cases.
 
@@ -1238,7 +1514,7 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 ### Threats and failure modes / 威胁与失效方式
 
-流畅回答仍可能错误或缺乏证据。检索可以提供有用依据，但不保证模型会正确使用；检索文本也不授予执行权限。本篇关注由此产生的运行安全边界；[LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)衡量事实性与支持度，[RAG 架构与实现](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)解释检索行为。NIST 将 confabulation 列为生成式 AI 风险；它没有把 grounding 视作正确性保证（[NIST AI 600-1, §2.2](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)）。
+流畅回答仍可能错误或缺乏证据。检索可以提供有用依据，但不保证模型会正确使用；检索文本也不授予执行权限。本篇关注由此产生的运行安全边界；[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)衡量事实性与支持度，[RAG 架构与实现](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)解释检索行为。NIST 将 confabulation 列为生成式 AI 风险；它没有把 grounding 视作正确性保证（[NIST AI 600-1, §2.2](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)）。
 
 提示注入不要求成功“覆盖 system prompt”。只要不可信内容改变模型行为并违反预期任务或数据边界，就构成问题。OWASP LLM01:2026 涵盖直接与间接输入，包括用户内容、检索材料、工具输出、多模态内容和持久记忆（[LLM01:2026 Prompt Injection](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/blob/main/2026/final/LLM01_PromptInjection.md)）。
 
@@ -1264,7 +1540,7 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 **Moderation / 内容审核**按应用内容策略审核内容；**data minimization or redaction / 数据最小化或脱敏**会从输入或输出中移除不必要的敏感字段。它们可以限制内容，但不授予访问权限，也不能替代针对下游语境的输出编码。NIST 讨论了生成式 AI 数据收集与处理的隐私风险（§2.4，[AI 600-1](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)）。
 
-高影响或难以撤销的动作应暂停，等待与具体动作和目标绑定的审批。获批后，应用仍需在执行前重新检查授权与业务状态。尽可能将密钥放在模型可见内容和执行环境之外；沙箱保护取决于实际挂载、网络规则和凭据暴露情况（[OpenAI Sandbox Agents](https://developers.openai.com/api/docs/guides/agents/sandboxes)、[Sandbox security](https://developers.openai.com/api/docs/guides/agents-api/environments/security)）。工具 schema 和执行契约见[工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
+高影响或难以撤销的动作应暂停，等待与具体动作和目标绑定的审批。获批后，应用仍需在执行前重新检查授权与业务状态。尽可能将密钥放在模型可见内容和执行环境之外；沙箱保护取决于实际挂载、网络规则和凭据暴露情况（[OpenAI Sandbox Agents](https://developers.openai.com/api/docs/guides/agents/sandboxes)、[Sandbox security](https://developers.openai.com/api/docs/guides/agents-api/environments/security)）。工具 schema 和执行契约见[工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
 
 ### Stop and hand off / 停止与人工接管
 
@@ -1276,7 +1552,7 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 ### Test and monitor the boundaries / 测试与监控边界
 
-红队测试探索攻击者可能如何突破本应用的数据和动作边界；评估测量已知案例；生产监控观察真实运行结果，三者不能互相替代。发布前，以及模型、提示、工具、数据源或权限发生实质变化后，都应测试；相关事件发生后也应测试。NIST AI 600-1 要求实证评估与持续监控；[评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)说明测量和回归设计。
+红队测试探索攻击者可能如何突破本应用的数据和动作边界；评估测量已知案例；生产监控观察真实运行结果，三者不能互相替代。发布前，以及模型、提示、工具、数据源或权限发生实质变化后，都应测试；相关事件发生后也应测试。NIST AI 600-1 要求实证评估与持续监控；[评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)说明测量和回归设计。
 
 回归用例应关联到应用实际能力：
 
@@ -1290,10 +1566,10 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 ### 相关知识
 
-- [工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：工具请求、schema 与副作用执行。
-- [RAG 架构与实现](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)：外部证据的检索和访问控制。
-- [LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：质量与安全用例的测量和回归。
-## 15. How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？
+- [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：工具请求、schema 与副作用执行。
+- [RAG 架构与实现](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)：外部证据的检索和访问控制。
+- [LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：质量与安全用例的测量和回归。
+## 16. How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？
 
 **Core explanation / 核心解释：** A client connection is a delivery channel, not the identity or source of truth for an AI task. Give each logical submission a stable run ID, persist authoritative state and useful checkpoints, and let clients query or resume that run after a timeout. A disconnect leaves delivery incomplete; it does not establish whether the model call or an external side effect finished. / 客户端连接只是交付通道，不是 AI 任务的身份或事实依据。为每次逻辑提交分配稳定的运行 ID，持久化权威状态和有用检查点，并允许客户端在超时后查询或恢复同一次运行。断连只能说明交付不完整，无法证明模型调用或外部副作用是否完成。
 
@@ -1309,11 +1585,11 @@ Request → authenticate and authorize → assemble permitted context
         ↘ persist run state, trace, and privacy-reviewed operational signals
 ~~~
 
-Treat a model-proposed tool call as untrusted input. The application executes it only after its own argument checks and authorization; schema-constrained output does not establish that an action is valid or permitted. See [Tool Design and Function Calling / 工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F) and [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F). OpenAI’s [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, describe provider-specific request and schema behavior; application authorization and semantic validation remain separate.
+Treat a model-proposed tool call as untrusted input. The application executes it only after its own argument checks and authorization; schema-constrained output does not establish that an action is valid or permitted. See [Tool Design and Function Calling / 工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F) and [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F). OpenAI’s [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, describe provider-specific request and schema behavior; application authorization and semantic validation remain separate.
 
 Set explicit deadlines, bounded retries, idempotency for retryable writes, cancellation behavior, rate and budget limits, an error or escalation path, and a way to roll back a model or prompt version. Retry only when the operation contract makes a duplicate safe. A timeout says the caller did not receive a result in time; it does not say the server did no work.
 
-These are separate design questions with deeper treatments: [how to reduce latency and cost](#4.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F), [how to choose a deployment pattern](#6.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F), and [how to monitor and improve a production feature](#20.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
+These are separate design questions with deeper treatments: [how to reduce latency and cost](#5.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F), [how to choose a deployment pattern](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F), and [how to monitor and improve a production feature](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
 
 ### Durable runs, checkpoints, and recovery / 持久化运行、检查点与恢复
 
@@ -1381,10 +1657,10 @@ Some workflow runtimes persist an ordered event history and replay deterministic
 - [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) owns browser-side partial output, terminal events, and local cancellation.
 - [Confirming request outcomes / 确认请求结果](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, retry, and idempotency.
 - [Database transactions and recovery / 数据库事务与恢复](../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) explains the boundary for durable application state.
-- [AI System Design Interview Questions / AI 系统设计面试题](#21.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) applies these production mechanisms to end-to-end design cases.
+- [AI System Design Interview Questions / AI 系统设计面试题](#22.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) applies these production mechanisms to end-to-end design cases.
 
 **Sources / 来源：** [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) defines idempotent HTTP method semantics, and [§15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3) says `202 Accepted` does not mean processing is complete. Temporal's [Workflow replay guide](https://docs.temporal.io/workflows) and [Event History guide](https://docs.temporal.io/encyclopedia/event-history) describe one runtime's deterministic orchestration replay and recorded activity results. These sources support the mechanisms described here; the example API, states, and names are synthetic application choices.
-## 16. How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？
+## 17. How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？
 
 **Core explanation / 核心解释：** Define success in observable terms, then evaluate representative cases at the layer where the behavior occurs—retrieval, generation, or an end-to-end agent. Use objective checks where there is a defensible answer, verify facts and source support separately, and use an explicit rubric or calibrated judge for open-ended quality. Keep a held-out regression set, report the denominator and uncertainty, and pair offline comparisons with production outcomes. No single score captures task success, truth, relevance, safety, and operating cost. / 先把成功定义为可观察的条件，再在行为实际发生的层级评估代表性案例：检索、生成或 agent 端到端。存在可辩护答案时使用客观检查；事实正确与来源支持分别核验；开放式质量使用明确 rubric 或经校准的 judge。保留独立回归集，报告分母与波动，并把离线比较与生产结果结合。单一分数无法同时代表任务成功、事实、相关性、安全和运行成本。
 
@@ -1469,10 +1745,10 @@ Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（20
 
 ### Related notes / 相关笔记
 
-- [Agent improvement and version acceptance / Agent 改进与版本验收](#19.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F) — connect feedback on a task to a change that persists across runs.
-- [Orchestration patterns](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F) — compare the single-loop baseline with tested delegation or parallel work.
-- [RAG architecture and implementation](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
-- [AI safety in production](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) — 了解需要单独设计任务检查的安全边界和生产控制。
+- [Agent improvement and version acceptance / Agent 改进与版本验收](#20.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F) — connect feedback on a task to a change that persists across runs.
+- [Orchestration patterns](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F) — compare the single-loop baseline with tested delegation or parallel work.
+- [RAG architecture and implementation](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
+- [AI safety in production](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) — 了解需要单独设计任务检查的安全边界和生产控制。
 
 ### Sources / 来源
 
@@ -1481,7 +1757,7 @@ Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（20
 - Liang et al., [*Holistic Evaluation of Language Models*](https://arxiv.org/abs/2211.09110).
 - Zheng et al., [*Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*](https://arxiv.org/abs/2306.05685).
 - Xia et al., [*Evaluation-Driven Development and Operations of LLM Agents: A Process Model and Reference Architecture*](https://arxiv.org/abs/2411.13768) — 提出连接离线与线上评估的流程模型，并不保证两者分数一致。
-## 17. 何时应微调来弥补稳定的行为差距？
+## 18. 何时应微调来弥补稳定的行为差距？
 
 ### 案例：日志助手反复给出错误标签
 
@@ -1495,7 +1771,7 @@ Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（20
 | 指令、标签定义或流程不清 | 提示词、上下文、标签设计或工作流 | 只有这些因素稳定后还存在重复行为差距，训练样例也能表达正确行为时。 |
 | 相同输入反复违反风格、分类或响应格式 | 先试更清楚的提示词与应用层结构约束 | 若特定任务行为仍稳定失败，可用代表性示范训练并用独立评估证明收益。 |
 
-fine-tuning（微调）更新预训练模型的可训练参数，使目标示例所表达的行为在之后的调用中更常出现。权重并不是能按请求精确查询、保持实时或实施用户权限的数据库。外部证据仍需检索的来源时效和访问控制；可从[如何检索并使用经过授权的外部证据？](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)了解应用如何提供证据。训练前应比较提示词基线与相关检索或工作流基线；只有数据代表目标行为、差距可重复且预期收益覆盖训练、部署和维护成本时，才值得继续。
+fine-tuning（微调）更新预训练模型的可训练参数，使目标示例所表达的行为在之后的调用中更常出现。权重并不是能按请求精确查询、保持实时或实施用户权限的数据库。外部证据仍需检索的来源时效和访问控制；可从[如何检索并使用经过授权的外部证据？](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)了解应用如何提供证据。训练前应比较提示词基线与相关检索或工作流基线；只有数据代表目标行为、差距可重复且预期收益覆盖训练、部署和维护成本时，才值得继续。
 
 ### 标签差距应该更新哪些参数？
 
@@ -1575,13 +1851,13 @@ learning rate（学习率）决定优化器更新的尺度；对某个设置来�
 
 ### SFT、偏好优化和奖励训练怎样取舍？
 
-supervised fine-tuning（SFT，监督微调）用期望回答或演示训练模型。它能教会示例实际表达的响应模式，但不能保证模型在未见场景中遵循所有指令或保持安全；生产环境仍需运行时控制，可参阅[生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
+supervised fine-tuning（SFT，监督微调）用期望回答或演示训练模型。它能教会示例实际表达的响应模式，但不能保证模型在未见场景中遵循所有指令或保持安全；生产环境仍需运行时控制，可参阅[生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
 
 InstructGPT 研究中的 reinforcement learning from human feedback（RLHF，基于人类反馈的强化学习）流程先用人工撰写的演示做 SFT，再用人类偏好比较训练奖励模型，最后让强化学习优化策略来获得更高奖励。这描述的是该论文的方法，不代表所有助手模型的训练过程。
 
 direct preference optimization（DPO，直接偏好优化）从同一提示下被选中和被拒绝的回答优化模型，不像经典 RLHF 流程那样先训练一个单独的奖励模型。它仍依赖偏好数据、目标函数和建模假设，不能据此推断 DPO 一定比 proximal policy optimization（PPO，近端策略优化）更准确或更安全。应根据数据、基础设施和评估结果选择。
 
-reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）适用于存在可靠程序检查或其他独立结果检查的任务；它和 SFT、离线蒸馏承担不同作用。以推理任务为例，[可验证奖励如何训练推理能力？](#18.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)沿一道题讲清采样、判分、组内优势、策略更新、零方差奖励组和长度截断，并比较最终验收方式。偏好标签仍可能互相矛盾，或只反映标注者与 rubric（评分准则）的选择；偏好训练完成后，仍要用目标任务及相关失败案例评估，不能仅凭偏好标签判断安全。
+reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）适用于存在可靠程序检查或其他独立结果检查的任务；它和 SFT、离线蒸馏承担不同作用。以推理任务为例，[可验证奖励如何训练推理能力？](#19.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)沿一道题讲清采样、判分、组内优势、策略更新、零方差奖励组和长度截断，并比较最终验收方式。偏好标签仍可能互相矛盾，或只反映标注者与 rubric（评分准则）的选择；偏好训练完成后，仍要用目标任务及相关失败案例评估，不能仅凭偏好标签判断安全。
 
 > [!info]- 来源
 > 下列来源分别支持微调方法、偏好训练和平台可用性。LoRA 参数示例及训练流程中的建议为教学演算或工程实践。
@@ -1589,11 +1865,11 @@ reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学
 > - **低秩与参数高效微调。** Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)；Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)；Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751)；Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190)；Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)。
 > - **SFT 与 DPO。** Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155)；Rafailov et al., [Direct Preference Optimization: Your Language Model Is Secretly a Reward Model](https://arxiv.org/abs/2305.18290)。
 > - **OpenAI API 上的可用性。** [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization)、[Supervised fine-tuning](https://developers.openai.com/api/docs/guides/supervised-fine-tuning)、[Direct preference optimization](https://developers.openai.com/api/docs/guides/direct-preference-optimization)、[Reinforcement fine-tuning](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning) 与 [Deprecations](https://developers.openai.com/api/docs/deprecations)，核对日期为 2026-11-06。OpenAI 正在逐步结束自助微调：2026-05-07 起，没有既往微调记录的组织不能创建训练任务；2026-07-02 起，过去 60 天未对微调模型运行推理的组织也不能创建新任务；现有合格用户可创建任务至 2027-01-06，或基础模型更早停服之日。微调模型推理会持续到其基础模型退役；先前训练文档仍在迁移，具体资格与模型时限应按官方页面核验。平台可用性仅适用于 OpenAI API，不是对通用微调方法的限制。
-## 18. 可验证奖励如何训练推理能力？
+## 19. 可验证奖励如何训练推理能力？
 
 给模型一道可复算的小题：“4 盒各装 3 个螺丝，另有 2 个散装螺丝，共有多少个？”答案是 `4×3+2=14`。若训练提示要求模型把推理和答案分别放进 `<think>...</think>`、`<answer>...</answer>`，一个运行器可以检查最终数值和标记格式。下面先沿四条回答算分，再追踪分数怎样改变模型的下一次输出概率。
 
-若要判断这类训练是否适合稳定的行为差距，可先读[何时应微调来弥补稳定的行为差距？](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)；要设计独立验收，再读[如何判断 AI 系统是否满足任务契约？](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+若要判断这类训练是否适合稳定的行为差距，可先读[何时应微调来弥补稳定的行为差距？](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)；要设计独立验收，再读[如何判断 AI 系统是否满足任务契约？](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 ### 检查器判的是什么，没判的又是什么？
 
@@ -1827,7 +2103,7 @@ TRL `v1.17.1` 和 verl `v0.9.1` 是本节核对过的具体发布版；新版本
 > - **TRL 当前配置。** Hugging Face [TRL `v1.17.1` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.17.1)（2026-10-30）、[该 tag 的 `grpo_config.py`](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_config.py)和[当前 GRPOTrainer 文档](https://huggingface.co/docs/trl/grpo_trainer)，截至 2026-11-06 核对。版本配置支持 `beta=0`、`epsilon=0.2`、`loss_type="dapo"`、`scale_rewards="group"`、`mask_truncated_completions=False`；无版本文档可能晚于 tag 更新。
 > - **verl 当前配置。** [verl `v0.9.1` 发布记录](https://github.com/verl-project/verl/releases/tag/v0.9.1)（2026-09-20）、[通用 PPO trainer 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/ppo_trainer.yaml)、[actor 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/actor/actor.yaml)、[GRPO 结果优势实现](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/core_algos.py)。配置说明默认优势估计是 GAE、组奖励标准差归一化打开、两种 KL 路径关闭，actor 聚合默认 `token-mean`；实际训练还须检查所用 recipe 的覆盖值。
 > - **DeepSeek-V4 多教师 OPD。** DeepSeek-AI, *DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence*（arXiv:2606.19348v1，2026-04-26；截至 2026-11-06 核对公开报告仍为 v1；§5.1.1–5.1.2、§5.2.2），[v1 HTML](https://arxiv.org/html/2606.19348v1)。支持 specialist 阶段 SFT+GRPO、student 前缀上的多教师 reverse KL 与全词表 logits 蒸馏。权重安排和通用路由规则不由该报告建立。
-## 19. How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？
+## 20. How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？
 
 **Short answer / 简答：** Use predictions to rank candidates, then measure them on real tasks against a common baseline and a predefined acceptance rule. Keep the accepted workflow, predictor, or harness as a version that can be inspected and restored. / 先用预测给候选排序，再用真实任务、统一基线和预先定义的验收规则测量效果。验收通过后，把工作流、预测器或运行脚手架作为可追溯、可恢复的版本保留。
 
@@ -1844,7 +2120,7 @@ flowchart TD
 
 ### Decide what will change / 确定改进对象
 
-Specify the task, budget, success criteria, and stop condition before trying candidates. Record whether each candidate changes the task policy, the predictor that ranks proposals, or the harness that controls execution. When two components can interact, compare each change separately and then compare the pair before accepting it. Preserve the task inputs and baseline for that comparison. [Evaluation and paired acceptance / 评估与配对验收](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
+Specify the task, budget, success criteria, and stop condition before trying candidates. Record whether each candidate changes the task policy, the predictor that ranks proposals, or the harness that controls execution. When two components can interact, compare each change separately and then compare the pair before accepting it. Preserve the task inputs and baseline for that comparison. [Evaluation and paired acceptance / 评估与配对验收](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
 
 ### Rank candidates, then observe the real result / 候选排序之后获取真实结果
 
@@ -1856,10 +2132,10 @@ Specify the task, budget, success criteria, and stop condition before trying can
 
 ### Retain changes to the harness / 保留脚手架改进
 
-另一类改进改变的是运行脚手架（harness），而非基础模型。[Harness²（v1，2026-10-09，§§2.1–2.3）](https://arxiv.org/html/2610.14224v1) 在同一任务上实际执行候选 harness，比较编辑前后的行为，再将采用的 harness 组件和有依据的经验存入库；新任务从共同的 H₀ 起步并按需检索。该研究保持 editor 模型、阶段指令和决策规则不变，因此展示的是任务级 harness 与经验库的演进，不是模型权重或 editor 自行改写。执行对照可支持针对性修改，但不单独证明答案正确；验收边界见[LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+另一类改进改变的是运行脚手架（harness），而非基础模型。[Harness²（v1，2026-10-09，§§2.1–2.3）](https://arxiv.org/html/2610.14224v1) 在同一任务上实际执行候选 harness，比较编辑前后的行为，再将采用的 harness 组件和有依据的经验存入库；新任务从共同的 H₀ 起步并按需检索。该研究保持 editor 模型、阶段指令和决策规则不变，因此展示的是任务级 harness 与经验库的演进，不是模型权重或 editor 自行改写。执行对照可支持针对性修改，但不单独证明答案正确；验收边界见[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
-**Related questions / 相关问题** — [When should a model control the next step? / 何时应让模型决定下一步？](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) explains the live execution loop. [Context engineering / 上下文工程](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains what can be stored for retrieval on later tasks.
-## 20. How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？
+**Related questions / 相关问题** — [When should a model control the next step? / 何时应让模型决定下一步？](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) explains the live execution loop. [Context engineering / 上下文工程](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains what can be stored for retrieval on later tasks.
+## 21. How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？
 
 **Core explanation / 核心解释：** Pair technical service signals with task outcomes. Record enough version and trace context to locate a regression while minimizing sensitive payloads. Treat user feedback as a useful but biased signal: inspect failure modes, make a targeted change, compare it on held-out cases, and keep or roll it back against agreed criteria. / 将服务运行信号与任务结果一起观察。记录足以定位回归的版本与追踪信息，同时尽量减少敏感载荷。用户反馈有用但存在偏差：先检查失败类型，再做有针对性的变更，在留出案例上比较，最后按约定标准保留或回滚。
 
@@ -1876,7 +2152,7 @@ Track technical operation and task outcomes together. Useful measures include:
 
 Set thresholds from service requirements and a measured baseline; no universal error-rate or latency threshold fits every application. Record prompt, model, and relevant configuration versions so a change can be investigated. Keep logs proportionate: redact or avoid sensitive content and apply retention controls. Use sampled traces or derived metrics when full payload logging is unnecessary.
 
-Model behavior, external data, prompts, and provider implementations can change. Re-run an evaluation set when a material component changes and compare results by important task slices. [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) owns task-quality definitions, dataset design, judge validation, and acceptance evidence. Keep a rollback or fallback path when a release misses the agreed quality bar.
+Model behavior, external data, prompts, and provider implementations can change. Re-run an evaluation set when a material component changes and compare results by important task slices. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) owns task-quality definitions, dataset design, judge validation, and acceptance evidence. Keep a rollback or fallback path when a release misses the agreed quality bar.
 
 ### How can feedback improve the product? / 如何让反馈改进产品？
 
@@ -1890,12 +2166,12 @@ A practical improvement loop is:
 4. Test the change on held-out cases and monitor the relevant production outcome.
 5. Keep or roll back the change using the agreed criteria.
 
-Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F). For permission boundaries, human approval, and production stop paths, see [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
+Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F). For permission boundaries, human approval, and production stop paths, see [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
 
-**Related note / 相关笔记：** [AI Application Architecture / AI 应用架构](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines the durable run state and recovery contract that lets service metrics and task feedback remain attached to one logical operation.
+**Related note / 相关笔记：** [AI Application Architecture / AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines the durable run state and recovery contract that lets service metrics and task feedback remain attached to one logical operation.
 
 **Source boundary / 来源边界：** These monitoring and feedback practices reorganize the existing architecture note. Thresholds, task metrics, and data-retention rules must come from the particular service's requirements and privacy constraints; this note does not prescribe universal numeric targets.
-## 21. How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？
+## 22. How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？
 
 **Core explanation / 核心解释：** Clarify the user task and its success criteria, make workload and data-boundary assumptions explicit, then trace the request through retrieval, model or tool calls, validation, delivery, and operations. Deep-dive only on the risks that bind correctness, privacy, latency, cost, or safety; compare alternatives against evidence and include evaluation, rollout, and rollback. This capstone applies the canonical mechanisms to three illustrative designs. All traffic and latency figures below are hypothetical teaching assumptions, not production measurements or defaults. / 先澄清用户任务与成功标准，明确工作负载和数据边界假设，再沿着检索、模型或工具调用、校验、交付和运维梳理请求路径。只深入分析决定正确性、隐私、时延、成本或安全的关键风险；依据证据比较方案，并说明评估、发布和回滚。本文用三个示例设计应用各主题的规范机制。下方流量与时延数字均为教学假设，并非生产测量或默认值。
 
@@ -1952,7 +2228,7 @@ User query → authenticate → permission-aware retrieval
 
 **Evaluation and operations:** test retrieval and answer quality separately; include permission-boundary cases, updates and deletions, unanswerable questions, and citation checks. Monitor latency by stage, indexing freshness, retrieval metrics, answer support, abstentions, and access-control failures.
 
-The [RAG chapter](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) follows a concrete policy question from authorized candidate retrieval through claim verification. Here the extra constraint is an end-to-end latency budget.
+The [RAG chapter](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) follows a concrete policy question from authorized candidate retrieval through claim verification. Here the extra constraint is an end-to-end latency budget.
 
 #### One worked budget and design choice / 一组预算推导与方案选择
 
@@ -1990,7 +2266,7 @@ Customer → intent and risk handling → assistant workflow
 
 **Evaluation and operations:** use reviewed examples for common intents, boundary cases, policy changes, tool failures, and escalation. Track task completion, human handoff, tool errors, unauthorized-action attempts, user feedback, and cost per resolved interaction. Treat the automation target as a product decision supported by evaluation, not a fixed percentage.
 
-A tool-call schema can constrain the shape of a proposed call; the application must still check whether the user and action are permitted. OpenAI's [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, illustrates provider-specific behavior; it does not replace application-side validation and authorization. See [Agent Fundamentals / 智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F), [Tool Design and Function Calling / 工具设计与函数调用](#11.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F), and [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
+A tool-call schema can constrain the shape of a proposed call; the application must still check whether the user and action are permitted. OpenAI's [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, illustrates provider-specific behavior; it does not replace application-side validation and authorization. See [Agent Fundamentals / 智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F), [Tool Design and Function Calling / 工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F), and [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
 
 ### Code review with a limited false-positive budget / 有误报预算的代码审查
 
@@ -2029,7 +2305,7 @@ Pull request event → diff and repository context
 
 ### Related notes / 相关笔记
 
-- [Durable AI runs / 持久化 AI 运行](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) covers production run controls. [AI deployment choices / AI 部署选择](#6.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares where to run the model.
-- [RAG Architecture and Implementation / 检索增强生成](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers retrieval implementation and grounding.
-- [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design.
-- [Agent Fundamentals / 智能体基础](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) covers runtime agent patterns.
+- [Durable AI runs / 持久化 AI 运行](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) covers production run controls. [AI deployment choices / AI 部署选择](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares where to run the model.
+- [RAG Architecture and Implementation / 检索增强生成](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers retrieval implementation and grounding.
+- [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design.
+- [Agent Fundamentals / 智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) covers runtime agent patterns.

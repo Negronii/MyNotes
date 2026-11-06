@@ -1,62 +1,127 @@
-# How do KV cache and scheduling determine LLM serving capacity? / KV 缓存与调度怎样决定模型推理容量？
+# KV 缓存与调度怎样决定大语言模型的服务容量？
 
-**Short answer / 简答** — Prefill creates the prompt’s per-layer K/V state. Decode reuses it and appends new K/V, so active sequence length and concurrency drive memory. Use a tiled attention kernel to reduce GPU memory traffic, page the persistent cache to reduce allocation waste, and schedule prefill and decode under a latency target. Measure which limit dominates before tuning. / 预填充生成提示词在各层的 K/V。增量解码读取旧状态并追加新 K/V，因此活跃序列的长度和并发数决定显存用量。用分块计算内核减少显存读写，用分页管理持久缓存减少分配浪费，再按时延目标调度 prefill 与 decode。先测量瓶颈在哪一层，再选优化。
+一台模型服务要同时回答 32 个报表助手请求，每条请求的提示与已生成内容合计约 8,192 个词元。模型权重已经能放进 GPU，但请求一多仍会耗尽显存；另一些时候显存够用，回答却迟迟不开始。这一章沿着请求进入、保存历史状态、调度生成、结束回收的过程，解释该怎样算容量，以及哪些优化能改变哪一段成本。
 
-**Key terms / 关键术语** · prefill / 提示预填充 · decode / 增量解码 · HBM / 高带宽显存 · KV cache / 键值缓存 · continuous batching / 连续批处理 · TTFT / 首词元时延 · ITL / 词元间时延
+## Prefill（提示预填充）和 decode（增量解码）为何有不同瓶颈？
 
-## What stays on the GPU between decode steps? / 解码步之间哪些数据留在 GPU？
+[模型生成章节](../foundations/how-llms-work.md)说明了因果 attention（注意力）为何能复用历史状态。服务端先对完整提示做 prefill：逐层处理所有提示词元，把各位置的 key/value（键/值，K/V）存入 KV cache（键值缓存），并从最后位置得到第一个输出词元的分布。之后每一步只把新词元送进各层，用新位置的 query（查询）与缓存中的 key（键）以及当前位置的 key 计算分数，再经 softmax 得到权重并聚合对应的 value（值），算出新的状态并追加缓存。因果掩码保证旧位置不读取未来，所以旧 K/V 可沿用；旧 query 不供后续位置读取。
 
-[生成机制](../foundations/how-llms-work.md)中的因果注意力解释了可缓存的条件。Prefill 把提示输入各层，写出全部提示位置的 K、V，并由最后一个位置的 logits 得到第一个输出 token。下一步把该 token 送进模型。每层为它计算新的 Q、K、V。新的 Q 对缓存里的旧 K 和当前 K 打分，再对对应 V 求加权和。在标准因果设置下，旧位置不受未来 token 影响，可以沿用旧 K/V。旧 Q 已经用于旧位置自己的更新；后续位置的 attention 不读取它。每层所需的投影来自该层自己的输入与权重，因此要存各层的 K/V。
-
-| 阶段 | 注意力典型形状，单条请求 | 常见成本 |
+| 阶段 | 一条请求的典型注意力形状 | 常见成本 |
 | --- | --- | --- |
-| Prefill $T$ 个提示 token | 每个 query 头处理 $T$ 个 query 和 $T$ 个 key，带因果掩码 | 大量投影与 FFN 矩阵乘法，长序列的全量注意力计算和内存流量 |
-| 带缓存的单步 decode | 每个 query 头只有 1 个 query，对长度 $C+1$ 的历史加当前 key/value 做注意力 | 读取模型权重和历史 K/V，追加当前 token 的 K/V。长前缀增大读取量，并发改变权重摊销和硬件利用率 |
+| Prefill `T` 个提示词元 | 每个 query 头并行处理 `T` 个 query 和 `T` 个 key，并使用因果掩码 | 多次投影和 FFN 矩阵乘法；长序列要计算大量有效位置对并读写中间状态 |
+| 带缓存的单步 decode | 每个 query 头只有一个新 query，与 `C` 个已缓存 key 和当前位置的 key 共 `C+1` 个 key 计算分数，再按权重聚合对应 value | 读取模型权重和历史 K/V，追加新位置的状态；更长前缀增大读取量，并发影响权重摊销与硬件利用率 |
 
-这里 $C$ 是这一轮之前已存的长度。对全量 dense attention，decode 单步在序列维上仍随历史长度增长。缓存避免重复为旧位置做投影和前向，不能免掉这一步对旧 K/V 的读取。Prefill 通常偏计算，低批量 decode 常受显存带宽限制，具体取决于模型、并发、长度、精度与硬件。 [Hugging Face Transformers 缓存机制](https://huggingface.co/docs/transformers/main/en/cache_explanation) · [Sarathi-Serve §§2–4](https://arxiv.org/abs/2403.02310)
+`C` 是该步之前已缓存的词元数。普通 dense attention（稠密注意力）的 decode 注意力仍随历史长度增长；KV 缓存省去旧位置的重复投影与前向，但不省去新 query 对历史 K/V 的读取。Prefill 往往更受计算量影响，低批量 decode 往往更受显存带宽影响，实际瓶颈还取决于模型、并发、长度、精度与硬件。
 
-## Estimate memory before admitting requests / 先估显存，再决定并发
+## 先估 KV 显存，再决定并发
 
-对每层采用相同 K/V 形状、K 和 V 每元素占同样字节的普通全量注意力模型，单条序列的 KV 载荷约为
+前篇玩具 MHA 缓存三个位置时得到 `2×3×2×4=48` 个数；通用普通注意力模型可把位置数、K/V 头数、头宽和元素字节数扩展为下面的容量估算。对每层都缓存同形状 K/V、元素字节数相同的普通全量注意力模型，单条序列的 KV 数据载荷近似为
 
 $$
-\text{bytes} = 2 \cdot L \cdot T \cdot H_{kv} \cdot d_h \cdot b.
+\text{bytes}=2\cdot L\cdot T\cdot H_{kv}\cdot d_h\cdot b.
 $$
 
-$L$ 是层数，$T$ 是当前缓存长度，$H_{kv}$ 是实际存储的 KV 头数，$d_h$ 是头宽，$b$ 是每元素字节数。最前面的 2 对应 K 和 V。用 32 层、8 个 KV 头、头宽 128、BF16（2 bytes）的示例，得到 **128 KiB/token**。缓存到 8,192 token 时每条序列是 **1 GiB**，32 条同长度且没有前缀共享的序列就需要 **32 GiB** 的 KV 载荷。权重、临时激活、块尾空位和调度余量另算。张量并行可能拆分或复制部分状态，单卡预算应按实际分片和测量核对。
+`L` 是层数，`T` 是缓存长度，`Hkv` 是实际存储的 K/V 头数，`dh` 是头宽，`b` 是每个元素的字节数；前面的 `2` 对应 K 和 V。以 32 层、8 个 K/V 头、头宽 128、BF16（每个元素 2 bytes）为例，每词元占 `2×32×8×128×2=131,072 bytes=128 KiB`。缓存到 8,192 个词元，一条序列需要 `1 GiB`；32 条同长度且没有共享前缀的序列需要 `32 GiB` 的 KV 数据载荷。权重、临时激活、块尾空位、量化元数据和调度余量另算。张量并行可能拆分或复制状态，单卡预算要按实际分片和测量核对。
 
-GQA 从模型结构上减少要存的 K/V 头。KV 量化从存储表示上减少每个元素的字节数，两者可以同时存在。KV 量化还涉及缩放参数、精度损失和内核支持，不能把存储比直接当吞吐比。滑动窗口、混合状态或潜变量注意力的持久状态不同，应按层核算。 [GQA §2](https://aclanthology.org/2023.emnlp-main.298/) · [KIVI §3](https://arxiv.org/abs/2402.02750) · [vLLM KV cache 配置](https://docs.vllm.ai/en/latest/api/vllm/config/cache/)
+Grouped-query attention (分组查询注意力，GQA) 从模型结构上减少缓存的 K/V 头；KV 量化则减少每个元素占用的字节数，两者可以同时使用。量化还会带来缩放参数、精度损失和内核支持条件，存储比例不能直接视为吞吐比例。滑动窗口、混合状态和潜变量注意力的每层持久状态不同，应按层核算。
 
-如果权重本身都放不进一张卡，分页只能减少缓存浪费。先比较能达到质量门槛的权重量化和多卡切分。**Tensor parallelism / 张量并行** 把同层的矩阵或注意力头分给多卡，层内需要交换或汇总结果。**Pipeline parallelism / 流水线并行** 把不同层放到不同卡上，阶段间传递激活，流水线未填满时会有空转。把模型装下以后，再按每卡的权重、KV 和临时缓冲预算接纳序列。分片策略要考虑互连带宽和 KV 头在各卡上的实际放置。 [vLLM 并行与扩展](https://docs.vllm.ai/en/latest/serving/parallelism_scaling/)
+如果模型权重本身装不进单卡，分页无法解决权重容量。先比较达到质量门槛的权重量化与多卡切分：tensor parallelism（张量并行）把同层的矩阵或注意力头分给多卡，层内需要交换或汇总结果；pipeline parallelism（流水线并行）把不同层放到不同卡，阶段间传递激活，流水线未填满时会有空转。模型装下后，再按各卡上的权重、KV 和临时缓冲预算接纳序列，并检查互连带宽与 K/V 头的分布。
 
-## Separate kernel work from cache allocation / 区分内核计算和缓存分配
+## MLA 的实际缓存里保存什么？
 
-**FlashAttention** 将 Q/K/V 分块，维护可增量合并的 softmax 统计量，避免把完整注意力分数矩阵写入 HBM。它针对一次 attention 运算的读写和临时显存，使用精确 dense attention 算法（浮点舍入可不同），也仍计算有效位置对。FlashAttention-4 进一步针对 Blackwell 的异步矩阵乘与流水线重叠优化，说明内核选择要看硬件和形状。 [FlashAttention §3](https://arxiv.org/abs/2205.14135) · [FlashAttention-4，2026](https://arxiv.org/abs/2603.05451)
+Multi-Head Latent Attention (MLA，多头潜注意力)把历史 key 和 value 的内容表示联合压到低秩 latent（潜变量）`c_t^KV=W_DKV h_t`，每头内容 key 与 value 都可由它上投影得到。DeepSeek-V3 报告说明压缩 latent 后还加 RMSNorm；旋转位置编码（RoPE）所需的位置相关 key 另从 hidden state（隐藏状态）得到，记为 `k_t^R=RoPE(W_KR h_t)`。具体缓存字段取决于 serving 路径：DeepSeek-V3 官方参考实现默认使用 `absorb`，缓存经 RMSNorm 的 KV latent 与独立 RoPE key；压缩 query 的 `c_t^Q` 是另一条计算路径，不能当作 KV cache 内容。
 
-**PagedAttention** 管理跨解码步骤持久存在的 KV 状态。借鉴操作系统分页，每个请求的逻辑 KV 块按 token 顺序增长，块表把它们映射到可不连续的显存物理块。支持这种布局的 attention 内核按表访问历史 K/V，服务端按需申请块。原论文 §4.3 的例子是每块四个 token，七个提示 token 分别使用物理块 7 和 1，后者还剩一格。下一次 decode 填这一格，再往后增长才需要申请新的块。请求完成后可归还块，共享前缀可引用同一份块；若两个分支要向同一个共享块写入不同内容，写时复制（copy-on-write）隔离这些修改。
+> [!example] 复算 DeepSeek-V3 absorb 路径的缓存载荷
+> V3 报告给出的每层 KV latent 维度 `d_c=512`，共享给各注意力头的解耦 RoPE key 维度 `d_h^R=64`，层数 `L=61`。按 BF16 的压缩 `absorb` 缓存，每词元、每层存 `512+64=576` 个数值，即 `576×2=1,152 bytes`；61 层合计 `1,152×61=70,272 bytes/token`，约 `68.6 KiB/token`。8,192 个词元的单条序列约需 `0.536 GiB` 载荷；32 条无前缀共享的同长度序列约需 `17.16 GiB`。这些数不含缓存块元数据、对齐、临时缓冲或其他模型状态。
+>
+> 若拿一个假设的普通 multi-head attention（多头注意力，MHA）作量纲基线，并设 128 个注意力头、每头 K 和 V 各 128 维，每词元每层需 `2×128×128=32,768` 个数，即 `65,536 bytes`。它与本例 `absorb` 路径的 `1,152 bytes` 相比约为 `56.9:1`。这不是 DeepSeek-V3 `naive` MLA 路径的缓存大小：该路径会按头展开 K/V，并将其写入不同的缓存字段；参考实现的 `naive` 与 `absorb` 分支实际缓存布局不同。此处比较只对照假设的标准 MHA 配置与压缩 `absorb` 缓存，不是端到端显存或速度承诺；并行分片、量化和运行时开销都会改变实测结果。
 
-~~~mermaid
+官方参考实现的 `absorb` 路径会把内容 K 上投影与 query 结合、把内容 V 上投影延后到 latent 加权之后；另一条 `naive` 路径则先展开逐头 K/V，再分别写入 `k_cache` 和 `v_cache`。因此 MLA 的持久缓存形状由具体计算路径决定，本例的 576 标量限定于参考实现的默认压缩 `absorb` 路径。这里关心容量估算与状态布局，矩阵吸收的投影代数见[长上下文注意力中的 MLA 与位置表示](../foundations/long-context-attention.md)。
+
+## 区分注意力内核与持久缓存分配
+
+FlashAttention 把 Q/K/V 分块，并在线合并 softmax 统计量，避免把完整注意力分数矩阵写入 HBM（高带宽显存）。它减少一次注意力运算的读写和临时显存，仍执行有效 query-key 对的 dense attention 计算，浮点舍入可能与直接实现不同。FlashAttention-4 进一步针对 Blackwell 的异步矩阵乘与流水线重叠优化；内核选择要看 GPU、形状和引擎版本。
+
+PagedAttention（分页注意力）管理跨解码步骤持久存在的 KV 状态。每条请求的逻辑块按词元顺序增长，块表将它们映射到可不连续的显存物理块；支持该布局的 attention kernel（注意力内核）按映射读取历史 K/V，服务端按需申请和回收物理块。原论文的手算例使用每块 4 个词元：7 个提示词元映射到物理块 7 和物理块 1，第二块尚有一个空位。下一次 decode 填满该槽；再接收一个词元才需申请新块。请求完成后可还块；共享前缀可引用同一块，若两个分支要向同一共享块写入不同内容，则用 copy-on-write（写时复制）隔离改动。
+
+```mermaid
 flowchart LR
-    L0["Logical block 0 · token 1–4"] --> P7["Physical block 7 · full"]
-    L1["Logical block 1 · token 5–7"] --> P1["Physical block 1 · one free slot"]
-    L2["Logical block 2 · when token 9 is processed"] -.-> P3["Another physical block"]
-~~~
+    L0["逻辑块 0 · 词元 1–4"] --> P7["物理块 7 · 已满"]
+    L1["逻辑块 1 · 词元 5–7"] --> P1["物理块 1 · 还剩一格"]
+    L2["逻辑块 2 · 处理词元 9 时需要"] -.-> P3["另一个物理块"]
+```
 
-每个请求的最后一块仍可能有空位，块表与间接访问也有成本。好处是按实际长度增长，不必为每条请求预留连续的最大序列区。更多请求可以同时驻留并参与批处理。原论文报告的是其 2023 年工作负载和对照系统上的吞吐量与时延。其独立注意力内核的微基准也测到了额外延迟。现代引擎的分页思想仍可用，具体计算后端按模型、卡与引擎版本选择。vLLM 将原 CUDA 内核的设计页标为历史说明。 [Kwon et al., arXiv v1，§§4.2–4.5、§6](https://arxiv.org/html/2309.06180v1) · [§7.1、图 18(a)](https://arxiv.org/html/2309.06180v1#S7.SS1) · [vLLM 原 PagedAttention 内核说明](https://docs.vllm.ai/en/latest/design/paged_attention/)
+最后一个块仍可能有空位，块表和间接访问也有成本；优势是按实际长度增长，不必为每条请求预留连续的最大序列区，因此可让更多请求驻留并批处理。原论文的吞吐与时延结论属于其 2023 年工作负载和对照系统，独立注意力内核的微基准也测到额外延迟。现代引擎保留分页思想，但计算后端应按模型、GPU 和引擎版本选择；vLLM 将原 CUDA 内核设计页标为历史说明。
 
-## Tune the stage that misses its target / 优先调超出目标的阶段
+## 推测解码如何验证候选并处理临时缓存？
 
-| 观察到的限制 | 优先试什么 | 验证边界 |
+[模型训练中的 MTP](../foundations/how-llms-work.md#%E8%AE%AD%E7%BB%83%E6%97%B6%E5%A6%82%E4%BD%95%E9%A2%84%E6%B5%8B%E5%A4%9A%E4%B8%AA%E6%9C%AA%E6%9D%A5%E8%AF%8D%E5%85%83%EF%BC%9F)介绍了 MTP 的训练接口；服务端还需确定候选从哪里来。普通 draft model（草稿模型）可按 draft distribution（草稿分布）`q_i`逐步提出候选。DeepSeek-V3 的 `D=1` MTP 路径则先由主模型对当前前缀`C`给出$p_1=p(\cdot\mid C)$并产生下一词元`x_1`；MTP block 接收前缀最后位置的 hidden state（隐藏状态）和`Emb(x_1)`，再给出额外候选`x_2`的草稿分布$q_2(\cdot\mid C,x_1)$。因此这一配置的 MTP 模块不是从`C`独立提出任意长的候选串；多于一个额外未来词元需要更大的 MTP 深度或引擎提供的其他 proposer 路径。具体 MTP state（状态）接口和草稿长度随引擎变化。下文先用通用`q_i`说明随机接受与替换，再追踪目标模型的并行计算和 KV 状态。`p_i`是给定当前前缀和已接受候选后，第`i`个位置的目标分布，`q_i`是为该候选实际使用的草稿分布。
+
+### 随机接受和残差替换怎样保留目标分布？
+
+从`q_i`抽到候选词元`x`时必有`q_i(x)>0`，再以`a_i(x)=min(1,p_i(x)/q_i(x))`的概率接受。若拒绝，则从归一化残差分布抽替换词元：
+
+$$
+r_i(y)=\frac{[p_i(y)-q_i(y)]_+}{\sum_z[p_i(z)-q_i(z)]_+},
+\qquad [u]_+=\max(0,u).
+$$
+
+对任意词元`y`，若`q_i(y)>0`，被接受候选贡献的无条件概率质量是`q_i(y)a_i(y)=min(p_i(y),q_i(y))`；若`q_i(y)=0`，草稿不会提出`y`，其接受质量为 0，也等于`min(p_i(y),0)`。拒绝分支补上的质量是`[p_i(y)-q_i(y)]_+`。两者相加正好是`p_i(y)`，所以每个位置经校正后的输出仍服从目标分布。若残差分母为零，说明`p_i=q_i`，候选不会被拒绝，残差分支不会被调用。
+
+> [!example] 复算一次拒绝与替换
+> 人为限定没有 EOS 的词表`{A,B,C}`，令`q=(0.6,0.3,0.1)`、`p=(0.3,0.4,0.3)`。若本次提议`A`，接受概率是`min(1,0.3/0.6)=0.5`。未归一化残差为`[p-q]_+=(0,0.1,0.2)`，总和`0.3`，所以拒绝后替换分布是`(0,1/3,2/3)`。仅以“已提议 A”为条件，本次输出会是 A 的概率`0.5`、B 的`1/6`、C 的`1/3`；这里不能加上其他草稿提议情形的质量。要得到总体分布，应分别对所有可能的草稿提议加总：提议 A 贡献`(A:0.3,B:0.1,C:0.2)`；提议 B 因`p(B)/q(B)>1`而必被接受，贡献`(0,0.3,0)`；提议 C 同理必被接受，贡献`(0,0,0.1)`。合并为`(0.3,0.4,0.3)=p`。
+>
+> 对串行依赖的多个候选，按位置逐个验证并在第一次拒绝处停下。接受到位置`j-1`后若拒绝`x_j`，从该位置的残差分布抽替换词元，并丢弃依赖`x_j`的后续草稿；若替换词元是 EOS，也立即结束生成。若某个候选`x_j`被接受且它是 EOS，同样立即结束，不验证后续草稿，也不抽 bonus。只有全部`m`个候选都被接受、尚未遇到停止词元且长度上限仍允许时，才从目标的下一位置分布抽 bonus token（额外词元）。这保证的是使用相同目标`p_i`时的采样分布；greedy decoding（贪心解码）可以用目标 argmax 匹配、失败时回退到 argmax 的规则，但那是确定性算法，不是这里的随机接受与残差校正。引擎若使用不同的采样过滤、温度或特殊 token 处理，目标分布`p_i`和 draft 分布`q_i`应按实际路径取得。
+
+### 目标模型怎样并行计算整段候选？
+
+设目标模型已经处理并缓存前缀`C`，其最后位置的 logits 已给出$p_1=p(\cdot\mid C)$，可用来验证草稿提出的第一个候选`x_1`。目标模型将整段候选`[x_1,…,x_m]`作为新位置输入完整网络一次；因果掩码使第`j`个候选位置可以读取`C`、此前候选和当前位置`x_j`，该位置随后得到的 logits 是`p_{j+1}`。草稿`x_j`则由位置前的目标 logits `p_j`校正，因此这一轮并行算出`p_2,…,p_{m+1}`。若全数接受，`p_{m+1}`提供 bonus token（额外词元）的分布。对于 DeepSeek-V3 的`D=1` MTP，主模型先给出`p_1`并产生`x_1`，MTP 再提出`x_2`；完整目标前向处理`[x_1,x_2]`得到验证`x_2`所需的`p_2`，并可在接受时从`p_3`取 bonus。这里的`x_1`已按目标分布产生，`q_2`校正针对的是 MTP 提出的额外词元`x_2`。
+
+“并行验证”指候选位置的张量计算在同一轮目标前向中展开；目标模型仍为每个位置执行各层 attention、MoE/FFN 和输出头，层与层仍按顺序运行。这减少的是目标模型 token 步之间的串行等待，不会跳过目标模型对候选位置的计算。若采用抽样，前一小节的`p_i/q_i`校正仍是输出分布契约。
+
+```mermaid
+flowchart LR
+    C["前缀 C<br/>目标 KV 已提交"] --> D["Proposer 按 q_i<br/>依次提出 x₁,…,xₘ"]
+    D --> V["目标模型完整前向<br/>一次处理整段候选"]
+    V --> A{"从 x₁ 起逐个校正"}
+    A -->|全部接受| B["提交 x₁,…,xₘ<br/>从 pₘ₊₁ 取 bonus"]
+    A -->|位置 j 首次拒绝| R["保留 x₁,…,xⱼ₋₁<br/>按残差抽 z"]
+    B --> N["继续下一轮"]
+    R --> N
+```
+
+> [!example] 第一次拒绝时，哪些缓存状态有效？
+> 已提交前缀为`C`，proposer 提出`[x₁,x₂,x₃]`。目标模型一次前向为这三个输入位置计算了结果和临时 K/V。若`x₁`接受、`x₂`被拒，并从残差抽到替换词元`z`，输出会接在前缀后成为`C,x₁,z`。目标 KV 可以保留`C,x₁`的状态；`x₂`与`x₃`对应的 K/V 是在候选路径上暂存的，应从逻辑缓存长度回退或标记为无效。`z`虽已作为输出词元提交，但目标模型尚未把`z`输入前向，因此它的目标 K/V 要等下一步处理`z`时再计算。若三项候选全被接受，可提交到`x₃`的目标 KV；bonus token 也尚未进入目标缓存。底层物理块不一定立即释放，但逻辑长度和下次读取边界必须只覆盖有效前缀。proposer 自身缓存的回退方式取决于引擎实现。
+
+因此推测解码可同时占用目标与 proposer 的状态，以及候选对应的暂存目标 KV。若一次最多提议`m`个词元，单条活跃序列在目标侧新增的临时 KV 载荷上界约为每词元 KV 载荷乘`m`；峰值还包括 draft 状态、工作区、块尾空位及同批其他请求。以本章 V3 MLA 载荷为例，假设某实现一次输入 3 个候选位置，目标侧暂存上界约`3×70,272=210,816 bytes`（约 206 KiB）/请求；若`B`条序列同时验证，近似再乘`B`。这只是目标 KV 载荷估算，MTP block 状态和引擎分配粒度另算；容量不足时应测引擎如何降低草稿深度、推迟请求或回收缓存。
+
+速度收益来自少做几轮串行的目标模型调用，并让目标计算在多个候选位置上并行；目标模型仍为每个候选位置执行完整计算，proposer 也有成本，拒绝后未提交的后缀计算会浪费。假设词表里没有 EOS、尚未触及长度上限且每轮都能追加词元，固定提议`m`个候选所产生的词元数是已接受前缀长度加一个替换词元，或在全接受时再加一个 bonus；此时其期望为`1 + P(x₁ 接受) + P(x₁,x₂ 均接受) + … + P(x₁,…,x_m 均接受)`。实际生成若接受的候选、拒绝后的替换词元或 bonus 是 EOS，或长度上限阻止继续输出，就立即停止，后续候选和 bonus 不再产生；带停止事件时的实际期望需按这些事件截断。较长草稿只有在前缀联合接受概率足够高、验证成本与额外缓存可承受时才有用。V3 报告在其生成主题评估中，第二词元接受率为 85–90%，并报告 1.8× TPS；该段未提供足以复算所有 batch、硬件、采样和时延分解的细节，所以不能当作不同 serving 配置的加速承诺。
+
+## 按未达标的阶段调度和调优
+
+| 观察到的限制 | 优先尝试 | 验证边界 |
 | --- | --- | --- |
-| 请求已到但 GPU 尚未开始工作 | 分开测排队、输入组装、分词和传输 | 只有分词确实占关键路径时，再换 tokenizer 后端或提高 CPU 处理能力。保持相同 token 序列和特殊词元规则。 |
-| 冷请求的长 prompt 首 token 慢 | 用支持当前卡和模型的内核，减少无用输入，比较长 prefill 分块预算 | 记录 TTFT 和排队时间。把 prefill 切块可以让活跃 decode 插入，长 prompt 自己可能等更久。 |
-| 重复的长 prompt 首 token 慢 | 让稳定的聊天模板或文档放在共同前缀，用引擎的 prefix cache | 检查复用 token 数和命中率。只复用语义上相同还不够，缓存要匹配实际 token 序列和模型状态。 |
-| 活跃序列经常碰显存上限 | 先限制最大活跃长度和并发，再试支持的 KV 精度、合适的模型或更多设备 | 跟踪实际 KV 占用、抢占与重算。CPU offload 可用更慢的传输换容量，测长请求的尾部时延。 |
-| 短请求吞吐低，GPU 利用不足 | 连续批处理在迭代之间补进新请求并移除已完成请求 | 同时观察排队和 p95 首 token，扩大批次也可能让单条请求等更久。 |
-| Decode 的词元间隔过长 | 按输出长度、活跃序列数分桶。测带宽，再比较 KV 或权重量化、受支持的推测解码 | 推测解码先提议一批 token 再由目标模型验证。收益取决于接受率、批次和验证成本，需对质量与延迟共同回归。 |
+| 请求已到但 GPU 尚未开始工作 | 分开测排队、输入组装、分词与传输 | 只有分词确实在关键路径时，才换 tokenizer 后端或提高 CPU 处理能力；保持词元序列和特殊词元规则相同。 |
+| 冷请求的长 prompt 首 token 慢 | 使用支持当前 GPU 与模型的内核，减少无用输入，比较长 prefill 的分块预算 | 同时记录 TTFT（请求至首词元时延）和排队时间。分块可让活跃 decode 插入，但长 prompt 本身可能要等更久。 |
+| 重复的长 prompt 首 token 慢 | 把稳定模板或文档放在共同前缀，试用引擎 prefix cache（前缀缓存） | 检查实际复用词元数和命中率。语义相同不够，缓存须匹配实际词元序列、模型和适配器状态。 |
+| 活跃序列经常碰显存上限 | 限制最大活跃长度与并发，再比较支持的 KV 精度、模型或设备数 | 跟踪实际 KV、抢占与重算。CPU offload（卸载）可用更慢传输换容量，需检查长请求尾时延。 |
+| 短请求吞吐低，GPU 利用不足 | 连续批处理在迭代间补入请求并移除已完成请求 | 同看排队和 p95 首词元时延；扩大批次可能让单条请求等待更久。 |
+| Decode 的词元间隔长 | 按输出长度与活跃数分桶，测显存带宽，再比较量化或推测解码 | 推测解码要同时测联合接受长度、每轮目标计算量、draft 成本、峰值暂存 KV 与拒绝比例。 |
 
-vLLM V1 启用 chunked prefill 后把大 prefill 切成小块、与 decode 混合调度，并优先处理已排队的 decode。其 token 预算影响 TTFT 和词元间隔，参数应按服务流量测试。vLLM 的跨请求 prefix cache 用已完成块及其前缀身份做复用，适配器、多模态内容和租户隔离都要与部署一致。可使用独立缓存范围或引擎支持的租户盐值隔离共享。跨请求命中减少 prefill 工作，仍要生成新结果。应用层的响应缓存是另一种优化，命中后可能跳过整个模型调用。文档核对于 2026-11-06。 [vLLM Optimization and Tuning](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill) · [vLLM v0.25.0 Prefix Caching](https://docs.vllm.ai/en/v0.25.0/design/prefix_caching/) · [vLLM Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/)
+vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块并与 decode 混合调度，优先处理排队的 decode；词元预算影响 TTFT 和词元间隔，应按服务流量测试。跨请求 prefix cache 可以复用完整 KV 块与前缀身份。适配器、多模态内容和租户隔离要与部署一致，可用独立缓存范围或引擎支持的租户盐值隔离共享。跨请求命中减少 prefill 工作，但仍要生成新结果；应用层响应缓存则可能跳过整个模型调用。
 
-若分块后长 prefill 仍影响 decode 时延，可以评估预填充与解码分池（prefill/decode disaggregation）。分池可以独立调整两边容量，但每条请求的 KV 状态要从 prefill worker 传给 decode worker。把传输与排队纳入 TTFT 和吞吐测试。DistServe 的收益来自论文测试的请求分布、互连与时延目标。 [DistServe](https://arxiv.org/abs/2401.09670)
+若分块后长 prefill 仍拉高 decode 时延，可评估 prefill/decode disaggregation（预填充与解码分池）。分池允许分别调整两边容量，但每条请求的 KV 状态要从 prefill worker 传给 decode worker；传输与排队也应计入 TTFT 和吞吐。DistServe 的收益来自论文测过的请求分布、互连与时延目标。
 
-做一组固定流量回放。记录模型版本、精度、GPU、输入和输出长度分布、并发与到达速率、冷暖缓存比例。比较 **TTFT**（请求到首词元）、**ITL**（输出词元之间的间隔）、端到端 p95、吞吐和满足时延目标的请求数。能处理更多请求但超出交互时延的批次没有解决交互负载的问题。测量由 [vLLM Benchmark CLI](https://docs.vllm.ai/en/latest/benchmarking/cli/) 示例和[应用级时延与成本](ai-latency-and-cost-optimization.md)分别覆盖服务内和端到端两层。
+做固定流量回放，记录模型版本、精度、GPU、输入输出长度分布、并发与到达速率、冷暖缓存比例。比较 TTFT、ITL（输出词元间隔）、端到端 p95、吞吐量和满足时延目标的请求数。能处理更多请求却超过交互时延目标的批次，不算解决了交互负载。服务内测量可从引擎基准命令的示例起步；应用级时延与成本见[应用端到端优化](ai-latency-and-cost-optimization.md)。
+
+> [!info]- 来源
+> 来源支持的范围与对应章节如下；容量数值是按列明的架构维度与精度复算的载荷估算，不是硬件实测。
+>
+> - **因果缓存、prefill 与 decode。** [Transformers 缓存说明](https://huggingface.co/docs/transformers/main/en/cache_explanation)；[Sarathi-Serve, §§2–4](https://arxiv.org/abs/2403.02310)。
+> - **普通 K/V 容量、GQA 与量化。** [GQA, EMNLP 2023, §2](https://aclanthology.org/2023.emnlp-main.298/)；[KIVI, §3](https://arxiv.org/abs/2402.02750)；[vLLM KV cache 配置](https://docs.vllm.ai/en/latest/api/vllm/config/cache/)（文档核对日期：2026-11-06）。
+> - **MLA 缓存维度与实现分支。** [DeepSeek-V3 Technical Report, arXiv v2, §2.1.1、§4.2](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1) 给出联合 KV latent、独立 RoPE key、压缩 latent 后的 RMSNorm，以及 `d_c=512`、`d_h^R=64`、61 层等参数。官方 [`inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 默认 `attn_impl="absorb"`，在 `absorb` 分支缓存经 `kv_norm` 的 latent 和独立 `pe_cache`；`naive` 分支会展开逐头 K/V 并写入 `k_cache/v_cache`（检查日期：2026-11-06）。MLA 代数的唯一详解见长上下文注意力章节。
+> - **FlashAttention 内核。** [FlashAttention, §3](https://arxiv.org/abs/2205.14135)；[FlashAttention-4, 2026](https://arxiv.org/abs/2603.05451)。
+> - **分页缓存。** [Kwon et al., PagedAttention, arXiv v1, §§4.2–4.5、§§6–7](https://arxiv.org/html/2309.06180v1) 说明逻辑块、物理块、共享和性能边界；[vLLM 原 PagedAttention 内核说明](https://docs.vllm.ai/en/latest/design/paged_attention/) 将早期 CUDA 内核页标为历史说明。
+> - **推测采样与 MTP serving。** [Leviathan et al., ICML 2023, §§2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 支持目标分布校正；[DeepSeek-V3 Technical Report, arXiv v2, §§2.2、5.4.3](https://arxiv.org/html/2412.19437v2#S2.SS2) 报告 MTP 与论文评估结果；vLLM 当前的[原生 MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)和[`deepseek_mtp.py` 实现](https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/deepseek_mtp.py)展示了框架特定的草稿接口与配置（核对日期：2026-11-06）。
+> - **并行、分块预填充、前缀缓存与负载测试。** [vLLM 并行与扩展](https://docs.vllm.ai/en/latest/serving/parallelism_scaling/)；[vLLM Chunked Prefill](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill)；[vLLM v0.25.0 Prefix Caching](https://docs.vllm.ai/en/v0.25.0/design/prefix_caching/)；[vLLM Benchmark CLI](https://docs.vllm.ai/en/latest/benchmarking/cli/)。
+> - **Prefill/decode 分池。** [DistServe](https://arxiv.org/abs/2401.09670)；收益受论文测过的负载、硬件互连与时延目标约束。

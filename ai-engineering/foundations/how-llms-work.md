@@ -116,6 +116,8 @@ $$
 
 `Hkv` 表示 K/V 头数。生成时会保留每层各位置的 K 和 V，供后续 token 复用。MHA 中 `Hkv = Hq`；multi-query attention (多查询注意力，MQA) 则是 `Hkv = 1` 的情况。这些选择会影响所学权重，以及生成过程中存储的 K/V 数量。把 MHA checkpoint 转为其他结构会改变 K/V 权重和模型行为；GQA 论文评估了基于权重平均的转换以及后续训练。在这个例子中，缓存了三个位置时，每层的 MHA 会存储 `2 × 3 × 2 × 4 = 48` 个 K/V 数值，依次对应 K/V 两种表示、三个位置、两个头和每头四个坐标。共享一个 K/V 头后，数量降为 `2 × 3 × 1 × 4 = 24`，而两个 Q 头仍各自计算分数。若想了解服务环节的影响，请继续阅读[KV cache 和调度如何决定推理容量](../systems/llm-serving-and-kv-cache.md)。Dense attention 的两两计算量随 `T²` 增长，但实际时延还取决于 kernel (计算内核)、其他层和硬件。
 
+共享 K/V 头减少了每个位置的表示数量，却没有减少历史位置数。输入长到几十万甚至百万个 token 时，还可以追问：能否压缩每个位置的 K/V，或让当前 query 只读取部分历史？[长上下文的存储与读取](long-context-attention.md)从这里展开 MLA 的矩阵吸收，以及选择、压缩历史各自会丢掉什么。
+
 ## FFN 增加了什么，多个块如何堆叠？
 
 ### 变换每个位置的特征
@@ -168,6 +170,25 @@ flowchart TD
 
 完整模型还包含 embedding table、归一化权重，有时还包含单独的词表投影。每一层都有自己权重时，逐层重复计算；共享权重只计一次。hidden state 和缓存的 K/V 是根据这些参数计算出来的临时数据。因此，参数数量本身无法决定 GPU 上能同时容纳多少请求。这也是继续阅读[推理内存与调度章节](../systems/llm-serving-and-kv-cache.md) 的原因之一。
 
+## 有些模型为什么只运行部分 FFN？
+
+Mixture-of-Experts (MoE，混合专家)把一层 FFN 分成多个专家网络，再由 router（路由器）根据每个词元当前的 hidden state 选择其中一部分。它改变的是 FFN 子层的计算路径；attention 仍负责汇集位置间的信息。一个 MoE 层可把 shared expert（共享专家）用于所有词元，再把 routed experts（路由专家）的加权输出加到残差上。专家是学习到的 FFN 参数组，不是预先命名的知识类别或外部检索库。
+
+DeepSeek-V3 给出了具体配置：前 3 层仍用 dense FFN，其余 MoE 层各有 1 个共享专家和 256 个路由专家，每个词元选 8 个路由专家。为和前面的 pre-norm 块衔接，令 attention 残差后的状态为 `y_t`，FFN 前归一化后的路由/专家输入为 `u_t=Norm(y_t)`。路由器对 `u_t` 与专家向量 `e_i` 做点积，再经 sigmoid 得到亲和度 `s_i = sigmoid(u_tᵀe_i)`。`top-k` 决策选出亲和度最高的专家，选中项再按原始 `s_i` 归一化为混合权重 `g_i`；因此计算图中可以同时有“离散选谁”和“连续混多少”。为突出核心计算，下式与后面的手算均采用 `route_scale=1` 的简式，省略实际路由中的专家组、设备/节点限制。在只有一个共享专家时，这层更新为
+
+$$
+h'_t=y_t+\operatorname{FFN}_{shared}(u_t)+\sum_{i\in selected}g_i\operatorname{FFN}_i(u_t).
+$$
+
+> [!example] 偏置只参与选人，混合用原分数
+> 用 3 个专家、每词元选 2 个的玩具路由器。原始亲和度为 `s=(0.80, 0.70, 0.60)`，偏置为 `b=(0, 0, 0.25)`。不加偏置时 top-2 是专家 1 和专家 2；加偏置后按 `s+b=(0.80, 0.70, 0.85)` 排序，候选集合变为专家 3 和专家 1。混合权重仍用原始亲和度：分母是 `0.80+0.60=1.40`，所以专家 1 的权重为 `0.80/1.40≈0.571`，专家 3 为 `0.60/1.40≈0.429`。若这两个专家对归一化输入 `u_t` 的 FFN 输出分别为 `(1,0)` 和 `(0,2)`，路由分量就是 `0.571(1,0)+0.429(0,2)≈(0.571,0.857)`；完整层输出还要加上共享专家的输出和残差 `y_t`。分数和向量值是人为设定的。这个例子中偏置确实让专家 3 进入 top-2，但偏置值本身不参与输出混合权重。
+
+路由器中的专家向量是可学习参数。主任务损失可以沿被选专家的输出、归一化后的路由权重和 sigmoid 亲和度回传；但 `top-k` 返回的索引是离散值，普通反向传播不会直接求导“换选另一个专家”的效果。某个词元没有运行的专家不会从该词元的 FFN 输出获得主任务梯度。V3 还用 sequence-wise balance loss（序列级平衡损失）约束单条序列上的极端负载，所以未选路由的亲和度仍可经这项辅助损失受到训练信号。这是由论文公式和可学习 Gate 参数得到的梯度解释；论文没有公开其训练代码的完整自动微分路径。
+
+V3 的 batch-level load balancing（批次级负载平衡）另维护每个专家的偏置：每个训练批次统计选中量，过载专家的偏置减 `γ`，低于平均负载的偏置加 `γ`。在同一个三专家玩具例子中，若一个批次有 6 个词元且每个词元只选 1 个，实际负载 `[4,1,1]`，均匀目标为 `[2,2,2]`；若教学用 `γ=0.01`，这一步就把偏置从 `(0,0,0)` 更新为 `(-0.01,+0.01,+0.01)`。这些偏置是在训练批次间调节的路由校正，不是输出混合权重；部署时的固定偏置也不是按每个请求的瞬时 GPU 队列随机改派专家。V3 前 14.3T 训练词元使用 `γ=0.001`，最后 500B 设为 `0`。称为“aux-loss-free（无辅助损失）”只是在说主要批次级平衡机制不依赖传统负载损失；V3 仍用 `α=0.0001` 的序列级辅助项来抑制单条序列的极端失衡。
+
+路由也不是语义分类器。固定输入、权重和偏置时，top-k 路由是确定的；训练中不同领域可能使专家负载呈现统计上的专门化，但不保证某个专家只对应“数学”或“代码”。实际收益取决于稀疏计算节省能否覆盖专家分布、通信和热门专家带来的负载不平衡。服务容量需要按全部专家权重、路由通信和 KV 状态共同估算，可继续看[KV 缓存与调度怎样决定模型推理容量](../systems/llm-serving-and-kv-cache.md)。
+
 ## 模型如何选择词元并继续生成？
 
 ### 为词表打分并选择一个 ID
@@ -208,9 +229,18 @@ prefill (预填充) 会让初始序列通过各层。最后一个位置的 logit
 
 ### 为每个位置设置目标
 
-前面使用的都是已经学到的权重。训练会根据“接下来应该是什么”的示例来调整这些权重。沿用玩具 tokenizer，训练样本 `ababcac` 会被分成 `[abab, c, a, c]`，即 `[257, 99, 97, 99]`。用前三个位置预测后一个：`abab → c`、`c → a`、`a → c`。这里末尾的 `c` 是训练语料中的真实目标，不是刚才生成步骤采出的结果。causal mask 允许并行计算这些预测，同时阻止每个位置读取右侧的目标 token。某些模型的训练格式还会加入 beginning-of-sequence marker (序列起始标记，BOS) 等特殊 token；它们需要由相应词表和模板定义，本例不额外加入。
+前面使用的都是已经学到的权重。训练会根据“接下来应该是什么”的示例来调整这些权重。沿用玩具 tokenizer，训练样本 `ababcac` 会被分成 `[abab, c, a, c]`，即 `[257, 99, 97, 99]`。用前三个位置预测后一个：前缀 `abab` 预测 `c`，前缀 `[abab, c]` 预测 `a`，前缀 `[abab, c, a]` 预测 `c`。后两个预测都能读取完整的左侧前缀，不是只看紧邻的前一个词元。这里末尾的 `c` 是训练语料中的真实目标，不是刚才生成步骤采出的结果。causal mask 允许并行计算这些位置，同时阻止每个位置读取右侧的目标词元。某些模型的训练格式还会加入 beginning-of-sequence marker (序列起始标记，BOS) 等特殊 token；它们需要由相应词表和模板定义，本例不额外加入。
 
 teacher forcing (教师强制) 指训练时使用训练样本中真实的前序词元。生成时，后续输入则包含模型实际选出的词元。这就是为什么生成序列开头的错误可能改变后续预测。
+
+### 训练时如何预测多个未来词元？
+
+multi-token prediction（多词元预测，MTP）在 next-token prediction（下一个词元预测）之外增加未来位置的训练目标。DeepSeek-V3 的 MTP 深度 `D=1`：对位置 `i`，主模型表示 `h_i` 预测真实的 `t_{i+1}`；MTP 模块再把 `h_i` 与训练样本中真实的 `Emb(t_{i+1})` 分别做 RMSNorm 后拼接。投影 `M_1∈R^{d×2d}` 把宽度 `2d` 的拼接向量压回 `d`，再送入附加 Transformer block 和与主模型共享的 output head（输出头），预测 `t_{i+2}`；词元 embedding 也与主模型共享。它训练的是“已知正确前一个词元时再预测下一个”，不是让多个互不相干的输出头同时猜同一个前缀之后的词。
+
+> [!example] 同一训练串怎样多监督一个位置
+> 沿用样本 `ababcac → [abab, c, a, c]`，把位置编号为 1 到 4。主模型在位置 1 用 `h₁` 预测位置 2 的真实词元 `c`。MTP 将 `RMSNorm(h₁)` 和 `RMSNorm(Emb(c))` 拼接后投影，再经过附加块，预测位置 3 的 `a`。同样，位置 2 的 `h₂` 与真实 `Emb(a)` 一起预测位置 4 的 `c`。因此训练标签仍来自右移后的语料；位置维度的计算可以并行，而更深的 MTP 预测模块彼此按深度串接。V3 只设一个额外预测深度。
+
+每个深度各算一份交叉熵，深度间取平均，再乘训练权重 `λ`；总目标是主 next-token loss 加 MTP loss。V3 报告的 `λ` 前 10T 训练词元为 `0.3`，之后 4.8T 为 `0.1`。额外预测让每个训练位置提供更多监督，也可能帮助主模型形成对未来的表征；它不意味着推理时必须保留 MTP 模块。推理可以只运行主模型，也可把已训练的 MTP 模块用作推测解码的 proposer（提议器）。后者如何组织草稿状态、目标模型验证和缓存回滚，属于服务实现问题，见[推测解码如何验证候选并处理临时缓存](../systems/llm-serving-and-kv-cache.md#%E6%8E%A8%E6%B5%8B%E8%A7%A3%E7%A0%81%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%80%99%E9%80%89%E5%B9%B6%E5%A4%84%E7%90%86%E4%B8%B4%E6%97%B6%E7%BC%93%E5%AD%98%EF%BC%9F)。
 
 ### 计算误差并反向传播更新
 
@@ -238,5 +268,8 @@ backpropagation (反向传播) 会把导数依次传过 LM head、残差相加�
 > - **采样与部署控制。** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) 介绍 nucleus sampling。[Transformers generation configuration](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation) 记录了采样控制项。[OpenAI Responses parameters](https://developers.openai.com/api/reference/resources/responses/methods/create) 记录了托管 API 的契约。[OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) 和 [Claude model migration guidance](https://platform.claude.com/docs/en/about-claude/model-deprecations) (核对日期：2026-11-06) 展示了模型和 API 版本可能带来的限制。这里提出的调参比较是这些机制的一种工程应用，并非普遍适用的温度建议。
 > - **缓存生成。** [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) 解释了因果复用、逐层 K/V，以及新词元如何关注此前和当前位置。
 > - **训练。** [Llama 3, v3, §3](https://arxiv.org/html/2407.21783v3#S3) 涉及预训练；[PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 说明了损失函数。[BERT, 2019, §3.1](https://arxiv.org/abs/1810.04805) 支持掩码目标的描述；[Wang and Cho, 2019](https://arxiv.org/abs/1902.04094) 探索了一种不同的迭代生成过程。
+> - **MoE、路由学习与负载。** [DeepSeek-V3 Technical Report, arXiv v2, §§2.1.2、4.2、4.5.2–4.5.3](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS2) 给出 sigmoid 亲和度、top-k、路由偏置、序列级平衡损失、V3 的专家数量和训练系数。Gate 参数与推理路由可在 [DeepSeek-V3 官方参考实现 `inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 中核对（检查日期：2026-11-06）；关于 top-k 梯度的说明是基于上述公式和参数实现的数学推论。
+> - **MTP 训练。** [DeepSeek-V3 Technical Report, arXiv v2, §2.2、§4.2、§4.5.1](https://arxiv.org/html/2412.19437v2#S2.SS2) 给出真实右移词元、串接的预测深度、共享 embedding/output head 和损失；V3 深度与权重见 §4.2。该报告 §5.4.3 的第二词元接受率与吞吐结果仅适用于论文评估设置。
+> - **推测解码。** [Leviathan et al., ICML 2023, §2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 说明并行目标验证和拒绝采样校正；当前框架对原生 MTP 的支持范围随模型与版本变化，可参见 [vLLM MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)（检查日期：2026-11-06）。
 >
 > 浏览[AI 好文集](../../review/ai-literature-index.md)，可按主题查找相关论文。
