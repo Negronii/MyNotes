@@ -1,155 +1,66 @@
-# When do optimistic validation and snapshot isolation allow concurrent updates? / 乐观验证与快照隔离何时允许并发更新？
+# 乐观验证、快照隔离与时间戳排序怎样处理并发冲突？
 
-Optimistic schemes defer conflict checks until validation. Snapshot isolation reads a fixed snapshot and commonly detects writes to the same row, yet disjoint write sets can still violate a cross-row invariant through write skew. Timestamp protocols also need their own explicit rules. / 乐观方案把冲突检查推迟到验证阶段。快照隔离从固定快照读取，并通常检测对同一行的并发写入；但不同写集仍可能因写偏斜共同违反跨行不变量。时间戳协议也需明确自己的规则。
+一个账户约束要求 `A+B≥0`，初始 `A=B=100`。两笔事务各自读取两行、判断扣款后仍满足约束，然后分别改写不同的账户行。若二者都能提交，最终值会是多少？这组运行帮助区分三个常被混为一谈的机制：推迟冲突检查的乐观验证、读取固定版本的快照隔离，以及按逻辑时间戳拒绝过时操作的排序协议。
 
-## Optimistic Locking
-- When conflicts are rare, transactions can execute operations without managing locks and without waiting for locks - higher throughput
-- Use data without locks
-- Before committing, each transaction rechecks its read-set and validates the values or versions used by the computation. A value comparison can miss an intervening update that changes a value and later restores it (ABA); version or write-sequence checks are needed when that history matters.
-- If any conflict found, the transaction repeats the attempt
-- If no conflict, make changes and commit
+## 乐观验证怎样把冲突检查推迟到提交前？
 
-### Example
-```sql
-% Read without lock
-Read A into A1
-Read B into B1
-Read C into C1
-Loop: Compute new values based on A1 and B1
-    % Start taking locks
-    % Read again
-    Slock A; Read A into A2
-    Slock B; Read B into B2
-    Xlock C; Read C into C2
-    if (A1 == A2 & B1 == B2 & C1 == C2)
-        Write new value into C
-        commit
-        Unlock A, B and C
-    else % read data is changed
-        A1 = A2
-        B1 = B2
-        C1 = C2
-        unlock A ,B and C
-        goto Loop
-end
-```
+optimistic concurrency control（乐观并发控制）适合冲突相对少、读和计算耗时较长的工作：事务先读取并计算，暂不长时间持锁；准备提交时再验证自己使用的数据是否仍有效。抽象流程是“读取—计算—验证—提交写入”。若验证失败，就放弃本次尝试并基于新状态重算。
 
-On success, this path holds locks for the recheck and write, but lock duration and throughput depend on contention and work inside the critical section. Value equality does not prove that no intervening update occurred.\
-Advantage: avoids holding locks during the initial computation when conflicts are rare\
-Disadvantage: Repeat in Loop for long time
+下面沿用课程的 A、B 输入与 C 输出，但用版本号而不只比较值。事务开始时读取 `A=8@v4`、`B=5@v7`、`C=12@v3`，计算要写入的 `C_new=A+B`；同时读取 C 的版本，要求它在计算期间未被其他事务改写。提交前对 read set（读集）扣除 write set（写集）的项取得 shared lock（共享锁），对写集取得 exclusive lock（排他锁），再检查相关版本是否仍为 `v4`、`v7`、`v3`。全都未变才写入 `C_new` 并提交；任一版本变化，就释放锁、重读和重算。
 
-## Snapshot Isolation / 快照隔离
-Assume every read in one transaction attempt uses a fixed snapshot S. The write-conflict test below represents first-committer-wins validation against versions committed after S; a conflict aborts the attempt, and a retry starts a new transaction with a new snapshot.
+> [!example] 一次验证失败后怎样重算
+> 第一次读取的是 `A=8@v4`、`B=5@v7`。计算期间另一个事务把 `B` 改为 `6@v8`。验证发现版本由 `v7` 变成 `v8`，所以不能用旧输入写入 `C`。本事务重新读取 `A=8@v4`、`B=6@v8`，按新输入计算，再验证一次。
+
+若只比较值而不比较版本，`B` 可能从 5 改成 6 又改回 5；当前值虽然相等，版本仍能揭示中间发生过修改；若契约只依赖当前数值，值恢复后不一定有错，但不能据值相等证明从未改动。这类“变了又回来”现象称为 ABA 问题。版本号、写序列号或其他足以证明未被修改的令牌，可以识别它。上面的方案是讲解读集验证的教学实现；真实系统还必须使验证与写入提交形成一个原子协调点，并处理并发验证者之间的竞争。它不是仅凭相等比较就自动获得可串行化的通用算法。
+
+## 快照隔离为什么会出现写偏斜？
+
+snapshot isolation（快照隔离，SI）让事务从固定快照读取数据；许多实现使用“同一行的写入冲突遵循 first-committer-wins（先提交者获胜）”的规则。两个事务若并发写同一行，后提交者通常需要中止并重试。这个检查针对写集重叠，不能替代所有跨行约束的串行化检查。
+
+回到开头的约束。两笔事务都从同一个快照 `S0` 读取 `A=100、B=100`，各自把其中一行扣 200：
+
+| 步骤 | T1 | T2 | 数据库已提交状态 |
+| --- | --- | --- | --- |
+| 0 |  |  | A=100，B=100，合计 200 |
+| 1 | 从 S0 读 A=100、B=100；计算 A'=-100，合计 0，约束通过 |  | A=100，B=100 |
+| 2 |  | 从 S0 读 A=100、B=100；计算 B'=-100，合计 0，约束通过 | A=100，B=100 |
+| 3 | 写 A=-100 并提交 |  | A=-100，B=100，合计 0 |
+| 4 |  | 写 B=-100 并提交；T1 没有写 B，故没有同一行写冲突 | A=-100，B=-100，合计 -200 |
+
+两笔事务分别写 `A` 与 `B`，所以常见的同一行“先提交者获胜”检查不会发现冲突；但两笔事务读了对方将要改写的数据。冲突图里，`T1` 读 `B` 先于 `T2` 写 `B`，有 `T1 → T2`；`T2` 读 `A` 先于 `T1` 写 `A`，有 `T2 → T1`。形成环，说明该成功结果无法按串行顺序实现。
+
+如果先串行执行 T1，状态会变为 `A=-100、B=100`；T2 随后扣减 B 会得到合计 -200，必须拒绝。先执行 T2 再执行 T1 同理。因此二者不可能在每笔事务都检查最新状态的串行执行中同时成功。这种不同写集共同破坏跨行规则的现象叫 write skew（写偏斜），是 serialization anomaly（可串行化异常）。
+
+课程还用同一组账户对比了锁式执行：`X(A)` 表示对 A 加排他锁，`S(B)` 表示对 B 加共享锁；T1 按前一顺序锁住写入行和另一行，T2 按 `S(A)`、`X(B)` 的顺序申请。两笔事务都先碰同一行 A，所以先取得 A 上锁的一方会让另一方在 A 上等待，而不会分别持有 A、B 后互等。获胜者在锁保护下读取两行、检查并写入，提交后等待者才读取最新状态并重做约束判断。若 T1 先执行，它把 A 写成 -100 后提交；T2 随后看到 `A=-100、B=100`，扣减 B 后合计 -200，于是拒绝。T2 先执行时结果对称。这里的保证要求锁覆盖所有被检查的数据、两笔事务遵循相同资源顺序并按 two-phase locking（两阶段锁，2PL）持锁；锁请求顺序不一致可能改成死锁。
+
+PostgreSQL 18 的 `REPEATABLE READ` 使用事务级固定快照并可允许这类异常；其 `SERIALIZABLE` 级别通过 Serializable Snapshot Isolation（可串行化快照隔离，SSI）跟踪危险的读写依赖，必要时中止一个事务，应用应从事务开始重试并重新执行约束检查。不要把课程抽象的“快照 + 写集校验”伪代码等同于所有产品隔离级别的完整实现。
+
+## 基本时间戳排序怎样拒绝过时读写？
+
+timestamp ordering（时间戳排序）给每笔事务分配唯一、单调递增的逻辑时间戳 `TS(T)`，使最终冲突次序符合时间戳给出的串行顺序。时间戳通常是系统逻辑计数，不必是墙上时钟。对每个数据项 `X`，算法记住：`read_TS(X)` 是成功读取 `X` 的事务中最大的时间戳；`write_TS(X)` 是成功写入 `X` 的事务中最大的时间戳。初始都为 0。
+
+读写许可规则可以直接从“不能让较旧事务排在较新读写之后”推出来：
+
+- `T` 请求读 `X`：若 `TS(T) < write_TS(X)`，说明 `X` 已被时间戳更晚的事务写过；若现在让 `T` 读这个值，就违反规定顺序，因此中止并重启 `T`。否则允许读取，并令 `read_TS(X)=max(read_TS(X),TS(T))`。
+- `T` 请求写 `X`：若 `TS(T) < read_TS(X)`，较新的事务已读过当前值，先前的时间戳顺序不允许再插入这次旧写，因此中止；若 `TS(T) < write_TS(X)`，更晚事务已经写过，基本算法同样中止。否则允许写入并更新 `write_TS(X)`。
+
+> [!example] 复算一次过时读取
+> `T1` 的 `TS=5`，`T2` 的 `TS=10`。起初 `read_TS(A)=write_TS(A)=0`。T1 读取 A 后，`read_TS(A)=5`。T2 写 A 时 `10≥5` 且 `10≥0`，所以可写并令 `write_TS(A)=10`。之后 T1 再读 A，因 `5<10` 必须中止；否则这个旧事务会观察到一个比自己时间戳更新的写入。
+
+基本时间戳排序在“时间戳顺序与事务操作冲突”的检查处中止事务。Thomas write rule（Thomas 写规则）是一个特定变体：若写操作没有先因 `TS(T) < read_TS(X)` 触发中止，却满足 `TS(T) < write_TS(X)`，可忽略这次已过时写入，而不修改数据项或 `write_TS(X)`；后续较新事务本来就应看到更新的写入。Thomas 规则允许某些视图可串行化而非冲突可串行化的历史，不能把前文冲突图判据原封不动套到这个变体。strict timestamp ordering（严格时间戳排序）还要阻止其他事务读取或覆盖尚未提交的写入，以减少级联回滚；“冲突次序可串行化”本身并不自动保证恢复简单。
+
+## time-domain versioning（时间域版本模型）与时间戳排序是同一件事吗？
+
+不是。课程还保留了按时间区间保存对象版本的表示：
 
 ```text
-begin attempt using snapshot S
-Read C, D, A, and B from S
-Compute new values C3 and D3 from A and B
-if either C or D has a version committed after S:
-    abort this attempt
-    retry in a new transaction using a new snapshot
-else:
-    write C3 to C and D3 to D
-    commit
+<o, <V1,[t1,t2)>, <V2,[t2,t3)>, <V3,[t3,∞)>>
 ```
 
-Snapshot isolation gives a transaction a consistent snapshot and commonly uses first-committer-wins for concurrent writes to the same row. It can still permit write skew, so it is not generally serializable. Product behavior and isolation-level names differ: [PostgreSQL 18 documents MVCC and Serializable Snapshot Isolation](https://www.postgresql.org/docs/18/mvcc-intro.html) and [application-level consistency anomalies](https://www.postgresql.org/docs/18/applevel-consistency.html); [SQL Server 17 distinguishes RCSI from SNAPSHOT](https://learn.microsoft.com/en-us/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide?view=sql-server-ver17); [Oracle 26 documents its own multiversion read-consistency model](https://docs.oracle.com/en/database/oracle/oracle-database/26/cncpt/data-concurrency-and-consistency.html). These implementations should not be collapsed into one generic product claim.
+它表示对象 `o` 在不同区间对应不同版本，是一个历史版本模型；它不是上节中按事务时间戳拒绝 `read/write` 操作的算法。两者都出现“时间”和“版本”，但一个讲可查询的数据历史，另一个讲并发事务冲突顺序。
 
-## Two phase locking Transaction - Snapshot Locking potential problem
-Integrity constraint A+B >= 0; A = 100; B = 100;
-T1:
+课程例子里，T1 计算员工平均工资；T2 把低于 40,000 的工资提高 10%。若 T1 选取的快照早于 T2 提交，它可继续从旧工资版本计算平均值，并在 T2 提交后完成只读事务。使用 multiversion concurrency control（多版本并发控制，MVCC）时，读者读取旧版本并不意味着自动中止；若某个特定时间戳验证协议要求拒绝旧版本，则需另行说明该协议的规则。
 
-```
-Lock(X,A)
-Lock(S,B)
-Read A to A1;
-Read B to B1;
-A1 = A1 -200;
-if (A1+ B1 >= 0)
-    Write A1 to A
-    Commit
-else abort
-end
-Unlock (all locks)
-```
-
-T2:
-
-```
-Lock(S,A)
-Lock(X,B)
-Read A to A1;
-Read B to B1;
-B1 = B1 -200;
-If (A1+ B1 >= 0)
-    Write B1 to B
-    Commit
-else abort
-end
-Unlock (all locks)
-```
-
-Only one transaction can commit.
-
-Snapshot Isolation Transaction - Snapshot Locking potential problem
-Integrity constraint A+B >= 0; A = 100; B = 100;
-T1:
-
-```sql
-Loop:
-    Read A to A1;
-    Read B to B1;
-    A3 = A1 -200;
-    Lock(X, A)
-    Read A to A2
-    if (A1 != A2)
-        Unlock(A)
-        goto Loop
-    % potential problem: B1 is read without lock, the value of B possiblily has been changed
-    elseif (A3+ B1 >= 0)
-        Write A3 to A
-        Commit
-    else abort
-Unlock (all locks)
-```
-
-T2:
-
-```sql
-Loop:
-    Read A to A1;
-    Read B to B1;
-    B3 = B1 -200;
-    Lock(X, B)
-    Read B to B2
-    if (B1 != B2)
-        Unlock(B)
-        goto Loop
-    % A1 is read without lock
-    elseif (A1+ B3 >= 0)
-        Write B3 to B
-        Commit
-    else abort
-Unlock (all locks)
-```
-
-Under snapshot-style validation, both transactions can commit because they write different rows, yet the invariant A+B >= 0 is violated. This is write skew: no serial order permits both updates.
-
-## Time Stamping / 时间戳排序
-This is one optimistic timestamp-validation model: at validation, a transaction may abort if a conflicting update is newer than the version it read. Basic timestamp-ordering protocols instead assign transaction timestamps and maintain read/write timestamps per item, checking operations against those timestamps. Do not treat this sentence as the general timestamp-ordering algorithm. Validation, commit durability, and version retention are separate concerns.
-
-**Time Domain Versioning**\
-In this time-domain versioning example, an update creates a new version with a validity interval rather than overwriting the earlier version. This temporal-data model is distinct from the basic timestamp-ordering protocol above.\
-<o,<V1, [t1, t2)>, <V2, [t2,t3)>, <V3,[t3,\*)>
-
-e.g.
-T1
-select average (salary)
-from employee
-
-T2
-update employee
-set salary = salary\*1.1
-where salary < $40000
-
-If T1 reads from a snapshot taken before T2 commits, it can compute the average from the older salary versions and the read-only T1 may commit after T2. This schedule alone does not require T1 to abort; a timestamp-validation protocol that rejects stale reads would need to be specified separately. Under MVCC, T2 need not wait for this read-only T1 to finish, subject to product-specific rules.
+> [!info]- 来源
+> - 乐观验证、时间戳排序、Thomas write rule（Thomas 写规则）、快照隔离与冲突图：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版第 18 章“Concurrency Control”，2019 年 3 月课程幻灯片，https://www.db-book.com/slides-dir/PDF-dir/ch18.pdf 。本章的时间戳规则对应“Timestamp-Based Protocols”；验证模型对应“Validation-Based Protocols”；快照隔离讨论对应“Snapshot Isolation”。
+> - PostgreSQL 的 MVCC、`REPEATABLE READ` 与 `SERIALIZABLE` 行为：PostgreSQL 18 文档第 13.1、13.2、13.4 节，访问于 2026-11-06，https://www.postgresql.org/docs/18/mvcc-intro.html 、https://www.postgresql.org/docs/18/transaction-iso.html 、https://www.postgresql.org/docs/18/applevel-consistency.html 。文中 A/B 写偏斜是依官方应用一致性文档校准的抽象例子。

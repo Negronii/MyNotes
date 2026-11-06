@@ -1,139 +1,103 @@
-# How do synchronization primitives coordinate access and avoid deadlock? / 同步原语如何协调访问并避免死锁？
+# 两个线程同时改写同一计数器时，怎样协调访问并处理死锁？
 
-Mutual exclusion may use atomic busy-wait protocols or blocking primitives, which have different assumptions and costs. Deadlock requires a real wait cycle; a consistent resource order prevents cycles in the stated resource-order model. / 互斥可使用原子忙等协议或阻塞原语，两者的前提与成本不同。死锁要求真实等待环；在给定资源排序模型下，一致的资源顺序可以阻止循环等待。
+两个工作线程都要把共享计数器加一百万次；运行结束后，计数却少了几百次。与此同时，数据库里还有事务可能各自持有一把锁，再等对方释放另一把锁。要解释这两类故障，需要先看“读—改—写”为什么不是一个不可分割动作，再比较忙等与阻塞原语，最后检查等待关系是否形成闭环。
 
-## Concurrency Control / 并发控制
-For correct execution, we need to impose exclusive access to the shared variable counter by Tasks.
+## 为什么一次自增会丢失？
 
-- To resolve conflicts
-- To preserve database consistency
+把 `counter = counter + 1` 展开成三个步骤：读取旧值、计算新值、写回。若两个线程都读到 10，它们各自算出 11 并写回，最终仍是 11，而预期是 12。这是 race condition（竞态）：结果取决于多个操作交错的次序。
 
-### Different ways for concurrency control
-- **Peterson's algorithm (two-process pseudocode)** demonstrates mutual exclusion under atomic, sequentially consistent shared-register assumptions; it busy-waits and is not a multi-process solution.
-- **OS-supported blocking primitives**, such as mutexes and semaphores, can park waiters instead of busy-waiting; implementations may use a user-space atomic fast path and involve the kernel only when needed ([Linux futex manual](https://man7.org/linux/man-pages/man2/futex.2.html)).
-- **Spin locks** use atomic operations to busy-wait; they can suit short waits in an appropriate environment but consume CPU while contended.
+需要保护的 critical section（临界区）是“读取、计算、写回”这一整段。mutual exclusion（互斥）保证同一时刻只有一个执行者进入。不同方案的区别在于：等待者是在处理器上反复检查，还是被挂起等待唤醒；以及方案适用于多少参与者、要求什么内存模型。
 
-### Peterson's algorithm (two processes)
-This is Peterson's two-process algorithm, not Dekker's: each process raises its flag, gives the other process priority, and waits while the other flag is raised and it is the other process's turn. The pseudocode assumes atomic, sequentially consistent shared-register reads and writes; ordinary shared C `int` variables do not by themselves provide those concurrent-memory guarantees ([Peterson's mutual-exclusion algorithm](https://www.cs.yale.edu/homes/aspnes/pinewiki/MutualExclusion.html)). Repeat each process's entry, critical-section, exit, and remainder sequence as needed.
+## Peterson 算法怎样在两进程模型里互斥？
+
+Peterson's algorithm（Peterson 算法）用两个意愿标志和一个让行变量实现两个进程之间的互斥。下面的伪代码展示进入区、临界区、退出区和其余代码：
 
 ```text
-Shared state, initialized before either process runs:
-    flag[1] = 0
-    flag[2] = 0
+共享状态，两个进程启动前初始化：
+    flag[1] = false
+    flag[2] = false
     turn = 1
 
-Process 1:
-    flag[1] = 1
-    turn = 2
-    while flag[2] == 1 and turn == 2:
-        wait
-    # critical section
-    counter = counter + 1
-    flag[1] = 0
-    # remainder section
+进程 1：
+    flag[1] = true       # 我想进入
+    turn = 2             # 若冲突，先让进程 2
+    while flag[2] and turn == 2:
+        等待
+    counter = counter + 1  # 临界区
+    flag[1] = false      # 退出
+    执行其余代码
 
-Process 2:
-    flag[2] = 1
+进程 2：
+    flag[2] = true
     turn = 1
-    while flag[1] == 1 and turn == 1:
-        wait
-    # critical section
+    while flag[1] and turn == 1:
+        等待
     counter = counter + 1
-    flag[2] = 0
-    # remainder section
+    flag[2] = false
+    执行其余代码
 ```
 
-- The protocol uses busy waiting. Its performance depends on the workload and platform; this teaching pseudocode is not a substitute for language or operating-system synchronization primitives in application code.
+关键点是两个进程都表达“我想进”，随后写入相反的 `turn`。若两者几乎同时进入，最后写入 `turn` 的值只会使其中一个等待；先进入者离开后清除自己的标志，另一个才可继续。这里的布尔判断可直接读作“对方有意进入，而且当前轮到对方”。
 
-### OS supported primitives
-- A blocking mutex or semaphore may ask the OS scheduler to park a waiting thread and wake it later; this avoids spinning while blocked but has scheduling and context-switch overhead. The implementation may still use hardware atomic operations internally. It is not necessarily an interrupt on every lock request.
+这个证明依赖模型前提：共享读写是原子的，并按 sequentially consistent（顺序一致）的方式观察；只有两个参与进程；等待中的进程仍会继续运行。伪代码不是可直接复制的 C 程序，普通共享 `int` 不会自动满足并发内存模型，也不能把这个两进程算法扩展成通用锁。实际程序应使用语言或操作系统提供的同步原语。
 
-### Spin Lock
-- Spin locks use an atomic read-modify-write primitive such as test-and-set or compare-and-swap, and busy-wait while the lock is held. They can be useful for very short critical sections with low contention, but waste CPU under contention; database systems also use blocking locks and latches. Implementation and processor support vary.
+## 等待者何时应忙等，何时应阻塞？
 
-#### Spin lock – Test and Set
+spin lock（自旋锁）在锁忙时循环检查状态。test-and-set（测试并置位）必须是一个原子读—改—写操作，否则两个线程仍可能同时读到“空闲”并都取得锁。
+
 ```text
-Atomic pseudocode (not C or a processor-specific implementation):
-testAndSet(lock):
+初始：lock = UNLOCKED
+
+atomic_test_and_set(lock):
     old = atomic_exchange(lock, LOCKED)
     return old == UNLOCKED
+
+线程：
+    while not atomic_test_and_set(lock):
+        继续检查
+    # 临界区
+    atomic_store(lock, UNLOCKED)
 ```
 
-Using test and set in spin lock for exclusive access
+compare-and-swap（比较并交换，CAS）也提供原子状态更新：只有当内存值仍等于期望旧值时，才写入新值；失败时返回当前值供调用方重试。一次尝试可抽象为：
 
 ```text
-lock = UNLOCKED
+compare_and_swap(cell, expected, desired):
+    atomically:
+        observed = *cell
+        if observed == expected:
+            *cell = desired
+            return success
+        else:
+            return failure, observed
 ```
 
-T1
+失败时调用者可据返回值重算或重试。无论采用何种读—改—写指令，真实实现还要遵守平台的内存顺序要求，以上只是算法草图。
 
-```text
-while (!testAndSet(&lock)) { /* spin until acquired */ }
-/* exclusive access for T1 */
-counter = counter + 1
-atomic_store(lock, UNLOCKED)
-```
+自旋适合临界区很短、线程很可能很快拿到锁、且运行环境允许消耗处理器时间的场景。竞争持续时，等待者会空转并争用缓存行。mutex（互斥锁）或 semaphore（信号量）可以让等待线程睡眠，交给调度器稍后唤醒，代价是等待队列和调度切换。实际互斥锁常先在用户态尝试原子快路径，只在需要睡眠或唤醒时进入内核；Linux futex（快速用户态互斥）就是这种用户态状态与内核阻塞机制协作的接口。
 
-T2
+信号量维护一个计数或许可：获取（通常称 `wait` / `P`）在没有许可时等待，释放（通常称 `post` / `V`）归还许可并可能唤醒等待者。二值信号量可以表达互斥，但它与互斥锁在所有权和误用检查上并不等价。
 
-```text
-while (!testAndSet(&lock)) { /* spin until acquired */ }
-/* exclusive access for T2 */
-counter = counter + 1
-atomic_store(lock, UNLOCKED)
-```
+若释放时一次唤醒所有等待者，它们会同时争抢刚释放的许可，造成 thundering herd（惊群）并产生额外调度开销。队列唤醒或直接把许可交给一名等待者可以减少无效竞争；具体策略要权衡公平性、吞吐量和调度开销，单靠信号量接口并不能保证某种队列策略。
 
-#### Spin lock – Compare and Swap
-```c
-boolean cs(int *cell, int *old, int *new)
-{/* the following is executed atomically*/
-if (*cell == *old) { *cell = *new; return TRUE;}
-else { *old = *cell; return FALSE;} //put it into old and will be used later
-}
-```
+![信号量持有与排队的课程示意图](./Semaphore.png)
 
-#### Short summary
-Test-and-set and compare-and-swap are both atomic read-modify-write operations used to implement synchronization. Neither is accurately described as locking only reads or only writes. The pseudocode above is a teaching sketch; real primitives also have memory-ordering requirements.
+图中从“无人持有”到 `P1` 持有，再到 `P2`、`P3` 排队的序列，用来说明一个独占许可只能由一个执行者占用，其他调用者等待释放。图示解释的是等待队列概念，不承诺实现一定按 FIFO（先进先出）唤醒；唤醒次序、是否直接交接锁及公平性由实现决定。
 
-## Semaphore
-Derived from train and track
+## 等待关系怎样变成死锁？
 
-- Try to Get track, wait if track not clear
-- If Get track was successful, use it (no other train will be able to use it at the same time)
-- Once the train passes, the semaphore is set until the train exits that section of track
-  Computer semaphores have a **get()** routine that acquires the semaphore (perhaps waiting until it is free) and a **give()** routine that returns the semaphore to the free state, perhaps **signalling** (waking up) a waiting process.
+deadlock（死锁）指一组执行者都在等由组内其他成员持有的资源，因而没有一个成员能自行推进。对单实例资源，可以画 wait-for graph（等待图）：节点是事务，边 `T1 → T2` 表示 `T1` 正在等 `T2` 持有的锁。此模型下，有向环表示这些事务相互等待。对多实例资源，图中出现环不一定足以证明死锁，还要检查可用实例与每个请求需要的资源数。
 
-### Exclusive mode Semaphore
-![](Semaphore.png)
+先看资源排序为何能避免环。给每种资源指定一个全局严格顺序；任何事务只能按递增顺序申请资源。设 `Pa` 持有等级 `i` 的资源并等待 `Pb` 的等级 `j`，则 `j > i`；后续等待也只能从 `j` 到更高等级 `k`，如此继续。若真的形成环，就会得到 `i < j < k < … < i`，与严格递增矛盾。
 
-- A semaphore or mutex implementation may track waiters in a queue; whether the queue is FIFO and how ownership is represented are implementation choices. A waiting thread can be awakened when the resource becomes available.
+![按资源等级递增申请时，等待边只会从低等级指向高等级](./nocyclic.png)
 
-### Convoy avoiding semaphore
-Waking every waiter can cause a thundering herd as they all compete to acquire the resource. Queueing and handoff policies trade fairness, throughput, and scheduling overhead; waking all waiters is not a general convoy-avoidance guarantee.
+图中的 `Pa → Pb → Pc → Pd` 分别对应 `i < j < k < l`；旁支 `Pq → Pd` 对应 `g < l`。在“所有等待都是等待更高等级资源”的假设下，图不可能回到较低等级形成环。实践中，所有事务都必须遵循同一排序；若调用路径可能以相反次序申请锁，这条保证就不成立。 另外，若事务开始前就能准确列出所需资源，也可尝试一次性申请整组资源，避免持有一部分再等待另一部分；动态业务流程通常难以预先列全。增加资源容量能降低等待概率，但除非需求有可信上界且容量足够，否则不能据此证明永远无等待或无死锁。
 
-## Deadlock / 死锁
-- Deadlocks are rare, however, they do occur and the database has to deal with them when they occur
-- In a deadlock, each process in the deadlock is waiting for another member to release the resources it wants.
+另一种办法是检测等待图中的环并选择代价较低的事务回滚；也可以给单次锁等待设置超时并取消事务。超时能限制等待时间，但本身不是全局死锁证明；反复立即重试可能造成 starvation（饥饿）或 livelock（活锁，持续运行却无法完成），通常还需退避与重试上限。分布式系统可能只能看到局部等待关系，因而需要超时或跨节点协调来处理全局环。
 
-### Deadlock - Solutions
-- Have enough resources so that no waiting occurs – not practical since we cannot have infinite resources
-- Do not allow a process to wait, simply rollback after a certain time. This can create live locks which are worse than deadlocks.
-- Linearly order the resources and request of resources should follow this order,
-- i.e., a transaction after requesting ith resource can request jth resource if j > i. This type of allocation guarantees no cyclic dependencies among the transactions.
-
-### Linear Order
-![no cyclic](nocyclic.png)
-
-- Pa: Holds resources at level i and request resource at level j which are held by Pb. j > i
-- Pb: Holds resources at level j and request resource at level k which are held by Pc. k > j
-- Pc: Holds resources at level k and request resource at level l which are held by Pd l > k
-- Pd: Holds resources at level l and and is currently running.
-- Pq: Holds resources at level g and request resource at level l which are held by Pd. l > g
-- l > k > j > i and l > g.
-  We cannot have loops. The dependency graph can be a tree or a linear chain and hence cannot have cycles.
-
-### Deadlock – Avoidance / Mitigation
-- Pre-declare all necessary resources and allocate in a single request, not practical as not possible to know about all requests.
-- Periodically check the resource dependency graph for cycles. If a **cycle** exists - rollback (i.e., terminate) one or more transaction to eliminate cycles (deadlocks). The chosen transactions should be cheap (e.g., they have not consumed too many resources).
-- Allow waiting for a maximum time **on a lock** then **force Rollback**. Many successful systems (IBM, Tandem) have chosen this approach.
-- (Many distributed database systems maintain only local dependency graphs and use time outs for global deadlocks.)
+> [!info]- 来源
+> - Peterson 两进程互斥的原子寄存器模型与正确性推理：Aspnes，《Notes on Theory of Distributed Systems》，Peterson 算法章节，https://www.cs.yale.edu/homes/aspnes/pinewiki/MutualExclusion.html 。
+> - 阻塞等待与用户态快路径/内核唤醒的接口事实：Linux man-pages `futex(2)`，访问于 2026-11-06，DESCRIPTION，https://man7.org/linux/man-pages/man2/futex.2.html 。
+> - 锁顺序、等待图与死锁处理的数据库背景：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版第 18 章“Concurrency Control”，2019 年 3 月课程幻灯片，https://www.db-book.com/slides-dir/PDF-dir/ch18.pdf 。
+> - PostgreSQL 锁等待与死锁行为：PostgreSQL 18 文档第 13.3.4 节“Deadlocks”，访问于 2026-11-06，https://www.postgresql.org/docs/18/explicit-locking.html 。

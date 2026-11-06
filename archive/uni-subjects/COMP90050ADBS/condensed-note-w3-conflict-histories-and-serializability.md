@@ -1,100 +1,76 @@
-# How does a precedence graph test a transaction history? / 如何用优先图判断事务历史？
+# 一段交错执行能否等价于串行执行？
 
-Represent each conflicting operation order as a directed edge between transactions. A history is conflict-serializable exactly when its precedence graph is acyclic. Course DEP and wormhole exercises use their own stated terminology. / 将每组冲突操作的先后顺序表示为事务间有向边。历史当且仅当优先图无环时才是冲突可串行化。课程 DEP 与 wormhole 练习使用其给定术语。
+两笔事务同时改账户与订单时，单看最后余额未必能看出哪笔读到了旧值。我们要把执行记录里的读写先后抽出来，判断是否存在某种“整笔事务一个接一个执行”的顺序，保留所有冲突操作的相对次序。先用异常小图认识危险交错，再用 precedence graph（优先图）给出可复算的判据。
 
-## Isolation & Dependency / 隔离与依赖
-### Isolation Concept
-- Isolation defines which effects concurrent transactions may observe. Serializable isolation makes the committed result equivalent to some serial execution; weaker isolation levels may permit anomalies. Isolation preserves application invariants only when constraints are enforced or every transaction follows the required logic.
-- We can achieve isolation by sequentially processing each transaction - generally not efficient and provides poor response times.
-- We need to run transactions concurrently with the following goals
-  - Concurrent execution should not cause application programs (transactions) to malfunction (fail).
-  - Concurrent execution should not have lower throughput or bad response times than serial execution.
+## 哪些操作顺序会影响结果？
 
-### Possible dependencies
-![possible-dependencies](possibleDependency.png)
+history（历史）是事务操作按实际发生顺序排列的序列。记 `R_i(x)` 为事务 `T_i` 读取数据项 `x`，`W_i(x)` 为事务写入 `x`。serial history（串行历史）会先执行完一笔事务，再执行下一笔；interleaved history（交错历史）允许不同事务的操作穿插。
 
-- Lost Update, Write-Write, T1 Write is covered by T2
-- Dirty Read, Write-Read, T1 read in middle of write
-- Unrepeatable Read, Read-Write, T1 reading while others writing
-- OK, no dependency
+若有 `N` 笔事务，只看“整笔事务依次排列”，最多有 `N!` 个串行顺序；例如 3 笔事务最多 `3! = 3×2×1 = 6` 种。优先图不会枚举它们，而是直接筛掉违反冲突先后的顺序。
 
-### Dependency model
-- $I_i$ : set of inputs (objects that are read) of a transaction $T_i$
-- $O_i$ : set of outputs (objects that are modified) of a transaction $T_i$ Note $O_j$ and $I_j$ are not necessarily disjoint that is $O_j \cap I_j ≠ ∅$
-- Given a set of transactions , Transaction $T_j$ has no dependency on any transaction $T_i$ in if -
-  $$
-  O_i\cap(I_j\cup O_j) = empty\ for\ all\ i ≠ j
-  $$
-- This approach cannot be planed ahead as in many situation inputs and outputs may be state dependant/not known in prior.
+conflict（冲突）满足三个条件：两次操作属于不同事务、作用于同一数据项、至少一次是写。因此读—读不冲突，读—写与写—写会冲突。为什么要排除读—读？它们不会改变数据，也不会改变对方读到的值；但一个写操作可能改变另一个事务读到的版本，写—写则会决定哪个写发生在后。
 
-### Dependency Formal Definition
-- Let **H** is a **history sequence** of tuples of the form (T, action, object). Here, T is transaction, action can be read/write, object is what the action operates on. e.g. (T1, Read, O1)
-- For conflict-serializability, add an edge $T_i \to T_j$ when an operation of $T_i$ precedes and conflicts with an operation of $T_j$ on the same object: the transactions differ and at least one operation is a write. Read-read pairs do not conflict. The object may label the edge.
-- A precedence graph is acyclic exactly when the history is conflict-equivalent to a serial history. This graph criterion is about conflict serializability, not every possible notion of serial equivalence ([Database System Concepts, 7e, ch. 18](https://www.db-book.com/Previous-editions/db7/slides-dir/PDF-dir/ch18.pdf)).
+![丢失更新、脏读、不可重复读和无冲突读的课程示意图](./possibleDependency.png)
 
-### Dependency Relations Example
-H1 = <(T1,R,O1), (T2,W,O5), (T1,W,O3), (T3,W,O1), (T5,R,O3), (T3,W,O2), (T5,R,O4), (T4,R,O2), (T6,W,O4)>\
-H2 = <(T1,R,O1), (T3,W,O1), (T3,W,O2), (T4,R,O2), (T1,W,O3), (T2,W,O5), (T5,R,O3), (T5,R,O4), (T6,W,O4)>
+这张课程图展示四种操作轨迹：lost update（丢失更新）中，`T2` 先基于旧值读取后再写回，可能盖掉 `T1` 的更新；dirty read（脏读）中，`T1` 读到 `T2` 尚未提交的写入；nonrepeatable read（不可重复读）中，`T1` 两次读取之间 `T2` 更新了同一项；最后一栏两个事务都只读同一版本。图中 `(o,1)`、`(o,2)` 是课程示意里的对象版本标记，不应把图下的箭头误读为标准优先图；下面的判据从原始操作次序重新建图。
 
-Give
+## 怎样从历史生成优先图？
 
-- DEP(H1)
-- DEP(H2)
-- Dependency graph
+图的顶点是事务。按历史顺序检查每一对冲突操作：若 `T_i` 在 `T_j` 之前执行了同一数据项上的冲突操作，就加入有向边 `T_i → T_j`；边可标出冲突对象，便于复核。
 
-For questions like this, first we focus on the object order: O1, O2.... We can notice that O1 is in T1 and T3, so we can write <T1, O1, T3> in the DEP(H1). Then we can see T3 and T4 both operate on O2, so we can write <T3, O2, T4>...
+例如，`R_1(A)` 先于 `W_2(A)`，产生 `T1 → T2`；若在 `B` 上又有 `W_2(B)` 先于 `R_1(B)`，则产生 `T2 → T1`。两个方向连在一起是环，表示二者的冲突次序彼此矛盾，无法安排成任何串行顺序。
 
-DEP(H1) = {<T1, O1,T3>, <T3,O2,T4>, <T1,O3,T5>, <T5,O4,T6> }\
-DEP(H2) = {<T1, O1,T3>, <T3,O2,T4>, <T1,O3,T5>, <T5,O4,T6> }\
-Dependency graph
-![dependency graph](./dependencygraph.png)
+判据是：历史当且仅当优先图无环时，才是 conflict-serializable（冲突可串行化）。无环图的 topological sort（拓扑排序）给出一种与历史冲突次序等价的 serial order（串行顺序）；有环图则不存在这样的顺序。这里检验的是 conflict equivalence（冲突等价），不是把所有关于事务结果的等价定义混为一谈。
 
-### Isolated History
-- A serial history is history that is resulted as a consequence of running transactions sequentially one by one.
-- N transactions can result in a maximum of N! serial histories.
-- A history is conflict-serializable if it is conflict-equivalent to a **serial history** (the conflicting operations have the same order).
-- A history is legal if it respects the applicable lock-grant rules.
-- In this course's dependency-graph terminology, the wormhole theorem characterizes the illustrated isolation condition. For the standard conflict-serializability test, use the acyclic-precedence-graph criterion above.
+> [!info] 局部数学提示：怎样读有向边
+> 有向边 `Ti → Tj` 表示 `Ti` 在某个共同数据项上的冲突操作先于 `Tj`，所以串行候选顺序必须把 `Ti` 放在 `Tj` 前。拓扑排序就是反复选一个入度为零的顶点并移除它；若最终还有顶点未移除，剩余子图含环。
 
-#### Isolated History – e.g.,
-![dependency graph](./dependencygraph.png)
-If T1 precedes T2, it is written as T1 << T2.
+## 两条不同历史为什么可以有同一依赖图？
 
-```
-Before(T) = {T’ | T’ << T}
-After(T) = {T’| T << T’}
+下面两个历史包含相同事务、读写对象相同，但无冲突操作的位置不同：
+
+```text
+H1 = <(T1,R,O1), (T2,W,O5), (T1,W,O3), (T3,W,O1),
+      (T5,R,O3), (T3,W,O2), (T5,R,O4), (T4,R,O2), (T6,W,O4)>
+
+H2 = <(T1,R,O1), (T3,W,O1), (T3,W,O2), (T4,R,O2),
+      (T1,W,O3), (T2,W,O5), (T5,R,O3), (T5,R,O4), (T6,W,O4)>
 ```
 
-E.g.
+从同一对象的冲突操作逐项推导：`O1` 上 `T1` 先读、`T3` 后写，给出 `T1 → T3`；`O2` 上 `T3` 先写、`T4` 后读，给出 `T3 → T4`；`O3` 上 `T1` 先写、`T5` 后读，给出 `T1 → T5`；`O4` 上 `T5` 先读、`T6` 后写，给出 `T5 → T6`。`O5` 只有 `T2` 写，没有跨事务冲突，不产生边。
 
+```text
+DEP(H1) = DEP(H2)
+         = {<T1,O1,T3>, <T3,O2,T4>, <T1,O3,T5>, <T5,O4,T6>}
 ```
-After(T1) = {T5,T6, T3, T4}
-After(T3) = {T4}
-After (T5) = {T6}
+
+![H1 与 H2 的共同优先图，以及课程图中两条历史的结果对应关系](./dependencygraph.png)
+
+图左的四条彩色边分别标出 `O1`、`O2`、`O3`、`O4`；`T2` 是孤立顶点。图右表示本题中 `H1` 与 `H2` 分别作用于同一初态后得到相同状态。它成立的依据是这两条具体历史对所有冲突操作都保持了相同先后关系；不能推广成“只要两个图看起来类似，任意执行结果都相同”。
+
+优先图无环。一个拓扑排序是 `T1, T2, T3, T4, T5, T6`；也可把与其他事务无冲突的 `T2` 放在别处。比如 `O3` 上 `T1` 必须在 `T5` 前，`O4` 上 `T5` 必须在 `T6` 前，正好都被该顺序保留。图只约束有冲突的事务对，不会唯一决定所有事务的顺序。
+
+## 课程的 DEP 与 wormhole 应怎样读？
+
+课程把边进一步写成三元组 `<Ti, x, Tj>`，称为 dependency（依赖关系，`DEP`）。这和带对象标签的优先图是一一对应的记法。课程还用 `Before(T)` 表示可沿图到达 `T` 的事务，用 `After(T)` 表示从 `T` 可沿图到达的事务；对当前例子，`After(T1)={T3,T4,T5,T6}`、`After(T3)={T4}`、`After(T5)={T6}`。
+
+课程把某事务 `T'` 称为 `T` 的 wormhole transaction（课程所称的“虫洞事务”），当 `T' ∈ Before(T) ∩ After(T)`，也就是既能从 `T` 到达 `T'`，又能从 `T'` 回到 `T`。这意味着优先图有环。做课程题时可沿用这个术语；判断冲突可串行化时，仍以标准的有向优先图有环/无环为最终判据。
+
+## 2022S1 历史怎样复算？
+
+题目给出的历史是：
+
+```text
+h = <(k,R,a), (m,W,a), (m,W,b), (n,R,b),
+     (k,W,c), (l,W,e), (o,R,c), (o,R,d), (p,W,d)>
 ```
 
-### Wormhole Transaction
-A transaction T’ is called a **wormhole transaction** if
+从每个对象按出现顺序只取跨事务冲突：`a` 上 `k` 读先于 `m` 写，得到 `k → m`；`b` 上 `m` 写先于 `n` 读，得到 `m → n`；`c` 上 `k` 写先于 `o` 读，得到 `k → o`；`d` 上 `o` 读先于 `p` 写，得到 `o → p`；`e` 只有 `l` 写，没有另一笔事务操作。
 
-$$
-T' \in Before(T) \cap After(T)
-$$
+![2022S1 原题与手写图解](./2022S1Q3.png)
 
-That is T << T’ << T. This implies there is a **cycle** in the dependency graph of the history. Presence of a wormhole transaction implies it is not isolated (=> not a serial schedule).
+原图保留了题目和手写推导。手写 DEP 中的四条边与逐项复算一致；图中的事务顺序示例也必须满足 `k < m < n` 和 `k < o < p`。例如 `k,m,n,l,o,p` 是一个合法拓扑顺序，`l,k,o,p,m,n` 也是；`l` 与其他事务没有冲突，位置可以变化。因此该历史无环、冲突可串行化，不存在 wormhole。
 
-Idea to solve wormhole problem:
-
-1. Known history
-2. Write DEP based on history
-3. Draw Dependency graph based on DEP
-4. See if there is a wormhole or not
-
-#### 2022S1 Example
-Given the following transaction history h we are told that k, l, m, n, o, and p are transactions, and operations are Read and Write operations which are labeled as R and W, and operations are done on the objects labeled as a, b, c, d, e:\
-h = < (k,R,a),(m,W,a),(m,W,b),(n,R,b),(k,W,c),(l,W,e),(o,R,c),(o,R,d), (p,W,d) >\
-Please find the DEP(h) and draw as a simple graph version as well. Then using the concept of wormholes explain whether this history is equal to a serial history or not, i.e., if this history is not equal to a serial history then give a wormhole example, and if it is then give a serial execution of these transactions that this history is equal to. Briefly explain your steps with sentences while answering this question.
-
-Remind that the tuple is (Transaction, Action, Object), the DEP is <T1, O, T2>. The use of all characters is indeed confusing us.
-
-Answer
-![](./2022S1Q3.png)
+> [!info]- 来源
+> - 冲突、优先图、拓扑排序与冲突可串行化：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版第 18 章“Concurrency Control”，2019 年 3 月课程幻灯片，相关章节“Conflict Serializability”“Testing for Conflict Serializability”，https://www.db-book.com/slides-dir/PDF-dir/ch18.pdf 。
+> - PostgreSQL 隔离级别和并发异常的产品语义见 PostgreSQL 18 文档第 13.2 节“Transaction Isolation”，访问于 2026-11-06，https://www.postgresql.org/docs/18/transaction-iso.html 。本章的图判据是历史分析算法，不代表某一隔离级别的实现说明。

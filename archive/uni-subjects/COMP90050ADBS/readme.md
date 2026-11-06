@@ -23,11 +23,11 @@ COMP90050 围绕访问成本、查询执行、并发控制和故障恢复展开�
 
 ### [事务规则与并发控制如何保持隔离？](condensed-note-w3.md)
 
-- [事务边界、保存点与嵌套事务意味着什么？](condensed-note-w3-transactions-and-nesting.md)
-- [同步原语如何协调访问并避免死锁？](condensed-note-w3-concurrency-primitives-and-deadlocks.md)
-- [如何用优先图判断事务历史？](condensed-note-w3-conflict-histories-and-serializability.md)
-- [共享锁、排他锁与粒度锁能保证什么？](condensed-note-w3-locks-and-isolation-levels.md)
-- [乐观验证与快照隔离何时允许并发更新？](condensed-note-w3-optimistic-snapshot-and-timestamp-concurrency.md)
+- [扣款成功但入账失败时，事务边界与局部回滚怎样保护业务？](condensed-note-w3-transactions-and-nesting.md)
+- [两个线程同时改写同一计数器时，怎样协调访问并处理死锁？](condensed-note-w3-concurrency-primitives-and-deadlocks.md)
+- [一段交错执行能否等价于串行执行？](condensed-note-w3-conflict-histories-and-serializability.md)
+- [两笔事务同时升级锁时为何会互等，隔离级别又保证什么？](condensed-note-w3-locks-and-isolation-levels.md)
+- [乐观验证、快照隔离与时间戳排序怎样处理并发冲突？](condensed-note-w3-optimistic-snapshot-and-timestamp-concurrency.md)
 
 ### [数据库如何在崩溃与网络节点之间保全事务？](condensed-note-w4.md)
 
