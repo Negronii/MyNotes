@@ -53,9 +53,6 @@ Follow the model from tokens to generation, then design what the application sup
 - [When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？](systems/ai-deployment-patterns.md)
 - [How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
 - [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](systems/ai-system-design-interview-questions.md)
-- [How do you design permission-aware enterprise document question answering? / 如何设计具备权限意识的企业文档问答？](systems/ai-enterprise-document-qa-design.md)
-- [How do you design a customer-support assistant that can safely issue refunds? / 如何设计能够安全处理退款的客服助手？](systems/ai-customer-support-agent-design.md)
-- [How do you design a code-review assistant developers can trust? / 如何设计开发者愿意信任的代码审查助手？](systems/ai-code-review-assistant-design.md)
 
 ## Cross-domain context / 跨域脉络
 

@@ -1430,31 +1430,11 @@ Do not invent scale or latency targets to fill silence. Ask for them or label an
 
 Present each choice conditionally: explain when each option would fit, what evidence would change your decision, and how the alternative could be tested.
 
-### Which design case should you study? / 应深入哪种设计案例？
+### Three cases, three binding risks / 三个案例，三个主要风险
 
-- [How do you design permission-aware enterprise document question answering? / 如何设计具备权限意识的企业文档问答？](#20.%20How%20do%20you%20design%20permission-aware%20enterprise%20document%20question%20answering?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%85%B7%E5%A4%87%E6%9D%83%E9%99%90%E6%84%8F%E8%AF%86%E7%9A%84%E4%BC%81%E4%B8%9A%E6%96%87%E6%A1%A3%E9%97%AE%E7%AD%94%EF%BC%9F) follows ingestion, retrieval, authorization, budget, and answer-evidence decisions.
-- [How do you design a customer-support assistant that can safely issue refunds? / 如何设计能够安全处理退款的客服助手？](#21.%20How%20do%20you%20design%20a%20customer-support%20assistant%20that%20can%20safely%20issue%20refunds?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E8%83%BD%E5%A4%9F%E5%AE%89%E5%85%A8%E5%A4%84%E7%90%86%E9%80%80%E6%AC%BE%E7%9A%84%E5%AE%A2%E6%9C%8D%E5%8A%A9%E6%89%8B%EF%BC%9F) follows a fixed workflow from identity checks through verified refund execution and handoff.
-- [How do you design a code-review assistant developers can trust? / 如何设计开发者愿意信任的代码审查助手？](#22.%20How%20do%20you%20design%20a%20code-review%20assistant%20developers%20can%20trust?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%BC%80%E5%8F%91%E8%80%85%E6%84%BF%E6%84%8F%E4%BF%A1%E4%BB%BB%E7%9A%84%E4%BB%A3%E7%A0%81%E5%AE%A1%E6%9F%A5%E5%8A%A9%E6%89%8B%EF%BC%9F) follows advisory findings, human authority, evidence, and false-positive evaluation.
+Apply the same design sequence to different failure costs. For document QA, ask whether the evidence is authorized and current. For refunds, ask whether an irreversible write was authorized and actually completed. For code review, ask whether the finding is supported and worth a reviewer’s time.
 
-### Practice / 练习
-
-- Ask clarifying questions before fixing assumed scale or targets.
-- Draw the request and data paths, including trust boundaries and failures.
-- State assumptions and what evidence could change the design.
-- Discuss quality, latency, cost, permissions, and operational ownership together.
-- Explain how the system is evaluated, rolled out, monitored, and rolled back.
-
-### Related notes / 相关笔记
-
-- [Durable AI runs / 持久化 AI 运行](#14.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) covers production run controls. [AI deployment choices / AI 部署选择](#17.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares where to run the model.
-- [RAG Architecture and Implementation / 检索增强生成](#6.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers retrieval implementation and grounding.
-- [LLM Evaluation Methods / 大语言模型评估方法](#11.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design.
-- [Agent Fundamentals / 智能体基础](#7.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) covers runtime agent patterns.
-## 20. How do you design permission-aware enterprise document question answering? / 如何设计具备权限意识的企业文档问答？
-
-**Core explanation / 核心解释：** Version and synchronize source documents, authenticate each caller, enforce their access before retrieval, and pass only selected evidence with source identity to generation. Validate citations and answer support, handle stale or conflicting material explicitly, and measure retrieval separately from answer quality. / 为来源文档保留版本并持续同步，认证调用者，在检索前执行其访问权限，只把筛选后的证据及来源身份交给模型生成。校验引用和答案依据，明确处理过期或冲突材料，并将检索质量与答案质量分开评估。
-
-### Design: enterprise question answering over documents / 企业文档问答
+### Document QA under an access and latency budget / 有权限与时延约束的文档问答
 
 **Clarify first:** Which user groups and repositories are in scope? How often do documents change? What is the source of truth for permissions? What answer freshness and citation behavior are required? What happens when evidence is missing or conflicting?
 
@@ -1477,7 +1457,7 @@ User query → authenticate → permission-aware retrieval
 
 **Evaluation and operations:** test retrieval and answer quality separately; include permission-boundary cases, updates and deletions, unanswerable questions, and citation checks. Monitor latency by stage, indexing freshness, retrieval metrics, answer support, abstentions, and access-control failures.
 
-Lewis et al.'s RAG paper describes combining parametric generation with retrieved non-parametric memory; a production enterprise design must add current data ownership, authorization, and evaluation ([Lewis et al.](https://arxiv.org/abs/2005.11401)). See [RAG Architecture and Implementation / 检索增强生成](#6.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) for implementation detail.
+The [RAG chapter](#6.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) follows a concrete policy question from authorized candidate retrieval through claim verification. Here the extra constraint is an end-to-end latency budget.
 
 #### One worked budget and design choice / 一组预算推导与方案选择
 
@@ -1487,14 +1467,9 @@ One proposed latency budget is 0.2 s for authentication and request setup + 0.6 
 
 For a rough capacity check, use Little's Law L = λW for the mean number of requests in a stable system ([Little](https://doi.org/10.1287/opre.9.3.383)). Suppose the explicit design assumption is an admitted 6 requests/s and 1.2 s mean time spent in the model stage, including any internal wait. Then L = 6 × 1.2 = 7.2, or about 8 requests in flight in that stage. This is an average, not 8 active model slots or a replica count; queueing, bursts, and service limits need load tests with the real model, request lengths, and latency target. Size executing slots from measured service demand and the target utilization.
 
-For these mixed exact-ID and natural-language questions, I would start with hybrid keyword and vector retrieval, enforce document permissions before context assembly, and evaluate retrieval and answer quality separately. Given the stated hosted-service permission and lack of capacity for operating GPU inference, I would put a hosted model behind that retrieval service, keep authorization outside the prompt, and bound queueing so overload does not silently consume the latency budget. If the data boundary changed, I would compare a private or self-hosted endpoint and include its operations cost; if retrieval or generation cannot fit the measured budget, I would revisit context selection, candidate ranking, and the model before relaxing answer-quality checks.
+For these mixed exact-ID and natural-language questions, I would test hybrid keyword and vector retrieval against a lexical baseline, enforce document permissions before context assembly, and evaluate retrieval and answer quality separately. Given the stated hosted-service permission and lack of capacity for operating GPU inference, I would put a hosted model behind that retrieval service, keep authorization outside the prompt, and bound queueing so overload does not silently consume the latency budget. If the data boundary changed, I would compare a private or self-hosted endpoint and include its operations cost; if retrieval or generation cannot fit the measured budget, I would revisit context selection, candidate ranking, and the model before relaxing answer-quality checks.
 
-**Related design method / 相关设计方法：** [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](#19.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) covers the reusable scoping and trade-off sequence.
-## 21. How do you design a customer-support assistant that can safely issue refunds? / 如何设计能够安全处理退款的客服助手？
-
-**Core explanation / 核心解释：** Keep identity, eligibility, confirmation, and refund execution in an application-controlled workflow. Let the model help interpret or explain the request, but require trusted code to read authoritative order and policy state, verify the amount, obtain any needed confirmation, execute an idempotent action, and confirm its result. Hand off ambiguous or failed cases. / 将身份、资格检查、确认和退款执行放在应用控制的工作流中。模型可以帮助理解或解释请求，但可信代码必须读取权威订单与政策状态、核实金额、获取必要确认、执行幂等动作并确认结果。遇到歧义或失败时转交人工。
-
-### Design: customer support assistant with tools / 带工具的客服助手
+### Refunds with a verified side effect / 需要确认写入结果的退款
 
 **Clarify first:** Which intents can be automated? Which actions change customer accounts or money? What policy and order systems are authoritative? Which requests require explicit consent or human review? What is the handoff path?
 
@@ -1522,12 +1497,7 @@ Customer → intent and risk handling → assistant workflow
 
 A tool-call schema can constrain the shape of a proposed call; the application must still check whether the user and action are permitted. OpenAI's [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, illustrates provider-specific behavior; it does not replace application-side validation and authorization. See [Agent Fundamentals / 智能体基础](#7.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F), [Tool Design and Function Calling / 工具设计与函数调用](#9.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F), and [AI Safety in Production / 生产环境中的 AI 安全](#10.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
 
-**Related design method / 相关设计方法：** [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](#19.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) covers the reusable scoping and trade-off sequence.
-## 22. How do you design a code-review assistant developers can trust? / 如何设计开发者愿意信任的代码审查助手？
-
-**Core explanation / 核心解释：** Start with advisory findings tied to changed lines and visible code evidence, keep a person responsible for review decisions, and suppress weak claims when false positives are costly. Build evaluation cases from reviewed changes and clean examples; measure issue detection, false positives, valid locations, and workflow cost before increasing automation. / 先输出指向变更行且展示代码依据的建议，保留人工审查决策权，并在误报代价高时抑制依据薄弱的发现。用已审查变更和无问题样例构建评估集；在提高自动化程度前，测量问题检出、误报、位置有效性和流程成本。
-
-### Design: code review assistant / 代码审查助手
+### Code review with a limited false-positive budget / 有误报预算的代码审查
 
 **Clarify first:** Which languages and review types are in scope? Should findings be advisory or posted automatically? How is repository context selected? What level of false positives will developers tolerate? Which code or metadata may leave the repository boundary?
 
@@ -1554,4 +1524,17 @@ Pull request event → diff and repository context
 
 **Evaluation and operations:** build a held-out set of reviewed changes with known issues and clean examples. Measure issue detection by category, false positives, location validity, developer acceptance or dismissal, cost per review, and delay added to the workflow. Compare against a no-assistant baseline; do not claim to outperform human review without evidence.
 
-**Related design method / 相关设计方法：** [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](#19.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) covers the reusable scoping and trade-off sequence.
+### Practice / 练习
+
+- Ask clarifying questions before fixing assumed scale or targets.
+- Draw the request and data paths, including trust boundaries and failures.
+- State assumptions and what evidence could change the design.
+- Discuss quality, latency, cost, permissions, and operational ownership together.
+- Explain how the system is evaluated, rolled out, monitored, and rolled back.
+
+### Related notes / 相关笔记
+
+- [Durable AI runs / 持久化 AI 运行](#14.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) covers production run controls. [AI deployment choices / AI 部署选择](#17.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares where to run the model.
+- [RAG Architecture and Implementation / 检索增强生成](#6.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers retrieval implementation and grounding.
+- [LLM Evaluation Methods / 大语言模型评估方法](#11.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design.
+- [Agent Fundamentals / 智能体基础](#7.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) covers runtime agent patterns.
