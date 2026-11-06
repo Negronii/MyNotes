@@ -164,7 +164,7 @@ renderReports(sortFromUrl());
 
 浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
 
-**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#58.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 > [!info]- 来源
 > - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
@@ -538,7 +538,7 @@ Effect 用于让已提交的组件与 React 之外的系统保持一致，例如
 
 开发环境在根组件开启 StrictMode（严格模式）时，React 可在首挂载额外执行一次 setup 与 cleanup 来暴露不完整的清理逻辑。此例首轮 Effect 因 `requestId === 0` 直接返回，不会因此发出重复请求；这项检查不代表生产中每个请求都会重复。手写 Effect 获取数据时要清理或忽略已经失效的响应；若要缓存、去重、刷新和更新服务端数据，接着读[React如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
-类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#58.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
+类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-06）
 > - 状态是快照、setter 请求下一次 render、updater 按队列应用：React 官方 [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)、[Queueing a Series of State Updates](https://react.dev/learn/queueing-a-series-of-state-updates)，核验日期 2026-11-06。
@@ -548,7 +548,7 @@ Effect 用于让已提交的组件与 React 之外的系统保持一致，例如
 > - 自动/经典 JSX runtime 的转换边界：[Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform)，React 团队，2020-09-22。
 > - URL 修改当前历史项的标准语义：[HTML Standard, History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，核验日期 2026-11-06。
 > - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
-## 7. 如何在React中组合组件与复用行为？
+## 7. 如何在 React 中组合组件与复用行为？
 
 **案例背景。** 报表页的浏览器地址为 `/reports?sort=recent#summary`；服务端按 `sort=recent` 返回 May、April，`#summary` 只供浏览器定位。选择 **Oldest first** 后，排序状态变成 `oldest`，可见顺序应为 April、May。这个排序状态要同时驱动工具栏的选中状态和列表顺序，因此由包含二者的最近共同父组件持有；列表只拿已排序的报表数组，工具栏收到更新回调。沿 props（属性）、Context（上下文）、自定义 Hook（自定义钩子）、ref（引用）逐层选择能表达清楚所有权的边界，不把组件组合变成隐式的全局通信。
 
@@ -621,7 +621,7 @@ function ReportList({ reports }: { reports: Report[] }) {
 }
 ~~~
 
-数据沿 props（属性）向下传，用户意图用 callback prop（回调属性）向上交给状态所有者。这个结构让一次点击的去向可见。若两个组件不共享状态，把 state（状态）提到更高层只会扩大更新范围；若多个远距离组件确实要读取主题、地区设置等值，可以在共同子树上用 Context；跨多个功能共享且需要统一更新策略时，再考虑 store（共享状态容器）。
+数据沿 props（属性）向下传，用户意图用 callback prop（回调属性）向上交给状态所有者。这个结构让一次点击的去向可见。若两个组件不共享状态，把 state（状态）提到更高层只会扩大更新范围；若多个远距离组件确实要读取主题、地区设置等值，可以在共同子树上用 Context；跨多个功能共享且需要统一更新策略时，再考虑 store（共享状态容器）。若确实选 Redux 管理这类共享客户端状态，action、reducer、selector 与异步工作流见[Redux 如何组织共享界面状态与异步工作？](#57.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 服务端拥有的报表记录仍属于服务端状态。把它们放进 Context 不会自动提供查询身份、缓存新鲜度、取消或变更协调；这些由[服务端状态章节](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)讲解。
 
@@ -1263,7 +1263,7 @@ const ReportRow = memo(function ReportRow({ report, onToggle }) {
 
 ### 用结果决定优化是否值得保留
 
-为同一交互记录组件耗时、commit 数量、脚本和浏览器布局成本。检查 Compiler 的编译覆盖后，再比较它自动优化与手工 memoization 的收益；若手工缓存增加依赖复杂度却没有缩短交互，就删掉这层复杂度。稳定 key 用来保留行身份，不是性能 API；组件状态的范围则优先按所有权整理，见[如何组合组件与复用行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8React%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)。
+为同一交互记录组件耗时、commit 数量、脚本和浏览器布局成本。检查 Compiler 的编译覆盖后，再比较它自动优化与手工 memoization 的收益；若手工缓存增加依赖复杂度却没有缩短交互，就删掉这层复杂度。稳定 key 用来保留行身份，不是性能 API；组件状态的范围则优先按所有权整理，见[如何组合组件与复用行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)。
 
 用 CSS 隐藏已挂载面板时，它仍留在 React 树中，state 和 Effect 继续存在；条件移除会卸载组件并执行 cleanup，再显示时会创建新实例。二者应按生命周期和交互需求选择。Fragment 可免去多余 DOM 包装节点，但这本身不构成可测的性能结论。
 
@@ -7580,7 +7580,273 @@ Android 的来源和主 frame 信息来自 `WebMessageListener` 平台回调；A
 > - Apple WebKit 消息处理器与回复：[Apple Developer Documentation，WKScriptMessageHandler](https://developer.apple.com/documentation/webkit/wkscriptmessagehandler)；[WKScriptMessageHandlerWithReply](https://developer.apple.com/documentation/webkit/wkscriptmessagehandlerwithreply/usercontentcontroller%28_%3Adidreceive%3Areplyhandler%3A%29?language=objc)，2026-11-06 核对。
 > - Apple 消息 frame 的 `isMainFrame`、`securityOrigin`：[Apple Developer Documentation，WKFrameInfo](https://developer.apple.com/documentation/webkit/wkframeinfo)；[WKScriptMessage.frameInfo](https://developer.apple.com/documentation/webkit/wkscriptmessage/frameinfo)，2026-11-06 核对。
 > - Bundle 签名、兼容矩阵、原子切换与回滚是应用更新策略，不是 WebView 平台规范；本文把它们作为威胁模型驱动的设计建议。
-## 57. 如何为产品选择前端框架？
+## 57. Redux 如何组织共享界面状态与异步工作？
+
+**案例背景。** 报表页打开 `/reports?sort=recent#summary`，服务端给出 May、April。用户选 **Oldest first** 后，路由把 `sort=oldest` 写成一条新历史记录；路由提交新地址后，组件用新的 `sort` 组成查询 key，TanStack Query 复用仍新鲜的缓存，或在缺少/过期时发请求，结果可用后显示 April、May。浏览器 Back 回到 recent 后，同样按 recent 的查询 key 复用缓存或重取结果。`#summary` 只用于浏览器定位，不会随 HTTP 请求发送。排序由 URL 与路由拥有，报表行由 TanStack Query 缓存服务端结果。Redux（共享状态管理库）只接手另一类问题：报表表格和远处的批量操作栏都需要读取、修改同一份已选报表 ID。选择变化会清除与旧集合对应的预览；用户点“预览导出范围”按钮时，才按当前选中 ID 发起请求。
+
+~~~mermaid
+flowchart TD
+    A[URL sort=recent] --> B[组件按sort查询报表行]
+    B --> C[查询缓存持有 May、April]
+    C --> D
+    D[选择行] --> E[dispatch action]
+    E --> F[reducer更新共享selectedIds]
+    F --> G[清空旧预览并使旧requestId失效]
+    F --> H[表格与批量操作栏读取同一选择]
+    H --> I[用户点击预览导出范围]
+    I --> J[dispatch thunk并保存requestId]
+    J --> K{返回的requestId仍是当前值？}
+    K -->|是| P[保存当前预览或错误]
+    K -->|否| Q[忽略过期结果]
+    A --> M[选择oldest并新增历史项]
+    M --> N[按oldest查缓存或取数，数据可用后显示April、May]
+    N --> O[Back恢复recent，复用缓存或重取对应行]
+~~~
+
+### 先确定什么状态需要共享
+
+Redux 的价值在于让多个相隔较远的组件围绕同一份客户端状态和明确的更新动作协作。它不会自动取代 URL、组件本地 state 或服务端查询缓存。沿报表案例看，状态由谁拥有，决定了刷新、返回和请求完成时谁负责恢复：
+
+| 状态 | 所有者 | 本例中的结果 |
+| --- | --- | --- |
+| `sort=recent` 或 `sort=oldest` | URL 与路由 | 刷新、分享地址和浏览器 Back 都能恢复筛选条件 |
+| May、April 等报表行 | 服务端；客户端查询缓存保存副本 | 查询身份包含 `sort`，不同排序对应不同结果；见[React 如何维护服务端数据与乐观更新？](#%E6%8E%92%E5%BA%8F%E5%80%BC%E6%9E%84%E6%88%90%E6%9F%A5%E8%AF%A2%E8%BA%AB%E4%BB%BD) |
+| 已选报表 ID | Redux store | 表格、计数提示和批量操作栏可以读取同一份数组 |
+| 当前弹层是否打开 | 使用它的组件 | 只影响局部展示时，不必提升到全局 store |
+| 导出预览请求状态 | 本例的 Redux 工作流 | 选择变化清除旧预览；点击按钮后，异步结果只更新它对应的当前请求 |
+
+如果只有一个组件使用某值，就让它留在组件中；两个相邻组件共享时，先比较提升到最近共同父组件是否更简单，见[如何在 React 中组合组件与复用行为？](#%E6%8A%8A%E7%8A%B6%E6%80%81%E6%94%BE%E5%9C%A8%E5%85%B1%E5%90%8C%E4%BD%BF%E7%94%A8%E8%80%85%E4%B9%8B%E4%B8%8A%E7%9A%84%E6%9C%80%E8%BF%91%E4%B8%80%E5%B1%82)。Redux 不会让数据变成“全局自动同步”；它给出明确的读写入口。React Router 路由加载与历史项的提交时机见[React 路由如何把地址映射到界面并加载数据？](#%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%BC%8F%E5%85%88%E5%8C%B9%E9%85%8D%E8%B7%AF%E7%94%B1%EF%BC%8C%E5%86%8D%E5%8A%A0%E8%BD%BD%E5%8C%B9%E9%85%8D%E9%A1%B5%E9%9D%A2%E7%9A%84%E6%95%B0%E6%8D%AE)。
+
+### action 怎样经过 store 更新共享选择
+
+在 Redux Toolkit（Redux 官方工具集）中，`configureStore` 建立 store（状态容器）并合并 reducer（状态更新函数）；传入 reducer 对象时，它会按功能组合这些 reducer，并默认启用与 Redux DevTools 浏览器扩展的集成，安装扩展后可检查 action 和状态。DevTools 会看到已派发的数据，因此不要把凭证放进 Redux state 或 action。`createSlice` 将一类状态、reducer 和 action creator（动作创建函数）放在一起。reducer 收到 action（动作）后同步计算下一状态，不执行网络请求或其他副作用。
+
+下面按报表 ID 切换选择。Redux Toolkit 允许 reducer 写成对 draft 的局部修改，Immer 会据此产出新的不可变状态；这不是直接修改 store 中已经发布的对象。把选择保存为 ID 而不是数组下标，排序改变后仍会选择同一份报表。
+
+一个 action 只说明“发生了什么”，表格组件不需要自己去找批量操作栏并直接改它的 props。调用 `dispatch(toggleReport("april"))` 后，reducer 将 `selectedIds` 从 `[]` 变成 `["april"]`；所有订阅这个值的组件都能看到新状态。它们仍要使用稳定的报表 ID，不应以当前列表位置作身份。
+
+### 异步结果怎样避免覆盖较新的选择
+
+导出范围预览是用户点击按钮后开始的一次性工作。假设用户先选中 May，点击“预览导出范围”后为 `["may"]` 派发请求；再选中 April，旧预览会清空，用户再次点击按钮才会为 `["may", "april"]` 派发第二个请求。如果第一份响应较晚到达，它描述的是旧集合，不能覆盖第二份预览。`createAsyncThunk`（异步 thunk 创建器）会为一次调用派发 `pending`、`fulfilled` 或 `rejected` 生命周期 action，并把本次唯一 `requestId` 放在 `action.meta` 中。reducer 只接受仍匹配当前 ID 的结果。
+
+这个示例约定接口 `POST /api/reports/export-preview` 接收 `reportIds`，只返回非负安全整数 `reportCount` 与 `estimatedBytes`，不创建导出文件。服务端仍须按当前身份和租户逐个授权这些 ID；客户端 Redux 中的选择不能代替[服务端资源权限检查](../../engineering-foundations/security/web-security-and-authentication.md)。把响应先视为 `unknown` 并检查结构，因为 TypeScript 泛型或断言本身不会验证服务器实际返回值；边界校验细节见[TypeScript 如何处理不可信 JSON？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
+
+~~~typescript
+// features/report-selection/reportSelectionSlice.ts
+import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
+
+type Preview = { reportCount: number; estimatedBytes: number };
+type PreviewState = {
+  status: "idle" | "pending" | "ready" | "error";
+  currentRequestId: string | null;
+  result: Preview | null;
+  error: string | null;
+};
+type ReportSelectionState = {
+  selectedIds: string[];
+  preview: PreviewState;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function parsePreview(value: unknown): Preview {
+  if (
+    !isRecord(value) ||
+    !isNonNegativeSafeInteger(value.reportCount) ||
+    !isNonNegativeSafeInteger(value.estimatedBytes)
+  ) {
+    throw new Error("报表服务返回了无效的导出预览");
+  }
+  return { reportCount: value.reportCount, estimatedBytes: value.estimatedBytes };
+}
+
+export const loadExportPreview = createAsyncThunk<Preview, string[]>(
+  "reportSelection/loadExportPreview",
+  async (reportIds, { signal }) => {
+    const response = await fetch("/api/reports/export-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reportIds }),
+      signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload: unknown = await response.json();
+    return parsePreview(payload);
+  }
+);
+
+const emptyPreview = (): PreviewState => ({
+  status: "idle",
+  currentRequestId: null,
+  result: null,
+  error: null,
+});
+
+const initialState: ReportSelectionState = {
+  selectedIds: [],
+  preview: emptyPreview(),
+};
+
+export const reportSelectionSlice = createSlice({
+  name: "reportSelection",
+  initialState,
+  reducers: {
+    toggleReport(state, action: PayloadAction<string>) {
+      const index = state.selectedIds.indexOf(action.payload);
+      if (index === -1) state.selectedIds.push(action.payload);
+      else state.selectedIds.splice(index, 1);
+      state.preview = emptyPreview();
+    },
+    clearSelection(state) {
+      state.selectedIds = [];
+      state.preview = emptyPreview();
+    },
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(loadExportPreview.pending, (state, action) => {
+        state.preview = {
+          status: "pending",
+          currentRequestId: action.meta.requestId,
+          result: null,
+          error: null,
+        };
+      })
+      .addCase(loadExportPreview.fulfilled, (state, action) => {
+        if (state.preview.currentRequestId !== action.meta.requestId) return;
+        state.preview = {
+          status: "ready",
+          currentRequestId: null,
+          result: action.payload,
+          error: null,
+        };
+      })
+      .addCase(loadExportPreview.rejected, (state, action) => {
+        if (state.preview.currentRequestId !== action.meta.requestId) return;
+        state.preview = {
+          status: action.meta.aborted ? "idle" : "error",
+          currentRequestId: null,
+          result: null,
+          error: action.meta.aborted ? null : action.error.message ?? "请求失败",
+        };
+      });
+  },
+});
+
+export const { toggleReport, clearSelection } = reportSelectionSlice.actions;
+export const reportSelectionReducer = reportSelectionSlice.reducer;
+~~~
+
+异步 action 创建器负责启动请求；`extraReducers` 在 slice（状态切片）里响应它的生命周期。每次选择变化都会把预览状态和当前 ID 清空；新请求开始时记录自己的 ID。因而，旧请求即使没有取消且稍后成功或失败，也无法提交到当前界面。
+
+> [!example] 两份请求按开始顺序而不是返回顺序判定
+> 初始行是 May、April。用户只选 May 后点击“预览导出范围”，第一次预览请求带 ID `req-1`；接着用户再选 April，旧预览清空，再次点击同一按钮后才开始 `req-2`。`req-2` 先返回 `reportCount: 2`，状态变为 `ready` 且 `currentRequestId` 归为 `null`。随后 `req-1` 即使返回 `reportCount: 1`，也因 ID 与当前的 `null` 不匹配而被忽略。浏览器 Back 只把 URL 排序恢复为 recent；同一批稳定 ID 仍表示已选 May、April。
+
+`requestId` 负责识别一次调用，不会自动停止网络请求。payload creator 收到的 `signal` 可以传给 `fetch`；调用 `dispatch(loadExportPreview(ids)).abort()` 也会请求取消该 thunk。取消客户端读取不保证已经接到请求的服务端停止工作。示例的状态只表示“当前集合的预览”，若产品要同时保留多份并发预览或多个导出作业，应按 `requestId` 或服务端作业 ID 分开存储，而不能用一个 latest-request 槽覆盖所有结果。
+
+### React 组件怎样读取并派发类型安全的状态
+
+`configureStore` 会组合 reducer，并默认包含 thunk middleware（中间件）；在 TypeScript 项目中，从创建好的 store 推导 `RootState` 和 `AppDispatch`，再用 React-Redux（Redux 的 React 绑定）9.1 及以上的 `.withTypes()` 建立应用专用 Hook（钩子）。Hook 文件只导入 store 的类型，避免组件与 store 之间形成运行时循环导入。
+
+~~~typescript
+// app/store.ts
+import { configureStore } from "@reduxjs/toolkit";
+import { reportSelectionReducer } from "../features/report-selection/reportSelectionSlice";
+
+export const store = configureStore({
+  reducer: { reportSelection: reportSelectionReducer },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+~~~
+
+~~~typescript
+// app/hooks.ts
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "./store";
+
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
+export const useAppSelector = useSelector.withTypes<RootState>();
+~~~
+
+根节点用 `<Provider store={store}>` 包住需要访问 Redux 的 React 子树。行组件按报表 ID 读取选中状态并派发 action；批量工具栏读取同一份数组，再以它的快照发起预览。
+
+~~~tsx
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { loadExportPreview, toggleReport } from "./reportSelectionSlice";
+
+type Report = { id: string; period: string; title: string };
+
+function ReportRow({ report }: { report: Report }) {
+  const selected = useAppSelector(state =>
+    state.reportSelection.selectedIds.includes(report.id)
+  );
+  const dispatch = useAppDispatch();
+
+  return (
+    <li>
+      <label>
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => dispatch(toggleReport(report.id))}
+        />
+        {report.period} — {report.title}
+      </label>
+    </li>
+  );
+}
+
+function ExportPreviewToolbar() {
+  const selectedIds = useAppSelector(state => state.reportSelection.selectedIds);
+  const preview = useAppSelector(state => state.reportSelection.preview);
+  const dispatch = useAppDispatch();
+
+  return (
+    <section aria-label="批量操作">
+      <button
+        type="button"
+        disabled={selectedIds.length === 0 || preview.status === "pending"}
+        onClick={() => void dispatch(loadExportPreview([...selectedIds]))}
+      >
+        预览导出范围
+      </button>
+      {preview.status === "pending" && <p role="status">正在计算导出范围…</p>}
+      {preview.status === "ready" && preview.result && (
+        <p role="status">
+          {preview.result.reportCount} 份报表，约 {preview.result.estimatedBytes} 字节
+        </p>
+      )}
+      {preview.status === "error" && <p role="alert">{preview.error}</p>}
+    </section>
+  );
+}
+~~~
+
+`useSelector` 默认用严格引用相等比较前后选择结果；像上面一样读取布尔值、字符串或 store 中现有数组可以直接观察状态变化。若每次 selector 都新建对象，默认比较会认为结果不同而触发重新渲染；需要一起返回多个字段时，可分别调用 Hook、使用有记忆的 selector，或显式选择比较函数。渲染成本是否值得优化应通过[React 工作测量](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)判断。
+
+### middleware 与 thunk 分别插入哪一步
+
+普通 action 到达 Redux store 后，同步调用 reducer 并保存新状态。middleware（中间件）包裹 `dispatch`，可以在 action 到达 reducer 前后观察或扩展这一流程；thunk middleware 允许 `dispatch` 接受函数，让这个函数访问 `dispatch`、`getState` 并等待异步任务，再派发普通结果 action。Redux Toolkit 默认已配置 thunk，新增中间件时用 `getDefaultMiddleware()` 扩展默认列表，不要为了添加一项日志就替换默认值。
+
+`createAsyncThunk` 已为一次请求组织了 pending、fulfilled、rejected 三种 action；一般无需再手写一个“把所有函数 action 变成异步”的 middleware。只有当工作需要响应后续 action 或状态变化、而不是由某次显式派发触发时，才进一步考虑 listener middleware。缓存服务端数据可用 Redux Toolkit Query（RTK Query）；本报表案例已经以 TanStack Query 持有查询缓存，不再把同一批行同时放入 Redux。
+
+> [!info]- 来源
+> - 状态切片、自动生成的 action creator、Immer draft、`configureStore` 默认 middleware 与 DevTools：[Redux Toolkit — `createSlice`](https://redux-toolkit.js.org/api/createSlice)、[`configureStore`](https://redux-toolkit.js.org/api/configureStore)、[Why Redux Toolkit Is Redux Today](https://redux-toolkit.js.org/introduction/why-rtk-is-redux-today)，Redux Toolkit 2.14.0，核对日期：2026-11-06。
+> - 异步 thunk 生命周期 action、`meta.requestId`、`signal`、`abort()` 与错误结果：[Redux Toolkit — `createAsyncThunk`](https://redux-toolkit.js.org/api/createAsyncThunk)，Redux Toolkit 2.14.0，核对日期：2026-11-06。
+> - 缓存服务端数据用 Redux Toolkit Query、一次命令式异步工作用 thunk、响应后续状态变化用 listener middleware：[Redux Toolkit — Side Effects Approaches](https://redux-toolkit.js.org/usage/side-effects-approaches)，Redux Toolkit 2.14.0，核对日期：2026-11-06。
+> - 从 store 推导 `RootState` 和 `AppDispatch`，以及用 `.withTypes()` 创建 typed hooks：[Redux Toolkit — TypeScript Quick Start](https://redux-toolkit.js.org/tutorials/typescript)、[React-Redux — TypeScript Usage](https://react-redux.js.org/using-react-redux/usage-with-typescript)，React-Redux 9.3.1，核对日期：2026-11-06。
+> - selector 默认使用严格 `===` 比较及多值选择建议：[React-Redux — Hooks API](https://react-redux.js.org/api/hooks)，React-Redux 9.3.1，核对日期：2026-11-06。
+> - 路由 PUSH 加入新筛选历史、POP 依 URL 恢复筛选和目标数据：[React Router 路由导航](#%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%BC%8F%E5%85%88%E5%8C%B9%E9%85%8D%E8%B7%AF%E7%94%B1%EF%BC%8C%E5%86%8D%E5%8A%A0%E8%BD%BD%E5%8C%B9%E9%85%8D%E9%A1%B5%E9%9D%A2%E7%9A%84%E6%95%B0%E6%8D%AE)，React Router 8.5.1，核对日期：2026-11-06。
+> - `sort` 是 URL 状态、报表行为查询数据，不应由 Redux 再保存第二份：[React Server State 章节](#%E6%8E%92%E5%BA%8F%E5%80%BC%E6%9E%84%E6%88%90%E6%9F%A5%E8%AF%A2%E8%BA%AB%E4%BB%BD)，TanStack Query v5.90.3，核对日期：2026-11-06。
+## 58. 如何为产品选择前端框架？
 
 **案例背景。** 以报表页面为例：浏览器地址是 `/reports?sort=recent#summary`，服务端实际收到 `/reports?sort=recent` 并据此返回 May、April 两行；`#summary` 只供浏览器定位。用户点 **Oldest first** 后，`pushState` 新增 `sort=oldest` 历史项，可见顺序成为 April、May；按浏览器 Back 会恢复 `sort=recent` 和 May、April。完整历史行为见[浏览器导航路径](#%E8%AE%A9%E7%AD%9B%E9%80%89%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。框架选择要回答的是团队怎样可靠地交付这类更新，以及页面还需要怎样的路由、服务端渲染、无障碍和运维支持。单说“有虚拟 DOM”不能回答这些问题。
 
@@ -7617,13 +7883,13 @@ React 用组件类型、树中的位置和同级 key 判断状态能否保留。
 
 框架不是唯一变量。真实环境还包括数据形状、设备、浏览器、访问性需求、发布约束和团队维护能力。保留一个候选框架的理由，应能说清它满足了哪条必要约束、测试了哪条路径，以及哪类工作仍由浏览器或服务端承担。
 
-React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#58.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
+React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（2026-11-06）
 > - 本文关于 React 描述、render 与 commit 的边界：React 19.3 当前文档，[Render and Commit](https://react.dev/learn/render-and-commit)、[Versions](https://react.dev/versions)，核验日期 2026-11-06。
 > - 框架实现可采用不同渲染机制：React 文档同上；Vue 官方文档，[Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism)，核验日期 2026-11-06。
 > - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
-## 58. React 路由怎样把地址映射到界面并加载数据？
+## 59. React 路由怎样把地址映射到界面并加载数据？
 
 **案例背景。** 用户打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 告诉服务端返回 May、April 两份报表；`#summary` 只用于浏览器定位，不属于 Hypertext Transfer Protocol（超文本传输协议，HTTP）请求。用户点 **Oldest first** 后，地址应新增 `sort=oldest` 历史项，加载结果后行序为 April、May；按 Back 则回到 `sort=recent` 和 May、April。路由把地址、数据请求和界面更新连在一起，不能只把 URL 当作组件选择器。
 
@@ -7848,7 +8114,7 @@ React Router v8.5.1 的 `useParams`、`Link` 和路由对象 API 承接归档 v6
 > - 路由错误边界、最近边界和 404 响应：[Error Boundaries](https://reactrouter.com/how-to/error-boundary)，React Router v8.5.1，核验日期 2026-11-06。
 > - React 子组件同步错误由边界兜底、事件处理和异步回调不在该范围：[React Component — Catching rendering errors with an Error Boundary](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)，核验日期 2026-11-06。
 > - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；React Router 8.5.1 核对 PUSH/POP 等待期的地址与列表、502 错误提交与重试；相关浏览器排序用例通过。接口为本地合成测试服务。
-## 59. Next.js 如何把文件路由、服务端数据与客户端交互连接起来？
+## 60. Next.js 如何把文件路由、服务端数据与客户端交互连接起来？
 
 **案例背景。** 报表页打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端取得 May、April；用户点 **Oldest first** 后，URL 进入 `sort=oldest`，页面显示 April、May，再按 Back 恢复 recent 顺序。`#summary` 是浏览器片段，不会发给服务端。这条主流程假设搜索框为空；若用户已输入查询，客户端本地 query 可以在排序导航和 Back 后继续保留，当前列表仍会被它过滤。本文按当前 Next.js 16.4.5 App Router（应用路由器）讲清：文件怎样选中页面、服务器怎样读 URL 并取数、客户端代码从哪里开始，以及加载和错误如何沿路由边界显示。
 
@@ -8111,7 +8377,7 @@ App Router 的客户端导航优先用 `next/link`；需要在客户端代码中
 > - Pages Router 按请求读取、静态生成与 ISR：[getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props)、[getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths)、[Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration)。
 > - App Router 路由端点的方法导出与响应：[Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route)。
 > - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；Next.js 16.4.5 生产构建核对排序、Back 的 RSC 复用、本地搜索保留及摘要失败后的 retry。上游为本地合成测试服务。
-## 60. Lodash 何时适合处理报表列表，哪些方法会修改输入？
+## 61. Lodash 何时适合处理报表列表，哪些方法会修改输入？
 
 **案例背景。** 用户在 `/reports?sort=recent#summary` 看到 May、April 两份报表。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回 May、April；点击 **Oldest first** 后，地址的 `sort` 变为 `oldest`，服务端返回 April、May；按 Back 回到 recent 和 May、April。地址和请求属于路由层；Lodash 只转换已经交给它的数据，不拥有排序状态，也不会替代服务端查询。
 
@@ -8275,7 +8541,7 @@ Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适�
 > - 当前稳定版本及 4.18.1 发布记录：[Lodash Releases](https://github.com/lodash/lodash/releases)，2026-04-01。
 > - 排序、深合并、数组按索引合并、对象路径、字符串、集合和计时方法：[Lodash 4.18.1 API 文档](https://github.com/lodash/lodash/blob/4.18.1/doc/README.md)。
 > - 原生数组展平与空值运算符：[Array.prototype.flat](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat)、[Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing)，核验日期 2026-11-06。
-## 61. ahooks 怎样管理报表请求、分页与列表身份？
+## 62. ahooks 怎样管理报表请求、分页与列表身份？
 
 **案例背景。** 报表从 `/reports?sort=recent#summary` 打开时显示 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 是排序和历史状态的来源；用户选 **Oldest first** 后，路由把 `sort=oldest` 传给报表请求，列表变成 April、May；按 Back 时 recent 再次成为请求输入。ahooks 管组件中的请求状态、分页或可编辑列表，不应另存一份竞争的 sort。
 
@@ -8488,7 +8754,7 @@ ahooks v3.11.0 文档把 `useDynamicList.getKey(index)` 描述为可保持列表
 | `useDebounceFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading false、trailing true。 |
 | `useThrottleFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading / trailing true。 |
 
-debounce 的 `cancel` 只取消尚未执行的函数调用；请求已经开始后，必须另行管理网络取消。排序点击应立即发起导航，地址与列表的提交时点由路由决定；输入搜索适合等待停顿后再查。更多 React Hook 生命周期见[React 组件如何组合状态与行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8React%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)，服务端查询与乐观更新见[React界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+debounce 的 `cancel` 只取消尚未执行的函数调用；请求已经开始后，必须另行管理网络取消。排序点击应立即发起导航，地址与列表的提交时点由路由决定；输入搜索适合等待停顿后再查。更多 React Hook 生命周期见[React 组件如何组合状态与行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)，服务端查询与乐观更新见[React界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（ahooks v3.11.0；2026-11-06）
 > - 当前稳定版本和 v3.11.0 的分页、取消、空页、动态列表假值修复：[ahooks v3.11.0 release](https://github.com/alibaba/hooks/releases/tag/v3.11.0)，2026-10-27。
@@ -8500,7 +8766,7 @@ debounce 的 `cancel` 只取消尚未执行的函数调用；请求已经开始�
 > - 当前虚拟列表结果形状与行高函数：[useVirtualList](https://ahooks.js.org/hooks/use-virtual-list/)、[v3.11.0 implementation](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useVirtualList/index.ts)；v2.6.0 旧结果形状：[v2.6.0 source](https://github.com/alibaba/hooks/blob/v2.6.0/packages/hooks/src/useVirtualList/index.ts)。
 > - debounce / throttle 返回值与默认选项：[useDebounce](https://ahooks.js.org/hooks/use-debounce/)、[useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn/)、[useThrottle](https://ahooks.js.org/hooks/use-throttle/)、[useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn/)。
 > - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；ahooks 3.11.0 核对请求代次、分页重置、手动游标追加、草稿会话和取消；短首屏自动加载与按钮并用可重复请求同一游标，主例因此只保留按钮触发。
-## 62. 前端测试怎样证明报表排序、历史恢复和发布产物正确？
+## 63. 前端测试怎样证明报表排序、历史恢复和发布产物正确？
 
 **案例背景。** 用户打开 `/reports?sort=recent#summary`，看到 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回该顺序；点击 **Oldest first** 后，地址变成 `sort=oldest`，列表为 April、May；按 Back 则回到 recent 和 May、April。测试要验证用户看到的结果、真实地址历史和请求边界；点击事件触发过或内部状态等于某值，都不足以证明整条流程可用。
 
@@ -8526,7 +8792,7 @@ flowchart LR
 
 React Testing Library 的查询名称表达等待契约：`getByRole` 表示元素现在应存在且唯一；`queryByRole` 适合断言它不存在；`findByRole` 返回 Promise 并等待元素出现。优先使用角色和可访问名称，避免检查组件内部状态、CSS class 或 hook 调用次数。
 
-组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock 与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](#63.%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E7%8A%B6%E6%80%81%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock 与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](#64.%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E7%8A%B6%E6%80%81%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
 
 React Testing Library 16.3.3 也从 `@testing-library/react` 导出 `renderHook`，可单独验证有复用价值的 Hook 契约；只被一个组件使用的 Hook 通常直接测那个组件更能表达用户行为。Testing Library 的 render 和 user-event helper 已处理一般交互的 React `act` 边界；测试从 helper 外部直接触发更新时，再显式包在 `act` 中。快照适合记录稳定的小结构，较大的快照本身说不清用户需要看到什么，排序和错误行为仍应使用有含义的断言。
 
@@ -8602,9 +8868,9 @@ typecheck -> unit/component tests -> production build
 > - Playwright 当前包版本：[npm package](https://www.npmjs.com/package/@playwright/test)，1.65.0；浏览器端断言与拦截请求：[Assertions](https://playwright.dev/docs/test-assertions)、[Page route](https://playwright.dev/docs/api/class-page#page-route)，核验日期 2026-11-06。
 > - 测试产物服务器配置：[Playwright webServer](https://playwright.dev/docs/test-webserver)。
 > - `vite preview` 用于本地预览构建产物，不是生产服务器：[Vite CLI](https://vite.dev/guide/cli.html#vite-preview)、[Static deployment](https://vite.dev/guide/static-deploy.html)，按 Vite v8.3.5 官方文档核验于 2026-11-06。
-## 63. Jest 怎样验证报表请求中的异步状态和结果？
+## 64. Jest 怎样验证报表请求中的异步状态和结果？
 
-**案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](#62.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F)。
+**案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](#63.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F)。
 
 ### 测试必须等待承载断言的异步工作
 

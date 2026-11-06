@@ -1,12 +1,12 @@
-# How are the TypeScript API references organized? / TypeScript API 参考如何组织？
+# TypeScript API 参考索引
 
-The former all-in-one file repeated the six topic notes below. Keep their examples and details in those individual references; this page is the navigation entry. TypeScript supplies compile-time types while runtime behavior comes from JavaScript. / 原综合文件重复了下面六份主题笔记。示例和细节以各自独立参考页为准；本页仅作导航。TypeScript 提供编译期类型，运行时行为仍由 JavaScript 决定。
+原综合文件重复了下面六份主题参考。示例和细节以各自页面为准；TypeScript 提供编译期类型，运行时行为仍由 JavaScript 决定。
 
-- [How do you use arrays safely in TypeScript? / 如何在 TypeScript 中安全地使用数组？](array.md) — array declarations, sparse arrays, common APIs, traversal, mapping, and stack usage.
-- [How do closures preserve state in JavaScript? / JavaScript 闭包如何保留状态？](closure.md) — lexical state, counters, partial application, and asynchronous animation.
-- [How do you choose and use a JavaScript `Map`? / 如何选择并使用 JavaScript `Map`？](map.md) — keys, insertion order, lookup, iteration, and typed maps.
-- [Which built-in `Math` methods cover common numeric tasks? / 哪些内置 `Math` 方法适合常见数值任务？](math.md) — rounding, extrema, random values, and trigonometry.
-- [What do Promise types guarantee in TypeScript? / TypeScript 中 Promise 类型能保证什么？](promise.md) — construction, chaining, rejection, combinators, and host timers.
-- [How should you choose JavaScript string operations? / 如何选择 JavaScript 字符串操作？](string.md) — methods, UTF-16 indexing, locale casing, and code-point iteration.
+- [TypeScript 数组怎样从类型声明走到运行时遍历与变换？](array.md) — 声明、遍历、映射、筛选与栈操作。
+- [JavaScript 闭包主题迁移](closure.md) — 词法状态、计数器、偏函数与异步动画。
+- [Map 怎样维护键身份、存在性和插入顺序？](map.md) — 键身份、插入顺序、查找与带类型的集合。
+- [JavaScript 的 Math 怎样处理舍入、范围和数值变换？](math.md) — 舍入、极值、随机值与三角函数。
+- [TypeScript 的 Promise 类型能保证什么？](promise.md) — 创建、链式组合、拒绝、组合器与宿主定时器。
+- [字符串处理怎样从位置索引走到用户看见的文字？](string.md) — 方法、UTF-16 索引、本地化大小写转换与码点迭代。
 
-For the language's broader type system, see [Advanced TypeScript / TypeScript进阶](../../../../frontend/typescript/advanced-typescript.md). The exercise collection remains in [`leetcode30days/`](leetcode30days/).
+TypeScript 的完整类型系统见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../../../../frontend/typescript/advanced-typescript.md)。练习集合仍保留在 [`leetcode30days/`](leetcode30days/) 目录。

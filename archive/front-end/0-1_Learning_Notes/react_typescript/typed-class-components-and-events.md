@@ -1,294 +1,39 @@
-# How do typed class components model state and events? / 带类型的类组件如何表达 state 与事件？
+# TypeScript 怎样为 React 类组件的 state 与事件定型？
 
-A class component declares `Props` and `State` as generic parameters and updates state through `setState`, including an updater when the next value depends on the previous one. The examples are retained for legacy code and teaching. / 类组件通过 `Props` 和 `State` 泛型声明输入与内部状态，并通过 `setState` 更新；下一状态依赖前一状态时使用 updater。以下示例为旧代码维护和教学保留。
+React 仍支持类组件，但新代码通常选择函数组件与 Hooks。本页保留旧项目维护会遇到的 Props/State 泛型、setState updater 和类方法 this 绑定示例；类组件当前生命周期与函数组件 Effect 的关系见[React 更新轮次](../../../../frontend/frameworks/react-basics.md)。
 
-## Class in TypeScript / TypeScript中的类组件
+~~~tsx
+import { Component, type MouseEvent } from "react";
 
-In TypeScript, `React.Component` is a generic type that can take up to three parameters: `Props`, `State`, and an optional `Snapshot`. Using TypeScript with React ensures type safety, which helps catch errors during development.
+type Props = { initialCount: number };
+type State = { count: number };
 
-### Example:
+export class Counter extends Component<Props, State> {
+  state: State = { count: this.props.initialCount };
 
-```tsx
-import React from "react";
-import styles from "./ShoppingCart.module.css";
+  handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    // currentTarget 是绑定处理器的 button；target 可能是里面被点到的 span。
+    const button = event.currentTarget;
+    button.dataset.clicked = "true";
 
-interface Props {}
-
-interface State {
-  isHidden: boolean; // This is an attribute we defined, true when the cart is hidden
-}
-
-export default class ShoppingCart extends React.Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      isHidden: false,
-    };
-  }
-
-  render() {
-    return (
-      <div className={styles.cartContainer}>
-        <button
-          className={styles.button}
-          onClick={() => {
-            this.setState({ isHidden: !this.state.isHidden });
-          }}
-        >
-          Cart (2)
-        </button>
-        <div
-          className={styles.cartDropDown}
-          style={{ display: this.state.isHidden ? "none" : "block" }}
-        >
-          <ul>
-            <li>robot 1</li>
-            <li>robot 2</li>
-          </ul>
-        </div>
-      </div>
-    );
-  }
-}
-```
-
-To use this component in `app.tsx`:
-
-```tsx
-import React from "react";
-import ShoppingCart from "./ShoppingCart";
-
-const App = () => (
-  <div>
-    <h1>Welcome to the Robot Store</h1>
-    <ShoppingCart />
-  </div>
-);
-
-export default App;
-```
-
-## State vs. Props in a Class Component / 类组件中的State与Props
-
-### Props
-- **Definition**: Props (short for properties) are read-only attributes that are passed to components by their parent component.
-- **Usage**: Used for passing data and event handlers down the component tree.
-- **Read-only input**: A child should not mutate its props; the parent supplies new values through the next render.
-
-### State
-- **Definition**: State is a built-in object that holds data that may change over the component's lifecycle.
-- **Usage**: Used for managing internal component data that can change over time.
-- **Updates**: Treat state as read-only and use `setState()` to provide a replacement or an updater function.
-- **Initialization**: State is typically initialized in the constructor.
-
-### Key Differences
-- **Source**: Props are passed from parent to child, whereas state is managed within the component.
-- **Update path**: A child treats props as read-only; state changes go through `setState()` rather than direct mutation.
-
-### Example:
-
-```tsx
-interface ParentProps {
-  initialCount: number;
-}
-
-interface ParentState {
-  count: number;
-}
-
-class ParentComponent extends React.Component<ParentProps, ParentState> {
-  constructor(props: ParentProps) {
-    super(props);
-    this.state = {
-      count: props.initialCount,
-    };
-  }
-
-  render() {
-    return (
-      <div>
-        <ChildComponent count={this.state.count} />
-        <button
-          onClick={() => this.setState({ count: this.state.count + 1 })}
-        >
-          Increment
-        </button>
-      </div>
-    );
-  }
-}
-
-interface ChildProps {
-  count: number;
-}
-
-const ChildComponent: React.FC<ChildProps> = ({ count }) => (
-  <div>Count: {count}</div>
-);
-```
-
-## Updates Based on Previous Class State / 基于前一次类组件State更新
-
-`setState()` queues an update; do not read `this.state` immediately after calling it and expect the new value. When the next value depends on the previous one, use the updater form, which receives the previous state and props.
-
-### Syntax:
-
-```tsx
-this.setState(
-  (prevState, prevProps) => {
-    // Return the new state object
-    return { ... };
-  },
-  () => {
-    // Callback function executed after state update
-    console.log(`State updated: ${this.state.someValue}`);
-  }
-);
-```
-
-### Example:
-
-```tsx
-interface State {
-  count: number;
-}
-
-class Counter extends React.Component<{}, State> {
-  constructor(props: {}) {
-    super(props);
-    this.state = {
-      count: 0,
-    };
-  }
-
-  increment = () => {
     this.setState(
-      (prevState) => ({ count: prevState.count + 1 }),
-      () => {
-        console.log(`Count is now: ${this.state.count}`);
-      }
+      previous => ({ count: previous.count + 1 }),
+      () => console.log("已提交的计数：", this.state.count)
     );
   };
 
   render() {
     return (
-      <div>
-        <p>Count: {this.state.count}</p>
-        <button onClick={this.increment}>Increment</button>
-      </div>
+      <button type="button" onClick={this.handleClick}>
+        <span>已点击 {this.state.count} 次</span>
+      </button>
     );
   }
 }
-```
+~~~
 
-### Explanation:
-- **Updater Function**: The first argument to `setState()` is a function that receives `prevState` and `prevProps`.
-- **Callback**: The second argument runs after the update has been committed.
+类方法若以普通实例方法传给事件处理器，调用时可能失去实例接收者；类字段箭头函数捕获实例 this。setState updater 接收排队处理时的前一份 state，不能在 setter 后立刻读 this.state 并期待它已改变；第二个回调在更新提交后运行。React 合并类 state 顶层字段的方式也不同于 useState 的整体替换，维护旧代码时不要直接混用两个更新模型。
 
-Using this pattern ensures that state updates are based on the most recent state, avoiding potential synchronization issues.
-## Event Handling / 事件处理
-
-## The "this" Pointing Problem
-
-In a class component, an unbound instance method loses its receiver when React calls it as an event handler. In strict mode, `this` is `undefined`; it does not refer to the class instance.
-
-### Incorrect Usage
-
-The following method is not bound, so `this.setState` fails when the button calls it:
-
-```tsx
-class MyComponent extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { ishidden: false };
-  }
-
-  handleClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-    // Error: 'this' is undefined
-    this.setState({ ishidden: !this.state.ishidden });
-  }
-
-  render() {
-    return <button onClick={this.handleClick}>Click me</button>;
-  }
-}
-```
-
-### Correct Usage
-
-To avoid this issue, we can use an arrow function, which binds `this` lexically, meaning `this` inside the arrow function will refer to the class instance:
-
-```tsx
-class MyComponent extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { ishidden: false };
-  }
-
-  handleClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    this.setState({ ishidden: !this.state.ishidden });
-  }
-
-  render() {
-    return <button onClick={this.handleClick}>Click me</button>;
-  }
-}
-```
-
-In modern React development, it's recommended to use functional components with hooks whenever possible, as they provide a more concise and readable way to handle state and side effects.
-
-### Using Functional Components with Hooks
-
-```tsx
-import React, { useState } from 'react';
-
-const MyComponent = () => {
-  const [isHidden, setIsHidden] = useState(false);
-
-  const handleClick = () => {
-    setIsHidden(previous => !previous);
-  };
-
-  return <button onClick={handleClick}>Click me</button>;
-};
-```
-
-## `e.target` and `e.currentTarget` / 事件目标与监听元素
-
-When handling events, it's important to distinguish between `e.target` and `e.currentTarget`:
-
-- `e.target` refers to the element on which the event originally occurred. This is the deepest element that triggered the event.
-- `e.currentTarget` refers to the element that has the event listener attached. This is useful when you have nested elements and you want to ensure that the handler is reacting to the correct element.
-
-### Example
-
-Consider a button element that contains a span element with text:
-
-```tsx
-const MyComponent = () => {
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    console.log("e.target:", e.target);
-    console.log("e.currentTarget:", e.currentTarget);
-
-    if ((e.target as HTMLElement).nodeName === "SPAN") {
-      // Do something if the span was clicked
-      console.log("Span was clicked");
-    }
-  };
-
-  return (
-    <button onClick={handleClick}>
-      <span>Click me</span>
-    </button>
-  );
-};
-```
-
-When the span is clicked:
-
-- `e.target` will be the `span` element.
-- `e.currentTarget` will be the `button` element.
-
-This allows you to differentiate the element that triggered the event from the element that is handling the event.
-
-**See also / 另见：** [React Basics / React基础](../../../../frontend/frameworks/react-basics.md) for current state and lifecycle semantics.
+> [!info]- 来源
+> - Component Props、State、setState 与类生命周期：[React Component](https://react.dev/reference/react/Component)，React 19.3 文档，核对日期：2026-11-06。
+> - React 鼠标事件类型与 DOM currentTarget：[React TypeScript Cheatsheet — Events](https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/forms_and_events/)，React 类型维护者社区参考，核对日期：2026-11-06。

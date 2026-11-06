@@ -10,4 +10,4 @@
 - [两笔事务同时升级锁时为何会互等，隔离级别又保证什么？](condensed-note-w3-locks-and-isolation-levels.md)
 - [乐观验证、快照隔离与时间戳排序怎样处理并发冲突？](condensed-note-w3-optimistic-snapshot-and-timestamp-concurrency.md)
 
-这些机制也用于解释[库存事务的隔离与恢复](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)和[进程、线程之间的协调](../../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md)。
+这些机制也用于解释[事务隔离与预写日志能保证什么？](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)和[何时选线程、进程或异步 I/O？](../../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md)。

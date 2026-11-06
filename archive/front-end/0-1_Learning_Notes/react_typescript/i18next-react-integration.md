@@ -1,232 +1,58 @@
-# How can i18next provide language selection in React? / i18next 如何在 React 中提供语言选择？
+# i18next 怎样为 React 提供语言切换？
 
-Initialize i18next with locale resources and the React binding, then use `useTranslation` or the legacy translation HOC in components. When Redux also stores the selected language, keep the reducer pure and coordinate the external language change in the event handler. / 使用语言资源初始化 i18next 和 React 绑定，再在组件中使用 `useTranslation` 或旧式翻译 HOC。若 Redux 也保存当前语言，reducer 应保持纯函数，并在事件处理器中协调外部语言切换。
+i18next 保存语言资源与翻译规则，react-i18next 把翻译函数接到 React 组件。当前函数组件可用 useTranslation 读取 t 与 i18n；切换语言调用 changeLanguage。语言资源的实际加载方式由配置的 backend 和 namespace 决定。
 
-## Internationalization with i18next / 使用i18next实现国际化
+在应用入口先导入 `./i18n`，让实例在渲染 React 树前初始化一次；不要在组件 render 中反复初始化：
 
-This guide shows a basic i18next configuration and its React bindings from `react-i18next`.
-
-## Installation
-
-To install i18Next and its React integration, run the following command in your terminal:
-
-```bash
-npm install react-i18next i18next --save
-```
-
-## Configuration
-
-### Step 1: Create a Configuration File
-
-1. Create a `configs.ts` (or `configs.js` for JavaScript) file in your project directory.
-
-2. Import the necessary modules:
-
-```tsx
+~~~typescript
+// i18n.ts
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-```
 
-### Step 2: Create Language JSON Files
-
-1. Create language JSON files (e.g., `en.json` for English, `zh.json` for Chinese) in your project directory. These files will contain your translations.
-
-### Step 3: Import Language JSON Files
-
-1. Import the language JSON files into `configs.ts`:
-
-```tsx
-import translation_en from "./locales/en.json";
-import translation_zh from "./locales/zh.json";
-```
-
-### Step 4: Set Up i18Next Configuration
-
-1. Set up your i18Next configuration:
-
-```tsx
-const resources = {
-  en: {
-    translation: translation_en,
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: { title: "Reports", oldest: "Oldest first" } },
+    zh: { translation: { title: "报表", oldest: "最早优先" } },
   },
-  zh: {
-    translation: translation_zh,
+  lng: "en",
+  fallbackLng: "en",
+  interpolation: {
+    // React 把翻译文本作为文本节点输出；这不允许把不可信 HTML 交给危险 HTML API。
+    escapeValue: false,
   },
-};
-
-i18n
-  .use(initReactI18next)
-  .init({
-    resources,
-    lng: "en",
-    fallbackLng: "en", // Fallback language if the current language translation is not available
-    interpolation: {
-        escapeValue: false, // React escapes text output; this does not make HTML injection safe.
-    },
-  });
+});
 
 export default i18n;
-```
+~~~
 
-## Usage in React Components
+组件只展示语言切换和翻译。语言选项属于本例的界面设置；当用户选择中文时，翻译函数读取中文资源，切回 English 后又使用英文资源。
 
-### Class Components
-
-1. Import the `withTranslation` higher-order component (HOC) and `WithTranslation` type from `react-i18next`:
-
-```tsx
-import { withTranslation, WithTranslation } from "react-i18next";
-```
-
-2. Add `WithTranslation` to your component's props type:
-
-```tsx
-class HeaderComponent extends React.Component<RouteComponentProps & WithTranslation, State> {
-  ...
-}
-```
-
-3. In your component's render function, extract the `t` function from the props. This function is used to translate your text:
-
-```tsx
-render() {
-  const { t } = this.props;
-  return (
-    <div>
-      <Typography.Text>{t("header.slogan")}</Typography.Text>
-      <Dropdown.Button>
-        {this.state.language === "en" ? "English" : "中文"}
-      </Dropdown.Button>
-    </div>
-  );
-}
-```
-
-4. Wrap your component with the `withTranslation` HOC when exporting:
-
-```tsx
-export const Header = withTranslation()(withRouter(HeaderComponent));
-```
-
-### Functional Components
-
-1. In functional components, you can use the `useTranslation` hook instead of the `withTranslation` HOC:
-
-```tsx
+~~~tsx
 import { useTranslation } from "react-i18next";
 
-export const Footer: React.FC = () => {
-  const { t } = useTranslation();
-  return (
-    <Layout.Footer>
-      <Typography.Title level={3} style={{ textAlign: "center" }}>
-        {t("footer.detail")}
-      </Typography.Title>
-    </Layout.Footer>
-  );
-};
-```
+export function ReportHeader() {
+  const { t, i18n, ready } = useTranslation("translation", { useSuspense: false });
 
-## Redux Integration
-
-To ensure strong typing for your Redux actions, you can use action creators. Here's an example of how to do this for language-related actions:
-
-### Action Creators
-
-1. Define action types and creators:
-
-```tsx
-export const CHANGE_LANGUAGE = "change_language";
-
-interface ChangeLanguageAction {
-  type: typeof CHANGE_LANGUAGE;
-  payload: "zh" | "en";
-}
-
-export type LanguageActionTypes = ChangeLanguageAction;
-
-export const changeLanguageActionCreator = (
-  languageCode: "zh" | "en"
-): ChangeLanguageAction => ({
-  type: CHANGE_LANGUAGE,
-  payload: languageCode,
-});
-```
-
-### Reducers
-
-1. In your reducer, handle different actions by setting the action type to `LanguageActionTypes`:
-
-```tsx
-import { CHANGE_LANGUAGE, LanguageActionTypes } from "./languageActions";
-
-export interface LanguageState {
-  language: "en" | "zh";
-  languageList: { name: string; code: string }[];
-}
-
-const defaultState: LanguageState = {
-  language: "en",
-  languageList: [
-    { name: "中文", code: "zh" },
-    { name: "English", code: "en" },
-  ],
-};
-
-export default (state = defaultState, action: LanguageActionTypes): LanguageState => {
-  switch (action.type) {
-    case CHANGE_LANGUAGE:
-      return { ...state, language: action.payload };
-    default:
-      return state;
-  }
-};
-```
-
-### Usage in Components
-
-1. Change the i18next language in the event handler, then dispatch the plain action. Keep the reducer pure; it only updates Redux state ([Redux reducer rules](https://redux.js.org/style-guide/#reducers-must-not-have-side-effects)):
-
-```typescript
-import i18n from "./configs";
-
-const menuClickHandler = async (e: any) => {
-  const languageCode = e.key as "zh" | "en";
-  await i18n.changeLanguage(languageCode);
-  store.dispatch(changeLanguageActionCreator(languageCode));
-};
-```
-
-### Example Component
-
-1. Here is how you might integrate everything in a sample component:
-
-```tsx
-import React from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { Menu } from "antd";
-import { changeLanguageActionCreator } from "./languageActions";
-import i18n from "./configs";
-
-const LanguageSwitcher: React.FC = () => {
-  const dispatch = useDispatch();
-  const language = useSelector((state: any) => state.language);
-
-  const handleMenuClick = async (e: any) => {
-    const languageCode = e.key as "zh" | "en";
-    await i18n.changeLanguage(languageCode);
-    dispatch(changeLanguageActionCreator(languageCode));
-  };
+  if (!ready) return <p role="status">正在加载语言资源…</p>;
 
   return (
-    <Menu onClick={handleMenuClick} selectedKeys={[language]}>
-      <Menu.Item key="en">English</Menu.Item>
-      <Menu.Item key="zh">中文</Menu.Item>
-    </Menu>
+    <header>
+      <h1>{t("title")}</h1>
+      <button type="button" onClick={() => void i18n.changeLanguage("en")}>English</button>
+      <button type="button" onClick={() => void i18n.changeLanguage("zh")}>中文</button>
+    </header>
   );
-};
+}
+~~~
 
-export default LanguageSwitcher;
-```
+默认情况下，useTranslation 在所需 namespace 尚未就绪时可触发 Suspense；示例以 `useSuspense: false` 显式关闭它，才由组件读取 `ready` 显示加载状态。若开启 Suspense，应在组件外提供匹配的边界。使用 backend 动态加载资源时，应通过加载事件处理资源失败；不要假定 `changeLanguage` 的 Promise 拒绝就能表示加载失败。长页面的导航排序仍属于 URL：不要让语言切换意外改写 sort 或浏览器历史。
 
-**References checked 2026-10-15:** [i18next interpolation](https://www.i18next.com/translation-function/interpolation), [Redux reducer rules](https://redux.js.org/style-guide/#reducers-must-not-have-side-effects).
+旧课程把语言代码同时写入 Redux，再调用 i18n.changeLanguage。若业务确实需要两个系统都读取语言代码，应把外部语言切换放在事件处理器或 thunk 中，并明确失败时的协调策略；reducer 只应计算下一个 Redux state。通常由 i18next 持有当前语言即可，避免两份可独立修改的值彼此不同步。Redux 的 action、reducer 与异步工作流见[共享界面状态章节](../../../../frontend/frameworks/redux-state-and-async-workflows.md)。
+
+类组件项目仍可维护 withTranslation 高阶组件；新函数组件优先用 Hook。React Router v5 的 withRouter 等旧组合不应拼入当前路由代码，参见[React 路由章节](../../../../frontend/frameworks/react-routing-and-navigation.md)。
+
+> [!info]- 来源
+> - 初始化 React 绑定与插值：[i18next React Integration](https://react.i18next.com/latest/using-with-hooks)、[i18next Interpolation](https://www.i18next.com/translation-function/interpolation)，i18next 26.7.2、react-i18next 17.1.13 官方文档，核对日期：2026-11-06。
+> - useTranslation、ready、Suspense 与 changeLanguage：[react-i18next useTranslation](https://react.i18next.com/latest/usetranslation-hook)，官方文档，核对日期：2026-11-06。
+> - 资源加载错误回调与 `failedLoading` 事件：[i18next API — changeLanguage and Events](https://www.i18next.com/overview/api)，i18next 26.7.2 官方文档，核对日期：2026-11-06。
+> - reducer 不应执行副作用：[Redux Style Guide — Reducers Must Not Have Side Effects](https://redux.js.org/style-guide/#reducers-must-not-have-side-effects)，Redux 官方指南，核对日期：2026-11-06。

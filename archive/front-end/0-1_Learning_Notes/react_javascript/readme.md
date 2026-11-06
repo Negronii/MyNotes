@@ -1,12 +1,12 @@
-# Which examples remain in the archived React JavaScript course? / 归档的 React JavaScript 课程保留了哪些示例？
+# React JavaScript 课程示例入口
 
-Use the current React notes for component, render, and state semantics. The course examples below cover mounting a root, passing state, controlled forms, Effects, and local storage. / 组件、渲染和 state 语义见当前 React 笔记。下方保留课程里的根节点挂载、状态传递、受控表单、Effect 与本地存储示例。
+当前 React 笔记说明组件、渲染和状态语义；以下课程示例保留根节点挂载、状态传递、受控表单、Effect 与本地存储的具体写法。
 
-- [React render and commit / React 渲染与提交](../../../../frontend/frameworks/react-basics.md)
-- [React component composition and Hooks / React 组件组合与 Hook](../../../../frontend/frameworks/react-component-composition.md)
-- [Mounting a React root in an existing CRA project / 在现有 CRA 项目中挂载 React 根节点](react-root-in-a-cra-project.md)
-- [React 18 PropTypes and the React 19 change / React 18 的 PropTypes 与 React 19 的变化](react-proptypes-react-19-history.md)
-- [State and component communication examples / State 与组件通信示例](state-and-component-communication-examples.md)
-- [Controlled form example / 受控表单示例](forms-and-inputs-example.md)
-- [Effects and request examples / Effect 与请求示例](effects-and-request-examples.md)
-- [Local storage example / LocalStorage 示例](local-storage-example.md)
+- [React如何把一次用户操作变成界面更新？](../../../../frontend/frameworks/react-basics.md)
+- [如何在 React 中组合组件与复用行为？](../../../../frontend/frameworks/react-component-composition.md)
+- [现有 Create React App 项目怎样挂载 React 根节点？](react-root-in-a-cra-project.md)
+- [React 19 移除 PropTypes 后，旧组件怎样维护？](react-proptypes-react-19-history.md)
+- [React 本地状态的对象和数组怎样按身份更新？](state-and-component-communication-examples.md)
+- [React 受控表单怎样把输入写回组件状态？](forms-and-inputs-example.md)
+- [React Effect 如何清理请求与浏览器订阅？](effects-and-request-examples.md)
+- [React 组件怎样读写少量浏览器偏好？](local-storage-example.md)

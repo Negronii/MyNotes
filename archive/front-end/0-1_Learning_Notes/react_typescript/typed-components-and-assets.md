@@ -1,165 +1,50 @@
-# How do you type React components and imported assets? / 如何为 React 组件和导入资源添加类型？
+# TypeScript 怎样描述 React props 与样式模块？
 
-TypeScript checks declared component props and module shapes during type checking, but a type declaration does not validate runtime data. This archived reference retains the course setup, component props, CSS-module declaration, and asset examples. / TypeScript 在类型检查时校验组件 props 和模块形状，但类型声明不会验证运行时数据。本归档参考保留课程配置、组件 props、CSS Module 声明和资源示例。
+组件 props 是调用方必须满足的编译期接口。React 组件若接受 children，应把它明确写入 props；当前 React 类型中的 FunctionComponent 不会自动把 children 添加到接口。
 
-## TypeScript Configuration / TypeScript配置
+~~~tsx
+import type { ReactNode } from "react";
 
-`noImplicitAny` controls whether TypeScript reports values that would otherwise receive an inferred `any`; it does not prohibit explicit `any`. Setting it to `true`, as below, catches missing annotations. See the TypeScript [`noImplicitAny` option](https://www.typescriptlang.org/tsconfig/#noImplicitAny).
-
-```json
-{
-  "compilerOptions": {
-    "noImplicitAny": true
-  }
-}
-```
-
-Prefer a specific type or `unknown` over `any`; narrow `unknown` before using its value.
-
-## Creating a Component in TypeScript / 使用TypeScript定义组件
-
-Here's an example of a React component written in TypeScript:
-
-```tsx
-import React from "react";
-
-interface RobotProps {
+type RobotProps = {
   id: number;
   name: string;
-  email: string;
-}
-
-const Robot: React.FC<RobotProps> = ({ id, name, email }) => {
-  return (
-    <li>
-      <img alt="robot" src={`https://robohash.org/${id}`} />
-      <h2>{name}</h2>
-      <p>{email}</p>
-    </li>
-  );
+  children?: ReactNode;
 };
 
-export default Robot;
-```
-
-### Key Points:
-
-- `React.FC` is a component type that checks the declared props. With current React type definitions, it does not add a `children` prop implicitly; declare children explicitly when part of the component API ([React types](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts)).
-- Defining the props type (e.g., `RobotProps`) lets TypeScript check component calls.
-
-## Using the Component in App.tsx
-
-Here's how to use the `Robot` component in your main `App` component:
-
-```tsx
-import React from "react";
-import robots from "./mockData/robots.json";
-import Robot from "./components/Robot";
-
-export default function App() {
+export function Robot({ id, name, children }: RobotProps) {
   return (
-    <ul>
-      {robots.map((r) => (
-        <Robot key={r.id} id={r.id} email={r.email} name={r.name} />
-      ))}
-    </ul>
+    <article className="robot">
+      <img alt="" src={"https://robohash.org/" + id} />
+      <h2>{name}</h2>
+      {children}
+    </article>
   );
 }
-```
+~~~
 
-### Key Points:
+CSS Module（CSS 模块）文件的导入同时需要构建工具处理样式，并需要 TypeScript 知道默认导出的类名映射形状。旧课程常用一个环境声明：
 
-- Use the `.map()` function to render a list of components.
-- Always provide a `key` prop when rendering lists in React to ensure efficient updates.
+~~~typescript
+// custom.d.ts
+declare module "*.module.css" {
+  const classes: Readonly<Record<string, string>>;
+  export default classes;
+}
+~~~
 
-## CSS in TypeScript / TypeScript中的CSS
+~~~tsx
+import styles from "./Robot.module.css";
 
-When using CSS modules with TypeScript, follow this approach:
+export function RobotCard() {
+  return <article className={styles.robotCard}>报表机器人</article>;
+}
+~~~
 
-1. **File Naming Convention:**
+这个声明只告诉编译器“模块导出一组字符串类名”；它不生成 CSS、不保证类名确实存在，也不决定打包器如何处理文件。图片、字体和 SVG 的静态导入同样依赖项目的 bundler（打包器）及其资源规则；需要检查构建产物的路径和输出行为时，见[构建工具怎样把源码变成可发布产物？](../../../../frontend/tooling/build-tools.md)。
 
-   Name your CSS files as `<component>.module.css`, ensuring that styles are scoped to the component.
+使用 noImplicitAny 可让 TypeScript 报告缺少注解而被推断为 any 的值，但它不会禁止显式 any。数据来自 API 或 JSON 时，props 类型也不会替代运行时解析，见[TypeScript 如何处理不可信 JSON？](../../../../frontend/typescript/advanced-typescript.md)。
 
-2. **Importing CSS Modules:**
-
-   Instead of importing CSS directly, import it as a module to avoid global style conflicts:
-
-   ```tsx
-   import styles from "./<component>.module.css";
-   ```
-
-3. **Declaring CSS Modules for TypeScript:**
-
-   Create a file called `custom.d.ts` to declare CSS modules for TypeScript:
-
-   ```tsx
-   declare module "*.module.css" {
-     const styles: { [className: string]: string };
-     export default styles;
-   }
-   ```
-
-4. **Using CSS Modules:**
-
-   Apply CSS classes in JSX as follows:
-
-   ```tsx
-   <div className={styles.app}>
-   ```
-
-   For class names with hyphens, use:
-
-   ```tsx
-   <div className={styles['app-style']}>
-   ```
-
-## Project Structure and Media Import
-
-### Recommended Project Structure:
-
-- **assets/**: Directory for media files.
-  - **images/**: Directory for images.
-  - **fonts/**: Directory for fonts.
-  - **icons/**: Directory for icons.
-
-### Importing Media:
-
-#### Importing Images:
-
-To import an image:
-
-```tsx
-import logo from "./assets/images/logo.svg";
-```
-
-React does not load image files. Whether an image import works depends on the bundler and its TypeScript declarations; public assets can instead be referenced by URL.
-
-#### Importing Fonts:
-
-1. **Add Font Files:**
-
-   Place the font file in the `assets/fonts` directory.
-
-2. **Declare Fonts in CSS:**
-
-   Add the font in your global `index.css` or any global stylesheet:
-
-   ```css
-   @font-face {
-     font-family: "Slidefu";
-     src: local("Slidefu"), url("./assets/fonts/Slidefu-Regular-2.ttf") format("truetype");
-   }
-   ```
-
-3. **Use Fonts in Components:**
-
-   Apply the font in your component-specific CSS file:
-
-   ```css
-   h1 {
-     font-family: "Slidefu";
-     font-size: 72px;
-   }
-   ```
-
-**Sources checked 2026-10-15:** [TypeScript `noImplicitAny`](https://www.typescriptlang.org/tsconfig/#noImplicitAny), [React type definitions](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts), [TypeScript type erasure](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types).
+> [!info]- 来源
+> - 当前 React 函数组件类型与显式 children：[React TypeScript type definitions](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts)，核对日期：2026-11-06。
+> - noImplicitAny：[TypeScript TSConfig Reference](https://www.typescriptlang.org/tsconfig/#noImplicitAny)，TypeScript 官方文档，核对日期：2026-11-06。
+> - 类型声明会被擦除，不能验证运行时值：[TypeScript Handbook — Everyday Types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html)，TypeScript 官方文档，核对日期：2026-11-06。

@@ -11,4 +11,4 @@
 - [为什么消息确认仍可能导致重复处理？](condensed-note-w1-message-reliability.md)
 - [双写与日志能保证什么，循环冗余校验又能证明什么？](condensed-note-w1-durable-writes-and-crc.md)
 
-相关主线：[内存层次与局部性](../../../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)、[事务与恢复](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)、[请求超时与重试](../../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)。
+相关主线：[为什么连续扫描往往比链表遍历快？](../../../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)、[事务隔离与预写日志能保证什么？](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)、[请求超时后如何确认结果并安全重试？](../../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)。

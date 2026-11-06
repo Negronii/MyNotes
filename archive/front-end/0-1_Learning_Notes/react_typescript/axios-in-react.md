@@ -1,214 +1,84 @@
-# How does this React course use Axios for HTTP requests? / 本 React 课程如何使用 Axios 发起 HTTP 请求？
+# Axios 如何连接 React 报表界面的 HTTP 请求？
 
-Axios returns a Promise with a response object; component examples can model loading, success, and failure, while shared defaults and interceptors centralize request configuration. TypeScript generics still do not validate response JSON at runtime. / Axios 返回带响应对象的 Promise；组件示例可处理加载、成功和失败，全局默认值与拦截器可集中请求配置。TypeScript 泛型仍不会在运行时验证响应 JSON。
+Axios 是 Promise 式 HTTP 客户端。下面的代码沿用当前报表 URL 中的 sort 条件请求行数据；UI 更新和请求过期处理的主线见[React Effect 更新轮次](../../../../frontend/frameworks/react-basics.md#effect在提交后同步外部系统)，服务端查询缓存见[React 服务端状态章节](../../../../frontend/frameworks/react-server-state-and-optimistic-updates.md)。
 
-## Fetching Data with Axios / 使用Axios获取数据
+~~~typescript
+import axios from "axios";
 
-Axios is a promise-based HTTP client for JavaScript and TypeScript. Browser support depends on the Axios version and its adapter; this course makes no compatibility claim for obsolete browsers. The examples show basic requests, loading/error state, defaults, and interceptors.
+type SortOrder = "recent" | "oldest";
+type Report = { id: string; period: string; title: string };
+type Preview = { reportCount: number; estimatedBytes: number };
 
-## Installation
+declare function parseReports(value: unknown): Report[];
+declare function parsePreview(value: unknown): Preview;
 
-To install Axios, use the following command:
+const reportsClient = axios.create({
+  baseURL: "/api",
+  timeout: 10_000,
+});
 
-```bash
-npm install axios
-```
+reportsClient.interceptors.request.use(config => {
+  // 只对这个客户端实例的请求设置默认头；token 应由可信的会话边界提供。
+  config.headers.Authorization = "Bearer " + readAccessToken();
+  return config;
+});
 
-Alternatively, if you are using Yarn:
-
-```bash
-yarn add axios
-```
-
-## Basic Usage
-
-### Performing GET Requests
-
-Axios simplifies making HTTP GET requests. Here's a basic example:
-
-```typescript
-import axios from 'axios';
-
-axios.get('https://api.example.com/data')
-  .then(response => {
-    console.log(response.data);
-  })
-  .catch(error => {
-    console.error('Error fetching data:', error);
+async function loadReports(
+  sort: SortOrder,
+  signal: AbortSignal
+): Promise<Report[]> {
+  const response = await reportsClient.get<unknown>("/reports", {
+    params: { sort },
+    signal,
   });
-```
 
-### Performing POST Requests
-
-Similarly, making a POST request is straightforward:
-
-```typescript
-import axios from 'axios';
-
-const data = {
-  key1: 'value1',
-  key2: 'value2'
-};
-
-axios.post('https://api.example.com/data', data)
-  .then(response => {
-    console.log('Data posted successfully:', response.data);
-  })
-  .catch(error => {
-    console.error('Error posting data:', error);
-  });
-```
-
-## Example Usage in a React Component
-
-Here is a comprehensive example of using Axios within a React component. This example demonstrates how to handle loading states, errors, and rendering fetched data.
-
-```typescript
-import React, { Component } from 'react';
-import axios from 'axios';
-import { Spin, Typography, Row } from 'antd';
-import { withTranslation, WithTranslation } from 'react-i18next';
-import ProductCollection from './ProductCollection';
-
-interface State {
-  loading: boolean;
-  error: string | null;
-  productList: any[];
+  // 泛型只描述编译器中的预期，运行时仍由 parseReports 检查 JSON。
+  return parseReports(response.data);
 }
 
-class HomePageComponent extends Component<WithTranslation, State> {
-  constructor(props: WithTranslation) {
-    super(props);
-    this.state = {
-      loading: true,
-      error: null,
-      productList: []
-    };
-  }
+declare function readAccessToken(): string;
 
-  async componentDidMount() {
-    try {
-      const response = await axios.get('https://api.example.com/product-collections');
-      this.setState({
-        loading: false,
-        productList: response.data
-      });
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        this.setState({
-          loading: false,
-          error: error.message
-        });
-      } else {
-        this.setState({ loading: false, error: 'Unexpected request error' });
-      }
-    }
-  }
-
-  render() {
-    const { t } = this.props;
-    const { productList, loading, error } = this.state;
-
-    if (loading) {
-      return <Spin size="large" style={{ marginTop: 200, marginBottom: 200, marginLeft: 'auto', marginRight: 'auto', width: '100%' }} />;
-    }
-
-    if (error) {
-      return <div>Error: {error}</div>;
-    }
-
-    return (
-      <>
-        <Row>
-          <ProductCollection
-            title={<Typography.Title level={3} type="warning">{t('products.featured')}</Typography.Title>}
-            sideImage="/images/featured-products.jpg"
-            products={productList[0]?.touristRoutes || []}
-          />
-          <ProductCollection
-            title={<Typography.Title level={3} type="danger">{t('products.new')}</Typography.Title>}
-            sideImage="/images/new-products.jpg"
-            products={productList[1]?.touristRoutes || []}
-          />
-          <ProductCollection
-            title={<Typography.Title level={3} type="success">{t('products.popular')}</Typography.Title>}
-            sideImage="/images/popular-products.jpg"
-            products={productList[2]?.touristRoutes || []}
-          />
-        </Row>
-      </>
-    );
-  }
+async function requestExportPreview(reportIds: string[], signal: AbortSignal): Promise<Preview> {
+  const response = await reportsClient.post<unknown>(
+    "/reports/export-preview",
+    { reportIds },
+    { signal }
+  );
+  return parsePreview(response.data);
 }
+~~~
 
-export const HomePage = withTranslation()(HomePageComponent);
-```
+axios.create 为这组请求建立 baseURL、timeout 和拦截器作用域。示例不导出这个带 token 的客户端；`loadReports` 只请求固定的 `/reports`，`requestExportPreview` 只请求固定的 `/reports/export-preview`。不要把携带会话凭证的实例交给可接收任意 URL 的调用方。若应用会并行切换会话，应让调用边界明确传入凭证。请求与响应拦截器可以规范认证头、日志和错误映射；组件仍要处理调用成功、失败和卸载后的结果。传入 AbortSignal 后，组件或路由可在任务过期时请求取消客户端读取。
 
-### Setting Default Headers
+Axios 默认把 2xx 响应交给成功分支，把不满足 validateStatus 的响应放入拒绝分支。Fetch 则会对 HTTP 404/500 正常兑现 Promise，因此需要检查 response.ok；其他传输故障与正文解析故障也各有表现，详见[HTTP 客户端如何呈现响应与失败](../../../../engineering-foundations/networking/http-protocols-and-websockets.md)。
 
-For headers that should be included in every request, you can set them globally in your `index.ts` or `index.js` file:
+在 catch 中，axios.isAxiosError 可识别 AxiosError 并收窄其静态类型；再看 error.response、error.request 或 setup error，分别对应服务端返回了非成功状态、没有收到响应、请求尚未正确建立。这个类型守卫不会验证 response.data 的 JSON 结构。
 
-```typescript
-import axios from 'axios';
+~~~typescript
+declare const signal: AbortSignal;
+declare function showReports(reports: Report[]): void;
+declare function showRequestError(message: string): void;
 
-axios.defaults.headers.common['Accept'] = 'application/json';
-axios.defaults.baseURL = 'https://api.example.com/api';
-axios.defaults.timeout = 10000; // 10 seconds
-```
-
-### Handling Interceptors
-
-Interceptors allow you to run your code or modify the request/response before they are handled by `then` or `catch`. This is useful for adding authorization tokens or logging responses.
-
-```typescript
-import axios from 'axios';
-
-// Request Interceptor
-axios.interceptors.request.use(
-  config => {
-    // Modify config before request is sent
-    config.headers.Authorization = 'Bearer YOUR_TOKEN';
-    return config;
-  },
-  error => {
-    return Promise.reject(error);
-  }
-);
-
-// Response Interceptor
-axios.interceptors.response.use(
-  response => {
-    // With Axios's default validateStatus setting, 2xx responses resolve here.
-    return response;
-  },
-  error => {
-    // With the default validateStatus setting, other HTTP statuses reject here.
-    if (error.response?.status === 401) {
-      // Handle unauthorized error
-    }
-    return Promise.reject(error);
-  }
-);
-```
-
-## Error Handling
-
-Handling errors properly ensures a better user experience. Here’s an example of how to handle errors with Axios:
-
-```typescript
-import axios from 'axios';
-
-axios.get('https://api.example.com/data')
-  .then(response => {
-    console.log(response.data);
-  })
-  .catch(error => {
-    if (axios.isAxiosError(error)) {
-      console.error('Axios error:', error.message);
+try {
+  const reports = await loadReports("oldest", signal);
+  showReports(reports);
+} catch (cause) {
+  if (axios.isCancel(cause)) {
+    // 主动取消或过期请求不作为用户可见错误。
+  } else if (axios.isAxiosError(cause)) {
+    if (cause.response) {
+      showRequestError("服务端返回 HTTP " + cause.response.status);
+    } else if (cause.request) {
+      showRequestError("请求已发出，但没有收到响应");
     } else {
-      console.error('Unexpected error:', error);
+      showRequestError(cause.message);
     }
-  });
-```
+  } else {
+    showRequestError(cause instanceof Error ? cause.message : String(cause));
+  }
+}
+~~~
 
-**Reference checked 2026-10-15:** [Axios error handling](https://axios-http.com/docs/handling_errors).
+> [!info]- 来源
+> - 当前实例、默认值、拦截器、响应结构、错误类别、取消与 POST 请求配置：[Axios 1.21.0 README](https://github.com/axios/axios/blob/v1.21.0/README.md)、[Cancellation](https://axios-http.com/docs/cancellation)，核对日期：2026-11-06。
+> - Axios TypeScript 类型、isAxiosError 与运行时解析边界：[Axios TypeScript documentation](https://axios-http.com/docs/typescript)，Axios 1.21.0，核对日期：2026-11-06。

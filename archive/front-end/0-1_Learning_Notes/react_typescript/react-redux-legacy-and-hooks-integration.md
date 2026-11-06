@@ -1,180 +1,48 @@
-# How do class and function components connect to Redux? / 类组件和函数组件如何连接 Redux？
+# 旧类组件怎样通过 connect 读取 Redux？
 
-The archived examples contrast the legacy `connect`/class pattern with Hooks-based selectors and dispatch. The class sample is tied to React Router v5 `withRouter`; current Router v6 code uses a different routing API. / 归档示例对照旧式 `connect`/类组件模式与基于 Hook 的 selector/dispatch。类组件示例依赖 React Router v5 的 `withRouter`；当前 v6 使用不同路由 API。
+当前函数组件的 Redux hooks、类型推导和 Provider 入口见[Redux 如何组织共享界面状态与异步工作？](../../../../frontend/frameworks/redux-state-and-async-workflows.md)。本页保留 react-redux connect 与类组件的维护模式，便于阅读旧项目；它不需要和 Hook 版本并排用于新组件。
 
-## React-Redux Integration: Class and Function Components / 类组件与函数组件中的React-Redux
+~~~tsx
+import { Component } from "react";
+import { legacy_connect as connect, type ConnectedProps } from "react-redux";
 
-This section preserves both the older `connect`/higher-order-component integration and the Hooks-based integration. The class example uses React Router v5 APIs; keep that version boundary explicit when maintaining an existing application.
-
-## Prerequisites
-
-Before you start, make sure you have the React-Redux library installed. If not, you can install it using npm:
-
-```bash
-npm install react-redux
-```
-
-Older React-Redux releases relied on a separate DefinitelyTyped package. Current React-Redux releases include their own types, so check the installed major before adding this legacy package:
-
-```bash
-npm install @types/react-redux --save-dev
-```
-
-The class example below also uses React Router v5's `withRouter` API; it is kept as a legacy integration example, separate from the v6 declarative routing section above.
-
-## React-Redux with Class Components
-
-### Setting up the Provider
-
-The `<Provider />` component makes the Redux store available to the rest of your app. Here’s how you set it up:
-
-```tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-import { Provider } from "react-redux";
-import store from "./redux/store";
-import App from "./App";
-
-const root = createRoot(
-  document.getElementById("root") as HTMLElement
-);
-root.render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <App />
-    </Provider>
-  </React.StrictMode>
-);
-```
-
-### Connecting the Component
-
-Use the `connect` function to connect your component to the Redux store. This involves defining `mapStateToProps` and `mapDispatchToProps` functions:
-
-```tsx
-import { connect } from "react-redux";
-import { Dispatch } from "redux";
-import i18n from "../../configs";
-import { changeLanguageActionCreator } from "./redux/language/languageActions";
-import { RootState } from "./redux/store";
+type RootState = { language: "en" | "zh" };
 
 const mapStateToProps = (state: RootState) => ({
   language: state.language,
-  languageList: state.languageList,
 });
 
-const mapDispatchToProps = (dispatch: Dispatch) => ({
-  changeLanguage: async (code: "zh" | "en") => {
-    await i18n.changeLanguage(code);
-    const action = changeLanguageActionCreator(code);
-    dispatch(action);
-  },
-});
-```
+const mapDispatchToProps = {
+  chooseLanguage: (language: "en" | "zh") => ({
+    type: "settings/languageChanged" as const,
+    payload: language,
+  }),
+};
 
-### Modifying the Component
+const connector = connect(mapStateToProps, mapDispatchToProps);
+type Props = ConnectedProps<typeof connector>;
 
-Modify the class component to receive props injected by `connect` and handle type definitions accordingly:
-
-```tsx
-import React from "react";
-import { RouteComponentProps, withRouter } from "react-router-dom";
-import { withTranslation, WithTranslation } from "react-i18next";
-
-class HeaderComponent extends React.Component<
-  RouteComponentProps &
-    WithTranslation &
-    ReturnType<typeof mapStateToProps> &
-    ReturnType<typeof mapDispatchToProps>
-> {
-  menuClickHandler = (e: any) => {
-    this.props.changeLanguage(e.key);
-  };
-
+class LanguageHeader extends Component<Props> {
   render() {
     return (
-      <div>
-        <h1>{this.props.language}</h1>
-        <button onClick={() => this.menuClickHandler({ key: 'en' })}>English</button>
-        <button onClick={() => this.menuClickHandler({ key: 'zh' })}>中文</button>
-      </div>
+      <header>
+        <h1>语言：{this.props.language}</h1>
+        <button onClick={() => this.props.chooseLanguage("en")}>English</button>
+        <button onClick={() => this.props.chooseLanguage("zh")}>中文</button>
+      </header>
     );
   }
 }
 
-export const Header = connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(withTranslation()(withRouter(HeaderComponent)));
-```
+export default connector(LanguageHeader);
+~~~
 
-### Modifying the Store Type
+mapStateToProps 选择 store 中组件要显示的字段，mapDispatchToProps 把更新 action 暴露为 props。旧版本常把注入的 props 手工组合成接口；ConnectedProps 可从 connector 推导这些属性。React Router v5 的 withRouter 是另一层旧式 HOC；当前项目的路由 API 见[React 路由章节](../../../../frontend/frameworks/react-routing-and-navigation.md)。
 
-Ensure your store is correctly typed to provide robust type checking and intellisense support:
+React-Redux 9.3.0 起将 `connect` 标为 deprecated，并提供 `legacy_connect` 作为同一旧式接口的显式维护入口。这个示例用别名把它写作 `connect`，方便阅读旧代码；新组件优先使用 typed hooks。
 
-```typescript
-import { createStore } from "redux";
-import languageReducer from "./redux/language/languageReducer";
+旧 react-redux 版本可能需要外置 @types/react-redux；react-redux 9 已自带类型声明。升级前按实际锁文件版本核对，不要把旧 DefinitelyTyped 包直接加到新版本。
 
-const store = createStore(languageReducer);
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-
-export default store;
-```
-
-## React-Redux with Function Components
-
-### Creating a hooks.ts File
-
-Create a `hooks.ts` file to define custom hooks for accessing the Redux store:
-
-```typescript
-import { useSelector as useReduxSelector, TypedUseSelectorHook } from "react-redux";
-import { RootState } from "./store";
-
-export const useSelector: TypedUseSelectorHook<RootState> = useReduxSelector;
-```
-
-### Using useSelector and useDispatch
-
-In functional components, use `useSelector` to access the state and `useDispatch` to dispatch actions:
-
-```typescript
-import React from "react";
-import { useSelector } from "../../redux/hooks";
-import { useDispatch } from "react-redux";
-import i18n from "../../configs";
-import { changeLanguageActionCreator } from "../../redux/language/languageActions";
-
-export const Header: React.FC = () => {
-  const language = useSelector((state) => state.language);
-  const languageList = useSelector((state) => state.languageList);
-  const dispatch = useDispatch();
-
-  const menuClickHandler = async (e: any) => {
-    const languageCode = e.key as "zh" | "en";
-    await i18n.changeLanguage(languageCode);
-    dispatch(changeLanguageActionCreator(languageCode));
-  };
-
-  return (
-    <div>
-      <h1>{language}</h1>
-      <button onClick={() => menuClickHandler({ key: 'en' })}>English</button>
-      <button onClick={() => menuClickHandler({ key: 'zh' })}>中文</button>
-    </div>
-  );
-};
-```
-
-In this setup, `useSelector` hooks access the Redux store state, and `useDispatch` dispatches actions. This approach simplifies state management in function components.
-
-## Conclusion
-
-This guide covers the integration of React-Redux with both class and function components using modern best practices. By following these steps, you can ensure a robust, type-safe, and scalable integration of Redux into your React application.
-
-For more information and advanced usage, refer to the official [React-Redux documentation](https://react-redux.js.org/introduction/getting-started).
-
-**Reference / 参考：** [React-Redux TypeScript usage](https://react-redux.js.org/using-react-redux/usage-with-typescript).
+> [!info]- 来源
+> - connect 与 ConnectedProps：[React-Redux Usage with TypeScript](https://react-redux.js.org/using-react-redux/usage-with-typescript)、[connect API](https://react-redux.js.org/api/connect)，React-Redux 9.3.1 文档，核对日期：2026-11-06。
+> - React-Redux 9.1 起 typed hooks 可用 withTypes：[React-Redux Usage with TypeScript](https://react-redux.js.org/using-react-redux/usage-with-typescript)，见当前 Redux canonical。

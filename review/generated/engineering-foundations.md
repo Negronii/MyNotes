@@ -576,7 +576,35 @@ OpenAPI 记录操作路径、参数、媒体类型、成功与错误响应及 sc
 > check()
 > ~~~
 >
-> This code uses an in-memory offset map to teach the cursor boundary; the token expires on process restart and is not bound to filters, sort order or identity. A production collection can use an index-backed keyset cursor and reauthorize each page. The page contents are computed from these three records; they are not performance measurements.
+> 此示例用内存中的偏移量映射演示游标边界；进程重启后令牌会失效，也未绑定筛选条件、排序或身份。生产集合可使用基于索引的键集游标，并对每一页重新授权。页面内容由这三条记录计算，不代表性能测量结果。
+
+### API 返回的链接怎样告诉客户端可继续做什么？
+
+REST 的 Hypermedia as the Engine of Application State（超媒体作为应用状态引擎，HATEOAS）约束要求客户端从服务端表示中发现当前可用的状态转移。客户端仍需理解媒体类型和关系名，但不必仅凭报表 ID 拼出每个目标 URL。API 可以在报表表示中按自己的契约返回链接：
+
+~~~json
+{
+  "id": "r-42",
+  "links": [
+    { "rel": "self", "href": "/api/reports/r-42" },
+    { "rel": "download", "href": "/api/reports/r-42/download" }
+  ]
+}
+~~~
+
+React 客户端可以按关系查找详情地址并渲染链接。下面假设 `self` 关系已在 API 表示契约中定义，`href` 是同源站点根路径；只有契约明确允许时才跟随异源地址，不能把当前站点的认证信息盲目附到异源请求上。客户端不再根据 `id` 自行构造 `/api/reports/${id}`。
+
+~~~tsx
+type ApiLink = { rel: string; href: string };
+type Report = { id: string; links: ApiLink[] };
+
+function ReportDetailsLink({ report }: { report: Report }) {
+  const self = report.links.find(link => link.rel === "self");
+  return self ? <a href={self.href}>查看报表详情</a> : null;
+}
+~~~
+
+普通链接适合安全导航，例如读取详情。链接本身若只给出 `href`，并没有说明取消报表等写操作应使用什么 HTTP 方法和请求体；这类动作应按 API 明确声明的 affordance（操作描述）或另行定义的契约发送，不能把有副作用的操作伪装成 `<a>`。单页应用可由路由接管内部导航，但路由仍需按它自己的加载和历史规则提交地址；服务端返回链接不会自动配置 React Router。
 
 ### 兼容演进需要显式规则
 
@@ -590,6 +618,8 @@ OpenAPI 记录操作路径、参数、媒体类型、成功与错误响应及 sc
 > - 操作、参数、媒体类型、响应和 schema 的接口描述：[OpenAPI Specification v3.2.1](https://spec.openapis.org/oas/v3.2.1.html)，2026-09-10，§4–§5；核对于 2026-11-06。代码环境当前生成 3.1.0；运行时版本由 `app.openapi()['openapi']` 决定，规范文件描述契约但不保证实现遵循它。
 > - 页大小、请求间参数一致、不透明 page token 和结束信号：[Google AIP-158, Pagination](https://google.aip.dev/158)，2019-02-18，Guidance；核对于 2026-11-06。
 > - FastAPI 请求模型、响应模型和自定义错误处理：[FastAPI Request Body](https://fastapi.tiangolo.com/tutorial/body/)、[Response Model](https://fastapi.tiangolo.com/tutorial/response-model/)、[Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/)，官方文档核对于 2026-11-06；错误类型映射已在列明版本的本地运行环境核对。
+> - REST 超媒体约束及由表示提供状态转移：[Roy Fielding, Architectural Styles and the Design of Network-based Software Architectures, §5.1.5](https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm)，2000；核对日期：2026-11-06。
+> - 安全的 `GET` 方法与 HTTP 方法语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9.2.1，2022-06；核对日期：2026-11-06。
 ## 4. Cookie 会话与 OIDC 令牌怎样建立身份？
 
 浏览器每次读取报表 42 时，服务端要先辨认请求携带的凭据、签发者和可确认的身份。Cookie 可以承载不透明会话标识，应用再由标识查询服务器端会话；bearer token（持有者令牌）本身就是可重放的凭据，由资源服务验证。OpenID Connect (OIDC，基于 OAuth 2.0 的身份层) 让应用验证身份提供方的认证结果。应用随后仍要建立自己的会话；独立的报表 API 则需要面向该 API 签发的 Access Token（访问令牌）。这些凭据只建立调用者身份或调用资格，不决定用户能否读取报表 42。

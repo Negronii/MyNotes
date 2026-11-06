@@ -21,7 +21,7 @@
 - [DOM 事件如何传播，何时适合事件委托？](browser-apis/dom-manipulation-and-events.md)
 - [浏览器 JavaScript 何时运行，画面何时更新？](runtime/event-loop.md)
 - [React如何把一次用户操作变成界面更新？](frameworks/react-basics.md)
-- [如何在React中组合组件与复用行为？](frameworks/react-component-composition.md)
+- [如何在 React 中组合组件与复用行为？](frameworks/react-component-composition.md)
 - [如何让报表筛选在昂贵更新时保持响应？](frameworks/advanced-react.md)
 - [React界面如何维护服务端数据与乐观更新的正确性？](frameworks/react-server-state-and-optimistic-updates.md)
 - [React错误边界能恢复哪些失败？](frameworks/react-error-boundaries.md)
@@ -89,6 +89,7 @@
 
 ### 框架、工具选择与交付验收
 
+- [Redux 如何组织共享界面状态与异步工作？](frameworks/redux-state-and-async-workflows.md)
 - [如何为产品选择前端框架？](frameworks/virtual-dom-and-framework-selection.md)
 - [React 路由怎样把地址映射到界面并加载数据？](frameworks/react-routing-and-navigation.md)
 - [Next.js 如何把文件路由、服务端数据与客户端交互连接起来？](frameworks/next-js.md)

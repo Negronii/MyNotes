@@ -13,7 +13,7 @@ COMP90050 围绕访问成本、查询执行、并发控制和故障恢复展开�
 - [为什么消息确认仍可能导致重复处理？](condensed-note-w1-message-reliability.md)
 - [双写与日志能保证什么，循环冗余校验又能证明什么？](condensed-note-w1-durable-writes-and-crc.md)
 
-### [查询如何转化为可估算成本的物理计划？](condensed-note-w2.md)
+### [查询如何从关系代数转为可估算成本的物理计划？](condensed-note-w2.md)
 
 - [关系代数和连接算法怎样把查询变成可估算的页访问？](condensed-note-w2-query-algebra-and-join-cost.md)
 - [查询优化器怎样在等价计划之间作选择？](condensed-note-w2-query-plan-optimization.md)
@@ -31,12 +31,12 @@ COMP90050 围绕访问成本、查询执行、并发控制和故障恢复展开�
 
 ### [数据库如何在崩溃与网络节点之间保全事务？](condensed-note-w4.md)
 
-- [WAL 与 ARIES 恢复如何在崩溃后保留已提交工作？](condensed-note-w4-wal-and-aries-recovery.md)
-- [远程备份与影子分页如何处理故障？](condensed-note-w4-backup-and-shadow-paging.md)
-- [CAP、一致性模型与 PACELC 如何描述分布式服务？](condensed-note-w4-distributed-consistency-and-nosql.md)
-- [数据仓库如何采集、整合并汇总源数据？](condensed-note-w4-data-warehousing.md)
-- [两阶段提交如何让多个参与者得到同一结果？](condensed-note-w4-two-phase-commit-and-replicated-data.md)
+- [崩溃后，数据库如何重做已提交工作并撤销未完成事务？](condensed-note-w4-wal-and-aries-recovery.md)
+- [站点故障怎样切换，影子分页又怎样提交事务？](condensed-note-w4-backup-and-shadow-paging.md)
+- [网络分区时系统能保证什么，非关系型数据库又按什么模型区分？](condensed-note-w4-distributed-consistency-and-nosql.md)
+- [数据仓库怎样把多源业务数据整理成可分析的历史数据？](condensed-note-w4-data-warehousing.md)
+- [多个参与者怎样取得同一事务结果，副本又怎样等价于一份数据？](condensed-note-w4-two-phase-commit-and-replicated-data.md)
 
 ## 阅读边界
 
-通用机制可以先从[SQL 查询结果](../../../engineering-foundations/databases/sql-null-joins-and-aggregates.md)、[约束与索引](../../../engineering-foundations/databases/database-constraints-and-indexes.md)、[事务与恢复](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)进入；[最后一件库存](../../../engineering-foundations/databases/database-fundamentals.md)将这些机制串在同一个应用中。
+通用机制可以先从[SQL 空值、连接与分组会怎样改变报表 42 的结果？](../../../engineering-foundations/databases/sql-null-joins-and-aggregates.md)、[如何用约束保护业务规则并为读取建立索引？](../../../engineering-foundations/databases/database-constraints-and-indexes.md)、[事务隔离与预写日志能保证什么？](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)进入；[两个请求争夺最后一件库存时，怎样保证只预留一次？](../../../engineering-foundations/databases/database-fundamentals.md)将这些机制串在同一个应用中。

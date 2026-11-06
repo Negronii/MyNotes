@@ -1,73 +1,40 @@
-# How does the archived Ant Design example assemble React components? / 归档中的 Ant Design 示例如何组合 React 组件？
+# Ant Design 如何组合布局与菜单组件？
 
-The archived example uses Ant Design layout, menu, typography, input, button, and dropdown components. Pin the package version and check the installed component API before reuse. / 归档示例使用 Ant Design 布局、菜单、排版、输入框、按钮和下拉组件。复用前应固定依赖版本，并核对项目实际 API。
+本页把旧课程里的菜单 API 更新为 Ant Design 6.7.0 的 items 写法，保留 Layout、Menu、Typography 与图标组合。Ant Design 是组件库，组件负责呈现和交互外观；页面路由、筛选状态与表单语义仍由应用和 HTML 契约决定。
 
-## Using Ant Design
+~~~tsx
+import { Layout, Menu, Typography, type MenuProps } from "antd";
+import { GlobalOutlined } from "@ant-design/icons";
 
-### Overview
-Ant Design is a React component library. The examples below use its Layout, Menu, Typography, and icon components; component APIs can differ between Ant Design versions, so pin the package version used by the application.
+const menuItems: MenuProps["items"] = [
+  { key: "reports", icon: <GlobalOutlined />, label: "报表" },
+  { key: "settings", label: "设置" },
+];
 
-### Installation
-To use Ant Design, you need to install the core library along with the icons package. Run the following command to install both:
-```bash
-npm install antd @ant-design/icons
-```
+export function ReportsShell() {
+  return (
+    <Layout>
+      <Layout.Header>
+        <Menu
+          mode="horizontal"
+          theme="dark"
+          selectedKeys={["reports"]}
+          items={menuItems}
+        />
+      </Layout.Header>
+      <Layout.Content style={{ padding: "0 32px" }}>
+        <Typography.Title level={2}>月度报表</Typography.Title>
+        <p>此处放置路由页面内容。</p>
+      </Layout.Content>
+      <Layout.Footer>报表服务</Layout.Footer>
+    </Layout>
+  );
+}
+~~~
 
-### Using Components
-After installation, you can start using Ant Design components in your project. Here is a basic example demonstrating the use of the `Layout`, `Typography`, `Input`, `Menu`, `Button`, and `Dropdown` components.
+菜单项目通过稳定 key 标识，selectedKeys 表达当前选中状态；真实导航应让路由状态驱动它，而不只是写死数组。旧版 Menu.Item 写法只在其对应的 Ant Design 版本范围内维护。6.x 图标包也应与 antd 主版本一致。
 
-#### Example
-```tsx
-// src/components/Header.tsx
-import React from 'react';
-import { Layout, Menu } from 'antd';
-import { GlobalOutlined } from '@ant-design/icons';
-
-const { Header } = Layout;
-
-const AppHeader: React.FC = () => (
-  <Header>
-    <div className="logo" />
-    <Menu theme="dark" mode="horizontal" defaultSelectedKeys={['1']}>
-      <Menu.Item key="1" icon={<GlobalOutlined />}>Home</Menu.Item>
-      <Menu.Item key="2">About</Menu.Item>
-      <Menu.Item key="3">Contact</Menu.Item>
-    </Menu>
-  </Header>
-);
-
-export default AppHeader;
-```
-
-#### Integrating Ant Design in `App.tsx`
-```tsx
-// src/components/App.tsx
-import React from 'react';
-import { Layout, Typography } from 'antd';
-import AppHeader from './header/Header';
-import AppFooter from './footer/Footer';
-
-const { Content } = Layout;
-const { Title } = Typography;
-
-const App: React.FC = () => (
-  <Layout>
-    <AppHeader />
-    <Content style={{ padding: '0 50px' }}>
-      <Title level={2}>Welcome to My App</Title>
-      <p>This is a simple example of using Ant Design with React.</p>
-    </Content>
-    <AppFooter />
-  </Layout>
-);
-
-export default App;
-```
-
-### Exploring Ant Design Components
-For more examples and detailed documentation on how to use different Ant Design components, visit the [Ant Design Components Overview](https://ant.design/components/overview).
-
-### Best Practices
-- **Consistent Use of Ant Design Components:** Ensure consistency in design by leveraging Ant Design components across the application.
-- **Theming and Customization:** Use Ant Design's theming capabilities to customize the appearance to match your brand.
-- **Responsive Design:** Utilize the responsive grid system and other responsive components to ensure your application works well on different screen sizes.
+> [!info]- 来源
+> - 当前菜单的 items、selectedKeys 与 MenuItem 属性：[Ant Design Menu](https://ant.design/components/menu/)，Ant Design 6.7.0 文档，核对日期：2026-11-06。
+> - Layout 的 Header、Content、Footer 结构：[Ant Design Layout](https://ant.design/components/layout/)，Ant Design 6.7.0 文档，核对日期：2026-11-06。
+> - 图标包主版本匹配：[Ant Design 6 Migration Guide](https://ant.design/docs/react/migration-v6/)，Ant Design 6.7.0 文档，核对日期：2026-11-06。

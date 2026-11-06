@@ -1,7 +1,7 @@
-# Which frontend tool notes cover the archived workflow examples? / 哪些前端工具笔记包含归档工作流示例？
+# 前端工具工作流示例入口
 
-Use [Build Tools / 构建工具](../../../../frontend/tooling/build-tools.md) for the current build-pipeline model. These focused archive notes preserve the older practical workflows for browser inspection, Less compilation, and editor abbreviations. / 当前构建流程模型见[构建工具](../../../../frontend/tooling/build-tools.md)。以下专题归档页保留浏览器检查、Less 编译和编辑器缩写的实践流程。
+当前构建流程模型见[构建工具怎样把源码变成可发布产物？](../../../../frontend/tooling/build-tools.md)。归档保留浏览器检查、Less 编译和编辑器缩写的实操示例。
 
-- [DevTools and design inspection / DevTools 与设计稿检查](devtools-and-design-inspection.md)
-- [Less preprocessor workflow / Less 预处理工作流](less-preprocessor-workflow.md)
-- [VS Code and Emmet reference / VS Code 与 Emmet 参考](vscode-and-emmet-reference.md)
+- [怎样用开发者工具对照页面与设计稿？](devtools-and-design-inspection.md)
+- [Less 怎样把复用规则转换成浏览器可用的样式表？](less-preprocessor-workflow.md)
+- [哪些 VS Code 与 Emmet 操作可以减少重复输入？](vscode-and-emmet-reference.md)

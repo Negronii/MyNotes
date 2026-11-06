@@ -1,20 +1,23 @@
-# Archive index / 归档索引
+# 归档索引
 
-Use this index for earlier study notes, worked examples, and version-specific references. The [2026-10-27 knowledge review](../maintenance/knowledge-review-2026-10-27.md) records the 63 original archive articles and the scope of that review. / 从这里查找早期学习笔记、演算题和特定版本的参考资料。
+归档保存早期学习笔记、演算题、源材料和特定版本参考；这里表示低频维护，不表示内容错误或已弃用。[全库知识审查 — 2026-10-27](../maintenance/knowledge-review-2026-10-27.md) 记录了原有 63 篇归档正文及审查范围。
 
-## Preserved packs / 保留材料
+## 保留的材料包
 
-- [`ai/`](ai/production-prompts/codex_prompt_25_01_16.md) — AI source snapshots and original prompt collections retained as reference packs.
-- [Frontend learning notes / 前端学习笔记](front-end/0-1_Learning_Notes/react_javascript/readme.md) — [Next.js App Router data fetching](<front-end/0-1_Learning_Notes/next.js/readme.md>), [React with JavaScript](<front-end/0-1_Learning_Notes/react_javascript/readme.md>), [React with TypeScript](<front-end/0-1_Learning_Notes/react_typescript/readme.md>), and TypeScript examples for [Map](<front-end/0-1_Learning_Notes/Typescript/map.md>), [Math](<front-end/0-1_Learning_Notes/Typescript/math.md>), [Promises](<front-end/0-1_Learning_Notes/Typescript/promise.md>), and [String](<front-end/0-1_Learning_Notes/Typescript/string.md>).
-- [Earlier frontend questions / 前端旧题索引](front-end/Deprecated_Interview_Notes/reference-map.md) — original entry paths for CSS, JavaScript, browser behavior, framework APIs, and system examples.
-- [`mobile/`](mobile/SwiftUI/readme.md) — Swift and SwiftUI notes.
-- [`machine-learning/`](machine-learning/machine-learning.md) — machine-learning study notes.
-- [`Quantitative Trading/`](Quantitative%20Trading/notes.md) — quantitative-trading notes.
-- [Database course map / 数据库课程地图](uni-subjects/COMP90050ADBS/readme.md) — four weeks of worked examples from storage and indexes through isolation and recovery, with the original course figures.
-- [`back-end/`](back-end/Backend-Concepts.md) — backend framework and environment-setup references, including ASP.NET Core, Spring, Java concepts, and shell setup; scoped content review is summarized in the audit.
-- [Jest reference / Jest 参考](testing/Jest/readme.md) — routes to the Jest examples in the current frontend testing material.
-- [`historical-scripts/`](historical-scripts/AI_Engineering_Notes/merge-md.sh) — the two former per-domain merge scripts, retained as historical files only.
+- [`ai/`](ai/production-prompts/codex_prompt_25_01_16.md) — AI 资料快照与原始 prompt 合集。
+- [前端学习笔记](front-end/0-1_Learning_Notes/react_javascript/readme.md) — React JavaScript 示例入口；另有 [App Router 流式渲染如何处理独立数据请求？](<front-end/0-1_Learning_Notes/next.js/readme.md>)、[React JavaScript 课程示例入口](<front-end/0-1_Learning_Notes/react_javascript/readme.md>)、[React 与 TypeScript 课程专题入口](<front-end/0-1_Learning_Notes/react_typescript/readme.md>)，以及 TypeScript 的 [Map 怎样维护键身份、存在性和插入顺序？](<front-end/0-1_Learning_Notes/Typescript/map.md>)、[JavaScript 的 Math 怎样处理舍入、范围和数值变换？](<front-end/0-1_Learning_Notes/Typescript/math.md>)、[TypeScript 的 Promise 类型能保证什么？](<front-end/0-1_Learning_Notes/Typescript/promise.md>) 与 [字符串处理怎样从位置索引走到用户看见的文字？](<front-end/0-1_Learning_Notes/Typescript/string.md>) 示例。
+- [前端早期资料索引](front-end/Deprecated_Interview_Notes/reference-map.md) — HTML、CSS、JavaScript、浏览器、框架和系统示例的原始入口。
+- [Swift 与 SwiftUI 学习笔记入口](mobile/SwiftUI/readme.md) — Swift 和 SwiftUI 笔记。
+- [树模型、正则化与 XGBoost 资料入口](machine-learning/machine-learning.md) — 机器学习学习笔记。
+- [从历史收益发现一个因子后，怎样判断它提供了什么证据？](Quantitative%20Trading/notes.md) — 量化交易笔记。
+- [COMP90050 高级数据库系统回答哪些问题？](uni-subjects/COMP90050ADBS/readme.md) — 四周课程示例，从存储和索引延伸到隔离与恢复，并保留原始配图。
+- [后端死锁与 Java HashMap 资料入口](back-end/Backend-Concepts.md) — 识别死锁环，并区分 OpenJDK 17 HashMap 的公开契约和实现细节。
+- [ASP.NET Core 与 EF Core 示例如何阅读？](back-end/ASP.NET-Core.md) — EF Core、控制器、MongoDB 与本地数据库容器示例。
+- [Spring Boot 怎样把一次 JSON 请求接到服务和数据访问对象？](back-end/Spring.md) — Java Web 请求和数据访问示例。
+- [Zsh 怎样从启动配置找到插件与 pnpm 命令？](back-end/Shell-Setup.md) — Zsh 启动配置、插件与 pnpm 命令查找。
+- [Jest 异步测试示例入口](testing/Jest/readme.md) — 链接到当前前端测试材料中的 Jest 示例。
+- [`historical-scripts/`](historical-scripts/AI_Engineering_Notes/merge-md.sh) — 以前按领域合并文件的两个脚本，仅作为历史文件保留。
 
-## Kept in the current foundations map / 已并入工程基础
+## 已并入工程基础的材料
 
-The current [Docker operations question / Docker 运维问题](../engineering-foundations/infrastructure/docker-operations.md) covers the container, volume, and network examples from the earlier command reference.
+当前的[Docker 如何把报表服务的源码构建成可运行镜像？](../engineering-foundations/infrastructure/docker-operations.md)涵盖早期命令参考中的容器、卷和网络示例。
