@@ -1,53 +1,94 @@
-# How should Zsh plugin order and pnpm PATH be configured? / 如何配置 Zsh 插件顺序与 pnpm PATH？
+# Zsh 怎样从启动配置找到插件与 pnpm 命令？
 
-Core rule / 核心规则：install the framework and external plugin files first; load syntax highlighting last, configure `zsh-completions` on `fpath` before Oh My Zsh starts, and set `PNPM_HOME` to the installation’s actual directory. `zsh -n` checks syntax only. / 先安装框架和外部插件文件；语法高亮最后加载，`zsh-completions` 的 `fpath` 配置放在 Oh My Zsh 启动前，`PNPM_HOME` 指向实际安装目录。`zsh -n` 只检查语法。
+**案例背景：** 新终端中输入 `pnpm` 得到 `command not found`，补全和语法高亮也没有出现。三个现象可能发生在不同步骤：程序尚未安装、启动文件没有执行，或查找路径与加载顺序不对。先分清谁在找什么，才能改对配置。
 
-Oh My Zsh is an optional Zsh configuration framework. Installing the framework, enabling a plugin, and installing that plugin are separate steps. Review the current [official installation instructions](https://ohmyz.sh/#install) before choosing an install method; this note does not run an installer.
+~~~mermaid
+flowchart TD
+    A[启动交互式 Zsh] --> B[读取适用的启动文件]
+    B --> C[设置插件位置与 fpath]
+    C --> D[加载 Oh My Zsh 和已安装插件]
+    D --> E[最后加载语法高亮]
+    B --> F[配置命令目录 PATH]
+    F --> G[输入 pnpm：查找可执行程序]
+    D --> H[按 Tab：查找并执行补全函数]
+~~~
 
-## Minimal `.zshrc` / 最小配置
+## 启动文件不是同一个入口
 
-```zsh
+默认设置下，Zsh 会读取 `.zshenv`；login shell（登录 shell）另外读取 `.zprofile`，interactive shell（交互式 shell）读取 `.zshrc`，登录 shell 最后还会读取 `.zlogin`。各类文件有系统级和用户级版本，用户文件位于 `$ZDOTDIR`，未设置时才取 `$HOME`。终端窗口是否启动登录 shell 取决于终端配置。
+
+插件、提示符和键盘交互通常放在 `.zshrc`。脚本执行环境不能假定读过它，因此“终端能运行 pnpm”不代表 CI、编辑器启动的进程或非交互 shell 也有同一个 `PATH`。为运行程序配置明确的环境，不要把整个交互配置当作脚本依赖。
+
+## 框架、插件文件和启用配置怎样衔接？
+
+Oh My Zsh 是可选的配置框架。先安装它，再通过 `source` 在当前 shell 执行其启动脚本。下面假设框架已装在所示位置：
+
+~~~zsh
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="robbyrussell"
 plugins=(git)
 source "$ZSH/oh-my-zsh.sh"
-```
+~~~
 
-Oh My Zsh reads the `plugins` array when its startup script is sourced; array items are separated by spaces, not commas. The bundled `git` plugin adds aliases such as `gst` (`git status`) and `gco` (`git checkout`). The aliases are conveniences, not separate Git commands.
+框架加载时读取 `plugins` 数组，因此必须先赋值。数组元素用空格分隔；内置 Git 插件的 `gst`、`gco` 只是 `git status`、`git checkout` 的 alias（别名）。它们没有创建新 Git 功能。
 
-## Optional external plugins / 可选外部插件
+外部的 `zsh-autosuggestions`、`zsh-syntax-highlighting`、`zsh-completions` 都需要各自的实际文件。只把名称写进数组不会安装插件。前两个安装到框架能找到的位置后，可写：
 
-`zsh-autosuggestions`, `zsh-syntax-highlighting`, and `zsh-completions` are separate projects. Listing their names does not install them: first follow each project's installation instructions and put its files where Zsh can load them. Add only installed Oh My Zsh plugins to `plugins`:
-
-```zsh
+~~~zsh
 plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
-```
+~~~
 
-Load `zsh-syntax-highlighting` last; its maintainers require that order. `zsh-completions` provides completion definitions through `fpath`, not as a regular entry in the plugin list. Following its [Oh My Zsh installation instructions](https://github.com/zsh-users/zsh-completions#oh-my-zsh), add the installed `src` directory to `fpath` before the existing `source "$ZSH/oh-my-zsh.sh"` line:
+语法高亮按其维护者要求最后加载；若在框架之后还配置会影响 Zsh 行编辑器的其他插件或 widget（编辑器操作），应将高亮脚本的加载放在这些设置之后，而不是只保证它在数组末尾。重新打开终端通常比反复 `source ~/.zshrc` 更容易观察一次干净的加载；重复 source 可能重复注册钩子和监听行为。
 
-```zsh
-# Replace this with the installed zsh-completions/src directory.
-fpath=(/path/to/zsh-completions/src $fpath)
-```
+## `fpath` 与 `PATH` 分别查找什么？
 
-Restart the shell after changing the plugin list or completion path.
+| 名称 | 搜索对象 | 本例中的用途 |
+|---|---|---|
+| `PATH` / Zsh 的 `path` 数组 | 外部可执行程序 | 查找 `pnpm`、`git` |
+| `fpath` | 可自动加载的 Zsh 函数文件 | 查找补全定义 |
 
-## pnpm on the command path / pnpm 命令路径
+`zsh-completions` 提供的是额外补全定义。它的 Oh My Zsh 指引要求不把它作为普通插件再次加载；将实际安装目录的 `src` 放进 `fpath`，并放在框架启动之前，让补全初始化能发现它。当前 Oh My Zsh 的启动脚本会调用 `compinit`，这里由框架负责初始化：
 
-The pnpm home directory depends on the installation method and platform. Current pnpm provides `pnpm setup` to create its home directory and update the shell configuration. If managing the path manually, use the actual directory selected for that installation; the following is a macOS example, not a portable default:
+~~~zsh
+fpath=(/actual/install/path/zsh-completions/src $fpath)
+# 后面才执行原有的 source "$ZSH/oh-my-zsh.sh"
+~~~
 
-```zsh
-export PNPM_HOME="$HOME/Library/pnpm"
+其中 `/actual/install/path` 必须换成真实路径。加载顺序正确但目录不存在，仍不会产生补全。补全系统的缓存和初始化也要遵循所用框架的约定，不能为了“保险”到处重复调用 `compinit`。
+
+## pnpm 已安装，为何仍找不到？
+
+先用 `whence -va pnpm` 检查当前 shell 能否找到程序。若找不到，先按原安装方式定位可执行文件，用其绝对路径运行；若尚未安装，则先完成安装。`pnpm setup` 本身也要由一个已经可运行的 pnpm 执行，不能直接修复“程序根本不存在”的问题。
+
+当前 pnpm 的 `pnpm setup` 会配置安装位置；能识别启动配置且未指定 `--no-modify-path` 时，还会更新 shell 的命令路径；它会修改启动配置，适合选择由 pnpm 管理这段配置时使用。安装方式、版本与平台决定真实目录，尤其 pnpm 本身与全局命令目录可能不同，应以安装输出为准。若选择手工维护，下面只演示如何加入一个**已存在且包含目标程序**的目录：
+
+~~~zsh
+export PNPM_HOME="$HOME/Library/pnpm" # 示例，按实际安装位置替换
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
-```
+~~~
 
-The membership check avoids adding the same directory repeatedly. After editing `.zshrc`, `zsh -n ~/.zshrc` checks shell syntax only; it does not verify that referenced plugins exist or that every command in startup files is available.
+> [!example] 为什么给 PATH 两侧加冒号？
+> 假设目录是 `/opt/pnpm`。在 `:/usr/bin:/opt/pnpm:/bin:` 中匹配 `:/opt/pnpm:`，检查的是完整目录项，不会把 `/opt/pnpm-old` 当作命中。重复执行也不会再次前置同一目录。
 
-## Sources / 参考资料
+`PATH` 从前向后查找外部程序；但 shell alias 或函数可能先拦截命令名。排查时看解析结果而不是只看配置文件：
 
-- [Oh My Zsh installation](https://ohmyz.sh/#install), [plugin configuration](https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins), and the [Git plugin aliases](https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/git/README.md).
-- External plugin installation and ordering: [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions/blob/master/INSTALL.md), [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md), and [zsh-completions](https://github.com/zsh-users/zsh-completions#oh-my-zsh).
-- [pnpm setup](https://pnpm.io/cli/setup) documents how it creates the pnpm home directory and adds it to `PATH` through shell configuration.
+~~~zsh
+whence -va pnpm
+print -l -- $path
+print -l -- $fpath
+~~~
+
+这些结果回答“当前 shell 会使用哪个命令、去哪些目录找”，不证明另一个终端或 CI 使用相同环境。`pnpm setup` 的当前全局命令布局涉及 `$PNPM_HOME/bin`；若需要这些命令，应检查 setup 实际生成的目录安排，不能只复制旧教程的一条 PATH。
+
+## 怎样区分语法检查和加载成功？
+
+`zsh -n "${ZDOTDIR:-$HOME}/.zshrc"` 检查实际用户配置所在路径，只解析语法，不执行 `source`，所以不存在的插件文件、错误的程序路径也可能通过。先做语法检查，再开新交互 shell，观察启动错误并检查 `whence -va`、补全与高亮。读到配置、找到文件、初始化成功、最终功能可用，是四个不同的检查点。
+
+> [!info]- 来源
+> - 启动文件条件与 ZDOTDIR：Zsh 5.9.2 [Startup/Shutdown Files](https://zsh.sourceforge.io/Doc/Release/Files.html#Startup_002fShutdown-Files)，核对 2026-11-06。
+> - 框架与插件顺序：[Oh My Zsh Plugins](https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins)、[Git 插件别名](https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/git/README.md)。
+> - 外部插件安装与最后加载要求：[autosuggestions](https://github.com/zsh-users/zsh-autosuggestions/blob/master/INSTALL.md)、[syntax-highlighting INSTALL](https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md)；框架自行初始化补全的代码：[Oh My Zsh 启动脚本](https://github.com/ohmyzsh/ohmyzsh/blob/master/oh-my-zsh.sh)；补全目录说明：[zsh-completions](https://github.com/zsh-users/zsh-completions#oh-my-zsh)。核对 2026-11-06。
+> - 安装目录、配置修改与全局 bin 目录：[pnpm setup](https://pnpm.io/cli/setup)，核对 2026-11-06；具体布局以所装版本输出为准。
