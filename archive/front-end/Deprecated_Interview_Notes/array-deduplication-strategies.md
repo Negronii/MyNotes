@@ -1,29 +1,3 @@
-# How do array deduplication strategies differ? / 数组去重策略有什么区别？
+# 数组去重策略有什么区别？
 
-Choose an equality rule before choosing an implementation. Set preserves first-seen order and uses SameValueZero; a field-keyed Map compares records by that field and keeps the latest value for a repeated key; a sort-based implementation changes order and needs matching comparison and equality functions. / 先确定相等规则，再选实现。Set 按 SameValueZero 保留首次出现顺序；按字段建键的 Map 用该字段比较记录，并在键重复时保留最后一个值；排序实现会改变顺序，且比较和相等函数必须一致。
-
-A simple indexOf filter is a useful contrast: indexOf uses strict equality, so it removes every NaN; filter also skips sparse holes.
-
-~~~javascript
-const values = [NaN, NaN, 1, 1];
-values.filter((value, index) => values.indexOf(value) === index); // [1]
-[...new Set(values)]; // [NaN, 1]
-~~~
-
-For object records, the canonical [JavaScript Arrays](../../../frontend/javascript/arrays.md) note shows a Map keyed by the field that defines identity. When ordering is acceptable, sort a copy and keep one value per comparator-defined equivalence group. The comparator must put equivalent values together:
-
-~~~typescript
-function uniqueSorted<T>(
-  items: T[],
-  compare: (left: T, right: T) => number,
-  same: (left: T, right: T) => boolean,
-): T[] {
-  const result: T[] = [];
-  for (const item of [...items].sort(compare)) {
-    if (result.length === 0 || !same(result[result.length - 1], item)) result.push(item);
-  }
-  return result;
-}
-~~~
-
-The maintained [JavaScript Arrays](../../../frontend/javascript/arrays.md) note is canonical for Set/Map equality and complexity. These examples preserve the distinct indexOf/NaN and comparator-based variants. / Set/Map 相等规则和复杂度的规范解释见维护中的 [JavaScript 数组](../../../frontend/javascript/arrays.md)；本页保留 indexOf/NaN 与比较器变体。
+去重策略的相等规则、顺序、重复记录胜出方式与排序边界已并入[JavaScript 数组操作如何处理空位、修改与复制？](../../../frontend/javascript/arrays.md#%E5%8E%BB%E9%87%8D%E5%89%8D%E5%85%88%E9%80%89%E2%80%9C%E7%9B%B8%E5%90%8C%E2%80%9D%E7%9A%84%E5%AE%9A%E4%B9%89)。其中保留了 indexOf 对 NaN 的处理、Set 的 SameValueZero、按业务字段用 Map 保留最后值，以及 comparator / same 配对的排序实现。

@@ -48,12 +48,10 @@
 
 ### JavaScript 的值、对象与调用
 
-- [How do JavaScript values convert, compare, and become property keys? / JavaScript 值如何转换、比较并成为属性键？](javascript/javascript-types.md)
-- [How do JavaScript array operations differ on holes, mutation, and copying? / JavaScript 数组操作对空位、修改和复制有何差异？](javascript/arrays.md)
-- [How do Object and Array helper APIs copy or enumerate data? / Object 与 Array 辅助方法如何复制或枚举数据？](javascript/es6-new-methods.md)
-- [How do optional access and destructuring handle missing values? / 可选访问和解构如何处理缺失值？](javascript/optional-chaining-and-destructuring.md)
-- [When should I use Map, Set, or an object? / 何时应使用 Map、Set 或普通对象？](javascript/map-and-set.md)
-- [How do you deep-copy a JavaScript value safely? / 如何安全地深拷贝 JavaScript 值？](javascript/deep-copy-and-structured-clone.md)
+- [JavaScript 值如何转换、比较，并成为属性键？](javascript/javascript-types.md)
+- [何时使用 Map、Set 或普通对象？](javascript/map-and-set.md)
+- [JavaScript 数组操作如何处理空位、修改与复制？](javascript/arrays.md)
+- [如何安全地深拷贝 JavaScript 值？](javascript/deep-copy-and-structured-clone.md)
 - [How do var, let, and const differ? / var、let 与 const 有什么区别？](javascript/javascript-basics.md)
 - [How do lexical scope and closures preserve access to state? / 词法作用域与闭包如何保留对状态的访问？](javascript/scope-and-closure.md)
 - [How do JavaScript objects find and organize properties? / JavaScript 对象如何查找和组织属性？](javascript/objects-functions-and-prototypes.md)
@@ -62,8 +60,8 @@
 - [How does JavaScript Proxy intercept object operations? / JavaScript Proxy 如何拦截对象操作？](javascript/proxy.md)
 - [How does currying support partial application? / 柯里化如何支持部分应用？](javascript/currying-and-partial-application.md)
 - [What does JavaScript strict mode change? / JavaScript 严格模式会改变什么？](javascript/other-javascript-topics.md)
-- [What do weak collections and weak references guarantee? / 弱集合和弱引用能保证什么？](javascript/javascript-memory-weakmap-and-weakset.md)
-- [How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？](runtime/javascript-garbage-collection-and-retained-objects.md)
+- [弱集合与弱引用能保证什么？](javascript/javascript-memory-weakmap-and-weakset.md)
+- [JavaScript 对象为何会在不再有用后仍留在内存中？](runtime/javascript-garbage-collection-and-retained-objects.md)
 
 ### 异步任务与错误恢复
 

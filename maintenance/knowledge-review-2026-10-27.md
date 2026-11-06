@@ -115,7 +115,7 @@ Each listed note was read in full. File-specific checkpoints, evidence URLs, lim
 - [`frontend/javascript/arrays.md`](../frontend/javascript/arrays.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/asynchronous-javascript.md`](../frontend/javascript/asynchronous-javascript.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/error-handling.md`](../frontend/javascript/error-handling.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/es6-new-methods.md`](../frontend/javascript/es6-new-methods.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- 原 `frontend/javascript/es6-new-methods.md`（现并入[值与属性](../frontend/javascript/javascript-types.md)及[数组](../frontend/javascript/arrays.md)） — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/iterators-and-generators.md`](../frontend/javascript/iterators-and-generators.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/javascript-basics.md`](../frontend/javascript/javascript-basics.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/javascript-memory-weakmap-and-weakset.md`](../frontend/javascript/javascript-memory-weakmap-and-weakset.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
