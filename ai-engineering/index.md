@@ -34,10 +34,10 @@
 - [每次模型调用应看到什么，应用又应持久化什么？](context/context-engineering-principles.md)
 - [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)
 - [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](agents/tool-design-and-function-calling.md)
-- [When should a model control the next step? / 何时应让模型决定下一步？](agents/agent-fundamentals.md)
-- [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](agents/orchestration-patterns.md)
-- [How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？](safety/ai-safety-in-production.md)
-- [How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？](systems/ai-application-architecture.md)
+- [什么时候应该让模型决定下一步？](agents/agent-fundamentals.md)
+- [怎样按依赖、并行性和控制权组织多阶段 AI 任务？](agents/orchestration-patterns.md)
+- [生产 AI 如何阻止不可信内容诱导模型越权？](safety/ai-safety-in-production.md)
+- [AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？](systems/ai-application-architecture.md)
 
 ### 从发现差距到验证改进
 

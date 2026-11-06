@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=47715ee5d262e4c21d0c737c0178fc63503d8403e523943ee6b1930602869134 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=fcc47d4e952f4b78d441952bf06c3feecb611b79b9dbbf77acce401d46e4eb4e -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -22,10 +22,10 @@
 - [ ] 10. [每次模型调用应看到什么，应用又应持久化什么？](../ai-engineering/context/context-engineering-principles.md)
 - [ ] 11. [怎样从授权文档中检索并核验回答依据？](../ai-engineering/rag/rag-architecture-and-implementation.md)
 - [ ] 12. [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](../ai-engineering/agents/tool-design-and-function-calling.md)
-- [ ] 13. [When should a model control the next step? / 何时应让模型决定下一步？](../ai-engineering/agents/agent-fundamentals.md)
-- [ ] 14. [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](../ai-engineering/agents/orchestration-patterns.md)
-- [ ] 15. [How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？](../ai-engineering/safety/ai-safety-in-production.md)
-- [ ] 16. [How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？](../ai-engineering/systems/ai-application-architecture.md)
+- [ ] 13. [什么时候应该让模型决定下一步？](../ai-engineering/agents/agent-fundamentals.md)
+- [ ] 14. [怎样按依赖、并行性和控制权组织多阶段 AI 任务？](../ai-engineering/agents/orchestration-patterns.md)
+- [ ] 15. [生产 AI 如何阻止不可信内容诱导模型越权？](../ai-engineering/safety/ai-safety-in-production.md)
+- [ ] 16. [AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？](../ai-engineering/systems/ai-application-architecture.md)
 - [ ] 17. [如何判断 AI 系统是否满足任务契约？](../ai-engineering/evaluation/llm-evaluation-methods.md)
 - [ ] 18. [何时应微调来弥补稳定的行为差距？](../ai-engineering/fine-tuning/fine-tuning-strategies.md)
 - [ ] 19. [可验证奖励如何训练推理能力？](../ai-engineering/fine-tuning/reward-based-reasoning-training.md)

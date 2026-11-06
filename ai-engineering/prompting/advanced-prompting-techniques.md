@@ -44,7 +44,7 @@ Self-consistency samples multiple candidate reasoning answers and aggregates the
 
 Multiple samples increase token use and usually require more inference work. Exact cost and wall-clock impact depend on batching, provider behavior, and the selected model. Compare accuracy, latency, and cost with a single answer on the target task.
 
-A model can also adapt its next action to a tool's observed result. See [the ReAct decision loop / ReAct 决策循环](../agents/agent-fundamentals.md#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF) for when that feedback loop is worth adding and how the runtime controls it.
+A model can also adapt its next action to a tool's observed result. See [the ReAct decision loop / ReAct 决策循环](../agents/agent-fundamentals.md#ReAct%20循环怎样让观察影响下一步？) for when that feedback loop is worth adding and how the runtime controls it.
 
 ## When should you chain prompts? / 何时串联提示词？
 

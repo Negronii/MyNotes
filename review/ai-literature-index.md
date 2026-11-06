@@ -33,7 +33,7 @@
 
 | 来源与版本 | 核心贡献或阅读理由 | 知识落点 |
 |---|---|---|
-| [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629v3) · 2022 首次发表 · arXiv v3 2023-03-10 | 用任务环境返回的 observation (观察结果)调整后续推理和行动，并在特定问答及交互任务中与相应基线比较。 | [Agent 决策循环](../ai-engineering/agents/agent-fundamentals.md#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF) 将论文的行动与观察连接到生产中的工具契约。 |
+| [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629v3) · 2022 首次发表 · arXiv v3 2023-03-10 | 用任务环境返回的 observation (观察结果)调整后续推理和行动，并在特定问答及交互任务中与相应基线比较。 | [Agent 决策循环](../ai-engineering/agents/agent-fundamentals.md#ReAct%20循环怎样让观察影响下一步？) 将论文的行动与观察连接到生产中的工具契约。 |
 | [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401v4) · 2020 首次发表 · arXiv v4 2021-04-12 | 结合可更新的文档索引与参数化生成器，比较按整段输出和按单个 token 对候选文档做 marginalization (边缘化)。 | [检索与有依据的生成](../ai-engineering/rag/rag-architecture-and-implementation.md) 将论文机制连接到证据检索和回答验收。 |
 | [Dense Passage Retrieval for Open-Domain Question Answering](https://arxiv.org/abs/2004.04906v3) · EMNLP 2020 / arXiv v3 | 用兼容的问题与段落编码器检索候选，帮助理解语义匹配与词法命中的互补及局限。 | [检索表示与混合排序](../ai-engineering/rag/rag-architecture-and-implementation.md#词法、向量和混合检索怎样互补)。 |
 | [Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf) · SIGIR 2009 | 按名次融合不同检索器结果，避免直接相加不在同一尺度的分数。 | [RRF 手算与重排](../ai-engineering/rag/rag-architecture-and-implementation.md#词法、向量和混合检索怎样互补)。 |

@@ -1,91 +1,113 @@
-# How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？
+# AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？
 
-**Core explanation / 核心解释：** A client connection is a delivery channel, not the identity or source of truth for an AI task. Give each logical submission a stable run ID, persist authoritative state and useful checkpoints, and let clients query or resume that run after a timeout. A disconnect leaves delivery incomplete; it does not establish whether the model call or an external side effect finished. / 客户端连接只是交付通道，不是 AI 任务的身份或事实依据。为每次逻辑提交分配稳定的运行 ID，持久化权威状态和有用检查点，并允许客户端在超时后查询或恢复同一次运行。断连只能说明交付不完整，无法证明模型调用或外部副作用是否完成。
+把一次逻辑任务的身份、权威状态和外部副作用保存在应用侧。HTTP（Hypertext Transfer Protocol，超文本传输协议）请求、事件流和 worker（工作进程）都只是完成或交付运行的参与者；任何一个断开，都不能单独证明运行已经停止，也不能证明一次写入没有生效。恢复时先读持久状态，再按操作契约查询、去重或对账。
 
-**Key terms / 关键术语：** run ID / 运行标识；authoritative state / 权威状态；checkpoint / 检查点；resume / 恢复；idempotency key / 幂等键；unknown outcome / 结果未知；terminal state / 终态。
+本篇沿用[一条构建失败消息](from-message-to-answer.md)：开发者问 build 42 为什么失败。工具请求的 `tool_call_id` 为 `c1`；应用执行 `read_build_log` 后，将匹配的结果关联到 `c1`，其中 `unit-tests` 的 `reject_empty_name` 预期返回 HTTP `400`、实际返回 `200`，进程退出状态为 `1`。为走完长运行，合成案例增加一个请求：“解释失败并准备缺陷单；提交前让我审核。”新增的 `create_issue` 是本例的应用工具，不是上游章节已经存在的接口。
 
-## What changes from prototype to production? / 从原型到生产会发生什么变化？
+## 运行身份、持久状态和交付连接分别负责什么？
 
-A prototype tests whether a model can help with a task. A production service must also authenticate and authorize the caller, assemble permitted context, handle model and tool failures, validate outputs, manage deadlines and cost, and expose a result that can be recovered after the original response channel ends.
+每个逻辑任务使用稳定的 run ID（运行标识，字段名 `runId`）。客户端提交 idempotency key（幂等键）时，服务端将调用者、资源范围、键值和规范化请求摘要绑定：同一作用域和摘要的重试返回原有运行；同键但不同摘要应返回冲突，不能借用旧运行，也不能新建第二个动作。`runId` 标识逻辑任务，`tool_call_id`（工具调用 ID）关联模型请求与工具结果，worker attempt（工作进程执行尝试）标识一次获租执行；它们不能相互代替。
 
-~~~text
-Request → authenticate and authorize → assemble permitted context
-        → model and/or tools → validate result → respond or escalate
-        ↘ persist run state, trace, and privacy-reviewed operational signals
-~~~
-
-Treat a model-proposed tool call as untrusted input. The application executes it only after its own argument checks and authorization; schema-constrained output does not establish that an action is valid or permitted. See [Tool Design and Function Calling / 工具设计与函数调用](../agents/tool-design-and-function-calling.md) and [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md). OpenAI’s [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, describe provider-specific request and schema behavior; application authorization and semantic validation remain separate.
-
-Set explicit deadlines, bounded retries, idempotency for retryable writes, cancellation behavior, rate and budget limits, an error or escalation path, and a way to roll back a model or prompt version. Retry only when the operation contract makes a duplicate safe. A timeout says the caller did not receive a result in time; it does not say the server did no work.
-
-These are separate design questions with deeper treatments: [how to reduce latency and cost](ai-latency-and-cost-optimization.md), [how to choose a deployment pattern](ai-deployment-patterns.md), and [how to monitor and improve a production feature](ai-production-observability-and-feedback.md). The remainder of this note defines the durable run contract that those interfaces rely on.
-
-## Durable runs, checkpoints, and recovery / 持久化运行、检查点与恢复
-
-Use one stable `runId` for a logical submission, independent of HTTP requests, event streams, and worker attempts. Persist the run's current state and terminal result or error summary long enough for clients to resolve refreshes and retries. A response body or stream is a view of that run, not its authoritative record.
-
-### Choose a completion shape / 选择完成方式
-
-All three shapes can expose the same run identity, but they make different promises about waiting, early output, and recovery:
-
-| Shape | What the caller sees | Trade-off |
+| 记录或通道 | 在本例中的内容 | 能证明什么 |
 |---|---|---|
-| **Direct response / 直接响应** | One request waits for a final response. Its `runId` can be correlated or queried if the service persists the run. | Few moving parts and a simple client; long waits are vulnerable to deadline and connection limits. Without retained state, a lost response leaves no status to recover. |
-| **Provisional stream / 临时流式响应** | The same run emits partial text or progress before its terminal result. | Better perceived responsiveness, but text is provisional until a terminal frame and authoritative state agree. A disconnect can leave useful partial output and an unknown outcome. |
-| **Queued/background completion / 排队或后台完成** | Submission returns a run identity and current state; a worker completes it later, and the client polls or reconnects for updates. | Fits longer work and bounded admission, but requires durable state, queue/worker operations, status handling, and retention. `202 Accepted` means processing was accepted, not completed. |
+| 运行记录 | `runId`、调用者和 `repository_id=build-service` 范围、当前状态、任务版本、截止时间、终态结果或错误 | 这次逻辑任务现在处于什么状态 |
+| 检查点 | 最近已持久化的步骤、工具调用 ID、证据引用、经批准动作的摘要 | 哪些观察与决策已经记录，可从哪里继续 |
+| 副作用记录 | 稳定操作键、目标资源、请求摘要、执行状态、外部工单 ID | 某个外部动作是否已发起、已确认或仍结果未知 |
+| 请求响应、临时流或 WebSocket（网页套接字）连接 | 这一次提交响应或进度事件 | 只说明本次交付；断线不改变运行事实 |
+| model context（模型上下文）或 KV cache（键值缓存）/prompt cache（提示缓存） | 当前推理使用的对话和可重用计算 | 可能减少重复输入处理；不证明应用状态、审批或外部动作结果 |
+| 队列消息 | 某个运行可以被 worker 处理的唤醒信号 | 可被重投；不是运行状态的权威记录 |
 
-For example, a synthetic API can accept `POST /runs` with a stable idempotency key, return `202` and a `runId`, expose `GET /runs/{runId}` for current state, and stream events from `GET /runs/{runId}/events?after=12`. The run record is authoritative; event delivery is a view. The `after` cursor helps only while the server retains the corresponding event history. This is an application contract, not an HTTP requirement.
+## 接受请求后怎样保证最终入队？
 
-Model the server-side lifecycle explicitly. `accepted`, `queued`, and `running` are nonterminal states. `cancel_requested` records a request that still needs handling. `completed`, `failed`, and `canceled` are terminal states. A reconnect should fetch current run status before claiming success. Replay progress only when the service defines a cursor and retains the events needed to fill gaps. The diagram shows one path for queued work.
+初始提交可能已成功写入运行记录，但响应尚未送到客户端；如果运行记录和队列发送不是一个原子动作，也可能在两者之间崩溃。常见做法是在同一数据库事务中写入运行记录和待发布的 outbox（事务发件箱）事件。发布器先持久化 `accepted` 到 `queued` 的状态变化，保留待发送事件，再投递队列消息；若在投递前崩溃，发布器仍能找到事件并重试，若投递后、标记已发送前崩溃，重复消息会唤醒同一个 `queued` 运行，由条件领取消重。这样 worker 收到消息时不会遇到尚未入队的 `accepted` 状态。若运行记录和 outbox 记录无法参加同一事务，就需要等价的可恢复入队协议与扫描修复任务。
 
-~~~mermaid
+本例只在请求摘要与运行记录、outbox 事件持久化后返回 `202 Accepted`。同一调用者在同一 build 42 范围内用原键重试相同请求，会找到相同的 `runId`；若改了问题或目标，服务返回冲突。RFC 9110 中的 `202` 只表示请求已接受处理，业务的去重和队列恢复仍由应用实现。
+
+## worker 崩溃后怎样让新尝试接手？
+
+队列消息只是唤醒运行。worker 用条件更新原子领取 `queued` 状态，并在持久记录中取得有期限的 lease（租约）和单调递增的 attempt/fencing token（尝试代次／栅栏令牌）。租约到期只允许恢复器尝试接管，不会自行撤销旧尝试的写入资格；恢复器提交领取下一代的条件更新后，每次检查点写入才会因代次不符而拒绝旧尝试。条件推进还须比较期望状态和取消标记：若扫描器先将运行改回 `queued`，旧 worker 即使代次尚未增加，也会因状态不符而无法继续写入。若旧写入先于接管事务提交，恢复器应读到该状态再继续；若接管先提交，旧尝试的写入被拒绝。栅栏只保护本地状态，不会取消已发出的远端请求。完成本次消息代表的步骤或写下暂停状态后，先持久化检查点再确认消息；若确认前崩溃，重投会从检查点恢复；若确认后崩溃且运行仍需推进，恢复扫描器必须能找到过期的非终态运行，以条件事务重新排队并写入新的 outbox 事件；仅保存状态不会自动唤醒 worker。等待审批的运行由审批事件唤醒，结果未知的操作由对账调度器接续。
+
+运行表、操作记录和持久队列可以完成这些职责。更复杂的编排也可选保存事件历史的工作流运行时；持久化的关键不是技术名词，而是进程、连接或 worker 消失后仍能回答“任务到哪一步、外部动作发生了什么”。
+
+## 同一运行怎样跨审批和外部写入恢复？
+
+```mermaid
 stateDiagram-v2
   [*] --> accepted
-  accepted --> queued
-  queued --> running
-  running --> cancel_requested
-  cancel_requested --> canceled
-  running --> completed
-  running --> failed
-  cancel_requested --> completed: completion won the race
-~~~
+  accepted --> queued: 排队状态持久化，outbox 等待发布
+  queued --> running: worker 原子领取并持有有效租约
+  running --> awaiting_approval: c1 证据已保存，缺陷单草稿已生成
+  awaiting_approval --> queued: 同事务记录有效审批、排队状态与 outbox
+  awaiting_approval --> rejected: 审核人拒绝
+  running --> effect_in_flight: 操作键、请求摘要与当前租约已持久化
+  effect_in_flight --> completed: 外部结果和工单 ID 已保存
+  effect_in_flight --> effect_unknown: 新尝试发现租约过期且结果未确认
+  effect_unknown --> effect_unknown: 未取消时按契约查询或同键重放，仍未确认
+  effect_unknown --> completed: 对账确认已提交并保存外部 ID
+  running --> failed: 无法恢复的错误
+  running --> cancel_requested: 收到取消请求
+  awaiting_approval --> cancel_requested: 收到取消请求
+  effect_in_flight --> cancel_requested: 收到取消；保留副作用记录
+  effect_unknown --> cancel_requested: 收到取消；仍须对账
+  cancel_requested --> cancel_requested: 只查询或非创建式对账，结果仍未确认
+  cancel_requested --> canceled: 确认没有尚可能提交的动作
+  cancel_requested --> completed: 外部动作已完成，停止后续步骤并如实返回
+```
 
-## What if submission times out or a side effect has an unknown outcome? / 提交超时或副作用结果未知时怎么办？
+`effect_in_flight` 不是死掉的 worker 写出的结论，而是在调用远端之前由当前有效尝试持久化的状态，包含操作键、精确请求摘要与租约代次。租约过期后，新尝试发现该操作没有记录终态，才把它转为 `effect_unknown` 并对账。审批通过时，应用以条件事务核验仍在等待同一动作摘要，将有效审批、`queued` 状态及针对同一 `runId` 的 outbox 恢复事件一起提交；重复或迟到的审批事件不能重新排队一个已经继续或取消的运行。领取该事件的 worker 必须取得新的 attempt 代次和 lease，重新读取草稿摘要、审批记录与当前授权，然后才能进入 `effect_in_flight`。若审批人拒绝，应用将运行记为 `rejected`；若草稿摘要或权限在等待期间变化，原审批失效，更新后需重新审核。未取消且处于 `effect_unknown` 时，查询或契约允许的同键重放都不能凭发起动作本身清除未知状态；只有确认远端结果后才转为完成，确认旧请求不会再提交后才可取消。取消请求不删除副作用记录、操作键或摘要，也不能退回允许写入重放的普通未知状态。同键写入只防重复：若旧请求从未到达接收方，重放可能首次创建工单，所以取消后只允许查询或接收方保证不会创建新效果的对账操作。
 
-A timeout after `POST /runs` creates an **unknown submission outcome**. The server may have created the run even though its response never reached the client. The client can query by its stable submission key if the API supports that lookup, or repeat the same request under its same-key retry contract. The server binds a key to the same request parameters and returns the existing run for a duplicate. Reusing the key with different input requires explicit handling. Starting a new run with a fresh key can duplicate model cost or side effects.
+`accepted`、`queued`、`running`、`awaiting_approval`、`effect_in_flight`、`effect_unknown` 与 `cancel_requested` 都表示仍有后续处理或对账；`completed`、`failed`、`rejected`、`canceled` 是终态。具体存储可将运行状态与单个副作用状态分别建模，但外部效果必须能关联回唯一的 `runId` 和操作键。
 
-Worker recovery has a second ambiguity around external effects. Checkpoints tell the application what it recorded; they cannot reveal whether an unrecorded remote effect committed:
+> [!example] 从重复提交到恢复 `run-r42-7`
+> 1. 浏览器在调用者、build 42 范围内以幂等键 `build-42-triage-req-19` 提交“解释失败并准备缺陷单”。服务端计算请求摘要，并在一个持久事务中写入 `run-r42-7` 与 outbox 事件，返回 `202` 和 `runId`。同键重试且摘要相同会得到该运行；若把同一键用于不同问题或目标，服务端返回冲突。HTTP 的 `202 Accepted` 只表示请求已收下，不代表任务已完成。
+> 2. 若进程恰在事务提交后、队列发布前崩溃，outbox 发布器稍后仍能找到待发送事件。若发布器发布后、标记前崩溃，它可能再次发布同一事件。worker 通过条件更新原子领取 `queued` 运行，写入带过期时间的租约与递增 attempt/fencing token；同一时刻只有已提交的当前代次能更新运行检查点。租约到期后，如果旧写入先于接管事务提交，恢复器必须读入这个最新状态；如果接管事务先提交，之后旧代次的状态更新会失败。队列消息只唤醒运行，数据库中的当前代次决定哪一次尝试可以继续。
+> 3. worker 调用模型后，模型提出读取 `read_build_log` 的请求。应用核验调用者可读 build 42 后才执行工具；`c1` 是这次工具调用的 ID，结果关联到该 ID，包含失败步骤、测试名、预期/实际值和退出状态。应用先持久化这些证据及其来源，再继续模型调用。完成本次唤醒代表的步骤或暂停点后，应用先保存对应检查点，再确认队列消息；若确认前崩溃，重投消息会从该检查点恢复，若确认后崩溃且尚未到暂停点或终态，过期运行扫描器以条件事务重新排队并登记 outbox，才能从持久检查点继续。
+> 4. 模型生成解释和缺陷单草稿。应用保存 `repository_id=build-service`、标题、正文、证据摘要和 `payload_hash`，把运行置于 `awaiting_approval`。此时尚未创建工单。
+> 5. 浏览器在审批事件到达前断线。重连后以 `run-r42-7` 查询，看到仍在等待审批；不重新创建任务，也不把部分流文本当作终态。审核人看到的预览绑定到 `repository_id`、标题、正文和证据摘要。审批返回时，应用检查该摘要仍相同、审批人仍有权限、目标仓库状态仍有效，并以条件事务一起提交审批决定、`queued` 状态和唤醒同一 `runId` 的 outbox 恢复事件。
+> 6. worker 收到审批恢复事件后，先通过条件事务领取 `run-r42-7` 的新 attempt 代次和 lease，再回读草稿摘要、审批记录与当前授权。核对通过后，它把 `create_issue` 的操作键 `run-r42-7:create-issue:v1`、完整请求摘要和副作用状态 `effect_in_flight` 持久化，进入该状态的条件更新同时核对当前 attempt、期望状态与取消标记，并重新核验写授权。若取消先提交，这次推进失败；若写入意图先提交，后来取消必须按请求可能已经发出处理，本地栅栏不能撤回网络请求。然后才提交给工单服务。假设服务创建了 `ISSUE-842`，worker 却在写回 ID 前崩溃；它无法自行更新运行。租约过期后，新 worker 通过条件事务提交下一 attempt，读到尚无结果的 `effect_in_flight` 并转为 `effect_unknown`，不会再生成一份草稿或使用新操作键。栅栏只拒绝接管提交后的旧代次写入；先前已发出的远端请求仍需按操作键对账。
+> 7. 恢复 worker 先向接收服务查询同一操作键；副作用记录保持 `effect_unknown` 并保留原键和请求摘要。只有运行未被取消，且接收服务支持绑定相同请求摘要的幂等写入，且当前键仍在接收方保证的去重保留窗口内，应用重新核验当前写授权与取消状态后，才可以用同一键重放；超时或仍在处理时继续保持未知，不能把一次重放当作已确认。若只能查询，查无记录仍不证明原请求没有在途或延迟提交，应继续等待、按服务契约查询，不能改键重发。若去重窗口已经结束，不能仅因键相同就重放写入，应改用查询或人工对账。确认已有 `ISSUE-842` 后，写回副作用记录与最终答复，再标记 `completed`。
+> 8. 如果接收服务既不支持按键去重，也不能按键查询，就暂停自动重试并人工对账。盲目重发可能创建第二张工单；若用户同时要求取消，运行保持 `cancel_requested`，并保留副作用的 `effect_unknown` 账目；只做不会新建工单的对账，直到确认原请求不会再提交。
 
-1. A worker records that an export run is at `create-artifact`, then crashes **before** calling the artifact service. Recovery can retry that step with the same operation key.
-2. The artifact service creates the file, but the worker crashes **before** saving the returned artifact ID as the next checkpoint. The run record cannot prove failure. Retry with the same key if the receiving service deduplicates it, or query that service by operation key and then save the result. If neither is supported, mark the outcome unknown and reconcile it; blindly repeating may create a duplicate.
-
-Persist a local effect and its deduplication record in one transaction when both share a database. For another service, use its idempotency contract, a queryable operation key, or a compensation/reconciliation path. See [confirming request outcomes / 确认请求结果](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) for retry budgets, key scope, and deadlines. See [queue acknowledgements / 队列确认](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md) for what the broker confirms.
-
-| Failure point | What is known | Safe next step |
+| 重连时持久状态 | 恢复动作 | 不安全的推断 |
 |---|---|---|
-| Request or stream disconnects before a terminal result | The caller's view is incomplete; the run may still be active or already terminal. | Query `GET /runs/{runId}`. Resume events only with a defined, retained cursor; do not resubmit under a new key. |
-| Worker crashes before a side effect | The checkpoint says the step did not finish, but another worker can retry it. | Use the same stable operation key and persist the result before advancing the checkpoint. |
-| Worker crashes after an external effect but before its result is recorded | The external outcome is unknown to the run record. | Deduplicate or query at the receiver, then reconcile the checkpoint; do not infer that the effect failed. |
-| Cancel request races with completion | Either transition may win the authoritative state update. | Serialize the transition and return the state that actually won; treat a pending request as nonterminal. |
+| `running`，最后检查点是 `c1` 的已存结果 | 恢复必要上下文，继续处理已持久化的观察 | 认为旧流没有到达客户端，所以可新建一份 run |
+| `awaiting_approval`，动作摘要未变 | 继续展示同一审批项；获批后重新检查权限和目标状态 | 把之前对别的动作或旧版本的审批复用到新草稿 |
+| `effect_in_flight`，操作键和请求摘要已保存，原租约过期 | 新 worker 先认领并标记结果未知，再查询；只有未取消时才考虑契约允许的同键写入重放 | 因本地没存到外部 ID 就当作远端没有提交，或用新操作键再写一次 |
+| `effect_unknown`，接收方暂时查无结果 | 保持未知；未取消且当前授权、同键同请求与有效去重窗口条件满足时才按契约重放，否则只查询、等待或人工对账 | 把“查询无记录”视为足以证明旧请求永远不会提交 |
+| `cancel_requested`，副作用仍为 `effect_in_flight` 或 `effect_unknown` | 停止新动作，但保留原键和摘要，继续对账 | 清除副作用记录或直接标为 `canceled` |
+| `completed`，结果已持久化 | 返回已存结果；可以另行重放仍被保留的进度事件 | 再跑模型或工具以“补回”丢失的响应 |
 
-## What does cancellation mean for a durable run? / 持久化运行中的取消意味着什么？
+## 客户端断线后怎样查询同一次运行？
 
-Persist a `cancel_requested` transition and let the worker observe it at a safe point. Serialize the terminal updates so completion and confirmed cancellation compete to update the same run state. If completion commits first, report `completed`. Commit `canceled` only when the run can no longer perform its work. An endpoint acknowledgement can leave cancellation pending. Compensating for an already committed external action requires its own operation.
+直接响应、临时流和排队任务可以共享同一个运行状态，只是客户端等待和读取结果的方式不同。短任务可让一个请求等待结果；需要显示进度时，把流事件标作临时信息，直到终态记录写入；超过连接时限的工作可以返回 `runId`，让客户端查询或重连。事件游标只有在服务端保留对应事件时才能补齐空档。不要把一个流的断开等同于任务取消。
 
-A browser abort, closed tab, or disconnected event stream ends a local delivery attempt. It does not prove that the server-side run stopped. The UI should query the run record or request server cancellation separately; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) covers the client view, incremental decoding, and teardown.
+| 交付方式 | 调用方收到什么 | 需要守住的边界 |
+|---|---|---|
+| 直接响应 | 请求等待最终答复 | 设置期限；连接超时后仍查同一运行状态 |
+| 临时流 | 先收到文本或进度，最终再有终态 | 流文本在运行记录到达终态前仍属临时内容 |
+| 排队或后台 | `202` 与 `runId`，之后查询状态或事件 | `202` 不是完成；消息重投时仍按运行记录和租约恢复 |
 
-## When is event-history replay useful? / 事件历史重放何时有用？
+例如，合成接口可以让 `POST /runs` 接受问题和 `Idempotency-Key`，持久化后返回 `202 {"runId":"run-r42-7","status":"accepted"}`；客户端用 `GET /runs/run-r42-7` 查询权威状态，用 `GET /runs/run-r42-7/events?after=12` 续读服务器仍保留的事件。短任务可以在同一 `runId` 上等待直接答复，流模式则把进度作为临时事件。状态查询、事件续读和审批入口每次都按当前调用者与资源范围授权；`runId` 只定位运行，不是访问凭据。路径与字段是本例的应用契约，并非 HTTP 规范要求。
 
-Some workflow runtimes persist an ordered event history and replay deterministic orchestration code to rebuild in-memory state. In such a runtime, completed external activities can return their recorded results during replay; this mechanism does not make a model call deterministic. A model call still in flight before its result was recorded may be attempted again, cost more, or return different text. Decide whether that retry is acceptable and checkpoint the result when it completes. Deterministic event-history replay is a runtime-specific implementation option, not a requirement that an LLM recompute identical output after a crash.
+初始 `POST /runs` 可能已经创建运行，只是响应未到客户端。客户端应在服务支持时用同一调用者与资源范围查询幂等键，或用该键重试完全相同的请求；不能改写请求后复用键，也不能换新键盲目重提。HTTP 规范只把方法语义定义为幂等或非幂等；业务应用需为 `POST` 另设明确的去重契约。流事件只能在服务保留相应游标时补齐，断线后应先查运行记录。
 
-**Representative answer / 代表性回答：** I give each logical AI run a stable ID and persist its state independently of the response connection. A direct request, provisional stream, or queued worker can expose that same run. On reconnect, the client checks status and resumes from a retained cursor only when the service supports it. A worker checkpoints completed steps, but retries a side effect only with a deduplication or reconciliation contract because a crash after the effect can hide its outcome. Cancellation is terminal only after authoritative state says the work stopped; a client disconnect or cancel acknowledgement is not enough. / 我会为每次逻辑 AI 运行分配稳定标识，并独立于响应连接持久化运行状态。直接响应、临时流式响应或排队 worker 都可以暴露同一次运行。重连时客户端先查询状态，只有服务端支持保留游标时才按游标续传。worker 为已完成步骤保存检查点；只有具备去重或结果对账契约时才重试副作用，因为副作用完成后发生崩溃会让结果变得未知。只有权威状态确认工作已停止，取消才是终态；客户端断线或收到取消请求确认都不足以证明这一点。
+## 取消请求与断线有什么不同？
 
-## Related notes / 相关笔记
+客户端断开响应连接只结束这次交付，不取消服务端运行。用户发出的取消则是需要鉴权、持久记录并由 worker 在安全点执行的独立请求。应用可以把运行改为 `cancel_requested`，等待 worker 停止后续推理和新工具调用；若外部副作用处于 `effect_in_flight` 或 `effect_unknown`，仍保留操作键、请求摘要与副作用记录，并继续查询或按接收方契约进行不会创建新效果的对账。运行保留取消标记；不得因进入未知结果处理就重新允许写入重放。只有确认远端没有执行且原请求不会再提交，才可标为 `canceled`；确认已成功则保存外部结果、停止后续步骤并如实完成。若远端始终无法给出结论，运行继续待人工对账，不能用取消清除未知结果。
 
-- [Real-time web updates / 实时网页更新](../../engineering-foundations/networking/real-time-web-updates.md) explains transport selection, SSE framing, and wire behavior.
-- [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) owns browser-side partial output, terminal events, and local cancellation.
-- [Confirming request outcomes / 确认请求结果](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, retry, and idempotency.
-- [Database transactions and recovery / 数据库事务与恢复](../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) explains the boundary for durable application state.
-- [AI System Design Interview Questions / AI 系统设计面试题](./ai-system-design-interview-questions.md) applies these production mechanisms to end-to-end design cases.
+## 检查点与模型推理缓存分别恢复什么？
 
-**Sources / 来源：** [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) defines idempotent HTTP method semantics, and [§15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3) says `202 Accepted` does not mean processing is complete. Temporal's [Workflow replay guide](https://docs.temporal.io/workflows) and [Event History guide](https://docs.temporal.io/encyclopedia/event-history) describe one runtime's deterministic orchestration replay and recorded activity results. These sources support the mechanisms described here; the example API, states, and names are synthetic application choices.
+检查点保存的是应用已经知道的事实：工具调用 ID、工具返回的结果、批准过的动作、外部结果标识和下一步骤。模型上下文中的文字、模型回复 ID、前缀缓存或推理引擎的 KV cache 都不构成这些事实的替代品。OpenAI 当前 prompt-caching 文档说明，前缀缓存按模型配置过期且不保证每次命中；这类缓存只复用计算状态，不是运行账本。若运行重建时需要再次调用模型，输出可能不同且再次产生费用；若某个外部动作尚有未知结果，应先对账，不让新一轮模型生成决定是否重做。
+
+## 事件历史能恢复什么？
+
+> [!info] 工作流事件回放的适用范围
+> Temporal 的 event history（事件历史）示例把运行时已记录的活动结果用于重建编排状态。该功能可以恢复应用工作流，但不让模型调用变得确定，也不自动判定一个尚未记录的远端副作用是否提交。采用同类运行时，仍要为活动结果和外部写操作定义持久记录与幂等或对账契约。
+
+运行契约承接[应用如何执行模型的工具请求](../agents/tool-design-and-function-calling.md)，并与[生产 AI 如何阻止不可信内容触发越权动作](../safety/ai-safety-in-production.md)中的审批和停止边界配合。队列确认和重试结果的底层语义见[API 交付如何确认结果并限制重试](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)与[队列消息在何时才算被确认](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+
+> [!info]- 来源
+> - **HTTP 重试与异步接收的协议边界：** IETF，[RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，2022，§9.2.2（幂等方法与失败后重试）及 §15.3.3（`202 Accepted` 只表示接收处理，不表示完成）；核对日期：2026-11-06。本文额外的 `POST` 幂等键是应用契约，不是该 RFC 自动提供的保证。
+> - **事件历史重建运行状态：** Temporal，[Event History](https://docs.temporal.io/encyclopedia/event-history)，核对日期：2026-11-06；说明工作流命令和活动结果如何记录、worker 崩溃后如何重放。它是运行时实现例，不能证明外部系统未记录的副作用状态。
+> - **运行态与人审恢复：** OpenAI，[Running agents](https://developers.openai.com/api/docs/guides/agents/running-agents) 与 [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，核对日期：2026-11-06；当前 Agents SDK 文档说明运行循环、可保存会话状态、暂停审批并恢复同一 run 的做法。具体 API 属于该 SDK。
+> - **模型上下文缓存的服务边界：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”“Cache lifetime”和常见问题；说明可重用的是匹配前缀的 KV 张量，缓存按模型/配置过期且不能保证每次复用。Anthropic，[Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)，2025-09-29，“Compaction”“Structured note-taking”；讨论上下文整理与外部笔记。运行身份、外部动作和审批账本是本文的应用架构扩展。
