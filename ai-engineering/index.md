@@ -10,7 +10,7 @@ Follow one message through an AI service, then choose whether to study its evide
 
 ## Literature / 论文与文章
 
-- [AI Literature Index / AI 论文与文章索引](../review/ai-literature-index.md) — 按来源查找核心贡献与知识落点。
+- [AI literature collection](../review/ai-literature-index.md) — Browse selected sources by topic and follow them to the notes that explain their contributions.
 
 ## Reading order / 阅读顺序
 
@@ -20,7 +20,7 @@ Follow one message through an AI service, then choose whether to study its evide
 
 ### Foundation models / 基础模型
 
-- [How does a language model turn a prompt into text? / 语言模型怎样把一段 prompt 变成文本？](foundations/how-llms-work.md)
+- [How does a language model turn a prompt into text?](foundations/how-llms-work.md)
 - [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](foundations/model-selection-and-ecosystem.md)
 
 ### Prompting / 提示工程
