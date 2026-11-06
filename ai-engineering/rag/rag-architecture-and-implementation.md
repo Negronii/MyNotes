@@ -1,6 +1,6 @@
 # How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？
 
-**Core explanation / 核心解释：** Retrieval-augmented generation (RAG) retrieves candidate material from an external source, applies caller permissions, selects relevant evidence, and adds that evidence to the model's context for answer generation. It joins non-parametric, updateable sources with a model's parametric knowledge, but correctness still depends on source quality, synchronization, retrieval, evidence use, and application-side authorization. RAG does not guarantee freshness, privacy, correctness, low latency, or low cost. / 检索增强生成（RAG）从外部来源检索候选材料，根据调用者权限筛选内容，再把相关证据加入模型上下文以生成回答。它让可更新的外部知识与模型的参数化知识协作，但正确性仍取决于来源质量、同步、检索、证据使用和应用侧授权。RAG 不保证内容新鲜、隐私、答案正确，也不保证低时延或低成本。[Lewis et al.](https://arxiv.org/abs/2005.11401)
+**Short answer / 简答** — Define what sources the caller may use, retrieve from the eligible corpus, and give the model a small set of traceable passages. Validate each material claim against those passages and abstain when the evidence is missing or conflicting. Measure candidate recall, evidence selection, and final answers separately so you can fix the stage that failed. / 先确定调用者能使用哪些来源，再从有资格的文档中检索，把少量可追溯的证据交给模型。用原文核对关键主张，证据不足或冲突时说明无法确定。分别衡量候选召回、证据组装和最终回答，才能知道该修哪一层。
 
 ## When to use retrieval, long context, or fine-tuning / 如何选择检索、长上下文或微调
 
@@ -16,31 +16,26 @@ There is no universal token-count cutoff. Compare the methods on representative 
 
 ## Pipeline / 检索增强生成的流程
 
-A RAG request has two connected paths. The corpus path parses and indexes content; the query path retrieves evidence and uses it for generation. This note focuses on text corpora. A system can also fetch live records or call APIs at query time.
+Follow one synthetic question through the system. A caller asks “What is the cancellation window for a self-serve annual plan in the EU?” The authoritative current EU policy says 14 calendar days. The caller can read both the current EU and US policies. A withdrawn EU revision used 30 days, and another tenant’s contract is outside the caller’s scope.
 
-```text
-Corpus path: source documents → parse and preserve metadata → split into chunks → encode and/or build lexical index
-Query path: question + caller → authorization filter → retrieve candidates → optional reranking → assemble evidence → generate
-```
+~~~mermaid
+flowchart LR
+    Source["Source document and version"] --> Index["Parse sections and index eligible passages"]
+    Caller["Caller and question"] --> Scope["Compute authorization and policy scope"]
+    Index --> Candidates["Retrieve candidates"]
+    Scope --> Candidates
+    Candidates --> Evidence["Rank, verify and assemble evidence"]
+    Evidence --> Model["Generate with passage IDs"]
+    Model --> Check["Check claims and citations"]
+    Check --> Output["Return supported answer or abstain"]
+~~~
 
-Indexing is often asynchronous or performed ahead of user requests, but that is an implementation choice, not part of the definition of RAG. Preserve enough provenance to identify each chunk’s source and version. If source documents change, the application must synchronize those changes and define how it handles old versions, deletion, and revoked access.
+1. **Index / 建索引.** Parse by section, keeping text and structural context such as table headers, product scope, and exceptions. Store document ID, version or effective date, section or offsets, and policy metadata for each passage. Synchronize edits, deletions, and permission changes. If revocation must take effect before the index catches up, recheck access against the authoritative policy before releasing text.
+2. **Retrieve / 召回.** Compute the caller's authorized scope in trusted code. Apply authorization and effective-date constraints in each retrieval branch. Test which of the returned policies actually applies to the requested region and plan. The withdrawn revision and other tenant’s contract cannot become evidence. Search the eligible passages with a lexical baseline, a dense index when paraphrase matters, or both if evaluation shows the methods complement one another.
+3. **Rank and assemble / 重排与组装.** Fuse rankings if using multiple retrievers, then consider a cross-encoder if useful candidates are being ranked below less applicable ones and evaluation shows a gain. Keep the most relevant passages with their source IDs and exact scope. If a chunk points at a parent section, check the parent’s access and version before adding it. The EU section gets priority over a broadly related billing FAQ. Fit the evidence to the token budget and preserve the qualification “self-serve annual.”
+4. **Generate and check / 生成与核对.** Ask for an answer and passage IDs, then confirm that the cited passage really supports “14 calendar days” for the stated region and plan. An ID copied from the prompt is not proof of support. If only the US policy is present, report insufficient applicable evidence. When trusted passages conflict, apply a predefined authority/version rule or surface the conflict.
 
-A framework-neutral sketch of the query path:
-
-```python
-# Synthetic example: answer a question about a sample policy.
-# The application computes and enforces this caller's scope.
-query = "What is the sample policy's cancellation window?"
-allowed_scope = authorization_scope(caller)
-candidates = retrieve(query, scope=allowed_scope, limit=40)  # illustrative candidate count
-ranked = rerank(query, candidates)
-evidence = select_passages(ranked, limit=5)                  # illustrative passage count
-answer = generate(query=query, context=evidence)             # also enforce the model's token budget
-```
-
-The limits above illustrate **wide candidate retrieval → reranking → finite evidence**; they are not recommended values. The example selects at most five passages and must also fit them within the model's token budget. Reranking can reorder only candidates already retrieved. If the needed passage is absent from the candidate set, reranking cannot recover it. The application should retain source metadata through assembly and validate any required citations separately. This sketch omits implementation details such as filtering syntax, source synchronization, and citation validation.
-
-Treat retrieved text as untrusted input; the access and trust-boundary section below covers prompt injection and application-side controls.
+A missing passage at step 2 cannot be recovered by reranking at step 3. A retrieved passage can still be dropped by context assembly. Evidence that reaches the model can still be misread. Keeping the authorized candidate IDs, selected passage IDs, and output claims distinct makes those failures diagnosable. Treat the passages as data. Their text grants no additional permissions or tool authority.
 
 ## Embeddings and similarity / 向量表示与相似度
 
@@ -94,13 +89,15 @@ For the parent-child chunking design and its trade-offs, see “Parent-child ret
 
 **Hybrid retrieval / 混合检索** combines dense and sparse candidates or rankings. The methods can complement one another, but hybrid retrieval is not a universal default. A heterogeneous retrieval benchmark found BM25 to be a robust baseline; it also found that reranking and late-interaction systems performed strongly on average at higher computational cost. Results vary across tasks, so compare retrieval methods on the application’s queries. [BEIR](https://arxiv.org/abs/2104.08663)
 
-One fusion method is **Reciprocal Rank Fusion (RRF) / 倒数排名融合**. It combines rankings rather than directly combining raw scores:
+**Reciprocal rank fusion / 倒数排名融合（RRF）** combines ordered lists. For a candidate $d$ with rank $r_i(d)$ in list $i$,
 
 $$
-\operatorname{RRF}(d) = \sum_i \frac{1}{k + r_i(d)}
+\operatorname{RRF}(d)=\sum_i \frac{1}{k+r_i(d)}.
 $$
 
-Here, $r_i(d)$ is document $d$’s rank in result list $i$; a document absent from a list contributes nothing. RRF avoids requiring the raw score scales to match, but the smoothing constant $k$, retrieval depths, and systems being combined still affect the result. Treat it as a useful baseline and evaluate it against alternatives, not as a calibration-free guarantee. [Cormack, Clarke & Büttcher](https://cormack.uwaterloo.ca/cormack/cormacksigir09-rrf.pdf)
+A candidate contributes only from the lists that return it. In the example, lexical retrieval returns US, EU, FAQ and dense retrieval returns EU, Billing, US. With an illustrative $k=60$, EU scores $1/62+1/61$, above US at $1/61+1/63$. Fusion uses positions without calibrating a raw BM25 score against a cosine score. It sees only the returned candidate windows. Tune candidate depth, fusion and reranking on the same queries. [Cormack, Clarke & Büttcher](https://cormack.uwaterloo.ca/cormack/cormacksigir09-rrf.pdf) · [Elasticsearch RRF reference](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion)
+
+A 2026 financial QA preprint compared ten approaches on text and tables. Its hybrid retrieval with cross-encoder reranking led its retrieval comparison, and BM25 was stronger than the tested dense baseline. That makes a good reason to test hybrid retrieval on mixed text and numeric questions. The main comparison indexed whole documents, so it does not settle passage size or performance on another corpus. [From BM25 to Corrective RAG, v1, §§III–IV](https://arxiv.org/html/2604.01733v1)
 
 ## Reranking / 重排
 
@@ -134,15 +131,17 @@ For a question whose answer requires evidence from more than one source, retriev
 
 RAG does not make a corpus private. Compute the caller’s permissions in trusted application code and enforce them in the retrieval/data-access layer before evidence reaches the model. Metadata filters can express attributes such as tenant, region, source, or date, but correctness of the policy and its enforcement belongs to the application. Track document identity and version so updates, deletions, and permission revocations do not leave stale chunks available. The index is only as fresh as its synchronization and processing path. [OWASP LLM08:2025](https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/), [OpenAI retrieval guide](https://developers.openai.com/api/docs/guides/retrieval)
 
+A logical authorization filter and the search engine’s scan order are different concerns. In pgvector, a SQL `WHERE` condition still gates what rows can be returned, but approximate HNSW or IVFFlat may scan candidates before applying that filter. With selective filters, measure authorized recall and the count of eligible rows. If needed, test iterative scans, a scoped index or partition, or exact search over a small authorized subset. Never relax the policy to fill a candidate quota. [pgvector filtering and iterative scans](https://github.com/pgvector/pgvector#filtering)
+
 Treat all retrieved text as untrusted content. A document can contain direct or indirect instructions that influence the model. Delimiters and prompts may reduce confusion, but they do not guarantee protection. Do not let a retrieved passage authorize a data access or tool action; enforce permissions and validate actions outside the model. [OWASP LLM01:2025](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). For more on prompt injection and application boundaries, see [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md).
 
 ### Evaluation / 评估
 
 Measure retrieval and generation separately, then compare the complete system:
 
-- **Retrieval:** Did the authorized candidate set contain the necessary evidence, and where was it ranked?
-- **Generation:** Is the answer correct for the task, supported by the supplied evidence, responsive to the question, and appropriately abstaining when evidence is missing or conflicting?
-- **System:** What are end-to-end latency and cost, including query transforms, embedding, retrieval, reranking, context tokens, and indexing/update work where relevant?
+- **Candidate recall / 候选召回.** Label the source passages needed for each question and identify the version and caller. Recall@K is the share of those passages found in the first K candidates. MRR describes the rank of the first relevant candidate and cannot establish that a multi-part answer has every necessary passage.
+- **Evidence and generation / 证据与生成.** Track which needed passages survive assembly. Then assess factual correctness, support for each claim and citation, and whether the answer abstains when the passage is missing or conflicting. RAGChecker illustrates claim-level decomposition for retrieval and generation diagnosis. [RAGChecker §§3–4](https://arxiv.org/abs/2408.08067)
+- **System / 系统.** Track end-to-end latency and cost along with revocation and tenant-isolation regressions. Keep cases where the relevant-looking passage is unauthorized, expired, or for the wrong plan. Re-run the same cases across the lexical baseline, dense retrieval, hybrid fusion and reranking. Change one stage and retain the simplest configuration that meets the acceptance bar.
 
 RAGAS and ARES illustrate multi-dimensional evaluation, including context relevance, answer faithfulness, and answer relevance; they are evaluation frameworks, not a complete universal score. Automated judges are useful signals and should be checked against representative human-reviewed examples. See [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md). [RAGAS](https://arxiv.org/abs/2309.15217), [ARES](https://arxiv.org/abs/2311.09476)
 
@@ -156,6 +155,12 @@ RAGAS and ARES illustrate multi-dimensional evaluation, including context releva
 | Evidence is in the prompt, but the answer is unsupported or contradicts it. | Conflicting passages, prompt instructions, model output, citation support, and whether the question is answerable. | Test prompt/model/evidence changes against the same cases; do not infer a specific internal cause from the answer alone. |
 
 A practical debugging loop is: inspect the source and authorized candidates; inspect what reached the model; check answer claims against those passages; then change one retrieval or generation factor and evaluate the same cases. More context can add missing evidence or add noise, so “retrieve more” is a hypothesis to test, not a universal fix. Long-context performance can also depend on where relevant information appears. [Liu et al.](https://arxiv.org/abs/2307.03172)
+
+## What carries forward from the original RAG paper? / 原始 RAG 论文留下什么？
+
+Lewis 等人的 RAG 把可更新的非参数记忆（non-parametric memory）与参数化生成器结合起来。论文使用 DPR 检索 Wikipedia 向量索引，以 BART 生成，把检索到的文档当作潜变量。**RAG-Sequence** 对每篇文档分别计算整条答案的概率，再按文档权重求和。**RAG-Token** 对每个输出位置先按文档求和，再沿序列相乘。每种方法都按输入做一次 top-K 检索。RAG-Token 在自己的候选窗口内逐位置计算，逐词元改变文档贡献不等于逐词元重新检索。论文在当时的三项开放域问答上报告了相对基线的提升。 [Lewis et al., arXiv v4, §§2.1–2.5、§4.1 与表 1](https://arxiv.org/html/2005.11401v4)
+
+今天的应用通常可独立更换检索器与生成模型，在生成前按权限和问题组装证据，再单独评估回答。值得继承的是把可更新证据与模型参数分离，以及测量检索和生成如何互相影响。业务权限、文档版本、重排和逐条引用验收是生产系统要另外实现的边界。
 
 ## Related notes / 相关笔记
 

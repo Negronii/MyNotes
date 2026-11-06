@@ -44,20 +44,7 @@ Self-consistency samples multiple candidate reasoning answers and aggregates the
 
 Multiple samples increase token use and usually require more inference work. Exact cost and wall-clock impact depend on batching, provider behavior, and the selected model. Compare accuracy, latency, and cost with a single answer on the target task.
 
-## What is ReAct, and when should an application use a tool loop? / 什么是 ReAct，应用何时应使用工具循环？
-
-ReAct is a research prompting pattern that interleaves a model's reasoning text, an action, and an observation from an environment. Its paper evaluated it on specific knowledge and interactive tasks. It is one design option for tasks that need successive observations and actions, not a universal default for tool use. A one-shot function call or a developer-controlled workflow may be simpler when the path is known.
-
-**Synthetic flight-search illustration / 虚构的航班搜索示例:**
-
-~~~text
-User: Find the lowest listed fare from NYC to LA for next Tuesday.
-Action: search_flights(origin="NYC", destination="LA", date=<resolved date>)
-Observation: The search service returned three fares: $189, $210, and $175.
-Answer: The lowest fare returned by that search was $175.
-~~~
-
-This example assumes a real search service would resolve airport codes, date, currency, freshness, and availability. The model must not invent those observations. The application should validate tool arguments, authorize side effects, limit tool access and turns, record outcomes, and stop safely on errors. Treat retrieved pages and tool output as untrusted input; see [Agent Fundamentals / 智能体基础](../agents/agent-fundamentals.md), [Tool Design and Function Calling / 工具设计与函数调用](../agents/tool-design-and-function-calling.md), and [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md).
+A model can also adapt its next action to a tool's observed result. See [the ReAct decision loop / ReAct 决策循环](../agents/agent-fundamentals.md#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF) for when that feedback loop is worth adding and how the runtime controls it.
 
 ## When should you chain prompts? / 何时串联提示词？
 
@@ -125,7 +112,6 @@ A practical loop is to define success criteria, generate or revise candidates, c
 - Wei et al., [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903).
 - Kojima et al., [Large Language Models are Zero-Shot Reasoners](https://arxiv.org/abs/2205.11916).
 - Wang et al., [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171).
-- Yao et al., [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629).
 - Zhou et al., [Large Language Models Are Human-Level Prompt Engineers](https://arxiv.org/abs/2211.01910), for the APE instruction-generation and selection approach.
 - OpenAI, [Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices), checked 2026-10-15. These instructions describe OpenAI reasoning models and should not be generalized to other APIs.
 - OpenAI, [Prompt generation](https://developers.openai.com/api/docs/guides/prompt-generation), checked 2026-10-15. This is an OpenAI-specific example of generating or revising prompt text, not evidence that a generated prompt performs better without task evaluation.
