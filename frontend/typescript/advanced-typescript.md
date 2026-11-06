@@ -1,6 +1,6 @@
 # How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
 
-**Core answer / 核心回答：** Treat API bodies and browser storage as untrusted runtime data. Parse into unknown, validate both syntax and shape with JavaScript checks, then construct a trusted typed value. A type annotation, utility type, or assertion changes what the checker believes; it does not inspect incoming data. / API 响应和浏览器存储都是不可信的运行时数据。先解析为 unknown，再用 JavaScript 检查语法和结构，最后构造可信的类型化值。类型注解、工具类型或断言只改变检查器的判断，不会检查输入数据。
+**Short answer / 简答** — Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, check syntax and shape, then construct a value whose fields match the application's type. The checker can enforce exhaustive use of that type. The parser does not establish whether a supplied role or identity claim is authorized. / 把 API 响应和浏览器存储视为不可信数据。先解析为 `unknown`，校验语法和结构，再构造与应用类型匹配的值。编译器可以检查是否处理所有受支持的类型分支。结构校验无法证明输入里的角色或身份已经获得授权。
 
 Type annotations are erased from emitted JavaScript. TypeScript’s type system also makes deliberate soundness tradeoffs, and any or an unchecked assertion can bypass useful checks. / 类型注解会从生成的 JavaScript 中擦除。TypeScript 类型系统也有意作出某些健全性取舍；any 或未校验的断言会绕过有效检查。
 
@@ -66,7 +66,28 @@ const malformed = parseProfile('{"id":7,"label":"Ada","role":"reader"}');
 // valid.ok is true; malformed.ok is false with a structural error.
 ~~~
 
-After validation, ordinary control-flow narrowing applies to the declared model. The caller still needs to inspect ParseResult.ok before using value; a type-safe representation does not choose the application’s error policy. If the server adds a new role, this parser deliberately rejects it until the application accepts it; update the validator and exhaustive consumers together. For exhaustive handling of every role or result variant, see [Checking Every Union Case / 联合类型穷尽检查](./exhaustive-discriminated-unions.md). / 校验后可对声明模型执行普通控制流缩窄。调用方仍需先检查 ParseResult.ok 才能使用 value；类型安全的表示不会替应用选择错误处理策略。若服务端增加角色，解析器会先拒绝它，直到应用明确接受；应同步更新验证器和穷尽处理分支。需要确保处理每个角色或结果分支时，见[联合类型穷尽检查](./exhaustive-discriminated-unions.md)。
+## Handle every validated variant / 处理每个已校验的分支
+
+Callers first inspect `ParseResult.ok`. After the parser succeeds, the UI can narrow on the validated role. Assign the unhandled default value to `never` so an added role becomes a compile error at this switch.
+
+~~~typescript
+function roleLabel(role: Profile["role"]): string {
+  switch (role) {
+    case "admin":
+      return "Administrator";
+    case "reader":
+      return "Reader";
+    default: {
+      const unhandled: never = role;
+      throw new Error(`Unhandled role: ${unhandled}`);
+    }
+  }
+}
+
+if (valid.ok) roleLabel(valid.value.role); // "Reader"
+~~~
+
+If the server introduces `editor`, the parser still rejects it until the client deliberately supports it. When you add `editor` to `Profile["role"]`, the missing switch case fails the `never` assignment. Update the runtime guard and the consumers together. These checks serve different points in the same data path. The runtime parser protects the input boundary, while the compiler checks the supported cases at this switch. / 输入校验挡住外部未知值，`never` 让受支持的类型新增分支时在该 switch 报错。 [TypeScript handbook on exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
 
 Utility types and generics describe compile-time relationships, not runtime guards: [Utility Types / 工具类型](./utility-types.md), [Generics / 泛型](./generics.md). Decorator modes answer a separate class-definition question: [TypeScript Decorators / TypeScript 装饰器](./decorators.md). JavaScript Proxy is a runtime object feature, not a TypeScript type feature; see [JavaScript Proxy / JavaScript Proxy](../javascript/proxy.md).
 

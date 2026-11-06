@@ -43,6 +43,40 @@ The `padding` and `margin` shorthands accept one to four values in top/right/bot
 }
 ~~~
 
+## A triangle from border geometry / 用边框几何画三角形
+
+A zero-size element with thick borders forms four triangular border regions. Make three borders transparent and color one: the colored region becomes a triangle pointing away from that border. This is useful for small carets and callouts; use `clip-path` when the shape must scale independently of border thickness. / 零尺寸元素的粗边框会形成四个三角形区域。将三个边框设为透明并给一个边框着色，彩色区域会形成一个朝向该彩色边框相反方向的三角形，适合小箭头和气泡尖角；若形状需要独立缩放，可考虑 `clip-path`。
+
+```html
+<div class="triangle" aria-hidden="true"></div>
+```
+
+```css
+.triangle {
+  width: 0;
+  height: 0;
+  border: 10px solid transparent;
+  border-left-color: red; /* points right */
+}
+```
+
+The element’s content box has zero width and height, so the visible shape is created by its border geometry. Color the bottom border for an upward-pointing triangle, top for downward, left for rightward, or right for leftward.
+
+For a shape whose dimensions should follow its box rather than a fixed border size:
+
+```css
+.triangle {
+  width: 1rem;
+  aspect-ratio: 1;
+  background: currentColor;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+```
+
+The second example makes an upward triangle; change the polygon points to change direction. A decorative caret should be hidden from assistive technology if it adds no meaning. If it communicates state or direction, expose that information through the control's text or semantics as well.
+
+[CSS Masking on clipping paths](https://www.w3.org/TR/css-masking-1/#the-clip-path)
+
 For the flow rules that determine how floats and margins interact around boxes, see [How does a block formatting context contain floats and margins?](./bfc-and-flow-containment.md). For CSS layout coordinates and DOM geometry, see [DOM geometry APIs](./dom-properties.md).
 
 **Specification:** [CSS 2.2 box model](https://www.w3.org/TR/CSS22/box.html#box-dimensions), checked 2026-11-05.

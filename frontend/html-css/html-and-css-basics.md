@@ -42,6 +42,23 @@ Cascade layers let a stylesheet establish broad precedence groups, then use spec
 
 For normal declarations, later named layers outrank earlier layers, and unlayered normal declarations outrank declarations in named layers. For important declarations, layer order reverses. Use layer order as an explicit project-level policy rather than relying on ever-growing selector specificity. [CSS Cascading and Inheritance](https://www.w3.org/TR/css-cascade-5/#layer-order) defines the ordering.
 
+## How a child gets a value after the cascade / 级联后子元素怎样得到值
+
+The cascade first finds a winning declaration on the element itself. If none applies, an inherited property normally takes the parent’s computed value, while a non-inherited property takes its initial value. User-agent rules still participate in the cascade. A rule that directly sets a child’s color wins over an inherited color even if the parent was styled with an ID selector.
+
+~~~html
+<article id="notice">Read <span class="label">this</span>.</article>
+~~~
+
+~~~css
+#notice { color: #222; font-family: system-ui, sans-serif; margin: 2rem; }
+.label  { color: blue; }
+~~~
+
+The span computes blue from its own declaration and inherits the font. The parent's margin does not flow down. Applying `margin: inherit` explicitly would use the parent’s computed margin. Fonts, color, line height, text alignment, letter spacing, and visibility usually inherit. Width, padding, margin, display, and position do not inherit by default. Check the property definition when it matters. / 先看子元素自己是否有生效声明，再按属性的继承规则取值。父元素选择器的优先级不会传给子元素。
+
+**Text decoration / 文本装饰.** A parent's underline can be drawn across descendant text through decoration propagation. On `<a>Title <em>with emphasis</em></a>`, setting `text-decoration: none` on `em` does not erase the line drawn by `a`. Change the rule on the element that establishes the decoration. [CSS Cascade defaulting and inheritance](https://www.w3.org/TR/css-cascade-5/#defaulting) · [CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/#line-decoration)
+
 ## Keep selectors maintainable
 
 Attribute selectors such as `[data-state="active"]` can reflect state in markup. BEM naming (`.block__element--modifier`) tends to keep selectors flat and easier to override. CSS-in-JS-generated classes still participate in the browser's cascade; the generation method does not remove cascade rules.
@@ -51,4 +68,4 @@ Critical CSS can reduce dependence on a render-blocking stylesheet for content t
 **Specifications:** [Selectors Level 4](https://www.w3.org/TR/selectors-4/#specificity-rules), [CSS Cascading and Inheritance Level 5](https://www.w3.org/TR/css-cascade-5/), and [CSS Display, visual order](https://www.w3.org/TR/css-display-3/#order-property).
 
 
-**Related questions:** [CSS inheritance](./css-inheritance.md) explains which values flow to children; [responsive CSS units and layout](./responsive-css-units-and-layout.md) covers size references and breakpoints; [semantic HTML forms](./accessible-html-forms.md) covers native controls and validation; [text overflow and line clamp](./css-text-overflow-and-line-clamp.md) covers visual truncation.
+**Related questions:** [responsive CSS units and layout](./responsive-css-units-and-layout.md) covers size references and breakpoints; [semantic HTML forms](./accessible-html-forms.md) covers native controls and validation; [text overflow and line clamp](./responsive-css-units-and-layout.md#Constrained%20text%20and%20line%20clamping%20/%20%E5%8F%97%E9%99%90%E6%96%87%E6%9C%AC%E4%B8%8E%E8%A1%8C%E6%95%B0%E8%A3%81%E5%88%87) covers visual truncation.

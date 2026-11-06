@@ -54,6 +54,6 @@ For a fixed-size overlay, equal insets and auto margins distribute the available
 
 Table-cell layout can vertically align its contents with `vertical-align: middle`. Use it when maintaining an existing table-style layout. When centering a layout box, distinguish parent alignment from `text-align: center`, which aligns inline content inside a box.
 
-**Related questions / 相关问题** — [Fixed and fluid layouts / 固定与流动布局](flex-and-grid-layout.md), [positioning and stacking / 定位与堆叠](css-position-display-and-animations.md), [float containment / 包含浮动](bfc-and-flow-containment.md), [CSS triangles / CSS 三角形](css-border-triangles.md), [high-DPR hairlines / 高 DPR 细线](responsive-css-units-and-layout.md#when-does-a-css-hairline-mean-one-device-pixel).
+**Related questions / 相关问题** — [Fixed and fluid layouts / 固定与流动布局](flex-and-grid-layout.md), [positioning and stacking / 定位与堆叠](css-position-display-and-animations.md), [float containment / 包含浮动](bfc-and-flow-containment.md), [CSS triangles / CSS 三角形](box-model-and-bfc.md#A%20triangle%20from%20border%20geometry%20/%20%E7%94%A8%E8%BE%B9%E6%A1%86%E5%87%A0%E4%BD%95%E7%94%BB%E4%B8%89%E8%A7%92%E5%BD%A2), [high-DPR hairlines / 高 DPR 细线](responsive-css-units-and-layout.md#when-does-a-css-hairline-mean-one-device-pixel).
 
 **Sources / 来源** — [CSS Box Alignment §7.3](https://www.w3.org/TR/css-align-3/#place-items-property), [CSS Positioned Layout §4.2](https://www.w3.org/TR/css-position-3/#abspos-margins), [CSS Transforms §6](https://www.w3.org/TR/css-transforms-1/#transform-box).

@@ -94,11 +94,14 @@ A recursive implementation makes the rule explicit but can exceed the call-stack
 ~~~javascript
 function flattenNested(items) {
   const result = [];
-  for (let i = 0; i < items.length; i++) {
-    const value = items[i];
-    if (Array.isArray(value)) result.push(...flattenNested(value));
-    else result.push(value);
+  function append(list) {
+    for (let i = 0; i < list.length; i++) {
+      const value = list[i];
+      if (Array.isArray(value)) append(value);
+      else result.push(value);
+    }
   }
+  append(items);
   return result;
 }
 
@@ -116,3 +119,23 @@ function flattenByLevels(items) {
 ~~~
 
 Prefer flat when its depth and hole semantics match the task. For Set/Map equality used by deduplication, see [Map and Set / JavaScript 中的 Map 与 Set](./map-and-set.md). That page owns the keyed-collection contract; this page keeps the array-specific decision and examples.
+
+## Compute a maximum without expanding function arguments / 避免实参展开求最大值
+
+`Math.max(...values)` and `Math.max.apply(null, values)` pass one argument per value. Engines can reject a very large argument list, and the cutoff is implementation-specific. A loop keeps a fixed-size call and makes the handling of empty input and invalid values visible. / 展开会把每个值传为一个函数实参。循环每次只传固定数量的参数，可以明确空输入和无效值的处理策略。
+
+~~~javascript
+function maxOfNumbers(values) {
+  let max = -Infinity;
+  for (const value of values) {
+    max = Math.max(max, value);
+  }
+  return max;
+}
+
+maxOfNumbers([]);          // -Infinity
+maxOfNumbers([7, NaN]);    // NaN
+maxOfNumbers([, 7]);       // NaN, since array iteration visits the hole as undefined
+~~~
+
+If the product treats holes as absent, an explicit reducer callback skips them. Choose how to handle empty input and invalid numbers before computing a result. [ECMAScript `Math.max`](https://tc39.es/ecma262/2026/#sec-math.max)

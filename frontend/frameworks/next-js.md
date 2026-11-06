@@ -66,12 +66,15 @@ export async function getStaticProps({ params }) {
 
 Under the app directory, pages and layouts are Server Components by default. They can fetch on the server and pass serializable data to a Client Component. A file marked use client creates a client boundary for Hooks, event handlers, and browser APIs. Client Components may still contribute to initial HTML; use client does not mean the whole route is client-only.
 
+The following example uses the App Router with Cache Components disabled.
+
 ~~~tsx
 // app/posts/page.tsx — App Router
 async function getPosts() {
   const response = await fetch("https://api.example.com/posts", {
     cache: "no-store"
   });
+  if (!response.ok) throw new Error("Posts request failed");
   return response.json();
 }
 
@@ -85,7 +88,9 @@ export default async function PostsPage() {
 }
 ~~~
 
-In the current Next.js 16.4.1 documentation checked on 2026-10-15, App Router fetch requests are not cached by default. Set caching deliberately, for example with a fetch revalidation option; with Cache Components enabled, a use cache directive can cache a component or function. Request-time data and static shells can be combined with Suspense and streaming. Older Next.js App Router versions had different fetch defaults, so do not carry a versionless caching rule between projects.
+With Cache Components disabled, the default server `fetch` mode is `auto no cache`. That mode does not opt a fetch into the persistent Data Cache. A statically prerendered route can still fetch once during `next build` and serve its prerendered output. A route using request-time APIs can fetch per request. Choose deliberately. Use `cache: "no-store"` for data that must be fetched per request, or opt into caching with `force-cache` or a compatible `next.revalidate` policy. In development, the HMR cache can reuse even `no-store` fetches until navigation or a full reload. [Next.js fetch reference, checked 2026-11-06](https://nextjs.org/docs/app/api-reference/functions/fetch#optionscache)
+
+With Cache Components enabled, a component or function can opt into caching with `use cache`. To stream the uncached posts in this example, move the fetch into an async child with a Suspense ancestor. That boundary lets Next.js prerender the surrounding shell while the child waits for request-time data. Check where the result is reused and how it gets invalidated before choosing a cache lifetime. / 区分数据缓存、静态预渲染的页面产物与开发环境的 HMR 缓存。开启 Cache Components 后，把请求时才读取的数据放到 Suspense 边界下。 [Next.js on streaming uncached data](https://nextjs.org/docs/app/getting-started/caching#streaming-uncached-data)
 
 A Client Component can receive data from a Server Component through props, but props crossing the boundary must be serializable. Keep secrets and server-only dependencies on the server.
 
@@ -103,7 +108,7 @@ A diagnostic example is `new Date().toLocaleDateString()` rendered during both s
 
 ### Place a Suspense boundary around a useful streamed region
 
-In Next.js 16.4.1 App Router, the fetching guide documents route-level `loading.tsx` and smaller `<Suspense>` boundaries. Content outside a boundary can render while the child inside waits. Start independent data work before awaiting it, then let the child suspend so the boundary has time to show its fallback. The example follows the existing archived [App Router data-fetching and Suspense example](../../archive/front-end/0-1_Learning_Notes/next.js/readme.md); `getPosts()` is an application data function returning a promise.
+In the App Router, the fetching guide documents route-level `loading.tsx` and smaller `<Suspense>` boundaries. Content outside a boundary can render while the child inside waits. Start independent data work before awaiting it, then let the child suspend so the boundary has time to show its fallback. The example follows the existing archived [App Router data-fetching and Suspense example](../../archive/front-end/0-1_Learning_Notes/next.js/readme.md); `getPosts()` is an application data function returning a promise.
 
 ```tsx
 import { Suspense } from "react";
@@ -160,4 +165,4 @@ Use framework endpoints for colocated, bounded server work such as webhooks or a
 
 **See also:** [React Routing and Navigation / React路由与导航](./react-routing-and-navigation.md) for client navigation and SPA/MPA document models; [React Basics / React基础](./react-basics.md) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
-**Sources checked 2026-10-15:** [React 19.3 versions and release](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
+**Sources checked 2026-10-15:** [React release and version references](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).

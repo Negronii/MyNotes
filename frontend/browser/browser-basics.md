@@ -25,12 +25,41 @@ flowchart TD
     U --> L
 ~~~
 
-The network lane is conditional. A service worker or HTTP cache can satisfy a request; a redirect can change the target; DNS and connection setup are needed only when the chosen fetch path lacks a usable result or reusable connection. Resource hints request early work, but do not guarantee it. See [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) for DNS, HTTP versions, caching, CORS, and resource hints.
+## Resolve a navigation before fetching / 先决定导航，再获取文档
 
-The document lane is incremental, not a queue of stages that each finish once. The parser can discover stylesheets, scripts, images, and other resources before reaching the end of the response. A parser-inserted classic script may pause parsing; `async`, `defer`, and module scripts have distinct schedules. See [How do scripts affect HTML parsing and readiness?](../html-css/browser-html-and-css.md).
+Follow `https://example.test/reports?sort=recent#summary` from the address bar. Once the browser treats the input as a URL, the scheme and authority identify the origin and connection requirements. The path and query select the requested resource. The fragment identifies a location in the resulting document and stays on the browser side. An application can also change a URL with the History API without replacing its current document. Back/Forward can restore an existing document from a history entry, including the back/forward cache when eligible. That cache preserves document state, while an HTTP cache reuses an eligible response.
 
-Layout produces geometry; paint produces drawing output, not a bitmap. Rasterization makes pixel content from drawing records, and compositing arranges content into a frame. Engines may reuse existing work, run parts in parallel, or use different stage names. Chromium's RenderingNG documentation is one implementation example, not a requirement for WebKit, Gecko, or the web platform. See [Why can a CSS change trigger layout, paint, or compositing work?](../html-css/rendering-pipeline-and-forced-layout.md).
+For this example, assume it is a fresh document navigation. A service worker controlling the target scope may respond. Otherwise the fetch path can use a fresh cached response, revalidate a stored response, or obtain a new response. For a new connection, resolve the host when no suitable address is available, then establish the transport and secure session. A typical HTTP/2 path uses TCP and TLS, while HTTP/3 uses QUIC. A reused connection skips new setup. If the fetch goes to the network, the origin receives `/reports?sort=recent` without `#summary`, and may redirect. The browser handles the fragment locally when the target element is available. [HTTP, DNS, and connection setup](../../engineering-foundations/networking/http-protocols-and-websockets.md) explains the network choices. [Navigation and history](./browser-navigation-and-history.md) explains same-document updates.
 
-A URL change is not always a new document. Same-document fragment navigation and History API updates have their own behavior; see [Does every URL change load a new document?](./browser-navigation-and-history.md). To investigate a slow or unstable page, use measurements and traces rather than assuming a stage name identifies the cause; see [How should browser performance be measured and diagnosed?](../performance/performance-metrics-and-analysis.md).
+## Parse and render while resources arrive / 资源到达时就开始解析与渲染
+
+Assume the response starts with this document:
+
+~~~html
+<!doctype html>
+<link rel="stylesheet" href="/reports.css">
+<script type="module" src="/reports.js"></script>
+<main>
+  <h1 id="summary">Recent reports</h1>
+  <img src="/report-summary.png" width="320" height="180" alt="Report summary">
+</main>
+~~~
+
+HTML bytes can be decoded and parsed before the full response arrives. The parser creates DOM nodes as markup becomes available. Discovering the stylesheet, module, and image starts separate resource work. Browsers can discover some resources speculatively. An applicable stylesheet can delay rendering, and a parser-inserted classic script without `async` or `defer` can pause parsing. The module shown here is fetched as parsing proceeds and is deferred by default. The image can arrive later. Its dimensions give layout an initial size or aspect ratio before the pixel data is ready. [Script scheduling and document readiness](../html-css/browser-html-and-css.md) explains which scripts can change the order and when readiness events fire.
+
+The browser combines the DOM and applicable styles to compute used geometry. The heading takes space according to its computed font and available width, then layout positions the image box. Paint records how to draw the result, including text, borders, backgrounds, and images. Rasterization produces pixel content from those records and decoded resources. Compositing positions and combines the content for a frame, which is submitted for display. Chromium's RenderingNG uses paint records, raster tiles, compositor frames, and a display compositor. The boundaries of work, threads, and GPU participation depend on the engine. [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture)
+
+The first visible frame can precede `load` and, in a server-rendered app, client interactivity. The app may still need to download JavaScript and attach its behavior. An image or font that arrives later can change paint or geometry and produce another frame. [React and Next.js hydration](../frameworks/next-js.md) connects this path to application code. [Rendering invalidation and forced layout](../html-css/rendering-pipeline-and-forced-layout.md) explains why later changes may reuse work or force it to repeat.
+
+## Find the stage that is slow / 定位真正慢的环节
+
+| What you observe | What to inspect next |
+| --- | --- |
+| Long before the first HTML byte | Redirects, cache status, connection timing, and backend latency in the network trace |
+| HTML arrives early but useful content is late | Discovery of the critical resource, blocking CSS or JavaScript, then paint and image decoding |
+| Content appears but the first interaction is slow | Main-thread tasks, script execution or hydration, and the next presentation |
+| The layout jumps after content appears | Late image or font geometry, inserted content, and the nodes shown in the layout-shift trace |
+
+Follow the measured event to its dependency. A slow largest-content paint can come from a late request, a slow response, or delayed rendering after the bytes arrived. Changing a CSS selector alone would miss two of those causes. [Chrome DevTools Performance reference](https://developer.chrome.com/docs/devtools/performance/reference) · [Web performance diagnosis](../performance/performance-metrics-and-analysis.md)
 
 **Evidence / 资料：** [WHATWG HTML: navigation and session history](https://html.spec.whatwg.org/multipage/nav-history-apis.html); [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/); [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), checked 2026-11-05.

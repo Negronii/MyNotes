@@ -35,7 +35,6 @@ Start with JavaScript and the browser runtime, then follow navigation, layout, a
 - [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](typescript/advanced-typescript.md)
 - [What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？](typescript/utility-types.md)
 - [How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？](typescript/generics.md)
-- [How can TypeScript check every case in a discriminated union? / TypeScript 如何检查判别联合的每个分支？](typescript/exhaustive-discriminated-unions.md)
 - [Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？](typescript/decorators.md)
 
 ### Browser runtime / 浏览器运行时
@@ -51,10 +50,8 @@ Start with JavaScript and the browser runtime, then follow navigation, layout, a
 ### HTML and CSS / HTML与CSS
 
 - [How does the CSS cascade decide which declaration applies? / CSS 级联如何决定最终生效的声明？](html-css/html-and-css-basics.md)
-- [Which CSS properties inherit their values from a parent? / 哪些 CSS 属性会从父元素继承值？](html-css/css-inheritance.md)
 - [Which CSS units and responsive layout rules fit the available space? / 哪些 CSS 单位与响应式布局规则适合当前空间？](html-css/responsive-css-units-and-layout.md)
 - [How do semantic HTML forms support keyboard and assistive-technology users? / 语义化 HTML 表单如何支持键盘与辅助技术用户？](html-css/accessible-html-forms.md)
-- [How can CSS truncate one or several lines of text? / CSS 如何截断单行或多行文本？](html-css/css-text-overflow-and-line-clamp.md)
 - [How does CSS calculate an element's box size? / CSS 如何计算元素盒子的尺寸？](html-css/box-model-and-bfc.md)
 - [How does a block formatting context contain floats and margins? / 块格式化上下文如何约束浮动和外边距？](html-css/bfc-and-flow-containment.md)
 - [Which CSS layout tool fits fixed and fluid content? / 固定与流动内容适合哪种 CSS 布局？](html-css/flex-and-grid-layout.md)
@@ -62,8 +59,6 @@ Start with JavaScript and the browser runtime, then follow navigation, layout, a
 - [Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？](html-css/rendering-pipeline-and-forced-layout.md)
 - [Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？](html-css/dom-properties.md)
 - [How do you center an element whose size is unknown? / 如何居中尺寸未知的元素？](html-css/css-interview-questions.md)
-- [How can CSS draw a small triangle without an image? / 如何不用图片用 CSS 绘制小三角形？](html-css/css-border-triangles.md)
-- [How should a mobile page handle tap gestures and the historical 300 ms delay? / 移动页面应如何处理点按手势与历史上的 300 毫秒延迟？](html-css/mobile-tap-delay-and-touch-action.md)
 - [How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？](html-css/css-position-display-and-animations.md)
 - [What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？](html-css/css-visibility-and-accessibility.md)
 - [When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？](html-css/css-transitions-and-animations.md)
@@ -73,7 +68,6 @@ Start with JavaScript and the browser runtime, then follow navigation, layout, a
 - [How do DOM events propagate, and when does delegation work? / DOM 事件如何传播，何时适合事件委托？](browser-apis/dom-manipulation-and-events.md)
 - [How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？](browser-apis/event-bus-and-observer-patterns.md)
 - [How do you deep-copy a JavaScript value safely? / 如何安全地深拷贝 JavaScript 值？](javascript/deep-copy-and-structured-clone.md)
-- [What is a safe way to find a maximum in a huge array? / 如何安全地求超大数组中的最大值？](javascript/maximum-in-large-arrays.md)
 - [Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？](browser-apis/browser-storage-and-communication.md)
 - [What is the difference between an HTMLCollection and a NodeList? / HTMLCollection 与 NodeList 有什么区别？](browser-apis/dom-collections.md)
 - [How do browser contexts communicate? / 浏览上下文之间如何通信？](browser-apis/browser-context-communication.md)
@@ -113,7 +107,6 @@ Start with JavaScript and the browser runtime, then follow navigation, layout, a
 ### Build tooling / 构建工具链
 
 - [How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？](tooling/build-tools.md)
-- [How does a project pin its package-manager version? / 项目如何固定包管理器版本？](tooling/package-manager-pinning.md)
 
 ## Shared foundations / 共享基础
 
