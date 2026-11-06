@@ -1,242 +1,170 @@
-# How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？
+# 怎样用测试边界验证一次报表服务改动？
 
-**核心回答 / Core answer：** Choose the narrowest boundary that can exercise the failure condition: isolate a pure rule with a unit test, connect the real route and principal seam for API behavior, and let the selected database execute SQL for constraints and transactions. Use the configured broker or a deployed-like journey when delivery guarantees or assembled wiring are the risk. The FastAPI example below proves route behavior and local SQLite state transitions; it does not prove production identity, PostgreSQL behavior, broker redelivery, or external effects. / 选择能够触达故障条件的最小测试边界：纯规则用单元测试隔离；API 行为接入真实路由和主体接缝；约束与事务由所选数据库实际执行 SQL 验证。若风险在消息投递保证或部署后的组件装配，就纳入配置好的 broker 或近似生产的端到端链路。下方 FastAPI 示例能证明路由行为和 SQLite 本地状态变更，不能证明生产身份认证、PostgreSQL 行为、broker 重投或外部副作用。
+报表平台工程师准备发布一项租户授权修复：tenant-a 应能读取自己的 report 42，得到 200；tenant-b 猜中同一 ID 时只能得到 404。导出 job 重复投递后，任务状态和结果对象引用也只能提交一次。要判断这次改动能否发布，测试必须覆盖这些用户可观察的失败条件，而不只是确认实现和它自己生成的 happy-path 测试一起通过。
 
-**Key terms / 关键术语：** unit test / 单元测试；integration test / 集成测试；compatibility contract / 兼容性契约；end-to-end (E2E) test / 端到端测试；fixture / 测试夹具；test seam / 测试接缝；test double / 测试替身。
+application programming interface（应用程序接口，API）集成和数据库集成分别需要真实路由与 structured query language（结构化查询语言，SQL）。若要声称 publisher confirm（发布者确认）、consumer acknowledgement（消费者确认，ACK）或部署装配正确，还要把实际 broker（消息代理）或近似生产链路纳入测试。本文 SQLite 示例验证 FastAPI 路由和 SQL，不代表 PostgreSQL、broker 或生产身份系统已经验证。
 
-## Choose the boundary from the failure risk / 按故障风险选择测试边界
-
-| Risk | Useful boundary | Evidence that boundary can provide |
-|---|---|---|
-| A pure rule maps input to the wrong result | Unit | The rule's inputs and outputs, with unrelated I/O absent. |
-| A route validates the wrong shape, returns the wrong status, or skips tenant authorization | API integration | The actual router, request validation, dependency path, response serialization, and error mapping. An in-process client does not exercise a network socket or production identity provider. |
-| Duplicate keys, rollback, or a conditional update violate a durable invariant | Database integration | The selected database engine executes the schema and statements. A mock session cannot prove a constraint or transaction. |
-| An existing consumer can no longer read a response | Compatibility contract | Compare a pinned or published schema and representative consumer expectations with the provider's current output. Checking only a freshly generated schema does not prove compatibility with an older client. |
-| A queue redelivery or acknowledgement order causes a duplicate or lost effect | Broker integration | The configured broker, acknowledgement mode, consumer, and durable store exercise the delivery boundary. Calling a handler twice tests its database behavior, not broker delivery guarantees. |
-| Login, API, database, and worker wiring fail only when assembled | End-to-end | A controlled deployed-like journey with the actual selected services and identities. It is slower and narrower in number; use it for failures that depend on that wiring. |
-
-These are complementary boundaries, not a required test-count pyramid. Keep quick, deterministic checks close to the risk, then add a higher-boundary check only when it proves something the lower one cannot. The existing [Frontend Testing / 前端测试](../../frontend/testing/frontend-testing.md) note owns Jest, component, browser, and frontend release examples; this note applies the same risk-and-feedback idea to API, persistence, and delivery boundaries.
-
-## One job API with a database-backed worker / 一个带数据库 worker 的任务 API
-
-The small example below creates a tenant-owned job. `POST /jobs` validates a request and gives the same tenant's request key a database uniqueness rule. `GET /jobs/{id}` scopes lookup by the current tenant. A worker delivery changes `pending` to `done` with one conditional database update; replaying the same job ID must not increment the effect counter twice.
-
-The fixture creates a fresh in-memory SQLite database for each test and keeps it on one shared connection so the in-process test client and the test's database inspection see the same database. The `Session` dependency and worker's session-factory argument are deliberate seams: they control database lifetime while still executing real SQL against SQLite. `X-Tenant-ID` stands in for a principal supplied by trusted authentication middleware; it is a test input, not an authentication scheme to trust in a deployed service. For the general authorization rule, see [Web Security and Authentication / Web安全与身份认证](../security/web-security-and-authentication.md). The queue call is represented by calling the worker twice; no broker is present.
-
-~~~python
-from typing import Annotated
-
-import pytest
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.testclient import TestClient
-from pydantic import BaseModel, Field
-from sqlalchemy import Integer, String, UniqueConstraint, create_engine, func, select, update
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
-from sqlalchemy.pool import StaticPool
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-class Job(Base):
-    __tablename__ = "jobs"
-    __table_args__ = (
-        UniqueConstraint("tenant_id", "request_key", name="uq_job_tenant_key"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    tenant_id: Mapped[str] = mapped_column(String(60), nullable=False)
-    request_key: Mapped[str] = mapped_column(String(64), nullable=False)
-    payload: Mapped[str] = mapped_column(String(200), nullable=False)
-    state: Mapped[str] = mapped_column(String(12), nullable=False, default="pending")
-    processed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
-
-class JobCreate(BaseModel):
-    request_key: str = Field(min_length=1, max_length=64)
-    payload: str = Field(min_length=1, max_length=200)
-
-
-class JobView(BaseModel):
-    id: int
-    request_key: str
-    state: str
-    processed_count: int
-
-
-def tenant_from_test_header(
-    x_tenant_id: Annotated[str | None, Header()] = None,
-) -> str:
-    if not x_tenant_id:
-        raise HTTPException(status_code=401, detail="authentication required")
-    return x_tenant_id
-
-
-def get_session(request: Request):
-    with request.app.state.session_factory() as session:
-        yield session
-
-
-def create_app() -> FastAPI:
-    engine = create_engine(
-        "sqlite+pysqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(engine)
-    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
-
-    app = FastAPI()
-    app.state.engine = engine
-    app.state.session_factory = session_factory
-
-    @app.post(
-        "/jobs",
-        status_code=201,
-        response_model=JobView,
-        responses={
-            401: {"description": "Authentication required"},
-            409: {"description": "Request key already exists for this tenant"},
-        },
-    )
-    def create_job(
-        body: JobCreate,
-        tenant_id: Annotated[str, Depends(tenant_from_test_header)],
-        session: Annotated[Session, Depends(get_session)],
-    ):
-        try:
-            with session.begin():
-                job = Job(
-                    tenant_id=tenant_id,
-                    request_key=body.request_key,
-                    payload=body.payload,
-                )
-                session.add(job)
-                session.flush()
-                response = JobView(
-                    id=job.id,
-                    request_key=job.request_key,
-                    state=job.state,
-                    processed_count=job.processed_count,
-                )
-        except IntegrityError:
-            raise HTTPException(status_code=409, detail="request key already exists")
-        return response
-
-    @app.get("/jobs/{job_id}", response_model=JobView)
-    def read_job(
-        job_id: int,
-        tenant_id: Annotated[str, Depends(tenant_from_test_header)],
-        session: Annotated[Session, Depends(get_session)],
-    ):
-        job = session.scalar(
-            select(Job).where(Job.id == job_id, Job.tenant_id == tenant_id)
-        )
-        if job is None:
-            raise HTTPException(status_code=404, detail="job not found")
-        return JobView(
-            id=job.id,
-            request_key=job.request_key,
-            state=job.state,
-            processed_count=job.processed_count,
-        )
-
-    return app
-
-
-def deliver_job(session_factory, job_id: int) -> str:
-    with session_factory() as session, session.begin():
-        result = session.execute(
-            update(Job)
-            .where(Job.id == job_id, Job.state == "pending")
-            .values(state="done", processed_count=Job.processed_count + 1)
-        )
-        if result.rowcount == 1:
-            return "processed"
-        return "duplicate" if session.get(Job, job_id) is not None else "missing"
-
-
-@pytest.fixture
-def app():
-    application = create_app()
-    yield application
-    application.state.engine.dispose()
-
-
-@pytest.fixture
-def client(app):
-    with TestClient(app) as test_client:
-        yield test_client
-
-
-def headers(tenant_id: str) -> dict[str, str]:
-    return {"X-Tenant-ID": tenant_id}
-
-
-def test_api_schema_auth_and_tenant_scope(client):
-    body = {"request_key": "daily-7", "payload": "sample"}
-    assert client.post("/jobs", json=body).status_code == 401
-    assert client.post(
-        "/jobs", headers=headers("tenant-a"), json={"request_key": "", "payload": "x"}
-    ).status_code == 422
-
-    created = client.post("/jobs", headers=headers("tenant-a"), json=body)
-    assert created.status_code == 201
-    assert set(created.json()) == {"id", "request_key", "state", "processed_count"}
-    assert created.json()["state"] == "pending"
-
-    job_id = created.json()["id"]
-    own_read = client.get(f"/jobs/{job_id}", headers=headers("tenant-a"))
-    other_read = client.get(f"/jobs/{job_id}", headers=headers("tenant-b"))
-    assert own_read.status_code == 200
-    assert other_read.status_code == 404
-
-
-def test_openapi_exposes_the_public_request_and_response_shape(client):
-    schema = client.get("/openapi.json").json()
-    operation = schema["paths"]["/jobs"]["post"]
-    assert {"201", "401", "409", "422"} <= set(operation["responses"])
-    request_ref = operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
-    response_ref = operation["responses"]["201"]["content"]["application/json"]["schema"]["$ref"]
-    request_schema = schema["components"]["schemas"][request_ref.rsplit("/", 1)[1]]
-    response_schema = schema["components"]["schemas"][response_ref.rsplit("/", 1)[1]]
-    assert set(request_schema["properties"]) == {"request_key", "payload"}
-    assert set(response_schema["properties"]) == {"id", "request_key", "state", "processed_count"}
-
-
-def test_database_unique_constraint_rolls_back_duplicate_create(client, app):
-    body = {"request_key": "daily-7", "payload": "sample"}
-    first = client.post("/jobs", headers=headers("tenant-a"), json=body)
-    duplicate = client.post("/jobs", headers=headers("tenant-a"), json=body)
-    assert first.status_code == 201
-    assert duplicate.status_code == 409
-
-    with Session(app.state.engine) as session:
-        count = session.scalar(select(func.count()).select_from(Job))
-    assert count == 1
-
-
-def test_replayed_worker_delivery_changes_database_once(client, app):
-    created = client.post(
-        "/jobs",
-        headers=headers("tenant-a"),
-        json={"request_key": "daily-8", "payload": "sample"},
-    )
-    job_id = created.json()["id"]
-
-    assert deliver_job(app.state.session_factory, job_id) == "processed"
-    assert deliver_job(app.state.session_factory, job_id) == "duplicate"
-    result = client.get(f"/jobs/{job_id}", headers=headers("tenant-a"))
-    assert result.json()["state"] == "done"
-    assert result.json()["processed_count"] == 1
+~~~mermaid
+flowchart TD
+    A[契约：A 读 report 42 得 200；B 得 404] --> B[单元：租户规则]
+    B --> C[API + SQLite：路由、主体接缝、查询]
+    C --> D[契约：与已发布响应结构比较]
+    D --> E[PostgreSQL：生产数据库方言与约束]
+    E --> F[RabbitMQ：发布确认、重投、消费者确认]
+    F --> G[近生产旅程：组件装配与流量路径]
 ~~~
 
-Extract that block into `test_jobs.py` and run `python -m pytest -q test_jobs.py`. The tests assert visible API behavior, the request and response schema exposed by this app, an actual SQLite uniqueness violation with rollback, and a repeated worker call against the same database. The OpenAPI assertion checks this version's declared shape; a compatibility gate should compare with a released schema or exercise a real supported consumer before claiming an older client remains compatible.
+每升高一层，必须能指出新增层解决的失败条件。测试数量多不能替代边界正确。单个端到端测试不易定位原因，也很难覆盖大量输入；只测函数又看不到依赖装配或真实数据库行为。
 
-The database is SQLite 3.51.0 through SQLAlchemy 2.0.44. This is a real database engine and the test executes its unique constraint and transaction, but its locking, typing, SQL dialect, and concurrency behavior do not establish PostgreSQL behavior. `TestClient` exercises FastAPI through an in-process ASGI transport, not a live server, network, production authentication provider, or deployed application. `deliver_job` exercises a repeated database operation; it does not prove a broker's redelivery, acknowledgement, ordering, or outage guarantees. Those claims need a broker-backed integration test using the selected broker's configuration. External side effects such as email or payment also need an outbox or downstream idempotency boundary; this example changes only local database state. See [safe retries](../reliability/api-reliability-and-async-delivery.md) and [broker acknowledgements](../reliability/queue-delivery-and-acknowledgement.md) for the separate contracts. For the session and transaction lifecycle, see [Data Access and Connection Pools / 数据访问与连接池](../backend/data-access-and-connection-pools.md).
+## 先把风险与可证明的边界对应起来
 
-**Interview answer / 面试回答：** I start from the failure risk and choose the lowest boundary that can prove it. Here the API tests verify validation, public response shape, and tenant-scoped access; a real SQLite database verifies uniqueness and rollback; the repeated worker call verifies the local idempotent state transition. I would add a contract comparison for compatibility and a broker-backed test before claiming delivery or acknowledgement guarantees. / 我先从故障风险出发，选择能够证明该风险的最低边界。这个例子用 API 测试验证输入校验、公开响应结构和租户范围访问，用真实 SQLite 验证唯一性约束与回滚，再用重复 worker 调用验证本地幂等状态变更。要声称兼容既有客户端或消息投递确认语义，还需要契约对比和真实 broker 测试。
+| 要排除的失败 | 合适边界 | 该边界能给出的证据 | 不能据此声称 |
+|---|---|---|---|
+| 租户 A/B 条件判断颠倒 | 单元测试 | 给定主体和资源归属，访问规则输出允许或拒绝 | 真实 HTTP 路由一定调用该规则 |
+| 路由忘记传租户条件、返回错状态或错字段 | API 集成 | 实际路由、参数校验、依赖注入、响应序列化和错误映射 | 真实网络或生产身份提供方正常 |
+| 唯一键、回滚或条件更新不守约束 | 数据库集成 | 选定数据库执行真实表结构与 SQL | 换一个数据库也有相同锁和类型行为 |
+| 新响应不兼容已发布客户端 | 契约测试 | 当前输出与已发布 schema（结构定义）/代表性旧客户端比较 | 只检查本次自动生成的 schema 就兼容旧客户端 |
+| 确认或重投造成丢失、重复业务效果 | broker 集成 | 指定 broker、队列配置、ACK 模式和持久化存储共同执行交接 | 本地函数调用两次等同于 broker 重投 |
+| 只有服务装配后才出现的故障 | 近生产端到端 | 真实身份、API、数据库、队列和 worker 的受控旅程 | 一个健康探针就代表用户旅程正确 |
 
-**Sources checked 2026-10-15:** [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/) and [testing dependencies with overrides](https://fastapi.tiangolo.com/advanced/testing-dependencies/) for in-process request checks and dependency seams; [pytest fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html) for function-scoped setup and cleanup; SQLAlchemy 2.0 [constraints](https://docs.sqlalchemy.org/en/20/core/constraints.html), [session transactions](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html), and [SQLite pooling](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines); SQLite [CREATE TABLE and UNIQUE constraints](https://www.sqlite.org/lang_createtable.html) and [transactions](https://www.sqlite.org/lang_transaction.html). Runtime behavior was checked with the versions recorded above; the live FastAPI documentation is not a substitute for the named runtime check.
+这些边界是互补关系，不是固定的“测试金字塔”。尽量把快速、确定的检查放在靠近故障条件的位置；只有下层无法证明的属性才提高边界。前端组件和浏览器行为另由[前端测试](../../frontend/testing/frontend-testing.md)说明，本篇聚焦 API、持久化和消息交付。
+
+## 用实际路由重放跨租户反例
+
+先将主体边界做成可替换依赖。X-Tenant-ID 只是测试接缝，用来把 tenant-a、tenant-b 送到实际路由；生产服务必须从已验证的登录上下文取得主体，不能信任客户端任填的租户头。示意表把 report_id 设为全局主键、tenant_id 设为资源所有者；若真实表用复合主键，测试应按真实 schema 改写，不能照搬主键读取方式。
+
+> [!example] 关键查询和断言
+> 关键是查询同时约束当前租户和 report 42，且两个租户走同一个 API 路由：
+>
+> ~~~python
+> row = connection.execute(
+>     text("""
+>         SELECT report_id, state FROM reports
+>         WHERE tenant_id = :tenant_id AND report_id = :report_id
+>     """),
+>     {"tenant_id": tenant_id, "report_id": report_id},
+> ).mappings().first()
+>
+> owner = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-a"})
+> other = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-b"})
+> assert owner.status_code == 200
+> assert owner.json() == {"report_id": 42, "state": "ready"}
+> assert other.status_code == 404
+> ~~~
+>
+> 这组检查通过 FastAPI TestClient 进程内调用实际路由、通过 SQLAlchemy 执行参数化查询，并由 SQLite 执行真实 SELECT。它不是 mock，也没有建立网络 socket。
+
+> [!example]- 完整 FastAPI + SQLite fixture 与 OpenAPI 检查
+> 下方测试夹具为每次测试建立内存 SQLite，使用 StaticPool 让 TestClient 所在线程与数据库检查共享该连接。示例中的测试头不是真实认证协议。
+>
+> ~~~python
+> from typing import Annotated
+>
+> import pytest
+> from fastapi import Depends, FastAPI, Header, HTTPException, Request
+> from fastapi.testclient import TestClient
+> from sqlalchemy import create_engine, text
+> from sqlalchemy.pool import StaticPool
+>
+>
+> def create_app() -> FastAPI:
+>     engine = create_engine(
+>         "sqlite+pysqlite://",
+>         connect_args={"check_same_thread": False},
+>         poolclass=StaticPool,
+>     )
+>     with engine.begin() as connection:
+>         connection.execute(text("""
+>             CREATE TABLE reports (
+>                 report_id INTEGER PRIMARY KEY,
+>                 tenant_id TEXT NOT NULL,
+>                 state TEXT NOT NULL
+>             )
+>         """))
+>         connection.execute(
+>             text("INSERT INTO reports VALUES (:id, :tenant, :state)"),
+>             {"id": 42, "tenant": "tenant-a", "state": "ready"},
+>         )
+>
+>     app = FastAPI()
+>     app.state.engine = engine
+>
+>     def tenant_from_test_header(
+>         x_tenant_id: Annotated[str | None, Header()] = None,
+>     ) -> str:
+>         if not x_tenant_id:
+>             raise HTTPException(status_code=401, detail="authentication required")
+>         return x_tenant_id
+>
+>     @app.get(
+>         "/api/reports/{report_id}",
+>         responses={
+>             401: {"description": "Authentication required"},
+>             404: {"description": "Not found"},
+>         },
+>     )
+>     def read_report(
+>         report_id: int,
+>         tenant_id: Annotated[str, Depends(tenant_from_test_header)],
+>         request: Request,
+>     ):
+>         with request.app.state.engine.connect() as connection:
+>             row = connection.execute(
+>                 text("""
+>                     SELECT report_id, state FROM reports
+>                     WHERE tenant_id = :tenant_id AND report_id = :report_id
+>                 """),
+>                 {"tenant_id": tenant_id, "report_id": report_id},
+>             ).mappings().first()
+>         if row is None:
+>             raise HTTPException(status_code=404, detail="report not found")
+>         return dict(row)
+>
+>     return app
+>
+>
+> @pytest.fixture
+> def client():
+>     app = create_app()
+>     with TestClient(app) as test_client:
+>         yield test_client
+>     app.state.engine.dispose()
+>
+>
+> def test_report_scope_and_authentication(client):
+>     owner = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-a"})
+>     other = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-b"})
+>     anonymous = client.get("/api/reports/42")
+>
+>     assert owner.status_code == 200
+>     assert owner.json() == {"report_id": 42, "state": "ready"}
+>     assert other.status_code == 404
+>     assert anonymous.status_code == 401
+>
+>
+> def test_public_schema_declares_scope_errors(client):
+>     operation = client.get("/openapi.json").json()["paths"]["/api/reports/{report_id}"]["get"]
+>     assert {"200", "401", "404", "422"} <= set(operation["responses"])
+> ~~~
+>
+> 保存为 test_report_scope.py 后运行 python -m pytest -q test_report_scope.py。OpenAPI 检查说明本应用声明了哪些响应码；若要保证已有客户端兼容，仍需与已发布 schema 或代表性旧客户端比较。
+
+若原实现只按 report_id 读取，tenant-b 的测试会得到 200，暴露缺失的租户条件。示例中 report_id 是全局主键，所以 SQLAlchemy 的 session.get(Report, 42) 能找到该行，但这不等于当前主体有权读取它；复合主键则需要不同的主键参数。修正后，所有者得到 200、越租户请求得到 404、匿名请求得到 401。相关授权规则见[如何逐次授权租户内的报表资源？](../security/web-security-and-authentication.md)。
+
+参数校验和旧客户端兼容也要分别验收：请求先通过认证后，`GET /api/reports/not-a-number` 由整数路径参数校验返回 422；没有可信主体的请求应在认证边界先得到 401。若既有客户端依赖响应中的 `state` 字段，应把上一版发布的 schema 或代表性请求/响应作为固定契约，删掉 `state` 时该契约测试应失败。当前 `/openapi.json` 只证明此版本声明了什么，不证明它仍兼容旧客户端。
+
+> [!example] 唯一约束与重复投递的最小状态轨迹
+> SQLite 演算的插入表以 `(tenant_id, request_key)` 为唯一键。首次插入影响 1 行；相同键再次插入触发唯一约束并回滚事务，查询仍只有原来的 1 行。这个约束例说明重复 insert 不会多建一行；它不等于 API 应对相同幂等键返回 409。报表接口若收到相同键和相同参数，应按[持久报表任务](../architecture/system-design-fundamentals.md)的契约读取并返回原 job；键相同但参数冲突时再按该业务契约拒绝。
+>
+> 对 worker 的本地条件更新，初始行是 `pending, processed_count=0`。第一次以 `WHERE status='pending'` 更新为 `done` 并递增计数，`rowcount=1`；再次执行同一条件时 `rowcount=0`；事务后最终状态仍为 `done, processed_count=1`。这证明选定 SQLite SQL 对重复函数调用只计一次，不证明 broker 的重投、ACK 或跨进程并发契约。
+
+若 worker（工作进程）被本地函数调用两次，只能验证数据库状态迁移是否防重；它不覆盖消息是否被 broker 接收、连接中断后怎样重投或 ACK 是否可靠。若 worker 外发邮件、付款等副作用，还要让外部动作具备操作键幂等性或经持久 outbox 处理。任务与数据库结果边界见[超时后的结果确认与安全重试](../reliability/api-reliability-and-async-delivery.md)；发布者确认与消费者 ACK 的 broker 语义见[消息交付如何确认](../reliability/queue-delivery-and-acknowledgement.md)。
+
+## 从测试证据接到可发布的变更
+
+测试通过只是证据链的一环。它应能指向变更需求、对应代码和具体测试数据；随后由 Git 提交固定源码快照，Docker 根据这个快照构建镜像，部署流水线再验证并晋级相同镜像。生产路径出现问题时，指标、trace 与日志用于定位是哪一环偏离。完整过程见[如何晋级已验证的报表服务产物？](../infrastructure/application-deployment-and-ci-cd.md)。
+
+> [!info]- 来源
+> - 测试方式的界限：FastAPI 官方 [Testing](https://fastapi.tiangolo.com/tutorial/testing/) 说明 TestClient 对应用路由的调用，checked 2026-11-06；pytest 官方 [Fixtures reference](https://docs.pytest.org/en/stable/reference/fixtures.html) 说明 fixture 作用域和发现，checked 2026-11-06。
+> - SQLite 约束与共享内存连接：SQLite [CREATE TABLE](https://www.sqlite.org/lang_createtable.html)；SQLAlchemy 2.0 官方 [SQLite 内存数据库与连接池](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines)，适用于本例的 StaticPool / check_same_thread 连接安排。
+> - 本地运行边界：示例执行环境为 FastAPI 0.128.0、SQLAlchemy 2.0.44、pytest 9.0.2 与系统 SQLite；它不代表 PostgreSQL 或 broker 集成测试。

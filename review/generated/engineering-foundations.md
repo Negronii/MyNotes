@@ -741,7 +741,7 @@ WHERE tenant_id = ? AND id = ?;
 
 排队时先按该任务的实际动作授权，再保存服务端创建的可信任务记录。消息只带不透明 `job_id`；worker 用该 ID 从可信存储读取租户、请求人和资源，不从任意消息载荷接受租户或报表编号。worker 是否要在执行时重新检查成员资格取决于产品定义：若成员移除后应停止工作，就复验当前权限；若已受理任务按提交时权限继续，则把那项授权决定作为可审计状态持久化。
 
-下面的复现仅演示“读取一个已经存在的报表”任务，因此 `enqueue_read_job` 只需要 `report:read`。高成本报表导出或重算必须另查 `report:export` 等独立动作，或者明确定义其权限组合；不能从 `reader` 自然推出。账户报表作业的幂等受理、outbox 发布和队列确认见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)；队列确认分别见[发布者确认和消费者确认分别证明什么？](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
+下面的复现仅演示“读取一个已经存在的报表”任务，因此 `enqueue_read_job` 只需要 `report:read`。高成本报表导出或重算必须另查 `report:export` 等独立动作，或者明确定义其权限组合；不能从 `reader` 自然推出。账户报表作业的幂等受理、outbox 发布和队列确认见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)；队列确认分别见[发布者确认和消费者确认分别证明什么？](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 输入输出可以直接按上面的状态表理解：甲的成员读取甲的 42 返回 200；乙的成员读取乙命名空间中不存在的 42 返回 404；失去成员关系后，API 仍按隐藏策略返回 404，worker 抛出拒绝异常。完整 SQLite 复现放在折叠示例中。
 
@@ -1616,7 +1616,7 @@ wait(n) = 从 0 到 cap(n) 均匀随机选择
 
 cancellation（取消）是通知仍在运行的工作“结果不再需要”。把信号传给下游，并在安全检查点停止多余计算、释放资源；不同运行时能否中止远端调用取决于 API。对已返回 202 且已持久接受的账户报表，浏览器断开只结束这次连接，不会取消后台 job；客户端必须向已知 job URL 显式请求取消。尚未接受的请求级工作则可在断开后结束。取消也不证明已经提交的数据库副作用回滚，提交状态仍要从权威业务记录确认。
 
-**接下来：** 账户报表把幂等键、202、outbox 和后台尝试组合成一个可长期查询的流程，见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。队列发布确认与消费者 acknowledgement 的 broker 语义归[发布者确认和消费者确认分别证明什么？](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)，连接借用预算归[如何限定 ORM Session 并排查连接池耗尽？](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。
+**接下来：** 账户报表把幂等键、202、outbox 和后台尝试组合成一个可长期查询的流程，见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。队列发布确认与消费者 acknowledgement 的 broker 语义归[发布者确认和消费者确认分别证明什么？](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)，连接借用预算归[如何限定 ORM Session 并排查连接池耗尽？](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。
 
 > [!info]- 来源
 > - HTTP 幂等方法与 202 受理语义：[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§9.2.2、§15.3.3，核对于 2026-11-06。
@@ -1694,7 +1694,7 @@ flowchart TD
 读写失败、重复投递和租约超时不会跳过这些边界；下面分别说明它们怎样恢复。
 
 
-数据库提交与队列发布是两个系统的写入，不能放进一个普通数据库事务。若先提交 job 后直接发布，进程可能在两步之间崩溃，导致永远无人处理的任务；若先发消息再提交，数据库回滚后队列会出现不存在的任务。outbox 把 job 和待发布记录一起提交；relay 读取并重试发布，只有按所选 broker 的契约验证发布确认、路由与所需持久性条件后才更新 outbox。relay 若在 broker 接收后、更新 outbox 前崩溃，可能再次发布，所以 worker 按 job ID 幂等领取；已确认的 outbox 行也要按保留策略清理。发布者确认和消费者 ACK 是两个独立边界；即使 relay 记录 `published`，worker 也可能已经领取任务甚至写入终态。数据库事务不覆盖 broker，也不覆盖对象存储。[队列确认页](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)详解 broker 语义。
+数据库提交与队列发布是两个系统的写入，不能放进一个普通数据库事务。若先提交 job 后直接发布，进程可能在两步之间崩溃，导致永远无人处理的任务；若先发消息再提交，数据库回滚后队列会出现不存在的任务。outbox 把 job 和待发布记录一起提交；relay 读取并重试发布，只有按所选 broker 的契约验证发布确认、路由与所需持久性条件后才更新 outbox。relay 若在 broker 接收后、更新 outbox 前崩溃，可能再次发布，所以 worker 按 job ID 幂等领取；已确认的 outbox 行也要按保留策略清理。发布者确认和消费者 ACK 是两个独立边界；即使 relay 记录 `published`，worker 也可能已经领取任务甚至写入终态。数据库事务不覆盖 broker，也不覆盖对象存储。[队列确认页](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)详解 broker 语义。
 
 > [!example] job-demo-731 的一次正常完成
 > 在这个明确的顺序示例中，relay 先验证所选 broker 契约并更新 `outbox=published`，之后 worker 才领取；因此这一时刻 `job=queued`、等待槽占用 1。worker 原子领取后，job 变成 `running`、attempt=1，等待槽归还。worker 写私有对象并提交结果引用后，job 才变成 `succeeded`；消费者随后按 broker 契约确认消息。真实系统中 worker 可能在 relay 更新 `published` 前就已领取，因此 outbox 状态、job 状态和消费者确认不能互相推导。
@@ -1721,7 +1721,7 @@ attempt fencing（尝试号栅栏）以单调递增的 attempt 号隔离新旧 w
 部署与运行时保留以下检查：API、relay 与 worker 的任务表结构兼容，使升级期间旧任务仍可完成；按本例分开的 7 天结果与终态后 14 天状态/幂等元数据策略清理；限制重试数、对象上传时长和每次工作时长；监测 API 接受时延、pending outbox 的最老等待时间、数据库中最老 `queued` job 年龄、broker 最老消息年龄与深度、活跃 worker 槽、任务完成分位数、连接池等待与 SQL 耗时、对象存储用量、重试、取消和终态结果。broker 队列指标正常不能证明数据库中没有积压；`pending outbox` 或 `queued` 年龄持续增长都表示处理路径跟不上。发布时保留回滚路径，并考虑已经按旧 schema 接受的任务。
 
 
-**继续阅读：** [数据库约束与索引](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)说明唯一键与查询路径；[事务隔离与 WAL](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)说明数据库内提交边界；[数据访问与连接池](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)说明每个请求/attempt 的 ORM 与连接生命周期；[HTTP 协议与 WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)说明客户端状态查询的传输边界；[可观测性、服务目标与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F)说明阶段指标。更长的设计检查清单见[AI 系统设计案例](../../ai-engineering/systems/ai-system-design-interview-questions.md)。
+**继续阅读：** [数据库约束与索引](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)说明唯一键与查询路径；[事务隔离与 WAL](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)说明数据库内提交边界；[数据访问与连接池](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)说明每个请求/attempt 的 ORM 与连接生命周期；[HTTP 协议与 WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)说明客户端状态查询的传输边界；[可观测性、服务目标与事件响应](#31.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明阶段指标。更长的设计检查清单见[AI 系统设计案例](../../ai-engineering/systems/ai-system-design-interview-questions.md)。
 
 > [!info]- 来源
 > - `202 Accepted` 表示已接受但尚未完成的 HTTP 语义：[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§15.3.3，核对于 2026-11-06。
@@ -1730,53 +1730,93 @@ attempt fencing（尝试号栅栏）以单调递增的 attempt 号隔离新旧 w
 > - 发送端 publisher confirms 与消费端 acknowledgements 是两个独立边界；RabbitMQ 的 unroutable/持久消息行为：[RabbitMQ 4.4, Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms)，核对于 2026-11-06；本架构只要求按最终选择的 broker 契约确认。
 > - 按对象名防止覆盖的条件写入示例：[Amazon S3, Conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)，核对于 2026-11-06；S3 只是可选实现。
 > - 从需求、约束与运行目标选择架构：[Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework)，核对于 2026-11-06。
-## 14. What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？
+## 14. 报表任务的发布确认、消费者确认与业务完成各证明什么？
 
-A publisher confirm and a consumer acknowledgement cover different handoffs. A publisher confirm says the broker accepted a publish under its own configured rules; it does not say a consumer performed the business operation. A consumer acknowledgement tells the broker that the consumer reached the chosen processing boundary. If either confirmation is lost, work may be repeated, so make the business effect idempotent and acknowledge only after its durable outcome. / 发布者确认和消费者确认覆盖不同的交接边界。发布者确认表示 broker 按自身配置规则接受了消息，并不表示 consumer 已执行业务操作。消费者确认告诉 broker，consumer 已达到系统选定的处理边界。任一确认丢失都可能造成重复处理，因此业务效果应可幂等，并且只有在持久化业务结果后才确认消息。
-
-**Key terms / 关键术语：** publisher confirm / 发布者确认；consumer acknowledgement / 消费者确认；redelivery / 重投；deduplication / 去重；ordering / 顺序；dead-letter queue / 死信队列。
+账户 acct-17 为 report 42 发起导出时，请求幂等键为 report-demo-208，并在 application programming interface（应用程序接口，API）的数据库事务里创建 job（任务）job-demo-731 和 outbox（事务发件箱）行。report 42 也可由只读 API 路径查询；读状态码与异步 job 的状态或结果对象提交是不同的用户结果，不能互相代替。relay（转发进程）再把工作意图发布到 broker（消息代理）。publisher confirm（发布者确认）覆盖 relay 到 broker 的接收边界；consumer acknowledgement（消费者确认，常写作 ACK）覆盖 broker 到 worker（工作进程）的交付处理边界；job 的 succeeded 状态和私有对象引用才是应用对用户作出的业务完成记录。
 
 ~~~mermaid
 sequenceDiagram
-    participant P as Publisher
-    participant B as Broker
-    participant C as Consumer
-    participant D as Business store
-    P->>B: Publish message
-    B-->>P: Confirm broker acceptance
-    B->>C: Deliver message
-    C->>D: Commit idempotent business effect
-    D-->>C: Durable outcome
-    C->>B: Acknowledge delivery
-    Note over P,B: Lost confirm may cause publisher retry and duplicate publish
-    Note over C,B: Crash after commit but before ack may cause redelivery
+    participant A as API / database
+    participant R as Outbox relay
+    participant B as RabbitMQ broker
+    participant W as Report worker
+    participant O as Private object storage
+    A->>A: 同事务写 job + pending outbox + 预留一个等待槽
+    R->>B: mandatory 发布载荷 {job_id=job-demo-731}
+    alt 消息不可路由
+        B-->>R: basic.return（关联本次发布）
+        B-->>R: publisher confirm ack
+        R->>A: intent 保持 pending，修复路由后再试
+    else 到达已验证的目标拓扑
+        B-->>R: 无关联 return + publisher confirm ack
+        R->>A: 仅标记对应 intent 为 published
+        B->>W: 投递 job ID
+        W->>A: 只对 queued 条件领取；attempt + 1；释放等待槽
+        W->>O: 上传 attempt 隔离的临时对象
+        W->>A: 条件提交 succeeded + object key
+        A-->>W: 事务提交
+        W->>B: consumer ACK
+    end
+    Note over R,B: confirm 丢失时 relay 可能重发；confirm ack 本身不表示已路由
+    Note over W,B: commit 后 ACK 丢失时消息可能重投
+    Note over R,W: 实际 delivery 可能早于 outbox 的 published 回写；published 不是 worker 条件领取的前置状态
 ~~~
 
-The sequence has two separate ambiguity windows. If the broker accepted a publish but its confirmation did not reach the publisher, the publisher may resend and create a duplicate. If the consumer commits its effect and then crashes before acknowledging, the broker may redeliver the message. If the consumer acknowledges before durable work, a crash can lose the work. The application therefore needs stable message or operation identity and an idempotent effect; queue delivery alone is not proof of business completion.
+图中的两条回路是分布式系统的正常不确定区间：网络故障可能让一方已完成操作、另一方却没收到确认。持久 outbox 避免应用数据库提交与 broker publish（发布）的双写空档；幂等业务更新负责接住重复消息。没有共享的分布式事务时，不应把这称作 exactly-once（恰好一次）。
 
-### Publisher confirmation / 发布者确认
+### 发布者确认只回答 broker 是否接收
 
-Publisher confirms cover the publisher-to-broker boundary under the broker's rules. They do not know whether a consumer received, acknowledged, or completed the message. The publisher must also distinguish a broker confirmation from a routing guarantee: depending on broker and configuration, acceptance by an exchange may not mean that the message reached the intended queue.
+publisher confirm 覆盖 publisher（发布者）到 RabbitMQ 的通信。它不知道 worker 是否已收到、确认或完成消息。如果 broker 接收了 publish，但 confirm 在网络中丢失，relay 无法区分“broker 未收到”和“broker 已收到但回复丢失”，重发便可能为同一 job 产生重复载荷。outbox 每次调度意图有独立唯一 ID，relay 用这个 ID 更新相应的发布状态；消息载荷只需 job ID。
 
-With RabbitMQ, a publisher that has not received a confirm when a connection fails cannot know whether the message was accepted; retrying may duplicate it. For routable persistent messages, what the confirm means depends on the message and queue type; consult the configured queue's durability and replication semantics. A confirm is not a transaction across the publisher's database and the broker. Persisting business state and an outbox row together, then publishing from that outbox, handles that separate database-to-broker dual-write problem. The account-report implementation is in [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F).
+confirm 的含义还受消息和 queue（队列）类型影响。RabbitMQ 的 publisher confirm 不是路由保证：消息被 exchange（交换器）接受，并不一定已进入预期 queue。若采用 RabbitMQ 的 mandatory 发布，应将该次 publish 的 publisher confirm ack 与关联的 basic.return 联合判断：4.4 中不可路由消息会先 basic.return、再收到 confirm ack，因此“有 confirm ack 且没有关联 return”才能说明至少路由到了某个 queue。它仍不证明该 queue 是业务目标；exchange、binding 和备用 exchange 必须按明确拓扑预先验证。若 routing contract 由其他 broker/机制保证，则按该契约检查路由结果。durable message/queue（持久消息/队列）与副本类型也决定 broker 按什么配置确认承担责任；不要把另一种 queue 的保证套用过来。
 
-### Consumer acknowledgement and redelivery / 消费者确认与重投
+outbox relay 可以按此顺序推进：读取一条未发布 outbox 意图，发布它所指向的 job ID；只有所选路由契约通过（例如 mandatory publish 已收到 confirm ack，且没有关联的 basic.return）后，才标记这个 intent 自己的 outbox 行已发布。confirm 状态未知或出现 return 时保留意图并报告发布/路由故障，修复后重试；重复 publish 可能得到相同逻辑 job 的消息，RabbitMQ 不在这里替应用去重。数据库事务和 RabbitMQ 事务不是一个原子事务；重复消息可接受的前提是 consumer（消费者）按持久 job 状态幂等处理。账户报表如何把 job、outbox 和等待槽同事务提交见[怎样设计一个可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
 
-Choose the consumer's acknowledgement point from the business completion contract. If processing consists of a database update, make that update idempotent by message ID or operation key. A crash after database commit but before broker acknowledgement can then trigger redelivery without repeating the effect. The database commit and broker acknowledgement usually cannot share one local transaction, so this remaining duplicate window is expected.
+### 消费者在业务结果持久后才 ACK
 
-With RabbitMQ 4.3 manual acknowledgements, an unacknowledged delivery is requeued when its channel or connection closes. Consumers must be ready for redelivery. This is a broker-specific behavior, not a universal queue rule. Acknowledging before durable work can lose work; acknowledging after durable work can cause redelivery if the acknowledgement is lost, so processing should tolerate duplicates.
+给 job-demo-731 的 delivery（消息投递）载荷只带稳定 job ID，不带 attempt。worker 从数据库读取任务，并只对 `queued` 状态做 conditional claim（条件领取）：在同一数据库事务中把状态改为 `running`、生成新的 attempt（尝试号）并释放这个排队轮次的等待槽。重投消息只是查询权威 job 的线索；若已有 `running` 尝试且租约尚未过期，不能据此接管或另起 attempt。租约到期只让数据库恢复器有资格尝试接管；它必须先赢得条件更新，再把任务改回 `queued`、预留新槽并写入新的 outbox intent。随后当前 worker 才能领取新 attempt。attempt 来自数据库的胜者更新，不能信任可能重复、延迟或过期的 queue message（队列消息）。结果对象写入后，只有成功提交 `succeeded` 和对象 key，才向 broker 发 consumer ACK。用户读取结果仍要经 API 做授权，不能因 message 已被 ACK 就把对象公开。
 
-A dead-letter queue makes repeatedly failed messages visible only if it is monitored and someone has defined whether to repair, retry, or discard them. Immediate requeue can create a hot retry loop, so define bounded attempts or delayed retry behavior. Keep the application operation's idempotency record and any relevant status query separate from the queue's delivery state.
+成功条件必须把当前状态、attempt 和取消请求一起放进更新谓词，且对象已经写好后才提交：
 
-### Preserve the order the business needs / 保留业务需要的顺序
+~~~sql
+UPDATE report_jobs
+SET status = 'succeeded', result_object_key = :object_key
+WHERE job_id = :job_id
+  AND status = 'running'
+  AND attempt = :attempt
+  AND cancel_requested = FALSE;
+~~~
 
-Concurrent consumers may finish messages in a different order from delivery. A FIFO queue does not automatically serialize all effects across multiple consumers, retries, or partitions. If completion order is a correctness rule, define its scope—often per account or key—and enforce it with a single ordered partition, per-key sequence, conditional state transition, or serialization at the worker. Confirm the chosen broker's exact delivery and ordering contract.
+若更新一行，事务提交后 ACK；若更新零行，先重新读取权威 job/outbox 状态。若已有未过期的 `running` attempt，本条重投不能另起尝试；可以按队列策略延迟它，或在确认持久租约恢复器会于过期后创建新 outbox 意图并重排时 ACK 这条重复消息。若任务已取消或终结，持久状态能证明无需再做；若仍为 `queued` 或后继意图尚未持久，则不能盲目 ACK，否则可能丢失尚未重新排队的工作。租约到期也不自动使旧 worker 失权，实际竞争以数据库条件更新的提交先后决定。
 
-Observe each boundary separately: publish attempts and confirms, unroutable messages, queue depth and oldest-message age, unacknowledged deliveries, retries and redeliveries, acknowledgements, dead-letter volume, and completed business outcomes. A growing oldest-message age indicates delay even while a queue continues accepting work. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains how to constrain the work waiting behind those boundaries.
+如果更新为零是因为 `cancel_requested` 已置位，不能把旧 worker 的失败返回或已上传对象当作成功。先读取并持久化取消终态，或交给租约恢复流程完成取消；只有状态和清理/保留策略已经持久后，才按 broker 契约 ACK。对象上传本身也不让结果对用户可见；只有数据库引用提交后，授权 API 才能提供结果。
 
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers ambiguous request outcomes and operation idempotency; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies outbox, attempt fencing, and post-outcome acknowledgement to a report job; [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) covers the local transaction boundary used to persist business effects.
+| 失败时点 | broker 可能采取的动作 | 应用要保持的条件 |
+|---|---|---|
+| broker 已接收 publish，confirm 未到 relay | relay 重发，同一 job ID 可能有多条消息 | 对当前持久 job/attempt 的完成更新只能有一个赢家 |
+| worker 在持久结果前崩溃，delivery 尚未 ACK | RabbitMQ 连接或 channel 关闭后可重新排队未 ACK delivery | 重投仅触发读取权威 job；若仍为未过期的 `running`，不能另起 attempt。租约到期后也须等恢复器条件接管并重排，才可领取新 attempt |
+| 数据库已提交 succeeded，worker 发 ACK 前崩溃 | delivery 可再次到达另一个 worker | 后继 worker 查到 job 已终态/attempt 已失效，不得重复业务副作用，再 ACK 重复消息 |
+| worker 先 ACK，再提交结果前崩溃 | broker 可删除这条 delivery，不会再因它自动重投 | 如果没有独立的持久恢复扫描，job 可能一直滞留；报表任务设计中的 lease recovery（租约恢复）会扫描过期的 running job，用条件更新 fencing（栅栏校验）并通过新的 outbox intent 重排。因此该恢复依赖数据库恢复器而非 broker。 |
 
-**Sources / 来源：** RabbitMQ 4.3, [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and [Reliability Guide](https://www.rabbitmq.com/docs/reliability), checked 2026-11-05. These references document RabbitMQ's confirm, manual-ack, redelivery, and publisher retry behavior; other brokers have different contracts.
+若成功提交了对象但数据库事务未能提交，可能留下不可见的孤儿对象；以 attempt key 命名并在无引用、任务终态和宽限期满足后清理。若数据库已提交成功但 ACK 丢失，重复 handler 应通过终态 job、attempt fencing（尝试栅栏校验）或 operation key 得到“已完成/重复”而不是再次发布或覆盖结果。数据库提交、ACK 与恢复器抢占的状态谓词由 report job 设计章负责，本篇只解释 broker 交界。
+
+### 重试、并发窗口与顺序会改变负载
+
+RabbitMQ 4.4 使用手动确认时，未确认 delivery 在其 channel（通道）或 connection（连接）关闭后可自动 requeue（重新排队）；这是 RabbitMQ 的行为，不能无条件推广到所有 broker。automatic acknowledgement（自动确认）模式在发送后就视为已交付，可提高吞吐，但应用还没处理就断线时会失去工作。对需要可靠完成的报表任务，选择手动 ACK 并把 ACK 放在业务持久化之后；若依赖数据库租约扫描恢复被提前确认的任务，要把恢复器视为独立的正确性机制。
+
+RabbitMQ 4.4 的 consumer prefetch（消费者预取上限）默认按单个 consumer（消费者）计算，而不是整个 channel（通道）：例如一个 consumer 设 prefetch=4，就最多有四条它自己的 delivery 未 ACK；同一个 channel 上若有三个 consumer，总数可以达到 12。RabbitMQ 4.3 起全局 per-channel QoS 已弃用且默认禁用。prefetch 同时影响 worker 的并行量、进程内排队和内存，不应设置为无限而不评估容量。
+
+失败重试要有边界：瞬时故障可安排有延迟的有限重试；永久 schema（结构定义）错误或格式错误应进入可观测 dead-letter queue（死信队列，DLQ），由处理流程决定修复重放或隔离丢弃。反复立刻重新排队会形成热循环。若业务要求每个账户按顺序更新，必须明确顺序的键范围，并用单一有序分区、序号条件更新或串行化保证；first in, first out（先进先出，FIFO）名称不自动保证多个 worker 的业务完成顺序。
+
+### 观测每个交接点，不能只数 ACK
+
+单独记录 publish 尝试、confirm/return、queue depth 和 oldest-message age、unacked 数、重投、重试、ACK、DLQ、job succeeded/failed 及对象引用提交。oldest-message age 持续增长表示结果延迟，即使队列还在接受消息。broker 继续接收并不代表 worker 有容量；worker 发 ACK 也只表示应用确认到达选择的处理边界，不等于用户后来成功下载了报告。更完整的事故定位见[如何从报表服务信号定位发布故障？](#31.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)。
+
+> [!info]- 来源
+> - RabbitMQ 官方 [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms) 与[发布何时确认](https://www.rabbitmq.com/docs/confirms#when-will-published-messages-be-confirmed-by-the-broker)、[Reliability Guide](https://www.rabbitmq.com/docs/reliability)，checked 2026-11-06：确认方向相互独立、mandatory/unroutable 的 `basic.return` 在 confirm ack 前、手动/自动 ack、未确认消息在 channel/connection 关闭后的重排、publisher 重试与确认语义。latest release 为 RabbitMQ 4.4.0，见[官方 Release Information](https://www.rabbitmq.com/release-information)。
+> - RabbitMQ 4.4.0 官方 [Consumer Prefetch](https://www.rabbitmq.com/docs/consumer-prefetch)，checked 2026-11-06：RabbitMQ 默认 false 的 QoS 标记对应每个 consumer 独立上限；global per-channel 模式在 4.3 起弃用并默认禁用。见[发布信息](https://www.rabbitmq.com/release-information)核对当前 4.4.0 版。
+> - RabbitMQ 官方 [Publishers](https://www.rabbitmq.com/docs/publishers) 与 [Consumers](https://www.rabbitmq.com/docs/consumers)，checked 2026-11-06：publisher confirms、不可路由消息检测、消费者预取和并发交付。具体保证仍由已配置的 exchange、queue 类型、持久性、副本和客户端库决定。
+> - 数据库 outbox、幂等键和 report job attempt 是应用级机制，见[请求超时后的结果确认](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)和[持久报表任务](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)；本文不声称对真实 broker 做了部署验证。
 ## 15. 何时选择轮询、SSE、流式 Fetch 或 WebSocket？
 
 报表查看者已请求刷新报表 42，接下来要决定怎样收取进度。选择取决于消息方向、请求形状、连接生命周期和恢复要求：轮询重复发普通 HTTP 请求；Server-sent Events (SSE，服务端事件) 用一个 HTTP 响应单向发送事件；流式 Fetch 让应用控制请求与读流；WebSocket 让连接两端主动发消息。重连只恢复连接，不保证所有事件都被应用处理；恢复需要服务端保留日志并接受游标，或客户端重新读取权威状态。
@@ -2948,9 +2988,9 @@ flowchart LR
 
 在这些假设下，峰值按时处理需要 120 个平均并发 job，而计划只有 64 个槽，因此 worker 执行槽先于列出的连接配置上限达到规划值。这只是排查顺序的假设，不表示数据库 CPU、存储 I/O 或网络已经有余量。
 
-用代表性的 8 KiB 请求、12 次读取扇出和输出大小逐步加压，再单独试 20/秒突发、满队列、慢读、重试和 worker 丢失。分别记录 API 接受延迟、job 排队时长、生成时长、下载时长，以及 p50、p95、p99（第 50、95、99 百分位）延迟分位数。6 秒是平均处理时长，只能用于这次平均在途量估算，不能写成 p95 保证。观测活动槽位、共享等待槽、最老队列年龄、数据库 checkout 等待和 CPU、结果留存量、完成与失败状态，再按真实 service-level objective（SLO，服务级目标）决定扩副本、改准入还是优化查询。[可观测性、SLO 与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F)说明如何按各阶段检查饱和与延迟。
+用代表性的 8 KiB 请求、12 次读取扇出和输出大小逐步加压，再单独试 20/秒突发、满队列、慢读、重试和 worker 丢失。分别记录 API 接受延迟、job 排队时长、生成时长、下载时长，以及 p50、p95、p99（第 50、95、99 百分位）延迟分位数。6 秒是平均处理时长，只能用于这次平均在途量估算，不能写成 p95 保证。观测活动槽位、共享等待槽、最老队列年龄、数据库 checkout 等待和 CPU、结果留存量、完成与失败状态，再按真实 service-level objective（SLO，服务级目标）决定扩副本、改准入还是优化查询。[可观测性、SLO 与事件响应](#31.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明如何按各阶段检查饱和与延迟。
 
-**接下来：** 本章把任务、排队和连接限制到同一工作负载假设；应用是否需要异步 job 以及完整持久生命周期见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)，消息确认语义见[发布者确认和消费者确认分别证明什么？](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
+**接下来：** 本章把任务、排队和连接限制到同一工作负载假设；应用是否需要异步 job 以及完整持久生命周期见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)，消息确认语义见[发布者确认和消费者确认分别证明什么？](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 > [!info]- 来源
 > - Little 定律成立条件、平均数和系统边界：[Little, “A Proof for the Queuing Formula: L = λW,” Operations Research 9(3), 1961](https://doi.org/10.1287/opre.9.3.383)，该关系对应长期稳定系统的平均量。
@@ -3008,754 +3048,674 @@ CDN可以在更靠近用户的边缘节点缓存适合共享的公开内容或�
 > - 分布式流量、IP 欺骗、攻击类别、预防和响应步骤：[CISA、FBI、MS-ISAC, Understanding and Responding to Distributed Denial-of-Service Attacks](https://www.cisa.gov/sites/default/files/2024-03/understanding-and-responding-to-distributed-denial-of-service-attacks_508c.pdf)，2024-03-21，§2–§5；核对于 2026-11-06。
 > - 网络与应用层 DoS、限速以及可消耗资源的应用输入：[OWASP Denial of Service Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html)，Fundamentals、Application Attacks、Network Attacks、Rate Limiting，按 2026-11-06 版本核对。
 > - `429 Too Many Requests` 与可选 `Retry-After`：[IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html)，§4，2012-04；临时过载 `503` 与等待建议字段：[RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§10.2.3、§15.6.4，2022-06。均核对于 2026-11-06。
-## 25. How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？
+## 25. 怎样用最小反例定位报表授权回归？
 
-**核心回答 / Core answer：** Start with an observable expected outcome, trace the request through its entry point, dependencies, data access, and side effects, then build the smallest counterexample that can disprove a specific hypothesis. If the failure occurs at a lost tenant predicate, restore that predicate and test both owner and non-owner requests. Review the implementation and its tests independently: they can pass together while sharing the same missing assumption. / 先写出可观察的预期结果，再沿入口、依赖、数据访问和副作用追踪请求，并构造足以推翻某个具体假设的最小反例。如果故障来自丢失租户条件，就恢复该条件，并分别检查所有者与非所有者请求。实现和测试要独立审查：两者可能共享同一个遗漏假设，即使一起通过也不能证明需求已满足。
+报表平台工程师收到一条跨租户访问回归：tenant-a 读自己的 report 42 应返回 200，tenant-b 猜中同一 ID 也只能得到 404。为了定位并修复回归，先把需求改写成可观察结果，再提出一个能被反例推翻的根因假设。若新改动让 B 得到 200，就沿主体、application programming interface（应用程序接口，API）路由、查询和序列化追踪请求，而不是先猜数据库或框架有问题。针对该边界的可运行测试见[测试如何证明报表服务改动？](#26.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E9%AA%8C%E8%AF%81%E4%B8%80%E6%AC%A1%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E6%94%B9%E5%8A%A8%EF%BC%9F)。
 
-**Key terms / 关键术语：** expected behavior / 预期行为；entry point / 入口；call path / 调用路径；minimal reproduction / 最小复现；falsifiable hypothesis / 可证伪假设；root cause / 根因；regression check / 回归检查；generated change / 生成式改动。
+~~~mermaid
+flowchart TD
+    A[可信主体为 tenant-b，请求 report 42] --> B[主体依赖得到当前租户]
+    B --> C[路由把主体交给数据查询]
+    C --> D{查询同时限制租户与报表 ID？}
+    D -->|否| E[返回其他租户的行]
+    D -->|是| F[查无匹配行，返回 404]
+~~~
 
-### Follow one generated authorization bug / 跟踪一个生成式授权缺陷
+这张图标出三处必须核对的交接：主体依赖是否正确给出当前租户，路由是否把它传入查询，查询是否把主体范围用于取行。一个响应状态只能提示失败发生了，不能单独证明是哪一处失效。
 
-Suppose a generated refactor changes a job lookup from the existing tenant-scoped query to `session.get(Job, job_id)`. Its generated test creates a job for `tenant-a` and reads it back as `tenant-a`; that test passes. The requirement, however, is that the current tenant may read only its own job. A matching owner read does not exercise that boundary.
+### 先把症状变成可证伪假设
 
-Start with an observable expectation: after `tenant-a` creates a job, `tenant-b` requesting the same ID receives `404`, while `tenant-a` still receives `200`. Then follow the request rather than guessing from the response: the route reads `tenant_id` from the principal dependency, passes it to the database lookup, and serializes the returned job. The generated patch still receives `tenant_id`, but its new `session.get` lookup ignores it.
-
-The minimal reproduction is one create and one read under a different tenant. If the response is `200`, the hypothesis “the database lookup no longer constrains the row by the current tenant” is supported. If the route rejects the second tenant earlier, or the lookup is tenant-scoped, the hypothesis is false and the next step is to inspect that earlier branch or another code path. This makes the hypothesis testable rather than a label attached after the fact.
-
-The smallest coherent fix is to restore both predicates in the query:
+假设一次自动化重构把原有的租户范围查询：
 
 ~~~python
-job = session.scalar(
-    select(Job).where(Job.id == job_id, Job.tenant_id == tenant_id)
+report = session.scalar(
+    select(Report).where(
+        Report.report_id == report_id,
+        Report.tenant_id == tenant_id,
+    )
 )
 ~~~
 
-The root cause is the lost tenant predicate, not response serialization or a missing test fixture. Keep the owner success path, add the cross-tenant `404` assertion, and retain the missing-principal, invalid-request, duplicate-create, and repeated-worker checks from [Software Testing Strategy / 软件测试策略](#26.%20How%20should%20test%20boundaries%20prove%20the%20failure%20risks%20that%20matter?%20/%20%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E6%9D%A5%E8%AF%81%E6%98%8E%E5%85%B3%E9%94%AE%E6%95%85%E9%9A%9C%E9%A3%8E%E9%99%A9%EF%BC%9F). Those nearby checks show that the fix did not break the surrounding route and persistence behavior. They do not prove production identity validation or broker semantics, which were not part of this reproduction.
-
-### Read a generated change against the requirement / 对照需求独立阅读生成式改动
-
-Read the requirement first and write down the expected outcomes before using the generated tests as a guide. Then inspect the changed route, its callers and dependencies, the query or transaction it reaches, and the error/response mapping. Compare the assertions with that expected behavior: in this case, a suite that tests only `tenant-a` cannot detect a missing tenant predicate, even if every generated test passes.
-
-Run the minimal counterexample against the changed code, inspect the actual query and row returned, apply the narrow fix, then run the owner and non-owner cases plus relevant nearby checks. Read the new tests too: verify that they reach the changed route and real database boundary, that their fixtures establish the intended principal, and that they assert the required failure rather than only a happy-path response. For a database or delivery claim, identify the engine or broker the test actually used; a stubbed session or local function call is evidence only for that seam.
-
-The review is complete when the observed failure, its cause, the changed behavior, and the regression evidence line up with the requirement. A model-written test passing is one observation, not independent proof that the requirement is complete. Keep the change as small as the cause allows: this example needs the missing query predicate and its negative regression assertion, not a new repository layer or review-management process.
-
-**Interview answer / 面试回答：** I first state the expected behavior, trace the entry point through the relevant dependency and data access, and build the smallest request that can disprove my hypothesis. Here, the other tenant receives the row because the generated refactor drops the tenant condition. Restoring that condition and running both owner and non-owner requests is the focused fix and regression check. I read the generated implementation and tests independently because their shared assumptions can omit the same requirement. / 我先明确预期行为，再沿入口、依赖和数据访问追踪调用路径，并构造能够推翻假设的最小请求。这个例子中，另一租户读到了任务，是因为生成式重构删掉了租户条件。恢复该条件并分别运行所有者和非所有者请求，就是聚焦的修复与回归验证。我会独立阅读生成实现和测试，因为二者可能共享同一个遗漏假设。
-
-**Sources checked 2026-10-15:** GitHub's official [reviewing proposed changes](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests) documentation describes inspecting commits and diffs, and its [review concepts](https://docs.github.com/en/pull-requests/concepts/giving-reviews) explain review feedback and deeper inspection. The reproduced tenant behavior and query correction are exercised in the linked synthetic API example; no personal project or generated artifact is used.
-## 26. How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？
-
-**核心回答 / Core answer：** Choose the narrowest boundary that can exercise the failure condition: isolate a pure rule with a unit test, connect the real route and principal seam for API behavior, and let the selected database execute SQL for constraints and transactions. Use the configured broker or a deployed-like journey when delivery guarantees or assembled wiring are the risk. The FastAPI example below proves route behavior and local SQLite state transitions; it does not prove production identity, PostgreSQL behavior, broker redelivery, or external effects. / 选择能够触达故障条件的最小测试边界：纯规则用单元测试隔离；API 行为接入真实路由和主体接缝；约束与事务由所选数据库实际执行 SQL 验证。若风险在消息投递保证或部署后的组件装配，就纳入配置好的 broker 或近似生产的端到端链路。下方 FastAPI 示例能证明路由行为和 SQLite 本地状态变更，不能证明生产身份认证、PostgreSQL 行为、broker 重投或外部副作用。
-
-**Key terms / 关键术语：** unit test / 单元测试；integration test / 集成测试；compatibility contract / 兼容性契约；end-to-end (E2E) test / 端到端测试；fixture / 测试夹具；test seam / 测试接缝；test double / 测试替身。
-
-### Choose the boundary from the failure risk / 按故障风险选择测试边界
-
-| Risk | Useful boundary | Evidence that boundary can provide |
-|---|---|---|
-| A pure rule maps input to the wrong result | Unit | The rule's inputs and outputs, with unrelated I/O absent. |
-| A route validates the wrong shape, returns the wrong status, or skips tenant authorization | API integration | The actual router, request validation, dependency path, response serialization, and error mapping. An in-process client does not exercise a network socket or production identity provider. |
-| Duplicate keys, rollback, or a conditional update violate a durable invariant | Database integration | The selected database engine executes the schema and statements. A mock session cannot prove a constraint or transaction. |
-| An existing consumer can no longer read a response | Compatibility contract | Compare a pinned or published schema and representative consumer expectations with the provider's current output. Checking only a freshly generated schema does not prove compatibility with an older client. |
-| A queue redelivery or acknowledgement order causes a duplicate or lost effect | Broker integration | The configured broker, acknowledgement mode, consumer, and durable store exercise the delivery boundary. Calling a handler twice tests its database behavior, not broker delivery guarantees. |
-| Login, API, database, and worker wiring fail only when assembled | End-to-end | A controlled deployed-like journey with the actual selected services and identities. It is slower and narrower in number; use it for failures that depend on that wiring. |
-
-These are complementary boundaries, not a required test-count pyramid. Keep quick, deterministic checks close to the risk, then add a higher-boundary check only when it proves something the lower one cannot. The existing [Frontend Testing / 前端测试](../../frontend/testing/frontend-testing.md) note owns Jest, component, browser, and frontend release examples; this note applies the same risk-and-feedback idea to API, persistence, and delivery boundaries.
-
-### One job API with a database-backed worker / 一个带数据库 worker 的任务 API
-
-The small example below creates a tenant-owned job. `POST /jobs` validates a request and gives the same tenant's request key a database uniqueness rule. `GET /jobs/{id}` scopes lookup by the current tenant. A worker delivery changes `pending` to `done` with one conditional database update; replaying the same job ID must not increment the effect counter twice.
-
-The fixture creates a fresh in-memory SQLite database for each test and keeps it on one shared connection so the in-process test client and the test's database inspection see the same database. The `Session` dependency and worker's session-factory argument are deliberate seams: they control database lifetime while still executing real SQL against SQLite. `X-Tenant-ID` stands in for a principal supplied by trusted authentication middleware; it is a test input, not an authentication scheme to trust in a deployed service. For the general authorization rule, see [Web Security and Authentication / Web安全与身份认证](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F). The queue call is represented by calling the worker twice; no broker is present.
+替换成按主键直接读：
 
 ~~~python
-from typing import Annotated
-
-import pytest
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.testclient import TestClient
-from pydantic import BaseModel, Field
-from sqlalchemy import Integer, String, UniqueConstraint, create_engine, func, select, update
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
-from sqlalchemy.pool import StaticPool
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-class Job(Base):
-    __tablename__ = "jobs"
-    __table_args__ = (
-        UniqueConstraint("tenant_id", "request_key", name="uq_job_tenant_key"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    tenant_id: Mapped[str] = mapped_column(String(60), nullable=False)
-    request_key: Mapped[str] = mapped_column(String(64), nullable=False)
-    payload: Mapped[str] = mapped_column(String(200), nullable=False)
-    state: Mapped[str] = mapped_column(String(12), nullable=False, default="pending")
-    processed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
-
-class JobCreate(BaseModel):
-    request_key: str = Field(min_length=1, max_length=64)
-    payload: str = Field(min_length=1, max_length=200)
-
-
-class JobView(BaseModel):
-    id: int
-    request_key: str
-    state: str
-    processed_count: int
-
-
-def tenant_from_test_header(
-    x_tenant_id: Annotated[str | None, Header()] = None,
-) -> str:
-    if not x_tenant_id:
-        raise HTTPException(status_code=401, detail="authentication required")
-    return x_tenant_id
-
-
-def get_session(request: Request):
-    with request.app.state.session_factory() as session:
-        yield session
-
-
-def create_app() -> FastAPI:
-    engine = create_engine(
-        "sqlite+pysqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(engine)
-    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
-
-    app = FastAPI()
-    app.state.engine = engine
-    app.state.session_factory = session_factory
-
-    @app.post(
-        "/jobs",
-        status_code=201,
-        response_model=JobView,
-        responses={
-            401: {"description": "Authentication required"},
-            409: {"description": "Request key already exists for this tenant"},
-        },
-    )
-    def create_job(
-        body: JobCreate,
-        tenant_id: Annotated[str, Depends(tenant_from_test_header)],
-        session: Annotated[Session, Depends(get_session)],
-    ):
-        try:
-            with session.begin():
-                job = Job(
-                    tenant_id=tenant_id,
-                    request_key=body.request_key,
-                    payload=body.payload,
-                )
-                session.add(job)
-                session.flush()
-                response = JobView(
-                    id=job.id,
-                    request_key=job.request_key,
-                    state=job.state,
-                    processed_count=job.processed_count,
-                )
-        except IntegrityError:
-            raise HTTPException(status_code=409, detail="request key already exists")
-        return response
-
-    @app.get("/jobs/{job_id}", response_model=JobView)
-    def read_job(
-        job_id: int,
-        tenant_id: Annotated[str, Depends(tenant_from_test_header)],
-        session: Annotated[Session, Depends(get_session)],
-    ):
-        job = session.scalar(
-            select(Job).where(Job.id == job_id, Job.tenant_id == tenant_id)
-        )
-        if job is None:
-            raise HTTPException(status_code=404, detail="job not found")
-        return JobView(
-            id=job.id,
-            request_key=job.request_key,
-            state=job.state,
-            processed_count=job.processed_count,
-        )
-
-    return app
-
-
-def deliver_job(session_factory, job_id: int) -> str:
-    with session_factory() as session, session.begin():
-        result = session.execute(
-            update(Job)
-            .where(Job.id == job_id, Job.state == "pending")
-            .values(state="done", processed_count=Job.processed_count + 1)
-        )
-        if result.rowcount == 1:
-            return "processed"
-        return "duplicate" if session.get(Job, job_id) is not None else "missing"
-
-
-@pytest.fixture
-def app():
-    application = create_app()
-    yield application
-    application.state.engine.dispose()
-
-
-@pytest.fixture
-def client(app):
-    with TestClient(app) as test_client:
-        yield test_client
-
-
-def headers(tenant_id: str) -> dict[str, str]:
-    return {"X-Tenant-ID": tenant_id}
-
-
-def test_api_schema_auth_and_tenant_scope(client):
-    body = {"request_key": "daily-7", "payload": "sample"}
-    assert client.post("/jobs", json=body).status_code == 401
-    assert client.post(
-        "/jobs", headers=headers("tenant-a"), json={"request_key": "", "payload": "x"}
-    ).status_code == 422
-
-    created = client.post("/jobs", headers=headers("tenant-a"), json=body)
-    assert created.status_code == 201
-    assert set(created.json()) == {"id", "request_key", "state", "processed_count"}
-    assert created.json()["state"] == "pending"
-
-    job_id = created.json()["id"]
-    own_read = client.get(f"/jobs/{job_id}", headers=headers("tenant-a"))
-    other_read = client.get(f"/jobs/{job_id}", headers=headers("tenant-b"))
-    assert own_read.status_code == 200
-    assert other_read.status_code == 404
-
-
-def test_openapi_exposes_the_public_request_and_response_shape(client):
-    schema = client.get("/openapi.json").json()
-    operation = schema["paths"]["/jobs"]["post"]
-    assert {"201", "401", "409", "422"} <= set(operation["responses"])
-    request_ref = operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
-    response_ref = operation["responses"]["201"]["content"]["application/json"]["schema"]["$ref"]
-    request_schema = schema["components"]["schemas"][request_ref.rsplit("/", 1)[1]]
-    response_schema = schema["components"]["schemas"][response_ref.rsplit("/", 1)[1]]
-    assert set(request_schema["properties"]) == {"request_key", "payload"}
-    assert set(response_schema["properties"]) == {"id", "request_key", "state", "processed_count"}
-
-
-def test_database_unique_constraint_rolls_back_duplicate_create(client, app):
-    body = {"request_key": "daily-7", "payload": "sample"}
-    first = client.post("/jobs", headers=headers("tenant-a"), json=body)
-    duplicate = client.post("/jobs", headers=headers("tenant-a"), json=body)
-    assert first.status_code == 201
-    assert duplicate.status_code == 409
-
-    with Session(app.state.engine) as session:
-        count = session.scalar(select(func.count()).select_from(Job))
-    assert count == 1
-
-
-def test_replayed_worker_delivery_changes_database_once(client, app):
-    created = client.post(
-        "/jobs",
-        headers=headers("tenant-a"),
-        json={"request_key": "daily-8", "payload": "sample"},
-    )
-    job_id = created.json()["id"]
-
-    assert deliver_job(app.state.session_factory, job_id) == "processed"
-    assert deliver_job(app.state.session_factory, job_id) == "duplicate"
-    result = client.get(f"/jobs/{job_id}", headers=headers("tenant-a"))
-    assert result.json()["state"] == "done"
-    assert result.json()["processed_count"] == 1
+report = session.get(Report, report_id)
 ~~~
 
-Extract that block into `test_jobs.py` and run `python -m pytest -q test_jobs.py`. The tests assert visible API behavior, the request and response schema exposed by this app, an actual SQLite uniqueness violation with rollback, and a repeated worker call against the same database. The OpenAPI assertion checks this version's declared shape; a compatibility gate should compare with a released schema or exercise a real supported consumer before claiming an older client remains compatible.
+这个合成模型把 report_id 设成全局主键、tenant_id 设成资源所有者，所以 session.get(Report, report_id) 是合法的主键查找，但不会验证所有权。若真实表用复合主键，get 的参数应是相应的主键 tuple；具体形式要与真实 schema 对齐。原测试只以 tenant-a 创建并读取自己的报表，因此仍然通过。这个测试确认了所有者的成功路径，却没有测试访问边界。
 
-The database is SQLite 3.51.0 through SQLAlchemy 2.0.44. This is a real database engine and the test executes its unique constraint and transaction, but its locking, typing, SQL dialect, and concurrency behavior do not establish PostgreSQL behavior. `TestClient` exercises FastAPI through an in-process ASGI transport, not a live server, network, production authentication provider, or deployed application. `deliver_job` exercises a repeated database operation; it does not prove a broker's redelivery, acknowledgement, ordering, or outage guarantees. Those claims need a broker-backed integration test using the selected broker's configuration. External side effects such as email or payment also need an outbox or downstream idempotency boundary; this example changes only local database state. See [safe retries](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) and [broker acknowledgements](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) for the separate contracts. For the session and transaction lifecycle, see [Data Access and Connection Pools / 数据访问与连接池](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F).
+先写出预期观察：
 
-**Interview answer / 面试回答：** I start from the failure risk and choose the lowest boundary that can prove it. Here the API tests verify validation, public response shape, and tenant-scoped access; a real SQLite database verifies uniqueness and rollback; the repeated worker call verifies the local idempotent state transition. I would add a contract comparison for compatibility and a broker-backed test before claiming delivery or acknowledgement guarantees. / 我先从故障风险出发，选择能够证明该风险的最低边界。这个例子用 API 测试验证输入校验、公开响应结构和租户范围访问，用真实 SQLite 验证唯一性约束与回滚，再用重复 worker 调用验证本地幂等状态变更。要声称兼容既有客户端或消息投递确认语义，还需要契约对比和真实 broker 测试。
+| 主体 | 请求 | 预期结果 |
+|---|---|---|
+| tenant-a | GET /api/reports/42 | 200，返回 report 42 |
+| tenant-b | GET /api/reports/42 | 404，不泄露跨租户资源是否存在 |
+| 无有效主体 | GET /api/reports/42 | 401，由认证入口拒绝 |
 
-**Sources checked 2026-10-15:** [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/) and [testing dependencies with overrides](https://fastapi.tiangolo.com/advanced/testing-dependencies/) for in-process request checks and dependency seams; [pytest fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html) for function-scoped setup and cleanup; SQLAlchemy 2.0 [constraints](https://docs.sqlalchemy.org/en/20/core/constraints.html), [session transactions](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html), and [SQLite pooling](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines); SQLite [CREATE TABLE and UNIQUE constraints](https://www.sqlite.org/lang_createtable.html) and [transactions](https://www.sqlite.org/lang_transaction.html). Runtime behavior was checked with the versions recorded above; the live FastAPI documentation is not a substitute for the named runtime check.
-## 27. How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？
+假设是“数据读取不再依据当前 tenant_id 限定行”。最小反例只需要一条归属 tenant-a 的 report 42 和一次可信主体 tenant-b 的读取。变更前若得到 200，这支持假设；若得到 404，则应检查主体解析、更早的拒绝分支、缓存或另一条路由。反例缩小调查范围，但只有看到查询缺少租户谓词并将其与这条行记录对应起来，才定位到数据库查询根因。
 
-Git stores snapshots behind movable branch references, while the working tree and index hold changes not yet committed. Choose merge or rebase based on whether others rely on the commits, and choose reset, revert, or reflog recovery according to which local or shared history state must change. These commands repair repository history and files; they do not roll back a deployed application, database migration, or external side effect. / Git 用提交保存快照，分支是可移动引用；工作区和暂存区保存尚未提交的修改。根据提交是否已被他人依赖选择合并或变基，再根据需要改变的是哪部分本地或共享历史选择 reset、revert 或 reflog 恢复。这些命令修复的是仓库历史和文件，不会回滚已部署应用、数据库迁移或外部副作用；生产恢复见[应用部署与持续交付](#30.%20How%20do%20you%20promote%20one%20validated%20artifact%20and%20recover%20each%20state%20layer%20safely?%20/%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B7%B2%E9%AA%8C%E8%AF%81%E4%BA%A7%E7%89%A9%E5%B9%B6%E5%88%86%E5%88%AB%E6%81%A2%E5%A4%8D%E5%90%84%E5%B1%82%E7%8A%B6%E6%80%81%EF%BC%9F)。
+### 沿调用路径找出丢失的条件
 
-### Core commands
+从 API 路由向内读：
 
-| Command | Purpose |
-|---|---|
-| `git init` | Create an empty repository in the current directory |
-| `git clone <url>` | Copy a repository and its history |
-| `git status` | Show branch and working-tree state |
-| `git add <path>` | Stage changes for the next commit |
-| `git diff` | Show unstaged changes; use `--staged` for staged changes |
-| `git commit -m "message"` | Record the staged snapshot |
-| `git log --oneline --graph --decorate` | Inspect recent history and branch references |
+1. 确认请求经过哪一个公开入口，是否经过认证依赖。
+2. 看依赖返回的主体来自已验证会话或 token（令牌），而非任意客户端字段。
+3. 沿函数调用检查 report_id 和 tenant_id 是否都传到数据层。
+4. 查看最终 SQL 或 object-relational mapping（对象关系映射，ORM）条件、行归属以及 cache（缓存）是否绕过了同一授权范围。
+5. 查看错误映射和序列化，确认不存在“查无权限行却返回成功”之类的备用分支。
 
-Stage deliberately. `git add .` stages changes under the current directory; `git add -A` stages additions, modifications, and deletions in the repository. Review `git diff --staged` before committing.
+在这个合成例中，路由仍然拿到了 tenant_id，但 session.get 只按主键载入记录，没有使用 tenant_id。根因是查询丢失了范围条件。聚焦修正就是重新同时约束租户和资源：
 
-### Remote operations
+~~~python
+report = session.scalar(
+    select(Report).where(
+        Report.report_id == report_id,
+        Report.tenant_id == tenant_id,
+    )
+)
+~~~
+
+然后重跑所有者和非所有者测试及同一入口的邻近检查。若成功响应缓存键仅包含 report_id，数据库查询正确也可能再次泄露；缓存命中必须在返回前执行同等范围检查。这类授权边界和后台任务执行时的复验条件见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+### 独立阅读实现与测试
+
+先从需求列预期结果，再读修改过的路由、调用者、依赖、SQL/事务和错误响应。之后阅读测试本身，判断它是否确实通过被修改的入口到达真实数据库，fixture（测试夹具）是否建立了正确主体，断言是否覆盖必须拒绝的访问。模型或生成式改动的实现与测试可能共享同一遗漏假设；全部通过也不代表遗漏的需求已被验证。
+
+一个实际复核要把四项证据串起来：报告 42 的所有者/非所有者输入，观察到的状态码，改动前后的查询条件，以及回归断言。需要数据库约束或 broker（消息代理）的 redelivery（重投）结论时，再确认测试实际使用的引擎或 broker；模拟会话、本地重复调用和部署探针只能证明各自的接缝，不能外推到未执行的边界。
+
+> [!example] 反例通过前后比较
+> 变更前：tenant-b 请求 /api/reports/42 得到 200，支持“缺少租户范围”的假设；沿调用路径确认查询确实漏了 tenant 谓词，才定位到根因。
+>
+> 变更：查询从只按 report_id 读取，改为同时匹配 report_id 和主体的 tenant_id。
+>
+> 变更后：tenant-a 仍得到 200，tenant-b 得到 404，匿名请求得到 401。只有这些观察与需求一致，才说明当前回归已被修复；其他 query path、缓存和后台导出仍各有自己的边界。
+
+在共享分支上保留小而聚焦的修复，用[Git 如何记录通过验收的改动？](#27.%20Git%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E9%80%9A%E8%BF%87%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%94%B9%E5%8A%A8%E5%8F%98%E6%88%90%E5%8F%AF%E8%BF%BD%E6%BA%AF%E6%8F%90%E4%BA%A4%EF%BC%9F)记录源码快照。评审时独立检查实际差异、需求边界和测试覆盖；具体的代码评审流程由团队自己的仓库政策规定。
+
+> [!info]- 来源
+> - GitHub 官方 [Reviewing proposed changes](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests) 与[Review concepts](https://docs.github.com/en/pull-requests/concepts/giving-reviews)，checked 2026-11-06：支持从差异和提交检查改动与评审意见；本文的最小反例是合成 API 的行为推演。
+> - 租户授权的规范规则由[逐次授权报表资源](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)承担；本篇只用该规则定位一次 SQL 条件遗漏，不重复完整认证和授权设计。
+## 26. 怎样用测试边界验证一次报表服务改动？
+
+报表平台工程师准备发布一项租户授权修复：tenant-a 应能读取自己的 report 42，得到 200；tenant-b 猜中同一 ID 时只能得到 404。导出 job 重复投递后，任务状态和结果对象引用也只能提交一次。要判断这次改动能否发布，测试必须覆盖这些用户可观察的失败条件，而不只是确认实现和它自己生成的 happy-path 测试一起通过。
+
+application programming interface（应用程序接口，API）集成和数据库集成分别需要真实路由与 structured query language（结构化查询语言，SQL）。若要声称 publisher confirm（发布者确认）、consumer acknowledgement（消费者确认，ACK）或部署装配正确，还要把实际 broker（消息代理）或近似生产链路纳入测试。本文 SQLite 示例验证 FastAPI 路由和 SQL，不代表 PostgreSQL、broker 或生产身份系统已经验证。
+
+~~~mermaid
+flowchart TD
+    A[契约：A 读 report 42 得 200；B 得 404] --> B[单元：租户规则]
+    B --> C[API + SQLite：路由、主体接缝、查询]
+    C --> D[契约：与已发布响应结构比较]
+    D --> E[PostgreSQL：生产数据库方言与约束]
+    E --> F[RabbitMQ：发布确认、重投、消费者确认]
+    F --> G[近生产旅程：组件装配与流量路径]
+~~~
+
+每升高一层，必须能指出新增层解决的失败条件。测试数量多不能替代边界正确。单个端到端测试不易定位原因，也很难覆盖大量输入；只测函数又看不到依赖装配或真实数据库行为。
+
+### 先把风险与可证明的边界对应起来
+
+| 要排除的失败 | 合适边界 | 该边界能给出的证据 | 不能据此声称 |
+|---|---|---|---|
+| 租户 A/B 条件判断颠倒 | 单元测试 | 给定主体和资源归属，访问规则输出允许或拒绝 | 真实 HTTP 路由一定调用该规则 |
+| 路由忘记传租户条件、返回错状态或错字段 | API 集成 | 实际路由、参数校验、依赖注入、响应序列化和错误映射 | 真实网络或生产身份提供方正常 |
+| 唯一键、回滚或条件更新不守约束 | 数据库集成 | 选定数据库执行真实表结构与 SQL | 换一个数据库也有相同锁和类型行为 |
+| 新响应不兼容已发布客户端 | 契约测试 | 当前输出与已发布 schema（结构定义）/代表性旧客户端比较 | 只检查本次自动生成的 schema 就兼容旧客户端 |
+| 确认或重投造成丢失、重复业务效果 | broker 集成 | 指定 broker、队列配置、ACK 模式和持久化存储共同执行交接 | 本地函数调用两次等同于 broker 重投 |
+| 只有服务装配后才出现的故障 | 近生产端到端 | 真实身份、API、数据库、队列和 worker 的受控旅程 | 一个健康探针就代表用户旅程正确 |
+
+这些边界是互补关系，不是固定的“测试金字塔”。尽量把快速、确定的检查放在靠近故障条件的位置；只有下层无法证明的属性才提高边界。前端组件和浏览器行为另由[前端测试](../../frontend/testing/frontend-testing.md)说明，本篇聚焦 API、持久化和消息交付。
+
+### 用实际路由重放跨租户反例
+
+先将主体边界做成可替换依赖。X-Tenant-ID 只是测试接缝，用来把 tenant-a、tenant-b 送到实际路由；生产服务必须从已验证的登录上下文取得主体，不能信任客户端任填的租户头。示意表把 report_id 设为全局主键、tenant_id 设为资源所有者；若真实表用复合主键，测试应按真实 schema 改写，不能照搬主键读取方式。
+
+> [!example] 关键查询和断言
+> 关键是查询同时约束当前租户和 report 42，且两个租户走同一个 API 路由：
+>
+> ~~~python
+> row = connection.execute(
+>     text("""
+>         SELECT report_id, state FROM reports
+>         WHERE tenant_id = :tenant_id AND report_id = :report_id
+>     """),
+>     {"tenant_id": tenant_id, "report_id": report_id},
+> ).mappings().first()
+>
+> owner = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-a"})
+> other = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-b"})
+> assert owner.status_code == 200
+> assert owner.json() == {"report_id": 42, "state": "ready"}
+> assert other.status_code == 404
+> ~~~
+>
+> 这组检查通过 FastAPI TestClient 进程内调用实际路由、通过 SQLAlchemy 执行参数化查询，并由 SQLite 执行真实 SELECT。它不是 mock，也没有建立网络 socket。
+
+> [!example]- 完整 FastAPI + SQLite fixture 与 OpenAPI 检查
+> 下方测试夹具为每次测试建立内存 SQLite，使用 StaticPool 让 TestClient 所在线程与数据库检查共享该连接。示例中的测试头不是真实认证协议。
+>
+> ~~~python
+> from typing import Annotated
+>
+> import pytest
+> from fastapi import Depends, FastAPI, Header, HTTPException, Request
+> from fastapi.testclient import TestClient
+> from sqlalchemy import create_engine, text
+> from sqlalchemy.pool import StaticPool
+>
+>
+> def create_app() -> FastAPI:
+>     engine = create_engine(
+>         "sqlite+pysqlite://",
+>         connect_args={"check_same_thread": False},
+>         poolclass=StaticPool,
+>     )
+>     with engine.begin() as connection:
+>         connection.execute(text("""
+>             CREATE TABLE reports (
+>                 report_id INTEGER PRIMARY KEY,
+>                 tenant_id TEXT NOT NULL,
+>                 state TEXT NOT NULL
+>             )
+>         """))
+>         connection.execute(
+>             text("INSERT INTO reports VALUES (:id, :tenant, :state)"),
+>             {"id": 42, "tenant": "tenant-a", "state": "ready"},
+>         )
+>
+>     app = FastAPI()
+>     app.state.engine = engine
+>
+>     def tenant_from_test_header(
+>         x_tenant_id: Annotated[str | None, Header()] = None,
+>     ) -> str:
+>         if not x_tenant_id:
+>             raise HTTPException(status_code=401, detail="authentication required")
+>         return x_tenant_id
+>
+>     @app.get(
+>         "/api/reports/{report_id}",
+>         responses={
+>             401: {"description": "Authentication required"},
+>             404: {"description": "Not found"},
+>         },
+>     )
+>     def read_report(
+>         report_id: int,
+>         tenant_id: Annotated[str, Depends(tenant_from_test_header)],
+>         request: Request,
+>     ):
+>         with request.app.state.engine.connect() as connection:
+>             row = connection.execute(
+>                 text("""
+>                     SELECT report_id, state FROM reports
+>                     WHERE tenant_id = :tenant_id AND report_id = :report_id
+>                 """),
+>                 {"tenant_id": tenant_id, "report_id": report_id},
+>             ).mappings().first()
+>         if row is None:
+>             raise HTTPException(status_code=404, detail="report not found")
+>         return dict(row)
+>
+>     return app
+>
+>
+> @pytest.fixture
+> def client():
+>     app = create_app()
+>     with TestClient(app) as test_client:
+>         yield test_client
+>     app.state.engine.dispose()
+>
+>
+> def test_report_scope_and_authentication(client):
+>     owner = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-a"})
+>     other = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-b"})
+>     anonymous = client.get("/api/reports/42")
+>
+>     assert owner.status_code == 200
+>     assert owner.json() == {"report_id": 42, "state": "ready"}
+>     assert other.status_code == 404
+>     assert anonymous.status_code == 401
+>
+>
+> def test_public_schema_declares_scope_errors(client):
+>     operation = client.get("/openapi.json").json()["paths"]["/api/reports/{report_id}"]["get"]
+>     assert {"200", "401", "404", "422"} <= set(operation["responses"])
+> ~~~
+>
+> 保存为 test_report_scope.py 后运行 python -m pytest -q test_report_scope.py。OpenAPI 检查说明本应用声明了哪些响应码；若要保证已有客户端兼容，仍需与已发布 schema 或代表性旧客户端比较。
+
+若原实现只按 report_id 读取，tenant-b 的测试会得到 200，暴露缺失的租户条件。示例中 report_id 是全局主键，所以 SQLAlchemy 的 session.get(Report, 42) 能找到该行，但这不等于当前主体有权读取它；复合主键则需要不同的主键参数。修正后，所有者得到 200、越租户请求得到 404、匿名请求得到 401。相关授权规则见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+参数校验和旧客户端兼容也要分别验收：请求先通过认证后，`GET /api/reports/not-a-number` 由整数路径参数校验返回 422；没有可信主体的请求应在认证边界先得到 401。若既有客户端依赖响应中的 `state` 字段，应把上一版发布的 schema 或代表性请求/响应作为固定契约，删掉 `state` 时该契约测试应失败。当前 `/openapi.json` 只证明此版本声明了什么，不证明它仍兼容旧客户端。
+
+> [!example] 唯一约束与重复投递的最小状态轨迹
+> SQLite 演算的插入表以 `(tenant_id, request_key)` 为唯一键。首次插入影响 1 行；相同键再次插入触发唯一约束并回滚事务，查询仍只有原来的 1 行。这个约束例说明重复 insert 不会多建一行；它不等于 API 应对相同幂等键返回 409。报表接口若收到相同键和相同参数，应按[持久报表任务](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)的契约读取并返回原 job；键相同但参数冲突时再按该业务契约拒绝。
+>
+> 对 worker 的本地条件更新，初始行是 `pending, processed_count=0`。第一次以 `WHERE status='pending'` 更新为 `done` 并递增计数，`rowcount=1`；再次执行同一条件时 `rowcount=0`；事务后最终状态仍为 `done, processed_count=1`。这证明选定 SQLite SQL 对重复函数调用只计一次，不证明 broker 的重投、ACK 或跨进程并发契约。
+
+若 worker（工作进程）被本地函数调用两次，只能验证数据库状态迁移是否防重；它不覆盖消息是否被 broker 接收、连接中断后怎样重投或 ACK 是否可靠。若 worker 外发邮件、付款等副作用，还要让外部动作具备操作键幂等性或经持久 outbox 处理。任务与数据库结果边界见[超时后的结果确认与安全重试](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)；发布者确认与消费者 ACK 的 broker 语义见[消息交付如何确认](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
+
+### 从测试证据接到可发布的变更
+
+测试通过只是证据链的一环。它应能指向变更需求、对应代码和具体测试数据；随后由 Git 提交固定源码快照，Docker 根据这个快照构建镜像，部署流水线再验证并晋级相同镜像。生产路径出现问题时，指标、trace 与日志用于定位是哪一环偏离。完整过程见[如何晋级已验证的报表服务产物？](#30.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+
+> [!info]- 来源
+> - 测试方式的界限：FastAPI 官方 [Testing](https://fastapi.tiangolo.com/tutorial/testing/) 说明 TestClient 对应用路由的调用，checked 2026-11-06；pytest 官方 [Fixtures reference](https://docs.pytest.org/en/stable/reference/fixtures.html) 说明 fixture 作用域和发现，checked 2026-11-06。
+> - SQLite 约束与共享内存连接：SQLite [CREATE TABLE](https://www.sqlite.org/lang_createtable.html)；SQLAlchemy 2.0 官方 [SQLite 内存数据库与连接池](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines)，适用于本例的 StaticPool / check_same_thread 连接安排。
+> - 本地运行边界：示例执行环境为 FastAPI 0.128.0、SQLAlchemy 2.0.44、pytest 9.0.2 与系统 SQLite；它不代表 PostgreSQL 或 broker 集成测试。
+## 27. Git 怎样把通过验收的报表改动变成可追溯提交？
+
+修复 report 42 的租户条件并通过相关检查后，Git 能把已审查的源码快照变成可复查的提交。这个提交给构建系统提供固定输入，但它还不是部署产物：之后要记录由它构建出的镜像摘要，并验证、晋级那份镜像。Git 命令改变工作区、暂存区、提交或引用；它不撤销数据库迁移、已发布镜像或生产副作用。
+
+branch（分支）是指向提交的可移动引用；working tree（工作区）保存文件，index（暂存区）保存下一次提交的快照，commit（提交）固定一棵树及父提交。区分这几层，才能选择正确的恢复动作。
+
+创建分支只建立一个指向提交的引用，`git switch -c <name>` 也不会把未提交的工作区或暂存区改动保存成快照。要在切换任务前保护这类改动，应先提交或暂存保存，再核对恢复后的状态。
+
+~~~mermaid
+flowchart TD
+    A[工作区：改了查询与测试] --> B[检查 diff 并选择文件]
+    B --> C[暂存区：本次提交精确内容]
+    C --> D[提交：固定源码树和父提交]
+    D --> E[CI（持续集成）以提交号构建镜像]
+    E --> F[镜像摘要与提交号形成可追溯映射]
+    D --> G{哪里需要修复？}
+    G -->|仅未共享的本地历史| H[reset / rebase]
+    G -->|已经共享的提交| I[revert 新增反向提交]
+~~~
+
+### 把一个小修复明确放进暂存区
+
+在示意仓库中，改动只包含 `src/reports.py` 的租户限定查询和 `tests/test_report_scope.py` 的非所有者断言。先查看仓库是否混有其他任务，再查看准确的差异：
 
 ~~~bash
-git remote add origin <url>
+git status --short
+git diff -- src/reports.py tests/test_report_scope.py
+~~~
+
+逐文件暂存能避免把本地配置、调试输出或其他人的改动混进报告修复：
+
+~~~bash
+git add src/reports.py tests/test_report_scope.py
+git diff --cached
+git diff --cached --check
+git status --short
+git commit -m "fix(reports): enforce tenant-scoped reads"
+git show --stat --oneline HEAD
+git log --oneline --graph --decorate -8
+~~~
+
+commit message（提交说明）描述变化和对象，`fix(reports): ...` 属于可选的 Conventional Commits（常规提交说明格式），不是 Git 本身的要求。仓库策略若规定 squash、merge commit 或签名提交，就按该策略执行。代码审查应检查实际 diff（差异）和测试边界；提交标题不等于测试通过。
+
+### 先检查远端，再选择 merge 或 rebase
+
+`git fetch`（获取）更新远程跟踪引用但不改当前分支；`git pull`（拉取）执行获取后再按配置整合。可以先查看差异，再选择整合方式：
+
+~~~bash
 git fetch origin
-git push -u origin main
-git pull
+git log --left-right --oneline --graph HEAD...origin/main
 ~~~
 
-`git fetch` updates remote-tracking references without integrating them into the current branch. `git pull` fetches and then integrates the selected upstream using the configured or requested fast-forward, merge, or rebase behavior; inspect its options when the result matters. Fetch first when you want to review incoming commits before integrating them.
+三点范围列出两边各自独有的提交；`<` 表示只在当前 `HEAD` 可达，`>` 表示只在 `origin/main` 可达。两点写法 `HEAD..origin/main` 只列远端独有提交，不能单独判断本地是否也有未发布提交。
 
-### Branching
-
-~~~bash
-git branch feature/login       # create a branch
-git switch feature/login       # switch branches
-git switch -c feature/login    # create and switch
-git branch -d feature/login    # delete only when Git considers it merged
-git branch -D feature/login    # force-delete the branch reference
-~~~
-
-A feature branch is one collaboration approach. A team can instead integrate small changes directly or use a release-branch strategy. Git Flow adds long-lived branches such as `develop`; it can suit scheduled releases but adds merging and coordination. Choose according to release and integration needs rather than treating one strategy as universal.
-
-### Merge vs. rebase
-
-#### `git merge`
-
-Merge integrates another branch into the current branch. If possible, Git may fast-forward the current branch reference; otherwise it creates a merge commit that records both parent histories.
-
-~~~bash
-git switch main
-git merge feature/login
-~~~
-
-~~~
-A---B---C---M  main
-     \     /
-      D---E    feature/login
-~~~
-
-#### `git rebase`
-
-Rebase replays commits onto a new base. The replayed commits have new IDs because their parent history changes.
-
-~~~bash
-git switch feature/login
-git rebase main
-~~~
-
-~~~
-A---B---C              main
-         \
-          D'---E'      feature/login
-~~~
-
-| Situation | A common choice | Why |
+| 当前状态 | 常见做法 | 原因 |
 |---|---|---|
-| Integrating work while keeping both branch histories visible | Merge | Records the integration point when a merge commit is created |
-| Updating an unpublished local branch | Rebase | Replays local commits on the updated base |
-| Commits others have already based work on | Coordinate before rebasing | Rebase changes commit IDs and requires collaborators to reconcile history |
+| 更新尚未发布的本地分支 | 按仓库政策 rebase（变基）或 merge（合并） | 变基重放提交会创建新提交 ID；合并保留双侧历史和可能的汇合点 |
+| 多人已经基于该分支继续提交 | 先协调，通常不改写共享提交 | 改写会让其他人的父提交失效并要求重新整合 |
+| 仓库需要显示集成节点 | merge | 合并提交可显式记录两条历史如何接合 |
 
-A rebase can be useful on a shared branch only when the team coordinates the history rewrite and remote update. The practical rule is to avoid rewriting commits others may rely on.
+例如仅有自己未推送的 `fix/report-tenant-scope` 分支，可以按团队约定 `git rebase origin/main`。若团队需要保留合并关系，则 `git merge origin/main`。两者都可能产生冲突；不要用某种分支模型替代仓库现行策略。
 
-### Resolving conflicts
-
-When Git cannot combine edits automatically, it marks the affected file:
-
-~~~
-<<<<<<< HEAD
-const timeout = 3000;
-=======
-const timeout = 5000;
->>>>>>> feature/login
-~~~
-
-1. Inspect the conflict and decide how the changes should combine.
-2. Remove the conflict markers and edit the final content.
-3. Stage the resolved path with `git add <path>`.
-4. Finish with `git commit` after a merge, or `git rebase --continue` during a rebase.
-
-Use `git merge --abort` or `git rebase --abort` to stop an integration that is still in progress.
-
-### Useful commands
-
-#### `git stash`
-
-Save tracked working-tree changes temporarily when switching tasks or branches.
+发生冲突时，先看带冲突标记的源文件及 `git diff --cc`。在 report42 的例子里，必须保留当前主体与报表 ID 两个条件，再解决与远端其他调整的真实冲突。检查文件、运行相应测试后暂存并继续：
 
 ~~~bash
-git stash push -m "work in progress"
-git stash list
-git stash apply       # keep the stash entry
-git stash pop         # apply and remove the stash entry if successful
-git stash drop        # discard a stash entry
+git add src/reports.py
+git rebase --continue
 ~~~
 
-Untracked files are not included by default; use `-u` when they should be included.
+示例从干净工作区开始。合并未完成前可 `git merge --abort` 尝试重建合并前状态；如果开始合并时已有未提交改动，Git 在某些情况下无法完整恢复它们。变基未完成前可 `git rebase --abort`。不要把未理解的冲突整块接受为 ours 或 theirs。
 
-#### `git cherry-pick`
+### stash 与 cherry-pick 解决不同问题
 
-Apply the change introduced by a selected commit to the current branch, creating a new commit.
+临时切走时，`git stash push -m "report scope in progress"` 保存已跟踪文件的工作区和暂存区状态；默认不含未跟踪文件，需要时加 `-u`。`git stash apply` 默认重新应用改动但不保证恢复原先暂存状态；需要尽量恢复 index（暂存区）时用 `git stash apply --index`。`apply` 保留记录，`pop` 在应用成功后移除记录。应用后检查状态和冲突，不要把 stash 当成备份；重要工作还应保存在提交或其他持久位置。
+
+`git cherry-pick <commit>`（挑选提交）把指定提交所引入的改动应用到当前分支，并创建一个新的提交。它适合把已审查的报表修复移到维护分支，但新提交 ID 不同，应记录实际运行的检查和部署构建对应的目标提交。
+
+### 按变化所在层恢复
+
+若只是暂存了不想提交的文件，用 `git restore --staged <path>` 保留工作区内容并移出 index；若只丢弃工作区的未暂存编辑，用 `git restore <path>`，该路径内容会被覆盖。对已经提交的共享修复，用 `git revert <commit>` 添加一个反向提交，保留原提交供历史审计。普通提交可直接指定；撤销 merge commit 时须选择主线父提交，例如 `git revert -m 1 <merge-commit>`，并先检查这个反向差异以及后续合并会受什么影响。回滚共享历史时通常用 revert，不要直接把远端分支强制指回旧位置。
+
+| reset 方式 | branch 引用 | 暂存区 | 工作区 |
+|---|---|---|---|
+| `--soft <target>` | 移到目标 | 保留 | 保留 |
+| `--mixed <target>` | 移到目标 | 重置为目标内容 | 保留 |
+| `--hard <target>` | 移到目标 | 重置为目标内容 | 丢弃与目标不符的受跟踪改动，也可能覆盖路径 |
+
+在未共享的本地提交上，确认工作区内容可丢弃后才考虑 `git reset --hard <target>`。若只需改提交边界，`--soft` 或 `--mixed` 更合适。若误移 branch 指针，可先查看 `git reflog` 找回旧提交，再用新 branch 保住它：
 
 ~~~bash
-git cherry-pick <commit>
+git reflog
+git branch recovery/report-scope <commit-id>
+git show --stat recovery/report-scope
 ~~~
 
-### Undo or recover by state layer / 按状态层撤销与找回
+reflog 是本地引用移动记录，会过期，不是远端备份。恢复到共享存储前先检查保住的快照。Git 对 reset、restore、revert 的职责有明确区分：reset 移动当前提交/重置 index，restore 改文件，revert 新增反向提交。
 
-First ask whether the change lives in the working tree, index, or commit history, and whether others already rely on the commit. For example, if a bad change is already on a shared branch, `git revert <commit>` records a new inverse change. It preserves the published commit identity. Reverting a merge commit requires choosing the mainline parent. Resolve conflicts and verify what the inverse change actually does.
+变更经 PR 和状态检查进入共享分支后，CI 才能用这个确切的提交构建镜像。容器摘要和晋级过程见[Docker 如何把该提交构建成固定镜像？](#28.%20Docker%20%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%BA%90%E7%A0%81%E6%9E%84%E5%BB%BA%E6%88%90%E5%8F%AF%E8%BF%90%E8%A1%8C%E9%95%9C%E5%83%8F%EF%BC%9F)与[如何晋级已验证的报表服务产物？](#30.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
 
-For an unshared local commit, `git reset <target>` can move the current branch. Choose what else should change.
+> [!info]- 来源
+> - Git 官方手册：[status](https://git-scm.com/docs/git-status)、[diff](https://git-scm.com/docs/git-diff)、[add](https://git-scm.com/docs/git-add)、[commit](https://git-scm.com/docs/git-commit)，checked 2026-11-06：工作区、index 和提交差异。
+> - Git 官方手册：[fetch](https://git-scm.com/docs/git-fetch)、[pull](https://git-scm.com/docs/git-pull)、[merge](https://git-scm.com/docs/git-merge)、[rebase](https://git-scm.com/docs/git-rebase)，checked 2026-11-06：远端跟踪、整合和历史重放。
+> - Git 官方手册：[reset](https://git-scm.com/docs/git-reset)、[restore](https://git-scm.com/docs/git-restore)、[revert](https://git-scm.com/docs/git-revert)、[reflog](https://git-scm.com/docs/git-reflog)、[stash](https://git-scm.com/docs/git-stash)、[cherry-pick](https://git-scm.com/docs/git-cherry-pick)，checked 2026-11-06：各命令的状态影响和恢复范围；本机 Git 2.56.0。
+## 28. Docker 如何把报表服务的源码构建成可运行镜像？
 
-| Reset mode | Branch | Index | Working tree |
-| --- | --- | --- | --- |
-| `--soft` | Move to target | Keep | Keep |
-| `--mixed` | Move to target | Set to target | Keep |
-| `--hard` | Move to target | Set to target | Set to target, discarding tracked local edits that differ from the target and possibly overwriting untracked paths |
+报表平台工程师已修复 tenant-a 对 report 42 的读取条件，现在要确保测试过的提交确实构建成可复用镜像。container image（容器镜像）是只读文件系统和默认配置；container（容器）启动时增加可写层；volume（数据卷）把数据库数据放在容器外；network（网络）让 application programming interface（应用程序接口，API）、worker（工作进程）和数据库互通。发布时把 Git 提交固定为镜像摘要，并把数据库、密钥和运行配置放在镜像之外。下面用示意提交 c4f2a91 演示本地构建；本地验证不会自动发布或部署。
 
-Use `git status` and save any edits you need before a hard reset. If a local branch moved by mistake, inspect `git reflog`, find the prior commit, and make it reachable again with `git branch recovery <commit>`. Inspect that new branch before applying or restoring anything. Reflogs are local and expire, so use another durable copy for backup. / 共享提交通常用 revert 产生新的撤销记录。只调整本地分支时，按需要保留的暂存区与工作区选择 reset 模式。误移动后可从 reflog 找旧提交并先用新分支保留。 [Git reset](https://git-scm.com/docs/git-reset) · [Git reflog](https://git-scm.com/docs/git-reflog)
-
-### Pull request and code review workflow
-
-A common workflow is to branch from the repository's integration branch, commit focused changes, push, open a pull request, review and revise, then merge using the repository's chosen method. The exact branch name and merge policy vary by project.
-
-For commits, concise messages that describe the change help future readers. **Conventional Commits** is one optional convention, often paired with tooling that reads its prefixes:
-
-~~~
-feat(auth): refresh access tokens
-fix(api): handle missing user
-refactor(utils): extract date formatting
-docs(readme): clarify setup
+~~~mermaid
+flowchart TD
+    A[源码提交 c4f2a91 + 依赖锁文件] --> B[多阶段构建与依赖安装]
+    B --> C[镜像 report-api，记录摘要]
+    C --> D[API 容器与 worker 容器]
+    D --> E[同一 Compose 网络中的 db:5432]
+    E --> F[命名卷独立保存数据库文件]
+    C --> G[构建流水线测试精确镜像，再发布相同摘要]
 ~~~
 
-**See also:** [Agile and Scrum](#46.%20How%20does%20Scrum%20help%20a%20team%20inspect%20and%20adapt%20work?%20/%20Scrum%20%E5%A6%82%E4%BD%95%E5%B8%AE%E5%8A%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F) for team-process context, and [Frontend Testing](../../frontend/testing/frontend-testing.md) for CI checks in a pull request.
+图里的 c4f2a91 和 report-api 都是示意值。image digest（镜像摘要）是内容身份；tag（可变标签）只是可变别名。同一提交可有不同构建结果，必须记录实际摘要才能确认 staging（预发布环境）与 production（生产环境）用的是相同镜像内容。
 
-Sources: [Git pull](https://git-scm.com/docs/git-pull), [Git merge](https://git-scm.com/docs/git-merge), [Git rebase](https://git-scm.com/docs/git-rebase), [Git reset](https://git-scm.com/docs/git-reset), [Git revert](https://git-scm.com/docs/git-revert), [Git reflog](https://git-scm.com/docs/git-reflog), [Git stash](https://git-scm.com/docs/git-stash), and [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick). Git manuals checked 2026-10-15.
-## 28. How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？
+### 按运行所需文件分层构建
 
-An image supplies the read-only filesystem and configuration template; a container adds a writable runtime layer; a volume stores data beyond container replacement; and a shared network gives services a path to reach one another. Port publishing exposes a container port through the host, while secrets belong in the build or runtime channel that needs them. The commands and Compose examples below show what survives removal and how services connect. / 镜像提供只读文件系统和配置模板，容器增加运行时可写层，卷让数据独立于容器替换而留存，共享网络则让服务彼此连通。端口发布通过宿主机暴露容器端口；密钥应只进入实际需要它的构建或运行时通道。下面的命令和 Compose 示例说明删除容器后什么会保留，以及服务如何通信。
+Python 报表 API 和 worker 可以来自同一个多阶段镜像：构建阶段下载由 dependency lock file（依赖锁定文件）固定的依赖，最终阶段只复制运行所需依赖和代码。下面基础镜像 tag 只用于说明结构；实际 CI 应记录所解析的基础镜像摘要，或直接固定摘要。
 
-Before starting a fresh `postgres:16` instance in the examples below, provide a non-empty `POSTGRES_PASSWORD` through the shell environment or a secret manager. The official image requires it to initialize an empty data directory; it can be passed at runtime without placing a credential in the image or source file. Changing the variable later does not rotate a password in an already initialized volume.
+~~~dockerfile
+FROM python:3.12-slim AS wheels
+WORKDIR /build
+COPY requirements.txt .
+RUN python -m pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
-### Common operations
+FROM python:3.12-slim AS runtime
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1
+COPY requirements.txt .
+COPY --from=wheels /wheels /wheels
+RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt && rm -rf /wheels
+COPY app ./app
+USER 10001:10001
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+~~~
 
-| Task | Command | Notes |
-|---|---|---|
-| Download an image | `docker pull redis:7` | Pin a tag or digest when repeatability matters; a tag may move. |
-| List local images | `docker image ls` | Images can have multiple tags. |
-| Create and start a container | `docker run --name cache -d redis:7` | Pulls the image if it is not available locally. |
-| List running containers | `docker ps` | Add `-a` to include stopped containers. |
-| Stop / start a container | `docker stop cache` / `docker start cache` | A stopped container still exists. |
-| Read container logs | `docker logs cache` | Add `-f` to follow new output. |
-| Run a command in a running container | `docker exec -it cache /bin/sh` | Run only when the image includes `/bin/sh`; minimal images may contain no shell. |
-| Remove a stopped container | `docker rm cache` | `-f` also stops and removes a running container. |
-| Remove an image | `docker image rm redis:7` | Refer to an image tag or image ID, not a container ID. |
+为减少无关输入，先复制依赖清单再复制频繁改变的源码；这样源码改动不会使依赖安装层失效。`.dockerignore` 应排除 `.git/`、`.venv/`、`__pycache__/`、本机日志、真实 `.env` 和 secret（密钥）文件。Build context（构建上下文）是发送给 builder 的文件集合；若把密钥放进 context 再 COPY，镜像历史里就可能留下它。构建阶段需要私有包凭据时使用 BuildKit secret mount（构建时临时挂载密钥），而不是 Dockerfile `ARG` 或 `ENV`。运行期配置和密钥再由所选运行平台注入。
 
-Detached mode (such as `docker run -d`) returns the terminal while the container's main process runs. It does not supervise an application or guarantee that the container stays healthy. Use `docker ps` and `docker logs` to inspect it.
-
----
-
-### Publish ports
-
-A port mapping forwards a host port to a port in the container. This publishes a container service to the host network; it does not make the service healthy or authenticated.
+例如本地单平台构建并记录元数据的命令是：
 
 ~~~bash
-docker run -d --name cache -p 127.0.0.1:6000:6379 redis:7
+docker buildx build --load --metadata-file /tmp/report-api-build.json -t report-api:c4f2a91 .
+docker image inspect report-api:c4f2a91
+docker image history report-api:c4f2a91
 ~~~
 
-For the default bridge/NAT configuration on Docker Engine 28 and later, a localhost-published port is scoped to the Docker host. Earlier Engine releases had an exception where hosts on the same Layer 2 network could reach a localhost-published port. Check the actual Engine version, network mode and routing before relying on the bind for exposure control. [Docker port publishing, checked 2026-11-06](https://docs.docker.com/engine/network/port-publishing/) Omitting the host IP generally publishes on all host interfaces, subject to the host and Docker networking configuration. Container-to-container traffic on a shared Docker network normally uses the container port directly, not a published host port.
+`--load` 将单平台镜像载入本地 Docker Engine；本地 `containerimage.digest` 只标识该 build 输出，不能当作 registry 已发布的摘要。示例 tag `report-api:c4f2a91` 只是本地引用：要将镜像归到该提交，CI 必须 checkout 确切的 `c4f2a91` 并从干净工作区构建，因为 tag 名不会约束 Build context。生产发布由 CI 从受控提交执行 `--push`，记录实际 push 的 `containerimage.digest` 并从 registry 核对目标 manifest；之后 staging 与 production 晋级同一不可变引用，不要分别重建。单平台摘要指向一个平台 manifest；多平台索引摘要指向多个平台 manifest，不同架构实际运行的内容可能不同。跨架构部署须记录并验收每个目标平台的 manifest digest，或明确预发布和生产使用同一平台。
 
----
+Dockerfile 中的 `RUN` 在构建镜像时执行；`CMD` 提供容器启动时的默认命令或参数，`ENTRYPOINT` 指定主要可执行程序。Compose 的 `command` 覆盖镜像的默认 `CMD`，不会自动替换 `ENTRYPOINT`。因此 API 和 worker 可通过各自的 `command` 使用同一镜像启动不同进程。
 
-### Networks
+### 容器、服务网络与数据存留是不同状态
 
-A user-defined bridge network lets attached containers communicate by container or service name through Docker's embedded DNS. Network membership controls which containers can connect at the Docker network layer; it is not application authentication or authorization.
+下面的 Compose 片段复用上一条命令已载入的 `report-api:c4f2a91`，不再设置 `build:`，因此 API 与 worker 使用同一份本地镜像。若开发环境另用 `build: .` 和 `report-api:local`，那是从当前目录再构建的一份本地拓扑样例，不等于上面已验收提交的镜像。
 
-~~~bash
-docker network create app-net
-docker run -d --name db --network app-net \
-  --env POSTGRES_PASSWORD postgres:16
-~~~
-
-Only expose a host port when a process outside the network needs to connect. In Compose, services join a project network by default and can usually use each other's service names as hostnames.
-
----
-
-### Volumes and persistent data
-
-Container writable layers are removed with their containers. A **named volume / 命名卷** is managed by Docker and remains after the container is removed. A **bind mount / 绑定挂载** maps a host path into the container and is useful when both host and container need the files. A volume is not a backup; plan backups and restore tests separately.
-
-The examples pin PostgreSQL 16 and mount `/var/lib/postgresql/data`. Starting with the official PostgreSQL 18 image, the default data directory is version-specific and the recommended volume mount is `/var/lib/postgresql`. Check the image's data path when upgrading and migrate or restore the data explicitly. Changing the tag and mount point alone does not upgrade the database files. [Official Postgres image, PGDATA](https://github.com/docker-library/docs/blob/master/postgres/README.md#pgdata)
-
-Omitting the volume source creates an anonymous volume with a generated name; it normally persists after container removal but is not automatically reused by a later container.
-
-~~~bash
-docker volume create db-data
-docker run -d --name db --env POSTGRES_PASSWORD \
-  --mount type=volume,src=db-data,dst=/var/lib/postgresql/data postgres:16
-~~~
-
-The destination path belongs to the image or application, so check that product's documentation. Compose declares named volumes at the top level:
+API 与 worker 使用不同 command，但在 Compose 网络内访问数据库服务名 `db` 和容器端口 5432。容器间通信无需公开数据库端口。只将需要本机浏览器访问的 API 发布到宿主机回环地址：
 
 ~~~yaml
 services:
-  db:
-    image: postgres:16
+  api:
+    image: report-api:c4f2a91
+    pull_policy: never
+    ports:
+      - "127.0.0.1:8080:8080"
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-    volumes:
-      - db-data:/var/lib/postgresql/data
-
-volumes:
-  db-data:
-~~~
-
-Compose normally preserves declared named volumes on `docker compose down`. Adding `-v` removes project volumes and their data; review that effect before using it.
-
----
-
-### Compose
-
-Compose describes a multi-container application in a YAML file. The default project network provides service-name discovery, so an application container can address the database as `db` on its container port. Publish a port only when the host or another external network needs access.
-
-~~~yaml
-services:
-  app:
-    build: .
+      DATABASE_HOST: db
+  worker:
+    image: report-api:c4f2a91
+    pull_policy: never
+    command: ["python", "-m", "app.worker"]
     environment:
       DATABASE_HOST: db
   db:
-    image: postgres:16
+    image: postgres:18
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - report-data:/var/lib/postgresql
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
 
 volumes:
-  db-data:
+  report-data:
 ~~~
 
-~~~bash
-docker compose up -d
-docker compose ps
-docker compose logs -f app
-docker compose down
-~~~
+此片段只演示 API/worker 到 `db:5432` 的服务发现和网络可达，并未配置应用数据库凭据。`db_password` 当前只挂给 db，用于初始化 Postgres 默认管理员；官方镜像的 `POSTGRES_PASSWORD_FILE` 只在数据目录为空时用于初始化，后来修改 secret 文件不会轮换已有数据库中的密码。改密码须在数据库中执行凭据变更，并同步更新应用 secret。实际应用应另行创建最小权限账号，把用户名和独立密码注入 API/worker，并让代码从受控 secret 路径读取。不能从只有 `DATABASE_HOST` 推出应用已登录数据库。生产部署应让平台 secret store（密钥存储服务）管理凭据，不应把示意文件加入版本控制。受支持的 Docker Compose CLI v2 和 v5 都使用 `docker compose` 命令与 Compose Specification；Compose 文件顶层 `version` 字段已废弃，旧版独立 `docker-compose` 命令应迁移到该 CLI。服务加入项目网络后可通过服务名发现彼此；主机只在 API 的 127.0.0.1:8080 上可访问。网络成员关系限制可达路径，但不代替数据库身份、应用认证或租户授权。port mapping（端口映射）只转发连接，不证明进程健康。Docker Engine 28 及之后的默认 bridge/NAT 配置下，本机回环发布只在 Docker 主机可达；更早版本存在同一 Layer 2 网络主机可访问的例外。省略主机 IP 通常会绑定全部宿主接口，必须按 Engine 版本、network mode（网络模式）和路由判断暴露范围。
 
-The current Compose Specification is used by Compose V2. Its top-level `version` field is obsolete and does not select a schema version. The older standalone `docker-compose` command is a legacy interface; use `docker compose` with the Compose CLI plugin.
+容器写层随容器删除而丢失；命名卷由 Docker 管理，在容器替换后仍可复用。匿名卷也可存活，但新容器通常不会自动重新挂上相同卷。bind mount 直接把宿主路径映射到容器，适合需要共同读写的开发文件。volume 不是备份；还需独立恢复演练。普通 `docker compose down` 保留声明的 named volumes，`docker compose down -v` 会删除项目卷和其中的数据。
 
----
+本例使用官方 Postgres 18 镜像，把 volume 挂到 `/var/lib/postgresql`，由版本专属的数据目录组织数据库文件。旧版本镜像常见挂载点是 `/var/lib/postgresql/data`；现有旧卷不能只改 image tag 后直接按新目录启动，必须按官方镜像和 PostgreSQL 大版本迁移说明备份、转换或恢复。
 
-### Dockerfile and image builds
+### 从构建状态检查到运行状态观察
 
-A Dockerfile describes image build steps. `RUN` executes during build; `CMD` supplies a default command or arguments when a container starts; `ENTRYPOINT` defines the executable to run. A runtime command can override `CMD`.
+常见本地查看命令用于分开判断镜像、容器和服务：
 
-~~~dockerfile
-FROM node:22-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:22-alpine AS runtime
-WORKDIR /app
-ENV NODE_ENV=production
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY --from=build /app/dist ./dist
-CMD ["node", "dist/index.js"]
-~~~
-
-Build with `docker build -t my-app:1.0 .`. This example assumes a package lockfile. The build context is the set of files sent to the builder; use a `.dockerignore` file to exclude files such as local dependencies, version-control data, and secrets. Multi-stage builds keep build-only stages out of the final image unless files are copied from them. Copy only the runtime files and dependencies the application needs.
-
-Do not put credentials in a Dockerfile's `ENV` or `ARG` values. Use a BuildKit secret mount for a credential needed during build; it is made available to the build instruction without baking it into the image. At runtime, Compose secrets can be granted to selected services and mounted as files; protect the source secret file and host.
-
-~~~dockerfile
-# syntax=docker/dockerfile:1
-RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
-~~~
-
-~~~bash
-docker build --secret id=npmrc,src=.npmrc -t my-app:1.0 .
-~~~
-
-To push an image to a registry, authenticate with that registry, tag the image with its repository address, and push the tag. These commands use placeholders; `docker login` prompts or uses configured credentials, which should not be committed:
-
-~~~bash
-docker login registry.example.com
-docker tag my-app:1.0 registry.example.com/team/my-app:1.0
-docker push registry.example.com/team/my-app:1.0
-~~~
-
-Sources: [official PostgreSQL image environment variables and secrets](https://github.com/docker-library/docs/blob/master/postgres/README.md#environment-variables), [Docker image and container concepts](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/), [Docker networking](https://docs.docker.com/engine/network/), [port publishing](https://docs.docker.com/engine/network/port-publishing/), [Docker volumes](https://docs.docker.com/engine/storage/volumes/), [Compose file reference](https://docs.docker.com/compose/compose-file/), [Compose variable interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [`docker run` environment variables](https://docs.docker.com/reference/cli/docker/container/run/#set-environment-variables--e---env), [Docker build secrets](https://docs.docker.com/build/building/secrets/), [Docker Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/), [`docker login`](https://docs.docker.com/reference/cli/docker/login/), [`docker tag`](https://docs.docker.com/reference/cli/docker/image/tag/), and [`docker push`](https://docs.docker.com/reference/cli/docker/image/push/). Docker documentation checked 2026-10-15.
-## 29. How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？
-
-Trace compute, networking, and storage along the request path. Managed infrastructure can operate a component, while the application still defines its data, access, workload and recovery policy. / 沿请求路径定位计算、网络和存储。托管基础设施可以代为运行组件，应用仍需定义数据、权限、负载和恢复策略。
-
-### Request and data path / 请求与数据路径
-
-For a typical web application, the browser talks only to public entry points; server-side services reach databases, object storage, and queues through controlled routes and identities:
-
-~~~text
-Name lookup, before the connection:
-Browser -- DNS query for app.example --> resolver
-resolver -- CDN / load-balancer address --> Browser
-
-HTTPS request:
-Browser -- HTTPS --> CDN (optional) --> public load balancer
-                                          |
-                                          v
-                                 private API compute
-                                  /      |       \
-                             database  objects    queue --> workers
-~~~
-
-The load balancer terminates or forwards HTTPS and sends requests only to configured targets. Compute runs the API and workers. A database stores structured state, object storage holds large files, and a queue separates work that can finish asynchronously. A browser may upload or download an object through a narrowly scoped, expiring signed URL; that does not require making the storage bucket public.
-
-Network reachability and authorization are separate checks. A route table, firewall or security group decides which network paths exist; an identity and resource policy decides which actions a reachable principal may perform. A common layout exposes only the load-balancer listener, permits API traffic from the load balancer, and permits database traffic only from the API. Keep data services private where the provider supports it, and add controlled outbound access or private service endpoints only when required. A task or workload identity should receive only the actions and resources it needs; application users still need application-level authorization. / 网络可达不等于有权访问：网络规则控制通信路径，IAM 与资源策略控制主体能执行的操作。应用运行身份应只获得所需资源和操作权限；业务用户的授权仍由应用负责。
-
-### Managed service and application responsibilities / 托管服务与应用责任
-
-| Layer / 层 | Provider or platform manages / 平台管理 | Application team owns / 应用团队负责 |
+| 命令 | 读取的状态 | 适合确认 |
 |---|---|---|
-| Compute / 计算 | Underlying hardware and, depending on the offer, host maintenance and scheduling. | Image or package, startup and shutdown behavior, resource limits, scaling policy, and application health. |
-| Database / 数据库 | Database service infrastructure and only the backups, patching, and failover included in the selected configuration. | Schema and migrations, query and connection behavior, access grants, retention choices, and restore testing. |
-| Object storage / 对象存储 | Storage service availability and documented durability mechanisms. | Object naming, privacy, retention/lifecycle, upload limits, and who receives a signed URL. |
-| Queue / 队列 | Message storage and delivery within service guarantees and configured limits. | Idempotent processing, retry/backoff, poison-message handling, queue age, and dead-letter recovery. |
+| `docker image ls` | 本机镜像和 tag | 镜像是否已载入，不能证明运行中 |
+| `docker ps -a` | 创建过的容器 | 容器是否运行或退出 |
+| `docker compose logs api worker` | Compose 服务日志 | 启动错误或应用输出 |
+| `docker compose exec api /bin/sh` | api 服务容器内进程环境 | 仅当镜像里确实有 shell；精简镜像可能没有 |
+| `docker compose ps` | Compose 服务 | 容器状态；实际容器名由项目名和服务名生成 |
+| `docker image history report-api:c4f2a91` | 镜像层历史 | COPY/RUN 的构建结果，不是镜像里的完整文件审计 |
 
-“Managed” removes some infrastructure work; it does not choose safe defaults for the workload. Read the service contract and configuration: automated backups, retention, public access, network placement, and failover behavior are often selectable. A managed database cannot fix an unindexed query or a connection storm, and a managed queue cannot make a non-idempotent consumer safe to retry.
+detached mode（后台运行模式）返回 shell 不表示程序有监督，也不证明容器健康。启动探针、就绪探针和应用 SLI 属于运行平台与服务观测，不由镜像构建证明；参见[容器运行时如何承接 API 和 worker？](#29.%20%E6%8A%A5%E8%A1%A8%20API%20%E4%B8%8E%E5%BC%82%E6%AD%A5%20worker%20%E5%BA%94%E7%94%B1%E4%BB%80%E4%B9%88%E8%BF%90%E8%A1%8C%E6%97%B6%E6%89%BF%E6%8E%A5%EF%BC%9F)。ACK、队列延迟与业务完成由[消息交付如何确认](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)说明。
 
-Choose a runtime by workload constraints. A managed application platform or function service can reduce host operations for ordinary stateless APIs or bounded event-driven jobs, subject to its execution, startup, and networking limits. A managed container service fits long-running APIs and queue workers when packaging and process control matter. Use virtual machines when the workload needs host-level control or a legacy environment, and budget for operating-system patching and capacity management. Compare steady and peak load, required minimum capacity, startup/cold-start tolerance, execution duration, portability, and the team’s ability to operate the platform; “serverless” does not mean state-free or cost-free.
+基本操作可按 image/container 两种对象查看：`docker pull redis:7` 拉取镜像，`docker run --name cache -d redis:7` 创建并启动容器，`docker ps -a` 查看含已停止的容器，`docker stop cache` 与 `docker start cache` 停止或重新启动已有容器，`docker rm cache` 移除已停止容器，`docker image rm redis:7` 移除镜像标签。对正在运行的容器使用 `docker rm -f` 会同时停止并删除它，先确认容器写层中没有要保留的数据。
 
-#### What the runtime still leaves to the application / 运行平台仍留给应用的责任
+手动推送镜像时先用 `docker login registry.example.com` 验证 registry 身份，再 `docker tag` 赋上 registry 地址并 `docker push`。这会发布镜像，不能用可变 tag 代替部署时的 digest；生产中由受控 CI 身份执行该步骤，本文不运行登录或推送。
 
-A managed function service owns the execution infrastructure, while the application owns durable state, resource cleanup and idempotent behavior across retries. For example, AWS Lambda may reuse an execution environment. A cached client can reduce setup time on a warm call. An in-memory counter in that environment cannot be the authoritative history across invocations, concurrent workers, or restarts. Persist progress externally. / 云函数平台可复用执行环境，应用仍要把持久状态、重试语义与资源清理设计清楚。
+> [!info]- 来源
+> - Image、Dockerfile 指令与多阶段构建：[Docker image concepts](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/)、[Dockerfile reference](https://docs.docker.com/reference/dockerfile/) 与[多阶段构建](https://docs.docker.com/get-started/docker-concepts/building-images/multi-stage-builds/)，checked 2026-11-06；Compose 服务的 [`command`](https://docs.docker.com/reference/compose-file/services/#command) 覆盖默认 `CMD`。
+> - Layer cache、context 和 secret：[Build cache](https://docs.docker.com/build/cache/)、[Build secrets](https://docs.docker.com/build/building/secrets/)、[buildx build --metadata-file](https://docs.docker.com/reference/cli/docker/buildx/build/)，checked 2026-11-06。
+> - Network、port publish 和 volume：[Docker networking](https://docs.docker.com/engine/network/)、[port publishing](https://docs.docker.com/engine/network/port-publishing/)、[volumes](https://docs.docker.com/engine/storage/volumes/)，checked 2026-11-06；Docker Engine localhost publishing 语义须按 Engine 版本、network mode 和路由核对。
+> - Compose 默认网络、volume、secret 与 CLI 版本：[Compose file reference](https://docs.docker.com/compose/compose-file/)、[Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/) 和[Compose history](https://docs.docker.com/compose/intro/history/)，checked 2026-11-06；当前 v2/v5 使用 `docker compose` 与 Compose Specification。
+> - Postgres image 的初始化变量和数据路径：[官方 image 环境变量](https://hub.docker.com/_/postgres#environment-variables)与[PGDATA 说明](https://github.com/docker-library/docs/blob/master/postgres/README.md#pgdata)，checked 2026-11-06。`POSTGRES_PASSWORD_FILE` 不会更新既有数据目录中的账号密码；PostgreSQL 18 路径与旧镜像迁移边界适用于相应官方 image，换版不迁移数据。
+> - 固定发布标识：[Docker image digests](https://docs.docker.com/dhi/explore/security-concepts/digests/)，checked 2026-11-06；具体多平台 manifest 应读 builder 和 registry 的实际 metadata。
+> - 基本操作：[docker run](https://docs.docker.com/reference/cli/docker/container/run/)、[docker stop](https://docs.docker.com/reference/cli/docker/container/stop/)、[docker rm](https://docs.docker.com/reference/cli/docker/container/rm/)、[docker login](https://docs.docker.com/reference/cli/docker/login/)、[docker tag](https://docs.docker.com/reference/cli/docker/image/tag/) 和[docker push](https://docs.docker.com/reference/cli/docker/image/push/)，checked 2026-11-06。
+## 29. 报表 API 与异步 worker 应由什么运行时承接？
 
-Compare duration, concurrency, cold starts, billing and long-lived connections against the selected provider and plan. Choose a function for a bounded event-driven job when those limits fit. For long-lived connections or jobs that may outlast an invocation, compare an API or worker runtime with explicit process and shutdown controls. [AWS Lambda execution lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) · [Lambda application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html) · [API retries and uncertain outcomes](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)
-
-### Failure and cost model / 故障与成本模型
-
-| Boundary / 边界 | Failure to plan for / 需要考虑的故障 | Cost or limit to watch / 成本或限制 |
-|---|---|---|
-| Load balancer and network / 负载均衡与网络 | Bad route or listener, no healthy targets, blocked egress, or an expired certificate. | Requests and processed bytes, public addresses, NAT gateways, and cross-zone or internet data transfer. |
-| Compute / 计算 | Startup failure, crash loop, CPU/memory saturation, or slow scale-out. | Minimum replicas and CPU/memory time; autoscaling cannot create capacity instantly. |
-| Database / 数据库 | Exhausted connections, lock contention, storage or I/O limits, or failover delay. | Provisioned compute, storage, I/O, replicas, and retained backups. |
-| Object storage / 对象存储 | Permission errors, unavailable routes, unexpectedly public objects, or unbounded retention. | Stored bytes, requests/retrieval, lifecycle transitions, replication, and outbound transfer. |
-| Queue and workers / 队列与工作进程 | Duplicate or delayed delivery, poison messages, or growing backlog. | Requests, retained messages, worker compute, and the delay before backlog drains. |
-
-Track each boundary with a useful signal: request errors and latency at ingress, ready replica count and saturation for compute, connection/query pressure for the database, request errors and object growth for storage, and oldest-message age plus dead-letter count for a queue. Cost estimates should include idle minimums and peak headroom as well as per-use storage, requests, and data movement; a service with a low unit price can still be expensive when retries or egress multiply the workload.
-
-[Back to the main question / 返回主问题](#30.%20How%20do%20you%20promote%20one%20validated%20artifact%20and%20recover%20each%20state%20layer%20safely?%20/%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B7%B2%E9%AA%8C%E8%AF%81%E4%BA%A7%E7%89%A9%E5%B9%B6%E5%88%86%E5%88%AB%E6%81%A2%E5%A4%8D%E5%90%84%E5%B1%82%E7%8A%B6%E6%80%81%EF%BC%9F).
-## 30. How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？
-
-Build one immutable application artifact, test those exact bits, and promote the same artifact through staging to production with runtime configuration supplied separately. Readiness and gradual rollout protect traffic while error, latency, and saturation signals establish whether to stop or return to the last known-good application version. Persistent data and external effects have separate owners and recovery paths: image rollback cannot reverse a database migration, sent email, payment, or other completed action. / 构建一个不可变应用产物，验证这份确切产物，再把同一产物从预发环境晋级到生产，并单独注入运行时配置。就绪检查和渐进式放量保护流量，错误率、延迟和资源饱和信号决定是否暂停或恢复到上一个已知正常的应用版本。持久数据和外部副作用各有其所有者与恢复路径：镜像回滚不能撤销数据库迁移、已发送邮件、支付或其他已完成操作。
-
-The [production request path and responsibility model](#29.%20How%20do%20deployment%20components%20carry%20a%20request%20and%20share%20responsibilities?%20/%20%E9%83%A8%E7%BD%B2%E7%BB%84%E4%BB%B6%E6%80%8E%E6%A0%B7%E6%89%BF%E6%8E%A5%E8%AF%B7%E6%B1%82%E5%B9%B6%E5%88%86%E6%8B%85%E8%81%8C%E8%B4%A3%EF%BC%9F) explains which components run the service and own its data. The following steps focus on how a tested artifact safely replaces the one serving traffic.
-
-### One artifact from checks to production / 一个产物经过检查再到生产
-
-Use one generic path and adapt the checks to actual regression risks:
-
-~~~text
-commit
-  -> static/type checks -> unit and integration checks -> production build
-  -> test the built artifact -> publish it with commit and content identity
-  -> deploy that same artifact to staging -> smoke/browser check
-  -> protected production gate -> gradual traffic shift -> observe and complete
-~~~
-
-Build once, then promote the same artifact. For a container, record and deploy its immutable digest rather than a mutable tag; for a static bundle, retain a checksum or release identifier with the emitted files. Rebuilding separately for staging and production weakens the claim that the tested bits are the deployed bits. If frontend configuration is compiled into the bundle, that bundle is environment-specific; a shared artifact needs safe public runtime configuration. Values shipped to a browser are public, never secrets.
-
-Inject secrets at runtime from a secret store or protected deployment environment, and give the deployment identity only the permissions needed for its target. Keep non-secret environment configuration separate from the image. A deployment environment can also restrict source branches, protect production with approval, and scope access to environment secrets; these controls protect the release gate, while credentials still need rotation and least privilege.
-
-Readiness is a traffic gate: an instance should receive requests only when it can serve its assigned work. Liveness is a restart signal for a process that cannot recover on its own. Exact probe behavior varies by platform; do not make liveness depend on every transient downstream service, since a database outage can then trigger a restart storm. Roll out gradually when the platform and workload permit it, watch a small set of error, latency, and saturation thresholds, and stop or redeploy the last known-good artifact when they cross the release limit. A green process probe alone does not prove the user journey works.
-
-Database changes need an independent compatibility plan. A common expand-and-contract sequence adds a backward-compatible schema shape, deploys code that tolerates both shapes, backfills or dual-writes as needed, switches reads, and removes the old shape only after old code and the rollback window are gone. Run migrations as a controlled step rather than once per replica. Redeploying an older image does not reverse a schema migration, sent email, payment, or other external side effect; rollback may require a forward fix, an idempotent compensating action, or a tested restore plan. Restoring a backup can discard writes made after that backup, so it is a recovery decision rather than a routine application rollback.
-
-For the frontend-specific type/test/build and critical-browser-check sequence, see [Frontend Testing / 前端测试](../../frontend/testing/frontend-testing.md). The existing [Docker Operations / Docker操作参考](#28.%20How%20do%20images,%20containers,%20volumes,%20and%20networks%20determine%20state%20and%20connectivity?%20/%20%E9%95%9C%E5%83%8F%E3%80%81%E5%AE%B9%E5%99%A8%E3%80%81%E5%8D%B7%E5%92%8C%E7%BD%91%E7%BB%9C%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%8A%B6%E6%80%81%E7%95%99%E5%AD%98%E4%B8%8E%E6%9C%8D%E5%8A%A1%E8%BF%9E%E9%80%9A%EF%BC%9F) note covers image construction and local container mechanics.
-
-**Interview answer / 面试回答：** Start with the request/data path and trust boundaries, then choose the least operational runtime that meets workload constraints. Build and verify one immutable artifact, inject runtime configuration and secrets, release behind readiness and monitored thresholds, and keep schema or external-state recovery separate from image rollback. / 先画出请求和数据路径及信任边界，再按负载约束选择运维负担最低的运行时。构建并验证一个不可变产物，运行时注入配置和密钥，在就绪检查与监控阈值保护下发布，并把数据库和外部状态的恢复方案与镜像回滚分开。
-
-**Sources checked 2026-10-15:** [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html); [AWS VPC network example](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html); [ECS task IAM roles](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html); [Application Load Balancer health checks](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html); [ECS deployment circuit breaker](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html); [Kubernetes startup, readiness and liveness probes](https://kubernetes.io/docs/concepts/workloads/pods/probes/); [Amazon RDS shared responsibility and query tuning](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/); [Amazon S3 access control](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-management.html); [S3 presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html); [Amazon SQS standard queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html); [SQS dead-letter queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html); [AWS Fargate pricing dimensions](https://aws.amazon.com/fargate/pricing/); [Amazon RDS pricing](https://aws.amazon.com/rds/pricing/); [Amazon S3 pricing](https://aws.amazon.com/s3/pricing/); [Docker Compose in production](https://docs.docker.com/compose/how-tos/production/); [Docker image digests](https://docs.docker.com/dhi/explore/security-concepts/digests/); [GitHub Actions deployment environments](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments); [CodeDeploy rollback behavior](https://docs.aws.amazon.com/codedeploy/latest/userguide/deployments-rollback-and-redeploy.html); [Vite static deployment](https://vite.dev/guide/static-deploy.html). AWS examples document one provider's current service boundaries and are not universal defaults; verify the selected provider, service, region, and configuration.
-## 31. How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？
-
-**Core model / 核心模型:** Start from the outcome users need, measure it with a clear service-level indicator, and use correlated metrics, traces, and logs to find which stage is failing. Metrics show the aggregate shape; a trace follows one request across stages; logs explain specific events. / 从用户需要的结果开始，用明确定义的服务等级指标衡量它，再用相互关联的指标、追踪和日志定位故障阶段。指标显示整体趋势，追踪串起单个请求的各阶段，日志说明具体事件。
-
-**Key terms / 关键术语:** service-level indicator (SLI) / 服务等级指标；service-level objective (SLO) / 服务等级目标；service-level agreement (SLA) / 服务等级协议；error budget / 错误预算；trace / 分布式追踪；span / 跨度；cardinality / 基数。
-
-**Core answer / 核心回答：** SLI 是符合资格的用户请求中“好事件 / 总事件”的实测比例；SLO 是该比例在指定时间窗内应达到的目标；SLA 是对外业务协议，可能规定计量方式和未达标后果。例：30 天内 10,000 次有效请求中，9,940 次在 400 ms 内成功，SLI 为 99.4%；若 SLO 为 99.5%，错误预算是 `(1 − 99.5%) × 10,000 = 50` 次坏事件，实际 60 次即超出 10 次。告警后先确认用户影响和分母，再沿 trace 定位慢/失败阶段并查关联日志；根据证据缓解，以用户 SLI 和依赖信号验证恢复，并记录原因与后续改进。
+在这次租户授权修复中，tenant-a 读取 report 42 应得到 200，tenant-b 猜中同一 ID 应得到 404。用户通过浏览器访问 application programming interface（应用程序接口，API）；当账户 acct-17 为 report 42 发起异步导出时，请求幂等键为 report-demo-208，API 在同一数据库事务写入 job（任务）job-demo-731、outbox（事务发件箱）意图并预留一个共享等待槽，再由 relay（转发进程）发布到 queue（队列），worker（工作进程）计算结果、写入私有对象并提交状态。只读请求和导出任务虽指向同一报表，但授权响应与 job 成功/失败是不同用户结果；每层的网络可达、身份权限、业务规则和恢复责任都不同。
 
 ~~~mermaid
-flowchart LR
-    Metrics[Metric shows user-impact window and scope] --> Trace[Representative trace locates slow or failed stage]
-    Trace --> Logs[Correlated logs explain that event]
-    Logs --> Mitigate[Choose evidence-based mitigation]
-    Mitigate --> Verify[Verify user SLI and dependency recovery]
-    Verify --> Learn[Record cause and follow-up]
+flowchart TD
+    B[浏览器] -->|HTTPS| L[可选 CDN / 负载均衡器]
+    L --> A[私有 API 运行时]
+    A -->|按当前主体查 tenant（租户）+ report| D[(数据库)]
+    A -->|job + pending outbox + 预留等待槽，同一事务| D
+    D --> R[Outbox relay]
+    R -->|发布并等待 broker（消息代理）确认| Q[队列]
+    Q -->|delivery（消息投递）| W[私有 worker]
+    W --> D
+    W --> O[私有对象存储]
+    W -->|耐久结果状态后 ACK| Q
 ~~~
 
-### Follow one request through three signals / 用三种信号跟踪一个请求
+只读请求和异步导出均以 report 42 为报表资源；导出由账户 acct-17 发起，report-demo-208 是幂等键，job-demo-731 是持久任务 ID。导出结果先写入私有对象存储，只有数据库记录已提交对象引用后，授权 API 才能签发短期 signed URL（签名网址）。以 S3 预签名 URL 为例，授权检查发生在发放时；拿到 URL 的人可在其签发权限、对象策略和有效期允许时直接访问，它是一种 bearer 能力。应用后来撤销用户业务权限，不会自动撤销已发出的 URL；新发 URL 应设较短有效期，撤销底层签名凭据或改变资源策略也会影响既有 URL 的可用性。CDN 只是可选入口，含租户私有结果的响应不能按公共 URL 无条件共享缓存。通常 DNS 先把公共服务名解析为入口地址，再建立 HTTPS 连接；更完整的协议过程见[HTTP 与网络请求如何建立？](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)。路由、outbox 与 attempt（尝试号）状态细节见[怎样设计一个可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
 
-Consider a generic catalog lookup: `client → API edge → catalog service → cache/database → response`. Instrument the boundaries that make up this user action. Propagate trace context across service calls so spans from the edge, service, and database client can be assembled into one trace. A span is one timed operation; parent-child spans show which sub-operation took time. Context propagation connects spans across process and network boundaries. [OpenTelemetry: traces](https://opentelemetry.io/docs/concepts/signals/traces/) and [context propagation](https://opentelemetry.io/docs/concepts/context-propagation/).
+### 网络路径和身份策略分开
 
-| Signal / 信号 | What it answers / 回答的问题 | Example for the lookup / 查询示例 |
+负载均衡器接收 HTTPS（安全超文本传输协议）并把请求送到配置的健康目标；计算服务运行 API 和 worker；数据库保存结构化状态；对象存储保存大文件；队列把可异步完成的工作和用户请求分离。浏览器可以通过范围受限、短期有效的签名网址直传或下载对象，不需要把 bucket（对象存储桶）设成公开。
+
+网络路由、防火墙或安全组决定“谁能连到哪个地址”；工作负载身份和资源策略决定“该主体能对哪个资源做什么”；应用的授权规则再决定当前业务用户能否读取 tenant-a 的 report 42。这三个层次不能互相替代。常见拓扑只开放负载均衡器，API 仅允许来自负载均衡器，数据库只允许来自 API/worker，队列和对象存储只接受已授予相应任务身份的请求。本地 Compose 只能验证服务发现和网络连通；同一个镜像摘要进入 staging 后，还要经已装配的真实入口和测试身份复放 A→200、B→404，不能把镜像相同当成认证、配置或租户授权已验证。见[晋级验收](#30.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+
+### 托管平台管理什么，应用仍拥有哪部分
+
+| 层 | 平台通常负责 | 应用团队仍负责 |
 |---|---|---|
-| **Metrics / 指标** | Is the service broadly healthy, and when did behavior change? | Count eligible requests and failures; measure end-to-end duration, dependency duration, in-flight work, and resource saturation over time. Metrics aggregate measurements, so they are efficient for trends and alerts. |
-| **Traces / 追踪** | Which stage made this particular request slow or unsuccessful? | One trace contains a root request span and child spans for cache and database work. Compare their durations and statuses to see where time accumulated. |
-| **Logs / 日志** | What event or decision happened at that stage? | A structured record such as `cache_lookup=miss` or `database_timeout` adds event detail. Include the active `trace_id` and `span_id` when available so the record can be found from the trace. |
+| 计算 | 按服务方案提供主机维护、调度和运行环境 | 镜像/包、启动退出、资源上限、扩缩容策略、健康规则 |
+| 数据库 | 所选配置包含的基础设施、补丁、备份或故障切换 | schema 和迁移、查询/连接行为、权限授予、保留期、恢复演练 |
+| 对象存储 | 服务可用性及文档承诺的持久性机制 | 私有命名、保留/生命周期、上传上限、谁能拿 signed URL 及其过期/撤权策略 |
+| 队列 | 在服务合同和配置限制内存储和投递消息 | 幂等处理、重试退避、毒消息处理、队列年龄和 DLQ 恢复 |
 
-Start with the metric to find the affected time window, route, and outcome. Then inspect a representative slow or failed trace and follow its child spans. Use the trace and span identifiers to find detailed log events from the same request. For example, an edge metric may show that catalog lookups are slow, a trace may show most of one request's 700 ms elapsed in the database span, and a correlated log may show that the connection pool waited before timing out. The metric establishes scope, the trace locates the stage, and the log gives event detail. [OpenTelemetry: signals](https://opentelemetry.io/docs/concepts/signals/) describes the three signal types; its [logs guide](https://opentelemetry.io/docs/concepts/signals/logs/) describes correlating logs with active traces and spans.
+“托管”减少平台运维，但不会替工作负载选择安全配置。托管数据库不会修复缺索引查询或连接风暴；托管队列也不会使非幂等 worker 在重试时安全。
 
-Signals have different coverage. Metrics can remain useful when traces are sampled, but a missing trace is not proof that no request or failure occurred. Check telemetry freshness and instrumentation coverage before treating silence as recovery.
+### 按任务时长、并发和停止行为选择运行时
 
-### Keep telemetry safe and bounded / 让遥测信息安全且有界
+一次有界、可重试的短报告任务可以由 function service（函数托管服务）执行，前提是最大执行时长、cold start（冷启动）、并发和触发器语义符合任务；长时间 API 与 queue worker 需要明确进程生命周期、并发界限和停止流程时，managed container service（托管容器服务）往往更适合；需要主机级控制或兼容遗留环境时，virtual machine（虚拟机，VM）提供控制权，但团队要承担系统补丁和容量管理。按峰值/稳态负载、最低常驻容量、启动延迟容忍度、长连接、执行上限和团队运维能力比较。serverless（无服务器计算）仍有状态、网络、配额和费用边界。
 
-Use stable, low-cardinality metric dimensions such as route template (`/catalog/{itemId}`), response class, region, and dependency. Do not attach `request_id`, `trace_id`, user or tenant IDs, raw URL paths, search terms, prompts, or other per-request values to metric measurements. Every distinct dimension combination can create another time series and increase aggregation cost; OpenTelemetry's metrics guide warns that user IDs and raw paths can cause unbounded cardinality. [OpenTelemetry: metrics and cardinality limits](https://opentelemetry.io/docs/concepts/signals/metrics/).
+在这个报表例子里，HTTP API 要持续接收读请求，worker 要等队列、处理 database（数据库）和对象存储，并在部署停止时完成或释放当前 delivery（消息投递）。因此可把 API 与 worker 作为分开的可扩缩容服务，同一镜像运行不同命令。只有导出任务明确有界且平台事件处理语义合适时，才把它拆为函数。Cloud Run functions 的代际、并发和时长限制见[托管函数何时适合报表任务？](../../archive/front-end/Deprecated_Interview_Notes/hosted-functions-tradeoffs.md)。
 
-Request and trace identifiers are useful correlation fields in logs and traces, where each record is already about an individual event or operation. Treat them as sensitive linkage data: restrict access and retention, and never log credentials, authorization headers, cookies, or raw user content just to make a failure searchable. Prefer stable route names and bounded result categories; redact or omit fields that are not needed to diagnose the service.
+进程收到停止信号时，先让 readiness probe（就绪探针）报告未就绪、停止接入新请求或消息，再在宽限期内完成在途请求与其事务；已持久提交业务结果的消息可以 ACK，未提交结果的消息按所选 broker 恢复契约处理。平台终止连接后，未确认 delivery 可被重投，但有效租约内的旧尝试仍由数据库状态保护，不能被新 worker 抢占。数据库连接池、线程、临时文件和 telemetry exporter（遥测导出器）都要有明确清理。具体 stop signal、async cancellation（异步取消）与资源释放依运行时和平台实现；容器 health probe（健康探针）的职责由[容器发布检查](#30.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)说明，消息交接则由[发布确认与消费者 ACK](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)说明。
 
-### Define a user outcome and its budget / 定义用户结果与预算
+### 用失败信号和成本边界检查组件
 
-An **SLI** is a measured indicator of a service outcome, commonly a ratio of good events to eligible events. An **SLO** is the target for that indicator over a stated period. An **SLA** is an external business agreement that can specify measurement rules and consequences if commitments are missed; an internal SLO is not automatically an SLA. [Google SRE Workbook: Implementing SLOs](https://sre.google/workbook/implementing-slos/) defines event-based SLIs, explains error budgets, and distinguishes an SLA as a business contract.
+| 边界 | 计划中的失败 | 观察信号 | 成本/限制 |
+|---|---|---|---|
+| 负载均衡 / 网络 | 错路由、无健康目标、出站流量受阻、证书过期 | 请求错误、连接失败、目标健康数 | 请求与字节、网络地址转换、数据传输 |
+| 计算服务 | 启动失败、崩溃循环、CPU/内存饱和、扩容慢 | 就绪实例、CPU/内存、重启与请求排队 | 最低副本和运行时间；扩容不是瞬时容量 |
+| 数据库 | 连接耗尽、锁等待、I/O/存储或故障切换 | 连接池等待、连接数、查询时延、锁 | 计算、存储、I/O、备份保留 |
+| 对象存储 | 权限错误、路由故障、对象意外公开、无限保留 | API 错误、对象增长、下载量 | 存储、请求、生命周期、复制、出站流量 |
+| 队列 / worker | 重复/延迟投递、毒消息、积压上升 | 最老消息年龄、队列深度、未确认数、死信队列 | 保留消息、worker 计算、积压排空时间 |
 
-**Synthetic example / 合成示例.** Suppose a catalog lookup service chooses the following request-based SLI over a rolling 30-day window:
+平台容量与业务结果要分开观察。CPU 不高并不能证明 report 42 可正确读取；queue 有消费者也不代表报表已经成功。可观测性章会把这些组件信号与用户的 request/job 结果连接起来。
 
-- **Eligible events:** every authenticated, syntactically valid catalog lookup accepted at the public API edge. Exclude synthetic health checks. Keep service errors, timeouts, and requests with no completed response in the denominator.
-- **Good event:** the edge completes a successful response in at most 400 ms from acceptance.
-- **SLI:** good eligible events ÷ all eligible events.
-- **SLO:** at least 99.5% of eligible events are good in the rolling 30-day window.
+> [!info]- 来源
+> - 网络与身份责任：AWS Well-Architected [Security pillar](https://docs.aws.amazon.com/wellarchitected/latest/security-pillar/welcome.html) 和 [ECS task IAM roles](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html)，checked 2026-11-06；这是 AWS 实例，其他平台的身份模型不同。
+> - 托管函数的 warm runtime、实例复用与重试：AWS Lambda [Execution environment lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) 与 [application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html)，checked 2026-11-06；内存缓存可复用但不能作为跨执行持久状态的事实限于 Lambda 运行时。
+> - 对象授权路径：Amazon S3 [access management](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-management.html) 和[presigned URL](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)，checked 2026-11-06；签名 URL 可给短期访问，不代表 bucket 公开。
+> - 运行探针：Kubernetes 官方 [Liveness, Readiness, and Startup Probes](https://kubernetes.io/docs/concepts/workloads/pods/probes/)，checked 2026-11-06；probe 作用依平台，readiness 影响流量，liveness 可触发重启。
+> - 证据和术语按具体平台合同适用；本文图是通用架构示意，不代表任何已部署系统。
+## 30. 如何晋级并回滚已验证的报表服务产物？
 
-If the window contains 10,000 eligible lookups and 9,940 are good, the SLI is `9,940 ÷ 10,000 = 99.4%`. The error budget is `1 − 0.995 = 0.5%`, or `10,000 × 0.005 = 50` bad events for this traffic volume. The 60 bad events observed exceed that budget by 10. This event-based calculation weights each request equally; it does not prove every region or user group had the same experience. The chosen edge measurement also does not include the user's device or network after the edge completes its response. Google SRE recommends specifying both the user outcome and how it is measured, because measurement boundaries change what failures are visible.
+对 report 42 的租户范围修复，测试结果应绑定到固定的源码提交。continuous integration（持续集成，CI）在该提交上运行静态检查、单元测试、数据库测试和所需的消息代理检查；构建一次 container image（容器镜像），测试这份确切镜像，再把相同 digest（摘要）从 staging（预发布环境）晋级到 production（生产环境）。continuous delivery（持续交付）让通过门禁的产物随时可发布；continuous deployment（持续部署）则在规则满足后自动发布。部署回滚不能自动撤销数据库写入或远程副作用。
 
-The SLI must keep its denominator and eligibility rules stable: dropping timeouts or slow successes would make the number look better while excluding users who did not receive a timely result. Report request volume with the ratio, and inspect meaningful low-cardinality slices such as region or route when an overall number hides a localized failure.
+~~~mermaid
+flowchart TD
+    A[提交 c4f2a91] --> B[静态 + 单元 + 集成 + 契约测试]
+    B --> C[构建一次并发布镜像]
+    C --> D[保存 commit 与 image digest]
+    D --> E[在 staging 部署相同 digest]
+    E --> F[smoke / 数据库 / worker 检查]
+    F --> G{生产环境门禁}
+    G -->|通过| H[小流量 canary]
+    H --> I{用户 SLI 和依赖信号在范围内？}
+    I -->|是| J[逐步放到全部流量]
+    I -->|否| K[停止放量并判断安全回退目标]
+    G -->|未通过| L[不接触生产流量]
+~~~
 
-### Alert, investigate, mitigate, and learn / 告警、调查、缓解与复盘
+图里的 c4f2a91 是示意 commit。单平台镜像的 digest 标识该平台 manifest；多平台镜像索引 digest 标识一组平台 manifest，同一个索引摘要可能让 amd64 与 arm64 节点拉取不同平台的镜像内容。因此本例若说 staging/prod 运行相同镜像内容，前提是部署目标平台相同；跨架构发布须记录并核验每个目标平台解析到的 manifest digest。构建时间戳 tag、latest 或 staging/prod 两次独立 build 都不能替代摘要；需要审计的是目标平台实际运行的产物。
 
-For the example SLO, a focused alert could fire when at least 100 eligible lookups occur in a rolling 10-minute window, fewer than 99% are good, and that condition persists for 5 minutes. A minimum event count reduces noise from tiny samples. The alert should carry the SLI numerator, denominator, time window, affected route/region, and links to the relevant metric and trace views. Page when this user-outcome condition holds; internal component signals help explain the cause.
+### 一次构建，逐级测试并记录产物身份
 
-When it fires:
+先在 pull request（合并请求，PR）上运行与变更风险匹配的检查：修复授权范围要有所有者/非所有者测试；数据库 schema（结构定义）变更要兼容旧数据与旧代码；worker 改动触及 acknowledgement（确认，ACK）时需要所选消息代理的集成测试。合并可能产生新的 merge commit，因此构建前要在最终合并提交上重跑必需检查，或确认 PR 检查验证的源码树与最终构建输入完全相同。随后 CI 从这个已验收的 commit（提交）构建一次镜像，并记录提交、依赖锁文件、构建器、基础镜像与镜像摘要。
 
-1. **Confirm impact and scope.** Check event counts, SLI trend, error types, route/region, and recent changes. Make sure telemetry is arriving and the denominator still matches the SLI definition.
-2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age and depth as part of [capacity and backpressure](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). [Broker delivery](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains the acknowledgement boundary.
-3. **Mitigate the user impact.** Choose the smallest safe action supported by evidence, such as rolling back a change that matches the onset or temporarily reducing load on a saturated dependency. Record the action and its expected effect; do not add retries blindly if they can amplify overload.
-4. **Verify recovery.** Confirm that the user-facing SLI returns above the alert threshold with adequate traffic, and check the affected stage and dependency signals for continuing saturation or error growth. A quiet alert alone is not evidence that the service recovered.
-5. **Follow up.** Record the user impact and time window, the causal mechanism, the mitigation, and a small set of owned changes to prevent recurrence or improve detection. Link the incident to relevant tests and telemetry gaps.
+例如 Buildx 可在构建并推送镜像时把构建 metadata 写到文件：
 
-Use the SLO to guide tradeoffs. For AI-backed flows, pair [production signals](../../ai-engineering/systems/ai-production-observability-and-feedback.md) with task-quality measures from [LLM evaluation](../../ai-engineering/evaluation/llm-evaluation-methods.md). HTTP success and latency describe delivery. Task evaluation establishes whether generated answers are useful or correct.
+~~~bash
+docker buildx build \
+  --push \
+  --metadata-file report-build.json \
+  --tag registry.example.com/team/report-api:c4f2a91 \
+  .
+jq -r '."containerimage.digest"' report-build.json
+~~~
 
-### Sources / 来源
+该命令会构建并推送镜像；得到摘要后，把预发布和生产环境的目标都写成同一个不可变引用，如 `registry.example.com/team/report-api@sha256:...`。生产变更记录至少能回答：哪个提交生成了这个摘要、哪组检查针对它通过、当前哪个环境运行它。
 
-- OpenTelemetry's unversioned concept pages, checked 2026-10-15: [Signals](https://opentelemetry.io/docs/concepts/signals/) (last modified 2026-03-10), [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) (2026-04-23), [Traces](https://opentelemetry.io/docs/concepts/signals/traces/) (2026-01-14), [Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/) (2026-07-02), [Logs](https://opentelemetry.io/docs/concepts/signals/logs/) (2026-08-07), and [Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/) (2026-08-10).
-- [Google SRE Workbook, Chapter 2: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15.
+在 staging（预发布环境）验证同一摘要时，用经真实入口和测试身份提供方装配的请求复放授权回归：tenant-a 读取 report 42 应返回 200 和预期报表；tenant-b 用自己的合法身份请求同一路径应返回 404。这里不能用客户端自填的租户头代替身份。tenant-a 得到 404 也是本次验收失败，不能因为 tenant-b 的合法拒绝状态也是 404 就把状态码集合当作成功判断。worker 的提交/ACK 检查覆盖另一条异步路径，不能代替这项用户读请求验收。
+
+如果每个环境分别重建，即使源码提交相同，也可能遇到基础镜像、依赖、构建时间输入或构建器变化。一个具体镜像通过预发布环境后，应晋级它本身；运行时数据库地址、feature flag（功能开关）和 secret（密钥）通过受控配置注入，不把密钥烘进镜像。若有前端 bundle（前端打包文件），编译期环境配置不同会生成不同产物；若要逐环境晋级同一静态站点 bundle，应把非秘密配置作为运行时公开配置读取。无论何种方式，编译进 bundle 的值都对浏览器用户可见，不能作为密钥。静态站点没有容器镜像时，也可记录每次发布的 artifact ID（产物标识）或校验和，并在 staging 与 production 验证同一组文件。
+
+### 将环境门禁、启动检查和渐进放量接起来
+
+GitHub Actions environment（工作流环境）可以为 production 配置部署保护规则，例如要求审查者批准、限制可部署分支或控制环境密钥的访问。workflow（工作流）引用该环境的 job（任务）通过相应规则后才运行；这控制的是凭据和部署授权，不替代应用自己的流量安全判定。选用第三方 action（自动化步骤）时，固定已审核的完整 commit SHA（提交哈希）；tag 可移动。
+
+发布前核对部署配置的 identity and access management（身份与访问管理，IAM）权限、网络路由、密钥来源、数据库迁移和目标镜像摘要。镜像本身不应包含数据库密码。一次数据库 migration（结构迁移）由独立、可观察的步骤执行，而不是每个 API replica（副本）启动时都执行。
+
+readiness probe（就绪探针）判断实例是否可以接收流量；liveness probe（存活探针）判断进程是否卡在无法自愈的状态并可触发重启；startup probe（启动探针）给慢启动应用完成初始化的时间，成功前先不执行存活/就绪探针。不要让存活探针依赖每个暂时性的下游服务，否则数据库短暂故障可能让实例同时重启。绿色探针只能说明探针路径正常，还不能证明 report 42 的授权、结果对象或队列处理正确。
+
+支持渐进发布的平台可以从一小部分真实流量开始，按用户 SLI（服务等级指标）、错误类别、延迟、容量与 queue age（队列消息年龄）比较新旧 revision（版本实例）。只在样本量、时间窗口和代表性任务足够时继续放量；新版本启动成功不等于用户旅程健康。具体平台可能采用滚动更新、blue-green（蓝绿发布）或 canary（金丝雀发布），其流量切换和自动判断机制并不相同。
+
+### 回退代码时不要假设数据也回去了
+
+如果新镜像导致 5xx、超时或 queue worker 持续失败，可以停止放量并回退到最近一个已完成且安全的应用版本。report 42 的租户隔离修复有安全意义：若旧版存在已知跨租户漏洞，回到旧 image 会重新开放数据风险。此时应先隔离受影响入口、禁用危险路径或前向修复，不能机械恢复成旧 digest。缓解选择需要 production trace、部署时间和权限测试共同支持，见[从报表服务信号定位发布故障](#31.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)。
+
+代码回退不等于数据库回滚。常用 expand-and-contract（扩展-收缩迁移）次序是：先加向后兼容的列、索引或表形态；部署同时接受新旧形态的代码；在可控事务或批次中回填并核对；切换读写；等旧 API 实例和旧 worker 全部退出、旧代码不再是回滚目标后，才删除旧形态。进入删除旧结构的收缩阶段前，要确认线上没有实例或 worker 再读写它，而且发布策略已不再考虑回滚到仍依赖该结构的旧版本。
+
+镜像 rollback 不会撤销已经提交的 job、已上传且已引用的报告对象、已发送邮件或支付。若外部动作需要补偿，应使用有幂等键的明确补偿流程；恢复备份也可能丢失备份之后的新写入，是恢复决策，不是普通应用回滚。数据库与对象状态由各自备份、保留与审计边界负责。
+
+> [!info]- 来源
+> - GitHub Actions [Deployments and environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) 与[部署环境概念](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments)，checked 2026-11-06：保护规则、required reviewers、branch 限制和环境 secrets 的授予时间；部署行为仍由具体 workflow/provider 决定。
+> - GitHub Actions [Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use)，checked 2026-11-06：third-party Action 使用完整 commit SHA 的不可变发布方式与审查理由。
+> - Docker Buildx [build --metadata-file](https://docs.docker.com/reference/cli/docker/buildx/build/)、[image digest](https://docs.docker.com/dhi/explore/security-concepts/digests/) 与[multi-platform images](https://docs.docker.com/build/building/multi-platform/)，checked 2026-11-06：push 返回的 registry digest、可移动 tag、索引摘要和各平台 manifest digest 的边界。
+> - 探针：Kubernetes [Liveness, Readiness, and Startup Probes](https://kubernetes.io/docs/concepts/workloads/pods/probes/)，checked 2026-11-06：三种探针的不同动作；不同平台的配置语义须看其官方文档。
+> - 自动回退实例：Amazon ECS [Deployment failure detection](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-failure-detection.html) 与[deployment circuit breaker](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html)，checked 2026-11-06：ECS circuit breaker 根据任务运行与已配置健康检查判断 steady state，CloudWatch alarm 可作另一类 failure detector；自动 rollback 需要配置，且回到上次 COMPLETED deployment。不是所有发布平台都采用相同条件。
+> - 数据库兼容性：AWS blue/green 官方白皮书 [Decoupling schema changes from code changes](https://docs.aws.amazon.com/pdfs/whitepapers/latest/blue-green-deployments/blue-green-deployments.pdf)，checked 2026-11-06：新旧环境共用数据时要保持 schema 兼容；本文的 expand-and-contract 是通用工程安排，不是平台自动回滚数据库的承诺。
+## 31. 怎样从报表服务信号定位发布后的故障？
+
+report-api 的新镜像已经通过测试并开始逐步接收真实流量。若用户看到 5xx、report 42 变慢或导出任务迟迟未完成，先用聚合指标确定影响范围，再沿一个 request/job trace（请求或任务的分布式追踪）找出耗时或失败阶段，最后用关联日志核实该阶段做了什么。指标、追踪和日志各自回答不同问题；一个健康进程或没有告警都不能单独证明用户结果正确。
+
+~~~mermaid
+flowchart TD
+    D[发布新的镜像 digest] --> M[指标显示错误/延迟窗口与范围]
+    M --> T[代表性 trace 找到慢或失败阶段]
+    T --> L[关联日志解释该事件]
+    L --> A[选有证据的最小缓解]
+    A --> V[核对用户 SLI 与依赖恢复]
+    V --> P[记录原因、修复与检测缺口]
+~~~
+
+图把已发布构建连接到事故诊断：观测要能够区分“新镜像引入变化”与数据库、队列、对象存储等依赖故障。trace context（追踪上下文）与跨异步边界传播方式由 OpenTelemetry 的上下文传播机制说明；用户 SLO（服务等级目标）的目标和预算由[测试验收与发布流程](#30.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)使用。
+
+### 从一个用户请求关联三种信号
+
+对 GET /api/reports/42 记录稳定的路由模板、响应类别、区域和依赖名称。传递追踪上下文后，可以把入口、API、数据库访问与对象存储调用组合成一个 trace（分布式追踪）。一个 span（操作区间）有开始时间、结束时间和状态；日志关联时同时记录 trace ID 与 span ID，便于回到具体请求和子操作。父子关系显示某个步骤消耗了多少时间，但并行或嵌套 span 的持续时长可能重叠，不能简单相加为总耗时。对异步导出，可在消息属性中传播可用的追踪上下文，同时保留 job ID 作为业务关联键。trace ID/job ID 是单次操作信息，不要将它们作为每条 metric（指标）的维度。
+
+| 信号 | 它回答的问题 | 报表服务示例 |
+|---|---|---|
+| Metrics（指标） | 整体是否变差，何时、哪类请求受影响？ | report 路由的有效请求数、坏事件率、延迟分位数、数据库连接等待、任务最老年龄 |
+| Traces（追踪） | 这个请求/任务在哪个阶段变慢或失败？ | API 请求的操作区间包含授权查询和报表读取；异步任务的追踪延伸到队列、worker、数据库和对象上传 |
+| Logs（日志） | 该阶段具体记录了哪个结果或错误？ | 同一追踪 ID 的结构化事件记录查询超时、状态转换失败或对象写入错误 |
+
+调查正在放量的新镜像时，先从该 canary（小流量版本）的指标窗口筛选受影响路由和结果，再找代表性慢请求。例：一次读取耗时 900 ms，其中授权/报表查询 span 占 720 ms，关联日志显示查询前先等连接池 600 ms。指标把影响连到当前摘要和时间窗；trace 说明慢在查询阶段；日志显示主要等待来自连接池。若该摘要对应的指标窗口达到停止放量门槛，就暂停增加流量并核对连接池与下游数据库信号；这条 trace 用于定位慢在哪一阶段，尚不足以单独触发停发或归因给查询计划。若 trace 被采样，缺少样本不证明没有请求或故障；检查采样率、遥测新鲜度和覆盖后再判断。
+
+> [!example] 用 report 42 的 SLI 核对用户影响
+> 设定 30 天的 service level indicator（服务等级指标，SLI）：在可信身份边界已确认主体、且 report ID 格式有效后进入 API 的 report read 请求为分母；之后超时、5xx 或没有响应仍留在分母。身份提供方在主体确认前发生的失败另用入口认证指标衡量，不能因为 API 内部授权组件返回成功才决定是否计入。好事件是服务在 400 ms 内按业务契约给出预期结果：tenant-a 有权读取 report 42，必须返回 200 和预期报表；tenant-b 无权读同一资源，按本例契约返回 404。tenant-a 得到 404 即使状态码“看起来可接受”也算坏事件。这个 SLI 衡量 API 边界的可用性和时延，不包含用户设备或服务回复后的网络，也不单独证明返回数据的租户归属正确；后者仍需授权回归测试和独立审计。
+>
+> 若 10,000 次符合条件的请求中 9,940 次为好事件，则 SLI 是 9,940 ÷ 10,000 = 99.4%。若 service level objective（服务等级目标，SLO）为 99.5%，坏事件预算为 (1 − 0.995) × 10,000 = 50 次；实有 60 次坏事件，超预算 10 次。单位是此 30 天窗口中的请求数，不是百分比或毫秒。SLI 是测量结果，SLO 是内部目标；service level agreement（服务等级协议，SLA）则是对外承诺，可能规定服务额度或违约后果，不能只把内部阈值改名为 SLA。这项 30 天 SLO 用于看长期错误预算；放量决策另看接下来数分钟的 canary 结果，不必等待 30 天预算恢复。该请求加权平均也不能证明每个 region（区域）或用户群体体验相同。
+>
+> 分母必须保持稳定，不能因为没有返回、超时或慢响应而把请求剔除。这个简单事件比率只适用于该定义和 30 天窗口。另设 job 完成时间 SLI 时，要定义接受后多久必须完成，并按统计窗口截止时的状态计算。例如约定 2 分钟 deadline，则只将本窗口中已接受至少 2 分钟的成熟任务纳入分母；成熟任务只有在自己的 deadline 前已持久化为 `succeeded` 才算好事件，否则算坏事件，包括截止时仍为 `queued`、`running` 或 `cancelled`，以及迟到才成功的任务。新近接受、尚未到期的任务暂不计入，也要单列 oldest pending age。统计应冻结窗口截止状态，不能用事后现在已完成的状态改写当时是否逾期。以 12:00 结束的窗口为例，11:57:00 接受的任务若到 11:59:01 才完成，已超 2 分钟 deadline，应计坏事件；11:59:30 才接受的任务在 12:00 仍未到期，不进分母。这样不能只对已完成样本计算，也不会把尚有时间完成的任务提前算失败。
+
+SLO 告警可以要求至少 100 个符合条件的请求的滚动 10 分钟窗口中好事件比例低于 99%，且持续 5 分钟才触发。该数字只是说明一次告警条件的组成；实际阈值要按服务流量、目标与噪声调校。告警信息带上分子、分母、窗口、路由/区域和指标/追踪查询链接。HTTP 成功与时延度量交付；若报表含模型生成内容，任务质量需另用独立评估，用户反馈样本可能偏向主动评分者。见[LLM 任务评估方法](../../ai-engineering/evaluation/llm-evaluation-methods.md)和[生产反馈信号](../../ai-engineering/systems/ai-production-observability-and-feedback.md)。
+
+### 让遥测可诊断，但不泄露报表内容
+
+指标使用低 cardinality（基数）的维度，如 route template（路由模板）、响应类别、区域和依赖名；不要把 request ID、trace ID、用户/tenant ID、原始 URL、报表标题、提示词或返回内容放进每条指标。每种维度组合可能新增一条 time series（时间序列），任意 ID 会使序列数快速增长并增加聚合成本。
+
+请求 ID 与追踪 ID 可放在各自日志/追踪记录中用于关联，但仍是敏感链接数据：限制访问和保留期；不记录 access token（访问令牌）、cookie、授权 header（请求头）或原始用户内容。优先记录有界分类，如授权结果=allow/deny、数据库错误=timeout、任务状态=succeeded/failed，并验证这些值实际有助于诊断。跨租户授权错误还需要适当的安全审计；不要把每个 tenant ID 作为指标标签暴露。
+
+### 按证据缓解并确认恢复
+
+告警触发后按固定证据顺序推进：
+
+1. **确认影响范围。** 检查事件数、好事件比例、5xx/超时、路由/区域和新镜像摘要。确认遥测还在到达，分母仍按原 SLI 计算。
+2. **定位阶段。** 比较入口、数据库、队列、worker 与对象存储的延迟、错误和饱和度；挑选受影响的追踪，再用标识查相关日志。异步任务要同时看最老消息年龄、队列深度、未确认消息数和死信队列；见[发布确认与消费者 ACK](#14.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
+3. **按证据降低用户影响。** 若指标窗口显示新摘要的 canary 超出当前错误率或时延发布门槛，应停止增加该摘要流量；前述 900/720/600 ms trace 用于定位到连接池等待，而不是单独作为停放量依据。若连接池等待接近容量边界，可限制该版本的读流量并先恢复数据库连接余量。只有旧版本满足当前安全不变量时才能回到旧摘要；若旧版本含同一跨租户缺陷，则隔离受影响入口或前向修复，不能盲目回滚。
+4. **验证短期恢复。** 在随后滚动 10 分钟窗口取得至少 100 个符合条件的请求后，确认好事件率达到已设的短期放量恢复门槛（本例为至少 99%），同时检查连接池等待、队列最老消息年龄及代表性 job 是否恢复；再经同一已装配入口验证 tenant-a 得到 200/预期数据、tenant-b 得到 404，才继续放量。不能只以“当前没有触发低于 99% 的告警”判断恢复，因为更低的比例也可能尚未持续 5 分钟。长期 30 天错误预算继续单独跟踪。安静的告警、绿色探针或 queue 收到 ACK 都不等同于 report 42 已按权限返回。
+5. **记录改进。** 记下用户影响时间窗、因果机制、缓解动作、关联测试和遥测缺口，以及负责修复的具体改动。
+
+> [!info]- 来源
+> - OpenTelemetry [Signals](https://opentelemetry.io/docs/concepts/signals/)、[Traces](https://opentelemetry.io/docs/concepts/signals/traces/)、[Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/)、[Logs](https://opentelemetry.io/docs/concepts/signals/logs/) 与[Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/)，checked 2026-11-06：信号的用途、trace/span 与上下文跨服务传播；cardinality 和隐私边界按本文的 report 例子应用。
+> - Google SRE Workbook, [Chapter 2: Implementing SLOs](https://sre.google/workbook/implementing-slos/)，checked 2026-11-06：为用户结果定义事件 SLI、时间窗、错误预算和迭代规则。本文的 30 天、400 ms、99.5% 数值是合成示例，不是该来源建议的统一目标。
 ## 32. 怎样根据输入约束和访问模式选择算法？
 
 报表请求已从数据库得到 acct-17 的 report 42 事件页：1,024 条，按 (occurred_at, event_id) 升序排列。接口要定位游标、显示分类树、缓存最近查看的页面，并按事件描述处理 Unicode（统一码）文本。选算法前先写明输入保证、要执行的操作和结果约束；只有这样才能证明候选范围可以丢弃，并估计成本。

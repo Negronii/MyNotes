@@ -6,7 +6,7 @@
 
 - [两个请求争夺最后一件库存时，怎样保证只预留一次？](databases/database-fundamentals.md)——建议先读，从库存约束走到事务提交。
 - [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)——沿请求标识确认结果并安全重试。
-- [哪一段导致 API 未达到服务目标？](reliability/observability-slos-and-incident-response.md)——先用指标、追踪和日志定位环节，再决定改哪里。
+- [怎样从报表服务信号定位发布后的故障？](reliability/observability-slos-and-incident-response.md)——先用指标、追踪和日志定位环节，再决定改哪里。
 
 ## Reading order / 阅读顺序
 
@@ -28,7 +28,7 @@
 
 - [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
 - [怎样设计一个可持久查询的账户报表？](architecture/system-design-fundamentals.md)
-- [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](reliability/queue-delivery-and-acknowledgement.md)
+- [报表任务的发布确认、消费者确认与业务完成各证明什么？](reliability/queue-delivery-and-acknowledgement.md)
 - [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 
 ### 运行时如何承接与限制工作
@@ -45,13 +45,13 @@
 
 ### 从回归证据到部署与事故诊断
 
-- [How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？](architecture/reading-debugging-and-reviewing-code.md)
-- [How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？](testing/software-testing-strategy.md)
-- [How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？](version-control/git-essentials.md)
-- [How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？](infrastructure/docker-operations.md)
-- [How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？](infrastructure/production-application-runtime.md)
-- [How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？](infrastructure/application-deployment-and-ci-cd.md)
-- [How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？](reliability/observability-slos-and-incident-response.md)
+- [怎样用最小反例定位报表授权回归？](architecture/reading-debugging-and-reviewing-code.md)
+- [怎样用测试边界验证一次报表服务改动？](testing/software-testing-strategy.md)
+- [Git 怎样把通过验收的报表改动变成可追溯提交？](version-control/git-essentials.md)
+- [Docker 如何把报表服务的源码构建成可运行镜像？](infrastructure/docker-operations.md)
+- [报表 API 与异步 worker 应由什么运行时承接？](infrastructure/production-application-runtime.md)
+- [如何晋级并回滚已验证的报表服务产物？](infrastructure/application-deployment-and-ci-cd.md)
+- [怎样从报表服务信号定位发布后的故障？](reliability/observability-slos-and-incident-response.md)
 
 ### 数据访问的操作量与硬件成本
 

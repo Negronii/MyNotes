@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=f2be01e5c17b1a41041fe941c684516a48aadfb00bd8ad26dbecf7f2afe4bffe -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=a5a0b8ac43944715c1cfbfaf87f540581e45fcab7e839ae18808ef3818ebf8d6 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -112,7 +112,7 @@
 - [ ] 96. [怎样缓存数据库读取并说明陈旧窗口？](../engineering-foundations/backend/caching-and-redis.md)
 - [ ] 97. [请求超时后如何确认结果并安全重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)
 - [ ] 98. [怎样设计一个可持久查询的账户报表？](../engineering-foundations/architecture/system-design-fundamentals.md)
-- [ ] 99. [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)
+- [ ] 99. [报表任务的发布确认、消费者确认与业务完成各证明什么？](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)
 - [ ] 100. [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](../engineering-foundations/networking/real-time-web-updates.md)
 - [ ] 101. [何时选线程、进程或异步 I/O？](../engineering-foundations/operating-systems/processes-threads-and-concurrency.md)
 - [ ] 102. [Node.js 如何在事件循环、工作线程与进程之间调度工作？](../engineering-foundations/backend/node-js-fundamentals.md)
@@ -123,13 +123,13 @@
 - [ ] 107. [异步 FastAPI 接口为什么仍会阻塞？](../engineering-foundations/backend/python-async-and-fastapi.md)
 - [ ] 108. [如何估算并限制异步工作管线？](../engineering-foundations/reliability/api-capacity-and-backpressure.md)
 - [ ] 109. [Web 服务如何限制拒绝服务的影响？](../engineering-foundations/security/web-availability-and-ddos.md)
-- [ ] 110. [How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)
-- [ ] 111. [How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？](../engineering-foundations/testing/software-testing-strategy.md)
-- [ ] 112. [How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？](../engineering-foundations/version-control/git-essentials.md)
-- [ ] 113. [How do images, containers, volumes, and networks determine state and connectivity? / 镜像、容器、卷和网络如何决定状态留存与服务连通？](../engineering-foundations/infrastructure/docker-operations.md)
-- [ ] 114. [How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？](../engineering-foundations/infrastructure/production-application-runtime.md)
-- [ ] 115. [How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)
-- [ ] 116. [How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？](../engineering-foundations/reliability/observability-slos-and-incident-response.md)
+- [ ] 110. [怎样用最小反例定位报表授权回归？](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)
+- [ ] 111. [怎样用测试边界验证一次报表服务改动？](../engineering-foundations/testing/software-testing-strategy.md)
+- [ ] 112. [Git 怎样把通过验收的报表改动变成可追溯提交？](../engineering-foundations/version-control/git-essentials.md)
+- [ ] 113. [Docker 如何把报表服务的源码构建成可运行镜像？](../engineering-foundations/infrastructure/docker-operations.md)
+- [ ] 114. [报表 API 与异步 worker 应由什么运行时承接？](../engineering-foundations/infrastructure/production-application-runtime.md)
+- [ ] 115. [如何晋级并回滚已验证的报表服务产物？](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)
+- [ ] 116. [怎样从报表服务信号定位发布后的故障？](../engineering-foundations/reliability/observability-slos-and-incident-response.md)
 - [ ] 117. [怎样根据输入约束和访问模式选择算法？](../engineering-foundations/algorithms/algorithms-and-complexity.md)
 - [ ] 118. [数据结构如何匹配访问方式，复杂度界何时成立？](../engineering-foundations/algorithms/core-data-structures.md)
 - [ ] 119. [队列和栈怎样表示待处理工作？](../engineering-foundations/algorithms/queue-and-stack-representations.md)

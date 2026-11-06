@@ -1,70 +1,56 @@
-# How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？
+# 怎样从报表服务信号定位发布后的故障？
 
-**Core model / 核心模型:** Start from the outcome users need, measure it with a clear service-level indicator, and use correlated metrics, traces, and logs to find which stage is failing. Metrics show the aggregate shape; a trace follows one request across stages; logs explain specific events. / 从用户需要的结果开始，用明确定义的服务等级指标衡量它，再用相互关联的指标、追踪和日志定位故障阶段。指标显示整体趋势，追踪串起单个请求的各阶段，日志说明具体事件。
-
-**Key terms / 关键术语:** service-level indicator (SLI) / 服务等级指标；service-level objective (SLO) / 服务等级目标；service-level agreement (SLA) / 服务等级协议；error budget / 错误预算；trace / 分布式追踪；span / 跨度；cardinality / 基数。
-
-**Core answer / 核心回答：** SLI 是符合资格的用户请求中“好事件 / 总事件”的实测比例；SLO 是该比例在指定时间窗内应达到的目标；SLA 是对外业务协议，可能规定计量方式和未达标后果。例：30 天内 10,000 次有效请求中，9,940 次在 400 ms 内成功，SLI 为 99.4%；若 SLO 为 99.5%，错误预算是 `(1 − 99.5%) × 10,000 = 50` 次坏事件，实际 60 次即超出 10 次。告警后先确认用户影响和分母，再沿 trace 定位慢/失败阶段并查关联日志；根据证据缓解，以用户 SLI 和依赖信号验证恢复，并记录原因与后续改进。
+report-api 的新镜像已经通过测试并开始逐步接收真实流量。若用户看到 5xx、report 42 变慢或导出任务迟迟未完成，先用聚合指标确定影响范围，再沿一个 request/job trace（请求或任务的分布式追踪）找出耗时或失败阶段，最后用关联日志核实该阶段做了什么。指标、追踪和日志各自回答不同问题；一个健康进程或没有告警都不能单独证明用户结果正确。
 
 ~~~mermaid
-flowchart LR
-    Metrics[Metric shows user-impact window and scope] --> Trace[Representative trace locates slow or failed stage]
-    Trace --> Logs[Correlated logs explain that event]
-    Logs --> Mitigate[Choose evidence-based mitigation]
-    Mitigate --> Verify[Verify user SLI and dependency recovery]
-    Verify --> Learn[Record cause and follow-up]
+flowchart TD
+    D[发布新的镜像 digest] --> M[指标显示错误/延迟窗口与范围]
+    M --> T[代表性 trace 找到慢或失败阶段]
+    T --> L[关联日志解释该事件]
+    L --> A[选有证据的最小缓解]
+    A --> V[核对用户 SLI 与依赖恢复]
+    V --> P[记录原因、修复与检测缺口]
 ~~~
 
-## Follow one request through three signals / 用三种信号跟踪一个请求
+图把已发布构建连接到事故诊断：观测要能够区分“新镜像引入变化”与数据库、队列、对象存储等依赖故障。trace context（追踪上下文）与跨异步边界传播方式由 OpenTelemetry 的上下文传播机制说明；用户 SLO（服务等级目标）的目标和预算由[测试验收与发布流程](../infrastructure/application-deployment-and-ci-cd.md)使用。
 
-Consider a generic catalog lookup: `client → API edge → catalog service → cache/database → response`. Instrument the boundaries that make up this user action. Propagate trace context across service calls so spans from the edge, service, and database client can be assembled into one trace. A span is one timed operation; parent-child spans show which sub-operation took time. Context propagation connects spans across process and network boundaries. [OpenTelemetry: traces](https://opentelemetry.io/docs/concepts/signals/traces/) and [context propagation](https://opentelemetry.io/docs/concepts/context-propagation/).
+## 从一个用户请求关联三种信号
 
-| Signal / 信号 | What it answers / 回答的问题 | Example for the lookup / 查询示例 |
+对 GET /api/reports/42 记录稳定的路由模板、响应类别、区域和依赖名称。传递追踪上下文后，可以把入口、API、数据库访问与对象存储调用组合成一个 trace（分布式追踪）。一个 span（操作区间）有开始时间、结束时间和状态；日志关联时同时记录 trace ID 与 span ID，便于回到具体请求和子操作。父子关系显示某个步骤消耗了多少时间，但并行或嵌套 span 的持续时长可能重叠，不能简单相加为总耗时。对异步导出，可在消息属性中传播可用的追踪上下文，同时保留 job ID 作为业务关联键。trace ID/job ID 是单次操作信息，不要将它们作为每条 metric（指标）的维度。
+
+| 信号 | 它回答的问题 | 报表服务示例 |
 |---|---|---|
-| **Metrics / 指标** | Is the service broadly healthy, and when did behavior change? | Count eligible requests and failures; measure end-to-end duration, dependency duration, in-flight work, and resource saturation over time. Metrics aggregate measurements, so they are efficient for trends and alerts. |
-| **Traces / 追踪** | Which stage made this particular request slow or unsuccessful? | One trace contains a root request span and child spans for cache and database work. Compare their durations and statuses to see where time accumulated. |
-| **Logs / 日志** | What event or decision happened at that stage? | A structured record such as `cache_lookup=miss` or `database_timeout` adds event detail. Include the active `trace_id` and `span_id` when available so the record can be found from the trace. |
+| Metrics（指标） | 整体是否变差，何时、哪类请求受影响？ | report 路由的有效请求数、坏事件率、延迟分位数、数据库连接等待、任务最老年龄 |
+| Traces（追踪） | 这个请求/任务在哪个阶段变慢或失败？ | API 请求的操作区间包含授权查询和报表读取；异步任务的追踪延伸到队列、worker、数据库和对象上传 |
+| Logs（日志） | 该阶段具体记录了哪个结果或错误？ | 同一追踪 ID 的结构化事件记录查询超时、状态转换失败或对象写入错误 |
 
-Start with the metric to find the affected time window, route, and outcome. Then inspect a representative slow or failed trace and follow its child spans. Use the trace and span identifiers to find detailed log events from the same request. For example, an edge metric may show that catalog lookups are slow, a trace may show most of one request's 700 ms elapsed in the database span, and a correlated log may show that the connection pool waited before timing out. The metric establishes scope, the trace locates the stage, and the log gives event detail. [OpenTelemetry: signals](https://opentelemetry.io/docs/concepts/signals/) describes the three signal types; its [logs guide](https://opentelemetry.io/docs/concepts/signals/logs/) describes correlating logs with active traces and spans.
+调查正在放量的新镜像时，先从该 canary（小流量版本）的指标窗口筛选受影响路由和结果，再找代表性慢请求。例：一次读取耗时 900 ms，其中授权/报表查询 span 占 720 ms，关联日志显示查询前先等连接池 600 ms。指标把影响连到当前摘要和时间窗；trace 说明慢在查询阶段；日志显示主要等待来自连接池。若该摘要对应的指标窗口达到停止放量门槛，就暂停增加流量并核对连接池与下游数据库信号；这条 trace 用于定位慢在哪一阶段，尚不足以单独触发停发或归因给查询计划。若 trace 被采样，缺少样本不证明没有请求或故障；检查采样率、遥测新鲜度和覆盖后再判断。
 
-Signals have different coverage. Metrics can remain useful when traces are sampled, but a missing trace is not proof that no request or failure occurred. Check telemetry freshness and instrumentation coverage before treating silence as recovery.
+> [!example] 用 report 42 的 SLI 核对用户影响
+> 设定 30 天的 service level indicator（服务等级指标，SLI）：在可信身份边界已确认主体、且 report ID 格式有效后进入 API 的 report read 请求为分母；之后超时、5xx 或没有响应仍留在分母。身份提供方在主体确认前发生的失败另用入口认证指标衡量，不能因为 API 内部授权组件返回成功才决定是否计入。好事件是服务在 400 ms 内按业务契约给出预期结果：tenant-a 有权读取 report 42，必须返回 200 和预期报表；tenant-b 无权读同一资源，按本例契约返回 404。tenant-a 得到 404 即使状态码“看起来可接受”也算坏事件。这个 SLI 衡量 API 边界的可用性和时延，不包含用户设备或服务回复后的网络，也不单独证明返回数据的租户归属正确；后者仍需授权回归测试和独立审计。
+>
+> 若 10,000 次符合条件的请求中 9,940 次为好事件，则 SLI 是 9,940 ÷ 10,000 = 99.4%。若 service level objective（服务等级目标，SLO）为 99.5%，坏事件预算为 (1 − 0.995) × 10,000 = 50 次；实有 60 次坏事件，超预算 10 次。单位是此 30 天窗口中的请求数，不是百分比或毫秒。SLI 是测量结果，SLO 是内部目标；service level agreement（服务等级协议，SLA）则是对外承诺，可能规定服务额度或违约后果，不能只把内部阈值改名为 SLA。这项 30 天 SLO 用于看长期错误预算；放量决策另看接下来数分钟的 canary 结果，不必等待 30 天预算恢复。该请求加权平均也不能证明每个 region（区域）或用户群体体验相同。
+>
+> 分母必须保持稳定，不能因为没有返回、超时或慢响应而把请求剔除。这个简单事件比率只适用于该定义和 30 天窗口。另设 job 完成时间 SLI 时，要定义接受后多久必须完成，并按统计窗口截止时的状态计算。例如约定 2 分钟 deadline，则只将本窗口中已接受至少 2 分钟的成熟任务纳入分母；成熟任务只有在自己的 deadline 前已持久化为 `succeeded` 才算好事件，否则算坏事件，包括截止时仍为 `queued`、`running` 或 `cancelled`，以及迟到才成功的任务。新近接受、尚未到期的任务暂不计入，也要单列 oldest pending age。统计应冻结窗口截止状态，不能用事后现在已完成的状态改写当时是否逾期。以 12:00 结束的窗口为例，11:57:00 接受的任务若到 11:59:01 才完成，已超 2 分钟 deadline，应计坏事件；11:59:30 才接受的任务在 12:00 仍未到期，不进分母。这样不能只对已完成样本计算，也不会把尚有时间完成的任务提前算失败。
 
-## Keep telemetry safe and bounded / 让遥测信息安全且有界
+SLO 告警可以要求至少 100 个符合条件的请求的滚动 10 分钟窗口中好事件比例低于 99%，且持续 5 分钟才触发。该数字只是说明一次告警条件的组成；实际阈值要按服务流量、目标与噪声调校。告警信息带上分子、分母、窗口、路由/区域和指标/追踪查询链接。HTTP 成功与时延度量交付；若报表含模型生成内容，任务质量需另用独立评估，用户反馈样本可能偏向主动评分者。见[LLM 任务评估方法](../../ai-engineering/evaluation/llm-evaluation-methods.md)和[生产反馈信号](../../ai-engineering/systems/ai-production-observability-and-feedback.md)。
 
-Use stable, low-cardinality metric dimensions such as route template (`/catalog/{itemId}`), response class, region, and dependency. Do not attach `request_id`, `trace_id`, user or tenant IDs, raw URL paths, search terms, prompts, or other per-request values to metric measurements. Every distinct dimension combination can create another time series and increase aggregation cost; OpenTelemetry's metrics guide warns that user IDs and raw paths can cause unbounded cardinality. [OpenTelemetry: metrics and cardinality limits](https://opentelemetry.io/docs/concepts/signals/metrics/).
+## 让遥测可诊断，但不泄露报表内容
 
-Request and trace identifiers are useful correlation fields in logs and traces, where each record is already about an individual event or operation. Treat them as sensitive linkage data: restrict access and retention, and never log credentials, authorization headers, cookies, or raw user content just to make a failure searchable. Prefer stable route names and bounded result categories; redact or omit fields that are not needed to diagnose the service.
+指标使用低 cardinality（基数）的维度，如 route template（路由模板）、响应类别、区域和依赖名；不要把 request ID、trace ID、用户/tenant ID、原始 URL、报表标题、提示词或返回内容放进每条指标。每种维度组合可能新增一条 time series（时间序列），任意 ID 会使序列数快速增长并增加聚合成本。
 
-## Define a user outcome and its budget / 定义用户结果与预算
+请求 ID 与追踪 ID 可放在各自日志/追踪记录中用于关联，但仍是敏感链接数据：限制访问和保留期；不记录 access token（访问令牌）、cookie、授权 header（请求头）或原始用户内容。优先记录有界分类，如授权结果=allow/deny、数据库错误=timeout、任务状态=succeeded/failed，并验证这些值实际有助于诊断。跨租户授权错误还需要适当的安全审计；不要把每个 tenant ID 作为指标标签暴露。
 
-An **SLI** is a measured indicator of a service outcome, commonly a ratio of good events to eligible events. An **SLO** is the target for that indicator over a stated period. An **SLA** is an external business agreement that can specify measurement rules and consequences if commitments are missed; an internal SLO is not automatically an SLA. [Google SRE Workbook: Implementing SLOs](https://sre.google/workbook/implementing-slos/) defines event-based SLIs, explains error budgets, and distinguishes an SLA as a business contract.
+## 按证据缓解并确认恢复
 
-**Synthetic example / 合成示例.** Suppose a catalog lookup service chooses the following request-based SLI over a rolling 30-day window:
+告警触发后按固定证据顺序推进：
 
-- **Eligible events:** every authenticated, syntactically valid catalog lookup accepted at the public API edge. Exclude synthetic health checks. Keep service errors, timeouts, and requests with no completed response in the denominator.
-- **Good event:** the edge completes a successful response in at most 400 ms from acceptance.
-- **SLI:** good eligible events ÷ all eligible events.
-- **SLO:** at least 99.5% of eligible events are good in the rolling 30-day window.
+1. **确认影响范围。** 检查事件数、好事件比例、5xx/超时、路由/区域和新镜像摘要。确认遥测还在到达，分母仍按原 SLI 计算。
+2. **定位阶段。** 比较入口、数据库、队列、worker 与对象存储的延迟、错误和饱和度；挑选受影响的追踪，再用标识查相关日志。异步任务要同时看最老消息年龄、队列深度、未确认消息数和死信队列；见[发布确认与消费者 ACK](queue-delivery-and-acknowledgement.md)。
+3. **按证据降低用户影响。** 若指标窗口显示新摘要的 canary 超出当前错误率或时延发布门槛，应停止增加该摘要流量；前述 900/720/600 ms trace 用于定位到连接池等待，而不是单独作为停放量依据。若连接池等待接近容量边界，可限制该版本的读流量并先恢复数据库连接余量。只有旧版本满足当前安全不变量时才能回到旧摘要；若旧版本含同一跨租户缺陷，则隔离受影响入口或前向修复，不能盲目回滚。
+4. **验证短期恢复。** 在随后滚动 10 分钟窗口取得至少 100 个符合条件的请求后，确认好事件率达到已设的短期放量恢复门槛（本例为至少 99%），同时检查连接池等待、队列最老消息年龄及代表性 job 是否恢复；再经同一已装配入口验证 tenant-a 得到 200/预期数据、tenant-b 得到 404，才继续放量。不能只以“当前没有触发低于 99% 的告警”判断恢复，因为更低的比例也可能尚未持续 5 分钟。长期 30 天错误预算继续单独跟踪。安静的告警、绿色探针或 queue 收到 ACK 都不等同于 report 42 已按权限返回。
+5. **记录改进。** 记下用户影响时间窗、因果机制、缓解动作、关联测试和遥测缺口，以及负责修复的具体改动。
 
-If the window contains 10,000 eligible lookups and 9,940 are good, the SLI is `9,940 ÷ 10,000 = 99.4%`. The error budget is `1 − 0.995 = 0.5%`, or `10,000 × 0.005 = 50` bad events for this traffic volume. The 60 bad events observed exceed that budget by 10. This event-based calculation weights each request equally; it does not prove every region or user group had the same experience. The chosen edge measurement also does not include the user's device or network after the edge completes its response. Google SRE recommends specifying both the user outcome and how it is measured, because measurement boundaries change what failures are visible.
-
-The SLI must keep its denominator and eligibility rules stable: dropping timeouts or slow successes would make the number look better while excluding users who did not receive a timely result. Report request volume with the ratio, and inspect meaningful low-cardinality slices such as region or route when an overall number hides a localized failure.
-
-## Alert, investigate, mitigate, and learn / 告警、调查、缓解与复盘
-
-For the example SLO, a focused alert could fire when at least 100 eligible lookups occur in a rolling 10-minute window, fewer than 99% are good, and that condition persists for 5 minutes. A minimum event count reduces noise from tiny samples. The alert should carry the SLI numerator, denominator, time window, affected route/region, and links to the relevant metric and trace views. Page when this user-outcome condition holds; internal component signals help explain the cause.
-
-When it fires:
-
-1. **Confirm impact and scope.** Check event counts, SLI trend, error types, route/region, and recent changes. Make sure telemetry is arriving and the denominator still matches the SLI definition.
-2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age and depth as part of [capacity and backpressure](api-capacity-and-backpressure.md). [Broker delivery](queue-delivery-and-acknowledgement.md) explains the acknowledgement boundary.
-3. **Mitigate the user impact.** Choose the smallest safe action supported by evidence, such as rolling back a change that matches the onset or temporarily reducing load on a saturated dependency. Record the action and its expected effect; do not add retries blindly if they can amplify overload.
-4. **Verify recovery.** Confirm that the user-facing SLI returns above the alert threshold with adequate traffic, and check the affected stage and dependency signals for continuing saturation or error growth. A quiet alert alone is not evidence that the service recovered.
-5. **Follow up.** Record the user impact and time window, the causal mechanism, the mitigation, and a small set of owned changes to prevent recurrence or improve detection. Link the incident to relevant tests and telemetry gaps.
-
-Use the SLO to guide tradeoffs. For AI-backed flows, pair [production signals](../../ai-engineering/systems/ai-production-observability-and-feedback.md) with task-quality measures from [LLM evaluation](../../ai-engineering/evaluation/llm-evaluation-methods.md). HTTP success and latency describe delivery. Task evaluation establishes whether generated answers are useful or correct.
-
-## Sources / 来源
-
-- OpenTelemetry's unversioned concept pages, checked 2026-10-15: [Signals](https://opentelemetry.io/docs/concepts/signals/) (last modified 2026-03-10), [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) (2026-04-23), [Traces](https://opentelemetry.io/docs/concepts/signals/traces/) (2026-01-14), [Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/) (2026-07-02), [Logs](https://opentelemetry.io/docs/concepts/signals/logs/) (2026-08-07), and [Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/) (2026-08-10).
-- [Google SRE Workbook, Chapter 2: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15.
+> [!info]- 来源
+> - OpenTelemetry [Signals](https://opentelemetry.io/docs/concepts/signals/)、[Traces](https://opentelemetry.io/docs/concepts/signals/traces/)、[Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/)、[Logs](https://opentelemetry.io/docs/concepts/signals/logs/) 与[Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/)，checked 2026-11-06：信号的用途、trace/span 与上下文跨服务传播；cardinality 和隐私边界按本文的 report 例子应用。
+> - Google SRE Workbook, [Chapter 2: Implementing SLOs](https://sre.google/workbook/implementing-slos/)，checked 2026-11-06：为用户结果定义事件 SLI、时间窗、错误预算和迭代规则。本文的 30 天、400 ms、99.5% 数值是合成示例，不是该来源建议的统一目标。
