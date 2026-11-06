@@ -4,7 +4,7 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 
 ## Organize knowledge
 
-- A knowledge note answers one coherent question. Give the reader a complete answer on the page. Give a follow-up its own page when it can support an independent explanation or be reused in other questions.
+- A chapter answers one question at the scale of a complete mechanism or decision. Keep the steps a reader needs for that answer as sections of the same chapter. Give a mechanism its own chapter when it has an independent question and meaningful use in at least two different contexts. A map entry, glossary mention, or backlink to its parent does not count as a second use.
 - Use the six domain roots as the top-level boundary: `ai-engineering`, `frontend`, `engineering-foundations`, `archive`, `review`, and `maintenance`. Engineering foundations holds shared networking, operating systems, databases, API reliability, security, testing, deployment, backend, and system-design knowledge. Create topic folders when substantive notes need them; authorized, source-backed additions may fill knowledge gaps.
 - Keep this open-source repository to general, reusable knowledge. Exclude personal résumé or project-experience material, internal project, system, code, or organization details, and unpublished results or data.
 - Use English kebab-case filenames without numeric prefixes for new pages. Use subdirectories where they clarify ownership. Domain maps own the complete reading order. The knowledge navigator offers shorter routes through shared questions.
@@ -12,7 +12,7 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 
 ## Write for understanding and reuse
 
-- Put the question in the title and give a short answer first. For a process, explain what enters each step, what changes, why it matters, and what comes out. For a decision, connect the constraints to the choices and their tradeoffs. Keep tables, commands, and worked examples in the form the reader can best use.
+- Put the question in the title and give a short answer first. For a process, follow a concrete input through the transformations and show the relevant intermediate state, such as tensor shapes, protocol messages, or ownership changes. For a decision, connect the constraints to the choices and show how to tell when a choice fails. Use diagrams or runnable examples where they explain a step better than prose.
 - Use bilingual titles, short answers, key terms, and interview answers where included. Detailed derivations, mechanisms, and examples may use whichever language makes them clearest.
 - Preserve useful knowledge and distinctive examples when rewriting, merging, or splitting notes. Remove genuine duplication, but do not delete lasting material only because it is not currently an interview topic.
 - Explain a linked mechanism's role at the point where the reader needs it. Link to the page that owns the detailed answer. Use a section link when it helps the reader find a particular part, and verify the heading in the intended readers.
@@ -22,6 +22,8 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 ## Check factual claims
 
 Model memory is a prompt to investigate, not evidence. For uncertain or consequential claims, check authoritative documentation, papers, or reproducible behavior. Distinguish an error from a version change, a conditional conclusion, and insufficient evidence. Do not describe an unverified claim as confirmed. Record a source, version, and verification date in the note when they matter to a key decision; omit them when they add no value.
+
+When a foundational paper informs current practice, read follow-up research and a current reference implementation. Teach the durable mechanism and the applicable current practice in one account. Keep older methods only where their assumptions explain the current design or help maintain an existing system. Keep study results scoped to the tested task, model, workload, and baseline.
 
 ## Keep maintenance lightweight
 

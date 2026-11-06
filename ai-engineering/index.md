@@ -11,10 +11,6 @@ Follow the model from tokens to generation, then design what the application sup
 ### Foundation models / 基础模型
 
 - [How does a language model turn a prompt into text? / 语言模型怎样把一段 prompt 变成文本？](foundations/how-llms-work.md)
-- [How does a tokenizer map text to token IDs? / 分词器怎样把文本变成 token ID？](foundations/llm-tokenization.md)
-- [How does a Transformer block update a token using context? / Transformer block 怎样利用上下文更新词元表示？](foundations/transformer-context-updates.md)
-- [How does a decoder choose the next token from model scores? / 解码器怎样根据模型分数选出下一个词元？](foundations/next-token-decoding.md)
-- [What does a language model learn to predict during training? / 语言模型训练时学习预测什么？](foundations/language-model-training-objectives.md)
 - [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](foundations/model-selection-and-ecosystem.md)
 
 ### Prompting / 提示工程
@@ -53,6 +49,7 @@ Follow the model from tokens to generation, then design what the application sup
 
 - [How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？](systems/ai-application-architecture.md)
 - [How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？](systems/ai-latency-and-cost-optimization.md)
+- [How do KV cache and scheduling determine LLM serving capacity? / KV 缓存与调度怎样决定模型推理容量？](systems/llm-serving-and-kv-cache.md)
 - [When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？](systems/ai-deployment-patterns.md)
 - [How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
 - [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](systems/ai-system-design-interview-questions.md)

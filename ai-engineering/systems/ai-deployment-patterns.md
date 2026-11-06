@@ -25,4 +25,6 @@ There is no universal spend threshold for switching to self-hosting. Estimate wi
 
 The choice also depends on which model candidates meet the task contract. See [Model Selection and Ecosystem / 模型选择与生态](../foundations/model-selection-and-ecosystem.md) for comparing task quality, modality, deployment constraints, and measured routing. For the run identity and recovery behavior that should remain stable across deployment patterns, see [AI Application Architecture / AI 应用架构](ai-application-architecture.md).
 
+For self-hosting, estimate the peak number and length of active sequences and then measure fit on the intended hardware. [GPU serving capacity / GPU 推理容量](llm-serving-and-kv-cache.md) shows how to size KV memory and compare batching under a latency target.
+
 **Source boundary / 来源边界：** This note summarizes the deployment comparison already present in the AI Application Architecture source. Provider features, terms, prices, capacity, and availability are time- and workload-specific; verify the exact provider or serving stack when making a current deployment decision. It does not make a universal cost or privacy ranking.
