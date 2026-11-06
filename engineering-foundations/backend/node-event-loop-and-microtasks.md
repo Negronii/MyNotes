@@ -5,6 +5,7 @@ Node runs JavaScript callbacks on an event-loop thread while libuv coordinates t
 **Key terms / 关键术语：** event-loop phase / 事件循环阶段；poll / 轮询阶段；microtask / 微任务；process.nextTick / nextTick 队列；CommonJS / CommonJS 模块；ES module / ES 模块；timer threshold / 计时器阈值。
 
 ~~~mermaid
+flowchart TD
     subgraph loop[libuv event-loop phases]
         Timers[Timers] --> Pending[Pending callbacks]
         Pending --> Poll[Poll: I/O]

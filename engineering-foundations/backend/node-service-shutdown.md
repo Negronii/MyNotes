@@ -7,8 +7,9 @@ Graceful shutdown is an application lifecycle, not something the event loop or H
 **Key terms / 关键术语：** readiness / 就绪状态；in-flight work / 在途工作；graceful shutdown / 优雅关闭；deadline / 截止时间；cooperative cancellation / 协作式取消；owned resources / 应用拥有的资源。
 
 ~~~mermaid
+stateDiagram-v2
     [*] --> Ready
-    Ready --> Draining: SIGTERM; mark unready
+    Ready --> Draining: SIGTERM / mark unready
     Draining --> Waiting: stop accepting new connections
     Waiting --> Closed: in-flight work and server close
     Waiting --> Deadline: deadline expires

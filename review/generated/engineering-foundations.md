@@ -1955,6 +1955,7 @@ Node runs JavaScript callbacks on an event-loop thread while libuv coordinates t
 **Key terms / 关键术语：** event-loop phase / 事件循环阶段；poll / 轮询阶段；microtask / 微任务；process.nextTick / nextTick 队列；CommonJS / CommonJS 模块；ES module / ES 模块；timer threshold / 计时器阈值。
 
 ~~~mermaid
+flowchart TD
     subgraph loop[libuv event-loop phases]
         Timers[Timers] --> Pending[Pending callbacks]
         Pending --> Poll[Poll: I/O]
@@ -2062,6 +2063,7 @@ Use queueMicrotask for ordinary portable deferral unless the API depends on next
 **Key terms / 关键术语：** Readable / 可读流；Writable / 可写流；Transform / 转换流；backpressure / 背压；highWaterMark / 暂停阈值；pipeline / 流水线。
 
 ~~~mermaid
+flowchart TD
     Source[Readable source] --> Transform[Transform stages]
     Transform --> Sink[Writable destination]
     Sink -->|write returns false| Pause[Pause the producer]
@@ -2118,8 +2120,9 @@ Graceful shutdown is an application lifecycle, not something the event loop or H
 **Key terms / 关键术语：** readiness / 就绪状态；in-flight work / 在途工作；graceful shutdown / 优雅关闭；deadline / 截止时间；cooperative cancellation / 协作式取消；owned resources / 应用拥有的资源。
 
 ~~~mermaid
+stateDiagram-v2
     [*] --> Ready
-    Ready --> Draining: SIGTERM; mark unready
+    Ready --> Draining: SIGTERM / mark unready
     Draining --> Waiting: stop accepting new connections
     Waiting --> Closed: in-flight work and server close
     Waiting --> Deadline: deadline expires

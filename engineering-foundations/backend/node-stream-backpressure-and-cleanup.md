@@ -7,6 +7,7 @@
 **Key terms / 关键术语：** Readable / 可读流；Writable / 可写流；Transform / 转换流；backpressure / 背压；highWaterMark / 暂停阈值；pipeline / 流水线。
 
 ~~~mermaid
+flowchart TD
     Source[Readable source] --> Transform[Transform stages]
     Transform --> Sink[Writable destination]
     Sink -->|write returns false| Pause[Pause the producer]
