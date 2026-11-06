@@ -1,9 +1,51 @@
-# How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？
+# Web 服务如何限制拒绝服务的影响？
 
-Distributed denial-of-service attacks use traffic or expensive requests to exhaust network, service, or application resources. Mitigation depends on the attack layer and available capacity; no single application control guarantees protection. Use layered edge filtering and provider capacity, rate limits and quotas, caching where it is safe, bounded work, and monitoring. Application code can reject abusive work early, but large traffic floods need network and provider-level capacity as well. / 分布式拒绝服务攻击通过流量或高成本请求耗尽网络、服务或应用资源。缓解措施取决于攻击层级和可用容量，单一应用控制不能保证防护。应组合边缘流量过滤与服务商容量、速率限制和配额、安全场景中的缓存、有界工作及监控。应用代码可以尽早拒绝滥用请求，但大规模流量洪峰还需要网络和服务商层的容量。
+denial of service (DoS，拒绝服务) 通过流量洪峰、连接耗尽或昂贵请求让服务资源不够用；distributed denial-of-service (DDoS，分布式拒绝服务) 指多来源同时发起的攻击。保障要沿请求实际能到达的层次布置：链路入口被塞满时，应用限流代码还没有机会运行；请求已进应用后，按 Internet Protocol address (IP 地址) 限流也不能替代对昂贵工作、并发和排队长度的约束。
 
-**Key terms / 关键术语：** denial of service / 拒绝服务；rate limit / 速率限制；quota / 配额；admission control / 准入控制；bounded work / 有界工作。
+**案例：** 多个来源同时请求报表 42。大量流量可能先占满上游网络；也可能是有效格式的请求通过入口，却反复触发一次昂贵的数据汇总。两种情况下要保护的资源和起作用的位置不同。
 
-**Sources / 来源：** CISA [Understanding and Responding to Distributed Denial-of-Service Attacks](https://www.cisa.gov/sites/default/files/2024-03/understanding-and-responding-to-distributed-denial-of-service-attacks_508c.pdf), checked 2026-11-05, for layered mitigation and rate limitation.
+~~~mermaid
+flowchart LR
+    Attack[分布式或高成本请求] --> Ingress[互联网链路与上游清洗]
+    Ingress --> Edge[边缘缓存 / 网关过滤和早期限制]
+    Edge --> App[按身份、路由成本准入和并发限制]
+    App --> Data[有界数据库、缓存与队列资源]
+    App --> Client[429、503 或服务降级]
+    Ingress --> Signals[异常流量与容量告警]
+    Edge --> Signals
+    App --> Signals
+~~~
 
-**Related notes / 相关笔记：** [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md) explains worker slots, admission, and queue limits; [API timeout and safe retry / API 超时后的结果确认与安全重试](../reliability/api-reliability-and-async-delivery.md) explains how retries can amplify overload.
+## 过载发生在哪一层，就在哪一层减压
+
+| 层次 | 典型故障 | 可以做什么 | 控制的边界 |
+| --- | --- | --- | --- |
+| 上游链路、DNS、网络入口 | 洪峰占满接入带宽，应用请求尚未到达 | 与网络/云服务商预先安排足够入口容量、DDoS 流量清洗、路由和过滤策略；保存应急联系和切换方案 | 仅在服务器里的代码无法清除已经塞满的上游链路 |
+| Content Delivery Network (内容分发网络，CDN)、反向代理、网关 | 边缘连接、TLS、头部解析或无效请求消耗资源 | 限制头部/请求体大小、连接与超时，过滤明显异常流量；只缓存适合共享的公开表示；以低成本规则尽早拒绝 | 边缘按 IP 计数会受共享地址、代理和分布式来源影响；它也不了解所有业务授权 |
+| API 与业务处理 | 有效请求触发昂贵查询，或同一租户占用服务槽位 | 按未认证来源、账户/租户、路由和估算成本组合限流；约束时间范围、查询复杂度、并发和返回量 | 受限额度可能误伤高峰期的合法用户；要让用户范围和服务容量相匹配 |
+| 数据库、缓存、worker、队列 | 连接池耗尽、慢查询堆积、待处理任务无限增长 | 限制并发、队列长度、单任务成本和处理时间；必要时拒绝新工作并保留已接受工作 | 无限扩大队列会把即刻过载改成更迟的内存、存储和恢复过载 |
+| 监控与事件响应 | 攻击特征未及时发现或缓解动作不一致 | 对比平常流量基线、资源指标和请求分布；启动已演练的上游清洗、临时规则、沟通与恢复步骤 | 单次请求日志无法提供链路容量和分布式来源全貌 |
+
+## 速率限制和工作上限怎样一起计算？
+
+rate limit（速率限制）约束某个键在一段时间内可提交多少请求；quota（配额）约束一段周期内可消耗的总量；并发限制约束同一时刻有多少工作在执行。它们处理不同的资源形状。例如读取报表 42 的小缓存只消耗少量资源，已获聚合操作授权的用户提交长时间范围聚合则会占用更多数据库工作。请求格式有效不代表用户有权启动昂贵计算；先检查身份和资源权限，再按路由估算成本计费。每个便宜缓存读取扣 1 个工作点，每个长范围聚合扣 4 点，同一主体的额度因此反映可接受的实际工作量，而不是给昂贵请求更多额度。还要限制时间范围、查询时限和并发槽位。
+
+> [!example] 令牌桶的实际预算
+> 假定一个主体专属的 token bucket（令牌桶）初始有 8 个工作点，每秒补 4 点；先看每个请求都只扣 1 点的情况。20 个请求同时在 `t=0` 到达时，最多先放行 8 个；若排队且没有其他流量，`t=0.25、0.50、0.75、1.00` 各补足 1 点，再各放行一个，至 `t=1.00` 累计上限是 `8 + 4 × 1 = 12` 个，余下 8 个仍待处理。不开队列时，首批 8 个之外的请求会立刻被拒绝，实际放行量可以低于 12。若请求有不同成本，每次从同一桶扣对应点数：4 点的长范围聚合会比 1 点的缓存读取更快耗尽额度。一般在长度为 `T` 的时间内，桶初始满时成本预算不超过 `burst + rate × T`。这是对单个计数键和这组成本的上限计算，不是服务整体容量保证。
+>
+> 如果三个进程各自保存一个相同的本地桶，短窗口预算上限相加可到 36 点；本例的 20 个请求仍最多只能放行 20 个，而且到达顺序、各请求成本及是否排队会影响实际结果。全局额度需要网关集中计数、共享状态或明确分片额度；共享状态提高一致性，却引入可用性和延迟成本。具体方案按部署规模选择。
+
+CDN可以在更靠近用户的边缘节点缓存适合共享的公开内容或执行入口规则；Network Address Translation (网络地址转换，NAT)可能让许多合法用户共享同一个出口 IP。匿名请求发生在身份认证之前，不能只靠账户限流；登录后的请求也不能只靠 IP 限流，而分布式攻击来源又可能跨越许多地址。可以在不同阶段组合 IP/网络特征、账户、租户、路由和成本额度，并为误伤、绕过、状态存储可用性设计补救。反向代理转发的客户端 IP 只有在信任该代理、拒绝外部伪造转发头时才可用于策略。
+
+速率限制是准入政策，不会给出一个“安全的 QPS”。容量章负责在正常负载下估算资源与背压，见[如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md)；本章强调在攻击者可分布请求、上游容量会饱和且不同请求成本悬殊时，应由哪一层拒绝或削减工作。
+
+## 限额触发时如何让客户端和服务一起恢复？
+
+若单个调用方超过合同额度，API 可按其错误契约返回 `429 Too Many Requests`，并选择用 `Retry-After` 建议等待时间；若服务整体暂时不能处理，请求也可能得到 `503 Service Unavailable`。这些状态表达本次 HTTP 请求结果，不会自行清除队列或建立未来重试。客户端应遵守等待时间，并用带抖动的指数退避避免一群用户同时重试；对于有副作用的 POST，还要先按[请求超时后的结果确认与安全重试契约](../reliability/api-reliability-and-async-delivery.md)处理未知结果。
+
+当入口流量超过上游能力时，应用返回 429/503 并不能帮助未到达应用的请求；要让上游服务商启动预案。当应用数据库或 worker 过载时，边缘可先挡掉已知攻击形态，但 API 还要把并发和队列限制在下游可承受范围，不能让短时间增长的队列拖垮健康的请求。限额和降级策略要配合服务目标，也要监控拒绝比例、合法租户成功率、数据库等待和可用容量，才能判断是不是阻断了攻击同时误伤正常读者。
+
+> [!info]- 来源
+> - 分布式流量、IP 欺骗、攻击类别、预防和响应步骤：[CISA、FBI、MS-ISAC, Understanding and Responding to Distributed Denial-of-Service Attacks](https://www.cisa.gov/sites/default/files/2024-03/understanding-and-responding-to-distributed-denial-of-service-attacks_508c.pdf)，2024-03-21，§2–§5；核对于 2026-11-06。
+> - 网络与应用层 DoS、限速以及可消耗资源的应用输入：[OWASP Denial of Service Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html)，Fundamentals、Application Attacks、Network Attacks、Rate Limiting，按 2026-11-06 版本核对。
+> - `429 Too Many Requests` 与可选 `Retry-After`：[IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html)，§4，2012-04；临时过载 `503` 与等待建议字段：[RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§10.2.3、§15.6.4，2022-06。均核对于 2026-11-06。

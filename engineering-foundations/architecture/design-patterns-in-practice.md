@@ -117,4 +117,4 @@ See [DOM Manipulation and Events](../../frontend/browser-apis/dom-manipulation-a
 
 ---
 
-See [how to model an editable component tree](low-code-editor-data-model.md) for a system-design example and [how roles control feature access](../security/web-security-and-authentication.md#Roles%20grant%20an%20action%20within%20a%20resource%20scope%20/%20%E8%A7%92%E8%89%B2%E5%9C%A8%E8%B5%84%E6%BA%90%E8%8C%83%E5%9B%B4%E5%86%85%E6%8E%88%E4%BA%88%E6%93%8D%E4%BD%9C) for a distinct authorization decision.
+See [how to model an editable component tree](low-code-editor-data-model.md) for a system-design example and [how roles control feature access](../security/web-security-and-authentication.md#%E8%A7%92%E8%89%B2%E8%83%BD%E6%8E%88%E4%BA%88%E4%BB%80%E4%B9%88%E5%8A%A8%E4%BD%9C%EF%BC%8C%E8%B5%84%E6%BA%90%E6%A3%80%E6%9F%A5%E8%BF%98%E8%A6%81%E5%81%9A%E4%BB%80%E4%B9%88%EF%BC%9F) for a distinct authorization decision.

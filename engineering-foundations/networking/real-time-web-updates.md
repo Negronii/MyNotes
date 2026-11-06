@@ -1,134 +1,217 @@
-# When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？
+# 何时选择轮询、SSE、流式 Fetch 或 WebSocket？
 
-**Core answer / 核心回答：** Choose by message direction, request shape, connection lifetime, and recovery contract. Polling is a series of ordinary HTTP requests; SSE/EventSource provides one-way server events over GET; Fetch streams allow a custom method, headers, body, and cancellation but leave parsing and reconnection to the application; WebSocket supports bidirectional messages and leaves reconnect/replay rules to the application. A reconnect is not recovery unless the server can replay from a retained cursor or the client can query authoritative state. / 根据消息方向、请求形状、连接生命周期和恢复契约选择方式。轮询是一系列普通 HTTP 请求；SSE/EventSource 通过 GET 单向发送服务端事件；Fetch 流允许自定义方法、请求头、请求体和取消信号，但解析和重连由应用负责；WebSocket 支持双向消息，重连和重放规则也由应用定义。若服务端不能按保留游标重放，或客户端不能查询权威状态，重新连接本身不等于恢复。
-## WebSocket handshake and bidirectional messages / WebSocket 握手与双向消息
-
-传统浏览器WebSocket使用HTTP/1.1 Upgrade握手：客户端发送Upgrade相关字段，服务器接受后以101 Switching Protocols切换协议；之后双方可在同一TCP连接上主动发送帧，而不再是普通HTTP请求/响应。WebSocket还有跨HTTP/2、HTTP/3的扩展连接方式，分别通过Extended CONNECT和HTTP/3的对应机制承载，因此不应把所有WebSocket描述为HTTP/1.1的TCP升级。[RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)、[RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html)、[RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html)。
-
-WebSocket握手不是用CORS响应字段授权的Fetch请求。浏览器会带上Origin，服务器应按应用策略验证来源并认证连接；浏览器WebSocket构造器接受URL和可选子协议，不提供任意请求头参数。适用的Cookie可能参与握手，仍受Cookie规则约束。[MDN WebSocket构造器](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket)。
-
-Node.js 可用第三方 `ws` 库提供服务，浏览器使用内置 WebSocket API。示例向除发送者之外的已连接客户端广播，保留文本或二进制消息类型，并在连接关闭时清理集合。 [`ws` 广播示例](https://github.com/websockets/ws#server-broadcast)
-
-~~~javascript
-const { WebSocketServer, WebSocket } = require('ws');
-const server = new WebSocketServer({ port: 3000 });
-const clients = new Set();
-
-server.on('connection', (socket) => {
-  clients.add(socket);
-
-  socket.on('message', (data, isBinary) => {
-    for (const client of clients) {
-      if (client !== socket && client.readyState === WebSocket.OPEN) {
-        client.send(data, { binary: isBinary });
-      }
-    }
-  });
-
-  socket.on('close', () => clients.delete(socket));
-});
-~~~
-
-浏览器端：
-
-~~~javascript
-const socket = new WebSocket('ws://localhost:3000');
-
-socket.addEventListener('open', () => socket.send('Hello'));
-socket.addEventListener('message', (event) => console.log('Received:', event.data));
-socket.addEventListener('close', () => console.log('Disconnected'));
-~~~
-
-HTTP持久连接（keep-alive）可以在多个HTTP请求/响应间重用连接，但服务器仍需等待请求，不能在没有请求时任意推送HTTP响应。WebSocket提供双方都可发消息的通道；[ws项目文档](https://github.com/websockets/ws)是Node.js服务端实现示例。轮询、SSE和流式Fetch各自使用HTTP请求/响应，适用的方向与恢复能力见下表。
-
-**Key terms / 关键术语：** polling / 轮询；Server-sent Events (SSE) / 服务端事件；EventSource / EventSource 接口；Fetch response stream / Fetch 响应流；WebSocket / WebSocket；replay cursor / 重放游标。
+报表查看者已请求刷新报表 42，接下来要决定怎样收取进度。选择取决于消息方向、请求形状、连接生命周期和恢复要求：轮询重复发普通 HTTP 请求；Server-sent Events (SSE，服务端事件) 用一个 HTTP 响应单向发送事件；流式 Fetch 让应用控制请求与读流；WebSocket 让连接两端主动发消息。重连只恢复连接，不保证所有事件都被应用处理；恢复需要服务端保留日志并接受游标，或客户端重新读取权威状态。
 
 ~~~mermaid
 flowchart TD
-    Direction{Which update direction?}
-    Direction -->|occasional or client-controlled| Poll[Polling or long polling]
-    Direction -->|server to client only| RequestShape{Need custom method, headers, or body?}
-    RequestShape -->|no; GET and simple contract| SSE[SSE with EventSource]
-    RequestShape -->|yes| Fetch[Fetch response stream]
-    Direction -->|both directions| WS[WebSocket]
-    Poll --> Resume[Define cursor, status lookup, or replay]
-    SSE --> Resume
-    Fetch --> Resume
-    WS --> Resume
-    Resume --> UI[Client reconstructs authoritative state]
+    Need{报表端要发送，客户端也要连续发送消息吗？}
+    Need -->|否，低频或客户端控制更新| Poll[轮询或长轮询]
+    Need -->|否，服务端单向推送| Shape{普通 GET 是否满足请求需求？}
+    Shape -->|是| SSE[SSE + EventSource]
+    Shape -->|否| Fetch[Fetch 响应流]
+    Need -->|是，持续双向消息| WS[WebSocket]
+    Poll --> Recover[定义游标、重放或状态查询]
+    SSE --> Recover
+    Fetch --> Recover
+    WS --> Recover
+    Recover --> State[恢复报表当前状态或业务事件]
 ~~~
 
-## 轮询、SSE、流式Fetch与WebSocket / Polling, SSE, streaming Fetch, and WebSocket
+## 先按更新方向和请求形状选方式
 
-| 方式 Transport | 方向与请求契约 Direction and request contract | 连接恢复 Recovery | 适用场景与边界 Fit and boundary |
-|---|---|---|---|
-| 轮询 Polling | 客户端按间隔发起普通HTTP请求；长轮询会让服务端暂挂一次请求直到有事件或超时。 | 客户端决定频率、退避和何时重试；若需续传，由API定义游标或事件ID。 | 实现简单、适合低频更新；短轮询带来请求开销，长轮询占用等待中的请求。 |
-| SSE格式 + `EventSource` API | 服务端向客户端单向发送HTTP `text/event-stream`；EventSource用URL建立GET请求，可选择`withCredentials`。 | EventSource通常会在连接中断后自动重连；服务端可用HTTP 204告知客户端停止重连。带`id:`的事件会在后续重连请求中作为`Last-Event-ID`回传。服务器只有保留可重放的事件历史，才能按该ID续传。 | 适合单向事件；原生EventSource接口没有自定义请求头或请求体，不能把传输断线等同于事件已恢复。 |
-| 流式Fetch / Fetch response stream | 一次Fetch请求在响应有body时提供可逐块读取的`Response.body`；请求可使用API允许的方法、请求头、请求体和取消信号。 | Fetch不会替应用实现SSE式自动重连或重放；应用解析协议帧并定义游标、重试和取消策略。 | 需要自定义请求契约或一次性POST后流式返回时合适；字节块不是消息边界。跨源读取仍受CORS约束。 |
-| WebSocket | 握手后，客户端和服务端都能沿同一连接发送消息。应用收到的是完整消息，传输层可将一条消息拆成多个帧。 | 重连、身份过期、事件序号、确认和恢复均由应用协议定义。 | 双向低延迟交互合适；长期连接需要连接生命周期管理。浏览器构造器没有任意请求头参数，握手认证要按浏览器可用契约设计。 |
+| 方式 | 请求与方向 | 断线恢复由谁负责 | 适用边界 |
+| --- | --- | --- | --- |
+| 短轮询 | 客户端每隔一段时间发普通请求，返回当前状态或差异 | 客户端控制间隔、退避和停止；API 定义结果与游标 | 更新少且简单性重要；轮询频率过高会浪费请求，间隔过长会延迟发现变化 |
+| 长轮询 | 客户端请求后，服务端等到事件或等待期限返回；客户端再发下一条 | 应用重新请求并带序号/游标；代理超时和断线仍须处理 | 需要兼容普通 HTTP 又要降低空轮询；等待请求占用连接和服务资源，须设上限 |
+| SSE + EventSource | `GET` 建立 `text/event-stream` 响应，主要收服务端消息 | EventSource 通常自动重连；服务端依游标和保留日志重放 | 服务端单向推送、原生重连方便；原生 API 不接受自定义请求头或请求体 |
+| 流式 Fetch | 一次 Fetch 的 body 分块可读；请求可按 API 契约带方法、头和正文 | 应用实现线格式解析、重试、游标、退避和取消 | 需要自定义请求头/Bearer 或 POST 查询后接收流 |
+| WebSocket | 握手后客户端与服务端都可主动发完整消息 | 应用定义重连、认证过期、序号、确认和重放 | 双向低延迟交互值得维持长连接；协议不提供业务去重和恢复 |
 
-SSE既是`text/event-stream`线格式，也是浏览器EventSource接口的常见后端协议。线格式用UTF-8字段行表示事件，并以空行结束一条事件；常见字段为`event`、`data`、`id`和`retry`。例如：
+还要估计连接数、更新频率、消息大小、后台休眠行为和服务端连接容量。一名客户端每秒两次轮询约 2 请求/秒，一万名客户端约 20,000 请求/秒；这只估计请求数，不代表 CPU、网络或数据库开销相同。容量与准入见[Web 服务如何限制拒绝服务的影响？](../security/web-availability-and-ddos.md)。
+
+## SSE 怎样从一致的快照位置续读？
+
+`text/event-stream` 使用 UTF-8 文本，事件字段按行组织，以空行结束一条完整事件。`event` 命名类型，`data` 放内容，`id` 提供重连时可携带的游标，`retry` 可建议重连等待时间。网络包、HTTP 帧和 Fetch 读出的块都不是应用事件边界；客户端要按 SSE 语法解析。
+
+**案例状态：** 在较早的时刻，浏览器曾缓存报表 42 的版本 8 并向服务器验证。之后一次新的刷新已启动；现在客户端从权威接口取得版本 9 的快照，状态为 `running`，且该快照已包含事件日志至游标 103。快照和游标必须来自同一一致性位置；否则两者之间刚发生的事件可能被跳过。
+
+~~~http
+GET /api/reports/42 HTTP/1.1
+Accept: application/json
+~~~
+
+~~~json
+{"id":42,"version":9,"status":"running","event_cursor":"103"}
+~~~
+
+客户端首次订阅时以应用约定的查询参数告诉服务器从快照游标之后读取：
+
+~~~http
+GET /api/reports/42/events?after=103 HTTP/1.1
+Accept: text/event-stream
+~~~
+
+服务器发送事件 104，表示报表进入生成阶段；稍后报表完成，写入事件 105：
 
 ~~~text
-Content-Type: text/event-stream
+id: 104
+event: report.updated
+data: {"report_id":42,"version":10,"status":"running","progress":80}
 
-event: progress
-id: 42
-data: {"stage":"working"}
+id: 105
+event: report.updated
+data: {"report_id":42,"version":11,"status":"ready","progress":100}
 
 ~~~
 
-`id`只提供重连游标；它本身不保存事件，也不保证服务器能重放断线期间的数据。EventSource接口只公开URL和凭据选项；当请求需要自定义Authorization头、非GET方法或请求体时，可用Fetch读取同一类流格式，但解析、重试和恢复都由应用实现。Fetch的响应体是`ReadableStream`；一次`read()`得到的块可能切在UTF-8字符或应用事件中间，所以要用增量解码器并按协议帧边界拼装，不要把每个块直接当成一个事件。
+对应的浏览器订阅可以是：
 
 ~~~javascript
-const response = await fetch('/api/events', {
+const source = new EventSource('/api/reports/42/events?after=103');
+source.addEventListener('report.updated', (event) => {
+  const update = JSON.parse(event.data);
+  if (update.report_id === 42) {
+    showStatus(update.status, update.version, update.progress);
+  }
+});
+source.addEventListener('reset', () => {
+  source.close();
+  void refreshSnapshotAndSubscribeAgain();
+});
+source.addEventListener('error', () => showConnectionState(source.readyState));
+~~~
+
+假定客户端已解析 104、随后连接断开；服务器日志仍保存 105。EventSource 重连时浏览器会把解析到的最后事件 ID 放入 `Last-Event-ID`。本例规定：重连请求的该字段优先于初连 URL 中的 `after=103`，服务器从 104 之后读取并重放 105。初次订阅用 URL 参数，因为原生 EventSource 不让页面设置 `Last-Event-ID` 请求头。
+
+~~~mermaid
+sequenceDiagram
+    participant C as 浏览器
+    participant S as 报表服务
+    participant L as 事件日志
+    C->>S: GET /api/reports/42/events?after=103
+    S->>L: 读取 103 之后的事件
+    L-->>S: 104、105
+    S-->>C: 事件 104
+    Note over C,S: 连接断开，日志仍保留 105
+    C->>S: GET /api/reports/42/events?after=103，Last-Event-ID: 104
+    S->>L: 按应用约定优先采用 Last-Event-ID
+    L-->>S: 重放 105
+    S-->>C: report.updated，version 11，ready
+~~~
+
+**游标和状态版本不是同一个编号。** `104`、`105` 是事件日志位置，用于从历史中续读；`version=10`、`version=11` 是报表状态修订，只有产品保证版本单调时，界面才可用它丢弃较旧状态。快照版本 9 已涵盖日志游标 103，因此后续状态更新从 104 开始。
+
+`Last-Event-ID` 只表示浏览器解析了某个 SSE 事件并将 ID 作为重连位置；它可能在应用事件处理器完成前已更新，不能证明 `showStatus`、本地持久化或用户确认成功。若每一条事件都必须被业务处理，应用还需按订阅范围持久化已处理的 ID、去重并显式确认；传输本身不提供端到端只处理一次。若界面只需要最新状态，事件版本单调时可合并更新，并在重连后 GET 权威快照。
+
+游标过期时服务器不能悄悄跳过缺口。本例的重置政策是发送一条完整 SSE 事件并终止当前流：
+
+~~~text
+event: reset
+data: {}
+
+~~~
+
+`data` 字段和结尾空行不可省略，否则标准 EventSource 不会派发这条事件，客户端的 `reset` 处理器也不会运行。客户端收到后关闭 EventSource，重新 GET 快照和 `event_cursor`，再带新游标订阅。若服务器收到一次新的 SSE 请求后直接以 HTTP 204 响应，EventSource 会停止自动重连；这不是把已经开始的 200 流改成 204。断开原因和授权状态仍应由应用契约说明。每次初连或重连都要重新授权读取报表 42。
+
+## 流式 Fetch 如何分开解析完成和传输 EOF？
+
+当原生 EventSource 的 GET、Cookie 认证或请求字段不满足 API 需要时，Fetch 可以用 POST 提交筛选条件，再读 SSE 格式或其他明确线协议。`reader.read()` 可能只拿到半个 UTF-8 字符或半条事件；parser 要把片段缓冲到完整事件边界。此有限查询约定服务端最后发送并以空行结束以下终止事件：
+
+~~~text
+event: result.complete
+data: {}
+
+~~~
+
+`data` 字段和结尾空行不可省略；parser 只在完整终止事件中识别它。EOF 之前没收到该事件表示查询响应截断。`decoder.decode()` 只冲刷 UTF-8 解码状态，不能代替 parser 判断应用事件是否完整。持续订阅遇到 EOF 则按游标重连。
+
+下面的 parser 是本例接口约定：`feed()` 只向调用方交付已完整结束的事件，`hasTerminalEvent` 仅在解析到完整 `result.complete` 事件后为真，`finish()` 检查未闭合事件并拒绝截断结果。它不是浏览器内置 SSE parser。
+
+~~~javascript
+const response = await fetch('/api/reports/42/events/search', {
   method: 'POST',
   headers: {
-    Authorization: `Bearer ${token}`,
+    Authorization: 'Bearer token-supplied-by-the-application',
+    Accept: 'text/event-stream',
     'Content-Type': 'application/json',
   },
-  body: JSON.stringify({ filter }),
+  body: JSON.stringify({ stage: 'rendering' }),
   signal,
 });
-if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+if (!response.ok || !response.body) throw new Error('HTTP ' + response.status);
+if (!response.headers.get('content-type')?.startsWith('text/event-stream')) {
+  throw new Error('Unexpected stream media type');
+}
 
 const reader = response.body.getReader();
 const decoder = new TextDecoder();
-let endedNormally = false;
-let cancelAttempted = false;
+let completed = false;
+let stoppedEarly = false;
 try {
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      endedNormally = true;
+    const result = await reader.read();
+    if (result.done) {
+      parser.feed(decoder.decode()); // 只完成最终 UTF-8 解码
+      parser.finish();               // 拒绝未以空行结束的尾部事件
+      if (!parser.hasTerminalEvent) throw new Error('Truncated event stream');
+      completed = true;
       break;
     }
-    // This parser placeholder returns false when the caller intentionally stops before EOF.
-    if (parser.feed(decoder.decode(value, { stream: true })) === false) {
-      cancelAttempted = true;
+    parser.feed(decoder.decode(result.value, { stream: true }));
+    if (parser.hasTerminalEvent) {
+      stoppedEarly = true;
       await reader.cancel();
       break;
     }
   }
-  if (endedNormally) parser.feed(decoder.decode());
 } catch (error) {
-  if (!cancelAttempted) {
-    cancelAttempted = true;
-    try {
-      await reader.cancel(error);
-    } catch {
-      // Preserve the original parser or read error.
-    }
+  if (!stoppedEarly) {
+    try { await reader.cancel(error); } catch { /* 保留原读取或解析错误 */ }
   }
   throw error;
 } finally {
   reader.releaseLock();
 }
+if (!completed && !stoppedEarly) throw new Error('Incomplete search result');
 ~~~
 
-这里的`parser.feed`代表按已约定的线格式增量解析；示例约定它在调用方已获得所需完整结果、决定提前停止时返回`false`，代码随即取消未读响应体。若解析或读取抛错，也会尝试取消响应流；取消本身若失败，仍保留原始解析/读取错误，并在所有路径释放reader锁。若用户取消操作，传入的`AbortSignal`会取消Fetch。传输层提供请求契约、分块、结束和失败信号，不定义界面如何呈现部分内容，也不保证服务端任务状态能跨重连保留。选择时先回答四件事：消息方向是什么、请求是否要带方法/头/体、连接由谁关闭、恢复是否只需重连还是必须按游标重放。
+`result.complete` 说明这次有限搜索流按 API 契约结束，不等于任何独立的持久报表作业已生成；作业完成要查询其权威状态。Fetch 收到响应头后正文仍可能失败，因此必须读到完整终态；跨源请求仍受 CORS 与凭据模式约束。
 
+## WebSocket 适合哪些双向消息？
 
-**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](http-protocols-and-websockets.md) covers request methods, caches, CORS, DNS, and transport behavior; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the interface represents partial, reconnecting, cancelled, and terminal states; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) uses persistent run state to recover after a client disconnect.
+浏览器 WebSocket 先握手，再切换到双向消息协议。HTTP/1.1 常用 Upgrade 和 101；HTTP/2、HTTP/3 有各自扩展连接承载方式，不能概括为“升级到 TCP”。WebSocket 消息可跨多个帧，但消息确认、幂等处理、游标和掉线重放仍由应用定义。原生 WebSocket API 不会自动重连，调用方要在应用层实现退避、重新认证和游标恢复。
 
-**Sources / 来源：** [RFC 6455, The WebSocket Protocol](https://www.rfc-editor.org/rfc/rfc6455.html), [RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html), [RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html), [WHATWG HTML Server-sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html), [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/), [WHATWG Streams Standard](https://streams.spec.whatwg.org/), and [WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/) checked 2026-10-15. The SSE reconnection and HTTP 204 boundary was rechecked against the current WHATWG HTML standard on 2026-10-27. See also the MDN [WebSocket constructor](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket) and the Node.js [ws implementation](https://github.com/websockets/ws).
+浏览器构造器接受 URL 与子协议，不开放任意自定义请求头。若握手使用 Cookie，恶意页面可能尝试建连；服务端须按策略检查 Origin、认证连接，并在每条敏感消息上逐次授权。WebSocket 不用 Fetch 的 CORS 响应许可机制，但仍有来源风险。代理超时、网络切换、客户端挂起和服务端资源都会限制连接寿命。
+
+> [!example]- Node.js WebSocket 广播示例
+> 下例展示连接集合与广播的最小形状。它不实现认证、租户隔离、消息校验、限速、去重、重连或恢复，不代表完整生产服务。
+>
+> ~~~javascript
+> const { WebSocketServer, WebSocket } = require('ws');
+> const server = new WebSocketServer({ port: 3000 });
+> const clients = new Set();
+>
+> server.on('connection', (socket) => {
+>   clients.add(socket);
+>   socket.on('message', (data, isBinary) => {
+>     for (const client of clients) {
+>       if (client !== socket && client.readyState === WebSocket.OPEN) {
+>         client.send(data, { binary: isBinary });
+>       }
+>     }
+>   });
+>   socket.on('close', () => clients.delete(socket));
+> });
+> ~~~
+
+## 断线后如何确定报表状态？
+
+先决定客户端需要“当前状态”还是“每一条事件”。当前状态可在断线后 GET 报表/作业资源，再从版本和游标建立新订阅；每一条变化都重要时，服务端要保留可重放日志并定义重复、缺口、过期和确认方式。初始快照必须一并交付与之对齐的事件游标，否则读快照和订阅之间可能漏变化。
+
+SSE 可以自动重连，WebSocket 需要应用自己重连，Fetch 也要由应用重新发请求；它们都不能证明数据库副作用是否提交，也不能恢复服务进程内丢失的任务状态。遇到未知完成结果，应查稳定的状态资源，见[请求超时后如何确认结果并安全重试？](../reliability/api-reliability-and-async-delivery.md)。
+
+> [!info]- 来源
+> - SSE 线格式、EventSource 重连、Last-Event-ID 更新、204 停止重连与事件解析：[WHATWG HTML Living Standard, Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)，§9.2，按 2026-11-05 版本核对。
+> - Fetch 请求与响应体、取消和流处理：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§2、§4；[Streams Standard](https://streams.spec.whatwg.org/)，§4；持续维护规范，核对于 2026-11-06。
+> - 浏览器 WebSocket API：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，§2；握手和消息帧：[RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)，§4–§5；HTTP/2 承载扩展：[RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html)；HTTP/3 扩展：[RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html)，均核对于 2026-11-06。
+> - Node.js `ws` 服务端广播：[ws README, Server broadcast](https://github.com/websockets/ws#server-broadcast)，核对于 2026-11-06。库文档描述该实现，不是协议规范。

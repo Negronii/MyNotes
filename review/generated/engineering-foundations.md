@@ -40,770 +40,888 @@ This example relies on the database transaction and row-update contract. The det
 **Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains how operation keys handle unknown request outcomes; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies job-key uniqueness and transactional outbox to asynchronous work.
 
 **Sources and verification / 来源与验证：** PostgreSQL 18 [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) and [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html); SQLite [transactions](https://www.sqlite.org/lang_transaction.html) and [foreign keys](https://www.sqlite.org/foreignkeys.html). The conditional reservation transaction was run with Python sqlite3 against SQLite 3.51.0 with foreign-key enforcement enabled. This is evidence for that local SQLite run, not a universal concurrency guarantee.
-## 2. How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？
+## 2. 浏览器请求如何到达 HTTP 响应？
 
-> **核心解释 / Core idea：** HTTP定义客户端与服务器交换表示、状态和元数据的语义；TCP、QUIC等传输机制决定字节或流如何送达。HTTP版本改变了连接复用与多路复用方式，但不会让请求自动安全、可重试或跨域可读。
-> **Core idea:** HTTP defines the semantics for exchanging representations, status, and metadata between clients and servers; transports such as TCP and QUIC determine how bytes or streams are delivered. HTTP versions change connection reuse and multiplexing, but do not by themselves make requests safe to retry or readable across origins.
->
-> **面试简答 / Interview answer：** REST是约束式架构风格，HTTP方法语义决定重试边界；HTTP/1.1复用连接，HTTP/2在TCP上多路复用，HTTP/3基于QUIC流，浏览器CORS控制跨源读取。需要新建连接且没有可用地址时才需解析主机名；已有连接可直接复用，无须为每个请求重新查询。HTTPS还需TLS；DNS、连接、TLS与HTTP故障应分层判断。实时更新的协议选择单独见[轮询、SSE、流式Fetch与WebSocket](#15.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
-> **Interview answer:** REST is a constrained style, and HTTP method semantics set retry boundaries. HTTP/1.1 reuses connections, HTTP/2 multiplexes over TCP, and HTTP/3 uses QUIC streams; browser CORS controls cross-origin reads. Resolve the name when a new connection needs an address; an existing usable connection can be reused without a fresh lookup. Apply TLS for HTTPS, and diagnose DNS, connection, TLS, and HTTP failures separately. Choose a live-update transport by direction and request contract; [the comparison note](#15.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F) explains its recovery limits.
+Hypertext Transfer Protocol (HTTP，超文本传输协议) 规定调用方怎样描述操作、服务端怎样返回状态与表示；Transmission Control Protocol (TCP，传输控制协议) 或 QUIC 负责承载字节流，Transport Layer Security (TLS，传输层安全协议) 在安全连接上保护通信。看同一个报表请求，应先认清 HTTP 语义，再按是否有可复用缓存、地址和连接追踪网络阶段。HTTP 版本会改变连接复用和多路复用方式，但不会替 application programming interface (API，应用程序接口) 验证身份、授权资源、允许跨源读取或确认超时操作结果。
 
-### REST与HTTP方法 / REST and HTTP methods
+**案例：** 查看者已登录并获准读取报表 42。此前浏览器收到 `200` JSON、`ETag: "report-42-v8"` 和 `Cache-Control: private, no-cache`，并把该表示保存在自己的私有缓存。用户再次打开页面时，浏览器用旧验证值询问当前表示。图中的某些阶段会因 Service Worker、缓存、DNS 地址或已有连接而跳过；持续更新则需要独立的消息与恢复契约，见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#15.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
 
-REST（Representational State Transfer，表述性状态转移）是架构风格，不等同于“把CRUD路径写成名词”。它约束客户端与服务器分离、无状态交互、可缓存响应、统一接口和分层系统等。HTTP API常用URI标识资源，并以方法表达操作；资源表示和状态码共同构成接口语义。[Fielding对REST的原始描述](https://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm) 与 [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) 分别说明架构约束与HTTP方法语义。
-
-| 方法 Method | 常见用途 Typical use | 安全 Safe | 幂等 Idempotent |
-|---|---|---:|---:|
-| GET | 读取表示 Retrieve a representation | 是 Yes | 是 Yes |
-| POST | 提交处理或创建资源 Submit processing or create a resource | 否 No | 通常否 Usually no |
-| PUT | 创建或完整替换目标资源 Create or replace the target resource | 否 No | 是 Yes |
-| PATCH | 按补丁文档修改资源 Apply partial modifications | 否 No | 不保证 Not guaranteed |
-| DELETE | 删除目标资源 Delete the target resource | 否 No | 是 Yes |
-
-“安全”指请求语义不要求服务器改变目标资源状态，并不表示没有日志、计数等附带效果。“幂等”指重复执行的预期效果等同于执行一次，不要求每次响应完全一样。例如，第一次DELETE可能返回200，之后返回404，但目标资源保持不存在。POST通常不幂等；若业务允许安全重试，API需要额外约定，例如幂等键或可识别的请求标识。[RFC 9110 §9](https://www.rfc-editor.org/rfc/rfc9110.html#section-9) 定义这些方法属性。
-
-PUT表示创建或替换目标资源的状态；服务器可以拒绝不完整或不合规的表示，不能简单总结成“所有缺失字段必然清空”。PATCH携带描述局部修改的补丁文档；是否幂等取决于补丁操作和接口约定。[RFC 5789](https://www.rfc-editor.org/rfc/rfc5789.html) 说明PATCH的语义。
-
-~~~http
-GET    /posts
-POST   /posts
-GET    /posts/42
-PUT    /posts/42
-PATCH  /posts/42
-DELETE /posts/42
+~~~mermaid
+flowchart LR
+    Click[打开报表 42] --> Browser[浏览器构造请求]
+    Browser --> Cache{缓存可直接回答且无需源站验证？}
+    Cache -->|是| Cached[交付缓存表示]
+    Cache -->|否| Conn{有可复用连接？}
+    Conn -->|有| HTTP[发送 HTTP 请求]
+    Conn -->|没有| Address[使用地址缓存，或按需解析域名]
+    Address --> Handshake[建立 TCP/TLS 或 QUIC 连接]
+    Handshake --> HTTP
+    HTTP --> App[路由、认证、授权与处理]
+    App -->|权限拒绝| Deny[返回约定的 401、403 或隐藏式 404]
+    App -->|权限允许| Result[返回 304 或新的 200 表示]
+    Cached --> UI[浏览器交付表示给页面]
+    Deny --> UI
+    Result --> UI
 ~~~
 
-不要只凭状态码类别判断能否重试。收到5xx只能说明服务器端或网关报告了错误；如果请求可能已经产生副作用，客户端盲目重发仍会重复操作。根据方法的安全/幂等语义、业务契约以及超时发生阶段作决定。
+### 一次请求和响应如何描述报表？
 
-### HTTP消息、请求头与状态码 / HTTP messages, fields, and status codes
+Uniform Resource Identifier (URI，统一资源标识符) 定位目标资源；方法表达操作；请求还可以有路径、查询参数、字段和消息体。响应给出状态、字段和表示（representation）。这里的“表示”是服务端选择的一种媒体类型与编码，不必等于数据库中的单行。
 
-HTTP/1.x（尤其是HTTP/1.1）的文本报文由起始行、字段（常称headers）、空行以及可选消息体组成。[RFC 9112 §2.1](https://www.rfc-editor.org/rfc/rfc9112.html#section-2.1) 规定了这一线格式。HTTP/2和HTTP/3保留HTTP语义，但通过帧和字段块表达消息，并用伪首部承载方法、状态码等控制信息；它们没有HTTP/1.x的文本起始行与空行。[RFC 9113 §8.1](https://www.rfc-editor.org/rfc/rfc9113.html#section-8.1)、[§8.3](https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3)、[RFC 9114 §4.1](https://www.rfc-editor.org/rfc/rfc9114.html#section-4.1)、[§4.3](https://www.rfc-editor.org/rfc/rfc9114.html#section-4.3)。字段传递内容格式、认证信息、缓存策略等元数据。以下是常见字段，具体是否出现取决于客户端、服务器和资源：
+本次条件读取可写成：
 
-| 字段 Field | 常见方向 Direction | 作用 Purpose |
-|---|---|---|
-| Accept | 请求 Request | 客户端可处理的表示媒体类型 |
-| Content-Type | 请求/响应 Request/response | 当前消息体的媒体类型，如application/json |
-| Authorization | 请求 Request | 显式提供认证凭据，例如Bearer token |
-| Cookie / Set-Cookie | 请求 / 响应 Request / response | 发送已有cookie / 要求浏览器保存或更新cookie |
-| Cache-Control | 请求/响应 Request/response | 缓存策略和验证要求 |
-| ETag | 响应 Response | 表示版本的验证器，可供条件请求使用 |
-| Accept-Encoding | 请求 Request | 客户端支持的内容编码，如gzip、br |
-| Accept-Language | 请求 Request | 客户端偏好的自然语言 |
-| Content-Length | 请求/响应 Request/response | 在适用的消息中声明消息体长度 |
+~~~http
+GET /api/reports/42 HTTP/1.1
+Host: reports.example
+Accept: application/json
+Accept-Language: zh-CN, en;q=0.8
+Cookie: __Host-session=<opaque-session-id>
+If-None-Match: "report-42-v8"
+~~~
 
-Cookie常用于保存会话标识，但它本身不是认证协议；服务器根据Cookie值查找会话并执行认证授权。Authorization是应用显式传递凭据的字段。浏览器Fetch不能由脚本手动设置Cookie请求字段，响应中的Set-Cookie也不会暴露给脚本读取；浏览器按cookie规则处理它们。[MDN Cookie字段](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cookie) 与 [MDN Set-Cookie字段](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie) 说明这一区别。
+浏览器曾缓存的响应是：
 
-| 状态码范围 | 意义 Meaning | 示例 Examples |
-|---|---|---|
-| 1xx | 继续处理 Informational | 100 Continue |
-| 2xx | 请求成功 Successful | 200 OK、201 Created、204 No Content |
-| 3xx | 重定向或使用缓存结果 Redirection or cache validation | 301、302、304 |
-| 4xx | 请求存在问题 Client error | 400、401、403、404 |
-| 5xx | 服务器未能完成请求 Server error | 500、502、503 |
+~~~http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Language: zh-CN
+ETag: "report-42-v8"
+Cache-Control: private, no-cache
 
-401表示请求缺少有效认证凭据或需要认证；403表示服务器理解请求但拒绝执行。304 Not Modified是条件GET/HEAD的缓存验证结果，表示客户端可复用已存表示；它不是普通的页面跳转。成功与否也不能只靠Fetch的Promise是否reject来判断：Fetch对404或500仍会兑现Promise，调用方应检查Response的status或ok属性。[MDN Fetch指南](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)。
+{"id":42,"title":"Service health","status":"ready","version":8}
+~~~
 
-### 缓存协商 / Cache validation
+`ETag` 是服务端为选中表示提供的验证值。当前权限仍允许读取、表示也未变化时，服务端可以只回答：
 
-缓存可减少传输和等待，但必须区分“是否存储”和“使用前是否验证”。Cache-Control: max-age给出新鲜期；no-cache允许存储，但使用前需向源站验证；no-store要求缓存不要存储该响应。它们的语义不能互换。[RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html) 定义HTTP缓存。
+~~~http
+HTTP/1.1 304 Not Modified
+ETag: "report-42-v8"
+Cache-Control: private, no-cache
+~~~
 
-常见的ETag协商流程：
+若权限已撤销，服务端应按 API 的隐私政策返回 403 或隐藏式 404；若权限仍允许但表示变化，则返回新的 `200`、正文和 ETag。浏览器管理的 HTTP 缓存收到 304 后会把先前保存的正文与新验证信息组合；页面通常得到可用的 200 表示，而不是把空的 304 正文当报表内容。缓存验证不绕过认证与授权。
 
-1. 响应携带ETag，客户端缓存表示及验证器。
-2. 缓存条目过期后，客户端发送If-None-Match并带上该验证器。
-3. 若资源未变化，服务器返回304，客户端复用缓存表示；若已变化，服务器返回新表示及其验证器。
+各字段职责不同：`Accept` 表示调用方偏好的响应媒体类型，`Content-Type` 描述消息体的媒体类型，`Content-Encoding` 描述表示经过的压缩等编码，`Accept-Language` 表示语言偏好而不保证服务一定有该语言，`Content-Language` 描述返回表示面向的语言。Cookie 与 `Authorization` 携带认证凭据；浏览器会自行管理 Cookie，脚本不能任意手设 `Cookie`。缓存验证器则由 `ETag` 与条件字段 `If-None-Match` 配合。
 
-协商缓存避免重复传输未变化的内容，但是否允许存储仍由缓存策略和隐私要求决定。不要把no-cache写成“禁止缓存”。
+safe method (安全方法) 的预期语义是不要求改变目标资源状态；这不禁止日志、计数等附带效果。idempotent (幂等) 表示重复执行的预期效果等同执行一次，不要求响应字节相同：第一次 DELETE 可回 204，后续回 404，但资源仍保持不存在。PUT 让目标资源成为请求描述的状态，不必然表示没写的字段都会清空；PATCH 是否幂等取决于补丁操作和接口约定；POST 通常不具幂等性。方法语义不能独自说明连接中断后副作用是否已经提交；未知结果需用业务请求标识确认，见[请求超时后如何确认结果并安全重试？](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
 
-### 浏览器请求API / Browser request APIs
+> [!info] HTTP 与 REST 的关系
+> Representational State Transfer (REST，表述性状态转移) 是一种架构风格，约束包括客户端与服务端分离、无状态交互、可缓存、统一接口和分层系统；代码按需下发是可选约束。统一接口进一步要求资源标识、以表示操纵资源、自描述消息及超媒体控制。使用 HTTP 方法和 JSON 不会自动满足所有 REST 约束；检查请求是否无状态、缓存是否遵循策略、表示和链接是否足以驱动交互，才是在讨论 REST 风格。参见 Fielding 的架构定义。
 
-XMLHttpRequest（XHR）仍用于维护旧代码或需要其事件接口的场景，例如上传进度；Fetch是现代浏览器常用的Promise API。两者都需要处理网络失败、取消和HTTP错误等情况。Fetch遇到HTTP 404/500不会自动抛出异常：
+### 缓存策略怎样决定能否复用？
+
+以下指令表达不同选择：`private` 允许浏览器私有缓存保存，但禁止共享缓存复用该响应；`max-age=60` 给出新鲜期，未过期时缓存可能直接复用而不联系源站；`no-cache` 允许存储，却要求每次复用前先向源站验证；`no-store` 要求缓存不要存储该交换。它们不替代访问控制，也不自动让私有响应与用户隔离。若权限可能在 60 秒内撤销，只靠 `private, max-age=60` 会允许浏览器在新鲜期内直接复用旧正文；要求再次确认授权时，可使用 revalidation（重新验证）策略，敏感内容也可用 `no-store`。
+
+API 自己仍须为缓存键和验证器划定租户、主体、表示协商及语言范围。浏览器中的私有表示缓存与服务器端对象/租户授权是两层不同控制；见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+### 状态码说明什么？
+
+HTTP 状态描述当前请求的处理结果类别，不描述调用方全部业务状态，也不表示中间每个网络环节都成功。
+
+| 范围或状态 | 报表示例 | 含义边界 |
+| --- | --- | --- |
+| 1xx | 100 Continue | 继续处理的中间信息 |
+| 2xx | 200 当前表示；201 已创建资源记录；202 已受理异步作业 | 202 不表示作业已完成 |
+| 3xx | 304 Not Modified | 浏览器可复用已有的已验证表示 |
+| 4xx | 400 格式错误；401 缺少有效凭据；403 拒绝；404 不存在或按政策隐藏；409 冲突；429 超过额度 | 发出 401 时必须包含适用的 `WWW-Authenticate` challenge；超时发生在客户端，不自动成为 HTTP 状态 |
+| 5xx | 502 上游响应无效；503 暂时不能处理；504 等待上游超时 | 说明服务端/网关未完成当前请求 |
+
+浏览器 `fetch()` 的 Promise 在收到 HTTP 响应后会兑现，即使状态是 404 或 500；脚本应检查 `response.ok` 或 `status`。响应头已到达不代表正文已经完整读完：`response.json()` 或流读取仍可能因连接断开、解码或读取错误而失败。Fetch 与其他客户端对 HTTP 错误的呈现也不同：Fetch 默认不会因为非 2xx 拒绝 Promise；Axios 默认把非 2xx 放入拒绝分支并把响应放在错误对象中，`validateStatus` 可改变该规则；XMLHttpRequest 的 `load` 表示收到响应，需自行检查状态，`error` 表示网络级失败，`upload.onprogress` 仍适合需要浏览器上传进度事件的界面。Axios 的 adapter 和版本会影响细节，旧项目可参考[归档 Axios 说明](../../archive/front-end/0-1_Learning_Notes/react_typescript/axios-in-react.md)。
+
+### HTTP/1.1、HTTP/2 与 HTTP/3 如何共享连接？
+
+HTTP 语义由 RFC 9110 定义，不同版本用不同线格式和传输承载。HTTP/1.1 报文可见起始行、字段、空行和可选消息体；HTTP/2、HTTP/3 把方法、字段和内容编码为帧及字段块，但调用方仍表达相同方法、目标与状态。
+
+| 版本 | 连接和并发方式 | 丢包影响及边界 |
+| --- | --- | --- |
+| HTTP/1.1 | 默认可持久复用连接，浏览器也可并行打开多个连接；同一连接上的流水线响应仍按请求顺序返回 | 一个连接上前面的慢响应可能让后续响应等待；持久连接不表示服务器能在无请求时任意推送 HTTP 响应 |
+| HTTP/2 | 多个 HTTP 流在一个 TCP 连接上以帧交错传输，并压缩字段 | TCP 提供有序字节流；早期 TCP 段丢失会暂缓该连接后续字节交付，因此多个流可能一起等候 |
+| HTTP/3 | HTTP 流运行在 QUIC 上；QUIC 使用 UDP 承载，但自己提供可靠流、流控、拥塞控制和 TLS 1.3 握手 | 某个 QUIC 流缺失的数据通常不会阻止其他已齐全流的数据交付；它们仍共享连接级拥塞、流控和路径资源 |
+
+例如图片所在 TCP 段丢失时，即使报表 JSON 的 HTTP/2 流后续字节已到，也要等待字节流缺口补齐；在 QUIC 下，若 JSON 流数据本身齐全且仍有连接资源，它可能先交付。HTTP/3 隔离了部分跨流传输等待，但并不消除共享拥塞造成的延迟，因此不能只从版本号推出固定性能收益。
+
+TCP 是有序可靠字节流，不保留一次应用 `write` 对应一次 `read` 的消息边界。应用协议需另定长度前缀、分隔符或固定长度。所谓“粘包”通常是把字节流误当消息队列造成的解析错误。正常关闭还可分别结束两个方向；FIN/ACK 交换可能合并，不能说每次都固定四个报文。
+
+### 域名解析、TCP 与 TLS 按什么顺序检查？
+
+浏览器首次访问 `reports.example` 时，若缺少可复用连接，会先使用仍有效的本地 DNS 地址缓存；没有可用地址才向解析器查询。即使连接已关闭，DNS 地址仍可能在缓存有效期内。递归解析器也可能从缓存返回记录或沿域名委派查询。记录 TTL 限定缓存可保留时间；错误回答也可能被缓存。Service Worker、HTTP 缓存、地址缓存和连接复用是不同快路径。
+
+TCP 建连常见三次握手：客户端发送 SYN 请求同步序号；服务端回 SYN-ACK 同意并给出自己的序号；客户端再回 ACK。它只描述 TCP 建连；QUIC 在 UDP 上进行自己的连接和 TLS 握手，不执行这组三报文交换。完整、普通的 TLS/QUIC 新连接会在应用数据前建立必要密钥与身份验证；TLS 1.3 会话恢复还可能启用 0-RTT early data，让客户端在握手完成前发送早期数据。早期数据可被重放，所以不能把它用于依赖“只执行一次”的副作用，除非应用有与重放边界相配的幂等或反重放设计。
+
+因此排障时要分开确认：是否有地址缓存或 DNS 查询、TCP 三次握手或 QUIC 建连、常规 TLS 握手或恢复、证书与主机名验证、最后的 HTTP 请求和响应。网络连接或 TLS 错误不是 API 的 500。
+
+> [!info] 预连接与预取提示
+> `preload` 提示浏览器提前取当前页面已经确定要用的关键资源；`prefetch` 提示低优先级准备未来导航可能使用的资源；`preconnect` 可为很快要访问的可信来源准备连接；`dns-prefetch` 只预解析主机名。浏览器可以依据资源和连接条件忽略或调整这些提示。对当前已复用的主机，预连接通常没有额外效果；提前准备新的第三方来源会占用连接资源，须按实际需要选择。
+
+~~~html
+<link rel="preload" href="/fonts/main.woff2" as="font" crossorigin>
+<link rel="prefetch" href="/next-page.js">
+<link rel="preconnect" href="https://reports-cdn.example">
+~~~
+
+**接下来：** 若页面与 API 不同源，浏览器何时允许脚本读取响应由[浏览器安全边界](#6.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E5%88%86%E5%88%AB%E4%BF%9D%E6%8A%A4%E4%BB%80%E4%B9%88%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F)说明；若要连续接收报表更新，则选取[实时传输与恢复方式](#15.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
+
+> [!info]- 来源
+> - HTTP 字段、方法安全性与幂等、状态码、URI、表示协商：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§6–§12、§15，2022-06；401 challenge 见 §15.5.2，核对于 2026-11-06。
+> - 缓存新鲜度、`max-age`、`no-cache`、`no-store`、`private` 和条件请求：[IETF RFC 9111, HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111.html)，§4–§5，2022-06；核对于 2026-11-06。
+> - HTTP/1.1 报文与连接：[RFC 9112](https://www.rfc-editor.org/rfc/rfc9112.html)，§2、§9；HTTP/2 帧与流：[RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html)，§2、§5、§8；HTTP/3 映射：[RFC 9114](https://www.rfc-editor.org/rfc/rfc9114.html)，§1–§4。均为 2022-06 标准，核对于 2026-11-06。
+> - TCP 三次握手与连接状态：[RFC 9293, Transmission Control Protocol](https://www.rfc-editor.org/rfc/rfc9293.html)，§3、§3.5，2022-08；QUIC 流与拥塞：[RFC 9000](https://www.rfc-editor.org/rfc/rfc9000.html)，§2、§3、§13，2021-05；QUIC TLS：[RFC 9001](https://www.rfc-editor.org/rfc/rfc9001.html)，§4、§5、§9.2，2021-05；TLS 1.3：[RFC 8446](https://www.rfc-editor.org/rfc/rfc8446.html)，§2–§4，2018-08。均核对于 2026-11-06。
+> - DNS 委派与缓存：[RFC 1034](https://www.rfc-editor.org/rfc/rfc1034.html)，§4–§5，1987-11；DNS 负缓存：[RFC 2308](https://www.rfc-editor.org/rfc/rfc2308.html)，§3–§5，1998-03。核对于 2026-11-06。
+> - REST 架构风格的客户端-服务端、无状态、缓存、统一接口和分层约束：[Roy T. Fielding, Architectural Styles and the Design of Network-based Software Architectures](https://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm)，§5，2000。
+> - Fetch 对脚本可设置请求字段和可见响应字段的限制：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/#forbidden-request-header)，Living Standard，核对于 2026-11-06；XHR 事件模型：[WHATWG XMLHttpRequest Standard](https://xhr.spec.whatwg.org/)，§3.5，核对于 2026-11-06；Axios 默认错误处理：[Axios error handling](https://axios-http.com/docs/handling_errors)，核对于 2026-11-06。
+> - 资源提示类型：[WHATWG HTML Living Standard, Link types](https://html.spec.whatwg.org/multipage/links.html#linkTypes)，核对于 2026-11-06。
+## 3. 如何设计可预期的 HTTP API 契约？
+
+API 契约说明调用方怎样构造请求、怎样识别成功和失败、怎样继续读取集合。HTTP 提供通用方法和状态语义；API 定义领域输入、返回结构、错误类别、分页规则与兼容政策。文档、类型注解、OpenAPI 描述和运行中的实现是不同层：写出 schema（结构模式）不证明已部署行为符合它。
+
+**案例：** 浏览器请求 `GET /api/reports/42`。报表存在且当前主体获准读取时，API 返回稳定 JSON；编号格式错误、报表不存在、认证缺失或访问被拒，各有调用方能识别的结果。列表按 ID 排序并显式给出下一页游标。
+
+~~~http
+GET /api/reports/42 HTTP/1.1
+Host: reports.example
+Accept: application/json, application/problem+json
+~~~
+
+一个合法的成功表示是：
+
+~~~http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"id":42,"title":"Service health","status":"ready"}
+~~~
+
+路径里的 `42` 是 API 的资源标识，不是访问授权。边界先解析和校验输入，再由服务确认当前身份、租户和对象权限；之后才读取资源。资源归属见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+### 错误契约怎样保留机器可判定的含义？
+
+API 可以用 RFC 9457 Problem Details 表示错误，媒体类型为 `application/problem+json`。例如 ID 不存在或按隐私政策不可见时返回统一错误：
+
+~~~http
+HTTP/1.1 404 Not Found
+Content-Type: application/problem+json
+
+{"type":"https://api.example/problems/not-found","title":"Report not found","status":404,"detail":"No report is visible under this identifier."}
+~~~
+
+客户端可依赖稳定的 `type` 或扩展错误码，而不应解析供人阅读的 `title`、`detail`。若正文含 `status`，它须与实际 HTTP 状态相同。不要回显秘密、内部异常栈或 SQL 文本。
+
+| 条件 | 本例的结果 | 补充约定 |
+| --- | --- | --- |
+| 报表 42 存在、身份和资源权限都通过 | 200 + JSON | 定义成功表示中的稳定字段 |
+| 缺少有效凭据 | 401 + Problem Details | 发出 401 时提供适用的 `WWW-Authenticate` challenge；例如 Bearer API 返回 `Bearer realm="reports"` |
+| 已认证但无权访问 | 403，或按隐藏政策返回与不存在相同的 404 | 隐藏策略下错误详情不能泄漏对象存在性 |
+| JSON 语法无效，例如正文 `{` | 400 + Problem Details | 指明内容无法解析 |
+| 语法有效但字段、路径参数或范围不符合契约 | 422 + Problem Details | 指出字段路径和稳定错误代码 |
+| 与当前状态冲突，例如重复标题 | 409 + Problem Details | 告诉调用方怎样刷新或解决冲突 |
+| 超过适用调用额度 | 429 + Problem Details | 定义额度作用域和可重试时机 |
+| 报表 999 不存在或被隐藏 | 404 + Problem Details | 与成功表示结构不同 |
+
+这是本 API 的映射政策，不是所有服务都必须采用的唯一表。`422 Unprocessable Content` 表示内容语法可理解但指令不能处理，因此本例把畸形 JSON 归为 400，把结构有效但字段不合规归为 422。认证/授权、结构校验和数据库并发不变量分别由不同边界负责。
+
+### 201 创建资源和 202 接受作业有什么区别？
+
+`POST /api/reports` 可创建一条报表资源记录，返回 `201 Created` 和 `Location: /api/reports/44`。如果新资源的 `status` 是 `queued`，201 表示资源记录已经建立，不表示报表成品已生成。若请求创建的是独立长作业而不是资源记录，API 可以返回 `202 Accepted` 与稳定的作业状态 URL；202 表示受理处理，不表示成功完成。客户端在连接断开后查状态资源，而不是从原响应推断完成。账户报表的持久 job、outbox 和队列确认见[怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+
+### 分页怎样给出明确结束条件？
+
+集合可能很大或持续变化，契约须规定页大小、确定性排序和结束信号。本例默认 `limit=2`、最大 100，按 ID 升序；`next_cursor` 是必返回字段，最后一页明确返回 JSON `null`。
+
+~~~http
+GET /api/reports?limit=2 HTTP/1.1
+Host: reports.example
+Accept: application/json
+~~~
+
+~~~json
+{"items":[{"id":41,"title":"Monthly overview","status":"ready"},{"id":42,"title":"Service health","status":"ready"}],"next_cursor":"opaque-token-A"}
+~~~
+
+客户端原样传回不透明游标：
+
+~~~http
+GET /api/reports?limit=2&cursor=opaque-token-A HTTP/1.1
+Host: reports.example
+Accept: application/json
+~~~
+
+~~~json
+{"items":[{"id":43,"title":"Usage summary","status":"queued"}],"next_cursor":null}
+~~~
+
+第一页的 `[41, 42]` 续到 ID 42 之后，第二页的 `[43]` 以 `null` 明确结束；只有客户端看见该结束标记才停止。短页不总表示没有后续数据。游标不应暴露可篡改的数据库偏移量；生产集合可把游标绑定筛选条件、排序、授权范围和过期时间，并按 `(created_at, id)` 之类的稳定复合键续读。每页重新授权。并列时间戳时游标要同时保存两个排序键，数据变化时还要说明读者看到移动集合还是固定快照。
+
+> [!example] 读完三条报表的分页回放
+> 排序为 ID 升序、页大小为 2：第一批是 `[41, 42]`，游标代表“从 42 之后继续”；第二批是 `[43]`，返回 `next_cursor: null` 后停止。若服务器因资源上限只返回 1 项但仍有后续数据，只凭短页就停止会漏项。示例游标是占位显示；运行代码会生成不可预测的不透明 token。
+
+### OpenAPI 怎样描述实际运行契约？
+
+OpenAPI 记录操作路径、参数、媒体类型、成功与错误响应及 schema，使人和工具可据此调用服务。框架可从请求/响应模型生成结构；自定义异常处理器也要在相应操作里声明错误响应。只有运行时错误和 OpenAPI 都匹配，客户端才不会按一份服务实际不返回的契约生成分支。检查时要按操作核对真实路径、状态码、媒体类型、Problem `type`、分页字段是否必填以及 schema 是否允许 `null`。
+
+下面的 FastAPI 复现定义裸应用前缀 `/api`，与本章请求路径一致。它用三条合成报表演示 200、404、字段验证、畸形 JSON、冲突、分页和 OpenAPI。为集中讲契约，它没有实现身份认证、租户授权或数据库并发唯一性；它不是可直接部署的安全报表服务。正常请求和失败的输入输出已在正文展示，无需运行这段代码才能理解契约。
+
+> [!example]- 可运行的 FastAPI 契约复现
+> 运行环境已核验：FastAPI 0.128.0、Pydantic 2.11.7、Starlette 0.47.2、httpx 0.28.1；本环境的 `app.openapi()` 生成 OpenAPI 3.1.0。OpenAPI 文档版本以运行时字段为准。
+>
+> ~~~python
+> import secrets
+> from typing import Any
+>
+> from fastapi import APIRouter, FastAPI, Query, Request, Response
+> from fastapi.exceptions import RequestValidationError
+> from fastapi.responses import JSONResponse
+> from fastapi.testclient import TestClient
+> from pydantic import BaseModel, Field, field_validator
+>
+> PROBLEM_BASE = "https://api.example/problems/"
+>
+>
+> class CreateReport(BaseModel):
+>     title: str = Field(min_length=1, max_length=60)
+>
+>     @field_validator("title", mode="before")
+>     @classmethod
+>     def normalize_title(cls, value: Any) -> Any:
+>         if isinstance(value, str):
+>             if len(value) > 60:  # 上限检查原始输入，再去除首尾空格
+>                 raise ValueError("title must be at most 60 characters before trimming")
+>             if not value.strip():
+>                 raise ValueError("title must contain a non-whitespace character")
+>             return value.strip()
+>         return value
+>
+>
+> class Report(BaseModel):
+>     id: int
+>     title: str
+>     status: str
+>
+>
+> class Page(BaseModel):
+>     items: list[Report]
+>     next_cursor: str | None  # required, but null on the last page
+>
+>
+> class Problem(BaseModel):
+>     type: str
+>     title: str
+>     status: int
+>     detail: str
+>     errors: list[dict[str, str]] | None = None
+>
+>
+> class ApiProblem(Exception):
+>     def __init__(self, status: int, kind: str, title: str, detail: str):
+>         self.status, self.kind, self.title, self.detail = status, kind, title, detail
+>
+>
+> def problem_content(description: str):
+>     return {
+>         "description": description,
+>         "content": {
+>             "application/problem+json": {"schema": Problem.model_json_schema()}
+>         },
+>     }
+>
+>
+> LIST_ERRORS = {
+>     400: problem_content("Unknown cursor"),
+>     422: problem_content("Invalid query parameter"),
+> }
+> READ_ERRORS = {
+>     404: problem_content("Report does not exist"),
+>     422: problem_content("Report ID is not an integer"),
+> }
+> CREATE_ERRORS = {
+>     400: problem_content("Malformed JSON body"),
+>     409: problem_content("Report title already exists"),
+>     422: problem_content("Invalid title fields"),
+> }
+>
+> reports = {
+>     41: Report(id=41, title="Monthly overview", status="ready"),
+>     42: Report(id=42, title="Service health", status="ready"),
+>     43: Report(id=43, title="Usage summary", status="queued"),
+> }
+> cursor_offsets: dict[str, int] = {}
+> next_id = 44
+> app = FastAPI()
+> router = APIRouter(prefix="/api")
+>
+>
+> def problem_response(status, kind, title, detail, **extensions):
+>     return JSONResponse(
+>         status_code=status,
+>         media_type="application/problem+json",
+>         content={
+>             "type": PROBLEM_BASE + kind,
+>             "title": title,
+>             "status": status,
+>             "detail": detail,
+>             **extensions,
+>         },
+>     )
+>
+>
+> @app.exception_handler(ApiProblem)
+> async def api_problem_handler(request: Request, exc: ApiProblem):
+>     return problem_response(exc.status, exc.kind, exc.title, exc.detail)
+>
+>
+> @app.exception_handler(RequestValidationError)
+> async def validation_handler(request: Request, exc: RequestValidationError):
+>     errors = exc.errors()
+>     if any(error.get("type") == "json_invalid" for error in errors):
+>         return problem_response(
+>             400, "malformed-json", "Malformed JSON", "Send a syntactically valid JSON body."
+>         )
+>     fields = [
+>         {"field": ".".join(str(part) for part in error["loc"]), "code": "invalid_value"}
+>         for error in errors
+>     ]
+>     return problem_response(
+>         422, "validation", "Request validation failed",
+>         "Correct the fields listed in errors and resubmit.", errors=fields,
+>     )
+>
+>
+> @router.get("/reports", response_model=Page, responses=LIST_ERRORS)
+> async def list_reports(
+>     limit: int = Query(default=2, ge=1, le=100), cursor: str | None = None
+> ):
+>     if cursor is None:
+>         offset = 0
+>     elif cursor in cursor_offsets:
+>         offset = cursor_offsets[cursor]
+>     else:
+>         raise ApiProblem(400, "invalid-cursor", "Invalid cursor", "Start a new listing.")
+>
+>     ordered = [reports[key] for key in sorted(reports)]
+>     page = ordered[offset : offset + limit]
+>     next_cursor = None
+>     if offset + len(page) < len(ordered):
+>         next_cursor = secrets.token_urlsafe(12)
+>         cursor_offsets[next_cursor] = offset + len(page)
+>     return Page(items=page, next_cursor=next_cursor)
+>
+>
+> @router.get("/reports/{report_id}", response_model=Report, responses=READ_ERRORS)
+> async def get_report(report_id: int):
+>     if report_id not in reports:
+>         raise ApiProblem(
+>             404, "not-found", "Report not found",
+>             "No report is visible under this identifier.",
+>         )
+>     return reports[report_id]
+>
+>
+> @router.post(
+>     "/reports", status_code=201, response_model=Report, responses=CREATE_ERRORS
+> )
+> async def create_report(payload: CreateReport, response: Response):
+>     global next_id
+>     title = payload.title
+>     if any(report.title.casefold() == title.casefold() for report in reports.values()):
+>         raise ApiProblem(409, "duplicate-title", "Title already exists", "Choose another title.")
+>     report = Report(id=next_id, title=title, status="queued")
+>     reports[next_id] = report
+>     response.headers["Location"] = f"/api/reports/{next_id}"
+>     next_id += 1
+>     return report
+>
+>
+> app.include_router(router)
+>
+>
+> def check():
+>     client = TestClient(app)
+>     good = client.get("/api/reports/42", headers={"Accept": "application/json"})
+>     assert good.status_code == 200
+>     assert good.json() == {"id": 42, "title": "Service health", "status": "ready"}
+>
+>     missing = client.get("/api/reports/999")
+>     assert missing.status_code == 404
+>     assert missing.headers["content-type"].startswith("application/problem+json")
+>     assert missing.json()["type"] == PROBLEM_BASE + "not-found"
+>     invalid_id = client.get("/api/reports/not-an-integer")
+>     assert invalid_id.status_code == 422
+>
+>     first = client.get("/api/reports?limit=2")
+>     assert [row["id"] for row in first.json()["items"]] == [41, 42]
+>     assert first.json()["next_cursor"] is not None
+>     cursor = first.json()["next_cursor"]
+>     second = client.get("/api/reports", params={"limit": 2, "cursor": cursor})
+>     assert [row["id"] for row in second.json()["items"]] == [43]
+>     assert "next_cursor" in second.json() and second.json()["next_cursor"] is None
+>     assert client.get("/api/reports?limit=101").status_code == 422
+>     assert client.get("/api/reports?cursor=unknown-token").status_code == 400
+>
+>     malformed = client.post(
+>         "/api/reports", content="{", headers={"Content-Type": "application/json"}
+>     )
+>     assert malformed.status_code == 400
+>     assert malformed.json()["type"] == PROBLEM_BASE + "malformed-json"
+>     assert malformed.headers["content-type"].startswith("application/problem+json")
+>     whitespace = client.post("/api/reports", json={"title": "   "})
+>     assert whitespace.status_code == 422
+>     overlong_raw = client.post("/api/reports", json={"title": " " * 61 + "Padded"})
+>     assert overlong_raw.status_code == 422
+>
+>     created = client.post("/api/reports", json={"title": " Weekly detail "})
+>     assert created.status_code == 201 and created.json()["id"] == 44
+>     assert created.json()["title"] == "Weekly detail"
+>     assert created.headers["location"] == "/api/reports/44"
+>     duplicate = client.post("/api/reports", json={"title": "weekly detail"})
+>     assert duplicate.status_code == 409
+>     assert duplicate.json()["type"] == PROBLEM_BASE + "duplicate-title"
+>
+>     spec = app.openapi()
+>     paths = spec["paths"]
+>     assert "/api/reports/42" not in paths  # path template is used in OpenAPI
+>     get_one = paths["/api/reports/{report_id}"]["get"]
+>     get_list = paths["/api/reports"]["get"]
+>     post = paths["/api/reports"]["post"]
+>     assert "404" in get_one["responses"] and "422" in get_one["responses"]
+>     assert "400" not in get_one["responses"] and "409" not in get_one["responses"]
+>     assert "400" in get_list["responses"] and "422" in get_list["responses"]
+>     assert "404" not in get_list["responses"] and "409" not in get_list["responses"]
+>     assert {"400", "409", "422"} <= set(post["responses"])
+>     assert "404" not in post["responses"]
+>     page_schema = spec["components"]["schemas"]["Page"]
+>     assert "next_cursor" in page_schema["required"]
+>     assert page_schema["properties"]["next_cursor"]["anyOf"]
+>     print("GET /api/reports/42 -> 200; missing -> 404; invalid ID -> 422")
+>     print("malformed JSON -> 400; blank/overlong title -> 422; duplicate -> 409")
+>     print("page [41, 42] -> [43]; required next_cursor=null ends the listing")
+>     print("OpenAPI routes and per-operation responses match the demonstrated paths")
+>
+>
+> check()
+> ~~~
+>
+> This code uses an in-memory offset map to teach the cursor boundary; the token expires on process restart and is not bound to filters, sort order or identity. A production collection can use an index-backed keyset cursor and reauthorize each page. The page contents are computed from these three records; they are not performance measurements.
+
+### 兼容演进需要显式规则
+
+新增可选响应字段通常可兼容会忽略未知字段的客户端，但严格解码器或生成代码可能拒绝它。删除字段、改变字段类型或含义、把可选请求字段改为必填、改变 Problem `type`、调整分页结束标志，都可能破坏调用方。应公开兼容政策，检查重要调用方，并为不兼容变更安排版本切换或迁移窗口；不存在唯一强制的版本化方案。
+
+**接下来：** 本章描述调用方可观察的接口结构；HTTP 方法、缓存与状态码的通用语义见[浏览器请求如何到达 HTTP 响应？](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)，副作用未知后的结果查询和重试见[请求超时后如何确认结果并安全重试？](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
+
+> [!info]- 来源
+> - 错误正文的类别标识、状态、标题、详情和扩展字段：[IETF RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)，§3–§4，2023-07；核对于 2026-11-06。
+> - 400、401 challenge、403、404、409、422、429、201 与 202 的 HTTP 语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9、§15，2022-06；核对于 2026-11-06。
+> - 操作、参数、媒体类型、响应和 schema 的接口描述：[OpenAPI Specification v3.2.1](https://spec.openapis.org/oas/v3.2.1.html)，2026-09-10，§4–§5；核对于 2026-11-06。代码环境当前生成 3.1.0；运行时版本由 `app.openapi()['openapi']` 决定，规范文件描述契约但不保证实现遵循它。
+> - 页大小、请求间参数一致、不透明 page token 和结束信号：[Google AIP-158, Pagination](https://google.aip.dev/158)，2019-02-18，Guidance；核对于 2026-11-06。
+> - FastAPI 请求模型、响应模型和自定义错误处理：[FastAPI Request Body](https://fastapi.tiangolo.com/tutorial/body/)、[Response Model](https://fastapi.tiangolo.com/tutorial/response-model/)、[Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/)，官方文档核对于 2026-11-06；错误类型映射已在列明版本的本地运行环境核对。
+## 4. Cookie 会话与 OIDC 令牌怎样建立身份？
+
+浏览器每次读取报表 42 时，服务端要先辨认请求携带的凭据、签发者和可确认的身份。Cookie 可以承载不透明会话标识，应用再由标识查询服务器端会话；bearer token（持有者令牌）本身就是可重放的凭据，由资源服务验证。OpenID Connect (OIDC，基于 OAuth 2.0 的身份层) 让应用验证身份提供方的认证结果。应用随后仍要建立自己的会话；独立的报表 API 则需要面向该 API 签发的 Access Token（访问令牌）。这些凭据只建立调用者身份或调用资格，不决定用户能否读取报表 42。
+
+### 登录后，Cookie 会话怎样识别请求？
+
+一种常见架构是在浏览器保存随机、不透明的会话 ID（标识），服务器把会话状态保存在共享存储或应用数据库。登录后，服务器创建新会话记录并以 `Set-Cookie` 返回：
+
+~~~http
+Set-Cookie: __Host-session=<random-opaque-id>; Path=/; Secure; HttpOnly; SameSite=Lax
+~~~
+
+后续请求只有在目标主机、路径、安全连接和 SameSite 规则都匹配时才会附带 Cookie。`__Host-session` 是由 `reports.example` 设置的 host-only Cookie：它随发往该主机的合适请求发送，不会自动发送给 `api.reports.example`、`console.example.com` 或其他主机。服务端收到标识后查询会话，再把经验证的主体映射到本地账户，例如用签发者 `iss`（issuer，签发身份提供方）与该签发者范围内的用户编号 `sub`（subject，主体）共同标识账户。Cookie 字段只运送值；同一个字段也能存偏好等非身份数据，“有 Cookie”本身不表示已经认证。
+
+会话 ID 是可重放凭据。认证成功或权限等级变化时轮换它，可以降低会话固定风险；空闲过期、绝对过期、退出、密码重置和管理员撤销的处理共同决定失效速度。`__Host-` 要求安全连接、无 `Domain` 属性且 `Path=/`，从而收紧 Cookie 主机范围。`Secure` 限制只在安全连接上传送；`HttpOnly` 阻止页面脚本直接读取 Cookie 值；`SameSite` 限制部分跨站上下文中的自动发送。它们各有边界：`HttpOnly` 不能阻止已执行的恶意脚本代替用户发请求；`SameSite` 按 site（站点）判断，不等同 origin（源）或资源授权。若确实需要跨站上下文附带 Cookie，需设置 `SameSite=None; Secure`，并保留适用的 CSRF 防护；见[浏览器安全控制保护什么边界？](#6.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E5%88%86%E5%88%AB%E4%BF%9D%E6%8A%A4%E4%BB%80%E4%B9%88%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F)。
+
+### Cookie 会话和 Bearer 令牌各保留什么状态？
+
+| 设计 | 浏览器或调用方携带 | 验证点与状态 | 撤销和权限变化的取舍 |
+| --- | --- | --- | --- |
+| 服务端 Cookie 会话 | Cookie 中的不透明会话 ID | 应用按 ID 取服务器端会话；受保护操作再逐次检查授权 | 可即时使服务器端记录失效；请求需要会话存储或共享会话服务 |
+| 不透明 Bearer Access Token | 常见形式是 `Authorization: Bearer …` | 资源服务器查询签发方或调用 token introspection（令牌状态查询）服务 | 可集中撤销；请求可能依赖查询服务或其缓存 |
+| 自包含 JWT Bearer Token | 常见形式是同一 Authorization 字段 | 资源服务器验签并检查 `iss`、`aud`（audience，令牌原本面向的受众）、有效期和用途 | 不必每次查询用户会话；已签发权限可能在到期前仍有效，及时撤销需要额外机制 |
+
+JSON Web Token (JWT，JSON Web 令牌) 是令牌格式，不是身份已验证的证明。典型签名 JWT 的声明可被读取；签名证明内容来自受信签发者且未被修改，不提供保密性。验证方要按目标协议检查允许的算法、准确签发者、目标受众、令牌类型、过期时间和适用的授权范围；只解码 JWT 不等于验证 JWT。若资源服务器必须及时获知撤销，短有效期、introspection 或请求期会话检查都可能适用，取舍取决于延迟、故障和部署成本。
+
+单页应用若把访问令牌放在脚本可读的存储中，XSS 可能将其读出；换成 HttpOnly Cookie 后，脚本不易直接读凭据，但浏览器会自动附带 Cookie，仍须防 CSRF。由后端代理浏览器请求的架构可以把访问令牌留在服务端，并给浏览器较短作用域的应用会话。选择存储位置不能修复 XSS、错误授权或身份映射问题。
+
+### 授权码流程如何确认身份并建立应用会话？
+
+OAuth 2.0 是授权框架，本身不定义客户端如何确认终端用户身份；OIDC 在其上增加身份层和 ID Token（身份令牌）。ID Token 面向 OIDC 客户端，说明身份提供方完成了怎样的认证事件；Access Token 面向资源服务器。把发给登录客户端的 ID Token 当成报表 API 凭据会混淆两个受众。
+
+**案例：** 查看者在报表应用选择“使用身份提供方登录”。本例选择授权码流程和顶层 GET callback：
+
+1. 应用生成高熵、一次性的 PKCE `code_verifier`，计算 `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))`；再生成随机事务句柄，把 `{state, verifier, expected_issuer}` 按句柄保存在短期服务端记录中。
+2. 应用用 `__Host-login-tx` Cookie 把事务句柄交给浏览器，属性为 `Path=/; Secure; HttpOnly; SameSite=Lax`，且不设置 `Domain`；再把浏览器导向已注册的身份提供方，并发送 `response_type=code`、`client_id`、精确登记的 `redirect_uri`、`scope=openid`、`code_challenge`、`code_challenge_method=S256` 和随机 `state`。短期事务记录和 Cookie 都应设置有限寿命。本例的顶层 GET 回调可携带 Lax Cookie；若选择其他回调方式，应重新核对 SameSite 发送条件。
+3. 身份提供方认证用户后，将浏览器导回已登记的 callback，附上短期授权码与原 `state`。回调请求还须携带先前设置的登录事务 Cookie；应用先用它定位本浏览器发起的事务，再核对并消费其中的 state，取回 verifier 和预期签发者。不能只凭 callback 自带的 state 查一个全局事务记录。配置多个授权服务器时，还须按协议防范授权服务器混淆并校验 issuer。
+4. 应用后端向 Token Endpoint 提交 `grant_type=authorization_code`、授权码、原 `redirect_uri`、私有 `code_verifier`；按客户端类型还要认证客户端。身份提供方重新计算 challenge，匹配后才兑换授权码。截获授权码的第三方通常没有 verifier，不能代替发起客户端完成交换。
+5. 成功兑换的 Token Endpoint 响应返回 ID Token 和 Access Token。OIDC 客户端验证 ID Token，再把 `(issuer, subject)` 映射到本地账户并建立自己的应用会话。`scope=openid` 建立 OIDC 身份请求，但不会自动授予自定义报表 API 的受众或权限；Access Token 只有在身份提供方按资源服务器配置签发了该 API 所需的 audience 与权限时，才可用于报表 API。其他配置下它可能面向 UserInfo 等资源，不能仅凭它与 ID Token 一起返回就当作报表 API 凭据。
+
+`state` 把回调与发起登录的浏览器事务绑定；`nonce`（若发送）把 ID Token 与一次认证请求关联；PKCE 把授权码与持有 verifier 的客户端绑定。RFC 9700 允许客户端在确认授权服务器支持 PKCE 时依 PKCE 防护回调 CSRF；若不确认支持，或本身发送了 state/nonce，就要把相应值绑定原事务并验证，不能信任回调自带值。授权服务器必须支持 PKCE；客户端应显式发送 `code_challenge_method=S256`，因为省略时 RFC 7636 默认 `plain`。
+
+~~~mermaid
+sequenceDiagram
+    participant App as 报表应用
+    participant Browser as 浏览器
+    participant IdP as 身份提供方
+    participant API as 报表 API
+    App->>App: 保存 {state, verifier, expected_issuer}
+    App->>Browser: 登录事务 Cookie + redirect_uri、scope=openid、challenge、method=S256、state
+    Browser->>IdP: 请求授权码
+    IdP->>Browser: 顶层 GET 回调 code + state
+    Browser->>App: 事务 Cookie + code + state
+    App->>App: 用 Cookie 找事务并消费 state
+    App->>IdP: grant_type=authorization_code、code、redirect_uri、verifier
+    IdP-->>App: ID Token 和 Access Token
+    App->>App: 验证 ID Token，创建本地应用会话
+    opt 独立 API 且签发方配置了该资源
+        App->>API: API audience 的 Access Token
+        API->>API: 验证令牌后逐次检查资源授权
+    end
+~~~
+
+验证 ID Token 时，客户端至少要匹配预期 `iss`，验证 `aud` 包含客户端 ID、按规则检查 `azp`（authorized party，获授权的客户端），核验 `exp`、本次事务发送的 `nonce`（如有），并依据协议验证签名、可信算法和密钥。报表 API 若是独立资源，身份提供方须配置相应资源受众与权限；客户端可以按 RFC 8707 使用 `resource` 参数请求特定资源（是否支持仍由提供方决定），API 再独立验证该专用 Access Token 的 issuer、audience、有效期和范围。OAuth scope 不会替应用判断报表 42 的本地所有权。
+
+> [!info] 单点登录不共享各应用的本地会话
+> Single Sign-On (SSO，单点登录) 可以让同一身份提供方的登录会话支持用户进入多个已注册应用，减少重复输入凭据的需要；同意页面、策略和认证强度仍可能要求再次交互。每个应用仍须验证自己的授权回调并创建自己的本地会话。退出一个应用的本地会话，不一定结束身份提供方会话，也不会自动退出其他应用。报表应用使用的会话 Cookie 仍由各自主机设置和验证。
+
+> [!info] Token Endpoint 的限定验证方式
+> OIDC Core 对直接经已验证 TLS 连接从 Token Endpoint 收到的 Authorization Code Flow ID Token 允许一种窄例外：在验证 Token Endpoint 的 TLS 服务器身份后，可用它验证 issuer 来代替 ID Token 签名检查。该例外只适用于这条受限路径；其他 ID Token 仍须按规范验证签名。
+
+Refresh Token 只发给 Token Endpoint 用于换取新 Access Token，不应发给报表 API。它是高价值凭据；RFC 9700 要求公共客户端使用令牌轮换或 sender-constraining 检测 Refresh Token 重放。若签发方提供撤销端点，客户端可请求撤销；自包含 Access Token 是否立即停止被资源服务器接受，还取决于资源服务器是否查撤销状态。退出本地应用会话、退出身份提供方会话、撤销令牌是三种相关但不同的操作。
+
+### 本地密码验证后，应用还要做什么？
+
+本地密码数据库保存带随机盐的专用密码哈希及其算法和成本参数，而不是明文或快速通用散列。被盗数据库会让攻击者离线尝试猜测；内存困难的 Argon2id 会使每次猜测消耗内存和计算，仍需由服务根据并发和硬件调优成本，并独立限制在线尝试。OWASP 当前列出的 19 MiB 内存、2 次迭代、并行度 1 是一个最低 Argon2id 配置示例，不是所有服务的性能目标。盐不需要保密；可选 Pepper 是数据库外的服务器秘密，要先设计轮换与恢复。
+
+密码验证或联邦身份验证得到的是已经验证的主体和认证上下文。之后，账户映射、会话生命周期和具体资源授权仍由应用负责。报表编号 42 是否允许当前主体读取，见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+> [!info]- 来源
+> - Cookie 与服务器状态关联：[IETF RFC 6265, HTTP State Management Mechanism](https://www.rfc-editor.org/rfc/rfc6265.html)，§4–§5，2011-04；属性与 Cookie 发送限制同时核对 WHATWG [Fetch Standard, Cookies](https://fetch.spec.whatwg.org/#cookies)，Living Standard，核对于 2026-11-06。
+> - Cookie 前缀、host-only 作用域与 SameSite 属性：[HTTPWG RFC6265bis 草案](https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html)，§4.1.3.2、§5.6.7，核对于 2026-11-06；草案仍在演进。
+> - 会话 ID 与安全配置：[OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)，Session ID、Cookie 属性和过期章节，按 2026-11-06 版本核对。
+> - OAuth 2.0 安全最佳实践：[IETF RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html)，§2、§4.7、§4.10、§4.14，2025-01；核对于 2026-11-06。
+> - OIDC 身份层、Code Flow、ID Token 和访问令牌验证：[OpenID Connect Core 1.0 incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html)，§2、§3.1.2–§3.1.3，2023-12-15；Token Endpoint/TLS 例外见 §3.1.3.7(6)。核对于 2026-11-06。
+> - PKCE verifier、challenge 与默认方法：[IETF RFC 7636](https://www.rfc-editor.org/rfc/rfc7636.html)，§4.3；授权码交换参数：[RFC 6749](https://www.rfc-editor.org/rfc/rfc6749.html)，§4.1.3；资源指示参数：[RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html)，§2。均核对于 2026-11-06。
+> - Token 撤销：[RFC 7009](https://www.rfc-editor.org/rfc/rfc7009.html)，§2，2013-08；JWT 验签与防算法混淆：[RFC 8725](https://www.rfc-editor.org/rfc/rfc8725.html)，§3，2020-02。均核对于 2026-11-06。
+> - 密码哈希 Argon2id 参数：[OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)，Argon2id 与升级章节，按 2026-11-06 版本核对；身份验证器要求：[NIST SP 800-63B-4](https://csrc.nist.gov/pubs/sp/800/63/b/4/final)，2025-07，核对于 2026-11-06。
+## 5. 如何逐次授权租户内的报表资源？
+
+authentication (身份认证) 确认请求由哪个主体发出；authorization (授权) 逐项判断该主体此刻能否对指定资源执行指定动作。请求里的用户 ID、租户 ID、角色名或报表编号可由调用方选择，不能因它们出现在 URL、JSON 或队列消息里就视为可信事实。
+
+**案例设定：** 浏览器请求 `/tenants/tenant-a/reports/42`。身份层已验证用户 `user-17`，数据库里 `user-17` 是租户甲的 `reader`；报表 42 的所有者固定为租户甲。`reader` 可以读取现有报表，但不能因此发起高成本重算或导出。为简化例子，报表归属不可变，授权只由当前成员角色决定，没有单报表分享规则。示例结果如下：
+
+| 请求 | 数据库状态 | 对外结果 |
+| --- | --- | --- |
+| `user-17` 在 `tenant-a` 读报表 42 | 当前成员角色允许，复合键 `(tenant-a, 42)` 存在 | 200，返回报表 |
+| `user-29` 在 `tenant-b` 读报表 42 | 用户是乙的 reader，但 `(tenant-b, 42)` 不存在 | 404，隐藏其他租户资源 |
+| 没有租户成员身份的用户读报表 42 | 无当前租户主体 | 404，按本 API 的隐藏政策与资源不存在统一 |
+| 任务创建后 `user-17` 被移出租户甲 | 当前成员关系已撤销 | API 读为 404；需要当前权限的 worker 拒绝任务 |
+
+~~~mermaid
+flowchart LR
+    Credential[验证 Cookie 会话或 API 凭据] --> Subject[得到可信主体]
+    Subject --> Tenant[从请求取租户上下文并查当前成员]
+    Tenant -->|无成员或无 report:read| Deny[统一按政策返回 404]
+    Tenant -->|允许读取| Key[构造 tenant、subject、report 缓存键]
+    Key --> Cache{缓存命中？}
+    Cache -->|是| Hit[返回曾在正确租户范围内填充的副本]
+    Cache -->|否| Query[按 tenant_id + report_id 查询]
+    Query -->|存在| Fill[填充对应范围的缓存并返回]
+    Query -->|不存在| Missing[返回 404]
+    Export[独立导出/重算请求] --> ExportAuth[另查 report:export 等动作权限]
+    ExportAuth -->|通过| Job[持久化可信任务记录]
+    Job --> Worker[worker 读 job_id 并复验当前策略]
+~~~
+
+图中的缓存命中以固定报表归属、按租户和主体隔离的缓存键为前提；未命中时，查询再以 `(tenant_id, report_id)` 证明行属于该租户。若所有权、分享关系或可见策略能改变，缓存命中也必须校验当前对象授权，并可靠更新或失效旧范围的缓存。缓存不应跳过本次请求的成员授权。
+
+### 从可信主体到报表 42 的读取，需要经过哪些检查？
+
+1. 认证层验证 Cookie 会话或访问令牌，得出稳定主体。不要把请求头或请求体里的 `user_id` 当成登录结果。凭据和联邦登录见[Cookie 会话与 OIDC 令牌怎样建立身份？](#4.%20Cookie%20%E4%BC%9A%E8%AF%9D%E4%B8%8E%20OIDC%20%E4%BB%A4%E7%89%8C%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E8%BA%AB%E4%BB%BD%EF%BC%9F)。
+2. 将路径中的 `tenant-a` 当作用户希望选择的上下文；服务器查当前主体在租户甲的成员关系，之后才把它用于权限判断。多租户应用要明确用户在不同租户各自拥有的角色。
+3. 把动作与对象一起判断。`reader` 可以允许若干读取动作，但不能自动证明对象归属，也不能推导出导出、刷新或管理权限。
+4. 查询时同时绑定租户与编号，不能先用全局编号取出私有报表，再假设隐藏链接、不可猜 ID 或 UI 检查已经完成授权。
+5. 对 API、附件、缓存和后台工作等每条数据路径重复正确的检查。最小权限的服务账号定义 worker 能做什么，不替最终用户完成授权。
+
+#### 角色能授予什么动作，资源检查还要做什么？
+
+Role-Based Access Control (RBAC，基于角色的访问控制) 用 `reader`、`admin` 等角色归纳一组动作，适合表达租户成员的常见权限。资源属性或关系可能还需额外条件，例如某份报表只分享给指定主体，或其部门标签不匹配。角色说明“通常可做哪类动作”，不能证明报表 42 属于当前租户或用户。新端点默认拒绝，并对每个受保护操作重新检查当前策略，可以减少遗漏。
+
+### 数据库与缓存怎样保持同一授权范围？
+
+把租户和报表编号分别作为绑定值传入 SQL：
+
+~~~sql
+SELECT id, title, body
+FROM reports
+WHERE tenant_id = ? AND id = ?;
+~~~
+
+参数绑定防止输入改写 SQL 语法；授权检查决定当前主体能否读取绑定后的对象。两者解决不同问题：绑定参数后读取 `report_id=73` 仍可能越权；完成授权但拼接 SQL 仍可能被注入。动态排序字段通常不能作为一般参数绑定，应从固定允许列表里选择。
+
+本例的数据库用复合主键 `(tenant_id, id)` 标识租户内报表；这使每个租户的编号空间明确。查询仍须保留两个谓词，因为主键约束数据形状，并不判断当前用户是否有权读该行。队列里的任务引用也应按同一复合身份解析。
+
+缓存命中会绕过数据库谓词，因此先查当前成员资格，再访问带范围的缓存。此例缓存键是 `(tenant_id, subject, report_id)`：租户乙不能拿租户甲的缓存副本，且每次 API 请求都会先重查当前成员。固定所有权是这个精简示例的假设；若报表可以迁移租户或分享权限会变，就要在命中路径复验对象访问条件，或确保权限变更同步使缓存失效。参见[如何控制数据库缓存的新鲜度？](#11.%20How%20do%20you%20cache%20database%20reads%20without%20losing%20freshness?%20/%20%E5%A6%82%E4%BD%95%E7%BC%93%E5%AD%98%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AF%BB%E5%8F%96%E5%B9%B6%E6%8E%A7%E5%88%B6%E6%95%B0%E6%8D%AE%E6%96%B0%E9%B2%9C%E5%BA%A6%EF%BC%9F)。
+
+### 后台任务如何继续执行相同的访问政策？
+
+排队时先按该任务的实际动作授权，再保存服务端创建的可信任务记录。消息只带不透明 `job_id`；worker 用该 ID 从可信存储读取租户、请求人和资源，不从任意消息载荷接受租户或报表编号。worker 是否要在执行时重新检查成员资格取决于产品定义：若成员移除后应停止工作，就复验当前权限；若已受理任务按提交时权限继续，则把那项授权决定作为可审计状态持久化。
+
+下面的复现仅演示“读取一个已经存在的报表”任务，因此 `enqueue_read_job` 只需要 `report:read`。高成本报表导出或重算必须另查 `report:export` 等独立动作，或者明确定义其权限组合；不能从 `reader` 自然推出。账户报表作业的幂等受理、outbox 发布和队列确认见[怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)；队列确认分别见[发布者确认和消费者确认分别证明什么？](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
+
+输入输出可以直接按上面的状态表理解：甲的成员读取甲的 42 返回 200；乙的成员读取乙命名空间中不存在的 42 返回 404；失去成员关系后，API 仍按隐藏策略返回 404，worker 抛出拒绝异常。完整 SQLite 复现放在折叠示例中。
+
+> [!example]- SQLite 授权、缓存与任务复现
+> 示例使用标准库 SQLite 和合成数据；`principal_for` 的主体参数视为认证中间件已经验证，不实现 Cookie 或签名令牌。
+>
+> ~~~python
+> import sqlite3
+>
+> db = sqlite3.connect(":memory:")
+> db.executescript("""
+> CREATE TABLE memberships (
+>     tenant_id TEXT NOT NULL, subject TEXT NOT NULL, role TEXT NOT NULL,
+>     PRIMARY KEY (tenant_id, subject)
+> );
+> CREATE TABLE reports (
+>     tenant_id TEXT NOT NULL, id INTEGER NOT NULL,
+>     title TEXT NOT NULL, body TEXT NOT NULL,
+>     PRIMARY KEY (tenant_id, id)
+> );
+> CREATE TABLE jobs (
+>     id INTEGER PRIMARY KEY, tenant_id TEXT NOT NULL,
+>     requester TEXT NOT NULL, report_id INTEGER NOT NULL
+> );
+> INSERT INTO memberships VALUES ('tenant-a', 'user-17', 'reader');
+> INSERT INTO memberships VALUES ('tenant-b', 'user-29', 'reader');
+> INSERT INTO reports VALUES
+>     ('tenant-a', 42, 'Service health', 'Synthetic private data A');
+> INSERT INTO reports VALUES
+>     ('tenant-b', 73, 'Usage summary', 'Synthetic private data B');
+> """)
+>
+> def principal_for(tenant_id, subject):
+>     row = db.execute(
+>         "SELECT role FROM memberships WHERE tenant_id=? AND subject=?",
+>         (tenant_id, subject),
+>     ).fetchone()
+>     if row is None or row[0] not in {"reader", "admin"}:
+>         return None
+>     return {"tenant_id": tenant_id, "subject": subject, "role": row[0]}
+>
+> def read_report(principal, report_id, cache):
+>     if principal is None or principal["role"] not in {"reader", "admin"}:
+>         raise PermissionError("no current report:read permission")
+>     key = (principal["tenant_id"], principal["subject"], report_id)
+>     if key not in cache:
+>         row = db.execute(
+>             "SELECT body FROM reports WHERE tenant_id=? AND id=?",
+>             (principal["tenant_id"], report_id),
+>         ).fetchone()
+>         if row is None:
+>             return None
+>         cache[key] = row[0]
+>     return cache[key]
+>
+> def read_api(tenant_id, subject, report_id, cache):
+>     # 隐藏政策把无成员、无角色和资源不存在统一映射为 404。
+>     principal = principal_for(tenant_id, subject)
+>     if principal is None:
+>         return (404, None)
+>     body = read_report(principal, report_id, cache)
+>     return (404, None) if body is None else (200, body)
+>
+> def enqueue_read_job(tenant_id, subject, report_id, cache):
+>     principal = principal_for(tenant_id, subject)
+>     if read_report(principal, report_id, cache) is None:
+>         raise PermissionError("cannot enqueue an unreadable report")
+>     cursor = db.execute(
+>         "INSERT INTO jobs (tenant_id, requester, report_id) VALUES (?, ?, ?)",
+>         (principal["tenant_id"], principal["subject"], report_id),
+>     )
+>     db.commit()
+>     return cursor.lastrowid
+>
+> def run_job(job_id, cache):
+>     job = db.execute(
+>         "SELECT tenant_id, requester, report_id FROM jobs WHERE id=?", (job_id,)
+>     ).fetchone()
+>     if job is None:
+>         raise PermissionError("unknown job")
+>     tenant_id, requester, report_id = job
+>     principal = principal_for(tenant_id, requester)  # 执行时重查成员
+>     body = read_report(principal, report_id, cache)
+>     if body is None:
+>         raise PermissionError("job target is outside its tenant or no longer readable")
+>     return body
+>
+> cache = {}
+> assert read_api("tenant-a", "user-17", 42, cache) == (
+>     200, "Synthetic private data A"
+> )
+> assert read_api("tenant-b", "user-29", 42, cache) == (404, None)
+> assert read_api("tenant-a", "user-29", 42, cache) == (404, None)
+> job_id = enqueue_read_job("tenant-a", "user-17", 42, cache)
+> assert run_job(job_id, cache) == "Synthetic private data A"
+>
+> # 即使错误写入了跨租户任务记录，worker 仍按 tenant_id + report_id 查询。
+> malicious_job = db.execute(
+>     "INSERT INTO jobs (tenant_id, requester, report_id) VALUES (?, ?, ?)",
+>     ("tenant-b", "user-29", 42),
+> )
+> db.commit()
+> try:
+>     run_job(malicious_job.lastrowid, cache)
+> except PermissionError:
+>     pass
+> else:
+>     raise AssertionError("worker exposed a report outside the tenant")
+>
+> # 已排队任务在成员撤销后不得命中旧缓存。
+> db.execute("DELETE FROM memberships WHERE tenant_id=? AND subject=?",
+>            ("tenant-a", "user-17"))
+> db.commit()
+> assert read_api("tenant-a", "user-17", 42, cache) == (404, None)
+> try:
+>     run_job(job_id, cache)
+> except PermissionError:
+>     pass
+> else:
+>     raise AssertionError("worker accepted a revoked member")
+> print("tenant-a user-17: report 42 -> 200 before revocation, 404 after")
+> print("tenant-b user-29: report 42 -> 404; wrong-scope and revoked jobs denied")
+> ~~~
+
+**接下来：** 本章负责服务端把主体、动作和租户内资源联系起来；浏览器跨源读取、Cookie 自动发送和脚本执行见[浏览器安全控制分别保护什么信任边界？](#6.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E5%88%86%E5%88%AB%E4%BF%9D%E6%8A%A4%E4%BB%80%E4%B9%88%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F)。网络入口容量与攻击流量准入见[Web 服务如何限制拒绝服务的影响？](#24.%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
+
+> [!info]- 来源
+> - 每次受保护操作检查权限、默认拒绝、最小权限和对象级授权：[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)，Recommendations 与 IDOR 章节，按 2026-11-06 版本核对。
+> - 租户所有权与 pooled SaaS 中运行时租户隔离：[AWS Well-Architected SaaS Lens, Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html)，按 2026-11-06 版本核对。该文是云厂商架构指导，不是通用标准。
+> - SQL 参数化与允许列表：[OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)，Primary Defenses，按 2026-11-06 版本核对。
+## 6. 浏览器安全控制分别保护什么信任边界？
+
+报表页面会跨过多个不同边界。Transport Layer Security (TLS，传输层安全协议) 保护 HTTP 网络链路；Cross-Site Scripting (XSS，跨站脚本攻击) 防护避免不可信文本变成活动脚本；Cross-Site Request Forgery (CSRF，跨站请求伪造) 防护限制另一页面借用浏览器自动附带的 Cookie 发起变更；Cross-Origin Resource Sharing (CORS，跨源资源共享) 控制浏览器脚本能否读取跨源响应；Content Security Policy (CSP，内容安全策略) 的 `frame-ancestors` 限制哪些来源能嵌入页面。它们都不替代服务端认证和对报表 42 的逐次授权。
+
+| 信任边界 | 控制主要保证什么 | 本身不保证什么 |
+| --- | --- | --- |
+| 网络链路 | 正确配置的 TLS 加密传输、检测篡改并认证服务端 | 登录用户身份或其可读取的报表 |
+| 页面解释数据 | 按上下文输出编码和必要的标记消毒，避免数据成为活动内容 | 已执行脚本不会滥用页面已有权限 |
+| Cookie 自动发送 | CSRF token 或经审查的来源校验限制伪造状态变更 | 阻止所有未授权调用 |
+| 浏览器跨源读取 | 同源策略与 CORS 控制脚本能否读取响应 | 请求一定未到服务器或用户已经获授权 |
+| 页面嵌入 | `frame-ancestors` 限制谁能嵌入报表界面 | 报表数据和操作的服务端权限 |
+
+### 网络连接如何保护数据并认证服务端？
+
+TLS 握手后为连接建立流量保护。浏览器正确验证证书链、主机名和握手时，HTTPS 可以保护传输机密性与完整性，并认证连接到预期的服务器。TLS 不说明当前浏览器用户是谁；即使浏览器验证了报表站点提供的证书，服务仍须验证会话或访问凭据，并授权读取报表 42。证书状态查询和撤销行为受客户端及部署方式影响，不应假设所有浏览器以相同步骤即时检查撤销。
+
+### 不可信报表标题怎样安全显示？
+
+Document Object Model (DOM，文档对象模型) 是页面结构；XSS 指不可信数据被当作活动内容执行。假设报表 42 的标题是 ` <img src=x onerror=alert(1)> `。若把它交给将值设为纯文本的 `textContent`，它仍只是字符；若拼进 `innerHTML`，浏览器会按 HyperText Markup Language (HTML，超文本标记语言) 解析。当图片加载失败且策略允许 inline handler 时，`onerror` 处理器可能执行。
+
+1. 普通文本使用框架默认安全的文本呈现接口。只有需要将数据放入安全属性值等允许上下文时，才用对应的上下文编码。
+2. 不把不可信字符串拼进执行位置，例如动态脚本正文、事件处理器代码或 CSS 选择器；这些位置不能靠一种通用转义方式修好。
+3. 只有产品确实要呈现用户编写的富文本时，才使用维护良好的 HTML 消毒器过滤允许的标记和属性。
+4. 避免把不可信字符串传给 `innerHTML`、`document.write`、事件属性、`eval` 或 `new Function`。框架常规自动转义不保护有意使用的 raw HTML 入口。
+5. 为链接和资源 URL 验证 scheme 与目标，例如拒绝不允许的 `javascript:`；HTML 属性编码不会限制 URL 的语义。经测试的 CSP 可限制脚本来源，作为纵深防御，不能代替安全呈现。
+
+如果 XSS 已执行，脚本通常能以页面所属 origin 发起请求并读取脚本可访问的页面数据；即使会话 Cookie 是 `HttpOnly`，恶意脚本仍可能让浏览器替用户调用报表 API。因此要修复注入点并保留服务端授权。`HttpOnly` 减少 Cookie 值被脚本直接窃取的途径，不是 XSS 防护本身。
+
+### Cookie 自动发送时，怎样防止伪造变更？
+
+CSRF 利用浏览器自动附带目标站点 Cookie 的行为。以下场景固定为明确可复现的条件：用户已经登录 `api.example.test`，其当前主体本来就有执行 `reports:refresh` 的权限；另一个同 site 但不可信的旧子域 `legacy.example.test` 可被攻击者控制；API 接受下方表单格式，且目前没有 token 或来源校验。host-only Cookie 仍会发给目标 API 主机；同 site 不等于同 origin。
+
+~~~html
+<form action="https://api.example.test/api/reports/42/refresh" method="post">
+  <input name="range" value="365-days">
+</form>
+<script>document.forms[0].submit();</script>
+~~~
+
+这次跨源表单 POST 的响应不必可被攻击页面读取，副作用仍可能已经发生。例子中的两个主机使用 HTTPS 且共享可注册域 `example.test`，所以是同 site、不同 origin；若 Cookie 为 `SameSite=Lax`，同 site 的表单 POST 仍可能附带 Cookie。真正跨 site 的普通 POST 通常会被 Lax 限制，但顶层安全方法导航等仍有不同规则，不能把 `Lax` 当成授权或完整 CSRF 防护。
+
+对 Cookie 认证的状态变更，服务端验证与当前会话绑定的 CSRF token，或使用经过审查的等价机制；适用时再校验 Origin/Referer，并用合适的 SameSite 设置纵深防御。使用 GET 等安全方法的路由不应改变状态。加上 token 后，同一请求仍可能抵达 API，但因缺少或无效 token 而被拒绝；token 让服务识别伪造来源，不证明用户操作意图。如果同源 XSS 已执行，它可能读取页面中的 token 或调用合法请求接口，因此还要修复注入并持续执行资源授权。
+
+当某个合法流程确实需要跨 site 附带 Cookie，应设置 `SameSite=None; Secure` 并单独设计 CSRF 防护。不要为了让登录回调或嵌入工作而静默取消请求校验。
+
+### 同源策略如何控制跨源响应读取？
+
+浏览器将 origin 定义为协议、主机和端口。`https://console.example.test` 与 `https://api.example.test` 的 scheme 和可注册域相同，属于 same-site；主机不同，所以是不同 origin。Cookie 的 SameSite 依据 site 判定，不能与 origin 混为一谈。
+
+以下部署变体让控制台脚本直接请求 API；浏览器已通过 `api.example.test` 的登录流程持有 API 自己设置的 host-only `__Host-api-session` Cookie。`console.example.test` 的 Cookie 不会发给 `api.example.test`；`__Host-` Cookie 也不能设置 `Domain` 扩大范围。`credentials: "include"` 允许浏览器按目标 URL、Cookie 属性和 Fetch 凭据模式附带匹配凭据，JavaScript 不读取 Cookie 值。
 
 ~~~javascript
-const response = await fetch('/api/data');
-
-if (!response.ok) {
-  throw new Error('HTTP ' + response.status);
-}
-
-const data = await response.json();
+const response = await fetch('https://api.example.test/api/reports/42', {
+  credentials: 'include',
+  headers: { 'X-Report-View': 'compact' },
+});
 ~~~
 
-XHR可以读取状态和响应文本，但应用通常还需自行解析JSON并处理网络错误。Axios是第三方HTTP客户端，常见特性包括响应数据转换、拦截器及可配置的错误判断；它的默认状态码判断通常接受2xx并将其他状态作为错误处理。选择哪种API应服从项目依赖与需求，而不是把某个库的行为误认为HTTP协议保证。[Axios响应结构](https://axios-http.com/docs/res_schema) 与 [Axios错误处理](https://axios-http.com/docs/handling_errors)。
-
-### 网络分层与TCP / Network layers and TCP
-
-OSI七层模型常用于定位概念；实际互联网套件也常按四层概括。不同教材对会话、表示、链路层的归并略有差别，模型是理解工具：
-
-| OSI层 OSI layer | 常见概念 Examples |
-|---|---|
-| 7 应用 Application | HTTP、DNS、FTP |
-| 6 表示 Presentation | 数据表示、编码；TLS常跨越应用与传输边界讨论 |
-| 5 会话 Session | 会话管理概念 |
-| 4 传输 Transport | TCP、UDP |
-| 3 网络 Network | IP、ICMP |
-| 2 数据链路 Data link | Ethernet、Wi-Fi链路 |
-| 1 物理 Physical | 电缆、无线电信号 |
-
-TCP提供有序、可靠的字节流，不保留应用程序一次write对应一次read的消息边界。应用协议要使用长度前缀、分隔符或固定长度等方式确定消息边界。所谓“粘包”不是TCP把消息粘坏，而是应用误把字节流当作消息队列。
-
-建立连接通常经过SYN、SYN-ACK、ACK三个TCP段；正常关闭时，两个方向分别结束，常见情形会看到FIN与ACK组成的四段交换。但这不是固定的四个报文：ACK与FIN可能合并，双方同时关闭、异常复位等情况也不同。TCP状态与关闭过程见 [RFC 9293](https://www.rfc-editor.org/rfc/rfc9293.html)。
-
-### DNS名称解析与故障边界 / DNS resolution and failure boundaries
-
-**核心解释 / Core explanation：** DNS把名称映射到资源记录，例如IPv4/IPv6地址。常见路径是客户端的本地解析器先查可用缓存；缓存未命中时，请求递归解析器。递归解析器再从缓存回答，或沿根、顶级域到权威服务器的委派查找记录。记录TTL限制缓存可保留该记录的时间；名称错误也可能被缓存。具体客户端可能命中浏览器/系统缓存、hosts文件或已有连接，因而每次请求不一定都走完整解析路径。
-
-**Core explanation (English):** DNS maps names to records such as IP addresses. A local resolver checks available caches first; on a miss, a recursive resolver may follow referrals from the root through a top-level domain to an authoritative server. A record's TTL limits how long it may be cached, and negative answers may also be cached. Browser or system caches, a hosts file, or an already usable connection can bypass a fresh lookup for a particular request.
-
-**面试简答 / Interview answer：** 先确认名称解析是否给出了可用地址，再按连接建立、TLS握手和HTTP响应分别定位错误。解析器可能返回名称错误或临时错误，也可能在上游无响应时超时；这些都发生在HTTP状态码出现之前。改DNS记录也不会立刻清除所有缓存副本，变更速度受已缓存TTL和解析器策略影响。
-
-在浏览器导航中，缓存、Service Worker和连接复用可能绕过一次新的DNS查询；[Browser Basics / 浏览器基础](../../frontend/browser/browser-basics.md)介绍导航时的整体请求路径。DNS只提供名称解析结果，不负责传输加密；[Web Security and Authentication / Web安全与身份认证](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F)中的TLS说明解释了HTTPS验证服务器并保护传输的边界。
-
-### HTTP/1.1、HTTP/2与HTTP/3 / HTTP versions
-
-| 版本 Version | 连接与多路复用 Connection and multiplexing | 关键边界 Key caveat |
-|---|---|---|
-| HTTP/1.0 | 通常响应后关闭连接；后来出现Keep-Alive扩展 | 不是现代HTTP/1.1默认持久连接语义 |
-| HTTP/1.1 | 默认持久连接，可复用多个请求/响应；同一连接的流水线响应仍按请求顺序返回 | 串行等待或有序响应可能增加延迟；浏览器可使用多个连接 |
-| HTTP/2 | 在一个TCP连接上用多个流并发交换帧，使用HPACK压缩字段 | TCP要求字节有序；一个TCP段丢失可能阻塞该连接上尚未交付的数据 |
-| HTTP/3 | 在QUIC连接上承载多个HTTP流；QUIC运行在UDP之上并提供可靠流 | 一个流丢失的数据不必阻塞其他流交付，但流仍受共享拥塞控制等连接级影响 |
-
-HTTP/1.1连接默认持久，但持久连接不等于并行响应；RFC规定流水线响应按请求顺序发送。HTTP/2的应用层多路复用减少了每个请求单独占用连接的需要，却无法改变底层TCP有序字节流的传输层队头阻塞。HTTP/3把流建立在QUIC上：QUIC可在一个流丢包时继续交付其他可用流的数据，但仍共享连接的拥塞控制和部分流控资源。[RFC 9112](https://www.rfc-editor.org/rfc/rfc9112.html)、[RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html)、[RFC 9114](https://www.rfc-editor.org/rfc/rfc9114.html)、[RFC 9000](https://www.rfc-editor.org/rfc/rfc9000.html)。
-
-HTTP/3使用QUIC而不是“把HTTP直接放在UDP上”：QUIC本身提供连接管理、加密协商和可靠流。会话恢复时可能使用0-RTT数据，但该数据在某些路径上可被重放；有副作用的请求不能仅凭0-RTT就当成安全重试。[RFC 9001](https://www.rfc-editor.org/rfc/rfc9001.html)。
-
-### CORS与浏览器同源策略 / CORS and the same-origin policy
-
-源（origin）由协议、主机和端口共同确定。浏览器的同源策略限制页面读取其他源的响应；CORS（Cross-Origin Resource Sharing，跨源资源共享）让目标服务器通过响应字段声明哪些源可以读取。CORS不是身份认证或CSRF防护机制：符合简单请求条件的跨源请求可能已经发送，只是浏览器不把响应交给页面脚本，因此服务端仍必须验证权限和请求来源。[MDN CORS指南](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)。
+`X-Report-View` 不在 CORS safelist 中，因此在无可用预检缓存的本例里，浏览器先发送不含用户凭据的预检：
 
 ~~~http
-Access-Control-Allow-Origin: https://app.example
-Access-Control-Allow-Methods: GET, POST, PUT, DELETE
-Access-Control-Allow-Headers: Content-Type, Authorization
+OPTIONS /api/reports/42 HTTP/1.1
+Host: api.example.test
+Origin: https://console.example.test
+Access-Control-Request-Method: GET
+Access-Control-Request-Headers: x-report-view
+~~~
+
+~~~http
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: https://console.example.test
+Access-Control-Allow-Methods: GET
+Access-Control-Allow-Headers: X-Report-View
 Access-Control-Allow-Credentials: true
 Vary: Origin
 ~~~
 
-浏览器会对不满足CORS safelist的请求先发送OPTIONS预检，询问服务器是否允许目标方法和请求字段；服务器允许后，浏览器才发送实际请求。预检本身不携带凭据。若实际请求需要浏览器凭据，客户端要使用合适的credentials模式，服务端响应必须允许credentials并返回明确的来源，不能用Access-Control-Allow-Origin: *。服务端按Origin动态返回允许来源时，通常还要通过Vary: Origin告知缓存区分响应。
+预检获准后，浏览器才按 Fetch 凭据模式和 Cookie 规则发送实际 GET。这里假设 API Cookie 匹配目标 URL、已登录且请求的 SameSite 条件允许附带：
 
-JSONP曾用script标签加载远程JavaScript并调用全局回调，通常限于GET和配合服务端输出；现在应把它看作遗留兼容方案。若前端和后端由同一团队控制，反向代理可以让浏览器请求同源地址，再由服务器转发到上游：
-
-~~~nginx
-location /api/ {
-  proxy_pass http://backend-server:8080/;
-}
+~~~http
+GET /api/reports/42 HTTP/1.1
+Host: api.example.test
+Origin: https://console.example.test
+Cookie: __Host-api-session=<opaque-session-id>
+X-Report-View: compact
 ~~~
 
+若请求获准读取，实际响应本身也必须带允许来源和凭据字段，脚本才能取得正文：
 
-**Related question / 相关问题：** [When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？](#15.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F) compares live-update transports and disconnect recovery.
+~~~http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Access-Control-Allow-Origin: https://console.example.test
+Access-Control-Allow-Credentials: true
+Vary: Origin
 
-### 浏览器资源提示 / Browser resource hints
-
-资源提示让浏览器提前处理可能重要的网络工作。它们是提示，浏览器可根据资源与连接状况调整或忽略：
-
-| 提示 Hint | 用途 Purpose | 典型场景 Typical use |
-|---|---|---|
-| preload | 提前获取当前页面确定需要的关键资源 | 首屏字体、稍后才被发现的关键图片或脚本 |
-| prefetch | 低优先级预取可能用于后续导航的资源 | 预测下一页 |
-| dns-prefetch | 提前解析域名 | 后续可能访问的第三方域 |
-| preconnect | 提前完成目标源连接准备 | 很快要使用的关键第三方源 |
-
-~~~html
-<link rel="preload" href="/fonts/main.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="prefetch" href="/next-page.js">
-<link rel="dns-prefetch" href="//analytics.example">
-<link rel="preconnect" href="https://api.example">
+{"id":42,"title":"Service health","status":"ready"}
 ~~~
 
-preload应只用于当前页面确实需要的资源，并填写匹配的as类型；字体通常需要crossorigin，以便预加载与CSS字体请求使用一致的CORS模式，避免重复下载。preconnect只适合关键且即将使用的来源，过多提示会消耗连接资源。[web.dev资源提示指南](https://web.dev/learn/performance/resource-hints)。
+若预检通过但实际 `200` 漏掉 `Access-Control-Allow-Origin` 或 `Access-Control-Allow-Credentials`，API 仍已收到 GET 并执行处理，浏览器却不把响应暴露给脚本。按隐藏策略返回的 `404` 也必须有匹配的 CORS 响应字段，控制台脚本才可读取该错误。预检失败时浏览器不会发送实际请求；无需预检的请求则可能先到达服务器，即便脚本最后读不到响应。两种时序都要求 API 独立验证身份与权限。
 
-### 相关主题 / Related notes
+CORS 是浏览器实现的读取协议，不能认证用户、授权报表、约束 curl 等非浏览器客户端，也不是一般网络防火墙。`Vary: Origin` 只让共享缓存按来源区分响应变体，不隔离不同用户的数据；私有响应还须正确设置缓存策略和用户范围。若页面与 API 可通过同一源反向代理到 `/api/`，通常可以省去跨源读取配置，但服务端授权仍需保留。
 
-- [浏览器基础 / Browser Basics](../../frontend/browser/browser-basics.md)：浏览器的请求、渲染和安全边界。
-- [Web安全与身份认证 / Web Security and Authentication](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F)：CORS之外的认证、Cookie与请求保护。
-- [实时Web更新 / Real-time Web Updates](#15.%20When%20should%20a%20browser%20use%20polling,%20SSE,%20streaming%20Fetch,%20or%20WebSocket?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)：轮询、SSE、流式Fetch与WebSocket的选择和恢复边界。
+> [!info] Fetch 对 Cookie 响应字段的边界
+> 浏览器脚本不能通过 Fetch/XHR 手动设置 `Cookie` 请求字段；它由浏览器依请求 URL 和 Cookie 政策管理。`Set-Cookie` 是禁止暴露给脚本的响应字段，网页不能靠读取它来取得 HttpOnly 会话值。登录 Cookie 的 host-only 范围见[会话与身份令牌](#4.%20Cookie%20%E4%BC%9A%E8%AF%9D%E4%B8%8E%20OIDC%20%E4%BB%A4%E7%89%8C%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E8%BA%AB%E4%BB%BD%EF%BC%9F)。
 
-DNS resolution and TTL behavior were checked against [RFC 1034](https://www.rfc-editor.org/rfc/rfc1034.html) on 2026-10-15.
-## 3. How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？
+### 什么时候限制页面被嵌入？
 
-**Core idea / 核心模型：** An API contract makes a boundary predictable: it says which request shapes are accepted, which success representation is returned, and how clients recognize failures. Validate input at the boundary, keep response and error shapes intentional, and document pagination and evolution rules so clients do not infer behavior from implementation details. / API契约让接口边界可预期：明确接受哪些请求形状、成功时返回什么表示，以及客户端如何识别失败。在边界校验输入，明确设计响应与错误形状，并说明分页和演进规则，避免客户端依赖实现细节。
+点击劫持可将真实页面放进攻击者控制的 frame 下方，诱导用户点击错位按钮。CSP 的 `frame-ancestors` 响应指令声明哪些祖先来源可以嵌入页面；例如仅允许同源嵌入：
 
-**Key terms / 关键术语：** request schema / 请求结构；response schema / 响应结构；boundary validation / 边界校验；problem details / 问题详情；machine-readable error / 机器可读错误；OpenAPI / OpenAPI描述；opaque cursor / 不透明游标；compatible evolution / 兼容演进。
-
-### Separate HTTP semantics from API policy / 区分HTTP语义与API策略
-
-An API contract sits above the transport: a route and method, its path/query/body inputs, response schemas, status outcomes, and pagination rules. HTTP defines the common message and status-code semantics; the API chooses the domain-specific representations and which status applies to each outcome. See [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) for method, status, and transport basics and [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) for timeouts, retries, and unknown write outcomes.
-
-A type annotation helps the application and framework understand values; it is not proof that an untrusted request has the right shape or meaning. Define request models and constraints at the boundary. Return a deliberate response model as well. Structural validation can reject a missing field or out-of-range number, but it cannot decide permission, resource ownership, uniqueness under concurrency, or whether a business action is allowed. Those rules need trusted authorization and domain logic; durable uniqueness belongs at the data boundary (see [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F)).
-
-[OpenAPI](https://spec.openapis.org/oas/latest.html) describes operations, inputs, response codes, media types, and schemas in a machine-readable document. In FastAPI, request models and `response_model` contribute generated schemas; custom error handlers must also be represented in each operation's declared responses, or the runtime response and published contract can diverge. OpenAPI documents a contract; it does not validate deployed behavior by itself.
-
-~~~mermaid
-flowchart LR
-    Request[Request with path, query, and body] --> Validate[Validate shape and domain boundary]
-    Validate -->|valid| Success[Documented success status and schema]
-    Validate -->|invalid| Problem[Problem Details with stable type]
-    Validate -->|permission or conflict| Outcome[Documented policy outcome]
-    Outcome --> Problem
-    Success --> OpenAPI[OpenAPI describes both]
-    Problem --> OpenAPI
+~~~http
+Content-Security-Policy: frame-ancestors 'self'
 ~~~
 
-### Give failures a stable machine identity / 为错误提供稳定的机器标识
-
-An API can use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html) with `Content-Type: application/problem+json`. Its `type` URI is the primary identifier for a problem category; `status` in the body must match the HTTP response; `title` and `detail` are human-readable. Clients should not parse prose in `detail`. Put any stable client-action data in documented extension fields, such as a small `errors` array with a field path and an application-owned code. Avoid echoing raw request values or internal exception text.
-
-The following status mapping is one API's policy, not a universal template:
-
-| Outcome | Example response | Meaning in this API |
-|---|---|---|
-| Valid create | `201` + `Item` | A new item was created and its representation is returned. |
-| Invalid body/query | `422` + problem | The JSON shape or a declared value constraint failed. This sample groups boundary-validation failures here. |
-| Missing item | `404` + problem | No item currently has the requested ID. |
-| Duplicate name | `409` + problem | The requested create conflicts with the current collection state. |
-| Unknown cursor | `400` + problem | The client supplied a continuation token this process does not recognize. |
-
-RFC 9110 describes `422` for syntactically valid content whose instructions cannot be processed and `409` for a conflict with current resource state. A different API may separate malformed JSON syntax as `400`, use a different validation status, or choose another duplicate policy; document the actual behavior and keep it consistent. The transport note covers the status definitions.
-
-### Cursor pagination / 游标分页
-
-A list contract defines a page-size cap, a deterministic order, and an explicit end signal. The synthetic API below defaults to two items, rejects limits above 100, and always returns `next_cursor`. An opaque string means continue and JSON `null` means stop. A short page on its own does not prove that the collection ended. Other APIs choose different signals. Google AIP-158, for example, uses an empty next-page token and reduces an oversized request to the documented maximum. [AIP-158](https://google.aip.dev/158#guidance)
-
-A scoped production listing follows this flow.
-
-~~~mermaid
-flowchart LR
-    Request["Request a page"] --> Auth["Authorize caller and verify query scope"]
-    Auth --> Read["Read in deterministic order after the cursor"]
-    Read --> More{"More eligible rows?"}
-    More -->|yes| Cursor["Return rows and an opaque next cursor"]
-    More -->|no| End["Return rows and next_cursor null in this API"]
-    Cursor --> Request
-~~~
-
-For a production listing sorted by `(created_at, id)` ascending, a keyset cursor can retain the last pair. The next query uses the same filters, a strictly greater pair, and the same order, so two rows with the same timestamp still appear in a predictable order. Associate the cursor with the original query, authorization scope, sort direction and lifetime. Apply authorization on every page. If the dataset changes during paging, document whether the client sees a moving collection or a consistent snapshot. Mutable sort keys can otherwise cause duplicates or omissions.
-
-The runnable example below is one public, synthetic listing. Its in-memory mapping from random tokens to offsets demonstrates continuation, page limits, and the end signal. The demo has no identity or cursor scope checks, and those tokens stop working on restart. For a large, changing collection, choose an indexed query and a cursor policy appropriate to the storage engine. / 客户端原样传回游标，并按接口声明的结束信号停止。示例用 JSON `null` 表示结束。服务端要限制页大小、保证排序稳定，并对每一页重新授权。
-
-### Runnable contract example / 可运行的契约示例
-
-The API uses a synthetic inventory collection. A Pydantic before-validator strips string input before the field's length constraints run, so whitespace-only input cannot become an empty stored name. / API使用合成库存集合。Pydantic前置验证器先去除字符串两端空白，再执行字段长度约束，因此全空白输入不会变成已保存的空名称。 The complete script below validates request and query boundaries, exposes success and error schemas, and checks the resulting HTTP behavior and OpenAPI document. Save it as `api_contract_demo.py` and run it in an environment with FastAPI and its TestClient dependencies.
-
-~~~python
-import secrets
-
-from fastapi import FastAPI, Query, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from fastapi.testclient import TestClient
-from typing import Any
-
-from pydantic import BaseModel, Field, field_validator
-
-PROBLEM_BASE = "https://api.example/problems/"
-
-
-class CreateItem(BaseModel):
-    name: str = Field(min_length=1, max_length=40)
-    quantity: int = Field(ge=1, le=1000)
-
-    @field_validator("name", mode="before")
-    @classmethod
-    def strip_name(cls, value: Any) -> Any:
-        return value.strip() if isinstance(value, str) else value
-
-
-class Item(BaseModel):
-    id: int
-    name: str
-    quantity: int
-
-
-class Page(BaseModel):
-    items: list[Item]
-    next_cursor: str | None = None
-
-
-class Problem(BaseModel):
-    type: str
-    title: str
-    status: int
-    detail: str
-    errors: list[dict[str, str]] | None = None
-
-
-class ApiProblem(Exception):
-    def __init__(self, status: int, kind: str, title: str, detail: str):
-        self.status, self.kind, self.title, self.detail = status, kind, title, detail
-
-
-def problem_content(description: str):
-    return {
-        "description": description,
-        "content": {
-            "application/problem+json": {"schema": Problem.model_json_schema()}
-        },
-    }
-
-
-PROBLEM_RESPONSES = {
-    400: problem_content("Unknown cursor"),
-    404: problem_content("Item does not exist"),
-    409: problem_content("Name already exists"),
-    422: problem_content("Request validation failed"),
-}
-SEED = {
-    1: Item(id=1, name="notebook", quantity=4),
-    2: Item(id=2, name="pencil", quantity=8),
-    3: Item(id=3, name="folder", quantity=2),
-}
-items = dict(SEED)
-cursor_offsets: dict[str, int] = {}
-next_id = 4
-app = FastAPI()
-
-
-def problem_response(status, kind, title, detail, **extensions):
-    return JSONResponse(
-        status_code=status,
-        media_type="application/problem+json",
-        content={
-            "type": PROBLEM_BASE + kind,
-            "title": title,
-            "status": status,
-            "detail": detail,
-            **extensions,
-        },
-    )
-
-
-@app.exception_handler(ApiProblem)
-async def api_problem_handler(request: Request, exc: ApiProblem):
-    return problem_response(exc.status, exc.kind, exc.title, exc.detail)
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_handler(request: Request, exc: RequestValidationError):
-    errors = [
-        {"field": ".".join(str(part) for part in error["loc"]), "code": "invalid_value"}
-        for error in exc.errors()
-    ]
-    return problem_response(
-        422, "validation", "Request validation failed",
-        "Correct the fields listed in errors and resubmit.", errors=errors,
-    )
-
-
-@app.get("/items", response_model=Page, responses=PROBLEM_RESPONSES)
-async def list_items(limit: int = Query(default=2, ge=1, le=100), cursor: str | None = None):
-    if cursor is None:
-        offset = 0
-    elif cursor in cursor_offsets:
-        offset = cursor_offsets[cursor]
-    else:
-        raise ApiProblem(400, "invalid-cursor", "Invalid cursor", "Start a new listing.")
-
-    ordered = [items[key] for key in sorted(items)]
-    page = ordered[offset : offset + limit]
-    next_cursor = None
-    if offset + len(page) < len(ordered):
-        next_cursor = secrets.token_urlsafe(12)
-        cursor_offsets[next_cursor] = offset + len(page)
-    return Page(items=page, next_cursor=next_cursor)
-
-
-@app.get("/items/{item_id}", response_model=Item, responses=PROBLEM_RESPONSES)
-async def get_item(item_id: int):
-    if item_id not in items:
-        raise ApiProblem(404, "not-found", "Item not found", "No item has this ID.")
-    return items[item_id]
-
-
-@app.post("/items", status_code=201, response_model=Item, responses=PROBLEM_RESPONSES)
-async def create_item(payload: CreateItem):
-    global next_id
-    name = payload.name
-    if any(item.name.casefold() == name.casefold() for item in items.values()):
-        raise ApiProblem(409, "duplicate-name", "Name already exists", "Choose another name.")
-    item = Item(id=next_id, name=name, quantity=payload.quantity)
-    items[next_id] = item
-    next_id += 1
-    return item
-
-
-def check():
-    client = TestClient(app)
-    first = client.get("/items?limit=2")
-    assert first.status_code == 200 and len(first.json()["items"]) == 2
-    cursor = first.json()["next_cursor"]
-    assert cursor
-    second = client.get("/items", params={"limit": 2, "cursor": cursor})
-    assert second.status_code == 200
-    assert [x["id"] for x in second.json()["items"]] == [3]
-    second_body = second.json()
-    assert "next_cursor" in second_body and second_body["next_cursor"] is None
-
-    bad_page = client.get("/items?limit=101")
-    assert bad_page.status_code == 422
-    assert bad_page.headers["content-type"].startswith("application/problem+json")
-    assert bad_page.json()["type"] == PROBLEM_BASE + "validation"
-    assert bad_page.json()["errors"]
-
-    malformed = client.post("/items", json={"name": "stapler", "quantity": 0})
-    assert malformed.status_code == 422 and malformed.json()["type"] == PROBLEM_BASE + "validation"
-    missing_field = client.post("/items", json={"name": "stapler"})
-    assert missing_field.status_code == 422
-
-    whitespace_name = client.post("/items", json={"name": "   ", "quantity": 1})
-    assert whitespace_name.status_code == 422 and whitespace_name.json()["type"] == PROBLEM_BASE + "validation"
-
-    created = client.post("/items", json={"name": " stapler ", "quantity": 2})
-    assert created.status_code == 201 and created.json()["id"] == 4
-    assert created.json()["name"] == "stapler"
-    conflict = client.post("/items", json={"name": "Stapler", "quantity": 3})
-    assert conflict.status_code == 409
-    assert conflict.json()["type"] == PROBLEM_BASE + "duplicate-name"
-
-    missing = client.get("/items/999")
-    assert missing.status_code == 404
-    assert missing.json()["type"] == PROBLEM_BASE + "not-found"
-    invalid_cursor = client.get("/items?cursor=unknown-token")
-    assert invalid_cursor.status_code == 400
-
-    operation = app.openapi()["paths"]["/items"]["post"]
-    assert operation["responses"]["201"]["content"]["application/json"]["schema"]
-    assert operation["responses"]["409"]["content"]["application/problem+json"]["schema"]
-    print("201 success trims names; invalid, missing, and whitespace-only input and limit 101 -> 422; missing item -> 404; duplicate -> 409")
-    print("two pages contain 2+1 items; unknown cursor -> 400; final page includes next_cursor=null")
-    print("OpenAPI", app.openapi()["openapi"], "documents JSON success and problem+json errors")
-
-
-check()
-~~~
-
-The client reads a successful body according to `Item`/`Page`; on failure it checks the HTTP status and the stable problem `type`, then uses a documented extension such as `errors` to associate an issue with a field. It displays or logs `detail` for people without parsing it as a code. To continue, it passes a non-null `next_cursor` back unchanged and stops when the field's value is JSON `null`.
-
-### Evolve the contract deliberately / 有计划地演进契约
-
-Adding an optional response field is often compatible when clients ignore unknown fields, but generated clients and strict decoders can reject it. Removing or renaming a field, changing its type or meaning, making an optional request field required, changing a problem `type`, or changing pagination meaning can break callers. Treat these as contract changes: publish the compatibility policy, test representative old and new clients, and use a versioning or migration window when an incompatible change is necessary. There is no single mandatory versioning scheme.
-
-### Interview answers / 面试回答
-
-**How would you make an API failure usable by both a client and a person? / 如何让API错误同时适合程序与人阅读？** I would keep the HTTP status meaningful, return a stable problem `type`, and document the response media type and schema in OpenAPI. Human text can explain the immediate issue, but clients branch on the stable identifier or a documented extension rather than parsing that text. I would avoid reflecting secrets or exception details and test that runtime responses match the published schema.
-
-我会让HTTP状态码有明确含义，返回稳定的问题`type`，并在OpenAPI中说明响应媒体类型和结构。人类可读文本可以解释当前问题，但客户端应根据稳定标识或有文档约定的扩展字段分支，而不是解析这段文本。我会避免回显机密或异常细节，并测试运行时响应是否符合已发布的结构。
-
-
-
-**Sources / 来源：** [OpenAPI Specification, latest](https://spec.openapis.org/oas/latest.html); IETF [RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html); [RFC 9110 §15.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5) for 404, 409, and 422 semantics; Google [AIP-158, Pagination](https://google.aip.dev/158) as one pagination style; FastAPI [request bodies and validation](https://fastapi.tiangolo.com/tutorial/body/), [response models](https://fastapi.tiangolo.com/tutorial/response-model/), and [handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/); Pydantic 2.11 [field validators](https://docs.pydantic.dev/2.11/concepts/validators/), checked against a FastAPI 0.128.0 / Pydantic 2.11.7 runtime on 2026-10-15. The pinned example emits OpenAPI `3.1.0`. Use the version produced by the framework when checking the generated schema.
-
-**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers the transport and generic status semantics; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers durable uniqueness and transaction boundaries.
-## 4. How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？
-
-**Core answer / 核心回答：** A cookie usually carries an opaque session identifier that the server resolves; a bearer token carries a credential the resource server validates. OIDC adds an identity layer to OAuth, while the application still creates its own session and authorizes each protected action. Choose storage, lifetime, revocation, and callback checks for the client and threat model. / Cookie 通常承载由服务端解析的不透明会话标识；Bearer token 则携带资源服务器验证的凭据。OIDC 在 OAuth 上加入身份层，但应用仍要建立自己的会话，并逐项授权受保护操作。应按客户端和威胁模型设计凭据存储、生命周期、撤销与回调校验。
-
-**Key terms / 关键术语：** session identifier / 会话标识；bearer token / Bearer 令牌；JWT / JSON Web Token；OIDC / OpenID Connect；authorization code / 授权码；PKCE / 授权码交换证明；state / 状态值；nonce / 随机数；refresh token / 刷新令牌。
-
-### Verify a local credential before issuing a session / 签发会话前验证本地凭据
-
-For local password login, store a salted **password hash / 密码哈希**, including the algorithm and cost parameters, and verify it through a maintained library. A stolen database gives an attacker material for offline guesses. Argon2id makes each guess spend memory and computation. A fast digest such as SHA-256 alone does not provide that cost. Let the library generate a unique random salt, and store the salt with the hash.
-
-OWASP lists Argon2id at 19 MiB of memory, two iterations and parallelism one as one minimum configuration. Benchmark your authentication service at realistic concurrency and tune within the security requirements. Bound online attempts separately. When upgrading hash cost, rehash on a successful login after verifying the password with its old settings. An optional **pepper / 服务器侧秘密** belongs outside the password database, with an explicit rotation plan. For federated sign-in, the identity provider verifies the credential and the application validates the protocol result before issuing its session. / 本地登录先用带随机盐的专用密码哈希验证密码，再签发会话。离线猜测成本与在线限速是两层不同的保护。 [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) · [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html)
-
-### Cookies vs. tokens — which to use for authentication? / Cookie 会话与令牌应如何选择？
-
-**Cookie 会话与令牌 / Cookie sessions and tokens** are transport and session choices, not two complete security models. Choose according to the clients, domain boundaries, revocation needs, and threat model.
-
-A server-side session commonly works like this:
-
-1. The user authenticates; the server creates a session and stores its state.
-2. The server returns an opaque session identifier in a cookie.
-3. The browser sends that cookie only when its domain, path, security, SameSite, and request rules match.
-4. The server resolves the session and performs authorization for the requested action.
-
-For a session cookie, consider:
-
-- **HttpOnly** prevents page JavaScript from reading the cookie through APIs such as `document.cookie`. It does not stop injected JavaScript from making authenticated requests as the user.
-- **Secure** limits transmission to secure channels such as HTTPS.
-- **SameSite=Strict, Lax, or None** controls cookie sending in cross-site contexts. It is a site-level browser rule, not an origin or authorization boundary. Specify the value; browser defaults can vary. `SameSite=None` requires `Secure`.
-- Cookie scope and size have implementation constraints; do not use `Domain` or `Path` as authorization checks.
-
-A bearer token is presented by the client, commonly in an `Authorization: Bearer` header. A JWT is one token format: a signed JWT normally protects integrity, but its claims are readable unless it is encrypted. A valid signature proves that a trusted key signed the token; it does not by itself authorize every action. Verifiers must validate the expected algorithm, issuer, audience, token type, and time claims according to the application protocol. Use short-lived tokens and a deliberate rotation or revocation strategy where needed.
-
-A JWT can carry claims without a per-request session lookup, but revocation and fresh permission changes then need an explicit design. The JWT format does not bypass browser origin rules or CORS. A token stored in browser-accessible storage can be read by injected JavaScript; an HttpOnly cookie reduces that direct theft path but still needs a CSRF design. Neither storage choice fixes XSS or authorization flaws.
-
----
-
-### What is Single Sign-On (SSO), and how does it work?
-
-**单点登录 / Single Sign-On** lets a user authenticate through an identity provider and establish sessions with multiple relying applications. Each application still validates the protocol response and applies its own authorization rules.
-
-OAuth 2.0 is an authorization framework for delegated access; OAuth alone is not an authentication protocol. **OpenID Connect / OpenID Connect 身份层** builds an identity layer on OAuth 2.0 and defines the ID Token. An access token and an ID Token serve different purposes: do not treat either as proof for an unrelated audience.
-
-In a typical redirect flow, the relying application creates a login request, the identity provider authenticates the user, and the application validates the response before creating its own session. Protocol details matter: validate the redirect target and issuer, and apply the relevant state, nonce, signature, and audience checks for the flow.
-
-See [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
-
-#### Authorization-code + PKCE callback / 授权码 + PKCE 回调
-
-When an application needs federated sign-in, OpenID Connect uses OAuth's authorization-code flow with the `openid` scope. Plain OAuth grants delegated API access; it does not define an ID Token or an authentication result for the client.
-
-1. The client creates a one-time `code_verifier` and derives `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))` using `S256`. It keeps the verifier with the browser's pending login transaction. It also normally creates an unpredictable `state` value bound to that browser transaction; an OIDC client may create a `nonce` if it wants to bind the returned ID Token to this request.
-2. The client redirects the browser to the authorization endpoint with `response_type=code`, its `client_id`, an exactly registered `redirect_uri`, `scope=openid` (plus only the API scopes it needs), `state`, `code_challenge`, and `code_challenge_method=S256`. It includes `nonce` only if the flow uses it.
-3. After authenticating the user and obtaining any required consent, the authorization server redirects to the registered callback with a short-lived, one-use authorization code and the `state` value, if sent. The callback checks and consumes its stored `state` before continuing. If the client uses multiple authorization servers, it also applies an issuer or equivalent mix-up defense.
-4. The client sends the code, the same `redirect_uri`, and its original `code_verifier` to the token endpoint; a confidential client also authenticates there when required. The authorization server recomputes the challenge and rejects a code redemption whose verifier does not match. The code alone is therefore insufficient for an interceptor to redeem.
-5. In the selected OIDC Authorization Code Flow, a successful token response includes an ID Token and an Access Token; a Refresh Token is optional. The client validates the ID Token before establishing its own session. The API validates the access token it receives separately.
-
-These values solve different problems and are not all mandatory in every flow:
-
-- **`state` / 请求状态** is an opaque value for correlating a redirect with the initiating browser transaction and often restoring a local return path. OAuth clients must prevent callback CSRF, but a literal `state` parameter is not the only permitted defense: RFC 9700 allows a client that has confirmed PKCE support to rely on PKCE for CSRF protection; in OIDC, `nonce` can also provide that protection. If the client sends `state`, it must bind and check it instead of trusting a callback value.
-- **`nonce` / 随机数** binds an ID Token to an OIDC authentication request and helps detect replay. It is optional in the OIDC Authorization Code Flow; when sent, the provider must return it in the ID Token and the client must compare it. Other OIDC flows have different requirements.
-- **`code_verifier` / PKCE验证值** is the secret the client keeps and later presents at the token endpoint. The authorization request carries only its derived challenge. RFC 9700 requires PKCE for public clients and recommends it for confidential clients; use `S256`, not a method that reveals the verifier.
-
-**Token use and lifecycle / 令牌用途与生命周期：** An **ID Token / 身份令牌** tells the OIDC client about an authentication event; it is not an API credential. Validate it under the OIDC profile: exact expected issuer, a trusted audience containing this client's ID (and `azp` when applicable), expiration, a matching `nonce` when one was sent, and normally its signature with the configured algorithm and appropriate verification key. OIDC Core §3.1.3.7(6) permits a narrow exception in the Authorization Code Flow: if the client receives the ID Token by direct communication with the Token Endpoint and validates that endpoint's TLS server identity, it may use that TLS validation to validate the issuer instead of checking the token signature. The other ID Token checks still apply, and ID Tokens received through other paths require signature validation. An **access token / 访问令牌** is for a resource server. That server checks the expected issuer, its own API audience, expiration, and allowed scope/action; follow the issuer's contract, verifying the signature and claims for a JWT access-token profile or using the trusted introspection/lookup mechanism for an opaque token. Decoding a JWT is not validation.
-
-A refresh token is presented to the authorization server's token endpoint to obtain a replacement access token; it is not sent to the API. Treat it as a high-value credential. RFC 9700 requires public clients to use refresh-token rotation or sender constraint. If the authorization server supports a revocation endpoint, a client can request revocation of a token; resource servers may learn of that change at different times. A locally verified, self-contained access token may remain accepted until its expiry unless the resource server also checks revocation state. Ending the application's own session and ending an identity-provider session are separate operations.
-
-**Core idea / 核心要点：** OAuth authorization grants access to an API; OIDC tells a client who authenticated; the application still decides whether that identity may perform an action now. PKCE protects code redemption, and runtime authorization protects application data.
-
-**Mechanism in Chinese / 机制要点：** PKCE 把授权码与客户端保留的 verifier 配对；state 关联回调与发起的登录事务，若发送就必须校验，而已确认支持 PKCE 的客户端可按 RFC 9700 依 PKCE 防回调 CSRF。OIDC Code Flow 的 nonce 可选，若发送则须与 ID Token 中的值匹配。客户端验证 ID Token 后建立自己的会话，API 则独立验证面向自身的 access token，并按当前主体、租户和权限做运行时授权。refresh token 只向授权服务器换取新 access token；撤销传播可能有延迟，应用会话、IdP 会话和 API 对已签发 access token 的接受边界要分别处理。
-
-See [OpenID Connect Core 1.0, incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice (January 2025)](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 7636, Proof Key for Code Exchange (September 2015)](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009, OAuth 2.0 Token Revocation (August 2013)](https://www.rfc-editor.org/rfc/rfc7009.html), and [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html).
-
-
-**Related notes / 相关笔记：** [Cross-tenant authorization / 跨租户资源授权](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) uses the validated subject to resolve current tenant membership; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers cookie fields and browser-origin transport.
-
-**Sources / 来源：** [OpenID Connect Core 1.0 incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html), [RFC 9700, OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 7636, PKCE](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 7009, Token Revocation](https://www.rfc-editor.org/rfc/rfc7009.html), [RFC 8725, JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html), and [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html). Guidance checked 2026-10-15. The Authorization Code Flow ID Token validation exception was checked against OIDC Core on 2026-10-27.
-## 5. How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？
-
-**身份认证 / Authentication** establishes which identity or credential is presenting a request. **授权 / Authorization** decides whether that identity may perform this action on this resource. Authentication alone does not grant every permission; enforce authorization on the server for each protected operation. Client checks can improve the interface but cannot decide access.
-
-身份认证回答请求以谁的凭据发出，授权则逐项决定该身份能否访问资源或执行操作；浏览器编码、Cookie属性、CORS、CSRF和CSP处理的是不同边界，不能替代服务端授权或彼此替代。
-**Key terms / 关键术语：** authenticated subject / 已认证主体；tenant membership / 租户成员关系；authorization / 授权；resource scope / 资源范围；tenant-scoped query / 租户范围查询；worker revalidation / worker 重新验证。
-
-~~~mermaid
-flowchart LR
-    Credential[Validate credential] --> Subject[Authenticated subject]
-    Subject --> Membership[Resolve current tenant membership]
-    Membership --> Action[Authorize action and resource]
-    Action --> Cache[Check scoped cache]
-    Cache -->|miss| Query[Tenant-scoped database query]
-    Action --> Job[Persist authorized job context]
-    Job --> Queue[Queue carries only job ID]
-    Queue --> Worker[Worker reloads job and rechecks membership]
-    Worker --> Cache
-~~~
-
-### Tenant-owned resources / 租户资源授权
-
-Authentication yields a validated subject; it does not prove access to every tenant or object. Build a **principal / 请求主体** from the verified identity plus the user's current membership and permissions in the selected tenant. A tenant ID in a URL or request body is only a requested context: resolve it against trusted membership before constructing the principal. Enforce the resource and action together on every API path.
-
-#### Roles grant an action within a resource scope / 角色在资源范围内授予操作
-
-**RBAC / 基于角色的访问控制** maps users to roles and roles to permitted actions. In a relational store, user–role and role–permission tables represent those mappings, and the assignment can be scoped by tenant. In the sample service, a `reader` role in tenant A can request `documents:read`. The server must still confirm that the selected document belongs to A. Rendering or hiding a button only reflects the policy. The service evaluates current membership, the action, and the specific resource independently. / 角色授予某类操作，租户和资源判断决定这次请求实际能访问哪一条记录。 [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
-
-In the synthetic document service, a verified credential and current tenant membership establish the caller's read capability. The API looks up the cache by tenant, subject, and document ID. On a miss it queries by both tenant and document ID. The example assumes that document ownership never moves between tenants. An optional job row stores the authorized tenant, requester, and document. The worker reloads that row, rechecks current membership, and calls the same scoped read function.
-
-This standard-library example uses SQLite to exercise the API and worker data boundaries. The identity inputs below stand in for a principal produced by a real authentication layer; they are not token validation code.
-
-```python
-import sqlite3
-
-db = sqlite3.connect(":memory:")
-db.executescript("""
-CREATE TABLE memberships (
-    tenant_id TEXT NOT NULL, subject TEXT NOT NULL, role TEXT NOT NULL,
-    PRIMARY KEY (tenant_id, subject)
-);
-CREATE TABLE documents (
-    id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, body TEXT NOT NULL
-);
-CREATE TABLE jobs (
-    id INTEGER PRIMARY KEY, tenant_id TEXT NOT NULL,
-    requester TEXT NOT NULL, document_id TEXT NOT NULL
-);
-INSERT INTO memberships VALUES ('tenant-a', 'alice', 'reader');
-INSERT INTO memberships VALUES ('tenant-b', 'bob', 'reader');
-INSERT INTO documents VALUES ('doc-a', 'tenant-a', 'A private sample');
-INSERT INTO documents VALUES ('doc-b', 'tenant-b', 'B private sample');
-""")
-
-def principal_for(tenant_id, subject):
-    # A requested tenant becomes trusted only after this current membership lookup.
-    row = db.execute(
-        "SELECT role FROM memberships WHERE tenant_id=? AND subject=?",
-        (tenant_id, subject),
-    ).fetchone()
-    if row is None or row[0] not in {"reader", "admin"}:
-        return None
-    return {"tenant_id": tenant_id, "subject": subject, "role": row[0]}
-
-def read_document(principal, document_id, cache):
-    if principal is None or principal["role"] not in {"reader", "admin"}:
-        raise PermissionError("no current read permission")
-    key = (principal["tenant_id"], principal["subject"], document_id)
-    if key not in cache:
-        row = db.execute(
-            "SELECT body FROM documents WHERE tenant_id=? AND id=?",
-            (principal["tenant_id"], document_id),
-        ).fetchone()
-        if row is None:
-            return None
-        cache[key] = row[0]
-    return cache[key]
-
-def read_api(principal, document_id, cache):
-    body = read_document(principal, document_id, cache)
-    return (404, None) if body is None else (200, body)
-
-def enqueue(principal, document_id, cache):
-    if read_document(principal, document_id, cache) is None:
-        raise PermissionError("cannot enqueue an unreadable document")
-    cursor = db.execute(
-        "INSERT INTO jobs (tenant_id, requester, document_id) VALUES (?, ?, ?)",
-        (principal["tenant_id"], principal["subject"], document_id),
-    )
-    db.commit()
-    return cursor.lastrowid
-
-def run_job(job_id, cache):
-    # The queue carries only an ID; tenant, actor, and object come from the stored job.
-    job = db.execute(
-        "SELECT tenant_id, requester, document_id FROM jobs WHERE id=?", (job_id,)
-    ).fetchone()
-    if job is None:
-        raise PermissionError("unknown job")
-    tenant_id, requester, document_id = job
-    principal = principal_for(tenant_id, requester)  # current membership, not enqueue-time trust
-    body = read_document(principal, document_id, cache)
-    if body is None:
-        raise PermissionError("job target is outside its tenant")
-    return body
-
-cache = {}
-alice = principal_for("tenant-a", "alice")
-bob = principal_for("tenant-b", "bob")
-assert read_api(alice, "doc-a", cache) == (200, "A private sample")
-assert read_api(bob, "doc-a", cache) == (404, None)  # API boundary
-assert run_job(enqueue(alice, "doc-a", cache), cache) == "A private sample"
-
-# Simulate a stale or malformed job row created through a privileged service path.
-cursor = db.execute(
-    "INSERT INTO jobs (tenant_id, requester, document_id) VALUES (?, ?, ?)",
-    ("tenant-b", "bob", "doc-a"),
-)
-db.commit()
-try:
-    run_job(cursor.lastrowid, cache)
-except PermissionError:
-    pass  # worker boundary still rejects the cross-tenant object
-else:
-    raise AssertionError("worker exposed a cross-tenant document")
-```
-
-The current membership and role are checked before cache lookup. The SQL tenant predicate applies on a miss. A system with finer-grained permissions must also enforce them on a hit and account for every access-relevant scope in its cache design. If ownership can change, invalidate old entries reliably or recheck current scope before serving a cached copy. Database row-level security or tenant-scoped credentials can add another boundary for database reads.
-
-Permission-aware retrieval uses the same boundary before evidence reaches a model; see [Retrieval-Augmented Generation / 检索增强生成](../../ai-engineering/rag/rag-architecture-and-implementation.md) for that application.
-
-### Bind SQL values after checking scope / 核对范围后绑定 SQL 参数
-
-The example's `WHERE tenant_id=? AND id=?` passes both values separately from SQL syntax. A request ID such as `doc-a' OR 1=1 --` is then compared as data. If an application instead interpolates that ID into a SQL string, the input can change the command. Use driver parameters for values, including raw SQL inside an ORM. Dynamic column names or sort directions that cannot be bound as values should come from a fixed allowlist selected by code. Give the database credential only the access it needs.
-
-Parameterization and authorization protect distinct parts of the same request. Binding `doc-b` is safe SQL, but the server still has to check whether the caller can read it. / 参数绑定把输入作为数据交给数据库，跨租户授权再决定这次请求能否读取该对象。 [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)
-
-**Interview answer / 面试回答：**
-
-> **EN:** I derive the subject from a validated credential, then resolve its current membership in the requested tenant. The API checks the action and scopes the database query by tenant and object ID. I authorize before cache lookup and carry only a server-created job ID into the queue; the worker reloads the job, rechecks membership, and uses the same scoped query. A service account's broad database access does not grant the caller cross-tenant access.
->
-> **中文：** 我先从已验证的凭据得到用户身份，再校验其当前租户成员关系。API 同时检查操作权限，并用租户 ID 和对象 ID 限定查询；缓存命中前也要授权。队列只传递服务端创建的任务 ID，worker 重新读取任务、检查成员关系，并复用租户范围查询。服务账号拥有较广数据库权限，不代表调用者可以跨租户访问。
-
-See [AWS Well-Architected SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html) for the distinction between isolated resources and pooled resources that rely on runtime tenant scoping.
-
----
-
-
-**Related questions / 相关问题：** [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](#4.%20How%20do%20cookie%20sessions%20and%20OIDC%20tokens%20establish%20identity?%20/%20Cookie%20%E4%BC%9A%E8%AF%9D%E4%B8%8E%20OIDC%20%E4%BB%A4%E7%89%8C%E5%A6%82%E4%BD%95%E5%BB%BA%E7%AB%8B%E8%BA%AB%E4%BB%BD%EF%BC%9F) covers credentials and login; [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](#6.%20Which%20web%20security%20control%20protects%20each%20browser%20boundary?%20/%20%E5%93%AA%E7%A7%8D%20Web%20%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E4%BF%9D%E6%8A%A4%E5%93%AA%E6%9D%A1%E6%B5%8F%E8%A7%88%E5%99%A8%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F) separates TLS, XSS, CSRF, CORS, and framing; [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](#24.%20How%20do%20web%20services%20limit%20denial-of-service%20impact?%20/%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) covers bounded public work.
-
-**See also / 另见：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers browser request and transport context; [Browser Storage and Communication / 浏览器存储与通信](../../frontend/browser-apis/browser-storage-and-communication.md) covers client storage and messaging risks.
-
-**Sources / 来源：** [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [AWS SaaS Lens: Preventing cross-tenant access](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/preventing-cross-tenant-access.html). Security guidance checked 2026-10-15. The SQLite example uses synthetic identities and data; it is not credential-validation code.
-## 6. Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？
-
-These controls address different threats: TLS protects data in transit and authenticates a server; output handling prevents injected script from becoming active content; CSRF defenses protect cookie-authenticated actions; CORS controls whether browser script may read a cross-origin response; framing policy limits deceptive embedding. None substitutes for server-side authentication or authorization. / 这些控制处理不同威胁：TLS 保护传输并认证服务器；输出处理避免注入脚本成为活动内容；CSRF 防护保护使用 Cookie 凭据的操作；CORS 控制浏览器脚本能否读取跨源响应；框架策略限制欺骗性嵌入。它们都不能替代服务端身份认证或授权。
-
-**Key terms / 关键术语：** TLS / 传输层安全；XSS / 跨站脚本；CSRF / 跨站请求伪造；CORS / 跨源资源共享；CSP / 内容安全策略；frame-ancestors / 可嵌入来源策略。
-
-~~~mermaid
-flowchart LR
-    Network[Network attacker] -->|TLS| Channel[Confidential and integrity-protected channel]
-    Untrusted[Untrusted output] -->|context encoding and sanitization| Page[Rendered page]
-    CrossSite[Cross-site action with ambient cookie] -->|CSRF token and origin checks| StateChange[Authorized state change]
-    OtherOrigin[Other origin script] -->|CORS response policy| Read[Browser may expose response]
-    Frame[Deceptive framing site] -->|frame-ancestors| Embed[Allowed embedding only]
-~~~
-
-### How does HTTPS protect against man-in-the-middle attacks?
-
-**HTTPS / TLS** protects data in transit against network eavesdropping and tampering when the connection is correctly configured and the client validates the server. In a certificate-authenticated TLS 1.3 handshake, key agreement derives traffic keys; the server's certificate and handshake signature authenticate the server's key. The server does not simply encrypt a session key with its public key as in older textbook handshake descriptions.
-
-A client checks the certificate chain and that the certificate is valid for the requested hostname, then verifies the handshake. Certificate status and revocation handling depend on the client and deployment, so do not describe revocation checking as a universal guaranteed browser step. A trusted certificate does not authenticate the application's user; application authentication and authorization remain separate.
-
-- **Symmetric cryptography / 对称密码** protects application traffic efficiently after handshake keys are established.
-- **Public-key cryptography / 公钥密码** supports key agreement and authentication in the handshake; the TLS 1.3 suite and configuration determine the exact mechanisms.
-
-See [RFC 8446, TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html).
-
----
-
-### XSS (Cross-Site Scripting) — what is it, how do you prevent it?
-
-**跨站脚本 / XSS** occurs when untrusted data is interpreted as active content in a page. Script that executes in an origin can read data available to that script and make requests from that origin; an HttpOnly cookie blocks direct cookie reading but does not stop such requests.
-
-Use the defense that matches the output context:
-
-1. Render plain text through framework APIs that treat it as text, and encode values for their HTML, attribute, URL, JavaScript, or CSS context.
-2. If user-authored rich HTML is required, sanitize it with a maintained HTML sanitizer and keep the allowed markup narrow.
-3. Avoid inserting untrusted strings into `innerHTML`, `document.write`, inline event handlers, `eval`, or `new Function`. Framework escape defaults do not protect deliberate raw-HTML escape hatches.
-4. Add a carefully tested Content Security Policy as defense in depth. Nonce- or hash-based strict policies can restrict script execution; an allowlist such as `script-src 'self'` alone is not a universal XSS fix.
-
-Before assigning an untrusted value to `href` or `src`, validate the complete URL's scheme and destination against the application's policy (for example, reject `javascript:`); output encoding for the attribute does not replace URL validation.
-
-CSP can reduce the impact of some injection paths, but it does not replace safe rendering and sanitization. See OWASP's [XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html) and [Content Security Policy](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html) guidance.
-
----
-
-### CSRF (Cross-Site Request Forgery) — what is it, how do you prevent it?
-
-**跨站请求伪造 / CSRF** abuses ambient browser credentials: a site can cause a browser to send some cross-site requests, and the browser may attach cookies that match the destination. The attacker often cannot read the response, but reading it is not required to cause a state change.
-
-For state-changing cookie-authenticated requests, use an application-validated CSRF token or an equivalent well-reviewed pattern. Check the request origin where appropriate, and use SameSite as defense in depth. Do not mutate state on safe methods such as GET. SameSite=Lax still permits some top-level safe-method navigations, and sibling subdomains can be same-site; it does not replace authorization or every CSRF defense.
-
-**SameSite=None requires Secure.** Also account for legitimate cross-site login and embedded flows rather than silently weakening checks. See the [OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
-
----
-
-### What is CORS?
-
-**跨源资源共享 / Cross-Origin Resource Sharing (CORS)** is a browser protocol that controls when a script may read a cross-origin response. It is not authentication, authorization, or a general firewall: some cross-origin requests can still be sent even when browser JavaScript cannot read the response, and non-browser clients do not enforce CORS.
-
-For a credentialed browser request, the client must opt in to credentials and the response must name an allowed origin rather than `Access-Control-Allow-Origin: *`, with `Access-Control-Allow-Credentials: true`. Preflight requests are checked separately. Use an explicit origin allowlist; reflecting arbitrary Origin values can expose credentialed responses.
-
-CORS does not make an endpoint private. Authenticate and authorize the server request even if the intended browser client is the only one expected to call it. See the [WHATWG Fetch Standard, CORS protocol and credentials](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials).
-
----
-
-### Clickjacking — what is it, how do you prevent it?
-
-**点击劫持 / Clickjacking** tricks a user into interacting with a page framed beneath or inside deceptive content. Use the CSP `frame-ancestors` directive to state which sites may embed the page; use `X-Frame-Options` where legacy client support requires it. These headers control framing, not user authorization.
-
-For example, `Content-Security-Policy: frame-ancestors 'self'` permits framing by the same origin. Set a policy that fits legitimate embedding requirements and test the application paths that must remain embeddable.
-
----
-
-
-**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) owns TLS handshake and CORS browser mechanics; [Cross-tenant authorization / 跨租户资源授权](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) owns user identity and server-side permission checks.
-
-**Sources / 来源：** [RFC 8446, TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html); OWASP [XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [Content Security Policy](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html), and [CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html); [WHATWG Fetch, CORS protocol and credentials](https://fetch.spec.whatwg.org/#cors-protocol-and-credentials). Security guidance checked 2026-10-15.
+旧客户端需要兼容时可设置 `X-Frame-Options`。允许列表应符合实际嵌入场景并在完整流程中测试。这个策略限制哪些页面能嵌入报表 UI，不替代服务端对每份报表或操作的权限判断。
+
+WebSocket 握手也不能用 CORS 响应字段授权。浏览器会发送 Origin；服务端应按允许来源校验握手、认证连接，并对敏感消息继续授权。双向消息和断线恢复见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#15.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
+
+**接下来：** TLS 保护网络连接；安全输出和 CSP 降低脚本注入风险；CSRF 防护检验带 Cookie 的变更请求；CORS 决定浏览器是否暴露跨源响应；`frame-ancestors` 决定页面可由谁嵌入。所有资源读取仍须经过[服务端逐项授权](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+> [!info]- 来源
+> - TLS 1.3 握手、服务器认证与流量密钥：[IETF RFC 8446](https://www.rfc-editor.org/rfc/rfc8446.html)，§2–§4，2018-08；核对于 2026-11-06。
+> - Same-Origin 与 same-site 判定：[WHATWG HTML, Origins and Sites](https://html.spec.whatwg.org/multipage/browsers.html#origins)，Living Standard，核对于 2026-11-06；`example.test` 属于示例域。
+> - origin、Cookie、预检、CORS、credentialed 响应及禁止脚本设置 Cookie/读取 `Set-Cookie`：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§2、§3.3、§4.2、§4.10，2026-10-19 版本；核对于 2026-11-06。Cookie 属性同时见 [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265.html)，§5，2011-04。
+> - 安全上下文输出、HTML 消毒与危险执行上下文：[OWASP Cross Site Scripting Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)，Contextual Output Encoding、HTML Sanitization、Dangerous Contexts，按 2026-11-06 版本核对。
+> - CSP 的脚本纵深防御：[OWASP Content Security Policy Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html)，按 2026-11-06 版本核对；`frame-ancestors`：[W3C Content Security Policy Level 3](https://www.w3.org/TR/CSP3/#directive-frame-ancestors)，2026-10-27 Working Draft，§6.4.2；该规范仍是工作草案，浏览器支持应与目标环境核验。
+> - Cookie 认证请求的 CSRF token、Origin 和 SameSite 条件：[OWASP Cross-Site Request Forgery Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)，Synchronizer Token、SameSite 与 Origin Validation，按 2026-11-06 版本核对；Cookie same-site 规则：[HTTPWG RFC6265bis 草案](https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html)，§5.6.7，核对于 2026-11-06。
 ## 7. How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？
 
 **How do NULL, outer joins, and grouping change a query result? / NULL、外连接和分组会怎样改变查询结果？** An ordinary comparison such as `=` or `<>` with `NULL` is UNKNOWN; null-aware predicates such as `IS NULL` and `IS DISTINCT FROM` have their own rules. Use `IS NULL` for missing values, and remember that `WHERE` keeps only TRUE. Put a right-side condition in `LEFT JOIN ... ON` when unmatched left rows must remain; a `WHERE` condition can remove those rows. `COUNT(*)` counts joined rows, `COUNT(column)` skips nulls, `WHERE` filters input rows, and `HAVING` filters completed groups. Inspect query plans with the chosen engine and version. / `=` 或 `<>` 这类普通比较遇到 `NULL` 时结果为 UNKNOWN；`IS NULL`、`IS DISTINCT FROM` 等空值判定或相异性谓词有各自的规则。缺失值应使用 `IS NULL`，并记住 `WHERE` 只保留 TRUE。若要保留没有匹配右表记录的左表行，应把右表条件放在 `LEFT JOIN ... ON` 中；放在 `WHERE` 中可能移除这些行。`COUNT(*)` 统计连接后的行数，`COUNT(column)` 跳过空值；`WHERE` 筛选分组前的输入行，`HAVING` 筛选已完成的分组。查询计划应使用所选数据库及其版本来检查。
@@ -1214,7 +1332,7 @@ I would keep the database authoritative and use cache-aside: read the cache, loa
 **Sources and verification / 来源与验证：** Redis [cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/) and [node-redis cache-aside example](https://redis.io/docs/latest/develop/use-cases/cache-aside/nodejs/), checked 2026-10-15. The official examples demonstrate cache-first reads, TTL-bearing writes, invalidation, and a short-lived stampede lock. The flow above is a generic application design; no Redis server was deployed, so Redis commands and outage behavior were not runtime-tested. TTL and `DEL` are implementation tools, not a cross-store consistency protocol.
 
 
-**Related notes / 相关笔记：** [Web Security and Authentication / Web安全与身份认证](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) owns principal and tenant authorization before cache lookup. [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains the connection budget used by bounded database fallback.
+**Related notes / 相关笔记：** [Web Security and Authentication / Web安全与身份认证](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F) owns principal and tenant authorization before cache lookup. [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains the connection budget used by bounded database fallback.
 ## 12. A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？
 
 A timeout or disconnected connection means the caller did not receive a result; by itself, it does not show whether the server applied the operation. Give the operation a stable identity, persist that identity with the local effect in one transaction, and let the caller query the authoritative status or repeat the same request with the same key. Carry one end-to-end deadline through the work, bound retries, and treat cancellation as a request for work to stop rather than proof that a remote side effect was undone. / 超时或连接断开只表示调用方没有收到结果，本身不能说明服务端是否已经执行操作。为操作指定稳定标识，在一个事务中持久化该标识和本地效果，并让调用方查询权威状态，或使用相同 key 重试原请求。沿整条调用链传递同一个截止时间并限制重试次数；取消表示请求工作停止，不代表远端副作用已经撤销。
@@ -1225,7 +1343,7 @@ A timeout or disconnected connection means the caller did not receive a result; 
 
 A **timeout** limits one wait or operation. An end-to-end **deadline** is the latest time the whole request may finish. Starting a new full timeout for each downstream call can let a multi-hop request run far beyond the caller's budget. Pass a deadline or remaining time downstream, reserve time for cleanup and the response, and choose limits from measured latency and the product's failure policy; there is no universal timeout value. Connection setup and response waiting may need separate limits when a client library treats them separately.
 
-When a write is accepted but the response is lost, the caller's **outcome is unknown**. It cannot distinguish “the request never arrived” from “the effect committed and only the response was lost.” A **202 Accepted** response is a different, explicit contract: it says processing was accepted but is not complete. Return a stable operation or job URL so the client can query later; HTTP does not send a later response over the original connection. The endpoint's response and error shapes belong to [HTTP API Contracts / HTTP API契约](#3.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F), while method-level semantics belong to [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F).
+When a write is accepted but the response is lost, the caller's **outcome is unknown**. It cannot distinguish “the request never arrived” from “the effect committed and only the response was lost.” A **202 Accepted** response is a different, explicit contract: it says processing was accepted but is not complete. Return a stable operation or job URL so the client can query later; HTTP does not send a later response over the original connection. The endpoint's response and error shapes belong to [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F), while method-level semantics belong to [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F).
 
 ~~~mermaid
 sequenceDiagram
@@ -1317,11 +1435,11 @@ Location: /v1/jobs/job-demo-731
 {"jobId":"job-demo-731","status":"queued","statusUrl":"/v1/jobs/job-demo-731"}
 ~~~
 
-The **202** response means the request was accepted for processing; it does not say that processing completed or will necessarily succeed. **GET /v1/jobs/{jobId}** returns current job state; **DELETE /v1/jobs/{jobId}** records a cancellation request; and **GET /v1/jobs/{jobId}/result** returns the private result only after authorization and completion. The status resource tells the client the later outcome. If the original response is lost, [work out what the caller can confirm / 判断调用方能确认什么](#Where%20a%20timeout%20leaves%20the%20caller%20/%20%E8%B6%85%E6%97%B6%E5%90%8E%E8%B0%83%E7%94%A8%E6%96%B9%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E7%8A%B6%E6%80%81) before repeating the operation. This follows [HTTP API Contracts / HTTP API契约](#3.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) for endpoint shapes and [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) for protocol semantics.
+The **202** response means the request was accepted for processing; it does not say that processing completed or will necessarily succeed. **GET /v1/jobs/{jobId}** returns current job state; **DELETE /v1/jobs/{jobId}** records a cancellation request; and **GET /v1/jobs/{jobId}/result** returns the private result only after authorization and completion. The status resource tells the client the later outcome. If the original response is lost, [work out what the caller can confirm / 判断调用方能确认什么](#Where%20a%20timeout%20leaves%20the%20caller%20/%20%E8%B6%85%E6%97%B6%E5%90%8E%E8%B0%83%E7%94%A8%E6%96%B9%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E7%8A%B6%E6%80%81) before repeating the operation. This follows [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) for endpoint shapes and [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) for protocol semantics.
 
 Scope an idempotency key to (account, requesting principal, key) and enforce that scope with a database unique constraint. First look up an existing key: return its job when the normalized-request fingerprint matches, and report a conflict when it differs. If absent, insert the job under the unique constraint, add the outbox row, and conditionally reserve a waiting slot in one transaction before commit. If a concurrent same-key insert wins, the loser rolls back before reserving, loads the existing job, and compares fingerprints; lookup-then-insert alone is racy. These are explicit choices for this example, not rules every API must use. Define the success and error schema as part of the service's endpoint contract.
 
-Authenticate first, then check that the principal may create a report for the account in the path. A caller-supplied account ID selects a resource; it does not prove permission. Every later status, cancellation, and result request checks access to the job's stored account; knowing a job ID does not grant access. The worker uses a narrowly scoped service identity to read only the stored account and report range. See [Web Security and Authentication / Web安全与身份认证](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) for the shared authorization boundary.
+Authenticate first, then check that the principal may create a report for the account in the path. A caller-supplied account ID selects a resource; it does not prove permission. Every later status, cancellation, and result request checks access to the job's stored account; knowing a job ID does not grant access. The worker uses a narrowly scoped service identity to read only the stored account and report range. See [Web Security and Authentication / Web安全与身份认证](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F) for the shared authorization boundary.
 
 Store a job row with a stable job ID, account ID, requesting principal, validated normalized report parameters such as period/range/format, normalized request fingerprint, idempotency key, current status, creation/expiry times, cancellation request, attempt number and lease expiry, waiting-slot reservation state, private result reference, and a bounded error code. The parameters let a restarted worker rebuild its input; the fingerprint only compares requests and cannot recover them. Do not retain the raw request body or put sensitive filters in queue messages. A separate outbox row holds the job ID and publication state.
 
@@ -1387,7 +1505,7 @@ Deploy API, relay, and workers with compatible job schemas so old jobs can finis
 
 **How would you answer “How would you design a report that may outlive an HTTP request?” / 如何回答“如何设计一个可能超过 HTTP 请求时限的报表任务？”** I would first confirm report size, response deadline, retention, access owner, and acceptable failure behavior. If measured tail latency fits the request budget, I would keep it synchronous. For the stated multi-second report, I would persist the job and outbox in one database transaction, return a stable status URL, and let a bounded worker create a private result. Retries use the scoped idempotency key, and each worker attempt writes a distinct immutable object. A guarded update makes only the current, non-cancelled attempt visible; acknowledge the queue message after the durable outcome. The client queries job state after disconnect rather than inferring completion from a response or message delivery. / 我会先确认报表规模、响应期限、留存期、数据所有者和可接受的失败行为。如果实测尾部时延满足请求预算，就保持同步。对于本例需要数秒的任务，我会在同一数据库事务中保存 job 与 outbox 并返回稳定的状态 URL，再由有界 worker 生成私有结果。重试使用有作用域的幂等键，每个 worker 尝试写入不同且不可变的对象。只有当前且未被取消的尝试可以通过条件更新让结果可见，并在持久化业务结果后确认队列消息；客户端断连后应查询 job 状态，而不能从响应或消息是否投递推断完成。
 
-**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) owns unknown outcomes and safe retries; [Sizing and bounding asynchronous work / 容量估算与背压](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) retains the detailed estimates; [Publisher confirms and consumer acknowledgements / 队列确认与重投](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker-level confirmation boundaries; [HTTP API Contracts / HTTP API契约](#3.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) covers endpoint and error conventions; [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains ORM sessions and process-local pool limits; [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers constraints and transaction semantics; [Web Security and Authentication / Web安全与身份认证](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F) owns identity and resource authorization; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) owns transport and reconnect semantics; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) shows a separate durable-run contract; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the client surfaces stream and disconnect state; [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F) covers stage-level production signals.
+**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) owns unknown outcomes and safe retries; [Sizing and bounding asynchronous work / 容量估算与背压](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) retains the detailed estimates; [Publisher confirms and consumer acknowledgements / 队列确认与重投](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker-level confirmation boundaries; [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) covers endpoint and error conventions; [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains ORM sessions and process-local pool limits; [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers constraints and transaction semantics; [Web Security and Authentication / Web安全与身份认证](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F) owns identity and resource authorization; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) owns transport and reconnect semantics; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) shows a separate durable-run contract; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the client surfaces stream and disconnect state; [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F) covers stage-level production signals.
 
 **Sources / 来源：** [RFC 9110 §15.3.3, 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3); [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html) for the database-local all-or-nothing boundary; [PostgreSQL 18: Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) for scoped uniqueness and [Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html) for concurrent transaction behavior; [AWS Prescriptive Guidance: Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html) for dual-write failure and duplicate-publication boundaries; [Amazon S3 conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) as one create-only object-write mechanism, not a requirement to choose S3; [Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework) for workload requirements, operational focus, and starting with a simple design, checked 2026-10-15.
 ## 14. What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？
@@ -1437,140 +1555,223 @@ Observe each boundary separately: publish attempts and confirms, unroutable mess
 **Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers ambiguous request outcomes and operation idempotency; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies outbox, attempt fencing, and post-outcome acknowledgement to a report job; [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers the local transaction boundary used to persist business effects.
 
 **Sources / 来源：** RabbitMQ 4.3, [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and [Reliability Guide](https://www.rabbitmq.com/docs/reliability), checked 2026-11-05. These references document RabbitMQ's confirm, manual-ack, redelivery, and publisher retry behavior; other brokers have different contracts.
-## 15. When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？
+## 15. 何时选择轮询、SSE、流式 Fetch 或 WebSocket？
 
-**Core answer / 核心回答：** Choose by message direction, request shape, connection lifetime, and recovery contract. Polling is a series of ordinary HTTP requests; SSE/EventSource provides one-way server events over GET; Fetch streams allow a custom method, headers, body, and cancellation but leave parsing and reconnection to the application; WebSocket supports bidirectional messages and leaves reconnect/replay rules to the application. A reconnect is not recovery unless the server can replay from a retained cursor or the client can query authoritative state. / 根据消息方向、请求形状、连接生命周期和恢复契约选择方式。轮询是一系列普通 HTTP 请求；SSE/EventSource 通过 GET 单向发送服务端事件；Fetch 流允许自定义方法、请求头、请求体和取消信号，但解析和重连由应用负责；WebSocket 支持双向消息，重连和重放规则也由应用定义。若服务端不能按保留游标重放，或客户端不能查询权威状态，重新连接本身不等于恢复。
-### WebSocket handshake and bidirectional messages / WebSocket 握手与双向消息
-
-传统浏览器WebSocket使用HTTP/1.1 Upgrade握手：客户端发送Upgrade相关字段，服务器接受后以101 Switching Protocols切换协议；之后双方可在同一TCP连接上主动发送帧，而不再是普通HTTP请求/响应。WebSocket还有跨HTTP/2、HTTP/3的扩展连接方式，分别通过Extended CONNECT和HTTP/3的对应机制承载，因此不应把所有WebSocket描述为HTTP/1.1的TCP升级。[RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)、[RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html)、[RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html)。
-
-WebSocket握手不是用CORS响应字段授权的Fetch请求。浏览器会带上Origin，服务器应按应用策略验证来源并认证连接；浏览器WebSocket构造器接受URL和可选子协议，不提供任意请求头参数。适用的Cookie可能参与握手，仍受Cookie规则约束。[MDN WebSocket构造器](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket)。
-
-Node.js 可用第三方 `ws` 库提供服务，浏览器使用内置 WebSocket API。示例向除发送者之外的已连接客户端广播，保留文本或二进制消息类型，并在连接关闭时清理集合。 [`ws` 广播示例](https://github.com/websockets/ws#server-broadcast)
-
-~~~javascript
-const { WebSocketServer, WebSocket } = require('ws');
-const server = new WebSocketServer({ port: 3000 });
-const clients = new Set();
-
-server.on('connection', (socket) => {
-  clients.add(socket);
-
-  socket.on('message', (data, isBinary) => {
-    for (const client of clients) {
-      if (client !== socket && client.readyState === WebSocket.OPEN) {
-        client.send(data, { binary: isBinary });
-      }
-    }
-  });
-
-  socket.on('close', () => clients.delete(socket));
-});
-~~~
-
-浏览器端：
-
-~~~javascript
-const socket = new WebSocket('ws://localhost:3000');
-
-socket.addEventListener('open', () => socket.send('Hello'));
-socket.addEventListener('message', (event) => console.log('Received:', event.data));
-socket.addEventListener('close', () => console.log('Disconnected'));
-~~~
-
-HTTP持久连接（keep-alive）可以在多个HTTP请求/响应间重用连接，但服务器仍需等待请求，不能在没有请求时任意推送HTTP响应。WebSocket提供双方都可发消息的通道；[ws项目文档](https://github.com/websockets/ws)是Node.js服务端实现示例。轮询、SSE和流式Fetch各自使用HTTP请求/响应，适用的方向与恢复能力见下表。
-
-**Key terms / 关键术语：** polling / 轮询；Server-sent Events (SSE) / 服务端事件；EventSource / EventSource 接口；Fetch response stream / Fetch 响应流；WebSocket / WebSocket；replay cursor / 重放游标。
+报表查看者已请求刷新报表 42，接下来要决定怎样收取进度。选择取决于消息方向、请求形状、连接生命周期和恢复要求：轮询重复发普通 HTTP 请求；Server-sent Events (SSE，服务端事件) 用一个 HTTP 响应单向发送事件；流式 Fetch 让应用控制请求与读流；WebSocket 让连接两端主动发消息。重连只恢复连接，不保证所有事件都被应用处理；恢复需要服务端保留日志并接受游标，或客户端重新读取权威状态。
 
 ~~~mermaid
 flowchart TD
-    Direction{Which update direction?}
-    Direction -->|occasional or client-controlled| Poll[Polling or long polling]
-    Direction -->|server to client only| RequestShape{Need custom method, headers, or body?}
-    RequestShape -->|no; GET and simple contract| SSE[SSE with EventSource]
-    RequestShape -->|yes| Fetch[Fetch response stream]
-    Direction -->|both directions| WS[WebSocket]
-    Poll --> Resume[Define cursor, status lookup, or replay]
-    SSE --> Resume
-    Fetch --> Resume
-    WS --> Resume
-    Resume --> UI[Client reconstructs authoritative state]
+    Need{报表端要发送，客户端也要连续发送消息吗？}
+    Need -->|否，低频或客户端控制更新| Poll[轮询或长轮询]
+    Need -->|否，服务端单向推送| Shape{普通 GET 是否满足请求需求？}
+    Shape -->|是| SSE[SSE + EventSource]
+    Shape -->|否| Fetch[Fetch 响应流]
+    Need -->|是，持续双向消息| WS[WebSocket]
+    Poll --> Recover[定义游标、重放或状态查询]
+    SSE --> Recover
+    Fetch --> Recover
+    WS --> Recover
+    Recover --> State[恢复报表当前状态或业务事件]
 ~~~
 
-### 轮询、SSE、流式Fetch与WebSocket / Polling, SSE, streaming Fetch, and WebSocket
+### 先按更新方向和请求形状选方式
 
-| 方式 Transport | 方向与请求契约 Direction and request contract | 连接恢复 Recovery | 适用场景与边界 Fit and boundary |
-|---|---|---|---|
-| 轮询 Polling | 客户端按间隔发起普通HTTP请求；长轮询会让服务端暂挂一次请求直到有事件或超时。 | 客户端决定频率、退避和何时重试；若需续传，由API定义游标或事件ID。 | 实现简单、适合低频更新；短轮询带来请求开销，长轮询占用等待中的请求。 |
-| SSE格式 + `EventSource` API | 服务端向客户端单向发送HTTP `text/event-stream`；EventSource用URL建立GET请求，可选择`withCredentials`。 | EventSource通常会在连接中断后自动重连；服务端可用HTTP 204告知客户端停止重连。带`id:`的事件会在后续重连请求中作为`Last-Event-ID`回传。服务器只有保留可重放的事件历史，才能按该ID续传。 | 适合单向事件；原生EventSource接口没有自定义请求头或请求体，不能把传输断线等同于事件已恢复。 |
-| 流式Fetch / Fetch response stream | 一次Fetch请求在响应有body时提供可逐块读取的`Response.body`；请求可使用API允许的方法、请求头、请求体和取消信号。 | Fetch不会替应用实现SSE式自动重连或重放；应用解析协议帧并定义游标、重试和取消策略。 | 需要自定义请求契约或一次性POST后流式返回时合适；字节块不是消息边界。跨源读取仍受CORS约束。 |
-| WebSocket | 握手后，客户端和服务端都能沿同一连接发送消息。应用收到的是完整消息，传输层可将一条消息拆成多个帧。 | 重连、身份过期、事件序号、确认和恢复均由应用协议定义。 | 双向低延迟交互合适；长期连接需要连接生命周期管理。浏览器构造器没有任意请求头参数，握手认证要按浏览器可用契约设计。 |
+| 方式 | 请求与方向 | 断线恢复由谁负责 | 适用边界 |
+| --- | --- | --- | --- |
+| 短轮询 | 客户端每隔一段时间发普通请求，返回当前状态或差异 | 客户端控制间隔、退避和停止；API 定义结果与游标 | 更新少且简单性重要；轮询频率过高会浪费请求，间隔过长会延迟发现变化 |
+| 长轮询 | 客户端请求后，服务端等到事件或等待期限返回；客户端再发下一条 | 应用重新请求并带序号/游标；代理超时和断线仍须处理 | 需要兼容普通 HTTP 又要降低空轮询；等待请求占用连接和服务资源，须设上限 |
+| SSE + EventSource | `GET` 建立 `text/event-stream` 响应，主要收服务端消息 | EventSource 通常自动重连；服务端依游标和保留日志重放 | 服务端单向推送、原生重连方便；原生 API 不接受自定义请求头或请求体 |
+| 流式 Fetch | 一次 Fetch 的 body 分块可读；请求可按 API 契约带方法、头和正文 | 应用实现线格式解析、重试、游标、退避和取消 | 需要自定义请求头/Bearer 或 POST 查询后接收流 |
+| WebSocket | 握手后客户端与服务端都可主动发完整消息 | 应用定义重连、认证过期、序号、确认和重放 | 双向低延迟交互值得维持长连接；协议不提供业务去重和恢复 |
 
-SSE既是`text/event-stream`线格式，也是浏览器EventSource接口的常见后端协议。线格式用UTF-8字段行表示事件，并以空行结束一条事件；常见字段为`event`、`data`、`id`和`retry`。例如：
+还要估计连接数、更新频率、消息大小、后台休眠行为和服务端连接容量。一名客户端每秒两次轮询约 2 请求/秒，一万名客户端约 20,000 请求/秒；这只估计请求数，不代表 CPU、网络或数据库开销相同。容量与准入见[Web 服务如何限制拒绝服务的影响？](#24.%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
+
+### SSE 怎样从一致的快照位置续读？
+
+`text/event-stream` 使用 UTF-8 文本，事件字段按行组织，以空行结束一条完整事件。`event` 命名类型，`data` 放内容，`id` 提供重连时可携带的游标，`retry` 可建议重连等待时间。网络包、HTTP 帧和 Fetch 读出的块都不是应用事件边界；客户端要按 SSE 语法解析。
+
+**案例状态：** 在较早的时刻，浏览器曾缓存报表 42 的版本 8 并向服务器验证。之后一次新的刷新已启动；现在客户端从权威接口取得版本 9 的快照，状态为 `running`，且该快照已包含事件日志至游标 103。快照和游标必须来自同一一致性位置；否则两者之间刚发生的事件可能被跳过。
+
+~~~http
+GET /api/reports/42 HTTP/1.1
+Accept: application/json
+~~~
+
+~~~json
+{"id":42,"version":9,"status":"running","event_cursor":"103"}
+~~~
+
+客户端首次订阅时以应用约定的查询参数告诉服务器从快照游标之后读取：
+
+~~~http
+GET /api/reports/42/events?after=103 HTTP/1.1
+Accept: text/event-stream
+~~~
+
+服务器发送事件 104，表示报表进入生成阶段；稍后报表完成，写入事件 105：
 
 ~~~text
-Content-Type: text/event-stream
+id: 104
+event: report.updated
+data: {"report_id":42,"version":10,"status":"running","progress":80}
 
-event: progress
-id: 42
-data: {"stage":"working"}
+id: 105
+event: report.updated
+data: {"report_id":42,"version":11,"status":"ready","progress":100}
 
 ~~~
 
-`id`只提供重连游标；它本身不保存事件，也不保证服务器能重放断线期间的数据。EventSource接口只公开URL和凭据选项；当请求需要自定义Authorization头、非GET方法或请求体时，可用Fetch读取同一类流格式，但解析、重试和恢复都由应用实现。Fetch的响应体是`ReadableStream`；一次`read()`得到的块可能切在UTF-8字符或应用事件中间，所以要用增量解码器并按协议帧边界拼装，不要把每个块直接当成一个事件。
+对应的浏览器订阅可以是：
 
 ~~~javascript
-const response = await fetch('/api/events', {
+const source = new EventSource('/api/reports/42/events?after=103');
+source.addEventListener('report.updated', (event) => {
+  const update = JSON.parse(event.data);
+  if (update.report_id === 42) {
+    showStatus(update.status, update.version, update.progress);
+  }
+});
+source.addEventListener('reset', () => {
+  source.close();
+  void refreshSnapshotAndSubscribeAgain();
+});
+source.addEventListener('error', () => showConnectionState(source.readyState));
+~~~
+
+假定客户端已解析 104、随后连接断开；服务器日志仍保存 105。EventSource 重连时浏览器会把解析到的最后事件 ID 放入 `Last-Event-ID`。本例规定：重连请求的该字段优先于初连 URL 中的 `after=103`，服务器从 104 之后读取并重放 105。初次订阅用 URL 参数，因为原生 EventSource 不让页面设置 `Last-Event-ID` 请求头。
+
+~~~mermaid
+sequenceDiagram
+    participant C as 浏览器
+    participant S as 报表服务
+    participant L as 事件日志
+    C->>S: GET /api/reports/42/events?after=103
+    S->>L: 读取 103 之后的事件
+    L-->>S: 104、105
+    S-->>C: 事件 104
+    Note over C,S: 连接断开，日志仍保留 105
+    C->>S: GET /api/reports/42/events?after=103，Last-Event-ID: 104
+    S->>L: 按应用约定优先采用 Last-Event-ID
+    L-->>S: 重放 105
+    S-->>C: report.updated，version 11，ready
+~~~
+
+**游标和状态版本不是同一个编号。** `104`、`105` 是事件日志位置，用于从历史中续读；`version=10`、`version=11` 是报表状态修订，只有产品保证版本单调时，界面才可用它丢弃较旧状态。快照版本 9 已涵盖日志游标 103，因此后续状态更新从 104 开始。
+
+`Last-Event-ID` 只表示浏览器解析了某个 SSE 事件并将 ID 作为重连位置；它可能在应用事件处理器完成前已更新，不能证明 `showStatus`、本地持久化或用户确认成功。若每一条事件都必须被业务处理，应用还需按订阅范围持久化已处理的 ID、去重并显式确认；传输本身不提供端到端只处理一次。若界面只需要最新状态，事件版本单调时可合并更新，并在重连后 GET 权威快照。
+
+游标过期时服务器不能悄悄跳过缺口。本例的重置政策是发送一条完整 SSE 事件并终止当前流：
+
+~~~text
+event: reset
+data: {}
+
+~~~
+
+`data` 字段和结尾空行不可省略，否则标准 EventSource 不会派发这条事件，客户端的 `reset` 处理器也不会运行。客户端收到后关闭 EventSource，重新 GET 快照和 `event_cursor`，再带新游标订阅。若服务器收到一次新的 SSE 请求后直接以 HTTP 204 响应，EventSource 会停止自动重连；这不是把已经开始的 200 流改成 204。断开原因和授权状态仍应由应用契约说明。每次初连或重连都要重新授权读取报表 42。
+
+### 流式 Fetch 如何分开解析完成和传输 EOF？
+
+当原生 EventSource 的 GET、Cookie 认证或请求字段不满足 API 需要时，Fetch 可以用 POST 提交筛选条件，再读 SSE 格式或其他明确线协议。`reader.read()` 可能只拿到半个 UTF-8 字符或半条事件；parser 要把片段缓冲到完整事件边界。此有限查询约定服务端最后发送并以空行结束以下终止事件：
+
+~~~text
+event: result.complete
+data: {}
+
+~~~
+
+`data` 字段和结尾空行不可省略；parser 只在完整终止事件中识别它。EOF 之前没收到该事件表示查询响应截断。`decoder.decode()` 只冲刷 UTF-8 解码状态，不能代替 parser 判断应用事件是否完整。持续订阅遇到 EOF 则按游标重连。
+
+下面的 parser 是本例接口约定：`feed()` 只向调用方交付已完整结束的事件，`hasTerminalEvent` 仅在解析到完整 `result.complete` 事件后为真，`finish()` 检查未闭合事件并拒绝截断结果。它不是浏览器内置 SSE parser。
+
+~~~javascript
+const response = await fetch('/api/reports/42/events/search', {
   method: 'POST',
   headers: {
-    Authorization: `Bearer ${token}`,
+    Authorization: 'Bearer token-supplied-by-the-application',
+    Accept: 'text/event-stream',
     'Content-Type': 'application/json',
   },
-  body: JSON.stringify({ filter }),
+  body: JSON.stringify({ stage: 'rendering' }),
   signal,
 });
-if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+if (!response.ok || !response.body) throw new Error('HTTP ' + response.status);
+if (!response.headers.get('content-type')?.startsWith('text/event-stream')) {
+  throw new Error('Unexpected stream media type');
+}
 
 const reader = response.body.getReader();
 const decoder = new TextDecoder();
-let endedNormally = false;
-let cancelAttempted = false;
+let completed = false;
+let stoppedEarly = false;
 try {
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      endedNormally = true;
+    const result = await reader.read();
+    if (result.done) {
+      parser.feed(decoder.decode()); // 只完成最终 UTF-8 解码
+      parser.finish();               // 拒绝未以空行结束的尾部事件
+      if (!parser.hasTerminalEvent) throw new Error('Truncated event stream');
+      completed = true;
       break;
     }
-    // This parser placeholder returns false when the caller intentionally stops before EOF.
-    if (parser.feed(decoder.decode(value, { stream: true })) === false) {
-      cancelAttempted = true;
+    parser.feed(decoder.decode(result.value, { stream: true }));
+    if (parser.hasTerminalEvent) {
+      stoppedEarly = true;
       await reader.cancel();
       break;
     }
   }
-  if (endedNormally) parser.feed(decoder.decode());
 } catch (error) {
-  if (!cancelAttempted) {
-    cancelAttempted = true;
-    try {
-      await reader.cancel(error);
-    } catch {
-      // Preserve the original parser or read error.
-    }
+  if (!stoppedEarly) {
+    try { await reader.cancel(error); } catch { /* 保留原读取或解析错误 */ }
   }
   throw error;
 } finally {
   reader.releaseLock();
 }
+if (!completed && !stoppedEarly) throw new Error('Incomplete search result');
 ~~~
 
-这里的`parser.feed`代表按已约定的线格式增量解析；示例约定它在调用方已获得所需完整结果、决定提前停止时返回`false`，代码随即取消未读响应体。若解析或读取抛错，也会尝试取消响应流；取消本身若失败，仍保留原始解析/读取错误，并在所有路径释放reader锁。若用户取消操作，传入的`AbortSignal`会取消Fetch。传输层提供请求契约、分块、结束和失败信号，不定义界面如何呈现部分内容，也不保证服务端任务状态能跨重连保留。选择时先回答四件事：消息方向是什么、请求是否要带方法/头/体、连接由谁关闭、恢复是否只需重连还是必须按游标重放。
+`result.complete` 说明这次有限搜索流按 API 契约结束，不等于任何独立的持久报表作业已生成；作业完成要查询其权威状态。Fetch 收到响应头后正文仍可能失败，因此必须读到完整终态；跨源请求仍受 CORS 与凭据模式约束。
 
+### WebSocket 适合哪些双向消息？
 
-**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) covers request methods, caches, CORS, DNS, and transport behavior; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the interface represents partial, reconnecting, cancelled, and terminal states; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) uses persistent run state to recover after a client disconnect.
+浏览器 WebSocket 先握手，再切换到双向消息协议。HTTP/1.1 常用 Upgrade 和 101；HTTP/2、HTTP/3 有各自扩展连接承载方式，不能概括为“升级到 TCP”。WebSocket 消息可跨多个帧，但消息确认、幂等处理、游标和掉线重放仍由应用定义。原生 WebSocket API 不会自动重连，调用方要在应用层实现退避、重新认证和游标恢复。
 
-**Sources / 来源：** [RFC 6455, The WebSocket Protocol](https://www.rfc-editor.org/rfc/rfc6455.html), [RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html), [RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html), [WHATWG HTML Server-sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html), [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/), [WHATWG Streams Standard](https://streams.spec.whatwg.org/), and [WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/) checked 2026-10-15. The SSE reconnection and HTTP 204 boundary was rechecked against the current WHATWG HTML standard on 2026-10-27. See also the MDN [WebSocket constructor](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket) and the Node.js [ws implementation](https://github.com/websockets/ws).
+浏览器构造器接受 URL 与子协议，不开放任意自定义请求头。若握手使用 Cookie，恶意页面可能尝试建连；服务端须按策略检查 Origin、认证连接，并在每条敏感消息上逐次授权。WebSocket 不用 Fetch 的 CORS 响应许可机制，但仍有来源风险。代理超时、网络切换、客户端挂起和服务端资源都会限制连接寿命。
+
+> [!example]- Node.js WebSocket 广播示例
+> 下例展示连接集合与广播的最小形状。它不实现认证、租户隔离、消息校验、限速、去重、重连或恢复，不代表完整生产服务。
+>
+> ~~~javascript
+> const { WebSocketServer, WebSocket } = require('ws');
+> const server = new WebSocketServer({ port: 3000 });
+> const clients = new Set();
+>
+> server.on('connection', (socket) => {
+>   clients.add(socket);
+>   socket.on('message', (data, isBinary) => {
+>     for (const client of clients) {
+>       if (client !== socket && client.readyState === WebSocket.OPEN) {
+>         client.send(data, { binary: isBinary });
+>       }
+>     }
+>   });
+>   socket.on('close', () => clients.delete(socket));
+> });
+> ~~~
+
+### 断线后如何确定报表状态？
+
+先决定客户端需要“当前状态”还是“每一条事件”。当前状态可在断线后 GET 报表/作业资源，再从版本和游标建立新订阅；每一条变化都重要时，服务端要保留可重放日志并定义重复、缺口、过期和确认方式。初始快照必须一并交付与之对齐的事件游标，否则读快照和订阅之间可能漏变化。
+
+SSE 可以自动重连，WebSocket 需要应用自己重连，Fetch 也要由应用重新发请求；它们都不能证明数据库副作用是否提交，也不能恢复服务进程内丢失的任务状态。遇到未知完成结果，应查稳定的状态资源，见[请求超时后如何确认结果并安全重试？](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
+
+> [!info]- 来源
+> - SSE 线格式、EventSource 重连、Last-Event-ID 更新、204 停止重连与事件解析：[WHATWG HTML Living Standard, Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)，§9.2，按 2026-11-05 版本核对。
+> - Fetch 请求与响应体、取消和流处理：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§2、§4；[Streams Standard](https://streams.spec.whatwg.org/)，§4；持续维护规范，核对于 2026-11-06。
+> - 浏览器 WebSocket API：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，§2；握手和消息帧：[RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)，§4–§5；HTTP/2 承载扩展：[RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html)；HTTP/3 扩展：[RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html)，均核对于 2026-11-06。
+> - Node.js `ws` 服务端广播：[ws README, Server broadcast](https://github.com/websockets/ws#server-broadcast)，核对于 2026-11-06。库文档描述该实现，不是协议规范。
 ## 16. When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？
 
 **Core model / 核心模型：** A process is an operating-system resource and protection boundary; a thread is an execution path inside a process. Threads share much of that process's memory and therefore need coordination when they update shared state. Concurrency means work overlaps in time; parallelism means work executes at the same time on multiple processing units. Asynchronous I/O can provide concurrency without assigning one thread to every waiting operation. / 进程是操作系统管理资源并隔离地址空间的边界；线程是在进程内执行指令的路径。线程共享进程中的许多内存，因此并发修改共享状态时需要协调。并发表示任务的执行时间重叠；并行表示多个处理单元同时执行任务。异步 I/O 可以在不为每个等待中的操作分配一个线程的情况下提高并发能力。
@@ -2176,7 +2377,7 @@ For a project with a `requirements.txt`, install its declared packages with `.ve
 
 **Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains timeouts, cancellation, and safe retries. [Capacity and backpressure](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) covers bounded work.
 Python-specific coroutine and framework behavior is explained in [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](#22.%20Why%20can%20an%20async%20FastAPI%20endpoint%20still%20block?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BC%82%E6%AD%A5%20FastAPI%20%E6%8E%A5%E5%8F%A3%E4%BB%8D%E4%BC%9A%E9%98%BB%E5%A1%9E%EF%BC%9F).
-Application-level request, response, error, and pagination contracts are covered in [HTTP API Contracts / HTTP API契约](#3.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F).
+Application-level request, response, error, and pagination contracts are covered in [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F).
 
 **Sources / 来源：** Python 3.11 [Tutorial](https://docs.python.org/3.11/tutorial/) and [Language Reference](https://docs.python.org/3.11/reference/), including [objects and types](https://docs.python.org/3.11/reference/datamodel.html#objects-values-and-types), [function definitions](https://docs.python.org/3.11/reference/compound_stmts.html#function-definitions), [iterators and generators](https://docs.python.org/3.11/reference/datamodel.html#generator-functions), and [`with` statements](https://docs.python.org/3.11/reference/compound_stmts.html#the-with-statement); [`typing`](https://docs.python.org/3.11/library/typing.html); and the Python Packaging User Guide's [installing packages](https://packaging.python.org/en/latest/tutorials/installing-packages/) and [managing application dependencies](https://packaging.python.org/en/latest/tutorials/managing-dependencies/) tutorials. Checked 2026-10-15.
 
@@ -2398,7 +2599,7 @@ The `/bad` route delays the next event-loop request because it calls a blocking 
 
 取消通过协作方式传递，因此我会把释放逻辑放进`finally`并让`CancelledError`继续传播。若响应流仍要使用FastAPI的`yield`依赖，我会选择request scope；若资源应在响应发送前关闭，则选择function scope。我不会因为客户端超时或断开就认定远端工作已停止；下游截止时间与副作用处理仍需显式定义。
 
-**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#21.%20How%20do%20Python%20values,%20iterators,%20and%20resource%20lifetimes%20behave?%20/%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20How%20does%20a%20browser%20request%20reach%20an%20HTTP%20response?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F), and [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F). [HTTP API Contracts / HTTP API契约](#3.%20How%20do%20you%20design%20a%20predictable%20HTTP%20API%20contract?%20/%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) expands the resource example into database-session, transaction, and pool-lifetime choices.
+**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#21.%20How%20do%20Python%20values,%20iterators,%20and%20resource%20lifetimes%20behave?%20/%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F), and [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F). [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) expands the resource example into database-session, transaction, and pool-lifetime choices.
 ## 23. How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？
 
 Size a pipeline by naming its system boundary, arrival rate, time in each stage, resource held by each unit of work, and maximum waiting work. Little's Law estimates average work in flight in a stable system; it does not promise peak throughput or tail latency. A queue gives work somewhere durable to wait, but only admission control and backpressure keep that wait bounded. / 估算管线时，要明确系统边界、到达速率、各阶段耗时、每个任务占用的资源和最大等待量。Little 定律估算稳定系统中的平均在途工作；它不承诺峰值吞吐量或尾部时延。队列让工作可以持久等待，但只有准入控制和背压才能限制等待规模。
@@ -2484,15 +2685,57 @@ Load-test the representative 8 KiB input, 12-read fan-out, and output sizes. Ram
 **Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers deadline and unknown-outcome policy; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies these bounds to a complete service contract; [Queue delivery acknowledgements / 队列确认与重投](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) covers broker delivery state; [AI System Design Interview Questions / AI 系统设计面试题](../../ai-engineering/systems/ai-system-design-interview-questions.md) has a different worked latency allocation and model-stage concurrency estimate.
 
 **Sources / 来源：** Little and Graves, [“Little’s Law Deals with Queuing Systems”](https://web.eng.ucsd.edu/~massimo/ECE158A/Handouts_files/Little.pdf), in *Building Intuition* (2008), pp. 81–82, for the steady-state relation and system boundary; [Google SRE Workbook: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15, for latency distributions and percentile-based indicators. The numeric workload and all capacity figures above are synthetic calculations from the stated assumptions.
-## 24. How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？
+## 24. Web 服务如何限制拒绝服务的影响？
 
-Distributed denial-of-service attacks use traffic or expensive requests to exhaust network, service, or application resources. Mitigation depends on the attack layer and available capacity; no single application control guarantees protection. Use layered edge filtering and provider capacity, rate limits and quotas, caching where it is safe, bounded work, and monitoring. Application code can reject abusive work early, but large traffic floods need network and provider-level capacity as well. / 分布式拒绝服务攻击通过流量或高成本请求耗尽网络、服务或应用资源。缓解措施取决于攻击层级和可用容量，单一应用控制不能保证防护。应组合边缘流量过滤与服务商容量、速率限制和配额、安全场景中的缓存、有界工作及监控。应用代码可以尽早拒绝滥用请求，但大规模流量洪峰还需要网络和服务商层的容量。
+denial of service (DoS，拒绝服务) 通过流量洪峰、连接耗尽或昂贵请求让服务资源不够用；distributed denial-of-service (DDoS，分布式拒绝服务) 指多来源同时发起的攻击。保障要沿请求实际能到达的层次布置：链路入口被塞满时，应用限流代码还没有机会运行；请求已进应用后，按 Internet Protocol address (IP 地址) 限流也不能替代对昂贵工作、并发和排队长度的约束。
 
-**Key terms / 关键术语：** denial of service / 拒绝服务；rate limit / 速率限制；quota / 配额；admission control / 准入控制；bounded work / 有界工作。
+**案例：** 多个来源同时请求报表 42。大量流量可能先占满上游网络；也可能是有效格式的请求通过入口，却反复触发一次昂贵的数据汇总。两种情况下要保护的资源和起作用的位置不同。
 
-**Sources / 来源：** CISA [Understanding and Responding to Distributed Denial-of-Service Attacks](https://www.cisa.gov/sites/default/files/2024-03/understanding-and-responding-to-distributed-denial-of-service-attacks_508c.pdf), checked 2026-11-05, for layered mitigation and rate limitation.
+~~~mermaid
+flowchart LR
+    Attack[分布式或高成本请求] --> Ingress[互联网链路与上游清洗]
+    Ingress --> Edge[边缘缓存 / 网关过滤和早期限制]
+    Edge --> App[按身份、路由成本准入和并发限制]
+    App --> Data[有界数据库、缓存与队列资源]
+    App --> Client[429、503 或服务降级]
+    Ingress --> Signals[异常流量与容量告警]
+    Edge --> Signals
+    App --> Signals
+~~~
 
-**Related notes / 相关笔记：** [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains worker slots, admission, and queue limits; [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains how retries can amplify overload.
+### 过载发生在哪一层，就在哪一层减压
+
+| 层次 | 典型故障 | 可以做什么 | 控制的边界 |
+| --- | --- | --- | --- |
+| 上游链路、DNS、网络入口 | 洪峰占满接入带宽，应用请求尚未到达 | 与网络/云服务商预先安排足够入口容量、DDoS 流量清洗、路由和过滤策略；保存应急联系和切换方案 | 仅在服务器里的代码无法清除已经塞满的上游链路 |
+| Content Delivery Network (内容分发网络，CDN)、反向代理、网关 | 边缘连接、TLS、头部解析或无效请求消耗资源 | 限制头部/请求体大小、连接与超时，过滤明显异常流量；只缓存适合共享的公开表示；以低成本规则尽早拒绝 | 边缘按 IP 计数会受共享地址、代理和分布式来源影响；它也不了解所有业务授权 |
+| API 与业务处理 | 有效请求触发昂贵查询，或同一租户占用服务槽位 | 按未认证来源、账户/租户、路由和估算成本组合限流；约束时间范围、查询复杂度、并发和返回量 | 受限额度可能误伤高峰期的合法用户；要让用户范围和服务容量相匹配 |
+| 数据库、缓存、worker、队列 | 连接池耗尽、慢查询堆积、待处理任务无限增长 | 限制并发、队列长度、单任务成本和处理时间；必要时拒绝新工作并保留已接受工作 | 无限扩大队列会把即刻过载改成更迟的内存、存储和恢复过载 |
+| 监控与事件响应 | 攻击特征未及时发现或缓解动作不一致 | 对比平常流量基线、资源指标和请求分布；启动已演练的上游清洗、临时规则、沟通与恢复步骤 | 单次请求日志无法提供链路容量和分布式来源全貌 |
+
+### 速率限制和工作上限怎样一起计算？
+
+rate limit（速率限制）约束某个键在一段时间内可提交多少请求；quota（配额）约束一段周期内可消耗的总量；并发限制约束同一时刻有多少工作在执行。它们处理不同的资源形状。例如读取报表 42 的小缓存只消耗少量资源，已获聚合操作授权的用户提交长时间范围聚合则会占用更多数据库工作。请求格式有效不代表用户有权启动昂贵计算；先检查身份和资源权限，再按路由估算成本计费。每个便宜缓存读取扣 1 个工作点，每个长范围聚合扣 4 点，同一主体的额度因此反映可接受的实际工作量，而不是给昂贵请求更多额度。还要限制时间范围、查询时限和并发槽位。
+
+> [!example] 令牌桶的实际预算
+> 假定一个主体专属的 token bucket（令牌桶）初始有 8 个工作点，每秒补 4 点；先看每个请求都只扣 1 点的情况。20 个请求同时在 `t=0` 到达时，最多先放行 8 个；若排队且没有其他流量，`t=0.25、0.50、0.75、1.00` 各补足 1 点，再各放行一个，至 `t=1.00` 累计上限是 `8 + 4 × 1 = 12` 个，余下 8 个仍待处理。不开队列时，首批 8 个之外的请求会立刻被拒绝，实际放行量可以低于 12。若请求有不同成本，每次从同一桶扣对应点数：4 点的长范围聚合会比 1 点的缓存读取更快耗尽额度。一般在长度为 `T` 的时间内，桶初始满时成本预算不超过 `burst + rate × T`。这是对单个计数键和这组成本的上限计算，不是服务整体容量保证。
+>
+> 如果三个进程各自保存一个相同的本地桶，短窗口预算上限相加可到 36 点；本例的 20 个请求仍最多只能放行 20 个，而且到达顺序、各请求成本及是否排队会影响实际结果。全局额度需要网关集中计数、共享状态或明确分片额度；共享状态提高一致性，却引入可用性和延迟成本。具体方案按部署规模选择。
+
+CDN可以在更靠近用户的边缘节点缓存适合共享的公开内容或执行入口规则；Network Address Translation (网络地址转换，NAT)可能让许多合法用户共享同一个出口 IP。匿名请求发生在身份认证之前，不能只靠账户限流；登录后的请求也不能只靠 IP 限流，而分布式攻击来源又可能跨越许多地址。可以在不同阶段组合 IP/网络特征、账户、租户、路由和成本额度，并为误伤、绕过、状态存储可用性设计补救。反向代理转发的客户端 IP 只有在信任该代理、拒绝外部伪造转发头时才可用于策略。
+
+速率限制是准入政策，不会给出一个“安全的 QPS”。容量章负责在正常负载下估算资源与背压，见[如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)；本章强调在攻击者可分布请求、上游容量会饱和且不同请求成本悬殊时，应由哪一层拒绝或削减工作。
+
+### 限额触发时如何让客户端和服务一起恢复？
+
+若单个调用方超过合同额度，API 可按其错误契约返回 `429 Too Many Requests`，并选择用 `Retry-After` 建议等待时间；若服务整体暂时不能处理，请求也可能得到 `503 Service Unavailable`。这些状态表达本次 HTTP 请求结果，不会自行清除队列或建立未来重试。客户端应遵守等待时间，并用带抖动的指数退避避免一群用户同时重试；对于有副作用的 POST，还要先按[请求超时后的结果确认与安全重试契约](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)处理未知结果。
+
+当入口流量超过上游能力时，应用返回 429/503 并不能帮助未到达应用的请求；要让上游服务商启动预案。当应用数据库或 worker 过载时，边缘可先挡掉已知攻击形态，但 API 还要把并发和队列限制在下游可承受范围，不能让短时间增长的队列拖垮健康的请求。限额和降级策略要配合服务目标，也要监控拒绝比例、合法租户成功率、数据库等待和可用容量，才能判断是不是阻断了攻击同时误伤正常读者。
+
+> [!info]- 来源
+> - 分布式流量、IP 欺骗、攻击类别、预防和响应步骤：[CISA、FBI、MS-ISAC, Understanding and Responding to Distributed Denial-of-Service Attacks](https://www.cisa.gov/sites/default/files/2024-03/understanding-and-responding-to-distributed-denial-of-service-attacks_508c.pdf)，2024-03-21，§2–§5；核对于 2026-11-06。
+> - 网络与应用层 DoS、限速以及可消耗资源的应用输入：[OWASP Denial of Service Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html)，Fundamentals、Application Attacks、Network Attacks、Rate Limiting，按 2026-11-06 版本核对。
+> - `429 Too Many Requests` 与可选 `Retry-After`：[IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html)，§4，2012-04；临时过载 `503` 与等待建议字段：[RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§10.2.3、§15.6.4，2022-06。均核对于 2026-11-06。
 ## 25. How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？
 
 **核心回答 / Core answer：** Start with an observable expected outcome, trace the request through its entry point, dependencies, data access, and side effects, then build the smallest counterexample that can disprove a specific hypothesis. If the failure occurs at a lost tenant predicate, restore that predicate and test both owner and non-owner requests. Review the implementation and its tests independently: they can pass together while sharing the same missing assumption. / 先写出可观察的预期结果，再沿入口、依赖、数据访问和副作用追踪请求，并构造足以推翻某个具体假设的最小反例。如果故障来自丢失租户条件，就恢复该条件，并分别检查所有者与非所有者请求。实现和测试要独立审查：两者可能共享同一个遗漏假设，即使一起通过也不能证明需求已满足。
@@ -2551,7 +2794,7 @@ These are complementary boundaries, not a required test-count pyramid. Keep quic
 
 The small example below creates a tenant-owned job. `POST /jobs` validates a request and gives the same tenant's request key a database uniqueness rule. `GET /jobs/{id}` scopes lookup by the current tenant. A worker delivery changes `pending` to `done` with one conditional database update; replaying the same job ID must not increment the effect counter twice.
 
-The fixture creates a fresh in-memory SQLite database for each test and keeps it on one shared connection so the in-process test client and the test's database inspection see the same database. The `Session` dependency and worker's session-factory argument are deliberate seams: they control database lifetime while still executing real SQL against SQLite. `X-Tenant-ID` stands in for a principal supplied by trusted authentication middleware; it is a test input, not an authentication scheme to trust in a deployed service. For the general authorization rule, see [Web Security and Authentication / Web安全与身份认证](#5.%20How%20do%20you%20prevent%20cross-tenant%20access%20across%20a%20web%20request?%20/%20%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%20Web%20%E8%AF%B7%E6%B1%82%E8%B7%A8%E7%A7%9F%E6%88%B7%E8%AE%BF%E9%97%AE%EF%BC%9F). The queue call is represented by calling the worker twice; no broker is present.
+The fixture creates a fresh in-memory SQLite database for each test and keeps it on one shared connection so the in-process test client and the test's database inspection see the same database. The `Session` dependency and worker's session-factory argument are deliberate seams: they control database lifetime while still executing real SQL against SQLite. `X-Tenant-ID` stands in for a principal supplied by trusted authentication middleware; it is a test input, not an authentication scheme to trust in a deployed service. For the general authorization rule, see [Web Security and Authentication / Web安全与身份认证](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F). The queue call is represented by calling the worker twice; no broker is present.
 
 ~~~python
 from typing import Annotated
@@ -4369,7 +4612,7 @@ See [DOM Manipulation and Events](../../frontend/browser-apis/dom-manipulation-a
 
 ---
 
-See [how to model an editable component tree](#45.%20How%20should%20a%20low-code%20editor%20store%20editable%20structure%20and%20published%20output?%20/%20%E4%BD%8E%E4%BB%A3%E7%A0%81%E7%BC%96%E8%BE%91%E5%99%A8%E6%80%8E%E6%A0%B7%E4%BF%9D%E5%AD%98%E5%8F%AF%E7%BC%96%E8%BE%91%E7%BB%93%E6%9E%84%E4%B8%8E%E5%8F%91%E5%B8%83%E7%BB%93%E6%9E%9C%EF%BC%9F) for a system-design example and [how roles control feature access](#Roles%20grant%20an%20action%20within%20a%20resource%20scope%20/%20%E8%A7%92%E8%89%B2%E5%9C%A8%E8%B5%84%E6%BA%90%E8%8C%83%E5%9B%B4%E5%86%85%E6%8E%88%E4%BA%88%E6%93%8D%E4%BD%9C) for a distinct authorization decision.
+See [how to model an editable component tree](#45.%20How%20should%20a%20low-code%20editor%20store%20editable%20structure%20and%20published%20output?%20/%20%E4%BD%8E%E4%BB%A3%E7%A0%81%E7%BC%96%E8%BE%91%E5%99%A8%E6%80%8E%E6%A0%B7%E4%BF%9D%E5%AD%98%E5%8F%AF%E7%BC%96%E8%BE%91%E7%BB%93%E6%9E%84%E4%B8%8E%E5%8F%91%E5%B8%83%E7%BB%93%E6%9E%9C%EF%BC%9F) for a system-design example and [how roles control feature access](#%E8%A7%92%E8%89%B2%E8%83%BD%E6%8E%88%E4%BA%88%E4%BB%80%E4%B9%88%E5%8A%A8%E4%BD%9C%EF%BC%8C%E8%B5%84%E6%BA%90%E6%A3%80%E6%9F%A5%E8%BF%98%E8%A6%81%E5%81%9A%E4%BB%80%E4%B9%88%EF%BC%9F) for a distinct authorization decision.
 ## 45. How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？
 
 Keep an editable component tree with typed configuration and stable identity. Derive rendering and published output from that schema so editing, validation, and release can each use the representation appropriate to their lifecycle. / 维护带类型配置和稳定身份的可编辑组件树。渲染和发布结果从该结构派生，让编辑、校验和发布可以各自使用适合其生命周期的表示。

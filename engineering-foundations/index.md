@@ -13,11 +13,11 @@
 ### 从请求到受约束的数据提交
 
 - [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](databases/database-fundamentals.md)
-- [How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？](networking/http-protocols-and-websockets.md)
-- [How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？](backend/http-api-contracts.md)
-- [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](security/web-sessions-and-oidc.md)
-- [How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？](security/web-security-and-authentication.md)
-- [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](security/web-browser-security-boundaries.md)
+- [浏览器请求如何到达 HTTP 响应？](networking/http-protocols-and-websockets.md)
+- [如何设计可预期的 HTTP API 契约？](backend/http-api-contracts.md)
+- [Cookie 会话与 OIDC 令牌怎样建立身份？](security/web-sessions-and-oidc.md)
+- [如何逐次授权租户内的报表资源？](security/web-security-and-authentication.md)
+- [浏览器安全控制分别保护什么信任边界？](security/web-browser-security-boundaries.md)
 - [How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？](databases/sql-null-joins-and-aggregates.md)
 - [How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？](databases/database-constraints-and-indexes.md)
 - [What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？](databases/database-transactions-isolation-and-recovery.md)
@@ -29,7 +29,7 @@
 - [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
 - [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 - [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](reliability/queue-delivery-and-acknowledgement.md)
-- [When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
+- [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 
 ### 运行时如何承接与限制工作
 
@@ -41,7 +41,7 @@
 - [How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？](backend/python-fundamentals.md)
 - [Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？](backend/python-async-and-fastapi.md)
 - [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
-- [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
+- [Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
 
 ### 从回归证据到部署与事故诊断
 

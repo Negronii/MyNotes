@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=df6d0261802b312420bc0e71201e37e8c8c9ccb806d88076b44623e30df297bb -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=50d2224d7e52c4191bf24d79cda7476f732c095cf90193306c368ee00f370ab0 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -105,11 +105,11 @@
 ## Engineering Foundations
 
 - [ ] 91. [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](../engineering-foundations/databases/database-fundamentals.md)
-- [ ] 92. [How does a browser request reach an HTTP response? / 浏览器请求如何到达 HTTP 响应？](../engineering-foundations/networking/http-protocols-and-websockets.md)
-- [ ] 93. [How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？](../engineering-foundations/backend/http-api-contracts.md)
-- [ ] 94. [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](../engineering-foundations/security/web-sessions-and-oidc.md)
-- [ ] 95. [How do you prevent cross-tenant access across a web request? / 如何防止 Web 请求跨租户访问？](../engineering-foundations/security/web-security-and-authentication.md)
-- [ ] 96. [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](../engineering-foundations/security/web-browser-security-boundaries.md)
+- [ ] 92. [浏览器请求如何到达 HTTP 响应？](../engineering-foundations/networking/http-protocols-and-websockets.md)
+- [ ] 93. [如何设计可预期的 HTTP API 契约？](../engineering-foundations/backend/http-api-contracts.md)
+- [ ] 94. [Cookie 会话与 OIDC 令牌怎样建立身份？](../engineering-foundations/security/web-sessions-and-oidc.md)
+- [ ] 95. [如何逐次授权租户内的报表资源？](../engineering-foundations/security/web-security-and-authentication.md)
+- [ ] 96. [浏览器安全控制分别保护什么信任边界？](../engineering-foundations/security/web-browser-security-boundaries.md)
 - [ ] 97. [How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？](../engineering-foundations/databases/sql-null-joins-and-aggregates.md)
 - [ ] 98. [How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？](../engineering-foundations/databases/database-constraints-and-indexes.md)
 - [ ] 99. [What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)
@@ -118,7 +118,7 @@
 - [ ] 102. [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)
 - [ ] 103. [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](../engineering-foundations/architecture/system-design-fundamentals.md)
 - [ ] 104. [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)
-- [ ] 105. [When should a browser use polling, SSE, streaming Fetch, or WebSocket? / 何时选轮询、SSE、流式 Fetch 或 WebSocket？](../engineering-foundations/networking/real-time-web-updates.md)
+- [ ] 105. [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](../engineering-foundations/networking/real-time-web-updates.md)
 - [ ] 106. [When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？](../engineering-foundations/operating-systems/processes-threads-and-concurrency.md)
 - [ ] 107. [How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？](../engineering-foundations/backend/node-js-fundamentals.md)
 - [ ] 108. [How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？](../engineering-foundations/backend/node-event-loop-and-microtasks.md)
@@ -127,7 +127,7 @@
 - [ ] 111. [How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？](../engineering-foundations/backend/python-fundamentals.md)
 - [ ] 112. [Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？](../engineering-foundations/backend/python-async-and-fastapi.md)
 - [ ] 113. [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](../engineering-foundations/reliability/api-capacity-and-backpressure.md)
-- [ ] 114. [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](../engineering-foundations/security/web-availability-and-ddos.md)
+- [ ] 114. [Web 服务如何限制拒绝服务的影响？](../engineering-foundations/security/web-availability-and-ddos.md)
 - [ ] 115. [How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)
 - [ ] 116. [How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？](../engineering-foundations/testing/software-testing-strategy.md)
 - [ ] 117. [How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？](../engineering-foundations/version-control/git-essentials.md)
