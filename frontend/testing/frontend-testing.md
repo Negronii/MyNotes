@@ -1,106 +1,102 @@
-# What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
+# 前端测试怎样证明报表排序、历史恢复和发布产物正确？
 
-**Core answer / 核心回答：** Build the production output, run a critical browser journey against that output on a production-like server, then promote the exact artifact that passed. A development server alone does not exercise emitted assets or deployment paths. The general risk-to-test-boundary principle belongs to [Software Testing Strategy / 软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md); the tool choices for local logic and component behavior are outlined below. / 构建生产产物，在接近生产环境的服务上用该产物运行关键浏览器流程，然后晋级同一份通过检查的产物。单独运行开发服务器无法覆盖实际生成的资源或部署路径。通用的风险与测试边界原则见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)；本地逻辑和组件行为的工具选择见下文。
+**案例背景。** 用户打开 `/reports?sort=recent#summary`，看到 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回该顺序；点击 **Oldest first** 后，地址变成 `sort=oldest`，列表为 April、May；按 Back 则回到 recent 和 May、April。测试要验证用户看到的结果、真实地址历史和请求边界；点击事件触发过或内部状态等于某值，都不足以证明整条流程可用。
 
-## How should frontend tests be divided? / 前端测试如何分层？
+~~~mermaid
+flowchart LR
+    A[纯函数与契约] --> B[组件交互和异步状态]
+    B --> C[真实浏览器路由与 Back]
+    C --> D[生产构建资源]
+    D --> E[发布同一份已验证产物]
+~~~
 
-**Core answer / 核心回答：** Use a unit test for isolated logic, a component integration test for user-visible wiring, and a browser test when real navigation, persistence, browser behavior, emitted assets, or service wiring is part of the risk. Keep the feedback loop cheap where it can provide reliable evidence. / 隔离逻辑用单元测试，验证用户可见的组件连接用集成测试；当风险涉及真实导航、持久化、浏览器行为、生成资源或服务连接时使用浏览器测试。能可靠提供证据时，优先保持反馈成本较低。
+## 先按风险选择测试边界
 
-| Layer | Useful for | Example tools |
+| 测试边界 | 适合验证 | 报表排序例子 |
 |---|---|---|
-| Unit | Pure functions and isolated behavior | Jest, Vitest |
-| Integration | Components, hooks, context, and API boundaries together | React Testing Library with Jest or Vitest |
-| End-to-end | Browser navigation, persistence, and critical user journeys | Playwright, Cypress |
+| 单元测试 | 无 Document Object Model（文档对象模型，DOM）的纯转换与解析 | 无效 `sort` 被拒绝；报表响应字段映射正确。 |
+| 组件集成测试 | 组件、Hook（钩子）、可访问控件和请求边界一起工作 | 点排序控件后显示等待状态，成功后行序变为 April、May，失败时出现错误提示。 |
+| 浏览器端到端测试 | 浏览器历史、真实 URL、路由、资源和服务组合 | 从 recent 点 Oldest first，确认 URL 和行序，再按 Back 恢复 recent。 |
 
-Keep browser tests for behavior that depends on the real browser or application wiring. A test pyramid is a planning aid; a project's distribution should follow its actual risks and feedback costs.
+保持单元测试简单纯粹；请求和 React 组件的关系用组件测试；浏览器 Back、片段锚点、生产资源路径等风险由真实浏览器覆盖。组件测试不模拟出真实浏览器历史时，不能替代 Back 测试。
 
-## Jest fundamentals / Jest基础
+## 用用户能找到的名称和内容断言
 
-Use Jest when the risk can be reproduced around logic, state, or a dependency boundary. A test that starts asynchronous work must return or await the Promise that contains its assertions. Place the mock at the dependency and assert the behavior of the caller. [How a Jest test verifies asynchronous behavior / Jest 怎样验证异步行为](jest-async-tests-and-mocks.md) contains the complete async, lifecycle, matcher, CommonJS and native ESM examples.
+React Testing Library 的查询名称表达等待契约：`getByRole` 表示元素现在应存在且唯一；`queryByRole` 适合断言它不存在；`findByRole` 返回 Promise 并等待元素出现。优先使用角色和可访问名称，避免检查组件内部状态、CSS class 或 hook 调用次数。
 
-## React Testing Library / React Testing Library
+组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock 与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](jest-async-tests-and-mocks.md)。
 
-Test through user-visible roles, labels, text, and interactions. Queries have different timing contracts:
+React Testing Library 16.3.3 也从 `@testing-library/react` 导出 `renderHook`，可单独验证有复用价值的 Hook 契约；只被一个组件使用的 Hook 通常直接测那个组件更能表达用户行为。Testing Library 的 render 和 user-event helper 已处理一般交互的 React `act` 边界；测试从 helper 外部直接触发更新时，再显式包在 `act` 中。快照适合记录稳定的小结构，较大的快照本身说不清用户需要看到什么，排序和错误行为仍应使用有含义的断言。
 
-| Query | Use when |
-|---|---|
-| getBy... | The element should exist now; throws if absent or ambiguous. |
-| queryBy... | Checking that an element is absent; returns null if absent. |
-| findBy... | The element should appear asynchronously; returns a Promise. |
+## 浏览器测试应经过同一条 URL 和 Back 流程
 
-Prefer getByRole with an accessible name when it represents the user's interaction. Use getByLabelText for form controls. A test ID is an escape hatch when the UI has no suitable user-facing query.
+下面的端到端测试是 React Router Data Mode 浏览器 loader 加同源 `/api/reports` 的方案。它假定 Playwright 配置了应用 `baseURL` 与启动待测应用的 `webServer`。`page.route` 只拦截浏览器页面发出的请求；Next Server Component 在服务器进程发出的上游 `fetch` 不会经过它，要为 Next 配置可达的服务端测试上游。此处在浏览器 API 边界按 `sort` 返回固定数据，断言链接、地址、列表和浏览器历史；拦截器中的断言只检查实际出现的请求，URL 和行序断言验证界面行为；它们不证明每次导航一定发生网络调用。若还要证明应用确实接入接口，可增加至少一次拦截命中的断言，或用不会出现在初始静态页面中的 fixture 值。这里不固定请求次数，因为预取、路由再验证或返回历史项可能影响网络调用次数：
 
-~~~jsx
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import "@testing-library/jest-dom";
+~~~ts
+import { expect, test } from "@playwright/test";
 
-test("submits the entered email", async () => {
-  // Arrange
-  const user = userEvent.setup();
-  const onSubmit = jest.fn();
-  render(<EmailForm onSubmit={onSubmit} />);
+const recentRows = [
+  { id: "may", period: "May", title: "Operations" },
+  { id: "april", period: "April", title: "Finance" }
+];
+const oldestRows = [...recentRows].reverse();
 
-  // Act
-  await user.type(
-    screen.getByRole("textbox", { name: /email/i }),
-    "person@example.com"
-  );
-  await user.click(screen.getByRole("button", { name: /submit/i }));
+test("sorts reports and restores the previous URL with Back", async ({ page }) => {
+  await page.route(/\/api\/reports(?:\?.*)?$/, async route => {
+    expect(route.request().method()).toBe("GET");
+    const url = new URL(route.request().url());
+    const sorts = url.searchParams.getAll("sort");
+    expect(sorts).toHaveLength(1);
+    const sort = sorts[0];
+    expect(["recent", "oldest"]).toContain(sort);
+    const rows = sort === "oldest" ? oldestRows : recentRows;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(rows)
+    });
+  });
 
-  // Assert
-  expect(onSubmit).toHaveBeenCalledWith("person@example.com");
+  await page.goto("/reports?sort=recent#summary");
+  const rows = page.getByRole("list", { name: "报表" }).getByRole("listitem");
+  await expect(rows).toHaveText([
+    "May — Operations",
+    "April — Finance"
+  ]);
+
+  await page.getByRole("link", { name: "Oldest first" }).click();
+  await expect(page).toHaveURL(/\/reports\?sort=oldest#summary$/);
+  await expect(rows).toHaveText([
+    "April — Finance",
+    "May — Operations"
+  ]);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/reports\?sort=recent#summary$/);
+  await expect(rows).toHaveText([
+    "May — Operations",
+    "April — Finance"
+  ]);
 });
 ~~~
 
-userEvent models a higher-level interaction sequence, including keyboard and focus behavior. It is not a real browser. fireEvent dispatches a lower-level event and can be useful when a test specifically needs that event boundary.
+这类测试把 `#summary` 留在页面地址，并让 API 只按查询参数读取排序；浏览器不会把片段发给服务端。URL 断言只证明片段仍在地址栏，不证明页面滚动到了 `id="summary"` 的位置；若页面确有滚动契约，应单独断言锚点与视口位置。DOM 角色查询也只证明可访问树中的结构和名称，不证明屏幕阅读器实际播报。测试应用可以把 `page.route` 换成测试服务或 Mock Service Worker（请求拦截工具），但不要在同一案例里一边 Mock 页面实现、一边又声称覆盖了真实路由。
 
-The form test above follows Arrange–Act–Assert (AAA): prepare the user and component, perform the interaction, then check the observable result.
+## 验证将发布的构建产物
 
-For an asynchronous appearance, prefer findBy...:
-
-~~~javascript
-const result = await screen.findByText("Loaded");
-expect(result).toBeInTheDocument();
-~~~
-
-Use waitFor when the assertion itself needs retrying. Its callback must throw for a retry; returning false does not request another attempt. Avoid placing side effects inside waitFor because the callback can run more than once.
-
-## Testing custom Hooks and snapshots / 测试自定义Hook与快照
-
-React Testing Library exports renderHook from @testing-library/react. It renders a test component around the Hook. Most Testing Library render and interaction helpers already use React act; use act for an update initiated outside those helpers when the test needs to flush it.
-
-~~~javascript
-import { act, renderHook } from "@testing-library/react";
-
-test("increments the counter", () => {
-  const { result } = renderHook(() => useCounter(0));
-
-  act(() => result.current.increment());
-
-  expect(result.current.count).toBe(1);
-});
-~~~
-
-Snapshots can capture stable structure, but a large snapshot does not explain which behavior matters. Use focused assertions for user-visible behavior and update snapshots intentionally when the expected output changes.
-
-## Release checks / 发布检查
-
-CI should connect fast source checks to the exact production output. A small frontend release path is:
-
-**核心原则 / Core idea：** 先完成类型、单元和组件检查，再生成生产构建；用接近生产的服务运行这份构建产物，执行关键浏览器流程，最后晋级同一份已验证产物，避免重新构建后发布了另一份代码。HMR 只验证开发热更新链路，不能证明生产资源路径、分块或发布产物正常；Vite preview 可以本地预览刚生成的 `dist`，但官方定位不是生产服务器。Source map 应关联到具体发布版本并受控上传；`hidden` 只隐藏源码映射注释，不阻止他人直接访问映射文件。
+开发热更新服务主要验证开发链路，不会完整覆盖打包后的资源地址、分块加载或部署路径。常用交付检查顺序是：
 
 ~~~text
-lockfile install -> type check -> unit/component tests -> production build
-  -> serve the built output -> one critical browser smoke -> retain/promote that output
+typecheck -> unit/component tests -> production build
+  -> serve that build -> critical browser journey -> promote the same artifact
 ~~~
 
-For example, a project can run `npm run typecheck`, `npm run test:ci`, and `npm run build`, then `npx playwright test tests/release-smoke.spec.ts`. Configure Playwright's `webServer.command` to start `npm run preview` (or the framework's built-output server) after the build so this browser test sees emitted assets rather than the HMR server; script names are project-specific.
+用接近生产的服务器启动刚生成的构建产物，再执行一次上面的关键用户流程；使用 Vite 时，`vite preview` 可以本地预览刚构建的 `dist`，但官方不把它定位为生产服务器。发布时晋级同一份通过检查的产物，避免重新构建后部署了另一份代码。Source map（源码映射）应绑定发布版本并受控上传；隐藏注释不会自动阻止外部直接访问 map 文件。公共的构建产物晋级、运行时和发布门禁见[应用部署与持续集成及持续交付（CI/CD）](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)，通用测试边界见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)。
 
-Type checks catch static contract errors; unit and component tests catch local logic and UI wiring; a production build catches transforms, asset emission, and chunk or base-path issues that a dev server may not exercise. Then serve the generated output with a production-like static server and run one browser test for a critical journey, such as opening search, submitting a query, and seeing results. A Playwright `webServer` can start the local artifact server for the test; with Vite, `vite preview` serves the just-built `dist` locally for this check, but is not a production server. Promote the tested output rather than rebuilding it for release.
-
-Use browser checks where real routing, asset URLs, browser behavior, or app/service wiring matters. A passing HMR session proves the development loop works; it does not prove production chunks load from the deployed base path or that the published artifact works. Source maps can translate minified error locations back to original source when tied to a release and uploaded to a controlled error-reporting system. A hidden map removes the source-map comment, not the file or access risk; do not leave private maps at a public asset URL. The shared [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) note owns artifact promotion, runtime secrets, and rollout gates.
-
-**See also:** [Advanced React / React进阶](../frameworks/advanced-react.md) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
-
-**Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/), [Vite static deployment](https://vite.dev/guide/static-deploy.html), [Playwright web server](https://playwright.dev/docs/test-webserver).
+> [!info]- 来源与版本核验（React Testing Library 16.3.3；user-event 14.6.8；Playwright 1.65.0；2026-11-06）
+> - React Testing Library 当前包版本：[npm package](https://www.npmjs.com/package/@testing-library/react)，16.3.3；角色查询和异步行为：[ByRole](https://testing-library.com/docs/queries/byrole/)、[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)。
+> - `renderHook` API 与测试单个 Hook 的适用边界：[React Testing Library API](https://testing-library.com/docs/react-testing-library/api/#renderhook)，v16.3.3，核验日期 2026-11-06。
+> - user-event 当前版本：[npm package](https://www.npmjs.com/package/@testing-library/user-event)，14.6.8；用户交互模型：[Introduction](https://testing-library.com/docs/user-event/intro/)，核验日期 2026-11-06。
+> - Playwright 当前包版本：[npm package](https://www.npmjs.com/package/@playwright/test)，1.65.0；浏览器端断言与拦截请求：[Assertions](https://playwright.dev/docs/test-assertions)、[Page route](https://playwright.dev/docs/api/class-page#page-route)，核验日期 2026-11-06。
+> - 测试产物服务器配置：[Playwright webServer](https://playwright.dev/docs/test-webserver)。
+> - `vite preview` 用于本地预览构建产物，不是生产服务器：[Vite CLI](https://vite.dev/guide/cli.html#vite-preview)、[Static deployment](https://vite.dev/guide/static-deploy.html)，按 Vite v8.3.5 官方文档核验于 2026-11-06。

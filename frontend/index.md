@@ -90,12 +90,12 @@
 ### 框架、工具选择与交付验收
 
 - [如何为产品选择前端框架？](frameworks/virtual-dom-and-framework-selection.md)
-- [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](frameworks/react-routing-and-navigation.md)
-- [How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？](frameworks/next-js.md)
-- [When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？](libraries/lodash.md)
-- [When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？](libraries/ahooks.md)
-- [What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？](testing/frontend-testing.md)
-- [How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？](testing/jest-async-tests-and-mocks.md)
+- [React 路由怎样把地址映射到界面并加载数据？](frameworks/react-routing-and-navigation.md)
+- [Next.js 如何把文件路由、服务端数据与客户端交互连接起来？](frameworks/next-js.md)
+- [Lodash 何时适合处理报表列表，哪些方法会修改输入？](libraries/lodash.md)
+- [ahooks 怎样管理报表请求、分页与列表身份？](libraries/ahooks.md)
+- [前端测试怎样证明报表排序、历史恢复和发布产物正确？](testing/frontend-testing.md)
+- [Jest 怎样验证报表请求中的异步状态和结果？](testing/jest-async-tests-and-mocks.md)
 
 ## 共享基础
 

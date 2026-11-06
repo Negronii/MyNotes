@@ -1,173 +1,152 @@
-# How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
+# Jest 怎样验证报表请求中的异步状态和结果？
 
-Wait for the Promise that carries the assertion, give the code under test an explicit dependency boundary, and assert what the code does with the result. Set up and restore only the resources the test owns. Module mocking depends on the test's module system. / 等待承载断言的 Promise，在被测代码的依赖边界安排模拟，并断言被测代码如何处理结果。测试只负责准备和恢复自己拥有的资源。模块模拟方式取决于测试使用的模块系统。
+**案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](frontend-testing.md)。
 
-**Key terms / 关键术语** · observable behavior / 可观察行为 · dependency boundary / 依赖边界 · test lifecycle / 测试生命周期 · module mock / 模块模拟
+## 测试必须等待承载断言的异步工作
 
-## Suites and cases / 测试套件与用例
+在 Promise 风格的 Jest 测试里，框架会等待测试返回或 `await` 的 Promise；另一种受支持的异步方式是 `done` 回调，不要在同一个测试中混用两种完成协议。若启动请求却不等待，测试可能在断言执行前就结束。`rejects` / `resolves` 自身也会返回 Promise，必须 `return` 或 `await`；不能把同步 `toThrow` 用在已经执行过的调用结果上。
 
-describe groups related tests; test and its alias it define a case. Use clear names that describe behavior. Starting a name with “should” is a style choice, not a Jest requirement.
+## 用用户操作和假时钟控制请求返回
 
-~~~javascript
-function add(left, right) {
-  return left + right;
+下例用 300 ms 定时器模拟报表服务。运行 TSX 前要配置 `jsdom` 环境及 TypeScript/JSX transformer；测试全局从 `@jest/globals` 显式导入。Fake timers（假时钟）让测试控制响应时机：先点击控件、确认等待状态和旧列表还在，再只推进所需时间，最后检查新行序。这个小组件仅用于隔离请求状态；真正的 sort URL 与 Back 由浏览器测试覆盖：
+
+~~~tsx
+import { useState } from "react";
+import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom/jest-globals";
+import { afterEach, beforeEach, expect, jest, test } from "@jest/globals";
+
+type SortOrder = "recent" | "oldest";
+type Report = { id: string; period: string; title: string };
+type LoadReports = (sort: SortOrder) => Promise<Report[]>;
+
+const recentRows: Report[] = [
+  { id: "may", period: "May", title: "Operations" },
+  { id: "april", period: "April", title: "Finance" }
+];
+const oldestRows = [...recentRows].reverse();
+
+function ReportPanel({ loadReports }: { loadReports: LoadReports }) {
+  const [rows, setRows] = useState(recentRows);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  async function showOldest() {
+    setLoading(true);
+    setError(false);
+    try {
+      setRows(await loadReports("oldest"));
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section>
+      <button type="button" disabled={loading} onClick={() => void showOldest()}>
+        Oldest first
+      </button>
+      {loading && <p role="status">正在读取 oldest 排序…</p>}
+      {error && <p role="alert">报表读取失败。</p>}
+      <ol aria-label="报表" aria-busy={loading}>
+        {rows.map(report => (
+          <li key={report.id}>{report.period} — {report.title}</li>
+        ))}
+      </ol>
+    </section>
+  );
 }
 
-function subtract(left, right) {
-  return left - right;
-}
+beforeEach(() => {
+  jest.useFakeTimers();
+});
 
-describe('calculator', () => {
-  test('adds two numbers', () => {
-    expect(add(2, 3)).toBe(5);
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+test("keeps the visible rows pending, then shows the oldest order", async () => {
+  const loadReports = jest.fn<LoadReports>(
+    sort =>
+      new Promise(resolve => {
+        setTimeout(
+          () => resolve(sort === "oldest" ? oldestRows : recentRows),
+          300
+        );
+      })
+  );
+  const user = userEvent.setup({
+    advanceTimers: jest.advanceTimersByTime
   });
 
-  test('subtracts a larger value', () => {
-    expect(subtract(5, 10)).toBe(-5);
+  render(<ReportPanel loadReports={loadReports} />);
+  await user.click(screen.getByRole("button", { name: "Oldest first" }));
+
+  expect(loadReports).toHaveBeenCalledWith("oldest");
+  expect(screen.getByRole("status")).toBeInTheDocument();
+  const list = screen.getByRole("list", { name: "报表" });
+  expect(within(list).getAllByRole("listitem").map(row => row.textContent))
+    .toEqual(["May — Operations", "April — Finance"]);
+
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(300);
   });
+
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(within(list).getAllByRole("listitem").map(row => row.textContent))
+    .toEqual(["April — Finance", "May — Operations"]);
 });
 ~~~
 
-Arrange–Act–Assert makes setup, behavior, and verification easy to scan. A small test may not need a separate variable for every phase.
+`user-event` 在输入或点击过程中也会安排定时任务；启用 Jest 假时钟时，把 `jest.advanceTimersByTime` 传给 `userEvent.setup`。不要用 `delay: null` 绕过假计时器。对只需立即完成的服务 Mock 可用 `mockResolvedValue`；需要验证防抖或加载延迟时，让 Mock Promise 用明确的定时器解决，并调用 `advanceTimersByTimeAsync`。异步定时器 API 会让 Promise 回调有机会执行，旧式 fake timers 不支持它。
 
-Common file names include .test.js and .spec.js; the project’s Jest configuration determines which files are collected.
+此处推进 300 ms 会让定时器调用 Mock Promise 的 `resolve`；`act` 再等 React 把 `setRows` 和 `setLoading(false)` 提交到 DOM，之后同步查询才观察得到 April、May 和消失的等待提示。按钮在 `loading` 时禁用，因此本例定义的是一次只处理一个请求；若产品允许连续切换或重试，要另测并发返回次序和过期结果保护。
 
-## Async tests / 异步测试
+当目标元素本来就不存在且需要异步出现时，`findByRole` 返回等待 Promise；如果整条断言需要重试，用 `waitFor`，其回调应在未满足时抛错。固定等待 1 秒既慢又不说明等的是什么。组件请求失败的测试应再用 `mockRejectedValue` 并确认用户能找到 `role="alert"`，不要只断言 Mock 曾经被调用。
 
-Return or await the Promise so Jest waits for the assertion. For rejected Promises, use the rejects matcher.
+## Mock 要停在真实依赖边界
 
-~~~javascript
-test('loads a user', async () => {
-  const user = await getUser(1);
-  expect(user).toHaveProperty('id', 1);
-});
+`jest.fn` 可记录参数、调用和 Promise 结果；例如 `mock.results[0].value` 是 Mock 返回的 Promise 对象，不是它之后兑现的报表数组。组件例最后断言的是 Promise 结算后用户实际看到的行序。`jest.spyOn(object, method)` 默认仍会执行原实现，需调用 `mockReturnValue` / `mockImplementation` 才替换，并在测试后用 `mockRestore` 恢复。普通函数 Mock（模拟函数）应断言业务代码如何处理 May、April，不要只复述自己设置了什么结果。
 
-test('reports a failed request', async () => {
-  await expect(getUser(-1)).rejects.toThrow('not found');
-});
-~~~
-
-A test that starts an asynchronous operation but neither awaits it nor returns its Promise can finish before the assertion runs.
-
-## Setup and cleanup / 准备与清理
-
-beforeAll and afterAll run once around a test scope; beforeEach and afterEach run around each test in that scope. Use cleanup hooks for resources that tests actually open.
+在 Babel 或其他转换为 CommonJS（通用模块系统）的配置中，`jest.mock` 可能由 transformer（代码转换器）提升到导入前。原生 ECMAScript Module（ECMAScript 模块，ESM）的静态导入先执行，Mock 必须在动态导入被测模块前登记：
 
 ~~~javascript
-describe('temporary resource', () => {
-  let resource;
+import { jest } from "@jest/globals";
 
-  beforeAll(async () => {
-    resource = await openResource();
-  });
-
-  afterAll(async () => {
-    await resource.close();
-  });
-
-  beforeEach(async () => {
-    await resource.clear();
-  });
-
-  test('stores a record', async () => {
-    await resource.insert({ id: 1, name: 'Ada' });
-    expect(await resource.count()).toBe(1);
-  });
-});
-~~~
-
-## Mock functions and spies / Mock 函数与 spy
-
-### jest.fn
-
-jest.fn creates a mock function whose calls and results can be inspected.
-
-~~~javascript
-const callback = jest.fn();
-callback('saved');
-
-expect(callback).toHaveBeenCalledWith('saved');
-expect(callback).toHaveBeenCalledTimes(1);
-~~~
-
-### jest.mock in a CommonJS/transformed setup
-
-This example uses CommonJS require with a test configuration that transforms or otherwise supports this mocking pattern. In Babel-transformed tests, jest.mock calls are hoisted by the Jest transformer, so the mock is registered before the module is required.
-
-~~~javascript
-jest.mock('./api', () => ({
-  fetchUser: jest.fn(),
+jest.unstable_mockModule("./report-api.js", () => ({
+  fetchReports: jest.fn()
 }));
 
-const api = require('./api');
-const { loadUser } = require('./userService'); // userService delegates to api.fetchUser
-
-test('uses the API boundary', async () => {
-  api.fetchUser.mockResolvedValue({ id: 1, name: 'Ada' });
-
-  await expect(loadUser(1)).resolves.toEqual({ id: 1, name: 'Ada' });
-});
+const { reportsLoader } = await import("./reports-loader.js");
 ~~~
 
-A module mock replaces a dependency at the module boundary. The test should still assert the behavior of the code under test rather than only reasserting the mock configuration.
+`reports-loader.js` 应在模块中导入 `./report-api.js` 的 `fetchReports`；测试先登记该依赖的 Mock，再动态导入真正使用它的 loader。`unstable_mockModule` 仍带 unstable 前缀，模块 ESM Mock 方式要和项目的 Jest 版本、Node 运行时以及 transformer 配置一致。Jest 30.5.2 对 Node 24.9+ 同步可求值的 ESM 图也有 automock 和手写 Mock 支持；包含顶层 await 或异步 resolver（模块解析器）/ transformer 的图仍要按当前 ESM 文档选方法。
 
-### Native ESM modules
+## 断言要匹配数据结构和观察方式
 
-Native ESM evaluates static imports before the test body, so the CommonJS-style hoisting example does not apply. Jest's documentation provides jest.unstable_mockModule followed by dynamic import for ESM mocking. The API name is marked unstable; check the Jest version and runtime configuration.
-
-~~~javascript
-import { jest } from '@jest/globals';
-
-jest.unstable_mockModule('./api.js', () => ({
-  fetchUser: jest.fn(),
-}));
-
-const { fetchUser } = await import('./api.js');
-~~~
-
-### jest.spyOn
-
-jest.spyOn observes an existing object method and calls the original implementation by default. Provide a mock implementation or return value when the test needs replacement behavior. Restore the spy after use.
-
-~~~javascript
-const service = {
-  greet: name => 'Hello ' + name,
-};
-
-const spy = jest.spyOn(service, 'greet').mockReturnValue('Hi Bob');
-
-expect(service.greet('Bob')).toBe('Hi Bob');
-expect(spy).toHaveBeenCalledWith('Bob');
-
-spy.mockRestore();
-~~~
-
-mockRestore restores a spy created by jest.spyOn. Use clearAllMocks, resetAllMocks, or restoreAllMocks according to whether the test needs to clear call history, reset implementations, or restore replaced properties; these operations are not interchangeable.
-
-## Common matchers / 常见 matcher
-
-| Matcher | Use |
+| 断言 | 适合检查 |
 |---|---|
-| **toBe(value)** | Compare with Object.is semantics. |
-| **toEqual(value)** | Compare nested object or array values. |
-| **toStrictEqual(value)** | Also distinguish missing properties from properties set to `undefined` and similar structural cases. |
-| **toMatchObject(value)** | Check that an object contains the expected subset. |
-| **toBeTruthy / toBeFalsy** | Check the Boolean coercion of a value. |
-| **toBeNull / toBeUndefined** | Distinguish null from undefined. |
-| **toContain(value)** | Check an array item or string substring. |
-| **toHaveLength(n)** | Check a length property. |
-| **toThrow(error)** | Check a synchronous function for a thrown error; pass the function, not its already-evaluated result. |
-| **toHaveBeenCalled()** | Check that a mock or spy was called. |
-| **toHaveBeenCalledWith(args)** | Check arguments recorded by a mock or spy. |
+| `toBe(value)` | 原始值或引用相同，使用 `Object.is` 语义。 |
+| `toEqual(value)` | 数组和对象的递归值。 |
+| `toStrictEqual(value)` | 还要区分缺失属性、`undefined` 属性等结构差异。 |
+| `toHaveBeenCalledWith(args)` | Mock 在实际调用边界收到的参数。 |
+| `toThrow(error)` | 同步抛错；传入函数本身，而非已经执行的结果。 |
 
-## Coverage / 覆盖率
+Mock 清理方法不会互相替代：
 
-Run Jest with the project’s configured coverage option, commonly --coverage. Coverage reports which statements, branches, functions, and lines ran; a high percentage does not prove that assertions check meaningful behavior or edge cases.
+| 方法 | 清除什么 | 保留什么 |
+|---|---|---|
+| `jest.clearAllMocks()` | 调用、实例与结果记录 | Mock 的实现与返回值设置 |
+| `jest.resetAllMocks()` | 调用记录和 Mock 实现 | spy 仍被替换；需要另行恢复原属性 |
+| `jest.restoreAllMocks()` | `spyOn` / 替换属性保存的原实现 | 独立创建或手动赋值的 `jest.fn()` 不会自动还原 |
 
-## References / 参考资料
+`beforeAll` / `afterAll` 可为整组测试打开和关闭共享资源；`beforeEach` / `afterEach` 负责逐测试建立和恢复假时钟、spy 与 DOM；不要让一个用例的调用记录或待处理计时器泄漏到另一个用例。Jest 的 `--coverage` 报告哪些分支执行过，不代表断言已验证了用户要的 May/April 顺序、错误恢复或历史行为。
 
-- [Jest 30.0 documentation](https://jestjs.io/docs/30.0/getting-started)
-- [Jest: ECMAScript Modules](https://jestjs.io/docs/30.0/ecmascript-modules)
-- [Jest: The Jest Object](https://jestjs.io/docs/30.0/jest-object)
-- [Jest: Mock Functions](https://jestjs.io/docs/30.0/mock-functions)
-- [Frontend Testing / 前端测试](frontend-testing.md)
+> [!info]- 来源与版本核验（Jest 30.5.2；React Testing Library 16.3.3；user-event 14.6.8；2026-11-06）
+> - 当前包版本及发行记录：[Jest v30.5.2 release](https://github.com/jestjs/jest/releases/tag/v30.5.2)，2026-09-18。
+> - 定时器 Mock、推进时钟以及异步 timer API：[Timer Mocks](https://jestjs.io/docs/timer-mocks)、[Jest Object API](https://jestjs.io/docs/jest-object)，Jest 30.5.2，核验日期 2026-11-06。
+> - 函数 Mock、spy 和 ESM 模块 Mock：[Mock Functions](https://jestjs.io/docs/mock-functions)、[ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules)，Jest 30.5.2，核验日期 2026-11-06。
+> - 假时钟下的用户操作、异步查询和重试断言：[user-event setup options](https://testing-library.com/docs/user-event/options/)、[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)，核验日期 2026-11-06。

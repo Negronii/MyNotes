@@ -53,7 +53,7 @@ DOM 表示文档节点，CSS 规则决定这些节点如何呈现。浏览器按
 
 ### 从首帧交接到筛选更新
 
-首帧可能先于 `load` 事件和客户端代码可交互的时点出现。比如 HTML 已显示报表，但模块脚本尚未完成下载、运行或注册点击处理器。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](#How%20do%20hydration%20and%20streaming%20fit%20together?%20/%20Hydration%20%E4%B8%8E%E6%B5%81%E5%BC%8F%E6%B8%B2%E6%9F%93%E5%A6%82%E4%BD%95%E8%A1%94%E6%8E%A5%EF%BC%9F)。若点击没有反馈，先确认处理器何时可用；若处理器已经注册，则查看事件是否被主线程上其他工作挡住。
+首帧可能先于 `load` 事件和客户端代码可交互的时点出现。比如 HTML 已显示报表，但模块脚本尚未完成下载、运行或注册点击处理器。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E4%B8%8E%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%BB%84%E4%BB%B6%E5%9C%A8%E5%93%AA%E6%9D%A1%E7%BA%BF%E4%BA%A4%E6%8E%A5)。若点击没有反馈，先确认处理器何时可用；若处理器已经注册，则查看事件是否被主线程上其他工作挡住。
 
 当用户点击“最早优先”，`/reports.js` 的 DOM 事件处理器可以把 `sort=oldest` 写入 URL，设置按钮的 `aria-pressed` 状态，并改动列表节点。节点修改立即改变 DOM；样式、布局、绘制和之后的画面呈现则由浏览器在后续工作中按需完成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
@@ -164,7 +164,7 @@ renderReports(sortFromUrl());
 
 浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
 
-**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#58.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 > [!info]- 来源
 > - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
@@ -538,7 +538,7 @@ Effect 用于让已提交的组件与 React 之外的系统保持一致，例如
 
 开发环境在根组件开启 StrictMode（严格模式）时，React 可在首挂载额外执行一次 setup 与 cleanup 来暴露不完整的清理逻辑。此例首轮 Effect 因 `requestId === 0` 直接返回，不会因此发出重复请求；这项检查不代表生产中每个请求都会重复。手写 Effect 获取数据时要清理或忽略已经失效的响应；若要缓存、去重、刷新和更新服务端数据，接着读[React如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
-类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
+类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#58.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-06）
 > - 状态是快照、setter 请求下一次 render、updater 按队列应用：React 官方 [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)、[Queueing a Series of State Updates](https://react.dev/learn/queueing-a-series-of-state-updates)，核验日期 2026-11-06。
@@ -5818,7 +5818,7 @@ A source map relates emitted code to source files for debugging and error report
 | hidden-source-map | Emits an external map without the reference comment; useful when a release process uploads maps separately / 输出外部 map 但无引用注释；适合由发布流程单独上传 |
 | nosources-source-map | Omits embedded source content, but mappings and source paths may remain / 不嵌入源码内容，但映射和源码路径仍可能存在 |
 
-These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#62.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
+These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#62.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
 ## 50. 报表页面里的状态应该放在哪里？
 
 案例背景：用户打开 `/reports/42?sort=recent#summary`，希望刷新后继续查看同一报表、复制链接分享当前排序，并在另一标签页改变偏好后看到更新。重开时，页面从路径取报表 ID、从查询参数还原 `sort`，然后通过 HTTP 请求服务端报表；片段 `#summary` 定位页面中的摘要。若返回快照仍是 `running`，页面拿到与快照一致的 `event_cursor` 后再订阅更新，见[流式报表恢复案例](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。报表内容由服务端维护，可分享的筛选条件进入 URL，Web Storage (网页存储) 只保存客户端偏好或草稿。
@@ -6855,773 +6855,1140 @@ React 用组件类型、树中的位置和同级 key 判断状态能否保留。
 
 框架不是唯一变量。真实环境还包括数据形状、设备、浏览器、访问性需求、发布约束和团队维护能力。保留一个候选框架的理由，应能说清它满足了哪条必要约束、测试了哪条路径，以及哪类工作仍由浏览器或服务端承担。
 
-React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
+React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#58.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（2026-11-06）
 > - 本文关于 React 描述、render 与 commit 的边界：React 19.3 当前文档，[Render and Commit](https://react.dev/learn/render-and-commit)、[Versions](https://react.dev/versions)，核验日期 2026-11-06。
 > - 框架实现可采用不同渲染机制：React 文档同上；Vue 官方文档，[Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism)，核验日期 2026-11-06。
 > - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
-## 58. How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？
+## 58. React 路由怎样把地址映射到界面并加载数据？
 
-**Core answer / 核心回答：** React Router matches the current location to a route, while SPA and MPA describe whether navigation updates the current document or requests another one. The choice depends on delivery, interaction, accessibility, hosting, and operations. / React Router 将当前地址匹配到路由；SPA 与 MPA 则描述导航是更新当前文档还是请求另一个文档。选择取决于内容交付、交互、无障碍、托管和运维需求。
+**案例背景。** 用户打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 告诉服务端返回 May、April 两份报表；`#summary` 只用于浏览器定位，不属于 Hypertext Transfer Protocol（超文本传输协议，HTTP）请求。用户点 **Oldest first** 后，地址应新增 `sort=oldest` 历史项，加载结果后行序为 April、May；按 Back 则回到 `sort=recent` 和 May、April。路由把地址、数据请求和界面更新连在一起，不能只把 URL 当作组件选择器。
 
-### How does React Router work? / React Router如何工作？
-
-**Core answer / 核心回答：** React Router matches the current location to a route and renders the configured UI. The example below uses the React Router v6 declarative API; current releases also offer data and framework modes with additional APIs. A browser-history router needs the host to serve the application entry point for client-side paths. / React Router 将当前地址匹配到路由并渲染对应界面。下面的例子使用 React Router v6 声明式 API；当前版本还提供数据模式和框架模式。浏览器历史路由要求服务器将客户端路径回退到应用入口文件。
-
-~~~jsx
-import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/posts/:postId" element={<Post />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
-
-function Home() {
-  return <h1>Home</h1>;
-}
-
-function Post() {
-  const { postId } = useParams();
-  return <h1>Post {postId}</h1>;
-}
+~~~mermaid
+flowchart TD
+    A[读取地址 /reports 与查询 sort=recent] --> B[匹配报表路由]
+    B --> C[loader（加载器）从地址读 sort]
+    C --> D[请求服务端 May、April]
+    D --> E[useLoaderData 渲染当前列表]
+    E --> F[点击 Oldest first]
+    F --> G[PUSH pending：recent 地址和列表暂留]
+    G --> H[加载器请求 oldest 数据]
+    H --> I{loader 结算}
+    I -->|成功| J[提交 oldest URL、历史项与列表]
+    I -->|失败| K[提交 oldest URL 与路由错误界面]
+    J --> L[Back 的 POP 立即恢复 recent 地址]
+    L --> M[loader 等待期间仍显示 oldest 列表]
+    M --> N{recent loader 结算后显示列表或错误}
 ~~~
 
-- **BrowserRouter** uses the browser History API and clean paths.
-- **HashRouter** stores the route after the URL hash; it can fit hosting where server fallback configuration is unavailable.
-- **MemoryRouter** stores location in memory and is useful in tests or non-browser contexts.
+### 路径、查询和片段各自表达什么
 
-Use Link for navigation users can follow and useNavigate for programmatic navigation. Route API and package imports vary by React Router version; follow the version installed by the project.
+路由器用 pathname（路径名）选择页面，例如 `/reports` 或 `/reports/:reportId`；动态段 `:reportId` 用来标识一份具体报表。多个动态段也能组合成 `/teams/:teamId/reports/:reportId`，`useParams` 读取匹配的路径值。查询参数描述页面当前的筛选、排序或分页状态，像 `?sort=oldest` 可以复制、刷新和由浏览器历史恢复。片段 `#summary` 由浏览器用于定位页面内的位置，客户端能读到它，普通 HTTP 请求不会把它发给服务端。
 
-### What is the difference between an SPA and an MPA? / SPA和MPA有什么区别？
+因此，报表排序由 URL 作为状态来源；用户打开旧地址或按 Back 时，路由从地址重建数据请求和选中状态。不要再用独立的 React state 保存一份互相竞争的 sort。需要低层理解 `pushState`、`popstate` 和片段导航时，见[浏览器导航与历史如何恢复筛选状态？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。
 
-**Core answer / 核心回答：** An MPA navigation requests another document; an SPA typically keeps one document loaded and updates route content in the client. Server rendering and client navigation can be combined, so many current applications use a hybrid model. Choose based on content delivery, interaction, accessibility, and operational needs rather than the label alone. / MPA 导航会请求另一个文档；SPA 通常保留一个文档并在客户端更新路由内容。服务端渲染和客户端导航可以组合，因此许多现代应用采用混合模式。应根据内容交付、交互、无障碍和运维需求选择，而非只看标签。
+### 数据模式先匹配路由，再加载匹配页面的数据
 
-| Aspect | SPA pattern | MPA pattern |
+React Router 有 Declarative Mode（声明式模式）、Data Mode（数据模式）和 Framework Mode（框架模式）三种模式。声明式模式适合只把路径匹配到组件；数据模式在路由配置之外增加 loader（加载器）、action（提交处理器）、pending（等待）状态和错误边界；框架模式在数据模式上再提供文件路由、类型生成、Server-Side Rendering（服务端渲染，SSR）和静态渲染。以下用当前 React Router v8.5.1 的数据模式与 `createBrowserRouter` 把同一报表地址接到数据加载器。此例是浏览器端路由；框架模式的 loader 可以运行在服务端，部署边界不同。
+
+下面从首次 `recent` loader 已成功、May 和 April 已显示后开始观察。PUSH 切换时关注三处：浏览器地址、`useNavigation().location` 中的目标地址、当前已提交的列表。POP 的地址栏更新时间不同，所以不能把两种导航压成“地址与列表一起切换”。
+
+| 导航 | loader 等待时 | loader 结算后 |
 |---|---|---|
-| Navigation | Client router updates the current document | Browser requests another document |
-| State | Client state can persist between route changes | State often needs URL, storage, or server persistence |
-| Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
-| SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
+| 点 Oldest first（PUSH） | 地址和已提交列表仍是 recent；`navigation.location` 是 oldest。 | 成功时提交 oldest 地址、历史项和 April/May；失败时仍提交目标地址和历史项，但显示该目标路由的错误界面。 |
+| 按 Back（POP） | 浏览器地址和历史指针先回到 recent；已提交路由状态与列表暂留 oldest，`navigation.location` 指向 recent。 | 成功后列表切回 May/April；失败后显示 recent 路由的错误界面。 |
 
-**See also:** [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Next.js / Next.js开发](#59.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) for server/client rendering and framework routing.
-
-**Sources checked 2026-10-15:** [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
-## 59. How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
-
-**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。
-
-
-### What does Next.js add to React? / Next.js为React增加了什么？
-
-**Core answer / 核心回答：** Next.js is a React framework that combines routing, server and client rendering, data access, and deployment integrations. Its Pages Router and App Router have different file conventions and rendering APIs, so name the router and version when describing behavior. / Next.js 是 React 框架，整合路由、服务端与客户端渲染、数据访问和部署集成。Pages Router 与 App Router 的文件约定和渲染 API 不同，说明行为时要注明路由器和版本。
-
-Next.js can produce HTML on the server or ahead of a request, and it can update route content in the browser. These options are not one global switch: choose based on the route's data freshness, user-specific content, runtime, and caching needs.
-
-### Pages Router: SSR, SSG, and ISR / Pages Router：SSR、SSG和ISR
-
-The following APIs belong to the **Pages Router** under the pages directory.
-
-| Strategy | API | When it fits |
-|---|---|---|
-| Server rendering per request | getServerSideProps | Request-specific data or authorization must be resolved on the server for each request. |
-| Static generation | getStaticProps and, for dynamic paths, getStaticPaths | Output can be produced before a request and reused. |
-| Incremental Static Regeneration | getStaticProps with revalidate | A generated page can be refreshed after a time window or on demand. |
-| Client-side data | Browser fetch or a client data library | Data is user-specific or does not need to be in the initial server-rendered response. |
-
-~~~jsx
-// pages/posts/[id].js — Pages Router
-export async function getServerSideProps({ params }) {
-  const response = await fetch(
-    "https://api.example.com/posts/" + params.id
-  );
-
-  if (response.status === 404) return { notFound: true };
-  if (!response.ok) throw new Error("Post request failed: " + response.status);
-
-  return { props: { post: await response.json() } };
-}
-
-export default function PostPage({ post }) {
-  return <article><h1>{post.title}</h1></article>;
-}
-~~~
-
-For ISR, a successful getStaticProps result can return revalidate: 60. This is a minimum interval before a request can trigger regeneration, not a timer that regenerates every minute. After the interval, a request can receive the stale page while regeneration runs; a successful new result replaces the cached version. Dynamic paths also need getStaticPaths and a deliberate fallback policy. In this Pages Router example, fallback: false makes paths omitted from the build-time list return 404; fallback: "blocking" generates an omitted path on its first request before returning HTML.
-
-~~~jsx
-// pages/posts/[id].js — Pages Router
-export async function getStaticPaths() {
-  const response = await fetch("https://api.example.com/posts");
-  if (!response.ok) throw new Error("Could not list posts");
-  const posts = await response.json();
-
-  return {
-    paths: posts.map(post => ({ params: { id: String(post.id) } })),
-    fallback: "blocking"
-  };
-}
-
-export async function getStaticProps({ params }) {
-  const response = await fetch("https://api.example.com/posts/" + params.id);
-  if (response.status === 404) return { notFound: true };
-  if (!response.ok) throw new Error("Post request failed: " + response.status);
-
-  return { props: { post: await response.json() }, revalidate: 60 };
-}
-~~~
-
-### App Router: Server Components and caching / App Router：Server Components与缓存
-
-Under the app directory, pages and layouts are Server Components by default. They can fetch on the server and pass serializable data to a Client Component. A file marked use client creates a client boundary for Hooks, event handlers, and browser APIs. Client Components may still contribute to initial HTML; use client does not mean the whole route is client-only.
-
-The following example uses the App Router with Cache Components disabled.
+首次打开页面时还没有旧列表；上面的“暂留”只适用于从已显示 recent 的状态导航。
 
 ~~~tsx
-// app/posts/page.tsx — App Router
-async function getPosts() {
-  const response = await fetch("https://api.example.com/posts", {
-    cache: "no-store"
+import {
+  createBrowserRouter,
+  data,
+  isRouteErrorResponse,
+  Link,
+  Outlet,
+  useLoaderData,
+  useNavigation,
+  useParams,
+  useRevalidator,
+  useRouteError,
+  type LoaderFunctionArgs
+} from "react-router";
+import { RouterProvider } from "react-router/dom";
+
+type SortOrder = "recent" | "oldest";
+type Report = { id: string; period: string; title: string };
+
+function isReport(value: unknown): value is Report {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.id === "string" &&
+    typeof row.period === "string" &&
+    typeof row.title === "string";
+}
+
+function parseReports(value: unknown): Report[] {
+  if (!Array.isArray(value)) {
+    throw data("报表服务返回的不是列表", { status: 502 });
+  }
+  return (value as unknown[]).map(row => {
+    if (!isReport(row)) {
+      throw data("报表服务返回了无效行", { status: 502 });
+    }
+    return row;
   });
-  if (!response.ok) throw new Error("Posts request failed");
-  return response.json();
 }
 
-export default async function PostsPage() {
-  const posts = await getPosts();
-  return (
-    <ul>
-      {posts.map(post => <li key={post.id}>{post.title}</li>)}
-    </ul>
-  );
-}
-~~~
+async function reportsLoader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const rawSort = url.searchParams.get("sort") ?? "recent";
+  if (rawSort !== "recent" && rawSort !== "oldest") {
+    throw data("不支持这个排序方式", { status: 400 });
+  }
+  const requestedSort: SortOrder = rawSort;
 
-With Cache Components disabled, the default server `fetch` mode is `auto no cache`. That mode does not opt a fetch into the persistent Data Cache. A statically prerendered route can still fetch once during `next build` and serve its prerendered output. A route using request-time APIs can fetch per request. Choose deliberately. Use `cache: "no-store"` for data that must be fetched per request, or opt into caching with `force-cache` or a compatible `next.revalidate` policy. In development, the HMR cache can reuse even `no-store` fetches until navigation or a full reload. [Next.js fetch reference, checked 2026-11-06](https://nextjs.org/docs/app/api-reference/functions/fetch#optionscache)
+  const apiUrl = new URL("/api/reports", url.origin);
+  apiUrl.searchParams.set("sort", requestedSort);
+  const response = await fetch(apiUrl, { signal: request.signal });
+  if (!response.ok) {
+    throw data("报表读取失败", { status: response.status });
+  }
 
-With Cache Components enabled, a component or function can opt into caching with `use cache`. To stream the uncached posts in this example, move the fetch into an async child with a Suspense ancestor. That boundary lets Next.js prerender the surrounding shell while the child waits for request-time data. Check where the result is reused and how it gets invalidated before choosing a cache lifetime. / 区分数据缓存、静态预渲染的页面产物与开发环境的 HMR 缓存。开启 Cache Components 后，把请求时才读取的数据放到 Suspense 边界下。 [Next.js on streaming uncached data](https://nextjs.org/docs/app/getting-started/caching#streaming-uncached-data)
-
-A Client Component can receive data from a Server Component through props, but props crossing the boundary must be serializable. Keep secrets and server-only dependencies on the server.
-
-### How do hydration and streaming fit together? / Hydration 与流式渲染如何衔接？
-
-**Core answer / 核心回答：** Server-rendered HTML can appear before the client JavaScript is ready. Hydration makes that existing markup interactive by matching it to React's initial client render and attaching behavior; the two initial outputs must agree. Effects run only in the browser after a component commits. In the App Router, a `Suspense` boundary can show a useful fallback while a slower child waits, then stream that region into the page. / 服务端 HTML 可以先于客户端 JavaScript 显示。Hydration 将已有标记与 React 客户端的首次渲染匹配并附加交互行为；两端首次输出必须一致。Effect 只在浏览器中、组件提交后运行。App Router 中的 `Suspense` 边界可以先显示有用的占位内容，再把等待中的子区域流式送入页面。
-
-#### Hydration timeline and one mismatch diagnostic
-
-1. The server sends HTML. The browser can display it before React's client code runs; React-specific handlers and state are not attached yet, although ordinary HTML behavior still works.
-2. The client loads React and hydrates the existing DOM. React expects the first client render to match the server HTML, then attaches component behavior.
-3. After the client commit, `useEffect` can read browser-only state and schedule a later render. Effects do not run during server rendering, so they cannot supply initial server HTML.
-
-A diagnostic example is `new Date().toLocaleDateString()` rendered during both server and initial client rendering: the clock, locale, or time zone can make the strings differ. Start with the hydration warning and compare the server output with the first client render; trace values that depend on time, randomness, browser APIs, or independently changing data. Prefer a stable value shared by both renders. If content must be browser-specific, render a stable initial placeholder and update after hydration, accepting that the user may see a second pass. `suppressHydrationWarning` is a narrow escape hatch for an unavoidable one-level text or attribute difference, not a fix for a mismatched subtree.
-
-#### Place a Suspense boundary around a useful streamed region
-
-In the App Router, the fetching guide documents route-level `loading.tsx` and smaller `<Suspense>` boundaries. Content outside a boundary can render while the child inside waits. Start independent data work before awaiting it, then let the child suspend so the boundary has time to show its fallback. The example follows the existing archived [App Router data-fetching and Suspense example](../../archive/front-end/0-1_Learning_Notes/next.js/readme.md); `getPosts()` is an application data function returning a promise.
-
-```tsx
-import { Suspense } from "react";
-
-type Post = { id: number; title: string };
-
-async function getPosts(): Promise<Post[]> {
-  const response = await fetch("https://api.example.com/posts");
-  if (!response.ok) throw new Error("Post request failed");
-  return response.json();
+  const payload: unknown = await response.json();
+  return { sort: requestedSort, reports: parseReports(payload) };
 }
 
-export default function Page() {
-  const posts = getPosts(); // start the request without blocking the page
+function Root() {
+  return <Outlet />;
+}
+
+function ReportsPage() {
+  const { sort, reports } = useLoaderData<typeof reportsLoader>();
+  const navigation = useNavigation();
+  const loading = navigation.state !== "idle";
+  const pendingSort = navigation.location
+    ? new URLSearchParams(navigation.location.search).get("sort")
+    : null;
 
   return (
     <main>
-      <h1>Latest posts</h1>
-      <Suspense fallback={<p>Loading posts…</p>}>
-        <PostList posts={posts} />
+      <h1 id="summary">报表</h1>
+      <nav aria-label="报表排序">
+        <Link
+          to="/reports?sort=recent#summary"
+          aria-current={sort === "recent" ? "page" : undefined}
+        >
+          Recent
+        </Link>
+        {" · "}
+        <Link
+          to="/reports?sort=oldest#summary"
+          aria-current={sort === "oldest" ? "page" : undefined}
+        >
+          Oldest first
+        </Link>
+      </nav>
+      {loading && (
+        <p role="status">
+          {pendingSort === "oldest" ? "正在切换到最早顺序…" : "正在加载所选排序…"}
+        </p>
+      )}
+      <ol aria-label="报表" aria-busy={loading}>
+        {reports.map(report => (
+          <li key={report.id}>
+            <Link to={"/reports/" + encodeURIComponent(report.id)}>
+              {report.period} — {report.title}
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </main>
+  );
+}
+
+function ReportDetail() {
+  const { reportId } = useParams();
+  return <h1>报表 ID：{reportId}</h1>;
+}
+
+function ReportsErrorBoundary() {
+  const error = useRouteError();
+  const revalidator = useRevalidator();
+  const status = isRouteErrorResponse(error) ? error.status : undefined;
+
+  return (
+    <section>
+      <p role="alert">
+        {status === 400 ? "不支持这个排序方式。" : "报表列表暂时无法显示。"}
+      </p>
+      {(!isRouteErrorResponse(error) || (status !== undefined && status >= 500)) && (
+        <button
+          type="button"
+          onClick={() => revalidator.revalidate()}
+          disabled={revalidator.state !== "idle"}
+        >
+          重新加载
+        </button>
+      )}
+    </section>
+  );
+}
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    Component: Root,
+    children: [
+      {
+        path: "reports",
+        loader: reportsLoader,
+        Component: ReportsPage,
+        ErrorBoundary: ReportsErrorBoundary
+      },
+      { path: "reports/:reportId", Component: ReportDetail },
+      { path: "*", Component: () => <h1>页面不存在</h1> }
+    ]
+  }
+]);
+
+export function App() {
+  return <RouterProvider router={router} />;
+}
+~~~
+
+`reportsLoader` 从当前 URL 校验 `sort`，再把它传给同源 `/api/reports`；片段不会进入 API URL。这个片段假定应用已挂载 `App`，托管端把 `/reports` 文档请求回退到应用入口，同时让 `/api/reports` 继续进入 API 处理器。PUSH 的目标 loader 结算时，不论成功还是失败都会提交目标地址与历史项：成功时换成目标列表，失败时换成目标错误界面。POP 则先改变浏览器历史地址，等待期间保留已提交的列表；loader 结算后再显示 recent 列表或它的错误界面。按 Back 重新走旧 URL 的 loader，不保证取回首次访问时的缓存快照。`useNavigation` 的 `location` 展示等待中的目标，`useLoaderData` 和 `aria-current` 仍代表当前已提交结果。不要在 `Link` 点击之外再手动调用 `history.pushState`，否则浏览器历史和路由状态会有两套写入者。
+
+### 请求取消、过期响应与错误边界
+
+一次数据导航被新的导航打断时，React Router 会取消前一轮 loader 请求并立即处理新地址。把 loader 收到的 `request.signal` 传给底层 `fetch`，客户端就能停止等待已失效的读取；路由器也不会把过期的页面结果提交到当前导航。**这不等于服务端停止了工作**：请求到达服务端后，服务端仍可能继续处理，所以取消客户端读取不能代替写操作的幂等、权限或事务约束。
+
+loader 返回的数据交给匹配的路由组件；它抛出的 HTTP 状态或异常交给最近的路由 `ErrorBoundary`。报表排序参数的 400 错误会提示排序无效，不提供只会重复失败的重试；网络错误或 5xx 可通过 `useRevalidator` 重跑当前已提交 URL 的 loader。列表项的详细页用 `:reportId` 动态段匹配；真实应用也应给它自己的 loader，并在不存在时抛出 404。当前列表错误边界不会把服务端 404 说成“找不到某一份报表”。
+
+路由错误边界也覆盖它下面的 React 子组件：同步渲染错误和子组件 Effect setup 同步抛出的异常会交给边界；事件处理器、timer 或后续 Promise 拒绝不会被它捕获，应在触发这些工作的位置处理。
+
+### 客户端导航与整页导航怎么选
+
+内部 `Link` 在当前文档中切换路由；外部地址或需要浏览器请求另一个完整文档时，使用普通 `<a>`。读取完整 location 时可用 `useLocation`，有明确的程序化跳转需求（例如提交成功后）时再用 `useNavigate`；普通链接仍应保留锚点语义。客户端导航可保留共同布局和局部界面，但部署端必须把直接打开的 `/reports` **文档请求**交给应用入口；`/api/reports` 仍须由 API 处理器应答，不能一并回退到 HTML。若托管环境无法配置路径回退，可以考虑 `HashRouter`（哈希路由器）；它会占用本例的 URL 片段空间。若同时要支持 `#summary` 锚点，应用还得定义并解析自己的片段格式或负责滚动恢复，不能原样使用这个简单地址。`MemoryRouter`（内存路由器）让地址保存在内存中，适合测试和非浏览器环境。
+
+single-page application（单页应用，SPA）与 multi-page application（多页应用，MPA）描述的是页面导航方式，不是服务端渲染的二选一：React Router 框架模式能服务端渲染，也能选择客户端或静态输出。内容以可爬取文档和无 JavaScript 首屏为主时，完整文档导航通常更直接；需要大量共享界面和路由内数据交互时，客户端导航更容易保留上下文。两种方式都要提供语义化链接、明确的加载与错误状态，并验证直接访问和刷新目标 URL。
+
+React Router v8.5.1 的 `useParams`、`Link` 和路由对象 API 承接归档 v6 例子；老 v5 的 `component={Post}` 与 `withRouter` 是另一套接口，不要混用。v5 的 `StaticRouter` 以固定 location 做服务端匹配；当前 Framework Mode 使用自己的服务端路由入口，不应把它当作同一 API。需要维护旧项目时，先看实际依赖版本，再查对应版本的文档。React 组件的状态更新与提交顺序见[React如何把用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)，服务端查询缓存见[React界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+
+> [!info]- 来源与版本核验（React Router v8.5.1；2026-11-06）
+> - 当前稳定版本、v8 迁移边界与运行时最低版本：[React Router Changelog](https://reactrouter.com/changelog)，v8.5.1，2026-10-27。
+> - 三种模式的职责和框架模式的服务端渲染 / 静态渲染能力：[Picking a Mode](https://reactrouter.com/start/modes)，核验日期 2026-11-06。
+> - 路由对象、嵌套页、动态段和 loader：[Routing](https://reactrouter.com/start/data/routing)、[Route Object](https://reactrouter.com/start/data/route-object)、[Data Loading](https://reactrouter.com/start/data/data-loading)，React Router v8.5.1，核验日期 2026-11-06。
+> - 导航提交、等待界面和 pending 位置：[Navigating](https://reactrouter.com/start/data/navigating)、[Pending UI](https://reactrouter.com/start/data/pending-ui)、[useNavigation](https://reactrouter.com/api/hooks/useNavigation)，React Router v8.5.1，核验日期 2026-11-06。
+> - 浏览器入口 `react-router/dom` 提供带 `react-dom` flushSync 的 `RouterProvider`：[RouterProvider](https://reactrouter.com/api/data-routers/RouterProvider)，React Router v8.5.1，核验日期 2026-11-06。
+> - 当前 location、程序化导航和 loader 重验证的 hook：[useLocation](https://reactrouter.com/api/hooks/useLocation)、[useNavigate](https://api.reactrouter.com/v8/functions/react-router.useNavigate.html)、[useRevalidator](https://api.reactrouter.com/v8/functions/react-router.useRevalidator.html)，React Router v8.5.1，核验日期 2026-11-06。
+> - 导航打断、loader 取消和服务端仍可能处理请求：[Race Conditions](https://reactrouter.com/explanation/race-conditions)，React Router v8.5.1，核验日期 2026-11-06。
+> - 路由错误边界、最近边界和 404 响应：[Error Boundaries](https://reactrouter.com/how-to/error-boundary)，React Router v8.5.1，核验日期 2026-11-06。
+> - React 子组件同步错误由边界兜底、事件处理和异步回调不在该范围：[React Component — Catching rendering errors with an Error Boundary](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)，核验日期 2026-11-06。
+> - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；React Router 8.5.1 核对 PUSH/POP 等待期的地址与列表、502 错误提交与重试；相关浏览器排序用例通过。接口为本地合成测试服务。
+## 59. Next.js 如何把文件路由、服务端数据与客户端交互连接起来？
+
+**案例背景。** 报表页打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端取得 May、April；用户点 **Oldest first** 后，URL 进入 `sort=oldest`，页面显示 April、May，再按 Back 恢复 recent 顺序。`#summary` 是浏览器片段，不会发给服务端。这条主流程假设搜索框为空；若用户已输入查询，客户端本地 query 可以在排序导航和 Back 后继续保留，当前列表仍会被它过滤。本文按当前 Next.js 16.4.5 App Router（应用路由器）讲清：文件怎样选中页面、服务器怎样读 URL 并取数、客户端代码从哪里开始，以及加载和错误如何沿路由边界显示。
+
+~~~mermaid
+flowchart TD
+    A["/reports?sort=recent#summary"] --> B[Page 读取 searchParams 并启动两项请求]
+    B --> C[先显示外壳与排序链接]
+    B --> D[摘要与报表分别等待]
+    D --> E[数据到达后填充相应区域]
+    E --> F[列表中的搜索组件水合后可输入]
+    C --> G[排序 Link 可交互后，进入 oldest]
+    G --> H{客户端是否已有可复用的目标载荷？}
+    H -->|是| I[使用对应 oldest 页面载荷]
+    H -->|否| J[服务端 Page 按 oldest 再读取上游]
+    J --> I
+    I --> K[Back 选择 recent，仍按缓存与请求规则恢复]
+    D -->|请求失败| Err[段级 error 界面替换此页面区域]
+~~~
+
+### 文件路由把路径落到页面与布局
+
+App Router 把路由写在 `app` 目录：`app/reports/page.tsx` 对应 `/reports`，`app/reports/[reportId]/page.tsx` 对应 `/reports/:reportId`；`layout.tsx` 为一组子路由提供共享外壳，客户端导航时可继续保留。`route.ts` 则按 Hypertext Transfer Protocol（超文本传输协议，HTTP）方法定义 Application Programming Interface（应用程序编程接口，API）端点，不是页面组件；它导出 `GET`、`POST` 等具名函数并返回 `Response`。运行时与部署方式由配置和托管环境决定，放在 Next.js 项目里本身不会自动变成 serverless function（无服务器函数）。
+
+页面收到的动态 `params` 和查询 `searchParams` 都是 Promise，需要在服务端页面中 `await`。对本例来说，`searchParams` 的 `sort` 决定请求哪种顺序；读取它会让页面依赖本次请求，不能把这个值放进不会随导航更新的共享 layout。需要在客户端组件读查询状态时，可使用 `useSearchParams`；若页面本身已经是 Server Component，优先在 Page 读取后把需要的值传给客户端叶节点。
+
+### 服务端与客户端组件在哪条线交接
+
+App Router 的 layout 和 page 默认是 Server Components（服务端组件）。它们能在服务端访问数据库、私有环境变量和后端接口；不进入客户端 JavaScript 包。需要本地 state（状态）、事件处理器、Effect（副作用）或浏览器 API 时，用 `"use client"` 声明 Client Component（客户端组件）的模块边界，并尽量把边界放在实际交互的最小子树。
+
+`"use client"` 不表示“只在浏览器生成 HyperText Markup Language（超文本标记语言，HTML）”。首次访问时，Next.js 会用 Server Component 结果和 Client Component 生成初始 HTML；浏览器先展示静态预览，再下载并 hydrate（水合，让已有标记获得交互）客户端组件。水合要求服务器 HTML 与浏览器首次渲染相同；时间、随机数、地区设置或仅浏览器可读的数据都可能让两边不一致。需要浏览器专属值时，先输出稳定内容，再在首次提交后的 Effect 中读取。后续客户端导航使用 React Server Component Payload（React 服务端组件载荷，RSC payload）更新界面。服务端传给客户端的组件属性（props）必须可序列化；这不是保密机制，可序列化的字符串凭证一旦放进 props 也会进入客户端载荷。函数和数据库连接通常不可序列化，不应作为普通 props 传递。Server Component 可以把已渲染的内容作为 `children` 交给一个 Client Component，但不要从客户端模块图直接导入依赖服务端能力的代码；只传报表展示所需字段，不传内部记录或凭证。
+
+### 用 URL 选排序，并并行加载可独立等待的数据
+
+`page.tsx` 作为 Server Component 读取查询参数。以下例子在得知排序后同时启动报表列表和摘要请求；列表由异步 Server Component 在 `Suspense`（挂起边界）中等待，摘要可独立返回。切换排序的 `Link` 可以直接写在 Server Component 中：链接负责客户端导航、保留路径和片段，若需要服务器重新生成目标载荷，Next.js 再用新的 `searchParams` 运行页面；可复用的客户端载荷则无需这次执行。这是 React Router 浏览器 loader 的替代实现：本例在 Next 服务端向占位上游 `reports.example.test` 请求数据，必须为该主机配置可达的测试服务；它不是浏览器对本应用同源 `/api/reports` 的请求。
+
+~~~tsx
+// app/reports/page.tsx
+import { Suspense } from "react";
+import Link from "next/link";
+import { ReportSearch } from "./report-search";
+
+type SortOrder = "recent" | "oldest";
+type Report = {
+  id: string;
+  period: string;
+  title: string;
+};
+type Summary = { totalReports: number };
+type PageProps = {
+  searchParams: Promise<{ sort?: string | string[] }>;
+};
+
+function isReport(value: unknown): value is Report {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.id === "string" &&
+    typeof row.period === "string" &&
+    typeof row.title === "string";
+}
+
+function parseReports(value: unknown): Report[] {
+  if (!Array.isArray(value)) throw new Error("Invalid report response");
+  return (value as unknown[]).map(row => {
+    if (!isReport(row)) throw new Error("Invalid report row");
+    return { id: row.id, period: row.period, title: row.title };
+  });
+}
+
+function parseSummary(value: unknown): Summary {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("Invalid summary response");
+  }
+  const summary = value as Record<string, unknown>;
+  if (typeof summary.totalReports !== "number" ||
+      !Number.isSafeInteger(summary.totalReports) || summary.totalReports < 0) {
+    throw new Error("Invalid report count");
+  }
+  return { totalReports: summary.totalReports };
+}
+
+async function getReports(sort: SortOrder): Promise<Report[]> {
+  const response = await fetch(
+    "https://reports.example.test/api/reports?sort=" + encodeURIComponent(sort),
+    { cache: "no-store" }
+  );
+  if (!response.ok) throw new Error("Could not load reports");
+  const payload: unknown = await response.json();
+  return parseReports(payload);
+}
+
+async function getSummary(): Promise<Summary> {
+  const response = await fetch(
+    "https://reports.example.test/api/reports/summary",
+    { cache: "no-store" }
+  );
+  if (!response.ok) throw new Error("Could not load report summary");
+  const payload: unknown = await response.json();
+  return parseSummary(payload);
+}
+
+export default async function ReportsPage({ searchParams }: PageProps) {
+  const { sort: rawSort } = await searchParams;
+  const sort: SortOrder = rawSort === "oldest" ? "oldest" : "recent";
+  const reportsPromise = getReports(sort);
+  const summaryPromise = getSummary();
+
+  return (
+    <main>
+      <h1 id="summary">报表摘要</h1>
+      <nav aria-label="报表排序">
+        <Link
+          href="/reports?sort=recent#summary"
+          aria-current={sort === "recent" ? "page" : undefined}
+        >
+          Recent
+        </Link>
+        {" · "}
+        <Link
+          href="/reports?sort=oldest#summary"
+          aria-current={sort === "oldest" ? "page" : undefined}
+        >
+          Oldest first
+        </Link>
+      </nav>
+
+      <Suspense fallback={<p role="status">正在取得摘要…</p>}>
+        <ReportSummary promise={summaryPromise} />
+      </Suspense>
+      <Suspense fallback={<p role="status">正在取得报表…</p>}>
+        <ReportList promise={reportsPromise} />
       </Suspense>
     </main>
   );
 }
 
-async function PostList({ posts }: { posts: Promise<Post[]> }) {
-  const items = await posts;
-  return <ul>{items.map(post => <li key={post.id}>{post.title}</li>)}</ul>;
+async function ReportSummary({ promise }: { promise: Promise<Summary> }) {
+  const summary = await promise;
+  return <p>报表数量：{summary.totalReports}</p>;
 }
-```
 
-If the page awaits `getPosts()` before returning this tree, that request cannot be streamed inside the boundary. Place boundaries around independently useful parts: a boundary that is too high can hold back the whole page, while a boundary around a tiny fragment can create a choppy reveal. A fallback is visible page content, so give it meaningful text. If an update needs an assistive-technology announcement, add the appropriate live-region semantics; that does not move keyboard focus or create interaction behavior. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#16.%20CSS%20%E7%BA%A7%E8%81%94%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E6%9C%80%E7%BB%88%E7%94%9F%E6%95%88%E7%9A%84%E5%A3%B0%E6%98%8E%EF%BC%9F) for the focused keyboard, naming, and error model. A pending fallback also does not make a failed request successful; provide a separate error path.
-
-### How does file-based routing work? / 文件系统路由如何工作？
-
-**Core answer / 核心回答：** The route tree follows files, but the conventions differ between routers. Pages Router uses files such as pages/about.js and pages/posts/[id].js. App Router uses route segments containing page.tsx and can add layout.tsx, loading.tsx, and error.tsx. / 路由树由文件结构决定，但两种路由器的约定不同。Pages Router 使用 pages/about.js、pages/posts/[id].js 等文件；App Router 使用包含 page.tsx 的路由段，并可加入 layout.tsx、loading.tsx 和 error.tsx。
-
-Use Link for navigation. Prefetching is production-only and differs by router: App Router can fully prefetch static routes and partially prefetch dynamic routes to a loading boundary; Pages Router's default behavior differs. Treat prefetch as an optimization, not a guarantee that a destination is already loaded.
-
-In the Pages Router, an automatically statically optimized page may have an empty `router.query` during prerendering. In a client Effect that depends on those fields, check `router.isReady` before using them. [Versioned route-parameter examples / 路由参数版本示例](../../archive/front-end/Deprecated_Interview_Notes/react-router-v5-and-next-pages-router-parameters.md) · [Next.js Pages Router `useRouter`](https://nextjs.org/docs/pages/api-reference/functions/use-router)
-
-### What are API routes and Route Handlers? / API routes和Route Handler是什么？
-
-**Core answer / 核心回答：** Pages Router API routes use a default handler in pages/api. App Router Route Handlers use named HTTP method exports in a route.ts file. The runtime and deployment model depend on configuration and hosting; an endpoint is not automatically a serverless function just because it is in a Next.js app. / Pages Router 的 API route 在 pages/api 中使用默认 handler；App Router 的 Route Handler 在 route.ts 中导出 HTTP 方法函数。运行时和部署模型取决于配置与托管平台；接口不会因为位于 Next.js 应用中就自动成为 serverless function。
-
-~~~ts
-// app/api/hello/route.ts — App Router
-export async function GET() {
-  return Response.json({ message: "Hello from Next.js" });
+async function ReportList({ promise }: { promise: Promise<Report[]> }) {
+  const reports = await promise;
+  return <ReportSearch reports={reports} />;
 }
 ~~~
 
-Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
+`ReportSearch` 放在独立文件 `app/reports/report-search.tsx`，因为它需要输入 state 和 `onChange`。数据先在服务端取得，再以普通可序列化数组传入：
 
-**See also:** [React Routing and Navigation / React路由与导航](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F) for client navigation and SPA/MPA document models; [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+~~~tsx
+"use client";
 
-**Sources checked 2026-10-15:** [React release and version references](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
-## 60. When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
+import { useState } from "react";
 
-**Core answer / 核心回答：** Use Lodash when its documented path, collection, or timing contract removes repeated edge-case code. For a simple known shape, prefer the native operation when it expresses the same behavior more clearly; compare the exact semantics and installed version before substituting. This page is a method lookup, not a claim that one option is always smaller or faster. / Lodash 的路径、集合或定时语义能减少重复的边界处理时可使用它。对象结构简单明确时，如果原生操作能更清晰表达相同行为，就优先考虑原生 API；替换前要核对具体语义和安装版本。本文用于查找方法，不表示某种选择总是更小或更快。
-
-### Common utilities / 常用工具
-
-#### Arrays / 数组
-
-| Signature | Behavior |
-|---|---|
-| _.chunk(array, size) | Split into groups of up to size items. |
-| _.compact(array) | Remove false, null, 0, empty string, undefined, and NaN. |
-| _.difference(array, values) | Keep values from the first array that are absent from the other array; returns a new array. |
-| _.intersection(array, ...arrays) | Return values present in all arrays. |
-| _.flatten(array) / _.flattenDeep(array) | Flatten one level / recursively flatten nested arrays. |
-| _.uniq(array) | Return a new array with duplicate values removed. |
-
-~~~javascript
-_.chunk([1, 2, 3, 4], 2);          // [[1, 2], [3, 4]]
-_.difference([2, 1], [2, 3]);     // [1]
-_.intersection([1, 2], [2, 3]);   // [2]
-_.flatten([1, [2, [3]]]);         // [1, 2, [3]]
-~~~
-
-Native Array.prototype.flat() defaults to depth 1; flat(Infinity) recursively flattens. That corresponds to the one-level and recursive distinction above, not a universal replacement for all Lodash collection semantics.
-
-#### Collections / 集合
-
-| Signature | Behavior |
-|---|---|
-| _.filter(collection, predicate) | Return every matching value. |
-| _.find(collection, predicate) | Return the first matching value, or undefined. |
-| _.map(collection, iteratee) | Transform values in arrays or object collections. |
-| _.reduce(collection, iteratee, accumulator) | Accumulate values into one result. |
-| _.groupBy(collection, iteratee) | Build an object whose keys come from the iteratee and whose values are matching arrays. |
-| _.sortBy(collection, iteratees) | Sort ascending by one or more criteria. |
-| _.orderBy(collection, iteratees, orders) | Sort by criteria with explicit asc/desc directions. |
-
-~~~javascript
-_.groupBy([6.1, 4.2, 6.3], Math.floor); // { "4": [4.2], "6": [6.1, 6.3] }
-_.orderBy(users, ["age", "name"], ["desc", "asc"]);
-~~~
-
-#### Objects / 对象
-
-| Signature | Behavior |
-|---|---|
-| _.get(object, path, defaultValue) | Read a deep path; use the default only when the resolved value is undefined. |
-| _.set(object, path, value) | Create path segments as needed and mutate the target object. |
-| _.merge(target, ...sources) | Recursively merge enumerable properties and mutate target. |
-| _.assign(target, ...sources) | Shallow-assign own enumerable properties and mutate target. |
-| _.pick(object, paths) / _.omit(object, paths) | Return a new object with selected / excluded paths. |
-| _.cloneDeep(value) | Recursively clone values supported by Lodash's clone rules. |
-
-~~~javascript
-const city = _.get(user, "address.city", "Unknown");
-const nullableCity = { address: { city: null } };
-_.get(nullableCity, "address.city", "Unknown"); // null
-nullableCity.address?.city ?? "Unknown";       // "Unknown"
-~~~
-
-The difference matters: Lodash's get default handles an absent path or undefined value, while JavaScript's nullish coalescing operator also falls back for null. For a statically known path, optional chaining plus an explicit fallback may be clearer.
-
-#### Strings / 字符串
-
-| Signature | Example result |
-|---|---|
-| _.camelCase(string) | _.camelCase("Foo BAR") → "fooBar" |
-| _.kebabCase(string) | _.kebabCase("fooBar") → "foo-bar" |
-| _.snakeCase(string) | _.snakeCase("fooBar") → "foo_bar" |
-| _.capitalize(string) | _.capitalize("hello") → "Hello" |
-| _.startCase(string) | _.startCase("fooBar") → "Foo Bar" |
-
-### Debounce and throttle / 防抖与节流
-
-**Core answer / 核心回答：** Debounce delays work until calls stop for a wait period; throttle limits calls to at most once per interval. Leading, trailing, and maxWait options change the contract, so describe the configuration being used. / debounce 会等到调用静止一段时间后再执行；throttle 将执行限制为每个时间间隔至多一次。leading、trailing 和 maxWait 选项会改变具体行为，因此要说明配置。
-
-~~~javascript
-const debouncedSearch = _.debounce(search, 300, {
-  trailing: true,
-  maxWait: 1000
-});
-
-input.addEventListener("input", debouncedSearch);
-
-// When the listener is removed or the component is disposed:
-debouncedSearch.cancel();
-~~~
-
-Lodash's debounced function also has flush() to invoke a pending call immediately. When both leading and trailing are enabled, a trailing invocation occurs only if there was another call during the wait period. Throttled functions also expose cancel() and flush(). Review the exact leading/trailing settings when a delayed call must not run after unmount or navigation.
-
-### When should you use Lodash? / 何时使用Lodash？
-
-Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
-
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#48.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for choosing debounce or throttle by workload.
-
-**Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
-## 61. When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
-
-**Core answer / 核心回答：** Use ahooks when an existing helper matches the interaction's state, lifecycle, request, or list contract and the installed package version. A helper still follows React's render and Effect rules; it does not replace decisions about data ownership, cache freshness, transport cancellation, or item identity. The APIs here follow documentation checked on 2026-10-15. / 当现有 ahooks 工具符合交互的状态、生命周期、请求或列表语义，并且与项目安装版本一致时再使用。工具仍遵守 React 的 render 和 Effect 规则；它不会替代对数据归属、缓存新鲜度、传输取消或列表项身份的判断。此处 API 依据 2026-10-15 核对的文档。
-
-### Data fetching / 数据请求
-
-#### useRequest
-
-useRequest wraps an asynchronous service and exposes request state and controls. It runs on mount by default; manual: true makes the caller start it with run or runAsync.
-
-~~~jsx
-function UserButton({ userId }) {
-  const { data, loading, error, run } = useRequest(fetchUser, {
-    manual: true,
-    retryCount: 2,
-    onSuccess(user) {
-      console.log(user);
-    }
-  });
-
-  return (
-    <button type="button" disabled={loading} onClick={() => run(userId)}>
-      {loading ? "Loading" : "Load user"}
-    </button>
-  );
-}
-~~~
-
-Choose polling, debounce, or retry options for the specific request. The useRequest cancel method ignores data and errors from the current Promise; it does not stop that Promise. In debounce mode, cancel can stop a call that has not started. Pass an AbortSignal to the service when the network transport itself must stop.
-
-#### usePagination and useInfiniteScroll
-
-usePagination expects a service that returns a total count and list, and exposes pagination state and change methods.
-
-~~~javascript
-const { data, loading, pagination } = usePagination(
-  ({ current, pageSize }) => fetchUsers({ current, pageSize }),
-  { defaultPageSize: 20 }
-);
-
-pagination.changeCurrent(2);
-~~~
-
-`useInfiniteScroll` passes the accumulated data to the service when loading more. For downward loading, return the next page's `list` and cursor so the Hook can append the page. Configure the scroll target and stopping rule for the UI. The [archive's list-loading example / 归档列表加载示例](../../archive/front-end/Deprecated_Interview_Notes/12.2%20ahooks.md#List-loading%20service%20contracts%20/%20%E5%88%97%E8%A1%A8%E5%8A%A0%E8%BD%BD%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%A5%91%E7%BA%A6) shows the complete service contract. [ahooks v3.10.0 source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useInfiniteScroll/index.tsx)
-
-### State and browser storage / 状态与浏览器存储
-
-~~~javascript
-const [enabled, { toggle, setTrue, setFalse }] = useBoolean(false);
-const [settings, setSettings] = useLocalStorageState("settings", {
-  defaultValue: {}
-});
-~~~
-
-Other state utilities include useToggle, useMap, and useSet. useLocalStorageState serializes browser storage and can optionally synchronize changes from other tabs. Storage is browser-local and can fail or be unavailable in server rendering, so treat it as persistence convenience rather than a source of trusted data.
-
-useLatest returns a ref whose current value is refreshed to the latest input. It can help a long-lived callback read current data without rebuilding a timer or listener on every render.
-
-~~~javascript
-const latestCount = useLatest(count);
-
-useEffect(() => {
-  const timer = setInterval(() => {
-    console.log(latestCount.current);
-  }, 1000);
-  return () => clearInterval(timer);
-}, []);
-~~~
-
-### Function identity and list rendering / 函数引用与列表渲染
-
-useMemoizedFn returns a stable function reference that calls the latest function body. It can simplify a callback identity boundary, but it does not remove the need to understand which state a callback should observe.
-
-~~~javascript
-function SaveButton({ currentRecordId }) {
-  const saveLatest = useMemoizedFn(() => save(currentRecordId));
-  return <button onClick={saveLatest}>Save</button>;
-}
-~~~
-
-useCreation(factory, deps) is an ahooks helper for creating a value with dependency-based reuse. Treat it as a library convenience rather than a resource-lifecycle primitive or a correctness guarantee.
-
-useVirtualList renders a visible window and a buffer from a larger array. In ahooks 3.10.0, it returns the tuple [list, scrollTo(index)]; each list entry is shaped as { data, index }. Pass containerTarget and wrapperTarget refs in the options.
-
-~~~jsx
-const containerRef = useRef(null);
-const wrapperRef = useRef(null);
-const [list, scrollTo] = useVirtualList(users, {
-  containerTarget: containerRef,
-  wrapperTarget: wrapperRef,
-  itemHeight: 48,
-  overscan: 5
-});
-
-return (
-  <>
-    <button type="button" onClick={() => scrollTo(40)}>Jump to row</button>
-    <div ref={containerRef} style={{ height: 360, overflow: "auto" }}>
-      <div ref={wrapperRef}>
-        {list.map(({ data, index }) => (
-          <div key={data.id} style={{ height: 48 }}>{data.name}</div>
-        ))}
-      </div>
-    </div>
-  </>
-);
-~~~
-
-ahooks v2.6.0 uses a different useVirtualList result shape with containerProps and wrapperProps; v3 redesigned this API. Do not mix the versions. The v2.6.0 package returns these props for the scroll container and wrapper:
-
-~~~jsx
-// ahooks 2.6.0 result shape; use only with the matching installed version.
-const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(users, {
-  itemHeight: 48,
-  overscan: 5
-});
-
-return (
-  <div
-    {...containerProps}
-    style={{ ...containerProps.style, height: 360 }}
-  >
-    <div {...wrapperProps}>
-      {list.map(({ data, index }) => (
-        <div key={data.id} style={{ height: 48 }}>{data.name}</div>
-      ))}
-    </div>
-  </div>
-);
-~~~
-
-Variable-height rows need the measurement behavior supported by the installed version. See [Rendering and Computation Optimization / 渲染与计算优化](#14.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F).
-
-useDynamicList exposes list and operations such as push, remove, move, insert, and getKey(index). Use getKey(index) as the React key so item identity survives edits; callbacks receive the current index.
-
-~~~jsx
-const { list, push, remove, insert, getKey } = useDynamicList([
-  { name: "Ada" }
-]);
-
-return (
-  <>
-    {list.map((item, index) => (
-      <div key={getKey(index)}>
-        {item.name}
-        <button type="button" onClick={() => remove(index)}>Remove</button>
-      </div>
-    ))}
-    <button type="button" onClick={() => insert(0, { name: "Grace" })}>
-      Add first
-    </button>
-    <button type="button" onClick={() => push({ name: "Lin" })}>Add</button>
-  </>
-);
-~~~
-
-### Effects and timing / Effect与时机
-
-useMount and useUnmount package common Effect setup and cleanup. Their behavior follows React's Effect lifecycle, including the extra development setup-and-cleanup cycle under root StrictMode. They do not mean “run once for the lifetime of this process.”
-
-useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn and useThrottleFn wrap functions. Check whether the chosen hook returns a value, run function, or cancellation control before relying on an example from another version.
-
-**Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
-
-**See also / 另见** — [React component composition / React 组件组合](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8React%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F) for Hook rules and Effect cleanup, [React server state / React 服务端状态](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query and mutation rules, and [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for debounce and throttle tradeoffs.
-
-**Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
-## 62. What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
-
-**Core answer / 核心回答：** Build the production output, run a critical browser journey against that output on a production-like server, then promote the exact artifact that passed. A development server alone does not exercise emitted assets or deployment paths. The general risk-to-test-boundary principle belongs to [Software Testing Strategy / 软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md); the tool choices for local logic and component behavior are outlined below. / 构建生产产物，在接近生产环境的服务上用该产物运行关键浏览器流程，然后晋级同一份通过检查的产物。单独运行开发服务器无法覆盖实际生成的资源或部署路径。通用的风险与测试边界原则见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)；本地逻辑和组件行为的工具选择见下文。
-
-### How should frontend tests be divided? / 前端测试如何分层？
-
-**Core answer / 核心回答：** Use a unit test for isolated logic, a component integration test for user-visible wiring, and a browser test when real navigation, persistence, browser behavior, emitted assets, or service wiring is part of the risk. Keep the feedback loop cheap where it can provide reliable evidence. / 隔离逻辑用单元测试，验证用户可见的组件连接用集成测试；当风险涉及真实导航、持久化、浏览器行为、生成资源或服务连接时使用浏览器测试。能可靠提供证据时，优先保持反馈成本较低。
-
-| Layer | Useful for | Example tools |
-|---|---|---|
-| Unit | Pure functions and isolated behavior | Jest, Vitest |
-| Integration | Components, hooks, context, and API boundaries together | React Testing Library with Jest or Vitest |
-| End-to-end | Browser navigation, persistence, and critical user journeys | Playwright, Cypress |
-
-Keep browser tests for behavior that depends on the real browser or application wiring. A test pyramid is a planning aid; a project's distribution should follow its actual risks and feedback costs.
-
-### Jest fundamentals / Jest基础
-
-Use Jest when the risk can be reproduced around logic, state, or a dependency boundary. A test that starts asynchronous work must return or await the Promise that contains its assertions. Place the mock at the dependency and assert the behavior of the caller. [How a Jest test verifies asynchronous behavior / Jest 怎样验证异步行为](#63.%20How%20can%20a%20Jest%20test%20verify%20behavior%20across%20an%20asynchronous%20boundary?%20/%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E8%B7%A8%E5%BC%82%E6%AD%A5%E8%BE%B9%E7%95%8C%E7%9A%84%E8%A1%8C%E4%B8%BA%EF%BC%9F) contains the complete async, lifecycle, matcher, CommonJS and native ESM examples.
-
-### React Testing Library / React Testing Library
-
-Test through user-visible roles, labels, text, and interactions. Queries have different timing contracts:
-
-| Query | Use when |
-|---|---|
-| getBy... | The element should exist now; throws if absent or ambiguous. |
-| queryBy... | Checking that an element is absent; returns null if absent. |
-| findBy... | The element should appear asynchronously; returns a Promise. |
-
-Prefer getByRole with an accessible name when it represents the user's interaction. Use getByLabelText for form controls. A test ID is an escape hatch when the UI has no suitable user-facing query.
-
-~~~jsx
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import "@testing-library/jest-dom";
-
-test("submits the entered email", async () => {
-  // Arrange
-  const user = userEvent.setup();
-  const onSubmit = jest.fn();
-  render(<EmailForm onSubmit={onSubmit} />);
-
-  // Act
-  await user.type(
-    screen.getByRole("textbox", { name: /email/i }),
-    "person@example.com"
-  );
-  await user.click(screen.getByRole("button", { name: /submit/i }));
-
-  // Assert
-  expect(onSubmit).toHaveBeenCalledWith("person@example.com");
-});
-~~~
-
-userEvent models a higher-level interaction sequence, including keyboard and focus behavior. It is not a real browser. fireEvent dispatches a lower-level event and can be useful when a test specifically needs that event boundary.
-
-The form test above follows Arrange–Act–Assert (AAA): prepare the user and component, perform the interaction, then check the observable result.
-
-For an asynchronous appearance, prefer findBy...:
-
-~~~javascript
-const result = await screen.findByText("Loaded");
-expect(result).toBeInTheDocument();
-~~~
-
-Use waitFor when the assertion itself needs retrying. Its callback must throw for a retry; returning false does not request another attempt. Avoid placing side effects inside waitFor because the callback can run more than once.
-
-### Testing custom Hooks and snapshots / 测试自定义Hook与快照
-
-React Testing Library exports renderHook from @testing-library/react. It renders a test component around the Hook. Most Testing Library render and interaction helpers already use React act; use act for an update initiated outside those helpers when the test needs to flush it.
-
-~~~javascript
-import { act, renderHook } from "@testing-library/react";
-
-test("increments the counter", () => {
-  const { result } = renderHook(() => useCounter(0));
-
-  act(() => result.current.increment());
-
-  expect(result.current.count).toBe(1);
-});
-~~~
-
-Snapshots can capture stable structure, but a large snapshot does not explain which behavior matters. Use focused assertions for user-visible behavior and update snapshots intentionally when the expected output changes.
-
-### Release checks / 发布检查
-
-CI should connect fast source checks to the exact production output. A small frontend release path is:
-
-**核心原则 / Core idea：** 先完成类型、单元和组件检查，再生成生产构建；用接近生产的服务运行这份构建产物，执行关键浏览器流程，最后晋级同一份已验证产物，避免重新构建后发布了另一份代码。HMR 只验证开发热更新链路，不能证明生产资源路径、分块或发布产物正常；Vite preview 可以本地预览刚生成的 `dist`，但官方定位不是生产服务器。Source map 应关联到具体发布版本并受控上传；`hidden` 只隐藏源码映射注释，不阻止他人直接访问映射文件。
-
-~~~text
-lockfile install -> type check -> unit/component tests -> production build
-  -> serve the built output -> one critical browser smoke -> retain/promote that output
-~~~
-
-For example, a project can run `npm run typecheck`, `npm run test:ci`, and `npm run build`, then `npx playwright test tests/release-smoke.spec.ts`. Configure Playwright's `webServer.command` to start `npm run preview` (or the framework's built-output server) after the build so this browser test sees emitted assets rather than the HMR server; script names are project-specific.
-
-Type checks catch static contract errors; unit and component tests catch local logic and UI wiring; a production build catches transforms, asset emission, and chunk or base-path issues that a dev server may not exercise. Then serve the generated output with a production-like static server and run one browser test for a critical journey, such as opening search, submitting a query, and seeing results. A Playwright `webServer` can start the local artifact server for the test; with Vite, `vite preview` serves the just-built `dist` locally for this check, but is not a production server. Promote the tested output rather than rebuilding it for release.
-
-Use browser checks where real routing, asset URLs, browser behavior, or app/service wiring matters. A passing HMR session proves the development loop works; it does not prove production chunks load from the deployed base path or that the published artifact works. Source maps can translate minified error locations back to original source when tied to a release and uploaded to a controlled error-reporting system. A hidden map removes the source-map comment, not the file or access risk; do not leave private maps at a public asset URL. The shared [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) note owns artifact promotion, runtime secrets, and rollout gates.
-
-**See also:** [Advanced React / React进阶](#8.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E6%8A%A5%E8%A1%A8%E7%AD%9B%E9%80%89%E5%9C%A8%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
-
-**Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/), [Vite static deployment](https://vite.dev/guide/static-deploy.html), [Playwright web server](https://playwright.dev/docs/test-webserver).
-## 63. How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
-
-Wait for the Promise that carries the assertion, give the code under test an explicit dependency boundary, and assert what the code does with the result. Set up and restore only the resources the test owns. Module mocking depends on the test's module system. / 等待承载断言的 Promise，在被测代码的依赖边界安排模拟，并断言被测代码如何处理结果。测试只负责准备和恢复自己拥有的资源。模块模拟方式取决于测试使用的模块系统。
-
-**Key terms / 关键术语** · observable behavior / 可观察行为 · dependency boundary / 依赖边界 · test lifecycle / 测试生命周期 · module mock / 模块模拟
-
-### Suites and cases / 测试套件与用例
-
-describe groups related tests; test and its alias it define a case. Use clear names that describe behavior. Starting a name with “should” is a style choice, not a Jest requirement.
-
-~~~javascript
-function add(left, right) {
-  return left + right;
-}
-
-function subtract(left, right) {
-  return left - right;
-}
-
-describe('calculator', () => {
-  test('adds two numbers', () => {
-    expect(add(2, 3)).toBe(5);
-  });
-
-  test('subtracts a larger value', () => {
-    expect(subtract(5, 10)).toBe(-5);
-  });
-});
-~~~
-
-Arrange–Act–Assert makes setup, behavior, and verification easy to scan. A small test may not need a separate variable for every phase.
-
-Common file names include .test.js and .spec.js; the project’s Jest configuration determines which files are collected.
-
-### Async tests / 异步测试
-
-Return or await the Promise so Jest waits for the assertion. For rejected Promises, use the rejects matcher.
-
-~~~javascript
-test('loads a user', async () => {
-  const user = await getUser(1);
-  expect(user).toHaveProperty('id', 1);
-});
-
-test('reports a failed request', async () => {
-  await expect(getUser(-1)).rejects.toThrow('not found');
-});
-~~~
-
-A test that starts an asynchronous operation but neither awaits it nor returns its Promise can finish before the assertion runs.
-
-### Setup and cleanup / 准备与清理
-
-beforeAll and afterAll run once around a test scope; beforeEach and afterEach run around each test in that scope. Use cleanup hooks for resources that tests actually open.
-
-~~~javascript
-describe('temporary resource', () => {
-  let resource;
-
-  beforeAll(async () => {
-    resource = await openResource();
-  });
-
-  afterAll(async () => {
-    await resource.close();
-  });
-
-  beforeEach(async () => {
-    await resource.clear();
-  });
-
-  test('stores a record', async () => {
-    await resource.insert({ id: 1, name: 'Ada' });
-    expect(await resource.count()).toBe(1);
-  });
-});
-~~~
-
-### Mock functions and spies / Mock 函数与 spy
-
-#### jest.fn
-
-jest.fn creates a mock function whose calls and results can be inspected.
-
-~~~javascript
-const callback = jest.fn();
-callback('saved');
-
-expect(callback).toHaveBeenCalledWith('saved');
-expect(callback).toHaveBeenCalledTimes(1);
-~~~
-
-#### jest.mock in a CommonJS/transformed setup
-
-This example uses CommonJS require with a test configuration that transforms or otherwise supports this mocking pattern. In Babel-transformed tests, jest.mock calls are hoisted by the Jest transformer, so the mock is registered before the module is required.
-
-~~~javascript
-jest.mock('./api', () => ({
-  fetchUser: jest.fn(),
-}));
-
-const api = require('./api');
-const { loadUser } = require('./userService'); // userService delegates to api.fetchUser
-
-test('uses the API boundary', async () => {
-  api.fetchUser.mockResolvedValue({ id: 1, name: 'Ada' });
-
-  await expect(loadUser(1)).resolves.toEqual({ id: 1, name: 'Ada' });
-});
-~~~
-
-A module mock replaces a dependency at the module boundary. The test should still assert the behavior of the code under test rather than only reasserting the mock configuration.
-
-#### Native ESM modules
-
-Native ESM evaluates static imports before the test body, so the CommonJS-style hoisting example does not apply. Jest's documentation provides jest.unstable_mockModule followed by dynamic import for ESM mocking. The API name is marked unstable; check the Jest version and runtime configuration.
-
-~~~javascript
-import { jest } from '@jest/globals';
-
-jest.unstable_mockModule('./api.js', () => ({
-  fetchUser: jest.fn(),
-}));
-
-const { fetchUser } = await import('./api.js');
-~~~
-
-#### jest.spyOn
-
-jest.spyOn observes an existing object method and calls the original implementation by default. Provide a mock implementation or return value when the test needs replacement behavior. Restore the spy after use.
-
-~~~javascript
-const service = {
-  greet: name => 'Hello ' + name,
+type Report = {
+  id: string;
+  period: string;
+  title: string;
 };
 
-const spy = jest.spyOn(service, 'greet').mockReturnValue('Hi Bob');
+export function ReportSearch({ reports }: { reports: Report[] }) {
+  const [query, setQuery] = useState("");
+  const visible = reports.filter(report =>
+    report.title.toLowerCase().includes(query.toLowerCase())
+  );
 
-expect(service.greet('Bob')).toBe('Hi Bob');
-expect(spy).toHaveBeenCalledWith('Bob');
-
-spy.mockRestore();
+  return (
+    <section>
+      <label>
+        搜索报表
+        <input value={query} onChange={event => setQuery(event.target.value)} />
+      </label>
+      <ol aria-label="报表">
+        {visible.map(report => (
+          <li key={report.id}>{report.period} — {report.title}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
 ~~~
 
-mockRestore restores a spy created by jest.spyOn. Use clearAllMocks, resetAllMocks, or restoreAllMocks according to whether the test needs to clear call history, reset implementations, or restore replaced properties; these operations are not interchangeable.
+输入和本地过滤属于客户端交互；读报表权限、访问私有服务和确定 URL 排序应由服务端负责，但本例没有实现鉴权，真实应用要先在服务端检查用户能否读取这些报表。这里只把少量报表展示字段传到浏览器供本地标题过滤；如果数据量很大或过滤结果受权限、分页影响，应把条件放入 URL 并让服务端按条件查询。`response.json()` 的静态类型不能验证运行时形状；示例在服务边界先把它视为 `unknown`，再逐行检查并投影成三个客户端展示字段，不把上游行对象中可能存在的内部字段顺手传入 RSC payload。摘要中的 `totalReports` 也要求为非负安全整数。
 
-### Common matchers / 常见 matcher
+此页的参数策略是：只有单个字符串 `oldest` 选择最早顺序；缺失、`recent`、非法值或重复参数（`string[]`）都回退到 `recent`。这是本例选定的回退契约；React Router 例子则会对其读取到的非法首值返回 400。
 
-| Matcher | Use |
+`cache: "no-store"` 控制这个 Next 服务端 `fetch` 在实际执行时不要读写持久数据缓存；若 `Page` 执行，它会向上游请求新结果。它不强迫每次 Link/Back 都重新执行服务端 Page：客户端路由可能直接复用已缓存的 React Server Component Payload（React 服务端组件载荷，RSC），因此 `no-store` 也不保证每次浏览器导航都打到上游。当前案例按 URL 保存排序条件，但不冻结返回数据的版本。Next.js 16.4.5 默认的 `auto no cache` 会在动态页面的每次请求中取数，在静态预渲染页面的构建时取数；本例访问 `searchParams`，所以是请求时页面。开启 `cacheComponents`（缓存组件）后，数据默认按请求动态读取；需要跨请求缓存时，使用 `use cache`（缓存指令）明确标出可复用的页面、函数或组件。开发模式的 Hot Module Replacement（热模块替换，HMR）也可能暂时复用 `no-store` 结果，不能把热更新时没变化误判为生产缓存策略。
+
+### 加载、失败和重试各有自己的边界
+
+`app/reports/loading.tsx` 自动为该路由段提供加载界面；更小的 `Suspense` 区域可以让摘要和列表各自出现。等待界面只是表示数据尚未准备好，不会处理读取失败。
+
+~~~tsx
+// app/reports/loading.tsx
+export default function Loading() {
+  return <p role="status">正在打开报表…</p>;
+}
+~~~
+
+在同一段创建 `app/reports/error.tsx`，用 Client Component 显示可恢复的错误状态。此边界包住当前段的页面和子段，但不会捕获同段 `layout.tsx` 自己抛出的错误；错误向上交给父段边界。Next.js 16.3 起，重试回调 `retry` 已稳定；它会重新读取并渲染边界内的内容。根 `layout.tsx` 本身失败时，使用 `app/global-error.tsx`；全局错误界面要自己提供 `html` 与 `body`。
+
+~~~tsx
+// app/reports/error.tsx
+"use client";
+
+import { useEffect } from "react";
+
+export default function ReportsError({
+  error,
+  retry
+}: {
+  error: unknown;
+  retry: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <section>
+      <p role="alert">报表暂时无法显示。</p>
+      <button type="button" onClick={() => retry()}>
+        重新读取
+      </button>
+    </section>
+  );
+}
+~~~
+
+此页的 `Link` 使用客户端过渡，Back 会把地址恢复到 `sort=recent`；App Router 可以复用客户端路由缓存，也可以请求服务器取得对应页面，不能据此断言一定发生网络重取，也不保证恢复某个旧数据快照。若服务端报表本身未改变，页面排序仍回到 May、April；若服务端数据已变，URL 只固定查询条件，不冻结数据版本。在服务端页面函数中没有 React Router 那样公开的 loader `request.signal`，不能因为用户切换路由，就宣称 Next 已停止服务端接口或数据库工作。客户端自己启动的 fetch 可用 `AbortController` 在组件清理时取消等待；服务端请求则应有合适的超时、幂等和数据一致性保护。当服务端实际重新执行 Page 时，才从新 URL 读取对应排序并请求上游。较低层的 History API 与 Back 语义见[浏览器导航与历史如何恢复筛选状态？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)，React 中的过期响应和查询缓存见[React界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+
+`app/reports/error.tsx` 中的 `retry()` 会重新读取并渲染边界内的页面内容；例如当前 `sort=oldest` 的上游请求失败时，它仍以 oldest 参数重试，成功后列表替换错误界面。它不会悄悄改回 recent。
+
+### 旧版 Pages Router（页面路由器）代码怎样与 App Router 区分
+
+当前例子使用 App Router；旧 Pages Router 应按它自己的运行模型维护，不要把两套 API 拼进一个文件。
+
+| 需求 | Pages Router 旧入口 | 当前 App Router |
+|---|---|---|
+| 动态路径参数 | `next/router` 的 `router.query` | 页面收到 Promise `params`，`await` 后读取 |
+| 查询参数 | `router.query`；自动静态优化期间首屏可能暂时为空，客户端代码应在 Effect（副作用）中等 `router.isReady` | 页面收到 Promise `searchParams`；读取会使用请求时 URL |
+| 服务端数据 | `getServerSideProps` 按请求读取；`getStaticProps` 配合 `getStaticPaths` 构建静态页 | 默认 Server Component 读取服务端数据；本篇 `no-store` 示例每次按请求读取 |
+| 刷新静态结果 | `getStaticProps` 的 `revalidate` 支持 Incremental Static Regeneration（增量静态再生，ISR） | 按当前 App Router 缓存配置选择重新读取或缓存 |
+| API 端点 | `pages/api` 的默认处理器 | `app/**/route.ts` 按 HTTP 方法导出处理器 |
+
+Pages Router 中的 `revalidate: 60` 是允许请求触发再生成的最小间隔，不是后台每分钟准点重建；间隔过后，首个请求可能先读到旧页，同时触发新版本生成。动态路由还要用 `getStaticPaths` 的 `fallback` 决定构建时未列出的路径是直接 404，还是首个请求到来时先生成页面。这个 ISR 语义只用于识别维护中的旧 Pages Router 代码，不与本篇 App Router 的 `no-store` 报表请求混用。
+
+App Router 的客户端导航优先用 `next/link`；需要在客户端代码中编程导航时，使用 `next/navigation` 的 `useRouter`。旧 `next/router`、`router.query` 和 Pages Router 数据函数不适用于 `app/` 页面。当前客户端组件和服务端组件的边界不因保留 Pages Router 而消失：同一项目可以逐段迁移，但每段代码都必须明确属于哪种路由器。
+
+> [!info]- 来源与版本核验（Next.js 16.4.5；2026-11-06）
+> - 当前稳定版本：Next.js 官方 [v16.4.5 release](https://github.com/vercel/next.js/releases/tag/v16.4.5)；以下 App Router 文档按官方当前页面核验于 2026-11-06。
+> - 服务端与客户端组件的默认归属、首次页面文档、hydrate、可序列化属性与边界范围：[Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components)。
+> - 服务端到客户端只传界面所需数据及在服务端检查授权：[Data Security — Passing Data from Server to Client](https://nextjs.org/docs/app/guides/data-security#passing-data-from-server-to-client)，核验日期 2026-11-06。
+> - 页面 `params` / `searchParams` Promise、查询参数触发动态渲染及共享 layout 不接收 searchParams：[page.js](https://nextjs.org/docs/app/api-reference/file-conventions/page)。
+> - `Link` 的客户端导航、预取与历史行为：[Linking and Navigating](https://nextjs.org/docs/app/getting-started/linking-and-navigating)、[Link API](https://nextjs.org/docs/app/api-reference/components/link)。
+> - Server Component 中读取数据、并行请求与 Suspense 流式返回：[Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data)、[loading.js](https://nextjs.org/docs/app/api-reference/file-conventions/loading)。
+> - 水合一致性、Effect 仅在客户端运行，以及首屏输出要求：[React hydrateRoot](https://react.dev/reference/react-dom/client/hydrateRoot)、[React useEffect](https://react.dev/reference/react/useEffect)。
+> - `fetch` 缓存默认值、`no-store`、请求期页面与开发热模块替换缓存：[fetch API](https://nextjs.org/docs/app/api-reference/functions/fetch)、[Cache Components](https://nextjs.org/docs/app/api-reference/config/next-config-js/cacheComponents)。
+> - `loading.tsx`、`error.tsx`、稳定的 `retry` 与 `global-error.tsx`：[loading.js](https://nextjs.org/docs/app/api-reference/file-conventions/loading)、[error.js](https://nextjs.org/docs/app/api-reference/file-conventions/error)，Next.js 16.3 起 `retry` 稳定；核验版本 16.4.5。
+> - Pages Router 参数与 `router.isReady`：[Pages Router useRouter](https://nextjs.org/docs/pages/api-reference/functions/use-router)。
+> - Pages Router 按请求读取、静态生成与 ISR：[getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props)、[getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths)、[Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration)。
+> - App Router 路由端点的方法导出与响应：[Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route)。
+> - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；Next.js 16.4.5 生产构建核对排序、Back 的 RSC 复用、本地搜索保留及摘要失败后的 retry。上游为本地合成测试服务。
+## 60. Lodash 何时适合处理报表列表，哪些方法会修改输入？
+
+**案例背景。** 用户在 `/reports?sort=recent#summary` 看到 May、April 两份报表。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回 May、April；点击 **Oldest first** 后，地址的 `sort` 变为 `oldest`，服务端返回 April、May；按 Back 回到 recent 和 May、April。地址和请求属于路由层；Lodash 只转换已经交给它的数据，不拥有排序状态，也不会替代服务端查询。
+
+~~~mermaid
+flowchart LR
+    A[URL sort=recent] --> B[服务端返回 May、April]
+    B --> C[组件显示列表]
+    C --> D[Oldest first 开始路由导航]
+    D --> E[loader 读取 oldest 并返回数据]
+    E --> F[结算后提交 oldest URL 与 April、May]
+    F --> Back[Back 恢复 recent URL 并重跑路由数据]
+    B -.本地拥有副本时才选此分支.-> G[本地列表]
+    G --> H[orderBy 返回新数组]
+    G --> I[merge 按索引原地合并]
+~~~
+
+### 排序逻辑应跟着数据来源走
+
+真实应用让 `sort` 查询参数决定服务端顺序；同一列表不要再由组件状态保存一份排序，也不要在收到已经排好序的服务端结果后重复排序。若数据确实由当前组件本地排序，`_.orderBy` 会按指定字段和方向返回一个新数组，不会改动传入的 recent 数组：
+
+~~~javascript
+const recent = [
+  { id: "may", period: "May", month: "2026-05" },
+  { id: "april", period: "April", month: "2026-04" }
+];
+
+const oldest = _.orderBy(recent, ["month"], ["asc"]);
+
+oldest.map(report => report.period); // ["April", "May"]
+recent.map(report => report.period); // ["May", "April"]
+oldest[0] === recent[1]; // true：新数组仍共享 April 行对象
+~~~
+
+`_.sortBy` 同样返回新数组，按升序排列；要写清升降序或多个字段时用 `_.orderBy`。新数组只是行引用的新顺序，`oldest[0]` 仍是 `recent[1]` 那个 April 对象；改行对象会同时改到两边。图中的分支表示组件确实拥有一份本地数据时才做本地转换，不表示服务端排序页还要二次排序。生产路由仍从 URL 发出排序请求，避免两套逻辑相互覆盖。
+
+### 深合并为什么会改到已有报表数据
+
+`_.merge(target, ...sources)` 会递归合并并修改第一个参数，然后返回这个目标对象。数组按索引合并，不会拼接：
+
+~~~javascript
+const cached = {
+  reports: [
+    { id: "may", period: "May", owner: { team: "Ops" } },
+    { id: "april", period: "April" }
+  ]
+};
+const patch = {
+  reports: [{ owner: { reviewed: true } }]
+};
+
+const changed = _.merge(cached, patch);
+changed === cached; // true
+cached.reports[0].owner.reviewed; // true
+cached.reports.length; // 2，patch 的第 0 项合并进原第 0 项
+~~~
+
+把同一个引用传回 React state，可能因引用没变而跳过渲染；若 `cached` 还被请求缓存、其他组件或测试共享，也会一起看到被改的值。要建立新值，可以把新对象作为目标：
+
+~~~javascript
+const next = _.merge({}, cached, { reports: [{ owner: { reviewed: false } }] });
+next !== cached; // true
+~~~
+
+这个写法只改变目标引用，不会让数组按 ID 匹配；数组仍按索引合并。纯列表补项应显式拼接，例如 `[...cached.reports, newReport]`。`_.assign` 也会修改目标，只做浅层赋值。用库方法前，先看它返回哪个对象以及是否改变输入。
+
+同一个 `patch.reports[0]` 会随当前排序改到不同报表：
+
+| 正在合并的顺序 | 第 0 行 | 补丁结果落到 |
+|---|---|---|
+| recent：May、April | May | May 的 `owner.reviewed` |
+| oldest：April、May | April | April 的 `owner.reviewed` |
+
+如果补丁实际针对某个 `report.id`，先按 ID 找到那一行再更新，别把“第 0 行”当成报表身份。
+
+需要写入嵌套路径时，`_.set` 也会原地修改目标：
+
+~~~javascript
+const draft = {};
+const result = _.set(draft, "owner.team", "Ops");
+result === draft; // true
+draft.owner.team; // "Ops"
+~~~
+
+### 深路径默认值要区分缺失与 null
+
+`_.get` 只在路径结果为 `undefined` 时采用默认值；如果接口明确返回 `null`，结果仍是 `null`：
+
+~~~javascript
+const missingOwner = { owner: {} };
+const emptyOwner = { owner: { name: null } };
+
+_.get(missingOwner, "owner.name", "Unknown"); // "Unknown"
+_.get(emptyOwner, "owner.name", "Unknown");   // null
+emptyOwner.owner?.name ?? "Unknown";          // "Unknown"
+~~~
+
+当报表确实允许“没有负责人”和“负责人字段未返回”表达不同状态时，这个差异会改变空态文案。字段路径固定时，原生可选链和显式回退值通常更直接。
+
+### 其他方法先看返回值和边界
+
+| 方法 | 对界面数据的实际契约 |
 |---|---|
-| **toBe(value)** | Compare with Object.is semantics. |
-| **toEqual(value)** | Compare nested object or array values. |
-| **toStrictEqual(value)** | Also distinguish missing properties from properties set to `undefined` and similar structural cases. |
-| **toMatchObject(value)** | Check that an object contains the expected subset. |
-| **toBeTruthy / toBeFalsy** | Check the Boolean coercion of a value. |
-| **toBeNull / toBeUndefined** | Distinguish null from undefined. |
-| **toContain(value)** | Check an array item or string substring. |
-| **toHaveLength(n)** | Check a length property. |
-| **toThrow(error)** | Check a synchronous function for a thrown error; pass the function, not its already-evaluated result. |
-| **toHaveBeenCalled()** | Check that a mock or spy was called. |
-| **toHaveBeenCalledWith(args)** | Check arguments recorded by a mock or spy. |
+| `_.concat(array, ...values)` | 返回浅拼接的新数组；把传入数组展开一层，数组里再嵌套的数组保持嵌套。 |
+| `_.drop(array, n = 1)` | 返回去掉前 `n` 项后的新切片。 |
+| `_.find(collection, predicate, fromIndex = 0)` | 只找第一项；数组可从 `fromIndex` 开始，不会返回全部匹配行。 |
+| `_.each(collection, iteratee)` | 遍历后返回原集合；`_.forEach` 是别名，不适合当作变换后的新列表。 |
+| `_.keys(object)` | 返回对象自有、可枚举的字符串键，不含 Symbol（符号）键。 |
+| `_.uniq(array)` | 返回保留首次出现顺序的新数组；若只需原生值集合，Set（集合）可能更清楚。 |
+| `_.compact(array)` | 移除所有假值，包括 `0`、`false` 和空字符串；报表字段可能合法为 `0` 时不能用它清洗行。 |
+| `_.times(n, iteratee)` | 调用迭代器 `n` 次并返回结果数组。 |
 
-### Coverage / 覆盖率
+`_.uniqueId(prefix)` 只使用当前 Lodash 模块实例的递增计数器；结果受先前调用影响，不保证跨进程或多份模块全局唯一，也不是安全令牌。列表行优先用服务端稳定的 `report.id`；认证能力令牌应使用具备相应安全契约的生成器。
 
-Run Jest with the project’s configured coverage option, commonly --coverage. Coverage reports which statements, branches, functions, and lines ran; a high percentage does not prove that assertions check meaningful behavior or edge cases.
+### 搜索输入可以延迟，排序导航不应延迟
 
-### References / 参考资料
+Lodash 的 debounce（防抖）方法 `_.debounce` 会等最后一次调用后的等待时间过去再执行；`leading`、`trailing` 和 `maxWait` 会改变它何时运行。用它减少报表标题搜索的请求频率时，保留当前 URL 的 `sort`，并在组件卸载或输入控件销毁时取消尚未触发的调用：
 
-- [Jest 30.0 documentation](https://jestjs.io/docs/30.0/getting-started)
-- [Jest: ECMAScript Modules](https://jestjs.io/docs/30.0/ecmascript-modules)
-- [Jest: The Jest Object](https://jestjs.io/docs/30.0/jest-object)
-- [Jest: Mock Functions](https://jestjs.io/docs/30.0/mock-functions)
-- [Frontend Testing / 前端测试](#62.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F)
+~~~javascript
+const scheduleReportSearch = _.debounce(
+  (query, sort) => fetchReports({ sort, query }),
+  300,
+  { trailing: true, maxWait: 1000 }
+);
+
+function onSearchInput(query, currentUrlSort) {
+  scheduleReportSearch(query, currentUrlSort);
+}
+
+function onSortNavigation(navigate) {
+  scheduleReportSearch.cancel(); // 丢弃尚未开始的旧排序搜索
+  navigate("/reports?sort=oldest#summary"); // 立即开始路由导航
+}
+
+function onSearchPanelUnmount() {
+  scheduleReportSearch.cancel();
+}
+~~~
+
+防抖函数要在一段组件生命周期内复用；排序处理器取消待发的搜索，再立即把导航交给路由。React Router Data Mode 会先加载目标数据，地址和历史项在结算时提交；这里的 `navigate` 只表示开始导航，不表示地址在点击瞬间提交。Back 则由浏览器选回 recent 历史项并触发路由加载。`cancel` 只撤销尚未触发的调用，不会中止已经发出的网络请求；真正停止传输需要请求服务配合 AbortSignal（请求取消信号）。
+
+这段处理器只覆盖显式点击与卸载。Back/Forward 不会经过 `onSortNavigation`：若 oldest 下的搜索计时器尚未触发，Back 已提交 recent 后，它仍可能带着捕获的 oldest 发请求。接入真实路由时，应在每次已提交的 sort 改变时同样取消旧待发搜索，并用请求代次或查询键保护结果；已经启动的旧请求即便无法取消，也不能覆盖新条件下的列表。
+
+同时开启 leading 和 trailing 时，trailing 只在等待窗口内发生多次调用后才会再执行；若调用方需要立即提交尚待执行的尾部输入，可用 `.flush()`：
+
+~~~javascript
+const search = _.debounce(fetchReports, 300, { leading: true, trailing: true });
+search({ query: "O" });
+search({ query: "Ops" }); // 窗口内第二次调用，结束时会执行 trailing
+search.flush(); // 若 trailing 尚待执行，现在就执行
+~~~
+
+Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适合按固定间隔响应滚动或连续事件，不等同于 debounce。
+
+### 何时优先用原生操作
+
+路径明确时，原生可选链、`Array.prototype.flat`（数组扁平化）、Set 或对象展开常常更易读。需要 Lodash 的边界行为时，先核对版本和输入形状，再决定是否使用。按方法导入可以帮助构建器裁剪依赖，但最终包体还受模块格式和构建配置影响；要用生产产物测量，不能只凭写法推断体积。
+
+相关内容见[现代 JavaScript 特性](#48.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F)与[前端性能测量](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+
+> [!info]- 来源与版本核验（Lodash 4.18.1；2026-11-06）
+> - 当前稳定版本及 4.18.1 发布记录：[Lodash Releases](https://github.com/lodash/lodash/releases)，2026-04-01。
+> - 排序、深合并、数组按索引合并、对象路径、字符串、集合和计时方法：[Lodash 4.18.1 API 文档](https://github.com/lodash/lodash/blob/4.18.1/doc/README.md)。
+> - 原生数组展平与空值运算符：[Array.prototype.flat](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat)、[Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing)，核验日期 2026-11-06。
+## 61. ahooks 怎样管理报表请求、分页与列表身份？
+
+**案例背景。** 报表从 `/reports?sort=recent#summary` 打开时显示 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 是排序和历史状态的来源；用户选 **Oldest first** 后，路由把 `sort=oldest` 传给报表请求，列表变成 April、May；按 Back 时 recent 再次成为请求输入。ahooks 管组件中的请求状态、分页或可编辑列表，不应另存一份竞争的 sort。
+
+~~~mermaid
+flowchart TD
+    A[父 loader 只解析 URL，提交 sort=recent] --> B[Hook 请求报表]
+    B --> C[显示 May、April]
+    C --> D[Oldest first 发起路由导航]
+    D --> E[父 loader 只返回 sort=oldest，路由提交]
+    E --> F[Hook 发起 oldest 请求；旧列表可暂留]
+    F --> G[新请求成功后显示 April、May]
+    G --> H[Back 先恢复 recent 地址]
+    H --> I[父 loader 提交 recent，Hook 再请求列表]
+~~~
+
+### 请求 Hook（钩子）管本地请求状态，不自动取得传输控制权
+
+下面的例子假定父级只负责路由：它从 URL loader 的**已提交数据**中取出 `sort` 并传给组件；不要把 `navigation.location` 中尚未提交的目标值提前传入。父 loader 在这个替代方案中只解析并校验 `sort`，不取报表：其返回值为 `{ sort }`，父组件再将 `useLoaderData()` 中已提交的 `sort` 传给 `ReportPanel`。此处由组件独自拥有列表请求，不同时配置 React Router loader 或 TanStack Query 请求同一份列表。`fetchReports` 是会校验响应形状的 Application Programming Interface（应用程序编程接口，API）客户端。初次渲染会自动请求；`refreshDeps` 改变时，Hook 使用最新的服务函数再次请求。等待期间 `data` 可以保留上次成功的列表：
+
+~~~tsx
+import { useState } from "react";
+import { useDebounce, useRequest } from "ahooks";
+import { fetchReports } from "./report-api";
+
+type SortOrder = "recent" | "oldest";
+type Report = { id: string; period: string; title: string };
+
+function ReportPanel({ sort }: { sort: SortOrder }) {
+  const [query, setQuery] = useState("");
+  const settledQuery = useDebounce(query, { wait: 300 });
+  const { data: reports, loading, error } = useRequest(
+    () => fetchReports({ sort, query: settledQuery }),
+    { refreshDeps: [sort, settledQuery] }
+  );
+
+  return (
+    <section>
+      <label>
+        搜索报表
+        <input
+          value={query}
+          onChange={event => setQuery(event.target.value)}
+        />
+      </label>
+      {loading && <p role="status">正在加载报表…</p>}
+      {error && <p role="alert">报表读取失败。</p>}
+      <ol aria-label="报表" aria-busy={loading}>
+        {reports?.map((report: Report) => (
+          <li key={report.id}>{report.period} — {report.title}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+~~~
+
+`useDebounce` 返回延迟后的值，不返回网络请求。假设输入前搜索条件为空，用户输入 `Ops` 后立刻切换到 oldest，且路由在 300 ms 防抖到期前已经提交 oldest，服务调用顺序是 `recent/"" → oldest/"" → oldest/"Ops"`：排序导航一开始，路由仍保留 recent 的已提交页面；等 oldest loader 成功，父级才把 `sort=oldest` 交给这个组件，随后 `refreshDeps` 触发请求；300 ms 到期后搜索值再触发一次。若路由更慢，搜索值会先在 recent 下生效，调用顺序也随之改变；决定请求参数的是当时已提交的 sort 和已稳定的搜索值。新的 `useRequest` 调用会让前一次结果过期，但等新数据成功前，屏幕上的旧列表仍是最近一次成功结果，不代表它已经符合 oldest 或 `Ops` 条件。按 Back 时父级在 recent loader 结算前仍保留 oldest，因此 Hook 不会抢先发 recent 请求。输入防抖不延迟路由导航。若 React Router loader 或 TanStack Query 已经负责同一份列表，就不要再挂这段 `useRequest` 重复读取。
+
+`useRequest` 默认自动运行（且 `ready` 为 true）；`manual: true` 才等待调用 `run` 或 `runAsync`。`run` 返回 `void`，失败由 `onError` 等回调处理；`runAsync` 返回 Promise，调用方应处理失败。v3.11.0 的 `Fetch.runAsync` 会等服务 Promise 结算后才比较请求代次；若它已过期，才以 `CancelledError` 拒绝，`run` 会处理这个取消错误。`cancel()` 会立即让 Hook 忽略当前 Promise 的结果并结束 Hook 的等待状态，但 `runAsync` 仍需等原服务 Promise 结算后才能拒绝；如果服务 Promise 永不结算，调用方的 `runAsync` 也可能一直 pending。它不会撤销已经发给浏览器或服务端的网络请求。若传输必须停止，服务本身还要接收并响应 AbortSignal（请求取消信号），通常由 AbortController（请求控制器）发出。
+
+常用状态和控制各自回答不同问题：
+
+| 返回值 | 契约 |
+|---|---|
+| `data / error / loading / params` | 最近请求的数据、错误、等待状态和最后一次参数。 |
+| `run` | 启动服务，返回 `void`；普通失败走 Hook 的错误回调。 |
+| `runAsync` | 启动服务并返回 Promise；取消的调用也可能拒绝。 |
+| `refresh / refreshAsync` | 使用最近一次参数重新请求。 |
+| `mutate` | 改变 Hook 当前展示的数据；不等于写入服务端，也不自动同步其他数据所有者。 |
+| `cancel` | 忽略当前请求结果；不等于底层请求的 AbortController。 |
+
+v3.11.0 的其他 `useRequest` 选项还包括首次自动调用时使用的 `defaultParams`、`onBefore` / `onSuccess` / `onError` / `onFinally` 回调，以及 `retryCount` / `retryInterval` 重试控制；重试适合可安全重放的读取。维护 v2 项目时会遇到 `debounceInterval` / `throttleInterval`；v3 将名称改为 `debounceWait` / `throttleWait`，并以 `usePagination`、`useInfiniteScroll` 替代 `pagination`、`loadMore` 请求选项，原来的 `formatResult` 转换要放在服务层。升级代码前先核对实际依赖版本，别把两代选项混用。
+
+### 分页服务返回 total 与 list，滚动加载返回下一段
+
+`usePagination` 的服务接收 `current` 和 `pageSize`，解析为 `{ total, list }`；排序变化时 `refreshDeps` 会重置到第一页并重新请求。例中 42 条、每页 20 条，下一页按钮会走到第 2 页，再走到第 3 页，并在加载或到末页时禁用。Hook 的页码是局部状态；需要刷新或 Back 保留页码时，应像排序一样让 URL 成为来源并把页码传给服务。
+
+~~~tsx
+import { usePagination } from "ahooks";
+import { fetchReportPage } from "./report-api";
+
+// 沿用上文的 SortOrder、Report 类型。
+function PagedReports({ sort }: { sort: SortOrder }) {
+  const { data, loading, pagination } = usePagination(
+    ({ current, pageSize }) =>
+      fetchReportPage({ sort, current, pageSize }),
+    { defaultPageSize: 20, refreshDeps: [sort] }
+  );
+
+  return (
+    <section>
+      <ol aria-label="报表" aria-busy={loading}>
+        {data?.list.map(report => (
+          <li key={report.id}>{report.period} — {report.title}</li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        onClick={() => pagination.changeCurrent(pagination.current + 1)}
+        disabled={loading || !data || pagination.current * pagination.pageSize >= data.total}
+      >
+        下一页
+      </button>
+    </section>
+  );
+}
+
+// API 响应形状：{ total: 42, list: Report[] }；pageSize 为 20 时可依次到第 2、3 页。
+~~~
+
+`useInfiniteScroll` 则把已累计数据交回服务，让服务用当前游标获取下一页；Hook 会把新列表接到已有列表后面。继续条件、错误、载入更多状态和稳定的行 ID 仍要由组件呈现。下面只用显式按钮触发后续页，便于读者看清每次请求的来源：
+
+~~~tsx
+import { useInfiniteScroll } from "ahooks";
+import { fetchNextReportPage } from "./report-api";
+
+type ReportPage = { list: Report[]; nextCursor: string | null };
+
+function ReportFeed({ sort }: { sort: SortOrder }) {
+  const { data, loading, loadingMore, error, noMore, loadMore } =
+    useInfiniteScroll(
+      (current?: ReportPage) =>
+        fetchNextReportPage({ sort, cursor: current?.nextCursor ?? null }),
+      {
+        reloadDeps: [sort],
+        isNoMore: current => current != null && current.nextCursor === null
+      }
+    );
+
+  return (
+    <div style={{ height: 360, overflow: "auto" }}>
+      {loading && <p role="status">正在读取报表…</p>}
+      {error && <p role="alert">继续加载失败。</p>}
+      <ol>
+        {data?.list.map(report => (
+          <li key={report.id}>{report.period} — {report.title}</li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        onClick={loadMore}
+        disabled={loading || loadingMore || noMore}
+      >
+        {noMore ? "没有更多报表" : "加载更多"}
+      </button>
+    </div>
+  );
+}
+~~~
+
+若选择滚动自动续页，可另传滚动容器 `target` 与 `threshold`；短首屏未填满容器时，Hook 可能自动继续取下一页。若同时提供自动滚动和按钮，两个触发可能撞上同一个在途游标，应在服务边界合并相同 `(sort, cursor)` 请求。上例只使用手动按钮。
+
+这里 `fetchNextReportPage` 的响应有 `list` 和 `nextCursor`；`isNoMore` 在游标为 null 时停止。实际接口要校验分页响应，并限制重复请求和授权范围。ahooks v3.11.0 修复了空页导致连续自动请求的问题；仍应处理空列表、错误和没有下一页的状态。
+
+### 可编辑表单行要用可复现的稳定身份
+
+`useState(() => reports)` 只把 props 当作首次初始化值；父路由后来传来 oldest 列表时，已编辑列表不会自动同步。下面明确把表单定义成一次编辑会话的快照：要放弃草稿并换数据时，调用者应显式开始新会话或重置列表。服务端报表使用自己的 `report.id`；新增草稿在点击事件中只生成一次 ID：
+
+~~~tsx
+function EditableReportList({ reports }: { reports: Report[] }) {
+  const [list, setList] = useState(() => reports);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          const draft = {
+            id: `draft:${crypto.randomUUID()}`,
+            period: "草稿",
+            title: "待补报表"
+          };
+          setList(current => [draft, ...current]);
+        }}
+      >
+        添加草稿
+      </button>
+      {list.map(report => (
+        <div key={report.id}>
+          {report.period} — {report.title}
+          <button
+            type="button"
+            onClick={() => setList(current => current.filter(row => row.id !== report.id))}
+          >
+            移除
+          </button>
+        </div>
+      ))}
+    </>
+  );
+}
+~~~
+
+ahooks v3.11.0 文档把 `useDynamicList.getKey(index)` 描述为可保持列表项身份的 key；但在 React 19.3.1 开发 StrictMode 下实测，初始化和插入都触发其内部 key ref 的重复递增，插入前 May/April 的 key 为 2/3，插入后变为 4/2，新草稿为 5，和常见使用者预期不符。这是该版本与开发 StrictMode 的实测问题，不应泛化为 React 的 key 契约；主例因此用业务 `report.id` 和每次新增只生成一次的草稿 ID。若维护依赖 `getKey` 的代码，应在实际 React、ahooks 版本和 StrictMode 配置下覆盖插入、移动、重置行为。`useDynamicList` v3.11.0 还提供 `move`、`batchRemove`、`replace`、`push` / `pop`、`unshift` / `shift` 和 `resetList`；`merge(index, items)` 是把多项插入列表的位置操作，不是 Lodash 的对象深合并。`sortList` 会保留 `0`、`false` 和空字符串，只剔除 `null` 与 `undefined`。
+
+`useVirtualList` 在 v3.11.0 返回 `[visibleRows, scrollTo]`，每项带 `data` 和源 `index`，通过 `containerTarget` / `wrapperTarget` 配置滚动容器；`itemHeight` 可为固定数值或按行计算的函数，行高要与实际布局相符；源数组要保持稳定或由 `useMemo` 记住，否则 Hook 会重复重新计算。归档 ahooks v2.6 使用对象返回值 `{ list, containerProps, wrapperProps, scrollTo }`；其 `itemHeight` 函数按源索引给出高度，没有独立的 `estimateSize` 参数，不要混用版本。虚拟化只减少挂载的 Document Object Model（文档对象模型，DOM）行数，不会减少网络分页或完整源数组的内存；变高行、可访问边界与滚动成本见[大列表如何在网络、DOM 和可访问性之间取舍？](#14.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
+
+### 轻量状态和时序工具也有边界
+
+`useBoolean` 提供显式布尔动作，`useToggle` 切换两个值，`useMap` 和 `useSet` 管集合；`useCreation(factory, deps)` 按依赖复用创建结果，但不提供资源生命周期或永久语义缓存保证。不要在其 factory 中做 Effect 副作用。
+
+`useLatest(value)` 返回会更新到最新值的 ref，适合已安装的长生命周期回调读取新数据；`useMemoizedFn(fn)` 保持函数引用稳定，同时调用最新的函数体。前者解决回调读取哪个值，后者解决函数身份是否变化，两者契约不同。`useLocalStorageState` 方便持久化浏览器设置，也可同步其他标签页；Storage（浏览器存储）可能不可用或被用户改写，不能当作可信权限来源，服务端渲染也应等到浏览器端读取。
+
+`useMount` / `useUnmount` 是 Effect 建立与清理的封装，不等于进程生命周期内绝对只运行一次。根级 React StrictMode 开发模式会额外执行一次 setup → cleanup → setup；订阅或计时器等副作用要能正确清理，首次载入也不能产生不可逆的重复动作。
+
+| Hook | 返回 / 默认时序 |
+|---|---|
+| `useDebounce(value)` | 延迟后的值，`wait` 默认 1000 ms，`leading` 默认 false，`trailing` 默认 true；`maxWait` 可选。 |
+| `useThrottle(value)` | 限频后的值，`wait` 默认 1000 ms，`leading` 与 `trailing` 默认 true。 |
+| `useDebounceFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading false、trailing true。 |
+| `useThrottleFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading / trailing true。 |
+
+debounce 的 `cancel` 只取消尚未执行的函数调用；请求已经开始后，必须另行管理网络取消。排序点击应立即发起导航，地址与列表的提交时点由路由决定；输入搜索适合等待停顿后再查。更多 React Hook 生命周期见[React 组件如何组合状态与行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8React%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)，服务端查询与乐观更新见[React界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+
+> [!info]- 来源与版本核验（ahooks v3.11.0；2026-11-06）
+> - 当前稳定版本和 v3.11.0 的分页、取消、空页、动态列表假值修复：[ahooks v3.11.0 release](https://github.com/alibaba/hooks/releases/tag/v3.11.0)，2026-10-27。
+> - `useRequest` 的默认自动执行、手动控制与状态：[useRequest](https://ahooks.js.org/hooks/use-request/)；`runAsync` 取消拒绝和 `run` 处理由 [v3.11.0 Fetch source](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useRequest/src/Fetch.ts) 核验。
+> - 请求回调、默认参数、重试和 v3 `debounceWait` / `throttleWait`：[v3.11.0 option types](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useRequest/src/types.ts)；v2 到 v3 的旧请求选项迁移：[upgrade guide](https://ahooks.js.org/guide/upgrade/)，2026-11-06。
+> - 分页响应和 `refreshDeps`：[usePagination](https://ahooks.js.org/hooks/use-pagination/)；累积列表、游标服务、停止条件与滚动目标：[useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll/)。
+> - `useDynamicList` 的文档 key 契约、操作与 `sortList`：[useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list/)、[v3.11.0 type definition](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useDynamicList/index.ts)、[v3.11.0 release changes](https://github.com/alibaba/hooks/releases/tag/v3.11.0)。开发 StrictMode key 漂移是 v3.11.0 + React 19.3.1 的本地实测，不作为通用 API 语义。
+> - `useLatest`、`useMemoizedFn`、`useLocalStorageState` 和 Mount/Unmount helper：[useLatest](https://ahooks.js.org/hooks/use-latest/)、[useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn/)、[useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state/)、[useMount](https://ahooks.js.org/hooks/use-mount/)、[useUnmount](https://ahooks.js.org/hooks/use-unmount/)，核验日期 2026-11-06。
+> - 当前虚拟列表结果形状与行高函数：[useVirtualList](https://ahooks.js.org/hooks/use-virtual-list/)、[v3.11.0 implementation](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useVirtualList/index.ts)；v2.6.0 旧结果形状：[v2.6.0 source](https://github.com/alibaba/hooks/blob/v2.6.0/packages/hooks/src/useVirtualList/index.ts)。
+> - debounce / throttle 返回值与默认选项：[useDebounce](https://ahooks.js.org/hooks/use-debounce/)、[useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn/)、[useThrottle](https://ahooks.js.org/hooks/use-throttle/)、[useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn/)。
+> - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；ahooks 3.11.0 核对请求代次、分页重置、手动游标追加、草稿会话和取消；短首屏自动加载与按钮并用可重复请求同一游标，主例因此只保留按钮触发。
+## 62. 前端测试怎样证明报表排序、历史恢复和发布产物正确？
+
+**案例背景。** 用户打开 `/reports?sort=recent#summary`，看到 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回该顺序；点击 **Oldest first** 后，地址变成 `sort=oldest`，列表为 April、May；按 Back 则回到 recent 和 May、April。测试要验证用户看到的结果、真实地址历史和请求边界；点击事件触发过或内部状态等于某值，都不足以证明整条流程可用。
+
+~~~mermaid
+flowchart LR
+    A[纯函数与契约] --> B[组件交互和异步状态]
+    B --> C[真实浏览器路由与 Back]
+    C --> D[生产构建资源]
+    D --> E[发布同一份已验证产物]
+~~~
+
+### 先按风险选择测试边界
+
+| 测试边界 | 适合验证 | 报表排序例子 |
+|---|---|---|
+| 单元测试 | 无 Document Object Model（文档对象模型，DOM）的纯转换与解析 | 无效 `sort` 被拒绝；报表响应字段映射正确。 |
+| 组件集成测试 | 组件、Hook（钩子）、可访问控件和请求边界一起工作 | 点排序控件后显示等待状态，成功后行序变为 April、May，失败时出现错误提示。 |
+| 浏览器端到端测试 | 浏览器历史、真实 URL、路由、资源和服务组合 | 从 recent 点 Oldest first，确认 URL 和行序，再按 Back 恢复 recent。 |
+
+保持单元测试简单纯粹；请求和 React 组件的关系用组件测试；浏览器 Back、片段锚点、生产资源路径等风险由真实浏览器覆盖。组件测试不模拟出真实浏览器历史时，不能替代 Back 测试。
+
+### 用用户能找到的名称和内容断言
+
+React Testing Library 的查询名称表达等待契约：`getByRole` 表示元素现在应存在且唯一；`queryByRole` 适合断言它不存在；`findByRole` 返回 Promise 并等待元素出现。优先使用角色和可访问名称，避免检查组件内部状态、CSS class 或 hook 调用次数。
+
+组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock 与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](#63.%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E7%8A%B6%E6%80%81%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+
+React Testing Library 16.3.3 也从 `@testing-library/react` 导出 `renderHook`，可单独验证有复用价值的 Hook 契约；只被一个组件使用的 Hook 通常直接测那个组件更能表达用户行为。Testing Library 的 render 和 user-event helper 已处理一般交互的 React `act` 边界；测试从 helper 外部直接触发更新时，再显式包在 `act` 中。快照适合记录稳定的小结构，较大的快照本身说不清用户需要看到什么，排序和错误行为仍应使用有含义的断言。
+
+### 浏览器测试应经过同一条 URL 和 Back 流程
+
+下面的端到端测试是 React Router Data Mode 浏览器 loader 加同源 `/api/reports` 的方案。它假定 Playwright 配置了应用 `baseURL` 与启动待测应用的 `webServer`。`page.route` 只拦截浏览器页面发出的请求；Next Server Component 在服务器进程发出的上游 `fetch` 不会经过它，要为 Next 配置可达的服务端测试上游。此处在浏览器 API 边界按 `sort` 返回固定数据，断言链接、地址、列表和浏览器历史；拦截器中的断言只检查实际出现的请求，URL 和行序断言验证界面行为；它们不证明每次导航一定发生网络调用。若还要证明应用确实接入接口，可增加至少一次拦截命中的断言，或用不会出现在初始静态页面中的 fixture 值。这里不固定请求次数，因为预取、路由再验证或返回历史项可能影响网络调用次数：
+
+~~~ts
+import { expect, test } from "@playwright/test";
+
+const recentRows = [
+  { id: "may", period: "May", title: "Operations" },
+  { id: "april", period: "April", title: "Finance" }
+];
+const oldestRows = [...recentRows].reverse();
+
+test("sorts reports and restores the previous URL with Back", async ({ page }) => {
+  await page.route(/\/api\/reports(?:\?.*)?$/, async route => {
+    expect(route.request().method()).toBe("GET");
+    const url = new URL(route.request().url());
+    const sorts = url.searchParams.getAll("sort");
+    expect(sorts).toHaveLength(1);
+    const sort = sorts[0];
+    expect(["recent", "oldest"]).toContain(sort);
+    const rows = sort === "oldest" ? oldestRows : recentRows;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(rows)
+    });
+  });
+
+  await page.goto("/reports?sort=recent#summary");
+  const rows = page.getByRole("list", { name: "报表" }).getByRole("listitem");
+  await expect(rows).toHaveText([
+    "May — Operations",
+    "April — Finance"
+  ]);
+
+  await page.getByRole("link", { name: "Oldest first" }).click();
+  await expect(page).toHaveURL(/\/reports\?sort=oldest#summary$/);
+  await expect(rows).toHaveText([
+    "April — Finance",
+    "May — Operations"
+  ]);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/reports\?sort=recent#summary$/);
+  await expect(rows).toHaveText([
+    "May — Operations",
+    "April — Finance"
+  ]);
+});
+~~~
+
+这类测试把 `#summary` 留在页面地址，并让 API 只按查询参数读取排序；浏览器不会把片段发给服务端。URL 断言只证明片段仍在地址栏，不证明页面滚动到了 `id="summary"` 的位置；若页面确有滚动契约，应单独断言锚点与视口位置。DOM 角色查询也只证明可访问树中的结构和名称，不证明屏幕阅读器实际播报。测试应用可以把 `page.route` 换成测试服务或 Mock Service Worker（请求拦截工具），但不要在同一案例里一边 Mock 页面实现、一边又声称覆盖了真实路由。
+
+### 验证将发布的构建产物
+
+开发热更新服务主要验证开发链路，不会完整覆盖打包后的资源地址、分块加载或部署路径。常用交付检查顺序是：
+
+~~~text
+typecheck -> unit/component tests -> production build
+  -> serve that build -> critical browser journey -> promote the same artifact
+~~~
+
+用接近生产的服务器启动刚生成的构建产物，再执行一次上面的关键用户流程；使用 Vite 时，`vite preview` 可以本地预览刚构建的 `dist`，但官方不把它定位为生产服务器。发布时晋级同一份通过检查的产物，避免重新构建后部署了另一份代码。Source map（源码映射）应绑定发布版本并受控上传；隐藏注释不会自动阻止外部直接访问 map 文件。公共的构建产物晋级、运行时和发布门禁见[应用部署与持续集成及持续交付（CI/CD）](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)，通用测试边界见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)。
+
+> [!info]- 来源与版本核验（React Testing Library 16.3.3；user-event 14.6.8；Playwright 1.65.0；2026-11-06）
+> - React Testing Library 当前包版本：[npm package](https://www.npmjs.com/package/@testing-library/react)，16.3.3；角色查询和异步行为：[ByRole](https://testing-library.com/docs/queries/byrole/)、[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)。
+> - `renderHook` API 与测试单个 Hook 的适用边界：[React Testing Library API](https://testing-library.com/docs/react-testing-library/api/#renderhook)，v16.3.3，核验日期 2026-11-06。
+> - user-event 当前版本：[npm package](https://www.npmjs.com/package/@testing-library/user-event)，14.6.8；用户交互模型：[Introduction](https://testing-library.com/docs/user-event/intro/)，核验日期 2026-11-06。
+> - Playwright 当前包版本：[npm package](https://www.npmjs.com/package/@playwright/test)，1.65.0；浏览器端断言与拦截请求：[Assertions](https://playwright.dev/docs/test-assertions)、[Page route](https://playwright.dev/docs/api/class-page#page-route)，核验日期 2026-11-06。
+> - 测试产物服务器配置：[Playwright webServer](https://playwright.dev/docs/test-webserver)。
+> - `vite preview` 用于本地预览构建产物，不是生产服务器：[Vite CLI](https://vite.dev/guide/cli.html#vite-preview)、[Static deployment](https://vite.dev/guide/static-deploy.html)，按 Vite v8.3.5 官方文档核验于 2026-11-06。
+## 63. Jest 怎样验证报表请求中的异步状态和结果？
+
+**案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](#62.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F)。
+
+### 测试必须等待承载断言的异步工作
+
+在 Promise 风格的 Jest 测试里，框架会等待测试返回或 `await` 的 Promise；另一种受支持的异步方式是 `done` 回调，不要在同一个测试中混用两种完成协议。若启动请求却不等待，测试可能在断言执行前就结束。`rejects` / `resolves` 自身也会返回 Promise，必须 `return` 或 `await`；不能把同步 `toThrow` 用在已经执行过的调用结果上。
+
+### 用用户操作和假时钟控制请求返回
+
+下例用 300 ms 定时器模拟报表服务。运行 TSX 前要配置 `jsdom` 环境及 TypeScript/JSX transformer；测试全局从 `@jest/globals` 显式导入。Fake timers（假时钟）让测试控制响应时机：先点击控件、确认等待状态和旧列表还在，再只推进所需时间，最后检查新行序。这个小组件仅用于隔离请求状态；真正的 sort URL 与 Back 由浏览器测试覆盖：
+
+~~~tsx
+import { useState } from "react";
+import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom/jest-globals";
+import { afterEach, beforeEach, expect, jest, test } from "@jest/globals";
+
+type SortOrder = "recent" | "oldest";
+type Report = { id: string; period: string; title: string };
+type LoadReports = (sort: SortOrder) => Promise<Report[]>;
+
+const recentRows: Report[] = [
+  { id: "may", period: "May", title: "Operations" },
+  { id: "april", period: "April", title: "Finance" }
+];
+const oldestRows = [...recentRows].reverse();
+
+function ReportPanel({ loadReports }: { loadReports: LoadReports }) {
+  const [rows, setRows] = useState(recentRows);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  async function showOldest() {
+    setLoading(true);
+    setError(false);
+    try {
+      setRows(await loadReports("oldest"));
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section>
+      <button type="button" disabled={loading} onClick={() => void showOldest()}>
+        Oldest first
+      </button>
+      {loading && <p role="status">正在读取 oldest 排序…</p>}
+      {error && <p role="alert">报表读取失败。</p>}
+      <ol aria-label="报表" aria-busy={loading}>
+        {rows.map(report => (
+          <li key={report.id}>{report.period} — {report.title}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+test("keeps the visible rows pending, then shows the oldest order", async () => {
+  const loadReports = jest.fn<LoadReports>(
+    sort =>
+      new Promise(resolve => {
+        setTimeout(
+          () => resolve(sort === "oldest" ? oldestRows : recentRows),
+          300
+        );
+      })
+  );
+  const user = userEvent.setup({
+    advanceTimers: jest.advanceTimersByTime
+  });
+
+  render(<ReportPanel loadReports={loadReports} />);
+  await user.click(screen.getByRole("button", { name: "Oldest first" }));
+
+  expect(loadReports).toHaveBeenCalledWith("oldest");
+  expect(screen.getByRole("status")).toBeInTheDocument();
+  const list = screen.getByRole("list", { name: "报表" });
+  expect(within(list).getAllByRole("listitem").map(row => row.textContent))
+    .toEqual(["May — Operations", "April — Finance"]);
+
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(300);
+  });
+
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(within(list).getAllByRole("listitem").map(row => row.textContent))
+    .toEqual(["April — Finance", "May — Operations"]);
+});
+~~~
+
+`user-event` 在输入或点击过程中也会安排定时任务；启用 Jest 假时钟时，把 `jest.advanceTimersByTime` 传给 `userEvent.setup`。不要用 `delay: null` 绕过假计时器。对只需立即完成的服务 Mock 可用 `mockResolvedValue`；需要验证防抖或加载延迟时，让 Mock Promise 用明确的定时器解决，并调用 `advanceTimersByTimeAsync`。异步定时器 API 会让 Promise 回调有机会执行，旧式 fake timers 不支持它。
+
+此处推进 300 ms 会让定时器调用 Mock Promise 的 `resolve`；`act` 再等 React 把 `setRows` 和 `setLoading(false)` 提交到 DOM，之后同步查询才观察得到 April、May 和消失的等待提示。按钮在 `loading` 时禁用，因此本例定义的是一次只处理一个请求；若产品允许连续切换或重试，要另测并发返回次序和过期结果保护。
+
+当目标元素本来就不存在且需要异步出现时，`findByRole` 返回等待 Promise；如果整条断言需要重试，用 `waitFor`，其回调应在未满足时抛错。固定等待 1 秒既慢又不说明等的是什么。组件请求失败的测试应再用 `mockRejectedValue` 并确认用户能找到 `role="alert"`，不要只断言 Mock 曾经被调用。
+
+### Mock 要停在真实依赖边界
+
+`jest.fn` 可记录参数、调用和 Promise 结果；例如 `mock.results[0].value` 是 Mock 返回的 Promise 对象，不是它之后兑现的报表数组。组件例最后断言的是 Promise 结算后用户实际看到的行序。`jest.spyOn(object, method)` 默认仍会执行原实现，需调用 `mockReturnValue` / `mockImplementation` 才替换，并在测试后用 `mockRestore` 恢复。普通函数 Mock（模拟函数）应断言业务代码如何处理 May、April，不要只复述自己设置了什么结果。
+
+在 Babel 或其他转换为 CommonJS（通用模块系统）的配置中，`jest.mock` 可能由 transformer（代码转换器）提升到导入前。原生 ECMAScript Module（ECMAScript 模块，ESM）的静态导入先执行，Mock 必须在动态导入被测模块前登记：
+
+~~~javascript
+import { jest } from "@jest/globals";
+
+jest.unstable_mockModule("./report-api.js", () => ({
+  fetchReports: jest.fn()
+}));
+
+const { reportsLoader } = await import("./reports-loader.js");
+~~~
+
+`reports-loader.js` 应在模块中导入 `./report-api.js` 的 `fetchReports`；测试先登记该依赖的 Mock，再动态导入真正使用它的 loader。`unstable_mockModule` 仍带 unstable 前缀，模块 ESM Mock 方式要和项目的 Jest 版本、Node 运行时以及 transformer 配置一致。Jest 30.5.2 对 Node 24.9+ 同步可求值的 ESM 图也有 automock 和手写 Mock 支持；包含顶层 await 或异步 resolver（模块解析器）/ transformer 的图仍要按当前 ESM 文档选方法。
+
+### 断言要匹配数据结构和观察方式
+
+| 断言 | 适合检查 |
+|---|---|
+| `toBe(value)` | 原始值或引用相同，使用 `Object.is` 语义。 |
+| `toEqual(value)` | 数组和对象的递归值。 |
+| `toStrictEqual(value)` | 还要区分缺失属性、`undefined` 属性等结构差异。 |
+| `toHaveBeenCalledWith(args)` | Mock 在实际调用边界收到的参数。 |
+| `toThrow(error)` | 同步抛错；传入函数本身，而非已经执行的结果。 |
+
+Mock 清理方法不会互相替代：
+
+| 方法 | 清除什么 | 保留什么 |
+|---|---|---|
+| `jest.clearAllMocks()` | 调用、实例与结果记录 | Mock 的实现与返回值设置 |
+| `jest.resetAllMocks()` | 调用记录和 Mock 实现 | spy 仍被替换；需要另行恢复原属性 |
+| `jest.restoreAllMocks()` | `spyOn` / 替换属性保存的原实现 | 独立创建或手动赋值的 `jest.fn()` 不会自动还原 |
+
+`beforeAll` / `afterAll` 可为整组测试打开和关闭共享资源；`beforeEach` / `afterEach` 负责逐测试建立和恢复假时钟、spy 与 DOM；不要让一个用例的调用记录或待处理计时器泄漏到另一个用例。Jest 的 `--coverage` 报告哪些分支执行过，不代表断言已验证了用户要的 May/April 顺序、错误恢复或历史行为。
+
+> [!info]- 来源与版本核验（Jest 30.5.2；React Testing Library 16.3.3；user-event 14.6.8；2026-11-06）
+> - 当前包版本及发行记录：[Jest v30.5.2 release](https://github.com/jestjs/jest/releases/tag/v30.5.2)，2026-09-18。
+> - 定时器 Mock、推进时钟以及异步 timer API：[Timer Mocks](https://jestjs.io/docs/timer-mocks)、[Jest Object API](https://jestjs.io/docs/jest-object)，Jest 30.5.2，核验日期 2026-11-06。
+> - 函数 Mock、spy 和 ESM 模块 Mock：[Mock Functions](https://jestjs.io/docs/mock-functions)、[ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules)，Jest 30.5.2，核验日期 2026-11-06。
+> - 假时钟下的用户操作、异步查询和重试断言：[user-event setup options](https://testing-library.com/docs/user-event/options/)、[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)，核验日期 2026-11-06。

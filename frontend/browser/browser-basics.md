@@ -49,7 +49,7 @@ DOM 表示文档节点，CSS 规则决定这些节点如何呈现。浏览器按
 
 ## 从首帧交接到筛选更新
 
-首帧可能先于 `load` 事件和客户端代码可交互的时点出现。比如 HTML 已显示报表，但模块脚本尚未完成下载、运行或注册点击处理器。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](../frameworks/next-js.md#How%20do%20hydration%20and%20streaming%20fit%20together%3F%20/%20Hydration%20%E4%B8%8E%E6%B5%81%E5%BC%8F%E6%B8%B2%E6%9F%93%E5%A6%82%E4%BD%95%E8%A1%94%E6%8E%A5%EF%BC%9F)。若点击没有反馈，先确认处理器何时可用；若处理器已经注册，则查看事件是否被主线程上其他工作挡住。
+首帧可能先于 `load` 事件和客户端代码可交互的时点出现。比如 HTML 已显示报表，但模块脚本尚未完成下载、运行或注册点击处理器。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](../frameworks/next-js.md#服务端与客户端组件在哪条线交接)。若点击没有反馈，先确认处理器何时可用；若处理器已经注册，则查看事件是否被主线程上其他工作挡住。
 
 当用户点击“最早优先”，`/reports.js` 的 DOM 事件处理器可以把 `sort=oldest` 写入 URL，设置按钮的 `aria-pressed` 状态，并改动列表节点。节点修改立即改变 DOM；样式、布局、绘制和之后的画面呈现则由浏览器在后续工作中按需完成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](../browser-apis/dom-manipulation-and-events.md)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](../html-css/rendering-pipeline-and-forced-layout.md)。
 

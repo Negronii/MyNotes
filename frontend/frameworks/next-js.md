@@ -1,168 +1,263 @@
-# How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
+# Next.js 如何把文件路由、服务端数据与客户端交互连接起来？
 
-**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](../browser-apis/streaming-ux.md). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](../browser-apis/streaming-ux.md)。
+**案例背景。** 报表页打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端取得 May、April；用户点 **Oldest first** 后，URL 进入 `sort=oldest`，页面显示 April、May，再按 Back 恢复 recent 顺序。`#summary` 是浏览器片段，不会发给服务端。这条主流程假设搜索框为空；若用户已输入查询，客户端本地 query 可以在排序导航和 Back 后继续保留，当前列表仍会被它过滤。本文按当前 Next.js 16.4.5 App Router（应用路由器）讲清：文件怎样选中页面、服务器怎样读 URL 并取数、客户端代码从哪里开始，以及加载和错误如何沿路由边界显示。
 
-
-## What does Next.js add to React? / Next.js为React增加了什么？
-
-**Core answer / 核心回答：** Next.js is a React framework that combines routing, server and client rendering, data access, and deployment integrations. Its Pages Router and App Router have different file conventions and rendering APIs, so name the router and version when describing behavior. / Next.js 是 React 框架，整合路由、服务端与客户端渲染、数据访问和部署集成。Pages Router 与 App Router 的文件约定和渲染 API 不同，说明行为时要注明路由器和版本。
-
-Next.js can produce HTML on the server or ahead of a request, and it can update route content in the browser. These options are not one global switch: choose based on the route's data freshness, user-specific content, runtime, and caching needs.
-
-## Pages Router: SSR, SSG, and ISR / Pages Router：SSR、SSG和ISR
-
-The following APIs belong to the **Pages Router** under the pages directory.
-
-| Strategy | API | When it fits |
-|---|---|---|
-| Server rendering per request | getServerSideProps | Request-specific data or authorization must be resolved on the server for each request. |
-| Static generation | getStaticProps and, for dynamic paths, getStaticPaths | Output can be produced before a request and reused. |
-| Incremental Static Regeneration | getStaticProps with revalidate | A generated page can be refreshed after a time window or on demand. |
-| Client-side data | Browser fetch or a client data library | Data is user-specific or does not need to be in the initial server-rendered response. |
-
-~~~jsx
-// pages/posts/[id].js — Pages Router
-export async function getServerSideProps({ params }) {
-  const response = await fetch(
-    "https://api.example.com/posts/" + params.id
-  );
-
-  if (response.status === 404) return { notFound: true };
-  if (!response.ok) throw new Error("Post request failed: " + response.status);
-
-  return { props: { post: await response.json() } };
-}
-
-export default function PostPage({ post }) {
-  return <article><h1>{post.title}</h1></article>;
-}
+~~~mermaid
+flowchart TD
+    A["/reports?sort=recent#summary"] --> B[Page 读取 searchParams 并启动两项请求]
+    B --> C[先显示外壳与排序链接]
+    B --> D[摘要与报表分别等待]
+    D --> E[数据到达后填充相应区域]
+    E --> F[列表中的搜索组件水合后可输入]
+    C --> G[排序 Link 可交互后，进入 oldest]
+    G --> H{客户端是否已有可复用的目标载荷？}
+    H -->|是| I[使用对应 oldest 页面载荷]
+    H -->|否| J[服务端 Page 按 oldest 再读取上游]
+    J --> I
+    I --> K[Back 选择 recent，仍按缓存与请求规则恢复]
+    D -->|请求失败| Err[段级 error 界面替换此页面区域]
 ~~~
 
-For ISR, a successful getStaticProps result can return revalidate: 60. This is a minimum interval before a request can trigger regeneration, not a timer that regenerates every minute. After the interval, a request can receive the stale page while regeneration runs; a successful new result replaces the cached version. Dynamic paths also need getStaticPaths and a deliberate fallback policy. In this Pages Router example, fallback: false makes paths omitted from the build-time list return 404; fallback: "blocking" generates an omitted path on its first request before returning HTML.
+## 文件路由把路径落到页面与布局
 
-~~~jsx
-// pages/posts/[id].js — Pages Router
-export async function getStaticPaths() {
-  const response = await fetch("https://api.example.com/posts");
-  if (!response.ok) throw new Error("Could not list posts");
-  const posts = await response.json();
+App Router 把路由写在 `app` 目录：`app/reports/page.tsx` 对应 `/reports`，`app/reports/[reportId]/page.tsx` 对应 `/reports/:reportId`；`layout.tsx` 为一组子路由提供共享外壳，客户端导航时可继续保留。`route.ts` 则按 Hypertext Transfer Protocol（超文本传输协议，HTTP）方法定义 Application Programming Interface（应用程序编程接口，API）端点，不是页面组件；它导出 `GET`、`POST` 等具名函数并返回 `Response`。运行时与部署方式由配置和托管环境决定，放在 Next.js 项目里本身不会自动变成 serverless function（无服务器函数）。
 
-  return {
-    paths: posts.map(post => ({ params: { id: String(post.id) } })),
-    fallback: "blocking"
-  };
-}
+页面收到的动态 `params` 和查询 `searchParams` 都是 Promise，需要在服务端页面中 `await`。对本例来说，`searchParams` 的 `sort` 决定请求哪种顺序；读取它会让页面依赖本次请求，不能把这个值放进不会随导航更新的共享 layout。需要在客户端组件读查询状态时，可使用 `useSearchParams`；若页面本身已经是 Server Component，优先在 Page 读取后把需要的值传给客户端叶节点。
 
-export async function getStaticProps({ params }) {
-  const response = await fetch("https://api.example.com/posts/" + params.id);
-  if (response.status === 404) return { notFound: true };
-  if (!response.ok) throw new Error("Post request failed: " + response.status);
+## 服务端与客户端组件在哪条线交接
 
-  return { props: { post: await response.json() }, revalidate: 60 };
-}
-~~~
+App Router 的 layout 和 page 默认是 Server Components（服务端组件）。它们能在服务端访问数据库、私有环境变量和后端接口；不进入客户端 JavaScript 包。需要本地 state（状态）、事件处理器、Effect（副作用）或浏览器 API 时，用 `"use client"` 声明 Client Component（客户端组件）的模块边界，并尽量把边界放在实际交互的最小子树。
 
-## App Router: Server Components and caching / App Router：Server Components与缓存
+`"use client"` 不表示“只在浏览器生成 HyperText Markup Language（超文本标记语言，HTML）”。首次访问时，Next.js 会用 Server Component 结果和 Client Component 生成初始 HTML；浏览器先展示静态预览，再下载并 hydrate（水合，让已有标记获得交互）客户端组件。水合要求服务器 HTML 与浏览器首次渲染相同；时间、随机数、地区设置或仅浏览器可读的数据都可能让两边不一致。需要浏览器专属值时，先输出稳定内容，再在首次提交后的 Effect 中读取。后续客户端导航使用 React Server Component Payload（React 服务端组件载荷，RSC payload）更新界面。服务端传给客户端的组件属性（props）必须可序列化；这不是保密机制，可序列化的字符串凭证一旦放进 props 也会进入客户端载荷。函数和数据库连接通常不可序列化，不应作为普通 props 传递。Server Component 可以把已渲染的内容作为 `children` 交给一个 Client Component，但不要从客户端模块图直接导入依赖服务端能力的代码；只传报表展示所需字段，不传内部记录或凭证。
 
-Under the app directory, pages and layouts are Server Components by default. They can fetch on the server and pass serializable data to a Client Component. A file marked use client creates a client boundary for Hooks, event handlers, and browser APIs. Client Components may still contribute to initial HTML; use client does not mean the whole route is client-only.
+## 用 URL 选排序，并并行加载可独立等待的数据
 
-The following example uses the App Router with Cache Components disabled.
+`page.tsx` 作为 Server Component 读取查询参数。以下例子在得知排序后同时启动报表列表和摘要请求；列表由异步 Server Component 在 `Suspense`（挂起边界）中等待，摘要可独立返回。切换排序的 `Link` 可以直接写在 Server Component 中：链接负责客户端导航、保留路径和片段，若需要服务器重新生成目标载荷，Next.js 再用新的 `searchParams` 运行页面；可复用的客户端载荷则无需这次执行。这是 React Router 浏览器 loader 的替代实现：本例在 Next 服务端向占位上游 `reports.example.test` 请求数据，必须为该主机配置可达的测试服务；它不是浏览器对本应用同源 `/api/reports` 的请求。
 
 ~~~tsx
-// app/posts/page.tsx — App Router
-async function getPosts() {
-  const response = await fetch("https://api.example.com/posts", {
-    cache: "no-store"
-  });
-  if (!response.ok) throw new Error("Posts request failed");
-  return response.json();
-}
-
-export default async function PostsPage() {
-  const posts = await getPosts();
-  return (
-    <ul>
-      {posts.map(post => <li key={post.id}>{post.title}</li>)}
-    </ul>
-  );
-}
-~~~
-
-With Cache Components disabled, the default server `fetch` mode is `auto no cache`. That mode does not opt a fetch into the persistent Data Cache. A statically prerendered route can still fetch once during `next build` and serve its prerendered output. A route using request-time APIs can fetch per request. Choose deliberately. Use `cache: "no-store"` for data that must be fetched per request, or opt into caching with `force-cache` or a compatible `next.revalidate` policy. In development, the HMR cache can reuse even `no-store` fetches until navigation or a full reload. [Next.js fetch reference, checked 2026-11-06](https://nextjs.org/docs/app/api-reference/functions/fetch#optionscache)
-
-With Cache Components enabled, a component or function can opt into caching with `use cache`. To stream the uncached posts in this example, move the fetch into an async child with a Suspense ancestor. That boundary lets Next.js prerender the surrounding shell while the child waits for request-time data. Check where the result is reused and how it gets invalidated before choosing a cache lifetime. / 区分数据缓存、静态预渲染的页面产物与开发环境的 HMR 缓存。开启 Cache Components 后，把请求时才读取的数据放到 Suspense 边界下。 [Next.js on streaming uncached data](https://nextjs.org/docs/app/getting-started/caching#streaming-uncached-data)
-
-A Client Component can receive data from a Server Component through props, but props crossing the boundary must be serializable. Keep secrets and server-only dependencies on the server.
-
-## How do hydration and streaming fit together? / Hydration 与流式渲染如何衔接？
-
-**Core answer / 核心回答：** Server-rendered HTML can appear before the client JavaScript is ready. Hydration makes that existing markup interactive by matching it to React's initial client render and attaching behavior; the two initial outputs must agree. Effects run only in the browser after a component commits. In the App Router, a `Suspense` boundary can show a useful fallback while a slower child waits, then stream that region into the page. / 服务端 HTML 可以先于客户端 JavaScript 显示。Hydration 将已有标记与 React 客户端的首次渲染匹配并附加交互行为；两端首次输出必须一致。Effect 只在浏览器中、组件提交后运行。App Router 中的 `Suspense` 边界可以先显示有用的占位内容，再把等待中的子区域流式送入页面。
-
-### Hydration timeline and one mismatch diagnostic
-
-1. The server sends HTML. The browser can display it before React's client code runs; React-specific handlers and state are not attached yet, although ordinary HTML behavior still works.
-2. The client loads React and hydrates the existing DOM. React expects the first client render to match the server HTML, then attaches component behavior.
-3. After the client commit, `useEffect` can read browser-only state and schedule a later render. Effects do not run during server rendering, so they cannot supply initial server HTML.
-
-A diagnostic example is `new Date().toLocaleDateString()` rendered during both server and initial client rendering: the clock, locale, or time zone can make the strings differ. Start with the hydration warning and compare the server output with the first client render; trace values that depend on time, randomness, browser APIs, or independently changing data. Prefer a stable value shared by both renders. If content must be browser-specific, render a stable initial placeholder and update after hydration, accepting that the user may see a second pass. `suppressHydrationWarning` is a narrow escape hatch for an unavoidable one-level text or attribute difference, not a fix for a mismatched subtree.
-
-### Place a Suspense boundary around a useful streamed region
-
-In the App Router, the fetching guide documents route-level `loading.tsx` and smaller `<Suspense>` boundaries. Content outside a boundary can render while the child inside waits. Start independent data work before awaiting it, then let the child suspend so the boundary has time to show its fallback. The example follows the existing archived [App Router data-fetching and Suspense example](../../archive/front-end/0-1_Learning_Notes/next.js/readme.md); `getPosts()` is an application data function returning a promise.
-
-```tsx
+// app/reports/page.tsx
 import { Suspense } from "react";
+import Link from "next/link";
+import { ReportSearch } from "./report-search";
 
-type Post = { id: number; title: string };
+type SortOrder = "recent" | "oldest";
+type Report = {
+  id: string;
+  period: string;
+  title: string;
+};
+type Summary = { totalReports: number };
+type PageProps = {
+  searchParams: Promise<{ sort?: string | string[] }>;
+};
 
-async function getPosts(): Promise<Post[]> {
-  const response = await fetch("https://api.example.com/posts");
-  if (!response.ok) throw new Error("Post request failed");
-  return response.json();
+function isReport(value: unknown): value is Report {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.id === "string" &&
+    typeof row.period === "string" &&
+    typeof row.title === "string";
 }
 
-export default function Page() {
-  const posts = getPosts(); // start the request without blocking the page
+function parseReports(value: unknown): Report[] {
+  if (!Array.isArray(value)) throw new Error("Invalid report response");
+  return (value as unknown[]).map(row => {
+    if (!isReport(row)) throw new Error("Invalid report row");
+    return { id: row.id, period: row.period, title: row.title };
+  });
+}
+
+function parseSummary(value: unknown): Summary {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("Invalid summary response");
+  }
+  const summary = value as Record<string, unknown>;
+  if (typeof summary.totalReports !== "number" ||
+      !Number.isSafeInteger(summary.totalReports) || summary.totalReports < 0) {
+    throw new Error("Invalid report count");
+  }
+  return { totalReports: summary.totalReports };
+}
+
+async function getReports(sort: SortOrder): Promise<Report[]> {
+  const response = await fetch(
+    "https://reports.example.test/api/reports?sort=" + encodeURIComponent(sort),
+    { cache: "no-store" }
+  );
+  if (!response.ok) throw new Error("Could not load reports");
+  const payload: unknown = await response.json();
+  return parseReports(payload);
+}
+
+async function getSummary(): Promise<Summary> {
+  const response = await fetch(
+    "https://reports.example.test/api/reports/summary",
+    { cache: "no-store" }
+  );
+  if (!response.ok) throw new Error("Could not load report summary");
+  const payload: unknown = await response.json();
+  return parseSummary(payload);
+}
+
+export default async function ReportsPage({ searchParams }: PageProps) {
+  const { sort: rawSort } = await searchParams;
+  const sort: SortOrder = rawSort === "oldest" ? "oldest" : "recent";
+  const reportsPromise = getReports(sort);
+  const summaryPromise = getSummary();
 
   return (
     <main>
-      <h1>Latest posts</h1>
-      <Suspense fallback={<p>Loading posts…</p>}>
-        <PostList posts={posts} />
+      <h1 id="summary">报表摘要</h1>
+      <nav aria-label="报表排序">
+        <Link
+          href="/reports?sort=recent#summary"
+          aria-current={sort === "recent" ? "page" : undefined}
+        >
+          Recent
+        </Link>
+        {" · "}
+        <Link
+          href="/reports?sort=oldest#summary"
+          aria-current={sort === "oldest" ? "page" : undefined}
+        >
+          Oldest first
+        </Link>
+      </nav>
+
+      <Suspense fallback={<p role="status">正在取得摘要…</p>}>
+        <ReportSummary promise={summaryPromise} />
+      </Suspense>
+      <Suspense fallback={<p role="status">正在取得报表…</p>}>
+        <ReportList promise={reportsPromise} />
       </Suspense>
     </main>
   );
 }
 
-async function PostList({ posts }: { posts: Promise<Post[]> }) {
-  const items = await posts;
-  return <ul>{items.map(post => <li key={post.id}>{post.title}</li>)}</ul>;
+async function ReportSummary({ promise }: { promise: Promise<Summary> }) {
+  const summary = await promise;
+  return <p>报表数量：{summary.totalReports}</p>;
 }
-```
 
-If the page awaits `getPosts()` before returning this tree, that request cannot be streamed inside the boundary. Place boundaries around independently useful parts: a boundary that is too high can hold back the whole page, while a boundary around a tiny fragment can create a choppy reveal. A fallback is visible page content, so give it meaningful text. If an update needs an assistive-technology announcement, add the appropriate live-region semantics; that does not move keyboard focus or create interaction behavior. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](../html-css/html-and-css-basics.md) for the focused keyboard, naming, and error model. A pending fallback also does not make a failed request successful; provide a separate error path.
-
-## How does file-based routing work? / 文件系统路由如何工作？
-
-**Core answer / 核心回答：** The route tree follows files, but the conventions differ between routers. Pages Router uses files such as pages/about.js and pages/posts/[id].js. App Router uses route segments containing page.tsx and can add layout.tsx, loading.tsx, and error.tsx. / 路由树由文件结构决定，但两种路由器的约定不同。Pages Router 使用 pages/about.js、pages/posts/[id].js 等文件；App Router 使用包含 page.tsx 的路由段，并可加入 layout.tsx、loading.tsx 和 error.tsx。
-
-Use Link for navigation. Prefetching is production-only and differs by router: App Router can fully prefetch static routes and partially prefetch dynamic routes to a loading boundary; Pages Router's default behavior differs. Treat prefetch as an optimization, not a guarantee that a destination is already loaded.
-
-In the Pages Router, an automatically statically optimized page may have an empty `router.query` during prerendering. In a client Effect that depends on those fields, check `router.isReady` before using them. [Versioned route-parameter examples / 路由参数版本示例](../../archive/front-end/Deprecated_Interview_Notes/react-router-v5-and-next-pages-router-parameters.md) · [Next.js Pages Router `useRouter`](https://nextjs.org/docs/pages/api-reference/functions/use-router)
-
-## What are API routes and Route Handlers? / API routes和Route Handler是什么？
-
-**Core answer / 核心回答：** Pages Router API routes use a default handler in pages/api. App Router Route Handlers use named HTTP method exports in a route.ts file. The runtime and deployment model depend on configuration and hosting; an endpoint is not automatically a serverless function just because it is in a Next.js app. / Pages Router 的 API route 在 pages/api 中使用默认 handler；App Router 的 Route Handler 在 route.ts 中导出 HTTP 方法函数。运行时和部署模型取决于配置与托管平台；接口不会因为位于 Next.js 应用中就自动成为 serverless function。
-
-~~~ts
-// app/api/hello/route.ts — App Router
-export async function GET() {
-  return Response.json({ message: "Hello from Next.js" });
+async function ReportList({ promise }: { promise: Promise<Report[]> }) {
+  const reports = await promise;
+  return <ReportSearch reports={reports} />;
 }
 ~~~
 
-Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
+`ReportSearch` 放在独立文件 `app/reports/report-search.tsx`，因为它需要输入 state 和 `onChange`。数据先在服务端取得，再以普通可序列化数组传入：
 
-**See also:** [React Routing and Navigation / React路由与导航](./react-routing-and-navigation.md) for client navigation and SPA/MPA document models; [React Basics / React基础](./react-basics.md) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+~~~tsx
+"use client";
 
-**Sources checked 2026-10-15:** [React release and version references](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
+import { useState } from "react";
+
+type Report = {
+  id: string;
+  period: string;
+  title: string;
+};
+
+export function ReportSearch({ reports }: { reports: Report[] }) {
+  const [query, setQuery] = useState("");
+  const visible = reports.filter(report =>
+    report.title.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <section>
+      <label>
+        搜索报表
+        <input value={query} onChange={event => setQuery(event.target.value)} />
+      </label>
+      <ol aria-label="报表">
+        {visible.map(report => (
+          <li key={report.id}>{report.period} — {report.title}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+~~~
+
+输入和本地过滤属于客户端交互；读报表权限、访问私有服务和确定 URL 排序应由服务端负责，但本例没有实现鉴权，真实应用要先在服务端检查用户能否读取这些报表。这里只把少量报表展示字段传到浏览器供本地标题过滤；如果数据量很大或过滤结果受权限、分页影响，应把条件放入 URL 并让服务端按条件查询。`response.json()` 的静态类型不能验证运行时形状；示例在服务边界先把它视为 `unknown`，再逐行检查并投影成三个客户端展示字段，不把上游行对象中可能存在的内部字段顺手传入 RSC payload。摘要中的 `totalReports` 也要求为非负安全整数。
+
+此页的参数策略是：只有单个字符串 `oldest` 选择最早顺序；缺失、`recent`、非法值或重复参数（`string[]`）都回退到 `recent`。这是本例选定的回退契约；React Router 例子则会对其读取到的非法首值返回 400。
+
+`cache: "no-store"` 控制这个 Next 服务端 `fetch` 在实际执行时不要读写持久数据缓存；若 `Page` 执行，它会向上游请求新结果。它不强迫每次 Link/Back 都重新执行服务端 Page：客户端路由可能直接复用已缓存的 React Server Component Payload（React 服务端组件载荷，RSC），因此 `no-store` 也不保证每次浏览器导航都打到上游。当前案例按 URL 保存排序条件，但不冻结返回数据的版本。Next.js 16.4.5 默认的 `auto no cache` 会在动态页面的每次请求中取数，在静态预渲染页面的构建时取数；本例访问 `searchParams`，所以是请求时页面。开启 `cacheComponents`（缓存组件）后，数据默认按请求动态读取；需要跨请求缓存时，使用 `use cache`（缓存指令）明确标出可复用的页面、函数或组件。开发模式的 Hot Module Replacement（热模块替换，HMR）也可能暂时复用 `no-store` 结果，不能把热更新时没变化误判为生产缓存策略。
+
+## 加载、失败和重试各有自己的边界
+
+`app/reports/loading.tsx` 自动为该路由段提供加载界面；更小的 `Suspense` 区域可以让摘要和列表各自出现。等待界面只是表示数据尚未准备好，不会处理读取失败。
+
+~~~tsx
+// app/reports/loading.tsx
+export default function Loading() {
+  return <p role="status">正在打开报表…</p>;
+}
+~~~
+
+在同一段创建 `app/reports/error.tsx`，用 Client Component 显示可恢复的错误状态。此边界包住当前段的页面和子段，但不会捕获同段 `layout.tsx` 自己抛出的错误；错误向上交给父段边界。Next.js 16.3 起，重试回调 `retry` 已稳定；它会重新读取并渲染边界内的内容。根 `layout.tsx` 本身失败时，使用 `app/global-error.tsx`；全局错误界面要自己提供 `html` 与 `body`。
+
+~~~tsx
+// app/reports/error.tsx
+"use client";
+
+import { useEffect } from "react";
+
+export default function ReportsError({
+  error,
+  retry
+}: {
+  error: unknown;
+  retry: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <section>
+      <p role="alert">报表暂时无法显示。</p>
+      <button type="button" onClick={() => retry()}>
+        重新读取
+      </button>
+    </section>
+  );
+}
+~~~
+
+此页的 `Link` 使用客户端过渡，Back 会把地址恢复到 `sort=recent`；App Router 可以复用客户端路由缓存，也可以请求服务器取得对应页面，不能据此断言一定发生网络重取，也不保证恢复某个旧数据快照。若服务端报表本身未改变，页面排序仍回到 May、April；若服务端数据已变，URL 只固定查询条件，不冻结数据版本。在服务端页面函数中没有 React Router 那样公开的 loader `request.signal`，不能因为用户切换路由，就宣称 Next 已停止服务端接口或数据库工作。客户端自己启动的 fetch 可用 `AbortController` 在组件清理时取消等待；服务端请求则应有合适的超时、幂等和数据一致性保护。当服务端实际重新执行 Page 时，才从新 URL 读取对应排序并请求上游。较低层的 History API 与 Back 语义见[浏览器导航与历史如何恢复筛选状态？](../browser/browser-navigation-and-history.md)，React 中的过期响应和查询缓存见[React界面如何维护服务端数据与乐观更新的正确性？](./react-server-state-and-optimistic-updates.md)。
+
+`app/reports/error.tsx` 中的 `retry()` 会重新读取并渲染边界内的页面内容；例如当前 `sort=oldest` 的上游请求失败时，它仍以 oldest 参数重试，成功后列表替换错误界面。它不会悄悄改回 recent。
+
+## 旧版 Pages Router（页面路由器）代码怎样与 App Router 区分
+
+当前例子使用 App Router；旧 Pages Router 应按它自己的运行模型维护，不要把两套 API 拼进一个文件。
+
+| 需求 | Pages Router 旧入口 | 当前 App Router |
+|---|---|---|
+| 动态路径参数 | `next/router` 的 `router.query` | 页面收到 Promise `params`，`await` 后读取 |
+| 查询参数 | `router.query`；自动静态优化期间首屏可能暂时为空，客户端代码应在 Effect（副作用）中等 `router.isReady` | 页面收到 Promise `searchParams`；读取会使用请求时 URL |
+| 服务端数据 | `getServerSideProps` 按请求读取；`getStaticProps` 配合 `getStaticPaths` 构建静态页 | 默认 Server Component 读取服务端数据；本篇 `no-store` 示例每次按请求读取 |
+| 刷新静态结果 | `getStaticProps` 的 `revalidate` 支持 Incremental Static Regeneration（增量静态再生，ISR） | 按当前 App Router 缓存配置选择重新读取或缓存 |
+| API 端点 | `pages/api` 的默认处理器 | `app/**/route.ts` 按 HTTP 方法导出处理器 |
+
+Pages Router 中的 `revalidate: 60` 是允许请求触发再生成的最小间隔，不是后台每分钟准点重建；间隔过后，首个请求可能先读到旧页，同时触发新版本生成。动态路由还要用 `getStaticPaths` 的 `fallback` 决定构建时未列出的路径是直接 404，还是首个请求到来时先生成页面。这个 ISR 语义只用于识别维护中的旧 Pages Router 代码，不与本篇 App Router 的 `no-store` 报表请求混用。
+
+App Router 的客户端导航优先用 `next/link`；需要在客户端代码中编程导航时，使用 `next/navigation` 的 `useRouter`。旧 `next/router`、`router.query` 和 Pages Router 数据函数不适用于 `app/` 页面。当前客户端组件和服务端组件的边界不因保留 Pages Router 而消失：同一项目可以逐段迁移，但每段代码都必须明确属于哪种路由器。
+
+> [!info]- 来源与版本核验（Next.js 16.4.5；2026-11-06）
+> - 当前稳定版本：Next.js 官方 [v16.4.5 release](https://github.com/vercel/next.js/releases/tag/v16.4.5)；以下 App Router 文档按官方当前页面核验于 2026-11-06。
+> - 服务端与客户端组件的默认归属、首次页面文档、hydrate、可序列化属性与边界范围：[Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components)。
+> - 服务端到客户端只传界面所需数据及在服务端检查授权：[Data Security — Passing Data from Server to Client](https://nextjs.org/docs/app/guides/data-security#passing-data-from-server-to-client)，核验日期 2026-11-06。
+> - 页面 `params` / `searchParams` Promise、查询参数触发动态渲染及共享 layout 不接收 searchParams：[page.js](https://nextjs.org/docs/app/api-reference/file-conventions/page)。
+> - `Link` 的客户端导航、预取与历史行为：[Linking and Navigating](https://nextjs.org/docs/app/getting-started/linking-and-navigating)、[Link API](https://nextjs.org/docs/app/api-reference/components/link)。
+> - Server Component 中读取数据、并行请求与 Suspense 流式返回：[Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data)、[loading.js](https://nextjs.org/docs/app/api-reference/file-conventions/loading)。
+> - 水合一致性、Effect 仅在客户端运行，以及首屏输出要求：[React hydrateRoot](https://react.dev/reference/react-dom/client/hydrateRoot)、[React useEffect](https://react.dev/reference/react/useEffect)。
+> - `fetch` 缓存默认值、`no-store`、请求期页面与开发热模块替换缓存：[fetch API](https://nextjs.org/docs/app/api-reference/functions/fetch)、[Cache Components](https://nextjs.org/docs/app/api-reference/config/next-config-js/cacheComponents)。
+> - `loading.tsx`、`error.tsx`、稳定的 `retry` 与 `global-error.tsx`：[loading.js](https://nextjs.org/docs/app/api-reference/file-conventions/loading)、[error.js](https://nextjs.org/docs/app/api-reference/file-conventions/error)，Next.js 16.3 起 `retry` 稳定；核验版本 16.4.5。
+> - Pages Router 参数与 `router.isReady`：[Pages Router useRouter](https://nextjs.org/docs/pages/api-reference/functions/use-router)。
+> - Pages Router 按请求读取、静态生成与 ISR：[getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props)、[getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths)、[Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration)。
+> - App Router 路由端点的方法导出与响应：[Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route)。
+> - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；Next.js 16.4.5 生产构建核对排序、Back 的 RSC 复用、本地搜索保留及摘要失败后的 retry。上游为本地合成测试服务。

@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=79044b3e4851384ad47462f1fd3a0294b9ec3230ed0e5b40d7df1db17f00301a -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=fbc640987d05bb5ec8420140ede1bc2f1abb7352d15347bb220ff3b2847fab47 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -91,12 +91,12 @@
 - [ ] 77. [用户离开报表页时，分析事件怎样尽力发送？](../frontend/performance/analytics-event-delivery-on-navigation.md)
 - [ ] 78. [WebView 怎样安全地开放原生能力并更新页面包？](../frontend/browser-apis/webview-javascript-bridge.md)
 - [ ] 79. [如何为产品选择前端框架？](../frontend/frameworks/virtual-dom-and-framework-selection.md)
-- [ ] 80. [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](../frontend/frameworks/react-routing-and-navigation.md)
-- [ ] 81. [How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？](../frontend/frameworks/next-js.md)
-- [ ] 82. [When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？](../frontend/libraries/lodash.md)
-- [ ] 83. [When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？](../frontend/libraries/ahooks.md)
-- [ ] 84. [What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？](../frontend/testing/frontend-testing.md)
-- [ ] 85. [How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？](../frontend/testing/jest-async-tests-and-mocks.md)
+- [ ] 80. [React 路由怎样把地址映射到界面并加载数据？](../frontend/frameworks/react-routing-and-navigation.md)
+- [ ] 81. [Next.js 如何把文件路由、服务端数据与客户端交互连接起来？](../frontend/frameworks/next-js.md)
+- [ ] 82. [Lodash 何时适合处理报表列表，哪些方法会修改输入？](../frontend/libraries/lodash.md)
+- [ ] 83. [ahooks 怎样管理报表请求、分页与列表身份？](../frontend/libraries/ahooks.md)
+- [ ] 84. [前端测试怎样证明报表排序、历史恢复和发布产物正确？](../frontend/testing/frontend-testing.md)
+- [ ] 85. [Jest 怎样验证报表请求中的异步状态和结果？](../frontend/testing/jest-async-tests-and-mocks.md)
 ## Engineering Foundations
 
 - [ ] 86. [两个请求争夺最后一件库存时，怎样保证只预留一次？](../engineering-foundations/databases/database-fundamentals.md)
