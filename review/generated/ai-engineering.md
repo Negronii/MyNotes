@@ -2,254 +2,254 @@
 
 > Generated from the [ai-engineering reading map](../../ai-engineering/index.md). Edit the map and its linked source notes. Internal section links use Obsidian heading fragments; source notes remain standard Markdown.
 
-## 1. How does an AI service turn one message into a complete answer?
+## 1. AI 服务如何将一条消息变成完整回答？
 
-### Case study — explaining a failed build
+### 案例：解释一次构建失败
 
-Imagine a developer using an AI assistant connected to a build system. A build runs automated checks against a code change, and build `42` has failed. The developer asks, `Why did build 42 fail?` The failure details are stored in a log service that the assistant can query through a tool named `read_build_log`.
+想象一位开发者正在使用一款接入构建系统的 AI assistant (AI 助手)。构建系统会对一次代码改动运行自动检查，而构建 `42` 失败了。开发者问：`Why did build 42 fail?` 失败详情保存在日志服务中，助手可以通过名为 `read_build_log` 的 tool (工具) 查询。
 
-The assistant needs to retrieve that evidence and explain what it shows. We will follow this one question through the service, from preparing the model's input to returning an answer grounded in the log. The application manages access to the log service, while the model generates a request for the evidence and then an explanation using it. This is a fictional example of an application-managed tool loop.
+助手需要取回这些证据并解释日志说明了什么。我们将沿着这个问题走过整个服务流程，从准备模型输入，到返回一份以日志为依据的回答。应用负责管理日志服务的访问；模型先生成获取证据的请求，再利用证据生成说明。这是一个虚构的、由应用管理的 tool-call loop (工具调用循环) 示例。
 
-The flow below follows the successful case. There are two model calls in this run. The first produces a tool request. After the application reads the log, the second produces the answer. If another question already contains enough evidence, the model can answer on its first call.
+下图展示成功完成的情形。本次运行包含两次模型调用：第一次生成工具请求；应用读取日志后，第二次生成回答。如果另一个问题本身已经包含足够证据，模型也可以在第一次调用时直接回答。
 
 ~~~mermaid
 flowchart TD
-    Input["1 Prepare input<br/>Question + instructions + tool definition"]
-    Model["2 Run the model<br/>Generate the next output"]
-    Choice{"What did the model return?"}
-    Tool["3 Execute the tool<br/>Check access, then read build 42"]
-    Context["4 Update the input<br/>Include the call and its result"]
-    Answer["5 Complete the run<br/>Save and return the explanation"]
+    Input["1 准备输入<br/>问题 + 指令 + 工具定义"]
+    Model["2 运行模型<br/>生成下一段输出"]
+    Choice{"模型返回了什么？"}
+    Tool["3 执行工具<br/>检查访问权限，然后读取构建 42"]
+    Context["4 更新输入<br/>加入调用及其结果"]
+    Answer["5 完成本次运行<br/>保存并返回说明"]
     Input --> Model --> Choice
-    Choice -->|Tool request| Tool
-    Tool -->|Log evidence or an error| Context
-    Context -->|Next model call| Model
-    Choice -->|Final answer| Answer
+    Choice -->|工具请求| Tool
+    Tool -->|日志证据或错误| Context
+    Context -->|下一次模型调用| Model
+    Choice -->|最终回答| Answer
 ~~~
 
-### 1. Prepare what the model can see
+### 1. 准备模型可见的内容
 
-The harness is the application code that coordinates the model and its tools. It records the caller's identity, selects the information for the model, executes tools, and decides when the application has a result to return. Here, the first model call has three inputs.
+harness 是负责协调模型与工具的应用代码。它记录调用者身份、为模型选择信息、执行工具，并决定应用何时有结果可返回。本例中的第一次模型调用有三项输入。
 
-| Input | Content in this example |
+| 输入 | 本例中的内容 |
 | --- | --- |
-| Application instruction | Explain the build failure using available evidence. |
-| User message | `Why did build 42 fail?` |
-| Tool definition | `read_build_log` accepts an integer `build_id` and returns failure records from the build log. |
+| 应用指令 | 根据现有证据解释构建失败。 |
+| 用户消息 | `Why did build 42 fail?` |
+| 工具定义 | `read_build_log` 接受整数 `build_id`，并返回构建日志中的失败记录。 |
 
-> [!tip] Instructions, conversation, and external state
-> A model call receives a selected input. It does not automatically see the log service, the application's database, or everything a user previously said. The application must supply that information or execute a tool that retrieves it.
+> [!tip] 指令、对话与外部状态
+> 每次模型调用都会收到经过选择的输入。模型不会自动看到日志服务、应用数据库，或用户此前说过的所有内容。应用必须提供这些信息，或执行能取回信息的工具。
 
-The tool definition describes an available operation. The log itself enters the conversation only after the application retrieves it. The caller's identity is retained by the application for permission checks.
+工具定义描述了一个可用操作。只有应用取回日志后，日志内容才会进入对话。应用会保留调用者身份，用于权限检查。
 
-These inputs form the model's context (上下文) for this call. In a longer conversation, the application would also choose which earlier messages and evidence to include. That selection matters because the model can only condition its output on information actually supplied to it and knowledge encoded in its trained parameters. [Choosing the information for each model call](#6.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)
+这些输入构成了本次调用的模型 context (上下文)。在较长的对话中，应用还需要决定包含哪些较早的消息和证据。这个选择很重要，因为模型只能依据实际提供的信息，以及训练参数中编码的知识来生成输出。[如何为每次模型调用选择信息](#6.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)
 
-### 2. Generate a request for the missing evidence
+### 2. 生成请求以获取缺失证据
 
-The model now has the question and a way to ask for logs. During inference (推理), it processes that input and generates an output one token (词元) at a time. In this run, the output specifies `read_build_log` with `build_id` set to `42`.
+现在，模型拿到了问题，也有办法请求日志。在 inference (推理) 过程中，它处理这些输入，并一次生成一个 token (词元)。本次运行中，输出指定调用 `read_build_log`，并将 `build_id` 设为 `42`。
 
-How can a sequence of numerical operations produce that request? We can follow the transformations inside a simplified decoder-only Transformer (仅解码器 Transformer). The small dimensions and numerical values below illustrate the computation. They are not measurements of a model responding to this question.
+一系列数值运算如何生成这样的请求？我们可以沿着一个简化的 decoder-only Transformer (仅解码器 Transformer) 中的变换过程来观察。下面的小型维度和数值只用于说明计算过程，并非模型回答这个问题时的实测数据。
 
-The service first formats the question, instructions, and tool definition, then a tokenizer (分词器) turns them into integer IDs. Encoding just `Why did build 42 fail?` with `tiktoken 0.12.0` and `cl100k_base` gives seven pieces, `["Why", " did", " build", " ", "42", " fail", "?"]`, and IDs `[10445, 1550, 1977, 220, 2983, 3775, 30]`. The complete input also includes the other messages and formatting markers.
+服务先格式化问题、指令和工具定义，再由 tokenizer (分词器) 将其转换为整数 ID。使用 `tiktoken 0.12.0` 和 `cl100k_base` 编码 `Why did build 42 fail?` 这句话，会得到七个片段 `["Why", " did", " build", " ", "42", " fail", "?"]`，对应 ID `[10445, 1550, 1977, 220, 2983, 3775, 30]`。完整输入还包含其他消息和格式标记。
 
-An embedding table (嵌入表) maps each ID to a vector. Across successive Transformer layers, attention (注意力) gathers information from visible positions, while a feed-forward network (前馈网络), or FFN, transforms the features within each position. These operations update the hidden state (隐层状态), the model's numerical representation of this particular input.
+embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。在连续的 Transformer 层中，attention (注意力) 从可见位置收集信息，而 feed-forward network (前馈网络，简称 FFN) 会变换每个位置上的特征。这些运算共同更新 hidden state (隐藏状态)，也就是模型对本次特定输入的数值表示。
 
-> [!tip] What is being transformed?
-> A vector (向量) is an ordered list of numbers. With `T` token positions and eight features per position, the hidden state has shape `T × 8`. Each row belongs to one position. The model's learned weights transform those features; the rows remain associated with the positions as information flows between them.
+> [!tip] 这里变换的是什么？
+> vector 是一个有序数值列表。若有 `T` 个 token 位置，每个位置有八个特征，hidden state 的形状就是 `T × 8`。每一行对应一个位置。模型学到的权重会变换这些特征；信息在位置之间传递时，各行仍与原来的位置对应。
 
-After the last layer, the LM head uses the state at the final input position to score vocabulary entries. Decoding (解码) selects a token, appends it, and repeats the prediction. A KV cache (键值缓存) lets later steps reuse earlier positions' keys and values, the representations attention reads when gathering information. The next position still needs its own computation. This loop can produce ordinary text or tokens encoding a structured tool request.
+经过最后一层后，language model head (LM head，语言模型头) 使用最后一个输入位置的状态为词表条目打分。decoding (解码) 会选出一个 token，将其追加到输入中，再重复预测。KV cache (键值缓存) 让后续步骤复用先前位置的 Key 和 Value；attention 在收集信息时会读取这些表示。新位置仍然需要单独计算。这个循环可以生成普通文本，也可以生成编码结构化工具请求的 token。
 
-When the model exposes temperature (温度), that setting changes how concentrated token sampling is. It does not establish whether the result is correct. [How should an application choose decoding settings?](#How%20should%20an%20application%20choose%20decoding%20settings?) follows this choice through task-specific evaluation. The numerical steps behind the model call can be inspected below, or read in sequence in the model chapter after this service run finishes.
+如果模型提供 temperature (温度) 设置，它会改变 token 采样分布的集中程度，但不能证明结果正确。[应用应如何选择解码设置？](#%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E8%A7%A3%E7%A0%81%E8%AE%BE%E7%BD%AE%EF%BC%9F) 会通过特定任务的评估来分析这个选择。下方可以查看模型调用背后的数值步骤，也可以在本次服务运行结束后，按顺序阅读模型章节。
 
-> [!example]- Inside this model call — a small tensor example
-> **Turn the input into token IDs and vectors**
+> [!example]- 本次模型调用的内部过程：一个小型 tensor (张量) 示例
+> **将输入转换为 token ID 和 vector**
 >
-> The inference service formats the messages and tool definition for the model. A tokenizer converts that formatted input into integer IDs. For a concrete example, encoding just `Why did build 42 fail?` with `tiktoken 0.12.0`, using `cl100k_base`, gives the following pieces and IDs.
+> inference service (推理服务) 会为模型格式化消息和工具定义。tokenizer 会把格式化后的输入转换为整数 ID。具体来说，使用 `tiktoken 0.12.0` 和 `cl100k_base` 编码 `Why did build 42 fail?`，会得到以下片段和 ID。
 >
-> | Token pieces | Token IDs |
+> | Token 片段 | Token ID |
 > | --- | --- |
 > | `"Why", " did", " build", " ", "42", " fail", "?"` | `10445, 1550, 1977, 220, 2983, 3775, 30` |
 >
-> This tokenizer applies byte pair encoding (字节对编码), or BPE, to byte sequences, repeatedly merging adjacent pieces according to learned merge priorities. A piece can include a leading space. The full model input also contains the instructions, tool description, and formatting markers. Let `T` be the length of that entire sequence. [How token boundaries are chosen](#How%20does%20the%20tokenizer%20choose%20token%20boundaries?)
+> 这个 tokenizer 会对字节序列应用 byte pair encoding (字节对编码)，简称 BPE：它按照学到的合并优先级，反复合并相邻片段。一个片段可能以空格开头。完整模型输入还包含指令、工具说明和格式标记。令 `T` 表示整个序列的长度。[token 边界是如何确定的](#%E5%88%86%E8%AF%8D%E5%99%A8%E5%A6%82%E4%BD%95%E5%88%92%E5%88%86%E8%AF%8D%E5%85%83%E8%BE%B9%E7%95%8C%EF%BC%9F)
 >
-> An embedding table maps each ID to a learned vector. With vocabulary size `N` and a deliberately small model width of `8`, the table has shape `N × 8`. ID `2983`, for example, selects row `2983`. Looking up every ID produces a `T × 8` hidden state, with one row per position. Later layers update these rows using the surrounding context. Each of the eight coordinates is a learned feature value, not a labeled slot for a particular word meaning.
+> embedding table 会为每个 ID 查找一个学到的 vector。设词表大小为 `N`，并将模型宽度刻意设为较小的 `8`，那么该表的形状为 `N × 8`。例如，ID `2983` 会选中索引为 `2983` 的行。查找全部 ID 后，就会得到形状为 `T × 8` 的 hidden state，每个位置占一行。后续层会结合上下文更新这些行。每行的八个坐标都是学到的特征值，并非为某个词义预先标注的槽位。
 >
-> **Reminder — Reading a shape such as `T × 8`**
-> `T` counts token positions; `8` counts features per position. One row is a vector, an ordered list of eight numbers. Transforming this into `T × 4` keeps the same positions and computes four new features for each one.
+> **提醒：如何阅读 `T × 8` 这样的形状**
+> `T` 表示 token 位置数，`8` 表示每个位置的特征数。一行是一个 vector，也就是由八个数字组成的有序列表。将它变成 `T × 4`，表示保留相同的位置，并为每个位置计算四个新特征。
 >
-> **Let each position gather relevant information**
+> **让每个位置收集相关信息**
 >
-> Attention lets a position gather information from other visible positions. In this example, each of two attention heads (注意力头) takes the normalized `T × 8` state and uses three learned `8 × 4` projection matrices to produce Query (查询), Key (键), and Value (值), abbreviated Q, K, and V. Each resulting matrix has shape `T × 4`. The normalization rescales each row before projection, keeping its magnitude controlled while preserving its shape.
+> attention 让一个位置能够从其他可见位置收集信息。本例中的两个 attention head (注意力头) 各自接收经过 normalization (归一化) 的 `T × 8` 状态，并用三个学到的 `8 × 4` 投影矩阵生成 Query (查询)、Key (键) 和 Value (值)，简称 Q、K、V。每个结果矩阵的形状都是 `T × 4`。normalization 会在投影前缩放每一行，控制其数值大小，同时保持形状不变。
 >
-> **Reminder — What multiplication means here**
-> A dot product (点积) multiplies corresponding coordinates and adds them, such as `[2, 3] · [4, 5] = 23`. Multiplying one width-`8` row by an `8 × 4` matrix computes one dot product per weight column, yielding four numbers. Each learned column defines a different weighted combination of the row's features.
+> **提醒：这里的矩阵乘法意味着什么**
+> dot product (点积) 会将对应坐标相乘后求和，例如 `[2, 3] · [4, 5] = 23`。将一行宽度为 `8` 的 vector 乘以一个 `8 × 4` 矩阵，相当于对权重矩阵的每一列分别计算一个 dot product，最终得到四个数。每一列学到的权重都定义了对输入特征的不同加权组合。
 >
-> With rotary position embedding (旋转位置编码), or RoPE, Q and K are first rotated according to position. For one position, its Q is compared with each position's K by taking their dot product and dividing by `√4`. A causal mask (因果掩码) excludes positions to the right of the query. Softmax exponentiates those scores and divides each result by their sum. For scores `[1, 0]`, it gives approximately `[0.731, 0.269]`. The weights sum to one and determine how much each visible V contributes to the result. Here, comparing Q with K gives a relevance score for a pair of positions; it is a different use of the dot product from projecting features with a learned weight matrix. [The QKV calculation](#How%20do%20Q,%20K,%20and%20V%20produce%20the%20attention%20update?)
+> 使用 rotary position embedding (旋转位置编码)，简称 RoPE 时，Q 和 K 会先按照位置旋转。对于一个位置，用它的 Q 与各位置的 K 分别计算 dot product，再除以 `√4`。causal mask (因果掩码) 会排除位于当前查询位置右侧的位置。softmax 会对这些分数取指数，再用每个结果除以它们的总和。分数为 `[1, 0]` 时，结果约为 `[0.731, 0.269]`。这些权重之和为一，并决定各个可见 V 对结果的贡献比例。这里用 Q 与 K 比较得到的是一对位置之间的相关性分数；这与通过学到的权重矩阵投影特征时使用的 dot product 不同。[QKV 的计算过程](#Q%E3%80%81K%E3%80%81V%20%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9B%B4%E6%96%B0%EF%BC%9F)
 >
-> Take the row for the question mark in the user message. For this arithmetic illustration, keep only `build` and `42`, and assign them weights of `0.25` and `0.75`. If their V vectors are `(1, 0, 0, 0)` and `(0, 2, 0, 0)`, the result is `(0.25, 1.5, 0, 0)`.
+> 下面用一组独立的权重演示 V 的加权求和，不沿用上面的 softmax 数值。取用户消息中问号所在的那一行，只保留 `build` 和 `42`，并分别赋予权重 `0.25` 和 `0.75`。如果它们的 V vector 分别是 `(1, 0, 0, 0)` 和 `(0, 2, 0, 0)`，加权结果就是 `(0.25, 1.5, 0, 0)`。
 >
-> Each head performs its own calculation. At each position, their two width-`4` results are concatenated into a width-`8` vector, then mixed by an `8 × 8` output projection. A residual connection (残差连接) adds this update to the input state, coordinate by coordinate. For example, `[1, 2]` plus an update `[0.1, −0.2]` becomes `[1.1, 1.8]`. Matching the width lets each layer refine the existing representation. The result still has shape `T × 8`, now with information gathered across positions.
+> 每个 head 都会单独计算。在每个位置，将两个宽度为 `4` 的结果拼接成宽度为 `8` 的 vector，再通过一个 `8 × 8` 的输出投影进行混合。residual connection (残差连接) 会逐坐标将这个更新加到输入状态上。例如，`[1, 2]` 加上更新量 `[0.1, −0.2]`，结果是 `[1.1, 1.8]`。宽度相同，才能让每一层细化已有表示。结果仍为 `T × 8`，但现在已汇集了不同位置的信息。
 >
-> **Transform the information within each position**
+> **在每个位置内变换信息**
 >
-> A feed-forward network, or FFN, then transforms each row independently using shared learned weights. Attention has brought contextual information into a row. The FFN can combine those features nonlinearly and write an update back into that row.
+> 接着，FFN 使用共享的学到的权重，独立变换每一行。attention 已将上下文信息带入某一行；FFN 可以用非线性方式组合这些特征，再将更新写回该行。
 >
-> Using SwiGLU in our small model, two `8 × 16` projections of the normalized state produce candidate values and gate inputs. SiLU smoothly scales a gate input `x` by `1 / (1 + exp(−x))`. The result multiplies the corresponding candidate coordinate. This element-wise multiplication (逐元素乘法) keeps the `T × 16` shape, without summing across coordinates as a dot product does. For the question-mark row, suppose one candidate channel is `3` and its gate input is `1`. SiLU turns `1` into approximately `0.73`, so that channel becomes approximately `2.19`. A `16 × 8` down projection returns the result to the model width, and a residual connection adds it to the state produced by attention. The gate depends on the current row, allowing the same learned weights to produce different updates for different contexts. Those gates are continuous values, so “gate” here does not mean a binary switch. [FFNs and stacked layers](#What%20does%20the%20FFN%20add,%20and%20how%20do%20blocks%20stack?)
+> 在这个小型模型中使用 SwiGLU 时，两个 `8 × 16` 投影会对 normalization 后的状态进行投影，分别产生候选值和门控输入。SiLU 会按照 `1 / (1 + exp(−x))` 平滑缩放门控输入 `x`。所得结果与对应的候选坐标相乘。这种 element-wise multiplication (逐元素乘法) 会保持 `T × 16` 的形状，不像 dot product 那样对坐标求和。假设问号所在行的一个候选通道为 `3`，门控输入为 `1`。SiLU 会将 `1` 转换为约 `0.73`，因此该通道的结果约为 `2.19`。接着，`16 × 8` 的降维投影会将结果还原到模型宽度，再通过 residual connection 将它加到 attention 生成的状态上。门控取决于当前行，因此相同的学到的权重会根据不同上下文产生不同更新。门控值是连续的，所以这里的“门”并不表示二元开关。[FFN 如何补充信息，以及层如何堆叠](#FFN%20%E5%A2%9E%E5%8A%A0%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%9A%E4%B8%AA%E5%9D%97%E5%A6%82%E4%BD%95%E5%A0%86%E5%8F%A0%EF%BC%9F)
 >
-> One Transformer layer combines these attention and FFN operations with normalization and residual connections. Each layer passes its `T × 8` output to the next layer, which has its own learned parameters. The diagram tracks the shapes through one layer of our example, including normalization before each sublayer.
+> 一个 Transformer 层会将 attention 和 FFN 操作与 normalization、residual connection 组合起来。每一层会把形状为 `T × 8` 的输出传给下一层，下一层有自己学到的参数。下图沿着本例的一层追踪形状变化，包括每个子层之前的 normalization。
 >
 > ~~~mermaid
 > flowchart TD
->     X["Layer input<br/>T × 8, one row per token"]
->     Norm["Normalize for attention<br/>T × 8"]
->     H1["Head 1<br/>Q, K, V each T × 4<br/>Weighted output T × 4"]
->     H2["Head 2<br/>Q, K, V each T × 4<br/>Weighted output T × 4"]
->     A["Concatenate, then project<br/>T × 8"]
->     R["Add attention update to layer input<br/>T × 8"]
->     F["Normalize, then SwiGLU FFN<br/>Two T × 16 branches<br/>Gate, multiply, project to T × 8"]
->     Y["Add FFN update<br/>T × 8 for the next layer"]
+>     X["层输入<br/>T × 8，每个 token 一行"]
+>     Norm["为 attention 归一化<br/>T × 8"]
+>     H1["attention head 1<br/>Q、K、V 均为 T × 4<br/>加权输出 T × 4"]
+>     H2["attention head 2<br/>Q、K、V 均为 T × 4<br/>加权输出 T × 4"]
+>     A["拼接后投影<br/>T × 8"]
+>     R["将 attention 更新加到层输入<br/>T × 8"]
+>     F["经过 normalization 后执行 SwiGLU FFN<br/>两个 T × 16 分支<br/>门控、相乘，再投影为 T × 8"]
+>     Y["加入 FFN 更新<br/>T × 8，传给下一层"]
 >     X --> Norm
 >     Norm --> H1 & H2
 >     H1 & H2 --> A --> R
->     X -->|Residual| R
+>     X -->|残差 Residual| R
 >     R --> F --> Y
->     R -->|Residual| Y
+>     R -->|残差 Residual| Y
 > ~~~
 >
-> **Convert the final state into output tokens**
+> **将最终状态转换为输出 token**
 >
-> Processing the initial input is called prefill (预填充). After the last layer and final normalization in this example, the language model head, usually called the LM head, uses the vector at the last position of the complete formatted input to predict the first new token. Causal attention allows that position to attend to the whole supplied prefix. It may be an assistant-start marker added by the input template.
+> 处理初始输入的过程称为 prefill (预填充)。在本例中，经过最后一层和最终 normalization 后，LM head 会取完整格式化输入最后一个位置的 vector，预测第一个新 token。causal attention (因果注意力) 允许这个位置关注整个已提供的前缀；该位置也可能是输入模板添加的 assistant 起始标记。
 >
-> The LM head projects that width-`8` vector through an `8 × N` matrix to obtain logits (未归一化分数), one score for each vocabulary entry. Decoding selects an ID, either by taking the highest score or by sampling from a probability distribution derived from the scores. For models that expose temperature, a lower value concentrates that distribution and a higher value spreads it out. These probabilities describe token selection, not the truth of the eventual answer. [How should an application choose decoding settings?](#How%20should%20an%20application%20choose%20decoding%20settings?) connects this mechanism to a controlled comparison of agent behavior. The selected ID is appended to the sequence, and the model predicts the next one from the new position.
+> LM head 会将这个宽度为 `8` 的 vector 乘以一个 `8 × N` 矩阵，得到 logits (未归一化分数)，每个词表条目对应一个分数。decoding 会选择一个 ID：可以取分数最高的 ID，也可以根据这些分数构造出的概率分布进行采样。对于提供 temperature 设置的模型，较低的值会让分布更集中，较高的值则会让它更分散。这些概率描述的是 token 的选择过程，并不表示最终回答的真实性。[应用应如何选择解码设置？](#%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E8%A7%A3%E7%A0%81%E8%AE%BE%E7%BD%AE%EF%BC%9F) 会将这个机制与智能体行为的受控对比联系起来。选出的 ID 会被追加到序列中，模型再从新位置开始预测下一个 ID。
 >
-> A KV cache retains K and V for previous positions in each layer. At the new position, the model computes Q, K, and V, then uses that Q to attend to both the cached K/V and the new position's own K/V. It appends the new K/V to the cache for subsequent steps. Previous positions' Q vectors have already served their calculations and are not needed for this step. [Decoding and KV cache](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F)
+> KV cache 会在每一层保留先前位置的 K 和 V。在新位置，模型计算 Q、K、V，再用这个 Q 关注缓存中的 K/V 和新位置自己的 K/V。随后，新位置的 K/V 会追加到缓存中，供后续步骤使用。先前位置的 Q vector 已经用于各自的计算，本步骤不需要它们。[解码与 KV cache](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F)
 
-For our build question, this generation produces the tool name and arguments in the model's tool-call format. The inference service interprets the generated tokens according to the model's tool-call protocol and exposes the completed tool name and arguments as a structured API item. In a simplified notation, the application receives `tool_call(c1, read_build_log, {build_id: 42})`. The ID `c1` will associate the tool's result with this particular request. This correspondence matters when there are several pending calls, so the model can see which observation belongs to which request. The harness passes the proposed call to validation, taking the tool branch in the overview. Execution follows the checks in the next step.
+针对构建问题，这次生成会按照模型的 tool-call 格式 (工具调用格式) 产生工具名和参数。inference service 会根据模型的 tool-call protocol (工具调用协议) 解释生成的 token，并将完整的工具名和参数作为结构化 API 条目提供给应用。用简化记法表示，应用会收到 `tool_call(c1, read_build_log, {build_id: 42})`。ID `c1` 会把工具结果与这次特定请求关联起来。当有多个待处理调用时，这种对应关系很重要，模型才能知道哪条观察结果属于哪个请求。harness 会将拟议的调用交给校验流程，从而进入总览图中的工具分支。接下来的步骤会说明执行前的检查。
 
-### 3. Execute the request and retrieve the log
+### 3. 执行请求并读取日志
 
-The application checks that `read_build_log` is available, that `build_id` has the required integer type, and that the caller may read build `42`. Argument validation establishes that the request can be interpreted. Authorization (授权) establishes which resource the caller may access. The application reads the log only after these checks succeed. If the tool instead changed external state, such as restarting a build, retries would also need to account for whether the previous attempt already took effect. [Tool contracts and authorization](#10.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
+应用会检查 `read_build_log` 是否可用、`build_id` 是否为所需的整数类型，以及调用者是否有权读取构建 `42`。参数校验确保请求可以被正确解释。authorization (授权) 则确定调用者可以访问哪个资源。只有这些检查全部通过后，应用才会读取日志。如果工具会改变外部状态，例如重启构建，那么重试时还需要考虑前一次尝试是否已经生效。[工具契约与授权](#10.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
 
-The retrieved result contains the evidence the model was missing.
+取回的结果包含模型此前缺少的证据。
 
-| Field in the result for `c1` | Value from build `42` |
+| `c1` 的结果字段 | 构建 `42` 的值 |
 | --- | --- |
-| Failed step | `unit-tests` |
-| Failed test | `reject_empty_name` |
-| Failed assertion | A request with an empty name should return HTTP `400`, but returned `200`. |
-| Process exit status | `1` |
+| 失败步骤 | `unit-tests` |
+| 失败测试 | `reject_empty_name` |
+| 失败断言 | 空名称请求应返回 HTTP `400`，但实际返回了 `200`。 |
+| 进程退出状态 | `1` |
 
-If authorization fails, the application can return a failure result for `c1`, allowing the next model call to explain that the evidence is unavailable. Here the tool retrieves one known log by ID. When a question requires finding relevant passages across many documents, the application can retrieve them and supply them to the model to generate an answer. This retrieval-and-generation process is called retrieval-augmented generation (检索增强生成), or RAG. [Retrieving and grounding an answer](#7.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)
+如果 authorization 失败，应用可以为 `c1` 返回失败结果，让模型在下一次调用时说明无法获取证据。本例中，工具按照 ID 查询一条已知日志。如果问题需要在大量文档中查找相关段落，应用可以先检索这些段落，再提供给模型生成回答。这个检索与生成过程称为 retrieval-augmented generation (检索增强生成)，简称 RAG。[如何检索证据并据此生成回答](#7.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)
 
-### 4. Let the model use the retrieved evidence
+### 4. 让模型利用检索到的证据
 
-The application now makes another model call. Alongside the original question and instructions, it includes the model's `tool_call(c1, …)` and the matching `tool_result(c1, …)`. The call records what was requested. The result supplies what the tool actually observed.
+应用现在发起另一次模型调用。除了原始问题和指令，还会包含模型的 `tool_call(c1, …)` 和与之匹配的 `tool_result(c1, …)`。调用记录了模型请求的内容，结果则提供工具实际观察到的信息。
 
-This second input contains `unit-tests`, `reject_empty_name`, and the expected `400` versus observed `200`. Those details are formatted and encoded as part of the model's context. The same inference mechanism processes the expanded input using the same trained weights. The new evidence changes what the model can base its answer on. It does not require retraining the model. The weights are persistent learned parameters; the input and hidden states are data for this run. [How training changes model parameters](#How%20does%20next-token%20training%20update%20these%20parameters?) follows the separate learning process.
+第二次输入包含 `unit-tests`、`reject_empty_name`，以及预期的 `400` 与实际观察到的 `200`。这些细节会被格式化并编码为模型 context 的一部分。相同的推理机制会使用相同的训练权重处理扩展后的输入。新证据改变了模型可以据以回答的信息，不需要重新训练模型。权重是持久保存的学到的参数；输入和 hidden state 则是本次运行的数据。[训练如何改变模型参数](#%E4%B8%8B%E4%B8%80%E4%B8%AA%E8%AF%8D%E5%85%83%E8%AE%AD%E7%BB%83%E5%A6%82%E4%BD%95%E6%9B%B4%E6%96%B0%E8%BF%99%E4%BA%9B%E5%8F%82%E6%95%B0%EF%BC%9F) 会介绍独立的学习过程。
 
-If the evidence leaves a gap, the model can request another tool call, and the application repeats validation, execution, and result collection within its configured limits on calls, elapsed time, and cost. If it reaches a limit, it should return an incomplete or failed outcome with the evidence obtained so far. In this case the log is enough to describe the observed failure, so the model generates an explanation. Determining the underlying code defect would require further evidence, such as the implementation and the intended behavior. [Actions, observations, and the next decision](#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF)
+如果证据仍有缺口，模型可以再请求一次工具调用；应用会在配置的调用次数、耗时和成本限制内，重复执行校验、工具操作和结果收集。如果达到限制，应用应根据目前取得的证据，返回未完成或失败的结果。本例中的日志足以说明观察到的失败，因此模型会生成解释。要判断底层代码缺陷，还需要更多证据，例如具体实现和预期行为。[行动、观察与下一步决策](#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF)
 
-### 5. Return the explanation and complete the run
+### 5. 返回说明并完成本次运行
 
-The answer can now state what the log establishes.
+现在，回答可以陈述日志证实的内容。
 
-> Build 42 failed at the `unit-tests` step. The `reject_empty_name` test expected HTTP `400` for a request with an empty name, but received `200`. The test process exited with status `1`. To identify the underlying cause, check the request-validation logic against the test's expected behavior.
+> 构建 42 在 `unit-tests` 步骤失败。`reject_empty_name` 测试预期空名称请求返回 HTTP `400`，但实际收到 `200`。测试进程以状态 `1` 退出。若要确认底层原因，请对照测试的预期行为检查请求校验逻辑。
 
-The first model call ended with a tool request, leaving the application with work to do. The second ends normally with an answer. In this example, the application saves that answer and marks the run complete before returning the result to the caller. If it streams text as it is generated, the application must still track whether generation ultimately completed or failed. [Run state and recovery](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)
+第一次模型调用以工具请求结束，因此应用还需要继续工作。第二次调用则正常地以回答结束。在本例中，应用会先保存回答并将本次运行标记为完成，再把结果返回给调用者。如果应用在生成过程中流式传输文本，仍须跟踪生成最终是成功完成还是失败。[运行状态与恢复](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)
 
-The distinction between an observed failed assertion and its underlying cause also gives us an evaluation target. A changed prompt or decoding setting should preserve the log's actual values and avoid inventing an explanation for the defect. Include missing or inaccessible logs when checking that behavior. [How can you tell whether an AI system meets its task contract?](#12.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) develops those acceptance criteria and comparisons.
+区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](#12.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) 会进一步说明验收标准和对比方法。
 
-The service run is now complete. To follow the calculation inside either model call in more depth, continue with [how a language model turns a prompt into text](#2.%20How%20does%20a%20language%20model%20turn%20a%20prompt%20into%20text?). That chapter develops the mathematics, training, and generation choices in order.
+本次服务运行到此结束。若想进一步了解任一次模型调用中的计算过程，可以继续阅读[语言模型如何将提示转换为文本](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)。该章节会依次展开数学原理、训练过程和生成选择。
 
-> [!info]- Sources
-> The fictional build-log scenario and small numerical examples illustrate the mechanisms supported below.
+> [!info]- 来源
+> 虚构的构建日志场景和小型数值示例用于说明下列来源支持的机制。
 >
-> - **Attention and position.** [Attention Is All You Need, v7, §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2) supports scaled attention and head concatenation. [RoFormer, v5, §3.2](https://arxiv.org/html/2104.09864v5#S3.SS2) explains the rotary position mechanism. The layer example here uses pre-normalization and a decoder-only layout.
-> - **FFN gating and the layer layout.** [GLU Variants Improve Transformer, 2020, §2](https://arxiv.org/html/2002.05202#S2) defines SwiGLU. The [Llama 3 reference implementation](https://github.com/meta-llama/llama-models/blob/main/models/llama3/model.py) shows pre-normalization, residual updates, and a gated FFN.
-> - **Input formatting and generation.** [Transformers chat templates](https://huggingface.co/docs/transformers/chat_templating#add_generation_prompt) explains generation markers; its [cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) describes reuse of previous K/V. The token pieces were reproduced with [tiktoken 0.12.0](https://github.com/openai/tiktoken/tree/0.12.0), using `cl100k_base`.
-> - **Structured requests and the application loop.** The [OpenAI function-calling guide](https://developers.openai.com/api/docs/guides/function-calling#the-tool-calling-flow) and [Claude tool-use guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works#the-agentic-loop-client-tools) describe tool definitions, model requests, application execution, and feeding results back. The `tool_call` and `tool_result` notation here is illustrative rather than an SDK schema. Run budgets and the proposed build-log evaluation are engineering choices for this example.
+> - **Attention 与位置。** [Attention Is All You Need, v7, §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2) 支持 scaled attention 与多个 head 的拼接。[RoFormer, v5, §3.2](https://arxiv.org/html/2104.09864v5#S3.SS2) 说明了 rotary position mechanism。本章的层示例采用 pre-normalization (前置归一化) 和仅解码器布局。
+> - **FFN 门控与层布局。** [GLU Variants Improve Transformer, 2020, §2](https://arxiv.org/html/2002.05202#S2) 定义了 SwiGLU。[Llama 3 参考实现](https://github.com/meta-llama/llama-models/blob/main/models/llama3/model.py) 展示了 pre-normalization、residual update (残差更新) 和门控 FFN。
+> - **输入格式化与生成。** [Transformers chat templates](https://huggingface.co/docs/transformers/chat_templating#add_generation_prompt) 说明了生成标记；其[缓存说明](https://huggingface.co/docs/transformers/main/en/cache_explanation) 介绍了如何复用先前的 K/V。token 片段使用 [tiktoken 0.12.0](https://github.com/openai/tiktoken/tree/0.12.0) 和 `cl100k_base` 重现。
+> - **结构化请求与应用循环。** [OpenAI function-calling guide](https://developers.openai.com/api/docs/guides/function-calling#the-tool-calling-flow) 和 [Claude tool-use guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works#the-agentic-loop-client-tools) 介绍了工具定义、模型请求、应用执行以及将结果反馈给模型的过程。此处的 `tool_call` 和 `tool_result` 记法仅供说明，并非 SDK schema。运行预算和针对构建日志提出的评估方式是本例中的工程选择。
 >
-> Browse related papers in the [AI literature collection](../ai-literature-index.md).
-## 2. How does a language model turn a prompt into text?
+> 查看 [AI 好文集](../ai-literature-index.md) 中的相关论文。
+## 2. 语言模型如何把提示词变成文本？
 
-### Following a short input through the model
+### 沿着一段短输入追踪模型处理过程
 
-Imagine the build-log assistant has prepared a message for its model. The application can supply a question, tool descriptions, or retrieved logs, but the model needs to turn that input into numbers before it can generate anything. This chapter follows that numerical path, then explains how training produced the parameters used along the way. The surrounding application loop is covered in [how an AI service turns one message into a complete answer](#1.%20How%20does%20an%20AI%20service%20turn%20one%20message%20into%20a%20complete%20answer?).
+想象一下，构建日志助手已经为模型准备好一条消息。应用可以提供问题、工具说明或检索到的日志，但模型必须先把这些输入转换成数字，之后才能生成内容。本章沿着这条数值处理路径展开，再解释训练如何产生处理过程中使用的 parameters (参数)。应用外围的执行循环见[AI 服务如何把一条消息转化为完整回答](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)。
 
-We will use a tiny decoder-only Transformer (仅解码器 Transformer) so that its shapes and arithmetic fit on the page. It has a model width of `8`, two attention heads, and a gated feed-forward network. We first build a toy tokenizer for `ababca`, then carry its three token positions through the model. The text and numbers are teaching examples; they do not demonstrate a trained model understanding that string. For a real tokenizer comparison, we also inspect an ordinary English sentence.
+我们用一个小型 decoder-only Transformer (仅解码器 Transformer) 来说明，让张量形状和算术都能在页面上看清。它的 model width (模型宽度) 为 `8`，有两个 attention head (注意力头)，并使用 gated feed-forward network (门控前馈网络，FFN)。我们先为 `ababca` 构造一个玩具 tokenizer (分词器)，再让它的三个 token (词元) 位置依次经过模型。这里的文本和数字只是教学示例，并不能证明训练好的模型理解了这个字符串。为了对照真实 tokenizer，我们还会查看一个普通的英文句子。
 
 ~~~mermaid
 flowchart TD
-    Text["Format text, then tokenize<br/>Example: ababca → 3 IDs"] --> E["Look up embeddings<br/>3 positions × 8 features"]
-    subgraph Pass["One pass through all Transformer layers"]
-        A["Attention<br/>Gather information across visible positions"] --> F["FFN<br/>Transform features within each position"]
-        F --> More{"More layers?"}
-        More -->|Yes, next layer's weights| A
+    Text["整理文本并分词<br/>示例：ababca → 3 个 ID"] --> E["查找嵌入<br/>3 个位置 × 8 个特征"]
+    subgraph Pass["依次通过全部 Transformer 层"]
+        A["Attention<br/>汇集可见位置的信息"] --> F["FFN<br/>变换各位置内部的特征"]
+        F --> More{"还有下一层吗？"}
+        More -->|有，使用下一层的权重| A
     end
-    E -->|Start at layer 1| A
-    More -->|No| L["Final normalization and LM head<br/>Score vocabulary from the last position"]
-    L --> D["Select one token<br/>Append its ID to the prefix"]
-    D --> Stop{"Stop condition?"}
-    Stop -->|No| Next["Embed the new token"]
-    Next -->|Restart at layer 1<br/>Reuse per-layer cached K/V| A
-    Stop -->|Yes| Out["Return the generated sequence<br/>Decode token bytes into text"]
+    E -->|从第 1 层开始| A
+    More -->|没有| L["最终归一化和 LM head<br/>根据最后一个位置为词表打分"]
+    L --> D["选出一个词元<br/>将其 ID 添加到前缀"]
+    D --> Stop{"满足停止条件吗？"}
+    Stop -->|没有| Next["嵌入新词元"]
+    Next -->|从第 1 层重新开始<br/>复用各层缓存的 K/V| A
+    Stop -->|满足| Out["返回生成的序列<br/>把词元字节解码为文本"]
 ~~~
 
-Text can also be decoded incrementally while generation continues. The important loop is that each selected token becomes part of the input for predicting the next one.
+生成还在继续时，也可以逐步解码文本。关键的循环在于：每次选出的词元都会成为下一次预测的输入之一。
 
-### How does the tokenizer choose token boundaries?
+### 分词器如何划分词元边界？
 
-A token (词元) is an entry in a particular vocabulary. It may represent punctuation, a byte, part of a word, a whole word, or a piece with a leading space. A tokenizer (分词器) maps text to these entries' integer IDs. The IDs identify entries; a larger ID does not mean a stronger or more important word.
+token 是特定词表中的一个条目。它可以表示标点、一个字节、部分单词、整个单词，也可以是带前导空格的一段文本。tokenizer 把文本映射为这些条目的整数 ID。ID 用来标识条目；ID 数字更大，并不表示对应的词更重要或更有力量。
 
-For byte-level byte pair encoding (字节级字节对编码), or BPE, training starts from byte-sized pieces and repeatedly merges frequent adjacent pairs. In a common implementation, a regular expression first divides the text into segments, and BPE operates within those segments. Encoding new text uses the already learned merge priorities.
+在 byte-level byte pair encoding (字节级字节对编码，BPE) 中，训练从单字节片段开始，反复合并相邻且频繁出现的片段对。常见实现会先用正则表达式把文本分成若干段，再在每段内部执行 BPE。编码新文本时，会使用已经学到的合并优先级。
 
-Suppose the training segments are `abab`, `ab`, and `ac`. Begin with 256 single-byte entries, numbered `0` through `255`. The pair `a+b` occurs three times, so the first merge creates `ab`, with ID `256`. The segments become `[ab, ab]`, `[ab]`, and `[a, c]`. Next, `ab+ab` and `a+c` each occur once. Let our toy tie-breaking rule choose `ab+ab`, creating `abab` with ID `257`.
+假设训练片段是 `abab`、`ab` 和 `ac`。先建立 256 个单字节条目，编号为 `0` 到 `255`。`a+b` 这一对出现三次，因此第一次合并会创建 `ab`，ID 为 `256`。此时各段变为 `[ab, ab]`、`[ab]` 和 `[a, c]`。接下来，`ab+ab` 和 `a+c` 都各出现一次。假定这个玩具示例的平局规则选择 `ab+ab`，于是创建 ID 为 `257` 的 `abab`。
 
-| Step | What happens to the previously unseen input `ababca` |
+| 步骤 | 对此前未见的输入 `ababca` 所做的处理 |
 | --- | --- |
-| Start with bytes | `[a, b, a, b, c, a]` |
-| Apply the highest-priority available merge | `[ab, a, b, c, a]`, then `[ab, ab, c, a]` |
-| Apply the next merge | `[abab, c, a]` |
-| Look up the three IDs | `[257, 99, 97]` |
+| 从字节开始 | `[a, b, a, b, c, a]` |
+| 应用优先级最高的可用合并 | `[ab, a, b, c, a]`，然后是 `[ab, ab, c, a]` |
+| 应用下一次合并 | `[abab, c, a]` |
+| 查找这三个 ID | `[257, 99, 97]` |
 
-For a real example, `tiktoken 0.12.0` with `cl100k_base` encodes `The transformer architecture revolutionized NLP.` as eight pieces, `["The", " transformer", " architecture", " revolution", "ized", " N", "LP", "."]`, with IDs `[791, 43678, 18112, 14110, 1534, 452, 12852, 13]`. Spaces belong to some pieces. Another tokenizer can segment the same sentence differently.
+看一个真实例子：`tiktoken 0.12.0` 的 `cl100k_base` 会把 `The transformer architecture revolutionized NLP.` 编为八个片段：`["The", " transformer", " architecture", " revolution", "ized", " N", "LP", "."]`，对应的 ID 是 `[791, 43678, 18112, 14110, 1534, 452, 12852, 13]`。有些片段会包含空格。同一句子经由其他 tokenizer 处理时，切分结果可能不同。
 
-> [!tip] A token boundary need not be a character boundary
-> A Unicode character can occupy several UTF-8 bytes. Byte-level token pieces can split those bytes, so decoding one token at a time as a complete string can produce broken characters. Incremental text decoding keeps incomplete bytes until the rest arrive.
+> [!tip] 词元边界不一定是字符边界
+> 一个 Unicode 字符可能由多个 UTF-8 字节组成。字节级词元片段可能会拆开这些字节，因此逐个把词元当作完整字符串解码，可能得到损坏的字符。增量文本解码会暂存尚未完整的字节，直到后续字节到达。
 
-This matters when budgeting a request. Count the input using the deployed model's tokenizer and request format, including role markers and tool definitions. If the full conversation is too large, the next decision is [which information each model call should retain](#6.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F), rather than simply counting words. BPE is one tokenizer family, not a requirement of the Transformer computation below.
+这会影响请求的 token 预算。统计输入时，要使用已部署模型的 tokenizer，并计入请求格式中的角色标记和工具定义。如果完整对话太长，接下来要决定的是[每次模型调用应保留哪些信息](#6.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，而不是简单地数词。BPE 只是 tokenizer 的一种类型，并非后续 Transformer 计算的必需条件。
 
-### What enters the first block?
+### 第一个 Transformer 块接收什么？
 
-An embedding table (嵌入表) contains one learned vector for each vocabulary entry. Let vocabulary size be `N`, model width be `d`, and input length be `T`. For our toy vocabulary, `N = 258`, `d = 8`, and `T = 3`. The table `E` has shape `258 × 8`.
+embedding table (嵌入表) 为词表中的每个条目保存一个已学习的 vector (向量)。设词表大小为 `N`、模型宽度为 `d`、输入长度为 `T`。在这个玩具模型中，`N = 258`、`d = 8`、`T = 3`，所以表 `E` 的形状是 `258 × 8`。
 
-ID `257` selects row `257` of `E`, and IDs `99` and `97` select their rows. Stacking the retrieved rows gives the initial hidden state (隐层状态), `X₀`, with shape `3 × 8`. Position one now holds a vector for `abab`, position two for `c`, and position three for `a`.
+ID `257` 选出 `E` 中索引为 `257` 的行，ID `99` 和 `97` 则选出相应的行。把取出的行堆叠起来，就得到初始 hidden state (隐藏状态)`X₀`，形状为 `3 × 8`。此时第一个位置是 `abab` 的向量，第二个位置是 `c` 的向量，第三个位置是 `a` 的向量。
 
-> [!tip] Read the axes before reading the numbers
-> In `T × d`, rows are token positions and columns are learned feature coordinates. One row is a vector (向量), an ordered list of `d` numbers. A column tracks one coordinate across positions. Adding a batch axis would group several such sequences. A feature coordinate does not come with a fixed human-readable label such as “basketball.”
+> [!tip] 读数之前先看清各轴
+> 在 `T × d` 中，行表示词元位置，列表示已学习的特征坐标。一行是一个 vector，也就是由 `d` 个数字按顺序组成的列表。一列则表示某个坐标在各个位置上的取值。如果添加一个 batch axis (批次维)，它就能把多个这样的序列放在一起。某个特征坐标并没有固定、可读作“篮球”之类的含义。
 
-The same ID selects the same initial row, but later layers change its representation according to position and context. Mathematically, lookup is equivalent to multiplying a one-hot vector (独热向量), with a single `1` at the selected ID and zeros elsewhere, by `E`. An implementation normally retrieves the row directly.
+同一 ID 选出的初始行相同，但后续各层会根据位置和上下文改变它的表示。从数学上看，查表等价于用一个 one-hot vector (独热向量) 乘以 `E`：独热向量在对应 ID 的位置上是 `1`，其余位置都是 `0`。实际实现通常直接取出相应行。
 
-Before an attention sublayer uses these vectors, our model applies normalization (归一化). For example, RMSNorm divides each row by the square root of its mean squared coordinates plus a small stability constant, then applies learned coordinate scales. Ignoring that tiny constant and taking learned scales as one, `[3, 4]` is divided by `√((9+16)/2) ≈ 3.536`, giving approximately `[0.849, 1.131]`. This keeps the numerical scale controlled without changing the row count or width. We call the normalized matrix `U`. Position information will enter through Q and K in the next step.
+attention sublayer (注意力子层) 使用这些向量之前，我们的模型会做 normalization (归一化)。例如，RMSNorm (均方根归一化) 会让每行除以其坐标均方值加上一个很小的稳定常数后所得的平方根，再乘上可学习的坐标缩放值。忽略这个很小的常数，并假定缩放值都为 `1`，`[3, 4]` 除以 `√((9+16)/2) ≈ 3.536` 后约为 `[0.849, 1.131]`。这能控制数值尺度，不会改变行数或列数。我们把归一化后的矩阵记为 `U`。接下来的步骤会在 Q 和 K 中引入位置信息。
 
-### How do Q, K, and V produce the attention update?
+### Q、K、V 如何生成注意力更新？
 
-#### Project each row into Q, K, and V
+#### 将每一行投影为 Q、K、V
 
-Attention (注意力) computes what information each position should gather from visible positions. It derives three representations from the current hidden state. Query (查询), or Q, participates in deciding what to match. Key (键), or K, participates in the matching score. Value (值), or V, supplies the content that will be combined using those scores. These roles describe how the vectors are used in the computation.
+attention (注意力) 计算每个位置应从可见位置汇集哪些信息。它从当前 hidden state 推导出三种表示。query (查询，Q) 参与决定要匹配什么；key (键，K) 参与计算匹配分数；value (值，V) 提供将根据这些分数组合的内容。这些名称描述的是向量在计算中的用途。
 
-Each attention head (注意力头) has learned projections for Q, K, and V. In our example, a head has width `4`. Multiplying the `3 × 8` matrix `U` by that head's `8 × 4` Q matrix produces `3 × 4` Q values. K and V are produced the same way, using their own matrices.
+每个 attention head 都有自己的 Q、K、V projection (投影)。在本例中，每个头的宽度为 `4`。将 `3 × 8` 的矩阵 `U` 乘以该头形状为 `8 × 4` 的查询投影权重，得到形状为 `3 × 4` 的 Q。K 和 V 也以相同方式计算，只是使用各自的矩阵。
 
-> [!tip] What does a matrix product produce?
-> Each output coordinate is a dot product (点积) of an input row and a weight column. For example, `[2, 3] · [4, 5] = 2×4 + 3×5 = 23`. With weight columns `[4, 5]` and `[1, −1]`, the same row becomes `[23, −1]`. Each column defines one weighted combination of the input features. Thus, `3 × 8` times `8 × 4` keeps three positions and produces four features per position. The matching inner dimensions specify which coordinates are multiplied and summed.
+> [!tip] 矩阵乘法会得到什么？
+> 每个输出坐标都是输入行与权重列的 dot product (点积)。例如，`[2, 3] · [4, 5] = 2×4 + 3×5 = 23`。如果权重的两列分别是 `[4, 5]` 和 `[1, −1]`，同一输入行就会变成 `[23, −1]`。每一列定义了输入特征的一种加权组合。因此，`3 × 8` 乘以 `8 × 4` 后仍有三个位置，每个位置产生四个特征。相乘的内侧维度相同，决定了哪些坐标会相乘并求和。
 
-Computing both heads together is convenient. With `Hq = 2` heads and width `dh = 4`, each combined projection matrix has shape `d × (Hq·dh) = 8 × 8`. We compute `Q = UW_Q`, `K = UW_K`, and `V = UW_V`, then split the feature axis into two width-`4` heads. Each head receives its own `3 × 4` Q, K, and V. This notation uses row vectors multiplying weights on the right. A library may store the weight transposed; PyTorch `Linear`, for example, stores output features by input features.
+把两个头一起计算很方便。有 `Hq = 2` 个头、每个头宽度 `dh = 4` 时，每个合并投影矩阵的形状为 `d × (Hq·dh) = 8 × 8`。我们计算 `Q = UW_Q`、`K = UW_K` 和 `V = UW_V`，然后沿特征轴拆分为两个宽度为 `4` 的头。每个头各自得到一个 `3 × 4` 的 Q、K 和 V。这里使用行向量右乘权重的记法。库也可能按转置后的方向存储权重；例如 PyTorch `Linear` 会按输出特征数 × 输入特征数存储权重。
 
-Our model uses rotary position embedding (旋转位置编码), or RoPE. It rotates pairs of Q and K coordinates according to their positions before computing their dot products. The resulting scores can depend on relative position. The shapes remain unchanged.
+模型使用 rotary position embedding (旋转位置编码，RoPE)。它会根据 Q 和 K 所属的位置旋转其中成对的坐标，再计算点积。因此，所得分数可以受相对位置影响，但张量形状不变。
 
-#### Turn pairwise scores into a weighted mixture
+#### 把两两分数转换为加权混合
 
-For a head, compute the score between every query position and every key position.
+对一个头，计算每个 query 位置与每个 key 位置之间的分数。
 
 $$
 S = \frac{QK^\top}{\sqrt{d_h}} + M,\qquad
@@ -257,44 +257,44 @@ P = \operatorname{softmax}_{\mathrm{keys}}(S),\qquad
 Z = PV.
 $$
 
-Here `Kᵀ` denotes the transpose (转置), which swaps K's rows and columns. `Q` is `3 × 4`, while `Kᵀ` is `4 × 3`, so the product is `3 × 3`. Entry `(i, j)` is the dot product of position `i`'s Q and position `j`'s K. Each row now lists one position's scores for all positions. This product compares positions; the earlier `UW_Q` transformed features within each position.
+这里的 `Kᵀ` 表示 K 的 transpose (转置)，也就是交换 K 的行与列。`Q` 的形状是 `3 × 4`，`Kᵀ` 的形状是 `4 × 3`，所以乘积形状为 `3 × 3`。其中 `(i, j)` 项是位置 `i` 的 Q 与位置 `j` 的 K 的点积。现在每一行都列出一个位置对所有位置的分数。这次乘法比较的是各个位置；前面的 `UW_Q` 则是在每个位置内部变换特征。
 
-Dividing by `√dh` controls the score scale as head width grows. Under the motivating approximation of independent, unit-variance coordinates, a sum of `dh` products has variance proportional to `dh`. Scaling helps avoid very large score differences that make softmax concentrate almost entirely on one entry.
+随着头宽增大，除以 `√dh` 会控制分数的尺度。在一个用来解释这一做法的近似假设下，各坐标彼此独立、均值为 `0` 且方差为 `1`，那么 `dh` 个乘积之和的方差与 `dh` 成正比。缩放能抑制分数差异随头宽增大，降低 softmax 过度集中于单项的风险。
 
-The causal mask (因果掩码) `M` assigns `−∞` to positions to the right of the query and zero elsewhere. This prevents a position from reading future tokens. For the second position, token `c`, take an already position-rotated Q of `[2, 0, 0, 0]`. Let the rotated K rows for `abab`, `c`, and `a` be `[1, 0, 0, 0]`, `[0, 1, 0, 0]`, and `[2, 0, 0, 0]`. Their dot products with this Q are `[2, 0, 4]`. Dividing by `√4 = 2` gives `[1, 0, 2]`. The future token `a` scores highest, but the mask excludes it, leaving `[1, 0, −∞]`.
+causal mask (因果掩码)`M` 会把 query 右侧位置的值设为 `−∞`，其他位置设为 `0`，从而阻止某个位置读取未来词元。对第二个位置，也就是词元 `c`，假设已经按位置旋转的 Q 是 `[2, 0, 0, 0]`。设 `abab`、`c` 和 `a` 的旋转后 K 分别为 `[1, 0, 0, 0]`、`[0, 1, 0, 0]` 和 `[2, 0, 0, 0]`。这些 K 与 Q 的点积为 `[2, 0, 4]`。除以 `√4 = 2` 后得到 `[1, 0, 2]`。未来的词元 `a` 分数最高，但掩码会把它排除，结果是 `[1, 0, −∞]`。
 
-> [!tip] Softmax turns scores into relative weights
-> Softmax exponentiates each score and divides by the sum of the exponentials. Here `e ≈ 2.718`. For `[1, 0, −∞]`, the weights are `[e/(e+1), 1/(e+1), 0] ≈ [0.731, 0.269, 0]`. They sum to one. These weights describe how this head mixes V vectors; they are not probabilities that the corresponding words are true.
+> [!tip] softmax 把分数变成相对权重
+> softmax 对每个分数取指数，再除以所有指数之和。这里 `e ≈ 2.718`。`[1, 0, −∞]` 对应的权重为 `[e/(e+1), 1/(e+1), 0] ≈ [0.731, 0.269, 0]`，总和为 `1`。这些权重表示这个头如何混合 V 向量；它们不是对应词语为真的概率。
 
-Suppose the first two V vectors are `(1, 0, 0, 0)` and `(0, 2, 0, 0)`. The second position's weighted sum is
+假设前两个 V 向量是 `(1, 0, 0, 0)` 和 `(0, 2, 0, 0)`。那么第二个位置的加权和为
 
 $$
 0.731(1,0,0,0)+0.269(0,2,0,0)=(0.731,0.538,0,0).
 $$
 
-Across all three query positions, `P` is `3 × 3` and `V` is `3 × 4`, so `Z = PV` is `3 × 4`. Each output row now contains information gathered from the positions it could see.
+对全部三个 query 位置而言，`P` 的形状是 `3 × 3`，`V` 的形状是 `3 × 4`，所以 `Z = PV` 的形状是 `3 × 4`。现在每个输出行都包含它能够看到的位置汇集来的信息。
 
-#### Combine heads and retain the previous state
+#### 合并注意力头并保留已有状态
 
-The other head has its own projections and weighted sums. Concatenation (拼接) places the two width-`4` outputs side by side for each position, producing `3 × 8`. An `8 × 8` output projection `W_O` mixes those features. A residual connection (残差连接) adds the attention update back to the layer's original input, coordinate by coordinate.
+另一个头有自己的投影和加权和。concatenation (拼接) 会把两个宽度为 `4` 的输出逐个位置并排放好，得到 `3 × 8`。形状为 `8 × 8` 的输出投影 `W_O` 会混合这些特征。residual connection (残差连接) 会把注意力更新逐坐标加回该层原来的输入。
 
-If one original row were `[1, 2]` and its update `[0.1, −0.2]`, residual addition would produce `[1.1, 1.8]`. Both terms need the same shape. Each layer can preserve existing information while learning an update. The output still has one width-`8` row per token position.
+假设某一行原来是 `[1, 2]`，更新量是 `[0.1, −0.2]`，残差相加后得到 `[1.1, 1.8]`。两项的形状必须一致。每一层都能保留已有信息，同时计算一个更新。输出中每个词元位置仍有一行宽度为 `8` 的向量。
 
-Head behavior can vary across layers, tasks, and inputs. A head might often attend to the preceding position, but a weight map alone does not establish its complete function. Its V vectors, output projection, and later layers all affect the result.
+不同层、任务和输入中的 attention head 行为可能不同。某个头可能经常关注前一个位置，但仅凭权重图并不能确定它的完整功能。它的 V 向量、输出投影以及后续层也都会影响结果。
 
-#### What changes when heads share K and V?
+#### 注意力头共享 K 和 V 时会怎样？
 
-The calculation above uses multi-head attention (多头注意力), or MHA, with one K/V head for every Q head. Grouped-query attention (分组查询注意力), or GQA, shares a K/V head among a group of Q heads. Keeping two Q heads but only one K/V head makes `W_Q` remain `8 × 8`, while `W_K` and `W_V` become `8 × 4`. Both queries still generate their own width-`4` output, so concatenation and `W_O` retain their shapes.
+上面的计算使用 multi-head attention (多头注意力，MHA)，每个 Q 头都有一个 K/V 头。grouped-query attention (分组查询注意力，GQA) 让一组 Q 头共享一个 K/V 头。如果仍保留两个 Q 头、但只使用一个 K/V 头，那么 `W_Q` 仍是 `8 × 8`，而 `W_K` 和 `W_V` 会变为 `8 × 4`。两个 Q 仍各自生成宽度为 `4` 的输出，所以拼接后的形状和 `W_O` 都不变。
 
-MHA has `Hkv = Hq`; multi-query attention (多查询注意力), or MQA, is the case `Hkv = 1`. These choices affect learned weights and the amount of K/V stored during generation. Converting an MHA checkpoint changes its K/V weights and behavior; the GQA paper evaluates an averaging-based conversion and further training. With three cached positions, our MHA example stores `2 × 3 × 2 × 4 = 48` K/V values per layer. Sharing one K/V head reduces that to `2 × 3 × 1 × 4 = 24`, while both Q heads still calculate their own scores. To understand the serving consequence, continue with [how KV cache and scheduling determine inference capacity](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F). Dense attention's pairwise work grows with `T²`, but actual latency also depends on kernels, other layers, and the hardware.
+`Hkv` 表示 K/V 头数。生成时会保留每层各位置的 K 和 V，供后续 token 复用。MHA 中 `Hkv = Hq`；multi-query attention (多查询注意力，MQA) 则是 `Hkv = 1` 的情况。这些选择会影响所学权重，以及生成过程中存储的 K/V 数量。把 MHA checkpoint 转为其他结构会改变 K/V 权重和模型行为；GQA 论文评估了基于权重平均的转换以及后续训练。在这个例子中，缓存了三个位置时，每层的 MHA 会存储 `2 × 3 × 2 × 4 = 48` 个 K/V 数值，依次对应 K/V 两种表示、三个位置、两个头和每头四个坐标。共享一个 K/V 头后，数量降为 `2 × 3 × 1 × 4 = 24`，而两个 Q 头仍各自计算分数。若想了解服务环节的影响，请继续阅读[KV cache 和调度如何决定推理容量](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F)。Dense attention 的两两计算量随 `T²` 增长，但实际时延还取决于 kernel (计算内核)、其他层和硬件。
 
-### What does the FFN add, and how do blocks stack?
+### FFN 增加了什么，多个块如何堆叠？
 
-#### Transform each position's features
+#### 变换每个位置的特征
 
-The attention update has brought contextual information into each row. A feed-forward network (前馈网络), or FFN, applies a nonlinear transformation within each row. It is also often called an MLP. The same FFN weights are used for all positions within a layer, while different layers normally have different weights. Without a nonlinear operation between its projections, several linear transformations would collapse into a single linear transformation; the nonlinearity lets the update depend more richly on combinations of input features.
+attention 更新已经把上下文信息带入每一行。FFN 会在每行内部应用非线性变换。它也常被称为 multilayer perceptron (多层感知机，MLP)。同一层内的所有位置共用一套 FFN 权重，不同层通常使用不同权重。如果投影之间没有非线性操作，多次线性变换会合并为一次线性变换；加入非线性后，更新就能更丰富地取决于输入特征的组合。
 
-For a SwiGLU FFN, first normalize the attention-updated state to obtain `R`, with shape `3 × 8`. Two projections, `W_g` and `W_u`, each of shape `8 × 16`, generate a gate input and a candidate branch. Apply SiLU to the gate input, multiply the branches element by element, then project back using `W_d`, with shape `16 × 8`.
+以 SwiGLU FFN 为例，先对经过 attention 更新的状态做归一化，得到形状为 `3 × 8` 的 `R`。两个投影 `W_g` 和 `W_u` 的形状都是 `8 × 16`，分别生成门控输入和候选分支。对门控输入应用 SiLU，逐元素相乘两个分支，最后用形状为 `16 × 8` 的 `W_d` 投影回去。
 
 $$
 F(R)=\big[\operatorname{SiLU}(RW_g)\odot(RW_u)\big]W_d,
@@ -302,18 +302,18 @@ F(R)=\big[\operatorname{SiLU}(RW_g)\odot(RW_u)\big]W_d,
 \qquad \sigma(x)=\frac{1}{1+e^{-x}}.
 $$
 
-The sigmoid `σ` lies between zero and one. SiLU multiplies its input by that factor, producing a smooth nonlinear transformation. In this use, the resulting gate values can be negative or greater than one. They scale candidate features continuously rather than acting as binary on/off switches.
+sigmoid `σ` 的取值介于 `0` 和 `1` 之间。SiLU 将输入乘以这个比例，形成平滑的非线性变换。在这里，最后得到的门控值可能是负数，也可能大于 `1`。它们连续地缩放候选特征，而不是像二进制开关那样只有开或关。
 
-> [!tip] Element-wise multiplication keeps the shape
-> The symbol `⊙` multiplies matching coordinates without summing over them. For `[0, 0.731] ⊙ [2, 3]`, the result is `[0, 2.193]`. Two `3 × 16` branches therefore produce another `3 × 16` matrix. This differs from a dot product, which sums products to produce one number.
+> [!tip] 逐元素乘法不会改变形状
+> 符号 `⊙` 将对应坐标相乘，不会把结果求和。例如 `[0, 0.731] ⊙ [2, 3]` 得到 `[0, 2.193]`。两个 `3 × 16` 的分支逐元素相乘后仍是 `3 × 16` 矩阵。这和 dot product 不同，后者会把乘积求和为一个数字。
 
-For example, gate inputs `[0, 1]` become approximately `[0, 0.731]` after SiLU. With candidate values `[2, 3]`, those two channels become `[0, 2.193]`. The down projection mixes the 16 channels into eight, and a residual connection adds the result to the attention-updated state. Because the gate and candidate branches both depend on the current row, the same weights can produce different updates for different contexts.
+例如，门控输入 `[0, 1]` 经过 SiLU 后约为 `[0, 0.731]`。与候选值 `[2, 3]` 相乘后，这两个通道变为 `[0, 2.193]`。down projection (降维投影) 会把 16 个通道混合成 8 个，再通过 residual connection 加回经过 attention 更新的状态。由于门控分支和候选分支都取决于当前行，同一套权重可以针对不同上下文产生不同更新。
 
-This helps explain why learned knowledge can affect a prediction. If a row represents a person's name in a basketball context, learned feature combinations can activate directions that influence related output tokens. Geva and colleagues found text-pattern associations and output effects in parts of the FFNs they studied. This is evidence about those models, not a literal fact database inside every FFN. A model's factual output also depends on attention, multiple layers, and the final vocabulary projection. When information must be current or verifiable, [retrieval and grounding](#7.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) explain how an application can supply external evidence.
+这有助于解释学习到的知识为何会影响预测。如果某一行代表篮球语境中的人名，学到的特征组合就可能激活某些方向，从而影响相关的输出词元。Geva 等人发现，他们所研究的部分 FFN 中存在文本模式关联和输出影响。这一发现适用于那些模型，并不表示每个 FFN 都是字面意义上的事实数据库。模型输出事实的能力也取决于 attention、多层计算和最终词表投影。若信息必须保持最新或能够核验，[检索与依据构建](#7.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) 介绍了应用如何提供外部证据。
 
-#### Pass the updated state through the next layer
+#### 把更新后的状态传给下一层
 
-Our block uses pre-normalization (预归一化), with normalization before attention and before the FFN. If `Xℓ` is layer `ℓ`'s input, the two updates are
+这里的块使用 pre-normalization (预归一化)，也就是在 attention 和 FFN 之前分别做归一化。设 `Xℓ` 是第 `ℓ` 层的输入，两次更新为
 
 $$
 Y_\ell=X_\ell+\operatorname{Attention}_\ell(\operatorname{Norm}_{\ell,1}(X_\ell)),
@@ -324,94 +324,94 @@ $$
 
 ~~~mermaid
 flowchart TD
-    X["Layer input X<br/>3 × 8"] --> N1["Normalize"] --> A["Attention<br/>Mix information across positions"]
-    A --> Y["Add attention update<br/>Y is 3 × 8"]
-    X -->|Residual| Y
-    Y --> N2["Normalize"] --> F["SwiGLU FFN<br/>Expand to 3 × 16, gate, project to 3 × 8"]
-    F --> Next["Add FFN update<br/>Next layer receives 3 × 8"]
-    Y -->|Residual| Next
+    X["层输入 X<br/>3 × 8"] --> N1["归一化"] --> A["Attention<br/>混合不同位置的信息"]
+    A --> Y["加上 attention 更新<br/>Y 的形状为 3 × 8"]
+    X -->|残差| Y
+    Y --> N2["归一化"] --> F["SwiGLU FFN<br/>扩展至 3 × 16，门控，再投影至 3 × 8"]
+    F --> Next["加上 FFN 更新<br/>下一层接收 3 × 8"]
+    Y -->|残差| Next
 ~~~
 
-Each layer performs another transformation over the same positions. In this model, length and width do not shrink as layers accumulate. The familiar decoder-only design choices illustrated here include RMSNorm, RoPE, and a gated FFN; K/V sharing is a separate architectural choice. The 2017 Transformer established attention and position-wise FFNs in an encoder–decoder model for translation. Its decoder also used cross-attention, and its normalization and FFN choices differed. The equations here describe the chosen decoder-only example; a particular model's implementation determines its architecture.
+每一层都会对相同位置再做一次变换。在这个模型中，随着层数增加，序列长度和宽度都不会缩短。这里示例的 decoder-only 架构选择包括 RMSNorm、RoPE 和门控 FFN；是否共享 K/V 则是另一项独立的架构选择。2017 年提出的 Transformer 在翻译任务的 encoder–decoder (编码器–解码器) 模型中使用 attention 和逐位置 FFN。它的 decoder 也使用了 cross-attention (交叉注意力)，归一化方式和 FFN 选择也与此不同。这里的公式描述所选的 decoder-only 示例；具体模型采用的架构由其实现决定。
 
-#### Which numbers are learned parameters?
+#### 哪些数字属于可学习参数？
 
-A matrix's parameter count is its row count times its column count. With ordinary MHA and `Hq·dh = d`, the Q, K, V, and output projections total `4d²` parameters. At `d = 8`, that is `256`. The three SwiGLU projections total `3d·dff`; with `dff = 16`, that is `384`.
+矩阵的参数数量等于行数乘以列数。在普通 MHA 且 `Hq·dh = d` 时，Q、K、V 和输出投影合计有 `4d²` 个参数。若 `d = 8`，则共有 `256` 个。三个 SwiGLU 投影合计有 `3d·dff` 个参数；若 `dff = 16`，则共有 `384` 个。
 
-A complete model also includes the embedding table, normalization weights, and possibly a separate vocabulary projection. Repeat the per-layer count for each layer's own weights; count shared weights once. Hidden states and cached K/V are temporary data computed from those parameters. Consequently, parameter count alone does not determine how many concurrent requests fit on a GPU. That is another reason to follow the [inference memory and scheduling chapter](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F).
+完整模型还包含 embedding table、归一化权重，有时还包含单独的词表投影。每一层都有自己权重时，逐层重复计算；共享权重只计一次。hidden state 和缓存的 K/V 是根据这些参数计算出来的临时数据。因此，参数数量本身无法决定 GPU 上能同时容纳多少请求。这也是继续阅读[推理内存与调度章节](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F) 的原因之一。
 
-### How does the model choose a token and continue?
+### 模型如何选择词元并继续生成？
 
-#### Score the vocabulary and select an ID
+#### 为词表打分并选择一个 ID
 
-After the final layer and final normalization, the LM head takes the last input position's vector, `h_last`, with shape `1 × 8`. For `[abab, c, a]`, this is the updated row for `a`. Under causal attention, this position can attend to the whole supplied prefix. In a formatted chat, it might be an assistant-start marker rather than the last character of the user's question.
+经过最后一层和最终归一化之后，language model head (语言模型头，LM head) 会取最后一个输入位置的向量 `h_last`，其形状是 `1 × 8`。对于 `[abab, c, a]`，它就是 `a` 对应的更新后向量。在 causal attention 中，这个位置可以关注整个输入前缀。格式化的对话中，它也可能是 assistant 起始标记，而不是用户问题的最后一个字符。
 
-Multiplication by `W_lm`, with shape `8 × 258`, gives `1 × 258` logits (未归一化分数), one score for each vocabulary ID. Each column of `W_lm` produces one score by a dot product with `h_last`. Weight tying (权重绑定) uses the embedding table's transpose as this output weight, saving a separate parameter matrix. Some architectures use separate input and output weights.
+将 `h_last` 乘以形状为 `8 × 258` 的 `W_lm`，会得到形状为 `1 × 258` 的 logits (未归一化分数)，每个词表 ID 对应一个分数。`W_lm` 的每一列都会与 `h_last` 做点积，算出一个分数。weight tying (权重绑定) 会把 embedding table 的转置用作这个输出权重，从而省去一张单独的参数矩阵。有些架构会分别使用输入和输出权重。
 
-For sampling (采样), temperature (温度) `τ > 0` rescales logits before softmax.
+做 sampling (采样) 时，temperature (温度)`τ > 0` 会在 softmax 之前缩放 logits。
 
 $$
 p_i=\frac{\exp(z_i/\tau)}{\sum_j\exp(z_j/\tau)}.
 $$
 
-For a small illustration restricted to two eligible candidates, `c` (ID `99`) and `a` (ID `97`), suppose their logits are `[2, 1]`. Then temperature `1` gives probabilities about `[0.731, 0.269]`. At `0.5`, they become `[0.881, 0.119]`; at `2`, `[0.622, 0.378]`. Lower temperature concentrates probability on the higher-scoring candidate. Higher temperature gives lower-scoring candidates more chance. These are next-token probabilities, not confidence that an answer is factually correct.
+看一个仅限两个候选词元的简单示例：`c` (ID `99`) 和 `a` (ID `97`)，假设它们的 logits 是 `[2, 1]`。温度为 `1` 时，概率约为 `[0.731, 0.269]`；温度为 `0.5` 时，概率变为 `[0.881, 0.119]`；温度为 `2` 时，则为 `[0.622, 0.378]`。温度越低，概率越集中于分数较高的候选项；温度越高，分数较低的候选项也越有机会被选中。这些是下一个词元的概率，并不代表答案在事实层面正确的置信度。
 
-Greedy decoding (贪心解码) directly chooses the highest-scoring token. An API's temperature-zero setting may request greedy behavior; the formula above cannot literally divide by zero. Top-k sampling keeps the `k` highest-scoring candidates. Top-p, or nucleus sampling (核采样), keeps the smallest descending-probability prefix whose total reaches the threshold, then renormalizes. For `[0.50, 0.30, 0.15, 0.05]` and top-p `0.75`, the first two remain, becoming `[0.625, 0.375]` after division by their sum `0.80`.
+greedy decoding (贪心解码) 会直接选择分数最高的词元。API 的温度零设置可能表示请求采用贪心行为；上面的公式无法真的除以零。Top-k sampling 会保留分数最高的 `k` 个候选项。Top-p，也称 nucleus sampling (核采样)，会保留按概率降序排列、总和首次达到阈值的最短前缀，然后重新归一化。对于 `[0.50, 0.30, 0.15, 0.05]` 和 top-p `0.75`，保留前两个概率，除以它们的总和 `0.80` 后变为 `[0.625, 0.375]`。
 
-#### How should an application choose decoding settings?
+#### 应用应如何选择解码设置？
 
-The practical choice starts with the deployed model and endpoint. Check which controls are supported and which combinations are allowed, then establish a baseline with the supported defaults. Sampling controls depend on the model and API version; some hosted interfaces restrict, fix, or omit them. There is no single temperature that is best for every model and task.
+实际选择应从已部署的模型和 endpoint (端点) 入手。先确认支持哪些控制项、哪些组合可用，再以支持的默认值建立基线。采样控制取决于模型和 API 版本；一些托管接口会限制、固定或省略这些参数。不存在适用于所有模型和任务的最佳温度。
 
-For the build-log assistant, try a supported lower-temperature candidate if repeated runs vary unnecessarily in tool arguments or evidence reporting. Compare it against the baseline on normal failures, missing logs, permission failures, and misleading log text. A lower setting can repeatedly favor an incorrect action, so repeatability alone is not a success criterion.
+对于构建日志助手，如果多次运行的工具参数或证据报告不必要地发生变化，可以尝试一个受支持的较低温候选设置。将其与基线进行比较，覆盖常见故障、日志缺失、权限失败，以及带有误导性文字的日志。较低设置也可能反复偏向错误操作，所以结果稳定本身并不代表成功。
 
-For a task that deliberately generates several candidate explanations or solutions for later verification, testing more sampling diversity can be useful. The cost is more weak or invalid candidates and more verification work. Higher temperature does not supply missing evidence or make unsupported claims acceptable. Whether diversity improves the final result depends on the candidate generator and the verifier together.
+如果任务本来就需要生成多个候选解释或解法供后续核验，那么尝试更高的采样多样性可能有用。代价是出现更多质量较差或无效的候选结果，也需要更多核验工作。提高温度既不会补上缺失证据，也不会让没有依据的说法变得可接受。多样性是否能改善最终结果，取决于候选生成器与验证器的整体效果。
 
-A controlled comparison holds the model version, instructions, tools, and case set fixed while changing the chosen decoding setting. For each candidate, repeat complete runs and measure correct tool selection and arguments, grounded explanations, appropriate failure handling, cost, and latency. Develop settings on one set and use a separate held-out set for acceptance. This is an engineering testing approach, not a reported result that lower or higher temperature wins. [How to build a comparable evaluation set](#Build%20a%20comparable%20regression%20set%20/%20%E5%BB%BA%E7%AB%8B%E5%8F%AF%E6%AF%94%E8%BE%83%E7%9A%84%E5%9B%9E%E5%BD%92%E9%9B%86) develops the evaluation method beyond this one setting.
+做受控比较时，应固定模型版本、指令、工具和案例集，只改变所选的解码设置。对每个候选设置重复完整运行，并衡量工具选择及参数是否正确、解释是否有依据、故障处理是否恰当，以及成本和时延。用一组数据开发设置，再用单独的留出集验收。这是一种工程测试方法，并非宣称较低或较高的温度必然更好。[如何构建可比较的评估集](#Build%20a%20comparable%20regression%20set%20/%20%E5%BB%BA%E7%AB%8B%E5%8F%AF%E6%AF%94%E8%BE%83%E7%9A%84%E5%9B%9E%E5%BD%92%E9%9B%86) 会进一步介绍评估方法，而不只关注这一项设置。
 
-#### Reuse the prefix and predict the next token
+#### 复用已有前缀并预测下一个词元
 
-Prefill (预填充) processes the initial sequence through the layers. The last position's logits select the first output token. Suppose we select `c`, ID `99`. The token sequence grows from `[257, 99, 97]` to `[257, 99, 97, 99]`. Decode (增量解码) embeds that new `c` position and processes it starting at layer one to predict the next token.
+prefill (预填充) 会让初始序列通过各层。最后一个位置的 logits 选出第一个输出词元。假设我们选出 `c`，ID 为 `99`。词元序列由 `[257, 99, 97]` 增长为 `[257, 99, 97, 99]`。decode (增量解码) 会嵌入新位置上的 `c`，并从第一层开始处理它，以预测下一个词元。
 
-In a causal model, adding a new position cannot change earlier positions' hidden states for the same prefix and inference configuration. A KV cache (键值缓存) therefore stores each layer's earlier K and V. At a new position, that layer computes new Q, K, and V. Its Q attends to the cached K/V and its own K/V, and the new K/V are appended to the cache. Earlier Q vectors have already served their own positions' calculations and are not inputs to this new query's attention operation.
+在 causal model (因果模型) 中，对于相同的前缀和推理配置，添加新位置不会改变先前位置的 hidden state。因此，KV cache (键值缓存) 会存储每一层此前算出的 K 和 V。在新位置，该层会计算新的 Q、K 和 V。新位置上的 Q 会关注缓存中的 K/V 以及当前位置的 K/V，再把新的 K/V 追加到缓存中。更早位置的 Q 向量已经参与过各自位置的计算，不会作为输入再参与这个新 query 的 attention 运算。
 
-The cache is layer-specific because every layer has different input representations and projection weights. As output grows, so does the cache. Generation ends at a model end token, an application stop sequence, a length limit, or cancellation. A length limit can cut off an unfinished answer, so the application must interpret the completion reason. [Serving capacity](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F) develops the memory consequence; [application run state and recovery](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) develops what happens when generation ends or is interrupted.
+每层的 cache 各自独立，因为每一层的输入表示和投影权重不同。输出变长时，cache 也会随之增大。生成会在模型结束词元、应用停止序列、长度上限或取消操作时结束。长度上限可能会截断尚未完成的回答，因此应用必须判断完成原因。[服务容量](#17.%20How%20do%20KV%20cache%20and%20scheduling%20determine%20LLM%20serving%20capacity?%20/%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%AE%B9%E9%87%8F%EF%BC%9F) 会进一步说明内存影响；[应用运行状态与恢复](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) 会展开生成结束或中断后的处理。
 
-### How does next-token training update these parameters?
+### 下一个词元训练如何更新这些参数？
 
-#### Set a target for each position
+#### 为每个位置设置目标
 
-So far we have used already learned weights. Training adjusts them using examples of what should come next. In a training sequence `[BOS, a, b, c]`, `BOS` is a beginning-of-sequence marker. Its target is `a`, the target at `a` is `b`, and the target at `b` is `c`. The causal mask allows these predictions to be calculated in parallel while preventing each position from reading its target to the right.
+前面使用的都是已经学到的权重。训练会根据“接下来应该是什么”的示例来调整这些权重。在训练序列 `[BOS, a, b, c]` 中，`BOS` 是 beginning-of-sequence marker (序列起始标记)。它的目标是 `a`，`a` 位置的目标是 `b`，而 `b` 位置的目标是 `c`。因果掩码允许并行计算这些预测，同时阻止每个位置读取右侧的目标词元。
 
-Teacher forcing (教师强制) means that training uses the actual preceding tokens from the training example. During generation, subsequent input contains the tokens the model actually selected. This difference is why a mistake early in a generated sequence can alter later predictions.
+teacher forcing (教师强制) 指训练时使用训练样本中真实的前序词元。生成时，后续输入则包含模型实际选出的词元。这就是为什么生成序列开头的错误可能改变后续预测。
 
-#### Measure error and propagate an update
+#### 计算误差并反向传播更新
 
-For training here, `p` is ordinary softmax over the raw logits for the full vocabulary, without inference-time temperature or top-k/top-p filtering. For target ID `y_i`, cross-entropy (交叉熵) uses `−log p(y_i)` and averages over the positions included in training. Assigning the correct token probability `0.8` gives loss about `0.223`; probability `0.25` gives about `1.386`. Their average is approximately `0.805`, using natural logarithms, whose unit is called a nat. Low probability on the correct token incurs a larger penalty.
+在这里的训练过程中，`p` 是对完整词表的原始 logits 执行普通 softmax 的结果，没有使用推理时的温度或 top-k/top-p 过滤。对于目标 ID `y_i`，cross-entropy (交叉熵) 使用 `−log p(y_i)`，并对训练中包含的位置取平均。如果正确词元的概率是 `0.8`，损失约为 `0.223`；概率为 `0.25` 时，损失约为 `1.386`。两者的平均值约为 `0.805`，使用的是自然对数，其单位称为 nat。正确词元的概率越低，惩罚就越大。
 
-For one position, the derivative of this loss with respect to the logits is `p − onehot(y_i)`. This keeps every probability entry except the correct one, from which it subtracts `1`. If the probabilities are `[0.7, 0.2, 0.1]` and the second token is correct, that gradient is `[0.7, −0.8, 0.1]`.
+对单个位置来说，该损失相对于 logits 的导数是 `p − onehot(y_i)`。这个结果保留了除正确项以外的所有概率项，并从正确项中减去 `1`。如果概率是 `[0.7, 0.2, 0.1]`，而第二个词元是正确答案，gradient (梯度) 就是 `[0.7, −0.8, 0.1]`。
 
-> [!tip] A gradient tells us how the loss changes locally
-> A positive derivative means increasing that quantity slightly would increase loss. Gradient descent therefore subtracts a small multiple of the derivative. In the example, an update applied directly to logits would lower the first and third and raise the second. Training actually updates the shared parameters that produced those logits, using the chain rule (链式法则) to propagate their effects through the computation.
+> [!tip] gradient 表示损失在局部如何变化
+> 导数为正，表示稍微增大对应数值会使损失增大。因此 gradient descent (梯度下降) 会减去导数的一小部分。在这个例子中，如果直接更新 logits，就会降低第一个和第三个值，提高第二个值。实际训练更新的是产生这些 logits 的共享参数，并使用 chain rule (链式法则) 将它们的影响沿计算过程反向传播。
 
-Backpropagation (反向传播) carries derivatives through the LM head, residual additions, FFNs, attention, and embeddings. For a simple chain `z = wx` with a fixed `x`, `∂L/∂w = (∂L/∂z)x`. Matrix versions accumulate contributions from many coordinates and positions. An optimizer applies parameter updates, with its own rules for step size and accumulated statistics. Training is a new computation of derivatives through the forward operations; it does not run an inverse model backward from the answer.
+backpropagation (反向传播) 会把导数依次传过 LM head、残差相加、FFN、attention 和 embedding。对于简单的计算链 `z = wx`，若 `x` 固定，则 `∂L/∂w = (∂L/∂z)x`。矩阵形式会累加多个坐标和位置上的贡献。optimizer (优化器) 按照自己的步长和累积统计规则更新参数。训练利用前向计算的中间量，沿计算图反向求出各参数的梯度，再据此更新参数。
 
-The chosen training objective matters. Masked language modeling (掩码语言建模), as used in BERT, predicts selected missing positions using visible context on both sides. Its usual procedure differs from the left-to-right loop above. Research can build iterative generation procedures from masked models, but those require their own sampling process.
+所选的训练目标也很重要。BERT 使用的 masked language modeling (掩码语言建模) 会根据左右两侧可见的上下文，预测选定的缺失位置。它的常规过程与上面从左向右的循环不同。研究者可以基于掩码模型构造迭代生成过程，但这需要另外的采样过程。
 
-If an application repeatedly fails in a stable way, the next question is whether it lacks evidence, instructions, or learned behavior. [When to fine-tune](#14.%20When%20should%20you%20fine-tune%20to%20close%20a%20repeatable%20behavior%20gap?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%9A%E8%BF%87%E5%BE%AE%E8%B0%83%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) develops that choice, including which parameters to update. Feeding new evidence into a prompt changes the current computation; training changes parameters that persist into later runs.
+如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#14.%20When%20should%20you%20fine-tune%20to%20close%20a%20repeatable%20behavior%20gap?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%9A%E8%BF%87%E5%BE%AE%E8%B0%83%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
 
-> [!info]- Sources
-> Sources below support the named mechanisms. Small tensor dimensions, made-up vectors, and the build-log tuning scenario are teaching examples or engineering extensions.
+> [!info]- 来源
+> 下列来源为所列机制提供依据。较小的张量维度、虚构的向量和构建日志调参场景都是教学示例或工程扩展。
 >
-> - **Tokenization.** [Sennrich et al., 2016, §3.2](https://aclanthology.org/P16-1162/) explains subword BPE. [tiktoken 0.12.0 educational implementation](https://github.com/openai/tiktoken/blob/0.12.0/tiktoken/_educational.py) implements byte-level training, merge priorities, and decoding. The exact English token sequence in this chapter was reproduced with that package version and `cl100k_base`.
-> - **Attention and the original architecture.** [Attention Is All You Need, v7, §§3.1–3.5 and §5.1](https://arxiv.org/html/1706.03762v7#S3) supports scaled dot products, masking, multi-head concatenation, position-wise FFNs, and the original encoder–decoder's scope. Its translation setup is not the decoder-only model illustrated here.
-> - **Position and normalization.** [RoFormer, v5, §3](https://arxiv.org/html/2104.09864v5#S3) explains RoPE; [Root Mean Square Layer Normalization, 2019, §3](https://arxiv.org/abs/1910.07467) explains RMSNorm. [The Llama 3 Herd of Models, v3, §3.2](https://arxiv.org/html/2407.21783v3#S3.SS2) and the [Llama 3 reference implementation](https://github.com/meta-llama/llama-models/blob/main/models/llama3/model.py) ground the decoder-only design choices and normalization order. Model-specific implementations determine the exact configuration.
-> - **Projection storage and K/V sharing.** [PyTorch Linear](https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html) specifies the stored weight orientation. [GQA, EMNLP 2023, §2](https://aclanthology.org/2023.emnlp-main.298/) describes grouped K/V heads and converting models through uptraining.
-> - **FFN gating and interpretation.** [GLU Variants Improve Transformer, 2020, §2](https://arxiv.org/html/2002.05202#S2) defines SwiGLU. [Geva et al., EMNLP 2021](https://aclanthology.org/2021.emnlp-main.446/) studies pattern associations and output effects in FFN memories, with conclusions limited to its analyzed models.
-> - **Sampling and deployment controls.** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) introduces nucleus sampling. [Transformers generation configuration](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation) documents sampling controls. [OpenAI Responses parameters](https://developers.openai.com/api/reference/resources/responses/methods/create) documents a hosted API contract. [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) and [Claude model migration guidance](https://platform.claude.com/docs/en/about-claude/model-deprecations), checked 2026-11-06, illustrate model- and API-version-specific restrictions. The proposed tuning comparison is an engineering application of these mechanisms, not a universal temperature recommendation.
-> - **Cached generation.** [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) explains causal reuse, per-layer K/V, and the new token's attention over previous and current positions.
-> - **Training.** [Llama 3, v3, §3](https://arxiv.org/html/2407.21783v3#S3) covers pretraining; [PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) specifies the loss. [BERT, 2019, §3.1](https://arxiv.org/abs/1810.04805) supports the masked objective, and [Wang and Cho, 2019](https://arxiv.org/abs/1902.04094) explores a distinct iterative generation procedure.
+> - **词元化。** [Sennrich et al., 2016, §3.2](https://aclanthology.org/P16-1162/) 解释了子词 BPE。[tiktoken 0.12.0 educational implementation](https://github.com/openai/tiktoken/blob/0.12.0/tiktoken/_educational.py) 实现了字节级训练、合并优先级和解码。文中给出的精确英文词元序列使用该版本软件包和 `cl100k_base` 复现。
+> - **Attention 与原始架构。** [Attention Is All You Need, v7, §§3.1–3.5 and §5.1](https://arxiv.org/html/1706.03762v7#S3) 支持缩放点积、掩码、多头拼接、逐位置 FFN，以及原始 encoder–decoder 的适用范围。论文中的翻译任务设定与这里演示的 decoder-only 模型不同。
+> - **位置与归一化。** [RoFormer, v5, §3](https://arxiv.org/html/2104.09864v5#S3) 解释 RoPE；[Root Mean Square Layer Normalization, 2019, §3](https://arxiv.org/abs/1910.07467) 解释 RMSNorm。[The Llama 3 Herd of Models, v3, §3.2](https://arxiv.org/html/2407.21783v3#S3.SS2) 和 [Llama 3 参考实现](https://github.com/meta-llama/llama-models/blob/main/models/llama3/model.py) 为 decoder-only 架构选择和归一化顺序提供依据。具体配置由特定模型的实现决定。
+> - **投影权重存储与 K/V 共享。** [PyTorch Linear](https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html) 说明了权重的存储方向。[GQA, EMNLP 2023, §2](https://aclanthology.org/2023.emnlp-main.298/) 介绍了分组 K/V 头，以及通过 uptraining 转换模型的方法。
+> - **FFN 门控与解释。** [GLU Variants Improve Transformer, 2020, §2](https://arxiv.org/html/2002.05202#S2) 定义了 SwiGLU。[Geva et al., EMNLP 2021](https://aclanthology.org/2021.emnlp-main.446/) 研究了 FFN memory 中的文本模式关联与输出影响；结论仅适用于其分析的模型。
+> - **采样与部署控制。** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) 介绍 nucleus sampling。[Transformers generation configuration](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation) 记录了采样控制项。[OpenAI Responses parameters](https://developers.openai.com/api/reference/resources/responses/methods/create) 记录了托管 API 的契约。[OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) 和 [Claude model migration guidance](https://platform.claude.com/docs/en/about-claude/model-deprecations) (核对日期：2026-11-06) 展示了模型和 API 版本可能带来的限制。这里提出的调参比较是这些机制的一种工程应用，并非普遍适用的温度建议。
+> - **缓存生成。** [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) 解释了因果复用、逐层 K/V，以及新词元如何关注此前和当前位置。
+> - **训练。** [Llama 3, v3, §3](https://arxiv.org/html/2407.21783v3#S3) 涉及预训练；[PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 说明了损失函数。[BERT, 2019, §3.1](https://arxiv.org/abs/1810.04805) 支持掩码目标的描述；[Wang and Cho, 2019](https://arxiv.org/abs/1902.04094) 探索了一种不同的迭代生成过程。
 >
-> Browse related papers in the [AI literature collection](../ai-literature-index.md).
+> 浏览[AI 好文集](../ai-literature-index.md)，可按主题查找相关论文。
 ## 3. How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？
 
 Choose from candidates that satisfy the task's hard constraints, then compare them on representative examples against an agreed quality bar. Measure latency, total cost, modality and format reliability, data handling, and operational fit. Model names, rankings, context limits, supported inputs, and prices change, so a public benchmark or provider label is a lead for investigation, not a lasting selection rule. / 先筛出符合任务硬性约束的候选模型，再用有代表性的样本和约定的质量门槛进行比较。测量任务效果、时延、总成本、模态与格式可靠性、数据处理和运维适配。模型名称、排名、上下文限制、输入能力和价格都会变化，因此公开基准或供应商标签只能帮助调查，不能作为长期固定的选择规则。
@@ -1593,7 +1593,7 @@ OpenAI's [prompt caching documentation](https://developers.openai.com/api/docs/g
 
 ### What stays on the GPU between decode steps? / 解码步之间哪些数据留在 GPU？
 
-[生成机制](#2.%20How%20does%20a%20language%20model%20turn%20a%20prompt%20into%20text?)中的因果注意力解释了可缓存的条件。Prefill 把提示输入各层，写出全部提示位置的 K、V，并由最后一个位置的 logits 得到第一个输出 token。下一步把该 token 送进模型。每层为它计算新的 Q、K、V。新的 Q 对缓存里的旧 K 和当前 K 打分，再对对应 V 求加权和。在标准因果设置下，旧位置不受未来 token 影响，可以沿用旧 K/V。旧 Q 已经用于旧位置自己的更新；后续位置的 attention 不读取它。每层所需的投影来自该层自己的输入与权重，因此要存各层的 K/V。
+[生成机制](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)中的因果注意力解释了可缓存的条件。Prefill 把提示输入各层，写出全部提示位置的 K、V，并由最后一个位置的 logits 得到第一个输出 token。下一步把该 token 送进模型。每层为它计算新的 Q、K、V。新的 Q 对缓存里的旧 K 和当前 K 打分，再对对应 V 求加权和。在标准因果设置下，旧位置不受未来 token 影响，可以沿用旧 K/V。旧 Q 已经用于旧位置自己的更新；后续位置的 attention 不读取它。每层所需的投影来自该层自己的输入与权重，因此要存各层的 K/V。
 
 | 阶段 | 注意力典型形状，单条请求 | 常见成本 |
 | --- | --- | --- |

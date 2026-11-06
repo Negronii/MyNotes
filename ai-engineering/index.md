@@ -1,26 +1,26 @@
 # AI Engineering / AI 工程
 
-Follow one message through an AI service, then choose whether to study its evidence, model, or release decisions in depth. / 先沿着一条消息走完 AI 服务的处理过程，再深入证据、模型或发布决策。
+先沿着一条消息走完 AI 服务的处理过程，再深入证据、模型或发布决策。
 
 ## Start with a question / 从问题开始
 
-- [How does an AI service turn one message into a complete answer?](systems/from-message-to-answer.md) — Follow a build-failure question through the model, log retrieval, and the explanation returned to the caller.
+- [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md) — 沿一个构建失败问题，走完模型推理、日志查询和返回解释的过程。
 - [How does an updated document become usable evidence? / 更新后的文档怎样成为可用证据？](rag/rag-architecture-and-implementation.md) — Follow a document revision through indexing, access checks, retrieval, and citation. / 沿一次文档更新看索引、权限校验、检索和引用。
 - [What would justify shipping a model or prompt change? / 怎样证明模型或提示词的改动值得上线？](evaluation/llm-evaluation-methods.md) — Compare the baseline and candidate on representative tasks and check the production outcome. / 用代表性任务对照基线和候选版本，再看生产结果。
 
 ## Literature / 论文与文章
 
-- [AI literature collection](../review/ai-literature-index.md) — Browse selected sources by topic and follow them to the notes that explain their contributions.
+- [AI 好文集](../review/ai-literature-index.md) — 按主题查找值得读的来源，以及解释其贡献的笔记。
 
 ## Reading order / 阅读顺序
 
 ### End-to-end application / 应用主线
 
-- [How does an AI service turn one message into a complete answer?](systems/from-message-to-answer.md)
+- [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md)
 
 ### Foundation models / 基础模型
 
-- [How does a language model turn a prompt into text?](foundations/how-llms-work.md)
+- [语言模型如何把提示词变成文本？](foundations/how-llms-work.md)
 - [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](foundations/model-selection-and-ecosystem.md)
 
 ### Prompting / 提示工程

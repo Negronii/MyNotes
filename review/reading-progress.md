@@ -7,11 +7,11 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=96ab0e943b733c93326c38417dca7fd8470797a421993b23198a64fd2ccd890c -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=05f55ce66829caca208642d7bcad417a7b6a4af8a42c541f7630c2efd12a73ec -->
 ## AI Engineering
 
-- [ ] 1. [How does an AI service turn one message into a complete answer?](../ai-engineering/systems/from-message-to-answer.md)
-- [ ] 2. [How does a language model turn a prompt into text?](../ai-engineering/foundations/how-llms-work.md)
+- [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
+- [ ] 2. [语言模型如何把提示词变成文本？](../ai-engineering/foundations/how-llms-work.md)
 - [ ] 3. [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](../ai-engineering/foundations/model-selection-and-ecosystem.md)
 - [ ] 4. [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](../ai-engineering/prompting/prompt-engineering-fundamentals.md)
 - [ ] 5. [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](../ai-engineering/prompting/advanced-prompting-techniques.md)

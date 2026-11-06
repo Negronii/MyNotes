@@ -40,7 +40,7 @@ For a model, prompt, or agent change, establish the baseline and compare outcome
 
 ## How can an AI application answer from evidence? / AI 应用怎样凭证据回答？
 
-Start with [one message to a complete answer](../ai-engineering/systems/from-message-to-answer.md). Follow a build-failure question through input assembly, model inference, an authorized log lookup, and the resulting explanation. If evidence must be found in a document collection, continue with [retrieval and grounding](../ai-engineering/rag/rag-architecture-and-implementation.md).
+从[一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md)开始，沿一个构建失败问题，走完输入组装、模型推理、授权查询日志和解释结果的过程。如果需要在一组文档中寻找证据，再进入[检索与证据核对](../ai-engineering/rag/rag-architecture-and-implementation.md)。
 
 ## Where does the cost of accessing data come from? / 访问数据的成本从哪来？
 
