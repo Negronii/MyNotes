@@ -104,6 +104,25 @@ class ReadingDocsTests(unittest.TestCase):
             capture_output=True,
         )
 
+    def test_preserves_display_math_without_creating_setext_headings(self):
+        source = self.root / "ai-engineering/AIagents/agent-fundamentals.md"
+        formula = "$$\n\\text{Cost}\n=\n\\frac{10}{2}\n$$\n"
+        code = FENCE + "text\n$$\n" + FENCE + "\n"
+        source.write_text(
+            source.read_text() + "\n" + code + "\n" + formula
+            + "\nAfter math\n---\n[After](#after-math)\n",
+            encoding="utf-8",
+        )
+        built = self.run_generator()
+        self.assertEqual(built.returncode, 0, built.stderr)
+        content = (self.root / "review/generated/ai-engineering.md").read_text()
+        self.assertIn(formula, content)
+        self.assertIn(code, content)
+        self.assertIn("#### After math\n", content)
+        self.assertIn("[After](#After%20math)", content)
+        checked = self.run_generator("--check")
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+
     def test_generates_deterministically_and_rewrites_supported_links(self):
         first = self.run_generator()
         self.assertEqual(first.returncode, 0, first.stderr)

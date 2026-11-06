@@ -1,30 +1,76 @@
-# When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？
+# AI 应用怎样选择部署方式，并逐步上线或回滚？
 
-**Core explanation / 核心解释：** Compare deployment patterns against the same workload, task-quality bar, data boundary, peak demand, and operational requirement. Hosted inference can reduce serving work; self-hosting increases control while transferring capacity and on-call responsibility to the team; edge and hybrid patterns answer distinct device or data-boundary needs. No deployment label by itself establishes lower total cost or better privacy. / 应在同一工作负载、任务质量门槛、数据边界、峰值需求和运维要求下比较部署方式。托管推理可以减少服务维护；自托管增加控制力，也把容量和 on-call 责任交给团队；端侧和混合部署分别回应设备或数据边界需求。仅凭部署名称不能证明总成本更低或隐私更好。
+把已通过任务评测的模型候选、真实流量、数据边界、峰值和运维能力放在同一张表里比较，再制定渐进发布和 rollback（回滚）条件。托管推理可减少自营服务工作，自托管可增加模型与运行位置的控制，但也把容量、更新、安全和 on-call（值班响应）责任转给团队；端侧与混合架构对应特定设备或数据边界。部署标签本身不能证明成本更低、隐私更好或服务更快。
 
-**Key terms / 关键术语：** hosted API / 托管 API；self-hosted / 自托管；edge / 端侧；hybrid / 混合部署；total cost of ownership / 总拥有成本。
+本篇承接[模型选择](../foundations/model-selection-and-ecosystem.md)输出的候选与任务契约，以及[时延和成本测量](ai-latency-and-cost-optimization.md)提供的测量口径与待验证负载。它为月报助手选定一个有边界的运行决策，并把模型、提示词和应用版本一起纳入上线与回退。
 
-## API, self-hosted, edge, or hybrid — how do you pick a deployment pattern? / 托管 API、自托管、端侧或混合部署——如何选择？
+## 先筛掉不满足数据、服务和团队硬约束的方案
 
-| Pattern | Useful when | Costs and constraints |
+| 部署方式 | 适合条件 | 成本、约束与责任 |
 |---|---|---|
-| **Hosted API / 托管 API** | Managed inference and quick iteration fit the task. | Review provider terms, model lifecycle, feature support, rate limits, availability, and per-use cost. |
-| **Self-hosted / 自托管** | Control over serving location, model version, and infrastructure is a real requirement. | The team owns capacity, scaling, security updates, model serving, observability, and on-call response. |
-| **Edge / 端侧** | Offline use, local latency, or device-level data handling matters. | Compute, battery, memory, device coverage, updates, and supported model size constrain the design. |
-| **Hybrid / 混合部署** | Distinct workloads need different data or serving boundaries. | Routing and duplicated operations add complexity; define fallback and consistent policy behavior. |
+| **托管 API** | 托管推理、快速迭代符合任务与数据要求。 | 按具体合同与配置检查处理地区、保留行为、功能、限流、可用性、生命周期和用量价格；还要监控依赖供应商的变更。 |
+| **自托管** | 控制服务位置、模型版本或基础设施有明确价值，团队有能力运营。 | 自己承担模型许可、硬件容量、服务引擎、扩缩容、安全更新、监控、值班响应和模型升级。 |
+| **端侧** | 离线运行、设备本地响应或设备级数据处理是需求。 | 设备算力、内存、电量、机型覆盖、升级机制和模型体积约束质量与可用能力。 |
+| **混合部署** | 不同请求类确实需要不同的数据或运行边界。 | routing（请求路由）、策略一致性、回退、故障处理和重复运维带来额外复杂度。 |
 
-## How should total cost and operational fit be compared? / 如何比较总成本和运维适配？
+自托管的权重许可要按具体模型与用途核验；open-weight（开放权重）不自动授予所有商业用途，也不表示整个训练数据、代码和系统都开源。对托管服务，“云端”也不能替代查看实际合同、区域、保留设置、日志与功能例外。隐私结论来自具体数据流与控制，而不是部署名词。
 
-A useful estimate is:
+## 如何估算总拥有成本（total cost of ownership，TCO）？
+
+不要只把 API token（词元）费用与 GPU（图形处理器）租赁价相减。可比较的范围至少包括：
 
 $$
-\text{total cost} = \text{inference} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and controls}
+\begin{aligned}
+\text{总成本}={}&\text{推理运行成本}+\text{检索与额外存储}\\
+&+\text{工程与运维}+\text{评估与风险控制}.
+\end{aligned}
 $$
 
-There is no universal spend threshold for switching to self-hosting. Estimate with actual traffic, peak demand, staffing, quality requirements, and the full operating burden. Edge and hybrid choices likewise depend on device and data constraints, not just a latency label.
+其中，推理运行成本按实际路径计入托管调用费，或自托管计算与存储费；同一次推理只计一种运行路径。
 
-The choice also depends on which model candidates meet the task contract. See [Model Selection and Ecosystem / 模型选择与生态](../foundations/model-selection-and-ecosystem.md) for comparing task quality, modality, deployment constraints, and measured routing. For the run identity and recovery behavior that should remain stable across deployment patterns, see [AI Application Architecture / AI 应用架构](ai-application-architecture.md).
+为同一流量假设计入低谷、峰值、冗余、闲置、扩容、支持、更新、故障响应、质量差异和人工复核。托管 API 的推理费与自托管 GPU 账单是两条实际运行路径；同一份推理不能把供应商费用和 GPU 费用重复计算。明确是每请求、每成功报告、每用户还是每月成本，并用时延目标限制可接受的容量方案。[时延与成本测量](ai-latency-and-cost-optimization.md)中的 \$2 / \$1 / \$8 教学费率不是报价，真实 API 价格和缓存/区域规则要查部署时的官方价格页。自托管容量需在目标硬件、模型精度、输入/输出长度、并发和批处理条件下回放；平均 token 量不能证明峰值显存足够。
 
-For self-hosting, estimate the peak number and length of active sequences and then measure fit on the intended hardware. [GPU serving capacity / GPU 推理容量](llm-serving-and-kv-cache.md) shows how to size KV memory and compare batching under a latency target.
+## 月报助手在什么假设下选择什么部署？
 
-**Source boundary / 来源边界：** This note summarizes the deployment comparison already present in the AI Application Architecture source. Provider features, terms, prices, capacity, and availability are time- and workload-specific; verify the exact provider or serving stack when making a current deployment decision. It does not make a universal cost or privacy ranking.
+> [!example] 案例延续：先选一个可逆的试点
+> 月报助手用公开合成数据，目标是每月交付 10,000 份通过内容与结构验收的成功报告；这不是请求数。选型筛选中，候选甲在 200 个合成案例上内容通过 198/200、结构有效 200/200；另设的常规负载 p95（第 95 百分位）=1.7 秒和模型 API 直接费 $0.007/成功报告只是教学假设，不是峰值实测。该直接费按所有模型尝试的费用（含失败和重试）除以同时通过内容与结构验收的报告数，$0.01/成功报告只约束直接 API 费。
+>
+> 按同一口径估算，10,000 份成功报告 × $0.007 = $70/月直接 API 费；直接费用上限对应 $100/月。这个预算不含人工复核、数据服务、评估与运维，不能推出完整总成本已达标。实际请求/重试数量、月末并发与 p95、完整 TCO 均未测。因此在假设的合成数据条件下，先做可逆的托管 API 试点；若首次试点失败，就关闭模型入口，回到当前人工编制的月报流程。只有后续模型版本已有验收基线时，才回滚到上一份已验收版本。团队没有现成 GPU 推理服务和值班能力，所以本例也没有自托管基线。
+
+如果需要自托管，先用[GPU 推理容量](llm-serving-and-kv-cache.md)估计每个活跃序列的 KV 内存和批处理容量，再回放真实峰值并检查满足时延目标的吞吐量。若当前没测过同一工作负载，部署选型就仍未定，不能只凭账单或公开基准做盈亏平衡结论。
+
+## 如何从试点走到上线，并保留回滚能力？
+
+模型发布不是只换一个二进制。将以下配置作为可追溯、可比较的版本组合：模型标识/修订、提示词、schema（结构模式）、推理参数、数据与检索规则、服务镜像、任务评估集和验收门槛。遇到服务侧模型更新时，记录实际调用到的标识；若供应商不提供固定快照，就把每次重要变化当成需重新评估的候选。
+
+1. **离线验收：** 内容判定至少 99%，结构校验为 100%；只有内容与结构同时通过才计一份成功报告。保存这两项的联合结果，不能只看单项较高的比例。
+2. **影子运行或小流量试点：** shadow traffic（影子流量）不改变用户当前看到的结果，也不应触发外部副作用，但会增加模型调用费用；只有数据使用政策允许时才能复制真实载荷。本例只用合成公开数据。首次模型试点若停止，直接回到现有人工月报流程。
+3. **逐步加量：** 先验证日常负载，再在月末代表性峰值窗口检查后端完整时延、内容通过率、结构校验、失败/重试数、供应商限流和每份成功报告费用。
+4. **按不同严重度设停门槛：**
+
+   | 检查项 | 案例门槛 | 触发后的动作 |
+   |---|---|---|
+   | 跨租户或越权数据泄漏 | 零容忍 | 立即关闭候选流量，转人工月报并调查 |
+   | 输出结构 | 100% 有效；无效结果不得到达用户 | 暂停候选，修复并重跑离线门禁 |
+   | 内容（金额、行号引用、不臆测原因） | 审核样本通过率至少 99% | 低于门槛即停止加量并退回人工流程；上述错误都计入内容失败率。若具体产品要求某类内容错误零容忍，需在上线前把该项另设硬门槛 |
+   | 后端完成 p95 | 约定观测窗口内不高于 2 秒，并通过月末代表性峰值验证 | 超过门槛或峰值未验证时不继续加量；失败时退回人工流程 |
+   | 模型 API 直接费用 | 每份成功报告不高于 $0.01，按所有尝试费用除以成功报告数（包含重试） | 超额就暂停候选；不可用直接费用替代完整 TCO |
+
+   完整 TCO 上限尚未定出；在确定并验证总成本门槛前，不把试点当成全面上线许可。
+5. **回滚并核实：** 首次模型试点切回人工月报；以后版本若已存在已验收模型组合，则将流量切回该版本。停止候选流量后，核对未完成运行、错误、数据影响和用户反馈。
+
+Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它不会自动恢复部署模板以外的提示词、供应商模型配置、数据状态或已产生的外部副作用。若用 Kubernetes，自身保留 Deployment 修订史并确认回退完成；其他平台也需有可重放的版本选择和回退机制。AI 运行的持久标识、断连恢复和副作用处理属于[生产 AI 运行架构](ai-application-architecture.md)；上线后持续将任务反馈与版本关联，见[生产可观测性与反馈](ai-production-observability-and-feedback.md)。
+
+## 相关笔记
+
+- [模型选择与生态](../foundations/model-selection-and-ecosystem.md)：先得到满足任务门槛的候选。
+- [时延与成本优化](ai-latency-and-cost-optimization.md)：提供真实负载、尾延迟、成功任务成本及缓存数据。
+- [AI 应用架构](ai-application-architecture.md)：在任何部署模式下保持稳定运行 ID 和权威状态。
+- [GPU 推理容量与 KV 缓存](llm-serving-and-kv-cache.md)：测量自托管容量与请求调度。
+- [生产可观测性与反馈](ai-production-observability-and-feedback.md)：用线上结果决定保留或回滚。
+
+> [!info]- 来源
+> - **托管服务的数据和留存条件必须检查具体控制与 API 功能：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored with the OpenAI API”和“Data retention controls”；这些条款只适用于该平台，不能代替其他提供方的合同评估。
+> - **当前目录、API 能力和用量价格会变化：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；页面用于查当时具体模型与价格，不提供跨部署方式的总拥有成本比较。
+> - **逐步替换与修订回退的具体例子：** Kubernetes，[Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)，文档版本 v1.37，核对日期：2026-11-06，“Rolling Back a Deployment”和“Rolling Update”；这里只将其作为 Kubernetes 实现实例。模型、提示词、数据版本及外部副作用仍需应用级协调。
+> - **服务密钥、流量和上线准备：** OpenAI，[Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices)，核对日期：2026-11-06；“API keys”与“Choose a model”章节用于提示凭据与生产边界，不作为平台无关清单。

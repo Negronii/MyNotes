@@ -4,7 +4,7 @@
 
 ## 从问题开始
 
-- [从输入 URL 到第一帧，发生了什么？](browser/browser-basics.md)——建议先读，沿同一个报表页面从地址栏走到画面出现。
+- [浏览器如何把 URL 变成第一帧？](browser/browser-basics.md)——建议先读，沿同一个报表页面从地址栏走到画面出现。
 - [一次操作怎样变成界面更新？](../review/index.md#一次操作怎样变成界面更新？)——沿事件处理、React 状态变化走到下一帧。
 - [页面已经可见，为什么操作还很慢？](performance/performance-metrics-and-analysis.md)——从性能录制定位延迟落在哪一段。
 

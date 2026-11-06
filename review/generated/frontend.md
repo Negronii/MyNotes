@@ -8,34 +8,19 @@
 
 ~~~mermaid
 flowchart TD
-    A[地址栏输入报表 URL] --> B[首次访问：跨文档导航]
-    B --> C[浏览器取得响应并创建新 Document（文档对象）]
-    C --> D[HTML 字节逐步到达，HTML parser（解析器）边解析边建立 DOM（Document Object Model，文档对象模型）]
-    D --> P[继续接收和解析后续 HTML]
-    D --> CSS[发现并获取 reports.css]
-    D --> JS[发现并获取 reports.js 模块图]
-    D --> IMG[发现并获取报表图片]
-    P --> STYLE[已有内容且当前渲染所需样式可用]
-    CSS -->|当前渲染所需的阻塞样式表就绪| STYLE
-    STYLE --> FRAME[渲染机会：计算样式、布局并生成绘制结果]
-    FRAME --> PRESENT[浏览器引擎栅格化、合成并显示画面]
-    P --> MODULE[HTML 解析结束]
-    JS --> GRAPH[模块图获取完成]
-    MODULE --> GATE[普通模块执行条件检查]
-    GRAPH --> GATE
-    CSS -->|当前无阻塞脚本的样式表| GATE
-    GATE --> RUN[普通模块开始求值]
-    RUN --> HANDLER[reports.js 注册筛选处理器]
-    IMG --> LATER[图片到达后填入预留区域]
-    PRESENT --> VISIBLE[标题、筛选按钮和预渲染行可见]
-    HANDLER --> ACTIVE[筛选按钮已可交互]
-    VISIBLE --> ACTIVE
-    ACTIVE --> CLICK[点击“最早优先”]
-    CLICK --> UPDATE[处理器更新 URL、aria-pressed 和行顺序]
-    UPDATE --> NEXT[浏览器在后续渲染机会显示新顺序]
+    A[输入报表 URL] --> B[导航取得 HTML 响应]
+    B --> C[逐步解析 HTML<br/>建立 DOM 并发现资源]
+    C --> D[已有可显示内容<br/>当前渲染所需 CSS 就绪]
+    C --> E[HTML 解析结束、模块图就绪<br/>样式不再阻塞脚本]
+    D --> F[渲染机会：样式、布局、绘制<br/>栅格化与合成后显示首帧]
+    E --> G[reports.js 模块求值<br/>注册筛选处理器]
+    F --> H[画面可见且处理器已就绪]
+    G --> H
+    H --> I[点击最早优先<br/>更新 URL、选中态与行顺序]
+    I --> J[后续渲染机会显示新顺序]
 ~~~
 
-图中 CSS、模块脚本、图片获取与后续 HTML 解析分别推进；不必等所有资源都到齐才有首帧。模块图获取完成只表示依赖资源已就绪；普通模块还要等 HTML 解析结束，并满足脚本阻塞样式表状态，才开始求值。图片若晚到，可以填入预留空间而不必挪动已有内容。图是帮助跟踪这条报表路线的模型，不是每个引擎都必须遵循的逐步流水线。浏览器负责导航、资源协调与画面呈现，JavaScript engine（JavaScript 引擎，如 V8、JavaScriptCore 或 SpiderMonkey）负责执行脚本；各自的进程和线程边界属于实现选择。
+图的两条分支分别跟踪“画面可见”和“处理器可用”。解析期间，CSS、模块脚本、图片获取与后续 HTML 解析可以交叠推进；不必等所有资源都到齐才有首帧。模块图获取完成只表示依赖资源已就绪；普通模块还要等 HTML 解析结束，并满足脚本阻塞样式表状态，才开始求值。图片若晚到，可以填入预留空间而不必挪动已有内容。图是帮助跟踪这条报表路线的模型，不是每个引擎都必须遵循的逐步流水线。浏览器负责导航、资源协调与画面呈现，JavaScript engine（JavaScript 引擎，如 V8、JavaScriptCore 或 SpiderMonkey）负责执行脚本；各自的进程和线程边界属于实现选择。
 
 ### 先确定浏览器要打开什么
 

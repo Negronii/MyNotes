@@ -1,65 +1,102 @@
-# How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？
+# 如何为具体任务选择模型，并让部署约束进入决策？
 
-Choose from candidates that satisfy the task's hard constraints, then compare them on representative examples against an agreed quality bar. Measure latency, total cost, modality and format reliability, data handling, and operational fit. Model names, rankings, context limits, supported inputs, and prices change, so a public benchmark or provider label is a lead for investigation, not a lasting selection rule. / 先筛出符合任务硬性约束的候选模型，再用有代表性的样本和约定的质量门槛进行比较。测量任务效果、时延、总成本、模态与格式可靠性、数据处理和运维适配。模型名称、排名、上下文限制、输入能力和价格都会变化，因此公开基准或供应商标签只能帮助调查，不能作为长期固定的选择规则。
+先把任务成功条件写成可测的契约，再淘汰不满足硬约束的候选模型。对剩余候选使用同一提示词、输入、工具和评估协议比较任务质量、时延与总成本；模型名称、排行榜和供应商档位只能帮助初筛，不能替代目标任务上的验证。本篇交付候选集、验收门槛和基线假设；[如何测量 AI 服务的时延与成本](../systems/ai-latency-and-cost-optimization.md)接着量化工作负载，[如何选择 AI 部署方式并安全回滚](../systems/ai-deployment-patterns.md)再据此选运行位置和发布路径。
 
-**Key terms / 关键术语：** task contract / 任务要求；held-out set / 保留集；hosted API / 托管 API；open-weight / 开放权重；hybrid deployment / 混合部署；routing / 路由。
+~~~mermaid
+flowchart TD
+  A[任务契约与授权边界] --> B[筛选并评测候选模型]
+  B --> C[测量峰值、时延与每份成功任务成本]
+  C --> D[选择部署模式并逐步发布]
+  D -->|门槛失败| B
+~~~
 
-## Start with the task contract / 从任务要求开始
+图中月报助手先得到通过相同任务检查的候选，再用真实工作负载建立预算，最后选运行位置；上线回归会回到候选评测，不是一次性排名。下两篇分别解释预算测量和部署回滚。
 
-Record what a successful result must do, what errors matter, and which operating conditions are fixed. Compare candidates on the same prompt, data, tools, and evaluation protocol where possible.
+## 从月报助手的任务契约开始
 
-| Dimension | Questions to answer |
+> [!example] 虚构案例：为月报生成可核对的摘要
+> 一家虚构的报表助手接收已经过应用授权的区域销售汇总，回答“哪些区域环比变化率的绝对值超过 8%，总额变化多少？”。模型输入包含行号、区域名和两期原始金额；租户隔离和行级权限由应用完成。
+>
+> 以下数据是公开教学用的合成数值，单位为万元。表中前两期是模型输入；“环比变化”和“合计”是保留集上的验收参考，不发送给模型。行号必须随原始输入保留：
+>
+> | 行号 | 区域 | 2026-09 原始输入 | 2026-10 原始输入 | 环比变化验收参考 |
+> |---|---|---:|---:|---:|
+> | r1 | 华东 | 120 | 132 | +12（+10%） |
+> | r2 | 华北 | 80 | 72 | -8（-10%） |
+> | r3 | 华南 | 50 | 55 | +5（+10%） |
+> | 合计 | — | — | — | 250→259；+9（+3.6%） |
+>
+> 验收参考答案：华东 +12 万元（+10%，r1）、华北 -8 万元（-10%，r2）、华南 +5 万元（+10%，r3）；合计 +9 万元（+3.6%，依据 r1–r3）。区域、变化额、变化率和支持它们的行号都是必填项；不得臆测促销、季节等原因。上期为零或缺失时百分比标为不可计算，不得除以零。
+
+把此类要求写成验收契约，而不是“回答得好”：
+
+| 维度 | 月报助手的检查方式 |
 |---|---|
-| **Task quality / 任务质量** | What counts as correct or useful? Which edge cases and refusal cases matter? |
-| **Latency and availability / 时延与可用性** | Is the constraint about time to first response, full completion, or uptime? Which workload and region are representative? |
-| **Cost / 成本** | Include input and output usage, retries, retrieval, hosting, support, and evaluation—not just one token rate. |
-| **Inputs and outputs / 输入与输出** | Does the task require text, image, audio, or other modalities? Are schemas or tools supported for this exact model and API? |
-| **Data handling / 数据处理** | What do the contract, configuration, retention policy, and deployment boundary allow? “Hosted” or “open-weight” alone does not answer this. |
-| **Operations / 运维** | Who owns scaling, updates, monitoring, security patches, and incident response? |
+| 任务正确性 | 金额、方向、百分比和总额与授权输入一致；行号确实支持相应说法 |
+| 边界行为 | 缺失、上期为零、负数、单位混用、相互矛盾或无数据时，按约定报告或升级 |
+| 指令与格式 | 不猜测原因；输出能通过目标接口的结构校验 |
+| 时延 | 约束明确是首 token、完整报告还是两者；按真实峰值与区域测量 |
+| 成本 | 计算模型、重试、数据准备、托管、评测和人工复核后的每份成功报告成本 |
+| 数据与运维 | 输入是否可发给托管服务，谁负责密钥、扩缩容、更新、监控和故障响应 |
 
-Public benchmarks can help generate a shortlist when their task and protocol are relevant. They do not establish performance on a different prompt, data distribution, API configuration, or deployment. Keep an application-specific held-out set and report its sample scope and uncertainty. [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) explains how to choose task criteria and compare changes.
+**适用边界：** 对这类报表，算术可以留给模型并被严格评测，也可以由应用确定性地预先计算、让模型只负责解释。两种实现都要评估端到端结果；如果授权和计算交给模型猜测，就没有落实任务契约。
 
-## Model tiers are shorthand, not a catalog / 模型档位只是简称，不是目录
+## 如何建立可比较的候选集？
 
-Teams sometimes use labels such as **frontier**, **balanced**, and **fast** to describe rough cost, latency, and capability tradeoffs within a provider's current catalog. Those labels are not shared standards: a “fast” model can be the better choice on a narrow task, and a “frontier” label does not prove quality on yours. Avoid copying an undated model list or treating a prior ranking as a current fact. Verify the exact model ID, supported API features, context limit, and pricing in the provider's current documentation when making a real selection.
+先应用硬门槛：必要模态和输入形状是否支持；API 或本地引擎是否能实现需要的结构化输出；数据处理方式是否符合合同和内部规则；是否有可接受的故障与运维责任。只要候选不满足一项硬门槛，就不应靠低价格或高公开基准分补偿。
 
-## Hosted API, open-weight, or hybrid? / 托管 API、开放权重还是混合部署？
+再在相同条件下做代表性评测：
 
-| Approach | Potential advantages | Costs and constraints to compare |
+1. 固定模型调用前的授权、上下文、工具与应用校验流程。
+2. 用开发集迭代提示词和配置；把 held-out set（独立保留集）留给最终比较。
+3. 覆盖普通请求、零值/缺失值、越权输入、格式边界和已知失败切片。
+4. 分开记录任务通过、事实/数值正确、引用支持、格式有效、拒答或升级、时延和实际费用。
+5. 报告样本分母和不确定性；小样本上的差异不能自动外推到生产总体。
+
+> [!example] 教学用候选表：分开内容、格式与费用门槛
+> 假设两种匿名候选都用同一组 200 个合成案例、同一提示词与应用路径筛选。内容判定检查金额、方向、行号和不臆测；结构有效率单独统计。一个报告只有内容与结构都通过，才算成功。
+>
+> | 候选 | 内容判定通过 | 结构有效 | 成功交集 | 常规筛选的后端完整报告时延 p95 | 模型 API 直接费/成功报告 |
+> |---|---:|---:|---:|---:|---:|
+> | 甲 | 198/200（99%） | 200/200（100%） | 198/200（99%） | 假设 1.7 秒 | 假设 $0.007 |
+> | 乙 | 199/200（99.5%） | 198/200（99%） | 197–198/200（交集未知） | 假设 1.2 秒 | 假设 $0.004 |
+>
+> 本例要求内容通过率至少 99%、结构有效率 100%，并要求常规筛选负载的 p95≤2 秒；只有内容与结构交集才计成功。甲交集为 198/200，样本内容/结构门槛与假设 p95 都通过。乙的交集无法只由两项比例精确还原，但结构门槛无论如何都未通过，须先修复后重评。p95 和直接费用是分开设定的常规筛选假设，不是从这 200 个样例计算出来，也不是峰值测量。模型 API 直接费按所有尝试（含失败和重试）费用除以成功报告数；$0.01/成功报告是**直接 API 费用上限**，甲的假设值低于它。它不含人员、工程、评估、人工复核等总拥有成本，不能据此称完整成功成本已达标。所有数字均为教学假设，不是实测或模型排名。
+
+公共基准可以帮助缩短候选列表，但基准的任务、样本、模型访问方式、评分协议和目标部署若不同，就不能直接推出本应用的质量。模型版本、上下文窗口、模态、工具和结构输出支持都会变化。上线前要核验确切模型标识、版本、接口能力、限制、区域和当前价格。
+
+## hosted API（托管 API）、open-weight（开放权重）与 hybrid deployment（混合部署）如何进入候选筛选？
+
+| 方式 | 可能合适的条件 | 仍需核对的成本与责任 |
 |---|---|---|
-| **Hosted API / 托管 API** | Quick access to managed inference and model updates; less serving infrastructure to operate. | Data flows and retention depend on provider terms and configuration; usage, rate limits, availability, and model lifecycle are provider-controlled. |
-| **Open-weight deployment / 开放权重部署** | More control over serving location, model version, and infrastructure choices. | A weight license is not automatically an open-source license or permission for every use. The operator owns hardware, serving, security, scaling, and updates. |
-| **Hybrid / 混合部署** | Different models or environments can serve distinct workload classes. | Adds routing, evaluation, observability, policy consistency, and failure paths across systems. |
+| 托管 API | 希望快速试验托管推理，且合同、地域、功能和数据要求均允许。 | 精确服务条款、保留设置、速率限制、可用性、模型生命周期和按量费用由具体提供方与配置决定。 |
+| 开放权重、自托管 | 模型版本或运行位置的控制是明确需求，并且团队能承担容量与运维。 | 开放权重不自动等于开源许可或所有用途的授权；团队还负责硬件、服务栈、安全更新、扩缩容和 on-call（值班响应）。 |
+| 混合部署 | 不同任务确实需要不同模型或不同数据边界。 | routing（请求路由）、策略一致性、回退、监控和重复基础设施会增加复杂度；必须测量净收益。 |
 
-This is an eligibility and trade-off comparison, not a universal deployment ranking. Edge, self-hosted capacity, and detailed operating responsibilities have their own constraints; see [AI Deployment Patterns / AI 部署模式](../systems/ai-deployment-patterns.md).
+“前沿”“均衡”“快速”等档位只是各家产品目录中的粗略称呼，不是共享标准。高档位不证明它在此报表任务上更好，低时延标签也不代表端到端服务更快。实际选型应看同任务评测与当前文档，而非复制过期榜单。
 
-Do not pick a hosting pattern from API spend alone. A useful estimate is:
+模态也要细分验证。multimodal（多模态）不说明一个模型支持哪种图片、音频或视频输入，也不说明它能否读准所需内容。若报表输入以后改成扫描件或图表，应用要用目标格式、分辨率和 API 逐项评测，不能把表格文本测试结果直接外推。
 
-$$
-\text{total cost} \approx \text{inference usage} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and risk controls}
-$$
+## 何时把请求路由到不同候选？
 
-Compare the same workload, quality target, peak traffic, and data constraints. A provider API may suit rapid iteration; self-hosting may suit a real data-control or workload need; edge deployment can help when offline operation or device constraints dominate. The break-even point depends on the actual workload and people costs.
+只有当不同请求类别表现出稳定、可测的需求差异，才值得增加模型路由。它可以把简单、低风险的摘要送给成本较低的候选，把经评测确实受益的请求交给其他候选；但需要把分类错误、路由时延、回退比例、维护、权限和策略一致性一起算入。
 
-## Route by measured need / 按实测需求路由
+月报助手若按输入长度或报表类型路由，先给每个切片定义通过条件，再比较路由前后的成功率、每份成功报告成本和尾部时延。分类置信不足时，应回退到已验收候选或人工路径；高影响工具动作仍需应用逐项授权，模型路由本身不授予权限。不能假定“抽取”必然简单、某一行业请求必然困难。详细的请求阶段测量见[如何测量 AI 服务的时延与成本](../systems/ai-latency-and-cost-optimization.md)。
 
-Routing can send simple, low-risk requests to a cheaper model and reserve a more capable option for cases that benefit from it. First measure whether the router's errors, added latency, and maintenance are outweighed by the savings. Use a task-relevant fallback when routing confidence is insufficient, and ensure high-impact operations still pass application-side authorization. Do not label “classification,” “reasoning,” or “extraction” as automatically easy or hard across all models.
+## 从候选评测交给预算与部署
 
-Routing and other service optimizations need a fixed quality bar and end-to-end measurements; see [How to reduce AI application latency and cost / 如何降低 AI 应用时延与成本](../systems/ai-latency-and-cost-optimization.md). To connect versioned results and user feedback to an improvement or rollback decision, see [Production observability and feedback / 生产可观测性与反馈](../systems/ai-production-observability-and-feedback.md).
+选型交付候选甲的合成筛选结果和任务契约；服务目标暂设为每月 10,000 份通过内容与格式验收的成功报告（不是 10,000 次请求）。实际请求/重试数量、峰值并发、峰值时延和完整总成本留给后续测量。
 
-## Multimodal capability / 多模态能力
+## 相关笔记
 
-“Multimodal” does not specify which input or output a model supports or how well it handles a task. Test the actual modality and input shape—such as a chart, scanned document, spoken utterance, or video sample—under the target API. Check model documentation for supported formats, limits, and feature combinations at the time of deployment.
+- [如何测量 AI 服务的时延与成本](../systems/ai-latency-and-cost-optimization.md)：定位端到端瓶颈，计算每份成功任务成本。
+- [如何选择 AI 部署方式并安全回滚](../systems/ai-deployment-patterns.md)：把候选和测得的工作负载映射到运行方式和发布计划。
+- [AI 应用架构如何经受断连与 worker 故障？](../systems/ai-application-architecture.md)：定义稳定运行标识、持久状态与恢复契约。
+- [如何判断 AI 系统是否满足任务契约？](../evaluation/llm-evaluation-methods.md)：设计样本、评分维度、保留集与不确定性。
+- [上下文工程原则](../context/context-engineering-principles.md)、[微调策略](../fine-tuning/fine-tuning-strategies.md)和[检索增强生成架构](../rag/rag-architecture-and-implementation.md)：分别处理模型每次看到什么、何时训练行为，以及怎样使用外部证据。
 
-## Related notes / 相关笔记
-
-- [AI Deployment Patterns / AI 部署模式](../systems/ai-deployment-patterns.md) compares hosted, self-hosted, edge, and hybrid operating patterns.
-- [AI Application Architecture / AI 应用架构](../systems/ai-application-architecture.md) defines run identity, persistence, and recovery behavior across request channels.
-- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) covers token budgets and provider-specific prompt caching.
-- [Fine-tuning Strategies / 微调策略](../fine-tuning/fine-tuning-strategies.md) distinguishes behavior adaptation from maintained external knowledge.
-- [RAG Architecture and Implementation / 检索增强生成](../rag/rag-architecture-and-implementation.md) covers current or access-controlled external evidence.
-
-## Sources / 来源
-
-- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Its guidance treats prompting, context, fine-tuning, and evaluation as task-specific optimization levers rather than a universal linear ladder.
-- For current OpenAI model IDs and feature support, consult the changing [Models documentation](https://developers.openai.com/api/docs/models), checked 2026-10-15.
+> [!info]- 来源
+> - **同任务比较与动态目录：** OpenAI，[Model selection](https://developers.openai.com/api/docs/guides/model-selection)，核对日期：2026-11-06；“Compare it with ... on the same inputs”及模型/产品可用性部分用于佐证同协议比较和目录变化。文中的产品建议是提供方示例，不作为通用模型排名。
+> - **把行为写成评测条件：** OpenAI，[Working with evals](https://developers.openai.com/api/docs/guides/evals)，核对日期：2026-11-06；“Create an eval for a task”展示将任务、测试输入与判定条件对应。该文档标示 Evals 平台已进入弃用过渡期；此处只引用评测思路，不依赖其 API 可用性。
+> - **部署前的确切能力与价格：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；目录和价格是提供方当前页面，不应转抄为长期固定值。
+> - **托管服务数据边界：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored”和“Data retention controls”；仅说明一个具体 API 如何文档化留存与控制，其他提供方和设置须另行核对。

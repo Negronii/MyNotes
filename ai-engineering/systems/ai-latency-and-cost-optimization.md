@@ -1,47 +1,103 @@
-# How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？
+# 如何测量并降低 AI 应用的时延与成本，同时守住任务质量？
 
-**Core explanation / 核心解释：** First measure where end-to-end time and cost accumulate, then change one layer at a time against a fixed task-quality bar. Queueing, context assembly, retrieval, model input/output, tools, retries, and operations have different costs; token price alone is not total cost, and faster partial output is not necessarily faster completion. / 先测量端到端时间和成本分别累积在哪些环节，再以固定任务质量门槛为准逐层调整。排队、上下文组装、检索、模型输入与输出、工具、重试和运维成本各不相同；token 单价不等于总成本，更快看到部分输出也不代表更快完成。
+先记录一份完整任务从进入应用到得到有效结果的时间、每个阶段的资源和最终任务结果，再针对已定位的瓶颈一次改变一个因素。time to first token（首 token 时延，TTFT）、完整响应、吞吐量和每份成功任务成本回答不同问题；更快吐出部分文本不一定减少总工作，较便宜的模型若增加重试或人工复核也未必省钱。
 
-**Key terms / 关键术语：** time to first token (TTFT) / 首 token 时延；queue time / 排队时间；response cache / 响应缓存；prompt cache / 提示缓存；continuous batching / 连续批处理；quantization / 量化；distillation / 蒸馏。
+本篇承接[模型选择与任务契约](../foundations/model-selection-and-ecosystem.md)的候选、通过门槛和流量目标，建立同一口径的时延/成本测量账本；[部署方式与回滚](ai-deployment-patterns.md)据此判断托管、自托管、端侧或混合运行能否满足条件。
 
-## How can you reduce latency and cost? / 如何降低时延与成本？
+月报助手承接候选甲的合成筛选结果；月目标为 10,000 份验收成功报告。筛选记录中的常规负载时延和模型 API 直接费用是独立假设，不是峰值或完整成本数据；实际请求/重试数、月末并发和全成本仍待测。本篇的单条 trace 与缓存算例仅演示计算，不作为甲的实测结果。
 
-Measure queueing, context assembly, retrieval, model input and output, tools, and retries separately. Track latency distributions and TTFT alongside throughput, queue time, and cost per completed task. Hold the task-quality bar constant: a cheaper route that fails more often may increase retries, escalations, and human review.
+## 先把月报助手的端到端时延拆开
 
-The application architecture owns run status, deadlines, and recovery; see [How can a production AI run survive disconnections and worker failures? / 生产运行如何经受断连与故障？](ai-application-architecture.md). Define the success measure before comparing optimizations with [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md).
+对虚构月报助手，每次报告包括：读取已授权汇总、排队、组装上下文、调用模型、校验结构和行号、返回完成结果。客户端还要计入网络与自身处理。若只看模型的生成速度，就会漏掉排队、数据访问或应用校验。
 
-### Which optimization should you test? / 应先测试哪种优化？
+> [!example] 一条合成追踪记录：各阶段相加与首 token
+> 以下时长只是演示如何相加的一条请求，不是分布统计或实测。以请求进入后端应用为计时起点：读取与上下文组装 0.12 秒，应用排队 0.08 秒，向模型发起调用到应用收到首 token 0.62 秒（不包括前面的应用排队），首 token 后生成剩余内容 0.58 秒，schema（结构模式）和行号校验 0.10 秒。
+>
+> - 后端请求完成时延：0.12 + 0.08 + 0.62 + 0.58 + 0.10 = **1.50 秒**。
+> - 后端首 token 时延（TTFT）：0.12 + 0.08 + 0.62 = **0.82 秒**。
+> - 若用户必须等报告校验通过才能使用，0.82 秒不能替代 1.50 秒的后端完成时间；客户端实际等待还要加网络与显示处理。
 
-- **Shorten or select context / 缩短或筛选上下文：** include relevant material and limit unnecessary history. Measure whether evidence or task quality is lost. See [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md).
-- **Cache / 使用缓存：** exact-response or semantic response caches can avoid model work on a safe hit. Require compatible permissions, freshness, tenant, locale, and policy version. For example, “What is the refund policy in the US?” and “What is the refund policy in the EU?” can have similar embeddings but different correct answers. Similarity alone does not prove a response is reusable.
-- **Route requests / 请求路由：** use a lower-cost candidate only for cases where it meets the measured quality bar. Include classifier errors, added latency, fallback frequency, and maintenance in the comparison. Candidate fit belongs to [Model Selection and Ecosystem / 模型选择与生态](../foundations/model-selection-and-ecosystem.md).
-- **Inference batching / 推理批处理** — A serving engine can admit and retire sequences between decoding steps. [GPU serving capacity / GPU 推理容量](llm-serving-and-kv-cache.md) explains how that affects memory, throughput, and per-request latency. A provider's asynchronous Batch API is a job interface for requests that tolerate delayed completion. It exposes no live inference scheduling contract.
-- **Quantization / 量化：** represent weights, and in some methods activations, with fewer bits. This can reduce model memory and data movement, and may improve inference speed when the hardware and kernels support the chosen format. Quantization error can affect quality, and lower precision does not guarantee faster end-to-end service; evaluate the exact model, quantizer, hardware, and workload.
-- **Distillation / 蒸馏：** train a smaller student on outputs or softened targets from a larger teacher over chosen inputs. A student may reduce serving cost or latency, but can lose capabilities or fail outside the distillation set. Include teacher/data generation and evaluation in the cost, and test on held-out tasks before replacement.
-- **Stream responses / 流式返回：** streaming can improve perceived responsiveness and TTFT; it does not necessarily reduce total generation time or work. The browser's treatment of partial output is covered in [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md).
+线上要按同一运行标识记录阶段起止时间，并分别报告后端时延和客户端观测时延的中位数 p50、第 95 百分位 p95（必要时 p99），以及请求完成量、排队、超时、重试、输入/输出 token（词元）长度与每份成功任务成本。标出模型、提示词、检索/数据版本、服务区域、并发和 GPU（图形处理器）等相关硬件配置。尾部时延可能来自高并发排队，不能仅凭平均值定位。自托管时，推理引擎的排队、prefill（预填充）、decode（解码）和端到端指标能帮助区分服务瓶颈；应用外部链路仍需自己计入。
 
-Provider features such as prompt caching, batch jobs, context limits, and prices vary by model and API and can change. Verify current documentation for the exact deployment. Compare total cost, including inference, retrieval, storage, engineering, evaluation, and operations.
+## 根据瓶颈选一个可检验的改动
 
-### A teaching calculation for cache cost / 缓存成本教学算例
+| 观察到的瓶颈 | 可测试的改动 | 需要一起检查的代价 |
+|---|---|---|
+| 模型在许多请求上都慢 | 比较已通过任务门槛的较小候选、受支持的推理格式或更快硬件 | 质量变化、硬件利用、尾部时延和成本是否真的改善 |
+| 排队随并发上升 | 调整准入、容量、并发与 inference batching（推理批处理）；必要时拆分交互与异步工作负载 | 批处理可提升吞吐，但等待凑批可能加长单次响应 |
+| 每次输入都很长 | 减少无关历史、只取必要证据、避免把结构化数据渲染成重复长文本 | 输入删减是否漏掉报表依据；输入 token 减少不保证全部延迟同比下降 |
+| 输出很长或有多轮往返 | 明确简洁格式、合并确实可合并的独立工作、并行可并行阶段 | 不能合并有先后依赖的步骤；缩短输出不能牺牲必要解释或校验 |
+| 数据或应用阶段占主导 | 聚合和算术改用确定性数据库/代码路径；减少重复读取 | 应用实现也需维护正确性、权限和缓存失效逻辑 |
 
-Assume 1,000 model calls, each with 1,000 input tokens and 200 output tokens. For this arithmetic example only, assume uncached input costs $2 per million tokens, cached input costs $1 per million, and output costs $8 per million. These are invented teaching values, not current provider prices; ignore cache-write, storage, retrieval, and other fees.
+几种常见优化须分别解释：
 
-Without caching, the token charge is:
+- **上下文裁剪与检索：** 只传入回答需要的数据。月报的合计、变化率可以在授权后的确定性聚合阶段计算，模型再把核对过的结果转成说明。保留已有算术测试与行号引用，确认裁剪未移除依据。
+- **prompt caching（提示缓存）：** 重用相同请求前缀的计算状态，可能减少符合特定模型条件的输入处理时间和费用；它不会直接复用上一份答案，也不替代 response cache（响应缓存）。把稳定指令、schema 放在稳定前缀，把动态报表数据放在后缀；用实际缓存命中和账单字段验证收益。
+- **应用响应缓存：** semantic cache（语义缓存）或整份回答缓存只有在可证明请求等价且数据仍新鲜、同租户同权限、同语言、同策略时才可重用。美国与欧盟的退款政策问题向量相近，却可能有不同正确答案；语义相似度本身不能证明回答可共享。
+- **request routing（请求路由）：** 只有当低成本候选在对应任务切片上通过同一质量门槛时才路由。计入分类错误、附加延迟、回退频率和维护成本；候选筛选见[模型选择](../foundations/model-selection-and-ecosystem.md)。
+- **推理批处理与异步批任务：** 支持 continuous batching（连续批处理）的服务引擎可以在生成步骤之间接纳和结束请求，改善设备利用和总体吞吐，但排队与批次策略会改变单请求尾延迟。[GPU 推理容量](llm-serving-and-kv-cache.md)解释 KV 显存与调度关系。供应商的 Batch API 则是容忍延后完成的一种异步作业接口，不等于在线推理引擎的连续批处理。
+- **quantization（量化）与 distillation（知识蒸馏）：** 量化以较低精度表示权重（某些方法也处理激活），通常可降低权重存储占用；有些格式在目标硬件和内核有高效实现时，也可能减少数据搬运或加快推理。量化误差可能影响任务表现，低位宽不保证端到端更快。蒸馏用较大的教师模型为选定输入生成训练信号，训练较小学生；它可能降低部署成本，也可能丢失能力，且数据生成和评测本身有成本。两者都要在具体模型、硬件、流量和保留集上实测。
+- **streaming（流式输出）：** 可能让用户更早看到部分结果，改善感知响应；若用户必须等待完整结构、引用和安全校验，它不会自动降低任务完成时间。
+
+### 复算缓存成本，而不是只看“支持缓存”
+
+下面保留一个简化的代数教学算例。假设 1,000 次月报调用，每次输入 1,000 token、输出 200 token；只为演算，假设未缓存输入每百万 token 2 美元、缓存输入每百万 1 美元、输出每百万 8 美元。**这些价格是虚构教学值，不是任何当前供应商的报价。** 此例把 500-token 前缀设为“符合缓存条件”，只计算 token 费，忽略写入、存储、检索、最低缓存长度、保留期限和其他费用；真实服务可能因模型、接口和配置而不接受这样的短前缀。
+
+无缓存时，每次调用费用为：
 
 $$
-1{,}000 \times [(1{,}000 \times \$2) + (200 \times \$8)] / 1{,}000{,}000 = \$3.60.
+(1{,}000 \times \$2 + 200 \times \$8) / 1{,}000{,}000
+= \$0.0036
 $$
 
-Suppose 400 calls share a 500-token prompt prefix and receive the assumed cached-input rate for that prefix. Prompt caching still processes the remaining input and generates all 200 output tokens. The assumed token charge becomes:
+因此 1,000 次调用合计为 \$3.60。
+
+若 1,000 次调用中恰有 400 次实际命中该 500-token 前缀、并按假设的缓存输入价计费，这 400 次仍须处理剩余 500 个未缓存输入 token，并生成完整的 200 个输出 token：
 
 $$
-600 \times \$0.0036 + 400 \times [\$0.0005 + \$0.001 + \$0.0016] = \$3.40.
+600 \times \$0.0036
++ 400 \times
+\frac{500 \times \$2 + 500 \times \$1 + 200 \times \$8}{1{,}000{,}000}
+= \$2.16 + \$1.24 = \$3.40
 $$
 
-The $0.20 saving comes only from the lower rate on 400 × 500 cached input tokens. Output is still generated and billed.
+节省的 \$0.20 只来自 400 × 500 个输入 token 的价格差；模型仍为每份报告生成输出。
 
-An application-level response-cache hit is different: if 400 requests can safely reuse an exact, current response, those requests skip the model call, so the remaining 600 calls cost 600 × $0.0036 = $2.16 in token charges, before cache infrastructure costs. This assumes a valid exact hit; a semantic cache needs its own correctness and authorization checks.
+response cache 则是不同操作：若 400 次请求是权限、月份、数据版本、问题、提示词和格式均匹配的精确可复用命中，这些请求完全跳过模型调用，剩下 600 次调用的 token 费是 600 × \$0.0036 = \$2.16，尚未扣除缓存基础设施费用。若报表数据已刷新，旧月报就不再是有效命中。语义缓存也必须单独评估正确性、授权和新鲜度。
 
-OpenAI's [prompt caching documentation](https://developers.openai.com/api/docs/guides/prompt-caching), checked 2026-10-15, likewise describes reuse of a prompt prefix while the model still generates a new response. Supported models, rates, and cache rules are provider-specific and change.
+## 把单位成本换成成功任务预算
 
-**Sources / 来源：** OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Frantar et al., [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323); Lin et al., [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978). Hinton et al., [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531). Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu), on iteration-level scheduling and selective batching. OpenAI, [Batch API](https://developers.openai.com/api/docs/guides/batch), checked 2026-10-15, documents its separate asynchronous job interface.
+只计算每次 API 调用会漏掉失败和人工返工。适合决策的指标是：
+
+$$
+\text{每份成功报告成本}
+=
+\frac{\text{所有尝试费用}+\text{共享费用}}{\text{内容与结构均通过的报告数}}
+$$
+
+所有尝试费用包括每次模型与检索调用，含失败和重试；共享费用包括存储、人工复核以及分摊的运维与控制成本。两部分按同一统计周期归集。
+
+本例把成功报告定义为内容与结构都通过的交集。举例说，若 100 次模型尝试各花 \$0.0036、无重试，其中 98 份最终报告通过两项检查，而且人工工作另计，则这组样本的推理费为 \$0.36 / 98 ≈ \$0.00367 每份成功报告。这是只计推理费用的独立演算，不是甲的 \$0.007 直接费估算，也不是长期失败率估计。预算分母必须是成功报告数；重试的推理/检索费用已在所有尝试中，只计一次，不再另加“重试费”。
+
+月报助手预算还要按流量分布测量：日常与月末峰值、并发、最长输入、报告输出长度、缓存命中与失效率。吞吐增加但超过交互时延目标的批次，不算改善交互体验；费用降低但数值错误更多，也不能称为优化。
+
+## 把测得的工作负载交给部署决策
+
+本篇的目标交付是：候选甲在实际服务区的分阶段时延与尾部分布、实际请求/重试数量、峰值并发回放、每份成功报告完整费用和缓存命中。当前示例只给甲的合成筛选假设；单条 trace、缓存算例和 \$0.36/98 演算都不是这些实测。把仍待验证的项交给[如何选择 AI 部署方式并安全回滚](ai-deployment-patterns.md)：在月末峰值和完整成本通过约定门槛前，只能讨论可逆试点，不能宣布总成本预算已达标。
+
+## 相关笔记
+
+- [模型选择与生态](../foundations/model-selection-and-ecosystem.md)：定义候选和任务质量门槛。
+- [GPU 推理容量与 KV 缓存](llm-serving-and-kv-cache.md)：检查 KV 内存、批处理、服务吞吐和时延。
+- [上下文工程原则](../context/context-engineering-principles.md)：控制每次推理看到的历史和证据。
+- [AI 应用架构](ai-application-architecture.md)：持久化运行身份、状态、截止时间与恢复路径。
+- [流式交互体验](../../frontend/browser-apis/streaming-ux.md)：处理浏览器侧部分输出与用户等待体验。
+
+> [!info]- 来源
+> - **提示缓存复用的是前缀状态，不是最终答案；缓存门槛、写入价、读取价依模型和配置变化：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”、“How caching works”和模型差异部分。页面当前说明 GPT-5.6 及更新模型的前缀门槛为 1,024 token；本文 500-token 算例明确是假设性代数练习，不是该接口的可直接执行参数。
+> - **优化顺序、输出长度、缓存前缀与流式体验：** OpenAI，[Latency optimization](https://developers.openai.com/api/docs/guides/latency-optimization)，核对日期：2026-11-06，“Seven principles”及具体示例；提供方经验用于提示待测方向，不保证本案例的收益幅度。
+> - **费用减少与异步处理的边界：** OpenAI，[Cost optimization](https://developers.openai.com/api/docs/guides/cost-optimization) 与 [Batch API](https://developers.openai.com/api/docs/guides/batch)，核对日期：2026-11-06；后者描述异步批作业接口，并非在线调度合同。
+> - **自托管观测：** vLLM，[Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/)，核对日期：2026-11-06；“request latency”直方图将端到端、排队、推理、prefill 和 decode 分开。引擎指标仍需与应用端到端 trace 配合。
+> - **量化实现和硬件边界：** vLLM，[Quantization](https://docs.vllm.ai/en/stable/features/quantization/index.html)，核对日期：2026-11-06；当前文档说明精度与存储占用的取舍，并列出格式与硬件兼容性；兼容表会随版本改变。
+> - **量化与蒸馏机制：** Frantar et al., [GPTQ v2 (2023-03-22)](https://arxiv.org/abs/2210.17323)；Lin et al., [AWQ v6 (2026-04-25)](https://arxiv.org/abs/2306.00978)；Hinton et al., [Distilling the Knowledge in a Neural Network (2015)](https://arxiv.org/abs/1503.02531)。这些来源提供方法背景，不证明本案例的收益；具体效果受模型、数据、硬件和实现影响。
+> - **推理迭代级调度：** Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu)，2022；作为调度机制背景，不意味着某个当前服务引擎具有相同实现或性能。

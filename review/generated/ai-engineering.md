@@ -669,7 +669,7 @@ vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块�
 
 若分块后长 prefill 仍拉高 decode 时延，可评估 prefill/decode disaggregation（预填充与解码分池）。分池允许分别调整两边容量，但每条请求的 KV 状态要从 prefill worker 传给 decode worker；传输与排队也应计入 TTFT 和吞吐。DistServe 的收益来自论文测过的请求分布、互连与时延目标。
 
-做固定流量回放，记录模型版本、精度、GPU、输入输出长度分布、并发与到达速率、冷暖缓存比例。比较 TTFT、ITL（输出词元间隔）、端到端 p95、吞吐量和满足时延目标的请求数。能处理更多请求却超过交互时延目标的批次，不算解决了交互负载。服务内测量可从引擎基准命令的示例起步；应用级时延与成本见[应用端到端优化](#5.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F)。
+做固定流量回放，记录模型版本、精度、GPU、输入输出长度分布、并发与到达速率、冷暖缓存比例。比较 TTFT、ITL（输出词元间隔）、端到端 p95、吞吐量和满足时延目标的请求数。能处理更多请求却超过交互时延目标的批次，不算解决了交互负载。服务内测量可从引擎基准命令的示例起步；应用级时延与成本见[应用端到端优化](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)。
 
 > [!info]- 来源
 > 来源支持的范围与对应章节如下；容量数值是按列明的架构维度与精度复算的载荷估算，不是硬件实测。
@@ -682,148 +682,287 @@ vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块�
 > - **推测采样与 MTP serving。** [Leviathan et al., ICML 2023, §§2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 支持目标分布校正；[DeepSeek-V3 Technical Report, arXiv v2, §§2.2、5.4.3](https://arxiv.org/html/2412.19437v2#S2.SS2) 报告 MTP 与论文评估结果；vLLM 当前的[原生 MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)和[`deepseek_mtp.py` 实现](https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/deepseek_mtp.py)展示了框架特定的草稿接口与配置（核对日期：2026-11-06）。
 > - **并行、分块预填充、前缀缓存与负载测试。** [vLLM 并行与扩展](https://docs.vllm.ai/en/latest/serving/parallelism_scaling/)；[vLLM Chunked Prefill](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill)；[vLLM v0.25.0 Prefix Caching](https://docs.vllm.ai/en/v0.25.0/design/prefix_caching/)；[vLLM Benchmark CLI](https://docs.vllm.ai/en/latest/benchmarking/cli/)。
 > - **Prefill/decode 分池。** [DistServe](https://arxiv.org/abs/2401.09670)；收益受论文测过的负载、硬件互连与时延目标约束。
-## 5. How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？
+## 5. 如何测量并降低 AI 应用的时延与成本，同时守住任务质量？
 
-**Core explanation / 核心解释：** First measure where end-to-end time and cost accumulate, then change one layer at a time against a fixed task-quality bar. Queueing, context assembly, retrieval, model input/output, tools, retries, and operations have different costs; token price alone is not total cost, and faster partial output is not necessarily faster completion. / 先测量端到端时间和成本分别累积在哪些环节，再以固定任务质量门槛为准逐层调整。排队、上下文组装、检索、模型输入与输出、工具、重试和运维成本各不相同；token 单价不等于总成本，更快看到部分输出也不代表更快完成。
+先记录一份完整任务从进入应用到得到有效结果的时间、每个阶段的资源和最终任务结果，再针对已定位的瓶颈一次改变一个因素。time to first token（首 token 时延，TTFT）、完整响应、吞吐量和每份成功任务成本回答不同问题；更快吐出部分文本不一定减少总工作，较便宜的模型若增加重试或人工复核也未必省钱。
 
-**Key terms / 关键术语：** time to first token (TTFT) / 首 token 时延；queue time / 排队时间；response cache / 响应缓存；prompt cache / 提示缓存；continuous batching / 连续批处理；quantization / 量化；distillation / 蒸馏。
+本篇承接[模型选择与任务契约](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)的候选、通过门槛和流量目标，建立同一口径的时延/成本测量账本；[部署方式与回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)据此判断托管、自托管、端侧或混合运行能否满足条件。
 
-### How can you reduce latency and cost? / 如何降低时延与成本？
+月报助手承接候选甲的合成筛选结果；月目标为 10,000 份验收成功报告。筛选记录中的常规负载时延和模型 API 直接费用是独立假设，不是峰值或完整成本数据；实际请求/重试数、月末并发和全成本仍待测。本篇的单条 trace 与缓存算例仅演示计算，不作为甲的实测结果。
 
-Measure queueing, context assembly, retrieval, model input and output, tools, and retries separately. Track latency distributions and TTFT alongside throughput, queue time, and cost per completed task. Hold the task-quality bar constant: a cheaper route that fails more often may increase retries, escalations, and human review.
+### 先把月报助手的端到端时延拆开
 
-The application architecture owns run status, deadlines, and recovery; see [How can a production AI run survive disconnections and worker failures? / 生产运行如何经受断连与故障？](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F). Define the success measure before comparing optimizations with [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
+对虚构月报助手，每次报告包括：读取已授权汇总、排队、组装上下文、调用模型、校验结构和行号、返回完成结果。客户端还要计入网络与自身处理。若只看模型的生成速度，就会漏掉排队、数据访问或应用校验。
 
-#### Which optimization should you test? / 应先测试哪种优化？
+> [!example] 一条合成追踪记录：各阶段相加与首 token
+> 以下时长只是演示如何相加的一条请求，不是分布统计或实测。以请求进入后端应用为计时起点：读取与上下文组装 0.12 秒，应用排队 0.08 秒，向模型发起调用到应用收到首 token 0.62 秒（不包括前面的应用排队），首 token 后生成剩余内容 0.58 秒，schema（结构模式）和行号校验 0.10 秒。
+>
+> - 后端请求完成时延：0.12 + 0.08 + 0.62 + 0.58 + 0.10 = **1.50 秒**。
+> - 后端首 token 时延（TTFT）：0.12 + 0.08 + 0.62 = **0.82 秒**。
+> - 若用户必须等报告校验通过才能使用，0.82 秒不能替代 1.50 秒的后端完成时间；客户端实际等待还要加网络与显示处理。
 
-- **Shorten or select context / 缩短或筛选上下文：** include relevant material and limit unnecessary history. Measure whether evidence or task quality is lost. See [Context Engineering Principles / 上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F).
-- **Cache / 使用缓存：** exact-response or semantic response caches can avoid model work on a safe hit. Require compatible permissions, freshness, tenant, locale, and policy version. For example, “What is the refund policy in the US?” and “What is the refund policy in the EU?” can have similar embeddings but different correct answers. Similarity alone does not prove a response is reusable.
-- **Route requests / 请求路由：** use a lower-cost candidate only for cases where it meets the measured quality bar. Include classifier errors, added latency, fallback frequency, and maintenance in the comparison. Candidate fit belongs to [Model Selection and Ecosystem / 模型选择与生态](#6.%20How%20should%20you%20choose%20a%20model%20for%20a%20task%20and%20its%20deployment%20constraints?%20/%20%E5%A6%82%E4%BD%95%E6%A0%B9%E6%8D%AE%E4%BB%BB%E5%8A%A1%E4%B8%8E%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%9F).
-- **Inference batching / 推理批处理** — A serving engine can admit and retire sequences between decoding steps. [GPU serving capacity / GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) explains how that affects memory, throughput, and per-request latency. A provider's asynchronous Batch API is a job interface for requests that tolerate delayed completion. It exposes no live inference scheduling contract.
-- **Quantization / 量化：** represent weights, and in some methods activations, with fewer bits. This can reduce model memory and data movement, and may improve inference speed when the hardware and kernels support the chosen format. Quantization error can affect quality, and lower precision does not guarantee faster end-to-end service; evaluate the exact model, quantizer, hardware, and workload.
-- **Distillation / 蒸馏：** train a smaller student on outputs or softened targets from a larger teacher over chosen inputs. A student may reduce serving cost or latency, but can lose capabilities or fail outside the distillation set. Include teacher/data generation and evaluation in the cost, and test on held-out tasks before replacement.
-- **Stream responses / 流式返回：** streaming can improve perceived responsiveness and TTFT; it does not necessarily reduce total generation time or work. The browser's treatment of partial output is covered in [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md).
+线上要按同一运行标识记录阶段起止时间，并分别报告后端时延和客户端观测时延的中位数 p50、第 95 百分位 p95（必要时 p99），以及请求完成量、排队、超时、重试、输入/输出 token（词元）长度与每份成功任务成本。标出模型、提示词、检索/数据版本、服务区域、并发和 GPU（图形处理器）等相关硬件配置。尾部时延可能来自高并发排队，不能仅凭平均值定位。自托管时，推理引擎的排队、prefill（预填充）、decode（解码）和端到端指标能帮助区分服务瓶颈；应用外部链路仍需自己计入。
 
-Provider features such as prompt caching, batch jobs, context limits, and prices vary by model and API and can change. Verify current documentation for the exact deployment. Compare total cost, including inference, retrieval, storage, engineering, evaluation, and operations.
+### 根据瓶颈选一个可检验的改动
 
-#### A teaching calculation for cache cost / 缓存成本教学算例
+| 观察到的瓶颈 | 可测试的改动 | 需要一起检查的代价 |
+|---|---|---|
+| 模型在许多请求上都慢 | 比较已通过任务门槛的较小候选、受支持的推理格式或更快硬件 | 质量变化、硬件利用、尾部时延和成本是否真的改善 |
+| 排队随并发上升 | 调整准入、容量、并发与 inference batching（推理批处理）；必要时拆分交互与异步工作负载 | 批处理可提升吞吐，但等待凑批可能加长单次响应 |
+| 每次输入都很长 | 减少无关历史、只取必要证据、避免把结构化数据渲染成重复长文本 | 输入删减是否漏掉报表依据；输入 token 减少不保证全部延迟同比下降 |
+| 输出很长或有多轮往返 | 明确简洁格式、合并确实可合并的独立工作、并行可并行阶段 | 不能合并有先后依赖的步骤；缩短输出不能牺牲必要解释或校验 |
+| 数据或应用阶段占主导 | 聚合和算术改用确定性数据库/代码路径；减少重复读取 | 应用实现也需维护正确性、权限和缓存失效逻辑 |
 
-Assume 1,000 model calls, each with 1,000 input tokens and 200 output tokens. For this arithmetic example only, assume uncached input costs $2 per million tokens, cached input costs $1 per million, and output costs $8 per million. These are invented teaching values, not current provider prices; ignore cache-write, storage, retrieval, and other fees.
+几种常见优化须分别解释：
 
-Without caching, the token charge is:
+- **上下文裁剪与检索：** 只传入回答需要的数据。月报的合计、变化率可以在授权后的确定性聚合阶段计算，模型再把核对过的结果转成说明。保留已有算术测试与行号引用，确认裁剪未移除依据。
+- **prompt caching（提示缓存）：** 重用相同请求前缀的计算状态，可能减少符合特定模型条件的输入处理时间和费用；它不会直接复用上一份答案，也不替代 response cache（响应缓存）。把稳定指令、schema 放在稳定前缀，把动态报表数据放在后缀；用实际缓存命中和账单字段验证收益。
+- **应用响应缓存：** semantic cache（语义缓存）或整份回答缓存只有在可证明请求等价且数据仍新鲜、同租户同权限、同语言、同策略时才可重用。美国与欧盟的退款政策问题向量相近，却可能有不同正确答案；语义相似度本身不能证明回答可共享。
+- **request routing（请求路由）：** 只有当低成本候选在对应任务切片上通过同一质量门槛时才路由。计入分类错误、附加延迟、回退频率和维护成本；候选筛选见[模型选择](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)。
+- **推理批处理与异步批任务：** 支持 continuous batching（连续批处理）的服务引擎可以在生成步骤之间接纳和结束请求，改善设备利用和总体吞吐，但排队与批次策略会改变单请求尾延迟。[GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)解释 KV 显存与调度关系。供应商的 Batch API 则是容忍延后完成的一种异步作业接口，不等于在线推理引擎的连续批处理。
+- **quantization（量化）与 distillation（知识蒸馏）：** 量化以较低精度表示权重（某些方法也处理激活），通常可降低权重存储占用；有些格式在目标硬件和内核有高效实现时，也可能减少数据搬运或加快推理。量化误差可能影响任务表现，低位宽不保证端到端更快。蒸馏用较大的教师模型为选定输入生成训练信号，训练较小学生；它可能降低部署成本，也可能丢失能力，且数据生成和评测本身有成本。两者都要在具体模型、硬件、流量和保留集上实测。
+- **streaming（流式输出）：** 可能让用户更早看到部分结果，改善感知响应；若用户必须等待完整结构、引用和安全校验，它不会自动降低任务完成时间。
+
+#### 复算缓存成本，而不是只看“支持缓存”
+
+下面保留一个简化的代数教学算例。假设 1,000 次月报调用，每次输入 1,000 token、输出 200 token；只为演算，假设未缓存输入每百万 token 2 美元、缓存输入每百万 1 美元、输出每百万 8 美元。**这些价格是虚构教学值，不是任何当前供应商的报价。** 此例把 500-token 前缀设为“符合缓存条件”，只计算 token 费，忽略写入、存储、检索、最低缓存长度、保留期限和其他费用；真实服务可能因模型、接口和配置而不接受这样的短前缀。
+
+无缓存时，每次调用费用为：
 
 $$
-1{,}000 \times [(1{,}000 \times \$2) + (200 \times \$8)] / 1{,}000{,}000 = \$3.60.
+(1{,}000 \times \$2 + 200 \times \$8) / 1{,}000{,}000
+= \$0.0036
 $$
 
-Suppose 400 calls share a 500-token prompt prefix and receive the assumed cached-input rate for that prefix. Prompt caching still processes the remaining input and generates all 200 output tokens. The assumed token charge becomes:
+因此 1,000 次调用合计为 \$3.60。
+
+若 1,000 次调用中恰有 400 次实际命中该 500-token 前缀、并按假设的缓存输入价计费，这 400 次仍须处理剩余 500 个未缓存输入 token，并生成完整的 200 个输出 token：
 
 $$
-600 \times \$0.0036 + 400 \times [\$0.0005 + \$0.001 + \$0.0016] = \$3.40.
+600 \times \$0.0036
++ 400 \times
+\frac{500 \times \$2 + 500 \times \$1 + 200 \times \$8}{1{,}000{,}000}
+= \$2.16 + \$1.24 = \$3.40
 $$
 
-The $0.20 saving comes only from the lower rate on 400 × 500 cached input tokens. Output is still generated and billed.
+节省的 \$0.20 只来自 400 × 500 个输入 token 的价格差；模型仍为每份报告生成输出。
 
-An application-level response-cache hit is different: if 400 requests can safely reuse an exact, current response, those requests skip the model call, so the remaining 600 calls cost 600 × $0.0036 = $2.16 in token charges, before cache infrastructure costs. This assumes a valid exact hit; a semantic cache needs its own correctness and authorization checks.
+response cache 则是不同操作：若 400 次请求是权限、月份、数据版本、问题、提示词和格式均匹配的精确可复用命中，这些请求完全跳过模型调用，剩下 600 次调用的 token 费是 600 × \$0.0036 = \$2.16，尚未扣除缓存基础设施费用。若报表数据已刷新，旧月报就不再是有效命中。语义缓存也必须单独评估正确性、授权和新鲜度。
 
-OpenAI's [prompt caching documentation](https://developers.openai.com/api/docs/guides/prompt-caching), checked 2026-10-15, likewise describes reuse of a prompt prefix while the model still generates a new response. Supported models, rates, and cache rules are provider-specific and change.
+### 把单位成本换成成功任务预算
 
-**Sources / 来源：** OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Frantar et al., [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323); Lin et al., [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978). Hinton et al., [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531). Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu), on iteration-level scheduling and selective batching. OpenAI, [Batch API](https://developers.openai.com/api/docs/guides/batch), checked 2026-10-15, documents its separate asynchronous job interface.
-## 6. How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？
+只计算每次 API 调用会漏掉失败和人工返工。适合决策的指标是：
 
-Choose from candidates that satisfy the task's hard constraints, then compare them on representative examples against an agreed quality bar. Measure latency, total cost, modality and format reliability, data handling, and operational fit. Model names, rankings, context limits, supported inputs, and prices change, so a public benchmark or provider label is a lead for investigation, not a lasting selection rule. / 先筛出符合任务硬性约束的候选模型，再用有代表性的样本和约定的质量门槛进行比较。测量任务效果、时延、总成本、模态与格式可靠性、数据处理和运维适配。模型名称、排名、上下文限制、输入能力和价格都会变化，因此公开基准或供应商标签只能帮助调查，不能作为长期固定的选择规则。
+$$
+\text{每份成功报告成本}
+=
+\frac{\text{所有尝试费用}+\text{共享费用}}{\text{内容与结构均通过的报告数}}
+$$
 
-**Key terms / 关键术语：** task contract / 任务要求；held-out set / 保留集；hosted API / 托管 API；open-weight / 开放权重；hybrid deployment / 混合部署；routing / 路由。
+所有尝试费用包括每次模型与检索调用，含失败和重试；共享费用包括存储、人工复核以及分摊的运维与控制成本。两部分按同一统计周期归集。
 
-### Start with the task contract / 从任务要求开始
+本例把成功报告定义为内容与结构都通过的交集。举例说，若 100 次模型尝试各花 \$0.0036、无重试，其中 98 份最终报告通过两项检查，而且人工工作另计，则这组样本的推理费为 \$0.36 / 98 ≈ \$0.00367 每份成功报告。这是只计推理费用的独立演算，不是甲的 \$0.007 直接费估算，也不是长期失败率估计。预算分母必须是成功报告数；重试的推理/检索费用已在所有尝试中，只计一次，不再另加“重试费”。
 
-Record what a successful result must do, what errors matter, and which operating conditions are fixed. Compare candidates on the same prompt, data, tools, and evaluation protocol where possible.
+月报助手预算还要按流量分布测量：日常与月末峰值、并发、最长输入、报告输出长度、缓存命中与失效率。吞吐增加但超过交互时延目标的批次，不算改善交互体验；费用降低但数值错误更多，也不能称为优化。
 
-| Dimension | Questions to answer |
+### 把测得的工作负载交给部署决策
+
+本篇的目标交付是：候选甲在实际服务区的分阶段时延与尾部分布、实际请求/重试数量、峰值并发回放、每份成功报告完整费用和缓存命中。当前示例只给甲的合成筛选假设；单条 trace、缓存算例和 \$0.36/98 演算都不是这些实测。把仍待验证的项交给[如何选择 AI 部署方式并安全回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：在月末峰值和完整成本通过约定门槛前，只能讨论可逆试点，不能宣布总成本预算已达标。
+
+### 相关笔记
+
+- [模型选择与生态](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)：定义候选和任务质量门槛。
+- [GPU 推理容量与 KV 缓存](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)：检查 KV 内存、批处理、服务吞吐和时延。
+- [上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：控制每次推理看到的历史和证据。
+- [AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)：持久化运行身份、状态、截止时间与恢复路径。
+- [流式交互体验](../../frontend/browser-apis/streaming-ux.md)：处理浏览器侧部分输出与用户等待体验。
+
+> [!info]- 来源
+> - **提示缓存复用的是前缀状态，不是最终答案；缓存门槛、写入价、读取价依模型和配置变化：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”、“How caching works”和模型差异部分。页面当前说明 GPT-5.6 及更新模型的前缀门槛为 1,024 token；本文 500-token 算例明确是假设性代数练习，不是该接口的可直接执行参数。
+> - **优化顺序、输出长度、缓存前缀与流式体验：** OpenAI，[Latency optimization](https://developers.openai.com/api/docs/guides/latency-optimization)，核对日期：2026-11-06，“Seven principles”及具体示例；提供方经验用于提示待测方向，不保证本案例的收益幅度。
+> - **费用减少与异步处理的边界：** OpenAI，[Cost optimization](https://developers.openai.com/api/docs/guides/cost-optimization) 与 [Batch API](https://developers.openai.com/api/docs/guides/batch)，核对日期：2026-11-06；后者描述异步批作业接口，并非在线调度合同。
+> - **自托管观测：** vLLM，[Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/)，核对日期：2026-11-06；“request latency”直方图将端到端、排队、推理、prefill 和 decode 分开。引擎指标仍需与应用端到端 trace 配合。
+> - **量化实现和硬件边界：** vLLM，[Quantization](https://docs.vllm.ai/en/stable/features/quantization/index.html)，核对日期：2026-11-06；当前文档说明精度与存储占用的取舍，并列出格式与硬件兼容性；兼容表会随版本改变。
+> - **量化与蒸馏机制：** Frantar et al., [GPTQ v2 (2023-03-22)](https://arxiv.org/abs/2210.17323)；Lin et al., [AWQ v6 (2026-04-25)](https://arxiv.org/abs/2306.00978)；Hinton et al., [Distilling the Knowledge in a Neural Network (2015)](https://arxiv.org/abs/1503.02531)。这些来源提供方法背景，不证明本案例的收益；具体效果受模型、数据、硬件和实现影响。
+> - **推理迭代级调度：** Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu)，2022；作为调度机制背景，不意味着某个当前服务引擎具有相同实现或性能。
+## 6. 如何为具体任务选择模型，并让部署约束进入决策？
+
+先把任务成功条件写成可测的契约，再淘汰不满足硬约束的候选模型。对剩余候选使用同一提示词、输入、工具和评估协议比较任务质量、时延与总成本；模型名称、排行榜和供应商档位只能帮助初筛，不能替代目标任务上的验证。本篇交付候选集、验收门槛和基线假设；[如何测量 AI 服务的时延与成本](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)接着量化工作负载，[如何选择 AI 部署方式并安全回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)再据此选运行位置和发布路径。
+
+~~~mermaid
+flowchart TD
+  A[任务契约与授权边界] --> B[筛选并评测候选模型]
+  B --> C[测量峰值、时延与每份成功任务成本]
+  C --> D[选择部署模式并逐步发布]
+  D -->|门槛失败| B
+~~~
+
+图中月报助手先得到通过相同任务检查的候选，再用真实工作负载建立预算，最后选运行位置；上线回归会回到候选评测，不是一次性排名。下两篇分别解释预算测量和部署回滚。
+
+### 从月报助手的任务契约开始
+
+> [!example] 虚构案例：为月报生成可核对的摘要
+> 一家虚构的报表助手接收已经过应用授权的区域销售汇总，回答“哪些区域环比变化率的绝对值超过 8%，总额变化多少？”。模型输入包含行号、区域名和两期原始金额；租户隔离和行级权限由应用完成。
+>
+> 以下数据是公开教学用的合成数值，单位为万元。表中前两期是模型输入；“环比变化”和“合计”是保留集上的验收参考，不发送给模型。行号必须随原始输入保留：
+>
+> | 行号 | 区域 | 2026-09 原始输入 | 2026-10 原始输入 | 环比变化验收参考 |
+> |---|---|---:|---:|---:|
+> | r1 | 华东 | 120 | 132 | +12（+10%） |
+> | r2 | 华北 | 80 | 72 | -8（-10%） |
+> | r3 | 华南 | 50 | 55 | +5（+10%） |
+> | 合计 | — | — | — | 250→259；+9（+3.6%） |
+>
+> 验收参考答案：华东 +12 万元（+10%，r1）、华北 -8 万元（-10%，r2）、华南 +5 万元（+10%，r3）；合计 +9 万元（+3.6%，依据 r1–r3）。区域、变化额、变化率和支持它们的行号都是必填项；不得臆测促销、季节等原因。上期为零或缺失时百分比标为不可计算，不得除以零。
+
+把此类要求写成验收契约，而不是“回答得好”：
+
+| 维度 | 月报助手的检查方式 |
 |---|---|
-| **Task quality / 任务质量** | What counts as correct or useful? Which edge cases and refusal cases matter? |
-| **Latency and availability / 时延与可用性** | Is the constraint about time to first response, full completion, or uptime? Which workload and region are representative? |
-| **Cost / 成本** | Include input and output usage, retries, retrieval, hosting, support, and evaluation—not just one token rate. |
-| **Inputs and outputs / 输入与输出** | Does the task require text, image, audio, or other modalities? Are schemas or tools supported for this exact model and API? |
-| **Data handling / 数据处理** | What do the contract, configuration, retention policy, and deployment boundary allow? “Hosted” or “open-weight” alone does not answer this. |
-| **Operations / 运维** | Who owns scaling, updates, monitoring, security patches, and incident response? |
+| 任务正确性 | 金额、方向、百分比和总额与授权输入一致；行号确实支持相应说法 |
+| 边界行为 | 缺失、上期为零、负数、单位混用、相互矛盾或无数据时，按约定报告或升级 |
+| 指令与格式 | 不猜测原因；输出能通过目标接口的结构校验 |
+| 时延 | 约束明确是首 token、完整报告还是两者；按真实峰值与区域测量 |
+| 成本 | 计算模型、重试、数据准备、托管、评测和人工复核后的每份成功报告成本 |
+| 数据与运维 | 输入是否可发给托管服务，谁负责密钥、扩缩容、更新、监控和故障响应 |
 
-Public benchmarks can help generate a shortlist when their task and protocol are relevant. They do not establish performance on a different prompt, data distribution, API configuration, or deployment. Keep an application-specific held-out set and report its sample scope and uncertainty. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) explains how to choose task criteria and compare changes.
+**适用边界：** 对这类报表，算术可以留给模型并被严格评测，也可以由应用确定性地预先计算、让模型只负责解释。两种实现都要评估端到端结果；如果授权和计算交给模型猜测，就没有落实任务契约。
 
-### Model tiers are shorthand, not a catalog / 模型档位只是简称，不是目录
+### 如何建立可比较的候选集？
 
-Teams sometimes use labels such as **frontier**, **balanced**, and **fast** to describe rough cost, latency, and capability tradeoffs within a provider's current catalog. Those labels are not shared standards: a “fast” model can be the better choice on a narrow task, and a “frontier” label does not prove quality on yours. Avoid copying an undated model list or treating a prior ranking as a current fact. Verify the exact model ID, supported API features, context limit, and pricing in the provider's current documentation when making a real selection.
+先应用硬门槛：必要模态和输入形状是否支持；API 或本地引擎是否能实现需要的结构化输出；数据处理方式是否符合合同和内部规则；是否有可接受的故障与运维责任。只要候选不满足一项硬门槛，就不应靠低价格或高公开基准分补偿。
 
-### Hosted API, open-weight, or hybrid? / 托管 API、开放权重还是混合部署？
+再在相同条件下做代表性评测：
 
-| Approach | Potential advantages | Costs and constraints to compare |
+1. 固定模型调用前的授权、上下文、工具与应用校验流程。
+2. 用开发集迭代提示词和配置；把 held-out set（独立保留集）留给最终比较。
+3. 覆盖普通请求、零值/缺失值、越权输入、格式边界和已知失败切片。
+4. 分开记录任务通过、事实/数值正确、引用支持、格式有效、拒答或升级、时延和实际费用。
+5. 报告样本分母和不确定性；小样本上的差异不能自动外推到生产总体。
+
+> [!example] 教学用候选表：分开内容、格式与费用门槛
+> 假设两种匿名候选都用同一组 200 个合成案例、同一提示词与应用路径筛选。内容判定检查金额、方向、行号和不臆测；结构有效率单独统计。一个报告只有内容与结构都通过，才算成功。
+>
+> | 候选 | 内容判定通过 | 结构有效 | 成功交集 | 常规筛选的后端完整报告时延 p95 | 模型 API 直接费/成功报告 |
+> |---|---:|---:|---:|---:|---:|
+> | 甲 | 198/200（99%） | 200/200（100%） | 198/200（99%） | 假设 1.7 秒 | 假设 $0.007 |
+> | 乙 | 199/200（99.5%） | 198/200（99%） | 197–198/200（交集未知） | 假设 1.2 秒 | 假设 $0.004 |
+>
+> 本例要求内容通过率至少 99%、结构有效率 100%，并要求常规筛选负载的 p95≤2 秒；只有内容与结构交集才计成功。甲交集为 198/200，样本内容/结构门槛与假设 p95 都通过。乙的交集无法只由两项比例精确还原，但结构门槛无论如何都未通过，须先修复后重评。p95 和直接费用是分开设定的常规筛选假设，不是从这 200 个样例计算出来，也不是峰值测量。模型 API 直接费按所有尝试（含失败和重试）费用除以成功报告数；$0.01/成功报告是**直接 API 费用上限**，甲的假设值低于它。它不含人员、工程、评估、人工复核等总拥有成本，不能据此称完整成功成本已达标。所有数字均为教学假设，不是实测或模型排名。
+
+公共基准可以帮助缩短候选列表，但基准的任务、样本、模型访问方式、评分协议和目标部署若不同，就不能直接推出本应用的质量。模型版本、上下文窗口、模态、工具和结构输出支持都会变化。上线前要核验确切模型标识、版本、接口能力、限制、区域和当前价格。
+
+### hosted API（托管 API）、open-weight（开放权重）与 hybrid deployment（混合部署）如何进入候选筛选？
+
+| 方式 | 可能合适的条件 | 仍需核对的成本与责任 |
 |---|---|---|
-| **Hosted API / 托管 API** | Quick access to managed inference and model updates; less serving infrastructure to operate. | Data flows and retention depend on provider terms and configuration; usage, rate limits, availability, and model lifecycle are provider-controlled. |
-| **Open-weight deployment / 开放权重部署** | More control over serving location, model version, and infrastructure choices. | A weight license is not automatically an open-source license or permission for every use. The operator owns hardware, serving, security, scaling, and updates. |
-| **Hybrid / 混合部署** | Different models or environments can serve distinct workload classes. | Adds routing, evaluation, observability, policy consistency, and failure paths across systems. |
+| 托管 API | 希望快速试验托管推理，且合同、地域、功能和数据要求均允许。 | 精确服务条款、保留设置、速率限制、可用性、模型生命周期和按量费用由具体提供方与配置决定。 |
+| 开放权重、自托管 | 模型版本或运行位置的控制是明确需求，并且团队能承担容量与运维。 | 开放权重不自动等于开源许可或所有用途的授权；团队还负责硬件、服务栈、安全更新、扩缩容和 on-call（值班响应）。 |
+| 混合部署 | 不同任务确实需要不同模型或不同数据边界。 | routing（请求路由）、策略一致性、回退、监控和重复基础设施会增加复杂度；必须测量净收益。 |
 
-This is an eligibility and trade-off comparison, not a universal deployment ranking. Edge, self-hosted capacity, and detailed operating responsibilities have their own constraints; see [AI Deployment Patterns / AI 部署模式](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F).
+“前沿”“均衡”“快速”等档位只是各家产品目录中的粗略称呼，不是共享标准。高档位不证明它在此报表任务上更好，低时延标签也不代表端到端服务更快。实际选型应看同任务评测与当前文档，而非复制过期榜单。
 
-Do not pick a hosting pattern from API spend alone. A useful estimate is:
+模态也要细分验证。multimodal（多模态）不说明一个模型支持哪种图片、音频或视频输入，也不说明它能否读准所需内容。若报表输入以后改成扫描件或图表，应用要用目标格式、分辨率和 API 逐项评测，不能把表格文本测试结果直接外推。
 
-$$
-\text{total cost} \approx \text{inference usage} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and risk controls}
-$$
+### 何时把请求路由到不同候选？
 
-Compare the same workload, quality target, peak traffic, and data constraints. A provider API may suit rapid iteration; self-hosting may suit a real data-control or workload need; edge deployment can help when offline operation or device constraints dominate. The break-even point depends on the actual workload and people costs.
+只有当不同请求类别表现出稳定、可测的需求差异，才值得增加模型路由。它可以把简单、低风险的摘要送给成本较低的候选，把经评测确实受益的请求交给其他候选；但需要把分类错误、路由时延、回退比例、维护、权限和策略一致性一起算入。
 
-### Route by measured need / 按实测需求路由
+月报助手若按输入长度或报表类型路由，先给每个切片定义通过条件，再比较路由前后的成功率、每份成功报告成本和尾部时延。分类置信不足时，应回退到已验收候选或人工路径；高影响工具动作仍需应用逐项授权，模型路由本身不授予权限。不能假定“抽取”必然简单、某一行业请求必然困难。详细的请求阶段测量见[如何测量 AI 服务的时延与成本](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)。
 
-Routing can send simple, low-risk requests to a cheaper model and reserve a more capable option for cases that benefit from it. First measure whether the router's errors, added latency, and maintenance are outweighed by the savings. Use a task-relevant fallback when routing confidence is insufficient, and ensure high-impact operations still pass application-side authorization. Do not label “classification,” “reasoning,” or “extraction” as automatically easy or hard across all models.
+### 从候选评测交给预算与部署
 
-Routing and other service optimizations need a fixed quality bar and end-to-end measurements; see [How to reduce AI application latency and cost / 如何降低 AI 应用时延与成本](#5.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F). To connect versioned results and user feedback to an improvement or rollback decision, see [Production observability and feedback / 生产可观测性与反馈](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F).
+选型交付候选甲的合成筛选结果和任务契约；服务目标暂设为每月 10,000 份通过内容与格式验收的成功报告（不是 10,000 次请求）。实际请求/重试数量、峰值并发、峰值时延和完整总成本留给后续测量。
 
-### Multimodal capability / 多模态能力
+### 相关笔记
 
-“Multimodal” does not specify which input or output a model supports or how well it handles a task. Test the actual modality and input shape—such as a chart, scanned document, spoken utterance, or video sample—under the target API. Check model documentation for supported formats, limits, and feature combinations at the time of deployment.
+- [如何测量 AI 服务的时延与成本](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：定位端到端瓶颈，计算每份成功任务成本。
+- [如何选择 AI 部署方式并安全回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：把候选和测得的工作负载映射到运行方式和发布计划。
+- [AI 应用架构如何经受断连与 worker 故障？](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)：定义稳定运行标识、持久状态与恢复契约。
+- [如何判断 AI 系统是否满足任务契约？](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计样本、评分维度、保留集与不确定性。
+- [上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)、[微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)和[检索增强生成架构](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)：分别处理模型每次看到什么、何时训练行为，以及怎样使用外部证据。
 
-### Related notes / 相关笔记
+> [!info]- 来源
+> - **同任务比较与动态目录：** OpenAI，[Model selection](https://developers.openai.com/api/docs/guides/model-selection)，核对日期：2026-11-06；“Compare it with ... on the same inputs”及模型/产品可用性部分用于佐证同协议比较和目录变化。文中的产品建议是提供方示例，不作为通用模型排名。
+> - **把行为写成评测条件：** OpenAI，[Working with evals](https://developers.openai.com/api/docs/guides/evals)，核对日期：2026-11-06；“Create an eval for a task”展示将任务、测试输入与判定条件对应。该文档标示 Evals 平台已进入弃用过渡期；此处只引用评测思路，不依赖其 API 可用性。
+> - **部署前的确切能力与价格：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；目录和价格是提供方当前页面，不应转抄为长期固定值。
+> - **托管服务数据边界：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored”和“Data retention controls”；仅说明一个具体 API 如何文档化留存与控制，其他提供方和设置须另行核对。
+## 7. AI 应用怎样选择部署方式，并逐步上线或回滚？
 
-- [AI Deployment Patterns / AI 部署模式](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares hosted, self-hosted, edge, and hybrid operating patterns.
-- [AI Application Architecture / AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines run identity, persistence, and recovery behavior across request channels.
-- [Context Engineering Principles / 上下文工程原则](#10.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) covers token budgets and provider-specific prompt caching.
-- [Fine-tuning Strategies / 微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) distinguishes behavior adaptation from maintained external knowledge.
-- [RAG Architecture and Implementation / 检索增强生成](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers current or access-controlled external evidence.
+把已通过任务评测的模型候选、真实流量、数据边界、峰值和运维能力放在同一张表里比较，再制定渐进发布和 rollback（回滚）条件。托管推理可减少自营服务工作，自托管可增加模型与运行位置的控制，但也把容量、更新、安全和 on-call（值班响应）责任转给团队；端侧与混合架构对应特定设备或数据边界。部署标签本身不能证明成本更低、隐私更好或服务更快。
 
-### Sources / 来源
+本篇承接[模型选择](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)输出的候选与任务契约，以及[时延和成本测量](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)提供的测量口径与待验证负载。它为月报助手选定一个有边界的运行决策，并把模型、提示词和应用版本一起纳入上线与回退。
 
-- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), checked 2026-10-15. Its guidance treats prompting, context, fine-tuning, and evaluation as task-specific optimization levers rather than a universal linear ladder.
-- For current OpenAI model IDs and feature support, consult the changing [Models documentation](https://developers.openai.com/api/docs/models), checked 2026-10-15.
-## 7. When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？
+### 先筛掉不满足数据、服务和团队硬约束的方案
 
-**Core explanation / 核心解释：** Compare deployment patterns against the same workload, task-quality bar, data boundary, peak demand, and operational requirement. Hosted inference can reduce serving work; self-hosting increases control while transferring capacity and on-call responsibility to the team; edge and hybrid patterns answer distinct device or data-boundary needs. No deployment label by itself establishes lower total cost or better privacy. / 应在同一工作负载、任务质量门槛、数据边界、峰值需求和运维要求下比较部署方式。托管推理可以减少服务维护；自托管增加控制力，也把容量和 on-call 责任交给团队；端侧和混合部署分别回应设备或数据边界需求。仅凭部署名称不能证明总成本更低或隐私更好。
-
-**Key terms / 关键术语：** hosted API / 托管 API；self-hosted / 自托管；edge / 端侧；hybrid / 混合部署；total cost of ownership / 总拥有成本。
-
-### API, self-hosted, edge, or hybrid — how do you pick a deployment pattern? / 托管 API、自托管、端侧或混合部署——如何选择？
-
-| Pattern | Useful when | Costs and constraints |
+| 部署方式 | 适合条件 | 成本、约束与责任 |
 |---|---|---|
-| **Hosted API / 托管 API** | Managed inference and quick iteration fit the task. | Review provider terms, model lifecycle, feature support, rate limits, availability, and per-use cost. |
-| **Self-hosted / 自托管** | Control over serving location, model version, and infrastructure is a real requirement. | The team owns capacity, scaling, security updates, model serving, observability, and on-call response. |
-| **Edge / 端侧** | Offline use, local latency, or device-level data handling matters. | Compute, battery, memory, device coverage, updates, and supported model size constrain the design. |
-| **Hybrid / 混合部署** | Distinct workloads need different data or serving boundaries. | Routing and duplicated operations add complexity; define fallback and consistent policy behavior. |
+| **托管 API** | 托管推理、快速迭代符合任务与数据要求。 | 按具体合同与配置检查处理地区、保留行为、功能、限流、可用性、生命周期和用量价格；还要监控依赖供应商的变更。 |
+| **自托管** | 控制服务位置、模型版本或基础设施有明确价值，团队有能力运营。 | 自己承担模型许可、硬件容量、服务引擎、扩缩容、安全更新、监控、值班响应和模型升级。 |
+| **端侧** | 离线运行、设备本地响应或设备级数据处理是需求。 | 设备算力、内存、电量、机型覆盖、升级机制和模型体积约束质量与可用能力。 |
+| **混合部署** | 不同请求类确实需要不同的数据或运行边界。 | routing（请求路由）、策略一致性、回退、故障处理和重复运维带来额外复杂度。 |
 
-### How should total cost and operational fit be compared? / 如何比较总成本和运维适配？
+自托管的权重许可要按具体模型与用途核验；open-weight（开放权重）不自动授予所有商业用途，也不表示整个训练数据、代码和系统都开源。对托管服务，“云端”也不能替代查看实际合同、区域、保留设置、日志与功能例外。隐私结论来自具体数据流与控制，而不是部署名词。
 
-A useful estimate is:
+### 如何估算总拥有成本（total cost of ownership，TCO）？
+
+不要只把 API token（词元）费用与 GPU（图形处理器）租赁价相减。可比较的范围至少包括：
 
 $$
-\text{total cost} = \text{inference} + \text{compute and storage} + \text{engineering and operations} + \text{evaluation and controls}
+\begin{aligned}
+\text{总成本}={}&\text{推理运行成本}+\text{检索与额外存储}\\
+&+\text{工程与运维}+\text{评估与风险控制}.
+\end{aligned}
 $$
 
-There is no universal spend threshold for switching to self-hosting. Estimate with actual traffic, peak demand, staffing, quality requirements, and the full operating burden. Edge and hybrid choices likewise depend on device and data constraints, not just a latency label.
+其中，推理运行成本按实际路径计入托管调用费，或自托管计算与存储费；同一次推理只计一种运行路径。
 
-The choice also depends on which model candidates meet the task contract. See [Model Selection and Ecosystem / 模型选择与生态](#6.%20How%20should%20you%20choose%20a%20model%20for%20a%20task%20and%20its%20deployment%20constraints?%20/%20%E5%A6%82%E4%BD%95%E6%A0%B9%E6%8D%AE%E4%BB%BB%E5%8A%A1%E4%B8%8E%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%9F) for comparing task quality, modality, deployment constraints, and measured routing. For the run identity and recovery behavior that should remain stable across deployment patterns, see [AI Application Architecture / AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F).
+为同一流量假设计入低谷、峰值、冗余、闲置、扩容、支持、更新、故障响应、质量差异和人工复核。托管 API 的推理费与自托管 GPU 账单是两条实际运行路径；同一份推理不能把供应商费用和 GPU 费用重复计算。明确是每请求、每成功报告、每用户还是每月成本，并用时延目标限制可接受的容量方案。[时延与成本测量](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)中的 \$2 / \$1 / \$8 教学费率不是报价，真实 API 价格和缓存/区域规则要查部署时的官方价格页。自托管容量需在目标硬件、模型精度、输入/输出长度、并发和批处理条件下回放；平均 token 量不能证明峰值显存足够。
 
-For self-hosting, estimate the peak number and length of active sequences and then measure fit on the intended hardware. [GPU serving capacity / GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) shows how to size KV memory and compare batching under a latency target.
+### 月报助手在什么假设下选择什么部署？
 
-**Source boundary / 来源边界：** This note summarizes the deployment comparison already present in the AI Application Architecture source. Provider features, terms, prices, capacity, and availability are time- and workload-specific; verify the exact provider or serving stack when making a current deployment decision. It does not make a universal cost or privacy ranking.
+> [!example] 案例延续：先选一个可逆的试点
+> 月报助手用公开合成数据，目标是每月交付 10,000 份通过内容与结构验收的成功报告；这不是请求数。选型筛选中，候选甲在 200 个合成案例上内容通过 198/200、结构有效 200/200；另设的常规负载 p95（第 95 百分位）=1.7 秒和模型 API 直接费 $0.007/成功报告只是教学假设，不是峰值实测。该直接费按所有模型尝试的费用（含失败和重试）除以同时通过内容与结构验收的报告数，$0.01/成功报告只约束直接 API 费。
+>
+> 按同一口径估算，10,000 份成功报告 × $0.007 = $70/月直接 API 费；直接费用上限对应 $100/月。这个预算不含人工复核、数据服务、评估与运维，不能推出完整总成本已达标。实际请求/重试数量、月末并发与 p95、完整 TCO 均未测。因此在假设的合成数据条件下，先做可逆的托管 API 试点；若首次试点失败，就关闭模型入口，回到当前人工编制的月报流程。只有后续模型版本已有验收基线时，才回滚到上一份已验收版本。团队没有现成 GPU 推理服务和值班能力，所以本例也没有自托管基线。
+
+如果需要自托管，先用[GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)估计每个活跃序列的 KV 内存和批处理容量，再回放真实峰值并检查满足时延目标的吞吐量。若当前没测过同一工作负载，部署选型就仍未定，不能只凭账单或公开基准做盈亏平衡结论。
+
+### 如何从试点走到上线，并保留回滚能力？
+
+模型发布不是只换一个二进制。将以下配置作为可追溯、可比较的版本组合：模型标识/修订、提示词、schema（结构模式）、推理参数、数据与检索规则、服务镜像、任务评估集和验收门槛。遇到服务侧模型更新时，记录实际调用到的标识；若供应商不提供固定快照，就把每次重要变化当成需重新评估的候选。
+
+1. **离线验收：** 内容判定至少 99%，结构校验为 100%；只有内容与结构同时通过才计一份成功报告。保存这两项的联合结果，不能只看单项较高的比例。
+2. **影子运行或小流量试点：** shadow traffic（影子流量）不改变用户当前看到的结果，也不应触发外部副作用，但会增加模型调用费用；只有数据使用政策允许时才能复制真实载荷。本例只用合成公开数据。首次模型试点若停止，直接回到现有人工月报流程。
+3. **逐步加量：** 先验证日常负载，再在月末代表性峰值窗口检查后端完整时延、内容通过率、结构校验、失败/重试数、供应商限流和每份成功报告费用。
+4. **按不同严重度设停门槛：**
+
+   | 检查项 | 案例门槛 | 触发后的动作 |
+   |---|---|---|
+   | 跨租户或越权数据泄漏 | 零容忍 | 立即关闭候选流量，转人工月报并调查 |
+   | 输出结构 | 100% 有效；无效结果不得到达用户 | 暂停候选，修复并重跑离线门禁 |
+   | 内容（金额、行号引用、不臆测原因） | 审核样本通过率至少 99% | 低于门槛即停止加量并退回人工流程；上述错误都计入内容失败率。若具体产品要求某类内容错误零容忍，需在上线前把该项另设硬门槛 |
+   | 后端完成 p95 | 约定观测窗口内不高于 2 秒，并通过月末代表性峰值验证 | 超过门槛或峰值未验证时不继续加量；失败时退回人工流程 |
+   | 模型 API 直接费用 | 每份成功报告不高于 $0.01，按所有尝试费用除以成功报告数（包含重试） | 超额就暂停候选；不可用直接费用替代完整 TCO |
+
+   完整 TCO 上限尚未定出；在确定并验证总成本门槛前，不把试点当成全面上线许可。
+5. **回滚并核实：** 首次模型试点切回人工月报；以后版本若已存在已验收模型组合，则将流量切回该版本。停止候选流量后，核对未完成运行、错误、数据影响和用户反馈。
+
+Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它不会自动恢复部署模板以外的提示词、供应商模型配置、数据状态或已产生的外部副作用。若用 Kubernetes，自身保留 Deployment 修订史并确认回退完成；其他平台也需有可重放的版本选择和回退机制。AI 运行的持久标识、断连恢复和副作用处理属于[生产 AI 运行架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)；上线后持续将任务反馈与版本关联，见[生产可观测性与反馈](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)。
+
+### 相关笔记
+
+- [模型选择与生态](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)：先得到满足任务门槛的候选。
+- [时延与成本优化](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：提供真实负载、尾延迟、成功任务成本及缓存数据。
+- [AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)：在任何部署模式下保持稳定运行 ID 和权威状态。
+- [GPU 推理容量与 KV 缓存](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)：测量自托管容量与请求调度。
+- [生产可观测性与反馈](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)：用线上结果决定保留或回滚。
+
+> [!info]- 来源
+> - **托管服务的数据和留存条件必须检查具体控制与 API 功能：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored with the OpenAI API”和“Data retention controls”；这些条款只适用于该平台，不能代替其他提供方的合同评估。
+> - **当前目录、API 能力和用量价格会变化：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；页面用于查当时具体模型与价格，不提供跨部署方式的总拥有成本比较。
+> - **逐步替换与修订回退的具体例子：** Kubernetes，[Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)，文档版本 v1.37，核对日期：2026-11-06，“Rolling Back a Deployment”和“Rolling Update”；这里只将其作为 Kubernetes 实现实例。模型、提示词、数据版本及外部副作用仍需应用级协调。
+> - **服务密钥、流量和上线准备：** OpenAI，[Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices)，核对日期：2026-11-06；“API keys”与“Choose a model”章节用于提示凭据与生产边界，不作为平台无关清单。
 ## 8. How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？
 
 A useful prompt makes the task, necessary context, constraints, and expected output clear. Add examples or structure when they address a measured failure. Prompt text can guide model behavior, but it cannot enforce access control, guarantee factual accuracy, or replace application validation. / 有效提示词要清楚说明任务、必要背景、约束和输出要求。只有在示例或结构能解决实测问题时，才加入它们。提示词能引导模型，但不能执行访问控制、保证事实正确，也不能替代应用校验。
@@ -1589,7 +1728,7 @@ Treat a model-proposed tool call as untrusted input. The application executes it
 
 Set explicit deadlines, bounded retries, idempotency for retryable writes, cancellation behavior, rate and budget limits, an error or escalation path, and a way to roll back a model or prompt version. Retry only when the operation contract makes a duplicate safe. A timeout says the caller did not receive a result in time; it does not say the server did no work.
 
-These are separate design questions with deeper treatments: [how to reduce latency and cost](#5.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F), [how to choose a deployment pattern](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F), and [how to monitor and improve a production feature](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
+These are separate design questions with deeper treatments: [how to reduce latency and cost](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F), [how to choose a deployment pattern](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F), and [how to monitor and improve a production feature](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
 
 ### Durable runs, checkpoints, and recovery / 持久化运行、检查点与恢复
 
@@ -2305,7 +2444,7 @@ Pull request event → diff and repository context
 
 ### Related notes / 相关笔记
 
-- [Durable AI runs / 持久化 AI 运行](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) covers production run controls. [AI deployment choices / AI 部署选择](#7.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares where to run the model.
+- [Durable AI runs / 持久化 AI 运行](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) covers production run controls. [AI deployment choices / AI 部署选择](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F) compares where to run the model.
 - [RAG Architecture and Implementation / 检索增强生成](#11.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers retrieval implementation and grounding.
 - [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design.
 - [Agent Fundamentals / 智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) covers runtime agent patterns.

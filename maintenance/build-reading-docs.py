@@ -155,18 +155,25 @@ def fence_close(line: str, marker: tuple[str, int]) -> bool:
 
 
 def fenced_lines(lines: list[str]) -> list[bool]:
+    """Protect literal code and display-math blocks from Markdown rewriting."""
     result: list[bool] = []
     marker: tuple[str, int] | None = None
+    display_math = False
     for line in lines:
-        if marker is None:
+        if marker is not None:
+            result.append(True)
+            if fence_close(line, marker):
+                marker = None
+        elif without_line_ending(line).strip() == "$$":
+            result.append(True)
+            display_math = not display_math
+        elif display_math:
+            result.append(True)
+        else:
             opening = fence_open(line)
             result.append(opening is not None)
             if opening is not None:
                 marker = opening
-        else:
-            result.append(True)
-            if fence_close(line, marker):
-                marker = None
     return result
 
 

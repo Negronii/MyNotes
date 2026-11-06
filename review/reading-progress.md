@@ -7,16 +7,16 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=fb633b7bc6d0ca2d2c0b06fd1c61cd10bb2cbd9df5b99310bdcb4de86cfc5a93 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=7fcd9ac9742ecc4766b1080f6b6e970cef3d7e6c1421f14fca0d523a84b25759 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
 - [ ] 2. [语言模型如何把提示词变成文本？](../ai-engineering/foundations/how-llms-work.md)
 - [ ] 3. [长上下文怎样少存、少读历史，同时保留需要的信息？](../ai-engineering/foundations/long-context-attention.md)
 - [ ] 4. [KV 缓存与调度怎样决定大语言模型的服务容量？](../ai-engineering/systems/llm-serving-and-kv-cache.md)
-- [ ] 5. [How do you reduce AI application latency and cost without weakening task quality? / 如何在不损害任务质量的前提下降低 AI 应用的时延与成本？](../ai-engineering/systems/ai-latency-and-cost-optimization.md)
-- [ ] 6. [How should you choose a model for a task and its deployment constraints? / 如何根据任务与部署约束选择模型？](../ai-engineering/foundations/model-selection-and-ecosystem.md)
-- [ ] 7. [When should an AI application use a hosted API, self-hosting, edge, or hybrid deployment? / AI 应用何时应选托管 API、自托管、端侧或混合部署？](../ai-engineering/systems/ai-deployment-patterns.md)
+- [ ] 5. [如何测量并降低 AI 应用的时延与成本，同时守住任务质量？](../ai-engineering/systems/ai-latency-and-cost-optimization.md)
+- [ ] 6. [如何为具体任务选择模型，并让部署约束进入决策？](../ai-engineering/foundations/model-selection-and-ecosystem.md)
+- [ ] 7. [AI 应用怎样选择部署方式，并逐步上线或回滚？](../ai-engineering/systems/ai-deployment-patterns.md)
 - [ ] 8. [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](../ai-engineering/prompting/prompt-engineering-fundamentals.md)
 - [ ] 9. [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](../ai-engineering/prompting/advanced-prompting-techniques.md)
 - [ ] 10. [What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？](../ai-engineering/context/context-engineering-principles.md)
