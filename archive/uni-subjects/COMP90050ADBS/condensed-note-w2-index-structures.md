@@ -1,156 +1,96 @@
-# How do database indexes trade lookup cost against update and storage cost? / 数据库索引如何权衡查找、更新与存储成本？
+# 索引怎样降低查找成本，又增加哪些维护工作？
 
-An index maps search keys to rows or pages so some lookups avoid scanning the whole relation. Each structure trades query patterns against maintenance, space, and locality; B+ trees maintain ordered paths using balanced page-level splits and merges. / 索引将搜索键映射到行或数据页，使部分查询无需扫描整个关系。不同结构在查询模式、维护、空间和局部性之间取舍；B+ 树通过平衡的页级分裂与合并维护有序访问路径。
+学生选课系统要按学号查单个学生，也要按学号范围输出名单；每次新增或修改选课，又会改变索引内容。读者需要根据等值、范围和分析查询判断索引怎样组织数据、查询能省下什么，以及维护要付出什么。
 
-## Indexing / 索引
-- DBMS admin generally creates indices to allow almost direct access to individual items (index = indice)
-- DBMS must support
-  - insert/delete/modify record
-  - read a particular record (specified using record id)
-  - scan all records (possibly with some conditions on the records to be retrieved), or scan a range of records
+## 索引项怎样把搜索键带到记录？
 
-### Indexing overview
-- Indexing mechanisms used to speed up access to desired data in a similar way to look up a phone book or dictionary
-- **Search Key** - **attribute** or **set of attributes** used to look up records/rows in a system like an ID of a person (The ID will take us to get the entire record)
-- An index file consists of records (called index entries) of the form search- key, pointer to where data is
-- Index structures are often smaller than their base data, and frequently accessed pages may be cached in main memory; the cached working set depends on index size and available memory.
+index (索引) 是一份辅助结构，用 search key (搜索键) 定位数据行或数据页。键可以是一个属性，也可以由多个属性组成；index entry (索引项) 通常保存键值和指向数据的指针。索引能让部分查询避开全表扫描，但会占空间，并在插入、删除和修改相关键时增加维护工作。英语中 index 的复数可写 indexes 或 indices。
 
-### Indexing makes Disk Access Time become faster through
-- records with a **specified value** in the attribute accessed with minimal disk accesses (e.g., Student ID = 101, the index file tells us which data block in disk to go)
-- records with an attribute value falling in a specified range of values can be retrieved with a single seek and then consecutive sequential reads (e.g., ID:100-200, find where is the first record (single seek of starting block), then read sequentially)
-- Note: not all DB stores sequential data sequentially, so this method may not useful for some DB
+设选课表有 student_id、course_id、semester 等列：
 
-### Criteria to choose index – always tradeoff
-- Insertion time to index is also important
-- Deletion time is important as well
-- No big index rearrangement after insertion and deletion
-- Space overhead needs to be considered for the index itself
-- No single indexing technique is the best. Rather, each technique is best suited to particular applications.
+- 查 student_id = 101 是等值查询，可以按键找到候选记录；
+- 查 student_id 在 100 到 200 之间是范围查询，需要索引按顺序访问相邻键；
+- 扫描所有记录时，索引未必比顺序读数据页更省 I/O；
+- 更新 student_id 或索引覆盖的其他列时，索引页也可能要更新。
 
-### Types of indices based on search keys
-Ordered indices – Search keys are stored in some order
+索引是否适合某张表，取决于实际查询、选择率、数据排列、可用内存、写入频率和具体 database management system (DBMS，数据库管理系统)。一个索引能快速定位键值，不等于查询只做一次磁盘 input/output (I/O，输入/输出)；索引页、数据页、缓存命中和回表都要计入访问成本。
 
-- Clustering index / primary index
-- Non-clustering index / secondary index
-- Hash indices – Search keys are distributed
-- **B+ tree**
-- Bitmap index
-- Trees for spatial data
-  - Quadtree
-  - k-d tree
-  - R-tree
+## 键的顺序与数据顺序相同有什么好处？
 
-### Clustering Index / Primary Index
-- in a sequentially **ordered file**, the index whose **search key** specifies the sequential order of the file
-- The search key of a primary index is usually but not necessarily the **primary key**
-  ![clustering-index](./clustering-index.png)
-  As shown in graph, the order is sorted
+ordered index (有序索引) 按搜索键排序。课程中的 clustering index (聚簇索引) 指索引键顺序与数据文件的物理顺序相对应；它通常但不一定使用主键。non-clustering index (非聚簇索引) 的键顺序与数据文件顺序不同，可为其他查询列提供访问路径。
 
-### Non-clustering Index / Secondary Index
-- An index whose **search key specifies an order** different from the sequential order of the file
-- Secondary indices improve the performance of queries that use keys other than the search key of the clustering index.
-  ![non-clustering-index](./non-clustering-index.png)
-  As shown in graph, the search key here is the major
+![聚簇索引示意](./clustering-index.png)
 
-### Hash indices
-- A hash function aims to spread distinct search-key values approximately uniformly across buckets.
-- A hash index organizes the search keys, with their associated record pointers, into a hash file structure. Order is not important.
-- Equal search-key values still hash to the same bucket. Skew or many duplicate records can overload a bucket and require overflow pages; bucket record counts need not be equal, and lookup is not guaranteed to take one I/O ([PostgreSQL hash indexes](https://www.postgresql.org/docs/18/hash-index.html)).
-- Typical hash functions perform computation on the internal binary representation of the search-key.
-  ![hash-indices](./hash-indice.png)
-- With seven buckets, a hash function should distribute distinct keys across bucket values 0–6 approximately evenly; this does not guarantee the same number of records per bucket when keys repeat.
-- Goes to which bucket here determined by Hash function return value, e.g. Hash(A-215) = 1
+![非聚簇索引示意](./non-clustering-index.png)
 
-### Bitmap index
-- Records in a relation are assumed to be numbered sequentially from, say, 0
-- Applicable on attributes that take on a relatively small number of distinct Values
-  - E.g. gender, country, state, ...
-  - E.g. income-level (income broken up into a small number of levels such as 0-9999, 10000-19999, 20000-50000, 50000- infinity)
-- A bitmap is simply an array of bits
-- In its simplest form a bitmap index on an attribute has a bitmap for each value of the attribute
-  - Bitmap has as many bits as records
-  - In a bitmap for value v, the bit for a record is 1 if the record has the value v for the attribute, and is 0 otherwise
-  - Used for business analysis, where rather than individual records say how much of one type exists is the query/important
+聚簇数据上的范围扫描可能先定位起始页，再顺序读相邻页；非聚簇索引找到键后，若结果分散在许多数据页，仍可能产生大量随机访问。数据库引擎具体如何组织聚簇与辅助索引由产品定义。这里的课程术语 clustering index 也不等于 SQL schema 中的 PRIMARY KEY 约束；SQL Server 的 clustered index 物理组织语义见[SQL Server 索引语法与边界](./condensed-note-w2-sql-server-index-examples.md)。
 
-![bitmap](./bitmap.png)
-In this graph,
+## 哈希索引适合什么查询？
 
-- gender is distinct value which is m or f
-- income-level is distinct value, which is L1, L2, ..., L5
+hash index (哈希索引) 把搜索键送入 hash function (哈希函数)，再定位 bucket (桶)。散列顺序不保留键的大小顺序，因此它适合按完整键值做等值查找，不适合直接提供有序范围扫描。
 
-### B+ tree / B+树
-Why?
+![哈希索引示意](./hash-indice.png)
 
-- As an ordered file grows, insertions can create overflow pages and weaken locality; binary search can still be used only when the file's organization supports it, and may incur extra I/O. Periodic reorganization is one possible remedy.
-- A B+ tree maintains balance through local splits and merges, keeping all root-to-leaf paths at the same depth. In this convention, order n is the maximum number of child pointers: each non-root internal node has between $\lceil n/2 \rceil$ and $n$ children, and each leaf has between $\lceil(n-1)/2 \rceil$ and $n-1$ key entries. The root has separate minimum-occupancy rules. For a product example, [SQL Server rowstore indexes are organized as B+ trees](https://learn.microsoft.com/en-us/sql/relational-databases/indexes/clustered-and-nonclustered-indexes-described?view=sql-server-ver17).
-- Special cases:
-  - If the root is not a leaf, it has at least 2 children.
-  - If the root is a leaf (that is, there are no other nodes in the tree), it can have between 0 and (n–1) values.
+> [!example] 七个桶的课程例子
+> 桶编号为 0–6；若 hash(A-215) = 1，就去桶 1 查找。不同键可能散列到同一桶，桶满后还可能用溢出页；因此“平均分布”是对不同键的理想目标，不代表每桶记录数一定相等，也不保证每次只读一个页。重复值本身会把许多记录放在相同键值对应的桶中。
 
-#### B+ tree Typical Node
-![typical node](./b+typical.png)
+PostgreSQL 的哈希索引实现只支持单列和等值运算，不支持唯一性检查。每个索引项只保存 4 字节哈希值，不保存原列值；查询命中桶后还要按原列值复核候选项，所以哈希碰撞会产生额外候选。这是 PostgreSQL 的具体实现边界，不能直接推广到所有哈希索引。
 
-- $K_i$ are ordered search-key values. Internal-node pointers refer to child pages; leaf entries contain a key and a record identifier, or a key and a bucket/record list, depending on the index. In a B+ tree file organization, leaves may instead contain the rows.
-- Upper levels are often cached because they are smaller and accessed frequently, but the tree's height does not guarantee that they are resident in memory.
+## 低基数列为什么可以用位图？
 
-#### Example B+ tree
-![example B+ tree](./b+treeexample.png)
-In this graph, the nodes with _ are records, that's why all leaf nodes have _
+bitmap index (位图索引) 为属性的每个取值保存一串位。设关系中的记录按位置编号；若第 i 行的 gender 值为 m，则 m 对应位图的第 i 位为 1，其他值的位图该位为 0。查询多个低基数条件时，可以用位运算组合候选行，例如“性别为 m 且收入等级为 L2”可对两张位图做 AND。位图索引通常更适合不同值较少、分析查询较多的场景；高基数或频繁单行更新的适用性取决于产品如何存储和维护位图。
 
-#### Finding all records with a search-key value of k.
-Using the illustrated convention, pointer $P_i$ lies immediately to the left of separator $K_i$:
-1. N=root initially
-2. Repeat
-   1. Examine N for the smallest search-key value > k.
-   2. If such a value exists, assume it is Ki. Then set N = Pi
-   3. Otherwise k ≥ Kn–1. Set N = Pn . Follow pointer.
-      Until N is a leaf node
-3. If for some i, key Ki = k follow pointer Pi to the desired record or bucket.
-4. Else no record with search-key value k exists.
-   ![string search example](./B+treeStringExample.png)
-   Note don't get confused by the Perryridge on the root, it is just the search key by chance.
+![位图索引示意](./bitmap.png)
 
-#### Run range queries in B+ tree
-Range queries find all records with search key values in a given range e.g., from Brandt to Singh
-![range search example](./B+RangeSearchExample.png)
+图中性别只有 m/f，收入等级有 L1–L5；位图按每个取值标出匹配记录。它是一种课程示意，不表示所有 DBMS 都按完全相同的位布局实现。
 
-#### B+ tree - Insertion (2 types)
-![B+ insertion example](./B+insertion.png)
-![B+ insertion example 2](./B+Insertion2.png)
-It will split nodes to avoid having leaf node > n–1
+例如图中的 `m` 位图为 `10010`，`L2` 位图为 `01000`；逐位 AND 得到 `00000`，表示没有记录同时满足两个条件。
 
-#### B+ tree - Deletion (2 types)
-![B+ deletion example](B+Deletion1.png)
-![B+ deletion example 2](B+TreeDeletion2.png)
-It will merge to avoid having leaf node < ⎡(n–1)/2⎤
+## B+ 树如何同时支持等值查找和范围扫描？
 
-#### B+ tree – File organization
-- Leaf nodes in a B+-tree file organization store records, instead of pointers to children
-- Helps keep data records clustered (ordered) even when there are insertions/deletions/updates
-- Insertion and deletion or records are handled in the same way as insertion and deletion of entries in a B+-tree index.
+B+ tree (B+ 树) 用多叉平衡树把搜索路径压到少数页访问。叶页按键排序；内部页保存分隔键与子页指针。fan-out (分支数) 较高时，树的高度通常比同样记录数的二叉树低。根到任意叶的路径深度相同，但实际访问页是否已在缓存中由负载和内存决定。
 
-#### B+ tree Advantages
-- Automatically reorganizes itself with small, local changes in the face of insertions and deletions.
-- Reorganization of entire file is not required to maintain performance
-- Similar to Binary tree in many aspects but the **fan out** is much higher (height of B+ tree is smaller than binary tree)
+![B+ 树典型节点](./b+typical.png)
 
-#### B+ tree Disdvantages
-- Extra insertion and deletion over head and space over head (reorganisation)
+![B+ 树示例](./b+treeexample.png)
 
-Advantages of B+-trees outweigh disadvantages for DBMSs (B+ trees are used extensively)
+课程使用的 order n 约定是：内部页最多有 n 个子指针、n−1 个分隔键；非根内部页至少有 ceil(n/2) 个子指针；叶页最多有 n−1 个键，非根叶页至少有 ceil((n−1)/2) 个键。若根不是叶页，它至少有两个子指针；若根同时是唯一叶页，允许空树到 n−1 个键。不同教材对 order 的定义可能不同，套用占用公式前先核对约定。
 
-## Summary
-- There is no point going through all index types for all data types
-  - There is hundreds of them
-  - Even each type would have many subtypes
-    - E.g., MX-CIF quadtree is one quadtree type among many
-  - Same with R-trees, etc
-  - Same with many other index types
-- Given a data set, when uploading to the DBMS
-  - Find the potential query types
-  - Research what indices that particular DBMS would have for that data type
-  - Research for what queries you would better do on what index
-  - Create index if you have large data
-  - Monitor performance
-  - Tune or create other indices
-  - Your DMBS will have a version of the “create index” SQL statement
+图中的内部页指针 $P_i$ 位于分隔键 $K_i$ 左侧。设当前节点实际有 $m$ 个分隔键；查找键 $k$ 时，遇到第一个大于 $k$ 的分隔键 $K_i$，就沿 $P_i$ 下行；若没有更大的分隔键，则走最右的有效子指针 $P_{m+1}$。页容量只是上限，不能把尚未使用的槽位当成有效指针。示意图中的根页最多容纳 5 个子指针，但当前只有两个有效指针；查 20 时应走实际存在的 $P_2$，$P_5$ 是空槽。下一层分隔键 24 使查找向左，最后在叶页中找到 20。
+
+![按搜索键查找的课程示例](./B+treeStringExample.png)
+
+查找一个范围时，先沿树找到第一个不小于下界的键所在叶页；若下界本身不存在，就从第一个大于它的键开始，再顺着叶页之间的有序链接扫描到上界。课程图把 Brandt 与 Singh 两端都包含在内。
+
+![B+ 树范围查询](./B+RangeSearchExample.png)
+
+插入新键时，叶页有空间就直接插入；若超过容量，就分裂并把新的分隔键向上推，父页也可能继续分裂，必要时生成新根。删除后若页低于最小占用量，可从兄弟页借键，或合并页并向上调整分隔键。变化沿局部路径传播，树保持平衡。
+
+![B+ 树插入例一](./B+insertion.png)
+
+![B+ 树插入例二](./B+Insertion2.png)
+
+![B+ 树删除例一](./B+Deletion1.png)
+
+![B+ 树删除例二](./B+TreeDeletion2.png)
+
+逐图回放可看到父子页如何一起变化：插入 Adams 只分裂叶页，并把 Califeri 复制为父页分隔键；插入 Lamport 先分裂叶页，再分裂父页，把 Gold 提升到原根。删除 Srinivasan 后右侧两张叶页合并，右内部页从左内部页借一个子指针，根分隔键改为 Gold；再删除 Singh、Wu 后，右侧叶页从左邻借入 Kim，父页分隔键随之从 Mozart 改为 Kim。
+
+在 B+ tree file organization (B+ 树文件组织) 中，叶页可以直接保存完整记录，而不只是行指针；普通 B+ 树索引的叶项则指向数据记录或键值对应的记录列表。文件组织与二级索引是两种不同的存储安排，选择时要同时考虑主数据的范围扫描和其他键的查找。
+
+## 读写负载不同，索引选择为什么也不同？
+
+| 查询模式 | 可先考虑的结构 | 还要计入的代价 |
+| --- | --- | --- |
+| 等值查找 | 哈希索引或 B+ 树 | 是否有重复键、是否需排序/范围，以及回表页分散程度 |
+| 范围查询或按键排序 | B+ 树等有序索引 | 索引顺序与数据顺序的相关性、结果行数量和扫描页数 |
+| 多个低基数条件的分析筛选 | 位图索引（若 DBMS 支持） | 位图更新方式、并发写入、列基数和组合条件 |
+| 地理或几何查询 | 空间索引 | 包围盒候选数和精确几何判断；见[空间索引如何筛选候选对象](./condensed-note-w2-spatial-indexes.md) |
+
+增加索引能降低某些查询的读取成本，但会占磁盘和内存、扩大写入维护量，并可能改变优化器估计。先从真实查询形态挑候选，再查看实际计划与读写指标；不要因为表“大”就给每一列都建索引。PostgreSQL 与 SQL Server 的具体索引类型和 DDL 可在各自官方文档及本目录的产品例子中核验。
+
+> [!info]- 来源
+> - **索引项、聚簇/辅助索引、位图、B+ 树页占用、分裂合并与文件组织：** [Database System Concepts, 7e, ch. 14, Indexing and Hashing](https://www.db-book.com/slides-dir/PDF-dir/ch14.pdf)，2019 年课程幻灯片。order n 的占用约定按本文明示的“最大子指针数”解释。
+> - **索引带来的维护开销和类型边界：** [PostgreSQL 18, Indexes](https://www.postgresql.org/docs/18/indexes.html)，2026-11-06 核验；这里只用它说明索引是读写的整体权衡，不把产品可用索引类型当作通用清单。
+> - **PostgreSQL 哈希索引项只存 4 字节哈希值、扫描需复核原列值、只支持等值且不做唯一性检查：** [PostgreSQL 18, Hash Indexes](https://www.postgresql.org/docs/18/hash-index.html)，2026-11-06 核验；此处明确是 PostgreSQL 实现例。
+> - **SQL Server rowstore 索引的 B+ 树实现：** [Microsoft Learn, Clustered and nonclustered indexes](https://learn.microsoft.com/en-us/sql/relational-databases/indexes/clustered-and-nonclustered-indexes-described?view=sql-server-ver17)，2026-11-06 核验；此产品例不意味着每个 DBMS 都使用相同组织。

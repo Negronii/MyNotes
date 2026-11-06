@@ -1,46 +1,75 @@
-# How do spatial indexes find candidates for geometric queries? / 空间索引如何为几何查询筛选候选对象？
+# 空间索引如何缩小搜索范围，又不漏掉几何结果？
 
-Spatial indexes partition points or group objects by bounding regions so queries can prune irrelevant areas. A bounding-box match is only a candidate test: the exact geometry predicate must still be checked. A k-d tree splits into two regions, unlike a quadtree’s four. / 空间索引通过划分点集或按包围区域组织对象来剪除不相关区域。包围盒相交只是候选测试，仍需核对精确几何谓词。k-d 树将区域一分为二，四叉树则划分为四个区域。
+地图服务要找离用户 5 公里内的餐馆，或返回与一条道路相交的地块。逐个精确计算每个对象的距离或相交关系，数据量大时很贵；读者要弄清空间索引如何先排除不相关区域、哪些候选仍需做精确几何判断，以及点集和形状数据为什么会用不同树结构。
 
-## Considering location data (spatial data)
+## 为什么普通的一维排序不够？
 
-- Unlike things we can access by names, ids, there is a lot of data that exists, and increasingly that requires special indexing
-- For example, spatial data requires more complex computations for accessing data,
-  - e.g., intersections of objects in space
-- There is no trivial way to sort items which is a key issue,
-  - e.g., range query on a simple set of items, e.g. all restaurants within 5 KM
-  - e.g., a Nearest Neighbour query, e.g. find the nearest restaurant of my location
+spatial index (空间索引) 为多维坐标或几何对象建立搜索结构，先减少需要检查的候选对象。它不同于按一个键排序的普通 B+ 树：平面上的点有横、纵坐标，两个点的“前后顺序”不能同时保留所有空间邻近关系。
 
-## Quadtree (for location data - points) / 四叉树
-- Each quadtree node represents a rectangular region; an internal node partitions it into four quadrants, recursively, until a chosen stopping condition (for example, a maximum number of points per leaf).
-- A k-d tree is a different spatial structure: each internal node splits a region with one axis-aligned line into two children, often alternating axes. The exam example below is a k-d tree, not a quadtree.
+常见查询包括 range query (范围查询)，例如找圆形服务区内的地点；nearest-neighbor query (最近邻查询)，例如找离当前位置最近的餐馆；以及判断两个线或多边形是否相交。包围区域相交通常只表示对象可能满足条件，不能替代精确距离或几何关系计算。
 
-### Quadtree – e.g.,
-Example: **Leaf nodes** have between zero and **some fixed maximum number** of points (set to 1 in example below)
-![quad tree example](quadtreeExample.png)
-It is keep spliting into squares until no more than n (1 in this example) leaf nodes are inside same square
+## 四叉树如何逐层缩小点的范围？
 
-### Quadtree Tree structure
-![tree](quadtreenodesexample.png)
+quadtree (四叉树) 的每个节点代表一块矩形区域；若该区域内点数超过容量，就按横纵轴各切一次，形成四个子区域，然后递归处理。课程示例把叶节点容量设为一个点，因此同一区域有多个点时继续细分。
 
-### Quadtree – e.g., run NN (nearest neighbor) query
-![NN on quad tree](NNonQuadtree.png)
+![课程四叉树点分区示例](./quadtreeExample.png)
 
-## k-d Tree / k-d 树
-A k-d tree is a binary spatial search tree. Each internal node splits the current region into two using an axis-aligned boundary, often cycling through dimensions; unlike a quadtree, it does not divide every region into four quadrants ([Princeton, Geometric Applications of BSTs](https://algs4.cs.princeton.edu/92search/)).
+![四叉树分区对应的节点结构](./quadtreenodesexample.png)
 
-### 2022S1 Exam Question 5: k-d Tree Example
-Given the k-d tree below with point data, where black labeled dots represent spatial coordinate data, and the rectangular area is divided into regions with the division order given with numbers: draw the associated k-d tree as a tree structure with leaves labeled as the data labels given below. Assume **left subarea** of a division goes to a **left subtree**, and **lower subarea** of a division also goes to a **left subtree**. The figure for the k-tree follows:
-![Q5 graph](2022S1Q5.png)
-The key idea is, for each division, split the current node (root) to 2 nodes. Put the left-down on left, right-up on right nodes.
-![answer](2022S1Q5Answer.png)
+第一张图展示点区域怎样不断四分；第二张图左边是树节点，右边是对应的空间区域，箭头把节点和其分区连起来。实际结构还要规定何时停止细分，例如达到最大深度或遇到无法继续分开的重合点；这属于实现需要的终止条件。
 
-## R-Trees / R树
-- An R-tree is a balanced spatial index whose internal entries store minimum bounding rectangles (MBRs) for child subtrees; leaves index spatial objects. It is not simply a B+ tree with a one-dimensional interval replaced. See [Guttman's original 1984 R-tree paper](https://www.cs.princeton.edu/courses/archive/fall08/cos597B/papers/rtrees.pdf).
-- Child MBRs may overlap, so a range query can visit multiple subtrees; the index returns candidates that must be checked with the exact spatial predicate. Variants include R+ trees and R* trees.
-- **Bounding boxes of children of a node are allowed to overlap**
-- Note: A **bounding box** of a node is a minimum sized rectangle that contains all the rectangles/polygons associated with the node
+### 最近邻查询为什么不能只取用户所在的象限？
 
-### R-Tree example
-![R-Tree example](RtreeExample.png)
-A range query tests relevant MBRs and may descend into multiple children when their bounds overlap. Candidate geometries still need the exact predicate, since MBR overlap alone does not prove an exact match.
+用户所在的象限可能没有最近的对象：隔壁区域里离分界线很近的点，可能比本区远端的点更近。NNonQuadtree 图标出查询点 Q、空间分区和对象形状，但没有规定临近区域的访问次序；下面用区域距离下界说明为什么命中一个叶子后仍可能要查其他区域。
+
+![四叉树分区上的课程最近邻搜索示意](./NNonQuadtree.png)
+
+一个可复用的 branch-and-bound (分支限界) 做法是：先取得一个候选点并计算它到查询点的真实距离，作为当前最优距离；再根据查询点到每个候选区域的最短可能距离，决定是否进入该区域。矩形框的最短距离是下界：若查询点为 $(x,y)$，矩形横轴范围 $[x_{\min},x_{\max}]$、纵轴范围 $[y_{\min},y_{\max}]$，则
+
+$$
+d_x=\max(x_{\min}-x,\ 0,\ x-x_{\max}),\qquad
+d_y=\max(y_{\min}-y,\ 0,\ y-y_{\max}),
+\qquad
+d_{\min}=\sqrt{d_x^2+d_y^2}.
+$$
+
+$d_x$、$d_y$ 分别表示查询点横、纵坐标到矩形对应轴区间的距离；坐标落在该轴区间内时距离为 0。$d_{\min}$ 不会大于查询点到该区域内任何对象的距离。按这个下界从小到大检查候选区域；如果某区域下界已经大于当前最优真实距离，就可剪枝。若要返回所有并列最近的点，等于当前最优距离的区域也必须检查。这个下界公式假设平面欧氏坐标，并且与精确距离使用同一坐标单位；经纬度坐标不能直接当作平面坐标套用，应使用与查询相符的地理距离和相应的区域下界。
+
+> [!example] 用一个合成点集看下界如何更新
+> 查询点为 $Q=(3,1)$，已找到候选点 $(1,1)$，真实距离为 $2$。东侧矩形 $[4,8]\times[0,4]$ 的距离下界为 $1$，所以不能剪枝；若在其中找到点 $(4.5,1)$，真实距离为 $1.5$，当前上界就从 $2$ 降到 $1.5$。北侧矩形 $[0,4]\times[4,8]$ 的距离下界为 $3$，大于当前上界，可剪枝。这里的坐标和点只用于演示公式，不是课程图中数据。
+
+## k-d 树和四叉树的分割规则有什么不同？
+
+k-d tree (k-d 树) 是二叉空间树。每个内部节点选择一个维度和一条轴对齐分割线，把当前区域分成两部分；四叉树则每次同时沿两个轴切成四块。二维情形常交替使用横向和纵向切分，但具体切分轴、阈值及重复点规则取决于构造过程。
+
+课程保留了 2022 年第一学期第 5 题。题图给的是点的相对位置、分割先后次序和左右约定：分割线左侧区域进入左子树，下侧区域也进入左子树。按图中第 1 刀左右分配，左半区域包含 `{a,b,e,f}`，右半区域包含 `{c,d,g,h}`；左半区域的第 2 刀切分后，落在下侧的 `{e,f}` 进入左子树。作答时应按图上从外层到内层的编号，把每次分割翻译成父节点的两个子区域；不要把这题当作四叉树。
+
+![2022S1 第 5 题给出的点和区域分割](./2022S1Q5.png)
+
+![课程手绘的 k-d 树结构答案](./2022S1Q5Answer.png)
+
+答案图记录的是这道题给定的分割序列和左右规则，不代表所有 k-d 树都必须按同一维度次序或同一平衡策略构造。
+
+## R 树怎样索引线和多边形？
+
+R-tree (R 树) 用层级结构索引复杂形状。minimum bounding rectangle (MBR，最小包围矩形) 包住一个对象或一组子节点；叶项指向空间对象，内部项保存子树的包围矩形。R 树维持平衡，使叶节点处于同一层，但同一父节点下的 MBR 可以重叠。
+
+![R 树课程结构示例](./RtreeExample.png)
+
+查询一个矩形范围时，先检查它与哪些 MBR 相交，再沿相交分支继续查找。由于 MBR 可能重叠，同一查询可以访问多个子树；叶项返回的对象仍需运行真实空间谓词。比如道路穿过地块的包围矩形，不足以证明道路真的穿过地块。
+
+许多空间数据库采用 filter-and-refine (筛选再精算)：索引先用包围盒筛选较小的候选集，再对候选对象检查精确的相交、包含或距离谓词。PostGIS 的索引感知空间谓词会自动加入包围盒筛选；具体索引类型与谓词支持由产品文档规定。
+
+| 查询或对象 | 可先考虑的结构 | 需要记住的边界 |
+| --- | --- | --- |
+| 平面上的点集、区域内点 | 四叉树或 k-d 树 | 具体分区、重复点处理及终止条件由构造策略决定 |
+| 线段、多边形及范围相交 | R 树等包围区域索引 | MBR 可重叠；候选仍须精确检查 |
+| 最近邻 | 支持邻近搜索的空间结构 | 依据区域距离下界剪枝，不能只看一个网格或叶节点 |
+
+课程图保留了几种结构的差别：四叉树重复四分空间，k-d 树逐次二分，R 树按多边形等对象的包围矩形聚组。选型时还要结合查询谓词、维数、对象形状、空间分布及具体数据库支持的操作符。
+
+> [!info]- 来源
+> - **R 树层级、包围矩形及重叠分支：** Antonin Guttman, [R-trees: A Dynamic Index Structure for Spatial Searching](https://www.cs.princeton.edu/courses/archive/fall08/cos597B/papers/rtrees.pdf), 1984；作为原始 R-tree 研究来源。
+> - **k-d 树与几何搜索：** [Princeton Algorithms, Geometric Applications of BSTs](https://algs4.cs.princeton.edu/92search/)，用于区分二叉轴向分割与四叉树；课程题目本身的分割规则以原图为准。
+> - **包围盒过滤后检查精确空间谓词：** [PostGIS 3.6, Spatial Queries](https://postgis.net/docs/manual-3.6/using_postgis_query.html)，2026-11-06 核验；PostGIS 的函数和索引路径是产品实现示例。
+> - **四叉树点分区、最近邻剪枝与 k-d 树课内题：** 本课程示意图与 2022S1 Question 5；图中的树形及分割序列按题设解释，未推广为唯一通用构造算法。
