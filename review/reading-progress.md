@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=8a372067eff3c2ac8ad0bb07cd900ac65fe780f662702f06493e33d680d4c61d -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d3b48625bdb05879c239ff4f07f9d07904e34c2cd5a96fc325d89b147687072a -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -72,10 +72,10 @@
 - [ ] 58. [函数变换如何改变调用过程？](../frontend/javascript/currying-and-partial-application.md)
 - [ ] 59. [弱集合与弱引用能保证什么？](../frontend/javascript/javascript-memory-weakmap-and-weakset.md)
 - [ ] 60. [JavaScript 对象为何会在不再有用后仍留在内存中？](../frontend/runtime/javascript-garbage-collection-and-retained-objects.md)
-- [ ] 61. [How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？](../frontend/javascript/asynchronous-javascript.md)
-- [ ] 62. [How can a chainable API queue delayed tasks? / 链式 API 如何排队执行延后任务？](../frontend/javascript/chainable-task-queue.md)
-- [ ] 63. [How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？](../frontend/javascript/iterators-and-generators.md)
-- [ ] 64. [Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？](../frontend/javascript/error-handling.md)
+- [ ] 61. [回调、Promise 与 async 函数怎样组合异步工作？](../frontend/javascript/asynchronous-javascript.md)
+- [ ] 62. [链式接口如何先排队、再依次执行延后任务？](../frontend/javascript/chainable-task-queue.md)
+- [ ] 63. [迭代器与生成器怎样按需产出并清理数据？](../frontend/javascript/iterators-and-generators.md)
+- [ ] 64. [JavaScript 错误应在哪一层恢复、传播或上报？](../frontend/javascript/error-handling.md)
 - [ ] 65. [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](../frontend/typescript/advanced-typescript.md)
 - [ ] 66. [How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？](../frontend/typescript/generics.md)
 - [ ] 67. [What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？](../frontend/typescript/utility-types.md)

@@ -62,10 +62,10 @@
 
 ### 异步任务与错误恢复
 
-- [How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？](javascript/asynchronous-javascript.md)
-- [How can a chainable API queue delayed tasks? / 链式 API 如何排队执行延后任务？](javascript/chainable-task-queue.md)
-- [How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？](javascript/iterators-and-generators.md)
-- [Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？](javascript/error-handling.md)
+- [回调、Promise 与 async 函数怎样组合异步工作？](javascript/asynchronous-javascript.md)
+- [链式接口如何先排队、再依次执行延后任务？](javascript/chainable-task-queue.md)
+- [迭代器与生成器怎样按需产出并清理数据？](javascript/iterators-and-generators.md)
+- [JavaScript 错误应在哪一层恢复、传播或上报？](javascript/error-handling.md)
 
 ### 类型、模块与构建产物
 

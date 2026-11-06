@@ -360,7 +360,7 @@ console.log("end");
 
 当前同步脚本先输出 `start`、`end`。脚本返回时排队的 Promise reaction 和 `queueMicrotask()` 回调按入队顺序在微任务检查点执行；计时器回调是后续 task，只有达到计时器允许执行的时点后才有资格运行。`setTimeout(fn, 0)` 不表示立刻切走，也不承诺下一个画面会先出现。若当前处理器很长，用户点击会等它完成才开始处理；若处理器不断追加微任务，检查点会持续排空队列，浏览器也就迟迟不能处理后续任务或渲染。
 
-`new Promise(executor)` 中的 `executor` 在构造时同步运行；由 `.then()` 注册的 reaction 才排入微任务。上面的例子使用 `Promise.resolve().then()`，所以 `Promise reaction` 出现在同步输出之后。Promise 的语言行为见[异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
+`new Promise(executor)` 中的 `executor` 在构造时同步运行；由 `.then()` 注册的 reaction 才排入微任务。上面的例子使用 `Promise.resolve().then()`，所以 `Promise reaction` 出现在同步输出之后。Promise 的语言行为见[异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 在报表页的例子里，点击发生时可能正有脚本任务占用主线程，这会增加输入延迟。处理器开始后，`pushState()` 和节点修改是同步的；处理器结束后，微任务仍可能继续安排工作，浏览器再看是否有机会更新报表画面。`await Promise.resolve()` 或把工作切成一串微任务并不会主动让浏览器绘制。若计算确实太重，应把有界工作切到后续 task、Web Worker 或适合的框架调度策略；需要确认是哪段时间占用主线程时，沿 [INP 的交互阶段](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)看录制结果。
 
@@ -386,7 +386,7 @@ requestIdleCallback(runIdleSlice, { timeout: 2000 });
 
 React 等框架的 scheduler 是建立在宿主机制上的另一套排程策略，不是浏览器 HTML 规范中的 task source。使用分片调度也不能假定每两个代码块之间浏览器一定会绘制。
 
-**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
 > [!info]- 来源
 > - 浏览器任务、微任务检查点、渲染机会和动画帧回调： [WHATWG HTML：Web 应用 API 与事件循环](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，持续更新规范，事件循环、微任务与更新渲染章节。核对日期：2026-11-06。
@@ -3433,7 +3433,7 @@ Array.of(3); // [3]：参数本身作为元素
 Array.of(1, 2, 3); // [1, 2, 3]
 ~~~
 
-类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#41.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#41.%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E6%80%8E%E6%A0%B7%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%B9%B6%E6%B8%85%E7%90%86%E6%95%B0%E6%8D%AE%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
 
 ### 复制数组只复制一层
 
@@ -4953,14 +4953,35 @@ Chrome DevTools 堆快照可以显示对象到根的保留者，比较视图可�
 > - 追踪式回收、根集合和不可达对象的实现示例：[V8 “Trash talk: the Orinoco garbage collector”](https://v8.dev/blog/trash-talk)，2018-08-14；这是当时的 V8 实现说明，不代表当前所有引擎。
 > - `WeakRef` 与 `FinalizationRegistry` 不保证回收和清理时机：[ECMAScript 2026 §9.9 Processing Model](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-weakref-processing-model)。
 > - 比较堆快照、检查保留者和脱离 DOM 节点：[Chrome DevTools 官方指南 “Record heap snapshots”](https://developer.chrome.com/docs/devtools/memory-problems/heap-snapshots)，访问于 2026-11-06。
-## 39. How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？
+## 39. 回调、Promise 与 async 函数怎样组合异步工作？
 
-**Core answer / 核心回答：** A callback gives an API a function to call later. A Promise represents one future fulfillment or rejection and composes with then and catch. An async function returns a Promise, while await writes the same control flow in sequential syntax. Promise combinators coordinate already-started work; they do not cancel it. / 回调把函数交给 API 供其稍后调用。Promise 表示未来的一次成功或拒绝，并可通过 then 和 catch 组合。async 函数返回 Promise，await 用顺序语法表达同一控制流。Promise 组合方法协调已经启动的任务，但不会取消它们。
+### 案例背景
 
+用户从 /reports?sort=recent#summary 打开报表页后切换筛选。页面用 Fetch API（浏览器的应用程序编程接口）请求报表 42、摘要和访问权限，检查 HTTP（超文本传输协议）响应并解析 JSON（JavaScript 对象表示法），再把可显示的数据交给界面。三项基础数据全部到达并通过结构校验后，页面再检查权限结果；若允许查看行，就用相同的报表 ID、排序和取消信号单独按页读取表格行。行不是第四项必须同时完成的基础请求。用户离开页面时，应用可能想停止仍可取消的网络工作。
 
-### How callbacks express deferred work / 回调如何表达延后执行
+Promise在这条流程中承接每个异步步骤的未来成功值或失败原因；组合与等待它们不等于取消或并行执行 JavaScript 代码。
 
-A callback passes a function to an API to be called later. Dependent callback nesting can make control flow and error paths hard to follow; callbacks still fit event handlers and many host APIs. / 回调把函数交给 API，供其稍后调用。若任务相互依赖，层层嵌套会让控制流和错误路径难以跟踪；事件处理器和许多宿主 API 仍适合用回调。
+下图从请求输入走到交付给界面的值。JavaScript 异步机制能组织等待和结果，不会自动取消输掉竞争的操作，也不保证 JavaScript CPU 代码并行运行。
+
+~~~mermaid
+flowchart TD
+  A["报表筛选：id=42，sort=recent"] --> B["并发发出 3 个 Fetch 请求"]
+  B -->|网络失败或中止：Fetch Promise 拒绝| G["拒绝 Promise，交给调用方"]
+  B --> C["Promise.all 收到 3 个 Response"]
+  C --> D{"检查 HTTP 状态"}
+  D -->|有非成功状态| G
+  D -->|均可用| E["并发读取响应体"]
+  E -->|读取或解析失败| G
+  E --> F["运行时校验 JSON 形状"]
+  F -->|结构不符合预期| G
+  F -->|均有效| H["交付报表、摘要、权限"]
+~~~
+
+这里把 Promise 和错误归属拆成两个问题：本章解释等待、组合与超时的机制；[JavaScript 错误应在哪一层恢复、传播或上报？](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E9%94%99%E8%AF%AF%E7%94%B1%E8%B0%81%E6%8E%A5%E6%89%8B%EF%BC%9F)继续说明哪个调用层有足够上下文处理失败。浏览器或 Node 何时执行回调属于宿主调度，见[浏览器事件循环](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)和[Node.js 事件循环](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+
+### 回调如何表示延后的工作？
+
+callback（回调）是交给 API（应用程序接口）的函数，API 决定在什么时机调用它：有些异步 API 在稍后调用，有些普通函数（如 map）会在当前调用栈中同步调用回调。事件处理器和计时器使用回调；当后续步骤依赖前一步的结果，层层嵌套会分散成功与失败路径。
 
 ~~~javascript
 readUser(userId, (error, user) => {
@@ -4972,90 +4993,237 @@ readUser(userId, (error, user) => {
 });
 ~~~
 
-Promises were standardized in ES2015, async functions and await in ES2017, and async iteration in ES2018. Asynchronous APIs allow a program to continue while work is pending; that does not by itself imply parallel JavaScript computation. / Promise 于 ES2015 标准化，async 函数与 await 于 ES2017 标准化，异步迭代于 ES2018 标准化。异步 API 让程序在等待任务时继续推进，但这本身不表示 JavaScript 计算并行执行。
-
-### What a Promise state means / Promise 状态表示什么
-
-A Promise begins pending and settles once, either fulfilled with a value or rejected with a reason. It cannot change state after settlement. The executor passed to new Promise runs immediately; registered reactions run later as Promise jobs. / Promise 初始处于 pending 状态，之后只会成功完成并带有值，或拒绝并带有原因；完成后状态不可改变。传给 new Promise 的 executor 立即运行；注册的处理器稍后作为 Promise job 运行。
+Promise把“稍后成功得到一个值”或“稍后以某个原因失败”表示为可组合的对象。Promise 从 pending（待定）开始，只能完成一次，之后进入 fulfilled（成功）或 rejected（拒绝）状态。
 
 ~~~mermaid
 stateDiagram-v2
   [*] --> pending
-  pending --> fulfilled
-  pending --> rejected
+  pending --> fulfilled: 成功完成
+  pending --> rejected: 拒绝
   fulfilled --> [*]
   rejected --> [*]
 ~~~
 
-then returns a new Promise, so a returned value fulfills the next link, a thrown error rejects it, and a returned Promise is adopted. catch handles a rejection; returning normally recovers with its value, while throwing propagates a rejection. / then 会返回一个新 Promise：返回值让下一环节成功完成，抛错会使其拒绝，返回 Promise 时后续会采用其最终状态。catch 处理拒绝；正常返回即以返回值恢复，抛错则继续传播拒绝。
-
-finally normally passes through the original fulfillment value or rejection reason. If its callback throws or returns a rejected Promise, the new chain rejects with that failure. / finally 通常保留原成功值或拒绝原因。若回调抛错或返回拒绝的 Promise，新链会以该错误拒绝。
+传给 new Promise 的 executor（执行器）会在构造时同步运行；传给 then 或 catch 的处理器则在 Promise job（Promise 作业）中稍后运行。下面先输出“执行器”，再输出“构造完成”；计时器回调只调用 resolve，最后输出“报表响应已到”的是 then 处理器：
 
 ~~~javascript
-const result = getUser(userId)
-  .then(user => getOrders(user.id))
-  .then(renderOrders)
-  .catch(handleError);
+const pending = new Promise(resolve => {
+  console.log("执行器");
+  setTimeout(() => resolve("报表响应已到"), 20);
+});
+
+console.log("构造完成");
+pending.then(value => console.log(value));
 ~~~
 
-An async function always returns a Promise. Code before its first suspension point runs synchronously. await suspends the async function until its operand settles, then resumes with the value or throws the rejection into the surrounding control flow. / async 函数始终返回 Promise。第一个暂停点之前的代码同步运行。await 会暂停该函数，直到操作数完成，再以成功值继续，或把拒绝原因抛入当前控制流。
+定时器请求一段延迟，不承诺正好在该毫秒执行。这个调度细节由宿主定义，不是 Promise 自己的功能。
+
+### Promise 链怎样传递值和失败？
+
+then 会返回一个新的 Promise，供下一个处理器接续。当前处理器正常返回普通值，下一环节就以该值成功；处理器抛错，下一环节就拒绝；处理器返回 Promise 或 thenable（带 then 方法、会被 Promise 采用的值），新环节会采用它最终的状态和值。
+
+catch 是 then 的拒绝分支：处理器返回普通值或最终履行的 Promise/thenable，才会把后续链恢复为成功；抛错或返回最终拒绝的 Promise/thenable，后续仍是拒绝。Promise.prototype.finally 适合放两种结果都要执行的清理；它会等待回调返回的 Promise/thenable，若清理最终履行就保留原结果，若清理抛错或最终拒绝才替换结果。因此可以 return cleanupPromise 来等待异步清理，但不要靠它的成功值改写业务值。
 
 ~~~javascript
-async function loadOrders(userId) {
-  try {
-    const user = await getUser(userId);
-    return await getOrders(user.id);
-  } catch (error) {
-    handleError(error);
-    throw error; // returned Promise remains rejected
+async function loadUserAndOrders(userId) {
+  const user = await getUser(userId);
+  const orders = await getOrders(user.id);
+  return { user, orders };
+}
+
+loadUserAndOrders("u-42")
+  .then(renderOrders)
+  .catch(showRequestFailure);
+~~~
+
+async function（异步函数）调用时会立即同步执行函数体，直到第一个 await 挂起，或函数体结束；它始终返回 Promise。await（等待运算符）会暂停这个 async 函数，其他 JavaScript 可以继续运行；操作成功后，函数从下一行继续，操作拒绝时则像在该处抛错一样进入 try/catch 或向外传播。try 中的 return 会经过语言级 finally，throw 也可先由 catch 处理；finally 中新的 return/throw 可以替换原完成结果。
+
+### TypeScript 的 Promise 类型能保证什么？
+
+TypeScript 中的 Promise<T> 只是编译期类型信息。泛型在编译后擦除，不会验证服务端 JSON 确实符合 T。来自网络的值要作为不可信输入检查，再交给后续状态：
+
+~~~typescript
+async function parseReport(response: Response): Promise<Report> {
+  if (!response.ok) {
+    throw new Error("报表请求失败，HTTP " + response.status);
   }
+
+  const value: unknown = await response.json();
+  return validateReport(value);
 }
 ~~~
 
-For deciding where to recover or propagate a rejection, see [Error Handling / 错误处理](#42.%20Where%20should%20a%20JavaScript%20error%20be%20recovered%20or%20reported?%20/%20JavaScript%20%E9%94%99%E8%AF%AF%E5%BA%94%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E6%81%A2%E5%A4%8D%E6%88%96%E4%B8%8A%E6%8A%A5%EF%BC%9F).
+validateReport 必须执行实际检查并在形状不符时抛错；仅写上 Promise<Report> 不会增加运行时检查。TypeScript 类型擦除见本页末尾来源。
 
-### Which Promise combinator fits? / 应选择哪个 Promise 组合方法？
+### 报表请求何时并发、何时顺序等待？
 
-| Method / 方法 | Returned Promise fulfills when / 成功条件 | Returned Promise rejects when / 拒绝条件 |
-|---|---|---|
-| Promise.all | Every input fulfills; result values keep input order / 全部成功；结果按输入顺序排列 | An input rejects / 任一输入拒绝 |
-| Promise.allSettled | All inputs settle; each outcome is returned / 全部结束并返回各项结果 | Not because an input rejects / 不会因某项输入拒绝 |
-| Promise.any | First input fulfills / 首项成功 | All inputs reject with AggregateError / 全部拒绝并产生 AggregateError |
-| Promise.race | First settlement is fulfillment / 首项完成为成功 | First settlement is rejection / 首项完成为拒绝 |
-
-These methods coordinate inputs; they do not cancel losing operations. Passing promises usually means their underlying work has already started. If an API supports cancellation and abandoned work should stop, use its explicit mechanism, such as AbortController with Fetch. / 这些方法用于协调输入，不会取消未获胜的操作。传入 Promise 时，其底层任务通常已经启动。若 API 支持取消且不再需要的工作应停止，使用其显式机制，例如 Fetch 配合 AbortController。
-
-The methods were added across editions: Promise.all and Promise.race in ES2015, Promise.allSettled in ES2020, and Promise.any in ES2021. Their normative completion behavior is in the [ECMAScript Promise combinator algorithms](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-combinator-objects). Promise.race installs both fulfillment and rejection reactions for each input in [PerformPromiseRace](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-performpromiserace).
-
-### When should operations be awaited sequentially or concurrently? / 何时顺序等待，何时并发推进？
-
-Await sequentially when a later operation depends on the earlier result. Start independent operations before awaiting either, then coordinate them with Promise.all when all results are required. This is concurrency, not necessarily parallel JavaScript CPU work: a host may overlap I/O while a JavaScript agent still runs one job at a time. / 后续操作依赖前项结果时顺序 await。操作彼此独立时，应先启动它们，再用 Promise.all 等待所需结果。这是并发，不一定是 JavaScript CPU 计算并行：宿主可重叠处理 I/O，而 JavaScript agent 仍一次执行一个 job。
+请求本身彼此独立，先把三项工作都启动，再用 Promise.all 收集响应。Fetch Promise 履行时已有 Response 和响应头可供检查，不表示响应体已读取完成；正文要等后面的 json()。若网络失败或中止使其中一个 Fetch 拒绝，第一轮 Promise.all 会立即拒绝；Promise.all 本身不会取消其他已启动请求，但页面可以再中止共用的 signal。若三个 Fetch 都给出 Response，代码才检查状态；此时即使一个状态为 404，也要等这一轮所有 Fetch Promise 都履行后才进入状态检查。读取三个响应体也可以并发。currentSort 是筛选控件当前提交的值；signal 来自页面持有的 AbortController（中止控制器），调用 abort() 可向 Fetch 发出中止信号。validateReport、validateSummary 和 validatePermissions 是按各接口合约编写的运行时校验器：
 
 ~~~javascript
-// Dependent: the second operation needs the first result.
-const user = await fetchUser(id);
-const orders = await fetchOrders(user.id);
+async function loadReport(id, sort, signal) {
+  const paths = [
+    "/api/reports/" + id + "?sort=" + encodeURIComponent(sort),
+    "/api/reports/" + id + "/summary",
+    "/api/reports/" + id + "/permissions"
+  ];
 
-// Independent: start both before awaiting either.
-const [users, posts] = await Promise.all([
-  fetchUsers(),
-  fetchPosts()
-]);
+  const responses = await Promise.all(
+    paths.map(path => fetch(path, { signal }))
+  );
+
+  const failed = responses.find(response => !response.ok);
+  if (failed) throw new Error("HTTP " + failed.status);
+
+  const [rawReport, rawSummary, rawPermissions] = await Promise.all(
+    responses.map(response => response.json())
+  );
+
+  return {
+    report: validateReport(rawReport),
+    summary: validateSummary(rawSummary),
+    permissions: validatePermissions(rawPermissions)
+  };
+}
 ~~~
 
-for await...of consumes async iterables in order and can also adapt a synchronous iterable of Promises, awaiting each value before continuing. For independent operations, Promise.all is usually clearer. The protocol and sequential-consumption details belong to [Iterators and Generators / 迭代器与生成器](#41.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F).
+fetch 遇到网络失败会拒绝；HTTP 404 或 500 本身仍会以 Response 成功完成，所以要检查 response.ok。响应对象可在响应头可用后先到达，读取 JSON 正文仍可能等待，也可能因中止或无效 JSON 失败。解析或校验失败也会拒绝 async 函数返回的 Promise。调用方可以在有界面上下文的地方显示错误、选择旧数据或继续传播，具体由[错误处理章节](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E9%94%99%E8%AF%AF%E7%94%B1%E8%B0%81%E6%8E%A5%E6%89%8B%EF%BC%9F)展开。
 
-### How Promise-job order is observed / 如何观察 Promise job 顺序
+Promise combinator（Promise 组合方法）按不同条件合并输入结果：
 
-Promise reactions are queued as jobs. When one handler queues a later reaction, already-queued jobs run first. The host determines checkpoints, so keep browser task/rendering rules and Node scheduling rules in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F), not in this language-level note. / Promise 处理器会排入 job 队列。某个处理器新增后续处理器时，已排队的 job 先运行。检查点由宿主决定；浏览器任务/渲染规则和 Node 调度规则见[事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，不在此处混作语言保证。
+| 方法 | 组合 Promise 的完成条件 | 常见用途与边界 |
+| --- | --- | --- |
+| Promise.all | 全部成功后按输入顺序返回值；任一拒绝时拒绝 | 多个结果都必需。拒绝不会取消其他操作 |
+| Promise.allSettled | 等全部输入完成，返回每项状态和值或原因 | 每项都需汇总，单项失败不提前结束 |
+| Promise.any | 第一个成功时成功；全部拒绝时以 AggregateError 拒绝 | 多个备选中接受任一成功 |
+| Promise.race | 第一个成功或拒绝决定结果 | 在结果与计时器之间竞速；输家继续运行，除非 API 另有取消机制 |
+
+Promise.all 保留的是传入项的顺序，不是完成顺序。两个异步操作可各自已经启动；组合 Promise 只负责等待与汇总。
+
+#### 两个 Promise 结果怎样相加？
+
+> [!example] 两个数字按输入顺序相加
+> 输入 A 在 20 ms 后给出 2，输入 B 在 60 ms 后给出 5。尽管 A 先完成，Promise.all 的数组仍对应输入顺序 [2, 5]，相加为 7，组合结果要等 B 完成才成功。
+>
+> 若输入 A 是 50 ms 后的 10，输入 B 是 30 ms 后的 -12，数组仍为 [10, -12]，结果为 -2。两个运算都已经开始，Promise.all 的拒绝也不会取消另一个运算。
+
+Promise.all([]) 和 Promise.allSettled([]) 会以空数组成功完成；Promise.race([]) 会一直保持 pending；Promise.any([]) 会以 AggregateError 拒绝。这些空输入行为来自 Promise 组合算法。
+
+### 定时器和超时究竟能取消什么？
+
+Promise 本身没有通用的取消方法。Promise.race 返回“谁先完成”的观察结果；它不会通知输掉的工作停止。为报表调用包一层超时，只能保证调用方在超时已触发时得到拒绝，不能保证底层函数停止运行。
+
+#### 怎样把定时器延迟包装成 Promise？
+
+Sleep 练习把宿主计时器包成 Promise：resolve 只会在计时器回调运行时发生。100 ms 和 200 ms 是请求延迟，不是测得的实时保证。setTimeout 与 setInterval 是宿主 API：浏览器返回数值 id，Node.js 返回 Timeout 对象，TypeScript 的声明取决于所选宿主类型。
+
+~~~javascript
+function sleep(millis) {
+  return new Promise(resolve => setTimeout(resolve, millis));
+}
+
+const start = Date.now();
+sleep(100).then(() => console.log(Date.now() - start)); // 约 100 或更久
+~~~
+
+#### 怎样让异步操作与计时器竞速？
+
+~~~javascript
+function timeLimit(fn, millis) {
+  // 示例在 ES module 或 strict mode 中运行，调用方的 this 才会原样传递。
+  return function (...args) {
+    let timerId;
+    const timeout = new Promise((_, reject) => {
+      timerId = setTimeout(
+        () => reject(new Error("Time Limit Exceeded")),
+        millis
+      );
+    });
+
+    let work;
+    try {
+      work = Promise.resolve(fn.apply(this, args));
+    } catch (error) {
+      work = Promise.reject(error);
+    }
+
+    return Promise.race([work, timeout])
+      .finally(() => clearTimeout(timerId));
+  };
+}
+~~~
+
+包装函数以普通函数返回，因而保留调用者的 this 和参数；try/catch 把 fn 同步抛错转为拒绝。工作先完成时，finally 清除尚未触发的超时；超时先完成时，包装 Promise 拒绝，工作本身却仍可能继续并产生副作用。
+
+> [!info] TypeScript 的 this 参数不改变运行时调用
+> 可以用显式 this 参数保留包装函数的调用类型；它会在编译时擦除，不是实际传入的第一个参数。运行时仍要用普通 function 接住调用上下文，并像本例一样以 fn.apply(this, args) 调用原函数；箭头函数捕获外层 this，不适合此处。
+>
+> ~~~typescript
+> type TimedFunction<This, Args extends unknown[], Result> =
+>   (this: This, ...args: Args) => Promise<Result>;
+> ~~~
+
+> [!example] 50 ms 超时与 100 ms 网络等待
+> 假设 fn 在 100 ms 后完成，timeLimit(fn, 50) 的调用方会在计时器获准执行时收到 Time Limit Exceeded。fn 并没有随之取消；它仍可能在之后完成。若改为 150 ms 限制，则工作可以在约 100 ms 后成功返回。
+>
+> 参数 [5, 10] 在 120 ms 后相加仍得到 15。若 fn 同步抛错，即使限制设为 1000 ms，调用方立即得到拒绝，并由 finally 清除定时器。这里的“约”重要：定时器可晚于请求时刻执行，当前同步代码也不能被定时器打断。
+
+> [!info] 超过限制时间不一定先收到超时拒绝
+> 若 fn 同步占用 80 ms 后返回一个已履行的 Promise，而 t 是 50 ms，计时器虽已到期，却要等当前调用栈结束才有机会运行；fn 的 Promise 反应可能先作为微任务执行，使包装结果成功。这是宿主调度下可能发生的结果，timeLimit 不是可抢占的硬截止时间。
+
+真正停止支持取消的 API，需要使用它提供的取消接口。例如把 AbortSignal（中止信号）传给 Fetch，并在页面不再需要请求时调用 AbortController（中止控制器）的 abort()。这会让 Fetch 遵循中止协议，但不能撤销服务器已经收到并执行的请求，也不能逆转已发生的业务副作用。手动计时超时若要中止 Fetch，应让同一个计时器触发 controller.abort()，而不是只拒绝包装 Promise。
+
+#### 取消一次或重复定时器时，哪些调用还会发生？
+
+一次性定时器保存返回的 id，取消函数调用 clearTimeout。以下三组输入说明调用时点怎样影响结果；取消时间与计时器都由宿主调度，表里的毫秒数是题目中的理想化示例。
+
+~~~javascript
+function cancellable(fn, args, millis) {
+  const timerId = setTimeout(() => fn(...args), millis);
+  return () => clearTimeout(timerId);
+}
+~~~
+
+| 输入 | 预期结果 | 原因 |
+| --- | --- | --- |
+| fn(x)=x*5，args=[2]，t=20，cancelT=50 | 约 20 ms 调用一次，fn 算出 10 | 回调先开始，后续取消不能撤回它 |
+| fn(x)=x²，args=[2]，t=100，cancelT=50 | 不调用 | clearTimeout 先移除仍待运行的回调 |
+| fn(x,y)=x*y，args=[2,4]，t=30，cancelT=100 | 约 30 ms 调用一次，fn 算出 8 | 回调完成早于取消 |
+
+题目约束是参数数组 1–10 项、t 为 20–1000 ms、cancelT 为 10–1000 ms。表中的 10 和 8 是定时器调用 fn 算出的值；cancellable 的返回值是取消函数，并不会把这些值交给调用者。上面的回调使用 fn(...args) 普通调用；若 fn 依赖 this，应先绑定或显式传入 receiver。
+
+重复计时器的题目要求立即调用一次，再每隔 t 请求一次，cancel 函数清除未来的 interval 回调：
+
+~~~javascript
+function cancellableInterval(fn, args, millis) {
+  fn(...args); // 第一次同步调用
+  const intervalId = setInterval(() => fn(...args), millis);
+  return () => clearInterval(intervalId);
+}
+~~~
+
+| 参数与取消时间 | 题目中的理想调用时刻 | 每次返回值 |
+| --- | --- | --- |
+| fn(x)=2*x，args=[4]，t=35，cancelT=190 | 0、35、70、105、140、175 ms | 每次为 8 |
+| fn(x,y)=x*y，args=[2,5]，t=30，cancelT=165 | 0、30、60、90、120、150 ms | 每次为 10 |
+| fn(x,y,z)=x+y+z，args=[5,1,3]，t=50，cancelT=180 | 0、50、100、150 ms | 每次为 9 |
+
+setInterval 不是精确时钟，回调可能晚于请求时刻；clearInterval 不会中断已经开始执行的回调，也不会撤销其副作用。若 fn 依赖 this，示例中的普通函数调用同样不会自动保留 receiver。
+
+clearTimeout 只能清除仍在等待调用的 timeout；clearInterval 停止后续重复回调。二者都不能中断已经开始运行的 JavaScript 回调。Promise 处理器的排队顺序也不是“多等几个 tick 就有公平性”的承诺：规范定义处理器如何排入作业，宿主决定作业何时获得处理机会。
+
+### Promise 处理器为什么会交错？
+
+对多个链条，要从具体代码推导：当前运行的处理器结束后，把它新安排的后续处理器排到队列；已经排队的处理器先执行。返回一个已成功 Promise 时，解析程序还要采用它的最终状态，因此可能加入额外的 Promise 作业。第一段中，log0 返回 Promise.resolve(4)，于是采用作业排在已经安排好的 log1 后面；log1 输出后排入 log2。采用作业再给返回的 Promise 安装后续反应，此时 log2 已排队；log2 输出后排入 log3，后续反应才把输出 4 的处理器排到 log3 后面，所以先看到 3 再看到 4。不要把这次队列追踪换算成跨宿主通用的 tick 数。
+
+先看两条只返回普通值的链：同步代码先把两个首处理器排好；运行第一个后，新排入的第二个处理器排在另一条链已排好的首处理器后面，所以输出交错为 0、2、1、3。
 
 ~~~javascript
 Promise.resolve().then(() => console.log(0)).then(() => console.log(1));
 Promise.resolve().then(() => console.log(2)).then(() => console.log(3));
-// 0, 2, 1, 3
+// Node.js v26.11.1 CommonJS: 0, 2, 1, 3
 ~~~
 
-Returning a Promise from a handler makes the next Promise adopt its eventual state. The following observed order is scoped to the tested context, not a portable count of “ticks.” / 处理器返回 Promise 时，后续 Promise 会采用它最终的状态。下例顺序限定于实际测试的上下文，不应转述为跨环境通用的“tick 数”。
+以下三个例子来自原归档练习。它们在 Node.js v26.11.1 的 CommonJS 环境逐段执行，分别得到右侧注释的输出；浏览器宿主自己的事件循环细节另见[事件循环章节](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 ~~~javascript
 Promise.resolve().then(() => {
@@ -5065,14 +5233,78 @@ Promise.resolve().then(() => {
 
 Promise.resolve().then(() => console.log(1))
   .then(() => console.log(2))
-  .then(() => console.log(3));
-// Node.js v26.11.1, CommonJS: 0, 1, 2, 3, 4
+  .then(() => console.log(3))
+  .then(() => console.log(5))
+  .then(() => console.log(6));
+
+// 0 1 2 3 4 5 6
 ~~~
 
-See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering and CJS/ESM context are explained separately in the runtime note. The focused [Currying and Partial Application / 柯里化与部分应用](#36.%20%E5%87%BD%E6%95%B0%E5%8F%98%E6%8D%A2%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E8%B0%83%E7%94%A8%E8%BF%87%E7%A8%8B%EF%BC%9F) and [Chainable Task Queue / 链式任务队列](#40.%20How%20can%20a%20chainable%20API%20queue%20delayed%20tasks?%20/%20%E9%93%BE%E5%BC%8F%20API%20%E5%A6%82%E4%BD%95%E6%8E%92%E9%98%9F%E6%89%A7%E8%A1%8C%E5%BB%B6%E5%90%8E%E4%BB%BB%E5%8A%A1%EF%BC%9F) articles preserve two code exercises from the original collection.
-## 40. How can a chainable API queue delayed tasks? / 链式 API 如何排队执行延后任务？
+~~~javascript
+Promise.resolve().then(() => console.log(0))
+  .then(() => console.log(1)).then(() => console.log(2));
+Promise.resolve().then(() => console.log(3))
+  .then(() => console.log(4)).then(() => console.log(5));
+Promise.resolve().then(() => console.log(6))
+  .then(() => console.log(7)).then(() => console.log(8));
+// 0 3 6 1 4 7 2 5 8
+~~~
 
-**Core answer / 核心回答：** A chainable task API can append closures to a queue and return the same builder object. Deferring the first step allows the synchronous chain to finish building before the queue starts. Each task advances the queue only after its own work completes. / 链式任务 API 可把闭包追加到队列并返回同一 builder 对象。延后首步执行可先让同步调用链构建完成；每个任务只在自身工作结束后推进队列。
+~~~javascript
+Promise.resolve().then(() => {
+  console.log(0);
+  return Promise.resolve(1);
+}).then(() => console.log(2)).then(() => console.log(3));
+
+Promise.resolve().then(() => {
+  console.log(4);
+  return Promise.resolve(5);
+}).then(() => console.log(6)).then(() => console.log(7));
+// 0 4 2 6 3 7
+~~~
+
+老式 Promise 反应顺序练习已并入上述三个可重放程序，见[归档入口](../../archive/front-end/Deprecated_Interview_Notes/promise-reaction-order-exercises.md)。Promise、定时器与事件循环分别由 ECMAScript 和宿主规范规定，来源列在本章末尾。
+
+> [!info]- 来源
+> - Promise 状态、then/catch/finally、async 函数、迭代和组合方法：ECMAScript 2027 规范（2026-11-05 草案快照），[Promise 对象与作业](https://tc39.es/ecma262/#sec-promise-objects)、[Promise.prototype.finally](https://tc39.es/ecma262/#sec-promise.prototype.finally)、[thenable 采用作业](https://tc39.es/ecma262/#sec-newpromiseresolvethenablejob)、[Promise 组合方法](https://tc39.es/ecma262/#sec-promise.all)、[async 函数](https://tc39.es/ecma262/#sec-async-function-definitions)。处理器队列输出另按原样在 Node.js v26.11.1 CommonJS 重放。
+> - 浏览器的 setTimeout/setInterval/clearTimeout：WHATWG HTML Living Standard，2026-11-05 版本，[定时器](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)；标准说明回调不保证精确按延迟执行。
+> - Node.js 定时器的延迟与取消：Node.js v26.13.0 文档，[Timers](https://nodejs.org/api/timers.html#timers)。本机重放使用 v26.11.1。
+> - Fetch 的 AbortSignal 中止行为：[Fetch Standard，Living Standard 2026-10-19：abort a fetch](https://fetch.spec.whatwg.org/#abort-fetch)。该机制可取消 Fetch 的请求/响应处理，不承诺撤回远端已经执行的业务副作用。
+> - Promise<T> 类型擦除及类型注解不改变运行时行为：[TypeScript Handbook：Erased Types](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types)。
+> - 显式 this 参数在编译时检查并在输出中擦除，且需普通 function 才能接收调用时 this：[TypeScript Handbook：this parameters](https://www.typescriptlang.org/docs/handbook/2/functions.html#declaring-this-in-a-function)。
+## 40. 链式接口如何先排队、再依次执行延后任务？
+
+### 案例背景
+
+面试题 LazyMan 要让调用者先写完一串链式命令，再按顺序打印吃饭与睡眠状态：
+
+~~~javascript
+new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
+~~~
+
+预期输出是 eat fruit、等待后输出 wake up after 10ms、最后输出 eat bread。关键是分开两个时序：同步方法先把任务加入对象自己的队列；宿主定时器稍后启动第一项；每项结束时显式推进下一项。
+
+~~~mermaid
+sequenceDiagram
+  participant Caller as 同步调用者
+  participant Queue as LazyMan 任务队列
+  participant Timer as 宿主计时器
+  Caller->>Queue: 构造并安排首轮 next
+  Caller->>Queue: 加入 eat(fruit)
+  Caller->>Queue: 加入 sleep(10)
+  Caller->>Queue: 加入 eat(bread)
+  Timer->>Queue: 首轮 next
+  Queue->>Queue: 执行 eat，推进 next
+  Queue->>Timer: 安排 10 ms 后继续
+  Timer->>Queue: 打印醒来并推进 next
+  Queue->>Queue: 执行 eat，队列结束
+~~~
+
+### 为什么构造时要延后第一项？
+
+如果构造函数立即调用 next，方法链还没有来得及把 eat 和 sleep 放进队列。用 setTimeout 安排一个稍后的 next，让当前同步调用栈先跑完，三个方法就能先依次登记工作。延时为 0 也不是“立刻执行”：回调要等当前同步代码退出，并且实际执行时机由宿主调度。
+
+下面的 tasks 是应用自己实现的任务队列，它保存闭包；它不是浏览器或 Node.js 的事件循环队列。
 
 ~~~javascript
 class LazyMan {
@@ -5105,25 +5337,54 @@ class LazyMan {
     if (task) task();
   }
 }
-
-new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
-// eat fruit → wake up after 10ms → eat bread
 ~~~
 
-The time unit is milliseconds. This is a teaching example, not a production queue: it does not define failure handling, cancellation, or behavior when a task never completes. / 时间单位为毫秒。这是教学示例，不是生产队列；它没有定义错误处理、取消方式或任务永不完成时的行为。
+eat 与 sleep 都把一个函数压入 tasks，并返回 this，所以调用者还能继续链式调用。closure（闭包）在入队时记住当前的 food 或 ms。next 取出并执行队首函数；普通 eat 打印后马上调用 next，sleep 则设定计时器，在计时器回调中打印，再调用 next。
 
-For standard Promise composition, rejection propagation, and concurrency, see [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F). Timer callback scheduling is host behavior; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
-## 41. How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？
+### 队列怎样推进到最终输出？
 
-**Core answer / 核心回答：** An iterable provides an iterator through Symbol.iterator; each iterator next() call returns an object whose done value tells the consumer whether to stop. A generator implements this protocol by pausing at yield. Async iterables provide next results asynchronously and are consumed in order with for await...of. / 可迭代对象通过 Symbol.iterator 提供迭代器；每次调用 next() 返回带 done 值的对象，用于告知消费者是否停止。生成器在 yield 处暂停，以此实现该协议。异步可迭代对象异步提供 next 结果，并由 for await...of 按序消费。
+~~~javascript
+new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
+~~~
 
-### How iterable and iterator protocols work / 可迭代与迭代器协议如何工作
+| 阶段 | 任务队列剩余项 | 正在执行的工作 | 下一步由谁触发 |
+| --- | --- | --- | --- |
+| 链式调用结束 | eat fruit、sleep 10、eat bread | 还未开始 | 构造函数安排的计时器 |
+| 首轮 next | sleep 10、eat bread | eat fruit，打印后立即 next | 当前 JavaScript 调用 |
+| 第二轮 next | eat bread | 安排 10 ms 定时器后返回 | 宿主定时器回调 |
+| 定时器到期 | eat bread | 打印 wake up after 10ms，再 next | 当前 JavaScript 调用 |
+| 最后一轮 next | 空 | eat bread，随后队列结束 | 当前 JavaScript 调用 |
 
-The iterable protocol exposes Symbol.iterator, which returns an iterator. The iterator’s next() method returns an object. The consumer converts its done property to Boolean; if done is missing, it acts as false. value supplies the current item and can be absent on completion. An object is not iterable just because it has numeric keys or a length. / 可迭代协议通过 Symbol.iterator 返回迭代器。迭代器的 next() 返回对象。消费者把 done 转为布尔值；若缺少 done，按 false 处理。value 提供当前项，完成时可以省略。有数字键或 length 的对象不会自动变成可迭代对象。
+输出顺序因此是：
 
-The protocol is defined by the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration). / 协议定义见 [ECMAScript 迭代接口](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)。
+> [!example] Ada 的三个排队命令
+> 输入是 eat("fruit")、sleep(10)、eat("bread")。队列按入队顺序执行；sleep 在 10 ms 定时器回调中才调用 next，因此最后一项不会越过等待提前执行。
+>
+> ~~~text
+> eat fruit
+> wake up after 10ms
+> eat bread
+> ~~~
 
-Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
+此处 next 的含义是“当前任务已完成，可以继续”，不是定时器、Promise 或浏览器内置的推进机制。若任务没有调用 next，队列就会停住；若在 sleep 期间加入任务，下一项仍等计时器完成。实际定时器可能晚于 10 ms，例子描述的是先后关系，不是精确时钟保证。
+
+> [!info] 这段示例没有定义什么？
+> 这是教学用的串行任务队列，没有规定任务抛错时如何恢复、如何取消等待中的计时器，也没有处理永不完成或重复推进。连续排入很多个同步 eat 任务会通过 next 递归推进，可能耗尽调用栈；队列已经清空后再加入任务也不会自动重新启动。生产队列要为这些状态另外定义契约，不能把本例当成已经具备这些保证。
+
+如果任务本身要返回结果、并发组合或把失败交给调用链处理，应使用 Promise链或 async/await（异步函数和等待表达式）；见[回调、Promise 与 async 函数怎样组合异步工作？](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。本页只回答如何把链式命令转成按序推进的闭包队列。
+
+> [!info]- 来源
+> - setTimeout 的宿主调度、嵌套计时器限制及不精确时序：WHATWG HTML Living Standard（2026-11-05），[Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)。
+> - “当前同步调用栈结束后回调才有机会运行”是宿主任务调度和 JavaScript run-to-completion（运行至完成）规则的应用说明；浏览器见[HTML event loops](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，Node 定时器见[Node.js v26.13.0 timers](https://nodejs.org/api/timers.html)。
+## 41. 迭代器与生成器怎样按需产出并清理数据？
+
+### 案例背景
+
+报表 42 有很多行，页面通过 Fetch API（浏览器的应用程序编程接口）逐页请求并逐行追加结果，不必先把所有页合成一个大数组。它检查 HTTP（超文本传输协议）状态并读取 JSON（JavaScript 对象表示法）。调用方希望处理一行后再取下一行，也可能在找到目标行或用户取消时提前停止。迭代协议规定生产者怎样交付下一项、怎样表示结束；生成器可把暂停和清理逻辑写在产出值的代码旁边。
+
+### 可迭代对象怎样交给消费者逐项读取？
+
+iterable（可迭代对象）通过 Symbol.iterator 提供 iterator（迭代器）。迭代器的 next() 返回一个对象：消费者把 done 转成布尔值，false 表示继续使用 value，true 表示结束。done 缺省时按 false 处理；结束时 value 可以省略。有 length 或数字键并不会自动让普通对象可迭代。
 
 ~~~javascript
 const values = [10, 20];
@@ -5132,22 +5393,20 @@ const iterator = values[Symbol.iterator]();
 iterator.next(); // { value: 10, done: false }
 iterator.next(); // { value: 20, done: false }
 iterator.next(); // { value: undefined, done: true }
-
-for (const [key, value] of new Map([["x", 1], ["y", 2]])) {
-  console.log(key, value);
-}
 ~~~
+
+数组、字符串、Map、Set、类型化数组和 arguments 对象都能迭代。Document Object Model（文档对象模型，DOM）的 NodeList（节点列表）也支持迭代，但它是宿主 API；集合是否实时变化取决于返回它的具体 API，DOM 集合的实时/静态差异见[HTMLCollection 与 NodeList 如何处理集合变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
 
 ~~~mermaid
 flowchart LR
-  A["Iterable: Symbol.iterator()"] --> B["Iterator: next()"]
+  A["iterable：调用 Symbol.iterator"] --> B["iterator：调用 next()"]
   B --> C{"Boolean(result.done)"}
-  C -- "false" --> D["Use result.value"]
+  C -- "false" --> D["消费 result.value"]
   D --> B
-  C -- "true" --> E["Stop"]
+  C -- "true" --> E["结束"]
 ~~~
 
-An iterable can return a fresh iterator each time, but the protocol does not require that. Iterator objects and generators often return themselves and are one-shot. / 可迭代对象可以每次都返回新迭代器，但协议不要求如此。迭代器对象和生成器通常返回自身，因此只能消费一次。
+一个 iterable 每次可以返回新的 iterator，但协议不要求如此。很多内置迭代器和 generator 会把自身作为 iterator 返回，所以那种对象消费一次后已经结束；自定义 iterator 是否可迭代、是否可重用由它自己的协议实现决定：
 
 ~~~javascript
 const range = {
@@ -5164,15 +5423,88 @@ const range = {
     };
   }
 };
+
 [...range]; // [1, 2, 3]
 
 const oneShot = (function* values() { yield 1; })();
 oneShot[Symbol.iterator]() === oneShot; // true
 ~~~
 
-### How early exit closes an iterator / 提前退出如何关闭迭代器
+### 生成器怎样暂停、接收值并委托工作？
 
-An iterator may expose return() as a cleanup hook. for...of closes the iterator when break or an abrupt completion such as an exception exits the loop. / 迭代器可提供 return() 清理钩子。break 或异常等 abrupt completion 离开 for...of 时，循环会关闭迭代器。
+generator（生成器）函数调用时只创建一个同时实现可迭代协议和迭代器协议的对象，函数体尚未执行。首次调用 next() 才开始运行函数体，直到第一个 yield 暂停并把当前值交给调用方；下一次 next() 才恢复。第一次 next(value) 的参数会被忽略，因为还没有暂停在 yield；后续参数会成为当前暂停处 yield 表达式的值。
+
+~~~javascript
+function* conversation() {
+  const name = yield "你叫什么名字？";
+  const hobby = yield "你好，" + name + "！你喜欢做什么？";
+  return name + "喜欢" + hobby;
+}
+
+const chat = conversation();
+chat.next();          // { value: "你叫什么名字？", done: false }
+chat.next("Ada");     // { value: "你好，Ada！你喜欢做什么？", done: false }
+chat.next("编程");    // { value: "Ada喜欢编程", done: true }
+~~~
+
+yield* 把读取委托给另一个 iterable 或 generator，并把子生成器的 return 值交回当前生成器。它能把递归遍历组合成一个惰性输出序列：
+
+~~~javascript
+function* flatten(items) {
+  for (const item of items) {
+    if (Array.isArray(item)) yield* flatten(item);
+    else yield item;
+  }
+}
+
+[...flatten([1, [2, [3, 4]], 5])]; // [1, 2, 3, 4, 5]
+
+function* child() {
+  yield "item";
+  return 42;
+}
+function* parent() {
+  return yield* child();
+}
+const delegated = parent();
+delegated.next(); // { value: "item", done: false }
+delegated.next(); // { value: 42, done: true }
+~~~
+
+生成器按调用方需求才计算后续值。它可以表达大序列或无限序列，而不把所有结果预先放进数组：
+
+~~~javascript
+function* fibonacci() {
+  let a = 0, b = 1;
+  while (true) {
+    yield a;
+    [a, b] = [b, a + b];
+  }
+}
+
+const fib = fibonacci();
+fib.next().value; // 0
+fib.next().value; // 1
+fib.next().value; // 1
+fib.next().value; // 2
+~~~
+
+同一状态思路也可按需产生序号，不需要提前分配全部 id。下面只在同一个生成器实例内、计数尚未超过 Number 精确整数范围时保证不重复；不同实例使用同一前缀仍会生成相同 ID：
+
+~~~javascript
+function* ids(prefix = "id") {
+  let next = 0;
+  while (true) yield prefix + "_" + next++;
+}
+
+const userIds = ids("user");
+userIds.next().value; // "user_0"
+userIds.next().value; // "user_1"
+~~~
+
+### 提前退出如何通知迭代器清理？
+
+迭代器可以实现 return()，作为调用者不再请求下一项时的清理钩子。for...of 因循环体中的 break、throw 或其他突然控制流离开时会调用该钩子；若生成器使用 try/finally，关闭时会执行 finally。
 
 ~~~javascript
 const source = {
@@ -5183,7 +5515,7 @@ const source = {
         return { value: value++, done: false };
       },
       return() {
-        console.log("release iterator resource");
+        console.log("释放迭代器资源");
         return { done: true };
       }
     };
@@ -5191,198 +5523,337 @@ const source = {
 };
 
 for (const value of source) {
-  if (value === 2) break; // calls return() before leaving
+  if (value === 2) break; // 退出时调用 return()
 }
 ~~~
 
-The specification’s [IteratorClose](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteratorclose) algorithm defines this cleanup behavior. It also defines how the consumer interprets iterator results in [IteratorComplete](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteratorcomplete).
+这是一种协议层的“不会再向你要值”通知，不等于中断任意底层工作。若 iterator 的 next() 已在等待网络、文件或流，return() 本身不会替这些宿主 API 实现取消；要停止它们，还需其显式取消机制，例如把 AbortSignal 传给 Fetch。
 
-### What yield and next(value) exchange / yield 与 next(value) 交换什么
+对异步生成器，若一次 next() 仍在等待，之后调用 return() 不会抢占那次挂起的 next；它要等该次操作完成后才有机会关闭。正在执行的 Fetch 仍需单独通过 AbortSignal 中止。
 
-A generator function returns an object that is both iterable and an iterator. yield pauses execution and produces a value; the next() call resumes it. The first next(value) argument is ignored because execution has not paused at a yield yet. Later arguments become the result of the suspended yield expression. / 生成器函数返回同时是可迭代对象和迭代器的对象。yield 暂停执行并产出值；调用 next() 时恢复。第一次 next(value) 的参数会被忽略，因为函数尚未暂停在 yield；之后传入的值会成为暂停处 yield 表达式的结果。
+> [!warning] 关闭钩子由消费者的退出路径触发
+> 上述保证针对循环体执行 break、throw 等情况。若 iterator 自己的 next() 抛错，不能据此假定消费者会再调用它的 return() 清理；需要可靠释放资源时，应把清理放进生成器自己的 finally 或使用宿主 API 的显式关闭协议。
+
+### 报表行怎样按页异步读取？
+
+async iterable（异步可迭代对象）通过 Symbol.asyncIterator 提供 async iterator（异步迭代器）。每次 next() 返回一个稍后完成的 Promise；for await...of（异步迭代循环）等待当前一项并处理完循环体，再请求下一项。这样消费者的处理速度自然限制下一次读取，形成逐项 backpressure（背压）。
+
+表格行是第二阶段：三项基础请求的响应已通过状态和结构校验，页面也依据权限结果决定可以读取行后，把 loadReport(42, sort, signal) 使用的同一报表 ID、排序和请求信号交给独立分页接口。客户端权限判断只控制是否发起交互，服务端仍须独立验证访问权。行请求不属于基础 Promise.all，也不必先把所有行读进内存；若基础请求失败或用户切换筛选，页面不会继续交付这条旧行流。下面假设行记录至少有字符串 id；validateReportPage 在响应边界检查分页形状，appendRow 作为参数注入，返回当前行追加完成的 Promise；它必须绑定本次筛选独立拥有的输出容器。currentSort、selectedRowId 和取消按钮来自同一个报表界面。
 
 ~~~javascript
-function* conversation() {
-  const name = yield "What is your name?";
-  const hobby = yield "Hello, " + name + "! What do you enjoy?";
-  return name + " likes " + hobby;
+function validateReportRow(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) ||
+      typeof value.id !== "string") {
+    throw new Error("报表行缺少字符串 id");
+  }
+  return value;
 }
 
-const chat = conversation();
-chat.next();          // { value: "What is your name?", done: false }
-chat.next("Ada");     // { value: "Hello, Ada! What do you enjoy?", done: false }
-chat.next("coding");  // { value: "Ada likes coding", done: true }
-~~~
+function validateReportPage(value) {
+  if (!value || typeof value !== "object" || !Array.isArray(value.items)) {
+    throw new Error("报表分页响应缺少 items 数组");
+  }
+  if (value.nextCursor !== null &&
+      (typeof value.nextCursor !== "string" || value.nextCursor.length === 0)) {
+    throw new Error("nextCursor 必须是非空字符串或 null");
+  }
+  return {
+    items: value.items.map(validateReportRow),
+    nextCursor: value.nextCursor
+  };
+}
 
-yield* delegates iteration to another iterable or generator and receives its completion result. It can compose recursive traversals. / yield* 把迭代委托给另一个可迭代对象或生成器，并接收其完成结果，可用于组合递归遍历。
+async function* reportRows(reportId, sort, signal) {
+  let cursor = null;
+  const seenCursors = new Set();
 
-~~~javascript
-function* flatten(items) {
-  for (const item of items) {
-    if (Array.isArray(item)) yield* flatten(item);
-    else yield item;
+  try {
+    while (true) {
+      const query = new URLSearchParams({ sort });
+      if (cursor !== null) query.set("cursor", cursor);
+      const response = await fetch(
+        "/api/reports/" + reportId + "/rows?" + query,
+        { signal }
+      );
+      if (!response.ok) throw new Error("HTTP " + response.status);
+
+      const page = validateReportPage(await response.json());
+      for (const row of page.items) yield row;
+      if (page.nextCursor === null) return;
+      if (seenCursors.has(page.nextCursor)) {
+        throw new Error("报表接口重复返回分页游标");
+      }
+      seenCursors.add(page.nextCursor);
+      cursor = page.nextCursor;
+    }
+  } finally {
+    console.log("报表行迭代已关闭");
   }
 }
-[...flatten([1, [2, [3, 4]], 5])]; // [1, 2, 3, 4, 5]
 
-function* child() {
-  yield "item";
-  return 42;
-}
-function* parent() {
-  const completion = yield* child();
-  return completion;
-}
-const delegated = parent();
-delegated.next(); // { value: "item", done: false }
-delegated.next(); // { value: 42, done: true }
-~~~
-
-### Why generators are useful for lazy sequences / 生成器为何适合惰性序列
-
-Generators compute on demand, so the consumer controls how many values to request. This can represent large or infinite sequences without storing every value in an array. / 生成器按需计算，由消费者决定请求多少项，因此可表示大型或无限序列，而不必预存所有值。
-
-~~~javascript
-function* fibonacci() {
-  let a = 0, b = 1;
-  while (true) {
-    yield a;
-    [a, b] = [b, a + b];
+async function appendReportRows(reportId, sort, stopAfterId, signal, appendRow) {
+  try {
+    for await (const row of reportRows(reportId, sort, signal)) {
+      if (signal.aborted) throw signal.reason;
+      await appendRow(row);
+      if (row.id === stopAfterId) break;
+    }
+  } catch (error) {
+    if (signal.aborted && error === signal.reason) return;
+    throw error;
   }
 }
-const fib = fibonacci();
-fib.next().value; // 0
-fib.next().value; // 1
-fib.next().value; // 1
-fib.next().value; // 2
 
-function* ids(prefix = "id") {
-  let next = 0;
-  while (true) yield prefix + "_" + next++;
-}
-const userIds = ids("user");
-userIds.next().value; // "user_0"
-userIds.next().value; // "user_1"
+const controller = new AbortController(); // 用户取消时向正在运行的 Fetch 发信号
+cancelButton.addEventListener("click", () => controller.abort(), { once: true });
+appendReportRows(42, currentSort, selectedRowId, controller.signal, appendRow)
+  .catch(showReportError);
 ~~~
 
-Before async/await, libraries such as co used a runner to yield Promises from generators and resume with their results. This is a historical pattern; async functions standardize another syntax and runtime protocol, rather than exposing a generator implementation. / async/await 出现以前，co 等库通过 runner 让生成器 yield Promise，再根据结果恢复执行。这是历史模式；async 函数标准化的是另一种语法与运行时协议，并非直接暴露生成器实现。
+找到目标行后 break 会关闭 async iterator，因此生成器的 finally 会执行；未请求的后续页不会再读取。若用户在 fetch 等待期间按“取消”，外层需通过 AbortController（中止控制器）调用 abort()，Fetch 才会收到 AbortSignal（中止信号）。若取消发生在 appendRow 等待期间，该行追加已开始且本例没有把 signal 交给 appendRow，不能撤回；如果它直接写共享当前列表，旧行就可能混入新筛选。因此调用方应像[错误处理章节](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E9%94%99%E8%AF%AF%E7%94%B1%E8%B0%81%E6%8E%A5%E6%89%8B%EF%BC%9F)那样为每一代创建独立容器，切换时替换当前容器；已开始的旧追加只能写脱离页面的旧容器。追加完成后，循环在开始下一行前检查 signal，不会再追加缓存的后续行。catch 只吞掉与该 signal.reason 相同的取消原因；恰好同时发生的独立校验或追加错误仍会向上传播。异步迭代协议不会自动取消正在进行的网络请求，也不能撤销远端已经完成的写操作。此例在每页响应后检查 items、行结构和 nextCursor，并拒绝重复游标；它逐页持有一个响应体并逐行交付，没有把整个报表预存为数组。
 
-### How async iteration differs / 异步迭代有何不同
+> [!example] 在当前页停止后不会请求下一页
+> 假设当前页交付行 r-101、r-102，并带有 nextCursor。若 r-102 是 stopAfterId，循环在消费 r-102 后执行 break；生成器关闭并运行 finally，停在该页，不会更新 cursor 或发出下一页请求。
 
-An async iterable (standardized in ES2018) supplies Symbol.asyncIterator. Each next() call makes its iterator result available asynchronously; for await...of waits for each result in sequence. This suits streams whose next value becomes available over time. A synchronous array of independent Promises is usually clearer with Promise.all. / 异步可迭代对象（ES2018 标准化）通过 Symbol.asyncIterator 提供迭代器，每次 next() 异步提供迭代结果；for await...of 按顺序等待各项，适合后续值逐渐到达的流。同步数组中相互独立的 Promise 通常用 Promise.all 更清晰。
-
-`for await...of` can also consume a synchronous iterable of Promises, awaiting each yielded value before requesting the next one. If the Promises have already started, this preserves input order rather than yielding whichever finishes first. / `for await...of` 也能消费由 Promise 组成的同步可迭代对象；每项完成后才继续请求下一项。即使 Promise 已经启动，结果仍按输入顺序处理，而非按最快完成顺序产出。
+for await...of（异步迭代循环）也能读取同步 iterable 中的 Promise，但按输入顺序等待，而非按最快完成顺序产出。下面两个计时器在数组构造时同时启动，第二项先完成；迭代结果仍为 first、second：
 
 ~~~javascript
-async function collectInOrder(tasks) {
+const slow = new Promise(resolve => setTimeout(() => resolve("first"), 20));
+const fast = new Promise(resolve => setTimeout(() => resolve("second"), 0));
+
+async function collectInInputOrder() {
   const values = [];
-  for await (const value of tasks) values.push(value);
+  for await (const value of [slow, fast]) values.push(value);
   return values;
 }
 
-collectInOrder([Promise.resolve("first"), Promise.resolve("second")])
-  .then(values => console.log(values)); // ["first", "second"]
+collectInInputOrder().then(values => console.log(JSON.stringify(values)));
+// ["first","second"]
 ~~~
 
-See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
-## 42. Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？
+> [!warning] 并行 Promise 不要只按序等待
+> 若第二个 Promise 在第一个仍 pending 时先拒绝，for await...of 仍等待第一个；宿主可能在循环读取到第二项前先报告这个拒绝未处理。若多项工作彼此独立并且都需要观察成功或失败，先用 Promise.all 或 Promise.allSettled 安装统一处理路径。
 
-**Core answer / 核心回答：** Handle a failure at the layer with enough context to recover, add information, or report it. If the current layer cannot decide what recovery means, propagate the error. A catch that only logs and returns can silently turn failure into success; browser-global and React handlers cover specific last-resort scopes. / 应在拥有足够上下文进行恢复、补充信息或上报的层级处理错误。当前层无法决定如何恢复时，应继续传播。只记录日志后正常返回的 catch 会悄悄把失败转成成功；浏览器全局处理器和 React 边界只覆盖特定的兜底范围。
+若目标是汇总独立操作，通常用 Promise.all；异步迭代适合逐项到达、逐项消费的数据。Promise 组合的输入顺序与取消边界见[回调、Promise 与 async 函数怎样组合异步工作？](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%BD%95%E6%97%B6%E5%B9%B6%E5%8F%91%E3%80%81%E4%BD%95%E6%97%B6%E9%A1%BA%E5%BA%8F%E7%AD%89%E5%BE%85%EF%BC%9F)。
 
-### What try/catch/finally cover / try/catch/finally 能处理什么
+在 async/await 标准化以前，co 等库曾运行生成器：生成器 yield 一个 Promise，runner（驱动器）在 Promise 完成后把值传给 next()，拒绝时把错误传给 throw()。这是历史控制流模式；async 函数有自己的 Promise 语义，并不是由用户可见的 generator 实例实现。
 
-try/catch handles an exception thrown while protected code runs. finally runs when control leaves the block, including return or throw, unless finally itself overrides the completion. Avoid returning or throwing from finally because it replaces an earlier result or error. / try/catch 处理受保护代码执行期间抛出的异常。控制流离开代码块时 finally 会运行，包括 return 或 throw；但 finally 自己可以覆盖原结果。不要在 finally 中 return 或 throw，以免替换之前的结果或错误。
+> [!info]- 来源
+> - iterable、iterator、generator、async iterator、yield* 与迭代关闭：ECMAScript 2027 规范（2026-11-05 草案快照），[迭代协议](https://tc39.es/ecma262/#sec-iteration)、[IteratorClose](https://tc39.es/ecma262/#sec-iteratorclose)、[AsyncIteratorClose](https://tc39.es/ecma262/#sec-asynciteratorclose)、[异步生成器请求队列](https://tc39.es/ecma262/#sec-asyncgeneratordrainqueue)、[for-of 与 for-await-of](https://tc39.es/ecma262/#sec-for-in-and-for-of-statements-runtime-semantics-labelledevaluation)。
+> - Fetch 中止与响应体清理：[Fetch Standard，Living Standard 2026-10-19：abort a fetch](https://fetch.spec.whatwg.org/#abort-fetch)。中止请求与回滚远端业务副作用是不同保证。
+> - DOM NodeList 的可迭代与集合实时性：由相应 DOM API 定义，见[DOM Standard，Living Standard 2026-11-04：NodeList](https://dom.spec.whatwg.org/#interface-nodelist)与本仓库的[DOM 集合章节](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
+> - 宿主计时器不保证精确触发时间，拒绝处理器的安装时机也可能触发全局未处理拒绝报告：WHATWG HTML Living Standard（2026-11-05），[Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)、[unhandled promise rejections](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections)。
+## 42. JavaScript 错误应在哪一层恢复、传播或上报？
+
+### 案例背景
+
+报表筛选触发三项并发 Fetch API（浏览器的应用程序编程接口）请求，分别取报表、摘要和权限；三者都校验成功后，同一报表 ID、排序和取消信号还可驱动迭代章节的分页行流。任一网络失败、HTTP（超文本传输协议）404、JSON（JavaScript 对象表示法）解析失败或结构错误，都由服务函数拒绝给页面；即使数据请求成功，组件渲染也仍可能出错。每个错误都要交给一个能决定下一步的层级：页面选择提示、保留旧数据或重试，渲染边界负责限定范围内的 user interface（用户界面，UI）兜底，全局处理器只记录遗漏。
+
+### 报表请求的错误由谁接手？
+
+异步章节的 loadReport(id, sort, signal) 并发取得并校验报表、摘要和权限；这个页面处理层接收它的三个结果或拒绝，而不是再定义一个只取报表的单请求。AbortController（中止控制器）提供 AbortSignal（中止信号），调用 abort() 向支持取消的请求发出中止。页面还可能快速切换筛选，因此每一代请求要有自己的中止控制器和序号：中止旧网络工作，并只允许最新一代更新报表、错误和 loading（加载）状态。
+
+~~~javascript
+let latestReportRequest = 0; // 页面级状态
+let activeController = null;
+
+async function onRefreshClick(sort) {
+  const requestId = ++latestReportRequest;
+  activeController?.abort();
+  const controller = new AbortController();
+  activeController = controller;
+  setLoading(true);
+  // 每代使用自己的 tbody；切换时立即移除旧行，旧异步写入只触碰旧容器。
+  const rowTarget = document.createElement("tbody");
+  const oldBody = rowsTable.tBodies[0];
+  if (oldBody) oldBody.replaceWith(rowTarget);
+  else rowsTable.append(rowTarget);
+  const appendRow = async row => {
+    const element = await prepareReportRow(row);
+    rowTarget.append(element);
+  };
+
+  try {
+    const { report, summary, permissions } =
+      await loadReport(42, sort, controller.signal);
+    if (requestId !== latestReportRequest) return;
+    setReport(report);
+    setSummary(summary);
+    setPermissions(permissions);
+    clearError();
+
+    // validatePermissions 已验证 canReadRows 为布尔值；无权时不启动行流。
+    if (permissions.canReadRows === true) {
+      await appendReportRows(42, sort, null, controller.signal, appendRow);
+    }
+  } catch (error) {
+    // 仅静默与本 signal.reason 完全相同的取消；独立错误即使已过期也记录。
+    if (controller.signal.aborted && error === controller.signal.reason) return;
+    if (!controller.signal.aborted) controller.abort(); // 停止仍在运行的同组请求
+    reportError(error);
+    if (requestId !== latestReportRequest) return;
+    setError(toUserMessage(error));
+  } finally {
+    if (requestId === latestReportRequest) {
+      setLoading(false);
+      activeController = null;
+    }
+  }
+}
+
+cancelButton.addEventListener("click", () => activeController?.abort());
+~~~
+
+`rowsTable` 是页面拥有的表格元素，假定只有一份动态 tbody，替换它会保留静态 thead/tfoot，`prepareReportRow` 只准备一个本行 DOM 节点，不写共享界面。每次刷新先换上一个空 tbody，当前请求无行权限或失败时也不会继续暴露旧筛选的行。传入分页函数的 appendRow 闭包只持有本代 tbody；旧追加即使晚完成，也写入已经脱离当前页面的旧容器，不会混进新列表。
+
+`loadReport` 来自[异步请求章节](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%BD%95%E6%97%B6%E5%B9%B6%E5%8F%91%E3%80%81%E4%BD%95%E6%97%B6%E9%A1%BA%E5%BA%8F%E7%AD%89%E5%BE%85%EF%BC%9F)，返回已校验的三项基础数据；`appendReportRows` 来自[分页迭代章节](#%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%80%8E%E6%A0%B7%E6%8C%89%E9%A1%B5%E5%BC%82%E6%AD%A5%E8%AF%BB%E5%8F%96%EF%BC%9F)，沿用这次的 sort 和 signal。Promise.all 自身不会取消同组请求；这里在处理非取消失败时显式中止共享 signal，停止仍支持取消的兄弟 Fetch 和行流。实际页面可把基础数据与行列表的 loading 拆开；这里用一个状态聚焦最新请求的错误归属。序号检查和 abort 各有作用：signal 尽力停止支持取消的 Fetch；若旧结果仍完成，序号阻止它覆盖当前筛选或清掉新请求的 loading。
+
+> [!example] 两次筛选交错返回
+> recent 请求先启动，随后 oldest 请求启动并使 recent 的 signal 中止。序号保护本节的报表、摘要、权限、用户可见错误和 loading 状态；旧请求的 finally 不会关闭 oldest 的 loading。真正的取消原因被静默；若旧请求恰好产生独立错误，仍会交给 reportError 记录，但不会覆盖当前筛选的提示。分页章节说明，每行追加前还会检查同一个 signal；若 append 已开始且不支持取消，它仍可能完成，但只写本代容器；容器已被新请求替换时，旧写入不会显示，也不会再开始下一行。只有最新一代完成、失败或被用户取消时，页面才清理这次 loading。
+
+检查 response.ok 把“服务器给了一个 HTTP 响应”与“这个响应可供页面使用”分开。Fetch Promise 在响应可用时给出 Response；正文还需由 json() 读取，解析或运行时校验都可能失败。此例在权限字段允许后才调用分页函数，rows 接口仍必须在服务端重新验证权限。Fetch、JSON 和 Promise 的行为见异步章节。
+
+> [!example] HTTP 404 如何走到界面提示？
+> Fetch 成功拿到状态为 404 的 Response，所以不会因状态码自动拒绝；loadReport 检查 response.ok 后拒绝，把失败交给 onRefreshClick 的 catch。页面仍掌握当前筛选交互，于是更新错误提示并上报；finally 则关闭最新请求的 loading 状态。
+
+页面能显示可恢复的错误，所以它可以在 catch 中更新界面。若一个底层 helper 只记录日志后正常返回，调用方会误以为 Promise 已成功；若当前层没有恢复决定，就把错误继续抛给知道页面上下文的上层。
+
+### try/catch/finally 覆盖哪段控制流？
+
+try/catch 捕获同步执行期间抛出的错误，也能捕获在 try 内 await 的 Promise 拒绝。语言中的 finally 代码块会在成功、拒绝或 return 离开时执行；若它自己 return 或 throw，就会用新的控制流完成替换原结果。清理代码通常只做清理，不要无意中覆盖业务结果。
 
 ~~~javascript
 try {
-  riskyOperation();
+  const data = await loadReport(42, currentSort, controller.signal);
+  renderReport(data);
 } catch (error) {
-  throw error; // keep propagating the same error
+  showError(error);
+  throw error; // 如果此层没有完成恢复，继续传播
 } finally {
-  releaseResource();
+  setLoading(false);
 }
 ~~~
 
-Use finally for cleanup required on either outcome. To add context while propagating, preserve the original with Error options cause (standardized in ES2022): new Error("Request failed", { cause: error }). / finally 适合放置成功、失败都必须执行的清理。若需补充上下文并继续传播，可通过 Error options 的 cause 保留原始错误（ES2022 标准化）：new Error("Request failed", { cause: error })。
+~~~javascript
+async function languageFinally() {
+  try {
+    return "报表值";
+  } finally {
+    return "被 finally 替换的值";
+  }
+}
 
-### When to define a custom Error / 何时定义自定义 Error
+languageFinally().then(console.log); // 被 finally 替换的值
+~~~
 
-Extend Error when callers need a stable category or structured context. Modern JavaScript engines support built-in Error subclassing directly; Object.setPrototypeOf workarounds are for particular legacy transpilation targets. instanceof depends on realm and constructor identity, so stable codes or fields may be more reliable when errors cross package or realm boundaries. / 调用方需要稳定错误类别或结构化上下文时可继承 Error。现代 JavaScript 引擎支持直接继承内置 Error；Object.setPrototypeOf 补丁只适用于特定旧转译目标。instanceof 依赖 realm 和构造函数身份，因此错误跨包或跨 realm 时，稳定的 code 或字段可能更可靠。
+Promise.finally() 方法不同：回调返回的普通成功值会被忽略，原 Promise 的成功值或拒绝原因继续传递；若回调返回 Promise 或 thenable（带 then 方法、会被 Promise 采用的值），会等待它完成。清理最终履行时保留原结果，清理抛错或最终拒绝才会让新 Promise 改为拒绝。
 
 ~~~javascript
-class ValidationError extends Error {
-  constructor(message, field) {
-    super(message);
-    this.name = "ValidationError";
-    this.field = field;
+Promise.resolve("报表值")
+  .finally(() => Promise.resolve("清理结果"))
+  .then(console.log); // 等清理 Promise 履行后，仍输出“报表值”
+
+Promise.resolve("报表值")
+  .finally(() => { throw new Error("清理失败"); })
+  .catch(error => console.log(error.message)); // 清理失败
+~~~
+
+语言级 finally 和 Promise.finally 的时间边界也不同：`try { return pendingPromise; } finally { ... }` 会先退出 try 并运行 finally，async 函数随后才采用 pendingPromise 的结果；若要让同一 try/catch 捕获它的拒绝，或让 finally 等到它完成后再运行，应写 `return await pendingPromise`。
+
+~~~javascript
+async function returnBeforePromiseSettles(pendingPromise) {
+  try {
+    return pendingPromise;
+  } finally {
+    console.log("return pendingPromise 时 finally 先运行");
   }
+}
+
+async function waitBeforeFinally(pendingPromise) {
+  try {
+    return await pendingPromise;
+  } finally {
+    console.log("await 结束后 finally 才运行");
+  }
+}
+~~~
+
+try/catch 不会捕获稍后由计时器或事件回调抛出的错误，因为回调在独立的调用栈上执行，其 throw 没有被转换为原 try 正在等待的 Promise 拒绝；即使原 try 仍挂起在 await 上，也不能捕获这个独立 throw。若异步 API 把失败表示为 Promise，应 await 它，或给返回的 Promise 明确安装拒绝处理器。
+
+~~~javascript
+try {
+  setTimeout(() => {
+    throw new Error("这次抛错发生在未来的回调中");
+  }, 0);
+} catch (error) {
+  // 捕获不到定时器回调中的错误
 }
 
 try {
-  validate(input);
+  await loadReport(42, currentSort, controller.signal);
 } catch (error) {
-  if (error instanceof ValidationError) {
-    showFieldError(error.field, error.message);
-  } else {
-    throw error; // unexpected failure still propagates
+  // 可以捕获 loadReport 返回 Promise 的拒绝
+}
+~~~
+
+Promise 的 catch 与 then 的拒绝处理器遵循同一条结果规则：返回普通值或最终履行的 Promise/thenable 才会恢复为成功；抛错或返回最终拒绝的 Promise/thenable，链仍保持拒绝。若只上报但要继续传播，应重新抛出：
+
+~~~javascript
+loadReport(42, currentSort, controller.signal)
+  .catch(error => {
+    reportError(error);
+    throw error; // 只上报，没有恢复，继续拒绝
+  });
+~~~
+
+用 Error 的 cause 属性包装失败，可补充当前层的上下文而保留原错误；该属性标准化于 ES2022。需要稳定错误类别或结构化字段时可继承 Error。现代运行环境支持直接继承内置 Error；只有目标转译环境无法正确设置内置子类原型时，才考虑 Object.setPrototypeOf 兼容处理。跨 iframe 或 JavaScript realm（运行时领域）以及重复安装依赖的边界上，instanceof 可能因构造函数身份不同而失败；可把稳定 code 和字段作为更可靠的跨边界判断依据。JavaScript 允许 throw 任意值，因此错误处理器也不应假设收到的一定是 Error 实例。
+
+~~~javascript
+class ReportDecodeError extends Error {
+  constructor(message, cause) {
+    super(message, { cause });
+    this.name = "ReportDecodeError";
+    this.code = "REPORT_DECODE_FAILED";
+  }
+}
+
+function decodeReport(raw) {
+  try {
+    return validateReport(raw);
+  } catch (cause) {
+    throw new ReportDecodeError("报表数据无法读取", cause);
   }
 }
 ~~~
 
-A try/catch does not catch a throw that happens later inside a timer or another callback. It does catch a rejected Promise when the code awaits that Promise inside the try block. / try/catch 不会捕获稍后在计时器或其他回调中发生的抛错；若在 try 块中 await 被拒绝的 Promise，则可捕获该拒绝。
+### 浏览器全局处理器能兜住什么？
 
-### How to propagate or recover a Promise rejection / 如何传播或恢复 Promise 拒绝
+浏览器的 window.onerror 可报告未捕获的脚本运行错误；跨源脚本若未使用 crossorigin 属性，或其响应未通过 Cross-Origin Resource Sharing（跨源资源共享，CORS），错误详情可能被限制。unhandledrejection 可记录最终没有拒绝处理器的 Promise 拒绝，但这是遗漏的诊断信号，不替代请求调用链内的恢复或传播。用它追踪问题时，也不要默认所有宿主对未处理拒绝采取相同策略。
 
-A catch handler recovers when it returns normally; the next then receives that value. Throwing or returning Promise.reject keeps the chain rejected. Around await, catch the rejection and choose deliberately whether to recover or rethrow. / catch 处理器正常返回即表示恢复，后续 then 收到该返回值。再次抛错或返回 Promise.reject 会让链保持拒绝。await 周围捕获拒绝后，应明确选择恢复还是继续抛出。
-
-Fetch rejects for network-level failures, but an HTTP 404 or 500 still fulfills with a Response. Check response.ok or response.status when HTTP success is required. / Fetch 遇到网络层失败时会拒绝，但 HTTP 404 或 500 仍会以 Response 成功完成。需要 HTTP 成功状态时检查 response.ok 或 response.status。
+资源加载错误有另一个边界：例如图片元素派发的 error 事件不冒泡。若通过父节点统一采集，应监听捕获阶段。从 window.onerror 处理器返回 true 会抑制默认错误报告；下面改用事件监听器，展示如何捕获非冒泡资源错误：
 
 ~~~javascript
-async function loadData() {
-  const response = await fetch("/api/data");
-  if (!response.ok) {
-    throw new Error("HTTP " + response.status);
-  }
-  return response.json();
-}
-
-loadData().catch(reportFailure);
-~~~
-
-Every rejection needs an owner somewhere in the call chain. The browser’s unhandledrejection event is useful for diagnostics, but it is a late signal, not a substitute for local recovery or deliberate propagation. Host reporting and process behavior differ. See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise chain mechanics. / 每个拒绝都应由调用链某处明确负责。浏览器的 unhandledrejection 事件可用于诊断，但只是较晚的信号，不能替代本地恢复或明确传播。宿主上报和进程行为有所不同。Promise 链机制见 [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
-
-### What browser-global handlers cover / 浏览器全局处理器覆盖什么
-
-These are browser APIs, not JavaScript-language or Node guarantees. Use them for last-resort reporting rather than handling expected failures far from their source. / 以下是浏览器 API，不是 JavaScript 语言或 Node 的保证。它们适合最后兜底上报，不应用来远距离处理预期失败。
-
-- window.onerror reports uncaught script errors; returning true suppresses default browser reporting. Cross-origin scripts may expose limited details unless crossorigin="anonymous" is used and the response grants access with CORS.
-- unhandledrejection exposes an unhandled Promise rejection; preventDefault suppresses its default browser reporting.
-- Image load failure fires error on the image element. The event does not bubble, so a capturing listener may be needed.
-
-The [HTML image algorithm](https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data) dispatches the failure event at the image element; the [DOM event rules](https://dom.spec.whatwg.org/#concept-event-dispatch) explain capture behavior for non-bubbling events. See the HTML Standard’s [runtime-error](https://html.spec.whatwg.org/multipage/webappapis.html#runtime-script-errors) and [unhandled-rejection](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections) sections.
-
-~~~javascript
-function reportRejection(reason) { console.error(reason); }
-function reportResourceFailure(target) { console.error(target); }
-
 window.addEventListener("unhandledrejection", event => {
-  reportRejection(event.reason);
-  // event.preventDefault(); // only when suppressing default reporting is intended
+  reportError(event.reason);
+  // 仅当明确要抑制浏览器默认报告时才调用：
+  // event.preventDefault();
 });
 
 window.addEventListener("error", event => {
   if (event.target !== window) {
-    reportResourceFailure(event.target); // resource element is the event target
+    reportResourceFailure(event.target);
   }
-}, true); // capture non-bubbling resource error events
+}, true);
 ~~~
 
-### What React error boundaries cover / React 错误边界覆盖什么
+全局处理器适合最后记录遗漏。预期 HTTP 失败、校验错误或用户取消应在仍知道报表 id、筛选条件和交互上下文的地方处理。
 
-A React error boundary displays fallback UI for errors thrown while rendering its descendant tree. The documented API uses a class component with static getDerivedStateFromError and optionally componentDidCatch for reporting. / React 错误边界会为后代组件树渲染期间抛出的错误显示备用界面。官方 API 使用 class 组件实现 static getDerivedStateFromError，可选用 componentDidCatch 上报。
+### React 错误边界覆盖哪个 UI 范围？
+
+React Error Boundary（错误边界）为其后代组件渲染期间抛出的错误切换到备用界面；class component（类组件）通过 static getDerivedStateFromError 更新备用状态，可用 componentDidCatch 上报组件栈。它不是 Promise 的拒绝处理器。
 
 ~~~jsx
-class ErrorBoundary extends React.Component {
+class ReportBoundary extends React.Component {
   state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -5394,13 +5865,20 @@ class ErrorBoundary extends React.Component {
   }
 
   render() {
-    if (this.state.failed) return <p>Something went wrong.</p>;
+    if (this.state.failed) return <p>报表暂时无法显示。</p>;
     return this.props.children;
   }
 }
 ~~~
 
-React documentation says boundaries do not catch errors from event handlers, ordinary asynchronous callbacks, server-side rendering, or the boundary itself. Current React documentation describes an exception for errors thrown inside a transition started with the function returned by useTransition. Check the app’s React version and framework behavior. See [React Error Boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary). / React 文档说明，边界不会捕获事件处理器、普通异步回调、服务端渲染或边界自身抛出的错误。当前 React 文档列出由 useTransition 返回函数启动的 transition 中抛错的例外情况。应核对应用使用的 React 版本和框架行为，详见 [React 错误边界](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)。
+当前 React 文档说明，错误边界不会捕获事件处理器、普通异步回调、服务端渲染错误或边界自身的错误；文档列出由 useTransition Hook（React 钩子）返回的 startTransition 函数启动的 Transition（过渡更新）内抛错这一例外。按钮处理器中的 Fetch 失败仍应像本章的 onRefreshClick 一样显式处理。不同 React 版本和框架集成可能增加自己的边界，应用应按实际版本核对。
+
+> [!info]- 来源
+> - 语言级 try/catch/finally 控制流、async return/await、Promise 拒绝传播与作业机制：ECMAScript 2027 规范（2026-11-05 草案快照），[TryStatement 求值](https://tc39.es/ecma262/#sec-try-statement-runtime-semantics-evaluation)、[async 函数](https://tc39.es/ecma262/#sec-async-function-definitions)、[Promise 对象](https://tc39.es/ecma262/#sec-promise-objects)、[thenable 采用作业](https://tc39.es/ecma262/#sec-newpromiseresolvethenablejob)、[Promise.prototype.finally](https://tc39.es/ecma262/#sec-promise.prototype.finally)。
+> - Fetch 对 HTTP 响应与网络错误的区分：[Fetch Standard，Living Standard 2026-10-19：fetch processing model](https://fetch.spec.whatwg.org/#main-fetch)；中止请求：[abort a fetch](https://fetch.spec.whatwg.org/#abort-fetch)。
+> - 浏览器 window.onerror、未处理拒绝与 image error：[HTML Standard，Living Standard 2026-11-05：runtime script errors](https://html.spec.whatwg.org/multipage/webappapis.html#runtime-script-errors)、[unhandled promise rejections](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections)、[image data update algorithm](https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data)；事件传播：[DOM Standard，Living Standard 2026-11-04：dispatching events](https://dom.spec.whatwg.org/#concept-event-dispatch)。
+> - React 错误边界范围与 useTransition 例外：[React Component reference](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)，核对日期 2026-11-06。
+> - Error options cause 与 instanceof 的构造函数/prototype 检查：[ECMAScript 2027 Error constructor](https://tc39.es/ecma262/#sec-error-constructor)、[OrdinaryHasInstance](https://tc39.es/ecma262/#sec-ordinaryhasinstance)。
 ## 43. How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
 
 **Short answer / 简答** — Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, check syntax and shape, then construct a value whose fields match the application's type. The checker can enforce exhaustive use of that type. The parser does not establish whether a supplied role or identity claim is authorized. / 把 API 响应和浏览器存储视为不可信数据。先解析为 `unknown`，校验语法和结构，再构造与应用类型匹配的值。编译器可以检查是否处理所有受支持的类型分支。结构校验无法证明输入里的角色或身份已经获得授权。
@@ -5697,9 +6175,9 @@ A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone d
 | Object.assign, Object.is | ES2015 | Object.assign mutates its target; Object.is uses SameValue / Object.assign 会修改目标；Object.is 使用 SameValue |
 | Object.values, Object.entries | ES2017 | Own enumerable string-keyed values or pairs / 自有可枚举字符串键的值或键值对 |
 | Array.from, Array.of | ES2015 | Iterable/array-like conversion or argument list / 可迭代或类数组转换，或参数列表建数组 |
-| Promise.all, Promise.race | ES2015 | Outcome semantics and cancellation limits: see [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 完成条件和不取消其他操作见异步页 |
-| Promise.allSettled | ES2020 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
-| Promise.any | ES2021 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
+| Promise.all, Promise.race | ES2015 | Outcome semantics and cancellation limits: see [Asynchronous JavaScript / 异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F) / 完成条件和不取消其他操作见异步页 |
+| Promise.allSettled | ES2020 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F) / 见异步页的 Promise 比较表 |
+| Promise.any | ES2021 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F) / 见异步页的 Promise 比较表 |
 | globalThis | ES2020 | Current realm’s global object; host-specific properties differ / 当前 realm 的全局对象；宿主属性不同 |
 | Array.prototype.at | ES2022 | Supports negative offsets from the end / 支持从末尾反向计数 |
 | Object.hasOwn | ES2022 | Own-property test works with null-prototype objects and overridden hasOwnProperty / 可用于 null 原型对象和被覆盖的 hasOwnProperty |

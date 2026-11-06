@@ -1,51 +1,15 @@
-# In what order do chained Promise reactions run? / Promise 链的反应处理器按什么顺序运行？
+# Promise 处理器的顺序由什么决定？
 
-A then reaction runs as a Promise job after settlement; its returned value settles the next Promise and may queue later reactions among other chains. Derive the order from the jobs created by the exact program rather than assuming fairness between chains. / then 处理器会在 Promise 敲定后作为 Promise job 运行；其返回值会决定下一 Promise 的状态，也可能使后续反应任务与其他链交错。应按程序实际创建的任务推导顺序，不要假设不同链之间有公平调度。
+本归档练习包含三段 Promise 链，关键差异是处理器返回普通值还是已完成的 Promise，以及多条链怎样交错。三段完整程序和在 Node.js v26.11.1 CommonJS 环境中逐段重放的输出，现归入[回调、Promise 与 async 函数怎样组合异步工作？](../../../frontend/javascript/asynchronous-javascript.md#promise-处理器为什么会交错)。
 
-Returning an already-fulfilled Promise adds adoption work and shifts later reactions in this exact example:
+| 归档程序 | 重放输出 |
+| --- | --- |
+| 第一条链返回 Promise.resolve(4)，与另一条链交错 | 0 1 2 3 4 5 6 |
+| 三条各含三段处理器的链 | 0 3 6 1 4 7 2 5 8 |
+| 两条链分别返回已完成 Promise | 0 4 2 6 3 7 |
 
-~~~javascript
-Promise.resolve().then(() => {
-  console.log(0);
-  return Promise.resolve(4);
-}).then(value => console.log(value));
+具体结果只对应相应程序和运行上下文；不要从输出推导统一的 tick 数或跨宿主调度顺序。
 
-Promise.resolve().then(() => console.log(1))
-  .then(() => console.log(2))
-  .then(() => console.log(3))
-  .then(() => console.log(5))
-  .then(() => console.log(6));
-
-// 0 1 2 3 4 5 6
-~~~
-
-Three independently chained handlers interleave as each handler queues the next one:
-
-~~~javascript
-Promise.resolve().then(() => console.log(0))
-  .then(() => console.log(1)).then(() => console.log(2));
-Promise.resolve().then(() => console.log(3))
-  .then(() => console.log(4)).then(() => console.log(5));
-Promise.resolve().then(() => console.log(6))
-  .then(() => console.log(7)).then(() => console.log(8));
-// 0 3 6 1 4 7 2 5 8
-~~~
-
-Nested Promise returns give this output for the complete program:
-
-~~~javascript
-Promise.resolve().then(() => {
-  console.log(0);
-  return Promise.resolve(1);
-}).then(() => console.log(2)).then(() => console.log(3));
-
-Promise.resolve().then(() => {
-  console.log(4);
-  return Promise.resolve(5);
-}).then(() => console.log(6)).then(() => console.log(7));
-// 0 4 2 6 3 7
-~~~
-
-The output belongs to each exact snippet. See [Asynchronous JavaScript](../../../frontend/javascript/asynchronous-javascript.md) for Promise chaining and [Event Loop and Host Scheduling](../../../frontend/runtime/event-loop.md) for the host boundary.
-
-**Specification / 规范:** [ECMAScript 2025 Promise objects and jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects).
+> [!info]- 来源
+> - 原题程序与输出保存在本页对应的归档提交；规范依据：[ECMAScript 2027 Promise objects and jobs](https://tc39.es/ecma262/#sec-promise-objects)。
+> - 本页输出于 Node.js v26.11.1 CommonJS 实际重放；浏览器宿主调度见[HTML event loops](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)。
