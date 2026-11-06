@@ -5,7 +5,7 @@
 ## 从问题开始
 
 - [两个请求争夺最后一件库存时，怎样保证只预留一次？](databases/database-fundamentals.md)——建议先读，从库存约束走到事务提交。
-- [预留库存的请求超时，调用方能重试吗？](reliability/api-reliability-and-async-delivery.md)——沿请求标识确认结果并安全重试。
+- [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)——沿请求标识确认结果并安全重试。
 - [哪一段导致 API 未达到服务目标？](reliability/observability-slos-and-incident-response.md)——先用指标、追踪和日志定位环节，再决定改哪里。
 
 ## Reading order / 阅读顺序
@@ -21,13 +21,13 @@
 - [SQL 空值、连接与分组会怎样改变报表 42 的结果？](databases/sql-null-joins-and-aggregates.md)
 - [如何用约束保护业务规则并为读取建立索引？](databases/database-constraints-and-indexes.md)
 - [事务隔离与预写日志能保证什么？](databases/database-transactions-isolation-and-recovery.md)
-- [How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？](backend/data-access-and-connection-pools.md)
-- [How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？](backend/caching-and-redis.md)
+- [怎样限定对象关系映射会话并排查连接池耗尽？](backend/data-access-and-connection-pools.md)
+- [怎样缓存数据库读取并说明陈旧窗口？](backend/caching-and-redis.md)
 
 ### 超时之后：确认结果与恢复任务
 
-- [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
-- [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](architecture/system-design-fundamentals.md)
+- [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
+- [怎样设计一个可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 - [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](reliability/queue-delivery-and-acknowledgement.md)
 - [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 

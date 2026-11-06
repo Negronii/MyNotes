@@ -1,69 +1,63 @@
-# A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？
+# 请求超时后如何确认结果并安全重试？
 
-A timeout or disconnected connection means the caller did not receive a result; by itself, it does not show whether the server applied the operation. Give the operation a stable identity, persist that identity with the local effect in one transaction, and let the caller query the authoritative status or repeat the same request with the same key. Carry one end-to-end deadline through the work, bound retries, and treat cancellation as a request for work to stop rather than proof that a remote side effect was undone. / 超时或连接断开只表示调用方没有收到结果，本身不能说明服务端是否已经执行操作。为操作指定稳定标识，在一个事务中持久化该标识和本地效果，并让调用方查询权威状态，或使用相同 key 重试原请求。沿整条调用链传递同一个截止时间并限制重试次数；取消表示请求工作停止，不代表远端副作用已经撤销。
-
-**Key terms / 关键术语：** timeout / 超时；deadline / 截止时间；unknown outcome / 结果未知；idempotency key / 幂等键；retry / 重试；backoff / 退避；jitter / 抖动；cancellation / 取消。
-
-## Where a timeout leaves the caller / 超时后调用方处于什么状态
-
-A **timeout** limits one wait or operation. An end-to-end **deadline** is the latest time the whole request may finish. Starting a new full timeout for each downstream call can let a multi-hop request run far beyond the caller's budget. Pass a deadline or remaining time downstream, reserve time for cleanup and the response, and choose limits from measured latency and the product's failure policy; there is no universal timeout value. Connection setup and response waiting may need separate limits when a client library treats them separately.
-
-When a write is accepted but the response is lost, the caller's **outcome is unknown**. It cannot distinguish “the request never arrived” from “the effect committed and only the response was lost.” A **202 Accepted** response is a different, explicit contract: it says processing was accepted but is not complete. Return a stable operation or job URL so the client can query later; HTTP does not send a later response over the original connection. The endpoint's response and error shapes belong to [HTTP API Contracts / HTTP API契约](../backend/http-api-contracts.md), while method-level semantics belong to [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../networking/http-protocols-and-websockets.md).
+**案例：** reserve-demo-208 条件扣减 SKU-7 的最后一件库存，数据库提交后 HTTP 响应丢失。调用方看到超时，但不知道请求没到服务器、事务回滚，还是扣减已经提交。网络超时描述的是“调用方没收到结果”，不是“数据库没有执行”；解决方法是为逻辑操作分配稳定身份，并把操作结果和本地效果一并持久化，使客户端可查询或按契约重放同一操作。
 
 ~~~mermaid
 sequenceDiagram
-    participant C as Client
+    participant C as 客户端
     participant A as API
-    participant D as Database
-    C->>A: Write with operation key
-    A->>D: Commit effect and operation result together
-    D-->>A: Commit completed
-    A--xC: Response is lost
-    Note over C: Outcome is unknown
-    alt Read-only status lookup
-        C->>A: Query the operation
-        A->>D: Read recorded outcome
-        D-->>A: Recorded result
-        A-->>C: Return status and outcome
-    else Retry under the same-key contract
-        C->>A: Repeat the request with the same key
-        A->>D: Match the key and fingerprint
-        D-->>A: Recorded result for this write
-        A-->>C: Return the recorded outcome
-    end
+    participant D as 数据库
+    C->>A: reserve-demo-208，预留 SKU-7
+    A->>D: 条件扣减 + 写操作结果
+    D-->>A: 同一事务提交，库存变 0
+    A--xC: 响应在途中丢失
+    Note over C: 客户端结果未知，不能据此断言回滚
+    C->>A: POST 原预留请求，沿用同一键和相同参数
+    A->>D: 按作用域键读取或裁决同键并发
+    D-->>A: 返回已提交结果；不再扣库存
+    A-->>C: 返回原结果
 ~~~
 
-This diagram follows a committed write whose reply was lost. A read-only status lookup can report that a key is absent and never starts the write. Only a retried write under its explicit idempotency contract can execute when the key is absent. If the effect is in another service, use that service's idempotency contract or a reconciliation path.
+## 超时和截止时间让调用方处于什么状态？
 
-## Make a repeated request safe / 让重复请求安全
+timeout（超时）限定一次等待或操作的时长；deadline（截止时间）是整条调用链最晚允许完成的时间点。每经过一层都重新开始完整 timeout，会让多个串行下游调用的总耗时远超最初预算。服务应传递剩余时间或截止时限，并为清理和响应留出时间。连接建立、TLS 和响应读取是否都包含在一次库的 timeout 内，要按客户端 API 检查。
 
-HTTP defines **idempotent methods** by the intended effect of multiple identical requests. That permits a client to retry an idempotent request after a communication failure, but does not erase other per-request side effects such as audit logging. A timeout alone is not a reason to automatically repeat a non-idempotent operation.
+当写入被接受而响应丢失，调用方得到的是 unknown outcome（未知结果）：它无法从自己的连接状态区分“请求没到”与“效果已提交但响应丢失”。reserve-demo-208 的权威记录已是 `reserved`，`available` 从 1 变 0；客户端没有一个按此键查询的 GET 契约，因此重放原 POST，并沿用相同作用域键与相同参数，服务端返回已记录结果而不再扣减。若读取查询暂时查不到记录，这只表示当前可见快照没有已提交结果，并不能证明原事务已经回滚或不在进行。只有明确允许幂等重放的写请求，才能用同一键和同一参数安全重试；单纯的只读状态查询不应意外启动原操作。
 
-For a write that needs retry support, accept an **idempotency key** or operation ID and define its scope, retention window, and relationship to request parameters. Store a normalized-request fingerprint with the key. The service should return the recorded result for the same key and same request; reuse with different parameters should be rejected or handled by an explicitly documented rule. The deduplication record and the local database effect must share one atomic transaction boundary. A key stored separately from the effect can still permit duplicate work if a crash occurs between the two writes.
+HTTP 202 Accepted 是另一种显式状态：API 确认任务已受理，但没有表示已完成。账户报表契约没有按幂等键查询的 GET；若 202 响应丢失，客户端用相同 `report-demo-208` 和相同请求正文重放 POST，服务返回已存在的 `job-demo-731` 与状态 URL，再 GET 该已知 URL。连接断开不会自动取消已经持久接受的 job；需要取消时使用明确的取消请求。完整作业生命周期见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。
 
-**Hypothetical example / 假设示例：** A refund service accepts a request, records the refund, then loses its response before the client deadline. The client cannot tell whether the refund committed. If it retries with the same operation key, the service can return the recorded refund result instead of issuing another refund—provided the key record and refund state were committed together and the service retains that record for the documented retry window. Without those assumptions, the caller must query or reconcile the outcome rather than blindly issue a second refund. This example is illustrative, not a provider contract.
+## 怎样定义可安全重放的幂等键？
 
-## Bound retries by the remaining deadline / 按剩余截止时间约束重试
+idempotency key（幂等键）是客户端为一次逻辑意图生成并在重试时保持不变的标识。服务必须定义它的唯一范围、保留时间、请求参数关系和结果重放规则。账户报表示例把键作用域定义为 (account_id, principal_id, key)；不能让另一个主体靠猜到键读取私有结果。服务还保存规范化请求指纹：同一个键、同一参数返回已存结果；同一键却换了 period 或 format，则返回明确冲突，不能默默把旧结果解释成新意图。
 
-Retry only when a failure may be transient and the operation is safe to repeat, or when the client can determine the first attempt was not applied. Use a capped exponential schedule with randomized jitter to spread attempts rather than synchronizing them:
+RFC 9110 对 HTTP 方法的幂等性定义为：重复一次或多次相同请求，其预期服务端效果等同于只执行一次；这不禁止每次请求分别记录日志。它是 HTTP 方法的语义。给某个 POST 另加稳定幂等键，则是应用层的去重和结果重放约定，两者不能互相代替。
+
+去重记录和本地数据库效果必须处于同一事务；若扣库存提交后才单独写 reserve-demo-208 操作记录，中间崩溃会让重试无法识别原操作：本例最后一件已被扣完时会误报无库存；若其后补货，重试还可能再次扣减。对同键并发，先查询再插入不够：两个请求可能都看见“没有记录”。要由唯一约束裁决一方；失败方回滚本次条件扣减，再读取胜者提交的结果。服务还要明确保证的重放窗口，并在窗口内保留识别同一键所需的记录。窗口过后若删掉所有信息，服务无法仅凭键字符串判断它是旧操作还是新意图；若要拒绝任何过期旧键，就得继续保留可验证的墓碑。窗口外的重试保证必须写清楚，调用方不能把旧操作当成新请求重做。
+
+若操作会调用外部支付或发消息，单库事务无法覆盖远端系统。durable outbox（持久发件箱）只让本地结果与待发布指令一起提交，并使 relay 能在崩溃后重发；它不会替远端付款去重。真正的资金效果仍需要收款方按相同业务键幂等处理，或通过权威对账识别重复。超时不自动撤销远端副作用。
+
+## 重试时间和总工作量怎样受控？
+
+只对可能暂时失败且重复执行安全的操作重试。使用有上限的 exponential backoff (指数退避) 并加入 full jitter（全抖动），避免所有客户端同时再试：
 
 ~~~text
-cap(n)  = min(max_delay, base_delay × 2^n)
-wait(n) = random value from 0 through cap(n)  # one full-jitter variant
+cap(n) = min(max_delay, base_delay × 2^n)
+wait(n) = 从 0 到 cap(n) 均匀随机选择
 ~~~
 
-The base delay, cap, attempt limit, and total retry budget are service choices derived from the deadline and downstream capacity, not universal defaults. Stop when the remaining deadline cannot fit another useful attempt. Avoid retries at several layers: if five layers each make three attempts, one logical request can create 3⁵ = 243 downstream attempts. One deliberate retry boundary is easier to bound and observe.
+假定 base_delay 为 100 ms、max_delay 为 800 ms，前几次等待区间依次为 0–100 ms、0–200 ms、0–400 ms；客户端实际次数还须受剩余 deadline 限制。若最多 3 次尝试，初次请求失败后只在剩余预算装得下下一次调用和必要回包时重试。base、上限和次数是服务策略，不是通用常数。避免多个调用层各自重试：5 层各做 3 次会把一次逻辑请求放大为 3⁵ = 243 次下游调用。
 
-## Treat cancellation as cooperative / 把取消视为协作式信号
+> [!example] 响应截止时间下的重试复盘
+> 客户端总截止时间为 2 秒，第一次（共最多 3 次尝试中的第 1 次）请求用了 1.2 秒后超时，剩余 0.8 秒。第一次失败后的退避是 `n=0`，所以等待上限为 100 毫秒；下一次调用至少需要 700 毫秒，并为处理/返回预留 50 毫秒，能容纳的等待最多只有 `800−700−50=50` 毫秒。若全抖动抽到 80 毫秒（合法，因为低于 100 毫秒），总计要 `80+700+50=830` 毫秒，超过剩余预算，应停止并把状态留作未知。最多 3 次尝试包括初次调用，因此总共最多只有两次退避，后续上限才是 200 毫秒。
 
-Cancellation tells work that its result is no longer needed. Propagate it to downstream calls and check it at safe points so unnecessary computation stops and resources are released. Support depends on each runtime and API; cancellation is often cooperative. It does not prove a remote service stopped or undid a side effect. A client disconnect can trigger a local cancellation signal in some frameworks, but the server must still rely on authoritative operation state to determine whether a write committed.
+## 取消如何作为协作式信号？
 
-The account-report example shows the full durable contract: the client receives **202** and a status URL, retries return one job for the same scoped key, and the job record remains authoritative after disconnect. See [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md). For a durable AI run and its checkpoint/reconciliation boundary, see [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md); for how a browser presents disconnect, reconnect, and final states, see [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md).
+cancellation（取消）是通知仍在运行的工作“结果不再需要”。把信号传给下游，并在安全检查点停止多余计算、释放资源；不同运行时能否中止远端调用取决于 API。对已返回 202 且已持久接受的账户报表，浏览器断开只结束这次连接，不会取消后台 job；客户端必须向已知 job URL 显式请求取消。尚未接受的请求级工作则可在断开后结束。取消也不证明已经提交的数据库副作用回滚，提交状态仍要从权威业务记录确认。
 
-Observe the request boundary separately: accepted and rejected requests, deadline exhaustion, timeout and cancellation counts, idempotent replays and key conflicts, and final operation or job outcomes. These show whether users received a result, an explicit pending state, an overload response, or an unresolved outcome. Queue depth, oldest-message age, worker slots, redelivery, and acknowledgement signals belong to the corresponding capacity and broker boundaries.
+**接下来：** 账户报表把幂等键、202、outbox 和后台尝试组合成一个可长期查询的流程，见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。队列发布确认与消费者 acknowledgement 的 broker 语义归[发布者确认和消费者确认分别证明什么？](queue-delivery-and-acknowledgement.md)，连接借用预算归[如何限定 ORM Session 并排查连接池耗尽？](../backend/data-access-and-connection-pools.md)。
 
-Capacity and queue delivery are separate questions. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](api-capacity-and-backpressure.md) covers admission, backpressure, and the full synthetic report estimate. [Publisher confirms and consumer acknowledgements / 发布者确认和消费者确认分别证明什么？](queue-delivery-and-acknowledgement.md) explains broker confirmation and redelivery boundaries.
-
-**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](../backend/data-access-and-connection-pools.md) explains how request and transaction lifetimes borrow database connections; [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) covers the constraints and transaction semantics that make a local deduplication boundary possible.
-
-**Sources / 来源：** [RFC 9110 §9.2.2, Idempotent Methods](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) and [§15.3.3, 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3), checked 2026-11-05; AWS Builders' Library, [Timeouts, retries, and backoff with jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/) and [Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/), checked 2026-10-15; gRPC guides to [Deadlines](https://grpc.io/docs/guides/deadlines/) and [Cancellation](https://grpc.io/docs/guides/cancellation/).
+> [!info]- 来源
+> - HTTP 幂等方法与 202 受理语义：[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§9.2.2、§15.3.3，核对于 2026-11-06。
+> - 副作用、超时、重试安全与请求令牌：[AWS Builders’ Library, Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)，核对于 2026-11-06。
+> - timeout、backoff 与 jitter：[AWS Builder Center, Timeouts, retries, and backoff with jitter](https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter)，原文 2019-12-05，核对于 2026-11-06。
+> - deadline 传播和协作式取消：[gRPC Deadlines](https://grpc.io/docs/guides/deadlines/)，核对于 2026-11-06；具体行为仍取决于各 API。

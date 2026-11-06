@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d6e05a177d12e21d0523519c58d4625cfc551fc2c4b161b5d64e83962bbaa446 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=47715ee5d262e4c21d0c737c0178fc63503d8403e523943ee6b1930602869134 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -110,10 +110,10 @@
 - [ ] 94. [SQL 空值、连接与分组会怎样改变报表 42 的结果？](../engineering-foundations/databases/sql-null-joins-and-aggregates.md)
 - [ ] 95. [如何用约束保护业务规则并为读取建立索引？](../engineering-foundations/databases/database-constraints-and-indexes.md)
 - [ ] 96. [事务隔离与预写日志能保证什么？](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)
-- [ ] 97. [How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？](../engineering-foundations/backend/data-access-and-connection-pools.md)
-- [ ] 98. [How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？](../engineering-foundations/backend/caching-and-redis.md)
-- [ ] 99. [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)
-- [ ] 100. [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](../engineering-foundations/architecture/system-design-fundamentals.md)
+- [ ] 97. [怎样限定对象关系映射会话并排查连接池耗尽？](../engineering-foundations/backend/data-access-and-connection-pools.md)
+- [ ] 98. [怎样缓存数据库读取并说明陈旧窗口？](../engineering-foundations/backend/caching-and-redis.md)
+- [ ] 99. [请求超时后如何确认结果并安全重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)
+- [ ] 100. [怎样设计一个可持久查询的账户报表？](../engineering-foundations/architecture/system-design-fundamentals.md)
 - [ ] 101. [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)
 - [ ] 102. [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](../engineering-foundations/networking/real-time-web-updates.md)
 - [ ] 103. [When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？](../engineering-foundations/operating-systems/processes-threads-and-concurrency.md)

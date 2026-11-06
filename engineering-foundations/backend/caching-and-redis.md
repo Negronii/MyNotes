@@ -1,56 +1,50 @@
-# How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？
+# 怎样缓存数据库读取并说明陈旧窗口？
 
-**Core explanation / 核心解释：** In cache-aside, the database remains the source of truth: reads check the cache first and load the database on a miss; writes commit to the database and then invalidate the cached copy. A TTL bounds how long one cached value can live, but invalidation races and cache failures still need an explicit freshness and load policy. / 在 cache-aside 模式中，数据库仍是事实来源：读取先查缓存，未命中时再读取数据库；写入先提交数据库，然后使缓存副本失效。TTL 限制单个缓存值的存活时间，但失效竞态和缓存故障仍需要明确的新鲜度与负载策略。
-
-**Key terms / 关键术语：** cache-aside / 旁路缓存；source of truth / 事实来源；time to live (TTL) / 存活时间；invalidation / 失效；cache stampede / 缓存击穿；negative caching / 负缓存；stale data / 陈旧数据。
-
-## One record, one read/write lifecycle / 一个记录的读写过程
-
-Suppose `products` is authoritative and the cache key is `product:42`. A typical read is:
-
-1. `GET product:42`. On a hit, return the cached representation after applying the same authorization and response rules as a database read.
-2. On a miss, query the primary database. If the product exists, cache the representation with a TTL, for example `SET product:42 "..." EX 30`, then return it.
-3. If it does not exist, an optional short negative entry can reduce repeated misses: cache a “not found” sentinel for a few seconds. Keep this TTL shorter than the normal entry, and invalidate it when the product is created. Do not cache a database timeout or error as “not found.”
-
-For a write, update the authoritative row and commit first; only then issue `DEL product:42`. The next read repopulates from the database. Redis `GET`, `SET ... EX`, `DEL`, and `TTL` are useful implementation primitives, but these commands do not make a Redis mutation atomic with the database transaction.
-
-The [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) note covers the constraints and transaction boundary that protect the source-of-truth write.
+**案例：** 报表 42 的已授权展示表示可缓存在 Redis 中，返回版本 9 或 10；数据库仍是报表版本的权威来源。job-demo-731 的 `queued/running/succeeded` 状态及结果引用要读权威数据库，不能用可能陈旧的报表缓存回答。每次请求仍要检查主体对报表的读取权限，缓存键不会授予权限。选择 cache-aside（旁路缓存）后，仍需回答：写入何时失效、缓存回填可能怎样过期、Redis 故障会给数据库带来多少额外压力。time to live（TTL，存活时间）能限制单个条目的寿命，却不能单独保证全程读到最新版本。
 
 ~~~mermaid
 sequenceDiagram
-    participant R as Reader
-    participant C as Cache
-    participant D as Database
-    participant W as Writer
-    R->>C: Cache miss
-    R->>D: Read old value
-    W->>D: Commit new value
-    W->>C: Delete cached value
-    R->>C: Fill old value after invalidation
-    Note over C: Stale value now has a fresh TTL
+    participant R as 读者
+    participant C as Redis 缓存
+    participant D as 权威数据库
+    participant W as 写入者
+    R->>C: GET report:acct-17:42
+    C-->>R: 未命中（miss）
+    R->>D: 读取 version 9
+    D-->>R: 报表 42，version 9
+    W->>D: 提交 version 10
+    W->>C: DEL 缓存键
+    R->>C: 回填刚才读到的 version 9，设置 30 秒 TTL
+    Note over C: 失效发生后，旧版本再次获得新 TTL
 ~~~
 
-### Make the freshness window explicit / 明确新鲜度窗口
+## 一次读取和写入会经过哪些状态？
 
-With a 30-second TTL, a value that was filled before an update can remain visible until its entry expires if the post-commit invalidation fails. But TTL is not an end-to-end consistency guarantee: a reader can load the old database value just before a concurrent write commits, then populate the cache after the writer's `DEL`; that stale fill receives a fresh TTL. Each entry's lifetime is bounded, but repeated or delayed stale fills can extend the period in which clients see stale data. If read-after-write freshness is required, bypass the cache for that read or use a versioned/ordered invalidation design; do not assume Redis alone coordinates the two stores.
+读取通常是：先 GET 缓存键；命中（hit）时取出缓存表示；未命中（miss）时查询主数据库；查询成功后再写入带 TTL 的缓存并返回。Redis 常用 GET、SET key value EX seconds、DEL 和 TTL 实现这些步骤。若数据库确定返回“报表不存在”，可以用几秒的短 TTL 缓存负结果；不要把超时、拒绝或数据库故障缓存成“不存在”。创建资源后也要删除对应负缓存。
 
-Include every dimension that changes the returned value in the cache key, such as tenant or locale, and keep authorization checks outside an untrusted cached payload. The [AI response-cache explanation](../../ai-engineering/systems/ai-latency-and-cost-optimization.md) applies the same key-isolation and freshness discipline to exact or semantic response reuse. Semantic similarity cannot establish that data is current or authorized.
+写入应先在数据库提交新的权威状态，再删除缓存键。若反过来先删除缓存，随后读者可在旧数据库值上回填旧缓存。如果数据库提交成功而 Redis DEL 失败，旧值会持续到过期或后续失效；Redis 命令和数据库事务不是跨系统原子操作。对允许短暂陈旧的展示页，明确可接受年龄后可用短 TTL；对授权、余额和需要立即读己之写的操作，应绕过缓存读权威源或明确返回暂时不可用。
 
-## Expiration bursts and cache outages / 集中过期与缓存故障
+缓存键必须包含所有能改变返回表示的范围，例如租户、资源 ID、语言或筛选条件。报表如果按主体返回不同字段，缓存键也要有相应主体范围；即使键包含租户，缓存命中仍不能代替逐次主体/租户授权。见[如何逐次授权租户内的报表资源？](../security/web-security-and-authentication.md)。
 
-When a popular key expires, many requests can miss together and send duplicate reads to the database. Coalesce concurrent misses for the same key inside each application process, and add small random jitter to TTLs so many keys do not expire together. Local coalescing reduces one process to roughly one loader per key at a time; it does not coordinate other processes. A Redis-backed short lock is another option at higher fan-out, but it needs a bounded lease and wait, plus safe owner-only release.
+## 为什么存活时间不等于一致性保证？
 
-A cache outage does not by itself corrupt the authoritative row. If a cache lookup fails, an application may read through to the database only within a deliberate bound: use a request deadline, cap concurrent fallback reads or apply admission control, and fail quickly when the database budget is exhausted. Otherwise a cache outage can turn every request into a database request and exhaust database connections. Serve stale cached data only when that endpoint has a stated maximum acceptable age; for authorization, balances, or other correctness-sensitive decisions, read the authoritative source or fail closed. Cache-fill and invalidation failures should be visible as operational errors rather than silently treated as valid data.
+图里的竞争顺序还可以按时钟复算：t=0，R 未命中并从数据库读到版本 9；t=1，W 提交版本 10 并执行 DEL；t=3，仍在途的 R 把此前读到的版本 9 设为 30 秒 TTL；该键到 t=33 才到期。因此 t=1 提交后，读者最晚可能在接近 32 秒后仍命中版本 9。竞态的关键是先前读到的旧值在 DEL 后才完成回填；若后续陈旧回填来自别的在途读取或本地副本，新的 SET 还会重新开始各自 TTL，不能说一次竞态必然持续回填。
 
-## Representative answer / 代表性面试回答
+若一个接口必须读己之写，可以在成功写入后绕过缓存读取，或将新版本号与无效化事件一起传播，使回填不得覆盖更高版本。跨数据库和 Redis 需要排序/条件写的设计时，须明确处理乱序、进程崩溃与重复失效；单独执行 DEL 不能提供这种原子版本协议。
 
-**How would you add a cache in front of a database, and what happens if Redis fails? / 如何在数据库前增加缓存，Redis 故障时应怎样处理？**
+> [!info] 负载计算也属于缓存策略
+> 命中率只说明多少次读取绕过了数据库；一次失效风暴可能同时让大量请求变成未命中。比如某热键到期后，100 个并发请求都回源，一次正常读被放大成 100 次数据库读取。缓存方案要同时控制陈旧窗口和回源并发。
 
-I would keep the database authoritative and use cache-aside: read the cache, load on a miss, write with a TTL, and invalidate only after a database write commits. I would choose the TTL from the endpoint's freshness requirement, account for the failed-invalidation and stale-fill windows, and coalesce concurrent misses for hot keys. If Redis fails, I would bound database fallback by deadlines and concurrency limits; cache loss should increase load, not silently change the source of truth. I would serve stale data only where its maximum age is acceptable.
+## 缓存击穿和 Redis 故障怎样限制？
 
-我会让数据库保持事实来源，并采用 cache-aside：先读缓存，未命中时查数据库，写入缓存时设置 TTL，并只在数据库写入提交后执行失效。我会根据接口的新鲜度要求选择 TTL，考虑失效失败和陈旧回填窗口，并合并热点键的并发未命中请求。Redis 故障时，我会用截止时间和并发上限约束数据库回退；缓存丢失应增加负载，但不能悄悄改变事实来源。只有在业务明确接受最大陈旧时间时才提供旧值。
+热门键同时过期会产生 cache stampede（缓存击穿）。单进程内可以将同一键并发未命中合并成一个加载者，并给不同键的 TTL 加小幅随机抖动，减少整批键同时到期；这不协调多个进程。需要跨进程协调时，可使用有界租约的短锁，但等待要有截止时间。释放锁必须用 Redis Lua 脚本或等价原子命令，在一个原子操作里比较随机 token 并且只删除匹配的锁；若先比较、暂停、再单独 DEL，租约过期后旧持有者可能删掉新持有者的锁。锁只是减少重复加载，不能成为数据正确性的证明。
 
-**Sources and verification / 来源与验证：** Redis [cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/) and [node-redis cache-aside example](https://redis.io/docs/latest/develop/use-cases/cache-aside/nodejs/), checked 2026-10-15. The official examples demonstrate cache-first reads, TTL-bearing writes, invalidation, and a short-lived stampede lock. The flow above is a generic application design; no Redis server was deployed, so Redis commands and outage behavior were not runtime-tested. TTL and `DEL` are implementation tools, not a cross-store consistency protocol.
+Redis 整体不可用时，应用无法读取仅存放在 Redis 的旧值；它可以在请求 deadline（截止时间）、并发回源上限和数据库连接预算内回源，或返回暂时不可用。若另有本地快照，只有端点允许该陈旧上限、且应用能核对快照实际年龄时才可返回；超出业务可接受范围就回源或失败。缓存故障应被监控，不要静默把数据库错误当成空值。
 
+**接下来：** ORM Session 与连接池决定回源数据库的借出压力，见[如何限定 ORM Session 并排查连接池耗尽？](data-access-and-connection-pools.md)。高成本报表任务和故障后的确定结果见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。
 
-**Related notes / 相关笔记：** [Web Security and Authentication / Web安全与身份认证](../security/web-security-and-authentication.md) owns principal and tenant authorization before cache lookup. [Data Access and Connection Pools / 数据访问与连接池](data-access-and-connection-pools.md) explains the connection budget used by bounded database fallback.
+> [!info]- 来源
+> - Redis cache-aside 的 cache-first、miss 回源、TTL 与更新失效：[Redis cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/)，核对于 2026-11-06；该页将 TTL 描述为受限陈旧窗口，跨数据库一致性方案属于应用设计。
+> - Redis 的 SET 过期参数、DEL、TTL 与锁机制：[Redis Commands](https://redis.io/docs/latest/commands/)；按 Redis 官方当前文档核对于 2026-11-06。
+> - 释放租约时比较锁 token 并原子删除，避免删除其他持有者的锁：[Redis Distributed Locks](https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/)；该页也列出 Redis 8.4 的 `DELEX ... IFEQ` 与较早版本 Lua 写法。
+> - 报表展示的失效竞态、主体授权与 job 状态读取边界是本章应用设计；没有部署 Redis 服务做在线故障测试。
