@@ -60,7 +60,7 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 
 ### 3. 执行请求并读取日志
 
-应用会检查 `read_build_log` 是否可用、`build_id` 是否为所需的整数类型，以及调用者是否有权读取构建 `42`。参数校验确保请求可以被正确解释。authorization (授权) 则确定调用者可以访问哪个资源。只有这些检查全部通过后，应用才会读取日志。如果工具会改变外部状态，例如重启构建，那么重试时还需要考虑前一次尝试是否已经生效。[工具契约与授权](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
+应用会检查 `read_build_log` 是否可用、`build_id` 是否为所需的整数类型，以及调用者是否有权读取构建 `42`。参数校验确保请求可以被正确解释。authorization (授权) 则确定调用者可以访问哪个资源。只有这些检查全部通过后，应用才会读取日志。如果工具会改变外部状态，例如重启构建，那么重试时还需要考虑前一次尝试是否已经生效。[工具契约与授权](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
 
 取回的结果包含模型此前缺少的证据。
 
@@ -1026,205 +1026,200 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 > - **当前目录、API 能力和用量价格会变化：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；页面用于查当时具体模型与价格，不提供跨部署方式的总拥有成本比较。
 > - **逐步替换与修订回退的具体例子：** Kubernetes，[Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)，文档版本 v1.37，核对日期：2026-11-06，“Rolling Back a Deployment”和“Rolling Update”；这里只将其作为 Kubernetes 实现实例。模型、提示词、数据版本及外部副作用仍需应用级协调。
 > - **服务密钥、流量和上线准备：** OpenAI，[Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices)，核对日期：2026-11-06；“API keys”与“Choose a model”章节用于提示凭据与生产边界，不作为平台无关清单。
-## 8. How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？
+## 8. 怎样写出清楚且可验收的提示词？
 
-A useful prompt makes the task, necessary context, constraints, and expected output clear. Add examples or structure when they address a measured failure. Prompt text can guide model behavior, but it cannot enforce access control, guarantee factual accuracy, or replace application validation. / 有效提示词要清楚说明任务、必要背景、约束和输出要求。只有在示例或结构能解决实测问题时，才加入它们。提示词能引导模型，但不能执行访问控制、保证事实正确，也不能替代应用校验。
+提示词要把模型本轮该完成的事、可用材料、约束和输出说清楚；改动应针对已观察到的失败，并用同一组案例检查是否真的改善。提示只能影响模型如何处理输入，不能替应用取回没提供的事实、核实权限、执行动作或保证结论正确。
 
-**Key terms / 关键术语：** instruction / 指令；context / 上下文；few-shot example / 少样本示例；output contract / 输出约定；structured output / 结构化输出；validation / 校验。
+### 从构建 42 的已知记录写起
 
-### The “capable intern” heuristic / “能干的实习生”启发式
+用户问“构建 42 为什么失败？”应用调用 `read_build_log` 后，收到与请求 ID `c1` 对应的日志结果：`unit-tests` 步骤中的 `reject_empty_name` 预期 HTTP `400`，实际收到 `200`，进程退出状态为 `1`。这些是日志观察；目前还没有底层代码根因。提示词要把观察和推断分开。
 
-Treat the model as capable of using the information and tools actually supplied, but unaware of unstated product rules, source freshness, user permissions, or the format expected by a downstream system. State those requirements explicitly when they matter.
+一个可以作为基线的指令是：
 
-| Vague request | More useful instruction |
-|---|---|
-| “Handle the refund.” | “Look up the sample order, check the current refund policy, and explain the next step. The application must authorize any refund action before execution.” |
-| “Classify the ticket.” | “Choose billing, technical, or general. If the message does not contain enough evidence, return needs_review.” |
-| “Summarize the document.” | “Return three bullets about the decisions and open questions. Do not add claims absent from the supplied document.” |
+~~~text
+根据本轮提供的构建记录，解释构建 42 失败了什么。
+只陈述记录明确支持的观察；把观察到的失败和未确认的代码根因分开。
+若没有根因证据，明确说尚不能确定，不要猜测修改位置。
+返回构建 ID、证据状态、来源调用 ID、失败步骤、测试名、预期值、实际值、退出状态、根因状态及一句说明。已有可用记录（含可靠复用的历史观察）时设为 `available`；没有可用记录且尚未尝试取回时设为 `not_requested`、来源 ID 设为 `null`；尝试取回但被拒或失败且仍无可用记录时设为 `unavailable`，保留已知调用 ID，不填造日志字段。
+~~~
 
-These examples illustrate clarity; they do not imply that a prompt can verify an order, authorize a refund, or make a summary factually correct. The runtime must perform those checks.
+应用至少要把 `c1` 的请求与结果，或从权威运行记录整理出的等价观察，放进本轮输入。模型不会自动看到日志服务、之前所有会话或当前持续集成（CI）手册。若用户看过这个回答后再问“按当前手册能否重跑”，那是新的用户轮次：应用需要组装先前 `c1` 观察和当前手册证据；继续阅读[每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)与[怎样从授权文档中检索并核验回答依据](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)。
 
-### A practical prompt checklist / 提示词检查清单
+可以把模型看作能处理已给材料的协作者，但不能假定它知道未输入的产品规则、资料版本、调用者权限或下游格式。提示中说“有权限时再读取”不能代替权限检查；必须由应用在工具执行前校验。更多工具执行边界见[应用怎样设计并执行模型提出的工具请求](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
 
-Include only what helps this task:
+### 让输入、约束和输出形成同一份任务说明
 
-1. **Goal / 目标：** State the requested result and audience.
-2. **Relevant context / 相关背景：** Supply rules, terminology, source material, or assumptions the model cannot infer.
-3. **Inputs / 输入：** Identify the content to transform and delimit untrusted source text.
-4. **Constraints / 约束：** Explain required coverage, exclusions, uncertainty handling, and what should trigger a question or handoff.
-5. **Examples / 示例：** Add aligned positive, negative, or edge examples when they reduce ambiguity.
-6. **Output contract / 输出约定：** Specify fields, format, length, language, and validation expectations.
-7. **Tools and side effects / 工具与副作用：** Explain intended tool use, while the application independently enforces permissions and business conditions.
+提示里每句话都应服务于任务。先写清要产出的结果和使用者，再指出哪些文本是待分析的数据，哪些是必须遵循的规则。遇到可能误解的边界，明确缺证时该报告什么。最后确定下游能够检查的输出字段。
 
-This list is an organizing aid, not a universal seven-layer prompt architecture. Some APIs distinguish system, developer, and user messages; use the roles and precedence defined by the exact API. Put dynamic data in the request context rather than hard-coding user records in reusable instructions.
+| 写入的内容 | 在本例中怎样写 | 缺失时容易出现什么错误 |
+|---|---|---|
+| 任务目标 | 解释日志确认了什么，不要求猜修复方案。 | 把“解释失败”扩展成未要求的根因诊断。 |
+| 可用证据 | 用户请求说明要完成什么；把与 `c1` 绑定的步骤、测试名、预期、实际和退出状态作为分析材料提供。 | 把任务目标误当成运行证据，或用一般经验补造本次运行没有的事实。 |
+| 推断边界 | 没有代码或请求路径证据时，根因标为未知。 | 把 `400 → 200` 的断言差异直接说成某个校验器缺陷。 |
+| 输出约定 | 固定字段、语言和未知值的表达方式。 | 忘掉退出状态、混淆预期与实际，或让下游无法解析。 |
 
-### Make constraints and examples useful / 让约束和示例真正有用
+先把用户请求理解为任务目标，再把用户附上的日志、引用文段、检索片段和工具结果标为待分析材料。目标表达用户意图，但不会自行授予系统权限；材料中的指令性文字也不因此成为应用规则。标记能减少边界歧义，却不是安全隔离，也不证明材料真实。送入模型前，应用还要按当前调用者选择并授权可见资料；参见[生产 AI 如何阻止不可信内容诱导模型越权](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
-“Be concise” may be sufficient for a simple chat. A downstream parser may need a precise schema, while a support response may need an uncertainty path. More text is not automatically better: conflicting examples, repeated rules, or irrelevant context can hurt.
+具体 API 可能把持久指令与本轮输入放在不同角色，并为 system（系统）、developer（开发者）、user（用户）消息定义优先级；使用该 API 当前文档规定的语义，不要把一个提供商的角色规则套到另一个。稳定的任务规则与语气可版本化管理，本轮记录用有类型的输入传入。可复用提示和示例应使用合成资料，不要硬编码真实姓名、工单号、秘密或会话历史。
 
-Use an example that demonstrates the intended boundary, not only the easiest typical input. If examples and instructions disagree, the model may follow the wrong pattern. Keep examples synthetic and avoid real customer records or secrets.
+### 用示例修正已复现的歧义
 
-### Structured output / 结构化输出
+如果基线提示已经能处理 `c1`，不必为了完整而添加示例。若一组验证案例显示模型持续把不同失败类别混在一起，few-shot examples（少样本示例）可以呈现仅靠文字难以描述的边界。例如，用合成记录并列“断言实际值与预期不符”及“测试尚未运行就发生网络中断”；前者报告断言差异但不推断代码原因，后者报告没有测试结果。例子要与指令一致，避免把偶然措辞教成规则。
 
-For machine-consumed output, prefer an API-supported schema-constrained mode when it fits the task. In the OpenAI API documentation checked on 2026-10-15, Structured Outputs supports schema adherence for supported schemas and models; JSON mode guarantees valid JSON syntax but not adherence to an application schema. Refusals, incomplete responses, unsupported schema features, and semantic errors still need handling. Schema conformance does not prove that a field is true, authorized, or safe to execute. If the chosen API cannot enforce the schema, parse, validate, and use a bounded retry or explicit failure path.
+保留未参与改写的案例来检查改动：断言失败时是否仍保留 `400` 和 `200`，网络中断时是否避免声称测试失败，日志缺失或拒绝访问时是否明确说证据不足。若样例集只包含提示词编写时用过的 `c1`，模型可能只是记住那种表述。评估时应检查事实字段、证据支持、缺证时的行为及输出格式；更完整的验收设计见[如何判断模型是否满足任务契约](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
-For human-readable output, headings, bullets, XML tags, or code fences can make sections easier to interpret. Delimiters help organize content; they are not a security boundary and do not guarantee valid machine output.
+### 机器消费时分开检查结构和含义
 
-**Small output contract / 简单输出约定:**
+如果结果会被程序读取，应先定义真正需要的字段和允许值，再看当前应用程序接口（API）是否支持相应的 schema（结构约束）。例如，下面是供说明用的 JSON Schema（JSON 结构描述）形状；实际请求须按所选 API 和模型支持的子集配置：
+
+`evidence_status` 区分三种情况：`available` 表示已有可用记录，包括应用从权威运行记录中可靠复用的历史观察；`unavailable` 表示没有可用记录，且取回尝试被拒或失败；`not_requested` 表示没有可用记录，且应用尚未尝试取得本次报告所需的日志。失败/拒绝时保留已知的来源调用 ID，日志字段用 `null`；尚未尝试且没有记录时，来源 ID 和全部日志字段都为 `null`。若拿到部分记录，就只填写实际观察到的字段，其余仍为 `null`。
 
 ~~~json
 {
-  "summary": "A short account of the supplied text",
-  "category": "billing",
-  "needs_review": false
+  "type": "object",
+  "properties": {
+    "build_id": {"type": "integer"},
+    "evidence_status": {"type": "string", "enum": ["available", "unavailable", "not_requested"]},
+    "source_call_id": {"type": ["string", "null"]},
+    "step": {"type": ["string", "null"]},
+    "failed_test": {"type": ["string", "null"]},
+    "expected": {"type": ["string", "null"]},
+    "actual": {"type": ["string", "null"]},
+    "exit_status": {"type": ["integer", "null"]},
+    "root_cause_status": {"type": "string", "enum": ["confirmed", "unknown"]},
+    "root_cause": {"type": ["string", "null"]},
+    "explanation": {"type": "string"}
+  },
+  "required": ["build_id", "evidence_status", "source_call_id", "step", "failed_test", "expected", "actual", "exit_status", "root_cause_status", "root_cause", "explanation"],
+  "additionalProperties": false
 }
 ~~~
 
-Application code should check allowed categories and required fields, and verify any consequential claim against its source. For the broader distinction between task success, factual correctness, source support, and instruction adherence, see [LLM Evaluation Methods / 大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
+完整的 `c1` 报告可以是：
 
-### Optional organization pattern / 可选组织方式
+~~~json
+{
+  "build_id": 42,
+  "evidence_status": "available",
+  "source_call_id": "c1",
+  "step": "unit-tests",
+  "failed_test": "reject_empty_name",
+  "expected": "HTTP 400",
+  "actual": "HTTP 200",
+  "exit_status": 1,
+  "root_cause_status": "unknown",
+  "root_cause": null,
+  "explanation": "断言预期 HTTP 400，实际为 HTTP 200；现有记录没有确认代码根因。"
+}
+~~~
 
-Some teams group a long instruction by general-to-specific concerns. The following is a checklist, not a standard that every prompt needs:
+若 `c1` 因权限拒绝而没有日志观察，报告应把 `evidence_status` 设为 `unavailable`、保留 `source_call_id: "c1"`，并将日志字段设为 `null`；如果既没有可用历史记录，也未尝试调用工具，则用 `not_requested`、`source_call_id: null` 和空日志字段。应用仍须按自己保存的 `c1` 请求和响应核对对象内容：把 `expected` 与 `actual` 交换后，或捏造根因并标为已确认，仍能通过这个 schema 的形状检查，但应在业务校验中拒绝。
 
-| Section | What it contains |
-|---|---|
-| **Role and task context / 角色与任务背景** | Work setting and goal. |
-| **Behavior / 行为** | Tone and response style. |
-| **Tool guidance / 工具说明** | Intended use and limits of available tools. |
-| **Procedure / 流程** | Steps that are useful to explain to the model. |
-| **Output / 输出** | Format and length. |
-| **Safety reminders / 安全提醒** | Human-readable reminders; code still enforces authorization and stop conditions. |
-| **Request-specific context / 本轮背景** | Current task data and state, supplied only when needed. |
+在 OpenAI API 中，Structured Outputs（结构化输出）可令受支持的 schema 约束输出形状；JSON mode 主要保证合法 JSON 语法，不等于符合应用 schema。即使结构正确，也可能出现拒答、不完整响应、值与证据不符或不应执行的业务决定。应用要检查字段、枚举、来源对应关系和当前业务规则。人读的 Markdown 标题、XML 标签或代码围栏只帮助区分内容，不会自动成为机器可验证的输出契约。
 
-Do not put real names, ticket numbers, secrets, or private histories in a reusable prompt. Use a synthetic record when illustrating the format.
+提示内容也适合按生命周期分开：稳定的任务规则放在版本化的提示构造代码里，本轮用户材料通过有类型的输入传入。OpenAI 当前文档将生产提示视为应用代码并建议对修改运行代表性评估；截至 2026-11-06，其可复用提示对象（prompt objects）已不建议新项目使用，`v1/prompts` 计划于 2026-11-30 关闭。这是 OpenAI API 的迁移说明，不是其他平台的通用规则。
 
-### Related notes / 相关笔记
+> [!warning] 结构和措辞都不能证明事实或授权
+> Schema 只能限制允许的形状和值域，提示只能说明预期行为。字段值是否由 `c1` 支持、当前手册是否适用、调用者能否读取资源或是否获准执行操作，必须由应用依据权威记录和运行策略核验。
 
-- [Advanced Prompting Techniques / 高级提示技巧](#9.%20Which%20prompting%20technique%20should%20you%20try%20when%20a%20simple%20prompt%20fails?%20/%20%E7%AE%80%E5%8D%95%E6%8F%90%E7%A4%BA%E5%A4%B1%E8%B4%A5%E6%97%B6%E5%BA%94%E5%B0%9D%E8%AF%95%E5%93%AA%E7%A7%8D%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7%EF%BC%9F) covers optional methods for failures that a clear baseline prompt does not resolve.
-- [Context Engineering Principles / 上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains how to select and update the full information available to each inference.
-- [AI Safety in Production / 生产环境中的 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F) explains why prompts cannot replace runtime authorization and stop controls.
+### 相关知识
 
-### Sources / 来源
+- [简单提示失败后，怎样选择并评估提示技巧？](#9.%20%E7%AE%80%E5%8D%95%E6%8F%90%E7%A4%BA%E5%A4%B1%E8%B4%A5%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E5%B9%B6%E8%AF%84%E4%BC%B0%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7%EF%BC%9F)：从具体失败信号选择少样本、拆分步骤或工具反馈。
+- [每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定 `c1`、历史和证据中哪些内容进入新一轮。
+- [AI 服务怎样把一条消息变成完整回答](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)：本章使用的构建 42 运行主线。
 
-- OpenAI, [Model optimization: write effective prompts](https://developers.openai.com/api/docs/guides/model-optimization#write-effective-prompts), checked 2026-10-15.
-- OpenAI, [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs), checked 2026-10-15. API behavior and supported schema features can change.
-## 9. Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？
+> [!info]- 来源
+> 本章的构建 42 记录是合成示例。以下来源用于核验提示工程与结构约束的当前边界。
+>
+> - **按失败改提示、组织消息、代码管理版本和评估。** OpenAI API，[Prompting](https://developers.openai.com/api/docs/guides/prompting)，检查于 2026-11-06，`Refine your prompt`、`Prompts in your application`；含 OpenAI 可复用 prompt 对象退场安排。
+> - **提示写法与模型差异。** OpenAI API，[Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)，检查于 2026-11-06，`Version prompts in code`、`Message formatting with Markdown and XML`、`Few-shot learning`；该页对不同模型家族的建议不能互换为统一配方。
+> - **结构约束的范围。** OpenAI API，[Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs)，检查于 2026-11-06，JSON mode、Structured Outputs、拒答和 schema limitations 小节；支持哪些 JSON Schema 特性取决于接口能力。
+## 9. 简单提示失败后，怎样选择并评估提示技巧？
 
-Start with a clear, simple prompt, identify the failure on representative cases, and add only the method that addresses it. Few-shot examples, reasoning prompts, self-consistency, tool loops, prompt chains, and prompt generation can add tokens, calls, or control-flow complexity. Compare each change with the simpler baseline and application-side checks; published results support claims only for the tasks and setups actually evaluated. / 先用清楚、简单的提示词建立基线，再从有代表性的失败样本中定位问题，只增加能应对该问题的方法。少样本示例、推理提示、自一致性、工具循环、提示词链和提示词生成都会增加 token、调用或控制流复杂度。每种改动都应与简单基线及应用校验比较；论文结果只支持其实际评估过的任务和设置。
+先用[提示工程基础](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)建立清楚的 zero-shot（零样本）基线，再看代表性失败究竟来自提示歧义、输入证据缺失，还是下游校验不足。只有第一类问题主要靠提示词解决；其他情况应补材料、调用工具或修复运行时。提示技巧要按“失败信号 → 最小改动 → 同集评估”选择，不按名称堆叠。以下构建 42、网络中断和缺日志情形均为合成示例。
 
-**Key terms / 关键术语：** zero-shot / 零样本；few-shot / 少样本；chain-of-thought (CoT) / 思维链；self-consistency / 自一致性；ReAct / 推理与行动；prompt chaining / 提示词链；meta-prompting / 元提示。
+### 先分清构建 42 的失败是哪一类
 
-### When should you use few-shot vs. zero-shot prompting? / 何时使用少样本或零样本提示？
+首次运行的工具结果 `c1` 显示：`unit-tests` 中 `reject_empty_name` 预期 HTTP `400`、实际 `200`，退出状态为 `1`。它证明了断言差异，没有证明代码根因。如果模型看到这些字段，却把结果写成“输入校验器必然有缺陷”，提示改动应限制根因推断；如果字段没有进入本轮输入，追加“请认真思考”也补不回日志。
 
-Start with a clear zero-shot instruction for a simple, well-defined task. Add a few examples when they resolve ambiguity, demonstrate a non-obvious label boundary, or show a required output format. Keep examples representative and include meaningful edge cases. More examples can consume context and can also bias the model toward an accidental pattern.
+同一事件能用于比较两种输入条件不同的问题。原问题“构建 42 为什么失败”可以在读到 `c1` 后继续回答；用户再问“按当前持续集成（CI）手册应否重跑”则开启新一轮，应用需要把权威运行记录中的 `c1` 与本轮适用的手册证据重新组装。是否仍开放原工具、如何检索当前手册，分别由[上下文工程](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)和[RAG](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)解释。提示技巧不能代替这项证据交接。
 
-**Zero-shot / 零样本:**
+先检查一批代表性错误，再按能观测到的症状选择变化：
+
+| 失败信号 | 先尝试的改动 | 用什么结果判断有效 |
+|---|---|---|
+| 输出把 `expected=400` 和 `actual=200` 混为一谈，或直接猜代码原因。 | 明确字段含义、未知值表达方式；若仍混淆，再加一组“断言失败 / 测试未运行”的对照示例。 | 对同一组断言、网络中断、无日志样例检查字段准确率和无证据根因率。 |
+| 字段形状通过，但内容与工具观察不符，例如把 `c1` 的 `expected=HTTP 400` 和 `actual=HTTP 200` 交换。 | 在应用端把输出逐项与该来源记录比较，并将不一致的报告拒绝或退回修正。 | 单独计数 schema 通过但语义不一致的报告是否被拦住；schema 本身不能代替这层检查。 |
+| 需要多个有明确检查点的子步骤，且下游能检查中间值。 | 分成少数有 schema（结构约束）或确定性门槛的阶段；失败时停止或返回具体错误。 | 核对每个中间产物与原记录，再比较端到端成功率、时延和调用数。 |
+| 可验证的离散答案在相同输入下波动，且错误路径有机会彼此独立。 | 测试自一致性，聚合前规范化答案；重要结果仍交独立验证器。 | 比较正确率、验证器拒绝率、生成词元（token）总量和端到端时延。 |
+| 多轮手改仍反复失败，且原因已缩小到明确歧义。 | 让模型生成少量候选修订，再由固定开发集筛选。 | 同一开发集上看增益和回归，最终只在未参与选择的留出集确认。 |
+| 必需事实不在本轮材料中，或问题要依据刚更新的外部状态。 | 通过运行时工具或授权检索取回证据。 | 检查本轮实际收到的工具结果或来源段落，再核对答案主张。 |
+
+### 例子只有在边界不清时才增加
+
+如果零样本指令下，构建日志的两类事件反复被混淆，可以添加两条简短、互相区分的合成示例。以下只展示关键观察与结论，供说明分类边界，不是[基础章](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)的完整 JSON 输出对象：
 
 ~~~text
-Classify the sentiment as positive, negative, or neutral.
-Review: "The product arrived late, but the quality exceeded expectations."
-Return one label.
+输入：测试断言写明 expected=HTTP 400，日志为 actual=HTTP 200。
+输出：报告 `expected=HTTP 400`、`actual=HTTP 200`；`root_cause_status=unknown`、`root_cause=null`。
+
+输入：网络中断发生在测试启动前，没有断言记录。
+输出：报告测试未运行、没有断言结果；不能称为测试断言失败。
 ~~~
 
-**Few-shot / 少样本:**
+few-shot examples（少样本示例）是在上下文中展示标签边界和输出模式。例子应来自可复现的错误类型，而不是只复制某个测试用例；重复的例子会增加输入长度，也可能让模型记住无关措辞。保持同一任务的验证集合不变，并加入未用于撰写示例的网络中断和缺日志情况。若模型只在示例原句上好转，说明改动没有解决边界问题。
 
-~~~text
-Classify each review as positive, negative, or neutral.
-"Terrible experience, never buying again." → negative
-"Exactly what I needed. Fast shipping." → positive
-"It's okay. Nothing special." → neutral
-"The product arrived late, but the quality exceeded expectations." →
-~~~
+### 需要中间检查时，选择可核对的推理形式
 
-For extraction, examples can demonstrate how a date or amount should be normalized. Keep them synthetic; validate required fields, allowed values, and source evidence in application code. Measure the example/no-example variants on the same held-out cases rather than assuming few-shot is more reliable.
+chain-of-thought（思维链，CoT）提示让模型生成最终答案前的中间推理文本。早期研究在若干大模型的算术、常识和符号推理任务上报告了改进；zero-shot CoT（零样本思维链）不提供示例，但仍会明确要求模型生成中间推理；该研究也在其测试基准上发现，简单的推理提示语可带来收益。这些是特定模型和任务的实验结果，不保证加上“逐步思考”对当前目标模型或每类任务都有帮助。
 
-### What is chain-of-thought, and when is it useful? / 什么是思维链，何时有用？
+近年的证据让这个边界更清楚：OpenAI 当前针对 reasoning models（推理模型）的指南建议从直接、简短的提示开始，先试零样本；对这类模型显式要求“逐步思考”可能没有收益，有时还会降低表现。2025 年的一项 EMNLP Findings 数学实验在 Qwen2.5 系列上发现，CoT 示例相对零样本 CoT 未提升推理表现，主要帮助输出形式；另一项 2024 年研究在隐式统计学习、视觉识别和含例外模式分类等特定任务中观察到显式 CoT 的性能下降。它们并不说明所有模型都不需要分步，也不能替代对目标模型和任务的实测。
 
-Chain-of-thought (CoT) prompting asks for intermediate reasoning text before a final answer, often through examples or an instruction. Research found gains on some multi-step arithmetic and reasoning benchmarks under particular model and prompt conditions. The result is task- and model-dependent: asking for step-by-step text does not guarantee correct reasoning, and a written rationale is not proof that it faithfully describes the model's internal computation.
+因此，若失败是模型没有保留 `c1` 中的关系，不要要求冗长的私有思维过程；要求它返回可核验的中间字段即可：`step=unit-tests`、`failed_test=reject_empty_name`、`expected=HTTP 400`、`actual=HTTP 200`、`root_cause_status=unknown`、`root_cause=null`。字段名和值与[基础章的输出约定](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)一致，应用可逐项与工具结果比较。若困难来自多个相互依赖的转换，则把检查点拆成程序可验证的结构化结果。该结构能暴露哪里发生了错误，但不能证明解释忠实描述了模型的内部计算。
 
-A small arithmetic illustration is 4 × $2 + 2 × $3 = $8 + $6 = $14. A model may give a concise answer, a worked explanation, or an incorrect derivation. Verify consequential arithmetic with code or another trusted method.
+### 多个答案可以投票，但票数不是证据
 
-OpenAI's reasoning-model guidance, checked 2026-10-15, recommends trying a straightforward prompt first; asking for step-by-step reasoning can be unnecessary or counterproductive for those models. API behavior differs by provider and model, so evaluate the actual target rather than carrying a prompt recipe across systems.
+self-consistency（自一致性）会对同一问题采样多个推理路径，再汇合这些路径对最终答案的支持度；常见的离散答案近似，是先规范化最终答案，再按出现次数投票。它适合有离散答案、候选路径能提供互补信息、且有条件验证答案的情况。多数投票只是候选间的聚合；如果所有样本共享同一错误或遗漏同一证据，票数仍可一致地错。
 
-### What is self-consistency? / 什么是自一致性？
+> [!example] 规范化后比较候选答案
+> 以下是手工演算，不是模型采样结果。对 $17 \times 23$，两条可核算路径是 $17 \times (20+3)=340+51=391$ 和 $(10+7) \times 23=230+161=391$。若假设五次采样的最终字符串为 `391`、` 391 `、`391`、`392`、`392`，先去除首尾空白，再按十进制整数解析，得到规范化序列 `391, 391, 391, 392, 392`，计数为 `391: 3`、`392: 2`，投票选 `391`。独立乘法验证仍应确认结果。
 
-Self-consistency samples multiple candidate reasoning answers and aggregates their final answers, often by a majority vote. The research paper reported improvements on several tested reasoning benchmarks. It can help when the candidates make partly independent errors, but repeated samples can agree on the same wrong answer. Use a task-specific verifier for important results.
+候选数从 1 增到 $m$ 会增加生成计算，且结果质量取决于采样多样性、答案归一化和任务验证器。在构建 42 的 `c1` 上，多采样无法让模型得知未记录的代码根因；优先把日志观察作为输入并限制无依据推断。只有固定案例显示单次输出不稳定、而答案又可由工具或代码校验时，才比较采样数与收益。
 
-**Illustration, not model output / 示意，不是模型实测输出：** For 17 × 23, two valid decompositions are 17 × (20 + 3) = 340 + 51 = 391 and (10 + 7) × 23 = 230 + 161 = 391. If sampling several candidates, normalize equivalent answers before aggregation; voting does not replace checking.
+### 只有阶段能独立检查时才串联提示
 
-Multiple samples increase token use and usually require more inference work. Exact cost and wall-clock impact depend on batching, provider behavior, and the selected model. Compare accuracy, latency, and cost with a single answer on the target task.
+prompt chaining（提示词链）把一个任务拆成顺序模型调用，并在阶段间让程序检查、分支或停止。以构建 42 为例，如果下游系统必须先拿到严格字段，可以让第一步从 `c1` 形成字段对象，代码逐项核对它仍是 `expected=HTTP 400`、`actual=HTTP 200`，再让第二步把已经核实的字段转成解释。字段缺失或对不上时，不应继续生成一段看似完整的文字。若只需回答一句“该测试的预期与实际状态不符”，直接一次生成更简单。
 
-A model can also adapt its next action to a tool's observed result. See [the ReAct decision loop / ReAct 决策循环](#ReAct%20%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E8%AE%A9%E8%A7%82%E5%AF%9F%E5%BD%B1%E5%93%8D%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) for when that feedback loop is worth adding and how the runtime controls it.
+多一次模型调用不是免费的可靠性。一般的两阶段通过率是 $P(S_1) \times P(S_2 \mid S_1)$；作一个明确的玩具假设：第一步通过率为 $0.95$，第一步通过后第二步通过率也为 $0.95$，中间的确定性门控能挡住不合格字段，则两阶段都通过的概率为 $0.95 \times 0.95=0.9025$，约 $90.3\%$。若还假设两次调用独立，这也等于两个通过事件概率的乘积。它不是实际系统可靠性数据；共同的输入错误会使失败相关，门控也可能拒绝原本可用的输出，有界重试又会改变最终结果。实际比较需记录阶段通过率、端到端通过率、额外调用、延迟和成本。
 
-### When should you chain prompts? / 何时串联提示词？
+更开放的 ReAct（Reason + Act，推理与行动）把模型决定与环境动作、观察结果交替进行。原论文在知识问答、事实核验和交互式环境任务上评估这种反馈路径。一次用户轮次可以包含多次模型调用：模型在首次调用提出 `c1`，应用执行查询，再把观察交给同一用户轮次的后续模型调用，由它继续回答或提出下一步。用户看过回答后再问“按当前手册应否重跑”才开启新用户轮次；应用须重新组装 `c1` 观察和适用手册证据。构建 42 的 `c1` 就是这个基本交接；实际使用工具的请求、调度和结果 ID 由[工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)展开。ReAct 论文的实验也不意味着任意工具链都正确、安全或值得启动。
 
-Use a fixed prompt chain when the task has separable steps and code can validate, branch, retry, or stop between them. If the sequence is known, developer-controlled stages can be easier to inspect than an open-ended agent loop. Each model call can still be wrong; validate intermediate outputs and test the whole chain. For broader workflow and delegation patterns, see [Orchestration Patterns / 编排模式](#14.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F).
+### 让自动生成的提示候选接受同一套验收
 
-**Outline → validate → write / 大纲 → 校验 → 写作:**
+Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索的候选程序：生成多条候选，再依照选定的分数在任务数据上比较。原论文在 24 个指令归纳任务与 21 个精选 BIG-Bench 任务上评估候选生成与选择；所得结果依赖其模型、数据和分数函数，并不证明一次通用的“帮我改好提示”请求就能提升任意应用。
 
-1. Ask for an outline in a declared schema.
-2. Parse it and check required sections and constraints in application code.
-3. If valid, ask for a draft based on the outline; otherwise return an explicit failure or a bounded correction request.
+实际使用时，先把问题缩到一个失败信号，例如模型把断言预期值和实测值混淆。让生成模型提出几条真正不同、各针对该错误的候选，不让它宣称候选已经有效。然后在相同开发案例上逐条比较，检查对网络中断、缺日志和其他正常输入是否回归。根据开发集挑出的版本仍须在未参与选择的留出案例上复核；在同一组失败上反复改写再报告该组分数，会把提示过拟合到已知例子。
 
-~~~python
-outline = call_model(make_outline_prompt(topic))
-parsed = parse_schema(outline)
-if not parsed.ok:
-    return validation_error(parsed.issues)
-if not deterministic_checks(parsed.value):
-    return validation_error("outline violates required section rules")
-return call_model(make_draft_prompt(parsed.value))
-~~~
+### 评估整套变更，而不是提示的外观
 
-If five stages each succeed with probability 0.95 and failures are independent, the probability that all five succeed is 0.95⁵ ≈ 0.774. Real failures may be correlated, and retries or gates change the result; measure the actual workflow instead of treating this illustration as a reliability estimate.
+比较提示文本时，固定模型版本、工具可用性、检索证据和解码配置，只改提示。若评估的正是工具接入、采样或编排，则固定相同原始任务/案例及其他不受测条件，允许受测策略改变及其产生的中间状态变化，再评估完整流程。构建 42 的验证样本至少区分断言 `400 → 200`、测试前网络中断、没有日志、以及依赖当前 CI 手册的重跑追问。记录提示版本和完整输入条件；检查哪些字段与 `c1` 一致、是否凭空补了根因、缺证时是否暂停，以及输出是否满足程序契约。用相同基线和候选集看正确性、支持度、拒答/缺证行为、延迟、成本和工具次数，再在留出集确认。不要把语气更顺或“解释看起来更完整”作为通过条件。
 
-### What is meta-prompting? / 什么是元提示？
+### 相关知识
 
-Meta-prompting uses a model to generate candidate instructions or revise an existing prompt in response to concrete failures. Treat either output as a candidate. Evaluate variants on development examples, inspect failures, and keep a final held-out set untouched until selection; repeated tuning against the same set can overfit it.
+- [怎样写出清楚且可验收的提示词？](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)：建立任务、输入边界和输出契约的简单基线。
+- [每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：解释新一轮如何重新选取 `c1`、历史和政策材料。
+- [怎样从授权文档中检索并核验回答依据](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：当问题需要当前手册或外部证据时，负责检索与来源核验。
+- [怎样判断模型是否满足任务契约](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计固定案例、留出集和发布判据。
 
-Automatic Prompt Engineer (APE) is one research approach to generating and selecting instruction candidates for evaluated tasks. The templates here are a lightweight human-directed workflow, not a reproduction of that method or its reported results.
-
-**Candidate generation / 生成候选提示词:**
-
-~~~text
-Task: Classify a support message as billing, technical, or general.
-Success: Choose the supported category; return needs_review when evidence is insufficient.
-Inputs: Only the supplied message and category definitions.
-Output: Return the category and needs_review as JSON.
-Generate three materially different candidate instructions. For each, state which ambiguity it addresses. Do not claim the candidates have been tested.
-~~~
-
-**Failure-driven revision / 根据失败样例修订:**
-
-~~~text
-Current prompt:
-[insert the current synthetic prompt]
-
-Observed failure:
-[insert a synthetic input and the incorrect output]
-
-Expected behavior:
-[state the correct output and why]
-
-Revise only the instruction needed to address this failure. Preserve the task, output contract, and other constraints. Return the revised prompt and a short change note. This candidate still requires evaluation on examples not used to write it.
-~~~
-
-A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design and acceptance evidence.
-
-### Related notes / 相关笔记
-
-- [Prompt Engineering Fundamentals / 提示工程基础](#8.%20How%20do%20you%20write%20a%20prompt%20that%20makes%20a%20task%20clear%20and%20testable?%20/%20%E5%A6%82%E4%BD%95%E7%BC%96%E5%86%99%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E6%A3%80%E9%AA%8C%E7%9A%84%E4%BB%BB%E5%8A%A1%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F) covers clear instructions, examples, and output contracts.
-- [Context Engineering Principles / 上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) covers the information available to each inference.
-- [Agent Fundamentals / 智能体基础](#13.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F), [Orchestration Patterns / 编排模式](#14.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F), and [Tool Design and Function Calling / 工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F) cover runtime tool loops and control flow.
-
-### Sources / 来源
-
-- Wei et al., [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903).
-- Kojima et al., [Large Language Models are Zero-Shot Reasoners](https://arxiv.org/abs/2205.11916).
-- Wang et al., [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171).
-- Zhou et al., [Large Language Models Are Human-Level Prompt Engineers](https://arxiv.org/abs/2211.01910), for the APE instruction-generation and selection approach.
-- OpenAI, [Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices), checked 2026-10-15. These instructions describe OpenAI reasoning models and should not be generalized to other APIs.
-- OpenAI, [Prompt generation](https://developers.openai.com/api/docs/guides/prompt-generation), checked 2026-10-15. This is an OpenAI-specific example of generating or revising prompt text, not evidence that a generated prompt performs better without task evaluation.
+> [!info]- 来源
+> 本章的构建 42 及网络中断、缺日志案例均为合成示例；算术表决和阶段成功率也为手工演算。研究结论保留原文任务与模型范围。
+>
+> - **早期思维链示例及零样本提示。** Wei et al., [“Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,” arXiv v1](https://arxiv.org/abs/2201.11903v1), 2022-01-28，摘要与实验；Kojima et al., [“Large Language Models are Zero-Shot Reasoners,” arXiv v1](https://arxiv.org/abs/2205.11916v1), 2022-05-24，摘要与实验。实验基于各自测试的大模型和推理基准。
+> - **对当前模型的工程建议。** OpenAI API，[Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices)，检查于 2026-11-06，`How to prompt reasoning models effectively`；是 OpenAI reasoning models 的建议，不能外推为所有供应商行为。
+> - **后续提示研究的任务边界。** Cheng et al., [“Revisiting Chain-of-Thought Prompting: Zero-shot Can Be Stronger than Few-shot,” Findings of EMNLP 2025](https://aclanthology.org/2025.findings-emnlp.729/)，摘要与实验分析；结果针对论文评测的数学任务及 Qwen2.5 系列。Liu et al., [“Mind Your Step (by Step): Chain-of-Thought can Reduce Performance on Tasks where Thinking Makes Humans Worse,” arXiv v1](https://arxiv.org/abs/2410.21333v1), 2024-10-27，摘要与 §§3–5；报告特定的隐式统计学习、视觉识别和异常模式任务，不是所有 CoT 场景的评估。
+> - **自一致性解码。** Wang et al., [“Self-Consistency Improves Chain of Thought Reasoning in Language Models,” arXiv v1](https://arxiv.org/abs/2203.11171v1), 2022-03-21，摘要与 §§2–4；论文比较若干算术与常识推理基准，样本收益和成本取决于其设置。
+> - **自动指令候选生成与选择。** Zhou et al., [“Large Language Models Are Human-Level Prompt Engineers,” arXiv v2](https://arxiv.org/abs/2211.01910v2), 2023-03-10，§§3–5；包含候选指令生成、评分函数和 24 个指令归纳任务与 21 个精选 BIG-Bench 任务的实验。
+> - **推理和行动反馈循环。** Yao et al., [“ReAct: Synergizing Reasoning and Acting in Language Models,” ICLR 2023 / arXiv v3](https://arxiv.org/abs/2210.03629v3)，2023-03-10，§§2–4；论文涵盖 HotpotQA、FEVER、ALFWorld 和 WebShop 等评测任务。
 ## 10. 每次模型调用应看到什么，应用又应持久化什么？
 
 模型本轮能看到的输入称为 context（上下文）。模型读取的是本次调用最终组装出的内容；如果服务根据会话 ID 自动加入历史，应用也要按该服务的会话语义理解实际输入。模型不会自行查询应用数据库或日志。Prompt engineering（提示工程）侧重指令和样例的写法；**context engineering（上下文工程）**则在每次推理前，把可用的指令、工具、历史、证据与任务状态选成一份足以完成下一步的输入。上一章的 build 42 样板中，先前运行通过 `read_build_log` 得到绑定于构建 42 的 `c1` 日志结果；本章接着处理开发者看过失败后的新一轮追问。[AI 服务怎样把一条消息变成完整回答？](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)
@@ -1299,7 +1294,7 @@ A practical loop is to define success criteria, generate or revise candidates, c
 
 ### 下一章怎样接手
 
-本章给每次模型调用建立边界：应用持有身份和事实来源，按需组装模型可见内容，必要时将工具请求或检索结果作为带来源的观察返回。接下来，RAG 章从构建 42 的日志已知、而“如何解释或重跑”仍需当前手册支持的状态开始，详细说明文档如何分块、授权、更新、排序并进入上下文。模型请求的字段与副作用如何执行和恢复则由[工具契约](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)承接。
+本章给每次模型调用建立边界：应用持有身份和事实来源，按需组装模型可见内容，必要时将工具请求或检索结果作为带来源的观察返回。接下来，RAG 章从构建 42 的日志已知、而“如何解释或重跑”仍需当前手册支持的状态开始，详细说明文档如何分块、授权、更新、排序并进入上下文。模型请求的字段与副作用如何执行和恢复则由[工具契约](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)承接。
 
 > [!info]- 来源
 > 本章的 145 token 演算由 `tiktoken 0.12.0` 的 `cl100k_base` 对表中原始文本逐段计算；消息封装与真实 provider 用量不包含在该演算中。
@@ -1495,7 +1490,7 @@ Lewis 等人的 RAG 将可更新的非参数知识库与参数化生成器结合
 
 - [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定每次推理保留哪些历史、工具结果和文档段落，并管理压缩导致的信息损失。
 - [长上下文注意力](#3.%20%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E6%80%8E%E6%A0%B7%E5%B0%91%E5%AD%98%E3%80%81%E5%B0%91%E8%AF%BB%E5%8E%86%E5%8F%B2%EF%BC%8C%E5%90%8C%E6%97%B6%E4%BF%9D%E7%95%99%E9%9C%80%E8%A6%81%E7%9A%84%E4%BF%A1%E6%81%AF%EF%BC%9F)：解释模型内部的历史表示与选择性访问，不替应用进行授权检索。
-- [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：解释如何执行读取日志、搜索文档等模型请求，并恢复不确定的工具状态。
+- [工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：解释如何执行读取日志、搜索文档等模型请求，并恢复不确定的工具状态。
 - [AI 生产安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：处理文档诱导、权限和运行时控制边界。
 
 > [!info]- 来源
@@ -1515,80 +1510,144 @@ Lewis 等人的 RAG 将可更新的非参数知识库与参数化生成器结合
 > - **假设文档仅用于检索。** Gao et al., [“Precise Zero-Shot Dense Retrieval without Relevance Labels,” arXiv v1](https://arxiv.org/abs/2212.10496), 2022-12-20，§§2–3；提出 HyDE 中间文本检索方法，并指出假想文档可能含有错误细节。
 > - **检索与生成分开诊断。** Ru et al., [“RAGChecker: A Fine-grained Framework for Diagnosing Retrieval-Augmented Generation,” arXiv v2](https://arxiv.org/abs/2408.08067), 2024-08-17，§§3–4；Es et al., [“Ragas: Automated Evaluation of Retrieval Augmented Generation,” arXiv v2](https://arxiv.org/abs/2309.15217v2), 2025-04-28，§§3–4；Saad-Falcon et al., [“ARES: An Automated Evaluation Framework for Retrieval-Augmented Generation Systems,” arXiv v2](https://arxiv.org/abs/2311.09476v2), 2024-03-31，§§3–4。三者的维度、评审器与校准方式不同；指标是辅助诊断框架，不代表本应用的唯一验收标准。
 > - **检索段落中的恶意指令和向量数据边界。** OWASP GenAI Security Project, [LLM01:2026 Prompt Injection](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/blob/main/2026/final/LLM01_PromptInjection.md) 与 [LLM09:2026 Vector and Embedding Weaknesses](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/blob/main/2026/final/LLM09_VectorAndEmbeddingWeaknesses.md)，检查于 2026-11-06。分别支持不可信输入与权限的分界、共享相似度搜索的跨租户探测风险及按范围检索/隔离索引；不构成完整威胁模型。
-## 12. How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？
+## 12. 应用怎样设计并执行模型提出的工具请求？
 
-**Short answer / 简答：** A tool call is a structured request from the model, not code execution or permission. The application must parse and validate it, check the caller’s authorization and current business state, execute the function, then return a useful result. Design for dependencies, side effects, and uncertain outcomes so recovery does not repeat an action blindly.
+模型的 tool call（工具调用）是一条结构化请求，不是代码执行、权限授予或成功结果。应用要在当前一轮暴露合适的工具，解释并检查请求，再由运行时执行函数，并把与该请求对应的观察交回模型。本篇的 build 42 记录是合成示例；副作用的持久提交、授权恢复和断连后的运行恢复见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)及[生产 AI 如何阻止不可信内容诱导模型越权](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
-工具调用只是模型发出的结构化请求，不等于代码已经执行或用户已获授权。应用需要解析并校验请求，检查调用者权限和当前业务状态，执行函数，再把有用结果返回模型。设计时还要处理依赖、副作用和结果未知，避免恢复时盲目重复动作。
+### 一次请求怎样变成下一步可用的观察
 
-### 函数调用的生命周期
+先前的消息是 `Why did build 42 fail?`。应用给模型本轮可用的只读工具 `read_build_log`，其参数 `build_id` 是整数。以下用 `c1` 表示 OpenAI Responses API（响应 API）中这条 `function_call` 的 `call_id`；模型请求调用 `read_build_log` 并提供 `build_id=42`。应用解析请求，确认工具仍可用、参数满足结构约束，并在运行时核对调用者对构建 42 的读取范围，然后才读取日志。
 
-以下按 provider-neutral 方式描述，具体消息格式、角色名称、工具选择模式和结构约束因 API 而异：
+下图中每一条箭头都交付新的状态。模型提议的调用在被应用接受和执行之前，只是待处理请求：
 
-1. 应用将对话状态与本轮可用工具定义发送给模型。
-2. 模型返回普通内容，或返回包含工具名称与参数的调用请求。
-3. 应用解析请求，校验参数，并按当前用户和业务状态授权。
-4. 应用执行函数，将成功、错误或部分结果返回模型。
-5. 模型依据结果继续调用工具、交接，或生成答复。
+图里的 `tool_call` 和 `tool_result` 是说明生命周期的简写；OpenAI Responses API 实际使用 `function_call` 和 `function_call_output` 条目，并用 `call_id` 配对。
 
-[OpenAI 函数调用指南](https://developers.openai.com/api/docs/guides/function-calling)将工具调用描述为模型请求与应用端执行之间的多步流程。结构化调用或严格 schema 可以减少格式错误，但不证明用户意图正确、权限充分、业务动作合理或外部操作已经成功。动作循环与控制权的整体关系见[智能体基础](#13.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)。
+~~~mermaid
+flowchart TD
+    A[应用整理当前消息和本轮可用工具] --> B[模型生成下一步]
+    B --> C{普通答复还是工具请求?}
+    C -->|普通答复| G[应用按运行策略返回或保存答复]
+    C -->|tool_call c1| D[解析工具名和参数]
+    D --> E{工具可用且结构有效?}
+    E -->|否| X[形成可识别的失败结果]
+    E -->|是| F[运行时核对调用者和目标资源]
+    F -->|允许| H[执行 read_build_log]
+    F -->|拒绝| X
+    H --> I[tool_result 与 c1 关联]
+    X --> I
+    I --> J[同一用户轮次的后续模型调用带 function_call_output 与必要响应状态]
+    J --> B
+~~~
 
-### 工具选择模式：OpenAI API 示例
+同一工具循环中的 `function_call_output` 必须带回原 `call_id`，并保留 API 续接所需的响应状态：Responses API 可用 `previous_response_id` 引用前一响应，也可重传必要的响应条目与工具结果。`previous_response_id` 不会自动继承前一次请求的 `instructions`，需要持续应用的运行指令必须重新提供；手动管理上下文且使用推理模型时，还要保留该模型要求回传的 reasoning items。续接对话状态不等于继承全部运行规则。它会触发同一用户轮次里的后续模型调用；一次用户轮次因此可以包含多次模型调用。Responses API 的实际条目形状如下，`output` 是由应用编码的字符串；其中 `status`、`build_id` 等是本例应用结果格式，不是 API 为工具结果规定的固定字段：
 
-OpenAI API 的 tool_choice 可控制模型是否以及如何选择函数。下表描述的是该 API 的行为示例，参数名和语义不能直接假定适用于其他 provider：
+~~~json
+{
+  "type": "function_call",
+  "call_id": "c1",
+  "name": "read_build_log",
+  "arguments": "{\"build_id\":42}"
+}
+~~~
 
-| 模式 | 行为 |
+~~~json
+{
+  "type": "function_call_output",
+  "call_id": "c1",
+  "output": "{\"status\":\"ok\",\"build_id\":42,\"step\":\"unit-tests\",\"failed_test\":\"reject_empty_name\",\"expected\":\"HTTP 400\",\"actual\":\"HTTP 200\",\"exit_status\":1}"
+}
+~~~
+
+若访问被拒，应用仍以 `call_id: "c1"` 回传失败状态，但结果不含日志观察，例如：
+
+~~~json
+{
+  "type": "function_call_output",
+  "call_id": "c1",
+  "output": "{\"status\":\"error\",\"code\":\"access_denied\",\"observation\":null}"
+}
+~~~
+
+模型不能把失败结果当成已读取的日志。用户看过回答后再问“按当前手册应否重跑”才是新用户轮次。此时应用重建独立输入，可把已完成的 `c1` 记录整理成注明来源的事实；只在工具仍可调用时才附上定义。不能用普通上下文文本替换一个尚待回应的 `function_call`。[上下文工程](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)说明如何为新轮次选择历史和证据。
+
+本例实际返回的可核对值如下：
+
+| `c1` 的日志字段 | 返回值 |
 |---|---|
-| auto | 默认模式；模型可调用零个、一个或多个函数。 |
-| required | 要求模型至少调用一个函数。 |
-| 指定函数（forced function） | 要求调用某个具体函数，例如 {"type":"function","name":"get_weather"}。 |
-| none | 模拟不提供函数时的行为，不调用函数。 |
+| 失败步骤 | `unit-tests` |
+| 失败测试 | `reject_empty_name` |
+| 断言预期 / 实际 | HTTP `400` / HTTP `200` |
+| 进程退出状态 | `1` |
 
-并行工具调用是另一个维度：在 OpenAI API 中，parallel_tool_calls: false 可将单轮调用限制为零个或一个；支持的模型和组合仍以 API 文档为准。模型返回多个调用请求不等于应用必须并发执行，实际调度仍由运行时按依赖和副作用决定。工具选择也不授予业务权限，执行前仍要做授权检查。
+这份观察支持“测试断言的预期与实际不符”。它没有包含代码修改或执行路径，因此单靠它不能确定根因。生成最终解释时应只复用这些可追溯字段；完整的首轮服务计算见[AI 服务如何将一条消息变成完整回答](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)。
 
-### 设计工具契约 / Tool contract
+### 先设计让模型选对的工具契约
 
-不要要求每个工具都填固定数量的说明槽。先确保开发者和模型都能理解以下契约：
+工具目录首先是模型的动作选项，也是应用执行函数的契约。工具越多或名字越相近，模型越容易选错；把每个现成应用程序接口（API）端点原样暴露，也未必让任务更容易完成。围绕可识别的任务边界来设计名称和结果：已知订单 ID 时用 `get_order(order_id)` 取一个订单；按客户或时间范围查多笔订单时用 `list_orders(customer_id, time_range, page_token)`，并定义分页边界。参数说明应讲清字段含义、格式、单位和过滤条件，结果只保留后续判断需要的信息。
 
-| 说明 | 设计问题 |
+构建 42 的只读工具可以将契约写成：
+
+~~~json
+{
+  "type": "function",
+  "name": "read_build_log",
+  "description": "Read the failure summary for one build ID; return the failed step, test, expected value, actual value, and process exit status.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "build_id": {"type": "integer", "description": "ID of the build to read"}
+    },
+    "required": ["build_id"],
+    "additionalProperties": false
+  }
+}
+~~~
+
+这里的定义采用 OpenAI Responses API function calling 的扁平函数输入形状作示意；其他 API 的封装层和字段名称不同。工具名和描述说明何时使用，schema（结构约束）限制参数形状，应用还需要解释 `build_id` 指什么。OpenAI 严格模式要求对象关闭额外字段，并将 schema 中所有字段声明为必需；若业务上字段可选，可在支持的 schema 中把它设为可空。JSON Schema 的 `default` 是注释信息，不会在验证输入时自动填入缺失字段；需要默认值时，由应用显式补齐或要求模型提供。严格结构减少参数形状错误，但不会检查目标构建是否存在、调用者是否有权读取，或模型判断是否符合用户意图。例如退款工具可将金额字段约束为正数、原因字段约束为枚举；订单当前状态、实际可退总额与用户授权仍要由业务运行时核验。
+
+有用的错误结果也属于契约：`not_found` 应表达目标未找到；结构错误指出缺少或格式错误的字段；临时不可用则说明工具没有可用结果。错误应帮助模型选择下一步，不应把内部堆栈或敏感内容原样塞回上下文。对于分页、大日志或复杂资料，提供范围查询并返回来源 ID、段落位置或可续读标识，能减少无关输出。Anthropic 的工具设计研究也报告了类似工程经验：工具要有清晰且互不重叠的用途，结果应高信号，并通过任务评估检查工具选择和输出质量；具体效果依赖模型与任务。
+
+### API 如何约束模型能提出哪些调用
+
+OpenAI API（应用程序接口）的 `tool_choice` 是一个**调用选择控制**。它只影响模型本轮能否或如何提出函数调用，不授予业务权限，也不保证应用会执行：
+
+| 模式 | OpenAI API 中的作用 |
 |---|---|
-| **职责与边界** | 这项工具具体完成什么？相似工具的分界在哪里？ |
-| **输入** | 每个字段代表什么，格式和单位如何，什么条件下必填？ |
-| **结果** | 哪些信息足以支持后续动作？是否需要返回可继续查询的标识符？ |
-| **约束与副作用** | 读还是写？执行对象和范围是什么？何时需要确认？ |
-| **错误与恢复** | 未找到、权限不足、限流、超时或部分成功时，应返回什么可操作信息？ |
+| `auto` | 模型可选择不用工具，或发起一个或多个工具请求。 |
+| `required` | 要求至少发起一个调用。 |
+| 强制指定函数 | 指定必须调用的一个具体函数。 |
+| `allowed_tools` | 将本轮可选集合限制到已提供工具的子集。 |
+| `none` | 不允许本轮提出工具调用。 |
 
-例如，按订单 ID 查看具体内容用 get_order，按客户或时间搜索一批订单用 list_orders。不要让两个工具的用途重叠到只能靠模型猜；在描述中写清何时选择哪一个。字段名应表达业务含义，如 order_id，而不是含糊的 value；示例用真实格式，但不要放入用户数据。
+模式名称和支持条件是 OpenAI API 的定义，不可直接当成其他供应商的统一应用程序接口。并行请求又是另一个维度：支持并行的模型可能在同一响应中返回数条工具调用；对支持这些设置的模型，`parallel_tool_calls: false` 会把每次模型调用的单个响应限制为零个或一个。`required` 与 `parallel_tool_calls: false` 合用时，单个响应恰好提出一个请求；应用仍须验证并决定是否执行。应用应按实际依赖决定是否并发执行：相互独立的只读查询可以并发；依赖前一个结果的步骤要串行。每条结果都须关联自己的调用 ID，不能只按数组顺序假定对应关系。
 
-返回结果应只包含下一步决策需要的信息。对于大集合，支持筛选、分页或范围读取，避免把无关数据全部塞回上下文。工具错误应说明发生了什么、是否已产生副作用，以及可安全采取的下一步。[Anthropic 的工具设计经验](https://www.anthropic.com/engineering/writing-tools-for-agents)特别强调清晰用途、低重叠、易读输入输出，以及用任务评估迭代工具设计；命名效果也因模型而异。
+读工具失败时，应用可返回 `c1` 的失败结果，再让模型说明目前无法读取日志或选择有界恢复方式。写工具的超时则不能推断“操作没有发生”；应用需要按权威状态处理未知结果、确认、重试和恢复。持久操作与权限恢复的具体流程见上方运行架构和安全说明；本篇聚焦请求与观察之间的契约边界。
 
-### Schema、说明与业务校验
+### MCP 把工具连接方式标准化到什么程度
 
-Schema 是输入输出的结构合同，说明文字则解释语义、格式、单位、相互依赖和操作边界。可以用 required、enum、数值范围、格式约束或提供商支持的严格结构化模式，减少格式错误。不要假设 schema 的 default 字段会由每个 runtime 自动填入；运行时需要明确实现默认值和业务验证。
+Model Context Protocol（MCP，模型上下文协议）在 2026-07-28 版中定义 host（承载模型应用）、client（应用内的协议连接器）和 server（提供上下文与能力的服务）之间的互操作方式；消息使用 JSON-RPC 2.0，server 可提供 tools（工具）、resources（资源）和 prompts（提示模板）。该版的核心改为无状态协议请求流，并规定了多轮往返请求等能力，因此不应把更早版本的有状态会话描述直接套到新版本上。协议也定义连接层面的授权要求，但资源是否属于当前调用者、哪些业务操作允许执行，仍须由服务和应用按业务规则判断。
 
-以部分退款为例，refund_amount 的数值范围可以按订单状态和总额在服务端检查；refund_reason 可以有可选枚举；但“用户是否授权退款”并不是 JSON schema 能验证的。严格输出约束只解决结构层，仍需检查身份、资源归属、当前状态、业务规则和风险阈值。[生产环境 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)说明各运行控制的授权与隔离边界。
+以 `read_build_log` 为例，MCP client 可通过 `tools/list` 发现 server 暴露的定义，host 按本轮任务和授权范围筛选后映射为模型工具；模型提出 `c1` 后，应用检查并让 client 发送 `tools/call`，再把 MCP 结果配回同一 `c1` 的 Responses API 工具请求。MCP 的 JSON-RPC 请求 ID 与模型调用的 `call_id` 属于不同协议，host 负责二者关联。
 
-### 并发（concurrency）、依赖与副作用
-
-并行有两个不同环节：模型或 API 可以在一个响应中提出多个工具调用；应用运行时决定哪些调用能同时执行。能力因模型和 API 参数而异。[OpenAI 函数调用指南](https://developers.openai.com/api/docs/guides/function-calling)提供并行函数调用及关闭该行为的选项，但这不意味着所有调用都适合并发。
-
-- **可并行的只读工作：** 获取客户资料、列出订单、读取支持历史；这些调用互不依赖时可并行，结果齐备后再合并。
-- **必须有序的动作：** 核实订单 → 计算退款 → 执行退款 → 确认结果。后一步依赖前一步结果。
-- **并发写入：** 涉及同一订单、库存或账户时，要处理竞态、重复提交和部分失败，通常需服务端幂等性（idempotency）、版本条件或事务保护。
-
-网络超时并不能证明写操作失败。给有副作用的动作使用操作 ID 或幂等键；对结果不明的调用先查询状态，再决定是否重试。模型提出的错误恢复建议只是提示，服务端必须定义安全重试策略。
-
-### MCP 是什么 / Model Context Protocol
-
-[Model Context Protocol（MCP）架构规范](https://modelcontextprotocol.io/docs/learn/architecture)定义了 host、client 与 server 如何发现彼此能力并通信。MCP 数据层基于 JSON-RPC，规范包含 tools、resources、prompts 等原语；传输层处理连接、消息与授权。它为应用发现和调用外部能力提供互操作协议，本身不负责模型推理、业务授权或工具执行质量。
-
-MCP 减少每个 agent 平台都为每个服务单独定义连接协议的重复工作，但不会自动消除全部集成成本：每个 server 仍需实现、认证、授权、版本兼容和任务评估。Host 决定暴露哪些能力，运行时仍要控制每个实际调用。
+MCP 解决的是应用与外部能力之间的发现和通信协议，不等于某个模型供应商的 function calling schema，也不会替应用选定哪些 server 能力可见、检查业务权限、决定执行顺序或判定回答有依据。使用 MCP 时，host 与应用运行时仍需把协议能力映射到当前模型输入和应用执行契约，并检查工具结果。
 
 ### 相关知识
 
-- [智能体基础](#13.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：工具属于动作空间，但授权必须由运行时执行。
-- [编排模式](#14.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：并行与串行编排取决于任务依赖和副作用。
-- [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：工具定义与结果也是模型上下文的一部分。
+- [AI 服务如何将一条消息变成完整回答](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)：完整追踪用户问题到 `c1` 日志观察和最终说明。
+- [每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：解释旧 `c1` 如何进入后续新一轮，工具定义应何时继续提供。
+- [怎样从授权文档中检索并核验回答依据](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：当工具或检索返回的文档参与回答时，说明来源版本、访问范围和证据映射。
+- [智能体怎样决定下一步动作](#13.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：解释模型如何在回答和动作之间选择。
+- [多阶段 AI 任务怎样按依赖编排](#14.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：比较串行、并行及委派工作流。
+- [AI 运行怎样在断线或工作进程崩溃后恢复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：处理外部副作用、持久操作和运行恢复。
+
+> [!info]- 来源
+> 构建 42 与订单工具均为合成示例。OpenAI 字段语义及 MCP 协议版本按下列资料核验于 2026-11-06。
+>
+> - **模型请求、应用执行、工具结果配对、工具选择、并行调用和严格 schema。** OpenAI API，[Function calling](https://developers.openai.com/api/docs/guides/function-calling)，检查于 2026-11-06，`The tool calling flow`、`Tool call outputs`、`Formatting results`、`Incorporating results into response`、`Tool choice`、`Parallel function calling`、`Strict mode`；模型支持和 API 的默认严格行为可能不同。`previous_response_id` 与 `instructions` 的续接规则见 [Responses Create](https://developers.openai.com/api/reference/resources/responses/methods/create.md)，手动上下文回传见 [Reasoning guide](https://developers.openai.com/api/docs/guides/reasoning)。
+> - **JSON Schema 默认值的验证语义。** [JSON Schema 2020-12: Annotations](https://json-schema.org/understanding-json-schema/reference/annotations)，检查于 2026-11-06，`default`；默认值是注释，不在验证时填入缺失字段。
+> - **为 Agent 设计工具用途、描述和高信号结果。** Anthropic Research，[Writing effective tools for AI agents](https://www.anthropic.com/research/writing-tools-for-agents)，检查于 2026-11-06，`Choosing the right tools for agents`、`Returning meaningful context from tools`、`Prompt-engineering your tool descriptions`；文章中的效果实例属于其作者评估条件。
+> - **协议中的角色、无状态请求、工具发现和执行。** Model Context Protocol，[2026-07-28 Specification](https://modelcontextprotocol.io/specification/2026-07-28)，版号即发布日期，`Overview`；[Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) 说明 `tools/list` 与 `tools/call`；[该版发布说明](https://blog.modelcontextprotocol.io/posts/2026-07-28/)列出无状态协议核心及多轮往返更新。
 ## 13. 什么时候应该让模型决定下一步？
 
 **案例背景。** 一次构建失败诊断从用户的问题“build 42 为什么失败？”开始。模型提出读取只读 tool（工具）`read_build_log` 的请求，应用核验权限后才执行。工具调用 ID `c1` 关联这次请求和返回结果；返回值显示 `unit-tests` 步骤中的 `reject_empty_name` 预期 HTTP（Hypertext Transfer Protocol，超文本传输协议）`400`、实际 `200`，进程退出状态为 `1`。这些字段足以说明测试观察到了什么；它们还不能证明是哪一行实现代码造成了问题。
@@ -1649,7 +1708,7 @@ ReAct 原论文在 PaLM-540B 的 HotpotQA 与 FEVER 提示实验中发现，ReAc
 
 ### 工具、Skills 和权限分别约束什么？
 
-工具定义模型可以请求哪类读写能力。一个清晰的 action space（动作空间）应让每个工具的用途、参数、失败方式和边界容易区分；用 `browser_search`、`file_read` 这样的服务或资源前缀，可以提示调用归属，却不能授予权限。Anthropic 的 2025 年工具评估发现，命名空间前缀或后缀的效果会随模型变化，因此应按本地任务测试，而不是把一种命名法当成通用最佳做法。每次执行仍由运行时核对调用者和目标资源；参数 schema 也不能证明业务动作已获用户授权。权限、审批和停止路径见[生产环境 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)，工具调用的具体契约见[工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
+工具定义模型可以请求哪类读写能力。一个清晰的 action space（动作空间）应让每个工具的用途、参数、失败方式和边界容易区分；用 `browser_search`、`file_read` 这样的服务或资源前缀，可以提示调用归属，却不能授予权限。Anthropic 的 2025 年工具评估发现，命名空间前缀或后缀的效果会随模型变化，因此应按本地任务测试，而不是把一种命名法当成通用最佳做法。每次执行仍由运行时核对调用者和目标资源；参数 schema 也不能证明业务动作已获用户授权。权限、审批和停止路径见[生产环境 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)，工具调用的具体契约见[工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
 
 Agent Skills（智能体技能包）把领域说明、步骤、脚本和参考资料组织为可按需载入的程序知识；Anthropic 公开的方案通过逐层披露，让模型先看到简要说明，需要时再读取完整技能和附属文件。Skill 能教会流程，但实际可读写资源仍由运行时工具与授权决定。因而，领域步骤不同不一定需要一个新的子智能体；可比较按需加载技能与拆分上下文的效果。
 
@@ -1741,7 +1800,7 @@ agents as tools（把智能体作为工具调用）和 handoff（控制权交接
 
 交接前要传递足够的任务背景和当前状态；接手方应知道由谁授权、已经读取了哪些材料、仍有哪些结论未知。避免宽泛转发整个对话，也不能把有损摘要当成权威运行记录。工具返回和副作用应由主运行记录并关联任务身份；稳定 run ID、事件恢复和未知结果如何处理见[AI 运行怎样断线恢复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
 
-多个工作者适合并行读取不同材料或验证彼此独立的产物。依赖上一步结果的写操作仍要按序执行。工单创建属于一次外部副作用，不能让多个工作者并发发起相同写入；应用需将已审批的目标与请求绑定到同一个幂等键，并通过运行时授权。更多工具边界和审核流程见[工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)和[生产环境 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
+多个工作者适合并行读取不同材料或验证彼此独立的产物。依赖上一步结果的写操作仍要按序执行。工单创建属于一次外部副作用，不能让多个工作者并发发起相同写入；应用需将已审批的目标与请求绑定到同一个幂等键，并通过运行时授权。更多工具边界和审核流程见[工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)和[生产环境 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
 ### 什么时候保留单主循环，什么时候增加子智能体？
 
@@ -1959,7 +2018,7 @@ stateDiagram-v2
 > [!info] 工作流事件回放的适用范围
 > Temporal 的 event history（事件历史）示例把运行时已记录的活动结果用于重建编排状态。该功能可以恢复应用工作流，但不让模型调用变得确定，也不自动判定一个尚未记录的远端副作用是否提交。采用同类运行时，仍要为活动结果和外部写操作定义持久记录与幂等或对账契约。
 
-运行契约承接[应用如何执行模型的工具请求](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)，并与[生产 AI 如何阻止不可信内容触发越权动作](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)中的审批和停止边界配合。队列确认和重试结果的底层语义见[API 交付如何确认结果并限制重试](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)与[队列消息在何时才算被确认](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+运行契约承接[应用如何执行模型的工具请求](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)，并与[生产 AI 如何阻止不可信内容触发越权动作](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)中的审批和停止边界配合。队列确认和重试结果的底层语义见[API 交付如何确认结果并限制重试](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)与[队列消息在何时才算被确认](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
 
 > [!info]- 来源
 > - **HTTP 重试与异步接收的协议边界：** IETF，[RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，2022，§9.2.2（幂等方法与失败后重试）及 §15.3.3（`202 Accepted` 只表示接收处理，不表示完成）；核对日期：2026-11-06。本文额外的 `POST` 幂等键是应用契约，不是该 RFC 自动提供的保证。

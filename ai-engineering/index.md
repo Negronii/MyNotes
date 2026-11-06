@@ -29,11 +29,11 @@
 
 ### 输入、外部证据与行动
 
-- [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](prompting/prompt-engineering-fundamentals.md)
-- [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](prompting/advanced-prompting-techniques.md)
+- [怎样写出清楚且可验收的提示词？](prompting/prompt-engineering-fundamentals.md)
+- [简单提示失败后，怎样选择并评估提示技巧？](prompting/advanced-prompting-techniques.md)
 - [每次模型调用应看到什么，应用又应持久化什么？](context/context-engineering-principles.md)
 - [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)
-- [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](agents/tool-design-and-function-calling.md)
+- [应用怎样设计并执行模型提出的工具请求？](agents/tool-design-and-function-calling.md)
 - [什么时候应该让模型决定下一步？](agents/agent-fundamentals.md)
 - [怎样按依赖、并行性和控制权组织多阶段 AI 任务？](agents/orchestration-patterns.md)
 - [生产 AI 如何阻止不可信内容诱导模型越权？](safety/ai-safety-in-production.md)

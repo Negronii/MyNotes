@@ -1,117 +1,86 @@
-# Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？
+# 简单提示失败后，怎样选择并评估提示技巧？
 
-Start with a clear, simple prompt, identify the failure on representative cases, and add only the method that addresses it. Few-shot examples, reasoning prompts, self-consistency, tool loops, prompt chains, and prompt generation can add tokens, calls, or control-flow complexity. Compare each change with the simpler baseline and application-side checks; published results support claims only for the tasks and setups actually evaluated. / 先用清楚、简单的提示词建立基线，再从有代表性的失败样本中定位问题，只增加能应对该问题的方法。少样本示例、推理提示、自一致性、工具循环、提示词链和提示词生成都会增加 token、调用或控制流复杂度。每种改动都应与简单基线及应用校验比较；论文结果只支持其实际评估过的任务和设置。
+先用[提示工程基础](./prompt-engineering-fundamentals.md)建立清楚的 zero-shot（零样本）基线，再看代表性失败究竟来自提示歧义、输入证据缺失，还是下游校验不足。只有第一类问题主要靠提示词解决；其他情况应补材料、调用工具或修复运行时。提示技巧要按“失败信号 → 最小改动 → 同集评估”选择，不按名称堆叠。以下构建 42、网络中断和缺日志情形均为合成示例。
 
-**Key terms / 关键术语：** zero-shot / 零样本；few-shot / 少样本；chain-of-thought (CoT) / 思维链；self-consistency / 自一致性；ReAct / 推理与行动；prompt chaining / 提示词链；meta-prompting / 元提示。
+## 先分清构建 42 的失败是哪一类
 
-## When should you use few-shot vs. zero-shot prompting? / 何时使用少样本或零样本提示？
+首次运行的工具结果 `c1` 显示：`unit-tests` 中 `reject_empty_name` 预期 HTTP `400`、实际 `200`，退出状态为 `1`。它证明了断言差异，没有证明代码根因。如果模型看到这些字段，却把结果写成“输入校验器必然有缺陷”，提示改动应限制根因推断；如果字段没有进入本轮输入，追加“请认真思考”也补不回日志。
 
-Start with a clear zero-shot instruction for a simple, well-defined task. Add a few examples when they resolve ambiguity, demonstrate a non-obvious label boundary, or show a required output format. Keep examples representative and include meaningful edge cases. More examples can consume context and can also bias the model toward an accidental pattern.
+同一事件能用于比较两种输入条件不同的问题。原问题“构建 42 为什么失败”可以在读到 `c1` 后继续回答；用户再问“按当前持续集成（CI）手册应否重跑”则开启新一轮，应用需要把权威运行记录中的 `c1` 与本轮适用的手册证据重新组装。是否仍开放原工具、如何检索当前手册，分别由[上下文工程](../context/context-engineering-principles.md)和[RAG](../rag/rag-architecture-and-implementation.md)解释。提示技巧不能代替这项证据交接。
 
-**Zero-shot / 零样本:**
+先检查一批代表性错误，再按能观测到的症状选择变化：
 
-~~~text
-Classify the sentiment as positive, negative, or neutral.
-Review: "The product arrived late, but the quality exceeded expectations."
-Return one label.
-~~~
+| 失败信号 | 先尝试的改动 | 用什么结果判断有效 |
+|---|---|---|
+| 输出把 `expected=400` 和 `actual=200` 混为一谈，或直接猜代码原因。 | 明确字段含义、未知值表达方式；若仍混淆，再加一组“断言失败 / 测试未运行”的对照示例。 | 对同一组断言、网络中断、无日志样例检查字段准确率和无证据根因率。 |
+| 字段形状通过，但内容与工具观察不符，例如把 `c1` 的 `expected=HTTP 400` 和 `actual=HTTP 200` 交换。 | 在应用端把输出逐项与该来源记录比较，并将不一致的报告拒绝或退回修正。 | 单独计数 schema 通过但语义不一致的报告是否被拦住；schema 本身不能代替这层检查。 |
+| 需要多个有明确检查点的子步骤，且下游能检查中间值。 | 分成少数有 schema（结构约束）或确定性门槛的阶段；失败时停止或返回具体错误。 | 核对每个中间产物与原记录，再比较端到端成功率、时延和调用数。 |
+| 可验证的离散答案在相同输入下波动，且错误路径有机会彼此独立。 | 测试自一致性，聚合前规范化答案；重要结果仍交独立验证器。 | 比较正确率、验证器拒绝率、生成词元（token）总量和端到端时延。 |
+| 多轮手改仍反复失败，且原因已缩小到明确歧义。 | 让模型生成少量候选修订，再由固定开发集筛选。 | 同一开发集上看增益和回归，最终只在未参与选择的留出集确认。 |
+| 必需事实不在本轮材料中，或问题要依据刚更新的外部状态。 | 通过运行时工具或授权检索取回证据。 | 检查本轮实际收到的工具结果或来源段落，再核对答案主张。 |
 
-**Few-shot / 少样本:**
+## 例子只有在边界不清时才增加
 
-~~~text
-Classify each review as positive, negative, or neutral.
-"Terrible experience, never buying again." → negative
-"Exactly what I needed. Fast shipping." → positive
-"It's okay. Nothing special." → neutral
-"The product arrived late, but the quality exceeded expectations." →
-~~~
-
-For extraction, examples can demonstrate how a date or amount should be normalized. Keep them synthetic; validate required fields, allowed values, and source evidence in application code. Measure the example/no-example variants on the same held-out cases rather than assuming few-shot is more reliable.
-
-## What is chain-of-thought, and when is it useful? / 什么是思维链，何时有用？
-
-Chain-of-thought (CoT) prompting asks for intermediate reasoning text before a final answer, often through examples or an instruction. Research found gains on some multi-step arithmetic and reasoning benchmarks under particular model and prompt conditions. The result is task- and model-dependent: asking for step-by-step text does not guarantee correct reasoning, and a written rationale is not proof that it faithfully describes the model's internal computation.
-
-A small arithmetic illustration is 4 × $2 + 2 × $3 = $8 + $6 = $14. A model may give a concise answer, a worked explanation, or an incorrect derivation. Verify consequential arithmetic with code or another trusted method.
-
-OpenAI's reasoning-model guidance, checked 2026-10-15, recommends trying a straightforward prompt first; asking for step-by-step reasoning can be unnecessary or counterproductive for those models. API behavior differs by provider and model, so evaluate the actual target rather than carrying a prompt recipe across systems.
-
-## What is self-consistency? / 什么是自一致性？
-
-Self-consistency samples multiple candidate reasoning answers and aggregates their final answers, often by a majority vote. The research paper reported improvements on several tested reasoning benchmarks. It can help when the candidates make partly independent errors, but repeated samples can agree on the same wrong answer. Use a task-specific verifier for important results.
-
-**Illustration, not model output / 示意，不是模型实测输出：** For 17 × 23, two valid decompositions are 17 × (20 + 3) = 340 + 51 = 391 and (10 + 7) × 23 = 230 + 161 = 391. If sampling several candidates, normalize equivalent answers before aggregation; voting does not replace checking.
-
-Multiple samples increase token use and usually require more inference work. Exact cost and wall-clock impact depend on batching, provider behavior, and the selected model. Compare accuracy, latency, and cost with a single answer on the target task.
-
-A model can also adapt its next action to a tool's observed result. See [the ReAct decision loop / ReAct 决策循环](../agents/agent-fundamentals.md#ReAct%20循环怎样让观察影响下一步？) for when that feedback loop is worth adding and how the runtime controls it.
-
-## When should you chain prompts? / 何时串联提示词？
-
-Use a fixed prompt chain when the task has separable steps and code can validate, branch, retry, or stop between them. If the sequence is known, developer-controlled stages can be easier to inspect than an open-ended agent loop. Each model call can still be wrong; validate intermediate outputs and test the whole chain. For broader workflow and delegation patterns, see [Orchestration Patterns / 编排模式](../agents/orchestration-patterns.md).
-
-**Outline → validate → write / 大纲 → 校验 → 写作:**
-
-1. Ask for an outline in a declared schema.
-2. Parse it and check required sections and constraints in application code.
-3. If valid, ask for a draft based on the outline; otherwise return an explicit failure or a bounded correction request.
-
-~~~python
-outline = call_model(make_outline_prompt(topic))
-parsed = parse_schema(outline)
-if not parsed.ok:
-    return validation_error(parsed.issues)
-if not deterministic_checks(parsed.value):
-    return validation_error("outline violates required section rules")
-return call_model(make_draft_prompt(parsed.value))
-~~~
-
-If five stages each succeed with probability 0.95 and failures are independent, the probability that all five succeed is 0.95⁵ ≈ 0.774. Real failures may be correlated, and retries or gates change the result; measure the actual workflow instead of treating this illustration as a reliability estimate.
-
-## What is meta-prompting? / 什么是元提示？
-
-Meta-prompting uses a model to generate candidate instructions or revise an existing prompt in response to concrete failures. Treat either output as a candidate. Evaluate variants on development examples, inspect failures, and keep a final held-out set untouched until selection; repeated tuning against the same set can overfit it.
-
-Automatic Prompt Engineer (APE) is one research approach to generating and selecting instruction candidates for evaluated tasks. The templates here are a lightweight human-directed workflow, not a reproduction of that method or its reported results.
-
-**Candidate generation / 生成候选提示词:**
+如果零样本指令下，构建日志的两类事件反复被混淆，可以添加两条简短、互相区分的合成示例。以下只展示关键观察与结论，供说明分类边界，不是[基础章](./prompt-engineering-fundamentals.md)的完整 JSON 输出对象：
 
 ~~~text
-Task: Classify a support message as billing, technical, or general.
-Success: Choose the supported category; return needs_review when evidence is insufficient.
-Inputs: Only the supplied message and category definitions.
-Output: Return the category and needs_review as JSON.
-Generate three materially different candidate instructions. For each, state which ambiguity it addresses. Do not claim the candidates have been tested.
+输入：测试断言写明 expected=HTTP 400，日志为 actual=HTTP 200。
+输出：报告 `expected=HTTP 400`、`actual=HTTP 200`；`root_cause_status=unknown`、`root_cause=null`。
+
+输入：网络中断发生在测试启动前，没有断言记录。
+输出：报告测试未运行、没有断言结果；不能称为测试断言失败。
 ~~~
 
-**Failure-driven revision / 根据失败样例修订:**
+few-shot examples（少样本示例）是在上下文中展示标签边界和输出模式。例子应来自可复现的错误类型，而不是只复制某个测试用例；重复的例子会增加输入长度，也可能让模型记住无关措辞。保持同一任务的验证集合不变，并加入未用于撰写示例的网络中断和缺日志情况。若模型只在示例原句上好转，说明改动没有解决边界问题。
 
-~~~text
-Current prompt:
-[insert the current synthetic prompt]
+## 需要中间检查时，选择可核对的推理形式
 
-Observed failure:
-[insert a synthetic input and the incorrect output]
+chain-of-thought（思维链，CoT）提示让模型生成最终答案前的中间推理文本。早期研究在若干大模型的算术、常识和符号推理任务上报告了改进；zero-shot CoT（零样本思维链）不提供示例，但仍会明确要求模型生成中间推理；该研究也在其测试基准上发现，简单的推理提示语可带来收益。这些是特定模型和任务的实验结果，不保证加上“逐步思考”对当前目标模型或每类任务都有帮助。
 
-Expected behavior:
-[state the correct output and why]
+近年的证据让这个边界更清楚：OpenAI 当前针对 reasoning models（推理模型）的指南建议从直接、简短的提示开始，先试零样本；对这类模型显式要求“逐步思考”可能没有收益，有时还会降低表现。2025 年的一项 EMNLP Findings 数学实验在 Qwen2.5 系列上发现，CoT 示例相对零样本 CoT 未提升推理表现，主要帮助输出形式；另一项 2024 年研究在隐式统计学习、视觉识别和含例外模式分类等特定任务中观察到显式 CoT 的性能下降。它们并不说明所有模型都不需要分步，也不能替代对目标模型和任务的实测。
 
-Revise only the instruction needed to address this failure. Preserve the task, output contract, and other constraints. Return the revised prompt and a short change note. This candidate still requires evaluation on examples not used to write it.
-~~~
+因此，若失败是模型没有保留 `c1` 中的关系，不要要求冗长的私有思维过程；要求它返回可核验的中间字段即可：`step=unit-tests`、`failed_test=reject_empty_name`、`expected=HTTP 400`、`actual=HTTP 200`、`root_cause_status=unknown`、`root_cause=null`。字段名和值与[基础章的输出约定](./prompt-engineering-fundamentals.md)一致，应用可逐项与工具结果比较。若困难来自多个相互依赖的转换，则把检查点拆成程序可验证的结构化结果。该结构能暴露哪里发生了错误，但不能证明解释忠实描述了模型的内部计算。
 
-A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task. [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) covers evaluation design and acceptance evidence.
+## 多个答案可以投票，但票数不是证据
 
-## Related notes / 相关笔记
+self-consistency（自一致性）会对同一问题采样多个推理路径，再汇合这些路径对最终答案的支持度；常见的离散答案近似，是先规范化最终答案，再按出现次数投票。它适合有离散答案、候选路径能提供互补信息、且有条件验证答案的情况。多数投票只是候选间的聚合；如果所有样本共享同一错误或遗漏同一证据，票数仍可一致地错。
 
-- [Prompt Engineering Fundamentals / 提示工程基础](./prompt-engineering-fundamentals.md) covers clear instructions, examples, and output contracts.
-- [Context Engineering Principles / 上下文工程原则](../context/context-engineering-principles.md) covers the information available to each inference.
-- [Agent Fundamentals / 智能体基础](../agents/agent-fundamentals.md), [Orchestration Patterns / 编排模式](../agents/orchestration-patterns.md), and [Tool Design and Function Calling / 工具设计与函数调用](../agents/tool-design-and-function-calling.md) cover runtime tool loops and control flow.
+> [!example] 规范化后比较候选答案
+> 以下是手工演算，不是模型采样结果。对 $17 \times 23$，两条可核算路径是 $17 \times (20+3)=340+51=391$ 和 $(10+7) \times 23=230+161=391$。若假设五次采样的最终字符串为 `391`、` 391 `、`391`、`392`、`392`，先去除首尾空白，再按十进制整数解析，得到规范化序列 `391, 391, 391, 392, 392`，计数为 `391: 3`、`392: 2`，投票选 `391`。独立乘法验证仍应确认结果。
 
-## Sources / 来源
+候选数从 1 增到 $m$ 会增加生成计算，且结果质量取决于采样多样性、答案归一化和任务验证器。在构建 42 的 `c1` 上，多采样无法让模型得知未记录的代码根因；优先把日志观察作为输入并限制无依据推断。只有固定案例显示单次输出不稳定、而答案又可由工具或代码校验时，才比较采样数与收益。
 
-- Wei et al., [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903).
-- Kojima et al., [Large Language Models are Zero-Shot Reasoners](https://arxiv.org/abs/2205.11916).
-- Wang et al., [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171).
-- Zhou et al., [Large Language Models Are Human-Level Prompt Engineers](https://arxiv.org/abs/2211.01910), for the APE instruction-generation and selection approach.
-- OpenAI, [Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices), checked 2026-10-15. These instructions describe OpenAI reasoning models and should not be generalized to other APIs.
-- OpenAI, [Prompt generation](https://developers.openai.com/api/docs/guides/prompt-generation), checked 2026-10-15. This is an OpenAI-specific example of generating or revising prompt text, not evidence that a generated prompt performs better without task evaluation.
+## 只有阶段能独立检查时才串联提示
+
+prompt chaining（提示词链）把一个任务拆成顺序模型调用，并在阶段间让程序检查、分支或停止。以构建 42 为例，如果下游系统必须先拿到严格字段，可以让第一步从 `c1` 形成字段对象，代码逐项核对它仍是 `expected=HTTP 400`、`actual=HTTP 200`，再让第二步把已经核实的字段转成解释。字段缺失或对不上时，不应继续生成一段看似完整的文字。若只需回答一句“该测试的预期与实际状态不符”，直接一次生成更简单。
+
+多一次模型调用不是免费的可靠性。一般的两阶段通过率是 $P(S_1) \times P(S_2 \mid S_1)$；作一个明确的玩具假设：第一步通过率为 $0.95$，第一步通过后第二步通过率也为 $0.95$，中间的确定性门控能挡住不合格字段，则两阶段都通过的概率为 $0.95 \times 0.95=0.9025$，约 $90.3\%$。若还假设两次调用独立，这也等于两个通过事件概率的乘积。它不是实际系统可靠性数据；共同的输入错误会使失败相关，门控也可能拒绝原本可用的输出，有界重试又会改变最终结果。实际比较需记录阶段通过率、端到端通过率、额外调用、延迟和成本。
+
+更开放的 ReAct（Reason + Act，推理与行动）把模型决定与环境动作、观察结果交替进行。原论文在知识问答、事实核验和交互式环境任务上评估这种反馈路径。一次用户轮次可以包含多次模型调用：模型在首次调用提出 `c1`，应用执行查询，再把观察交给同一用户轮次的后续模型调用，由它继续回答或提出下一步。用户看过回答后再问“按当前手册应否重跑”才开启新用户轮次；应用须重新组装 `c1` 观察和适用手册证据。构建 42 的 `c1` 就是这个基本交接；实际使用工具的请求、调度和结果 ID 由[工具设计与函数调用](../agents/tool-design-and-function-calling.md)展开。ReAct 论文的实验也不意味着任意工具链都正确、安全或值得启动。
+
+## 让自动生成的提示候选接受同一套验收
+
+Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索的候选程序：生成多条候选，再依照选定的分数在任务数据上比较。原论文在 24 个指令归纳任务与 21 个精选 BIG-Bench 任务上评估候选生成与选择；所得结果依赖其模型、数据和分数函数，并不证明一次通用的“帮我改好提示”请求就能提升任意应用。
+
+实际使用时，先把问题缩到一个失败信号，例如模型把断言预期值和实测值混淆。让生成模型提出几条真正不同、各针对该错误的候选，不让它宣称候选已经有效。然后在相同开发案例上逐条比较，检查对网络中断、缺日志和其他正常输入是否回归。根据开发集挑出的版本仍须在未参与选择的留出案例上复核；在同一组失败上反复改写再报告该组分数，会把提示过拟合到已知例子。
+
+## 评估整套变更，而不是提示的外观
+
+比较提示文本时，固定模型版本、工具可用性、检索证据和解码配置，只改提示。若评估的正是工具接入、采样或编排，则固定相同原始任务/案例及其他不受测条件，允许受测策略改变及其产生的中间状态变化，再评估完整流程。构建 42 的验证样本至少区分断言 `400 → 200`、测试前网络中断、没有日志、以及依赖当前 CI 手册的重跑追问。记录提示版本和完整输入条件；检查哪些字段与 `c1` 一致、是否凭空补了根因、缺证时是否暂停，以及输出是否满足程序契约。用相同基线和候选集看正确性、支持度、拒答/缺证行为、延迟、成本和工具次数，再在留出集确认。不要把语气更顺或“解释看起来更完整”作为通过条件。
+
+## 相关知识
+
+- [怎样写出清楚且可验收的提示词？](./prompt-engineering-fundamentals.md)：建立任务、输入边界和输出契约的简单基线。
+- [每次模型调用应看到什么，应用又应持久化什么](../context/context-engineering-principles.md)：解释新一轮如何重新选取 `c1`、历史和政策材料。
+- [怎样从授权文档中检索并核验回答依据](../rag/rag-architecture-and-implementation.md)：当问题需要当前手册或外部证据时，负责检索与来源核验。
+- [怎样判断模型是否满足任务契约](../evaluation/llm-evaluation-methods.md)：设计固定案例、留出集和发布判据。
+
+> [!info]- 来源
+> 本章的构建 42 及网络中断、缺日志案例均为合成示例；算术表决和阶段成功率也为手工演算。研究结论保留原文任务与模型范围。
+>
+> - **早期思维链示例及零样本提示。** Wei et al., [“Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,” arXiv v1](https://arxiv.org/abs/2201.11903v1), 2022-01-28，摘要与实验；Kojima et al., [“Large Language Models are Zero-Shot Reasoners,” arXiv v1](https://arxiv.org/abs/2205.11916v1), 2022-05-24，摘要与实验。实验基于各自测试的大模型和推理基准。
+> - **对当前模型的工程建议。** OpenAI API，[Reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices)，检查于 2026-11-06，`How to prompt reasoning models effectively`；是 OpenAI reasoning models 的建议，不能外推为所有供应商行为。
+> - **后续提示研究的任务边界。** Cheng et al., [“Revisiting Chain-of-Thought Prompting: Zero-shot Can Be Stronger than Few-shot,” Findings of EMNLP 2025](https://aclanthology.org/2025.findings-emnlp.729/)，摘要与实验分析；结果针对论文评测的数学任务及 Qwen2.5 系列。Liu et al., [“Mind Your Step (by Step): Chain-of-Thought can Reduce Performance on Tasks where Thinking Makes Humans Worse,” arXiv v1](https://arxiv.org/abs/2410.21333v1), 2024-10-27，摘要与 §§3–5；报告特定的隐式统计学习、视觉识别和异常模式任务，不是所有 CoT 场景的评估。
+> - **自一致性解码。** Wang et al., [“Self-Consistency Improves Chain of Thought Reasoning in Language Models,” arXiv v1](https://arxiv.org/abs/2203.11171v1), 2022-03-21，摘要与 §§2–4；论文比较若干算术与常识推理基准，样本收益和成本取决于其设置。
+> - **自动指令候选生成与选择。** Zhou et al., [“Large Language Models Are Human-Level Prompt Engineers,” arXiv v2](https://arxiv.org/abs/2211.01910v2), 2023-03-10，§§3–5；包含候选指令生成、评分函数和 24 个指令归纳任务与 21 个精选 BIG-Bench 任务的实验。
+> - **推理和行动反馈循环。** Yao et al., [“ReAct: Synergizing Reasoning and Acting in Language Models,” ICLR 2023 / arXiv v3](https://arxiv.org/abs/2210.03629v3)，2023-03-10，§§2–4；论文涵盖 HotpotQA、FEVER、ALFWorld 和 WebShop 等评测任务。

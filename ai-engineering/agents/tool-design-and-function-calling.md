@@ -1,74 +1,138 @@
-# How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？
+# 应用怎样设计并执行模型提出的工具请求？
 
-**Short answer / 简答：** A tool call is a structured request from the model, not code execution or permission. The application must parse and validate it, check the caller’s authorization and current business state, execute the function, then return a useful result. Design for dependencies, side effects, and uncertain outcomes so recovery does not repeat an action blindly.
+模型的 tool call（工具调用）是一条结构化请求，不是代码执行、权限授予或成功结果。应用要在当前一轮暴露合适的工具，解释并检查请求，再由运行时执行函数，并把与该请求对应的观察交回模型。本篇的 build 42 记录是合成示例；副作用的持久提交、授权恢复和断连后的运行恢复见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](../systems/ai-application-architecture.md)及[生产 AI 如何阻止不可信内容诱导模型越权](../safety/ai-safety-in-production.md)。
 
-工具调用只是模型发出的结构化请求，不等于代码已经执行或用户已获授权。应用需要解析并校验请求，检查调用者权限和当前业务状态，执行函数，再把有用结果返回模型。设计时还要处理依赖、副作用和结果未知，避免恢复时盲目重复动作。
+## 一次请求怎样变成下一步可用的观察
 
-## 函数调用的生命周期
+先前的消息是 `Why did build 42 fail?`。应用给模型本轮可用的只读工具 `read_build_log`，其参数 `build_id` 是整数。以下用 `c1` 表示 OpenAI Responses API（响应 API）中这条 `function_call` 的 `call_id`；模型请求调用 `read_build_log` 并提供 `build_id=42`。应用解析请求，确认工具仍可用、参数满足结构约束，并在运行时核对调用者对构建 42 的读取范围，然后才读取日志。
 
-以下按 provider-neutral 方式描述，具体消息格式、角色名称、工具选择模式和结构约束因 API 而异：
+下图中每一条箭头都交付新的状态。模型提议的调用在被应用接受和执行之前，只是待处理请求：
 
-1. 应用将对话状态与本轮可用工具定义发送给模型。
-2. 模型返回普通内容，或返回包含工具名称与参数的调用请求。
-3. 应用解析请求，校验参数，并按当前用户和业务状态授权。
-4. 应用执行函数，将成功、错误或部分结果返回模型。
-5. 模型依据结果继续调用工具、交接，或生成答复。
+图里的 `tool_call` 和 `tool_result` 是说明生命周期的简写；OpenAI Responses API 实际使用 `function_call` 和 `function_call_output` 条目，并用 `call_id` 配对。
 
-[OpenAI 函数调用指南](https://developers.openai.com/api/docs/guides/function-calling)将工具调用描述为模型请求与应用端执行之间的多步流程。结构化调用或严格 schema 可以减少格式错误，但不证明用户意图正确、权限充分、业务动作合理或外部操作已经成功。动作循环与控制权的整体关系见[智能体基础](./agent-fundamentals.md)。
+~~~mermaid
+flowchart TD
+    A[应用整理当前消息和本轮可用工具] --> B[模型生成下一步]
+    B --> C{普通答复还是工具请求?}
+    C -->|普通答复| G[应用按运行策略返回或保存答复]
+    C -->|tool_call c1| D[解析工具名和参数]
+    D --> E{工具可用且结构有效?}
+    E -->|否| X[形成可识别的失败结果]
+    E -->|是| F[运行时核对调用者和目标资源]
+    F -->|允许| H[执行 read_build_log]
+    F -->|拒绝| X
+    H --> I[tool_result 与 c1 关联]
+    X --> I
+    I --> J[同一用户轮次的后续模型调用带 function_call_output 与必要响应状态]
+    J --> B
+~~~
 
-## 工具选择模式：OpenAI API 示例
+同一工具循环中的 `function_call_output` 必须带回原 `call_id`，并保留 API 续接所需的响应状态：Responses API 可用 `previous_response_id` 引用前一响应，也可重传必要的响应条目与工具结果。`previous_response_id` 不会自动继承前一次请求的 `instructions`，需要持续应用的运行指令必须重新提供；手动管理上下文且使用推理模型时，还要保留该模型要求回传的 reasoning items。续接对话状态不等于继承全部运行规则。它会触发同一用户轮次里的后续模型调用；一次用户轮次因此可以包含多次模型调用。Responses API 的实际条目形状如下，`output` 是由应用编码的字符串；其中 `status`、`build_id` 等是本例应用结果格式，不是 API 为工具结果规定的固定字段：
 
-OpenAI API 的 tool_choice 可控制模型是否以及如何选择函数。下表描述的是该 API 的行为示例，参数名和语义不能直接假定适用于其他 provider：
+~~~json
+{
+  "type": "function_call",
+  "call_id": "c1",
+  "name": "read_build_log",
+  "arguments": "{\"build_id\":42}"
+}
+~~~
 
-| 模式 | 行为 |
+~~~json
+{
+  "type": "function_call_output",
+  "call_id": "c1",
+  "output": "{\"status\":\"ok\",\"build_id\":42,\"step\":\"unit-tests\",\"failed_test\":\"reject_empty_name\",\"expected\":\"HTTP 400\",\"actual\":\"HTTP 200\",\"exit_status\":1}"
+}
+~~~
+
+若访问被拒，应用仍以 `call_id: "c1"` 回传失败状态，但结果不含日志观察，例如：
+
+~~~json
+{
+  "type": "function_call_output",
+  "call_id": "c1",
+  "output": "{\"status\":\"error\",\"code\":\"access_denied\",\"observation\":null}"
+}
+~~~
+
+模型不能把失败结果当成已读取的日志。用户看过回答后再问“按当前手册应否重跑”才是新用户轮次。此时应用重建独立输入，可把已完成的 `c1` 记录整理成注明来源的事实；只在工具仍可调用时才附上定义。不能用普通上下文文本替换一个尚待回应的 `function_call`。[上下文工程](../context/context-engineering-principles.md)说明如何为新轮次选择历史和证据。
+
+本例实际返回的可核对值如下：
+
+| `c1` 的日志字段 | 返回值 |
 |---|---|
-| auto | 默认模式；模型可调用零个、一个或多个函数。 |
-| required | 要求模型至少调用一个函数。 |
-| 指定函数（forced function） | 要求调用某个具体函数，例如 {"type":"function","name":"get_weather"}。 |
-| none | 模拟不提供函数时的行为，不调用函数。 |
+| 失败步骤 | `unit-tests` |
+| 失败测试 | `reject_empty_name` |
+| 断言预期 / 实际 | HTTP `400` / HTTP `200` |
+| 进程退出状态 | `1` |
 
-并行工具调用是另一个维度：在 OpenAI API 中，parallel_tool_calls: false 可将单轮调用限制为零个或一个；支持的模型和组合仍以 API 文档为准。模型返回多个调用请求不等于应用必须并发执行，实际调度仍由运行时按依赖和副作用决定。工具选择也不授予业务权限，执行前仍要做授权检查。
+这份观察支持“测试断言的预期与实际不符”。它没有包含代码修改或执行路径，因此单靠它不能确定根因。生成最终解释时应只复用这些可追溯字段；完整的首轮服务计算见[AI 服务如何将一条消息变成完整回答](../systems/from-message-to-answer.md)。
 
-## 设计工具契约 / Tool contract
+## 先设计让模型选对的工具契约
 
-不要要求每个工具都填固定数量的说明槽。先确保开发者和模型都能理解以下契约：
+工具目录首先是模型的动作选项，也是应用执行函数的契约。工具越多或名字越相近，模型越容易选错；把每个现成应用程序接口（API）端点原样暴露，也未必让任务更容易完成。围绕可识别的任务边界来设计名称和结果：已知订单 ID 时用 `get_order(order_id)` 取一个订单；按客户或时间范围查多笔订单时用 `list_orders(customer_id, time_range, page_token)`，并定义分页边界。参数说明应讲清字段含义、格式、单位和过滤条件，结果只保留后续判断需要的信息。
 
-| 说明 | 设计问题 |
+构建 42 的只读工具可以将契约写成：
+
+~~~json
+{
+  "type": "function",
+  "name": "read_build_log",
+  "description": "Read the failure summary for one build ID; return the failed step, test, expected value, actual value, and process exit status.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "build_id": {"type": "integer", "description": "ID of the build to read"}
+    },
+    "required": ["build_id"],
+    "additionalProperties": false
+  }
+}
+~~~
+
+这里的定义采用 OpenAI Responses API function calling 的扁平函数输入形状作示意；其他 API 的封装层和字段名称不同。工具名和描述说明何时使用，schema（结构约束）限制参数形状，应用还需要解释 `build_id` 指什么。OpenAI 严格模式要求对象关闭额外字段，并将 schema 中所有字段声明为必需；若业务上字段可选，可在支持的 schema 中把它设为可空。JSON Schema 的 `default` 是注释信息，不会在验证输入时自动填入缺失字段；需要默认值时，由应用显式补齐或要求模型提供。严格结构减少参数形状错误，但不会检查目标构建是否存在、调用者是否有权读取，或模型判断是否符合用户意图。例如退款工具可将金额字段约束为正数、原因字段约束为枚举；订单当前状态、实际可退总额与用户授权仍要由业务运行时核验。
+
+有用的错误结果也属于契约：`not_found` 应表达目标未找到；结构错误指出缺少或格式错误的字段；临时不可用则说明工具没有可用结果。错误应帮助模型选择下一步，不应把内部堆栈或敏感内容原样塞回上下文。对于分页、大日志或复杂资料，提供范围查询并返回来源 ID、段落位置或可续读标识，能减少无关输出。Anthropic 的工具设计研究也报告了类似工程经验：工具要有清晰且互不重叠的用途，结果应高信号，并通过任务评估检查工具选择和输出质量；具体效果依赖模型与任务。
+
+## API 如何约束模型能提出哪些调用
+
+OpenAI API（应用程序接口）的 `tool_choice` 是一个**调用选择控制**。它只影响模型本轮能否或如何提出函数调用，不授予业务权限，也不保证应用会执行：
+
+| 模式 | OpenAI API 中的作用 |
 |---|---|
-| **职责与边界** | 这项工具具体完成什么？相似工具的分界在哪里？ |
-| **输入** | 每个字段代表什么，格式和单位如何，什么条件下必填？ |
-| **结果** | 哪些信息足以支持后续动作？是否需要返回可继续查询的标识符？ |
-| **约束与副作用** | 读还是写？执行对象和范围是什么？何时需要确认？ |
-| **错误与恢复** | 未找到、权限不足、限流、超时或部分成功时，应返回什么可操作信息？ |
+| `auto` | 模型可选择不用工具，或发起一个或多个工具请求。 |
+| `required` | 要求至少发起一个调用。 |
+| 强制指定函数 | 指定必须调用的一个具体函数。 |
+| `allowed_tools` | 将本轮可选集合限制到已提供工具的子集。 |
+| `none` | 不允许本轮提出工具调用。 |
 
-例如，按订单 ID 查看具体内容用 get_order，按客户或时间搜索一批订单用 list_orders。不要让两个工具的用途重叠到只能靠模型猜；在描述中写清何时选择哪一个。字段名应表达业务含义，如 order_id，而不是含糊的 value；示例用真实格式，但不要放入用户数据。
+模式名称和支持条件是 OpenAI API 的定义，不可直接当成其他供应商的统一应用程序接口。并行请求又是另一个维度：支持并行的模型可能在同一响应中返回数条工具调用；对支持这些设置的模型，`parallel_tool_calls: false` 会把每次模型调用的单个响应限制为零个或一个。`required` 与 `parallel_tool_calls: false` 合用时，单个响应恰好提出一个请求；应用仍须验证并决定是否执行。应用应按实际依赖决定是否并发执行：相互独立的只读查询可以并发；依赖前一个结果的步骤要串行。每条结果都须关联自己的调用 ID，不能只按数组顺序假定对应关系。
 
-返回结果应只包含下一步决策需要的信息。对于大集合，支持筛选、分页或范围读取，避免把无关数据全部塞回上下文。工具错误应说明发生了什么、是否已产生副作用，以及可安全采取的下一步。[Anthropic 的工具设计经验](https://www.anthropic.com/engineering/writing-tools-for-agents)特别强调清晰用途、低重叠、易读输入输出，以及用任务评估迭代工具设计；命名效果也因模型而异。
+读工具失败时，应用可返回 `c1` 的失败结果，再让模型说明目前无法读取日志或选择有界恢复方式。写工具的超时则不能推断“操作没有发生”；应用需要按权威状态处理未知结果、确认、重试和恢复。持久操作与权限恢复的具体流程见上方运行架构和安全说明；本篇聚焦请求与观察之间的契约边界。
 
-## Schema、说明与业务校验
+## MCP 把工具连接方式标准化到什么程度
 
-Schema 是输入输出的结构合同，说明文字则解释语义、格式、单位、相互依赖和操作边界。可以用 required、enum、数值范围、格式约束或提供商支持的严格结构化模式，减少格式错误。不要假设 schema 的 default 字段会由每个 runtime 自动填入；运行时需要明确实现默认值和业务验证。
+Model Context Protocol（MCP，模型上下文协议）在 2026-07-28 版中定义 host（承载模型应用）、client（应用内的协议连接器）和 server（提供上下文与能力的服务）之间的互操作方式；消息使用 JSON-RPC 2.0，server 可提供 tools（工具）、resources（资源）和 prompts（提示模板）。该版的核心改为无状态协议请求流，并规定了多轮往返请求等能力，因此不应把更早版本的有状态会话描述直接套到新版本上。协议也定义连接层面的授权要求，但资源是否属于当前调用者、哪些业务操作允许执行，仍须由服务和应用按业务规则判断。
 
-以部分退款为例，refund_amount 的数值范围可以按订单状态和总额在服务端检查；refund_reason 可以有可选枚举；但“用户是否授权退款”并不是 JSON schema 能验证的。严格输出约束只解决结构层，仍需检查身份、资源归属、当前状态、业务规则和风险阈值。[生产环境 AI 安全](../safety/ai-safety-in-production.md)说明各运行控制的授权与隔离边界。
+以 `read_build_log` 为例，MCP client 可通过 `tools/list` 发现 server 暴露的定义，host 按本轮任务和授权范围筛选后映射为模型工具；模型提出 `c1` 后，应用检查并让 client 发送 `tools/call`，再把 MCP 结果配回同一 `c1` 的 Responses API 工具请求。MCP 的 JSON-RPC 请求 ID 与模型调用的 `call_id` 属于不同协议，host 负责二者关联。
 
-## 并发（concurrency）、依赖与副作用
-
-并行有两个不同环节：模型或 API 可以在一个响应中提出多个工具调用；应用运行时决定哪些调用能同时执行。能力因模型和 API 参数而异。[OpenAI 函数调用指南](https://developers.openai.com/api/docs/guides/function-calling)提供并行函数调用及关闭该行为的选项，但这不意味着所有调用都适合并发。
-
-- **可并行的只读工作：** 获取客户资料、列出订单、读取支持历史；这些调用互不依赖时可并行，结果齐备后再合并。
-- **必须有序的动作：** 核实订单 → 计算退款 → 执行退款 → 确认结果。后一步依赖前一步结果。
-- **并发写入：** 涉及同一订单、库存或账户时，要处理竞态、重复提交和部分失败，通常需服务端幂等性（idempotency）、版本条件或事务保护。
-
-网络超时并不能证明写操作失败。给有副作用的动作使用操作 ID 或幂等键；对结果不明的调用先查询状态，再决定是否重试。模型提出的错误恢复建议只是提示，服务端必须定义安全重试策略。
-
-## MCP 是什么 / Model Context Protocol
-
-[Model Context Protocol（MCP）架构规范](https://modelcontextprotocol.io/docs/learn/architecture)定义了 host、client 与 server 如何发现彼此能力并通信。MCP 数据层基于 JSON-RPC，规范包含 tools、resources、prompts 等原语；传输层处理连接、消息与授权。它为应用发现和调用外部能力提供互操作协议，本身不负责模型推理、业务授权或工具执行质量。
-
-MCP 减少每个 agent 平台都为每个服务单独定义连接协议的重复工作，但不会自动消除全部集成成本：每个 server 仍需实现、认证、授权、版本兼容和任务评估。Host 决定暴露哪些能力，运行时仍要控制每个实际调用。
+MCP 解决的是应用与外部能力之间的发现和通信协议，不等于某个模型供应商的 function calling schema，也不会替应用选定哪些 server 能力可见、检查业务权限、决定执行顺序或判定回答有依据。使用 MCP 时，host 与应用运行时仍需把协议能力映射到当前模型输入和应用执行契约，并检查工具结果。
 
 ## 相关知识
 
-- [智能体基础](./agent-fundamentals.md)：工具属于动作空间，但授权必须由运行时执行。
-- [编排模式](./orchestration-patterns.md)：并行与串行编排取决于任务依赖和副作用。
-- [上下文工程原则](../context/context-engineering-principles.md)：工具定义与结果也是模型上下文的一部分。
+- [AI 服务如何将一条消息变成完整回答](../systems/from-message-to-answer.md)：完整追踪用户问题到 `c1` 日志观察和最终说明。
+- [每次模型调用应看到什么，应用又应持久化什么](../context/context-engineering-principles.md)：解释旧 `c1` 如何进入后续新一轮，工具定义应何时继续提供。
+- [怎样从授权文档中检索并核验回答依据](../rag/rag-architecture-and-implementation.md)：当工具或检索返回的文档参与回答时，说明来源版本、访问范围和证据映射。
+- [智能体怎样决定下一步动作](./agent-fundamentals.md)：解释模型如何在回答和动作之间选择。
+- [多阶段 AI 任务怎样按依赖编排](./orchestration-patterns.md)：比较串行、并行及委派工作流。
+- [AI 运行怎样在断线或工作进程崩溃后恢复](../systems/ai-application-architecture.md)：处理外部副作用、持久操作和运行恢复。
+
+> [!info]- 来源
+> 构建 42 与订单工具均为合成示例。OpenAI 字段语义及 MCP 协议版本按下列资料核验于 2026-11-06。
+>
+> - **模型请求、应用执行、工具结果配对、工具选择、并行调用和严格 schema。** OpenAI API，[Function calling](https://developers.openai.com/api/docs/guides/function-calling)，检查于 2026-11-06，`The tool calling flow`、`Tool call outputs`、`Formatting results`、`Incorporating results into response`、`Tool choice`、`Parallel function calling`、`Strict mode`；模型支持和 API 的默认严格行为可能不同。`previous_response_id` 与 `instructions` 的续接规则见 [Responses Create](https://developers.openai.com/api/reference/resources/responses/methods/create.md)，手动上下文回传见 [Reasoning guide](https://developers.openai.com/api/docs/guides/reasoning)。
+> - **JSON Schema 默认值的验证语义。** [JSON Schema 2020-12: Annotations](https://json-schema.org/understanding-json-schema/reference/annotations)，检查于 2026-11-06，`default`；默认值是注释，不在验证时填入缺失字段。
+> - **为 Agent 设计工具用途、描述和高信号结果。** Anthropic Research，[Writing effective tools for AI agents](https://www.anthropic.com/research/writing-tools-for-agents)，检查于 2026-11-06，`Choosing the right tools for agents`、`Returning meaningful context from tools`、`Prompt-engineering your tool descriptions`；文章中的效果实例属于其作者评估条件。
+> - **协议中的角色、无状态请求、工具发现和执行。** Model Context Protocol，[2026-07-28 Specification](https://modelcontextprotocol.io/specification/2026-07-28)，版号即发布日期，`Overview`；[Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) 说明 `tools/list` 与 `tools/call`；[该版发布说明](https://blog.modelcontextprotocol.io/posts/2026-07-28/)列出无状态协议核心及多轮往返更新。

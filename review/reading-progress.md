@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=3c590c3a40e081d1ab497feddfff7a4f201083a9dfdc8af139c351dbe10639d4 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=79044b3e4851384ad47462f1fd3a0294b9ec3230ed0e5b40d7df1db17f00301a -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -17,11 +17,11 @@
 - [ ] 5. [如何测量并降低 AI 应用的时延与成本，同时守住任务质量？](../ai-engineering/systems/ai-latency-and-cost-optimization.md)
 - [ ] 6. [如何为具体任务选择模型，并让部署约束进入决策？](../ai-engineering/foundations/model-selection-and-ecosystem.md)
 - [ ] 7. [AI 应用怎样选择部署方式，并逐步上线或回滚？](../ai-engineering/systems/ai-deployment-patterns.md)
-- [ ] 8. [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](../ai-engineering/prompting/prompt-engineering-fundamentals.md)
-- [ ] 9. [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](../ai-engineering/prompting/advanced-prompting-techniques.md)
+- [ ] 8. [怎样写出清楚且可验收的提示词？](../ai-engineering/prompting/prompt-engineering-fundamentals.md)
+- [ ] 9. [简单提示失败后，怎样选择并评估提示技巧？](../ai-engineering/prompting/advanced-prompting-techniques.md)
 - [ ] 10. [每次模型调用应看到什么，应用又应持久化什么？](../ai-engineering/context/context-engineering-principles.md)
 - [ ] 11. [怎样从授权文档中检索并核验回答依据？](../ai-engineering/rag/rag-architecture-and-implementation.md)
-- [ ] 12. [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](../ai-engineering/agents/tool-design-and-function-calling.md)
+- [ ] 12. [应用怎样设计并执行模型提出的工具请求？](../ai-engineering/agents/tool-design-and-function-calling.md)
 - [ ] 13. [什么时候应该让模型决定下一步？](../ai-engineering/agents/agent-fundamentals.md)
 - [ ] 14. [怎样按依赖、并行性和控制权组织多阶段 AI 任务？](../ai-engineering/agents/orchestration-patterns.md)
 - [ ] 15. [生产 AI 如何阻止不可信内容诱导模型越权？](../ai-engineering/safety/ai-safety-in-production.md)

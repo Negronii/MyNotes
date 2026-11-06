@@ -33,7 +33,7 @@
 
 | 来源与版本 | 核心贡献或阅读理由 | 知识落点 |
 |---|---|---|
-| [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629v3) · 2022 首次发表 · arXiv v3 2023-03-10 | 用任务环境返回的 observation (观察结果)调整后续推理和行动，并在特定问答及交互任务中与相应基线比较。 | [Agent 决策循环](../ai-engineering/agents/agent-fundamentals.md#ReAct%20循环怎样让观察影响下一步？) 将论文的行动与观察连接到生产中的工具契约。 |
+| [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629v3) · 2022 首次发表 · arXiv v3 2023-03-10 | 用任务环境返回的 observation (观察结果)调整后续推理和行动，并在特定问答及交互任务中与相应基线比较。 | [Agent 决策循环](../ai-engineering/agents/agent-fundamentals.md#ReAct%20循环怎样让观察影响下一步？) 将论文的行动与观察连接到生产中的工具契约；[提示链与工具反馈的选择](../ai-engineering/prompting/advanced-prompting-techniques.md#只有阶段能独立检查时才串联提示)说明多次模型调用如何服务同一用户轮次。 |
 | [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401v4) · 2020 首次发表 · arXiv v4 2021-04-12 | 结合可更新的文档索引与参数化生成器，比较按整段输出和按单个 token 对候选文档做 marginalization (边缘化)。 | [检索与有依据的生成](../ai-engineering/rag/rag-architecture-and-implementation.md) 将论文机制连接到证据检索和回答验收。 |
 | [Dense Passage Retrieval for Open-Domain Question Answering](https://arxiv.org/abs/2004.04906v3) · EMNLP 2020 / arXiv v3 | 用兼容的问题与段落编码器检索候选，帮助理解语义匹配与词法命中的互补及局限。 | [检索表示与混合排序](../ai-engineering/rag/rag-architecture-and-implementation.md#词法、向量和混合检索怎样互补)。 |
 | [Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf) · SIGIR 2009 | 按名次融合不同检索器结果，避免直接相加不在同一尺度的分数。 | [RRF 手算与重排](../ai-engineering/rag/rag-architecture-and-implementation.md#词法、向量和混合检索怎样互补)。 |
@@ -42,6 +42,17 @@
 | [Is Semantic Chunking Worth the Computational Cost?](https://aclanthology.org/2025.findings-naacl.114/) · Findings of NAACL 2025 | 在其任务与设置中检验语义分块的成本和效果，不能把更复杂的切分视作自动更好。 | [分块策略比较](../ai-engineering/rag/rag-architecture-and-implementation.md#分块要保留问题所需的限定关系)。 |
 | [A Systematic Analysis of Chunking Strategies for Reliable Question Answering](https://arxiv.org/html/2601.14123v1) · arXiv v1 · 2026-01-20 | 受控比较分块与重叠设置；结果受检索器、模型和数据集限制，不提供通用块长。 | [长度单位与分块验收](../ai-engineering/rag/rag-architecture-and-implementation.md#分块要保留问题所需的限定关系)。 |
 | [From BM25 to Corrective RAG: Benchmarking Retrieval Strategies for Text-and-Table Documents](https://arxiv.org/html/2604.01733v1) · arXiv v1 · 2026-04-02 | 在金融文本与表格问答中比较整文检索、融合和重排，提示精确数字任务应单独测量；分块实验仍属未来工作。 | [词法、向量与重排的条件](../ai-engineering/rag/rag-architecture-and-implementation.md#词法、向量和混合检索怎样互补)。 |
+
+## 提示策略与可核验的中间结果
+
+| 来源与版本 | 核心贡献或阅读理由 | 知识落点 |
+|---|---|---|
+| [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903v1) · arXiv v1 · 2022-01-28 | 在当时模型和任务中研究中间推理示例的作用；当前是否应显式要求推理仍需按目标模型检验。 | [可核对的推理形式](../ai-engineering/prompting/advanced-prompting-techniques.md#需要中间检查时，选择可核对的推理形式)。 |
+| [Large Language Models are Zero-Shot Reasoners](https://arxiv.org/abs/2205.11916v1) · arXiv v1 · 2022-05-24 | 在其基准中观察零样本推理提示的收益，帮助区分有无示例与是否要求中间推理。 | [零样本 CoT 与当前推理模型](../ai-engineering/prompting/advanced-prompting-techniques.md#需要中间检查时，选择可核对的推理形式)。 |
+| [Revisiting Chain-of-Thought Prompting: Zero-shot Can Be Stronger than Few-shot](https://aclanthology.org/2025.findings-emnlp.729/) · Findings of EMNLP 2025 | 在 Qwen2.5 数学实验中区分示例的格式作用和推理收益，提醒按任务检验少样本的必要性。 | [后续证据与适用边界](../ai-engineering/prompting/advanced-prompting-techniques.md#需要中间检查时，选择可核对的推理形式)。 |
+| [Mind Your Step (by Step): Chain-of-Thought can Reduce Performance on Tasks where Thinking Makes Humans Worse](https://arxiv.org/abs/2410.21333v1) · arXiv v1 · 2024-10-27 | 在特定隐式统计学习、视觉与模式任务中观察显式 CoT 的负面结果，不能据此外推所有推理场景。 | [显式推理为何需要实测](../ai-engineering/prompting/advanced-prompting-techniques.md#需要中间检查时，选择可核对的推理形式)。 |
+| [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171v1) · arXiv v1 · 2022-03-21 | 采样多条推理路径并聚合答案支持度；收益取决于任务、候选多样性和采样成本。 | [规范化、投票与独立验证](../ai-engineering/prompting/advanced-prompting-techniques.md#多个答案可以投票，但票数不是证据)。 |
+| [Large Language Models Are Human-Level Prompt Engineers](https://arxiv.org/abs/2211.01910v2) · arXiv v2 · 2023-03-10 | 将提示指令作为候选生成和评分选择对象；生成候选与证明改进仍是两个环节。 | [提示候选的开发集与留出集验收](../ai-engineering/prompting/advanced-prompting-techniques.md#让自动生成的提示候选接受同一套验收)。 |
 
 ## Agent 循环与经验积累
 
