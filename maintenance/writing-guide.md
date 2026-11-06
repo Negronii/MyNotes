@@ -18,14 +18,13 @@ This is the single source of writing rules for MyNotes. Notes are a durable know
 
 ## Write for understanding and reuse
 
-- Put the question in the title and give a short answer first. For a process, follow a concrete input through the transformations and show the relevant intermediate state, such as tensor shapes, protocol messages, or ownership changes. For a decision, connect the constraints to the choices and show how to tell when a choice fails. Use diagrams or runnable examples where they explain a step better than prose.
+- Put the question in the title. Open directly on the situation and the first step or decision. For a process, follow one concrete input through the transformations and show the relevant intermediate state, such as tensor shapes, protocol messages, or ownership changes. For a decision, connect the constraints to the choices and show how to tell when a choice fails.
 - Make an end-to-end chapter readable without opening its links. For each handoff, state what the preceding step produced and why the next step needs it. Work backward from the answer to the prerequisites that explain it. Assume an undergraduate computing background, including introductory linear algebra and statistics, and explain any domain-specific knowledge needed to bridge the steps.
-- Use bilingual titles, short answers, key terms, and interview answers where included. Detailed derivations, mechanisms, and examples may use whichever language makes them clearest.
+- Keep titles bilingual. Introduce Chinese and English terms at the point where they matter, and pair key explanations in the relevant paragraph or figure. Detailed derivations, mechanisms, and examples may use whichever language makes them clearest.
 - Preserve useful knowledge and distinctive examples when rewriting, merging, or splitting notes. Remove genuine duplication, but do not delete lasting material only because it is not currently an interview topic.
 - Explain a linked mechanism's role at the point where the reader needs it. Link to the page that owns the detailed answer. Use a section link when it helps the reader find a particular part, and verify the heading in the intended readers.
 - Use Mermaid when a flow, state change, or interaction is easier to follow visually. Put new static assets in a nearby `resources` folder and use relative Markdown links. Explain the main point in prose so the page remains usable without the figure.
-- End an end-to-end chapter with two short self-checks. Ask the reader to retell the chain from memory, then change one condition and ask what would happen or what evidence would distinguish the possible outcomes.
-- Do not manufacture a gotcha, code example, or interview framing. Every example should clarify a point or show a real use.
+- Show examples readers can follow on the page, including what changes when a real condition changes. Include runnable code when the code's behavior is itself part of the explanation or the reader asks to run it. Reserve quizzes and exercises for explicit requests.
 
 ## Check factual claims
 

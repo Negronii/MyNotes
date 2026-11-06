@@ -60,11 +60,8 @@ The first visible frame can precede `load` and, in a server-rendered app, client
 | Content appears but the first interaction is slow | Main-thread tasks, script execution or hydration, and the next presentation |
 | The layout jumps after content appears | Late image or font geometry, inserted content, and the nodes shown in the layout-shift trace |
 
-Follow the measured event to its dependency. A slow largest-content paint can come from a late request, a slow response, or delayed rendering after the bytes arrived. Changing a CSS selector alone would miss two of those causes. [Chrome DevTools Performance reference](https://developer.chrome.com/docs/devtools/performance/reference) · [Web performance diagnosis](../performance/performance-metrics-and-analysis.md)
+Follow the measured event to its dependency. A slow largest-content paint can come from a late request, a slow response, or delayed rendering after the bytes arrived. Changing a CSS selector alone would miss two of those causes.
+
+For example, the report heading is visible but clicking a filter gives no immediate feedback. Compare the timing of `/reports.js` and the filter's initialization with the click. If the module was still loading or the handler was registered after the click, start with readiness. If the handler was already registered and the click waited behind a long main-thread task, the recording points to input delay. If the handler ran promptly, follow its work and the next presentation instead. [Chrome DevTools Performance reference](https://developer.chrome.com/docs/devtools/performance/reference) · [Web performance diagnosis](../performance/performance-metrics-and-analysis.md)
 
 **Evidence / 资料：** [WHATWG HTML: navigation and session history](https://html.spec.whatwg.org/multipage/nav-history-apis.html); [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/); [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), checked 2026-11-05.
-
-## Check your understanding / 闭卷自测
-
-- **Retell / 复述。** Starting with the address bar, trace how `Recent reports` first appears. Which work can overlap, and why can the heading appear before the image finishes loading? / 从地址栏按回车开始，讲到 `Recent reports` 标题首次可见。哪些工作能交叠？为什么图片尚未加载完，标题已经能出现？
-- **Change one condition / 变式。** Suppose the page has a filter initialized by `/reports.js`. The heading is already visible, but the first click gives no prompt feedback. What would you look for in the Network panel and in a Performance recording to distinguish a handler that has yet to be attached from a main thread occupied by a long task? / 假设页面的筛选功能由 `/reports.js` 初始化。标题已经可见，第一次点击却迟迟没有反馈。你会在网络记录和性能录制里找哪些证据，区分事件处理器还没注册和主线程正被长任务占用？
