@@ -1,29 +1,51 @@
-# What does module voting guarantee under failvote and failfast? / failvote 与 failfast 的模块投票能保证什么？
+# 多数表决与故障即停模式分别能保证什么？
 
-Failvote accepts an output only when a strict majority of configured replicas agree. Failfast can continue with one survivor only under the self-checking-survivor assumption. These are different failure models and require different availability calculations. / failvote 只在配置副本的输出达到严格多数一致时接受结果。failfast 只有在幸存模块可自检这一假设下，才能依靠一个幸存模块继续运行。两者属于不同故障模型，需要不同的可用性计算。
+一组三模块控制器收到同一输入，却返回 `OK`、`OK` 和 `FAIL`；另一组设备则有两个模块报告失效，只剩一个输出。运维人员需要判断何时可以接受输出、何时必须停机，并估算短时修复能改变多少系统风险。
 
-## Fault Tolerance by Voting / 多数表决容错
-### Definition of majority here
-if n nodes, then:
+## 严格多数和输出投票解决什么问题？
 
-- if n is odd, majority means $\frac{(n + 1)}{2}$
-- if n is even, majority means $\frac{n}{2} + 1$
+若固定配置 $n$ 个模块，严格多数票数为 $\lfloor n/2\rfloor+1$：三个副本要两票，四个副本要三票。输出投票模式 failvote (故障投票) 将同一输入的副本输出记为 $y_1,\ldots,y_n$，再比较是否达到该阈值。
 
-### Failvote
-In the fail-vote/fail-fast model described by [Saltzer and Kaashoek, ch. 8](https://live.ocw.mit.edu/courses/res-6-004-principles-of-computer-system-design-an-introduction-spring-2009/6b31587ec59b1b002cb7a710d9781453_faults_open_5_0.pdf), a failvote voter accepts an output only when a strict majority of all configured replicas agrees. For three replicas, two matching outputs suffice; for four, three are required. A replica being powered on does not prove that its output is correct.
+> [!example] 三副本示例
+> 三个副本对同一输入分别给出 `OK`、`OK`、`FAIL`。比较器可接受 `OK`，并标记偏离的输出；若三者分别给出不同结果，就没有多数，系统不能仅靠投票判断哪个值正确。
 
-### Failfast
-A self-checking fail-fast replica model can continue with one surviving replica after failed replicas are detected. An ordinary untrusted survivor cannot validate its answer by comparison with another result, so this is a model prerequisite rather than a guarantee for every fail-fast design. Detection errors and common-mode failures remain outside this simple model.
+投票能掩盖少数错误结果的前提是正确副本产生相同输出，错误模式又不会同时污染多数。三个副本若来自同一缺陷实现、收到不同输入，或共享电源和软件故障，票数本身无法识别共同错误。被供电或能响应也不等于输出正确。
 
-### Supermodule
-A supermodule combines modules with a voter or comparator. Its failure condition depends on the design: a design that remains usable with one self-checking module fails only when all modules are unavailable; failvote has a stricter output-agreement threshold. Do not use the all-modules-down formula below for a failvote system.
+## 故障投票和故障即停依赖哪些状态条件？
 
-#### Fault Tolerance with Repair
-Assume independent module failures with a constant rate, immediate detection, and repair time with mean MTTR. In a two-state up/down model, one module's long-run unavailability is
-$$q = \frac{MTTR}{MTTF + MTTR} \approx \frac{MTTR}{MTTF}$$
-when MTTR is much smaller than MTTF. Values such as MTTR of a few hours to one day and MTTF of 750,000 hours (about 85.6 years) are illustrative inputs for this model, not a general current disk specification.
+在 failvote 中，系统能否给出答案取决于输出是否达到严格多数。模块处于“在线”状态还不足以判断它是否正确；比较器、故障检测和修复机制也会影响状态转移。
 
-#### Approximate Failure Rate of a One-Available-Module Supermodule
-For a supermodule that can operate with any one self-checking module available, the approximate rate of total failure is
-$$\lambda_{sys} \approx n\lambda q^{n-1}, \qquad \lambda=1/MTTF,$$
-when failures are rare, independent, and repaired independently. This follows because any of the n modules can fail while the other n-1 are unavailable. The result has units of failures per time; its reciprocal is an approximate MTTDL. It excludes common-cause failures, repair queues, latent errors, and voter failures. Failvote/failfast systems with a different voting threshold need a different failure-state calculation.
+故障即停模式 failfast 假设模块能够检测自身已进入失效状态，并及时报告、停止输出错误结果。若一个由两个模块和比较器组成的 self-checking pair (自检双模块组) 能报告不一致，它可以作为 failfast 模块的构造方式之一。只有在这个明确假设下，系统才可按“至少一个可用且自检的模块仍能服务”分析；普通的、不可自检的幸存副本不能单独证明自己的输出正确。
+
+supermodule (超级模块) 只是把模块与比较器/投票器组合起来的抽象。failvote 的可用条件、failfast 的失效检测条件、投票器本身失效，以及共同原因失效都要分别建模。不能把 failfast 的“所有模块都不可用才停止”条件直接套给 failvote。
+
+## 有修复时，怎样估算 failfast 超级模块的服务中断间隔？
+
+先给时间量和状态概率定单位。令 $n$ 为模块数（无单位）；每个模块的 constant failure rate (故障率 $\lambda$) 以 $\text{h}^{-1}$ 计，并假设各模块的失效过程相互独立且寿命服从指数分布。模块的 mean time to failure (MTTF，平均失效时间) 以小时计，因此 $\lambda=1/MTTF$。
+
+mean time to repair (MTTR，平均修复时间) 以小时计。$q$ 表示模块长期处于不可用状态的比例，是无单位的概率；若模块在正常/维修两状态间转换，则：
+
+$$
+q=\frac{MTTR}{MTTF+MTTR}.
+$$
+
+若 failfast 超级模块只要还有一个自检模块在线就能继续服务，则只有所有 $n$ 个模块同时不可用时才会中断服务。在各模块独立失效、独立修复，故障稀少且修复队列不拥塞时，系统长期处于恰有一个模块在线状态的概率为 $n(1-q)q^{n-1}$：可由 $n$ 种“哪一个模块在线”的选择乘上独立的状态概率得到。该最后一个在线模块以速率 $\lambda$ 失效便进入全停状态，故精细一些的近似是 $n(1-q)\lambda q^{n-1}$；因 $q\ll1$，课程式子将 $1-q$ 近似为 1。全停状态的长期时间占比是 $q^n$，它是概率，不是进入全停的速率。由此可近似计算服务中断率 $\lambda_{outage}$（单位 $\text{h}^{-1}$），并用倒数估计平均服务中断间隔 $T_{outage}$（小时）：
+
+$$
+\lambda_{outage}\approx n\lambda q^{n-1},\qquad T_{outage}\approx\frac{1}{\lambda_{outage}}.
+$$
+
+这是 failfast 超级模块服务中断间隔的近似，不是 failvote 多数系统的公式，也不是数据永久丢失率。mean time to data loss (MTTDL，平均数据丢失时间) 指直到不可恢复的数据丢失事件的平均间隔；本模型只有可修复的正常/不可用状态，没有定义不可恢复丢失事件，因此不能从 $\lambda_{outage}$ 直接推出 MTTDL。有些课程资料会把服务失效率的倒数简称为 MTTDL，使用时应先核对它是否另含数据不可恢复的假设。这里还忽略共同原因失效、检测误报/漏报、比较器或投票器失效、修复队列，以及多模块同时故障等因素。
+
+> [!example] 用课程中的假设值复算
+> 取 $MTTF=750{,}000$ 小时、$MTTR=24$ 小时、$n=2$。前两项是时间输入，$n$ 是模块数；它们只是展示模型的输入，不是当前硬盘规格。则
+> $$q=24/(750000+24)\approx3.1999\times10^{-5},$$
+> $$\lambda=1/750000\approx1.3333\times10^{-6}\text{ h}^{-1},$$
+> $$\lambda_{outage}\approx2\lambda q\approx8.53\times10^{-11}\text{ h}^{-1}.$$
+> 取倒数得平均服务中断间隔约 $1.172\times10^{10}$ 小时，即约 $1.34\times10^6$ 年。这个数量级不是系统寿命承诺；它显示在独立、稀少故障且修复很快的模型下，两模块同时不可用很少见。现实部署的共同故障和模型误差可能远大于该项。
+
+若使用 failvote，应为每个模块状态（正确、错误但未检测、失效且不输出等）、投票器和修复过程建立状态模型，再计算达到可接受输出的概率；仅给出 $MTTF$、$MTTR$ 和多数阈值通常还不够。
+
+> [!info]- 来源
+> - `failvote / failfast、N 模块投票、purging 与 self-checking pair`：[Saltzer & Kaashoek, Principles of Computer System Design, ch. 8, version 5.0](https://live.ocw.mit.edu/courses/res-6-004-principles-of-computer-system-design-an-introduction-spring-2009/6b31587ec59b1b002cb7a710d9781453_faults_open_5_0.pdf)，MIT，2009，第 8 章及第 33 页。本文的 750,000 小时和 24 小时是课程演算输入，不由该教材当作当前硬件规格。
+> - `长期可用率与罕见服务中断率近似`：按本文列明的两状态和独立失效假设推导；该状态模型没有定义 MTTDL 所需的不可恢复数据损失事件，不用于承诺实际服务等级。

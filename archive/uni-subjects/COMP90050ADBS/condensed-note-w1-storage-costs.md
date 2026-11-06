@@ -1,127 +1,71 @@
-# How do storage hierarchy and buffers shape database access cost? / 存储层级与缓冲如何影响数据库访问成本？
+# 存储层级与缓冲如何影响数据库访问成本？
 
-Disk access time combines positioning and transfer costs in the simplified HDD model, while a hit at the relevant cache avoids some lower-level cost. The estimate depends on which layer and miss path are modelled: CPU caches, device caches, and the DBMS buffer pool are separate. / 简化 HDD 模型将访问时间拆成定位与传输成本；命中相应缓存可避免部分下层成本。估算取决于所建模的层与未命中路径：CPU 缓存、设备缓存和 DBMS 缓冲池彼此不同。
+假设一条报表查询按 `customer_id` 读取一页：开发机上请求很快，线上一些请求却要等磁盘。要解释这种差异，需要跟踪请求经过了哪些层、每层读写耗时如何计量。下面从给定的磁盘算例出发，再追踪一次数据库页读取。
 
-## Efficiency
-Efficiency of a database system is influenced by both hardware and software aspects:
+## 先把性能、事务效果与可靠性分开
 
-- **Hardware**
-  - Disks and I/O bandwidth
-  - Main memory
-  - Number of processors
-  - Communication network
-  - Type of architecture
-- **Software/DB Tuning**
-  - Types of DB
-  - Indexing
-  - Query optimisation
+数据库的性能由硬件与软件共同决定：设备延迟和吞吐量、主存容量、处理器、网络、数据布局、索引、查询计划及缓冲策略都会影响实际结果。并发用户数和事务规则则决定系统必须完成多少工作、允许观察到什么状态；它们不等同于一次页面读取的延迟。
 
-## Effectiveness
-Effectiveness of a database system is determined by:
+可靠性又是另一类问题：崩溃后能否恢复、已确认的更新是否仍存在、设备故障后能否继续提供服务。这些问题会改变存储设计和写入路径，却不能用一次读请求的平均访问时间回答。下文先算访问成本，再追踪缓存命中和未命中路径。
 
-- Concurrent users: Users reading and writing over the same data
-- Transactions: Required tasks are all done together
+## 机械硬盘的一次读取要等哪些步骤？
 
-## Reliability
-Reliability of a database system is ensured by:
+hard disk drive (HDD，机械硬盘) 的盘片旋转，磁头由执行器移动到目标磁道；设备寻址的是扇区，磁道和柱面描述机械几何位置。文件系统的簇是由扇区组成的分配单位，不是硬盘的机械部件。
 
-- Crash recovery
-  - Hardware:
-    - Arrangement of multiple disks
-    - Voting among multiple disks/modules
-    - Disk block write
-- Fault tolerance
-- Data duplication
+![硬盘物理结构](./physicalArchitecture.png)
 
-## Hard Disk & Memory Hierarchy
-### Hard Disk Drive
-![Physical Architecture](./physicalArchitecture.png)
-
-A **hard disk drive (HDD)** is a crucial component of computing systems that provides data storage. Its structure comprises of several key elements:
-
-- **Platter**: The entire circular disk.
-- **Sector**: A device exposes sectors as addressable units; logical and physical sector sizes can differ.
-- **Track**: A circular path on a platter. The red highlighted area in the image is one track.
-- **Cylinder**: Tracks at the same radial position across platters. A file-system cluster is an allocation unit made of sectors, not a mechanical disk component.
-- **Actuator Arm**: The component that moves the head to the required position.
-- **Head**: This component is responsible for reading and writing data on the disk.
-
-Note that the disk rotates at high speed, allowing the head to read and write data at different locations.
-
-#### Disk Access Time in HDD
-In this simplified model, estimate the transfer delay as:
+在忽略控制器、排队和操作系统开销的课程模型里，一次 HDD 读的时延估为：
 
 $$
-\text{Disk Access Time} = \text{Seek Time} + \text{Rotational Delay} + \frac{\text{Transfer Length}}{\text{Bandwidth}}
+T_{HDD}=T_{seek}+T_{rotation}+\frac{L}{B}
 $$
 
-Where:
+其中，$T_{seek}$ 是寻道时间，$T_{rotation}$ 是目标扇区转到磁头下的等待时间，$L$ 是传输字节数，$B$ 是传输带宽。最后一项必须与前两项使用兼容单位；本式把定位时间和传输时间相加，不代表现代设备在任何队列深度下都能达到该值。
 
-- **Seek Time**: This is the time taken by the head to move from its current position to the desired track. Also known as seek latency.
-- **Rotational Delay**: The time the disk takes to rotate and bring the desired sector under the head. This is also referred to as rotational latency.
-- **Transfer Length**: This refers to the amount of data to be transferred. The units for this measure can vary, such as KB, MB, GB, etc.
-- **Bandwidth**: This measures the amount of data that can be transferred within a given timeframe. Its unit is Storage/Time (e.g., 4MB/S).
+> [!example] 4 KB 请求的课程估算
+> 假设平均寻道时间为 12 ms、旋转等待为 4 ms、持续传输带宽为 4 MB/s。采用十进制换算 $1\text{ MB}=1000\text{ KB}$，传输时间为
+> $$4\text{ KB}/(4000\text{ KB/s})=0.001\text{ s}=1\text{ ms}.$$
+> 因而模型结果是 $12+4+1=17$ ms。这个数是给定前提下的演算，不含控制器与排队时延，也假定请求没有被缓存命中。
 
-#### Exercise
-What is the disk access time for a 4 KB transfer when average seek time is 12 ms, rotational delay is 4 ms, and transfer rate is 4 MB/s?
+## 固态硬盘的带宽估算遗漏了什么？
 
-Using decimal units (1 MB = 1000 KB), transfer time is 4 KB / 4000 KB/s = 0.001 s = 1 ms, so the estimate is 12 + 4 + 1 = 17 ms. This model omits controller and queueing delays and assumes the request is not already cached.
+solid-state drive (SSD，固态硬盘) 没有磁头寻道和盘片旋转，所以不能把 HDD 的两项机械定位时间照搬过去。若只想做带宽下界估算，可以写成 $T\approx L/B$；这个近似仍没有涵盖控制器、闪存访问、队列、垃圾回收和写入放大等影响。
 
-### Solid-State Drives (SSD)
-Solid-state drives (SSDs) store data in flash memory and have no moving head or rotating platter. They avoid HDD seek and rotational delay, but still have controller, flash, queueing, and write-management latency. Read and write performance depends on the device, workload, and queue depth; overwrites are not universally slower. Flash pages are erased in larger blocks and the flash translation layer manages remapping and wear leveling ([Database System Concepts, 7e, ch. 12](https://www.db-book.com/Previous-editions/db7/slides-dir/PDF-dir/ch12.pdf)).
+闪存按页读写、按更大的擦除块擦除。flash translation layer (FTL，闪存转换层) 负责映射、回收和磨损均衡，因此“覆盖写一定比读取慢”或“SSD 延迟只由带宽决定”都不是一般规律。设备型号和工作负载会改变实测延迟。
 
-#### Disk Access Time in SSDs
-A bandwidth-only estimate for a transfer is:
+## 一次请求经过哪些缓存？
 
-$$
-\text{Disk Access Time} = \frac{\text{Transfer Length}}{\text{Bandwidth}}
-$$
+![内存层次](./Mem-hierarchy.png)
 
-### Memory Hierarchy
-![Memory Hierarchy](./Mem-hierarchy.png)
+原课程图只示意层次和典型数量级；L2 是否在芯片内、有哪些缓存层以及不同层之间的倍率都随处理器实现而变，不能把图中位置和数字当作通用规格。
 
-- Reg: Register
-- CPU caches (L1/L2 and other levels) reduce the average cost of CPU memory access; they do not directly cache hard-disk blocks. Operating-system file caches, storage-device caches, and a DBMS buffer pool are separate layers with different units and behavior.
-- Main Memory: If the system is shut down, data stored in the main memory (but not in the hard disk) will be lost. The unit of measurement for Main Memory is typically in GB.
-- Hard Disk: The unit of measurement is usually in TB.
-- Speed: Cache > Main Memory > Hard Disk
-- Storage Capacity: Cache (in MB) < Main Memory (in GB) < Hard Disk (in TB)
-- Simplified CPU path: check the CPU cache hierarchy, then access DRAM on a miss. A page fault or database storage request may involve an OS file cache, DBMS buffer pool, controller cache, and persistent storage; these are not one universal linear path.
+图中的寄存器、L1/L2 等 central processing unit (CPU，中央处理器) 缓存和 dynamic random-access memory (DRAM，动态随机存取存储器) 组成处理器的数据访问层次。CPU 缓存保存近期使用的内存缓存行，不直接缓存数据库磁盘页。数据库页读取还可能经过 database management system (DBMS，数据库管理系统) 的 buffer pool（缓冲池）、operating-system file cache（操作系统文件缓存）、存储控制器缓存和设备自身缓存；具体实现不一定都存在，也不是一条固定的逐层回退链。
 
-#### Effective Memory Access Time
-For a single cache level, if $M$ is the full cost of the miss path, including lookup, then:
+以查询 `WHERE customer_id = 101` 读取一页为例：
+
+1. 执行器先向数据库缓冲管理器请求页面；若缓冲池中已有该页，DBMS 不需要为这次读取发起存储读写。
+2. 若缓冲池未命中，DBMS 请求操作系统读取页面。若操作系统文件缓存命中，设备请求可以被省掉；否则请求才会继续到控制器和持久设备。
+3. CPU 缓存命中可省去本次继续访问更低层缓存或 DRAM 的成本；若 L1 未命中，也可能在 L2 命中。CPU 缓存不能代替数据库缓冲池，也不能让未缓存的数据库页自动从磁盘出现。
+
+因此，应先说清楚“命中”指哪一层，以及未命中时 $M$ 覆盖了哪些步骤，再计算 expected access time (EAT，期望访问时间)。单层模型可写为：
 
 $$
-EA = H \times C + (1 - H) \times M
+EAT=H\cdot C+(1-H)\cdot M
 $$
 
-where:
+$H$ 是本层命中率，$C$ 是命中路径完整时延，$M$ 是未命中路径的完整时延。这里把探测缓存的成本计入 $C$ 或 $M$，不能又把同一次探测重复相加。若需要同时建模多层缓存，应按各分支路径的概率和时延逐项展开，而不能把不同层的命中率混成一个数。
 
-- $H$ is the hit ratio (the percentage probability of finding data in the cache)
-- $C$ is the cache access time
-- $M$ is the full miss-path cost. If $M$ means only lower-memory access time, use $EA = H C + (1-H)(C+M)$ instead.
+### 30% 命中率时，平均访问时间为何是命中路径的 700.3 倍？
 
-The CPU-cache example concerns L1/L2 memory hierarchy. It is distinct from both a storage-device/controller cache and the DBMS buffer pool, which caches database pages in main memory. The latter is the buffer model used in query-cost calculations.
+> [!example] 一个单层磁盘缓冲示例
+> 假设缓冲命中路径耗时 $C$，未命中完整访问耗时 $M=1000C$，命中率 $H=30\%$。则
+> $$EAT=0.3C+0.7\times1000C=700.3C.$$
+> 平均访问时间是命中路径时间的 700.3 倍；若 $C=1\text{ ms}$，结果为 $700.3\text{ ms}$。这里的命中率和比值是题设，不是任何具体 DBMS 的测量值。若 $M$ 只是“缓存之后的磁盘时延”，还要把未命中前的缓存探测时间纳入完整路径。
 
-Why don't we have larger caches?
+扩大缓存通常会增加硬件成本，也可能因容量、芯片距离或更复杂的查找而改变访问时延；命中率收益还取决于工作集和访问局部性。因此不能只凭“缓存越大越快”决定容量，数据库缓冲池大小也要结合操作系统缓存、工作负载和实测情况看。
 
-1. They are expensive.
-2. If the processor and the cache are not on the same chip, the access time increases.
+与更广的 CPU 缓存、DRAM 和设备局部性问题相接时，可继续看[内存层次与数据局部性](../../../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)。
 
-#### Effective Disk Buffer Access Time
-A device or controller cache is different from the DBMS buffer pool in main memory. In this one-level model, BC is the hit-path cost and D is the full miss-path cost; the estimate excludes other caching levels and queueing:
-
-$$
-EA = HB \times BC + (1 - HB) \times D
-$$
-
-where:
-
-- $HB$ is the hit ratio of the disk buffer
-- $BC$ is the buffer access time
-- $D$ is the disk access time
-
-#### Example
-e.g., Assume disk access time is S, buffer access time is C, hit ratio is H, and S = 1000C. What is the effective access time, EA, expressed as a multiple of C when H = 30%?
-
-$EA = 30\% \times C + (1 - 30\%) \times S = 0.3C + 0.7 \times 1000C = 700.3C$
+> [!info]- 来源
+> - `HDD/SSD 介质、设备访问与 RAID 基础`：[Database System Concepts, 7e, ch. 12: Physical Storage Systems](https://www.db-book.com/Previous-editions/db7/slides-dir/PDF-dir/ch12.pdf)，2019 年课程幻灯片；本文中的 4 KB 数值仍是课程自设算例。
+> - `操作系统缓存、控制器缓存和设备写入持久性边界`：[PostgreSQL 18, WAL Reliability](https://www.postgresql.org/docs/18/wal-reliability.html)，2026-11-06 核验，第 28.1 节；[PostgreSQL 18, Resource Consumption](https://www.postgresql.org/docs/18/runtime-config-resource.html)，2026-11-06 核验，第 19.4 节。这里只用它说明不同层次和持久化边界，不把 PostgreSQL 行为泛化为所有 DBMS。
