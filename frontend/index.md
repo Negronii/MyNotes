@@ -18,7 +18,7 @@
 
 ### 从筛选点击到下一帧
 
-- [DOM 事件如何传播，何时适合事件委托？](browser-apis/dom-manipulation-and-events.md)
+- [浏览器怎样查询、更新 DOM 并响应用户输入？](browser-apis/dom-manipulation-and-events.md)
 - [浏览器 JavaScript 何时运行，画面何时更新？](runtime/event-loop.md)
 - [React如何把一次用户操作变成界面更新？](frameworks/react-basics.md)
 - [如何在 React 中组合组件与复用行为？](frameworks/react-component-composition.md)

@@ -1,10 +1,23 @@
 # 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
-案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM)的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
+案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM) 的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
+
+## 先查询到要操作的节点
+
+`document.documentElement` 是 `<html>` 根元素，`document.body` 指向 `<body>`；脚本若在 HTML parser 解析到相应标签前运行，`body` 可能还是 `null`。`getElementById()` 与 `querySelector()` 都返回一个元素或 `null`，后者的参数是 CSS 选择器。拿到容器后，可继续在容器内查询，避免把页面上另一个同类按钮误当成报表控件：
+
+~~~javascript
+const reports = document.querySelector("#reports");
+const controls = document.querySelector("#sort-controls");
+const oldestButton = controls?.querySelector('button[data-sort="oldest"]') ?? null;
+const directRows = reports?.querySelectorAll(":scope > li[data-id]") ?? [];
+~~~
+
+`querySelectorAll()` 在没有匹配项时仍返回长度为 `0` 的 `NodeList`；`querySelector()` 则返回 `null`。选择器字符串若不是有效 CSS 语法，查询会抛 `SyntaxError`，不是返回空结果。完整页面的 `body`、根元素和控件在 DOM 构建后的关系见[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)。
 
 | 来源 | 类型 | 包含什么 | 查询后发生 DOM 变更时 |
 |---|---|---|---|
-| `element.children`、`getElementsByClassName()` | `HTMLCollection` | 元素节点 | 实时反映当前树 |
+| `element.children`、`getElementsByClassName()`、`getElementsByTagName()` | `HTMLCollection` | 元素节点 | 实时反映当前树 |
 | `element.querySelectorAll()` | `NodeList` | 匹配元素 | 静态成员列表 |
 | `element.childNodes` | `NodeList` | 元素、文本、注释等子节点 | 实时反映当前树 |
 
@@ -44,5 +57,6 @@
 **延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](./event-bus-and-observer-patterns.md) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](../performance/analytics-event-delivery-on-navigation.md) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](../browser/browser-basics.md) 讨论 DOM 与后续渲染。
 
 > [!info]- 来源
-> - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-06 核对。
-> - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-06 核对。
+> - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-07 核对。
+> - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-07 核对。
+> - `querySelector()` 首个匹配项或 `null`、`querySelectorAll()` 静态匹配结果及作用域查询：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#interface-parentnode)，持续更新规范，selector matching methods。核对日期：2026-11-07。

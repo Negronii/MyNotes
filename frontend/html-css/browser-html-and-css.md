@@ -58,9 +58,30 @@
 
 `load` 要等文档中所有仍会延迟该事件的资源；普通图片、样式表、脚本和子框架可能在其中，懒加载资源通常不必挡住它。具体资源是否延迟 load 由 HTML 的加载算法定义。两种事件都不是“首帧已出现”或“按钮已可用”的指标。
 
+## 脚本晚到时，怎样避免错过 `DOMContentLoaded`？
+
+`DOMContentLoaded` 是一次事件，不是以后可订阅的完成状态。若代码通过动态导入或延迟执行，在事件之后才注册监听器，处理器不会补发。读取 `document.readyState`：仍是 `loading` 时订阅事件，否则文档解析已经完成，可以现在初始化。同步执行的 JavaScript 不会被浏览器事件打断，因此状态检查和注册之间不会插入一次 `DOMContentLoaded` 派发。
+
+~~~javascript
+function initializeReportControls() {
+  const controls = document.querySelector("#sort-controls");
+  if (!controls) return;
+  // 在这里绑定本页面的筛选控件。
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeReportControls, { once: true });
+} else {
+  initializeReportControls();
+}
+~~~
+
+`readyState` 的 `loading` 表示 HTML parser 仍在解析，`interactive` 表示解析已经结束但窗口尚未完成加载，`complete` 表示文档已完成加载。这个 guard 只保证 DOM 已可查询：若初始化依赖尚未执行的 defer/module 脚本副作用，应等待该脚本自己的就绪信号。文档状态也不代表报表 API 请求、React hydration 或其他应用异步初始化已经完成；若初始化包含这类异步工作，仍需单独表示并等待。
+
 两种事件都不能回答“用户什么时候第一次看到主要内容”或“筛选按钮现在是否可用”。首帧可以早于 `load`，而报表内容也可能已显示、模块脚本还没注册筛选处理器。反过来，`DOMContentLoaded` 触发后，一次长脚本任务仍会让点击处理器排队等待。可见时点和就绪事件的区别见[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)；用户侧的加载与交互数据见[如何测量并诊断网页性能问题？](../performance/performance-metrics-and-analysis.md)。
 
 > [!info]- 来源
-> - 解析器插入的经典脚本、`async`、`defer` 与模块调度： [WHATWG HTML：脚本元素](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)，持续更新规范，脚本准备与执行算法章节。核对日期：2026-11-06。
-> - 阻塞脚本样式表的判定状态： [WHATWG HTML：样式与脚本交互](https://html.spec.whatwg.org/multipage/semantics.html#has-a-style-sheet-that-is-blocking-scripts)，持续更新规范，media 匹配、启用与加载状态条件。核对日期：2026-11-06。
-> - 延后脚本、模块脚本到 `DOMContentLoaded` / `load` 的顺序： [WHATWG HTML：解析结束](https://html.spec.whatwg.org/multipage/parsing.html#the-end)与[HTML 中调用脚本](https://html.spec.whatwg.org/multipage/webappapis.html#calling-scripts)，持续更新规范，解析结束、延后脚本队列和模块求值步骤。核对日期：2026-11-06。
+> - 解析器插入的经典脚本、`async`、`defer` 与模块调度： [WHATWG HTML：脚本元素](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)，持续更新规范，脚本准备与执行算法章节。核对日期：2026-11-07。
+> - 阻塞脚本样式表的判定状态： [WHATWG HTML：样式与脚本交互](https://html.spec.whatwg.org/multipage/semantics.html#has-a-style-sheet-that-is-blocking-scripts)，持续更新规范，media 匹配、启用与加载状态条件。核对日期：2026-11-07。
+> - 延后脚本、模块脚本到 `DOMContentLoaded` / `load` 的顺序： [WHATWG HTML：解析结束](https://html.spec.whatwg.org/multipage/parsing.html#the-end)与[HTML 中调用脚本](https://html.spec.whatwg.org/multipage/webappapis.html#calling-scripts)，持续更新规范，解析结束、延后脚本队列和模块求值步骤。核对日期：2026-11-07。
+> - `document.readyState` 的 `loading`、`interactive`、`complete` 状态与 `readystatechange`： [WHATWG HTML：报告文档加载状态](https://html.spec.whatwg.org/multipage/dom.html#current-document-readiness)，持续更新规范，当前文档就绪状态。核对日期：2026-11-07。

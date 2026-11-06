@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=c63414d318b85df3eb0dc992972d3f7e9c74a3dc81ddcb8515bb268cf992068a -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=449e820fdba3e1e87e5695d80151327996e3a3d0d47e347405cfc856d1aa149e -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -37,7 +37,7 @@
 - [ ] 23. [浏览器如何把 URL 变成第一帧？](../frontend/browser/browser-basics.md)
 - [ ] 24. [每次 URL 变化都会加载新文档吗？](../frontend/browser/browser-navigation-and-history.md)
 - [ ] 25. [脚本如何影响 HTML 解析与文档就绪？](../frontend/html-css/browser-html-and-css.md)
-- [ ] 26. [DOM 事件如何传播，何时适合事件委托？](../frontend/browser-apis/dom-manipulation-and-events.md)
+- [ ] 26. [浏览器怎样查询、更新 DOM 并响应用户输入？](../frontend/browser-apis/dom-manipulation-and-events.md)
 - [ ] 27. [浏览器 JavaScript 何时运行，画面何时更新？](../frontend/runtime/event-loop.md)
 - [ ] 28. [React如何把一次用户操作变成界面更新？](../frontend/frameworks/react-basics.md)
 - [ ] 29. [如何在 React 中组合组件与复用行为？](../frontend/frameworks/react-component-composition.md)

@@ -1,72 +1,8 @@
-# When should you use browser load, DOM ready, resize, or scroll events? / 何时使用 load、DOM ready、resize 或 scroll 事件？
+# 何时监听文档就绪、资源加载与窗口变化？
 
-`load` waits for dependent resources; `DOMContentLoaded` follows parsing and deferred/module script execution. `resize` and `scroll` report later viewport or document changes and can fire frequently, so keep handlers bounded and use an observer when it better fits the need. / `load` 等待相关资源；`DOMContentLoaded` 在解析及 defer/module 脚本执行后触发。`resize` 与 `scroll` 会报告后续视口或文档变化，触发可能很频繁，因此处理器应保持轻量，适合时可使用 Observer。
+这份早期笔记的就绪事件主线已并入前端浏览器章节。Document Object Model（文档对象模型，DOM）解析完成后才运行的初始化，与之后的尺寸、滚动变化属于不同时间点：
 
-## Event reference / 事件参考
+- [脚本如何影响 HTML 解析与文档就绪？](../../../../frontend/html-css/browser-html-and-css.md#脚本晚到时怎样避免错过-domcontentloaded)解释 DOMContentLoaded、load、readyState 与延迟注册监听器。
+- [浏览器怎样查询、更新 DOM 并响应用户输入？](../../../../frontend/browser-apis/dom-manipulation-and-events.md#窗口-resize元素尺寸与-scroll-应监听在哪里)说明 window resize、ResizeObserver、页面或元素 scroll 的监听目标与清理。
 
-### 1. `onload` Event
-
-The window `load` event fires after resources that delay the event have loaded; some resources, such as lazy-loaded images, need not delay it.
-
-- **Using `onload` Property:**
-  ```javascript
-  window.onload = function() {
-    console.log('Load-delaying resources have finished loading');
-  };
-  ```
-
-- **Using `addEventListener`:**
-  ```javascript
-  window.addEventListener('load', function() {
-    console.log('Load-delaying resources have finished loading');
-  });
-  ```
-
-### 2. `DOMContentLoaded` Event
-
-`DOMContentLoaded` fires after parsing and deferred/module script execution. It does not wait for images or subframes; stylesheets can delay scripts that in turn delay this event.
-
-- **Example:**
-  ```javascript
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('Document parsed and deferred/module scripts executed');
-  });
-  ```
-
-### 3. `resize` Event
-
-The `resize` event is triggered when the size of the browser window changes.
-
-- **Using `onresize` Property:**
-  ```javascript
-  window.onresize = function() {
-    console.log('Window resized');
-  };
-  ```
-
-- **Using `addEventListener`:**
-  ```javascript
-  window.addEventListener('resize', function() {
-    console.log('Window resized');
-  });
-  ```
-
-- **Example to Get Window Size:**
-  ```javascript
-  window.addEventListener('resize', function() {
-    console.log('Width: ' + window.innerWidth + ', Height: ' + window.innerHeight);
-  });
-  ```
-
-### 4. `scroll` Event
-
-The `scroll` event fires when the scroll position of the document or a scrollable element changes, whether through user input or script.
-
-- **Example:**
-  ```javascript
-  window.addEventListener('scroll', function() {
-    console.log('Page scrolled');
-  });
-  ```
-
-**See also / 另见：** [Event Loop / 事件循环](../../../../frontend/runtime/event-loop.md), [Browser Basics / 浏览器基础](../../../../frontend/browser/browser-basics.md), and [DOM Manipulation and Events / DOM 操作与事件](../../../../frontend/browser-apis/dom-manipulation-and-events.md).
+本归档路径保留作旧链接入口；就绪时序及 resize / scroll 的机制以以上章节为准。

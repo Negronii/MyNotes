@@ -55,7 +55,7 @@ DOM 表示文档节点，CSS 规则决定这些节点如何呈现。浏览器按
 
 首帧可能先于 `load` 事件和客户端代码可交互的时点出现。比如 HTML 已显示报表，但模块脚本尚未完成下载、运行或注册点击处理器。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E4%B8%8E%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%BB%84%E4%BB%B6%E5%9C%A8%E5%93%AA%E6%9D%A1%E7%BA%BF%E4%BA%A4%E6%8E%A5)。若点击没有反馈，先确认处理器何时可用；若处理器已经注册，则查看事件是否被主线程上其他工作挡住。
 
-当用户点击“最早优先”，`/reports.js` 的 DOM 事件处理器可以把 `sort=oldest` 写入 URL，设置按钮的 `aria-pressed` 状态，并改动列表节点。节点修改立即改变 DOM；样式、布局、绘制和之后的画面呈现则由浏览器在后续工作中按需完成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+当用户点击“最早优先”，`/reports.js` 的 DOM 事件处理器可以把 `sort=oldest` 写入 URL，设置按钮的 `aria-pressed` 状态，并改动列表节点。节点修改立即改变 DOM；样式、布局、绘制和之后的画面呈现则由浏览器在后续工作中按需完成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 | 现象 | 优先检查的阶段 |
 |---|---|
@@ -75,14 +75,23 @@ DOM 表示文档节点，CSS 规则决定这些节点如何呈现。浏览器按
 
 案例背景：用户先打开 `https://example.test/reports?sort=recent#summary`，随后点“最早优先”并可能按浏览器后退。要让这三个时点显示正确的报表，先判断浏览器是在换文档、跳转片段，还是只更新当前文档的历史地址。
 
-### 先解析 URL，再选导航操作
+### URL 分量怎样对应到浏览器导航？
 
-用 `URL` 解析地址，避免自己按 `?`、`&` 或 `#` 切字符串。`searchParams.get()` 读取一个值，`getAll()` 读取同名多值，`set()` 替换该名字的值，`append()` 则有意保留并追加一个值；对象序列化时会处理 URL 编码。查询参数来自地址栏或外部链接，必须按业务允许值校验，也不要把口令或访问令牌放进 URL。
+以本例地址为例，`https:` 是 scheme（方案），`example.test` 是 host（主机），`/reports` 是 path（路径），`?sort=recent` 是 query（查询），`#summary` 是 fragment（片段）。不是所有 URL 都有 `//authority`：`mailto:reports@example.test` 就没有 HTTP(S) 式主机与路径结构。
+
+`location.href` 读取完整 URL，赋值会导航；`protocol` 带结尾冒号，`host` 包含非默认端口，`hostname` 不含端口，`port` 是非默认端口或空字符串，`pathname` 是路径，`search` 保留开头的 `?`，`hash` 保留开头的 `#`。用 `URL` 和 `URLSearchParams` 解析，不要手动切分字符串；查询参数缺失时 `get()` 返回 `null`，已存在的值是字符串，例如 `"2026"` 不是数字。`getAll()` 可读同名多值，`set()` 替换同名值，`append()` 则追加一项；序列化时按 URL 查询参数规则编码。
+
+浏览器历史栈可以包含不同 origin（源）的文档，因此 `history.back()`、`forward()` 和 `go()` 可能遍历到跨源页面。`history.go(n)` 按偏移量移动历史项：正数向前、负数向后、零会重新载入当前页；超出范围则不动作。History API 对 `pushState()` / `replaceState()` 新 URL 的同源要求，不等于浏览器只能在同源历史项之间后退。
+
+### 用 URL 参数表达筛选状态
+
+本例只接受 `sort=recent` 和 `sort=oldest`；`sortFromUrl()` 会把缺失或未知值规范为 `recent`。写回时从 `location.href` 解析现有地址，再更新 `sort`，所以路径、其他查询参数和 `#summary` 片段仍在。查询参数来自地址栏或外部链接，必须按业务允许值校验，也不要把口令或访问令牌放进 URL。
 
 | 需要的行为 | API / 行为 | 是否获取新文档 |
 |---|---|---|
-| 打开另一个地址并留下新历史项 | 点击 `<a>` 或 `location.assign(url)` | 通常换 `Document`；目标只是片段时可留在当前 `Document` |
+| 打开另一个地址并留下新历史项 | 点击 `<a>`、`location.href = url` 或 `location.assign(url)` | 通常换 `Document`；目标只是片段时可留在当前 `Document` |
 | 打开地址并替换当前历史项 | `location.replace(url)` | 替换当前历史项；目标是否换 `Document` 仍取决于导航目标 |
+| 重新载入当前地址 | `location.reload()` | 浏览器重新处理当前地址；资源是否来自缓存由加载过程决定 |
 | 当前文档新增一项路由状态 | `history.pushState(state, "", sameOriginUrl)` | 否 |
 | 修改当前历史项的路由状态 | `history.replaceState(state, "", sameOriginUrl)` | 否 |
 
@@ -164,11 +173,45 @@ renderReports(sortFromUrl());
 
 浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
 
-**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+### 定时导航怎样用文本更新并允许取消？
+
+倒计时示例把剩余秒数写进文本节点，避免将动态内容按 HTML 解析。`setInterval(..., 1000)` 中的 1000 毫秒是请求间隔，不承诺每秒准时执行；主线程繁忙或计时器节流都可能让更新变晚。时间到后清除 interval（间隔定时器）再导航；点击取消会清除同一个定时器，后续不会继续倒数。
+
+~~~html
+<p id="countdown" role="status">5 秒后打开 example.com。</p>
+<button id="cancel-navigation" type="button">取消</button>
+~~~
+
+~~~javascript
+const message = document.querySelector("#countdown");
+const cancel = document.querySelector("#cancel-navigation");
+let seconds = 5;
+
+const timer = setInterval(() => {
+  seconds -= 1;
+  message.textContent = seconds + " 秒后打开 example.com。";
+  if (seconds === 0) {
+    clearInterval(timer);
+    location.assign("https://example.com/");
+  }
+}, 1000);
+
+cancel.addEventListener("click", () => {
+  clearInterval(timer);
+  message.textContent = "已取消跳转。";
+  cancel.disabled = true;
+});
+~~~
+
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 > [!info]- 来源
-> - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
-> - 片段导航、同文档导航、会话历史遍历、`pushState()`、`popstate` 与 `hashchange`： [WHATWG HTML：导航与会话历史](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，持续更新规范，navigation、History interface 与事件章节。核对日期：2026-11-06。
+> - URL 分量的定义及序列化：[WHATWG URL Standard：URL representation](https://url.spec.whatwg.org/#url-representation)，持续更新规范，URL record 组成。核对日期：2026-11-07。
+> - `Location` 的地址分量、assign/replace/reload 操作：[WHATWG HTML：Location interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-location-interface)，持续更新规范，Location API。核对日期：2026-11-07。
+> - History API 的同源 URL 检查与 session history 遍历：[WHATWG HTML：History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，持续更新规范，pushState/replaceState 与遍历算法。核对日期：2026-11-07。
+> - 倒计时更新文本与停止定时器：[WHATWG DOM：Node.textContent](https://dom.spec.whatwg.org/#dom-node-textcontent)；[WHATWG HTML：Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)，持续更新规范，文本节点与 timer 初始化/取消步骤。核对日期：2026-11-07。
+> - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-07。
+> - 片段导航、同文档导航、会话历史遍历、`pushState()`、`popstate` 与 `hashchange`： [WHATWG HTML：导航与会话历史](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，持续更新规范，navigation、History interface 与事件章节。核对日期：2026-11-07。
 ## 3. 脚本如何影响 HTML 解析与文档就绪？
 
 案例背景：报表服务器已返回标题、筛选按钮和初始行，浏览器还在解析 HTML，并同时获取 `/reports.css` 与 `/reports.js`。用户要尽快看到内容，之后点击按钮时脚本也必须已经注册处理器。下面按脚本下载、执行、文档就绪的先后关系判断哪些工作会挡住哪一步。
@@ -229,15 +272,129 @@ renderReports(sortFromUrl());
 
 `load` 要等文档中所有仍会延迟该事件的资源；普通图片、样式表、脚本和子框架可能在其中，懒加载资源通常不必挡住它。具体资源是否延迟 load 由 HTML 的加载算法定义。两种事件都不是“首帧已出现”或“按钮已可用”的指标。
 
+### 脚本晚到时，怎样避免错过 `DOMContentLoaded`？
+
+`DOMContentLoaded` 是一次事件，不是以后可订阅的完成状态。若代码通过动态导入或延迟执行，在事件之后才注册监听器，处理器不会补发。读取 `document.readyState`：仍是 `loading` 时订阅事件，否则文档解析已经完成，可以现在初始化。同步执行的 JavaScript 不会被浏览器事件打断，因此状态检查和注册之间不会插入一次 `DOMContentLoaded` 派发。
+
+~~~javascript
+function initializeReportControls() {
+  const controls = document.querySelector("#sort-controls");
+  if (!controls) return;
+  // 在这里绑定本页面的筛选控件。
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeReportControls, { once: true });
+} else {
+  initializeReportControls();
+}
+~~~
+
+`readyState` 的 `loading` 表示 HTML parser 仍在解析，`interactive` 表示解析已经结束但窗口尚未完成加载，`complete` 表示文档已完成加载。这个 guard 只保证 DOM 已可查询：若初始化依赖尚未执行的 defer/module 脚本副作用，应等待该脚本自己的就绪信号。文档状态也不代表报表 API 请求、React hydration 或其他应用异步初始化已经完成；若初始化包含这类异步工作，仍需单独表示并等待。
+
 两种事件都不能回答“用户什么时候第一次看到主要内容”或“筛选按钮现在是否可用”。首帧可以早于 `load`，而报表内容也可能已显示、模块脚本还没注册筛选处理器。反过来，`DOMContentLoaded` 触发后，一次长脚本任务仍会让点击处理器排队等待。可见时点和就绪事件的区别见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)；用户侧的加载与交互数据见[如何测量并诊断网页性能问题？](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源
-> - 解析器插入的经典脚本、`async`、`defer` 与模块调度： [WHATWG HTML：脚本元素](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)，持续更新规范，脚本准备与执行算法章节。核对日期：2026-11-06。
-> - 阻塞脚本样式表的判定状态： [WHATWG HTML：样式与脚本交互](https://html.spec.whatwg.org/multipage/semantics.html#has-a-style-sheet-that-is-blocking-scripts)，持续更新规范，media 匹配、启用与加载状态条件。核对日期：2026-11-06。
-> - 延后脚本、模块脚本到 `DOMContentLoaded` / `load` 的顺序： [WHATWG HTML：解析结束](https://html.spec.whatwg.org/multipage/parsing.html#the-end)与[HTML 中调用脚本](https://html.spec.whatwg.org/multipage/webappapis.html#calling-scripts)，持续更新规范，解析结束、延后脚本队列和模块求值步骤。核对日期：2026-11-06。
-## 4. DOM 事件如何传播，何时适合事件委托？
+> - 解析器插入的经典脚本、`async`、`defer` 与模块调度： [WHATWG HTML：脚本元素](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)，持续更新规范，脚本准备与执行算法章节。核对日期：2026-11-07。
+> - 阻塞脚本样式表的判定状态： [WHATWG HTML：样式与脚本交互](https://html.spec.whatwg.org/multipage/semantics.html#has-a-style-sheet-that-is-blocking-scripts)，持续更新规范，media 匹配、启用与加载状态条件。核对日期：2026-11-07。
+> - 延后脚本、模块脚本到 `DOMContentLoaded` / `load` 的顺序： [WHATWG HTML：解析结束](https://html.spec.whatwg.org/multipage/parsing.html#the-end)与[HTML 中调用脚本](https://html.spec.whatwg.org/multipage/webappapis.html#calling-scripts)，持续更新规范，解析结束、延后脚本队列和模块求值步骤。核对日期：2026-11-07。
+> - `document.readyState` 的 `loading`、`interactive`、`complete` 状态与 `readystatechange`： [WHATWG HTML：报告文档加载状态](https://html.spec.whatwg.org/multipage/dom.html#current-document-readiness)，持续更新规范，当前文档就绪状态。核对日期：2026-11-07。
+## 4. 浏览器怎样查询、更新 DOM 并响应用户输入？
 
-案例背景：用户打开 `https://example.test/reports?sort=recent#summary` 后，页面显示 May、April 两行和“最早优先”按钮。点击按钮要把 `oldest` 这个筛选意图交给应用，由应用更新地址和列表。按钮里面还可能有图标或文字节点；事件委托必须从真实事件目标找到所属按钮，并确认它属于这个工具栏。
+案例背景：用户打开 `https://example.test/reports?sort=recent#summary` 后，页面已有 May、April 两行和“最早优先”按钮。用户点按钮里的文字或图标时，处理器要找到所属按钮，把 `oldest` 这个筛选意图交给应用；渲染时还要区分文字、表单当前值、HTML content attribute（HTML 内容属性）和 DOM property（DOM 对象属性）。Document Object Model (文档对象模型，DOM) 把 HTML 文档表示为节点树，JavaScript 可以查询这些节点、改写其状态，并响应输入事件。
+
+### DOM 树里有哪些节点？
+
+文档节点包含元素节点、文本节点和注释等；元素的 attribute（属性）描述元素状态，但 attribute 不是元素的子节点。常用的 `nodeType` 值如下：
+
+| `nodeType` | 节点 | 报表页中的例子 |
+|---:|---|---|
+| 1 | 元素（Element） | `<ol>`、`<li>`、`<button>` |
+| 2 | 属性（Attr） | `id="reports"`（有 `Attr` 对象，但不是树的子节点） |
+| 3 | 文本（Text） | `May report` |
+
+向上找父级时，`parentNode` 可返回任意节点父级：`<html>` 的 `parentNode` 是 Document，而 `parentElement` 只返回元素父级，所以 `<html>.parentElement` 为 `null`。`nodeName` 命名任意节点，`tagName` 只属于元素；`nodeValue` 读取单个 Text 节点的值，在 Element 上则为 `null`，读取元素后代文字应使用 `textContent`。若要查某行的下一个元素，使用 `nextElementSibling`；`nextSibling` 可能先遇到 HTML 换行空白对应的文本节点。同理，`firstChild` 与 `firstElementChild` 可能不是同一项。`childNodes` 包含文本、注释等节点，`children` 只包含元素；它们的集合更新规则见[修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。选到具体控件后，再决定修改文本、attribute、DOM property 还是节点顺序。
+
+### 修改内容、HTML 属性和 DOM 对象属性有何区别？
+
+文本和标记要用不同接口。`textContent` 读取后代文本，赋值会用一个文本内容替换子树；`innerText` 读写渲染文本：读取时元素若未渲染，会退回到后代文本；若已渲染，结果会受显示状态影响；`innerHTML` 读取或解析 HTML 字符串。把纯文字放入 DOM 时使用 `textContent`；只有受信任或已净化的标记才作为 HTML 解析。
+
+| 写法 | 控制什么 | 报表页上的用途 |
+|---|---|---|
+| `row.textContent = label` | 文字，不解析 HTML | 写入报表名称 |
+| `row.innerText` | 渲染后的文字语义；未渲染时退回后代文本 | 读取渲染文本 |
+| `row.innerHTML = markup` | 子树的 HTML 标记 | 只有模板可信或已净化时才插入标记 |
+| `element.setAttribute(name, value)` | HTML 内容属性 | 设置 `data-report-id`、`alt`、`title` 等声明 |
+| `element.classList`、`element.style` | class 集合与 inline style（内联样式） | 切换状态 class，或写入必要的单次内联样式 |
+
+HTML content attribute（HTML 内容属性）通常表达标记中的初始值；对应 DOM property（DOM 对象属性）则暴露该元素当前的状态或类型化值。输入框说明了这个区别：
+
+~~~html
+<input id="sort-query" value="recent">
+~~~
+
+~~~javascript
+const query = document.querySelector("#sort-query");
+query.value = "oldest"; // 当前输入值
+
+console.log(query.value); // "oldest"
+console.log(query.getAttribute("value")); // "recent"，标记里的初始值
+~~~
+
+用户编辑或脚本设置 `value` 后，HTML 的 dirty value flag（值已修改标记）让 property 保留当前值；`value` attribute 仍用于初始值。对布尔 attribute（布尔属性，例如 `disabled`），只看是否存在：`setAttribute("disabled", "false")` 仍会禁用控件。要启用按钮，设 `button.disabled = false` 或移除该 attribute。
+
+要更新筛选行的外观，`className = "selected"` 会整体替换 class 字符串；`classList.add()`、`remove()` 和 `toggle()` 改单个类。`element.style.backgroundColor` 写的是 inline style（内联样式）；CSS property 在 JavaScript 里通常使用 camelCase（小驼峰）。`data-report-id="may"` 可通过 `row.dataset.reportId` 读取与设置，`dataset` 中的值始终是字符串。图片的 `src` 选择资源，`alt` 提供替代文本（装饰图可用空值），`title` 是补充信息，不能替代 `alt`。
+
+### 怎样生成、移动或克隆一组节点？
+
+为单独演示如何从结构化数据建表，设一张学校成绩表固定按 Name、Subject、Grade 排列。对象字段顺序不是表格的列定义；三条记录应分别显示 Ron—Math—100、Jack—Calculus—70、Mar—Business—90：
+
+~~~html
+<table>
+  <thead><tr><th>Name</th><th>Subject</th><th>Grade</th></tr></thead>
+  <tbody id="students"></tbody>
+</table>
+~~~
+
+~~~javascript
+const students = [
+  { name: "Ron", subject: "Math", grade: "100" },
+  { name: "Jack", subject: "Calculus", grade: "70" },
+  { name: "Mar", subject: "Business", grade: "90" },
+];
+const columns = ["name", "subject", "grade"];
+const body = document.querySelector("#students");
+
+for (const student of students) {
+  const row = document.createElement("tr");
+  for (const column of columns) {
+    const cell = document.createElement("td");
+    cell.textContent = student[column];
+    row.append(cell);
+  }
+  body.append(row);
+}
+~~~
+
+每个记录依照同一份 `columns` 产生三格，输入值只进入文本节点。`append()` 会把新节点追加到末尾；若传入已经在文档中的节点，它会将该节点移动到新位置。`insertBefore(node, reference)` 把节点放到参考节点前，`remove()` 将节点从树上移除。
+
+`cloneNode(true)` 会复制节点及其后代结构和 attribute，但不会复制通过 `addEventListener()` 或 DOM property 绑定的 listener（监听器）。若源节点已有 `id`，直接克隆会让页面出现重复 ID；插入前应为副本及其后代生成唯一 ID，并同步更新指向这些 ID 的引用。需要监听行为时，在新节点上重新注册：
+
+本例的源行只有根节点 `data-id="may"`，没有 `id` attribute 或带 ID 的后代。代码给副本新增一个 DOM `id`，同时保留 `data-id` 所表示的报表身份；如果源行已有 DOM ID，克隆后就必须替换副本的 ID。
+
+~~~javascript
+function handleReportClick(event) {
+  console.log(event.currentTarget.dataset.id);
+}
+
+const source = document.querySelector('#reports [data-id="may"]');
+const copy = source.cloneNode(true);
+copy.id = "may-row-copy"; // 新增 DOM id；data-id 仍标识 May 报表
+copy.addEventListener("click", handleReportClick);
+document.querySelector("#reports").append(copy);
+~~~
+
+对同一元素给 `onclick` 属性赋新函数会替换先前的函数；多处代码都需监听时，用 `addEventListener()` 可以各自注册和移除 listener（监听器）。只需响应一次时可设 `{ once: true }`；若要提前移除，保留原函数引用，并使用相同 capture（捕获阶段）选项调用 `removeEventListener()`。也可把同一 `AbortSignal`（中止信号）交给多个监听器，结束该页面区域时调用 `abort()` 一并清理。
 
 ### 一次点击沿哪些节点传播？
 
@@ -255,7 +412,7 @@ button.addEventListener("click", () => console.log("button bubble"));
 // 点击 span：body capture → span target → button bubble → body bubble
 ~~~
 
-`event.target` 是最初的事件目标；`event.currentTarget` 是当前正在运行监听器的对象。若按钮里还有 `<svg>` 或 `<span>`，`target` 可能是它们；处理器应先找到最近的筛选按钮。Shadow DOM（影子 DOM）边界外的监听器可能看到被重定向的 `target`；事件的 `bubbles` 与 `composed` 标记影响事件能否穿过相应边界。
+`event.target` 是最初的事件目标；`event.currentTarget` 是当前正在运行监听器的对象。普通函数监听器中的 `this` 也指向 `currentTarget`，箭头函数的 `this` 则保留词法绑定。若按钮里还有 `<svg>` 或 `<span>`，`target` 可能是它们；处理器应先找到最近的筛选按钮。Shadow DOM（影子 DOM）边界外的监听器可能看到被重定向的 `target`；事件的 `bubbles` 与 `composed` 标记影响事件能否穿过相应边界。输入框获得和失去焦点时分别派发 `focus` 与 `blur`，这两个事件不冒泡；父级要委托焦点变化时可监听会冒泡的 `focusin` 与 `focusout`。
 
 ### 什么时候用父级监听器处理子控件？
 
@@ -309,6 +466,150 @@ controls.addEventListener("click", (event) => {
 
 它让浏览器保留平移和连续缩放，同时不把双击缩放作为该元素上的手势。把规则限制在确实需要的控件，不要用 `touch-action: none` 全局封锁操作。原生 `<button>` 自带键盘激活；自制的 `role="button"` 还必须补足键盘行为。Chrome 的 viewport 诊断指出一个特定条件：初始视口未针对移动设备优化时，点击可能延后至多 300 毫秒；其他浏览器和输入设置会不同，不能把这个值当成所有移动端点击的固定时延。除非目标设备实测仍有兼容问题，不要同时在 touch-end 和 click 上触发同一动作，以免合成 click 与原生 click 重复执行。
 
+### 拖动时怎样跟踪坐标并处理取消？
+
+Pointer Events（指针事件）把鼠标、触摸和笔输入统一到 pointer 事件，但一次拖动不是只有 `pointermove`：它从 `pointerdown` 开始，可通过 `setPointerCapture(pointerId)` 把后续该 pointer 的事件留给手柄；正常释放由 `pointerup` 结束，系统接管手势时可能收到 `pointercancel`，捕获释放后会有 `lostpointercapture`。清理时按 `pointerId` 匹配当前拖动，避免另一根手指或旧事件结束错误手势。
+
+坐标属性对应不同参照系：
+
+| 属性 | 参照系 | 适合回答的问题 |
+|---|---|---|
+| `clientX / clientY` | viewport（视口） | 指针现在相对当前可视区域在哪里 |
+| `pageX / pageY` | 文档 | 指针在页面内容坐标中在哪里 |
+| `screenX / screenY` | 屏幕 | 指针相对设备显示区域的位置 |
+
+下面把一个报表卡片放进定位容器。移动用 client 坐标的差值；初始卡片位置来自同一个定位容器的 `offsetLeft` / `offsetTop`。本例假设容器没有 CSS 缩放或旋转，拖动时页面与容器也不滚动；在此条件下，视口坐标的位移对应卡片的 CSS 像素位移。若变换或滚动改变坐标参照系，就需先转换到同一坐标空间。
+
+~~~html
+<div id="report-canvas">
+  <button id="movable-report" type="button" aria-describedby="move-report-help">
+    May report
+  </button>
+</div>
+<p id="move-report-help">鼠标或触摸拖动卡片；聚焦后也可用方向键移动。</p>
+~~~
+
+~~~css
+#report-canvas {
+  position: relative;
+  width: 24rem;
+  height: 12rem;
+  border: 1px solid;
+}
+
+#movable-report {
+  position: absolute;
+  left: 0;
+  top: 0;
+  touch-action: none;
+}
+~~~
+
+~~~javascript
+const card = document.querySelector("#movable-report");
+let drag = null;
+
+card.addEventListener("pointerdown", (event) => {
+  if (drag || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+  drag = {
+    pointerId: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    left: card.offsetLeft,
+    top: card.offsetTop,
+  };
+  card.setPointerCapture(event.pointerId);
+});
+
+card.addEventListener("pointermove", (event) => {
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  card.style.left = (drag.left + event.clientX - drag.x) + "px";
+  card.style.top = (drag.top + event.clientY - drag.y) + "px";
+});
+
+function finishDrag(event, canceled = false) {
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  const start = drag;
+  drag = null;
+  if (canceled) {
+    card.style.left = start.left + "px";
+    card.style.top = start.top + "px";
+  }
+}
+
+card.addEventListener("pointerup", finishDrag);
+card.addEventListener("pointercancel", (event) => finishDrag(event, true));
+card.addEventListener("lostpointercapture", (event) => finishDrag(event, true));
+
+card.addEventListener("keydown", (event) => {
+  const step = event.shiftKey ? 24 : 8;
+  let dx = 0;
+  let dy = 0;
+  if (event.key === "ArrowLeft") dx = -step;
+  else if (event.key === "ArrowRight") dx = step;
+  else if (event.key === "ArrowUp") dy = -step;
+  else if (event.key === "ArrowDown") dy = step;
+  else return;
+
+  event.preventDefault();
+  card.style.left = (card.offsetLeft + dx) + "px";
+  card.style.top = (card.offsetTop + dy) + "px";
+});
+~~~
+
+卡片仍连接文档时，捕获让它在指针移出按钮后仍收到同一指针的移动与结束事件；正常抬起保留新位置，取消或捕获丢失则回到拖动起点。捕获目标脱离文档后，规范建议（SHOULD）把捕获目标改为 `document`，因此卸载时不能依赖卡片监听器收到 `lostpointercapture`。卸载区域时，应先清空拖动状态、释放捕获，再移除节点：
+
+~~~javascript
+function disposeCard() {
+  const activeDrag = drag;
+  drag = null;
+  if (activeDrag && card.hasPointerCapture(activeDrag.pointerId)) {
+    card.releasePointerCapture(activeDrag.pointerId);
+  }
+  card.remove();
+}
+~~~
+
+`touch-action: none` 会禁止从卡片上开始的视口平移与缩放，所以只应放在确实需要拖动的小控件上；页面其余区域仍可正常滚动。另有 `contextmenu` 和 `selectstart` 的默认动作可在特定自定义交互上取消，但全页禁用菜单或选中文字会移除浏览器本身提供的操作，也不是安全机制。
+
+### 窗口 resize、元素尺寸与 scroll 应监听在哪里？
+
+`resize` 事件用于窗口/视口尺寸变化；若要响应某个报表容器自身的尺寸变化，使用 `ResizeObserver`（尺寸变化观察器）。`scroll` 应监听页面或实际发生滚动的容器；元素滚动时，把 listener 绑在该元素上，而不是假设它会冒泡到任意父级。两种事件都可能频繁触发，应让处理器只做该界面所需的更新。
+
+Navigator 对象（浏览器环境信息接口）提供环境线索：`navigator.language` 是浏览器报告的首选语言，`navigator.platform` 是平台字符串，`navigator.userAgent` 是 user-agent 字符串（用户代理字符串）。语言不是国籍，平台或 user-agent 字符串也不能证明某个 API 可用；相关识别信息还会增加隐私暴露。页面需要容器尺寸能力时，直接检测 `ResizeObserver`，不按浏览器品牌猜测。
+
+~~~javascript
+const reportList = document.querySelector("#reports");
+const lifetime = new AbortController();
+let sizeObserver = null;
+
+function recordViewportWidth() {
+  if (reportList) {
+    reportList.dataset.viewportWidth = String(window.innerWidth);
+  }
+}
+
+if (reportList && typeof ResizeObserver === "function") {
+  sizeObserver = new ResizeObserver(([entry]) => {
+    if (!entry) return;
+    reportList.dataset.containerWidth = String(Math.round(entry.contentRect.width));
+  });
+  sizeObserver.observe(reportList);
+} else if (reportList) {
+  window.addEventListener("resize", recordViewportWidth, { signal: lifetime.signal });
+  recordViewportWidth();
+}
+
+function stopObservingReport() {
+  lifetime.abort();
+  sizeObserver?.disconnect();
+}
+~~~
+
+检测到 `ResizeObserver` 时，更新来自实际报表容器；退回 `window.resize` 时只知道视口变化，父容器单独改变大小不会触发该回退。示例中的 `stopObservingReport()` 应由移除该页面区域的一方调用。
+
+页面区域被移除时，用 `AbortController`（中止控制器）的 `signal` 一次清除绑定到该 signal 的事件监听器；`ResizeObserver` 则调用 `disconnect()` 停止观察。这些变化事件不同于初次解析用的 `DOMContentLoaded` / `load`；两者先后关系见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)。
+
 ### 把浏览器事件交给 React 时，交接什么？
 
 若同一报表页由 React 管理，浏览器仍然派发 click；React 的 `onClick` handler 因这次点击触发，并把筛选意图 `oldest` 传给状态更新。事件处理器可从目标元素读取该值，也可由按钮各自的闭包传入。浏览器这一侧的输入是已发生的事件、当前 URL `sort=recent` 和当前 DOM；交给下一章的应用意图是“筛选变为 `oldest`”。React 章节从这个输入继续，讲 state 快照、组件重算和 commit 后需要的 DOM 变化。见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。React 管理的节点应由 React state 描述；若另用 DOM API 直接改它们，下一次 React commit 可能覆盖这些修改。
@@ -318,11 +619,21 @@ React 的 JSX 事件名和事件对象保留常用的 DOM 事件概念，`onClic
 **延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)讨论应用层发布/订阅。
 
 > [!info]- 来源
-> - 捕获、目标、冒泡、事件目标、默认动作及取消： [WHATWG DOM：事件分发](https://dom.spec.whatwg.org/#concept-event-dispatch)，Living Standard，事件分发算法；[WHATWG DOM：Event 接口](https://dom.spec.whatwg.org/#interface-event)，事件标记与取消行为。核对日期：2026-11-06。
-> - `touch-action` 的手势边界： [Pointer Events Level 3](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property)，W3C Recommendation，`manipulation` 值与直接操控行为章节。核对日期：2026-11-06。
-> - passive 默认值与取消行为： [WHATWG DOM：事件监听器](https://dom.spec.whatwg.org/#dom-addeventlistener)，Living Standard，passive 监听器与阻止默认动作章节。核对日期：2026-11-06。
-> - React 事件处理器与事件阶段： [React：Responding to Events](https://react.dev/learn/responding-to-events)；React 17 将委托根移到 root container：[React 17：Changes to Event Delegation](https://legacy.reactjs.org/blog/2020/08/10/react-v17-rc.html#changes-to-event-delegation)；React 17 移除事件池：[React 17：No Event Pooling](https://legacy.reactjs.org/blog/2020/08/10/react-v17-rc.html#no-event-pooling)。核对日期：2026-11-06。
-> - 移动端 viewport 诊断的适用条件： [Chrome Performance Insights：Optimize viewport for mobile](https://developer.chrome.com/docs/performance/insights/viewport)，Chrome DevTools 指标说明。核对日期：2026-11-06。
+> - DOM 节点类型、树访问与 mutation、cloneNode 的复制范围：[WHATWG DOM：Node and node trees](https://dom.spec.whatwg.org/#interface-node)；[clone algorithm](https://dom.spec.whatwg.org/#concept-node-clone)，持续更新规范，Node 接口与节点复制算法。核对日期：2026-11-07。
+> - `textContent`、事件监听器列表、`addEventListener()` 的 `signal` 选项与移除规则：[WHATWG DOM：Node.textContent](https://dom.spec.whatwg.org/#dom-node-textcontent)；[EventTarget](https://dom.spec.whatwg.org/#interface-eventtarget)，持续更新规范。核对日期：2026-11-07。
+> - 表单 `input.value` 当前值、默认 attribute 与 dirty value flag，布尔 attribute 与 `disabled`：[WHATWG HTML：input element](https://html.spec.whatwg.org/multipage/input.html)，持续更新规范，common input attributes 与 value IDL attribute。核对日期：2026-11-07。
+> - `innerText`、`data-*` 到 `dataset` 的 camelCase 映射、`title` 和 `style` 等全局属性：[WHATWG HTML：global attributes and text properties](https://html.spec.whatwg.org/multipage/dom.html)，持续更新规范，global attributes 与 innerText。核对日期：2026-11-07。
+> - `img.src`、`alt` 替代文本与装饰图空 alt：[WHATWG HTML：The img element](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element)，持续更新规范，img attributes 与 authoring requirements。核对日期：2026-11-07。
+> - Navigator 的语言、平台和 userAgent 接口及减少可识别信息的隐私要求：[WHATWG HTML：Navigator object](https://html.spec.whatwg.org/multipage/system-state.html#the-navigator-object)，持续更新规范，NavigatorID 与 NavigatorLanguage。核对日期：2026-11-07。
+> - 视口/页面坐标、窗口 `resize` 与页面/元素 `scroll` 事件：[CSSOM View Module Level 1](https://drafts.csswg.org/cssom-view/)，CSS Working Group Editor’s Draft，5 November 2026，MouseEvent coordinates、scrolling 和 resize 章节。核对日期：2026-11-07。
+> - 观察元素尺寸及断开观察：[Resize Observer Module Level 1](https://www.w3.org/TR/resize-observer/)，W3C First Public Working Draft，11 February 2020；[CSSWG Editor’s Draft](https://drafts.csswg.org/resize-observer/)将其定义为元素尺寸观察 API。核对日期：2026-11-07。
+> - pointer capture、捕获目标脱离文档时 SHOULD 迁移到 document、`pointercancel`、`lostpointercapture`、`touch-action` 与手势取消：[Pointer Events Level 3：Implicit release of pointer capture](https://www.w3.org/TR/pointerevents3/#implicit-release-of-pointer-capture)，W3C Recommendation，30 June 2026，pointer capture 与 direct manipulation sections。核对日期：2026-11-07。
+> - `key`、`code`、`repeat` 以及不再推荐 `keypress`：[W3C UI Events](https://www.w3.org/TR/uievents/)，21 February 2026 Working Draft，KeyboardEvent interface 与 legacy keypress sections。核对日期：2026-11-07。
+> - 捕获、目标、冒泡、事件目标、默认动作及取消： [WHATWG DOM：事件分发](https://dom.spec.whatwg.org/#concept-event-dispatch)，Living Standard，事件分发算法；[WHATWG DOM：Event 接口](https://dom.spec.whatwg.org/#interface-event)，事件标记与取消行为。核对日期：2026-11-07。
+> - `touch-action` 的手势边界： [Pointer Events Level 3](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property)，W3C Recommendation，`manipulation` 值与直接操控行为章节。核对日期：2026-11-07。
+> - passive 默认值与取消行为： [WHATWG DOM：事件监听器](https://dom.spec.whatwg.org/#dom-addeventlistener)，Living Standard，passive 监听器与阻止默认动作章节。核对日期：2026-11-07。
+> - React 事件处理器与事件阶段： [React：Responding to Events](https://react.dev/learn/responding-to-events)；React 17 将委托根移到 root container：[React 17：Changes to Event Delegation](https://legacy.reactjs.org/blog/2020/08/10/react-v17-rc.html#changes-to-event-delegation)；React 17 移除事件池：[React 17：No Event Pooling](https://legacy.reactjs.org/blog/2020/08/10/react-v17-rc.html#no-event-pooling)。核对日期：2026-11-07。
+> - 移动端 viewport 诊断的适用条件： [Chrome Performance Insights：Optimize viewport for mobile](https://developer.chrome.com/docs/performance/insights/viewport)，Chrome DevTools 指标说明。核对日期：2026-11-07。
 ## 5. 浏览器 JavaScript 何时运行，画面何时更新？
 
 案例背景：报表页已经显示 `sort=recent` 的行，`/reports.js` 也已注册 click 处理器，用户点击“最早优先”。如果浏览器正忙，处理器什么时候能运行？处理器改完 URL 和 DOM 后，用户又要等到什么时候才能看到新顺序？沿一次点击走完这两个时间边界。
@@ -386,7 +697,7 @@ requestIdleCallback(runIdleSlice, { timeout: 2000 });
 
 React 等框架的 scheduler 是建立在宿主机制上的另一套排程策略，不是浏览器 HTML 规范中的 task source。使用分片调度也不能假定每两个代码块之间浏览器一定会绘制。
 
-**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
 > [!info]- 来源
 > - 浏览器任务、微任务检查点、渲染机会和动画帧回调： [WHATWG HTML：Web 应用 API 与事件循环](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，持续更新规范，事件循环、微任务与更新渲染章节。核对日期：2026-11-06。
@@ -7381,18 +7692,31 @@ class EventBus {
 
 若一个对象自然拥有订阅者，例如数据模型通知观察者，Observer (观察者模式) 让对象直接管理订阅关系。若多个模块只通过主题名沟通，事件总线用代理降低直接耦合，但会增加追踪事件来源的成本。两者都可把流式报表状态更新送到本地界面；跨标签页则需使用浏览上下文间的通信机制。
 
-**延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
+**延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
 
 > [!info]- 来源
 > - `Set` 保存不同监听函数并按插入顺序迭代；`emit()` 的快照和 `once()` 的注销策略是本文这份应用实现明确采用的规则：[ECMAScript Language Specification，Keyed Collections](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-set-objects)，2026-11-06 核对。
 > - DOM 事件的分发规则由浏览器平台定义，与上述应用层事件总线不同：[WHATWG DOM Standard，Events](https://dom.spec.whatwg.org/#events)。
 ## 54. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
-案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM)的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
+案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM) 的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
+
+### 先查询到要操作的节点
+
+`document.documentElement` 是 `<html>` 根元素，`document.body` 指向 `<body>`；脚本若在 HTML parser 解析到相应标签前运行，`body` 可能还是 `null`。`getElementById()` 与 `querySelector()` 都返回一个元素或 `null`，后者的参数是 CSS 选择器。拿到容器后，可继续在容器内查询，避免把页面上另一个同类按钮误当成报表控件：
+
+~~~javascript
+const reports = document.querySelector("#reports");
+const controls = document.querySelector("#sort-controls");
+const oldestButton = controls?.querySelector('button[data-sort="oldest"]') ?? null;
+const directRows = reports?.querySelectorAll(":scope > li[data-id]") ?? [];
+~~~
+
+`querySelectorAll()` 在没有匹配项时仍返回长度为 `0` 的 `NodeList`；`querySelector()` 则返回 `null`。选择器字符串若不是有效 CSS 语法，查询会抛 `SyntaxError`，不是返回空结果。完整页面的 `body`、根元素和控件在 DOM 构建后的关系见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
 
 | 来源 | 类型 | 包含什么 | 查询后发生 DOM 变更时 |
 |---|---|---|---|
-| `element.children`、`getElementsByClassName()` | `HTMLCollection` | 元素节点 | 实时反映当前树 |
+| `element.children`、`getElementsByClassName()`、`getElementsByTagName()` | `HTMLCollection` | 元素节点 | 实时反映当前树 |
 | `element.querySelectorAll()` | `NodeList` | 匹配元素 | 静态成员列表 |
 | `element.childNodes` | `NodeList` | 元素、文本、注释等子节点 | 实时反映当前树 |
 
@@ -7432,8 +7756,9 @@ class EventBus {
 **延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](#55.%20%E7%94%A8%E6%88%B7%E7%A6%BB%E5%BC%80%E6%8A%A5%E8%A1%A8%E9%A1%B5%E6%97%B6%EF%BC%8C%E5%88%86%E6%9E%90%E4%BA%8B%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%B0%BD%E5%8A%9B%E5%8F%91%E9%80%81%EF%BC%9F) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F) 讨论 DOM 与后续渲染。
 
 > [!info]- 来源
-> - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-06 核对。
-> - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-06 核对。
+> - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-07 核对。
+> - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-07 核对。
+> - `querySelector()` 首个匹配项或 `null`、`querySelectorAll()` 静态匹配结果及作用域查询：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#interface-parentnode)，持续更新规范，selector matching methods。核对日期：2026-11-07。
 ## 55. 用户离开报表页时，分析事件怎样尽力发送？
 
 案例背景：用户打开报表、改变一次筛选，然后立刻导航到别处。analytics event (分析事件) 不应拖慢筛选或导航；页面可先在内存中收集少量事件，再小批量发送，并在页面变为隐藏时尝试提交一批。这个生命周期信号只提供最后一次机会，不能保证服务器已收到。

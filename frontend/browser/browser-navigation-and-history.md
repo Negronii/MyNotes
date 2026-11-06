@@ -2,14 +2,23 @@
 
 案例背景：用户先打开 `https://example.test/reports?sort=recent#summary`，随后点“最早优先”并可能按浏览器后退。要让这三个时点显示正确的报表，先判断浏览器是在换文档、跳转片段，还是只更新当前文档的历史地址。
 
-## 先解析 URL，再选导航操作
+## URL 分量怎样对应到浏览器导航？
 
-用 `URL` 解析地址，避免自己按 `?`、`&` 或 `#` 切字符串。`searchParams.get()` 读取一个值，`getAll()` 读取同名多值，`set()` 替换该名字的值，`append()` 则有意保留并追加一个值；对象序列化时会处理 URL 编码。查询参数来自地址栏或外部链接，必须按业务允许值校验，也不要把口令或访问令牌放进 URL。
+以本例地址为例，`https:` 是 scheme（方案），`example.test` 是 host（主机），`/reports` 是 path（路径），`?sort=recent` 是 query（查询），`#summary` 是 fragment（片段）。不是所有 URL 都有 `//authority`：`mailto:reports@example.test` 就没有 HTTP(S) 式主机与路径结构。
+
+`location.href` 读取完整 URL，赋值会导航；`protocol` 带结尾冒号，`host` 包含非默认端口，`hostname` 不含端口，`port` 是非默认端口或空字符串，`pathname` 是路径，`search` 保留开头的 `?`，`hash` 保留开头的 `#`。用 `URL` 和 `URLSearchParams` 解析，不要手动切分字符串；查询参数缺失时 `get()` 返回 `null`，已存在的值是字符串，例如 `"2026"` 不是数字。`getAll()` 可读同名多值，`set()` 替换同名值，`append()` 则追加一项；序列化时按 URL 查询参数规则编码。
+
+浏览器历史栈可以包含不同 origin（源）的文档，因此 `history.back()`、`forward()` 和 `go()` 可能遍历到跨源页面。`history.go(n)` 按偏移量移动历史项：正数向前、负数向后、零会重新载入当前页；超出范围则不动作。History API 对 `pushState()` / `replaceState()` 新 URL 的同源要求，不等于浏览器只能在同源历史项之间后退。
+
+## 用 URL 参数表达筛选状态
+
+本例只接受 `sort=recent` 和 `sort=oldest`；`sortFromUrl()` 会把缺失或未知值规范为 `recent`。写回时从 `location.href` 解析现有地址，再更新 `sort`，所以路径、其他查询参数和 `#summary` 片段仍在。查询参数来自地址栏或外部链接，必须按业务允许值校验，也不要把口令或访问令牌放进 URL。
 
 | 需要的行为 | API / 行为 | 是否获取新文档 |
 |---|---|---|
-| 打开另一个地址并留下新历史项 | 点击 `<a>` 或 `location.assign(url)` | 通常换 `Document`；目标只是片段时可留在当前 `Document` |
+| 打开另一个地址并留下新历史项 | 点击 `<a>`、`location.href = url` 或 `location.assign(url)` | 通常换 `Document`；目标只是片段时可留在当前 `Document` |
 | 打开地址并替换当前历史项 | `location.replace(url)` | 替换当前历史项；目标是否换 `Document` 仍取决于导航目标 |
+| 重新载入当前地址 | `location.reload()` | 浏览器重新处理当前地址；资源是否来自缓存由加载过程决定 |
 | 当前文档新增一项路由状态 | `history.pushState(state, "", sameOriginUrl)` | 否 |
 | 修改当前历史项的路由状态 | `history.replaceState(state, "", sameOriginUrl)` | 否 |
 
@@ -91,8 +100,42 @@ renderReports(sortFromUrl());
 
 浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
 
+## 定时导航怎样用文本更新并允许取消？
+
+倒计时示例把剩余秒数写进文本节点，避免将动态内容按 HTML 解析。`setInterval(..., 1000)` 中的 1000 毫秒是请求间隔，不承诺每秒准时执行；主线程繁忙或计时器节流都可能让更新变晚。时间到后清除 interval（间隔定时器）再导航；点击取消会清除同一个定时器，后续不会继续倒数。
+
+~~~html
+<p id="countdown" role="status">5 秒后打开 example.com。</p>
+<button id="cancel-navigation" type="button">取消</button>
+~~~
+
+~~~javascript
+const message = document.querySelector("#countdown");
+const cancel = document.querySelector("#cancel-navigation");
+let seconds = 5;
+
+const timer = setInterval(() => {
+  seconds -= 1;
+  message.textContent = seconds + " 秒后打开 example.com。";
+  if (seconds === 0) {
+    clearInterval(timer);
+    location.assign("https://example.com/");
+  }
+}, 1000);
+
+cancel.addEventListener("click", () => {
+  clearInterval(timer);
+  message.textContent = "已取消跳转。";
+  cancel.disabled = true;
+});
+~~~
+
 **延伸：** [DOM 事件如何传播，何时适合事件委托？](../browser-apis/dom-manipulation-and-events.md)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](../frameworks/react-routing-and-navigation.md)，组件状态更新见[React 如何把用户操作变成更新后的界面？](../frameworks/react-basics.md)。
 
 > [!info]- 来源
-> - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
-> - 片段导航、同文档导航、会话历史遍历、`pushState()`、`popstate` 与 `hashchange`： [WHATWG HTML：导航与会话历史](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，持续更新规范，navigation、History interface 与事件章节。核对日期：2026-11-06。
+> - URL 分量的定义及序列化：[WHATWG URL Standard：URL representation](https://url.spec.whatwg.org/#url-representation)，持续更新规范，URL record 组成。核对日期：2026-11-07。
+> - `Location` 的地址分量、assign/replace/reload 操作：[WHATWG HTML：Location interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-location-interface)，持续更新规范，Location API。核对日期：2026-11-07。
+> - History API 的同源 URL 检查与 session history 遍历：[WHATWG HTML：History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，持续更新规范，pushState/replaceState 与遍历算法。核对日期：2026-11-07。
+> - 倒计时更新文本与停止定时器：[WHATWG DOM：Node.textContent](https://dom.spec.whatwg.org/#dom-node-textcontent)；[WHATWG HTML：Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)，持续更新规范，文本节点与 timer 初始化/取消步骤。核对日期：2026-11-07。
+> - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-07。
+> - 片段导航、同文档导航、会话历史遍历、`pushState()`、`popstate` 与 `hashchange`： [WHATWG HTML：导航与会话历史](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，持续更新规范，navigation、History interface 与事件章节。核对日期：2026-11-07。
