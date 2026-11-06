@@ -1,71 +1,78 @@
-# How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？
+# Node.js 如何在事件循环、工作线程与进程之间调度工作？
 
-**Core answer / 核心回答：** Use asynchronous APIs for I/O waits; one event-loop thread runs JavaScript callbacks and a long synchronous callback blocks it. Move CPU-heavy JavaScript to a bounded worker pool, and use child processes when process isolation matters. The choice changes memory sharing, communication, fault boundaries, and shutdown duties. A worker pool also needs a bounded admission policy; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md). / I/O 等待通常使用异步 API；JavaScript 回调在事件循环线程上运行，长时间同步回调会阻塞它。CPU 密集型 JavaScript 可交给有界 worker 池；需要进程隔离时可使用子进程。不同选择会改变内存共享、通信、故障边界与关闭责任。
+**案例：** API 收到导出 acct-17 报表的请求：先用数据库网络连接取数据，再压缩输出；同一服务还要接其他用户请求。异步 I/O 能让线程在等待数据库或网络时处理别的工作，不能让一段长时间的 JavaScript 汇总循环自己让路。遇到 CPU 阻塞时才考虑工作线程；需要独立内存或故障边界时考虑进程。
 
-**Key terms / 关键术语：** event loop / 事件循环；isolate / 隔离环境；worker thread / 工作线程；child process / 子进程；cluster / 多进程服务；IPC / 进程间通信。
-
-## What's the difference between a process and a thread?
-
-**进程 / Process** is an operating-system execution boundary with its own virtual address space. **线程 / Thread** is an execution path inside a process; threads can share process memory, so shared mutable data needs coordination.
-
-Node has a JavaScript event-loop thread for each isolate, not one JavaScript thread for the whole machine. A worker thread runs JavaScript in another isolate in the same process. It can exchange messages, transfer an ArrayBuffer, or share a SharedArrayBuffer; shared memory requires explicit synchronization such as Atomics. A child process has a separate process address space and communicates through IPC or other operating-system channels.
-
-Node also uses background mechanisms for asynchronous work: network I/O is commonly driven by the operating system, while selected APIs such as filesystem operations, cryptography, compression, and some name-resolution work use libuv's worker pool. Their JavaScript callbacks run on the event-loop thread. CPU-heavy JavaScript on that thread delays other callbacks.
-
-For the reusable process/thread model of address spaces, shared resources, concurrency, I/O, and cancellation, see [Processes, Threads, and Concurrency / 进程、线程与并发](../operating-systems/processes-threads-and-concurrency.md); this note applies it to Node's event loop and worker choices.
-
----
-
-## How do you use multiple CPU cores in Node.js?
-
-Choose based on the work and isolation needed:
-
-- **Worker threads / 工作线程** run CPU-intensive JavaScript in parallel and can communicate by message or shared memory. Use a bounded worker pool for repeated tasks rather than creating one thread per small job.
-- **Child processes / 子进程** run in separate process memory and provide stronger isolation; IPC messages are a boundary to account for.
-- **Cluster / 多进程服务** starts multiple Node processes that can accept connections on the same server port. It is one deployment option for multi-core servers, not a guarantee of linear throughput scaling or balanced work.
-
-Built-in asynchronous I/O is usually a better choice for I/O-bound work than worker threads. For process or worker choices and shared-state trade-offs, see the linked Node.js API documentation.
-
-An external process manager is optional. PM2 is one choice for starting and observing clustered workers:
-
-~~~bash
-pm2 start app.js --name api -i max
-pm2 list
-pm2 monit
-pm2 reload api
+~~~mermaid
+flowchart TD
+    Request[API 请求] --> Main[主进程中的 JavaScript isolate]
+    Main -->|等待网络 I/O| Kernel[操作系统 I/O]
+    Main -->|所选 API 的后台工作| Pool[libuv 工作线程池]
+    Main -->|CPU 密集型 JavaScript| Worker[有界 worker_threads 池]
+    Main -->|隔离或独立生命周期| Child[子进程]
+    Child -->|多进程 HTTP 入口| Cluster[cluster：多个 Node 进程]
+    Worker --> Main
+    Pool --> Main
+    Main --> Queue[限制任务数与等待队列]
 ~~~
 
-PM2 may fall back from a cluster reload to a restart if it cannot complete it. The application must handle shutdown and drain or close its own work; availability during reload is not guaranteed.
+## 默认的 JavaScript 执行路径是什么？
 
-### Child process example
+Node.js 进程中的每个 JavaScript isolate（隔离环境）有自己的 JavaScript 执行线程和事件循环。主线程运行请求处理器；异步操作完成后，回调再回到相应 isolate 的事件循环执行。一个长同步 JSON 变换会占住主线程，延迟这个进程里其他请求的回调。异步并不等于“所有工作都交给另一个线程”；worker thread（工作线程）指 Node 的工作线程 API，和 cluster 启动的工作进程不同。
 
-This compact CommonJS example runs the same file in a child process and sends one task over the fork IPC channel. It is illustrative; production code also needs workload limits, error handling, and shutdown policy.
+网络 I/O 通常由操作系统异步机制推进；libuv（Node.js 使用的跨平台异步 I/O 库）协调部分后台工作。Node.js v26.11.1 文档说明，回调式与 Promise 式文件系统 API（fs.FSWatcher 除外）使用 libuv 工作线程池，部分加密和压缩 API 也使用该池，完成后的 JavaScript 回调仍回到事件循环。具体 API 的实现契约不同，因此不要把“异步”直接等同于“线程池”。例如，适合大量等待的场景优先使用 Node 的异步 I/O；worker_threads 主要解决 CPU 密集型 JavaScript，并不替代高效 I/O。
+
+## 该把计算放在哪种执行资源上？
+
+| 选择 | 适合报表服务的情况 | 隔离和共享边界 |
+| --- | --- | --- |
+| 主事件循环上的异步 API | 等数据库、网络或异步文件操作 | 等待不占住 JS 调用栈；同步计算仍会阻塞当前 isolate |
+| worker_threads | 大块 CPU 密集型 JavaScript，且能按任务切分 | worker 有独立 isolate 和堆；可发消息、转移 ArrayBuffer 或共享 SharedArrayBuffer，共享时要用 Atomics 等同步 |
+| child_process | 工作有独立地址空间、可独立重启或需要更强故障隔离 | 使用 IPC（进程间通信）等显式通信；内存不与父进程自动共享；默认以相同 OS 用户运行，可访问该用户获准的文件和网络，不是安全沙箱 |
+| cluster | 在同一机器上用多个 Node 进程提供 HTTP 服务 | 每个 worker 是进程；进程内会话或缓存不自动共享，退出和重启要由应用或进程管理器处理 |
+
+不要为每个小请求新建一个线程或进程。重复计算应交给有界 worker 池，并限制等待队列；否则只是把事件循环前的无界等待移到 worker 前。进程选择也要计入消息传输、启动时间、独立连接池和每进程内存。操作系统层面的比较见[何时选线程、进程或异步 I/O？](../operating-systems/processes-threads-and-concurrency.md)；具体槽位与连接预算见[如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md)。
+
+若报表只是等待数据库，直接使用异步数据库驱动，额外线程只会增加调度和连接管理成本。若从已取回的数据计算摘要会持续占用主事件循环，就交给有界 worker 池。若扩展可能崩溃或需要独立生命周期，可用子进程隔开地址空间和故障生命周期；子进程不会自动隔离文件、网络或其他操作系统权限。运行不可信代码还需要真实的操作系统权限隔离，本章不实现这部分。cluster 是让多进程接受 HTTP 连接的一种部署方式，不保证吞吐量线性增长；数据库、内存和磁盘也仍是共享的机器资源。
+
+## 子进程怎样接收一个计算任务？
+
+下面的 CommonJS 示例用 fork() 启动同一文件作为子进程，通过 IPC 发送 Fibonacci 输入并取回结果。它展示进程边界，不是生产任务队列：没有排队上限、重复任务保护或 supervisor 级别的重启策略。
 
 ~~~javascript
+// 保存为 report-child.cjs；使用 Node.js v26.11.1 运行
 const { fork } = require('node:child_process');
+
+function fib(n) {
+  let a = 0;
+  let b = 1;
+  for (let i = 0; i < n; i++) [a, b] = [b, a + b];
+  return a;
+}
 
 if (process.argv[2] === 'worker') {
   process.on('message', ({ n }) => {
-    let a = 0;
-    let b = 1;
-    for (let i = 0; i < n; i++) [a, b] = [b, a + b];
-    process.send({ result: a });
+    process.send({ result: fib(n) });
   });
 } else {
   const child = fork(__filename, ['worker']);
-  child.on('message', message => {
-    console.log(message.result);
+  child.once('error', error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+  child.once('message', ({ result }) => {
+    console.log(result);
     child.disconnect();
   });
   child.send({ n: 10 });
 }
 ~~~
 
-### Cluster example
+输出 55。使用真实 CPU 计算时，应该复用有界进程或 worker 池，而不是每个报表都启动一个新进程。
 
-Each worker is a separate process. Restarting workers, health checks, graceful shutdown, and shared session state are application or process-manager responsibilities; the cluster module does not make in-memory state shared.
+cluster 让多个 Node 子进程监听同一服务端口。下面延续同一报表服务，重点是每个 worker 的进程隔离；若把会话或进程内缓存放在这些 worker 里，请求落到另一个 worker 时就看不到同一份状态。
 
 ~~~javascript
+// 保存为 cluster-report.cjs；使用 Node.js v26.11.1 运行
 const cluster = require('node:cluster');
 const http = require('node:http');
 const { availableParallelism } = require('node:os');
@@ -77,15 +84,19 @@ if (cluster.isPrimary) {
   });
 } else {
   http.createServer((request, response) => {
-    response.end('Hello');
+    response.end('report API');
   }).listen(8000);
 }
 ~~~
 
-Workers have separate heaps. If a session, cache, or connection map must be shared, choose a deliberate external store, routing strategy, or message-broadcast mechanism. A Redis store is one option, not a universal requirement.
+该服务要用外部状态存储、明确的连接路由或消息机制解决跨进程状态共享。任何多进程部署还需要健康检查、滚动退出和重启策略；怎样排空 Node HTTP 请求见[Node.js 服务如何排空并关闭？](node-service-shutdown.md)。
 
----
+若使用 PM2 管理集群，可用 pm2 start app.js --name api -i max 启动、pm2 list 或 pm2 monit 观察、pm2 reload api 请求滚动重载。PM2 对 stop、restart、reload 默认先发送 SIGINT，等待 `kill_timeout`（默认 1600 ms）后仍未退出就发 SIGKILL；可用 `PM2_KILL_SIGNAL` 改信号。reload 超时也可能退化为 restart。应用应处理部署实际发来的信号并在强杀前完成排空；用户态会话也不能默认留在单进程内存里。
 
-
-**Related questions / 相关问题：** [Node.js event-loop phases and microtasks / Node.js 事件循环阶段与微任务](node-event-loop-and-microtasks.md) explains host scheduling; [How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？](node-stream-backpressure-and-cleanup.md) explains chunk flow and cleanup; [How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？](node-service-shutdown.md) covers in-flight work and resource closure; [What does serverless leave to the application? / 无服务器计算仍要求应用负责什么？](../infrastructure/production-application-runtime.md#What%20the%20runtime%20still%20leaves%20to%20the%20application%20/%20%E8%BF%90%E8%A1%8C%E5%B9%B3%E5%8F%B0%E4%BB%8D%E7%95%99%E7%BB%99%E5%BA%94%E7%94%A8%E7%9A%84%E8%B4%A3%E4%BB%BB) describes provider-managed execution environments.
-**Sources / 来源：** Node.js v24 documentation for [worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html); [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/), checked 2026-10-15.
+> [!info]- 来源
+> - Worker 线程适用 CPU 工作、消息与共享内存边界：[Node.js v26.11.1, worker_threads](https://nodejs.org/download/release/v26.11.1/docs/api/worker_threads.html)，核对于 2026-11-06。
+> - 子进程 IPC 与 fork()：[Node.js v26.11.1, child_process](https://nodejs.org/download/release/v26.11.1/docs/api/child_process.html)，示例于该版本重放，收到结果 55。
+> - 多进程共享 HTTP 端口及 worker 生命周期：[Node.js v26.11.1, cluster](https://nodejs.org/download/release/v26.11.1/docs/api/cluster.html)，核对于 2026-11-06。
+> - 文件系统哪些 API 使用 libuv 线程池：[Node.js v26.11.1, File system](https://nodejs.org/download/release/v26.11.1/docs/api/fs.html#threadpool-usage)；加密、压缩和 DNS 的 API 边界见 [crypto](https://nodejs.org/download/release/v26.11.1/docs/api/crypto.html)、[zlib](https://nodejs.org/download/release/v26.11.1/docs/api/zlib.html)、[DNS](https://nodejs.org/download/release/v26.11.1/docs/api/dns.html)，核对于 2026-11-06。
+> - PM2 Cluster mode 的 reload 回退与进程关闭责任：[PM2, Cluster Mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/)；启动、查看和重载命令见 [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/)，核对于 2026-11-06。
+> - PM2 默认 SIGINT、`kill_timeout` 后 SIGKILL 和 `PM2_KILL_SIGNAL` 配置：[PM2, Graceful Start/Shutdown](https://pm2.keymetrics.io/docs/usage/signals-clean-restart/)、[PM2 Environment Variables](https://pm2.keymetrics.io/docs/usage/environment/)，核对于 2026-11-06。

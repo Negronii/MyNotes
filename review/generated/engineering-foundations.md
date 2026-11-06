@@ -1713,7 +1713,7 @@ attempt fencing（尝试号栅栏）以单调递增的 attempt 号隔离新旧 w
 
 若代表性报表稳定满足调用方截止时间和尾部时延目标，同步接口更简单：校验输入、执行有界查询、返回 CSV，无需 queue、outbox relay、worker、状态轮询和结果清理生命周期。任务可能超过请求预算、必须在断连后可查，或突发流量需要与 API 执行隔离时，才选择异步路径。队列能保存等待和隔离故障，但不会凭空增加处理能力。
 
-沿用[容量与背压页](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)的估算：64 个 worker 槽、准入目标 7 次/秒、30 个任务的短时突发，以及共享上限 240 个已接受未开始任务；应用连接池总上限是 200。若把峰值 20 次/秒持续按平均 6 秒处理，平均需要约 `20 × 6 = 120` 个并发 worker；64 个槽不能长期消化该到达率，因此准入规则要限流/拒绝，等待队列也不能无界增长。未开始任务包括 outbox 中尚未发布的任务。若 broker 暂时不可用，已接受任务仍占槽；槽已满时 API 必须在 **202 之前**返回过载错误。数据库不可用时无法持久接受任务，也不能声称已受理。
+沿用[容量与背压页](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)的估算：64 个 worker 槽、准入目标 7 次/秒、30 个任务的短时突发，以及共享上限 240 个已接受未开始任务；应用连接池总上限是 200。若把峰值 20 次/秒持续按平均 6 秒处理，平均需要约 `20 × 6 = 120` 个并发 worker；64 个槽不能长期消化该到达率，因此准入规则要限流/拒绝，等待队列也不能无界增长。未开始任务包括 outbox 中尚未发布的任务。若 broker 暂时不可用，已接受任务仍占槽；槽已满时 API 必须在 **202 之前**返回过载错误。数据库不可用时无法持久接受任务，也不能声称已受理。
 
 > [!info] 用平均到达率估算并发，不等于压测结果
 > Little's law（利特尔法则）给出稳态关系：平均在途任务数约等于平均到达率乘以平均处理时长。若 20 次/秒持续到达且每项平均 6 秒，`20 × 6 = 120` 是近似并发需求；它不包含长尾、突发与失败重试，不能替代压测和限流。
@@ -1772,7 +1772,7 @@ A dead-letter queue makes repeatedly failed messages visible only if it is monit
 
 Concurrent consumers may finish messages in a different order from delivery. A FIFO queue does not automatically serialize all effects across multiple consumers, retries, or partitions. If completion order is a correctness rule, define its scope—often per account or key—and enforce it with a single ordered partition, per-key sequence, conditional state transition, or serialization at the worker. Confirm the chosen broker's exact delivery and ordering contract.
 
-Observe each boundary separately: publish attempts and confirms, unroutable messages, queue depth and oldest-message age, unacknowledged deliveries, retries and redeliveries, acknowledgements, dead-letter volume, and completed business outcomes. A growing oldest-message age indicates delay even while a queue continues accepting work. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains how to constrain the work waiting behind those boundaries.
+Observe each boundary separately: publish attempts and confirms, unroutable messages, queue depth and oldest-message age, unacknowledged deliveries, retries and redeliveries, acknowledgements, dead-letter volume, and completed business outcomes. A growing oldest-message age indicates delay even while a queue continues accepting work. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains how to constrain the work waiting behind those boundaries.
 
 **Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers ambiguous request outcomes and operation idempotency; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies outbox, attempt fencing, and post-outcome acknowledgement to a report job; [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) covers the local transaction boundary used to persist business effects.
 
@@ -1994,57 +1994,46 @@ SSE 可以自动重连，WebSocket 需要应用自己重连，Fetch 也要由应
 > - Fetch 请求与响应体、取消和流处理：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§2、§4；[Streams Standard](https://streams.spec.whatwg.org/)，§4；持续维护规范，核对于 2026-11-06。
 > - 浏览器 WebSocket API：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，§2；握手和消息帧：[RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)，§4–§5；HTTP/2 承载扩展：[RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html)；HTTP/3 扩展：[RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html)，均核对于 2026-11-06。
 > - Node.js `ws` 服务端广播：[ws README, Server broadcast](https://github.com/websockets/ws#server-broadcast)，核对于 2026-11-06。库文档描述该实现，不是协议规范。
-## 16. When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？
+## 16. 何时选线程、进程或异步 I/O？
 
-**Core model / 核心模型：** A process is an operating-system resource and protection boundary; a thread is an execution path inside a process. Threads share much of that process's memory and therefore need coordination when they update shared state. Concurrency means work overlaps in time; parallelism means work executes at the same time on multiple processing units. Asynchronous I/O can provide concurrency without assigning one thread to every waiting operation. / 进程是操作系统管理资源并隔离地址空间的边界；线程是在进程内执行指令的路径。线程共享进程中的许多内存，因此并发修改共享状态时需要协调。并发表示任务的执行时间重叠；并行表示多个处理单元同时执行任务。异步 I/O 可以在不为每个等待中的操作分配一个线程的情况下提高并发能力。
+**案例：** 报表服务接到 acct-17 的导出任务，需要读数据库、格式化几万行并写出压缩文件。数据库响应期间主要在等 I/O；格式化若占住一颗 CPU 很久，则会拖慢同一执行路径上的其他请求。选线程、进程或异步 I/O，要先看工作是在等什么、要共享什么，以及停止它时谁负责释放资源。
 
 ~~~mermaid
-flowchart LR
-    Wait[Many tasks waiting for I/O] --> Async[Async I/O lets one thread schedule progress]
-    CPU[CPU-heavy work] --> Parallel[Worker thread or process for parallel execution]
-    Shared{Must share mutable state?} -->|yes| Thread[Thread plus synchronization]
-    Shared -->|no, or stronger isolation needed| Process[Separate process plus IPC]
+flowchart TD
+    Report[账户报表任务] --> Wait{当前主要在等 I/O？}
+    Wait -->|是| Async[异步 I/O：等待时让其他工作继续]
+    Wait -->|否，CPU 计算很久| CPU{需要独立地址空间/故障隔离，或运行时线程不能并行计算？}
+    CPU -->|是| Process[独立进程：消息或显式共享内存]
+    CPU -->|否| Thread[工作线程：共享地址空间；并发修改需同步]
+    Async --> Limit[仍要限制在途任务和等待队列]
+    Thread --> Limit
+    Process --> Limit
 ~~~
 
-**Key terms / 关键术语：** process / 进程；thread / 线程；address space / 地址空间；concurrency / 并发；parallelism / 并行；blocking I/O / 阻塞 I/O；non-blocking I/O / 非阻塞 I/O；asynchronous I/O / 异步 I/O；race condition / 竞态；deadlock / 死锁；cancellation / 取消。
+图里的决定顺序是：先确认是否有长时间 CPU 计算，再选择执行边界。异步 I/O 让等待中的任务不必独占一个线程，但不会让 CPU 计算自动并行；线程与进程也不会自动形成有界的任务队列。
 
-### Process and thread / 进程与线程
+### 进程、线程和异步 I/O 各自拥有哪种边界？
 
-| Aspect / 维度 | Process / 进程 | Thread / 线程 |
+在常见操作系统模型中，process（进程）是资源与保护边界，通常有自己的虚拟地址空间；thread（线程）是进程里的执行路径。同一进程的线程共享地址空间中的堆、全局数据和许多句柄，但每个线程仍有自己的寄存器状态和栈。进程间通常用管道、套接字、消息或显式映射的共享内存通信。进程可通过显式配置共享部分资源，因此“进程绝不共享”也不准确。
+
+| 选择 | 报表服务里的合适工作 | 付出的责任 |
 | --- | --- | --- |
-| Memory / 内存 | Has its own virtual address space in the usual process model. Processes can explicitly map shared memory. / 通常拥有独立的虚拟地址空间；也可以显式映射共享内存。 | Threads in one process share its address space and global data; each thread has its own execution state and stack. / 同一进程中的线程共享地址空间和全局数据；每个线程有自己的执行状态和栈。 |
-| Communication / 通信 | Uses an explicit boundary such as a pipe, socket, message, or shared mapping. / 通过管道、套接字、消息或共享映射等显式边界通信。 | Can pass references through shared memory, but concurrent access must follow a synchronization rule. / 可通过共享内存传递引用，但并发访问必须遵循同步规则。 |
-| Typical choice / 常见选择 | Prefer when a fault or trust boundary matters, or work needs separate process lifetime. / 当故障或信任隔离、独立进程生命周期很重要时考虑使用。 | Prefer when work benefits from shared process state or CPU-parallel execution and the program can manage synchronization. / 当工作需要共享进程状态或 CPU 并行执行，且程序能管理同步时考虑使用。 |
+| 异步 I/O | 等待数据库查询、网络响应或异步文件 I/O | 等待期间仍有任务、连接和缓冲区；必须限制并发 |
+| 工作线程 | CPU 密集型转换；或确实需要共享同一进程状态 | 共享可变状态需同步；线程池及其排队量需有界 |
+| 独立进程 | 易崩、需要独立生命周期或独立地址空间的计算 | 消息/序列化、独立内存和启动成本；必须管理子进程退出。不可信代码还需要操作系统权限隔离 |
 
-These are useful defaults, not cost or isolation guarantees for every operating system. A process can deliberately share memory or handles; a thread does not automatically make CPU work faster. For Node-specific choices among its event loop, worker threads, and child processes, see [Node.js Fundamentals / Node.js基础](#17.%20How%20does%20Node.js%20schedule%20work%20across%20its%20event%20loop,%20workers,%20and%20processes?%20/%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F).
+并发（concurrency）是多个任务在一段时间内交替推进；并行（parallelism）是多个处理单元同时执行指令。单线程事件循环可以在一个请求等待 I/O 时处理另一个请求，因此能有并发；一个很长的同步回调仍会堵住这条线程。要让 CPU 计算并行，需要工作线程或其他执行资源，但能否提速还取决于语言运行时、数据交换和负载大小。Node 的运行时选择见[Node.js 如何在事件循环、worker 与进程之间调度工作？](#17.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
-### Concurrency, parallelism, and I/O / 并发、并行与 I/O
+阻塞 I/O 会让调用线程等操作完成或可以继续；非阻塞 I/O 在暂时无法继续时迅速返回，但一次返回可能只表示“目前没数据”；异步 I/O 则让调用方提交操作，并在稍后收到完成结果。异步 API 描述调用关系，不表示底层必定由某个工作线程执行：网络 I/O 可由操作系统就绪通知驱动，某些文件或加密工作则可能使用运行时的线程池。
 
-Tasks are **concurrent** when their progress overlaps—for example, a server starts another request while the first waits for a response. They are **parallel** when instructions from both tasks execute at the same instant on separate cores or other processing units. A single event-loop thread can coordinate many waiting I/O operations, but a long synchronous callback still prevents that thread from running other callbacks. CPU parallelism needs another execution resource, such as a worker thread or process.
+### 共享计数为什么会丢更新？
 
-| I/O style / I/O 方式 | What the caller observes / 调用方观察到的行为 |
-| --- | --- |
-| Blocking / 阻塞 | The calling thread waits until the operation can make progress or completes. / 调用线程等待操作可以继续或完成。 |
-| Non-blocking / 非阻塞 | An attempt returns promptly when it cannot proceed; the caller can wait for readiness or try again. A non-blocking result does not itself mean the full transfer completed. / 暂时无法继续时，调用立即返回；调用方可等待就绪或稍后重试。非阻塞返回本身不表示数据已经全部传输完成。 |
-| Asynchronous / 异步 | The caller submits work and receives a later completion or callback. The runtime may use operating-system readiness, a completion facility, or a worker pool. “Async” describes the interface and scheduling relationship, not one universal implementation. / 调用方提交工作，随后接收完成通知或回调。运行时可能使用操作系统就绪通知、完成机制或工作线程池。“异步”描述接口与调度关系，并不对应唯一实现。 |
+竞态（race condition）是结果取决于并发操作顺序。count += 1 看起来是一条语句，概念上却是读、加一、写回三个步骤。若两个线程都先读到 10，再各自写 11，最终还是 11；预期的 12 丢了一次更新。对共享不变量，选择一条明确的所有权规则：锁、原子操作、单一写入者消息循环，或数据库约束。数据库中的库存不能靠进程内锁在所有服务副本间保护。
 
-In Node.js, synchronous filesystem APIs block the event-loop thread. Callback- and promise-based filesystem APIs use libuv's thread pool except `fs.FSWatcher`; many network operations are driven by the operating system. Exact APIs have their own contracts. Async I/O therefore helps waiting workloads, but moving CPU-heavy JavaScript off the event loop requires workers or processes. See the [Event Loop / 事件循环](../../frontend/runtime/event-loop.md) note for scheduling details.
-
-### Races and deadlocks / 竞态与死锁
-
-A **race condition / 竞态** exists when the result depends on the timing or order of operations that access shared state. For example, an increment is a read–modify–write sequence: two workers can both read `10`, compute `11`, then each write `11`, losing one increment. Protect the invariant with a lock, an atomic operation, a single owner that processes messages, or a database constraint—whichever matches the boundary. In JavaScript, synchronous code in one event-loop turn runs to completion, but state can still change between `await` points; worker threads that share a `SharedArrayBuffer` need an explicit synchronization protocol.
-
-A **deadlock / 死锁** occurs when tasks wait in a cycle. If worker A holds lock L1 and waits for L2 while worker B holds L2 and waits for L1, neither can continue. Consistent lock ordering and short critical sections prevent many such cycles. Avoid holding a lock while waiting on network or other unbounded work; a timeout can reveal a stuck wait, but does not by itself restore a partially changed invariant.
-
-### Cancellation and cleanup / 取消与清理
-
-Cancellation is a request to stop work, not proof that work has stopped or that its side effects were undone. Many APIs use cooperative cancellation: code checks a token, stops at a safe boundary, and releases resources or leaves shared state consistent. In POSIX threads, deferred cancellation is the default and takes effect at cancellation points; asynchronous cancellation can interrupt code while it holds a resource. Runtime and API contracts differ, so check whether the operation actually observes cancellation. In particular, cancelling a caller's wait does not retract a request that a remote service already accepted.
-
-### A runnable shared-counter example / 可运行的共享计数示例
-
-The two workers below share one integer. `Atomics.add` makes each read–modify–write increment one synchronized operation; after both workers exit, the expected count is `200000`. Without an atomic operation or another coordination rule, increments can be lost.
+以下例子把一个 32 位计数器放进共享内存，用 Atomics.add 将读—改—写变成原子操作。每个工作线程（worker thread）加 100,000 次，因此两者结束后应为 200,000。
 
 ~~~javascript
+// 保存为 counter.cjs；使用 Node.js v26.11.1 运行
 const { Worker, isMainThread, workerData } = require('node:worker_threads');
 
 if (isMainThread) {
@@ -2058,7 +2047,7 @@ if (isMainThread) {
     worker.once('error', reject);
     worker.once('exit', code => {
       if (code === 0) resolve();
-      else reject(new Error(`worker exited with code ${code}`));
+      else reject(new Error('worker exited with code ' + code));
     });
   });
 
@@ -2074,79 +2063,99 @@ if (isMainThread) {
 }
 ~~~
 
-Verified with Node.js v26.11.1; observed output: `200000`. This checks one local runtime example, not performance scaling or every platform's worker implementation.
+本机运行输出 200000。它验证了这段小程序在该 Node 版本中的结果，不证明增加 worker 就会线性提速。
 
-**Related notes / 相关笔记：** [Node.js Fundamentals / Node.js基础](#17.%20How%20does%20Node.js%20schedule%20work%20across%20its%20event%20loop,%20workers,%20and%20processes?%20/%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F) applies these process and worker boundaries to Node's APIs; [Event Loop / 事件循环](../../frontend/runtime/event-loop.md) explains how queued callbacks make progress on a JavaScript thread.
+### 等待环何时才构成死锁？
 
-**Sources / 来源：** POSIX.1-2024 [General Information, process and thread model](https://pubs.opengroup.org/onlinepubs/9799919799/functions/V2_chap02.html); Linux [`pthreads(7)`](https://man7.org/linux/man-pages/man7/pthreads.7.html), for Linux/POSIX thread-sharing and cancellation-point details; Node.js v24 [worker_threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html) and [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html#threadpool-usage) documentation, checked 2026-10-15. The filesystem docs specify that callback and promise APIs except `fs.FSWatcher` use libuv's thread pool.
-## 17. How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？
+在每类资源只有一个实例的模型里，deadlock（死锁）等价于资源等待图出现环：例如线程 A 持有互斥锁 R1 并等 R2，线程 B 持有 R2 并等 R1。若资源有多个可互换实例，等待图出现环只是必要线索，不足以单独证明死锁。经典资源分配模型还列出互斥、持有并等待、不可抢占和循环等待四个条件；在这个模型中打破任一条件即可消除此类死锁。它们不是判断任意慢请求的打勾清单：请求等待 I/O 或 Promise 未完成本身不构成死锁，先找出实际的资源与依赖关系。浏览器中等待 fetch 的 Promise 不会持有 DOM 独占锁，event loop 可在其 pending 期间运行其他代码；但真实依赖环、永不完成的 Promise 或资源耗尽仍可能让应用停滞。全局一致的锁顺序和短临界区可以拆掉许多锁环；不要在持锁期间等待不确定时长的网络调用。
 
-**Core answer / 核心回答：** Use asynchronous APIs for I/O waits; one event-loop thread runs JavaScript callbacks and a long synchronous callback blocks it. Move CPU-heavy JavaScript to a bounded worker pool, and use child processes when process isolation matters. The choice changes memory sharing, communication, fault boundaries, and shutdown duties. A worker pool also needs a bounded admission policy; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). / I/O 等待通常使用异步 API；JavaScript 回调在事件循环线程上运行，长时间同步回调会阻塞它。CPU 密集型 JavaScript 可交给有界 worker 池；需要进程隔离时可使用子进程。不同选择会改变内存共享、通信、故障边界与关闭责任。
+### 取消信号能证明什么？
 
-**Key terms / 关键术语：** event loop / 事件循环；isolate / 隔离环境；worker thread / 工作线程；child process / 子进程；cluster / 多进程服务；IPC / 进程间通信。
+取消（cancellation）通常只是要求任务在安全检查点停止。代码需要观察信号、停止提交新副作用，并通过 finally 或等价清理机制释放自己拥有的资源。若取消的是等待方，底层线程、数据库操作或远端请求可能仍在执行；已经提交的写入也不会因此回滚。调用方应以持久化的业务结果确认副作用，而不是把“本地任务已取消”当成“操作没有发生”。
 
-### What's the difference between a process and a thread?
+**接下来：** 本章区分执行资源和共享状态；Node 章节把这些边界落实到 isolate、worker 和进程。异步作业何时接受、重试或显式取消见[请求超时后如何确认结果并安全重试？](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
 
-**进程 / Process** is an operating-system execution boundary with its own virtual address space. **线程 / Thread** is an execution path inside a process; threads can share process memory, so shared mutable data needs coordination.
+> [!info]- 来源
+> - 进程与线程的资源、地址空间、线程状态模型：[POSIX.1-2024, General Information](https://pubs.opengroup.org/onlinepubs/9799919799/functions/V2_chap02.html)，核对于 2026-11-06。
+> - Linux/POSIX 线程共享内存、取消点及取消类型：[Linux man-pages, pthreads(7)](https://man7.org/linux/man-pages/man7/pthreads.7.html)，核对于 2026-11-06。
+> - Node worker 并行计算与共享内存：[Node.js v26.11.1, worker_threads](https://nodejs.org/download/release/v26.11.1/docs/api/worker_threads.html)；计数程序于该版本重放，输出 200000。
+> - Node 文件 API 的异步执行方式：[Node.js v26.11.1, File system](https://nodejs.org/download/release/v26.11.1/docs/api/fs.html#threadpool-usage)，核对于 2026-11-06。
+> - 经典资源分配死锁的互斥、持有并等待、不可抢占与循环等待条件：[Coffman, Elphick, and Shoshani (1971), “System Deadlocks”](https://doi.org/10.1145/356586.356588)，核对单实例资源等待环的适用边界。
+## 17. Node.js 如何在事件循环、工作线程与进程之间调度工作？
 
-Node has a JavaScript event-loop thread for each isolate, not one JavaScript thread for the whole machine. A worker thread runs JavaScript in another isolate in the same process. It can exchange messages, transfer an ArrayBuffer, or share a SharedArrayBuffer; shared memory requires explicit synchronization such as Atomics. A child process has a separate process address space and communicates through IPC or other operating-system channels.
+**案例：** API 收到导出 acct-17 报表的请求：先用数据库网络连接取数据，再压缩输出；同一服务还要接其他用户请求。异步 I/O 能让线程在等待数据库或网络时处理别的工作，不能让一段长时间的 JavaScript 汇总循环自己让路。遇到 CPU 阻塞时才考虑工作线程；需要独立内存或故障边界时考虑进程。
 
-Node also uses background mechanisms for asynchronous work: network I/O is commonly driven by the operating system, while selected APIs such as filesystem operations, cryptography, compression, and some name-resolution work use libuv's worker pool. Their JavaScript callbacks run on the event-loop thread. CPU-heavy JavaScript on that thread delays other callbacks.
-
-For the reusable process/thread model of address spaces, shared resources, concurrency, I/O, and cancellation, see [Processes, Threads, and Concurrency / 进程、线程与并发](#16.%20When%20should%20work%20use%20a%20thread,%20process,%20or%20asynchronous%20I/O?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E6%88%96%E5%BC%82%E6%AD%A5%20I/O%EF%BC%9F); this note applies it to Node's event loop and worker choices.
-
----
-
-### How do you use multiple CPU cores in Node.js?
-
-Choose based on the work and isolation needed:
-
-- **Worker threads / 工作线程** run CPU-intensive JavaScript in parallel and can communicate by message or shared memory. Use a bounded worker pool for repeated tasks rather than creating one thread per small job.
-- **Child processes / 子进程** run in separate process memory and provide stronger isolation; IPC messages are a boundary to account for.
-- **Cluster / 多进程服务** starts multiple Node processes that can accept connections on the same server port. It is one deployment option for multi-core servers, not a guarantee of linear throughput scaling or balanced work.
-
-Built-in asynchronous I/O is usually a better choice for I/O-bound work than worker threads. For process or worker choices and shared-state trade-offs, see the linked Node.js API documentation.
-
-An external process manager is optional. PM2 is one choice for starting and observing clustered workers:
-
-~~~bash
-pm2 start app.js --name api -i max
-pm2 list
-pm2 monit
-pm2 reload api
+~~~mermaid
+flowchart TD
+    Request[API 请求] --> Main[主进程中的 JavaScript isolate]
+    Main -->|等待网络 I/O| Kernel[操作系统 I/O]
+    Main -->|所选 API 的后台工作| Pool[libuv 工作线程池]
+    Main -->|CPU 密集型 JavaScript| Worker[有界 worker_threads 池]
+    Main -->|隔离或独立生命周期| Child[子进程]
+    Child -->|多进程 HTTP 入口| Cluster[cluster：多个 Node 进程]
+    Worker --> Main
+    Pool --> Main
+    Main --> Queue[限制任务数与等待队列]
 ~~~
 
-PM2 may fall back from a cluster reload to a restart if it cannot complete it. The application must handle shutdown and drain or close its own work; availability during reload is not guaranteed.
+### 默认的 JavaScript 执行路径是什么？
 
-#### Child process example
+Node.js 进程中的每个 JavaScript isolate（隔离环境）有自己的 JavaScript 执行线程和事件循环。主线程运行请求处理器；异步操作完成后，回调再回到相应 isolate 的事件循环执行。一个长同步 JSON 变换会占住主线程，延迟这个进程里其他请求的回调。异步并不等于“所有工作都交给另一个线程”；worker thread（工作线程）指 Node 的工作线程 API，和 cluster 启动的工作进程不同。
 
-This compact CommonJS example runs the same file in a child process and sends one task over the fork IPC channel. It is illustrative; production code also needs workload limits, error handling, and shutdown policy.
+网络 I/O 通常由操作系统异步机制推进；libuv（Node.js 使用的跨平台异步 I/O 库）协调部分后台工作。Node.js v26.11.1 文档说明，回调式与 Promise 式文件系统 API（fs.FSWatcher 除外）使用 libuv 工作线程池，部分加密和压缩 API 也使用该池，完成后的 JavaScript 回调仍回到事件循环。具体 API 的实现契约不同，因此不要把“异步”直接等同于“线程池”。例如，适合大量等待的场景优先使用 Node 的异步 I/O；worker_threads 主要解决 CPU 密集型 JavaScript，并不替代高效 I/O。
+
+### 该把计算放在哪种执行资源上？
+
+| 选择 | 适合报表服务的情况 | 隔离和共享边界 |
+| --- | --- | --- |
+| 主事件循环上的异步 API | 等数据库、网络或异步文件操作 | 等待不占住 JS 调用栈；同步计算仍会阻塞当前 isolate |
+| worker_threads | 大块 CPU 密集型 JavaScript，且能按任务切分 | worker 有独立 isolate 和堆；可发消息、转移 ArrayBuffer 或共享 SharedArrayBuffer，共享时要用 Atomics 等同步 |
+| child_process | 工作有独立地址空间、可独立重启或需要更强故障隔离 | 使用 IPC（进程间通信）等显式通信；内存不与父进程自动共享；默认以相同 OS 用户运行，可访问该用户获准的文件和网络，不是安全沙箱 |
+| cluster | 在同一机器上用多个 Node 进程提供 HTTP 服务 | 每个 worker 是进程；进程内会话或缓存不自动共享，退出和重启要由应用或进程管理器处理 |
+
+不要为每个小请求新建一个线程或进程。重复计算应交给有界 worker 池，并限制等待队列；否则只是把事件循环前的无界等待移到 worker 前。进程选择也要计入消息传输、启动时间、独立连接池和每进程内存。操作系统层面的比较见[何时选线程、进程或异步 I/O？](#16.%20%E4%BD%95%E6%97%B6%E9%80%89%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E6%88%96%E5%BC%82%E6%AD%A5%20I/O%EF%BC%9F)；具体槽位与连接预算见[如何估算并限制异步工作管线？](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)。
+
+若报表只是等待数据库，直接使用异步数据库驱动，额外线程只会增加调度和连接管理成本。若从已取回的数据计算摘要会持续占用主事件循环，就交给有界 worker 池。若扩展可能崩溃或需要独立生命周期，可用子进程隔开地址空间和故障生命周期；子进程不会自动隔离文件、网络或其他操作系统权限。运行不可信代码还需要真实的操作系统权限隔离，本章不实现这部分。cluster 是让多进程接受 HTTP 连接的一种部署方式，不保证吞吐量线性增长；数据库、内存和磁盘也仍是共享的机器资源。
+
+### 子进程怎样接收一个计算任务？
+
+下面的 CommonJS 示例用 fork() 启动同一文件作为子进程，通过 IPC 发送 Fibonacci 输入并取回结果。它展示进程边界，不是生产任务队列：没有排队上限、重复任务保护或 supervisor 级别的重启策略。
 
 ~~~javascript
+// 保存为 report-child.cjs；使用 Node.js v26.11.1 运行
 const { fork } = require('node:child_process');
+
+function fib(n) {
+  let a = 0;
+  let b = 1;
+  for (let i = 0; i < n; i++) [a, b] = [b, a + b];
+  return a;
+}
 
 if (process.argv[2] === 'worker') {
   process.on('message', ({ n }) => {
-    let a = 0;
-    let b = 1;
-    for (let i = 0; i < n; i++) [a, b] = [b, a + b];
-    process.send({ result: a });
+    process.send({ result: fib(n) });
   });
 } else {
   const child = fork(__filename, ['worker']);
-  child.on('message', message => {
-    console.log(message.result);
+  child.once('error', error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+  child.once('message', ({ result }) => {
+    console.log(result);
     child.disconnect();
   });
   child.send({ n: 10 });
 }
 ~~~
 
-#### Cluster example
+输出 55。使用真实 CPU 计算时，应该复用有界进程或 worker 池，而不是每个报表都启动一个新进程。
 
-Each worker is a separate process. Restarting workers, health checks, graceful shutdown, and shared session state are application or process-manager responsibilities; the cluster module does not make in-memory state shared.
+cluster 让多个 Node 子进程监听同一服务端口。下面延续同一报表服务，重点是每个 worker 的进程隔离；若把会话或进程内缓存放在这些 worker 里，请求落到另一个 worker 时就看不到同一份状态。
 
 ~~~javascript
+// 保存为 cluster-report.cjs；使用 Node.js v26.11.1 运行
 const cluster = require('node:cluster');
 const http = require('node:http');
 const { availableParallelism } = require('node:os');
@@ -2158,105 +2167,106 @@ if (cluster.isPrimary) {
   });
 } else {
   http.createServer((request, response) => {
-    response.end('Hello');
+    response.end('report API');
   }).listen(8000);
 }
 ~~~
 
-Workers have separate heaps. If a session, cache, or connection map must be shared, choose a deliberate external store, routing strategy, or message-broadcast mechanism. A Redis store is one option, not a universal requirement.
+该服务要用外部状态存储、明确的连接路由或消息机制解决跨进程状态共享。任何多进程部署还需要健康检查、滚动退出和重启策略；怎样排空 Node HTTP 请求见[Node.js 服务如何排空并关闭？](#20.%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F)。
 
----
+若使用 PM2 管理集群，可用 pm2 start app.js --name api -i max 启动、pm2 list 或 pm2 monit 观察、pm2 reload api 请求滚动重载。PM2 对 stop、restart、reload 默认先发送 SIGINT，等待 `kill_timeout`（默认 1600 ms）后仍未退出就发 SIGKILL；可用 `PM2_KILL_SIGNAL` 改信号。reload 超时也可能退化为 restart。应用应处理部署实际发来的信号并在强杀前完成排空；用户态会话也不能默认留在单进程内存里。
 
+> [!info]- 来源
+> - Worker 线程适用 CPU 工作、消息与共享内存边界：[Node.js v26.11.1, worker_threads](https://nodejs.org/download/release/v26.11.1/docs/api/worker_threads.html)，核对于 2026-11-06。
+> - 子进程 IPC 与 fork()：[Node.js v26.11.1, child_process](https://nodejs.org/download/release/v26.11.1/docs/api/child_process.html)，示例于该版本重放，收到结果 55。
+> - 多进程共享 HTTP 端口及 worker 生命周期：[Node.js v26.11.1, cluster](https://nodejs.org/download/release/v26.11.1/docs/api/cluster.html)，核对于 2026-11-06。
+> - 文件系统哪些 API 使用 libuv 线程池：[Node.js v26.11.1, File system](https://nodejs.org/download/release/v26.11.1/docs/api/fs.html#threadpool-usage)；加密、压缩和 DNS 的 API 边界见 [crypto](https://nodejs.org/download/release/v26.11.1/docs/api/crypto.html)、[zlib](https://nodejs.org/download/release/v26.11.1/docs/api/zlib.html)、[DNS](https://nodejs.org/download/release/v26.11.1/docs/api/dns.html)，核对于 2026-11-06。
+> - PM2 Cluster mode 的 reload 回退与进程关闭责任：[PM2, Cluster Mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/)；启动、查看和重载命令见 [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/)，核对于 2026-11-06。
+> - PM2 默认 SIGINT、`kill_timeout` 后 SIGKILL 和 `PM2_KILL_SIGNAL` 配置：[PM2, Graceful Start/Shutdown](https://pm2.keymetrics.io/docs/usage/signals-clean-restart/)、[PM2 Environment Variables](https://pm2.keymetrics.io/docs/usage/environment/)，核对于 2026-11-06。
+## 18. Node.js 事件循环阶段与微任务队列如何交互？
 
-**Related questions / 相关问题：** [Node.js event-loop phases and microtasks / Node.js 事件循环阶段与微任务](#18.%20How%20do%20Node.js%20event-loop%20phases%20and%20microtask%20queues%20interact?%20/%20Node.js%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E9%98%B6%E6%AE%B5%E4%B8%8E%E5%BE%AE%E4%BB%BB%E5%8A%A1%E9%98%9F%E5%88%97%E5%A6%82%E4%BD%95%E4%BA%A4%E4%BA%92%EF%BC%9F) explains host scheduling; [How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？](#19.%20How%20do%20Node.js%20streams%20propagate%20backpressure?%20/%20Node.js%20%E6%B5%81%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%E8%83%8C%E5%8E%8B%EF%BC%9F) explains chunk flow and cleanup; [How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？](#20.%20How%20should%20a%20Node.js%20service%20drain%20on%20shutdown?%20/%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F) covers in-flight work and resource closure; [What does serverless leave to the application? / 无服务器计算仍要求应用负责什么？](#What%20the%20runtime%20still%20leaves%20to%20the%20application%20/%20%E8%BF%90%E8%A1%8C%E5%B9%B3%E5%8F%B0%E4%BB%8D%E7%95%99%E7%BB%99%E5%BA%94%E7%94%A8%E7%9A%84%E8%B4%A3%E4%BB%BB) describes provider-managed execution environments.
-**Sources / 来源：** Node.js v24 documentation for [worker threads](https://nodejs.org/docs/latest-v24.x/api/worker_threads.html), [child processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html), [cluster](https://nodejs.org/docs/latest-v24.x/api/cluster.html), [filesystem](https://nodejs.org/docs/latest-v24.x/api/fs.html), [crypto](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [zlib](https://nodejs.org/docs/latest-v24.x/api/zlib.html), and [DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html); [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/) and [cluster mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/), checked 2026-10-15.
-## 18. How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？
-
-Node runs JavaScript callbacks on an event-loop thread while libuv coordinates timers and I/O through phases. Node's next-tick queue and the Promise/queueMicrotask microtask queue are separate scheduling mechanisms; their order depends on where code runs. Give the Node version and execution context before stating an order. / Node 在事件循环线程上运行 JavaScript 回调，libuv 则通过多个阶段协调计时器和 I/O。Node 的 nextTick 队列与 Promise/queueMicrotask 微任务队列是不同的调度机制，执行上下文会影响它们的先后顺序。说明 Node 版本与执行位置后，再给出顺序规则。
-
-**Key terms / 关键术语：** event-loop phase / 事件循环阶段；poll / 轮询阶段；microtask / 微任务；process.nextTick / nextTick 队列；CommonJS / CommonJS 模块；ES module / ES 模块；timer threshold / 计时器阈值。
+一个报表请求先排定定时器，再等数据库读回调；两者何时运行取决于当前 JavaScript 操作、event loop（事件循环）阶段和队列。不要只记一个跨所有上下文的“异步先后顺序”：CommonJS 与 ES module 顶层执行中的 nextTick 和 Promise 排序不同，定时器也只承诺最早可运行时间，不是精确截止时刻。
 
 ~~~mermaid
 flowchart TD
-    subgraph loop[libuv event-loop phases]
-        Timers[Timers] --> Pending[Pending callbacks]
-        Pending --> Poll[Poll: I/O]
-        Poll --> Check[Check: setImmediate]
+    subgraph loop[libuv 事件循环阶段]
+        Timers[Timers：到期定时器] --> Pending[Pending callbacks]
+        Pending --> Poll[Poll：I/O 事件]
+        Poll --> Check[Check：setImmediate]
         Check --> Close[Close callbacks]
         Close --> Timers
     end
-    Operation[Current JavaScript operation completes] --> Tick[Node drains nextTick queue]
-    Tick --> Micro[Node drains microtask queue]
-    Micro --> LoopNext[Event loop continues]
+    Operation[CJS 普通 JavaScript 调用返回] --> Tick[清空 nextTick 队列]
+    Tick --> Micro[清空 Promise / queueMicrotask 队列]
+    Micro --> LoopNext[事件循环继续]
 ~~~
 
-The diagram is a simplified loop outline. The idle and prepare phases are internal. A JavaScript operation's completion handling occurs around the loop and is not itself another libuv phase. ES module evaluation already runs within microtask processing, which explains why the top-level CommonJS and ES module examples below differ.
+这张图概括普通 CommonJS JavaScript 操作返回到 Node 调度点后的处理顺序：idle、prepare 是内部阶段；nextTick 和微任务不属于 libuv 的阶段。ES module 求值和正在排空的微任务队列有不同上下文，不能用图中的一条箭头替代后面的条件说明。
 
-### What the event-loop phases do / 事件循环阶段各自做什么
+### I/O 回调、定时器和 setImmediate() 何时推进？
 
-| Phase | Main role |
-|---|---|
-| Timers | Run timer callbacks once their minimum delay threshold has passed; the requested delay is not an exact deadline. |
-| Pending callbacks | Run certain I/O callbacks deferred from an earlier loop iteration. |
-| Poll | Retrieve and process I/O events; it may wait for I/O when appropriate. |
-| Check | Run callbacks scheduled with setImmediate. |
-| Close callbacks | Run selected close events, such as a socket close after abrupt destruction. |
-| Idle and prepare | Internal libuv phases. |
+Node 使用 libuv（Node.js 的跨平台事件循环与异步 I/O 库）管理计时器和 I/O 回调。常见阶段包括 timers、pending callbacks、poll、check 和 close callbacks。poll 取回 I/O 事件并执行相关回调；setImmediate() 在 check 阶段运行；定时器只在给定延迟门槛之后变为可运行，繁忙的回调仍会让它晚于门槛才得到执行。
 
-In libuv 1.45.0, used by Node.js 20 and later, timers run after poll on each loop iteration; earlier versions also ran timers before poll. This changes some timer/immediate timing relationships. At top level, do not rely on a fixed order between setTimeout(fn, 0) and setImmediate(fn). Inside an I/O callback, setImmediate runs in the check phase after poll; the official guide describes it as running before the timer in that situation.
+从 Node.js 20 所用的 libuv 1.45.0 起，定时器在每轮 poll 后运行；较早版本还会在 poll 前运行。不要依赖主模块中 setTimeout(fn, 0) 和 setImmediate(fn) 的固定顺序。在 I/O 回调里排定两者时，setImmediate() 在 check 阶段先运行。
 
 ~~~javascript
+// save as timers.cjs; output order for the first pair may vary
 const fs = require('node:fs');
 
-// At top level, the order can vary.
-setTimeout(() => console.log('timeout'), 0);
-setImmediate(() => console.log('immediate'));
+setTimeout(() => console.log('top-level timeout'), 0);
+setImmediate(() => console.log('top-level immediate'));
 
-// Inside an I/O callback, setImmediate runs in the check phase.
 fs.readFile(__filename, () => {
   setTimeout(() => console.log('timer after I/O'), 0);
   setImmediate(() => console.log('immediate after I/O'));
 });
 ~~~
 
-### How do nextTick and microtasks differ by module context? / nextTick 与微任务顺序如何受模块上下文影响？
+上例中两条带 top-level 的输出允许不同顺序；I/O 回调中则先输出 immediate after I/O。如果一次同步回调执行 120 ms，即使 setTimeout(..., 100) 已到门槛，它也要等该回调结束才能运行。给 API 设服务端截止时间时，应使用明确的 deadline（截止时间）和可取消操作，不把定时器当作严格准点机制。
 
-The nextTick queue is drained after the current JavaScript operation finishes and before the event loop continues. Promise handlers and queueMicrotask callbacks use the microtask queue. In CommonJS top-level execution, nextTick callbacks run before Promise/queueMicrotask callbacks. ES module evaluation itself runs as microtask work, so its top-level Promise/queueMicrotask callbacks run before nextTick callbacks.
+### nextTick 与 Promise 微任务的顺序为何会变？
 
-| Context | Ordering for the calls below |
-|---|---|
-| CommonJS top level | process.nextTick, Promise reaction, queueMicrotask |
-| ES module top level | Promise reaction, queueMicrotask, process.nextTick |
+nextTick 队列是 Node 管理的队列；Promise reaction 和 queueMicrotask() 使用 microtask（微任务）队列。在普通 CommonJS 顶层或 callback 返回到 Node 的调度点时，当前 JavaScript 操作先完成，Node 随后处理 nextTick，再排空微任务。ES module 顶层求值本身处于微任务处理中，所以顶层排入的 Promise 和 queueMicrotask 先于 nextTick。
+
+| 代码所在上下文 | 下面三个回调的输出顺序 |
+| --- | --- |
+| CommonJS 顶层 | nextTick → promise → microtask |
+| ES module 顶层 | promise → microtask → nextTick |
+
+保存并分别运行：
 
 ~~~javascript
-// Save as example.cjs
+// queues.cjs — Node.js v26.11.1
 const { nextTick } = require('node:process');
 
 Promise.resolve().then(() => console.log('promise'));
 queueMicrotask(() => console.log('microtask'));
 nextTick(() => console.log('nextTick'));
-// Checked output on Node.js v26.11.1:
-// nextTick
-// promise
-// microtask
 ~~~
 
 ~~~javascript
-// Save as example.mjs
+// queues.mjs — Node.js v26.11.1
 import { nextTick } from 'node:process';
 
 Promise.resolve().then(() => console.log('promise'));
 queueMicrotask(() => console.log('microtask'));
 nextTick(() => console.log('nextTick'));
-// Checked output on Node.js v26.11.1:
-// promise
-// microtask
-// nextTick
 ~~~
 
-Current Node.js documentation marks process.nextTick as Legacy and recommends queueMicrotask for most userland deferrals. A recursively replenished nextTick queue can starve I/O because the loop cannot reach poll until the queue drains. Keep nextTick only when its particular scheduling boundary is required by existing API behavior.
+本机依次运行得到 CommonJS：nextTick, promise, microtask；ES module：promise, microtask, nextTick。Promise 与 queueMicrotask 同属微任务队列，在本例中按排队顺序运行。若代码已经在执行微任务时才排入 nextTick，该 callback 不会插队中断本轮微任务队列；Node 会等当前队列排空后再处理它：
 
-One historical use is making a callback-based API consistently asynchronous, including validation errors, so the caller can finish setting up state before the callback runs. Another is emitting a readiness event on the next tick so callers can register a listener after construction:
+~~~javascript
+Promise.resolve().then(() => {
+  console.log('microtask A');
+  process.nextTick(() => console.log('nextTick from microtask'));
+  Promise.resolve().then(() => console.log('microtask B'));
+  queueMicrotask(() => console.log('queueMicrotask from microtask'));
+});
+~~~
+
+Node.js v26.11.1 的本机输出是 microtask A、microtask B、queueMicrotask from microtask、nextTick from microtask。当前 Node 文档把 process.nextTick() 标为 Legacy，多数用户代码应优先选 queueMicrotask()；只有兼容现有 nextTick 排序契约时才保留 nextTick。递归排入 nextTick 会不断清空该队列，令循环迟迟进不了 poll，从而饿死 I/O。
+
+nextTick 曾用于让 callback API 的验证错误也延后到当前调用栈退栈后交付，或者让构造器返回后才发出 readiness 事件，好让调用方先注册 listener：
 
 ~~~javascript
 const { EventEmitter } = require('node:events');
@@ -2271,208 +2281,318 @@ const emitter = createEmitter();
 emitter.on('ready', () => console.log('ready'));
 ~~~
 
-Use queueMicrotask for ordinary portable deferral unless the API depends on nextTick-specific ordering. These rules describe Node's host queues; they do not define browser scheduling. [Asynchronous JavaScript / 异步 JavaScript](../../frontend/javascript/asynchronous-javascript.md) covers Promise behavior outside Node's host phases.
+该例运行输出 ready；普通的可移植延后优先使用 queueMicrotask。上述顺序是 Node 宿主的调度契约，不是 JavaScript Promise 语言本身的跨宿主规则。浏览器事件循环见[浏览器事件循环](../../frontend/runtime/event-loop.md)；Node 主线程与 CPU worker 的选择见[Node.js 调度与 worker 选择](#17.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
-**Related notes / 相关笔记：** [Node.js scheduling and worker choices / Node.js 调度与 worker 选择](#17.%20How%20does%20Node.js%20schedule%20work%20across%20its%20event%20loop,%20workers,%20and%20processes?%20/%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F) applies these host queues to server workloads; [Processes, Threads, and Concurrency / 进程、线程与并发](#16.%20When%20should%20work%20use%20a%20thread,%20process,%20or%20asynchronous%20I/O?%20/%20%E4%BD%95%E6%97%B6%E9%80%89%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E6%88%96%E5%BC%82%E6%AD%A5%20I/O%EF%BC%9F) explains the execution resources used for CPU work.
+> [!info]- 来源
+> - 阶段、计时器门槛、poll 与 setImmediate()：[Node.js Event Loop](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick)，核对于 2026-11-06；Node.js 20 起的阶段变更对应 libuv 1.45.0。
+> - nextTick 队列、CommonJS/ES module 顺序和 Legacy 状态：[Node.js v26.11.1, process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)，三个队列例子于该版本重放。
+## 19. Node.js 流如何传播背压？
 
-**Sources / 来源：** [Node.js event-loop phases and timer behavior](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick) and [Node.js v26 process.nextTick / queueMicrotask guidance](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), checked 2026-11-05. The CJS and ESM output examples were checked on Node.js v26.11.1; the libuv timer phase change is documented for libuv 1.45.0 (Node.js 20).
-## 19. How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？
-
-**核心解释 / Core explanation：** A stream moves data in chunks from a producer to a consumer. A `Readable` supplies chunks; a `Writable` accepts them; a `Transform` reads and writes while changing them; a `Duplex` does both. When `writable.write(chunk)` returns `false`, stop producing until `'drain'` says writing can resume. `pipeline()` connects stages and propagates a slow consumer's backpressure upstream.
-
-**中文说明：** 流按数据块从生产者流向消费者；`write()` 返回 `false` 时，生产者应暂停并等待 `'drain'` 再继续。`pipeline()` 会把下游变慢的背压传回上游。`highWaterMark` 是暂停阈值而非内存上限；单个大数据块、各阶段缓冲和链路外队列仍可能增加内存。读取端的 `'end'` 表示输入结束，写入端的 `'finish'` 表示 `end()` 后已处理已接收写入；`'close'` 表示资源关闭，`'error'` 表示失败。`destroy()` 用于中止或失败，额外拥有的游标等资源应在 `finally` 中释放；写入完成也不代表远端应用已处理数据或文件已持久化。
-
-**Key terms / 关键术语：** Readable / 可读流；Writable / 可写流；Transform / 转换流；backpressure / 背压；highWaterMark / 暂停阈值；pipeline / 流水线。
+**案例：** 已接受的报表 job 由 worker 顺序读取账户活动，转换成 CSV 并写入私有对象存储。若对象上传比查询慢，生产者不能继续把所有行堆在内存中。Node stream（流）用数据块和 backpressure（背压）协调快慢不同的阶段；取消整条管线时，还要清理管线之外由生产者持有的游标。
 
 ~~~mermaid
 flowchart TD
-    Source[Readable source] --> Transform[Transform stages]
-    Transform --> Sink[Writable destination]
-    Sink -->|write returns false| Pause[Pause the producer]
+    Source[Readable：按需读取报表行] --> Transform[Transform：CSV 编码与可选压缩]
+    Transform --> Sink[Writable：私有对象上传；本地例用文件]
+    Sink -->|write 返回 false| Pause[暂停生产者]
     Pause -->|drain| Sink
-    Pause -->|pipeline propagates backpressure| Transform
+    Pause -->|pipeline 传递背压| Source
 ~~~
 
-**面试简答 / Interview answer：** If `write()` returns `false`, stop calling it until `'drain'`; continuing to submit chunks can grow the writable's queue and memory use. Use `pipeline()` for a source/transform/destination chain, or wait for `'drain'` in a manual producer. `highWaterMark` is a pause threshold, not a hard memory cap; a large chunk, transform buffers, or queues outside the pipeline can still use more memory.
+图中 false 的反馈若只停在 Writable，生产者仍会继续堆数据；pipeline() 会把下游变慢的状态沿这条流链路传回上游。
+
+### 什么状态表示写入方该等一等？
+
+Readable（可读流）提供数据块；Writable（可写流）接收数据块；Transform（转换流）一边读取一边转换；Duplex（双工流）同时可读可写。只有 writable 仍处于可写、未结束且未销毁状态时，手动调用 writable.write(chunk) 返回 false 才表示当前块已被接收、内部缓冲达到 highWaterMark 阈值；这时先停止继续写，等 drain 后再恢复。若写入已结束、流已销毁或遇到错误，false 不能证明数据已接收，且不会保证再有 drain；应处理 error/close 并结束这条管线。
+
+在正常可写状态下，返回 true 表示当前仍可继续写入；返回 false 表示应暂停，待 drain 后再继续。
+
+highWaterMark（缓冲阈值）是何时降低读取速度的门槛，不是内存硬上限。`Readable.from()` 默认 `objectMode: true`，此时阈值按数据块个数而非字节数计；本例产出字符串，因此显式关闭 object mode。`32 KiB` 只设置本地文件 sink 的阈值，压缩流、源流、较大单块和管线外队列仍有各自缓冲。真正的背压要求生产端能暂停，且每一层都把“下游暂时消化不了”传回源。
+
+### 如何让一条报表流自然限速并释放游标？
+
+用 pipeline() 连接可读、转换和写入阶段。下面的生成器一次只产生一行；当可写 sink 变慢时，pipeline() 会传递背压。中止信号会销毁参与管线的流并让 Promise 以 AbortError 拒绝；数据库游标不属于这些流，仍须由生成器的 finally 关闭。
 
 ~~~javascript
+// 保存为 export-report.cjs；使用 Node.js v26.11.1 运行
 const { createWriteStream } = require('node:fs');
 const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { createGzip } = require('node:zlib');
 
-async function* rows() {
-  for (let id = 1; id <= 10_000; id++) yield { id };
+function openReportCursor(accountId) {
+  const rows = [
+    { id: 'event-1', accountId, amount: 12 },
+    { id: 'event-2', accountId, amount: 8 },
+    { id: 'event-3', accountId, amount: -2 },
+  ];
+  let index = 0;
+  let closed = false;
+  return {
+    async next() {
+      if (index === rows.length) return null;
+      return rows[index++];
+    },
+    async close() {
+      closed = true;
+      console.log('cursor closed:', closed);
+    },
+  };
 }
 
-async function exportRows(signal) {
-  const lines = (async function* () {
-    for await (const row of rows()) yield `${JSON.stringify(row)}\n`;
-  })();
+async function* reportRows(signal) {
+  const cursor = openReportCursor('acct-17');
+  try {
+    while (!signal.aborted) {
+      const row = await cursor.next();
+      signal.throwIfAborted();
+      if (row === null) return;
+      yield row;
+    }
+  } finally {
+    await cursor.close();
+  }
+}
 
+function csvCell(value) {
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+
+async function* csvRows(signal) {
+  yield 'id,accountId,amount\n';
+  for await (const row of reportRows(signal)) {
+    yield [row.id, row.accountId, row.amount].map(csvCell).join(',') + '\n';
+  }
+}
+
+async function exportReport(signal) {
   await pipeline(
-    Readable.from(lines),
+    Readable.from(csvRows(signal), { objectMode: false }),
     createGzip(),
-    createWriteStream('rows.ndjson.gz', { highWaterMark: 32 * 1024 }),
-    { signal }
+    createWriteStream('report.csv.gz', { highWaterMark: 32 * 1024 }),
+    { signal },
   );
 }
 
 const controller = new AbortController();
-// The owner can call controller.abort(reason) to cancel the export.
-exportRows(controller.signal).catch((error) => {
+exportReport(controller.signal).catch(error => {
   console.error('export failed:', error.message);
 });
+// 生命周期拥有者可在截止时间到达时调用：
+// controller.abort(new Error('report deadline'));
 ~~~
 
-Here the async generator produces one row at a time, and `pipeline()` resolves after the output finishes. If a stage errors or the signal aborts, the promise rejects and the pipeline destroys its participating streams. A producer that owns an extra resource, such as a database cursor, should release it in `finally`; pipeline cleanup cannot close resources hidden outside its stages. For manual writes, the same rule is `if (!writable.write(chunk)) await once(writable, 'drain')`.
+本机用 Node.js v26.11.1 重放这段合成游标程序：它输出 cursor closed: true，并生成可解压的 `.csv.gz` 文件，内有一行表头和 3 条 CSV 记录。这只验证本地文件 sink 的流量传递与合成游标清理，不代表测试过真实数据库驱动或对象上传，也没有验证取消正在执行的数据库查询。pipeline 中止或失败可能留下部分本地文件；destroy 流不会删除文件或撤销已写出的字节。生产 attempt 应拥有自己的私有临时对象键，正常失败时由该 attempt 清理未发布对象；若 worker 崩溃留下孤儿对象，则由独立回收责任方按持久导出设计中的宽限期清理。只有完整上传且当前 attempt 提交结果引用后才把 job 标为 succeeded。FastAPI 的 StreamingResponse 是另一条请求内直接传给客户端的路径，依赖资源活到正文结束或请求取消。
 
-The terminal signals describe different outcomes: a readable `'end'` means no more input chunks remain; a writable `'finish'` means its accepted writes have completed after `end()`; `'close'` reports resource closure when that stream emits it; `'error'` reports failure. Use `destroy(error)` to abort or fail a stream, not as a synonym for successful end-of-input. A writable finishing does not prove that a remote application processed the bytes or that a file is durable on storage.
+生产 worker 应从已持久接受且已授权的 job 读取 acct-17、时间范围与分页上限，不能从队列正文重新信任未验证的账户范围。现有报表设计按最多 12 页查询、每页短事务读取；读取完一页即归还连接，再做压缩和写入，见[如何限定 ORM Session 并排查连接池耗尽？](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。如果实际驱动提供的是持有数据库游标的长连接流，它可能在下游变慢时继续占住事务和连接；须把这段真实连接持有时间计入连接池和任务槽预算。需要同一快照时，可以明确选择长事务并核算额外成本，不能把短事务分页示例直接换成长游标。真实驱动是否响应取消仍需按驱动契约确认；如果不支持，正在执行的查询可能要等返回后生成器 finally 才能关闭游标。
 
+Writable 的 highWaterMark 是缓冲阈值，不是整条管线的内存预算；如果上游在管线外把所有任务先放入数组或无界队列，stream 背压到不了那条队列。取消会传播给参与管线的流，但不能假定驱动正在执行的 `cursor.next()` 已停止：当前查询可能要先返回，生成器的 `finally` 才能关闭游标。资源所有者应跟踪并等待该操作确实结束，再关闭它仍在使用的连接；仅观察 AbortSignal 已触发不足以证明资源可释放。可读流的 end 表示没有更多输入块；调用 end() 后可写流的 finish 表示已处理接受的写入；close 表示该流报告资源关闭；error 表示失败。文件流 finish 也不证明远端应用收到数据或文件系统已持久化。
 
-**Sources / 来源：** The stream example and lifecycle behavior were checked against the version-pinned [Node.js v26.11.1 stream documentation](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html) on 2026-10-15. This version boundary matters for code and API behavior; the conceptual backpressure rule is not a memory cap.
+**接下来：** 本章说明管线内部的流量控制；HTTP 请求、worker 和持久队列的并发上限见[如何估算并限制异步工作管线？](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)。服务退出时如何停止接入并等流结束，见[Node.js 服务如何排空并关闭？](#20.%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F)。
 
-**Related notes / 相关笔记：** [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) applies the same bounded-work rule to requests, worker slots, and durable queues.
-## 20. How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？
+> [!info]- 来源
+> - Writable.write() 返回 false、drain、错误/销毁状态，以及 Readable.from() 默认 object mode：[Node.js v26.11.1, Stream](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html)，核对于 2026-11-06。
+> - pipeline() 的 Promise、AbortSignal 和流清理：[Node.js v26.11.1, stream/promises](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html#stream-promises-api)，核对于 2026-11-06。
+> - end、finish、close 和 error 的生命周期定义：[Node.js v26.11.1, Stream API](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html)，核对于 2026-11-06。
+## 20. Node.js 服务如何排空并关闭？
 
-Graceful shutdown is an application lifecycle, not something the event loop or HTTP server performs for every dependency. On a shutdown signal, mark the instance unready and have each request handler reject work before enqueueing it; this also catches requests on already-open keep-alive connections. Then stop accepting connections, let tracked handlers and response streams finish, cancel work at the deadline, and close pools, workers, timers, and other owned resources after their users have stopped. Pass `workAbort.signal` to cancellable handlers and track accepted work so `waitForInFlightWork()` has a real completion condition.
-
-**核心解释（中文）：** 收到关闭信号后先摘除就绪并拒绝新任务，再停止接入、等待已接收请求和后台工作排空；到期后发出协作取消并强制关闭 HTTP 连接。服务端关闭与跟踪任务都结算后，再回收它们使用的资源；即使其中一项失败，也要完成清理并报告错误，且在生命周期和清理报告结束前保留截止计时器。
-
-**Key terms / 关键术语：** readiness / 就绪状态；in-flight work / 在途工作；graceful shutdown / 优雅关闭；deadline / 截止时间；cooperative cancellation / 协作式取消；owned resources / 应用拥有的资源。
+**案例：** 报表 API 正在读取数据库并写流式响应时收到 SIGTERM。优雅关闭（graceful shutdown）的关键是按所有权顺序收拢工作：先停止对外宣称 readiness（就绪状态）并拒绝新任务，再停止接收连接，等待现有请求和后台工作不再使用依赖，最后关闭连接池、后台工作线程或进程和其他资源。deadline（截止时间）到达时发出协作取消；只有可观察的完成条件才能证明任务已经停下。
 
 ~~~mermaid
 stateDiagram-v2
     [*] --> Ready
-    Ready --> Draining: SIGTERM / mark unready
-    Draining --> Waiting: stop accepting new connections
-    Waiting --> Closed: in-flight work and server close
-    Waiting --> Deadline: deadline expires
-    Deadline --> Cancel: abort cooperative work
-    Cancel --> ForceClose: close remaining HTTP connections
-    Closed --> Cleanup: release owned resources
-    ForceClose --> Cleanup
-    Cleanup --> [*]
+    Ready --> Draining: SIGTERM / 摘除就绪并拒绝新任务
+    Draining --> Waiting: 停止接收连接
+    Waiting --> Cleanup: 在途工作与 HTTP 服务都已结束
+    Waiting --> Deadline: 截止时间到
+    Deadline --> Cancel: 发出协作取消
+    Cancel --> ForceClose: 关闭剩余 HTTP 连接
+    ForceClose --> Waiting: 等工作退出其依赖
+    Cleanup --> Closed: 关闭池、worker 与其他资源
+    Closed --> [*]
 ~~~
 
-~~~javascript
-const workAbort = new AbortController();
-let draining = false;
+这里的排空不是 HTTP Server 自动替应用完成的事。request handler、后台任务、响应流和任务专用游标都要登记到各自拥有者，关闭程序才能知道它们何时不再使用依赖。
 
-function rejectWhileDraining(res) {
-  if (!draining) return false;
-  res.writeHead(503, { Connection: 'close' });
-  res.end();
-  return true;
-}
-// Call first in each request handler: if (rejectWhileDraining(res)) return;
+### 为什么要先拒绝工作再关闭连接？
 
-async function shutdown() {
-  draining = true;
-  markReadiness(false);
+先将实例标为不就绪，负载均衡器就有机会停止把新连接路由到它；但健康状态的传播有延迟，因此 handler 也要在入队或开始副作用前检查 draining 状态。对已经打开的 keep-alive 连接，新请求可能仍会到达，handler 应返回带 Connection: close 的 503 并且不要受理任务。随后调用 server.close() 停止接入；它的回调表示 HTTP 连接和响应已收尾。应用拥有的后台工作由单独的 inFlight 集合跟踪并等待，不能把这两个完成条件混为一谈。
 
-  const deadline = setTimeout(() => {
-    workAbort.abort(new Error('shutdown deadline'));
-    server.closeAllConnections();
-  }, 10_000);
+下面是可以直接运行的最小服务。它用一个可取消的计时操作代替数据库报表任务，跟踪这项工作，并演示：1 秒截止到达时向它发出取消、关闭剩余 HTTP 连接，然后等待实际工作结束才清资源。这个截止只约束本例可取消的 timer 与 HTTP 连接；不响应取消的 handler 仍会让 inFlight 等待继续。真实服务要把 readiness、任务跟踪和资源清理接到自己的 health、worker 及连接池实现上，并由进程 supervisor 提供最终硬截止。
 
-  const serverClosed = new Promise((resolve, reject) => {
-    server.close((error) => error ? reject(error) : resolve());
-  });
+> [!example]- 可运行的关停示例
+>
+> ~~~javascript
+> // 保存为 shutdown-demo.cjs；使用 Node.js v26.11.1 运行
+> const http = require('node:http');
+> const { setTimeout: sleep } = require('node:timers/promises');
+>
+> const workAbort = new AbortController();
+> const inFlight = new Set();
+> let draining = false;
+>
+> function trackWork(promise) {
+>   inFlight.add(promise);
+>   promise.then(
+>     () => inFlight.delete(promise),
+>     () => inFlight.delete(promise),
+>   );
+>   return promise;
+> }
+>
+> async function createReport(signal) {
+>   await sleep(5_000, undefined, { signal });
+>   return 'report ready';
+> }
+>
+> async function waitForInFlightWork() {
+>   while (inFlight.size > 0) {
+>     await Promise.allSettled([...inFlight]);
+>   }
+> }
+>
+> const server = http.createServer(async (request, response) => {
+>   if (draining) {
+>     response.writeHead(503, { Connection: 'close' });
+>     response.end('draining');
+>     return;
+>   }
+>
+>   try {
+>     const report = await trackWork(createReport(workAbort.signal));
+>     response.end(report);
+>   } catch (error) {
+>     if (!response.destroyed) {
+>       response.writeHead(503);
+>       response.end('report stopped');
+>     }
+>   }
+> });
+>
+> server.listen(8000);
+>
+> function markReadiness(ready) {
+>   console.log('ready:', ready);
+> }
+>
+> async function closeOwnedResources() {
+>   // 生产服务在这里关闭数据库池、worker、定时任务和应用拥有的句柄。
+>   console.log('resource cleanup complete');
+> }
+>
+> async function shutdown() {
+>   draining = true;
+>   markReadiness(false);
+>
+>   const deadline = setTimeout(() => {
+>     workAbort.abort(new Error('shutdown deadline'));
+>     server.closeAllConnections();
+>   }, 1_000);
+>
+>   const serverClosed = new Promise((resolve, reject) => {
+>     server.close(error => error ? reject(error) : resolve());
+>   });
+>
+>   try {
+>     const lifecycle = await Promise.allSettled([
+>       serverClosed,
+>       waitForInFlightWork(),
+>     ]);
+>     const lifecycleFailures = lifecycle.filter(result => result.status === 'rejected');
+>
+>     let cleanupFailure;
+>     let cleanupFailed = false;
+>     try {
+>       await closeOwnedResources();
+>     } catch (error) {
+>       cleanupFailed = true;
+>       cleanupFailure = error;
+>     }
+>
+>     for (const result of lifecycleFailures) {
+>       console.error('shutdown lifecycle failed:', result.reason);
+>       process.exitCode = 1;
+>     }
+>     if (cleanupFailed) {
+>       console.error('resource cleanup failed:', cleanupFailure);
+>       process.exitCode = 1;
+>     }
+>   } finally {
+>     clearTimeout(deadline);
+>   }
+> }
+>
+> process.once('SIGTERM', () => {
+>   void shutdown().catch(error => {
+>     console.error('shutdown failed:', error);
+>     process.exitCode = 1;
+>   });
+> });
+> ~~~
 
-  try {
-    const lifecycle = await Promise.allSettled([
-      serverClosed,
-      waitForInFlightWork(),
-    ]);
-    const lifecycleFailures = lifecycle.filter((result) => result.status === 'rejected');
+服务在收到信号后先把 draining 设为 true，再启动 deadline。该截止计时器必须保持引用：若用 unref()，当其他句柄不再阻止退出时，Node 可能在 deadline 回调执行前退出。Node.js 19 及以后，server.close() 会关闭空闲连接并等待活动连接；超时时调用 closeAllConnections() 是强制关闭 HTTP(S) 连接，且应该在 close() 之后调用以避免连接竞态。它不会关闭升级后的 WebSocket 或 HTTP/2 会话，这些要由各自的所有者处理。注册 SIGTERM listener 会接管该信号的默认退出路径，所以 handler 必须完成清理，或明确设置失败退出码。
 
-    let cleanupFailure;
-    let cleanupFailed = false;
-    try {
-      await closeOwnedResources();
-    } catch (error) {
-      cleanupFailed = true;
-      cleanupFailure = error;
-    }
+本例监听 SIGTERM，适合显式向进程发送该信号的部署。PM2 对 stop、restart、reload 默认先发 SIGINT；运行在 PM2 下时也要处理 SIGINT，或把 `PM2_KILL_SIGNAL` 配成 SIGTERM。PM2 的 `kill_timeout` 到期后会发 SIGKILL，因此优雅关闭预算必须短于该上限或同步调整管理器配置。
 
-    for (const { reason } of lifecycleFailures) {
-      console.error('shutdown lifecycle failed:', reason);
-      process.exitCode = 1;
-    }
-    if (cleanupFailed) {
-      console.error('resource cleanup failed:', cleanupFailure);
-      process.exitCode = 1;
-    }
-  } finally {
-    clearTimeout(deadline);
-  }
-}
+本例的可取消 timer 会在 deadline 到达时停止，因此 tracked work 随后结束，才允许关闭其资源。`server.close()` 回调和 inFlight Promise 集合分别代表 HTTP 收尾与应用工作收尾；即使 HTTP 连接已被强制关闭，handler 仍可能占用数据库连接。对不支持取消的数据库查询、忽略信号的 handler 或已经启动的远端副作用，取消只是通知，并不会强制中止它们；waitForInFlightWork 必须等到它们确实不再使用依赖。若服务超过上层硬截止时间仍未退出，应由进程 supervisor 最终终止，而不能提前关闭仍在使用的资源。HTTP 任务与持久后台 job 的取消边界不同：连接断开不自动撤销已持久接受的账户报表，见[请求超时后如何确认结果并安全重试？](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
 
-process.once('SIGTERM', () => {
-  void shutdown().catch((error) => {
-    console.error('shutdown failed:', error);
-    process.exitCode = 1;
-  });
-});
-~~~
+**本机重放：** Node.js v26.11.1 上启动此脚本，发起一个尚未完成的请求后发送 SIGTERM；deadline 触发取消，输出 ready: false 与 resource cleanup complete，进程以成功状态结束。若 handler 忽略 signal，该清理次序会继续等待它，而不会提前关闭连接池。
 
-`markReadiness`, `waitForInFlightWork`, and `closeOwnedResources` stand for application-owned health, task, and resource hooks. `waitForInFlightWork()` must settle only after tracked work has stopped using its dependencies; a rejection reports failed work, not permission to clean up while that work still runs. The referenced deadline timer stays active while `Promise.allSettled()` awaits both server close and tracked work, and the code still attempts owned-resource cleanup before reporting lifecycle or cleanup failures. Keep the timer referenced until it fires or shutdown cleanup finishes; `unref()` would allow Node to exit before its callback when no other handle keeps the event loop active. `server.close()` stops new connections and, in Node.js 26.11.1, closes idle connections while waiting for the rest. `closeAllConnections()` is the deadline's forceful HTTP(S) fallback; call it after `server.close()` as shown, and close upgraded WebSocket or HTTP/2 sessions through their own owners. The task abort is cooperative: if a handler ignores its signal or another handle keeps the process alive, the service supervisor must enforce the final hard stop. A signal listener also replaces Node's default signal exit behavior on supported POSIX systems, so the handler must complete or deliberately set a failure exit code.
+> [!info]- 来源
+> - HTTP server.close()、closeAllConnections()、空闲连接和协议升级连接边界：[Node.js v26.11.1, HTTP](https://nodejs.org/download/release/v26.11.1/docs/api/http.html)，核对于 2026-11-06。
+> - SIGTERM handler 替代默认退出行为及信号行为：[Node.js v26.11.1, process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html)，核对于 2026-11-06。
+> - PM2 stop/restart/reload 的默认 SIGINT、可配置的 kill signal 和最终 SIGKILL 截止：[PM2, Graceful Start/Shutdown](https://pm2.keymetrics.io/docs/usage/signals-clean-restart/)，核对于 2026-11-06。
+> - 定时器 unref() 与事件循环存活：[Node.js v26.11.1, Timers](https://nodejs.org/download/release/v26.11.1/docs/api/timers.html)，核对于 2026-11-06。
+> - AbortSignal 对 Promise 定时器的协作取消：[Node.js v26.11.1, Timers Promises API](https://nodejs.org/download/release/v26.11.1/docs/api/timers.html#timers-promises-api)，本例按上述时序重放。
+## 21. Python 的值、迭代器与资源生命周期如何工作？
 
-
-**Sources / 来源：** The shutdown example and lifecycle behavior were checked against [Node.js v26.11.1 HTTP](https://nodejs.org/download/release/v26.11.1/docs/api/http.html) and [process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html) documentation on 2026-10-15. The timer-reference behavior uses [Node.js v26.12.1 timers](https://nodejs.org/api/timers.html), checked 2026-10-27.
-
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains cancellation and ambiguous remote outcomes; [Queue delivery acknowledgements / 队列确认与重投](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains why a consumer acknowledges only after its chosen durable boundary.
-## 21. How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？
-
-**Core model / 核心模型：** Python names are bindings to objects. A collection may be changed in place or a name may be rebound to another object; those are different operations. Function defaults are evaluated when the function is defined, iterators produce values as they are requested, and context managers define cleanup around a block. Type hints describe intent to static tools but do not validate runtime input. A virtual environment separates a project's installed packages from other environments. / Python 名称绑定到对象。集合可以被原地修改，名称也可以重新绑定到另一个对象，这是两种不同操作。函数默认值在函数定义时求值，迭代器按需产生值，上下文管理器则为代码块定义资源清理。类型提示表达意图并帮助静态工具检查，但不会在运行时验证输入。虚拟环境将项目安装的包与其他环境隔离。
+**案例：** worker 读取账户报表的 CSV 分页，把有效行逐个送入后续处理。要避免意外共享行对象，不能把整份文件先展开到内存；遇到坏行时，还要关闭文件和临时目录。Python 名称绑定到对象，迭代器按需交付值，上下文管理器则界定资源清理。
 
 ~~~mermaid
 flowchart LR
-    File[CSV file] --> Iterator[Generator reads one row at a time]
-    Iterator -->|valid row| Yield[Yield row to consumer]
-    Iterator -->|later malformed row| Error[Raise parsing error]
-    Error --> Unwind[Exception unwinds nested with blocks]
-    Unwind --> Close[Close file and remove temporary directory]
-    Yield --> Partial[Earlier output may already have escaped]
+    File[CSV 文件] --> Iterator[生成器逐行读取]
+    Iterator -->|有效行| Yield[交付一行给调用者]
+    Iterator -->|后续格式错误| Error[抛出解析异常]
+    Error --> Unwind[离开嵌套 with 块]
+    Unwind --> Close[关闭文件并删除临时目录]
+    Yield --> Partial[更早输出的行已经离开生成器]
 ~~~
 
-**Key terms / 关键术语：** object / 对象；name binding / 名称绑定；mutable / 可变；immutable / 不可变；alias / 别名；shallow copy / 浅拷贝；default argument / 默认参数；iterable / 可迭代对象；iterator / 迭代器；generator / 生成器；exception / 异常；context manager / 上下文管理器；type hint / 类型提示；virtual environment / 虚拟环境。
+图中从输入到输出是一条惰性流程：错误可能在已经产出部分结果后才出现，所以资源会清理，但副作用不会自动回滚。
 
-### Collections and object references / 集合与对象引用
+### 名称、可变对象和浅拷贝怎样相互影响？
 
-Lists and dictionaries are mutable: an operation such as `append` or item assignment changes that object. Strings and tuples are immutable. A tuple cannot have its slots replaced, although it can still contain a mutable object whose value changes. Sets keep unique elements and do not provide sequence indexing; dictionaries map keys to values and preserve insertion order in Python 3.7 and later.
+赋值通常是把名称绑定到对象，不是复制对象。列表和字典可变；同一列表被两个名称引用时，经任一名称原地修改，另一个名称看到的也是同一结果。把其中一个名称重新绑定到新字典，不会改变另一个绑定。浅拷贝会新建外层容器，但其中嵌套的可变对象仍可能共用。
 
-A name does not contain a separate copy of the value. Assignment binds the name to an object, so two names can refer to the same mutable object. Mutating through either name is visible through the other. Rebinding one name changes only that name's binding. A shallow copy creates a new outer container while keeping references to nested objects; use a deeper copy or explicit reconstruction only when the nested values also need independent ownership.
+字符串和元组不可原地替换其成员；不过，元组里仍可以放一个可变列表，再修改列表内容。set 保存唯一元素但不提供序列索引；字典把键映射到值，并从 Python 3.7 起保证保留插入顺序。CPython 的 id(obj) 当前以对象地址作为运行期身份值，但不能跨进程或运行期拿来标识账户、job 或数据库记录。
 
 ~~~python
 event = {"id": "evt-1", "tags": ["new"]}
 alias = event
 alias["tags"].append("priority")
-print(event["tags"])  # ['new', 'priority']
+print(event["tags"])
 
 outer_copy = event.copy()
-outer_copy["id"] = "evt-copy"  # a different outer dictionary
-outer_copy["tags"].append("shared")  # the nested list is still shared
-print(event["tags"])  # ['new', 'priority', 'shared']
+outer_copy["id"] = "evt-copy"
+outer_copy["tags"].append("shared")
+print(event["tags"])
 
-alias = {"id": "evt-2", "tags": []}  # only alias is rebound
-print(event["id"])  # evt-1
+alias = {"id": "evt-2", "tags": []}
+print(event["id"])
 ~~~
 
-### Calls, argument binding, and defaults / 调用、参数绑定与默认值
+输出依次是 ['new', 'priority']、['new', 'priority', 'shared']、evt-1。若要隔离嵌套状态，应按所需字段显式重建，或在确有需要时深拷贝；不要把“拷贝了字典”理解为递归复制所有对象。
 
-At a call, Python binds supplied argument values to parameters by position or keyword. A parameter receives a reference to the supplied object; the call does not copy a mutable argument. Mutating that object inside a function can therefore be observed by the caller, while assigning a new object to the local parameter only rebinds that local name.
-
-Default expressions are evaluated once when Python executes the `def` statement. If the default is a list or dictionary and the function mutates it, later calls reuse that same object. Use `None` when it means “no value supplied,” then create per-call state inside the function. If `None` itself is a meaningful input, choose a separate sentinel.
+函数调用也传递对象引用。若函数原地修改传入列表，调用者能观察到修改；函数内部把形参改绑到新对象则不会替调用方重新绑定名称。函数默认表达式在执行 def 时求值一次，因此可变默认对象会被多次调用共用：
 
 ~~~python
 def unsafe_add(item: str, items: list[str] = []) -> list[str]:
     items.append(item)
     return items
 
-print(unsafe_add("first"))   # ['first']
-print(unsafe_add("second"))  # ['first', 'second'] — same default list
+print(unsafe_add("first"))
+print(unsafe_add("second"))
 
 def add(item: str, items: list[str] | None = None) -> list[str]:
     if items is None:
@@ -2480,436 +2600,363 @@ def add(item: str, items: list[str] | None = None) -> list[str]:
     items.append(item)
     return items
 
-print(add("first"))   # ['first']
-print(add("second"))  # ['second']
+print(add("first"))
+print(add("second"))
 ~~~
 
-### Iteration and generators / 迭代与生成器
+前两个结果会累积为 ['first'] 和 ['first', 'second']；修正后的调用分别得到 ['first'] 和 ['second']。若 None 本身也是有效输入，用单独 sentinel 表示“调用方未提供”。
 
-An **iterable** can supply an iterator. An **iterator** returns its next value on request and signals completion with `StopIteration`; a `for` loop handles that protocol. A generator function uses `yield` to produce an iterator whose local state resumes at the next request. This lets a pipeline process one item at a time instead of first building a complete result list. The work, and any exception raised by that work, happens as the consumer advances the generator. A generator is usually one-pass; materializing it with `list(...)` consumes it and stores all produced values.
+### 迭代器和生成器如何控制读取量？
+
+可迭代对象能提供迭代器；迭代器每次被请求时给出一个值，直到完成。生成器函数包含 yield，调用时返回一个保存执行位置的迭代器；循环或消费端每次请求下一值时，生成器才继续执行。这样可以逐行处理大文件，避免先构造完整结果列表；把生成器转成 list 则会立即消费并保存所有值。
 
 ~~~python
 from collections.abc import Iterable, Iterator
 
-def ready_rows(rows: Iterable[dict[str, str]]) -> Iterator[dict[str, str]]:
+Row = dict[str, str]
+
+def ready_rows(rows: Iterable[Row]) -> Iterator[Row]:
     for row in rows:
         if row["status"] == "ready":
             yield row
 ~~~
 
-Streaming reduces intermediate storage and can begin output early, but it does not make a whole operation atomic. If a later row is invalid, earlier rows may already have been emitted or acted on. Validate or stage first when the operation requires all-or-nothing effects.
+惰性读取减少中间存储，也可以更早开始输出，但不会让一个多行事务自动具备原子性。如果第 500 条数据记录才有格式错误，而前 499 条已经写入其他系统，就必须由调用方决定这些部分结果能否保留；需要全有或全无时，先验证并暂存，或把修改置于合适的事务边界。
 
-### Exceptions and context managers / 异常与上下文管理器
+### 解析失败时资源和先前输出会怎样？
 
-Exceptions report that an operation could not complete normally. Catch one where the program can recover, translate it into a useful boundary error, or add context and re-raise it with `raise ... from error`. Avoid swallowing an exception when the caller still needs to know that work failed.
-
-A context manager pairs setup and cleanup around a block. Once `__enter__` completes successfully, `__exit__` is called when the block ends, including when an exception leaves the block. A context manager may intentionally suppress an exception; ordinary file context managers close the file and allow the original error to continue. This is why file and temporary-directory lifetimes should be explicit rather than left to garbage collection.
-
-### What type hints do and do not do / 类型提示的作用与边界
-
-Annotations give readers and static analyzers a shared description of expected values and returns. A type checker can report a mismatch before execution, and an editor can use the information for navigation and completion. Python does not automatically reject a value because it conflicts with an annotation; data read from a file, database, or network still needs parsing and validation at that boundary. Runtime validation requires an explicit check or a library designed to perform it.
-
-~~~python
-def declared_integer() -> int:
-    return "still a string"
-
-print(declared_integer())  # Python returns the string; a type checker can flag it
-~~~
-
-### A small file-processing example / 小型文件处理示例
-
-Save this as `python-fundamentals-example.py`. It filters synthetic CSV rows lazily, copies each selected row before adding a tag, and uses nested context managers to close the file and remove the temporary directory even if parsing raises an exception.
+下面用合成 CSV 展示完整过程。生成器按 CSV 记录验证列数、状态值和整数数量；错误时读取 `csv.reader.line_num`，报告读到该记录时的物理文件行号，并保留原始异常。CSV 记录可能跨多行，所以不能用记录序号当文件行号。外层在文件与临时目录两个 with 块之外捕获异常。坏记录到来之前已经打印的报表行仍会保留，但两个资源都会在异常退出时关闭。
 
 ~~~python
 import csv
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 Row = dict[str, str]
 
+def ready_rows(source) -> Iterator[Row]:
+    reader = csv.reader(source)
+    try:
+        headers = next(reader)
+    except StopIteration:
+        return
 
-def ready_rows(rows: Iterable[Row]) -> Iterator[Row]:
-    for line_number, row in enumerate(rows, start=2):  # line 1 is the header
+    required = {"id", "status", "count"}
+    if not required.issubset(headers):
+        raise ValueError("CSV header must include id, status, and count")
+
+    for values in reader:
+        line_number = reader.line_num
+        if len(values) != len(headers):
+            raise ValueError(
+                f"CSV physical line {line_number}: column count does not match header"
+            )
+        row = dict(zip(headers, values))
         try:
             status = row["status"]
+            if status not in {"ready", "queued"}:
+                raise ValueError(f"unknown status {status!r}")
             count = int(row["count"])
         except (KeyError, TypeError, ValueError) as error:
             raise ValueError(
-                f"CSV row {line_number}: status and integer count are required"
+                f"CSV physical line {line_number}: status must be ready or queued, "
+                "and count must be an integer"
             ) from error
 
         if status == "ready" and count > 0:
             yield row
 
-
 def add_tag(row: Row, tag: str = "reviewed") -> Row:
-    enriched = row.copy()  # a shallow copy is enough because values are strings
+    enriched = row.copy()
     enriched["tag"] = tag
     return enriched
 
-
-CSV_TEXT = """id,status,count
-evt-1,ready,3
-evt-2,queued,1
-evt-3,ready,nope
+CSV_TEXT = """id,status,count,note
+evt-1,ready,3,"account
+export"
+evt-2,queued,1,skip
+evt-3,unknown,2,bad-status
 """
 
+try:
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "events.csv"
+        path.write_text(CSV_TEXT, encoding="utf-8")
 
-def main() -> None:
-    try:
-        with TemporaryDirectory() as directory:
-            path = Path(directory) / "events.csv"
-            path.write_text(CSV_TEXT, encoding="utf-8")
-
-            with path.open(encoding="utf-8", newline="") as source:
-                for row in ready_rows(csv.DictReader(source)):
-                    print(add_tag(row))
-    except ValueError as error:
-        print(f"Rejected input: {error}")
-
-
-if __name__ == "__main__":
-    main()
+        with path.open(encoding="utf-8", newline="") as source:
+            for row in ready_rows(source):
+                print(add_tag(row))
+except ValueError as error:
+    print(f"Rejected input: {error}")
 ~~~
 
-Expected output:
+本机以 CPython 3.11.13 重放，输出第一条 evt-1 记录，再报告 `CSV physical line 5` 的未知状态。该坏行是第 3 条数据记录；第一条 evt-1 记录跨文件第 2、3 两行，第二条 evt-2 在第 4 行，所以记录序号和物理行号不同。生成器是在消费者推进时运行，异常离开两个上下文后文件关闭，TemporaryDirectory 清除其目录。由于第一条结果已输出，资源清理不等同于撤回此前效果。
 
-~~~text
-{'id': 'evt-1', 'status': 'ready', 'count': '3', 'tag': 'reviewed'}
-Rejected input: CSV row 4: status and integer count are required
+普通文件的 with 语句能在异常时关闭文件。上下文管理器会先进入代码块，退出时运行清理逻辑；若清理器选择抑制异常，还可改变异常传播，因此应检查实际管理器契约。需及时释放游标、文件或锁时，显式使用 with/finally，不依赖垃圾回收何时运行。
+
+### 类型标注和虚拟环境分别保证什么？
+
+type hint（类型提示）描述函数参数、结果或变量的预期形状，供读者、IDE 和静态类型检查器使用。Python 运行时默认不会因为注解不匹配而拒绝返回值；从网络、文件或数据库读入的 str 仍需解析、验证并转换为可信类型。若一个返回 int 的函数实际返回 str，静态检查器可以报告，但普通调用仍会拿到字符串。
+
+~~~python
+def declared_integer() -> int:
+    return "still a string"
+
+print(declared_integer())
 ~~~
 
-The first row is yielded before the generator reaches the malformed fourth CSV line. The example catches the parsing error outside both `with` blocks, so the file and temporary directory still close during exception unwinding. A real application that writes results to a database or calls a remote service must decide whether partial progress is acceptable and use a transaction or staging boundary when it is not.
+本机输出 still a string。版本和实现也要分开说明：本文代码使用 Python 3.11 的语法和标准库行为；字典插入顺序从 Python 3.7 起是语言保证，CPython 3.6 中只是实现细节；CPython 的 id(obj) 目前表现为对象身份值，但不能把它当作跨进程、跨运行的业务标识。
 
-### Language behavior, implementations, and versions / 语言语义、实现与版本
-
-The examples use Python 3.11 syntax and the language behavior documented for Python 3.11. Names, mutability, default evaluation, iteration, and `with` cleanup are language/runtime contracts; they do not depend on CPython's internal object layout. Other details can be implementation-specific or change between Python versions. For example, dictionary insertion order is a language guarantee from Python 3.7; CPython 3.6 preserved it as an implementation detail. In CPython, `id(obj)` currently represents an object's memory address, but code should not treat an identity value as a durable identifier. Check the target interpreter and minimum supported version before relying on newer syntax or runtime behavior.
-
-### Isolated environment and run command / 隔离环境与运行命令
-
-A virtual environment gives a project its own package installation area; it does not install or pin the Python interpreter itself. Select the intended interpreter when creating the environment, and use that environment's Python to invoke `pip` so package installation and execution target the same environment. Declare third-party requirements in the project's packaging or dependency files. A dependency-free example needs no installation step.
-
-On POSIX, from the directory containing the saved example, create an environment and run it with:
+虚拟环境隔离项目安装的包，不会安装或固定 Python 解释器本身。创建环境时选定解释器，再用该环境中的 Python 运行 pip，才能保证装包和执行指向同一环境。将上面的完整文件处理程序保存为 python-fundamentals-example.py。这个示例只依赖标准库，不需要额外安装：
 
 ~~~sh
-python3.11 -m venv .venv && .venv/bin/python python-fundamentals-example.py
+python3.11 -m venv .venv
+.venv/bin/python python-fundamentals-example.py
 ~~~
 
-For a project with a `requirements.txt`, install its declared packages with `.venv/bin/python -m pip install -r requirements.txt` before running the script. A virtual environment isolates packages, while repeatability still depends on selecting a compatible Python version and recording the project's dependency versions and platform requirements.
+项目如需第三方库，应把依赖写入项目的 packaging 配置或依赖文件，再用 .venv/bin/python -m pip install -r requirements.txt 从该环境安装；可复现运行还取决于兼容的解释器版本、包版本和平台要求。Python 异步请求怎样选择运行边界见[异步 FastAPI 接口为什么仍会阻塞？](#22.%20%E5%BC%82%E6%AD%A5%20FastAPI%20%E6%8E%A5%E5%8F%A3%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%8D%E4%BC%9A%E9%98%BB%E5%A1%9E%EF%BC%9F)。
 
-**Verified run / 运行验证：** The file-processing example ran with CPython 3.11.13 and printed the expected output above. This verifies the example on that interpreter; it is not a claim that every Python implementation or platform has identical implementation details.
+> [!info]- 来源
+> - 名称绑定、对象可变性和字典顺序：[Python 3.11 Language Reference, Data model](https://docs.python.org/3.11/reference/datamodel.html#objects-values-and-types)，核对于 2026-11-06。
+> - 默认参数只在函数定义时求值：[Python 3.11 Tutorial, Default Argument Values](https://docs.python.org/3.11/tutorial/controlflow.html#default-argument-values)，本例于 CPython 3.11.13 重放。
+> - `csv.reader.line_num` 计源文件物理行，CSV 记录可跨多行：[Python 3.11 csv module](https://docs.python.org/3.11/library/csv.html#csv.csvreader.line_num)，多行记录例于 CPython 3.11.13 重放。
+> - 迭代器、生成器与 StopIteration：[Python 3.11 Language Reference, Data model](https://docs.python.org/3.11/reference/datamodel.html#generator-functions)，CSV 例子于 CPython 3.11.13 重放。
+> - with 退出时的资源清理：[Python 3.11 Language Reference, The with statement](https://docs.python.org/3.11/reference/compound_stmts.html#the-with-statement)。
+> - 注解不作默认运行时验证：[Python 3.11 typing](https://docs.python.org/3.11/library/typing.html)，注解示例于 CPython 3.11.13 重放。
+> - venv 与包安装：[Python 3.11 venv](https://docs.python.org/3.11/library/venv.html)、[Python Packaging User Guide](https://packaging.python.org/en/latest/tutorials/installing-packages/)，核对于 2026-11-06。
+## 22. 异步 FastAPI 接口为什么仍会阻塞？
 
-**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains timeouts, cancellation, and safe retries. [Capacity and backpressure](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) covers bounded work.
-Python-specific coroutine and framework behavior is explained in [Python Async and FastAPI Request Lifecycle / Python异步与FastAPI请求生命周期](#22.%20Why%20can%20an%20async%20FastAPI%20endpoint%20still%20block?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BC%82%E6%AD%A5%20FastAPI%20%E6%8E%A5%E5%8F%A3%E4%BB%8D%E4%BC%9A%E9%98%BB%E5%A1%9E%EF%BC%9F).
-Application-level request, response, error, and pagination contracts are covered in [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F).
+**案例：** FastAPI 报表接口收到 acct-17 的查询，异步数据库驱动要等数页结果；同一 worker 还必须及时回应其他请求。async def 只是协程函数声明，只有执行到会挂起的 await 才能把事件循环让给别的任务。同步阻塞调用仍会占住当前线程，资源也必须活到最后一次使用它的响应阶段。
 
-**Sources / 来源：** Python 3.11 [Tutorial](https://docs.python.org/3.11/tutorial/) and [Language Reference](https://docs.python.org/3.11/reference/), including [objects and types](https://docs.python.org/3.11/reference/datamodel.html#objects-values-and-types), [function definitions](https://docs.python.org/3.11/reference/compound_stmts.html#function-definitions), [iterators and generators](https://docs.python.org/3.11/reference/datamodel.html#generator-functions), and [`with` statements](https://docs.python.org/3.11/reference/compound_stmts.html#the-with-statement); [`typing`](https://docs.python.org/3.11/library/typing.html); and the Python Packaging User Guide's [installing packages](https://packaging.python.org/en/latest/tutorials/installing-packages/) and [managing application dependencies](https://packaging.python.org/en/latest/tutorials/managing-dependencies/) tutorials. Checked 2026-10-15.
+~~~mermaid
+flowchart TD
+    Route[报表请求进入路由] --> Library{底层库提供哪种接口？}
+    Library -->|原生 async API| Await[async def 中 await]
+    Library -->|同步阻塞 I/O| Sync[FastAPI 调用 def 路由/依赖]
+    Library -->|同步辅助函数| Inline{是否由 async 路由直接调用？}
+    Inline -->|是，直接调用| Block[当前事件循环被阻塞]
+    Inline -->|否，主动卸载| DefaultExec[asyncio.to_thread 默认 executor]
+    Sync --> Pool[Starlette / AnyIO 同步线程池]
+    Library -->|大量纯 Python CPU 计算| Process[有界进程/计算 worker]
+    Await --> Resource[资源活到最后一次读取或响应结束]
+    Sync --> Resource
+    DefaultExec --> Resource
+    Process --> Resource
+~~~
 
-### Representative answers / 代表性回答
+### 从 async def 到运行中的协程，中间发生什么？
 
-**How do mutability, argument binding, and defaults affect a function call? / 可变性、参数绑定与默认值如何影响函数调用？** Names bind to objects, so a caller and a parameter can refer to the same mutable object. An in-place mutation is visible through both references; rebinding the local parameter does not rebind the caller's name. Python evaluates a default expression when the function is defined, so a mutable default is shared across calls. Use `None` and allocate a fresh list or dictionary inside when each call needs independent state.
+调用 async def 函数只会构造并返回协程对象，函数体此时尚未执行；await 它或用 asyncio.create_task() 将它调度为 Task 后，函数体才开始运行。await 在等待一个尚未完成的可等待对象时暂停当前任务，事件循环可以推进其他就绪任务。被创建的任务仍由创建者或结构化并发作用域负责收集结果和等待结束。在 Python 3.11 中，TaskGroup 会在离开作用域前等待组内任务完成。
 
-名称绑定到对象，因此调用方和形参可能引用同一可变对象。原地修改会通过两个引用都可见；在函数内部重新绑定形参不会改变调用方的名称绑定。Python 在函数定义时求值默认表达式，因此可变默认值会在多次调用间共享。若每次调用需要独立状态，使用 `None` 并在函数内部创建新列表或字典。
+await 并不保证一定让出线程：若等待的对象已经就绪，代码可以继续推进。time.sleep()、同步数据库驱动或长时间 Python 循环则不会让事件循环调度别的任务。一个同步辅助函数如果从 async def 路由中直接调用，只是普通函数调用，FastAPI 不会自动把它移到线程池。
 
-**How do iterators, generators, and context managers control work and resources? / 迭代器、生成器与上下文管理器如何控制工作和资源？** An iterator produces one value per request, and a generator packages that pull-based behavior with `yield` and saved execution state. That can avoid building an entire intermediate collection, but later errors may occur after earlier values have already been consumed. A context manager runs its exit behavior when a block ends, including during exception unwinding, so files and other resources have a clear cleanup boundary.
+按驱动来选择接口：有原生 async 数据库或 HTTP 客户端时，在 async 路由中 await 它；若只能使用同步阻塞 I/O，可以把 FastAPI 路由或依赖本身声明为 def，由 Starlette/AnyIO 的同步工作线程池运行；短期兼容阻塞 I/O 时也可用 asyncio.to_thread()。这两者是不同的线程池，独立受限：框架调用的同步路由/依赖走 AnyIO 池，asyncio.to_thread() 走事件循环的默认 executor。应用要分别配置和计入它们的容量。FastAPI 只会对它负责调用的同步路由和依赖做调度，async 路由里直接调用的同步辅助函数仍在当前线程运行。
 
-迭代器按请求产出一个值，生成器通过 `yield` 和保存的执行状态封装这种拉取式行为。这样可以避免构建整个中间集合，但后续错误可能在较早的值已经被消费后才发生。代码块退出时（包括异常展开期间），上下文管理器都会运行退出逻辑，因此文件等资源有明确的清理边界。
+对纯 Python CPU 工作，CPython 3.11 的 Global Interpreter Lock（全局解释器锁，GIL）通常让多个线程不能同时执行 Python 字节码；to_thread 是避免阻塞事件循环的 I/O 选项，不是通用 CPU 并行开关。进程池或独立 worker 可以并行计算，但会增加序列化、进程启动、内存和排队成本。CPython 3.13 引入实验性的自由线程构建；3.14 起它成为正式支持的可选构建，但不是默认解释器，未适配的扩展还可能重新启用 GIL。运行效果取决于实际解释器和依赖，应测量确认。无论哪种卸载方式，都要限制 worker 数及等待队列。
 
-**What do Python type hints guarantee at runtime? / Python 类型提示在运行时保证什么？** By themselves, they guarantee nothing about the values passed or returned. They communicate expected shapes to humans and static tools. Programs still parse and validate untrusted or external data where it enters the application, and use explicit runtime checks when runtime enforcement is required.
+### 任务取消时，函数、线程和远端操作分别会怎样？
 
-类型提示本身不会在运行时保证输入值或返回值的类型。它们向读者和静态工具传达预期的数据形状。程序仍需在外部数据进入应用时解析与校验；需要运行时强制时，应添加显式检查或使用专门的校验库。
-## 22. Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？
+Task.cancel() 会安排在事件循环下一次机会把 CancelledError 注入协程。任务可以在 finally 中释放资源；清理完成后通常应让取消继续传播。TaskGroup 和 timeout scope 也依赖取消传播，不要把 CancelledError 当作普通业务异常吞掉。
 
-**Core idea / 核心模型：** `asyncio` lets one event-loop thread make progress on other tasks while the current task waits for asynchronous I/O. An `async def` declaration alone does not make blocking work asynchronous: choose `def` for synchronous libraries that block, and `async def` when awaited libraries can suspend. Tie every acquired resource to a clear cleanup boundary, and treat cancellation as a cooperative request to stop. / `asyncio`让事件循环线程在当前任务等待异步I/O时推进其他任务。仅仅声明`async def`不会让阻塞操作异步：使用同步阻塞库时可选择`def`，使用能通过`await`挂起的库时选择`async def`。资源应绑定明确的清理边界；取消是要求任务协作停止，而非强制终止。
+asyncio.timeout(秒数) 需要事件循环重新获得调度机会才能送达取消。如果事件循环被同步函数堵住，超时回调无法运行；阻塞调用返回后，若代码在让出控制权前已退出 timeout 上下文，超时甚至可能完全不触发。本机 CPython 3.11.13 中，`asyncio.timeout(0.01)` 包住 `time.sleep(0.05)` 正常退出，耗时约 0.06 秒。对 await asyncio.to_thread(blocking_call)，取消当前 Task 会让调用方停止等待结果，却不能强制停止已经开始运行的线程函数。底层线程可能继续占用文件、连接或 CPU，所以不要在任务已取消时立刻关闭仍被它使用的连接池。
 
-**Key terms / 关键术语：** coroutine function / 协程函数；coroutine object / 协程对象；awaitable / 可等待对象；task / 任务；event loop / 事件循环；cooperative scheduling / 协作式调度；blocking I/O / 阻塞I/O；deadline / 截止时间；cancellation / 取消；yield dependency / `yield`依赖；worker thread / 工作线程。
+HTTP 客户端超时或断线也不能证明远端副作用已经停止。一次请求超时后，写入可能尚未到达服务、可能回滚，也可能已经提交但响应丢失；耐久 job 需显式取消，并从权威状态确认结果，见[请求超时后如何确认结果并安全重试？](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
 
-### From `async def` to a running task / 从`async def`到运行中的任务
+### FastAPI 的 yield 依赖应何时释放？
 
-An `async def` **coroutine function** describes work. Calling it creates a **coroutine object**; it does not run the body. `await coro()` drives that coroutine as part of the current task. `asyncio.create_task(coro())` schedules it as a separate **Task**, so it can progress concurrently with other tasks. Keep and await created tasks; starting work without collecting its result makes failures and shutdown hard to control. In Python 3.11, `asyncio.TaskGroup` is a structured way to create related tasks and wait for them together.
+一个 yield 依赖的生命周期要覆盖它最后一次被使用的时点。FastAPI 中未指定 scope 时，带 yield 的依赖默认是 request scope：依赖在路由前打开，在 response 处理完成后关闭。若路由返回的 StreamingResponse 仍要读取数据库游标，就让 request scope 一直覆盖流生成。只有路由返回后不再需要该资源，才用 Depends(scope="function")，这样清理发生在发送响应前。
 
-An **awaitable** is any object accepted by `await`, including coroutine objects, Tasks, and Futures. During an incomplete await, the current task suspends and the event loop can run another ready task or service I/O. This is cooperative: code runs until it reaches a suspension point. A synchronous call such as `time.sleep()`, a blocking database driver, or a long CPU loop prevents the event-loop thread from serving other tasks during that call.
-
-An `async def` function containing `yield` is an **async-generator function**; calling it returns an **async-generator object**, not a coroutine object. FastAPI manages that object's dependency lifecycle to run cleanup after yielding the resource.
-
-### Choose the boundary by the library you call / 按所调用的库选择边界
-
-For an awaited database or HTTP client, use an `async def` route and await its I/O. A synchronous `def` route or dependency that FastAPI calls is run in its worker thread pool, so a legacy synchronous client can fit that boundary. Conversely, a synchronous helper called directly from inside an `async def` route is just a normal function call; FastAPI does not automatically move that nested call to a thread.
-
-`asyncio.to_thread()` is useful for blocking I/O that cannot yet be replaced, and it keeps the event loop available while the thread waits. It is not a general CPU-parallelism switch: in a GIL-enabled CPython runtime, the lock limits simultaneous execution of pure-Python CPU work. CPython offers free-threaded builds from 3.13, but extension support and whether the GIL is enabled still matter. A process pool or separate worker can run CPU work in parallel, with serialization, startup, memory, and queueing costs. Native extensions that release the GIL and other Python implementations can differ. Measure the chosen runtime and library combination. [CPython free-threading guide](https://docs.python.org/3/howto/free-threading-python.html) Bound thread/process concurrency so offloading does not merely move an unbounded queue; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) for admission and backpressure.
-
-### Cancellation, deadlines, and cleanup / 取消、截止时间与清理
-
-`Task.cancel()` arranges for `CancelledError` to be raised in the task at a later opportunity, commonly at an `await`. Use `try/finally` to release resources and normally let cancellation propagate after cleanup. Do not catch `BaseException` or suppress `CancelledError` as a generic error; structured concurrency and timeout scopes rely on cancellation being visible.
-
-In Python 3.11, `asyncio.timeout(seconds)` cancels the current task when its time budget expires and raises `TimeoutError` outside the context manager. It is cooperative: a blocking synchronous function prevents the event loop from delivering that cancellation until the function returns. A timeout around `await asyncio.to_thread(...)` stops waiting in the coroutine but cannot forcibly stop a thread function already running. A client timeout also does not prove that a remote operation stopped or had no side effect. Pass remaining request budget to supported downstream calls and use the broader [API reliability guidance](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) for end-to-end deadlines and unknown outcomes.
-
-### Choose the dependency scope from its last use / 按最后一次使用选择依赖作用域
-
-In FastAPI 0.128.0, a yielded dependency defaults to request scope. The framework enters it before the route runs. If the route returns a streaming body that will keep using the resource, retain the request scope through response processing. If the dependency is only needed while running the route, `Depends(scope="function")` ends it when the handler returns, before sending the response. Return data that no longer needs the resource when choosing function scope. / 如果响应生成过程中还需使用资源，就保留 request scope。路由返回前已完成全部资源使用时，才选择 function scope。
+这条 StreamingResponse 路径在请求内直接向客户端发送正文；连接和游标活到正文结束或请求取消。持久导出是另一条路径：先同事务接受 job、outbox 和等待槽并返回 202，后台 worker 再写 CSV 私有对象；上传与结果引用提交后才把 job 标为 succeeded。客户端断开不能替代 job 取消。
 
 ~~~mermaid
 sequenceDiagram
     participant F as FastAPI
-    participant D as Yield dependency
-    participant R as Route
-    participant B as Response body
-    F->>D: Acquire resource
-    F->>R: Call route
-    R-->>F: Return response
+    participant D as yield 依赖
+    participant R as 路由函数
+    participant B as 响应正文生成器
+    F->>D: 打开会话或游标
+    F->>R: 调用路由
+    R-->>F: 返回响应
     alt function scope
-        F->>D: Clean up
-        F->>B: Generate and send body
-    else request scope
-        F->>B: Generate and send body
-        B->>D: Use resource while streaming
-        F->>D: Clean up at end of request scope
+        F->>D: 先清理依赖
+        F->>B: 发送响应正文
+    else request scope（默认）
+        F->>B: 生成并发送正文
+        B->>D: 流式读取时继续使用资源
+        F->>D: 请求响应生命周期结束后清理
     end
 ~~~
 
-Put cleanup in `finally`. In an already-cancelled AnyIO scope, awaited cleanup can be cancelled too. When it must await, give that cleanup a short shielded deadline and let the original cancellation propagate. The smoke check below exercises explicit task cancellation and both streaming lifetimes. A dropped connection does not necessarily cancel every kind of downstream work. Test the selected ASGI server and response type before depending on disconnect behavior. A background job should acquire its own resources at its own lifetime boundary. [FastAPI dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/) · [AnyIO finalization](https://anyio.readthedocs.io/en/stable/cancellation.html#finalization)
-
-~~~mermaid
-flowchart LR
-    Sync[Blocking sync library] -->|def route or dependency| Pool[FastAPI worker thread pool]
-    Async[Async library] -->|await| Loop[Event loop can run other tasks]
-    Inline[Blocking call inside async route] -->|no suspension| Block[Event loop is blocked]
-    CPU[Pure-Python CPU work] -->|bounded process pool or worker| Parallel[Other execution resource]
-~~~
-
-### Runnable request example / 可运行的请求示例
-
-This small app has a sync settings dependency, an async resource dependency, an awaited route with a deadline, a streaming route that needs request-scoped cleanup, a deliberately bad blocking route, and a thread-offloaded I/O route. Save the complete block as `async_api_demo.py`; it is an executable smoke check rather than a production server.
+下面的路由片段只展示资源和调度边界。真实服务中的数据库驱动、超时和流式响应都应按本机库契约替换。
 
 ~~~python
 import asyncio
-import threading
 import time
 
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
-from httpx import ASGITransport, AsyncClient
-
-trace = []
-slow_started = []
-quick_seen = []
-
-
-def load_settings():
-    # FastAPI runs a sync dependency it calls in its worker thread pool.
-    return {"region": "demo", "thread": threading.get_ident()}
-
-
-class Store:
-    async def get(self, item_id: int, region: str):
-        await asyncio.sleep(0)  # stand-in for an async driver wait
-        return {"id": item_id, "region": region}
-
-
-async def get_store():
-    trace.append("open")
-    try:
-        yield Store()
-    finally:
-        trace.append("close")
-
 
 app = FastAPI()
 
+class Store:
+    async def get(self):
+        print("read")
+        await asyncio.sleep(0)
+        return "report row"
 
-@app.get("/items/{item_id}")
-async def read_item(
-    item_id: int,
+async def get_store():
+    print("open")
+    try:
+        yield Store()
+    finally:
+        print("close")
+
+def load_settings():
+    return {"region": "demo"}
+
+@app.get("/row")
+async def read_row(
     settings=Depends(load_settings),
     store=Depends(get_store, scope="function"),
 ):
-    assert settings["thread"] != threading.get_ident()
     async with asyncio.timeout(0.5):
-        return await store.get(item_id, settings["region"])
-
+        return {"region": settings["region"], "row": await store.get()}
 
 def blocking_io():
     time.sleep(0.06)
     return "done"
 
-
-@app.get("/bad")
-async def bad_route():
-    slow_started.append(time.monotonic())
-    blocking_io()  # blocks the event-loop thread
-    return {"ok": True}
-
-
-@app.get("/quick")
-async def quick_route():
-    quick_seen.append(time.monotonic())
-    return {"ok": True}
-
+@app.get("/blocking")
+async def blocking_route():
+    return {"result": blocking_io()}
 
 @app.get("/offloaded")
 async def offloaded_route():
-    return {"result": await asyncio.to_thread(blocking_io)}
-
+    try:
+        return {"result": await asyncio.to_thread(blocking_io)}
+    except asyncio.CancelledError:
+        # 取消当前等待任务不会强停已经开始的 blocking_io 线程。
+        raise
 
 @app.get("/stream")
-async def stream(store=Depends(get_store)):  # default yield scope is request
+async def stream(store=Depends(get_store)):
     async def body():
-        trace.append("body")
-        yield "x"
+        print("body")
+        yield await store.get()
 
     return StreamingResponse(body(), media_type="text/plain")
-
-
-@app.get("/wait")
-async def wait_forever(store=Depends(get_store)):
-    await asyncio.Event().wait()
-
-
-async def check():
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://example.test"
-    ) as client:
-        trace.clear()
-        response = await client.get("/items/7")
-        assert response.json() == {"id": 7, "region": "demo"}
-        assert trace == ["open", "close"]  # function scope closes before send
-
-        trace.clear()
-        response = await client.get("/stream")
-        assert response.text == "x"
-        assert trace == ["open", "body", "close"]  # request scope covers body
-
-        trace.clear()
-        task = asyncio.create_task(client.get("/wait"))
-        await asyncio.sleep(0.01)
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-        else:
-            raise AssertionError("request task was expected to be cancelled")
-        assert trace == ["open", "close"]
-
-        slow_started.clear()
-        quick_seen.clear()
-        bad = asyncio.create_task(client.get("/bad"))
-        await asyncio.sleep(0)  # let /bad block before /quick is scheduled
-        quick = await client.get("/quick")
-        await bad
-        assert quick.status_code == 200
-        assert quick_seen[0] - slow_started[0] >= 0.05
-
-        response = await client.get("/offloaded")
-        assert response.json() == {"result": "done"}
-
-
-asyncio.run(check())
 ~~~
 
-The `/bad` route delays the next event-loop request because it calls a blocking helper directly. Use a synchronous route for a synchronous I/O stack, or explicitly offload a blocking call; when possible prefer a native async client. The `/items` route awaits I/O and receives the sync and async dependencies through FastAPI's respective boundaries. Its 0.5-second timeout is only a local teaching budget, not a recommended service-wide setting.
+`/row` 的 function-scope 依赖事件顺序是 `open → read → close`；`/stream` 默认 request scope 的顺序是 `open → body → read → close`。这是依赖和生成器事件 trace，不是对 ASGI response send 次序的测量。0.5 秒 timeout 只是示例预算；真实应用的 session、事务和数据库连接是不同资源，每个请求或 worker attempt 都要有独立短生命周期，不能把同一个 ORM Session 共享给并发 Task。见[如何限定 ORM Session 并排查连接池耗尽？](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。若流生成器需要游标，依赖的 scope 必须覆盖最后一次游标读取；一个后台 job 则应在自己的执行生命周期内重新取得资源。
 
-### Python and runtime versions / Python与运行时版本
+本机 CPython 3.11.13、FastAPI 0.128.0、Starlette 0.47.2、HTTPX 0.28.1 上用独立 smoke 驱动核对过这些机制：同步依赖被移出事件循环线程；同步阻塞调用会拖慢同时请求；运行中的 `to_thread` 函数在等待它的 Task 被取消后仍完成。取消请求测试使用 HTTPX `ASGITransport` 并在同进程取消 ASGI 调用 Task；这不等于真实 TCP 客户端断线，也不据此推断服务器断线后的资源行为。FastAPI 版本会影响依赖生命周期选项，升级时应核对所装版本。
 
-`async`/`await` syntax is part of Python; `asyncio` is a standard-library API. This example was checked with **CPython 3.11.13**, FastAPI **0.128.0**, Starlette **0.47.2**, and HTTPX **0.28.1**. `asyncio.timeout()` and `asyncio.TaskGroup` require Python 3.11; `asyncio.to_thread()` requires Python 3.9+. CPython is one Python implementation, so GIL statements above are explicitly CPython-specific. Verify framework lifecycle options against the installed FastAPI version: newer live documentation may describe behavior absent in an older release.
+> [!info]- 来源
+> - Python 3.11 协程、TaskGroup、Task.cancel()、timeout 与 to_thread：[Python 3.11 asyncio tasks](https://docs.python.org/3.11/library/asyncio-task.html)，Task取消和后台线程示例于 CPython 3.11.13 重放。
+> - asyncio.to_thread() 调用事件循环默认 executor 的实现：[CPython 3.11, Lib/asyncio/threads.py](https://github.com/python/cpython/blob/3.11/Lib/asyncio/threads.py)；阻塞函数已运行后不能由取消 awaiter 强制停止，线程验证于 CPython 3.11.13 重放。
+> - 已经运行的 callable 不能由 Future.cancel() 强制取消：[Python 3.11 concurrent.futures](https://docs.python.org/3.11/library/concurrent.futures.html#concurrent.futures.Future.cancel)，已运行线程示例于 CPython 3.11.13 重放。
+> - async 函数、生成器和协程对象的语言定义：[Python 3.11 Language Reference, Data model](https://docs.python.org/3.11/reference/datamodel.html#coroutine-functions)。
+> - CPython 自由线程模式的可选构建、运行时 GIL 状态和扩展兼容边界：[Python support for free threading](https://docs.python.org/3/howto/free-threading-python.html)；3.14 正式支持标准见 [PEP 779](https://peps.python.org/pep-0779/)，核对于 2026-11-06。
+> - FastAPI 对同步路由/依赖与异步路由的调度边界：[FastAPI, Concurrency and async / await](https://fastapi.tiangolo.com/async/)，核对于 2026-11-06。
+> - 同步路由/依赖使用 AnyIO 线程容量、且 Starlette 内其他同步操作共用该限制：[Starlette, Thread Pool](https://www.starlette.io/threadpool/)；AnyIO 的限制不影响 asyncio 默认 executor：[AnyIO, Working with threads](https://anyio.readthedocs.io/en/stable/threads.html)，核对于 2026-11-06。
+> - yield 依赖默认 request scope 与 function scope 的清理时点：[FastAPI, Dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/)，核对于 2026-11-06；0.128.0 路由 resolver 实现见 [dependency utilities](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py)。
+## 23. 如何估算并限制异步工作管线？
 
-### Interview answers / 面试回答
+**案例：** API 接到 acct-17 的账户报表请求：先验证并持久接受任务，后台 worker（工作进程）顺序读数据库并生成 CSV，最后写入私有对象存储。受理事务同时写 job、outbox 和一个共享等待槽，提交后才返回 `202`；只有对象上传完成、结果引用与 `succeeded` 状态提交后，报表才可查询。这里估算的是这条持久后台导出路径。直接用 HTTP 流式响应是另一条请求内路径：连接和流资源要活到正文发送完或请求取消，不会自动变成可查询的 job 结果。
 
-**Why can an `async def` endpoint still stall other requests? / 为什么`async def`接口仍会拖慢其他请求？** An async function only yields when it awaits an operation that actually suspends. Calling a synchronous network/file helper or doing a long CPU loop inline keeps the event-loop thread busy. I would use an async driver, a sync route/dependency that FastAPI can offload, or a bounded thread/process worker chosen for the workload; then I would measure queueing and latency.
+要决定接多少任务，必须同时看准入速率、等待上限、每个执行槽的处理时间、数据库连接和输出体量。队列能保留待办工作，却不会自动增加处理能力。
 
-异步函数只有在等待一个确实会挂起的操作时才让出执行权。在函数内直接调用同步网络/文件操作，或执行很长的CPU循环，都会占住事件循环线程。我会使用异步驱动、由FastAPI代为卸载的同步路由/依赖，或根据工作负载选择有界线程/进程工作池，并测量排队与延迟。
-
-**What happens when a request is cancelled while it owns a resource? / 请求持有资源时被取消会怎样？** Cancellation is delivered cooperatively, so I put release logic in `finally` and let `CancelledError` propagate. For FastAPI `yield` dependencies I choose request scope if response streaming still consumes the resource, and function scope if cleanup should happen before sending the response. I would not assume a client timeout or disconnect proves remote work stopped; I would keep downstream deadlines and side-effect handling explicit.
-
-取消通过协作方式传递，因此我会把释放逻辑放进`finally`并让`CancelledError`继续传播。若响应流仍要使用FastAPI的`yield`依赖，我会选择request scope；若资源应在响应发送前关闭，则选择function scope。我不会因为客户端超时或断开就认定远端工作已停止；下游截止时间与副作用处理仍需显式定义。
-
-**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#21.%20How%20do%20Python%20values,%20iterators,%20and%20resource%20lifetimes%20behave?%20/%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F), and [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F). [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) expands the resource example into database-session, transaction, and pool-lifetime choices.
-## 23. How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？
-
-Size a pipeline by naming its system boundary, arrival rate, time in each stage, resource held by each unit of work, and maximum waiting work. Little's Law estimates average work in flight in a stable system; it does not promise peak throughput or tail latency. A queue gives work somewhere durable to wait, but only admission control and backpressure keep that wait bounded. / 估算管线时，要明确系统边界、到达速率、各阶段耗时、每个任务占用的资源和最大等待量。Little 定律估算稳定系统中的平均在途工作；它不承诺峰值吞吐量或尾部时延。队列让工作可以持久等待，但只有准入控制和背压才能限制等待规模。
-
-**Key terms / 关键术语：** admission control / 准入控制；backpressure / 背压；in-flight work / 在途工作；queue age / 队列等待时长；Little's Law / Little 定律；connection pool ceiling / 连接池配置上限。
-
-### Bound work before estimating replicas / 先限制工作量，再估算副本数
-
-Bound in-flight requests, worker count, and every waiting queue. An unbounded queue turns overload into growing memory use and delay. When a bound is reached, choose an explicit policy: wait within the request deadline, reject, defer to durable storage, or shed work that can safely be dropped. Include queue wait in the request's latency budget and report overload distinctly from successful completion.
+容量规划中的 admission control（准入控制）决定是否接受新工作；backpressure（背压）把下游拥塞反馈给上游。两者都要与任务槽位和连接池的所有权一起定义。
 
 ~~~mermaid
 flowchart LR
-    S[Submission] --> Rate{Rate budget available?}
-    Rate -->|no| Reject[Reject without claiming acceptance]
-    Rate -->|yes| Slots{Shared waiting slot available?}
-    Slots -->|no| Reject
-    Slots -->|yes| Reserve[Atomically reserve one job slot]
-    Reserve --> Outbox[Outbox or durable queue]
-    Outbox --> Start[Worker starts job]
-    Start --> Release[Release reservation once]
-    Outbox -->|publish retry or broker copy| Outbox
+    Request[提交报表] --> Rate{速率预算可用？}
+    Rate -->|否| Reject[拒绝，尚未承诺受理]
+    Rate -->|是| Slot{共享等待槽可用？}
+    Slot -->|否| Reject
+    Slot -->|是| Persist[同一事务：写 job、outbox 与一个等待槽]
+    Persist --> Relay[relay 发布 outbox]
+    Relay --> Broker[message broker（消息代理）]
+    Broker --> ExecSlot{worker 已取得执行槽？}
+    ExecSlot -->|否| Broker
+    ExecSlot -->|是| Claim[条件领取 job]
+    Claim --> Active[领取时释放等待槽；执行槽继续归 worker]
+    Active --> Settle[尝试完成或确认停止并清理]
+    Settle --> Free[归还执行槽]
+    Broker -->|重投仍是同一逻辑 job| Broker
 ~~~
 
-For a durable job, count the logical job once while it is in the outbox or waiting in the broker. Moving the same job between those systems does not consume a second waiting slot. Release the reservation through a guarded transition when the job starts or becomes terminal before starting. If a retry or lease recovery returns it to waiting, reserve a slot again before requeueing. The account-report case uses this rule and defines the database transitions in [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F).
+等待槽属于尚未被 worker 领取的逻辑 job。API 在同一数据库事务提交 job、`pending` outbox 行和等待槽；relay 重发同一 outbox 意图、broker 重复投递时都不新占槽。worker 必须在领取前先预占一个执行槽；没有执行槽就不领取、不确认消息，并把预取和本地待处理消息限制在执行容量内。条件更新成功时 job 变为 `running`、等待槽释放，执行槽由 worker 持有；若消息重复、job 已终态或条件领取失败，就归还刚预占的执行槽。等待中的 job 若在领取前取消或转为其他终态，状态变化与释放等待槽必须同事务进行且只释放一次。
 
-Under steady-state conditions, Little's Law is:
+成功领取后执行槽一直由该物理 attempt 持有，直到该尝试确实停止运行、不再使用它持有的连接、游标或上传句柄后才归还。不要仅因数据库状态变化就释放物理槽，也不必为了回收异步孤儿对象而继续占着已停止 worker 的执行槽；孤儿对象由独立的清理责任方按宽限期处理。请求超时、发出取消信号、租约到期都不能单独证明执行停止。租约到期后，恢复器先检查取消请求：若 job 已请求取消，就条件提交终态，不重排；若仍可重试且能取得新等待槽，则用条件更新 fencing（隔离旧 attempt 对结果的写入权），并在同一事务中把逻辑 job 重排、写新的 outbox 意图。这不代表旧 worker 的计算、连接或游标已经停止。被 fencing 的旧 attempt 仍占原物理执行槽到实际退出并释放正在使用的资源，新 attempt 领取时另取一个执行槽。若是已确定结束的普通失败，完成资源清理后再为重试预留等待槽。租约接管和旧结果 fencing 的状态转移见[怎样设计可持久查询的账户报表？](#%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E9%87%8D%E8%AF%95%E6%80%8E%E6%A0%B7%E9%81%BF%E5%85%8D%E6%97%A7%E7%BB%93%E6%9E%9C%E8%A6%86%E7%9B%96%E6%96%B0%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+
+### 用平均在途量估算，不要把平均值当峰值保证
+
+先给公式里的量对齐单位和边界。若一个稳定系统平均每秒接受 40 个请求，每个请求在该系统内平均停留 0.2 秒，则平均在途请求约为 40 次/秒 × 0.2 秒 = 8 个。这是 Little 定律（Little's Law）：平均在系统中的任务数 = 平均到达速率 × 平均停留时间。若 W 包含排队，就必须把同一个队列纳入系统边界；若只算 worker 执行时间，就不能把排队延迟偷偷算进 W。
+
+这个关系描述长期平均量，不能推出峰值吞吐、p95/p99 时延或安全并发上限。需求成批到达、重试、变长任务和下游资源限制都要另外测量。队列长度（queue depth）说明有多少任务在等；queue age（队列等待时长）说明最老任务等了多久，两者都应跟踪。
+
+### 合成账户报表要预留多少执行槽？
+
+下表是用于演算的合成输入，不是生产测量、服务目标或默认推荐值。
+
+| 输入 | 假设 |
+| --- | ---: |
+| 新幂等键产生的平均与 10 分钟峰值 job 提交速率 | 5 / 20 个每秒 |
+| 单个请求大小 | 8 KiB |
+| 提交事务持有数据库连接 | 10 ms |
+| 每份报表的顺序索引读取 | 12 次，每次借连接 20 ms |
+| worker 每个 attempt 平均处理时间 | 6 s |
+| 每份结果与每个 job 元数据 | 128 KiB / 2 KiB |
+| 结果对象与终态/幂等元数据保留期 | 7 天 / 终态后 14 天 |
+
+先假设每份报表只执行一个 attempt，且重试、恢复和失败清理额外耗时不计入 6 秒。平均到达 5 份/秒、平均 attempt 处理 6 秒，对应 5 × 6 = 30 个平均在途 attempt。若 10 分钟峰值 20 份/秒都被接受，则需要约 20 × 6 = 120 个平均并发 attempt。4 个后台 worker 副本、每副本 2 个进程、每进程 8 个并行 attempt 槽，一共是 4 × 2 × 8 = 64 个执行槽。
+
+64 个执行槽全满时，按 6 秒平均处理时间，理想平均服务率是 64 / 6 ≈ 10.67 个 attempt/秒。若规划时先把平均利用率压在假设的 70%，估算速率为 64 × 0.70 / 6 ≈ 7.47 个/秒。将 token bucket（令牌桶）准入目标设为 7 份报表/秒，则按每份一次 attempt 估算会占用 7 × 6 / 64 ≈ 65.6% 的槽。70% 和 7 个/秒只是后续负载测试的起点，不是实测容量承诺；重试会占用额外 attempt 槽。
+
+准入速率和等待队列要分别封顶。本例假设持续准入 7 份/秒、短时突发 30 份、所有 outbox 与 broker 队列中最多 240 个已接受未领取的逻辑 job。受理前，在同一事务里持久化 job、outbox 发布意图并原子预留一个共享等待槽；outbox 和 broker 之间迁移同一个 job 不再占第二槽。worker 有执行槽后才条件领取；领取事务只释放该 job 当前排队轮次的等待槽一次。领取前取消的 job 转终态时，也要在同一条件状态转移中释放等待槽一次。运行中的 job 只有在 attempt 实际完成或已确认停止、不再使用实时资源后才能归还该物理 attempt 的执行槽；若租约恢复已 fencing 旧 attempt，恢复器只在 job 未请求取消且取得新等待槽时才能重排并写 outbox，旧物理执行槽仍占用，新 attempt 领取时另取执行槽。重试重排须同事务再次取得等待槽并写新的 outbox 意图；没有槽位就记录可查询的容量失败状态，不得无界重发。
+
+若 20 个/秒的新幂等键提交持续 600 秒，共有 12,000 个新的逻辑 job 意图到达。令牌桶最多准入 7 × 600 + 30 = 4,230 个，因此在共享等待槽和其他限额没有更早拒绝的假设下，至少 12,000 − 4,230 = 7,770 个新逻辑 job 不能受理。相同幂等键重放会返回原 job，不在这组新 job 到达量中，也不再占一个令牌或等待槽；重放 HTTP 请求本身仍消耗 API 服务容量。速率或等待槽已满时返回明确过载错误，不能返回 202 Accepted（已受理）后再悄悄丢任务。完整 job 状态和事务边界见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+
+### 进程内连接池怎样叠加成数据库总预算？
+
+连接池通常由每个应用进程持有；扩容进程会复制池上限，多个服务还会争用同一数据库预算。假设本例 API 和 worker 都部署 4 个副本、每副本 2 个进程，每个进程使用 SQLAlchemy QueuePool，配置 pool_size=8、max_overflow=2：
+
+| 连接使用者 | 最大上限计算 | 连接上限 |
+| --- | ---: | ---: |
+| API：4 个副本，每副本 2 个进程 | 4 × 2 × (8 + 2) | 80 |
+| worker：4 个副本，每副本 2 个进程 | 4 × 2 × (8 + 2) | 80 |
+| 其他共用数据库的服务 | 本例预留 | 40 |
+| 应用配置总上限 | 80 + 80 + 40 | 200 |
+| 教学用数据库连接预算 | 本例假设 | 240 |
+| 未分配余量 | 240 − 200 | 40 |
+
+这是并发借出连接的配置上限，不是数据库此刻一定会有 200 条活跃连接；池也可能保留已连接但空闲的物理连接。单份报表读取的 connection-seconds（连接秒）为 12 × 0.020 秒 = 0.24；按 5 个报表/秒估算，平均约有 5 × 0.24 = 1.2 条连接被报表读取借出。若假设峰值 20 个/秒都被接受，该数为 4.8；10 ms 的提交事务另加 0.05 条平均借出连接，峰值假设下另加 0.2 条。平均借出量是需求估算，连接预算仍应按各进程池上限核算。每进程连接池上限与 checkout 等待见[怎样限定 ORM Session 并排查连接池耗尽？](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。
+
+### 结果存储和请求字节量会涨到多少？
+
+按 5 份报表/秒、每份结果 128 KiB，长期平均结果写入速率是 640 KiB/s。七天是 7 × 24 × 60 × 60 = 604,800 秒；若都保留，结果数据体量约为：
 
 ~~~text
-average work in flight = arrival rate × average time in system
+128 KiB × 5/s × 604,800 s ÷ 1,048,576 KiB/GiB = 369 GiB
 ~~~
 
-The system boundary must include the queue if the arrival rate and elapsed time include queued work. For example, 40 requests/s × 0.2 s in the chosen system implies about 8 average in-flight requests. This is a planning check, not a universal concurrency cap: bursts, latency distributions, retries, and downstream limits still need measurement.
+这还没计入索引、复制、压缩和清理滞后。结果对象保留七天约占 `128 KiB × 5/s × 604,800 s ÷ 1,048,576 ≈ 369 GiB`。假设每个 job 的 2 KiB 终态/幂等元数据在完成后保留 14 天，近似体量是 `2 KiB × 5/s × 1,209,600 s ÷ 1,048,576 ≈ 11.54 GiB`，未计索引；处理时长和清理滞后会略微增加实际在库行数。若准入后以 7 份/秒持续完成，结果速率约 0.875 MiB/s；30 个 job 的突发全部完成时约生成 3.75 MiB。当前 64 槽、6 秒平均处理时间对应的理想持续完成率是 10.67 份/秒，结果写入约 1.33 MiB/s；实际要以对象上传、worker 执行和数据库状态提交测量，不能把 20 个/秒的提交峰值当作可达到的完成速率。下载流量要和报表生成分开预算。
 
-### Synthetic account-report sizing example / 合成账户报表容量估算
+### 如何确认最先到达的瓶颈？
 
-**Assumptions / 假设：** Consider a teaching workload with an average of 5 submissions/s and a 10-minute peak of 20/s. Each validated request is 8 KiB, and its submission transaction holds a database connection for 10 ms. A worker makes 12 sequential indexed reads, holding a database connection for 20 ms per read. Mean worker time is 6 s, the average report is 128 KiB, and job metadata is 2 KiB. These are synthetic inputs for arithmetic, not observed traffic, service measurements, an SLO, or a recommended default.
+在这些假设下，峰值按时处理需要 120 个平均并发 job，而计划只有 64 个槽，因此 worker 执行槽先于列出的连接配置上限达到规划值。这只是排查顺序的假设，不表示数据库 CPU、存储 I/O 或网络已经有余量。
 
-#### Estimate worker slots and admission / 估算 worker 槽位与准入
+用代表性的 8 KiB 请求、12 次读取扇出和输出大小逐步加压，再单独试 20/秒突发、满队列、慢读、重试和 worker 丢失。分别记录 API 接受延迟、job 排队时长、生成时长、下载时长，以及 p50、p95、p99（第 50、95、99 百分位）延迟分位数。6 秒是平均处理时长，只能用于这次平均在途量估算，不能写成 p95 保证。观测活动槽位、共享等待槽、最老队列年龄、数据库 checkout 等待和 CPU、结果留存量、完成与失败状态，再按真实 service-level objective（SLO，服务级目标）决定扩副本、改准入还是优化查询。[可观测性、SLO 与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F)说明如何按各阶段检查饱和与延迟。
 
-At the average arrival rate, mean worker concurrency is 5 jobs/s × 6 s = 30 jobs. At the stated peak, offered load would require 20 × 6 = 120 concurrent jobs if every request were admitted.
+**接下来：** 本章把任务、排队和连接限制到同一工作负载假设；应用是否需要异步 job 以及完整持久生命周期见[怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)，消息确认语义见[发布者确认和消费者确认分别证明什么？](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
-A plan with 4 worker replicas × 2 processes per replica × 8 active job slots per process has 64 slots. If the slots stayed full, the estimate is 64 / 6 = 10.67 jobs/s; at a planning utilization of 70%, it is 64 × 0.70 / 6 = 7.47 jobs/s. A 7 jobs/s token-bucket admission rate uses an estimated 7 × 6 / 64 = 65.6% of slots. These values are starting limits to test, not measured capacity guarantees.
-
-Bound acceptance separately from waiting work. In this example, allow a sustained 7 submissions/s with a burst of 30 and at most 240 accepted-but-not-started jobs across the outbox and broker queue. Reserve one shared slot per job before returning **202 Accepted**; moving a job from outbox to broker does not count it twice. Release the reservation once when work starts or becomes terminal before starting. If all workers stop, the bound fills after a short interruption; once the waiting allowance is full or the rate limit is exhausted, return a documented overload response without claiming the request was accepted.
-
-At 20 offered submissions/s for 600 s, 12,000 requests arrive. A token bucket admitting at most 7 × 600 + 30 = 4,230 in that interval leaves at least 7,770 not admitted, assuming the shared waiting allowance and other limits do not reject sooner. A rejected or ambiguous submission still follows the deadline and idempotency rules in [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F).
-
-#### Budget database connections / 预算数据库连接
-
-Budget every process-local pool, including overflow, before increasing replicas:
-
-| Process group | Maximum calculation | Possible connections |
-|---|---:|---:|
-| API: 4 replicas, 2 processes each, pool 8 + overflow 2 | 4 × 2 × (8 + 2) | 80 |
-| Workers: 4 replicas, 2 processes each, pool 8 + overflow 2 | 4 × 2 × (8 + 2) | 80 |
-| Other services using the same database | Assumed allocation | 40 |
-| Configured application total | 80 + 80 + 40 | 200 |
-| Example database connection budget | Assumed total | 240 |
-| Unallocated headroom | 240 − 200 | 40 |
-
-This pool ceiling is not a prediction that 200 connections will be busy. Each report uses 12 sequential reads × 0.020 connection-seconds = 0.24 connection-seconds. That implies 5 × 0.24 = 1.2 average checked-out connections for report reads at the average arrival rate, or 20 × 0.24 = 4.8 if the offered peak were admitted; a 10 ms submission transaction adds 0.05 average or 0.2 at that peak. Query fan-out, connection hold time, and real pool behavior must be measured before treating these estimates as resource headroom. The application-level pool ceiling and its per-process scope are explained in [Data Access and Connection Pools / 数据访问与连接池](#10.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F).
-
-#### Estimate result bytes and retention / 估算结果体量与留存
-
-At 5 completed reports/s, 128 KiB per report produces 640 KiB/s of results. Seven days of output retention is:
-
-~~~text
-128 KiB × 5/s × 604,800 s ÷ 1,048,576 KiB/GiB ≈ 369 GiB
-~~~
-
-This is before compression, replication, and cleanup lag. Two KiB of metadata per job adds about 5.8 GiB per seven days before indexes.
-
-At a sustained 7 completions/s, result volume averages 0.875 MiB/s; this is a long-run planning rate, not an instantaneous upper bound. The permitted 30-job burst could produce 3.75 MiB if all reports complete in one interval, and backlog drain can exceed the current admission rate. At a sustained 20 completions/s, the corresponding long-run result volume is 2.5 MiB/s. Measure result downloads separately from generation and retention.
-
-#### Test the first bottleneck / 验证最先触顶的资源
-
-Under these assumptions, worker slots bind before the estimated database connection count: peak demand needs 120 active jobs while the plan has 64 slots. That does not prove database CPU, storage I/O, or network has spare capacity.
-
-Load-test the representative 8 KiB input, 12-read fan-out, and output sizes. Ramp average traffic, apply the 20/s burst, then test rate rejection, a full queue, slow reads, retries, and worker loss. Record request acceptance latency separately from job queue wait and completion time. Compare distributions such as p50, p95, and p99 for each user-visible stage; the 6 s mean belongs in the concurrency estimate, not as a p95 promise. Track sustained throughput, queue age, busy slots, database checkout wait and CPU, retained bytes, and completed-job outcomes against the service objective before changing pool size or replicas. [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F) explains how to turn these signals into useful service indicators.
-
-**How would you answer “How many workers do we need?” / 如何回答“需要多少个 worker？”** I would state the workload and service-time assumptions, use Little's Law for mean in-flight jobs, and compare that with a bounded worker plan and pool budget. Here the mean suggests 30 active jobs, but peak demand suggests 120; 64 slots and a 7/s admission limit are hypotheses to test under the expected payload and fan-out. I would measure queue age and stage latency distributions before adding replicas, because the first limit could move to the database or storage. / 我会先说明工作负载和处理时长假设，用 Little 定律估算平均在途任务，再与有界 worker 和连接池预算比较。此例平均负载约需 30 个并发任务，但峰值需求约为 120；64 个槽位和每秒准入 7 个是待压测的假设，应按预期 payload 和扇出测量队列等待及各阶段时延分布，再决定是否扩容，因为首个瓶颈也可能转移到数据库或存储。
-
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers deadline and unknown-outcome policy; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies these bounds to a complete service contract; [Queue delivery acknowledgements / 队列确认与重投](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) covers broker delivery state; [AI System Design Interview Questions / AI 系统设计面试题](../../ai-engineering/systems/ai-system-design-interview-questions.md) has a different worked latency allocation and model-stage concurrency estimate.
-
-**Sources / 来源：** Little and Graves, [“Little’s Law Deals with Queuing Systems”](https://web.eng.ucsd.edu/~massimo/ECE158A/Handouts_files/Little.pdf), in *Building Intuition* (2008), pp. 81–82, for the steady-state relation and system boundary; [Google SRE Workbook: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15, for latency distributions and percentile-based indicators. The numeric workload and all capacity figures above are synthetic calculations from the stated assumptions.
+> [!info]- 来源
+> - Little 定律成立条件、平均数和系统边界：[Little, “A Proof for the Queuing Formula: L = λW,” Operations Research 9(3), 1961](https://doi.org/10.1287/opre.9.3.383)，该关系对应长期稳定系统的平均量。
+> - SQLAlchemy 2.1.8 QueuePool 的 pool_size + max_overflow 同时连接上限：[SQLAlchemy 2.1, Connection Pooling](https://docs.sqlalchemy.org/en/21/core/pooling.html)，官网版本与行为核对于 2026-11-06；部署到其他池实现时按实际配置重算。
+> - 延迟分布分位数与服务目标的关系：[Google SRE Workbook, Implementing SLOs](https://sre.google/workbook/implementing-slos/)，核对于 2026-11-06。
+> - 表中工作负载与容量数字均为按上述显式假设重算的合成算例，不是服务测量。
 ## 24. Web 服务如何限制拒绝服务的影响？
 
 denial of service (DoS，拒绝服务) 通过流量洪峰、连接耗尽或昂贵请求让服务资源不够用；distributed denial-of-service (DDoS，分布式拒绝服务) 指多来源同时发起的攻击。保障要沿请求实际能到达的层次布置：链路入口被塞满时，应用限流代码还没有机会运行；请求已进应用后，按 Internet Protocol address (IP 地址) 限流也不能替代对昂贵工作、并发和排队长度的约束。
@@ -2949,7 +2996,7 @@ rate limit（速率限制）约束某个键在一段时间内可提交多少请�
 
 CDN可以在更靠近用户的边缘节点缓存适合共享的公开内容或执行入口规则；Network Address Translation (网络地址转换，NAT)可能让许多合法用户共享同一个出口 IP。匿名请求发生在身份认证之前，不能只靠账户限流；登录后的请求也不能只靠 IP 限流，而分布式攻击来源又可能跨越许多地址。可以在不同阶段组合 IP/网络特征、账户、租户、路由和成本额度，并为误伤、绕过、状态存储可用性设计补救。反向代理转发的客户端 IP 只有在信任该代理、拒绝外部伪造转发头时才可用于策略。
 
-速率限制是准入政策，不会给出一个“安全的 QPS”。容量章负责在正常负载下估算资源与背压，见[如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)；本章强调在攻击者可分布请求、上游容量会饱和且不同请求成本悬殊时，应由哪一层拒绝或削减工作。
+速率限制是准入政策，不会给出一个“安全的 QPS”。容量章负责在正常负载下估算资源与背压，见[如何估算并限制异步工作管线？](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)；本章强调在攻击者可分布请求、上游容量会饱和且不同请求成本悬殊时，应由哪一层拒绝或削减工作。
 
 ### 限额触发时如何让客户端和服务一起恢复？
 
@@ -3698,7 +3745,7 @@ For the example SLO, a focused alert could fire when at least 100 eligible looku
 When it fires:
 
 1. **Confirm impact and scope.** Check event counts, SLI trend, error types, route/region, and recent changes. Make sure telemetry is arriving and the denominator still matches the SLI definition.
-2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age and depth as part of [capacity and backpressure](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). [Broker delivery](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains the acknowledgement boundary.
+2. **Locate the stage.** Compare stage and dependency latency, errors, saturation, and in-flight work. Inspect affected traces, then use trace IDs to read the specific correlated logs. For asynchronous work, inspect queue age and depth as part of [capacity and backpressure](#23.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F). [Broker delivery](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains the acknowledgement boundary.
 3. **Mitigate the user impact.** Choose the smallest safe action supported by evidence, such as rolling back a change that matches the onset or temporarily reducing load on a saturated dependency. Record the action and its expected effect; do not add retries blindly if they can amplify overload.
 4. **Verify recovery.** Confirm that the user-facing SLI returns above the alert threshold with adequate traffic, and check the affected stage and dependency signals for continuing saturation or error growth. A quiet alert alone is not evidence that the service recovered.
 5. **Follow up.** Record the user impact and time window, the causal mechanism, the mitigation, and a small set of owned changes to prevent recurrence or improve detection. Link the incident to relevant tests and telemetry gaps.

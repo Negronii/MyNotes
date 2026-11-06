@@ -33,14 +33,14 @@
 
 ### 运行时如何承接与限制工作
 
-- [When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？](operating-systems/processes-threads-and-concurrency.md)
-- [How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？](backend/node-js-fundamentals.md)
-- [How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？](backend/node-event-loop-and-microtasks.md)
-- [How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？](backend/node-stream-backpressure-and-cleanup.md)
-- [How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？](backend/node-service-shutdown.md)
-- [How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？](backend/python-fundamentals.md)
-- [Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？](backend/python-async-and-fastapi.md)
-- [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
+- [何时选线程、进程或异步 I/O？](operating-systems/processes-threads-and-concurrency.md)
+- [Node.js 如何在事件循环、工作线程与进程之间调度工作？](backend/node-js-fundamentals.md)
+- [Node.js 事件循环阶段与微任务队列如何交互？](backend/node-event-loop-and-microtasks.md)
+- [Node.js 流如何传播背压？](backend/node-stream-backpressure-and-cleanup.md)
+- [Node.js 服务如何排空并关闭？](backend/node-service-shutdown.md)
+- [Python 的值、迭代器与资源生命周期如何工作？](backend/python-fundamentals.md)
+- [异步 FastAPI 接口为什么仍会阻塞？](backend/python-async-and-fastapi.md)
+- [如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
 - [Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
 
 ### 从回归证据到部署与事故诊断

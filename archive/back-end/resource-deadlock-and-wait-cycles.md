@@ -1,19 +1,17 @@
-# When is a wait cycle a deadlock? / 什么情况下等待环构成死锁？
+# 什么情况下等待环构成死锁？
 
-A deadlock requires participants to form a cycle in which each waits for a resource held by another member. A slow operation or pending asynchronous request is not enough; identify the actual dependency graph. / 死锁要求参与者形成循环等待，每个参与者等待环中其他成员持有的资源。操作缓慢或异步请求尚未完成都不足以说明死锁；先确定真实依赖图。
+**案例背景：** 线程 A 已持有 R1，再等待 R2；线程 B 已持有 R2，再等待 R1。若两者都必须取得第二把锁才能继续并释放第一把锁，就没有一方能独自推进。完整的进程与线程模型见[等待环何时才构成死锁？](../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md#等待环何时才构成死锁)，这里保留资源锁与异步等待的判别例。
 
-## Deadlocks / 死锁
+## 先找实际资源依赖，再判断能否推进
 
-A deadlock is a state in which a set of processes or threads cannot proceed because each waits for a resource held by another member of the set. In the classic resource-allocation model, the four conditions are **mutual exclusion**, **hold and wait**, **no preemption**, and **circular wait**. For that model, breaking any one condition prevents deadlock; the conditions are not a checklist that makes every slow or waiting operation a deadlock.
+经典资源分配模型中的四个必要条件是 mutual exclusion（互斥）、hold and wait（持有并等待）、no preemption（不可抢占）和 circular wait（循环等待）。破坏其中一个可防止该模型中的死锁；条件成立还要结合资源实例数和实际分配判断，不能看到任何环就一概断言死锁。每种资源只有一个实例的锁例中，A→B→A 的等待环足以说明双方不能推进。
 
-Example: thread A locks resource `R1` and then waits for `R2`; thread B holds `R2` and waits for `R1`. Neither can release its first lock while blocked on the second. A consistent global lock order, shorter lock scopes, or avoiding nested locks can remove this cycle, depending on the design.
+为所有线程规定相同的全局加锁次序，或重新设计以避免同时持有两把锁，可以消除这类循环。缩短持锁时间能降低争用，但单纯“持得更短”并不证明已消除所有可能的加锁顺序。
 
-An asynchronous request waiting for I/O is not by itself a deadlock. JavaScript's event loop does not hold exclusive DOM access while a `fetch` is pending, and a Promise is a representation of eventual completion rather than a lock. An application can still stall because of a dependency cycle, an unresolved Promise, or exhausted resources; identify the actual dependency/resource graph before calling it a deadlock. For the corresponding operating-system view of process and thread waits, see [Processes, threads, and concurrency](../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md).
+## pending 的 fetch 为什么不是 DOM 死锁？
 
-## Related current note / 相关现行笔记
+等待 I/O 的异步请求本身不持有独占 DOM 锁。JavaScript 的 event loop（事件循环）可以在 `fetch` 等待期间处理其他回调；Promise 表示将来的完成状态，不是资源锁。页面停住也可能来自永不结算的 Promise、任务相互依赖、资源耗尽或同步计算占住线程。要称为死锁，必须具体指出谁持有什么、又在等待谁，以及为什么没有参与者能够推进。
 
-[Processes, Threads, and Concurrency](../../engineering-foundations/operating-systems/processes-threads-and-concurrency.md) explains the general process and thread wait model. / 进程、线程与并发笔记说明通用进程和线程等待模型。
-
-## Sources / 参考资料
-
-- Coffman, Elphick, and Shoshani (1971), [System Deadlocks](https://doi.org/10.1145/356586.356588), for the classic resource-allocation conditions.
+> [!info]- 来源
+> - 经典资源分配与死锁条件：Coffman, Elphick, and Shoshani (1971), [System Deadlocks](https://doi.org/10.1145/356586.356588)。
+> - 异步请求与主线程调度的现代机制见[事件循环正文](../../frontend/runtime/event-loop.md)，Promise 与锁是不同抽象。

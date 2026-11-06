@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=fbc640987d05bb5ec8420140ede1bc2f1abb7352d15347bb220ff3b2847fab47 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=8a372067eff3c2ac8ad0bb07cd900ac65fe780f662702f06493e33d680d4c61d -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -114,14 +114,14 @@
 - [ ] 98. [怎样设计一个可持久查询的账户报表？](../engineering-foundations/architecture/system-design-fundamentals.md)
 - [ ] 99. [What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)
 - [ ] 100. [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](../engineering-foundations/networking/real-time-web-updates.md)
-- [ ] 101. [When should work use a thread, process, or asynchronous I/O? / 何时选线程、进程或异步 I/O？](../engineering-foundations/operating-systems/processes-threads-and-concurrency.md)
-- [ ] 102. [How does Node.js schedule work across its event loop, workers, and processes? / Node.js 如何在事件循环、工作线程与进程之间调度工作？](../engineering-foundations/backend/node-js-fundamentals.md)
-- [ ] 103. [How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？](../engineering-foundations/backend/node-event-loop-and-microtasks.md)
-- [ ] 104. [How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？](../engineering-foundations/backend/node-stream-backpressure-and-cleanup.md)
-- [ ] 105. [How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？](../engineering-foundations/backend/node-service-shutdown.md)
-- [ ] 106. [How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？](../engineering-foundations/backend/python-fundamentals.md)
-- [ ] 107. [Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？](../engineering-foundations/backend/python-async-and-fastapi.md)
-- [ ] 108. [How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？](../engineering-foundations/reliability/api-capacity-and-backpressure.md)
+- [ ] 101. [何时选线程、进程或异步 I/O？](../engineering-foundations/operating-systems/processes-threads-and-concurrency.md)
+- [ ] 102. [Node.js 如何在事件循环、工作线程与进程之间调度工作？](../engineering-foundations/backend/node-js-fundamentals.md)
+- [ ] 103. [Node.js 事件循环阶段与微任务队列如何交互？](../engineering-foundations/backend/node-event-loop-and-microtasks.md)
+- [ ] 104. [Node.js 流如何传播背压？](../engineering-foundations/backend/node-stream-backpressure-and-cleanup.md)
+- [ ] 105. [Node.js 服务如何排空并关闭？](../engineering-foundations/backend/node-service-shutdown.md)
+- [ ] 106. [Python 的值、迭代器与资源生命周期如何工作？](../engineering-foundations/backend/python-fundamentals.md)
+- [ ] 107. [异步 FastAPI 接口为什么仍会阻塞？](../engineering-foundations/backend/python-async-and-fastapi.md)
+- [ ] 108. [如何估算并限制异步工作管线？](../engineering-foundations/reliability/api-capacity-and-backpressure.md)
 - [ ] 109. [Web 服务如何限制拒绝服务的影响？](../engineering-foundations/security/web-availability-and-ddos.md)
 - [ ] 110. [How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)
 - [ ] 111. [How should test boundaries prove the failure risks that matter? / 如何选择测试边界来证明关键故障风险？](../engineering-foundations/testing/software-testing-strategy.md)

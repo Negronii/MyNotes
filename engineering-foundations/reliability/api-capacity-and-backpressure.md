@@ -1,85 +1,96 @@
-# How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？
+# 如何估算并限制异步工作管线？
 
-Size a pipeline by naming its system boundary, arrival rate, time in each stage, resource held by each unit of work, and maximum waiting work. Little's Law estimates average work in flight in a stable system; it does not promise peak throughput or tail latency. A queue gives work somewhere durable to wait, but only admission control and backpressure keep that wait bounded. / 估算管线时，要明确系统边界、到达速率、各阶段耗时、每个任务占用的资源和最大等待量。Little 定律估算稳定系统中的平均在途工作；它不承诺峰值吞吐量或尾部时延。队列让工作可以持久等待，但只有准入控制和背压才能限制等待规模。
+**案例：** API 接到 acct-17 的账户报表请求：先验证并持久接受任务，后台 worker（工作进程）顺序读数据库并生成 CSV，最后写入私有对象存储。受理事务同时写 job、outbox 和一个共享等待槽，提交后才返回 `202`；只有对象上传完成、结果引用与 `succeeded` 状态提交后，报表才可查询。这里估算的是这条持久后台导出路径。直接用 HTTP 流式响应是另一条请求内路径：连接和流资源要活到正文发送完或请求取消，不会自动变成可查询的 job 结果。
 
-**Key terms / 关键术语：** admission control / 准入控制；backpressure / 背压；in-flight work / 在途工作；queue age / 队列等待时长；Little's Law / Little 定律；connection pool ceiling / 连接池配置上限。
+要决定接多少任务，必须同时看准入速率、等待上限、每个执行槽的处理时间、数据库连接和输出体量。队列能保留待办工作，却不会自动增加处理能力。
 
-## Bound work before estimating replicas / 先限制工作量，再估算副本数
-
-Bound in-flight requests, worker count, and every waiting queue. An unbounded queue turns overload into growing memory use and delay. When a bound is reached, choose an explicit policy: wait within the request deadline, reject, defer to durable storage, or shed work that can safely be dropped. Include queue wait in the request's latency budget and report overload distinctly from successful completion.
+容量规划中的 admission control（准入控制）决定是否接受新工作；backpressure（背压）把下游拥塞反馈给上游。两者都要与任务槽位和连接池的所有权一起定义。
 
 ~~~mermaid
 flowchart LR
-    S[Submission] --> Rate{Rate budget available?}
-    Rate -->|no| Reject[Reject without claiming acceptance]
-    Rate -->|yes| Slots{Shared waiting slot available?}
-    Slots -->|no| Reject
-    Slots -->|yes| Reserve[Atomically reserve one job slot]
-    Reserve --> Outbox[Outbox or durable queue]
-    Outbox --> Start[Worker starts job]
-    Start --> Release[Release reservation once]
-    Outbox -->|publish retry or broker copy| Outbox
+    Request[提交报表] --> Rate{速率预算可用？}
+    Rate -->|否| Reject[拒绝，尚未承诺受理]
+    Rate -->|是| Slot{共享等待槽可用？}
+    Slot -->|否| Reject
+    Slot -->|是| Persist[同一事务：写 job、outbox 与一个等待槽]
+    Persist --> Relay[relay 发布 outbox]
+    Relay --> Broker[message broker（消息代理）]
+    Broker --> ExecSlot{worker 已取得执行槽？}
+    ExecSlot -->|否| Broker
+    ExecSlot -->|是| Claim[条件领取 job]
+    Claim --> Active[领取时释放等待槽；执行槽继续归 worker]
+    Active --> Settle[尝试完成或确认停止并清理]
+    Settle --> Free[归还执行槽]
+    Broker -->|重投仍是同一逻辑 job| Broker
 ~~~
 
-For a durable job, count the logical job once while it is in the outbox or waiting in the broker. Moving the same job between those systems does not consume a second waiting slot. Release the reservation through a guarded transition when the job starts or becomes terminal before starting. If a retry or lease recovery returns it to waiting, reserve a slot again before requeueing. The account-report case uses this rule and defines the database transitions in [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md).
+等待槽属于尚未被 worker 领取的逻辑 job。API 在同一数据库事务提交 job、`pending` outbox 行和等待槽；relay 重发同一 outbox 意图、broker 重复投递时都不新占槽。worker 必须在领取前先预占一个执行槽；没有执行槽就不领取、不确认消息，并把预取和本地待处理消息限制在执行容量内。条件更新成功时 job 变为 `running`、等待槽释放，执行槽由 worker 持有；若消息重复、job 已终态或条件领取失败，就归还刚预占的执行槽。等待中的 job 若在领取前取消或转为其他终态，状态变化与释放等待槽必须同事务进行且只释放一次。
 
-Under steady-state conditions, Little's Law is:
+成功领取后执行槽一直由该物理 attempt 持有，直到该尝试确实停止运行、不再使用它持有的连接、游标或上传句柄后才归还。不要仅因数据库状态变化就释放物理槽，也不必为了回收异步孤儿对象而继续占着已停止 worker 的执行槽；孤儿对象由独立的清理责任方按宽限期处理。请求超时、发出取消信号、租约到期都不能单独证明执行停止。租约到期后，恢复器先检查取消请求：若 job 已请求取消，就条件提交终态，不重排；若仍可重试且能取得新等待槽，则用条件更新 fencing（隔离旧 attempt 对结果的写入权），并在同一事务中把逻辑 job 重排、写新的 outbox 意图。这不代表旧 worker 的计算、连接或游标已经停止。被 fencing 的旧 attempt 仍占原物理执行槽到实际退出并释放正在使用的资源，新 attempt 领取时另取一个执行槽。若是已确定结束的普通失败，完成资源清理后再为重试预留等待槽。租约接管和旧结果 fencing 的状态转移见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md#工作进程重试怎样避免旧结果覆盖新结果)。
+
+## 用平均在途量估算，不要把平均值当峰值保证
+
+先给公式里的量对齐单位和边界。若一个稳定系统平均每秒接受 40 个请求，每个请求在该系统内平均停留 0.2 秒，则平均在途请求约为 40 次/秒 × 0.2 秒 = 8 个。这是 Little 定律（Little's Law）：平均在系统中的任务数 = 平均到达速率 × 平均停留时间。若 W 包含排队，就必须把同一个队列纳入系统边界；若只算 worker 执行时间，就不能把排队延迟偷偷算进 W。
+
+这个关系描述长期平均量，不能推出峰值吞吐、p95/p99 时延或安全并发上限。需求成批到达、重试、变长任务和下游资源限制都要另外测量。队列长度（queue depth）说明有多少任务在等；queue age（队列等待时长）说明最老任务等了多久，两者都应跟踪。
+
+## 合成账户报表要预留多少执行槽？
+
+下表是用于演算的合成输入，不是生产测量、服务目标或默认推荐值。
+
+| 输入 | 假设 |
+| --- | ---: |
+| 新幂等键产生的平均与 10 分钟峰值 job 提交速率 | 5 / 20 个每秒 |
+| 单个请求大小 | 8 KiB |
+| 提交事务持有数据库连接 | 10 ms |
+| 每份报表的顺序索引读取 | 12 次，每次借连接 20 ms |
+| worker 每个 attempt 平均处理时间 | 6 s |
+| 每份结果与每个 job 元数据 | 128 KiB / 2 KiB |
+| 结果对象与终态/幂等元数据保留期 | 7 天 / 终态后 14 天 |
+
+先假设每份报表只执行一个 attempt，且重试、恢复和失败清理额外耗时不计入 6 秒。平均到达 5 份/秒、平均 attempt 处理 6 秒，对应 5 × 6 = 30 个平均在途 attempt。若 10 分钟峰值 20 份/秒都被接受，则需要约 20 × 6 = 120 个平均并发 attempt。4 个后台 worker 副本、每副本 2 个进程、每进程 8 个并行 attempt 槽，一共是 4 × 2 × 8 = 64 个执行槽。
+
+64 个执行槽全满时，按 6 秒平均处理时间，理想平均服务率是 64 / 6 ≈ 10.67 个 attempt/秒。若规划时先把平均利用率压在假设的 70%，估算速率为 64 × 0.70 / 6 ≈ 7.47 个/秒。将 token bucket（令牌桶）准入目标设为 7 份报表/秒，则按每份一次 attempt 估算会占用 7 × 6 / 64 ≈ 65.6% 的槽。70% 和 7 个/秒只是后续负载测试的起点，不是实测容量承诺；重试会占用额外 attempt 槽。
+
+准入速率和等待队列要分别封顶。本例假设持续准入 7 份/秒、短时突发 30 份、所有 outbox 与 broker 队列中最多 240 个已接受未领取的逻辑 job。受理前，在同一事务里持久化 job、outbox 发布意图并原子预留一个共享等待槽；outbox 和 broker 之间迁移同一个 job 不再占第二槽。worker 有执行槽后才条件领取；领取事务只释放该 job 当前排队轮次的等待槽一次。领取前取消的 job 转终态时，也要在同一条件状态转移中释放等待槽一次。运行中的 job 只有在 attempt 实际完成或已确认停止、不再使用实时资源后才能归还该物理 attempt 的执行槽；若租约恢复已 fencing 旧 attempt，恢复器只在 job 未请求取消且取得新等待槽时才能重排并写 outbox，旧物理执行槽仍占用，新 attempt 领取时另取执行槽。重试重排须同事务再次取得等待槽并写新的 outbox 意图；没有槽位就记录可查询的容量失败状态，不得无界重发。
+
+若 20 个/秒的新幂等键提交持续 600 秒，共有 12,000 个新的逻辑 job 意图到达。令牌桶最多准入 7 × 600 + 30 = 4,230 个，因此在共享等待槽和其他限额没有更早拒绝的假设下，至少 12,000 − 4,230 = 7,770 个新逻辑 job 不能受理。相同幂等键重放会返回原 job，不在这组新 job 到达量中，也不再占一个令牌或等待槽；重放 HTTP 请求本身仍消耗 API 服务容量。速率或等待槽已满时返回明确过载错误，不能返回 202 Accepted（已受理）后再悄悄丢任务。完整 job 状态和事务边界见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。
+
+## 进程内连接池怎样叠加成数据库总预算？
+
+连接池通常由每个应用进程持有；扩容进程会复制池上限，多个服务还会争用同一数据库预算。假设本例 API 和 worker 都部署 4 个副本、每副本 2 个进程，每个进程使用 SQLAlchemy QueuePool，配置 pool_size=8、max_overflow=2：
+
+| 连接使用者 | 最大上限计算 | 连接上限 |
+| --- | ---: | ---: |
+| API：4 个副本，每副本 2 个进程 | 4 × 2 × (8 + 2) | 80 |
+| worker：4 个副本，每副本 2 个进程 | 4 × 2 × (8 + 2) | 80 |
+| 其他共用数据库的服务 | 本例预留 | 40 |
+| 应用配置总上限 | 80 + 80 + 40 | 200 |
+| 教学用数据库连接预算 | 本例假设 | 240 |
+| 未分配余量 | 240 − 200 | 40 |
+
+这是并发借出连接的配置上限，不是数据库此刻一定会有 200 条活跃连接；池也可能保留已连接但空闲的物理连接。单份报表读取的 connection-seconds（连接秒）为 12 × 0.020 秒 = 0.24；按 5 个报表/秒估算，平均约有 5 × 0.24 = 1.2 条连接被报表读取借出。若假设峰值 20 个/秒都被接受，该数为 4.8；10 ms 的提交事务另加 0.05 条平均借出连接，峰值假设下另加 0.2 条。平均借出量是需求估算，连接预算仍应按各进程池上限核算。每进程连接池上限与 checkout 等待见[怎样限定 ORM Session 并排查连接池耗尽？](../backend/data-access-and-connection-pools.md)。
+
+## 结果存储和请求字节量会涨到多少？
+
+按 5 份报表/秒、每份结果 128 KiB，长期平均结果写入速率是 640 KiB/s。七天是 7 × 24 × 60 × 60 = 604,800 秒；若都保留，结果数据体量约为：
 
 ~~~text
-average work in flight = arrival rate × average time in system
+128 KiB × 5/s × 604,800 s ÷ 1,048,576 KiB/GiB = 369 GiB
 ~~~
 
-The system boundary must include the queue if the arrival rate and elapsed time include queued work. For example, 40 requests/s × 0.2 s in the chosen system implies about 8 average in-flight requests. This is a planning check, not a universal concurrency cap: bursts, latency distributions, retries, and downstream limits still need measurement.
+这还没计入索引、复制、压缩和清理滞后。结果对象保留七天约占 `128 KiB × 5/s × 604,800 s ÷ 1,048,576 ≈ 369 GiB`。假设每个 job 的 2 KiB 终态/幂等元数据在完成后保留 14 天，近似体量是 `2 KiB × 5/s × 1,209,600 s ÷ 1,048,576 ≈ 11.54 GiB`，未计索引；处理时长和清理滞后会略微增加实际在库行数。若准入后以 7 份/秒持续完成，结果速率约 0.875 MiB/s；30 个 job 的突发全部完成时约生成 3.75 MiB。当前 64 槽、6 秒平均处理时间对应的理想持续完成率是 10.67 份/秒，结果写入约 1.33 MiB/s；实际要以对象上传、worker 执行和数据库状态提交测量，不能把 20 个/秒的提交峰值当作可达到的完成速率。下载流量要和报表生成分开预算。
 
-## Synthetic account-report sizing example / 合成账户报表容量估算
+## 如何确认最先到达的瓶颈？
 
-**Assumptions / 假设：** Consider a teaching workload with an average of 5 submissions/s and a 10-minute peak of 20/s. Each validated request is 8 KiB, and its submission transaction holds a database connection for 10 ms. A worker makes 12 sequential indexed reads, holding a database connection for 20 ms per read. Mean worker time is 6 s, the average report is 128 KiB, and job metadata is 2 KiB. These are synthetic inputs for arithmetic, not observed traffic, service measurements, an SLO, or a recommended default.
+在这些假设下，峰值按时处理需要 120 个平均并发 job，而计划只有 64 个槽，因此 worker 执行槽先于列出的连接配置上限达到规划值。这只是排查顺序的假设，不表示数据库 CPU、存储 I/O 或网络已经有余量。
 
-### Estimate worker slots and admission / 估算 worker 槽位与准入
+用代表性的 8 KiB 请求、12 次读取扇出和输出大小逐步加压，再单独试 20/秒突发、满队列、慢读、重试和 worker 丢失。分别记录 API 接受延迟、job 排队时长、生成时长、下载时长，以及 p50、p95、p99（第 50、95、99 百分位）延迟分位数。6 秒是平均处理时长，只能用于这次平均在途量估算，不能写成 p95 保证。观测活动槽位、共享等待槽、最老队列年龄、数据库 checkout 等待和 CPU、结果留存量、完成与失败状态，再按真实 service-level objective（SLO，服务级目标）决定扩副本、改准入还是优化查询。[可观测性、SLO 与事件响应](observability-slos-and-incident-response.md)说明如何按各阶段检查饱和与延迟。
 
-At the average arrival rate, mean worker concurrency is 5 jobs/s × 6 s = 30 jobs. At the stated peak, offered load would require 20 × 6 = 120 concurrent jobs if every request were admitted.
+**接下来：** 本章把任务、排队和连接限制到同一工作负载假设；应用是否需要异步 job 以及完整持久生命周期见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)，消息确认语义见[发布者确认和消费者确认分别证明什么？](queue-delivery-and-acknowledgement.md)。
 
-A plan with 4 worker replicas × 2 processes per replica × 8 active job slots per process has 64 slots. If the slots stayed full, the estimate is 64 / 6 = 10.67 jobs/s; at a planning utilization of 70%, it is 64 × 0.70 / 6 = 7.47 jobs/s. A 7 jobs/s token-bucket admission rate uses an estimated 7 × 6 / 64 = 65.6% of slots. These values are starting limits to test, not measured capacity guarantees.
-
-Bound acceptance separately from waiting work. In this example, allow a sustained 7 submissions/s with a burst of 30 and at most 240 accepted-but-not-started jobs across the outbox and broker queue. Reserve one shared slot per job before returning **202 Accepted**; moving a job from outbox to broker does not count it twice. Release the reservation once when work starts or becomes terminal before starting. If all workers stop, the bound fills after a short interruption; once the waiting allowance is full or the rate limit is exhausted, return a documented overload response without claiming the request was accepted.
-
-At 20 offered submissions/s for 600 s, 12,000 requests arrive. A token bucket admitting at most 7 × 600 + 30 = 4,230 in that interval leaves at least 7,770 not admitted, assuming the shared waiting allowance and other limits do not reject sooner. A rejected or ambiguous submission still follows the deadline and idempotency rules in [API timeout and safe retry / API 超时后的结果确认与安全重试](api-reliability-and-async-delivery.md).
-
-### Budget database connections / 预算数据库连接
-
-Budget every process-local pool, including overflow, before increasing replicas:
-
-| Process group | Maximum calculation | Possible connections |
-|---|---:|---:|
-| API: 4 replicas, 2 processes each, pool 8 + overflow 2 | 4 × 2 × (8 + 2) | 80 |
-| Workers: 4 replicas, 2 processes each, pool 8 + overflow 2 | 4 × 2 × (8 + 2) | 80 |
-| Other services using the same database | Assumed allocation | 40 |
-| Configured application total | 80 + 80 + 40 | 200 |
-| Example database connection budget | Assumed total | 240 |
-| Unallocated headroom | 240 − 200 | 40 |
-
-This pool ceiling is not a prediction that 200 connections will be busy. Each report uses 12 sequential reads × 0.020 connection-seconds = 0.24 connection-seconds. That implies 5 × 0.24 = 1.2 average checked-out connections for report reads at the average arrival rate, or 20 × 0.24 = 4.8 if the offered peak were admitted; a 10 ms submission transaction adds 0.05 average or 0.2 at that peak. Query fan-out, connection hold time, and real pool behavior must be measured before treating these estimates as resource headroom. The application-level pool ceiling and its per-process scope are explained in [Data Access and Connection Pools / 数据访问与连接池](../backend/data-access-and-connection-pools.md).
-
-### Estimate result bytes and retention / 估算结果体量与留存
-
-At 5 completed reports/s, 128 KiB per report produces 640 KiB/s of results. Seven days of output retention is:
-
-~~~text
-128 KiB × 5/s × 604,800 s ÷ 1,048,576 KiB/GiB ≈ 369 GiB
-~~~
-
-This is before compression, replication, and cleanup lag. Two KiB of metadata per job adds about 5.8 GiB per seven days before indexes.
-
-At a sustained 7 completions/s, result volume averages 0.875 MiB/s; this is a long-run planning rate, not an instantaneous upper bound. The permitted 30-job burst could produce 3.75 MiB if all reports complete in one interval, and backlog drain can exceed the current admission rate. At a sustained 20 completions/s, the corresponding long-run result volume is 2.5 MiB/s. Measure result downloads separately from generation and retention.
-
-### Test the first bottleneck / 验证最先触顶的资源
-
-Under these assumptions, worker slots bind before the estimated database connection count: peak demand needs 120 active jobs while the plan has 64 slots. That does not prove database CPU, storage I/O, or network has spare capacity.
-
-Load-test the representative 8 KiB input, 12-read fan-out, and output sizes. Ramp average traffic, apply the 20/s burst, then test rate rejection, a full queue, slow reads, retries, and worker loss. Record request acceptance latency separately from job queue wait and completion time. Compare distributions such as p50, p95, and p99 for each user-visible stage; the 6 s mean belongs in the concurrency estimate, not as a p95 promise. Track sustained throughput, queue age, busy slots, database checkout wait and CPU, retained bytes, and completed-job outcomes against the service objective before changing pool size or replicas. [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](observability-slos-and-incident-response.md) explains how to turn these signals into useful service indicators.
-
-**How would you answer “How many workers do we need?” / 如何回答“需要多少个 worker？”** I would state the workload and service-time assumptions, use Little's Law for mean in-flight jobs, and compare that with a bounded worker plan and pool budget. Here the mean suggests 30 active jobs, but peak demand suggests 120; 64 slots and a 7/s admission limit are hypotheses to test under the expected payload and fan-out. I would measure queue age and stage latency distributions before adding replicas, because the first limit could move to the database or storage. / 我会先说明工作负载和处理时长假设，用 Little 定律估算平均在途任务，再与有界 worker 和连接池预算比较。此例平均负载约需 30 个并发任务，但峰值需求约为 120；64 个槽位和每秒准入 7 个是待压测的假设，应按预期 payload 和扇出测量队列等待及各阶段时延分布，再决定是否扩容，因为首个瓶颈也可能转移到数据库或存储。
-
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](api-reliability-and-async-delivery.md) covers deadline and unknown-outcome policy; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md) applies these bounds to a complete service contract; [Queue delivery acknowledgements / 队列确认与重投](queue-delivery-and-acknowledgement.md) covers broker delivery state; [AI System Design Interview Questions / AI 系统设计面试题](../../ai-engineering/systems/ai-system-design-interview-questions.md) has a different worked latency allocation and model-stage concurrency estimate.
-
-**Sources / 来源：** Little and Graves, [“Little’s Law Deals with Queuing Systems”](https://web.eng.ucsd.edu/~massimo/ECE158A/Handouts_files/Little.pdf), in *Building Intuition* (2008), pp. 81–82, for the steady-state relation and system boundary; [Google SRE Workbook: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15, for latency distributions and percentile-based indicators. The numeric workload and all capacity figures above are synthetic calculations from the stated assumptions.
+> [!info]- 来源
+> - Little 定律成立条件、平均数和系统边界：[Little, “A Proof for the Queuing Formula: L = λW,” Operations Research 9(3), 1961](https://doi.org/10.1287/opre.9.3.383)，该关系对应长期稳定系统的平均量。
+> - SQLAlchemy 2.1.8 QueuePool 的 pool_size + max_overflow 同时连接上限：[SQLAlchemy 2.1, Connection Pooling](https://docs.sqlalchemy.org/en/21/core/pooling.html)，官网版本与行为核对于 2026-11-06；部署到其他池实现时按实际配置重算。
+> - 延迟分布分位数与服务目标的关系：[Google SRE Workbook, Implementing SLOs](https://sre.google/workbook/implementing-slos/)，核对于 2026-11-06。
+> - 表中工作负载与容量数字均为按上述显式假设重算的合成算例，不是服务测量。

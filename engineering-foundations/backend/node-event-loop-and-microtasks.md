@@ -1,90 +1,87 @@
-# How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？
+# Node.js 事件循环阶段与微任务队列如何交互？
 
-Node runs JavaScript callbacks on an event-loop thread while libuv coordinates timers and I/O through phases. Node's next-tick queue and the Promise/queueMicrotask microtask queue are separate scheduling mechanisms; their order depends on where code runs. Give the Node version and execution context before stating an order. / Node 在事件循环线程上运行 JavaScript 回调，libuv 则通过多个阶段协调计时器和 I/O。Node 的 nextTick 队列与 Promise/queueMicrotask 微任务队列是不同的调度机制，执行上下文会影响它们的先后顺序。说明 Node 版本与执行位置后，再给出顺序规则。
-
-**Key terms / 关键术语：** event-loop phase / 事件循环阶段；poll / 轮询阶段；microtask / 微任务；process.nextTick / nextTick 队列；CommonJS / CommonJS 模块；ES module / ES 模块；timer threshold / 计时器阈值。
+一个报表请求先排定定时器，再等数据库读回调；两者何时运行取决于当前 JavaScript 操作、event loop（事件循环）阶段和队列。不要只记一个跨所有上下文的“异步先后顺序”：CommonJS 与 ES module 顶层执行中的 nextTick 和 Promise 排序不同，定时器也只承诺最早可运行时间，不是精确截止时刻。
 
 ~~~mermaid
 flowchart TD
-    subgraph loop[libuv event-loop phases]
-        Timers[Timers] --> Pending[Pending callbacks]
-        Pending --> Poll[Poll: I/O]
-        Poll --> Check[Check: setImmediate]
+    subgraph loop[libuv 事件循环阶段]
+        Timers[Timers：到期定时器] --> Pending[Pending callbacks]
+        Pending --> Poll[Poll：I/O 事件]
+        Poll --> Check[Check：setImmediate]
         Check --> Close[Close callbacks]
         Close --> Timers
     end
-    Operation[Current JavaScript operation completes] --> Tick[Node drains nextTick queue]
-    Tick --> Micro[Node drains microtask queue]
-    Micro --> LoopNext[Event loop continues]
+    Operation[CJS 普通 JavaScript 调用返回] --> Tick[清空 nextTick 队列]
+    Tick --> Micro[清空 Promise / queueMicrotask 队列]
+    Micro --> LoopNext[事件循环继续]
 ~~~
 
-The diagram is a simplified loop outline. The idle and prepare phases are internal. A JavaScript operation's completion handling occurs around the loop and is not itself another libuv phase. ES module evaluation already runs within microtask processing, which explains why the top-level CommonJS and ES module examples below differ.
+这张图概括普通 CommonJS JavaScript 操作返回到 Node 调度点后的处理顺序：idle、prepare 是内部阶段；nextTick 和微任务不属于 libuv 的阶段。ES module 求值和正在排空的微任务队列有不同上下文，不能用图中的一条箭头替代后面的条件说明。
 
-## What the event-loop phases do / 事件循环阶段各自做什么
+## I/O 回调、定时器和 setImmediate() 何时推进？
 
-| Phase | Main role |
-|---|---|
-| Timers | Run timer callbacks once their minimum delay threshold has passed; the requested delay is not an exact deadline. |
-| Pending callbacks | Run certain I/O callbacks deferred from an earlier loop iteration. |
-| Poll | Retrieve and process I/O events; it may wait for I/O when appropriate. |
-| Check | Run callbacks scheduled with setImmediate. |
-| Close callbacks | Run selected close events, such as a socket close after abrupt destruction. |
-| Idle and prepare | Internal libuv phases. |
+Node 使用 libuv（Node.js 的跨平台事件循环与异步 I/O 库）管理计时器和 I/O 回调。常见阶段包括 timers、pending callbacks、poll、check 和 close callbacks。poll 取回 I/O 事件并执行相关回调；setImmediate() 在 check 阶段运行；定时器只在给定延迟门槛之后变为可运行，繁忙的回调仍会让它晚于门槛才得到执行。
 
-In libuv 1.45.0, used by Node.js 20 and later, timers run after poll on each loop iteration; earlier versions also ran timers before poll. This changes some timer/immediate timing relationships. At top level, do not rely on a fixed order between setTimeout(fn, 0) and setImmediate(fn). Inside an I/O callback, setImmediate runs in the check phase after poll; the official guide describes it as running before the timer in that situation.
+从 Node.js 20 所用的 libuv 1.45.0 起，定时器在每轮 poll 后运行；较早版本还会在 poll 前运行。不要依赖主模块中 setTimeout(fn, 0) 和 setImmediate(fn) 的固定顺序。在 I/O 回调里排定两者时，setImmediate() 在 check 阶段先运行。
 
 ~~~javascript
+// save as timers.cjs; output order for the first pair may vary
 const fs = require('node:fs');
 
-// At top level, the order can vary.
-setTimeout(() => console.log('timeout'), 0);
-setImmediate(() => console.log('immediate'));
+setTimeout(() => console.log('top-level timeout'), 0);
+setImmediate(() => console.log('top-level immediate'));
 
-// Inside an I/O callback, setImmediate runs in the check phase.
 fs.readFile(__filename, () => {
   setTimeout(() => console.log('timer after I/O'), 0);
   setImmediate(() => console.log('immediate after I/O'));
 });
 ~~~
 
-## How do nextTick and microtasks differ by module context? / nextTick 与微任务顺序如何受模块上下文影响？
+上例中两条带 top-level 的输出允许不同顺序；I/O 回调中则先输出 immediate after I/O。如果一次同步回调执行 120 ms，即使 setTimeout(..., 100) 已到门槛，它也要等该回调结束才能运行。给 API 设服务端截止时间时，应使用明确的 deadline（截止时间）和可取消操作，不把定时器当作严格准点机制。
 
-The nextTick queue is drained after the current JavaScript operation finishes and before the event loop continues. Promise handlers and queueMicrotask callbacks use the microtask queue. In CommonJS top-level execution, nextTick callbacks run before Promise/queueMicrotask callbacks. ES module evaluation itself runs as microtask work, so its top-level Promise/queueMicrotask callbacks run before nextTick callbacks.
+## nextTick 与 Promise 微任务的顺序为何会变？
 
-| Context | Ordering for the calls below |
-|---|---|
-| CommonJS top level | process.nextTick, Promise reaction, queueMicrotask |
-| ES module top level | Promise reaction, queueMicrotask, process.nextTick |
+nextTick 队列是 Node 管理的队列；Promise reaction 和 queueMicrotask() 使用 microtask（微任务）队列。在普通 CommonJS 顶层或 callback 返回到 Node 的调度点时，当前 JavaScript 操作先完成，Node 随后处理 nextTick，再排空微任务。ES module 顶层求值本身处于微任务处理中，所以顶层排入的 Promise 和 queueMicrotask 先于 nextTick。
+
+| 代码所在上下文 | 下面三个回调的输出顺序 |
+| --- | --- |
+| CommonJS 顶层 | nextTick → promise → microtask |
+| ES module 顶层 | promise → microtask → nextTick |
+
+保存并分别运行：
 
 ~~~javascript
-// Save as example.cjs
+// queues.cjs — Node.js v26.11.1
 const { nextTick } = require('node:process');
 
 Promise.resolve().then(() => console.log('promise'));
 queueMicrotask(() => console.log('microtask'));
 nextTick(() => console.log('nextTick'));
-// Checked output on Node.js v26.11.1:
-// nextTick
-// promise
-// microtask
 ~~~
 
 ~~~javascript
-// Save as example.mjs
+// queues.mjs — Node.js v26.11.1
 import { nextTick } from 'node:process';
 
 Promise.resolve().then(() => console.log('promise'));
 queueMicrotask(() => console.log('microtask'));
 nextTick(() => console.log('nextTick'));
-// Checked output on Node.js v26.11.1:
-// promise
-// microtask
-// nextTick
 ~~~
 
-Current Node.js documentation marks process.nextTick as Legacy and recommends queueMicrotask for most userland deferrals. A recursively replenished nextTick queue can starve I/O because the loop cannot reach poll until the queue drains. Keep nextTick only when its particular scheduling boundary is required by existing API behavior.
+本机依次运行得到 CommonJS：nextTick, promise, microtask；ES module：promise, microtask, nextTick。Promise 与 queueMicrotask 同属微任务队列，在本例中按排队顺序运行。若代码已经在执行微任务时才排入 nextTick，该 callback 不会插队中断本轮微任务队列；Node 会等当前队列排空后再处理它：
 
-One historical use is making a callback-based API consistently asynchronous, including validation errors, so the caller can finish setting up state before the callback runs. Another is emitting a readiness event on the next tick so callers can register a listener after construction:
+~~~javascript
+Promise.resolve().then(() => {
+  console.log('microtask A');
+  process.nextTick(() => console.log('nextTick from microtask'));
+  Promise.resolve().then(() => console.log('microtask B'));
+  queueMicrotask(() => console.log('queueMicrotask from microtask'));
+});
+~~~
+
+Node.js v26.11.1 的本机输出是 microtask A、microtask B、queueMicrotask from microtask、nextTick from microtask。当前 Node 文档把 process.nextTick() 标为 Legacy，多数用户代码应优先选 queueMicrotask()；只有兼容现有 nextTick 排序契约时才保留 nextTick。递归排入 nextTick 会不断清空该队列，令循环迟迟进不了 poll，从而饿死 I/O。
+
+nextTick 曾用于让 callback API 的验证错误也延后到当前调用栈退栈后交付，或者让构造器返回后才发出 readiness 事件，好让调用方先注册 listener：
 
 ~~~javascript
 const { EventEmitter } = require('node:events');
@@ -99,8 +96,8 @@ const emitter = createEmitter();
 emitter.on('ready', () => console.log('ready'));
 ~~~
 
-Use queueMicrotask for ordinary portable deferral unless the API depends on nextTick-specific ordering. These rules describe Node's host queues; they do not define browser scheduling. [Asynchronous JavaScript / 异步 JavaScript](../../frontend/javascript/asynchronous-javascript.md) covers Promise behavior outside Node's host phases.
+该例运行输出 ready；普通的可移植延后优先使用 queueMicrotask。上述顺序是 Node 宿主的调度契约，不是 JavaScript Promise 语言本身的跨宿主规则。浏览器事件循环见[浏览器事件循环](../../frontend/runtime/event-loop.md)；Node 主线程与 CPU worker 的选择见[Node.js 调度与 worker 选择](node-js-fundamentals.md)。
 
-**Related notes / 相关笔记：** [Node.js scheduling and worker choices / Node.js 调度与 worker 选择](node-js-fundamentals.md) applies these host queues to server workloads; [Processes, Threads, and Concurrency / 进程、线程与并发](../operating-systems/processes-threads-and-concurrency.md) explains the execution resources used for CPU work.
-
-**Sources / 来源：** [Node.js event-loop phases and timer behavior](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick) and [Node.js v26 process.nextTick / queueMicrotask guidance](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick), checked 2026-11-05. The CJS and ESM output examples were checked on Node.js v26.11.1; the libuv timer phase change is documented for libuv 1.45.0 (Node.js 20).
+> [!info]- 来源
+> - 阶段、计时器门槛、poll 与 setImmediate()：[Node.js Event Loop](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick)，核对于 2026-11-06；Node.js 20 起的阶段变更对应 libuv 1.45.0。
+> - nextTick 队列、CommonJS/ES module 顺序和 Legacy 状态：[Node.js v26.11.1, process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)，三个队列例子于该版本重放。

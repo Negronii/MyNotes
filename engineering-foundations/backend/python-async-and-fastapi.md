@@ -1,206 +1,136 @@
-# Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？
+# 异步 FastAPI 接口为什么仍会阻塞？
 
-**Core idea / 核心模型：** `asyncio` lets one event-loop thread make progress on other tasks while the current task waits for asynchronous I/O. An `async def` declaration alone does not make blocking work asynchronous: choose `def` for synchronous libraries that block, and `async def` when awaited libraries can suspend. Tie every acquired resource to a clear cleanup boundary, and treat cancellation as a cooperative request to stop. / `asyncio`让事件循环线程在当前任务等待异步I/O时推进其他任务。仅仅声明`async def`不会让阻塞操作异步：使用同步阻塞库时可选择`def`，使用能通过`await`挂起的库时选择`async def`。资源应绑定明确的清理边界；取消是要求任务协作停止，而非强制终止。
+**案例：** FastAPI 报表接口收到 acct-17 的查询，异步数据库驱动要等数页结果；同一 worker 还必须及时回应其他请求。async def 只是协程函数声明，只有执行到会挂起的 await 才能把事件循环让给别的任务。同步阻塞调用仍会占住当前线程，资源也必须活到最后一次使用它的响应阶段。
 
-**Key terms / 关键术语：** coroutine function / 协程函数；coroutine object / 协程对象；awaitable / 可等待对象；task / 任务；event loop / 事件循环；cooperative scheduling / 协作式调度；blocking I/O / 阻塞I/O；deadline / 截止时间；cancellation / 取消；yield dependency / `yield`依赖；worker thread / 工作线程。
+~~~mermaid
+flowchart TD
+    Route[报表请求进入路由] --> Library{底层库提供哪种接口？}
+    Library -->|原生 async API| Await[async def 中 await]
+    Library -->|同步阻塞 I/O| Sync[FastAPI 调用 def 路由/依赖]
+    Library -->|同步辅助函数| Inline{是否由 async 路由直接调用？}
+    Inline -->|是，直接调用| Block[当前事件循环被阻塞]
+    Inline -->|否，主动卸载| DefaultExec[asyncio.to_thread 默认 executor]
+    Sync --> Pool[Starlette / AnyIO 同步线程池]
+    Library -->|大量纯 Python CPU 计算| Process[有界进程/计算 worker]
+    Await --> Resource[资源活到最后一次读取或响应结束]
+    Sync --> Resource
+    DefaultExec --> Resource
+    Process --> Resource
+~~~
 
-## From `async def` to a running task / 从`async def`到运行中的任务
+## 从 async def 到运行中的协程，中间发生什么？
 
-An `async def` **coroutine function** describes work. Calling it creates a **coroutine object**; it does not run the body. `await coro()` drives that coroutine as part of the current task. `asyncio.create_task(coro())` schedules it as a separate **Task**, so it can progress concurrently with other tasks. Keep and await created tasks; starting work without collecting its result makes failures and shutdown hard to control. In Python 3.11, `asyncio.TaskGroup` is a structured way to create related tasks and wait for them together.
+调用 async def 函数只会构造并返回协程对象，函数体此时尚未执行；await 它或用 asyncio.create_task() 将它调度为 Task 后，函数体才开始运行。await 在等待一个尚未完成的可等待对象时暂停当前任务，事件循环可以推进其他就绪任务。被创建的任务仍由创建者或结构化并发作用域负责收集结果和等待结束。在 Python 3.11 中，TaskGroup 会在离开作用域前等待组内任务完成。
 
-An **awaitable** is any object accepted by `await`, including coroutine objects, Tasks, and Futures. During an incomplete await, the current task suspends and the event loop can run another ready task or service I/O. This is cooperative: code runs until it reaches a suspension point. A synchronous call such as `time.sleep()`, a blocking database driver, or a long CPU loop prevents the event-loop thread from serving other tasks during that call.
+await 并不保证一定让出线程：若等待的对象已经就绪，代码可以继续推进。time.sleep()、同步数据库驱动或长时间 Python 循环则不会让事件循环调度别的任务。一个同步辅助函数如果从 async def 路由中直接调用，只是普通函数调用，FastAPI 不会自动把它移到线程池。
 
-An `async def` function containing `yield` is an **async-generator function**; calling it returns an **async-generator object**, not a coroutine object. FastAPI manages that object's dependency lifecycle to run cleanup after yielding the resource.
+按驱动来选择接口：有原生 async 数据库或 HTTP 客户端时，在 async 路由中 await 它；若只能使用同步阻塞 I/O，可以把 FastAPI 路由或依赖本身声明为 def，由 Starlette/AnyIO 的同步工作线程池运行；短期兼容阻塞 I/O 时也可用 asyncio.to_thread()。这两者是不同的线程池，独立受限：框架调用的同步路由/依赖走 AnyIO 池，asyncio.to_thread() 走事件循环的默认 executor。应用要分别配置和计入它们的容量。FastAPI 只会对它负责调用的同步路由和依赖做调度，async 路由里直接调用的同步辅助函数仍在当前线程运行。
 
-## Choose the boundary by the library you call / 按所调用的库选择边界
+对纯 Python CPU 工作，CPython 3.11 的 Global Interpreter Lock（全局解释器锁，GIL）通常让多个线程不能同时执行 Python 字节码；to_thread 是避免阻塞事件循环的 I/O 选项，不是通用 CPU 并行开关。进程池或独立 worker 可以并行计算，但会增加序列化、进程启动、内存和排队成本。CPython 3.13 引入实验性的自由线程构建；3.14 起它成为正式支持的可选构建，但不是默认解释器，未适配的扩展还可能重新启用 GIL。运行效果取决于实际解释器和依赖，应测量确认。无论哪种卸载方式，都要限制 worker 数及等待队列。
 
-For an awaited database or HTTP client, use an `async def` route and await its I/O. A synchronous `def` route or dependency that FastAPI calls is run in its worker thread pool, so a legacy synchronous client can fit that boundary. Conversely, a synchronous helper called directly from inside an `async def` route is just a normal function call; FastAPI does not automatically move that nested call to a thread.
+## 任务取消时，函数、线程和远端操作分别会怎样？
 
-`asyncio.to_thread()` is useful for blocking I/O that cannot yet be replaced, and it keeps the event loop available while the thread waits. It is not a general CPU-parallelism switch: in a GIL-enabled CPython runtime, the lock limits simultaneous execution of pure-Python CPU work. CPython offers free-threaded builds from 3.13, but extension support and whether the GIL is enabled still matter. A process pool or separate worker can run CPU work in parallel, with serialization, startup, memory, and queueing costs. Native extensions that release the GIL and other Python implementations can differ. Measure the chosen runtime and library combination. [CPython free-threading guide](https://docs.python.org/3/howto/free-threading-python.html) Bound thread/process concurrency so offloading does not merely move an unbounded queue; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md) for admission and backpressure.
+Task.cancel() 会安排在事件循环下一次机会把 CancelledError 注入协程。任务可以在 finally 中释放资源；清理完成后通常应让取消继续传播。TaskGroup 和 timeout scope 也依赖取消传播，不要把 CancelledError 当作普通业务异常吞掉。
 
-## Cancellation, deadlines, and cleanup / 取消、截止时间与清理
+asyncio.timeout(秒数) 需要事件循环重新获得调度机会才能送达取消。如果事件循环被同步函数堵住，超时回调无法运行；阻塞调用返回后，若代码在让出控制权前已退出 timeout 上下文，超时甚至可能完全不触发。本机 CPython 3.11.13 中，`asyncio.timeout(0.01)` 包住 `time.sleep(0.05)` 正常退出，耗时约 0.06 秒。对 await asyncio.to_thread(blocking_call)，取消当前 Task 会让调用方停止等待结果，却不能强制停止已经开始运行的线程函数。底层线程可能继续占用文件、连接或 CPU，所以不要在任务已取消时立刻关闭仍被它使用的连接池。
 
-`Task.cancel()` arranges for `CancelledError` to be raised in the task at a later opportunity, commonly at an `await`. Use `try/finally` to release resources and normally let cancellation propagate after cleanup. Do not catch `BaseException` or suppress `CancelledError` as a generic error; structured concurrency and timeout scopes rely on cancellation being visible.
+HTTP 客户端超时或断线也不能证明远端副作用已经停止。一次请求超时后，写入可能尚未到达服务、可能回滚，也可能已经提交但响应丢失；耐久 job 需显式取消，并从权威状态确认结果，见[请求超时后如何确认结果并安全重试？](../reliability/api-reliability-and-async-delivery.md)。
 
-In Python 3.11, `asyncio.timeout(seconds)` cancels the current task when its time budget expires and raises `TimeoutError` outside the context manager. It is cooperative: a blocking synchronous function prevents the event loop from delivering that cancellation until the function returns. A timeout around `await asyncio.to_thread(...)` stops waiting in the coroutine but cannot forcibly stop a thread function already running. A client timeout also does not prove that a remote operation stopped or had no side effect. Pass remaining request budget to supported downstream calls and use the broader [API reliability guidance](../reliability/api-reliability-and-async-delivery.md) for end-to-end deadlines and unknown outcomes.
+## FastAPI 的 yield 依赖应何时释放？
 
-## Choose the dependency scope from its last use / 按最后一次使用选择依赖作用域
+一个 yield 依赖的生命周期要覆盖它最后一次被使用的时点。FastAPI 中未指定 scope 时，带 yield 的依赖默认是 request scope：依赖在路由前打开，在 response 处理完成后关闭。若路由返回的 StreamingResponse 仍要读取数据库游标，就让 request scope 一直覆盖流生成。只有路由返回后不再需要该资源，才用 Depends(scope="function")，这样清理发生在发送响应前。
 
-In FastAPI 0.128.0, a yielded dependency defaults to request scope. The framework enters it before the route runs. If the route returns a streaming body that will keep using the resource, retain the request scope through response processing. If the dependency is only needed while running the route, `Depends(scope="function")` ends it when the handler returns, before sending the response. Return data that no longer needs the resource when choosing function scope. / 如果响应生成过程中还需使用资源，就保留 request scope。路由返回前已完成全部资源使用时，才选择 function scope。
+这条 StreamingResponse 路径在请求内直接向客户端发送正文；连接和游标活到正文结束或请求取消。持久导出是另一条路径：先同事务接受 job、outbox 和等待槽并返回 202，后台 worker 再写 CSV 私有对象；上传与结果引用提交后才把 job 标为 succeeded。客户端断开不能替代 job 取消。
 
 ~~~mermaid
 sequenceDiagram
     participant F as FastAPI
-    participant D as Yield dependency
-    participant R as Route
-    participant B as Response body
-    F->>D: Acquire resource
-    F->>R: Call route
-    R-->>F: Return response
+    participant D as yield 依赖
+    participant R as 路由函数
+    participant B as 响应正文生成器
+    F->>D: 打开会话或游标
+    F->>R: 调用路由
+    R-->>F: 返回响应
     alt function scope
-        F->>D: Clean up
-        F->>B: Generate and send body
-    else request scope
-        F->>B: Generate and send body
-        B->>D: Use resource while streaming
-        F->>D: Clean up at end of request scope
+        F->>D: 先清理依赖
+        F->>B: 发送响应正文
+    else request scope（默认）
+        F->>B: 生成并发送正文
+        B->>D: 流式读取时继续使用资源
+        F->>D: 请求响应生命周期结束后清理
     end
 ~~~
 
-Put cleanup in `finally`. In an already-cancelled AnyIO scope, awaited cleanup can be cancelled too. When it must await, give that cleanup a short shielded deadline and let the original cancellation propagate. The smoke check below exercises explicit task cancellation and both streaming lifetimes. A dropped connection does not necessarily cancel every kind of downstream work. Test the selected ASGI server and response type before depending on disconnect behavior. A background job should acquire its own resources at its own lifetime boundary. [FastAPI dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/) · [AnyIO finalization](https://anyio.readthedocs.io/en/stable/cancellation.html#finalization)
-
-~~~mermaid
-flowchart LR
-    Sync[Blocking sync library] -->|def route or dependency| Pool[FastAPI worker thread pool]
-    Async[Async library] -->|await| Loop[Event loop can run other tasks]
-    Inline[Blocking call inside async route] -->|no suspension| Block[Event loop is blocked]
-    CPU[Pure-Python CPU work] -->|bounded process pool or worker| Parallel[Other execution resource]
-~~~
-
-## Runnable request example / 可运行的请求示例
-
-This small app has a sync settings dependency, an async resource dependency, an awaited route with a deadline, a streaming route that needs request-scoped cleanup, a deliberately bad blocking route, and a thread-offloaded I/O route. Save the complete block as `async_api_demo.py`; it is an executable smoke check rather than a production server.
+下面的路由片段只展示资源和调度边界。真实服务中的数据库驱动、超时和流式响应都应按本机库契约替换。
 
 ~~~python
 import asyncio
-import threading
 import time
 
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
-from httpx import ASGITransport, AsyncClient
-
-trace = []
-slow_started = []
-quick_seen = []
-
-
-def load_settings():
-    # FastAPI runs a sync dependency it calls in its worker thread pool.
-    return {"region": "demo", "thread": threading.get_ident()}
-
-
-class Store:
-    async def get(self, item_id: int, region: str):
-        await asyncio.sleep(0)  # stand-in for an async driver wait
-        return {"id": item_id, "region": region}
-
-
-async def get_store():
-    trace.append("open")
-    try:
-        yield Store()
-    finally:
-        trace.append("close")
-
 
 app = FastAPI()
 
+class Store:
+    async def get(self):
+        print("read")
+        await asyncio.sleep(0)
+        return "report row"
 
-@app.get("/items/{item_id}")
-async def read_item(
-    item_id: int,
+async def get_store():
+    print("open")
+    try:
+        yield Store()
+    finally:
+        print("close")
+
+def load_settings():
+    return {"region": "demo"}
+
+@app.get("/row")
+async def read_row(
     settings=Depends(load_settings),
     store=Depends(get_store, scope="function"),
 ):
-    assert settings["thread"] != threading.get_ident()
     async with asyncio.timeout(0.5):
-        return await store.get(item_id, settings["region"])
-
+        return {"region": settings["region"], "row": await store.get()}
 
 def blocking_io():
     time.sleep(0.06)
     return "done"
 
-
-@app.get("/bad")
-async def bad_route():
-    slow_started.append(time.monotonic())
-    blocking_io()  # blocks the event-loop thread
-    return {"ok": True}
-
-
-@app.get("/quick")
-async def quick_route():
-    quick_seen.append(time.monotonic())
-    return {"ok": True}
-
+@app.get("/blocking")
+async def blocking_route():
+    return {"result": blocking_io()}
 
 @app.get("/offloaded")
 async def offloaded_route():
-    return {"result": await asyncio.to_thread(blocking_io)}
-
+    try:
+        return {"result": await asyncio.to_thread(blocking_io)}
+    except asyncio.CancelledError:
+        # 取消当前等待任务不会强停已经开始的 blocking_io 线程。
+        raise
 
 @app.get("/stream")
-async def stream(store=Depends(get_store)):  # default yield scope is request
+async def stream(store=Depends(get_store)):
     async def body():
-        trace.append("body")
-        yield "x"
+        print("body")
+        yield await store.get()
 
     return StreamingResponse(body(), media_type="text/plain")
-
-
-@app.get("/wait")
-async def wait_forever(store=Depends(get_store)):
-    await asyncio.Event().wait()
-
-
-async def check():
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://example.test"
-    ) as client:
-        trace.clear()
-        response = await client.get("/items/7")
-        assert response.json() == {"id": 7, "region": "demo"}
-        assert trace == ["open", "close"]  # function scope closes before send
-
-        trace.clear()
-        response = await client.get("/stream")
-        assert response.text == "x"
-        assert trace == ["open", "body", "close"]  # request scope covers body
-
-        trace.clear()
-        task = asyncio.create_task(client.get("/wait"))
-        await asyncio.sleep(0.01)
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-        else:
-            raise AssertionError("request task was expected to be cancelled")
-        assert trace == ["open", "close"]
-
-        slow_started.clear()
-        quick_seen.clear()
-        bad = asyncio.create_task(client.get("/bad"))
-        await asyncio.sleep(0)  # let /bad block before /quick is scheduled
-        quick = await client.get("/quick")
-        await bad
-        assert quick.status_code == 200
-        assert quick_seen[0] - slow_started[0] >= 0.05
-
-        response = await client.get("/offloaded")
-        assert response.json() == {"result": "done"}
-
-
-asyncio.run(check())
 ~~~
 
-The `/bad` route delays the next event-loop request because it calls a blocking helper directly. Use a synchronous route for a synchronous I/O stack, or explicitly offload a blocking call; when possible prefer a native async client. The `/items` route awaits I/O and receives the sync and async dependencies through FastAPI's respective boundaries. Its 0.5-second timeout is only a local teaching budget, not a recommended service-wide setting.
+`/row` 的 function-scope 依赖事件顺序是 `open → read → close`；`/stream` 默认 request scope 的顺序是 `open → body → read → close`。这是依赖和生成器事件 trace，不是对 ASGI response send 次序的测量。0.5 秒 timeout 只是示例预算；真实应用的 session、事务和数据库连接是不同资源，每个请求或 worker attempt 都要有独立短生命周期，不能把同一个 ORM Session 共享给并发 Task。见[如何限定 ORM Session 并排查连接池耗尽？](data-access-and-connection-pools.md)。若流生成器需要游标，依赖的 scope 必须覆盖最后一次游标读取；一个后台 job 则应在自己的执行生命周期内重新取得资源。
 
-## Python and runtime versions / Python与运行时版本
+本机 CPython 3.11.13、FastAPI 0.128.0、Starlette 0.47.2、HTTPX 0.28.1 上用独立 smoke 驱动核对过这些机制：同步依赖被移出事件循环线程；同步阻塞调用会拖慢同时请求；运行中的 `to_thread` 函数在等待它的 Task 被取消后仍完成。取消请求测试使用 HTTPX `ASGITransport` 并在同进程取消 ASGI 调用 Task；这不等于真实 TCP 客户端断线，也不据此推断服务器断线后的资源行为。FastAPI 版本会影响依赖生命周期选项，升级时应核对所装版本。
 
-`async`/`await` syntax is part of Python; `asyncio` is a standard-library API. This example was checked with **CPython 3.11.13**, FastAPI **0.128.0**, Starlette **0.47.2**, and HTTPX **0.28.1**. `asyncio.timeout()` and `asyncio.TaskGroup` require Python 3.11; `asyncio.to_thread()` requires Python 3.9+. CPython is one Python implementation, so GIL statements above are explicitly CPython-specific. Verify framework lifecycle options against the installed FastAPI version: newer live documentation may describe behavior absent in an older release.
-
-## Interview answers / 面试回答
-
-**Why can an `async def` endpoint still stall other requests? / 为什么`async def`接口仍会拖慢其他请求？** An async function only yields when it awaits an operation that actually suspends. Calling a synchronous network/file helper or doing a long CPU loop inline keeps the event-loop thread busy. I would use an async driver, a sync route/dependency that FastAPI can offload, or a bounded thread/process worker chosen for the workload; then I would measure queueing and latency.
-
-异步函数只有在等待一个确实会挂起的操作时才让出执行权。在函数内直接调用同步网络/文件操作，或执行很长的CPU循环，都会占住事件循环线程。我会使用异步驱动、由FastAPI代为卸载的同步路由/依赖，或根据工作负载选择有界线程/进程工作池，并测量排队与延迟。
-
-**What happens when a request is cancelled while it owns a resource? / 请求持有资源时被取消会怎样？** Cancellation is delivered cooperatively, so I put release logic in `finally` and let `CancelledError` propagate. For FastAPI `yield` dependencies I choose request scope if response streaming still consumes the resource, and function scope if cleanup should happen before sending the response. I would not assume a client timeout or disconnect proves remote work stopped; I would keep downstream deadlines and side-effect handling explicit.
-
-取消通过协作方式传递，因此我会把释放逻辑放进`finally`并让`CancelledError`继续传播。若响应流仍要使用FastAPI的`yield`依赖，我会选择request scope；若资源应在响应发送前关闭，则选择function scope。我不会因为客户端超时或断开就认定远端工作已停止；下游截止时间与副作用处理仍需显式定义。
-
-**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](python-fundamentals.md), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../reliability/api-reliability-and-async-delivery.md), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../networking/http-protocols-and-websockets.md), and [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md). [HTTP API Contracts / HTTP API契约](http-api-contracts.md) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](data-access-and-connection-pools.md) expands the resource example into database-session, transaction, and pool-lifetime choices.
+> [!info]- 来源
+> - Python 3.11 协程、TaskGroup、Task.cancel()、timeout 与 to_thread：[Python 3.11 asyncio tasks](https://docs.python.org/3.11/library/asyncio-task.html)，Task取消和后台线程示例于 CPython 3.11.13 重放。
+> - asyncio.to_thread() 调用事件循环默认 executor 的实现：[CPython 3.11, Lib/asyncio/threads.py](https://github.com/python/cpython/blob/3.11/Lib/asyncio/threads.py)；阻塞函数已运行后不能由取消 awaiter 强制停止，线程验证于 CPython 3.11.13 重放。
+> - 已经运行的 callable 不能由 Future.cancel() 强制取消：[Python 3.11 concurrent.futures](https://docs.python.org/3.11/library/concurrent.futures.html#concurrent.futures.Future.cancel)，已运行线程示例于 CPython 3.11.13 重放。
+> - async 函数、生成器和协程对象的语言定义：[Python 3.11 Language Reference, Data model](https://docs.python.org/3.11/reference/datamodel.html#coroutine-functions)。
+> - CPython 自由线程模式的可选构建、运行时 GIL 状态和扩展兼容边界：[Python support for free threading](https://docs.python.org/3/howto/free-threading-python.html)；3.14 正式支持标准见 [PEP 779](https://peps.python.org/pep-0779/)，核对于 2026-11-06。
+> - FastAPI 对同步路由/依赖与异步路由的调度边界：[FastAPI, Concurrency and async / await](https://fastapi.tiangolo.com/async/)，核对于 2026-11-06。
+> - 同步路由/依赖使用 AnyIO 线程容量、且 Starlette 内其他同步操作共用该限制：[Starlette, Thread Pool](https://www.starlette.io/threadpool/)；AnyIO 的限制不影响 asyncio 默认 executor：[AnyIO, Working with threads](https://anyio.readthedocs.io/en/stable/threads.html)，核对于 2026-11-06。
+> - yield 依赖默认 request scope 与 function scope 的清理时点：[FastAPI, Dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/)，核对于 2026-11-06；0.128.0 路由 resolver 实现见 [dependency utilities](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py)。
