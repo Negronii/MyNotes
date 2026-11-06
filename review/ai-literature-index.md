@@ -19,6 +19,7 @@
 | [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467v1) · arXiv v1 · 2019-10-16 | 解释基于 RMS (均方根)的缩放怎样控制表示的数值尺度，以及它与包含中心化步骤的 normalization (归一化)有何不同。 | [输入归一化](../ai-engineering/foundations/how-llms-work.md#%E7%AC%AC%E4%B8%80%E4%B8%AA%20Transformer%20%E5%9D%97%E6%8E%A5%E6%94%B6%E4%BB%80%E4%B9%88%EF%BC%9F)。 |
 | [The Llama 3 Herd of Models](https://arxiv.org/html/2407.21783v3#S3) · 2024 · arXiv v3 2024-11-23 | 以具体 decoder-only 架构和训练过程为参照，理解 RoPE、GQA、normalization 和门控 FFN。 | [模型计算](../ai-engineering/foundations/how-llms-work.md)、[服务完整流程](../ai-engineering/systems/from-message-to-answer.md)。 |
 | [The Curious Case of Neural Text Degeneration](https://arxiv.org/abs/1904.09751v2) · 首次发表 2019 · arXiv v2 2020-02-14 | 解释 nucleus sampling (核采样)和 temperature (温度)的机制；开放式文本生成实验不能据此证明 agent 行为正确。 | [token 选择](../ai-engineering/foundations/how-llms-work.md#%E4%B8%BA%E8%AF%8D%E8%A1%A8%E6%89%93%E5%88%86%E5%B9%B6%E9%80%89%E6%8B%A9%E4%B8%80%E4%B8%AA%20ID)、[如何选择解码设置](../ai-engineering/foundations/how-llms-work.md#%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E8%A7%A3%E7%A0%81%E8%AE%BE%E7%BD%AE%EF%BC%9F)。 |
+| [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/html/2501.12948v2) · arXiv v2 | 研究可验证奖励驱动的推理训练，并区分 R1-Zero 的 RL 实验与最终 R1 的多阶段训练；结果奖励不等于验证了每个推理步骤。 | [奖励、组内优势与参数更新](../ai-engineering/fine-tuning/reward-based-reasoning-training.md)、[如何选择后训练信号](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。 |
 
 ## 推理显存与服务容量
 

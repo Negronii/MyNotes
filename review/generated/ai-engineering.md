@@ -329,7 +329,7 @@ backpropagation (反向传播) 会把导数依次传过 LM head、残差相加�
 
 所选的训练目标也很重要。BERT 使用的 masked language modeling (掩码语言建模) 会根据左右两侧可见的上下文，预测选定的缺失位置。它的常规过程与上面从左向右的循环不同。研究者可以基于掩码模型构造迭代生成过程，但这需要另外的采样过程。
 
-如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#17.%20When%20should%20you%20fine-tune%20to%20close%20a%20repeatable%20behavior%20gap?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%9A%E8%BF%87%E5%BE%AE%E8%B0%83%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
+如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
 
 > [!info]- 来源
 > 下列来源为所列机制提供依据。较小的张量维度、虚构的向量和构建日志调参场景都是教学示例或工程扩展。
@@ -500,7 +500,7 @@ Compare the same workload, quality target, peak traffic, and data constraints. A
 
 Routing can send simple, low-risk requests to a cheaper model and reserve a more capable option for cases that benefit from it. First measure whether the router's errors, added latency, and maintenance are outweighed by the savings. Use a task-relevant fallback when routing confidence is insufficient, and ensure high-impact operations still pass application-side authorization. Do not label “classification,” “reasoning,” or “extraction” as automatically easy or hard across all models.
 
-Routing and other service optimizations need a fixed quality bar and end-to-end measurements; see [How to reduce AI application latency and cost / 如何降低 AI 应用时延与成本](#4.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F). To connect versioned results and user feedback to an improvement or rollback decision, see [Production observability and feedback / 生产可观测性与反馈](#19.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F).
+Routing and other service optimizations need a fixed quality bar and end-to-end measurements; see [How to reduce AI application latency and cost / 如何降低 AI 应用时延与成本](#4.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F). To connect versioned results and user feedback to an improvement or rollback decision, see [Production observability and feedback / 生产可观测性与反馈](#20.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F).
 
 ### Multimodal capability / 多模态能力
 
@@ -511,7 +511,7 @@ Routing and other service optimizations need a fixed quality bar and end-to-end 
 - [AI Deployment Patterns / AI 部署模式](#6.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F) compares hosted, self-hosted, edge, and hybrid operating patterns.
 - [AI Application Architecture / AI 应用架构](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines run identity, persistence, and recovery behavior across request channels.
 - [Context Engineering Principles / 上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) covers token budgets and provider-specific prompt caching.
-- [Fine-tuning Strategies / 微调策略](#17.%20When%20should%20you%20fine-tune%20to%20close%20a%20repeatable%20behavior%20gap?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%9A%E8%BF%87%E5%BE%AE%E8%B0%83%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) distinguishes behavior adaptation from maintained external knowledge.
+- [Fine-tuning Strategies / 微调策略](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) distinguishes behavior adaptation from maintained external knowledge.
 - [RAG Architecture and Implementation / 检索增强生成](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers current or access-controlled external evidence.
 
 ### Sources / 来源
@@ -1004,7 +1004,7 @@ Lewis 等人的 RAG 把可更新的非参数记忆（non-parametric memory）与
 ### Related notes / 相关笔记
 
 - [Context Engineering Principles / 上下文工程原则](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains context budgets and how placement can affect use of evidence.
-- [Fine-tuning Strategies / 微调策略](#17.%20When%20should%20you%20fine-tune%20to%20close%20a%20repeatable%20behavior%20gap?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%9A%E8%BF%87%E5%BE%AE%E8%B0%83%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) discusses adapting model behavior and combining it with external knowledge.
+- [Fine-tuning Strategies / 微调策略](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) discusses adapting model behavior and combining it with external knowledge.
 - [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation datasets, metrics, and review methods.
 - [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) covers prompt injection, permission boundaries, and runtime controls.
 ## 11. How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？
@@ -1131,7 +1131,7 @@ ReAct 的关键是让外部观察改变下一步。论文在 PaLM 的少样本�
 
 评估时，把同一组任务交给固定工作流和 Agent，比较完成率、写入结果、权限违规、重复动作、成本和延迟。τ-bench 同时检查任务结束后的数据库状态与必须告知用户的信息。后续 τ²-bench 的电信任务还让模拟用户与 Agent 使用不同工具操作同一个环境，暴露了只测试单方动作时看不到的协调失败。将这类变化变成自己的测试用例，例如用户改完设置后要重新读状态，再决定是否执行后续动作。 [Anthropic, Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) · [τ-bench](https://arxiv.org/abs/2406.12045) · [τ²-bench](https://arxiv.org/abs/2506.07982)
 
-An observation updates the current run. A change that should apply across later runs needs a baseline, external evidence, and a retained version. / 观察会更新当前运行。若变更要延续到后续运行，就需要基线、外部证据与可保留的版本。[How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](#18.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)
+An observation updates the current run. A change that should apply across later runs needs a baseline, external evidence, and a retained version. / 观察会更新当前运行。若变更要延续到后续运行，就需要基线、外部证据与可保留的版本。[How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](#19.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)
 
 ### 可用动作空间 / Action space
 
@@ -1313,7 +1313,7 @@ Treat a model-proposed tool call as untrusted input. The application executes it
 
 Set explicit deadlines, bounded retries, idempotency for retryable writes, cancellation behavior, rate and budget limits, an error or escalation path, and a way to roll back a model or prompt version. Retry only when the operation contract makes a duplicate safe. A timeout says the caller did not receive a result in time; it does not say the server did no work.
 
-These are separate design questions with deeper treatments: [how to reduce latency and cost](#4.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F), [how to choose a deployment pattern](#6.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F), and [how to monitor and improve a production feature](#19.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
+These are separate design questions with deeper treatments: [how to reduce latency and cost](#4.%20How%20do%20you%20reduce%20AI%20application%20latency%20and%20cost%20without%20weakening%20task%20quality?%20/%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%8D%E6%8D%9F%E5%AE%B3%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%E7%9A%84%E5%89%8D%E6%8F%90%E4%B8%8B%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%9F), [how to choose a deployment pattern](#6.%20When%20should%20an%20AI%20application%20use%20a%20hosted%20API,%20self-hosting,%20edge,%20or%20hybrid%20deployment?%20/%20AI%20%E5%BA%94%E7%94%A8%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%89%E6%89%98%E7%AE%A1%20API%E3%80%81%E8%87%AA%E6%89%98%E7%AE%A1%E3%80%81%E7%AB%AF%E4%BE%A7%E6%88%96%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2%EF%BC%9F), and [how to monitor and improve a production feature](#20.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
 
 ### Durable runs, checkpoints, and recovery / 持久化运行、检查点与恢复
 
@@ -1381,7 +1381,7 @@ Some workflow runtimes persist an ordered event history and replay deterministic
 - [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) owns browser-side partial output, terminal events, and local cancellation.
 - [Confirming request outcomes / 确认请求结果](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, retry, and idempotency.
 - [Database transactions and recovery / 数据库事务与恢复](../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) explains the boundary for durable application state.
-- [AI System Design Interview Questions / AI 系统设计面试题](#20.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) applies these production mechanisms to end-to-end design cases.
+- [AI System Design Interview Questions / AI 系统设计面试题](#21.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) applies these production mechanisms to end-to-end design cases.
 
 **Sources / 来源：** [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) defines idempotent HTTP method semantics, and [§15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3) says `202 Accepted` does not mean processing is complete. Temporal's [Workflow replay guide](https://docs.temporal.io/workflows) and [Event History guide](https://docs.temporal.io/encyclopedia/event-history) describe one runtime's deterministic orchestration replay and recorded activity results. These sources support the mechanisms described here; the example API, states, and names are synthetic application choices.
 ## 16. How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？
@@ -1469,7 +1469,7 @@ Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（20
 
 ### Related notes / 相关笔记
 
-- [Agent improvement and version acceptance / Agent 改进与版本验收](#18.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F) — connect feedback on a task to a change that persists across runs.
+- [Agent improvement and version acceptance / Agent 改进与版本验收](#19.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F) — connect feedback on a task to a change that persists across runs.
 - [Orchestration patterns](#13.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F) — compare the single-loop baseline with tested delegation or parallel work.
 - [RAG architecture and implementation](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
 - [AI safety in production](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) — 了解需要单独设计任务检查的安全边界和生产控制。
@@ -1481,103 +1481,353 @@ Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（20
 - Liang et al., [*Holistic Evaluation of Language Models*](https://arxiv.org/abs/2211.09110).
 - Zheng et al., [*Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*](https://arxiv.org/abs/2306.05685).
 - Xia et al., [*Evaluation-Driven Development and Operations of LLM Agents: A Process Model and Reference Architecture*](https://arxiv.org/abs/2411.13768) — 提出连接离线与线上评估的流程模型，并不保证两者分数一致。
-## 17. When should you fine-tune to close a repeatable behavior gap? / 何时应通过微调弥补稳定的行为差距？
+## 17. 何时应微调来弥补稳定的行为差距？
 
-**Core explanation / 核心解释：** Fine-tuning updates a pretrained model using examples or preferences to change task behavior. It is worth testing when a repeatable behavior gap remains after prompt, context, retrieval, and workflow improvements. It is not a reliable database for fresh or access-controlled facts; choose the method and data through held-out evaluation and account for training, serving, and maintenance. / 微调用示例或偏好更新预训练模型，以改变特定任务行为。当提示词、上下文、检索和工作流改进后仍存在稳定的行为差距，才值得评估微调。它不是可靠的实时或权限控制数据库；应通过保留集评估选择方法和数据，并计入训练、部署及维护成本。
+### 案例：日志助手反复给出错误标签
 
-**Key terms / 关键术语：** supervised fine-tuning (SFT) / 监督微调；LoRA / 低秩适配；QLoRA / 量化低秩适配；preference optimization / 偏好优化；RLHF / 基于人类反馈的强化学习；DPO / 直接偏好优化。
+值班工程师希望构建日志助手，把失败日志归入稳定标签并用固定 JSON 结构输出，方便后续聚合。举例：输入 `Build 73 failed: connect ECONNREFUSED 10.0.0.8:5432`；团队约定的标签是 `database_connection_refused`，简短摘要是“构建进程无法连接数据库”。但模型有时把它标成 `database_timeout`，有时又在 JSON 前后附上说明文字。日志已包含分类所需的信号，错误在标签映射和输出行为，而不是少了当日外部事实。
 
-### Should you fine-tune, or use prompting and retrieval? / 应微调，还是使用提示和检索？
+先把指令、标签定义、示例、可用结构化输出和工作流改清楚，并在同一批代表性日志上建立基线。如果约束输出能解决 JSON 格式问题，就让应用用结构化输出保证格式；只有在标签误判等行为差距仍反复出现、且手头有经审查的正确示例时，才评估微调。按成因选择方法：
 
-First identify the error. Missing or changing facts call for an authoritative data source and retrieval or a direct API. Unclear instructions may be fixed with a prompt or workflow. A persistent style, label convention, or response pattern may be suitable for fine-tuning if examples can teach it and evaluation confirms the gain. These are useful starting points, not mutually exclusive categories.
+| 失败现象 | 先改变什么 | 何时进入微调评估 |
+| --- | --- | --- |
+| 缺少或变化中的服务事实 | 权威数据源、检索或 application programming interface（API，应用程序接口） | 微调不能代替数据刷新或权限检查；需要时把微调行为与检索组合。 |
+| 指令、标签定义或流程不清 | 提示词、上下文、标签设计或工作流 | 只有这些因素稳定后还存在重复行为差距，训练样例也能表达正确行为时。 |
+| 相同输入反复违反风格、分类或响应格式 | 先试更清楚的提示词与应用层结构约束 | 若特定任务行为仍稳定失败，可用代表性示范训练并用独立评估证明收益。 |
 
-Fine-tuning does not make facts stored in weights reliably addressable, current, or permission-aware. Retrieval still needs source freshness, access checks, and evidence validation. A fine-tuned model can also be paired with retrieval. [RAG Architecture and Implementation / 检索增强生成](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers external evidence; [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers task evaluation.
+fine-tuning（微调）更新预训练模型的可训练参数，使目标示例所表达的行为在之后的调用中更常出现。权重并不是能按请求精确查询、保持实时或实施用户权限的数据库。外部证据仍需检索的来源时效和访问控制；可从[如何检索并使用经过授权的外部证据？](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F)了解应用如何提供证据。训练前应比较提示词基线与相关检索或工作流基线；只有数据代表目标行为、差距可重复且预期收益覆盖训练、部署和维护成本时，才值得继续。
 
-Before training, compare a prompt-only baseline and any relevant retrieval or workflow baseline. Consider fine-tuning when the remaining gap is repeatable, the training data represents the target behavior, and the expected improvement justifies training, deployment, and future update work.
+### 标签差距应该更新哪些参数？
 
-### Which method should you choose? / 如何选择微调方法？
-
-- **Full fine-tuning / 全量微调：** updates the base model's trainable weights. It offers broad adaptation capacity, with higher memory, compute, and artifact costs.
-- **LoRA / 低秩适配：** freezes the base weights and trains low-rank matrices for selected weight updates. This reduces the number of trainable parameters; resulting quality and memory needs depend on model, rank, target modules, data, and training setup.
-- **QLoRA / 量化低秩适配：** keeps a quantized base model frozen while training LoRA adapters. The QLoRA paper studies 4-bit quantization and memory-saving methods in a specific experimental setup; quantization and adapter choices still require task evaluation.
-- **Adapters / 适配器：** add small trainable modules, often bottleneck layers within Transformer blocks, while the main model weights stay frozen.
-- **Prefix tuning / 前缀微调：** learns continuous task-specific vectors that are supplied as prefix representations at Transformer layers; these are not ordinary visible text tokens.
-- **Prompt tuning / 软提示微调：** learns a small set of continuous input-embedding vectors prepended to the input while keeping the model frozen. This differs from prompt engineering, which edits ordinary instruction text.
-
-These methods alter different parts of a model's computation and have different trainer and serving support. Their results depend on the model, task, and implementation; compare them by evaluation rather than assuming one dominates.
-
-A common LoRA parameterization writes an update as a product of two low-rank matrices:
+日志助手案例里，目标不是重写基础模型的所有能力，而是在不改变底座的前提下，调整选定投影矩阵，使模型更常把 `ECONNREFUSED` 映射到正确标签。这可以用 low-rank adaptation（LoRA，低秩适配）说明。若采用列向量记法，基础投影 `W` 将 `k` 维输入映到 `d` 维输出；LoRA 冻结 `W`，只训练两个小矩阵组成的增量：
 
 $$
 W' = W + \Delta W,\qquad \Delta W = BA
 $$
 
-Here, if W maps from input dimension k to output dimension d, A can have shape r × k and B shape d × r, with rank r smaller than k and d. This is a schematic form; implementations may scale or target different modules. Some serving stacks can merge adapters into the base weights, while other configurations keep adapter operations at inference. Verify the target stack instead of assuming zero latency overhead.
+其中 `A` 的形状是 `r × k`，`B` 是 `d × r`，所以增量 `BA` 的形状与 `W` 相同；`r` 是中间瓶颈宽度，也是 `BA` 秩的上限。由于 `A` 或 `B` 本身可能秩不足，`BA` 的实际秩可以小于 `r`；增量至多沿 `B` 的 `r` 个列方向调整。看一个可手算的小矩阵：设输入 `x=[1,2]ᵀ`、基础权重 `W=I`（单位矩阵，因此 `Wx=x`）、`r=1`、`A=[1,1]`、`B=[0.1,−0.2]ᵀ`。那么 `Ax=3`，`B(Ax)=[0.3,−0.6]ᵀ`，也就是 `W'x=Wx+B(Ax)=[1.3,1.4]ᵀ`。输入先经一维瓶颈，再投影回两维；真实网络里这只是某层的局部表示增量，不是直接把最终类别标签改成目标值。
 
-**One-matrix count illustration / 单个矩阵参数量示例:** Suppose one target projection is 4096 × 4096 and r = 8. The two LoRA matrices contain r(k + d) = 8(4096 + 4096) = 65,536 trainable values, while the original dense matrix has dk = 4096 × 4096 = 16,777,216 values. This compares one adapted matrix only; a model's total depends on how many layers and matrices are targeted, and the count alone predicts neither quality nor the whole model's trainable-parameter fraction.
+训练时，cross-entropy loss（交叉熵损失）经模型计算图反向传播到 `A` 和 `B`，优化器逐步修改它们；基础矩阵 `W` 保持冻结。常见实现还会乘缩放因子 `α/r`，并可能在适配路径加入 dropout（随机失活）；本例为了便于手算省略这些配置。若目标权重的方向或存储转置与这里不同，矩阵形状会随实现转置，但可训练参数仍是低秩增量。
 
-There is no universal rank, method, or “default” that guarantees quality. Compare feasible approaches using the same data splits, task metrics, deployment constraints, and base model.
+在 `4096 × 4096` 的单个投影矩阵上取 `r=8`，LoRA 矩阵共有 `r(k+d)=8(4096+4096)=65,536` 个可训练数值；原稠密矩阵有 `dk=4096×4096=16,777,216` 个数值。这仅比较单个目标矩阵。全模型的训练参数量取决于目标层数和矩阵数，不能凭一个矩阵的比例预测整模型的质量或训练显存。
 
-### How much and what kind of data? / 需要多少数据，数据应是什么样？
+**rank（矩阵秩）**决定这个增量能表达多少方向：较低的 `r` 参数和显存更少，但可能表达不了复杂的行为差距；较高的 `r` 容量更大，训练和部署成本也增加。应从可运行的小秩实验开始，用相同数据与留出样例比较，不存在保证质量的通用秩。
 
-There is no general example count that predicts success. A small clean set may reveal whether a behavior is learnable, while broader or rarer cases may need more coverage. Track which behaviors and input patterns each example represents; do not treat raw volume as evidence of quality.
+其他方法改动模型的不同部分。full fine-tuning（全量微调）更新全部可训练基础权重，适应容量较大但算力、内存和模型产物成本也高；quantized LoRA（QLoRA，量化低秩适配）冻结量化基础权重并训练 LoRA，QLoRA 论文在其特定实验中使用 4-bit 量化，不能推定任一量化、模型或任务都适用。adapter（适配器）在 Transformer 块中加入小型可训练模块；prefix tuning（前缀微调）学连续向量，作为各层的前缀表示输入 Transformer；prompt tuning（软提示微调）则在输入嵌入前加少量连续向量。后两者不是普通可见文本 token（词元），也不同于编辑指令文字的提示词工程。
 
-Possible supervised example / 监督样例:
+有些服务栈能把适配器合并进基础权重，有些会在推理时保留额外运算；训练器和服务端支持也不同。选方法时应把是否需保留底座、可用显存、预期行为复杂度、训练产物和服务路径放到同一比较中，并以任务评估确认，而不是假定某一种参数高效微调必然胜过其他方法。
+
+### 案例中的标签如何变成训练损失？
+
+若错误行为已被归因到稳定的标签映射，训练数据就要把“输入信号”和“期望输出”配对。日志助手的一个合成监督样例如下：
 
 ~~~json
 {
   "messages": [
-    {"role": "user", "content": "Summarize this sample clause: The supplier will deliver the parts by June 1."},
-    {"role": "assistant", "content": "The supplier must deliver the parts by June 1."}
+    {"role": "user", "content": "Classify this build log using one approved category and return JSON only: Build 73 failed: connect ECONNREFUSED 10.0.0.8:5432"},
+    {"role": "assistant", "content": "{\"category\":\"database_connection_refused\",\"summary\":\"构建进程无法连接数据库。\"}"}
   ]
 }
 ~~~
 
-This is synthetic demonstration data, not legal advice or a recommended training format for every API. Follow the chosen trainer's current format and include only data you are authorized to use.
+supervised fine-tuning（SFT，监督微调）将期望回答分成目标 token（词元）序列 `y₁,…,y_N`。计算第 `j` 个 token 的目标时，模型接收输入 `x` 和训练样本中已知的正确前缀 `y_{<j}`，再预测 `y_j`；逐步喂入这些标注前缀的方式称为 teacher forcing（教师强制），不是先让模型自由生成前缀。常见的 cross-entropy（交叉熵）目标可写为
 
-Review data for correctness, representative coverage, consistent labels, duplicates, sensitive information, and rights to use. Split training and evaluation data to reduce leakage; near-duplicates or examples from the same source can make a nominally held-out score misleading. Synthetic examples can expand coverage, but verify them because generation can introduce unsupported facts, errors, and bias.
+$$
+L(\theta)=-\frac{1}{N}\sum_{j=1}^{N}\log\pi_\theta(y_j\mid x,y_{<j}).
+$$
 
-### A training and evaluation workflow / 训练与评估流程
+这是对每个目标 token 的负对数概率取平均。假设只看标签位置的两个候选词元 `[database_timeout, database_connection_refused]`，玩具 logits（未归一化分数）为 `[2,0]`，模型把错误候选放在前面。softmax（归一化指数函数）概率为 `[e²,1]/(e²+1)≈[0.880797,0.119203]`，目标 one-hot（独热向量）是 `[0,1]`，正确标签对应的损失为 `−ln(1/(e²+1))=ln(e²+1)≈2.126928`。对这两个候选分数的梯度是 `p−onehot(y)≈[+0.880797,−0.880797]`；梯度下降会降低错误候选的相对分数、提高正确候选的相对分数。实际共享参数还受其他 token 位置与样本的梯度影响，所以不能由这一项推断模型更新后的具体概率。真实输出有许多 JSON 与摘要 token，损失会覆盖整段目标回答；这个二候选小算例只解释梯度方向，不是实测模型数字。
 
-1. **Define the failure and success criteria.** Record the current behavior, target behavior, operational constraints, and unacceptable regressions.
-2. **Build and review examples.** Remove duplicates and unauthorized or sensitive material; check labels and coverage.
-3. **Create separated data splits.** Separate training and validation examples, and reserve a representative final test set until the method and training controls are fixed. Document the split method and known leakage risks.
-4. **Choose a base model and method.** Confirm current training support, data format, license or service terms, and serving compatibility.
-5. **Train and tune a baseline experiment.** Track the learning rate and schedule, epoch count, effective batch size, gradient accumulation, training-data version, checkpoints, and validation results. These are experiment-specific controls, not portable defaults.
-6. **Compare with the untuned baseline.** Use validation cases for iterative comparisons; after choices are fixed, compare the selected model with the baseline on the untouched test set. Report quality by important slices, format and tool behavior, safety outcomes, and regressions.
-7. **Deploy cautiously and monitor.** Version the model and rollback path; monitor the same outcomes on real traffic, respecting data retention and consent rules.
+梯度再沿模型的共享计算图回传到被选参数：全量微调会更新全部可训练权重；LoRA 会更新 `A`、`B`，基础矩阵保持冻结。也就是说，SFT 不会把一条日志作为可查询记录附加到模型中，而是用许多输入—目标对让模型的参数逐渐偏向它们共同表达的映射。新日志分布若与训练样本不同，已学到的标签映射仍可能失效。
 
-A successful training job only shows that optimization ran. It does not establish better generalization. Do not call a score gain “memorization” or “generalization” without checking data overlap, task slices, and independent evidence.
+不存在能预测成功的通用样本数。小而干净的数据集可以先验证目标行为是否可学；更广泛或罕见的错误类型需要更多覆盖。针对本例，应覆盖 `ECONNREFUSED` 的不同措辞、日志前后缀、允许标签的边界案例与相邻的 `timeout` 标签，避免只把同一行复制很多遍。不要把样本量当成质量证据。
 
-The **learning rate** sets the scale of optimizer updates; a rate that is too large for a setup can destabilize learning, while one that is too small can fail to adapt within the chosen training budget. **Epochs** count passes over the training examples; more passes may improve fit or begin to overfit. **Batch size** controls how many examples contribute to an optimizer update, with memory and gradient-variance tradeoffs; gradient accumulation can change the effective batch without changing the per-device batch.
+> [!example] 摘要也可以作为监督目标
+> 这是一个合成输入—输出对，用来说明 SFT 也可教摘要措辞；它不是法律建议，也不是所有训练器的通用格式。
+>
+> ~~~json
+> {
+>   "messages": [
+>     {"role": "user", "content": "Summarize this sample clause: The supplier will deliver the parts by June 1."},
+>     {"role": "assistant", "content": "The supplier must deliver the parts by June 1."}
+>   ]
+> }
+> ~~~
 
-Use training data to fit weights, a validation split to compare training controls and support early stopping, and a final held-out test set only after choices are fixed. Repeatedly selecting against the final test set leaks it into development. Compare task outcomes and important slices against the untuned baseline; training and validation loss are useful signals, not substitutes for the target behavior.
+数据审查要检查事实与标签是否正确、输入类型和失败切片是否有代表性、标注口径是否一致、重复样本、敏感信息，以及使用权。按日志来源、事故类别或时间段切分训练和评估集；同一次事故里的近重复日志若随机分到两侧，会让测试集看似独立却实际泄漏。合成数据可以扩充覆盖，但仍需检查错误事实、标签偏差和模板重复。
 
-### What are SFT, RLHF, and DPO? / 什么是 SFT、RLHF 与 DPO？
+### 怎样组织训练、调参并验收？
 
-**Supervised fine-tuning (SFT)** trains on desired responses or demonstrations. It can teach response patterns represented by the examples; it does not guarantee that the model follows every instruction or is safe in unseen situations.
+1. **界定重复失败。** 记录当前行为、目标行为、运行约束和不能接受的回归。例如记录日志助手把 `ECONNREFUSED` 误判成 timeout 的比例，以及合法标签全集和 JSON 契约。
+2. **先立无训练基线。** 固定基础模型、提示词、结构约束、检索和工作流；在代表性样本上量出错误类型和分母。任务若允许在应用层保证 schema，应同时评估这项控制。
+3. **构建并审查样例。** 去重，排除未经授权或敏感的数据，检查标签、覆盖范围及目标 token 格式。
+4. **拆分数据。** 训练集用来算梯度，验证集用来选训练轮数和其他控制；选择固定后，最终独立测试集才用于比较候选与基线。记录如何切分和可能的泄漏风险。
+5. **固定模型与训练方法。** 确认基础模型、全量或参数高效方法、训练器版本、数据格式、许可条款，以及产物能否由目标服务加载。
+6. **跑小实验并记录配置。** 记录学习率和调度、训练轮数、每卡批次、梯度累积、有效批次、数据版本、LoRA 秩与目标模块、检查点和验证指标。
+7. **冻结方案后做独立比较。** 用相同输入与运行设置比较微调前后模型；检查整体成功率、重要标签切片、非法 JSON、安全、成本和时延。
+8. **谨慎部署并监控。** 对模型和回滚路径做版本管理，遵守数据保留与同意规则，并继续观察相同业务结果。
 
-In the InstructGPT research pipeline, human-written demonstrations were used for supervised fine-tuning, human preference comparisons trained a reward model, and reinforcement learning optimized the policy against that reward. This describes that paper's method, not every assistant model's training process.
+训练任务成功完成，只说明优化过程运行了，不代表模型泛化变好。不能只凭一次分数上升就声称模型发生了记忆或泛化；还要检查样本重叠、任务切片和独立证据。
 
-**Direct Preference Optimization (DPO)** is a preference-learning method that optimizes from chosen and rejected responses without fitting a separate reward model in the same way as the classic RLHF pipeline. It still depends on preference data, a training objective, and modeling assumptions; it is not automatically more accurate or safer than PPO. Choose based on the available data, infrastructure, and evaluation.
+learning rate（学习率）决定优化器更新的尺度；对某个设置来说过大可能使训练不稳定，过小则可能在既定预算内学不到目标行为。epoch（训练轮数）表示完整遍历训练样本的次数；多训练几轮可能改善拟合，也可能开始过拟合。batch size（批次大小）控制一次优化更新综合多少样本，影响显存和梯度波动。若每卡微批次为 `b`、设备数为 `D`、gradient accumulation（梯度累积）步数为 `K`，在各步样本等权的常见设置下，有效批次近似 `bDK`。梯度累积让多次较小的前向与反向计算先累积梯度，再进行一次参数更新；若固定有效批次，增加 `K` 只会增加两次更新之间的微步数，不会改变按样本计算的更新频率。若保持 `b` 和 `D` 不变而增大 `K`，有效批次也增大，每轮数据对应的优化器更新数就会减少。样本长度不等时，还要查看训练器如何按 token 聚合损失。
 
-Preference labels can be inconsistent or reflect the annotators and rubric. Evaluate the resulting model for the intended task and relevant failure cases; do not infer safety from a preference-training label alone.
+训练集用来拟合权重，验证集用来比较训练控制并支持提前停止，最终留出测试集要等所有选择固定后再用。反复根据最终测试集调参，会让它泄漏进开发过程。训练损失和验证损失有助于诊断，却不能替代目标行为指标；应将结果与未微调基线比较，并检查重要切片。
 
-### Related notes / 相关笔记
+### SFT、偏好优化和奖励训练怎样取舍？
 
-- [RAG Architecture and Implementation / 检索增强生成](#10.%20How%20do%20you%20retrieve%20and%20use%20authorized%20external%20evidence%20in%20a%20grounded%20answer?%20/%20%E6%80%8E%E6%A0%B7%E6%A3%80%E7%B4%A2%E5%B9%B6%E4%BD%BF%E7%94%A8%E7%BB%8F%E8%BF%87%E6%8E%88%E6%9D%83%E7%9A%84%E5%A4%96%E9%83%A8%E8%AF%81%E6%8D%AE%E7%94%9F%E6%88%90%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E5%9B%9E%E7%AD%94%EF%BC%9F) covers retrieval for external and changing evidence.
-- [LLM Evaluation Methods / 大语言模型评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers held-out evaluation and failure analysis.
-- [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) covers runtime controls that training does not replace.
+supervised fine-tuning（SFT，监督微调）用期望回答或演示训练模型。它能教会示例实际表达的响应模式，但不能保证模型在未见场景中遵循所有指令或保持安全；生产环境仍需运行时控制，可参阅[生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
 
-### Sources / 来源
+InstructGPT 研究中的 reinforcement learning from human feedback（RLHF，基于人类反馈的强化学习）流程先用人工撰写的演示做 SFT，再用人类偏好比较训练奖励模型，最后让强化学习优化策略来获得更高奖励。这描述的是该论文的方法，不代表所有助手模型的训练过程。
 
-- Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685).
-- Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314).
-- Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751); Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190); Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691).
-- Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155).
-- Rafailov et al., [Direct Preference Optimization: Your Language Model is Secretly a Reward Model](https://arxiv.org/abs/2305.18290).
-- OpenAI, [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization), [Supervised fine-tuning](https://developers.openai.com/api/docs/guides/supervised-fine-tuning), [Direct preference optimization](https://developers.openai.com/api/docs/guides/direct-preference-optimization), and [Deprecations](https://developers.openai.com/api/docs/deprecations), checked 2026-10-15. The SFT/DPO pages describe OpenAI-specific methods, not general availability: the optimization page marks fine-tuning docs as legacy and says the platform is winding down. The deprecations page says organizations that had not previously run fine-tuning cannot create jobs; since 2026-07-02, organizations that have not run inference on a fine-tuned model in the prior 60 days also cannot create jobs. Active existing customers lose job creation on 2027-01-06, while inference continues until the base model is deprecated. Check current availability before treating OpenAI API fine-tuning as an option.
-## 18. How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？
+direct preference optimization（DPO，直接偏好优化）从同一提示下被选中和被拒绝的回答优化模型，不像经典 RLHF 流程那样先训练一个单独的奖励模型。它仍依赖偏好数据、目标函数和建模假设，不能据此推断 DPO 一定比 proximal policy optimization（PPO，近端策略优化）更准确或更安全。应根据数据、基础设施和评估结果选择。
+
+reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）适用于存在可靠程序检查或其他独立结果检查的任务；它和 SFT、离线蒸馏承担不同作用。以推理任务为例，[可验证奖励如何训练推理能力？](#18.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)沿一道题讲清采样、判分、组内优势、策略更新、零方差奖励组和长度截断，并比较最终验收方式。偏好标签仍可能互相矛盾，或只反映标注者与 rubric（评分准则）的选择；偏好训练完成后，仍要用目标任务及相关失败案例评估，不能仅凭偏好标签判断安全。
+
+> [!info]- 来源
+> 下列来源分别支持微调方法、偏好训练和平台可用性。LoRA 参数示例及训练流程中的建议为教学演算或工程实践。
+>
+> - **低秩与参数高效微调。** Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)；Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)；Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751)；Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190)；Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)。
+> - **SFT 与 DPO。** Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155)；Rafailov et al., [Direct Preference Optimization: Your Language Model Is Secretly a Reward Model](https://arxiv.org/abs/2305.18290)。
+> - **OpenAI API 上的可用性。** [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization)、[Supervised fine-tuning](https://developers.openai.com/api/docs/guides/supervised-fine-tuning)、[Direct preference optimization](https://developers.openai.com/api/docs/guides/direct-preference-optimization)、[Reinforcement fine-tuning](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning) 与 [Deprecations](https://developers.openai.com/api/docs/deprecations)，核对日期为 2026-11-06。OpenAI 正在逐步结束自助微调：2026-05-07 起，没有既往微调记录的组织不能创建训练任务；2026-07-02 起，过去 60 天未对微调模型运行推理的组织也不能创建新任务；现有合格用户可创建任务至 2027-01-06，或基础模型更早停服之日。微调模型推理会持续到其基础模型退役；先前训练文档仍在迁移，具体资格与模型时限应按官方页面核验。平台可用性仅适用于 OpenAI API，不是对通用微调方法的限制。
+## 18. 可验证奖励如何训练推理能力？
+
+给模型一道可复算的小题：“4 盒各装 3 个螺丝，另有 2 个散装螺丝，共有多少个？”答案是 `4×3+2=14`。若训练提示要求模型把推理和答案分别放进 `<think>...</think>`、`<answer>...</answer>`，一个运行器可以检查最终数值和标记格式。下面先沿四条回答算分，再追踪分数怎样改变模型的下一次输出概率。
+
+若要判断这类训练是否适合稳定的行为差距，可先读[何时应微调来弥补稳定的行为差距？](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)；要设计独立验收，再读[如何判断 AI 系统是否满足任务契约？](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+
+### 检查器判的是什么，没判的又是什么？
+
+reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）要求 reward（奖励）来自能独立复核的目标，例如参考答案比较、结构约束或程序测试。模型评委即使能输出分数，若它只是估计开放式质量或是否符合参考答案，也属于带误差的近似奖励；过程评审器同理，不能仅凭“会评分”就称为可验证结果。RLVR 仍属于 reinforcement learning（RL，强化学习）；其训练循环如下：
+
+~~~mermaid
+flowchart TD
+    Q[数学题 q] --> S[旧策略采样 G 个回答]
+    S --> V[结果与格式检查器判分]
+    V --> A[在同题组内计算优势]
+    A --> U[按裁剪策略更新当前模型]
+    U --> N[下一批题继续采样]
+    U -. 可选 Kullback–Leibler（KL）散度正则 .-> R[参考策略]
+~~~
+
+检查器必须针对明确目标设计；不同类型的检查器能支持不同强度的结论：
+
+- **规则型 verifier（规则检查器/程序检查器）。** 数学任务可解析最终答案并检查等价性；代码任务可编译并运行预先定义的测试；结构任务可检查 schema（结构模式）和必需字段。在规则覆盖范围内，结果可重复、成本较低。编译成功或通过现有单测只说明满足这些检查，不证明程序对所有输入正确；答案解析器也可能漏掉等价表达或容忍错误。
+- **学得的 verifier、评审模型或 reward model（奖励模型，RM）。** 可以用成对偏好训练 RM，也可以让模型对照参考答案判断简短答案是否正确。它能覆盖难以写成规则的质量，但分数是代理信号，受评分准则（rubric）、评审偏差和训练数据影响；这类模型分数可用于 model-based RL（基于模型奖励的强化学习），但如果无法独立复核评分本身，就不属于可验证奖励。策略越会优化该分数，越可能找出评审器漏洞。
+- **process reward model（PRM，过程奖励模型）。** 它对推理步骤分别给分，可提供比最终答案更多的过程信号，但要先定义步骤边界、收集可靠步骤标签并检查评审器是否被利用。步骤切分和标注质量可能成为新的误差来源。
+
+“可验证”描述检查目标能否被独立执行或复核，不意味着 formal verification（形式化验证）证明了模型程序的全部行为。outcome reward（结果奖励）与 process reward（过程奖励）描述“检查整段结果还是给中间步骤打分”，并不决定“奖励是否可验证”：程序可判最终答案，也可有带误差的模型评委给整段回答打分；PRM 可逐步评分，但标注和评审仍可能出错。若结果检查器只看最终答案，它没有逐步核对 chain-of-thought（CoT，思维链）；即使最终答案由程序精确判定，也不能因此推断轨迹中的每个中间推理都正确。
+
+### 同题采样怎样转成组内优势？
+
+给定题目 `q`，old policy（旧策略）`π_old` 会按当前生成分布采样 `G` 条 rollout（采样轨迹）`o₁,…,o_G`。每条回答是若干 token（词元）组成的序列；检查器只根据结果与格式给整条回答 reward（奖励）`r_i`。在 DeepSeek-R1-Zero 的规则奖励中，答案准确性 `r_acc` 和格式 `r_format` 等权相加；下表用一个单独设计的教学检查器演算同类的两个信号，不声称复刻 R1 的解析器：教学检查器可从带或不带标记的输出摘录中提取末尾数值，准确性与标记格式分别判分。四条回答如下：
+
+| 回答 | 输出摘录 | 最终答案正确 | 标记格式正确 | `r_acc+r_format` |
+| --- | --- | ---: | ---: | ---: |
+| A | `15`，没有指定标记 | 0 | 0 | 0 |
+| B | `14`，没有指定标记 | 1 | 0 | 1 |
+| C | `<think>4×3=12；加2仍是12</think><answer>12</answer>` | 0 | 1 | 1 |
+| D | `<think>4×3=12；12+2=14</think><answer>14</answer>` | 1 | 1 | 2 |
+
+C 的过程虽有算术错误，只要结果奖励的检查器只验证最终答案 `12` 与格式，仍可能得到格式分；这不是逐步正确性标签。
+
+R1 论文 §2.2 对数学准确性奖励举的是指定格式中的最终答案；格式奖励则明确要求推理放在 `<think>` 标记中。上表为了分开演算两项信号，允许摘录不带标记仍被教学解析器读出数值；不要把这条玩具解析规则当成 R1 的实现细节。
+
+Group Relative Policy Optimization（GRPO，组相对策略优化）用同题回答的平均奖励作 baseline（基线），并通常按同题奖励标准差缩放 advantage（优势）：
+
+$$
+\bar r=\frac{1}{G}\sum_{i=1}^{G}r_i,\qquad
+\hat A_i=\frac{r_i-\bar r}{s_r},\qquad
+\hat A_{i,t}=\hat A_i
+$$
+
+这里 `s_r` 是这 `G` 个奖励的 standard deviation（标准差），`t` 是回答中的 token 位置。对结果监督，算法把同一标量优势 `\hat A_i` 广播给回答中的每个生成 token；它告诉优化器“这条轨迹相对同题其他轨迹表现如何”，不告诉它“哪一行推理出错”。实现通常会在分母加一个与裁剪参数不同的小常数 `\epsilon_{std}`，避免 `s_r=0` 时除零，但这不会为零方差组创造新信号。
+
+这组奖励为 `[0,1,1,2]`，均值为 `(0+1+1+2)/4=1`。为方便手算，假设用总体标准差：
+
+$$
+s_r=\sqrt{\frac{(0-1)^2+(1-1)^2+(1-1)^2+(2-1)^2}{4}}
+=\sqrt{0.5}\approx0.707.
+$$
+
+于是 A、B、C、D 的优势依次约为 `−1.414、0、0、+1.414`。D 相对组平均奖励较好，得到提高其轨迹概率的信号；A 相对较差，得到降低其轨迹概率的信号；B 和 C 落在均值上，按这次组内比较没有优势信号。该教学演算不声称复刻某个框架的标准差定义、奖励组合、掩码或 loss reduction（损失聚合），实现细节要按锁定版本检查。
+
+### 概率比、裁剪与 KL 怎样约束参数更新？
+
+设题目 `q` 下，旧策略采样出回答 D；在其已生成前缀 `o_{i,<t}` 后，旧策略给这个已采样 token 概率 `0.20`。更新后，当前策略在同一个 `q`、同一个前缀和同一个 token 上重新打分，得到 `0.26`。这两个已算出的概率构成 importance ratio（概率比）：
+
+$$
+\rho_{i,t}(\theta)=
+\frac{\pi_\theta(o_{i,t}\mid q,o_{i,<t})}
+{\pi_{\theta_{old}}(o_{i,t}\mid q,o_{i,<t})}
+=\frac{0.26}{0.20}=1.30.
+$$
+
+proximal policy optimization（PPO，近端策略优化）的 clipped surrogate（裁剪代理目标）限制这次更新能从该 token 的优势中获得多少收益。设裁剪宽度 `\epsilon_{clip}=0.2`，裁剪区间为 `[1-\epsilon_{clip},1+\epsilon_{clip}]=[0.8,1.2]`。D 的优势是 `+1.414`：未裁剪项为 `1.30×1.414≈1.838`，裁剪项为 `1.20×1.414≈1.697`，目标取较小值。因此，该 token 的实际新旧概率比仍是 `1.30`；达到上界后只是这一个正优势项进入平台，其他 token、共享参数上的梯度和 KL 项仍可能改变模型概率。
+
+裁剪不会硬性限制实际的新旧概率比，也不会把答案裁成正确或错误；它只改变 surrogate 中特定优势项的梯度。若优势为负，低于下界时也会出现相应的平台。裁剪范围过窄可能削弱很多 token 的学习信号，过宽则可能允许不稳定的大更新，必须用目标任务验证。
+
+参考策略与采样时的旧策略承担不同作用。旧策略 `\pi_{\theta_{old}}` 是产生本批回答的分布，出现在概率比的分母；参考策略 `\pi_{ref}` 是一个用于限制策略漂移的锚点。Kullback–Leibler divergence（KL 散度）衡量两个概率分布的差异，例如参考分布为 `[0.9,0.1]`、当前分布为 `[0.8,0.2]` 时，按当前分布对数值求和得到
+
+$$
+D_{KL}([0.8,0.2]\Vert[0.9,0.1])
+=0.8\ln\frac{0.8}{0.9}+0.2\ln\frac{0.2}{0.1}\approx0.044403\text{ nats}.
+$$
+
+`nats` 是使用自然对数得到的单位；此二元分布在单个前缀上枚举两种可能，因而这里是精确求和的 KL。实际 RL 目标通常对题目和旧策略 rollout 求期望，GRPO 会用采样响应或 token 上的概率项估计 KL；DeepSeekMath 给出采样估计，R1 也把 sampled response 上的 KL 项写进目标。因此，不能把“精确遍历每个上下文的完整词表”当作所有 GRPO 实现的前提。`β=0` 时 KL 项关闭；非零 `β` 会增加贴近参考策略的约束，也会带来额外计算。
+
+现在各项已经有了对应量：组内奖励决定优势，概率比比较新旧策略，裁剪限制 surrogate，KL 项约束相对参考策略的漂移。一个常见的 token 级 GRPO 最大化目标写作
+
+$$
+\mathcal{J}(\theta)=\mathbb{E}\left[
+\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_i|}
+\sum_{t=1}^{|o_i|}
+\left[
+\min\!\left(\rho_{i,t}\hat A_i,
+\operatorname{clip}(\rho_{i,t},1-\epsilon_{clip},1+\epsilon_{clip})\hat A_i\right)
+-\beta\widehat D_{i,t}
+\right]
+\right].
+$$
+
+`\widehat D_{i,t}` 是在回答 `i` 的位置 `t`、沿同一已采样前缀计算的 KL 惩罚估计；本式将它和 surrogate 一起按 token、回答和题目聚合。它不是上面枚举两个候选得到的精确 KL，也不自动保证在旧策略采样与当前策略已经偏离时仍无偏。
+
+这里最大化 `\mathcal{J}`；若训练器定义的是最小化损失，则对应最小化 `-\mathcal{J}`。该教学目标先对每条回答的 token 项取长度平均，再对组内回答取均值；最外层期望对题目和旧策略采出的回答组求平均。这只是一个讲解用的 reduction。论文写法和框架目标并不完全相同：DeepSeekMath 的 GRPO 公式写逐 token 概率比并按每条回答长度取均值；DeepSeek-R1 正文把策略比写成整条输出的概率比；TRL 和 verl 又提供不同的损失聚合、奖励标准化与 KL 配置。公式相同处说明策略更新机制，具体归约和超参数仍须按所用实现核对。
+
+> [!info] 为什么结果分数会影响整条序列？
+> 一条回答的对数概率可分解为各个条件 token 对数概率之和：`log π(o_i|q) = Σ_t log π(o_{i,t}|q,o_{i,<t})`。策略梯度沿这条计算链反向传播，所以一个终局奖励可以提高或降低整条采样轨迹的概率。它没有把标准答案写进参数，也没有给轨迹中每一步单独贴上正确或错误标签。
+
+#### GRPO 为什么不需要 critic（价值网络）？
+
+PPO 常训练一个 critic（价值函数/价值网络）估计状态价值，再用它计算优势；对大语言模型来说，这通常需要额外模型和显存。GRPO 不拟合该价值网络，而是用同一道题的多条回答的奖励均值作基线，并可按组内标准差归一化。它省去了 critic，却需要为一道题生成多个回答、运行多次检查器；因此节省模型内存的代价是更多 rollout（采样轨迹）和判分开销。若检查器昂贵，或生成回答很长，这部分成本可能成为瓶颈。
+
+### 哪些奖励组不给学习信号？
+
+若同一道题的全部回答奖励都相同，例如 `[1,1,1,1]` 或 `[0,0,0,0]`，则每个 `r_i - \bar r = 0`，所以优势全为零。给标准差分母加 `\epsilon_{std}` 能避免除以零，却不会改变分子为零的事实；对这道题来说，policy gradient（策略梯度）没有区分候选答案的信号。
+
+这通常出现在过容易的题（所有采样都答对）或当前策略很难攻克的题（所有采样都答错）。Decoupled Clip and Dynamic Sampling Policy Optimization（DAPO，解耦裁剪与动态采样策略优化）的 dynamic sampling（动态筛组）会保留有正确也有错误回答的组，以减少二元准确率任务中零优势组占用有效 batch 的情况；这会改变进入更新的题目分布，需要监控覆盖面，不是所有任务都该采用的通用规则。只用结果奖励时，组内差异来自试验回答；有格式、长度或偏好等额外奖励时，即使正确性相同，奖励也可能不同，但增加的信号是否对齐任务目标仍需单独检查。
+
+### 为什么回答长度和截断会改写训练权重？
+
+原始 GRPO 常先把每条回答的 token 损失按自身长度平均，再对组内回答平均。设某条回答有 20 个 token、另一条有 200 个 token，若两条每 token 的优势和损失大小相近，前者每个 token 会乘约 `1/20`，后者会乘约 `1/200`。因此，短的正优势回答可得到更大的单位 token 权重；长的负优势回答则可能被摊薄。这是某种损失 reduction（聚合方式）的长度加权效应，不是“GRPO 一定喜欢长思维链”或“总是惩罚长答案”。
+
+后续改法针对的偏差不同，应按自己的目标与 token 分布比较：
+
+- **DAPO** 改为按累积 batch 中的有效 token 数聚合，让长回答里的 token 不会仅因回答长就被样本级平均稀释；这也会让长回答贡献更多总 token 项。它另以分开的上下裁剪幅度提高探索 token 的上调空间，并在其二元准确率设置中动态筛除同奖组。论文的示例取 `epsilon_low=0.2`、`epsilon_high=0.28`。这些选择服务于该论文的长 CoT 训练设置。
+- **Dr.GRPO（GRPO 的论文修正版）** 讨论样本长度平均和按组奖励标准差归一化带来的回答长度与题目难度加权，并提出移除这两项归一化、用固定生成预算作分母。它改变了每题和每 token 的权重；论文论证与实验限于其 R1-Zero-style 设置，不意味着对所有任务都是默认最佳。
+
+硬生成上限会截断回答。若检查器将未完成答案一律判错，训练可能把超长但接近正确的轨迹当作完整错误来惩罚，给策略带来噪声。DAPO 论文用截断样本 loss mask（损失掩码）和预期长度之后的软惩罚来处理这种情况。另一种做法是为任务定义经过验证的长度成本；若任务确实要求短回答，不能简单把长度惩罚当噪声丢弃。要判断截断样本是否可公平计分，应同时观察长度、终止原因、奖励和通过率。
+
+### DeepSeek-R1-Zero 与最终 R1 有什么不同？
+
+DeepSeek-R1 没有发明强化学习或 GRPO。GRPO 已由 DeepSeekMath 于 2024 年提出，R1 将其用于大规模 reasoning post-training（推理后训练）。R1-Zero 展示的是一种特定训练结果：在 DeepSeek-V3-Base 上不先做 supervised fine-tuning（SFT，监督微调），直接用规则型准确性和格式奖励训练策略。论文观察到响应变长、出现反思和探索行为；这些是该实验中的行为变化，不是每条推理链经过验证或模型获得类人的自我意识的证据。
+
+DeepSeek-R1 是多阶段流程，不等于 R1-Zero。论文描述的主线如下：
+
+~~~mermaid
+flowchart TD
+    B[DeepSeek-V3-Base] --> Z[R1-Zero 分支<br/>不先做 SFT；规则正确性与格式奖励做 GRPO]
+    B --> S[收集数千条冷启动推理示范<br/>先做 SFT]
+    S --> R[第一阶段推理 RL<br/>规则奖励 + 语言一致性奖励]
+    R --> RS[拒绝采样与筛选<br/>约 600K 推理样例]
+    RS -.筛选后的训练数据.-> D[约 800K 样例做第二次 SFT]
+    B -->|重新从 Base 权重开始| D
+    D --> M[第二阶段多目标 RL<br/>推理规则奖励 + 通用偏好/安全模型奖励]
+    M --> F[DeepSeek-R1]
+~~~
+
+第一阶段先收集数千条更易读、对话式的冷启动推理样本，再用规则奖励继续强化推理，并加语言一致性奖励降低混语。rejection sampling（拒绝采样）阶段从第一阶段 checkpoint（检查点）为每题生成多个回答，保留正确轨迹；部分难以写规则的样本由 DeepSeek-V3 对照参考答案辅助判断，再过滤混语、过长段落或代码块等难读样例，形成约 600K 推理样本。另加入约 200K 非推理样本，重新从 DeepSeek-V3-Base 权重做第二次 SFT。这里由第一阶段 RL 传过来的是筛选后的数据；第二次 SFT 不直接沿用该 RL checkpoint 的权重。
+
+论文将两条训练线的配置分开报告：R1-Zero 每题采样 16 条、`β=0.001`、每 400 步刷新参考模型；最大回答长度在第 8.2K 步之前为 32,768 token，之后增至 65,536。最终 R1 第一阶段推理 RL 也报告每题 16 条、`β=0.001`、每 400 步刷新参考模型，最大长度 32,768 token，并设 GRPO clip ratio `\epsilon_{clip}=10`。这些是论文的阶段配置，尤其 `10` 不是通用 clip 默认值。
+
+第二阶段 RL 对推理题仍用规则奖励；对通用帮助性与安全性问题使用模型奖励：帮助性评估主要看最终摘要，安全性则检查整条响应。模型奖励用在通用偏好任务，不代表 R1-Zero 的推理训练用神经奖励模型逐步判对错。R1 作者报告帮助性奖励模型分数上升时，Codeforces 表现却下降，作为 reward hacking（奖励投机）的例子；作者放弃在大规模推理 RL 中使用神经过程奖励模型的理由包括过程步骤难定义、标注难扩展和模型本身可能被利用，但仍提出它们可用于重排或引导搜索。
+
+### 哪种训练信号符合手头目标？
+
+| 目标与可用数据 | 适合先试什么 | 主要代价与边界 |
+| --- | --- | --- |
+| 已知期望输出，能写出稳定示范 | supervised fine-tuning（SFT，监督微调） | 训练信号来自示范实际表达的行为；未见输入上的泛化需要独立验证。 |
+| 有可靠的程序化结果检查，希望模型通过尝试发现更好的解题轨迹 | 在线 RLVR，例如 GRPO | 需要多次采样、稳定可复现的检查器、足够算力和独立验收；奖励只覆盖检查器所定义的目标。 |
+| 有更强教师模型生成并筛选过的轨迹，希望小模型学会这些解法 | offline distillation（离线蒸馏）或 rejection-sampling SFT（拒绝采样后的 SFT） | 学生从固定轨迹模仿，不需要每轮再按学生当前策略 rollout；效果受教师质量、样例覆盖和筛选器限制。 |
+| 有成对偏好标签，目标偏主观且不易精确程序化 | direct preference optimization（DPO，直接偏好优化）或其他偏好优化 | 学到的是标注偏好与训练目标，不是外部事实真值，也不是结果正确性的证明。 |
+
+R1 的蒸馏例子属于离线监督：教师先产生推理回答，筛选后的固定回答用于 SFT，学生训练时不会每轮自己采样再按 verifier 更新。论文 Appendix F 的一个受限比较中，Qwen2.5-32B-Base 做超过 10K 步 RL 后得到的 Qwen2.5-32B-Zero，和 DeepSeek-R1-Distill-Qwen-32B 在 AIME 2024 的 pass@1（单次采样通过率）分别为 47.0% 和 72.6%。这个实验显示该教师轨迹在该基线、数据和评估协议下很有效，不能推出蒸馏总胜过 RL。R1 自身也将 SFT 与 RL 组合使用。
+
+### 多教师在策略蒸馏又提供了什么训练信号？
+
+离线 SFT 把固定教师回答当作目标 token；在线 RLVR 让学生自己采样回答、再用一个标量 reward 给轨迹分配优势。还有一种目标是：学生先在自己的 rollout 中走到某个 prefix（生成前缀），教师在这个相同前缀上提供整个词表的下一 token 分布，学生再对齐该分布。这称为 on-policy distillation（OPD，在策略蒸馏）：训练前缀由学生当前策略产生，因此训练覆盖学生实际会走到的状态；软分布则让教师可以给未采样到的 token 也提供信息。
+
+DeepSeek-V4 论文 v1 报告了一种多教师 OPD 流程。数学、代码、Agent、指令遵循等领域分别训练 specialist teacher（领域教师模型）：先用领域数据做 SFT，再用领域 prompt 与 GRPO 奖励做强化学习。之后，统一 student（学生模型）从自己的策略采样轨迹，按任务从相关教师的完整输出分布学习。十多个是整个训练系统的教师数量，不是每个前缀都要运行全部教师。该报告将这一阶段的 mixed RL 改为 OPD；它没有说 specialist 阶段也跳过 SFT/RL。
+
+把来自不同任务的训练样本按适用教师分组，多教师目标可概括为
+
+$$
+\mathcal{L}_{OPD}(\theta)
+=\sum_{j=1}^{M}w_j\,\mathbb{E}_{s\sim\mathcal{D}_j}\left[D_{KL}\!\left(
+\pi_\theta(\cdot\mid s)\,\Vert\,\pi_{E_j}(\cdot\mid s)
+\right)\right].
+$$
+
+`\mathcal{D}_j` 表示适用教师 `j` 的任务中，学生 rollout 实际走到的前缀分布；`π_θ` 是学生在该前缀的分布，`π_Ej` 是该教师在同一前缀上的分布，`w_j` 是教师权重。求和概括整个训练混合，不要求把每个前缀都交给所有教师。对每个学生前缀，目标先用学生和教师完整词表 logits 经 softmax（归一化指数函数）得到两张概率分布，再对全词表精确求和计算 reverse KL（反向 KL），方向为学生到教师；它不是只评估刚采样到的一个 token，也不是对最终回答打分后广播一个优势。DeepSeek-V4 报告认为，相较于只用学生刚采样的 token 估计 KL，全词表 logit 蒸馏在其系统中梯度方差更低、训练更稳定；这是该报告的方法选择，不能推为所有任务的通用结论。
+
+看只有两个候选 token 的小分布：学生 `Q=(0.8,0.2)`，教师 `P=(0.9,0.1)`。学生到教师的方向是
+
+$$
+D_{KL}(Q\Vert P)=0.8\ln\frac{0.8}{0.9}+0.2\ln\frac{0.2}{0.1}
+\approx0.044403\text{ nats}.
+$$
+
+反过来则是 `D_KL(P∥Q)=0.9 ln(0.9/0.8)+0.1 ln(0.1/0.2)≈0.036690 nats`。结果不同，因为 KL 对求和式左侧分布中的概率质量加权；因此不能把 `D_KL(student∥teacher)` 和 `D_KL(teacher∥student)` 当作可互换的“相似度”。两分布演算说明方向，不代表报告中的实测 loss 或质量增益。
+
+| 机制 | 训练时的输入状态 | 提供的信号 | 与其他机制的区别 |
+| --- | --- | --- | --- |
+| 在线 RLVR / GRPO | 学生自己采样的完整回答 | RLVR 用可独立复核的规则分数；一般 GRPO 也可用模型奖励，但评委分数不因此变成可验证结果 | 依赖 reward 与采样组，不直接给每个词的教师分布。 |
+| 离线 SFT / 轨迹蒸馏 | 固定收集的教师回答 | 每个目标 token 的 cross-entropy（交叉熵） | 学生不必在每个训练步骤自己 rollout；不会自动覆盖学生独有的前缀。 |
+| 多教师 OPD | 学生自己 rollout 到的前缀 | 各教师在同前缀上的全词表分布与反向 KL | 信号是分布对齐，不是结果 reward 或固定答案 token。 |
+| mixture of experts（MoE，混合专家）路由 | 同一个模型的一次前向计算 | 路由器选择内部 expert 子网络参与计算 | 这是模型架构；DeepSeek-V4 报告的 specialist teacher 是独立完整模型权重，并非 MoE 层里的 FFN 子网。 |
+
+全词表 logits 的缓存成本也很大。V4 报告的实现按样本对应的教师索引组织数据，缓存该教师的末层 hidden state，再在训练时加载相应输出头重建词表分布；它避免为所有训练位置长期保存完整 logits，但仍需教师推理和输出头计算。
+
+OPD 的多位教师是训练时的来源；学生要吸收其能力进自己的参数，推理时不需要继续调用这十多个教师，也不等于部署一个 teacher 路由器。报告给出按教师重要性设权重的 full-vocabulary（全词表）方案，但没有给出可迁移到任意任务的通用权重或样本调度规则。它应作为独立的蒸馏选择与 RLVR、离线 SFT 对照，不应称为所有训练任务的最佳方案。
+
+### 当前训练器提供哪些可用控制？
+
+训练库的默认值是一个实现版本的起点，不是适用于所有任务的推荐答案。版本固定后，应检查奖励如何合并、优势是否除组内标准差、每个回答怎样聚合 token 损失、策略概率比如何裁剪、KL 项是否加载参考模型，以及到达长度上限时哪些 token 会参与 loss。
+
+截至 2026-11-06，Hugging Face TRL 的 `v1.17.1` 发布版在 `GRPOConfig` 中提供下列控制。TRL 的 GRPO 指南也展示了用 `GRPOTrainer`、prompt（提示）数据集和数学准确性奖励函数训练的可执行入门样例；要复现行为，应依赖版本 tag 的配置与代码，不要仅靠无版本的网页说明。
+
+| TRL `v1.17.1` 参数 | 发布版默认值 | 应按任务检查什么 |
+| --- | --- | --- |
+| `beta` | `0.0` | 默认不加载参考模型、不加 KL 项。若要限制偏离参考策略，显式设非零值并记录内存与质量代价。 |
+| `epsilon` | `0.2` | PPO-style ratio clip 的基础幅度；低概率探索 token 是否能获得足够上调空间要单独观察。 |
+| `loss_type` | `"dapo"` | 默认采用 DAPO 式 token 聚合。还提供 `"grpo"` 与 `"dr_grpo"` 等选项，reduction 会改变长短回答的权重。 |
+| `scale_rewards` | `"group"` | 默认按组标准差缩放奖励。Dr.GRPO 风格配置还要考虑关闭这项缩放；只改 loss reduction 不等于复现论文算法。 |
+| `mask_truncated_completions` | `False` | 默认仍将截断回答纳入损失。若任务不能公平评分未完成答案，可显式启用 mask，并监控丢弃比例和长度分布。 |
+
+`epsilon_high` 可设置与下界不同的上裁剪幅度；DAPO 在其特定实验中用 `0.28`，不是 TRL 通用默认值。TRL 当前版本的字段组合应连同模型、奖励函数、数据划分、生成上限、随机种子和有效 batch 一起记入实验配置。
+
+verl 的 `v0.9.1` 发布版也能做 GRPO，但其通用 `ppo_trainer.yaml` 默认 `algorithm.adv_estimator=gae`，即 generalized advantage estimation（GAE，广义优势估计），不是 GRPO；若要跑 GRPO，需显式设为 `grpo`。同一 tag 中 `algorithm.norm_adv_by_std_in_grpo=true`，而 `algorithm.use_kl_in_reward=false`、`actor.use_kl_loss=false`；actor 的 `loss_agg_mode` 默认是 `token-mean`。因此，verl 的基础 PPO 配置不能当作完整 GRPO 论文设置；要核对优势估计、奖励标准化、loss reduction 及两种 KL 路径各自的字段。`filter_groups.enable` 默认关闭，采用 DAPO 式筛组时还要显式配置及检查组筛选指标。
+
+TRL `v1.17.1` 和 verl `v0.9.1` 是本节核对过的具体发布版；新版本可能改变默认值或实现。一个可复现的训练说明至少应记录库的 tag/commit、模型 checkpoint、reward 函数与聚合权重、`G`、优势标准化和 `epsilon`、clip、loss reduction、KL 两项设置、完成长度及截断 mask。不要用一个显示 `GRPO` 的命令行参数概括这些差异。
+
+### 怎样独立验收训练结果？
+
+训练样本上的 reward 上升只说明策略更会满足优化目标；不能据此证明泛化。把同一可靠评分规则应用在未参与训练、调参或筛选的新题上，仍是衡量该结果指标的有效方式。若 reward 只检查数学答案，最终验收还应覆盖解析边界、等价答案、错解侥幸答对、格式问题及未知题型；代码任务则要检查隐藏测试、边界输入、sandbox 隔离和副作用。通过现有 verifier 只说明通过该检查集，需检查 verifier 本身的覆盖和漏洞；一个分数也不能单独证明广义质量或安全性。
+
+在方案确定前留出不参与训练、调参或筛选的独立任务集与隐藏测试。用相同提示词、模型推理设置和采样预算比较训练前后 checkpoint，按任务难度、长度、终止原因和失败类型报告分母与成功率，并一并看格式、重复、拒答、安全、时延和成本。若目标包含帮助性、风格或开放式质量，应在训练偏好集之外使用盲审人工样例或已校准评审器；模型评审器分数不能替代事实检查。发现候选用格式、措辞或可预测漏洞取得高训练分但任务质量下降时，应修复奖励或检查器，再从未参与优化的验收集重测。
+
+训练前先小规模比较组大小、奖励组合、标准差缩放、clip、KL、loss reduction 和截断处理，固定并记录选择理由。DAPO、Dr.GRPO 或原始 GRPO 的效果取决于任务奖励是否可信、回答长度分布、题目难度及实现细节，没有一个只凭算法名称就能得出的跨任务最佳配置。
+
+> [!info]- 来源
+> 下列来源映射到正文中的机制与实验。数值推演是教学合成值；训练器参数来自标明版本的官方文档或代码。
+>
+> - **GRPO、同题组优势与 PPO 对照。** Shao et al., *DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models*（2024，§4.1、Appendix A.1.6），[论文](https://arxiv.org/html/2402.03300)。原始算法、结果/过程监督和 token 级目标。
+> - **R1-Zero 奖励与完整 R1 流程。** DeepSeek-AI, *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning*（arXiv:2501.12948v2，2026-01-04；§2.1–2.3、§3.1–3.2、Appendix B.3/B.4.2/B.5、F.1、G.2），[v2 HTML](https://arxiv.org/html/2501.12948v2)。支持准确性/格式奖励、奖励模型使用范围、训练阶段、reward hacking、过程奖励模型和蒸馏比较。
+> - **DAPO。** Yu et al., *DAPO: An Open-Source LLM Reinforcement Learning System at Scale*（arXiv:2503.14476v2，2025-05-20；§3.1–3.4、§4），[v2 HTML](https://arxiv.org/html/2503.14476v2)。支持 Clip-Higher、动态筛组、token-level loss 和截断处理；结论限于该训练系统与实验。
+> - **Dr.GRPO。** Liu et al., *Understanding R1-Zero-Like Training: A Critical Perspective*（arXiv:2503.20783v2，2025-10-06；§3.1–3.2），[v2 HTML](https://arxiv.org/html/2503.20783)。支持回答长度与题目难度加权分析及 Dr.GRPO 的固定预算分母方案。
+> - **TRL 当前配置。** Hugging Face [TRL `v1.17.1` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.17.1)（2026-10-30）、[该 tag 的 `grpo_config.py`](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_config.py)和[当前 GRPOTrainer 文档](https://huggingface.co/docs/trl/grpo_trainer)，截至 2026-11-06 核对。版本配置支持 `beta=0`、`epsilon=0.2`、`loss_type="dapo"`、`scale_rewards="group"`、`mask_truncated_completions=False`；无版本文档可能晚于 tag 更新。
+> - **verl 当前配置。** [verl `v0.9.1` 发布记录](https://github.com/verl-project/verl/releases/tag/v0.9.1)（2026-09-20）、[通用 PPO trainer 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/ppo_trainer.yaml)、[actor 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/actor/actor.yaml)、[GRPO 结果优势实现](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/core_algos.py)。配置说明默认优势估计是 GAE、组奖励标准差归一化打开、两种 KL 路径关闭，actor 聚合默认 `token-mean`；实际训练还须检查所用 recipe 的覆盖值。
+> - **DeepSeek-V4 多教师 OPD。** DeepSeek-AI, *DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence*（arXiv:2606.19348v1，2026-04-26；截至 2026-11-06 核对公开报告仍为 v1；§5.1.1–5.1.2、§5.2.2），[v1 HTML](https://arxiv.org/html/2606.19348v1)。支持 specialist 阶段 SFT+GRPO、student 前缀上的多教师 reverse KL 与全词表 logits 蒸馏。权重安排和通用路由规则不由该报告建立。
+## 19. How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？
 
 **Short answer / 简答：** Use predictions to rank candidates, then measure them on real tasks against a common baseline and a predefined acceptance rule. Keep the accepted workflow, predictor, or harness as a version that can be inspected and restored. / 先用预测给候选排序，再用真实任务、统一基线和预先定义的验收规则测量效果。验收通过后，把工作流、预测器或运行脚手架作为可追溯、可恢复的版本保留。
 
@@ -1609,7 +1859,7 @@ Specify the task, budget, success criteria, and stop condition before trying can
 另一类改进改变的是运行脚手架（harness），而非基础模型。[Harness²（v1，2026-10-09，§§2.1–2.3）](https://arxiv.org/html/2610.14224v1) 在同一任务上实际执行候选 harness，比较编辑前后的行为，再将采用的 harness 组件和有依据的经验存入库；新任务从共同的 H₀ 起步并按需检索。该研究保持 editor 模型、阶段指令和决策规则不变，因此展示的是任务级 harness 与经验库的演进，不是模型权重或 editor 自行改写。执行对照可支持针对性修改，但不单独证明答案正确；验收边界见[LLM 评估方法](#16.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 **Related questions / 相关问题** — [When should a model control the next step? / 何时应让模型决定下一步？](#12.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) explains the live execution loop. [Context engineering / 上下文工程](#9.%20What%20should%20each%20model%20inference%20see,%20and%20what%20should%20the%20application%20persist?%20/%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains what can be stored for retrieval on later tasks.
-## 19. How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？
+## 20. How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？
 
 **Core explanation / 核心解释：** Pair technical service signals with task outcomes. Record enough version and trace context to locate a regression while minimizing sensitive payloads. Treat user feedback as a useful but biased signal: inspect failure modes, make a targeted change, compare it on held-out cases, and keep or roll it back against agreed criteria. / 将服务运行信号与任务结果一起观察。记录足以定位回归的版本与追踪信息，同时尽量减少敏感载荷。用户反馈有用但存在偏差：先检查失败类型，再做有针对性的变更，在留出案例上比较，最后按约定标准保留或回滚。
 
@@ -1640,12 +1890,12 @@ A practical improvement loop is:
 4. Test the change on held-out cases and monitor the relevant production outcome.
 5. Keep or roll back the change using the agreed criteria.
 
-Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](#17.%20When%20should%20you%20fine-tune%20to%20close%20a%20repeatable%20behavior%20gap?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E9%80%9A%E8%BF%87%E5%BE%AE%E8%B0%83%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F). For permission boundaries, human approval, and production stop paths, see [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
+Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](#17.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F). For permission boundaries, human approval, and production stop paths, see [AI Safety in Production / 生产环境中的 AI 安全](#14.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
 
 **Related note / 相关笔记：** [AI Application Architecture / AI 应用架构](#15.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines the durable run state and recovery contract that lets service metrics and task feedback remain attached to one logical operation.
 
 **Source boundary / 来源边界：** These monitoring and feedback practices reorganize the existing architecture note. Thresholds, task metrics, and data-retention rules must come from the particular service's requirements and privacy constraints; this note does not prescribe universal numeric targets.
-## 20. How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？
+## 21. How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？
 
 **Core explanation / 核心解释：** Clarify the user task and its success criteria, make workload and data-boundary assumptions explicit, then trace the request through retrieval, model or tool calls, validation, delivery, and operations. Deep-dive only on the risks that bind correctness, privacy, latency, cost, or safety; compare alternatives against evidence and include evaluation, rollout, and rollback. This capstone applies the canonical mechanisms to three illustrative designs. All traffic and latency figures below are hypothetical teaching assumptions, not production measurements or defaults. / 先澄清用户任务与成功标准，明确工作负载和数据边界假设，再沿着检索、模型或工具调用、校验、交付和运维梳理请求路径。只深入分析决定正确性、隐私、时延、成本或安全的关键风险；依据证据比较方案，并说明评估、发布和回滚。本文用三个示例设计应用各主题的规范机制。下方流量与时延数字均为教学假设，并非生产测量或默认值。
 
