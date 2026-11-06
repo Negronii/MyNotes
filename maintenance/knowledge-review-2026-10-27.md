@@ -107,7 +107,7 @@ Each listed note was read in full. File-specific checkpoints, evidence URLs, lim
 - [`frontend/frameworks/virtual-dom-and-framework-selection.md`](../frontend/frameworks/virtual-dom-and-framework-selection.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/html-css/box-model-and-bfc.md`](../frontend/html-css/box-model-and-bfc.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/html-css/browser-html-and-css.md`](../frontend/html-css/browser-html-and-css.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/html-css/css-interview-questions.md`](../frontend/html-css/css-interview-questions.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/html-css/css-interview-questions.md`](../frontend/html-css/flex-and-grid-layout.md#居中未知尺寸的内容) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/html-css/css-position-display-and-animations.md`](../frontend/html-css/css-position-display-and-animations.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/html-css/dom-properties.md`](../frontend/html-css/dom-properties.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/html-css/flex-and-grid-layout.md`](../frontend/html-css/flex-and-grid-layout.md) — **no-new-issue in targeted checks**; full-text read recorded: true.

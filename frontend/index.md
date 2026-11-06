@@ -32,13 +32,12 @@
 
 ### 结构、布局与可访问交互
 
-- [How do semantic HTML forms support keyboard and assistive-technology users? / 语义化 HTML 表单如何支持键盘与辅助技术用户？](html-css/accessible-html-forms.md)
-- [How does the CSS cascade decide which declaration applies? / CSS 级联如何决定最终生效的声明？](html-css/html-and-css-basics.md)
-- [How does CSS calculate an element's box size? / CSS 如何计算元素盒子的尺寸？](html-css/box-model-and-bfc.md)
-- [How does a block formatting context contain floats and margins? / 块格式化上下文如何约束浮动和外边距？](html-css/bfc-and-flow-containment.md)
-- [Which CSS units and responsive layout rules fit the available space? / 哪些 CSS 单位与响应式布局规则适合当前空间？](html-css/responsive-css-units-and-layout.md)
-- [Which CSS layout tool fits fixed and fluid content? / 固定与流动内容适合哪种 CSS 布局？](html-css/flex-and-grid-layout.md)
-- [How do you center an element whose size is unknown? / 如何居中尺寸未知的元素？](html-css/css-interview-questions.md)
+- [语义化 HTML 表单如何支持键盘与辅助技术用户？](html-css/accessible-html-forms.md)
+- [CSS 级联如何决定最终生效的声明？](html-css/html-and-css-basics.md)
+- [CSS 如何计算元素盒子的尺寸？](html-css/box-model-and-bfc.md)
+- [块格式化上下文如何约束浮动和外边距？](html-css/bfc-and-flow-containment.md)
+- [哪些 CSS 单位与响应式布局规则适合当前空间？](html-css/responsive-css-units-and-layout.md)
+- [固定与流动内容适合哪种 CSS 布局？](html-css/flex-and-grid-layout.md)
 - [How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？](html-css/css-position-display-and-animations.md)
 - [What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？](html-css/css-visibility-and-accessibility.md)
 - [When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？](html-css/css-transitions-and-animations.md)

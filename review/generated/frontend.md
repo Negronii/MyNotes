@@ -164,7 +164,7 @@ renderReports(sortFromUrl());
 
 浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
 
-**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#61.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 > [!info]- 来源
 > - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
@@ -283,7 +283,7 @@ controls.addEventListener("click", (event) => {
 });
 ~~~
 
-点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#53.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F)。
+点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#52.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F)。
 
 ### 默认动作与传播控制是两回事
 
@@ -315,7 +315,7 @@ controls.addEventListener("click", (event) => {
 
 React 的 JSX 事件名和事件对象保留常用的 DOM 事件概念，`onClick` 默认冒泡、`onClickCapture` 对应捕获。事件委托的具体根节点属于 React 实现细节：React 17 将委托根从 `document` 移到了 React root container；早期 React DOM 还会池化 SyntheticEvent，React 17 起移除了池化，所以当前 React DOM 不需要为异步读取事件调用 `persist()`。React Native 的事件行为另有边界。
 
-**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#56.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#54.%20How%20can%20a%20JavaScript%20event%20bus%20handle%20reentrancy?%20/%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E9%87%8D%E5%85%A5%EF%BC%9F)讨论应用层发布/订阅。
+**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#55.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#53.%20How%20can%20a%20JavaScript%20event%20bus%20handle%20reentrancy?%20/%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E9%87%8D%E5%85%A5%EF%BC%9F)讨论应用层发布/订阅。
 
 > [!info]- 来源
 > - 捕获、目标、冒泡、事件目标、默认动作及取消： [WHATWG DOM：事件分发](https://dom.spec.whatwg.org/#concept-event-dispatch)，Living Standard，事件分发算法；[WHATWG DOM：Event 接口](https://dom.spec.whatwg.org/#interface-event)，事件标记与取消行为。核对日期：2026-11-06。
@@ -360,7 +360,7 @@ console.log("end");
 
 当前同步脚本先输出 `start`、`end`。脚本返回时排队的 Promise reaction 和 `queueMicrotask()` 回调按入队顺序在微任务检查点执行；计时器回调是后续 task，只有达到计时器允许执行的时点后才有资格运行。`setTimeout(fn, 0)` 不表示立刻切走，也不承诺下一个画面会先出现。若当前处理器很长，用户点击会等它完成才开始处理；若处理器不断追加微任务，检查点会持续排空队列，浏览器也就迟迟不能处理后续任务或渲染。
 
-`new Promise(executor)` 中的 `executor` 在构造时同步运行；由 `.then()` 注册的 reaction 才排入微任务。上面的例子使用 `Promise.resolve().then()`，所以 `Promise reaction` 出现在同步输出之后。Promise 的语言行为见[异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
+`new Promise(executor)` 中的 `executor` 在构造时同步运行；由 `.then()` 注册的 reaction 才排入微任务。上面的例子使用 `Promise.resolve().then()`，所以 `Promise reaction` 出现在同步输出之后。Promise 的语言行为见[异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
 
 在报表页的例子里，点击发生时可能正有脚本任务占用主线程，这会增加输入延迟。处理器开始后，`pushState()` 和节点修改是同步的；处理器结束后，微任务仍可能继续安排工作，浏览器再看是否有机会更新报表画面。`await Promise.resolve()` 或把工作切成一串微任务并不会主动让浏览器绘制。若计算确实太重，应把有界工作切到后续 task、Web Worker 或适合的框架调度策略；需要确认是哪段时间占用主线程时，沿 [INP 的交互阶段](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)看录制结果。
 
@@ -386,7 +386,7 @@ requestIdleCallback(runIdleSlice, { timeout: 2000 });
 
 React 等框架的 scheduler 是建立在宿主机制上的另一套排程策略，不是浏览器 HTML 规范中的 task source。使用分片调度也不能假定每两个代码块之间浏览器一定会绘制。
 
-**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
 > [!info]- 来源
 > - 浏览器任务、微任务检查点、渲染机会和动画帧回调： [WHATWG HTML：Web 应用 API 与事件循环](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，持续更新规范，事件循环、微任务与更新渲染章节。核对日期：2026-11-06。
@@ -538,7 +538,7 @@ Effect 用于让已提交的组件与 React 之外的系统保持一致，例如
 
 开发环境在根组件开启 StrictMode（严格模式）时，React 可在首挂载额外执行一次 setup 与 cleanup 来暴露不完整的清理逻辑。此例首轮 Effect 因 `requestId === 0` 直接返回，不会因此发出重复请求；这项检查不代表生产中每个请求都会重复。手写 Effect 获取数据时要清理或忽略已经失效的响应；若要缓存、去重、刷新和更新服务端数据，接着读[React如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
-类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#61.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
+类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-06）
 > - 状态是快照、setter 请求下一次 render、updater 按队列应用：React 官方 [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)、[Queueing a Series of State Updates](https://react.dev/learn/queueing-a-series-of-state-updates)，核验日期 2026-11-06。
@@ -916,7 +916,7 @@ function useMarkReviewed() {
 
 这里回滚的是整份当前列表快照，因此这个简化方案假设 `reports/list` 前缀下的所有排序视图共用一个变更入口：从 `onMutate` 到 `onSettled` 返回的失效 Promise 完成前，全局只有一个乐观变更。否则另一排序 key 上的 mutation 或失效重抓可能覆盖乐观值，整表回滚也可能抹掉另一笔已成功变更。调用端应使用列表级 `isPending` gate 禁用所有排序视图中的行操作，不能只按行或按当前排序 key 禁用；首次切换时的本地临时行以及当前 key 尚无 `query.data` 的视图也要禁用操作。如果存在其他触发入口，它们也必须共享提交级串行约束；单靠某个 hook 的 `isPending` 显示或禁用按钮不能阻止其他入口并发提交。若 mutation 失败，界面可检查 `isError`，并用同一组变量重试，例如再次提交上面的 April 参数。当前片段只展示 hook/cache 处理，没有渲染调用按钮。若同一报表还缓存为详情查询，更新也要覆盖或失效对应的详情 key，不能只改当前列表。服务端仍是权威来源；乐观更新只是让等待中的界面先表达用户意图。
 
-查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#46.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F)。
+查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（TanStack Query v5.90.3；React 19.3；2026-11-06）
 > - `queryKey` 标识查询，函数参数可从 QueryFunctionContext 读取 `signal`：[Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)、[Query Functions](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)，TanStack Query v5.90.3，核验日期 2026-11-06。
@@ -1088,7 +1088,7 @@ items.forEach((item, index) => {
 });
 ~~~
 
-第二种顺序消除了显眼的交替读写，允许浏览器把后续更新合并处理；它不保证整段代码只发生一次布局，也不保证所有数据和页面上都更快。先确认页面确有强制刷新，再用性能录制定位写入与读取的位置。不同几何 API 返回的盒子与坐标系不同，按问题选择，见[哪个 DOM 几何 API 能回答哪种测量问题？](#25.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F)。
+第二种顺序消除了显眼的交替读写，允许浏览器把后续更新合并处理；它不保证整段代码只发生一次布局，也不保证所有数据和页面上都更快。先确认页面确有强制刷新，再用性能录制定位写入与读取的位置。不同几何 API 返回的盒子与坐标系不同，按问题选择，见[哪个 DOM 几何 API 能回答哪种测量问题？](#24.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 ### 引擎怎样实现这些步骤？
 
@@ -1144,7 +1144,7 @@ field data（现场数据）来自实际用户访问，包含设备、网络、�
 | 处理器开始后，列表迟迟没变化 | 交互的处理时长、事件处理器和框架提交工作 | 定位数据排序、组件计算或回调；只拆分确实阻塞主线程的工作 |
 | 处理器很快结束，但下一帧仍晚 | 呈现延迟、事件回调结束后的样式/布局/绘制轨迹 | 检查 DOM 规模和昂贵样式；见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) |
 | React 处理时长长 | 浏览器 Performance 录制与组件 render/commit 记录 | 用 [React Profiler](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F) 找出组件工作，再回到浏览器轨迹查看提交后的样式、布局和绘制 |
-| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#52.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) |
+| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#51.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) |
 | 图片出现时文字或按钮向下跳 | CLS 事件、缺少尺寸的图片/嵌入内容、字体替换或异步插入 | 提前保留内容空间并复现相同网络条件 |
 | 首屏按钮显示了但点击无反馈 | 脚本是否已完成初始化，或处理器是否被主线程工作挡住 | 分清“已经看见”与“事件可处理”；HTML 脚本调度边界见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) |
 
@@ -1154,7 +1154,7 @@ field data（现场数据）来自实际用户访问，包含设备、网络、�
 
 打开 Performance 或 Lighthouse 录制后，先确定本次视口中的实际 LCP 元素，再看它的资源从哪里发现、何时开始请求、何时响应、何时绘制。不同设备视口、URL 参数和缓存可能让同一路由的 LCP 元素不同，因此不要只按本机一次录制假定全体用户看见同一内容。若 LCP 是图片，不要对它使用延迟加载；为图片或嵌入内容声明尺寸可以提前留出空间，减少后续内容位移。
 
-只有录制显示某个非关键图片或脚本与关键路径竞争时，才考虑延后它。若阻塞样式表确实拖慢 LCP，可以比较内联首屏必需样式是否有收益；代价是 HTML 变大，而且首屏样式不能像独立样式表那样单独复用缓存。服务端渲染或静态输出可能让内容更早进入 HTML，但不会自动保证 LCP 或 INP 良好。HTTP 新鲜度、缓存验证与网络请求时序见[HTTP 协议与缓存](../../engineering-foundations/networking/http-protocols-and-websockets.md)；图片加载策略见[如何延迟加载图片而不损害 LCP 或布局稳定性？](#26.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F)。
+只有录制显示某个非关键图片或脚本与关键路径竞争时，才考虑延后它。若阻塞样式表确实拖慢 LCP，可以比较内联首屏必需样式是否有收益；代价是 HTML 变大，而且首屏样式不能像独立样式表那样单独复用缓存。服务端渲染或静态输出可能让内容更早进入 HTML，但不会自动保证 LCP 或 INP 良好。HTTP 新鲜度、缓存验证与网络请求时序见[HTTP 协议与缓存](../../engineering-foundations/networking/http-protocols-and-websockets.md)；图片加载策略见[如何延迟加载图片而不损害 LCP 或布局稳定性？](#25.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F)。
 
 ### 大列表要先分辨数据成本与 DOM 成本
 
@@ -1344,160 +1344,263 @@ const range = getWindow(100_000, 4_000, 480, 40);
 > - 虚拟列表的实际测量、可变行高与滚动锚点：[TanStack Virtual — Virtualizer API](https://tanstack.com/virtual/latest/docs/api/virtualizer)，官方当前文档，核验日期 2026-11-06。
 > - 只呈现部分集合时的位置与总量属性、以及表格/网格行位置：[WAI-ARIA 1.2](https://www.w3.org/TR/wai-aria-1.2/)，W3C Recommendation，2023-06-06。
 > - 动态加载 listbox 项的键盘模式和 `aria-posinset`/`aria-setsize`：[WAI-ARIA APG — Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/)，W3C WAI 官方模式，核验日期 2026-11-06。
-## 15. How do semantic HTML forms support keyboard and assistive-technology users? / 语义化 HTML 表单如何支持键盘与辅助技术用户？
+## 15. 语义化 HTML 表单如何支持键盘与辅助技术用户？
 
-Use native elements for their built-in meaning and behavior: a `label` gives a form control a programmatic name, a `button` supports keyboard activation, and an `a href` represents navigation. Keep focus visible; describe validation errors in text, associate them with the field, and focus the invalid field after a custom submission is rejected. ARIA adds information for assistive technology but does not create keyboard behavior or native validation. / 使用原生元素获得其内建语义与行为：`label` 为表单控件提供程序化名称，`button` 支持键盘激活，`a href` 表示导航。保持焦点可见；用文字描述校验错误并关联到字段，自定义提交被拒绝时将焦点移到无效字段。ARIA 为辅助技术提供信息，但不会创建键盘行为或原生校验。
+从一次只读报表筛选开始：读者选择月份、地区和状态，提交后查看结果。用 HTML 元素表达控件的用途和关系，再用 CSS 布局；样式改变位置和外观，不会替代控件语义、键盘行为或文档顺序。
 
-Use heading levels to express structure, landmarks such as `main` and `nav` to identify regions, and `alt` text that conveys an informative image's purpose. Use empty alternative text (`alt=""`) for decorative images. Keep source order meaningful because CSS visual placement does not change document order for nonvisual presentation. Do not rely on color or position alone to communicate a required state.
+### 先建立有语言和视口的文档
 
-This form keeps the browser's `required` and `type="email"` constraints as the no-JavaScript baseline. Once the custom handler is installed, it reports the invalid state in text, associates the error through `aria-describedby`, marks the field, and moves focus to it.
-
-```html
-<form id="subscribe" action="/subscribe" method="post">
-  <label for="email">Email address</label>
-  <input id="email" name="email" type="email" required
-         aria-describedby="email-help email-error">
-  <p id="email-help">Enter an address such as name@example.com.</p>
-  <p id="email-error" hidden></p>
-  <button type="submit">Subscribe</button>
-</form>
-
-<style>
-  :focus { outline: 3px solid currentColor; outline-offset: 2px; }
-</style>
-
-<script>
-const form = document.querySelector("#subscribe");
-const email = form.elements.namedItem("email");
-const error = document.querySelector("#email-error");
-
-function clearError() {
-  error.textContent = "";
-  error.hidden = true;
-  email.removeAttribute("aria-invalid");
-}
-
-email.addEventListener("input", () => {
-  if (email.validity.valid) clearError();
-});
-
-form.addEventListener("submit", event => {
-  if (email.validity.valid) {
-    clearError();
-    return;
-  }
-
-  event.preventDefault();
-  error.textContent = email.validity.valueMissing
-    ? "Enter an email address."
-    : "Enter a valid email address.";
-  error.hidden = false;
-  email.setAttribute("aria-invalid", "true");
-  email.focus();
-});
-form.noValidate = true; // Enable custom feedback after the handler is ready.
-</script>
-```
-
-Before JavaScript installs the handler, the native constraints can reject an invalid submission. After installation, Tab reaches the input and button; invalid submission focuses the field and associates its visible error with the accessible description. The client check improves feedback, but the server must validate submitted values before accepting them. This is an example interaction, not a claim that one snippet makes an entire page conformant.
-
-Group related controls with a `fieldset` and `legend` when their shared question matters. A clear page heading and landmarks help a reader find the form before they interact with individual fields. [WAI page structure](https://www.w3.org/WAI/tutorials/page-structure/)
-
-**Guidance / 指南** — [WAI form labels](https://www.w3.org/WAI/tutorials/forms/labels/), [WAI form notifications](https://www.w3.org/WAI/tutorials/forms/notifications/), [WAI image alternatives](https://www.w3.org/WAI/tutorials/images/), [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/), [ARIA authoring principles](https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/), [keyboard interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/), and the [HTML Standard](https://html.spec.whatwg.org/).
-## 16. How does the CSS cascade decide which declaration applies? / CSS 级联如何决定最终生效的声明？
-
-CSS first keeps declarations that apply to the element, then resolves their cascade priority. Origin and importance, encapsulation context, element-attached styles, and layer precedence are considered before specificity; scoping proximity where applicable and source order resolve later ties. Specificity is therefore only one part of the cascade; a larger selector weight cannot override a declaration that wins an earlier priority step. / CSS 先筛选适用于元素的声明，再解析级联优先级。来源与重要性、封装上下文、元素附加样式和层顺序先于 specificity；适用时由作用域接近程度及源码顺序进一步打破平局。因此 specificity 只是级联的一部分；更高的选择器权重不能推翻更早优先级步骤已经胜出的声明。
-
-### Compare specificity only after earlier cascade steps
-
-For ordinary author stylesheet rules in the same origin, importance, and layer, compare the tuple `(ID, class/attribute/pseudo-class, type/pseudo-element)` from left to right.
-
-```css
-/* (1, 1, 0): wins this same-layer comparison */
-#sidebar .menu-item { color: red; }
-
-/* (0, 3, 0): loses even with more classes */
-.menu .menu-item.active { color: blue; }
-```
-
-An ID column wins before any number of class selectors. The universal selector (`*`) and combinators (`>`, `+`, `~`) add no specificity.
-
-Functional pseudo-classes have defined argument behavior:
-
-- `:not()`, `:is()`, and `:has()` contribute the specificity of their most-specific argument.
-- `:where()` contributes zero specificity, including its arguments.
-- A selector such as `div:not(.sidebar)` has specificity `(0, 1, 1)`.
-
-Inline style declarations participate in the cascade through a separate element-attached style precedence step; do not treat their behavior as simply “more classes.” Importance and cascade layer rules still matter.
-
-### Use layers to organize priority intentionally
-
-Cascade layers let a stylesheet establish broad precedence groups, then use specificity within the winning layer.
-
-```css
-@layer reset, components, utilities;
-
-@layer components {
-  .button { color: navy; }
-}
-
-@layer utilities {
-  .text-red { color: red; }
-}
-```
-
-For normal declarations, later named layers outrank earlier layers, and unlayered normal declarations outrank declarations in named layers. For important declarations, layer order reverses. Use layer order as an explicit project-level policy rather than relying on ever-growing selector specificity. [CSS Cascading and Inheritance](https://www.w3.org/TR/css-cascade-5/#layer-order) defines the ordering.
-
-### How a child gets a value after the cascade / 级联后子元素怎样得到值
-
-The cascade first finds a winning declaration on the element itself. If none applies, an inherited property normally takes the parent’s computed value, while a non-inherited property takes its initial value. User-agent rules still participate in the cascade. A rule that directly sets a child’s color wins over an inherited color even if the parent was styled with an ID selector.
+页面骨架提供浏览器解释和辅助技术导航所需的信息。<code>&lt;!doctype html&gt;</code> 选择标准模式；根元素的 <code>lang</code> 声明主要语言；<code>title</code> 命名浏览器标签页；<code>meta viewport</code> 让窄屏的布局视口与设备宽度相符。文件也应实际使用 UTF-8 编码，字符集声明不会把错误编码的字节转换成正确内容。视口声明本身不会让固定宽度布局变得响应式。
 
 ~~~html
-<article id="notice">Read <span class="label">this</span>.</article>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="按月份、地区和订单状态查看月度订单。">
+  <link rel="icon" href="/favicon.ico">
+  <title>月度订单报表</title>
+</head>
+<body>
+  <main>
+    <h1>月度订单报表</h1>
+    <!-- 报表筛选表单与结果表格 -->
+  </main>
+</body>
+</html>
+~~~
+
+让标题层级表达页面结构，用 <code>main</code>、<code>nav</code> 等 landmark 标记主要区域。<code>div</code> 和 <code>span</code> 适合没有更具体语义的布局容器；不要按默认字号或默认块级显示来选择元素，因为 CSS 可以改变显示方式，不能因此改变元素语义。<code>id</code> 在一份文档中应唯一，可用于 label 关联和片段导航；<code>class</code> 则可把多个元素归为同一组样式。HTML 内容模型仍决定元素能否嵌套，例如段落只接受 phrasing content；给 <code>div</code> 设成 inline 样式也不会让它变成段落可接受的语义内容。
+
+<code>meta name="description"</code> 可提供页面摘要，但搜索引擎可能改从正文生成摘要；<code>link rel="icon"</code> 提供浏览器和搜索结果可用的站点图标。<code>meta name="keywords"</code> 不是 Google Search 的排名信号，不应为了 SEO 把关键词堆在 head 里。
+
+### 让控件名称、提交值和动作明确
+
+每个输入字段都要有可见且程序化关联的 <code>label</code>（标签）；按钮可由自己的文字命名。下面的表单用 <code>GET</code> 表达只读筛选，并把字段名和值放进 URL；只有在筛选结果可以安全地由 URL 表达时才适用。缺少 <code>name</code> 的字段不会进入提交数据；未选中的复选框（checkbox）或单选框（radio）也不会提交。<code>placeholder</code> 只是输入提示，不能替代标签。
+
+~~~html
+<form action="/reports" method="get">
+  <label for="month">月份</label>
+  <input id="month" name="month" type="month" value="2026-10">
+
+  <label for="region">地区</label>
+  <select id="region" name="region">
+    <option value="">全部地区</option>
+    <option value="north">北区</option>
+    <option value="south">南区</option>
+  </select>
+
+  <fieldset>
+    <legend>订单状态（可多选）</legend>
+    <label><input type="checkbox" name="status" value="open"> 处理中</label>
+    <label><input type="checkbox" name="status" value="closed"> 已完成</label>
+  </fieldset>
+
+  <button type="submit">筛选报表</button>
+</form>
+~~~
+
+下方结果表示月份“2026-10”、全部地区且不限制状态，对应查询 `/reports?month=2026-10&region=`。地区的空值仍会提交为 `region=`；不勾任何状态时则没有 `status` 键。月份“2026-10”、地区“北区”并勾选两种状态时，浏览器按表单字段顺序构造另一条查询；同名复选框产生重复键。
+
+~~~text
+/reports?month=2026-10&region=
+/reports?month=2026-10&region=north&status=open&status=closed
+/reports?month=2026-10&region=&status=open    （全部地区、只选处理中）
+/reports?month=2026-10&region=north           （未选状态）
+~~~
+
+<code>input</code> 的类型决定控件语义、输入方式和可用的原生约束。<code>type="password"</code> 只遮住屏幕显示，不会加密传输或替代安全存储；文件选择器的 <code>accept</code> 只提示可选类型，服务端仍须校验收到的文件。<code>checked</code> 和 <code>selected</code> 标记初始选择；用户操作后的当前状态才决定提交数据。<code>select multiple</code> 也能让一个字段提交多组选项值，序列化结果会出现重复键。单选组用相同 <code>name</code> 保证只能选一个值；复选框允许同名字段提交多个已选值。若地区变化会改变下一级门店选项，更新选项时也要清除不再有效的旧门店值，并在选项不可用时明确告知用户；这属于交互状态管理，单靠 CSS 不会级联更新数据。
+
+使用 <code>fieldset</code> 和 <code>legend</code> 把共享问题的一组控件归在一起。表单内的 <code>button</code> 默认可能提交表单，因此给按钮显式写 <code>type</code>：<code>submit</code> 提交，<code>reset</code> 恢复默认值，<code>button</code> 用作其他动作。页面导航用有真实 <code>href</code> 的链接；重置、筛选等动作使用按钮，<code>href="#"</code> 不是中性的占位符。
+
+### 让报表结果保持数据表语义
+
+当列和行本身有意义时，用表格标记数据，不要用 Grid 伪造表格语义。用 <code>caption</code> 说明表格内容，用 <code>th scope="col"</code> 标记列标题；行标题则按数据关系使用 <code>scope="row"</code>。无序条目用 <code>ul</code>，有序步骤用 <code>ol</code>，术语与解释用 <code>dl</code>/<code>dt</code>/<code>dd</code>；不应用连续空格或非断行空格排版。
+
+~~~html
+<table>
+  <caption>2026 年 10 月订单结果</caption>
+  <thead>
+    <tr>
+      <th scope="col">订单号</th>
+      <th scope="col">地区</th>
+      <th scope="col">状态</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row">A-1042</th><td>北区</td><td>处理中</td></tr>
+    <tr><th scope="row">A-1043</th><td>南区</td><td>已完成</td></tr>
+  </tbody>
+</table>
+~~~
+
+表格中的 <code>rowspan</code> 或 <code>colspan</code> 会占据后续单元格位置；例如三列表中，上行一个 <code>rowspan="2"</code> 已占下行第一列，下行只再写两个单元格。窄屏宽表可以放入局部横向滚动容器，避免页面整体横向溢出，详见[固定与流动内容的布局选择](#20.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)。
+
+### 键盘、焦点与校验错误
+
+原生控件提供用户熟悉的键盘操作和约束验证。标签、说明和错误文案要靠真实关系连接，而不是只靠颜色、图标或位置表达状态。Tab 顺序跟随有意义的文档顺序；<code>:focus-visible</code> 或 <code>:focus</code> 样式应保留可辨认的焦点轮廓，不要为了视觉整齐移除它。
+
+这是报表页内另一个保存通知设置的表单，与上面的 GET 筛选表单分开。浏览器原生约束可以阻止空邮箱提交并触发 `invalid` 事件，但不会替作者改写隐藏的错误段落或设置 `aria-invalid`。若应用接管反馈，可在该字段的 `invalid` 事件处理中写入错误文本、移除 `hidden` 并设 `aria-invalid="true"`；输入改正后清除错误状态。以下表格演算的正是应用处理后的状态。
+
+~~~html
+<form action="/notification-settings" method="post">
+  <label for="email">通知邮箱</label>
+  <input id="email" name="email" type="email" required
+         aria-describedby="email-help email-error">
+  <p id="email-help">用于接收筛选完成通知。</p>
+  <p id="email-error" hidden></p>
+  <button type="submit">保存通知设置</button>
+</form>
+~~~
+
+应用必须把错误写成文本、用 <code>aria-describedby</code> 关联字段、用 <code>aria-invalid</code> 标记无效状态。原生验证阻止提交时，浏览器通常会把焦点放到无效字段；若应用接管了提交流程，则由应用负责将焦点移至第一个错误字段。辅助属性只补充语义，不会创建键盘行为或验证规则；服务端仍需检查收到的数据。
+
+| 时刻 | 字段值 | 可见状态 | 焦点 |
+| --- | --- | --- | --- |
+| 初始 | 空 | 帮助说明显示，错误段落带 `hidden`，没有 `aria-invalid` | 由用户决定 |
+| 提交空值，应用处理 `invalid` | 空 | 应用写入错误、移除 `hidden`、设置 `aria-invalid="true"` | 浏览器聚焦邮箱字段 |
+| 修正后 | team@example.com | 输入处理清除错误、恢复 `hidden` 并移除 `aria-invalid` | 留在字段或由用户继续移动 |
+
+默认阅读和键盘顺序跟随 HTML 源码顺序。Flex <code>order</code> 和 Grid 放置只改变视觉布局，不会同步重排键盘与非视觉阅读顺序；不要用它们修补错误的源顺序。
+
+> [!info] HTML 字符引用与用户输入
+> HTML 源码中的 <code>&amp;lt;</code> 和 <code>&amp;amp;</code> 分别表示文本 <code>&lt;</code> 和 <code>&amp;</code>；<code>&amp;nbsp;</code> 表示不换行空格，不应拿它代替 CSS 间距。字符引用在 HTML 解析时解码。它不是动态字符串安全插入的替代方案；把用户输入作为文本显示时，应使用 DOM 的文本接口，而非把拼接后的字符串当作标记解析。
+
+> [!info]- 来源
+> - 文档骨架、语言和语义：WHATWG HTML Living Standard，§3 文档结构与语义、§4.3 元数据；该规范 2026-11-05 更新：[HTML Standard](https://html.spec.whatwg.org/multipage/).
+> - 表单标签、表单控件、按钮、验证与提交：WHATWG HTML Living Standard，§4.10；同上。
+> - 表单标签与错误通知：W3C WAI Forms Tutorial，[Labeling Controls](https://www.w3.org/WAI/tutorials/forms/labels/) 和 [User Notification](https://www.w3.org/WAI/tutorials/forms/notifications/)，检查于 2026-11-06。
+> - 数据表结构：WHATWG HTML Living Standard，§4.9 Tabular data；同上。
+> - 字符引用：WHATWG HTML Living Standard，§13.5 Named character references；该部分 2026-10-07 更新：[HTML Standard: named character references](https://html.spec.whatwg.org/multipage/named-characters.html).
+> - 焦点可见性与键盘：W3C WCAG 2.2，Recommendation（2024-12-12），Success Criteria 2.4.7 Focus Visible、2.4.11 Focus Not Obscured；[WCAG 2.2](https://www.w3.org/TR/WCAG22/)，检查于 2026-11-06。<code>:focus-visible</code> 的具体样式由页面设计决定。
+> - 搜索摘要、标题链接、站点图标与不支持的 meta keywords：Google Search Central，[Snippets](https://developers.google.com/search/docs/appearance/snippet)、[Title links](https://developers.google.com/search/docs/appearance/title-link)、[Favicon](https://developers.google.com/search/docs/appearance/favicon-in-search) 和 [supported meta tags](https://developers.google.com/search/docs/crawling-indexing/special-tags)，检查于 2026-11-06。搜索结果呈现由搜索引擎决定。
+## 16. CSS 级联如何决定最终生效的声明？
+
+当报表中同一状态文字被多个 CSS 规则赋值时，浏览器不会简单地选“选择器最长”或“最后写的规则”。它先筛掉不适用的声明，再按来源与重要性、封装上下文、元素附加样式、级联层、选择器优先级及顺序比较。级联选出声明后，若该值使用 CSS-wide keyword（全局关键字），还要继续按对应规则解析；没有声明时，继承属性通常取父元素的计算值，非继承属性通常取初始值。
+
+### 先确认选择器匹配到谁
+
+报表中表头行不属于数据行；数据 A、数据 B 在所有行里分别位于第 2、第 3 个位置，在 `.data-row` 里则分别是第 1、第 2 个。
+
+~~~css
+tbody > tr:nth-child(even) { background: #f4f7fb; }
+tbody > tr:nth-child(even of .data-row) { font-weight: 600; }
+~~~
+
+~~~html
+<tbody>
+  <tr class="heading"><th>本月订单</th></tr>
+  <tr class="data-row"><td>数据 A</td></tr>
+  <tr class="data-row"><td>数据 B</td></tr>
+</tbody>
+~~~
+
+第一条 `:nth-child(even)` 按所有元素兄弟计数；此例的兄弟全是 `tr`，所以匹配数据 A。第二条先只取 `.data-row`，再从该集合计数，匹配数据 B。选择器先决定声明适用于谁，之后才有级联胜负。
+
+<code>:first-child</code>、<code>:last-child</code>、<code>:nth-child()</code> 和 <code>:nth-last-child()</code> 依据兄弟位置匹配；对应的 <code>-of-type</code> 形式只依据相同标签名计数。选择器先决定声明是否适用于元素，之后才有级联胜负。
+
+设置了可生成的 <code>content</code> 值时，<code>::before</code> 和 <code>::after</code> 会生成附属于元素的盒子，不会新增 DOM 节点。适合放装饰性图标或清除浮动的辅助样式，不要把唯一的文字说明、交互控件或重要状态只放进生成内容。<code>:not()</code>、<code>:is()</code>、<code>:has()</code> 的 specificity 取最具体参数的 specificity；<code>:where()</code> 本身及其参数贡献零。
+
+### 按级联步骤找到胜出声明
+
+以普通页面作者样式为例，按下面顺序比较；前一步已分出高下时，后面的步骤不再参与：
+
+1. **来源与重要性。** 从高到低为过渡中的声明、用户代理 <code>!important</code>、用户 <code>!important</code>、作者 <code>!important</code>、动画声明、作者普通声明、用户普通声明、用户代理普通声明。不要把 <code>!important</code> 当作日常覆盖手段：它会改变这套优先次序，也让后续维护更难。
+2. **封装上下文。** 规则跨越 Shadow DOM 等边界时，普通声明中外层上下文优先于内层；重要声明优先方向相反。
+3. **元素附加样式。** 同一重要性下，写在元素 <code>style</code> 属性中的声明优先于由样式规则匹配到的声明。
+4. **级联层。** 对普通声明，较晚声明的层优先，未分层的普通声明高于显式层；对重要声明，层顺序反转。
+5. **specificity（选择器优先级）。** 只在前面步骤持平时比较。
+6. **作用域接近度与源码顺序。** 使用 <code>@scope</code> 时，作用域根更近的规则在 specificity 相同后优先；最后才由源码出现顺序打破平局。
+
+下面两条规则都在作者普通样式中。<code>#status</code> 的 specificity <code>(1, 0, 0)</code> 高于三个类 <code>(0, 3, 0)</code>，所以即使后者写在后面，前者仍胜出：
+
+~~~html
+<p id="status" class="report status warning">待处理</p>
 ~~~
 
 ~~~css
-#notice { color: #222; font-family: system-ui, sans-serif; margin: 2rem; }
-.label  { color: blue; }
+#status { color: #8a3b00; }
+.report.status.warning { color: #b00020; }
 ~~~
 
-The span computes blue from its own declaration and inherits the font. The parent's margin does not flow down. Applying `margin: inherit` explicitly would use the parent’s computed margin. Fonts, color, line height, text alignment, letter spacing, and visibility usually inherit. Width, padding, margin, display, and position do not inherit by default. Check the property definition when it matters. / 先看子元素自己是否有生效声明，再按属性的继承规则取值。父元素选择器的优先级不会传给子元素。
+specificity 按 <code>(ID, 类/属性/伪类, 元素/伪元素)</code> 从左向右比较。ID 列先比较；类的数量再多也不能抵消更高的 ID 列。通配符 <code>*</code> 和组合符 <code>&gt;</code>、<code>+</code>、<code>~</code> 不增加 specificity。
 
-**Text decoration / 文本装饰.** A parent's underline can be drawn across descendant text through decoration propagation. On `<a>Title <em>with emphasis</em></a>`, setting `text-decoration: none` on `em` does not erase the line drawn by `a`. Change the rule on the element that establishes the decoration. [CSS Cascade defaulting and inheritance](https://www.w3.org/TR/css-cascade-5/#defaulting) · [CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/#line-decoration)
+### 用层次组织样式来源
 
-### Keep selectors maintainable
+级联层让项目按 reset、第三方组件、业务组件和工具类组织冲突；先声明层顺序，再在各层中使用适度的选择器权重。
 
-Attribute selectors such as `[data-state="active"]` can reflect state in markup. BEM naming (`.block__element--modifier`) tends to keep selectors flat and easier to override. CSS-in-JS-generated classes still participate in the browser's cascade; the generation method does not remove cascade rules.
+~~~css
+@layer reset, vendor, components, utilities;
 
-Critical CSS can reduce dependence on a render-blocking stylesheet for content that must appear early, but it adds markup bytes and can duplicate later CSS. Treat it as a measured delivery choice, not as an automatic selector-speed technique. See [Performance Metrics and Analysis](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F).
+@layer components {
+  .status { color: #8a3b00; }
+}
 
-**Specifications:** [Selectors Level 4](https://www.w3.org/TR/selectors-4/#specificity-rules), [CSS Cascading and Inheritance Level 5](https://www.w3.org/TR/css-cascade-5/), and [CSS Display, visual order](https://www.w3.org/TR/css-display-3/#order-property).
-
-
-**Related questions:** [responsive CSS units and layout](#19.%20Which%20CSS%20units%20and%20responsive%20layout%20rules%20fit%20the%20available%20space?%20/%20%E5%93%AA%E4%BA%9B%20CSS%20%E5%8D%95%E4%BD%8D%E4%B8%8E%E5%93%8D%E5%BA%94%E5%BC%8F%E5%B8%83%E5%B1%80%E8%A7%84%E5%88%99%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E7%A9%BA%E9%97%B4%EF%BC%9F) covers size references and breakpoints; [semantic HTML forms](#15.%20How%20do%20semantic%20HTML%20forms%20support%20keyboard%20and%20assistive-technology%20users?%20/%20%E8%AF%AD%E4%B9%89%E5%8C%96%20HTML%20%E8%A1%A8%E5%8D%95%E5%A6%82%E4%BD%95%E6%94%AF%E6%8C%81%E9%94%AE%E7%9B%98%E4%B8%8E%E8%BE%85%E5%8A%A9%E6%8A%80%E6%9C%AF%E7%94%A8%E6%88%B7%EF%BC%9F) covers native controls and validation; [text overflow and line clamp](#Constrained%20text%20and%20line%20clamping%20/%20%E5%8F%97%E9%99%90%E6%96%87%E6%9C%AC%E4%B8%8E%E8%A1%8C%E6%95%B0%E8%A3%81%E5%88%87) covers visual truncation.
-## 17. How does CSS calculate an element's box size? / CSS 如何计算元素盒子的尺寸？
-
-A CSS box has content, padding, border, and margin layers. With the default `box-sizing: content-box`, declared width and height size the content area; padding and border are added outside it. With `box-sizing: border-box`, the declared dimensions include content, padding, and border. Margin remains outside both. / CSS 盒模型包含内容、内边距、边框和外边距。默认的 `box-sizing: content-box` 把声明的宽高用于内容区，内边距和边框会在外侧增加尺寸；`box-sizing: border-box` 则将内容、内边距和边框都包含在声明尺寸内。两种模式下 margin 都在盒子外面。
-
-~~~text
-┌────────────── margin ──────────────┐
-│ ┌──────────── border ────────────┐ │
-│ │ ┌────────── padding ────────┐ │ │
-│ │ │          content           │ │ │
-│ │ └───────────────────────────┘ │ │
-│ └───────────────────────────────┘ │
-└───────────────────────────────────┘
+@layer utilities {
+  .text-muted { color: #555; }
+}
 ~~~
 
-For `width: 100px; padding: 10px; border: 5px solid`, the content-box width is `100 + 20 + 10 = 130px`. Under border-box the outer border edge remains 100px and the content area shrinks to 70px. Height follows the same rule.
+普通声明中，后声明的显式层优先于前面的层，未分层样式优先于所有显式层。重要声明中的层顺序相反。层只解决同一来源和上下文中的层级关系；不能用层顺序覆盖更高优先级来源中的规则。若 ID 规则与工具类规则处于不同层，先比较层级，选择器优先级只在更早步骤持平后才比较。
 
-| Declared `width`/`height` size | `content-box` | `border-box` |
-|---|---|---|
-| Content area | Yes | No |
-| Padding and border | Added outside the declared size | Included in the declared size |
-| Margin | Always outside | Always outside |
+### 级联之后，属性怎样继承？
 
-A common reset makes sizing arithmetic predictable, including generated pseudo-elements:
+> [!info] 三个常见 CSS-wide keyword
+> `inherit` 明确要求取父元素计算值，即使该属性通常不继承；`initial` 取属性规范定义的初始值；`unset` 按属性本身是否继承来选择，继承属性等同 `inherit`，非继承属性等同 `initial`。
+
+浏览器先得到元素自身的胜出声明；若没有声明，继承属性通常从父元素取计算值，非继承属性取初始值。父元素选择器的 specificity 不会“传给”子元素。
+
+~~~html
+<article id="report">
+  <span class="status">处理中</span>
+</article>
+~~~
+
+~~~css
+#report { color: #222; font-family: system-ui, sans-serif; margin: 2rem; }
+.status { color: #8a3b00; }
+~~~
+
+<code>span</code> 自己的 <code>color</code> 声明胜出，并继承父级字体；父级 <code>margin</code> 不会继承。<code>color</code>、<code>font-family</code>、<code>line-height</code> 通常会继承；<code>width</code>、<code>padding</code>、<code>margin</code>、<code>display</code> 和 <code>position</code> 默认不会继承，具体仍以属性定义为准。父链接产生的下划线也可能沿后代文本绘制；对子 <code>em</code> 设置 <code>text-decoration: none</code> 不会抹掉由链接建立的装饰，应修改建立装饰的元素规则。
+
+属性选择器例如 <code>[data-state="warning"]</code> 可把显式状态映射到样式；扁平、可维护的类选择器通常比层层增加 specificity 更容易覆盖。CSS-in-JS 生成类名也仍参与浏览器级联。
+
+内联关键 CSS 有时能让首屏关键样式不等待外部样式表，但会增加 HTML 字节并可能与后续 CSS 重复；是否值得应看实际载入路径和测量结果，而不是把它理解成选择器加速技巧，参见[网页性能测量与诊断](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+
+> [!info]- 来源
+> - 过滤、级联来源、元素附加样式、层顺序及 specificity 之前的比较：W3C CSS Cascading and Inheritance Level 5，§5–6，Candidate Recommendation Snapshot（2022-01-13，最新正式发布快照）：[CSS Cascade Level 5](https://www.w3.org/TR/css-cascade-5/)，检查于 2026-11-06。
+> - <code>@scope</code> 的作用域接近度：W3C CSS Cascading and Inheritance Level 6，§2，Working Draft（2024-09-06；仍是差异草案，基础级联以 Level 5 为参考）：[CSS Cascade Level 6](https://www.w3.org/TR/css-cascade-6/)，检查于 2026-11-06。
+> - specificity 与结构伪类：W3C Selectors Level 4，§13.3–13.4、§15，Working Draft（2026-01-22）：[Selectors Level 4](https://www.w3.org/TR/selectors-4/)，检查于 2026-11-06。
+> - 生成伪元素：W3C CSS Pseudo-Elements Level 4，§4，Working Draft（2025-06-27）：[CSS Pseudo-Elements](https://www.w3.org/TR/css-pseudo-4/#generated-content)，检查于 2026-11-06。
+> - 文本装饰传播：W3C CSS Text Decoration Level 3，§2，Candidate Recommendation Draft（2022-05-05）：[CSS Text Decoration](https://www.w3.org/TR/css-text-decor-3/#line-decoration)，检查于 2026-11-06。
+## 17. CSS 如何计算元素盒子的尺寸？
+
+先确定声明尺寸量到哪里，再把 padding、border 和 margin 加进布局预算。CSS 盒子从内到外依次是 content、padding、border、margin；<code>box-sizing</code> 决定声明宽高包含哪些边缘，但 margin 总是在声明尺寸之外。
+
+![CSS 盒模型原始示意图](../../archive/front-end/0-1_Learning_Notes/CSS/box_model.png)
+
+### 用报表筛选面板演算宽度
+
+假设筛选面板希望占父容器 <code>360px</code>，左右各留 <code>16px</code> 内边距，边框各 <code>1px</code>。默认 <code>content-box</code> 下，<code>width: 360px</code> 量的是内容区，所以实际外框为：
+
+> [!example] 内容盒演算
+> <code>360 + 16 × 2 + 1 × 2 = 394px</code>。父区只有 <code>360px</code> 时，面板会多出 <code>34px</code>，可能推动邻列或形成溢出。
+
+设为 <code>box-sizing: border-box</code> 后，声明的 <code>360px</code> 包含内容、padding 和 border；内容区剩余：
+
+> [!example] 边框盒演算
+> <code>360 - 16 × 2 - 1 × 2 = 326px</code>。外框正好是 <code>360px</code>；margin 仍额外占用父区空间。
+
+| 声明宽度 | <code>content-box</code> | <code>border-box</code> |
+| --- | --- | --- |
+| 内容区 | 等于声明宽度 | <code>max(0, 声明宽度 - padding - border)</code>；结果最小为 <code>0</code> |
+| 内边距和边框 | 加在内容区外 | 包含在声明宽度内 |
+| 外边距 | 始终在盒子外 | 始终在盒子外 |
+
+若左右 padding 与边框合计 <code>34px</code>，但 <code>border-box</code> 声明宽度只有 <code>20px</code>，内容宽度下限为 <code>0px</code>，外框仍要长到 <code>34px</code>，不会出现负内容宽度。
+
+常见重置把页面元素和伪元素统一按边框盒计算，让列宽加法更容易预测：
 
 ~~~css
 *, *::before, *::after {
@@ -1505,472 +1608,348 @@ A common reset makes sizing arithmetic predictable, including generated pseudo-e
 }
 ~~~
 
-The `padding` and `margin` shorthands accept one to four values in top/right/bottom/left order: one value sets all sides; two set vertical then horizontal; three set top, horizontal, bottom; four set each side clockwise.
+该属性也会影响 sizing properties（如 flex-basis）对固定尺寸的解释。<code>padding</code> 和 <code>margin</code> 的一至四值简写按上、右、下、左分配：一值设四边；两值为上下、左右；三值为上、左右、下；四值依顺时针排列。
+
+### 边框几何可以画小三角
+
+宽高为零的盒子仍可通过边框显示形状。给四条边都设 <code>10px solid transparent</code>，再给左边着色，会显示向右的三角；改给下边着色则指向上方。它适合固定的小箭头。若形状要随盒子尺寸独立缩放，可使用 <code>clip-path</code>：
 
 ~~~css
-.box-a { border: 1px solid black; }
-.box-b { border: 3px dashed red; }
-
-.box {
-  width: 100px;
-  height: 100px;
-  padding: 10px;
-  border: 5px solid black;
-  box-sizing: border-box; /* outer border box stays 100 × 100 */
-}
-~~~
-
-### A triangle from border geometry / 用边框几何画三角形
-
-A zero-size element with thick borders forms four triangular border regions. Make three borders transparent and color one: the colored region becomes a triangle pointing away from that border. This is useful for small carets and callouts; use `clip-path` when the shape must scale independently of border thickness. / 零尺寸元素的粗边框会形成四个三角形区域。将三个边框设为透明并给一个边框着色，彩色区域会形成一个朝向该彩色边框相反方向的三角形，适合小箭头和气泡尖角；若形状需要独立缩放，可考虑 `clip-path`。
-
-```html
-<div class="triangle" aria-hidden="true"></div>
-```
-
-```css
-.triangle {
-  width: 0;
-  height: 0;
-  border: 10px solid transparent;
-  border-left-color: red; /* points right */
-}
-```
-
-The element’s content box has zero width and height, so the visible shape is created by its border geometry. Color the bottom border for an upward-pointing triangle, top for downward, left for rightward, or right for leftward.
-
-For a shape whose dimensions should follow its box rather than a fixed border size:
-
-```css
-.triangle {
+.caret {
+  display: inline-block;
   width: 1rem;
   aspect-ratio: 1;
   background: currentColor;
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
-```
-
-The second example makes an upward triangle; change the polygon points to change direction. A decorative caret should be hidden from assistive technology if it adds no meaning. If it communicates state or direction, expose that information through the control's text or semantics as well.
-
-[CSS Masking on clipping paths](https://www.w3.org/TR/css-masking-1/#the-clip-path)
-
-For the flow rules that determine how floats and margins interact around boxes, see [How does a block formatting context contain floats and margins?](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F). For CSS layout coordinates and DOM geometry, see [DOM geometry APIs](#25.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F).
-
-**Specification:** [CSS 2.2 box model](https://www.w3.org/TR/CSS22/box.html#box-dimensions), checked 2026-11-05.
-## 18. How does a block formatting context contain floats and margins? / 块格式化上下文如何约束浮动和外边距？
-
-A block formatting context (BFC) is a flow-layout boundary: floats cannot intrude into its contents, its auto height includes floats inside it, and child margins do not collapse through its boundary. It is not a stacking context, a universal containing block, or general layout containment. Use `display: flow-root` when the intended change is simply to contain floats and separate child margins. / 块格式化上下文（BFC）是流式布局的边界：外部浮动不会侵入其内容，BFC 根的自动高度会包含其中的浮动，子元素外边距也不会穿过该边界折叠。BFC 不等于堆叠上下文、通用定位包含块或整体布局隔离。若目的只是包含浮动并分隔子级 margin，使用 `display: flow-root`。
-
-### Float containment / 包含浮动
-
-Floats leave normal flow, so a normal-flow parent whose children are all floated may have no height from those children. A BFC root contains its floats:
-
-~~~css
-.container { background: red; }
-.box { float: left; width: 100px; height: 100px; }
-
-/* Before: .container may collapse to a stripe. */
-.container { display: flow-root; } /* includes the floated child */
 ~~~
 
-Use a clearfix when maintaining legacy markup or browser support requires it:
+装饰性箭头可以对辅助技术隐藏；若箭头表达开合状态或方向，还要通过控件文字或其他语义暴露该信息。
+
+要看 float 和块之间的流式边界，请继续读[块格式化上下文如何约束浮动和外边距](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)。居中和浮层位置则分别见[Flex/Grid 对齐](#20.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)与[定位和堆叠](#21.%20How%20do%20CSS%20positioning%20and%20stacking%20determine%20where%20an%20element%20appears?%20/%20CSS%20%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%A0%86%E5%8F%A0%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%85%83%E7%B4%A0%E7%9A%84%E6%98%BE%E7%A4%BA%E4%BD%8D%E7%BD%AE%EF%BC%9F)。
+
+CSS 声明的盒尺寸和脚本读取到的几何值是不同问题：例如 <code>offsetWidth</code> 包含边框、通常还包含占位滚动条，但不含 margin，且忽略变换；各 API 的测量边界见 [DOM 几何 API](#24.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F)。
+
+> [!info]- 来源
+> - <code>box-sizing</code> 以及 content-box / border-box 边缘：W3C CSS Box Sizing Module Level 3，§3.3，Working Draft（2026-09-04）：[CSS Sizing Level 3](https://www.w3.org/TR/css-sizing-3/#box-sizing)，检查于 2026-11-06。该模块为工作草案；这里的常见盒边缘规则也与 CSS 2.1/2.2 兼容。
+> - <code>clip-path</code>：W3C CSS Masking Level 1，§6：[CSS Masking](https://www.w3.org/TR/css-masking-1/#the-clip-path)，检查于 2026-11-06。
+> - <code>offsetWidth</code> 的边框盒测量：W3C CSSOM View，§7：[CSSOM View](https://www.w3.org/TR/cssom-view-1/#dom-htmlelement-offsetwidth)，检查于 2026-11-06。
+## 18. 块格式化上下文如何约束浮动和外边距？
+
+block formatting context（BFC，块格式化上下文）是流式布局的一道边界。建立 BFC 的块会包含内部浮动，外部浮动不会侵入它的内容，子元素 margin 也不会穿过边界折叠。BFC 不等于 stacking context（堆叠上下文）、定位包含块或所有方向上的布局隔离；若只需要隔开普通流中的浮动和外边距，可用 <code>display: flow-root</code>。
+
+> [!info] BFC 的边界效果
+> BFC 主要约束块流、浮动与外边距。它本身不决定绘制层级，也不会为任意后代提供绝对定位的包含块；需要层叠或定位时应分别看 stacking context 与 containing block。
+
+### 为什么报表卡片里浮动徽标会撑不开父级？
+
+浮动盒离开普通流；即使容器里还有普通流段落，若段落本身只有一行高、旁边的浮动徽标更高，父级自动高度仍只由段落高度决定，背景会在徽标底部之前结束。让容器建立 BFC 后，其自动高度也会包住内部浮动：
+
+~~~html
+<div class="summary">
+  <span class="badge">异常</span>
+  <p>共 12 条记录需要复核。</p>
+</div>
+~~~
 
 ~~~css
-.parent::after {
+.badge { float: left; inline-size: 3rem; block-size: 3rem; }
+.summary { display: flow-root; background: #f3f6fa; }
+.summary p { margin: 0; line-height: 20px; }
+~~~
+
+> [!example] 前后状态
+> 根字号为 <code>16px</code> 时，徽标的 <code>3rem</code> 高为 <code>48px</code>；段落 margin 为 <code>0</code>、单行高度为 <code>20px</code>。没有 <code>flow-root</code> 时，`.summary` 内容盒高 <code>20px</code>，徽标超出背景；加上后内容盒高为 <code>48px</code>，背景包住徽标。
+
+同一格式化上下文外的浮动也不能侵入 BFC 的内容区域；建立 BFC 的整个盒子仍可能被浮动挤窄，或在空间不足时移到浮动下方。普通块级容器若没有建立 BFC，浮动影响可能延伸到下一个清除或格式化边界。
+
+### 相邻 margin 为什么不是简单相加？
+
+同一 BFC 中相邻、处于普通流的块级兄弟元素，它们的正向垂直 margin 会折叠为较大的值。例如一行状态卡片下 margin 为 <code>24px</code>，下一张卡片上 margin 为 <code>16px</code>，最终间隔是 <code>24px</code> 而不是 <code>40px</code>。若一正一负，结果是最大正值加最负的负值：<code>24px + (-16px) = 8px</code>；缺少一侧时按 <code>0</code> 参与计算。
+
+~~~css
+.report-card { margin-block: 24px; }
+.report-card + .report-card { margin-block-start: 16px; }
+/* 同一块格式化上下文中的相邻外边距合并后，间隔为 24px。 */
+~~~
+
+父级和第一个普通流块子元素的上 margin 也可能向外折叠，条件包括两者之间没有 border、padding、行内内容、clearance 或新格式化上下文。给父级加边框、内边距或建立 BFC，会把这条折叠路径分开。BFC 边界不取消容器自己的 margin 与其父级上下文的折叠规则。
+
+### 如何创建 BFC，什么副作用值得注意？
+
+- <code>display: flow-root</code> 明确建立 BFC，不裁切内容，也不建立滚动区域。
+- 块容器设置 <code>overflow: hidden</code>、<code>auto</code> 或 <code>scroll</code> 会建立 BFC；同时可能裁切内容或成为滚动容器。若不希望这些副作用，不要只为了清浮动而选 <code>overflow: hidden</code>。
+- <code>overflow: clip</code> 会裁切溢出，但不建立 BFC；与另一轴的可滚动 overflow 值组合时，计算值可能落到 <code>hidden</code>。
+- 浮动、绝对定位、inline-block、table cell 等盒会为其内部内容建立独立格式化上下文。
+- Flex 和 Grid 容器建立各自的格式化上下文，不是 BFC；它们的项目不按普通块流参与外边距折叠，也不受普通 float 侵入规则控制。
+
+旧项目若必须兼容不能使用 <code>flow-root</code> 的环境，可用清除伪元素方案；新代码优先选直接表达意图的属性：
+
+~~~css
+.legacy-parent::after {
   content: "";
   display: table;
   clear: both;
 }
 ~~~
 
-A clearing element can also end the float interaction, but adds non-semantic markup:
+> [!info]- 来源
+> - 格式化上下文、<code>flow-root</code>、float containment、margin collapse 和 Flex/Grid 的格式化边界：W3C CSS Display Module Level 3，§2.2，Candidate Recommendation Draft（2026-06-05）：[CSS Display Level 3](https://www.w3.org/TR/css-display-3/)，检查于 2026-11-06。
+> - BFC、float 和 margin 折叠的传统定义：W3C CSS 2.2，§8.3.1、§9.4.1、§9.5，First Public Working Draft（2016-04-12）：[CSS 2.2, margin collapsing](https://www.w3.org/TR/CSS22/box.html#collapsing-margins) 与 [BFC / floats](https://www.w3.org/TR/CSS22/visuren.html#block-formatting)，检查于 2026-11-06。该文档是工作草案；格式化上下文的现代模型另见上项 CSS Display Level 3。
+> - <code>overflow</code> 的滚动与裁切行为：W3C CSS Overflow Module Level 3，§3：[CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/)，检查于 2026-11-06。
+## 19. 哪些 CSS 单位与响应式布局规则适合当前空间？
 
-~~~html
-<div class="parent">
-  <div class="child">Content</div>
-  <div class="clear"></div>
-</div>
-~~~
+单位先问“相对于什么”，断点再问“谁的尺寸或状态改变时需要重排”。报表页面通常用内容容器宽度和内在轨道适配列；媒体查询响应视口或用户偏好；容器查询让放在侧栏、主栏等不同区域的卡片按自身可用宽度调整。
 
-~~~css
-.clear { clear: both; }
-~~~
+### 常见尺寸单位各自参照什么？
 
-`overflow: hidden` can establish a BFC but also clips overflow and creates a scroll container. Prefer `flow-root` when clipping and scrolling are not wanted. `overflow: clip` does not establish a BFC.
+| 单位 | 参照 | 常见用途 | 需要记住的边界 |
+| --- | --- | --- | --- |
+| <code>px</code> | CSS reference pixel | 边框、精确间距 | 不保证等于一个物理设备像素 |
+| <code>%</code> | 属性定义的参照盒 | 流动宽度、偏移 | 每个属性的百分比基准需分别确认 |
+| <code>em</code> | 通常是元素计算后的字号；用于 <code>font-size</code> 时参照继承字号 | 随文字缩放的局部间距 | 嵌套字号会复合 |
+| <code>rem</code> | 普通声明和容器查询中取根元素计算字号；媒体查询中取初始字号 | 跨组件的一致文字相对尺寸 | 固定根字号会影响用户文字偏好；媒体断点按另一基准解析 |
+| <code>vw</code> / <code>vh</code> | large viewport 的宽、高，即动态地址栏或工具栏收起时的视口 | 视口区域 | 视口不是普通内容盒；可能大于浏览器界面展开时的可见区 |
+| <code>svh</code> / <code>lvh</code> / <code>dvh</code> | 小、大、动态视口高度 | 移动端全高界面 | 需选择是否随浏览器工具栏伸缩 |
+| <code>vmin</code> / <code>vmax</code> | 视口短边 / 长边 | 随方向变化的形状 | 不表示内容容器宽度 |
 
-### Margin collapse / 外边距折叠
+例如根字号为浏览器默认的 <code>16px</code> 时，<code>1.5rem = 24px</code>；若显式把根字号设为 <code>20px</code>，则 <code>5rem = 100px</code>。<code>em</code> 在嵌套字号上可能逐层相乘；<code>rem</code> 统一参照根字号。固定根字号可能覆盖用户对基础文字大小的偏好，因此除非产品有明确缩放策略，通常保留浏览器根字号。CSS <code>1px</code> 是参考像素：缩放、设备像素比和栅格对齐都会影响最终绘制到多少个设备像素。
 
-Adjacent positive vertical margins of in-flow block siblings in the same BFC collapse to the larger value: two `50px` margins create a `50px` gap. A formatting-context boundary prevents a child's margin from collapsing through the container, though the container's own margins still follow its parent context.
+<code>100vw</code> 按视口宽度计算，在传统占位滚动条环境下可能比内容区宽，从而出现横向溢出。若目标是填满内容区，通常让块容器 <code>width: 100%</code> 或保持 <code>width: auto</code>，再由父级布局分配可用空间；若元素同时有 padding 或 border，使用 <code>box-sizing: border-box</code> 避免内容宽度之外再加边缘。
 
-~~~html
-<section>box one</section>
-<section>box two</section>
-~~~
+### 断点由视口还是组件决定？
 
-~~~css
-section { margin: 50px; }
-/* Adjacent positive margins collapse to a 50px gap. */
-~~~
+| 需要响应的变化 | 起点 | 报表中的例子 |
+| --- | --- | --- |
+| 整个页面可用宽度或方向变化 | <code>@media</code> | 小视口将侧栏移到筛选表单上方 |
+| 卡片自身分配宽度变化 | <code>@container</code> | 同一查询卡片在主栏横排，在窄侧栏竖排 |
+| 重复卡片依内容自动换列 | Grid 内在轨道 | 可放几列就排几列，不硬编码设备名 |
 
-Wrap a child in a BFC to keep its margin inside that boundary:
-
-~~~html
-<section>box one</section>
-<div class="bfc"><section>box two</section></div>
-~~~
+桌面断点应服务于内容，不是按“手机/平板/桌面”名称机械设置。报表外框的侧栏与主栏在 <code>48rem</code> 及以下改为单列：
 
 ~~~css
-section { margin: 50px; }
-.bfc { display: flow-root; }
-/* The child's top margin stays inside the BFC; the outer gap is 100px. */
-~~~
-
-A parent's first child's top margin can also collapse through a parent without border, padding, inline content, clearance, or a new formatting context. A border, padding, or formatting-context boundary separates the margins.
-
-### What establishes a BFC? / 哪些条件会建立 BFC？
-
-- `display: flow-root` explicitly establishes a BFC without clipping or scrolling.
-- A block container with `overflow: hidden`, `auto`, or `scroll` establishes a BFC; `overflow: clip` does not.
-- Floats, absolutely positioned boxes, inline blocks, and table cells/captions establish independent formatting contexts for their contents.
-- Flex and grid containers establish their own formatting contexts, not BFCs. Their items do not participate in block margin collapsing or the usual float intrusion rules.
-
-A BFC has defined flow behavior, not the separate rules for stacking and positioned containing blocks. See [CSS position and stacking](#22.%20How%20do%20CSS%20positioning%20and%20stacking%20determine%20where%20an%20element%20appears?%20/%20CSS%20%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%A0%86%E5%8F%A0%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%85%83%E7%B4%A0%E7%9A%84%E6%98%BE%E7%A4%BA%E4%BD%8D%E7%BD%AE%EF%BC%9F).
-
-**Specifications:** [CSS Display: formatting contexts](https://www.w3.org/TR/css-display-3/); [CSS 2.2: block formatting contexts](https://www.w3.org/TR/CSS22/visuren.html#block-formatting); checked 2026-11-05.
-## 19. Which CSS units and responsive layout rules fit the available space? / 哪些 CSS 单位与响应式布局规则适合当前空间？
-
-Choose a unit by its reference: CSS pixels for a stable CSS-space length, percentages for a property-specific containing-block relationship, font-relative units for text-scaled dimensions, and viewport units for viewport-sized regions. Choose the responsive layout mechanism by what the component can measure: Grid's intrinsic tracks for content-driven columns, media queries for viewport conditions, and container queries when a component should react to its own allocated width. / 根据参照选择单位：固定 CSS 空间尺寸使用 CSS 像素，容器关系使用百分比，随文字缩放的尺寸使用字体相对单位，视口区域使用视口单位。再根据布局约束选择响应式机制：内容驱动的列可用 Grid 内在轨道，视口条件可用媒体查询，组件需要响应自身可用宽度时可用容器查询。
-
-### What does each unit measure?
-
-| Unit | Reference | Useful for | Watch for |
-|---|---|---|---|
-| `px` | CSS reference pixel | Borders and precise spacing | It is not necessarily one physical device pixel |
-| `%` | A reference defined by the property | Fluid sizes and offsets | Different properties can use different percentage bases |
-| `em` | Usually the element's computed font size; on `font-size`, the inherited size | Spacing that should scale with text | Nested font-size declarations can compound |
-| `rem` | Root element's font size | Consistent text-relative sizing across components | A fixed root size can ignore user text preferences |
-| `vw` / `vh` | Large viewport dimensions | Viewport-relative sizing | Viewport is not always the available content box |
-| `svh` / `lvh` / `dvh` | Small, large, and dynamic viewport heights | Full-height mobile UI with an explicit browser-chrome policy | Dynamic viewport dimensions can change as browser UI changes |
-| `vmin` / `vmax` | Smaller / larger viewport dimension | A shape that should adapt to orientation | It chooses one viewport axis relationship, not a content width |
-
-A CSS pixel is a reference unit. Browser zoom and device-pixel ratio affect how CSS lengths map to output pixels; writing `1px` does not promise a one-device-pixel stroke. For a property such as `width`, a percentage is generally resolved against a containing block; the percentage basis for other properties is defined separately. `em` usually follows the element's font size for non-`font-size` properties, while its own `font-size` resolves against the inherited font size. `rem` follows the root element.
-
-The default `vh` corresponds to the large viewport. On devices with retractable browser controls, a `100vh` region can extend behind those controls. Use `svh` when fitting the small viewport matters or `dvh` when following the changing viewport matters. See [CSS Values and Units, viewport-relative lengths](https://www.w3.org/TR/css-values-4/#viewport-relative-lengths).
-
-### How should a layout adapt?
-
-| Constraint | Starting point | Example |
-|---|---|---|
-| Component responds to the viewport | Media query | Change design tokens at a breakpoint |
-| Component responds to its own available width | Container query | Reflow a card within a sidebar or grid |
-| Repeating columns should fit content without a fixed breakpoint | Intrinsic Grid sizing | `repeat(auto-fit, minmax(...))` |
-
-A content-driven card grid can fit as many columns as the available width allows:
-
-```css
-.cards {
+.report-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  grid-template-columns: 14rem minmax(0, 1fr);
   gap: 1rem;
 }
-```
 
-A component can instead respond to the width of its query container:
-
-```css
-.card-grid { container-type: inline-size; }
-
-@container (width > 28rem) {
-  .card { display: grid; grid-template-columns: 1fr 2fr; }
+@media (max-width: 48rem) {
+  .report-layout { grid-template-columns: minmax(0, 1fr); }
 }
-```
+~~~
 
-For site-wide tokens, define the breakpoint in one place and reuse the values:
+在媒体查询中，`rem` 按浏览器默认字号或用户字号偏好确定的初始值解析。按默认 `16px` 计算，`48rem = 768px`，`max-width` 包含等号；即使页面写了 `html { font-size: 20px; }`，这个视口断点仍为 `768px`，不是 `960px`。
 
-```css
-:root { --columns: 1; --gap: 0.5rem; }
+若筛选栏按面板自身宽度重排，先建立 inline-size query container，再由容器宽度决定样式。为单独观察轨道，这里只取月份、地区和提交按钮三个项目；每个 label 包含自己的控件，使它们作为一组参与 Grid 布局，状态复选框不在这个精简例中：
 
-@media (min-width: 48rem) {
-  :root { --columns: 2; --gap: 1rem; }
-}
+~~~html
+<section class="report-panel">
+  <form class="report-filter" action="/reports" method="get">
+    <label>月份 <input name="month" type="month" value="2026-10"></label>
+    <label>地区
+      <select name="region">
+        <option value="">全部地区</option>
+        <option value="north">北区</option>
+      </select>
+    </label>
+    <button type="submit">筛选报表</button>
+  </form>
+</section>
+~~~
 
-.cards {
+~~~css
+.report-panel { container-type: inline-size; }
+.report-filter {
   display: grid;
-  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
-  gap: var(--gap);
+  grid-template-columns: 1fr;
 }
-```
 
-Use the available containing block for ordinary full-width content. A child with `width: 100vw` can overflow when the viewport width includes a classic scrollbar while the content box does not. Grid's track choice and intrinsic minimums are covered in [Flexbox and Grid layout](#20.%20Which%20CSS%20layout%20tool%20fits%20fixed%20and%20fluid%20content?%20/%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F).
+@container (inline-size > 30rem) {
+  .report-panel > .report-filter {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: end;
+  }
+}
+~~~
 
-### Constrained text and line clamping / 受限文本与行数裁切
+规则选中 `.report-filter`；它沿祖先查找合格查询容器，由 `.report-panel` 提供尺寸。按根字号 `16px`，面板内容盒宽 `480px` 时仍用基础单列样式，`481px` 才改为三列；普通声明和容器查询里的 `rem` 使用根元素计算字号。若根字号改为 `20px`，这个容器阈值成为 `600px`。建立尺寸查询容器也会改变其尺寸计算约束，使用前应确认组件的布局用途。
 
-For one line, keep the text on one line, clip overflow, and ask the browser to show an ellipsis. For a multiline excerpt, use a line-clamp form supported by the target browsers. Truncation changes what is visible, not the underlying text; ensure the full content remains available when users need to read or copy it. / 单行截断需要保持单行、裁切溢出，并让浏览器绘制省略号。多行摘要则使用目标浏览器支持的行数裁切语法并限制溢出。截断只改变可见内容，不会删除底层文本；若用户需要完整阅读或复制，应提供可访问的完整内容。
+### 用内容和实际宽度决定响应规则
 
-#### Single-line ellipsis
+以前端设计稿为 <code>1000px</code> 画布为例，某个图标宽 <code>200px</code> 对应 <code>200 / (1000 / 100) = 20vw</code>。这只是在该设计宽度下的换算；若图标在窄屏仍需保持可读尺寸，<code>20vw</code> 会继续缩小，通常应该用有上下限的 <code>clamp()</code>，或让布局在内容放不下时重排。
 
-All three properties have distinct roles: `white-space` prevents wrapping, `overflow` clips the extra text, and `text-overflow` requests the ellipsis marker.
+~~~css
+.report-title { font-size: clamp(1.25rem, 2vw + 0.75rem, 2rem); }
+~~~
 
-```css
-.title {
-  width: 100px; /* demonstration constraint; a parent may constrain production content */
-  min-width: 0;
+根字号为 `16px` 时，这个式子分别在视口宽 `400px`、`600px`、`1200px` 得到 `20px`、`24px`、`32px`：两端值触及 `clamp()` 的下限和上限，中间值按视口连续变化。
+
+不需要连续缩放时，用媒体查询表达台阶变化；需要适配组件大小时，用容器查询；内容自身适合决定列数时，可让 Grid 的最小轨道和最大轨道参与计算。相关固定轨道和内在最小尺寸见[Flexbox 与 Grid 布局](#20.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)。
+
+### 受限文本与行数裁切
+
+单行省略号要同时满足：盒子有确定的可用宽度、文字不换行、溢出被裁切。<code>text-overflow</code> 只请求省略符号，不会替你限制宽度或隐藏溢出。Flex/Grid 直接子项目有自动最小尺寸；当裁切放在内层文字上时，外层项目可能需要 <code>min-inline-size: 0</code> 才会缩到轨道宽度。
+
+~~~css
+.toolbar { display: flex; }
+.toolbar > .report-name {
+  flex: 1 1 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-```
+~~~
 
-The box also needs a constrained inline size, which can come from its parent layout. In a Flex or Grid item, `min-width: 0` may be needed so the item's intrinsic minimum does not force it wider than the available track. See [Flexbox and Grid layout](#20.%20Which%20CSS%20layout%20tool%20fits%20fixed%20and%20fluid%20content?%20/%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F).
+这里的 `overflow: hidden` 写在直接 Flex 项目上，会让自动主轴最小尺寸为零，因此无需再写 `min-inline-size: 0`。若把裁切改到项目内部的子元素，就在直接项目上设置该最小尺寸，允许它缩小后再由内层文字显示省略号。
 
-#### Multiline clamp
+多行摘要可用目标浏览器支持的行数裁切形式；若使用兼容语法，目标浏览器仍需验证：
 
-When the target browsers still need the WebKit-compatible form, use a vertical box and an explicit line count.
-
-```css
-.excerpt {
-  width: 100px;
+~~~css
+.report-summary {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
-```
+~~~
 
-CSS Overflow Level 4 defines the unprefixed `line-clamp` shorthand as well as the compatibility syntax. Choose the unprefixed form once it meets the project’s browser support target. Check the actual rendered behavior on overflowing and short content. [CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/#propdef-line-clamp)
+裁切改变可见部分，不会删除文本值。关键信息应提供阅读或复制完整内容的办法；不要把省略号当作唯一披露方式。
 
-`text-overflow` signals that inline content is clipped; it does not itself constrain the element's width or make multi-line clamping happen. For important text, provide a way to view the full value, preserve it in accessible text, and avoid using visual truncation as the only way to disclose essential information.
+### 细边框何时等于一个设备像素？
 
-**Specification:** [CSS Overflow Module Level 4](https://www.w3.org/TR/css-overflow-4/).
+<code>1px</code> 是一个 CSS 像素，效果不必是一条物理设备像素宽的线。有效缩放约为 <code>2×</code> 时，<code>0.5 CSS px</code> 名义上接近一个设备像素，但最终栅格化还受对齐与缩放影响。分数线和阴影是视觉技巧，应在目标设备检查。
 
-### When does a CSS hairline mean one device pixel?
-
-A `1px` border is one CSS pixel; the output can cover more than one device pixel depending on device-pixel ratio, zoom, OS scaling, and subpixel alignment. At an effective 2× scale, a half-CSS-pixel painted line is nominally one device pixel, but rasterization and alignment still vary. Treat fractional widths as a visual technique to test on target devices, not a physical-pixel guarantee.
-
-```css
-.box { position: relative; }
-
-.box::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: 1px;
-  background: #d9d9d9;
-  transform: scaleY(0.5);
-  transform-origin: 0 100%;
+~~~css
+.hairline {
+  box-shadow: 0 0 0 0.5px #d9d9d9;
 }
-```
+~~~
 
-For rounded edges, a fractional shadow is another technique to test:
+> [!info]- 来源
+> - CSS reference pixel、字体相对单位和视口相对单位：W3C CSS Values and Units Level 4，§6，Working Draft（2024-03-12）：[CSS Values and Units](https://www.w3.org/TR/css-values-4/)，检查于 2026-11-06。
+> - 媒体查询中 <code>rem</code> 的初始字号基准：W3C Media Queries Level 5，§1.3，Working Draft（2026-02-19）：[Media Queries Level 5](https://www.w3.org/TR/mediaqueries-5/#units)，检查于 2026-11-06。
+> - 容器查询与 <code>@container</code>：W3C CSS Conditional Rules Level 5，§5，Working Draft（2025-10-30）：[CSS Conditional Level 5](https://www.w3.org/TR/css-conditional-5/#container-queries)，检查于 2026-11-06。
+> - Flex/Grid 自动最小尺寸与轨道宽度：W3C CSS Flexible Box Layout Level 1，§4.5，Candidate Recommendation Draft（2025-10-14）；CSS Grid Layout Level 2，§12，Candidate Recommendation Draft（2025-03-26）：[Flexbox](https://www.w3.org/TR/css-flexbox-1/) · [Grid](https://www.w3.org/TR/css-grid-2/)，检查于 2026-11-06。
+> - <code>text-overflow</code>：W3C CSS Overflow Level 3，§5.1，Working Draft（2025-10-07）；<code>line-clamp</code>：Level 4，§5.1，Working Draft（2023-03-21）。两者仍处于草案阶段，兼容实现需按目标环境确认：[CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/) · [CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/)，检查于 2026-11-06。
+## 20. 固定与流动内容适合哪种 CSS 布局？
 
-```css
-.box { box-shadow: 0 0 0 0.5px #d9d9d9; }
-```
+报表外框常同时有固定侧栏和可伸缩主栏；筛选栏则沿一个方向排列控件；卡片列表要在窄宽度下自动换列。上一章的 `<main>` 承载筛选表单和结果表；本章用它作为主栏。选择 Flexbox 或 Grid 时先描述这些关系：Flexbox 解决一条主轴上的分配和对齐，Grid 显式建立行列轨道。默认情况下，这些布局属性只改变视觉位置，不改变 HTML 的源顺序。
 
-Both techniques depend on output scale and alignment. SVG also rasterizes to device pixels; it does not ensure a physical-pixel stroke.
+![Flexbox composition example](../../archive/front-end/0-1_Learning_Notes/CSS/flex.png)
 
-**Specifications:** [CSS Values and Units Level 4](https://www.w3.org/TR/css-values-4/) defines reference pixels, font-relative and viewport-relative lengths; [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines `devicePixelRatio`; [CSS Containment Level 3](https://www.w3.org/TR/css-contain-3/#container-queries) defines size container queries; [CSS Grid Level 2](https://www.w3.org/TR/css-grid-2/) defines intrinsic track sizing.
-## 20. Which CSS layout tool fits fixed and fluid content? / 固定与流动内容适合哪种 CSS 布局？
+### 固定侧栏与流动结果区
 
-Use Flexbox for a one-dimensional row or column of items and Grid when rows and columns form a two-dimensional structure. For a fixed side with a fluid region, set the fixed track explicitly and make the flexible minimum shrinkable: for example, Grid's `minmax(0, 1fr)` or a Flex item with `min-width: 0`. Choose from the relationship among content, then define what should happen to overflow. / 一行或一列的项目优先考虑 Flexbox；需要同时安排行与列的二维结构时考虑 Grid。固定侧栏加流动区域时，明确固定轨道，并让弹性部分的最小值可以收缩，例如 Grid 的 `minmax(0, 1fr)` 或 Flex 子项的 `min-width: 0`。先根据内容关系选择布局，再规定溢出时如何处理。
+设整个报表外框的内容宽度为 <code>1120px</code>，左侧导航固定为 <code>14rem = 224px</code>，中间留 <code>1rem = 16px</code>（按根字号 <code>16px</code> 计算）。Grid 主栏剩余宽度为：
 
-| Layout problem | Good starting point | Why |
-|---|---|---|
-| Toolbar or row of items | Flexbox | One main axis, with optional wrapping |
-| Page with fixed sidebars and a fluid center | Grid | The three column tracks are explicit |
-| One fixed column and one fluid column | Grid or Flexbox | Both express the fixed/flexible relationship |
-| Content of unknown size centered in a region | Grid or Flexbox | Alignment stays in normal flow |
-| Legacy browser/layout constraints | Float, table, absolute, or inline-block patterns | Recognize their tradeoffs and existing formatting model |
-
-### Fixed and fluid columns / 固定与流动列
-
-For a fixed-width sidebar and flexible content, Grid makes the track relationship explicit. The HTML source order remains meaningful for reading and keyboard navigation:
+> [!example] 轨道宽度演算
+> <code>1120 - 224 - 16 = 880px</code>。为了演算自动最小轨道，假设主栏中有一个合成的不可断长内容，其 min-content 宽度为 <code>920px</code>。使用 <code>1fr</code> 时自动最小轨道可按这 <code>920px</code> 撑开，整行达到 <code>224 + 16 + 920 = 1160px</code>，比外框多 <code>40px</code>；改成 <code>minmax(0, 1fr)</code> 后主栏收缩到 <code>880px</code>，长内容本身仍需裁切、换行或滚动。
 
 ~~~html
-<div class="two-column">
-  <aside>Navigation</aside>
-  <main>Article content</main>
-</div>
-
-<div class="three-column">
-  <aside>Left rail</aside>
-  <main>Main content</main>
-  <aside>Right rail</aside>
+<div class="report-layout">
+  <nav aria-label="报表导航">...</nav>
+  <main>
+    <h1>月度订单</h1>
+    <p class="report-url"><span class="synthetic-token">合成的 920px 不可断内容</span></p>
+  </main>
 </div>
 ~~~
 
 ~~~css
-.two-column {
+.report-layout {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: 14rem minmax(0, 1fr);
   gap: 16px;
 }
-.two-column > main { min-width: 0; }
+.report-url {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.synthetic-token { display: inline-block; width: 920px; }
 ~~~
 
-For a row of items, Flex expresses the same decision:
+<code>minmax(0, 1fr)</code> 让 Grid 轨道本身可收缩，因此这里不需要再给直接 Grid 项目加 <code>min-width: 0</code>。这里第一个不可断的行内盒只会被裁切，合成内容用来展示轨道尺寸变化；真实长标题的省略号见下一节。若要把合成盒换成真实长 URL 并显示全文，应移除 <code>.synthetic-token</code> 的 <code>920px</code> 固定宽度，并从 <code>.report-url</code> 去掉 <code>white-space: nowrap</code> 和裁切，再为链接设置 <code>overflow-wrap: anywhere</code>。若结果是宽数据表，把真实 <code>table</code> 保留在带名称且可由键盘到达的局部横向滚动容器内。
+
+同样的固定/弹性关系也可以用 Flex 表达：
 
 ~~~css
-.two-column { display: flex; gap: 16px; }
-.two-column > aside { flex: 0 0 200px; }
-.two-column > main { flex: 1; min-width: 0; }
+.report-layout { display: flex; gap: 1rem; }
+.report-layout > nav { flex: 0 0 14rem; }
+.report-layout > main { flex: 1 1 0; min-width: 0; }
 ~~~
 
-For fixed side columns around a flexible center:
+选择 Grid 通常更容易说清多个列轨道；只需按主轴分配空间时，Flex 更直接。若导航只是单独一行控件，Flex 更合适；若侧栏、主栏、页头和页脚需要同时安排行与列，Grid 更容易表达二维关系。
+
+### Flexbox 一次处理一个主轴
+
+<code>display: flex</code> 或 <code>inline-flex</code> 让直接子元素成为 Flex 项目；<code>flex-direction</code> 决定主轴方向，交叉轴与其垂直。<code>align-content</code> 用于设置了 <code>flex-wrap: wrap</code> 的容器，并在交叉轴存在剩余空间时分配 flex line；即使最终只有一条 line，也可能移动它。<code>nowrap</code> 容器的单行项目由 <code>align-items</code> / <code>align-self</code> 对齐。
+
+> [!example] 一条 flex line 也能被 align-content 移动
+> 容器高 <code>100px</code>、单行项目高 <code>20px</code> 且 <code>align-content: end</code> 时，<code>flex-wrap: wrap</code> 的单行会移到 <code>y=80px</code>；将容器改成 <code>nowrap</code>，项目仍从 <code>y=0</code> 开始。
+
+| 属性 | 负责什么 |
+| --- | --- |
+| <code>flex-direction</code>、<code>flex-wrap</code> | 主轴方向、是否换行 |
+| <code>justify-content</code> | 主轴上的分布与对齐 |
+| <code>align-items</code>、<code>align-self</code> | 交叉轴上的项目对齐 |
+| <code>align-content</code> | 开启换行时 flex line 的交叉轴分布；单条 line 也可能移动 |
+| <code>gap</code> | 项目之间的间距 |
+| <code>flex-grow</code>、<code>flex-shrink</code>、<code>flex-basis</code> | 可增长因子、可收缩因子、起始尺寸 |
+| <code>order</code> | 仅改变视觉顺序，不改变文档与键盘顺序 |
+
+为精确表示从零基准分配剩余空间，示例显式写 <code>flex: 1 1 0</code>。规范把单数值简写 <code>flex: 1</code> 定义为 <code>1 1 0</code>；常见浏览器的计算样式可能序列化为 <code>0%</code>，在主轴尺寸不确定时，百分比基准可能按内容解析。<code>flex: auto</code> 等于 <code>1 1 auto</code>，以明确的主轴 <code>width</code>/<code>height</code> 为基准，若其值为 <code>auto</code> 则以内容为基准；<code>flex: none</code> 等于 <code>0 0 auto</code>。项目的自动最小尺寸还可能影响最终大小，需结合内容溢出规则判断。
+
+### 用 Flex 排列一行报表导航，并收缩长标题
+
+一排导航、操作按钮和当前报表名只有一条主轴，适合 Flex。若长标题需要让按钮留在原位，允许标题项目收缩，并明确单行裁切规则；内容仍可从真实标题或链接访问。
+
+~~~html
+<nav class="report-toolbar" aria-label="报表导航">
+  <a href="/reports">全部报表</a>
+  <a href="/reports/monthly">月度报表</a>
+  <span class="current-report">2026 年 10 月跨地区订单处理与复核情况汇总</span>
+  <button type="button">导出</button>
+</nav>
+~~~
 
 ~~~css
-.three-column {
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr) 100px;
-  gap: 10px;
+.report-toolbar { display: flex; align-items: center; gap: 16px; }
+.current-report {
+  flex: 1 1 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 ~~~
 
-The middle region's min-content width can otherwise prevent it from shrinking around a long URL, word, or wide table. `min-width: 0` lets the item shrink; it does not decide whether descendants wrap, clip, or scroll. Give content a policy such as `overflow-wrap: anywhere` for long URLs or a scroll container for wide tables. In a column Flex layout the analogous block-axis constraint is often `min-height: 0`.
+两个链接约占 <code>64px</code> 各，导出按钮约 <code>43px</code>，三处 gap 共 <code>48px</code>。在 <code>360px</code> 工具栏里标题可用约 <code>360 - (64 + 64 + 43) - 48 = 141px</code>；自然宽度约 <code>322px</code> 的标题因此显示省略号。换到 <code>1120px</code> 时标题盒约 <code>901px</code>，文本完整显示。具体文字宽度会随字体变化。因为 <code>overflow: hidden</code> 在直接 Flex 项上，自动最小主尺寸已经为零，这里不需要再加 <code>min-width: 0</code>。若标题本身是导航目标，应使用真实链接并保留完整可访问名称，而不是仅呈现截断后的伪文字。
 
-### Why can Flexbox and Grid still overflow? / Flexbox 与 Grid 为什么仍可能溢出？
+### Grid 同时定义行与列
 
-Flex items and Grid tracks have intrinsic minimum sizing behavior. Long words, fixed-size descendants, and wide tables can contribute a content-based minimum larger than the available space. Lower the relevant minimum only when the design permits it; do not treat `min-width: 0` or `minmax(0, 1fr)` as automatic wrapping.
-
-~~~css
-.row { display: flex; }
-.row > main { flex: 1; min-width: 0; }
-.row > main img { max-width: 100%; }
-
-.content-first-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 16rem;
-}
-.content-first-grid > main { min-width: 0; }
-~~~
-
-### Flexbox essentials / Flexbox 要点
-
-`display: flex` or `inline-flex` makes direct children flex items arranged on a main axis and a perpendicular cross axis.
-
-| Container property | Controls |
-|---|---|
-| `flex-direction` | Main-axis direction: row, row-reverse, column, column-reverse |
-| `flex-wrap` | Whether items wrap |
-| `justify-content` | Alignment/distribution along the main axis |
-| `align-items` | Alignment within each line on the cross axis |
-| `align-content` | Distribution of multiple flex lines when cross-axis space is available |
-| `gap` | Space between items |
-
-In a wrapping flex container, `align-content` aligns flex lines when extra cross-axis space exists and can affect a single line. In a `nowrap` container there is only one line, so `align-content` has no effect.
-
-| Item property | Controls |
-|---|---|
-| `flex-grow` / `flex-shrink` / `flex-basis` | Growth, shrinking, and starting size |
-| `flex` | Shorthand for grow, shrink, and basis |
-| `align-self` | Cross-axis alignment of one item |
-| `order` | Visual order without changing document order |
-
-The shorthand and common values differ: `flex: 1` uses a zero basis and shares free space; `flex: auto` starts from the item's size; `flex: none` is inflexible. Do not assume every item can shrink below its minimum content size.
-
-~~~css
-.toolbar { display: flex; justify-content: space-between; gap: 1rem; }
-.centered-flex {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-~~~
-
-### Grid essentials / Grid 要点
-
-`display: grid` or `inline-grid` creates explicit or implicit row and column tracks.
-
-| Container property | Controls |
-|---|---|
-| `grid-template-columns` / `grid-template-rows` | Track sizes |
-| `grid-template-areas` | Named regions |
-| `gap` | Space between tracks |
-| `justify-items` / `align-items` / `place-items` | Item alignment inside cells |
-| `justify-content` / `align-content` / `place-content` | Grid alignment inside the container |
-
-Tracks can be fixed, flexible (`fr`), or content-sized (`min-content`, `max-content`, `auto`). `minmax(min, max)` sets lower and upper track sizing functions; `repeat(auto-fit, minmax(200px, 1fr))` creates responsive tracks. An `fr` track with an automatic minimum can still be held open by min-content contributions; use `minmax(0, 1fr)` when the design needs it to shrink below them, then choose a wrapping or overflow policy.
+<code>display: grid</code> 或 <code>inline-grid</code> 建立显式或隐式行列轨道。固定宽度适合不变的导航，<code>fr</code> 将可用剩余空间按因子分配；<code>minmax(min, max)</code> 给轨道范围。内容关键时，<code>min-content</code>、<code>max-content</code>、<code>auto</code> 和 <code>fit-content()</code> 可参与轨道尺寸计算。
 
 ~~~css
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
 }
 ~~~
 
-The inner `min(100%, 250px)` lets the minimum fit a container narrower than 250px. Named areas can describe page structure:
+每列至少尽量宽 <code>15rem</code>，容器窄于此值时最小项由 <code>min(100%, 15rem)</code> 缩到容器宽度；<code>auto-fit</code> 按可用空间重复轨道，并会折叠没有内容的轨道。沿用上面的 <code>880px</code> 主栏，根字号 <code>16px</code> 时每卡片的设计下限是 <code>15rem = 240px</code>：三列需 <code>3×240 + 2×16 = 752px</code>，四列需 <code>4×240 + 3×16 = 1008px</code>，因此有至少三张卡片时排三列，各约 <code>(880 - 2×16) ÷ 3 = 282.7px</code>。若只有两张卡片，空轨道折叠，两列各约 <code>(880 - 16) ÷ 2 = 432px</code>；容器缩到 <code>220px</code> 时单列下限缩到 <code>100%</code>，宽度为 <code>220px</code>。固定下限应来自卡片内容要求，再决定文字换行、裁切还是局部滚动。
+
+### 居中未知尺寸的内容
+
+如果内容应留在正常流中，用父容器负责二维或单轴对齐。容器必须有多余空间，否则居中没有可分配的空白：
 
 ~~~css
-.page {
+.center-grid {
   display: grid;
-  grid-template-columns: 200px 1fr;
-  grid-template-areas:
-    "header header"
-    "sidebar main"
-    "footer footer";
+  place-items: center;
 }
-.page-header  { grid-area: header; }
-.page-sidebar { grid-area: sidebar; }
-.page-main    { grid-area: main; }
-.page-footer  { grid-area: footer; }
-~~~
 
-Grid item properties include `grid-column`/`grid-row` placement and `justify-self`/`align-self` alignment.
-
-For two-axis alignment in one region, use a [centering rule that works with unknown content size / 尺寸未知时的居中规则](#21.%20How%20do%20you%20center%20an%20element%20whose%20size%20is%20unknown?%20/%20%E5%A6%82%E4%BD%95%E5%B1%85%E4%B8%AD%E5%B0%BA%E5%AF%B8%E6%9C%AA%E7%9F%A5%E7%9A%84%E5%85%83%E7%B4%A0%EF%BC%9F).
-
-### Legacy layout patterns / 旧式布局模式
-
-Use these to understand existing layouts; choose Flex/Grid for ordinary new row, column, and page-structure work.
-
-| Technique | Example pattern | Tradeoff |
-|---|---|---|
-| Float | `float: left` and `float: right` around a center with margins | Needs float containment/clearing and width math; see [BFC containment](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) |
-| Table display | `display: table` / `table-cell` | Cell sizing couples content; visual display does not create semantic table markup |
-| Absolute positioning | Fixed edges with a fluid center | Children leave normal flow; the parent does not grow around them |
-| Inline-block | Two inline-block columns | Whitespace between elements can create a gap; legacy workarounds set parent font-size to 0 |
-
-~~~css
-/* Legacy 3-column float pattern; width math assumes normalized box sizing. */
-.left { float: left; width: 100px; }
-.right { float: right; width: 100px; }
-.center { margin: 0 100px; width: calc(100% - 200px); }
-
-/* Table-style 3-column layout. */
-.table-layout { display: table; width: 100%; }
-.table-layout > * { display: table-cell; }
-
-/* Inline-block two-column layout; restore child text size. */
-.inline-layout { font-size: 0; }
-.inline-layout > * { display: inline-block; vertical-align: top; font-size: 1rem; }
-~~~
-
-Absolute positioning can also form fixed side columns around a center with matching margins and width math. Use it only when out-of-flow placement is intended.
-
-Keep meaningful document order in the HTML. Flex `order`, reverse directions, and Grid placement change visual order without changing source or assistive-technology order; do not use them to repair incorrect content order.
-
-**See also:** [Responsive CSS units and pixels](#19.%20Which%20CSS%20units%20and%20responsive%20layout%20rules%20fit%20the%20available%20space?%20/%20%E5%93%AA%E4%BA%9B%20CSS%20%E5%8D%95%E4%BD%8D%E4%B8%8E%E5%93%8D%E5%BA%94%E5%BC%8F%E5%B8%83%E5%B1%80%E8%A7%84%E5%88%99%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E7%A9%BA%E9%97%B4%EF%BC%9F) for container queries and viewport sizing; [Box sizing](#17.%20How%20does%20CSS%20calculate%20an%20element%27s%20box%20size?%20/%20CSS%20%E5%A6%82%E4%BD%95%E8%AE%A1%E7%AE%97%E5%85%83%E7%B4%A0%E7%9B%92%E5%AD%90%E7%9A%84%E5%B0%BA%E5%AF%B8%EF%BC%9F) for dimensions; [CSS position and stacking](#22.%20How%20do%20CSS%20positioning%20and%20stacking%20determine%20where%20an%20element%20appears?%20/%20CSS%20%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%A0%86%E5%8F%A0%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%85%83%E7%B4%A0%E7%9A%84%E6%98%BE%E7%A4%BA%E4%BD%8D%E7%BD%AE%EF%BC%9F) for out-of-flow placement.
-
-**Specifications:** [CSS Flexible Box Layout](https://www.w3.org/TR/css-flexbox-1/) defines flex sizing and automatic minimum sizes; [CSS Grid Layout](https://www.w3.org/TR/css-grid-2/) defines track sizing and grid-item minimums; [CSS Display](https://www.w3.org/TR/css-display-3/#order-property) describes formatting contexts and visual reordering; checked 2026-11-05.
-## 21. How do you center an element whose size is unknown? / 如何居中尺寸未知的元素？
-
-**Short answer / 简答** — Put the alignment on a Grid or Flexbox parent when the child should take up space in normal flow. For an overlay, anchor it at the center of its containing block and move it back by half of its own width and height. / 子元素应参与正常流时，由 Grid 或 Flexbox 父容器负责对齐。浮层则先把左上角定位在包含块中心，再向回移动自身宽、高的一半。
-
-### In normal flow / 保持正常流
-
-Grid's `place-items: center` aligns a single grid item within its area. Flexbox's `justify-content` and `align-items` center a single flex item along the main and cross axes. Give the container enough space for the alignment to have an effect.
-
-~~~html
-<div class="center-grid"><div>Centered content</div></div>
-~~~
-
-~~~css
-.center-grid { display: grid; place-items: center; }
-~~~
-
-~~~css
 .center-flex {
   display: flex;
   justify-content: center;
@@ -1978,42 +1957,35 @@ Grid's `place-items: center` aligns a single grid item within its area. Flexbox'
 }
 ~~~
 
-### Overlay / 浮层
+<code>place-items: center</code> 将 Grid 项目在格内水平和垂直对齐；Flex 版分别沿主轴和交叉轴对齐。需要覆盖整个区域时，让容器本身拿到预期高度，例如由布局轨道或父级分配，而不是给子项写固定尺寸。
 
-For an overlay, use absolute positioning to set the starting point and a transform to account for the element's own size.
+居中浮层会离开普通流，需要先确定它的包含块，再用定位和 transform 让未知尺寸自身回移；规则见[CSS 定位与堆叠](#21.%20How%20do%20CSS%20positioning%20and%20stacking%20determine%20where%20an%20element%20appears?%20/%20CSS%20%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%A0%86%E5%8F%A0%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%85%83%E7%B4%A0%E7%9A%84%E6%98%BE%E7%A4%BA%E4%BD%8D%E7%BD%AE%EF%BC%9F)。本节讨论正常流居中，浮层的位置由定位机制决定。
 
-~~~css
-.overlay { position: relative; }
-.overlay__content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-~~~
+### 看懂旧布局，不把它当新布局首选
 
-The insets refer to the containing block. The transform percentages refer to the element's own reference box, so the element can be centered without measuring it. The overlay does not contribute to the parent's normal-flow size.
+- **Float** 让文字环绕浮动盒，需处理包含浮动与 margin 交互，见[BFC 如何约束浮动和外边距](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)。
+- **表格布局**可用于维护旧项目；<code>display: table-cell</code> 不会创建 HTML 表格的标题、行列等语义。
+- **Inline-block** 项目会保留源码空白形成的间隙，可能需要处理基线对齐。
+- **绝对定位**能把按钮锚定到卡片角落，但脱离普通流，不会参与父级尺寸计算。
+- **Bootstrap Grid** 是框架约定，不等同于 CSS Grid；Bootstrap 3.4.1 和 4.6 的官方文档都标记版本已结束支持，只作为维护旧项目的版本参考。新项目先确认实际采用的版本，按其官方文档选择类名和断点。
 
-### Older layouts / 旧式布局
+宽订单表保留 HTML 表格结构；若它比结果区宽，把表格放入有名称且可由键盘到达的局部横向滚动区域，不要拆掉行列标题关系。
 
-For a fixed-size overlay, equal insets and auto margins distribute the available space. An older negative-margin variant subtracts half the known size from each coordinate.
+> [!info]- Bootstrap 3.4.1 的旧网格示例
+> 归档示例使用 Bootstrap 3.4.1 的十二列系统：<code>.container</code> / <code>.container-fluid</code>、<code>.row</code>、<code>.col-xs-*</code> / <code>.col-sm-*</code> / <code>.col-md-*</code> / <code>.col-lg-*</code>。其中断点是 <code>&lt;768px</code>、<code>≥768px</code>、<code>≥992px</code>、<code>≥1200px</code>。归档附图来自 Bootstrap 4 的 <code>.col-</code>、<code>.col-xl-*</code> 版本，不能用它推断 Bootstrap 3 的类名和断点。Bootstrap 3 插件 JavaScript 需要先加载 jQuery，纯 CSS 网格不需要；新项目不要把这套旧类名当原生 Grid。
+>
+> ![Bootstrap 4 网格断点原图](../../archive/front-end/0-1_Learning_Notes/CSS/grid.png)
+>
+> 来源：Bootstrap 3.4 CSS 文档，[Grid system](https://getbootstrap.com/docs/3.4/css/#grid) 与 [JavaScript 插件依赖](https://getbootstrap.com/docs/3.4/javascript/)，版本 3.4.1；归档图示为 Bootstrap 4.6 旧文档截取，[Bootstrap 4 Grid](https://getbootstrap.com/docs/4.6/layout/grid/)。两版文档均标记结束支持，检查于 2026-11-06。
 
-~~~css
-.overlay__fixed {
-  position: absolute;
-  width: 200px;
-  height: 100px;
-  inset: 0;
-  margin: auto;
-}
-~~~
+在未使用显式阅读顺序控制时，HTML 源码顺序决定默认阅读和键盘操作顺序。Flex <code>order</code>、<code>row-reverse</code> 和 Grid 指定区域只改变视觉位置；不要用它们修补错误的源顺序。
 
-Table-cell layout can vertically align its contents with `vertical-align: middle`. Use it when maintaining an existing table-style layout. When centering a layout box, distinguish parent alignment from `text-align: center`, which aligns inline content inside a box.
-
-**Related questions / 相关问题** — [Fixed and fluid layouts / 固定与流动布局](#20.%20Which%20CSS%20layout%20tool%20fits%20fixed%20and%20fluid%20content?%20/%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F), [positioning and stacking / 定位与堆叠](#22.%20How%20do%20CSS%20positioning%20and%20stacking%20determine%20where%20an%20element%20appears?%20/%20CSS%20%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%A0%86%E5%8F%A0%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E5%85%83%E7%B4%A0%E7%9A%84%E6%98%BE%E7%A4%BA%E4%BD%8D%E7%BD%AE%EF%BC%9F), [float containment / 包含浮动](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F), [CSS triangles / CSS 三角形](#A%20triangle%20from%20border%20geometry%20/%20%E7%94%A8%E8%BE%B9%E6%A1%86%E5%87%A0%E4%BD%95%E7%94%BB%E4%B8%89%E8%A7%92%E5%BD%A2), [high-DPR hairlines / 高 DPR 细线](#When%20does%20a%20CSS%20hairline%20mean%20one%20device%20pixel?).
-
-**Sources / 来源** — [CSS Box Alignment §7.3](https://www.w3.org/TR/css-align-3/#place-items-property), [CSS Positioned Layout §4.2](https://www.w3.org/TR/css-position-3/#abspos-margins), [CSS Transforms §6](https://www.w3.org/TR/css-transforms-1/#transform-box).
-## 22. How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？
+> [!info]- 来源
+> - Flex line、项目自动最小尺寸、<code>flex</code> 简写和 <code>align-content</code>：W3C CSS Flexible Box Layout Level 1，§4.5、§6、§7.1、§8.4，Candidate Recommendation Draft（2025-10-14）：[CSS Flexbox Level 1](https://www.w3.org/TR/css-flexbox-1/)，检查于 2026-11-06。
+> - Grid 轨道与自动最小轨道尺寸：W3C CSS Grid Layout Level 2，§6.6、§12，Candidate Recommendation Draft（2025-03-26）：[CSS Grid Level 2](https://www.w3.org/TR/css-grid-2/#min-size-auto)，检查于 2026-11-06。
+> - Flex 项目自动最小尺寸与 overflow 值的关系：W3C CSS Overflow Level 3，§3.1，Working Draft（2025-10-07）：[CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/#overflow-properties)，检查于 2026-11-06。
+> - Grid/Flex 视觉顺序与格式化模型：W3C CSS Display Module Level 3，§2（Candidate Recommendation Draft，2026-06-05）：[CSS Display Level 3](https://www.w3.org/TR/css-display-3/)，检查于 2026-11-06。
+## 21. How do CSS positioning and stacking determine where an element appears? / CSS 定位与堆叠如何决定元素的显示位置？
 
 Positioning answers where a box is anchored and whether it occupies normal-flow space; stacking contexts answer which painted group is in front. `relative` and `sticky` preserve the element's flow slot, while `absolute` and `fixed` remove it from normal flow. A large `z-index` only competes inside its stacking context, so coordinates, flow, and paint order must be debugged separately. / 定位决定盒子的锚点及其是否占据普通流空间；堆叠上下文决定绘制的分组谁在前。`relative` 和 `sticky` 保留元素的流位置，`absolute` 和 `fixed` 则脱离普通流。很大的 `z-index` 也只在自身堆叠上下文内参与排序，因此应分别排查坐标、文档流和绘制顺序。
 
@@ -2056,10 +2028,10 @@ A positioned box with a non-`auto` `z-index` creates a stacking context. Fixed a
 |---|---|
 | Why did this sibling move or overlap? | Normal flow and containing blocks |
 | Why did this large z-index stay underneath? | Stacking-context hierarchy |
-| Why did a float not increase its parent's height? | Block formatting context; see [BFC and flow containment](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) |
+| Why did a float not increase its parent's height? | Block formatting context; see [BFC and flow containment](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) |
 
-**Specification:** [CSS Positioned Layout Level 3](https://www.w3.org/TR/css-position-3/) defines position, insets, sticky scrollports, and stacking behavior. See [BFC and flow containment](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) for the separate flow boundary; [CSS visibility](#23.%20What%20changes%20when%20an%20element%20is%20visually%20hidden%20with%20CSS?%20/%20%E7%94%A8%20CSS%20%E9%9A%90%E8%97%8F%E5%85%83%E7%B4%A0%E6%97%B6%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88%E5%8F%98%E5%8C%96%EF%BC%9F) for hidden-state effects; [CSS transitions and animations](#24.%20When%20should%20CSS%20use%20a%20transition%20or%20a%20keyframe%20animation?%20/%20CSS%20%E5%BA%94%E5%9C%A8%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20transition%20%E6%88%96%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F) for motion and profiling; and [rendering pipeline and forced layout](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) when a style change affects layout or paint.
-## 23. What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？
+**Specification:** [CSS Positioned Layout Level 3](https://www.w3.org/TR/css-position-3/) defines position, insets, sticky scrollports, and stacking behavior. See [BFC and flow containment](#18.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) for the separate flow boundary; [CSS visibility](#22.%20What%20changes%20when%20an%20element%20is%20visually%20hidden%20with%20CSS?%20/%20%E7%94%A8%20CSS%20%E9%9A%90%E8%97%8F%E5%85%83%E7%B4%A0%E6%97%B6%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88%E5%8F%98%E5%8C%96%EF%BC%9F) for hidden-state effects; [CSS transitions and animations](#23.%20When%20should%20CSS%20use%20a%20transition%20or%20a%20keyframe%20animation?%20/%20CSS%20%E5%BA%94%E5%9C%A8%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20transition%20%E6%88%96%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F) for motion and profiling; and [rendering pipeline and forced layout](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) when a style change affects layout or paint.
+## 22. What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？
 
 Choose a hiding method by the state users should experience. `display: none` removes the box from layout and generally from the accessibility tree; `visibility: hidden` keeps layout space but suppresses visibility; `opacity: 0` makes a rendered box transparent while it can still receive focus and pointer input. Fading is only visual: also manage focus, input, and accessible state while the element is hidden. / 根据用户应体验的状态选择隐藏方式。`display: none` 会从布局中移除盒子，通常也从无障碍树中移除；`visibility: hidden` 保留布局空间但隐藏可见性；`opacity: 0` 让已布局的盒子透明，但它仍可能接收焦点和指针输入。淡出只改变视觉效果；元素隐藏时还要管理焦点、输入和无障碍状态。
 
@@ -2108,7 +2080,7 @@ The element's opacity is not inherited, but opacity composites the element and i
 Check target-browser support. Move focus and update accessible state as soon as the close action occurs; do not leave a transparent control interactive while waiting for `display` to switch. For a reduced-motion preference, shorten or remove nonessential movement and fades.
 
 **Specifications:** [CSS Display](https://www.w3.org/TR/css-display-3/), [CSS Color transparency](https://www.w3.org/TR/css-color-4/#transparency), [CSS Transitions Level 2](https://www.w3.org/TR/css-transitions-2/#transition-behavior-property), and [Media Queries: reduced motion](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-motion).
-## 24. When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？
+## 23. When should CSS use a transition or a keyframe animation? / CSS 应在何时使用 transition 或关键帧动画？
 
 A transition interpolates between two computed states after a property change, such as a hover or class toggle. A keyframe animation defines a sequence that can start independently, repeat, reverse, pause, or fill after its last keyframe. Prefer a transition for a simple state change; use keyframes for a multi-step or looping sequence. Respect reduced-motion preferences, and profile the actual effect instead of assuming a property is free to animate. / transition 在属性变化后于两个计算状态之间插值，例如 hover 或 class 切换。关键帧动画定义一段可独立启动、重复、反向、暂停或保留结束状态的序列。简单状态变化优先 transition；多阶段或循环序列使用关键帧。尊重减少动态效果偏好，并针对真实效果做性能分析，不要假定某属性动画没有成本。
 
@@ -2201,7 +2173,7 @@ A change can require style recalculation, layout, paint, rasterization, and comp
 This example reduces duration for selected motion. Choose a treatment that preserves necessary state feedback and avoids unexpected movement; not all motion should be removed indiscriminately.
 
 **Specifications:** [CSS Transitions Level 2](https://www.w3.org/TR/css-transitions-2/), [CSS Animations Level 1](https://www.w3.org/TR/css-animations-1/), [CSS Transforms Level 1](https://www.w3.org/TR/css-transforms-1/), [CSS Will Change](https://www.w3.org/TR/css-will-change-1/), and [Media Queries: reduced motion](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-motion).
-## 25. Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？
+## 24. Which DOM geometry API answers which measurement question? / 哪个 DOM 几何 API 能回答哪种测量问题？
 
 These DOM APIs measure different boxes and coordinate spaces. Use `offset*` values for integer, untransformed layout dimensions; `client*` for the inner padding area; `scroll*` for scrolling extent and position; and `getBoundingClientRect()` for a transformed viewport-relative rectangle. A read may force pending style or layout work to finish, but does not necessarily cause a new layout when the measurements are already current. / 这些 DOM API 测量的盒子和坐标空间不同。`offset*` 提供整数、未变换的布局尺寸；`client*` 提供内侧 padding 区域；`scroll*` 提供滚动范围和位置；`getBoundingClientRect()` 提供相对于视口且受变换影响的矩形。读取可能迫使尚未完成的样式或布局工作同步完成，但如果测量值已经是最新的，不一定会触发新布局。
 
@@ -2291,12 +2263,12 @@ This checks rectangle overlap, not whether the element is occluded, transparent,
 
 ### Measurement without repeated layout work
 
-For an occasional measurement, choose the API whose box and coordinate system match the task. For threshold-based visibility such as lazy loading or analytics, prefer [IntersectionObserver](#26.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F) over repeatedly polling geometry. It reports asynchronously and is not a blanket guarantee that no layout work occurs.
+For an occasional measurement, choose the API whose box and coordinate system match the task. For threshold-based visibility such as lazy loading or analytics, prefer [IntersectionObserver](#25.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F) over repeatedly polling geometry. It reports asynchronously and is not a blanket guarantee that no layout work occurs.
 
 A write followed by a geometry read can force pending layout; alternating writes and reads in a loop can repeat that work. See [Rendering pipeline and forced layout](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the read/write batching example.
 
 **Specifications:** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.
-## 26. How should a browser page lazy-load images without hurting LCP or layout stability? / 如何延迟加载图片而不损害 LCP 或布局稳定性？
+## 25. How should a browser page lazy-load images without hurting LCP or layout stability? / 如何延迟加载图片而不损害 LCP 或布局稳定性？
 
 For an ordinary off-screen image, prefer native `loading="lazy"` with a real `src` or `srcset`; the browser chooses its deferral threshold. Reserve the image's aspect ratio with `width`/`height` or CSS `aspect-ratio`. Use `IntersectionObserver` only when loading needs a custom root, threshold, or non-image action, and do not defer an image likely to be the page's LCP element. / 普通视口外图片优先使用带真实 `src` 或 `srcset` 的原生 `loading="lazy"`，由浏览器决定何时开始加载。通过 `width`/`height` 或 CSS `aspect-ratio` 预留图片纵横比。只有需要自定义 root、阈值或执行非图片操作时才使用 `IntersectionObserver`，且不要延迟可能成为页面 LCP 元素的图片。
 
@@ -2335,7 +2307,7 @@ A positive `rootMargin` can begin work before the target reaches the root. `thre
 
 ### Legacy scroll fallback / 旧环境滚动回退
 
-Use a scroll/resize fallback only when the required target browser lacks `IntersectionObserver`. It reads viewport geometry and should be throttled; geometry reads can force pending layout when state is dirty, but do not necessarily do so. See [DOM geometry APIs](#25.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F) for the exact box and coordinate returned, and [Debounce and throttle / 防抖与节流](#63.%20When%20should%20a%20UI%20use%20Lodash%20instead%20of%20a%20native%20JavaScript%20operation?%20/%20%E7%95%8C%E9%9D%A2%E4%BD%95%E6%97%B6%E5%BA%94%E4%BD%BF%E7%94%A8%20Lodash%20%E8%80%8C%E4%B8%8D%E6%98%AF%E5%8E%9F%E7%94%9F%20JavaScript%EF%BC%9F) for rate-limiting options.
+Use a scroll/resize fallback only when the required target browser lacks `IntersectionObserver`. It reads viewport geometry and should be throttled; geometry reads can force pending layout when state is dirty, but do not necessarily do so. See [DOM geometry APIs](#24.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F) for the exact box and coordinate returned, and [Debounce and throttle / 防抖与节流](#62.%20When%20should%20a%20UI%20use%20Lodash%20instead%20of%20a%20native%20JavaScript%20operation?%20/%20%E7%95%8C%E9%9D%A2%E4%BD%95%E6%97%B6%E5%BA%94%E4%BD%BF%E7%94%A8%20Lodash%20%E8%80%8C%E4%B8%8D%E6%98%AF%E5%8E%9F%E7%94%9F%20JavaScript%EF%BC%9F) for rate-limiting options.
 
 ~~~javascript
 function checkImages() {
@@ -2368,7 +2340,7 @@ checkImages();
 Do not blindly lazy-load the first visible or likely LCP image: delaying its fetch can increase LCP. Reserve image space using intrinsic dimensions or an aspect ratio to reduce layout shift; choose an appropriate responsive candidate with `srcset`/`sizes`, rather than loading an oversized source. A placeholder can avoid a blank region but does not replace dimension reservation. Measure the actual route and device; see [browser performance measurement](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) and the [URL-to-pixels path](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F).
 
 **Standards / 规范：** [WHATWG image element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element); [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes); [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/); [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/), checked 2026-11-05.
-## 27. When should small images be combined into a CSS sprite? / 何时应把多个小图片合并为 CSS Sprite？
+## 26. When should small images be combined into a CSS sprite? / 何时应把多个小图片合并为 CSS Sprite？
 
 A CSS sprite places several small images in one file and reveals each image with a fixed-size element and `background-position`. It can reduce separate image requests in some delivery setups, but couples cache invalidation and coordinates: changing one icon replaces the combined asset. With HTTP/2 multiplexing, request count alone is not enough reason to create a sprite; compare transfer bytes, cache reuse, and maintenance cost for the actual assets. / CSS Sprite 把多个小图放进一个文件，再通过固定尺寸元素和 `background-position` 显示其中一块。它在某些传输方式下可以减少独立图片请求，但会把缓存失效与坐标耦合起来：改动一个图标就要替换整个合并资源。HTTP/2 支持多路复用，仅凭请求数量不足以决定是否合并；应结合实际资源的传输字节、缓存复用和维护成本比较。
 
@@ -2387,7 +2359,7 @@ The offset exposes the desired sprite rectangle. Centralize coordinates or gener
 HTTP/2 multiplexes streams over a connection, so multiple assets need not imply one connection per image. That does not make every request free or settle the trade-off: measure the emitted files and cache behavior. See [HTTP protocols and caching](../../engineering-foundations/networking/http-protocols-and-websockets.md) for the shared transport explanation.
 
 **References:** [CSS Backgrounds and Borders: background positioning](https://www.w3.org/TR/css-backgrounds-3/#the-background-position), [HTTP/2 RFC 9113, streams and multiplexing](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing).
-## 28. JavaScript 值如何转换、比较，并成为属性键？
+## 27. JavaScript 值如何转换、比较，并成为属性键？
 
 报表结果里，金额 0、缺失的数组位置、两个字段相同的记录，看起来都像“没有数据”或“同一条记录”；JavaScript 会按不同规则处理它们。本章从一次结果导入开始，先分清值与对象身份，再说明比较和属性键转换。后续章节沿用这组输入：
 
@@ -2482,7 +2454,7 @@ Object.is(+0, -0);              // false
 new Set([NaN, NaN, -0, +0]).size; // 2
 ~~~
 
-`Map` 和 `Set` 使用 SameValueZero（同值零），所以它们既能识别重复 `NaN`，也会把 `+0` 和 `-0` 视为同一个键或成员。集合章节把这个规则用于报表索引和去重，见[何时使用 Map、Set 或普通对象？](#29.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
+`Map` 和 `Set` 使用 SameValueZero（同值零），所以它们既能识别重复 `NaN`，也会把 `+0` 和 `-0` 视为同一个键或成员。集合章节把这个规则用于报表索引和去重，见[何时使用 Map、Set 或普通对象？](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
 
 `Number` 采用 IEEE 754 `binary64`（二进制 64 位浮点）；`0.1` 和 `0.2` 这样的十进制小数通常没有精确的有限二进制表示。比较结果是否可接受需要由金额精度、容差和舍入规则共同决定，不能把某个固定 `epsilon`（误差容限）当作所有领域的通用答案。
 
@@ -2522,7 +2494,7 @@ count;        // 1
 profile.name; // "Grace"
 ~~~
 
-这也解释了浅拷贝为何会共享嵌套对象：新数组或新记录只复制了里面的对象引用。数组变异、复制和空位规则见[数组操作怎样处理空位与复制？](#30.%20JavaScript%20%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%A9%BA%E4%BD%8D%E3%80%81%E4%BF%AE%E6%94%B9%E4%B8%8E%E5%A4%8D%E5%88%B6%EF%BC%9F)；需要隔离整张对象图时见[如何安全地深拷贝 JavaScript 值？](#31.%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E5%9C%B0%E6%B7%B1%E6%8B%B7%E8%B4%9D%20JavaScript%20%E5%80%BC%EF%BC%9F)。
+这也解释了浅拷贝为何会共享嵌套对象：新数组或新记录只复制了里面的对象引用。数组变异、复制和空位规则见[数组操作怎样处理空位与复制？](#29.%20JavaScript%20%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%A9%BA%E4%BD%8D%E3%80%81%E4%BF%AE%E6%94%B9%E4%B8%8E%E5%A4%8D%E5%88%B6%EF%BC%9F)；需要隔离整张对象图时见[如何安全地深拷贝 JavaScript 值？](#30.%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E5%9C%B0%E6%B7%B1%E6%8B%B7%E8%B4%9D%20JavaScript%20%E5%80%BC%EF%BC%9F)。
 
 ### 类型检查能回答什么，不能证明什么
 
@@ -2560,7 +2532,7 @@ dictionary[first] = "first object";
 dictionary[retry]; // "first object"：两个对象默认都转成 "[object Object]"
 ~~~
 
-如果键需要保持对象身份、数字与字符串必须区分，或需要任意类型的键，使用 `Map`。若普通对象确实是字典，可用 `Object.create(null)` 去掉继承原型行为，并用 `Object.hasOwn` 检查自有属性。键值集合的选择见[何时使用 Map、Set 或普通对象？](#29.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
+如果键需要保持对象身份、数字与字符串必须区分，或需要任意类型的键，使用 `Map`。若普通对象确实是字典，可用 `Object.create(null)` 去掉继承原型行为，并用 `Object.hasOwn` 检查自有属性。键值集合的选择见[何时使用 Map、Set 或普通对象？](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
 
 ### 枚举与复制属性时，先看 API 选中了什么
 
@@ -2597,7 +2569,7 @@ const merged = { ...defaults, ...overrides };
 // merged 是新对象；retries 为 4，defaults 不变
 ~~~
 
-这些方法适合检查或组装属性记录，不会深拷贝嵌套对象。数组的复制、迭代输入与空位结果见[数组操作怎样处理空位与复制？](#30.%20JavaScript%20%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%A9%BA%E4%BD%8D%E3%80%81%E4%BF%AE%E6%94%B9%E4%B8%8E%E5%A4%8D%E5%88%B6%EF%BC%9F)；复杂对象图的隔离见[如何安全地深拷贝 JavaScript 值？](#31.%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E5%9C%B0%E6%B7%B1%E6%8B%B7%E8%B4%9D%20JavaScript%20%E5%80%BC%EF%BC%9F)。
+这些方法适合检查或组装属性记录，不会深拷贝嵌套对象。数组的复制、迭代输入与空位结果见[数组操作怎样处理空位与复制？](#29.%20JavaScript%20%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%A9%BA%E4%BD%8D%E3%80%81%E4%BF%AE%E6%94%B9%E4%B8%8E%E5%A4%8D%E5%88%B6%EF%BC%9F)；复杂对象图的隔离见[如何安全地深拷贝 JavaScript 值？](#30.%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E5%9C%B0%E6%B7%B1%E6%8B%B7%E8%B4%9D%20JavaScript%20%E5%80%BC%EF%BC%9F)。
 
 ### 缺失属性默认值与解构
 
@@ -2675,9 +2647,9 @@ capture`label: ${untrusted}`;
 > - 带标签模板调用参数的组成：[ECMAScript 2026 §13.3.11 Tagged Templates](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-tagged-templates)。
 > - React 条件渲染中 0 会作为结果呈现：[React 文档 Conditional Rendering](https://react.dev/learn/conditional-rendering)，访问于 2026-11-06。
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
-## 29. 何时使用 Map、Set 或普通对象？
+## 28. 何时使用 Map、Set 或普通对象？
 
-报表导入有一列是业务记录，有些记录可能重试；程序既要用 `Map`（映射）按 `reportId` 找最新值，也要为某个对象实例保存临时状态。选择数据结构前，先确定“相同”指什么、键需要什么类型，以及数据是否要按插入顺序遍历。对象字段与身份的比较规则见[JavaScript 值如何转换、比较，并成为属性键？](#28.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)。
+报表导入有一列是业务记录，有些记录可能重试；程序既要用 `Map`（映射）按 `reportId` 找最新值，也要为某个对象实例保存临时状态。选择数据结构前，先确定“相同”指什么、键需要什么类型，以及数据是否要按插入顺序遍历。对象字段与身份的比较规则见[JavaScript 值如何转换、比较，并成为属性键？](#27.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)。
 
 用一次导入中的两条记录说明这些选择：
 
@@ -2798,16 +2770,16 @@ Object.hasOwn(record, "toString"); // false
 
 ### 成本和生命周期也属于选择条件
 
-规范要求 `Map`、`Set` 和弱集合的平均访问时间相对集合大小为次线性，但不规定具体哈希表或常数时间实现。总体成本还取决于外围算法：如果过滤 n 个数组项时每次都新建同一张查找表，建表成本会被重复支付。需要比较数组去重、批量移除和排序的结果时，见[数组操作怎样处理空位与复制？](#30.%20JavaScript%20%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%A9%BA%E4%BD%8D%E3%80%81%E4%BF%AE%E6%94%B9%E4%B8%8E%E5%A4%8D%E5%88%B6%EF%BC%9F)。
+规范要求 `Map`、`Set` 和弱集合的平均访问时间相对集合大小为次线性，但不规定具体哈希表或常数时间实现。总体成本还取决于外围算法：如果过滤 n 个数组项时每次都新建同一张查找表，建表成本会被重复支付。需要比较数组去重、批量移除和排序的结果时，见[数组操作怎样处理空位与复制？](#29.%20JavaScript%20%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%A9%BA%E4%BD%8D%E3%80%81%E4%BF%AE%E6%94%B9%E4%B8%8E%E5%A4%8D%E5%88%B6%EF%BC%9F)。
 
-普通 `Map` 强持有键和值，`Set` 强持有成员，直到删除条目或集合自身不再可达。对象实例的元数据若不应延长键对象寿命，可考虑 `WeakMap`（弱映射）；它不提供遍历、`size` 或确定的清理时间，详见[弱集合与弱引用能保证什么？](#40.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
+普通 `Map` 强持有键和值，`Set` 强持有成员，直到删除条目或集合自身不再可达。对象实例的元数据若不应延长键对象寿命，可考虑 `WeakMap`（弱映射）；它不提供遍历、`size` 或确定的清理时间，详见[弱集合与弱引用能保证什么？](#39.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 > [!info]- 来源
 > - Map / Set 的插入顺序、SameValueZero 和集合运算：[ECMAScript 2026 §24.1–24.2](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)。
 > - Map / Set 平均访问时间的规范下限：[ECMAScript 2026 §24.1–24.2 implementation requirements](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)；类 Set 参数的读取方式：[GetSetRecord](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-getsetrecord)。
 > - SameValueZero 的定义：[ECMAScript 2026 §7.2.10](https://tc39.es/ecma262/2026/multipage/abstract-operations.html#sec-samevaluezero)。
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
-## 30. JavaScript 数组操作如何处理空位、修改与复制？
+## 29. JavaScript 数组操作如何处理空位、修改与复制？
 
 报表结果既可能包含同一业务记录的重复输入，也可能因上游筛选留下稀疏位置。数组操作的结果取决于它读取的是值还是存在的索引、是否修改原数组，以及复制时是否只复制一层。本章复用同一组输入；第二个位置是刻意保留的空位，第三个位置是重复业务 `id` 的更新记录：
 
@@ -2826,7 +2798,7 @@ const rows = [first, , retry];
 
 ### 去重前先选“相同”的定义
 
-对于原始值，`Set`（集合）按 `SameValueZero`（同值零）保留首次出现顺序。`NaN` 会和 `NaN` 合并，`+0` 与 `-0` 合并；对象按身份去重，字段相同但引用不同的对象仍会保留。相等规则和 `Map`（映射）/ `Set` 的键行为见[何时使用 Map、Set 或普通对象？](#29.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
+对于原始值，`Set`（集合）按 `SameValueZero`（同值零）保留首次出现顺序。`NaN` 会和 `NaN` 合并，`+0` 与 `-0` 合并；对象按身份去重，字段相同但引用不同的对象仍会保留。相等规则和 `Map`（映射）/ `Set` 的键行为见[何时使用 Map、Set 或普通对象？](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
 
 ~~~javascript
 [...new Set([1, 1, NaN, NaN, -0, +0])]; // [1, NaN, 0]
@@ -3019,7 +2991,7 @@ Array.of(3); // [3]：参数本身作为元素
 Array.of(1, 2, 3); // [1, 2, 3]
 ~~~
 
-类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#53.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#44.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#52.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#43.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
 
 ### 复制数组只复制一层
 
@@ -3038,7 +3010,7 @@ const spreadCopy = [...sparse];
 0 in spreadCopy; // true：展开生成了显式 undefined
 ~~~
 
-对象展开与数组展开不是同一协议。数组展开消费迭代器；`Object.assign` 和对象展开读取自有可枚举属性。两者都只是浅复制，且对 `getter`、`setter` 的影响不同；见[JavaScript 值如何转换、比较，并成为属性键？](#28.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)。
+对象展开与数组展开不是同一协议。数组展开消费迭代器；`Object.assign` 和对象展开读取自有可枚举属性。两者都只是浅复制，且对 `getter`、`setter` 的影响不同；见[JavaScript 值如何转换、比较，并成为属性键？](#27.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)。
 
 `concat` 返回浅层新数组，还会检查 `Symbol.isConcatSpreadable`，所以数组展开与 `concat` 不总是等价：展开要求输入可迭代；`concat` 则可展开带有长度和索引的类数组对象。
 
@@ -3131,7 +3103,7 @@ maxOfNumbers([, 7]); // NaN：数组迭代器把空位读成 undefined
 > - Set 去重、SameValueZero 与平均访问时间：[ECMAScript 2026 §24.1–24.2 Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)；[§7.2.10 SameValueZero](https://tc39.es/ecma262/2026/multipage/abstract-operations.html#sec-samevaluezero)。
 > - Math.max 和实参处理：[ECMAScript 2026 §21.3.2.24](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math.max)。
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
-## 31. 如何安全地深拷贝 JavaScript 值？
+## 30. 如何安全地深拷贝 JavaScript 值？
 
 报表要保存一份可独立编辑的快照时，浅复制只会新建外层数组或对象，嵌套 `owner` 仍可能与当前界面共享。所谓“深拷贝”没有脱离数据模型的通用实现：先确认输入类型、循环引用、共享子对象、原型行为和所有权边界，再选择 `JSON`、`structuredClone`（结构化克隆）或范围受限的手写复制器。
 
@@ -3309,7 +3281,7 @@ deepCopy(extendedArray).note; // "extra"
 > - 对象属性读取（包括 getter 执行）及反序列化：[WHATWG HTML Living Standard §2.7.4](https://html.spec.whatwg.org/multipage/structured-data.html#structuredserializeinternal) 与 [§2.7.7 StructuredDeserialize](https://html.spec.whatwg.org/multipage/structured-data.html#structureddeserialize)。
 > - `Date.prototype.getTime()` 的时间值读取：[ECMAScript 2026 §21.4.4.23](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-date.prototype.gettime)。
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
-## 32. How do var, let, and const differ? / var、let 与 const 有什么区别？
+## 31. How do var, let, and const differ? / var、let 与 const 有什么区别？
 
 **Core answer / 核心回答：** Choose a declaration by its scope and whether its binding must be reassigned. var is function-scoped and starts as undefined when its binding is created. let and const are block-scoped and cannot be read before their declaration initializes them. const prevents rebinding; it does not freeze an object. / 根据作用域和是否需要重新绑定来选择声明方式。var 是函数作用域，绑定创建时初值为 undefined。let 和 const 是块级作用域，声明初始化前不可访问。const 禁止重新绑定，但不会冻结对象。
 
@@ -3364,8 +3336,8 @@ Across hosts, globalThis refers to the current global object. A browser window n
 
 See MDN on the [global object](https://developer.mozilla.org/en-US/docs/Glossary/Global_object) for the host boundary.
 
-The binding rules for var, let, and const are specified in [ECMAScript statements and declarations](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html); the environment model, including [module environment records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records), is described in [ECMAScript execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html). For how outer lexical environments form the name-lookup chain and how a closure continues to access a binding, see [Scope and Closure / 作用域与闭包](#33.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F). / var、let、const 的绑定规则见 [ECMAScript 语句与声明](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html)；包括[模块环境记录](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records)在内的环境模型见 [ECMAScript 执行上下文](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html)。外层词法环境如何形成名称查找链、闭包如何继续访问绑定，见[作用域与闭包](#33.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F)。
-## 33. How do lexical scope and closures preserve access to state? / 词法作用域与闭包如何保留对状态的访问？
+The binding rules for var, let, and const are specified in [ECMAScript statements and declarations](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html); the environment model, including [module environment records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records), is described in [ECMAScript execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html). For how outer lexical environments form the name-lookup chain and how a closure continues to access a binding, see [Scope and Closure / 作用域与闭包](#32.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F). / var、let、const 的绑定规则见 [ECMAScript 语句与声明](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html)；包括[模块环境记录](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records)在内的环境模型见 [ECMAScript 执行上下文](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html)。外层词法环境如何形成名称查找链、闭包如何继续访问绑定，见[作用域与闭包](#32.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F)。
+## 32. How do lexical scope and closures preserve access to state? / 词法作用域与闭包如何保留对状态的访问？
 
 **Core answer / 核心回答：** JavaScript resolves a name from the function’s definition environment outward, not from its caller. A closure is a function that keeps access to bindings from that lexical environment. It reads the binding’s current value, so state can remain observable after the outer call returns. / JavaScript 按函数的定义环境向外查找名称，不按调用者的位置查找。闭包让函数继续访问定义时外层词法环境中的绑定；它读取绑定的当前值，因此外层函数返回后状态仍可被观察。
 
@@ -3492,8 +3464,8 @@ An outer call returning does not make a captured binding immediately unusable. A
 
 Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; MDN discusses [closure performance considerations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#performance_considerations); the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
-**See also:** [JavaScript Basics / JavaScript 基础](#32.%20How%20do%20var,%20let,%20and%20const%20differ?%20/%20var%E3%80%81let%20%E4%B8%8E%20const%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) explains the binding and temporal-dead-zone rules that determine which environment a closure can capture. Ordinary function this is determined by call form, not lexical name lookup; see [Function this and Binding / 函数 this 与绑定](#35.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
-## 34. How do JavaScript objects find and organize properties? / JavaScript 对象如何查找和组织属性？
+**See also:** [JavaScript Basics / JavaScript 基础](#31.%20How%20do%20var,%20let,%20and%20const%20differ?%20/%20var%E3%80%81let%20%E4%B8%8E%20const%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) explains the binding and temporal-dead-zone rules that determine which environment a closure can capture. Ordinary function this is determined by call form, not lexical name lookup; see [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
+## 33. How do JavaScript objects find and organize properties? / JavaScript 对象如何查找和组织属性？
 
 **Core answer / 核心回答：** An object first checks its own properties, then follows its internal prototype link until a match or the end of the chain. Constructor prototypes supply a default prototype to instances created with new, while instance fields, prototype methods, static members, and property descriptors control where properties live and how they behave. / 对象先查自有属性，再沿内部原型链接向上查找，直到找到匹配属性或到达链尾。构造函数的 prototype 为 new 创建的实例提供默认原型；实例字段、原型方法、静态成员和属性描述符决定属性的位置与行为。
 
@@ -3610,8 +3582,8 @@ profile._name; // "Jo"
 
 V8 uses HiddenClasses (also called Maps) to track object shapes and optimize property access. Objects initialized with the same named properties in the same order can share a shape in V8. This is an implementation detail, not an ECMAScript guarantee; optimize layouts only when profiling identifies a real cost. / V8 使用 HiddenClasses（也称 Maps）跟踪对象形状并优化属性访问。在 V8 中，以相同顺序初始化相同命名属性的对象可能共享形状。这是实现细节，不是 ECMAScript 保证；只有性能分析发现实际成本时才优化布局。
 
-See [Fast properties in V8](https://v8.dev/blog/fast-properties). For how a call supplies this and how new creates an instance, see [Function this and Binding / 函数 this 与绑定](#35.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F) and [Construction with new / 使用 new 构造对象](#36.%20What%20does%20new%20do%20when%20it%20constructs%20an%20object?%20/%20new%20%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%E6%97%B6%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F).
-## 35. How does a JavaScript function get its this value? / JavaScript 函数的 this 值如何确定？
+See [Fast properties in V8](https://v8.dev/blog/fast-properties). For how a call supplies this and how new creates an instance, see [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F) and [Construction with new / 使用 new 构造对象](#35.%20What%20does%20new%20do%20when%20it%20constructs%20an%20object?%20/%20new%20%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%E6%97%B6%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F).
+## 34. How does a JavaScript function get its this value? / JavaScript 函数的 this 值如何确定？
 
 **Core answer / 核心回答：** An ordinary function gets its this value from the call form: obj.method() supplies obj, call/apply supply an explicit receiver, and bind creates a bound function. A plain strict-function call uses undefined. An arrow function instead captures this from its surrounding lexical environment and cannot be rebound. / 普通函数的 this 由调用方式决定：obj.method() 以 obj 为接收者，call/apply 显式提供接收者，bind 创建绑定函数；严格函数的普通调用中 this 为 undefined。箭头函数从外层词法环境捕获 this，不能重新绑定。
 
@@ -3667,7 +3639,7 @@ button.addEventListener("click", event => {
 });
 ~~~
 
-Lexical name lookup and lexical this are separate ideas: closures capture outer bindings, while an ordinary function’s this depends on its invocation. See [Scope and Closure / 作用域与闭包](#33.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F).
+Lexical name lookup and lexical this are separate ideas: closures capture outer bindings, while an ordinary function’s this depends on its invocation. See [Scope and Closure / 作用域与闭包](#32.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F).
 
 ### Why a small bind helper is not a polyfill / 简化 bind 模型为何不是 polyfill
 
@@ -3700,7 +3672,7 @@ function callWithObjectReceiver(fn, receiver, ...args) {
 ~~~
 
 Ordinary function call behavior is specified by ECMAScript’s [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call), [Function.prototype.apply](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.apply), [Function.prototype.bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind), and [arrow-function definitions](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions). / 普通函数调用行为见 ECMAScript 的 [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call)、[Function.prototype.apply](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.apply)、[Function.prototype.bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind) 和[箭头函数定义](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions)。
-## 36. What does new do when it constructs an object? / new 构造对象时做了什么？
+## 35. What does new do when it constructs an object? / new 构造对象时做了什么？
 
 **Core answer / 核心回答：** For a constructible function, new creates a receiver whose prototype comes from the constructor’s effective prototype, calls the constructor with that receiver as this, then returns an explicit object or function result if supplied. A primitive return is ignored. / 对可构造函数，new 会创建一个原型取自构造函数有效 prototype 的接收者，以它作为 this 调用构造函数；若构造函数显式返回对象或函数，则返回该值，否则返回新接收者。原始值返回会被忽略。
 
@@ -3775,8 +3747,8 @@ const example = emulateNew(Example);
 Object.getPrototypeOf(example) === CallablePrototype; // true
 ~~~
 
-Class constructors have semantics beyond ordinary functions, including restrictions on how they are called; see the [ECMAScript class-definition rules](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions). Built-in constructors also have additional construction semantics, so use new or class syntax in application code rather than this teaching helper. For property lookup and the roles of instance, prototype, and static members, see [Objects and Prototypes / 对象与原型](#34.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F). / class 构造器拥有普通函数所没有的语义，包括调用方式限制；详见 [ECMAScript 类定义规则](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions)。内置构造器也有额外构造语义，因此应用代码应使用 new 或 class 语法，而不是此教学辅助函数。属性查找及实例、原型、静态成员的作用见[对象与原型](#34.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F)。
-## 37. How does JavaScript Proxy intercept object operations? / JavaScript Proxy 如何拦截对象操作？
+Class constructors have semantics beyond ordinary functions, including restrictions on how they are called; see the [ECMAScript class-definition rules](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions). Built-in constructors also have additional construction semantics, so use new or class syntax in application code rather than this teaching helper. For property lookup and the roles of instance, prototype, and static members, see [Objects and Prototypes / 对象与原型](#33.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F). / class 构造器拥有普通函数所没有的语义，包括调用方式限制；详见 [ECMAScript 类定义规则](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions)。内置构造器也有额外构造语义，因此应用代码应使用 new 或 class 语法，而不是此教学辅助函数。属性查找及实例、原型、静态成员的作用见[对象与原型](#33.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F)。
+## 36. How does JavaScript Proxy intercept object operations? / JavaScript Proxy 如何拦截对象操作？
 
 **Core answer / 核心回答：** A Proxy pairs a target object with a handler. When code operates through the proxy, matching handler traps can intercept reads, writes, deletion, membership checks, and other operations; Reflect methods forward an operation with its normal semantics. Proxy is a JavaScript runtime feature, not a TypeScript type feature. / Proxy 将目标对象与 handler 配对。代码通过代理执行操作时，对应 trap 可拦截读取、写入、删除、成员检查等行为；Reflect 方法可按正常语义转发操作。Proxy 是 JavaScript 运行时功能，不是 TypeScript 类型特性。
 
@@ -3804,7 +3776,7 @@ Vue 2 used property getters and setters for reactivity; Vue 3 uses proxies for r
 Vue 2 used property getters and setters for reactivity, while Vue 3 uses proxies for reactive objects. See [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth). This framework example does not imply that every reactive system needs Proxy. / Vue 2 使用属性 getter 和 setter 实现响应式，Vue 3 则对响应式对象使用代理。详见 [Vue 响应式原理](https://vuejs.org/guide/extras/reactivity-in-depth)。框架示例不意味着所有响应式系统都必须使用 Proxy。
 
 See [ECMAScript Proxy objects](https://tc39.es/ecma262/2025/multipage/proxy-object.html) for trap invariants and [Reflect](https://tc39.es/ecma262/2025/multipage/reflection.html) for forwarding operations.
-## 38. How does currying support partial application? / 柯里化如何支持部分应用？
+## 37. How does currying support partial application? / 柯里化如何支持部分应用？
 
 **Core answer / 核心回答：** Currying transforms a function that accepts several arguments into a sequence of calls. Supplying fewer than the expected arguments returns another function; later calls complete the argument list. This supports partial application, but the arity rule must match the function’s contract. / 柯里化把接收多个参数的函数转换为一系列调用。参数不足时返回新函数，后续调用补齐参数，实现部分应用；但元数判断规则必须符合函数契约。
 
@@ -3826,8 +3798,8 @@ curriedSum(1)(2)(3); // 6
 curriedSum(1, 2)(3); // 6
 ~~~
 
-Currying transforms argument flow; it does not change how ordinary function this is supplied. See [Function this and Binding / 函数 this 与绑定](#35.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
-## 39. What does JavaScript strict mode change? / JavaScript 严格模式会改变什么？
+Currying transforms argument flow; it does not change how ordinary function this is supplied. See [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
+## 38. What does JavaScript strict mode change? / JavaScript 严格模式会改变什么？
 
 **Core answer / 核心回答：** Strict mode turns selected legacy mistakes into errors and changes some function behavior, including the this value of a plain call. ES modules and class bodies are strict automatically. It is not a security sandbox and does not make eval safe. / 严格模式会把部分历史代码中的错误变成异常，并改变一些函数行为，包括普通调用中的 this 值。ES 模块和 class 函数体自动采用严格模式。严格模式不是安全沙箱，也不会让 eval 变安全。
 
@@ -3848,10 +3820,10 @@ Other recognizable differences include rejecting with, rejecting legacy octal nu
 
 These rules are part of the [ECMAScript strict mode code semantics](https://tc39.es/ecma262/2025/#sec-strict-mode-code). Strict mode changes only specified language behaviors. It does not validate input or impose a security boundary. / 这些规则属于 [ECMAScript 严格模式语义](https://tc39.es/ecma262/2025/#sec-strict-mode-code)。严格模式只改变规范明确列出的语言行为，不会验证输入，也不会建立安全边界。
 
-For the strict-call effect on this, see [Function this and Binding / 函数 this 与绑定](#35.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F). For value conversion, truthiness, and equality, see [JavaScript Types / JavaScript 类型](#28.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F).
-## 40. 弱集合与弱引用能保证什么？
+For the strict-call effect on this, see [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F). For value conversion, truthiness, and equality, see [JavaScript Types / JavaScript 类型](#27.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F).
+## 39. 弱集合与弱引用能保证什么？
 
-报表页面关闭后，某个记录对象只应由仍在使用它的界面持有。`WeakMap`（弱映射）可以把元数据关联到对象，而不单独延长键的生命周期；`WeakRef`（弱引用）和 `FinalizationRegistry`（最终化注册表）也不能提供及时、必达的清理保证。本章先界定“弱持有”，再说明它适合与不适合承担的责任。常规 `Map`（映射）的强引用与身份键见[何时使用 Map、Set 或普通对象？](#29.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
+报表页面关闭后，某个记录对象只应由仍在使用它的界面持有。`WeakMap`（弱映射）可以把元数据关联到对象，而不单独延长键的生命周期；`WeakRef`（弱引用）和 `FinalizationRegistry`（最终化注册表）也不能提供及时、必达的清理保证。本章先界定“弱持有”，再说明它适合与不适合承担的责任。常规 `Map`（映射）的强引用与身份键见[何时使用 Map、Set 或普通对象？](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
 
 本章的对象身份示例是两条同业务 id 的输入：
 
@@ -3939,16 +3911,16 @@ registry.unregister(unregisterToken); // 可显式取消这条注册
 
 因此，这些 API 适合不影响正确性的缓存提示、附加元数据或机会式清理；不适合释放文件、网络连接、锁、计费记录、UI 状态或任何要求及时发生的动作。需要确定结束时间时，由明确的所有者调用 `dispose`、`removeEventListener`、`clearInterval` 或对应的清理函数。
 
-对象仍被保留时，应找出强引用链，而不是等待最终化。堆保留路径的诊断见[对象为什么在不再有用后仍留在内存中？](#41.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E4%B8%BA%E4%BD%95%E4%BC%9A%E5%9C%A8%E4%B8%8D%E5%86%8D%E6%9C%89%E7%94%A8%E5%90%8E%E4%BB%8D%E7%95%99%E5%9C%A8%E5%86%85%E5%AD%98%E4%B8%AD%EF%BC%9F)。
+对象仍被保留时，应找出强引用链，而不是等待最终化。堆保留路径的诊断见[对象为什么在不再有用后仍留在内存中？](#40.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E4%B8%BA%E4%BD%95%E4%BC%9A%E5%9C%A8%E4%B8%8D%E5%86%8D%E6%9C%89%E7%94%A8%E5%90%8E%E4%BB%8D%E7%95%99%E5%9C%A8%E5%86%85%E5%AD%98%E4%B8%AD%EF%BC%9F)。
 
 > [!info]- 来源
 > - WeakMap / WeakSet 的键资格、弱键值关系和不可枚举约束：[ECMAScript 2026 §24.3–24.4](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)。
 > - WeakRef 目标和构造：[ECMAScript 2026 §26.1.1.1](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-weak-ref-target)；`deref()` 保活当前代码执行：[§26.1.3.2](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-weak-ref.prototype.deref)。
 > - FinalizationRegistry 注册目标、heldValue 和取消注册：[ECMAScript 2026 `FinalizationRegistry.prototype.register`](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-finalization-registry.prototype.register)；对象与注册表清理模型：[§26.2](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-finalization-registry-objects)、[§9.9](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-weakref-processing-model)。
 > - 运行时实际核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06；核对目标构造、键资格和同步 `deref()` 行为，不以一次运行推断最终化时序。
-## 41. JavaScript 对象为何会在不再有用后仍留在内存中？
+## 40. JavaScript 对象为何会在不再有用后仍留在内存中？
 
-用户关闭报表后，如果旧结果还被全局事件处理器、计时器闭包或缓存引用，垃圾回收器仍能从程序根沿引用链找到它们。判断“业务上已过期”并不能让对象自动回收；需要断开不再需要的强引用。本章从报表监听器的保留路径解释原因，再给出诊断步骤。弱引用的语言保证见[弱集合与弱引用能保证什么？](#40.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
+用户关闭报表后，如果旧结果还被全局事件处理器、计时器闭包或缓存引用，垃圾回收器仍能从程序根沿引用链找到它们。判断“业务上已过期”并不能让对象自动回收；需要断开不再需要的强引用。本章从报表监听器的保留路径解释原因，再给出诊断步骤。弱引用的语言保证见[弱集合与弱引用能保证什么？](#39.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### 可达性是保留问题，不是对象之间是否成环
 
@@ -4015,7 +3987,7 @@ Chrome DevTools 堆快照可以显示对象到根的保留者，比较视图可�
 > - 追踪式回收、根集合和不可达对象的实现示例：[V8 “Trash talk: the Orinoco garbage collector”](https://v8.dev/blog/trash-talk)，2018-08-14；这是当时的 V8 实现说明，不代表当前所有引擎。
 > - `WeakRef` 与 `FinalizationRegistry` 不保证回收和清理时机：[ECMAScript 2026 §9.9 Processing Model](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-weakref-processing-model)。
 > - 比较堆快照、检查保留者和脱离 DOM 节点：[Chrome DevTools 官方指南 “Record heap snapshots”](https://developer.chrome.com/docs/devtools/memory-problems/heap-snapshots)，访问于 2026-11-06。
-## 42. How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？
+## 41. How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？
 
 **Core answer / 核心回答：** A callback gives an API a function to call later. A Promise represents one future fulfillment or rejection and composes with then and catch. An async function returns a Promise, while await writes the same control flow in sequential syntax. Promise combinators coordinate already-started work; they do not cancel it. / 回调把函数交给 API 供其稍后调用。Promise 表示未来的一次成功或拒绝，并可通过 then 和 catch 组合。async 函数返回 Promise，await 用顺序语法表达同一控制流。Promise 组合方法协调已经启动的任务，但不会取消它们。
 
@@ -4074,7 +4046,7 @@ async function loadOrders(userId) {
 }
 ~~~
 
-For deciding where to recover or propagate a rejection, see [Error Handling / 错误处理](#45.%20Where%20should%20a%20JavaScript%20error%20be%20recovered%20or%20reported?%20/%20JavaScript%20%E9%94%99%E8%AF%AF%E5%BA%94%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E6%81%A2%E5%A4%8D%E6%88%96%E4%B8%8A%E6%8A%A5%EF%BC%9F).
+For deciding where to recover or propagate a rejection, see [Error Handling / 错误处理](#44.%20Where%20should%20a%20JavaScript%20error%20be%20recovered%20or%20reported?%20/%20JavaScript%20%E9%94%99%E8%AF%AF%E5%BA%94%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E6%81%A2%E5%A4%8D%E6%88%96%E4%B8%8A%E6%8A%A5%EF%BC%9F).
 
 ### Which Promise combinator fits? / 应选择哪个 Promise 组合方法？
 
@@ -4105,7 +4077,7 @@ const [users, posts] = await Promise.all([
 ]);
 ~~~
 
-for await...of consumes async iterables in order and can also adapt a synchronous iterable of Promises, awaiting each value before continuing. For independent operations, Promise.all is usually clearer. The protocol and sequential-consumption details belong to [Iterators and Generators / 迭代器与生成器](#44.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F).
+for await...of consumes async iterables in order and can also adapt a synchronous iterable of Promises, awaiting each value before continuing. For independent operations, Promise.all is usually clearer. The protocol and sequential-consumption details belong to [Iterators and Generators / 迭代器与生成器](#43.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F).
 
 ### How Promise-job order is observed / 如何观察 Promise job 顺序
 
@@ -4131,8 +4103,8 @@ Promise.resolve().then(() => console.log(1))
 // Node.js v26.11.1, CommonJS: 0, 1, 2, 3, 4
 ~~~
 
-See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering and CJS/ESM context are explained separately in the runtime note. The focused [Currying and Partial Application / 柯里化与部分应用](#38.%20How%20does%20currying%20support%20partial%20application?%20/%20%E6%9F%AF%E9%87%8C%E5%8C%96%E5%A6%82%E4%BD%95%E6%94%AF%E6%8C%81%E9%83%A8%E5%88%86%E5%BA%94%E7%94%A8%EF%BC%9F) and [Chainable Task Queue / 链式任务队列](#43.%20How%20can%20a%20chainable%20API%20queue%20delayed%20tasks?%20/%20%E9%93%BE%E5%BC%8F%20API%20%E5%A6%82%E4%BD%95%E6%8E%92%E9%98%9F%E6%89%A7%E8%A1%8C%E5%BB%B6%E5%90%8E%E4%BB%BB%E5%8A%A1%EF%BC%9F) articles preserve two code exercises from the original collection.
-## 43. How can a chainable API queue delayed tasks? / 链式 API 如何排队执行延后任务？
+See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering and CJS/ESM context are explained separately in the runtime note. The focused [Currying and Partial Application / 柯里化与部分应用](#37.%20How%20does%20currying%20support%20partial%20application?%20/%20%E6%9F%AF%E9%87%8C%E5%8C%96%E5%A6%82%E4%BD%95%E6%94%AF%E6%8C%81%E9%83%A8%E5%88%86%E5%BA%94%E7%94%A8%EF%BC%9F) and [Chainable Task Queue / 链式任务队列](#42.%20How%20can%20a%20chainable%20API%20queue%20delayed%20tasks?%20/%20%E9%93%BE%E5%BC%8F%20API%20%E5%A6%82%E4%BD%95%E6%8E%92%E9%98%9F%E6%89%A7%E8%A1%8C%E5%BB%B6%E5%90%8E%E4%BB%BB%E5%8A%A1%EF%BC%9F) articles preserve two code exercises from the original collection.
+## 42. How can a chainable API queue delayed tasks? / 链式 API 如何排队执行延后任务？
 
 **Core answer / 核心回答：** A chainable task API can append closures to a queue and return the same builder object. Deferring the first step allows the synchronous chain to finish building before the queue starts. Each task advances the queue only after its own work completes. / 链式任务 API 可把闭包追加到队列并返回同一 builder 对象。延后首步执行可先让同步调用链构建完成；每个任务只在自身工作结束后推进队列。
 
@@ -4174,8 +4146,8 @@ new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
 
 The time unit is milliseconds. This is a teaching example, not a production queue: it does not define failure handling, cancellation, or behavior when a task never completes. / 时间单位为毫秒。这是教学示例，不是生产队列；它没有定义错误处理、取消方式或任务永不完成时的行为。
 
-For standard Promise composition, rejection propagation, and concurrency, see [Asynchronous JavaScript / 异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F). Timer callback scheduling is host behavior; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
-## 44. How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？
+For standard Promise composition, rejection propagation, and concurrency, see [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F). Timer callback scheduling is host behavior; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
+## 43. How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？
 
 **Core answer / 核心回答：** An iterable provides an iterator through Symbol.iterator; each iterator next() call returns an object whose done value tells the consumer whether to stop. A generator implements this protocol by pausing at yield. Async iterables provide next results asynchronously and are consumed in order with for await...of. / 可迭代对象通过 Symbol.iterator 提供迭代器；每次调用 next() 返回带 done 值的对象，用于告知消费者是否停止。生成器在 yield 处暂停，以此实现该协议。异步可迭代对象异步提供 next 结果，并由 for await...of 按序消费。
 
@@ -4185,7 +4157,7 @@ The iterable protocol exposes Symbol.iterator, which returns an iterator. The it
 
 The protocol is defined by the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration). / 协议定义见 [ECMAScript 迭代接口](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)。
 
-Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#53.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
+Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#52.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
 
 ~~~javascript
 const values = [10, 20];
@@ -4346,8 +4318,8 @@ collectInOrder([Promise.resolve("first"), Promise.resolve("second")])
   .then(values => console.log(values)); // ["first", "second"]
 ~~~
 
-See [Asynchronous JavaScript / 异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
-## 45. Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？
+See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
+## 44. Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？
 
 **Core answer / 核心回答：** Handle a failure at the layer with enough context to recover, add information, or report it. If the current layer cannot decide what recovery means, propagate the error. A catch that only logs and returns can silently turn failure into success; browser-global and React handlers cover specific last-resort scopes. / 应在拥有足够上下文进行恢复、补充信息或上报的层级处理错误。当前层无法决定如何恢复时，应继续传播。只记录日志后正常返回的 catch 会悄悄把失败转成成功；浏览器全局处理器和 React 边界只覆盖特定的兜底范围。
 
@@ -4411,7 +4383,7 @@ async function loadData() {
 loadData().catch(reportFailure);
 ~~~
 
-Every rejection needs an owner somewhere in the call chain. The browser’s unhandledrejection event is useful for diagnostics, but it is a late signal, not a substitute for local recovery or deliberate propagation. Host reporting and process behavior differ. See [Asynchronous JavaScript / 异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise chain mechanics. / 每个拒绝都应由调用链某处明确负责。浏览器的 unhandledrejection 事件可用于诊断，但只是较晚的信号，不能替代本地恢复或明确传播。宿主上报和进程行为有所不同。Promise 链机制见 [Asynchronous JavaScript / 异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
+Every rejection needs an owner somewhere in the call chain. The browser’s unhandledrejection event is useful for diagnostics, but it is a late signal, not a substitute for local recovery or deliberate propagation. Host reporting and process behavior differ. See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise chain mechanics. / 每个拒绝都应由调用链某处明确负责。浏览器的 unhandledrejection 事件可用于诊断，但只是较晚的信号，不能替代本地恢复或明确传播。宿主上报和进程行为有所不同。Promise 链机制见 [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
 
 ### What browser-global handlers cover / 浏览器全局处理器覆盖什么
 
@@ -4463,7 +4435,7 @@ class ErrorBoundary extends React.Component {
 ~~~
 
 React documentation says boundaries do not catch errors from event handlers, ordinary asynchronous callbacks, server-side rendering, or the boundary itself. Current React documentation describes an exception for errors thrown inside a transition started with the function returned by useTransition. Check the app’s React version and framework behavior. See [React Error Boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary). / React 文档说明，边界不会捕获事件处理器、普通异步回调、服务端渲染或边界自身抛出的错误。当前 React 文档列出由 useTransition 返回函数启动的 transition 中抛错的例外情况。应核对应用使用的 React 版本和框架行为，详见 [React 错误边界](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)。
-## 46. How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
+## 45. How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
 
 **Short answer / 简答** — Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, check syntax and shape, then construct a value whose fields match the application's type. The checker can enforce exhaustive use of that type. The parser does not establish whether a supplied role or identity claim is authorized. / 把 API 响应和浏览器存储视为不可信数据。先解析为 `unknown`，校验语法和结构，再构造与应用类型匹配的值。编译器可以检查是否处理所有受支持的类型分支。结构校验无法证明输入里的角色或身份已经获得授权。
 
@@ -4554,10 +4526,10 @@ if (valid.ok) roleLabel(valid.value.role); // "Reader"
 
 If the server introduces `editor`, the parser still rejects it until the client deliberately supports it. When you add `editor` to `Profile["role"]`, the missing switch case fails the `never` assignment. Update the runtime guard and the consumers together. These checks serve different points in the same data path. The runtime parser protects the input boundary, while the compiler checks the supported cases at this switch. / 输入校验挡住外部未知值，`never` 让受支持的类型新增分支时在该 switch 报错。 [TypeScript handbook on exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
 
-Utility types and generics describe compile-time relationships, not runtime guards: [Utility Types / 工具类型](#48.%20What%20do%20TypeScript%20utility%20types%20guarantee?%20/%20TypeScript%20%E5%B7%A5%E5%85%B7%E7%B1%BB%E5%9E%8B%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F), [Generics / 泛型](#47.%20How%20do%20TypeScript%20generics%20preserve%20relationships%20between%20types?%20/%20TypeScript%20%E6%B3%9B%E5%9E%8B%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%B1%BB%E5%9E%8B%E4%B9%8B%E9%97%B4%E7%9A%84%E5%85%B3%E7%B3%BB%EF%BC%9F). Decorator modes answer a separate class-definition question: [TypeScript Decorators / TypeScript 装饰器](#49.%20Which%20TypeScript%20decorator%20mode%20does%20a%20project%20use?%20/%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F). JavaScript Proxy is a runtime object feature, not a TypeScript type feature; see [JavaScript Proxy / JavaScript Proxy](#37.%20How%20does%20JavaScript%20Proxy%20intercept%20object%20operations?%20/%20JavaScript%20Proxy%20%E5%A6%82%E4%BD%95%E6%8B%A6%E6%88%AA%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C%EF%BC%9F).
+Utility types and generics describe compile-time relationships, not runtime guards: [Utility Types / 工具类型](#47.%20What%20do%20TypeScript%20utility%20types%20guarantee?%20/%20TypeScript%20%E5%B7%A5%E5%85%B7%E7%B1%BB%E5%9E%8B%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F), [Generics / 泛型](#46.%20How%20do%20TypeScript%20generics%20preserve%20relationships%20between%20types?%20/%20TypeScript%20%E6%B3%9B%E5%9E%8B%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%B1%BB%E5%9E%8B%E4%B9%8B%E9%97%B4%E7%9A%84%E5%85%B3%E7%B3%BB%EF%BC%9F). Decorator modes answer a separate class-definition question: [TypeScript Decorators / TypeScript 装饰器](#48.%20Which%20TypeScript%20decorator%20mode%20does%20a%20project%20use?%20/%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F). JavaScript Proxy is a runtime object feature, not a TypeScript type feature; see [JavaScript Proxy / JavaScript Proxy](#36.%20How%20does%20JavaScript%20Proxy%20intercept%20object%20operations?%20/%20JavaScript%20Proxy%20%E5%A6%82%E4%BD%95%E6%8B%A6%E6%88%AA%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C%EF%BC%9F).
 
 **Sources checked 2026-10-15:** [TypeScript Basic Types and unknown](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), and [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness).
-## 47. How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？
+## 46. How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？
 
 **Core answer / 核心回答：** A generic type parameter preserves a relationship between inputs and outputs. TypeScript can infer a parameter from a call, while an extends constraint limits the values it accepts. Use generics when the same logic should preserve specific types across multiple callers. / 泛型参数用于保留输入与输出之间的关系。TypeScript 可从调用中推断类型参数；extends 约束限制可接受的值。当同一逻辑需要为不同调用者保留各自具体类型时，使用泛型。
 
@@ -4583,8 +4555,8 @@ interface Repository<T> {
 }
 ~~~
 
-A type parameter is not a runtime check. It describes a contract enforced by the checker where type information is available. External values still need runtime validation; see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#46.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Generics handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
-## 48. What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？
+A type parameter is not a runtime check. It describes a contract enforced by the checker where type information is available. External values still need runtime validation; see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Generics handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
+## 47. What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？
 
 **Core answer / 核心回答：** Utility types derive one compile-time type from another, helping related shapes stay connected instead of repeating property declarations. They do not change or validate runtime values. Readonly is shallow and does not freeze an object; Partial does not validate a request. / 工具类型从已有类型推导出新编译期类型，避免重复声明并让相关结构保持关联。它们不会改变或验证运行时值。Readonly 是浅层的，也不会冻结对象；Partial 不会校验请求。
 
@@ -4619,7 +4591,7 @@ const permissions: Record<Role, string[]> = {
 };
 ~~~
 
-UserPatch expresses an allowed shape to the checker; runtime code still needs to validate parsed JSON. For that boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#46.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Utility Types reference](https://www.typescriptlang.org/docs/handbook/utility-types.html).
+UserPatch expresses an allowed shape to the checker; runtime code still needs to validate parsed JSON. For that boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Utility Types reference](https://www.typescriptlang.org/docs/handbook/utility-types.html).
 
 ### How does ThisType contextually type this? / ThisType 如何提供 this 的上下文类型？
 
@@ -4653,7 +4625,7 @@ const person: Person = {
   greet() { console.log(this.name); }
 };
 ~~~
-## 49. Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？
+## 48. Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？
 
 **Core answer / 核心回答：** TypeScript supports standard ECMAScript decorators and a separate legacy mode. Their signatures and capabilities differ. Use the mode required by the framework and compiler configuration; do not copy a decorator from a different project without checking its mode. / TypeScript 支持标准 ECMAScript 装饰器和独立的旧版模式。两者的签名与能力不同。应使用框架和编译配置要求的模式，不要未确认模式就复制其他项目的装饰器。
 
@@ -4705,8 +4677,8 @@ function legacyLog(
 }
 ~~~
 
-Decorator metadata is not general runtime validation. For an external JSON value, validate the value itself with runtime logic or a validation library. For the separate unknown-JSON runtime boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#46.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript 5.0 decorator release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators). Sources checked 2026-10-15.
-## 50. How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？
+Decorator metadata is not general runtime validation. For an external JSON value, validate the value itself with runtime logic or a validation library. For the separate unknown-JSON runtime boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript 5.0 decorator release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators). Sources checked 2026-10-15.
+## 49. How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？
 
 **Core answer / 核心回答：** ECMAScript modules (ESM) are standardized JavaScript syntax with static imports and exports, module-scoped bindings, strict mode, and top-level this equal to undefined. CommonJS (CJS) is Node’s module wrapper using require and module.exports. Module syntax, host loading rules, bundler analysis, and runtime scheduling are separate concerns. / ECMAScript 模块（ESM）是标准 JavaScript 语法，使用静态导入与导出，绑定属于模块作用域，自动采用严格模式，顶层 this 为 undefined。CommonJS（CJS）是 Node 使用 require 和 module.exports 的模块包装机制。模块语法、宿主加载规则、打包器分析和运行时调度是不同问题。
 
@@ -4746,8 +4718,8 @@ See the [ECMAScript module specification](https://tc39.es/ecma262/2025/multipage
 
 ### Why ESM syntax does not guarantee tree shaking / 为什么 ESM 语法不保证 tree shaking
 
-A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone does not guarantee code removal. The result depends on the bundler and package metadata. See [Build Tools / 构建工具](#52.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) for the transform and production-output boundary. / 打包器可分析 ESM 导入并执行 tree shaking，但仅使用 ESM 语法并不保证代码会被移除；结果还取决于打包器和包元数据。变换与生产产物边界见 [Build Tools / 构建工具](#52.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F).
-## 51. How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？
+A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone does not guarantee code removal. The result depends on the bundler and package metadata. See [Build Tools / 构建工具](#51.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) for the transform and production-output boundary. / 打包器可分析 ESM 导入并执行 tree shaking，但仅使用 ESM 语法并不保证代码会被移除；结果还取决于打包器和包元数据。变换与生产产物边界见 [Build Tools / 构建工具](#51.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F).
+## 50. How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？
 
 **Core answer / 核心回答：** A feature’s ECMAScript edition and support in the target runtime are separate facts. Syntax must parse in the target environment or be transformed; APIs also need runtime support or a suitable polyfill. Check the actual browsers, Node versions, and build target before relying on a feature. / 特性属于哪个 ECMAScript 版本，与目标运行时是否支持是两件事。语法必须能被目标环境解析或经过转换；API 也需要运行时实现或合适的 polyfill。依赖某项特性前要检查实际浏览器、Node 版本和构建目标。
 
@@ -4759,9 +4731,9 @@ A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone d
 | Object.assign, Object.is | ES2015 | Object.assign mutates its target; Object.is uses SameValue / Object.assign 会修改目标；Object.is 使用 SameValue |
 | Object.values, Object.entries | ES2017 | Own enumerable string-keyed values or pairs / 自有可枚举字符串键的值或键值对 |
 | Array.from, Array.of | ES2015 | Iterable/array-like conversion or argument list / 可迭代或类数组转换，或参数列表建数组 |
-| Promise.all, Promise.race | ES2015 | Outcome semantics and cancellation limits: see [Asynchronous JavaScript / 异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 完成条件和不取消其他操作见异步页 |
-| Promise.allSettled | ES2020 | See [Asynchronous JavaScript / 异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
-| Promise.any | ES2021 | See [Asynchronous JavaScript / 异步 JavaScript](#42.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
+| Promise.all, Promise.race | ES2015 | Outcome semantics and cancellation limits: see [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 完成条件和不取消其他操作见异步页 |
+| Promise.allSettled | ES2020 | See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
+| Promise.any | ES2021 | See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
 | globalThis | ES2020 | Current realm’s global object; host-specific properties differ / 当前 realm 的全局对象；宿主属性不同 |
 | Array.prototype.at | ES2022 | Supports negative offsets from the end / 支持从末尾反向计数 |
 | Object.hasOwn | ES2022 | Own-property test works with null-prototype objects and overridden hasOwnProperty / 可用于 null 原型对象和被覆盖的 hasOwnProperty |
@@ -4782,8 +4754,8 @@ structuredClone is exposed by browsers and current Node releases, but it does no
 
 For edition-specific language features, see the [ECMAScript 2025 specification](https://tc39.es/ecma262/2025/). / 版本相关语言特性见 [ECMAScript 2025 规范](https://tc39.es/ecma262/2025/)。
 
-**See also:** [Optional Chaining and Destructuring / 可选链与解构](#%E7%BC%BA%E5%A4%B1%E5%B1%9E%E6%80%A7%E9%BB%98%E8%AE%A4%E5%80%BC%E4%B8%8E%E8%A7%A3%E6%9E%84) explains syntax semantics; [Modules and Host Boundaries / 模块与宿主边界](#50.%20How%20do%20ECMAScript%20modules%20and%20CommonJS%20differ?%20/%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%20%E6%9C%89%E4%BD%95%E5%8C%BA%E5%88%AB%EF%BC%9F) explains ESM and CommonJS; [Object helpers / 对象辅助方法](#%E6%9E%9A%E4%B8%BE%E4%B8%8E%E5%A4%8D%E5%88%B6%E5%B1%9E%E6%80%A7%E6%97%B6%EF%BC%8C%E5%85%88%E7%9C%8B%20API%20%E9%80%89%E4%B8%AD%E4%BA%86%E4%BB%80%E4%B9%88) and [Array helpers / 数组辅助方法](#%E4%BB%8E%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%88%96%E7%B1%BB%E6%95%B0%E7%BB%84%E8%BE%93%E5%85%A5%E5%88%9B%E5%BB%BA%E6%95%B0%E7%BB%84) covers property-copying and enumeration behavior.
-## 52. How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？
+**See also:** [Optional Chaining and Destructuring / 可选链与解构](#%E7%BC%BA%E5%A4%B1%E5%B1%9E%E6%80%A7%E9%BB%98%E8%AE%A4%E5%80%BC%E4%B8%8E%E8%A7%A3%E6%9E%84) explains syntax semantics; [Modules and Host Boundaries / 模块与宿主边界](#49.%20How%20do%20ECMAScript%20modules%20and%20CommonJS%20differ?%20/%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%20%E6%9C%89%E4%BD%95%E5%8C%BA%E5%88%AB%EF%BC%9F) explains ESM and CommonJS; [Object helpers / 对象辅助方法](#%E6%9E%9A%E4%B8%BE%E4%B8%8E%E5%A4%8D%E5%88%B6%E5%B1%9E%E6%80%A7%E6%97%B6%EF%BC%8C%E5%85%88%E7%9C%8B%20API%20%E9%80%89%E4%B8%AD%E4%BA%86%E4%BB%80%E4%B9%88) and [Array helpers / 数组辅助方法](#%E4%BB%8E%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%88%96%E7%B1%BB%E6%95%B0%E7%BB%84%E8%BE%93%E5%85%A5%E5%88%9B%E5%BB%BA%E6%95%B0%E7%BB%84) covers property-copying and enumeration behavior.
+## 51. How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？
 
 **Core answer / 核心回答：** A bundler follows a module graph, transforms selected modules, and emits assets. Loaders transform individual modules; plugins use broader compiler hooks. A successful development server does not prove that the production build has the same assets, paths, chunks, or source-map exposure. / 打包器沿模块图解析依赖、转换选定模块并输出资源。loader 转换单个模块；plugin 通过更广泛的 compiler hooks 扩展构建。开发服务器成功不代表生产构建具有相同资源、路径、分块或 source map 暴露方式。
 
@@ -4880,8 +4852,8 @@ A source map relates emitted code to source files for debugging and error report
 | hidden-source-map | Emits an external map without the reference comment; useful when a release process uploads maps separately / 输出外部 map 但无引用注释；适合由发布流程单独上传 |
 | nosources-source-map | Omits embedded source content, but mappings and source paths may remain / 不嵌入源码内容，但映射和源码路径仍可能存在 |
 
-These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#65.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
-## 53. What is the difference between an HTMLCollection and a NodeList? / HTMLCollection 与 NodeList 有什么区别？
+These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#64.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
+## 52. What is the difference between an HTMLCollection and a NodeList? / HTMLCollection 与 NodeList 有什么区别？
 
 Both are array-like collections of DOM nodes, but they differ in which nodes they contain and whether their view updates. An `HTMLCollection` contains elements and is live. A `NodeList` may include text and comment nodes; whether it is live depends on the API that returned it: `querySelectorAll()` is static, while `childNodes` is live. Choose from the returned API's contract, and avoid mutating a live collection while advancing forward through its indexes. / 两者都是类数组的 DOM 节点集合，但包含的节点类型和更新方式不同。`HTMLCollection` 只含元素且是实时集合。`NodeList` 可含文本和注释节点；是否实时取决于返回它的 API：`querySelectorAll()` 是静态集合，而 `childNodes` 是实时集合。应根据具体 API 的契约选择，并避免在正向按索引遍历时修改实时集合。
 
@@ -4922,7 +4894,7 @@ Use `querySelectorAll()` when a static result is simpler to reason about. Use a 
 **See also:** [How do DOM events propagate?](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) discusses event targets in a changing DOM.
 
 **Specification:** [WHATWG DOM: `NodeList` and `HTMLCollection`](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection), checked 2026-11-05.
-## 54. How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？
+## 53. How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？
 
 An event bus keeps listeners by event name and emits to a snapshot so that listener additions or removals during dispatch affect the next emission. A one-time wrapper should mark itself fired and unregister before calling user code; this keeps recursive emits and reentrant snapshots from invoking it twice. Observer and publish-subscribe are different coupling patterns: an observer subject knows its listeners, while a bus mediates between publishers and subscribers. / 事件总线按事件名保存监听器，触发时遍历快照，因此分发期间新增或删除监听器影响下一次触发。一次性包装器应先标记已触发并注销，再调用用户代码；这能避免递归触发和重入快照造成重复调用。观察者与发布订阅的耦合方式不同：观察者主体直接知道监听者，事件总线则位于发布者和订阅者之间。
 
@@ -4979,7 +4951,7 @@ Use **Observer** when there is a natural subject that owns its subscribers, such
 **See also:** [How do DOM events propagate?](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) covers platform event dispatch, which has different phases and cancellation rules.
 
 **Terminology note:** this is an application-level pattern, not the browser DOM event system.
-## 55. Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？
+## 54. Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？
 
 Use Web Storage when page JavaScript explicitly reads same-origin client state; use cookies when a matching request should carry a small value to a server, such as a session identifier. The choice depends on lifetime, request behavior, size, browser policy, and threat model. Web Storage is synchronous and has no multi-key transaction; cookies are sent according to domain, path, secure-transport, SameSite, and credentials rules. / 页面脚本显式读取同源客户端状态时可选 Web Storage；需要随符合条件的请求发送小型数据（例如会话标识）时可选 Cookie。应根据生命周期、请求行为、容量、浏览器策略和威胁模型选择。Web Storage 为同步接口且没有多键事务；Cookie 是否发送取决于域、路径、安全传输、SameSite 与凭证规则。
 
@@ -4993,14 +4965,14 @@ Use Web Storage when page JavaScript explicitly reads same-origin client state; 
 
 `localStorage` and `sessionStorage` expose synchronous string key/value operations. `localStorage` usually persists until cleared or evicted; it has no per-entry expiry API. `sessionStorage` survives reloads and same-tab navigation and is cleared when that top-level browsing context's session ends, though session restoration is user-agent dependent. A newly opened tab normally has a separate area; an auxiliary context opened by a page may begin with a copy of its opener's session storage, after which the two diverge. The Storage Standard recommends 5 MiB for each endpoint, but this is not a guarantee of usable space: browser mode, policy, and storage pressure matter. For larger structured data or atomic updates, use IndexedDB and handle quota/access errors. `navigator.storage.estimate()` reports approximate usage and quota; best-effort data may be evicted.
 
-The storage key is based on origin, while privacy behavior can further partition or gate embedded third-party storage. Do not assume an embedded page shares the same storage view it receives as a top-level page. Web Storage has no cross-tab lock or multi-key transaction: a read-modify-write can race, and another document's `storage` event is a notification after a write, not an atomicity mechanism. Use IndexedDB transactions or explicit coordination when updates must be atomic; see [How do browser contexts communicate?](#56.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F).
+The storage key is based on origin, while privacy behavior can further partition or gate embedded third-party storage. Do not assume an embedded page shares the same storage view it receives as a top-level page. Web Storage has no cross-tab lock or multi-key transaction: a read-modify-write can race, and another document's `storage` event is a notification after a write, not an atomicity mechanism. Use IndexedDB transactions or explicit coordination when updates must be atomic; see [How do browser contexts communicate?](#55.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F).
 
 Any script running in the page can read Web Storage, so XSS can expose stored bearer tokens. `HttpOnly` keeps a cookie value out of page JavaScript; cookies still introduce CSRF and cross-site policy concerns. `SameSite` can reduce some CSRF exposure but is not a complete defense, and `SameSite=None` requires `Secure` under current cookie rules. Choose a complete session design rather than treating either storage type as a security fix.
 
-**See also:** [Web Security and Authentication / Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) covers XSS, CSRF, and cookie flags; [How does a native app expose capabilities to WebView JavaScript?](#57.%20How%20does%20a%20native%20app%20expose%20capabilities%20to%20WebView%20JavaScript?%20/%20%E5%8E%9F%E7%94%9F%E5%BA%94%E7%94%A8%E5%A6%82%E4%BD%95%E5%90%91%20WebView%20JavaScript%20%E6%9A%B4%E9%9C%B2%E8%83%BD%E5%8A%9B%EF%BC%9F) covers privileged hybrid-app interfaces.
+**See also:** [Web Security and Authentication / Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) covers XSS, CSRF, and cookie flags; [How does a native app expose capabilities to WebView JavaScript?](#56.%20How%20does%20a%20native%20app%20expose%20capabilities%20to%20WebView%20JavaScript?%20/%20%E5%8E%9F%E7%94%9F%E5%BA%94%E7%94%A8%E5%A6%82%E4%BD%95%E5%90%91%20WebView%20JavaScript%20%E6%9A%B4%E9%9C%B2%E8%83%BD%E5%8A%9B%EF%BC%9F) covers privileged hybrid-app interfaces.
 
 **Standards / 规范：** [WHATWG Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html); [WHATWG Storage Standard](https://storage.spec.whatwg.org/); [IETF HTTP cookie draft](https://datatracker.ietf.org/doc/draft-ietf-httpbis-rfc6265bis/); [MDN storage quotas and eviction](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria), checked 2026-11-05.
-## 56. How do browser contexts communicate? / 浏览上下文之间如何通信？
+## 55. How do browser contexts communicate? / 浏览上下文之间如何通信？
 
 For same-origin tabs or frames that share an eligible storage partition, use `BroadcastChannel` for ephemeral messages, or `localStorage` plus the `storage` event when persisted state is useful. For windows across origins, use `postMessage` with a specific target origin, then validate the sender window, sender origin, and payload. Use a WebSocket when communication must go through a server. Browser privacy partitioning, frame lifecycle, and trust boundaries affect which contexts can communicate. / 对共享适用存储分区的同源标签页或 frame，临时消息可用 `BroadcastChannel`；需要同时保留状态时可用 `localStorage` 与 `storage` 事件。跨源窗口使用 `postMessage` 并指定目标源，接收端还要校验来源窗口、来源 origin 和消息格式。需要服务器参与时使用 WebSocket。浏览器隐私分区、frame 生命周期和信任边界都会影响通信范围。
 
@@ -5109,10 +5081,10 @@ Avoid `"*"` for confidential messages: a target window may navigate before deliv
 
 A WebSocket is for a server-mediated, persistent bidirectional channel, not a default workaround for two tabs with different origins. The WebSocket protocol is not CORS; validate the handshake's `Origin` and authenticate and authorize each connection on the server. See [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md).
 
-**See also:** [Where should browser state live: Web Storage or cookies?](#55.%20Where%20should%20browser%20state%20live:%20Web%20Storage%20or%20cookies?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E7%8A%B6%E6%80%81%E5%BA%94%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9AWeb%20Storage%20%E8%BF%98%E6%98%AF%20Cookie%EF%BC%9F) covers storage lifetime and races.
+**See also:** [Where should browser state live: Web Storage or cookies?](#54.%20Where%20should%20browser%20state%20live:%20Web%20Storage%20or%20cookies?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E7%8A%B6%E6%80%81%E5%BA%94%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9AWeb%20Storage%20%E8%BF%98%E6%98%AF%20Cookie%EF%BC%9F) covers storage lifetime and races.
 
 **Standards / 规范：** [WHATWG HTML: cross-document messaging and BroadcastChannel](https://html.spec.whatwg.org/multipage/web-messaging.html); [WHATWG Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html); [WHATWG WebSockets](https://websockets.spec.whatwg.org/); checked 2026-11-05.
-## 57. How does a native app expose capabilities to WebView JavaScript? / 原生应用如何向 WebView JavaScript 暴露能力？
+## 56. How does a native app expose capabilities to WebView JavaScript? / 原生应用如何向 WebView JavaScript 暴露能力？
 
 A JavaScript bridge is a host-app interface that lets code in a WebView request selected native operations; it is platform-specific, not a browser standard. Common designs include a native object injected into JavaScript, a message handler with an explicit reply path, or a legacy custom-URL interception scheme. Because bridge calls cross from page code into privileged host capabilities, expose only narrow operations to trusted content and validate every operation and argument on the native side. / JavaScript Bridge 是宿主应用提供给 WebView 页面代码的接口，让页面请求指定原生操作；它因平台而异，并非浏览器标准。常见设计包括注入 JavaScript 的原生对象、带显式回复路径的消息处理器，或较旧的自定义 URL 拦截方案。Bridge 会把页面代码连接到有权限的宿主能力，因此只向可信内容开放有限操作，并由原生端验证每个操作和参数。
 
@@ -5158,7 +5130,7 @@ This sketch only shows the request side. A complete bridge needs a response chan
 For a normal web page, use standard browser APIs such as `navigator.geolocation` when they fit; the browser mediates permission and device access.
 
 **Sources checked 2026-11-05:** [Android Developers: WebView JavaScript interfaces and security warning](https://developer.android.com/develop/ui/views/layout/webapps/webview); [Android Developers: JS bridge guidance](https://developer.android.com/develop/ui/views/layout/webapps/native-api-access-jsbridge); [Apple Developer Documentation: WKScriptMessage](https://developer.apple.com/documentation/webkit/wkscriptmessage); [Apple Developer Documentation: message handler with reply](https://developer.apple.com/documentation/webkit/wkusercontentcontroller/addscriptmessagehandlerwithreply%28_%3Acontentworld%3Aname%3A%29).
-## 58. How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
+## 57. How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
 
 **Core answer / 核心回答：** Treat a streamed answer as partial until the client receives and validates an explicit terminal event for the same run. Keep useful deltas visible, label them as incomplete, and bound decoding, buffering, rendering, and recovery. If the event connection ends without a terminal event, preserve the text but treat the result as unknown and query the run's authoritative status. Stopping the local reader cancels this view; stopping server work requires a separate cancellation request and confirmation. / 收到并验证同一次运行的明确终态事件之前，都应把流式回答视为部分结果。保留有用的增量文本并标记为未完成，同时限制解码、缓冲、渲染和恢复的资源。如果事件连接在终态事件前结束，应保留文本、把结果视为未知并查询运行的权威状态。停止本地读取只会取消当前视图；停止服务端工作需要单独发出取消请求并确认。
 
@@ -5575,7 +5547,7 @@ For a browser, create one AbortController for the active event request and pass 
 
 Keep render work bounded as well as network buffering. Accumulate adjacent delta text and update the output once per animation frame rather than rerendering the component for every token. Cap the pending render string; because the parser awaits onText, it can pause its next read while the UI drains that small queue. The sample also caps the full visible answer. A larger product can persist output by run and render a bounded window instead of keeping an ever-growing DOM.
 
-Leave partial output visible when it remains useful, but label it as incomplete and avoid actions that require a finished result. Expose a concise state message in a dedicated status region, for example a native element with role=status and aria-live=polite. Announce connection, completion, failure, or stop transitions and perhaps occasional long-running progress; do not announce every token. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#16.%20How%20does%20the%20CSS%20cascade%20decide%20which%20declaration%20applies?%20/%20CSS%20%E7%BA%A7%E8%81%94%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E6%9C%80%E7%BB%88%E7%94%9F%E6%95%88%E7%9A%84%E5%A3%B0%E6%98%8E%EF%BC%9F) for native controls and status semantics.
+Leave partial output visible when it remains useful, but label it as incomplete and avoid actions that require a finished result. Expose a concise state message in a dedicated status region, for example a native element with role=status and aria-live=polite. Announce connection, completion, failure, or stop transitions and perhaps occasional long-running progress; do not announce every token. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#16.%20CSS%20%E7%BA%A7%E8%81%94%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E6%9C%80%E7%BB%88%E7%94%9F%E6%95%88%E7%9A%84%E5%A3%B0%E6%98%8E%EF%BC%9F) for native controls and status semantics.
 
 **Representative answer / 代表性回答：** I treat streamed output as framed bytes that may arrive in arbitrary chunks. The client incrementally decodes UTF-8, validates sequence numbers, keeps partial text, and displays completion only after a valid terminal event. It batches rendering, bounds memory and retries, and tears down the local reader on stop or route change. A client abort does not prove the server run stopped, so I query the run record or request cancellation separately. / 我会把流式输出视为可能以任意分块到达的带帧字节。客户端增量解码 UTF-8、校验序号、保留部分文本，并且只在收到有效终态事件后显示完成。界面合并渲染、限制内存和重试次数，并在用户停止或路由卸载时清理本地读取器。客户端中止不能证明服务端运行已停止，因此还要查询运行记录或单独请求取消。
 
@@ -5586,7 +5558,7 @@ Leave partial output visible when it remains useful, but label it as incomplete 
 - [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) owns run identity, durable state, checkpoints, side effects, and server cancellation.
 
 **Sources checked 2026-10-15 / 来源核对日期：** The [WHATWG Streams Standard](https://streams.spec.whatwg.org/) defines readable-stream readers and local consumer cancellation; the [DOM Standard's AbortController](https://dom.spec.whatwg.org/#interface-abortcontroller) defines signaling abort to an API that accepts an AbortSignal, and [AbortSignal.throwIfAborted()](https://dom.spec.whatwg.org/#dom-abortsignal-throwifaborted) provides checkpoints between asynchronous operations; the [WHATWG Encoding Standard](https://encoding.spec.whatwg.org/) defines streaming UTF-8 decode behavior. The [WHATWG Server-sent Events section](https://html.spec.whatwg.org/multipage/server-sent-events.html) defines EventSource reconnection and event IDs; this note's parser instead exercises its explicitly synthetic newline-delimited JSON application contract. Browser behavior was not tested here.
-## 59. How can an analytics client reduce work and try to send events during navigation? / 分析客户端如何降低工作量并尝试在导航时发送事件？
+## 58. How can an analytics client reduce work and try to send events during navigation? / 分析客户端如何降低工作量并尝试在导航时发送事件？
 
 Keep analytics off the application's critical path: collect events in a bounded in-memory queue, send small batches on a threshold or timer, and try one final batch when the document becomes hidden. This reduces per-event work and gives the client a best-effort delivery opportunity. It cannot guarantee server receipt, and pending events can be lost if the page exits. / 不要让分析采集阻塞应用关键路径：先把事件放入有界内存队列，达到阈值或定时发送小批次，并在文档转为隐藏时尝试发送最后一批。这可以减少逐事件开销，并提供尽力发送的机会；它无法保证服务器收到，页面退出时仍可能丢失未发送事件。
 
@@ -5652,7 +5624,7 @@ document.addEventListener("visibilitychange", () => {
 Keep the queue bound and choose an explicit overflow policy. Do not make application correctness depend on analytics delivery or block navigation while waiting for an acknowledgement.
 
 **Specifications:** [Beacon](https://w3c.github.io/beacon/) defines the Beacon API and its queueing result; [Fetch Standard, `keepalive`](https://fetch.spec.whatwg.org/#request-keepalive-flag) defines keepalive request behavior.
-## 60. 如何为产品选择前端框架？
+## 59. 如何为产品选择前端框架？
 
 **案例背景。** 以报表页面为例：浏览器地址是 `/reports?sort=recent#summary`，服务端实际收到 `/reports?sort=recent` 并据此返回 May、April 两行；`#summary` 只供浏览器定位。用户点 **Oldest first** 后，`pushState` 新增 `sort=oldest` 历史项，可见顺序成为 April、May；按浏览器 Back 会恢复 `sort=recent` 和 May、April。完整历史行为见[浏览器导航路径](#%E8%AE%A9%E7%AD%9B%E9%80%89%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。框架选择要回答的是团队怎样可靠地交付这类更新，以及页面还需要怎样的路由、服务端渲染、无障碍和运维支持。单说“有虚拟 DOM”不能回答这些问题。
 
@@ -5689,13 +5661,13 @@ React 用组件类型、树中的位置和同级 key 判断状态能否保留。
 
 框架不是唯一变量。真实环境还包括数据形状、设备、浏览器、访问性需求、发布约束和团队维护能力。保留一个候选框架的理由，应能说清它满足了哪条必要约束、测试了哪条路径，以及哪类工作仍由浏览器或服务端承担。
 
-React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#61.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
+React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（2026-11-06）
 > - 本文关于 React 描述、render 与 commit 的边界：React 19.3 当前文档，[Render and Commit](https://react.dev/learn/render-and-commit)、[Versions](https://react.dev/versions)，核验日期 2026-11-06。
 > - 框架实现可采用不同渲染机制：React 文档同上；Vue 官方文档，[Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism)，核验日期 2026-11-06。
 > - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
-## 61. How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？
+## 60. How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？
 
 **Core answer / 核心回答：** React Router matches the current location to a route, while SPA and MPA describe whether navigation updates the current document or requests another one. The choice depends on delivery, interaction, accessibility, hosting, and operations. / React Router 将当前地址匹配到路由；SPA 与 MPA 则描述导航是更新当前文档还是请求另一个文档。选择取决于内容交付、交互、无障碍、托管和运维需求。
 
@@ -5744,12 +5716,12 @@ Use Link for navigation users can follow and useNavigate for programmatic naviga
 | Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
 | SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
 
-**See also:** [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Next.js / Next.js开发](#62.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) for server/client rendering and framework routing.
+**See also:** [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Next.js / Next.js开发](#61.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) for server/client rendering and framework routing.
 
 **Sources checked 2026-10-15:** [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
-## 62. How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
+## 61. How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
 
-**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#58.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#58.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F)。
+**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#57.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#57.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F)。
 
 
 ### What does Next.js add to React? / Next.js为React增加了什么？
@@ -5889,7 +5861,7 @@ async function PostList({ posts }: { posts: Promise<Post[]> }) {
 }
 ```
 
-If the page awaits `getPosts()` before returning this tree, that request cannot be streamed inside the boundary. Place boundaries around independently useful parts: a boundary that is too high can hold back the whole page, while a boundary around a tiny fragment can create a choppy reveal. A fallback is visible page content, so give it meaningful text. If an update needs an assistive-technology announcement, add the appropriate live-region semantics; that does not move keyboard focus or create interaction behavior. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#16.%20How%20does%20the%20CSS%20cascade%20decide%20which%20declaration%20applies?%20/%20CSS%20%E7%BA%A7%E8%81%94%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E6%9C%80%E7%BB%88%E7%94%9F%E6%95%88%E7%9A%84%E5%A3%B0%E6%98%8E%EF%BC%9F) for the focused keyboard, naming, and error model. A pending fallback also does not make a failed request successful; provide a separate error path.
+If the page awaits `getPosts()` before returning this tree, that request cannot be streamed inside the boundary. Place boundaries around independently useful parts: a boundary that is too high can hold back the whole page, while a boundary around a tiny fragment can create a choppy reveal. A fallback is visible page content, so give it meaningful text. If an update needs an assistive-technology announcement, add the appropriate live-region semantics; that does not move keyboard focus or create interaction behavior. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#16.%20CSS%20%E7%BA%A7%E8%81%94%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E6%9C%80%E7%BB%88%E7%94%9F%E6%95%88%E7%9A%84%E5%A3%B0%E6%98%8E%EF%BC%9F) for the focused keyboard, naming, and error model. A pending fallback also does not make a failed request successful; provide a separate error path.
 
 ### How does file-based routing work? / 文件系统路由如何工作？
 
@@ -5912,10 +5884,10 @@ export async function GET() {
 
 Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
 
-**See also:** [React Routing and Navigation / React路由与导航](#61.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F) for client navigation and SPA/MPA document models; [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+**See also:** [React Routing and Navigation / React路由与导航](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F) for client navigation and SPA/MPA document models; [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
 **Sources checked 2026-10-15:** [React release and version references](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
-## 63. When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
+## 62. When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
 
 **Core answer / 核心回答：** Use Lodash when its documented path, collection, or timing contract removes repeated edge-case code. For a simple known shape, prefer the native operation when it expresses the same behavior more clearly; compare the exact semantics and installed version before substituting. This page is a method lookup, not a claim that one option is always smaller or faster. / Lodash 的路径、集合或定时语义能减少重复的边界处理时可使用它。对象结构简单明确时，如果原生操作能更清晰表达相同行为，就优先考虑原生 API；替换前要核对具体语义和安装版本。本文用于查找方法，不表示某种选择总是更小或更快。
 
@@ -6010,10 +5982,10 @@ Lodash's debounced function also has flush() to invoke a pending call immediatel
 
 Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#51.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for choosing debounce or throttle by workload.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#50.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for choosing debounce or throttle by workload.
 
 **Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
-## 64. When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
+## 63. When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
 
 **Core answer / 核心回答：** Use ahooks when an existing helper matches the interaction's state, lifecycle, request, or list contract and the installed package version. A helper still follows React's render and Effect rules; it does not replace decisions about data ownership, cache freshness, transport cancellation, or item identity. The APIs here follow documentation checked on 2026-10-15. / 当现有 ahooks 工具符合交互的状态、生命周期、请求或列表语义，并且与项目安装版本一致时再使用。工具仍遵守 React 的 render 和 Effect 规则；它不会替代对数据归属、缓存新鲜度、传输取消或列表项身份的判断。此处 API 依据 2026-10-15 核对的文档。
 
@@ -6180,7 +6152,7 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 **See also / 另见** — [React component composition / React 组件组合](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8React%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F) for Hook rules and Effect cleanup, [React server state / React 服务端状态](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query and mutation rules, and [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for debounce and throttle tradeoffs.
 
 **Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
-## 65. What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
+## 64. What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
 
 **Core answer / 核心回答：** Build the production output, run a critical browser journey against that output on a production-like server, then promote the exact artifact that passed. A development server alone does not exercise emitted assets or deployment paths. The general risk-to-test-boundary principle belongs to [Software Testing Strategy / 软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md); the tool choices for local logic and component behavior are outlined below. / 构建生产产物，在接近生产环境的服务上用该产物运行关键浏览器流程，然后晋级同一份通过检查的产物。单独运行开发服务器无法覆盖实际生成的资源或部署路径。通用的风险与测试边界原则见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)；本地逻辑和组件行为的工具选择见下文。
 
@@ -6198,7 +6170,7 @@ Keep browser tests for behavior that depends on the real browser or application 
 
 ### Jest fundamentals / Jest基础
 
-Use Jest when the risk can be reproduced around logic, state, or a dependency boundary. A test that starts asynchronous work must return or await the Promise that contains its assertions. Place the mock at the dependency and assert the behavior of the caller. [How a Jest test verifies asynchronous behavior / Jest 怎样验证异步行为](#66.%20How%20can%20a%20Jest%20test%20verify%20behavior%20across%20an%20asynchronous%20boundary?%20/%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E8%B7%A8%E5%BC%82%E6%AD%A5%E8%BE%B9%E7%95%8C%E7%9A%84%E8%A1%8C%E4%B8%BA%EF%BC%9F) contains the complete async, lifecycle, matcher, CommonJS and native ESM examples.
+Use Jest when the risk can be reproduced around logic, state, or a dependency boundary. A test that starts asynchronous work must return or await the Promise that contains its assertions. Place the mock at the dependency and assert the behavior of the caller. [How a Jest test verifies asynchronous behavior / Jest 怎样验证异步行为](#65.%20How%20can%20a%20Jest%20test%20verify%20behavior%20across%20an%20asynchronous%20boundary?%20/%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E8%B7%A8%E5%BC%82%E6%AD%A5%E8%BE%B9%E7%95%8C%E7%9A%84%E8%A1%8C%E4%B8%BA%EF%BC%9F) contains the complete async, lifecycle, matcher, CommonJS and native ESM examples.
 
 ### React Testing Library / React Testing Library
 
@@ -6286,7 +6258,7 @@ Use browser checks where real routing, asset URLs, browser behavior, or app/serv
 **See also:** [Advanced React / React进阶](#8.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E6%8A%A5%E8%A1%A8%E7%AD%9B%E9%80%89%E5%9C%A8%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
 
 **Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/), [Vite static deployment](https://vite.dev/guide/static-deploy.html), [Playwright web server](https://playwright.dev/docs/test-webserver).
-## 66. How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
+## 65. How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
 
 Wait for the Promise that carries the assertion, give the code under test an explicit dependency boundary, and assert what the code does with the result. Set up and restore only the resources the test owns. Module mocking depends on the test's module system. / 等待承载断言的 Promise，在被测代码的依赖边界安排模拟，并断言被测代码如何处理结果。测试只负责准备和恢复自己拥有的资源。模块模拟方式取决于测试使用的模块系统。
 
@@ -6458,4 +6430,4 @@ Run Jest with the project’s configured coverage option, commonly --coverage. C
 - [Jest: ECMAScript Modules](https://jestjs.io/docs/30.0/ecmascript-modules)
 - [Jest: The Jest Object](https://jestjs.io/docs/30.0/jest-object)
 - [Jest: Mock Functions](https://jestjs.io/docs/30.0/mock-functions)
-- [Frontend Testing / 前端测试](#65.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F)
+- [Frontend Testing / 前端测试](#64.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F)

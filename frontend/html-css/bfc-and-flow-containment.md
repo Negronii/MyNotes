@@ -1,80 +1,63 @@
-# How does a block formatting context contain floats and margins? / 块格式化上下文如何约束浮动和外边距？
+# 块格式化上下文如何约束浮动和外边距？
 
-A block formatting context (BFC) is a flow-layout boundary: floats cannot intrude into its contents, its auto height includes floats inside it, and child margins do not collapse through its boundary. It is not a stacking context, a universal containing block, or general layout containment. Use `display: flow-root` when the intended change is simply to contain floats and separate child margins. / 块格式化上下文（BFC）是流式布局的边界：外部浮动不会侵入其内容，BFC 根的自动高度会包含其中的浮动，子元素外边距也不会穿过该边界折叠。BFC 不等于堆叠上下文、通用定位包含块或整体布局隔离。若目的只是包含浮动并分隔子级 margin，使用 `display: flow-root`。
+block formatting context（BFC，块格式化上下文）是流式布局的一道边界。建立 BFC 的块会包含内部浮动，外部浮动不会侵入它的内容，子元素 margin 也不会穿过边界折叠。BFC 不等于 stacking context（堆叠上下文）、定位包含块或所有方向上的布局隔离；若只需要隔开普通流中的浮动和外边距，可用 <code>display: flow-root</code>。
 
-## Float containment / 包含浮动
+> [!info] BFC 的边界效果
+> BFC 主要约束块流、浮动与外边距。它本身不决定绘制层级，也不会为任意后代提供绝对定位的包含块；需要层叠或定位时应分别看 stacking context 与 containing block。
 
-Floats leave normal flow, so a normal-flow parent whose children are all floated may have no height from those children. A BFC root contains its floats:
+## 为什么报表卡片里浮动徽标会撑不开父级？
 
-~~~css
-.container { background: red; }
-.box { float: left; width: 100px; height: 100px; }
+浮动盒离开普通流；即使容器里还有普通流段落，若段落本身只有一行高、旁边的浮动徽标更高，父级自动高度仍只由段落高度决定，背景会在徽标底部之前结束。让容器建立 BFC 后，其自动高度也会包住内部浮动：
 
-/* Before: .container may collapse to a stripe. */
-.container { display: flow-root; } /* includes the floated child */
+~~~html
+<div class="summary">
+  <span class="badge">异常</span>
+  <p>共 12 条记录需要复核。</p>
+</div>
 ~~~
 
-Use a clearfix when maintaining legacy markup or browser support requires it:
+~~~css
+.badge { float: left; inline-size: 3rem; block-size: 3rem; }
+.summary { display: flow-root; background: #f3f6fa; }
+.summary p { margin: 0; line-height: 20px; }
+~~~
+
+> [!example] 前后状态
+> 根字号为 <code>16px</code> 时，徽标的 <code>3rem</code> 高为 <code>48px</code>；段落 margin 为 <code>0</code>、单行高度为 <code>20px</code>。没有 <code>flow-root</code> 时，`.summary` 内容盒高 <code>20px</code>，徽标超出背景；加上后内容盒高为 <code>48px</code>，背景包住徽标。
+
+同一格式化上下文外的浮动也不能侵入 BFC 的内容区域；建立 BFC 的整个盒子仍可能被浮动挤窄，或在空间不足时移到浮动下方。普通块级容器若没有建立 BFC，浮动影响可能延伸到下一个清除或格式化边界。
+
+## 相邻 margin 为什么不是简单相加？
+
+同一 BFC 中相邻、处于普通流的块级兄弟元素，它们的正向垂直 margin 会折叠为较大的值。例如一行状态卡片下 margin 为 <code>24px</code>，下一张卡片上 margin 为 <code>16px</code>，最终间隔是 <code>24px</code> 而不是 <code>40px</code>。若一正一负，结果是最大正值加最负的负值：<code>24px + (-16px) = 8px</code>；缺少一侧时按 <code>0</code> 参与计算。
 
 ~~~css
-.parent::after {
+.report-card { margin-block: 24px; }
+.report-card + .report-card { margin-block-start: 16px; }
+/* 同一块格式化上下文中的相邻外边距合并后，间隔为 24px。 */
+~~~
+
+父级和第一个普通流块子元素的上 margin 也可能向外折叠，条件包括两者之间没有 border、padding、行内内容、clearance 或新格式化上下文。给父级加边框、内边距或建立 BFC，会把这条折叠路径分开。BFC 边界不取消容器自己的 margin 与其父级上下文的折叠规则。
+
+## 如何创建 BFC，什么副作用值得注意？
+
+- <code>display: flow-root</code> 明确建立 BFC，不裁切内容，也不建立滚动区域。
+- 块容器设置 <code>overflow: hidden</code>、<code>auto</code> 或 <code>scroll</code> 会建立 BFC；同时可能裁切内容或成为滚动容器。若不希望这些副作用，不要只为了清浮动而选 <code>overflow: hidden</code>。
+- <code>overflow: clip</code> 会裁切溢出，但不建立 BFC；与另一轴的可滚动 overflow 值组合时，计算值可能落到 <code>hidden</code>。
+- 浮动、绝对定位、inline-block、table cell 等盒会为其内部内容建立独立格式化上下文。
+- Flex 和 Grid 容器建立各自的格式化上下文，不是 BFC；它们的项目不按普通块流参与外边距折叠，也不受普通 float 侵入规则控制。
+
+旧项目若必须兼容不能使用 <code>flow-root</code> 的环境，可用清除伪元素方案；新代码优先选直接表达意图的属性：
+
+~~~css
+.legacy-parent::after {
   content: "";
   display: table;
   clear: both;
 }
 ~~~
 
-A clearing element can also end the float interaction, but adds non-semantic markup:
-
-~~~html
-<div class="parent">
-  <div class="child">Content</div>
-  <div class="clear"></div>
-</div>
-~~~
-
-~~~css
-.clear { clear: both; }
-~~~
-
-`overflow: hidden` can establish a BFC but also clips overflow and creates a scroll container. Prefer `flow-root` when clipping and scrolling are not wanted. `overflow: clip` does not establish a BFC.
-
-## Margin collapse / 外边距折叠
-
-Adjacent positive vertical margins of in-flow block siblings in the same BFC collapse to the larger value: two `50px` margins create a `50px` gap. A formatting-context boundary prevents a child's margin from collapsing through the container, though the container's own margins still follow its parent context.
-
-~~~html
-<section>box one</section>
-<section>box two</section>
-~~~
-
-~~~css
-section { margin: 50px; }
-/* Adjacent positive margins collapse to a 50px gap. */
-~~~
-
-Wrap a child in a BFC to keep its margin inside that boundary:
-
-~~~html
-<section>box one</section>
-<div class="bfc"><section>box two</section></div>
-~~~
-
-~~~css
-section { margin: 50px; }
-.bfc { display: flow-root; }
-/* The child's top margin stays inside the BFC; the outer gap is 100px. */
-~~~
-
-A parent's first child's top margin can also collapse through a parent without border, padding, inline content, clearance, or a new formatting context. A border, padding, or formatting-context boundary separates the margins.
-
-## What establishes a BFC? / 哪些条件会建立 BFC？
-
-- `display: flow-root` explicitly establishes a BFC without clipping or scrolling.
-- A block container with `overflow: hidden`, `auto`, or `scroll` establishes a BFC; `overflow: clip` does not.
-- Floats, absolutely positioned boxes, inline blocks, and table cells/captions establish independent formatting contexts for their contents.
-- Flex and grid containers establish their own formatting contexts, not BFCs. Their items do not participate in block margin collapsing or the usual float intrusion rules.
-
-A BFC has defined flow behavior, not the separate rules for stacking and positioned containing blocks. See [CSS position and stacking](./css-position-display-and-animations.md).
-
-**Specifications:** [CSS Display: formatting contexts](https://www.w3.org/TR/css-display-3/); [CSS 2.2: block formatting contexts](https://www.w3.org/TR/CSS22/visuren.html#block-formatting); checked 2026-11-05.
+> [!info]- 来源
+> - 格式化上下文、<code>flow-root</code>、float containment、margin collapse 和 Flex/Grid 的格式化边界：W3C CSS Display Module Level 3，§2.2，Candidate Recommendation Draft（2026-06-05）：[CSS Display Level 3](https://www.w3.org/TR/css-display-3/)，检查于 2026-11-06。
+> - BFC、float 和 margin 折叠的传统定义：W3C CSS 2.2，§8.3.1、§9.4.1、§9.5，First Public Working Draft（2016-04-12）：[CSS 2.2, margin collapsing](https://www.w3.org/TR/CSS22/box.html#collapsing-margins) 与 [BFC / floats](https://www.w3.org/TR/CSS22/visuren.html#block-formatting)，检查于 2026-11-06。该文档是工作草案；格式化上下文的现代模型另见上项 CSS Display Level 3。
+> - <code>overflow</code> 的滚动与裁切行为：W3C CSS Overflow Module Level 3，§3：[CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/)，检查于 2026-11-06。
