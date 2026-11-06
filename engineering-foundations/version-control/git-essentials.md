@@ -122,7 +122,19 @@ Apply the change introduced by a selected commit to the current branch, creating
 git cherry-pick <commit>
 ~~~
 
-For a mistake in existing changes or commits, see [undo and recovery in Git / Git 撤销与找回](git-undo-and-recovery.md).
+## Undo or recover by state layer / 按状态层撤销与找回
+
+First ask whether the change lives in the working tree, index, or commit history, and whether others already rely on the commit. For example, if a bad change is already on a shared branch, `git revert <commit>` records a new inverse change. It preserves the published commit identity. Reverting a merge commit requires choosing the mainline parent. Resolve conflicts and verify what the inverse change actually does.
+
+For an unshared local commit, `git reset <target>` can move the current branch. Choose what else should change.
+
+| Reset mode | Branch | Index | Working tree |
+| --- | --- | --- | --- |
+| `--soft` | Move to target | Keep | Keep |
+| `--mixed` | Move to target | Set to target | Keep |
+| `--hard` | Move to target | Set to target | Set to target, discarding tracked local edits that differ from the target and possibly overwriting untracked paths |
+
+Use `git status` and save any edits you need before a hard reset. If a local branch moved by mistake, inspect `git reflog`, find the prior commit, and make it reachable again with `git branch recovery <commit>`. Inspect that new branch before applying or restoring anything. Reflogs are local and expire, so use another durable copy for backup. / 共享提交通常用 revert 产生新的撤销记录。只调整本地分支时，按需要保留的暂存区与工作区选择 reset 模式。误移动后可从 reflog 找旧提交并先用新分支保留。 [Git reset](https://git-scm.com/docs/git-reset) · [Git reflog](https://git-scm.com/docs/git-reflog)
 
 ## Pull request and code review workflow
 

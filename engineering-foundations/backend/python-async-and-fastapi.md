@@ -16,7 +16,7 @@ An `async def` function containing `yield` is an **async-generator function**; c
 
 For an awaited database or HTTP client, use an `async def` route and await its I/O. A synchronous `def` route or dependency that FastAPI calls is run in its worker thread pool, so a legacy synchronous client can fit that boundary. Conversely, a synchronous helper called directly from inside an `async def` route is just a normal function call; FastAPI does not automatically move that nested call to a thread.
 
-`asyncio.to_thread()` is useful for blocking I/O that cannot yet be replaced, and it keeps the event loop available while the thread waits. It is not a general CPU-parallelism switch: in CPython, the GIL usually limits simultaneous execution of pure-Python CPU work. A process pool or separate worker can run CPU work in parallel, with serialization, startup, memory, and queueing costs. Native extensions that release the GIL and other Python implementations can differ; measure the actual workload. Bound thread/process concurrency so offloading does not merely move an unbounded queue; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md) for admission and backpressure.
+`asyncio.to_thread()` is useful for blocking I/O that cannot yet be replaced, and it keeps the event loop available while the thread waits. It is not a general CPU-parallelism switch: in a GIL-enabled CPython runtime, the lock limits simultaneous execution of pure-Python CPU work. CPython offers free-threaded builds from 3.13, but extension support and whether the GIL is enabled still matter. A process pool or separate worker can run CPU work in parallel, with serialization, startup, memory, and queueing costs. Native extensions that release the GIL and other Python implementations can differ. Measure the chosen runtime and library combination. [CPython free-threading guide](https://docs.python.org/3/howto/free-threading-python.html) Bound thread/process concurrency so offloading does not merely move an unbounded queue; see [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md) for admission and backpressure.
 
 ## Cancellation, deadlines, and cleanup / 取消、截止时间与清理
 
@@ -24,7 +24,30 @@ For an awaited database or HTTP client, use an `async def` route and await its I
 
 In Python 3.11, `asyncio.timeout(seconds)` cancels the current task when its time budget expires and raises `TimeoutError` outside the context manager. It is cooperative: a blocking synchronous function prevents the event loop from delivering that cancellation until the function returns. A timeout around `await asyncio.to_thread(...)` stops waiting in the coroutine but cannot forcibly stop a thread function already running. A client timeout also does not prove that a remote operation stopped or had no side effect. Pass remaining request budget to supported downstream calls and use the broader [API reliability guidance](../reliability/api-reliability-and-async-delivery.md) for end-to-end deadlines and unknown outcomes.
 
-FastAPI yield dependencies add a resource-lifetime decision: request scope remains open through response streaming, while function scope closes before the response is sent. The version-specific lifecycle, cleanup order, and disconnect caveat are explained in [FastAPI yield-dependency lifetime / FastAPI yield 依赖的资源生命周期](python-fastapi-resource-lifetimes.md). The smoke check below verifies explicit cancellation and streaming cleanup for the versions listed below; it does not establish how every ASGI server handles a real network disconnect.
+## Choose the dependency scope from its last use / 按最后一次使用选择依赖作用域
+
+In FastAPI 0.128.0, a yielded dependency defaults to request scope. The framework enters it before the route runs. If the route returns a streaming body that will keep using the resource, retain the request scope through response processing. If the dependency is only needed while running the route, `Depends(scope="function")` ends it when the handler returns, before sending the response. Return data that no longer needs the resource when choosing function scope. / 如果响应生成过程中还需使用资源，就保留 request scope。路由返回前已完成全部资源使用时，才选择 function scope。
+
+~~~mermaid
+sequenceDiagram
+    participant F as FastAPI
+    participant D as Yield dependency
+    participant R as Route
+    participant B as Response body
+    F->>D: Acquire resource
+    F->>R: Call route
+    R-->>F: Return response
+    alt function scope
+        F->>D: Clean up
+        F->>B: Generate and send body
+    else request scope
+        F->>B: Generate and send body
+        B->>D: Use resource while streaming
+        F->>D: Clean up at end of request scope
+    end
+~~~
+
+Use `finally` so cleanup runs when cancellation reaches the ASGI application. The smoke check below exercises explicit task cancellation and both streaming lifetimes. A dropped connection does not necessarily cancel every kind of downstream work. Test the selected ASGI server and response type before depending on disconnect behavior. A background job should acquire its own resources at its own lifetime boundary. [FastAPI dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/)
 
 ~~~mermaid
 flowchart LR

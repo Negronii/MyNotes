@@ -30,7 +30,7 @@ A port mapping forwards a host port to a port in the container. This publishes a
 docker run -d --name cache -p 127.0.0.1:6000:6379 redis:7
 ~~~
 
-Binding to `127.0.0.1` limits host access to the local machine. Omitting the host IP generally publishes on all host interfaces, subject to the host and Docker networking configuration. Container-to-container traffic on a shared Docker network normally uses the container port directly, not a published host port.
+For the default bridge/NAT configuration on Docker Engine 28 and later, a localhost-published port is scoped to the Docker host. Earlier Engine releases had an exception where hosts on the same Layer 2 network could reach a localhost-published port. Check the actual Engine version, network mode and routing before relying on the bind for exposure control. [Docker port publishing, checked 2026-11-06](https://docs.docker.com/engine/network/port-publishing/) Omitting the host IP generally publishes on all host interfaces, subject to the host and Docker networking configuration. Container-to-container traffic on a shared Docker network normally uses the container port directly, not a published host port.
 
 ---
 
@@ -51,6 +51,8 @@ Only expose a host port when a process outside the network needs to connect. In 
 ## Volumes and persistent data
 
 Container writable layers are removed with their containers. A **named volume / 命名卷** is managed by Docker and remains after the container is removed. A **bind mount / 绑定挂载** maps a host path into the container and is useful when both host and container need the files. A volume is not a backup; plan backups and restore tests separately.
+
+The examples pin PostgreSQL 16 and mount `/var/lib/postgresql/data`. Starting with the official PostgreSQL 18 image, the default data directory is version-specific and the recommended volume mount is `/var/lib/postgresql`. Check the image's data path when upgrading and migrate or restore the data explicitly. Changing the tag and mount point alone does not upgrade the database files. [Official Postgres image, PGDATA](https://github.com/docker-library/docs/blob/master/postgres/README.md#pgdata)
 
 Omitting the volume source creates an anonymous volume with a generated name; it normally persists after container removal but is not automatically reused by a later container.
 

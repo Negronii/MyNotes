@@ -22,6 +22,10 @@ flowchart LR
 
 Authentication yields a validated subject; it does not prove access to every tenant or object. Build a **principal / 请求主体** from the verified identity plus the user's current membership and permissions in the selected tenant. A tenant ID in a URL or request body is only a requested context: resolve it against trusted membership before constructing the principal. Enforce the resource and action together on every API path.
 
+### Roles grant an action within a resource scope / 角色在资源范围内授予操作
+
+**RBAC / 基于角色的访问控制** maps users to roles and roles to permitted actions. In a relational store, user–role and role–permission tables represent those mappings, and the assignment can be scoped by tenant. In the sample service, a `reader` role in tenant A can request `documents:read`. The server must still confirm that the selected document belongs to A. Rendering or hiding a button only reflects the policy. The service evaluates current membership, the action, and the specific resource independently. / 角色授予某类操作，租户和资源判断决定这次请求实际能访问哪一条记录。 [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
+
 For one synthetic document service, the path is: verified credential → current tenant membership → `GET /documents/{id}` authorization → query constrained by both `tenant_id` and document ID → cache lookup scoped by tenant, subject, and document after authorization → optional job row storing the authorized tenant, requester, and document. The worker loads that canonical job row, rechecks current membership, and calls the same tenant-scoped data function. A worker's broad database role does not make a job payload or object ID trustworthy.
 
 This standard-library example uses SQLite to exercise the API and worker data boundaries. The identity inputs below stand in for a principal produced by a real authentication layer; they are not token validation code.
@@ -121,9 +125,15 @@ else:
     raise AssertionError("worker exposed a cross-tenant document")
 ```
 
-The query always carries the principal's tenant, and authorization runs before a cache hit. This example gives each principal a separate cache entry; a system with finer-grained permissions must check those permissions on cache hits and include every access-relevant scope or policy version in its cache design. Database row-level security or tenant-scoped credentials can add another boundary, but the application still needs correct authorization and job ownership.
+The query always carries the principal's tenant, and authorization runs before a cache hit. This example gives each principal a separate cache entry; a system with finer-grained permissions must check those permissions on cache hits and include every access-relevant scope or policy version in its cache design. If an object can change ownership, invalidate its old entries or recheck current resource scope before serving a cached copy. A tenant key alone cannot make stale access policy current. Database row-level security or tenant-scoped credentials can add another boundary, but the application still needs correct authorization and job ownership.
 
 Permission-aware retrieval uses the same boundary before evidence reaches a model; see [Retrieval-Augmented Generation / 检索增强生成](../../ai-engineering/rag/rag-architecture-and-implementation.md) for that application.
+
+## Bind SQL values after checking scope / 核对范围后绑定 SQL 参数
+
+The example's `WHERE tenant_id=? AND id=?` passes both values separately from SQL syntax. A request ID such as `doc-a' OR 1=1 --` is then compared as data. If an application instead interpolates that ID into a SQL string, the input can change the command. Use driver parameters for values, including raw SQL inside an ORM. Dynamic column names or sort directions that cannot be bound as values should come from a fixed allowlist selected by code. Give the database credential only the access it needs.
+
+Parameterization and authorization protect distinct parts of the same request. Binding `doc-b` is safe SQL, but the server still has to check whether the caller can read it. / 参数绑定把输入作为数据交给数据库，跨租户授权再决定这次请求能否读取该对象。 [OWASP SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)
 
 **Interview answer / 面试回答：**
 
@@ -136,7 +146,7 @@ See [AWS Well-Architected SaaS Lens: Preventing cross-tenant access](https://doc
 ---
 
 
-**Related questions / 相关问题：** [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](web-sessions-and-oidc.md) covers credentials and login; [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](web-browser-security-boundaries.md) separates TLS, XSS, CSRF, CORS, and framing; [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](web-availability-and-ddos.md) covers bounded public work; [How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？](sql-injection-prevention.md) and [How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？](password-storage.md) cover server-side data and credential boundaries.
+**Related questions / 相关问题：** [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](web-sessions-and-oidc.md) covers credentials and login; [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](web-browser-security-boundaries.md) separates TLS, XSS, CSRF, CORS, and framing; [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](web-availability-and-ddos.md) covers bounded public work.
 
 **See also / 另见：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../networking/http-protocols-and-websockets.md) covers browser request and transport context; [Browser Storage and Communication / 浏览器存储与通信](../../frontend/browser-apis/browser-storage-and-communication.md) covers client storage and messaging risks.
 

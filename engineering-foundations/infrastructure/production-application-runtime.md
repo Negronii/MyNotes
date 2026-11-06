@@ -37,6 +37,12 @@ Network reachability and authorization are separate checks. A route table, firew
 
 Choose a runtime by workload constraints. A managed application platform or function service can reduce host operations for ordinary stateless APIs or bounded event-driven jobs, subject to its execution, startup, and networking limits. A managed container service fits long-running APIs and queue workers when packaging and process control matter. Use virtual machines when the workload needs host-level control or a legacy environment, and budget for operating-system patching and capacity management. Compare steady and peak load, required minimum capacity, startup/cold-start tolerance, execution duration, portability, and the team’s ability to operate the platform; “serverless” does not mean state-free or cost-free.
 
+### What the runtime still leaves to the application / 运行平台仍留给应用的责任
+
+A managed function service owns the execution infrastructure, while the application owns durable state, resource cleanup and idempotent behavior across retries. For example, AWS Lambda may reuse an execution environment. A cached client can reduce setup time on a warm call. An in-memory counter in that environment cannot be the authoritative history across invocations, concurrent workers, or restarts. Persist progress externally. / 云函数平台可复用执行环境，应用仍要把持久状态、重试语义与资源清理设计清楚。
+
+Compare duration, concurrency, cold starts, billing and long-lived connections against the selected provider and plan. Choose a function for a bounded event-driven job when those limits fit. For long-lived connections or jobs that may outlast an invocation, compare an API or worker runtime with explicit process and shutdown controls. [AWS Lambda execution lifecycle](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) · [Lambda application design](https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html) · [API retries and uncertain outcomes](../reliability/api-reliability-and-async-delivery.md)
+
 ## Failure and cost model / 故障与成本模型
 
 | Boundary / 边界 | Failure to plan for / 需要考虑的故障 | Cost or limit to watch / 成本或限制 |

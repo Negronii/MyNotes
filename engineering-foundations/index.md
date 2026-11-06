@@ -39,12 +39,9 @@ Start with the costs of representing and accessing data. Then follow work across
 - [How do Node.js event-loop phases and microtask queues interact? / Node.js 事件循环阶段与微任务队列如何交互？](backend/node-event-loop-and-microtasks.md)
 - [How do Node.js streams propagate backpressure? / Node.js 流如何传播背压？](backend/node-stream-backpressure-and-cleanup.md)
 - [How should a Node.js service drain on shutdown? / Node.js 服务如何排空并关闭？](backend/node-service-shutdown.md)
-- [What does serverless leave to the application? / 无服务器计算仍要求应用负责什么？](backend/serverless-runtime-boundaries.md)
 - [How do Python values, iterators, and resource lifetimes behave? / Python 的值、迭代器与资源生命周期如何工作？](backend/python-fundamentals.md)
 - [Why can an async FastAPI endpoint still block? / 为什么异步 FastAPI 接口仍会阻塞？](backend/python-async-and-fastapi.md)
-- [How long should a FastAPI dependency stay open during a response? / FastAPI 依赖应在响应期间保持多久？](backend/python-fastapi-resource-lifetimes.md)
 - [How do you design a predictable HTTP API contract? / 如何设计可预期的 HTTP API 契约？](backend/http-api-contracts.md)
-- [How does cursor pagination continue safely? / 游标分页如何安全续读？](backend/api-cursor-pagination.md)
 - [How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？](backend/data-access-and-connection-pools.md)
 - [How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？](backend/caching-and-redis.md)
 
@@ -54,8 +51,6 @@ Start with the costs of representing and accessing data. Then follow work across
 - [How do cookie sessions and OIDC tokens establish identity? / Cookie 会话与 OIDC 令牌如何建立身份？](security/web-sessions-and-oidc.md)
 - [Which web security control protects each browser boundary? / 哪种 Web 安全控制保护哪条浏览器信任边界？](security/web-browser-security-boundaries.md)
 - [How do web services limit denial-of-service impact? / Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
-- [How do parameterized queries prevent SQL injection? / 参数化查询如何防止 SQL 注入？](security/sql-injection-prevention.md)
-- [How should passwords be stored against offline guessing? / 如何存储密码以抵抗离线猜测？](security/password-storage.md)
 
 ### Reliability and asynchronous delivery / 可靠性与异步交付
 
@@ -70,7 +65,6 @@ Start with the costs of representing and accessing data. Then follow work across
 - [How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？](architecture/frontend-architecture-boundaries.md)
 - [When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？](architecture/design-patterns-in-practice.md)
 - [How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？](architecture/low-code-editor-data-model.md)
-- [How should roles control access to a feature? / 角色怎样控制对功能的访问？](architecture/role-based-access-design.md)
 - [How can a minimal counterexample trace a regression to its root cause? / 如何用最小反例沿调用路径定位回归根因？](architecture/reading-debugging-and-reviewing-code.md)
 - [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 
@@ -81,7 +75,6 @@ Start with the costs of representing and accessing data. Then follow work across
 ### Version control / 版本控制
 
 - [How do you integrate, revise, or recover Git history without losing work? / 如何在不丢失工作的前提下集成、修改或恢复 Git 历史？](version-control/git-essentials.md)
-- [How do you undo or recover a Git change safely? / 怎样安全撤销或找回 Git 改动？](version-control/git-undo-and-recovery.md)
 
 ### Infrastructure / 基础设施
 

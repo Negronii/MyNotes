@@ -41,7 +41,24 @@ RFC 9110 describes `422` for syntactically valid content whose instructions cann
 
 ## Cursor pagination / 游标分页
 
-For the separate question of page limits, cursors, and completion signals, see [How does cursor pagination continue safely? / 游标分页如何安全续读？](api-cursor-pagination.md).
+A list contract defines a page-size cap, a deterministic order, and an explicit end signal. The synthetic API below defaults to two items, rejects limits above 100, and always returns `next_cursor`. An opaque string means continue and JSON `null` means stop. A short page on its own does not prove that the collection ended. Other APIs choose different signals. Google AIP-158, for example, uses an empty next-page token and reduces an oversized request to the documented maximum. [AIP-158](https://google.aip.dev/158#guidance)
+
+A scoped production listing follows this flow.
+
+~~~mermaid
+flowchart LR
+    Request["Request a page"] --> Auth["Authorize caller and verify query scope"]
+    Auth --> Read["Read in deterministic order after the cursor"]
+    Read --> More{"More eligible rows?"}
+    More -->|yes| Cursor["Return rows and an opaque next cursor"]
+    More -->|no| End["Return rows and next_cursor null in this API"]
+    Cursor --> Request
+~~~
+
+For a production listing sorted by `(created_at, id)` ascending, a keyset cursor can retain the last pair. The next query uses the same filters, a strictly greater pair, and the same order, so two rows with the same timestamp still appear in a predictable order. Associate the cursor with the original query, authorization scope, sort direction and lifetime. Apply authorization on every page. If the dataset changes during paging, document whether the client sees a moving collection or a consistent snapshot. Mutable sort keys can otherwise cause duplicates or omissions.
+
+The runnable example below is one public, synthetic listing. Its in-memory mapping from random tokens to offsets demonstrates continuation, page limits, and the end signal. The demo has no identity or cursor scope checks, and those tokens stop working on restart. For a large, changing collection, choose an indexed query and a cursor policy appropriate to the storage engine. / 客户端原样传回游标，并按接口声明的结束信号停止。示例用 JSON `null` 表示结束。服务端要限制页大小、保证排序稳定，并对每一页重新授权。
+
 ## Runnable contract example / 可运行的契约示例
 
 The API uses a synthetic inventory collection. A Pydantic before-validator strips string input before the field's length constraints run, so whitespace-only input cannot become an empty stored name. / API使用合成库存集合。Pydantic前置验证器先去除字符串两端空白，再执行字段长度约束，因此全空白输入不会变成已保存的空名称。 The complete script below validates request and query boundaries, exposes success and error schemas, and checks the resulting HTTP behavior and OpenAPI document. Save it as `api_contract_demo.py` and run it in an environment with FastAPI and its TestClient dependencies.
@@ -252,6 +269,6 @@ Adding an optional response field is often compatible when clients ignore unknow
 
 
 
-**Sources / 来源：** [OpenAPI Specification, latest](https://spec.openapis.org/oas/latest.html); IETF [RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html); [RFC 9110 §15.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5) for 404, 409, and 422 semantics; Google [AIP-158, Pagination](https://google.aip.dev/158) as one pagination style; FastAPI [request bodies and validation](https://fastapi.tiangolo.com/tutorial/body/), [response models](https://fastapi.tiangolo.com/tutorial/response-model/), and [handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/); Pydantic 2.11 [field validators](https://docs.pydantic.dev/2.11/concepts/validators/), checked against a FastAPI 0.128.0 / Pydantic 2.11.7 runtime on 2026-10-15. In that installed runtime, `app.openapi()["openapi"]` returned `3.1.0`; the live OpenAPI `latest` document resolved to `3.2.1`, so the sample reports its actual generated version instead of assuming the framework emits the newest specification.
+**Sources / 来源：** [OpenAPI Specification, latest](https://spec.openapis.org/oas/latest.html); IETF [RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html); [RFC 9110 §15.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5) for 404, 409, and 422 semantics; Google [AIP-158, Pagination](https://google.aip.dev/158) as one pagination style; FastAPI [request bodies and validation](https://fastapi.tiangolo.com/tutorial/body/), [response models](https://fastapi.tiangolo.com/tutorial/response-model/), and [handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/); Pydantic 2.11 [field validators](https://docs.pydantic.dev/2.11/concepts/validators/), checked against a FastAPI 0.128.0 / Pydantic 2.11.7 runtime on 2026-10-15. The pinned example emits OpenAPI `3.1.0`. Use the version produced by the framework when checking the generated schema.
 
-**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../networking/http-protocols-and-websockets.md) covers the transport and generic status semantics; [Cursor pagination / 游标分页](api-cursor-pagination.md) owns page-size, cursor, and end-of-list behavior; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../reliability/api-reliability-and-async-delivery.md) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) covers durable uniqueness and transaction boundaries.
+**Related notes / 相关笔记：** [HTTP Protocols and WebSockets / HTTP协议与WebSocket](../networking/http-protocols-and-websockets.md) covers the transport and generic status semantics; [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../reliability/api-reliability-and-async-delivery.md) covers timeouts, retries, and ambiguous side effects; [Database Fundamentals / 数据库基础](../databases/database-fundamentals.md) covers durable uniqueness and transaction boundaries.

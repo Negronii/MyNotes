@@ -4,6 +4,12 @@
 
 **Key terms / 关键术语：** session identifier / 会话标识；bearer token / Bearer 令牌；JWT / JSON Web Token；OIDC / OpenID Connect；authorization code / 授权码；PKCE / 授权码交换证明；state / 状态值；nonce / 随机数；refresh token / 刷新令牌。
 
+## Verify a local credential before issuing a session / 签发会话前验证本地凭据
+
+For local password login, store a salted **password hash / 密码哈希**, including the algorithm and cost parameters, and verify it through a maintained library. A stolen database gives an attacker material for offline guesses. Argon2id makes each guess spend memory and computation. A fast digest such as SHA-256 alone does not provide that cost. Let the library generate a unique random salt, and store the salt with the hash.
+
+OWASP lists Argon2id at 19 MiB of memory, two iterations and parallelism one as one minimum configuration. Benchmark your authentication service at realistic concurrency and tune within the security requirements. Bound online attempts separately. When upgrading hash cost, rehash on a successful login after verifying the password with its old settings. An optional **pepper / 服务器侧秘密** belongs outside the password database, with an explicit rotation plan. For federated sign-in, the identity provider verifies the credential and the application validates the protocol result before issuing its session. / 本地登录先用带随机盐的专用密码哈希验证密码，再签发会话。离线猜测成本与在线限速是两层不同的保护。 [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) · [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html)
+
 ## Cookies vs. tokens — which to use for authentication? / Cookie 会话与令牌应如何选择？
 
 **Cookie 会话与令牌 / Cookie sessions and tokens** are transport and session choices, not two complete security models. Choose according to the clients, domain boundaries, revocation needs, and threat model.
