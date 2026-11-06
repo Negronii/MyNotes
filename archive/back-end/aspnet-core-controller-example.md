@@ -1,24 +1,55 @@
-# How does the ASP.NET Core controller example map requests to stored data? / ASP.NET Core 控制器示例如何把请求映射到持久化数据？
+# ASP.NET Core 控制器如何把 HTTP 请求送到正确的操作并返回结果？
 
-The controller receives its context and mapper through constructor injection, queries related data asynchronously, returns HTTP results for missing resources, and maps domain results to response DTOs. `Task<ActionResult<T>>` combines async completion with typed or status responses; it is one pattern, not the only valid signature. / 控制器通过构造器注入取得 context 和 mapper，异步查询关联数据，为缺失资源返回 HTTP 结果，并把领域结果映射为响应 DTO。`Task<ActionResult<T>>` 组合异步完成与带类型或状态码的响应，但不是唯一有效签名。
+**案例：** 卖家调用 `POST /api/auctions`，正文只含商品品牌、型号、颜色和起拍价。服务验证并保存拍卖后返回 `201 Created`、资源地址和响应数据传输对象（Data Transfer Object，DTO）；随后 `GET /api/auctions/{id}` 能读回包含商品字段的拍卖。控制器负责把 HTTP 输入送入应用，并把应用结果变成 HTTP 响应；它不应承担数据库模型设计或大段业务规则。
 
-## Controllers
+## 请求经过哪些处理才进入操作方法？
 
-Example code:
+~~~mermaid
+flowchart TD
+    Client[调用方发出 HTTP 请求] --> Pipeline[ASP.NET Core 请求管线]
+    Pipeline --> Route[路由选择控制器操作]
+    Route --> Auth{Seller 授权策略通过？}
+    Auth -->|否：未认证 401 / 策略拒绝 403| Denied[操作方法不执行]
+    Auth -->|是| Bind[模型绑定：路径、查询或 JSON 正文]
+    Bind --> Validate{模型验证通过？}
+    Validate -->|否| BadRequest[400：操作方法不执行]
+    Validate -->|是| Action[控制器查询或写入]
+    Action --> Db[DbContext 执行异步查询或提交]
+    Db --> Result[ActionResult：200、404 或 201]
+    Result --> Serialize[序列化响应正文]
+    Serialize --> Client
+~~~
 
-```csharp
-using AuctionService.DTOs;
+路由先选择操作；authentication（身份验证）建立调用方主体，authorization（授权）在模型绑定前检查 `Seller` 策略。未认证时走 401 challenge，主体缺少卖家角色或 ID claim 时走 403 forbid，两者都不会进入操作方法。model binding（模型绑定）再把路径、查询字符串或 JSON 正文转换成 C# 参数；model validation（模型验证）检查格式和声明的约束。应用配置了 `[ApiController]` 时，无效模型状态默认会在操作方法运行前返回 400。成功后，控制器通过 dependency injection（依赖注入）取得服务，调用数据库异步 API，再选择成功或错误结果。
+
+本例假设应用已经配置并启用可用的认证方案；把已认证且带卖家角色和主体 ID 的调用方视为卖家。实际身份提供程序必须签发相应 claim（声明），应用再注册对应 policy（授权策略）：
+
+~~~csharp
+using System.Security.Claims;
+
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy("Seller", policy =>
+        policy.RequireAuthenticatedUser()
+            .RequireRole("Seller")
+            .RequireClaim(ClaimTypes.NameIdentifier)));
+~~~
+
+## 控制器怎样映射并保存一次拍卖？
+
+~~~csharp
+using System.Security.Claims;
 using AuctionService.Data;
+using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace AuctionService.Controllers;
-
 [ApiController]
+[Authorize(Policy = "Seller")]
 [Route("api/auctions")]
-public class AuctionsController: ControllerBase
+public sealed class AuctionsController : ControllerBase
 {
     private readonly AuctionDbContext _context;
     private readonly IMapper _mapper;
@@ -30,57 +61,74 @@ public class AuctionsController: ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<AuctionDto>>> GetAllAuctions()
+    public async Task<ActionResult<List<AuctionDto>>> GetAll(CancellationToken cancellationToken)
     {
+        var sellerId = GetRequiredSellerId();
         var auctions = await _context.Auctions
-            .Include(x => x.Item)
-            .OrderBy(x => x.Item.Make)
-            .ToListAsync();
-        return _mapper.Map<List<AuctionDto>>(auctions);
+            .AsNoTracking()
+            .Include(a => a.Item)
+            .Where(a => a.SellerId == sellerId)
+            .OrderBy(a => a.Item.Make)
+            .ThenBy(a => a.Id)
+            .ToListAsync(cancellationToken);
+
+        return Ok(_mapper.Map<List<AuctionDto>>(auctions));
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<AuctionDto>> GetAuctionById(Guid id)
+    public async Task<ActionResult<AuctionDto>> GetById(
+        Guid id,
+        CancellationToken cancellationToken)
     {
+        var sellerId = GetRequiredSellerId();
         var auction = await _context.Auctions
-            .Include(x => x.Item)
-            .FirstOrDefaultAsync(x => x.Id == id);
-        if (auction == null) return NotFound();
-        return _mapper.Map<AuctionDto>(auction);
+            .AsNoTracking()
+            .Include(a => a.Item)
+            .SingleOrDefaultAsync(
+                a => a.Id == id && a.SellerId == sellerId,
+                cancellationToken);
+
+        if (auction is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(_mapper.Map<AuctionDto>(auction));
     }
 
     [HttpPost]
-    public async Task<ActionResult<AuctionDto>> CreateAuction(CreateAuctionDto createAuctionDto)
+    public async Task<ActionResult<AuctionDto>> Create(
+        CreateAuctionDto input,
+        CancellationToken cancellationToken)
     {
-        var auction = _mapper.Map<Auction>(createAuctionDto);
-        auction.Seller = "test";
+        var auction = _mapper.Map<Auction>(input);
+        auction.SellerId = GetRequiredSellerId();
+
         _context.Auctions.Add(auction);
-        var result = await _context.SaveChangesAsync() > 0;
-        if (!result) return BadRequest("Failed to create auction");
-        return CreatedAtAction(nameof(GetAuctionById), new { id = auction.Id }, _mapper.Map<AuctionDto>(auction));
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var response = _mapper.Map<AuctionDto>(auction);
+        return CreatedAtAction(nameof(GetById), new { id = auction.Id }, response);
     }
+
+    private string GetRequiredSellerId() =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? throw new InvalidOperationException("Authenticated identity has no subject claim.");
 }
-```
+~~~
 
-### `Task` and asynchronous endpoints / `Task` 与异步端点
+`GET` 列表显式装载关联的 `Item`，只读取当前卖家的拍卖，再按品牌和 ID 排序；`AsNoTracking` 表示读取后不需要 EF Core 跟踪这些实体的改动。按 ID 读取时，合法但不存在或不属于当前卖家的 ID 都走 `NotFound()`，不泄露其他卖家资源是否存在。POST 只把允许写入的 DTO 映射到实体；`SellerId` 从已认证主体读取，不接受调用方在 JSON 中伪造。授权策略验证卖家角色与 `ClaimTypes.NameIdentifier`，查询条件再落实资源归属边界。
 
-`Task<T>` represents an asynchronous operation that will eventually produce a `T`; it is not a JavaScript `Promise` contract and does not imply a dedicated thread. `await` lets an endpoint asynchronously wait for I/O, such as EF Core's database call. `ActionResult<T>` allows either a response value of type `T` or an HTTP result such as `NotFound()`.
+## 响应状态和返回类型怎样对应？
 
-### How `_context` and `_mapper` are resolved
+`CreatedAtAction` 创建 201 响应并根据 `GetById` 生成资源地址。响应 DTO 控制输出字段；状态码和 JSON 正文属于调用方可观察的 API 契约，详见[如何设计可预期的 HTTP API 契约？](../../engineering-foundations/backend/http-api-contracts.md)。
 
-The AuctionDbContext and IMapper instances are automatically injected into your controller's constructor by ASP.NET Core's Dependency Injection (DI) mechanism. This is because these types are registered in the DI container in the Program.cs.
+`Task<ActionResult<T>>` 同时表达异步完成和“带类型正文或 HTTP 结果”两种返回路径。`await` 等待数据库 I/O 时允许当前线程执行其他工作；`Task` 不意味着请求专属线程。`ActionResult<T>` 只是常见签名，控制器也可以返回 `IActionResult` 或其他受支持的结果类型。
 
-### Return Type of Controller Endpoints
+`SaveChangesAsync` 成功后返回已写入的状态项数量，数据库失败通常以异常报告；不要把“返回零”机械映射为 400，因为这不一定表示客户端输入有误。对失败和验证错误的统一映射由应用的异常处理与 API 契约决定。
 
-Returning `Task<ActionResult<T>>` is a common pattern for asynchronous endpoints in ASP.NET Core, but it's not a fixed or forced pattern. You can return other types as well. This particular return type gives you a lot of flexibility:
-
-`Task` represents asynchronous completion; `ActionResult` allows different HTTP results; `T` describes the response value that can be serialized.
-
-## Sources / 参考资料
-
-- Microsoft Learn: [EF Core migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations) and [applying migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying); the latter describes review, scripts/bundles, and runtime migration tradeoffs.
-- Microsoft Learn: [EF Core required and optional properties](https://learn.microsoft.com/en-us/ef/core/modeling/entity-properties), [ASP.NET Core controller injection](https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/dependency-injection), [dependency-injection lifetimes](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection), [MVC validation of non-nullable parameters](https://learn.microsoft.com/en-us/aspnet/core/mvc/models/validation?view=aspnetcore-7.0#non-nullable-reference-types-and-required-attribute), [.NET package CLI syntax](https://learn.microsoft.com/en-us/dotnet/core/tools/dependencies), [.NET 10 solution-file default](https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/10.0/dotnet-new-sln-slnx-default), [Web API template defaults](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-new-sdk-templates), and [Azure Data Studio retirement](https://learn.microsoft.com/en-us/sql/tools/whats-happening-azure-data-studio).
-- [AutoMapper dependency injection](https://docs.automapper.org/en/latest/Dependency-injection.html) documents that `AddAutoMapper` is in the core package starting with v13; the package list above preserves an older v12-era reference.
-- [Npgsql connection-string parameters](https://www.npgsql.org/doc/connection-string-parameters), [MongoDB official image documentation](https://hub.docker.com/_/mongo), and the [official PostgreSQL image `PGDATA` and volume guidance](https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md#pgdata) for connection fields, data directories, initialization, and authentication details. The Compose sample is pinned to PostgreSQL 17's volume layout; PostgreSQL 18+ changes it.
-- Microsoft Learn: [SQL Server Linux containers](https://learn.microsoft.com/en-us/sql/linux/install-upgrade/quickstart-install-docker) and [container security](https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-docker-container-security) for host support and the `MSSQL_SA_PASSWORD` variable.
-- The `MongoDB.Entities` snippets are pinned to the course's `22.1.0` package reference; the project's [API docs](https://mongodb-entities.com/api/MongoDB.Entities.DB.html) and [index guide](https://mongodb-entities.com/wiki/Indexes.html) document the corresponding concepts. The [v22.1 `Find` source](https://github.com/dj-nitehawk/MongoDB.Entities/blob/aced47f36f152c6a0e13fe827f1a2bce310826dd/MongoDB.Entities/Builders/Find.cs) shows that sort definitions are appended and text-score sorting uses the same sort path; the text-query branch therefore selects score ordering without also appending `Make`. Current docs may describe a later package version.
+> [!info]- 来源
+> - 请求绑定、验证、控制器操作和 `ActionResult<T>`：Microsoft Learn [ASP.NET Core MVC 概览](https://learn.microsoft.com/en-us/aspnet/core/mvc/overview?view=aspnetcore-10.0)、[控制器操作](https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/actions?view=aspnetcore-10.0)、[模型验证](https://learn.microsoft.com/en-us/aspnet/core/mvc/models/validation?view=aspnetcore-10.0)，核对版本 ASP.NET Core 10.0，2026-11-06。
+> - `[ApiController]` 对无效模型状态的自动 400 行为：Microsoft Learn [Web API controllers](https://learn.microsoft.com/en-us/aspnet/core/web-api/?view=aspnetcore-10.0)，ASP.NET Core 10.0，2026-11-06。
+> - 控制器构造器依赖注入：Microsoft Learn [控制器中的依赖注入](https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/dependency-injection?view=aspnetcore-10.0)，ASP.NET Core 10.0，2026-11-06。
+> - `CreatedAtAction` 与带状态码的控制器结果：Microsoft Learn [控制器操作结果](https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types?view=aspnetcore-10.0)，ASP.NET Core 10.0，2026-11-06。

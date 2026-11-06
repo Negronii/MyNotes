@@ -1,103 +1,66 @@
-# How do SwiftUI layout modifiers and reusable views fit together? / SwiftUI 布局 modifier 与可复用视图如何配合？
+# SwiftUI 的布局修饰符和可复用视图如何配合？
 
-SwiftUI composes layout from view values and modifiers. Padding adds space around a composed view in its parent; reusable subviews and parameters keep repeated UI behavior together, while Xcode previews inspect sample inputs without replacing the runtime data source. / SwiftUI 由 view 值与 modifier 组合布局。padding 在父视图中为组合视图增加周围空间；提取子视图并用参数复用可集中重复 UI 行为，Xcode preview 则用样例输入检查界面，不替代运行时数据源。
+你要把图标、标签和白色卡片组合成一行，并把它复用在多个信息项上。边框看起来太大时，是图形本身大了，还是留白被算进布局？重复界面该保留在一个文件里，还是拆为可传入数据的子视图？理解父子布局与修饰符顺序后，再决定如何抽取和预览。
 
-## Xcode editors: Interface Builder and SwiftUI / Xcode 编辑器：Interface Builder 与 SwiftUI
+## SwiftUI 与 Interface Builder 的布局方式有何不同？
 
-### Interface Builder (storyboards and XIBs) / Interface Builder（storyboard 与 XIB）
+在 storyboard（故事板）或 XIB（XML 界面文件）中，Interface Builder 通过编辑器拖放 UIKit/AppKit 控件；UIKit 的 `UIStackView` 是 storyboard 中排列子视图的容器。SwiftUI 则以 Swift 代码构造视图值，常用 `VStack`、`HStack`、`ZStack` 组合垂直、水平与叠放布局。它们与 Interface Builder 的堆栈容器不是同一个对象。
 
-- In storyboard or XIB editing, Xcode's library controls let you add UIKit/AppKit views and related objects. The control's position and appearance vary across Xcode versions.
+SwiftUI 布局大体按层次协商：父视图向子视图提出可用尺寸，子视图返回自己采用的尺寸，容器再确定位置。frame、padding 等 modifier（修饰符）改变参与协商的视图包装，因此阅读一串 modifier 时应先确认每一步包住了哪个视图。
 
-### Embedding Components in Stack Views
+## `padding` 为什么不像 CSS 的 `margin`？
 
-- UIKit storyboards use `UIStackView` for arranged subviews. SwiftUI has separate `VStack`, `HStack`, and `ZStack` view types, authored in Swift code and optionally shown in the SwiftUI canvas; they are not Interface Builder stack views.
-
-## Padding and Margins
-
-Padding is a layout modifier. Modifier order matters: in the example below, padding wraps the composed shape, so it creates space around that view in its parent. It is not a separate CSS-style `margin` property.
-
-### Understanding Padding in SwiftUI
+SwiftUI 没有一个独立 CSS 风格的 margin 属性。`padding` 给当前组合视图的边缘增加空间，父布局会把这段空间计入视图尺寸。修饰符按从上到下的顺序包裹前面的结果。
 
 ```swift
 RoundedRectangle(cornerRadius: 25)
-    .fill(Color.white)
+    .fill(.white)
     .frame(height: 50)
-    .overlay(
+    .overlay {
         HStack {
             Image(systemName: "phone.fill")
                 .foregroundStyle(.green)
             Text("Contact")
                 .foregroundStyle(.black)
         }
-    )
-    .padding() // Adds space around the composed view in its parent.
-```
-
-## Code Reusability
-
-Xcode provides tools to help clean up and reuse your code effectively.
-
-### Extracting a Subview
-
-Select a block of code, right-click, and choose `Extract Subview` to create a reusable component.
-
-## Creating Parameterized Views
-
-SwiftUI's declarative syntax makes it simple to create views that can be customized with parameters.
-
-### Defining a Parameterized View
-
-You can define a view that takes parameters to create a reusable UI component.
-
-```swift
-struct InfoView: View {
-    let text: String
-    let imageName: String
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 25)
-            .fill(Color.white)
-            .frame(height: 50)
-            .overlay(
-                HStack {
-                    Image(systemName: imageName)
-                        .foregroundStyle(.green)
-                    Text(text)
-                        .foregroundStyle(.black)
-                }
-            )
-            .padding(.all)
     }
-}
+    .padding()
 ```
 
-### Using the Parameterized View
-
-Instantiate and use the new view by passing in the required parameters.
+这里 `padding()` 作用于已包含矩形、frame 和 overlay 的完整组合，因此留白出现在组合视图外侧。要看顺序的实际影响，可比较边框包住留白前后的视图：
 
 ```swift
-InfoView(text: "Contact", imageName: "phone.fill")
+Text("Contact")
+    .padding(8)
+    .border(.blue) // 边框包含文字和留白
+
+Text("Contact")
+    .border(.blue)
+    .padding(8) // 外侧留白不在边框内
 ```
 
-## Organizing UI Components
+> [!example] 读 modifier 链时逐层追踪边界
+> 从内到外读第一段：矩形形状先填白色，再获得 50 点高度，再叠加图标和文字，最后整体增加系统默认留白。因此父容器看到的是带留白的完整卡片，而不是单独的文字或矩形。
 
-SwiftUI does not require a particular project-folder layout or a Model-View-Controller (MVC) architecture. Organize view files and models around the app's boundaries; an Xcode `View` group is a project convention, not a framework requirement.
+> [!warning] 固定高度不适合直接承载任意字号的内容
+> 上例的 50 点高度只是演示 modifier 顺序；较大的 Dynamic Type 或较长文本可能溢出固定框。真实卡片应让内容参与测量，用最小高度而不是强制高度，并让背景跟随内容伸展：
+>
+> ```swift
+> HStack {
+>     Image(systemName: "phone.fill")
+>     Text("Contact")
+> }
+> .frame(minHeight: 50)
+> .padding(.horizontal, 12)
+> .padding(.vertical, 8)
+> .background {
+>     RoundedRectangle(cornerRadius: 25).fill(.white)
+> }
+> ```
 
-### Optional view folder / 可选的 View 文件夹
+## 什么时候把一段界面抽成参数化子视图？
 
-Some projects place SwiftUI view types in a `Views` folder. Choose folders that make the project easier to navigate; the folder name does not change SwiftUI behavior.
-
-### Creating a New SwiftUI View
-
-When adding a new UI component, you should:
-
-1. Click on `New File...` in Xcode.
-2. Choose `SwiftUI View` from the template options.
-3. Save the file in the group or folder used by the project.
-
-### Example: InfoView.swift
-
-Below is an example of how you can structure a SwiftUI view in a separate file:
+当多处界面共享相同结构、但标签或图标不同，就把变化部分变为参数。Xcode 某些版本可通过编辑器的 Extract Subview 操作生成子视图；也可以直接声明一个 View（视图）类型。
 
 ```swift
 import SwiftUI
@@ -107,29 +70,53 @@ struct InfoView: View {
     let imageName: String
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 25)
-            .fill(Color.white)
-            .frame(height: 50)
-            // The shape uses fill; foregroundStyle below colors its child views.
-            .overlay(
-                HStack {
-                    Image(systemName: imageName)
-                        .foregroundStyle(.green)
-                    Text(text)
-                        .foregroundStyle(.black)
-                }
-            )
-            .padding(.all)
+        HStack {
+            Image(systemName: imageName)
+                .foregroundStyle(.green)
+            Text(text)
+                .foregroundStyle(.black)
+        }
+        .frame(minHeight: 50)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background {
+            RoundedRectangle(cornerRadius: 25).fill(.white)
+        }
     }
 }
+```
 
+调用者只提供不同数据，结构和样式仍由该组件负责：
+
+```swift
+struct ContactList: View {
+    var body: some View {
+        VStack {
+            InfoView(text: "Contact", imageName: "phone.fill")
+            InfoView(text: "Email", imageName: "envelope.fill")
+        }
+    }
+}
+```
+
+把视图文件放进名为 `Views` 的文件夹是一种项目组织约定，不是 SwiftUI 要求；目录名本身不会改变视图行为。新建文件时可从 Xcode 的 SwiftUI View 模板开始，再按项目的边界组织 view 与 model。文件内可用 `// MARK: -` 分隔属性、视图内容和预览等区域。
+
+## Xcode 预览能验证什么？
+
+预览用给定输入在 canvas 中显示视图，帮助检查布局和不同样例；它不是运行时数据源，也不保证网络、权限、完整导航或设备行为与真实 app 一致。提供可重复的样例输入，可以更快定位布局变化：
+
+```swift
 // MARK: - Preview
 #Preview {
     InfoView(text: "Contact", imageName: "phone.fill")
 }
+
+#Preview {
+    InfoView(text: "Email", imageName: "envelope.fill")
+}
 ```
 
-Xcode's preview macro is the current concise form. `PreviewProvider` remains available when a project or toolchain needs the manual form:
+较旧的工具链或不便使用预览宏的项目仍可通过 `PreviewProvider` 声明：
 
 ```swift
 struct InfoView_Previews: PreviewProvider {
@@ -139,17 +126,9 @@ struct InfoView_Previews: PreviewProvider {
 }
 ```
 
-### Using MARK Comments
+两种写法描述的是 Xcode 预览配置；现代项目通常用 `#Preview`。预览通过后仍要在目标平台检查交互、动态字体、资源与系统环境差异。
 
-To increase readability and organization of your SwiftUI views, use `// MARK: -` comments to separate different sections of the file, such as the body definition and the preview provider.
-
-### Previews Section
-
-Previews let you inspect a view with sample data in Xcode without changing the runtime data source.
-
-## Sources / 参考资料
-
-- Swift Language Guide: [functions](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/functions/), [structures and classes](https://docs.swift.org/swift-book/LanguageGuide/ClassesAndStructures.html), and [initialization](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/). The in-out parameter description follows Swift's [declaration reference](https://docs.swift.org/latest/documentation/the-swift-programming-language/declarations/); leading-dot shorthand is specified as an [implicit member expression](https://docs.swift.org/swift-book/ReferenceManual/Expressions.html#implicit-member-expression).
-- Apple SwiftUI: [State](https://developer.apple.com/documentation/swiftui/state), [Binding](https://developer.apple.com/documentation/swiftui/binding), [StateObject](https://developer.apple.com/documentation/swiftui/stateobject), [ObservedObject](https://developer.apple.com/documentation/swiftui/observedobject), and [EnvironmentObject](https://developer.apple.com/documentation/swiftui/environmentobject). The newer Observation availability and environment pattern are scoped in Apple's [migration guide](https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro) and [model-data guide](https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app).
-- Apple Developer Documentation: [SwiftUI images](https://developer.apple.com/documentation/swiftui/image), [adding images to an Xcode project](https://developer.apple.com/documentation/xcode/adding-images-to-your-xcode-project), [custom fonts](https://developer.apple.com/documentation/swiftui/applying-custom-fonts-to-text), [managing app information property-list values](https://developer.apple.com/documentation/bundleresources/managing-your-app-s-information-property-list), [foregroundColor deprecation](https://developer.apple.com/documentation/swiftui/view/foregroundcolor%28_%3A%29), [safe-area expansion](https://developer.apple.com/documentation/swiftui/view/ignoressafearea%28_%3Aedges%3A%29), and [Xcode previews](https://developer.apple.com/documentation/xcode/adding-previews-to-your-interface-files).
-- `#imageLiteral` maps to UIKit's documented [`UIImage(imageLiteralResourceName:)`](https://developer.apple.com/documentation/uikit/uiimage/init%28imageliteralresourcename%3A%29); use SwiftUI `Image` for SwiftUI view hierarchies. Platform/API availability checked 2026-10-15.
+> [!info]- 来源
+> - **父子视图提议尺寸、返回尺寸与组合布局**：Apple SwiftUI “Laying Out a Simple View”及布局调整指南；[简单布局](https://developer.apple.com/documentation/swiftui/laying-out-a-simple-view)及[布局调整](https://developer.apple.com/documentation/swiftui/layout-adjustments)，核对日期 2026-11-06。
+> - **padding 尺寸和 modifier 顺序**：Apple SwiftUI `padding(_:)` API；[padding](https://developer.apple.com/documentation/swiftui/view/padding%28_%3A%29-68shk)，核对日期 2026-11-06。
+> - **`#Preview`、样例数据与旧 `PreviewProvider`**：Apple Xcode “Adding Previews to Your Interface Files”及 SwiftUI “Previews in Xcode”；[添加预览](https://developer.apple.com/documentation/xcode/adding-previews-to-your-interface-files)及[预览集合](https://developer.apple.com/documentation/swiftui/previews-in-xcode)，核对日期 2026-11-06。

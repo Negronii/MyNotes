@@ -1,101 +1,70 @@
-# How do Swift values, functions, and control flow behave? / Swift 值、函数与控制流如何工作？
+# Swift 中的值、函数与控制流怎样改变程序状态？
 
-Swift `struct` values have value semantics while class instances carry reference identity. Functions use explicit argument labels and in-out parameters; `mutating` marks changes to a value-type instance. Ranges, loops, and string interpolation express common control flow without changing those ownership rules. / Swift `struct` 采用值语义，class 实例具有引用身份。函数使用显式参数标签与 in-out 参数；`mutating` 标记对值类型实例的修改。范围、循环和字符串插值表达常见控制流，但不改变所有权规则。
+本章用几个互不依赖的小例子回答三个问题：两个分数怎样交换，坐标副本是否牵动原值，循环如何筛出符合条件的倍数。沿着每段代码的实际输入与输出，就能判断一次赋值改变了什么、函数怎样表达参数，以及控制流执行了几轮。
 
-## Constants and variables / 常量与变量
+## `let` 与 `var` 分别限制什么？
+
+`let` 声明不可重新赋值的绑定，`var` 声明可以重新赋值的绑定。编译错误示例保留为注释，避免把不能通过编译的语句混入可运行片段。
 
 ```swift
-let a = 0 //this is a constant
-var b = 1 // this is a variable
-a = 2 // report error, constant cannot be re-assigned values
-b = 2 // valid
+let a = 0
+var b = 1
+// a = 2 // 编译错误：常量不能重新赋值
+b = 2
 ```
 
-## Functions / 函数
+对值类型而言，常量实例的可变属性也不能改；对类实例而言，常量限制的是变量绑定，若类属性本身是 `var`，仍可修改该属性。后文会用结构体与类的差别具体说明。
 
-### Swift Functions Overview
+## 函数调用点如何表达参数与结果？
 
-**Definition and Syntax:**
-
-- A function in Swift is defined using the `func` keyword, similar to how you'd use `function` or `def` in JavaScript/TypeScript or Python respectively.
-- Function names follow the camelCase convention, as they do in JavaScript and Java.
+函数用 `func` 声明。每个参数有内部名称；需要让调用更易读时，还可指定调用点使用的 argument label（参数标签）。省略标签时写 `_`。参数按声明顺序传入。
 
 ```swift
-func functionName(parameter1: Type, parameter2: Type) -> ReturnType {
-    // function body
+func greet(_ person: String, on day: String) -> String {
+    "你好，\(person)，今天是\(day)。"
 }
+
+let message = greet("小林", on: "周五")
 ```
 
-**Parameters:**
+这里函数体用 `person` 与 `day`，调用点则写成 `greet("小林", on: "周五")`。参数标签是 Swift 调用语法的一部分，不只是文档注释。
 
-- Parameters are strongly typed, just like in Java and TypeScript.
-- A parameter can have an internal name and a distinct call-site argument label; `_` omits the external label.
+默认参数让调用者省略不常变化的值；没有返回值时可省略返回类型，或显式写 `-> Void`。单表达式函数可以省略 `return`。
 
 ```swift
-func exampleWithParams(argumentLabel parameterName: Type, _ noLabel: Type) {
-    // function body
+func greeting(_ person: String = "访客", on day: String = "今天") -> String {
+    "你好，\(person)，今天是\(day)。"
 }
-```
 
-**Argument Labels:**
+greeting()
+greeting("小林")
+greeting("小林", on: "周五")
 
-- The external/call-site argument label comes first; the internal parameter name used in the function body follows it. Swift uses labels to give context to arguments, making calls read like sentences.
-- Argument labels are part of Swift call syntax; other languages provide different forms of named arguments.
-
-**Omitting Argument Labels:**
-
-- An underscore `_` is used to omit the argument label, making the syntax cleaner if the context is clear without the label.
-
-```swift
-func greet(_ person: String, on day: String) { /* ... */ }
-greet("John", on: "Friday")
-```
-
-**Default Parameter Values:**
-
-- Functions can have parameters with default values, which is a feature also available in JavaScript/TypeScript and Python, but not in Java.
-- If a parameter has a default value, it can be omitted when calling the function.
-
-```swift
-func greet(_ person: String = "Guest", on day: String = "Day") { /* ... */ }
-greet() // Uses both default values
-greet("John") // Uses default for `day`
-```
-
-**Return Types:**
-
-- The return type of a function is specified after the arrow `->`, similar to TypeScript's type annotation for function returns.
-- If a function does not return a value, the return type is omitted, which is equivalent to a `void` return type in Java or TypeScript.
-
-```swift
 func add(a: Int, b: Int) -> Int {
     return a + b
 }
-```
 
-**No Return Keyword Needed for Single Expressions:**
-
-- If the body of the function is a single expression, Swift allows you to omit the `return` keyword, similar to arrow functions in JavaScript.
-
-```swift
 func multiply(a: Int, b: Int) -> Int { a * b }
 ```
 
-**Variadic Parameters:**
+`greeting()` 使用两个默认值；`greeting("小林")` 只使用第二个参数的默认值。固定的返回类型要求所有可到达的正常结束路径都返回该类型的值。
 
-- Swift allows for variadic parameters, which take zero or more values of a specified type.
-- You can use variadic parameters in Swift similarly to the way you would use them in JavaScript/TypeScript with rest parameters, or in Python with `*args`.
+## 函数怎样接收一组参数或修改调用者的变量？
+
+variadic parameter（可变参数）接收零个或多个同类型值，在函数体内表现为数组。下面的 `sum` 可以用任意个整数调用：
 
 ```swift
 func sum(_ numbers: Int...) -> Int {
-    return numbers.reduce(0, +)
+    numbers.reduce(0, +)
 }
+
+let total = sum(2, 3, 5) // 10
 ```
 
-**In-Out Parameters:**
+若函数确实要改动调用者传入的变量，可使用 in-out parameter（输入输出参数）。调用点用 `&` 明示可能写回；实参必须是变量，不能传常量或字面量。它不能有默认值，也不能同时是可变参数。
 
-- Swift functions can also have in-out parameters, which allows them to modify the values of passed-in variables.
-- An `inout` argument must be a variable and is written with `&` at the call site. Swift describes it as a value copied in, modified by the function, and copied back out; it is not an analogy for mutating a reference-type object.
+> [!info] 输入输出参数在做什么
+> Swift 将这类参数描述为先提供实参的值、在函数中修改、调用结束时再写回。它不是“把一个引用类型对象传进去”的同义说法；它对一个变量位置提供显式的读写访问。
 
 ```swift
 func swapTwoInts(_ a: inout Int, _ b: inout Int) {
@@ -103,52 +72,52 @@ func swapTwoInts(_ a: inout Int, _ b: inout Int) {
     a = b
     b = temporaryA
 }
+
+var someInt = 3
+var anotherInt = 107
+swapTwoInts(&someInt, &anotherInt)
+// someInt 为 107，anotherInt 为 3
 ```
 
-**Function Types:**
+这个交换函数没有返回值，但调用者的两个变量在执行后改变了。读代码时要把这种写回当作函数的可观察结果。
 
-- Every function has a type, made up of the types of its parameters and its return type.
-- This is like the function signatures in TypeScript, where you can assign a function to a variable of a function type.
+## 函数可以作为值传递或返回吗？
+
+每个函数都有一个由参数类型和返回类型组成的 function type（函数类型）。函数可存进变量、传给另一个函数，也可由外层函数返回。函数类型不包含调用点标签。
 
 ```swift
 var mathFunction: (Int, Int) -> Int = add
-mathFunction(2, 3) // returns 5
-```
+let result = mathFunction(2, 3) // 5
 
-**Nested Functions:**
-
-- Functions can be nested within other functions, and the nested function has access to variables that were declared in the outer function.
-- This concept is similar to closures in JavaScript and Python.
-
-```swift
 func chooseStepFunction(backward: Bool) -> (Int) -> Int {
-    func stepForward(input: Int) -> Int { return input + 1 }
-    func stepBackward(input: Int) -> Int { return input - 1 }
+    func stepForward(input: Int) -> Int { input + 1 }
+    func stepBackward(input: Int) -> Int { input - 1 }
     return backward ? stepBackward : stepForward
 }
+
+let step = chooseStepFunction(backward: true)
+let next = step(10) // 9
 ```
 
-Swift functions are first-class types, meaning they can be passed as values to other functions, returned from functions, and assigned to variables, just as you can in JavaScript/TypeScript and Python. They offer flexibility and readability, especially with features like argument labels and default parameter values.
-
-### Non-Mutating Functions
-
-Non-mutating functions do not modify the state of the instance on which they're called. For example, if you have a function within a struct that performs an action and returns a result without altering the properties of the struct, it is considered non-mutating.
+这个例子展示外层函数按 `backward` 选择并返回一个嵌套函数；返回的两个函数本身都没有捕获外层变量。若要观察真正的捕获，函数体可读取外层参数 `factor`：
 
 ```swift
-struct Calculator {
-    var total: Int
-
-    func addTwoNumbers(a: Int, b: Int) -> Int {
-        return a + b
+func makeMultiplier(by factor: Int) -> (Int) -> Int {
+    func multiply(_ value: Int) -> Int {
+        value * factor
     }
+    return multiply
 }
+
+let triple = makeMultiplier(by: 3)
+let product = triple(4) // 12
 ```
 
-In this example, `addTwoNumbers` does not change the value of any properties of `Calculator`. It simply takes two numbers, adds them, and returns the result.
+这里返回的 `multiply` 保留了 `factor` 的值，因此 `triple(4)` 得到 12。这个行为是嵌套函数作为值返回并捕获外层参数的具体例子。
 
-### Mutating methods / 可变方法
+## 结构体方法什么时候需要 `mutating`？
 
-Mutating functions are explicitly marked with the `mutating` keyword, which allows them to modify the properties of the instance on which they're called. This is necessary because, by default, the instance methods of value types cannot modify the properties of their instance.
+`struct`（结构体）是 value type（值类型）。值类型的方法默认不能改动自身；若方法要修改属性或替换 `self`，要加 `mutating`（可变）。调用这种方法的结构体实例必须是 `var`。
 
 ```swift
 struct Point {
@@ -160,33 +129,66 @@ struct Point {
         y += deltaY
     }
 }
+
+var somePoint = Point(x: 1, y: 1)
+somePoint.moveBy(x: 2, y: 3)
+// somePoint 现在是 (3, 4)
 ```
 
-In the `Point` example, `moveBy` is a mutating method because it changes the properties `x` and `y` of the struct. When you have an instance of `Point` and you call `moveBy`, you are changing the instance's state.
-
-You would use it like this:
+相对地，只读取或计算结果的方法不需要 `mutating`：
 
 ```swift
-var somePoint = Point(x: 1, y: 1)
-somePoint.moveBy(x: 2, y: 3) // somePoint is now (3, 4)
+struct Calculator {
+    var total: Int
+
+    func addTwoNumbers(a: Int, b: Int) -> Int {
+        a + b
+    }
+}
 ```
 
-For a value type, `mutating` marks an instance method that changes `self` or one of its stored properties. Without the keyword, this method cannot mutate the value.
+`mutating` 是对“方法可能改变值本身”的显式声明，不等于所有副作用；例如它不说明是否会打印或调用外部服务。
 
-## Structures and classes / 结构体与类
+## 结构体赋值后，原值会跟着变化吗？
 
-In Swift, both classes and structs are building blocks of your code. They allow you to create complex data types by combining properties and methods. Since you're familiar with Java, you'll recognize many OOP principles in Swift classes, but there are key differences and unique features in Swift, particularly when it comes to structs.
+结构体、枚举、整数、字符串、数组与字典都采用 value semantics（值语义）。给结构体赋值会复制它的各个存储属性，但不会递归深复制属性所指向的整个对象图。标准库集合可以用写时复制优化存储，因此语义上的复制不代表每次都立刻搬移全部内存。
 
-### Classes
+```swift
+struct PointValue {
+    var x: Int
+    var y: Int
+}
 
-Classes in Swift are similar to classes in Java and other object-oriented languages. Here are some key points:
+let p1 = PointValue(x: 10, y: 20)
+var p2 = p1
+p2.x = 30
 
-- **Reference Types**: Classes are reference types, meaning that when you assign a class instance to a variable or constant, or pass it to a function, you're actually passing a reference to that instance, not a copy.
-- **Inheritance**: Swift classes support single inheritance, meaning a class can inherit from another class, gaining its properties and methods.
-- **Reference Counting**: Swift uses automatic reference counting (ARC) for memory management of class instances.
-- **Type Casting**: Instances of Swift classes can be checked at runtime to see if they are instances of a particular subclass.
-- **Deinitializers**: Classes can have deinitializers with the `deinit` keyword, which are called just before an instance of the class is deallocated.
-- **Reference Equality**: You can check for reference equality (whether two variables point to the same instance) using the identity operators `===` and `!==`.
+print(p1.x) // 10
+print(p2.x) // 30
+```
+
+值复制不是递归深复制。如果结构体的属性本身是类引用，副本会保存同一个引用；修改引用所指的对象时，两个结构体值都会观察到结果：
+
+```swift
+final class SharedBox {
+    var value = 0
+}
+
+struct BoxHolder {
+    var box: SharedBox
+}
+
+let original = BoxHolder(box: SharedBox())
+let copy = original
+copy.box.value = 7
+print(original.box.value) // 7：两个结构体值引用同一个类实例
+```
+
+结构体不支持类继承，但可用协议与扩展组织共享行为。若类型本体声明了自定义初始化方法，编译器合成的成员逐一初始化方法可能不再可用；初始化方法的位置与访问控制也会影响可见性，不能假定每个结构体都有公开的成员逐一初始化器。
+
+## 类为什么共享身份？
+
+`class`（类）是 reference type（引用类型）。将实例赋给另一个变量时，两处引用可以指向同一实例；类支持单继承、运行时类型检查和析构器 `deinit`。Swift 使用 automatic reference counting（自动引用计数，ARC）管理类实例的生命周期。`===` 与 `!==` 比较实例身份，而不是属性值是否相等。
 
 ```swift
 class Animal {
@@ -197,170 +199,107 @@ class Animal {
     }
 
     func makeSound() {
-        print("Some generic sound")
+        print("一般动物的声音")
     }
 }
 
-// Inheritance
 class Dog: Animal {
     override func makeSound() {
-        print("Woof")
+        print("汪")
     }
 }
 
 let dog = Dog(name: "Buddy")
-dog.makeSound() // Prints "Woof"
+dog.makeSound()
+let anotherReference = dog
+let isSameInstance = dog === anotherReference // true
 ```
 
-### Structs
+`let` 类绑定仍能改写上面声明为 `var` 的 `name`，但不能把该绑定改指向另一个类实例。这与常量结构体中所有属性都不可变不同。
 
-Structs in Swift are quite different from what you might expect if you're coming from a Java background:
+> [!example] 这两种类型会让共享状态呈现不同结果
+> 改结构体自己的存储属性只影响那份值；但若某个属性保存类引用，副本与原值仍可能指向同一对象。若需求是两个独立坐标，结构体的值语义更直接；若多个组件必须跟踪同一连接或模型的身份，类才表达了这种共享关系。
 
-- **Value Types**: Structs have value semantics: assignment or argument passing behaves as an independent value. The standard library can use copy-on-write storage, so the semantic copy does not mean every value is physically copied immediately.
-- **No Inheritance**: Structs do not support inheritance. They cannot inherit from another struct or class.
-- **Memberwise Initializers**: A struct receives a synthesized memberwise initializer when it defines no custom initializer in its declaration. A custom initializer can change which synthesized initializers are available.
-- **Mutability Control**: If an instance of a struct is constant (`let`), all of its properties are also constant, regardless of how they were declared. Properties of a struct instance can only be changed if the instance itself is variable (`var`).
+默认先考虑值语义适合的结构体；需要共享身份、继承或特定 Objective-C 类层次兼容时再选类。判断依据是模型行为，不是“类一定更快”或“结构体一定更快”。
+
+## 字符串插值与范围怎样表达计算？
+
+string interpolation（字符串插值）用 `\(表达式)` 将值放入字符串；JavaScript 常用模板字符串 `${expression}`，两种语言的写法不同。
 
 ```swift
-struct Point {
-    var x: Int
-    var y: Int
-}
-
-let p1 = Point(x: 10, y: 20)
-var p2 = p1 // p2 is now a copy of p1
-p2.x = 30 // This does not affect p1.x
-
-print(p1.x) // Prints "10"
-print(p2.x) // Prints "30"
+let varName = "Swift"
+let text = "正在学习 \(varName)。"
 ```
 
-### Choosing Between Classes and Structs
+closed range（闭区间）`0...5` 包含两端；half-open range（半开区间）`0..<5` 包含 0 但不包含 5。这个差别会影响循环次数和数组索引边界。
 
-Swift documentation recommends considering a struct by default when its value semantics fit the model. Use a class when shared identity, inheritance, or reference semantics are part of the design; choose based on behavior rather than a blanket performance rule.
+> [!info] 先看端点，再数迭代次数
+> `1...5` 经过 1、2、3、4、5 共五次；`1..<5` 经过 1、2、3、4 共四次。循环上限若是数组的 `count`，通常用半开区间避免访问不存在的下标。
 
-Keep in mind the following considerations:
+## 循环如何筛选、等待和提前离开？
 
-- Use a class when several parts of a program must observe the same instance identity or a class hierarchy is required.
-- Use a struct for independent values; declare an instance with `let` when its stored properties should not be mutated.
-
-Swift also includes features like protocols and extensions, which can provide some of the functionality of inheritance for structs, allowing you to write very flexible and reusable code without the overhead that can come with classes.
-
-## String Interpolation
-
-**Swift vs. JavaScript**
-
-In Swift programming, when you want to insert the value of a variable or an expression directly into a string, you use the **String Interpolation** method. The syntax for string interpolation in Swift is:
+`for-in` 可遍历范围、集合、字典和字符串。加入 `where` 可只执行满足条件的元素：
 
 ```swift
-"\(varName)"
-```
-
-The syntax for string interpolation in JavaScript is below, just FYI:
-
-```javascript
-`${varName}`;
-```
-
-**Summary:**
-
-- In **Swift**: Use `"\(varName)"` for string interpolation.
-- In **JavaScript**: Use `` `${varName}` `` for the same effect.
-
-## Range
-
-```swift
-0...5 // means 0, 1, 2, 3, 4, 5, it is inclusive range
-0..<5 // means 0, 1, 2, 3, 4, the last element is excluded
-```
-
-## Loops
-
-### For-In Loop
-
-The `for-in` loop is used to iterate over a sequence, such as ranges, collections, or strings.
-
-```swift
-// Iterate over a range of numbers
 for index in 1...5 {
-    print("Value of index is \(index)")
+    print("索引值是 \(index)")
 }
 
-// Iterate over an array
 let names = ["Anna", "Alex", "Brian", "Jack"]
 for name in names {
     print("Hello, \(name)!")
 }
 
-// Iterate over a dictionary
 let numberOfLegs = ["spider": 8, "ant": 6, "cat": 4]
 for (animalName, legCount) in numberOfLegs {
-    print("\(animalName)s have \(legCount) legs")
+    print("\(animalName) 有 \(legCount) 条腿")
 }
 
-// Iterate over characters of a string
 for character in "Hello" {
     print(character)
 }
 
-// Using where clause to filter out
 for number in 1...30 where number % 3 == 0 {
     print(number)
 }
 ```
 
-### While Loop
-
-The `while` loop starts by evaluating a condition. If the condition is `true`, the statement or statements inside the loop will execute. After each execution, the condition is evaluated again.
+字典没有供程序依赖的固定遍历次序；若输出顺序有要求，先对键排序。普通 `while` 在每轮开始前检查条件；`repeat-while` 先执行一次循环体，再检查条件。
 
 ```swift
 var counter = 5
 while counter > 0 {
-    print("Counter is \(counter)")
+    print("Counter 是 \(counter)")
     counter -= 1
 }
-```
 
-### Repeat-While Loop
-
-The `repeat-while` loop, similar to a `do-while` loop in other languages, executes the code block first, then evaluates the condition. It ensures that the loop body is executed at least once.
-
-```swift
 var countDown = 5
 repeat {
-    print("Countdown: \(countDown)")
+    print("倒数：\(countDown)")
     countDown -= 1
 } while countDown > 0
 ```
 
-### Control Transfer Statements
-
-Swift also provides control transfer statements that change the order in which your code is executed, by transferring control from one piece of code to another. Here are a few:
-
-- `break` ends the current loop or switch early.
-- `continue` is used within a loop to stop the current iteration and start the next iteration from the beginning.
+循环中的 `continue` 跳过当前轮剩余语句，`break` 退出当前循环或 `switch`：
 
 ```swift
-// Using 'continue' to skip an iteration
 for i in 1...10 {
     if i % 2 == 0 {
         continue
     }
-    print("Odd: \(i)")
+    print("奇数：\(i)")
 }
 
-// Using 'break' to exit a loop
 for i in 1...10 {
     if i > 5 {
         break
     }
-    print("Number: \(i)")
+    print("数字：\(i)")
 }
 ```
 
-## Sources / 参考资料
-
-- Swift Language Guide: [functions](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/functions/), [structures and classes](https://docs.swift.org/swift-book/LanguageGuide/ClassesAndStructures.html), and [initialization](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/). The in-out parameter description follows Swift's [declaration reference](https://docs.swift.org/latest/documentation/the-swift-programming-language/declarations/); leading-dot shorthand is specified as an [implicit member expression](https://docs.swift.org/swift-book/ReferenceManual/Expressions.html#implicit-member-expression).
-- Apple SwiftUI: [State](https://developer.apple.com/documentation/swiftui/state), [Binding](https://developer.apple.com/documentation/swiftui/binding), [StateObject](https://developer.apple.com/documentation/swiftui/stateobject), [ObservedObject](https://developer.apple.com/documentation/swiftui/observedobject), and [EnvironmentObject](https://developer.apple.com/documentation/swiftui/environmentobject). The newer Observation availability and environment pattern are scoped in Apple's [migration guide](https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro) and [model-data guide](https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app).
-- Apple Developer Documentation: [SwiftUI images](https://developer.apple.com/documentation/swiftui/image), [adding images to an Xcode project](https://developer.apple.com/documentation/xcode/adding-images-to-your-xcode-project), [custom fonts](https://developer.apple.com/documentation/swiftui/applying-custom-fonts-to-text), [managing app information property-list values](https://developer.apple.com/documentation/bundleresources/managing-your-app-s-information-property-list), [foregroundColor deprecation](https://developer.apple.com/documentation/swiftui/view/foregroundcolor%28_%3A%29), [safe-area expansion](https://developer.apple.com/documentation/swiftui/view/ignoressafearea%28_%3Aedges%3A%29), and [Xcode previews](https://developer.apple.com/documentation/xcode/adding-previews-to-your-interface-files).
-- `#imageLiteral` maps to UIKit's documented [`UIImage(imageLiteralResourceName:)`](https://developer.apple.com/documentation/uikit/uiimage/init%28imageliteralresourcename%3A%29); use SwiftUI `Image` for SwiftUI view hierarchies. Platform/API availability checked 2026-10-15.
+> [!info]- 来源
+> - **常量绑定和值类型**：Swift 语言指南“Properties”“Structures and Classes”，说明值类型复制、常量结构体属性与类引用的可变性；[Swift 语言指南](https://docs.swift.org/swift-book/LanguageGuide/Properties.html) 与[结构体和类](https://docs.swift.org/swift-book/LanguageGuide/ClassesAndStructures.html)，核对日期 2026-11-06。
+> - **函数标签、默认值、返回值、可变参数、输入输出参数与函数类型**：Swift 语言指南“Functions”与声明参考“In-Out Parameters”；[函数](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/functions/)及[声明](https://docs.swift.org/latest/documentation/the-swift-programming-language/declarations/)，核对日期 2026-11-06。
+> - **`mutating` 方法、类身份、ARC 与结构体初始化限制**：Swift 语言指南“Methods”“Choosing Between Structures and Classes”“Initialization”；[方法](https://docs.swift.org/swift-book/LanguageGuide/Methods.html)、[类型选择](https://docs.swift.org/latest/documentation/swift/choosing-between-structures-and-classes/)及[初始化](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/)，核对日期 2026-11-06。
+> - **范围与循环**：Swift 语言指南“Control Flow”；[控制流](https://docs.swift.org/swift-book/LanguageGuide/ControlFlow.html)，核对日期 2026-11-06。
