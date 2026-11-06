@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=8887215df9618f1d886a32cf89cb2784990ecfe0f56e2a9216702a6805bb2a8b -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=01685724c1133483d3ff238dabf668ff434627cbc739e978d6a848025c0a4ac3 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -19,8 +19,8 @@
 - [ ] 7. [AI 应用怎样选择部署方式，并逐步上线或回滚？](../ai-engineering/systems/ai-deployment-patterns.md)
 - [ ] 8. [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](../ai-engineering/prompting/prompt-engineering-fundamentals.md)
 - [ ] 9. [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](../ai-engineering/prompting/advanced-prompting-techniques.md)
-- [ ] 10. [What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？](../ai-engineering/context/context-engineering-principles.md)
-- [ ] 11. [How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？](../ai-engineering/rag/rag-architecture-and-implementation.md)
+- [ ] 10. [每次模型调用应看到什么，应用又应持久化什么？](../ai-engineering/context/context-engineering-principles.md)
+- [ ] 11. [怎样从授权文档中检索并核验回答依据？](../ai-engineering/rag/rag-architecture-and-implementation.md)
 - [ ] 12. [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](../ai-engineering/agents/tool-design-and-function-calling.md)
 - [ ] 13. [When should a model control the next step? / 何时应让模型决定下一步？](../ai-engineering/agents/agent-fundamentals.md)
 - [ ] 14. [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](../ai-engineering/agents/orchestration-patterns.md)

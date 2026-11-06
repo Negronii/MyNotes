@@ -1,90 +1,88 @@
-# What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？
+# 每次模型调用应看到什么，应用又应持久化什么？
 
-**Core explanation / 核心解释：** Context engineering selects, orders, and updates the instructions, tool definitions, history, retrieved evidence, observations, and relevant task state available to one inference. The application should keep authoritative long-term state outside the prompt and load only the information needed for the next step. Measure usefulness on the task: more context can add evidence, but also cost, delay, noise, and lossy summaries. / 上下文工程是在一次推理中选择、排序和更新模型可用的指令、工具定义、历史、检索证据、观察结果及相关任务状态。应用应把权威长期状态保存在提示词之外，只为下一步加载所需信息。应根据任务结果衡量上下文是否有用：更多内容可能补充证据，也会增加成本、时延、噪声和有损摘要风险。
+模型本轮能看到的输入称为 context（上下文）。模型读取的是本次调用最终组装出的内容；如果服务根据会话 ID 自动加入历史，应用也要按该服务的会话语义理解实际输入。模型不会自行查询应用数据库或日志。Prompt engineering（提示工程）侧重指令和样例的写法；**context engineering（上下文工程）**则在每次推理前，把可用的指令、工具、历史、证据与任务状态选成一份足以完成下一步的输入。上一章的 build 42 样板中，先前运行通过 `read_build_log` 得到绑定于构建 42 的 `c1` 日志结果；本章接着处理开发者看过失败后的新一轮追问。[AI 服务怎样把一条消息变成完整回答？](../systems/from-message-to-answer.md)
 
-## 提示工程与上下文工程
+## 一次推理看到的不是整段会话
 
-**提示工程（prompt engineering）** 关注如何组织指令和示例。**上下文工程（context engineering）** 关注每次推理实际提供给模型的整套信息，包括系统与开发者指令、工具定义、历史消息、检索材料、工具观察和任务状态。两者相互依赖：好指令不能补救缺失证据，更多材料也不能替代清楚的指令。[Anthropic 的上下文工程文章](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)把上下文视为每次推理都需要重新整理的动态集合，并建议用任务结果评估信息配置。
+想象开发者已经从先前回答看到构建 42 的测试失败，现在开启新一轮追问：“按当前 CI 手册，这个构建该重跑吗？”这是本章的**合成变体**：应用从权威运行记录取回原有 `c1` 和对应日志观察，再为本轮检索手册。`CI-RETRY-v3` 是为演示检索结果而虚构的通用公开手册条目，不代表任何组织政策。它规定只对工作节点（worker）或网络中断重试，断言失败须先调查。
 
-## Why is context a finite resource, and what's "lost-in-the-middle"?
+回答这次追问的输入要把这些已确认事实连在一起：应用指令、当前问题、从权威运行记录取回的 `c1` 与对应日志观察，以及检索得到并保留来源标识的手册段落。`c1` 可以作为原请求和返回结果，也可以由应用根据权威记录构建为具名观察；重要的是能追溯到 `build_id=42` 和真实日志。只有当本轮仍开放该只读工具、且模型可能再次调用它时，才需包含相应工具定义。旧消息即使由会话服务续接，也要判断是否仍影响当前决定。
 
-**上下文资源有限，长文本的效能也会变化 / Context is finite, and long-context performance varies.**
+模型上下文（context）是当前调用最终可用的信息，不只包括用户看到的聊天文本。每条消息可能有不同角色；请求还可以包含工具 schema（工具结构约束）、图片或其他非文本内容、格式约束和服务侧控制字段。以下小型演算假设本轮仍开放只读日志工具，因此把它的定义、`c1` 请求与结果都纳入；若工具已关闭，应使用应用从权威记录构建的观察并删去工具定义。演算只计文本，不复现服务可能添加的会话历史或完整请求格式。
 
-模型能接收较长输入，不等于能同样可靠地使用任意位置的所有信息。上下文还受模型支持的窗口、输入成本、预填充时延、检索噪声与目标相关性影响。随着上下文增大，效果并非必然以一个固定速度下降，也没有适用于所有模型和任务的“30 轮”或 token 数阈值。
+> [!example] 为本轮回答留出上下文预算
+> 假定这次完整文本输入的玩具预算为 145 个 token（词元），使用 `tiktoken 0.12.0` 的 `cl100k_base` 对下列原文计数。它只演示一段手册规则加上本轮问题与已知日志；尚未加入独立的 HTTP 合约片段。这个练习不代表实际模型窗口、服务计费或运行时消息封装。
+>
+> | 输入片段 | 演算 token 数 |
+> |---|---:|
+> | 应用指令：`Use only supplied build evidence. Report observed failures separately from causes. Do not infer an unobserved root cause.` | 23 |
+> | 用户问题：`According to the current CI guide, should build 42 be retried?` | 15 |
+> | 当前仍可调用的只读工具说明：`read_build_log(build_id: integer) -> {step, test, expected, actual, exit_status}` | 21 |
+> | 权威运行记录中的请求：`tool_call(id="c1", name="read_build_log", arguments={"build_id":42})` | 20 |
+> | 该请求绑定的结果：`tool_result(id="c1", step="unit-tests", test="reject_empty_name", expected="HTTP 400", actual="HTTP 200", exit_status=1)` | 35 |
+> | 当前手册证据：`CI retry policy, v3: Retry worker or network interruptions only. A test assertion failure requires investigation and is not automatically retried.` | 27 |
+> | 合计 | **141** |
+>
+> 若还把一段已经解决、与构建 42 无关的旧对话 `Earlier conversation about a different build, already resolved.` 放入输入，它要 10 个 token，合计就成 151，超过本例预算 6 个。先删除这段无关历史，保留 `expected=400`、`actual=200`、`reject_empty_name` 和来源版本，因为这些字段会改变判断。实际系统还要计入角色标记、结构化工具字段、其他模态和输出预留，并用目标模型支持的方式估算或查看用量。
 
-**Lost in the middle（中间迷失）** 是位置敏感性的一种实证现象。[Liu 等人的研究](https://arxiv.org/abs/2307.03172)在多文档问答和键值检索任务中观察到，模型对位于输入中部的信息有时不如位于开头或末尾的信息利用充分。它说明应在实际任务中测试长上下文与位置变化；不能据此断言所有模型总是更注意首尾，或某个 RAG 分块位置必然失败。
+> [!info] 请求 ID 连接请求与观察
+> 这次回答调用保留 `c1` 的请求和同 ID 的结果，模型才能把日志观察追溯到 `build_id=42`。若本轮不再开放工具，应用也可将两者从权威运行记录正规化为带 `c1` 和构建 ID 的观察。运行时仍须保留权威事件记录；模型上下文只是本轮输入的一种表达。
 
-有效做法是选取足以完成当前子任务的高信号信息，给关键证据附来源或标识，并对模型、任务与提示结构做长上下文评估。注意力机制的理论复杂度不能单独证明某个系统会在特定上下文长度失效。
+## 选择、压缩和按需读取
 
-## 管理持续增长的上下文
+模型窗口有限，应用还需要为当前调用的输出和服务格式预留预算；若随后继续工具循环，下一次调用要重新组装输入并重新估算。窗口变长增加一次可提供的信息上限，却不保证模型会等量、等准地使用其中每条内容。测试过的模型在长输入中可能受相关信息位置影响；这种位置敏感性随模型、任务和提示结构变化，不能化成“第几轮以后必须总结”一类固定阈值。[长上下文注意力](../foundations/long-context-attention.md)解释模型内部怎样访问历史表示，但替应用决定哪些消息应进入请求的仍是上下文构造逻辑。
 
-下面的“缩减、外置、隔离”是实用整理方法，不是必须采用的固定分类。多数长任务会组合使用：
+超预算时，先按当前问题的依赖排序：
 
-| 方法 | 何时使用 | 需要保留什么 |
+1. 保留有效的应用指令、调用者范围和本轮必须遵守的约束。
+2. 保留当前问题、尚未完成的步骤，以及影响下一决策的最新观察。
+3. 只附上当前需要的工具定义和证据。日志很长时，先保留失败测试、预期与实际状态、退出码和日志 ID；代码上下文仍不足，就用 ID 继续读取原日志。
+4. 清除重复消息和与任务无关的旧回合。对确实需要跨轮保留的长背景，可压缩成有来源的状态摘要，保留待办、已完成项、未解决问题、资源标识和副作用状态。
+
+摘要是有损变换，不是权威记录。比如把构建 42 记成“单测失败”会丢失测试名与 `400 → 200` 的断言差异；再把“需要检查”写成“代码校验已失败”则会混淆观察和推测。摘要应保留原始记录的 ID、版本或位置，让下一步能在需要时回到原文。若来源已删除或权限改变，重新读取也必须重新校验访问范围。
+
+**Offload（外置状态）**适合原始日志、完整文件或会话之外的长期资料：持久层保存原件与标识，上下文只带本轮需要的片段或可查询 ID。**Just-in-time retrieval（按需检索）**减少预先复制整库的成本，但会增加一次或多次工具调用；检索端还要正确应用授权和版本条件。[从授权文档中检索证据](../rag/rag-architecture-and-implementation.md)说明文档更新如何进入索引以及返回模型前应检查什么。
+
+**隔离任务**有助于让并行研究或权限不同的 worker（工作者）只接触必要信息，但不会自动共享主流程的记忆。交接中要明确目标、输入证据、权限、输出格式和不确定项；主流程保留来源并自行判断结论。若子任务都依赖同一批近期状态，先比较“一个主循环按需加载工具/技能”与“新建独立上下文”在质量、成本和时延上的差别，再决定是否拆分。[编排模式](../agents/orchestration-patterns.md)
+
+## 上下文与应用状态分开保存
+
+| 数据 | 由谁持有 | 后续推理怎样使用 |
 |---|---|---|
-| **缩减（reduce）** | 重复历史、冗长工具输出挤占当前任务空间 | 目标、关键决定、未解决问题、失败状态、资源 ID 与可追溯来源 |
-| **外置（offload）** | 原始资料太大或跨越多轮/会话 | 文件、数据库或其他持久状态中的原始内容；上下文只保留可再次读取的路径、查询或 ID |
-| **隔离（isolate）** | 一个任务需要独立研究，或当前历史混杂多个职责 | 工作者的目标、权限、输入与输出契约；主流程接收结论、证据和不确定性 |
+| 当前提示输入与筛选后的对话 | 本次应用请求 | 模型可见；每次调用都可能重建或继续。 |
+| 工具请求及观察结果 | 应用运行记录 | 通过 `c1` 之类的调用 ID 关联；必要时把选定字段带入下一轮。 |
+| 日志原文、文档和授权记录 | 日志库、文档库或业务存储 | 按权限查询；模型没看到的内容不能假定它已使用。 |
+| 模型参数 | 已部署模型 | 通过训练更新；一次推理的上下文变化不会改权重。 |
+| Key-value cache（KV cache，键值缓存） | 推理执行过程 | 在一次生成中复用先前 token 的键和值；由本次模型计算使用。 |
+| Prompt cache（提示缓存） | 支持它的推理服务 | 某些服务可复用完全匹配的请求前缀所对应的计算状态；缓存本身不承担用户会话或答案验证。 |
 
-**摘要与压缩：** 摘要有损。先保留稍后可能影响决策的事实，再删去重复内容；“订单已退款”不一定足以支持追问，可能还要留下订单号、金额、状态依据与操作 ID。原始记录可通过外部引用重新读取时，摘要就不必承担永久记忆的职责。Anthropic 建议在长任务中用 compaction、持久笔记和子智能体，并提醒过度压缩会丢失之后才显得重要的信息。
+这些持有者解决不同问题：应用状态记录发生了什么，输入上下文决定本轮模型可见什么，模型参数编码训练得到的行为，缓存减少重复计算。同一次生成中的 KV cache 与服务跨请求复用的 prompt cache 也各有用途。以 OpenAI 当前 API 文档为例，缓存复用依赖渲染后的前缀匹配和缓存策略；工具名或 schema、权限导致的工具变化，都应更新为有效配置。稳定前缀和缓存测量涉及的时延、成本取舍见[AI 时延与成本优化](../systems/ai-latency-and-cost-optimization.md)。缓存命中要结合实际用量与时延判断收益，也要按既定验收标准检查回答。
 
-**按需加载（just-in-time retrieval）：** 保留轻量引用，在需要时再读取文件、网页或数据库，而非预先加载全集。这减少无关 token，但每次探索需要额外工具调用，并依赖检索能力和可用权限。对经常需要的稳定资料，也可先加载摘要，再按需查原文。[Anthropic 对按需检索与混合策略有详细说明。](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
+> [!warning] 压缩不会替你保存事实
+> 摘要、上下文缓存和模型参数都不能代替权威任务记录。影响权限、操作是否已发生、文档版本或重试安全性的事实，应留在应用可查询的状态中；每次取回后再验证当前授权。
 
-Skills 与工具搜索也可渐进载入程序或能力；并行工具调用可以留在同一主循环中，不必因此创建 subagent。[Anthropic 关于把 subagent 折回主循环的文章（2026-10-22，“Using an agent loop with progressive disclosure”）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)描述了这种按需暴露方式。
+在长任务里，应用可把目标、完成项、下一步和阻塞项作为短状态重新带入近期上下文，同时把原始运行事件留在持久记录中。对构建 42，适合保留“`c1` 读取了哪个构建、观察到何种断言、当前手册版本和是否已查询重跑状态”，并把完整日志留在可检索的运行记录中。若运行反复读取同一结果，应记录失败状态并查明缺失证据，再通过任务评估比较调整上下文的影响。
 
-**隔离上下文：** 子智能体不会天然共享同一份记忆。清楚传递目标、必要背景和结果格式；需要一致决策时，明确由主 agent 汇总和核对。切分依据应是任务边界、权限或可验证的并行收益，而不是把完整历史复制给每个工作者。按问题类型交接时，若下一步仍依赖先前约束或发现，摘要可能丢失细节；可先尝试在主循环中保留共享状态并按需加载专业流程，再评估是否需要分拆。[Anthropic 的 folding 文章，“Combining domain agents”](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)；决策方法见[编排模式](../agents/orchestration-patterns.md)。
+保留还是重置也由任务决定。构建 42 继续调查时，应保留 `c1`、已确认断言、当前手册版本和待查步骤，并把原始日志留在权威运行记录中。要重启探索或复用跨任务经验，需把结果和来源外置、标版本，在新任务中重新检验；清空搜索状态不能清除权限、任务契约或尚未确认的外部副作用。
 
-## How should a request preserve a reusable prefix? / 请求怎样保留可复用的前缀？
+> [!info]- 研究案例：状态遗忘与跨任务复用
+> Manus 报告批量审阅 20 份简历时观察到重复动作，并提出用结构化变体打破模式；这是其系统中的观察和待评估假设，不能支持向当前上下文注入无关格式变化。
+>
+> *Scaling Discovery Requires Forgetting* 在四类带外部评分的搜索任务中比较保留与清空搜索状态后从当前最佳候选重启；它不建立一般对话或生产运行的重置规则。GitSwarm 用共享分支仓库和显式语义依赖复用中间产物：Git 的物理 `parent` 提交记录 worker 开始工作时的树，`informed_by=` 则记录作者声明的语义来源，必须包含 parent，也可指向其他分支产物；来源关系不单独证明因果。其 worker 模型在一次运行中保持固定。Harness² 区分任务级尝试与另行积累的 harness 经验，其结果受特定框架、模型和专业任务基准限制。保存和重读一个经验也不证明它改善了新任务结果，应按相同验收条件对照。[LLM 评估方法](../evaluation/llm-evaluation-methods.md)
 
-**KV cache 与 prompt caching 是相关但不同的复用机制 / KV cache and prompt caching are related but distinct reuse mechanisms.**
+## 下一章怎样接手
 
-本节处理应用能控制的前缀布局。逐层 KV 载荷、分页和批处理见 [GPU 推理容量](../systems/llm-serving-and-kv-cache.md)。
+本章给每次模型调用建立边界：应用持有身份和事实来源，按需组装模型可见内容，必要时将工具请求或检索结果作为带来源的观察返回。接下来，RAG 章从构建 42 的日志已知、而“如何解释或重跑”仍需当前手册支持的状态开始，详细说明文档如何分块、授权、更新、排序并进入上下文。模型请求的字段与副作用如何执行和恢复则由[工具契约](../agents/tool-design-and-function-calling.md)承接。
 
-**KV cache** 是自回归模型生成时保存先前 token 的 key/value 表示，以供同一次生成后续 token 使用。**Prompt caching（提示缓存）** 通常指推理服务在后续请求中重用相同前缀的计算。后者可降低特定服务和配置下的输入成本或首 token 时延；两者都不是模型的长期记忆，也不意味着缓存 token 在所有供应商中都按同一价格收费。
-
-缓存规则依供应商、模型和 API 而异。以 [OpenAI 当前 API 文档](https://developers.openai.com/api/docs/guides/prompt-caching)为例，缓存匹配依赖渲染后的请求前缀和可用的缓存断点；工具名、描述、schema 或顺序变化可能让变化之后的前缀无法复用。改变前缀不等于每种服务都把整段历史全部丢弃，实际匹配边界、最小长度与生命周期需查对应文档。
-
-- 将稳定指令和可复用资料放前面，把每次请求都会变的用户信息、时间戳放后面。
-- 在 API 支持的状态模型中，追加消息通常比重写早期内容更利于复用；压缩或改写历史可能改变匹配前缀。
-- 只有实测缓存命中率、总 token 成本与行为结果都合适时，才为缓存调整上下文布局。
-- 若工具列表因权限变化而变，先保证能力配置正确；缓存优化不能成为保留过期权限的理由。
-
-Manus 的[上下文工程经验](https://www.manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus)展示了稳定前缀、追加式历史和确定性序列化对其部署缓存的价值。这些是实践经验；不能把其价格、命中率或框架实现直接当作其他 API 的现行保证。
-
-## 长任务中的目标、计划与失败记录
-
-**目标重述（recitation）**：长循环会不断加入操作和观察。把精简的当前目标、已完成事项、下一步与阻塞项放到模型本轮可见的位置，并将权威状态保存在持久任务记录中，可降低目标在历史中被淹没的风险。
-
-例如，维护一个短任务清单：完成登录校验修复；定位导致失败的输入；运行对应测试；记录仍未验证的路径。[Manus 公开了在其长循环中把 todo 写到近期上下文的做法](https://www.manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus)，而 Anthropic 也描述了使用持久笔记追踪长任务进度。该模式是有用的设计启发，不意味着所有 agent 都需要每轮重写清单，也不支持一个通用的平均工具调用次数。
-
-**保留有用的失败证据：** 若后续决策需要知道刚才做过什么，保留精简的“尝试动作 → 错误或观察 → 当前状态”。这能让模型看到重试为何失败，但不会更新模型参数；只有在下一次推理时实际提供的记录才可能影响决策。无关日志、敏感数据和巨大堆栈应按需外置，并保留查询引用。压缩历史时，不要把会影响安全重试或后续确认的失败状态删掉。
-
-**历史会变成示例：** 上下文里重复的动作—观察模式可能影响模型下一步模仿什么。Manus 描述了在批量审核 20 份简历时观察到重复操作，并提出用结构化变体打破模式；这仍是该团队的实践假设，没有足够证据把“改变格式”当作普遍解决方案。保持规范、易解析的序列化通常更利于复现与缓存；若评测发现重复行为，先精简或组织历史，再用任务集比较不同表示，不要无依据地注入格式噪声。
-
-## 何时保留状态，何时重启探索 / Retain state or reset exploration
-
-**核心解释 / Core explanation：** 保留可复用资产，与把全部历史带入每轮上下文，是不同的选择。Keeping reusable assets and carrying all past history into every context are separate choices.
-
-下表是跨源工程综合，用于比较信息可见性与持久化选择，不构成统一架构或共同实验结论。
-
-| 情形 | 状态选择与证据边界 |
-|---|---|
-| **同一任务的后续步骤** | 保留目标、接口、权限、验收条件、操作状态和影响安全重试的失败事实；将原始记录外置并保留可查 ID。步骤依赖同一约束时，先考虑主循环或明确交接。 |
-| **有外部评分的开放搜索停滞** | 可从同一候选比较重启与继续搜索，并明确各自保留/移除的信息；停滞不自动构成通用重置规则。 |
-| **跨 worker 复用产物** | 将带版本与来源的代码、测试、实验记录外置；按当前任务读取相关产物，不载入完整历史。持久资产和每轮可见上下文是不同选择。[GitSwarm v1（2026-10-04，§§2.2、3.3–3.4、4）](https://arxiv.org/html/2610.04862v1) |
-| **跨任务复用 harness 经验** | 保存可复用组件和经验；新任务从共同基线开始，再检索与适配。[Harness² v1（2026-10-09，§2.3）](https://arxiv.org/html/2610.14224v1) |
-| **接受系统级变更** | 保留已验收配置及其证据；后续候选仍需[重新验收](../evaluation/llm-evaluation-methods.md)。 |
-
-[*Scaling Discovery Requires Forgetting* v1（2026-10-14，§§3.1–4.3、Appendix B p. 13、§6）](https://arxiv.org/abs/2610.20563v1) 的 Forget 同时清空 session 与候选搜索历史，只保留最佳候选及分数，以相同首轮指令重启。证据来自四项外部评分的优化任务、一个 harness/model 配置；它没有建立适用于一般任务的重置规则。
-
-GitSwarm 用可分支的共享 Git 仓库和原子提交（atomic commit）保存中间产物。Git 的物理父提交（physical parent）记录开始工作的树；强制字段 `informed_by=` 记录 worker 声明的语义来源，且必须包含 parent、可增加其他分支来源。这是来源追踪，不是因果证明。主要积累证据来自同题跨 episode；单独把已完成搜索的获胜提交作为种子，仍是同一 RMT 任务，不能外推成任意跨任务迁移。worker 使用的 LLM 在 run 中保持固定；架构搜索改进的是被研究的另一模型，不能写成 worker 权重自行学习。[GitSwarm v1（2026-10-04，§§2.2、3.3–3.4、4）](https://arxiv.org/html/2610.04862v1)
-
-**工程建议 / Engineering advice：** 将代码、测试、实验结果和负面发现作为候选经验资产外存，并记录版本、适用条件与检查依据，按当前任务检索后复验。重启探索不应删除权威任务契约或未决外部操作状态；把审计记录留在提示词之外，并重新载入目标、接口、测试、权限、验收条件和必要的失败/副作用状态。“被读取或引用”不等于提升结果。外部资产持续保留而当前上下文选择性清理，是跨源工程综合，不是论文共同评测过的方案。
-
-## 相关知识
-
-- [智能体基础](../agents/agent-fundamentals.md)：上下文、环境反馈和智能体执行循环如何连接。
-- [编排模式](../agents/orchestration-patterns.md)：判断主循环、并行工具与独立 worker 的边界。
-- [LLM 评估方法](../evaluation/llm-evaluation-methods.md)：比较历史保留、重启与跨运行变更。
-- [工具设计与函数调用](../agents/tool-design-and-function-calling.md)：工具 schema 与执行结果也是上下文的一部分。
-- [RAG 架构与实现](../rag/rag-architecture-and-implementation.md)：了解何时预先检索、何时按需检索。
+> [!info]- 来源
+> 本章的 145 token 演算由 `tiktoken 0.12.0` 的 `cl100k_base` 对表中原始文本逐段计算；消息封装与真实 provider 用量不包含在该演算中。
+>
+> - **上下文与提示工程的边界、按需维护信息。** Anthropic, [“Effective context engineering for AI agents”](https://www.anthropic.com/research/effective-context-engineering-for-ai-agents), 2025-09-29，§§1–4。组织对多轮输入的工程经验，不是通用实验结论。
+> - **长输入的位置效应。** Liu et al., [“Lost in the Middle: How Language Models Use Long Contexts,” TACL 2024 / arXiv v3](https://arxiv.org/abs/2307.03172v3)，§§3–4。研究中的具体模型与多文档/键值任务，不证明所有模型在所有输入中都有相同的首尾偏好。
+> - **KV 前缀复用的 provider 示例。** OpenAI API, [“Prompt caching”](https://developers.openai.com/api/docs/guides/prompt-caching), 检查于 2026-11-06。实现细节、模型支持、缓存生命周期和计费均依当前文档与部署配置。
+> - **稳定前缀、追加式历史与任务清单的实践经验。** Manus, [“Context Engineering for AI Agents: Lessons from Building Manus”](https://www.manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus), 2025-07-18。文中运行观察来自 Manus 自有 agent，不能当作跨 provider 的保证。
+> - **按需加载能力与独立 worker 的部署比较。** Claude Platform, [“Building agents: When to fold subagents into your main agent loop”](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop), 2026-10-22；数据来自若干企业部署，适用于其比较过的工作流。
+> - **开放式搜索重置。** Tan et al., [“Scaling Discovery Requires Forgetting,” arXiv v1](https://arxiv.org/abs/2610.20563v1), 2026-10-14，§§3–4、Appendix B、§6。测试四项带外部评分的搜索任务，范围见正文。
+> - **跨 episode 的共享产物与语义依赖。** Shah et al., [“GitSwarm: Decentralized Compounding Inference,” arXiv v1](https://arxiv.org/html/2610.04862v1), 2026-10-04，§§2.2、3.3–3.4、4。`parent` 与 `informed_by=` 各自表达的来源关系只按论文定义理解。
+> - **任务级和 harness 级经验积累。** Xu et al., [“Harness²: Recursive Agent Harnessing for an Open World,” arXiv v1](https://arxiv.org/html/2610.14224v1), 2026-10-09，§2.3。文中基准和模型配置限制外推范围。
+> - **演算 tokenizer。** OpenAI [`tiktoken` 0.12.0 源码与 `cl100k_base` 编码配置](https://github.com/openai/tiktoken/tree/0.12.0)；该 tokenizer 不等同于所有模型的线上请求序列化。

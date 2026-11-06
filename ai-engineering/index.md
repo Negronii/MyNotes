@@ -5,7 +5,7 @@
 ## 从问题开始
 
 - [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md) — 沿一个构建失败问题，走完模型推理、日志查询和返回解释的过程。
-- [更新后的文档怎样成为可用证据？](rag/rag-architecture-and-implementation.md)——沿一次文档更新看索引、权限校验、检索和引用。
+- [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)——沿一次文档更新看索引、权限校验、检索和引用。
 - [怎样证明模型或提示词的改动值得上线？](evaluation/llm-evaluation-methods.md)——用代表性任务对照基线和候选版本，再看生产结果。
 
 ## 论文与文章
@@ -31,8 +31,8 @@
 
 - [How do you write a prompt that makes a task clear and testable? / 如何编写清楚且可检验的任务提示词？](prompting/prompt-engineering-fundamentals.md)
 - [Which prompting technique should you try when a simple prompt fails? / 简单提示失败时应尝试哪种提示技巧？](prompting/advanced-prompting-techniques.md)
-- [What should each model inference see, and what should the application persist? / 每次模型推理应看到什么，应用应持久化什么？](context/context-engineering-principles.md)
-- [How do you retrieve and use authorized external evidence in a grounded answer? / 怎样检索并使用经过授权的外部证据生成有依据的回答？](rag/rag-architecture-and-implementation.md)
+- [每次模型调用应看到什么，应用又应持久化什么？](context/context-engineering-principles.md)
+- [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)
 - [How should an application execute a model’s tool request? / 应用应如何执行模型的工具请求？](agents/tool-design-and-function-calling.md)
 - [When should a model control the next step? / 何时应让模型决定下一步？](agents/agent-fundamentals.md)
 - [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](agents/orchestration-patterns.md)
