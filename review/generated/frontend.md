@@ -283,7 +283,7 @@ controls.addEventListener("click", (event) => {
 });
 ~~~
 
-点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#52.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F)。
+点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
 
 ### 默认动作与传播控制是两回事
 
@@ -315,7 +315,7 @@ controls.addEventListener("click", (event) => {
 
 React 的 JSX 事件名和事件对象保留常用的 DOM 事件概念，`onClick` 默认冒泡、`onClickCapture` 对应捕获。事件委托的具体根节点属于 React 实现细节：React 17 将委托根从 `document` 移到了 React root container；早期 React DOM 还会池化 SyntheticEvent，React 17 起移除了池化，所以当前 React DOM 不需要为异步读取事件调用 `persist()`。React Native 的事件行为另有边界。
 
-**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#55.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#53.%20How%20can%20a%20JavaScript%20event%20bus%20handle%20reentrancy?%20/%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E9%87%8D%E5%85%A5%EF%BC%9F)讨论应用层发布/订阅。
+**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#53.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)讨论应用层发布/订阅。
 
 > [!info]- 来源
 > - 捕获、目标、冒泡、事件目标、默认动作及取消： [WHATWG DOM：事件分发](https://dom.spec.whatwg.org/#concept-event-dispatch)，Living Standard，事件分发算法；[WHATWG DOM：Event 接口](https://dom.spec.whatwg.org/#interface-event)，事件标记与取消行为。核对日期：2026-11-06。
@@ -2991,7 +2991,7 @@ Array.of(3); // [3]：参数本身作为元素
 Array.of(1, 2, 3); // [1, 2, 3]
 ~~~
 
-类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#52.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#43.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#43.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
 
 ### 复制数组只复制一层
 
@@ -4157,7 +4157,7 @@ The iterable protocol exposes Symbol.iterator, which returns an iterator. The it
 
 The protocol is defined by the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration). / 协议定义见 [ECMAScript 迭代接口](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)。
 
-Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#52.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
+Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
 
 ~~~javascript
 const values = [10, 20];
@@ -4853,728 +4853,877 @@ A source map relates emitted code to source files for debugging and error report
 | nosources-source-map | Omits embedded source content, but mappings and source paths may remain / 不嵌入源码内容，但映射和源码路径仍可能存在 |
 
 These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#64.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
-## 52. What is the difference between an HTMLCollection and a NodeList? / HTMLCollection 与 NodeList 有什么区别？
+## 52. 报表页面里的状态应该放在哪里？
 
-Both are array-like collections of DOM nodes, but they differ in which nodes they contain and whether their view updates. An `HTMLCollection` contains elements and is live. A `NodeList` may include text and comment nodes; whether it is live depends on the API that returned it: `querySelectorAll()` is static, while `childNodes` is live. Choose from the returned API's contract, and avoid mutating a live collection while advancing forward through its indexes. / 两者都是类数组的 DOM 节点集合，但包含的节点类型和更新方式不同。`HTMLCollection` 只含元素且是实时集合。`NodeList` 可含文本和注释节点；是否实时取决于返回它的 API：`querySelectorAll()` 是静态集合，而 `childNodes` 是实时集合。应根据具体 API 的契约选择，并避免在正向按索引遍历时修改实时集合。
+案例背景：用户打开 `/reports/42?sort=recent#summary`，希望刷新后继续查看同一报表、复制链接分享当前排序，并在另一标签页改变偏好后看到更新。重开时，页面从路径取报表 ID、从查询参数还原 `sort`，然后通过 HTTP 请求服务端报表；片段 `#summary` 定位页面中的摘要。若返回快照仍是 `running`，页面拿到与快照一致的 `event_cursor` 后再订阅更新，见[流式报表恢复案例](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。报表内容由服务端维护，可分享的筛选条件进入 URL，Web Storage (网页存储) 只保存客户端偏好或草稿。
 
-| Collection | Typical source | Contents | Update behavior |
-|---|---|---|---|
-| `HTMLCollection` | `getElementsByClassName()`, `getElementsByTagName()`, `children` | `Element` nodes only | Live |
-| `NodeList` | `querySelectorAll()` | Matching elements | Static snapshot |
-| `NodeList` | `childNodes` | Elements, text, comments, and other child nodes | Live |
+| 状态 | 合适的所有者 | 原因 |
+|---|---|---|
+| 报表 42 的进度、最终状态和权限 | 服务端 API | 多设备共享且需要可信的业务记录；缓存只能用于显示，不能取代权威状态 |
+| `sort=recent`、定位到 `#summary` | URL 查询参数与片段 | 刷新、复制和浏览器历史都能恢复这份视图状态 |
+| 列密度、隐藏提示等小型偏好 | `localStorage` | 同源页面可读写，并可跨标签页保留；浏览器策略仍可能限制或清除它 |
+| 未提交的本标签页筛选草稿 | `sessionStorage` | 适合随当前顶层浏览上下文存活，重载后还可恢复 |
+| 登录会话标识 | 服务器管理的 Cookie | 符合域、路径、传输安全和请求凭证规则时会随请求发送 |
 
-~~~html
-<p id="p1"><em>hello</em> world <b>bold</b><!-- comment --></p>
+`localStorage` 和 `sessionStorage` 是同步的字符串键值 API；调用会占用当前 JavaScript 执行时间。它们不提供多键事务或条目级过期时间，也不适合作为大型结构化数据的数据库。Storage Standard 为这两个存储端点各建议 5 MiB 配额；这是规范建议，不保证用户代理一定能提供，写入也可能因配额或策略限制失败。较大的本地记录和需要原子提交的更新可用 IndexedDB 事务；`navigator.storage.estimate()` 只能给出近似使用量和配额，不能保证数据不会被策略拒绝或清除。
+
+同源并不总表示顶层页面和嵌入式第三方页面共享同一个存储区：浏览器可限制第三方存储，存储分区也可能把嵌入上下文隔离。不要假设同一页面在顶层打开和放入 iframe 后能读到相同数据。
+
+`sessionStorage` 通常按来源和顶层浏览上下文隔离，因而不同标签页各有一份，并能在同一标签页重载时保留。由带 opener 的页面新开的辅助浏览上下文，初始时可能收到 opener 的 sessionStorage 副本，之后两边各自变化；不要把这种初始复制当作共享存储。浏览器会话恢复等生命周期行为也由用户代理决定。
+
+本地存储写入不是跨标签页锁。标签页 A 和 B 同时读取计数 4、各自加一并写回时，最终值可能仍为 5。值实际发生变化时，其他共享该存储区的文档会收到 storage event (存储事件)，写入者本身不会收到；若 `setItem()` 写入的字符串与原值相同，规范会提前返回，不派发事件。事件只是通知，不会把多步读改写变成事务。需要协作时，使用 IndexedDB 事务或明确的跨上下文协调协议。
+
+> [!example] 用存储通知偏好变化
+> 排序是 URL 状态，以下键只保存列密度。两个标签页分别运行这两段代码。示例假定 B 中该键尚未设置或原值为 `"false"`；A 监听其他文档的有效变化，B 调整偏好后写入。即使通知到达，A 也应把它当作“偏好有变化”的信号，再从存储读取值。
+>
+> 标签页 A：
+>
+> ~~~javascript
+> const key = "reports:compact-columns";
+> window.addEventListener("storage", event => {
+>   if (event.storageArea === localStorage && event.key === key) {
+>     applyCompactColumns(localStorage.getItem(key) === "true");
+>   }
+> });
+> ~~~
+>
+> 标签页 B：
+>
+> ~~~javascript
+> localStorage.setItem("reports:compact-columns", "true");
+> ~~~
+
+Web Storage 可被当前页面上的脚本读取；若 cross-site scripting (跨站脚本攻击，XSS) 进入页面，存储在其中的 bearer token (持有者令牌) 也可能被窃取。`HttpOnly` Cookie 不向普通页面脚本暴露，但浏览器会按 Cookie 规则自动附带它，服务端仍需设计 Cross-Site Request Forgery (跨站请求伪造，CSRF) 防护。`SameSite=None` Cookie 必须同时带 `Secure`。选用一种存储形式并不会自动解决认证与授权问题。
+
+**延伸阅读：** [同一报表在多个标签页中怎样交换变化？](#53.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 解释怎样通知其他标签页；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论 Cookie、XSS 与 CSRF。
+
+> [!info]- 来源
+> - `localStorage`、`sessionStorage` 的作用域、storage event (存储事件) 与访问策略：[WHATWG HTML Standard，Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html)，§12.2，2026-11-06 核对。
+> - 浏览器配额、存储持久性和驱逐由实现与用户代理策略影响；`navigator.storage.estimate()` 返回近似值：[WHATWG Storage Standard](https://storage.spec.whatwg.org/)，2026-11-06 核对。
+> - Web Storage 的 5 MiB 是每个存储端点的规范配额建议；Storage Standard 说明 storage key 的分区模型预期会演进：[WHATWG Storage Standard，§4.1–4.2](https://storage.spec.whatwg.org/#storage-endpoints)，2026-11-06 核对。
+> - 用户代理可限制第三方文档对 `localStorage` 的访问：[WHATWG HTML Standard，Web Storage privacy](https://html.spec.whatwg.org/multipage/webstorage.html#user-tracking)，2026-11-06 核对。
+> - 结构化本地记录与事务：[Indexed Database API 3.0](https://w3c.github.io/IndexedDB/)，2026-11-06 核对。
+> - 已发布的 Cookie 存储与请求发送规则、`Secure`、`HttpOnly` 属性：[RFC 6265](https://www.rfc-editor.org/rfc/rfc6265.html)。
+> - `SameSite` 属性及 `SameSite=None` 要求 `Secure`：当前 IETF 文稿 `draft-ietf-httpbis-rfc6265bis-22` 的 §4.1.2.7、§5.7；截至 2026-11-06，Datatracker 仍标记 RFC Editor「Final Approval Pending」，普通 RFC 发布页尚未提供：[IETF 文稿](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis/)，[官方流程状态](https://datatracker.ietf.org/doc/draft-ietf-httpbis-rfc6265bis/)。
+## 53. 同一报表在多个标签页中怎样交换变化？
+
+案例背景：用户在标签页 A 查看报表 42，在标签页 B 重新生成报表。A 需要知道自己的画面可能过时，并刷新权威数据。browsing context (浏览上下文) 能否直接通信，取决于来源、浏览器存储分区和生命周期；通知本身也不等于共享或持久化业务状态。
+
+| 需求 | 机制 | 关键边界 |
+|---|---|---|
+| same-origin (同源) 且符合存储分区条件的临时广播 | `BroadcastChannel` | 消息不持久化；不在线的标签页收不到历史消息 |
+| 存储一项值并通知其他文档 | `localStorage` + `storage` 事件 | 字符串写入、无事务或锁；写入者不收到自己的事件 |
+| 同源上下文共享一个协调者或连接 | `SharedWorker` (共享工作线程) | worker 内存不是持久状态，需探测浏览器支持；页面关闭或进入 back-forward cache (前进/后退缓存，BFCache) 时需清理或重连端口 |
+| 跨源 iframe (内嵌框架) 或窗口消息 | `postMessage()` | 固定目标 origin (来源)，并验证发送方窗口和数据结构 |
+| 服务端持续更新或跨设备状态 | SSE、Fetch 流或 WebSocket | 服务端认证授权；重连与状态恢复由应用协议定义 |
+
+在简单的同源通知中，发送报表标识和单调状态版本即可；不要把另一个标签页发来的对象当成权威记录。接收端发现版本更高时，重新请求服务端快照可以减少陈旧数据和消息缺失的影响。`BroadcastChannel` 会用 structured clone (结构化克隆) 传递消息，不保留共享对象引用，也不会替应用保存未读消息。
+
+> [!example] 通知“报表可能更新”，再读权威状态
+> A 已持有报表 42 的版本 9。B 提交更新后收到服务端版本 11、状态 `ready`，并广播一条轻量通知；本例假设版本在同一报表 ID 下单调递增。若 A 收到高于当前版本的提示，就 GET 权威快照；广播不携带快照游标，也不补发离线期间的历史。
+>
+> ~~~javascript
+> const channel = new BroadcastChannel("reports");
+> let currentVersion = 9;
+>
+> channel.addEventListener("message", event => {
+>   const message = event.data;
+>   if (!message || message.type !== "report:changed" ||
+>       message.reportId !== 42 || !Number.isSafeInteger(message.version)) return;
+>   if (message.version <= currentVersion) return;
+>   void reloadReportFromServer(42, message.version);
+> });
+>
+> async function reloadReportFromServer(reportId, announcedVersion) {
+>   try {
+>     const response = await fetch(`/api/reports/${reportId}`);
+>     if (!response.ok) throw new Error("Snapshot request failed");
+>     const latest = await response.json();
+>     if (latest.id !== reportId || !Number.isSafeInteger(latest.version)) {
+>       throw new Error("Invalid snapshot");
+>     }
+>     if (latest.version > currentVersion) {
+>       currentVersion = latest.version;
+>       renderReport(latest);
+>     }
+>     if (currentVersion < announcedVersion) showRefreshPending();
+>   } catch {
+>     // Keep the current view and show a bounded refresh error; do not retry forever.
+>     if (currentVersion < announcedVersion) showRefreshUnavailable();
+>   }
+> }
+>
+> function announceChanged(reportId, version) {
+>   channel.postMessage({ type: "report:changed", reportId, version });
+> }
+>
+> // 页面所有者释放时执行；生命周期恢复时重新创建 channel。
+> function disposeReportChannel() {
+>   channel.close();
+> }
+> ~~~
+
+若更新值本身要跨刷新保留，可写入 `localStorage` 并监听其他文档的 `storage` 事件；值发生变化时其他文档才收到通知，写入文档不收到，同一字符串重复写入也不派发事件。此机制只报告发生过某次有效变化，不协调并发写入。对于复杂协调，WHATWG HTML 建议考虑 `SharedWorker`：它可以集中管理端口、版本或一条共享连接。页面可以在 `pagehide` 尝试发送断开消息、在恢复时重新注册，但 `pagehide` 不是可靠的退出确认；崩溃或系统回收时需靠租约/心跳过期，并允许回来的页面重新注册。旧端口也应从 worker 的集合中移除并 `close()`，而不能假设平台会向另一端提供通用的 peer-close event (对端关闭事件)。
+
+> [!example] SharedWorker 端口需要显式注销
+> `SharedWorker` 可以在内存中把一个标签页的变更转给其他连接页面。正常离开时页面发 `disconnect` 并关闭自己的端口；从 BFCache 恢复时重新建立端口。以下代码只展示协作式注销与恢复，不实现心跳或租约；若页面进程直接退出，worker 仍需按上文策略清除过期连接。
+>
+> ~~~javascript
+> // report-worker.js
+> const ports = new Set();
+> self.addEventListener("connect", event => {
+>   const port = event.ports[0];
+>   ports.add(port);
+>   const dropPort = () => {
+>     ports.delete(port);
+>     port.close();
+>   };
+>   port.addEventListener("message", ({ data }) => {
+>     if (data?.type === "disconnect") return dropPort();
+>     for (const peer of ports) if (peer !== port) peer.postMessage(data);
+>   });
+>   port.addEventListener("messageerror", dropPort);
+>   port.start();
+> });
+> ~~~
+>
+> ~~~javascript
+> // 页面所有者维护自己的连接，并在恢复时重新注册。
+> let port;
+> function connectReportWorker() {
+>   port = new SharedWorker("/report-worker.js").port;
+>   port.onmessage = event => renderReportNotice(event.data);
+> }
+> connectReportWorker();
+> window.addEventListener("pagehide", () => {
+>   port?.postMessage({ type: "disconnect" });
+>   port?.close();
+>   port = null;
+> });
+> window.addEventListener("pageshow", event => {
+>   if (event.persisted) connectReportWorker();
+> });
+> ~~~
+
+跨源页面必须在 `postMessage(data, targetOrigin)` 中设置精确目标来源。接收方同时检查 `event.origin`（消息来源）和 `event.source`（发送窗口），再验证允许的消息类型、字段及大小；来源不包括路径。子页先装好监听器并向父页发 `ready`，父页再发 `refresh`，避免消息先于监听器到达。使用 `"*"` 发送敏感内容可能把消息交给已经导航到另一站点的目标窗口。信任的页面也可能因 cross-site scripting (跨站脚本攻击，XSS) 被控制，因此来源校验不能替代操作授权和载荷校验。
+
+~~~javascript
+const childOrigin = "https://reports.example";
+const frame = document.querySelector("#report-frame");
+window.addEventListener("message", event => {
+  if (event.origin !== childOrigin || event.source !== frame.contentWindow) return;
+  if (event.data?.type === "ready") {
+    frame.contentWindow.postMessage({ type: "refresh", reportId: 42 }, childOrigin);
+  }
+});
 ~~~
 
 ~~~javascript
-const paragraph = document.querySelector("#p1");
-const elements = paragraph.children;
-const childNodes = paragraph.childNodes;
-const snapshot = paragraph.querySelectorAll("*");
-paragraph.append(document.createElement("i"));
-
-elements.length;   // 3 elements: em, b, i
-childNodes.length; // 5 nodes: em, text, b, comment, i
-snapshot.length;   // still 2 members: em, b
+// 子页在装好监听器后向父页宣告 ready。
+const parentOrigin = "https://app.example";
+window.addEventListener("message", event => {
+  if (event.origin !== parentOrigin || event.source !== window.parent) return;
+  if (event.data?.type !== "refresh" || event.data.reportId !== 42) return;
+  refreshEmbeddedReport();
+});
+window.parent.postMessage({ type: "ready" }, parentOrigin);
 ~~~
 
-A static list fixes which nodes are members. It does not freeze the node objects or their properties. Whitespace and comments can appear in `childNodes`; `tagName` belongs to elements, while all nodes have a `nodeName`.
+WebSocket 适合经过服务器的持续双向消息，不是两个标签页互相通知的默认方案。它的握手来源检查不等同于 Fetch 的 Cross-Origin Resource Sharing (跨源资源共享，CORS) 响应许可；服务端仍需检查握手 `Origin`、验证身份，并逐条授权敏感操作。连接建立后，WebSocket 也不会替业务消息提供去重、确认或断线补发。
 
-Removing items from a live collection while incrementing the index shifts later entries underneath the loop. Iterate backward or take an explicit snapshot:
+**延伸阅读：** [流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 对接服务器事件；[报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地状态的寿命与事务边界。
+
+> [!info]- 来源
+> - 跨文档消息、`postMessage` 目标源、`BroadcastChannel` 与共享 worker 的适用场景：[WHATWG HTML Standard，Web Messaging](https://html.spec.whatwg.org/multipage/web-messaging.html)，§9.3–9.5，2026-11-06 核对。
+> - `BroadcastChannel` 消息结构化克隆：[WHATWG HTML Standard，Structured data](https://html.spec.whatwg.org/multipage/structured-data.html)，2026-11-06 核对。
+> - 存储事件只向共享存储区中的其他文档派发：[WHATWG HTML Standard，Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html)，§12.2.4，2026-11-06 核对。
+> - WebSocket 的连接、来源和消息协议：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，2026-11-06 核对。
+> - `pagehide` 的 `persisted` 值用于表示页面可能留在历史缓存并在返回时复用；它不是可靠的最终退出通知：[WHATWG HTML Standard，PageTransitionEvent](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-pagetransitionevent-interface)，2026-11-06 核对。
+## 54. 流式报表断线重连后，界面怎样保留正确状态？
+
+案例背景：用户重开 `/reports/42?sort=recent#summary`。页面从服务端取到报表 42 的状态快照，再订阅进度；断线后浏览器会自动重连，但同一事件可能重放，页面也可能比服务端落后。界面需要分清传输游标、业务状态版本和报表终态。
+
+本文沿用 [实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md) 中的 Server-sent Events (服务器发送事件，SSE) 案例：初始快照为 `id=42, version=9, status=running, event_cursor=103`。这里快照 JSON 的 `id=42` 是报表资源标识；后续 SSE 事件行的 `id: 104` 才是日志续读游标；`version=9` 是报表状态的单调修订号；`status` 描述业务运行状态。这三者职责不同，不能相互比较。
+
+### 页面要显示两种状态
+
+服务端报表状态回答“报表现在是什么结果”；本地连接状态回答“页面是否正在接收更新”。连接短暂重连时，已有的报表快照仍然有用，但应标出更新正在恢复，而不把它误报成失败。
+
+| 服务端报表状态 | 页面连接状态 | 可以显示什么 |
+|---|---|---|
+| `running` | 已连接 | 当前状态与最近一次进度；结果仍未完成 |
+| `running` | 正在重连 | 保留最后可用状态并标注可能过时 |
+| `ready` | 任意 | 已完成；停止进度订阅 |
+| `failed` 或 `canceled` | 任意 | 显示服务端记录的终态；断线本身不能生成这种业务结论 |
+
+`EventSource` 收到 `error` 时可能仍会自动重连，因此不能直接把报表标成 `failed`。当报表状态是 `ready`、`failed` 或 `canceled` 等终态时，页面可关闭事件源；产品应由 API 合同明确哪些状态终止这项工作。
+
+~~~mermaid
+flowchart TD
+    Snapshot[读取报表快照和对应游标] --> Open[建立 SSE 连接]
+    Open --> Wait[等待当前连接的下一事件]
+    Wait --> Event{收到更新事件？}
+    Event -->|没有新事件| Wait
+    Event -->|版本较旧或重复| Wait
+    Event -->|新版本| Apply[合并状态并更新界面]
+    Apply --> Terminal{业务状态已终止？}
+    Terminal -->|否| Wait
+    Terminal -->|是| Close[关闭订阅]
+    Wait -->|连接丢失| Reconnect[保留快照并显示重连中]
+    Reconnect --> Resume[浏览器用原 EventSource 自动重连]
+    Resume --> Wait
+    Reconnect -->|游标过期 reset| Refresh[关闭旧连接并重新读取快照和游标]
+    Refresh --> SnapshotTerminal{新快照是否仍在运行？}
+    SnapshotTerminal -->|是| Open
+    SnapshotTerminal -->|否| Close
+~~~
+
+### 怎样合并状态并从游标恢复？
+
+第一次订阅必须接在与快照一致的位置之后。若快照版本 9 已涵盖事件日志游标 103，页面从 103 之后订阅；不能分别读取一个随时变化的快照和另一个独立游标，否则两者之间的更新可能被跳过。初连 URL 中的 `after` 是应用约定，原生 `EventSource` 不能让页面设置任意请求头。
+
+服务器接着发出日志事件 104、105：
+
+~~~text
+id: 104
+event: report.updated
+data: {"report_id":42,"version":10,"status":"running","progress":80}
+
+id: 105
+event: report.updated
+data: {"report_id":42,"version":11,"status":"ready","progress":100}
+
+~~~
+
+接收端按 `version` 合并业务状态，按 SSE 的 `id` 续读事件。版本不大于本地版本时忽略重复或旧消息；更高版本才更新界面。本例事件包含该视图所需的最新状态。如果 API 发送的是依赖前序版本的增量补丁，发现版本不连续时应重新 GET 快照，而不能把缺少的字段猜出来。
 
 ~~~javascript
-for (const element of Array.from(container.getElementsByClassName("item"))) {
-  element.remove();
+const initialSnapshot = { id: 42, version: 9, status: "running", progress: 0, event_cursor: "103" };
+let report = {
+  id: initialSnapshot.id,
+  version: initialSnapshot.version,
+  status: initialSnapshot.status,
+  progress: initialSnapshot.progress,
+};
+let source;
+let recoveryInProgress = false;
+let recoveryAttempts = 0;
+const reportStatuses = new Set(["running", "ready", "failed", "canceled"]);
+const terminalStatuses = new Set(["ready", "failed", "canceled"]);
+
+function subscribe(eventCursor) {
+  const currentSource = new EventSource(`/api/reports/42/events?after=${encodeURIComponent(eventCursor)}`);
+  source = currentSource;
+  currentSource.addEventListener("open", () => {
+    if (source === currentSource) showConnectionState("connected");
+  });
+  currentSource.addEventListener("report.updated", event => {
+    if (source !== currentSource) return;
+    let update;
+    try {
+      update = JSON.parse(event.data);
+    } catch {
+      closeCurrentSource(currentSource);
+      void refreshSnapshotAndSubscribe();
+      return;
+    }
+    if (!update || update.report_id !== report.id ||
+        !Number.isSafeInteger(update.version) ||
+        !reportStatuses.has(update.status) || !Number.isFinite(update.progress) ||
+        update.progress < 0 || update.progress > 100) {
+      closeCurrentSource(currentSource);
+      void refreshSnapshotAndSubscribe();
+      return;
+    }
+    // 合法的旧版本或重放帧不是坏数据；保留这条连接继续等待。
+    if (update.version <= report.version) return;
+    recoveryAttempts = 0;
+    // EventSource 用 SSE id 续读；业务状态只按 report.version 合并。
+    report = { ...report, version: update.version, status: update.status, progress: update.progress };
+    renderReport(report);
+    if (terminalStatuses.has(report.status)) closeCurrentSource(currentSource);
+  });
+  currentSource.addEventListener("reset", () => {
+    if (source !== currentSource || terminalStatuses.has(report.status)) return;
+    closeCurrentSource(currentSource);
+    void refreshSnapshotAndSubscribe();
+  });
+  currentSource.addEventListener("error", () => {
+    if (source !== currentSource || terminalStatuses.has(report.status)) return;
+    if (currentSource.readyState === EventSource.CONNECTING) {
+      showConnectionState("reconnecting");
+    } else if (currentSource.readyState === EventSource.CLOSED) {
+      closeCurrentSource(currentSource);
+      void refreshSnapshotAndSubscribe();
+    }
+  });
 }
+
+function closeCurrentSource(currentSource) {
+  if (source !== currentSource) return;
+  source = undefined;
+  currentSource.close();
+}
+
+async function refreshSnapshotAndSubscribe() {
+  if (recoveryInProgress) return;
+  if (recoveryAttempts >= 1) {
+    showRefreshUnavailable();
+    return;
+  }
+  recoveryAttempts += 1;
+  recoveryInProgress = true;
+  source?.close();
+  source = undefined;
+  try {
+    const response = await fetch("/api/reports/42");
+    if (!response.ok) throw new Error("Snapshot request failed");
+    const snapshot = await response.json();
+    if (snapshot.id !== report.id || !Number.isSafeInteger(snapshot.version) ||
+        snapshot.version < report.version || !reportStatuses.has(snapshot.status) ||
+        !Number.isFinite(snapshot.progress) || snapshot.progress < 0 || snapshot.progress > 100 ||
+        typeof snapshot.event_cursor !== "string") {
+      throw new Error("Invalid or older snapshot");
+    }
+    report = {
+      id: snapshot.id,
+      version: snapshot.version,
+      status: snapshot.status,
+      progress: snapshot.progress,
+    };
+    renderReport(report);
+    if (!terminalStatuses.has(report.status)) subscribe(snapshot.event_cursor);
+  } catch {
+    // Keep the last usable report and show one bounded recovery error.
+    showRefreshUnavailable();
+  } finally {
+    recoveryInProgress = false;
+  }
+}
+
+subscribe(initialSnapshot.event_cursor);
 ~~~
 
-Use `querySelectorAll()` when a static result is simpler to reason about. Use a live collection only when reflecting subsequent matching-tree changes is useful; “live” specifies observable data, not how often an engine recomputes it.
+初连请求为 `GET /api/reports/42/events?after=103`。当连接读到事件 104 后断开，浏览器重连仍访问同一 URL（包括 `?after=103`），并附带 `Last-Event-ID: 104`；本例的服务端合同规定，有效的 `Last-Event-ID` 优先于初始查询参数，因此从 104 之后续读事件 105。若本地已合并到仍在运行的版本 10，再收到版本 10 时会直接忽略，并让同一 EventSource 继续等待；版本 11 已是 `ready`，接受后就关闭订阅。`event_cursor` 只存在于初始或重新取得的快照中，不是自动变化的本地状态。`Last-Event-ID` 表示浏览器已解析到该事件位置，不表示应用监听器已经完成渲染、写入本地库或执行外部副作用。只关心最新报表状态时，按 `version` 去重并在恢复后读取权威快照足够；若每条业务事件都必须处理，则另需持久记录已处理 ID、去重和显式确认。
 
-**See also:** [How do DOM events propagate?](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) discusses event targets in a changing DOM.
+游标过期时，服务器可发送含 `data` 并以空行结束的 `event: reset`，浏览器才会派发事件。页面关闭旧 EventSource，重新 GET 一致快照和游标；版本较旧或数据无效时保留原显示并提示一次恢复失败，只有新快照仍为 `running` 才用新游标订阅。若快照已是 `ready`、`failed` 或 `canceled`，展示它并保持连接关闭。`EventSource` 的 `error` 若状态为 `CONNECTING`，表示浏览器仍在重连；若为 `CLOSED`，示例转为一次快照恢复。连续 reset、坏帧或立即关闭最多自动恢复一次；接收更高业务版本后才重置这个预算，避免反复重取或重连。恢复失败后显示错误。
 
-**Specification:** [WHATWG DOM: `NodeList` and `HTMLCollection`](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection), checked 2026-11-05.
-## 53. How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？
+### Fetch 自定义流和 SSE 有什么不同？
 
-An event bus keeps listeners by event name and emits to a snapshot so that listener additions or removals during dispatch affect the next emission. A one-time wrapper should mark itself fired and unregister before calling user code; this keeps recursive emits and reentrant snapshots from invoking it twice. Observer and publish-subscribe are different coupling patterns: an observer subject knows its listeners, while a bus mediates between publishers and subscribers. / 事件总线按事件名保存监听器，触发时遍历快照，因此分发期间新增或删除监听器影响下一次触发。一次性包装器应先标记已触发并注销，再调用用户代码；这能避免递归触发和重入快照造成重复调用。观察者与发布订阅的耦合方式不同：观察者主体直接知道监听者，事件总线则位于发布者和订阅者之间。
+若 API 需要自定义请求头或 POST 查询，再考虑 Fetch 响应流。`reader.read()` 给出的是任意字节块，不保证一个块刚好是一条记录；UTF-8 字符和 JSON 记录都可能跨块。需要自己持续解码、缓冲到完整分隔符、校验字段和终止条件。传输方式比较见上述实时更新说明；本节聚焦界面和 parser (解析器) 的责任。
+
+旧例还保留了一个自定义 newline-delimited JSON (按行分隔的 JSON，NDJSON) 作业协议模型。它与前面的 SSE 报表协议不同：模型中的 `runId` 标识一次生成作业，`seq` 是该私有日志的应用游标；它既不是 SSE 的 `id`，也不是报表 `version`。客户端用幂等键提交作业并获得稳定 `runId`，续读时带已接受的 `seq`；旧序号可重放并丢弃，跳号则拒绝，作业最终状态仍以状态接口为准。该模型限制单条帧为 8,192 个 UTF-16 代码单元、可见输出为 64 Ki 代码单元，并覆盖坏 JSON、提早 EOF、超时和本地取消；EOF 本身不等于收到终态。以下折叠段保留协议示例与可执行模型，供确实采用自定义 NDJSON API 的场景参考。
+
+> [!example]- 自定义 Fetch/NDJSON 作业 parser 与断线案例
+> 此实现是 Node Web Streams 与 Response API 上的合成协议模型，不是浏览器端到端或生产服务测试；八组断言覆盖 UTF-8 与帧跨块、合并帧、服务端错误、格式错误、提前结束、断线、超时、本地中止及渲染回调返回后阻止消费已缓冲的终态。
+>
+> ~~~text
+> POST /api/runs
+> Idempotency-Key: submit-7f2a
+> {"prompt":"Summarize the public release notes"}
+>
+> 202 Accepted
+> {"runId":"run-7f2a","status":"queued"}
+>
+> GET /api/runs/run-7f2a/events?after=0
+> Content-Type: application/x-ndjson
+>
+> {"type":"delta","seq":1,"text":"The release adds "}
+> {"type":"delta","seq":2,"text":"a search filter."}
+> {"type":"complete","seq":3,"runId":"run-7f2a"}
+> ~~~
+>
+> 这个小协议展示提交幂等键、稳定作业 ID、续读序号与明确终态；它是应用契约示例，不是浏览器标准。下面的 parser 会逐块解码并验证序号，遇到没有终态的 EOF 时保留部分文本但不标为完成。
+>
+> ~~~javascript
+> import assert from "node:assert/strict";
+>
+> const MAX_FRAME_CHARS = 8 * 1024;
+> const MAX_OUTPUT_CHARS = 64 * 1024;
+> const DECODE_SLICE_BYTES = 4 * 1024;
+>
+> function readWithSignal(reader, signal) {
+>   if (!signal) return reader.read();
+>   const abortReason = () => signal.reason ?? new DOMException("Aborted", "AbortError");
+>   if (signal.aborted) return Promise.reject(abortReason());
+>
+>   return new Promise((resolve, reject) => {
+>     const onAbort = () => reject(abortReason());
+>     signal.addEventListener("abort", onAbort, { once: true });
+>     reader.read().then(resolve, reject).finally(() => {
+>       signal.removeEventListener("abort", onAbort);
+>     });
+>   });
+> }
+>
+> async function consumeRun(response, {
+>   runId,
+>   signal,
+>   afterSequence = 0,
+>   currentOutputChars = 0,
+>   onState = () => {},
+>   onText = async () => {},
+> } = {}) {
+>   let state = "idle";
+>   let sequence = afterSequence;
+>   let outputChars = currentOutputChars;
+>   let carry = "";
+>   let terminal = false;
+>   let errorCode;
+>   let detail;
+>   let reader;
+>   const decoder = new TextDecoder("utf-8", { fatal: true });
+>
+>   const transition = next => {
+>     const allowed = {
+>       idle: ["connecting", "canceled"],
+>       connecting: ["streaming", "completed", "failed", "canceled"],
+>       streaming: ["connecting", "completed", "failed", "canceled"],
+>     };
+>     if (state === next) return;
+>     if (!allowed[state]?.includes(next)) {
+>       throw new Error("Invalid view-state transition: " + state + " -> " + next);
+>     }
+>     state = next;
+>     onState(state);
+>   };
+>
+>   const result = () => ({ state, sequence, outputChars, errorCode, detail });
+>
+>   async function acceptLine(line) {
+>     signal?.throwIfAborted();
+>     if (terminal) throw new Error("Frame received after a terminal frame");
+>     if (!line) throw new Error("Empty frame");
+>     if (line.length > MAX_FRAME_CHARS) throw new Error("Frame exceeds the size limit");
+>
+>     let event;
+>     try {
+>       event = JSON.parse(line);
+>     } catch {
+>       throw new Error("Malformed JSON frame");
+>     }
+>
+>     if (!event || Array.isArray(event) || typeof event !== "object") {
+>       throw new Error("Frame must be a JSON object");
+>     }
+>     if (!Number.isSafeInteger(event.seq) || event.seq < 1) {
+>       throw new Error("Frame has an invalid sequence number");
+>     }
+>     if (event.seq <= sequence) return; // replayed event already applied
+>     if (event.seq !== sequence + 1) throw new Error("Event sequence gap");
+>     if (typeof event.type !== "string") throw new Error("Frame has no event type");
+>
+>     if (event.type === "delta") {
+>       if (typeof event.text !== "string") throw new Error("Delta text must be a string");
+>       if (outputChars + event.text.length > MAX_OUTPUT_CHARS) {
+>         throw new Error("Output exceeds the display limit");
+>       }
+>       if (state === "connecting") transition("streaming");
+>       await onText(event.text, signal);
+>       // onText 成功返回表示这一整帧已经应用；这才是可续读的位置。
+>       sequence = event.seq;
+>       outputChars += event.text.length;
+>       signal?.throwIfAborted();
+>       return;
+>     }
+>
+>     if (event.type === "complete") {
+>       if (event.runId !== runId) throw new Error("Terminal frame has the wrong runId");
+>       sequence = event.seq;
+>       terminal = true;
+>       transition("completed");
+>       return;
+>     }
+>
+>     if (event.type === "error") {
+>       if (typeof event.code !== "string" || !event.code) {
+>         throw new Error("Error frame has no error code");
+>       }
+>       sequence = event.seq;
+>       errorCode = event.code;
+>       terminal = true;
+>       transition("failed");
+>       return;
+>     }
+>
+>     throw new Error("Unknown event type");
+>   }
+>
+>   async function feedText(text) {
+>     carry += text;
+>     let newline;
+>     while ((newline = carry.indexOf("\n")) !== -1) {
+>       let line = carry.slice(0, newline);
+>       carry = carry.slice(newline + 1);
+>       if (line.endsWith("\r")) line = line.slice(0, -1);
+>       await acceptLine(line);
+>       if (terminal) return;
+>     }
+>     if (carry.length > MAX_FRAME_CHARS) throw new Error("Frame exceeds the size limit");
+>   }
+>
+>   transition("connecting");
+>   try {
+>     if (!response.body) throw new Error("Response has no body");
+>     reader = response.body.getReader();
+>     if (!response.ok) throw new Error("HTTP " + response.status);
+>     if (!response.headers.get("content-type")?.toLowerCase().includes("application/x-ndjson")) {
+>       throw new Error("Unexpected response content type");
+>     }
+>
+>     while (true) {
+>       const { done, value } = await readWithSignal(reader, signal);
+>       if (done) {
+>         await feedText(decoder.decode());
+>         if (terminal) return result();
+>         if (carry.length) throw new Error("EOF inside an unterminated frame");
+>         throw new Error("EOF before a terminal frame");
+>       }
+>
+>       for (let offset = 0; offset < value.byteLength; offset += DECODE_SLICE_BYTES) {
+>         const part = value.subarray(offset, offset + DECODE_SLICE_BYTES);
+>         await feedText(decoder.decode(part, { stream: true }));
+>         if (terminal) return result();
+>       }
+>     }
+>   } catch (error) {
+>     detail = error instanceof Error ? error.message : String(error);
+>     if (signal?.aborted && signal.reason?.name === "TimeoutError") {
+>       transition("failed");
+>     } else if (signal?.aborted) {
+>       transition("canceled");
+>     } else {
+>       transition("failed");
+>     }
+>     return result();
+>   } finally {
+>     if (reader) {
+>       try {
+>         await reader.cancel();
+>       } catch {
+>         // Preserve the parse, read, timeout, or abort result.
+>       }
+>       reader.releaseLock();
+>     }
+>   }
+> }
+>
+> const encoder = new TextEncoder();
+> const asBytes = text => encoder.encode(text);
+>
+> function responseFrom(chunks, { open = false, status = 200 } = {}) {
+>   const body = new ReadableStream({
+>     start(controller) {
+>       for (const chunk of chunks) controller.enqueue(chunk);
+>       if (!open) controller.close();
+>     },
+>   });
+>   return new Response(body, {
+>     status,
+>     headers: { "content-type": "application/x-ndjson; charset=utf-8" },
+>   });
+> }
+>
+> function responseDisconnectAfter(chunk) {
+>   let sent = false;
+>   const body = new ReadableStream({
+>     pull(controller) {
+>       if (!sent) {
+>         sent = true;
+>         controller.enqueue(chunk);
+>       } else {
+>         controller.error(new Error("Connection dropped"));
+>       }
+>     },
+>   }, { highWaterMark: 0 });
+>   return new Response(body, {
+>     headers: { "content-type": "application/x-ndjson; charset=utf-8" },
+>   });
+> }
+>
+> async function check(name, response, expectedState, expectedText = "", options = {}) {
+>   const states = [];
+>   let text = "";
+>   const result = await consumeRun(response, {
+>     runId: "run-7",
+>     ...options,
+>     onState: state => states.push(state),
+>     onText: chunk => { text += chunk; },
+>   });
+>   assert.equal(result.state, expectedState, name);
+>   assert.equal(text, expectedText, name + " partial text");
+>   return { result, states };
+> }
+>
+> // Split one multibyte character and one record across reads; the final read
+> // also contains a coalesced complete record.
+> const multibyte = asBytes("好");
+> const normal = await check(
+>   "split UTF-8 and coalesced frames",
+>   responseFrom([
+>     asBytes('{"type":"delta","seq":1,"text":"你'),
+>     multibyte.slice(0, 1),
+>     multibyte.slice(1),
+>     asBytes('"}\n{"type":"complete","seq":2,"runId":"run-7"}\n'),
+>   ]),
+>   "completed",
+>   "你好",
+> );
+> assert.deepEqual(normal.states, ["connecting", "streaming", "completed"]);
+> console.log("PASS normal, multibyte split, frame split, and coalesced frames");
+>
+> const serverError = await check(
+>   "server error frame",
+>   responseFrom([asBytes('{"type":"error","seq":1,"code":"MODEL_UNAVAILABLE"}\n')]),
+>   "failed",
+> );
+> assert.equal(serverError.result.errorCode, "MODEL_UNAVAILABLE");
+> console.log("PASS terminal server-error frame");
+>
+> const malformed = await check(
+>   "malformed JSON",
+>   responseFrom([asBytes("{not-"), asBytes("json}\n")]),
+>   "failed",
+> );
+> assert.match(malformed.result.detail, /Malformed JSON/);
+> console.log("PASS malformed frame split across reads");
+>
+> const prematureEof = await check(
+>   "premature EOF",
+>   responseFrom([asBytes('{"type":"delta","seq":1,"text":"partial"}\n')]),
+>   "failed",
+>   "partial",
+> );
+> assert.match(prematureEof.result.detail, /EOF before a terminal frame/);
+> console.log("PASS EOF preserves partial text but does not complete");
+>
+> const disconnected = await check(
+>   "abrupt disconnect",
+>   responseDisconnectAfter(asBytes('{"type":"delta","seq":1,"text":"partial"}\n')),
+>   "failed",
+>   "partial",
+> );
+> assert.match(disconnected.result.detail, /Connection dropped/);
+> console.log("PASS abrupt disconnect preserves partial text but does not complete");
+>
+> const timeoutController = new AbortController();
+> const timeoutTimer = setTimeout(() => {
+>   timeoutController.abort(new DOMException("Deadline exceeded", "TimeoutError"));
+> }, 5);
+> const timeout = await check(
+>   "timeout",
+>   responseFrom([], { open: true }),
+>   "failed",
+>   "",
+>   { signal: timeoutController.signal },
+> );
+> clearTimeout(timeoutTimer);
+> assert.match(timeout.result.detail, /Deadline exceeded/);
+> console.log("PASS timeout remains a failure, not completion");
+>
+> const stopController = new AbortController();
+> const stopTimer = setTimeout(() => {
+>   stopController.abort(new DOMException("Stopped by user", "AbortError"));
+> }, 5);
+> const stopped = await check(
+>   "explicit abort after partial text",
+>   responseFrom([asBytes('{"type":"delta","seq":1,"text":"partial"}\n')], { open: true }),
+>   "canceled",
+>   "partial",
+>   { signal: stopController.signal },
+> );
+> clearTimeout(stopTimer);
+> assert.match(stopped.result.detail, /Stopped by user/);
+> console.log("PASS explicit abort keeps partial text and marks only the local view canceled");
+>
+> const bufferedRaceController = new AbortController();
+> const bufferedRaceStates = [];
+> let bufferedRaceText = "";
+> const bufferedRace = await consumeRun(responseFrom([
+>   asBytes('{"type":"delta","seq":1,"text":"partial"}\n{"type":"complete","seq":2,"runId":"run-7"}\n'),
+> ]), {
+>   runId: "run-7",
+>   signal: bufferedRaceController.signal,
+>   onState: state => bufferedRaceStates.push(state),
+>   onText: async chunk => {
+>     bufferedRaceText += chunk;
+>     await Promise.resolve();
+>     bufferedRaceController.abort(new DOMException("Stopped while rendering", "AbortError"));
+>   },
+> });
+> assert.equal(bufferedRace.state, "canceled");
+> assert.equal(bufferedRace.sequence, 1);
+> assert.equal(bufferedRace.outputChars, "partial".length);
+> assert.equal(bufferedRaceText, "partial");
+> assert.deepEqual(bufferedRaceStates, ["connecting", "streaming", "canceled"]);
+> assert.match(bufferedRace.detail, /Stopped while rendering/);
+> console.log("PASS abort after text callback returns prevents a buffered terminal frame");
+> ~~~
+
+本地 `AbortController.abort()` 或取消 reader 只会结束当前页面对响应体的读取，不证明服务端工作停止。若产品允许取消作业，还要发取消请求并查询权威作业状态，直到服务端报告终态。`onText` 成功返回表示整帧文本已完整接收并应用，只有此后才推进 `sequence` 和输出长度；回调若先应用部分文本再拒绝，就无法安全确定续读点。解析器在等待 `onText` 时不能强行打断任意 Promise，回调必须有界并自行响应传入的取消信号，或让其完成后再处理中止。示例的竞争测试仅证明渲染回调返回后，中止会阻止消费同一缓冲区里的终态帧。解析器等待回调完成也形成背压：若回调将 DOM 写入排入队列，应在队列保持较小时再读取下一块；可以用 `requestAnimationFrame` 合并可见更新，但它不提供恢复保证。路由卸载时释放 reader 和事件源，保留有用但不完整的文本，并将其标为部分结果。将收到的状态先交给本地 reducer 或事件总线再更新多个视图时，监听器重入也可能改变处理顺序；见[事件总线重入案例](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
+
+渲染本身也应有界：把同一帧中到达的文本增量合并后每帧更新一次，而不是每个 token 都刷新 DOM；输出很长时限制缓冲或只渲染可见窗口。状态区域使用 `role="status"` 与 `aria-live="polite"` 可播报连接、完成或失败，但不要逐字播报每个 token。
+
+**延伸阅读：** [实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md) 定义 SSE 的线格式、id/version 和重连边界；[API 可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) 讨论未知结果与安全重试；[JavaScript 事件总线在监听器中重入时怎样保持顺序？](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 讨论把一个状态更新送到本地多个模块。
+
+> [!info]- 来源
+> - SSE 字段解析、EventSource 自动重连和 `Last-Event-ID`：[WHATWG HTML Standard，Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)，§9.2，2026-11-06 核对；报表 42 的 `id`、`version` 和终态沿用[实时更新协议案例](../../engineering-foundations/networking/real-time-web-updates.md)。
+> - Fetch 响应体与 keepalive、流读取、reader 取消：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)；[WHATWG Streams Standard](https://streams.spec.whatwg.org/)，2026-11-06 核对。
+> - 增量 UTF-8 解码：[WHATWG Encoding Standard，TextDecoder](https://encoding.spec.whatwg.org/#interface-textdecoder)，2026-11-06 核对。
+> - `AbortController` 和 `AbortSignal` 的 API 语义：[WHATWG DOM Standard](https://dom.spec.whatwg.org/#interface-abortcontroller)，2026-11-06 核对。
+> - `role="status"` 的状态播报语义：[W3C WAI-ARIA 1.2，status role](https://www.w3.org/TR/wai-aria-1.2/#status)，2026-11-06 核对。
+## 55. JavaScript 事件总线在监听器中重入时怎样保持顺序？
+
+案例背景：报表 42 的页面收到进度更新后，会让多个界面模块同步响应。event bus (事件总线) 把发布者和订阅者隔开，但监听器也可能在分发过程中增删订阅，甚至再次发布同名事件。实现必须规定当前这次分发看哪些监听器，以及一次性监听器何时注销。
+
+下面的总线是应用层的 publish–subscribe (发布订阅) 模式，不是浏览器的 DOM 事件系统。它在 `emit()` 开始时复制监听器集合；分发途中发生的增删只影响之后开始的分发。`once()` 在调用用户函数前先标记并注销，因此递归 `emit()` 也不能再次执行同一个一次性监听器。
 
 ~~~javascript
 class EventBus {
   events = new Map();
 
-  on(event, listener) {
-    if (!this.events.has(event)) this.events.set(event, new Set());
-    this.events.get(event).add(listener);
+  on(type, listener) {
+    let listeners = this.events.get(type);
+    if (!listeners) this.events.set(type, listeners = new Set());
+    listeners.add(listener);
+    return () => this.off(type, listener);
   }
 
-  once(event, listener) {
+  once(type, listener) {
     let fired = false;
     const wrapper = (...args) => {
       if (fired) return;
       fired = true;
-      this.off(event, wrapper); // unregister before user code can recurse
+      this.off(type, wrapper); // 在用户代码运行前注销
       listener(...args);
     };
-    this.on(event, wrapper);
+    return this.on(type, wrapper);
   }
 
-  emit(event, ...args) {
-    // Mutations during dispatch affect the next emission.
-    for (const listener of [...(this.events.get(event) ?? [])]) listener(...args);
-  }
-
-  off(event, listener) {
-    const listeners = this.events.get(event);
+  off(type, listener) {
+    const listeners = this.events.get(type);
     if (!listeners) return;
     listeners.delete(listener);
-    if (listeners.size === 0) this.events.delete(event);
+    if (listeners.size === 0) this.events.delete(type);
+  }
+
+  emit(type, ...args) {
+    for (const listener of [...(this.events.get(type) ?? [])]) {
+      listener(...args);
+    }
   }
 }
 ~~~
 
-A reentrant case explains why both the snapshot and the `fired` guard matter:
+> [!example] 跟踪一次重入分发
+> 初始顺序是 `summary`、一次性 `once`、旧的 `legacy`。处理版本 10 时，`summary` 移除 `legacy`、加入 `recovery`，随后同步发布版本 11。版本 11 的分发会取一份新快照；其中的 `once` 监听器注销自己后又发布版本 12。
+>
+> `v10`、`v11`、`v12` 是展示重入顺序的合成输入，不是报表 42 的服务端版本序列；SSE 示例中服务端版本 11 已是 `ready` 终态。真实报表消费者只把已接受的服务端状态交给界面，并继续按业务 `version` 拒绝旧更新。
+>
+> ~~~javascript
+> const bus = new EventBus();
+> const trace = [];
+> let onceReentered = false;
+> const legacy = e => trace.push(`legacy v${e.version}`);
+> const recovery = e => trace.push(`recovery v${e.version}`);
+>
+> bus.on("report:updated", e => {
+>   trace.push(`summary v${e.version}`);
+>   if (e.version === 10) {
+>     bus.off("report:updated", legacy);
+>     bus.on("report:updated", recovery);
+>     bus.emit("report:updated", { reportId: 42, version: 11 });
+>   }
+> });
+> bus.once("report:updated", e => {
+>   trace.push(`once v${e.version}`);
+>   if (!onceReentered) {
+>     onceReentered = true;
+>     bus.emit("report:updated", { reportId: 42, version: 12 });
+>   }
+> });
+> bus.on("report:updated", legacy);
+> bus.emit("report:updated", { reportId: 42, version: 10 });
+> console.log(trace);
+> ~~~
+>
+> 输出顺序是 `summary v10 → summary v11 → once v11 → summary v12 → recovery v12 → recovery v11 → legacy v10`。版本 10 开始的旧快照仍含 `legacy`，所以即使它已注销，最后仍会执行一次；新加入的 `recovery` 不在版本 10 的快照中，但会出现在后续的快照中。`once` 先注销，避免后续新快照再次包含它；外层版本 10 的快照仍持有包装器，真正阻止它第二次调用用户函数的是 `fired` 检查。
 
-~~~javascript
-const bus = new EventBus();
-let firstCalls = 0;
-let laterCalls = 0;
-bus.once("x", () => { firstCalls += 1; bus.emit("x"); });
-bus.once("x", () => { laterCalls += 1; });
-bus.emit("x");
-console.assert(firstCalls === 1 && laterCalls === 1);
-~~~
+这个行为来自本实现的快照策略，不是所有事件总线的通用保证。同步监听器抛错时，此实现会让错误向 `emit()` 调用者传播，并停止后续监听器；异步监听器返回的 Promise 不会被等待。生产实现应按需要另行定义错误隔离、异步处理和监听器移除语义。
 
-The outer emission still has its original snapshot after the nested emission removes the later one-time listener. Its wrapper remains present in the outer snapshot, but the `fired` guard makes the second entry a no-op. This small implementation propagates a thrown listener error and documents snapshot mutation; production emitters should define their own error, removal, and async-listener policies.
+若一个对象自然拥有订阅者，例如数据模型通知观察者，Observer (观察者模式) 让对象直接管理订阅关系。若多个模块只通过主题名沟通，事件总线用代理降低直接耦合，但会增加追踪事件来源的成本。两者都可把流式报表状态更新送到本地界面；跨标签页则需使用浏览上下文间的通信机制。
 
-Use **Observer** when there is a natural subject that owns its subscribers, such as a DOM node or data model. Use **publish-subscribe** when a broker should decouple modules, accepting the indirect path's debugging cost.
+**延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#53.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
 
-**See also:** [How do DOM events propagate?](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) covers platform event dispatch, which has different phases and cancellation rules.
+> [!info]- 来源
+> - `Set` 保存不同监听函数并按插入顺序迭代；`emit()` 的快照和 `once()` 的注销策略是本文这份应用实现明确采用的规则：[ECMAScript Language Specification，Keyed Collections](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-set-objects)，2026-11-06 核对。
+> - DOM 事件的分发规则由浏览器平台定义，与上述应用层事件总线不同：[WHATWG DOM Standard，Events](https://dom.spec.whatwg.org/#events)。
+## 56. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
-**Terminology note:** this is an application-level pattern, not the browser DOM event system.
-## 54. Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？
+案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM)的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
 
-Use Web Storage when page JavaScript explicitly reads same-origin client state; use cookies when a matching request should carry a small value to a server, such as a session identifier. The choice depends on lifetime, request behavior, size, browser policy, and threat model. Web Storage is synchronous and has no multi-key transaction; cookies are sent according to domain, path, secure-transport, SameSite, and credentials rules. / 页面脚本显式读取同源客户端状态时可选 Web Storage；需要随符合条件的请求发送小型数据（例如会话标识）时可选 Cookie。应根据生命周期、请求行为、容量、浏览器策略和威胁模型选择。Web Storage 为同步接口且没有多键事务；Cookie 是否发送取决于域、路径、安全传输、SameSite 与凭证规则。
-
-| Feature | `localStorage` | `sessionStorage` | Cookies |
+| 来源 | 类型 | 包含什么 | 查询后发生 DOM 变更时 |
 |---|---|---|---|
-| Scope | Origin storage area; privacy policy may partition or restrict embedded contexts | Origin plus top-level browsing context | Domain/path and cookie policy |
-| Lifetime | Persists until removed or evicted; no per-entry expiry API | Usually the top-level context's session; restoration is user-agent dependent | Session or `Expires`/`Max-Age` |
-| Request behavior | Not attached automatically | Not attached automatically | Matching cookies may be attached subject to policy and request credentials |
-| JavaScript access | Readable by page scripts | Readable by page scripts | Readable through `document.cookie` unless `HttpOnly` |
-| Typical fit | Preferences or small client state | Temporary per-tab or wizard state | Server-managed sessions when designed for cookie authentication |
+| `element.children`、`getElementsByClassName()` | `HTMLCollection` | 元素节点 | 实时反映当前树 |
+| `element.querySelectorAll()` | `NodeList` | 匹配元素 | 静态成员列表 |
+| `element.childNodes` | `NodeList` | 元素、文本、注释等子节点 | 实时反映当前树 |
 
-`localStorage` and `sessionStorage` expose synchronous string key/value operations. `localStorage` usually persists until cleared or evicted; it has no per-entry expiry API. `sessionStorage` survives reloads and same-tab navigation and is cleared when that top-level browsing context's session ends, though session restoration is user-agent dependent. A newly opened tab normally has a separate area; an auxiliary context opened by a page may begin with a copy of its opener's session storage, after which the two diverge. The Storage Standard recommends 5 MiB for each endpoint, but this is not a guarantee of usable space: browser mode, policy, and storage pressure matter. For larger structured data or atomic updates, use IndexedDB and handle quota/access errors. `navigator.storage.estimate()` reports approximate usage and quota; best-effort data may be evicted.
+因此，`NodeList` 不代表“静态”。需要根据具体查询 API 的契约判断；空白文本也会成为 `childNodes` 中的文本节点；通用节点应使用 `nodeName`，因为 `tagName` 只属于元素。`HTMLCollection` 和 `NodeList` 都不是普通数组，直接调用 `map()` 不可行，可用 `Array.from()` 创建数组快照。
 
-The storage key is based on origin, while privacy behavior can further partition or gate embedded third-party storage. Do not assume an embedded page shares the same storage view it receives as a top-level page. Web Storage has no cross-tab lock or multi-key transaction: a read-modify-write can race, and another document's `storage` event is a notification after a write, not an atomicity mechanism. Use IndexedDB transactions or explicit coordination when updates must be atomic; see [How do browser contexts communicate?](#55.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F).
+> [!example] 正向删除实时集合会跳过一行
+> 开始时列表按顺序是 `[r1, r2, r3]`。这些只是合成行 ID，与报表 ID、业务版本或事件游标无关。`children` 是实时集合：删掉索引 0 的 `r1` 后，`r2` 移到索引 0、`r3` 移到索引 1。循环把索引递增到 1，于是跳过 `r2`，下一轮删的是 `r3`。
+>
+> ~~~html
+> <ul id="note-9f9143284c26-a1">
+>   <li class="report" id="note-9f9143284c26-a2">报告 1</li>
+>   <li class="report" id="note-9f9143284c26-a3">报告 2</li>
+>   <li class="report" id="note-9f9143284c26-a4">报告 3</li>
+> </ul>
+> ~~~
+>
+> ~~~javascript
+> const list = document.querySelector("#reports");
+> const liveRows = list.children;
+> const queriedRows = list.querySelectorAll(":scope > .report");
+>
+> for (let i = 0; i < liveRows.length; i += 1) {
+>   liveRows[i].remove();
+> }
+> // 起初 r1、r2、r3；循环结束后 r2 仍在列表中。
+> // queriedRows 仍有 3 个成员，但 queriedRows[0].isConnected 为 false。
+> ~~~
+>
+> 若在这份原始列表上先复制成员，循环处理的就是固定顺序 `[r1, r2, r3]`，删除树节点不会改变待遍历数组。`querySelectorAll()` 的静态列表也仍有三个成员，但其中已移除节点的 `isConnected` 会变成 `false`：静态只固定列表成员，不冻结节点对象。以下是与上面错误循环二选一的写法，应从同一份初始列表开始。
+>
+> ~~~javascript
+> for (const row of Array.from(liveRows)) row.remove();
+> ~~~
 
-Any script running in the page can read Web Storage, so XSS can expose stored bearer tokens. `HttpOnly` keeps a cookie value out of page JavaScript; cookies still introduce CSRF and cross-site policy concerns. `SameSite` can reduce some CSRF exposure but is not a complete defense, and `SameSite=None` requires `Secure` under current cookie rules. Choose a complete session design rather than treating either storage type as a security fix.
+实时集合适合反映 DOM 的当前成员，但不适合一边按递增索引遍历、一边改变成员；也可从后往前删。静态快照则适合一次查询后按成员执行任务。查询何时更新、节点本身是否仍连接到文档，是两个不同问题。实时描述的是可观察的成员结果，不承诺浏览器内部怎样、多久计算一次。
 
-**See also:** [Web Security and Authentication / Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) covers XSS, CSRF, and cookie flags; [How does a native app expose capabilities to WebView JavaScript?](#56.%20How%20does%20a%20native%20app%20expose%20capabilities%20to%20WebView%20JavaScript?%20/%20%E5%8E%9F%E7%94%9F%E5%BA%94%E7%94%A8%E5%A6%82%E4%BD%95%E5%90%91%20WebView%20JavaScript%20%E6%9A%B4%E9%9C%B2%E8%83%BD%E5%8A%9B%EF%BC%9F) covers privileged hybrid-app interfaces.
+**延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](#57.%20%E7%94%A8%E6%88%B7%E7%A6%BB%E5%BC%80%E6%8A%A5%E8%A1%A8%E9%A1%B5%E6%97%B6%EF%BC%8C%E5%88%86%E6%9E%90%E4%BA%8B%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%B0%BD%E5%8A%9B%E5%8F%91%E9%80%81%EF%BC%9F) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F) 讨论 DOM 与后续渲染。
 
-**Standards / 规范：** [WHATWG Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html); [WHATWG Storage Standard](https://storage.spec.whatwg.org/); [IETF HTTP cookie draft](https://datatracker.ietf.org/doc/draft-ietf-httpbis-rfc6265bis/); [MDN storage quotas and eviction](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria), checked 2026-11-05.
-## 55. How do browser contexts communicate? / 浏览上下文之间如何通信？
+> [!info]- 来源
+> - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-06 核对。
+> - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-06 核对。
+## 57. 用户离开报表页时，分析事件怎样尽力发送？
 
-For same-origin tabs or frames that share an eligible storage partition, use `BroadcastChannel` for ephemeral messages, or `localStorage` plus the `storage` event when persisted state is useful. For windows across origins, use `postMessage` with a specific target origin, then validate the sender window, sender origin, and payload. Use a WebSocket when communication must go through a server. Browser privacy partitioning, frame lifecycle, and trust boundaries affect which contexts can communicate. / 对共享适用存储分区的同源标签页或 frame，临时消息可用 `BroadcastChannel`；需要同时保留状态时可用 `localStorage` 与 `storage` 事件。跨源窗口使用 `postMessage` 并指定目标源，接收端还要校验来源窗口、来源 origin 和消息格式。需要服务器参与时使用 WebSocket。浏览器隐私分区、frame 生命周期和信任边界都会影响通信范围。
+案例背景：用户打开报表、改变一次筛选，然后立刻导航到别处。analytics event (分析事件) 不应拖慢筛选或导航；页面可先在内存中收集少量事件，再小批量发送，并在页面变为隐藏时尝试提交一批。这个生命周期信号只提供最后一次机会，不能保证服务器已收到。
 
-| Need | Mechanism | Main constraint |
-|---|---|---|
-| Ephemeral same-origin messages | `BroadcastChannel` | Eligible contexts must share the relevant storage key; close the channel when its owner ends |
-| Persisted state plus notification | `localStorage` and `storage` | The writer does not receive its own event; this is not a transaction or lock |
-| Shared in-memory coordinator | `SharedWorker` | State is not durable; feature-detect and clean up disconnected ports |
-| Cross-origin window/frame messages | `postMessage` | Pin `targetOrigin`; validate `event.origin`, `event.source`, and data |
-| Server-mediated updates | WebSocket or another authenticated connection | Authenticate and authorize on the server; validate the handshake origin |
+### 先限制采集内容和积压量
 
-### Same-origin contexts / 同源上下文
+先列出产品真正需要的事件名与字段。只收集允许的 `report_opened`、`filter_applied` 等事件和受控的页面代号；不要把搜索框原文、完整 URL、用户令牌或可识别身份的值塞进载荷。用户关闭可选采集时，停止入队并清空仍在应用内存中的未发送数据；已经交给 Beacon 或 Fetch 的批次可能还在途，不能由这个开关撤回。
 
-A storage event is queued for other documents sharing that storage area; the document that called `setItem` does not receive its own event. Browser storage partitioning can affect which embedded contexts share an area.
+内存队列需要上限和明示的溢出策略。下面采用最多 200 条，满时丢弃最旧条目；每 50 条或定时尝试发送一批。生产实现还应限制序列化后的字节数，因为事件条数不能代表请求体大小。`visibilitychange` 到 `hidden` 时只尝试一批，队列若仍有剩余，页面退出后可能被丢弃。发送小批次时可以先试 Beacon API，它不会等待服务器响应。
 
-~~~javascript
-// Tab A listens.
-window.addEventListener("storage", (event) => {
-  if (event.key === "message") console.log("Received:", event.newValue);
-});
-
-// Tab B writes; Tab B does not receive the event.
-localStorage.setItem("message", JSON.stringify({ text: "hello", ts: Date.now() }));
-~~~
-
-`BroadcastChannel` is purpose-built for structured-clone messages among eligible contexts and does not persist them.
-
-~~~javascript
-const channel = new BroadcastChannel("app_channel");
-channel.onmessage = (event) => console.log("Received:", event.data);
-channel.postMessage({ type: "update", payload: { id: 1 } });
-// When this owner is finished:
-channel.close();
-~~~
-
-A `SharedWorker` can coordinate connected contexts through ports. Its state lasts only as long as the worker, and a collection of ports needs a policy for removing stale entries. Use a disconnect message when a page can cooperate, then remove and close the worker's port. / SharedWorker 可以通过端口协调多个页面。状态随 worker 生命周期结束。页面能主动退出时，先发断开消息，worker 再移除并关闭对应端口。
-
-~~~javascript
-// worker.js
-const ports = new Set();
-self.onconnect = (event) => {
-  const port = event.ports[0];
-  ports.add(port);
-  function dropPort() {
-    ports.delete(port);
-    port.close();
-  }
-  port.onmessage = (message) => {
-    if (message.data?.type === "disconnect") {
-      dropPort();
-      return;
-    }
-    ports.forEach((other) => {
-      if (other !== port) other.postMessage(message.data);
-    });
-  };
-  port.onmessageerror = dropPort; // This example closes a port after a decode failure.
-};
-~~~
+> [!example] 报表打开和筛选变化
+> 页面先把 `report_opened` 和 `filter_applied` 放进内存队列。这两条尚未达到 50 条的成批门槛；若用户在 10 秒定时器触发前切换页面，文档变为 `hidden` 时处理器会将两条一起取出并尝试发送。
 
 ~~~javascript
-// Page
-function connect() {
-  const connection = new SharedWorker("./worker.js").port;
-  connection.onmessage = (event) => console.log("Received:", event.data);
-  return connection;
-}
-
-let port = connect();
-window.addEventListener("pagehide", () => {
-  port.postMessage({ type: "disconnect" });
-  port.close();
-});
-window.addEventListener("pageshow", (event) => {
-  if (event.persisted) port = connect();
-});
-~~~
-
-`pagehide` is best effort. For abrupt tab exits, expire connections after a bounded period without a reply, and let a resumed client register again. The HTML standard defines `close()` and the `messageerror` event for a deserialization failure. It provides no portable peer-close notification for this cleanup. [HTML Standard on MessagePort and broadcast cleanup](https://html.spec.whatwg.org/multipage/web-messaging.html#broadcasting-to-many-ports)
-
-### Cross-origin windows / 跨源窗口
-
-The sender chooses a precise target origin; the receiver checks both origin and the expected window before interpreting the structured-clone payload.
-
-~~~javascript
-const iframe = document.getElementById("myIframe");
-
-// Parent → iframe
-iframe.contentWindow.postMessage({ action: "update" }, "https://child-origin.example");
-
-// Iframe → parent
-window.parent.postMessage({ status: "ready" }, "https://parent-origin.example");
-
-// Receiver inside the iframe. On the parent, compare source with iframe.contentWindow.
-const expectedOrigin = "https://parent-origin.example";
-const expectedWindow = window.parent;
-window.addEventListener("message", (event) => {
-  if (event.origin !== expectedOrigin || event.source !== expectedWindow) return;
-  if (!event.data || typeof event.data !== "object" ||
-      typeof event.data.action !== "string") return;
-  handleAction(event.data.action);
-});
-~~~
-
-Avoid `"*"` for confidential messages: a target window may navigate before delivery. An origin check alone is not enough; a trusted page can be compromised, so validate the message schema and allowed operations. The payload is structured-cloned, not a shared object reference.
-
-A WebSocket is for a server-mediated, persistent bidirectional channel, not a default workaround for two tabs with different origins. The WebSocket protocol is not CORS; validate the handshake's `Origin` and authenticate and authorize each connection on the server. See [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md).
-
-**See also:** [Where should browser state live: Web Storage or cookies?](#54.%20Where%20should%20browser%20state%20live:%20Web%20Storage%20or%20cookies?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E7%8A%B6%E6%80%81%E5%BA%94%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9AWeb%20Storage%20%E8%BF%98%E6%98%AF%20Cookie%EF%BC%9F) covers storage lifetime and races.
-
-**Standards / 规范：** [WHATWG HTML: cross-document messaging and BroadcastChannel](https://html.spec.whatwg.org/multipage/web-messaging.html); [WHATWG Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html); [WHATWG WebSockets](https://websockets.spec.whatwg.org/); checked 2026-11-05.
-## 56. How does a native app expose capabilities to WebView JavaScript? / 原生应用如何向 WebView JavaScript 暴露能力？
-
-A JavaScript bridge is a host-app interface that lets code in a WebView request selected native operations; it is platform-specific, not a browser standard. Common designs include a native object injected into JavaScript, a message handler with an explicit reply path, or a legacy custom-URL interception scheme. Because bridge calls cross from page code into privileged host capabilities, expose only narrow operations to trusted content and validate every operation and argument on the native side. / JavaScript Bridge 是宿主应用提供给 WebView 页面代码的接口，让页面请求指定原生操作；它因平台而异，并非浏览器标准。常见设计包括注入 JavaScript 的原生对象、带显式回复路径的消息处理器，或较旧的自定义 URL 拦截方案。Bridge 会把页面代码连接到有权限的宿主能力，因此只向可信内容开放有限操作，并由原生端验证每个操作和参数。
-
-### Platform APIs / 平台 API
-
-Android's `addJavascriptInterface` exposes an annotated native object as a JavaScript interface. Android warns that it can grant JavaScript control over the host app; the object can be exposed to all frames, so do not expose it to untrusted content. Apple's `WKScriptMessageHandler` gives JavaScript a named message handler; the native delegate receives a message object with body and frame information, and newer reply handlers can return a response. These platform APIs have different lifecycles, threading and frame rules, so do not treat one sample as portable across WebViews.
-
-### An illustrative JavaScript contract / JavaScript 接口示例
-
-The following is a page-side sketch only. `NativeBridge` is supplied by the app and is not a standard web API.
-
-~~~javascript
-// The host app injects or registers this interface for trusted content.
-window.NativeBridge.requestLocation((location) => {
-  renderLocation(location);
-});
-~~~
-
-A real contract should define operation names, argument and reply schemas, error behavior, cancellation, and whether calls are synchronous or asynchronous. Validate origin/frame identity and authorization on the native side; page-side checks alone cannot protect native capabilities. If untrusted pages can load, do not let them navigate inside a WebView that exposes a privileged bridge.
-
-### Legacy custom-scheme pattern / 旧式自定义协议模式
-
-An older design appends a hidden iframe with a URL such as `myapp://api/location?data=...` and lets the native host intercept the navigation. The URL carries encoded arguments but may hit platform length limits and has no direct reply; callbacks require a separate request identifier and return channel. Treat this as an implementation-specific legacy pattern, not a general WebView recommendation.
-
-~~~javascript
-const bridge = {
-  invoke(path, data) {
-    const iframe = document.createElement("iframe");
-    iframe.hidden = true;
-    iframe.src = "myapp://" + path + "?data=" +
-      encodeURIComponent(JSON.stringify(data));
-    document.body.appendChild(iframe);
-    setTimeout(() => iframe.remove(), 100);
-  },
-  getLocation() {
-    this.invoke("api/location", {});
-  }
-};
-~~~
-
-This sketch only shows the request side. A complete bridge needs a response channel, request identifiers, timeouts, error handling, and a native authorization check.
-
-For a normal web page, use standard browser APIs such as `navigator.geolocation` when they fit; the browser mediates permission and device access.
-
-**Sources checked 2026-11-05:** [Android Developers: WebView JavaScript interfaces and security warning](https://developer.android.com/develop/ui/views/layout/webapps/webview); [Android Developers: JS bridge guidance](https://developer.android.com/develop/ui/views/layout/webapps/native-api-access-jsbridge); [Apple Developer Documentation: WKScriptMessage](https://developer.apple.com/documentation/webkit/wkscriptmessage); [Apple Developer Documentation: message handler with reply](https://developer.apple.com/documentation/webkit/wkusercontentcontroller/addscriptmessagehandlerwithreply%28_%3Acontentworld%3Aname%3A%29).
-## 57. How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？
-
-**Core answer / 核心回答：** Treat a streamed answer as partial until the client receives and validates an explicit terminal event for the same run. Keep useful deltas visible, label them as incomplete, and bound decoding, buffering, rendering, and recovery. If the event connection ends without a terminal event, preserve the text but treat the result as unknown and query the run's authoritative status. Stopping the local reader cancels this view; stopping server work requires a separate cancellation request and confirmation. / 收到并验证同一次运行的明确终态事件之前，都应把流式回答视为部分结果。保留有用的增量文本并标记为未完成，同时限制解码、缓冲、渲染和恢复的资源。如果事件连接在终态事件前结束，应保留文本、把结果视为未知并查询运行的权威状态。停止本地读取只会取消当前视图；停止服务端工作需要单独发出取消请求并确认。
-
-**Key terms / 关键术语：** partial output / 部分输出；terminal event / 终态事件；run state / 运行状态；resume cursor / 恢复游标；backpressure / 背压；local cancellation / 本地取消。
-
-### Which state can the interface safely show? / 界面可以准确显示哪些状态？
-
-The browser view tracks what this page has received and can render. The [durable run record / 持久运行记录](../../ai-engineering/systems/ai-application-architecture.md) owns the server's queued, running, completed, failed, and canceled states. A text delta moves the view into `streaming`. A valid `complete` event for the expected `runId` confirms success in this example, while a terminal `error` frame confirms that the server reported failure. When a disconnect, timeout, or framing error interrupts the read, preserve partial text and query the run record. The same [unknown outcome / 结果未知](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) matters when deciding whether to retry a regular request.
-
-| View state | What the user can infer |
-|---|---|
-| `idle` | No stream is being viewed. |
-| `connecting` | Submission, event connection, or an allowed resume request is in progress. |
-| `streaming` | At least one valid delta arrived. The visible answer is partial. |
-| `completed` | A valid `complete` frame for this `runId` arrived. |
-| `failed` | The view cannot continue normally. A valid error frame reports server failure; a transport, framing, timeout, or recovery failure leaves the run's final server state unknown until queried. Keep useful text labeled as incomplete. |
-| `canceled` | The local reader or view was stopped. The server may still be queued or running unless its status confirms cancellation. |
-
-The sequence below shows the main success and recovery paths. Status queries answer what happened to the run; they do not make a broken event stream complete. A cancellation request can remain pending until the server reports a terminal status.
-
-~~~mermaid
-sequenceDiagram
-    actor User
-    participant UI as Browser view
-    participant Events as Event endpoint
-    participant Runs as Run status API
-
-    User->>UI: Submit prompt
-    UI->>Runs: POST /api/runs (idempotency key)
-    Runs-->>UI: 202 + stable runId
-    UI->>Events: GET /api/runs/{runId}/events?after=seq
-    loop Valid progress
-        Events-->>UI: delta(seq, text)
-        UI-->>User: Append text, label as partial
-    end
-    alt Valid completion event
-        Events-->>UI: complete(seq, runId)
-        UI-->>User: Mark answer complete
-    else Valid error event
-        Events-->>UI: error(seq, runId)
-        UI-->>User: Keep partial text and show the failure
-    else Disconnect, EOF, timeout, or invalid stream
-        Events--xUI: No valid terminal event
-        UI->>Runs: GET /api/runs/{runId}
-        Runs-->>UI: Authoritative status
-        UI-->>User: Keep partial text and show known or unknown run state
-    else User stops this view
-        User->>UI: Stop
-        UI->>Events: Abort local fetch and reader
-        UI-->>User: Mark this view stopped
-        opt Also ask the server to stop work
-            UI->>Runs: POST /api/runs/{runId}/cancel
-            Runs-->>UI: Cancellation accepted or current status
-            UI->>Runs: Query within the recovery budget
-        end
-    end
-~~~
-
-### A small application protocol / 简洁的应用协议
-
-This example uses Fetch to read newline-delimited JSON records. It is a synthetic application contract, not an additional transport standard and not a redefinition of Server-Sent Events (SSE). `POST /api/runs` accepts an `Idempotency-Key` and returns `202` with a stable `runId`; the client then reads `GET /api/runs/{runId}/events?after={lastSequence}`. Each event is one UTF-8 JSON object followed by LF (CRLF is also accepted), and carries a monotonically increasing `seq`. A `delta` adds partial text; `complete` and `error` are terminal. On reconnect the server may replay older sequence numbers, which the client drops, while a gap fails the stream. `GET /api/runs/{runId}` remains authoritative for run status.
-
-~~~text
-POST /api/runs
-Idempotency-Key: submit-7f2a
-{"prompt":"Summarize the public release notes"}
-
-202 Accepted
-{"runId":"run-7f2a","status":"queued"}
-
-GET /api/runs/run-7f2a/events?after=0
-Content-Type: application/x-ndjson
-
-{"type":"delta","seq":1,"text":"The release adds "}
-{"type":"delta","seq":2,"text":"a search filter."}
-{"type":"complete","seq":3,"runId":"run-7f2a"}
-~~~
-
-The complete frame is the success boundary for this example. EOF before a terminal frame is an incomplete response, even when it follows valid text. A terminal error preserves earlier deltas as partial output. A timeout or disconnect may be retried only within the contract: for example, at most two event reconnections during a short deadline, using the same runId and last accepted seq. Never create a replacement run merely because the event request failed. If the cursor expired or the run is still active after the retry budget, query current status and explain that the visible text is partial.
-
-The HTTP body yields byte chunks. A read can split inside UTF-8 characters, inside one JSON record, or between records; one read can also contain several records. TextDecoder with stream mode carries an incomplete multibyte sequence into the next decode call. The parser below independently buffers until LF and therefore does not mistake a transport chunk for a record. It caps each frame and its incomplete line buffer at 8,192 UTF-16 code units (the units counted by JavaScript `String.length`), not 8 KiB of encoded bytes, and total displayed text at 64 Ki UTF-16 code units. These are example product limits, not browser or protocol defaults.
-
-### Executable protocol model / 可执行协议模型
-
-The following standalone snippet uses Node's Web Streams and Response APIs to exercise the parser and interaction states. It is a protocol model, not a test in a real browser and not proof of any production server behavior. The parser awaits onText; a browser can use that point to batch updates on requestAnimationFrame and pause reading while a small render queue drains.
-
-~~~javascript
-import assert from "node:assert/strict";
-
-const MAX_FRAME_CHARS = 8 * 1024;
-const MAX_OUTPUT_CHARS = 64 * 1024;
-const DECODE_SLICE_BYTES = 4 * 1024;
-
-function readWithSignal(reader, signal) {
-  if (!signal) return reader.read();
-  const abortReason = () => signal.reason ?? new DOMException("Aborted", "AbortError");
-  if (signal.aborted) return Promise.reject(abortReason());
-
-  return new Promise((resolve, reject) => {
-    const onAbort = () => reject(abortReason());
-    signal.addEventListener("abort", onAbort, { once: true });
-    reader.read().then(resolve, reject).finally(() => {
-      signal.removeEventListener("abort", onAbort);
-    });
-  });
-}
-
-async function consumeRun(response, {
-  runId,
-  signal,
-  afterSequence = 0,
-  currentOutputChars = 0,
-  onState = () => {},
-  onText = async () => {},
-} = {}) {
-  let state = "idle";
-  let sequence = afterSequence;
-  let outputChars = currentOutputChars;
-  let carry = "";
-  let terminal = false;
-  let errorCode;
-  let detail;
-  let reader;
-  const decoder = new TextDecoder("utf-8", { fatal: true });
-
-  const transition = next => {
-    const allowed = {
-      idle: ["connecting", "canceled"],
-      connecting: ["streaming", "completed", "failed", "canceled"],
-      streaming: ["connecting", "completed", "failed", "canceled"],
-    };
-    if (state === next) return;
-    if (!allowed[state]?.includes(next)) {
-      throw new Error("Invalid view-state transition: " + state + " -> " + next);
-    }
-    state = next;
-    onState(state);
-  };
-
-  const result = () => ({ state, sequence, outputChars, errorCode, detail });
-
-  async function acceptLine(line) {
-    signal?.throwIfAborted();
-    if (terminal) throw new Error("Frame received after a terminal frame");
-    if (!line) throw new Error("Empty frame");
-    if (line.length > MAX_FRAME_CHARS) throw new Error("Frame exceeds the size limit");
-
-    let event;
-    try {
-      event = JSON.parse(line);
-    } catch {
-      throw new Error("Malformed JSON frame");
-    }
-
-    if (!event || Array.isArray(event) || typeof event !== "object") {
-      throw new Error("Frame must be a JSON object");
-    }
-    if (!Number.isSafeInteger(event.seq) || event.seq < 1) {
-      throw new Error("Frame has an invalid sequence number");
-    }
-    if (event.seq <= sequence) return; // replayed event already applied
-    if (event.seq !== sequence + 1) throw new Error("Event sequence gap");
-    if (typeof event.type !== "string") throw new Error("Frame has no event type");
-
-    if (event.type === "delta") {
-      if (typeof event.text !== "string") throw new Error("Delta text must be a string");
-      if (outputChars + event.text.length > MAX_OUTPUT_CHARS) {
-        throw new Error("Output exceeds the display limit");
-      }
-      sequence = event.seq;
-      outputChars += event.text.length;
-      if (state === "connecting") transition("streaming");
-      await onText(event.text);
-      signal?.throwIfAborted();
-      return;
-    }
-
-    if (event.type === "complete") {
-      if (event.runId !== runId) throw new Error("Terminal frame has the wrong runId");
-      sequence = event.seq;
-      terminal = true;
-      transition("completed");
-      return;
-    }
-
-    if (event.type === "error") {
-      if (typeof event.code !== "string" || !event.code) {
-        throw new Error("Error frame has no error code");
-      }
-      sequence = event.seq;
-      errorCode = event.code;
-      terminal = true;
-      transition("failed");
-      return;
-    }
-
-    throw new Error("Unknown event type");
-  }
-
-  async function feedText(text) {
-    carry += text;
-    let newline;
-    while ((newline = carry.indexOf("\n")) !== -1) {
-      let line = carry.slice(0, newline);
-      carry = carry.slice(newline + 1);
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      await acceptLine(line);
-      if (terminal) return;
-    }
-    if (carry.length > MAX_FRAME_CHARS) throw new Error("Frame exceeds the size limit");
-  }
-
-  transition("connecting");
-  try {
-    if (!response.body) throw new Error("Response has no body");
-    reader = response.body.getReader();
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    if (!response.headers.get("content-type")?.toLowerCase().includes("application/x-ndjson")) {
-      throw new Error("Unexpected response content type");
-    }
-
-    while (true) {
-      const { done, value } = await readWithSignal(reader, signal);
-      if (done) {
-        await feedText(decoder.decode());
-        if (terminal) return result();
-        if (carry.length) throw new Error("EOF inside an unterminated frame");
-        throw new Error("EOF before a terminal frame");
-      }
-
-      for (let offset = 0; offset < value.byteLength; offset += DECODE_SLICE_BYTES) {
-        const part = value.subarray(offset, offset + DECODE_SLICE_BYTES);
-        await feedText(decoder.decode(part, { stream: true }));
-        if (terminal) return result();
-      }
-    }
-  } catch (error) {
-    detail = error instanceof Error ? error.message : String(error);
-    if (signal?.aborted && signal.reason?.name === "TimeoutError") {
-      transition("failed");
-    } else if (signal?.aborted) {
-      transition("canceled");
-    } else {
-      transition("failed");
-    }
-    return result();
-  } finally {
-    if (reader) {
-      try {
-        await reader.cancel();
-      } catch {
-        // Preserve the parse, read, timeout, or abort result.
-      }
-      reader.releaseLock();
-    }
-  }
-}
-
-const encoder = new TextEncoder();
-const asBytes = text => encoder.encode(text);
-
-function responseFrom(chunks, { open = false, status = 200 } = {}) {
-  const body = new ReadableStream({
-    start(controller) {
-      for (const chunk of chunks) controller.enqueue(chunk);
-      if (!open) controller.close();
-    },
-  });
-  return new Response(body, {
-    status,
-    headers: { "content-type": "application/x-ndjson; charset=utf-8" },
-  });
-}
-
-function responseDisconnectAfter(chunk) {
-  let sent = false;
-  const body = new ReadableStream({
-    pull(controller) {
-      if (!sent) {
-        sent = true;
-        controller.enqueue(chunk);
-      } else {
-        controller.error(new Error("Connection dropped"));
-      }
-    },
-  }, { highWaterMark: 0 });
-  return new Response(body, {
-    headers: { "content-type": "application/x-ndjson; charset=utf-8" },
-  });
-}
-
-async function check(name, response, expectedState, expectedText = "", options = {}) {
-  const states = [];
-  let text = "";
-  const result = await consumeRun(response, {
-    runId: "run-7",
-    ...options,
-    onState: state => states.push(state),
-    onText: chunk => { text += chunk; },
-  });
-  assert.equal(result.state, expectedState, name);
-  assert.equal(text, expectedText, name + " partial text");
-  return { result, states };
-}
-
-// Split one multibyte character and one record across reads; the final read
-// also contains a coalesced complete record.
-const multibyte = asBytes("好");
-const normal = await check(
-  "split UTF-8 and coalesced frames",
-  responseFrom([
-    asBytes('{"type":"delta","seq":1,"text":"你'),
-    multibyte.slice(0, 1),
-    multibyte.slice(1),
-    asBytes('"}\n{"type":"complete","seq":2,"runId":"run-7"}\n'),
-  ]),
-  "completed",
-  "你好",
-);
-assert.deepEqual(normal.states, ["connecting", "streaming", "completed"]);
-console.log("PASS normal, multibyte split, frame split, and coalesced frames");
-
-const serverError = await check(
-  "server error frame",
-  responseFrom([asBytes('{"type":"error","seq":1,"code":"MODEL_UNAVAILABLE"}\n')]),
-  "failed",
-);
-assert.equal(serverError.result.errorCode, "MODEL_UNAVAILABLE");
-console.log("PASS terminal server-error frame");
-
-const malformed = await check(
-  "malformed JSON",
-  responseFrom([asBytes("{not-"), asBytes("json}\n")]),
-  "failed",
-);
-assert.match(malformed.result.detail, /Malformed JSON/);
-console.log("PASS malformed frame split across reads");
-
-const prematureEof = await check(
-  "premature EOF",
-  responseFrom([asBytes('{"type":"delta","seq":1,"text":"partial"}\n')]),
-  "failed",
-  "partial",
-);
-assert.match(prematureEof.result.detail, /EOF before a terminal frame/);
-console.log("PASS EOF preserves partial text but does not complete");
-
-const disconnected = await check(
-  "abrupt disconnect",
-  responseDisconnectAfter(asBytes('{"type":"delta","seq":1,"text":"partial"}\n')),
-  "failed",
-  "partial",
-);
-assert.match(disconnected.result.detail, /Connection dropped/);
-console.log("PASS abrupt disconnect preserves partial text but does not complete");
-
-const timeoutController = new AbortController();
-const timeoutTimer = setTimeout(() => {
-  timeoutController.abort(new DOMException("Deadline exceeded", "TimeoutError"));
-}, 5);
-const timeout = await check(
-  "timeout",
-  responseFrom([], { open: true }),
-  "failed",
-  "",
-  { signal: timeoutController.signal },
-);
-clearTimeout(timeoutTimer);
-assert.match(timeout.result.detail, /Deadline exceeded/);
-console.log("PASS timeout remains a failure, not completion");
-
-const stopController = new AbortController();
-const stopTimer = setTimeout(() => {
-  stopController.abort(new DOMException("Stopped by user", "AbortError"));
-}, 5);
-const stopped = await check(
-  "explicit abort after partial text",
-  responseFrom([asBytes('{"type":"delta","seq":1,"text":"partial"}\n')], { open: true }),
-  "canceled",
-  "partial",
-  { signal: stopController.signal },
-);
-clearTimeout(stopTimer);
-assert.match(stopped.result.detail, /Stopped by user/);
-console.log("PASS explicit abort keeps partial text and marks only the local view canceled");
-
-const bufferedRaceController = new AbortController();
-const bufferedRaceStates = [];
-let bufferedRaceText = "";
-const bufferedRace = await consumeRun(responseFrom([
-  asBytes('{"type":"delta","seq":1,"text":"partial"}\n{"type":"complete","seq":2,"runId":"run-7"}\n'),
-]), {
-  runId: "run-7",
-  signal: bufferedRaceController.signal,
-  onState: state => bufferedRaceStates.push(state),
-  onText: async chunk => {
-    bufferedRaceText += chunk;
-    await Promise.resolve();
-    bufferedRaceController.abort(new DOMException("Stopped while rendering", "AbortError"));
-  },
-});
-assert.equal(bufferedRace.state, "canceled");
-assert.equal(bufferedRace.sequence, 1);
-assert.equal(bufferedRace.outputChars, "partial".length);
-assert.equal(bufferedRaceText, "partial");
-assert.deepEqual(bufferedRaceStates, ["connecting", "streaming", "canceled"]);
-assert.match(bufferedRace.detail, /Stopped while rendering/);
-console.log("PASS abort during awaited text handling prevents a buffered complete frame");
-~~~
-
-**Executable proof / 可执行验证：** The standalone model above ran with Node.js v26.11.1 on 2026-11-05. All eight assertion-backed case groups passed: split UTF-8 and frame boundaries with coalesced frames, terminal server error, malformed JSON, premature EOF, abrupt disconnect, timeout, explicit local abort, and abort during awaited rendering. This exercises the synthetic stream model; it does not test a browser or production server. / 上述独立模型于 2026-11-05 使用 Node.js v26.11.1 运行，所有八组断言场景均通过：拆分 UTF-8、跨帧读取与合并帧的正常路径、服务端终态错误、格式错误的 JSON、过早 EOF、连接中断、超时、显式本地中止以及渲染等待期间中止。此验证针对合成流模型，不覆盖真实浏览器或生产服务端。
-
-For a browser, create one AbortController for the active event request and pass its signal to Fetch. The stop button and route cleanup should abort that request and release its reader. If the product also wants to stop server work, send POST /api/runs/{runId}/cancel and keep showing a pending cancellation until GET /api/runs/{runId} reports a terminal state. AbortController.abort() and reader.cancel() affect the local fetch/body consumption; neither proves the worker stopped.
-
-Keep render work bounded as well as network buffering. Accumulate adjacent delta text and update the output once per animation frame rather than rerendering the component for every token. Cap the pending render string; because the parser awaits onText, it can pause its next read while the UI drains that small queue. The sample also caps the full visible answer. A larger product can persist output by run and render a bounded window instead of keeping an ever-growing DOM.
-
-Leave partial output visible when it remains useful, but label it as incomplete and avoid actions that require a finished result. Expose a concise state message in a dedicated status region, for example a native element with role=status and aria-live=polite. Announce connection, completion, failure, or stop transitions and perhaps occasional long-running progress; do not announce every token. See [Semantic HTML and accessibility / 语义化 HTML 与无障碍交互](#16.%20CSS%20%E7%BA%A7%E8%81%94%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E6%9C%80%E7%BB%88%E7%94%9F%E6%95%88%E7%9A%84%E5%A3%B0%E6%98%8E%EF%BC%9F) for native controls and status semantics.
-
-**Representative answer / 代表性回答：** I treat streamed output as framed bytes that may arrive in arbitrary chunks. The client incrementally decodes UTF-8, validates sequence numbers, keeps partial text, and displays completion only after a valid terminal event. It batches rendering, bounds memory and retries, and tears down the local reader on stop or route change. A client abort does not prove the server run stopped, so I query the run record or request cancellation separately. / 我会把流式输出视为可能以任意分块到达的带帧字节。客户端增量解码 UTF-8、校验序号、保留部分文本，并且只在收到有效终态事件后显示完成。界面合并渲染、限制内存和重试次数，并在用户停止或路由卸载时清理本地读取器。客户端中止不能证明服务端运行已停止，因此还要查询运行记录或单独请求取消。
-
-### Related notes / 相关笔记
-
-- [Choosing a transport for real-time updates / 怎样选择实时传输](../../engineering-foundations/networking/real-time-web-updates.md) explains SSE framing, EventSource limits, and Fetch stream boundaries.
-- [API Reliability and Asynchronous Delivery / API可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, cancellation, retry safety, and unknown outcomes.
-- [AI Application Architecture / AI应用架构](../../ai-engineering/systems/ai-application-architecture.md) owns run identity, durable state, checkpoints, side effects, and server cancellation.
-
-**Sources checked 2026-10-15 / 来源核对日期：** The [WHATWG Streams Standard](https://streams.spec.whatwg.org/) defines readable-stream readers and local consumer cancellation; the [DOM Standard's AbortController](https://dom.spec.whatwg.org/#interface-abortcontroller) defines signaling abort to an API that accepts an AbortSignal, and [AbortSignal.throwIfAborted()](https://dom.spec.whatwg.org/#dom-abortsignal-throwifaborted) provides checkpoints between asynchronous operations; the [WHATWG Encoding Standard](https://encoding.spec.whatwg.org/) defines streaming UTF-8 decode behavior. The [WHATWG Server-sent Events section](https://html.spec.whatwg.org/multipage/server-sent-events.html) defines EventSource reconnection and event IDs; this note's parser instead exercises its explicitly synthetic newline-delimited JSON application contract. Browser behavior was not tested here.
-## 58. How can an analytics client reduce work and try to send events during navigation? / 分析客户端如何降低工作量并尝试在导航时发送事件？
-
-Keep analytics off the application's critical path: collect events in a bounded in-memory queue, send small batches on a threshold or timer, and try one final batch when the document becomes hidden. This reduces per-event work and gives the client a best-effort delivery opportunity. It cannot guarantee server receipt, and pending events can be lost if the page exits. / 不要让分析采集阻塞应用关键路径：先把事件放入有界内存队列，达到阈值或定时发送小批次，并在文档转为隐藏时尝试发送最后一批。这可以减少逐事件开销，并提供尽力发送的机会；它无法保证服务器收到，页面退出时仍可能丢失未发送事件。
-
-### Decide what can enter the queue / 决定哪些事件可以进入队列
-
-Define the purpose and the fields it needs before adding instrumentation. For optional analytics, use the application's collection preference, allowlist event names and screen values, and leave raw input, full URLs, and identifiers out of the event payload. If the user opts out, stop accepting events and discard the pending queue.
-
-### Batch without blocking navigation / 批量发送并保持导航顺畅
-
-The example drops the oldest pending item when the queue is full and sends one bounded batch from the visibility-change handler. Tune the limits to payload size and the loss the application can tolerate.
-
-```javascript
 const MAX_PENDING = 200;
 const BATCH_SIZE = 50;
-const eventNames = new Set(["report_opened", "filter_applied"]);
-const screens = new Set(["report_list", "report_detail"]);
+const allowedNames = new Set(["report_opened", "filter_applied"]);
+const allowedScreens = new Set(["report_list", "report_detail"]);
 const queue = [];
 let collectionEnabled = false;
 let flushScheduled = false;
@@ -5584,15 +5733,17 @@ function setCollectionEnabled(enabled) {
   if (!enabled) queue.length = 0;
 }
 
-function report(url, events) {
-  const body = new Blob([JSON.stringify(events)], { type: "application/json" });
-  if (navigator.sendBeacon && navigator.sendBeacon(url, body)) return;
-  void fetch(url, { method: "POST", body, keepalive: true }).catch(() => {});
+function sendBatch(batch) {
+  const body = new Blob([JSON.stringify(batch)], { type: "application/json" });
+  // 本例假设同源端点。返回 true 仅表示浏览器已接受排队。
+  if (navigator.sendBeacon?.("/analytics", body)) return;
+  // Beacon 不可用或拒绝排队时尝试 Fetch；两者共享 keepalive 配额，不能保证后者绕过拒绝。
+  void fetch("/analytics", { method: "POST", body, keepalive: true }).catch(() => {});
 }
 
 function trackEvent(name, screen) {
-  if (!collectionEnabled || !eventNames.has(name) || !screens.has(screen)) return;
-  if (queue.length === MAX_PENDING) queue.shift(); // Drop the oldest item to stay bounded.
+  if (!collectionEnabled || !allowedNames.has(name) || !allowedScreens.has(screen)) return;
+  if (queue.length === MAX_PENDING) queue.shift();
   queue.push({ name, screen, ts: Date.now() });
   if (queue.length >= BATCH_SIZE) scheduleFlush();
 }
@@ -5608,22 +5759,99 @@ function scheduleFlush() {
 }
 
 function flushEvents() {
-  if (queue.length === 0) return;
-  const batch = queue.splice(0, BATCH_SIZE);
-  report("/analytics", batch); // Accepted for queuing is not server acknowledgement.
+  if (!queue.length) return;
+  sendBatch(queue.splice(0, BATCH_SIZE));
 }
 
 setInterval(flushEvents, 10_000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") flushEvents();
 });
-```
 
-`sendBeacon()` returns whether the browser accepted the payload for queuing. If the browser lacks Beacon or declines this payload, the code attempts a `fetch()` request with `keepalive`. Neither result confirms application-level processing or server acknowledgement. The visibility handler attempts only one batch; if the queue contains more, a later timer or scheduled threshold flush may attempt the rest, but page teardown can still discard them.
+setCollectionEnabled(true);
+trackEvent("report_opened", "report_detail");
+trackEvent("filter_applied", "report_detail");
+~~~
 
-Keep the queue bound and choose an explicit overflow policy. Do not make application correctness depend on analytics delivery or block navigation while waiting for an acknowledgement.
+### “已排队”不等于“已记录”
 
-**Specifications:** [Beacon](https://w3c.github.io/beacon/) defines the Beacon API and its queueing result; [Fetch Standard, `keepalive`](https://fetch.spec.whatwg.org/#request-keepalive-flag) defines keepalive request behavior.
+Beacon API 的 `navigator.sendBeacon()` 返回 `true` 只表示用户代理接受了传输排队；它没有响应回调，也不报告服务器是否处理。浏览器会在文档变为 `hidden` 时安排发送，但设备进程随后仍可能被系统终止。若需要自定义请求头或更细控制，可尝试 Fetch API 的 `keepalive` 请求；Beacon 和 Fetch keepalive 共用限额，一个 Fetch 组中尚未完成请求的正文总量受 64 KiB 限制，队列太大时提交可能被拒绝。若 Beacon 因这个限额被拒绝，回退到 Fetch 不能绕过限额。两个接口都不能替代可靠业务队列、服务器确认或幂等去重。
+
+本例 `flushEvents()` 在尝试发送前从内存队列取出一批。传输失败后该批不会自动重试；这正是“尽力发送”的损失边界。若统计数据不可丢，应把它升级为持久队列并设计服务端确认与重放，而不是阻塞离页等待。
+
+**延伸阅读：** [报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明偏好与业务状态的归属；[流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明哪些消息影响报表正确性、不能混同于可丢弃的分析事件；[WebView 怎样安全地开放原生能力并更新页面包？](#58.%20WebView%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E5%9C%B0%E5%BC%80%E6%94%BE%E5%8E%9F%E7%94%9F%E8%83%BD%E5%8A%9B%E5%B9%B6%E6%9B%B4%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%8C%85%EF%BC%9F) 讨论混合应用中的宿主权限。
+
+> [!info]- 来源
+> - Beacon 是非阻塞的尽力传输；返回值仅表示排队成功，且无响应回调：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3，2026-11-06 核对。
+> - Beacon 在页面 `visibilityState` 变为 `hidden` 时安排发送；规范也提示后台页面在移动设备上仍可能随进程终止而丢失：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3、§4，2026-11-06 核对。
+> - Fetch `keepalive` 与 64 KiB 的在途请求总量限制：[WHATWG Fetch Standard，HTTP-network-or-cache fetch](https://fetch.spec.whatwg.org/)，2026-11-06 核对。
+> - 页面可见性状态：[WHATWG HTML Standard，Page visibility](https://html.spec.whatwg.org/multipage/interaction.html#page-visibility)，2026-11-06 核对。
+## 58. WebView 怎样安全地开放原生能力并更新页面包？
+
+案例背景：报表应用把页面放进原生应用的 WebView，页面需要请求宿主打开报表详情；页面脚本同时会随应用安装或网络更新。JavaScript bridge (原生桥接接口) 把页面输入送到宿主应用的权限边界，因此必须把“哪个页面能发消息”“消息能请求什么”“更新后的代码是否兼容”作为一条信任链来设计。
+
+WebView 没有一个跨平台统一的原生桥接标准。Android 与 Apple WebKit 的 API、回调线程、来源信息和回复方式都不同；平台 API 只能提供边界线索，最终由宿主原生代码检查操作和授权。
+
+### 一条消息怎样变成原生操作？
+
+| 平台 | 消息入口 | 平台能提供的来源信息 | 重要边界 |
+|---|---|---|---|
+| Android WebView | 优先考虑 AndroidX `WebViewCompat.addWebMessageListener()` | 回调含 `sourceOrigin`、`isMainFrame` 和回复代理 | 注册时需设 `allowedOriginRules` 并在加载页面前安装；规则匹配 scheme (协议)、host (主机)、port (端口)，不匹配路径，而且匹配来源的子框架页面也可收到注入对象 |
+| Android 旧版接口 | `addJavascriptInterface()` | 旧桥接对象没有可信的逐消息来源校验 | 标注 `@JavascriptInterface` 的方法可暴露给各内嵌框架页面；只适合严格控制且完全可信的内容，不能让不可信内容复用同一个 WebView |
+| Apple WebKit | `WKScriptMessageHandler` 或带回复的 `WKScriptMessageHandlerWithReply` | `WKScriptMessage.frameInfo` 提供 `securityOrigin` 与 `isMainFrame` | 由宿主安装具名消息处理器；消息处理与回复是 WebKit API，不等同于 Android 的同步对象调用 |
+
+AndroidX `WebViewCompat.addWebMessageListener()` 需要用 `WebViewFeature.isFeatureSupported()` 检查当前 WebView 是否支持。现代接口仍需检查来源和主框架页面：可信主机下的广告内嵌框架，或遭 cross-site scripting (跨站脚本攻击，XSS) 控制的页面脚本，也可能发消息。`allowedOriginRules` 不区分路径，例如允许 `https://reports.example` 也会匹配这个来源上的其他路径。只加载 HTTPS 并允许受控的页面，收到消息后再校验 origin (来源)、frame (框架页面)、操作名、schema (参数结构)、数据范围和调用者权限。回调通常在主线程执行，耗时工作应移交后台线程。
+
+建议把应用自己的桥接契约做成窄的异步 remote procedure call (远程过程调用，RPC) 形状，例如 `{id, operation, payload}`，回复带同一 `id` 以及成功结果或错误码。定义允许的操作和参数、版本协商、取消、超时和权限拒绝；不要开放任意方法调用、JavaScript 求值或文件路径访问。确认来源只是信任的一部分，不能代替业务授权。
+
+> [!example] 先检查消息，再处理一个允许的操作
+> 以下是宿主侧伪代码，说明检查顺序，不是 Android 或 Apple 的可直接编译 API。`platformMetadata` 由原生平台回调提供，`untrustedBody` 才是网页发送的数据；页面不能靠在 body 中填来源或主 frame 来证明身份。示例只开放 `openReport`：宿主确认平台提供的受信来源和主 frame，再验证 `reportId`、检查当前用户权限，授权后才调用原生操作并回复。
+>
+> ~~~text
+> platformMetadata = { sourceOrigin: platformOrigin, isMainFrame: platformFrameFlag }
+> untrustedBody = { id: "req-17", operation: "openReport", payload: { reportId: 42 } }
+>
+> handle(platformMetadata, untrustedBody, reply):
+>   reject unless trustedOrigin(platformMetadata.sourceOrigin)
+>   reject unless platformMetadata.isMainFrame
+>   message = parseAndValidate(untrustedBody)
+>   reject unless message.operation == "openReport"
+>   reject unless schemaValid(message.payload) and validReportId(message.payload.reportId)
+>   reject unless authorize(currentNativeUser, "openReport", message.payload.reportId)
+>   result = openReport(message.payload.reportId)
+>   reply({ id: message.id, ok: true, payload: result })
+> ~~~
+
+Android 的来源和主 frame 信息来自 `WebMessageListener` 平台回调；Apple 宿主应从 `WKScriptMessage.frameInfo.securityOrigin` 与 `isMainFrame` 读取对应元数据。两者都不应从网页 body 取值。如果页面只需要浏览器已有能力，例如定位并展示地图，优先评估 Web API（如 `navigator.geolocation`）；浏览器可以按标准权限流程提示用户，减少原生接口暴露面。较旧的隐藏 iframe 自定义 URL scheme（例如 `myapp://api/location`）曾用于触发宿主拦截，但参数长度、回复通道、回调 ID 和错误处理都要自行实现；把它当成遗留兼容方案，不作为新桥接推荐。
+
+### 下载更新包怎样进入桥接信任区？
+
+下载的 HTML、JavaScript、CSS 与图片 bundle (资源包) 不是无权限的数据：只要在可调用桥接接口的 WebView 中执行，就可能请求宿主能力。因此资源包校验是桥接安全的一部分，但更新下载和消息授权仍是两套不同机制，不能用其中一套替代另一套。
+
+一个最小可审查的更新流程可以是：
+
+1. 应用启动时立即载入最后一个已验证版本；按新鲜度策略或用户请求在后台检查更新，不挡住启动。
+2. 从允许的更新源获取小型更新 manifest (清单)，包含不可变包版本、支持的原生桥接 API 版本范围、资源清单、大小和完整性摘要。
+3. 只从允许的包源下载；拒绝未授权的重定向，把包写入临时目录并完整校验后才候选安装。HTTPS 来源认证传输对端；若威胁模型包含 CDN 或更新源被攻陷，使用由原生应用内固定信任锚验证的发布者签名，不能把同一未认证源同时给的 hash (散列值) 当成独立身份验证。
+4. 确认包满足当前桥接 bridge API (桥接接口) 的兼容条件，再原子切换到已验证目录；不接受半下载或半安装状态。
+5. 保留上一版可用包。启动探测失败或启动崩溃达到策略阈值时回滚，并把下一次检查退避。
+
+宿主本地资源的装载方式也会影响来源隔离。Android 官方建议用 `WebViewAssetLoader` 通过受控的 HTTP(S) 风格 origin (来源) 提供本地资源，并避免依赖 `file://`；它解决的是资源装载与同源行为，不会替你验证网络下载包的签名，也不等同于原生桥接接口的授权策略。Apple 平台需采用对应 WebKit 资源方案，不能照搬 Android 配置。
+
+> [!example] 桥接接口版本不兼容时拒绝切换
+> 当前应用只实现桥接接口 `2.0`，远端 manifest (清单) 声明新包最低要求 `2.1`。即使文件下载完整、hash (散列值) 匹配，也应保留旧包并延后切换；完整性证明“文件与清单相同”，不证明“页面和宿主能够协作”。
+
+下载包中的密钥、会话数据和最终权限仍应留在原生安全存储或服务端。新页面获准调用原生桥接接口也不代表其所有代码都可信；为包更新和桥接操作分别记录版本、验证结果与授权决策，便于回滚和调查。
+
+**延伸阅读：** [报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地数据不应冒充服务端事实；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论来源、XSS 和授权边界。
+
+> [!info]- 来源
+> - AndroidX bridge API、来源规则、frame 信息、功能检测与回调线程：[Android Developers，Access native APIs with JavaScript bridge](https://developer.android.com/develop/ui/views/layout/webapps/native-api-access-jsbridge)，2026-11-06 核对。
+> - 旧式 `addJavascriptInterface` 的 frame 暴露与桥接风险：[Android Developers，Insecure WebView native bridges](https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges)，2026-11-06 核对。
+> - Android 本地资源通过 `WebViewAssetLoader`、避免 `file://` 的建议：[Android Developers，Load in-app content](https://developer.android.com/develop/ui/views/layout/webapps/load-local-content)，2026-11-06 核对。
+> - Apple WebKit 消息处理器与回复：[Apple Developer Documentation，WKScriptMessageHandler](https://developer.apple.com/documentation/webkit/wkscriptmessagehandler)；[WKScriptMessageHandlerWithReply](https://developer.apple.com/documentation/webkit/wkscriptmessagehandlerwithreply/usercontentcontroller%28_%3Adidreceive%3Areplyhandler%3A%29?language=objc)，2026-11-06 核对。
+> - Apple 消息 frame 的 `isMainFrame`、`securityOrigin`：[Apple Developer Documentation，WKFrameInfo](https://developer.apple.com/documentation/webkit/wkframeinfo)；[WKScriptMessage.frameInfo](https://developer.apple.com/documentation/webkit/wkscriptmessage/frameinfo)，2026-11-06 核对。
+> - Bundle 签名、兼容矩阵、原子切换与回滚是应用更新策略，不是 WebView 平台规范；本文把它们作为威胁模型驱动的设计建议。
 ## 59. 如何为产品选择前端框架？
 
 **案例背景。** 以报表页面为例：浏览器地址是 `/reports?sort=recent#summary`，服务端实际收到 `/reports?sort=recent` 并据此返回 May、April 两行；`#summary` 只供浏览器定位。用户点 **Oldest first** 后，`pushState` 新增 `sort=oldest` 历史项，可见顺序成为 April、May；按浏览器 Back 会恢复 `sort=recent` 和 May、April。完整历史行为见[浏览器导航路径](#%E8%AE%A9%E7%AD%9B%E9%80%89%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。框架选择要回答的是团队怎样可靠地交付这类更新，以及页面还需要怎样的路由、服务端渲染、无障碍和运维支持。单说“有虚拟 DOM”不能回答这些问题。
@@ -5721,7 +5949,7 @@ Use Link for navigation users can follow and useNavigate for programmatic naviga
 **Sources checked 2026-10-15:** [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
 ## 61. How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
 
-**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#57.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#57.%20How%20should%20a%20UI%20render%20a%20streamed%20answer%20without%20mistaking%20partial%20output%20for%20completion?%20/%20%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%91%88%E7%8E%B0%E6%B5%81%E5%BC%8F%E5%9B%9E%E7%AD%94%E8%80%8C%E4%B8%8D%E6%8A%8A%E9%83%A8%E5%88%86%E5%86%85%E5%AE%B9%E8%AF%AF%E5%88%A4%E4%B8%BA%E5%AE%8C%E6%88%90%EF%BC%9F)。
+**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。
 
 
 ### What does Next.js add to React? / Next.js为React增加了什么？

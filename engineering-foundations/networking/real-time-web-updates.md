@@ -41,7 +41,7 @@ Accept: application/json
 ~~~
 
 ~~~json
-{"id":42,"version":9,"status":"running","event_cursor":"103"}
+{"id":42,"version":9,"status":"running","progress":0,"event_cursor":"103"}
 ~~~
 
 客户端首次订阅时以应用约定的查询参数告诉服务器从快照游标之后读取：

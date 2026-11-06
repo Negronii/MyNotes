@@ -81,13 +81,13 @@
 
 ### 浏览器状态、通信与流式结果
 
-- [What is the difference between an HTMLCollection and a NodeList? / HTMLCollection 与 NodeList 有什么区别？](browser-apis/dom-collections.md)
-- [How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？](browser-apis/event-bus-and-observer-patterns.md)
-- [Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？](browser-apis/browser-storage-and-communication.md)
-- [How do browser contexts communicate? / 浏览上下文之间如何通信？](browser-apis/browser-context-communication.md)
-- [How does a native app expose capabilities to WebView JavaScript? / 原生应用如何向 WebView JavaScript 暴露能力？](browser-apis/webview-javascript-bridge.md)
-- [How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？](browser-apis/streaming-ux.md)
-- [How can an analytics client reduce work and try to send events during navigation? / 分析客户端如何降低工作量并尝试在导航时发送事件？](performance/analytics-event-delivery-on-navigation.md)
+- [报表页面里的状态应该放在哪里？](browser-apis/browser-storage-and-communication.md)
+- [同一报表在多个标签页中怎样交换变化？](browser-apis/browser-context-communication.md)
+- [流式报表断线重连后，界面怎样保留正确状态？](browser-apis/streaming-ux.md)
+- [JavaScript 事件总线在监听器中重入时怎样保持顺序？](browser-apis/event-bus-and-observer-patterns.md)
+- [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](browser-apis/dom-collections.md)
+- [用户离开报表页时，分析事件怎样尽力发送？](performance/analytics-event-delivery-on-navigation.md)
+- [WebView 怎样安全地开放原生能力并更新页面包？](browser-apis/webview-javascript-bridge.md)
 
 ### 框架、工具选择与交付验收
 

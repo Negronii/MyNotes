@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=01685724c1133483d3ff238dabf668ff434627cbc739e978d6a848025c0a4ac3 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d80a33df0e6cb669ba36421e730c18fb0c5ef04359cad7be69da1363f55d27e0 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -85,13 +85,13 @@
 - [ ] 71. [How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？](../frontend/javascript/modules-and-host-boundaries.md)
 - [ ] 72. [How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？](../frontend/javascript/modern-javascript-features.md)
 - [ ] 73. [How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？](../frontend/tooling/build-tools.md)
-- [ ] 74. [What is the difference between an HTMLCollection and a NodeList? / HTMLCollection 与 NodeList 有什么区别？](../frontend/browser-apis/dom-collections.md)
-- [ ] 75. [How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？](../frontend/browser-apis/event-bus-and-observer-patterns.md)
-- [ ] 76. [Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？](../frontend/browser-apis/browser-storage-and-communication.md)
-- [ ] 77. [How do browser contexts communicate? / 浏览上下文之间如何通信？](../frontend/browser-apis/browser-context-communication.md)
-- [ ] 78. [How does a native app expose capabilities to WebView JavaScript? / 原生应用如何向 WebView JavaScript 暴露能力？](../frontend/browser-apis/webview-javascript-bridge.md)
-- [ ] 79. [How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？](../frontend/browser-apis/streaming-ux.md)
-- [ ] 80. [How can an analytics client reduce work and try to send events during navigation? / 分析客户端如何降低工作量并尝试在导航时发送事件？](../frontend/performance/analytics-event-delivery-on-navigation.md)
+- [ ] 74. [报表页面里的状态应该放在哪里？](../frontend/browser-apis/browser-storage-and-communication.md)
+- [ ] 75. [同一报表在多个标签页中怎样交换变化？](../frontend/browser-apis/browser-context-communication.md)
+- [ ] 76. [流式报表断线重连后，界面怎样保留正确状态？](../frontend/browser-apis/streaming-ux.md)
+- [ ] 77. [JavaScript 事件总线在监听器中重入时怎样保持顺序？](../frontend/browser-apis/event-bus-and-observer-patterns.md)
+- [ ] 78. [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](../frontend/browser-apis/dom-collections.md)
+- [ ] 79. [用户离开报表页时，分析事件怎样尽力发送？](../frontend/performance/analytics-event-delivery-on-navigation.md)
+- [ ] 80. [WebView 怎样安全地开放原生能力并更新页面包？](../frontend/browser-apis/webview-javascript-bridge.md)
 - [ ] 81. [如何为产品选择前端框架？](../frontend/frameworks/virtual-dom-and-framework-selection.md)
 - [ ] 82. [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](../frontend/frameworks/react-routing-and-navigation.md)
 - [ ] 83. [How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？](../frontend/frameworks/next-js.md)
