@@ -268,6 +268,21 @@ flowchart TD
 
 每一层都会对相同位置再做一次变换。在这个模型中，随着层数增加，序列长度和宽度都不会缩短。这里示例的 decoder-only 架构选择包括 RMSNorm、RoPE 和门控 FFN；是否共享 K/V 则是另一项独立的架构选择。2017 年提出的 Transformer 在翻译任务的 encoder–decoder (编码器–解码器) 模型中使用 attention 和逐位置 FFN。它的 decoder 也使用了 cross-attention (交叉注意力)，归一化方式和 FFN 选择也与此不同。这里的公式描述所选的 decoder-only 示例；具体模型采用的架构由其实现决定。
 
+这里展示的是单条残差流。DeepSeek-V4 的 Manifold-Constrained Hyper-Connections（流形约束超连接，mHC）把每个词元的残差状态扩成 4 条宽度为 `d` 的流，再把它们读成普通层输入、混合旧流，并把新更新写回各流。这里每个 `l` 指一次残差更新：一个 Transformer block 里，attention 子层和 FFN 子层各自有一组 `A_l/B_l/C_l`。对一个词元，令 `X_l∈R^{4×d}`；`A_l∈R^{1×4}` 读出宽度为 `d` 的输入，`F_l` 表示带前置归一化的子层更新，输出宽度仍为 `d`；`C_l∈R^{4×1}` 把更新分配回 4 条流，`B_l∈R^{4×4}` 混合已有流：
+
+$$
+X_{l+1}=B_lX_l+C_lF_l(A_lX_l).
+$$
+
+若每层的旁路混合矩阵不受约束，连续相乘可能逐层放大已有状态；mHC 的约束针对这段纯流混合。
+
+式子只画一个词元的残差流；当 `F_l` 是 attention 时，它仍对整段序列计算，上式中的 `F_l` 是该词元对应的输出切片。`A_l`、`B_l`、`C_l` 都由当前残差状态动态生成，并带有可学习的静态偏置与缩放；`A_l` 和 `C_l` 分别经 sigmoid 与 `2·sigmoid` 限制为非负有界权重。mHC 的目标是让 `B_l` 落在 doubly stochastic（双随机）矩阵集合：元素非负，每行与每列的和都为 `1`。直观地说，每行是加权平均，列和为 `1` 可避免把输入流重复计重后放大总平方长度。
+
+V4 对 `B_l` 的原始分数先取指数，再用 20 步 Sinkhorn–Knopp 交替归一化行与列；官方 kernel 还加了 `eps`，所以有限步的数值结果是双随机约束的近似。对理想的双随机矩阵，`||B_l||₂≤1`，表示固定这个 `B_l` 后，它单独作用于残差状态不会增加其 Frobenius norm（弗罗贝尼乌斯范数，即矩阵元素平方和再开根）。`B_l` 本身又依赖当前状态，因此该界不能推出完整的输入到输出映射会如何随输入变化；它也不约束写入项 `C_lF_l(A_lX_l)`，更不是整层或全模型稳定性的证明。
+
+> [!example] 四条流的两种双随机混合
+> 单位矩阵 `I₄` 保持每条流不变；若 `B` 的 16 个元素全是 `0.25`，每条流就变成四条流的平均。例如，只看一个特征坐标，流值 `(1,0,0,0)` 会变为 `(0.25,0.25,0.25,0.25)`，长度从 `1` 降为 `√(4×0.25²)=0.5`。两者都满足理想的非负、行和为 `1`、列和为 `1` 条件；`||B||₂≤1` 意味着此类混合最大的长度放大倍数不超过 `1`。
+
 #### 哪些数字属于可学习参数？
 
 矩阵的参数数量等于行数乘以列数。在普通 MHA 且 `Hq·dh = d` 时，Q、K、V 和输出投影合计有 `4d²` 个参数。若 `d = 8`，则共有 `256` 个。三个 SwiGLU 投影合计有 `3d·dff` 个参数；若 `dff = 16`，则共有 `384` 个。
@@ -357,6 +372,27 @@ multi-token prediction（多词元预测，MTP）在 next-token prediction（下
 
 backpropagation (反向传播) 会把导数依次传过 LM head、残差相加、FFN、attention 和 embedding。对于简单的计算链 `z = wx`，若 `x` 固定，则 `∂L/∂w = (∂L/∂z)x`。矩阵形式会累加多个坐标和位置上的贡献。optimizer (优化器) 按照自己的步长和累积统计规则更新参数。训练利用前向计算的中间量，沿计算图反向求出各参数的梯度，再据此更新参数。
 
+#### 矩阵权重如何由 Muon 更新？
+
+DeepSeek-V4 报告把多数矩阵参数交给 Muon。对权重矩阵 `W` 的梯度 `G_t`，先维护 momentum buffer（动量缓冲）`M_t=μM_{t−1}+G_t`，再形成 Nesterov 型方向 `D_t=μM_t+G_t`；`μ` 是旧动量的保留系数。Newton–Schulz 迭代前，将更新方向按 Frobenius norm（弗罗贝尼乌斯范数，即矩阵元素平方和再开根）归一化。对归一化后的矩阵做 10 步 hybrid Newton–Schulz（混合 Newton–Schulz）迭代，近似正交化，再按矩阵形状缩放更新量：
+
+$$
+W_t=(1-ηλ_{wd})W_{t-1}-ηγ\sqrt{\max(n,m)}\,O'_t.
+$$
+
+其中 `η` 是学习率，`λ_wd` 是解耦权重衰减，`n×m` 是权重形状，`O'_t` 是正交化后的方向，`γ` 是更新 RMS 的整体缩放系数。这里 `γ` 指 Muon 的更新缩放，和前文 V3 路由偏置使用的 `γ` 不是同一项。Muon 调整的是梯度动量方向，不是把模型权重本身改成正交矩阵。
+
+singular value decomposition（奇异值分解，SVD）提供了理解目标的参照。若 `D=UΣVᵀ`，`U`、`V` 给出配对方向，`Σ` 的奇异值表示沿这些方向的伸缩倍数。只取非零奇异值对应的列组成 `U_r`、`V_r`，目标 `U_rV_rᵀ` 保留这些配对方向并把伸缩倍数变为 `1`，零方向保持为零；满秩时才可直接写作 `UVᵀ`。Newton–Schulz 用矩阵乘法多项式逼近这一结果，不必显式计算完整 SVD。V4 对多数矩阵参数使用 Muon，但对 embedding、prediction head（预测头）、mHC 静态偏置和门控因子、RMSNorm 权重仍使用 AdamW；这是该报告的训练分工，不是所有模型的通用最佳优化器配方。
+
+Muon 需要每个逻辑矩阵的完整梯度来做上述迭代。DeepSeek-V4 报告因此采用混合 Zero Redundancy Optimizer（零冗余优化器，ZeRO）bucket 分配；对稠密参数，超出 ZeRO 并行范围时，在额外数据并行组上冗余计算 Muon 更新，以计算换取更少的梯度桶内存。Muon 仍要保存动量缓冲，因此不是没有 optimizer state（优化器状态）的更新法。报告未给出这些状态逐参数的数据类型或总字节数，不能据此直接算出训练显存节省。
+
+报告说明 Newton–Schulz 矩阵乘可用 bfloat16（BF16）；MoE 梯度在跨数据并行通信前随机舍入到 BF16，再在本地用 float32（FP32，单精度浮点）求和。这些是指定算子和通信路径的精度选择，不代表整个训练过程或 Muon 状态统一使用 BF16。
+
+> [!example] 对角矩阵经过十步 hybrid Newton–Schulz 后怎样变化
+> 取教学用更新方向 `D=diag(9,1)`。它的 SVD 可取 `U=V=I`、`Σ=diag(9,1)`；两个对角值表示沿两个配对方向分别伸缩 9 倍和 1 倍。Frobenius norm 是 `√(9²+1²)=√82`，所以迭代从 `D_0=diag(9/√82,1/√82)≈diag(0.993884,0.110432)` 开始。
+>
+> 对这个正对角矩阵，Newton–Schulz 多项式可逐个奇异值计算为 `x'=a x+b x³+c x⁵`。前 8 步使用 `(a,b,c)=(3.4445,-4.7750,2.0315)`，后 2 步使用 `(2,-1.5,0.5)`。普通浮点标量复算得到：第 1 步约 `(0.705643,0.373984)`，第 8 步约 `(1.094391,1.134267)`，第 10 步约 `(1.000030,1.000190)`。有限步把非零方向推近 `1`，没有精确到 `1`；初始为零的奇异值也因该多项式没有常数项而保持为零。这里是系数公式的标量示例，不是 BF16 内核或训练结果实测。
+
 所选的训练目标也很重要。BERT 使用的 masked language modeling (掩码语言建模) 会根据左右两侧可见的上下文，预测选定的缺失位置。它的常规过程与上面从左向右的循环不同。研究者可以基于掩码模型构造迭代生成过程，但这需要另外的采样过程。
 
 如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
@@ -372,6 +408,7 @@ backpropagation (反向传播) 会把导数依次传过 LM head、残差相加�
 > - **采样与部署控制。** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) 介绍 nucleus sampling。[Transformers generation configuration](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation) 记录了采样控制项。[OpenAI Responses parameters](https://developers.openai.com/api/reference/resources/responses/methods/create) 记录了托管 API 的契约。[OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) 和 [Claude model migration guidance](https://platform.claude.com/docs/en/about-claude/model-deprecations) (核对日期：2026-11-06) 展示了模型和 API 版本可能带来的限制。这里提出的调参比较是这些机制的一种工程应用，并非普遍适用的温度建议。
 > - **缓存生成。** [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) 解释了因果复用、逐层 K/V，以及新词元如何关注此前和当前位置。
 > - **训练。** [Llama 3, v3, §3](https://arxiv.org/html/2407.21783v3#S3) 涉及预训练；[PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 说明了损失函数。[BERT, 2019, §3.1](https://arxiv.org/abs/1810.04805) 支持掩码目标的描述；[Wang and Cho, 2019](https://arxiv.org/abs/1902.04094) 探索了一种不同的迭代生成过程。
+> - **mHC 与 Muon。** [DeepSeek-V4 Technical Report v1, §2.2](https://arxiv.org/html/2606.19348v1#S2.SS2) 给出多流残差映射与双随机约束；[§2.4](https://arxiv.org/html/2606.19348v1#S2.SS4) 和 [§3.4.1](https://arxiv.org/html/2606.19348v1#S3.SS4.SSS1) 给出 Muon 参数分工、Newton–Schulz 更新与混合精度训练实现。截至 2026-11-06，公开 arXiv 版本仍为 v1。官方 V4-Pro 推理参考代码的 [`TransformerBlock` 与 mHC kernel](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L648-L700) / [`hc_split_sinkhorn`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/kernel.py#L372-L421) 核对 `hc_mult=4`、20 次迭代和推理路径（代码 revision `b5968e9190ef611bbf34a7229255be88a0e937c1`）；它不是 Muon 训练代码。Muon 状态精度和总内存未在报告中完整列出。
 > - **MoE、路由学习与负载。** [DeepSeek-V3 Technical Report, arXiv v2, §§2.1.2、4.2、4.5.2–4.5.3](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS2) 给出 sigmoid 亲和度、top-k、路由偏置、序列级平衡损失、V3 的专家数量和训练系数。Gate 参数与推理路由可在 [DeepSeek-V3 官方参考实现 `inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 中核对（检查日期：2026-11-06）；关于 top-k 梯度的说明是基于上述公式和参数实现的数学推论。
 > - **MTP 训练。** [DeepSeek-V3 Technical Report, arXiv v2, §2.2、§4.2、§4.5.1](https://arxiv.org/html/2412.19437v2#S2.SS2) 给出真实右移词元、串接的预测深度、共享 embedding/output head 和损失；V3 深度与权重见 §4.2。该报告 §5.4.3 的第二词元接受率与吞吐结果仅适用于论文评估设置。
 > - **推测解码。** [Leviathan et al., ICML 2023, §2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 说明并行目标验证和拒绝采样校正；当前框架对原生 MTP 的支持范围随模型与版本变化，可参见 [vLLM MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)（检查日期：2026-11-06）。
@@ -610,6 +647,31 @@ flowchart LR
 
 最后一个块仍可能有空位，块表和间接访问也有成本；优势是按实际长度增长，不必为每条请求预留连续的最大序列区，因此可让更多请求驻留并批处理。原论文的吞吐与时延结论属于其 2023 年工作负载和对照系统，独立注意力内核的微基准也测到额外延迟。现代引擎保留分页思想，但计算后端应按模型、GPU 和引擎版本选择；vLLM 将原 CUDA 内核设计页标为历史说明。
 
+#### V4 的异构缓存怎样命中、恢复和回收？
+
+上面的普通 K/V 公式假设各层都按相同规则缓存两组随长度增长的张量。DeepSeek-V4 预览模型的 Compressed Sparse Attention（压缩稀疏注意力，CSA）和 Heavily Compressed Attention（重度压缩注意力，HCA）让每请求状态必须按层分类：两类层按压缩率保留已完成的历史 KV；CSA 还需要一条供 top-k 搜索的 indexer（索引器）key；带 sliding-window attention（滑动窗口注意力，SWA）的层保留最近 128 个原始位置；压缩器还保留继续处理下一词元所需的运行状态。下文把压缩率为 4 和 128 的分支简记为 C4、C128。论文把变长的压缩条目放在分页 KV 区，把每序列定长的 state cache（状态缓存）留给 SWA 窗口与压缩器状态。不同层的压缩率、记录宽度和运行状态不同，单一的“每词元字节数”会漏算它们。
+
+定长状态池按活动序列分配槽位，所以即使已完成的压缩 KV 很少，并发序列也会占用各自的 SWA 与尾部状态空间。
+
+| 每请求的状态 | 随新词元发生什么 | 前缀命中或回收时要处理什么 |
+| --- | --- | --- |
+| 已完成的 CSA/HCA 压缩 KV | 按各层压缩率追加历史条目；SWA 窗口前移不会删除这些远距条目 | 前缀缓存可复用完整压缩块；请求终止或回滚时，按有效前缀长度截断并释放独占页 |
+| CSA indexer keys | 每个 CSA 层每完成一条 C4 主压缩 KV，就生成一条对应索引 key；截至 `N` 个位置，两者都是 `floor(N/4)` 条，但向量宽度、精度和每条载荷不同 | 若前缀命中后要继续 CSA 检索，对应索引 key 必须可用。论文未说明其磁盘存储格式；具体保存、恢复或重建方式依服务引擎实现 |
+| SWA 最近窗口 | 保留各适用层的最近 128 个原始 KV，窗口移动时淘汰最旧位置 | 可从磁盘命中、最近 checkpoint（检查点）恢复，或从前缀重新计算；这些策略决定存储与重算量 |
+| 压缩器运行状态 | HCA 留下尚未凑成 128 个位置的输入；C4 即使组已完整，也会保留上一整组的投影与分数作为下一条压缩记录的重叠输入；主 KV 与 indexer 各有自己的压缩器状态 | 完成的压缩条目本身不包含这些运行状态。继续压缩时必须取得等价状态；命中后恢复该状态或重算来源输入是工程要求，但报告未说明 C4 重叠状态或 indexer keys 的磁盘格式 |
+
+令 `N` 表示已处理的词元数、`m` 表示某层压缩率；`N mod m` 是除以 `m` 的余数。以 V4-Pro 的十进制 `N=1,000,000` 前缀为例，每个 CSA 层有 `floor(N/4)=250,000` 条 C4 主 KV，也有 250,000 条 indexer key；两者条目数相同，载荷不同。每个 HCA 层有 `floor(N/128)=7,812` 条 C128 KV，覆盖至位置 999,936，另有 64 个未完成输入位置。SWA 最近 128 个原始 KV 是另一份状态，依所选窗口缓存策略单独恢复。
+
+`N mod 4=0` 不表示 C4 压缩器没有运行状态：官方参考代码仍为主 KV 与 indexer 各保留最近完整 4 位置组的投影和分数；按一基位置编号，这组是 999,997–1,000,000。压缩条目之外还要取得这两份状态，或重算对应输入，才能继续压缩；这是由公开压缩器实现推出的恢复要求，论文没有说明该重叠状态或 indexer keys 的具体磁盘布局。各层完整的状态计数与载荷示例见[长上下文注意力的逐层 KV、索引器与尾部核算](#%E6%8C%89%E5%B1%82%E5%A4%8D%E7%AE%97%E4%B8%80%E7%99%BE%E4%B8%87%E8%AF%8D%E5%85%83%E6%97%B6%E7%9A%84%E7%8A%B6%E6%80%81)；这里的载荷不含量化 scale、页空位、对齐、临时缓冲或整卡其他占用。
+
+V4 报告把 prefix cache（前缀缓存）的磁盘状态拆成压缩 KV 与 SWA KV 两类。报告明确未完成压缩块需要重算；官方参考代码还表明，继续 CSA 压缩需要 C4 主 KV 和 indexer 各自的最近完整组状态，但论文未给出它们的磁盘格式或持久化办法。SWA 可按三种存储与计算取舍恢复：完整缓存把所有 SWA 条目写盘，命中时只读前缀末尾 128 个；周期检查点每隔 `p` 个词元保存当时的末尾 128 个，再从不晚于命中边界的最近 checkpoint（检查点）重算其后的尾段；零 SWA 缓存不保存窗口条目；命中压缩 KV 后，长前缀重算末尾 `128×L` 个位置即可恢复 `L` 层的末尾窗口，较短前缀则从开头重算。这里的 `L` 倍来自逐层依赖：重建高一层的窗口，还需要前一层更早一个窗口的输入，往下追溯时范围逐层向前扩展。V4-Pro 的 `L=61`，最多重算 7,808 个位置。完整缓存省重算但写盘量较大，零缓存省存储但增加计算；周期检查点通过 `p` 调节两者。它们是报告提出的磁盘策略，不表示所有推理引擎都默认采用同一种方案。
+
+分页池也要按异构状态分别估容量。论文的逻辑对齐单位是 4 与 128 的 least common multiple（最小公倍数，LCM）：`LCM(4,128)=128` 个原始位置；在各自对应层，每 128 个位置产生 32 条 C4 或 1 条 C128 压缩记录。实际逻辑块可以覆盖该单位的整数倍，这不是固定的物理页大小。当前 vLLM 的 V4 compressor 实现给 C4 和 C128 的状态页分别设 `block_size=4` 与 `8`，并让压缩器状态页与 KV block 共享物理张量；这是引擎状态页的另一层“块”。因此接纳并发时，应按每层压缩 KV、CSA indexer、SWA 窗口、尾部状态和引擎页粒度核算，再加量化元数据、填充、工作区与并行分片。纸面数据载荷是下界，不是实际 GPU 显存测量。
+
+请求完成或取消时，调度器释放请求对状态页的引用；引用计数归零后，页才可被回收或复用，前缀缓存策略也可能暂时保留它。逻辑释放、物理页回收和前缀缓存淘汰是不同事件。
+
+以从位置 127 继续验证位置 128 的候选为例。若候选被接受，各 C128 层完成一条压缩记录，各 C4 层的主 KV 与 indexer 也各完成一条记录；若候选被拒绝，逻辑前缀回到 127，就必须撤销这些新条目，并恢复到 127 对应的 HCA 未完成输入、C4 重叠状态、indexer 状态和 SWA 窗口。这里描述的是缓存正确性不变量，不限定引擎用暂存、检查点还是重算实现；替换词元尚未经过目标模型前向，因此不会作为已处理位置写入这些状态。通用目标 KV 的拒绝示例见[推测解码的临时缓存](#%E6%8E%A8%E6%B5%8B%E8%A7%A3%E7%A0%81%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%80%99%E9%80%89%E5%B9%B6%E5%A4%84%E7%90%86%E4%B8%B4%E6%97%B6%E7%BC%93%E5%AD%98%EF%BC%9F)。
+
 ### 推测解码如何验证候选并处理临时缓存？
 
 [模型训练中的 MTP](#%E8%AE%AD%E7%BB%83%E6%97%B6%E5%A6%82%E4%BD%95%E9%A2%84%E6%B5%8B%E5%A4%9A%E4%B8%AA%E6%9C%AA%E6%9D%A5%E8%AF%8D%E5%85%83%EF%BC%9F)介绍了 MTP 的训练接口；服务端还需确定候选从哪里来。普通 draft model（草稿模型）可按 draft distribution（草稿分布）`q_i`逐步提出候选。DeepSeek-V3 的 `D=1` MTP 路径则先由主模型对当前前缀`C`给出$p_1=p(\cdot\mid C)$并产生下一词元`x_1`；MTP block 接收前缀最后位置的 hidden state（隐藏状态）和`Emb(x_1)`，再给出额外候选`x_2`的草稿分布$q_2(\cdot\mid C,x_1)$。因此这一配置的 MTP 模块不是从`C`独立提出任意长的候选串；多于一个额外未来词元需要更大的 MTP 深度或引擎提供的其他 proposer 路径。具体 MTP state（状态）接口和草稿长度随引擎变化。下文先用通用`q_i`说明随机接受与替换，再追踪目标模型的并行计算和 KV 状态。`p_i`是给定当前前缀和已接受候选后，第`i`个位置的目标分布，`q_i`是为该候选实际使用的草稿分布。
@@ -679,6 +741,7 @@ vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块�
 > - **MLA 缓存维度与实现分支。** [DeepSeek-V3 Technical Report, arXiv v2, §2.1.1、§4.2](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1) 给出联合 KV latent、独立 RoPE key、压缩 latent 后的 RMSNorm，以及 `d_c=512`、`d_h^R=64`、61 层等参数。官方 [`inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 默认 `attn_impl="absorb"`，在 `absorb` 分支缓存经 `kv_norm` 的 latent 和独立 `pe_cache`；`naive` 分支会展开逐头 K/V 并写入 `k_cache/v_cache`（检查日期：2026-11-06）。MLA 代数的唯一详解见长上下文注意力章节。
 > - **FlashAttention 内核。** [FlashAttention, §3](https://arxiv.org/abs/2205.14135)；[FlashAttention-4, 2026](https://arxiv.org/abs/2603.05451)。
 > - **分页缓存。** [Kwon et al., PagedAttention, arXiv v1, §§4.2–4.5、§§6–7](https://arxiv.org/html/2309.06180v1) 说明逻辑块、物理块、共享和性能边界；[vLLM 原 PagedAttention 内核说明](https://docs.vllm.ai/en/latest/design/paged_attention/) 将早期 CUDA 内核页标为历史说明。
+> - **DeepSeek-V4 异构 KV、前缀命中与 SWA 检查点。** [DeepSeek-V4 Technical Report v1, §3.5.1](https://arxiv.org/html/2606.19348v1#S3.SS5.SSS1) 描述按层变化的压缩 KV、独立 indexer 与固定状态池；[§3.5.2](https://arxiv.org/html/2606.19348v1#S3.SS5.SSS2) 描述未完成压缩尾部重算以及完整/周期/零 SWA 磁盘缓存。截至 2026-11-06，公开 arXiv 版本仍为 v1。官方 V4-Pro [`inference/model.py`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L279-L359) 的 C4 `Compressor` 保留上一完整组投影与分数，独立 indexer 也有自己的 [`Compressor`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L380-L421)；这证明运行时重叠状态存在，不代表论文披露了 indexer 或重叠状态的磁盘布局。当前框架快照核对：vLLM `86564975c5a5ba96b0bea94708101480ca18a2cd` 的 [`compressor.py`](https://github.com/vllm-project/vllm/blob/86564975c5a5ba96b0bea94708101480ca18a2cd/vllm/models/deepseek_v4/compressor.py) 展示状态页和 C4/C128 块设置；SGLang `91fd6756e773ab857d5f6ddf3876fead1992b29b` 的 [`deepseek_v4.py`](https://github.com/sgl-project/sglang/blob/91fd6756e773ab857d5f6ddf3876fead1992b29b/python/sglang/srt/models/deepseek_v4.py) 有模型专属 attention backend 与尾部 source 写入路径（核对日期：2026-11-06）。框架代码用于核对实现边界，不代表本文执行了后端或显存实测。
 > - **推测采样与 MTP serving。** [Leviathan et al., ICML 2023, §§2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 支持目标分布校正；[DeepSeek-V3 Technical Report, arXiv v2, §§2.2、5.4.3](https://arxiv.org/html/2412.19437v2#S2.SS2) 报告 MTP 与论文评估结果；vLLM 当前的[原生 MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)和[`deepseek_mtp.py` 实现](https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/deepseek_mtp.py)展示了框架特定的草稿接口与配置（核对日期：2026-11-06）。
 > - **并行、分块预填充、前缀缓存与负载测试。** [vLLM 并行与扩展](https://docs.vllm.ai/en/latest/serving/parallelism_scaling/)；[vLLM Chunked Prefill](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill)；[vLLM v0.25.0 Prefix Caching](https://docs.vllm.ai/en/v0.25.0/design/prefix_caching/)；[vLLM Benchmark CLI](https://docs.vllm.ai/en/latest/benchmarking/cli/)。
 > - **Prefill/decode 分池。** [DistServe](https://arxiv.org/abs/2401.09670)；收益受论文测过的负载、硬件互连与时延目标约束。

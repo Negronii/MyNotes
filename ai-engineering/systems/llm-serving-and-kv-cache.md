@@ -53,6 +53,31 @@ flowchart LR
 
 最后一个块仍可能有空位，块表和间接访问也有成本；优势是按实际长度增长，不必为每条请求预留连续的最大序列区，因此可让更多请求驻留并批处理。原论文的吞吐与时延结论属于其 2023 年工作负载和对照系统，独立注意力内核的微基准也测到额外延迟。现代引擎保留分页思想，但计算后端应按模型、GPU 和引擎版本选择；vLLM 将原 CUDA 内核设计页标为历史说明。
 
+### V4 的异构缓存怎样命中、恢复和回收？
+
+上面的普通 K/V 公式假设各层都按相同规则缓存两组随长度增长的张量。DeepSeek-V4 预览模型的 Compressed Sparse Attention（压缩稀疏注意力，CSA）和 Heavily Compressed Attention（重度压缩注意力，HCA）让每请求状态必须按层分类：两类层按压缩率保留已完成的历史 KV；CSA 还需要一条供 top-k 搜索的 indexer（索引器）key；带 sliding-window attention（滑动窗口注意力，SWA）的层保留最近 128 个原始位置；压缩器还保留继续处理下一词元所需的运行状态。下文把压缩率为 4 和 128 的分支简记为 C4、C128。论文把变长的压缩条目放在分页 KV 区，把每序列定长的 state cache（状态缓存）留给 SWA 窗口与压缩器状态。不同层的压缩率、记录宽度和运行状态不同，单一的“每词元字节数”会漏算它们。
+
+定长状态池按活动序列分配槽位，所以即使已完成的压缩 KV 很少，并发序列也会占用各自的 SWA 与尾部状态空间。
+
+| 每请求的状态 | 随新词元发生什么 | 前缀命中或回收时要处理什么 |
+| --- | --- | --- |
+| 已完成的 CSA/HCA 压缩 KV | 按各层压缩率追加历史条目；SWA 窗口前移不会删除这些远距条目 | 前缀缓存可复用完整压缩块；请求终止或回滚时，按有效前缀长度截断并释放独占页 |
+| CSA indexer keys | 每个 CSA 层每完成一条 C4 主压缩 KV，就生成一条对应索引 key；截至 `N` 个位置，两者都是 `floor(N/4)` 条，但向量宽度、精度和每条载荷不同 | 若前缀命中后要继续 CSA 检索，对应索引 key 必须可用。论文未说明其磁盘存储格式；具体保存、恢复或重建方式依服务引擎实现 |
+| SWA 最近窗口 | 保留各适用层的最近 128 个原始 KV，窗口移动时淘汰最旧位置 | 可从磁盘命中、最近 checkpoint（检查点）恢复，或从前缀重新计算；这些策略决定存储与重算量 |
+| 压缩器运行状态 | HCA 留下尚未凑成 128 个位置的输入；C4 即使组已完整，也会保留上一整组的投影与分数作为下一条压缩记录的重叠输入；主 KV 与 indexer 各有自己的压缩器状态 | 完成的压缩条目本身不包含这些运行状态。继续压缩时必须取得等价状态；命中后恢复该状态或重算来源输入是工程要求，但报告未说明 C4 重叠状态或 indexer keys 的磁盘格式 |
+
+令 `N` 表示已处理的词元数、`m` 表示某层压缩率；`N mod m` 是除以 `m` 的余数。以 V4-Pro 的十进制 `N=1,000,000` 前缀为例，每个 CSA 层有 `floor(N/4)=250,000` 条 C4 主 KV，也有 250,000 条 indexer key；两者条目数相同，载荷不同。每个 HCA 层有 `floor(N/128)=7,812` 条 C128 KV，覆盖至位置 999,936，另有 64 个未完成输入位置。SWA 最近 128 个原始 KV 是另一份状态，依所选窗口缓存策略单独恢复。
+
+`N mod 4=0` 不表示 C4 压缩器没有运行状态：官方参考代码仍为主 KV 与 indexer 各保留最近完整 4 位置组的投影和分数；按一基位置编号，这组是 999,997–1,000,000。压缩条目之外还要取得这两份状态，或重算对应输入，才能继续压缩；这是由公开压缩器实现推出的恢复要求，论文没有说明该重叠状态或 indexer keys 的具体磁盘布局。各层完整的状态计数与载荷示例见[长上下文注意力的逐层 KV、索引器与尾部核算](../foundations/long-context-attention.md#按层复算一百万词元时的状态)；这里的载荷不含量化 scale、页空位、对齐、临时缓冲或整卡其他占用。
+
+V4 报告把 prefix cache（前缀缓存）的磁盘状态拆成压缩 KV 与 SWA KV 两类。报告明确未完成压缩块需要重算；官方参考代码还表明，继续 CSA 压缩需要 C4 主 KV 和 indexer 各自的最近完整组状态，但论文未给出它们的磁盘格式或持久化办法。SWA 可按三种存储与计算取舍恢复：完整缓存把所有 SWA 条目写盘，命中时只读前缀末尾 128 个；周期检查点每隔 `p` 个词元保存当时的末尾 128 个，再从不晚于命中边界的最近 checkpoint（检查点）重算其后的尾段；零 SWA 缓存不保存窗口条目；命中压缩 KV 后，长前缀重算末尾 `128×L` 个位置即可恢复 `L` 层的末尾窗口，较短前缀则从开头重算。这里的 `L` 倍来自逐层依赖：重建高一层的窗口，还需要前一层更早一个窗口的输入，往下追溯时范围逐层向前扩展。V4-Pro 的 `L=61`，最多重算 7,808 个位置。完整缓存省重算但写盘量较大，零缓存省存储但增加计算；周期检查点通过 `p` 调节两者。它们是报告提出的磁盘策略，不表示所有推理引擎都默认采用同一种方案。
+
+分页池也要按异构状态分别估容量。论文的逻辑对齐单位是 4 与 128 的 least common multiple（最小公倍数，LCM）：`LCM(4,128)=128` 个原始位置；在各自对应层，每 128 个位置产生 32 条 C4 或 1 条 C128 压缩记录。实际逻辑块可以覆盖该单位的整数倍，这不是固定的物理页大小。当前 vLLM 的 V4 compressor 实现给 C4 和 C128 的状态页分别设 `block_size=4` 与 `8`，并让压缩器状态页与 KV block 共享物理张量；这是引擎状态页的另一层“块”。因此接纳并发时，应按每层压缩 KV、CSA indexer、SWA 窗口、尾部状态和引擎页粒度核算，再加量化元数据、填充、工作区与并行分片。纸面数据载荷是下界，不是实际 GPU 显存测量。
+
+请求完成或取消时，调度器释放请求对状态页的引用；引用计数归零后，页才可被回收或复用，前缀缓存策略也可能暂时保留它。逻辑释放、物理页回收和前缀缓存淘汰是不同事件。
+
+以从位置 127 继续验证位置 128 的候选为例。若候选被接受，各 C128 层完成一条压缩记录，各 C4 层的主 KV 与 indexer 也各完成一条记录；若候选被拒绝，逻辑前缀回到 127，就必须撤销这些新条目，并恢复到 127 对应的 HCA 未完成输入、C4 重叠状态、indexer 状态和 SWA 窗口。这里描述的是缓存正确性不变量，不限定引擎用暂存、检查点还是重算实现；替换词元尚未经过目标模型前向，因此不会作为已处理位置写入这些状态。通用目标 KV 的拒绝示例见[推测解码的临时缓存](#%E6%8E%A8%E6%B5%8B%E8%A7%A3%E7%A0%81%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%80%99%E9%80%89%E5%B9%B6%E5%A4%84%E7%90%86%E4%B8%B4%E6%97%B6%E7%BC%93%E5%AD%98%EF%BC%9F)。
+
 ## 推测解码如何验证候选并处理临时缓存？
 
 [模型训练中的 MTP](../foundations/how-llms-work.md#%E8%AE%AD%E7%BB%83%E6%97%B6%E5%A6%82%E4%BD%95%E9%A2%84%E6%B5%8B%E5%A4%9A%E4%B8%AA%E6%9C%AA%E6%9D%A5%E8%AF%8D%E5%85%83%EF%BC%9F)介绍了 MTP 的训练接口；服务端还需确定候选从哪里来。普通 draft model（草稿模型）可按 draft distribution（草稿分布）`q_i`逐步提出候选。DeepSeek-V3 的 `D=1` MTP 路径则先由主模型对当前前缀`C`给出$p_1=p(\cdot\mid C)$并产生下一词元`x_1`；MTP block 接收前缀最后位置的 hidden state（隐藏状态）和`Emb(x_1)`，再给出额外候选`x_2`的草稿分布$q_2(\cdot\mid C,x_1)$。因此这一配置的 MTP 模块不是从`C`独立提出任意长的候选串；多于一个额外未来词元需要更大的 MTP 深度或引擎提供的其他 proposer 路径。具体 MTP state（状态）接口和草稿长度随引擎变化。下文先用通用`q_i`说明随机接受与替换，再追踪目标模型的并行计算和 KV 状态。`p_i`是给定当前前缀和已接受候选后，第`i`个位置的目标分布，`q_i`是为该候选实际使用的草稿分布。
@@ -122,6 +147,7 @@ vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块�
 > - **MLA 缓存维度与实现分支。** [DeepSeek-V3 Technical Report, arXiv v2, §2.1.1、§4.2](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1) 给出联合 KV latent、独立 RoPE key、压缩 latent 后的 RMSNorm，以及 `d_c=512`、`d_h^R=64`、61 层等参数。官方 [`inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 默认 `attn_impl="absorb"`，在 `absorb` 分支缓存经 `kv_norm` 的 latent 和独立 `pe_cache`；`naive` 分支会展开逐头 K/V 并写入 `k_cache/v_cache`（检查日期：2026-11-06）。MLA 代数的唯一详解见长上下文注意力章节。
 > - **FlashAttention 内核。** [FlashAttention, §3](https://arxiv.org/abs/2205.14135)；[FlashAttention-4, 2026](https://arxiv.org/abs/2603.05451)。
 > - **分页缓存。** [Kwon et al., PagedAttention, arXiv v1, §§4.2–4.5、§§6–7](https://arxiv.org/html/2309.06180v1) 说明逻辑块、物理块、共享和性能边界；[vLLM 原 PagedAttention 内核说明](https://docs.vllm.ai/en/latest/design/paged_attention/) 将早期 CUDA 内核页标为历史说明。
+> - **DeepSeek-V4 异构 KV、前缀命中与 SWA 检查点。** [DeepSeek-V4 Technical Report v1, §3.5.1](https://arxiv.org/html/2606.19348v1#S3.SS5.SSS1) 描述按层变化的压缩 KV、独立 indexer 与固定状态池；[§3.5.2](https://arxiv.org/html/2606.19348v1#S3.SS5.SSS2) 描述未完成压缩尾部重算以及完整/周期/零 SWA 磁盘缓存。截至 2026-11-06，公开 arXiv 版本仍为 v1。官方 V4-Pro [`inference/model.py`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L279-L359) 的 C4 `Compressor` 保留上一完整组投影与分数，独立 indexer 也有自己的 [`Compressor`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L380-L421)；这证明运行时重叠状态存在，不代表论文披露了 indexer 或重叠状态的磁盘布局。当前框架快照核对：vLLM `86564975c5a5ba96b0bea94708101480ca18a2cd` 的 [`compressor.py`](https://github.com/vllm-project/vllm/blob/86564975c5a5ba96b0bea94708101480ca18a2cd/vllm/models/deepseek_v4/compressor.py) 展示状态页和 C4/C128 块设置；SGLang `91fd6756e773ab857d5f6ddf3876fead1992b29b` 的 [`deepseek_v4.py`](https://github.com/sgl-project/sglang/blob/91fd6756e773ab857d5f6ddf3876fead1992b29b/python/sglang/srt/models/deepseek_v4.py) 有模型专属 attention backend 与尾部 source 写入路径（核对日期：2026-11-06）。框架代码用于核对实现边界，不代表本文执行了后端或显存实测。
 > - **推测采样与 MTP serving。** [Leviathan et al., ICML 2023, §§2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 支持目标分布校正；[DeepSeek-V3 Technical Report, arXiv v2, §§2.2、5.4.3](https://arxiv.org/html/2412.19437v2#S2.SS2) 报告 MTP 与论文评估结果；vLLM 当前的[原生 MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)和[`deepseek_mtp.py` 实现](https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/deepseek_mtp.py)展示了框架特定的草稿接口与配置（核对日期：2026-11-06）。
 > - **并行、分块预填充、前缀缓存与负载测试。** [vLLM 并行与扩展](https://docs.vllm.ai/en/latest/serving/parallelism_scaling/)；[vLLM Chunked Prefill](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill)；[vLLM v0.25.0 Prefix Caching](https://docs.vllm.ai/en/v0.25.0/design/prefix_caching/)；[vLLM Benchmark CLI](https://docs.vllm.ai/en/latest/benchmarking/cli/)。
 > - **Prefill/decode 分池。** [DistServe](https://arxiv.org/abs/2401.09670)；收益受论文测过的负载、硬件互连与时延目标约束。

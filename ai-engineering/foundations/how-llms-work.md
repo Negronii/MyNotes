@@ -164,6 +164,21 @@ flowchart TD
 
 每一层都会对相同位置再做一次变换。在这个模型中，随着层数增加，序列长度和宽度都不会缩短。这里示例的 decoder-only 架构选择包括 RMSNorm、RoPE 和门控 FFN；是否共享 K/V 则是另一项独立的架构选择。2017 年提出的 Transformer 在翻译任务的 encoder–decoder (编码器–解码器) 模型中使用 attention 和逐位置 FFN。它的 decoder 也使用了 cross-attention (交叉注意力)，归一化方式和 FFN 选择也与此不同。这里的公式描述所选的 decoder-only 示例；具体模型采用的架构由其实现决定。
 
+这里展示的是单条残差流。DeepSeek-V4 的 Manifold-Constrained Hyper-Connections（流形约束超连接，mHC）把每个词元的残差状态扩成 4 条宽度为 `d` 的流，再把它们读成普通层输入、混合旧流，并把新更新写回各流。这里每个 `l` 指一次残差更新：一个 Transformer block 里，attention 子层和 FFN 子层各自有一组 `A_l/B_l/C_l`。对一个词元，令 `X_l∈R^{4×d}`；`A_l∈R^{1×4}` 读出宽度为 `d` 的输入，`F_l` 表示带前置归一化的子层更新，输出宽度仍为 `d`；`C_l∈R^{4×1}` 把更新分配回 4 条流，`B_l∈R^{4×4}` 混合已有流：
+
+$$
+X_{l+1}=B_lX_l+C_lF_l(A_lX_l).
+$$
+
+若每层的旁路混合矩阵不受约束，连续相乘可能逐层放大已有状态；mHC 的约束针对这段纯流混合。
+
+式子只画一个词元的残差流；当 `F_l` 是 attention 时，它仍对整段序列计算，上式中的 `F_l` 是该词元对应的输出切片。`A_l`、`B_l`、`C_l` 都由当前残差状态动态生成，并带有可学习的静态偏置与缩放；`A_l` 和 `C_l` 分别经 sigmoid 与 `2·sigmoid` 限制为非负有界权重。mHC 的目标是让 `B_l` 落在 doubly stochastic（双随机）矩阵集合：元素非负，每行与每列的和都为 `1`。直观地说，每行是加权平均，列和为 `1` 可避免把输入流重复计重后放大总平方长度。
+
+V4 对 `B_l` 的原始分数先取指数，再用 20 步 Sinkhorn–Knopp 交替归一化行与列；官方 kernel 还加了 `eps`，所以有限步的数值结果是双随机约束的近似。对理想的双随机矩阵，`||B_l||₂≤1`，表示固定这个 `B_l` 后，它单独作用于残差状态不会增加其 Frobenius norm（弗罗贝尼乌斯范数，即矩阵元素平方和再开根）。`B_l` 本身又依赖当前状态，因此该界不能推出完整的输入到输出映射会如何随输入变化；它也不约束写入项 `C_lF_l(A_lX_l)`，更不是整层或全模型稳定性的证明。
+
+> [!example] 四条流的两种双随机混合
+> 单位矩阵 `I₄` 保持每条流不变；若 `B` 的 16 个元素全是 `0.25`，每条流就变成四条流的平均。例如，只看一个特征坐标，流值 `(1,0,0,0)` 会变为 `(0.25,0.25,0.25,0.25)`，长度从 `1` 降为 `√(4×0.25²)=0.5`。两者都满足理想的非负、行和为 `1`、列和为 `1` 条件；`||B||₂≤1` 意味着此类混合最大的长度放大倍数不超过 `1`。
+
 ### 哪些数字属于可学习参数？
 
 矩阵的参数数量等于行数乘以列数。在普通 MHA 且 `Hq·dh = d` 时，Q、K、V 和输出投影合计有 `4d²` 个参数。若 `d = 8`，则共有 `256` 个。三个 SwiGLU 投影合计有 `3d·dff` 个参数；若 `dff = 16`，则共有 `384` 个。
@@ -253,6 +268,27 @@ multi-token prediction（多词元预测，MTP）在 next-token prediction（下
 
 backpropagation (反向传播) 会把导数依次传过 LM head、残差相加、FFN、attention 和 embedding。对于简单的计算链 `z = wx`，若 `x` 固定，则 `∂L/∂w = (∂L/∂z)x`。矩阵形式会累加多个坐标和位置上的贡献。optimizer (优化器) 按照自己的步长和累积统计规则更新参数。训练利用前向计算的中间量，沿计算图反向求出各参数的梯度，再据此更新参数。
 
+### 矩阵权重如何由 Muon 更新？
+
+DeepSeek-V4 报告把多数矩阵参数交给 Muon。对权重矩阵 `W` 的梯度 `G_t`，先维护 momentum buffer（动量缓冲）`M_t=μM_{t−1}+G_t`，再形成 Nesterov 型方向 `D_t=μM_t+G_t`；`μ` 是旧动量的保留系数。Newton–Schulz 迭代前，将更新方向按 Frobenius norm（弗罗贝尼乌斯范数，即矩阵元素平方和再开根）归一化。对归一化后的矩阵做 10 步 hybrid Newton–Schulz（混合 Newton–Schulz）迭代，近似正交化，再按矩阵形状缩放更新量：
+
+$$
+W_t=(1-ηλ_{wd})W_{t-1}-ηγ\sqrt{\max(n,m)}\,O'_t.
+$$
+
+其中 `η` 是学习率，`λ_wd` 是解耦权重衰减，`n×m` 是权重形状，`O'_t` 是正交化后的方向，`γ` 是更新 RMS 的整体缩放系数。这里 `γ` 指 Muon 的更新缩放，和前文 V3 路由偏置使用的 `γ` 不是同一项。Muon 调整的是梯度动量方向，不是把模型权重本身改成正交矩阵。
+
+singular value decomposition（奇异值分解，SVD）提供了理解目标的参照。若 `D=UΣVᵀ`，`U`、`V` 给出配对方向，`Σ` 的奇异值表示沿这些方向的伸缩倍数。只取非零奇异值对应的列组成 `U_r`、`V_r`，目标 `U_rV_rᵀ` 保留这些配对方向并把伸缩倍数变为 `1`，零方向保持为零；满秩时才可直接写作 `UVᵀ`。Newton–Schulz 用矩阵乘法多项式逼近这一结果，不必显式计算完整 SVD。V4 对多数矩阵参数使用 Muon，但对 embedding、prediction head（预测头）、mHC 静态偏置和门控因子、RMSNorm 权重仍使用 AdamW；这是该报告的训练分工，不是所有模型的通用最佳优化器配方。
+
+Muon 需要每个逻辑矩阵的完整梯度来做上述迭代。DeepSeek-V4 报告因此采用混合 Zero Redundancy Optimizer（零冗余优化器，ZeRO）bucket 分配；对稠密参数，超出 ZeRO 并行范围时，在额外数据并行组上冗余计算 Muon 更新，以计算换取更少的梯度桶内存。Muon 仍要保存动量缓冲，因此不是没有 optimizer state（优化器状态）的更新法。报告未给出这些状态逐参数的数据类型或总字节数，不能据此直接算出训练显存节省。
+
+报告说明 Newton–Schulz 矩阵乘可用 bfloat16（BF16）；MoE 梯度在跨数据并行通信前随机舍入到 BF16，再在本地用 float32（FP32，单精度浮点）求和。这些是指定算子和通信路径的精度选择，不代表整个训练过程或 Muon 状态统一使用 BF16。
+
+> [!example] 对角矩阵经过十步 hybrid Newton–Schulz 后怎样变化
+> 取教学用更新方向 `D=diag(9,1)`。它的 SVD 可取 `U=V=I`、`Σ=diag(9,1)`；两个对角值表示沿两个配对方向分别伸缩 9 倍和 1 倍。Frobenius norm 是 `√(9²+1²)=√82`，所以迭代从 `D_0=diag(9/√82,1/√82)≈diag(0.993884,0.110432)` 开始。
+>
+> 对这个正对角矩阵，Newton–Schulz 多项式可逐个奇异值计算为 `x'=a x+b x³+c x⁵`。前 8 步使用 `(a,b,c)=(3.4445,-4.7750,2.0315)`，后 2 步使用 `(2,-1.5,0.5)`。普通浮点标量复算得到：第 1 步约 `(0.705643,0.373984)`，第 8 步约 `(1.094391,1.134267)`，第 10 步约 `(1.000030,1.000190)`。有限步把非零方向推近 `1`，没有精确到 `1`；初始为零的奇异值也因该多项式没有常数项而保持为零。这里是系数公式的标量示例，不是 BF16 内核或训练结果实测。
+
 所选的训练目标也很重要。BERT 使用的 masked language modeling (掩码语言建模) 会根据左右两侧可见的上下文，预测选定的缺失位置。它的常规过程与上面从左向右的循环不同。研究者可以基于掩码模型构造迭代生成过程，但这需要另外的采样过程。
 
 如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](../fine-tuning/fine-tuning-strategies.md) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
@@ -268,6 +304,7 @@ backpropagation (反向传播) 会把导数依次传过 LM head、残差相加�
 > - **采样与部署控制。** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) 介绍 nucleus sampling。[Transformers generation configuration](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation) 记录了采样控制项。[OpenAI Responses parameters](https://developers.openai.com/api/reference/resources/responses/methods/create) 记录了托管 API 的契约。[OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) 和 [Claude model migration guidance](https://platform.claude.com/docs/en/about-claude/model-deprecations) (核对日期：2026-11-06) 展示了模型和 API 版本可能带来的限制。这里提出的调参比较是这些机制的一种工程应用，并非普遍适用的温度建议。
 > - **缓存生成。** [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) 解释了因果复用、逐层 K/V，以及新词元如何关注此前和当前位置。
 > - **训练。** [Llama 3, v3, §3](https://arxiv.org/html/2407.21783v3#S3) 涉及预训练；[PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 说明了损失函数。[BERT, 2019, §3.1](https://arxiv.org/abs/1810.04805) 支持掩码目标的描述；[Wang and Cho, 2019](https://arxiv.org/abs/1902.04094) 探索了一种不同的迭代生成过程。
+> - **mHC 与 Muon。** [DeepSeek-V4 Technical Report v1, §2.2](https://arxiv.org/html/2606.19348v1#S2.SS2) 给出多流残差映射与双随机约束；[§2.4](https://arxiv.org/html/2606.19348v1#S2.SS4) 和 [§3.4.1](https://arxiv.org/html/2606.19348v1#S3.SS4.SSS1) 给出 Muon 参数分工、Newton–Schulz 更新与混合精度训练实现。截至 2026-11-06，公开 arXiv 版本仍为 v1。官方 V4-Pro 推理参考代码的 [`TransformerBlock` 与 mHC kernel](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L648-L700) / [`hc_split_sinkhorn`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/kernel.py#L372-L421) 核对 `hc_mult=4`、20 次迭代和推理路径（代码 revision `b5968e9190ef611bbf34a7229255be88a0e937c1`）；它不是 Muon 训练代码。Muon 状态精度和总内存未在报告中完整列出。
 > - **MoE、路由学习与负载。** [DeepSeek-V3 Technical Report, arXiv v2, §§2.1.2、4.2、4.5.2–4.5.3](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS2) 给出 sigmoid 亲和度、top-k、路由偏置、序列级平衡损失、V3 的专家数量和训练系数。Gate 参数与推理路由可在 [DeepSeek-V3 官方参考实现 `inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py) 中核对（检查日期：2026-11-06）；关于 top-k 梯度的说明是基于上述公式和参数实现的数学推论。
 > - **MTP 训练。** [DeepSeek-V3 Technical Report, arXiv v2, §2.2、§4.2、§4.5.1](https://arxiv.org/html/2412.19437v2#S2.SS2) 给出真实右移词元、串接的预测深度、共享 embedding/output head 和损失；V3 深度与权重见 §4.2。该报告 §5.4.3 的第二词元接受率与吞吐结果仅适用于论文评估设置。
 > - **推测解码。** [Leviathan et al., ICML 2023, §2.1–2.3](https://proceedings.mlr.press/v202/leviathan23a.html) 说明并行目标验证和拒绝采样校正；当前框架对原生 MTP 的支持范围随模型与版本变化，可参见 [vLLM MTP 文档](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/)（检查日期：2026-11-06）。
