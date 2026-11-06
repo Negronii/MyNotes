@@ -1,138 +1,122 @@
-# How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？
+# 如何把 AI 系统设计题转化为有依据的架构？
 
-**Core explanation / 核心解释：** Clarify the user task and its success criteria, make workload and data-boundary assumptions explicit, then trace the request through retrieval, model or tool calls, validation, delivery, and operations. Deep-dive only on the risks that bind correctness, privacy, latency, cost, or safety; compare alternatives against evidence and include evaluation, rollout, and rollback. This capstone applies the canonical mechanisms to three illustrative designs. All traffic and latency figures below are hypothetical teaching assumptions, not production measurements or defaults. / 先澄清用户任务与成功标准，明确工作负载和数据边界假设，再沿着检索、模型或工具调用、校验、交付和运维梳理请求路径。只深入分析决定正确性、隐私、时延、成本或安全的关键风险；依据证据比较方案，并说明评估、发布和回滚。本文用三个示例设计应用各主题的规范机制。下方流量与时延数字均为教学假设，并非生产测量或默认值。
+同样使用语言模型，文档问答可能泄露用户无权访问的文件；退款助手可能重复执行资金写入；代码审查助手可能用大量误报耗尽工程师信任。它们的共同点只是包含生成模型，真正决定架构的是失败代价、可信数据边界、外部副作用和可验证的用户结果。
 
-**Key terms / 关键术语：** requirements / 需求；data flow / 数据流；failure mode / 失败模式；trade-off / 权衡；evaluation / 评估；rollback / 回滚。
+以下三个案例用假设明确的输入和工作负载，推导各自的请求路径与取舍。它们是教学设计案例，不是对某个生产系统的测量；实际方案要用代表性评估和生产追踪校正。
 
-## How should you structure an AI system design answer? / 如何组织 AI 系统设计回答？
+## 文档问答：权限必须在证据交给模型前生效
 
-Use the following sequence as a set of discussion slots, not a fixed interview timetable:
+### 请求从哪里取得答案？
 
-1. **Clarify the task.** Identify users, inputs and outputs, success criteria, unacceptable errors, data sensitivity, freshness, and human review needs.
-2. **Establish constraints.** Ask about expected workload and peaks, latency and availability goals, budget, deployment boundary, existing systems, and operational ownership. State assumptions when information is unavailable.
-3. **Draw the end-to-end path.** Include ingestion if needed, request handling, model or retrieval calls, tools, validation, response or escalation, storage, and observability.
-4. **Deep-dive on the binding risks.** Choose two or three components whose failure would most affect correctness, privacy, latency, cost, or safety. Explain alternatives and failure handling.
-5. **Explain evaluation and rollout.** Define offline cases, production measures, staged release, rollback, and who responds to incidents.
+假设企业员工要查询政策文档，既会问自然语言问题，也会输入精确的政策编号。语料已预先索引，文档会更新或删除；权限来源是企业身份系统；若证据过期、冲突或用户无权访问，要说明不能回答或转人工。系统提供引用，但不能把引用外观当作证据正确的保证。
 
-Do not invent scale or latency targets to fill silence. Ask for them or label an assumption, then show how the design would change if it differs.
+> [!example] 文档问答的请求路径
+> ~~~text
+> 文档源 → 解析、版本化、索引
+> 员工问题 → 身份认证 → 按权限检索
+>          → 证据排序与上下文组装 → 模型生成
+>          → 引用与答案校验 → 回答或拒答/升级
+> ~~~
 
-## Common trade-offs / 常见权衡
+解析和索引需保留来源 ID、版本、更新时间及处理状态，以便文档更新或删除后能找到旧副本。检索候选可以比较关键词、向量或 hybrid keyword-and-vector retrieval (关键词与向量混合检索)：自然语言问题可能受益于语义匹配，精确编号则需要词法命中；用有标注的代表性问题比较召回、排序质量、延迟和费用，不能凭“向量库更先进”决定。权限服务超时或身份无效时停止检索，不将未授权文档交给模型，也不靠模型猜权限结论。
 
-| Decision | Option A | Option B | What should drive it |
-|---|---|---|---|
-| Latency and cost | Smaller or fewer model calls | More capable model or additional checks | Measured task quality, workload, and response-time needs |
-| Retrieval | Lower-cost candidate set | More recall or reranking work | Miss cost, corpus, and evaluation results |
-| Autonomy | Model-directed tool loop | Fixed workflow or human review | Task variability, action risk, and control needs |
-| Response mode | Immediate response | Queued or batch completion | User expectation and throughput |
-| Deployment | Hosted service | Self-hosted or edge | Data boundary, operations, device, availability, and full cost |
+调用者身份来自可信认证层，权限过滤必须在检索时执行，模型只接收当前用户有权看的片段。提示词中写“请勿泄露”不是访问控制；被检索到的文本也不能授予调用工具或读取其他文档的权限。缺少证据、权限服务超时、索引陈旧、来源冲突、模型超时和引用不存在都要有明确分支。
 
-Present each choice conditionally: explain when each option would fit, what evidence would change your decision, and how the alternative could be tested.
+上线前的评估要把检索和生成分开：检查证据是否进候选集，答案主张是否由来源支持，引用是否指向检索片段；还应包含无答案问题、权限边界、更新与删除。上线后监控索引新鲜度、各阶段延迟、访问拒绝和任务完成率。retrieval-augmented generation (RAG，检索增强生成) 的证据组织机制见[RAG 架构与实现](../rag/rag-architecture-and-implementation.md)，统一的配对评估方法见[大语言模型评估方法](../evaluation/llm-evaluation-methods.md)。
 
-## Three cases, three binding risks / 三个案例，三个主要风险
+### 用预算推导候选方案
 
-Apply the same design sequence to different failure costs. For document QA, ask whether the evidence is authorized and current. For refunds, ask whether an irreversible write was authorized and actually completed. For code review, ask whether the finding is supported and worth a reviewer’s time.
+假设一个虚构团队要求高峰处理 6 个查询/秒，端到端 p95 (95th percentile，第 95 百分位) 时延目标为 4 秒；允许托管模型 API，但没有专门资源运营 GPU 推理。
 
-## Document QA under an access and latency budget / 有权限与时延约束的文档问答
+> [!example] 将假设工作负载拆成延迟预算
+> 下表是用于压测的预算分配，不是测量结果或各阶段 p95：
+>
+> | 阶段 | 预算 |
+> |---|---:|
+> | 身份认证与请求建立 | 0.2 秒 |
+> | 权限感知检索 | 0.6 秒 |
+> | 模型生成 | 2.5 秒 |
+> | 引用/结构验证和响应处理 | 0.2 秒 |
+> | 网络与队列预留 | 0.5 秒 |
+> | 合计分配 | 4.0 秒 |
+>
+> 阶段预算相加得到 4.0 秒，但每阶段预算不是测得的分位数，阶段 p95 也不能直接相加得出端到端 p95；要用联合负载测试测量完整链路。若请求里经常有很长文档或突发流量，队列和生成尾延迟会改变预算是否成立。
 
-**Clarify first:** Which user groups and repositories are in scope? How often do documents change? What is the source of truth for permissions? What answer freshness and citation behavior are required? What happens when evidence is missing or conflicting?
+容量可先用 Little's Law (利特尔定律) 估算平均在途请求数：
 
-**Illustrative request path / 请求路径示意:**
+> [!example] 用平均停留时间估算在途请求
+> $$
+> L = \lambda W.
+> $$
+>
+> 其中 L 是该阶段长期平均在途请求数；$\lambda_{\mathrm{model}}$ 是进入模型阶段的实际平均准入速率，$W_{\mathrm{model}}$ 是请求从进入到离开同一模型阶段的平均停留时间。假设教学负载中模型阶段的实际平均准入速率为 6 次/秒，且 1.2 秒包含该阶段排队与执行，则 L=6 次/秒 × 1.2 秒=7.2 个平均在途请求。7.2 是长期平均量，无需上取整，也不是 worker (工作进程) 或 GPU 副本数量；缓存、旁路、重试或被拒请求会使模型阶段实际 λ 不同，因此要用测得的准入速率，而非外层 API 的目标速率。队列、突发和目标利用率还要通过实际负载确定。容量计算的机制见[API 容量与背压](../../engineering-foundations/reliability/api-capacity-and-backpressure.md)。
 
-~~~text
-Document sources → parse and version → chunk and index
-User query → authenticate → permission-aware retrieval
-            → rank evidence → generate answer with source references
-            → validate and return, or abstain/escalate
-~~~
+对混合问题，可先比较关键词与向量混合检索和纯词法基线，权限在证据组装前过滤，把托管模型放在该检索服务之后，并明确队列上限和超载行为。如果任务扩展为长报告且无法满足交互时延，可以比较异步排队或批处理，并给用户明确的任务状态与恢复路径。若数据边界改为不能离开内网，就需比较私有或自托管模型，并把 GPU 运维、容量冗余和故障恢复成本纳入；若检索/生成无法满足预算，应先评估候选排序、上下文选择或模型，而不是无条件放宽质量门槛。
 
-**Deep-dive topics:**
+## 退款：工具调用返回超时不代表写入失败
 
-- **Ingestion and freshness:** retain source identifiers and versions; reprocess changed or deleted material and make indexing status observable.
-- **Retrieval:** compare keyword, vector, or hybrid retrieval on representative questions. Tune chunking and reranking against recall, relevance, latency, and cost; there is no universal chunk size or top-k.
-- **Authorization:** derive the caller's access from the trusted identity system and enforce it during retrieval, before evidence reaches the model. A prompt is not an access-control boundary.
-- **Grounded answers:** carry source identifiers alongside retrieved passages. Validate that citations refer to retrieved evidence and evaluate whether claims are supported; asking for citations alone does not prove correctness.
-- **Failure paths:** stale or empty results, permission-service outage, conflicting documents, malformed output, and model timeout should have explicit behavior.
+退款是有外部副作用的操作。系统要在调用之前验证身份、订单状态、政策资格和明确确认；完成后读取可信交易状态。语言模型可以解析请求或说明流程，却不能成为授权和最终执行边界。
 
-**Evaluation and operations:** test retrieval and answer quality separately; include permission-boundary cases, updates and deletions, unanswerable questions, and citation checks. Monitor latency by stage, indexing freshness, retrieval metrics, answer support, abstentions, and access-control failures.
+> [!example] 退款写入的状态流
+> ~~~text
+> RECEIVED
+>   → AUTHENTICATED
+>   → ELIGIBLE
+>   → AWAITING_CONFIRMATION
+>   → SUBMITTED
+>   → CONFIRMED | OUTCOME_UNKNOWN | REJECTED
+> ~~~
 
-The [RAG chapter](../rag/rag-architecture-and-implementation.md) follows a concrete policy question from authorized candidate retrieval through claim verification. Here the extra constraint is an end-to-end latency budget.
+只有可信业务代码可以把状态从待确认推进到已提交。客户确认某一笔退款后，应用先生成并持久化稳定的 refund operation ID (退款操作 ID)，连同订单、金额、参数和 provider (支付提供方) 幂等键一起保存，再发起写入；订单号单独不够，因为同一订单可能有多笔独立退款。若请求超时，不要假定写入失败或换一个键重试：若已拿到提供方唯一 refund ID (退款 ID)，将其与本方操作 ID 绑定并按该 ID 读取状态；若超时导致 ID 丢失，则只能按提供方契约使用原支付引用/事件对账，或在其明确支持的范围内以同键同参安全重放。幂等键并不普遍提供查询能力。若仍无法确认，保持 OUTCOME_UNKNOWN，交由对账或人工处理，不能再创建第二个业务退款操作。支付方返回退款对象或 HTTP 成功也不必然代表最终成功：核对订单/原支付、金额和唯一退款 ID，并等到提供方报告最终成功状态后，才把业务状态记为 CONFIRMED。
 
-### One worked budget and design choice / 一组预算推导与方案选择
+> [!example] 一次超时后的核对
+> 应用先记录退款操作 R-204、订单 O-73、原支付 ID P-73、金额 20.00、键 K-R204 与 SUBMITTED 状态；请求超时后转为 OUTCOME_UNKNOWN，不创建 R-205。写入时还通过提供方支持的 metadata 将 R-204 附在退款对象上。后续经可信通道收到事件后，先按该业务标识确认它对应 R-204，才绑定唯一退款 ID re_demo_204，再按该 ID 读取并核对原支付 ID 与金额。同一笔支付可能有两次同额部分退款，仅金额相同不能建立关联；关联不清仍保持未知。若状态仍为 pending，就继续保持处理中；只有状态变为 succeeded 才将 R-204 推进到 CONFIRMED 一次。若提供方既不能按原支付引用核验，也不承诺同键同参重放，则继续保持未知并进入对账，而不是盲目再发一次。本例中的 ID 均为合成标识。
 
-Assume a fictional enterprise team has a pre-indexed policy corpus; employee questions include both natural-language policy questions and exact policy IDs; peak load is 6 queries per second; the p95 end-to-end target is 4 seconds; a hosted model API is allowed; and the team has no capacity allocated to operating GPU inference for this workload. These are interview assumptions, not observed traffic or latency.
+适合的请求路径是认证客户、读取订单和当前政策、应用代码校验资格、向客户展示拟退款金额并确认、执行受限写入、查询最终状态，再报告结果或交人工。步骤可预期且会改变资金状态，因此固定工作流让确认点和停止路径明确。只有当动态工具选择有明确收益、能受限且可观测时，才值得引入 agent loop (智能体循环)。
 
-One proposed latency budget is 0.2 s for authentication and request setup + 0.6 s for permission-aware retrieval + 2.5 s for model generation + 0.2 s for validation and response handling + 0.5 s reserved for network and queueing = 4.0 s. These are allocations to validate, not measured stage percentiles; the sum of component p95s is not itself a statistical p95 guarantee. Instrument each stage and load-test the composed service.
+工具 schema (参数结构定义) 可以约束字段与类型，但不能授权操作或判断退款资格；应用仍需根据认证身份和业务状态校验权限与幂等。上线评估应覆盖常见意图、资格边界、重复请求、超时后结果未知、政策冲突、工具失败和人工升级；生产可观测性需要把每次状态迁移和交易 ID 关联，但避免在通用日志中复制个人或支付正文。有关运行状态与恢复，见[持久化 AI 运行架构](ai-application-architecture.md)；权限、确认与停止路径见[生产环境中的 AI 安全](../safety/ai-safety-in-production.md)。
 
-For a rough capacity check, use Little's Law L = λW for the mean number of requests in a stable system ([Little](https://doi.org/10.1287/opre.9.3.383)). Suppose the explicit design assumption is an admitted 6 requests/s and 1.2 s mean time spent in the model stage, including any internal wait. Then L = 6 × 1.2 = 7.2, or about 8 requests in flight in that stage. This is an average, not 8 active model slots or a replica count; queueing, bursts, and service limits need load tests with the real model, request lengths, and latency target. Size executing slots from measured service demand and the target utilization.
+## 代码审查：误报成本决定自动化边界
 
-For these mixed exact-ID and natural-language questions, I would test hybrid keyword and vector retrieval against a lexical baseline, enforce document permissions before context assembly, and evaluate retrieval and answer quality separately. Given the stated hosted-service permission and lack of capacity for operating GPU inference, I would put a hosted model behind that retrieval service, keep authorization outside the prompt, and bound queueing so overload does not silently consume the latency budget. If the data boundary changed, I would compare a private or self-hosted endpoint and include its operations cost; if retrieval or generation cannot fit the measured budget, I would revisit context selection, candidate ranking, and the model before relaxing answer-quality checks.
+代码审查助手需要读取 pull request (PR，合并请求) 的 diff (代码差异) 与必要仓库上下文，输出有证据、能定位的 finding (审查发现)。团队若不愿承受嘈杂评论，应先以草稿形式提供建议，由人决定是否发布；不自动批准或阻止合并。每条 finding 至少要有类别、受影响行、代码证据和可执行解释；定位不在此次改动内或引用不匹配时拒绝该 finding。要先确定仓库代码、差异、评论和依赖元数据能否发送到托管服务；若不能越过仓库边界，应比较获准的私有端点或本地模型，同时限制所提供上下文。
 
-## Refunds with a verified side effect / 需要确认写入结果的退款
+> [!example] 代码审查的一次请求路径
+> ~~~text
+> Pull request 事件
+>   → 差异与必要仓库上下文
+>   → 针对正确性/安全等定义好的检查
+>   → schema、行号和证据校验
+>   → 去重、排序、低置信度抑制
+>   → 人工审阅草稿
+>   → 收集接受/驳回反馈并监测结果
+> ~~~
 
-**Clarify first:** Which intents can be automated? Which actions change customer accounts or money? What policy and order systems are authoritative? Which requests require explicit consent or human review? What is the handoff path?
+### 用误报与漏报决定发布模式
 
-**Worked choice / 方案选择：** Suppose the supported flow is checking an order and requesting a refund, and policy disputes or tool failures need a person. I would use a fixed sequence: authenticate the customer; read the order and current policy; have application code check eligibility; show the proposed refund and ask for confirmation; call an idempotent refund operation; verify its result; then report the outcome or hand off. The sequence is predictable and changes financial state, so a fixed workflow makes authorization and stop points explicit. An agent loop would need evidence that dynamic tool choice materially helps before adding that control surface.
+> [!example] 合成审查样本的 precision 和 recall
+> 在独立标注集上分别统计 true positive (TP，真阳性)、false positive (FP，假阳性) 和 false negative (FN，假阴性)：
+>
+> ~~~text
+> precision = TP / (TP + FP)
+> recall    = TP / (TP + FN)
+> ~~~
+>
+> 合成小样本中，按去重后的 finding (审查发现) 计数：TP=15、FP=10、FN=5，因此 precision (精确率)=15/(15+10)=60%，recall (召回率)=15/(15+5)=75%。同一标注问题至多匹配一个发现。精确率回答“发布出的发现中多少是真的”，召回率回答“已知问题中多少被找到”；它们的分母分别是系统发现数与标注真问题数，不是 PR 数。样本小、问题类型混合或标签不全时，百分比会不稳定，应按安全、正确性、风格等类别分层并报告样本数。
 
-**Illustrative architecture / 架构示意:**
+如果团队目标是让高置信、可证据复核的 finding 节省时间，60% 的 precision 可能不足以自动发评论，但可以继续作为草稿或抑制低置信输出。若漏掉安全问题代价更高，也要监测 recall 和高风险类别，不能只优化精确率让系统变沉默。阈值是产品和工作流决策，应在上线前按标注集校准，不是模型的通用常数。
 
-~~~text
-Customer → intent and risk handling → assistant workflow
-                                      ↙          ↘
-                          read-only order/FAQ    bounded action tools
-                                      ↘          ↙
-                              validation → response or human handoff
-~~~
+上下文可包括 changed lines、附近函数、相关调用方和仓库规范；当上下文限长而被截断时记录省略范围。正确性与安全检查可以分开以便解释，但不要在没有任务收益时把一次审查变成多个昂贵模型调用。对大型或生成代码按文件或逻辑块处理，再合并重复 finding。收集作者接受、驳回和修正时，应解释这些行为仍是有偏反馈，不能直接当成错误标签。
 
-**Tool and policy design:**
+评估集应同时包含已知问题与干净改动；测量按类别的 TP/FP/FN、行号有效率、证据支持、开发者接受/驳回、每次审查费用和增加的工作流延迟。用人工审查基线作比较，不能在没有证据时宣称优于人类审查。评估方法和保留候选版本的门禁见[大语言模型评估方法](../evaluation/llm-evaluation-methods.md)与[Agent 改进与版本验收](../agents/agent-improvement-and-version-acceptance.md)。
 
-- Separate read-only lookup from actions that change state.
-- Give the runtime—not the model—responsibility for identity, authorization, business limits, confirmation requirements, and final tool execution.
-- Make retryable writes idempotent where the underlying system supports it; log the request outcome without exposing unnecessary personal data.
-- Use a fixed workflow for a predictable sequence. Consider an agent loop only where dynamic tool selection adds value and can be bounded, observed, and stopped.
-- Provide explicit handling for ambiguous intent, unavailable tools, policy conflicts, and user requests for a person.
+## 三个案例的发布证据落点
 
-**Evaluation and operations:** use reviewed examples for common intents, boundary cases, policy changes, tool failures, and escalation. Track task completion, human handoff, tool errors, unauthorized-action attempts, user feedback, and cost per resolved interaction. Treat the automation target as a product decision supported by evaluation, not a fixed percentage.
+这三种系统的“成功”不共用一个分数：文档问答关心证据可见性和权限边界；退款要证明交易状态和授权；代码审查需要在误报成本与漏报风险间选工作模式。候选上线前，应固定任务样本、模型和相关配置，以配对基线查任务翻转，同时测成本、延迟和硬门禁。生产后 trace 用于解释实际失败并提出修复方向；修复是否泛化到新问题仍由独立样本验收。奖励训练分数不能替代这一步，线上用户反馈也不能自动视作真值标签。
 
-A tool-call schema can constrain the shape of a proposed call; the application must still check whether the user and action are permitted. OpenAI's [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, illustrates provider-specific behavior; it does not replace application-side validation and authorization. See [Agent Fundamentals / 智能体基础](../agents/agent-fundamentals.md), [Tool Design and Function Calling / 工具设计与函数调用](../agents/tool-design-and-function-calling.md), and [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md).
-
-## Code review with a limited false-positive budget / 有误报预算的代码审查
-
-**Clarify first:** Which languages and review types are in scope? Should findings be advisory or posted automatically? How is repository context selected? What level of false positives will developers tolerate? Which code or metadata may leave the repository boundary?
-
-**Worked choice / 方案选择：** Suppose the team has low tolerance for noisy comments and wants a human to retain review authority. I would begin with advisory draft comments, require each finding to point to changed lines and cite the relevant code evidence, and suppress weak findings rather than posting every possible concern. I would not auto-approve or block a pull request. This favors developer trust and gives the team dismissal data before considering more automation.
-
-**Illustrative architecture / 架构示意:**
-
-~~~text
-Pull request event → diff and repository context
-                   → one or more review passes
-                   → schema and location validation
-                   → deduplicate and rank findings
-                   → draft comments for human review
-                   → collect feedback and measure outcomes
-~~~
-
-**Deep-dive topics:**
-
-- **Context selection:** include changed lines, nearby code, relevant callers, and repository guidance as available. Record what was omitted when size limits require truncation.
-- **Review passes:** separate correctness, security, and style checks when that makes evaluation or prompts clearer. Keep each pass tied to a defined review rubric.
-- **Output validation:** require a finding category, explanation, location within the diff, and actionable suggestion; reject locations or structures that do not match the submitted change.
-- **Noise management:** rank or suppress uncertain findings, show evidence, and make dismissal easy. The acceptable precision/recall balance depends on developer workflow and risk.
-- **Large or generated changes:** segment by file or coherent unit, avoid irrelevant generated content, then deduplicate before presenting results.
-
-**Evaluation and operations:** build a held-out set of reviewed changes with known issues and clean examples. Measure issue detection by category, false positives, location validity, developer acceptance or dismissal, cost per review, and delay added to the workflow. Compare against a no-assistant baseline; do not claim to outperform human review without evidence.
-
-## Practice / 练习
-
-- Ask clarifying questions before fixing assumed scale or targets.
-- Draw the request and data paths, including trust boundaries and failures.
-- State assumptions and what evidence could change the design.
-- Discuss quality, latency, cost, permissions, and operational ownership together.
-- Explain how the system is evaluated, rolled out, monitored, and rolled back.
-
-## Related notes / 相关笔记
-
-- [Durable AI runs / 持久化 AI 运行](./ai-application-architecture.md) covers production run controls. [AI deployment choices / AI 部署选择](./ai-deployment-patterns.md) compares where to run the model.
-- [RAG Architecture and Implementation / 检索增强生成](../rag/rag-architecture-and-implementation.md) covers retrieval implementation and grounding.
-- [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) covers evaluation design.
-- [Agent Fundamentals / 智能体基础](../agents/agent-fundamentals.md) covers runtime agent patterns.
+> [!info]- 来源
+> 以下第一手资料支撑对应机制；案例数字是明确标注的假设或合成计算，不是来源中的实测。
+>
+> - **容量公式。** Little, [“A Proof for the Queuing Formula: L = λW”](https://doi.org/10.1287/opre.9.3.383)，*Operations Research*, 1961, 9(3):383–387；适用于稳定系统的长期平均关系，不直接给出分位数或 worker 配置。
+> - **退款幂等与结果读取。** Stripe 官方 [Idempotent requests](https://docs.stripe.com/api/idempotent_requests) 说明支持相同幂等键重放及参数一致性/保留期边界；[Create a refund](https://docs.stripe.com/api/refunds/create) 允许多次部分退款并支持 metadata；[Retrieve a refund](https://docs.stripe.com/api/refunds/retrieve) 按退款 ID 读取，说明“支持幂等键”不等于“可按键查询”。
+> - **退款对象与状态。** Stripe 官方 [Refund object](https://docs.stripe.com/api/refunds/object) 给退款对象唯一 ID，并区分 pending、requires_action、succeeded、failed、canceled；存在对象不等于最终成功。
+> - **结构化输出与工具调用。** OpenAI 官方 [Function calling](https://developers.openai.com/api/docs/guides/function-calling) 和 [Structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)，截至 2026-11-06 核对。schema 约束接口形状，不代替应用授权与业务状态检查。

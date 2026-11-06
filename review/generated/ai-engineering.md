@@ -90,7 +90,7 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 
 第一次模型调用以工具请求结束，因此应用还需要继续工作。第二次调用则正常地以回答结束。在本例中，应用会先保存回答并将本次运行标记为完成，再把结果返回给调用者。如果应用在生成过程中流式传输文本，仍须跟踪生成最终是成功完成还是失败。[运行状态与恢复](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)
 
-区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) 会进一步说明验收标准和对比方法。
+区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) 会进一步说明验收标准和对比方法。
 
 本次服务运行到此结束。若想进一步了解任一次模型调用中的计算过程，可以继续阅读[语言模型如何将提示转换为文本](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)。该章节会依次展开前向计算、解码和训练。
 
@@ -342,7 +342,7 @@ prefill (预填充) 会让初始序列通过各层。最后一个位置的 logit
 
 如果任务本来就需要生成多个候选解释或解法供后续核验，那么尝试更高的采样多样性可能有用。代价是出现更多质量较差或无效的候选结果，也需要更多核验工作。提高温度既不会补上缺失证据，也不会让没有依据的说法变得可接受。多样性是否能改善最终结果，取决于候选生成器与验证器的整体效果。
 
-做受控比较时，应固定模型版本、指令、工具和案例集，只改变所选的解码设置。对每个候选设置重复完整运行，并衡量工具选择及参数是否正确、解释是否有依据、故障处理是否恰当，以及成本和时延。用一组数据开发设置，再用单独的留出集验收。这是一种工程测试方法，并非宣称较低或较高的温度必然更好。[如何构建可比较的评估集](#Build%20a%20comparable%20regression%20set%20/%20%E5%BB%BA%E7%AB%8B%E5%8F%AF%E6%AF%94%E8%BE%83%E7%9A%84%E5%9B%9E%E5%BD%92%E9%9B%86) 会进一步介绍评估方法，而不只关注这一项设置。
+做受控比较时，应固定模型版本、指令、工具和案例集，只改变所选的解码设置。对每个候选设置重复完整运行，并衡量工具选择及参数是否正确、解释是否有依据、故障处理是否恰当，以及成本和时延。用一组数据开发设置，再用单独的留出集验收。这是一种工程测试方法，并非宣称较低或较高的温度必然更好。[如何构建可比较的评估集](#%E5%BB%BA%E7%AB%8B%E5%8F%AF%E6%AF%94%E8%BE%83%E7%9A%84%E5%9B%9E%E5%BD%92%E9%9B%86) 会进一步介绍评估方法，而不只关注这一项设置。
 
 ### 下一个词元训练如何更新这些参数？
 
@@ -942,7 +942,7 @@ flowchart TD
 - [如何测量 AI 服务的时延与成本](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：定位端到端瓶颈，计算每份成功任务成本。
 - [如何选择 AI 部署方式并安全回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：把候选和测得的工作负载映射到运行方式和发布计划。
 - [AI 应用架构如何经受断连与 worker 故障？](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)：定义稳定运行标识、持久状态与恢复契约。
-- [如何判断 AI 系统是否满足任务契约？](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计样本、评分维度、保留集与不确定性。
+- [如何判断 AI 系统是否满足任务契约？](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计样本、评分维度、保留集与不确定性。
 - [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)、[微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)和[检索增强生成架构](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：分别处理模型每次看到什么、何时训练行为，以及怎样使用外部证据。
 
 > [!info]- 来源
@@ -1011,7 +1011,7 @@ $$
    完整 TCO 上限尚未定出；在确定并验证总成本门槛前，不把试点当成全面上线许可。
 5. **回滚并核实：** 首次模型试点切回人工月报；以后版本若已存在已验收模型组合，则将流量切回该版本。停止候选流量后，核对未完成运行、错误、数据影响和用户反馈。
 
-Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它不会自动恢复部署模板以外的提示词、供应商模型配置、数据状态或已产生的外部副作用。若用 Kubernetes，自身保留 Deployment 修订史并确认回退完成；其他平台也需有可重放的版本选择和回退机制。AI 运行的持久标识、断连恢复和副作用处理属于[生产 AI 运行架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)；上线后持续将任务反馈与版本关联，见[生产可观测性与反馈](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)。
+Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它不会自动恢复部署模板以外的提示词、供应商模型配置、数据状态或已产生的外部副作用。若用 Kubernetes，自身保留 Deployment 修订史并确认回退完成；其他平台也需有可重放的版本选择和回退机制。AI 运行的持久标识、断连恢复和副作用处理属于[生产 AI 运行架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)；上线后持续将任务反馈与版本关联，见[生产可观测性与反馈](#21.%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)。
 
 ### 相关笔记
 
@@ -1019,7 +1019,7 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 - [时延与成本优化](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：提供真实负载、尾延迟、成功任务成本及缓存数据。
 - [AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)：在任何部署模式下保持稳定运行 ID 和权威状态。
 - [GPU 推理容量与 KV 缓存](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)：测量自托管容量与请求调度。
-- [生产可观测性与反馈](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)：用线上结果决定保留或回滚。
+- [生产可观测性与反馈](#21.%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)：用线上结果决定保留或回滚。
 
 > [!info]- 来源
 > - **托管服务的数据和留存条件必须检查具体控制与 API 功能：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored with the OpenAI API”和“Data retention controls”；这些条款只适用于该平台，不能代替其他提供方的合同评估。
@@ -1080,7 +1080,7 @@ For human-readable output, headings, bullets, XML tags, or code fences can make 
 }
 ~~~
 
-Application code should check allowed categories and required fields, and verify any consequential claim against its source. For the broader distinction between task success, factual correctness, source support, and instruction adherence, see [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
+Application code should check allowed categories and required fields, and verify any consequential claim against its source. For the broader distinction between task success, factual correctness, source support, and instruction adherence, see [LLM Evaluation Methods / 大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F).
 
 ### Optional organization pattern / 可选组织方式
 
@@ -1209,7 +1209,7 @@ Expected behavior:
 Revise only the instruction needed to address this failure. Preserve the task, output contract, and other constraints. Return the revised prompt and a short change note. This candidate still requires evaluation on examples not used to write it.
 ~~~
 
-A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design and acceptance evidence.
+A practical loop is to define success criteria, generate or revise candidates, compare them on the same development set, review regressions and edge cases, then confirm the selected version on an untouched held-out set before deployment. Keep the evaluation data appropriate for the sensitivity and policy of the task. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design and acceptance evidence.
 
 ### Related notes / 相关笔记
 
@@ -1295,7 +1295,7 @@ A practical loop is to define success criteria, generate or revise candidates, c
 > [!info]- 研究案例：状态遗忘与跨任务复用
 > Manus 报告批量审阅 20 份简历时观察到重复动作，并提出用结构化变体打破模式；这是其系统中的观察和待评估假设，不能支持向当前上下文注入无关格式变化。
 >
-> *Scaling Discovery Requires Forgetting* 在四类带外部评分的搜索任务中比较保留与清空搜索状态后从当前最佳候选重启；它不建立一般对话或生产运行的重置规则。GitSwarm 用共享分支仓库和显式语义依赖复用中间产物：Git 的物理 `parent` 提交记录 worker 开始工作时的树，`informed_by=` 则记录作者声明的语义来源，必须包含 parent，也可指向其他分支产物；来源关系不单独证明因果。其 worker 模型在一次运行中保持固定。Harness² 区分任务级尝试与另行积累的 harness 经验，其结果受特定框架、模型和专业任务基准限制。保存和重读一个经验也不证明它改善了新任务结果，应按相同验收条件对照。[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
+> *Scaling Discovery Requires Forgetting* 在四类带外部评分的搜索任务中比较保留与清空搜索状态后从当前最佳候选重启；它不建立一般对话或生产运行的重置规则。GitSwarm 用共享分支仓库和显式语义依赖复用中间产物：Git 的物理 `parent` 提交记录 worker 开始工作时的树，`informed_by=` 则记录作者声明的语义来源，必须包含 parent，也可指向其他分支产物；来源关系不单独证明因果。其 worker 模型在一次运行中保持固定。Harness² 区分任务级尝试与另行积累的 harness 经验，其结果受特定框架、模型和专业任务基准限制。保存和重读一个经验也不证明它改善了新任务结果，应按相同验收条件对照。[LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
 
 ### 下一章怎样接手
 
@@ -1471,7 +1471,7 @@ HyDE 原论文把生成段落当作零样本稠密检索的中间表示，并明
 | 候选中有证据，最终输入却没有。 | 融合、重排、去重、预算、截断和父块加载。 | 调整排序或组装，确认引用映射仍然准确。 |
 | 证据进了上下文，答案仍不支持或引用错位。 | 实际输入段落、版本冲突、输出中的每条主张与引用。 | 保持检索结果，单独比较提示或模型变化。 |
 
-要知道改动是否有效，应分别评估证据检索和回答生成。对固定查询集标出预期的 `doc_id`、版本与段落 ID，先看 Recall@k（前 $k$ 个候选召回率）是否取到所需依据，再看排序后的证据是否进入上下文；生成侧检查事实正确性、主张支持、引用准确和缺证时是否暂停。系统层还要统计索引新鲜度、权限拒绝、端到端时延和成本。评估集中应包括旧版本、无答案问题、空名称断言失败、工作节点中断、无权文档以及权限撤销；不能只用“答案流畅”当通过条件。RAGChecker 按主张粒度拆分检索和生成问题；Ragas、ARES 以不同方式评估上下文相关性、回答忠实度或相关性。这些自动化框架是诊断信号，应对代表性案例人工复核，并按应用的权限、更新与引用要求设验收条件，不能把框架分数当作通用合格线。[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
+要知道改动是否有效，应分别评估证据检索和回答生成。对固定查询集标出预期的 `doc_id`、版本与段落 ID，先看 Recall@k（前 $k$ 个候选召回率）是否取到所需依据，再看排序后的证据是否进入上下文；生成侧检查事实正确性、主张支持、引用准确和缺证时是否暂停。系统层还要统计索引新鲜度、权限拒绝、端到端时延和成本。评估集中应包括旧版本、无答案问题、空名称断言失败、工作节点中断、无权文档以及权限撤销；不能只用“答案流畅”当通过条件。RAGChecker 按主张粒度拆分检索和生成问题；Ragas、ARES 以不同方式评估上下文相关性、回答忠实度或相关性。这些自动化框架是诊断信号，应对代表性案例人工复核，并按应用的权限、更新与引用要求设验收条件，不能把框架分数当作通用合格线。[LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
 
 ### RAG、长上下文与微调的分工
 
@@ -1639,7 +1639,7 @@ ReAct 的关键是让外部观察改变下一步。论文在 PaLM 的少样本�
 
 评估时，把同一组任务交给固定工作流和 Agent，比较完成率、写入结果、权限违规、重复动作、成本和延迟。τ-bench 同时检查任务结束后的数据库状态与必须告知用户的信息。后续 τ²-bench 的电信任务还让模拟用户与 Agent 使用不同工具操作同一个环境，暴露了只测试单方动作时看不到的协调失败。将这类变化变成自己的测试用例，例如用户改完设置后要重新读状态，再决定是否执行后续动作。 [Anthropic, Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) · [τ-bench](https://arxiv.org/abs/2406.12045) · [τ²-bench](https://arxiv.org/abs/2506.07982)
 
-An observation updates the current run. A change that should apply across later runs needs a baseline, external evidence, and a retained version. / 观察会更新当前运行。若变更要延续到后续运行，就需要基线、外部证据与可保留的版本。[How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](#20.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)
+An observation updates the current run. A change that should apply across later runs needs a baseline, external evidence, and a retained version. / 观察会更新当前运行。若变更要延续到后续运行，就需要基线、外部证据与可保留的版本。[How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)
 
 ### 可用动作空间 / Action space
 
@@ -1652,7 +1652,7 @@ An observation updates the current run. A change that should apply across later 
 - [编排模式](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：决定步骤、并行、路由或多智能体结构。
 - [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：管理长任务中的历史、外部状态与缓存。
 - [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：定义运行时如何执行模型请求。
-- [LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：区分任务反馈、变更验收与持久版本。
+- [LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：区分任务反馈、变更验收与持久版本。
 ## 14. How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？
 
 **Short answer / 简答：** Choose orchestration from the task’s dependencies, independence, and ownership. Use code for known steps, add model-driven decomposition only when the work cannot be specified in advance, and keep one main loop unless measured parallelism, isolation, or a real capability boundary justifies delegation.
@@ -1711,7 +1711,7 @@ Anthropic 的模式目录区分固定路径的 workflow 与模型驱动的 agent
 
 [Anthropic / Diane Sarkis 的 fold-subagents 文章（2026-10-22，“Using an agent loop with progressive disclosure”“Task-completion evals”等章节）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)讨论何时把依赖共享上下文的 subagent 流程折入主循环：先建立端到端基线，再逐个折叠 subagent，检查任务成败、生产链路和必须遵守的规则，并以重复运行比较；合并后仍保留领域流程。其讨论也将独立研究、并行探索和验证列为可能适合独立 worker 的工作。文章给出的是评估方法与工程经验，不是折叠 subagent 会普遍提高表现的因果证明，也没有普适的工具数量分界线。
 
-GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在可分支的共享 Git 仓库中发布可组合产物；执行 harness 仍负责调度和发布验证，而该验证检查提交要求、不认证产物正确性。[GitSwarm v1（2026-10-04，§§2.1–2.3）](https://arxiv.org/html/2610.04862v1)没有中央“intellectual planner”替 workers 指派探索方向，但不因此取消执行协调。它支持把独立、可检查的产物作为拆分条件，不证明普通任务都应使用多 agent。状态取舍见[上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，架构对照及其证据边界见[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在可分支的共享 Git 仓库中发布可组合产物；执行 harness 仍负责调度和发布验证，而该验证检查提交要求、不认证产物正确性。[GitSwarm v1（2026-10-04，§§2.1–2.3）](https://arxiv.org/html/2610.04862v1)没有中央“intellectual planner”替 workers 指派探索方向，但不因此取消执行协调。它支持把独立、可检查的产物作为拆分条件，不证明普通任务都应使用多 agent。状态取舍见[上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，架构对照及其证据边界见[LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 ### 提示模板仍是单 agent 的选项
 
@@ -1726,7 +1726,7 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 - [智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：工作流与 agent 的控制流边界及运行循环。
 - [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：定义被编排结构调用的能力与执行边界。
 - [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定在交接中保留什么、何时按需载入或重启探索。
-- [LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：用端到端任务证据比较主循环、委托和交接。
+- [LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：用端到端任务证据比较主循环、委托和交接。
 ## 15. How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？
 
 **Short answer / 简答：** Treat user and retrieved content as untrusted data and model outputs as proposals. The application enforces authorization, validates outputs for their next consumer, limits execution capabilities, and keeps a stop path outside the model loop. Test those boundaries against direct and indirect injection, review high-impact actions, and turn confirmed failures into regression cases.
@@ -1746,7 +1746,7 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 ### Threats and failure modes / 威胁与失效方式
 
-流畅回答仍可能错误或缺乏证据。检索可以提供有用依据，但不保证模型会正确使用；检索文本也不授予执行权限。本篇关注由此产生的运行安全边界；[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)衡量事实性与支持度，[RAG 架构与实现](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)解释检索行为。NIST 将 confabulation 列为生成式 AI 风险；它没有把 grounding 视作正确性保证（[NIST AI 600-1, §2.2](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)）。
+流畅回答仍可能错误或缺乏证据。检索可以提供有用依据，但不保证模型会正确使用；检索文本也不授予执行权限。本篇关注由此产生的运行安全边界；[LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)衡量事实性与支持度，[RAG 架构与实现](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)解释检索行为。NIST 将 confabulation 列为生成式 AI 风险；它没有把 grounding 视作正确性保证（[NIST AI 600-1, §2.2](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)）。
 
 提示注入不要求成功“覆盖 system prompt”。只要不可信内容改变模型行为并违反预期任务或数据边界，就构成问题。OWASP LLM01:2026 涵盖直接与间接输入，包括用户内容、检索材料、工具输出、多模态内容和持久记忆（[LLM01:2026 Prompt Injection](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/blob/main/2026/final/LLM01_PromptInjection.md)）。
 
@@ -1784,7 +1784,7 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 ### Test and monitor the boundaries / 测试与监控边界
 
-红队测试探索攻击者可能如何突破本应用的数据和动作边界；评估测量已知案例；生产监控观察真实运行结果，三者不能互相替代。发布前，以及模型、提示、工具、数据源或权限发生实质变化后，都应测试；相关事件发生后也应测试。NIST AI 600-1 要求实证评估与持续监控；[评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)说明测量和回归设计。
+红队测试探索攻击者可能如何突破本应用的数据和动作边界；评估测量已知案例；生产监控观察真实运行结果，三者不能互相替代。发布前，以及模型、提示、工具、数据源或权限发生实质变化后，都应测试；相关事件发生后也应测试。NIST AI 600-1 要求实证评估与持续监控；[评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)说明测量和回归设计。
 
 回归用例应关联到应用实际能力：
 
@@ -1800,7 +1800,7 @@ GitSwarm 提供了不同范围的例子：异步 worker 自主选择工作，在
 
 - [工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：工具请求、schema 与副作用执行。
 - [RAG 架构与实现](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：外部证据的检索和访问控制。
-- [LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：质量与安全用例的测量和回归。
+- [LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：质量与安全用例的测量和回归。
 ## 16. How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？
 
 **Core explanation / 核心解释：** A client connection is a delivery channel, not the identity or source of truth for an AI task. Give each logical submission a stable run ID, persist authoritative state and useful checkpoints, and let clients query or resume that run after a timeout. A disconnect leaves delivery incomplete; it does not establish whether the model call or an external side effect finished. / 客户端连接只是交付通道，不是 AI 任务的身份或事实依据。为每次逻辑提交分配稳定的运行 ID，持久化权威状态和有用检查点，并允许客户端在超时后查询或恢复同一次运行。断连只能说明交付不完整，无法证明模型调用或外部副作用是否完成。
@@ -1821,7 +1821,7 @@ Treat a model-proposed tool call as untrusted input. The application executes it
 
 Set explicit deadlines, bounded retries, idempotency for retryable writes, cancellation behavior, rate and budget limits, an error or escalation path, and a way to roll back a model or prompt version. Retry only when the operation contract makes a duplicate safe. A timeout says the caller did not receive a result in time; it does not say the server did no work.
 
-These are separate design questions with deeper treatments: [how to reduce latency and cost](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F), [how to choose a deployment pattern](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F), and [how to monitor and improve a production feature](#21.%20How%20do%20you%20monitor%20a%20production%20AI%20feature%20and%20turn%20feedback%20into%20a%20safe%20improvement?%20/%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
+These are separate design questions with deeper treatments: [how to reduce latency and cost](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F), [how to choose a deployment pattern](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F), and [how to monitor and improve a production feature](#21.%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F). The remainder of this note defines the durable run contract that those interfaces rely on.
 
 ### Durable runs, checkpoints, and recovery / 持久化运行、检查点与恢复
 
@@ -1889,106 +1889,149 @@ Some workflow runtimes persist an ordered event history and replay deterministic
 - [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) owns browser-side partial output, terminal events, and local cancellation.
 - [Confirming request outcomes / 确认请求结果](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) explains deadlines, retry, and idempotency.
 - [Database transactions and recovery / 数据库事务与恢复](../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) explains the boundary for durable application state.
-- [AI System Design Interview Questions / AI 系统设计面试题](#22.%20How%20do%20you%20turn%20an%20AI%20system%20design%20prompt%20into%20a%20defensible%20architecture?%20/%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) applies these production mechanisms to end-to-end design cases.
+- [AI System Design Interview Questions / AI 系统设计面试题](#22.%20%E5%A6%82%E4%BD%95%E6%8A%8A%20AI%20%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E9%A2%98%E8%BD%AC%E5%8C%96%E4%B8%BA%E6%9C%89%E4%BE%9D%E6%8D%AE%E7%9A%84%E6%9E%B6%E6%9E%84%EF%BC%9F) applies these production mechanisms to end-to-end design cases.
 
 **Sources / 来源：** [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) defines idempotent HTTP method semantics, and [§15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3) says `202 Accepted` does not mean processing is complete. Temporal's [Workflow replay guide](https://docs.temporal.io/workflows) and [Event History guide](https://docs.temporal.io/encyclopedia/event-history) describe one runtime's deterministic orchestration replay and recorded activity results. These sources support the mechanisms described here; the example API, states, and names are synthetic application choices.
-## 17. How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？
+## 17. 如何判断 AI 系统是否满足任务契约？
 
-**Core explanation / 核心解释：** Define success in observable terms, then evaluate representative cases at the layer where the behavior occurs—retrieval, generation, or an end-to-end agent. Use objective checks where there is a defensible answer, verify facts and source support separately, and use an explicit rubric or calibrated judge for open-ended quality. Keep a held-out regression set, report the denominator and uncertainty, and pair offline comparisons with production outcomes. No single score captures task success, truth, relevance, safety, and operating cost. / 先把成功定义为可观察的条件，再在行为实际发生的层级评估代表性案例：检索、生成或 agent 端到端。存在可辩护答案时使用客观检查；事实正确与来源支持分别核验；开放式质量使用明确 rubric 或经校准的 judge。保留独立回归集，报告分母与波动，并把离线比较与生产结果结合。单一分数无法同时代表任务成功、事实、相关性、安全和运行成本。
+### 从 build 73 的日志开始：回答对用户有用吗？
 
-### Define each dimension / 分别定义各评估维度
+发布工程师把一次失败的 continuous integration (CI，持续集成) 构建交给日志助手，希望得到失败类别、可核对证据和下一步排查方向。
 
-Faithfulness 和 groundedness 在论文与工具中用法不完全一致。评分准则或评分量表（rubric）应明确评估维度和证据锚点；需要对照真值的任务还应说明 ground truth（参考真值，如外部事实或标注答案）。评估来源忠实度时要指定来源/上下文，评估指令遵循时要列明请求中的约束。RAG 研究常将上下文相关性、答案对上下文的忠实度、答案相关性分别评估；这是有用的拆分方式，不是普遍完整的指标清单。[RAGAS](https://arxiv.org/abs/2309.15217) 与 [ARES](https://aclanthology.org/2024.naacl-long.20/) 使用相近但不完全相同的评估设置。
+> [!example] Build 73 的合成日志样本
+> ~~~text
+> build=73 stage=integration
+> line 18: starting local service at 127.0.0.1:8081
+> line 19: GET /health
+> line 20: connect ECONNREFUSED 127.0.0.1:8081
+> line 21: retry 3/3 exhausted
+> line 22: integration tests skipped: service did not become ready
+> ~~~
 
-| Dimension / 维度 | Definition / 定义 | Does not establish / 不能据此推出 |
+分类时沿时间线定位最早导致任务中止、且之后没有恢复的阻塞失败：第 20 行连接被拒绝，第 21 行三次重试耗尽，第 22 行因此跳过集成测试。若连接错误后来恢复并且后续任务继续，就不能把它单独当作主失败。成功答案应把本例归为服务启动或就绪失败，而不是断言某个业务测试发现了代码回归；证据应指向第 20 至 22 行，建议检查进程启动、端口绑定和 readiness（就绪探针）配置。若答案只说“构建失败”，它可能事实无误却没有完成用户任务；若它说“支付接口断言失败”，则类别错误，而且没有证据支持。
+
+Build 73 在这里是开发阶段暴露问题的样例；它和任何用于修改候选的案例都不进入后面的独立验收集。
+
+这里的 task contract (任务契约) 是：找出最早未恢复且阻断后续任务的失败，给出一个主类别、引用实际日志行、提出不超出证据的下一步；禁止臆造根因或把无关服务日志当证据。评估不是给流畅文本打一个总分，而是逐项验证这个契约。下文继续用同一个助手说明怎样选样本、读分数、决定发布，并把这套可靠评分规则用于未参与训练的新问题。
+
+### 先把“成功”拆成可观察的条件
+
+factual correctness (事实正确性) 和 source faithfulness (来源忠实度) 回答不同问题：第 20 行是否真的出现 ECONNREFUSED 是可由日志检查的事实；把错误归因于服务未就绪，是否得到第 20 至 22 行支持，则是证据支持问题。来源可能过期，事实也可能正确但与给定来源无关，所以不能互相替代。
+
+| 维度 | 在 build 73 中如何检查 | 通过它仍不能推出什么 |
 |---|---|---|
-| Task success / 任务成功 | **EN:** Did the result meet explicit acceptance criteria? **中：** 输出是否满足明确的任务验收条件？ | **EN:** That every claim is true or safe. **中：** 不能证明每个说法都真实或安全。 |
-| Factual correctness / 事实正确性 | **EN:** Are claims true against an appropriate external reference at the relevant time? **中：** 说法对照适当的外部依据、在相关时间点上是否为真？ | **EN:** That the supplied context supports them. **中：** 不能证明给定上下文支持这些说法。 |
-| Source faithfulness or groundedness / 来源忠实度或依据充分性 | **EN:** Are claims supported by the specified source/context, without material contradiction? **中：** 说法是否由指定来源/上下文支持，且没有实质冲突？ | **EN:** That the source is current or correct. **中：** 不能证明来源本身及时或正确。 |
-| Relevance / 相关性 | **EN:** Does the answer address the question or requested information? **中：** 答案是否回应问题或所需信息？ | **EN:** That it is correct, supported, or complete. **中：** 不能证明答案正确、有依据或完整。 |
-| Instruction adherence / 指令遵循 | **EN:** Did it follow applicable format, scope, and constraints? **中：** 是否遵守适用的格式、范围和约束？ | **EN:** That it is factual. **中：** 不能证明内容属实。 |
-| Operational quality / 运行质量 | **EN:** Does it meet latency, availability, and cost requirements? **中：** 是否满足延迟、可用性和成本要求？ | **EN:** That user task goals were met. **中：** 不能证明用户任务目标已达成。 |
+| task success (任务成功) | 类别、证据和下一步是否满足事先列出的契约？ | 每个说法都为真或无风险。 |
+| 事实正确性 | 日志行、构建元数据是否与记录一致？ | 指定证据支持答案中的因果解释。 |
+| faithfulness / groundedness (来源忠实度/依据充分性) | 关键说法是否有指定日志或报告支撑，且无实质矛盾？ | 日志记录本身完整、及时或正确。 |
+| relevance (相关性) | 是否回答发布工程师问的失败类型和排查问题？ | 答案正确、完整或证据充分。 |
+| instruction adherence (指令遵循) | 是否只报一个主类别、给出行号并遵守格式？ | 内容属实。 |
+| operational quality (运行质量) | 是否符合延迟、可用性和每次完成成本要求？ | 用户任务成功。 |
 
-“Hallucination / 幻觉”没有统一且公认的分类法。不同综述对 factuality 与 faithfulness 的关系和子类划分并不相同；某篇论文的 taxonomy 不能当作普遍的三分法。评估时应标记可观察的失败及其依据，例如：对照外部依据为假、给定上下文不支持、与上下文冲突，或不遵守指令。指令失败应明确测量；某篇研究是否把它归到 faithfulness 子类，取决于该文定义。[Ji et al., *Survey of Hallucination in Natural Language Generation*](https://arxiv.org/abs/2202.03629)；[Huang et al., *A Survey on Hallucination in Large Language Models: Principles, Taxonomy, Challenges, and Open Questions*](https://doi.org/10.1145/3703155)（[arXiv](https://arxiv.org/abs/2311.05232)）。
+hallucination (幻觉) 没有一套对所有研究都统一的分类法。实际验收可标记可观察的错误：与外部依据相反、超出给定来源、与来源冲突、未满足格式或动作约束。若将指令失败算作某种幻觉子类，应在所用分类规则中明说，而不要把特定论文的分类当普遍定义。本文之后把“无依据的根因归因”当作一种待测失败模式。
 
-**合成示例 / Synthetic example。** 给定的服务日程写着 5 月 10 日闭店，但权威的当前通知已将日期改为 5 月 12 日。复述 5 月 10 日的答案忠于给定日程，却在当前事实上错误。回答 5 月 12 日可能符合当前事实，却没有得到该日程支持。应分别评估来源支持与当前事实，并记录参照日期。
+### 让样本与用户面对的任务一致
 
-### Choose metrics for the task / 按任务选择指标
+先定义目标总体：这里是发布团队提交的构建失败日志，而不是任何自然语言问题。若线上流量既有服务未启动、断言失败，也有依赖超时，回归集要覆盖这些主要类别、常见格式、边界情况和曾经失败的输入。可以按失败类别与日志长度分层抽样，再在每层中抽取案例；若为了覆盖稀有错误而过采样，汇总线上成功率时需按真实流量占比加权，不能把过采样后的比例误称线上比例。
 
-| Metric family / 指标类型 | Good fit / 适用条件 | Boundary / 边界 |
-|---|---|---|
-| Accuracy, exact match, F1, executable tests / 准确率、精确匹配、F1、可执行测试 | 有明确标签、结构化输出或可辩护的预期结果时。代码通过率只说明指定测试集的结果。 | 标签或测试集可能遗漏其他质量维度或合理答案。 |
-| BLEU, ROUGE / 参考文本重合度 | 翻译、摘要等任务中，参考文本重合度能作为有用的语料级信号时。BLEU 原用于机器翻译的快速、频繁评估；ROUGE 是一组参考摘要指标。[BLEU](https://research.ibm.com/publications/bleu-a-method-for-automatic-evaluation-of-machine-translation)、[ROUGE](https://aclanthology.org/W04-1013/)。 | 衡量词面重合，不是通用事实性或有用性指标。合理改写可能重合较少；仅有高重合分不能证明答案正确或相关。它们是特定任务工具，并非因历史较久就失效。 |
-| Retrieval precision/recall and ranking measures / 检索精确率、召回率与排序指标 | 有相关文档或参考证据标注的检索阶段。Recall@k 可看所需证据是否出现在前 k 项；精确率/排序指标可看返回集合与顺序。 | 结果取决于候选集、相关性标注和 k。检索到相关内容不等于证据完整，也不等于最终答案有依据。 |
-| Rubric or model-graded scores / rubric 或模型评审分数 | 没有唯一答案的开放任务，且评价标准可以明确写出并用例子校准时。 | judge 本身也是可能出错的模型；评分不是 ground truth（参考真值）。 |
-| Latency, availability, and cost / 延迟、可用性与成本 | 作为运行约束，与任务结果一起报告，用于理解质量与成本的权衡。 | 不能替代任务质量。 |
+对每条样本记录可复核的目标：主类别、支持类别的行、可接受的下一步，以及拒答或证据不足时的行为。标注说明要规定一条日志可以同时有诱因和表现时怎样选主类别，并由有经验的审阅者裁定歧义样本。人工标注同样可能错；保留来源版本、裁定记录和无法确定的标签。
 
-不要把指标名称当成跨库统一标准。如果使用框架中的 faithfulness、context precision 或 answer relevance 分数，应固定框架版本并检查其输入和 rubric；名称相同的指标也未必可互换。本文不提供框架 API 用法。
+开发集可用于修改提示词、检索和检查器；最终验收集必须与反复调试使用的样本隔离。锁定模型版本、system prompt (系统提示词)、索引、工具、生成设置、评分规则和发布日期。这里的统计单位是独立任务：同一事故的多份日志、同一题的多次生成或多个随机种子不能直接当作多道独立题。若样本按事故成簇或按线上流量加权，应改用匹配其抽样结构的分析或分组重采样，不能直接把行数代入普通 Wilson 或配对检验。反复挑选能在同一验收集上胜出的方案会让该集合逐渐成为开发集，所以重要发布需要保留新题或新时间段作最终审计。不得将含客户信息的原始日志直接放入公开教学材料。
 
-### Evaluate the pipeline at the right level / 在正确层级评估链路
+对 retrieval-augmented generation (RAG，检索增强生成) 链路，分阶段测量可帮助定位这类答案为何错：
 
-对检索增强系统分阶段评估，才便于定位故障：
+1. **检索：** 是否取回服务启动和健康检查相关日志、运行手册？如果正确证据不在候选集合，后续生成很难靠提示词补回。
+2. **给定上下文后的生成：** 是否正确解释所取片段、区分观察到的错误与推断原因，并引用实际行号？
+3. **端到端任务：** 工程师能否据此找到真正故障，回答有无不当动作或升级？组件分数不能代替端到端完成情况。
 
-1. **Retrieval / 检索：** 候选集合是否包含所需证据？排序是否把它放在系统可用的位置？有相关文档或证据标注时，可据此评估。
-2. **Generation given context / 给定上下文后的生成：** 回答是否回应问题、遵守指令、在需要时正确引用，且说法得到上下文支持？如果任务要求事实正确，还要单独核验外部事实。
-3. **End-to-end agent / Agent 端到端：** Agent 是否通过合适的动作达到要求的环境状态？评估目标完成、工具/动作是否正确、有无有害副作用，以及延迟或成本。组件分数有助于定位问题，但不能证明端到端成功。像 [AgentBench](https://arxiv.org/abs/2308.03688) 这样的交互式 agent 基准在环境任务中评估 agent，而不只是评分孤立文本回答。
+RAGAS 和 ARES 分别展示了上下文相关性、答案忠实度、答案相关性等多维评估，以及结合自动评审、人类标注和统计估计的方案。它们的维度和定义并不完全一致，既不是统一标准，也不是完整任务契约。检索到相关段落不证明证据完整；引用了日志也不证明解释正确。
 
-**Offline / 离线评估**用固定样本做受控比较和回归，便于复现；但可能漏掉当前流量、变化中的来源和线上用户结果。**Online / 线上观察或实验**反映部署行为，但结果可能延迟、不完整，或受模型以外因素影响。条件允许时两者结合：用线上证据发现变化与候选案例，经审查并去标识化或合成为适当样例，再纳入有版本记录的离线集。公开教学示例不要包含私人或用户来源数据。
+### 选择与问题相称的指标
 
-### LLM judges and human review / 模型评审与人工复核
+有明确标签或可执行预期时，用准确率、精确匹配、F1 或测试通过率；它们依赖正确标签和覆盖充分的样本。F1 衡量 precision (精确率) 与 recall (召回率) 的调和平均，常用于类别不平衡时观察两者折衷，但单独一个 F1 会隐藏漏报与误报各自的代价。若业务把“错误叫成代码回归”视作高代价误报，应分开报告该类别的 precision 与 recall。
 
-Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例。提供问题、相关上下文或参考答案，以及带有可观察评分锚点的标准；要求评委给出评分依据。若要核对验收底线，使用逐项 pass/fail 检查或带明确锚点的评分准则；若问题是相对偏好，可用成对比较。成对比较只回答相对偏好，赢家未必满足验收底线。
+BLEU 和 ROUGE 是针对特定文本任务的参考文本重合度工具：BLEU 起初用于机器翻译快速评估，ROUGE 是一组摘要指标。词面重合不能当通用事实性指标；合法改写可能重合很少。检索精确率、召回率及排序指标适用于有相关文档或证据标注的阶段，但依赖候选集、标注规则和 top-k，不能单独验证答案。
 
-研究发现的评委偏差包括位置、冗长偏好和自我偏好，但程度随任务和评委变化。[MT-Bench](https://arxiv.org/abs/2306.05685)、系统性的[位置偏差研究](https://arxiv.org/abs/2406.07791)和关于[自我偏好偏差的研究](https://arxiv.org/abs/2410.21819)说明应在目标评估任务上实际检验评委，不应假定某项缓解措施必然有效。可以随机或交换候选顺序并比较评分，按任务切片抽样复核；多评委或跨 provider 的增益仍需在校准集上验证。它们是诊断手段和可能的缓解措施，不保证评委彼此独立或判断正确。
+没有唯一答案的开放任务可用 rubric (评分准则) 或模型评审，但要给出可观察锚点。build 73 的 rubric 可以分别评分类别是否正确、证据是否逐行对应、下一步是否与证据相称；评分者不能因答案看起来专业就提高事实分。给评审模型的问题、上下文和标准时，也要检查遗漏证据、位置偏好、冗长偏好和自我偏好等偏差。随机交换两个候选答案位置，或对共享校准样本的人类评分进行盲审，可以发现部分偏差，但不能保证评委独立或正确。
 
-当标准需要专业知识、任务主观或后果重大，或需要验证自动评委时，应安排人工复核。先用共同样例校准评审者、比较分歧；需要可靠参考结论时，对分歧案例进行裁定。一致性表示评审者在 rubric 下较一致，不代表 rubric 或标签正确。Judge 与单个人的分数一致，也不能单独证明 judge 准确。
+对于成对偏好，评委选出的赢家只表示相对偏好，不表示它通过任务底线。例如两个答案都把 ECONNREFUSED 当作断言失败，较简洁的那一个仍应判失败。评委应在目标任务与 rubric 上对照人工裁定集校准；一致性说明评分较稳定，不证明标签本身正确。对高后果结论或专业判断，安排人工裁定。
 
-需要外部事实时，尽可能对照适当、可信且及时的依据。评估来源忠实度时，应对照指定的上下文检查说法。NLI 分类器、再次检索和 self-consistency 可帮助筛选待检查内容，但都可能出错：多次回答一致不能证明为真，二次检索也可能返回过期或不相关来源。应报告检查了什么、依据何在，而不要把检测器分数写成事实已核实。
+BLEU、ROUGE、模型评审、natural language inference (NLI，自然语言推断) 分类器、自动事实检测和再次检索都只能覆盖各自定义的信号。多次生成答案一致不证明真实；二次检索可能返回过期或不相关来源。报告每种检查使用的依据和失败边界，不要把检测器分数写成“事实已核实”。
 
-同样，提交被引用、标成依赖或获提名投票（nomination），只能说明来源声明或选择过程；不能代替任务结果的正确性检查。[GitSwarm v1（2026-10-04，§§2.2、2.5、3.4、4）](https://arxiv.org/html/2610.04862v1)将依赖声明、执行轨迹中的实际产物使用和最终候选的提交祖先链分开分析，并明确这些指标不单独证明因果收益。
+### 建立可比较的回归集
 
-### Build a comparable regression set / 建立可比较的回归集
+#### 同一批问题比较两个版本
 
-- 定义符合条件的任务总体，并抽取常见样本、重要切片和已知失败类型。记录样例如何选择、标注和版本化；方便取得的样例集不一定有代表性。
-- 将开发样例与用于最终比较的独立保留集分开，避免反复针对保留集调优。记录模型、提示词、检索语料/配置、评委和 rubric 的版本。
-- 明确分母。例如，报告“所有符合条件的尝试中成功完成任务的比例”，并单独报告回答覆盖率。若任务要求拒答，正确拒答计为成功；未回答或不当拒答也应作为结果保留。如果 faithfulness 只在已回答样本上计算，应标明这是“已回答样本中的条件分数”，并同时报告回答覆盖率或任务完成率。
-- 在相同协议下与基线比较。对于随机输出，重复足够次数以观察有实际意义的波动；报告样本数与不确定性，不要把微小分差说成确定结论。ARES 展示了一种将自动评委、人类标注样例与统计估计结合的方法，但不是每种评估都必须采用。[ARES](https://aclanthology.org/2024.naacl-long.20/)；另见 [Towards Reproducible LLM Evaluation](https://www.turing.ac.uk/sites/default/files/2025-11/towards_reproducible_llm_evaluation.pdf)。
-- 只让快速检查拦截它有能力发现的问题；根据变更风险安排更完整的评估。线上失败在原因查明、数据适合保留后可进入回归集；盲目加入每起事件会造成重复、数据泄漏或隐私风险。
+把版本 A 与版本 B 在同一批独立验收问题、相同输入和相同评估协议下运行，得到配对结果。
 
-### 架构迁移与更新验收 / Architecture migration and update acceptance
+> [!example] 合成配对样本的统计计算
+> 下面是 200 个 build-log 任务的合成教学数据，不是生产测量。假设从目标总体随机抽取 200 个独立、等权任务；每题用同一输入和协议分别运行 A 与 B，并产生一个二元任务结果。不对稀有类别过采样后再重加权。Build 73 及用于开发的案例已排除。若真实数据包含同一事故的多份日志或同一题的重复运行，它们需按事故/任务成组分析，不能按独立题直接代入下式：
+> A 是当前基线，B 是候选版本：
+>
+> | 结果 | 数量 |
+> |---|---:|
+> | 两个版本都通过 | 156 |
+> | 两个版本都失败 | 14 |
+> | 只有 B 通过 | 24 |
+> | 只有 A 通过 | 6 |
+>
+> 因此 A 有 156+6=162 个通过，成功率是 162/200=81%；B 有 156+24=180 个通过，成功率是 180/200=90%。观测差是 18/200=9 percentage points (个百分点)，不是“提高 9%”的相对百分比说法。
+>
+> Wilson score interval (Wilson 得分区间) 用样本比例 p̂、样本数 n 和正态分位数 z 计算；95% 区间取 z=1.96：
+>
+> $$
+> \frac{\hat p+z^2/(2n)\ \pm\ z\sqrt{\hat p(1-\hat p)/n+z^2/(4n^2)}}{1+z^2/n}.
+> $$
+>
+> 代入 p̂=162/200 与 180/200，A 的区间约为 [75.0%, 85.8%]，B 为 [85.1%, 93.4%]。区间描述抽样比例的不确定性，不涵盖标签错误、抽样偏差或未来分布变化。由于结果配对，不能只看两个边际区间是否重叠来检验版本差异。
+>
+> McNemar exact test (McNemar 精确检验) 只用发生翻转的 30 题：B 单独通过 24 题，A 单独通过 6 题。若版本没有方向性差异，每次翻转都同样可能由 A 或 B 获胜，30 次中预期各胜 15 题；双侧检验把至少像 24:6 这样偏向一方的两种方向都计入。
+>
+> C(30,k) 计算 30 个翻转中恰有 k 题由 B 获胜的不同排列数。零假设下每次翻转由 A 或 B 获胜的概率各为 0.5，因此每个具体排列的概率都是 0.5^30。双侧 p 值为：
+>
+> $$
+> 2\sum_{k=24}^{30}\binom{30}{k}(0.5)^{30}\approx 0.00143.
+> $$
 
-**核心解释 / Core explanation：** 在固定任务与验收契约下比较端到端结果；行为变化、预测分数或复用记录都不能单独证明改进。Compare end-to-end outcomes under fixed task and acceptance contracts; behavioral changes, forecast scores, or reuse records alone do not establish improvement.
+在零假设和独立任务假设成立时，p 值表示出现当前或更极端胜负失衡的概率，不是“零假设为真的概率”。这组配对数据与“没有方向性差异”的零假设不太相容；它不证明 B 对所有任务更好，也不能替代效果大小、失败类别、部署成本或独立新样本。阈值和分析方法应在看结果前确定，避免只挑显著切片报告。
 
-比较 agent loop、harness 或上下文策略时，覆盖完整生产链路、强制规则和发生变化的任务切片，并报告新增成功与回归的任务成败翻转（task flips）、成本及重复运行波动。先记录现有架构的端到端基线，再一次折叠一个 subagent 重复比较，单主循环是待评估的候选方案。这是工程建议，参照 [Anthropic 的 folding 文章（2026-10-22，“Task-completion evals”“Folding subagents into the main agent via skills and tools”）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)。
+#### 将质量、硬门禁与运行预算放进同一决策
 
-若更新策略（policy）与预测器（predictor），应分别检验各自效果和配对兼容性；配对门禁失败时保留已接受组合，并让开发/更新、门禁和最终审计数据承担不同用途。[RSI-Anything v1（2026-10-09，§2.5）](https://arxiv.org/html/2610.13912v1#S2.SS5)
+假设团队预先规定：成功率 Wilson 下界至少 85%；格式符合率至少 98%；权限错误必须为零；受控压测的端到端 p95 (95th percentile，第 95 百分位) 不高于 4 秒；每个符合条件的请求平均费用不高于 0.03 美元。以下继续使用同一组假设性结果：B 的成功率下界约 85.1%，199/200 个输出符合格式，即 99.5%，总推理费用 4.80 美元，除以 200 次符合条件的尝试后为每次 0.024 美元；独立压测 p95 为 3.4 秒；20 个专门的权限边界用例均无越权。
 
-若要测试清空历史是否有助于搜索，从同一候选检查点比较继续运行（continuation）与清空后重启（reset），同时报告候选质量、方案提案数（proposals）、实际 token/费用或时间及重复波动。[*Scaling Discovery Requires Forgetting* v1（2026-10-14，§4、§4.3 / Table 3）](https://arxiv.org/abs/2610.20563v1)的主实验固定三次重置；AHC014 对照按提案数匹配而非等花费或时长，且同时清除 session 和候选历史。该重置数只是实验设置；结果不能归因于其中一种记忆，也不建立通用重置周期。
+按书面阈值，B 的离线成功率刚刚通过，其他数字也达到假设目标；但 20 个权限用例的零失败不能证明线上越权概率为零。每次符合条件的尝试费用以全部合格尝试为分母；每个已完成任务费用则以经确认完成的任务数为分母，回答不同问题。本例没有给出独立确认的完成数，因此不据此计算后者。若权限是硬约束，要另外审查授权实现和边界覆盖，production canary (生产小流量试运行) 期间任何权限违规都触发回滚。把样本数、负载条件、费用分母、并发和配置一起写入报告；压测 p95 不是训练或离线评估上的统计量。
 
-Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（2026-10-09，§2.2.1、Appendix F）](https://arxiv.org/html/2610.14224v1)也指出额外执行成本、随机性和共同偏差的影响。工程上仍需单独限制 Probe 的外部写入权限与副作用，不能把它当成无成本、无影响的预测。
+发布前使用相同推理协议配对比较候选与基线，通过门禁后才分阶段放量。canary 中继续记录符合条件请求的分母、任务结果、工具失败、拒答、时延和成本；遇到硬门禁回滚，质量或成本越界则停止放量并查明切片。上线数据适合发现新失败，不自动成为可靠标签。
 
-**工程建议 / Engineering advice：** 若系统用预测器排序候选，应分别记录预测与随后实测的误差，以及所选 policy/version 在固定验收契约下的任务结果和成本。
+### 把训练信号与泛化评估分开
 
-### Use public benchmarks as evidence, not a deployment proxy / 公共基准是证据，不是上线代理
+训练中提升奖励只说明策略更会满足优化目标。对于规则可复用且评分定义稳定的任务，**同一评分规则可以用于没有参与训练、调参或筛选的新问题**，这仍是对结果指标的有效独立验收；变化的是样本，而不是必须换一套评分函数。应检查规则是否覆盖等价答案、格式边界、侥幸通过和未知题型，并同时看人工抽检或其他独立检查。
 
-当任务、协议、模型访问方式和计分规则与问题相符时，公共基准可支持受控比较。像 [HELM](https://arxiv.org/abs/2211.09110) 这样的广泛评估也显示了多种场景与指标的价值；但它们不会自动代表某个具体部署任务。
+例如，若推理训练只优化“最终数学答案正确”的 verifier (程序验证器) 奖励，新题上继续由同一个正确 verifier 判分可以测量数学答对率；它不能单独证明推理过程每步正确、解释清晰、抗提示注入或广义泛化。[奖励驱动的推理训练](#19.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)解释奖励如何进入更新；本章的独立新样本与任务切片才用于检验这些结果是否迁移到预定任务范围。
 
-检查基准覆盖范围、评估协议以及训练数据污染的可能性。污染测量及其影响取决于基准、模型和测量方法；分数提高或小幅上涨本身不能证明模型记住了测试集。[Sainz et al.](https://arxiv.org/abs/2310.18018)；[Singh et al.](https://arxiv.org/abs/2411.03923)。可用公开结果缩小候选范围，再用有代表性、记录版本且带独立保留集的任务样本比较入选系统。
+### 把线上反馈转成可复核的新案例
 
-### Related notes / 相关笔记
+部署后，工程师若指出 build 73 的建议无助于排查，应先把反馈与版本、任务类别和可控的日志引用关联，再按隐私规则检查和归类。审查过的失败可以用于补充开发回归集；若要进入最终验收集，应防止它同时被用来调参。任务、模型、提示词、检索语料、评委或评分规则变化都可能改变结果，记录这些版本以便重放。
 
-- [Agent improvement and version acceptance / Agent 改进与版本验收](#20.%20How%20do%20you%20test%20and%20keep%20an%20improvement%20to%20an%20agent?%20/%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F) — connect feedback on a task to a change that persists across runs.
-- [Orchestration patterns](#14.%20How%20should%20a%20multi-step%20AI%20task%20be%20structured?%20/%20%E6%80%8E%E6%A0%B7%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F) — compare the single-loop baseline with tested delegation or parallel work.
-- [RAG architecture and implementation](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
-- [AI safety in production](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F) — 了解需要单独设计任务检查的安全边界和生产控制。
+线上成功率也会受问题分布、用户选择是否反馈及服务可用性影响。明确报告分母和统计口径：反馈样本是自选子集，偏差方向取决于哪些用户更愿意反馈；它不能估计全体请求成功率。全量交付率和标注覆盖率需要全部符合条件的任务计数；正确性只核实了部分任务时，应报告审核样本结果、覆盖率和未知比例，或按代表性抽样及权重估计总体。不能拿抽样核实的成功数直接除全量任务数，也不能只看完成而漏掉弃用和无法回答。HTTP 200 表示请求响应成功，不证明任务答对。线上信号提示“去哪查”，代表性独立案例回答“改动是否满足契约”。
 
-### Sources / 来源
+### 使用公共基准的边界
 
-关键定义与主张已在正文链接一手研究。补充来源：
+公共基准可用于任务、输入输出协议和计分规则与目标问题接近的受控比较。检查覆盖范围、版本、基线和可能的数据污染；污染的检测取决于测试集、模型和测量方法，分数上涨本身既不证明记忆，也不排除污染。公开榜单不自动代替本地回归集和真实任务验收。像 HELM 这样的广泛评估展示了多场景、多指标的价值，但不能自动代表特定部署。
 
-- Liang et al., [*Holistic Evaluation of Language Models*](https://arxiv.org/abs/2211.09110).
-- Zheng et al., [*Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*](https://arxiv.org/abs/2306.05685).
-- Xia et al., [*Evaluation-Driven Development and Operations of LLM Agents: A Process Model and Reference Architecture*](https://arxiv.org/abs/2411.13768) — 提出连接离线与线上评估的流程模型，并不保证两者分数一致。
+RSI、harness 编辑或仓库产物复用等“系统如何演进”的研究证据属于[Agent 改进与版本验收](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)；这里保留其评估边界：预测、引用、复用和排序都不是端到端任务结果。若改变的是 agent 执行架构，还应在相同任务与预算下评估完整请求，而非只比较中间环节。
+
+> [!info]- 来源
+> 以下链接映射正文中的指标定义、评审偏差、评估设计和公共基准边界；合成数据在正文中明确标注，不来自这些论文。
+>
+> - **多维 RAG 评估。** RAGAS, [arXiv:2309.15217](https://arxiv.org/abs/2309.15217)；ARES, [NAACL 2024 论文](https://aclanthology.org/2024.naacl-long.20/)（arXiv:2311.09476）。指标设置相近但不完全相同。
+> - **幻觉术语边界。** Ji et al., [*Survey of Hallucination in Natural Language Generation*](https://arxiv.org/abs/2202.03629)；Huang et al., [*A Survey on Hallucination in Large Language Models*](https://doi.org/10.1145/3703155)，补充版本 [arXiv:2311.05232](https://arxiv.org/abs/2311.05232)。
+> - **文本重合指标。** Papineni et al., [BLEU](https://research.ibm.com/publications/bleu-a-method-for-automatic-evaluation-of-machine-translation)；Lin, [ROUGE](https://aclanthology.org/W04-1013/)。
+> - **模型评审。** Zheng et al., [*Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*](https://arxiv.org/abs/2306.05685)；Liu et al., [位置偏差分析](https://arxiv.org/abs/2406.07791)；[自我偏好偏差研究](https://arxiv.org/abs/2410.21819)。论文发现不等于每个任务上的固定偏差大小。
+> - **分层自动评估与标注。** Saad-Falcon et al., [ARES](https://aclanthology.org/2024.naacl-long.20/)，§§3–4；展示一种自动评分、人类标注与统计估计组合。
+> - **综合基准。** Liang et al., [*Holistic Evaluation of Language Models*](https://arxiv.org/abs/2211.09110)。
+> - **基准污染。** Sainz et al., [arXiv:2310.18018](https://arxiv.org/abs/2310.18018)；Singh et al., [arXiv:2411.03923](https://arxiv.org/abs/2411.03923)。污染测量依具体模型、数据和方法。
+> - **配对比例与置信区间。** NIST [Wilson 比例置信区间](https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm)；statsmodels [McNemar 检验](https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html)，exact 模式按不一致配对的二项分布计算。
+> - **配对验收扩展证据的归属。** [RSI-Anything v1](https://arxiv.org/html/2610.13912v1)、[Harness² v1](https://arxiv.org/html/2610.14224v1)、[GitSwarm v1](https://arxiv.org/html/2610.04862v1)和 Anthropic 的[子 agent 折叠实践文章](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)在 Agent 改进章详述；本章只使用它们共同提示的“实际任务结果优先”边界。
 ## 18. 何时应微调来弥补稳定的行为差距？
 
 ### 案例：日志助手反复给出错误标签
@@ -2101,7 +2144,7 @@ reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学
 
 给模型一道可复算的小题：“4 盒各装 3 个螺丝，另有 2 个散装螺丝，共有多少个？”答案是 `4×3+2=14`。若训练提示要求模型把推理和答案分别放进 `<think>...</think>`、`<answer>...</answer>`，一个运行器可以检查最终数值和标记格式。下面先沿四条回答算分，再追踪分数怎样改变模型的下一次输出概率。
 
-若要判断这类训练是否适合稳定的行为差距，可先读[何时应微调来弥补稳定的行为差距？](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)；要设计独立验收，再读[如何判断 AI 系统是否满足任务契约？](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+若要判断这类训练是否适合稳定的行为差距，可先读[何时应微调来弥补稳定的行为差距？](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)；要设计独立验收，再读[如何判断 AI 系统是否满足任务契约？](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 ### 检查器判的是什么，没判的又是什么？
 
@@ -2335,209 +2378,333 @@ TRL `v1.17.1` 和 verl `v0.9.1` 是本节核对过的具体发布版；新版本
 > - **TRL 当前配置。** Hugging Face [TRL `v1.17.1` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.17.1)（2026-10-30）、[该 tag 的 `grpo_config.py`](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_config.py)和[当前 GRPOTrainer 文档](https://huggingface.co/docs/trl/grpo_trainer)，截至 2026-11-06 核对。版本配置支持 `beta=0`、`epsilon=0.2`、`loss_type="dapo"`、`scale_rewards="group"`、`mask_truncated_completions=False`；无版本文档可能晚于 tag 更新。
 > - **verl 当前配置。** [verl `v0.9.1` 发布记录](https://github.com/verl-project/verl/releases/tag/v0.9.1)（2026-09-20）、[通用 PPO trainer 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/ppo_trainer.yaml)、[actor 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/actor/actor.yaml)、[GRPO 结果优势实现](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/core_algos.py)。配置说明默认优势估计是 GAE、组奖励标准差归一化打开、两种 KL 路径关闭，actor 聚合默认 `token-mean`；实际训练还须检查所用 recipe 的覆盖值。
 > - **DeepSeek-V4 多教师 OPD。** DeepSeek-AI, *DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence*（arXiv:2606.19348v1，2026-04-26；截至 2026-11-06 核对公开报告仍为 v1；§5.1.1–5.1.2、§5.2.2），[v1 HTML](https://arxiv.org/html/2606.19348v1)。支持 specialist 阶段 SFT+GRPO、student 前缀上的多教师 reverse KL 与全词表 logits 蒸馏。权重安排和通用路由规则不由该报告建立。
-## 20. How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？
+## 20. 如何验证并保留对 Agent 的改进？
 
-**Short answer / 简答：** Use predictions to rank candidates, then measure them on real tasks against a common baseline and a predefined acceptance rule. Keep the accepted workflow, predictor, or harness as a version that can be inspected and restored. / 先用预测给候选排序，再用真实任务、统一基线和预先定义的验收规则测量效果。验收通过后，把工作流、预测器或运行脚手架作为可追溯、可恢复的版本保留。
+### 从 build 73 的误诊开始
 
-任务内反馈改变当前任务状态；持久改进则把经评估接受的策略、预测器或 harness 变更保留为后续系统版本。两者都不等于模型在一次运行中自行改变权重。
+> [!example] Build 73：从误诊中提出候选改进
+> 发布团队的日志助手收到 build 73 的失败记录。基线版本把 ECONNREFUSED 归成“业务断言失败”，建议回退服务代码；原始日志却只表明本地服务未在 8081 端口接受连接，集成测试因此没有启动。工程师需要一项可持续的改进：以后面对同类日志，助手应引用证据、区分观察和推断，并在证据不足时保留不确定性。
+
+一次回答中修正结论只改变当前运行状态；要让后续请求也受益，必须留下可部署的系统版本。这个版本可以变化于提示词、动作策略、检索配置、工具执行或模型权重；“Agent 自我改进”不表示模型在一次对话中自行改写参数。单次运行中的状态变化由[智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)说明；本章关注跨运行保留的改动。
+
+将当前已接受版本记为 A。Build 73 的最小候选 B 只在 system prompt (系统提示词) 中补一条规则：找出最早导致任务中止、且重试后仍未恢复的阻塞失败，引用相应日志行，并区分“服务未就绪”与“业务断言失败”。本例的连接拒绝只有结合重试耗尽和测试跳过，才能作为未恢复的阻塞失败；若稍后的重试成功，就不按它定主类别。模型、检索索引、工具、格式和生成设置都保持不变。这样 A→B 的结果才能归因于这项策略改动；通过与否仍由独立任务结果决定。
 
 ~~~mermaid
 flowchart TD
-    Baseline[Fix the task and baseline] --> Propose[Propose and rank changes]
-    Propose --> Measure[Run candidates and collect real observations]
-    Measure --> Accept{Meets the acceptance rule?}
-    Accept -->|Yes| Save[Record evidence and retain the accepted version]
-    Accept -->|No| Baseline
+    Spec[固定任务、预算与验收契约] --> Base[运行已接受基线]
+    Spec --> Candidate[提出候选变更]
+    Base --> Compare[相同任务对照]
+    Candidate --> Compare
+    Compare --> Evidence[检查实际结果、成本与失败翻转]
+    Evidence --> Gate{通过预先定义的门禁？}
+    Gate -->|通过| Retain[记录版本与证据，分阶段发布]
+    Gate -->|未通过| Revise[保留旧版，修正候选或停止]
+    Revise --> Candidate
 ~~~
 
-### Decide what will change / 确定改进对象
+### 先说清楚哪个对象会改变
 
-Specify the task, budget, success criteria, and stop condition before trying candidates. Record whether each candidate changes the task policy, the predictor that ranks proposals, or the harness that controls execution. When two components can interact, compare each change separately and then compare the pair before accepting it. Preserve the task inputs and baseline for that comparison. [Evaluation and paired acceptance / 评估与配对验收](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
+同一个失败可以由不同层面修复。改变其中一层时，其余条件先保持不变，才能知道结果来自哪里。
 
-### Rank candidates, then observe the real result / 候选排序之后获取真实结果
+| 改变对象 | 在 build 73 中的候选改动 | 需要验证什么 |
+|---|---|---|
+| policy (任务策略) | 先定位最早且最终未恢复、阻断后续任务的失败，再选主类别；不得把建议当作已证实根因。 | 分类、行号和建议是否满足任务契约；难例是否仍能正确拒答。 |
+| predictor (预测器) | 估算候选提示词或检索设置在哪些日志类型上更可能有效，用于排序实验。 | 预测与随后真实观测是否校准；不能以预测分代替任务结果。 |
+| harness (运行脚手架) | 增加日志片段检索、引用校验和结构化输出验证。 | 取回是否完整、验证器能否拦截格式错误、成本和故障路径是否可接受。 |
+| 基础模型权重 | 对经筛选的样本进行 supervised fine-tuning (SFT，监督微调) 或奖励训练。 | 训练信号、数据切分和更新是否值得；训练奖励本身不是新题泛化证据。 |
 
-[RSI-Anything v1（2026-10-09，§2.1）](https://arxiv.org/html/2610.13912v1#S2.SS1) 将任务规格、预算、验收和停止条件视为固定契约；积累经验本身不会修改策略或模型。其 JEPA-Anything/OPF 世界模型先预测潜变量表示，再由领域读出（readout）转换成任务结果预测，用来排序候选并交给外部测量；机制见[§2.2](https://arxiv.org/html/2610.13912v1#S2.SS2)与[§2.3](https://arxiv.org/html/2610.13912v1#S2.SS3)。因此要区分规则、模型预测、模拟器输出和实测结果。外部反馈可以促成策略或工作流更新；只有在已观察候选显示预测器不可靠、且数据与预算足够时，才考虑更新预测器。观测覆盖不足也不等于可靠性已经成立。[§2.4](https://arxiv.org/html/2610.13912v1#S2.SS4)与[§2.5](https://arxiv.org/html/2610.13912v1#S2.SS5)分别说明更新门槛和配对验收。[Table 4](https://arxiv.org/html/2610.13912v1#S6.T4)与[§5](https://arxiv.org/html/2610.13912v1#S5)中各应用的更新范围不同；持续互相改进仍需联合的多轮评估。
+若同时改 policy 与 predictor，分别跑组件检查后仍需验收组合：更好的候选排序器可能与策略的候选空间不兼容。若一次改提示词、索引、工具和模型，指标变化就难以归因。权重训练的过程与目标归属[微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)和[奖励驱动的推理训练](#19.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)；本章负责版本化的候选变更和接受证据。
 
-**工程建议：** 对有清楚任务指标的工作流，可以尝试用脚本、模拟器或范围受限的 agent 预测候选效果并据此预筛，再与后续实测比较、验收版本。语法检查仍是规则校验，agent 的文字预判仍是预测。这些是实现选项，尚无替代上述学习型 world model 的等价实证；单步排序也不证明多步状态模拟有效。
+### 预测可以省实验，但必须让结果闭环
 
-例如，优化一个有工具调用的文档问答 Agent 时，可以用脚本预估候选配置的调用次数，先筛出更值得测试的候选。再对同一组任务运行基线和候选，比较实际成本、证据是否支持答案、权限控制是否通过。记录任务集、基线版本、变更及结果，验收后保留可恢复的配置和证据。这个例子说明候选筛选与版本验收如何配合。
+一些递归改进系统先用预测来挑值得测量的候选。这减少昂贵试验的搜索成本，却引入“预测错了”的风险。因此先固定 task contract (任务契约)：输入输出、限制、可用预算、程序检查器、成功定义和停止条件；再记录每个候选的证据来源。下面的证据等级是 RSI-Anything 论文中的区分，用来说明信息来源，不是所有领域都必须采用的标准：
 
-### Retain changes to the harness / 保留脚手架改进
+| 来源 | 代表什么 | 何时仍需外部检查 |
+|---|---|---|
+| E0：确定性规则或程序检查 | verifier (可执行验证器)、单测、形式化条件等可以直接执行的判据。 | 检查器是否覆盖真实任务，以及是否能被候选投机利用。 |
+| E1：学习型预测或 rollout (模型展开轨迹) | 模型对结果或未来状态的估计。 | 预测不是结果；选中候选仍要实测。 |
+| E2：模拟器或高保真模型 | 在模拟环境中执行的状态转移或任务测量。 | 仿真与实际环境存在差异时要做外部校验。 |
+| E3：外部测量 | 真实任务、硬件、用户或实验系统中的观察结果。 | 仍需控制变量、预算和测量噪声。 |
 
-另一类改进改变的是运行脚手架（harness），而非基础模型。[Harness²（v1，2026-10-09，§§2.1–2.3）](https://arxiv.org/html/2610.14224v1) 在同一任务上实际执行候选 harness，比较编辑前后的行为，再将采用的 harness 组件和有依据的经验存入库；新任务从共同的 H₀ 起步并按需检索。该研究保持 editor 模型、阶段指令和决策规则不变，因此展示的是任务级 harness 与经验库的演进，不是模型权重或 editor 自行改写。执行对照可支持针对性修改，但不单独证明答案正确；验收边界见[LLM 评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+RSI-Anything v1 的 world model (世界模型) 根据当前状态与候选动作预测下一状态的潜在表示，再由领域 readout (读出函数) 把该表示转成任务结果或其概率分布。它采用 orthogonal predictive factorization (正交预测因子分解，OPF)：把潜在目标拆成互补分量，分别预测后合成为整体表示；这给预测器提供结构，但不让它成为真值判定器。预测用于比较候选优先级，外部执行结果才提供任务结果证据。若覆盖不足，只能说预测不确定；不能把“没看到反例”当成可靠。
 
-**Related questions / 相关问题** — [When should a model control the next step? / 何时应让模型决定下一步？](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) explains the live execution loop. [Context engineering / 上下文工程](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F) explains what can be stored for retrieval on later tasks.
-## 21. How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？
+论文将 update data (候选更新数据) 用于构造候选版本，gate data (保留门禁数据) 用于选择保留版本；指定的 held-out audit set (留出审计集) 只留作最终结果报告。对策略或预测器候选先分别与当前组件配对检查：单组件门禁失败就保留该组件的当前版本；若至少一项改变，再把新组件组合与当前 policy–model pair 配对比较，组合门禁失败则保留整对。这里的论文协议不取代本地发布流程中另留未参与调参或筛选的新题作独立验收。
 
-**Core explanation / 核心解释：** Pair technical service signals with task outcomes. Record enough version and trace context to locate a regression while minimizing sensitive payloads. Treat user feedback as a useful but biased signal: inspect failure modes, make a targeted change, compare it on held-out cases, and keep or roll it back against agreed criteria. / 将服务运行信号与任务结果一起观察。记录足以定位回归的版本与追踪信息，同时尽量减少敏感载荷。用户反馈有用但存在偏差：先检查失败类型，再做有针对性的变更，在留出案例上比较，最后按约定标准保留或回滚。
+#### 论文结果显示的范围
 
-**Key terms / 关键术语：** observability / 可观测性；trace / 追踪；task outcome / 任务结果；feedback signal / 反馈信号；rollback / 回滚。
+下表是不同任务上的独立实验，不可把这些比例合并成一个“递归改进平均提升”，也不可外推到日志助手：
 
-### How should an application monitor behavior? / 应用应监控哪些行为？
+| 任务与对照 | 论文报告的观察 | 解读边界 |
+|---|---|---|
+| CodeContests 编程题：静态 verifier 排序；固定 world model (固定世界模型)；再允许预测器适应 | 200 道题、3 个随机种子、最多 3 轮反馈下，最终隐藏测试全部通过率分别为 26.3%、29.2%、31.2%；平均每题调用在线测试套件约 3.71–3.72 次。 | 是特定程序合成设置下的候选排名与隐藏测试验收；调用数指测试套件，不是模型或工具 API 调用。 |
+| graphical user interface (GUI，图形用户界面) 勾选任务 | 从 51% 到最终 99%，平均动作数由 5.30 降至 3.21；一个适应中的中间版本动作更少，却有 21 个 episode 出现错误提交。 | 动作效率不是正确率；最终任务结果优先于过程看起来更简洁。 |
+| 实验室规划 | 在同一 200 题 F200 Level-2 任务集上，五个保留的 policy 版本 Final Score 从 21.80% 升至 46.01%。该分数结合动作序列相似度与参数准确度，端点差为 24.21 percentage points (百分点)。 | 是特定协议规划任务上的合成评分，不与其他任务共用单位或基线。 |
+| LC–MS 反应选择 | 与 Bayesian optimization (贝叶斯优化) 在同一流程下比较 40 次实验后的平均最佳实测产率：96.15% 对 82.16%。 | 是受限实验与具体对照下的最佳观察值，不推论为其他科学搜索的普遍增益。 |
 
-Track technical operation and task outcomes together. Useful measures include:
+#### 将预测和筛选落到具体任务
 
-- latency distributions and time to first token (TTFT), throughput, and queue time;
-- errors and timeouts by stage, input/output usage, and cost per completed task;
-- tool success and authorization denials, cache-hit correctness, task completion, and escalation;
-- explicit user feedback and whether the result was accepted or corrected.
+> [!example] 文档问答的工具次数预测（合成示例）
+> 假设当前文档问答工作流最多调用检索工具 4 次，候选工作流把上限设为 2 次。这个改动只说明可调用次数的上界少了两次；若许多请求在第一次就找到答案，不能据此声称平均费用会少两次调用。可把“长尾成本可能下降”作为待测预测，先排它的实验优先级。两种配置仍要在同一批问题上实际运行，并比较真实费用、证据支持和权限结果；若少调用却漏掉关键条款，就不能仅凭上限较低接受它。
 
-Set thresholds from service requirements and a measured baseline; no universal error-rate or latency threshold fits every application. Record prompt, model, and relevant configuration versions so a change can be investigated. Keep logs proportionate: redact or avoid sensitive content and apply retention controls. Use sampled traces or derived metrics when full payload logging is unnecessary.
+**工程扩展：** 对 build 73，先用程序提取最早失败行、检查引用是否存在，再由模型解释原因，是比训练世界模型更直接的候选。程序检查提供 E0 证据，模型排序仍是预测；只有固定任务集上的实际表现达到门禁才进入版本。这个本地设计例子不是 RSI-Anything 论文验证过的等价预测器。
 
-Model behavior, external data, prompts, and provider implementations can change. Re-run an evaluation set when a material component changes and compare results by important task slices. [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) owns task-quality definitions, dataset design, judge validation, and acceptance evidence. Keep a rollback or fallback path when a release misses the agreed quality bar.
+### 改进运行脚手架时如何做对照
 
-### How can feedback improve the product? / 如何让反馈改进产品？
+Harness² 研究冻结基础模型权重，用同一基线 H₀ 开始每项任务，并开放八种运行时组件供改进：system prompt (系统提示词)、guardrails (防护规则)、memory (记忆)、skills (技能)、tool guidance (工具指引)、scripts (脚本)、subagents (子 Agent) 与 middleware (中间件)。它提出 Propose–Probe–Compose：提出编辑，在配对条件下真正执行候选，比较行为差异，只组合有对照证据支持的变化；再把可复用组件或经验存入改进脚手架，供后续任务检索。经验跨任务怎样被选择并进入当前上下文，见[上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
-Collect explicit signals such as ratings or corrections and implicit signals such as task completion, accepted suggestions, repeated requests, and escalation. These signals are incomplete and biased: a rating reflects who chose to respond, while time spent can mean either engagement or confusion. Interpret them alongside representative task evaluation and user research.
+这里的 Probe 是一次实际运行，仍可能受模型方差、共享评委或随机工具状态影响。在线 Propose–Probe–Compose 阶段没有每题真值答案或可靠 verifier (验证器)；行为差异可提示编辑效果，但本身不认证输出正确。论文仍在实验结束后用 WorkBuddy-Bench、JobBench 和 Harvey Legal Agent Benchmark 的外部基准分数评价结果，因此“在线编辑时无 ground-truth verifier”不等于“没有外部评分准则”。生产实现还应给 Probe 限制外部写入权限和费用，否则实验候选可能造成副作用。实际任务契约仍由[独立任务评估](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)验证。
 
-A practical improvement loop is:
+在四组 executor–harness 配置中，单次对照改进的最高结果分别是 WorkBuddy-Bench 平均得分 +11.5 score points (分数点)、JobBench 得分 +4.5 分数点，以及 Harvey LAB 的 Partial criterion pass rate (Partial 评分条目通过率) +11.8 percentage points (百分点)。前两者是基准分数的点数变化，只有最后一项是比例变化；它们是特定模型、基线和任务的单步结果，不是通用 harness 的预期提升。论文还讨论额外执行成本、行为波动以及 editor 与被编辑系统共用模型时的偏差。
 
-1. Capture feedback with relevant task and version context, subject to privacy and retention rules.
-2. Review a sample and classify its failure mode.
-3. Fix the appropriate layer: source data, retrieval, prompt, tool, model choice, interface, or policy.
-4. Test the change on held-out cases and monitor the relevant production outcome.
-5. Keep or roll back the change using the agreed criteria.
+### 复用记录说明了什么，又没有说明什么
 
-Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F). For permission boundaries, human approval, and production stop paths, see [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
+GitSwarm 在持久且可分支的共享产物仓库中观察 worker 如何引用、访问和组合前序工作。需要分别读三类度量，并把“访问”与“主动复用”区分开：
 
-**Related note / 相关笔记：** [AI Application Architecture / AI 应用架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) defines the durable run state and recovery contract that lets service metrics and task feedback remain attached to one logical operation.
+1. **声明依赖：** worker 在提交中将已有贡献列为 Git parent 或 informed_by 来源；这是可追溯的依赖声明，不是内容复用证明。
+2. **轨迹使用：** execution trace 里的 accessed (已访问) 只说明读、搜、比较或打开过产物。actively reused (主动复用) 要求只读材料实际影响后续贡献；可执行产物必须被运行、导入、改编或作为另一计算的输入；自愿产物包还必须引用其提供者。仅仅打开文件不算主动复用。
+3. **winner-linked ancestry (胜者关联祖先链)：** 最终选中提交沿 Git parent 和声明的 informed_by 边可达的贡献图覆盖率。它说明声明图上的祖先关系，不证明内容被最终代码实际继承。
 
-**Source boundary / 来源边界：** These monitoring and feedback practices reorganize the existing architecture note. Thresholds, task metrics, and data-retention rules must come from the particular service's requirements and privacy constraints; this note does not prescribe universal numeric targets.
-## 22. How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？
+在 ProgramBench，约 99.9% 的合格 episode 声明引用前序工作；94.7% 的已发布贡献随后被下游 worker 作为 Git parent 或 informed_by 来源引用。另一个分母下，79.9%–82.5% 的合格自愿产物包被轨迹证据判定为主动复用。按 Git parent 与 informed_by 边从选中解向上追溯，可达的贡献节点占 ProgramBench 贡献图的 81.6%–92.6%（随预算变化）；在 IMOProofBench-Advanced，选中证明可达的贡献节点占图的 21.3%–33.0%。例如证明任务中，后来 worker 打开了 759 个计算探针包中的 583 个，但只执行或改编其中 172 个并引用提供者；另外，172 个主动复用的探针包中，有 52 个探针包对应的消费贡献节点位于所选证明的声明祖先链上。这里的比例计数对象是贡献节点而非祖先边；节点位于所选解的声明祖先链上也不证明其内容被最终实现吸收或因果性地提升结果。
 
-**Core explanation / 核心解释：** Clarify the user task and its success criteria, make workload and data-boundary assumptions explicit, then trace the request through retrieval, model or tool calls, validation, delivery, and operations. Deep-dive only on the risks that bind correctness, privacy, latency, cost, or safety; compare alternatives against evidence and include evaluation, rollout, and rollback. This capstone applies the canonical mechanisms to three illustrative designs. All traffic and latency figures below are hypothetical teaching assumptions, not production measurements or defaults. / 先澄清用户任务与成功标准，明确工作负载和数据边界假设，再沿着检索、模型或工具调用、校验、交付和运维梳理请求路径。只深入分析决定正确性、隐私、时延、成本或安全的关键风险；依据证据比较方案，并说明评估、发布和回滚。本文用三个示例设计应用各主题的规范机制。下方流量与时延数字均为教学假设，并非生产测量或默认值。
+因此，单看最终祖先链会漏掉“用于验收但未被引用进最终祖先图”的工作；单看声明会把依赖声明误当作消费；单看访问又会把打开误当主动复用。这些度量说明哪些引用、访问和贡献图关系被观察到，不证明复用导致性能提升，也不证明每份祖先产物的内容被最终实现吸收。评估收益仍要在同一任务、基线和预算下实测。
 
-**Key terms / 关键术语：** requirements / 需求；data flow / 数据流；failure mode / 失败模式；trade-off / 权衡；evaluation / 评估；rollback / 回滚。
+### 搜索停滞时，清除什么要由对照回答
 
-### How should you structure an AI system design answer? / 如何组织 AI 系统设计回答？
+*Scaling Discovery Requires Forgetting* 研究在外部评分的开放搜索中保留最佳候选、但清除 session 和候选历史后重启。在 AHC014 的一项对照里，四人团队从同一 plateau 状态继续或重启；每个 agent 都追加 30 个 proposal (候选提案)，重复 3 次。继续运行结果为 +1.4% ±1.3%，每次实验费用 24.67 美元；重启结果为 +9.2% ±6.9%，费用 15.32 美元。这里的收益是三次重复中“最佳新候选相对起始最佳分”的均值 ± 标准差，费用按每次重复计。
 
-Use the following sequence as a set of discussion slots, not a fixed interview timetable:
+这项比较按 proposal 数量匹配，并非按费用、token 或时长匹配；重启还同时改变 session 与候选历史，不能把差异归因于清除某一个记忆源。它支持在某些受限搜索中测试重启，不建立固定重置周期。工程上要事先写下保留的最佳候选、清除的状态、实验预算和继续条件，再用相同起点及真实成本测量两种方案。
 
-1. **Clarify the task.** Identify users, inputs and outputs, success criteria, unacceptable errors, data sensitivity, freshness, and human review needs.
-2. **Establish constraints.** Ask about expected workload and peaks, latency and availability goals, budget, deployment boundary, existing systems, and operational ownership. State assumptions when information is unavailable.
-3. **Draw the end-to-end path.** Include ingestion if needed, request handling, model or retrieval calls, tools, validation, response or escalation, storage, and observability.
-4. **Deep-dive on the binding risks.** Choose two or three components whose failure would most affect correctness, privacy, latency, cost, or safety. Explain alternatives and failure handling.
-5. **Explain evaluation and rollout.** Define offline cases, production measures, staged release, rollback, and who responds to incidents.
+Anthropic 的实践文章建议一次只测试一个 subagent (子 Agent) 的合并，检查前后端到端任务翻转和重复运行，并分享何时把工作流合并到主循环的经验。它是特定提供方的工程经验，不是所有任务都该移除子 Agent 的因果定律；结构选择仍需测量。
 
-Do not invent scale or latency targets to fill silence. Ask for them or label an assumption, then show how the design would change if it differs.
+### 把候选证据变成可恢复的发布版本
 
-### Common trade-offs / 常见权衡
+候选比较应使用相同任务、输入和执行预算，并保留目前已接受的版本作为基线。先用开发数据诊断；选择候选后，用未参与调参的新样本和必要的安全边界测试做独立验收。验收不止看平均分，还应查任务类别、失败翻转、延迟、费用和外部副作用。指标、抽样、配对统计及发布门禁的完整算例见[大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
-| Decision | Option A | Option B | What should drive it |
-|---|---|---|---|
-| Latency and cost | Smaller or fewer model calls | More capable model or additional checks | Measured task quality, workload, and response-time needs |
-| Retrieval | Lower-cost candidate set | More recall or reranking work | Miss cost, corpus, and evaluation results |
-| Autonomy | Model-directed tool loop | Fixed workflow or human review | Task variability, action risk, and control needs |
-| Response mode | Immediate response | Queued or batch completion | User expectation and throughput |
-| Deployment | Hosted service | Self-hosted or edge | Data boundary, operations, device, availability, and full cost |
+build 73 的候选若只提升证据格式，却把“服务拒绝连接”仍判成业务断言失败，就没有解决目标问题；若分类改善但工具权限测试回归，也不能接受。只有当固定契约下的端到端结果达到预设门禁，才保存版本标识、模型与提示词修订、索引和工具版本、任务集版本、评估配置、日志脱敏规则及回滚目标。先小流量发布，按任务质量和硬约束观察；不满足标准时回退到最后接受的组合。
 
-Present each choice conditionally: explain when each option would fit, what evidence would change your decision, and how the alternative could be tested.
+> [!info]- 来源
+> 来源映射到正文里的研究机制与实验数据。论文结果仅适用于其写明的任务、预算与基线；表中的百分点、费用和比例不是本地实测。
+>
+> - **任务契约、潜在状态预测、数据分工、配对保留与独立报告。** [RSI-Anything v1](https://arxiv.org/html/2610.13912v1)，2026-10-09，§§2.1–2.5、3.1–3.4、6.2；CodeContests 的在线测试使用量、LabHorizon Final Score 与 LC–MS 最佳产率按原文口径解释。
+> - **冻结权重下的 harness 递归编辑。** [Harness² v1](https://arxiv.org/html/2610.14224v1)，2026-10-09，§§2.1、2.2.1、2.3、3.2、Appendix F；分别支撑在线无真值验证器的编辑过程、外部基准评价、八种运行时组件和单步结果单位。
+> - **共享产物的声明、访问、主动复用与祖先链。** [GitSwarm v1](https://arxiv.org/html/2610.04862v1)，2026-10-04，§3.4、Appendix F.1；不同分母及图边定义不可互换，也不提供复用的因果收益。
+> - **继续或清除搜索状态。** [*Scaling Discovery Requires Forgetting* v1](https://arxiv.org/abs/2610.20563v1)，2026-10-14，§4.3、Table 3；AHC014 对照按 proposal 数匹配，收益是三次重复均值和标准差，费用按每次重复计，且同时清除 session 与候选历史。
+> - **子 agent 合并的工程经验。** Anthropic, [*Building agents: When to fold subagents into your main agent loop*](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)，2026-10-22；特定提供方的工程实践，按端到端任务与重复运行判断。
+## 21. 如何监控生产中的 AI 功能并安全地改进？
 
-### Three cases, three binding risks / 三个案例，三个主要风险
+### Build 73 上线后，一次错误建议怎样变成可修复证据？
 
-Apply the same design sequence to different failure costs. For document QA, ask whether the evidence is authorized and current. For refunds, ask whether an irreversible write was authorized and actually completed. For code review, ask whether the finding is supported and worth a reviewer’s time.
+发布团队上线了日志助手。工程师提交 build 73 的构建报告，助手给出结构正确的答案，却把 ECONNREFUSED 误判为业务断言失败。用户点踩并补充“集成测试在服务就绪之前就被跳过”。单看一次 HTTP 200 或 JSON schema (结构定义) 合法，系统看起来运行正常；单看用户点踩，也还不知道错在日志获取、检索、模型判断还是评价预期。
 
-### Document QA under an access and latency budget / 有权限与时延约束的文档问答
+生产 observability (可观测性) 需要把一次任务的服务过程、版本和结果关联起来，同时限制收集的数据。反馈只有在经过分类、隐私审查并由独立样本验证后，才适合驱动持久变更。
 
-**Clarify first:** Which user groups and repositories are in scope? How often do documents change? What is the source of truth for permissions? What answer freshness and citation behavior are required? What happens when evidence is missing or conflicting?
-
-**Illustrative request path / 请求路径示意:**
-
-~~~text
-Document sources → parse and version → chunk and index
-User query → authenticate → permission-aware retrieval
-            → rank evidence → generate answer with source references
-            → validate and return, or abstain/escalate
+~~~mermaid
+flowchart TD
+    Request[用户请求与任务 ID] --> Trace[端到端 trace 及版本关联]
+    Trace --> Outcome[任务结果、工具状态与成本]
+    Outcome --> Feedback[反馈和纠正信号]
+    Feedback --> Classify[去重、隐私审查、失败分类]
+    Classify --> Candidate[改变合适的系统层]
+    Candidate --> Eval[独立样本评估与配对版本比较]
+    Eval -->|通过| Canary[小流量发布并监控]
+    Eval -->|未通过| Keep[保留当前已接受版本]
+    Canary -->|回归| Rollback[回滚到已接受版本]
+    Rollback --> Feedback
 ~~~
 
-**Deep-dive topics:**
+### 一条请求需要留下哪些可连起来的信号？
 
-- **Ingestion and freshness:** retain source identifiers and versions; reprocess changed or deleted material and make indexing status observable.
-- **Retrieval:** compare keyword, vector, or hybrid retrieval on representative questions. Tune chunking and reranking against recall, relevance, latency, and cost; there is no universal chunk size or top-k.
-- **Authorization:** derive the caller's access from the trusted identity system and enforce it during retrieval, before evidence reaches the model. A prompt is not an access-control boundary.
-- **Grounded answers:** carry source identifiers alongside retrieved passages. Validate that citations refer to retrieved evidence and evaluate whether claims are supported; asking for citations alone does not prove correctness.
-- **Failure paths:** stale or empty results, permission-service outage, conflicting documents, malformed output, and model timeout should have explicit behavior.
+一次 trace (分布式追踪) 把请求根 span 与其子 span 串成端到端操作。span (追踪片段) 可记录身份检查、构建日志读取、运行手册检索、模型生成、结构校验和结果交付等阶段的耗时、状态和关联版本。OpenTelemetry trace 可以连接日志与 span；GenAI 语义约定仍在发展，避免把不断变化的模型字段约定误当固定标准。
 
-**Evaluation and operations:** test retrieval and answer quality separately; include permission-boundary cases, updates and deletions, unanswerable questions, and citation checks. Monitor latency by stage, indexing freshness, retrieval metrics, answer support, abstentions, and access-control failures.
+| 阶段 | 可用于定位的记录 | 不应默认保存什么 |
+|---|---|---|
+| 接收请求 | trace ID、任务类别、地区、时间、受限访问的会话引用、请求入口状态 | 未脱敏的用户姓名、完整自由文本问题 |
+| 读取构建产物 | 构建编号、制品版本、读取状态、耗时、允许访问的范围 | 完整原始日志或未经筛选的环境变量 |
+| 检索运行手册 | 索引版本、候选数、证据引用 ID、耗时、权限结果 | 不必要的文档正文、对用户不可见的权限字段 |
+| 模型调用 | 部署模型版本、提示词版本、结束状态、输入/输出 token 数、耗时和费用 | 默认记录完整 prompt (提示词)、答案和工具参数 |
+| 验证与交付 | schema 结果、证据引用是否存在、拒答/升级结果、是否成功交付 | 将私密正文复制到通用应用日志 |
+| 任务结果复核 | 任务 ID、业务系统确认的结果或审核标签及其来源版本；未复核时记为未知 | 把 HTTP 状态、schema 合法或模型自评当作任务正确标签 |
 
-The [RAG chapter](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F) follows a concrete policy question from authorized candidate retrieval through claim verification. Here the extra constraint is an end-to-end latency budget.
+> [!example] Build 73 的合成 trace
+> - 关联键：task_id=ci-build-73，attempt_id=1，trace_id=trace-build-73-1。
+> - 构建制品读取：成功；受控存储中的标识为 build-73-report@r4。
+> - 检索：成功；index=runbook-index-v12，返回 runbook/service-readiness@v7#startup。
+> - 实际组装给模型的证据：build-73-report@r4#L20-L22 与 runbook/service-readiness@v7#startup；记录 prompt p12、模型部署 log-assistant-2026-10-31。
+> - 模型生成：1.1 秒，主类别为 assertion_failure，引用构建日志第 20 行。
+> - schema 校验和响应交付：均成功。
+> - 事后审核：审阅者按同一版本的 build 73 日志核实第 20 行连接被拒绝在第 21 行重试耗尽后仍未恢复，并导致第 22 行服务未就绪、集成测试跳过；因此把这条答案标为分类/解释错误，而非读取或检索错误。此标签关联 task ID，trace 本身仍只证明实际交付与结构有效。
+>
+> 这些是假设的教学标识，不是真实生产 ID。逐条检查最终组装上下文后，这个案例可定位到已提供证据的解释层；若模型实际收到的证据缺行、索引过期或权限过滤错了，分类就应改为数据/检索层。把交付状态、事后正确性标签和根因判断分开记录。
 
-#### One worked budget and design choice / 一组预算推导与方案选择
+任务结果要与服务信号并列：端到端延迟和 time to first token (TTFT，首 token 时延)、吞吐量、排队、超时和错误、每次符合条件尝试的费用、工具成功率、权限拒绝、交付完成数、人工升级和用户纠正。schema 与交付状态通常能随请求记录；答案是否满足业务契约则需用稳定 task ID 关联后续的业务结果或审核，未核实的结果标未知。每次符合条件尝试费用以所有合格尝试为分母；每个已完成任务费用以经确认完成的任务数为分母，含义不同，应分开报告。服务与交付率以未采样计数中的全部符合条件任务为分母。未加权的审核样本正确率以已确认标签的任务数为分母；按抽样权重估计总体正确率时，分母则是已核实样本的权重之和。另报已标注覆盖率=已确认标签任务数/全部符合条件任务数。未确认标签保留为未知，不能默默算作通过或失败。若通过抽样审核估计总体正确率，使用代表性抽样或相应权重。诊断 trace 可能经采样，点踩反馈也只是有选择的子集，都不能直接充当总体正确率分母。
 
-Assume a fictional enterprise team has a pre-indexed policy corpus; employee questions include both natural-language policy questions and exact policy IDs; peak load is 6 queries per second; the p95 end-to-end target is 4 seconds; a hosted model API is allowed; and the team has no capacity allocated to operating GPU inference for this workload. These are interview assumptions, not observed traffic or latency.
+不要把独立分位数相加当端到端分位数。例如身份检查的 p95 (95th percentile，第 95 百分位) 加检索 p95 加模型 p95，不一定等于总请求 p95；请求之间的相关性、队列和尾部时延都会改变总体分布。按用户可感知的端到端指标设服务目标，再用阶段 span 定位预算被谁消耗。
 
-One proposed latency budget is 0.2 s for authentication and request setup + 0.6 s for permission-aware retrieval + 2.5 s for model generation + 0.2 s for validation and response handling + 0.5 s reserved for network and queueing = 4.0 s. These are allocations to validate, not measured stage percentiles; the sum of component p95s is not itself a statistical p95 guarantee. Instrument each stage and load-test the composed service.
+### 从轨迹定位失败类型，而不是猜一个根因
 
-For a rough capacity check, use Little's Law L = λW for the mean number of requests in a stable system ([Little](https://doi.org/10.1287/opre.9.3.383)). Suppose the explicit design assumption is an admitted 6 requests/s and 1.2 s mean time spent in the model stage, including any internal wait. Then L = 6 × 1.2 = 7.2, or about 8 requests in flight in that stage. This is an average, not 8 active model slots or a replica count; queueing, bursts, and service limits need load tests with the real model, request lengths, and latency target. Size executing slots from measured service demand and the target utilization.
+收到反馈后，先给失败分配可观察类别，再决定改哪层。一个事件可能同时有表现与根因：模型可能给错分类，而检索也可能漏掉相关片段；应保留两者，避免一个标签抹掉调查路径。
 
-For these mixed exact-ID and natural-language questions, I would test hybrid keyword and vector retrieval against a lexical baseline, enforce document permissions before context assembly, and evaluate retrieval and answer quality separately. Given the stated hosted-service permission and lack of capacity for operating GPU inference, I would put a hosted model behind that retrieval service, keep authorization outside the prompt, and bound queueing so overload does not silently consume the latency budget. If the data boundary changed, I would compare a private or self-hosted endpoint and include its operations cost; if retrieval or generation cannot fit the measured budget, I would revisit context selection, candidate ranking, and the model before relaxing answer-quality checks.
+| 观察到的失败 | 可检查证据 | 首要调查方向 |
+|---|---|---|
+| 日志读取或工具调用失败 | 工具返回码、超时、重试和目标版本 | 连接、凭证、依赖健康或调用契约 |
+| 正确证据没有进入模型上下文 | 检索候选及排序、索引版本、权限过滤记录 | 数据更新、分块、检索或授权过滤 |
+| 证据已提供但解释错误 | 被引用的证据 ID 与输出说法、同类样本表现 | 提示词、模型能力、训练信号或验证器 |
+| 结构有效但用户仍无法行动 | 输出 schema 与用户实际任务要求、升级路径 | 任务契约、界面、缺少的上下文或产品策略 |
+| 用户报告内容错误但 trace 缺少证据 | 采样、脱敏策略及可访问的原始记录指针 | 可观测性缺口；不能用缺失日志假装错误不存在 |
 
-### Refunds with a verified side effect / 需要确认写入结果的退款
+若模型把 ECONNREFUSED 解释为业务断言失败，而被引用的日志确实显示服务未就绪，现象是“证据解释/任务分类错误”；若日志读取工具返回了空文件，现象则先是数据获取失败。每次修复应针对经检查的层：来源数据、检索、prompt、工具、模型、界面或策略。只凭相关性改动模型，可能掩盖权限或数据问题。
 
-**Clarify first:** Which intents can be automated? Which actions change customer accounts or money? What policy and order systems are authoritative? Which requests require explicit consent or human review? What is the handoff path?
+### 反馈并非随机标签：如何降低隐私风险和偏差？
 
-**Worked choice / 方案选择：** Suppose the supported flow is checking an order and requesting a refund, and policy disputes or tool failures need a person. I would use a fixed sequence: authenticate the customer; read the order and current policy; have application code check eligibility; show the proposed refund and ask for confirmation; call an idempotent refund operation; verify its result; then report the outcome or hand off. The sequence is predictable and changes financial state, so a fixed workflow makes authorization and stop points explicit. An agent loop would need evidence that dynamic tool choice materially helps before adding that control surface.
+显式反馈包括评分、用户纠正和“转人工”；隐式信号包括重复提问、重试、接受建议、是否完成任务。它们有偏且含义不唯一：不同用户对反馈的意愿不同，偏差方向不能仅从反馈事件推出；停留时间长可能代表投入，也可能是困惑；接受建议可能只表示用户赶时间。反馈事件应和版本、任务类别、结果阶段及稳定任务 ID 关联，不能把“没投诉”当正确标签，也不能用反馈子集估计总体成功率。
 
-**Illustrative architecture / 架构示意:**
+收集时做 data minimization (数据最小化)：只保留解决问题所需的字段。默认不写入完整输入、输出、系统提示词和工具参数；需要复核正文时，用受控访问的脱敏存储、短期保留和明确授权，而不是把正文复制到普通日志。OpenTelemetry 的 GenAI span 约定说明消息和工具参数可能包含敏感内容，默认不记录，并建议在生产中谨慎使用外部受控存储；该约定目前仍是开发级，字段与稳定性需要在部署时重新核对。敏感数据处理还应在采集或处理器阶段按需过滤、删除、遮蔽或转换；低熵标识符的散列仍可被猜测，不能称为匿名化。
 
-~~~text
-Customer → intent and risk handling → assistant workflow
-                                      ↙          ↘
-                          read-only order/FAQ    bounded action tools
-                                      ↘          ↙
-                              validation → response or human handoff
-~~~
+收到 build 73 的用户纠正时，只需先记录：任务类别、错误版本、可引用的日志行范围、用户明确的修正、隐私审查状态和来源标识。若必须打开原文，应按权限访问原始构建系统并记录访问审计；到达保留期限后删除。对外部系统的授权、用户同意与保留时长由实际服务约束决定，不能由模型自行推断。
 
-**Tool and policy design:**
+### 把线上信号变成独立验证，而不是直接喂训练
 
-- Separate read-only lookup from actions that change state.
-- Give the runtime—not the model—responsibility for identity, authorization, business limits, confirmation requirements, and final tool execution.
-- Make retryable writes idempotent where the underlying system supports it; log the request outcome without exposing unnecessary personal data.
-- Use a fixed workflow for a predictable sequence. Consider an agent loop only where dynamic tool selection adds value and can be bounded, observed, and stopped.
-- Provide explicit handling for ambiguous intent, unavailable tools, policy conflicts, and user requests for a person.
+1. **收集候选事件：** 将诊断 trace 与模型、prompt、索引和工具版本关联；请求总量、符合条件任务数和完成数来自未采样计数，trace 与反馈只用于定位事件。
+2. **抽样审查并去重：** 检查显式纠正、重试、超时和长期未解决任务；清除不必要的个人或敏感信息。
+3. **分类并确认标签：** 依据可信来源或人工裁定记录类别、行号和可接受下一步；保留交付 span 的 schema validity (结构校验状态)、delivery status (交付状态) 与后续正确性审核的来源、版本和裁定者；不清楚的案例标注为不确定。
+4. **修复对应层：** 例中若模型忽略就绪错误，可能调整提示词或分类校验；若源报告不完整，先修取数。
+5. **做配对比较和独立验收：** 用开发样本调候选，用未参与调参的新样本验收；按任务切片查看质量、硬约束、成本和时延。
+6. **分阶段发布：** 小流量观察同类错误、拒答和副作用，超过门禁就回滚并保留诊断 trace。
 
-**Evaluation and operations:** use reviewed examples for common intents, boundary cases, policy changes, tool failures, and escalation. Track task completion, human handoff, tool errors, unauthorized-action attempts, user feedback, and cost per resolved interaction. Treat the automation target as a product decision supported by evaluation, not a fixed percentage.
+已审查的线上失败可以进入开发回归集，帮助复现；不要让同一事件同时用于调候选、选择赢家和宣称独立验收。一个稳定的规则评分器可以复用于**新的独立样本**，前提是它在此类输入上可靠且评分规则适用；奖励训练分数只说明策略优化了该目标，不证明未见分布上的任务质量。若打算将反馈作监督微调或偏好训练数据，需额外审查标签质量、同意、数据切分与敏感性。[评估章](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)定义独立比较和统计门禁；[Agent 改进与版本验收](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)解释怎样把通过验收的改动保存成版本。
 
-A tool-call schema can constrain the shape of a proposed call; the application must still check whether the user and action are permitted. OpenAI's [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs) documentation, checked 2026-10-15, illustrates provider-specific behavior; it does not replace application-side validation and authorization. See [Agent Fundamentals / 智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F), [Tool Design and Function Calling / 工具设计与函数调用](#12.%20How%20should%20an%20application%20execute%20a%20model%E2%80%99s%20tool%20request?%20/%20%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F), and [AI Safety in Production / 生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F).
+### 由服务要求决定阈值
 
-### Code review with a limited false-positive budget / 有误报预算的代码审查
+延迟、错误、费用和隐私阈值来自用户体验、工作负载和合规要求，没有适用于所有 AI 服务的通用数字。上线前固定当前基线与需要分层观察的任务；变化可能来自提示词、模型提供方、外部数据、索引、工具或产品界面。重要组件更新后重跑代表性评估，并比较版本和失败切片。
 
-**Clarify first:** Which languages and review types are in scope? Should findings be advisory or posted automatically? How is repository context selected? What level of false positives will developers tolerate? Which code or metadata may leave the repository boundary?
+出现一次硬权限违规应如何处理，可由安全和系统策略设为硬停止条件；一般质量差异则应连同样本数、分母和不确定性判断。一次点踩触发调查是合理的，一次点踩自动改权重、自动发布不是可靠的改进闭环。
 
-**Worked choice / 方案选择：** Suppose the team has low tolerance for noisy comments and wants a human to retain review authority. I would begin with advisory draft comments, require each finding to point to changed lines and cite the relevant code evidence, and suppress weak findings rather than posting every possible concern. I would not auto-approve or block a pull request. This favors developer trust and gives the team dismissal data before considering more automation.
+> [!info]- 来源
+> 以下一手资料支持追踪结构、关联字段和隐私处理。版本化约定可能演进，线上配置需再次核对。
+>
+> - **Trace 与 span。** OpenTelemetry, [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/)：说明一次请求的根 span、子 span 与端到端操作。
+> - **日志关联。** OpenTelemetry Logs Specification [v1.62.0](https://opentelemetry.io/docs/specs/otel/logs/)：说明 TraceId、SpanId 关联日志和 span。
+> - **GenAI span 字段和敏感载荷。** OpenTelemetry [GenAI spans semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-spans.md)，截至 2026-11-06 检查主分支；文档标为 development，提示输入/输出消息和工具参数可能敏感、默认不记录。
+> - **敏感数据处理。** OpenTelemetry [Handling Sensitive Data](https://opentelemetry.io/docs/security/handling-sensitive-data/)：支持数据最小化、过滤/删除/遮蔽/转换，以及低熵散列不等于匿名化的边界。
+## 22. 如何把 AI 系统设计题转化为有依据的架构？
 
-**Illustrative architecture / 架构示意:**
+同样使用语言模型，文档问答可能泄露用户无权访问的文件；退款助手可能重复执行资金写入；代码审查助手可能用大量误报耗尽工程师信任。它们的共同点只是包含生成模型，真正决定架构的是失败代价、可信数据边界、外部副作用和可验证的用户结果。
 
-~~~text
-Pull request event → diff and repository context
-                   → one or more review passes
-                   → schema and location validation
-                   → deduplicate and rank findings
-                   → draft comments for human review
-                   → collect feedback and measure outcomes
-~~~
+以下三个案例用假设明确的输入和工作负载，推导各自的请求路径与取舍。它们是教学设计案例，不是对某个生产系统的测量；实际方案要用代表性评估和生产追踪校正。
 
-**Deep-dive topics:**
+### 文档问答：权限必须在证据交给模型前生效
 
-- **Context selection:** include changed lines, nearby code, relevant callers, and repository guidance as available. Record what was omitted when size limits require truncation.
-- **Review passes:** separate correctness, security, and style checks when that makes evaluation or prompts clearer. Keep each pass tied to a defined review rubric.
-- **Output validation:** require a finding category, explanation, location within the diff, and actionable suggestion; reject locations or structures that do not match the submitted change.
-- **Noise management:** rank or suppress uncertain findings, show evidence, and make dismissal easy. The acceptable precision/recall balance depends on developer workflow and risk.
-- **Large or generated changes:** segment by file or coherent unit, avoid irrelevant generated content, then deduplicate before presenting results.
+#### 请求从哪里取得答案？
 
-**Evaluation and operations:** build a held-out set of reviewed changes with known issues and clean examples. Measure issue detection by category, false positives, location validity, developer acceptance or dismissal, cost per review, and delay added to the workflow. Compare against a no-assistant baseline; do not claim to outperform human review without evidence.
+假设企业员工要查询政策文档，既会问自然语言问题，也会输入精确的政策编号。语料已预先索引，文档会更新或删除；权限来源是企业身份系统；若证据过期、冲突或用户无权访问，要说明不能回答或转人工。系统提供引用，但不能把引用外观当作证据正确的保证。
 
-### Practice / 练习
+> [!example] 文档问答的请求路径
+> ~~~text
+> 文档源 → 解析、版本化、索引
+> 员工问题 → 身份认证 → 按权限检索
+>          → 证据排序与上下文组装 → 模型生成
+>          → 引用与答案校验 → 回答或拒答/升级
+> ~~~
 
-- Ask clarifying questions before fixing assumed scale or targets.
-- Draw the request and data paths, including trust boundaries and failures.
-- State assumptions and what evidence could change the design.
-- Discuss quality, latency, cost, permissions, and operational ownership together.
-- Explain how the system is evaluated, rolled out, monitored, and rolled back.
+解析和索引需保留来源 ID、版本、更新时间及处理状态，以便文档更新或删除后能找到旧副本。检索候选可以比较关键词、向量或 hybrid keyword-and-vector retrieval (关键词与向量混合检索)：自然语言问题可能受益于语义匹配，精确编号则需要词法命中；用有标注的代表性问题比较召回、排序质量、延迟和费用，不能凭“向量库更先进”决定。权限服务超时或身份无效时停止检索，不将未授权文档交给模型，也不靠模型猜权限结论。
 
-### Related notes / 相关笔记
+调用者身份来自可信认证层，权限过滤必须在检索时执行，模型只接收当前用户有权看的片段。提示词中写“请勿泄露”不是访问控制；被检索到的文本也不能授予调用工具或读取其他文档的权限。缺少证据、权限服务超时、索引陈旧、来源冲突、模型超时和引用不存在都要有明确分支。
 
-- [Durable AI runs / 持久化 AI 运行](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F) covers production run controls. [AI deployment choices / AI 部署选择](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F) compares where to run the model.
-- [RAG Architecture and Implementation / 检索增强生成](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F) covers retrieval implementation and grounding.
-- [LLM Evaluation Methods / 大语言模型评估方法](#17.%20How%20can%20you%20tell%20whether%20an%20AI%20system%20meets%20its%20task%20contract?%20/%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) covers evaluation design.
-- [Agent Fundamentals / 智能体基础](#13.%20When%20should%20a%20model%20control%20the%20next%20step?%20/%20%E4%BD%95%E6%97%B6%E5%BA%94%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F) covers runtime agent patterns.
+上线前的评估要把检索和生成分开：检查证据是否进候选集，答案主张是否由来源支持，引用是否指向检索片段；还应包含无答案问题、权限边界、更新与删除。上线后监控索引新鲜度、各阶段延迟、访问拒绝和任务完成率。retrieval-augmented generation (RAG，检索增强生成) 的证据组织机制见[RAG 架构与实现](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)，统一的配对评估方法见[大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+
+#### 用预算推导候选方案
+
+假设一个虚构团队要求高峰处理 6 个查询/秒，端到端 p95 (95th percentile，第 95 百分位) 时延目标为 4 秒；允许托管模型 API，但没有专门资源运营 GPU 推理。
+
+> [!example] 将假设工作负载拆成延迟预算
+> 下表是用于压测的预算分配，不是测量结果或各阶段 p95：
+>
+> | 阶段 | 预算 |
+> |---|---:|
+> | 身份认证与请求建立 | 0.2 秒 |
+> | 权限感知检索 | 0.6 秒 |
+> | 模型生成 | 2.5 秒 |
+> | 引用/结构验证和响应处理 | 0.2 秒 |
+> | 网络与队列预留 | 0.5 秒 |
+> | 合计分配 | 4.0 秒 |
+>
+> 阶段预算相加得到 4.0 秒，但每阶段预算不是测得的分位数，阶段 p95 也不能直接相加得出端到端 p95；要用联合负载测试测量完整链路。若请求里经常有很长文档或突发流量，队列和生成尾延迟会改变预算是否成立。
+
+容量可先用 Little's Law (利特尔定律) 估算平均在途请求数：
+
+> [!example] 用平均停留时间估算在途请求
+> $$
+> L = \lambda W.
+> $$
+>
+> 其中 L 是该阶段长期平均在途请求数；$\lambda_{\mathrm{model}}$ 是进入模型阶段的实际平均准入速率，$W_{\mathrm{model}}$ 是请求从进入到离开同一模型阶段的平均停留时间。假设教学负载中模型阶段的实际平均准入速率为 6 次/秒，且 1.2 秒包含该阶段排队与执行，则 L=6 次/秒 × 1.2 秒=7.2 个平均在途请求。7.2 是长期平均量，无需上取整，也不是 worker (工作进程) 或 GPU 副本数量；缓存、旁路、重试或被拒请求会使模型阶段实际 λ 不同，因此要用测得的准入速率，而非外层 API 的目标速率。队列、突发和目标利用率还要通过实际负载确定。容量计算的机制见[API 容量与背压](../../engineering-foundations/reliability/api-capacity-and-backpressure.md)。
+
+对混合问题，可先比较关键词与向量混合检索和纯词法基线，权限在证据组装前过滤，把托管模型放在该检索服务之后，并明确队列上限和超载行为。如果任务扩展为长报告且无法满足交互时延，可以比较异步排队或批处理，并给用户明确的任务状态与恢复路径。若数据边界改为不能离开内网，就需比较私有或自托管模型，并把 GPU 运维、容量冗余和故障恢复成本纳入；若检索/生成无法满足预算，应先评估候选排序、上下文选择或模型，而不是无条件放宽质量门槛。
+
+### 退款：工具调用返回超时不代表写入失败
+
+退款是有外部副作用的操作。系统要在调用之前验证身份、订单状态、政策资格和明确确认；完成后读取可信交易状态。语言模型可以解析请求或说明流程，却不能成为授权和最终执行边界。
+
+> [!example] 退款写入的状态流
+> ~~~text
+> RECEIVED
+>   → AUTHENTICATED
+>   → ELIGIBLE
+>   → AWAITING_CONFIRMATION
+>   → SUBMITTED
+>   → CONFIRMED | OUTCOME_UNKNOWN | REJECTED
+> ~~~
+
+只有可信业务代码可以把状态从待确认推进到已提交。客户确认某一笔退款后，应用先生成并持久化稳定的 refund operation ID (退款操作 ID)，连同订单、金额、参数和 provider (支付提供方) 幂等键一起保存，再发起写入；订单号单独不够，因为同一订单可能有多笔独立退款。若请求超时，不要假定写入失败或换一个键重试：若已拿到提供方唯一 refund ID (退款 ID)，将其与本方操作 ID 绑定并按该 ID 读取状态；若超时导致 ID 丢失，则只能按提供方契约使用原支付引用/事件对账，或在其明确支持的范围内以同键同参安全重放。幂等键并不普遍提供查询能力。若仍无法确认，保持 OUTCOME_UNKNOWN，交由对账或人工处理，不能再创建第二个业务退款操作。支付方返回退款对象或 HTTP 成功也不必然代表最终成功：核对订单/原支付、金额和唯一退款 ID，并等到提供方报告最终成功状态后，才把业务状态记为 CONFIRMED。
+
+> [!example] 一次超时后的核对
+> 应用先记录退款操作 R-204、订单 O-73、原支付 ID P-73、金额 20.00、键 K-R204 与 SUBMITTED 状态；请求超时后转为 OUTCOME_UNKNOWN，不创建 R-205。写入时还通过提供方支持的 metadata 将 R-204 附在退款对象上。后续经可信通道收到事件后，先按该业务标识确认它对应 R-204，才绑定唯一退款 ID re_demo_204，再按该 ID 读取并核对原支付 ID 与金额。同一笔支付可能有两次同额部分退款，仅金额相同不能建立关联；关联不清仍保持未知。若状态仍为 pending，就继续保持处理中；只有状态变为 succeeded 才将 R-204 推进到 CONFIRMED 一次。若提供方既不能按原支付引用核验，也不承诺同键同参重放，则继续保持未知并进入对账，而不是盲目再发一次。本例中的 ID 均为合成标识。
+
+适合的请求路径是认证客户、读取订单和当前政策、应用代码校验资格、向客户展示拟退款金额并确认、执行受限写入、查询最终状态，再报告结果或交人工。步骤可预期且会改变资金状态，因此固定工作流让确认点和停止路径明确。只有当动态工具选择有明确收益、能受限且可观测时，才值得引入 agent loop (智能体循环)。
+
+工具 schema (参数结构定义) 可以约束字段与类型，但不能授权操作或判断退款资格；应用仍需根据认证身份和业务状态校验权限与幂等。上线评估应覆盖常见意图、资格边界、重复请求、超时后结果未知、政策冲突、工具失败和人工升级；生产可观测性需要把每次状态迁移和交易 ID 关联，但避免在通用日志中复制个人或支付正文。有关运行状态与恢复，见[持久化 AI 运行架构](#16.%20How%20can%20a%20production%20AI%20run%20survive%20disconnections%20and%20worker%20failures?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%20AI%20%E8%BF%90%E8%A1%8C%E5%A6%82%E4%BD%95%E7%BB%8F%E5%8F%97%E6%96%AD%E8%BF%9E%E4%B8%8E%20worker%20%E6%95%85%E9%9A%9C%EF%BC%9F)；权限、确认与停止路径见[生产环境中的 AI 安全](#15.%20How%20can%20a%20production%20AI%20system%20contain%20model%20errors%20and%20manipulation?%20/%20%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%20AI%20%E7%B3%BB%E7%BB%9F%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%A8%A1%E5%9E%8B%E9%94%99%E8%AF%AF%E4%B8%8E%E5%8F%97%E8%AF%B1%E5%AF%BC%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
+
+### 代码审查：误报成本决定自动化边界
+
+代码审查助手需要读取 pull request (PR，合并请求) 的 diff (代码差异) 与必要仓库上下文，输出有证据、能定位的 finding (审查发现)。团队若不愿承受嘈杂评论，应先以草稿形式提供建议，由人决定是否发布；不自动批准或阻止合并。每条 finding 至少要有类别、受影响行、代码证据和可执行解释；定位不在此次改动内或引用不匹配时拒绝该 finding。要先确定仓库代码、差异、评论和依赖元数据能否发送到托管服务；若不能越过仓库边界，应比较获准的私有端点或本地模型，同时限制所提供上下文。
+
+> [!example] 代码审查的一次请求路径
+> ~~~text
+> Pull request 事件
+>   → 差异与必要仓库上下文
+>   → 针对正确性/安全等定义好的检查
+>   → schema、行号和证据校验
+>   → 去重、排序、低置信度抑制
+>   → 人工审阅草稿
+>   → 收集接受/驳回反馈并监测结果
+> ~~~
+
+#### 用误报与漏报决定发布模式
+
+> [!example] 合成审查样本的 precision 和 recall
+> 在独立标注集上分别统计 true positive (TP，真阳性)、false positive (FP，假阳性) 和 false negative (FN，假阴性)：
+>
+> ~~~text
+> precision = TP / (TP + FP)
+> recall    = TP / (TP + FN)
+> ~~~
+>
+> 合成小样本中，按去重后的 finding (审查发现) 计数：TP=15、FP=10、FN=5，因此 precision (精确率)=15/(15+10)=60%，recall (召回率)=15/(15+5)=75%。同一标注问题至多匹配一个发现。精确率回答“发布出的发现中多少是真的”，召回率回答“已知问题中多少被找到”；它们的分母分别是系统发现数与标注真问题数，不是 PR 数。样本小、问题类型混合或标签不全时，百分比会不稳定，应按安全、正确性、风格等类别分层并报告样本数。
+
+如果团队目标是让高置信、可证据复核的 finding 节省时间，60% 的 precision 可能不足以自动发评论，但可以继续作为草稿或抑制低置信输出。若漏掉安全问题代价更高，也要监测 recall 和高风险类别，不能只优化精确率让系统变沉默。阈值是产品和工作流决策，应在上线前按标注集校准，不是模型的通用常数。
+
+上下文可包括 changed lines、附近函数、相关调用方和仓库规范；当上下文限长而被截断时记录省略范围。正确性与安全检查可以分开以便解释，但不要在没有任务收益时把一次审查变成多个昂贵模型调用。对大型或生成代码按文件或逻辑块处理，再合并重复 finding。收集作者接受、驳回和修正时，应解释这些行为仍是有偏反馈，不能直接当成错误标签。
+
+评估集应同时包含已知问题与干净改动；测量按类别的 TP/FP/FN、行号有效率、证据支持、开发者接受/驳回、每次审查费用和增加的工作流延迟。用人工审查基线作比较，不能在没有证据时宣称优于人类审查。评估方法和保留候选版本的门禁见[大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)与[Agent 改进与版本验收](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)。
+
+### 三个案例的发布证据落点
+
+这三种系统的“成功”不共用一个分数：文档问答关心证据可见性和权限边界；退款要证明交易状态和授权；代码审查需要在误报成本与漏报风险间选工作模式。候选上线前，应固定任务样本、模型和相关配置，以配对基线查任务翻转，同时测成本、延迟和硬门禁。生产后 trace 用于解释实际失败并提出修复方向；修复是否泛化到新问题仍由独立样本验收。奖励训练分数不能替代这一步，线上用户反馈也不能自动视作真值标签。
+
+> [!info]- 来源
+> 以下第一手资料支撑对应机制；案例数字是明确标注的假设或合成计算，不是来源中的实测。
+>
+> - **容量公式。** Little, [“A Proof for the Queuing Formula: L = λW”](https://doi.org/10.1287/opre.9.3.383)，*Operations Research*, 1961, 9(3):383–387；适用于稳定系统的长期平均关系，不直接给出分位数或 worker 配置。
+> - **退款幂等与结果读取。** Stripe 官方 [Idempotent requests](https://docs.stripe.com/api/idempotent_requests) 说明支持相同幂等键重放及参数一致性/保留期边界；[Create a refund](https://docs.stripe.com/api/refunds/create) 允许多次部分退款并支持 metadata；[Retrieve a refund](https://docs.stripe.com/api/refunds/retrieve) 按退款 ID 读取，说明“支持幂等键”不等于“可按键查询”。
+> - **退款对象与状态。** Stripe 官方 [Refund object](https://docs.stripe.com/api/refunds/object) 给退款对象唯一 ID，并区分 pending、requires_action、succeeded、failed、canceled；存在对象不等于最终成功。
+> - **结构化输出与工具调用。** OpenAI 官方 [Function calling](https://developers.openai.com/api/docs/guides/function-calling) 和 [Structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)，截至 2026-11-06 核对。schema 约束接口形状，不代替应用授权与业务状态检查。

@@ -6,7 +6,7 @@
 
 - [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md) — 沿一个构建失败问题，走完模型推理、日志查询和返回解释的过程。
 - [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)——沿一次文档更新看索引、权限校验、检索和引用。
-- [怎样证明模型或提示词的改动值得上线？](evaluation/llm-evaluation-methods.md)——用代表性任务对照基线和候选版本，再看生产结果。
+- [如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)——用代表性任务对照基线和候选版本，再看生产结果。
 
 ## 论文与文章
 
@@ -41,12 +41,12 @@
 
 ### 从发现差距到验证改进
 
-- [How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)
+- [如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)
 - [何时应微调来弥补稳定的行为差距？](fine-tuning/fine-tuning-strategies.md)
 - [可验证奖励如何训练推理能力？](fine-tuning/reward-based-reasoning-training.md)
-- [How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](agents/agent-improvement-and-version-acceptance.md)
-- [How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
-- [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](systems/ai-system-design-interview-questions.md)
+- [如何验证并保留对 Agent 的改进？](agents/agent-improvement-and-version-acceptance.md)
+- [如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
+- [如何把 AI 系统设计题转化为有依据的架构？](systems/ai-system-design-interview-questions.md)
 
 ## 跨域脉络
 

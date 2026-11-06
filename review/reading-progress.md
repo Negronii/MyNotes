@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d80a33df0e6cb669ba36421e730c18fb0c5ef04359cad7be69da1363f55d27e0 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d6e05a177d12e21d0523519c58d4625cfc551fc2c4b161b5d64e83962bbaa446 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -26,12 +26,12 @@
 - [ ] 14. [How should a multi-step AI task be structured? / 怎样组织多阶段 AI 任务？](../ai-engineering/agents/orchestration-patterns.md)
 - [ ] 15. [How can a production AI system contain model errors and manipulation? / 生产环境 AI 系统如何限制模型错误与受诱导带来的影响？](../ai-engineering/safety/ai-safety-in-production.md)
 - [ ] 16. [How can a production AI run survive disconnections and worker failures? / 生产环境中的 AI 运行如何经受断连与 worker 故障？](../ai-engineering/systems/ai-application-architecture.md)
-- [ ] 17. [How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？](../ai-engineering/evaluation/llm-evaluation-methods.md)
+- [ ] 17. [如何判断 AI 系统是否满足任务契约？](../ai-engineering/evaluation/llm-evaluation-methods.md)
 - [ ] 18. [何时应微调来弥补稳定的行为差距？](../ai-engineering/fine-tuning/fine-tuning-strategies.md)
 - [ ] 19. [可验证奖励如何训练推理能力？](../ai-engineering/fine-tuning/reward-based-reasoning-training.md)
-- [ ] 20. [How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？](../ai-engineering/agents/agent-improvement-and-version-acceptance.md)
-- [ ] 21. [How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？](../ai-engineering/systems/ai-production-observability-and-feedback.md)
-- [ ] 22. [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](../ai-engineering/systems/ai-system-design-interview-questions.md)
+- [ ] 20. [如何验证并保留对 Agent 的改进？](../ai-engineering/agents/agent-improvement-and-version-acceptance.md)
+- [ ] 21. [如何监控生产中的 AI 功能并安全地改进？](../ai-engineering/systems/ai-production-observability-and-feedback.md)
+- [ ] 22. [如何把 AI 系统设计题转化为有依据的架构？](../ai-engineering/systems/ai-system-design-interview-questions.md)
 ## Frontend
 
 - [ ] 23. [浏览器如何把 URL 变成第一帧？](../frontend/browser/browser-basics.md)

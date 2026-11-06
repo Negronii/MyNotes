@@ -1,97 +1,140 @@
-# How can you tell whether an AI system meets its task contract? / 如何判断 AI 系统是否满足任务契约？
+# 如何判断 AI 系统是否满足任务契约？
 
-**Core explanation / 核心解释：** Define success in observable terms, then evaluate representative cases at the layer where the behavior occurs—retrieval, generation, or an end-to-end agent. Use objective checks where there is a defensible answer, verify facts and source support separately, and use an explicit rubric or calibrated judge for open-ended quality. Keep a held-out regression set, report the denominator and uncertainty, and pair offline comparisons with production outcomes. No single score captures task success, truth, relevance, safety, and operating cost. / 先把成功定义为可观察的条件，再在行为实际发生的层级评估代表性案例：检索、生成或 agent 端到端。存在可辩护答案时使用客观检查；事实正确与来源支持分别核验；开放式质量使用明确 rubric 或经校准的 judge。保留独立回归集，报告分母与波动，并把离线比较与生产结果结合。单一分数无法同时代表任务成功、事实、相关性、安全和运行成本。
+## 从 build 73 的日志开始：回答对用户有用吗？
 
-## Define each dimension / 分别定义各评估维度
+发布工程师把一次失败的 continuous integration (CI，持续集成) 构建交给日志助手，希望得到失败类别、可核对证据和下一步排查方向。
 
-Faithfulness 和 groundedness 在论文与工具中用法不完全一致。评分准则或评分量表（rubric）应明确评估维度和证据锚点；需要对照真值的任务还应说明 ground truth（参考真值，如外部事实或标注答案）。评估来源忠实度时要指定来源/上下文，评估指令遵循时要列明请求中的约束。RAG 研究常将上下文相关性、答案对上下文的忠实度、答案相关性分别评估；这是有用的拆分方式，不是普遍完整的指标清单。[RAGAS](https://arxiv.org/abs/2309.15217) 与 [ARES](https://aclanthology.org/2024.naacl-long.20/) 使用相近但不完全相同的评估设置。
+> [!example] Build 73 的合成日志样本
+> ~~~text
+> build=73 stage=integration
+> line 18: starting local service at 127.0.0.1:8081
+> line 19: GET /health
+> line 20: connect ECONNREFUSED 127.0.0.1:8081
+> line 21: retry 3/3 exhausted
+> line 22: integration tests skipped: service did not become ready
+> ~~~
 
-| Dimension / 维度 | Definition / 定义 | Does not establish / 不能据此推出 |
+分类时沿时间线定位最早导致任务中止、且之后没有恢复的阻塞失败：第 20 行连接被拒绝，第 21 行三次重试耗尽，第 22 行因此跳过集成测试。若连接错误后来恢复并且后续任务继续，就不能把它单独当作主失败。成功答案应把本例归为服务启动或就绪失败，而不是断言某个业务测试发现了代码回归；证据应指向第 20 至 22 行，建议检查进程启动、端口绑定和 readiness（就绪探针）配置。若答案只说“构建失败”，它可能事实无误却没有完成用户任务；若它说“支付接口断言失败”，则类别错误，而且没有证据支持。
+
+Build 73 在这里是开发阶段暴露问题的样例；它和任何用于修改候选的案例都不进入后面的独立验收集。
+
+这里的 task contract (任务契约) 是：找出最早未恢复且阻断后续任务的失败，给出一个主类别、引用实际日志行、提出不超出证据的下一步；禁止臆造根因或把无关服务日志当证据。评估不是给流畅文本打一个总分，而是逐项验证这个契约。下文继续用同一个助手说明怎样选样本、读分数、决定发布，并把这套可靠评分规则用于未参与训练的新问题。
+
+## 先把“成功”拆成可观察的条件
+
+factual correctness (事实正确性) 和 source faithfulness (来源忠实度) 回答不同问题：第 20 行是否真的出现 ECONNREFUSED 是可由日志检查的事实；把错误归因于服务未就绪，是否得到第 20 至 22 行支持，则是证据支持问题。来源可能过期，事实也可能正确但与给定来源无关，所以不能互相替代。
+
+| 维度 | 在 build 73 中如何检查 | 通过它仍不能推出什么 |
 |---|---|---|
-| Task success / 任务成功 | **EN:** Did the result meet explicit acceptance criteria? **中：** 输出是否满足明确的任务验收条件？ | **EN:** That every claim is true or safe. **中：** 不能证明每个说法都真实或安全。 |
-| Factual correctness / 事实正确性 | **EN:** Are claims true against an appropriate external reference at the relevant time? **中：** 说法对照适当的外部依据、在相关时间点上是否为真？ | **EN:** That the supplied context supports them. **中：** 不能证明给定上下文支持这些说法。 |
-| Source faithfulness or groundedness / 来源忠实度或依据充分性 | **EN:** Are claims supported by the specified source/context, without material contradiction? **中：** 说法是否由指定来源/上下文支持，且没有实质冲突？ | **EN:** That the source is current or correct. **中：** 不能证明来源本身及时或正确。 |
-| Relevance / 相关性 | **EN:** Does the answer address the question or requested information? **中：** 答案是否回应问题或所需信息？ | **EN:** That it is correct, supported, or complete. **中：** 不能证明答案正确、有依据或完整。 |
-| Instruction adherence / 指令遵循 | **EN:** Did it follow applicable format, scope, and constraints? **中：** 是否遵守适用的格式、范围和约束？ | **EN:** That it is factual. **中：** 不能证明内容属实。 |
-| Operational quality / 运行质量 | **EN:** Does it meet latency, availability, and cost requirements? **中：** 是否满足延迟、可用性和成本要求？ | **EN:** That user task goals were met. **中：** 不能证明用户任务目标已达成。 |
+| task success (任务成功) | 类别、证据和下一步是否满足事先列出的契约？ | 每个说法都为真或无风险。 |
+| 事实正确性 | 日志行、构建元数据是否与记录一致？ | 指定证据支持答案中的因果解释。 |
+| faithfulness / groundedness (来源忠实度/依据充分性) | 关键说法是否有指定日志或报告支撑，且无实质矛盾？ | 日志记录本身完整、及时或正确。 |
+| relevance (相关性) | 是否回答发布工程师问的失败类型和排查问题？ | 答案正确、完整或证据充分。 |
+| instruction adherence (指令遵循) | 是否只报一个主类别、给出行号并遵守格式？ | 内容属实。 |
+| operational quality (运行质量) | 是否符合延迟、可用性和每次完成成本要求？ | 用户任务成功。 |
 
-“Hallucination / 幻觉”没有统一且公认的分类法。不同综述对 factuality 与 faithfulness 的关系和子类划分并不相同；某篇论文的 taxonomy 不能当作普遍的三分法。评估时应标记可观察的失败及其依据，例如：对照外部依据为假、给定上下文不支持、与上下文冲突，或不遵守指令。指令失败应明确测量；某篇研究是否把它归到 faithfulness 子类，取决于该文定义。[Ji et al., *Survey of Hallucination in Natural Language Generation*](https://arxiv.org/abs/2202.03629)；[Huang et al., *A Survey on Hallucination in Large Language Models: Principles, Taxonomy, Challenges, and Open Questions*](https://doi.org/10.1145/3703155)（[arXiv](https://arxiv.org/abs/2311.05232)）。
+hallucination (幻觉) 没有一套对所有研究都统一的分类法。实际验收可标记可观察的错误：与外部依据相反、超出给定来源、与来源冲突、未满足格式或动作约束。若将指令失败算作某种幻觉子类，应在所用分类规则中明说，而不要把特定论文的分类当普遍定义。本文之后把“无依据的根因归因”当作一种待测失败模式。
 
-**合成示例 / Synthetic example。** 给定的服务日程写着 5 月 10 日闭店，但权威的当前通知已将日期改为 5 月 12 日。复述 5 月 10 日的答案忠于给定日程，却在当前事实上错误。回答 5 月 12 日可能符合当前事实，却没有得到该日程支持。应分别评估来源支持与当前事实，并记录参照日期。
+## 让样本与用户面对的任务一致
 
-## Choose metrics for the task / 按任务选择指标
+先定义目标总体：这里是发布团队提交的构建失败日志，而不是任何自然语言问题。若线上流量既有服务未启动、断言失败，也有依赖超时，回归集要覆盖这些主要类别、常见格式、边界情况和曾经失败的输入。可以按失败类别与日志长度分层抽样，再在每层中抽取案例；若为了覆盖稀有错误而过采样，汇总线上成功率时需按真实流量占比加权，不能把过采样后的比例误称线上比例。
 
-| Metric family / 指标类型 | Good fit / 适用条件 | Boundary / 边界 |
-|---|---|---|
-| Accuracy, exact match, F1, executable tests / 准确率、精确匹配、F1、可执行测试 | 有明确标签、结构化输出或可辩护的预期结果时。代码通过率只说明指定测试集的结果。 | 标签或测试集可能遗漏其他质量维度或合理答案。 |
-| BLEU, ROUGE / 参考文本重合度 | 翻译、摘要等任务中，参考文本重合度能作为有用的语料级信号时。BLEU 原用于机器翻译的快速、频繁评估；ROUGE 是一组参考摘要指标。[BLEU](https://research.ibm.com/publications/bleu-a-method-for-automatic-evaluation-of-machine-translation)、[ROUGE](https://aclanthology.org/W04-1013/)。 | 衡量词面重合，不是通用事实性或有用性指标。合理改写可能重合较少；仅有高重合分不能证明答案正确或相关。它们是特定任务工具，并非因历史较久就失效。 |
-| Retrieval precision/recall and ranking measures / 检索精确率、召回率与排序指标 | 有相关文档或参考证据标注的检索阶段。Recall@k 可看所需证据是否出现在前 k 项；精确率/排序指标可看返回集合与顺序。 | 结果取决于候选集、相关性标注和 k。检索到相关内容不等于证据完整，也不等于最终答案有依据。 |
-| Rubric or model-graded scores / rubric 或模型评审分数 | 没有唯一答案的开放任务，且评价标准可以明确写出并用例子校准时。 | judge 本身也是可能出错的模型；评分不是 ground truth（参考真值）。 |
-| Latency, availability, and cost / 延迟、可用性与成本 | 作为运行约束，与任务结果一起报告，用于理解质量与成本的权衡。 | 不能替代任务质量。 |
+对每条样本记录可复核的目标：主类别、支持类别的行、可接受的下一步，以及拒答或证据不足时的行为。标注说明要规定一条日志可以同时有诱因和表现时怎样选主类别，并由有经验的审阅者裁定歧义样本。人工标注同样可能错；保留来源版本、裁定记录和无法确定的标签。
 
-不要把指标名称当成跨库统一标准。如果使用框架中的 faithfulness、context precision 或 answer relevance 分数，应固定框架版本并检查其输入和 rubric；名称相同的指标也未必可互换。本文不提供框架 API 用法。
+开发集可用于修改提示词、检索和检查器；最终验收集必须与反复调试使用的样本隔离。锁定模型版本、system prompt (系统提示词)、索引、工具、生成设置、评分规则和发布日期。这里的统计单位是独立任务：同一事故的多份日志、同一题的多次生成或多个随机种子不能直接当作多道独立题。若样本按事故成簇或按线上流量加权，应改用匹配其抽样结构的分析或分组重采样，不能直接把行数代入普通 Wilson 或配对检验。反复挑选能在同一验收集上胜出的方案会让该集合逐渐成为开发集，所以重要发布需要保留新题或新时间段作最终审计。不得将含客户信息的原始日志直接放入公开教学材料。
 
-## Evaluate the pipeline at the right level / 在正确层级评估链路
+对 retrieval-augmented generation (RAG，检索增强生成) 链路，分阶段测量可帮助定位这类答案为何错：
 
-对检索增强系统分阶段评估，才便于定位故障：
+1. **检索：** 是否取回服务启动和健康检查相关日志、运行手册？如果正确证据不在候选集合，后续生成很难靠提示词补回。
+2. **给定上下文后的生成：** 是否正确解释所取片段、区分观察到的错误与推断原因，并引用实际行号？
+3. **端到端任务：** 工程师能否据此找到真正故障，回答有无不当动作或升级？组件分数不能代替端到端完成情况。
 
-1. **Retrieval / 检索：** 候选集合是否包含所需证据？排序是否把它放在系统可用的位置？有相关文档或证据标注时，可据此评估。
-2. **Generation given context / 给定上下文后的生成：** 回答是否回应问题、遵守指令、在需要时正确引用，且说法得到上下文支持？如果任务要求事实正确，还要单独核验外部事实。
-3. **End-to-end agent / Agent 端到端：** Agent 是否通过合适的动作达到要求的环境状态？评估目标完成、工具/动作是否正确、有无有害副作用，以及延迟或成本。组件分数有助于定位问题，但不能证明端到端成功。像 [AgentBench](https://arxiv.org/abs/2308.03688) 这样的交互式 agent 基准在环境任务中评估 agent，而不只是评分孤立文本回答。
+RAGAS 和 ARES 分别展示了上下文相关性、答案忠实度、答案相关性等多维评估，以及结合自动评审、人类标注和统计估计的方案。它们的维度和定义并不完全一致，既不是统一标准，也不是完整任务契约。检索到相关段落不证明证据完整；引用了日志也不证明解释正确。
 
-**Offline / 离线评估**用固定样本做受控比较和回归，便于复现；但可能漏掉当前流量、变化中的来源和线上用户结果。**Online / 线上观察或实验**反映部署行为，但结果可能延迟、不完整，或受模型以外因素影响。条件允许时两者结合：用线上证据发现变化与候选案例，经审查并去标识化或合成为适当样例，再纳入有版本记录的离线集。公开教学示例不要包含私人或用户来源数据。
+## 选择与问题相称的指标
 
-## LLM judges and human review / 模型评审与人工复核
+有明确标签或可执行预期时，用准确率、精确匹配、F1 或测试通过率；它们依赖正确标签和覆盖充分的样本。F1 衡量 precision (精确率) 与 recall (召回率) 的调和平均，常用于类别不平衡时观察两者折衷，但单独一个 F1 会隐藏漏报与误报各自的代价。若业务把“错误叫成代码回归”视作高代价误报，应分开报告该类别的 precision 与 recall。
 
-Judge model 可按 rubric 评分、比较候选答案，或筛出待复核案例。提供问题、相关上下文或参考答案，以及带有可观察评分锚点的标准；要求评委给出评分依据。若要核对验收底线，使用逐项 pass/fail 检查或带明确锚点的评分准则；若问题是相对偏好，可用成对比较。成对比较只回答相对偏好，赢家未必满足验收底线。
+BLEU 和 ROUGE 是针对特定文本任务的参考文本重合度工具：BLEU 起初用于机器翻译快速评估，ROUGE 是一组摘要指标。词面重合不能当通用事实性指标；合法改写可能重合很少。检索精确率、召回率及排序指标适用于有相关文档或证据标注的阶段，但依赖候选集、标注规则和 top-k，不能单独验证答案。
 
-研究发现的评委偏差包括位置、冗长偏好和自我偏好，但程度随任务和评委变化。[MT-Bench](https://arxiv.org/abs/2306.05685)、系统性的[位置偏差研究](https://arxiv.org/abs/2406.07791)和关于[自我偏好偏差的研究](https://arxiv.org/abs/2410.21819)说明应在目标评估任务上实际检验评委，不应假定某项缓解措施必然有效。可以随机或交换候选顺序并比较评分，按任务切片抽样复核；多评委或跨 provider 的增益仍需在校准集上验证。它们是诊断手段和可能的缓解措施，不保证评委彼此独立或判断正确。
+没有唯一答案的开放任务可用 rubric (评分准则) 或模型评审，但要给出可观察锚点。build 73 的 rubric 可以分别评分类别是否正确、证据是否逐行对应、下一步是否与证据相称；评分者不能因答案看起来专业就提高事实分。给评审模型的问题、上下文和标准时，也要检查遗漏证据、位置偏好、冗长偏好和自我偏好等偏差。随机交换两个候选答案位置，或对共享校准样本的人类评分进行盲审，可以发现部分偏差，但不能保证评委独立或正确。
 
-当标准需要专业知识、任务主观或后果重大，或需要验证自动评委时，应安排人工复核。先用共同样例校准评审者、比较分歧；需要可靠参考结论时，对分歧案例进行裁定。一致性表示评审者在 rubric 下较一致，不代表 rubric 或标签正确。Judge 与单个人的分数一致，也不能单独证明 judge 准确。
+对于成对偏好，评委选出的赢家只表示相对偏好，不表示它通过任务底线。例如两个答案都把 ECONNREFUSED 当作断言失败，较简洁的那一个仍应判失败。评委应在目标任务与 rubric 上对照人工裁定集校准；一致性说明评分较稳定，不证明标签本身正确。对高后果结论或专业判断，安排人工裁定。
 
-需要外部事实时，尽可能对照适当、可信且及时的依据。评估来源忠实度时，应对照指定的上下文检查说法。NLI 分类器、再次检索和 self-consistency 可帮助筛选待检查内容，但都可能出错：多次回答一致不能证明为真，二次检索也可能返回过期或不相关来源。应报告检查了什么、依据何在，而不要把检测器分数写成事实已核实。
+BLEU、ROUGE、模型评审、natural language inference (NLI，自然语言推断) 分类器、自动事实检测和再次检索都只能覆盖各自定义的信号。多次生成答案一致不证明真实；二次检索可能返回过期或不相关来源。报告每种检查使用的依据和失败边界，不要把检测器分数写成“事实已核实”。
 
-同样，提交被引用、标成依赖或获提名投票（nomination），只能说明来源声明或选择过程；不能代替任务结果的正确性检查。[GitSwarm v1（2026-10-04，§§2.2、2.5、3.4、4）](https://arxiv.org/html/2610.04862v1)将依赖声明、执行轨迹中的实际产物使用和最终候选的提交祖先链分开分析，并明确这些指标不单独证明因果收益。
+## 建立可比较的回归集
 
-## Build a comparable regression set / 建立可比较的回归集
+### 同一批问题比较两个版本
 
-- 定义符合条件的任务总体，并抽取常见样本、重要切片和已知失败类型。记录样例如何选择、标注和版本化；方便取得的样例集不一定有代表性。
-- 将开发样例与用于最终比较的独立保留集分开，避免反复针对保留集调优。记录模型、提示词、检索语料/配置、评委和 rubric 的版本。
-- 明确分母。例如，报告“所有符合条件的尝试中成功完成任务的比例”，并单独报告回答覆盖率。若任务要求拒答，正确拒答计为成功；未回答或不当拒答也应作为结果保留。如果 faithfulness 只在已回答样本上计算，应标明这是“已回答样本中的条件分数”，并同时报告回答覆盖率或任务完成率。
-- 在相同协议下与基线比较。对于随机输出，重复足够次数以观察有实际意义的波动；报告样本数与不确定性，不要把微小分差说成确定结论。ARES 展示了一种将自动评委、人类标注样例与统计估计结合的方法，但不是每种评估都必须采用。[ARES](https://aclanthology.org/2024.naacl-long.20/)；另见 [Towards Reproducible LLM Evaluation](https://www.turing.ac.uk/sites/default/files/2025-11/towards_reproducible_llm_evaluation.pdf)。
-- 只让快速检查拦截它有能力发现的问题；根据变更风险安排更完整的评估。线上失败在原因查明、数据适合保留后可进入回归集；盲目加入每起事件会造成重复、数据泄漏或隐私风险。
+把版本 A 与版本 B 在同一批独立验收问题、相同输入和相同评估协议下运行，得到配对结果。
 
-## 架构迁移与更新验收 / Architecture migration and update acceptance
+> [!example] 合成配对样本的统计计算
+> 下面是 200 个 build-log 任务的合成教学数据，不是生产测量。假设从目标总体随机抽取 200 个独立、等权任务；每题用同一输入和协议分别运行 A 与 B，并产生一个二元任务结果。不对稀有类别过采样后再重加权。Build 73 及用于开发的案例已排除。若真实数据包含同一事故的多份日志或同一题的重复运行，它们需按事故/任务成组分析，不能按独立题直接代入下式：
+> A 是当前基线，B 是候选版本：
+>
+> | 结果 | 数量 |
+> |---|---:|
+> | 两个版本都通过 | 156 |
+> | 两个版本都失败 | 14 |
+> | 只有 B 通过 | 24 |
+> | 只有 A 通过 | 6 |
+>
+> 因此 A 有 156+6=162 个通过，成功率是 162/200=81%；B 有 156+24=180 个通过，成功率是 180/200=90%。观测差是 18/200=9 percentage points (个百分点)，不是“提高 9%”的相对百分比说法。
+>
+> Wilson score interval (Wilson 得分区间) 用样本比例 p̂、样本数 n 和正态分位数 z 计算；95% 区间取 z=1.96：
+>
+> $$
+> \frac{\hat p+z^2/(2n)\ \pm\ z\sqrt{\hat p(1-\hat p)/n+z^2/(4n^2)}}{1+z^2/n}.
+> $$
+>
+> 代入 p̂=162/200 与 180/200，A 的区间约为 [75.0%, 85.8%]，B 为 [85.1%, 93.4%]。区间描述抽样比例的不确定性，不涵盖标签错误、抽样偏差或未来分布变化。由于结果配对，不能只看两个边际区间是否重叠来检验版本差异。
+>
+> McNemar exact test (McNemar 精确检验) 只用发生翻转的 30 题：B 单独通过 24 题，A 单独通过 6 题。若版本没有方向性差异，每次翻转都同样可能由 A 或 B 获胜，30 次中预期各胜 15 题；双侧检验把至少像 24:6 这样偏向一方的两种方向都计入。
+>
+> C(30,k) 计算 30 个翻转中恰有 k 题由 B 获胜的不同排列数。零假设下每次翻转由 A 或 B 获胜的概率各为 0.5，因此每个具体排列的概率都是 0.5^30。双侧 p 值为：
+>
+> $$
+> 2\sum_{k=24}^{30}\binom{30}{k}(0.5)^{30}\approx 0.00143.
+> $$
 
-**核心解释 / Core explanation：** 在固定任务与验收契约下比较端到端结果；行为变化、预测分数或复用记录都不能单独证明改进。Compare end-to-end outcomes under fixed task and acceptance contracts; behavioral changes, forecast scores, or reuse records alone do not establish improvement.
+在零假设和独立任务假设成立时，p 值表示出现当前或更极端胜负失衡的概率，不是“零假设为真的概率”。这组配对数据与“没有方向性差异”的零假设不太相容；它不证明 B 对所有任务更好，也不能替代效果大小、失败类别、部署成本或独立新样本。阈值和分析方法应在看结果前确定，避免只挑显著切片报告。
 
-比较 agent loop、harness 或上下文策略时，覆盖完整生产链路、强制规则和发生变化的任务切片，并报告新增成功与回归的任务成败翻转（task flips）、成本及重复运行波动。先记录现有架构的端到端基线，再一次折叠一个 subagent 重复比较，单主循环是待评估的候选方案。这是工程建议，参照 [Anthropic 的 folding 文章（2026-10-22，“Task-completion evals”“Folding subagents into the main agent via skills and tools”）](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)。
+### 将质量、硬门禁与运行预算放进同一决策
 
-若更新策略（policy）与预测器（predictor），应分别检验各自效果和配对兼容性；配对门禁失败时保留已接受组合，并让开发/更新、门禁和最终审计数据承担不同用途。[RSI-Anything v1（2026-10-09，§2.5）](https://arxiv.org/html/2610.13912v1#S2.SS5)
+假设团队预先规定：成功率 Wilson 下界至少 85%；格式符合率至少 98%；权限错误必须为零；受控压测的端到端 p95 (95th percentile，第 95 百分位) 不高于 4 秒；每个符合条件的请求平均费用不高于 0.03 美元。以下继续使用同一组假设性结果：B 的成功率下界约 85.1%，199/200 个输出符合格式，即 99.5%，总推理费用 4.80 美元，除以 200 次符合条件的尝试后为每次 0.024 美元；独立压测 p95 为 3.4 秒；20 个专门的权限边界用例均无越权。
 
-若要测试清空历史是否有助于搜索，从同一候选检查点比较继续运行（continuation）与清空后重启（reset），同时报告候选质量、方案提案数（proposals）、实际 token/费用或时间及重复波动。[*Scaling Discovery Requires Forgetting* v1（2026-10-14，§4、§4.3 / Table 3）](https://arxiv.org/abs/2610.20563v1)的主实验固定三次重置；AHC014 对照按提案数匹配而非等花费或时长，且同时清除 session 和候选历史。该重置数只是实验设置；结果不能归因于其中一种记忆，也不建立通用重置周期。
+按书面阈值，B 的离线成功率刚刚通过，其他数字也达到假设目标；但 20 个权限用例的零失败不能证明线上越权概率为零。每次符合条件的尝试费用以全部合格尝试为分母；每个已完成任务费用则以经确认完成的任务数为分母，回答不同问题。本例没有给出独立确认的完成数，因此不据此计算后者。若权限是硬约束，要另外审查授权实现和边界覆盖，production canary (生产小流量试运行) 期间任何权限违规都触发回滚。把样本数、负载条件、费用分母、并发和配置一起写入报告；压测 p95 不是训练或离线评估上的统计量。
 
-Harness 的行为对照是执行证据而非正确性证明；[Harness² v1（2026-10-09，§2.2.1、Appendix F）](https://arxiv.org/html/2610.14224v1)也指出额外执行成本、随机性和共同偏差的影响。工程上仍需单独限制 Probe 的外部写入权限与副作用，不能把它当成无成本、无影响的预测。
+发布前使用相同推理协议配对比较候选与基线，通过门禁后才分阶段放量。canary 中继续记录符合条件请求的分母、任务结果、工具失败、拒答、时延和成本；遇到硬门禁回滚，质量或成本越界则停止放量并查明切片。上线数据适合发现新失败，不自动成为可靠标签。
 
-**工程建议 / Engineering advice：** 若系统用预测器排序候选，应分别记录预测与随后实测的误差，以及所选 policy/version 在固定验收契约下的任务结果和成本。
+## 把训练信号与泛化评估分开
 
-## Use public benchmarks as evidence, not a deployment proxy / 公共基准是证据，不是上线代理
+训练中提升奖励只说明策略更会满足优化目标。对于规则可复用且评分定义稳定的任务，**同一评分规则可以用于没有参与训练、调参或筛选的新问题**，这仍是对结果指标的有效独立验收；变化的是样本，而不是必须换一套评分函数。应检查规则是否覆盖等价答案、格式边界、侥幸通过和未知题型，并同时看人工抽检或其他独立检查。
 
-当任务、协议、模型访问方式和计分规则与问题相符时，公共基准可支持受控比较。像 [HELM](https://arxiv.org/abs/2211.09110) 这样的广泛评估也显示了多种场景与指标的价值；但它们不会自动代表某个具体部署任务。
+例如，若推理训练只优化“最终数学答案正确”的 verifier (程序验证器) 奖励，新题上继续由同一个正确 verifier 判分可以测量数学答对率；它不能单独证明推理过程每步正确、解释清晰、抗提示注入或广义泛化。[奖励驱动的推理训练](../fine-tuning/reward-based-reasoning-training.md)解释奖励如何进入更新；本章的独立新样本与任务切片才用于检验这些结果是否迁移到预定任务范围。
 
-检查基准覆盖范围、评估协议以及训练数据污染的可能性。污染测量及其影响取决于基准、模型和测量方法；分数提高或小幅上涨本身不能证明模型记住了测试集。[Sainz et al.](https://arxiv.org/abs/2310.18018)；[Singh et al.](https://arxiv.org/abs/2411.03923)。可用公开结果缩小候选范围，再用有代表性、记录版本且带独立保留集的任务样本比较入选系统。
+## 把线上反馈转成可复核的新案例
 
-## Related notes / 相关笔记
+部署后，工程师若指出 build 73 的建议无助于排查，应先把反馈与版本、任务类别和可控的日志引用关联，再按隐私规则检查和归类。审查过的失败可以用于补充开发回归集；若要进入最终验收集，应防止它同时被用来调参。任务、模型、提示词、检索语料、评委或评分规则变化都可能改变结果，记录这些版本以便重放。
 
-- [Agent improvement and version acceptance / Agent 改进与版本验收](../agents/agent-improvement-and-version-acceptance.md) — connect feedback on a task to a change that persists across runs.
-- [Orchestration patterns](../agents/orchestration-patterns.md) — compare the single-loop baseline with tested delegation or parallel work.
-- [RAG architecture and implementation](../rag/rag-architecture-and-implementation.md) — 了解检索、证据组装和生成机制，对应本文的 RAG 评估阶段。
-- [AI safety in production](../safety/ai-safety-in-production.md) — 了解需要单独设计任务检查的安全边界和生产控制。
+线上成功率也会受问题分布、用户选择是否反馈及服务可用性影响。明确报告分母和统计口径：反馈样本是自选子集，偏差方向取决于哪些用户更愿意反馈；它不能估计全体请求成功率。全量交付率和标注覆盖率需要全部符合条件的任务计数；正确性只核实了部分任务时，应报告审核样本结果、覆盖率和未知比例，或按代表性抽样及权重估计总体。不能拿抽样核实的成功数直接除全量任务数，也不能只看完成而漏掉弃用和无法回答。HTTP 200 表示请求响应成功，不证明任务答对。线上信号提示“去哪查”，代表性独立案例回答“改动是否满足契约”。
 
-## Sources / 来源
+## 使用公共基准的边界
 
-关键定义与主张已在正文链接一手研究。补充来源：
+公共基准可用于任务、输入输出协议和计分规则与目标问题接近的受控比较。检查覆盖范围、版本、基线和可能的数据污染；污染的检测取决于测试集、模型和测量方法，分数上涨本身既不证明记忆，也不排除污染。公开榜单不自动代替本地回归集和真实任务验收。像 HELM 这样的广泛评估展示了多场景、多指标的价值，但不能自动代表特定部署。
 
-- Liang et al., [*Holistic Evaluation of Language Models*](https://arxiv.org/abs/2211.09110).
-- Zheng et al., [*Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*](https://arxiv.org/abs/2306.05685).
-- Xia et al., [*Evaluation-Driven Development and Operations of LLM Agents: A Process Model and Reference Architecture*](https://arxiv.org/abs/2411.13768) — 提出连接离线与线上评估的流程模型，并不保证两者分数一致。
+RSI、harness 编辑或仓库产物复用等“系统如何演进”的研究证据属于[Agent 改进与版本验收](../agents/agent-improvement-and-version-acceptance.md)；这里保留其评估边界：预测、引用、复用和排序都不是端到端任务结果。若改变的是 agent 执行架构，还应在相同任务与预算下评估完整请求，而非只比较中间环节。
+
+> [!info]- 来源
+> 以下链接映射正文中的指标定义、评审偏差、评估设计和公共基准边界；合成数据在正文中明确标注，不来自这些论文。
+>
+> - **多维 RAG 评估。** RAGAS, [arXiv:2309.15217](https://arxiv.org/abs/2309.15217)；ARES, [NAACL 2024 论文](https://aclanthology.org/2024.naacl-long.20/)（arXiv:2311.09476）。指标设置相近但不完全相同。
+> - **幻觉术语边界。** Ji et al., [*Survey of Hallucination in Natural Language Generation*](https://arxiv.org/abs/2202.03629)；Huang et al., [*A Survey on Hallucination in Large Language Models*](https://doi.org/10.1145/3703155)，补充版本 [arXiv:2311.05232](https://arxiv.org/abs/2311.05232)。
+> - **文本重合指标。** Papineni et al., [BLEU](https://research.ibm.com/publications/bleu-a-method-for-automatic-evaluation-of-machine-translation)；Lin, [ROUGE](https://aclanthology.org/W04-1013/)。
+> - **模型评审。** Zheng et al., [*Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*](https://arxiv.org/abs/2306.05685)；Liu et al., [位置偏差分析](https://arxiv.org/abs/2406.07791)；[自我偏好偏差研究](https://arxiv.org/abs/2410.21819)。论文发现不等于每个任务上的固定偏差大小。
+> - **分层自动评估与标注。** Saad-Falcon et al., [ARES](https://aclanthology.org/2024.naacl-long.20/)，§§3–4；展示一种自动评分、人类标注与统计估计组合。
+> - **综合基准。** Liang et al., [*Holistic Evaluation of Language Models*](https://arxiv.org/abs/2211.09110)。
+> - **基准污染。** Sainz et al., [arXiv:2310.18018](https://arxiv.org/abs/2310.18018)；Singh et al., [arXiv:2411.03923](https://arxiv.org/abs/2411.03923)。污染测量依具体模型、数据和方法。
+> - **配对比例与置信区间。** NIST [Wilson 比例置信区间](https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm)；statsmodels [McNemar 检验](https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html)，exact 模式按不一致配对的二项分布计算。
+> - **配对验收扩展证据的归属。** [RSI-Anything v1](https://arxiv.org/html/2610.13912v1)、[Harness² v1](https://arxiv.org/html/2610.14224v1)、[GitSwarm v1](https://arxiv.org/html/2610.04862v1)和 Anthropic 的[子 agent 折叠实践文章](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)在 Agent 改进章详述；本章只使用它们共同提示的“实际任务结果优先”边界。

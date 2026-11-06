@@ -1,36 +1,96 @@
-# How do you monitor a production AI feature and turn feedback into a safe improvement? / 如何监控生产中的 AI 功能并安全地改进？
+# 如何监控生产中的 AI 功能并安全地改进？
 
-**Core explanation / 核心解释：** Pair technical service signals with task outcomes. Record enough version and trace context to locate a regression while minimizing sensitive payloads. Treat user feedback as a useful but biased signal: inspect failure modes, make a targeted change, compare it on held-out cases, and keep or roll it back against agreed criteria. / 将服务运行信号与任务结果一起观察。记录足以定位回归的版本与追踪信息，同时尽量减少敏感载荷。用户反馈有用但存在偏差：先检查失败类型，再做有针对性的变更，在留出案例上比较，最后按约定标准保留或回滚。
+## Build 73 上线后，一次错误建议怎样变成可修复证据？
 
-**Key terms / 关键术语：** observability / 可观测性；trace / 追踪；task outcome / 任务结果；feedback signal / 反馈信号；rollback / 回滚。
+发布团队上线了日志助手。工程师提交 build 73 的构建报告，助手给出结构正确的答案，却把 ECONNREFUSED 误判为业务断言失败。用户点踩并补充“集成测试在服务就绪之前就被跳过”。单看一次 HTTP 200 或 JSON schema (结构定义) 合法，系统看起来运行正常；单看用户点踩，也还不知道错在日志获取、检索、模型判断还是评价预期。
 
-## How should an application monitor behavior? / 应用应监控哪些行为？
+生产 observability (可观测性) 需要把一次任务的服务过程、版本和结果关联起来，同时限制收集的数据。反馈只有在经过分类、隐私审查并由独立样本验证后，才适合驱动持久变更。
 
-Track technical operation and task outcomes together. Useful measures include:
+~~~mermaid
+flowchart TD
+    Request[用户请求与任务 ID] --> Trace[端到端 trace 及版本关联]
+    Trace --> Outcome[任务结果、工具状态与成本]
+    Outcome --> Feedback[反馈和纠正信号]
+    Feedback --> Classify[去重、隐私审查、失败分类]
+    Classify --> Candidate[改变合适的系统层]
+    Candidate --> Eval[独立样本评估与配对版本比较]
+    Eval -->|通过| Canary[小流量发布并监控]
+    Eval -->|未通过| Keep[保留当前已接受版本]
+    Canary -->|回归| Rollback[回滚到已接受版本]
+    Rollback --> Feedback
+~~~
 
-- latency distributions and time to first token (TTFT), throughput, and queue time;
-- errors and timeouts by stage, input/output usage, and cost per completed task;
-- tool success and authorization denials, cache-hit correctness, task completion, and escalation;
-- explicit user feedback and whether the result was accepted or corrected.
+## 一条请求需要留下哪些可连起来的信号？
 
-Set thresholds from service requirements and a measured baseline; no universal error-rate or latency threshold fits every application. Record prompt, model, and relevant configuration versions so a change can be investigated. Keep logs proportionate: redact or avoid sensitive content and apply retention controls. Use sampled traces or derived metrics when full payload logging is unnecessary.
+一次 trace (分布式追踪) 把请求根 span 与其子 span 串成端到端操作。span (追踪片段) 可记录身份检查、构建日志读取、运行手册检索、模型生成、结构校验和结果交付等阶段的耗时、状态和关联版本。OpenTelemetry trace 可以连接日志与 span；GenAI 语义约定仍在发展，避免把不断变化的模型字段约定误当固定标准。
 
-Model behavior, external data, prompts, and provider implementations can change. Re-run an evaluation set when a material component changes and compare results by important task slices. [LLM Evaluation Methods / 大语言模型评估方法](../evaluation/llm-evaluation-methods.md) owns task-quality definitions, dataset design, judge validation, and acceptance evidence. Keep a rollback or fallback path when a release misses the agreed quality bar.
+| 阶段 | 可用于定位的记录 | 不应默认保存什么 |
+|---|---|---|
+| 接收请求 | trace ID、任务类别、地区、时间、受限访问的会话引用、请求入口状态 | 未脱敏的用户姓名、完整自由文本问题 |
+| 读取构建产物 | 构建编号、制品版本、读取状态、耗时、允许访问的范围 | 完整原始日志或未经筛选的环境变量 |
+| 检索运行手册 | 索引版本、候选数、证据引用 ID、耗时、权限结果 | 不必要的文档正文、对用户不可见的权限字段 |
+| 模型调用 | 部署模型版本、提示词版本、结束状态、输入/输出 token 数、耗时和费用 | 默认记录完整 prompt (提示词)、答案和工具参数 |
+| 验证与交付 | schema 结果、证据引用是否存在、拒答/升级结果、是否成功交付 | 将私密正文复制到通用应用日志 |
+| 任务结果复核 | 任务 ID、业务系统确认的结果或审核标签及其来源版本；未复核时记为未知 | 把 HTTP 状态、schema 合法或模型自评当作任务正确标签 |
 
-## How can feedback improve the product? / 如何让反馈改进产品？
+> [!example] Build 73 的合成 trace
+> - 关联键：task_id=ci-build-73，attempt_id=1，trace_id=trace-build-73-1。
+> - 构建制品读取：成功；受控存储中的标识为 build-73-report@r4。
+> - 检索：成功；index=runbook-index-v12，返回 runbook/service-readiness@v7#startup。
+> - 实际组装给模型的证据：build-73-report@r4#L20-L22 与 runbook/service-readiness@v7#startup；记录 prompt p12、模型部署 log-assistant-2026-10-31。
+> - 模型生成：1.1 秒，主类别为 assertion_failure，引用构建日志第 20 行。
+> - schema 校验和响应交付：均成功。
+> - 事后审核：审阅者按同一版本的 build 73 日志核实第 20 行连接被拒绝在第 21 行重试耗尽后仍未恢复，并导致第 22 行服务未就绪、集成测试跳过；因此把这条答案标为分类/解释错误，而非读取或检索错误。此标签关联 task ID，trace 本身仍只证明实际交付与结构有效。
+>
+> 这些是假设的教学标识，不是真实生产 ID。逐条检查最终组装上下文后，这个案例可定位到已提供证据的解释层；若模型实际收到的证据缺行、索引过期或权限过滤错了，分类就应改为数据/检索层。把交付状态、事后正确性标签和根因判断分开记录。
 
-Collect explicit signals such as ratings or corrections and implicit signals such as task completion, accepted suggestions, repeated requests, and escalation. These signals are incomplete and biased: a rating reflects who chose to respond, while time spent can mean either engagement or confusion. Interpret them alongside representative task evaluation and user research.
+任务结果要与服务信号并列：端到端延迟和 time to first token (TTFT，首 token 时延)、吞吐量、排队、超时和错误、每次符合条件尝试的费用、工具成功率、权限拒绝、交付完成数、人工升级和用户纠正。schema 与交付状态通常能随请求记录；答案是否满足业务契约则需用稳定 task ID 关联后续的业务结果或审核，未核实的结果标未知。每次符合条件尝试费用以所有合格尝试为分母；每个已完成任务费用以经确认完成的任务数为分母，含义不同，应分开报告。服务与交付率以未采样计数中的全部符合条件任务为分母。未加权的审核样本正确率以已确认标签的任务数为分母；按抽样权重估计总体正确率时，分母则是已核实样本的权重之和。另报已标注覆盖率=已确认标签任务数/全部符合条件任务数。未确认标签保留为未知，不能默默算作通过或失败。若通过抽样审核估计总体正确率，使用代表性抽样或相应权重。诊断 trace 可能经采样，点踩反馈也只是有选择的子集，都不能直接充当总体正确率分母。
 
-A practical improvement loop is:
+不要把独立分位数相加当端到端分位数。例如身份检查的 p95 (95th percentile，第 95 百分位) 加检索 p95 加模型 p95，不一定等于总请求 p95；请求之间的相关性、队列和尾部时延都会改变总体分布。按用户可感知的端到端指标设服务目标，再用阶段 span 定位预算被谁消耗。
 
-1. Capture feedback with relevant task and version context, subject to privacy and retention rules.
-2. Review a sample and classify its failure mode.
-3. Fix the appropriate layer: source data, retrieval, prompt, tool, model choice, interface, or policy.
-4. Test the change on held-out cases and monitor the relevant production outcome.
-5. Keep or roll back the change using the agreed criteria.
+## 从轨迹定位失败类型，而不是猜一个根因
 
-Preference data may inform fine-tuning or preference optimization, but a feedback button alone does not create a validated training signal. See [Fine-tuning Strategies / 微调策略](../fine-tuning/fine-tuning-strategies.md). For permission boundaries, human approval, and production stop paths, see [AI Safety in Production / 生产环境中的 AI 安全](../safety/ai-safety-in-production.md).
+收到反馈后，先给失败分配可观察类别，再决定改哪层。一个事件可能同时有表现与根因：模型可能给错分类，而检索也可能漏掉相关片段；应保留两者，避免一个标签抹掉调查路径。
 
-**Related note / 相关笔记：** [AI Application Architecture / AI 应用架构](ai-application-architecture.md) defines the durable run state and recovery contract that lets service metrics and task feedback remain attached to one logical operation.
+| 观察到的失败 | 可检查证据 | 首要调查方向 |
+|---|---|---|
+| 日志读取或工具调用失败 | 工具返回码、超时、重试和目标版本 | 连接、凭证、依赖健康或调用契约 |
+| 正确证据没有进入模型上下文 | 检索候选及排序、索引版本、权限过滤记录 | 数据更新、分块、检索或授权过滤 |
+| 证据已提供但解释错误 | 被引用的证据 ID 与输出说法、同类样本表现 | 提示词、模型能力、训练信号或验证器 |
+| 结构有效但用户仍无法行动 | 输出 schema 与用户实际任务要求、升级路径 | 任务契约、界面、缺少的上下文或产品策略 |
+| 用户报告内容错误但 trace 缺少证据 | 采样、脱敏策略及可访问的原始记录指针 | 可观测性缺口；不能用缺失日志假装错误不存在 |
 
-**Source boundary / 来源边界：** These monitoring and feedback practices reorganize the existing architecture note. Thresholds, task metrics, and data-retention rules must come from the particular service's requirements and privacy constraints; this note does not prescribe universal numeric targets.
+若模型把 ECONNREFUSED 解释为业务断言失败，而被引用的日志确实显示服务未就绪，现象是“证据解释/任务分类错误”；若日志读取工具返回了空文件，现象则先是数据获取失败。每次修复应针对经检查的层：来源数据、检索、prompt、工具、模型、界面或策略。只凭相关性改动模型，可能掩盖权限或数据问题。
+
+## 反馈并非随机标签：如何降低隐私风险和偏差？
+
+显式反馈包括评分、用户纠正和“转人工”；隐式信号包括重复提问、重试、接受建议、是否完成任务。它们有偏且含义不唯一：不同用户对反馈的意愿不同，偏差方向不能仅从反馈事件推出；停留时间长可能代表投入，也可能是困惑；接受建议可能只表示用户赶时间。反馈事件应和版本、任务类别、结果阶段及稳定任务 ID 关联，不能把“没投诉”当正确标签，也不能用反馈子集估计总体成功率。
+
+收集时做 data minimization (数据最小化)：只保留解决问题所需的字段。默认不写入完整输入、输出、系统提示词和工具参数；需要复核正文时，用受控访问的脱敏存储、短期保留和明确授权，而不是把正文复制到普通日志。OpenTelemetry 的 GenAI span 约定说明消息和工具参数可能包含敏感内容，默认不记录，并建议在生产中谨慎使用外部受控存储；该约定目前仍是开发级，字段与稳定性需要在部署时重新核对。敏感数据处理还应在采集或处理器阶段按需过滤、删除、遮蔽或转换；低熵标识符的散列仍可被猜测，不能称为匿名化。
+
+收到 build 73 的用户纠正时，只需先记录：任务类别、错误版本、可引用的日志行范围、用户明确的修正、隐私审查状态和来源标识。若必须打开原文，应按权限访问原始构建系统并记录访问审计；到达保留期限后删除。对外部系统的授权、用户同意与保留时长由实际服务约束决定，不能由模型自行推断。
+
+## 把线上信号变成独立验证，而不是直接喂训练
+
+1. **收集候选事件：** 将诊断 trace 与模型、prompt、索引和工具版本关联；请求总量、符合条件任务数和完成数来自未采样计数，trace 与反馈只用于定位事件。
+2. **抽样审查并去重：** 检查显式纠正、重试、超时和长期未解决任务；清除不必要的个人或敏感信息。
+3. **分类并确认标签：** 依据可信来源或人工裁定记录类别、行号和可接受下一步；保留交付 span 的 schema validity (结构校验状态)、delivery status (交付状态) 与后续正确性审核的来源、版本和裁定者；不清楚的案例标注为不确定。
+4. **修复对应层：** 例中若模型忽略就绪错误，可能调整提示词或分类校验；若源报告不完整，先修取数。
+5. **做配对比较和独立验收：** 用开发样本调候选，用未参与调参的新样本验收；按任务切片查看质量、硬约束、成本和时延。
+6. **分阶段发布：** 小流量观察同类错误、拒答和副作用，超过门禁就回滚并保留诊断 trace。
+
+已审查的线上失败可以进入开发回归集，帮助复现；不要让同一事件同时用于调候选、选择赢家和宣称独立验收。一个稳定的规则评分器可以复用于**新的独立样本**，前提是它在此类输入上可靠且评分规则适用；奖励训练分数只说明策略优化了该目标，不证明未见分布上的任务质量。若打算将反馈作监督微调或偏好训练数据，需额外审查标签质量、同意、数据切分与敏感性。[评估章](../evaluation/llm-evaluation-methods.md)定义独立比较和统计门禁；[Agent 改进与版本验收](../agents/agent-improvement-and-version-acceptance.md)解释怎样把通过验收的改动保存成版本。
+
+## 由服务要求决定阈值
+
+延迟、错误、费用和隐私阈值来自用户体验、工作负载和合规要求，没有适用于所有 AI 服务的通用数字。上线前固定当前基线与需要分层观察的任务；变化可能来自提示词、模型提供方、外部数据、索引、工具或产品界面。重要组件更新后重跑代表性评估，并比较版本和失败切片。
+
+出现一次硬权限违规应如何处理，可由安全和系统策略设为硬停止条件；一般质量差异则应连同样本数、分母和不确定性判断。一次点踩触发调查是合理的，一次点踩自动改权重、自动发布不是可靠的改进闭环。
+
+> [!info]- 来源
+> 以下一手资料支持追踪结构、关联字段和隐私处理。版本化约定可能演进，线上配置需再次核对。
+>
+> - **Trace 与 span。** OpenTelemetry, [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/)：说明一次请求的根 span、子 span 与端到端操作。
+> - **日志关联。** OpenTelemetry Logs Specification [v1.62.0](https://opentelemetry.io/docs/specs/otel/logs/)：说明 TraceId、SpanId 关联日志和 span。
+> - **GenAI span 字段和敏感载荷。** OpenTelemetry [GenAI spans semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-spans.md)，截至 2026-11-06 检查主分支；文档标为 development，提示输入/输出消息和工具参数可能敏感、默认不记录。
+> - **敏感数据处理。** OpenTelemetry [Handling Sensitive Data](https://opentelemetry.io/docs/security/handling-sensitive-data/)：支持数据最小化、过滤/删除/遮蔽/转换，以及低熵散列不等于匿名化的边界。

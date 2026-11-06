@@ -1,32 +1,112 @@
-# How do you test and keep an improvement to an agent? / 如何验证并保留对 Agent 的改进？
+# 如何验证并保留对 Agent 的改进？
 
-**Short answer / 简答：** Use predictions to rank candidates, then measure them on real tasks against a common baseline and a predefined acceptance rule. Keep the accepted workflow, predictor, or harness as a version that can be inspected and restored. / 先用预测给候选排序，再用真实任务、统一基线和预先定义的验收规则测量效果。验收通过后，把工作流、预测器或运行脚手架作为可追溯、可恢复的版本保留。
+## 从 build 73 的误诊开始
 
-任务内反馈改变当前任务状态；持久改进则把经评估接受的策略、预测器或 harness 变更保留为后续系统版本。两者都不等于模型在一次运行中自行改变权重。
+> [!example] Build 73：从误诊中提出候选改进
+> 发布团队的日志助手收到 build 73 的失败记录。基线版本把 ECONNREFUSED 归成“业务断言失败”，建议回退服务代码；原始日志却只表明本地服务未在 8081 端口接受连接，集成测试因此没有启动。工程师需要一项可持续的改进：以后面对同类日志，助手应引用证据、区分观察和推断，并在证据不足时保留不确定性。
+
+一次回答中修正结论只改变当前运行状态；要让后续请求也受益，必须留下可部署的系统版本。这个版本可以变化于提示词、动作策略、检索配置、工具执行或模型权重；“Agent 自我改进”不表示模型在一次对话中自行改写参数。单次运行中的状态变化由[智能体基础](agent-fundamentals.md)说明；本章关注跨运行保留的改动。
+
+将当前已接受版本记为 A。Build 73 的最小候选 B 只在 system prompt (系统提示词) 中补一条规则：找出最早导致任务中止、且重试后仍未恢复的阻塞失败，引用相应日志行，并区分“服务未就绪”与“业务断言失败”。本例的连接拒绝只有结合重试耗尽和测试跳过，才能作为未恢复的阻塞失败；若稍后的重试成功，就不按它定主类别。模型、检索索引、工具、格式和生成设置都保持不变。这样 A→B 的结果才能归因于这项策略改动；通过与否仍由独立任务结果决定。
 
 ~~~mermaid
 flowchart TD
-    Baseline[Fix the task and baseline] --> Propose[Propose and rank changes]
-    Propose --> Measure[Run candidates and collect real observations]
-    Measure --> Accept{Meets the acceptance rule?}
-    Accept -->|Yes| Save[Record evidence and retain the accepted version]
-    Accept -->|No| Baseline
+    Spec[固定任务、预算与验收契约] --> Base[运行已接受基线]
+    Spec --> Candidate[提出候选变更]
+    Base --> Compare[相同任务对照]
+    Candidate --> Compare
+    Compare --> Evidence[检查实际结果、成本与失败翻转]
+    Evidence --> Gate{通过预先定义的门禁？}
+    Gate -->|通过| Retain[记录版本与证据，分阶段发布]
+    Gate -->|未通过| Revise[保留旧版，修正候选或停止]
+    Revise --> Candidate
 ~~~
 
-## Decide what will change / 确定改进对象
+## 先说清楚哪个对象会改变
 
-Specify the task, budget, success criteria, and stop condition before trying candidates. Record whether each candidate changes the task policy, the predictor that ranks proposals, or the harness that controls execution. When two components can interact, compare each change separately and then compare the pair before accepting it. Preserve the task inputs and baseline for that comparison. [Evaluation and paired acceptance / 评估与配对验收](../evaluation/llm-evaluation-methods.md)
+同一个失败可以由不同层面修复。改变其中一层时，其余条件先保持不变，才能知道结果来自哪里。
 
-## Rank candidates, then observe the real result / 候选排序之后获取真实结果
+| 改变对象 | 在 build 73 中的候选改动 | 需要验证什么 |
+|---|---|---|
+| policy (任务策略) | 先定位最早且最终未恢复、阻断后续任务的失败，再选主类别；不得把建议当作已证实根因。 | 分类、行号和建议是否满足任务契约；难例是否仍能正确拒答。 |
+| predictor (预测器) | 估算候选提示词或检索设置在哪些日志类型上更可能有效，用于排序实验。 | 预测与随后真实观测是否校准；不能以预测分代替任务结果。 |
+| harness (运行脚手架) | 增加日志片段检索、引用校验和结构化输出验证。 | 取回是否完整、验证器能否拦截格式错误、成本和故障路径是否可接受。 |
+| 基础模型权重 | 对经筛选的样本进行 supervised fine-tuning (SFT，监督微调) 或奖励训练。 | 训练信号、数据切分和更新是否值得；训练奖励本身不是新题泛化证据。 |
 
-[RSI-Anything v1（2026-10-09，§2.1）](https://arxiv.org/html/2610.13912v1#S2.SS1) 将任务规格、预算、验收和停止条件视为固定契约；积累经验本身不会修改策略或模型。其 JEPA-Anything/OPF 世界模型先预测潜变量表示，再由领域读出（readout）转换成任务结果预测，用来排序候选并交给外部测量；机制见[§2.2](https://arxiv.org/html/2610.13912v1#S2.SS2)与[§2.3](https://arxiv.org/html/2610.13912v1#S2.SS3)。因此要区分规则、模型预测、模拟器输出和实测结果。外部反馈可以促成策略或工作流更新；只有在已观察候选显示预测器不可靠、且数据与预算足够时，才考虑更新预测器。观测覆盖不足也不等于可靠性已经成立。[§2.4](https://arxiv.org/html/2610.13912v1#S2.SS4)与[§2.5](https://arxiv.org/html/2610.13912v1#S2.SS5)分别说明更新门槛和配对验收。[Table 4](https://arxiv.org/html/2610.13912v1#S6.T4)与[§5](https://arxiv.org/html/2610.13912v1#S5)中各应用的更新范围不同；持续互相改进仍需联合的多轮评估。
+若同时改 policy 与 predictor，分别跑组件检查后仍需验收组合：更好的候选排序器可能与策略的候选空间不兼容。若一次改提示词、索引、工具和模型，指标变化就难以归因。权重训练的过程与目标归属[微调策略](../fine-tuning/fine-tuning-strategies.md)和[奖励驱动的推理训练](../fine-tuning/reward-based-reasoning-training.md)；本章负责版本化的候选变更和接受证据。
 
-**工程建议：** 对有清楚任务指标的工作流，可以尝试用脚本、模拟器或范围受限的 agent 预测候选效果并据此预筛，再与后续实测比较、验收版本。语法检查仍是规则校验，agent 的文字预判仍是预测。这些是实现选项，尚无替代上述学习型 world model 的等价实证；单步排序也不证明多步状态模拟有效。
+## 预测可以省实验，但必须让结果闭环
 
-例如，优化一个有工具调用的文档问答 Agent 时，可以用脚本预估候选配置的调用次数，先筛出更值得测试的候选。再对同一组任务运行基线和候选，比较实际成本、证据是否支持答案、权限控制是否通过。记录任务集、基线版本、变更及结果，验收后保留可恢复的配置和证据。这个例子说明候选筛选与版本验收如何配合。
+一些递归改进系统先用预测来挑值得测量的候选。这减少昂贵试验的搜索成本，却引入“预测错了”的风险。因此先固定 task contract (任务契约)：输入输出、限制、可用预算、程序检查器、成功定义和停止条件；再记录每个候选的证据来源。下面的证据等级是 RSI-Anything 论文中的区分，用来说明信息来源，不是所有领域都必须采用的标准：
 
-## Retain changes to the harness / 保留脚手架改进
+| 来源 | 代表什么 | 何时仍需外部检查 |
+|---|---|---|
+| E0：确定性规则或程序检查 | verifier (可执行验证器)、单测、形式化条件等可以直接执行的判据。 | 检查器是否覆盖真实任务，以及是否能被候选投机利用。 |
+| E1：学习型预测或 rollout (模型展开轨迹) | 模型对结果或未来状态的估计。 | 预测不是结果；选中候选仍要实测。 |
+| E2：模拟器或高保真模型 | 在模拟环境中执行的状态转移或任务测量。 | 仿真与实际环境存在差异时要做外部校验。 |
+| E3：外部测量 | 真实任务、硬件、用户或实验系统中的观察结果。 | 仍需控制变量、预算和测量噪声。 |
 
-另一类改进改变的是运行脚手架（harness），而非基础模型。[Harness²（v1，2026-10-09，§§2.1–2.3）](https://arxiv.org/html/2610.14224v1) 在同一任务上实际执行候选 harness，比较编辑前后的行为，再将采用的 harness 组件和有依据的经验存入库；新任务从共同的 H₀ 起步并按需检索。该研究保持 editor 模型、阶段指令和决策规则不变，因此展示的是任务级 harness 与经验库的演进，不是模型权重或 editor 自行改写。执行对照可支持针对性修改，但不单独证明答案正确；验收边界见[LLM 评估方法](../evaluation/llm-evaluation-methods.md)。
+RSI-Anything v1 的 world model (世界模型) 根据当前状态与候选动作预测下一状态的潜在表示，再由领域 readout (读出函数) 把该表示转成任务结果或其概率分布。它采用 orthogonal predictive factorization (正交预测因子分解，OPF)：把潜在目标拆成互补分量，分别预测后合成为整体表示；这给预测器提供结构，但不让它成为真值判定器。预测用于比较候选优先级，外部执行结果才提供任务结果证据。若覆盖不足，只能说预测不确定；不能把“没看到反例”当成可靠。
 
-**Related questions / 相关问题** — [When should a model control the next step? / 何时应让模型决定下一步？](agent-fundamentals.md) explains the live execution loop. [Context engineering / 上下文工程](../context/context-engineering-principles.md) explains what can be stored for retrieval on later tasks.
+论文将 update data (候选更新数据) 用于构造候选版本，gate data (保留门禁数据) 用于选择保留版本；指定的 held-out audit set (留出审计集) 只留作最终结果报告。对策略或预测器候选先分别与当前组件配对检查：单组件门禁失败就保留该组件的当前版本；若至少一项改变，再把新组件组合与当前 policy–model pair 配对比较，组合门禁失败则保留整对。这里的论文协议不取代本地发布流程中另留未参与调参或筛选的新题作独立验收。
+
+### 论文结果显示的范围
+
+下表是不同任务上的独立实验，不可把这些比例合并成一个“递归改进平均提升”，也不可外推到日志助手：
+
+| 任务与对照 | 论文报告的观察 | 解读边界 |
+|---|---|---|
+| CodeContests 编程题：静态 verifier 排序；固定 world model (固定世界模型)；再允许预测器适应 | 200 道题、3 个随机种子、最多 3 轮反馈下，最终隐藏测试全部通过率分别为 26.3%、29.2%、31.2%；平均每题调用在线测试套件约 3.71–3.72 次。 | 是特定程序合成设置下的候选排名与隐藏测试验收；调用数指测试套件，不是模型或工具 API 调用。 |
+| graphical user interface (GUI，图形用户界面) 勾选任务 | 从 51% 到最终 99%，平均动作数由 5.30 降至 3.21；一个适应中的中间版本动作更少，却有 21 个 episode 出现错误提交。 | 动作效率不是正确率；最终任务结果优先于过程看起来更简洁。 |
+| 实验室规划 | 在同一 200 题 F200 Level-2 任务集上，五个保留的 policy 版本 Final Score 从 21.80% 升至 46.01%。该分数结合动作序列相似度与参数准确度，端点差为 24.21 percentage points (百分点)。 | 是特定协议规划任务上的合成评分，不与其他任务共用单位或基线。 |
+| LC–MS 反应选择 | 与 Bayesian optimization (贝叶斯优化) 在同一流程下比较 40 次实验后的平均最佳实测产率：96.15% 对 82.16%。 | 是受限实验与具体对照下的最佳观察值，不推论为其他科学搜索的普遍增益。 |
+
+### 将预测和筛选落到具体任务
+
+> [!example] 文档问答的工具次数预测（合成示例）
+> 假设当前文档问答工作流最多调用检索工具 4 次，候选工作流把上限设为 2 次。这个改动只说明可调用次数的上界少了两次；若许多请求在第一次就找到答案，不能据此声称平均费用会少两次调用。可把“长尾成本可能下降”作为待测预测，先排它的实验优先级。两种配置仍要在同一批问题上实际运行，并比较真实费用、证据支持和权限结果；若少调用却漏掉关键条款，就不能仅凭上限较低接受它。
+
+**工程扩展：** 对 build 73，先用程序提取最早失败行、检查引用是否存在，再由模型解释原因，是比训练世界模型更直接的候选。程序检查提供 E0 证据，模型排序仍是预测；只有固定任务集上的实际表现达到门禁才进入版本。这个本地设计例子不是 RSI-Anything 论文验证过的等价预测器。
+
+## 改进运行脚手架时如何做对照
+
+Harness² 研究冻结基础模型权重，用同一基线 H₀ 开始每项任务，并开放八种运行时组件供改进：system prompt (系统提示词)、guardrails (防护规则)、memory (记忆)、skills (技能)、tool guidance (工具指引)、scripts (脚本)、subagents (子 Agent) 与 middleware (中间件)。它提出 Propose–Probe–Compose：提出编辑，在配对条件下真正执行候选，比较行为差异，只组合有对照证据支持的变化；再把可复用组件或经验存入改进脚手架，供后续任务检索。经验跨任务怎样被选择并进入当前上下文，见[上下文工程原则](../context/context-engineering-principles.md)。
+
+这里的 Probe 是一次实际运行，仍可能受模型方差、共享评委或随机工具状态影响。在线 Propose–Probe–Compose 阶段没有每题真值答案或可靠 verifier (验证器)；行为差异可提示编辑效果，但本身不认证输出正确。论文仍在实验结束后用 WorkBuddy-Bench、JobBench 和 Harvey Legal Agent Benchmark 的外部基准分数评价结果，因此“在线编辑时无 ground-truth verifier”不等于“没有外部评分准则”。生产实现还应给 Probe 限制外部写入权限和费用，否则实验候选可能造成副作用。实际任务契约仍由[独立任务评估](../evaluation/llm-evaluation-methods.md)验证。
+
+在四组 executor–harness 配置中，单次对照改进的最高结果分别是 WorkBuddy-Bench 平均得分 +11.5 score points (分数点)、JobBench 得分 +4.5 分数点，以及 Harvey LAB 的 Partial criterion pass rate (Partial 评分条目通过率) +11.8 percentage points (百分点)。前两者是基准分数的点数变化，只有最后一项是比例变化；它们是特定模型、基线和任务的单步结果，不是通用 harness 的预期提升。论文还讨论额外执行成本、行为波动以及 editor 与被编辑系统共用模型时的偏差。
+
+## 复用记录说明了什么，又没有说明什么
+
+GitSwarm 在持久且可分支的共享产物仓库中观察 worker 如何引用、访问和组合前序工作。需要分别读三类度量，并把“访问”与“主动复用”区分开：
+
+1. **声明依赖：** worker 在提交中将已有贡献列为 Git parent 或 informed_by 来源；这是可追溯的依赖声明，不是内容复用证明。
+2. **轨迹使用：** execution trace 里的 accessed (已访问) 只说明读、搜、比较或打开过产物。actively reused (主动复用) 要求只读材料实际影响后续贡献；可执行产物必须被运行、导入、改编或作为另一计算的输入；自愿产物包还必须引用其提供者。仅仅打开文件不算主动复用。
+3. **winner-linked ancestry (胜者关联祖先链)：** 最终选中提交沿 Git parent 和声明的 informed_by 边可达的贡献图覆盖率。它说明声明图上的祖先关系，不证明内容被最终代码实际继承。
+
+在 ProgramBench，约 99.9% 的合格 episode 声明引用前序工作；94.7% 的已发布贡献随后被下游 worker 作为 Git parent 或 informed_by 来源引用。另一个分母下，79.9%–82.5% 的合格自愿产物包被轨迹证据判定为主动复用。按 Git parent 与 informed_by 边从选中解向上追溯，可达的贡献节点占 ProgramBench 贡献图的 81.6%–92.6%（随预算变化）；在 IMOProofBench-Advanced，选中证明可达的贡献节点占图的 21.3%–33.0%。例如证明任务中，后来 worker 打开了 759 个计算探针包中的 583 个，但只执行或改编其中 172 个并引用提供者；另外，172 个主动复用的探针包中，有 52 个探针包对应的消费贡献节点位于所选证明的声明祖先链上。这里的比例计数对象是贡献节点而非祖先边；节点位于所选解的声明祖先链上也不证明其内容被最终实现吸收或因果性地提升结果。
+
+因此，单看最终祖先链会漏掉“用于验收但未被引用进最终祖先图”的工作；单看声明会把依赖声明误当作消费；单看访问又会把打开误当主动复用。这些度量说明哪些引用、访问和贡献图关系被观察到，不证明复用导致性能提升，也不证明每份祖先产物的内容被最终实现吸收。评估收益仍要在同一任务、基线和预算下实测。
+
+## 搜索停滞时，清除什么要由对照回答
+
+*Scaling Discovery Requires Forgetting* 研究在外部评分的开放搜索中保留最佳候选、但清除 session 和候选历史后重启。在 AHC014 的一项对照里，四人团队从同一 plateau 状态继续或重启；每个 agent 都追加 30 个 proposal (候选提案)，重复 3 次。继续运行结果为 +1.4% ±1.3%，每次实验费用 24.67 美元；重启结果为 +9.2% ±6.9%，费用 15.32 美元。这里的收益是三次重复中“最佳新候选相对起始最佳分”的均值 ± 标准差，费用按每次重复计。
+
+这项比较按 proposal 数量匹配，并非按费用、token 或时长匹配；重启还同时改变 session 与候选历史，不能把差异归因于清除某一个记忆源。它支持在某些受限搜索中测试重启，不建立固定重置周期。工程上要事先写下保留的最佳候选、清除的状态、实验预算和继续条件，再用相同起点及真实成本测量两种方案。
+
+Anthropic 的实践文章建议一次只测试一个 subagent (子 Agent) 的合并，检查前后端到端任务翻转和重复运行，并分享何时把工作流合并到主循环的经验。它是特定提供方的工程经验，不是所有任务都该移除子 Agent 的因果定律；结构选择仍需测量。
+
+## 把候选证据变成可恢复的发布版本
+
+候选比较应使用相同任务、输入和执行预算，并保留目前已接受的版本作为基线。先用开发数据诊断；选择候选后，用未参与调参的新样本和必要的安全边界测试做独立验收。验收不止看平均分，还应查任务类别、失败翻转、延迟、费用和外部副作用。指标、抽样、配对统计及发布门禁的完整算例见[大语言模型评估方法](../evaluation/llm-evaluation-methods.md)。
+
+build 73 的候选若只提升证据格式，却把“服务拒绝连接”仍判成业务断言失败，就没有解决目标问题；若分类改善但工具权限测试回归，也不能接受。只有当固定契约下的端到端结果达到预设门禁，才保存版本标识、模型与提示词修订、索引和工具版本、任务集版本、评估配置、日志脱敏规则及回滚目标。先小流量发布，按任务质量和硬约束观察；不满足标准时回退到最后接受的组合。
+
+> [!info]- 来源
+> 来源映射到正文里的研究机制与实验数据。论文结果仅适用于其写明的任务、预算与基线；表中的百分点、费用和比例不是本地实测。
+>
+> - **任务契约、潜在状态预测、数据分工、配对保留与独立报告。** [RSI-Anything v1](https://arxiv.org/html/2610.13912v1)，2026-10-09，§§2.1–2.5、3.1–3.4、6.2；CodeContests 的在线测试使用量、LabHorizon Final Score 与 LC–MS 最佳产率按原文口径解释。
+> - **冻结权重下的 harness 递归编辑。** [Harness² v1](https://arxiv.org/html/2610.14224v1)，2026-10-09，§§2.1、2.2.1、2.3、3.2、Appendix F；分别支撑在线无真值验证器的编辑过程、外部基准评价、八种运行时组件和单步结果单位。
+> - **共享产物的声明、访问、主动复用与祖先链。** [GitSwarm v1](https://arxiv.org/html/2610.04862v1)，2026-10-04，§3.4、Appendix F.1；不同分母及图边定义不可互换，也不提供复用的因果收益。
+> - **继续或清除搜索状态。** [*Scaling Discovery Requires Forgetting* v1](https://arxiv.org/abs/2610.20563v1)，2026-10-14，§4.3、Table 3；AHC014 对照按 proposal 数匹配，收益是三次重复均值和标准差，费用按每次重复计，且同时清除 session 与候选历史。
+> - **子 agent 合并的工程经验。** Anthropic, [*Building agents: When to fold subagents into your main agent loop*](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)，2026-10-22；特定提供方的工程实践，按端到端任务与重复运行判断。
