@@ -2,44 +2,121 @@
 
 > Generated from the [engineering-foundations reading map](../../engineering-foundations/index.md). Edit the map and its linked source notes. Internal section links use Obsidian heading fragments; source notes remain standard Markdown.
 
-## 1. How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？
+## 1. 两个请求争夺最后一件库存时，怎样保证只预留一次？
 
-Read the invariant at the place where concurrent writes meet: update inventory only when availability remains positive, check that exactly one row changed, and create the reservation in the same transaction. A separate read followed by an unconditional write lets two requests act on the same old value. Enforce request identity with a unique constraint so a repeated logical request cannot reserve the same unit twice. / 在并发写入发生的数据库边界检查不变量：只有库存仍大于零时才更新，并确认恰好更新一行，再在同一事务中创建预留。先单独读取、再无条件写入会让两个请求都基于同一个旧值操作。用唯一约束维护请求身份，避免同一逻辑请求重复预留库存。
-
-**Key terms / 关键术语：** conditional update / 条件更新；transaction / 事务；unique constraint / 唯一约束；idempotency key / 幂等键；rollback / 回滚。
+**案例：** 账户 acct-17 的请求要预留商品 SKU-7。数据库中 available = 1。浏览器携带稳定操作键 reserve-demo-208 发出请求；网络超时后，客户端不知道事务是否提交。正确边界是在数据库里同时检查库存、扣减一件并写入可查询的操作结果，让并发请求无法把数量扣成负数，也让同一操作键重放时能查回同一结果。
 
 ~~~mermaid
-flowchart TD
-    Begin[Begin transaction] --> Update[Conditional update: available > 0]
-    Update --> Count{Exactly one row changed?}
-    Count -->|yes| Reserve[Insert reservation with unique request ID]
-    Reserve --> Commit[Commit both changes]
-    Count -->|no| Rollback[Rollback and report unavailable]
-    Reserve -->|insert or constraint failure| Rollback
+sequenceDiagram
+    participant C as 调用方
+    participant A as API
+    participant D as 数据库
+    C->>A: 预留 SKU-7，操作键 reserve-demo-208
+    A->>A: 验证当前账户/主体与参数指纹
+    A->>D: 快速查询同一作用域的操作键
+    alt 已有记录且参数指纹相同
+        D-->>A: 已提交预留结果
+        A-->>C: 返回同一预留记录，不扣库存
+    else 已有同键但参数指纹不同
+        A-->>C: 返回操作键冲突
+    else 当前快照没有可见记录，结果仍可能未知
+        A->>D: 条件扣减，available 必须大于 0
+        alt 条件更新恰好 1 行且插入键成功
+            D-->>A: available = 0
+            A->>D: 插入唯一的账户/主体/操作键记录
+            A->>D: COMMIT
+            D-->>A: 提交完成
+            A--xC: 响应丢失，客户端结果未知
+        else 更新 0 行或插入时作用域键唯一冲突
+            A->>D: ROLLBACK 整个尝试
+            A->>D: 新事务再次查询操作键与指纹
+            alt 找到同键同指纹的已提交结果
+                D-->>A: 返回已存在结果
+                A-->>C: 返回同一预留记录，不扣库存
+            else 找到同键但指纹不同
+                A-->>C: 返回操作键冲突
+            else 确认没有可重放记录
+                A-->>C: SKU 不存在或已售罄
+            end
+        end
+    end
 ~~~
 
-Assume an inventory table has one row per unique SKU. Do not read the count in the application and then issue an unconditional write: competing requests can both act on the same old value. Let the database perform the condition and decrement as one write:
+### 为什么先读再无条件写会超卖？
+
+如果应用先 SELECT available，再根据返回值计算 available - 1 并无条件更新，两个请求可能都读到 1，再分别把值写成 0；数据库最终只有一件被扣减，但两条业务记录都可能显示预留成功。读到的旧值没有保护写入条件。
+
+把条件放进同一个更新语句，数据库才会在写入发生处判断库存是否仍大于零。先用小型数据库模式表示每个 SKU 的可用量，以及每个成功操作的唯一记录：
+
+~~~sql
+-- PostgreSQL 18 DDL
+CREATE TABLE inventory (
+    sku TEXT PRIMARY KEY NOT NULL,
+    available INTEGER NOT NULL CHECK (available >= 0)
+);
+
+CREATE TABLE reservations (
+    account_id TEXT NOT NULL,
+    principal_id TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    request_fingerprint TEXT NOT NULL,
+    sku TEXT NOT NULL REFERENCES inventory(sku),
+    status TEXT NOT NULL CHECK (status IN ('reserved', 'cancelled')),
+    PRIMARY KEY (account_id, principal_id, idempotency_key)
+);
+
+INSERT INTO inventory VALUES ('SKU-7', 1);
+~~~
+
+复合主键保证同一账户、主体和幂等键最多一条操作记录；外键保证预留指向存在的 SKU；CHECK 与 NOT NULL 一起禁止负库存和未知库存。数据库约束如何对所有写入方生效，见[如何用约束保护业务规则并为读取建立索引？](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)。
+
+### 条件更新怎样让两个并发请求竞争？
+
+以 PostgreSQL 18 的 Read Committed（读已提交）行为为例。请求 A 执行条件更新时拿到该行的写锁，把库存从 1 改为 0，但尚未提交；请求 B 在同一行上等待。A 提交后，B 会针对新版本重新判断 available > 0，条件不再成立，更新行数为 0。**这时不能立刻把 B 判成售罄：**它可能正是重放 reserve-demo-208 的同一逻辑操作。B 必须先回滚这次尝试，再在新事务中按当前账户和主体查询键、比较请求指纹：找到已提交的相同意图就返回同一预留记录及当前状态；同键不同指纹就返回冲突；确实没有该键时，零行才表示 SKU 不存在或已售罄。
+
+同键请求即使先查过仍可能同时进入事务；查不到只表示当前快照没有已提交记录，不证明原请求已回滚。PostgreSQL Read Committed 下，同一 SKU 的条件更新会等待持锁者结束：前者提交后，后者若因库存变为 0 得到零行，就先回滚，再用新事务查结果；前者回滚时，后者可重新判断并继续。若库存大于 1，两笔同键请求都可能扣减成功，后插入的一方会撞上作用域唯一约束；PostgreSQL 中该错误使当前事务失败，必须回滚整笔扣减，再在新的事务读取胜者结果。只有确认没有同键可重放记录时，零行才表示 SKU 不存在或已售罄；请求指纹不同则返回冲突。不能只回滚 INSERT 后保留扣减。
+
+以下 SQL 按 PostgreSQL 18 写法，$1 到 $5 是由驱动绑定的参数；它不是 SQLite 的问号占位符语法。应用先授权并核验/生成参数指纹，只有条件更新返回一行后才执行 INSERT：
 
 ~~~sql
 BEGIN;
 
 UPDATE inventory
 SET available = available - 1
-WHERE sku = ? AND available > 0;
+WHERE sku = $1 AND available > 0
+RETURNING available;
+-- 仅一行（本例 available = 0）才继续。
 
--- Continue only if exactly one row was updated.
-INSERT INTO reservations (request_id, sku) VALUES (?, ?);
+INSERT INTO reservations
+    (account_id, principal_id, idempotency_key, request_fingerprint, sku, status)
+VALUES ($2, $3, $4, $5, $1, 'reserved');
 
 COMMIT;
 ~~~
 
-Continue only if the update changed exactly one row. Insert the reservation under a unique request ID in the same transaction; if no row changed or the insert fails, roll back. This protects the local invariant only under the selected engine's atomic-update and transaction semantics. A unique request constraint also prevents duplicate local reservations. It does not make an external payment or message publish atomic with the database; use a downstream idempotency contract or durable outbox for that boundary.
+**中间状态：** 初值是 SKU-7 → 1。A 更新一行，得到 available=0，插入 (acct-17, user-17, reserve-demo-208, fingerprint-A) 并提交。若 B 是同键同指纹的重放，A 提交后 B 得到更新零行，回滚并读取这条已提交记录，因此返回同一预留记录且不再扣库存。若 B 是不同操作键，它回滚后查不到自己的键，才报告售罄。若 B 同键却携带另一参数指纹，应返回冲突，不复用 A 的结果。
 
-This example relies on the database transaction and row-update contract. The detailed meaning of isolation, MVCC, and WAL is in [Database transactions, isolation, and recovery / 数据库事务、隔离与恢复](#9.%20What%20do%20transaction%20isolation%20and%20WAL%20guarantee?%20/%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%20WAL%20%E5%88%86%E5%88%AB%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F). For the constraints and indexes used to express invariants and access paths, see [Database constraints and indexes / 数据库约束与索引](#8.%20How%20do%20database%20constraints%20and%20indexes%20shape%20data%20access?%20/%20%E6%95%B0%E6%8D%AE%E5%BA%93%E7%BA%A6%E6%9D%9F%E5%92%8C%E7%B4%A2%E5%BC%95%E5%A6%82%E4%BD%95%E5%A1%91%E9%80%A0%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE%EF%BC%9F). For examples of how SQL NULL and outer joins affect query results, see [SQL NULLs, joins, and aggregates / SQL NULL、连接与聚合](#7.%20How%20do%20NULLs,%20joins,%20and%20grouping%20change%20SQL%20results?%20/%20NULL%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%20SQL%20%E6%9F%A5%E8%AF%A2%E7%BB%93%E6%9E%9C%EF%BC%9F).
+> [!info] 更新行数为什么是业务判断
+> PostgreSQL 的 UPDATE ... WHERE available > 0 将“仍有库存”的条件放在扣减发生处。恰好一行才说明此次扣减成功；零行需要再检查幂等结果后才能确定是同键重放还是售罄；多行则表示 schema 没保证 SKU 唯一，数据模型应修正。本章 DDL 与占位符以 PostgreSQL 18 为准；若在 SQLite 另建对照表，需考虑其动态类型，并在每条连接启用 PRAGMA foreign_keys = ON；需要强类型约束时使用 STRICT 表或等效检查。
 
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains how operation keys handle unknown request outcomes; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies job-key uniqueness and transactional outbox to asynchronous work.
+### 提交成功但响应超时，怎样认出原操作？
 
-**Sources and verification / 来源与验证：** PostgreSQL 18 [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) and [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html); SQLite [transactions](https://www.sqlite.org/lang_transaction.html) and [foreign keys](https://www.sqlite.org/foreignkeys.html). The conditional reservation transaction was run with Python sqlite3 against SQLite 3.51.0 with foreign-key enforcement enabled. This is evidence for that local SQLite run, not a universal concurrency guarantee.
+超时只代表调用方没有收到响应；它无法区分请求未到达、事务回滚、事务仍在进行，或提交后只有响应丢失。每次查询或重放前，服务都要再次校验当前账户和主体有权读取这条操作结果。事务提交后，数据库中库存为 0，且存在 reserve-demo-208 与请求指纹 fingerprint-A 绑定的预留记录。客户端使用同一个操作键查记录或按明确的幂等契约重放；API 比较账户、主体与请求指纹后返回已记录结果而不再次扣减。不能为重试生成新键，否则服务端会把它当成另一次购买。键的作用域、保留窗口与未知结果重试规则由[请求超时后如何确认结果并安全重试？](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)专门解释。
+
+操作键记录必须和库存效果处于同一事务；若先扣库存并提交，之后再单独写操作键，二者之间崩溃仍可能造成“效果已发生但重试认不出”。支付服务或消息队列不在这个本地事务中，不能靠 SQL COMMIT 宣称远端副作用也完成。账户报表的数据库到队列边界会用 transactional outbox（事务型发件箱）延伸这一问题，见[怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+
+### 同一库存不变量怎样用于抽奖？
+
+抽奖服务对外提供公开只读的 GET /draws/{campaignId}，返回活动规则、时间与可见状态；已认证参与者以 POST /draws/{campaignId}/entries 提交自己的请求。服务端按当前主体检查活动仍开放、资格和一次参与规则，并使用 (campaign_id, principal_id) 唯一约束及作用域幂等键阻止重复参与。活动已关闭应返回明确 campaign-closed 状态；已有参与记录或其他规则冲突应返回明确 conflict，不让浏览器从通用错误猜结果。抽奖随机性和审计规则须符合活动承诺；统计事件不能决定资格或权威中奖结果。
+
+有限奖品应在同一事务里条件扣减并保存参与、抽取结果与待领取状态；若扣减零行，要按活动规则明确返回库存已用完/未中奖等业务结果，不能假定数据库自动替用户重新抽取。GET /draws/{campaignId}/entries/{entryId} 只能向当前结果所有者返回本人结果与领取状态；单独的 POST /prizes/{prizeId}/claims 再验证中奖记录所有者，只收集履约所需资料并写入履约状态。后台活动管理权限应比公开读取和本人参与更严格。抽奖提交也需使用稳定操作键，并按幂等契约定义保留窗口与重放结果，避免超时后重复参与；通用规则见[请求超时后如何确认结果并安全重试？](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。原档案的独特接口流、显式关闭/冲突结果和权限分层已迁入本节；旧入口保留导航，见[归档抽奖 API 规则入口](../../archive/front-end/Deprecated_Interview_Notes/prize-draw-api-invariants.md)。
+
+**接下来：** 此处只说明原子库存写入及本地约束。NULL、连接和分组改变报表查询的方式见[NULL、连接与分组如何改变报表 42 的结果？](#7.%20SQL%20%E7%A9%BA%E5%80%BC%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E6%8A%A5%E8%A1%A8%2042%20%E7%9A%84%E7%BB%93%E6%9E%9C%EF%BC%9F)；事务隔离、WAL 和崩溃恢复的保证见[事务隔离与 WAL 能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
+
+> [!info]- 来源
+> - 条件扣减的并发重检与事务隔离行为：[PostgreSQL 18, Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)，§13.2.1，核对于 2026-11-06；此处并发时序明确标为 PostgreSQL 行为。
+> - 主键、唯一、外键、CHECK 和 NOT NULL 的持久约束：[PostgreSQL 18, Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html)，§5.5，核对于 2026-11-06。
+> - SQLite 事务和外键约束：[SQLite Transactions](https://www.sqlite.org/lang_transaction.html) 与 [Foreign Key Support](https://www.sqlite.org/foreignkeys.html)，核对于 2026-11-06。
 ## 2. 浏览器请求如何到达 HTTP 响应？
 
 Hypertext Transfer Protocol (HTTP，超文本传输协议) 规定调用方怎样描述操作、服务端怎样返回状态与表示；Transmission Control Protocol (TCP，传输控制协议) 或 QUIC 负责承载字节流，Transport Layer Security (TLS，传输层安全协议) 在安全连接上保护通信。看同一个报表请求，应先认清 HTTP 语义，再按是否有可复用缓存、地址和连接追踪网络阶段。HTTP 版本会改变连接复用和多路复用方式，但不会替 application programming interface (API，应用程序接口) 验证身份、授权资源、允许跨源读取或确认超时操作结果。
@@ -922,31 +999,23 @@ WebSocket 握手也不能用 CORS 响应字段授权。浏览器会发送 Origin
 > - 安全上下文输出、HTML 消毒与危险执行上下文：[OWASP Cross Site Scripting Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)，Contextual Output Encoding、HTML Sanitization、Dangerous Contexts，按 2026-11-06 版本核对。
 > - CSP 的脚本纵深防御：[OWASP Content Security Policy Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html)，按 2026-11-06 版本核对；`frame-ancestors`：[W3C Content Security Policy Level 3](https://www.w3.org/TR/CSP3/#directive-frame-ancestors)，2026-10-27 Working Draft，§6.4.2；该规范仍是工作草案，浏览器支持应与目标环境核验。
 > - Cookie 认证请求的 CSRF token、Origin 和 SameSite 条件：[OWASP Cross-Site Request Forgery Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)，Synchronizer Token、SameSite 与 Origin Validation，按 2026-11-06 版本核对；Cookie same-site 规则：[HTTPWG RFC6265bis 草案](https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html)，§5.6.7，核对于 2026-11-06。
-## 7. How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？
+## 7. SQL 空值、连接与分组会怎样改变报表 42 的结果？
 
-**How do NULL, outer joins, and grouping change a query result? / NULL、外连接和分组会怎样改变查询结果？** An ordinary comparison such as `=` or `<>` with `NULL` is UNKNOWN; null-aware predicates such as `IS NULL` and `IS DISTINCT FROM` have their own rules. Use `IS NULL` for missing values, and remember that `WHERE` keeps only TRUE. Put a right-side condition in `LEFT JOIN ... ON` when unmatched left rows must remain; a `WHERE` condition can remove those rows. `COUNT(*)` counts joined rows, `COUNT(column)` skips nulls, `WHERE` filters input rows, and `HAVING` filters completed groups. Inspect query plans with the chosen engine and version. / `=` 或 `<>` 这类普通比较遇到 `NULL` 时结果为 UNKNOWN；`IS NULL`、`IS DISTINCT FROM` 等空值判定或相异性谓词有各自的规则。缺失值应使用 `IS NULL`，并记住 `WHERE` 只保留 TRUE。若要保留没有匹配右表记录的左表行，应把右表条件放在 `LEFT JOIN ... ON` 中；放在 `WHERE` 中可能移除这些行。`COUNT(*)` 统计连接后的行数，`COUNT(column)` 跳过空值；`WHERE` 筛选分组前的输入行，`HAVING` 筛选已完成的分组。查询计划应使用所选数据库及其版本来检查。
+**案例：** 报表 42 为账户 acct-17 汇总一小组客户订单。为让每一步能手算，下面把四个客户与四条订单当作本次报告的全部输入，不演示读取授权或全量账务规模。Ava 有两笔订单，Ben 的地区和一笔订单金额未知，Cy 有一笔已付款订单，Dia 没有订单。查询看似只是在拼表和相加，但 NULL、LEFT JOIN（左外连接）与 aggregate function（聚合函数）会改变哪些行存在、哪些值被统计。
 
 ~~~mermaid
-flowchart LR
-    Predicate[SQL comparison with NULL] --> Unknown[UNKNOWN]
-    Predicate -->|ordinary non-null comparison| TrueFalse[TRUE or FALSE]
-    Unknown --> Where[WHERE keeps only TRUE]
-    TrueFalse --> Where
-    Left[Left-side row] --> On{ON finds a match?}
-    On -->|no| NullRow[Null-extended right columns]
-    On -->|yes| Joined[Joined row]
-    NullRow --> PostWhere{Post-join WHERE is TRUE?}
-    Joined --> PostWhere
-    PostWhere -->|no: FALSE or UNKNOWN| Drop[Row disappears]
+flowchart TD
+    Base[客户与订单输入] --> From[FROM / JOIN 生成中间行]
+    From --> Where[WHERE 只保留 TRUE]
+    Where --> Group[GROUP BY 形成分组]
+    Group --> Aggregate[COUNT / SUM 计算]
+    Aggregate --> Having[HAVING 筛掉不符合的分组]
+    Having --> Output[报表 42 的客户汇总行]
 ~~~
 
-**Key terms / 关键术语：** NULL / 空值；three-valued logic / 三值逻辑；LEFT JOIN / 左外连接；null-extended row / 空扩展行；aggregate / 聚合；HAVING / 分组筛选。
+这条流程中的每一步都作用于一个中间结果：JOIN 先组合行；WHERE 在分组前筛选；聚合函数对分组输入计算；HAVING 再筛选分组。NULL 表示值未知或缺失，不等于数字 0，也不等于空字符串。后面的输出会逐个显示这些状态造成的差异。
 
-### SQL result semantics / SQL 查询结果语义
-
-SQL predicates can evaluate to **TRUE, FALSE, or UNKNOWN**. An ordinary comparison such as `=` or `<>` with `NULL` evaluates to UNKNOWN; null-aware predicates such as `IS NULL` and `IS DISTINCT FROM` have their own rules. `WHERE` keeps only rows for which its predicate is TRUE. Use `IS NULL` to test for a missing value; `column = NULL` does not find it. The same rule explains why a right-table filter in `WHERE` can remove the null-extended rows of a `LEFT JOIN`. / SQL 谓词可以得出 **TRUE、FALSE 或 UNKNOWN**。`=` 或 `<>` 这类普通比较遇到 `NULL` 时结果为 UNKNOWN；`IS NULL`、`IS DISTINCT FROM` 等空值判定或相异性谓词有各自的规则。`WHERE` 只保留谓词为 TRUE 的行。用 `IS NULL` 检查缺失值；`column = NULL` 不会查到它。这个规则也解释了为什么 `WHERE` 中的右表筛选条件会移除 `LEFT JOIN` 生成的空扩展行。
-
-Run this compact customer/order dataset in a fresh, separate teaching database/schema; it is independent of the earlier example, which also uses tables named `customers` and `orders` with a different schema. Ben's region and one order amount are `NULL`; Dia has no orders.
+### 输入中的空值怎样影响比较？
 
 ~~~sql
 CREATE TABLE customers (
@@ -975,26 +1044,39 @@ INSERT INTO orders VALUES
     (104, 3, 500, 'paid');
 ~~~
 
-The first query returns no rows because `region = NULL` is UNKNOWN. `IS NULL` returns Ben; `region <> 'North'` returns only Cy because Ben's comparison is UNKNOWN. To include missing regions in that search, say so explicitly with `OR region IS NULL`.
+SQL 使用 three-valued logic（三值逻辑）：普通比较可能为 TRUE、FALSE 或 UNKNOWN。NULL = NULL 与 NULL <> 'North' 都是 UNKNOWN，不是 TRUE 或 FALSE。WHERE 只保留为 TRUE 的行，所以把 region = NULL 当作空值搜索不会返回 Ben；应写 IS NULL。
 
 ~~~sql
 SELECT name FROM customers WHERE region = NULL;
--- no rows
+-- 空结果：NULL = NULL 得到 UNKNOWN，WHERE 丢弃
 
 SELECT name FROM customers WHERE region IS NULL ORDER BY customer_id;
 -- Ben
 
 SELECT name FROM customers WHERE region <> 'North' ORDER BY customer_id;
--- Cy
+-- Cy；Ben 的 UNKNOWN 不通过 WHERE
 
 SELECT name FROM customers
 WHERE region <> 'North' OR region IS NULL
 ORDER BY customer_id;
 -- Ben
 -- Cy
+
+SELECT name FROM customers
+WHERE region IS DISTINCT FROM 'North'
+ORDER BY customer_id;
+-- Ben
+-- Cy；此谓词把 NULL 当作一个可区分值
 ~~~
 
-`LEFT JOIN` first preserves each left-side customer, putting `NULL` in the order columns when no matching order remains. A right-side predicate in `ON` limits which orders count as matches, so Dia is kept. The same predicate in `WHERE` is applied after the join; Dia's null-extended row does not pass `o.status = 'paid'`, so it disappears.
+IS DISTINCT FROM 是可读的空值安全比较：它把 NULL 当作一个可比较状态，而不是返回 UNKNOWN。PostgreSQL 和当前 SQLite 都支持它；其他数据库可使用自己的等价谓词。若条件是“地区已知且不是 North”，上一条含 OR region IS NULL 的结果就不合语义，因此先明确业务筛选含义再写谓词。
+
+> [!info] 先判断“未知”是否等于“零”
+> Ben 的金额缺失可能表示尚未计价、上游未回填或数据质量错误；把它自动当 0 会掩盖不同问题。只有报表定义明确把“没有金额输入”解释成零贡献时，才用 COALESCE。业务解释应与 SQL 表达式一起说明。
+
+### 左外连接的筛选条件放在哪里？
+
+LEFT JOIN 会为每一条左表行寻找满足 ON 的右表行；如果没找到，仍保留左表行，并把右侧列补成 NULL。若“只关联已付款订单，但仍显示没有已付款订单的客户”，过滤条件应参与 ON 匹配：
 
 ~~~sql
 SELECT c.name, o.order_id
@@ -1006,7 +1088,11 @@ ORDER BY c.customer_id;
 -- Ben | 103
 -- Cy  | 104
 -- Dia | NULL
+~~~
 
+若先用客户号连接所有订单，再把 o.status = 'paid' 放到 WHERE，筛选在连接结果上执行。Ava 的 pending 订单使条件为 FALSE，不会留下；Dia 的右侧是空扩展行，NULL = 'paid' 为 UNKNOWN，也被移除；结果会像只留有已付款订单的内连接：
+
+~~~sql
 SELECT c.name, o.order_id
 FROM customers AS c
 LEFT JOIN orders AS o ON o.customer_id = c.customer_id
@@ -1015,15 +1101,28 @@ ORDER BY c.customer_id;
 -- Ava | 101
 -- Ben | 103
 -- Cy  | 104
+-- Dia 消失
 ~~~
 
-`COUNT(*)` counts input rows; `COUNT(column)` counts only rows whose value in that column is not `NULL`. Aggregates such as `SUM` ignore null inputs and return `NULL` when a group has no non-null inputs. The grouped result makes the outer-join detail visible: Dia has one joined row, but no order ID; Ben has an order but no priced order.
+这两条查询表达不同的问题：第一条保留没有已付款匹配的客户及其空扩展行；第二条只保留客户与每笔已付款订单的匹配行。两条结果都可能让同一客户出现多次，并不等于客户去重清单。把条件移动到 ON 与 WHERE 不是排版差异，而是改变输出行集。
+
+报表 42 的金额总和要包含 paid 与 pending 两种状态，因此下面的分组查询重新连接全部订单，不再加 o.status = 'paid'。连接后 Ava 有两行，其余有订单的客户各一行；随后 GROUP BY 才把每位客户的明细收拢为一个汇总行。只要保留上面的 paid 过滤，就会把 Ava 的 pending 订单 800 分漏在总额之外。
+
+### 计数与求和各自统计什么？
+
+在所有订单行中，COUNT(*) 统计四行；COUNT(amount_cents) 只统计非空金额，所以是三。这里限定讨论的 COUNT(expr) 只计入表达式非空的行，SUM(expr) 对非空输入求和；因此 Ben 虽有一笔订单，金额合计仍没有任何非空输入，SUM 返回 NULL。不要把这概括成每一种聚合函数都删除 NULL：例如 PostgreSQL 的 array_agg 可以把 NULL 放进数组。做左连接时，每个没有子行的客户也会获得一行空扩展记录，所以 COUNT(*) 对 Dia 是 1；要数真实订单，应使用非空主键 COUNT(o.order_id)。
 
 ~~~sql
-SELECT COUNT(*) AS order_rows, COUNT(amount_cents) AS priced_orders
+SELECT COUNT(*) AS order_rows,
+       COUNT(amount_cents) AS priced_orders,
+       SUM(amount_cents) AS total_cents
 FROM orders;
--- 4 | 3
+-- 4 | 3 | 2500
+~~~
 
+先计算单人分组：
+
+~~~sql
 SELECT c.name,
        COUNT(*) AS joined_rows,
        COUNT(o.order_id) AS orders,
@@ -1039,10 +1138,18 @@ ORDER BY c.customer_id;
 -- Dia | 1 | 0 | 0 | NULL
 ~~~
 
-`WHERE` filters rows before grouping; `HAVING` filters completed groups. This query keeps groups whose non-null total is at least 500 cents. Ben's sum is `NULL`, so the comparison is UNKNOWN and his group is not kept.
+每一行都能从输入表复算：Ava 的 1200 + 800 = 2000；Ben 的唯一金额是 NULL，因此金额非空计数为 0、总和为 NULL；Cy 是 500；Dia 没有订单，因左连接仍有一行，所以 COUNT(*)=1，但 order_id 为空让真实订单数为 0。输入中三笔已知金额之和为 1200 + 800 + 500 = 2500，另有一笔金额未知；2500 是已知金额小计，不代表未知金额可视为零。
+
+SUM() 没有非空输入时返回 NULL。若报表合同明确把没有金额的汇总展示为零，可写 COALESCE(SUM(o.amount_cents), 0)；否则保留 NULL 能区分“零金额”与“无有效金额数据”。
+
+### 分组前后两种筛选各在何时执行？
+
+WHERE 在分组前过滤 FROM / JOIN 产生的行；HAVING 在完成 GROUP BY 与聚合后筛选组。下面查询只保留金额合计至少为 500 分的客户。Ben 的 SUM 为 NULL，所以与 500 比较得 UNKNOWN，该组不通过 HAVING。
 
 ~~~sql
-SELECT c.name, COUNT(o.order_id) AS orders, SUM(o.amount_cents) AS total_cents
+SELECT c.name,
+       COUNT(o.order_id) AS orders,
+       SUM(o.amount_cents) AS total_cents
 FROM customers AS c
 LEFT JOIN orders AS o ON o.customer_id = c.customer_id
 GROUP BY c.customer_id, c.name
@@ -1052,139 +1159,243 @@ ORDER BY c.customer_id;
 -- Cy  | 1 | 500
 ~~~
 
+先确定统计粒度是“客户”、再决定空金额的业务含义，最后用 ON、WHERE、GROUP BY、HAVING 将顺序表达出来。数据库实现与数据规模会影响查询计划，但不会把空值语义变成缺失的 0。
 
+**接下来：** 报表 42 的唯一操作键、外键与复合访问索引见[如何用约束保护业务规则并为读取建立索引？](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)。实际事务隔离和本地提交保证见[事务隔离与 WAL 能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
-These result rules are shared by the examples' SQLite run; optimizer plans are not. Use the selected engine's `EXPLAIN` tool on representative data, and label any plan observation with its engine and version.
+> [!info]- 来源
+> - NULL 比较、IS NULL 与 IS DISTINCT FROM：[PostgreSQL 18, Comparison Functions and Operators](https://www.postgresql.org/docs/18/functions-comparison.html)，§9.2；SQLite [Expressions](https://www.sqlite.org/lang_expr.html)，核对于 2026-11-06。
+> - LEFT JOIN 的匹配与空扩展行：[PostgreSQL 18, Table Expressions](https://www.postgresql.org/docs/18/queries-table-expressions.html)，§7.2.1；SQLite [SELECT](https://www.sqlite.org/lang_select.html)，核对于 2026-11-06。
+> - WHERE、GROUP BY、HAVING 顺序与聚合函数的非空输入规则：[PostgreSQL 18, Table Expressions](https://www.postgresql.org/docs/18/queries-table-expressions.html)，§7.2.2–7.2.3 与 [Aggregate Functions](https://www.postgresql.org/docs/18/functions-aggregate.html)，§9.21；SQLite [Aggregate Functions](https://www.sqlite.org/lang_aggfunc.html)，核对于 2026-11-06。
+## 8. 如何用约束保护业务规则并为读取建立索引？
 
-
-**Sources / 来源：** PostgreSQL 18 [SQL tutorial](https://www.postgresql.org/docs/18/tutorial-sql.html), [comparison predicates](https://www.postgresql.org/docs/18/functions-comparison.html), [table expressions and joins](https://www.postgresql.org/docs/18/queries-table-expressions.html), and [aggregate functions](https://www.postgresql.org/docs/18/functions-aggregate.html), checked 2026-10-15; SQLite [SELECT](https://www.sqlite.org/lang_select.html), [expressions](https://www.sqlite.org/lang_expr.html), and [aggregate functions](https://www.sqlite.org/lang_aggfunc.html). The customer/order result queries ran with Python sqlite3 against SQLite 3.51.0 with foreign-key enforcement enabled.
-## 8. How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？
-
-Constraints enforce durable invariants for every writer, while indexes maintain access paths the planner may choose when their cost is worthwhile. A unique or foreign-key rule protects correctness; an index can speed a representative query but consumes storage and adds write work. Inspect the chosen engine's plan on representative data rather than treating an index definition as a performance promise. / 约束为所有写入方强制执行持久不变量；索引维护执行计划器可能按成本选择的访问路径。唯一约束或外键保护正确性；索引可能加速有代表性的查询，但会占用存储并增加写入成本。应使用真实代表性数据检查所选数据库的计划，不能把创建索引当成性能保证。
-
-**Key terms / 关键术语：** primary key / 主键；unique constraint / 唯一约束；foreign key / 外键；CHECK / 检查约束；B-tree index / B 树索引；query plan / 查询计划；EXPLAIN / 查询计划解释。
+**案例：** 报表服务接收账户 acct-17 的幂等请求 report-demo-208，生成任务 job-demo-731，并按账户读取最近任务状态。数据库要让每个合法操作最多对应一行、外键有真实目标、库存不能为负；读取路径还需在任务增多后可控。约束是所有写入方共享的正确性规则；索引是为某些查询维护的访问路径，只有当计划器判断成本合适时才会选择。
 
 ~~~mermaid
-flowchart LR
-    Query[Query and predicates] --> Planner[Database planner]
-    Planner --> Estimate[Estimate cost from data and statistics]
-    Estimate -->|useful path| Index[Index scan or lookup]
-    Estimate -->|not useful| Scan[Table scan or other plan]
-    Index --> Result[Rows in requested order]
-    Scan --> Result
+flowchart TD
+    Write[API / relay / worker 写入] --> Rules{约束成立？}
+    Rules -->|否| Reject[拒绝写入，事务不提交]
+    Rules -->|是| Store[提交业务状态]
+    Query[读取请求] --> Planner[计划器估算候选路径]
+    Planner -->|估计省成本| Index[使用索引]
+    Planner -->|扫描更划算| Scan[顺序扫描或其他计划]
+    Index --> Rows[按条件返回行]
+    Scan --> Rows
 ~~~
 
-### Schema and constraints / 模式与约束
+### 先把不变量放在数据库边界
 
-A relational schema defines tables, columns, types, and relationships. A **primary key** identifies a row; a **unique constraint** prevents duplicate key values; a **foreign key** requires a reference to an existing key (subject to the constraint's null and deferral rules); and `NOT NULL` and `CHECK` constrain allowed values. Put durable business invariants in database constraints as well as validating input in the application: another job, script, or service may write the same tables. Referential actions such as `ON DELETE CASCADE` encode an additional lifecycle rule and should match the data relationship.
-
-The following SQL uses common table and constraint syntax. It describes customers and orders, ensures an order has a customer and a non-negative amount, and adds an access path for a customer's recent orders. The query asks for rows; the database decides whether and how to use the index. The `?` is a bound-parameter placeholder used by SQLite; other drivers use their own placeholder notation.
+应用输入校验能及时给用户更友好的错误；数据库约束也要校验每一次写入，防止另一个 API、定时任务或人工脚本绕开这次校验后破坏已提交数据。以下业务 schema 以 PostgreSQL 18 为例；后面的 SQLite 计划演示独立建表，不声称同一 DDL 在两个引擎上有相同类型和外键语义。primary key (主键) 唯一标识行；unique constraint (唯一约束) 防止某组键重复；foreign key (外键) 要求被引用的父键存在；NOT NULL constraint (非空约束) 阻止缺值；CHECK constraint (检查约束) 限制每一行必须满足的布尔条件。
 
 ~~~sql
-CREATE TABLE customers (
-    customer_id INTEGER PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE
+CREATE TABLE accounts (
+    account_id TEXT PRIMARY KEY NOT NULL
 );
 
-CREATE TABLE orders (
-    order_id INTEGER PRIMARY KEY,
-    customer_id INTEGER NOT NULL REFERENCES customers(customer_id),
-    amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
-    placed_at TEXT NOT NULL
+CREATE TABLE inventory (
+    sku TEXT PRIMARY KEY NOT NULL,
+    available INTEGER NOT NULL CHECK (available >= 0)
 );
 
-CREATE INDEX orders_by_customer_and_time
-    ON orders(customer_id, placed_at);
+CREATE TABLE reservations (
+    account_id TEXT NOT NULL REFERENCES accounts(account_id),
+    principal_id TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    request_fingerprint TEXT NOT NULL,
+    sku TEXT NOT NULL REFERENCES inventory(sku),
+    status TEXT NOT NULL CHECK (status IN ('reserved', 'cancelled')),
+    PRIMARY KEY (account_id, principal_id, idempotency_key)
+);
 
-SELECT order_id, amount_cents, placed_at
-FROM orders
-WHERE customer_id = ?
-ORDER BY placed_at DESC;
+CREATE TABLE report_jobs (
+    job_id TEXT PRIMARY KEY NOT NULL,
+    account_id TEXT NOT NULL REFERENCES accounts(account_id),
+    principal_id TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    request_fingerprint TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (
+        status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')
+    ),
+    created_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (account_id, principal_id, idempotency_key)
+);
+
+INSERT INTO accounts (account_id) VALUES ('acct-17');
+INSERT INTO inventory (sku, available) VALUES ('SKU-7', 1);
 ~~~
 
-An index is a maintained access path, not a promise that every query will be faster. It uses storage and adds work to inserts, updates, and deletes. A multicolumn B-tree index is ordered by its leading columns, so `(customer_id, placed_at)` can support a lookup by customer and then a time ordering; the best plan still depends on the query, table size, data distribution, statistics, and database engine. Inspect a plan with that engine's `EXPLAIN` facility and compare it with representative data. In PostgreSQL, `EXPLAIN ANALYZE` executes the statement and reports observed work, while plain `EXPLAIN` shows the planner's estimated strategy. Plan output and choices are product- and version-specific.
+这里三种规则解决不同问题：available 的 CHECK 禁止负库存；reservation 的外键确保账户和 SKU 存在；report_jobs 的复合唯一键把同一账户、同一主体、同一幂等键限定为同一个逻辑提交。插入 acct-17 账户父行与 SKU-7 后，才有合法值可供 reservation 引用。键列是 NOT NULL，避免缺值绕过该业务比较。创建时间使用 TIMESTAMPTZ 表示绝对时间，不能把不同本地时区格式的任意 TEXT 直接按字典序当作时间顺序。任务 job-demo-731 可以在 queued 到 running 再到 succeeded 等已定义状态间变化，但 CHECK 只限制允许取值，并不单独验证转移顺序；转移需要由带前置状态的 UPDATE 或其他并发控制实现。ON DELETE CASCADE 是另一项独立的生命周期规则，只有业务确实要求删父行时也删掉关联子行才应选择；它不会默认发生。
 
+> [!info] CHECK 不一定拒绝 NULL
+> 在 PostgreSQL 中，CHECK 表达式只在结果为 FALSE 时拒绝行；结果为 TRUE 或 NULL 都满足约束。因此 CHECK (available >= 0) 若允许 available 为 NULL，并不能表达“必须有非负库存”。需要 NOT NULL 与 CHECK 一起约束。SQLite 还使用动态类型，普通 INTEGER 列可能存入文本；若要用 SQLite 验证同一强类型不变量，应启用 STRICT 表或加显式类型检查。SQLite 外键也必须在每个连接执行 PRAGMA foreign_keys = ON。
 
-**Sources and verification / 来源与验证：** PostgreSQL 18 [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [indexes](https://www.postgresql.org/docs/18/indexes.html), and [EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html), checked 2026-10-15; SQLite [foreign keys](https://www.sqlite.org/foreignkeys.html), [query planner](https://www.sqlite.org/queryplanner.html), and [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html). The schema/query example was run with Python sqlite3 against SQLite 3.51.0. For 1,000 synthetic orders, adding the composite index changed the observed plan from a table scan plus temporary sort to an index search. This is one planner observation, not a stable output contract.
+### 复合索引怎样配合任务列表？
 
+报表所有者查询账户 acct-17 最近 20 个任务，按创建时间倒序；同一时间戳时用任务 ID 决定稳定顺序：
 
-**Related notes / 相关笔记：** [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) applies a conditional update and a unique request key; [Database transactions, isolation, and recovery / 数据库事务、隔离与恢复](#9.%20What%20do%20transaction%20isolation%20and%20WAL%20guarantee?%20/%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%20WAL%20%E5%88%86%E5%88%AB%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F) explains the transaction boundary.
-## 9. What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？
+~~~
+CREATE INDEX report_jobs_by_account_recent
+    ON report_jobs (account_id, created_at DESC, job_id DESC);
 
-A database transaction gives statements one commit/rollback boundary. The isolation policy determines which concurrent changes a transaction may observe; MVCC is one way engines manage versions. Write-ahead logging lets recovery redo changes after a crash only within the database's durability and storage assumptions. Point-in-time recovery additionally needs a suitable base backup and required log history. Product, version, and configuration determine the exact guarantee. / 数据库事务为一组语句提供共同的提交或回滚边界；隔离策略定义事务能观察到哪些并发变更，MVCC 是数据库管理版本的一种机制。预写日志支持在崩溃后重做变更，但保证受数据库持久性和存储配置约束。时间点恢复还需要合适的基础备份和所需日志。具体保证取决于产品、版本与配置。
+SELECT job_id, status, created_at
+FROM report_jobs
+WHERE account_id = $1
+ORDER BY created_at DESC, job_id DESC
+LIMIT 20;
+~~~
 
-**Key terms / 关键术语：** transaction / 事务；isolation level / 隔离级别；MVCC / 多版本并发控制；write-ahead log (WAL) / 预写日志；crash recovery / 崩溃恢复；point-in-time recovery / 时间点恢复。
+B-tree index (B 树索引) 按键列的顺序保存索引项。查询中的 $1 是 PostgreSQL 驱动绑定的账户参数。第一个键 account_id 是等值条件，后两列直接提供稳定排序，因此这个复合索引可能同时缩小扫描范围并避免额外排序。把 account_id 去掉或调到末尾后，索引就不能同样直接定位某账户的那段连续键范围。索引的列序需从真实过滤条件与排序推导；字段多并不自动更快。
+
+UNIQUE (account_id, principal_id, idempotency_key) 通常会让数据库同时维护一条唯一索引来阻止重复键。外键查父表需要主键或唯一键，但在 PostgreSQL 中，创建外键并不会自动为子表引用列建立索引；删除账户或查某账户预留时，是否需要相应的子表索引取决于数据量与访问模式。索引只能缩短查询路径，不能替代业务授权；在服务端依然须先检查调用者是否可见任务或预留。
+
+### 计划器为什么有时不用已建索引？
+
+索引会占用磁盘和缓存，也会增加 INSERT、UPDATE、DELETE 时维护条目的工作。若查询预计读取表的大部分行，顺序扫描可能比逐个索引查找再回表便宜。query planner (查询计划器) 会根据表规模、分布、统计信息、谓词和输出列估算成本；估算和选择会随引擎、版本、数据与统计而变。必须用目标引擎的 EXPLAIN 检查代表性查询，不能以“索引存在”推断性能已提升。
+
+下面在独立 SQLite 教学库保留一个计划复现：它与 NULL 章节同名的 customers、orders 表结构不同，需分别建表。这里创建 1,000 个合成订单，按一个客户筛选并按时间倒序；先检查无索引计划，再加 customer_id、placed_at 复合索引并检查。可见行数、统计信息和版本都会影响输出；本例实测计划只说明这组 SQLite 数据上的选择。
+
+> [!example]- 用 1,000 个合成订单观察索引计划
+> ~~~sql
+> PRAGMA automatic_index = OFF;
+> CREATE TABLE orders (
+>     order_id INTEGER PRIMARY KEY,
+>     customer_id INTEGER NOT NULL,
+>     amount_cents INTEGER NOT NULL,
+>     placed_at INTEGER NOT NULL
+> );
+> WITH RECURSIVE seq(n) AS (
+>     VALUES(1)
+>     UNION ALL
+>     SELECT n + 1 FROM seq WHERE n < 1000
+> )
+> INSERT INTO orders
+> SELECT n, n % 100, n * 25, n FROM seq;
+>
+> EXPLAIN QUERY PLAN
+> SELECT order_id, amount_cents, placed_at
+> FROM orders
+> WHERE customer_id = 17
+> ORDER BY placed_at DESC;
+> -- 本地输出：SCAN orders；USE TEMP B-TREE FOR ORDER BY
+>
+> CREATE INDEX orders_by_customer_and_time
+>     ON orders(customer_id, placed_at);
+>
+> EXPLAIN QUERY PLAN
+> SELECT order_id, amount_cents, placed_at
+> FROM orders
+> WHERE customer_id = 17
+> ORDER BY placed_at DESC;
+> -- 本地输出：SEARCH orders USING INDEX orders_by_customer_and_time (customer_id=?)
+> ~~~
+> SQLite 3.51.0 的本地复现用于观察查询计划；不同 SQLite 版本、统计状态及不同规模的数据可能选择其他计划。PostgreSQL 的 EXPLAIN ANALYZE 会实际执行语句并报告观察到的耗时与行数，评估有写入副作用的语句前须先考虑它会真的执行。
+
+本次计划回放观察到的变化是访问路径和排序步骤：从全表 SCAN 加临时 B-tree 排序，变成按 customer_id 的索引 SEARCH。它没有量出端到端耗时，因此只能说明 SQLite 为这组数据选择了不同计划，不能据此声称实际延迟必然下降；amount_cents 不在索引键中，这条读取也不是覆盖索引。
+
+**接下来：** 唯一键为操作结果提供重放边界；具体怎样原子提交与处理并发见[事务隔离与 WAL 能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。SQL 空值、连接与聚合对结果行的影响见[NULL、连接与分组如何改变报表 42 的结果？](#7.%20SQL%20%E7%A9%BA%E5%80%BC%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E6%8A%A5%E8%A1%A8%2042%20%E7%9A%84%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+
+> [!info]- 来源
+> - CHECK、NOT NULL、主键、唯一键与外键：[PostgreSQL 18, Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html)，§5.5；特别是 CHECK 的 TRUE/NULL 行为，核对于 2026-11-06。
+> - 复合 B-tree 的前导列条件与索引开销：[PostgreSQL 18, Indexes](https://www.postgresql.org/docs/18/indexes.html)，§11.1、§11.3；排序：[Indexes and ORDER BY](https://www.postgresql.org/docs/18/indexes-ordering.html)，§11.4；核对于 2026-11-06。
+> - 计划估算与实际执行的区别：[PostgreSQL 18, EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html)，核对于 2026-11-06。
+> - SQLite 外键与查询计划：[SQLite Foreign Key Support](https://www.sqlite.org/foreignkeys.html) 与 [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html)，核对于 2026-11-06。
+## 9. 事务隔离与预写日志能保证什么？
+
+**案例：** 报表系统中的两条请求同时预留 SKU-7 的最后一件库存，初始 available = 1。事务要把库存扣减和 reserve-demo-208 结果记录一起提交。随后连接超时只会让调用方不知道结果，数据库是否提交仍由持久记录决定。要分析这个过程，需分清一组语句的提交边界、并发事务看到的版本，以及写前日志 (write-ahead log, WAL) 在崩溃后能够恢复的状态。
 
 ~~~mermaid
-flowchart LR
-    Tx[Transaction changes] --> Log[Append corresponding WAL records]
-    Log --> Flush[Flush log under configured durability policy]
-    Flush --> Commit[Report commit]
-    Commit --> Page[Data pages may be written later]
-    Crash[Crash] --> Recovery[Redo durable logged changes]
-    Recovery --> Data[Database recovers committed state]
-    Backup[Base backup plus archived log range] --> PITR[Point-in-time recovery]
+flowchart TD
+    Begin[开始事务] --> Predicate[条件更新 available > 0]
+    Predicate -->|恰好 1 行| Insert[写入同一作用域的预留操作记录]
+    Insert -->|成功| Changes[产生库存与操作记录的 WAL 变更]
+    Changes --> CommitRecord[写入提交记录]
+    CommitRecord --> CommitFlush[按同步提交配置持久化所需 WAL]
+    CommitFlush --> Ack[确认提交]
+    Changes --> PageFlush[对应 WAL 持久后，数据页可写回]
+    PageFlush -.可发生在提交前或提交后.-> Pages[持久数据页]
+    Predicate -->|0 行| Rollback[回滚本事务；按新事务查询操作键]
+    Insert -->|作用域键唯一冲突| Rollback
+    Insert -->|其他约束错误| Fail[回滚并返回明确失败]
+    Crash[进程 / 主机崩溃] --> Recovery[恢复重放 WAL 并按提交状态判定可见性]
+    Recovery --> Recovered[读到提交状态所证明的数据库结果]
+    Ack -.响应可能丢失.-> Caller[客户端暂时无法确认结果]
 ~~~
 
-### Transactions and isolation / 事务与隔离
+### 事务把哪些写入放在同一边界？
 
-A transaction gives a set of statements one commit or rollback boundary. **ACID** is a useful vocabulary, with each property still bounded by implementation and configuration:
+transaction (事务) 把多条数据库语句放进同一次提交或回滚。ACID 是说明该边界的常用词，但每项都受数据库实现、配置和底层存储能力约束：
 
-- **Atomicity / 原子性:** the transaction's changes commit together or are rolled back together.
-- **Consistency / 一致性:** constraints and application rules define valid states; the database does not invent the business rules.
-- **Isolation / 隔离性:** concurrent transactions see behavior controlled by the isolation level and engine implementation.
-- **Durability / 持久性:** a successful commit survives the failures covered by the database's configured durability and storage assumptions.
+- **atomicity（原子性）**：同一事务中的写入一起提交，或由回滚一起撤销。
+- **consistency（一致性）**：数据库约束和应用规则定义合法状态；事务不会自行发明业务不变量。
+- **isolation（隔离性）**：并发事务按所选级别与引擎实现观察或等待其他写入。
+- **durability（持久性）**：成功提交能够抵抗配置和存储承诺范围内的故障；异步提交或不可靠存储会改变这个范围。
 
-Consider reserving one remaining unit. Do not read the count in the application and then issue an unconditional write: concurrent requests can both act on the same old value. Prefer one conditional update, check that exactly one row changed, insert the reservation in the same transaction, and roll back if either step fails. The exact concurrency guarantee depends on the engine's atomic-update, locking, and isolation contract; verify it for the selected database.
+对 SKU-7，先读 available=1 再无条件写成 0 不安全。条件更新与按账户、主体和键识别的预留结果须在同一事务中。以下使用 PostgreSQL 示例参数；$1 是 SKU-7，$2 是 acct-17，$3 是 user-17，$4 是 reserve-demo-208，$5 是 fingerprint-A，均由驱动绑定。字段与[库存基础页](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F)中的 PostgreSQL schema 一致：
 
 ~~~sql
 BEGIN;
 
 UPDATE inventory
 SET available = available - 1
-WHERE sku = ? AND available > 0;
+WHERE sku = $1 AND available > 0
+RETURNING available;
+-- 本例按 Read Committed：成功者得到一行、值为 0；竞争者重检后得到零行。
 
--- Continue only if exactly one row was updated.
-INSERT INTO reservations (request_id, sku) VALUES (?, ?);
+INSERT INTO reservations
+    (account_id, principal_id, idempotency_key, request_fingerprint, sku, status)
+VALUES ($2, $3, $4, $5, $1, 'reserved');
 
 COMMIT;
 ~~~
 
-Assume `inventory.sku` is unique. If the update changes zero rows or the insert fails, roll back instead of committing. This example relies on the database's transaction and row-update semantics; unique constraints can also enforce that a `request_id` is not applied twice. A transaction cannot make a remote side effect atomic with the local database unless both participants share a protocol that provides that guarantee.
+API 只有在 UPDATE 返回一行后才执行 INSERT；零行、作用域操作键冲突或其他写入错误都要显式 ROLLBACK。零行或作用域键冲突后，先回滚这个尝试，再在新事务按当前授权范围查询键并比较指纹；同键同指纹返回已提交结果，同键异指纹冲突，确认没有该键后才报告 SKU 不存在或售罄。提交之后若客户端连接断开，数据库行仍说明是否存在 reserve-demo-208；不能把“客户端超时”当成数据库自动回滚的信号。若 COMMIT 响应丢失，沿[请求超时后如何确认结果并安全重试？](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)的同键流程查询已提交结果，或以同键安全重放；唯一约束只能帮助裁决并发写入，不能单独给出重放响应。
 
-SQL isolation names are not a complete description of every engine's behavior. Common anomalies include a **dirty read** (seeing another transaction's uncommitted write), a **non-repeatable read** (seeing a changed row on a later read), a **phantom read** (a repeated predicate query returns a different set), and a **serialization anomaly** (the committed result cannot be explained by any serial ordering). Check the selected product's manual rather than transferring an isolation-level label from another database.
+### 隔离级别限制哪些并发现象？
 
-**PostgreSQL 18 example:** the default Read Committed level takes a new snapshot for each statement; Repeatable Read keeps a transaction snapshot and can abort a conflicting update; Serializable detects additional dependency patterns and can abort a transaction that must then be retried from the beginning. These are PostgreSQL behaviors, not universal definitions of those level names.
+dirty read（脏读）是读到其他事务尚未提交的写入；non-repeatable read（不可重复读）是同一事务重读一行时看到后来提交的新值；phantom read（幻读）是相同条件查询再次执行时，结果行集合因其他提交而变化；serialization anomaly（序列化异常）是一组成功事务的结果无法解释为某种串行执行顺序。SQL 标准按这些现象描述隔离级别；产品对名称的实现可能更强或采用不同并发控制，需看所选数据库具体文档。
 
-#### MVCC / 多版本并发控制
+PostgreSQL 18 的对照如下。这是该产品的行为表，不应套用于所有数据库。官方文档版本在 2026-11-06 核对为 PostgreSQL 18；本地双连接并发复现运行于 PostgreSQL 14.24，不将其描述为 18 的实测：
 
-With **multi-version concurrency control (MVCC)**, a database keeps versions or visibility metadata so a statement or transaction can read a snapshot while concurrent transactions make changes. This can reduce reader–writer blocking, but does not remove write conflicts, explicit locks, or every wait. Engines that retain row versions need cleanup; PostgreSQL, for example, uses vacuuming to reclaim versions that are no longer visible, and long-running snapshots can delay that cleanup. MVCC is a concurrency-control mechanism, not a promise that all reads are lock-free or that every engine uses the same version rules.
+| PostgreSQL 18 级别 | 脏读 | 不可重复读 | 幻读 | 序列化异常 |
+| --- | --- | --- | --- | --- |
+| Read Uncommitted（读未提交） | 不允许，等同 Read Committed | 可能 | 可能 | 可能 |
+| Read Committed（读已提交，默认） | 不允许 | 可能 | 可能 | 可能 |
+| Repeatable Read（可重复读） | 不允许 | 不允许 | 不允许 | 仍可能出现写偏差 |
+| Serializable（可串行化） | 不允许 | 不允许 | 不允许 | 不允许 |
 
-#### One stable snapshot can still break a shared rule / 稳定快照仍可能破坏共享约束
+在 PostgreSQL Read Committed 下，每条语句取得新快照。若两个写入请求同时以 WHERE available > 0 更新同一 SKU，后执行者会等待；前者提交后，数据库会对新行重新检查条件，available 已为 0 就更新零行。因此单条条件更新正好表达此不变量。在 Repeatable Read 下，若当前事务的快照已看见某行旧版本，而另一个事务先提交了该行的新版本，等待中的更新可能以 SQLSTATE 40001 失败；应用必须从最初读取开始重试整笔事务。如果应用把“先查、再从多行推导规则、最后分别更新”分成多个语句，则 Read Committed 每语句新快照可能让后续语句观察不同状态，复杂规则需更强保护。
 
-Suppose a schedule has two on-call doctors and at least one must stay on. Two transactions each read the same two on-call rows. Both see that another doctor remains available, then each marks a different row off duty. With PostgreSQL Repeatable Read, these separate-row writes can both commit. This is **write skew / 写偏差**. A stable view for each transaction did not make the combined outcome equivalent to executing the transactions one at a time.
+### 为什么稳定快照仍可能破坏共享规则？
 
-If both operations use PostgreSQL Serializable and implement the rule in their reads, the system can abort a conflicting transaction with SQLSTATE `40001`. Retry the whole transaction, including the read and decision, so the later attempt can see only one doctor remaining. Another design makes every writer acquire the same schedule-row lock in one statement, then check the invariant in a later Read Committed statement. The later statement takes a fresh snapshot after the lock wait. Protect irreversible external actions separately, for example by writing an outbox entry and dispatching after commit. / 对跨行规则要保护整个读取与写入决策。序列化冲突后从头重试事务，重新读取状态。 [PostgreSQL 18 transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE)
+write skew (写偏差) 说明稳定快照不一定维护跨行规则。排班表有两名值班医生，规则要求至少一人值班。事务 A 读到两人都在岗并关闭 A 的排班；事务 B 读到相同快照并关闭 B。两者各写不同的行，因此 PostgreSQL Repeatable Read 下都可能提交，最终没人值班。
 
-### WAL and recovery boundaries / WAL 与恢复边界
+可选修法取决于规则形状：用同一行计数与条件更新将规则收敛为单行不变量；或在 PostgreSQL Read Committed 下，让所有写入方先锁定同一排班控制行，再用另一条 SELECT 语句检查状态。以 B 为例，它等 A 释放控制行后，第二条语句取得新快照并看到只剩 B 在岗，于是拒绝关闭 B 的排班。Repeatable Read 事务的快照不会因等待结束而刷新，因此这一两语句方案不能原样套用到 Repeatable Read；也可使用 Serializable 并在 SQLSTATE 40001 序列化失败后从最初读取开始重试整个事务。只重试最后一条 UPDATE 会沿用过期决策。事务中不应执行无法撤销的远端支付或直接发布消息；先写本地 outbox，提交后再投递。
 
-The write-ahead rule is that changes to data pages are written only after the corresponding log records have been flushed to durable storage. A commit can be reported durable after the required log records are safely flushed under the configured policy; a later crash can then use the log to redo changes not yet copied into data pages. Settings that weaken synchronous commit or storage guarantees can weaken what a successful response means. WAL supports crash recovery; point-in-time recovery additionally requires a suitable base backup and the needed archived log range.
+> [!info] MVCC 和“无锁读取”不是同一句话
+> multi-version concurrency control (多版本并发控制, MVCC) 让读取者按快照看见可见版本，同时并发写入可产生新版本，减少部分读写等待。它不取消写写冲突、显式锁或所有等待；不同引擎保留与清理版本的方式也不同。PostgreSQL 通过 VACUUM 清理不再可见的旧版本，长事务持有的旧快照可能延迟清理。
 
-Recovery algorithms are product-specific. The archived database course keeps the detailed ARIES analysis, including the Dirty Page Table and its `recLSN` rule, in [Log-based Crash Recovery / 基于日志的崩溃恢复](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-wal-and-aries-recovery.md). In ARIES, `recLSN` is the earliest log record that could have dirtied that page since it was last clean; it is not a universal WAL field or redo rule.
+### 预写日志如何把提交与数据页写回分开？
 
-### Distributed database boundaries / 分布式数据库的边界
+write-ahead log (预写日志, WAL) 先记录数据更改，再允许对应数据页写回持久存储。PostgreSQL 确认同步提交前，会先持久化提交所需的 WAL；相应数据页可能已经写回，也可能仍留待稍后写回。无论何时写页，都必须先持久化足以恢复该页的 WAL。崩溃后启动恢复会重放已持久日志；若日志没有提交记录，事务写入仍不会作为已提交结果被查询到。这样可以避免每个事务提交都同步刷新所有被修改的数据页，但承诺依赖同步提交策略、文件系统、设备 flush 语义和配置。WAL 的存在本身不意味着抵御存储设备谎报写入或失去整个故障域。
 
-Two nearby concepts are useful boundaries, not a distributed-systems survey:
+WAL 与崩溃恢复不是时间点恢复的全部材料。要恢复到某个过去时点，还需要适用的基础备份和从该备份起点到目标时刻连续、完整的 WAL 归档；缺失任一段日志都会造成时间范围断裂。SQLite 采用自己的回滚日志或 WAL 模式和配置规则，不能把 PostgreSQL 的文件布局与恢复步骤直接套过去。
 
-- **CAP:** during a network partition, a system cannot guarantee both linearizable consistency and an eventual response to every request at a non-failed node. Partition is the assumed failure; the trade-off is which operations may be rejected or may observe stale data. See Gilbert and Lynch's [CAP result](https://www.cs.princeton.edu/courses/archive/spring24/cos418/papers/cap.pdf) and the archived [CAP theorem / CAP 定理](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-distributed-consistency-and-nosql.md) discussion.
-- **Two-phase commit (2PC):** a participant that has durably prepared and voted YES must wait for the coordinator's decision. A timeout after YES is not a safe local abort, so the participant can remain blocked until it learns that decision. 2PC coordinates an atomic commit decision; it does not itself provide transaction isolation. See PostgreSQL's [prepared-transaction documentation](https://www.postgresql.org/docs/18/sql-prepare-transaction.html) and the archived [2PC notes](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-two-phase-commit-and-replicated-data.md).
+> [!example] 一次提交后立即崩溃时检查什么
+> 对 reserve-demo-208，若数据库已按持久策略确认 COMMIT，即使数据页尚未写回，崩溃恢复也能重做已提交的库存扣减与预留记录；恢复后查询得到 available=0 和该操作记录。相反，若库存与预留的变更日志已写出但事务没有持久提交记录，即使脏页曾写回，恢复后查询仍看见 available=1 且没有该预留。若 API 在提交确认前失联，客户端只能查询权威记录来区分这两种结果。具体断电保证取决于所选引擎与存储兑现配置，而不是 HTTP 响应有没有到达。
 
-**Course material kept in the archive / 保留在归档中的课程内容：** the detailed RAID calculations, R-tree/spatial-index examples, snapshot-isolation exercises, and recovery derivations remain in [week 1 RAID calculations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w1-redundancy-and-raid.md), [week 2 R-tree/spatial-index examples](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w2-spatial-indexes.md), [week 3 snapshot-isolation exercises](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w3-optimistic-snapshot-and-timestamp-concurrency.md), and [week 4 recovery derivations](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-wal-and-aries-recovery.md). The active note provides the shared model; the course files preserve their derivations and exercises.
+### 哪些课程细节继续留在归档？
 
+课程中的 ARIES 恢复推演仍保留在[WAL 与 ARIES 的逐步恢复例题](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-wal-and-aries-recovery.md)：analysis（分析）阶段用 dirty page table（脏页表）记录恢复时涉及的脏页；每页的 recLSN 表示该页自上次干净后可能需要 REDO（重做）的最早日志位置，最小 recLSN 是 REDO 起点，不是分析阶段要扫描的最早日志范围。CAP 的边界是在网络分区期间，系统不能同时保证线性一致性，并保证每个非故障节点收到的请求最终都得到响应；two-phase commit (两阶段提交, 2PC) 协调多个参与者的提交决定，已进入 prepared 并投 YES 的参与者，在尚不知道协调者全局决定时可能等待。两者都不能替代单库库存原子更新、隔离级别或日志恢复。
 
-**Related notes / 相关笔记：** [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) shows a conditional transaction for a local business invariant; [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) explains why a database transaction cannot atomically include an unrelated remote side effect; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies an outbox to the database-to-queue boundary.
+**接下来：** SQL 约束与索引决定哪些业务状态可写、哪些访问路径可用，见[如何用约束保护业务规则并为读取建立索引？](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)。当服务用 ORM 请求数据库时，session、事务与连接的持有时间见[如何限定 ORM Session 并诊断连接池耗尽？](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。
 
-**Sources / 来源：** PostgreSQL 18 [MVCC](https://www.postgresql.org/docs/18/mvcc-intro.html), [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html), [WAL introduction](https://www.postgresql.org/docs/18/wal-intro.html), [WAL configuration and recovery](https://www.postgresql.org/docs/18/wal.html), and [prepared transactions](https://www.postgresql.org/docs/18/sql-prepare-transaction.html), checked 2026-10-15; SQLite [transactions](https://www.sqlite.org/lang_transaction.html). The archived database course retains the detailed ARIES DPT/recLSN derivation and examples: [week 4 recovery](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-wal-and-aries-recovery.md). CAP and 2PC are boundaries, not local transaction substitutes: see Gilbert and Lynch's [CAP result](https://www.cs.princeton.edu/courses/archive/spring24/cos418/papers/cap.pdf), PostgreSQL's [prepared transaction documentation](https://www.postgresql.org/docs/18/sql-prepare-transaction.html), and the archived [CAP](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-distributed-consistency-and-nosql.md) and [2PC course notes](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-two-phase-commit-and-replicated-data.md). The original ARIES method is Mohan et al., [ARIES](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging), with DPT and recLSN explained in the [CMU database recovery notes (pp. 1, 4–6)](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf).
+> [!info]- 来源
+> - 隔离级别异常定义、PostgreSQL 18 每语句快照、更新等待重检与 Serializable 重试：[PostgreSQL 18, Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)，§13.2.1–13.2.3，核对于 2026-11-06；本地双连接并发实跑版本为 PostgreSQL 14.24，未在 PostgreSQL 18 实跑。
+> - MVCC 版本可见性与 VACUUM：[PostgreSQL 18, Introduction to MVCC](https://www.postgresql.org/docs/18/mvcc-intro.html)，§13.1，核对于 2026-11-06。
+> - WAL 先持久日志再写数据页、提交确认不依赖所有数据页已写回、崩溃重做与基础备份加日志的时间点恢复：[PostgreSQL 18, WAL Introduction](https://www.postgresql.org/docs/18/wal-intro.html)，§28.3，[WAL Configuration](https://www.postgresql.org/docs/18/wal-configuration.html)、[Asynchronous Commit](https://www.postgresql.org/docs/18/wal-async-commit.html) 及 [Continuous Archiving and Point-in-Time Recovery](https://www.postgresql.org/docs/18/continuous-archiving.html)，核对于 2026-11-06。
+> - SQLite 的本地事务与日志模式：[SQLite Transactions](https://www.sqlite.org/lang_transaction.html) 与 [Write-Ahead Logging](https://www.sqlite.org/wal.html)，核对于 2026-11-06。
+> - 课程 ARIES 推导：[Mohan et al., ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging)；关联原始课程页[WAL 与 ARIES 的逐步恢复例题](../../archive/uni-subjects/COMP90050ADBS/condensed-note-w4-wal-and-aries-recovery.md)。
+> - CAP 的网络分区边界：[Gilbert and Lynch, Brewer’s conjecture and the feasibility of consistent, available, partition-tolerant web services](https://www.cs.princeton.edu/courses/archive/spring24/cos418/papers/cap.pdf)；两阶段提交的预备状态限制：[PostgreSQL 18, PREPARE TRANSACTION](https://www.postgresql.org/docs/18/sql-prepare-transaction.html)，核对于 2026-11-06。
 ## 10. How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？
 
 **Core explanation / 核心解释：** An ORM session is a short-lived unit of work that tracks mapped objects and coordinates SQL within a transaction. Its lifetime, the transaction lifetime, and the database connection lifetime are related but distinct: a session may acquire a pooled connection only when it first needs the database, and commit or rollback returns that connection for reuse. / ORM Session 是短生命周期的工作单元，负责跟踪映射对象并协调事务中的 SQL。Session、事务和数据库连接的生命周期彼此相关但并不相同：Session 通常在首次访问数据库时才从连接池取连接，提交或回滚后会将连接归还以便复用。
@@ -1243,7 +1454,7 @@ with Session(engine) as session:
 
 Use an ORM for common mapping, relationship loading, and change tracking when its generated queries are clear. Use SQL directly when a bulk operation, specialized SQL feature, or plan shape needs explicit control. Either way, keep parameter binding and the same transaction/constraint rules; inspect generated or handwritten SQL with the selected database's plan tool.
 
-The [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) note explains SQL result semantics, constraints, query plans, transactions, and isolation independently of the ORM.
+The [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) note explains SQL result semantics, constraints, query plans, transactions, and isolation independently of the ORM.
 
 ~~~mermaid
 flowchart LR
@@ -1276,7 +1487,7 @@ Give each request a short-lived session and frame each write unit with one trans
 **Sources and verification / 来源与验证：** SQLAlchemy 2.0 [Session Basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html) and [Connection Pooling](https://docs.sqlalchemy.org/en/20/core/pooling.html), and the FastAPI [SQL (Relational) Databases tutorial](https://fastapi.tiangolo.com/tutorial/sql-databases/), checked 2026-10-15. The documented synchronous `Session`/transaction pattern and bounded pool behavior were exercised locally with SQLAlchemy 2.0.44 and SQLite 3.51.0: a successful block committed; an exception rolled back; session close reduced checked-out connections from one to zero; a second checkout against a full one-connection pool timed out, then succeeded after the first connection was returned. On 2026-10-27, the docs page identifies SQLAlchemy 2.0.55 as the current 2.0 docs build; the local verification above names the installed runtime version. No network database or asynchronous driver was used.
 
 
-**Related notes / 相关笔记：** [Database Fundamentals / How do you reserve the last inventory unit safely?](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) owns the engine's constraint and transaction semantics. [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers outcome and retry policy; pool growth and queue admission are sized in [the capacity and backpressure note](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F).
+**Related notes / 相关笔记：** [Database Fundamentals / How do you reserve the last inventory unit safely?](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) owns the engine's constraint and transaction semantics. [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers outcome and retry policy; pool growth and queue admission are sized in [the capacity and backpressure note](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F).
 ## 11. How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？
 
 **Core explanation / 核心解释：** In cache-aside, the database remains the source of truth: reads check the cache first and load the database on a miss; writes commit to the database and then invalidate the cached copy. A TTL bounds how long one cached value can live, but invalidation races and cache failures still need an explicit freshness and load policy. / 在 cache-aside 模式中，数据库仍是事实来源：读取先查缓存，未命中时再读取数据库；写入先提交数据库，然后使缓存副本失效。TTL 限制单个缓存值的存活时间，但失效竞态和缓存故障仍需要明确的新鲜度与负载策略。
@@ -1293,7 +1504,7 @@ Suppose `products` is authoritative and the cache key is `product:42`. A typical
 
 For a write, update the authoritative row and commit first; only then issue `DEL product:42`. The next read repopulates from the database. Redis `GET`, `SET ... EX`, `DEL`, and `TTL` are useful implementation primitives, but these commands do not make a Redis mutation atomic with the database transaction.
 
-The [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) note covers the constraints and transaction boundary that protect the source-of-truth write.
+The [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) note covers the constraints and transaction boundary that protect the source-of-truth write.
 
 ~~~mermaid
 sequenceDiagram
@@ -1399,7 +1610,7 @@ Observe the request boundary separately: accepted and rejected requests, deadlin
 
 Capacity and queue delivery are separate questions. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) covers admission, backpressure, and the full synthetic report estimate. [Publisher confirms and consumer acknowledgements / 发布者确认和消费者确认分别证明什么？](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker confirmation and redelivery boundaries.
 
-**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains how request and transaction lifetimes borrow database connections; [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers the constraints and transaction semantics that make a local deduplication boundary possible.
+**Related notes / 相关笔记：** [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains how request and transaction lifetimes borrow database connections; [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) covers the constraints and transaction semantics that make a local deduplication boundary possible.
 
 **Sources / 来源：** [RFC 9110 §9.2.2, Idempotent Methods](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2) and [§15.3.3, 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3), checked 2026-11-05; AWS Builders' Library, [Timeouts, retries, and backoff with jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/) and [Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/), checked 2026-10-15; gRPC guides to [Deadlines](https://grpc.io/docs/guides/deadlines/) and [Cancellation](https://grpc.io/docs/guides/cancellation/).
 ## 13. How would you design a durable account report? / 怎样设计可持久查询的账户报表？
@@ -1505,7 +1716,7 @@ Deploy API, relay, and workers with compatible job schemas so old jobs can finis
 
 **How would you answer “How would you design a report that may outlive an HTTP request?” / 如何回答“如何设计一个可能超过 HTTP 请求时限的报表任务？”** I would first confirm report size, response deadline, retention, access owner, and acceptable failure behavior. If measured tail latency fits the request budget, I would keep it synchronous. For the stated multi-second report, I would persist the job and outbox in one database transaction, return a stable status URL, and let a bounded worker create a private result. Retries use the scoped idempotency key, and each worker attempt writes a distinct immutable object. A guarded update makes only the current, non-cancelled attempt visible; acknowledge the queue message after the durable outcome. The client queries job state after disconnect rather than inferring completion from a response or message delivery. / 我会先确认报表规模、响应期限、留存期、数据所有者和可接受的失败行为。如果实测尾部时延满足请求预算，就保持同步。对于本例需要数秒的任务，我会在同一数据库事务中保存 job 与 outbox 并返回稳定的状态 URL，再由有界 worker 生成私有结果。重试使用有作用域的幂等键，每个 worker 尝试写入不同且不可变的对象。只有当前且未被取消的尝试可以通过条件更新让结果可见，并在持久化业务结果后确认队列消息；客户端断连后应查询 job 状态，而不能从响应或消息是否投递推断完成。
 
-**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) owns unknown outcomes and safe retries; [Sizing and bounding asynchronous work / 容量估算与背压](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) retains the detailed estimates; [Publisher confirms and consumer acknowledgements / 队列确认与重投](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker-level confirmation boundaries; [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) covers endpoint and error conventions; [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains ORM sessions and process-local pool limits; [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers constraints and transaction semantics; [Web Security and Authentication / Web安全与身份认证](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F) owns identity and resource authorization; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) owns transport and reconnect semantics; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) shows a separate durable-run contract; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the client surfaces stream and disconnect state; [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F) covers stage-level production signals.
+**Related notes / 相关笔记：** [API Reliability and Asynchronous Delivery / API超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) owns unknown outcomes and safe retries; [Sizing and bounding asynchronous work / 容量估算与背压](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) retains the detailed estimates; [Publisher confirms and consumer acknowledgements / 队列确认与重投](#14.%20What%20do%20publisher%20confirms%20and%20consumer%20acknowledgements%20prove?%20/%20%E5%8F%91%E5%B8%83%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%88%86%E5%88%AB%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) explains broker-level confirmation boundaries; [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) covers endpoint and error conventions; [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) explains ORM sessions and process-local pool limits; [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) covers constraints and transaction semantics; [Web Security and Authentication / Web安全与身份认证](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F) owns identity and resource authorization; [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) owns transport and reconnect semantics; [AI Application Architecture / AI 应用架构](../../ai-engineering/systems/ai-application-architecture.md) shows a separate durable-run contract; [Streaming UX / 流式交互](../../frontend/browser-apis/streaming-ux.md) explains how the client surfaces stream and disconnect state; [Observability, SLOs, and Incident Response / 可观测性、服务目标与事件响应](#31.%20How%20do%20you%20diagnose%20an%20API%20SLO%20violation?%20/%20%E5%A6%82%E4%BD%95%E8%AF%8A%E6%96%AD%20API%20SLO%20%E8%BF%9D%E7%BA%A6%EF%BC%9F) covers stage-level production signals.
 
 **Sources / 来源：** [RFC 9110 §15.3.3, 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.3); [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html) for the database-local all-or-nothing boundary; [PostgreSQL 18: Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) for scoped uniqueness and [Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html) for concurrent transaction behavior; [AWS Prescriptive Guidance: Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html) for dual-write failure and duplicate-publication boundaries; [Amazon S3 conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) as one create-only object-write mechanism, not a requirement to choose S3; [Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework) for workload requirements, operational focus, and starting with a simple design, checked 2026-10-15.
 ## 14. What do publisher confirms and consumer acknowledgements prove? / 发布者确认和消费者确认分别证明什么？
@@ -1552,7 +1763,7 @@ Concurrent consumers may finish messages in a different order from delivery. A F
 
 Observe each boundary separately: publish attempts and confirms, unroutable messages, queue depth and oldest-message age, unacknowledged deliveries, retries and redeliveries, acknowledgements, dead-letter volume, and completed business outcomes. A growing oldest-message age indicates delay even while a queue continues accepting work. [Sizing and bounding asynchronous work / 如何估算并限制异步工作管线？](#23.%20How%20do%20you%20size%20and%20bound%20an%20asynchronous%20work%20pipeline?%20/%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F) explains how to constrain the work waiting behind those boundaries.
 
-**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers ambiguous request outcomes and operation idempotency; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies outbox, attempt fencing, and post-outcome acknowledgement to a report job; [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F) covers the local transaction boundary used to persist business effects.
+**Related notes / 相关笔记：** [API timeout and safe retry / API 超时后的结果确认与安全重试](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F) covers ambiguous request outcomes and operation idempotency; [How would you design a durable account report? / 怎样设计可持久查询的账户报表？](#13.%20How%20would%20you%20design%20a%20durable%20account%20report?%20/%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F) applies outbox, attempt fencing, and post-outcome acknowledgement to a report job; [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F) covers the local transaction boundary used to persist business effects.
 
 **Sources / 来源：** RabbitMQ 4.3, [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and [Reliability Guide](https://www.rabbitmq.com/docs/reliability), checked 2026-11-05. These references document RabbitMQ's confirm, manual-ack, redelivery, and publisher retry behavior; other brokers have different contracts.
 ## 15. 何时选择轮询、SSE、流式 Fetch 或 WebSocket？
@@ -2602,7 +2813,7 @@ The `/bad` route delays the next event-loop request because it calls a blocking 
 
 取消通过协作方式传递，因此我会把释放逻辑放进`finally`并让`CancelledError`继续传播。若响应流仍要使用FastAPI的`yield`依赖，我会选择request scope；若资源应在响应发送前关闭，则选择function scope。我不会因为客户端超时或断开就认定远端工作已停止；下游截止时间与副作用处理仍需显式定义。
 
-**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#21.%20How%20do%20Python%20values,%20iterators,%20and%20resource%20lifetimes%20behave?%20/%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F), and [Database Fundamentals / 数据库基础](#1.%20How%20do%20you%20reserve%20the%20last%20inventory%20unit%20safely?%20/%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E9%A2%84%E7%95%99%E6%9C%80%E5%90%8E%E4%B8%80%E4%B8%AA%E5%BA%93%E5%AD%98%EF%BC%9F). [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) expands the resource example into database-session, transaction, and pool-lifetime choices.
+**Sources / 来源：** Python 3.11 [asynchronous generator functions](https://docs.python.org/3.11/reference/expressions.html#asynchronous-generator-functions), [`asyncio` tasks, cancellation, timeouts, and threads](https://docs.python.org/3.11/library/asyncio-task.html), [asyncio development guidance](https://docs.python.org/3.11/library/asyncio-dev.html), and [executor cancellation behavior](https://docs.python.org/3.11/library/concurrent.futures.html); FastAPI [async and sync route behavior](https://fastapi.tiangolo.com/async/), [yield dependency scopes](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/), and [streaming dependency lifetime](https://fastapi.tiangolo.com/advanced/advanced-dependencies/); version-pinned FastAPI [0.128.0 dependency resolver](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py), checked 2026-10-15. Related: [Python Fundamentals / Python基础](#21.%20How%20do%20Python%20values,%20iterators,%20and%20resource%20lifetimes%20behave?%20/%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F), [API Reliability and Asynchronous Delivery / API可靠性与异步交付](#12.%20A%20request%20timed%20out:%20how%20can%20I%20confirm%20its%20outcome%20and%20retry%20safely?%20/%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F), [HTTP Protocols and WebSockets / HTTP协议与WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F), and [Database Fundamentals / 数据库基础](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F). [HTTP API Contracts / HTTP API契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F) defines the request, response, and error shapes used by these handlers. [Data Access and Connection Pools / 数据访问与连接池](#10.%20How%20do%20you%20scope%20an%20ORM%20Session%20and%20diagnose%20pool%20exhaustion?%20/%20%E5%A6%82%E4%BD%95%E9%99%90%E5%AE%9A%20ORM%20Session%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%B9%B6%E8%AF%8A%E6%96%AD%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) expands the resource example into database-session, transaction, and pool-lifetime choices.
 ## 23. How do you size and bound an asynchronous work pipeline? / 如何估算并限制异步工作管线？
 
 Size a pipeline by naming its system boundary, arrival rate, time in each stage, resource held by each unit of work, and maximum waiting work. Little's Law estimates average work in flight in a stable system; it does not promise peak throughput or tail latency. A queue gives work somewhere durable to wait, but only admission control and backpressure keep that wait bounded. / 估算管线时，要明确系统边界、到达速率、各阶段耗时、每个任务占用的资源和最大等待量。Little 定律估算稳定系统中的平均在途工作；它不承诺峰值吞吐量或尾部时延。队列让工作可以持久等待，但只有准入控制和背压才能限制等待规模。

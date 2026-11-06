@@ -4,7 +4,7 @@
 
 ## 从问题开始
 
-- [两个请求抢最后一件库存，谁能成功？](databases/database-fundamentals.md)——建议先读，从库存约束走到事务提交。
+- [两个请求争夺最后一件库存时，怎样保证只预留一次？](databases/database-fundamentals.md)——建议先读，从库存约束走到事务提交。
 - [预留库存的请求超时，调用方能重试吗？](reliability/api-reliability-and-async-delivery.md)——沿请求标识确认结果并安全重试。
 - [哪一段导致 API 未达到服务目标？](reliability/observability-slos-and-incident-response.md)——先用指标、追踪和日志定位环节，再决定改哪里。
 
@@ -12,15 +12,15 @@
 
 ### 从请求到受约束的数据提交
 
-- [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](databases/database-fundamentals.md)
+- [两个请求争夺最后一件库存时，怎样保证只预留一次？](databases/database-fundamentals.md)
 - [浏览器请求如何到达 HTTP 响应？](networking/http-protocols-and-websockets.md)
 - [如何设计可预期的 HTTP API 契约？](backend/http-api-contracts.md)
 - [Cookie 会话与 OIDC 令牌怎样建立身份？](security/web-sessions-and-oidc.md)
 - [如何逐次授权租户内的报表资源？](security/web-security-and-authentication.md)
 - [浏览器安全控制分别保护什么信任边界？](security/web-browser-security-boundaries.md)
-- [How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？](databases/sql-null-joins-and-aggregates.md)
-- [How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？](databases/database-constraints-and-indexes.md)
-- [What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？](databases/database-transactions-isolation-and-recovery.md)
+- [SQL 空值、连接与分组会怎样改变报表 42 的结果？](databases/sql-null-joins-and-aggregates.md)
+- [如何用约束保护业务规则并为读取建立索引？](databases/database-constraints-and-indexes.md)
+- [事务隔离与预写日志能保证什么？](databases/database-transactions-isolation-and-recovery.md)
 - [How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？](backend/data-access-and-connection-pools.md)
 - [How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？](backend/caching-and-redis.md)
 

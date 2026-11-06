@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=7fcd9ac9742ecc4766b1080f6b6e970cef3d7e6c1421f14fca0d523a84b25759 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=1aefb371dfc6379d565c65c5251b230be3ce71ff20be42bdc8135ef39bf4fc7f -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -102,15 +102,15 @@
 - [ ] 88. [How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？](../frontend/testing/jest-async-tests-and-mocks.md)
 ## Engineering Foundations
 
-- [ ] 89. [How do you reserve the last inventory unit safely? / 如何安全预留最后一个库存？](../engineering-foundations/databases/database-fundamentals.md)
+- [ ] 89. [两个请求争夺最后一件库存时，怎样保证只预留一次？](../engineering-foundations/databases/database-fundamentals.md)
 - [ ] 90. [浏览器请求如何到达 HTTP 响应？](../engineering-foundations/networking/http-protocols-and-websockets.md)
 - [ ] 91. [如何设计可预期的 HTTP API 契约？](../engineering-foundations/backend/http-api-contracts.md)
 - [ ] 92. [Cookie 会话与 OIDC 令牌怎样建立身份？](../engineering-foundations/security/web-sessions-and-oidc.md)
 - [ ] 93. [如何逐次授权租户内的报表资源？](../engineering-foundations/security/web-security-and-authentication.md)
 - [ ] 94. [浏览器安全控制分别保护什么信任边界？](../engineering-foundations/security/web-browser-security-boundaries.md)
-- [ ] 95. [How do NULLs, joins, and grouping change SQL results? / NULL、连接与分组会怎样改变 SQL 查询结果？](../engineering-foundations/databases/sql-null-joins-and-aggregates.md)
-- [ ] 96. [How do database constraints and indexes shape data access? / 数据库约束和索引如何塑造数据访问？](../engineering-foundations/databases/database-constraints-and-indexes.md)
-- [ ] 97. [What do transaction isolation and WAL guarantee? / 事务隔离与 WAL 分别保证什么？](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)
+- [ ] 95. [SQL 空值、连接与分组会怎样改变报表 42 的结果？](../engineering-foundations/databases/sql-null-joins-and-aggregates.md)
+- [ ] 96. [如何用约束保护业务规则并为读取建立索引？](../engineering-foundations/databases/database-constraints-and-indexes.md)
+- [ ] 97. [事务隔离与预写日志能保证什么？](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)
 - [ ] 98. [How do you scope an ORM Session and diagnose pool exhaustion? / 如何限定 ORM Session 作用域并诊断连接池耗尽？](../engineering-foundations/backend/data-access-and-connection-pools.md)
 - [ ] 99. [How do you cache database reads without losing freshness? / 如何缓存数据库读取并控制数据新鲜度？](../engineering-foundations/backend/caching-and-redis.md)
 - [ ] 100. [A request timed out: how can I confirm its outcome and retry safely? / 请求超时后，如何确认操作结果并安全重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)
