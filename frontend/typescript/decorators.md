@@ -1,10 +1,10 @@
-# Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？
+# 项目使用哪种 TypeScript 装饰器模式？
 
-**Core answer / 核心回答：** TypeScript supports standard ECMAScript decorators and a separate legacy mode. Their signatures and capabilities differ. Use the mode required by the framework and compiler configuration; do not copy a decorator from a different project without checking its mode. / TypeScript 支持标准 ECMAScript 装饰器和独立的旧版模式。两者的签名与能力不同。应使用框架和编译配置要求的模式，不要未确认模式就复制其他项目的装饰器。
+报表服务可能要给方法加日志、缓存或指标统计。decorator（装饰器）会在类定义时接收类元素和上下文，并可包装或替换被修饰的成员。TypeScript 有新版装饰器模式和 `experimentalDecorators` 启用的旧版模式；两者的参数约定、可修饰位置和元数据能力不同，不能把一种模式的装饰器直接贴到另一种项目里。
 
-## Standard decorators in TypeScript 5.0 and later / TypeScript 5.0 及之后的标准装饰器
+## 新版方法装饰器怎样保留原方法的签名？
 
-A standard method decorator receives the original method and a context object; it may return a replacement method. / 标准方法装饰器接收原始方法和上下文对象，也可以返回替代方法。
+TypeScript 5.0 引入了不依赖 `experimentalDecorators` 的新版装饰器实现。下面的包装器使用 generic（泛型）保留接收者、参数元组和返回值类型；它可以为同步或异步方法加日志，而不把 `this` 和参数丢成 `any`。
 
 ~~~typescript
 function loggedMethod<This, Args extends unknown[], Return>(
@@ -17,24 +17,28 @@ function loggedMethod<This, Args extends unknown[], Return>(
   const name = String(context.name);
 
   return function (this: This, ...args: Args): Return {
-    console.log("calling", name);
+    console.log("报表方法调用：", name);
     return original.call(this, ...args);
   };
 }
 
-class Calculator {
+class ReportService {
   @loggedMethod
-  add(a: number, b: number) {
-    return a + b;
+  async loadMonth(month: string): Promise<string[]> {
+    return [`${month} 报表已加载`];
   }
 }
+
+const service = new ReportService();
+void service.loadMonth("2026-10").then(rows => console.log(rows));
+// 先记录“报表方法调用： loadMonth”；Promise 完成后输出 ["2026-10 报表已加载"]。
 ~~~
 
-Standard decorators do not support parameter decorators and are not compatible with emitDecoratorMetadata. / 标准装饰器不支持参数装饰器，也不兼容 emitDecoratorMetadata。
+新版方法装饰器会收到原方法和 `ClassMethodDecoratorContext`（类方法上下文），可以返回兼容的替代方法。它不能装饰参数，也不能使用旧版 `emitDecoratorMetadata`。新版模式对应 TC39 装饰器提案的调用约定；截至 2026-11-06，TC39 提案列表仍将装饰器标作 Stage 2.7。TypeScript 文档称其实现为标准装饰器支持，但项目能否直接在目标运行时执行仍取决于该运行时是否解析 `@` 语法，构建器也可能负责转换。
 
-## Legacy decorator mode / 旧版装饰器模式
+## 旧版方法装饰器为什么不能沿用同一签名？
 
-Existing Angular, NestJS, and ORM projects may use legacy decorator mode enabled by experimentalDecorators. A legacy method decorator receives a target, property key, and property descriptor, unlike the standard signature. Legacy emitDecoratorMetadata also belongs to this mode. / 既有 Angular、NestJS 和 ORM 项目可能使用 experimentalDecorators 启用的旧版模式。旧版方法装饰器接收 target、属性键和属性描述符，与标准签名不同；旧版 emitDecoratorMetadata 也属于该模式。
+开启 `experimentalDecorators` 后，旧版方法装饰器接收原型或构造函数、属性键和属性描述符。许多既有框架依赖此约定，也可能使用参数装饰器或 `emitDecoratorMetadata`；选择模式时应以框架文档和 `tsconfig.json` 为准。
 
 ~~~typescript
 function legacyLog(
@@ -43,11 +47,29 @@ function legacyLog(
   descriptor: PropertyDescriptor
 ) {
   const original = descriptor.value;
-  descriptor.value = function (...args: unknown[]) {
-    console.log("calling", key);
+  descriptor.value = function (this: unknown, ...args: unknown[]) {
+    console.log("旧版报表方法调用：", key);
     return original.apply(this, args);
   };
 }
+
+class LegacyReportService {
+  @legacyLog
+  loadMonth(month: string): string {
+    return `${month} 报表已加载`;
+  }
+}
+
+const legacyService = new LegacyReportService();
+console.log(legacyService.loadMonth("2026-10"));
+// 依次记录“旧版报表方法调用： loadMonth”和“2026-10 报表已加载”。
 ~~~
 
-Decorator metadata is not general runtime validation. For an external JSON value, validate the value itself with runtime logic or a validation library. For the separate unknown-JSON runtime boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](./advanced-typescript.md). See the [TypeScript 5.0 decorator release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators). Sources checked 2026-10-15.
+这两个例子都只是在方法调用周围加日志；它们不会验证网络响应，也不会证明调用者有查看报表的权限。需要在不可信数据入口检查实际值时，使用[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](./advanced-typescript.md)。选择新版或旧版装饰器后，继续核对[ECMAScript 模块与 CommonJS 的加载边界](../javascript/modules-and-host-boundaries.md)。
+
+> [!info]- 来源
+> - [TypeScript 5.0 发布说明：新版装饰器及其与旧版的差异](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators)
+> - [TypeScript TSConfig：`experimentalDecorators`](https://www.typescriptlang.org/tsconfig/experimentalDecorators.html)
+> - [TC39 装饰器提案](https://github.com/tc39/proposal-decorators)、[TC39 当前提案阶段列表](https://github.com/tc39/proposals)
+>
+> 提案阶段按 2026-11-06 列表核对；示例以 TypeScript 5.7.2 分别按新版和 `experimentalDecorators` 模式作严格编译检查。

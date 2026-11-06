@@ -4962,7 +4962,9 @@ let nextId = 1;
 function createNode(type) {
   const initialProps = defaults.get(type);
   if (!initialProps) throw new RangeError('unknown component type');
-  const id = 'node-' + nextId++;
+  if (!Number.isSafeInteger(nextId)) throw new RangeError('node ID counter exhausted');
+  const id = 'node-' + nextId;
+  nextId += 1;
   return { id, type, props: { ...initialProps }, children: [] };
 }
 
@@ -4970,7 +4972,7 @@ const heading = createNode('heading');
 // heading.id === 'node-1'; createNode('constructor') throws RangeError
 ~~~
 
-多个入口若各自生成默认字段和 ID，很容易得到不一致节点，共用入口就有价值。若只在一处创建固定对象，直接写对象更简单。这里的 Number 计数器只在当前模块运行期间、且计数值仍处于安全整数范围时保证 ID 不重复；可持久化文档或协作编辑需要跨重启、跨窗口不冲突的 ID 生成方案。工厂生成的草稿并不代表权限或发布校验已经完成。
+多个入口若各自生成默认字段和 ID，很容易得到不一致节点，共用入口就有价值。若只在一处创建固定对象，直接写对象更简单。这里的 Number 计数器只在当前模块运行期间有效；越过安全整数范围时工厂会停止发号。可持久化文档或协作编辑还需要跨重启、跨窗口不冲突的 ID 生成方案。工厂生成的草稿并不代表权限或发布校验已经完成。
 
 ### 行为可互换时，用策略
 

@@ -1,94 +1,148 @@
-# How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
+# 收到不可信 JSON 后，TypeScript 怎样建立可信的类型？
 
-**Short answer / 简答** — Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, check syntax and shape, then construct a value whose fields match the application's type. The checker can enforce exhaustive use of that type. The parser does not establish whether a supplied role or identity claim is authorized. / 把 API 响应和浏览器存储视为不可信数据。先解析为 `unknown`，校验语法和结构，再构造与应用类型匹配的值。编译器可以检查是否处理所有受支持的类型分支。结构校验无法证明输入里的角色或身份已经获得授权。
+月度报表页从接口或浏览器存储读入数据时，输入内容在运行时仍只是外部值。TypeScript 的类型注解会在输出 JavaScript 时擦除；它们能检查我们写下的代码，却不会替 `JSON.parse` 检查实际字段，也不会验证用户是否有权访问某份报表。
 
-Type annotations are erased from emitted JavaScript. TypeScript’s type system also makes deliberate soundness tradeoffs, and any or an unchecked assertion can bypass useful checks. / 类型注解会从生成的 JavaScript 中擦除。TypeScript 类型系统也有意作出某些健全性取舍；any 或未校验的断言会绕过有效检查。
+因此，数据要经过两个不同步骤：先解析 JSON（JavaScript 对象表示法）语法，再按运行时规则检查结构和取值。成功后从已检查字段重新构造应用对象，后续代码才可以依赖这个对象的静态类型。
 
 ~~~mermaid
 flowchart LR
-  A["External text"] --> B{"JSON.parse"}
-  B -- "syntax error" --> E["Parse error result"]
-  B -- "valid syntax: unknown" --> C{"Runtime shape and value checks"}
-  C -- "invalid shape" --> E
-  C -- "valid Profile" --> D["Construct typed value"]
+  A[接口文本或存储文本] --> B{JSON.parse}
+  B -- 语法错误 --> E[返回语法错误]
+  B -- 解析成功 --> C[unknown]
+  C --> D{检查 viewer 与 rows}
+  D -- 字段或取值不合格 --> F[返回结构错误]
+  D -- 合格 --> G[重建 ReportData]
+  G --> H[编译期检查消费者分支]
 ~~~
 
-## Validate a value at runtime / 在运行时校验值
+## 怎样在运行时检查报表数据？
 
-JSON.parse can throw for malformed JSON and, on success, still says nothing about the object’s shape. Keep the parsed result as unknown so every property access follows a runtime guard. This example handles syntax and shape failures without an unchecked cast; the storage adapter also makes a missing key explicit. / JSON.parse 遇到格式错误的 JSON 会抛错；成功解析也不能说明对象结构正确。将结果保留为 unknown，使每次属性读取都必须经过运行时保护。此示例不使用未经检查的类型断言来处理语法和结构错误；存储适配器也显式处理缺失键。
+`unknown`（未知类型）允许一个值暂时存在，但在缩窄到更具体类型前不允许任意读取属性。下面的解析器分别处理语法错误、缺失存储值和字段结构错误；每个通过的行都被重新构造成 `ReportRow`，而不是把外部对象直接断言成该类型。
 
 ~~~typescript
-type Profile = {
+type Role = "admin" | "reader";
+type ReportStatus = "open" | "published" | "archived";
+
+type ReportRow = {
   id: string;
-  label: string;
-  role: "admin" | "reader";
+  title: string;
+  month: string;
+  region: string;
+  status: ReportStatus;
+  total: number;
+  ownerEmail: string;
+};
+
+type ReportData = {
+  viewer: { id: string; role: Role };
+  rows: ReportRow[];
 };
 
 type ParseResult<T> =
   | { ok: true; value: T }
-  | { ok: false; error: string };
+  | { ok: false; reason: "syntax" | "shape" | "missing" };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseProfile(text: string): ParseResult<Profile> {
-  let value: unknown;
+function parseReportData(text: string): ParseResult<ReportData> {
+  let input: unknown;
   try {
-    value = JSON.parse(text);
+    input = JSON.parse(text);
   } catch {
-    return { ok: false, error: "Invalid JSON syntax" };
+    return { ok: false, reason: "syntax" };
   }
 
   if (
-    !isRecord(value) ||
-    typeof value.id !== "string" ||
-    typeof value.label !== "string" ||
-    (value.role !== "admin" && value.role !== "reader")
+    !isRecord(input) ||
+    !isRecord(input.viewer) ||
+    typeof input.viewer.id !== "string" ||
+    (input.viewer.role !== "admin" && input.viewer.role !== "reader") ||
+    !Array.isArray(input.rows)
   ) {
-    return { ok: false, error: "Expected id, label, and a known role" };
+    return { ok: false, reason: "shape" };
+  }
+
+  const rows: unknown[] = input.rows;
+  const checkedRows: ReportRow[] = [];
+  for (const candidate of rows) {
+    if (
+      !isRecord(candidate) ||
+      typeof candidate.id !== "string" ||
+      typeof candidate.title !== "string" ||
+      typeof candidate.month !== "string" ||
+      !/^\d{4}-(0[1-9]|1[0-2])$/.test(candidate.month) ||
+      typeof candidate.region !== "string" ||
+      (candidate.status !== "open" &&
+        candidate.status !== "published" &&
+        candidate.status !== "archived") ||
+      typeof candidate.total !== "number" ||
+      !Number.isFinite(candidate.total) ||
+      typeof candidate.ownerEmail !== "string"
+    ) {
+      return { ok: false, reason: "shape" };
+    }
+
+    checkedRows.push({
+      id: candidate.id,
+      title: candidate.title,
+      month: candidate.month,
+      region: candidate.region,
+      status: candidate.status,
+      total: candidate.total,
+      ownerEmail: candidate.ownerEmail
+    });
   }
 
   return {
     ok: true,
-    value: { id: value.id, label: value.label, role: value.role }
+    value: {
+      viewer: { id: input.viewer.id, role: input.viewer.role },
+      rows: checkedRows
+    }
   };
 }
 
-function readStoredProfile(storage: Storage): ParseResult<Profile> {
-  const text = storage.getItem("profile");
-  if (text === null) return { ok: false, error: "No saved profile" };
-  return parseProfile(text);
+function readStoredReport(storage: Storage): ParseResult<ReportData> {
+  const text = storage.getItem("monthly-report");
+  if (text === null) return { ok: false, reason: "missing" };
+  return parseReportData(text);
 }
 
-const valid = parseProfile('{"id":"u-7","label":"Ada","role":"reader"}');
-const malformed = parseProfile('{"id":7,"label":"Ada","role":"reader"}');
-// valid.ok is true; malformed.ok is false with a structural error.
+const result = parseReportData(
+  '{"viewer":{"id":"u-7","role":"reader"},"rows":[{"id":"r-21","title":"北区月报","month":"2026-10","region":"north","status":"published","total":820,"ownerEmail":"ada@example.com"}]}'
+);
 ~~~
 
-## Handle every validated variant / 处理每个已校验的分支
+解析器现在只保证字段形状和示例所写的格式规则。它不证明 `viewer.id` 是当前登录用户，也不证明该用户可以查看报表；这些授权判断必须由受信任的服务端完成。若业务还要求金额非负、地区来自配置清单等约束，应把对应规则也写入运行时解析，而不是只扩大 TypeScript 类型。`readStoredReport` 把缺失项转换为 `missing`，但不捕获存储访问异常：调用时读取 `localStorage` 可能因来源或策略抛出 `SecurityError`，而 `getItem` 的其他异常也会向上抛出。调用方应按自身降级策略处理，不要把存储故障误报成 JSON 语法错误。
 
-Callers first inspect `ParseResult.ok`. After the parser succeeds, the UI can narrow on the validated role. Assign the unhandled default value to `never` so an added role becomes a compile error at this switch.
+## 类型联合新增分支时怎样让编译器提醒调用处？
+
+解析器仅接受已知角色。调用端在分支中处理角色时，可以把默认分支赋给 `never`（不可能出现的类型）。若以后把 `editor` 加入 `Role`，但忘了补充下列分支，类型检查会在 `never` 赋值处报错。若 `editor` 是外部数据允许的新角色，还必须同步让上面的运行时解析器接受它；只扩充联合类型和显示分支不会使它通过输入检查。这里的标签仅用于界面显示，不是授权判断。
 
 ~~~typescript
-function roleLabel(role: Profile["role"]): string {
+function roleLabel(role: Role): string {
   switch (role) {
     case "admin":
-      return "Administrator";
+      return "管理员";
     case "reader":
-      return "Reader";
+      return "只读用户";
     default: {
       const unhandled: never = role;
-      throw new Error(`Unhandled role: ${unhandled}`);
+      throw new Error(`未处理的角色：${unhandled}`);
     }
   }
 }
 
-if (valid.ok) roleLabel(valid.value.role); // "Reader"
+if (result.ok) roleLabel(result.value.viewer.role);
 ~~~
 
-If the server introduces `editor`, the parser still rejects it until the client deliberately supports it. When you add `editor` to `Profile["role"]`, the missing switch case fails the `never` assignment. Update the runtime guard and the consumers together. These checks serve different points in the same data path. The runtime parser protects the input boundary, while the compiler checks the supported cases at this switch. / 输入校验挡住外部未知值，`never` 让受支持的类型新增分支时在该 switch 报错。 [TypeScript handbook on exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
+这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](./generics.md)与[怎样从报表行派生预览、更新请求和状态标签？](./utility-types.md)。
 
-Utility types and generics describe compile-time relationships, not runtime guards: [Utility Types / 工具类型](./utility-types.md), [Generics / 泛型](./generics.md). Decorator modes answer a separate class-definition question: [TypeScript Decorators / TypeScript 装饰器](./decorators.md). JavaScript Proxy is a runtime object feature, not a TypeScript type feature; see [JavaScript Proxy / JavaScript Proxy](../javascript/proxy.md).
-
-**Sources checked 2026-10-15:** [TypeScript Basic Types and unknown](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), and [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness).
+> [!info]- 来源
+> - [TypeScript Handbook：unknown 与类型缩窄](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
+> - [TypeScript Handbook：断言与类型兼容](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions)、[类型兼容与健全性取舍](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness)
+> - [TypeScript Handbook：穷尽性检查](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
+>
+> 按 `JSON.parse` 的语法错误、存储缺失值，以及报表结构检查整理；`localStorage` 访问可能抛出的 `SecurityError` 见 [HTML Standard：localStorage](https://html.spec.whatwg.org/multipage/webstorage.html#dom-localstorage)。来源核对日期：2026-11-06。

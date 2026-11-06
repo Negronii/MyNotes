@@ -916,7 +916,7 @@ function useMarkReviewed() {
 
 这里回滚的是整份当前列表快照，因此这个简化方案假设 `reports/list` 前缀下的所有排序视图共用一个变更入口：从 `onMutate` 到 `onSettled` 返回的失效 Promise 完成前，全局只有一个乐观变更。否则另一排序 key 上的 mutation 或失效重抓可能覆盖乐观值，整表回滚也可能抹掉另一笔已成功变更。调用端应使用列表级 `isPending` gate 禁用所有排序视图中的行操作，不能只按行或按当前排序 key 禁用；首次切换时的本地临时行以及当前 key 尚无 `query.data` 的视图也要禁用操作。如果存在其他触发入口，它们也必须共享提交级串行约束；单靠某个 hook 的 `isPending` 显示或禁用按钮不能阻止其他入口并发提交。若 mutation 失败，界面可检查 `isError`，并用同一组变量重试，例如再次提交上面的 April 参数。当前片段只展示 hook/cache 处理，没有渲染调用按钮。若同一报表还缓存为详情查询，更新也要覆盖或失效对应的详情 key，不能只改当前列表。服务端仍是权威来源；乐观更新只是让等待中的界面先表达用户意图。
 
-查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F)。
+查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（TanStack Query v5.90.3；React 19.3；2026-11-06）
 > - `queryKey` 标识查询，函数参数可从 QueryFunctionContext 读取 `signal`：[Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)、[Query Functions](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)，TanStack Query v5.90.3，核验日期 2026-11-06。
@@ -1144,7 +1144,7 @@ field data（现场数据）来自实际用户访问，包含设备、网络、�
 | 处理器开始后，列表迟迟没变化 | 交互的处理时长、事件处理器和框架提交工作 | 定位数据排序、组件计算或回调；只拆分确实阻塞主线程的工作 |
 | 处理器很快结束，但下一帧仍晚 | 呈现延迟、事件回调结束后的样式/布局/绘制轨迹 | 检查 DOM 规模和昂贵样式；见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) |
 | React 处理时长长 | 浏览器 Performance 录制与组件 render/commit 记录 | 用 [React Profiler](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F) 找出组件工作，再回到浏览器轨迹查看提交后的样式、布局和绘制 |
-| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#49.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) |
+| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#49.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F) |
 | 图片出现时文字或按钮向下跳 | CLS 事件、缺少尺寸的图片/嵌入内容、字体替换或异步插入 | 提前保留内容空间并复现相同网络条件 |
 | 首屏按钮显示了但点击无反馈 | 脚本是否已完成初始化，或处理器是否被主线程工作挡住 | 分清“已经看见”与“事件可处理”；HTML 脚本调度边界见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) |
 
@@ -4779,7 +4779,7 @@ const add = memoizeNumeric(function (a, b) {
 
 只包装 `fib` 外层调用，不会缓存原始 `fib` 函数内部直接发起的递归调用。要缓存每个子问题，递归调用也必须经过记忆化函数或共享内部缓存。
 
-**相关机制：** [函数 `this` 与绑定](#33.%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E7%94%B1%E4%BB%80%E4%B9%88%E5%86%B3%E5%AE%9A%EF%BC%9F) 解释包装器为什么用 `apply` 保留接收者；[作用域与闭包](#31.%20JavaScript%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%8A%B6%E6%80%81%EF%BC%9F) 解释 `once` 和记忆化保留的状态；[Map 与 Set](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明缓存键相等性和存在性；[TypeScript 装饰器](#46.%20Which%20TypeScript%20decorator%20mode%20does%20a%20project%20use?%20/%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F) 讲解装饰器语法。
+**相关机制：** [函数 `this` 与绑定](#33.%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E7%94%B1%E4%BB%80%E4%B9%88%E5%86%B3%E5%AE%9A%EF%BC%9F) 解释包装器为什么用 `apply` 保留接收者；[作用域与闭包](#31.%20JavaScript%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%8A%B6%E6%80%81%EF%BC%9F) 解释 `once` 和记忆化保留的状态；[Map 与 Set](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明缓存键相等性和存在性；[TypeScript 装饰器](#46.%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F) 讲解装饰器语法。
 
 
 > [!info]- 来源
@@ -5879,167 +5879,294 @@ class ReportBoundary extends React.Component {
 > - 浏览器 window.onerror、未处理拒绝与 image error：[HTML Standard，Living Standard 2026-11-05：runtime script errors](https://html.spec.whatwg.org/multipage/webappapis.html#runtime-script-errors)、[unhandled promise rejections](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections)、[image data update algorithm](https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data)；事件传播：[DOM Standard，Living Standard 2026-11-04：dispatching events](https://dom.spec.whatwg.org/#concept-event-dispatch)。
 > - React 错误边界范围与 useTransition 例外：[React Component reference](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)，核对日期 2026-11-06。
 > - Error options cause 与 instanceof 的构造函数/prototype 检查：[ECMAScript 2027 Error constructor](https://tc39.es/ecma262/#sec-error-constructor)、[OrdinaryHasInstance](https://tc39.es/ecma262/#sec-ordinaryhasinstance)。
-## 43. How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
+## 43. 收到不可信 JSON 后，TypeScript 怎样建立可信的类型？
 
-**Short answer / 简答** — Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, check syntax and shape, then construct a value whose fields match the application's type. The checker can enforce exhaustive use of that type. The parser does not establish whether a supplied role or identity claim is authorized. / 把 API 响应和浏览器存储视为不可信数据。先解析为 `unknown`，校验语法和结构，再构造与应用类型匹配的值。编译器可以检查是否处理所有受支持的类型分支。结构校验无法证明输入里的角色或身份已经获得授权。
+月度报表页从接口或浏览器存储读入数据时，输入内容在运行时仍只是外部值。TypeScript 的类型注解会在输出 JavaScript 时擦除；它们能检查我们写下的代码，却不会替 `JSON.parse` 检查实际字段，也不会验证用户是否有权访问某份报表。
 
-Type annotations are erased from emitted JavaScript. TypeScript’s type system also makes deliberate soundness tradeoffs, and any or an unchecked assertion can bypass useful checks. / 类型注解会从生成的 JavaScript 中擦除。TypeScript 类型系统也有意作出某些健全性取舍；any 或未校验的断言会绕过有效检查。
+因此，数据要经过两个不同步骤：先解析 JSON（JavaScript 对象表示法）语法，再按运行时规则检查结构和取值。成功后从已检查字段重新构造应用对象，后续代码才可以依赖这个对象的静态类型。
 
 ~~~mermaid
 flowchart LR
-  A["External text"] --> B{"JSON.parse"}
-  B -- "syntax error" --> E["Parse error result"]
-  B -- "valid syntax: unknown" --> C{"Runtime shape and value checks"}
-  C -- "invalid shape" --> E
-  C -- "valid Profile" --> D["Construct typed value"]
+  A[接口文本或存储文本] --> B{JSON.parse}
+  B -- 语法错误 --> E[返回语法错误]
+  B -- 解析成功 --> C[unknown]
+  C --> D{检查 viewer 与 rows}
+  D -- 字段或取值不合格 --> F[返回结构错误]
+  D -- 合格 --> G[重建 ReportData]
+  G --> H[编译期检查消费者分支]
 ~~~
 
-### Validate a value at runtime / 在运行时校验值
+### 怎样在运行时检查报表数据？
 
-JSON.parse can throw for malformed JSON and, on success, still says nothing about the object’s shape. Keep the parsed result as unknown so every property access follows a runtime guard. This example handles syntax and shape failures without an unchecked cast; the storage adapter also makes a missing key explicit. / JSON.parse 遇到格式错误的 JSON 会抛错；成功解析也不能说明对象结构正确。将结果保留为 unknown，使每次属性读取都必须经过运行时保护。此示例不使用未经检查的类型断言来处理语法和结构错误；存储适配器也显式处理缺失键。
+`unknown`（未知类型）允许一个值暂时存在，但在缩窄到更具体类型前不允许任意读取属性。下面的解析器分别处理语法错误、缺失存储值和字段结构错误；每个通过的行都被重新构造成 `ReportRow`，而不是把外部对象直接断言成该类型。
 
 ~~~typescript
-type Profile = {
+type Role = "admin" | "reader";
+type ReportStatus = "open" | "published" | "archived";
+
+type ReportRow = {
   id: string;
-  label: string;
-  role: "admin" | "reader";
+  title: string;
+  month: string;
+  region: string;
+  status: ReportStatus;
+  total: number;
+  ownerEmail: string;
+};
+
+type ReportData = {
+  viewer: { id: string; role: Role };
+  rows: ReportRow[];
 };
 
 type ParseResult<T> =
   | { ok: true; value: T }
-  | { ok: false; error: string };
+  | { ok: false; reason: "syntax" | "shape" | "missing" };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseProfile(text: string): ParseResult<Profile> {
-  let value: unknown;
+function parseReportData(text: string): ParseResult<ReportData> {
+  let input: unknown;
   try {
-    value = JSON.parse(text);
+    input = JSON.parse(text);
   } catch {
-    return { ok: false, error: "Invalid JSON syntax" };
+    return { ok: false, reason: "syntax" };
   }
 
   if (
-    !isRecord(value) ||
-    typeof value.id !== "string" ||
-    typeof value.label !== "string" ||
-    (value.role !== "admin" && value.role !== "reader")
+    !isRecord(input) ||
+    !isRecord(input.viewer) ||
+    typeof input.viewer.id !== "string" ||
+    (input.viewer.role !== "admin" && input.viewer.role !== "reader") ||
+    !Array.isArray(input.rows)
   ) {
-    return { ok: false, error: "Expected id, label, and a known role" };
+    return { ok: false, reason: "shape" };
+  }
+
+  const rows: unknown[] = input.rows;
+  const checkedRows: ReportRow[] = [];
+  for (const candidate of rows) {
+    if (
+      !isRecord(candidate) ||
+      typeof candidate.id !== "string" ||
+      typeof candidate.title !== "string" ||
+      typeof candidate.month !== "string" ||
+      !/^\d{4}-(0[1-9]|1[0-2])$/.test(candidate.month) ||
+      typeof candidate.region !== "string" ||
+      (candidate.status !== "open" &&
+        candidate.status !== "published" &&
+        candidate.status !== "archived") ||
+      typeof candidate.total !== "number" ||
+      !Number.isFinite(candidate.total) ||
+      typeof candidate.ownerEmail !== "string"
+    ) {
+      return { ok: false, reason: "shape" };
+    }
+
+    checkedRows.push({
+      id: candidate.id,
+      title: candidate.title,
+      month: candidate.month,
+      region: candidate.region,
+      status: candidate.status,
+      total: candidate.total,
+      ownerEmail: candidate.ownerEmail
+    });
   }
 
   return {
     ok: true,
-    value: { id: value.id, label: value.label, role: value.role }
+    value: {
+      viewer: { id: input.viewer.id, role: input.viewer.role },
+      rows: checkedRows
+    }
   };
 }
 
-function readStoredProfile(storage: Storage): ParseResult<Profile> {
-  const text = storage.getItem("profile");
-  if (text === null) return { ok: false, error: "No saved profile" };
-  return parseProfile(text);
+function readStoredReport(storage: Storage): ParseResult<ReportData> {
+  const text = storage.getItem("monthly-report");
+  if (text === null) return { ok: false, reason: "missing" };
+  return parseReportData(text);
 }
 
-const valid = parseProfile('{"id":"u-7","label":"Ada","role":"reader"}');
-const malformed = parseProfile('{"id":7,"label":"Ada","role":"reader"}');
-// valid.ok is true; malformed.ok is false with a structural error.
+const result = parseReportData(
+  '{"viewer":{"id":"u-7","role":"reader"},"rows":[{"id":"r-21","title":"北区月报","month":"2026-10","region":"north","status":"published","total":820,"ownerEmail":"ada@example.com"}]}'
+);
 ~~~
 
-### Handle every validated variant / 处理每个已校验的分支
+解析器现在只保证字段形状和示例所写的格式规则。它不证明 `viewer.id` 是当前登录用户，也不证明该用户可以查看报表；这些授权判断必须由受信任的服务端完成。若业务还要求金额非负、地区来自配置清单等约束，应把对应规则也写入运行时解析，而不是只扩大 TypeScript 类型。`readStoredReport` 把缺失项转换为 `missing`，但不捕获存储访问异常：调用时读取 `localStorage` 可能因来源或策略抛出 `SecurityError`，而 `getItem` 的其他异常也会向上抛出。调用方应按自身降级策略处理，不要把存储故障误报成 JSON 语法错误。
 
-Callers first inspect `ParseResult.ok`. After the parser succeeds, the UI can narrow on the validated role. Assign the unhandled default value to `never` so an added role becomes a compile error at this switch.
+### 类型联合新增分支时怎样让编译器提醒调用处？
+
+解析器仅接受已知角色。调用端在分支中处理角色时，可以把默认分支赋给 `never`（不可能出现的类型）。若以后把 `editor` 加入 `Role`，但忘了补充下列分支，类型检查会在 `never` 赋值处报错。若 `editor` 是外部数据允许的新角色，还必须同步让上面的运行时解析器接受它；只扩充联合类型和显示分支不会使它通过输入检查。这里的标签仅用于界面显示，不是授权判断。
 
 ~~~typescript
-function roleLabel(role: Profile["role"]): string {
+function roleLabel(role: Role): string {
   switch (role) {
     case "admin":
-      return "Administrator";
+      return "管理员";
     case "reader":
-      return "Reader";
+      return "只读用户";
     default: {
       const unhandled: never = role;
-      throw new Error(`Unhandled role: ${unhandled}`);
+      throw new Error(`未处理的角色：${unhandled}`);
     }
   }
 }
 
-if (valid.ok) roleLabel(valid.value.role); // "Reader"
+if (result.ok) roleLabel(result.value.viewer.role);
 ~~~
 
-If the server introduces `editor`, the parser still rejects it until the client deliberately supports it. When you add `editor` to `Profile["role"]`, the missing switch case fails the `never` assignment. Update the runtime guard and the consumers together. These checks serve different points in the same data path. The runtime parser protects the input boundary, while the compiler checks the supported cases at this switch. / 输入校验挡住外部未知值，`never` 让受支持的类型新增分支时在该 switch 报错。 [TypeScript handbook on exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
+这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](#44.%20%E6%B3%9B%E5%9E%8B%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E8%BE%93%E5%85%A5%E4%B8%8E%E8%BE%93%E5%87%BA%E4%B9%8B%E9%97%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%E5%85%B3%E7%B3%BB%EF%BC%9F)与[怎样从报表行派生预览、更新请求和状态标签？](#45.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
 
-Utility types and generics describe compile-time relationships, not runtime guards: [Utility Types / 工具类型](#45.%20What%20do%20TypeScript%20utility%20types%20guarantee?%20/%20TypeScript%20%E5%B7%A5%E5%85%B7%E7%B1%BB%E5%9E%8B%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F), [Generics / 泛型](#44.%20How%20do%20TypeScript%20generics%20preserve%20relationships%20between%20types?%20/%20TypeScript%20%E6%B3%9B%E5%9E%8B%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%B1%BB%E5%9E%8B%E4%B9%8B%E9%97%B4%E7%9A%84%E5%85%B3%E7%B3%BB%EF%BC%9F). Decorator modes answer a separate class-definition question: [TypeScript Decorators / TypeScript 装饰器](#46.%20Which%20TypeScript%20decorator%20mode%20does%20a%20project%20use?%20/%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F). JavaScript Proxy is a runtime object feature, not a TypeScript type feature; see [JavaScript Proxy / JavaScript Proxy](#35.%20JavaScript%20%E7%9A%84%20Proxy%20%E5%A6%82%E4%BD%95%E6%8B%A6%E6%88%AA%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C%EF%BC%9F).
+> [!info]- 来源
+> - [TypeScript Handbook：unknown 与类型缩窄](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
+> - [TypeScript Handbook：断言与类型兼容](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions)、[类型兼容与健全性取舍](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness)
+> - [TypeScript Handbook：穷尽性检查](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
+>
+> 按 `JSON.parse` 的语法错误、存储缺失值，以及报表结构检查整理；`localStorage` 访问可能抛出的 `SecurityError` 见 [HTML Standard：localStorage](https://html.spec.whatwg.org/multipage/webstorage.html#dom-localstorage)。来源核对日期：2026-11-06。
+## 44. 泛型怎样保留输入与输出之间的类型关系？
 
-**Sources checked 2026-10-15:** [TypeScript Basic Types and unknown](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), and [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness).
-## 44. How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？
+报表页会处理很多种行数据：月度汇总行、权限信息和分页结果。若每个函数都复制一份实现，维护成本很高；若一律把参数和返回值写成 `any`（任意类型），调用处又会丢掉具体字段信息。generic（泛型）让同一段逻辑保留调用时的具体类型。
 
-**Core answer / 核心回答：** A generic type parameter preserves a relationship between inputs and outputs. TypeScript can infer a parameter from a call, while an extends constraint limits the values it accepts. Use generics when the same logic should preserve specific types across multiple callers. / 泛型参数用于保留输入与输出之间的关系。TypeScript 可从调用中推断类型参数；extends 约束限制可接受的值。当同一逻辑需要为不同调用者保留各自具体类型时，使用泛型。
+### 怎样把所选字段的类型一并保留下来？
+
+type parameter（类型参数）像是类型层面的变量。编译器可以从调用参数推断它，也可以由调用者显式指定。下面的 `T` 代表整行类型，`K` 受 `keyof T`（类型键集合）约束，只能取该类型已有的键；indexed access type（索引访问类型）`T[K]` 则返回所选键对应的值类型。
 
 ~~~typescript
-function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
-  return obj[key];
+type ReportRow = {
+  id: string;
+  title: string;
+  month: string;
+  region: string;
+  status: "open" | "published" | "archived";
+  total: number;
+  ownerEmail: string;
+};
+
+function getProperty<T, K extends keyof T>(row: T, key: K): T[K] {
+  return row[key];
 }
 
-const user = { name: "Alice", age: 30 };
-const userName = getProperty(user, "name"); // string
-// getProperty(user, "phone"); // Type error: no such key
+const row: ReportRow = {
+  id: "r-21",
+  title: "北区月报",
+  month: "2026-10",
+  region: "north",
+  status: "published",
+  total: 820,
+  ownerEmail: "ada@example.com"
+};
+
+const reportId = getProperty(row, "id");       // string
+const reportTotal = getProperty(row, "total"); // number
+// getProperty(row, "owner");                  // 编译错误：不是 ReportRow 的键
 ~~~
 
-Here K must be a key of T. The indexed access type T[K] connects the chosen key to its corresponding property type; the function does not widen every result to a union of all possible property types. / 这里 K 必须是 T 的键。索引访问类型 T[K] 把所选键与对应属性类型关联起来；函数不会把每个结果都扩大成所有属性类型的联合。
+`K extends keyof T` 中的 `extends` 是 constraint（约束），意思是 `K` 必须属于允许的键集合。没有这个约束，函数就无法安全访问 `row[key]`。由于返回值是 `T[K]`，读 `id` 得到 `string`，读 `total` 得到 `number`；若把返回类型写成 `T[keyof T]`，结果会变成所有字段类型的联合。
 
-A generic interface preserves the same relationship across a group of operations: / 泛型接口可让一组操作共享同一种类型关系：
+### 怎样让分页与仓储接口为不同数据复用？
+
+泛型也可把类型关系保留在对象结构和一组操作中。报表页面拿到 `ReportPage<ReportRow>`，下游仍知道 `rows` 里的每一项是报表行；同一容器也能装其他数据，而不必退化成 `unknown[]` 或 `any[]`。
 
 ~~~typescript
+type ReportPage<T> = {
+  rows: T[];
+  total: number;
+  nextCursor: string | null;
+};
+
 interface Repository<T> {
-  getById(id: string): T;
+  getById(id: string): T | undefined;
   getAll(): T[];
   save(item: T): void;
 }
-~~~
 
-A type parameter is not a runtime check. It describes a contract enforced by the checker where type information is available. External values still need runtime validation; see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Generics handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
-## 45. What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？
-
-**Core answer / 核心回答：** Utility types derive one compile-time type from another, helping related shapes stay connected instead of repeating property declarations. They do not change or validate runtime values. Readonly is shallow and does not freeze an object; Partial does not validate a request. / 工具类型从已有类型推导出新编译期类型，避免重复声明并让相关结构保持关联。它们不会改变或验证运行时值。Readonly 是浅层的，也不会冻结对象；Partial 不会校验请求。
-
-| Utility type / 工具类型 | Type-level result / 类型结果 |
-|---|---|
-| Partial<T> | Makes each property optional / 所有属性可选 |
-| Required<T> | Makes each property required / 所有属性必需 |
-| Readonly<T> | Makes each property readonly at compile time; shallow / 编译期只读；浅层 |
-| Pick<T, K> / Omit<T, K> | Selects or removes keys / 选择或移除属性 |
-| Record<K, V> | Describes keys and values of an object shape / 描述对象键和值 |
-| Exclude<U, X> / Extract<U, X> | Removes from or selects members of a union / 从联合中排除或选取成员 |
-| NonNullable<T> | Removes null and undefined / 移除 null 和 undefined |
-| ReturnType<F> / Parameters<F> | Extracts a function return type or parameter tuple / 提取返回类型或参数元组 |
-| InstanceType<C> / ConstructorParameters<C> | Extracts a class instance type or constructor parameter tuple / 提取类实例类型或构造参数元组 |
-| ThisType<T> | Contextual `this` type marker for object-literal methods; it does not change runtime values / 对象字面量方法的上下文 `this` 类型标记；不改变运行时值 |
-
-~~~typescript
-interface User {
-  id: number;
-  name: string;
-  email: string;
+function firstRow<T>(page: ReportPage<T>): T | undefined {
+  return page.rows[0];
 }
 
-type UserPreview = Pick<User, "id" | "name">;
-type UserPatch = Partial<Pick<User, "name" | "email">>;
-
-type Role = "admin" | "editor" | "reader";
-const permissions: Record<Role, string[]> = {
-  admin: ["read", "write"],
-  editor: ["read", "write"],
-  reader: ["read"]
+const reports: ReportPage<ReportRow> = {
+  rows: [row],
+  total: 1,
+  nextCursor: null
 };
+const emptyPage: ReportPage<ReportRow> = {
+  rows: [],
+  total: 0,
+  nextCursor: null
+};
+const first = firstRow(reports);
+if (first) first.total.toFixed(2); // first.total 仍是 number
+console.log(firstRow(emptyPage)); // undefined：空页没有第一行
 ~~~
 
-UserPatch expresses an allowed shape to the checker; runtime code still needs to validate parsed JSON. For that boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Utility Types reference](https://www.typescriptlang.org/docs/handbook/utility-types.html).
+泛型保留的是编译器掌握的关系；它不会在运行时检查服务器是否真的返回 `ReportRow`。真实输入仍应先保持为 `unknown` 并逐项验证，见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。工具类型则可进一步从 `ReportRow` 派生只读表格行或更新请求形状，见[怎样从报表行派生预览、更新请求和状态标签？](#45.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
 
-### How does ThisType contextually type this? / ThisType 如何提供 this 的上下文类型？
+> [!info]- 来源
+> - [TypeScript Handbook：泛型与类型参数推断](https://www.typescriptlang.org/docs/handbook/2/generics.html)
+> - [TypeScript Handbook：`keyof` 类型操作符](https://www.typescriptlang.org/docs/handbook/2/keyof-types.html)、[索引访问类型](https://www.typescriptlang.org/docs/handbook/2/indexed-access-types.html)
+>
+> 来源核对日期：2026-11-06。代码以 TypeScript 5.7.2 执行严格模式检查。
+## 45. 怎样从报表行派生预览、更新请求和状态标签？
 
-`ThisType<T>` is a contextual-typing marker for `this` inside object-literal methods. It does not add a property or bind a runtime receiver, and the check depends on `noImplicitThis`. An explicit `this: Person` parameter is a separate compile-time receiver annotation. / `ThisType<T>` 是对象字面量方法中 `this` 的上下文类型标记。它不会添加属性或绑定运行时接收者，相关检查依赖 `noImplicitThis`。显式的 `this: Person` 参数则是另一种编译期接收者注解。
+同一条报表数据会用于接口、列表预览、详情编辑和状态标签映射。如果每个位置重新声明字段，修改字段名时容易漏改一处。TypeScript 的 utility type（工具类型）从现有类型派生新的编译期形状；它们不会验证或转换运行时对象。
+
+### 哪些工具类型适合哪些数据形状？
+
+下面把一份 `ReportRow` 派生成列表需要的预览、允许编辑的局部更新和状态标签映射。`Pick` 选取字段，`Partial` 把选中的字段变成可选项，`Record` 要求每个状态都对应一个标签。
+
+~~~typescript
+type ReportStatus = "open" | "published" | "archived";
+
+interface ReportRow {
+  id: string;
+  title: string;
+  month: string;
+  region: string;
+  status: ReportStatus;
+  total: number;
+  ownerEmail: string;
+}
+
+type ReportPreview = Pick<ReportRow, "id" | "title" | "month" | "total">;
+type ReportPatch = Partial<Pick<ReportRow, "title" | "region">>;
+type StatusLabels = Record<ReportStatus, string>;
+
+const labels: StatusLabels = {
+  open: "待审核",
+  published: "已发布",
+  archived: "已归档"
+};
+
+const input = { region: "north", ownerEmail: "ada@example.com" };
+const patch: ReportPatch = input;
+console.log(Object.keys(patch)); // ["region", "ownerEmail"]：仍是同一个运行时对象
+~~~
+
+若 `ReportStatus` 增加 `"scheduled"`，`labels` 会因缺少该键而报错；这让新增状态需要同步更新界面映射。`ReportPatch` 只收窄 `patch` 这个变量可通过静态类型访问的字段，不会从对象中删除 `ownerEmail`。这里先把对象存入变量再赋值，因此结构类型允许多出的字段；直接把带额外键的新对象字面量写给 `ReportPatch` 通常会触发多余属性检查。接收更新请求时应在运行时挑选并验证白名单字段，再处理未提供、提供 `null` 和提供具体值之间的业务差异。
+
+常用变换可按目的理解：
+
+| 需要 | 工具类型 | 结果与边界 |
+|---|---|---|
+| 列表只露出部分字段 | `Pick<T, K>` / `Omit<T, K>` | 选取或排除键；不会复制对象 |
+| 表达部分更新或完成默认值后的完整配置 | `Partial<T>` / `Required<T>` | 属性变为可选或必需；运行时仍需合并、检查 |
+| 标出只读视图 | `Readonly<T>` | 浅层地禁止通过该类型重新赋值属性；不冻结对象 |
+| 给一组键创建映射 | `Record<K, V>` | 约束对象键和值的类型；动态输入仍须验证 |
+| 从联合类型中筛选成员 | `Exclude<U, X>` / `Extract<U, X>` | 移除或保留可赋给指定类型的成员 |
+| 排除 `null` 与 `undefined` | `NonNullable<T>` | 仅改变静态类型，不会替值做空值检查 |
+| 读取函数签名 | `Parameters<F>` / `ReturnType<F>` | 得到参数元组或返回类型 |
+| 读取构造签名 | `ConstructorParameters<C>` / `InstanceType<C>` | 得到构造参数元组或实例类型 |
+| 解开 Promise 返回类型 | `Awaited<T>` | 递归得到等待后的类型；不会等待运行时值 |
+
+这些工具大多通过mapped type（映射类型）、conditional type（条件类型）或索引访问组合实现。阅读 `Partial<Pick<ReportRow, "title" | "region">>` 时，可以从内到外读：先取两个允许编辑的字段，再把它们变为可选。
+
+### 对象字面量方法里的 `this` 怎样获得上下文类型？
+
+`ThisType<T>` 是一个 contextual typing marker（上下文类型标记），可让对象字面量中的方法把 `this` 看作 `T`。它不会添加属性、绑定运行时接收者或改变对象；检查依赖 `noImplicitThis`。
 
 ~~~typescript
 type ObjectDescriptor<Data, Methods> = {
@@ -6047,35 +6174,52 @@ type ObjectDescriptor<Data, Methods> = {
   methods: Methods & ThisType<Data & Methods>;
 };
 
-function makeObject<Data, Methods>(descriptor: ObjectDescriptor<Data, Methods>): Data & Methods {
+function makeObject<Data, Methods>(
+  descriptor: ObjectDescriptor<Data, Methods>
+): Data & Methods {
   return { ...descriptor.data, ...descriptor.methods };
 }
 
-const counter = makeObject({
-  data: { value: 0 },
-  methods: { increment() { this.value += 1; } }
+const rowCounter = makeObject({
+  data: { loadedRows: 0 },
+  methods: {
+    addLoadedRow() {
+      this.loadedRows += 1;
+    }
+  }
 });
-counter.increment(); // this.value is contextually typed as number
+
+rowCounter.addLoadedRow(); // this.loadedRows 在编译期被识别为 number
 ~~~
+
+另一个做法是在普通函数签名中显式声明接收者：
 
 ~~~typescript
-interface Person {
+interface ReportViewer {
   name: string;
-  greet(this: Person): void;
+  describe(this: ReportViewer): string;
 }
 
-const person: Person = {
+const viewer: ReportViewer = {
   name: "Ada",
-  greet() { console.log(this.name); }
+  describe() { return `报表查看者：${this.name}`; }
 };
 ~~~
-## 46. Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？
 
-**Core answer / 核心回答：** TypeScript supports standard ECMAScript decorators and a separate legacy mode. Their signatures and capabilities differ. Use the mode required by the framework and compiler configuration; do not copy a decorator from a different project without checking its mode. / TypeScript 支持标准 ECMAScript 装饰器和独立的旧版模式。两者的签名与能力不同。应使用框架和编译配置要求的模式，不要未确认模式就复制其他项目的装饰器。
+`this: ReportViewer` 只是编译期注解，JavaScript 调用时仍按普通 `this` 绑定规则运行；`ThisType<T>` 也不会替你调用 `bind`。两者与上面的 `ReportPatch` 一样，只有在运行时对象经过边界检查后才有可靠的业务含义。解析入口见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
-### Standard decorators in TypeScript 5.0 and later / TypeScript 5.0 及之后的标准装饰器
+> [!info]- 来源
+> - [TypeScript Utility Types 参考](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+> - [TypeScript Handbook：映射类型](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html)、[条件类型](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html)、[上下文类型](https://www.typescriptlang.org/docs/handbook/type-inference.html#contextual-typing)
+>
+> 来源核对日期：2026-11-06。示例以 TypeScript 5.7.2、`strict` 模式和 `noImplicitThis` 检查。
+## 46. 项目使用哪种 TypeScript 装饰器模式？
 
-A standard method decorator receives the original method and a context object; it may return a replacement method. / 标准方法装饰器接收原始方法和上下文对象，也可以返回替代方法。
+报表服务可能要给方法加日志、缓存或指标统计。decorator（装饰器）会在类定义时接收类元素和上下文，并可包装或替换被修饰的成员。TypeScript 有新版装饰器模式和 `experimentalDecorators` 启用的旧版模式；两者的参数约定、可修饰位置和元数据能力不同，不能把一种模式的装饰器直接贴到另一种项目里。
+
+### 新版方法装饰器怎样保留原方法的签名？
+
+TypeScript 5.0 引入了不依赖 `experimentalDecorators` 的新版装饰器实现。下面的包装器使用 generic（泛型）保留接收者、参数元组和返回值类型；它可以为同步或异步方法加日志，而不把 `this` 和参数丢成 `any`。
 
 ~~~typescript
 function loggedMethod<This, Args extends unknown[], Return>(
@@ -6088,24 +6232,28 @@ function loggedMethod<This, Args extends unknown[], Return>(
   const name = String(context.name);
 
   return function (this: This, ...args: Args): Return {
-    console.log("calling", name);
+    console.log("报表方法调用：", name);
     return original.call(this, ...args);
   };
 }
 
-class Calculator {
+class ReportService {
   @loggedMethod
-  add(a: number, b: number) {
-    return a + b;
+  async loadMonth(month: string): Promise<string[]> {
+    return [`${month} 报表已加载`];
   }
 }
+
+const service = new ReportService();
+void service.loadMonth("2026-10").then(rows => console.log(rows));
+// 先记录“报表方法调用： loadMonth”；Promise 完成后输出 ["2026-10 报表已加载"]。
 ~~~
 
-Standard decorators do not support parameter decorators and are not compatible with emitDecoratorMetadata. / 标准装饰器不支持参数装饰器，也不兼容 emitDecoratorMetadata。
+新版方法装饰器会收到原方法和 `ClassMethodDecoratorContext`（类方法上下文），可以返回兼容的替代方法。它不能装饰参数，也不能使用旧版 `emitDecoratorMetadata`。新版模式对应 TC39 装饰器提案的调用约定；截至 2026-11-06，TC39 提案列表仍将装饰器标作 Stage 2.7。TypeScript 文档称其实现为标准装饰器支持，但项目能否直接在目标运行时执行仍取决于该运行时是否解析 `@` 语法，构建器也可能负责转换。
 
-### Legacy decorator mode / 旧版装饰器模式
+### 旧版方法装饰器为什么不能沿用同一签名？
 
-Existing Angular, NestJS, and ORM projects may use legacy decorator mode enabled by experimentalDecorators. A legacy method decorator receives a target, property key, and property descriptor, unlike the standard signature. Legacy emitDecoratorMetadata also belongs to this mode. / 既有 Angular、NestJS 和 ORM 项目可能使用 experimentalDecorators 启用的旧版模式。旧版方法装饰器接收 target、属性键和属性描述符，与标准签名不同；旧版 emitDecoratorMetadata 也属于该模式。
+开启 `experimentalDecorators` 后，旧版方法装饰器接收原型或构造函数、属性键和属性描述符。许多既有框架依赖此约定，也可能使用参数装饰器或 `emitDecoratorMetadata`；选择模式时应以框架文档和 `tsconfig.json` 为准。
 
 ~~~typescript
 function legacyLog(
@@ -6114,189 +6262,325 @@ function legacyLog(
   descriptor: PropertyDescriptor
 ) {
   const original = descriptor.value;
-  descriptor.value = function (...args: unknown[]) {
-    console.log("calling", key);
+  descriptor.value = function (this: unknown, ...args: unknown[]) {
+    console.log("旧版报表方法调用：", key);
     return original.apply(this, args);
   };
 }
-~~~
 
-Decorator metadata is not general runtime validation. For an external JSON value, validate the value itself with runtime logic or a validation library. For the separate unknown-JSON runtime boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript 5.0 decorator release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators). Sources checked 2026-10-15.
-## 47. How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？
-
-**Core answer / 核心回答：** ECMAScript modules (ESM) are standardized JavaScript syntax with static imports and exports, module-scoped bindings, strict mode, and top-level this equal to undefined. CommonJS (CJS) is Node’s module wrapper using require and module.exports. Module syntax, host loading rules, bundler analysis, and runtime scheduling are separate concerns. / ECMAScript 模块（ESM）是标准 JavaScript 语法，使用静态导入与导出，绑定属于模块作用域，自动采用严格模式，顶层 this 为 undefined。CommonJS（CJS）是 Node 使用 require 和 module.exports 的模块包装机制。模块语法、宿主加载规则、打包器分析和运行时调度是不同问题。
-
-### ESM syntax and dynamic import / ESM 语法与动态导入
-
-Static import and export declarations are part of ECMAScript. Top-level await was standardized in ES2022. Dynamic import() returns a Promise and Node supports it from either module system. / 静态 import 与 export 声明属于 ECMAScript。顶层 await 于 ES2022 标准化。动态 import() 返回 Promise，Node 两种模块系统都支持它。
-
-~~~javascript
-// features.mjs
-export const featureName = "search";
-export default function createFeature() {
-  return featureName;
+class LegacyReportService {
+  @legacyLog
+  loadMonth(month: string): string {
+    return `${month} 报表已加载`;
+  }
 }
+
+const legacyService = new LegacyReportService();
+console.log(legacyService.loadMonth("2026-10"));
+// 依次记录“旧版报表方法调用： loadMonth”和“2026-10 报表已加载”。
 ~~~
 
-~~~javascript
-// app.mjs
-import createFeature, { featureName } from "./features.mjs";
-export { featureName };
+这两个例子都只是在方法调用周围加日志；它们不会验证网络响应，也不会证明调用者有查看报表的权限。需要在不可信数据入口检查实际值时，使用[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。选择新版或旧版装饰器后，继续核对[ECMAScript 模块与 CommonJS 的加载边界](#47.%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%EF%BC%88Node.js%20%E6%A8%A1%E5%9D%97%E6%A0%BC%E5%BC%8F%EF%BC%89%E5%9C%A8%E8%AF%AD%E6%B3%95%E3%80%81%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C%E6%97%B6%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C%EF%BC%9F)。
 
-createFeature(); // "search"
-import("./features.mjs").then(({ featureName }) => featureName);
-~~~
+> [!info]- 来源
+> - [TypeScript 5.0 发布说明：新版装饰器及其与旧版的差异](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators)
+> - [TypeScript TSConfig：`experimentalDecorators`](https://www.typescriptlang.org/tsconfig/experimentalDecorators.html)
+> - [TC39 装饰器提案](https://github.com/tc39/proposal-decorators)、[TC39 当前提案阶段列表](https://github.com/tc39/proposals)
+>
+> 提案阶段按 2026-11-06 列表核对；示例以 TypeScript 5.7.2 分别按新版和 `experimentalDecorators` 模式作严格编译检查。
+## 47. ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？
 
-### What differs between ESM and CJS / ESM 与 CJS 有何不同
-
-| Concern / 维度 | ECMAScript module / ES 模块 | Node CommonJS / Node CommonJS |
-|---|---|---|
-| Static syntax / 静态语法 | import, export | require(), module.exports |
-| Top-level await / 顶层 await | Supported / 支持 | Not supported in a CJS wrapper / CJS 包装器中不支持 |
-| Top-level this / 顶层 this | undefined | Node wrapper’s exports value / Node 包装器的 exports 值 |
-| Strict mode / 严格模式 | Automatic / 自动采用 | Depends on code context / 取决于代码上下文 |
-
-Node determines whether a file is ESM or CJS using extensions, package settings, or explicit input options; browser module loading follows browser rules. CommonJS is not ECMAScript module syntax. / Node 根据扩展名、包配置或显式输入选项判断文件属于 ESM 还是 CJS；浏览器模块加载遵循浏览器规则。CommonJS 不是 ECMAScript 模块语法。
-
-See the [ECMAScript module specification](https://tc39.es/ecma262/2025/multipage/ecmascript-language-scripts-and-modules.html) and [Node.js ESM documentation](https://nodejs.org/api/esm.html). This page describes module semantics and loading boundaries, not Node event-loop ordering; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F) for scheduling.
-
-### Why ESM syntax does not guarantee tree shaking / 为什么 ESM 语法不保证 tree shaking
-
-A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone does not guarantee code removal. The result depends on the bundler and package metadata. See [Build Tools / 构建工具](#49.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) for the transform and production-output boundary. / 打包器可分析 ESM 导入并执行 tree shaking，但仅使用 ESM 语法并不保证代码会被移除；结果还取决于打包器和包元数据。变换与生产产物边界见 [Build Tools / 构建工具](#49.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F).
-## 48. How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？
-
-**Core answer / 核心回答：** A feature’s ECMAScript edition and support in the target runtime are separate facts. Syntax must parse in the target environment or be transformed; APIs also need runtime support or a suitable polyfill. Check the actual browsers, Node versions, and build target before relying on a feature. / 特性属于哪个 ECMAScript 版本，与目标运行时是否支持是两件事。语法必须能被目标环境解析或经过转换；API 也需要运行时实现或合适的 polyfill。依赖某项特性前要检查实际浏览器、Node 版本和构建目标。
-
-### Selected APIs and edition boundaries / 部分 API 与版本边界
-
-| Feature / 特性 | Edition or source / 版本或来源 | Boundary / 边界 |
-|---|---|---|
-| Object.keys | ES5 | Own enumerable string keys / 自有可枚举字符串键 |
-| Object.assign, Object.is | ES2015 | Object.assign mutates its target; Object.is uses SameValue / Object.assign 会修改目标；Object.is 使用 SameValue |
-| Object.values, Object.entries | ES2017 | Own enumerable string-keyed values or pairs / 自有可枚举字符串键的值或键值对 |
-| Array.from, Array.of | ES2015 | Iterable/array-like conversion or argument list / 可迭代或类数组转换，或参数列表建数组 |
-| Promise.all, Promise.race | ES2015 | Outcome semantics and cancellation limits: see [Asynchronous JavaScript / 异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F) / 完成条件和不取消其他操作见异步页 |
-| Promise.allSettled | ES2020 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F) / 见异步页的 Promise 比较表 |
-| Promise.any | ES2021 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F) / 见异步页的 Promise 比较表 |
-| globalThis | ES2020 | Current realm’s global object; host-specific properties differ / 当前 realm 的全局对象；宿主属性不同 |
-| Array.prototype.at | ES2022 | Supports negative offsets from the end / 支持从末尾反向计数 |
-| Object.hasOwn | ES2022 | Own-property test works with null-prototype objects and overridden hasOwnProperty / 可用于 null 原型对象和被覆盖的 hasOwnProperty |
-| structuredClone | Host API, not an ECMAScript edition feature / 宿主 API，不属于 ECMAScript 版本特性 | Structured-cloneable values, cycles, Map, Set, Date; not functions or custom class prototypes / 支持结构化克隆值、循环引用、Map、Set、Date；不支持函数或自定义类原型 |
-
-The edition number does not establish that a particular browser or runtime build implements the feature. Syntax transforms also do not automatically supply missing built-in APIs. Verify the configured target and run checks in the actual runtime set. / 版本号并不能证明特定浏览器或运行时构建实现了该特性。语法转换也不会自动补齐缺少的内置 API。应核对配置目标，并在实际运行环境中检查。
-
-~~~javascript
-const values = ["first", "last"];
-values.at(-1); // "last"
-
-const options = Object.create(null);
-options.enabled = false;
-Object.hasOwn(options, "enabled"); // true
-~~~
-
-structuredClone is exposed by browsers and current Node releases, but it does not preserve custom class prototypes or clone functions; unsupported values can throw DataCloneError. Do not assume it is faster than another copying method. See the [HTML structured clone algorithm](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) and [Node global API](https://nodejs.org/api/globals.html#structuredclonevalue-options). Sources checked 2026-10-15. / structuredClone 可由浏览器和当前 Node 版本使用，但不会保留自定义类原型或复制函数；不支持的值可能抛出 DataCloneError。不要假设它必然比其他复制方法快。见 [HTML 结构化克隆算法](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning) 与 [Node 全局 API](https://nodejs.org/api/globals.html#structuredclonevalue-options)。来源核对日期：2026-10-15。
-
-For edition-specific language features, see the [ECMAScript 2025 specification](https://tc39.es/ecma262/2025/). / 版本相关语言特性见 [ECMAScript 2025 规范](https://tc39.es/ecma262/2025/)。
-
-**See also:** [Optional Chaining and Destructuring / 可选链与解构](#%E7%BC%BA%E5%A4%B1%E5%B1%9E%E6%80%A7%E9%BB%98%E8%AE%A4%E5%80%BC%E4%B8%8E%E8%A7%A3%E6%9E%84) explains syntax semantics; [Modules and Host Boundaries / 模块与宿主边界](#47.%20How%20do%20ECMAScript%20modules%20and%20CommonJS%20differ?%20/%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%20%E6%9C%89%E4%BD%95%E5%8C%BA%E5%88%AB%EF%BC%9F) explains ESM and CommonJS; [Object helpers / 对象辅助方法](#%E6%9E%9A%E4%B8%BE%E4%B8%8E%E5%A4%8D%E5%88%B6%E5%B1%9E%E6%80%A7%E6%97%B6%EF%BC%8C%E5%85%88%E7%9C%8B%20API%20%E9%80%89%E4%B8%AD%E4%BA%86%E4%BB%80%E4%B9%88) and [Array helpers / 数组辅助方法](#%E4%BB%8E%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%88%96%E7%B1%BB%E6%95%B0%E7%BB%84%E8%BE%93%E5%85%A5%E5%88%9B%E5%BB%BA%E6%95%B0%E7%BB%84) covers property-copying and enumeration behavior.
-## 49. How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？
-
-**Core answer / 核心回答：** A bundler follows a module graph, transforms selected modules, and emits assets. Loaders transform individual modules; plugins use broader compiler hooks. A successful development server does not prove that the production build has the same assets, paths, chunks, or source-map exposure. / 打包器沿模块图解析依赖、转换选定模块并输出资源。loader 转换单个模块；plugin 通过更广泛的 compiler hooks 扩展构建。开发服务器成功不代表生产构建具有相同资源、路径、分块或 source map 暴露方式。
+报表页把类型、数据读取和界面入口分成不同文件后，`import` 和 `export` 只是这条路径的一部分。模块语法由 ECMAScript 定义；浏览器和 Node.js 作为宿主决定如何定位模块文件；bundler（打包器）还可在运行前合并或改写模块。把这几层分开，才能理解同一段源代码在不同项目里的加载差异。
 
 ~~~mermaid
 flowchart LR
-  A["Entry points"] --> B["Resolve module graph"]
-  B --> C["Apply loaders / transforms"]
-  C --> D["Compiler and plugin hooks"]
-  D --> E["Emit production assets and maps"]
-  E --> F["Serve and inspect built output"]
+  A[页面入口与模块文件] --> B{脚本或模块格式}
+  B -- 浏览器经典脚本 --> C[按 HTML 经典脚本规则执行；本身没有静态 ESM 导入]
+  B -- Node.js CommonJS --> D[执行 CJS 包装器与 require 链]
+  B -- ESM --> E{是否经过构建工具}
+  E -- 否 --> F[浏览器或 Node.js 宿主解析 ESM 依赖]
+  E -- 是 --> G[构建工具解析并改写依赖图]
+  G --> I{生成的产物格式}
+  I -- 浏览器经典脚本 --> C
+  I -- Node.js CommonJS --> D
+  I -- ESM --> F
+  F --> H[加载、链接并执行运行时仍保留的模块]
 ~~~
 
-### Pin the toolchain before building / 构建前固定工具链
+### ESM 静态导入怎样描述报表模块之间的依赖？
 
-`package.json` can record a project’s package manager and version, for example `"packageManager": "pnpm@10.0.0"` in a project that has tested that version. Provision the pinned tool in both CI and local development, then install from the committed lockfile. The field describes the expected tool. Corepack’s installed shims can select it, but the field alone does not install a manager. Node.js distributed Corepack starting with the 14.19 and 16.9 release lines through Node 24 and dropped it from Node 25 onward. Provision Corepack separately or use the package manager's documented installer. / 声明工具版本后，CI 和本地还需要安装相同版本并按锁文件安装依赖。 [Corepack project README](https://github.com/nodejs/corepack#readme) · [Node.js 25 release](https://nodejs.org/en/blog/release/v25.0.0)
+ECMAScript Module（ECMAScript 模块，简称 ESM）使用静态 `import` 与 `export` 声明。静态依赖可在模块执行前从源码结构中识别；导入绑定与导出保持关联，不是复制一份当时的值。下面是浏览器中的 JavaScript 模块示例：它导出加载函数；响应体的数据形状仍须由调用方在运行时验证，TypeScript 类型声明不会自动变成 JavaScript 导出。
 
-### How Webpack loaders and plugins differ / Webpack loader 与 plugin 有何不同
+~~~javascript
+// report-api.js（由 report-page.js 静态导入）
+export async function loadReport(month) {
+  // 根相对 URL 由浏览器按文档 base URL 解析。
+  const response = await fetch(`/api/reports?month=${encodeURIComponent(month)}`);
+  if (!response.ok) throw new Error(`报表请求失败：${response.status}`);
+  return response.json();
+}
 
-Webpack starts from configured entries, resolves their dependency graph, applies loaders to modules, and emits assets. Configuration names entry points, output, mode, module rules, plugins, and optimization. / Webpack 从配置的入口出发解析依赖图，对模块执行 loader，再输出资源。配置项包括 entry、output、mode、module rules、plugins 和 optimization。
+// report-page.js
+// index.html 通过 <script type="module" src="./report-page.js"></script> 加载此入口。
+import { loadReport } from "./report-api.js";
 
-| Term / 名称 | Role / 作用 |
-|---|---|
-| Entry | Starting point for dependency resolution / 依赖解析的起点 |
-| Output | Destination and naming for emitted assets / 输出资源的目录和命名 |
-| Loader | Transforms one module’s source before bundling / 打包前转换单个模块源码 |
-| Plugin | Hooks into compiler or compilation stages for broader behavior / 通过 compiler 或 compilation 阶段扩展行为 |
-| Mode | Enables development or production defaults; explicit settings may override / 启用开发或生产默认值；显式设置可覆盖 |
+const result = await loadReport("2026-10");
+console.log(result);
+~~~
 
-Normal loader functions run right to left. Pitch functions, when present, run left to right. / 普通 loader 函数从右向左执行；若有 pitch 函数，则从左向右执行。
+这个片段依赖浏览器的文档 URL 环境；Node.js 的 `fetch` 不会把 `"/api/..."` 自动补成站点地址，直接运行时应传入绝对 URL 或提供明确的 URL base。
+
+`loadReport` 是命名导出，导入时使用导出名或显式别名。模块也可提供一个默认导出，由调用方自行选择本地名称：
+
+~~~javascript
+// report-format.js
+export default function formatTotal(total) {
+  return new Intl.NumberFormat("zh-CN").format(total);
+}
+
+// report-page.js
+import formatReportTotal from "./report-format.js";
+~~~
+
+一个模块至多有一个默认导出；它与按名字导入的 `loadReport` 可以并存。
+
+顶层 `await` 让 ESM 等待异步初始化，属于 ES2022；当前模块和依赖其完成的模块需要等待；独立的依赖分支仍可继续求值。Promise continuation 与其他任务在事件循环中的顺序见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。若只需按需加载一段报表功能，可调用 `import()`；它返回 Promise，并可在 ESM、浏览器经典脚本与 Node CommonJS 中使用。动态导入使执行延后，但是否生成独立代码分块（chunk）由打包器配置决定。
+
+#### 目录入口怎样重新导出一个模块的公开接口？
+
+聚合导出模块（barrel）只是一个使用 `export` 重新导出其他模块的 ESM 文件；它不会自动生成组件、改变加载宿主或保证减小包体。它可以把目录对外的名字集中到一个入口：
+
+~~~javascript
+// reports/index.js
+export { ReportTable } from "./ReportTable.js";
+export { ReportToolbar } from "./ReportToolbar.js";
+
+// ReportsPage.js
+import { ReportTable, ReportToolbar } from "./reports/index.js";
+~~~
+
+导出列表应有意挑选，避免无意公开内部模块。内部模块若又从同一聚合入口导入彼此，依赖图可能形成循环；同目录实现通常直接导入具体文件更清楚。`export *` 还可能让重名导出产生歧义。聚合入口仍会静态依赖这些模块；最终能删除哪些未使用代码，取决于打包器能否分析 ESM 依赖及副作用，见下文的 tree shaking（摇树优化）。
+
+### CommonJS 与 ESM 的加载和文件识别有什么区别？
+
+CommonJS（CJS）是 Node.js 提供的模块包装格式，常见写法是 `require()` 和 `module.exports`。它通过调用表达式加载模块；ESM 则用声明式语法建立模块依赖。
+
+| 关注点 | ESM | Node.js CommonJS |
+|---|---|---|
+| 导入与导出 | 静态 `import`、`export`；也可使用 `import()` | `require()`、`module.exports`；也可使用 `import()` |
+| 模块顶层 `this` | `undefined` | Node.js 包装函数中的 `exports` 值 |
+| 顶层 `await` | 支持 | CJS 源文件中不支持；`require(ESM)` 仅支持没有顶层 `await` 的同步依赖图 |
+| 默认严格模式 | 是 | 由代码上下文决定 |
+| 依赖解析者 | 浏览器或服务器等宿主 | Node.js；也可由构建工具预处理 |
+
+Node.js 通过 `.mjs`、`.cjs`、最近的 `package.json` 中的 `"type"` 等标记决定 `.js` 文件的模块格式。Node 26.13 还会对没有显式标记的歧义 `.js` 执行语法探测：若代码含 `import`、`export` 或顶层 `await` 等 ESM 专属语法，则按 ESM 处理；官方仍将这项探测标为 Release candidate，并提醒它会增加开销。项目仍应显式写出 `"type"`，并让 ESM 导入使用实际输出扩展名，以减少工具配置与运行时的歧义：
+
+~~~json
+{
+  "type": "module"
+}
+~~~
+
+浏览器的 `<script type="module">` 依照 URL 解析相对导入并受浏览器跨源规则约束；Node.js 则按包导出映射、文件扩展名和 Node 的解析算法查找模块。相同的 `import "./report-api.js"` 文本，不能脱离宿主规则单独推断文件从哪里来。当前 Node 也允许 CommonJS 用 `require()` 加载完全同步的 ESM；若该模块或其依赖图含顶层 `await`，则抛出 `ERR_REQUIRE_ASYNC_MODULE`，应改用 `import()`。
+
+### 为什么 ESM 并不自动保证 tree shaking？
+
+打包器能从静态 ESM 依赖分析哪些导出未被使用，但代码是否安全可删还要看副作用。若包把带有副作用的初始化或 CSS 导入误标成无副作用，删除未引用模块就可能改变页面行为。tree shaking（摇树优化）是打包器基于语法、配置和包元数据作出的优化，不是 ESM 语法承诺的运行结果。
+
+开发服务器与生产构建的差异、构建器具体如何转译模块，见[构建工具怎样把源码变成可发布产物？](#49.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F)。Node.js 运行时对 ESM 与 CJS 的支持会随版本演进，部署前应检查正在使用的 Node 主版本。
+
+> [!info]- 来源
+> - [ECMAScript 2026 规范：脚本与模块](https://tc39.es/ecma262/2026/multipage/ecmascript-language-scripts-and-modules.html)
+> - [Node.js 26.13：包格式与语法探测](https://nodejs.org/api/packages.html#determining-module-system)、[ESM 与顶层 `await`](https://nodejs.org/api/esm.html)、[`require(ESM)` 的同步依赖限制](https://nodejs.org/api/modules.html#loading-ecmascript-modules-using-require)
+> - [Webpack：模块与 tree shaking 概念](https://webpack.js.org/concepts/)
+>
+> 来源核对日期：2026-11-06。Node.js 示例对应官方当前文档的 26.x 模块规则；Node 版本与包配置可能改变互操作边界。
+## 48. 怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？
+
+报表页可能在本地 Chrome 正常，却在部署后的旧 WebView 上因语法解析或缺少 API 失败。判断一项特性时，要分清它进入哪一版 ECMAScript、目标运行时是否实现，以及构建器实际转换了什么。TypeScript 的类型声明和构建选项也不能代替运行时能力检测。
+
+### ECMAScript 版本能告诉我们什么？
+
+ECMAScript 年份表示语言规范的版本；它本身不表示每个浏览器或 Node.js 发行版都已经实现所有特性。下面列出报表代码可能用到的一些边界。`structuredClone` 是由浏览器、Node.js 等宿主提供的 API（应用程序接口），不属于 ECMAScript 年份表。
+
+| 特性 | 语言版本 | 使用边界 |
+|---|---|---|
+| `Object.keys` | ES5 | 返回自有且可枚举的字符串键，不含 Symbol 键 |
+| `Object.assign`、`Object.is` | ES2015 | 前者会修改目标对象；后者使用 SameValue 比较规则 |
+| `Array.from`、`Array.of` | ES2015 | 分别从可迭代或类数组输入创建数组，以及从参数列表创建数组 |
+| `Object.values`、`Object.entries` | ES2017 | 只枚举自有、可枚举的字符串键 |
+| `Promise.all`、`Promise.race` | ES2015 | 完成条件与取消边界见[异步 JavaScript](#39.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F) |
+| `Promise.allSettled` | ES2020 | 等所有输入结束后分别给出完成或拒绝结果 |
+| `globalThis` | ES2020 | 当前 realm（执行域）的全局 `this` 值；浏览器网页的 Window 环境中为 `WindowProxy`，Node.js 中为 Node 全局对象 |
+| `Promise.any` | ES2021 | 最先兑现的输入使聚合 Promise 成功；全部拒绝才以 `AggregateError` 拒绝 |
+| `Array.prototype.at`、`Object.hasOwn` | ES2022 | 前者接受负索引；后者检查自有属性，不调用可覆盖的 `hasOwnProperty` |
+| `Object.groupBy`、`Map.groupBy`、`Promise.withResolvers` | ES2024 | 分别按回调结果分组对象键或 Map 键、以及创建 Promise 与其控制函数 |
+| `Set` 的集合方法、`RegExp.escape` | ES2025 | 集合并交差等操作；后者转义插入正则表达式的字面文本 |
+| `structuredClone` | 浏览器与 Node.js 宿主 API | 可复制支持结构化克隆的值和循环引用；不能复制函数，也不保留自定义类原型 |
+
+版本表适合初步定位；具体支持仍要核对目标浏览器版本、Node.js 主版本和嵌入式 WebView。单个运行时还可能只实现同一版规范中的部分功能。
+
+### 语法转换、类型声明和 polyfill 有什么差别？
+
+语法转换器可以把目标环境无法解析的语法改写成旧语法，但一般不会自动补上运行时缺失的内置 API。polyfill（兼容补丁）则在运行时提供缺少的方法或对象。TypeScript 的 `target` 决定 `tsc` 会把多少 JavaScript 语法降级；`lib` 选择类型检查时可见的标准库声明。把 `"DOM"` 或 `"ES2022"` 加入 `lib` 只让编译器认识这些名字，不会在运行时创建 `Object.hasOwn`。
+
+~~~json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noEmit": true
+  }
+}
+~~~
+
+在报表页面中，`Object.hasOwn` 和 `Array.prototype.at` 即使通过类型检查，也应由部署目标提供或由项目显式加入 polyfill：
+
+~~~javascript
+const options = Object.create(null);
+options.enabled = false;
+
+Object.hasOwn(options, "enabled"); // true
+["2026-09", "2026-10"].at(-1);   // "2026-10"
+~~~
+
+### Vite 的开发与生产目标分别由什么控制？
+
+Vite 8.3 的开发转换默认以现代浏览器和 `esnext` 为目标；生产 bundle（打包产物）默认面向 2026-01-01 的 Baseline Widely Available（广泛可用基线）浏览器范围：Chrome/Edge 111、Firefox 114、Safari/iOS 16.4 及以上。可以用 `build.target` 调整生产语法目标。Vite 8 用 Oxc 转换 TypeScript，但只做转译，不执行完整类型检查；项目应另跑 `tsc --noEmit`。
+
+Vite 的 `build.target` 与 `tsconfig.json` 的 `target` 名字相似，却分别控制生产 bundle（打包产物）的浏览器语法降级与 TypeScript 编译器的输出行为。Vite 默认只转换语法，并不补齐所有缺失 API；降低目标语法也不能让 `Object.hasOwn` 自动出现。需要旧浏览器兼容时，应分别确定语法目标和 API 补丁方案，再在代表性运行时检查构建产物。
+
+截至 2026-11-06，TypeScript 7.1 beta（测试版）文档已将 `es2026` 列为稳定的 `target` 与 `lib` 选项。可用名称由项目实际安装的 TypeScript 版本决定；上面的配置刻意使用稳定较久的 `ES2022`。
+
+`structuredClone` 的克隆范围由宿主定义。它可以处理循环引用、`Map`、`Set` 和 `Date` 等结构化可克隆值，但不能复制函数或保留自定义类的原型；不支持的值会抛出 `DataCloneError`。不要假设它必然比其他拷贝方法更快。
+
+> [!info]- 来源
+> - [ECMAScript 2026 规范](https://tc39.es/ecma262/2026/)
+> - [TypeScript TSConfig：`target`](https://www.typescriptlang.org/tsconfig/#target)、[`lib`](https://www.typescriptlang.org/tsconfig/#lib)
+> - [TypeScript 7.1 beta：ES2026 `target` 与 `lib`](https://devblogs.microsoft.com/typescript/announcing-typescript-7-1-beta/)
+> - [Vite 8.3：TypeScript 转译与目标配置](https://vite.dev/guide/features.html#typescript)、[生产构建浏览器兼容](https://vite.dev/guide/build.html#browser-compatibility)
+> - [HTML 结构化克隆算法](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning)、[Node.js 26.13：`structuredClone`](https://nodejs.org/api/globals.html#structuredclonevalue-options)
+>
+> Vite 浏览器版本与默认值按 Vite 8.3 文档核对；运行时更新后重新检查项目目标。来源核对日期：2026-11-06。
+
+相关模块加载和构建链路见[ECMAScript 模块与 CommonJS 的加载边界](#47.%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%EF%BC%88Node.js%20%E6%A8%A1%E5%9D%97%E6%A0%BC%E5%BC%8F%EF%BC%89%E5%9C%A8%E8%AF%AD%E6%B3%95%E3%80%81%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C%E6%97%B6%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C%EF%BC%9F)和[构建工具怎样把源码变成可发布产物？](#49.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+## 49. 构建工具怎样把源码变成可发布产物？
+
+月度报表页的 TypeScript 类型检查、模块解析、样式和图片处理、压缩以及服务器实际返回的文件，属于构建与发布链路上的不同工作。构建工具沿依赖图处理源码并输出页面 HTML（超文本标记语言）、样式表 CSS（层叠样式表）、JavaScript 和静态资源；开发服务器能成功运行，并不能证明生产服务器会提供正确的路径、分块和调试映射。
+
+~~~mermaid
+flowchart LR
+  A[入口与 package.json] --> B[解析模块依赖图]
+  B --> C[模块级源码转译与 loader]
+  C --> E[汇总并输出 JavaScript 分块、页面、样式、图片与源映射]
+  A -. 插件钩子可跨多个构建阶段 .-> D[compiler 与 compilation 生命周期]
+  D -. 可读取或修改产物 .-> E
+  E --> F[部署服务器返回文件]
+  F --> G[浏览器检查路径、行为和兼容性]
+  A -. 单独执行类型检查 .-> H[tsc --noEmit]
+~~~
+
+### 为什么要固定 Node.js 与包管理器版本？
+
+`package.json` 的 `packageManager` 字段可以记录项目验证过的包管理器及版本，例如 `"packageManager": "pnpm@10.0.0"`；它描述项目期望的工具，不会自行安装该工具。CI（持续集成）与本地环境都应安装同一版本，并按提交的锁文件恢复依赖。Node.js 自 25 起不再随发行包提供 Corepack；若项目依赖 Corepack 的命令 shim（命令代理），应按其当前说明单独安装，或改用包管理器官方安装流程。
+
+### Webpack 的模块加载器与插件分别处理什么？
+
+Webpack 从 entry（入口）解析依赖图。loader（模块加载器）转换单个模块的源码；plugin（插件）订阅 compiler（编译器）或 compilation（单次编译）的生命周期，在更广的构建阶段处理任务或产物。常见角色如下：
+
+| 构建环节 | 职责 | 报表页中的例子 |
+|---|---|---|
+| `entry` / `output` | 指定依赖起点、输出目录和文件名 | `src/main.ts` 进入 `dist/` |
+| module rule + loader | 按资源类型处理单个模块 | Sass 转 CSS；TS 或 JSX 转 JavaScript |
+| plugin hook（插件钩子） | 访问一次完整构建或单次 compilation | 生成页面、统计产物、调整资源 |
+| `optimization`（优化配置） | 压缩、分包等优化 | 生产模式默认优化，再按项目需求覆盖 |
+
+新配置先核对当前内置能力。Webpack 5.109 起，原生 CSS 处理默认按 `auto` 启用；已有匹配 CSS 的 loader 或显式类型规则时，它会保留原管线。一般 CSS 与 CSS Modules 无须再默认搭一整套 `style-loader`、`css-loader` 和提取插件；Sass 等预处理仍需要对应转换。原生 TypeScript 处理也在宿主 Node 支持 `module.stripTypeScriptTypes`、且没有匹配 TS loader 时自动启用，但只擦除类型，不执行类型检查，也不处理 TSX、带运行时行为的 enum 等非可擦除语法。需要这些能力时，再选择相应转换器并单独运行类型检查。
+
+下例保留已有 loader 项目的样式链，用来追踪转换顺序；它不是新项目必须复制的默认配置。Webpack 的 `use` 数组中，普通 loader 从右往左执行；有 `pitch`（预处理阶段）的链条先从左往右执行 pitch，再反向执行普通函数。如果某个 pitch 返回内容，webpack 会从该 loader 的左邻项开始反向运行 normal 阶段；该 loader 自己的 normal 函数，以及它右侧尚未 pitch 的 loader 和 normal 函数都会被跳过。只有 pitch 都继续传递时，完整 normal 函数链才会执行。插件钩子作用在 compiler 或 compilation 的不同生命周期阶段，不表示插件固定等所有 loader 完成后才运行。例如下面样式链先由 `sass-loader` 编译，再由 `css-loader` 处理导入关系，最后由 `style-loader` 注入开发页面：
 
 ~~~javascript
 module: {
   rules: [
     {
-      test: /\.tsx?$/,
-      use: ["babel-loader", "ts-loader"]
-    },
-    {
       test: /\.scss$/,
       use: ["style-loader", "css-loader", "sass-loader"]
+    },
+    {
+      test: /\.tsx?$/,
+      use: ["babel-loader", "ts-loader"]
     }
   ]
 }
 ~~~
 
-For the TypeScript rule, ts-loader runs first and its output goes to babel-loader. Choose one clear TypeScript transform pipeline; overlapping transforms can add cost or change output unexpectedly. / TypeScript 规则中 ts-loader 先运行，其输出再交给 babel-loader。应选择清晰的 TypeScript 转换链；重叠转换可能增加成本或意外改变产物。
-
-Common loader roles include JS/TS transforms, style processing, and static assets. Webpack 5 Asset Modules can emit or inline assets without older file-loader/url-loader setups. The exact loader stack depends on the project. / 常见 loader 用于 JS/TS 转换、样式处理和静态资源。Webpack 5 Asset Modules 可直接输出或内联资源，不必沿用旧式 file-loader/url-loader 配置。具体链路取决于项目需求。
-
-A text replacement loader illustrates the loader shape, but it does not parse JavaScript syntax. Use a syntax-aware transform when source structure matters. / 字符串替换示例说明 loader 形式，但不会解析 JavaScript 语法；源码结构重要时应使用语法感知的转换器。
+自定义 loader 可以展示转换函数的形状。这个示例只替换确切字符串；它不会解析 JavaScript 结构，若要根据语法节点改写代码，应使用 Abstract Syntax Tree（AST，抽象语法树）转换器。
 
 ~~~javascript
-module.exports = function replaceBuildLabel(source) {
-  return source.replaceAll("__BUILD_LABEL__", "demo");
-};
+export default function replaceReportTitle(source) {
+  return source.replaceAll("__REPORT_TITLE__", "Monthly Reports");
+}
 ~~~
 
-A plugin can subscribe to compiler hooks. The done hook runs after compilation and is an AsyncSeriesHook; synchronous handlers can use tap, while asynchronous handlers can use tapAsync or tapPromise so the hook waits for their work. / plugin 可订阅 compiler hooks。done hook 在编译结束后运行，是 AsyncSeriesHook；同步处理器可用 tap，异步处理器可用 tapAsync 或 tapPromise，以便 hook 等待其工作。
+第二条规则中 `ts-loader` 先运行，输出交给 `babel-loader`。只有项目确实需要两步各自提供的能力时才同时保留；重复转译会增加构建工作，也可能让两套 target 配置互相覆盖。Webpack 5 的 Asset Modules 可直接处理图片、字体、媒体和文本资源，取代许多旧项目的 `file-loader`、`url-loader` 或 `raw-loader` 配置。
+
+plugin 通过生命周期 hook（钩子）扩展构建。若自定义 plugin 要增加或修改输出资源，当前 Webpack 文档要求使用 `compilation.hooks.processAssets`，并为工作选择适当 stage（阶段）。在 compiler 的 `emit` hook 中添加或修改资源仍可能通过兼容接口运行，但会触发弃用警告；此时 compilation 已封存，资源会错过后续压缩、源映射（source map）和哈希阶段。读取已有资源仍可放在 `emit`。
+
+`done` hook 在本次编译完成后收到构建统计对象（`stats`）。下面保留原稿里的统计示例：它写出一份构建诊断 JSON（JavaScript 对象表示法）到项目当前工作目录，供开发者检查产物信息；若要生成发布目录内的资源，则改用 `processAssets`。
 
 ~~~javascript
+import { writeFileSync } from "node:fs";
+
 class BuildStatsPlugin {
   apply(compiler) {
     compiler.hooks.done.tap("BuildStatsPlugin", stats => {
-      const json = stats.toJson({ modules: false });
-      require("node:fs").writeFileSync(
-        "build-stats.json",
-        JSON.stringify(json, null, 2)
-      );
+      const json = stats.toJson({ assets: true, modules: false });
+      writeFileSync("build-stats.json", JSON.stringify(json, null, 2));
     });
   }
 }
 ~~~
 
-Example plugins have distinct roles: HtmlWebpackPlugin can generate HTML and inject emitted assets; DefinePlugin replaces configured expressions at compile time rather than reading a browser runtime environment variable; MiniCssExtractPlugin can emit CSS files. They are examples, not a required stack. As of the Webpack docs checked on 2026-10-15, the HtmlWebpackPlugin README marks it deprecated while the native HTML guide describes experiments.html and output.html as alternatives and still labels native HTML experimental. Check installed Webpack version and template needs before migrating. / 插件示例作用不同：HtmlWebpackPlugin 可生成 HTML 并注入输出资源；DefinePlugin 在编译时替换配置表达式，不会读取浏览器运行时环境变量；MiniCssExtractPlugin 可把 CSS 输出为独立文件。它们只是示例，不是必需组合。根据 2026-10-15 核对的 Webpack 文档，HtmlWebpackPlugin README 标记已弃用；原生 HTML 指南介绍 experiments.html 与 output.html 作为替代方案，同时仍标为实验性。迁移前应检查所用 Webpack 版本和模板需求。
+Webpack 的 `DefinePlugin` 在构建时替换写进代码的表达式；它不会读取浏览器里的运行时环境变量。写入前端包的值会随产物提供给用户，不能把密钥放在 `DefinePlugin` 的客户端常量中。已有 loader 管线中的 `MiniCssExtractPlugin` 负责输出独立 CSS 文件；`CompressionWebpackPlugin` 可生成 gzip/Brotli 资源，但服务器仍要配置协商并发送相应压缩文件。其他历史插件角色与当前注意点见[归档的 Webpack 插件对照表](../../archive/front-end/Deprecated_Interview_Notes/webpack-plugin-history.md)。
 
-Sources checked 2026-10-15: [Webpack Loaders](https://webpack.js.org/concepts/loaders/), [Asset Modules](https://webpack.js.org/guides/asset-modules/), [Webpack Plugins](https://webpack.js.org/concepts/plugins/), [DefinePlugin](https://webpack.js.org/plugins/define-plugin/), [HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme), [Webpack Native HTML guide](https://webpack.js.org/guides/native-html/), [style-loader](https://github.com/webpack/style-loader#readme), [css-loader](https://github.com/webpack-contrib/css-loader#readme), [MiniCssExtractPlugin](https://github.com/webpack/mini-css-extract-plugin#readme), [Webpack: Writing a Plugin](https://webpack.js.org/contribute/writing-a-plugin/), [Compiler hooks](https://webpack.js.org/api/compiler-hooks/).
+Webpack 现提供原生 HTML 处理。官方文档显示 `experiments.html` 默认值自 5.109.0 起为 `"auto"`：只有没有现存 loader 或显式 `type` 规则匹配 `.html` 资源时才自动启用 HTML 处理，因此迁移前要检查现有规则。显式设为 `true` 会强制启用原生解析，即使 HTML 资源先经过 loader；资源规则上的显式 `type` 仍决定其处理方式。`true` 还会让无扩展名导入或入口的默认扩展名顺序把 `.html` 放在 JavaScript 前，`auto` 则将其排在 JavaScript 后。原生 HTML 入口可生成 `index.html`。HtmlWebpackPlugin 仓库 README 当前标为 deprecated（弃用），并指向迁移指南；已有配置可继续工作，但新配置应先核对所用 Webpack 版本的原生 HTML 能力和模板需求。
 
-### Why Vite development and production need separate checks / 为什么 Vite 开发与生产需要分别检查
+### Vite 开发服务器为什么不能代替生产构建检查？
 
-The standard Vite development path serves native ES modules with on-demand transforms and HMR. Vite 8 uses Rolldown for production builds. Check the project's selected development mode and production settings when diagnosing differences. / Vite 的常规开发路径用原生 ES 模块、按需转换和 HMR 提供资源。Vite 8 的生产构建使用 Rolldown。排查差异时看该项目选用的开发模式和生产配置。
+Vite 的开发服务器按需提供转换后的 ESM，并用 HMR（热模块替换）更新开发页面。Vite 8 于 2026-03 发布稳定版，使用 Rolldown 作为打包器，Oxc 工具链处理转换。开发阶段和生产构建可以经过不同的处理路径，检查一个开发页面不能替代检查最终打包文件（bundle）。
 
-A fast development server is not evidence that production output has the same graph or performance. Run the configured production build and inspect its generated assets. For release verification, serve the generated output and check actual paths and chunks; HMR only validates the development loop. / 开发服务器速度快并不能证明生产产物具有相同依赖图或性能。应运行配置的生产构建并检查输出资源。发布验证要服务生成的产物并检查实际路径和分块；HMR 只验证开发循环。
+Vite 8 对 TypeScript 文件只做转译，不执行完整类型检查；当前文档建议在生产构建之外运行 `tsc --noEmit`。Vite 8.3 默认生产目标是 2026-01-01 的 Baseline Widely Available（广泛可用基线）浏览器范围；如果要支持更早的浏览器，应显式配置 `build.target` 并另行规划 API polyfill（应用程序接口兼容补丁）。`tsconfig.json` 的 `target` 不会设置 Vite 的构建目标。版本与目标细节见[怎样判断目标运行时是否支持 JavaScript 特性？](#48.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)。
 
-Sources checked 2026-10-15: [Vite 8 guide](https://vite.dev/guide/) and [Vite 8.0.10 source](https://github.com/vitejs/vite/blob/v8.0.10/README.md).
+发布前应运行仓库锁定版本的正式 build 命令，检查生成目录里的页面资源地址、动态代码分块（chunk）、样式、图片和服务端路由，再由与生产相同的服务器预览产物。HMR 只覆盖开发循环；不同 `base` 路径、CDN、缓存头和服务器压缩配置都需要在真实部署路径确认。
 
-### What a source map exposes / Source map 会暴露什么
+### Source map 怎样用于调试，又会暴露什么？
 
-A source map relates emitted code to source files for debugging and error reporting. Choose Webpack devtool by rebuild speed, trace detail, artifact size, and whether the map is published. A privately uploaded map can still be exposed if deployment serves it publicly; configuration alone does not define access policy. / source map 将输出代码关联回源文件，用于调试和错误报告。选择 Webpack devtool 时要看重建速度、追踪细节、产物大小和是否公开 map。私下上传的 map 若部署时能被公开访问，仍可能暴露；配置本身不等于访问策略。
+Source map（源映射）把压缩或转换后的代码位置映回源文件。Webpack 的 `devtool` 选择会影响首次构建与重建速度、映射精度、产物体积，以及映射文件如何关联到 bundle（打包文件）。
 
-| devtool example | Output meaning / 输出含义 |
-|---|---|
-| eval-source-map | Evaluates modules with source maps for development debugging / 开发调试用 eval 与 source map |
-| source-map | Emits an external map with a sourceMappingURL reference / 输出外部 map 并带 sourceMappingURL 引用 |
-| hidden-source-map | Emits an external map without the reference comment; useful when a release process uploads maps separately / 输出外部 map 但无引用注释；适合由发布流程单独上传 |
-| nosources-source-map | Omits embedded source content, but mappings and source paths may remain / 不嵌入源码内容，但映射和源码路径仍可能存在 |
+| 配置示例 | 主要含义 | 适用边界 |
+|---|---|---|
+| `eval-source-map` | 以 `eval` 逐模块关联高精度映射 | 开发调试常用；初次构建较慢 |
+| `cheap-source-map` | 只映射行号且忽略 loader 产生的映射 | 列级断点不可用，转换后的源码细节可能丢失 |
+| `cheap-module-source-map` | 吸收 loader 映射后简化到行级 | 精度和构建成本低于完整映射 |
+| `source-map` | 输出外置完整映射并在 bundle 留引用 | 生产错误还原方便；服务器要控制 `.map` 访问 |
+| `hidden-source-map` | 输出外置映射，但 bundle 不写引用注释 | 若供错误收集服务使用，应让发布流程单独上传且不公开托管 |
+| `nosources-source-map` | 映射文件不内嵌源码文本 | 仍可能公开文件名和目录结构，并非源码访问控制 |
 
-These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#62.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
+`inline-*` 把映射嵌入代码，页面访问者也会下载；`eval-*` 使用逐模块 `eval`；`cheap-*` 去掉列映射；`module-` 会考虑 loader 的 source map。Webpack 5.105 起 `devtool` 也支持按 JavaScript、CSS 或全部资源分别指定映射类型。完整组合和旧配置对照见[Webpack source map 预设归档](../../archive/front-end/Deprecated_Interview_Notes/webpack-source-map-presets.md)。
+
+Source map 不是权限边界：映射路径可被公开请求时，部署和服务器配置决定其是否真的私有。发布前同时检查产物目录、服务器静态资源规则和错误收集服务的上传路径。
+
+> [!info]- 来源
+> - [Node.js 25 发布说明：Corepack 不再随 Node 分发](https://nodejs.org/en/blog/release/v25.0.0)、[Node.js 25.8 Corepack 文档](https://nodejs.org/download/release/v25.8.0/docs/api/corepack.html)
+> - 当前原生 CSS/TypeScript 默认值、已有 loader 的优先级及类型擦除限制：[Webpack experiments.css](https://webpack.js.org/configuration/experiments/#experimentscss)、[experiments.typescript](https://webpack.js.org/configuration/experiments/#experimentstypescript)，5.109 起的默认行为，2026-11-06 核对。
+> - [Webpack：loader 执行顺序](https://webpack.js.org/concepts/loaders/)、[Asset Modules](https://webpack.js.org/guides/asset-modules/)、[插件与 `processAssets`](https://webpack.js.org/concepts/plugins/)
+> - [Webpack Compiler Hooks](https://webpack.js.org/api/compiler-hooks/)、[Webpack Writing a Plugin](https://webpack.js.org/contribute/writing-a-plugin/)
+> - [Webpack：原生 HTML](https://webpack.js.org/guides/native-html/)、[Webpack `experiments.html` 默认值与规则优先级](https://webpack.js.org/configuration/experiments/#experimentshtml)、[HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme)、[Webpack `DefinePlugin`](https://webpack.js.org/plugins/define-plugin/)
+> - [Webpack：`devtool`](https://webpack.js.org/configuration/devtool/)、[Webpack 5.105 source map 更新](https://webpack.js.org/blog/2026-02-03-webpack-5-105/)
+> - [Vite 8 发布公告](https://vite.dev/blog/announcing-vite8)、[Vite 8.3 TypeScript 转译](https://vite.dev/guide/features.html#typescript)、[浏览器兼容](https://vite.dev/guide/build.html#browser-compatibility)
+>
+> Webpack 的原生 HTML 默认值按官方文档中“自 5.109.0 起”的说明记录；Vite 目标按 8.3 文档记录。来源核对日期：2026-11-06。
 ## 50. 报表页面里的状态应该放在哪里？
 
 案例背景：用户打开 `/reports/42?sort=recent#summary`，希望刷新后继续查看同一报表、复制链接分享当前排序，并在另一标签页改变偏好后看到更新。重开时，页面从路径取报表 ID、从查询参数还原 `sort`，然后通过 HTTP 请求服务端报表；片段 `#summary` 定位页面中的摘要。若返回快照仍是 `running`，页面拿到与快照一致的 `event_cursor` 后再订阅更新，见[流式报表恢复案例](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。报表内容由服务端维护，可分享的筛选条件进入 URL，Web Storage (网页存储) 只保存客户端偏好或草稿。
@@ -7985,7 +8269,7 @@ Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适�
 
 路径明确时，原生可选链、`Array.prototype.flat`（数组扁平化）、Set 或对象展开常常更易读。需要 Lodash 的边界行为时，先核对版本和输入形状，再决定是否使用。按方法导入可以帮助构建器裁剪依赖，但最终包体还受模块格式和构建配置影响；要用生产产物测量，不能只凭写法推断体积。
 
-相关内容见[现代 JavaScript 特性](#48.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F)与[前端性能测量](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+相关内容见[现代 JavaScript 特性](#48.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)与[前端性能测量](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（Lodash 4.18.1；2026-11-06）
 > - 当前稳定版本及 4.18.1 发布记录：[Lodash Releases](https://github.com/lodash/lodash/releases)，2026-04-01。

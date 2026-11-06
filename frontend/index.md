@@ -69,13 +69,13 @@
 
 ### 类型、模块与构建产物
 
-- [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](typescript/advanced-typescript.md)
-- [How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？](typescript/generics.md)
-- [What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？](typescript/utility-types.md)
-- [Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？](typescript/decorators.md)
-- [How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？](javascript/modules-and-host-boundaries.md)
-- [How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？](javascript/modern-javascript-features.md)
-- [How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？](tooling/build-tools.md)
+- [收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](typescript/advanced-typescript.md)
+- [泛型怎样保留输入与输出之间的类型关系？](typescript/generics.md)
+- [怎样从报表行派生预览、更新请求和状态标签？](typescript/utility-types.md)
+- [项目使用哪种 TypeScript 装饰器模式？](typescript/decorators.md)
+- [ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？](javascript/modules-and-host-boundaries.md)
+- [怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？](javascript/modern-javascript-features.md)
+- [构建工具怎样把源码变成可发布产物？](tooling/build-tools.md)
 
 ### 浏览器状态、通信与流式结果
 

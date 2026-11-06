@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=3203aca808fc59d4332f218b11af6c77c81f5ea4468121ce50124456ed3a85ec -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=ef99445c93df579dd0974f6c3ea789a8d1b8181b20c9386e99485661c93f46c7 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -76,13 +76,13 @@
 - [ ] 62. [链式接口如何先排队、再依次执行延后任务？](../frontend/javascript/chainable-task-queue.md)
 - [ ] 63. [迭代器与生成器怎样按需产出并清理数据？](../frontend/javascript/iterators-and-generators.md)
 - [ ] 64. [JavaScript 错误应在哪一层恢复、传播或上报？](../frontend/javascript/error-handling.md)
-- [ ] 65. [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](../frontend/typescript/advanced-typescript.md)
-- [ ] 66. [How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？](../frontend/typescript/generics.md)
-- [ ] 67. [What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？](../frontend/typescript/utility-types.md)
-- [ ] 68. [Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？](../frontend/typescript/decorators.md)
-- [ ] 69. [How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？](../frontend/javascript/modules-and-host-boundaries.md)
-- [ ] 70. [How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？](../frontend/javascript/modern-javascript-features.md)
-- [ ] 71. [How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？](../frontend/tooling/build-tools.md)
+- [ ] 65. [收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../frontend/typescript/advanced-typescript.md)
+- [ ] 66. [泛型怎样保留输入与输出之间的类型关系？](../frontend/typescript/generics.md)
+- [ ] 67. [怎样从报表行派生预览、更新请求和状态标签？](../frontend/typescript/utility-types.md)
+- [ ] 68. [项目使用哪种 TypeScript 装饰器模式？](../frontend/typescript/decorators.md)
+- [ ] 69. [ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？](../frontend/javascript/modules-and-host-boundaries.md)
+- [ ] 70. [怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？](../frontend/javascript/modern-javascript-features.md)
+- [ ] 71. [构建工具怎样把源码变成可发布产物？](../frontend/tooling/build-tools.md)
 - [ ] 72. [报表页面里的状态应该放在哪里？](../frontend/browser-apis/browser-storage-and-communication.md)
 - [ ] 73. [同一报表在多个标签页中怎样交换变化？](../frontend/browser-apis/browser-context-communication.md)
 - [ ] 74. [流式报表断线重连后，界面怎样保留正确状态？](../frontend/browser-apis/streaming-ux.md)
