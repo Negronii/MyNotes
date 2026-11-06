@@ -3756,59 +3756,78 @@ Use the SLO to guide tradeoffs. For AI-backed flows, pair [production signals](.
 
 - OpenTelemetry's unversioned concept pages, checked 2026-10-15: [Signals](https://opentelemetry.io/docs/concepts/signals/) (last modified 2026-03-10), [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) (2026-04-23), [Traces](https://opentelemetry.io/docs/concepts/signals/traces/) (2026-01-14), [Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/) (2026-07-02), [Logs](https://opentelemetry.io/docs/concepts/signals/logs/) (2026-08-07), and [Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/) (2026-08-10).
 - [Google SRE Workbook, Chapter 2: Implementing SLOs](https://sre.google/workbook/implementing-slos/), checked 2026-10-15.
-## 32. How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？
+## 32. 怎样根据输入约束和访问模式选择算法？
 
-Choose an algorithm by the invariant the input provides, then count the work and storage required as the input grows. Dynamic programming reuses overlapping states; binary search discards half of a sorted search range; two pointers move only when ordering proves a region cannot contain the answer. Big-O summarizes that growth under stated assumptions, while representation, allocation, memory locality, and runtime constants still affect elapsed time.
+报表请求已从数据库得到 acct-17 的 report 42 事件页：1,024 条，按 (occurred_at, event_id) 升序排列。接口要定位游标、显示分类树、缓存最近查看的页面，并按事件描述处理 Unicode（统一码）文本。选算法前先写明输入保证、要执行的操作和结果约束；只有这样才能证明候选范围可以丢弃，并估计成本。
 
-先利用输入所提供的不变量选择算法，再计算输入规模增长时所需的操作和存储。动态规划复用重叠子问题，二分查找利用有序性缩小搜索区间，双指针则只在排序等条件足以证明某一段不含答案时移动。Big-O 概括这些前提下的增长趋势；表示方式、分配、内存局部性和运行时常数仍会影响实际耗时。
+本篇给出选型与复杂度模型。后续章节分别回答[数据结构怎样匹配访问方式](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)、[队列和栈怎样表示待处理工作](#34.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)、[LRU 如何维护按键查找与新近顺序](#35.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[有序数据怎样缩小候选范围](#36.%20%E6%9C%89%E5%BA%8F%E6%95%B0%E6%8D%AE%E6%80%8E%E6%A0%B7%E8%AE%A9%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%E5%AE%89%E5%85%A8%E6%8E%92%E9%99%A4%E5%80%99%E9%80%89%EF%BC%9F)、[动态规划怎样定义状态和更新顺序](#37.%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E5%A6%82%E4%BD%95%E5%AE%9A%E4%B9%89%E7%8A%B6%E6%80%81%E5%B9%B6%E5%AE%89%E6%8E%92%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[分区如何改变排序成本](#38.%20%E5%88%86%E5%8C%BA%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E6%97%B6%E9%97%B4%E5%92%8C%E7%A9%BA%E9%97%B4%E4%BB%A3%E4%BB%B7%EF%BC%9F)和[文本算法应选哪种字符单位](#39.%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E7%A0%81%E5%85%83%E3%80%81%E7%A0%81%E7%82%B9%E8%BF%98%E6%98%AF%E5%AD%97%E7%B4%A0%E7%B0%87%E5%A4%84%E7%90%86%EF%BC%9F)。
 
-Big-O leaves out cache locality, memory bandwidth, and dependent loads. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](#40.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F) for the hardware costs that can change elapsed time without changing an operation's asymptotic bound.
+### 先写明不变量，再选方法
 
-### Match the technique to the input / 按输入约束选择方法
+事件页按复合键 (occurred_at, event_id) 排序，因此可用相同规则二分定位游标；这不意味着 event_id 单独有序。若顺序、键或空值排序规则改变，数据顺序和比较器也要一起改变。若数据未排序，则不能直接二分；可扫描，或先排序并计入预处理成本。
 
-- When several states repeat and each can be defined from earlier ones, choose a [dynamic programming state and update order](#37.%20How%20do%20you%20choose%20a%20dynamic%20programming%20state%20and%20update%20order?%20/%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E7%8A%B6%E6%80%81%E5%92%8C%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F).
-- When order rules out a group of candidates, use [binary search or two pointers](#36.%20How%20do%20ordered%20inputs%20enable%20binary%20search%20and%20two%20pointers?%20/%20%E6%9C%89%E5%BA%8F%E8%BE%93%E5%85%A5%E6%80%8E%E6%A0%B7%E6%94%AF%E6%8C%81%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%EF%BC%9F) and prove why the discarded range is safe to ignore.
-- If the job is reordering, inspect how [partition balance and copying change sorting cost](#38.%20Why%20do%20partition%20choices%20change%20quicksort%20costs?%20/%20%E5%88%86%E5%8C%BA%E9%80%89%E6%8B%A9%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E4%BB%A3%E4%BB%B7%EF%BC%9F).
-- For text, choose [the units that define length and equality](#39.%20Which%20units%20should%20a%20text%20algorithm%20count%20and%20compare?%20/%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E4%BB%80%E4%B9%88%E5%8D%95%E4%BD%8D%E8%AE%A1%E6%95%B0%E5%92%8C%E6%AF%94%E8%BE%83%EF%BC%9F) before analyzing a loop.
+~~~mermaid
+flowchart LR
+    I[输入保证与规模] --> O[需要执行的操作]
+    O --> P[可证明的候选排除或状态复用]
+    P --> C[时间、空间与分配成本]
+    C --> V[用边界输入复算结果]
+~~~
 
-### Big-O reference
+例如，有序页中每次中点比较可以排除一半范围；动态规划复用相同子问题的结果；队列用头下标出队可免于搬移其余项。若缺少相应不变量，复杂度表中的数字便不适用。
 
-| Complexity | Typical example | Condition |
+### Big-O 表示增长，不是耗时承诺
+
+Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外空间的渐近上界，省略常数因子和低阶项。这里 n 是元素数；背包问题的 W 是数值容量，不是表示容量所需的位数。期望复杂度还依赖哈希分布等假设，需要明确标出。
+
+| 增长量 | 典型例子 | 成立条件 |
 |---|---|---|
-| O(1) | Array index access | Indexed access, not search |
-| O(1) average | Hash-table lookup | Expected under ordinary hash distribution |
-| O(log n) | Binary search; balanced BST operation | Sorted input or bounded tree height |
-| O(n) | Linear scan | One pass |
-| O(n log n) | Merge sort; balanced quicksort | Quicksort can degrade to O(n²) |
-| O(n²) | Nested scan; simple quadratic sort | Depends on input size and algorithm |
-| O(2^n) | Naive recursive Fibonacci; subset enumeration | Exponential growth |
-| O(n!) | Permutation enumeration | Factorial growth |
+| O(1) | 数组下标访问 | 下标已知且合法；按值查找不是常数时间 |
+| O(1) 期望 | 哈希表查找 | 哈希值充分分散；这是期望模型，不是所有实现的严格界 |
+| O(log n) | 有序数组二分、平衡搜索树 | 数据有序或树高受不变量约束 |
+| O(n) | 顺序扫描 | 每个元素检查常数次 |
+| O(n log n) | 归并排序、较均衡的快速排序 | 快速排序最坏会退化到 O(n²) |
+| O(n²) | 两层全量扫描、平方级简单排序 | 两层循环均随 n 线性增长 |
+| O(2ⁿ) | 朴素递归 Fibonacci 的上界、枚举子集 | 搜索树节点或候选数；按每个候选常数工作计 |
+| O(n!) | 枚举所有排列 | 搜索树节点工作；每个节点做常数工作时成立 |
 
-**See also:** [Core Data Structures](#33.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) for trees and tries, and [Practical Data Structure Implementations](#35.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) for LRU caches and [queues and stacks](#34.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) for removal-order implementations.
-## 33. Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？
+这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](#40.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
-Operation cost follows from both the structure and how an operation reaches its target. Arrays provide constant-time indexed access but shift elements on middle insertion; linked lists update in constant time only when the needed link is already known; search trees need logarithmic height for logarithmic search. Traversal order and child representation matter too, and asymptotic bounds do not capture the cost of pointer chasing versus contiguous memory.
+> [!example] 1,024 条事件页上的查找
+> 假设事件已按复合游标键升序，比较键的工作量为常数。目标位于末尾时，扫描需比较 1,024 次；二分最多进行 11 次中点探测，因为 2¹⁰=1,024，2¹¹=2,048；每次探测调用一个常数时间比较器，再判断比较结果。探测次数不等同于底层关系判断次数：若用直接 `===` 和 `<` 的标量写法，末尾命中例共做 21 次关系判断。若单次查找前要排序，预处理成本可能超过扫描。
 
-操作代价既取决于结构，也取决于操作如何找到目标。数组按下标访问为常数时间，但在中间插入时要移动元素；链表只有在已知所需链接时才能常数时间更新；搜索树只有保持对数高度，搜索才有对数界。遍历顺序和子节点表示也会影响选择，而渐进复杂度无法体现指针追逐与连续内存访问的实际差别。
+### 怎样判断选型假设是否成立？
 
-### Tree traversals
+检查目标是定位还是排序、排序由谁建立且是否使用同一比较规则；是否存在可复用子问题、状态是否包含转移需要的信息；是否允许原地修改、复制、分配、扩容和递归栈是否进入内存预算；空输入、重复键、相同排序值、零容量、超大数和非 ASCII 文本是否改变结果。最后用边界输入复算返回值、副作用和复杂度条件。若不变量失效，换成线性扫描或显式预处理并计入成本。
 
-For a binary tree, depth-first orders differ in when the current node is visited:
+> [!info]- 来源
+> - 本章渐近复杂度表作为通用算法分析摘要；1,024 项二分中点探测上界由每轮区间减半复算。
+## 33. 数据结构如何匹配访问方式，复杂度界何时成立？
 
-- **In-order / 中序**: left, node, right. This yields ascending values only when the tree satisfies the binary-search-tree ordering rule.
-- **Pre-order / 前序**: node, left, right. Useful when serializing a tree with enough structure to recover its shape.
-- **Post-order / 后序**: left, right, node. Useful when computing or releasing children before their parent.
+报表 42 要按下标显示事件页、按 event_id 找记录、按时间顺序遍历；分类视图需要层级结构，运行时也可能保存工作树。选择数据结构时，应看目标如何被找到、链接如何更新、是否需要排序，以及树高或哈希分布等前提是否成立。实际速度还会受连续存储和指针跳转影响。
 
-#### Kth smallest in a BST
+### 数组、链表和树各自适合什么操作？
 
-This iterative in-order traversal uses O(h) stack space for tree height h. It assumes node values are non-null numbers and the tree obeys the BST ordering rule. It returns null when k is invalid or the tree has fewer than k nodes.
+| 结构 | 访问或查找 | 插入、删除 | 条件与代价 |
+|---|---|---|---|
+| 数组 | 已知下标 O(1)；按值找元素 O(n) | 中间改动 O(n)，后续元素要移动 | 连续访问方便；增长时可能分配和复制 |
+| 单链表 | 按值或下标找节点 O(n) | 已知前驱链接时 O(1)，否则先找前驱 | 删除节点需要前驱 |
+| 双向链表 | 查找通常需外部索引；裸链表 O(n) | 已知节点时 O(1) 改邻接链接 | 每个节点多存前后引用 |
+| 高度平衡搜索树 | 搜索 O(log n) | 插入、删除 O(log n) | 需要不变量限制树高 |
+| 未平衡搜索树 | 最坏 O(n) | 最坏 O(n) | 递增插入可形成长链 |
+| Trie 前缀树 | 长度 m 的键约 O(m) | 沿字符路径增删 | 子边选择成本需受控；可能占较多内存 |
+
+链表只有在已知所需节点/链接时才是 O(1) 更新；先扫描定位会让整体操作成为 O(n)。树的 O(log n) 需要高度界。连续数组扫描通常比指针追逐更有局部性，硬件成本见[内存局部性如何影响访问](#40.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+
+### 树的遍历顺序和搜索条件是什么？
+
+二叉树深度优先遍历有三种访问时机：中序为左、节点、右；仅当满足 binary search tree（BST，二叉搜索树）次序规则时结果才升序。前序先节点，适合配合结构信息序列化；后序先子节点，适合先计算或释放子树。下面迭代中序返回第 k 小值；要求节点值为有限数字、比较规则一致且树满足 BST 次序（含其重复值规则）。重复值按节点分别计数；若实现把同值压在一个节点的计数器里，选择第 k 项时也要计入该计数。k 非正、非整数或节点不足时返回 null。先沿树高下降，再弹出并访问至多 k 个节点，时间 O(h+k)，最坏 O(n)；栈空间 O(h)，h 是树高；平衡树 h=O(log n)，退化时 h=O(n)。
 
 ~~~javascript
 function kthSmallest(root, k) {
   if (!Number.isInteger(k) || k <= 0) return null;
   const stack = [];
   let node = root;
-
   while (node || stack.length) {
     while (node) {
       stack.push(node);
@@ -3822,65 +3841,30 @@ function kthSmallest(root, k) {
 }
 ~~~
 
----
+red-black tree（红黑树）给二叉搜索树节点着色，约束红节点孩子为黑、路径黑高相同，并把根和叶哨兵按实现视为黑色。由此高度有 O(log n) 界，搜索、插入、删除最坏 O(log n)。Java TreeMap API 明确采用红黑树；C++ std::map 保证有序关联容器操作的对数界，但标准不规定树形。不能从一种实现推断另一种产品。
 
-### Trees and operation costs
+B-tree（B 树）每个节点容纳多个键，以降低存储页读取次数；其内部节点也可以保存记录或记录引用。B+ tree（B+ 树）内部节点只用于导航，记录保存在叶节点，叶页通常相连以支持范围扫描；具体数据库索引布局由产品文档决定。trie（前缀树）共享键前缀，适合前缀查询；m 是键长度，若每个字符转移能以常数期望时间选出，查找约 O(m)，否则还要加上各节点的子边查找成本。子边表示也会改变总内存。
 
-| Structure | Indexed access / search | Insert or delete |
-|---|---|---|
-| Array | Index access O(1); value search O(n) | Middle insert/delete O(n) because elements move |
-| Linked list | Finding by value or index O(n) | O(1) insertion at a known link; deletion needs the predecessor link (singly linked) or target node (doubly linked), otherwise O(n) worst case |
-| Height-balanced BST | Search O(log n) | O(log n) |
-| Unbalanced BST | Worst-case search O(n) | Worst-case O(n) |
+### 哈希表为什么有碰撞，何时能快速查找？
 
-A balanced search tree gives logarithmic operations by keeping height logarithmic. If insertions produce a chain, those operations degrade to linear time. Array access remains fast by index, while inserting into the middle shifts later elements.
+#### Java SE 25 HashMap 契约与 OpenJDK 25u 实现边界
 
-These bounds do not capture cache locality or dependency chains. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](#40.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F) for why contiguous scans can outperform pointer-based traversal and when a known-node list update is actually O(1).
+哈希表根据键的哈希值选桶，再在桶内处理冲突。不同键可落入同一桶，扩容只能改变分布而不会消除碰撞。Java 中 equals 相等的键必须有相同 hashCode；若键入表后改变参与 hashCode/equals 的字段，后续查询可能找不到原条目。哈希表适合精确键查找，不保证按键排序。
 
----
+Java SE 25（LTS）HashMap 允许一个 null 键和多个 null 值，不保证迭代顺序，也不负责并发安全。合理散列下 get/put 有常数时间期望；哈希分布很差时碰撞会增加成本。默认初始容量为 16、负载因子为 0.75；超过阈值后表会扩容。扩容时要重分桶，单次 put 可能花 Θ(n)，把一系列插入的扩容成本摊开后才是均摊常数；散列冲突仍另算。
 
-### Self-balancing trees
+OpenJDK 25u 维护分支在桶索引前用 h ^ (h >>> 16) 扩散哈希高位，并定义 TREEIFY_THRESHOLD=8、MIN_TREEIFY_CAPACITY=64。对普通 putVal 的链表桶追加路径，8 个既有碰撞节点后追加第 9 个：若表容量已是 64，该次 put 将桶树化；若初始容量为 16，且这些键的扩散后哈希值完全相同，第 9、10 个碰撞项分别触发扩容到 32、64，第 11 个才树化。仅在旧表中同桶的不同哈希值可能在扩容时分到不同桶，不能沿用这个极端例的计数。这个计数只描述该源码路径，不能外推到 compute/merge 或任意树桶查询的严格 O(log n) 界。旧档案原解释针对 OpenJDK 17；截至 2026-11-06 核对的 17u 维护分支在哈希扰动和相关阈值上相同。桶细节是源码实现，不是 Java Map 接口保证；键的可比较性可帮助处理哈希值相同的树桶项，差的哈希分布仍会影响总体成本。
 
-#### Red-Black Tree
+### 怎样遍历文档树并转换扁平记录？
 
-A red-black tree is a binary search tree with coloring invariants that bound its height. Red nodes have black children, and every path from a node to a descendant leaf has the same black height; implementations also treat the root and leaf sentinels as black. These rules give O(log n) worst-case search, insertion, and deletion.
-
-Java's `TreeMap` explicitly documents a red-black-tree implementation. C++ `std::map` specifies ordered associative behavior and logarithmic lookup, insertion, and key-removal bounds, but its standard does not prescribe a tree shape. Check the language and library documentation before inferring a product's internal structure: [Java `TreeMap`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/TreeMap.html) and [C++ associative containers](https://eel.is/c++draft/associative.reqmts).
-
-#### B-Tree and B+ Tree
-
-B-trees are multi-way search trees designed to reduce storage-page reads by keeping several keys in each node.
-
-- In a B-tree, records or record references may be stored in internal nodes as well as leaves.
-- In a B+ tree, internal nodes guide the search and records are stored at leaves; leaf links commonly support ordered range scans.
-
-These are family descriptions, not a guarantee that every database index uses the same variant or layout. Check the database's manual for its index type and behavior.
-
----
-
-### Trie (prefix tree)
-
-A trie shares prefixes between keys. Lookup takes O(m) steps for a key of length m when each next edge can be selected in constant expected time; the cost depends on the node's child representation. Tries can use substantial memory when keys share few prefixes.
-
-Use one when prefix traversal or prefix queries are central, such as autocomplete or routing tables; a hash map may be simpler for exact-key lookup.
-
----
-
-### DOM tree traversal
-
-A DOM tree is a hierarchy of Node objects. Pass an explicit visit callback and a node or null root. Snapshot each node's children before walking so the traversal has a clear view if callbacks mutate the DOM.
-
-#### DFS — depth-first search
+报表分类可用树显示。Document Object Model（DOM，文档对象模型）分类节点组成树。depth-first search（DFS，深度优先搜索）沿一个分支前进，breadth-first search（BFS，广度优先搜索）按层访问；DOM 树每个节点从根只有一条路径，而无权图 BFS 的最短路结论按边数计。代码在每个节点调用 visit 后立即快照该节点的子节点：该回调对当前节点做的修改会进入随后快照；这不是从遍历开始时冻结的整棵 DOM 快照。
 
 ~~~javascript
 function dfs(root, visit) {
   if (!root) return;
   visit(root);
-  for (const child of Array.from(root.childNodes)) {
-    dfs(child, visit);
-  }
+  for (const child of Array.from(root.childNodes)) dfs(child, visit);
 }
-
 function dfsIterative(root, visit) {
   if (!root) return;
   const stack = [root];
@@ -3888,66 +3872,49 @@ function dfsIterative(root, visit) {
     const node = stack.pop();
     visit(node);
     const children = Array.from(node.childNodes);
-    for (let i = children.length - 1; i >= 0; i--) {
-      stack.push(children[i]);
-    }
+    for (let i = children.length - 1; i >= 0; i--) stack.push(children[i]);
   }
 }
-~~~
-
-#### BFS — breadth-first search
-
-~~~javascript
 function bfs(root, visit) {
   if (!root) return;
   const queue = [root];
   for (let head = 0; head < queue.length; head++) {
     const node = queue[head];
     visit(node);
-    for (const child of Array.from(node.childNodes)) {
-      queue.push(child);
-    }
+    for (const child of Array.from(node.childNodes)) queue.push(child);
   }
 }
 ~~~
 
-A queue implemented with repeated `Array.prototype.shift` can move all remaining elements on each removal and make a traversal quadratic. Advancing a head index keeps this traversal O(n) in the number of visited nodes, with O(n) queue space.
+对固定树且 visit 每次为 O(1) 时，访问 n 个节点的遍历工作为 O(n)，显式栈/队列最坏 O(n) 空间；若回调改树，应按实际访问的节点数和回调成本另算。每个节点在调用 visit 后立即快照自己的 childNodes；回调对该节点的修改会影响随后快照，遍历不是整棵树在开始时的一致快照。BFS 用递增 head 下标；反复 shift 可能搬移剩余元素而使总工作达 O(n²)。实现见[队列和栈如何表示待处理工作](#34.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
-DFS is useful when depth-first order or a path is needed. BFS is useful for level order and shortest paths in an unweighted graph; a DOM tree has one unique path from the root to each node.
-
----
-
-### Array ↔ Tree conversion
-
-Flat rows with parent identifiers can be transformed into a hierarchy for a tree UI or converted back for an API or database representation. This example expects unique IDs, one root whose parent ID is 0, and each other row to reference an existing parent.
-
-#### Array to tree
+扁平分类行可两趟转成树：第一趟用 Map 按唯一 ID 建节点，第二趟按 parentId 接到父节点。每个父节点的 children 按输入行出现顺序追加，因此保留各自子项的相对输入顺序。约定一个根 parentId=0、ID 唯一且不能使用保留的根标记 ID 0、所有父 ID 存在；然后从根遍历检查不可达环。在常见平均常数时间的 Map 查找模型下，预期 O(n) 时间、O(n) 空间；ECMAScript 只要求平均访问次线性，未承诺精确 O(1)。
 
 ~~~javascript
 function arrayToTree(rows) {
   if (!Array.isArray(rows)) throw new TypeError('rows must be an array');
-
   const nodes = new Map();
   for (const row of rows) {
-    if (!row || nodes.has(row.id)) throw new RangeError('rows must have unique IDs');
+    if (!row || !Number.isSafeInteger(row.id) || row.id <= 0 || nodes.has(row.id)) {
+      throw new RangeError('rows must have unique positive safe-integer IDs');
+    }
     nodes.set(row.id, { ...row, children: [] });
   }
-
   const roots = [];
   for (const row of rows) {
     const node = nodes.get(row.id);
-    if (row.parentId === 0) {
-      roots.push(node);
-      continue;
+    if (row.parentId === 0) roots.push(node);
+    else {
+      if (!Number.isSafeInteger(row.parentId) || row.parentId <= 0) {
+        throw new RangeError('parentId must be 0 or a positive safe integer');
+      }
+      const parent = nodes.get(row.parentId);
+      if (!parent) throw new RangeError('parent ID does not exist');
+      parent.children.push(node);
     }
-    const parent = nodes.get(row.parentId);
-    if (!parent) throw new RangeError('parent ID does not exist');
-    parent.children.push(node);
   }
-
   if (roots.length !== 1) throw new RangeError('expected exactly one root');
   const root = roots[0];
-
   const seen = new Set();
   const stack = [root];
   while (stack.length) {
@@ -3959,13 +3926,7 @@ function arrayToTree(rows) {
   if (seen.size !== nodes.size) throw new RangeError('rows contain a disconnected cycle');
   return root;
 }
-~~~
 
-The two passes take O(n) expected time and O(n) space with a map. Reserve ID 0 for the root marker, or change the marker to match the data format.
-
-#### Tree to array
-
-~~~javascript
 function treeToArray(root) {
   if (!root) return [];
   const rows = [];
@@ -3982,24 +3943,27 @@ function treeToArray(root) {
 }
 ~~~
 
-This conversion expects an acyclic tree with a single root. Preserve application-specific fields deliberately; this example emits only `id`, `parentId`, and `name`.
+> [!example] 两行分类记录怎样变成一棵树？
+> 输入为 [{id:1,parentId:0,name:根},{id:2,parentId:1,name:收入}]。第一趟 Map 建出两个空 children；第二趟把 id=1 设为根，再把 id=2 接到 parentId=1。根遍历访问 1、2，seen 与 Map 都有两项，因此数据可达且合法。treeToArray 再输出 [{id:1,parentId:0,name:根},{id:2,parentId:1,name:收入}]。
 
-### Linked structure in React Fiber
+treeToArray 按前序输出父节点后再输出各子树；它不恢复任意扁平输入原先跨父节点交错的行顺序。回转假设输入为 ID 正安全整数、单根无环树，根 ID 标记 0 只用于 parentId；示例只输出 id、parentId、name；其他业务字段需显式复制。根标记不是 0 时应替换为实际协议。
 
-React represents its work tree with Fiber nodes linked through fields such as `child`, `sibling`, and `return`. The nodes still form a tree; sibling pointers encode the ordered children. This structure lets the reconciler keep work units and progress between scheduling steps.
+### React Fiber 内部为什么把树节点链接起来？
 
-**Concurrent rendering is conditional.** React can pause or restart render work for updates using concurrent features such as transitions. An update rendered without such features can remain synchronous. React applies DOM mutations during commit after rendering work is ready, so do not describe every render or commit as freely interruptible. Fiber is an implementation detail; use React's public APIs rather than depending on its internal node layout.
+React Fiber 节点用 child、sibling、return 等链接表达父子关系和同级顺序，使协调器能按工作单元保存进度。树仍是树，只是同级孩子通过 sibling 串联。transition 等并发特性允许某些渲染工作暂停、重启或让位；不能据此说每个 render 和 DOM commit 都可任意中断。DOM 变更在准备好的 commit 阶段应用。Fiber 布局是实现细节，应用应依赖 React 公共 API。
 
-See [React 18](https://react.dev/blog/2022/03/29/react-v18) for concurrent rendering behavior and [React's Fiber types](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js) for the illustrative implementation.
+> [!info]- 来源
+> - HashMap 契约、默认值与期望复杂度：[Java SE 25 HashMap API](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/HashMap.html)，Java SE 25。
+> - 哈希扰动与树化机制：[OpenJDK 17u HashMap 源码](https://github.com/openjdk/jdk17u/blob/master/src/java.base/share/classes/java/util/HashMap.java)、[OpenJDK 25u HashMap 源码](https://github.com/openjdk/jdk25u/blob/master/src/java.base/share/classes/java/util/HashMap.java)，2026-11-06 核对维护分支，作为实现样本。
+> - 有序容器契约：[Java SE 25 TreeMap API](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/TreeMap.html)、[C++ associative containers](https://eel.is/c++draft/associative.reqmts)。
+> - React 并发行为：[React 18](https://react.dev/blog/2022/03/29/react-v18)，2022-03-29；Fiber 内部字段：[React Fiber 类型](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js)，2026-11-06 核对。
+## 34. 队列和栈怎样表示待处理工作？
 
-**See also:** [Algorithms and Complexity](#32.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F) for searches and dynamic programming, and [Practical Data Structure Implementations](#35.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) for LRU caches and [queues and stacks](#34.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) for removal-order implementations.
-## 34. How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？
+处理报表 42 的事件流时，通知消费者应先处理最早到达的事件；解析嵌套表达式时，应先返回最近进入的未完成分支。前者是 first-in, first-out (FIFO，先进先出) 队列，后者是 last-in, first-out (LIFO，后进先出) 栈。选好顺序后，还要让空状态和可存储值之间没有歧义。
 
-Choose the removal order first. A stack removes the newest item and maps directly to an array end. A queue removes the oldest and needs a way to advance the front without moving every remaining element on each removal. / 先定取出顺序。栈取最新项，可以直接使用数组末尾。队列取最旧项，需要移动逻辑队首，而非每次搬动其余元素。
+### 队列怎样同时维护头、尾和空状态？
 
-### Queue (FIFO)
-
-**队列 / Queue** processes values in first-in, first-out order. This linked-list version throws on an empty read so every value, including `null` and `undefined`, remains distinguishable from the empty state.
+链表队列维护 head、tail、length：空时头尾均为 null 且长度为 0；非空时 head 指向最早项，tail 指向最新项且 tail.next 为 null。删除最后一项要同时清空头尾。空读抛错，因此 null 和 undefined 都可以是队列值。
 
 ~~~javascript
 class Queue {
@@ -4008,11 +3972,7 @@ class Queue {
     this.tail = null;
     this.length = 0;
   }
-
-  get isEmpty() {
-    return this.length === 0;
-  }
-
+  get isEmpty() { return this.length === 0; }
   enqueue(value) {
     const node = { value, next: null };
     if (this.tail) this.tail.next = node;
@@ -4020,7 +3980,6 @@ class Queue {
     this.tail = node;
     this.length++;
   }
-
   dequeue() {
     if (this.isEmpty) throw new RangeError('queue is empty');
     const value = this.head.value;
@@ -4029,7 +3988,6 @@ class Queue {
     this.length--;
     return value;
   }
-
   peek() {
     if (this.isEmpty) throw new RangeError('queue is empty');
     return this.head.value;
@@ -4037,33 +3995,57 @@ class Queue {
 }
 ~~~
 
-Enqueue, dequeue, and peek take O(1) time. Array `shift` removes the first element but may move the remaining indexed elements, so a linked queue or a head index is preferable for a queue that grows large. Breadth-first traversal with a head index appears in [Core Data Structures](#33.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F).
+enqueue、dequeue、peek 都是 O(1)，但每个节点需要分配并维护链接。容量有上限时可用环形缓冲区；一次性的 BFS 扫描可用数组与递增 head 下标。长期 FIFO 若只增加 head，会保留尚未清理的已消费引用并让数组持续增长；可清空已消费槽并定期压缩，或改用环形缓冲区。Array.shift 的可观察语义不承诺某引擎的搬移成本，但常见数组实现会调整剩余索引，连续出队可能累积平方级工作。
 
----
+用 head 而不是槽值表示空状态时，队列可以安全保存 null 和 undefined。下面两项出队后 head 递增；即使第 2 项本身是 undefined，head 仍小于长度，所以它是已存值而非“空”的信号。实际长期队列还应把消费槽设为 undefined 释放引用，并配合压缩或环形缓冲区控制数组增长。
 
-### Stack (LIFO)
+| 操作 | 数组状态 | head | 结果 / 空状态 |
+|---|---|---:|---|
+| 初始 | [null, undefined] | 0 | 还有 2 项 |
+| dequeue | [undefined, undefined] | 1 | 取出 null；还有 1 项 |
+| dequeue | [undefined, undefined] | 2 | 取出已存的 undefined；此时 head 等于长度，队列为空 |
 
-**栈 / Stack** processes values in last-in, first-out order. An array provides a compact stack; this version also throws on empty `pop` or `peek` so stored `undefined` is not confused with an empty stack.
+旧数值队列以 null 表示空：仅因为值域是 number，null 不会与有效值混淆；若要允许 null/undefined，须改为显式 isEmpty、带状态的返回值或异常。其受限实现保留如下。
+
+> [!example]- 可选：数值专用 TypeScript 空值哨兵
+> ~~~typescript
+> interface QueueNode { val: number; next: QueueNode | null; }
+> class NullableNumberQueue {
+>   private head: QueueNode | null = null;
+>   private tail: QueueNode | null = null;
+>   private length = 0;
+>   offer(val: number): void {
+>     const node: QueueNode = { val, next: null };
+>     if (this.tail) this.tail.next = node;
+>     else this.head = node;
+>     this.tail = node;
+>     this.length++;
+>   }
+>   poll(): number | null {
+>     if (!this.head) return null;
+>     const value = this.head.val;
+>     this.head = this.head.next;
+>     if (!this.head) this.tail = null;
+>     this.length--;
+>     return value;
+>   }
+>   get size(): number { return this.length; }
+> }
+> ~~~
+
+### 栈怎样保留最近未完成的工作？
+
+数组末尾 push/pop 表达栈的入栈和出栈；显式空检查可避免把已存的 undefined 当作空栈。
 
 ~~~javascript
 class Stack {
-  constructor() {
-    this.items = [];
-  }
-
-  get isEmpty() {
-    return this.items.length === 0;
-  }
-
-  push(value) {
-    this.items.push(value);
-  }
-
+  constructor() { this.items = []; }
+  get isEmpty() { return this.items.length === 0; }
+  push(value) { this.items.push(value); }
   pop() {
     if (this.isEmpty) throw new RangeError('stack is empty');
     return this.items.pop();
   }
-
   peek() {
     if (this.isEmpty) throw new RangeError('stack is empty');
     return this.items[this.items.length - 1];
@@ -4071,37 +4053,26 @@ class Stack {
 }
 ~~~
 
-Array `push` and `pop` are the natural stack operations. Their exact growth costs are runtime implementation details; a dynamic array may occasionally resize.
+push/pop 是末端操作；动态数组扩容时可能分配并复制，因此单次耗时会变化，通常按摊还常数时间分析。未知输入深度的递归还受运行时栈大小限制，可改用显式栈。
 
-[Back to the main question / 返回主问题](#35.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F).
-## 35. How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？
+> [!info]- 来源
+> - 数组末端和首端操作的规范行为：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)，Array.prototype.shift/push/pop。标准描述可观察效果，不规定某引擎的数组搬移算法。
+## 35. 最近最少使用缓存怎样按键查找并更新最近使用顺序？
 
-An LRU cache has two jobs: find an entry by key and identify the least recently used entry to evict. An insertion-ordered map can provide both if each hit moves the key to the end. A separate map and doubly linked list make the same two responsibilities explicit. / LRU 缓存有两项工作：按键查找，以及找出最久未使用的条目进行淘汰。有插入顺序的映射在每次命中时把键移到末尾，就能承担这两项工作。映射加双向链表则显式分开这两个职责。
+报表界面最近访问 acct-17 的 report/42 游标页和 report/41 页面。容量已满时，Least Recently Used (LRU) cache（最近最少使用缓存）要淘汰最久未访问条目，因此同时需要按键查找和按新近顺序淘汰。若缓存受保护的报表数据，缓存键须隔离账户/授权范围、过滤器和游标；缓存命中不能代替授权检查。
 
-**Key terms / 关键术语** · recency / 使用新近程度 · eviction / 淘汰 · ordered map / 有序映射
+### 用 Map 插入顺序表示新近程度
 
-### LRU Cache
-
-**最近最少使用缓存 / Least Recently Used cache** evicts the least recently accessed entry when full.
-
-#### Using `Map`
-
-`Map` preserves insertion order. Deleting and reinserting a hit moves it to the newest position. This API supports arbitrary keys and values; use `has` to distinguish a stored `undefined` from a missing key. A zero-capacity cache remains empty.
+ECMAScript Map 保留键的插入顺序。命中时删后重设，把键移到最新端；迭代器按顺序返回键，首项是最旧键。实现支持任意键和值，has 可区分存入 undefined 与键缺失；对象键按对象身份比较，内容相同但新建的数组仍是另一个键；容量为非负整数，容量 0 时不留数据。
 
 ~~~javascript
 class LRUCache {
   constructor(capacity) {
-    if (!Number.isInteger(capacity) || capacity < 0) {
-      throw new RangeError('capacity must be a non-negative integer');
-    }
+    if (!Number.isInteger(capacity) || capacity < 0) throw new RangeError('capacity must be a non-negative integer');
     this.capacity = capacity;
     this.cache = new Map();
   }
-
-  has(key) {
-    return this.cache.has(key);
-  }
-
+  has(key) { return this.cache.has(key); }
   get(key) {
     if (!this.cache.has(key)) return undefined;
     const value = this.cache.get(key);
@@ -4109,12 +4080,10 @@ class LRUCache {
     this.cache.set(key, value);
     return value;
   }
-
   put(key, value) {
     if (this.capacity === 0) return;
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size === this.capacity) {
+    if (this.cache.has(key)) this.cache.delete(key);
+    else if (this.cache.size === this.capacity) {
       const oldestKey = this.cache.keys().next().value;
       this.cache.delete(oldestKey);
     }
@@ -4123,27 +4092,29 @@ class LRUCache {
 }
 ~~~
 
-Map operations are commonly treated as expected constant-time in application analysis, but the ECMAScript specification requires average access to be sublinear rather than promising a precise O(1) bound. This version is concise and avoids maintaining a second ordering structure.
+> [!example] 容量为 2 的淘汰过程
+> put(A, 页面42)、put(B, 页面41) 后，A 最旧、B 最新。get(A) 命中后顺序变成 B、A。put(C, 首页) 淘汰 B，留下 A、C。更新已有键也把它移到最新端。
+>
+> | 操作 | 最旧 → 最新 |
+> |---|---|
+> | put(A) | A |
+> | put(B) | A, B |
+> | get(A) | B, A |
+> | put(C) | A, C；B 被淘汰 |
 
-#### Doubly linked list plus map
+ECMAScript 要求 Map 的平均访问复杂度为次线性，但不承诺精确 O(1)。更重要的是，Map 的键查找保证不能推出 `keys().next()` 找到首个仍存活键也为 O(1)：新迭代器可能略过此前删除的内部位置，反复删后重插的工作量还取决于实现如何维护迭代状态。此版顺序正确、代码较短，但不能仅凭 Map 键访问界给每次淘汰一个 O(1) 上界。
 
-A linked list makes moving an existing entry to the front and evicting the tail a pointer update. The map locates each node. Both structures are needed to keep the operations efficient; using an ordinary object for arbitrary cache keys can collide with inherited property names.
+### 用双向链表加 Map 显式维护索引与顺序
+
+Map 把键映射到节点，双向链表通过已知节点更新相邻链接、从尾部淘汰。头尾哨兵使插入头部和删除节点无需为真实边界写分支。
 
 ~~~javascript
 class ListNode {
-  constructor(key, value) {
-    this.key = key;
-    this.value = value;
-    this.prev = null;
-    this.next = null;
-  }
+  constructor(key, value) { this.key = key; this.value = value; this.prev = null; this.next = null; }
 }
-
 class LinkedLRUCache {
   constructor(capacity) {
-    if (!Number.isInteger(capacity) || capacity < 0) {
-      throw new RangeError('capacity must be a non-negative integer');
-    }
+    if (!Number.isInteger(capacity) || capacity < 0) throw new RangeError('capacity must be a non-negative integer');
     this.capacity = capacity;
     this.nodes = new Map();
     this.head = new ListNode(null, null);
@@ -4151,11 +4122,7 @@ class LinkedLRUCache {
     this.head.next = this.tail;
     this.tail.prev = this.head;
   }
-
-  has(key) {
-    return this.nodes.has(key);
-  }
-
+  has(key) { return this.nodes.has(key); }
   get(key) {
     const node = this.nodes.get(key);
     if (!node) return undefined;
@@ -4163,7 +4130,6 @@ class LinkedLRUCache {
     this._addToFront(node);
     return node.value;
   }
-
   put(key, value) {
     if (this.capacity === 0) return;
     const existing = this.nodes.get(key);
@@ -4173,7 +4139,6 @@ class LinkedLRUCache {
       this._addToFront(existing);
       return;
     }
-
     if (this.nodes.size === this.capacity) {
       const oldest = this.tail.prev;
       this._remove(oldest);
@@ -4183,14 +4148,12 @@ class LinkedLRUCache {
     this.nodes.set(key, node);
     this._addToFront(node);
   }
-
   _addToFront(node) {
     node.next = this.head.next;
     node.prev = this.head;
     this.head.next.prev = node;
     this.head.next = node;
   }
-
   _remove(node) {
     node.prev.next = node.next;
     node.next.prev = node.prev;
@@ -4198,42 +4161,138 @@ class LinkedLRUCache {
 }
 ~~~
 
-With a map that provides expected constant-time lookup, the linked-list version has expected O(1) get and put operations. Use the simpler map-based version when the linked-list mechanics are not part of the requirement.
+已知节点时，链表摘除、移到 head 和从 tail 取最旧项都只改固定数目的链接，因此是确定的 O(1)；完整 get/put 还包含 Map 查找或更新。若所选 Map 实现对键访问提供期望 O(1)，整项操作也可按期望 O(1) 分析；ECMAScript 对 Map 的最低保证只是平均次线性。Map 版适合展示紧凑实现，链表版把淘汰顺序变成显式首尾链接。
 
-Compare [FIFO and LIFO representations / 队列和栈的表示](#34.%20How%20do%20FIFO%20and%20LIFO%20change%20the%20representation%20of%20pending%20work?%20/%20FIFO%20%E4%B8%8E%20LIFO%20%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%E7%9A%84%E8%A1%A8%E7%A4%BA%EF%BC%9F) when work is removed in arrival or nesting order. [ECMAScript Map](https://tc39.es/ecma262/2020/#sec-map-objects) specifies observable key iteration order.
-## 36. How do ordered inputs enable binary search and two pointers? / 有序输入怎样支持二分查找和双指针？
+> [!example]- 可选：不使用 Map/Record 的数字键练习变体
+> 旧练习用 Object.create(null) 建无原型索引，以数字键查节点；命中移至头部，满容量插入淘汰尾节点。get 返回 -1 表示未命中，因此调用契约须约定 -1 不属于有效缓存值（代码本身不拒绝写入 -1）；键和值沿用 number 契约，不限为有限整数；索引把键转成属性名，因此 +0/-0 共用 "0"，NaN 共用 "NaN"，正负无穷分别成为属性名。大于安全整数范围的不同文本 ID 不能先存成 Number 再指望区分。容量须为非负整数。对象属性访问的复杂度是引擎行为，不是 ECMAScript 的精确 O(1) 保证。
+>
+> ~~~typescript
+> class ListNode {
+>   prev: ListNode | null = null;
+>   next: ListNode | null = null;
+>   constructor(readonly key: number, public value: number) {}
+> }
+> class NumericLRUCache {
+>   private readonly index: { [key: string]: ListNode } = Object.create(null);
+>   private head: ListNode | null = null;
+>   private tail: ListNode | null = null;
+>   private size = 0;
+>   constructor(private readonly capacity: number) {
+>     if (!Number.isInteger(capacity) || capacity < 0) throw new RangeError('capacity must be a non-negative integer');
+>   }
+>   get(key: number): number {
+>     const node = this.index[key];
+>     if (!node) return -1;
+>     this.moveToHead(node);
+>     return node.value;
+>   }
+>   put(key: number, value: number): void {
+>     if (this.capacity === 0) return;
+>     const existing = this.index[key];
+>     if (existing) {
+>       existing.value = value;
+>       this.moveToHead(existing);
+>       return;
+>     }
+>     if (this.size >= this.capacity) this.removeTail();
+>     const node = new ListNode(key, value);
+>     this.index[key] = node;
+>     this.addHead(node);
+>     this.size++;
+>   }
+>   private addHead(node: ListNode): void {
+>     node.prev = null;
+>     node.next = this.head;
+>     if (this.head) this.head.prev = node;
+>     this.head = node;
+>     if (!this.tail) this.tail = node;
+>   }
+>   private remove(node: ListNode): void {
+>     if (node.prev) node.prev.next = node.next;
+>     else this.head = node.next;
+>     if (node.next) node.next.prev = node.prev;
+>     else this.tail = node.prev;
+>     node.prev = null;
+>     node.next = null;
+>   }
+>   private moveToHead(node: ListNode): void {
+>     if (this.head === node) return;
+>     this.remove(node);
+>     this.addHead(node);
+>   }
+>   private removeTail(): void {
+>     if (!this.tail) return;
+>     const oldest = this.tail;
+>     this.remove(oldest);
+>     delete this.index[oldest.key];
+>     this.size--;
+>   }
+> }
+> ~~~
 
-Use ordering to prove which candidates can be discarded. Binary search shrinks a range around a monotone decision. Two pointers use relationships between positions to rule out a whole set of pairs at each move. / 用有序性证明哪些候选可以排除。二分按单调判断缩小范围，双指针利用位置之间的关系，每次移动时排除一组组合。
+> [!info]- 来源
+> - Map 键值、插入顺序与平均访问复杂度：[ECMAScript 2026 keyed collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)，Map Objects；规范承诺平均次线性访问，不承诺精确 O(1)。
+> - 容量 2 状态与链表指针更新按本页代码复算；无 Map 变体以 TypeScript 5.7.2 编译并运行。
+## 36. 有序数据怎样让二分查找和双指针安全排除候选？
 
-### Binary search
+报表 42 的事件页按 (occurred_at, event_id) 升序排列。若目标游标与这组键使用同一比较规则，binary search（二分查找）可以丢弃一半候选；若数组无序或只按 event_id 比较，就不能从时间顺序推断安全的排除范围。two pointers（双指针）也依赖同样的证明：每次移动前要说明为何被排除的一整批组合不可能成为答案。
 
-Binary search locates a matching item in O(log n) time when the input is sorted in ascending order and comparisons are consistent. This version returns any matching index, or -1 for an empty array or a missing value.
+### 二分查找如何缩小有序区间？
+
+binary search（二分查找）在升序数组中维持闭区间 [left, right]。比较中点后，若中点小于目标，则它及左侧元素都不可能匹配，令 left=middle+1；若大于目标，右侧同理。下例返回任意一个匹配下标；空数组或找不到目标时返回 -1。
 
 ~~~javascript
-function binarySearch(values, target) {
+function binarySearch(values, target, compare) {
   let left = 0;
   let right = values.length - 1;
   while (left <= right) {
     const middle = left + Math.floor((right - left) / 2);
-    if (values[middle] === target) return middle;
-    if (values[middle] < target) left = middle + 1;
+    const order = compare(values[middle], target);
+    if (order === 0) return middle;
+    if (order < 0) left = middle + 1;
     else right = middle - 1;
   }
   return -1;
 }
 ~~~
 
-For fixed-width integer languages, computing the midpoint as left + (right - left) / 2 avoids overflow in left + right. JavaScript array indices are far smaller than Number's exact-integer limit, but the difference form states the safer general pattern.
+标量示例可传入 `(a, b) => a - b`。以 [3, 7, 11, 15, 19, 23, 27] 查找 19：循环不变式是“若目标存在，它仍在当前闭区间”。
 
----
+| 轮次 | 当前区间 | 中点和值 | 更新 |
+|---|---|---|---|
+| 1 | [0,6] | 3 → 15 | 目标更大，left=4 |
+| 2 | [4,6] | 5 → 23 | 目标更小，right=4 |
+| 3 | [4,4] | 4 → 19 | 命中 |
 
-### Two pointers
+若改查 20，前两轮后比较 19 并令 left=5，区间变空，返回 -1。
 
-**双指针 / Two pointers** uses two positions to reduce repeated scans when the input structure provides an ordering or movement invariant. It is not a general replacement for nested loops; the invariant must justify discarding part of the search space.
+固定宽度整数语言中用 left + floor((right-left)/2) 避免 left+right 溢出。JavaScript 数组索引本身远小于 Number 精确整数上限，但差值写法便于移植。若要找重复值的第一个位置，应改用 lower bound：命中时仍收缩右半边，而非立刻返回。
 
-#### Two Sum on a sorted array
+报表 42 的游标按 `(occurred_at, event_id)` 字典序比较：先比 occurred_at，只有时间相同才比 event_id。下面假设时间使用统一 UTC、固定精度的 ISO 8601 字符串，且字典序与时间顺序一致，event_id 是安全整数；生产代码的比较器还必须与数据库的类型、空值顺序和排序规则一致。
 
-Returns a pair of indices or null when no pair exists. Equal values at different positions are valid.
+~~~javascript
+function compareEvent(a, b) {
+  if (a.occurred_at < b.occurred_at) return -1;
+  if (a.occurred_at > b.occurred_at) return 1;
+  return a.event_id < b.event_id ? -1 : a.event_id > b.event_id ? 1 : 0;
+}
+~~~
+
+| 排序行 | occurred_at | event_id | 与游标 (09:00, 41) 的顺序 |
+|---|---|---:|---|
+| A | 09:00 | 41 | 相等，确切命中游标 |
+| B | 09:00 | 42 | 大于游标，下一页边界候选 |
+| C | 09:01 | 13 | 也大于游标，但排在 B 后 |
+
+比较器必须对同一排序域稳定地返回负数、零或正数。`binarySearch` 用 `compareEvent` 可以查确切游标；分页取下一页时通常要找第一个比较结果严格大于零的行（upper bound，上界），不能要求游标行仍存在。若行 A 已删除，B 仍是正确边界；这依赖相同排序规则、有效游标及相同数据范围，并要求 `(occurred_at,event_id)` 在该范围内唯一。若两个记录排序键完全相同，而页尾停在两者之间，严格 `>` 会跳过后一条；应加上唯一的 tie-breaker（平局裁决键）。表中时间为完整时间戳的简写，C 的 ID 虽更小，仍因时间更晚而排在 B 后。
+
+### 双指针何时能替代重复扫描？
+
+双指针仅在排序或移动不变量能证明安全时减少搜索空间；它不是一般嵌套循环的替代品。
+
+#### 有序数组两数之和
+
+数组升序时，若两端和小于 target，左端值与任何剩余右端相加都不会更大，因此 left 可以前进；若和过大，right 可后退。下例返回两个不同位置的下标或 null；重复值可被不同下标选中。输入假设为有限安全整数，避免 Number 精度和溢出语义影响比较。
 
 ~~~javascript
 function twoSumSorted(values, target) {
@@ -4249,9 +4308,9 @@ function twoSumSorted(values, target) {
 }
 ~~~
 
-#### Move zeros to the end
+#### 把零移到末尾并保留其他次序
 
-Moves numeric zeroes in place while keeping the order of non-zero values. It returns the same mutated array.
+next 表示下一个非零值应该写入的位置。每遇到非零值就与该位置交换，因此非零元素相对顺序不变，函数原地修改并返回同一数组。
 
 ~~~javascript
 function moveZeros(values) {
@@ -4266,30 +4325,28 @@ function moveZeros(values) {
 }
 ~~~
 
----
+> [!example] 两个指针怎样缩小候选集合
+> 对 [1, 2, 4, 7, 11] 求和为 9：两端 1+11=12 太大，排除 11 与当前或更大左端值的组合，右指针左移；1+7=8 太小，排除 1 与当前/更小右项的组合，左指针右移；2+7=9，返回 [1,3]。排序是这项证明的前提。
 
-[Back to the main question / 返回主问题](#32.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
-## 37. How do you choose a dynamic programming state and update order? / 动态规划怎样选择状态和更新顺序？
+> [!info]- 来源
+> - 二分与双指针不变量按本页闭区间/升序数组逐步复算；事件页复合游标必须使用与来源排序相同的字典序比较。
+## 37. 动态规划如何定义状态并安排更新顺序？
 
-Define a state with all the information its transitions need, establish base cases, then compute prerequisites before dependent states. When an update reuses the same storage, its order determines which version a transition reads. / 状态要包含转移所需的信息，先确定初始条件，再按依赖顺序计算。复用同一份存储时，更新顺序决定转移读到哪个版本。
+报表汇总里某些查询可能复用之前算过的子结果，但本篇用三个更小、可完整复算的例子说明一般机制。dynamic programming（动态规划，DP）把问题拆为有限状态；每个状态只保留后续转移需要的信息。先写递推关系和初始状态，再按依赖顺序计算，复用一维数组时还要追踪每个格子属于哪一轮。
 
-### Dynamic programming
+### 状态如何消除重复计算？
 
-**动态规划 / Dynamic programming** stores results for overlapping subproblems. Top-down memoization follows the recursive definition; bottom-up iteration computes states in dependency order and can often retain only the state still needed.
-
-#### Fibonacci
-
-For non-negative integer n, naive recursion repeats subproblems and takes O(2^n) time with O(n) call-stack space. The iterative form takes O(n) time and O(1) auxiliary space. These examples use Number; use BigInt when exact results beyond Number's safe-integer range are needed.
+若多个递归分支会请求同一个子问题，记忆化将结果保存后复用；自底向上迭代则按依赖次序计算状态。以 Fibonacci 数列为例：F(0)=0、F(1)=1、F(n)=F(n-1)+F(n-2)。朴素递归每层分叉，O(2ⁿ) 是一个时间上界，调用栈 O(n)；迭代每个 n 只更新一次，时间 O(n)、辅助空间 O(1)。
 
 ~~~javascript
 function fibRecursive(n) {
-  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
+  if (!Number.isSafeInteger(n) || n < 0) throw new RangeError('n must be a non-negative safe integer');
   if (n <= 1) return n;
   return fibRecursive(n - 1) + fibRecursive(n - 2);
 }
 
 function fib(n) {
-  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
+  if (!Number.isSafeInteger(n) || n < 0) throw new RangeError('n must be a non-negative safe integer');
   if (n <= 1) return n;
   let previous = 0;
   let current = 1;
@@ -4300,15 +4357,20 @@ function fib(n) {
 }
 ~~~
 
-#### Climbing stairs (frog jump)
+JavaScript Number 的整数运算只有在每个中间结果都落在安全整数范围内时才保证精确。F(78)=8,944,394,323,791,464 仍可精确表示；F(79)=14,472,334,024,676,221 已超过 2⁵³−1。相同限制也作用于楼梯方案计数，例如 climbStairs(78,[1,2]) 计算 F(79)；背包有限值相加也可能越界，甚至把两个有限 Number.MAX_VALUE 加成 Infinity。若要求大整数精确，用 BigInt 并调整初始值、返回类型和调用方；若背包值含小数，Number 结果本来就是二进制浮点近似。按精确整数契约时，输入值应为安全整数且所有候选和不超过 Number.MAX_SAFE_INTEGER。
 
-Count ordered sequences of allowed positive step sizes that sum to n. The empty sequence is one way to reach step 0. Require distinct positive integer steps; repeated entries would count the same step size more than once.
+### 计数问题的状态和循环顺序是什么？
+
+爬楼梯示例定义 ways[total] 为按顺序选择合法步长、总和恰为 total 的方案数。ways[0]=1 表示空序列；每个合法正整数步长 step 贡献 ways[total-step]。输入要求步长为互异正整数，否则重复步长会重复计算同一选择。下面按目标总和再按步长转移。
 
 ~~~javascript
 function climbStairs(n, steps) {
-  if (!Number.isInteger(n) || n < 0) throw new RangeError('n must be a non-negative integer');
-  if (!Array.isArray(steps) || steps.some(step => !Number.isInteger(step) || step <= 0)) {
-    throw new TypeError('steps must contain positive integers');
+  if (!Number.isSafeInteger(n) || n < 0) throw new RangeError('n must be a non-negative safe integer');
+  if (!Array.isArray(steps)) throw new TypeError('steps must be an array');
+  for (let i = 0; i < steps.length; i++) {
+    if (!Number.isSafeInteger(steps[i]) || steps[i] <= 0) {
+      throw new TypeError('steps must contain positive safe integers without holes');
+    }
   }
   if (new Set(steps).size !== steps.length) throw new RangeError('steps must be distinct');
 
@@ -4323,20 +4385,23 @@ function climbStairs(n, steps) {
 }
 ~~~
 
-This counts order as meaningful: with steps [1, 2], reaching 3 has three sequences: 1+1+1, 1+2, and 2+1. Time is O(nk), where k is the number of allowed steps; space is O(n).
+steps=[1,2]、n=3 的计算是：ways[0]=1；ways[1]=ways[0]=1；ways[2]=ways[1]+ways[0]=2；ways[3]=ways[2]+ways[1]=3，对应 1+1+1、1+2、2+1。顺序有意义，1+2 与 2+1 是不同方案。空步长数组也有效：n=0 返回空序列方案 1，n>0 返回 0；`[1,,2]` 会在按下标校验时拒绝，避免 `some` 跳过数组洞。若 n 个台阶、k 种步长，含初始化和空边界的时间为 O((n+1)(k+1))，空间 O(n+1)。数组长度仍须能在当前运行时分配。
 
-#### 0/1 Knapsack
+### 0/1 背包为何要从大容量向小容量更新？
 
-Choose each item at most once to maximize value within a weight capacity. Iterate capacities downward so the current item cannot be selected again during the same pass.
+定义 best[c] 为已处理物品中、总重量不超过 c 时可取得的最大价值。处理重量 w、价值 v 的物品时，转移为 max(best[c], best[c-w]+v)。每件物品只能用一次，所以 c 必须从 W 向 w 递减；若从小到大，best[c-w] 可能已包含当前物品，造成重复使用。
 
 ~~~javascript
 function knapsack(capacity, weights, values) {
-  if (!Number.isInteger(capacity) || capacity < 0) throw new RangeError('capacity must be a non-negative integer');
+  if (!Number.isSafeInteger(capacity) || capacity < 0) throw new RangeError('capacity must be a non-negative safe integer');
   if (!Array.isArray(weights) || !Array.isArray(values) || weights.length !== values.length) {
     throw new TypeError('weights and values must be arrays of equal length');
   }
-  if (weights.some(weight => !Number.isInteger(weight) || weight < 0)) {
-    throw new RangeError('weights must be non-negative integers');
+  for (let i = 0; i < weights.length; i++) {
+    if (!Number.isSafeInteger(weights[i]) || weights[i] < 0) {
+      throw new RangeError('weights must contain non-negative safe integers without holes');
+    }
+    if (!Number.isFinite(values[i])) throw new TypeError('values must contain finite numbers without holes');
   }
 
   const best = new Array(capacity + 1).fill(0);
@@ -4349,20 +4414,19 @@ function knapsack(capacity, weights, values) {
 }
 ~~~
 
-Time is O(nW) and space O(W), for n items and integer capacity W. The zero-filled state means the result may leave capacity unused; it assumes there is no required minimum value or exact-fill constraint.
+假设容量 W=4，有两件物品 (重量,价值)=(2,3)、(3,4)。初始 best=[0,0,0,0,0]。处理第一件后得到 [0,0,3,3,3]；第二件从容量 4 向下更新，得到 [0,0,3,4,4]，最优价值 4，可留下未用容量。若第一件按容量从小到大更新，best[2]=3 后又会用该值算出 best[4]=6，相当于把同一件物品用两次。
 
----
+0/1 背包对 n 件、整数容量 W 的时间为 O((n+1)(W+1))，空间 O(W+1)，覆盖 n=0 或 W=0；这是伪多项式复杂度，因为 W 的数值可比其输入编码位数大得多。W=0 时仍会处理每件零重量物品一次；倒序循环在容量 0 也只更新一次，所以正价值零重量物品可各取一次。代码以零初始化，表示允许不装满且不要求最低价值；若要恰好装满，除 best[0]=0 外其余状态应初始化为不可达哨兵，并在转移时跳过不可达状态。若物品允许无限次且重量为正，才可从小容量向大容量更新；若零重量物品有正价值且可无限选，最优值没有有限上界。容量数组也必须能在当前运行时分配。
 
-[Back to the main question / 返回主问题](#32.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
-## 38. Why do partition choices change quicksort costs? / 分区选择为什么会改变快速排序的代价？
+> [!info]- 来源
+> - 动态规划状态、递推与更新顺序按三段代码的输入/输出和中间数组手工复算；Number 安全整数边界按 ECMAScript Number.MAX_SAFE_INTEGER=2⁵³−1 核对：[ECMAScript 2026 numbers](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-number.max_safe_integer)。
+## 38. 分区如何改变快速排序的时间和空间代价？
 
-Each partition groups values around a pivot. Balanced partitions keep the recursion shallow, while repeatedly skewed partitions make later calls process nearly the original input size. The representation also determines whether the algorithm copies data. / 分区按基准值分组。较均衡的分区使递归较浅，持续偏斜则让后续调用仍要处理接近原规模的数据。表示方式还会决定是否复制数据。
+报表 42 的页面可能要按数值指标排序。quicksort（快速排序）先选 pivot（基准值）再分区，分区大小决定递归树的高度；连续偏斜时，即使每层都正确排序，也会反复处理接近原规模的子数组。选择分区方式时还要看算法是否修改输入、是否复制数据以及递归深度。
 
-### Sorting
+### 三路分区怎样处理小于、等于和大于基准的值？
 
-#### Quicksort
-
-This array-building version is easy to inspect, but it is not in-place. With balanced partitions it takes O(n log n) time; an adversarial sequence of pivots can take O(n²) time and O(n) recursive stack space.
+下面是易检查的数组构造版：每轮把值放入 lower、equal、higher 三个新数组，递归只处理两侧。例子以数组中间位置的值为所选 pivot；这不保证它是中位数。输入应是同一可比较域中的有限数字，否则 NaN 或混合类型会破坏比较的分区含义。
 
 ~~~javascript
 function quickSort(values) {
@@ -4380,34 +4444,97 @@ function quickSort(values) {
 }
 ~~~
 
-For application code, prefer the built-in sort with an explicit comparator for numeric data: `values.sort((a, b) => a - b)` mutates the array, while `values.toSorted((a, b) => a - b)` returns a sorted copy where supported. Without a comparator, array elements are compared as strings. ECMAScript requires stable sorting; the engine's specific sorting algorithm is an implementation detail. See [ECMAScript 2020, Array.prototype.sort](https://tc39.es/ecma262/2020/#sec-array.prototype.sort).
+以 [5,2,4,1,3] 为例，pivot=4：
 
----
+| 阶段 | 中间结果 |
+|---|---|
+| 分区 | lower=[2,1,3]，equal=[4]，higher=[5] |
+| 递归 | quickSort(lower)=[1,2,3]，quickSort(higher)=[5] |
+| 拼接返回 | [1,2,3]+[4]+[5]=[1,2,3,4,5] |
 
-[Back to the main question / 返回主问题](#32.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
-## 39. Which units should a text algorithm count and compare? / 文本算法应按什么单位计数和比较？
+所有与 pivot 相等的值一次归入 equal，不再递归；因此大量相同值时三路分区可减少后续工作。
 
-Choose the unit from the behavior you need. Code units support storage indexing, code points represent Unicode values, and grapheme clusters better match many user-perceived characters. Formatting, comparison, and counting should use the same explicit assumptions. / 按任务选择单位。编码单元适合存储索引，码点表示 Unicode 值，字素簇更接近许多用户感知的字符。格式化、比较和计数都应明确所用假设。
+### 为什么分区平衡决定递归深度？
 
-### String algorithms
+每次分区本身扫描 n 个值，成本 Θ(n)。若每次约分成两半，递推式 T(n)=2T(n/2)+Θ(n)：每层合计处理约 n 项，约有 log₂n 层，所以总时间 Θ(n log n)、递归深度 O(log n)。若一侧为空、另一侧含 n−1 项，递推式 T(n)=T(n−1)+Θ(n)，各层工作是 n+(n−1)+…+1=n(n+1)/2，因此总时间 Θ(n²)、栈深 O(n)。取数组中间下标作为 pivot 并不保证分区平衡。例如 [7,5,3,1,2,4,6] 的中点值先是 1；递归较大侧后，下一个中点又是 2，再接着是 3，连续成为当前最小值，产生这种偏斜切分。
 
-The examples iterate Unicode code points with `Array.from`; that keeps surrogate pairs together. A user-perceived character can contain multiple code points, so grapheme-aware text operations need segmentation and may also need normalization.
+这段数组构造实现不是原地排序。每个递归调用为 lower、equal、higher 分配新数组，随后还分配拼接结果；不能只把递归栈当作空间成本。若切分平衡，每层处理的元素总量为 O(n)，累计数组分配为 O(n log n)，沿一条递归路径同时保留的分区规模按 n+n/2+n/4+… 增长为 O(n)；若反复偏斜，递归栈深 O(n)，沿栈仍可引用长度约为 n、n−1、n−2… 的分区数组，累计分配及保留数组总量可达 O(n²)。这里的累计分配不是峰值存活内存；实际回收时机由运行时决定。若目标是生产排序，通常优先用内置排序并明确比较器。
 
-#### Palindrome check
+### 内置排序何时修改数组，何时保留副本？
 
 ~~~javascript
-function isPalindrome(value) {
-  const characters = Array.from(String(value));
-  for (let left = 0, right = characters.length - 1; left < right; left++, right--) {
-    if (characters[left] !== characters[right]) return false;
+const values = [80, 9, 12];
+const sortedInPlace = values.sort((a, b) => a - b);
+
+const copyInput = [80, 9, 12];
+const sortedCopy = copyInput.toSorted((a, b) => a - b);
+~~~
+
+sort 会把 values 原地改为 [9,12,80]；toSorted 则让 copyInput 保持 [80,9,12] 并返回一个新数组，要求运行环境支持该方法。长度为 n 的返回副本至少要写出 n 个元素；排序本身的工作和副本存储要分开算。省略比较器时，元素按字符串比较，例如 80 会排在 9 之前。数值排序要显式给出比较器。ECMAScript 2019 及之后要求排序稳定：比较器判定相等的元素保留原相对顺序；具体采用何种排序算法是引擎实现细节。
+
+> [!example] 数值排序比较器
+> [80, 9, 12].sort() 会按字符串顺序得到 [12, 80, 9]；使用 (a,b)=>a-b 才按数值递增得到 [9, 12, 80]。若排序对象数组，比较器返回 0 的对象在稳定排序后保持输入中的相对次序。
+
+> [!info]- 来源
+> - 内置排序稳定性、比较器和原地 sort 语义：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.sort)，ECMAScript 2026。
+> - 返回副本的 toSorted 语义：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.tosorted)，ECMAScript 2026；Node.js v26.11.1 本地复算示例。
+## 39. 文本算法应按码元、码点还是字素簇处理？
+
+报表 42 的事件描述可能含 emoji、组合重音或其他扩展文字。JavaScript 字符串索引、Unicode 码点和用户看到的字符不是同一种单位：先定义任务要计数、比较或切分什么，再实现算法。这里第一次说明三个单位：UTF-16 code unit（UTF-16 编码单元）、Unicode code point（Unicode 码点）和 extended grapheme cluster（扩展字素簇）。
+
+### 三种长度会怎样不同？
+
+JavaScript String.length 返回 UTF-16 编码单元数。Array.from 对字符串迭代时把有效代理对组合成一个码点，孤立代理仍单独保留，但组合附加符仍是另一个码点。Intl.Segmenter 的 grapheme 模式按 locale（语言环境）与实现提供的分段规则给出字素簇；这通常接近用户感知字符，但规则可定制，不能把某个 Node 运行时的结果等同于当前 UAX #29 版本的每条边界规则。
+
+~~~javascript
+const sample = 'A😀e\u0301';
+const codeUnits = sample.length;
+const codePoints = Array.from(sample);
+const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+const graphemes = Array.from(segmenter.segment(sample), part => part.segment);
+
+console.log(codeUnits);              // 5
+console.log(codePoints.length);      // 4
+console.log(graphemes);              // ['A', '😀', 'é']
+console.log(graphemes.length);       // 3
+~~~
+
+这里 A 占 1 个码元和 1 个码点；😀 是代理对，占 2 个码元、1 个码点；e 加 U+0301 组合重音占 2 个码元、2 个码点，却通常成为 1 个字素簇。字符计数不能代替存储大小：若限制请求字节数，还要另外按明确编码计算字节。
+
+Array.from 不会自动把规范等价的不同码点序列变成相同序列。例如预组字符 é 与 e 加组合重音肉眼可相同，但码点逐个比较不同：'é' === 'e\u0301' 为 false，而 NFC 归一化后两者相等。若业务要求规范等价比较，可在明确边界使用 normalize('NFC')；保留原始输入时不要无意改写其码点序列。
+
+### 回文和连续重复要比较什么单位？
+
+原示例的回文函数按码点逆向比较，所以它把代理对当作单个元素，但不会把规范等价序列归一化；若要按用户可见单元比较，先用 Segmenter 切成字素簇。相同函数逻辑可接受不同切分结果：
+
+~~~javascript
+function isPalindromeByCodePoint(value) {
+  const units = Array.from(value);
+  for (let left = 0, right = units.length - 1; left < right; left++, right--) {
+    if (units[left] !== units[right]) return false;
+  }
+  return true;
+}
+
+function splitGraphemes(value, locale = 'en') {
+  const segmenter = new Intl.Segmenter(locale, { granularity: 'grapheme' });
+  return Array.from(segmenter.segment(value), part => part.segment);
+}
+
+function isPalindromeByGrapheme(value) {
+  const units = splitGraphemes(value);
+  for (let left = 0, right = units.length - 1; left < right; left++, right--) {
+    if (units[left] !== units[right]) return false;
   }
   return true;
 }
 ~~~
 
-#### Longest consecutive character
+这两个函数都用精确字符串相等比较；若文字规范化属于需求，应先明确是否按 NFC 归一化。UAX #29 的默认扩展字素簇是可复现的分段规则，但语言或应用可进行 tailor（定制），也不是编码字节长度。
 
-Returns the first longest run. Empty input returns an empty character and length zero.
+最长连续重复示例按码点统计完全相同的连续项，并在并列时返回第一个最长段；空字符串返回空字符、长度 0。对 Array.from('😀😀A')，结果是字符 😀、长度 2，而按 UTF-16 下标遍历会把每个 emoji 拆成两个码元。
+
+以 `AABB` 走查循环：第 2 个 A 使当前段长到 2；读到第一个 B 时先结算 A，best 变成 A/2；第 2 个 B 使当前段长到 2；循环最后一次以 i===length 结算 B。因更新条件是 `currentLength > bestLength` 而非大于等于，并列保留先出现的 A，尾段也不会漏掉。
 
 ~~~javascript
 function longestConsecutive(value) {
@@ -4418,9 +4545,8 @@ function longestConsecutive(value) {
   let bestLength = 1;
   let currentLength = 1;
   for (let i = 1; i <= characters.length; i++) {
-    if (i < characters.length && characters[i] === characters[i - 1]) {
-      currentLength++;
-    } else {
+    if (i < characters.length && characters[i] === characters[i - 1]) currentLength++;
+    else {
       if (currentLength > bestLength) {
         bestLength = currentLength;
         bestChar = characters[i - 1];
@@ -4432,9 +4558,9 @@ function longestConsecutive(value) {
 }
 ~~~
 
-#### Number formatting (thousand separators)
+### 数字显示和大小写转换如何明确边界？
 
-For display, use locale-aware formatting and specify a locale when output must be stable across machines. The manual version below accepts only strings containing an optional minus sign and decimal digits; use locale-aware formatting for numeric values and localized output.
+展示数值通常使用 Intl.NumberFormat，并显式指定 locale，避免依赖用户机器默认区域。格式化规则仍可能受运行时国际化数据版本影响；若输出用于协议或稳定快照，不应把本地化显示当作机器可解析格式。手写版本仅接受可选负号和 ASCII 十进制数字组成的整数字符串，不接受小数、空格或本地化数字。
 
 ~~~javascript
 function formatNumber(value, locale = 'en-US') {
@@ -4442,16 +4568,18 @@ function formatNumber(value, locale = 'en-US') {
 }
 
 function formatIntegerThousands(text) {
-  if (typeof text !== 'string' || !/^-?\d+$/.test(text)) throw new TypeError('expected an integer string');
+  if (typeof text !== 'string' || text.trim() !== text || !/^-?\d+$/.test(text)) {
+    throw new TypeError('expected an integer string');
+  }
   const sign = text.startsWith('-') ? '-' : '';
   const digits = sign ? text.slice(1) : text;
   return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 ~~~
 
-#### Switch ASCII letter case
+这个正则适合本例限定的 ASCII 整数字符串；普通回溯引擎可能在多个位置的前瞻中重复检查后缀，因此不对任意实现或输入规模声称线性时间。若要明确的单趟线性处理，可从右向左每三位分组再拼接；展示数字则优先使用 `Intl.NumberFormat`。
 
-This example changes only the English ASCII letters A-Z and a-z; other code points are preserved.
+大小写切换示例只变换 ASCII A–Z 与 a–z，其他码点保持不变。它不是适用于所有语言的大小写转换：Unicode 大小写映射可能依赖 locale，且转换前后长度也未必相同。
 
 ~~~javascript
 function switchAsciiCase(value) {
@@ -4464,9 +4592,11 @@ function switchAsciiCase(value) {
 }
 ~~~
 
----
-
-[Back to the main question / 返回主问题](#32.%20How%20do%20input%20constraints%20and%20access%20patterns%20determine%20algorithm%20choice%20and%20complexity?%20/%20%E8%BE%93%E5%85%A5%E7%BA%A6%E6%9D%9F%E4%B8%8E%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%E5%A6%82%E4%BD%95%E5%86%B3%E5%AE%9A%E7%AE%97%E6%B3%95%E9%80%89%E6%8B%A9%E5%92%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9F).
+> [!info]- 来源
+> - JavaScript 字符串的 UTF-16 表示及字符串迭代按码点处理：[ECMAScript 2026 text processing](https://tc39.es/ecma262/2026/multipage/text-processing.html)，String value 与 StringIterator。
+> - 构造器入口：[ECMA-402 2026 §8.2.7 `Intl.NumberFormat`](https://tc39.es/ecma402/2026/#sec-intl.numberformat)、[§8.2.10 `Intl.Segmenter`](https://tc39.es/ecma402/2026/#sec-intl.segmenter)；格式化机制见 [§16 NumberFormat Objects](https://tc39.es/ecma402/2026/#numberformat-objects)，分段机制见 [§19 Segmenter Objects](https://tc39.es/ecma402/2026/#segmenter-objects)。Node.js v26.11.1 只用于复算本例行为，不据此断言运行时采用 UAX #29 rev.49。
+> - 字素簇默认边界与适用限制：[Unicode Standard Annex #29, Unicode 18.0.0, Revision 49](https://www.unicode.org/reports/tr29/tr29-49.html)，2026-09-01；以 extended grapheme cluster 作默认分段，允许声明定制。
+> - 数字安全整数上限：[ECMAScript 2026 Number.MAX_SAFE_INTEGER](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-number.max_safe_integer)，2⁵³−1。
 ## 40. Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？
 
 Big-O describes how work grows, but data layout and dependency determine how quickly a processor can obtain that work. A contiguous scan often runs efficiently because its addresses are predictable and independent loads can overlap; a linked-list walk has a dependent pointer chain, but a cache miss does not automatically stop every part of the CPU.
@@ -4535,7 +4665,7 @@ An intrusive list can remove a separately allocated wrapper. Object placement an
 | 结构体填充 | 对齐要求会插入填充字节并增大对象；字段顺序也可能影响空间，仍受 ABI 与访问模式约束。`sizeof` 与成员偏移是否显示出实际空间问题？ |
 | 增加核心数 | 独立工作可扩展，直到共享内存带宽、一致性流量或同步争用成为瓶颈。增加核心后，负载是计算受限、带宽受限还是争用受限？[Intel 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)、[Linux 伪共享指南](https://docs.kernel.org/kernel-hacking/false-sharing.html) |
 
-**Related notes / 相关笔记：** [Core Data Structures](#33.%20Which%20data%20structure%20fits%20the%20access%20pattern,%20and%20when%20do%20its%20cost%20bounds%20hold?%20/%20%E5%93%AA%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%82%E5%90%88%E5%BD%93%E5%89%8D%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) explains tree structure and list-operation bounds; [Practical Data Structure Implementations](#35.%20How%20can%20an%20LRU%20cache%20find%20an%20entry%20and%20update%20recency%20efficiently?%20/%20LRU%20%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E9%AB%98%E6%95%88%E6%89%BE%E5%88%B0%E6%9D%A1%E7%9B%AE%E5%B9%B6%E6%9B%B4%E6%96%B0%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) shows an LRU cache locating a list node through a map before moving that known node.
+**Related notes / 相关笔记：** [Core Data Structures](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) explains tree structure and list-operation bounds; [Practical Data Structure Implementations](#35.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) shows an LRU cache locating a list node through a map before moving that known node.
 
 ### Sources / 来源
 

@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d3b48625bdb05879c239ff4f07f9d07904e34c2cd5a96fc325d89b147687072a -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=f2be01e5c17b1a41041fe941c684516a48aadfb00bd8ad26dbecf7f2afe4bffe -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -130,14 +130,14 @@
 - [ ] 114. [How do deployment components carry a request and share responsibilities? / 部署组件怎样承接请求并分担职责？](../engineering-foundations/infrastructure/production-application-runtime.md)
 - [ ] 115. [How do you promote one validated artifact and recover each state layer safely? / 如何晋级已验证产物并分别恢复各层状态？](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)
 - [ ] 116. [How do you diagnose an API SLO violation? / 如何诊断 API SLO 违约？](../engineering-foundations/reliability/observability-slos-and-incident-response.md)
-- [ ] 117. [How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？](../engineering-foundations/algorithms/algorithms-and-complexity.md)
-- [ ] 118. [Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？](../engineering-foundations/algorithms/core-data-structures.md)
-- [ ] 119. [How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？](../engineering-foundations/algorithms/queue-and-stack-representations.md)
-- [ ] 120. [How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？](../engineering-foundations/algorithms/practical-data-structure-implementations.md)
-- [ ] 121. [How do ordered inputs enable binary search and two pointers? / 有序输入怎样支持二分查找和双指针？](../engineering-foundations/algorithms/ordered-array-search.md)
-- [ ] 122. [How do you choose a dynamic programming state and update order? / 动态规划怎样选择状态和更新顺序？](../engineering-foundations/algorithms/dynamic-programming-state-and-order.md)
-- [ ] 123. [Why do partition choices change quicksort costs? / 分区选择为什么会改变快速排序的代价？](../engineering-foundations/algorithms/partitioning-and-sorting-costs.md)
-- [ ] 124. [Which units should a text algorithm count and compare? / 文本算法应按什么单位计数和比较？](../engineering-foundations/algorithms/text-units-and-algorithms.md)
+- [ ] 117. [怎样根据输入约束和访问模式选择算法？](../engineering-foundations/algorithms/algorithms-and-complexity.md)
+- [ ] 118. [数据结构如何匹配访问方式，复杂度界何时成立？](../engineering-foundations/algorithms/core-data-structures.md)
+- [ ] 119. [队列和栈怎样表示待处理工作？](../engineering-foundations/algorithms/queue-and-stack-representations.md)
+- [ ] 120. [最近最少使用缓存怎样按键查找并更新最近使用顺序？](../engineering-foundations/algorithms/practical-data-structure-implementations.md)
+- [ ] 121. [有序数据怎样让二分查找和双指针安全排除候选？](../engineering-foundations/algorithms/ordered-array-search.md)
+- [ ] 122. [动态规划如何定义状态并安排更新顺序？](../engineering-foundations/algorithms/dynamic-programming-state-and-order.md)
+- [ ] 123. [分区如何改变快速排序的时间和空间代价？](../engineering-foundations/algorithms/partitioning-and-sorting-costs.md)
+- [ ] 124. [文本算法应按码元、码点还是字素簇处理？](../engineering-foundations/algorithms/text-units-and-algorithms.md)
 - [ ] 125. [Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)
 - [ ] 126. [Why does the Linux kernel embed list nodes in their objects? / Linux 内核为什么把链表节点嵌入对象？](../engineering-foundations/operating-systems/intrusive-lists-in-linux.md)
 - [ ] 127. [How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？](../engineering-foundations/architecture/software-design-principles.md)

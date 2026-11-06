@@ -1,29 +1,46 @@
-# How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？
+# 怎样根据输入约束和访问模式选择算法？
 
-Choose an algorithm by the invariant the input provides, then count the work and storage required as the input grows. Dynamic programming reuses overlapping states; binary search discards half of a sorted search range; two pointers move only when ordering proves a region cannot contain the answer. Big-O summarizes that growth under stated assumptions, while representation, allocation, memory locality, and runtime constants still affect elapsed time.
+报表请求已从数据库得到 acct-17 的 report 42 事件页：1,024 条，按 (occurred_at, event_id) 升序排列。接口要定位游标、显示分类树、缓存最近查看的页面，并按事件描述处理 Unicode（统一码）文本。选算法前先写明输入保证、要执行的操作和结果约束；只有这样才能证明候选范围可以丢弃，并估计成本。
 
-先利用输入所提供的不变量选择算法，再计算输入规模增长时所需的操作和存储。动态规划复用重叠子问题，二分查找利用有序性缩小搜索区间，双指针则只在排序等条件足以证明某一段不含答案时移动。Big-O 概括这些前提下的增长趋势；表示方式、分配、内存局部性和运行时常数仍会影响实际耗时。
+本篇给出选型与复杂度模型。后续章节分别回答[数据结构怎样匹配访问方式](core-data-structures.md)、[队列和栈怎样表示待处理工作](queue-and-stack-representations.md)、[LRU 如何维护按键查找与新近顺序](practical-data-structure-implementations.md)、[有序数据怎样缩小候选范围](ordered-array-search.md)、[动态规划怎样定义状态和更新顺序](dynamic-programming-state-and-order.md)、[分区如何改变排序成本](partitioning-and-sorting-costs.md)和[文本算法应选哪种字符单位](text-units-and-algorithms.md)。
 
-Big-O leaves out cache locality, memory bandwidth, and dependent loads. See [Memory Hierarchy and Data Locality / 内存层次与数据局部性](../operating-systems/memory-hierarchy-and-data-locality.md) for the hardware costs that can change elapsed time without changing an operation's asymptotic bound.
+## 先写明不变量，再选方法
 
-## Match the technique to the input / 按输入约束选择方法
+事件页按复合键 (occurred_at, event_id) 排序，因此可用相同规则二分定位游标；这不意味着 event_id 单独有序。若顺序、键或空值排序规则改变，数据顺序和比较器也要一起改变。若数据未排序，则不能直接二分；可扫描，或先排序并计入预处理成本。
 
-- When several states repeat and each can be defined from earlier ones, choose a [dynamic programming state and update order](dynamic-programming-state-and-order.md).
-- When order rules out a group of candidates, use [binary search or two pointers](ordered-array-search.md) and prove why the discarded range is safe to ignore.
-- If the job is reordering, inspect how [partition balance and copying change sorting cost](partitioning-and-sorting-costs.md).
-- For text, choose [the units that define length and equality](text-units-and-algorithms.md) before analyzing a loop.
+~~~mermaid
+flowchart LR
+    I[输入保证与规模] --> O[需要执行的操作]
+    O --> P[可证明的候选排除或状态复用]
+    P --> C[时间、空间与分配成本]
+    C --> V[用边界输入复算结果]
+~~~
 
-## Big-O reference
+例如，有序页中每次中点比较可以排除一半范围；动态规划复用相同子问题的结果；队列用头下标出队可免于搬移其余项。若缺少相应不变量，复杂度表中的数字便不适用。
 
-| Complexity | Typical example | Condition |
+## Big-O 表示增长，不是耗时承诺
+
+Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外空间的渐近上界，省略常数因子和低阶项。这里 n 是元素数；背包问题的 W 是数值容量，不是表示容量所需的位数。期望复杂度还依赖哈希分布等假设，需要明确标出。
+
+| 增长量 | 典型例子 | 成立条件 |
 |---|---|---|
-| O(1) | Array index access | Indexed access, not search |
-| O(1) average | Hash-table lookup | Expected under ordinary hash distribution |
-| O(log n) | Binary search; balanced BST operation | Sorted input or bounded tree height |
-| O(n) | Linear scan | One pass |
-| O(n log n) | Merge sort; balanced quicksort | Quicksort can degrade to O(n²) |
-| O(n²) | Nested scan; simple quadratic sort | Depends on input size and algorithm |
-| O(2^n) | Naive recursive Fibonacci; subset enumeration | Exponential growth |
-| O(n!) | Permutation enumeration | Factorial growth |
+| O(1) | 数组下标访问 | 下标已知且合法；按值查找不是常数时间 |
+| O(1) 期望 | 哈希表查找 | 哈希值充分分散；这是期望模型，不是所有实现的严格界 |
+| O(log n) | 有序数组二分、平衡搜索树 | 数据有序或树高受不变量约束 |
+| O(n) | 顺序扫描 | 每个元素检查常数次 |
+| O(n log n) | 归并排序、较均衡的快速排序 | 快速排序最坏会退化到 O(n²) |
+| O(n²) | 两层全量扫描、平方级简单排序 | 两层循环均随 n 线性增长 |
+| O(2ⁿ) | 朴素递归 Fibonacci 的上界、枚举子集 | 搜索树节点或候选数；按每个候选常数工作计 |
+| O(n!) | 枚举所有排列 | 搜索树节点工作；每个节点做常数工作时成立 |
 
-**See also:** [Core Data Structures](./core-data-structures.md) for trees and tries, and [Practical Data Structure Implementations](./practical-data-structure-implementations.md) for LRU caches and [queues and stacks](queue-and-stack-representations.md) for removal-order implementations.
+这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](../operating-systems/memory-hierarchy-and-data-locality.md)。
+
+> [!example] 1,024 条事件页上的查找
+> 假设事件已按复合游标键升序，比较键的工作量为常数。目标位于末尾时，扫描需比较 1,024 次；二分最多进行 11 次中点探测，因为 2¹⁰=1,024，2¹¹=2,048；每次探测调用一个常数时间比较器，再判断比较结果。探测次数不等同于底层关系判断次数：若用直接 `===` 和 `<` 的标量写法，末尾命中例共做 21 次关系判断。若单次查找前要排序，预处理成本可能超过扫描。
+
+## 怎样判断选型假设是否成立？
+
+检查目标是定位还是排序、排序由谁建立且是否使用同一比较规则；是否存在可复用子问题、状态是否包含转移需要的信息；是否允许原地修改、复制、分配、扩容和递归栈是否进入内存预算；空输入、重复键、相同排序值、零容量、超大数和非 ASCII 文本是否改变结果。最后用边界输入复算返回值、副作用和复杂度条件。若不变量失效，换成线性扫描或显式预处理并计入成本。
+
+> [!info]- 来源
+> - 本章渐近复杂度表作为通用算法分析摘要；1,024 项二分中点探测上界由每轮区间减半复算。

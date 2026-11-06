@@ -55,14 +55,14 @@
 
 ### 数据访问的操作量与硬件成本
 
-- [How do input constraints and access patterns determine algorithm choice and complexity? / 输入约束与访问模式如何决定算法选择和复杂度？](algorithms/algorithms-and-complexity.md)
-- [Which data structure fits the access pattern, and when do its cost bounds hold? / 哪种数据结构适合当前访问模式，复杂度界何时成立？](algorithms/core-data-structures.md)
-- [How do FIFO and LIFO change the representation of pending work? / FIFO 与 LIFO 怎样影响待处理工作的表示？](algorithms/queue-and-stack-representations.md)
-- [How can an LRU cache find an entry and update recency efficiently? / LRU 缓存怎样高效找到条目并更新使用顺序？](algorithms/practical-data-structure-implementations.md)
-- [How do ordered inputs enable binary search and two pointers? / 有序输入怎样支持二分查找和双指针？](algorithms/ordered-array-search.md)
-- [How do you choose a dynamic programming state and update order? / 动态规划怎样选择状态和更新顺序？](algorithms/dynamic-programming-state-and-order.md)
-- [Why do partition choices change quicksort costs? / 分区选择为什么会改变快速排序的代价？](algorithms/partitioning-and-sorting-costs.md)
-- [Which units should a text algorithm count and compare? / 文本算法应按什么单位计数和比较？](algorithms/text-units-and-algorithms.md)
+- [怎样根据输入约束和访问模式选择算法？](algorithms/algorithms-and-complexity.md)
+- [数据结构如何匹配访问方式，复杂度界何时成立？](algorithms/core-data-structures.md)
+- [队列和栈怎样表示待处理工作？](algorithms/queue-and-stack-representations.md)
+- [最近最少使用缓存怎样按键查找并更新最近使用顺序？](algorithms/practical-data-structure-implementations.md)
+- [有序数据怎样让二分查找和双指针安全排除候选？](algorithms/ordered-array-search.md)
+- [动态规划如何定义状态并安排更新顺序？](algorithms/dynamic-programming-state-and-order.md)
+- [分区如何改变快速排序的时间和空间代价？](algorithms/partitioning-and-sorting-costs.md)
+- [文本算法应按码元、码点还是字素簇处理？](algorithms/text-units-and-algorithms.md)
 - [Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？](operating-systems/memory-hierarchy-and-data-locality.md)
 - [Why does the Linux kernel embed list nodes in their objects? / Linux 内核为什么把链表节点嵌入对象？](operating-systems/intrusive-lists-in-linux.md)
 
