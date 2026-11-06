@@ -20,15 +20,15 @@
 
 - [DOM 事件如何传播，何时适合事件委托？](browser-apis/dom-manipulation-and-events.md)
 - [浏览器 JavaScript 何时运行，画面何时更新？](runtime/event-loop.md)
-- [How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？](frameworks/react-basics.md)
-- [How do I compose components and reusable behavior around an interaction? / 如何围绕交互组合组件与可复用行为？](frameworks/react-component-composition.md)
-- [How can a React search interface stay responsive as results update? / React搜索界面如何在更新结果时保持响应？](frameworks/advanced-react.md)
-- [How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？](frameworks/react-server-state-and-optimistic-updates.md)
-- [Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？](frameworks/react-error-boundaries.md)
+- [React如何把一次用户操作变成界面更新？](frameworks/react-basics.md)
+- [如何在React中组合组件与复用行为？](frameworks/react-component-composition.md)
+- [如何让报表筛选在昂贵更新时保持响应？](frameworks/advanced-react.md)
+- [React界面如何维护服务端数据与乐观更新的正确性？](frameworks/react-server-state-and-optimistic-updates.md)
+- [React错误边界能恢复哪些失败？](frameworks/react-error-boundaries.md)
 - [为什么一次 DOM 改动会增加布局或绘制工作？](html-css/rendering-pipeline-and-forced-layout.md)
 - [如何测量并诊断网页性能问题？](performance/performance-metrics-and-analysis.md)
-- [How should you reduce unnecessary React rendering work? / 如何减少不必要的 React 渲染工作？](performance/react-rendering-optimization.md)
-- [When does virtual scrolling help a long list? / 长列表何时适合使用虚拟滚动？](performance/rendering-and-computation-optimization.md)
+- [如何测量并减少不必要的React工作？](performance/react-rendering-optimization.md)
+- [长报表列表何时适合虚拟滚动？](performance/rendering-and-computation-optimization.md)
 
 ### 结构、布局与可访问交互
 
@@ -92,7 +92,7 @@
 
 ### 框架、工具选择与交付验收
 
-- [How should I choose a frontend framework for a product? / 如何为产品选择前端框架？](frameworks/virtual-dom-and-framework-selection.md)
+- [如何为产品选择前端框架？](frameworks/virtual-dom-and-framework-selection.md)
 - [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](frameworks/react-routing-and-navigation.md)
 - [How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？](frameworks/next-js.md)
 - [When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？](libraries/lodash.md)

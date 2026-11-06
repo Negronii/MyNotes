@@ -1,131 +1,93 @@
-# How do I compose components and reusable behavior around an interaction? / 如何围绕交互组合组件与可复用行为？
+# 如何在React中组合组件与复用行为？
 
-**Core answer / 核心回答：** Use props and callbacks for direct data flow, Context or a store for shared values, custom Hooks for reusable stateful logic, and refs for narrow imperative actions. Use memoization only when profiling or an identity boundary shows a benefit; keep legacy render-prop and wrapper APIs when they make the contract clearer. / 直接数据流使用 props 与回调，共享值使用 Context 或 store，可复用有状态逻辑使用自定义 Hook，窄范围命令式操作使用 ref。只有性能分析或明确的引用边界证明有收益时才加 memo；当旧的 render-prop 或包装器 API 能更清楚表达契约时，可以继续使用。
+**案例背景。** 报表页的浏览器地址为 `/reports?sort=recent#summary`；服务端按 `sort=recent` 返回 May、April，`#summary` 只供浏览器定位。选择 **Oldest first** 后，排序状态变成 `oldest`，可见顺序应为 April、May。这个排序状态要同时驱动工具栏的选中状态和列表顺序，因此由包含二者的最近共同父组件持有；列表只拿已排序的报表数组，工具栏收到更新回调。沿 props（属性）、Context（上下文）、自定义 Hook（自定义钩子）、ref（引用）逐层选择能表达清楚所有权的边界，不把组件组合变成隐式的全局通信。
 
-## How can components communicate? / React组件如何通信？
+本章片段只展示组件之间的 state 归属，不实现 URL 与历史栈；完整应用用[浏览器主线的 `pushState` 与 `popstate` 路径](../browser/browser-navigation-and-history.md#让筛选状态跟随地址栏与前进后退)新增筛选历史并在后退时恢复排序。
 
-**Core answer / 核心回答：** Keep data flow explicit: pass data down with props, send events up with callback props, and use Context or a store when many distant consumers need shared state. Refs expose imperative capabilities; they are not a substitute for state that drives visible UI. / 保持数据流清晰：用 props 向下传数据，用回调 props 向上传事件；多个较远组件需要共享状态时再考虑 Context 或 store。ref 用于暴露命令式能力，不应替代驱动界面的 state。
+## 把状态放在共同使用者之上的最近一层
 
-~~~jsx
-const ThemeContext = createContext("light");
+排序按 ISO 日期字段 `periodStart` 进行，显示标签 `period` 不参与排序；最近共同父组件持有排序状态，并把它传给工具栏和列表。
 
-function App() {
-  return (
-    <ThemeContext.Provider value="dark">
-      <Toolbar />
-    </ThemeContext.Provider>
-  );
-}
+~~~tsx
+import { useState } from "react";
 
-function Toolbar() {
-  const theme = useContext(ThemeContext);
-  return <div className={theme}>Toolbar</div>;
-}
-~~~
+type SortOrder = "recent" | "oldest";
+type Report = { id: string; period: string; periodStart: string; title: string };
 
-A child can notify its parent through a callback prop. Use Context for values such as theme or locale that are needed across a subtree; a store can help when shared state and update patterns grow more complex. Custom Hooks share stateful logic, but each call has its own Hook state unless the Hook deliberately connects to shared state. Avoid using an event bus as a default substitute for React's data flow.
-
-## When should you use memo, useMemo, or useCallback? / 何时使用 memo、useMemo和useCallback？
-
-**Core answer / 核心回答：** These are performance tools, not correctness tools. React.memo can skip rendering when props compare equal; useMemo caches a calculated value; useCallback caches a function reference. Add them when profiling or a specific identity boundary shows they help. / 这些 API 是性能工具，不是正确性工具。React.memo 可在 props 比较相等时跳过渲染；useMemo 缓存计算值；useCallback 缓存函数引用。只有性能分析或明确的引用边界表明它们有帮助时再使用。
-
-~~~jsx
-import { memo, useCallback, useMemo } from "react";
-
-function ListContainer({ items, onSelect }) {
-  const sortedItems = useMemo(
-    () => [...items].sort((a, b) => a.name.localeCompare(b.name)),
-    [items]
-  );
-
-  const handleSelect = useCallback((id) => {
-    onSelect(id);
-  }, [onSelect]);
-
-  return <ItemList items={sortedItems} onSelect={handleSelect} />;
-}
-
-const ItemList = memo(function ItemList({ items, onSelect }) {
-  return items.map(item => (
-    <button key={item.id} onClick={() => onSelect(item.id)}>
-      {item.name}
-    </button>
-  ));
-});
-~~~
-
-React.memo's default prop comparison uses Object.is per prop. A component can still render when its own state or consumed context changes; one newly created object or function prop can also prevent a skip. Inline handlers are ordinary JavaScript and are not automatically a performance bug. Keep state near its consumers, avoid unnecessary Effects that trigger render chains, and use the React Profiler to find a real hotspot.
-
-React may discard a useMemo cache in documented circumstances. Do not depend on memoization for resource lifetime, semantic identity, or correctness.
-
-## What does useRef do? / useRef有什么作用？
-
-**Core answer / 核心回答：** useRef returns a stable object whose current field can hold a value between renders. Changing current does not request a render, so use refs for DOM access and bookkeeping, not for displayed state. / useRef 返回一个在多次渲染间保持稳定的对象，其 current 字段可保存可变值。修改 current 不会请求重新渲染，因此 ref 适合 DOM 访问和内部记录，不适合驱动可见界面的状态。
-
-~~~jsx
-function SearchBox() {
-  const inputRef = useRef(null);
-
-  return (
-    <>
-      <input ref={inputRef} />
-      <button onClick={() => inputRef.current?.focus()}>
-        Focus
-      </button>
-    </>
-  );
-}
-~~~
-
-Other suitable values include a timer ID or an external instance. Do not read or write refs during rendering except for initialization. Use state when a change must update the screen.
-
-## What do forwardRef and useImperativeHandle do? / forwardRef和useImperativeHandle有什么作用？
-
-**Core answer / 核心回答：** In React 18 and earlier, forwardRef lets a component accept and forward a parent's ref; useImperativeHandle can expose a narrow command API. In React 19, a function component can receive ref as a prop, so forwardRef is no longer necessary for new React 19-only components. / React 18 及更早版本中，forwardRef 让组件接收并转发父组件传入的 ref；useImperativeHandle 可暴露范围较小的命令式 API。React 19 的函数组件可以把 ref 作为 prop 接收，因此仅面向 React 19 的新组件不再需要 forwardRef。
-
-~~~jsx
-import { forwardRef, useImperativeHandle, useRef } from "react";
-
-const SearchInput = forwardRef(function SearchInput(props, forwardedRef) {
-  const input = useRef(null);
-  useImperativeHandle(forwardedRef, () => ({
-    focus() {
-      input.current?.focus();
-    }
-  }), []);
-  return <input {...props} ref={input} />;
-});
-
-function SearchForm() {
-  const search = useRef(null);
-  return (
-    <>
-      <SearchInput ref={search} aria-label="Search" />
-      <button type="button" onClick={() => search.current?.focus()}>Focus</button>
-    </>
-  );
-}
-~~~
-
-The parent receives the `focus()` capability and the child retains ownership of its DOM node. React 19 supports receiving `ref` as a prop in the same pattern. [React `useImperativeHandle`](https://react.dev/reference/react/useImperativeHandle)
-
-## Custom Hooks and Effect cleanup / 自定义 Hook 与 Effect 清理
-
-**Core answer / 核心回答：** A custom Hook is a function whose name starts with use and that calls other Hooks at the top level. It packages reusable stateful logic; it does not share one state instance across callers by itself. / 自定义 Hook 是名称以 use 开头、并在顶层调用其他 Hook 的函数。它封装可复用的有状态逻辑；仅仅复用 Hook 本身不会让多个调用共享同一份 state。
-
-~~~jsx
-function useWindowSize() {
-  const [size, setSize] = useState({
-    width: 0,
-    height: 0
+function sortReports(reports: Report[], sort: SortOrder) {
+  return [...reports].sort((a, b) => {
+    const order = a.periodStart.localeCompare(b.periodStart);
+    return sort === "recent" ? -order : order;
   });
+}
+
+function ReportsPage({ reports, initialSort }: { reports: Report[]; initialSort: SortOrder }) {
+  const [sort, setSort] = useState(initialSort);
+  const rows = sortReports(reports, sort);
+
+  return (
+    <main>
+      <ReportToolbar sort={sort} onSortChange={setSort} />
+      <ReportList reports={rows} />
+    </main>
+  );
+}
+
+function ReportToolbar({
+  sort,
+  onSortChange
+}: {
+  sort: SortOrder;
+  onSortChange: (sort: SortOrder) => void;
+}) {
+  return (
+    <div role="group" aria-label="报表排序">
+      <button
+        type="button"
+        aria-pressed={sort === "recent"}
+        onClick={() => onSortChange("recent")}
+      >
+        Most recent
+      </button>
+      <button
+        type="button"
+        aria-pressed={sort === "oldest"}
+        onClick={() => onSortChange("oldest")}
+      >
+        Oldest first
+      </button>
+    </div>
+  );
+}
+
+function ReportList({ reports }: { reports: Report[] }) {
+  return (
+    <ul>
+      {reports.map(report => (
+        <li key={report.id}>{report.period} — {report.title}</li>
+      ))}
+    </ul>
+  );
+}
+~~~
+
+数据沿 props（属性）向下传，用户意图用 callback prop（回调属性）向上交给状态所有者。这个结构让一次点击的去向可见。若两个组件不共享状态，把 state（状态）提到更高层只会扩大更新范围；若多个远距离组件确实要读取主题、地区设置等值，可以在共同子树上用 Context；跨多个功能共享且需要统一更新策略时，再考虑 store（共享状态容器）。
+
+服务端拥有的报表记录仍属于服务端状态。把它们放进 Context 不会自动提供查询身份、缓存新鲜度、取消或变更协调；这些由[服务端状态章节](./react-server-state-and-optimistic-updates.md)讲解。
+
+## 用自定义Hook复用状态行为
+
+自定义 Hook 把同一种有状态行为封装起来，但每次调用默认有各自的 state。下面的 Hook 让多个组件共享“监听窗口大小”这一行为，而不会让它们共享同一份 `size`：
+
+~~~jsx
+import { useEffect, useState } from "react";
+
+function useWindowSize() {
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     function update() {
-      setSize({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
+      setSize({ width: window.innerWidth, height: window.innerHeight });
     }
 
     window.addEventListener("resize", update);
@@ -137,52 +99,53 @@ function useWindowSize() {
 }
 ~~~
 
-Ordinary Hooks must be called in the same order on every render, at the top level of a component or another Hook. React 19’s use API is an exception: it may appear in a condition or loop, but it still belongs inside a component or Hook and cannot be wrapped in try/catch. The lint plugin checks these Rules of Hooks. An Effect's cleanup releases the listener; root StrictMode deliberately repeats setup and cleanup once in development.
+每个 Hook（钩子）调用都注册自己的监听器；如果想共享一份外部 store，应明确连接同一 store。Effect（副作用同步）的 setup、cleanup 和过期请求处理见[更新轮次](./react-basics.md#effect在提交后同步外部系统)。Hook 通常在组件或其他 Hook 顶层以固定顺序调用。React 的 `use` API 例外：可在条件和循环中读取 Promise 或 Context，但仍须处于组件或 Hook 中，且不能放进 `try/catch`。
 
-## What are render props and higher-order components? / 什么是 render props 和高阶组件？
+React 19.2 增加的 `useEffectEvent` 用于 Effect 内部的事件式逻辑：它读取调用时最新提交的值，却不让这些值重新触发连接。它只可在本组件的 Effect 或其他 Effect Event 中调用，不应传给子组件、用作普通事件回调，或借此隐藏本来应该声明的依赖。
 
-**Core answer / 核心回答：** Render props pass a function that chooses what to render from data supplied by a component. A higher-order component takes a component and returns a wrapped component. Both remain useful API shapes in some libraries and legacy code; custom Hooks are another way to share logic, not a universal replacement. / render props 通过函数接收组件提供的数据并决定渲染内容。高阶组件接收一个组件并返回包装后的组件。它们仍适用于某些库 API 和旧代码；自定义 Hook 是共享逻辑的另一种方式，并非对二者的通用替代。
+## ref用于窄范围的命令式能力
+
+state 改变后要更新界面就用 state；ref 则持有不驱动界面的可变值，或访问已经提交的 DOM。下面父工具栏只能调用搜索框公开的 `focus()`，实际输入节点仍由子组件持有：
 
 ~~~jsx
-import { useEffect, useState } from "react";
+import { useImperativeHandle, useRef } from "react";
 
-function MouseTracker({ render }) {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    function handleMove(event) {
-      setPosition({ x: event.clientX, y: event.clientY });
+function ReportSearchInput({ ref }) {
+  const inputRef = useRef(null);
+  useImperativeHandle(ref, () => ({
+    focus() {
+      inputRef.current?.focus();
     }
-    window.addEventListener("mousemove", handleMove);
-    return () => window.removeEventListener("mousemove", handleMove);
-  }, []);
-
-  return render(position);
+  }), []);
+  return <input ref={inputRef} aria-label="搜索报表" />;
 }
 
-function PointerReadout() {
-  return <MouseTracker render={({ x, y }) => <p>Pointer: {x}, {y}</p>} />;
-}
-~~~
-
-A wrapper component can add authorization or instrumentation, but nested wrappers may make the component tree and prop flow harder to follow. Choose the API that makes ownership and behavior clear.
-
-## What are common conditional-rendering patterns? / 常见的条件渲染写法有哪些？
-
-**Core answer / 核心回答：** Use a ternary for either-or, logical AND for render-or-nothing, and an early return for a clear guard. Choose the form that makes the branches easiest to read. / 二选一可用三元表达式；只在条件成立时渲染可用逻辑 AND；明确的前置检查可用 early return。选择最容易读懂分支的写法。
-
-~~~jsx
-{isLoggedIn ? <Dashboard /> : <Login />}
-{showBanner && <Banner />}
-
-function Profile({ user }) {
-  if (!user) return <Loading />;
-  return <Content user={user} />;
+function ReportFocusControl() {
+  const searchRef = useRef(null);
+  return (
+    <>
+      <ReportSearchInput ref={searchRef} />
+      <button type="button" onClick={() => searchRef.current?.focus()}>
+        聚焦搜索
+      </button>
+    </>
+  );
 }
 ~~~
 
-Because React renders numbers, a numeric left operand can leak into the output: an empty list's length is 0, so {items.length && <List />} displays 0. Use {items.length > 0 && <List />} when that is not intended.
+React 19 的函数组件可以把 `ref`（引用）当作 prop 接收；React 18 及更早版本的组件需要 `forwardRef` 转发。若父组件只需要 `focus()`，可用 `useImperativeHandle` 暴露这个有限动作，而不把内部节点和实现一起交出去。选 API 时保留子组件的资源所有权。
 
-The examples progress from declarative data flow to imperative escape hatches. For scheduling and loading boundaries, follow [the responsive search example / 响应式搜索示例](advanced-react.md). For measuring before adding memoization, see [React rendering optimization / React 渲染优化](../performance/react-rendering-optimization.md).
+## 组合组件与旧式逻辑复用接口
 
-**Sources checked 2026-10-15** — [React memo](https://react.dev/reference/react/memo), [useMemo](https://react.dev/reference/react/useMemo), [useCallback](https://react.dev/reference/react/useCallback), [useRef](https://react.dev/reference/react/useRef), [forwardRef](https://react.dev/reference/react/forwardRef), [Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks), [Rules of Hooks lint](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), [use](https://react.dev/reference/react/use), [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects).
+children 组合可让调用方控制布局；render prop（渲染属性）把数据交给一个函数，由调用方选择渲染结构；higher-order component（高阶组件，HOC）则包装组件并返回新组件。自定义 Hook 往往适合复用 Hook 状态逻辑，但旧库的 render prop 或 HOC 也可能是明确、稳定的 API，不必只为“改成 Hook”而重写。
+
+条件分支也属于组合的一部分：二选一用三元表达式，只在条件为真时渲染用逻辑 AND，能早退时用 `if`。由于 `0 && <List />` 的结果是数字 `0`，若空数组长度可能为零，应写成 `{items.length > 0 && <List />}`。
+
+这些模式解决状态归属和行为复用。若一次交互的 React render 成本已经测出，再看[如何测量并减少不必要的React工作？](../performance/react-rendering-optimization.md)；本章不把 memoization（记忆化）当作组件组合规则。
+
+> [!info]- 来源与版本核验（React 19.3；2026-11-06）
+> - props、共享 state 与 Context 的所有权：[Passing Props to a Component](https://react.dev/learn/passing-props-to-a-component)、[Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)、[Passing Data Deeply with Context](https://react.dev/learn/passing-data-deeply-with-context)，React 19.3 文档。
+> - 自定义 Hook 与 Hook 调用边界：[Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)、[Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks)、[`use`](https://react.dev/reference/react/use)，React 19.3 文档。
+> - React 19.2 的 Effect Event 语义与限制：[useEffectEvent](https://react.dev/reference/react/useEffectEvent)，React 官方 API 参考；React 19.2 发布日期 2025-10-01，见[React Blog](https://react.dev/blog)。
+> - ref、forwardRef 与受限命令式接口：[useRef](https://react.dev/reference/react/useRef)、[forwardRef](https://react.dev/reference/react/forwardRef)、[useImperativeHandle](https://react.dev/reference/react/useImperativeHandle)，React 19.3 文档。
+> - toggle button 的 `aria-pressed` 状态：[WAI-ARIA APG — Button Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/button/)，W3C WAI 官方模式，核验日期 2026-11-06。

@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=a30d5d3286ba3eff0a8060e805d85b519496b79a2e5803d313ab5e915fb22da7 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=fb633b7bc6d0ca2d2c0b06fd1c61cd10bb2cbd9df5b99310bdcb4de86cfc5a93 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -39,15 +39,15 @@
 - [ ] 25. [脚本如何影响 HTML 解析与文档就绪？](../frontend/html-css/browser-html-and-css.md)
 - [ ] 26. [DOM 事件如何传播，何时适合事件委托？](../frontend/browser-apis/dom-manipulation-and-events.md)
 - [ ] 27. [浏览器 JavaScript 何时运行，画面何时更新？](../frontend/runtime/event-loop.md)
-- [ ] 28. [How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？](../frontend/frameworks/react-basics.md)
-- [ ] 29. [How do I compose components and reusable behavior around an interaction? / 如何围绕交互组合组件与可复用行为？](../frontend/frameworks/react-component-composition.md)
-- [ ] 30. [How can a React search interface stay responsive as results update? / React搜索界面如何在更新结果时保持响应？](../frontend/frameworks/advanced-react.md)
-- [ ] 31. [How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？](../frontend/frameworks/react-server-state-and-optimistic-updates.md)
-- [ ] 32. [Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？](../frontend/frameworks/react-error-boundaries.md)
+- [ ] 28. [React如何把一次用户操作变成界面更新？](../frontend/frameworks/react-basics.md)
+- [ ] 29. [如何在React中组合组件与复用行为？](../frontend/frameworks/react-component-composition.md)
+- [ ] 30. [如何让报表筛选在昂贵更新时保持响应？](../frontend/frameworks/advanced-react.md)
+- [ ] 31. [React界面如何维护服务端数据与乐观更新的正确性？](../frontend/frameworks/react-server-state-and-optimistic-updates.md)
+- [ ] 32. [React错误边界能恢复哪些失败？](../frontend/frameworks/react-error-boundaries.md)
 - [ ] 33. [为什么一次 DOM 改动会增加布局或绘制工作？](../frontend/html-css/rendering-pipeline-and-forced-layout.md)
 - [ ] 34. [如何测量并诊断网页性能问题？](../frontend/performance/performance-metrics-and-analysis.md)
-- [ ] 35. [How should you reduce unnecessary React rendering work? / 如何减少不必要的 React 渲染工作？](../frontend/performance/react-rendering-optimization.md)
-- [ ] 36. [When does virtual scrolling help a long list? / 长列表何时适合使用虚拟滚动？](../frontend/performance/rendering-and-computation-optimization.md)
+- [ ] 35. [如何测量并减少不必要的React工作？](../frontend/performance/react-rendering-optimization.md)
+- [ ] 36. [长报表列表何时适合虚拟滚动？](../frontend/performance/rendering-and-computation-optimization.md)
 - [ ] 37. [How do semantic HTML forms support keyboard and assistive-technology users? / 语义化 HTML 表单如何支持键盘与辅助技术用户？](../frontend/html-css/accessible-html-forms.md)
 - [ ] 38. [How does the CSS cascade decide which declaration applies? / CSS 级联如何决定最终生效的声明？](../frontend/html-css/html-and-css-basics.md)
 - [ ] 39. [How does CSS calculate an element's box size? / CSS 如何计算元素盒子的尺寸？](../frontend/html-css/box-model-and-bfc.md)
@@ -93,7 +93,7 @@
 - [ ] 79. [How does a native app expose capabilities to WebView JavaScript? / 原生应用如何向 WebView JavaScript 暴露能力？](../frontend/browser-apis/webview-javascript-bridge.md)
 - [ ] 80. [How should a UI render a streamed answer without mistaking partial output for completion? / 界面如何呈现流式回答而不把部分内容误判为完成？](../frontend/browser-apis/streaming-ux.md)
 - [ ] 81. [How can an analytics client reduce work and try to send events during navigation? / 分析客户端如何降低工作量并尝试在导航时发送事件？](../frontend/performance/analytics-event-delivery-on-navigation.md)
-- [ ] 82. [How should I choose a frontend framework for a product? / 如何为产品选择前端框架？](../frontend/frameworks/virtual-dom-and-framework-selection.md)
+- [ ] 82. [如何为产品选择前端框架？](../frontend/frameworks/virtual-dom-and-framework-selection.md)
 - [ ] 83. [How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？](../frontend/frameworks/react-routing-and-navigation.md)
 - [ ] 84. [How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？](../frontend/frameworks/next-js.md)
 - [ ] 85. [When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？](../frontend/libraries/lodash.md)

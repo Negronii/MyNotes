@@ -1,44 +1,43 @@
-# How should I choose a frontend framework for a product? / 如何为产品选择前端框架？
+# 如何为产品选择前端框架？
 
-**Core answer / 核心回答：** Start from the route's rendering, interaction, accessibility, and operational needs, then compare how candidate frameworks express updates and what the team can maintain. Prototype one representative feature and measure its real bottleneck; a virtual DOM label or a standalone benchmark does not predict project fit by itself. / 先从页面的渲染、交互、无障碍和运维需求出发，再比较候选框架如何表达更新以及团队能否长期维护。用一个有代表性的功能做原型，并测量真实瓶颈；虚拟 DOM 这一标签或单项基准测试本身都不能判断项目是否适合。
+**案例背景。** 以报表页面为例：浏览器地址是 `/reports?sort=recent#summary`，服务端实际收到 `/reports?sort=recent` 并据此返回 May、April 两行；`#summary` 只供浏览器定位。用户点 **Oldest first** 后，`pushState` 新增 `sort=oldest` 历史项，可见顺序成为 April、May；按浏览器 Back 会恢复 `sort=recent` 和 May、April。完整历史行为见[浏览器导航路径](../browser/browser-navigation-and-history.md#让筛选状态跟随地址栏与前进后退)。框架选择要回答的是团队怎样可靠地交付这类更新，以及页面还需要怎样的路由、服务端渲染、无障碍和运维支持。单说“有虚拟 DOM”不能回答这些问题。
 
+## virtual DOM（虚拟 DOM）模型说明什么？
 
-## How does reconciliation work, and does a Virtual DOM make an app faster? / React如何协调界面，虚拟DOM是否天然更快？
+React 组件以当前 props（属性）和 state（状态）返回元素描述。React 将新旧描述进行 reconciliation（协调），再把必要变化 commit（提交）到宿主环境，例如 DOM（文档对象模型）。virtual DOM（虚拟 DOM）是这类描述与协调模型的简称，不是一张真实 DOM 的副本，也不自动表示更新更快。
 
-**Core answer / 核心回答：** React components describe the UI for a particular set of props and state. React compares the next element description with the previous one, then commits the necessary host changes. “Virtual DOM” is a useful shorthand for this model, not a speed guarantee: the cost depends on the component tree, update, browser work, and framework implementation. / React 组件根据当前 props 和 state 描述界面。React 将新的元素描述与之前的结果协调，再提交必要的宿主环境变更。“虚拟 DOM”是这种模型的常见简称，不代表它天然更快；实际成本取决于组件树、更新内容、浏览器工作和框架实现。
+报表排序改变的是行的顺序。React 可以借助稳定的 `key` 将新旧行对应起来；改变的 JSX 之后是否产生 DOM 修改、修改多少，以及浏览器是否需要布局和绘制，是不同阶段的问题。完整的状态身份与提交过程见[React如何把一次用户操作变成界面更新？](./react-basics.md)。
 
-### A practical React model / React中的实用模型
+```jsx
+{reports.map(report => (
+  <ReportRow key={report.id} report={report} />
+))}
+```
 
-1. **Render / 渲染：** React calls components to calculate the next UI description. Rendering should be pure; concurrent work may be restarted or discarded.
-2. **Reconciliation / 协调：** React matches the new description to the previous tree. The exact type, position, and key rules that preserve or reset component state are explained in [React Basics / React基础](./react-basics.md); they should not be inferred from a generic “virtual DOM” slogan.
-3. **Commit / 提交：** React applies the completed changes to the host tree, such as the DOM. Effects run in their documented phase; they are not part of render.
+React 用组件类型、树中的位置和同级 key 判断状态能否保留。其他框架可以使用虚拟树协调、编译期转换或更细粒度的依赖追踪；这些是实现取舍，不是产品性能排名。框架各自的更新成本还取决于组件结构、数据量、浏览器工作和具体版本。
 
-~~~jsx
-{items.map(item => <ListItem key={item.id} item={item} />)}
-~~~
+## 用一个真实交互比较候选方案
 
-The reconciler uses heuristics rather than a general-purpose minimum-edit tree algorithm. Treat complexity claims as implementation-specific; the useful question for framework choice is what work a representative update actually causes in the framework and browser.
+先把报表页的一项代表性交互做成纵向切片：初始 URL 与服务端响应、排序控件、错误与加载状态、键盘使用、测试和部署都在范围内。比较候选时记录用户实际需要的行为，而不是只测孤立的组件基准。
 
-### Where the model helps / 适用范围
-
-Declarative rendering keeps UI descriptions aligned with state and lets the framework manage host updates. It can also add work for tiny isolated changes, and it does not remove browser layout, paint, or scripting costs. Use the browser and framework profilers to identify a real bottleneck before choosing a different rendering model.
-
-React and Vue use virtual-tree reconciliation in their standard component models. Other approaches compile templates or update fine-grained dependencies. These are implementation choices, not a universal ranking.
-
-## How do you choose a frontend framework? / 如何选择前端框架？
-
-**Core answer / 核心回答：** Choose for the product's rendering and interaction needs, the team's ability to maintain it, required integrations, accessibility, deployment constraints, and the framework's support horizon. Evaluate a representative feature before migrating; popularity or a benchmark alone cannot predict project fit. / 根据产品的渲染与交互需求、团队维护能力、所需集成、无障碍要求、部署约束和框架支持周期来选择。迁移前先实现一个有代表性的功能；流行度或单项基准测试不足以判断项目是否适合。
-
-| Decision factor | Questions to answer |
+| 需要核对的部分 | 对这张报表页的具体问题 |
 |---|---|
-| Rendering and routing | Does the product need client-only navigation, server rendering, static output, or a mix? |
-| Team and codebase | Which framework and language can the team debug, test, and upgrade? |
-| Ecosystem | Are the needed router, form, data, accessibility, and build tools supported? |
-| Operations | Can the chosen runtime, hosting model, and release process support it? |
-| Migration cost | What working behavior, tests, and integrations would need to be replaced? |
+| 页面交付 | 首次打开是否要先看到服务端生成的报表，还是可以等客户端请求？ |
+| 导航与状态 | `sort`、片段 `#summary`、刷新和浏览器返回是否保持一致？ |
+| 交互与无障碍 | 排序控件是否可用键盘操作，结果顺序变化是否容易理解？ |
+| 数据与错误 | 服务端结果怎样缓存、过期、重试，以及局部失败时显示什么？ |
+| 团队与运行 | 团队能否调试、测试、升级候选框架及其路由和构建工具？ |
+| 迁移成本 | 已有页面行为、集成和验证证据需要重做多少？ |
 
-TypeScript adds static checking and editor support, but its types are erased and do not validate runtime data. Consider the language and migration cost alongside project size and contributor turnover; there is no reliable “six-month” or “three-person” threshold.
+若切片中真正耗时的是服务端网络，换渲染模型不能缩短请求；若测得长任务来自本地计算，服务端查询或 Web Worker（网页工作线程）可能比调整组件树更合适；若大量已挂载行让 DOM 工作变重，再评估虚拟滚动。用实际交互的证据判断瓶颈，后续章节分别解释这些机制。
 
-**See also:** [React Basics / React基础](./react-basics.md) for element identity and component state; [Next.js / Next.js开发](./next-js.md) for router-specific rendering models.
+## 决定前验证边界
 
-**Sources checked 2026-10-15:** [React Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html), [Vue Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism), [React: Render and Commit](https://react.dev/learn/render-and-commit), [React: Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state), [TypeScript: erased structural types](https://www.typescriptlang.org/docs/handbook/typescript-for-oopers.html#erased-structural-types).
+框架不是唯一变量。真实环境还包括数据形状、设备、浏览器、访问性需求、发布约束和团队维护能力。保留一个候选框架的理由，应能说清它满足了哪条必要约束、测试了哪条路径，以及哪类工作仍由浏览器或服务端承担。
+
+React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](./react-basics.md)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](./react-routing-and-navigation.md)。
+
+> [!info]- 来源与版本核验（2026-11-06）
+> - 本文关于 React 描述、render 与 commit 的边界：React 19.3 当前文档，[Render and Commit](https://react.dev/learn/render-and-commit)、[Versions](https://react.dev/versions)，核验日期 2026-11-06。
+> - 框架实现可采用不同渲染机制：React 文档同上；Vue 官方文档，[Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism)，核验日期 2026-11-06。
+> - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
