@@ -1,56 +1,60 @@
-# Knowledge Navigator / 知识导航
+# 知识导航
 
-Start with an end-to-end question in a domain map, or choose a route below that connects several chapters. The domain maps also provide complete reading orders.
+先从一个完整问题进入，读完主线再展开感兴趣的机制。下方路线连接同一过程中的不同章节；领域地图提供完整阅读顺序，连续阅读稿适合一口气读下去。
 
-可以从领域地图里选一个端到端问题，也可以选下方路线串读几篇笔记。领域地图还提供完整阅读顺序。
+## 从领域开始
 
-## Start in a domain / 从领域开始
-
-| Domain / 领域 | Questions and reading order / 主线问题与阅读顺序 | Continuous reading / 连续阅读稿 |
+| 领域 | 主线与完整顺序 | 连续阅读 |
 | --- | --- | --- |
-| AI engineering / AI 工程 | [Domain map / 领域地图](../ai-engineering/index.md) | [Reading document / 连续阅读稿](generated/ai-engineering.md) |
-| Frontend / 前端 | [Domain map / 领域地图](../frontend/index.md) | [Reading document / 连续阅读稿](generated/frontend.md) |
-| Engineering foundations / 工程基础 | [Domain map / 领域地图](../engineering-foundations/index.md) | [Reading document / 连续阅读稿](generated/engineering-foundations.md) |
+| AI 工程 | [AI 工程地图](../ai-engineering/index.md) | [AI 工程连续阅读稿](generated/ai-engineering.md) |
+| 前端 | [前端地图](../frontend/index.md) | [前端连续阅读稿](generated/frontend.md) |
+| 工程基础 | [工程基础地图](../engineering-foundations/index.md) | [工程基础连续阅读稿](generated/engineering-foundations.md) |
 
-## How does an interaction update the screen? / 一次操作怎样变成界面更新？
+## 一次操作怎样变成界面更新？
 
-After the [reports page first appears / 报表页首次出现](../frontend/browser/browser-basics.md), suppose the user clicks a filter that changes the visible rows. Follow the click to the next frame. / 报表页出现后，沿一次筛选操作，看点击怎样改变下一帧里的列表。
+[报表页首次出现](../frontend/browser/browser-basics.md)之后，用户点击筛选条件。跟着这一次点击，看页面怎样得到下一帧。
 
-1. [When does JavaScript get a turn to handle the event? / JavaScript 什么时候处理这个事件？](../frontend/runtime/event-loop.md) — The event handler reads the chosen filter and requests a state update.
-2. [How does React turn state into a committed update? / React 怎样把状态变成提交的界面更新？](../frontend/frameworks/react-basics.md) — React computes the next view and commits any necessary DOM changes. When recalculating results is expensive, see [how a search interface stays responsive / 搜索界面如何保持响应](../frontend/frameworks/advanced-react.md).
-3. [What browser work can an update trigger? / 一次更新会触发哪些浏览器工作？](../frontend/html-css/rendering-pipeline-and-forced-layout.md) — Follow the changed rows through the layout, paint, and compositing work they require.
+1. [点击先交给谁，事件怎样传播？](../frontend/browser-apis/dom-manipulation-and-events.md)点击进入事件分发路径，轮到该任务执行时才调用处理器。
+2. [JavaScript 什么时候处理事件？](../frontend/runtime/event-loop.md)回调、microtask 和浏览器渲染机会相互交错。
+3. [React 怎样把状态变成界面更新？](../frontend/frameworks/react-basics.md)处理器请求状态变化，React 计算视图并提交必要的 DOM 改动。计算结果很贵时，再看[怎样让输入保持响应](../frontend/frameworks/advanced-react.md)。
+4. [DOM 改动怎样变成像素？](../frontend/html-css/rendering-pipeline-and-forced-layout.md)浏览器按改动的依赖关系完成样式、布局、绘制和合成。
+5. [如果这一帧迟到了，怎样定位原因？](../frontend/performance/performance-metrics-and-analysis.md)用同一次交互的时间线区分输入等待、执行和呈现成本。
 
-## How do you confirm an operation's result? / 怎样确认一次跨系统操作的结果？
+## 怎样确认一次跨系统操作的结果？
 
-1. [How do you confirm the outcome after a timeout or disconnect? / 超时或断线后，怎样确认结果？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md) — Identify what the caller can observe and what evidence it needs to retry safely.
-2. [What makes an account report a durable job? / 账户报表怎样成为一个可恢复的任务？](../engineering-foundations/architecture/system-design-fundamentals.md) — Follow acceptance, persistence, and the worker's final result in a concrete design.
-3. [How can an AI run survive a disconnection? / AI 运行怎样在断线后继续或恢复？](../ai-engineering/systems/ai-application-architecture.md) — Connect model calls and tool actions to the service's run state.
-4. [How does a streaming interface show the right state? / 流式界面怎样准确展示任务状态？](../frontend/browser-apis/streaming-ux.md) — Follow incremental events, local cancellation, and the server's terminal outcome.
+1. [请求超时后，怎样确认结果并重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)先明确调用者看到了什么，以及服务端可能已经完成了什么。
+2. [账户报表怎样成为可恢复的任务？](../engineering-foundations/architecture/system-design-fundamentals.md)沿受理、持久化和 worker 的最终结果建立查询依据，再看[队列确认到底证明了什么](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+3. [AI 运行怎样在断线后继续或恢复？](../ai-engineering/systems/ai-application-architecture.md)将模型调用、工具动作连接到服务保存的运行状态。
+4. [流式界面怎样准确展示任务状态？](../frontend/browser-apis/streaming-ux.md)界面收到部分内容或本地取消后，仍需区分连接状态与服务端任务终态。
 
-For a short request, start with [what the API promises / API 对调用者作什么承诺](../engineering-foundations/backend/http-api-contracts.md), then follow its [data access / 数据访问](../engineering-foundations/backend/data-access-and-connection-pools.md) or [cache / 缓存](../engineering-foundations/backend/caching-and-redis.md). Follow [how HTTP carries requests / HTTP 怎样传输请求](../engineering-foundations/networking/http-protocols-and-websockets.md) for a single exchange or [how to choose a real-time transport / 怎样选择实时传输](../engineering-foundations/networking/real-time-web-updates.md) for ongoing updates.
+短请求可以从 [API 的承诺](../engineering-foundations/backend/http-api-contracts.md)进入，继续看[数据访问](../engineering-foundations/backend/data-access-and-connection-pools.md)或[缓存新鲜度](../engineering-foundations/backend/caching-and-redis.md)。单次交换由 [HTTP](../engineering-foundations/networking/http-protocols-and-websockets.md)承载；持续更新再比较[轮询、SSE 与 WebSocket](../engineering-foundations/networking/real-time-web-updates.md)。
 
-## What evidence makes a change safe to ship? / 怎样证明一次改动可以上线？
+## 怎样证明一次改动可以上线？
 
-1. [How do you find the smallest example that exposes the bug? / 怎样找到暴露问题的最小反例？](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md) — Start with the cross-tenant lookup case and state the behavior that should hold.
-2. [Which test boundary can prove that behavior? / 应在哪一层测试才能证明这个行为？](../engineering-foundations/testing/software-testing-strategy.md) — Choose evidence for the actual risk. [Frontend testing / 前端测试](../frontend/testing/frontend-testing.md) covers user-visible behavior and the built output.
-3. [How do you take the verified artifact to production? / 怎样把验证过的产物发布到生产？](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) — Follow artifact promotion, compatibility, and rollout decisions.
-4. [Which signals tell you how production is behaving? / 哪些信号能说明生产实际表现？](../engineering-foundations/reliability/observability-slos-and-incident-response.md) — Connect user-facing objectives with diagnosis and response.
+1. [怎样找到暴露问题的最小反例？](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)从跨租户查询的失败例子确定应该成立的行为。
+2. [在哪一层测试才能证明这个行为？](../engineering-foundations/testing/software-testing-strategy.md)按真实风险选择证据；[前端测试](../frontend/testing/frontend-testing.md)还要覆盖用户行为和构建产物。
+3. [怎样把验证过的产物发布到生产？](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)跟随同一产物的晋级、兼容性检查和发布决策。
+4. [生产中的哪些信号能发现退化？](../engineering-foundations/reliability/observability-slos-and-incident-response.md)用面向用户的目标连接监测、定位和恢复。
 
-For a model, prompt, or agent change, establish the baseline and compare outcomes using [LLM evaluation / 大语言模型评估](../ai-engineering/evaluation/llm-evaluation-methods.md).
+模型、提示词或 Agent 的改动还需要[独立的任务评估](../ai-engineering/evaluation/llm-evaluation-methods.md)：训练奖励或一次成功演示不能代替发布证据。
 
-## How can an AI application answer from evidence? / AI 应用怎样凭证据回答？
+## AI 应用怎样凭证据回答？
 
-从[一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md)开始，沿一个构建失败问题，走完输入组装、模型推理、授权查询日志和解释结果的过程。如果需要在一组文档中寻找证据，再进入[检索与证据核对](../ai-engineering/rag/rag-architecture-and-implementation.md)。
+从[一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md)开始，沿构建 42 的失败问题，走完输入组装、模型推理、授权查询日志和解释结果。
 
-## Where does the cost of accessing data come from? / 访问数据的成本从哪来？
+- 想知道模型内部发生了什么，继续看[提示词怎样变成文本](../ai-engineering/foundations/how-llms-work.md)，再把中间状态连接到[KV cache 与服务容量](../ai-engineering/systems/llm-serving-and-kv-cache.md)。
+- 问题需要先找到某份资料时，进入[文档更新、检索与证据核对](../ai-engineering/rag/rag-architecture-and-implementation.md)。[上下文组织](../ai-engineering/context/context-engineering-principles.md)解释每次推理该看到什么。
+- 一次工具调用不足以完成目标时，看[如何组织多阶段任务](../ai-engineering/agents/orchestration-patterns.md)和[如何验证并保留改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md)。
 
-1. [What does algorithmic complexity predict? / 算法复杂度能预测什么？](../engineering-foundations/algorithms/algorithms-and-complexity.md) — Use input size and access patterns to reason about the work.
-2. [Why can arrays and linked lists take different time? / 数组和链表的实际耗时为什么可能不同？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md) — Connect the access pattern to representation and memory locality.
-3. [How do you choose a data structure? / 怎样选数据结构？](../engineering-foundations/algorithms/core-data-structures.md) — Match the workload to the structure and its costs.
-4. [How do indexes change a query’s access cost? / 索引怎样改变查询的访问成本？](../engineering-foundations/databases/database-constraints-and-indexes.md) — Follow the query and its access path. The [database course map / 数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md) leads to worked examples of joins, indexes, isolation, and recovery. [Transactions and recovery / 事务与恢复](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md) connects these mechanisms to durable work.
+## 访问数据的成本从哪来？
 
-## References / 参考资料
+1. [算法复杂度能预测什么？](../engineering-foundations/algorithms/algorithms-and-complexity.md)先固定输入大小、允许操作和访问模式。
+2. [数组与链表的实际耗时为什么不同？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)把操作量连接到内存表示、局部性和等待。
+3. [怎样按工作负载选择数据结构？](../engineering-foundations/algorithms/core-data-structures.md)比较需要支持的操作及其成本条件。
+4. [索引怎样改变数据库的访问路径？](../engineering-foundations/databases/database-constraints-and-indexes.md)从查询条件追到数据库页。需要演算连接代价、隔离或恢复时，进入[数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md)；[事务与恢复](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)连接这些机制和持久提交。
 
-- [Reading progress / 本轮复习进度](reading-progress.md) records the notes read in this pass.
-- [AI literature / AI 论文与文章](ai-literature-index.md) links sources to the questions they inform.
-- [Archive / 归档](../archive/index.md) leads to course exercises, original materials, and specialized references.
+## 阅读记录与资料
+
+- [本轮阅读进度](reading-progress.md)只记录本轮读过哪些正文。
+- [AI 好文集](ai-literature-index.md)按问题收集来源及其知识落点。
+- [归档](../archive/index.md)保留课程推导、作者解法、原始材料和专门参考。
