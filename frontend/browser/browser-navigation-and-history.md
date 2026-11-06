@@ -1,50 +1,98 @@
-# Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？
+# 每次 URL 变化都会加载新文档吗？
 
-No. A cross-document navigation switches to another `Document` and may fetch a response; a fragment navigation can add a session-history entry that shares the current document; `history.pushState()` and `replaceState()` update the current document's URL and history without fetching that address. Use the URL as the shareable source of route state, and synchronize the UI when the user traverses Back or Forward. / 不会。跨文档导航会切换到另一个 `Document`，并可能获取响应；片段导航可新增历史条目但仍共享当前文档；`history.pushState()` 和 `replaceState()` 则在当前文档内更新 URL 与历史记录，不会请求该地址。让 URL 保存可分享的路由状态，并在用户前进或后退时同步界面。
+案例背景：用户先打开 `https://example.test/reports?sort=recent#summary`，随后点“最早优先”并可能按浏览器后退。要让这三个时点显示正确的报表，先判断浏览器是在换文档、跳转片段，还是只更新当前文档的历史地址。
 
-## Parse query state and choose an operation / 解析查询状态并选择操作
+## 先解析 URL，再选导航操作
 
-Create a `URL` from the current address instead of splitting strings on `?` and `&`. `searchParams.get()` reads one value, `getAll()` reads repeated values, `set()` replaces values with that name, and `append()` deliberately adds another pair. Serialization handles URL encoding. Query parameters are untrusted input: validate values and keep secrets out of URLs.
+用 `URL` 解析地址，避免自己按 `?`、`&` 或 `#` 切字符串。`searchParams.get()` 读取一个值，`getAll()` 读取同名多值，`set()` 替换该名字的值，`append()` 则有意保留并追加一个值；对象序列化时会处理 URL 编码。查询参数来自地址栏或外部链接，必须按业务允许值校验，也不要把口令或访问令牌放进 URL。
 
-- Use an anchor or `location.assign(url)` for a normal navigation that should create a history entry. Use `location.replace(url)` when the current entry should be replaced.
-- Use `pushState(state, "", url)` to add a same-document entry, or `replaceState(...)` to edit the current entry. The URL must be same-origin. These calls do not fetch the URL or fire `popstate` or `hashchange`.
-- On Back/Forward traversal, handle `popstate` and derive the displayed route from `location` (and `event.state` when the application uses it). Fragment navigation is distinct: history traversal involving fragment changes can dispatch `popstate`; a fragment change can also dispatch `hashchange`.
+| 需要的行为 | API / 行为 | 是否获取新文档 |
+|---|---|---|
+| 打开另一个地址并留下新历史项 | 点击 `<a>` 或 `location.assign(url)` | 通常换 `Document`；目标只是片段时可留在当前 `Document` |
+| 打开地址并替换当前历史项 | `location.replace(url)` | 替换当前历史项；目标是否换 `Document` 仍取决于导航目标 |
+| 当前文档新增一项路由状态 | `history.pushState(state, "", sameOriginUrl)` | 否 |
+| 修改当前历史项的路由状态 | `history.replaceState(state, "", sameOriginUrl)` | 否 |
 
-This sorting example keeps its selected value and summary in step with the query string. It updates the view directly after `pushState`, then re-reads the address after history traversal.
+History API 的目标 URL 必须符合当前文档可改写 URL 的规则；对本例的 HTTPS 页面，可以改路径、查询和片段，但不能改协议、主机或端口。`pushState()` 和 `replaceState()` 都不会发起该地址的网络请求，也不会因为调用本身派发 `popstate` 或 `hashchange`。应用若要显示与新 URL 对应的内容，仍须自己同步界面；目标是别的服务器资源时，应正常导航或显式发出请求。
+
+## 让筛选状态跟随地址栏与前进后退
+
+报表页面初始地址是 `/reports?sort=recent#summary`。这次服务器返回的 HTML 已包含 `h1#summary`、两个筛选按钮以及 May、April 两行；普通模块脚本由首帧示例头部的 `<script type="module" src="/reports.js"></script>` 引用。用户点击“最早优先”后，模块将查询参数改成 `sort=oldest`，并把已在客户端的数据按日期升序排进列表。若数据由服务器提供，更新 URL 后还需按该状态请求新结果，并处理加载、错误和过期响应。
 
 ~~~html
-<label for="sort">Sort results</label>
-<select id="sort">
-  <option value="recent">Most recent</option>
-  <option value="oldest">Oldest first</option>
-</select>
-<p id="summary"></p>
-
-<script>
-const sortSelect = document.querySelector("#sort");
-const summary = document.querySelector("#summary");
-
-function syncFromUrl() {
-  const url = new URL(location.href);
-  const sort = url.searchParams.get("sort") === "oldest" ? "oldest" : "recent";
-  sortSelect.value = sort;
-  summary.textContent = sort === "oldest" ? "Oldest results first" : "Most recent results first";
-}
-
-sortSelect.addEventListener("change", () => {
-  const url = new URL(location.href);
-  url.searchParams.set("sort", sortSelect.value);
-  history.pushState(null, "", url.href);
-  syncFromUrl();
-});
-
-window.addEventListener("popstate", syncFromUrl);
-syncFromUrl();
-</script>
+<!-- /reports?sort=recent 的服务端 HTML 初始状态 -->
+<h1 id="summary">Recent reports</h1>
+<img src="/report-summary.png" width="320" height="180" alt="Report summary">
+<div id="sort-controls">
+  <button type="button" data-sort="recent" aria-pressed="true"><span>Most recent</span></button>
+  <button type="button" data-sort="oldest" aria-pressed="false"><svg aria-hidden="true"></svg><span>Oldest first</span></button>
+</div>
+<ol id="reports">
+  <li data-id="may">May report</li>
+  <li data-id="april">April report</li>
+</ol>
 ~~~
 
-A client-side router can use these same-document entries to change views, but it owns rendering and route restoration. Browser History API behavior is not the same as a document navigation, even when the visible URL changes.
+以下是 `/reports.js` 中的代码，不是 HTML 里的内联脚本：
 
-**See also:** [React Router / React 路由](../frameworks/react-basics.md) builds client-side routes on browser history; [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) covers network requests once navigation takes a fetching path.
+~~~javascript
+const records = [
+  { id: "may", date: "2026-05-01", label: "May report" },
+  { id: "april", date: "2026-04-01", label: "April report" },
+];
+const list = document.querySelector("#reports");
+const controls = document.querySelector("#sort-controls");
 
-**Standards / 规范：** [WHATWG URL Standard: `URLSearchParams`](https://url.spec.whatwg.org/#urlsearchparams-class); [WHATWG HTML: same-document navigation and History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface), checked 2026-11-05.
+function sortFromUrl() {
+  return new URL(location.href).searchParams.get("sort") === "oldest"
+    ? "oldest"
+    : "recent";
+}
+
+function renderReports(sort) {
+  const rows = [...records].sort((a, b) =>
+    sort === "oldest" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)
+  );
+  for (const button of controls.querySelectorAll("button[data-sort]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.sort === sort));
+  }
+  list.replaceChildren(...rows.map(({ id, label }) => {
+    const item = document.createElement("li");
+    item.dataset.id = id;
+    item.textContent = label;
+    return item;
+  }));
+}
+
+function chooseSort(sort) {
+  if (sort !== "recent" && sort !== "oldest") return;
+  if (sort === sortFromUrl()) return;
+  const url = new URL(location.href);
+  url.searchParams.set("sort", sort);
+  history.pushState(null, "", url.href);
+  renderReports(sort);
+}
+
+controls.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const button = target?.closest("button[data-sort]");
+  if (!button || !controls.contains(button)) return;
+  chooseSort(button.dataset.sort);
+});
+window.addEventListener("popstate", () => renderReports(sortFromUrl()));
+renderReports(sortFromUrl());
+~~~
+
+`renderReports()` 先按 URL 状态选顺序，再同步两个按钮的 `aria-pressed`，最后用 `replaceChildren()` 写入行。初始服务器 HTML 已显示 May → April；用户点“最早优先”后，新地址是 `/reports?sort=oldest#summary`，按钮切成 pressed，行变为 April → May。若用户分享一条 `sort=oldest` 深链，`reports.js` 的初次运行会按 URL 修正列表；要让首批 HTML 本身就显示正确顺序，服务器也应按查询参数生成行和按钮状态。
+
+`pushState()` 只记录 URL；点击处理器主动调用 `renderReports()`，本例也不把应用状态重复存进 `history.state`。其他应用若把额外恢复信息放在 `state` 参数里，可以在 `popstate` 的 `event.state` 读取；本例将 URL 当作排序状态的唯一来源。接着用户在这两条共享同一个 `Document` 的历史项之间后退或前进时，浏览器派发 `popstate`，同一个仍在的监听器从当前 `location` 读回排序并恢复按钮与列表。再后退离开这个文档时，当前监听器并不接管另一文档的恢复或重新加载；浏览器处理的是另一条历史项及其页面状态。
+
+通过地址栏、链接或 `location` 改变片段会执行片段导航，可让浏览器滚到 `#summary` 并建立历史项；这是浏览器导航行为，不需要应用重画列表。脚本调用 History API 改成另一个片段则不会自动滚动，也不会因为调用本身派发 `hashchange`；遍历相应历史项时，`popstate` 可能与片段变化事件共同出现。客户端路由器可以复用这些历史项，但 URL 变化与视图绘制是两项不同工作。
+
+浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
+
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](../browser-apis/dom-manipulation-and-events.md)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](../frameworks/react-routing-and-navigation.md)，组件状态更新见[React 如何把用户操作变成更新后的界面？](../frameworks/react-basics.md)。
+
+> [!info]- 来源
+> - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
+> - 片段导航、同文档导航、会话历史遍历、`pushState()`、`popstate` 与 `hashchange`： [WHATWG HTML：导航与会话历史](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，持续更新规范，navigation、History interface 与事件章节。核对日期：2026-11-06。

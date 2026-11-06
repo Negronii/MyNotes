@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=50d2224d7e52c4191bf24d79cda7476f732c095cf90193306c368ee00f370ab0 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=afe96bc424ae6522681b2bc5ca6cd4403c11343bfbbfc9e09792dd3148a62ce1 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -34,18 +34,18 @@
 - [ ] 22. [How do you turn an AI system design prompt into a defensible architecture? / 如何把 AI 系统设计题转化为有依据的架构？](../ai-engineering/systems/ai-system-design-interview-questions.md)
 ## Frontend
 
-- [ ] 23. [How does a browser turn a URL into pixels? / 浏览器如何把 URL 变成屏幕像素？](../frontend/browser/browser-basics.md)
-- [ ] 24. [Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？](../frontend/browser/browser-navigation-and-history.md)
-- [ ] 25. [How do scripts affect HTML parsing and document readiness? / 脚本如何影响 HTML 解析与文档就绪？](../frontend/html-css/browser-html-and-css.md)
-- [ ] 26. [How do DOM events propagate, and when does delegation work? / DOM 事件如何传播，何时适合事件委托？](../frontend/browser-apis/dom-manipulation-and-events.md)
-- [ ] 27. [When does browser JavaScript run relative to a frame? / 浏览器 JavaScript 如何与每一帧交错？](../frontend/runtime/event-loop.md)
+- [ ] 23. [浏览器如何把 URL 变成第一帧？](../frontend/browser/browser-basics.md)
+- [ ] 24. [每次 URL 变化都会加载新文档吗？](../frontend/browser/browser-navigation-and-history.md)
+- [ ] 25. [脚本如何影响 HTML 解析与文档就绪？](../frontend/html-css/browser-html-and-css.md)
+- [ ] 26. [DOM 事件如何传播，何时适合事件委托？](../frontend/browser-apis/dom-manipulation-and-events.md)
+- [ ] 27. [浏览器 JavaScript 何时运行，画面何时更新？](../frontend/runtime/event-loop.md)
 - [ ] 28. [How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？](../frontend/frameworks/react-basics.md)
 - [ ] 29. [How do I compose components and reusable behavior around an interaction? / 如何围绕交互组合组件与可复用行为？](../frontend/frameworks/react-component-composition.md)
 - [ ] 30. [How can a React search interface stay responsive as results update? / React搜索界面如何在更新结果时保持响应？](../frontend/frameworks/advanced-react.md)
 - [ ] 31. [How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？](../frontend/frameworks/react-server-state-and-optimistic-updates.md)
 - [ ] 32. [Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？](../frontend/frameworks/react-error-boundaries.md)
-- [ ] 33. [Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？](../frontend/html-css/rendering-pipeline-and-forced-layout.md)
-- [ ] 34. [How do you measure and diagnose web performance problems? / 如何测量和诊断网页性能问题？](../frontend/performance/performance-metrics-and-analysis.md)
+- [ ] 33. [为什么一次 DOM 改动会增加布局或绘制工作？](../frontend/html-css/rendering-pipeline-and-forced-layout.md)
+- [ ] 34. [如何测量并诊断网页性能问题？](../frontend/performance/performance-metrics-and-analysis.md)
 - [ ] 35. [How should you reduce unnecessary React rendering work? / 如何减少不必要的 React 渲染工作？](../frontend/performance/react-rendering-optimization.md)
 - [ ] 36. [When does virtual scrolling help a long list? / 长列表何时适合使用虚拟滚动？](../frontend/performance/rendering-and-computation-optimization.md)
 - [ ] 37. [How do semantic HTML forms support keyboard and assistive-technology users? / 语义化 HTML 表单如何支持键盘与辅助技术用户？](../frontend/html-css/accessible-html-forms.md)

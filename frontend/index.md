@@ -12,21 +12,21 @@
 
 ### 从 URL 到第一帧
 
-- [How does a browser turn a URL into pixels? / 浏览器如何把 URL 变成屏幕像素？](browser/browser-basics.md)
-- [Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？](browser/browser-navigation-and-history.md)
-- [How do scripts affect HTML parsing and document readiness? / 脚本如何影响 HTML 解析与文档就绪？](html-css/browser-html-and-css.md)
+- [浏览器如何把 URL 变成第一帧？](browser/browser-basics.md)
+- [每次 URL 变化都会加载新文档吗？](browser/browser-navigation-and-history.md)
+- [脚本如何影响 HTML 解析与文档就绪？](html-css/browser-html-and-css.md)
 
 ### 从筛选点击到下一帧
 
-- [How do DOM events propagate, and when does delegation work? / DOM 事件如何传播，何时适合事件委托？](browser-apis/dom-manipulation-and-events.md)
-- [When does browser JavaScript run relative to a frame? / 浏览器 JavaScript 如何与每一帧交错？](runtime/event-loop.md)
+- [DOM 事件如何传播，何时适合事件委托？](browser-apis/dom-manipulation-and-events.md)
+- [浏览器 JavaScript 何时运行，画面何时更新？](runtime/event-loop.md)
 - [How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？](frameworks/react-basics.md)
 - [How do I compose components and reusable behavior around an interaction? / 如何围绕交互组合组件与可复用行为？](frameworks/react-component-composition.md)
 - [How can a React search interface stay responsive as results update? / React搜索界面如何在更新结果时保持响应？](frameworks/advanced-react.md)
 - [How should a React UI keep server data and optimistic updates correct? / React界面如何维护服务端数据与乐观更新的正确性？](frameworks/react-server-state-and-optimistic-updates.md)
 - [Which errors can a React Error Boundary recover from? / React Error Boundary能恢复哪些错误？](frameworks/react-error-boundaries.md)
-- [Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？](html-css/rendering-pipeline-and-forced-layout.md)
-- [How do you measure and diagnose web performance problems? / 如何测量和诊断网页性能问题？](performance/performance-metrics-and-analysis.md)
+- [为什么一次 DOM 改动会增加布局或绘制工作？](html-css/rendering-pipeline-and-forced-layout.md)
+- [如何测量并诊断网页性能问题？](performance/performance-metrics-and-analysis.md)
 - [How should you reduce unnecessary React rendering work? / 如何减少不必要的 React 渲染工作？](performance/react-rendering-optimization.md)
 - [When does virtual scrolling help a long list? / 长列表何时适合使用虚拟滚动？](performance/rendering-and-computation-optimization.md)
 

@@ -2,42 +2,50 @@
 
 > Generated from the [frontend reading map](../../frontend/index.md). Edit the map and its linked source notes. Internal section links use Obsidian heading fragments; source notes remain standard Markdown.
 
-## 1. How does a browser turn a URL into pixels? / 浏览器如何把 URL 变成屏幕像素？
+## 1. 浏览器如何把 URL 变成第一帧？
 
-A URL entry is first interpreted as an input or navigation request; only a cross-document navigation switches documents, and only some paths need a network fetch. For a document navigation, fetching and parsing can overlap, discovered resources can load in parallel, and scripts can pause selected parsing work. The browser computes styles and geometry, produces paint output, rasterizes content, composites a frame, and hands it to the platform for display. Rendering engines such as Blink, WebKit, and Gecko and JavaScript engines such as V8, JavaScriptCore, and SpiderMonkey occupy different implementation boundaries. The broad path is useful for diagnosis, but its exact stages and process architecture are implementation details. / 输入 URL 后，浏览器先判断它是搜索还是导航；只有跨文档导航才需要新文档，也只有部分路径需要网络。文档导航中的获取与解析可以交叠，解析会发现并行加载的资源，脚本可暂停特定解析工作。浏览器随后计算样式与几何、生成绘制输出、栅格化内容、合成画面并交给平台显示。这个概览适合定位问题，但具体阶段和进程架构属于实现。
+案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，需要看到最近报表；随后点击“最早优先”，期望列表更新。先沿初次导航走到可见页面，再从同一页跟进点击。
 
 ~~~mermaid
 flowchart TD
-    A[Address input] --> B{Search or URL?}
-    B -->|search terms| S[Search provider]
-    B -->|URL| C{Same document or new document?}
-    C -->|fragment or History API update| H[Update URL and session history]
-    C -->|cross-document navigation| F["Fetch path: service worker, cache, or network"]
-    F --> P[Stream and parse HTML]
-    P --> R[Discover and fetch subresources]
-    P --> J{Parser-blocking script?}
-    J -->|yes| W[Wait for required fetch/style conditions and run script]
-    W --> P
-    J -->|no| D[Build document and style data incrementally]
-    R --> D
-    D --> L[Compute style and layout as needed]
-    L --> O[Paint output / drawing records]
-    O --> T["Rasterize paint output into pixels (engine-specific)"]
-    T --> K["Composite and submit frame (engine-specific)"]
-    K --> X[Platform displays at a suitable presentation time]
-    H --> U[Same document UI may update]
-    U --> L
+    A[地址栏输入报表 URL] --> B[首次访问：跨文档导航]
+    B --> C[浏览器取得响应并创建新 Document（文档对象）]
+    C --> D[HTML 字节逐步到达，HTML parser（解析器）边解析边建立 DOM（Document Object Model，文档对象模型）]
+    D --> P[继续接收和解析后续 HTML]
+    D --> CSS[发现并获取 reports.css]
+    D --> JS[发现并获取 reports.js 模块图]
+    D --> IMG[发现并获取报表图片]
+    P --> STYLE[已有内容且当前渲染所需样式可用]
+    CSS -->|当前渲染所需的阻塞样式表就绪| STYLE
+    STYLE --> FRAME[渲染机会：计算样式、布局并生成绘制结果]
+    FRAME --> PRESENT[浏览器引擎栅格化、合成并显示画面]
+    P --> MODULE[HTML 解析结束]
+    JS --> GRAPH[模块图获取完成]
+    MODULE --> GATE[普通模块执行条件检查]
+    GRAPH --> GATE
+    CSS -->|当前无阻塞脚本的样式表| GATE
+    GATE --> RUN[普通模块开始求值]
+    RUN --> HANDLER[reports.js 注册筛选处理器]
+    IMG --> LATER[图片到达后填入预留区域]
+    PRESENT --> VISIBLE[标题、筛选按钮和预渲染行可见]
+    HANDLER --> ACTIVE[筛选按钮已可交互]
+    VISIBLE --> ACTIVE
+    ACTIVE --> CLICK[点击“最早优先”]
+    CLICK --> UPDATE[处理器更新 URL、aria-pressed 和行顺序]
+    UPDATE --> NEXT[浏览器在后续渲染机会显示新顺序]
 ~~~
 
-### Resolve a navigation before fetching / 先决定导航，再获取文档
+图中 CSS、模块脚本、图片获取与后续 HTML 解析分别推进；不必等所有资源都到齐才有首帧。模块图获取完成只表示依赖资源已就绪；普通模块还要等 HTML 解析结束，并满足脚本阻塞样式表状态，才开始求值。图片若晚到，可以填入预留空间而不必挪动已有内容。图是帮助跟踪这条报表路线的模型，不是每个引擎都必须遵循的逐步流水线。浏览器负责导航、资源协调与画面呈现，JavaScript engine（JavaScript 引擎，如 V8、JavaScriptCore 或 SpiderMonkey）负责执行脚本；各自的进程和线程边界属于实现选择。
 
-Follow `https://example.test/reports?sort=recent#summary` from the address bar. Once the browser treats the input as a URL, the scheme and authority identify the origin and connection requirements. The path and query select the requested resource. The fragment identifies a location in the resulting document and stays on the browser side. An application can also change a URL with the History API without replacing its current document. Back/Forward can restore an existing document from a history entry, including the back/forward cache when eligible. That cache preserves document state, while an HTTP cache reuses an eligible response.
+### 先确定浏览器要打开什么
 
-For this example, assume it is a fresh document navigation. A service worker controlling the target scope may respond. Otherwise the fetch path can use a fresh cached response, revalidate a stored response, or obtain a new response. For a new connection, resolve the host when no suitable address is available, then establish the transport and secure session. A typical HTTP/2 path uses TCP and TLS, while HTTP/3 uses QUIC. A reused connection skips new setup. If the fetch goes to the network, the origin receives `/reports?sort=recent` without `#summary`, and may redirect. The browser handles the fragment locally when the target element is available. [HTTP, DNS, and connection setup](../../engineering-foundations/networking/http-protocols-and-websockets.md) explains the network choices. [Navigation and history](#2.%20Does%20every%20URL%20change%20load%20a%20new%20document?%20/%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F) explains same-document updates.
+地址栏文本先被判定为搜索词还是 URL；这里已给出 URL，因此例子从跨文档导航开始。路径 `/reports` 和查询 `sort=recent` 会参与请求；片段 `#summary` 留在浏览器端，不会随 HTTP 请求发给服务器。匹配范围的 Service Worker（服务工作线程）或可用缓存可能直接提供响应；若走网络，缓存也可能需要验证。对本例的 HTTPS URL，协议、主机和端口共同确定 origin（源）；有匹配的活动连接时浏览器可以复用，需要新建连接且没有可用主机地址时才查询 Domain Name System（域名系统，DNS）。Transport Layer Security（传输层安全协议，TLS）可保护传输；HTTP/2 常运行在 TCP/TLS 上，HTTP/3 使用 QUIC。浏览器随后发送带 `/reports?sort=recent` 的请求并收到响应头和响应体，再将响应体按到达情况交给新 `Document` 的 HTML parser。协议协商、重定向、缓存与连接复用等细节见[HTTP、DNS 与连接建立](../../engineering-foundations/networking/http-protocols-and-websockets.md)。
 
-### Parse and render while resources arrive / 资源到达时就开始解析与渲染
+`#summary` 指向当前文档里的位置。后续应用也能用 History API 改变当前 URL，而不获取该 URL 对应的新文档。浏览器后退时，浏览器可能直接恢复符合条件的既有页面状态（back/forward cache，前进/后退缓存）；这与从 HTTP 缓存重新使用响应不是一回事。见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)和[HTTP、DNS 与连接建立](../../engineering-foundations/networking/http-protocols-and-websockets.md)。
 
-Assume the response starts with this document:
+### 响应到达时，解析和资源获取可以交叠
+
+假设 `/reports` 返回如下 HTML。服务端已经把报表标题和初始行放进响应，浏览器可在客户端代码完成之前显示它们。
 
 ~~~html
 <!doctype html>
@@ -46,253 +54,362 @@ Assume the response starts with this document:
 <main>
   <h1 id="summary">Recent reports</h1>
   <img src="/report-summary.png" width="320" height="180" alt="Report summary">
+  <div id="sort-controls">
+    <button type="button" data-sort="recent" aria-pressed="true"><span>Most recent</span></button>
+    <button type="button" data-sort="oldest" aria-pressed="false"><svg aria-hidden="true"></svg><span>Oldest first</span></button>
+  </div>
+  <ol id="reports"><li data-id="may">May report</li><li data-id="april">April report</li></ol>
 </main>
 ~~~
 
-HTML bytes can be decoded and parsed before the full response arrives. The parser creates DOM nodes as markup becomes available. Discovering the stylesheet, module, and image starts separate resource work. Browsers can discover some resources speculatively. An applicable stylesheet can delay rendering, and a parser-inserted classic script without `async` or `defer` can pause parsing. The module shown here is fetched as parsing proceeds and is deferred by default. The image can arrive later. Its dimensions give layout an initial size or aspect ratio before the pixel data is ready. [Script scheduling and document readiness](#3.%20How%20do%20scripts%20affect%20HTML%20parsing%20and%20document%20readiness?%20/%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) explains which scripts can change the order and when readiness events fire.
+浏览器不必等完整响应下载完才开始解析；随着标记到达，HTML parser 建立 DOM，并发现样式表、模块脚本和图片等资源。浏览器通常能并行获取独立资源，也可能用实现特有的预扫描提前发现资源。适用于当前媒体环境的外部样式表可能阻止首次显示；没有 `async` 或 `defer` 的解析器插入经典脚本会阻塞 HTML 解析。这里的普通模块脚本会并行获取，等解析完成、模块依赖图就绪且阻塞脚本的样式表条件满足后运行。具体脚本依赖关系见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)。
 
-The browser combines the DOM and applicable styles to compute used geometry. The heading takes space according to its computed font and available width, then layout positions the image box. Paint records how to draw the result, including text, borders, backgrounds, and images. Rasterization produces pixel content from those records and decoded resources. Compositing positions and combines the content for a frame, which is submitted for display. Chromium's RenderingNG uses paint records, raster tiles, compositor frames, and a display compositor. The boundaries of work, threads, and GPU participation depend on the engine. [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture)
+DOM 表示文档节点，CSS 规则决定这些节点如何呈现。浏览器按需计算样式和布局：例如标题文字的换行取决于字体和可用宽度，图片的宽高属性则让图片数据到达前也能先分配画面空间。后到的字体仍可能改变文字宽度或换行。渲染引擎（如 Blink、WebKit、Gecko）据此准备绘制结果，再把内容转换为像素并组合成待显示画面；JavaScript 引擎（如 V8、JavaScriptCore、SpiderMonkey）负责执行脚本。Blink/Chromium 的 RenderingNG 是一种实现实例，不是所有浏览器的强制结构。
 
-The first visible frame can precede `load` and, in a server-rendered app, client interactivity. The app may still need to download JavaScript and attach its behavior. An image or font that arrives later can change paint or geometry and produce another frame. [React and Next.js hydration](#64.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) connects this path to application code. For an interaction after the initial frame, follow [when the event handler can run](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) and [what rendering work its update can trigger](#11.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F).
+### 从首帧交接到筛选更新
 
-### Find the stage that is slow / 定位真正慢的环节
+首帧可能先于 `load` 事件和客户端代码可交互的时点出现。比如 HTML 已显示报表，但模块脚本尚未完成下载、运行或注册点击处理器。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](#How%20do%20hydration%20and%20streaming%20fit%20together?%20/%20Hydration%20%E4%B8%8E%E6%B5%81%E5%BC%8F%E6%B8%B2%E6%9F%93%E5%A6%82%E4%BD%95%E8%A1%94%E6%8E%A5%EF%BC%9F)。若点击没有反馈，先确认处理器何时可用；若处理器已经注册，则查看事件是否被主线程上其他工作挡住。
 
-| What you observe | What to inspect next |
-| --- | --- |
-| Long before the first HTML byte | Redirects, cache status, connection timing, and backend latency in the network trace |
-| HTML arrives early but useful content is late | Discovery of the critical resource, blocking CSS or JavaScript, then paint and image decoding |
-| Content appears but the first interaction is slow | Main-thread tasks, script execution or hydration, and the next presentation |
-| The layout jumps after content appears | Late image or font geometry, inserted content, and the nodes shown in the layout-shift trace |
+当用户点击“最早优先”，`/reports.js` 的 DOM 事件处理器可以把 `sort=oldest` 写入 URL，设置按钮的 `aria-pressed` 状态，并改动列表节点。节点修改立即改变 DOM；样式、布局、绘制和之后的画面呈现则由浏览器在后续工作中按需完成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
-Follow the measured event to its dependency. A slow largest-content paint can come from a late request, a slow response, or delayed rendering after the bytes arrived. Changing a CSS selector alone would miss two of those causes.
+| 现象 | 优先检查的阶段 |
+|---|---|
+| 首个 HTML 字节迟迟不到 | 重定向、缓存命中、连接建立、服务端响应和网络瀑布 |
+| HTML 已到，主要内容仍迟 | 关键 CSS/脚本的阻塞关系、LCP 资源发现与渲染时机 |
+| 页面可见，筛选点击迟迟没有反馈 | 点击前主线程工作、处理器运行时间、处理后的渲染工作 |
+| 内容出现后位置跳动 | 图片或字体的尺寸和到达时机、后插入内容及布局偏移记录 |
 
-For example, the report heading is visible but clicking a filter gives no immediate feedback. Compare the timing of `/reports.js` and the filter's initialization with the click. If the module was still loading or the handler was registered after the click, start with readiness. If the handler was already registered and the click waited behind a long main-thread task, the recording points to input delay. If the handler ran promptly, follow its work and the next presentation instead. [Chrome DevTools Performance reference](https://developer.chrome.com/docs/devtools/performance/reference) · [Web performance diagnosis](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)
+先沿测得的依赖关系定位，再决定要改请求、脚本、布局还是绘制。相同的“首屏慢”现象可能来自服务器响应、资源发现或内容渲染，单独改 CSS 选择器无法同时解释这些原因。见[如何测量并诊断网页性能问题？](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
-**Evidence / 资料：** [WHATWG HTML: navigation and session history](https://html.spec.whatwg.org/multipage/nav-history-apis.html); [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/); [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture), checked 2026-11-05.
-## 2. Does every URL change load a new document? / 每次 URL 变化都会加载新文档吗？
+> [!info]- 来源
+> - URL 片段及导航后文档状态： [WHATWG HTML：导航与会话历史](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，持续更新规范，导航、同文档导航与历史遍历章节；[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，请求 URL 处理章节。核对日期：2026-11-06。
+> - HTTPS origin、DNS 与本例网络协议： [WHATWG URL Standard：Origin](https://url.spec.whatwg.org/#origin)；[RFC 1034：DNS concepts and facilities](https://www.rfc-editor.org/rfc/rfc1034)、[RFC 1035：DNS implementation and specification](https://www.rfc-editor.org/rfc/rfc1035)；[RFC 8446：TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446)；[RFC 9113：HTTP/2](https://www.rfc-editor.org/rfc/rfc9113)、[RFC 9000：QUIC](https://www.rfc-editor.org/rfc/rfc9000) 与 [RFC 9114：HTTP/3](https://www.rfc-editor.org/rfc/rfc9114)。核对日期：2026-11-06。
+> - HTML 解析和浏览器渲染在 Chromium 中的一种实现： [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture)，架构概览。核对日期：2026-11-06。
+> - 浏览器渲染引擎名称： [Blink](https://www.chromium.org/blink/)，Chromium rendering engine；[WebKit](https://webkit.org/)，WebKit browser engine；[Gecko](https://firefox-source-docs.mozilla.org/overview/gecko.html)，Firefox rendering engine。JavaScript 引擎名称： [V8](https://v8.dev/)、[JavaScriptCore](https://docs.webkit.org/Deep%20Dive/JSC/JavaScriptCore.html)、[SpiderMonkey](https://firefox-source-docs.mozilla.org/js/)。核对日期：2026-11-06。
+## 2. 每次 URL 变化都会加载新文档吗？
 
-No. A cross-document navigation switches to another `Document` and may fetch a response; a fragment navigation can add a session-history entry that shares the current document; `history.pushState()` and `replaceState()` update the current document's URL and history without fetching that address. Use the URL as the shareable source of route state, and synchronize the UI when the user traverses Back or Forward. / 不会。跨文档导航会切换到另一个 `Document`，并可能获取响应；片段导航可新增历史条目但仍共享当前文档；`history.pushState()` 和 `replaceState()` 则在当前文档内更新 URL 与历史记录，不会请求该地址。让 URL 保存可分享的路由状态，并在用户前进或后退时同步界面。
+案例背景：用户先打开 `https://example.test/reports?sort=recent#summary`，随后点“最早优先”并可能按浏览器后退。要让这三个时点显示正确的报表，先判断浏览器是在换文档、跳转片段，还是只更新当前文档的历史地址。
 
-### Parse query state and choose an operation / 解析查询状态并选择操作
+### 先解析 URL，再选导航操作
 
-Create a `URL` from the current address instead of splitting strings on `?` and `&`. `searchParams.get()` reads one value, `getAll()` reads repeated values, `set()` replaces values with that name, and `append()` deliberately adds another pair. Serialization handles URL encoding. Query parameters are untrusted input: validate values and keep secrets out of URLs.
+用 `URL` 解析地址，避免自己按 `?`、`&` 或 `#` 切字符串。`searchParams.get()` 读取一个值，`getAll()` 读取同名多值，`set()` 替换该名字的值，`append()` 则有意保留并追加一个值；对象序列化时会处理 URL 编码。查询参数来自地址栏或外部链接，必须按业务允许值校验，也不要把口令或访问令牌放进 URL。
 
-- Use an anchor or `location.assign(url)` for a normal navigation that should create a history entry. Use `location.replace(url)` when the current entry should be replaced.
-- Use `pushState(state, "", url)` to add a same-document entry, or `replaceState(...)` to edit the current entry. The URL must be same-origin. These calls do not fetch the URL or fire `popstate` or `hashchange`.
-- On Back/Forward traversal, handle `popstate` and derive the displayed route from `location` (and `event.state` when the application uses it). Fragment navigation is distinct: history traversal involving fragment changes can dispatch `popstate`; a fragment change can also dispatch `hashchange`.
+| 需要的行为 | API / 行为 | 是否获取新文档 |
+|---|---|---|
+| 打开另一个地址并留下新历史项 | 点击 `<a>` 或 `location.assign(url)` | 通常换 `Document`；目标只是片段时可留在当前 `Document` |
+| 打开地址并替换当前历史项 | `location.replace(url)` | 替换当前历史项；目标是否换 `Document` 仍取决于导航目标 |
+| 当前文档新增一项路由状态 | `history.pushState(state, "", sameOriginUrl)` | 否 |
+| 修改当前历史项的路由状态 | `history.replaceState(state, "", sameOriginUrl)` | 否 |
 
-This sorting example keeps its selected value and summary in step with the query string. It updates the view directly after `pushState`, then re-reads the address after history traversal.
+History API 的目标 URL 必须符合当前文档可改写 URL 的规则；对本例的 HTTPS 页面，可以改路径、查询和片段，但不能改协议、主机或端口。`pushState()` 和 `replaceState()` 都不会发起该地址的网络请求，也不会因为调用本身派发 `popstate` 或 `hashchange`。应用若要显示与新 URL 对应的内容，仍须自己同步界面；目标是别的服务器资源时，应正常导航或显式发出请求。
+
+### 让筛选状态跟随地址栏与前进后退
+
+报表页面初始地址是 `/reports?sort=recent#summary`。这次服务器返回的 HTML 已包含 `h1#summary`、两个筛选按钮以及 May、April 两行；普通模块脚本由首帧示例头部的 `<script type="module" src="/reports.js"></script>` 引用。用户点击“最早优先”后，模块将查询参数改成 `sort=oldest`，并把已在客户端的数据按日期升序排进列表。若数据由服务器提供，更新 URL 后还需按该状态请求新结果，并处理加载、错误和过期响应。
 
 ~~~html
-<label for="sort">Sort results</label>
-<select id="sort">
-  <option value="recent">Most recent</option>
-  <option value="oldest">Oldest first</option>
-</select>
-<p id="summary"></p>
-
-<script>
-const sortSelect = document.querySelector("#sort");
-const summary = document.querySelector("#summary");
-
-function syncFromUrl() {
-  const url = new URL(location.href);
-  const sort = url.searchParams.get("sort") === "oldest" ? "oldest" : "recent";
-  sortSelect.value = sort;
-  summary.textContent = sort === "oldest" ? "Oldest results first" : "Most recent results first";
-}
-
-sortSelect.addEventListener("change", () => {
-  const url = new URL(location.href);
-  url.searchParams.set("sort", sortSelect.value);
-  history.pushState(null, "", url.href);
-  syncFromUrl();
-});
-
-window.addEventListener("popstate", syncFromUrl);
-syncFromUrl();
-</script>
+<!-- /reports?sort=recent 的服务端 HTML 初始状态 -->
+<h1 id="summary">Recent reports</h1>
+<img src="/report-summary.png" width="320" height="180" alt="Report summary">
+<div id="sort-controls">
+  <button type="button" data-sort="recent" aria-pressed="true"><span>Most recent</span></button>
+  <button type="button" data-sort="oldest" aria-pressed="false"><svg aria-hidden="true"></svg><span>Oldest first</span></button>
+</div>
+<ol id="reports">
+  <li data-id="may">May report</li>
+  <li data-id="april">April report</li>
+</ol>
 ~~~
 
-A client-side router can use these same-document entries to change views, but it owns rendering and route restoration. Browser History API behavior is not the same as a document navigation, even when the visible URL changes.
+以下是 `/reports.js` 中的代码，不是 HTML 里的内联脚本：
 
-**See also:** [React Router / React 路由](#6.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) builds client-side routes on browser history; [HTTP Protocols and WebSockets / HTTP 协议与 WebSocket](../../engineering-foundations/networking/http-protocols-and-websockets.md) covers network requests once navigation takes a fetching path.
+~~~javascript
+const records = [
+  { id: "may", date: "2026-05-01", label: "May report" },
+  { id: "april", date: "2026-04-01", label: "April report" },
+];
+const list = document.querySelector("#reports");
+const controls = document.querySelector("#sort-controls");
 
-**Standards / 规范：** [WHATWG URL Standard: `URLSearchParams`](https://url.spec.whatwg.org/#urlsearchparams-class); [WHATWG HTML: same-document navigation and History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface), checked 2026-11-05.
-## 3. How do scripts affect HTML parsing and document readiness? / 脚本如何影响 HTML 解析与文档就绪？
+function sortFromUrl() {
+  return new URL(location.href).searchParams.get("sort") === "oldest"
+    ? "oldest"
+    : "recent";
+}
 
-A parser-inserted classic script without `async` or `defer` can pause HTML parsing while it is fetched and run; it may also wait for an earlier stylesheet when it can inspect style. `defer` and ordinary module scripts fetch while parsing continues, then execute after parsing in their specified order; `async` scripts execute when ready without preserving relative order. Choose a mode from the script's dependencies and required start time, not from one placement rule. / 未带 `async` 或 `defer` 的解析器插入经典脚本可能在获取和执行期间暂停 HTML 解析；如果脚本能读取样式，它也可能等待之前的样式表。`defer` 与普通模块脚本会在解析期间获取，再按相应顺序于解析完成后执行；`async` 脚本就绪后即执行，不保持相对顺序。应根据依赖关系和所需运行时机选择模式，而不是依赖单一的位置口诀。
+function renderReports(sort) {
+  const rows = [...records].sort((a, b) =>
+    sort === "oldest" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)
+  );
+  for (const button of controls.querySelectorAll("button[data-sort]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.sort === sort));
+  }
+  list.replaceChildren(...rows.map(({ id, label }) => {
+    const item = document.createElement("li");
+    item.dataset.id = id;
+    item.textContent = label;
+    return item;
+  }));
+}
 
-### Script scheduling / 脚本调度
+function chooseSort(sort) {
+  if (sort !== "recent" && sort !== "oldest") return;
+  if (sort === sortFromUrl()) return;
+  const url = new URL(location.href);
+  url.searchParams.set("sort", sort);
+  history.pushState(null, "", url.href);
+  renderReports(sort);
+}
 
-| Script | Fetch | Execution | Relative order |
-|---|---|---|---|
-| Parser-inserted classic, no scheduling attribute | Parser fetches it; parser pauses | When available and eligible to run | Parser order |
-| External classic `defer` | In parallel with parsing | After parsing, before `DOMContentLoaded` | Document order among deferred classic scripts |
-| External classic `async` | In parallel with parsing | As soon as available; parsing can pause to run it | Not preserved |
-| Module without `async` | Module graph loads in parallel with parsing | Deferred until parsing is complete | Module and dependency rules |
-| Module with `async` | Module graph loads in parallel | As soon as its graph is ready | Not preserved relative to other async work |
-| Classic inline with `defer` | No fetch | Runs when parser reaches it | `defer` has no effect without `src` |
+controls.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const button = target?.closest("button[data-sort]");
+  if (!button || !controls.contains(button)) return;
+  chooseSort(button.dataset.sort);
+});
+window.addEventListener("popstate", () => renderReports(sortFromUrl()));
+renderReports(sortFromUrl());
+~~~
 
-`DOMContentLoaded` fires after the document has been parsed and deferred and ordinary module scripts have executed; it does not wait for images or `async` scripts. A deferred script can itself wait for a stylesheet that blocks scripts, so stylesheet loading can delay that script and therefore `DOMContentLoaded`. `load` waits on a wider set of dependent resources. These milestones do not promise that every image is decoded or that the page is visually complete.
+`renderReports()` 先按 URL 状态选顺序，再同步两个按钮的 `aria-pressed`，最后用 `replaceChildren()` 写入行。初始服务器 HTML 已显示 May → April；用户点“最早优先”后，新地址是 `/reports?sort=oldest#summary`，按钮切成 pressed，行变为 April → May。若用户分享一条 `sort=oldest` 深链，`reports.js` 的初次运行会按 URL 修正列表；要让首批 HTML 本身就显示正确顺序，服务器也应按查询参数生成行和按钮状态。
 
-Use `defer` for ordered external classic scripts that need the parsed document. Use `async` for a script whose execution does not depend on other scripts or parser output. Module scripts are deferred by default; adding `async` changes that schedule. Dynamically inserted scripts have different defaults from parser-inserted ones, so state which case you mean.
+`pushState()` 只记录 URL；点击处理器主动调用 `renderReports()`，本例也不把应用状态重复存进 `history.state`。其他应用若把额外恢复信息放在 `state` 参数里，可以在 `popstate` 的 `event.state` 读取；本例将 URL 当作排序状态的唯一来源。接着用户在这两条共享同一个 `Document` 的历史项之间后退或前进时，浏览器派发 `popstate`，同一个仍在的监听器从当前 `location` 读回排序并恢复按钮与列表。再后退离开这个文档时，当前监听器并不接管另一文档的恢复或重新加载；浏览器处理的是另一条历史项及其页面状态。
 
-### Why scripts can pause the parser / 脚本为何会暂停解析
+通过地址栏、链接或 `location` 改变片段会执行片段导航，可让浏览器滚到 `#summary` 并建立历史项；这是浏览器导航行为，不需要应用重画列表。脚本调用 History API 改成另一个片段则不会自动滚动，也不会因为调用本身派发 `hashchange`；遍历相应历史项时，`popstate` 可能与片段变化事件共同出现。客户端路由器可以复用这些历史项，但 URL 变化与视图绘制是两项不同工作。
 
-A classic script can inspect or modify the document while the parser is constructing it; it can also write markup that changes parsing. The browser therefore cannot always continue as if the script were an independent resource. A parser-blocking script's fetch can overlap resource discovery and other downloads, but its execution creates a dependency point.
+浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
 
-Stylesheets matter when a pending script can read style information: the browser may delay that script until a blocking stylesheet is available. This is why “all CSS must finish before first paint” is inaccurate; the relevant blocking relationships depend on the script and style state.
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#63.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F)。
+
+> [!info]- 来源
+> - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
+> - 片段导航、同文档导航、会话历史遍历、`pushState()`、`popstate` 与 `hashchange`： [WHATWG HTML：导航与会话历史](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，持续更新规范，navigation、History interface 与事件章节。核对日期：2026-11-06。
+## 3. 脚本如何影响 HTML 解析与文档就绪？
+
+案例背景：报表服务器已返回标题、筛选按钮和初始行，浏览器还在解析 HTML，并同时获取 `/reports.css` 与 `/reports.js`。用户要尽快看到内容，之后点击按钮时脚本也必须已经注册处理器。下面按脚本下载、执行、文档就绪的先后关系判断哪些工作会挡住哪一步。
+
+### 不同脚本属性怎样改变解析顺序？
+
+表格说的是 HTML parser（HTML 解析器）插入的脚本；动态插入的脚本有不同默认调度，不能把它们混为一谈。
+
+| 脚本形式 | 下载与解析的关系 | 运行时机与顺序 |
+|---|---|---|
+| 外部经典脚本，不带 `async` / `defer` | parser 遇到时开始获取并暂停继续解析 | 资源可运行后在 parser 继续前执行，保持文档顺序 |
+| 外部经典脚本 `defer` | 与解析并行获取 | 解析完成后、`DOMContentLoaded` 前执行；多个 defer 脚本按文档顺序 |
+| 外部经典脚本 `async` | 与解析并行获取 | 下载就绪后尽快执行；若解析还在进行，会暂时打断解析；不保证多个 async 脚本的顺序 |
+| 普通模块脚本 | 模块及依赖图与解析并行获取 | 默认延后到解析完成后执行，遵循模块依赖关系 |
+| `async` 模块脚本 | 模块及依赖图与解析并行获取 | 模块图就绪后尽快执行，不保证相对其他异步脚本的顺序 |
+| 内联经典脚本，有无 `defer` | 没有外部文件要获取 | parser 到达该元素且没有待等的阻塞样式表时执行；没有 `src` 时 `defer` 不起延后作用 |
+
+`defer` 适合依赖已解析文档、且需要保持外部经典脚本文档顺序的代码。`async` 适合执行不依赖解析结果或其他脚本的独立工作。模块脚本默认延后执行，给模块加 `async` 会改变这个选择。
+
+### 为什么解析器有时必须停下来？
+
+解析 HTML 就像按顺序读取标记并逐个建立节点。经典脚本能在节点还没建完时查询、修改文档，甚至用 `document.write()` 改变后续解析结果；浏览器不能一概把这种脚本当作与文档无关的文件而继续前进。因此，脚本获取可以和其他资源获取重叠，但脚本执行本身可能成为解析的依赖点。
+
+样式表对脚本的影响不是浏览器先分析某段 JavaScript 是否调用了 `getComputedStyle()`。HTML 定义了一个脚本阻塞样式表状态：样式表元素由 parser 创建时已启用、参与样式规则、媒体条件匹配且尚未加载完成，才会进入该文档的阻塞集合。后续要执行的同步 parser 脚本或延后脚本，会按这个集合判断是否等待；即便 `/reports.js` 只给按钮注册事件，也可能先等 `/reports.css`。
+
+适用于当前媒体环境的外部样式表通常会阻止首次绘制。不是“所有 CSS 必须全部下载后才能开始任何绘制”，而是当前渲染和脚本执行各自要满足规范定义的样式依赖。
+
+沿用报表页的 HTML：
 
 ~~~html
 <head>
-  <link rel="stylesheet" href="/app.css">
-  <script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/reports.css">
+  <script type="module" src="/reports.js"></script>
 </head>
+<main>
+  <h1 id="summary">Recent reports</h1>
+  <img src="/report-summary.png" width="320" height="180" alt="Report summary">
+  <div id="sort-controls">
+    <button type="button" data-sort="recent" aria-pressed="true"><span>Most recent</span></button>
+    <button type="button" data-sort="oldest" aria-pressed="false"><svg aria-hidden="true"></svg><span>Oldest first</span></button>
+  </div>
+  <ol id="reports"><li data-id="may">May report</li><li data-id="april">April report</li></ol>
+</main>
 ~~~
 
-Here HTML parsing and script fetching can proceed together. Once parsing ends, `app.js` executes before `DOMContentLoaded`; it can rely on the parsed document, but should not assume images have loaded.
+这段沿用首帧章的完整报表结构：服务器先输出 May → April 的行，`#summary` 是片段目标；外部模块 `/reports.js` 在 parser 完成后运行。
 
-**See also:** [How does a browser turn a URL into pixels?](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F) places script scheduling in the navigation path; [When does browser JavaScript run relative to a frame?](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) explains tasks, microtasks, and rendering opportunities; [How should browser performance be measured and diagnosed?](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) distinguishes readiness events from user-visible performance.
+| 此刻的资源状态 | parser 与首帧 | 筛选处理器与就绪事件 |
+|---|---|---|
+| HTML 主体和 `/reports.css` 已就绪，模块图仍在下载，图片还未到 | parser 已建出标题、按钮和两行；样式可用时浏览器可在渲染机会绘出首帧；图片宽高让空位先保留 | `reports.js` 尚未运行，按钮还没有处理器，`DOMContentLoaded` 尚未触发 |
+| `/reports.css` 仍是当前 parser 创建的阻塞样式表，模块图已就绪 | parser 仍可继续解析普通模块脚本后的 HTML；若当前样式表阻止渲染，首帧会等到样式依赖解除 | 普通模块仍要等解析结束、模块图就绪且文档没有阻塞脚本的样式表；脚本之后才能注册处理器，随后才排入 `DOMContentLoaded` |
 
-**Standards / 规范：** [WHATWG HTML: the script element and script preparation](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element); [WHATWG HTML: DOMContentLoaded](https://html.spec.whatwg.org/multipage/dom.html#the-end); checked 2026-11-05.
-## 4. How do DOM events propagate, and when does delegation work? / DOM 事件如何传播，何时适合事件委托？
+在表格第一行的状态下，本页可以先显示标题与预渲染行；用户如果过早点击，页面还可能没有 listener。待模块图与阻塞样式表条件满足，`/reports.js` 运行并注册处理器。若图片较晚到，预留的宽高减少它到达后挤动文字的机会。
 
-For an event with a propagation path, listeners may run during capture on the way to the target, at the target, and during bubbling on the way back. Delegation uses a parent listener to handle matching descendants, so it requires an event that bubbles and target checks appropriate to the DOM structure. Default actions are separate from propagation: cancel with `preventDefault()` only when the event is cancelable and the listener is not passive. / 对具有传播路径的事件，监听器可在捕获阶段沿路径到达目标，在目标阶段运行，再在冒泡阶段沿路径返回。事件委托通过父级监听器处理匹配的后代元素，因此要求事件会冒泡，并且按 DOM 结构检查目标。默认动作与事件传播分开：只有事件可取消且监听器非 passive 时，`preventDefault()` 才能取消默认动作。
+### `DOMContentLoaded` 和 `load` 分别说明什么？
 
-### Capture, target, and bubble / 捕获、目标与冒泡
+`DOMContentLoaded` 在文档解析完成、parser 的延后脚本队列处理流程之后触发；普通 `defer` 脚本和没有异步模块依赖、且模块本身没有顶层 `await` 的模块代码会在此流程同步运行，因此可在事件前注册处理器。若模块使用顶层 `await`、依赖异步模块，或只启动一个异步请求并把后续工作放进 Promise 回调，应用的后续初始化可以晚于 `DOMContentLoaded`；因此这个事件不代表所有异步初始化已完成。它不等图片或 `async` 脚本完成。因为延后脚本可能等待脚本阻塞样式表，所以样式表也可能间接推迟这个事件。
 
-1. **Capture:** capture listeners run from the path's outer nodes toward the target.
-2. **Target:** listeners on the target run.
-3. **Bubble:** if `event.bubbles` is true, bubble listeners run back through the path.
+`load` 要等文档中所有仍会延迟该事件的资源；普通图片、样式表、脚本和子框架可能在其中，懒加载资源通常不必挡住它。具体资源是否延迟 load 由 HTML 的加载算法定义。两种事件都不是“首帧已出现”或“按钮已可用”的指标。
+
+两种事件都不能回答“用户什么时候第一次看到主要内容”或“筛选按钮现在是否可用”。首帧可以早于 `load`，而报表内容也可能已显示、模块脚本还没注册筛选处理器。反过来，`DOMContentLoaded` 触发后，一次长脚本任务仍会让点击处理器排队等待。可见时点和就绪事件的区别见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)；用户侧的加载与交互数据见[如何测量并诊断网页性能问题？](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+
+> [!info]- 来源
+> - 解析器插入的经典脚本、`async`、`defer` 与模块调度： [WHATWG HTML：脚本元素](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)，持续更新规范，脚本准备与执行算法章节。核对日期：2026-11-06。
+> - 阻塞脚本样式表的判定状态： [WHATWG HTML：样式与脚本交互](https://html.spec.whatwg.org/multipage/semantics.html#has-a-style-sheet-that-is-blocking-scripts)，持续更新规范，media 匹配、启用与加载状态条件。核对日期：2026-11-06。
+> - 延后脚本、模块脚本到 `DOMContentLoaded` / `load` 的顺序： [WHATWG HTML：解析结束](https://html.spec.whatwg.org/multipage/parsing.html#the-end)与[HTML 中调用脚本](https://html.spec.whatwg.org/multipage/webappapis.html#calling-scripts)，持续更新规范，解析结束、延后脚本队列和模块求值步骤。核对日期：2026-11-06。
+## 4. DOM 事件如何传播，何时适合事件委托？
+
+案例背景：用户打开 `https://example.test/reports?sort=recent#summary` 后，页面显示 May、April 两行和“最早优先”按钮。点击按钮要把 `oldest` 这个筛选意图交给应用，由应用更新地址和列表。按钮里面还可能有图标或文字节点；事件委托必须从真实事件目标找到所属按钮，并确认它属于这个工具栏。
+
+### 一次点击沿哪些节点传播？
+
+浏览器为事件确定传播路径后，监听器可以沿路径经历三个阶段：捕获阶段从外层祖先走向目标；目标阶段运行目标上的监听器；若事件的 `bubbles` 为真，冒泡阶段再从目标向祖先返回。不是所有事件都会冒泡，所以委托前要确认事件类型的传播约定。
 
 ~~~javascript
+const button = document.querySelector('#sort-controls button[data-sort="oldest"]');
+const label = button.querySelector("span");
+
 document.body.addEventListener("click", () => console.log("body bubble"));
 document.body.addEventListener("click", () => console.log("body capture"), { capture: true });
-button.addEventListener("click", () => console.log("button"));
+label.addEventListener("click", () => console.log("label target"));
+button.addEventListener("click", () => console.log("button bubble"));
 
-// Click button: body capture → button target → body bubble
+// 点击 span：body capture → span target → button bubble → body bubble
 ~~~
 
-`event.target` identifies the event target; `event.currentTarget` is the object whose listener is executing. Shadow DOM can retarget `target` for listeners outside the shadow tree, and the event's bubbling/composed flags determine which boundaries it crosses.
+`event.target` 是最初的事件目标；`event.currentTarget` 是当前正在运行监听器的对象。若按钮里还有 `<svg>` 或 `<span>`，`target` 可能是它们；处理器应先找到最近的筛选按钮。Shadow DOM（影子 DOM）边界外的监听器可能看到被重定向的 `target`；事件的 `bubbles` 与 `composed` 标记影响事件能否穿过相应边界。
 
-### Delegation / 事件委托
+### 什么时候用父级监听器处理子控件？
 
-One parent listener can handle many controls, including descendants added later, without binding a handler to each child. Match a descendant from the event target and check the element type before calling element-specific APIs.
+事件委托让一个父级监听器处理多个后代控件，包括稍后插入的控件，因此不用逐一注册监听器。它适合事件会冒泡、父级确实拥有这些控件、目标匹配规则清楚的场景；它不会消除每次事件分发或处理器本身的计算。
+
+~~~html
+<h1 id="summary">Recent reports</h1>
+<div id="sort-controls">
+  <button type="button" data-sort="recent" aria-pressed="true"><span>Most recent</span></button>
+  <button type="button" data-sort="oldest" aria-pressed="false"><svg aria-hidden="true"></svg><span>Oldest first</span></button>
+</div>
+<ol id="reports"><li data-id="may">May report</li><li data-id="april">April report</li></ol>
+~~~
 
 ~~~javascript
-parent.addEventListener("click", (event) => {
+const controls = document.querySelector("#sort-controls");
+
+controls.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target : null;
-  const item = target?.closest(".item");
-  if (!item || !parent.contains(item)) return;
-  console.log("Item clicked:", item.textContent);
+  const button = target?.closest("button[data-sort]");
+  if (!button || !controls.contains(button)) return;
+
+  const sortIntent = button.dataset.sort;
+  console.log("Sort requested:", sortIntent); // 点击“最早优先”时得到 "oldest"
 });
 ~~~
 
-Delegation is useful for many dynamic descendants, but does not reduce every kind of work; use it when the propagation model and ownership make the handler simpler.
+点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#55.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F)。
 
-If an event handler removes matching descendants, [choose a live collection or a static snapshot](#55.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) before iterating. Removing an element from a live collection can change the index of the next element.
+### 默认动作与传播控制是两回事
 
-### Default action, cancellation, and listener options / 默认动作、取消与监听器选项
+按钮若位于表单中，点击可能触发表单提交；这是与事件传播分开的默认动作。`preventDefault()` 只在事件可取消且监听器不是 passive 时取消默认动作，它不会停止冒泡。`stopPropagation()` 阻止事件继续传到路径上后续对象；`stopImmediatePropagation()` 还会阻止当前对象上后续监听器运行。
 
-`preventDefault()` cancels a cancelable event's default action; it does not stop propagation. `stopPropagation()` prevents the event from reaching later objects on the path, while `stopImmediatePropagation()` also prevents later listeners on the current object. A passive listener cannot cancel the default action, so use `{ passive: true }` for scroll/touch listeners that never need to cancel scrolling. The DOM Standard defines passive defaults for particular root-target `touchstart`/`touchmove`/`wheel`/`mousewheel` listeners; set the option explicitly when cancellation matters.
+如果滚动或触控监听器不需要取消浏览器默认滚动，设置 `{ passive: true }` 能表明这一点；passive 监听器调用 `preventDefault()` 无法取消默认动作。DOM 标准规定，未显式设置 `passive` 的 `touchstart`、`touchmove`、`wheel` 和 `mousewheel` 监听器，在 `Window`、`Document`、`documentElement` 或 `body` 上默认 passive 为 true；确实需要拦截时，应先按事件的 `cancelable` 状态判断，再显式设置 `{ passive: false }`。
 
-### Mobile activation and touch gestures / 移动端点击与触控手势
+### 移动端点击与手势策略
 
-The old click delay was conditional: some browsers delayed click dispatch while waiting to distinguish a tap from a double-tap zoom gesture. It is not a universal fixed delay today. Start with a mobile-optimized viewport, then set a gesture policy only on controls that need one. `touch-action: manipulation` allows panning and pinch zoom while excluding user-agent double-tap zoom; do not disable user zoom to address a historical delay. / 历史上的点击延迟有触发条件：部分浏览器曾等待判断点按是否为双击缩放，因此延后派发 click；如今不能把它视为普遍固定延迟。先使用适合移动端的 viewport，再仅为确实需要的控件设置手势策略。`touch-action: manipulation` 允许平移和双指缩放，同时排除浏览器的双击缩放；不要为了处理历史延迟而禁用用户缩放。
+历史上的移动端 click 延迟有特定条件：部分浏览器曾等待判断一次触摸是否还会成为双击缩放手势。它不是今天所有浏览器、所有 viewport 或所有输入模式下的固定延迟。先设置符合设备宽度的 viewport；不要为了绕开历史延迟而禁止用户缩放。
 
-```html
+~~~html
 <meta name="viewport" content="width=device-width, initial-scale=1">
-```
+~~~
 
-This tells the browser to use a layout viewport aligned with the device width. It does not prevent pinch zoom. Chrome’s viewport diagnostic documents a possible delay up to 300 ms when the initial viewport is not optimized for mobile; other browsers and input configurations can differ. [Chrome's viewport insight](https://developer.chrome.com/docs/performance/insights/viewport) describes that specific condition.
+若某个控件不需要双击缩放，但仍应允许平移和双指缩放，可以对该控件使用 Pointer Events 的 `touch-action: manipulation`：
 
-For an interactive region where double-tap zoom is not part of the desired gesture, Pointer Events defines:
-
-```css
-button,
-[role="button"] {
+~~~css
+#sort-controls button[data-sort] {
   touch-action: manipulation;
 }
-```
+~~~
 
-Apply the rule narrowly enough to preserve panning and zoom. It changes the browser’s direct-manipulation gestures. Controls still need ordinary activation, including keyboard activation. Test the target devices and input modes. Avoid a legacy tap library unless a tested target requires it: a library that synthesizes click can conflict with the browser's native click, so do not activate the same action on both touch-end and click.
+它让浏览器保留平移和连续缩放，同时不把双击缩放作为该元素上的手势。把规则限制在确实需要的控件，不要用 `touch-action: none` 全局封锁操作。原生 `<button>` 自带键盘激活；自制的 `role="button"` 还必须补足键盘行为。Chrome 的 viewport 诊断指出一个特定条件：初始视口未针对移动设备优化时，点击可能延后至多 300 毫秒；其他浏览器和输入设置会不同，不能把这个值当成所有移动端点击的固定时延。除非目标设备实测仍有兼容问题，不要同时在 touch-end 和 click 上触发同一动作，以免合成 click 与原生 click 重复执行。
 
-**Specification:** [Pointer Events Level 3, `touch-action`](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property) defines the allowed direct-manipulation gestures.
+### 把浏览器事件交给 React 时，交接什么？
 
-### React DOM boundary / React DOM 边界
+若同一报表页由 React 管理，浏览器仍然派发 click；React 的 `onClick` handler 因这次点击触发，并把筛选意图 `oldest` 传给状态更新。事件处理器可从目标元素读取该值，也可由按钮各自的闭包传入。浏览器这一侧的输入是已发生的事件、当前 URL `sort=recent` 和当前 DOM；交给下一章的应用意图是“筛选变为 `oldest`”。React 章节从这个输入继续，讲 state 快照、组件重算和 commit 后需要的 DOM 变化。见[React 如何把用户操作变成更新后的界面？](#6.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F)。React 管理的节点应由 React state 描述；若另用 DOM API 直接改它们，下一次 React commit 可能覆盖这些修改。
 
-React exposes familiar synthetic event properties and JSX handlers: `onClick` bubbles by default and `onClickCapture` runs in capture. Its internal delegation is a framework implementation detail; React 17 moved the delegation root from the document to the React root container. Do not infer DOM event behavior from a particular React version. Before React 17, React DOM pooled SyntheticEvent objects; React 17 removed pooling, so `persist()` is not needed in current React DOM. React Native has separate behavior.
+React 的 JSX 事件名和事件对象保留常用的 DOM 事件概念，`onClick` 默认冒泡、`onClickCapture` 对应捕获。事件委托的具体根节点属于 React 实现细节：React 17 将委托根从 `document` 移到了 React root container；早期 React DOM 还会池化 SyntheticEvent，React 17 起移除了池化，所以当前 React DOM 不需要为异步读取事件调用 `persist()`。React Native 的事件行为另有边界。
 
-**See also:** [How do browser contexts communicate?](#58.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F) covers cross-document messaging; [When does browser JavaScript run relative to a frame?](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) covers rAF and idle scheduling; [How can a JavaScript event bus handle reentrancy?](#56.%20How%20can%20a%20JavaScript%20event%20bus%20handle%20reentrancy?%20/%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E9%87%8D%E5%85%A5%EF%BC%9F) covers application-level pub/sub.
+**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#58.%20How%20do%20browser%20contexts%20communicate?%20/%20%E6%B5%8F%E8%A7%88%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B9%8B%E9%97%B4%E5%A6%82%E4%BD%95%E9%80%9A%E4%BF%A1%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#56.%20How%20can%20a%20JavaScript%20event%20bus%20handle%20reentrancy?%20/%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E9%87%8D%E5%85%A5%EF%BC%9F)讨论应用层发布/订阅。
 
-**Sources:** [WHATWG DOM event dispatch](https://dom.spec.whatwg.org/#concept-event-dispatch); [React event handlers](https://react.dev/learn/responding-to-events); [React 17 delegation change](https://react.dev/blog/2020/08/10/react-v17-rc#changes-to-event-delegation), checked 2026-11-05.
-## 5. When does browser JavaScript run relative to a frame? / 浏览器 JavaScript 如何与每一帧交错？
+> [!info]- 来源
+> - 捕获、目标、冒泡、事件目标、默认动作及取消： [WHATWG DOM：事件分发](https://dom.spec.whatwg.org/#concept-event-dispatch)，Living Standard，事件分发算法；[WHATWG DOM：Event 接口](https://dom.spec.whatwg.org/#interface-event)，事件标记与取消行为。核对日期：2026-11-06。
+> - `touch-action` 的手势边界： [Pointer Events Level 3](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property)，W3C Recommendation，`manipulation` 值与直接操控行为章节。核对日期：2026-11-06。
+> - passive 默认值与取消行为： [WHATWG DOM：事件监听器](https://dom.spec.whatwg.org/#dom-addeventlistener)，Living Standard，passive 监听器与阻止默认动作章节。核对日期：2026-11-06。
+> - React 事件处理器与事件阶段： [React：Responding to Events](https://react.dev/learn/responding-to-events)；React 17 将委托根移到 root container：[React 17：Changes to Event Delegation](https://legacy.reactjs.org/blog/2020/08/10/react-v17-rc.html#changes-to-event-delegation)；React 17 移除事件池：[React 17：No Event Pooling](https://legacy.reactjs.org/blog/2020/08/10/react-v17-rc.html#no-event-pooling)。核对日期：2026-11-06。
+> - 移动端 viewport 诊断的适用条件： [Chrome Performance Insights：Optimize viewport for mobile](https://developer.chrome.com/docs/performance/insights/viewport)，Chrome DevTools 指标说明。核对日期：2026-11-06。
+## 5. 浏览器 JavaScript 何时运行，画面何时更新？
 
-A browser runs one task on a JavaScript agent to completion, then performs a microtask checkpoint that drains Promise reactions and other microtasks, including newly queued ones. A rendering opportunity is a separate user-agent decision: it may update rendering between tasks, but it need not produce a frame after every task or on a fixed 16 ms cadence. `requestAnimationFrame` is for work tied to a rendering update; `requestIdleCallback` is for deferrable work when an idle opportunity is available. / 浏览器中的一个 JavaScript agent 会把当前任务执行完，再进行微任务检查点，清空 Promise 处理器和其他微任务，包括期间新加入的微任务。渲染机会由用户代理单独决定：浏览器可在任务之间更新画面，但不必每个任务后都生成一帧，也不保证固定的 16 毫秒节奏。`requestAnimationFrame` 用于与渲染更新同步的工作；`requestIdleCallback` 用于有空闲机会时可延后的工作。
+案例背景：报表页已经显示 `sort=recent` 的行，`/reports.js` 也已注册 click 处理器，用户点击“最早优先”。如果浏览器正忙，处理器什么时候能运行？处理器改完 URL 和 DOM 后，用户又要等到什么时候才能看到新顺序？沿一次点击走完这两个时间边界。
+
+> [!info] 任务和微任务
+> **task（任务）**是宿主安排的工作单元，例如用户输入、计时器回调或网络事件处理。一个 task 中的同步 JavaScript 不会被另一个普通 task 插入执行。**microtask（微任务）**用于当前工作结束后的短小延续，例如 Promise reaction（Promise 处理器）；微任务检查点会清空队列，包括在运行中新增的微任务。ECMAScript 定义 Promise 的语言行为，浏览器宿主定义它们怎样接入事件循环。
 
 ~~~mermaid
 flowchart TD
-    T[Run one task to completion] --> M[Microtask checkpoint]
-    M -->|more microtasks queued| M
-    M --> D{Rendering opportunity now?}
-    D -->|no| I[Possible idle callback opportunity]
-    D -->|yes| R[Run requestAnimationFrame callbacks]
-    R --> U[Update rendering as needed]
-    U --> I
-    I --> N[Select another task]
-    N --> T
+    A[执行包含 click 的 task（任务）] --> B[同步处理器运行到返回]
+    B --> C[完成 microtask（微任务）检查点]
+    C -->|仍有微任务| C
+    C --> D[事件循环选择下一项可运行任务]
+    D --> E{选中的是渲染更新任务?}
+    E -->|是| F[运行该次渲染更新的 requestAnimationFrame 回调]
+    F --> G[按需执行样式、布局等渲染步骤]
+    G --> C
+    E -->|否| H[运行所选任务]
+    H --> C
 ~~~
 
-This is a mental model, not a promise that every pass includes rendering or idle callbacks. A long task or endless microtask chain can keep the browser from reaching a rendering opportunity. A zero-delay timer is eligible after its minimum delay; it is not an immediate yield.
+渲染机会会使用户代理把更新任务排入单独的 rendering task source（渲染任务源）；事件循环随后从可运行任务中选择下一项，选择策略不意味着每个 click 后同步检查一次渲染。图只表示一次交互后可能经过的顺序，不保证每轮都绘制；浏览器也会因刷新率、页面可见性和资源状况推迟或跳过画面更新。
+
+图把这次 click 中 `/reports.js` 的业务处理器简化成一个同步段；真实事件分发还可能调用其他监听器，它们不在这条示例时序里。
+
+### 微任务的先后顺序与让出的边界
 
 ~~~javascript
 console.log("start");
 setTimeout(() => console.log("timer task"), 0);
 Promise.resolve().then(() => console.log("Promise reaction"));
-queueMicrotask(() => console.log("microtask"));
+queueMicrotask(() => console.log("queued microtask"));
 console.log("end");
-
-// In a typical browser task:
-// start
-// end
-// Promise reaction
-// microtask
-// timer task
 ~~~
 
-The Promise executor runs synchronously. Promise reactions and `queueMicrotask` callbacks run as microtasks; the host later chooses when the timer task runs. A microtask added during a checkpoint is processed before the next task.
+当前同步脚本先输出 `start`、`end`。脚本返回时排队的 Promise reaction 和 `queueMicrotask()` 回调按入队顺序在微任务检查点执行；计时器回调是后续 task，只有达到计时器允许执行的时点后才有资格运行。`setTimeout(fn, 0)` 不表示立刻切走，也不承诺下一个画面会先出现。若当前处理器很长，用户点击会等它完成才开始处理；若处理器不断追加微任务，检查点会持续排空队列，浏览器也就迟迟不能处理后续任务或渲染。
 
-### Visual updates and `requestAnimationFrame` / 视觉更新与 rAF
+`new Promise(executor)` 中的 `executor` 在构造时同步运行；由 `.then()` 注册的 reaction 才排入微任务。上面的例子使用 `Promise.resolve().then()`，所以 `Promise reaction` 出现在同步输出之后。Promise 的语言行为见[异步 JavaScript](#44.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
 
-Use `requestAnimationFrame(callback)` for an update that should be made before a browser rendering update. Its callback receives a high-resolution timestamp useful for time-based animation. The callback rate follows available rendering opportunities and can vary with refresh rate and page visibility; it is not a fixed 60 Hz timer. Updating a transform in rAF can coordinate a write with rendering, but does not make the work free or guarantee a compositor path.
+在报表页的例子里，点击发生时可能正有脚本任务占用主线程，这会增加输入延迟。处理器开始后，`pushState()` 和节点修改是同步的；处理器结束后，微任务仍可能继续安排工作，浏览器再看是否有机会更新报表画面。`await Promise.resolve()` 或把工作切成一串微任务并不会主动让浏览器绘制。若计算确实太重，应把有界工作切到后续 task、Web Worker 或适合的框架调度策略；需要确认是哪段时间占用主线程时，沿 [INP 的交互阶段](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)看录制结果。
 
-### Deferrable work and `requestIdleCallback` / 可延后工作与 rIC
+### `requestAnimationFrame` 把写入对齐到渲染更新
 
-`requestIdleCallback(callback, {timeout})` lets the user agent schedule work during an idle period. `deadline.timeRemaining()` is an estimate, not a hard budget. Process a bounded unit and yield again; a timeout is not a reason to drain an unbounded queue. Support varies, so feature-detect it. A `setTimeout` fallback runs at a later timer opportunity but does not provide an idle-time guarantee.
+若动画或视觉写入需要按渲染更新同步，使用 `requestAnimationFrame(callback)`。回调会在该次渲染更新的常规样式与布局步骤之前运行，参数提供可用于时间计算的高精度时间戳。调用率取决于可用的渲染机会和页面状态；刷新率、后台限速都会影响它，所以它不是固定的 60 Hz 计时器。把变换属性的写入放入 rAF 可以让写入时机与画面同步，但不会让计算免费，也不保证浏览器只做合成工作。DOM/样式写入后读取几何值仍可能触发同步布局，详见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+
+### `requestIdleCallback` 只安排可推迟的小块工作
+
+`requestIdleCallback(callback, { timeout })` 允许用户代理在空闲时段安排低优先级工作。`deadline.timeRemaining()` 是对剩余空闲时间的估计，不是硬性运行预算；每轮处理一个有界单元，剩余工作再排队。即使设置 `timeout`，回调被延迟到超时后也不应因此一次清空无界队列。该 API 并非所有浏览器都支持，需按目标环境检测；用 `setTimeout()` 代替时只能保证之后有一次计时器机会，不能保证当时空闲。
 
 ~~~javascript
 function runIdleSlice(deadline) {
   if (!workQueue.length) return;
   if (deadline.didTimeout || deadline.timeRemaining() > 0) {
-    processNext(workQueue.shift()); // keep each unit bounded
+    processNext(workQueue.shift()); // 每次工作仍须有界
   }
   if (workQueue.length) requestIdleCallback(runIdleSlice, { timeout: 2000 });
 }
+
 requestIdleCallback(runIdleSlice, { timeout: 2000 });
 ~~~
 
-Framework schedulers such as React's scheduler are separate policies layered on host scheduling. Do not treat them as browser task queues or promise that rendering occurs between chunks.
+React 等框架的 scheduler 是建立在宿主机制上的另一套排程策略，不是浏览器 HTML 规范中的 task source。使用分片调度也不能假定每两个代码块之间浏览器一定会绘制。
 
-**See also:** [How do scripts affect HTML parsing and document readiness?](#3.%20How%20do%20scripts%20affect%20HTML%20parsing%20and%20document%20readiness?%20/%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) describes parser scheduling; [Why can a CSS change trigger layout, paint, or compositing work?](#11.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) describes rendering work after DOM changes; [Asynchronous JavaScript / 异步 JavaScript](#44.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) covers language-level Promise behavior.
+**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#44.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
-**Standards / references:** [WHATWG HTML event loops and rendering opportunities](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops); [W3C requestIdleCallback](https://www.w3.org/TR/requestidlecallback/); [Chrome requestIdleCallback guide](https://developer.chrome.com/blog/using-requestidlecallback), checked 2026-11-05.
-
-
-For the host-specific server contrast, see [Node runtime and scheduling / Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md).
+> [!info]- 来源
+> - 浏览器任务、微任务检查点、渲染机会和动画帧回调： [WHATWG HTML：Web 应用 API 与事件循环](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，持续更新规范，事件循环、微任务与更新渲染章节。核对日期：2026-11-06。
+> - 空闲回调和 `IdleDeadline`： [W3C `requestIdleCallback()`](https://www.w3.org/TR/requestidlecallback/)，Working Draft，2025-05-21，接口与处理算法章节；[Chrome `requestIdleCallback` guide](https://developer.chrome.com/blog/using-requestidlecallback)，使用建议。核对日期：2026-11-06。
+> - Promise 构造器执行器的同步调用： [ECMAScript：Promise 构造器](https://tc39.es/ecma262/multipage/control-abstraction-objects.html#sec-promise-executor)，Living Standard，执行器调用算法。核对日期：2026-11-06。
 ## 6. How does React turn a user action into an updated interface? / React如何把用户操作变成更新后的界面？
 
-**Core answer / 核心回答：** A user action reaches a React handler through the browser's event system. The handler requests a state update, but it continues to read the snapshot from its current render. React then renders the next component descriptions, matches them by type, position, and sibling keys, and commits the required host changes. The browser handles the later style, layout, and paint work. This route connects [DOM events / DOM事件](#4.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F), React state, and [browser rendering / 浏览器渲染](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F); it does not promise one paint for every setter call. / 用户操作经由浏览器事件系统到达 React 处理器。处理器请求状态更新，但仍读取当前这次 render 的快照。随后 React 重新计算组件描述，按元素类型、位置和兄弟 key 匹配，并提交必要的宿主环境变更。之后的样式、布局和绘制由浏览器处理。这条路线连接 [DOM events / DOM事件](#4.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)、React state 与[浏览器渲染](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F)；它不保证每次调用 setter 都对应一次绘制。
+**Core answer / 核心回答：** A user action reaches a React handler through the browser's event system. The handler requests a state update, but it continues to read the snapshot from its current render. React then renders the next component descriptions, matches them by type, position, and sibling keys, and commits the required host changes. The browser handles the later style, layout, and paint work. This route connects [DOM events / DOM事件](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F), React state, and [browser rendering / 浏览器渲染](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F); it does not promise one paint for every setter call. / 用户操作经由浏览器事件系统到达 React 处理器。处理器请求状态更新，但仍读取当前这次 render 的快照。随后 React 重新计算组件描述，按元素类型、位置和兄弟 key 匹配，并提交必要的宿主环境变更。之后的样式、布局和绘制由浏览器处理。这条路线连接 [DOM events / DOM事件](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)、React state 与[浏览器渲染](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)；它不保证每次调用 setter 都对应一次绘制。
 
 ~~~mermaid
 flowchart LR
@@ -782,26 +899,72 @@ The built-in React boundary API is class-based. A library can make boundary comp
 **See also:** [React Basics / React基础](#6.%20How%20does%20React%20turn%20a%20user%20action%20into%20an%20updated%20interface?%20/%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E6%9B%B4%E6%96%B0%E5%90%8E%E7%9A%84%E7%95%8C%E9%9D%A2%EF%BC%9F) for state updates and render/commit; [Advanced React / React进阶](#8.%20How%20can%20a%20React%20search%20interface%20stay%20responsive%20as%20results%20update?%20/%20React%E6%90%9C%E7%B4%A2%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E5%9C%A8%E6%9B%B4%E6%96%B0%E7%BB%93%E6%9E%9C%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for Suspense loading and error states.
 
 **Sources checked 2026-10-15:** [Component and lifecycle methods](https://react.dev/reference/react/Component), [Error Boundary caveats](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary), [useTransition Error Boundary example](https://react.dev/reference/react/useTransition#displaying-an-error-to-users-with-an-error-boundary).
-## 11. Why can a CSS change trigger layout, paint, or compositing work? / 为什么 CSS 改动会触发布局、绘制或合成工作？
+## 11. 为什么一次 DOM 改动会增加布局或绘制工作？
 
-A DOM or style change invalidates only the work needed for the next correct presentation, but that dependency may include style recalculation, layout, paint, rasterization, and compositing. Layout computes geometry; paint records drawing operations; rasterization turns paint output into pixel content; compositing arranges content for a frame. Reading geometry after a write can synchronously force stale style or layout to become current, but a geometry read does not always cause a new layout. / DOM 或样式变化会使下一次正确呈现所需的工作失效，依赖链可能包含样式重算、布局、绘制、栅格化和合成。布局计算几何；绘制记录绘图操作；栅格化把绘制输出转为像素内容；合成将内容组织成画面。写入后读取几何值可能同步刷新尚未更新的样式或布局，但几何读取并不总会触发布局。
+案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，看到 May、April 两行报表；点击“最早优先”后，页面把 URL 中的 `sort` 改为 `oldest`，并把行顺序换成 April → May。`/reports.js` 的处理器同步改 DOM，但列表何时出现在屏幕上、浏览器为此需要多少工作，是接下来的问题。
 
-### Which work may be invalidated? / 哪些工作可能失效？
+~~~mermaid
+flowchart TD
+    CLICK[点击“最早优先”] --> DOM[同步改动 DOM：行顺序与 aria-pressed]
+    DOM --> INVALID[相关样式或布局数据可能失效]
+    INVALID --> STYLE[需要时重新计算样式]
+    STYLE -->|几何或换行有变化| LAYOUT[需要时重新计算布局]
+    STYLE -->|几何不变但像素变化| PAINT[更新受影响的绘制结果]
+    LAYOUT --> PAINT
+    PAINT --> RASTER[需要时栅格化]
+    RASTER --> COMPOSITE[合成画面]
+    COMPOSITE --> FRAME[有需要时在后续渲染机会呈现]
+    DOM -->|若脚本此时读取几何| READ[脚本读取当前几何]
+    READ --> CHECK{相关数据已经是最新？}
+    CHECK -->|是| VALUE[返回几何值，脚本继续]
+    CHECK -->|否| FLUSH[返回前同步刷新样式或布局]
+    FLUSH --> VALUE
+    STYLE -->|属性与实现路径都适合时| MAYBE[某些实现可跳过布局或绘制]
+    MAYBE --> COMPOSITE
+~~~
 
-| Change (examples) | Work often needed | Boundary |
+图里的阶段是帮助解释依赖的概念模型，不表示每次更新都必须走完全部步骤。浏览器可延后并合并工作，也可跳过没有失效的阶段；脚本中的几何读取若要求最新结果，则可能让原本可延后的刷新提前发生。DOM 改动会提供下一帧的呈现状态；后续网络请求或异步业务结果是否已完成，是另一条时间线，浏览器也不保证每个任务后都立刻呈现。渲染机会与这条时间边界见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+
+### 浏览器需要让哪些信息重新一致？
+
+DOM 描述节点及其父子顺序，CSS 规则为这些节点提供样式。样式计算得到当前适用的 computed style（计算样式）；布局根据样式、内容和可用空间计算盒子的尺寸与位置；绘制把可见内容表示为绘制操作。后续实现可把绘制操作栅格化为像素内容，再合成各层并提交画面。简单说，列表换序先改了结构，浏览器必须保证它下一次显示时，结构、样式和几何彼此一致。
+
+| 对这张报表做什么 | 下一次呈现通常要考虑什么 | 为什么不能仅凭操作名称断言成本 |
 |---|---|---|
-| Geometry or line-wrap change (`width`, font metrics, inserting a node) | Style, layout, paint, then presentation | Extent depends on layout dependencies and engine |
-| Visual-only style change (`color`, many backgrounds) | Style, paint, then presentation | Geometry can be reused |
-| Suitable `transform` or `opacity` update | Style or compositor update, then presentation | May avoid layout and paint; layer or GPU use is not guaranteed |
-| Read current geometry after DOM/style writes | Potential synchronous style/layout flush | No flush is needed if relevant state is already current |
+| 把两行从 May → April 调成 April → May | 更新列表有关的样式与几何，必要时重绘 | 具体失效范围取决于布局依赖和引擎优化 |
+| 只把当前按钮文字颜色改为强调色 | 重算相关样式并更新可见像素 | 若尺寸、字体和换行不变，可能复用已有几何 |
+| 改宽度、字体尺寸，或插入会占空间的内容 | 可能重新布局受影响的区域并更新绘制 | 几何变化会影响后续内容的位置，影响范围不一定只在一个节点内 |
+| 改变适合合成处理的 `transform` 或 `opacity` | 有些情况下可以跳过布局或绘制 | 不保证只在合成阶段完成，也不保证提升图层或使用 GPU |
+| DOM / 样式改动后读取几何 | 若返回值依赖的样式或布局已失效，读取前可能同步刷新 | 若数据仍是最新的，同一读取 API 不需要触发布局 |
 
-“Reflow” and “repaint” are convenient shorthand, not portable performance scores. A small element can trigger work beyond itself, while a large subtree can be cheap when relevant data is unchanged. `transform` and `opacity` often make good animation candidates, but do not guarantee compositor-only updates, layer promotion, or GPU execution. Profile the target page and browser.
+`reflow`（重排）和 `repaint`（重绘）是常用说法，不是可以跨浏览器直接比较的性能分数。即使影响的是一个小节点，它的位置也可能牵动后续内容；反过来，大量节点若没有相关数据变化，也不必每次都重算。`transform` 和 `opacity` 常作为动画候选，是因为某些更新路径可以跳过布局或绘制；要确认目标页面是否走了这条路径，应检查实际录制，而不是只看 CSS 属性名。
 
-### How does a layout read become forced work? / 布局读取如何变成同步刷新？
+### 为什么读几何会让脚本停下来？
 
-When script changes the DOM or a layout-affecting style, the browser may mark style or layout data dirty and defer recalculation until it needs a current result. A later API that returns current geometry—such as `offsetWidth` or `getBoundingClientRect()`—can require that pending work to run before returning. If the relevant data is already current, the same API need not trigger layout.
+浏览器可以把样式或布局标为待更新，先继续运行 JavaScript，等需要显示或读取当前结果时再计算。`offsetWidth`、`getBoundingClientRect()` 等几何 API 要返回调用时的尺寸或坐标；如果前面的 DOM / 样式写入已经使相关数据失效，浏览器就可能先刷新再返回。这里的停顿不是这个 API 每次都会“主动制造布局”，而是它要求拿到尚未更新的当前值。DOM 写入本身同步生效；同步刷新发生时，脚本会在几何值返回前付出这一段工作。
 
-This loop repeatedly asks for current geometry after changing style, creating repeated flush opportunities:
+下面的示例从同一组已有元素开始：两个不受最小/最大宽度或变换约束的普通块级元素，边框盒宽度分别为 100px 和 160px；`box-sizing: border-box` 让 `style.width` 也指定边框盒宽度，因此两种代码都意图把宽度改为 110px 和 170px。示例使用数组而不是直接把 `querySelectorAll()` 返回的 `NodeList` 当作有 `.map()` 的数组：
+
+~~~html
+<div id="width-demo">
+  <div class="item" style="width: 100px"></div>
+  <div class="item" style="width: 160px"></div>
+</div>
+~~~
+
+~~~css
+#width-demo .item {
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid;
+}
+~~~
+
+~~~javascript
+const items = Array.from(document.querySelectorAll("#width-demo .item"));
+~~~
+
+以下两段代码是从上述相同初始宽度分别运行的两种写法，不是先后连续执行。第一种在每次写入宽度后，又读取下一项当前宽度。若某次写入使后续读取依赖的几何数据失效，读取可能触发同步刷新，形成反复的读—写：
 
 ~~~javascript
 for (const item of items) {
@@ -809,7 +972,7 @@ for (const item of items) {
 }
 ~~~
 
-Collect measurements before writing. This avoids the obvious read-write-read pattern; it does not promise that every later change collapses to one layout or that batching is faster for every workload.
+若需求是按原始宽度统一增加 10 像素，可以先读取一组尺寸，再写回；按上述起始尺寸，写入结果同样是 110px 和 170px：
 
 ~~~javascript
 const widths = items.map(item => item.offsetWidth);
@@ -818,60 +981,99 @@ items.forEach((item, index) => {
 });
 ~~~
 
-Choose a geometry API from the box and coordinate system needed: see [Which DOM geometry API returns the size or coordinate I need?](#25.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F). For a measured performance problem, inspect a rendering trace; [How should browser performance be measured and diagnosed?](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) connects the trace to the user-visible symptom.
+第二种顺序消除了显眼的交替读写，允许浏览器把后续更新合并处理；它不保证整段代码只发生一次布局，也不保证所有数据和页面上都更快。先确认页面确有强制刷新，再用性能录制定位写入与读取的位置。不同几何 API 返回的盒子与坐标系不同，按问题选择，见[哪个 DOM 几何 API 能回答哪种测量问题？](#25.%20Which%20DOM%20geometry%20API%20answers%20which%20measurement%20question?%20/%20%E5%93%AA%E4%B8%AA%20DOM%20%E5%87%A0%E4%BD%95%20API%20%E8%83%BD%E5%9B%9E%E7%AD%94%E5%93%AA%E7%A7%8D%E6%B5%8B%E9%87%8F%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
-### Standards versus an implementation pipeline / 标准行为与引擎流水线的界限
+### 引擎怎样实现这些步骤？
 
-CSS and CSSOM View define observable layout results and geometry APIs. They do not require every browser to expose internal stages called “render tree,” “reflow,” “raster,” or “composite,” or require the same process and thread arrangement. Chromium's RenderingNG is one implementation example: Blink produces paint artifacts, Chromium schedules raster work into tiles, compositor components assemble frames, and Viz submits frames for display. Those names and steps describe Chromium, not all browser engines; operating-system composition and display timing also sit outside the web platform's CSS layout contract.
+Web 平台规定 DOM、CSS 和几何 API 可观察到的结果，但不要求每个浏览器使用相同的内部阶段、进程或线程。以 Chromium 的 RenderingNG 为例，Blink 会计算样式、布局并生成绘制产物，后续可把绘制列表分块栅格化为 GPU 纹理 tile，再提交 compositor frame，由 Viz 聚合并绘制到屏幕；若某次变化不需要某些阶段，管线可以跳过它们。其他引擎的内部组件名称和调度方式可以不同，因此性能判断应围绕可见效果和录制数据，而不是把 Chromium 流程当作所有浏览器的硬性规范。
 
-**Sources checked 2026-11-05:** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) for geometry APIs; [CSS Display](https://www.w3.org/TR/css-display-3/) for box and formatting behavior; [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture) for the illustrative implementation pipeline; [Chrome forced reflow guidance](https://developer.chrome.com/docs/performance/insights/forced-reflow).
-## 12. How do you measure and diagnose web performance problems? / 如何测量和诊断网页性能问题？
+如果报表扩大到许多行，先分清瓶颈在网络传输、服务端查询、客户端数据计算，还是已挂载节点的样式与布局。虚拟滚动主要减少同时挂载的 DOM；它不会自动缩小已下载数据或消除对全量数据的计算。完整的窗口计算、可变行高、焦点和辅助技术边界在[长报表列表何时适合虚拟滚动？](#14.%20When%20does%20virtual%20scrolling%20help%20a%20long%20list?%20/%20%E9%95%BF%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BD%BF%E7%94%A8%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)展开；性能录制怎样区分主线程、布局和绘制成本，见[如何测量并诊断网页性能问题？](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
-Start with the user-visible symptom, measure the affected route and interaction, and identify the dominant cost before changing code. Core Web Vitals describe field experience: LCP for loading, INP for interaction responsiveness, and CLS for visual stability. Lab traces help explain causes but are not a substitute for real-user data. / 从用户能感知的问题出发，测量受影响的页面与交互，并在改代码前找出主要成本。Core Web Vitals 用于描述真实用户体验：LCP 衡量加载，INP 衡量交互响应，CLS 衡量视觉稳定。实验室追踪有助于解释原因，但不能替代真实用户数据。
+> [!info]- 来源
+> - 本章的概念阶段不是 Web 平台规定的完整固定流水线；渲染机会、更新渲染： [WHATWG HTML：事件循环与更新渲染](https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering)，Living Standard，持续更新；核对日期：2026-11-06。
+> - 盒子、布局与几何读取的可观察行为： [CSS Display](https://www.w3.org/TR/css-display-3/)，W3C Candidate Recommendation Draft，2026-06-05，display 类型与盒子生成；[CSS Sizing](https://www.w3.org/TR/css-sizing-3/#box-sizing)，box-sizing 的宽度计算；[CSSOM View](https://drafts.csswg.org/cssom-view/)，CSSWG Editor's Draft，`offsetWidth` 与 `getBoundingClientRect()`；核对日期：2026-11-06。
+> - DOM / 样式失效后读取几何可能触发同步布局，以及读写交错的风险： [Chrome Performance Insights：Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，Chrome DevTools 文档，2025-10-08 更新；该诊断解释 Chrome 实现。
+> - 作为一个实现案例的样式、布局、绘制、tile 栅格化、Viz 合成与可跳过阶段： [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture)，[RenderingNG 数据结构：tiles 与 Viz](https://developer.chrome.com/docs/chromium/renderingng-data-structures)，Chromium 架构说明；核对日期：2026-11-06。
+## 12. 如何测量并诊断网页性能问题？
 
-### What do the main metrics measure?
+案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，等报表首屏出现，再点击“最早优先”把 May → April 排成 April → May。有人反馈“页面开得慢”，有人反馈“点击没反应”；这两种描述可能落在不同阶段，修复前要先把用户感受到的时间与浏览器实际工作对应起来。
 
-| Metric | User-visible outcome | Current “good” threshold |
+### 三项核心指标分别回答什么？
+
+Core Web Vitals（核心网页指标）目前包含三项稳定指标，分别覆盖主要内容加载、交互响应和视觉稳定性。表里的“良好”阈值是现场数据的分档标准，不是单次访问的服务保证。
+
+| 指标 | 它回答的问题 | 良好阈值 |
 |---|---|---:|
-| **LCP** | Time until the largest visible image or text block is rendered | ≤ 2.5 s |
-| **INP** | Responsiveness across page interactions during a visit | ≤ 200 ms |
-| **CLS** | Unexpected layout movement during the page lifecycle | ≤ 0.1 |
+| Largest Contentful Paint（最大内容绘制，LCP） | 视口中最大的合格图片、文字块或视频何时绘制，通常用来观察主要内容是否及时出现 | ≤ 2.5 秒 |
+| Interaction to Next Paint（交互到下一次绘制，INP） | 用户点击、触屏或键盘交互后，浏览器何时能呈现下一帧；有时没有新帧要绘制，也不保证业务结果已出现；每次访问通常取最慢交互，交互很多时每 50 次排除一个最慢值 | ≤ 200 毫秒 |
+| Cumulative Layout Shift（累积布局偏移，CLS） | 页面生命周期中最大一组连续的意外布局偏移有多大 | ≤ 0.1 |
 
-Good thresholds are assessed at the 75th percentile of real visits, segmented by mobile and desktop. They are field-data thresholds, not guarantees that every visit feels fast. See [web.dev Web Vitals](https://web.dev/articles/vitals) and the metric definitions for [LCP](https://web.dev/articles/lcp), [INP](https://web.dev/articles/inp), and [CLS](https://web.dev/articles/cls).
+评估一个页面或站点时，要看真实访问样本在移动端、桌面端分别计算的第 75 百分位（p75）：至少 75% 的访问达到良好阈值，才会被划入该指标的良好档。它是现场人群分布的摘要，不能说明每次访问都一样快。CLS 也不是把整次访问的所有偏移直接相加；它取一组相邻偏移组成的 session window（会话窗口）中的最大分数，窗口内相邻偏移间隔少于 1 秒，且窗口最长为 5 秒。阈值与口径截至 2026-11-06 核对；发布说明或测量产品改变时，应重新核实。
 
-Other milestones answer different questions:
+INP 不是“事件处理器运行了多久”。一个逻辑交互可能产生 `pointerdown`、`pointerup`、`click` 等多个 Event Timing 条目；浏览器按关联条目汇总交互延迟，再定位三段时间。输入延迟结束于相关回调开始，不是处理器自身的耗时：
 
-| Milestone | Meaning |
-|---|---|
-| **FCP** | First text or image content is rendered |
-| **DOMContentLoaded (DCL)** | Parsing completed and deferred/module scripts executed; it does not wait for images or async scripts |
-| **load** | The document and dependent resources such as scripts, stylesheets, frames, and non-lazy images loaded |
-| **TTFB** | Time until the first response byte begins arriving |
+| 阶段 | 起止点 | 报表点击中的可能原因 |
+|---|---|---|
+| input delay（输入延迟） | 用户开始点击，到该交互的第一个事件回调开始 | 更早运行的长任务、脚本执行或其他主线程工作 |
+| processing duration（处理时长） | 该交互相关事件回调执行期间 | 点击处理器排序数据、React 计算更新或其他监听器工作 |
+| presentation delay（呈现延迟） | 事件回调结束，到浏览器下一次可以呈现帧时（有时没有新帧要绘制） | 样式、布局、绘制等渲染工作，或下一帧前的其他主线程任务；指标不保证业务结果已在这帧出现 |
 
-Do not assume these milestones always form one simple sequence with LCP. FID was retired as a Core Web Vital and replaced by INP; FCP, TTFB, long tasks, and TBT remain useful diagnostics but are not themselves current Core Web Vitals. See [DOMContentLoaded](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event) and [load](https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event) for their event boundaries.
+例如，一次假设录制从用户输入 0 ms 开始，回调在 90 ms 开始，105 ms 调用几何 API 并因同步布局等待 85 ms，回调在 195 ms 返回，下一帧在 230 ms 呈现。对应三段是 90 / 105 / 35 ms；85 ms 的同步布局属于处理时长，因为它发生在回调内。若同一读取发生在回调返回之后、下一帧呈现之前，它才可能落在呈现延迟。这些数字用于演示归类，不是报表的实测数据。
 
-### Field data and lab data answer different questions
+所以处理器很短也可能有高 INP：点击前主线程忙会增加输入延迟；DOM 修改后的布局与绘制会增加呈现延迟。反过来，INP 衡量到这次呈现机会为止，并不计量之后才完成的网络请求或所有异步业务效果；下一帧也可能尚未显示业务结果。复杂操作可先给出加载状态等可见反馈，结果到达后再更新内容。浏览器点击、处理器、微任务与渲染机会的边界见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
-Field data records actual routes, devices, networks, and interactions. Use it to check whether users improved, comparing the same device segment and percentile. Lab tools such as Lighthouse and DevTools make runs repeatable and expose likely causes before release, but a lab run does not represent every user's experience.
+### 现场数据与实验室录制怎样配合？
 
-A load-only Lighthouse run has no real user interaction, so it cannot directly measure that visit's INP. Total Blocking Time is a lab diagnostic proxy, not the INP metric. A load trace can also miss layout shifts caused later by interaction. See [lab and field data differences](https://web.dev/articles/lab-and-field-data-differences).
+field data（现场数据）来自实际用户访问，包含设备、网络、地理位置、缓存状态和用户行为的差异，适合判断用户整体体验及指标分布。lab data（实验室数据）在较受控的设备、网络和位置中运行，适合重现路径、比较改动并检查原因；一次 Lighthouse 加载录制并没有真实交互，不能直接给出该次访问的 INP。Total Blocking Time（总阻塞时间，TBT）可以提示页面加载期间主线程被长任务占用的风险，但它是实验室诊断指标，不等同于 INP，也无法代表用户何时点击。
 
-### How do you find the dominant cost?
+用同一个 URL 和动作做前后比较，并记录浏览器、设备、网络模拟、缓存是否冷启动以及数据来自现场还是实验室。现场指标看相同设备分组与百分位；排查点击时，用 Chrome DevTools（Chrome 开发者工具）的 Performance 面板交互轨道录制一次真实点击，观察输入延迟、处理时长、呈现延迟以及对应的主线程任务。排查加载时单独录制导航；Network 面板检查关键请求的发起时点、传输和响应时间。一次实验室运行解释某个复现条件，不替代多用户的现场分布。
 
-Capture enough context to reproduce a comparison: route, device, network conditions, browser, and whether the number is field or lab data. Then inspect the tool that matches the symptom.
+### 怎样从用户症状找到主要成本？
 
-| Symptom | Inspect first |
-|---|---|
-| Main content appears late | TTFB, redirects, critical request timing, and LCP resource discovery/render delay |
-| Input feels delayed | Long main-thread tasks, event-handler work, and work scheduled after input |
-| Content jumps | Missing image/embed dimensions, late-injected content, and font swaps |
-| Route bundle is large | Emitted chunk contents and whether deferred code is actually split |
+| 观察到的症状 | 先看什么 | 可能的下一步 |
+|---|---|---|
+| `/reports` 的主要内容迟迟没有出现 | 实际 LCP 元素、服务器首字节、重定向、关键资源何时被发现与完成、渲染延迟 | 若资源发现晚，调整 HTML 中可发现性或优先级；若响应晚，追网络或服务端；若图片是 LCP，避免对它延迟加载 |
+| 点“最早优先”后，按下去很久才开始处理 | 交互的输入延迟，点击到达前的主线程任务 | 查长任务、脚本解析执行或其他占用；有界的非关键计算可切到后续任务或 Worker |
+| 处理器开始后，列表迟迟没变化 | 交互的处理时长、事件处理器和框架提交工作 | 定位数据排序、组件计算或回调；只拆分确实阻塞主线程的工作 |
+| 处理器很快结束，但下一帧仍晚 | 呈现延迟、事件回调结束后的样式/布局/绘制轨迹 | 检查 DOM 规模和昂贵样式；见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) |
+| React 处理时长长 | 浏览器 Performance 录制与组件 render/commit 记录 | 用 [React Profiler](#13.%20How%20should%20you%20reduce%20unnecessary%20React%20rendering%20work?%20/%20%E5%A6%82%E4%BD%95%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84%20React%20%E6%B8%B2%E6%9F%93%E5%B7%A5%E4%BD%9C%EF%BC%9F) 找出组件工作，再回到浏览器轨迹查看提交后的样式、布局和绘制 |
+| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#54.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) |
+| 图片出现时文字或按钮向下跳 | CLS 事件、缺少尺寸的图片/嵌入内容、字体替换或异步插入 | 提前保留内容空间并复现相同网络条件 |
+| 首屏按钮显示了但点击无反馈 | 脚本是否已完成初始化，或处理器是否被主线程工作挡住 | 分清“已经看见”与“事件可处理”；HTML 脚本调度边界见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) |
 
-Use the Performance panel to inspect scripting, layout, paint, and interaction traces; Network to inspect request timing, transfer size, and cache behavior; React Profiler to inspect component work; and Lighthouse for a repeatable lab run. A score is a clue. Inspect the trace and user impact before choosing a fix, then measure the same route and interaction again.
+若 click handler 在返回前调用 `offsetWidth` 或 `getBoundingClientRect()`，并因此同步触发布局，这段成本在 INP 中计入处理时长；若几何读取或渲染工作发生在事件回调结束后、下一帧出现前，则计入呈现延迟。录制中出现强制刷新时，再检查具体调用顺序；不要因为看到布局或绘制就先把它们视为缺陷。修复后在同一 URL、设备、数据和动作下复测，再用相同设备分组观察现场样本。DOM 变更引发的工作边界见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
-For a first-screen issue, identify the actual LCP element and critical path. Make that resource discoverable promptly, avoid lazy-loading the LCP image, and reserve image/embed dimensions to reduce shifts. Defer below-the-fold images and non-critical code only when measurements show they compete with critical work. If a render-blocking stylesheet delays the LCP element, test whether inlining only the required initial styles helps; this adds bytes to the HTML and gives up separate stylesheet-cache reuse, so measure the trade-off ([web.dev resource-loading guidance](https://web.dev/learn/performance/optimize-resource-loading)). Server-rendered or static output can help some routes but does not guarantee a good LCP or INP.
+### 优化首屏时，先处理实际 LCP 路径
 
-HTTP freshness and validation are separate mechanisms; see [HTTP protocols and caching](../../engineering-foundations/networking/http-protocols-and-websockets.md) for their canonical explanation. For debounce and throttle behavior, see [Lodash timing utilities](#65.%20When%20should%20a%20UI%20use%20Lodash%20instead%20of%20a%20native%20JavaScript%20operation?%20/%20%E7%95%8C%E9%9D%A2%E4%BD%95%E6%97%B6%E5%BA%94%E4%BD%BF%E7%94%A8%20Lodash%20%E8%80%8C%E4%B8%8D%E6%98%AF%E5%8E%9F%E7%94%9F%20JavaScript%EF%BC%9F). See [rendering and computation optimization](#14.%20When%20does%20virtual%20scrolling%20help%20a%20long%20list?%20/%20%E9%95%BF%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BD%BF%E7%94%A8%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F) for virtual lists and React work, and [image lazy loading](#26.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F) for image policy.
+打开 Performance 或 Lighthouse 录制后，先确定本次视口中的实际 LCP 元素，再看它的资源从哪里发现、何时开始请求、何时响应、何时绘制。不同设备视口、URL 参数和缓存可能让同一路由的 LCP 元素不同，因此不要只按本机一次录制假定全体用户看见同一内容。若 LCP 是图片，不要对它使用延迟加载；为图片或嵌入内容声明尺寸可以提前留出空间，减少后续内容位移。
+
+只有录制显示某个非关键图片或脚本与关键路径竞争时，才考虑延后它。若阻塞样式表确实拖慢 LCP，可以比较内联首屏必需样式是否有收益；代价是 HTML 变大，而且首屏样式不能像独立样式表那样单独复用缓存。服务端渲染或静态输出可能让内容更早进入 HTML，但不会自动保证 LCP 或 INP 良好。HTTP 新鲜度、缓存验证与网络请求时序见[HTTP 协议与缓存](../../engineering-foundations/networking/http-protocols-and-websockets.md)；图片加载策略见[如何延迟加载图片而不损害 LCP 或布局稳定性？](#26.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F)。
+
+### 大列表要先分辨数据成本与 DOM 成本
+
+如果报表数据量很大，不要仅凭条目数决定方案：先分别看网络传输了多少、查询/筛选和转换计算了多少、同时挂载了多少节点，以及交互中的布局和绘制花了多少时间。客户端不需要全量结果时，分页、增量加载、服务端过滤或返回汇总值可减少传输与数据处理；若用户需要大量数据但录制确认瓶颈是大量已挂载行，虚拟滚动可减少可见窗口之外的 DOM 工作。虚拟滚动不自动减少完整数据集的下载、内存或 `O(n)` 计算；它的计算、测量、焦点、键盘和辅助技术边界集中在[长报表列表何时适合虚拟滚动？](#14.%20When%20does%20virtual%20scrolling%20help%20a%20long%20list?%20/%20%E9%95%BF%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BD%BF%E7%94%A8%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
+
+### 这些加载事件各自说明什么？
+
+| 时间点 | 可以回答的问题 | 不能据此推出什么 |
+|---|---|---|
+| First Contentful Paint（首次内容绘制，FCP） | 第一次文本、图片等内容何时出现在页面 | 主要内容是否已就绪，或应用按钮是否可用 |
+| Time to First Byte（首字节时间，TTFB） | 从导航开始到收到首个响应字节的时长 | 响应体解析和主要内容绘制是否已经完成 |
+| `DOMContentLoaded`（DCL） | HTML 解析结束，解析完成后的延后脚本处理流程到达该步后，事件何时触发 | 图片加载完成、应用所有异步初始化结束或页面达到可交互状态 |
+| `load` | 会延迟该事件的文档依赖资源何时完成加载 | 用户何时第一次看到内容或点击何时有反馈 |
+
+DCL 在解析完成后的延后脚本队列执行流程之后触发；普通、无顶层 `await` 的模块会先同步执行，因此可以在事件前注册处理器。若模块在顶层 `await` 暂停、依赖异步模块，或只启动 `fetch()` / Promise 工作，后续续体不因 DCL 而一概完成。样式表也可能通过等待延后脚本而间接推迟 DCL。详细脚本与就绪条件见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)。首屏与加载里程碑并非同一个指标；First Input Delay（首次输入延迟，FID）已由 INP 取代，不属于当前核心网页指标；FCP、TTFB 和 TBT 仍可用于诊断。
+
+> [!info]- 来源
+> - 核心网页指标当前集合、良好阈值及按移动端 / 桌面端 p75 评估： [web.dev：Web Vitals](https://web.dev/articles/vitals)，当前指标说明，2024-10-31 更新；[阈值定义方法](https://web.dev/articles/defining-core-web-vitals-thresholds)，表格与百分位说明，2025-05-07 更新。核对日期：2026-11-06。
+> - LCP 候选元素、时间范围及阈值： [web.dev：Largest Contentful Paint](https://web.dev/articles/lcp)，LCP 定义与合格元素，2025-09-04 更新；避免延迟加载 LCP 图片与首屏资源优先级： [优化 LCP](https://web.dev/articles/optimize-lcp)，资源发现和加载延迟章节。核对日期：2026-11-06。
+> - INP 汇总范围、离群值处理、良好阈值及输入延迟/处理时长/呈现延迟： [web.dev：Interaction to Next Paint](https://web.dev/articles/inp)，定义与交互阶段，2025-09-02 更新。核对日期：2026-11-06。
+> - CLS 的布局偏移、会话窗口与 p75 阈值： [web.dev：Cumulative Layout Shift](https://web.dev/articles/cls)，CLS 定义与阈值。核对日期：2026-11-06。
+> - 实验室与现场数据的差异、Lighthouse 加载录制与真实交互的边界、TBT 的诊断用途： [web.dev：Why lab and field data can be different](https://web.dev/articles/lab-and-field-data-differences)，实验室/现场及 INP 小节。核对日期：2026-11-06。
+> - 录制加载和运行时交互、Performance 交互轨道及各阶段提示： [Chrome DevTools：Performance features reference](https://developer.chrome.com/docs/devtools/performance/reference)，录制与 Interactions track；请求瀑布、响应头和请求时序： [Chrome DevTools：Network panel](https://developer.chrome.com/docs/devtools/network/overview/)，Requests 与 Timing 章节。核对日期：2026-11-06。
+> - FCP、导航首字节、DCL 与 `load` 的计时边界： [W3C Paint Timing](https://www.w3.org/TR/2025/WD-paint-timing-20250517/)，Working Draft，2025-05-17，FCP 定义；[W3C Navigation Timing Level 2](https://www.w3.org/TR/navigation-timing-2/)，Working Draft，2026-11-02，`responseStart`、`domContentLoadedEventStart` 与 `loadEventStart`；[web.dev：Time to First Byte](https://web.dev/articles/ttfb)，导航开始到收到首个响应字节的定义，2025-11-18 更新；[WHATWG HTML：解析结束](https://html.spec.whatwg.org/multipage/parsing.html#the-end)，DCL 与加载事件算法。核对日期：2026-11-06。
+> - 交互关联条目与 INP 时间分段： [W3C Event Timing](https://www.w3.org/TR/event-timing/)，Working Draft，2026-10-13，Event Timing 条目与 interaction id；[web.dev：Interaction to Next Paint](https://web.dev/articles/inp)，交互阶段。核对日期：2026-11-06。
+> - FID 停止作为核心网页指标并由 INP 取代： [web.dev：First Input Delay](https://web.dev/articles/fid)，弃用说明，2024-09-09。核对日期：2026-11-06。
 ## 13. How should you reduce unnecessary React rendering work? / 如何减少不必要的 React 渲染工作？
 
 First record the expensive interaction and identify which components render and why. Keep transient state near its consumers, use stable data keys for reorderable lists, and add memoization only at a measured boundary. A component render is not automatically a DOM mutation; props, state, context, and parent renders all affect whether work is skipped. / 先记录成本高的交互，确认哪些组件重渲染以及原因。让短暂状态靠近使用它的组件，可重排列表使用稳定数据键，并只在测量后对明确边界做 memoization。组件 render 不等于一定修改 DOM；props、state、context 与父组件 render 都会影响工作能否跳过。
@@ -907,7 +1109,7 @@ CSS hiding with `display: none` leaves the component mounted in the React tree. 
 
 Fragments avoid an extra DOM wrapper when one is not needed, but they do not guarantee a measurable performance gain.
 
-If profiling shows that a long list's mounted DOM is the dominant cost, see [virtual scrolling](#14.%20When%20does%20virtual%20scrolling%20help%20a%20long%20list?%20/%20%E9%95%BF%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BD%BF%E7%94%A8%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F). For page-level measurement and performance diagnosis, see [Performance Metrics and Analysis](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F).
+If profiling shows that a long list's mounted DOM is the dominant cost, see [virtual scrolling](#14.%20When%20does%20virtual%20scrolling%20help%20a%20long%20list?%20/%20%E9%95%BF%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BD%BF%E7%94%A8%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F). For page-level measurement and performance diagnosis, see [Performance Metrics and Analysis](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F).
 ## 14. When does virtual scrolling help a long list? / 长列表何时适合使用虚拟滚动？
 
 Virtual scrolling keeps the full scrollable extent but mounts only rows near the visible window. It can reduce DOM, layout, and rendering work when profiling shows a large rendered list is the bottleneck. It does not automatically reduce the memory or `O(n)` processing cost of the complete data set, and it adds work for measurement, focus, keyboard navigation, accessibility, and scroll restoration. / 虚拟滚动保留完整列表的滚动范围，但只挂载可视区域附近的行。当性能分析确认大量已渲染行是瓶颈时，它可以减少 DOM、布局和绘制工作。它不会自动减少完整数据集的内存或 `O(n)` 处理成本，并会增加测量、焦点、键盘导航、无障碍与滚动恢复的复杂度。
@@ -945,7 +1147,7 @@ function VirtualWindow({ items, scrollTop, viewportHeight, rowHeight = 40 }) {
 
 For production use, choose a maintained virtualizer compatible with the application version, such as [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction). Start with measurement and a real user interaction; virtualization is not useful if the list is already cheap.
 
-See [Performance Metrics and Analysis](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for profiling guidance and [React rendering optimization](#13.%20How%20should%20you%20reduce%20unnecessary%20React%20rendering%20work?%20/%20%E5%A6%82%E4%BD%95%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84%20React%20%E6%B8%B2%E6%9F%93%E5%B7%A5%E4%BD%9C%EF%BC%9F) when component work is the measured bottleneck.
+See [Performance Metrics and Analysis](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for profiling guidance and [React rendering optimization](#13.%20How%20should%20you%20reduce%20unnecessary%20React%20rendering%20work?%20/%20%E5%A6%82%E4%BD%95%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84%20React%20%E6%B8%B2%E6%9F%93%E5%B7%A5%E4%BD%9C%EF%BC%9F) when component work is the measured bottleneck.
 ## 15. How do semantic HTML forms support keyboard and assistive-technology users? / 语义化 HTML 表单如何支持键盘与辅助技术用户？
 
 Use native elements for their built-in meaning and behavior: a `label` gives a form control a programmatic name, a `button` supports keyboard activation, and an `a href` represents navigation. Keep focus visible; describe validation errors in text, associate them with the field, and focus the invalid field after a custom submission is rejected. ARIA adds information for assistive technology but does not create keyboard behavior or native validation. / 使用原生元素获得其内建语义与行为：`label` 为表单控件提供程序化名称，`button` 支持键盘激活，`a href` 表示导航。保持焦点可见；用文字描述校验错误并关联到字段，自定义提交被拒绝时将焦点移到无效字段。ARIA 为辅助技术提供信息，但不会创建键盘行为或原生校验。
@@ -1071,7 +1273,7 @@ The span computes blue from its own declaration and inherits the font. The paren
 
 Attribute selectors such as `[data-state="active"]` can reflect state in markup. BEM naming (`.block__element--modifier`) tends to keep selectors flat and easier to override. CSS-in-JS-generated classes still participate in the browser's cascade; the generation method does not remove cascade rules.
 
-Critical CSS can reduce dependence on a render-blocking stylesheet for content that must appear early, but it adds markup bytes and can duplicate later CSS. Treat it as a measured delivery choice, not as an automatic selector-speed technique. See [Performance Metrics and Analysis](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F).
+Critical CSS can reduce dependence on a render-blocking stylesheet for content that must appear early, but it adds markup bytes and can duplicate later CSS. Treat it as a measured delivery choice, not as an automatic selector-speed technique. See [Performance Metrics and Analysis](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F).
 
 **Specifications:** [Selectors Level 4](https://www.w3.org/TR/selectors-4/#specificity-rules), [CSS Cascading and Inheritance Level 5](https://www.w3.org/TR/css-cascade-5/), and [CSS Display, visual order](https://www.w3.org/TR/css-display-3/#order-property).
 
@@ -1660,7 +1862,7 @@ A positioned box with a non-`auto` `z-index` creates a stacking context. Fixed a
 | Why did this large z-index stay underneath? | Stacking-context hierarchy |
 | Why did a float not increase its parent's height? | Block formatting context; see [BFC and flow containment](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) |
 
-**Specification:** [CSS Positioned Layout Level 3](https://www.w3.org/TR/css-position-3/) defines position, insets, sticky scrollports, and stacking behavior. See [BFC and flow containment](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) for the separate flow boundary; [CSS visibility](#23.%20What%20changes%20when%20an%20element%20is%20visually%20hidden%20with%20CSS?%20/%20%E7%94%A8%20CSS%20%E9%9A%90%E8%97%8F%E5%85%83%E7%B4%A0%E6%97%B6%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88%E5%8F%98%E5%8C%96%EF%BC%9F) for hidden-state effects; [CSS transitions and animations](#24.%20When%20should%20CSS%20use%20a%20transition%20or%20a%20keyframe%20animation?%20/%20CSS%20%E5%BA%94%E5%9C%A8%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20transition%20%E6%88%96%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F) for motion and profiling; and [rendering pipeline and forced layout](#11.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) when a style change affects layout or paint.
+**Specification:** [CSS Positioned Layout Level 3](https://www.w3.org/TR/css-position-3/) defines position, insets, sticky scrollports, and stacking behavior. See [BFC and flow containment](#18.%20How%20does%20a%20block%20formatting%20context%20contain%20floats%20and%20margins?%20/%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F) for the separate flow boundary; [CSS visibility](#23.%20What%20changes%20when%20an%20element%20is%20visually%20hidden%20with%20CSS?%20/%20%E7%94%A8%20CSS%20%E9%9A%90%E8%97%8F%E5%85%83%E7%B4%A0%E6%97%B6%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88%E5%8F%98%E5%8C%96%EF%BC%9F) for hidden-state effects; [CSS transitions and animations](#24.%20When%20should%20CSS%20use%20a%20transition%20or%20a%20keyframe%20animation?%20/%20CSS%20%E5%BA%94%E5%9C%A8%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20transition%20%E6%88%96%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F) for motion and profiling; and [rendering pipeline and forced layout](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) when a style change affects layout or paint.
 ## 23. What changes when an element is visually hidden with CSS? / 用 CSS 隐藏元素时会发生什么变化？
 
 Choose a hiding method by the state users should experience. `display: none` removes the box from layout and generally from the accessibility tree; `visibility: hidden` keeps layout space but suppresses visibility; `opacity: 0` makes a rendered box transparent while it can still receive focus and pointer input. Fading is only visual: also manage focus, input, and accessible state while the element is hidden. / 根据用户应体验的状态选择隐藏方式。`display: none` 会从布局中移除盒子，通常也从无障碍树中移除；`visibility: hidden` 保留布局空间但隐藏可见性；`opacity: 0` 让已布局的盒子透明，但它仍可能接收焦点和指针输入。淡出只改变视觉效果；元素隐藏时还要管理焦点、输入和无障碍状态。
@@ -1785,7 +1987,7 @@ CSS transforms can translate, rotate, and scale a box:
 
 ### What does animation cost?
 
-A change can require style recalculation, layout, paint, rasterization, and compositing. Animating `transform` or `opacity` can let an engine update presentation without repeating layout, but neither guarantees compositor-only or GPU work. Consult a trace and the [rendering pipeline](#11.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the observed invalidation path.
+A change can require style recalculation, layout, paint, rasterization, and compositing. Animating `transform` or `opacity` can let an engine update presentation without repeating layout, but neither guarantees compositor-only or GPU work. Consult a trace and the [rendering pipeline](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the observed invalidation path.
 
 `will-change` is a hint, not a command to promote a layer. Some hints can consume memory or change stacking/containing-block behavior. Use it only on a small region after profiling shows it helps, then remove the hint when no longer needed. `transform: translateZ(0)` is not a universal GPU switch and may affect stacking and containing blocks.
 
@@ -1895,7 +2097,7 @@ This checks rectangle overlap, not whether the element is occluded, transparent,
 
 For an occasional measurement, choose the API whose box and coordinate system match the task. For threshold-based visibility such as lazy loading or analytics, prefer [IntersectionObserver](#26.%20How%20should%20a%20browser%20page%20lazy-load%20images%20without%20hurting%20LCP%20or%20layout%20stability?%20/%20%E5%A6%82%E4%BD%95%E5%BB%B6%E8%BF%9F%E5%8A%A0%E8%BD%BD%E5%9B%BE%E7%89%87%E8%80%8C%E4%B8%8D%E6%8D%9F%E5%AE%B3%20LCP%20%E6%88%96%E5%B8%83%E5%B1%80%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9F) over repeatedly polling geometry. It reports asynchronously and is not a blanket guarantee that no layout work occurs.
 
-A write followed by a geometry read can force pending layout; alternating writes and reads in a loop can repeat that work. See [Rendering pipeline and forced layout](#11.%20Why%20can%20a%20CSS%20change%20trigger%20layout,%20paint,%20or%20compositing%20work?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%20CSS%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E8%A7%A6%E5%8F%91%E5%B8%83%E5%B1%80%E3%80%81%E7%BB%98%E5%88%B6%E6%88%96%E5%90%88%E6%88%90%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the read/write batching example.
+A write followed by a geometry read can force pending layout; alternating writes and reads in a loop can repeat that work. See [Rendering pipeline and forced layout](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the read/write batching example.
 
 **Specifications:** [CSSOM View](https://www.w3.org/TR/cssom-view-1/) defines these geometry APIs, including the [root `scrollHeight` rule](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight); [Intersection Observer](https://www.w3.org/TR/intersection-observer/) defines asynchronous intersection notifications.
 ## 26. How should a browser page lazy-load images without hurting LCP or layout stability? / 如何延迟加载图片而不损害 LCP 或布局稳定性？
@@ -1967,7 +2169,7 @@ checkImages();
 
 ### Protect loading speed and visual stability / 保护加载速度与视觉稳定性
 
-Do not blindly lazy-load the first visible or likely LCP image: delaying its fetch can increase LCP. Reserve image space using intrinsic dimensions or an aspect ratio to reduce layout shift; choose an appropriate responsive candidate with `srcset`/`sizes`, rather than loading an oversized source. A placeholder can avoid a blank region but does not replace dimension reservation. Measure the actual route and device; see [browser performance measurement](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) and the [URL-to-pixels path](#1.%20How%20does%20a%20browser%20turn%20a%20URL%20into%20pixels?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B1%8F%E5%B9%95%E5%83%8F%E7%B4%A0%EF%BC%9F).
+Do not blindly lazy-load the first visible or likely LCP image: delaying its fetch can increase LCP. Reserve image space using intrinsic dimensions or an aspect ratio to reduce layout shift; choose an appropriate responsive candidate with `srcset`/`sizes`, rather than loading an oversized source. A placeholder can avoid a blank region but does not replace dimension reservation. Measure the actual route and device; see [browser performance measurement](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) and the [URL-to-pixels path](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F).
 
 **Standards / 规范：** [WHATWG image element and source requirements](https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element); [WHATWG lazy-loading attributes](https://html.spec.whatwg.org/multipage/urls-and-fetching.html#lazy-loading-attributes); [W3C Intersection Observer](https://www.w3.org/TR/intersection-observer/); [CSSOM View geometry](https://www.w3.org/TR/cssom-view-1/), checked 2026-11-05.
 ## 27. When should small images be combined into a CSS sprite? / 何时应把多个小图片合并为 CSS Sprite？
@@ -2731,7 +2933,7 @@ callbacks.map(fn => fn()); // [0, 1, 2]
 
 An outer call returning does not make a captured binding immediately unusable. As long as a reachable closure can observe it, the program must preserve the behavior. This does not mean every variable in the entire outer scope must occupy memory forever; implementations can optimize unobservable values. / 外层调用返回并不意味着捕获的绑定立即失效。只要可达闭包仍能观察它，程序就必须保留可观察行为；但这不表示外层作用域中的所有变量都必然永久占用内存，引擎可以优化不可观察的值。
 
-Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; MDN discusses [closure performance considerations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#performance_considerations); the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F)。
+Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; MDN discusses [closure performance considerations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#performance_considerations); the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 **See also:** [JavaScript Basics / JavaScript 基础](#34.%20How%20do%20var,%20let,%20and%20const%20differ?%20/%20var%E3%80%81let%20%E4%B8%8E%20const%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) explains the binding and temporal-dead-zone rules that determine which environment a closure can capture. Ordinary function this is determined by call form, not lexical name lookup; see [Function this and Binding / 函数 this 与绑定](#37.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
 ## 36. How do JavaScript objects find and organize properties? / JavaScript 对象如何查找和组织属性？
@@ -2896,7 +3098,7 @@ const counter = {
 };
 ~~~
 
-A host API can supply a receiver when it invokes a callback. The DOM calls an ordinary event listener with this set to event.currentTarget; an arrow keeps its surrounding this, so use the event property explicitly. See the [WHATWG DOM listener-invocation algorithm](https://dom.spec.whatwg.org/#concept-event-listener-invoke) and [DOM event propagation / DOM 事件传播](#4.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) for the surrounding event contract. / 宿主 API 调用回调时也可提供接收者。DOM 调用普通事件监听器时会把 this 设为 event.currentTarget；箭头函数保留外层 this，因此应显式读取事件属性。详见 [WHATWG DOM 监听器调用算法](https://dom.spec.whatwg.org/#concept-event-listener-invoke)及 [DOM 事件传播](#4.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)中的相关契约。
+A host API can supply a receiver when it invokes a callback. The DOM calls an ordinary event listener with this set to event.currentTarget; an arrow keeps its surrounding this, so use the event property explicitly. See the [WHATWG DOM listener-invocation algorithm](https://dom.spec.whatwg.org/#concept-event-listener-invoke) and [DOM event propagation / DOM 事件传播](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) for the surrounding event contract. / 宿主 API 调用回调时也可提供接收者。DOM 调用普通事件监听器时会把 this 设为 event.currentTarget；箭头函数保留外层 this，因此应显式读取事件属性。详见 [WHATWG DOM 监听器调用算法](https://dom.spec.whatwg.org/#concept-event-listener-invoke)及 [DOM 事件传播](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)中的相关契约。
 
 ~~~javascript
 const button = document.querySelector("button"); // assume a button exists
@@ -3142,7 +3344,7 @@ WeakRef and FinalizationRegistry were standardized in ES2021. WeakRef.deref() re
 
 If deref() returns a target, ECMAScript keeps it alive until the current job completes. This keeps behavior consistent within that job but does not promise that the target remains afterward. / deref() 返回目标后，ECMAScript 会使它至少存活到当前 job 结束，以保证该 job 内行为一致；这不承诺目标之后仍存活。
 
-The [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-weakmap-objects) and [weak-reference specification](https://tc39.es/ecma262/2025/multipage/managing-memory.html) permit implementation-dependent collection latency. Reachability models and heap-diagnostic context are covered by [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F).
+The [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-weakmap-objects) and [weak-reference specification](https://tc39.es/ecma262/2025/multipage/managing-memory.html) permit implementation-dependent collection latency. Reachability models and heap-diagnostic context are covered by [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
 ## 43. How can a JavaScript object stay in memory after it is no longer useful? / JavaScript 对象为什么在不再有用后仍会留在内存中？
 
 JavaScript does not promise when memory is reclaimed or require a particular garbage-collection algorithm. An object becomes eligible for collection when it is unreachable from the runtime's roots; cycles alone are collectable, but a long-lived reference to a detached node, listener, timer, closure-captured value, or cache entry can keep an object reachable. Diagnose the retaining path in a repeatable heap comparison, then release the reference at the correct lifetime boundary. / JavaScript 不承诺何时回收内存，也不要求某种垃圾回收算法。对象从运行时根不可达时才具备回收资格；循环引用本身可以回收，但长期存活的脱离 DOM 节点、监听器、计时器、闭包捕获值或缓存项会让对象仍可达。应通过可重复操作前后的堆快照检查保留路径，并在正确的生命周期边界释放引用。
@@ -3151,7 +3353,7 @@ A tracing collector is one implementation strategy: it starts from roots such as
 
 For practical diagnosis, reproduce the same action, compare heap snapshots, and inspect retaining paths. Common leads include an uncleared interval, a listener on a long-lived object, a detached DOM node still referenced by application code, or a closure holding a large value. These patterns are investigation clues, not proof by themselves. Keep a listener, timer, subscription, or cache handle when its lifetime should end earlier than its owner, and release it at that boundary. [Chrome DevTools memory diagnostics](https://developer.chrome.com/docs/devtools/memory-problems)
 
-**See also:** [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#42.%20What%20do%20weak%20collections%20and%20weak%20references%20guarantee?%20/%20%E5%BC%B1%E9%9B%86%E5%90%88%E5%92%8C%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F) covers weak-reference use and nondeterministic cleanup; [How do DOM events propagate?](#4.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) covers listener lifetimes.
+**See also:** [JavaScript Memory, WeakMap, WeakSet, and WeakRef / JavaScript 内存、WeakMap、WeakSet 与 WeakRef](#42.%20What%20do%20weak%20collections%20and%20weak%20references%20guarantee?%20/%20%E5%BC%B1%E9%9B%86%E5%90%88%E5%92%8C%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F) covers weak-reference use and nondeterministic cleanup; [How do DOM events propagate?](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) covers listener lifetimes.
 
 **Evidence:** [ECMAScript 2026 weak-reference processing model](https://tc39.es/ecma262/2026/#sec-processing-model-of-weakref-and-finalizationregistry-targets) explicitly makes no guarantee that an object will be collected at a particular time; [V8 Orinoco overview](https://v8.dev/blog/trash-talk), checked 2026-11-05, is an implementation illustration.
 ## 44. How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？
@@ -3248,7 +3450,7 @@ for await...of consumes async iterables in order and can also adapt a synchronou
 
 ### How Promise-job order is observed / 如何观察 Promise job 顺序
 
-Promise reactions are queued as jobs. When one handler queues a later reaction, already-queued jobs run first. The host determines checkpoints, so keep browser task/rendering rules and Node scheduling rules in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F), not in this language-level note. / Promise 处理器会排入 job 队列。某个处理器新增后续处理器时，已排队的 job 先运行。检查点由宿主决定；浏览器任务/渲染规则和 Node 调度规则见[事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F)，不在此处混作语言保证。
+Promise reactions are queued as jobs. When one handler queues a later reaction, already-queued jobs run first. The host determines checkpoints, so keep browser task/rendering rules and Node scheduling rules in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F), not in this language-level note. / Promise 处理器会排入 job 队列。某个处理器新增后续处理器时，已排队的 job 先运行。检查点由宿主决定；浏览器任务/渲染规则和 Node 调度规则见[事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，不在此处混作语言保证。
 
 ~~~javascript
 Promise.resolve().then(() => console.log(0)).then(() => console.log(1));
@@ -3313,7 +3515,7 @@ new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
 
 The time unit is milliseconds. This is a teaching example, not a production queue: it does not define failure handling, cancellation, or behavior when a task never completes. / 时间单位为毫秒。这是教学示例，不是生产队列；它没有定义错误处理、取消方式或任务永不完成时的行为。
 
-For standard Promise composition, rejection propagation, and concurrency, see [Asynchronous JavaScript / 异步 JavaScript](#44.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F). Timer callback scheduling is host behavior; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F).
+For standard Promise composition, rejection propagation, and concurrency, see [Asynchronous JavaScript / 异步 JavaScript](#44.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F). Timer callback scheduling is host behavior; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
 ## 46. How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？
 
 **Core answer / 核心回答：** An iterable provides an iterator through Symbol.iterator; each iterator next() call returns an object whose done value tells the consumer whether to stop. A generator implements this protocol by pausing at yield. Async iterables provide next results asynchronously and are consumed in order with for await...of. / 可迭代对象通过 Symbol.iterator 提供迭代器；每次调用 next() 返回带 done 值的对象，用于告知消费者是否停止。生成器在 yield 处暂停，以此实现该协议。异步可迭代对象异步提供 next 结果，并由 for await...of 按序消费。
@@ -3485,7 +3687,7 @@ collectInOrder([Promise.resolve("first"), Promise.resolve("second")])
   .then(values => console.log(values)); // ["first", "second"]
 ~~~
 
-See [Asynchronous JavaScript / 异步 JavaScript](#44.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F).
+See [Asynchronous JavaScript / 异步 JavaScript](#44.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
 ## 47. Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？
 
 **Core answer / 核心回答：** Handle a failure at the layer with enough context to recover, add information, or report it. If the current layer cannot decide what recovery means, propagate the error. A catch that only logs and returns can silently turn failure into success; browser-global and React handlers cover specific last-resort scopes. / 应在拥有足够上下文进行恢复、补充信息或上报的层级处理错误。当前层无法决定如何恢复时，应继续传播。只记录日志后正常返回的 catch 会悄悄把失败转成成功；浏览器全局处理器和 React 边界只覆盖特定的兜底范围。
@@ -3881,7 +4083,7 @@ import("./features.mjs").then(({ featureName }) => featureName);
 
 Node determines whether a file is ESM or CJS using extensions, package settings, or explicit input options; browser module loading follows browser rules. CommonJS is not ECMAScript module syntax. / Node 根据扩展名、包配置或显式输入选项判断文件属于 ESM 还是 CJS；浏览器模块加载遵循浏览器规则。CommonJS 不是 ECMAScript 模块语法。
 
-See the [ECMAScript module specification](https://tc39.es/ecma262/2025/multipage/ecmascript-language-scripts-and-modules.html) and [Node.js ESM documentation](https://nodejs.org/api/esm.html). This page describes module semantics and loading boundaries, not Node event-loop ordering; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20When%20does%20browser%20JavaScript%20run%20relative%20to%20a%20frame?%20/%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E5%A6%82%E4%BD%95%E4%B8%8E%E6%AF%8F%E4%B8%80%E5%B8%A7%E4%BA%A4%E9%94%99%EF%BC%9F) for scheduling.
+See the [ECMAScript module specification](https://tc39.es/ecma262/2025/multipage/ecmascript-language-scripts-and-modules.html) and [Node.js ESM documentation](https://nodejs.org/api/esm.html). This page describes module semantics and loading boundaries, not Node event-loop ordering; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F) for scheduling.
 
 ### Why ESM syntax does not guarantee tree shaking / 为什么 ESM 语法不保证 tree shaking
 
@@ -4058,7 +4260,7 @@ for (const element of Array.from(container.getElementsByClassName("item"))) {
 
 Use `querySelectorAll()` when a static result is simpler to reason about. Use a live collection only when reflecting subsequent matching-tree changes is useful; “live” specifies observable data, not how often an engine recomputes it.
 
-**See also:** [How do DOM events propagate?](#4.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) discusses event targets in a changing DOM.
+**See also:** [How do DOM events propagate?](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) discusses event targets in a changing DOM.
 
 **Specification:** [WHATWG DOM: `NodeList` and `HTMLCollection`](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection), checked 2026-11-05.
 ## 56. How can a JavaScript event bus handle reentrancy? / JavaScript 事件总线如何处理重入？
@@ -4115,7 +4317,7 @@ The outer emission still has its original snapshot after the nested emission rem
 
 Use **Observer** when there is a natural subject that owns its subscribers, such as a DOM node or data model. Use **publish-subscribe** when a broker should decouple modules, accepting the indirect path's debugging cost.
 
-**See also:** [How do DOM events propagate?](#4.%20How%20do%20DOM%20events%20propagate,%20and%20when%20does%20delegation%20work?%20/%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) covers platform event dispatch, which has different phases and cancellation rules.
+**See also:** [How do DOM events propagate?](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) covers platform event dispatch, which has different phases and cancellation rules.
 
 **Terminology note:** this is an application-level pattern, not the browser DOM event system.
 ## 57. Where should browser state live: Web Storage or cookies? / 浏览器状态应放在哪里：Web Storage 还是 Cookie？
@@ -5150,7 +5352,7 @@ Lodash's debounced function also has flush() to invoke a pending call immediatel
 
 Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#53.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for choosing debounce or throttle by workload.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#53.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for choosing debounce or throttle by workload.
 
 **Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
 ## 66. When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
@@ -5317,7 +5519,7 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 
 **Reach for ahooks / 何时使用：** It can reduce repeated hook boilerplate when its API matches the product behavior. Keep custom logic when cancellation, caching, errors, or data ownership need explicit control. For server-state caching and synchronization, compare a dedicated data library such as TanStack Query or SWR instead of assuming one hook collection covers every use case.
 
-**See also / 另见** — [React component composition / React 组件组合](#7.%20How%20do%20I%20compose%20components%20and%20reusable%20behavior%20around%20an%20interaction?%20/%20%E5%A6%82%E4%BD%95%E5%9B%B4%E7%BB%95%E4%BA%A4%E4%BA%92%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%8F%AF%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F) for Hook rules and Effect cleanup, [React server state / React 服务端状态](#9.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query and mutation rules, and [Performance Metrics and Analysis / 性能指标与分析](#12.%20How%20do%20you%20measure%20and%20diagnose%20web%20performance%20problems?%20/%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%92%8C%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for debounce and throttle tradeoffs.
+**See also / 另见** — [React component composition / React 组件组合](#7.%20How%20do%20I%20compose%20components%20and%20reusable%20behavior%20around%20an%20interaction?%20/%20%E5%A6%82%E4%BD%95%E5%9B%B4%E7%BB%95%E4%BA%A4%E4%BA%92%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%8F%AF%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F) for Hook rules and Effect cleanup, [React server state / React 服务端状态](#9.%20How%20should%20a%20React%20UI%20keep%20server%20data%20and%20optimistic%20updates%20correct?%20/%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query and mutation rules, and [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for debounce and throttle tradeoffs.
 
 **Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
 ## 67. What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
