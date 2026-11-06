@@ -1,21 +1,36 @@
-# Which built-in `Math` methods cover common numeric tasks? / 哪些内置 `Math` 方法适合常见数值任务？
+# JavaScript 的 Math 怎样处理舍入、范围和数值变换？
 
-**Core idea / 核心概念：** `Math` is a built-in ECMAScript object; TypeScript types it but does not provide a separate runtime math library. / `Math` 是 ECMAScript 内置对象；TypeScript 为它提供类型，但不会提供另一套运行时数学库。 See [ECMAScript numbers and dates](https://tc39.es/ecma262/2025/multipage/numbers-and-dates.html).
+**案例背景：** 列表有 42 条记录，每页 20 条。页数、最后一页剩余量和测量值的计算需要不同数学操作；先说清想得到的量，再选函数。Math 是 JavaScript 内置对象，TypeScript 只提供类型信息，没有额外创建一套运行时数学库。
 
-`Math.max()` returns the largest of the supplied numbers. With no arguments it returns `-Infinity`; `Math.min()` returns `Infinity` with no arguments.
+## 页数为什么要向上取整？
 
-Frequently used functions:
+42 / 20 = 2.1 表示两整页还剩一点，必须分配第三页，所以 `Math.ceil(42/20)` 为 3。最后一页有 `42 - (3 - 1) * 20 = 2` 条；这条公式以总数大于零为前提，零条记录应单独定义为零页、零条。对负数，向上和“离零更远”不是一回事：
 
-1. **Math.max(...values)**: Returns the largest of zero or more numbers.
-2. **Math.min(...values)**: Returns the smallest of zero or more numbers.
-3. **Math.round(value)**: Rounds a number to the nearest integer; a half-way tie goes toward positive infinity (for example, `Math.round(-1.5) === -1`).
-4. **Math.ceil(value)**: Rounds a number upward to its nearest integer.
-5. **Math.floor(value)**: Rounds a number downward to its nearest integer.
-6. **Math.abs(value)**: Returns the absolute value of a number.
-7. **Math.sqrt(value)**: Returns the square root of a number.
-8. **Math.pow(base, exponent)**: Returns the base to the exponent power, that is, base^exponent.
-9. **Math.random()**: Returns a pseudo-random number in the half-open range `[0, 1)`; it can be `0` but is less than `1`.
-10. **Math.sin(value)**, **Math.cos(value)**, **Math.tan(value)**: Trigonometric functions (sin, cos, tan).
-11. **Math.log(value)**: Returns the natural logarithm (base e) of a number.
+| 输入 | floor：向负无穷 | ceil：向正无穷 | trunc：向零 | round：最近整数，平局向正无穷 |
+|---|---|---|---|---|
+| 1.5 | 1 | 2 | 1 | 2 |
+| −1.5 | −2 | −1 | −1 | −1 |
 
-These functions are part of ECMAScript and are available in JavaScript hosts such as browsers and Node.js. For example: `Math.max(1, 2, 3)`.
+> [!info] 数轴上的“上”指更大的数
+> −1 比 −2 大。因此 `Math.round(-1.5)` 得 −1；不能把它解释为绝对值四舍五入后再恢复符号。`Math.round(-0.1)` 还会得到负零，`Object.is(result, -0)` 才能区分它与正零。
+
+## 最大、最小和随机范围怎样确定？
+
+`Math.max(1,2,3)` 为 3，`Math.min(1,2,3)` 为 1；零参数时分别是 `-Infinity`、`Infinity`。这两个单位值让逐项取极值能够起步，但业务上的空集合往往需要“无结果”，不能把无穷当成真实测量值。任一输入转换成 NaN 后，max/min 也得 NaN。
+
+`Math.random()` 产生 `[0,1)` 内的伪随机数。对一个短数组，`Math.floor(Math.random()*length)` 常用于选择有效索引，前提是 `length > 0`；它不适合密码、令牌或不可预测性要求。安全用途需要宿主提供的密码学随机 API。不要把大量元素直接 spread 给 max/min，参数数量受引擎限制，逐项归约更合适。
+
+## 根号、幂、对数和角度各在变换什么？
+
+| 需求 | 操作与例子 | 边界 |
+|---|---|---|
+| 距离零多远 | `Math.abs(-3)` 为 3 | 不保留方向 |
+| 求平方根 | `Math.sqrt(9)` 为 3 | 负实数输入通常为 NaN |
+| 求幂 | `Math.pow(2,3)` 或 `2 ** 3` 为 8 | Number 仍受浮点范围和精度限制 |
+| 自然对数 | `Math.log(Math.E)` 约为 1 | log(0) 为 −Infinity，负数为 NaN |
+| 三角函数 | `Math.sin` / `cos` / `tan` | 参数用弧度，180° 对应 π；浮点近似不保证理想恒等式逐位相等 |
+
+例如角度 30° 先换成 `30 * Math.PI / 180`，sin 约为 0.5。对数是在问“e 的几次幂得到这个值”；它不是默认的十进制对数，后者用 `Math.log10`。浮点误差与精确整数范围见[JavaScript 值怎样转换、比较与表示数字？](../../../../frontend/javascript/javascript-types.md)。
+
+> [!info]- 来源
+> - 各函数舍入方向、无穷、NaN、随机区间与数值近似：[ECMAScript 2026 Math Object](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math-object)，对应 round、max/min、random 和三角函数章节；核对 2026-11-06。

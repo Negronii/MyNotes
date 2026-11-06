@@ -1,80 +1,36 @@
-# How do you choose and use a JavaScript `Map`? / 如何选择并使用 JavaScript `Map`？
+# Map 怎样维护键身份、存在性和插入顺序？
 
-**Core idea / 核心概念：** A `Map` accepts keys of any type, compares them with `SameValueZero` (objects by identity), and iterates entries in insertion order. Setting an existing key updates its value without moving it; deleting and re-adding it places it at the end. / `Map` 的键可以是任意类型；比较采用 `SameValueZero`（对象按引用身份比较），迭代顺序为插入顺序。更新已有键不会改变其顺序；删除后重新添加会移到末尾。 See [JavaScript Map and Set](../../../../frontend/javascript/map-and-set.md) and [ECMAScript keyed collections](https://tc39.es/ecma262/2025/multipage/keyed-collections.html).
-
-**1. Creating a Map**
-
-```javascript
-let myMap = new Map();
-```
-
-**2. Adding Entries**
-
-```javascript
-myMap.set("key1", "value1");
-myMap.set("key2", "value2");
-```
-
-**3. Retrieving Entries**
-
-```javascript
-let value = myMap.get("key1"); // returns 'value1'
-```
-
-**4. Checking for a Key**
-
-```javascript
-let hasKey = myMap.has("key1"); // returns true
-```
-
-**5. Removing an Entry**
-
-```javascript
-myMap.delete("key1");
-```
-
-**6. Iterating Over a Map**
-
-- Using forEach:
-  ```javascript
-  myMap.forEach((value, key) => {
-    console.log(key, value);
-  });
-  ```
-- Using for...of loop:
-  ```javascript
-  for (let [key, value] of myMap) {
-    console.log(key, value);
-  }
-  ```
-
-**7. Getting Size of the Map**
-
-```javascript
-let size = myMap.size; // returns 1 (after deleting 'key1')
-```
-
-**Differences Between Object and Map**
-
-- **Key Types**:
-  - Object: Only strings and symbols as keys.
-  - Map: Allows any type, including functions, objects, and primitives.
-- **Order of Keys**:
-  - Map: Keys stay in insertion order.
-  - Ordinary objects: Own property-key order is specified: array-index keys first in numeric order, then other strings in creation order, then symbols in creation order.
-- **API Methods**:
-  - Map: Offers `set`, `get`, `has`, `delete`, etc.
-  - Object: Uses dot or bracket notation for property access.
-- **Performance**:
-  - Choose by key and API semantics; performance depends on workload and engine, so measure before making a performance claim.
-
-**Note on Key Choices**
-Objects and arrays used as `Map` keys compare by identity, not by contents: two separately created `{ id: 1 }` objects are distinct keys. `JSON.stringify` is not a general structural-key solution (for example, it can be ambiguous or fail for cyclic data); define a canonical key explicitly when value-based lookup is required.
-
-**Defining Types**
+**案例背景：** 用用户编号保存角色，并依次更新、删除和重新添加。需要区分“键不在表里”和“键存在但值为 undefined”，也需要知道更新是否改变顺序。Map 的键值契约适合这个问题；更完整的容器选择见[Map 与 Set 怎样维护身份与集合关系？](../../../../frontend/javascript/map-and-set.md)。
 
 ```typescript
-let userRoles: Map<number, string> = new Map();
-userRoles.set(1, "admin");
-userRoles.set(2, "user");
+const roles = new Map<number, string>();
+roles.set(1, "admin");
+roles.set(2, "user");
+roles.set(1, "reader");
+console.log([...roles]); // [[1,"reader"],[2,"user"]]
+roles.delete(1);
+roles.set(1, "admin");
+console.log([...roles.keys()]); // [2,1]
+console.log(roles.get(2), roles.has(2), roles.size); // "user", true, 2
 ```
+
+更新已有键只换值，不移动位置；删除后重加才位于末尾。`get` 查不到返回 `undefined`，但 `new Map([[1, undefined]]).get(1)` 也一样，所以存在性用 `has`。`delete` 返回是否确实删去键，`clear` 清空所有条目。
+
+## 对象内容一样，为何查不到？
+
+Map 采用 SameValueZero 比较键：NaN 与 NaN 匹配，正负零是同一键，对象按 identity（身份）比较。`map.set({id:1}, value)` 后用另一个 `{id:1}` 查询，不是同一个键。需要按编号查就用编号；需要复合键则先定义稳定且无歧义的编码，`JSON.stringify` 并不是适用于循环对象等任意值的结构身份方案。
+
+普通对象的键是字符串或 Symbol；Map 可以直接用对象、函数或原始值。普通对象自有键的顺序也有规则：array-index 键按数值升序，其余字符串按创建顺序，随后是 Symbol。选择应依据键语义和接口，不能用“对象无序”或“Map 永远更快”作判断。
+
+## 两种遍历为何参数顺序不同？
+
+```typescript
+roles.forEach((value, key) => console.log(key, value));
+for (const [key, value] of roles) console.log(key, value);
+```
+
+`forEach` 把 value 放在 key 前面；默认 iterator（迭代器）却产出 `[key,value]`。二者都跟随插入顺序。`keys()`、`values()`、`entries()` 分别给出需要的视图；这些不是冻结快照，遍历时修改容器须理解访问行为，需要固定一轮输入时先复制对应条目。
+
+> [!info]- 来源
+> - 键比较、插入顺序和方法契约：[ECMAScript 2026 Map Objects](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-map-objects)。规范要求平均次线性的访问，不承诺所有操作总是常数时间；核对 2026-11-06。
+> - 普通对象键顺序：[ECMAScript OrdinaryOwnPropertyKeys](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryownpropertykeys)。

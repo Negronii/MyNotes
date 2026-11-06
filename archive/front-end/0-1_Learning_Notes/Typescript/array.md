@@ -1,285 +1,75 @@
-# How do you use arrays safely in TypeScript? / 如何在 TypeScript 中安全地使用数组？
+# TypeScript 数组怎样从类型声明走到运行时遍历与变换？
 
-**Core idea / 核心概念：** TypeScript checks array element types at compile time; arrays, holes, sorting, and iteration follow JavaScript runtime semantics. / TypeScript 在编译期检查数组元素类型；数组、空槽、排序与遍历遵循 JavaScript 运行时语义。 See [JavaScript arrays](../../../../frontend/javascript/arrays.md) and [ECMAScript indexed collections](https://tc39.es/ecma262/2025/multipage/indexed-collections.html).
+**案例背景：** 一组测量值 `[1,4,9]` 要开平方，再保留根值至少为 2 的项，最后汇总。`number[]` 说明编译器允许放什么元素；真正如何分配、遍历和修改，仍由 JavaScript Array 决定。此页保留类型与常用方法的查阅例，完整的数据变换主线见[数组怎样筛选、排序并保留对象身份？](../../../../frontend/javascript/arrays.md)。
 
-## **Declaring an Array**
+## 声明了元素类型，为何还会读到 undefined？
 
-`new Array<number>(3)` creates three empty slots (holes), not three explicit `undefined` values. Methods such as `map`, `forEach`, `reduce`, `every`, and `some` skip holes; `for...of` yields `undefined` for a hole.
-- Empty Array with Fixed Length:
-  ```javascript
-  const arr_1 = new Array(3);
-  console.log(arr_1);     // [, , ]
-  ```
-- Typed Array with Fixed Length:
-  ```typescript
-  const arr_2 = new Array<number>(3);
-  console.log(arr_2);     // [, , ]
-  ```
-- Array with Initial Values:
-  ```javascript
-  const arr_3 = new Array(1, 2, 3);
-  console.log(arr_3);     // [1, 2, 3]
-  ```
-- Type of Arrays:
-  ```javascript
-  // All return “object"
-  console.log(typeof(arr_1), typeof(arr_2), typeof(arr_3));
-  ```
-
-## **Multi-Dimensional Array**
-- Creating and Accessing:
-  ```javascript
-  const numList = [[0, 1, 2], [0, 1, 2]];
-  console.log(numList);                   // [[0, 1, 2], [0, 1, 2]] 
-  console.log(numList.length);            // 2
-  console.log(numList[1] && numList[1].length);  // 3
-  ```
-- Flattening a Multi-Dimensional Array:
-  ```javascript
-  const arr = [1, 2, [3], [4]];
-  const flattenedArray = arr.flat();
-  console.log(flattenedArray); // [1, 2, 3, 4]
-  ```
-
-## **Get an Element from Array**
-- Accessing Elements by Index:
-  ```javascript
-  const arr_1 = [1, 2, 3, 4];
-  const arr_2 = [[1, 2, 3], [4, 5, 6]];
-  console.log(arr_1[0], arr_2[1][0]);     // 1, 4
-  // If index is wrong, returns undefined
-  console.log(arr_1[5], arr_2[1][10]);    // undefined, undefined
-  ```
-- Finding Index of Elements:
-  ```javascript
-  // Example with arrObj and indexOf/lastIndexOf methods
-  ```
-
-## Frequent used APIs
-
-`push`, `pop`, `shift`, `unshift`, `reverse`, `sort`, and `splice` mutate the array. `concat`, `slice`, `map`, and `filter` return new arrays; copies are shallow, so object elements still refer to the same objects.
-1. **length**
-   - **Type:** Number
-   - **Description:** Returns the length of the array.
-   - **Example:** `const arr = [1, 2, 3]; console.log(arr.length); // Output: 3`
-
-2. **toString()**
-   - **Type:** String
-   - **Description:** Returns a string representation of the array.
-   - **Example:** `const arr = [1, 2, 3]; console.log(arr.toString()); // Output: "1,2,3"`
-
-3. **toLocaleString()**
-   - **Type:** String
-   - **Description:** Returns a localized string representing the array.
-   - **Example:** `const arr = [1, 'a', new Date('21 Dec 1997 14:12:00 UTC')]; console.log(arr.toLocaleString());`
-
-4. **push()**
-   - **Type:** Number
-   - **Description:** Adds new elements to the end of an array, and returns the new length.
-   - **Example:** `const arr = [1, 2, 3]; arr.push(4); console.log(arr); // Output: [1, 2, 3, 4]`
-
-5. **pop()**
-   - **Type:** T | undefined
-   - **Description:** Removes the last element from an array and returns it.
-   - **Example:** `const arr = [1, 2, 3]; console.log(arr.pop()); // Output: 3`
-   - **Example:** `const emptyarr: number[] = []; console.log(emptyarr.pop()); // undefined for an empty array`
-
-6. **concat()**
-   - **Type:** T[]
-   - **Description:** Merges two or more arrays and returns a new array.
-   - **Example:** `const arr1 = [1, 2]; const arr2 = [3, 4]; console.log(arr1.concat(arr2)); // Output: [1, 2, 3, 4]`
-
-7. **join()**
-   - **Type:** String
-   - **Description:** Joins all elements of an array into a string and separates them with a specified separator.
-   - **Example:** `const arr = ['Fire', 'Air', 'Water']; console.log(arr.join(" - ")); // Output: "Fire - Air - Water"`
-
-8. **reverse()**
-   - **Type:** T[]
-   - **Description:** Reverses the order of the elements in an array.
-   - **Example:** `const arr = [1, 2, 3]; console.log(arr.reverse()); // Output: [3, 2, 1]`
-
-9. **shift()**
-   - **Type:** T | undefined
-   - **Description:** Removes the first element from an array and returns it.
-   - **Example:** `const arr = [1, 2, 3]; console.log(arr.shift()); // Output: 1`
-
-10. **unshift()**
-    - **Type:** Number
-    - **Description:** Adds one or more elements to the beginning of an array and returns the new length.
-    - **Example:** `const arr = [2, 3]; arr.unshift(1); console.log(arr); // Output: [1, 2, 3]`
-
-11. **slice()**
-    - **Type:** T[]
-    - **Description:** Returns a shallow copy of a portion of an array.
-    - **Example:** `const arr = [1, 2, 3, 4, 5]; console.log(arr.slice(1, 3)); // Output: [2, 3]`
-
-12. **sort()**
-    - **Type:** this
-    - **Description:** Sorts the elements of an array in place and returns it. Without a comparator, elements are sorted by their string forms; numeric arrays usually need a comparator.
-    - **Example:** `const arr = [3, 1, 4, 1, 5]; console.log(arr.sort()); // Output: [1, 1, 3, 4, 5]`
-    - **Example:** `const numList = [3, 10, 2]; console.log(numList.sort((a, b) => a - b)); // [2, 3, 10]`
-
-13. **splice()**
-    - **Type:** T[]
-    - **Description:** Changes the contents of an array by removing or replacing existing elements and/or adding new elements.
-    - **Example:** `const arr = [1, 2, 3, 4, 5]; arr.splice(2, 1, 'a', 'b'); console.log(arr); // Output: [1, 2, 'a', 'b', 4, 5]`
-
-14. **indexOf()**
-    - **Type:** Number
-    - **Description:** Returns the first index at which a given element can be found in the array.
-    - **Example:** `const arr = [1, 2, 3, 2, 1]; console.log(arr.indexOf(2)); // Output: 1`
-
-15. **lastIndexOf()**
-    - **Type:** Number
-    - **Description:** Returns the last index at which a given element can be found in the array.
-    - **Example:** `const arr = [1, 2, 3, 2, 1]; console.log(arr.lastIndexOf(2)); // Output: 3`
-
-16. **every()**
-    - **Type:** Boolean
-    - **Description:** Checks if all elements in the array pass the test implemented by the provided function.
-    - **Example:** `const arr = [1, 30, 39, 29, 10, 13]; console.log(arr.every(num => num < 40)); // Output: true`
-
-17. **some()**
-    - **Type:** Boolean
-    - **Description:** Checks if any of the elements in the array pass the test implemented by the provided function.
-    - **Example:** `const arr = [1, 2, 3, 4, 5]; console.log(arr.some(num => num >= 3)); // Output: true`
-
-18. **forEach()**
-    - **Type:** void
-    - **Description:** Executes a provided function once for each array element.
-    - **Example:** `const arr = ['a', 'b', 'c']; arr.forEach(element => console.log(element)); // Output: a b c`
-
-19. **map()**
-    - **Type:** U[]
-    - **Description:** Creates a new array with the results of calling a provided function on every element in the calling array.
-    - **Example:** `const arr = [1, 4, 9, 16]; console.log(arr.map(x => x * 2)); // Output: [2, 8, 18, 32]`
-
-20. **filter()**
-    - **Type:** T[]
-    - **Description:** Creates a new array with all elements that pass the test implemented by the provided function.
-    - **Example:** `const arr = [1, 2, 3, 4, 5, 6]; console.log(arr.filter(num => num % 2 === 0)); // Output: [2, 4, 6]`
-
-21. **reduce()**
-    - **Type:** accumulator type (inferred, or selected with the overload/generic)
-    - **Description:** Applies a function against an accumulator and each element in the array (from left to right) to reduce it to a single value.
-    - **Example:** `const arr = [1, 2, 3, 4]; console.log(arr.reduce((acc, val) => acc + val, 0)); // Output: 10`
-    - Without an initial value, reducing an empty array (or an array with no present elements) throws a `TypeError`; an initial value makes the empty case well-defined.
-
-22. **reduceRight()**
-    - **Type:** accumulator type (inferred, or selected with the overload/generic)
-    - **Description:** Applies a function against an accumulator and each element in the array (from right to left) to reduce it to a single value.
-    - Without an initial value, reducing an empty array (or an array with no present elements) throws a `TypeError`.
-    - **Example:** `const arr = [[0, 1], [2, 3], [4, 5]]; console.log(arr.reduceRight((acc, val) => acc.concat(val))); // Output: [4, 5, 2, 3, 0, 1]`
-
-## **Array Traverse**
-- For Loop:
-  ```javascript
-  let fruits = ['apple', 'banana', 'cherry'];
-  for(let i = 0; i < fruits.length; i++) {
-      console.log(fruits[i]);
-  }
-  ```
-- For..of Loop:
-  ```javascript
-  for(let fruit of fruits) {
-      console.log(fruit);
-  }
-  ```
-- forEach Method:
-  ```javascript
-  fruits.forEach(fruit => {
-      console.log(fruit);
-  });
-  ```
-- Using forEach with Index and Array:
-  ```javascript
-  const numList = [1, 2, 3];
-  numList.forEach((value, index, array) => {
-      if (value % 2 === 0) {
-          console.log(`Index: ${index} is even`);
-      }
-      console.log("Array contents: " + array.join("#")); 
-  });
-  ```
-- map Method:
-  ```javascript
-  let capitalizedFruits = fruits.map(fruit => fruit.toUpperCase());
-  console.log(capitalizedFruits);
-  ```
-
-## **Array Destructuring**
-- Basic Destructuring:
-  ```javascript
-  let [firstFruit, secondFruit] = fruits;
-  console.log(firstFruit); // Outputs: apple
-  console.log(secondFruit); // Outputs: banana
-  ```
-
-## Deep Dive: `array.map()`
-
-- **Purpose**: Builds a new result array from callback results without itself mutating the source; the callback can mutate the source, and an identity callback returns the same object references.
-- **Syntax**:
-  ```typescript
-  array.map(callback(currentValue[, index[, array]])[, thisArg])
-  ```
-The square brackets [...] around index and array mean that these parameters are optional. So when you write a callback function for the map() method, you can choose to include or ignore these parameters.
-
-The nested square brackets like [, index[, array]] signify that if you want to include array in your callback, you also need to include index. In other words, if you decide to use the array parameter in your callback, you can't skip the index parameter.
-### Examples of `array.map()`
-
-1. **Basic Usage**:
-
-   ```typescript
-   let numbers = [1, 4, 9];
-   let roots = numbers.map(function (element, index, arr) {
-     console.log(`element: ${element}, index: ${index}, array: ${arr}`);
-     return Math.sqrt(element);
-   });
-   console.log(roots); // [1, 2, 3]
-   ```
-
-2. **Using TypeScript Types**:
-
-   ```typescript
-   let numbers: number[] = [1, 4, 9];
-   let roots: number[] = numbers.map(
-     (element: number, index: number, arr: number[]) => {
-       console.log(`element: ${element}, index: ${index}, array: ${arr}`);
-       return Math.sqrt(element);
-     }
-   );
-   console.log(roots); // [1, 2, 3]
-   ```
-
-3. **Simplified with Arrow Functions**:
-
-   ```typescript
-   let numbers: number[] = [1, 4, 9];
-   let roots: number[] = numbers.map((element) => Math.sqrt(element));
-   console.log(roots); // [1, 2, 3]
-   ```
-
-4. **Mapping Array of Objects**:
-   ```typescript
-   interface User {
-     id: number;
-     name: string;
-   }
-   let users: User[] = [
-     { id: 1, name: "John" },
-     { id: 2, name: "Jane" },
-     { id: 3, name: "Doe" },
-   ];
-   let userNames: string[] = users.map((user) => user.name);
-   console.log(userNames); // ['John', 'Jane', 'Doe']
-   ```
-
-
-## Stack with array:
-```ts
-const stack: number[] = [];
-stack.push(200) //push an element
-const num = stack.pop() //pop an element
-stack.length // size of stack
+```typescript
+const holes = new Array<number>(3);
+const values: number[] = [1, 4, 9];
+const matrix = [[0, 1, 2], [0, 1, 2]];
+console.log(holes.length, 0 in holes); // 3, false
+console.log(values[8]);               // undefined
+console.log(matrix.length, matrix[1]?.length); // 2, 3
+console.log(typeof values);           // "object"
 ```
+
+`new Array(3)` 的单个数字表示长度；`new Array(1, 2, 3)` 则放入三个值。前者产生 empty slot（空槽），不等于显式填入三个 `undefined`。类型声明也不保证索引一定存在；开启 `noUncheckedIndexedAccess` 可让索引读取类型体现缺失可能性，运行时仍须处理它。判断数组用 `Array.isArray`，`typeof` 无法区分数组与普通对象。
+
+## map 传入什么，结果存到哪里？
+
+```typescript
+const values = [1, 4, 9];
+const roots = values.map((value, index, array) => {
+  console.log(index, array === values); // 0/1/2，各次都是 true
+  return Math.sqrt(value);
+});
+console.log(roots); // [1, 2, 3]
+
+const users = [
+  { id: 1, name: "John" },
+  { id: 2, name: "Jane" },
+  { id: 3, name: "Doe" }
+];
+const userNames: string[] = users.map(user => user.name);
+// ["John", "Jane", "Doe"]
+```
+
+callback（回调函数）收到元素、索引、原数组三个位置参数。只需要第一个时可以只声明 `value`；要用第三个时可以把中间参数命名为 `_index`，不能改变它的参数位置。普通函数还可通过 `map(callback, thisArg)` 指定回调接收者；箭头函数的 `this` 来自词法作用域。
+
+接着沿同一组数据走完处理：`roots.filter(x => x >= 2)` 得到 `[2,3]`，再用 `reduce((sum,x) => sum+x, 0)` 得到 5。映射改变各位置的值，筛选决定保留哪些值，归约将剩余值合成一个结果。
+
+`map` 创建新数组，但回调仍可修改原数组或共享对象。它先记住初始长度，再逐个检查索引是否存在：不会处理后来追加到初始长度之外的项，访问前已删除的项会跳过。空槽会在结果相同位置留下空槽；`filter` 则把匹配值压紧。完整循环实现和原题见[不用 map 怎样变换数组？](leetcode30days/Array/2635.%20Apply%20Transform%20Over%20Each%20Element%20in%20Array.md)与[不用 filter 怎样保留匹配项？](leetcode30days/Array/2634.%20Filter%20Elements%20from%20Array.md)。
+
+## 原地修改还是产生新值？
+
+| 目的 | 方法与返回值 | 是否修改原数组 |
+|---|---|---|
+| 两端添加 | `push` / `unshift` 返回新长度 | 是 |
+| 两端取走 | `pop` / `shift` 返回元素，空数组为 `undefined` | 是 |
+| 反转、排序 | `reverse` / `sort` 返回原数组 | 是 |
+| 插入、删除、替换 | `splice(start, deleteCount, ...items)` 返回删去的数组 | 是 |
+| 拼接、切片 | `concat` / `slice` 返回浅层新数组 | 否 |
+| 映射、筛选 | `map` / `filter` 返回新数组 | 方法本身不改输入，回调可能改 |
+| 非修改排序或反转 | `toSorted` / `toReversed` | 否；仍是浅层副本 |
+
+例如 `['a','b','c'].slice(1,3)` 得到 `['b','c']`，结束索引不含在内；`splice(1,1,'x','y')` 会改原数组并返回 `['b']`。数值排序写 `(a,b)=>a-b`，否则默认按字符串比较，`[3,10,2]` 会成为 `[10,2,3]`。`[[0,1],[2,3]].flat()` 展开一层；嵌套对象不会因此深复制。
+
+## 遍历、判断和归约各返回什么？
+
+| 问题 | 操作 | 本地例子 |
+|---|---|---|
+| 找索引 | `indexOf` / `lastIndexOf`；未找到 `-1` | `[1,2,3,2].lastIndexOf(2)` 为 3 |
+| 是否全部/至少一个通过 | `every` / `some` | `[].every(fn)` 为 true；`[].some(fn)` 为 false |
+| 对各项执行副作用 | `forEach` 返回 `undefined` | 参数同样是值、索引、数组 |
+| 顺序累计 | `reduce` | `[1,2,3,4].reduce((sum,x)=>sum+x,0)` 为 10 |
+| 从右累计 | `reduceRight` | `[[0,1],[2,3],[4,5]].reduceRight((a,x)=>a.concat(x))` 为 `[4,5,2,3,0,1]` |
+| 显示为字符串 | `join` / `toString` / `toLocaleString` | `['Fire','Air','Water'].join(' - ')` 为 `Fire - Air - Water`；本地化结果依环境 |
+
+没有初始值的 reduce 会用首个存在元素作为累加器；空数组或全空槽数组因此抛 `TypeError`。给出初始值也让 TypeScript 更容易明确累加器类型。
+
+`forEach`、`map`、`reduce`、`every` 和 `some` 跳过不存在的索引；`for...of` 对普通空槽读出 `undefined`。需要提前 `break` 时用循环，不要把 `forEach` 当成可以中断的循环。数组解构 `const [first, second] = fruits` 按位置取值；栈则直接用 `push`/`pop`，但空栈与存入 `undefined` 的区别要另做返回契约，见[两个栈如何得到队列？](leetcode30days/queueWith2Stacks.md)。
+
+> [!info]- 来源
+> - 分配、空槽、回调与上述数组方法：[ECMAScript 2026 Indexed Collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)，Array constructor 与 Array.prototype 各对应小节，核对 2026-11-06。
+> - 索引类型的缺失值提示：[TypeScript noUncheckedIndexedAccess](https://www.typescriptlang.org/tsconfig/noUncheckedIndexedAccess.html)。类型检查不替代运行时存在性检查。
