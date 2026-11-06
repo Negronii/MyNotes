@@ -1,74 +1,63 @@
-# How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？
+# 怎样准备有事实支撑的行为面试回答？
 
-Begin with the role's needs and facts from your own experience. Shape one relevant example as context → action you personally took → result or other evidence; describe qualitative outcomes plainly and never invent a metric or someone else's story. Research current role, company, location, and compensation details before the conversation, state skill gaps honestly, and prepare questions that help you understand the work. / 从岗位需求和自己真实经历中的事实开始。选择一个相关例子，按背景 → 个人行动 → 结果或其他证据组织；定性结果应如实描述，不要编造指标或借用别人的故事。面试前调研当前岗位、公司、地点和薪酬信息，坦诚说明技能缺口，并准备能帮助自己了解工作的提问。
+准备面试时，先读岗位职责和组织公开信息，再从自己的真实经历里挑出能说明相关能力的材料。一个有说服力的回答可以按“背景—个人行动—结果或证据”展开。描述团队成果时，区分自己的贡献和团队工作；没有可核实的数字，就说清观察到的变化，不要编造指标、夸大权限或借用别人的故事。
 
-## Discussing strengths and weaknesses
+面试也不是单向考试。候选人需要判断职责、团队协作、支持制度与工作方式是否适合自己，可以在回答和提问中逐步补全信息。
 
-### Strengths
+## 用事实组织行为题答案
 
-Choose a strength that matters for the role, then support it with one real example. A compact structure is **context → action you took → result or evidence**.
+**behavioral interview（行为面试）**会询问过去怎样处理具体情境。先确认问题关注的能力，再挑一个最相关的例子。回答要让听者理解发生了什么、自己为什么采取这些行动，以及结果如何被观察到。
 
-- “I work carefully with edge cases. In [specific situation], I [action I personally took], which led to [verifiable result].”
-- “I learn unfamiliar tools by [specific method]. For example, I used that approach to [real task] and [what changed or what I learned].”
+| 部分 | 需要说明什么 | 可用提示 |
+|---|---|---|
+| 背景 | 目标、限制、风险和自己的职责 | 哪件事最重要？我负责哪一部分？ |
+| 行动 | 自己作出的判断与执行步骤 | 我先确认什么，再做了什么？ |
+| 结果 | 可核实的产出、影响或学习 | 哪项行为或数据能证明变化？ |
 
-Replace each bracketed part with your own evidence. If the result is qualitative, describe what changed without inventing a metric.
+可先用一句话说明背景，再说两三项关键行动，最后交代结果和后续反思。团队成功不等于个人可以认领全部成果；说清“团队完成了什么”与“我负责哪一部分”会更可信。
 
-### Weaknesses
+## 优势、短板与技能缺口
 
-**诚实说明一个真实的发展方向，并说明正在采取的步骤。** Choose something you are actively improving and explain how you notice progress. Avoid presenting a disguised strength or claiming a weakness that would prevent you from doing the role's core work.
+谈优势时，选一个与岗位需求相关的能力，并提供例证。只说“我学习能力强”无法让面试官判断证据；可以说明在真实任务中如何拆解陌生知识、验证理解并应用到结果。
 
-- “I am still developing [skill]. I have been improving it by [specific practice], and I can now [observable progress].”
+谈短板时，选择真实且正在改善的发展方向，交代具体练习和可观察进展。不要把“工作太认真”这类伪装成优点的答案当作诚实反思，也不要承诺没有依据的掌握日期。若缺少某项经验，可以说明目前没有在目标场景中使用过，再指出相关基础与将如何学习、验证新工具。
 
-## Salary expectations
+## 讨论紧急任务与加班安排
 
-- Research a current range for the role, seniority, location, and total compensation before the conversation.
-- If you are ready to give a number, state a range and the assumptions behind it; leave room to discuss the full package.
-- If the responsibilities are not yet clear, ask about the role's level and compensation range before giving a precise expectation.
+若被问到临时紧急任务或加班，先说明怎样判断紧急程度、可用容量和风险，然后讲清沟通与取舍：确认截止时间和影响，列出当前时间内能完成的范围，向负责人同步冲突，让相关人一起决定延后、缩小范围、增加支援或改变发布计划。
 
-## Why are you a good fit?
+> [!example] 虚构练习场景，不是个人经历
+> 假设页面要在 16:00 发布，当前还在调整次要按钮样式；15:10 时，发布前权限检查发现未授权访客可以打开页面。候选人先用授权与未授权测试账号复现问题，记录受影响页面并告知负责人；团队决定暂停样式调整，修复访问校验，再由另一人复测两种权限。只有复测通过才恢复发布，按钮样式移到后续任务。这个结局是情境练习中的假设，不是可冒充的个人结果；真实回答应替换为本人实际承担的步骤与证据。
 
-Connect the role's stated needs to evidence you actually have:
+不要用“我随时可以无限加班”来证明投入。偶发故障和长期以加班填补容量不足是不同工作条件；可以询问值班轮换、紧急响应安排、加班补偿、优先级如何调整，以及团队如何避免事故反复发生。本章将容量判断、沟通取舍和核实工作安排放在同一回答过程中，便于与其他行为题采用一致的证据结构。
 
-1. **Skills match / 技能匹配** — identify the relevant requirement.
-2. **Evidence / 事实依据** — give a project, responsibility, or result that demonstrates it.
-3. **Motivation / 求职动机** — explain which part of this role you want to work on.
+## 解释为什么适合岗位
 
-Template: “This role needs [requirement]. In [real example], I [specific contribution] and [result or learning]. I am interested in applying that experience to [specific part of the role].”
+把岗位需要与自己能证明的经历对应起来，而不是复述公司口号：
 
-## Company research
+1. 复述一项明确职责或目标。
+2. 给出自己承担过的相近任务与具体行动。
+3. 说明结果或学到的东西，并指出如何应用到目标岗位。
+4. 说清为何希望做这类工作。
 
-- Understand the product, users, and the role's team from current company materials.
-- Connect your experience to a specific need instead of reciting company slogans.
-- If you do not know a detail, say what you have learned so far and ask a focused question.
+## 了解薪酬与岗位条件
 
-## Addressing lack of experience
+面试前研究与岗位、资历、地点和总薪酬构成相关的当前范围。若职责和级别尚不清楚，可以先询问岗位预期与薪酬区间；若需要先给数字，则说明范围和假设，并保留讨论奖金、福利与工作条件的空间。薪酬数据会随地区、行业与时间变化，应在面试前重新核实。
 
-State the gap plainly, then describe related experience and a realistic learning plan. Avoid guaranteeing that you will master an unfamiliar area by a fixed date unless you have a basis for that estimate.
+## 研究公司与团队
 
-Template: “I have not used [technology] in [relevant context]. I have used [related skill] for [real example], and I would start by [specific way to learn or validate the new system].”
+用当前公开材料了解产品、用户、岗位所在团队和近期方向，再把自己的经历与一项具体需求相连。不要把对团队内部实践的推测说成事实；将仍未知的部分记成面试问题。
 
-## Questions to ask the interviewer
+## 提前准备能帮助判断工作的提问
 
-Prepare questions that help you understand the work. Choose the ones that remain unanswered by the conversation.
+根据谈话中已回答的内容，选择仍未了解的问题：
 
-**About the role:**
+- 这个岗位前几个月最重要的结果是什么？
+- 工程师通常如何参与代码评审、技术决策和知识分享？
+- 团队怎样安排上线、值班和紧急响应？
+- 如果工作优先级冲突，谁参与排序，如何沟通取舍？
+- 团队如何支持技术成长与职责发展？
 
-- “What are the most important outcomes for this role in the first few months?”
-- “What technical challenges would this person work on?”
-- “How do you measure success for the position?”
+结束时感谢面试官，重申一个具体的兴趣理由，并在后续流程尚未说明时询问下一步。若问题已在谈话中回答，可用剩余时间追问相关细节。
 
-**About the team:**
-
-- “How does the team approach code review and knowledge sharing?”
-- “How are technical decisions made, and who is involved?”
-
-**About growth:**
-
-- “What opportunities are there to deepen or broaden engineering skills?”
-- “How does the team support progression for engineers?”
-
-## Closing the interview
-
-Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
-
-**See also:** [Agile and Scrum](../teamwork/agile-and-scrum.md) for the current Scrum vocabulary used in team-process discussions.
+**相关背景：**[Scrum 怎样让团队检查并调整工作？](../teamwork/agile-and-scrum.md)说明 Product Goal、Sprint Goal 和 Sprint Review 等团队协作用语。

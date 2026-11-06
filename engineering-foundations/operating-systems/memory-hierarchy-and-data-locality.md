@@ -1,84 +1,98 @@
-# Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？
+# 为什么连续扫描往往比链表遍历快？
 
-Big-O describes how work grows, but data layout and dependency determine how quickly a processor can obtain that work. A contiguous scan often runs efficiently because its addresses are predictable and independent loads can overlap; a linked-list walk has a dependent pointer chain, but a cache miss does not automatically stop every part of the CPU.
-
-复杂度描述工作量如何随输入增长，数据布局与依赖关系则影响处理器能多快拿到数据。连续扫描通常更容易利用预取、并行访存和 SIMD；链表遍历受逐节点地址依赖限制，但一次 Cache Miss 不等于整个 CPU 必然停摆。
+假设一段代码要累计一组事件的时长。它可以把事件放在连续数组里，也可以让每个节点保存一个指向下一节点的指针。两种表示都要访问 n 项，工作量都是 O(n)；差别在于处理器何时能知道下一次读取的地址，以及这次读取会带来哪些相邻数据。本例解释访问机制，不代表实测速度。
 
 ~~~mermaid
-flowchart LR
-    A[Array element i] -->|known address| A2[Adjacent element i+1]
-    A2 -->|regular access can prefetch and overlap| A3[Next independent load]
-    L[Current list node] -->|load next pointer| P[Wait for pointer value]
-    P -->|only then know address| L2[Next list node]
-    L -->|cache miss| Other[Independent CPU work may still continue]
+flowchart TD
+    A["数组：已知基址与下标 i"] --> B["计算第 i 项地址"]
+    B --> C["下一项地址也可独立计算"]
+    C --> D["规则访问可能被预取，多次读取可重叠"]
+    E["链表：读取当前节点"] --> F["从当前节点读取 next"]
+    F --> G["next 到达后才知道下个节点地址"]
+    G --> H{"依赖读取未命中缓存？"}
+    H -->|是，且没有独立工作| I["关键路径等待数据"]
+    H -->|是，但有独立工作| J["处理器可先执行其他工作"]
+    H -->|否| K["下一节点很快可用"]
 ~~~
 
-## Key terms / 核心术语
+图中的比较只针对一条遍历路径。处理器可能继续执行无关指令或其他独立读取；一次缓存未命中不会冻结整个 CPU。
 
-| Term | Meaning |
+## 延迟与带宽限制的是不同事情
+
+central processing unit（CPU，中央处理器）访问数据时可能从寄存器、不同层级的 cache（缓存）或 DRAM（动态随机存取存储器）取得数据。实际层数、容量、带宽和延迟都取决于处理器与系统配置；程序不能假设固定层级或固定耗时。
+
+latency（延迟）表示一次请求从发出到数据可用所需的时间。bandwidth（带宽）表示一段时间内能够传送多少数据。若流式循环每项平均传输 s 字节、可用带宽为 B，且循环已经受带宽限制，那么吞吐上限约为 B/s 项每秒。这个估算不包含计算时间，也不能预测一次依赖读取的等待时间。
+
+cache line（缓存行）是缓存与一致性协议常用的数据传输粒度，具体大小依处理器而异。读取一个地址时，缓存填充通常会带入邻近字节；随后访问相邻元素可能已经命中缓存。这是 spatial locality（空间局部性）。短时间重复使用同一数据更可能仍在缓存中，则是 temporal locality（时间局部性）。这些是访问机会，不是每次都命中的保证。
+
+Wulf 与 McKee 将处理器计算能力与内存供数能力逐渐扩大的差距称为 memory wall（内存墙）。当处理器等待数据或数据带宽饱和时，增加算术指令吞吐未必能提高整体速度；但计算密集、数据已在缓存或请求彼此独立的程序不一定受内存墙限制。
+
+## 连续地址让后续读取容易提前安排
+
+在 C 里，数组第 i 项的地址写作 `&events[i]`。若改用字节地址表示，才是字节基址加上 i 乘以元素字节数；不能把 C 的 struct 指针加法再乘一次 `sizeof`。读完当前项之前，下一项地址已经确定。对顺序访问，许多硬件预取器能识别访问模式；在数据依赖允许时，处理器还可让若干次独立读取同时在途。memory-level parallelism（MLP，内存级并行度）就是能同时等待的独立内存请求数量。
+
+~~~c
+for (size_t i = 0; i < count; i++) {
+    total += events[i].duration;
+}
+~~~
+
+这里的地址规律只说明 CPU 有机会提前取后续项。编译器是否向量化（SIMD，单指令多数据）、读取能重叠多少，还取决于数据依赖、别名关系、循环计算和目标处理器。`total` 的累加本身也有依赖，因此不能只凭代码外形承诺某种吞吐量。
+
+## 链表遍历必须先取到下一个指针
+
+链表循环每轮都要先读取当前节点，再从它读取 `next`。只有 `next` 到达后，CPU 才知道下一项的位置。这种 pointer chasing（指针追逐）形成地址依赖链，限制单条遍历能并行发出的独立请求数量。
+
+~~~c
+for (struct event_node *node = head;
+     node != NULL;
+     node = node->next) {
+    total += node->event.duration;
+}
+~~~
+
+如果 `next` 已在缓存里，遍历可能很快；如果节点分散在内存中，前一节点的读取会把下一次读取推迟。支持乱序执行的处理器仍可执行这条链以外的独立工作，其他线程或另一条独立链也可能产生在途请求。若缺失数据位于关键依赖路径、又没有有用工作可继续，相关指令才会停下来等它。顺序流式预取器通常比对数组更难预测普通指针链；特定处理器或软件预取可改善某些模式，但需要测量确认。
+
+## 渐进复杂度没有包含布局、移动与分配
+
+两种遍历的算法复杂度都可为 O(n)，但这不代表耗时相同。差别不是“链表常数时间、数组线性时间”这么简单：
+
+- 数组按下标访问通常为 O(1)；中间插入或删除要移动后续项，工作量为 O(n)，但移动范围连续，运行库或 CPU 可使用优化过的批量操作。
+- 链表按值查找通常为 O(n)。只有已经持有目标节点和所需链接时，插入或删除才需有限次指针更新、可视为 O(1)；若先扫描定位，整个操作仍为 O(n)。
+- 分配节点、缓存未命中、节点大小、锁竞争和访问顺序都可能改变实际成本。对象池能改变分配成本，却不保证链表顺序就是地址顺序。
+
+因此，主要工作是按顺序扫描时，连续数组常是更好的起点；若系统频繁改动已知节点、要求节点地址稳定，或同一对象要参加多个关系，链表可能更合适。先按操作和所有权选择，再测量代表性数据规模与访问模式。Linux 内核文档也提醒，能满足需求的简单数组通常比链表更有局部性。
+
+## “数组”在语言中不总是同一种布局保证
+
+C 普通数组的元素连续，多维数组按行优先排列。C++ `std::vector<T>` 对 `T` 非 `bool` 保证连续容器语义；`vector<bool>` 是专门化，不属于这项保证。C++ `std::list<T>` 的标准规定操作与复杂度，不规定具体节点布局。
+
+ECMAScript 规定 JavaScript `Array` 的索引属性、长度和操作行为，不承诺像 C 数组那样连续存储。引擎可对常见数组作优化；以 V8 为例，元素类型可有 packed（紧凑）与 holey（稀疏）等内部种类，这是 V8 的实现选择。`TypedArray` 提供固定数值元素类型，视图关联到 `ArrayBuffer` 的字节范围；也不能据此从 JavaScript 推断物理地址、缓存行或跨实现布局。
+
+## 其他数据结构也会受访问模式影响
+
+| 对比 | 何时可能改变选择 |
 |---|---|
-| **Memory wall / 内存墙** | 处理器计算能力与内存供数能力之间逐渐拉大的差距，涉及延迟与带宽；它不是固定耗时，也不表示所有程序都受内存限制。 |
-| **Latency / 延迟** | 从发出一次内存请求到数据可供使用所需的时间。 |
-| **Bandwidth / 带宽** | 多个请求充分重叠时，单位时间能传输的数据量。 |
-| **Cache line / 缓存行** | 缓存常用的数据传输与一致性维护粒度；具体大小依处理器而定。 |
-| **Spatial locality / 空间局部性** | 访问靠近刚访问过地址的数据。一次缓存填充可能带入扫描很快会用到的相邻值。 |
-| **Temporal locality / 时间局部性** | 短时间内重复使用同一数据，使它更可能仍留在缓存中。 |
-| **Memory-level parallelism (MLP) / 内存级并行度** | 同时处于未完成状态的独立内存请求数量。 |
+| 小范围线性搜索与二分搜索 | 二分比较次数更少，但会跳到不同位置；小数组是否更快取决于规模、比较成本和缓存状态。 |
+| 行遍历与列遍历 | 行优先布局中，按最后一维顺序扫描较连续；跨距读取会改变缓存利用率。 |
+| 伪共享与写入争用 | 多个 CPU 访问同一缓存行，且至少有一方写入时，彼此独立的字段也可能触发缓存一致性流量；纯并发读取不构成伪共享。Linux 的 `perf c2c` 可用于定位受争用的缓存行，再结合结构布局工具检查对应字段。 |
+| B+ 树与红黑树 | 页式 B+ 树将多个键放在节点页内并支持叶层范围扫描；内存中的指针式红黑树逐节点查找。主导成本可能是存储页、缓存未命中或更新。 |
+| 无分支代码与可预测分支 | 去掉分支可能增加无效工作或数据依赖；分支预测稳定时，保留分支也可能更快。 |
+| 扁平与节点式哈希表 | 扁平表可密集组织元数据和分组探测；节点式表可能更容易保持元素地址，但通常增加指针跳转。扩容、删除与引用稳定性也重要。 |
+| 结构体填充 | 对齐和字段布局会影响对象大小；应查看目标 ABI 下的 `sizeof` 与成员偏移，再判断是否值得调整。 |
+| 增加核心数 | 更多核心可执行更多独立工作，但共享带宽、一致性流量或同步争用可能成为瓶颈。 |
 
-Wulf 与 McKee 用“内存墙”描述处理器与内存性能差距的扩大。Intel 优化手册提出的实践方向是让访问尽量命中缓存，或隐藏足够多的延迟以利用内存带宽。两者相关但不同：**延迟**限制一条有依赖的访问链；**带宽**限制整体数据吞吐。 [Wulf 与 McKee（1995）](https://doi.org/10.1145/216585.216588)，[Intel® 64 和 IA-32 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)。
+这些比较都是定位问题的线索，不是脱离负载的通用性能结论。
 
-若一次流式循环平均为每项从内存传输 `s` 字节，可分配给它的有效带宽为 `B`，且循环已受带宽限制，则吞吐上限约为 `B / s` 项每秒。指针依赖链受另一种约束：当前节点到达后才能得知下一地址，因此单条遍历通常无法暴露同等数量的独立请求。这些关系用于识别瓶颈，不是精确耗时公式；缓存命中、计算量、其他请求和具体处理器都会改变结果。
+LRU 缓存常用 Map 从键定位已经存在的链表节点，再把该节点移动到最近使用端；前提是目标节点已由 Map 找到，随后改链只需有限次链接更新。若没有索引而要遍历链表找键，查找仍是 O(n)，指针追逐也没有消失。可继续看[队列、LRU 等数据结构的实际实现](../algorithms/practical-data-structure-implementations.md)。
 
-## Why contiguous scans often work well / 连续扫描为什么常常高效
+**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](../algorithms/core-data-structures.md)说明链表更新所需的前驱与树高条件；[Linux 内核为什么把链表节点嵌入对象？](intrusive-lists-in-linux.md)说明内嵌节点减少了哪种分配，以及为什么它仍然保留指针依赖。
 
-对连续数组区域，下一元素地址可由基址和下标计算。硬件预取器能识别许多规则访问模式；早先的读取尚未完成时，处理器也可能继续发出后续迭代中彼此独立的读取。如果操作、数据类型和编译条件合适，编译器还可用 SIMD 指令并行处理多个值。这些收益都有条件：步长不规则、分支多、指针别名难以排除、指令级并行度不足，或内存带宽已饱和时，预取和向量化都可能帮助有限。[Intel 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)、[Arm Cortex-A 系列程序员指南](https://documentation-service.arm.com/static/6893ad23e7f7ce6150e88d37)。
-
-链表遍历要先读取当前节点，再从中得到下一节点地址（`node = node->next`）。在当前节点的链接到达之前，处理器通常不知道下一请求发往哪里。这种**指针追逐 / pointer chasing**形成依赖链，常限制单条遍历可利用的 MLP。普通流式预取器较难从中识别规律；特定设计也可能使用软件预取或专用硬件改善访问。
-
-Cache Miss 仍可与独立工作重叠：支持乱序执行的核心可能先执行无关指令，其他独立读取或线程也可能已有请求在途。当缺失数据位于关键依赖路径上，且没有有用的独立工作可继续时，核心才会因等待而停顿。因此，长串依赖未命中会让链表遍历很慢，但不能推断每次 Miss 都冻结全部执行。Linux 官方文档也提醒，链表局部性较差；若简单数组已能满足需求，链表很少是更好的选择。[Linux：Linked Lists in Linux](https://www.kernel.org/doc/html/latest/core-api/list.html)。
-
-## Complexity is not elapsed time / 复杂度不等于实际耗时
-
-链表插入或删除只有在**已知相关节点或链接**时才是 O(1)。双向链表持有目标节点即可改动有限个指针；单向链表删除目标节点需要前驱，按位置插到某节点之前也需要前驱（除非表示方式另行提供）。按值或下标查找仍是 O(n)。创建节点还会经过分配器并产生内存流量，而复杂度表通常没有计入这些分配与缓存成本。
-
-数组中间插入需要 O(n) 次元素移动，但移动范围连续规则；对适合的类型还可用优化过的批量操作。它是否快于分配链表节点并改写链接，取决于元素大小、移动成本、是否已知链表位置、分配器、数据是否在缓存中以及操作比例。因此，“链表 O(1) 插入总比数组 O(n) 插入快”不能作为普遍结论。
-
-对象池可降低分配开销，也可能让对象更集中，但它不保证链接顺序与内存地址顺序一致。对象复用、插入顺序和池的设计共同决定实际遍历布局。
-
-## Arrays in C, C++, and JavaScript / 各语言中的数组布局
-
-在 C 中，普通数组的元素连续存储，多维数组按行优先布局（最后一维变化最快）；C++ `std::vector<T>`（专门化的 `vector<bool>` 除外）也保证连续存储。JavaScript `Array` 则由带特殊 `length` 行为的索引属性定义；语言规范不保证它采用同样的 C 式元素布局。引擎可以优化常见的稠密数组，具体表示因实现而异。以 V8 为例，它区分 packed 与 holey 等元素类型。[WG14 C23 草案](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf)
-
-JavaScript `TypedArray` 更接近数值数据布局：它以固定元素类型，在二进制数据缓冲区上提供数组式视图。但它仍由运行时管理；不能从 C 数组推断普通 JavaScript `Array` 的机器布局或优化方式。[C++ 草案：`vector`](https://eel.is/c++draft/vector)、[ECMAScript 2024：Indexed Collections](https://tc39.es/ecma262/2024/multipage/indexed-collections.html)、[V8：Elements kinds](https://v8.dev/blog/elements-kinds)。
-
-An intrusive list can remove a separately allocated wrapper. Object placement and dependent loads still determine traversal cost. The Linux example explains [why the kernel embeds its list nodes / Linux 内核为何嵌入链表节点](intrusive-lists-in-linux.md).
-
-## Related performance surprises / 相关的性能反直觉现象
-
-| 场景 | 机制与适用条件；可继续追问 |
-|---|---|
-| 小规模线性查找与二分 | 小型连续范围可简单顺序扫描；二分比较次数渐进更少，却跳跃访问不同位置。交叉点取决于数据规模、比较成本与缓存状态。实际输入规模和键分布是什么？ |
-| 行遍历与列遍历 | 行优先布局中，遍历末维是连续访问；按列走会跨距访问。规则取决于语言及实际布局。循环顺序是否符合存储顺序？ |
-| 伪共享 / False sharing | 不同 CPU 写同一一致性缓存行中的不同变量，也会让对方缓存副本失效。需要并发共享且至少一方写入；只有读取不构成此问题。能否用 `perf c2c` 找出争用缓存行？[Linux 伪共享指南](https://docs.kernel.org/kernel-hacking/false-sharing.html) |
-| B+ 树与红黑树 | 面向页的 B+ 树在每页容纳多个分隔键，并通过叶页链接支持范围扫描；指针式红黑树通常每节点组织一个键。取舍取决于主要成本是存储页读取、内存缓存未命中还是更新。哪层存储与查询模式主导？[PostgreSQL B-tree 实现](https://www.postgresql.org/docs/current/btree.html) |
-| 无分支与分支预测代码 | 去掉分支可能避开误预测，但也可能执行更多工作或引入数据依赖；预测稳定的分支反而更便宜。实际输入分布和生成指令是什么？ |
-| 扁平与节点式哈希表 | 扁平表可把元数据与条目密集组织以便分组探测；节点式表更容易保持元素地址稳定，但常增加指针追逐。删除、扩容、负载因子和引用稳定性都重要。[Abseil Swiss Tables 设计](https://abseil.io/about/design/swisstables) |
-| 结构体填充 | 对齐要求会插入填充字节并增大对象；字段顺序也可能影响空间，仍受 ABI 与访问模式约束。`sizeof` 与成员偏移是否显示出实际空间问题？ |
-| 增加核心数 | 独立工作可扩展，直到共享内存带宽、一致性流量或同步争用成为瓶颈。增加核心后，负载是计算受限、带宽受限还是争用受限？[Intel 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)、[Linux 伪共享指南](https://docs.kernel.org/kernel-hacking/false-sharing.html) |
-
-**Related notes / 相关笔记：** [Core Data Structures](../algorithms/core-data-structures.md) explains tree structure and list-operation bounds; [Practical Data Structure Implementations](../algorithms/practical-data-structure-implementations.md) shows an LRU cache locating a list node through a map before moving that known node.
-
-## Sources / 来源
-
-来源核实日期：**2026-10-16**。处理器手册描述特定架构与实现，不代表所有 CPU 都有相同缓存层次、预取行为、缓存行大小或内存级并行度。
-
-- [Wulf 与 McKee，“Hitting the Memory Wall: Implications of the Obvious”（1995）](https://doi.org/10.1145/216585.216588) — 内存墙术语的提出背景与论述。
-- [Intel® 64 和 IA-32 架构优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html) — 隐藏延迟、内存带宽、规则预取模式及特定架构优化。
-- [Arm Cortex-A 系列程序员指南，Armv7-A](https://documentation-service.arm.com/static/6893ad23e7f7ce6150e88d37) — 缓存延迟隐藏、hit-under-miss 与乱序执行示例；内容特定于处理器系列，不是所有 Arm 实现的保证。
-- [Linux 内核：Linked Lists in Linux](https://www.kernel.org/doc/html/latest/core-api/list.html) 与 [`include/linux/list.h`](https://github.com/torvalds/linux/blob/master/include/linux/list.h) — 循环双向结构、内嵌钩子、`container_of`、删除、安全遍历与并发说明。
-- [Linux 内核：False Sharing](https://docs.kernel.org/kernel-hacking/false-sharing.html) — 一致性缓存行机制、成立条件与诊断方法。
-- [C++ 草案：`vector`](https://eel.is/c++draft/vector) 和 [`list`](https://eel.is/c++draft/list) — 标准容器保证，以及哪些实现细节不能从标准推断。
-- [WG14 C23 草案 N3047](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf) — C 数组元素布局与多维数组行优先顺序。
-- [GCC libstdc++ `stl_list.h`](https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_list.h) — 一个标准库实现中，链表节点将 `T` 存在自身节点内的对齐存储。
-- [ECMAScript 2024：Indexed Collections](https://tc39.es/ecma262/2024/multipage/indexed-collections.html) 与 [V8：Elements kinds](https://v8.dev/blog/elements-kinds) — JavaScript Array 语义、TypedArray 数据缓冲视图，以及一种引擎的实现选择。
-- [PostgreSQL：B-tree 索引](https://www.postgresql.org/docs/current/btree.html) 与 [Abseil：Swiss Tables](https://abseil.io/about/design/swisstables) — 页式树与密集哈希元数据的实际例子。
+> [!info]- 来源
+> - 内存墙的提出背景：[Wulf 与 McKee，Hitting the Memory Wall: Implications of the Obvious（1995）](https://doi.org/10.1145/216585.216588)。
+> - 预取、访问延迟与内存优化方向：[Intel 64 和 IA-32 架构优化参考手册（文档 248966-050US）](https://cdrdv2-public.intel.com/821612/248966-Optimization-Reference-Manual-V1-050.pdf)；微架构说明适用于相应 Intel 处理器，不代表所有 CPU 行为。
+> - 链表局部性建议：[Linux 内核 Linked Lists in Linux](https://docs.kernel.org/core-api/list.html)，2026-11-06 核对。
+> - 缓存行伪共享及其并发写入条件：[Linux 内核 False Sharing](https://docs.kernel.org/kernel-hacking/false-sharing.html)，2026-11-06 核对。
+> - 连续容器保证：[C++ 草案 vector](https://eel.is/c++draft/vector)；C 数组定义：[WG14 C23 草案 N3047](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf)。
+> - JavaScript 索引集合语义：[ECMAScript 2026 Indexed Collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)；引擎数组种类示例：[V8 Elements kinds](https://v8.dev/blog/elements-kinds)。
+> - 页式 B-tree 的实现范围：[PostgreSQL B-tree Implementation](https://www.postgresql.org/docs/current/btree.html)；密集哈希元数据示例：[Abseil Swiss Tables Design](https://abseil.io/about/design/swisstables)。

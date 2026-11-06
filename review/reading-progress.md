@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=a5a0b8ac43944715c1cfbfaf87f540581e45fcab7e839ae18808ef3818ebf8d6 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=3203aca808fc59d4332f218b11af6c77c81f5ea4468121ce50124456ed3a85ec -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -138,12 +138,12 @@
 - [ ] 122. [动态规划如何定义状态并安排更新顺序？](../engineering-foundations/algorithms/dynamic-programming-state-and-order.md)
 - [ ] 123. [分区如何改变快速排序的时间和空间代价？](../engineering-foundations/algorithms/partitioning-and-sorting-costs.md)
 - [ ] 124. [文本算法应按码元、码点还是字素簇处理？](../engineering-foundations/algorithms/text-units-and-algorithms.md)
-- [ ] 125. [Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)
-- [ ] 126. [Why does the Linux kernel embed list nodes in their objects? / Linux 内核为什么把链表节点嵌入对象？](../engineering-foundations/operating-systems/intrusive-lists-in-linux.md)
-- [ ] 127. [How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？](../engineering-foundations/architecture/software-design-principles.md)
-- [ ] 128. [How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？](../engineering-foundations/architecture/frontend-architecture-boundaries.md)
-- [ ] 129. [When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？](../engineering-foundations/architecture/design-patterns-in-practice.md)
-- [ ] 130. [How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？](../engineering-foundations/architecture/low-code-editor-data-model.md)
-- [ ] 131. [How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？](../engineering-foundations/teamwork/agile-and-scrum.md)
-- [ ] 132. [How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？](../engineering-foundations/career/interview-preparation.md)
+- [ ] 125. [为什么连续扫描往往比链表遍历快？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)
+- [ ] 126. [Linux 内核为什么把链表节点嵌入对象？](../engineering-foundations/operating-systems/intrusive-lists-in-linux.md)
+- [ ] 127. [如何让设计原则减少真实的修改成本？](../engineering-foundations/architecture/software-design-principles.md)
+- [ ] 128. [前端架构怎样划分呈现、交互和数据所有权？](../engineering-foundations/architecture/frontend-architecture-boundaries.md)
+- [ ] 129. [页面编辑器何时需要设计模式？](../engineering-foundations/architecture/design-patterns-in-practice.md)
+- [ ] 130. [怎样建模页面文档、编辑会话和发布快照？](../engineering-foundations/architecture/low-code-editor-data-model.md)
+- [ ] 131. [Scrum 怎样让团队检查并调整工作？](../engineering-foundations/teamwork/agile-and-scrum.md)
+- [ ] 132. [怎样准备有事实支撑的行为面试回答？](../engineering-foundations/career/interview-preparation.md)
 <!-- MYNOTES:READING-PROGRESS:END -->

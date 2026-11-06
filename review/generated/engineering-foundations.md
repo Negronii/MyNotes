@@ -3751,7 +3751,7 @@ Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外
 | O(2ⁿ) | 朴素递归 Fibonacci 的上界、枚举子集 | 搜索树节点或候选数；按每个候选常数工作计 |
 | O(n!) | 枚举所有排列 | 搜索树节点工作；每个节点做常数工作时成立 |
 
-这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](#40.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 > [!example] 1,024 条事件页上的查找
 > 假设事件已按复合游标键升序，比较键的工作量为常数。目标位于末尾时，扫描需比较 1,024 次；二分最多进行 11 次中点探测，因为 2¹⁰=1,024，2¹¹=2,048；每次探测调用一个常数时间比较器，再判断比较结果。探测次数不等同于底层关系判断次数：若用直接 `===` 和 `<` 的标量写法，末尾命中例共做 21 次关系判断。若单次查找前要排序，预处理成本可能超过扫描。
@@ -3777,7 +3777,7 @@ Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外
 | 未平衡搜索树 | 最坏 O(n) | 最坏 O(n) | 递增插入可形成长链 |
 | Trie 前缀树 | 长度 m 的键约 O(m) | 沿字符路径增删 | 子边选择成本需受控；可能占较多内存 |
 
-链表只有在已知所需节点/链接时才是 O(1) 更新；先扫描定位会让整体操作成为 O(n)。树的 O(log n) 需要高度界。连续数组扫描通常比指针追逐更有局部性，硬件成本见[内存局部性如何影响访问](#40.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+链表只有在已知所需节点/链接时才是 O(1) 更新；先扫描定位会让整体操作成为 O(n)。树的 O(log n) 需要高度界。连续数组扫描通常比指针追逐更有局部性，硬件成本见[内存局部性如何影响访问](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 ### 树的遍历顺序和搜索条件是什么？
 
@@ -4557,617 +4557,737 @@ function switchAsciiCase(value) {
 > - 构造器入口：[ECMA-402 2026 §8.2.7 `Intl.NumberFormat`](https://tc39.es/ecma402/2026/#sec-intl.numberformat)、[§8.2.10 `Intl.Segmenter`](https://tc39.es/ecma402/2026/#sec-intl.segmenter)；格式化机制见 [§16 NumberFormat Objects](https://tc39.es/ecma402/2026/#numberformat-objects)，分段机制见 [§19 Segmenter Objects](https://tc39.es/ecma402/2026/#segmenter-objects)。Node.js v26.11.1 只用于复算本例行为，不据此断言运行时采用 UAX #29 rev.49。
 > - 字素簇默认边界与适用限制：[Unicode Standard Annex #29, Unicode 18.0.0, Revision 49](https://www.unicode.org/reports/tr29/tr29-49.html)，2026-09-01；以 extended grapheme cluster 作默认分段，允许声明定制。
 > - 数字安全整数上限：[ECMAScript 2026 Number.MAX_SAFE_INTEGER](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-number.max_safe_integer)，2⁵³−1。
-## 40. Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？
+## 40. 为什么连续扫描往往比链表遍历快？
 
-Big-O describes how work grows, but data layout and dependency determine how quickly a processor can obtain that work. A contiguous scan often runs efficiently because its addresses are predictable and independent loads can overlap; a linked-list walk has a dependent pointer chain, but a cache miss does not automatically stop every part of the CPU.
+假设一段代码要累计一组事件的时长。它可以把事件放在连续数组里，也可以让每个节点保存一个指向下一节点的指针。两种表示都要访问 n 项，工作量都是 O(n)；差别在于处理器何时能知道下一次读取的地址，以及这次读取会带来哪些相邻数据。本例解释访问机制，不代表实测速度。
 
-复杂度描述工作量如何随输入增长，数据布局与依赖关系则影响处理器能多快拿到数据。连续扫描通常更容易利用预取、并行访存和 SIMD；链表遍历受逐节点地址依赖限制，但一次 Cache Miss 不等于整个 CPU 必然停摆。
+~~~mermaid
+flowchart TD
+    A["数组：已知基址与下标 i"] --> B["计算第 i 项地址"]
+    B --> C["下一项地址也可独立计算"]
+    C --> D["规则访问可能被预取，多次读取可重叠"]
+    E["链表：读取当前节点"] --> F["从当前节点读取 next"]
+    F --> G["next 到达后才知道下个节点地址"]
+    G --> H{"依赖读取未命中缓存？"}
+    H -->|是，且没有独立工作| I["关键路径等待数据"]
+    H -->|是，但有独立工作| J["处理器可先执行其他工作"]
+    H -->|否| K["下一节点很快可用"]
+~~~
+
+图中的比较只针对一条遍历路径。处理器可能继续执行无关指令或其他独立读取；一次缓存未命中不会冻结整个 CPU。
+
+### 延迟与带宽限制的是不同事情
+
+central processing unit（CPU，中央处理器）访问数据时可能从寄存器、不同层级的 cache（缓存）或 DRAM（动态随机存取存储器）取得数据。实际层数、容量、带宽和延迟都取决于处理器与系统配置；程序不能假设固定层级或固定耗时。
+
+latency（延迟）表示一次请求从发出到数据可用所需的时间。bandwidth（带宽）表示一段时间内能够传送多少数据。若流式循环每项平均传输 s 字节、可用带宽为 B，且循环已经受带宽限制，那么吞吐上限约为 B/s 项每秒。这个估算不包含计算时间，也不能预测一次依赖读取的等待时间。
+
+cache line（缓存行）是缓存与一致性协议常用的数据传输粒度，具体大小依处理器而异。读取一个地址时，缓存填充通常会带入邻近字节；随后访问相邻元素可能已经命中缓存。这是 spatial locality（空间局部性）。短时间重复使用同一数据更可能仍在缓存中，则是 temporal locality（时间局部性）。这些是访问机会，不是每次都命中的保证。
+
+Wulf 与 McKee 将处理器计算能力与内存供数能力逐渐扩大的差距称为 memory wall（内存墙）。当处理器等待数据或数据带宽饱和时，增加算术指令吞吐未必能提高整体速度；但计算密集、数据已在缓存或请求彼此独立的程序不一定受内存墙限制。
+
+### 连续地址让后续读取容易提前安排
+
+在 C 里，数组第 i 项的地址写作 `&events[i]`。若改用字节地址表示，才是字节基址加上 i 乘以元素字节数；不能把 C 的 struct 指针加法再乘一次 `sizeof`。读完当前项之前，下一项地址已经确定。对顺序访问，许多硬件预取器能识别访问模式；在数据依赖允许时，处理器还可让若干次独立读取同时在途。memory-level parallelism（MLP，内存级并行度）就是能同时等待的独立内存请求数量。
+
+~~~c
+for (size_t i = 0; i < count; i++) {
+    total += events[i].duration;
+}
+~~~
+
+这里的地址规律只说明 CPU 有机会提前取后续项。编译器是否向量化（SIMD，单指令多数据）、读取能重叠多少，还取决于数据依赖、别名关系、循环计算和目标处理器。`total` 的累加本身也有依赖，因此不能只凭代码外形承诺某种吞吐量。
+
+### 链表遍历必须先取到下一个指针
+
+链表循环每轮都要先读取当前节点，再从它读取 `next`。只有 `next` 到达后，CPU 才知道下一项的位置。这种 pointer chasing（指针追逐）形成地址依赖链，限制单条遍历能并行发出的独立请求数量。
+
+~~~c
+for (struct event_node *node = head;
+     node != NULL;
+     node = node->next) {
+    total += node->event.duration;
+}
+~~~
+
+如果 `next` 已在缓存里，遍历可能很快；如果节点分散在内存中，前一节点的读取会把下一次读取推迟。支持乱序执行的处理器仍可执行这条链以外的独立工作，其他线程或另一条独立链也可能产生在途请求。若缺失数据位于关键依赖路径、又没有有用工作可继续，相关指令才会停下来等它。顺序流式预取器通常比对数组更难预测普通指针链；特定处理器或软件预取可改善某些模式，但需要测量确认。
+
+### 渐进复杂度没有包含布局、移动与分配
+
+两种遍历的算法复杂度都可为 O(n)，但这不代表耗时相同。差别不是“链表常数时间、数组线性时间”这么简单：
+
+- 数组按下标访问通常为 O(1)；中间插入或删除要移动后续项，工作量为 O(n)，但移动范围连续，运行库或 CPU 可使用优化过的批量操作。
+- 链表按值查找通常为 O(n)。只有已经持有目标节点和所需链接时，插入或删除才需有限次指针更新、可视为 O(1)；若先扫描定位，整个操作仍为 O(n)。
+- 分配节点、缓存未命中、节点大小、锁竞争和访问顺序都可能改变实际成本。对象池能改变分配成本，却不保证链表顺序就是地址顺序。
+
+因此，主要工作是按顺序扫描时，连续数组常是更好的起点；若系统频繁改动已知节点、要求节点地址稳定，或同一对象要参加多个关系，链表可能更合适。先按操作和所有权选择，再测量代表性数据规模与访问模式。Linux 内核文档也提醒，能满足需求的简单数组通常比链表更有局部性。
+
+### “数组”在语言中不总是同一种布局保证
+
+C 普通数组的元素连续，多维数组按行优先排列。C++ `std::vector<T>` 对 `T` 非 `bool` 保证连续容器语义；`vector<bool>` 是专门化，不属于这项保证。C++ `std::list<T>` 的标准规定操作与复杂度，不规定具体节点布局。
+
+ECMAScript 规定 JavaScript `Array` 的索引属性、长度和操作行为，不承诺像 C 数组那样连续存储。引擎可对常见数组作优化；以 V8 为例，元素类型可有 packed（紧凑）与 holey（稀疏）等内部种类，这是 V8 的实现选择。`TypedArray` 提供固定数值元素类型，视图关联到 `ArrayBuffer` 的字节范围；也不能据此从 JavaScript 推断物理地址、缓存行或跨实现布局。
+
+### 其他数据结构也会受访问模式影响
+
+| 对比 | 何时可能改变选择 |
+|---|---|
+| 小范围线性搜索与二分搜索 | 二分比较次数更少，但会跳到不同位置；小数组是否更快取决于规模、比较成本和缓存状态。 |
+| 行遍历与列遍历 | 行优先布局中，按最后一维顺序扫描较连续；跨距读取会改变缓存利用率。 |
+| 伪共享与写入争用 | 多个 CPU 访问同一缓存行，且至少有一方写入时，彼此独立的字段也可能触发缓存一致性流量；纯并发读取不构成伪共享。Linux 的 `perf c2c` 可用于定位受争用的缓存行，再结合结构布局工具检查对应字段。 |
+| B+ 树与红黑树 | 页式 B+ 树将多个键放在节点页内并支持叶层范围扫描；内存中的指针式红黑树逐节点查找。主导成本可能是存储页、缓存未命中或更新。 |
+| 无分支代码与可预测分支 | 去掉分支可能增加无效工作或数据依赖；分支预测稳定时，保留分支也可能更快。 |
+| 扁平与节点式哈希表 | 扁平表可密集组织元数据和分组探测；节点式表可能更容易保持元素地址，但通常增加指针跳转。扩容、删除与引用稳定性也重要。 |
+| 结构体填充 | 对齐和字段布局会影响对象大小；应查看目标 ABI 下的 `sizeof` 与成员偏移，再判断是否值得调整。 |
+| 增加核心数 | 更多核心可执行更多独立工作，但共享带宽、一致性流量或同步争用可能成为瓶颈。 |
+
+这些比较都是定位问题的线索，不是脱离负载的通用性能结论。
+
+LRU 缓存常用 Map 从键定位已经存在的链表节点，再把该节点移动到最近使用端；前提是目标节点已由 Map 找到，随后改链只需有限次链接更新。若没有索引而要遍历链表找键，查找仍是 O(n)，指针追逐也没有消失。可继续看[队列、LRU 等数据结构的实际实现](#35.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
+
+**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明链表更新所需的前驱与树高条件；[Linux 内核为什么把链表节点嵌入对象？](#41.%20Linux%20%E5%86%85%E6%A0%B8%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8A%E9%93%BE%E8%A1%A8%E8%8A%82%E7%82%B9%E5%B5%8C%E5%85%A5%E5%AF%B9%E8%B1%A1%EF%BC%9F)说明内嵌节点减少了哪种分配，以及为什么它仍然保留指针依赖。
+
+> [!info]- 来源
+> - 内存墙的提出背景：[Wulf 与 McKee，Hitting the Memory Wall: Implications of the Obvious（1995）](https://doi.org/10.1145/216585.216588)。
+> - 预取、访问延迟与内存优化方向：[Intel 64 和 IA-32 架构优化参考手册（文档 248966-050US）](https://cdrdv2-public.intel.com/821612/248966-Optimization-Reference-Manual-V1-050.pdf)；微架构说明适用于相应 Intel 处理器，不代表所有 CPU 行为。
+> - 链表局部性建议：[Linux 内核 Linked Lists in Linux](https://docs.kernel.org/core-api/list.html)，2026-11-06 核对。
+> - 缓存行伪共享及其并发写入条件：[Linux 内核 False Sharing](https://docs.kernel.org/kernel-hacking/false-sharing.html)，2026-11-06 核对。
+> - 连续容器保证：[C++ 草案 vector](https://eel.is/c++draft/vector)；C 数组定义：[WG14 C23 草案 N3047](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf)。
+> - JavaScript 索引集合语义：[ECMAScript 2026 Indexed Collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)；引擎数组种类示例：[V8 Elements kinds](https://v8.dev/blog/elements-kinds)。
+> - 页式 B-tree 的实现范围：[PostgreSQL B-tree Implementation](https://www.postgresql.org/docs/current/btree.html)；密集哈希元数据示例：[Abseil Swiss Tables Design](https://abseil.io/about/design/swisstables)。
+## 41. Linux 内核为什么把链表节点嵌入对象？
+
+假设内核要把一个 work item（工作项）放进待处理队列，同时还要把同一对象放进审计队列。Linux 内核的 `struct list_head` 是一对 `next`、`prev` 链接；把它作为成员嵌进工作项，就能让通用链表代码只修改链接，不必为每种关系再分配独立包装节点。
 
 ~~~mermaid
 flowchart LR
-    A[Array element i] -->|known address| A2[Adjacent element i+1]
-    A2 -->|regular access can prefetch and overlap| A3[Next independent load]
-    L[Current list node] -->|load next pointer| P[Wait for pointer value]
-    P -->|only then know address| L2[Next list node]
-    L -->|cache miss| Other[Independent CPU work may still continue]
+    Ready["ready_head"] <-->|next / prev| ReadyA
+    ReadyA["工作项 A.ready_link"] <-->|next / prev| ReadyB["工作项 B.ready_link"]
+    ReadyB <-->|next / prev| Ready
+    Audit["audit_head"] <-->|next / prev| AuditA["工作项 A.audit_link"]
+    AuditA <-->|next / prev| Audit
+    subgraph ItemA["同一个 work_item A"]
+        ReadyA
+        AuditA
+        PayloadA["id 与工作数据"]
+    end
 ~~~
 
-### Key terms / 核心术语
+`ready_link` 与 `audit_link` 是同一对象内的两个不同钩子，同一个钩子在同一时刻只能属于一张链表。图中的 head 也是 `struct list_head`，不是额外的业务对象；空表时它的 `next` 与 `prev` 都指向自身。
 
-| Term | Meaning |
-|---|---|
-| **Memory wall / 内存墙** | 处理器计算能力与内存供数能力之间逐渐拉大的差距，涉及延迟与带宽；它不是固定耗时，也不表示所有程序都受内存限制。 |
-| **Latency / 延迟** | 从发出一次内存请求到数据可供使用所需的时间。 |
-| **Bandwidth / 带宽** | 多个请求充分重叠时，单位时间能传输的数据量。 |
-| **Cache line / 缓存行** | 缓存常用的数据传输与一致性维护粒度；具体大小依处理器而定。 |
-| **Spatial locality / 空间局部性** | 访问靠近刚访问过地址的数据。一次缓存填充可能带入扫描很快会用到的相邻值。 |
-| **Temporal locality / 时间局部性** | 短时间内重复使用同一数据，使它更可能仍留在缓存中。 |
-| **Memory-level parallelism (MLP) / 内存级并行度** | 同时处于未完成状态的独立内存请求数量。 |
+### container_of 怎样从钩子找到对象？
 
-Wulf 与 McKee 用“内存墙”描述处理器与内存性能差距的扩大。Intel 优化手册提出的实践方向是让访问尽量命中缓存，或隐藏足够多的延迟以利用内存带宽。两者相关但不同：**延迟**限制一条有依赖的访问链；**带宽**限制整体数据吞吐。 [Wulf 与 McKee（1995）](https://doi.org/10.1145/216585.216588)，[Intel® 64 和 IA-32 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)。
+Linux 链表节点不是一个含 payload 指针的单独 wrapper。`struct list_head` 本身就放在被链接的结构体内；`container_of(ptr, type, member)` 根据成员偏移，概念上从钩子地址减去 `offsetof(type, member)`，还原出外层对象地址。`list_entry()` 建立在这一机制上，`list_for_each_entry()` 则直接让循环变量指向外层结构体。
 
-若一次流式循环平均为每项从内存传输 `s` 字节，可分配给它的有效带宽为 `B`，且循环已受带宽限制，则吞吐上限约为 `B / s` 项每秒。指针依赖链受另一种约束：当前节点到达后才能得知下一地址，因此单条遍历通常无法暴露同等数量的独立请求。这些关系用于识别瓶颈，不是精确耗时公式；缓存命中、计算量、其他请求和具体处理器都会改变结果。
-
-### Why contiguous scans often work well / 连续扫描为什么常常高效
-
-对连续数组区域，下一元素地址可由基址和下标计算。硬件预取器能识别许多规则访问模式；早先的读取尚未完成时，处理器也可能继续发出后续迭代中彼此独立的读取。如果操作、数据类型和编译条件合适，编译器还可用 SIMD 指令并行处理多个值。这些收益都有条件：步长不规则、分支多、指针别名难以排除、指令级并行度不足，或内存带宽已饱和时，预取和向量化都可能帮助有限。[Intel 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)、[Arm Cortex-A 系列程序员指南](https://documentation-service.arm.com/static/6893ad23e7f7ce6150e88d37)。
-
-链表遍历要先读取当前节点，再从中得到下一节点地址（`node = node->next`）。在当前节点的链接到达之前，处理器通常不知道下一请求发往哪里。这种**指针追逐 / pointer chasing**形成依赖链，常限制单条遍历可利用的 MLP。普通流式预取器较难从中识别规律；特定设计也可能使用软件预取或专用硬件改善访问。
-
-Cache Miss 仍可与独立工作重叠：支持乱序执行的核心可能先执行无关指令，其他独立读取或线程也可能已有请求在途。当缺失数据位于关键依赖路径上，且没有有用的独立工作可继续时，核心才会因等待而停顿。因此，长串依赖未命中会让链表遍历很慢，但不能推断每次 Miss 都冻结全部执行。Linux 官方文档也提醒，链表局部性较差；若简单数组已能满足需求，链表很少是更好的选择。[Linux：Linked Lists in Linux](https://www.kernel.org/doc/html/latest/core-api/list.html)。
-
-### Complexity is not elapsed time / 复杂度不等于实际耗时
-
-链表插入或删除只有在**已知相关节点或链接**时才是 O(1)。双向链表持有目标节点即可改动有限个指针；单向链表删除目标节点需要前驱，按位置插到某节点之前也需要前驱（除非表示方式另行提供）。按值或下标查找仍是 O(n)。创建节点还会经过分配器并产生内存流量，而复杂度表通常没有计入这些分配与缓存成本。
-
-数组中间插入需要 O(n) 次元素移动，但移动范围连续规则；对适合的类型还可用优化过的批量操作。它是否快于分配链表节点并改写链接，取决于元素大小、移动成本、是否已知链表位置、分配器、数据是否在缓存中以及操作比例。因此，“链表 O(1) 插入总比数组 O(n) 插入快”不能作为普遍结论。
-
-对象池可降低分配开销，也可能让对象更集中，但它不保证链接顺序与内存地址顺序一致。对象复用、插入顺序和池的设计共同决定实际遍历布局。
-
-### Arrays in C, C++, and JavaScript / 各语言中的数组布局
-
-在 C 中，普通数组的元素连续存储，多维数组按行优先布局（最后一维变化最快）；C++ `std::vector<T>`（专门化的 `vector<bool>` 除外）也保证连续存储。JavaScript `Array` 则由带特殊 `length` 行为的索引属性定义；语言规范不保证它采用同样的 C 式元素布局。引擎可以优化常见的稠密数组，具体表示因实现而异。以 V8 为例，它区分 packed 与 holey 等元素类型。[WG14 C23 草案](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf)
-
-JavaScript `TypedArray` 更接近数值数据布局：它以固定元素类型，在二进制数据缓冲区上提供数组式视图。但它仍由运行时管理；不能从 C 数组推断普通 JavaScript `Array` 的机器布局或优化方式。[C++ 草案：`vector`](https://eel.is/c++draft/vector)、[ECMAScript 2024：Indexed Collections](https://tc39.es/ecma262/2024/multipage/indexed-collections.html)、[V8：Elements kinds](https://v8.dev/blog/elements-kinds)。
-
-An intrusive list can remove a separately allocated wrapper. Object placement and dependent loads still determine traversal cost. The Linux example explains [why the kernel embeds its list nodes / Linux 内核为何嵌入链表节点](#41.%20Why%20does%20the%20Linux%20kernel%20embed%20list%20nodes%20in%20their%20objects?%20/%20Linux%20%E5%86%85%E6%A0%B8%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8A%E9%93%BE%E8%A1%A8%E8%8A%82%E7%82%B9%E5%B5%8C%E5%85%A5%E5%AF%B9%E8%B1%A1%EF%BC%9F).
-
-### Related performance surprises / 相关的性能反直觉现象
-
-| 场景 | 机制与适用条件；可继续追问 |
-|---|---|
-| 小规模线性查找与二分 | 小型连续范围可简单顺序扫描；二分比较次数渐进更少，却跳跃访问不同位置。交叉点取决于数据规模、比较成本与缓存状态。实际输入规模和键分布是什么？ |
-| 行遍历与列遍历 | 行优先布局中，遍历末维是连续访问；按列走会跨距访问。规则取决于语言及实际布局。循环顺序是否符合存储顺序？ |
-| 伪共享 / False sharing | 不同 CPU 写同一一致性缓存行中的不同变量，也会让对方缓存副本失效。需要并发共享且至少一方写入；只有读取不构成此问题。能否用 `perf c2c` 找出争用缓存行？[Linux 伪共享指南](https://docs.kernel.org/kernel-hacking/false-sharing.html) |
-| B+ 树与红黑树 | 面向页的 B+ 树在每页容纳多个分隔键，并通过叶页链接支持范围扫描；指针式红黑树通常每节点组织一个键。取舍取决于主要成本是存储页读取、内存缓存未命中还是更新。哪层存储与查询模式主导？[PostgreSQL B-tree 实现](https://www.postgresql.org/docs/current/btree.html) |
-| 无分支与分支预测代码 | 去掉分支可能避开误预测，但也可能执行更多工作或引入数据依赖；预测稳定的分支反而更便宜。实际输入分布和生成指令是什么？ |
-| 扁平与节点式哈希表 | 扁平表可把元数据与条目密集组织以便分组探测；节点式表更容易保持元素地址稳定，但常增加指针追逐。删除、扩容、负载因子和引用稳定性都重要。[Abseil Swiss Tables 设计](https://abseil.io/about/design/swisstables) |
-| 结构体填充 | 对齐要求会插入填充字节并增大对象；字段顺序也可能影响空间，仍受 ABI 与访问模式约束。`sizeof` 与成员偏移是否显示出实际空间问题？ |
-| 增加核心数 | 独立工作可扩展，直到共享内存带宽、一致性流量或同步争用成为瓶颈。增加核心后，负载是计算受限、带宽受限还是争用受限？[Intel 优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html)、[Linux 伪共享指南](https://docs.kernel.org/kernel-hacking/false-sharing.html) |
-
-**Related notes / 相关笔记：** [Core Data Structures](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F) explains tree structure and list-operation bounds; [Practical Data Structure Implementations](#35.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F) shows an LRU cache locating a list node through a map before moving that known node.
-
-### Sources / 来源
-
-来源核实日期：**2026-10-16**。处理器手册描述特定架构与实现，不代表所有 CPU 都有相同缓存层次、预取行为、缓存行大小或内存级并行度。
-
-- [Wulf 与 McKee，“Hitting the Memory Wall: Implications of the Obvious”（1995）](https://doi.org/10.1145/216585.216588) — 内存墙术语的提出背景与论述。
-- [Intel® 64 和 IA-32 架构优化手册](https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html) — 隐藏延迟、内存带宽、规则预取模式及特定架构优化。
-- [Arm Cortex-A 系列程序员指南，Armv7-A](https://documentation-service.arm.com/static/6893ad23e7f7ce6150e88d37) — 缓存延迟隐藏、hit-under-miss 与乱序执行示例；内容特定于处理器系列，不是所有 Arm 实现的保证。
-- [Linux 内核：Linked Lists in Linux](https://www.kernel.org/doc/html/latest/core-api/list.html) 与 [`include/linux/list.h`](https://github.com/torvalds/linux/blob/master/include/linux/list.h) — 循环双向结构、内嵌钩子、`container_of`、删除、安全遍历与并发说明。
-- [Linux 内核：False Sharing](https://docs.kernel.org/kernel-hacking/false-sharing.html) — 一致性缓存行机制、成立条件与诊断方法。
-- [C++ 草案：`vector`](https://eel.is/c++draft/vector) 和 [`list`](https://eel.is/c++draft/list) — 标准容器保证，以及哪些实现细节不能从标准推断。
-- [WG14 C23 草案 N3047](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf) — C 数组元素布局与多维数组行优先顺序。
-- [GCC libstdc++ `stl_list.h`](https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_list.h) — 一个标准库实现中，链表节点将 `T` 存在自身节点内的对齐存储。
-- [ECMAScript 2024：Indexed Collections](https://tc39.es/ecma262/2024/multipage/indexed-collections.html) 与 [V8：Elements kinds](https://v8.dev/blog/elements-kinds) — JavaScript Array 语义、TypedArray 数据缓冲视图，以及一种引擎的实现选择。
-- [PostgreSQL：B-tree 索引](https://www.postgresql.org/docs/current/btree.html) 与 [Abseil：Swiss Tables](https://abseil.io/about/design/swisstables) — 页式树与密集哈希元数据的实际例子。
-## 41. Why does the Linux kernel embed list nodes in their objects? / Linux 内核为什么把链表节点嵌入对象？
-
-**Short answer / 简答** — An intrusive list embeds its link hook in the object, so generic operations manipulate the hook rather than a separately allocated wrapper. Linux's `struct list_head` stores `next` and `prev` links in a circular doubly linked list whose sentinel points to itself when empty. / **侵入式链表 / intrusive linked list** 把链接钩子直接嵌在被链接的对象里。Linux 的 `struct list_head` 保存 `next` 和 `prev`；通用链表操作直接修改这些钩子，不需要为每个成员关系另分配包装节点。Linux 实现是带哨兵的循环双向链表：空表的 `list_head` 指向自身。
-
-### Recover the containing object / 还原外层对象
-
-`container_of(ptr, type, member)` 可从内嵌钩子指针还原外层对象。概念上，它从钩子地址减去成员相对结构体起点的字节偏移 `offsetof(type, member)`。因此链表操作只需认识通用钩子，调用方再还原具体对象类型。[Linux：Linked Lists in Linux](https://www.kernel.org/doc/html/latest/core-api/list.html)、[Linux `list.h`](https://github.com/torvalds/linux/blob/master/include/linux/list.h)。
-
-Conceptually, `container_of` recovers the enclosing object by subtracting the hook member's `offsetof` byte offset from the hook's address. This makes the link operations generic, but the recovered objects can still form a dependent pointer chain.
-
-### Link ownership and object lifetime / 链接归属与对象生命周期
-
-```c
-#include <linux/list.h>
-#include <linux/mutex.h>
-
-struct job {
-    unsigned long id;
+~~~c
+struct work_item {
+    u64 id;
     struct list_head ready_link;
     struct list_head audit_link;
 };
 
-static LIST_HEAD(ready_jobs);
-static DEFINE_MUTEX(ready_jobs_lock);
+static LIST_HEAD(ready_items);
 
-/* Initialize both hooks before first insertion. */
-static void init_job_links(struct job *job)
+static void inspect_ready_items(void)
 {
-    INIT_LIST_HEAD(&job->ready_link);
-    INIT_LIST_HEAD(&job->audit_link);
-}
+    struct work_item *item;
 
-/* Caller owns job and ensures it is not already on ready_jobs. */
-static void enqueue_job(struct job *job)
-{
-    mutex_lock(&ready_jobs_lock);
-    list_add_tail(&job->ready_link, &ready_jobs);
-    mutex_unlock(&ready_jobs_lock);
-}
-
-/* This iteration uses the same lock as every writer. */
-static void inspect_jobs(void)
-{
-    struct job *job;
-
-    mutex_lock(&ready_jobs_lock);
-    list_for_each_entry(job, &ready_jobs, ready_link) {
-        /* Use job->id. */
+    list_for_each_entry(item, &ready_items, ready_link) {
+        /* item 是外层 work_item，可读取 item->id。 */
     }
-    mutex_unlock(&ready_jobs_lock);
 }
+~~~
 
-/* job must currently be linked; unlinking does not free it. */
-static void dequeue_job(struct job *job)
+这要求传入的指针确实指向指定类型中的那个成员；成员名和外层类型必须匹配。`container_of` 做的是地址计算，不会寻找节点，也不消除遍历时读取 `next` 的依赖。对象插入链表后也不能随意移动或复制，否则链表中保存的钩子地址就不再指向有效成员。
+
+上面的遍历片段只展示宏怎样把钩子还原成外层对象；它假设队列在遍历期间不会被并发修改，并且其中对象仍然存活。共享队列的锁定方式见下一个完整示例。
+
+### 插入、遍历和摘除分别改变什么？
+
+下面的内核风格代码让两个关系共用一个互斥锁。初始化发生在首次插入前；`list_add_tail` 把当前链接放在 head 之前，因此队列顺序与入队顺序一致。
+
+~~~c
+#include <linux/list.h>
+#include <linux/mutex.h>
+#include <linux/types.h>
+
+struct work_item {
+    u64 id;
+    struct list_head ready_link;
+    struct list_head audit_link;
+};
+
+static LIST_HEAD(ready_items);
+static LIST_HEAD(audit_items);
+static DEFINE_MUTEX(items_lock);
+
+static void init_work_item(struct work_item *item)
 {
-    mutex_lock(&ready_jobs_lock);
-    list_del_init(&job->ready_link);
-    mutex_unlock(&ready_jobs_lock);
-}
-```
-
-这段是 Linux 内核风格代码，不是可直接用于普通用户态的可移植 C。示例假定处于允许休眠的上下文，且所有访问 `ready_jobs` 的读者和写者都遵循同一互斥锁。一个钩子同一时刻只能挂入一张链表；`ready_link` 和 `audit_link` 是两种独立关系。摘除 `ready_link` 不会释放 `job`；释放对象前还要摘除其他有效钩子，并确保没有引用者或读者继续使用它。Linux 的 `list_for_each_entry_safe` 会预存下一游标，支持遍历时删除当前项；这里的“safe”不提供并发保护。并发访问通常需要锁；读多写少时可使用遵循正确生命周期与宽限期协议的 RCU 链表接口。[Linux 链表文档：删除与并发](https://www.kernel.org/doc/html/latest/core-api/list.html)。
-
-### When does embedding help? / 何时适合把节点嵌入对象？
-
-当已有对象需保持地址稳定、参与一种或多种频繁变化的关系，且减少每种关系额外包装节点有价值时，侵入式链表很实用。它提供通用链接操作，并通过多个钩子表示多个独立关系。但它**不会**让对象在物理内存中连续，也不会消除节点之间的指针依赖，因此不能解决内存墙。
-
-也不要把非侵入式链表一概说成“对象再包一层指针并分配两次”。例如，`std::list<T>` 的容器元素本身就是 `T`；libstdc++ 的 `_List_node<T>` 将 `T` 放在节点内的对齐存储中，不是另分配一个用户对象再套包装节点，也不需要多追一次 `T*`。C++ 标准约束行为和复杂度，并不规定精确节点布局。[C++ 草案：`list`](https://eel.is/c++draft/list)、[GCC libstdc++ `stl_list.h`](https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_list.h)。
-
-Embedding changes ownership and allocation. For traversal cost, see [memory hierarchy and data locality / 内存层次与数据局部性](#40.%20Why%20are%20contiguous%20scans%20often%20faster%20than%20linked-list%20walks?%20/%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F).
-## 42. How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？
-
-Design principles help identify where a likely change would force unrelated code to change. Use a principle when it points to a concrete coupling cost and a boundary that reduces it; adding interfaces, classes, or extension points without a real source of variation merely moves complexity around. **设计原则用于判断一次可能的变化会不会迫使无关代码跟着修改。只有当原则指出了具体耦合成本，并能据此建立有价值的边界时才应用；没有真实变化点却增加接口、类或扩展点，只会把复杂度挪到别处。**
-
-### What are the SOLID principles, and what does each mean?
-
-**SOLID / 面向对象设计原则** is a mnemonic for five related guidelines:
-
-- **S — Single Responsibility Principle / 单一职责原则**: keep a module cohesive around one responsibility or axis of change.
-- **O — Open/Closed Principle / 开闭原则**: make a stable part of the design extensible at expected variation points, rather than editing that core for every new case.
-- **L — Liskov Substitution Principle / 里氏替换原则**: a subtype must preserve the behavioral expectations clients rely on from its base type.
-- **I — Interface Segregation Principle / 接口隔离原则**: clients should depend only on the operations they need.
-- **D — Dependency Inversion Principle / 依赖倒置原则**: high-level policy should not depend directly on low-level details; both should depend on abstractions where that boundary pays for itself.
-
-These guidelines can help isolate changes, but applying all of them mechanically can produce needless interfaces and indirection.
-
-#### Single Responsibility Principle (SRP)
-
-A module should group behavior that changes for the same reason. This is not a rule that every method or data field needs a separate class.
-
-~~~javascript
-class UserRepository {
-  async findById(id) { /* persistence details */ }
+    INIT_LIST_HEAD(&item->ready_link);
+    INIT_LIST_HEAD(&item->audit_link);
 }
 
-class UserPage {
-  render(user) { /* presentation */ }
-}
-~~~
-
-Separating persistence from presentation can help when those concerns change independently. A small component that performs a request and renders a result may still be cohesive if the application has no independent reason to change those pieces.
-
-#### Open/Closed Principle (OCP)
-
-An extension point is useful when a kind of variation is known and likely; it is not practical to close a system against every future change.
-
-~~~javascript
-class ShippingCalculator {
-  constructor(strategy) {
-    this.strategy = strategy;
-  }
-
-  calculate(pkg) {
-    return this.strategy.calculate(pkg);
-  }
+static bool enqueue_ready(struct work_item *item)
+{
+    mutex_lock(&items_lock);
+    /* 检查与插入共用一把锁，避免重复挂入同一钩子。 */
+    if (!list_empty(&item->ready_link)) {
+        mutex_unlock(&items_lock);
+        return false;
+    }
+    list_add_tail(&item->ready_link, &ready_items);
+    mutex_unlock(&items_lock);
+    return true;
 }
 
-class ExpressShipping {
-  calculate(pkg) { return pkg.weight * 10; }
+static bool record_for_audit(struct work_item *item)
+{
+    /* audit_link 独立于 ready_link，但同样只能加入一张表。 */
+    mutex_lock(&items_lock);
+    if (!list_empty(&item->audit_link)) {
+        mutex_unlock(&items_lock);
+        return false;
+    }
+    list_add_tail(&item->audit_link, &audit_items);
+    mutex_unlock(&items_lock);
+    return true;
 }
 
-class StandardShipping {
-  calculate(pkg) { return pkg.weight * 5; }
+static u64 sum_ready_ids(void)
+{
+    struct work_item *item;
+    u64 total = 0;
+
+    mutex_lock(&items_lock);
+    list_for_each_entry(item, &ready_items, ready_link)
+        total += item->id;
+    mutex_unlock(&items_lock);
+    return total;
+}
+
+static void clear_ready_links(void)
+{
+    struct work_item *item;
+    struct work_item *next;
+
+    mutex_lock(&items_lock);
+    list_for_each_entry_safe(item, next, &ready_items, ready_link)
+        list_del_init(&item->ready_link);
+    mutex_unlock(&items_lock);
 }
 ~~~
 
-A new shipping policy can be supplied without changing the calculator, while the selection and shared contract still need maintenance. See [Strategy in practice](#44.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F).
+`list_add_tail` 和 `list_del_init` 只需改动固定数量的链接，链表长度不会增加这部分指针操作的数量。但这不是整个操作的耗时保证：调用者可能还要扫描查找节点、取得锁、等待缓存或管理对象本身。`list_del_init` 只把该钩子从队列摘下并重新初始化；它既不释放 `work_item`，也不会摘掉同一对象的 `audit_link`。
 
-#### Liskov Substitution Principle (LSP)
+`list_for_each_entry_safe` 会在循环体删除当前节点前保存下一游标，因此适合“遍历时删除当前项”。这里的 safe 不提供多线程同步。上例用同一把锁保护所有读写；锁的类型与持有范围要符合调用上下文。互斥锁只适用于可以睡眠的上下文。
 
-A subtype should preserve the behavioral contract clients expect. For example, if a base type promises that every value can fly, a penguin subtype that throws from `fly` breaks that contract. A narrower abstraction such as `Bird` for shared bird behavior and `FlyingBird` for birds that can fly may model the domain more accurately.
+若 ready 队列依次含有 A.id=4、B.id=7，而 audit 队列含 A，`sum_ready_ids()` 返回 11。`clear_ready_links()` 后 ready 总和变为 0，但 A 仍在 audit 队列，不能释放 A。
 
-#### Interface Segregation Principle (ISP)
+### 对象生命周期和并发访问由谁负责？
 
-Clients should not be forced to depend on operations they never use. In TypeScript, this can mean separating unrelated capabilities into small interfaces and composing them where needed; there is no universal field-count threshold.
+嵌入链表不会自动管理外层对象的生命周期。释放对象前，需要摘掉所有仍挂入链表的钩子，并确认没有其他读者或引用者还会访问对象。一个工作项在待处理队列中已摘除、但仍留在审计队列时，仍然不能释放。
 
-#### Dependency Inversion Principle (DIP)
+普通链表操作本身不负责并发安全。多个线程或 CPU 并发修改同一链表时通常要用合适的锁；只有读多写少、允许读者暂时看到已移除项且能延迟销毁时，才考虑 RCU（read-copy-update，读-复制-更新）。RCU 读者在 `rcu_read_lock()` 与 `rcu_read_unlock()` 之间使用 `list_for_each_entry_rcu()`；写者用 `list_add_rcu()` / `list_del_rcu()`，并仍须由写锁或既有协议串行化相互竞争的写操作。删除后等 grace period（宽限期）结束才能回收对象，例如由 `call_rcu()` 延后释放。RCU 是读侧和生命周期协议，不是把普通 `list_for_each_entry_safe` 换个名字。
 
-High-level policy and low-level details depend on an abstraction when that boundary reduces coupling. Constructor injection is one way to supply an implementation; **dependency injection is a technique, not the definition of DIP**.
+### 内嵌节点什么时候划算？
 
-~~~javascript
-class NotificationService {
-  constructor(sender) {
-    this.sender = sender;
-  }
+当对象由当前模块拥有、地址在入链期间稳定、一个对象需要参加多种频繁更新的关系，且减少独立包装节点的分配和查找有实际价值时，侵入式链表很合适。每种同时存在的关系仍需一个钩子，每个 `list_head` 仍有两个指针；设计并没有消除链接存储成本。
 
-  notify(message) {
-    this.sender.send(message);
-  }
-}
+它也不会把对象放到物理连续的内存中。相邻链表节点可能远隔内存，遍历时仍要先取当前节点的 next 指针，再按它到达下一处数据。应把它看作简化关系表示和已知节点更新的办法，不要把它当作解决缓存局部性的办法。主要操作是顺序扫描时，连续数组往往更合适，具体比较见[为什么连续扫描往往比链表遍历快？](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
-class EmailSender {
-  send(message) { /* send email */ }
-}
+这也不是说所有非侵入式列表都会“给业务对象再包一层指针并分配两次”。C++ 标准规定 `std::list` 的容器语义与操作复杂度，不规定具体节点布局；以 GCC libstdc++ 为例，内部节点把 T 放在节点自带的对齐存储中。那是一个实现样本，不是所有 `std::list` 实现的布局保证。
 
-class SmsSender {
-  send(message) { /* send SMS */ }
-}
+**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明已知节点与查找前驱的复杂度差别；[内存层次如何改变实际访问成本？](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)比较连续读取与逐节点指针依赖。
 
-const notifications = new NotificationService(new EmailSender());
+> [!info]- 来源
+> - Linux 链表结构、初始化、插入、遍历、删除与删除时遍历：[Linux 内核 Linked Lists in Linux](https://docs.kernel.org/core-api/list.html)，2026-11-06 核对。
+> - list_add_tail、list_del_init 与 list_for_each_entry_safe 的当前实现和注释：[Linux mainline include/linux/list.h](https://github.com/torvalds/linux/blob/master/include/linux/list.h)，2026-11-06 核对。
+> - RCU 链表的读写侧协议与延后释放：[Linux 内核 Using RCU to Protect Read-Mostly Linked Lists](https://docs.kernel.org/RCU/listRCU.html)，2026-11-06 核对。
+> - std::list 标准不规定节点内存布局：[C++ 草案 list](https://eel.is/c++draft/list)；对照实现样本：[GCC libstdc++ stl_list.h](https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_list.h)。
+## 42. 如何让设计原则减少真实的修改成本？
+
+以下用一个合成的通用页面编辑器案例说明原则：用户可以添加标题和按钮、拖动节点、预览并发布页面。需求可能增加新的组件类型，也可能改变保存方式、预览表现或权限规则。设计的关键不是提前把所有细节都变成接口，而是识别哪些变化会一起发生、哪些变化应彼此独立，然后只为高频或高代价的变化建立边界。
+
+设计原则是判断边界的工具。若一个原则无法指出当前代码中哪种改动会扩散，以及边界如何缩小扩散范围，它就还没有给出引入抽象的理由。
+
+~~~mermaid
+flowchart TD
+    Change["需求变化"] --> Question["会迫使哪些模块一起改？"]
+    Question --> Evidence["重复规则 / 依赖方向 / 行为契约"]
+    Evidence --> Boundary["建立最小而稳定的边界"]
+    Boundary --> Cost["计算新增间接层与维护成本"]
+    Cost --> Decision{"减少的修改成本<br/>是否大于新增成本？"}
+    Decision -->|是| Keep["保留边界"]
+    Decision -->|否| Simplify["直接实现，待真实变化出现"]
 ~~~
 
-The service can use another implementation or a test double through the same contract. Add an abstraction when the variation or test boundary is real.
+### 单一职责：按共同变化原因聚合
 
----
+**Single Responsibility Principle（单一职责原则，SRP）**关注模块是否有多个彼此独立的变化原因，而不是类里是否只有一个方法。页面编辑器的节点持久化规则与画布阴影样式可能由不同需求驱动，因此可以归入文档存储与呈现模块。反过来，把每个字段都拆成类，会让理解一次简单修改要跳过许多文件。
 
-### What are DRY, KISS, and YAGNI?
+判断时列出真实的变更来源：谁提出变化、哪条规则必须同步修改、哪些调用者只关心其中一部分。只有当这些来源相对独立，且当前耦合确实让修改变贵时，再拆分职责。
 
-**DRY, KISS, and YAGNI / 不重复、保持简单、暂不实现未需功能** are practical heuristics. They help manage complexity but should not be interpreted as absolute prohibitions.
+### 开闭：为已知的变化点留扩展位置
 
-#### DRY (Don't Repeat Yourself)
+**Open/Closed Principle（开闭原则，OCP）**主张让稳定部分能在预期变化点扩展，而不是每增加一种情况都改动核心。它不是“永远不修改旧代码”，也无法预先关闭所有未来变化。
 
-Avoid duplicating the same rule or knowledge in places that must stay synchronized. Similar-looking code can represent different concepts, though; extracting it into one abstraction may couple changes that should remain independent.
-
-#### KISS (Keep It Simple)
-
-Prefer the simplest design that satisfies current requirements. A simple implementation is easier to explain and change; complexity should have a concrete payoff.
-
-#### YAGNI (You Aren't Gonna Need It)
-
-Do not build speculative features before a need is established. Keep the option to add an extension point when a real use case appears, and avoid confusing “not yet needed” with “never needed.”
-
----
-
-See [frontend architecture boundaries](#43.%20How%20can%20a%20frontend%20architecture%20divide%20presentation%20and%20behavior?%20/%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E4%B8%8E%E8%A1%8C%E4%B8%BA%E7%9A%84%E8%81%8C%E8%B4%A3%EF%BC%9F) for presentation and deployment ownership examples.
-
-Sources: [Robert C. Martin, The Open-Closed Principle](https://objectmentor.com/resources/articles/ocp.pdf), [Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf), and [Liskov and Wing, A Behavioral Notion of Subtyping](https://doi.org/10.1145/197320.197383).
-## 43. How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？
-
-Start by deciding who owns data, interaction, and the view. Components give the UI explicit inputs and outputs, and unidirectional data flow helps trace causes of state changes. Micro-frontends add a deployment and ownership boundary when teams need independent releases. / 先确定数据、交互和视图由谁负责。组件为界面定义明确的输入和输出，单向数据流有助于追溯状态变化的原因。团队需要独立发布时，微前端还会引入部署与所有权边界。
-
-### What are common frontend architecture patterns?
-
-These are common design shapes, not a required architecture. Choose based on product boundaries, change frequency, and team ownership.
-
-#### Component-based architecture
-
-A UI can be composed from reusable components with explicit inputs and outputs. State and side effects may live in a component, a hook, or a separate service depending on its lifecycle and reuse needs; they are not inherently owned by every component.
-
-#### Unidirectional data flow
-
-In the classic Flux model, actions pass through a dispatcher to stores, which notify views. Other state libraries use different contracts. The useful goal is to make state changes and their causes traceable; the particular library does not guarantee that by itself.
-
-See [Advanced React](../../frontend/frameworks/advanced-react.md) for React-specific state and component patterns.
-
-#### Micro-frontends
-
-Micro-frontends divide a frontend into parts that can have separate ownership or release paths. Integration can use build-time composition, runtime module loading, iframes, or web components, each with different isolation and deployment properties.
-
-Reach for this when independent teams or release schedules are a concrete requirement and the organization can support the shared navigation, styling, accessibility, observability, and runtime boundaries. For a smaller application, a modular single frontend usually has less coordination and deployment overhead.
-
-**See also:** [Design Patterns in Practice](#44.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F) for reusable patterns that can support these principles.
-
-[Back to the main question / 返回主问题](#42.%20How%20do%20design%20principles%20reduce%20the%20cost%20of%20change%20without%20adding%20needless%20abstraction?%20/%20%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%A6%82%E4%BD%95%E9%99%8D%E4%BD%8E%E5%8F%98%E5%8C%96%E6%88%90%E6%9C%AC%E8%80%8C%E4%B8%8D%E8%BF%87%E5%BA%A6%E6%8A%BD%E8%B1%A1%EF%BC%9F).
-## 44. When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？
-
-A design pattern names a recurring choice about construction, variation, notification, or ownership. Use it when the named boundary makes an actual change easier to localize or explain; then account for the added indirection and lifetime rules. A pattern does not remove a need to define scope, contracts, or authorization. **设计模式概括对象创建、行为变化、通知或所有权中的常见选择。只有当它能把真实变化收拢到更清晰的边界时才使用，并同时考虑新增的间接层和生命周期规则。模式不会替代对作用范围、契约和授权边界的定义。**
-
-### When do you use the Factory pattern?
-
-**工厂 / Factory** centralizes object creation when construction rules or the concrete type should not be repeated at call sites. A simple factory function is useful in JavaScript, but it is not automatically the GoF Factory Method or Abstract Factory pattern.
+若编辑器已经支持标题、按钮两种组件，并且类型校验和渲染逻辑各不相同，可以把定义按类型注册。下面的 `renderNode` 只演示类型分发；调用前由通用文档 schema 确认 `node` 和 `props` 是对象、`type` 是字符串，注册表负责识别受支持类型并校验该类型字段：
 
 ~~~javascript
-function createButton(type) {
-  if (type === 'primary') return new PrimaryButton();
-  if (type === 'secondary') return new SecondaryButton();
-  return new DefaultButton();
-}
-~~~
-
-Use this when the creation decision belongs in one place or construction has meaningful setup. If construction is already a single uncomplicated expression, a factory can add little value.
-
----
-
-### When do you use the Singleton pattern?
-
-**单例 / Singleton** constrains access to one instance within a chosen scope. A class-level static instance, for example, is one per loaded class in a JavaScript realm; it is not automatically one instance across workers, processes, duplicated module copies, or machines.
-
-~~~javascript
-class Store {
-  static instance;
-
-  static getInstance() {
-    if (!Store.instance) Store.instance = new Store();
-    return Store.instance;
-  }
-}
-~~~
-
-Repeated calls to `getInstance()` share one instance through that accessor; because `Store` has a public constructor, `new Store()` can still create additional instances.
-
-A shared cache, event bus, or connection pool may need one instance per process or module. Consider whether explicit dependency injection or a scoped shared instance is easier to test and reason about. A singleton's global access can hide dependencies and couple tests.
-
----
-
-### When do you use the Strategy pattern?
-
-**策略 / Strategy** puts interchangeable behavior behind a common contract. It is useful when callers must choose among algorithms or policies; a small conditional is often clearer when there is only one simple branch.
-
-~~~javascript
-const strategies = new Map([
-  ['express', pkg => pkg.weight * 10],
-  ['standard', pkg => pkg.weight * 5],
-  ['overnight', pkg => pkg.weight * 20],
+const definitions = new Map([
+  ['heading', {
+    validate: node => typeof node.props.text === 'string',
+    render: node => ({ tag: 'h2', text: node.props.text }),
+  }],
+  ['button', {
+    validate: node => typeof node.props.label === 'string',
+    render: node => ({ tag: 'button', text: node.props.label }),
+  }],
 ]);
 
-function calculateShipping(name, pkg) {
-  const strategy = strategies.get(name);
-  if (!strategy) throw new RangeError('unknown shipping strategy');
-  return strategy(pkg);
+function renderNode(node) {
+  const definition = definitions.get(node.type);
+  if (!definition) throw new RangeError('unsupported component type');
+  if (!definition.validate(node)) throw new TypeError('invalid node');
+  return definition.render(node);
 }
 ~~~
 
-Adding a strategy can avoid changing the dispatcher, but the strategy contract and selection rules still need to be maintained. This can support the Open/Closed Principle when the variation is real; it does not make a design closed to every future change. See [Software Design Principles](#42.%20How%20do%20design%20principles%20reduce%20the%20cost%20of%20change%20without%20adding%20needless%20abstraction?%20/%20%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%A6%82%E4%BD%95%E9%99%8D%E4%BD%8E%E5%8F%98%E5%8C%96%E6%88%90%E6%9C%AC%E8%80%8C%E4%B8%8D%E8%BF%87%E5%BA%A6%E6%8A%BD%E8%B1%A1%EF%BC%9F).
+新类型可以通过同一契约加入，渲染入口不必增加另一条类型分支。若现在只有一种节点，普通条件判断也许更清楚。扩展点仍需维护命名、契约和注册时机。
 
----
+### 里氏替换：子类型不能改变调用者依赖的行为
 
-### What's the difference between Observer and Publish-Subscribe?
+**Liskov Substitution Principle（里氏替换原则，LSP）**关注行为契约：调用者依赖基类或接口的保证，替代实现也应满足。若渲染器承诺每个已注册组件都能渲染，某个“只供预览”的子类型不能在普通渲染时突然抛出未支持异常；可以把预览能力单独建模为接口或可选能力。
 
-**观察者 / Observer** and **发布订阅 / Publish-Subscribe** both route notifications. In the common distinction, an observer subject knows its observers and notifies them directly; a publish-subscribe broker routes messages by topic, so publishers and subscribers need not know each other. Real libraries can combine these arrangements, so use the concrete API's contract rather than relying on the label.
+判断替换关系时要看前置条件、后置条件和不变量，不只是方法名与类型签名。若某个子类型要求调用者先做额外检查，它可能不属于同一可替换集合。Liskov 与 Wing 对行为子类型的描述强调，这是一种语义关系。
 
-#### Observer
+### 接口隔离与依赖倒置：按调用者需要定义契约
 
-~~~javascript
-class Subject {
-  constructor() {
-    this.observers = new Set();
-  }
+**Interface Segregation Principle（接口隔离原则，ISP）**要求按客户端实际使用的能力切分契约。画布只需要“把节点渲染成视图”，发布服务需要“校验并序列化文档”；若两者都被迫依赖包含编辑、渲染、保存和发布的大接口，修改与测试都会牵动无关能力。
 
-  subscribe(observer) {
-    this.observers.add(observer);
-    return () => this.observers.delete(observer);
-  }
+**Dependency Inversion Principle（依赖倒置原则，DIP）**让高层策略和底层细节通过稳定契约协作。发布流程表达“保存已校验修订”，存储适配器负责具体数据库调用。**dependency injection（依赖注入）**可以把适配器传给流程，但它只是组织依赖的一种技术，不等同于依赖倒置。
 
-  notify(data) {
-    for (const observer of this.observers) observer.update(data);
-  }
-}
+只有在替换存储、隔离测试或改变部署方式是真实需求时，这条边界才值得存在。若应用只有一个简单内存存储，数层接口可能只增加跳转。
+
+### DRY、KISS 与 YAGNI 如何约束抽象？
+
+DRY（Don't Repeat Yourself，不重复同一知识）针对必须保持一致的规则重复，不要求所有相似代码都合并。标题文本和按钮标签都用字符串，不表示它们需要相同业务模型；但“组件类型是否允许发布”的规则若复制在预览与发布两处，就容易不一致。
+
+KISS（Keep It Simple，保持简单）要求方案与当前问题的复杂度相称。YAGNI（You Aren't Gonna Need It，尚未需要的能力先不实现）提醒团队别为没有证据的未来需求造扩展接口。它们不要求忽略已发生的耦合：当一次变更反复影响多处，抽象收益就有了证据。
+
+### 用变化案例决定边界
+
+新增图片组件时，依次问：它是否有不同配置、校验或渲染语义？规则未来是否会独立变化？所有调用者是否都需要了解图片逻辑？注册表是否真的减少改动范围？若答案支持稳定变化点，注册表可能有用；若只是固定页面的一次分支，直接写条件更好。
+
+[前端架构怎样划分呈现、交互和数据所有权？](#43.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)讨论状态归属；[页面编辑器何时需要设计模式？](#44.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)展示工厂、策略和通知怎样落实边界。
+
+> [!info]- 来源
+> - 行为子类型的契约基础：[Barbara Liskov 与 Jeannette Wing, A Behavioral Notion of Subtyping](https://www.cs.cmu.edu/~wing/publications/LiskovWing94.pdf)。
+> - OCP、SRP 等面向对象原则讨论：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
+## 43. 前端架构怎样划分呈现、交互和数据所有权？
+
+以下沿用合成的页面编辑器案例：画布显示文档树，检查器编辑当前节点属性，工具栏新增组件，预览页呈现访客看到的页面。如果各处各存一份节点数据，拖动或重命名就可能让它们失步。架构应先说明每份状态由谁拥有、哪些模块能发出修改，再决定组件怎样拆分或代码如何部署。
+
+~~~mermaid
+flowchart TD
+    Select["选择节点"] --> Session["编辑会话：selectedId / dragPreview"]
+    Drag["拖动中的候选位置"] --> Session
+    Session --> CanvasPreview["画布显示选中和拖动预览"]
+    Session --> Inspector["检查器显示当前节点属性"]
+    Commit["确认属性修改或放下排序"] --> Intent["命令表达已提交的编辑"]
+    Intent --> Owner["文档状态所有者"]
+    Owner --> Revision["生成新的文档修订"]
+    Revision --> Canvas["画布读取新文档"]
+    Revision --> Inspector
+    Revision --> Preview["预览器读取同一修订"]
 ~~~
 
-The subject owns the subscriptions. Returning an unsubscribe function makes the lifetime of a listener explicit.
+文档节点属于可保存页面内容；当前选中项、拖动状态和面板属于编辑会话；焦点和输入光标等短暂状态通常留在组件内部。不是所有状态都要进全局状态存储，但每种状态都应有清楚的所有者。
 
-#### Publish-Subscribe
+### 单向数据流让修改原因可追踪
 
-~~~javascript
-class EventBus {
-  constructor() {
-    this.listeners = new Map();
-  }
+unidirectional data flow（单向数据流）让状态所有者把当前数据传给视图，视图通过事件或命令请求变化。检查器不私下改写画布节点副本，而是发出“把 `heading-1` 的 `text` 改成‘欢迎’”这样的意图。
 
-  on(topic, listener) {
-    const subscribers = this.listeners.get(topic) ?? new Set();
-    subscribers.add(listener);
-    this.listeners.set(topic, subscribers);
-    return () => subscribers.delete(listener);
-  }
+以下沿用同一个修订 12 的页面案例；完整文档与会话输入见[修订 12 的文档与编辑会话数据](#%E6%96%87%E6%A1%A3%E6%A0%91%E5%92%8C%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E8%AE%B0%E5%BD%95%E4%B8%8D%E5%90%8C%E4%BA%8B%E5%AE%9E)，可运行命令代码也在那里。选择、拖动预览和已提交修改走不同路径：
 
-  emit(topic, data) {
-    for (const listener of this.listeners.get(topic) ?? []) listener(data);
-  }
-}
-
-const eventBus = new EventBus();
-eventBus.on('user:login', user => { /* update the UI with user data */ });
-eventBus.emit('user:login', { name: 'Alice' });
-~~~
-
-A broker can reduce direct coupling, but distributed or global event buses can make the flow harder to trace. DOM `EventTarget` is observer-like: listeners register on a target that dispatches events.
-
-See [DOM Manipulation and Events](../../frontend/browser-apis/dom-manipulation-and-events.md) for browser event APIs.
-
----
-
-See [how to model an editable component tree](#45.%20How%20should%20a%20low-code%20editor%20store%20editable%20structure%20and%20published%20output?%20/%20%E4%BD%8E%E4%BB%A3%E7%A0%81%E7%BC%96%E8%BE%91%E5%99%A8%E6%80%8E%E6%A0%B7%E4%BF%9D%E5%AD%98%E5%8F%AF%E7%BC%96%E8%BE%91%E7%BB%93%E6%9E%84%E4%B8%8E%E5%8F%91%E5%B8%83%E7%BB%93%E6%9E%9C%EF%BC%9F) for a system-design example and [how roles control feature access](#%E8%A7%92%E8%89%B2%E8%83%BD%E6%8E%88%E4%BA%88%E4%BB%80%E4%B9%88%E5%8A%A8%E4%BD%9C%EF%BC%8C%E8%B5%84%E6%BA%90%E6%A3%80%E6%9F%A5%E8%BF%98%E8%A6%81%E5%81%9A%E4%BB%80%E4%B9%88%EF%BC%9F) for a distinct authorization decision.
-## 45. How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？
-
-Keep an editable component tree with typed configuration and stable identity. Derive rendering and published output from that schema so editing, validation, and release can each use the representation appropriate to their lifecycle. / 维护带类型配置和稳定身份的可编辑组件树。渲染和发布结果从该结构派生，让编辑、校验和发布可以各自使用适合其生命周期的表示。
-
-### Separate page content from the editing session / 分开页面内容与编辑会话
-
-A page builder can model a document as a component tree, with each node carrying an ID, type, properties, style, and children. The editor can derive its canvas and side panels from that model, then serialize it for persistence.
-
-~~~javascript
-const component = {
-  id: 'comp_001',
-  type: 'Button',
-  props: { text: 'Click me', variant: 'primary' },
-  style: { position: 'absolute', top: 100, left: 200 },
-  children: [],
-};
-~~~
-
-Keep document order and visual stacking as explicit concepts. Child order can be one input to rendering, but CSS stacking contexts mean it is not universally equivalent to the final z-order; each stacking context is painted as a unit within its parent context ([CSS 2.2 visual formatting model](https://www.w3.org/TR/CSS22/zindex.html)).
-
-Selection, hover, and panel state belong to the editing session. A selection change can update the inspector without editing the document, saving a draft, or adding an undo step.
-
-~~~javascript
-const editor = {
-  document: { schemaVersion: 1, nodes: [component] },
-  session: { selectedId: null },
-};
-
-function selectComponent(state, id) {
-  return { ...state, session: { ...state.session, selectedId: id } };
-}
-
-const draftJson = JSON.stringify(selectComponent(editor, component.id).document);
-~~~
-
-- **Component registry / 组件注册表**: map a validated component type to its renderer and schema.
-- **Layer order / 图层顺序**: define how siblings are ordered and translate that order into the chosen rendering model.
-- **Undo and redo / 撤销与重做**: store inverse commands or immutable document snapshots; choose based on history size and operation complexity.
-- **Collaboration / 协作**: a WebSocket transports updates, but does not resolve concurrent edits. A server-authoritative order, locks, operational transformation, or a CRDT may fit different conflict and offline requirements.
-
-### Publish a validated revision / 发布已校验的修订
-
-Validate a particular document revision against the registry and derive the public output from that revision. Keep the artifact or a versioned rendering recipe tied to its source revision so preview, release, and rollback can refer to the same content. Draft edits and session selections can then continue independently. [Design patterns and change boundaries / 设计模式与变化边界](#44.%20When%20does%20a%20design%20pattern%20make%20change%20easier%20to%20understand%20and%20maintain?%20/%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E8%83%BD%E8%AE%A9%E5%8F%98%E5%8C%96%E6%9B%B4%E6%98%93%E7%90%86%E8%A7%A3%E5%92%8C%E7%BB%B4%E6%8A%A4%EF%BC%9F)
-## 46. How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？
-
-**核心回答 / Core answer：** Agile names values and principles that favor collaboration, usable software, customer feedback, and adapting to change; Scrum is one framework that gives a team accountabilities, events, artifacts, and commitments to inspect progress and adjust its next steps. Product Goals, Sprint Goals, and the Definition of Done orient decisions, while a Sprint Backlog plan can change as the Developers learn. A Sprint Review examines outcomes and next adaptations; it is not a release gate. The framework creates opportunities for feedback but does not guarantee good delivery by itself. / 敏捷描述重视协作、可用软件、客户反馈和响应变化的价值与原则；Scrum 则用职责、事件、工件和承诺，帮助团队检查进展并调整下一步。产品目标、Sprint 目标和完成定义为决策提供方向，Developers 可随着学习调整 Sprint Backlog 计划。Sprint Review 检视成果并讨论后续调整，它不是发布审批关卡。框架提供反馈机会，但本身不能保证交付效果。
-
-### Agile principles
-
-The Agile Manifesto values:
-
-- Individuals and interactions over processes and tools.
-- Working software over comprehensive documentation.
-- Customer collaboration over contract negotiation.
-- Responding to change over following a plan.
-
-The items on the right still have value; the Manifesto gives greater weight to the items on the left. Its principles also emphasize frequent delivery, sustainable pace, technical excellence, simplicity, and regular reflection. How a team applies these ideas depends on its product, people, and constraints.
-
-### Scrum framework
-
-Scrum uses empiricism and lean thinking to help a Scrum Team generate value through adaptive solutions. Its defined structure is not a promise that adopting the framework will automatically improve delivery.
-
-#### Roles
-
-The Scrum Guide describes three **accountabilities / 职责** within one Scrum Team; these are responsibilities, not a required set of job titles.
-
-##### Product Owner
-
-Accountable for maximizing product value and effective Product Backlog management. The Product Owner may delegate backlog work but remains accountable for the result.
-
-##### Scrum Master
-
-Accountable for establishing Scrum as defined in the Guide and for the Scrum Team's effectiveness. This includes coaching, helping remove impediments, and supporting the wider organization in its use of Scrum; it does not make the Scrum Master the team's line manager.
-
-##### Developers
-
-The people who create a usable Increment during each Sprint. They create and adapt the Sprint Backlog plan, uphold the Definition of Done, and hold one another accountable as professionals.
-
-#### Events
-
-The five events are the **Sprint**, **Sprint Planning**, **Daily Scrum**, **Sprint Review**, and **Sprint Retrospective**. The Sprint is the container for the other events and activities.
-
-##### Sprint
-
-A fixed-length event of one month or less. Teams choose a duration that supports inspection and adaptation; two weeks is common in some teams but is not prescribed by Scrum. The Sprint Goal provides a coherent objective while allowing the exact work to be clarified as learning occurs.
-
-##### Sprint Planning
-
-The Scrum Team plans why the Sprint is valuable, what can be done, and how the selected work will be completed. The output includes a Sprint Goal and the Developers' plan in the Sprint Backlog.
-
-##### Daily Scrum
-
-A 15-minute event for the Developers to inspect progress toward the Sprint Goal and adapt their plan. The Guide does not require each person to answer a fixed set of status questions. Developers choose a format that serves the purpose and may meet more often as needed.
-
-##### Sprint Review
-
-The Scrum Team and stakeholders inspect the Sprint's outcome and discuss adaptations. It is a working session to inform what to do next, not only a demonstration.
-
-##### Sprint Retrospective
-
-The Scrum Team inspects how the last Sprint went with regard to people, interactions, processes, tools, and the Definition of Done, then identifies useful improvements. It is one of the Scrum events and occurs within the Sprint cadence.
-
-#### Artifacts
-
-| Artifact / 工件 | Commitment / 承诺 | Purpose |
+| 事件 | 编辑会话 | 文档修订 |
 |---|---|---|
-| Product Backlog / 产品待办列表 | Product Goal / 产品目标 | An ordered source of work for evolving the product |
-| Sprint Backlog / Sprint 待办列表 | Sprint Goal / Sprint 目标 | The Sprint Goal, selected Product Backlog items, and the Developers' plan |
-| Increment / 增量 | Definition of Done / 完成定义 | A usable step toward the Product Goal that meets the shared quality measure |
+| 选中 `heading-1` | `selectedId` 设为 `heading-1` | `revision` 仍为 12，文本仍是“首页” |
+| 在检查器确认标题改为“欢迎” | `selectedId` 仍为 `heading-1` | 所有者校验后产生 `revision` 13 |
+| 把 `heading-1` 拖到 `button-1` 后的预览 | `dragPreview` 记录候选位置 | `revision` 仍为 13，节点顺序不变 |
+| 在画布放下并确认排序 | 清除 `dragPreview` | 独立命令产生 `revision` 14，`rootIds` 变为 `['button-1', 'heading-1']` |
 
-The commitments focus the artifact without replacing it. Multiple Increments may be created during a Sprint; the Sprint Review is not a release gate.
+所以拖动中的每个鼠标移动都不需要写入可保存文档；只有放下并接受排序变更时才提交文档命令。React 官方状态共享指南用“将共享状态提升到最近共同父级”解释这种所有权；其他框架可以用不同机制实现同样约束。经典 Flux 模型让 action（动作）经过 dispatcher（分发器）到 store（状态存储），再由 store 通知 view（视图）；其他状态库采用不同契约，重点是让状态变化及其原因可追踪。
 
-### Common challenges
+### 组件与分层分别解决什么问题？
 
-- **Treating Scrum as a status-report schedule:** the events exist to inspect and adapt work toward goals, not merely to report individual activity.
-- **Treating the Sprint Backlog as an unchangeable contract:** the Developers adapt their plan as they learn, while working toward the Sprint Goal. The Product Owner and Developers can clarify and renegotiate scope without endangering that goal.
-- **Skipping inspection and improvement:** omitting defined events loses their intended opportunities and means the team is not using the framework as described.
-- **Assuming Scrum fits every problem:** choose a way of working that fits the product, feedback cycle, and organizational constraints. Regulated work can also use iterative development when its evidence and control requirements are built into the process.
+**component-based architecture（基于组件的架构）**按可复用视图和交互边界拆分 user interface（用户界面，UI）。`Canvas` 呈现画布，`Inspector` 编辑属性，`NodeView` 呈现一种节点类型。组件接口应写明输入输出：数据与回调怎样传入，选择、修改、删除等意图怎样传出。不是每个组件都要持有状态、调用服务并执行副作用。
 
-**See also:** [Interview Tips](#47.%20How%20do%20you%20prepare%20behavioral%20answers%20with%20evidence%20you%20can%20support?%20/%20%E5%A6%82%E4%BD%95%E5%87%86%E5%A4%87%E6%9C%89%E4%BA%8B%E5%AE%9E%E4%BE%9D%E6%8D%AE%E3%80%81%E7%BB%8F%E5%BE%97%E8%B5%B7%E6%A0%B8%E5%AE%9E%E7%9A%84%E8%A1%8C%E4%B8%BA%E9%9D%A2%E8%AF%95%E5%9B%9E%E7%AD%94%EF%BC%9F) for discussing team practices accurately.
+分层则按职责分开状态管理、领域命令、持久化适配和视图。小编辑器可能只需要几个清楚模块；只有一层确实承载独立规则或依赖边界时，再拆成独立包或服务。为每个组件都造“控制器—服务—仓库”容易使跟踪简单操作变慢。
 
-Sources: [The Scrum Guide, November 2020](https://scrumguides.org/scrum-guide.html) and the [Agile Manifesto](https://agilemanifesto.org/).
-## 47. How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？
+文档树顺序也不等于最终绘制顺序。浏览器布局和 CSS stacking context（堆叠上下文）参与绘制；若编辑器显示精确图层，需要把节点顺序、定位和堆叠上下文规则一并纳入模型。
 
-Begin with the role's needs and facts from your own experience. Shape one relevant example as context → action you personally took → result or other evidence; describe qualitative outcomes plainly and never invent a metric or someone else's story. Research current role, company, location, and compensation details before the conversation, state skill gaps honestly, and prepare questions that help you understand the work. / 从岗位需求和自己真实经历中的事实开始。选择一个相关例子，按背景 → 个人行动 → 结果或其他证据组织；定性结果应如实描述，不要编造指标或借用别人的故事。面试前调研当前岗位、公司、地点和薪酬信息，坦诚说明技能缺口，并准备能帮助自己了解工作的提问。
+### 何时微前端有实际收益？
 
-### Discussing strengths and weaknesses
+**micro-frontend（微前端）**按业务或团队边界拆分可独立开发、集成、发布的部分。可以构建时组合、运行时加载、用 iframe 或 Web Components；隔离、依赖共享、导航和样式方式各不相同。
 
-#### Strengths
+页面编辑器的检查器与画布若由同一团队同步发布，放在一个模块化应用更简单。若多支独立团队分别负责组件库、编辑器和资产管理，且确实需要独立发布，微前端可能减少协调阻塞。此时仍要定义路由、权限、设计系统、可访问性、错误处理、遥测、依赖版本和加载失败处理，否则集成成本会变成运行时故障。
 
-Choose a strength that matters for the role, then support it with one real example. A compact structure is **context → action you took → result or evidence**.
+微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。若主要问题是共享状态或数据流不清，先解决状态所有权通常更直接。
 
-- “I work carefully with edge cases. In [specific situation], I [action I personally took], which led to [verifiable result].”
-- “I learn unfamiliar tools by [specific method]. For example, I used that approach to [real task] and [what changed or what I learned].”
+**延伸阅读：**[设计原则怎样帮助定位真实变化边界？](#42.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#44.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#45.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
 
-Replace each bracketed part with your own evidence. If the result is qualitative, describe what changed without inventing a metric.
+> [!info]- 来源
+> - 组件间共享状态的所有权：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
+> - 堆叠上下文内的 CSS 绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
+> - 微前端的团队发布边界和集成权衡：[Martin Fowler, Micro Frontends](https://martinfowler.com/articles/micro-frontends.html)。
+## 44. 页面编辑器何时需要设计模式？
 
-#### Weaknesses
+沿用合成的页面编辑器案例，编辑者要创建标题、按钮等节点，为不同类型校验配置，通知画布和检查器刷新，并共享组件定义。**design pattern（设计模式）**为这些重复结构取名，但模式本身不会替你决定状态所有者、权限边界或对象生命周期。先说清问题，再看模式是否能让变化集中而仍容易跟踪。
 
-**诚实说明一个真实的发展方向，并说明正在采取的步骤。** Choose something you are actively improving and explain how you notice progress. Avoid presenting a disguised strength or claiming a weakness that would prevent you from doing the role's core work.
+模式有代价：额外类型、注册步骤、调用层和清理责任。若间接层没有减小真实修改范围，普通函数或条件分支更清楚。
 
-- “I am still developing [skill]. I have been improving it by [specific practice], and I can now [observable progress].”
+### 创建规则变多时，用工厂集中入口
 
-### Salary expectations
+**factory（工厂）**把创建规则放在一处：生成稳定 ID、填入默认属性并拒绝未知类型。它通常先是一个函数，不必马上设计成复杂层级。这样的简单工厂函数不自动等同于《设计模式》中的 Factory Method（工厂方法）或 Abstract Factory（抽象工厂）模式。
 
-- Research a current range for the role, seniority, location, and total compensation before the conversation.
-- If you are ready to give a number, state a range and the assumptions behind it; leave room to discuss the full package.
-- If the responsibilities are not yet clear, ask about the role's level and compensation range before giving a precise expectation.
+~~~javascript
+const defaults = new Map([
+  ['heading', { text: '新标题', level: 2 }],
+  ['button', { label: '按钮', variant: 'primary' }],
+]);
 
-### Why are you a good fit?
+let nextId = 1;
 
-Connect the role's stated needs to evidence you actually have:
+function createNode(type) {
+  const initialProps = defaults.get(type);
+  if (!initialProps) throw new RangeError('unknown component type');
+  const id = 'node-' + nextId++;
+  return { id, type, props: { ...initialProps }, children: [] };
+}
 
-1. **Skills match / 技能匹配** — identify the relevant requirement.
-2. **Evidence / 事实依据** — give a project, responsibility, or result that demonstrates it.
-3. **Motivation / 求职动机** — explain which part of this role you want to work on.
+const heading = createNode('heading');
+// heading.id === 'node-1'; createNode('constructor') throws RangeError
+~~~
 
-Template: “This role needs [requirement]. In [real example], I [specific contribution] and [result or learning]. I am interested in applying that experience to [specific part of the role].”
+多个入口若各自生成默认字段和 ID，很容易得到不一致节点，共用入口就有价值。若只在一处创建固定对象，直接写对象更简单。这里的 Number 计数器只在当前模块运行期间、且计数值仍处于安全整数范围时保证 ID 不重复；可持久化文档或协作编辑需要跨重启、跨窗口不冲突的 ID 生成方案。工厂生成的草稿并不代表权限或发布校验已经完成。
 
-### Company research
+### 行为可互换时，用策略
 
-- Understand the product, users, and the role's team from current company materials.
-- Connect your experience to a specific need instead of reciting company slogans.
-- If you do not know a detail, say what you have learned so far and ask a focused question.
+**strategy（策略）**把不同算法放进同一调用契约。编辑器可按组件类型选择配置校验器；通用 schema 已先确认 node 是对象、type 是字符串且 props 是对象，这些策略只检查对应类型的特有字段并返回错误集合。
 
-### Addressing lack of experience
+~~~javascript
+const validators = new Map([
+  ['heading', node => (
+    typeof node.props.text === 'string' ? [] : ['标题文本必须是字符串']
+  )],
+  ['button', node => (
+    typeof node.props.label === 'string' ? [] : ['按钮需要标签']
+  )],
+]);
 
-State the gap plainly, then describe related experience and a realistic learning plan. Avoid guaranteeing that you will master an unfamiliar area by a fixed date unless you have a basis for that estimate.
+function validateNode(node) {
+  const validate = validators.get(node.type);
+  return validate ? validate(node) : ['未知组件类型：' + node.type];
+}
 
-Template: “I have not used [technology] in [relevant context]. I have used [related skill] for [real example], and I would start by [specific way to learn or validate the new system].”
+validateNode({
+  id: 'button-1',
+  type: 'button',
+  props: { label: '发布' },
+});
+// []
+~~~
 
-### Questions to ask the interviewer
+调用者不需要理解每种组件的检查细节。新增策略是否真的避免集中式分支，取决于注册、类型管理和错误契约是否也统一。若规则少而稳定，普通 `switch` 可能更好。策略不能取代输入校验或授权检查。
 
-Prepare questions that help you understand the work. Choose the ones that remain unanswered by the conversation.
+### 多个视图订阅同一修订时，用观察者
 
-**About the role:**
+**observer（观察者）**结构中，状态主体直接维护订阅者并通知变化。下面用 `DocumentNotifier`（文档通知器）只展示通知职责；文档数据仍由上游状态所有者持有。订阅者应能取消订阅，避免卸载视图继续被引用。浏览器 `EventTarget` 也是这种直接注册到目标对象的观察者式 API，见[DOM 事件与交互](../../frontend/browser-apis/dom-manipulation-and-events.md)。
 
-- “What are the most important outcomes for this role in the first few months?”
-- “What technical challenges would this person work on?”
-- “How do you measure success for the position?”
+~~~javascript
+class DocumentNotifier {
+  #listeners = new Set();
 
-**About the team:**
+  subscribe(listener) {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
 
-- “How does the team approach code review and knowledge sharing?”
-- “How are technical decisions made, and who is involved?”
+  notify(document) {
+    for (const listener of this.#listeners) listener(document);
+  }
+}
 
-**About growth:**
+const notifier = new DocumentNotifier();
+const unsubscribe = notifier.subscribe(document => {
+  console.log('画布收到修订', document.revision);
+});
 
-- “What opportunities are there to deepen or broaden engineering skills?”
-- “How does the team support progression for engineers?”
+notifier.notify({ revision: 13 });
+unsubscribe();
+~~~
 
-### Closing the interview
+该循环是同步通知：若一个 listener 抛错，异常会向调用方传播，后续 listener 不会继续收到本轮通知；遍历期间新增或删除 listener 也遵循 Set 迭代器的实时行为。这个小例没有隔离回调异常或冻结订阅快照。
 
-Thank the interviewer, restate a specific reason for your interest, and ask about the next step if it has not already been explained. If your questions were answered during the discussion, say so and use the remaining time for a follow-up.
+**publish-subscribe（发布订阅）**常通过主题或中介路由消息，让发布者不必掌握每个接收者。若插件要监听 `document:saved`，典型实现会从 `listenersByTopic.get(topic)` 取得 Set 并同步通知，其中每个 Set 保存该主题的订阅者；取消时从同一 Set 删除 listener。它可能减少直接依赖，但全局事件名和隐式调用会让修改来源难以追踪。简单父子组件回调已足够时，不用事件总线。实际 API 可能混合两种形式，应看订阅由谁持有、消息如何路由。
 
-**See also:** [Agile and Scrum](#46.%20How%20does%20Scrum%20help%20a%20team%20inspect%20and%20adapt%20work?%20/%20Scrum%20%E5%A6%82%E4%BD%95%E5%B8%AE%E5%8A%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F) for the current Scrum vocabulary used in team-process discussions.
+### 共享实例有明确范围时，才用单例
+
+**singleton（单例）**让某个范围通过统一入口访问一个共享实例。例如一个编辑器应用实例可以持有一份组件注册表。在 JavaScript 中，模块变量通常由当前模块实例共享；worker、进程、重复加载的模块副本之间不自动共享同一个对象。
+
+全局单例会隐藏依赖，也可能让多个编辑器或测试互相污染。显式创建 `EditorRuntime` 并传给使用者通常更易测试。必须说清“一份”是每个模块、应用、进程还是其他范围。若该类仍暴露公有构造器，调用者通常仍能直接创建额外实例，访问器并不会自动阻止这种创建。
+
+### 用设计原则检查模式是否合适
+
+工厂和策略可支持开闭原则，但若它们没有缩小修改范围，就不需要硬套。观察者让变化通知多个视图；依赖倒置要求高层编辑流程依赖通知契约，而非绑死具体全局总线。每个订阅者的生命周期也仍需明确。
+
+新增图片节点时，工厂建立默认配置、校验策略检查属性、状态所有者接受“插入图片”命令，生成新修订后再通知画布。模式说明局部对象怎样协作；文档结构、撤销历史、发布版本与冲突处理见[页面文档和发布快照的数据模型](#45.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。组件之间的数据所有权见[前端架构边界](#43.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。
+
+> [!info]- 来源
+> - 工厂、策略、观察者等模式的适用情境和权衡：[Gamma、Helm、Johnson、Vlissides, Design Patterns: Elements of Reusable Object-Oriented Software](https://www.oreilly.com/library/view/design-patterns-elements/0201633612/)。
+> - 模式与设计原则应服务于变化边界：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
+> - Set 的实时迭代语义：[ECMAScript 2026, Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-set-iterator-objects)。
+## 45. 怎样建模页面文档、编辑会话和发布快照？
+
+以下用一个合成的通用页面编辑器案例：编辑者正在修改 revision 12 的首页，页面含标题和报名按钮；编辑者需要改文案、拖动排序、撤销修改并发布审核后的版本。若把页面内容、当前选中项、拖动中的临时位置和公开输出塞进同一对象，简单选择也可能触发保存和历史记录，发布时也难以确定实际使用哪个版本。
+
+先分开三个生命周期：可保存文档、只服务当前编辑器会话的状态，以及从某个文档修订派生的发布快照。
+
+~~~mermaid
+flowchart TD
+    Command["编辑命令"] --> Validate["按结构与业务规则校验"]
+    Validate --> Document["页面文档 revision 13"]
+    Document --> History["撤销 / 重做历史"]
+    Document --> Preview["编辑预览"]
+    Document --> PublishCheck["发布校验"]
+    PublishCheck --> Snapshot["不可变快照 revision 13"]
+    Snapshot --> PublicPage["访客页面"]
+    Session["编辑会话：选中 ID / 面板"] --> Canvas["画布与检查器"]
+    Document --> Canvas
+~~~
+
+### 文档树和编辑会话记录不同事实
+
+文档要保存页面事实：节点稳定身份、组件类型、属性和子节点。编辑会话记录当前选择、焦点面板、拖动候选目标等短暂 UI 状态。
+
+~~~javascript
+const documentState = {
+  schemaVersion: 1,
+  revision: 12,
+  rootIds: ['heading-1', 'button-1'],
+  nodes: {
+    'heading-1': {
+      id: 'heading-1',
+      type: 'heading',
+      props: { text: '首页', level: 1 },
+      style: { position: 'absolute', top: 100, left: 200 },
+      children: [],
+    },
+    'button-1': {
+      id: 'button-1',
+      type: 'button',
+      props: { label: '报名', action: { kind: 'navigate', pageId: 'form' } },
+      children: [],
+    },
+  },
+};
+
+const editorSession = {
+  selectedId: null,
+  openPanel: 'inspector',
+  dragPreview: null,
+};
+~~~
+
+`rootIds` 表示顶层顺序；`nodes` 按 ID 索引，便于定位和局部更新。示例采用已提交文档中的森林规则：根 ID 不重复，根节点不能同时作为子节点；每条父子边只出现一次，每个非根节点恰有一个父节点；所有节点都能从某个根到达，且不形成环。只检查 ID 唯一、引用存在和无环还不够，因为两个父节点仍可能引用同一个孩子，文档里也可能留下无法从根到达的孤儿节点。新节点在尚未挂到树上时可以先留在编辑会话的拖动草稿中，提交命令前再检查这些约束。
+
+较小编辑器也可用嵌套树，避免过早规范化，但仍需保持相同的单父和根归属规则。示例中的 `style` 是产品选择持久化的布局配置；如果它只用于画布临时呈现，则应留在编辑会话。`selectedId` 是对节点的引用，不是节点属性；切换选择不推进文档修订、不进入撤销历史，也不影响发布内容。
+
+### 稳定身份与命令使修改可追踪
+
+数组下标会因插入和排序改变，不适合作为长期节点身份。稳定 ID 让检查器、历史记录与协作消息指向同一节点。**command（命令）**把用户意图表示为可检查操作，例如把 `heading-1` 的 `text` 改为“欢迎”。
+
+下面的代码承接上节定义的完整 `documentState`，包括 `schemaVersion`、`rootIds`、标题样式和报名按钮；它只更新标题文本，不重新声明或裁剪初始文档。
+
+~~~javascript
+function updateNodeText(document, id, text) {
+  const node = document.nodes[id];
+  if (!node || node.type !== 'heading') {
+    throw new RangeError('heading does not exist');
+  }
+
+  return {
+    ...document,
+    revision: document.revision + 1,
+    nodes: {
+      ...document.nodes,
+      [id]: { ...node, props: { ...node.props, text } },
+    },
+  };
+}
+
+const revision13 = updateNodeText(documentState, 'heading-1', '欢迎');
+// revision13 仍有 rootIds=[heading-1, button-1]，button-1 未变；只改标题并从 12 变为 13。
+~~~
+
+撤销和重做可以保存前后状态快照，也可以记录带逆操作的命令。快照简单但占更多存储；逆操作紧凑，却必须正确处理删除、移动和并发修改。输入字段可以每次击键更新，也可本地缓冲到失焦再提交；提交到文档的修改仍须经过一致验证路径。
+
+### `schema`（结构描述）描述形状，业务规则解释含义
+
+**component registry（组件注册表）**为每种类型提供配置形状、渲染器和可选校验器。`schema`（结构描述）可声明标题文本是字符串、按钮标签必填。JSON Schema 2020-12 可校验 JSON 结构，但应用还需检查引用页面是否存在、用户是否有权发布，或组件树是否允许特定父子关系。
+
+未知类型、缺失 ID、非法属性和悬空引用都应在持久化或发布前给出可定位错误。客户端校验改善反馈，但授权应由可信服务端重新检查。不要让渲染阶段以空白组件静默掩盖无效文档。
+
+### 文档顺序不等于全部绘制顺序
+
+子节点顺序可定义图层面板中的逻辑顺序，但浏览器绘制还受定位、`z-index` 和 **stacking context（堆叠上下文）**影响。若产品提供“置顶”或“置底”，要定义它改的是节点顺序、同一堆叠上下文内的层级，还是更高层渲染模型。单独重排数组不能保证元素跨越 CSS 上下文覆盖另一个元素。
+
+### 发布绑定确切修订，避免混入未校验草稿
+
+发布服务应选择具体文档修订，执行结构校验、引用检查、权限检查和资源确认，再生成公开页面所需数据或制品。快照应记录 `documentId`、`revision`、`schema` 版本等来源。若构建期间只引用“当前文档”，草稿更新可能让未校验内容混入产物。仅固定文档修订还不足以重现输出：快照应同时固定组件注册表、渲染器和会影响页面的外部资源版本，或保存确切制品并封存/固定它引用的外部资源；否则重渲染或浏览仍可能读到新素材，显示效果随时间变化。
+
+草稿修订和公开版本可并存：编辑生成 revision 14 时，访客仍看到已校验的 revision 13。发布完成后原子切换活动版本引用；回滚则重新指向已发布快照，而不是把旧内容复制进当前草稿。
+
+### 协作、传输与冲突解决需要分别设计
+
+`WebSocket` 能传输编辑事件，却不会自动决定两人同时移动同一节点时谁胜出。单写者模型可让服务端排序命令；锁能防并发但增加等待。operational transformation（操作转换，OT）通过转换并发操作维护规定的一致性；conflict-free replicated data type（无冲突复制数据类型，CRDT）可在满足其收敛条件时合并副本更新。两种方案都要求定义操作格式、冲突语义与版本兼容。
+
+按离线需求、即时合并、服务端排序和审计要求选择机制。即便采用 CRDT，树结构约束、组件 schema 和发布校验仍然必要。协作是数据所有权与更新协议的一部分，不能因使用 WebSocket 就认为冲突已解决。
+
+**相关机制：**[前端架构怎样划分状态所有权？](#43.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)说明谁持有文档与会话状态；[页面编辑器何时需要设计模式？](#44.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)说明创建、校验和通知的局部实现。
+
+> [!info]- 来源
+> - JSON Schema 2020-12 文档与校验规范：[JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12)。
+> - 堆叠上下文中的绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
+> - 组件共享状态的单一所有权示例：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
+> - CRDT 的副本收敛条件：[Shapiro 等，Conflict-free Replicated Data Types（2011）](https://perso.lip6.fr/Marc.Shapiro/papers/2011/CRDTs_SSS-2011.pdf)。
+> - OT 中并发操作转换与一致性属性：[Sun 等，Achieving Convergence, Causality Preservation, and Intention Preservation in Real-Time Cooperative Editing Systems（1998）](https://www.cs.cityu.edu.hk/~jia/research/reduce98.pdf)。
+## 46. Scrum 怎样让团队检查并调整工作？
+
+假设团队正在开发页面编辑器，目标是让用户创建内容并安全发布。产品方向可能需要数月才能实现，单个 Sprint（冲刺周期）只能完成其中一部分；团队需要不断判断工作是否仍有价值、遇到阻碍时是否要调整计划。
+
+Agile（敏捷）是一组强调协作、可用软件、客户合作和响应变化的价值观与原则；Scrum 是用于复杂工作的轻量框架，规定团队职责、事件、工件和承诺。Product Goal（产品目标）、Product Backlog（产品待办列表）、Sprint Goal（Sprint 目标）、Sprint Backlog（Sprint 待办列表）、Increment（增量）与 Definition of Done（完成定义）在框架中共同提供方向与质量边界。框架创造检查与适应的节奏，但不会自动保证估算准确、交付质量或用户价值。
+
+~~~mermaid
+flowchart TD
+    ProductGoal["Product Goal（产品目标）<br/>让非开发者安全创建并发布简单页面"] --> Backlog["有序的 Product Backlog（产品待办列表）"]
+    Backlog --> Planning["Sprint Planning（Sprint 计划）<br/>为什么 / 做什么 / 怎样做"]
+    Planning --> SprintGoal["Sprint Goal（Sprint 目标）<br/>访客能看到已发布标题页"]
+    SprintGoal --> Work["Sprint Backlog（Sprint 待办列表）：所选工作与执行计划"]
+    Work --> Daily["Daily Scrum（每日 Scrum）：检查进展并调整计划"]
+    Daily --> Work
+    Work --> Increment["符合 Definition of Done（完成定义）的可用 Increment（增量）"]
+    Increment --> Review["Sprint Review（Sprint 评审）：检查结果并讨论下一步"]
+    Review -->|产品方向与待办反馈| Backlog
+    Review --> Retro["Sprint Retrospective（Sprint 回顾）：改进协作和质量"]
+    Retro --> Planning
+~~~
+
+### 敏捷价值观不是一套固定流程
+
+《敏捷软件开发宣言》强调四组价值：个体与互动高于流程与工具、可工作的软件高于详尽文档、客户合作高于合同谈判、响应变化高于遵循计划。右侧内容仍有价值；宣言表达的是左侧受到更高重视。它没有要求团队放弃文档、计划、流程或合同。十二条原则还提到可持续节奏、持续技术卓越、简洁与定期反思等做法。
+
+把敏捷理解成“完全不做计划”会错过重点：计划应根据反馈持续调整，而不是一次承诺后就不再检查。文档、验证和法规证据也可以服务于快速而可靠的反馈。
+
+### Scrum 用目标和工件建立透明度
+
+**Scrum Team（Scrum 团队）**包含 **Product Owner（产品负责人）**、**Scrum Master（Scrum 引导者）**和 **Developers（开发者）**三类职责；它们是责任，不必对应固定职位。Product Owner 对产品价值和 Product Backlog 管理负责，可以委托待办列表的具体管理活动但仍对效果负责；Scrum Master 帮助团队按 Scrum 运作、提升有效性并协助解除障碍；Developers 负责创建可用增量、维护 Sprint Backlog 计划并达到 Definition of Done。
+
+| 工件 | 对应承诺 | 页面编辑器案例中的作用 |
+|---|---|---|
+| Product Backlog（产品待办列表） | Product Goal（产品目标） | 持续排序创建、编辑、预览和发布的工作，朝产品目标前进。 |
+| Sprint Backlog（Sprint 待办列表） | Sprint Goal（Sprint 目标） | 包含目标、所选工作和 Developers 的执行计划；计划可随学习调整。 |
+| Increment（增量） | Definition of Done（完成定义） | 与以往增量集成、满足产品质量标准的一步可用成果。 |
+
+例如，Product Goal 可以是“让非开发者安全创建并发布简单页面”。一个 Sprint Goal 可以是“访客能看到包含标题的已发布页面”。团队可将存储节点、预览页面和最小校验作为候选工作；只有满足完成定义并整合到产品的部分才是 Increment。一轮 Sprint 中可以形成多个 Increment，只要每个都满足 Definition of Done 并集成到产品。
+
+### Sprint 事件让计划贴近现实
+
+Sprint 是一个月以内的固定长度事件，包含 Sprint Planning、Daily Scrum、Sprint Review、Sprint Retrospective 和全部工作活动；Sprint 容纳其余四个正式事件。Scrum Guide 不规定两周的固定节奏；团队选择能形成稳定检查与反馈、又不拖慢调整的长度。
+
+Sprint Planning（Sprint 计划）讨论为什么这个 Sprint 有价值、可以做什么、如何完成。团队建立 Sprint Goal、选择适合的 Product Backlog 项，Developers 制定执行计划。进入 Sprint 后，Developers 可根据新信息调整 Sprint Backlog，并与 Product Owner 澄清和协商范围，以保护 Sprint Goal。
+
+Daily Scrum（每日 Scrum）是 Developers 检查朝 Sprint Goal 的进展并调整计划的 15 分钟事件，不是每个人向主管轮流汇报昨日、今日和阻碍的固定格式。团队选择最能帮助协同工作的形式。
+
+Sprint Review（Sprint 评审）是团队与利益相关者检查结果、讨论环境变化并协作决定下一步的工作会话。它不是发布审批关卡；符合 Definition of Done 的增量可按产品需要在 Review 前发布。Sprint Retrospective（Sprint 回顾）检查人际协作、流程、工具与质量，挑选可落实的改进。
+
+### 遇到变化时，保护目标并重谈范围
+
+若页面发布服务的权限校验失效，访客可能看到未授权内容，这会直接威胁“访客能看到已发布标题页”所要求的安全发布。Developers 应先确认影响、向 Product Owner 说明修复与复测所需工作，再共同判断是否延后非核心样式微调以保护 Sprint Goal。若目标本身已失去价值，Product Owner 可取消 Sprint，而不是要求团队继续假装原计划仍适用。
+
+常见误区可从工件和事件的用途识别：
+
+- 把 Sprint Backlog 当作冻结合同，会让计划无法反映实际学习。
+- 把 Daily Scrum 当作人员考核汇报，会挤掉团队协作和适应计划的机会。
+- 把 Sprint Review 当作单向演示或发布审批，会削弱共同检查和调整的目的。
+- 只保留仪式名称、忽略透明、检查和适应，会失去框架的工作机制。
+
+若使用 Scrum，应按其定义运行并检查结果；若不适合，也可采用其他匹配产品复杂度、反馈周期和约束的协作方式。
+
+> [!info]- 来源
+> - Scrum Guides 当前官方版本为 2020 年 11 月版；本文按其角色、事件、工件和承诺定义：[The Scrum Guide](https://scrumguides.org/scrum-guide.html)，[官方版本下载页](https://scrumguides.org/download.html)。
+> - 敏捷价值观及左右两侧的关系：[Manifesto for Agile Software Development](https://agilemanifesto.org/)。
+## 47. 怎样准备有事实支撑的行为面试回答？
+
+准备面试时，先读岗位职责和组织公开信息，再从自己的真实经历里挑出能说明相关能力的材料。一个有说服力的回答可以按“背景—个人行动—结果或证据”展开。描述团队成果时，区分自己的贡献和团队工作；没有可核实的数字，就说清观察到的变化，不要编造指标、夸大权限或借用别人的故事。
+
+面试也不是单向考试。候选人需要判断职责、团队协作、支持制度与工作方式是否适合自己，可以在回答和提问中逐步补全信息。
+
+### 用事实组织行为题答案
+
+**behavioral interview（行为面试）**会询问过去怎样处理具体情境。先确认问题关注的能力，再挑一个最相关的例子。回答要让听者理解发生了什么、自己为什么采取这些行动，以及结果如何被观察到。
+
+| 部分 | 需要说明什么 | 可用提示 |
+|---|---|---|
+| 背景 | 目标、限制、风险和自己的职责 | 哪件事最重要？我负责哪一部分？ |
+| 行动 | 自己作出的判断与执行步骤 | 我先确认什么，再做了什么？ |
+| 结果 | 可核实的产出、影响或学习 | 哪项行为或数据能证明变化？ |
+
+可先用一句话说明背景，再说两三项关键行动，最后交代结果和后续反思。团队成功不等于个人可以认领全部成果；说清“团队完成了什么”与“我负责哪一部分”会更可信。
+
+### 优势、短板与技能缺口
+
+谈优势时，选一个与岗位需求相关的能力，并提供例证。只说“我学习能力强”无法让面试官判断证据；可以说明在真实任务中如何拆解陌生知识、验证理解并应用到结果。
+
+谈短板时，选择真实且正在改善的发展方向，交代具体练习和可观察进展。不要把“工作太认真”这类伪装成优点的答案当作诚实反思，也不要承诺没有依据的掌握日期。若缺少某项经验，可以说明目前没有在目标场景中使用过，再指出相关基础与将如何学习、验证新工具。
+
+### 讨论紧急任务与加班安排
+
+若被问到临时紧急任务或加班，先说明怎样判断紧急程度、可用容量和风险，然后讲清沟通与取舍：确认截止时间和影响，列出当前时间内能完成的范围，向负责人同步冲突，让相关人一起决定延后、缩小范围、增加支援或改变发布计划。
+
+> [!example] 虚构练习场景，不是个人经历
+> 假设页面要在 16:00 发布，当前还在调整次要按钮样式；15:10 时，发布前权限检查发现未授权访客可以打开页面。候选人先用授权与未授权测试账号复现问题，记录受影响页面并告知负责人；团队决定暂停样式调整，修复访问校验，再由另一人复测两种权限。只有复测通过才恢复发布，按钮样式移到后续任务。这个结局是情境练习中的假设，不是可冒充的个人结果；真实回答应替换为本人实际承担的步骤与证据。
+
+不要用“我随时可以无限加班”来证明投入。偶发故障和长期以加班填补容量不足是不同工作条件；可以询问值班轮换、紧急响应安排、加班补偿、优先级如何调整，以及团队如何避免事故反复发生。本章将容量判断、沟通取舍和核实工作安排放在同一回答过程中，便于与其他行为题采用一致的证据结构。
+
+### 解释为什么适合岗位
+
+把岗位需要与自己能证明的经历对应起来，而不是复述公司口号：
+
+1. 复述一项明确职责或目标。
+2. 给出自己承担过的相近任务与具体行动。
+3. 说明结果或学到的东西，并指出如何应用到目标岗位。
+4. 说清为何希望做这类工作。
+
+### 了解薪酬与岗位条件
+
+面试前研究与岗位、资历、地点和总薪酬构成相关的当前范围。若职责和级别尚不清楚，可以先询问岗位预期与薪酬区间；若需要先给数字，则说明范围和假设，并保留讨论奖金、福利与工作条件的空间。薪酬数据会随地区、行业与时间变化，应在面试前重新核实。
+
+### 研究公司与团队
+
+用当前公开材料了解产品、用户、岗位所在团队和近期方向，再把自己的经历与一项具体需求相连。不要把对团队内部实践的推测说成事实；将仍未知的部分记成面试问题。
+
+### 提前准备能帮助判断工作的提问
+
+根据谈话中已回答的内容，选择仍未了解的问题：
+
+- 这个岗位前几个月最重要的结果是什么？
+- 工程师通常如何参与代码评审、技术决策和知识分享？
+- 团队怎样安排上线、值班和紧急响应？
+- 如果工作优先级冲突，谁参与排序，如何沟通取舍？
+- 团队如何支持技术成长与职责发展？
+
+结束时感谢面试官，重申一个具体的兴趣理由，并在后续流程尚未说明时询问下一步。若问题已在谈话中回答，可用剩余时间追问相关细节。
+
+**相关背景：**[Scrum 怎样让团队检查并调整工作？](#46.%20Scrum%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明 Product Goal、Sprint Goal 和 Sprint Review 等团队协作用语。

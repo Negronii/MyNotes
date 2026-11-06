@@ -63,17 +63,17 @@
 - [动态规划如何定义状态并安排更新顺序？](algorithms/dynamic-programming-state-and-order.md)
 - [分区如何改变快速排序的时间和空间代价？](algorithms/partitioning-and-sorting-costs.md)
 - [文本算法应按码元、码点还是字素簇处理？](algorithms/text-units-and-algorithms.md)
-- [Why are contiguous scans often faster than linked-list walks? / 为什么连续扫描往往比链表遍历快？](operating-systems/memory-hierarchy-and-data-locality.md)
-- [Why does the Linux kernel embed list nodes in their objects? / Linux 内核为什么把链表节点嵌入对象？](operating-systems/intrusive-lists-in-linux.md)
+- [为什么连续扫描往往比链表遍历快？](operating-systems/memory-hierarchy-and-data-locality.md)
+- [Linux 内核为什么把链表节点嵌入对象？](operating-systems/intrusive-lists-in-linux.md)
 
 ### 变化、职责与协作
 
-- [How do design principles reduce the cost of change without adding needless abstraction? / 设计原则如何降低变化成本而不过度抽象？](architecture/software-design-principles.md)
-- [How can a frontend architecture divide presentation and behavior? / 前端架构怎样划分呈现与行为的职责？](architecture/frontend-architecture-boundaries.md)
-- [When does a design pattern make change easier to understand and maintain? / 何时使用设计模式能让变化更易理解和维护？](architecture/design-patterns-in-practice.md)
-- [How should a low-code editor store editable structure and published output? / 低代码编辑器怎样保存可编辑结构与发布结果？](architecture/low-code-editor-data-model.md)
-- [How does Scrum help a team inspect and adapt work? / Scrum 如何帮助团队检查并调整工作？](teamwork/agile-and-scrum.md)
-- [How do you prepare behavioral answers with evidence you can support? / 如何准备有事实依据、经得起核实的行为面试回答？](career/interview-preparation.md)
+- [如何让设计原则减少真实的修改成本？](architecture/software-design-principles.md)
+- [前端架构怎样划分呈现、交互和数据所有权？](architecture/frontend-architecture-boundaries.md)
+- [页面编辑器何时需要设计模式？](architecture/design-patterns-in-practice.md)
+- [怎样建模页面文档、编辑会话和发布快照？](architecture/low-code-editor-data-model.md)
+- [Scrum 怎样让团队检查并调整工作？](teamwork/agile-and-scrum.md)
+- [怎样准备有事实支撑的行为面试回答？](career/interview-preparation.md)
 
 ## 相关领域
 
