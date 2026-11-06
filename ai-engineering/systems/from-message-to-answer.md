@@ -2,7 +2,7 @@
 
 ## 案例：解释一次构建失败
 
-想象一位开发者正在使用一款接入构建系统的 AI assistant (AI 助手)。构建系统会对一次代码改动运行自动检查，而构建 `42` 失败了。开发者问：`Why did build 42 fail?` 失败详情保存在日志服务中，助手可以通过名为 `read_build_log` 的 tool (工具) 查询。
+想象一位开发者正在使用一款接入构建系统的 AI 助手。构建系统会对一次代码改动运行自动检查，而构建 `42` 失败了。开发者问：`Why did build 42 fail?` 失败详情保存在日志服务中，助手可以通过名为 `read_build_log` 的 tool (工具) 查询。
 
 助手需要取回这些证据并解释日志说明了什么。我们将沿着这个问题走过整个服务流程，从准备模型输入，到返回一份以日志为依据的回答。应用负责管理日志服务的访问；模型先生成获取证据的请求，再利用证据生成说明。这是一个虚构的、由应用管理的 tool-call loop (工具调用循环) 示例。
 
@@ -13,7 +13,7 @@ flowchart TD
     Input["1 准备输入<br/>问题 + 指令 + 工具定义"]
     Model["2 运行模型<br/>生成下一段输出"]
     Choice{"模型返回了什么？"}
-    Tool["3 执行工具<br/>检查访问权限，然后读取构建 42"]
+    Tool["3 执行调用 c1<br/>检查访问权限，再读取构建 42"]
     Context["4 更新输入<br/>加入调用及其结果"]
     Answer["5 完成本次运行<br/>保存并返回说明"]
     Input --> Model --> Choice
@@ -33,7 +33,7 @@ harness 是负责协调模型与工具的应用代码。它记录调用者身份
 | 用户消息 | `Why did build 42 fail?` |
 | 工具定义 | `read_build_log` 接受整数 `build_id`，并返回构建日志中的失败记录。 |
 
-> [!tip] 指令、对话与外部状态
+> [!info] 指令、对话与外部状态
 > 每次模型调用都会收到经过选择的输入。模型不会自动看到日志服务、应用数据库，或用户此前说过的所有内容。应用必须提供这些信息，或执行能取回信息的工具。
 
 工具定义描述了一个可用操作。只有应用取回日志后，日志内容才会进入对话。应用会保留调用者身份，用于权限检查。
@@ -42,85 +42,17 @@ harness 是负责协调模型与工具的应用代码。它记录调用者身份
 
 ## 2. 生成请求以获取缺失证据
 
-现在，模型拿到了问题，也有办法请求日志。在 inference (推理) 过程中，它处理这些输入，并一次生成一个 token (词元)。本次运行中，输出指定调用 `read_build_log`，并将 `build_id` 设为 `42`。
+现在，模型拿到了问题，也有办法请求日志。在 inference (推理) 过程中，它处理输入并一次生成一个 token (词元)。本次运行中，输出指定调用 `read_build_log`，并将 `build_id` 设为 `42`。
 
-一系列数值运算如何生成这样的请求？我们可以沿着一个简化的 decoder-only Transformer (仅解码器 Transformer) 中的变换过程来观察。下面的小型维度和数值只用于说明计算过程，并非模型回答这个问题时的实测数据。
+服务侧先格式化应用指令、用户消息和工具定义，再由 tokenizer (分词器) 转换为整数 ID。使用 `tiktoken 0.12.0` 和 `cl100k_base` 单独编码用户消息 `Why did build 42 fail?`，会得到七个片段 `["Why", " did", " build", " ", "42", " fail", "?"]`，对应 ID `[10445, 1550, 1977, 220, 2983, 3775, 30]`。这七个片段只说明用户原句的切分。实际调用会将应用指令、工具定义和用户消息按模型模板格式化后再编码；有对话历史时，还可加入选定的消息。令本次完整输入共有 `T` 个位置，不能直接把用户原句的七个 ID 当成完整模型输入。
 
-服务先格式化问题、指令和工具定义，再由 tokenizer (分词器) 将其转换为整数 ID。使用 `tiktoken 0.12.0` 和 `cl100k_base` 编码 `Why did build 42 fail?` 这句话，会得到七个片段 `["Why", " did", " build", " ", "42", " fail", "?"]`，对应 ID `[10445, 1550, 1977, 220, 2983, 3775, 30]`。完整输入还包含其他消息和格式标记。
+embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。为说明张量形状，令词表大小为 `N`，示意模型宽度取 `8`；这不是实际服务配置，因此示意嵌入表形状为 `N × 8`。以单独编码用户原句的结果为例，ID `2983` 会查到索引为 `2983` 的行。完整输入则按实际编码出的 ID 查表，形成 `T × 8` 的 hidden state (隐藏状态)，每个位置占一行。每个 Transformer 层的 attention (注意力) 都能让一个位置从它可见的其他位置收集信息；feed-forward network (前馈网络，FFN) 则独立变换每一行的特征。于是，包含 `build` 和 `42` 的位置表示可以为后续位置提供信息；这只是位置交互的直觉，不表示我们测得本次推理实际关注了这两个位置。
 
-embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。在连续的 Transformer 层中，attention (注意力) 从可见位置收集信息，而 feed-forward network (前馈网络，简称 FFN) 会变换每个位置上的特征。这些运算共同更新 hidden state (隐藏状态)，也就是模型对本次特定输入的数值表示。
+经过最后一层和最终归一化后，模型使用最后一个输入位置的 `1 × 8` 状态预测下一个 token；这个位置有时是模板附加的 assistant 起始标记，不一定是用户消息的末尾。language model head (语言模型头，LM head) 将它映射为 `1 × N` 的 logits (未归一化分数)，每个词表条目一个分数。decoding (解码) 根据这些分数选择 token，将它追加到序列中，再对新位置继续前向计算。KV cache (键值缓存) 保存各层先前位置的 Key (键) 和 Value (值)：前者供新位置计算匹配分数，后者提供要按这些分数汇集的信息。新位置仍需计算自己的状态，并使用缓存中的 K/V。这个循环可以生成普通文本，也可以生成编码结构化工具请求的词元。
 
-> [!tip] 这里变换的是什么？
-> vector 是一个有序数值列表。若有 `T` 个 token 位置，每个位置有八个特征，hidden state 的形状就是 `T × 8`。每一行对应一个位置。模型学到的权重会变换这些特征；信息在位置之间传递时，各行仍与原来的位置对应。
+如果模型提供 temperature (温度) 设置，它会改变 token 采样分布的集中程度，但不能证明结果正确。[应用应如何选择解码设置？](../foundations/how-llms-work.md#%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E8%A7%A3%E7%A0%81%E8%AE%BE%E7%BD%AE%EF%BC%9F) 会通过特定任务的评估来分析这个选择。若要查看一条模型输入如何逐步经过数值运算，可继续阅读[语言模型如何将提示转换为文本](../foundations/how-llms-work.md)。
 
-经过最后一层后，language model head (LM head，语言模型头) 使用最后一个输入位置的状态为词表条目打分。decoding (解码) 会选出一个 token，将其追加到输入中，再重复预测。KV cache (键值缓存) 让后续步骤复用先前位置的 Key 和 Value；attention 在收集信息时会读取这些表示。新位置仍然需要单独计算。这个循环可以生成普通文本，也可以生成编码结构化工具请求的 token。
-
-如果模型提供 temperature (温度) 设置，它会改变 token 采样分布的集中程度，但不能证明结果正确。[应用应如何选择解码设置？](../foundations/how-llms-work.md#%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E8%A7%A3%E7%A0%81%E8%AE%BE%E7%BD%AE%EF%BC%9F) 会通过特定任务的评估来分析这个选择。下方可以查看模型调用背后的数值步骤，也可以在本次服务运行结束后，按顺序阅读模型章节。
-
-> [!example]- 本次模型调用的内部过程：一个小型 tensor (张量) 示例
-> **将输入转换为 token ID 和 vector**
->
-> inference service (推理服务) 会为模型格式化消息和工具定义。tokenizer 会把格式化后的输入转换为整数 ID。具体来说，使用 `tiktoken 0.12.0` 和 `cl100k_base` 编码 `Why did build 42 fail?`，会得到以下片段和 ID。
->
-> | Token 片段 | Token ID |
-> | --- | --- |
-> | `"Why", " did", " build", " ", "42", " fail", "?"` | `10445, 1550, 1977, 220, 2983, 3775, 30` |
->
-> 这个 tokenizer 会对字节序列应用 byte pair encoding (字节对编码)，简称 BPE：它按照学到的合并优先级，反复合并相邻片段。一个片段可能以空格开头。完整模型输入还包含指令、工具说明和格式标记。令 `T` 表示整个序列的长度。[token 边界是如何确定的](../foundations/how-llms-work.md#%E5%88%86%E8%AF%8D%E5%99%A8%E5%A6%82%E4%BD%95%E5%88%92%E5%88%86%E8%AF%8D%E5%85%83%E8%BE%B9%E7%95%8C%EF%BC%9F)
->
-> embedding table 会为每个 ID 查找一个学到的 vector。设词表大小为 `N`，并将模型宽度刻意设为较小的 `8`，那么该表的形状为 `N × 8`。例如，ID `2983` 会选中索引为 `2983` 的行。查找全部 ID 后，就会得到形状为 `T × 8` 的 hidden state，每个位置占一行。后续层会结合上下文更新这些行。每行的八个坐标都是学到的特征值，并非为某个词义预先标注的槽位。
->
-> **提醒：如何阅读 `T × 8` 这样的形状**
-> `T` 表示 token 位置数，`8` 表示每个位置的特征数。一行是一个 vector，也就是由八个数字组成的有序列表。将它变成 `T × 4`，表示保留相同的位置，并为每个位置计算四个新特征。
->
-> **让每个位置收集相关信息**
->
-> attention 让一个位置能够从其他可见位置收集信息。本例中的两个 attention head (注意力头) 各自接收经过 normalization (归一化) 的 `T × 8` 状态，并用三个学到的 `8 × 4` 投影矩阵生成 Query (查询)、Key (键) 和 Value (值)，简称 Q、K、V。每个结果矩阵的形状都是 `T × 4`。normalization 会在投影前缩放每一行，控制其数值大小，同时保持形状不变。
->
-> **提醒：这里的矩阵乘法意味着什么**
-> dot product (点积) 会将对应坐标相乘后求和，例如 `[2, 3] · [4, 5] = 23`。将一行宽度为 `8` 的 vector 乘以一个 `8 × 4` 矩阵，相当于对权重矩阵的每一列分别计算一个 dot product，最终得到四个数。每一列学到的权重都定义了对输入特征的不同加权组合。
->
-> 使用 rotary position embedding (旋转位置编码)，简称 RoPE 时，Q 和 K 会先按照位置旋转。对于一个位置，用它的 Q 与各位置的 K 分别计算 dot product，再除以 `√4`。causal mask (因果掩码) 会排除位于当前查询位置右侧的位置。softmax 会对这些分数取指数，再用每个结果除以它们的总和。分数为 `[1, 0]` 时，结果约为 `[0.731, 0.269]`。这些权重之和为一，并决定各个可见 V 对结果的贡献比例。这里用 Q 与 K 比较得到的是一对位置之间的相关性分数；这与通过学到的权重矩阵投影特征时使用的 dot product 不同。[QKV 的计算过程](../foundations/how-llms-work.md#Q%E3%80%81K%E3%80%81V%20%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9B%B4%E6%96%B0%EF%BC%9F)
->
-> 下面用一组独立的权重演示 V 的加权求和，不沿用上面的 softmax 数值。取用户消息中问号所在的那一行，只保留 `build` 和 `42`，并分别赋予权重 `0.25` 和 `0.75`。如果它们的 V vector 分别是 `(1, 0, 0, 0)` 和 `(0, 2, 0, 0)`，加权结果就是 `(0.25, 1.5, 0, 0)`。
->
-> 每个 head 都会单独计算。在每个位置，将两个宽度为 `4` 的结果拼接成宽度为 `8` 的 vector，再通过一个 `8 × 8` 的输出投影进行混合。residual connection (残差连接) 会逐坐标将这个更新加到输入状态上。例如，`[1, 2]` 加上更新量 `[0.1, −0.2]`，结果是 `[1.1, 1.8]`。宽度相同，才能让每一层细化已有表示。结果仍为 `T × 8`，但现在已汇集了不同位置的信息。
->
-> **在每个位置内变换信息**
->
-> 接着，FFN 使用共享的学到的权重，独立变换每一行。attention 已将上下文信息带入某一行；FFN 可以用非线性方式组合这些特征，再将更新写回该行。
->
-> 在这个小型模型中使用 SwiGLU 时，两个 `8 × 16` 投影会对 normalization 后的状态进行投影，分别产生候选值和门控输入。SiLU 会按照 `1 / (1 + exp(−x))` 平滑缩放门控输入 `x`。所得结果与对应的候选坐标相乘。这种 element-wise multiplication (逐元素乘法) 会保持 `T × 16` 的形状，不像 dot product 那样对坐标求和。假设问号所在行的一个候选通道为 `3`，门控输入为 `1`。SiLU 会将 `1` 转换为约 `0.73`，因此该通道的结果约为 `2.19`。接着，`16 × 8` 的降维投影会将结果还原到模型宽度，再通过 residual connection 将它加到 attention 生成的状态上。门控取决于当前行，因此相同的学到的权重会根据不同上下文产生不同更新。门控值是连续的，所以这里的“门”并不表示二元开关。[FFN 如何补充信息，以及层如何堆叠](../foundations/how-llms-work.md#FFN%20%E5%A2%9E%E5%8A%A0%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%9A%E4%B8%AA%E5%9D%97%E5%A6%82%E4%BD%95%E5%A0%86%E5%8F%A0%EF%BC%9F)
->
-> 一个 Transformer 层会将 attention 和 FFN 操作与 normalization、residual connection 组合起来。每一层会把形状为 `T × 8` 的输出传给下一层，下一层有自己学到的参数。下图沿着本例的一层追踪形状变化，包括每个子层之前的 normalization。
->
-> ~~~mermaid
-> flowchart TD
->     X["层输入<br/>T × 8，每个 token 一行"]
->     Norm["为 attention 归一化<br/>T × 8"]
->     H1["attention head 1<br/>Q、K、V 均为 T × 4<br/>加权输出 T × 4"]
->     H2["attention head 2<br/>Q、K、V 均为 T × 4<br/>加权输出 T × 4"]
->     A["拼接后投影<br/>T × 8"]
->     R["将 attention 更新加到层输入<br/>T × 8"]
->     F["经过 normalization 后执行 SwiGLU FFN<br/>两个 T × 16 分支<br/>门控、相乘，再投影为 T × 8"]
->     Y["加入 FFN 更新<br/>T × 8，传给下一层"]
->     X --> Norm
->     Norm --> H1 & H2
->     H1 & H2 --> A --> R
->     X -->|残差 Residual| R
->     R --> F --> Y
->     R -->|残差 Residual| Y
-> ~~~
->
-> **将最终状态转换为输出 token**
->
-> 处理初始输入的过程称为 prefill (预填充)。在本例中，经过最后一层和最终 normalization 后，LM head 会取完整格式化输入最后一个位置的 vector，预测第一个新 token。causal attention (因果注意力) 允许这个位置关注整个已提供的前缀；该位置也可能是输入模板添加的 assistant 起始标记。
->
-> LM head 会将这个宽度为 `8` 的 vector 乘以一个 `8 × N` 矩阵，得到 logits (未归一化分数)，每个词表条目对应一个分数。decoding 会选择一个 ID：可以取分数最高的 ID，也可以根据这些分数构造出的概率分布进行采样。对于提供 temperature 设置的模型，较低的值会让分布更集中，较高的值则会让它更分散。这些概率描述的是 token 的选择过程，并不表示最终回答的真实性。[应用应如何选择解码设置？](../foundations/how-llms-work.md#%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9%E8%A7%A3%E7%A0%81%E8%AE%BE%E7%BD%AE%EF%BC%9F) 会将这个机制与智能体行为的受控对比联系起来。选出的 ID 会被追加到序列中，模型再从新位置开始预测下一个 ID。
->
-> KV cache 会在每一层保留先前位置的 K 和 V。在新位置，模型计算 Q、K、V，再用这个 Q 关注缓存中的 K/V 和新位置自己的 K/V。随后，新位置的 K/V 会追加到缓存中，供后续步骤使用。先前位置的 Q vector 已经用于各自的计算，本步骤不需要它们。[解码与 KV cache](llm-serving-and-kv-cache.md)
-
-针对构建问题，这次生成会按照模型的 tool-call 格式 (工具调用格式) 产生工具名和参数。inference service 会根据模型的 tool-call protocol (工具调用协议) 解释生成的 token，并将完整的工具名和参数作为结构化 API 条目提供给应用。用简化记法表示，应用会收到 `tool_call(c1, read_build_log, {build_id: 42})`。ID `c1` 会把工具结果与这次特定请求关联起来。当有多个待处理调用时，这种对应关系很重要，模型才能知道哪条观察结果属于哪个请求。harness 会将拟议的调用交给校验流程，从而进入总览图中的工具分支。接下来的步骤会说明执行前的检查。
+针对构建问题，这次生成会按照模型的 tool-call 格式 (工具调用格式) 产生工具名和参数。inference service (推理服务) 会按照模型的 tool-call protocol (工具调用协议) 解释这些词元，并将完整的工具名和参数作为结构化 API 条目提供给应用。用简化记法表示，应用会收到 `tool_call(c1, read_build_log, {build_id: 42})`。ID `c1` 会把工具结果与这次特定请求关联起来。当有多个待处理调用时，这种对应关系很重要，模型才能知道哪条观察结果属于哪个请求。服务侧协调代码会将拟议的调用交给校验流程，从而进入总览图中的工具分支。接下来的步骤会说明执行前的检查。
 
 ## 3. 执行请求并读取日志
 
@@ -149,20 +81,20 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 
 现在，回答可以陈述日志证实的内容。
 
+> [!example] 根据日志返回说明
 > 构建 42 在 `unit-tests` 步骤失败。`reject_empty_name` 测试预期空名称请求返回 HTTP `400`，但实际收到 `200`。测试进程以状态 `1` 退出。若要确认底层原因，请对照测试的预期行为检查请求校验逻辑。
 
 第一次模型调用以工具请求结束，因此应用还需要继续工作。第二次调用则正常地以回答结束。在本例中，应用会先保存回答并将本次运行标记为完成，再把结果返回给调用者。如果应用在生成过程中流式传输文本，仍须跟踪生成最终是成功完成还是失败。[运行状态与恢复](ai-application-architecture.md)
 
 区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](../evaluation/llm-evaluation-methods.md) 会进一步说明验收标准和对比方法。
 
-本次服务运行到此结束。若想进一步了解任一次模型调用中的计算过程，可以继续阅读[语言模型如何将提示转换为文本](../foundations/how-llms-work.md)。该章节会依次展开数学原理、训练过程和生成选择。
+本次服务运行到此结束。若想进一步了解任一次模型调用中的计算过程，可以继续阅读[语言模型如何将提示转换为文本](../foundations/how-llms-work.md)。该章节会依次展开前向计算、解码和训练。
 
 > [!info]- 来源
-> 虚构的构建日志场景和小型数值示例用于说明下列来源支持的机制。
+> 虚构的构建日志场景用于说明下列来源支持的服务机制。
 >
-> - **Attention 与位置。** [Attention Is All You Need, v7, §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2) 支持 scaled attention 与多个 head 的拼接。[RoFormer, v5, §3.2](https://arxiv.org/html/2104.09864v5#S3.SS2) 说明了 rotary position mechanism。本章的层示例采用 pre-normalization (前置归一化) 和仅解码器布局。
-> - **FFN 门控与层布局。** [GLU Variants Improve Transformer, 2020, §2](https://arxiv.org/html/2002.05202#S2) 定义了 SwiGLU。[Llama 3 参考实现](https://github.com/meta-llama/llama-models/blob/main/models/llama3/model.py) 展示了 pre-normalization、residual update (残差更新) 和门控 FFN。
-> - **输入格式化与生成。** [Transformers chat templates](https://huggingface.co/docs/transformers/chat_templating#add_generation_prompt) 说明了生成标记；其[缓存说明](https://huggingface.co/docs/transformers/main/en/cache_explanation) 介绍了如何复用先前的 K/V。token 片段使用 [tiktoken 0.12.0](https://github.com/openai/tiktoken/tree/0.12.0) 和 `cl100k_base` 重现。
+> - **Attention 与逐位置变换。** [Attention Is All You Need, v7, §§3.2–3.5](https://arxiv.org/html/1706.03762v7#S3) 支持注意力的跨位置聚合，以及 FFN 对每个位置分别变换的结构。
+> - **输入格式化、分词与缓存生成。** [Transformers chat templates](https://huggingface.co/docs/transformers/chat_templating#add_generation_prompt) 说明了生成标记；其[缓存说明](https://huggingface.co/docs/transformers/main/en/cache_explanation) 介绍了如何复用先前的 K/V。用户消息的片段和 ID 使用 [tiktoken 0.12.0](https://github.com/openai/tiktoken/tree/0.12.0) 与 `cl100k_base` 复现。
 > - **结构化请求与应用循环。** [OpenAI function-calling guide](https://developers.openai.com/api/docs/guides/function-calling#the-tool-calling-flow) 和 [Claude tool-use guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works#the-agentic-loop-client-tools) 介绍了工具定义、模型请求、应用执行以及将结果反馈给模型的过程。此处的 `tool_call` 和 `tool_result` 记法仅供说明，并非 SDK schema。运行预算和针对构建日志提出的评估方式是本例中的工程选择。
 >
 > 查看 [AI 好文集](../../review/ai-literature-index.md) 中的相关论文。
