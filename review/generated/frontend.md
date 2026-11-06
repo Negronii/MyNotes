@@ -164,7 +164,7 @@ renderReports(sortFromUrl());
 
 浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。筛选点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
 
-**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 > [!info]- 来源
 > - URL 查询参数的解析与序列化： [WHATWG URL Standard：URLSearchParams](https://url.spec.whatwg.org/#urlsearchparams-class)，持续更新规范，URLSearchParams 接口章节。核对日期：2026-11-06。
@@ -283,7 +283,7 @@ controls.addEventListener("click", (event) => {
 });
 ~~~
 
-点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
+点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
 
 ### 默认动作与传播控制是两回事
 
@@ -315,7 +315,7 @@ controls.addEventListener("click", (event) => {
 
 React 的 JSX 事件名和事件对象保留常用的 DOM 事件概念，`onClick` 默认冒泡、`onClickCapture` 对应捕获。事件委托的具体根节点属于 React 实现细节：React 17 将委托根从 `document` 移到了 React root container；早期 React DOM 还会池化 SyntheticEvent，React 17 起移除了池化，所以当前 React DOM 不需要为异步读取事件调用 `persist()`。React Native 的事件行为另有边界。
 
-**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#53.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)讨论应用层发布/订阅。
+**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)讨论应用层发布/订阅。
 
 > [!info]- 来源
 > - 捕获、目标、冒泡、事件目标、默认动作及取消： [WHATWG DOM：事件分发](https://dom.spec.whatwg.org/#concept-event-dispatch)，Living Standard，事件分发算法；[WHATWG DOM：Event 接口](https://dom.spec.whatwg.org/#interface-event)，事件标记与取消行为。核对日期：2026-11-06。
@@ -360,7 +360,7 @@ console.log("end");
 
 当前同步脚本先输出 `start`、`end`。脚本返回时排队的 Promise reaction 和 `queueMicrotask()` 回调按入队顺序在微任务检查点执行；计时器回调是后续 task，只有达到计时器允许执行的时点后才有资格运行。`setTimeout(fn, 0)` 不表示立刻切走，也不承诺下一个画面会先出现。若当前处理器很长，用户点击会等它完成才开始处理；若处理器不断追加微任务，检查点会持续排空队列，浏览器也就迟迟不能处理后续任务或渲染。
 
-`new Promise(executor)` 中的 `executor` 在构造时同步运行；由 `.then()` 注册的 reaction 才排入微任务。上面的例子使用 `Promise.resolve().then()`，所以 `Promise reaction` 出现在同步输出之后。Promise 的语言行为见[异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
+`new Promise(executor)` 中的 `executor` 在构造时同步运行；由 `.then()` 注册的 reaction 才排入微任务。上面的例子使用 `Promise.resolve().then()`，所以 `Promise reaction` 出现在同步输出之后。Promise 的语言行为见[异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
 
 在报表页的例子里，点击发生时可能正有脚本任务占用主线程，这会增加输入延迟。处理器开始后，`pushState()` 和节点修改是同步的；处理器结束后，微任务仍可能继续安排工作，浏览器再看是否有机会更新报表画面。`await Promise.resolve()` 或把工作切成一串微任务并不会主动让浏览器绘制。若计算确实太重，应把有界工作切到后续 task、Web Worker 或适合的框架调度策略；需要确认是哪段时间占用主线程时，沿 [INP 的交互阶段](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)看录制结果。
 
@@ -386,7 +386,7 @@ requestIdleCallback(runIdleSlice, { timeout: 2000 });
 
 React 等框架的 scheduler 是建立在宿主机制上的另一套排程策略，不是浏览器 HTML 规范中的 task source。使用分片调度也不能假定每两个代码块之间浏览器一定会绘制。
 
-**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+**延伸：** [脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析阶段的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)说明 click 处理器如何接收事件；[JavaScript 异步](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)解释 Promise 本身的语言行为。Node 有不同的宿主调度边界，见[Node 运行时与调度](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
 > [!info]- 来源
 > - 浏览器任务、微任务检查点、渲染机会和动画帧回调： [WHATWG HTML：Web 应用 API 与事件循环](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，持续更新规范，事件循环、微任务与更新渲染章节。核对日期：2026-11-06。
@@ -538,7 +538,7 @@ Effect 用于让已提交的组件与 React 之外的系统保持一致，例如
 
 开发环境在根组件开启 StrictMode（严格模式）时，React 可在首挂载额外执行一次 setup 与 cleanup 来暴露不完整的清理逻辑。此例首轮 Effect 因 `requestId === 0` 直接返回，不会因此发出重复请求；这项检查不代表生产中每个请求都会重复。手写 Effect 获取数据时要清理或忽略已经失效的响应；若要缓存、去重、刷新和更新服务端数据，接着读[React如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
-类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
+类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-06）
 > - 状态是快照、setter 请求下一次 render、updater 按队列应用：React 官方 [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)、[Queueing a Series of State Updates](https://react.dev/learn/queueing-a-series-of-state-updates)，核验日期 2026-11-06。
@@ -916,7 +916,7 @@ function useMarkReviewed() {
 
 这里回滚的是整份当前列表快照，因此这个简化方案假设 `reports/list` 前缀下的所有排序视图共用一个变更入口：从 `onMutate` 到 `onSettled` 返回的失效 Promise 完成前，全局只有一个乐观变更。否则另一排序 key 上的 mutation 或失效重抓可能覆盖乐观值，整表回滚也可能抹掉另一笔已成功变更。调用端应使用列表级 `isPending` gate 禁用所有排序视图中的行操作，不能只按行或按当前排序 key 禁用；首次切换时的本地临时行以及当前 key 尚无 `query.data` 的视图也要禁用操作。如果存在其他触发入口，它们也必须共享提交级串行约束；单靠某个 hook 的 `isPending` 显示或禁用按钮不能阻止其他入口并发提交。若 mutation 失败，界面可检查 `isError`，并用同一组变量重试，例如再次提交上面的 April 参数。当前片段只展示 hook/cache 处理，没有渲染调用按钮。若同一报表还缓存为详情查询，更新也要覆盖或失效对应的详情 key，不能只改当前列表。服务端仍是权威来源；乐观更新只是让等待中的界面先表达用户意图。
 
-查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F)。
+查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（TanStack Query v5.90.3；React 19.3；2026-11-06）
 > - `queryKey` 标识查询，函数参数可从 QueryFunctionContext 读取 `signal`：[Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)、[Query Functions](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)，TanStack Query v5.90.3，核验日期 2026-11-06。
@@ -1144,7 +1144,7 @@ field data（现场数据）来自实际用户访问，包含设备、网络、�
 | 处理器开始后，列表迟迟没变化 | 交互的处理时长、事件处理器和框架提交工作 | 定位数据排序、组件计算或回调；只拆分确实阻塞主线程的工作 |
 | 处理器很快结束，但下一帧仍晚 | 呈现延迟、事件回调结束后的样式/布局/绘制轨迹 | 检查 DOM 规模和昂贵样式；见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) |
 | React 处理时长长 | 浏览器 Performance 录制与组件 render/commit 记录 | 用 [React Profiler](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F) 找出组件工作，再回到浏览器轨迹查看提交后的样式、布局和绘制 |
-| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#51.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) |
+| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#49.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) |
 | 图片出现时文字或按钮向下跳 | CLS 事件、缺少尺寸的图片/嵌入内容、字体替换或异步插入 | 提前保留内容空间并复现相同网络条件 |
 | 首屏按钮显示了但点击无反馈 | 脚本是否已完成初始化，或处理器是否被主线程工作挡住 | 分清“已经看见”与“事件可处理”；HTML 脚本调度边界见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) |
 
@@ -3214,7 +3214,7 @@ Object.hasOwn(record, "toString"); // false
 
 规范要求 `Map`、`Set` 和弱集合的平均访问时间相对集合大小为次线性，但不规定具体哈希表或常数时间实现。总体成本还取决于外围算法：如果过滤 n 个数组项时每次都新建同一张查找表，建表成本会被重复支付。需要比较数组去重、批量移除和排序的结果时，见[数组操作怎样处理空位与复制？](#29.%20JavaScript%20%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%A9%BA%E4%BD%8D%E3%80%81%E4%BF%AE%E6%94%B9%E4%B8%8E%E5%A4%8D%E5%88%B6%EF%BC%9F)。
 
-普通 `Map` 强持有键和值，`Set` 强持有成员，直到删除条目或集合自身不再可达。对象实例的元数据若不应延长键对象寿命，可考虑 `WeakMap`（弱映射）；它不提供遍历、`size` 或确定的清理时间，详见[弱集合与弱引用能保证什么？](#39.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
+普通 `Map` 强持有键和值，`Set` 强持有成员，直到删除条目或集合自身不再可达。对象实例的元数据若不应延长键对象寿命，可考虑 `WeakMap`（弱映射）；它不提供遍历、`size` 或确定的清理时间，详见[弱集合与弱引用能保证什么？](#37.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 > [!info]- 来源
 > - Map / Set 的插入顺序、SameValueZero 和集合运算：[ECMAScript 2026 §24.1–24.2](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)。
@@ -3433,7 +3433,7 @@ Array.of(3); // [3]：参数本身作为元素
 Array.of(1, 2, 3); // [1, 2, 3]
 ~~~
 
-类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#43.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#41.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
 
 ### 复制数组只复制一层
 
@@ -3723,71 +3723,13 @@ deepCopy(extendedArray).note; // "extra"
 > - 对象属性读取（包括 getter 执行）及反序列化：[WHATWG HTML Living Standard §2.7.4](https://html.spec.whatwg.org/multipage/structured-data.html#structuredserializeinternal) 与 [§2.7.7 StructuredDeserialize](https://html.spec.whatwg.org/multipage/structured-data.html#structureddeserialize)。
 > - `Date.prototype.getTime()` 的时间值读取：[ECMAScript 2026 §21.4.4.23](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-date.prototype.gettime)。
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
-## 31. How do var, let, and const differ? / var、let 与 const 有什么区别？
+## 31. JavaScript 作用域与闭包如何保留状态？
 
-**Core answer / 核心回答：** Choose a declaration by its scope and whether its binding must be reassigned. var is function-scoped and starts as undefined when its binding is created. let and const are block-scoped and cannot be read before their declaration initializes them. const prevents rebinding; it does not freeze an object. / 根据作用域和是否需要重新绑定来选择声明方式。var 是函数作用域，绑定创建时初值为 undefined。let 和 const 是块级作用域，声明初始化前不可访问。const 禁止重新绑定，但不会冻结对象。
+标识符查找从当前 lexical environment（词法环境）开始，沿函数定义处的环境向外进行；调用者的局部变量不会插入这条链。closure（闭包）让函数在外层调用结束后仍可读取自己使用的 name binding（名称绑定）及其当前值。先看名称查找路径，再追踪闭包状态如何与调用时的 this 分开。
 
-| Behavior / 行为 | var | let | const |
-|---|---|---|---|
-| Scope / 作用域 | Function scope; top-level behavior depends on script, module, or host / 函数作用域；顶层由脚本、模块或宿主决定 | Lexical block / 词法块 | Lexical block / 词法块 |
-| Before declaration / 声明前访问 | Binding exists and is initialized to undefined / 绑定已建立并初始化为 undefined | Temporal Dead Zone; access throws / 暂时性死区，访问会抛错 | Temporal Dead Zone; access throws / 暂时性死区，访问会抛错 |
-| Same-scope redeclaration / 同作用域重复声明 | Often allowed for var / 通常允许 | Syntax error / 语法错误 | Syntax error / 语法错误 |
-| Reassignment / 重新赋值 | Allowed / 允许 | Allowed / 允许 | Binding cannot be reassigned / 绑定不能重新赋值 |
-| Initializer required / 是否必须初始化 | No / 否 | No / 否 | Yes / 是 |
+### 名称查找沿函数的定义位置进行
 
-### How scope and initialization differ / 作用域与初始化的差异
-
-A var declaration belongs to the nearest function scope. An if or for block does not create a separate var binding. Its binding is initialized to undefined when the environment is created, but the initializer expression still runs at its written position. / var 属于最近的函数作用域，if 或 for 块不会为它创建独立绑定。环境创建时该绑定会初始化为 undefined，但初始化表达式仍在代码写出的位置执行。
-
-~~~javascript
-function example() {
-  console.log(value); // undefined
-  if (true) {
-    var value = 10;
-  }
-  console.log(value); // 10
-}
-~~~
-
-let and const belong to the nearest lexical block, including if, switch, loops, and a standalone brace block. Their bindings are established with the block but remain in the Temporal Dead Zone until declaration evaluation. The precise description is not “they are never hoisted”; it is that they cannot be accessed before initialization. / let 和 const 属于最近的词法块，包括 if、switch、循环和独立代码块。进入代码块时绑定已经建立，但在声明执行前仍处于暂时性死区。准确说法不是“它们不会提升”，而是初始化前不能访问。 See MDN’s [let reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let) for the temporal-dead-zone behavior.
-
-~~~javascript
-{
-  // console.log(count); // ReferenceError: still in the TDZ
-  let count = 1;
-}
-
-const settings = { theme: "light" };
-settings.theme = "dark"; // allowed: the object can still mutate
-// settings = {};        // TypeError: the binding cannot be reassigned
-~~~
-
-At the top level, a classic browser script, an ES module, and a Node module have different environments. In a classic browser script, global var can create a property on the global object, while top-level let and const create global lexical bindings instead. Do not apply that script behavior to modules. / 经典浏览器脚本、ES 模块和 Node 模块的顶层环境不同。在经典浏览器脚本中，全局 var 可在全局对象上创建属性；顶层 let 和 const 则创建全局词法绑定。不要把脚本行为套用到模块。
-
-Across hosts, globalThis refers to the current global object. A browser window normally provides window on the main thread, while workers have their own global object. In a classic browser script, the difference between global var and lexical bindings is observable through window: / 跨宿主访问当前全局对象时可使用 globalThis。浏览器主线程通常提供 window，worker 则有自己的全局对象。在经典浏览器脚本中，可通过 window 观察全局 var 与词法绑定的区别：
-
-~~~html
-<script>
-  var scriptVar = 'global object property';
-  let scriptBinding = 'global lexical binding';
-
-  console.log(window.scriptVar);     // 'global object property'
-  console.log(window.scriptBinding); // undefined
-</script>
-~~~
-
-See MDN on the [global object](https://developer.mozilla.org/en-US/docs/Glossary/Global_object) for the host boundary.
-
-The binding rules for var, let, and const are specified in [ECMAScript statements and declarations](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html); the environment model, including [module environment records](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records), is described in [ECMAScript execution contexts](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html). For how outer lexical environments form the name-lookup chain and how a closure continues to access a binding, see [Scope and Closure / 作用域与闭包](#32.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F). / var、let、const 的绑定规则见 [ECMAScript 语句与声明](https://tc39.es/ecma262/2025/multipage/ecmascript-language-statements-and-declarations.html)；包括[模块环境记录](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html#sec-module-environment-records)在内的环境模型见 [ECMAScript 执行上下文](https://tc39.es/ecma262/2025/multipage/executable-code-and-execution-contexts.html)。外层词法环境如何形成名称查找链、闭包如何继续访问绑定，见[作用域与闭包](#32.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F)。
-## 32. How do lexical scope and closures preserve access to state? / 词法作用域与闭包如何保留对状态的访问？
-
-**Core answer / 核心回答：** JavaScript resolves a name from the function’s definition environment outward, not from its caller. A closure is a function that keeps access to bindings from that lexical environment. It reads the binding’s current value, so state can remain observable after the outer call returns. / JavaScript 按函数的定义环境向外查找名称，不按调用者的位置查找。闭包让函数继续访问定义时外层词法环境中的绑定；它读取绑定的当前值，因此外层函数返回后状态仍可被观察。
-
-### How name lookup follows lexical structure / 名称查找如何沿词法结构进行
-
-An identifier lookup starts in the current lexical environment and continues through its enclosing environments. The caller’s local variables are not inserted into a function’s lookup chain. Execution contexts and lexical environment records are the specification model for this behavior; engines need not allocate objects with those exact names or shapes. / 标识符先在当前词法环境中查找，再逐层向外查找。调用者的局部变量不会插入被调用函数的查找链。执行上下文和词法环境记录是规范描述这种行为的模型；引擎不必创建名称和结构完全相同的对象。
-
-See the [ECMAScript execution-context and environment-record specification](https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html). / 详见 [ECMAScript 执行上下文与环境记录规范](https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html)。
+函数不会查找调用者的局部变量。它先查自己的词法环境，再查定义位置外层的环境。调用者仍可传入参数和 `this`，但不会因此成为被调用函数的词法外层作用域。
 
 ~~~javascript
 const label = "global";
@@ -3809,73 +3751,111 @@ function callFromElsewhere() {
 callFromElsewhere(); // ["outer", "inner"]
 ~~~
 
-inner finds its own detail, then outer’s label, and only then could reach the global environment. The caller’s label is irrelevant. / inner 先找到自己的 detail，再找到 outer 的 label，之后才可能到达全局环境；caller 的 label 不参与查找。
+`inner` 先找到自己的 `detail`，再找到 `outer` 的 `label`；调用者的 `label` 不在这条查找链上。规范用 execution context（执行上下文）和 environment record（环境记录）描述这套行为，引擎不必创建名称和结构完全相同的对象。
 
-~~~mermaid
-flowchart LR
-  inner["inner environment: detail"] --> outer["outer environment: label"]
-  outer --> global["global environment"]
-  caller["caller environment: label"] -. "not part of lookup chain" .-> inner
-~~~
+### 声明方式决定绑定范围与初始化时机
 
-### What a closure retains / 闭包保留了什么
-
-A closure is a function together with its access to the lexical bindings it uses. It does not copy the value present when the function was created. / 闭包是函数及其对所用词法绑定的访问能力；创建函数时的值不会被定格为一份副本。 MDN’s [closure guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures) demonstrates this behavior. / MDN 的[闭包指南](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures)展示了这一行为。
+`var` 是 function-scoped（函数作用域）。函数环境准备时，其绑定会初始化为 `undefined`；赋值表达式仍在声明出现的位置执行。`if` 等代码块不会为 `var` 创建独立绑定。
 
 ~~~javascript
-function makeReader() {
-  let state = "before";
-  const read = () => state;
-  state = "after";
-  return read;
+function readBeforeAssignment() {
+  console.log(status); // undefined
+  if (true) {
+    var status = "ready";
+  }
+  return status; // "ready"
+}
+~~~
+
+`let` 和 `const` 是 block-scoped（块级作用域）。代码块环境创建时，绑定已经建立，但声明初始化前不可访问；这段时间称为 temporal dead zone（暂时性死区）。普通 `const` 声明必须带初始化式并禁止重新绑定；`for...in` 和 `for...of` 头部的 `const` 则由每轮取出的值初始化。`const` 不会冻结对象。
+同一词法作用域中，`var` 名称可以重复声明；重复声明同名 `let` 或 `const` 会产生语法错误。`let` 可以不写初始化值，此时初始化为 `undefined`。
+
+~~~javascript
+{
+  // console.log(count); // ReferenceError：仍处于暂时性死区
+  let count = 1;
 }
 
-const readState = makeReader();
-readState(); // "after"
+const options = { theme: "light" };
+options.theme = "dark"; // 允许：对象仍可修改
+// options = {};        // TypeError：const 绑定不能重新赋值
 ~~~
 
-Each call to makeReader creates a distinct state binding. Several returned functions can intentionally share one binding, which is useful for private state. / 每次调用 makeReader 都会创建独立的 state 绑定。多个返回函数也可以有意共享一个绑定，从而形成私有状态。
+绑定本身不会重新赋值时用 `const`，会重新赋值时用 `let`；维护依赖函数作用域的旧代码时才需要 `var`。经典浏览器脚本与 ES 模块、Node.js 模块有不同的顶层环境：经典脚本的顶层 `var` 可以成为全局对象属性，顶层 `let`、`const` 则是全局词法绑定。跨宿主访问当前 Realm（执行域）的全局 `this` 值可用 `globalThis`。浏览器主线程提供 `window` 接口；worker 有自己的 `WorkerGlobalScope`，Node.js 模块也有自己的模块环境。不要把经典脚本规则套用到模块。
+
+~~~html
+<script>
+  var scriptValue = "global object property";
+  let scriptBinding = "global lexical binding";
+
+  window.scriptValue; // "global object property"
+  window.scriptBinding; // undefined
+</script>
+~~~
+
+### 闭包保留绑定，而不是冻结快照
+
+每次调用工厂函数都会创建自己的绑定。工厂返回后，返回函数仍可让这些绑定保持可达；之后读取时看到的是同一绑定上最新的值。
 
 ~~~javascript
-function makeCounter() {
-  let count = 0;
+function makeCounter(start) {
+  let value = start;
+  return () => value++;
+}
+
+const first = makeCounter(10);
+const second = makeCounter(-2);
+[first(), first(), first()];   // [10, 11, 12]
+[second(), second(), second()]; // [-2, -1, 0]
+~~~
+
+同一次调用返回的多个闭包可以共享一个绑定。计数器对象中的 `increment`、`decrement` 和 `reset` 可以共同访问一个 `current` 值；`reset` 将同一绑定恢复到初始输入，而不是创建新计数器。
+
+~~~javascript
+function createCounter(init) {
+  let current = init;
   return {
-    increment() { count++; return count; },
-    decrement() { count--; return count; },
-    value() { return count; },
+    increment() { return ++current; },
+    decrement() { return --current; },
+    reset() { return current = init; },
   };
 }
 
-const counter = makeCounter();
-counter.increment(); // 1
-counter.increment(); // 2
-counter.count;       // undefined: count is not an object property
+const counter = createCounter(5);
+[counter.increment(), counter.reset(), counter.decrement()]; // [6, 5, 4]
 ~~~
 
-A function factory can retain a parameter to specialize later calls. Event callbacks similarly retain values from the registration call. / 函数工厂可以保留参数，让后续调用使用专门化的函数。事件回调也会保留注册回调时所在环境中的值。
+### 报表处理器把闭包状态与调用时接收者结合起来
+
+案例背景：报表服务创建处理器时捕获 `tag` 和 `calls`；每次调用都会更新同一个 `calls` 绑定。`this` 是另一种输入，由调用形式提供；[函数 this 与绑定](#33.%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E7%94%B1%E4%BB%80%E4%B9%88%E5%86%B3%E5%AE%9A%EF%BC%9F) 继续说明它如何随方法调用和 `bind` 传递。
 
 ~~~javascript
-function multiplyBy(factor) {
-  return number => number * factor;
-}
-const double = multiplyBy(2);
-const triple = multiplyBy(3);
-double(5); // 10
-triple(5); // 15
-
-function attachLogger(elementId, label) {
-  document.getElementById(elementId).addEventListener("click", () => {
-    console.log("Clicked: " + label);
-  });
+function makeReportHandler(tag) {
+  let calls = 0;
+  return function onReport(report) {
+    "use strict";
+    calls += 1;
+    return this.format(report, tag, calls);
+  };
 }
 
-attachLogger("btn1", "primary");
-attachLogger("btn2", "secondary");
+const service = {
+  prefix: "Sales",
+  format(report, tag, sequence) {
+    return `${this.prefix}/${tag}: ${report.title} #${sequence}`;
+  },
+  onReport: makeReportHandler("daily"),
+};
+
+service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #1"
+service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #2"
 ~~~
 
-### Why loop callbacks differ / 循环回调为什么读到不同值
+`tag` 和 `calls` 是词法状态；`this.prefix`、`this.format` 则通过调用时的接收者解析。处理器闭包保存前者，但它的 `this` 并未固定为某个 `service` 对象。
 
-A var loop has one function-scoped binding, so deferred callbacks read its final value. A let loop creates a per-iteration binding, so each callback retains the value for its iteration. / var 循环使用一个函数级绑定，延后执行的回调会读到它的最终值。let 循环为每次迭代创建绑定，因此回调保留各自迭代中的值。
+### 循环回调需要符合预期数量的绑定
+
+`var` 循环复用一个函数作用域绑定，延后执行的回调都会读到最终值。`let` 循环每轮创建一个绑定，各回调就能读到各自迭代时的值。
 
 ~~~javascript
 const fromVar = [];
@@ -3888,7 +3868,7 @@ fromVar.map(fn => fn()); // [3, 3, 3]
 fromLet.map(fn => fn()); // [0, 1, 2]
 ~~~
 
-An IIFE can introduce a separate parameter binding in legacy var code, but modern code normally expresses the intended per-iteration binding directly with let. / 旧式 var 代码可用 IIFE 为每轮引入独立参数绑定；现代代码通常直接用 let 表达每轮独立绑定的意图。
+旧式 `var` 代码可用 Immediately Invoked Function Expression（IIFE，立即调用函数表达式）为每轮创建参数绑定；`let` 可以直接表达这种意图。
 
 ~~~javascript
 const callbacks = [];
@@ -3900,71 +3880,201 @@ for (var index = 0; index < 3; index++) {
 callbacks.map(fn => fn()); // [0, 1, 2]
 ~~~
 
-### How closure lifetime relates to memory / 闭包生命周期与内存有何关系
+### 工厂函数专门化行为，回调保留捕获值
 
-An outer call returning does not make a captured binding immediately unusable. As long as a reachable closure can observe it, the program must preserve the behavior. This does not mean every variable in the entire outer scope must occupy memory forever; implementations can optimize unobservable values. / 外层调用返回并不意味着捕获的绑定立即失效。只要可达闭包仍能观察它，程序就必须保留可观察行为；但这不表示外层作用域中的所有变量都必然永久占用内存，引擎可以优化不可观察的值。
-
-Think in terms of reachability: a long-lived listener that closes over a large object can keep that object reachable. Remove the listener and other references when their lifetime ends. A cycle alone is not a leak; MDN discusses [closure performance considerations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#performance_considerations); the important question is whether a path from live program state still reaches the objects. For garbage-collection models and diagnostics, see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F). / 从可达性判断更实用：长期保存的监听器若闭包捕获大型对象，就可能让对象继续可达。生命周期结束时移除监听器及其他引用。循环引用本身不等于泄漏，关键是活动程序状态是否仍有到这些对象的引用路径。垃圾回收模型与排查见[事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
-
-**See also:** [JavaScript Basics / JavaScript 基础](#31.%20How%20do%20var,%20let,%20and%20const%20differ?%20/%20var%E3%80%81let%20%E4%B8%8E%20const%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) explains the binding and temporal-dead-zone rules that determine which environment a closure can capture. Ordinary function this is determined by call form, not lexical name lookup; see [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
-## 33. How do JavaScript objects find and organize properties? / JavaScript 对象如何查找和组织属性？
-
-**Core answer / 核心回答：** An object first checks its own properties, then follows its internal prototype link until a match or the end of the chain. Constructor prototypes supply a default prototype to instances created with new, while instance fields, prototype methods, static members, and property descriptors control where properties live and how they behave. / 对象先查自有属性，再沿内部原型链接向上查找，直到找到匹配属性或到达链尾。构造函数的 prototype 为 new 创建的实例提供默认原型；实例字段、原型方法、静态成员和属性描述符决定属性的位置与行为。
-
-### How prototype lookup works / 原型查找如何工作
-
-An ordinary object has an internal `[[Prototype]]` value, which may be null. If a property is missing from the object, lookup continues along this chain. Use Object.getPrototypeOf and Object.create when the chain must be inspected or created explicitly. / 普通对象有一个内部 `[[Prototype]]` 值，也可能为 null。对象上找不到属性时，查找会沿原型链继续。需要显式检查或创建原型链时，使用 Object.getPrototypeOf 和 Object.create。
-
-Many constructible functions have an own property named prototype. When that value is an object, new uses it as the prototype for the created instance. It is distinct from Function.prototype, which function objects themselves normally inherit through their own internal prototype link. Arrow functions and methods are not constructible and do not have an own prototype property. The legacy __proto__ accessor is inherited from Object.prototype; prefer Object.getPrototypeOf. / 许多可构造函数有名为 prototype 的自有属性；若该值为对象，new 会把它用作新实例的原型。它不同于 Function.prototype，后者通常是函数对象自身通过内部原型链接继承的对象。箭头函数和方法不可构造，也没有自有 prototype 属性。历史访问器 __proto__ 从 Object.prototype 继承而来；优先使用 Object.getPrototypeOf。
+闭包也可以保留工厂参数，返回专门化后的函数。
 
 ~~~javascript
-function Person(name) {
-  this.name = name;
+function add(x) {
+  return function (y) {
+    return x + y;
+  };
 }
-Person.prototype.greet = function () {
-  return "Hello, " + this.name;
+
+const addFive = add(5);
+addFive(3); // 8
+~~~
+
+~~~javascript
+function attachLogger(elementId, label) {
+  document.getElementById(elementId).addEventListener("click", () => {
+    console.log("Clicked: " + label);
+  });
+}
+
+const loggerButton = document.createElement("button");
+loggerButton.id = "btn1";
+document.body.append(loggerButton);
+attachLogger("btn1", "primary");
+~~~
+
+延后调度的回调可以在多帧之间保留动画参数和计时状态。此例要求 `duration` 为正；每帧都会通过同一个闭包读取 `start`、`element`、`from` 和 `to`。
+
+~~~javascript
+function animate(element, from, to, duration) {
+  const start = performance.now();
+
+  function update() {
+    const elapsed = performance.now() - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const value = from + (to - from) * progress;
+    element.style.left = value + "px";
+
+    if (progress < 1) requestAnimationFrame(update);
+  }
+
+  requestAnimationFrame(update);
+}
+
+const animatedElement = document.createElement("div");
+animatedElement.textContent = "报表已更新";
+animatedElement.style.position = "relative";
+document.body.append(animatedElement);
+animate(animatedElement, 0, 100, 1000); // 约一秒内从 0px 移到 100px
+~~~
+
+`style.left` 对普通静态定位元素不起偏移作用。本例使用 `position: relative`，改变盒子的绘制位置，同时保留它原本在正常流中占据的位置。
+
+
+### 闭包生命周期取决于可达性
+
+外层调用返回后，返回函数仍能观察捕获的绑定。这是行为保证，不表示引擎会把所有局部变量永久存入环境对象。长期存在的事件监听器可能通过闭包让数据保持可达；生命周期结束时应移除监听器和其他引用。循环引用本身不足以造成泄漏，关键在于活动程序状态是否仍能到达这些数据。
+
+**相关机制：** [对象与原型](#32.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%B1%9E%E6%80%A7%E5%B9%B6%E7%BB%84%E7%BB%87%E6%88%90%E5%91%98%EF%BC%9F) 将同一报表处理器放入构造出的 service 实例，并说明它如何从原型取得 `format`。
+
+
+> [!info]- 来源
+> - var、let、const 的作用域和初始化时机：[ECMAScript 2026 Let and Const Declarations](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-let-and-const-declarations)（§14.3.1）；执行上下文与词法环境：[Execution Contexts](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-execution-contexts)（§9.4）。
+> - 闭包对词法环境的引用：[ECMAScript Function Objects](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ecmascript-function-objects)（§10.2）。
+> - 全局 `this` 值与脚本、模块、worker 环境：[ECMAScript globalThis](https://tc39.es/ecma262/2026/multipage/global-object.html#sec-globalthis)、[WHATWG HTML script element](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)、[WHATWG HTML worker global scope](https://html.spec.whatwg.org/multipage/workers.html#the-global-scope)、[Node.js CommonJS modules](https://nodejs.org/api/modules.html) 和 [Node.js ECMAScript modules](https://nodejs.org/api/esm.html)；浏览器事件回调：[WHATWG DOM addEventListener](https://dom.spec.whatwg.org/#dom-eventtarget-addeventlistener)；逐帧回调：[WHATWG HTML requestAnimationFrame](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe)；计时 API：[W3C High Resolution Time performance.now](https://www.w3.org/TR/hr-time-3/#dom-performance-now)。
+## 32. JavaScript 对象如何查找属性并组织成员？
+
+普通对象读取属性时，own property（自有属性）先于继承属性；若没有找到，语言会沿 `[[Prototype]]` 链继续查找。构造函数的 prototype 属性用于建立实例原型，函数对象自身的原型链则是另一条关系。property descriptor（属性描述符）说明属性保存一个值，还是在读取或写入时执行 getter/setter。
+
+### 属性查找沿原型链进行
+
+读取 `object.key` 时先检查自有属性。若没有匹配项，普通对象会沿原型链继续查找，直到找到属性或到达 `null`。`Object.hasOwn` 只检查自有属性；`in` 还会检查继承属性。
+
+~~~javascript
+const base = { kind: "report" };
+const record = Object.create(base);
+record.title = "Q4";
+
+Object.hasOwn(record, "title"); // true
+Object.hasOwn(record, "kind");  // false
+"kind" in record;               // true
+Object.getPrototypeOf(record) === base; // true
+~~~
+
+内部 `[[Prototype]]` 链接不是名为 `prototype` 的属性。许多可构造函数有自有的 `prototype` 属性，`new` 会用它作为实例的默认原型。函数对象自身则通过另一个内部链接继承，通常指向 `Function.prototype`。箭头函数和简洁方法不能用 `new` 调用，也没有自有 `prototype` 属性。需要检查原型时优先使用 `Object.getPrototypeOf`，而不是旧式 `__proto__` 访问器。
+
+### 报表服务把实例状态与共享行为分开
+
+案例背景：每个 `service` 都有独立的 `prefix` 和处理器。原型上只有一个共享的 `format` 方法。调用 `service.onReport` 会把 `service` 作为 `this`；处理器仍持有工厂创建的 `tag` 和 `calls` 绑定。
+
+~~~javascript
+function makeReportHandler(tag) {
+  let calls = 0;
+  return function onReport(report) {
+    "use strict";
+    calls += 1;
+    return this.format(report, tag, calls);
+  };
+}
+
+function ReportService(prefix) {
+  this.prefix = prefix;                         // 自有数据属性
+  this.onReport = makeReportHandler("daily"); // 自有函数属性，带有闭包状态
+}
+
+ReportService.prototype.format = function (report, tag, sequence) {
+  return this.prefix + "/" + tag + ": " + report.title + " #" + sequence;
 };
 
-const ada = new Person("Ada");
-ada.greet(); // "Hello, Ada"
-Object.getPrototypeOf(ada) === Person.prototype; // true
-Object.getPrototypeOf(Person.prototype) === Object.prototype; // true
-Object.getPrototypeOf(Object.prototype); // null
+const service = new ReportService("Sales");
+service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #1"
+service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #2"
+Object.hasOwn(service, "format"); // false；查找会沿原型找到 ReportService.prototype.format
+Object.getPrototypeOf(service) === ReportService.prototype; // true
 ~~~
 
-Object.create lets code choose a prototype directly. A null-prototype object has no inherited toString method, which can be useful for dictionaries. / Object.create 可直接选择原型。null 原型对象没有继承 toString 方法，可用于字典。
+`service.prefix` 和 `service.onReport` 是自有属性，`service.format` 则从共享原型查找。这里 `ReportService` 函数的自有 `prototype` 对象成为实例的原型；它与函数对象自身的原型链不是同一概念。
 
-~~~javascript
-const ordinary = {};
-Object.getPrototypeOf(ordinary) === Object.prototype; // true
-
-const custom = Object.create({ greet: "hello" });
-custom.greet; // inherited value
-
-const dictionary = Object.create(null);
-dictionary.toString; // undefined
-~~~
-
-The old Object.prototype.__proto__ accessor is a legacy, normative-optional feature in ECMAScript. / ECMAScript 将旧版 Object.prototype.__proto__ 访问器标记为历史且规范可选的特性，见[规范](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object.prototype.__proto__)。
-
-### Where instance, prototype, and static properties live / 实例、原型与静态属性分别在哪里
-
-A function assigned inside a constructor becomes an own function property on each instance. A prototype method is found through the shared prototype. Class methods are placed on the prototype; class instance fields create own properties; static members belong to the class constructor itself. Choose based on state, identity, and behavior rather than assuming one placement is always faster. / 在构造函数中赋值的函数会成为每个实例上的自有函数属性；原型方法则通过共享原型查找。class 方法放在原型上，实例字段创建自有属性，静态成员属于 class 构造函数本身。应按状态、身份和行为选择，不要假设某一种布局总是更快。
+`class` 语法同样将成员放在不同位置：实例字段创建自有属性，普通方法与访问器放在 class 原型上，静态成员属于 class 构造函数。
 
 ~~~javascript
 class User {
-  label = "member";                // own instance field
-  greet() { return "Hi"; }         // shared prototype method
-  static category = "account";     // property on the class constructor
+  label = "member";                         // 实例自有字段
+  get displayLabel() { return this.label; } // 原型上的访问器
+  greet() { return "Hi"; }                  // 原型上的共享方法
+  static category = "account";              // 构造函数上的属性
 }
 
 const user = new User();
-Object.hasOwn(user, "label");      // true
-Object.hasOwn(user, "greet");      // false
-Object.hasOwn(User, "category");   // true
+Object.hasOwn(user, "label"); // true
+Object.hasOwn(user, "greet"); // false
+Object.hasOwn(Object.getPrototypeOf(user), "displayLabel"); // true
+Object.hasOwn(User, "category"); // true
 ~~~
 
-Own properties are checked before inherited ones; an own value can shadow a prototype method. Static properties on the constructor are not part of an instance’s prototype lookup. / 自有属性先于继承属性查找；自有值可以遮蔽原型方法。构造函数上的静态属性不属于实例的原型查找链。
+### 属性描述符决定读写是否执行代码
+
+属性描述符分为保存值和可写标记的数据描述符，以及包含 getter/setter 的访问器描述符。两类描述符都有 `enumerable` 与 `configurable` 标记。使用 `Object.defineProperty` 新建属性时，未提供的标记默认为 `false`。更新同类型描述符时，未提供的字段保留原值；只有可配置属性才能在数据描述符与访问器描述符之间切换；切换时，旧类型专有字段会移除，新类型专有字段按默认值创建，但未提供的 `enumerable` 与 `configurable` 等共同字段仍保留。对象字面量中的普通数据属性默认可写、可枚举且可配置。
+
+| 字段 | 作用 |
+|---|---|
+| `value`、`writable` | 存储值，以及赋值能否修改它 |
+| `get`、`set` | 读取或写入时调用的函数 |
+| `enumerable` | `Object.keys` 等只列出自有、可枚举的字符串键；`for...in` 还会沿原型链遍历可枚举字符串键 |
+| `configurable` | 通常能否删除或重新配置 |
+
+~~~javascript
+const profile = { _name: "John" };
+Object.defineProperty(profile, "name", {
+  get() { return this._name; },
+  set(value) { this._name = value; },
+  enumerable: true,
+  configurable: true,
+});
+
+profile.name;        // "John"；读取时调用 getter
+profile.name = "Jo"; // 调用 setter
+profile._name;       // "Jo"
+~~~
+
+更新描述符时，只有提供的字段会改变；从数据描述符切换为访问器描述符，或反向切换时，专属于旧类型的字段会消失。
+
+~~~javascript
+const descriptorDemo = {};
+Object.defineProperty(descriptorDemo, "item", {
+  value: 1, writable: true, enumerable: true, configurable: true,
+});
+
+Object.defineProperty(descriptorDemo, "item", { value: 2 });
+const sameType = Object.getOwnPropertyDescriptor(descriptorDemo, "item");
+[sameType.value, sameType.writable, sameType.enumerable, sameType.configurable];
+// [2, true, true, true]
+
+Object.defineProperty(descriptorDemo, "item", { get() { return 3; } });
+const switchedToAccessor = Object.getOwnPropertyDescriptor(descriptorDemo, "item");
+[descriptorDemo.item, typeof switchedToAccessor.get, switchedToAccessor.set,
+  switchedToAccessor.enumerable, switchedToAccessor.configurable];
+// [3, "function", undefined, true, true]
+
+Object.defineProperty(descriptorDemo, "item", { value: 4 });
+const switchedToData = Object.getOwnPropertyDescriptor(descriptorDemo, "item");
+[switchedToData.value, switchedToData.writable,
+  switchedToData.enumerable, switchedToData.configurable];
+// [4, false, true, true]
+
+Object.defineProperty(descriptorDemo, "fresh", { value: 1 });
+const fresh = Object.getOwnPropertyDescriptor(descriptorDemo, "fresh");
+[fresh.writable, fresh.enumerable, fresh.configurable]; // [false, false, false]
+~~~
+
+getter 是会执行的代码：读取属性可能产生副作用、抛错或继续读取其他属性。若 getter 是继承来的，读取时的接收者会成为它的 `this`；当读取经过 Proxy 时，这点很重要。setter 可以校验或规范写入。严格代码向不可写属性或只有 getter 的访问器赋值会抛出 `TypeError`；非严格代码中写入可能静默失败。
+
+实例上的自有属性会先于同名原型方法找到。构造函数上的静态属性不属于实例的查找链。
 
 ~~~javascript
 function Example() {
@@ -3976,134 +4086,154 @@ Example.value = function () { return 4; };
 
 Example.value(); // 4
 const instance = new Example();
-instance.value(); // 2: own property shadows the prototype method
-Example.value(); // 1: constructor body replaced the static property
+instance.value(); // 2：自有属性遮蔽原型方法
+Example.value(); // 1：构造函数体替换了静态属性
 ~~~
 
-### How property descriptors affect reads and writes / 属性描述符如何影响读写
-
-Own properties have attributes. A data property stores a value and may be writable; an accessor property uses getter and setter functions. Both kinds also have enumerable and configurable attributes. Object.defineProperty sets them explicitly. / 自有属性有属性特征。数据属性保存值并可设置是否可写；访问器属性通过 getter 和 setter 函数读写。两种属性都有 enumerable 和 configurable 特征，可由 Object.defineProperty 显式设置。
-
-| Attribute / 特征 | Meaning / 含义 |
-|---|---|
-| value | Stored value / 存储值 |
-| writable | Whether assignment may change a data property / 赋值是否能修改数据属性 |
-| get / set | Functions used when reading or writing an accessor property / 访问器属性读写时调用的函数 |
-| enumerable | Included in own-enumerable key APIs; for...in also walks the prototype chain / 自有可枚举键 API 会包含；for...in 还遍历原型链 |
-| configurable | Whether the property can generally be deleted or reconfigured / 通常能否删除或重新配置 |
+`Object.create(null)` 会创建一个没有原型、也不会继承 `toString` 的字典对象。
 
 ~~~javascript
-const record = {};
-Object.defineProperty(record, "id", {
-  value: 7,
-  writable: false,
-  enumerable: true,
-  configurable: false
-});
-Object.getOwnPropertyDescriptor(record, "id");
-// { value: 7, writable: false, enumerable: true, configurable: false }
+const dictionary = Object.create(null);
+dictionary.toString; // undefined
 ~~~
 
-A setter can validate or normalize writes; a getter can compute a read. Assignment to a non-writable property is ignored in sloppy code and throws in strict code. / setter 可校验或规范写入值；getter 可在读取时计算。非严格代码对不可写属性的赋值会被忽略，严格模式则会抛错。
+V8 的隐藏对象形状及转换可以优化属性访问，但这是实现选择，不是 ECMAScript 保证；只有性能分析确认存在瓶颈时才应调整属性布局。
+
+**相关机制：** [函数 `this` 与绑定](#33.%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E7%94%B1%E4%BB%80%E4%B9%88%E5%86%B3%E5%AE%9A%EF%BC%9F) 说明方法调用如何提供接收者；[使用 `new` 构造对象](#34.%20JavaScript%20%E7%9A%84%20new%20%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%EF%BC%9F) 跟进实例原型的选择；[Proxy 代理对象](#35.%20JavaScript%20%E7%9A%84%20Proxy%20%E5%A6%82%E4%BD%95%E6%8B%A6%E6%88%AA%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C%EF%BC%9F) 解释被拦截的读取、getter 与写入。
+
+
+> [!info]- 来源
+> - 自有属性、原型查找与访问器 `receiver`：[ECMAScript OrdinaryGet](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryget)（§10.1.8.1）。
+> - 描述符定义和默认属性标记：[ECMAScript Object.defineProperty](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.defineproperty)（§20.1.2.4）。
+> - `Object.prototype.__proto__` 是规范标记为 Normative Optional（规范可选）和 Legacy（遗留）的特性：[ECMAScript 2026 Object.prototype.__proto__](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.prototype.__proto__)（§20.1.3.8）。
+> - V8 的隐藏对象形状与属性访问优化：[V8 Fast Properties](https://v8.dev/blog/fast-properties)。
+## 33. JavaScript 函数的 `this` 值由什么决定？
+
+调用 ordinary function（普通函数）时，调用形式提供 receiver（接收者），而被调用函数自身的严格性决定是否转换它：strict function（严格函数）的普通裸调用收到 `undefined`，sloppy function（非严格函数）会把它换成全局对象。方法调用使用点号前的对象，`call` 和 `apply` 可以立即指定接收者，`bind` 会创建保存接收者的新函数。arrow function（箭头函数）没有自己的 `this` 绑定，而是读取定义位置的外层值。
+
+### 严格模式会改变部分调用行为
+
+Strict mode（严格模式）会把部分历史代码中的错误转为异常，并改变普通函数调用收到 `this` 的方式。严格函数的普通裸调用中 `this` 为 `undefined`；非严格函数会把 `null` 或 `undefined` 替换为全局对象，并将原始值接收者装箱，即使调用它的代码本身是严格代码。ES 模块和 class 函数体自动采用严格模式。严格模式不是安全沙箱，也不会让 `eval` 变安全。
 
 ~~~javascript
-const profile = { _name: "John" };
-Object.defineProperty(profile, "name", {
-  get() { return this._name; },
-  set(value) { this._name = value; },
-  enumerable: true,
-  configurable: true
-});
-
-profile.name; // "John"
-profile.name = "Jo";
-profile._name; // "Jo"
-~~~
-
-### Which object shapes are engine-specific / 哪些对象形状细节属于引擎实现
-
-V8 uses HiddenClasses (also called Maps) to track object shapes and optimize property access. Objects initialized with the same named properties in the same order can share a shape in V8. This is an implementation detail, not an ECMAScript guarantee; optimize layouts only when profiling identifies a real cost. / V8 使用 HiddenClasses（也称 Maps）跟踪对象形状并优化属性访问。在 V8 中，以相同顺序初始化相同命名属性的对象可能共享形状。这是实现细节，不是 ECMAScript 保证；只有性能分析发现实际成本时才优化布局。
-
-See [Fast properties in V8](https://v8.dev/blog/fast-properties). For how a call supplies this and how new creates an instance, see [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F) and [Construction with new / 使用 new 构造对象](#35.%20What%20does%20new%20do%20when%20it%20constructs%20an%20object?%20/%20new%20%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%E6%97%B6%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F).
-## 34. How does a JavaScript function get its this value? / JavaScript 函数的 this 值如何确定？
-
-**Core answer / 核心回答：** An ordinary function gets its this value from the call form: obj.method() supplies obj, call/apply supply an explicit receiver, and bind creates a bound function. A plain strict-function call uses undefined. An arrow function instead captures this from its surrounding lexical environment and cannot be rebound. / 普通函数的 this 由调用方式决定：obj.method() 以 obj 为接收者，call/apply 显式提供接收者，bind 创建绑定函数；严格函数的普通调用中 this 为 undefined。箭头函数从外层词法环境捕获 this，不能重新绑定。
-
-### Ordinary calls supply the receiver / 普通调用形式提供接收者
-
-~~~javascript
-const service = {
-  url: "/data",
-  fetch() { return this.url; }
-};
-
-service.fetch(); // "/data"
-const detached = service.fetch;
-detached(); // TypeError in strict code; it no longer has service as its receiver
-~~~
-
-In sloppy code, a plain call substitutes the host’s global this value. In a browser classic script that is generally window; Node module wrappers have their own top-level conventions. Strict mode, ES modules, and class bodies use strict semantics. / 非严格代码中的普通调用会把 this 替换为宿主全局值；浏览器经典脚本中通常为 window，Node 模块包装器另有顶层约定。严格模式、ES 模块和 class 函数体使用严格语义。
-
-### Explicit receiver methods / 显式接收者方法
-
-call invokes immediately with separate arguments; apply invokes immediately with an argument list; bind creates a new function with a bound receiver and leading arguments. / call 使用分开的参数立即调用；apply 使用参数列表立即调用；bind 创建一个绑定接收者和前置参数的新函数。
-
-~~~javascript
-function describe(prefix, name) {
-  return prefix + " " + name + " (" + this.role + ")";
+function strictPlainCall() {
+  "use strict";
+  return this;
 }
 
-describe.call({ role: "admin" }, "Hello", "Ada");
-describe.apply({ role: "admin" }, ["Hello", "Ada"]);
-const greetAdmin = describe.bind({ role: "admin" }, "Hello");
-greetAdmin("Ada"); // "Hello Ada (admin)"
+strictPlainCall(); // undefined
+
+function writeUndeclaredName() {
+  "use strict";
+  undeclaredName = 1;
+}
+
+try {
+  writeUndeclaredName();
+} catch (error) {
+  error.name; // "ReferenceError"
+}
 ~~~
 
-If a bound function is called with new, its bound receiver is ignored, but its leading arguments remain in effect. Arrow functions have no own this or arguments, are not constructible with new, and do not have an own prototype property. call, apply, or bind cannot replace an arrow’s lexical this. Use method syntax when the method needs its object as this; use an arrow when lexical capture is intentional. / 绑定函数通过 new 调用时会忽略已绑定的接收者，但保留前置参数。箭头函数没有自己的 this 或 arguments，不能通过 new 构造，也没有自有 prototype 属性。call、apply 和 bind 都不能替换箭头函数捕获的 this。方法需要对象作为 this 时使用方法语法；确实需要词法捕获时使用箭头函数。
+`"use strict"` 指令可以写在经典脚本或函数体开头。严格代码中给未声明名称赋值会抛出 `ReferenceError`；给不可写属性赋值会抛出 `TypeError`，而不是静默忽略。其他差异包括禁止 `with`、旧式八进制字面量和严格函数中的重复形参。
+
+### 调用形式为报表处理器提供接收者
+
+案例背景：本章在本地建立一份新的报表服务和新的处理器，避免依赖前一页的调用状态。处理器先递增闭包计数，再通过调用时的 `this` 查找 `format`：
 
 ~~~javascript
-const counter = {
-  value: 1,
-  read() { return this.value; },
-  readArrow: () => this.value // captures surrounding this, not counter
+function makeReportHandler(tag) {
+  let calls = 0;
+  return function onReport(report) {
+    "use strict";
+    calls += 1;
+    return this.format(report, tag, calls);
+  };
+}
+
+const service = {
+  prefix: "Sales",
+  format(report, tag, sequence) {
+    return this.prefix + "/" + tag + ": " + report.title + " #" + sequence;
+  },
+  onReport: makeReportHandler("daily"),
 };
+
+service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #1"
+
+const detached = service.onReport;
+let detachedError;
+try {
+  detached({ title: "Q4" });
+} catch (error) {
+  detachedError = error.name;
+}
+detachedError; // "TypeError"
+
+service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #3"
 ~~~
 
-A host API can supply a receiver when it invokes a callback. The DOM calls an ordinary event listener with this set to event.currentTarget; an arrow keeps its surrounding this, so use the event property explicitly. See the [WHATWG DOM listener-invocation algorithm](https://dom.spec.whatwg.org/#concept-event-listener-invoke) and [DOM event propagation / DOM 事件传播](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) for the surrounding event contract. / 宿主 API 调用回调时也可提供接收者。DOM 调用普通事件监听器时会把 this 设为 event.currentTarget；箭头函数保留外层 this，因此应显式读取事件属性。详见 [WHATWG DOM 监听器调用算法](https://dom.spec.whatwg.org/#concept-event-listener-invoke)及 [DOM 事件传播](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F)中的相关契约。
+`service.onReport` 作为方法调用时，`service` 是接收者。赋给 `detached` 后，函数值不再带有点号前的对象，严格模式下 `this` 为 `undefined`。失败调用仍先执行 `calls += 1`，所以闭包计数已经从 1 变为 2；下一次成功调用返回 `#3`。词法状态与调用接收者分别由闭包和调用形式决定。
+
+### `call`、`apply` 与 `bind` 的调用时机不同
+
+`call` 立即调用并接收分开的实参；`apply` 立即调用并接收类数组实参列表；`bind` 返回一个供以后调用的新函数。
 
 ~~~javascript
-const button = document.querySelector("button"); // assume a button exists
+function describe(prefix, report) {
+  "use strict";
+  return this.prefix + ": " + prefix + " " + report.title;
+}
+
+const report = { title: "Q4" };
+describe.call(service, "Ready", report);          // "Sales: Ready Q4"
+describe.apply(service, ["Ready", report]);       // "Sales: Ready Q4"
+const boundDescribe = describe.bind(service, "Ready");
+boundDescribe(report);                            // "Sales: Ready Q4"
+~~~
+
+`call`、`apply` 会把指定的 `thisArg` 传给函数调用；接收者是否转换取决于函数自身是否严格。`bind` 把接收者和前置参数保存在绑定函数中。绑定函数通过 `new` 调用时会忽略已保存的接收者，但仍使用前置参数。只拼接实参与 `apply` 的普通包装函数不会自动具备原生绑定函数的构造行为或 `name`、`length` 等元数据。
+
+### 箭头函数与宿主回调遵循不同规则
+
+箭头函数没有自己的 `this` 绑定、`arguments` 对象或 `prototype` 属性，也不能用 `new` 构造。它的 `this` 来自外层词法环境；`call`、`apply`、`bind` 都不能替换它。希望接收对象成为 `this` 时使用普通方法；确实需要词法捕获时使用箭头函数。
+
+~~~javascript
+const panel = {
+  title: "Q4",
+  read() { return this.title; },
+  readArrow: () => this.title, // 读取外层 this；panel 不会成为接收者
+};
+
+panel.read(); // "Q4"
+panel.readArrow(); // 结果取决于外层 this；panel 不会提供它
+~~~
+
+宿主调用回调时也能指定接收者。DOM 事件监听器算法会让普通监听器的 `this` 指向 `event.currentTarget`；箭头函数仍使用外层 `this`，因此应从事件对象显式读取目标。
+
+~~~javascript
+const button = document.createElement("button");
+document.body.append(button);
+
 button.addEventListener("click", function (event) {
   this === event.currentTarget; // true
 });
 button.addEventListener("click", event => {
-  event.currentTarget === button; // true: arrow this is not the listener receiver
+  event.currentTarget === button; // true
 });
 ~~~
 
-Lexical name lookup and lexical this are separate ideas: closures capture outer bindings, while an ordinary function’s this depends on its invocation. See [Scope and Closure / 作用域与闭包](#32.%20How%20do%20lexical%20scope%20and%20closures%20preserve%20access%20to%20state?%20/%20%E8%AF%8D%E6%B3%95%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E5%AF%B9%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%BF%E9%97%AE%EF%BC%9F).
+### 临时属性调用辅助函数只覆盖有限契约
 
-### Why a small bind helper is not a polyfill / 简化 bind 模型为何不是 polyfill
-
-This helper illustrates partial application for an object receiver. Native bind also handles constructor calls, constructibility, and function metadata. / 这个辅助函数演示对象接收者上的部分应用；原生 bind 还处理构造调用、可构造性和函数元数据。
-
-~~~javascript
-function bindForObjectReceiver(fn, receiver, ...leadingArgs) {
-  return function (...laterArgs) {
-    return fn.apply(receiver, [...leadingArgs, ...laterArgs]);
-  };
-}
-~~~
-
-A temporary property can also show how method-call syntax supplies this. This limited example only accepts an extensible object receiver; it does not model primitive receivers, proxies, strict/sloppy conversion, or every exceptional case. Use the built-ins in application code. / 临时属性也能展示方法调用如何提供 this。这个有限示例只接受可扩展对象接收者，不能模拟原始值接收者、代理、严格/非严格转换或所有异常情况。应用代码应使用内置方法。
+临时 Symbol 属性可用来演示 `object.method()` 为何会把对象作为 `this`。它无法复现内置方法对原始值、不可扩展接收者、代理、所有访问器或所有异常路径的处理。向 `Function.prototype` 添加自定义方法还会修改共享内置对象，因此这只是练习，不是应用代码。
 
 ~~~javascript
 function callWithObjectReceiver(fn, receiver, ...args) {
   if (receiver === null ||
       (typeof receiver !== "object" && typeof receiver !== "function")) {
-    throw new TypeError("This example requires an object receiver");
+    throw new TypeError("This exercise requires an object receiver");
   }
-  const key = Symbol("temporary method");
+  const key = Symbol("temporary call");
   Object.defineProperty(receiver, key, { value: fn, configurable: true });
   try {
     return receiver[key](...args);
@@ -4113,54 +4243,168 @@ function callWithObjectReceiver(fn, receiver, ...args) {
 }
 ~~~
 
-Ordinary function call behavior is specified by ECMAScript’s [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call), [Function.prototype.apply](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.apply), [Function.prototype.bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind), and [arrow-function definitions](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions). / 普通函数调用行为见 ECMAScript 的 [Function.prototype.call](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.call)、[Function.prototype.apply](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.apply)、[Function.prototype.bind](https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-function.prototype.bind) 和[箭头函数定义](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions)。
-## 35. What does new do when it constructs an object? / new 构造对象时做了什么？
+即使被调用函数抛错，`finally` 仍会清理临时键。归档中的 `myApply` 练习用 `Array.prototype.slice.call` 转换类数组，把 `null`、`undefined` 当成空列表，再委托给范围受限的 `myCall`；因此对没有实参的 `arguments` 调用会得到 `0`。
 
-**Core answer / 核心回答：** For a constructible function, new creates a receiver whose prototype comes from the constructor’s effective prototype, calls the constructor with that receiver as this, then returns an explicit object or function result if supplied. A primitive return is ignored. / 对可构造函数，new 会创建一个原型取自构造函数有效 prototype 的接收者，以它作为 this 调用构造函数；若构造函数显式返回对象或函数，则返回该值，否则返回新接收者。原始值返回会被忽略。
+<details>
+<summary>归档练习：范围受限的 myCall 与 myApply</summary>
 
-~~~mermaid
-flowchart LR
-  A["Read effective constructor prototype"] --> B["Create receiver with that prototype"]
-  B --> C["Call constructor with receiver as this"]
-  C --> D{"Did it return an object or function?"}
-  D -- "yes" --> E["Return explicit result"]
-  D -- "no: undefined or primitive" --> F["Return created receiver"]
-~~~
-
-### Constructor and instance relationship / 构造函数与实例的关系
+这个练习用临时 Symbol 属性制造方法调用语法，只接受对象或函数接收者。apply 版本把 nullish 实参列表当作空列表，并复制其他类数组输入；它不模拟原始值接收者转换，也不覆盖所有 Proxy 和异质对象行为。
 
 ~~~javascript
-function Person(name) {
-  this.name = name;
-}
-Person.prototype.greet = function () {
-  return "Hello, " + this.name;
+Function.prototype.myCall = function (context, ...args) {
+  if (context === null ||
+      (typeof context !== "object" && typeof context !== "function")) {
+    throw new TypeError("This exercise requires an object receiver");
+  }
+  const key = Symbol("temporary call");
+  Object.defineProperty(context, key, { value: this, configurable: true });
+  try {
+    return context[key](...args);
+  } finally {
+    delete context[key];
+  }
 };
 
-const ada = new Person("Ada");
-ada.greet(); // "Hello, Ada"
-Object.getPrototypeOf(ada) === Person.prototype; // true
+Function.prototype.myApply = function (context, args) {
+  const list = args == null ? [] : Array.prototype.slice.call(args);
+  return this.myCall(context, ...list);
+};
+
+const receiver = { base: 10 };
+function sum(a, b) { return this.base + a + b; }
+
+sum.myCall(receiver, 1, 2); // 13
+(function () { return arguments.length; }).myApply(receiver, []); // 0
 ~~~
 
-The prototype used for an instance is the constructor’s object-valued prototype property, not Function.prototype. If its prototype value is not an object, the language falls back to the appropriate intrinsic prototype; the exact fallback depends on the constructor’s realm. The specification’s [GetPrototypeFromConstructor](https://tc39.es/ecma262/2025/multipage/ordinary-and-exotic-objects-behaviours.html#sec-getprototypefromconstructor) accepts any object-valued prototype, including a function. / 实例所用原型来自构造函数的对象类型 prototype 属性，不是 Function.prototype。若该属性不是对象，语言会回退到相应内置原型；具体回退取决于构造函数所在 realm。规范的 [GetPrototypeFromConstructor](https://tc39.es/ecma262/2025/multipage/ordinary-and-exotic-objects-behaviours.html#sec-getprototypefromconstructor) 接受任何对象类型的 prototype，包括函数。
+唯一 Symbol 可避免与字符串键冲突；即使目标抛错，`finally` 也会清理临时属性。修改 `Function.prototype` 只用于练习，应用代码应使用内置方法。
 
-### Object returns replace the created receiver / 返回对象会替换新建接收者
+</details>
+
+
+**相关机制：** [JavaScript 对象如何查找属性？](#32.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%B1%9E%E6%80%A7%E5%B9%B6%E7%BB%84%E7%BB%87%E6%88%90%E5%91%98%EF%BC%9F) 解释属性查找和 getter；[使用 `new` 构造对象](#34.%20JavaScript%20%E7%9A%84%20new%20%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明绑定函数构造时为何忽略已绑定的 `this`。
+
+
+> [!info]- 来源
+> - 严格模式和普通调用的 this 绑定：[ECMAScript 2026 Strict Mode Code](https://tc39.es/ecma262/2026/multipage/ecmascript-language-source-code.html#sec-strict-mode-code)、[Function Calls](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-function-calls) 和 [OrdinaryCallBindThis](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinarycallbindthis)（§10.2.1.2）。
+> - 显式接收者与绑定函数：[ECMAScript Function.prototype.call](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function.prototype.call)、[Function.prototype.apply](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function.prototype.apply) 和 [Function.prototype.bind](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function.prototype.bind)；箭头函数：[Arrow Function Definitions](https://tc39.es/ecma262/2026/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions)。
+> - DOM 普通事件监听器的接收者：[WHATWG DOM Event Listener Invocation](https://dom.spec.whatwg.org/#concept-event-listener-invoke)。
+## 34. JavaScript 的 `new` 如何构造对象？
+
+执行 `new` 时，JavaScript 先要求目标可构造，再调用目标的 `[[Construct]]` 内部方法。下面流程图只概括普通基类构造器：它创建 receiver（接收者）并运行函数体，通常依据 `newTarget.prototype` 选择新接收者的原型；显式返回对象或函数可以替换它，返回原始值则保留新接收者。派生 `class` 构造器有额外规则，后文单独说明。
+
+~~~mermaid
+flowchart TD
+  A["确认目标可构造"] --> B["按 new.target 选择原型"]
+  B --> C["创建并初始化接收者"]
+  C --> D["运行构造函数体"]
+  D --> E{"是否返回对象或函数？"}
+  E -- "是" --> F["采用显式返回值"]
+  E -- "否：原始值或 undefined" --> G["采用新建的接收者"]
+~~~
+
+派生 `class` 构造器可以不调用 `super()` 而直接返回对象；显式返回除 `undefined` 外的原始值会抛出 `TypeError`。
+
+### 报表服务使用构造出的接收者
+
+案例背景：下面在本页定义新的构造器、实例字段和原型方法。新实例的 `prefix` 与 `onReport` 是自有属性；`format` 在原型上共享，处理器则捕获独立的 `tag` 和 `calls`：
+
+~~~javascript
+function makeReportHandler(tag) {
+  let calls = 0;
+  return function onReport(report) {
+    "use strict";
+    calls += 1;
+    return this.format(report, tag, calls);
+  };
+}
+
+function ReportService(prefix) {
+  this.prefix = prefix;
+  this.onReport = makeReportHandler("daily");
+}
+
+ReportService.prototype.format = function (report, tag, sequence) {
+  return this.prefix + "/" + tag + ": " + report.title + " #" + sequence;
+};
+
+const service = new ReportService("Sales");
+Object.getPrototypeOf(service) === ReportService.prototype; // true
+service.prefix; // "Sales"
+service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #1"
+~~~
+
+`new ReportService("Sales")` 会依据 `ReportService.prototype` 建立接收者，再以该接收者执行构造器。处理器由本页新建，因此第一次成功调用的计数从 1 开始；原型方法从实例接收者读取 `prefix`。
+
+### 构造器返回值可能替换接收者
+
+返回原始值不会替换实例，返回对象或函数则会替换。此规则适用于普通构造器；`class` 对派生构造器的返回值另有约束。
 
 ~~~javascript
 function ReturnsPrimitive() {
   this.created = true;
   return 1;
 }
-new ReturnsPrimitive(); // the new object with created: true
+new ReturnsPrimitive().created; // true
 
 function ReturnsObject() {
   this.ignored = true;
   return { replacement: true };
 }
 new ReturnsObject(); // { replacement: true }
+
+function ReturnsFunction() {
+  return function replacement() {};
+}
+typeof new ReturnsFunction(); // "function"
+
+class FactoryReport extends ReportService {
+  constructor(prefix) {
+    return new ReportService(prefix); // 可直接返回对象，不必调用 super()
+  }
+}
+new FactoryReport("North").prefix; // "North"
+
+class InvalidDerivedReport extends ReportService {
+  constructor() {
+    return 1; // 派生构造器不能返回非 undefined 原始值
+  }
+}
+try {
+  new InvalidDerivedReport();
+} catch (error) {
+  error.name; // "TypeError"
+}
+
+function Parent() {}
+function Child() {}
+Child.prototype = Parent; // 函数本身也是对象，可用作原型
+Object.getPrototypeOf(new Child()) === Parent; // true
 ~~~
 
-A teaching model for ordinary constructors from the current realm makes the main steps visible. It is not a full polyfill for classes, bound functions, built-ins, proxies, or new.target. / 以下普通当前 realm 构造函数教学模型展示主要步骤；它不是 class、绑定函数、内置构造器、代理或 new.target 的完整 polyfill。
+### `new.target` 标识本次构造目标
+
+普通调用中 `new.target` 为 `undefined`；构造调用中它标识本次 `new` 的目标。派生 class 的基类构造器会看到派生构造器作为 `new.target`。派生 class 必须先调用 `super()` 才能访问 `this`，因为基类构造过程负责建立接收者。
+
+~~~javascript
+class RegionalReportService extends ReportService {
+  constructor(prefix) {
+    super(prefix);
+    this.createdBy = new.target;
+  }
+}
+
+const regional = new RegionalReportService("Sales");
+regional.createdBy === RegionalReportService; // true
+Object.getPrototypeOf(regional) === RegionalReportService.prototype; // true
+regional.onReport({ title: "Q4" }); // "Sales/daily: Q4 #1"
+~~~
+
+`class` 构造器不能脱离 `new` 调用；箭头函数和简洁方法完全不可构造。若目标函数可构造，绑定函数也可构造；构造时忽略绑定的 `this`，但保留绑定的前置参数。
+
+### 简化的 `new` 模型有有限输入范围
+
+下面的教学模型只覆盖当前 `Realm`（执行域）的普通构造函数。它不实现 class、绑定函数、内置构造器、Proxy 的 `construct` trap、跨 realm 回退或全部 `new.target` 规则。标准构造在无效 `newTarget.prototype` 时会回退到该 `newTarget` 所属 realm 的内建原型；此模型限定在当前 realm，因而使用当前的 `Object.prototype`。应用代码应使用 `new`、class 语法或 `Reflect.construct`。
 
 ~~~javascript
 function emulateNew(fn, ...args) {
@@ -4179,91 +4423,371 @@ function emulateNew(fn, ...args) {
 }
 ~~~
 
-The helper also models a function-valued prototype, because functions are objects and are accepted as prototype objects by Object.create and the constructor operation. / 该辅助函数也能处理函数类型的 prototype，因为函数是对象，Object.create 与构造算法都接受函数作为原型对象。
+该模型接受函数类型的 prototype，因为函数是对象；它也保留原始值与对象返回值的区别，但 `fn.apply` 无法调用 class 构造器。
+
+**相关机制：** [Proxy 代理对象](#35.%20JavaScript%20%E7%9A%84%20Proxy%20%E5%A6%82%E4%BD%95%E6%8B%A6%E6%88%AA%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C%EF%BC%9F) 说明目标可构造时代理如何保留这项能力，以及 `construct` trap 的返回值边界。
+
+
+> [!info]- 来源
+> - new 表达式转入目标的 `[[Construct]]`：[ECMAScript 2026 EvaluateNew](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-evaluatenew)（§13.3.5.1.1）。
+> - 普通函数的构造流程和返回值：[ECMAScript Function Objects Construct](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ecmascript-function-objects-construct-argumentslist-newtarget)（§10.2.2）；原型及 realm 回退：[GetPrototypeFromConstructor](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-getprototypefromconstructor)（§10.1.14）。
+> - class 和派生构造器：[ECMAScript Class Definitions](https://tc39.es/ecma262/2026/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions)（§15.7）。
+## 35. JavaScript 的 `Proxy` 如何拦截对象操作？
+
+Proxy（代理对象）把 target（目标对象）与 handler（处理器）配对。经代理执行读取、赋值等操作时，对应 trap（拦截方法）可以观察或改变操作；未定义 trap 时默认按目标对象执行。Reflect（反射 API）转发操作并保留 receiver 语义，但 trap 仍须遵守固定属性的不变量。
+
+### 报表处理器只观察经过代理的操作
+
+案例背景：本页新建一个构造器、实例和处理器。先用直接读取 `target[property]` 的代理观察继承 getter，再用 `Reflect.get` 显示 receiver（接收者）为何会改变 getter 内部读取是否经过代理；最后追踪方法调用的日志来源：
 
 ~~~javascript
-function CallablePrototype() {}
-function Example() {}
-Example.prototype = CallablePrototype;
-const example = emulateNew(Example);
-Object.getPrototypeOf(example) === CallablePrototype; // true
-~~~
+function makeReportHandler(tag) {
+  let calls = 0;
+  return function onReport(report) {
+    "use strict";
+    calls += 1;
+    return this.format(report, tag, calls);
+  };
+}
 
-Class constructors have semantics beyond ordinary functions, including restrictions on how they are called; see the [ECMAScript class-definition rules](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions). Built-in constructors also have additional construction semantics, so use new or class syntax in application code rather than this teaching helper. For property lookup and the roles of instance, prototype, and static members, see [Objects and Prototypes / 对象与原型](#33.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F). / class 构造器拥有普通函数所没有的语义，包括调用方式限制；详见 [ECMAScript 类定义规则](https://tc39.es/ecma262/2025/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions)。内置构造器也有额外构造语义，因此应用代码应使用 new 或 class 语法，而不是此教学辅助函数。属性查找及实例、原型、静态成员的作用见[对象与原型](#33.%20How%20do%20JavaScript%20objects%20find%20and%20organize%20properties?%20/%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%92%8C%E7%BB%84%E7%BB%87%E5%B1%9E%E6%80%A7%EF%BC%9F)。
-## 36. How does JavaScript Proxy intercept object operations? / JavaScript Proxy 如何拦截对象操作？
+function ReportService(prefix) {
+  this.prefix = prefix;
+  this.onReport = makeReportHandler("daily");
+}
 
-**Core answer / 核心回答：** A Proxy pairs a target object with a handler. When code operates through the proxy, matching handler traps can intercept reads, writes, deletion, membership checks, and other operations; Reflect methods forward an operation with its normal semantics. Proxy is a JavaScript runtime feature, not a TypeScript type feature. / Proxy 将目标对象与 handler 配对。代码通过代理执行操作时，对应 trap 可拦截读取、写入、删除、成员检查等行为；Reflect 方法可按正常语义转发操作。Proxy 是 JavaScript 运行时功能，不是 TypeScript 类型特性。
+ReportService.prototype.format = function (report, tag, sequence) {
+  return this.prefix + "/" + tag + ": " + report.title + " #" + sequence;
+};
 
-~~~javascript
-const handler = {
+Object.defineProperty(ReportService.prototype, "label", {
+  configurable: true,
+  get() {
+    return this.prefix + " reports";
+  },
+});
+
+const service = new ReportService("Sales");
+const direct = new Proxy(service, {
+  get(target, property) {
+    console.log("direct get", String(property));
+    return target[property];
+  },
+});
+
+const observed = new Proxy(service, {
   get(target, property, receiver) {
-    console.log("read", property);
+    console.log("get", String(property));
     return Reflect.get(target, property, receiver);
   },
   set(target, property, value, receiver) {
-    console.log("write", property);
+    console.log("set", String(property));
+    if (property === "prefix" && typeof value !== "string") {
+      throw new TypeError("prefix must be a string");
+    }
     return Reflect.set(target, property, value, receiver);
-  }
-};
+  },
+});
 
-const data = new Proxy({ count: 0 }, handler);
-data.count;    // logs "read", then returns 0
-data.count = 1; // logs "write", then updates the target
+direct.label;
+// 记录 direct get label；返回 "Sales reports"，getter 的 this 是 target
+
+observed.label;
+// 记录 get label、get prefix；getter 的 this 是 observed
+
+observed.onReport({ title: "Q4" });
+// 记录 get onReport、get format、get prefix
+// 返回 "Sales/daily: Q4 #1"
+
+observed.prefix = "Ops"; // 记录 set prefix
+observed.onReport({ title: "Q4" }); // "Ops/daily: Q4 #2"
 ~~~
 
-Typical uses include reactive state, validation, and instrumentation. A proxy only observes operations that pass through it; a retained reference to the original target can bypass its traps. A proxy can intercept later-added properties, unlike defining a getter for each known property, but the object’s invariants and compatibility requirements still matter. / 常见用途包括响应式状态、校验和测量。代理只能观察经由代理执行的操作；若代码保留原始 target 的引用，就能绕过这些 trap。代理可以拦截后来添加的属性，而逐个定义 getter 做不到，但仍须考虑对象不变量和兼容性。
+直接代理的 `direct.label` 只触发 `direct get label`：求值 `target[property]` 时，继承 getter 的 `this` 是原始 target，所以 getter 读取 `this.prefix` 不再经过代理。`Reflect.get(target, property, receiver)` 显式把代理作为 getter 的接收者，因此 `observed.label` 还会触发 `get prefix`。
 
-Vue 2 used property getters and setters for reactivity; Vue 3 uses proxies for reactive objects. This is an example of framework implementation, not a guarantee that every reactive system needs Proxy. / Vue 2 使用属性 getter 和 setter 实现响应式；Vue 3 的响应式对象使用代理。这是框架实现示例，不代表所有响应式系统都必须使用 Proxy。
+方法日志则来自另一个机制。`observed.onReport(...)` 是方法调用，返回的处理器以 `observed` 为 `this`；它读取 `this.format` 时触发 `get format`，`format` 再读取 `this.prefix` 时触发 `get prefix`。即使 trap 用直接的 `target[property]` 返回这个方法，调用表达式仍会把 `observed` 作为 `this`。若代码保留原始 `service` 引用，就能绕过代理。代理也有独立身份：`observed !== service`。Proxy 是 JavaScript 运行时对象特性，不是 TypeScript 类型特性。
 
-Vue 2 used property getters and setters for reactivity, while Vue 3 uses proxies for reactive objects. See [Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth). This framework example does not imply that every reactive system needs Proxy. / Vue 2 使用属性 getter 和 setter 实现响应式，Vue 3 则对响应式对象使用代理。详见 [Vue 响应式原理](https://vuejs.org/guide/extras/reactivity-in-depth)。框架示例不意味着所有响应式系统都必须使用 Proxy。
+### trap 必须保留属性操作的可观察语义
 
-See [ECMAScript Proxy objects](https://tc39.es/ecma262/2025/multipage/proxy-object.html) for trap invariants and [Reflect](https://tc39.es/ecma262/2025/multipage/reflection.html) for forwarding operations.
-## 37. How does currying support partial application? / 柯里化如何支持部分应用？
+getter 会在读取时执行代码，不是被动存储的值。若 trap 直接求值 `target[property]`，继承的 getter 会以 `target` 为 `this`。使用 `Reflect.get(target, property, receiver)` 转发会保留 `receiver`，因此 getter 对其他属性的读取也能经过代理观察。`Reflect.set` 同样接收 `receiver`，并返回布尔值。
 
-**Core answer / 核心回答：** Currying transforms a function that accepts several arguments into a sequence of calls. Supplying fewer than the expected arguments returns another function; later calls complete the argument list. This supports partial application, but the arity rule must match the function’s contract. / 柯里化把接收多个参数的函数转换为一系列调用。参数不足时返回新函数，后续调用补齐参数，实现部分应用；但元数判断规则必须符合函数契约。
+若 `set` trap 返回 `false`，非严格赋值可能静默失败，严格赋值会抛出 `TypeError`。返回 `true` 也不能让 trap 违背 `target` 的某些固定属性。
 
-This compact implementation uses fn.length as arity and supports ordinary positional functions. Default parameters, rest parameters, placeholders, and other arity conventions need a different contract. / 这个简化实现用 fn.length 作为元数，仅支持普通位置参数函数。默认参数、剩余参数、占位符及其他元数约定需要另外定义。
+~~~javascript
+const rejected = new Proxy({ prefix: "Sales" }, {
+  set() { return false; },
+});
+
+Reflect.set(rejected, "prefix", "Ops"); // false
+rejected.prefix; // "Sales"
+(function () {
+  "use strict";
+  rejected.prefix = "Ops"; // TypeError：set trap 报告写入失败
+})();
+~~~
+
+Proxy invariant（代理不变量）禁止 trap 对不可配置的 `target` 属性报告矛盾结果。例如，`get` trap 不能为不可配置且不可写的自有数据属性返回其他值；对应的不可配置访问器若没有 getter，则必须返回 `undefined`。`set` trap 不能谎报对固定不可写属性的修改成功，也不能谎报对不可配置且没有 setter 的访问器写入成功。违反约束会抛出 `TypeError`。
+
+~~~javascript
+const fixed = Object.freeze({ id: 7 });
+const inconsistent = new Proxy(fixed, {
+  get(target, property, receiver) {
+    if (property === "id") return 8;
+    return Reflect.get(target, property, receiver);
+  },
+});
+
+inconsistent.id; // TypeError：不能用 8 代替固定值 7
+~~~
+
+一个高层操作可能触发多个 trap。例如 `array.push(value)` 会写入数组索引，并更新 `length`。校验或记录写入时，应覆盖需要观察的每个操作。
+
+归档中的校验示例用数字属性演示读写：读取和写入都会被记录，无效写入则在转发前抛错。因此 Proxy 会改变可观察行为，不是透明的性能优化。
+
+~~~javascript
+const product = new Proxy({ price: 10 }, {
+  get(target, property, receiver) {
+    console.log("read", String(property));
+    return Reflect.get(target, property, receiver);
+  },
+  set(target, property, value, receiver) {
+    console.log("write", String(property));
+    if (property === "price" && (!Number.isFinite(value) || value < 0)) {
+      throw new RangeError("price must be a non-negative finite number");
+    }
+    return Reflect.set(target, property, value, receiver);
+  },
+});
+
+product.price = 12; // 记录 write price 并更新目标对象
+product.price;      // 12；触发 get trap
+// product.price = -1; // 在转发写入前抛出 RangeError
+~~~
+
+
+### 可调用和可构造 target 保留相应能力
+
+Proxy 的 `target` 必须是对象。若 `target` 可调用或可构造，代理也具有相应能力；`construct` trap 必须返回对象。`Reflect.construct` 会连同参数一起转发 `newTarget`。
+
+~~~javascript
+function ReportFactory(prefix) {
+  this.prefix = prefix;
+}
+
+const tracedFactory = new Proxy(ReportFactory, {
+  construct(target, args, newTarget) {
+    console.log("construct", args[0]);
+    return Reflect.construct(target, args, newTarget);
+  },
+});
+
+const created = new tracedFactory("Finance"); // 记录 construct Finance
+created instanceof ReportFactory; // true
+~~~
+
+Vue 2 用访问器实现响应式属性，Vue 3 则对响应式对象使用 Proxy；这是框架选择的例子，不代表所有应用都必须采用其中一种。
+
+已知属性有稳定读写契约时使用访问器；需要拦截对象上的操作时再用 Proxy，例如校验之后新增的键或记录一组属性访问。Proxy 无法观察通过另行保留的 `target` 引用执行的操作。
+
+**相关机制：** [对象与原型](#32.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%B1%9E%E6%80%A7%E5%B9%B6%E7%BB%84%E7%BB%87%E6%88%90%E5%91%98%EF%BC%9F) 解释属性描述符和 getter；[使用 `new` 构造对象](#34.%20JavaScript%20%E7%9A%84%20new%20%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明代理构造和 `construct` 的边界。
+
+
+> [!info]- 来源
+> - Proxy 的 target/handler 分发、get/set 和 construct：[ECMAScript 2026 Proxy Object Internal Methods](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-proxy-object-internal-methods-and-internal-slots)（§10.5）。
+> - Proxy trap 必须遵守的对象内部方法不变量：[ECMAScript Invariants of the Essential Internal Methods](https://tc39.es/ecma262/2026/multipage/ecmascript-data-types-and-values.html#sec-invariants-of-the-essential-internal-methods)（§6.1.7.3）。
+> - getter 的 receiver 语义：[ECMAScript OrdinaryGet](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryget)（§10.1.8.1）；对应转发 API：[ECMAScript Reflect](https://tc39.es/ecma262/2026/multipage/reflection.html)（§28）。
+> - Vue 2 与 Vue 3 响应式机制的实现选择：[Vue Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth.html)。
+## 36. 函数变换如何改变调用过程？
+
+函数可以返回新函数，也可以由包装器改变一次调用的处理流程。本章沿调用过程看 rest parameter（剩余参数）、currying（柯里化）与 partial application（部分应用）、composition（组合）、decorator（装饰器）和 memoization（记忆化）：参数何时齐备、this 如何传递、返回值与异常如何处理；涉及缓存时再定义键策略。
+
+### 返回函数可以捕获状态，也可以不捕获
+
+rest parameter（剩余参数）会把所有实际传入的实参收集到数组中。显式传入 `undefined` 仍计为一个实参。返回函数只有在后续调用需要读取外层绑定时，才需要 closure（闭包）状态。
+
+~~~javascript
+function argumentsLength(...args) {
+  return args.length;
+}
+
+argumentsLength();            // 0
+argumentsLength(undefined);   // 1
+argumentsLength({}, null, 3); // 3
+
+function createHelloWorld() {
+  return (..._args) => "Hello World";
+}
+
+const hello = createHelloWorld();
+hello({}, null, 42); // "Hello World"；无需捕获状态
+~~~
+
+### 柯里化把实参分到多次调用中提供
+
+currying（柯里化）把多参数函数变为一系列调用。partial application（部分应用）先提供一部分实参，再返回等待其余实参的函数。简单位置参数函数可用 `fn.length` 作为 arity（元数）约定，但它不代表通用参数契约：默认参数会截断报告长度，rest parameter 不计入长度。占位符和可变参数函数需要另定规则。
 
 ~~~javascript
 function curry(fn) {
+  "use strict";
   return function curried(...args) {
     if (args.length >= fn.length) return fn.apply(this, args);
     return function (...next) {
-      return curried.apply(this, [...args, ...next]);
+      return curried.apply(this, args.concat(next));
     };
   };
 }
 
 const sum = (a, b, c) => a + b + c;
 const curriedSum = curry(sum);
+
 curriedSum(1)(2)(3); // 6
 curriedSum(1, 2)(3); // 6
+curriedSum(1, 2, 3); // 6
+
+function describeParts(prefix, period) {
+  return this.name + ":" + prefix + "/" + period;
+}
+
+const partial = curry(describeParts).call({ name: "first" }, "daily");
+partial.call({ name: "final" }, "Q4"); // "final:daily/Q4"
 ~~~
 
-Currying transforms argument flow; it does not change how ordinary function this is supplied. See [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F).
-## 38. What does JavaScript strict mode change? / JavaScript 严格模式会改变什么？
+这个实现会转发补足参数那次调用的接收者，不会保存第一次部分调用的接收者。达到声明元数时，它也会保留多余实参。这些都属于该辅助函数的契约。
 
-**Core answer / 核心回答：** Strict mode turns selected legacy mistakes into errors and changes some function behavior, including the this value of a plain call. ES modules and class bodies are strict automatically. It is not a security sandbox and does not make eval safe. / 严格模式会把部分历史代码中的错误变成异常，并改变一些函数行为，包括普通调用中的 this 值。ES 模块和 class 函数体自动采用严格模式。严格模式不是安全沙箱，也不会让 eval 变安全。
+### 组合把上一步输出接到下一步输入
 
-A classic script can opt in with a "use strict" directive at the start of the script; an ordinary function can opt in with a directive at the beginning of its body. An assignment to an undeclared name then throws instead of creating an accidental global. A strict plain function call receives undefined as this. / 经典脚本可在开头用 "use strict" 指令启用严格模式；普通函数也可在函数体开头启用。此时给未声明名称赋值会抛错，而不会意外创建全局变量。严格模式下普通函数调用的 this 是 undefined。
+function composition（函数组合）从右向左执行：`compose([f, g, h])(x)` 计算 `f(g(h(x)))`。函数列表为空时返回 identity function（恒等函数），也就是原样返回输入。
 
 ~~~javascript
-"use strict";
-
-undeclaredName = 1; // ReferenceError
-
-function inspectThis() {
-  return this;
+function compose(functions) {
+  return function (value) {
+    for (let i = functions.length - 1; i >= 0; i--) {
+      const step = functions[i];
+      value = step(value);
+    }
+    return value;
+  };
 }
-inspectThis(); // undefined
+
+const transform = compose([
+  value => value + 1,
+  value => value * value,
+  value => 2 + value,
+]);
+
+transform(4); // 37: 4 -> 6 -> 36 -> 37
+compose([])(42); // 42
 ~~~
 
-Other recognizable differences include rejecting with, rejecting legacy octal numeric literals and duplicate parameter names in strict functions, and throwing rather than silently ignoring some writes to non-writable properties. Class and module code is already strict, so an extra directive is unnecessary there. / 其他可识别的差异包括禁止 with、旧式八进制数字字面量和严格函数中的重复形参；对部分不可写属性的赋值也会抛错，而非静默忽略。class 和模块代码本来就是严格模式，无需额外指令。
+对 `n` 个单输入函数，每次组合调用执行 `n` 次，循环仅使用常量额外空间。若操作不可交换或带副作用，执行顺序就很重要。
 
-These rules are part of the [ECMAScript strict mode code semantics](https://tc39.es/ecma262/2025/#sec-strict-mode-code). Strict mode changes only specified language behaviors. It does not validate input or impose a security boundary. / 这些规则属于 [ECMAScript 严格模式语义](https://tc39.es/ecma262/2025/#sec-strict-mode-code)。严格模式只改变规范明确列出的语言行为，不会验证输入，也不会建立安全边界。
+循环先把步骤函数取到局部变量，再裸调用，避免把 `functions` 数组意外作为接收者。裸调用提供 `undefined` 接收者；被调用函数若为非严格函数，仍会按自身规则将其转换为全局对象。
 
-For the strict-call effect on this, see [Function this and Binding / 函数 this 与绑定](#34.%20How%20does%20a%20JavaScript%20function%20get%20its%20this%20value?%20/%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%EF%BC%9F). For value conversion, truthiness, and equality, see [JavaScript Types / JavaScript 类型](#27.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F).
-## 39. 弱集合与弱引用能保证什么？
+### 包装器转发一次调用并附加一种策略
+
+wrapper（包装器）是调用原函数并附加策略的新函数。计时 decorator（装饰器）应转发 `this` 和全部实参、返回原函数结果，并在原函数抛错时仍报告耗时。`finally` 会处理正常返回和异常完成两种情况。
+
+~~~javascript
+function withTiming(fn) {
+  "use strict";
+  return function (...args) {
+    const started = performance.now();
+    try {
+      return fn.apply(this, args);
+    } finally {
+      console.log((fn.name || "operation") + ": " +
+        (performance.now() - started) + " ms");
+    }
+  };
+}
+~~~
+
+包装器本身是严格函数，因此裸调用时收到的 `undefined` 会原样传给 `fn.apply`；被包装函数仍按自己的严格性决定如何处理它。若包装器在非严格模式下运行，裸调用时 `this` 会先变成全局对象，`apply` 就无法保留原调用的接收者语义。这个计时包装器只测同步执行时间。若 `fn` 返回 Promise，`finally` 会在 Promise 对象返回后立即运行，不会计入异步操作完成前的时间；测异步完成耗时需要按 Promise 生命周期另行包装。
+
+函数装饰器模式指用包装器增加调用策略；它与 JavaScript 或 TypeScript 的 decorator syntax（装饰器语法）不同，后者按各自约定修饰 class 元素。
+
+单次调用包装器保存一个布尔绑定。应在调用目标函数前置位，因此第一次调用即使抛错也会消耗机会。后续调用返回 `undefined`；第一次的结果或异常原样传递。
+
+~~~javascript
+function once(fn) {
+  "use strict";
+  let called = false;
+  return function (...args) {
+    if (called) return undefined;
+    called = true;
+    return fn.apply(this, args);
+  };
+}
+
+let calls = 0;
+const onlyOnce = once(function (a, b, c) {
+  calls += 1;
+  return a + b + c;
+});
+
+onlyOnce(1, 2, 3); // 6
+onlyOnce(2, 3, 6); // undefined
+calls;             // 1
+~~~
+
+若首次调用抛错，标志已经置位，因此下次不会重试目标函数。这种策略不同于“只允许一次成功调用”；包装可能失败的操作时应明确选择。
+
+~~~javascript
+let attempts = 0;
+const failOnce = once(function () {
+  attempts += 1;
+  throw new Error("failed");
+});
+
+try { failOnce(); } catch (error) { error.message; } // "failed"
+failOnce(); // undefined
+attempts;   // 1
+~~~
+
+
+TypeScript 的显式 `this` 参数只向类型检查器描述接收者，不会增加运行时实参。
+
+### 记忆化在调用前增加缓存键策略
+
+memoization（记忆化）会缓存结果。判断是否命中要检查键是否存在，而不是缓存值是否为真：`0`、`false`、`undefined` 都可能是有效结果。
+
+`LeetCode 2623` 只接受有限整数实参：`sum(a, b)` 中 `0 ≤ a, b ≤ 10^5`，`fib(n)` 和 `factorial(n)` 中 `1 ≤ n ≤ 10`。因此该题可将有序整数实参元组序列化为键；这不是任意 JavaScript number 元组的通用编码。`Map.has` 可以区分键不存在和缓存值为 `undefined`。
+
+~~~javascript
+function memoizeNumeric(fn) {
+  "use strict";
+  const cache = new Map();
+  return function (...args) {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    const result = fn.apply(this, args);
+    cache.set(key, result);
+    return result;
+  };
+}
+
+let evaluations = 0;
+const add = memoizeNumeric(function (a, b) {
+  evaluations += 1;
+  return a + b;
+});
+
+[add(2, 2), add(2, 2), add(1, 2), evaluations];
+// [4, 4, 3, 2]
+~~~
+
+序列化元组保留实参顺序，因此 `[2, 3]` 和 `[3, 2]` 是不同键，即使函数返回相同结果。超出该题的输入契约后会发生碰撞：`[NaN]` 与 `[Infinity]` 都会序列化为 `"[null]"`，`[-0]` 会序列化为 `"[0]"`；`[undefined]` 与 `[null]` 也都会序列化为 `"[null]"`。对象身份会丢失；依赖接收者的函数没有把 `this` 放入键；循环输入会在序列化时抛错。通用记忆化必须先定义实参、接收者身份、可变输入和失败结果的处理方式，再决定缓存结构。
+
+只包装 `fib` 外层调用，不会缓存原始 `fib` 函数内部直接发起的递归调用。要缓存每个子问题，递归调用也必须经过记忆化函数或共享内部缓存。
+
+**相关机制：** [函数 `this` 与绑定](#33.%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E7%94%B1%E4%BB%80%E4%B9%88%E5%86%B3%E5%AE%9A%EF%BC%9F) 解释包装器为什么用 `apply` 保留接收者；[作用域与闭包](#31.%20JavaScript%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%8A%B6%E6%80%81%EF%BC%9F) 解释 `once` 和记忆化保留的状态；[Map 与 Set](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明缓存键相等性和存在性；[TypeScript 装饰器](#46.%20Which%20TypeScript%20decorator%20mode%20does%20a%20project%20use?%20/%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F) 讲解装饰器语法。
+
+
+> [!info]- 来源
+> - 函数闭包和 length 属性：[ECMAScript Function Objects](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ecmascript-function-objects)（§10.2）、[Function length](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function-instances-length)（§20.2.4.1）。
+> - 包装器转发接收者及参数：[ECMAScript Function.prototype.apply](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function.prototype.apply)；缓存键示例中的存在检查和序列化：[Map.prototype.has](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-map.prototype.has)（§24.1.3.9）、[JSON.stringify](https://tc39.es/ecma262/2026/multipage/structured-data.html#sec-json.stringify)（§25.5.4）。
+> - 计时示例的 API：[W3C High Resolution Time performance.now](https://www.w3.org/TR/hr-time-3/#dom-performance-now)；TypeScript 显式 this 参数：[TypeScript Functions](https://www.typescriptlang.org/docs/handbook/2/functions.html#declaring-this-in-a-function)。
+> - 特定题目输入契约和作者解法仍保留在 [Memoize](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2623.%20Memoize.md)、[Function Composition](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2629.%20Function%20Composition.md)、[Allow One Function Call](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2666.%20Allow%20One%20Function%20Call.md) 和 [Return Length of Arguments Passed](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2703.%20Return%20Length%20of%20Arguments%20Passed.md)。
+## 37. 弱集合与弱引用能保证什么？
 
 报表页面关闭后，某个记录对象只应由仍在使用它的界面持有。`WeakMap`（弱映射）可以把元数据关联到对象，而不单独延长键的生命周期；`WeakRef`（弱引用）和 `FinalizationRegistry`（最终化注册表）也不能提供及时、必达的清理保证。本章先界定“弱持有”，再说明它适合与不适合承担的责任。常规 `Map`（映射）的强引用与身份键见[何时使用 Map、Set 或普通对象？](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
 
@@ -4353,16 +4877,16 @@ registry.unregister(unregisterToken); // 可显式取消这条注册
 
 因此，这些 API 适合不影响正确性的缓存提示、附加元数据或机会式清理；不适合释放文件、网络连接、锁、计费记录、UI 状态或任何要求及时发生的动作。需要确定结束时间时，由明确的所有者调用 `dispose`、`removeEventListener`、`clearInterval` 或对应的清理函数。
 
-对象仍被保留时，应找出强引用链，而不是等待最终化。堆保留路径的诊断见[对象为什么在不再有用后仍留在内存中？](#40.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E4%B8%BA%E4%BD%95%E4%BC%9A%E5%9C%A8%E4%B8%8D%E5%86%8D%E6%9C%89%E7%94%A8%E5%90%8E%E4%BB%8D%E7%95%99%E5%9C%A8%E5%86%85%E5%AD%98%E4%B8%AD%EF%BC%9F)。
+对象仍被保留时，应找出强引用链，而不是等待最终化。堆保留路径的诊断见[对象为什么在不再有用后仍留在内存中？](#38.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E4%B8%BA%E4%BD%95%E4%BC%9A%E5%9C%A8%E4%B8%8D%E5%86%8D%E6%9C%89%E7%94%A8%E5%90%8E%E4%BB%8D%E7%95%99%E5%9C%A8%E5%86%85%E5%AD%98%E4%B8%AD%EF%BC%9F)。
 
 > [!info]- 来源
 > - WeakMap / WeakSet 的键资格、弱键值关系和不可枚举约束：[ECMAScript 2026 §24.3–24.4](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)。
 > - WeakRef 目标和构造：[ECMAScript 2026 §26.1.1.1](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-weak-ref-target)；`deref()` 保活当前代码执行：[§26.1.3.2](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-weak-ref.prototype.deref)。
 > - FinalizationRegistry 注册目标、heldValue 和取消注册：[ECMAScript 2026 `FinalizationRegistry.prototype.register`](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-finalization-registry.prototype.register)；对象与注册表清理模型：[§26.2](https://tc39.es/ecma262/2026/multipage/managing-memory.html#sec-finalization-registry-objects)、[§9.9](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-weakref-processing-model)。
 > - 运行时实际核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06；核对目标构造、键资格和同步 `deref()` 行为，不以一次运行推断最终化时序。
-## 40. JavaScript 对象为何会在不再有用后仍留在内存中？
+## 38. JavaScript 对象为何会在不再有用后仍留在内存中？
 
-用户关闭报表后，如果旧结果还被全局事件处理器、计时器闭包或缓存引用，垃圾回收器仍能从程序根沿引用链找到它们。判断“业务上已过期”并不能让对象自动回收；需要断开不再需要的强引用。本章从报表监听器的保留路径解释原因，再给出诊断步骤。弱引用的语言保证见[弱集合与弱引用能保证什么？](#39.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
+用户关闭报表后，如果旧结果还被全局事件处理器、计时器闭包或缓存引用，垃圾回收器仍能从程序根沿引用链找到它们。判断“业务上已过期”并不能让对象自动回收；需要断开不再需要的强引用。本章从报表监听器的保留路径解释原因，再给出诊断步骤。弱引用的语言保证见[弱集合与弱引用能保证什么？](#37.%20%E5%BC%B1%E9%9B%86%E5%90%88%E4%B8%8E%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### 可达性是保留问题，不是对象之间是否成环
 
@@ -4429,7 +4953,7 @@ Chrome DevTools 堆快照可以显示对象到根的保留者，比较视图可�
 > - 追踪式回收、根集合和不可达对象的实现示例：[V8 “Trash talk: the Orinoco garbage collector”](https://v8.dev/blog/trash-talk)，2018-08-14；这是当时的 V8 实现说明，不代表当前所有引擎。
 > - `WeakRef` 与 `FinalizationRegistry` 不保证回收和清理时机：[ECMAScript 2026 §9.9 Processing Model](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-weakref-processing-model)。
 > - 比较堆快照、检查保留者和脱离 DOM 节点：[Chrome DevTools 官方指南 “Record heap snapshots”](https://developer.chrome.com/docs/devtools/memory-problems/heap-snapshots)，访问于 2026-11-06。
-## 41. How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？
+## 39. How do callbacks, Promises, and async functions compose asynchronous work? / 回调、Promise 与 async 函数如何组合异步任务？
 
 **Core answer / 核心回答：** A callback gives an API a function to call later. A Promise represents one future fulfillment or rejection and composes with then and catch. An async function returns a Promise, while await writes the same control flow in sequential syntax. Promise combinators coordinate already-started work; they do not cancel it. / 回调把函数交给 API 供其稍后调用。Promise 表示未来的一次成功或拒绝，并可通过 then 和 catch 组合。async 函数返回 Promise，await 用顺序语法表达同一控制流。Promise 组合方法协调已经启动的任务，但不会取消它们。
 
@@ -4488,7 +5012,7 @@ async function loadOrders(userId) {
 }
 ~~~
 
-For deciding where to recover or propagate a rejection, see [Error Handling / 错误处理](#44.%20Where%20should%20a%20JavaScript%20error%20be%20recovered%20or%20reported?%20/%20JavaScript%20%E9%94%99%E8%AF%AF%E5%BA%94%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E6%81%A2%E5%A4%8D%E6%88%96%E4%B8%8A%E6%8A%A5%EF%BC%9F).
+For deciding where to recover or propagate a rejection, see [Error Handling / 错误处理](#42.%20Where%20should%20a%20JavaScript%20error%20be%20recovered%20or%20reported?%20/%20JavaScript%20%E9%94%99%E8%AF%AF%E5%BA%94%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E6%81%A2%E5%A4%8D%E6%88%96%E4%B8%8A%E6%8A%A5%EF%BC%9F).
 
 ### Which Promise combinator fits? / 应选择哪个 Promise 组合方法？
 
@@ -4519,7 +5043,7 @@ const [users, posts] = await Promise.all([
 ]);
 ~~~
 
-for await...of consumes async iterables in order and can also adapt a synchronous iterable of Promises, awaiting each value before continuing. For independent operations, Promise.all is usually clearer. The protocol and sequential-consumption details belong to [Iterators and Generators / 迭代器与生成器](#43.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F).
+for await...of consumes async iterables in order and can also adapt a synchronous iterable of Promises, awaiting each value before continuing. For independent operations, Promise.all is usually clearer. The protocol and sequential-consumption details belong to [Iterators and Generators / 迭代器与生成器](#41.%20How%20do%20iterators%20and%20generators%20produce%20values%20on%20demand?%20/%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E5%A6%82%E4%BD%95%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%9F).
 
 ### How Promise-job order is observed / 如何观察 Promise job 顺序
 
@@ -4545,8 +5069,8 @@ Promise.resolve().then(() => console.log(1))
 // Node.js v26.11.1, CommonJS: 0, 1, 2, 3, 4
 ~~~
 
-See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering and CJS/ESM context are explained separately in the runtime note. The focused [Currying and Partial Application / 柯里化与部分应用](#37.%20How%20does%20currying%20support%20partial%20application?%20/%20%E6%9F%AF%E9%87%8C%E5%8C%96%E5%A6%82%E4%BD%95%E6%94%AF%E6%8C%81%E9%83%A8%E5%88%86%E5%BA%94%E7%94%A8%EF%BC%9F) and [Chainable Task Queue / 链式任务队列](#42.%20How%20can%20a%20chainable%20API%20queue%20delayed%20tasks?%20/%20%E9%93%BE%E5%BC%8F%20API%20%E5%A6%82%E4%BD%95%E6%8E%92%E9%98%9F%E6%89%A7%E8%A1%8C%E5%BB%B6%E5%90%8E%E4%BB%BB%E5%8A%A1%EF%BC%9F) articles preserve two code exercises from the original collection.
-## 42. How can a chainable API queue delayed tasks? / 链式 API 如何排队执行延后任务？
+See [ECMAScript Promise jobs](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-promise-objects) and the [browser event-loop standard](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops). Node queue ordering and CJS/ESM context are explained separately in the runtime note. The focused [Currying and Partial Application / 柯里化与部分应用](#36.%20%E5%87%BD%E6%95%B0%E5%8F%98%E6%8D%A2%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E8%B0%83%E7%94%A8%E8%BF%87%E7%A8%8B%EF%BC%9F) and [Chainable Task Queue / 链式任务队列](#40.%20How%20can%20a%20chainable%20API%20queue%20delayed%20tasks?%20/%20%E9%93%BE%E5%BC%8F%20API%20%E5%A6%82%E4%BD%95%E6%8E%92%E9%98%9F%E6%89%A7%E8%A1%8C%E5%BB%B6%E5%90%8E%E4%BB%BB%E5%8A%A1%EF%BC%9F) articles preserve two code exercises from the original collection.
+## 40. How can a chainable API queue delayed tasks? / 链式 API 如何排队执行延后任务？
 
 **Core answer / 核心回答：** A chainable task API can append closures to a queue and return the same builder object. Deferring the first step allows the synchronous chain to finish building before the queue starts. Each task advances the queue only after its own work completes. / 链式任务 API 可把闭包追加到队列并返回同一 builder 对象。延后首步执行可先让同步调用链构建完成；每个任务只在自身工作结束后推进队列。
 
@@ -4588,8 +5112,8 @@ new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
 
 The time unit is milliseconds. This is a teaching example, not a production queue: it does not define failure handling, cancellation, or behavior when a task never completes. / 时间单位为毫秒。这是教学示例，不是生产队列；它没有定义错误处理、取消方式或任务永不完成时的行为。
 
-For standard Promise composition, rejection propagation, and concurrency, see [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F). Timer callback scheduling is host behavior; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
-## 43. How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？
+For standard Promise composition, rejection propagation, and concurrency, see [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F). Timer callback scheduling is host behavior; see [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
+## 41. How do iterators and generators produce values on demand? / 迭代器与生成器如何按需产出值？
 
 **Core answer / 核心回答：** An iterable provides an iterator through Symbol.iterator; each iterator next() call returns an object whose done value tells the consumer whether to stop. A generator implements this protocol by pausing at yield. Async iterables provide next results asynchronously and are consumed in order with for await...of. / 可迭代对象通过 Symbol.iterator 提供迭代器；每次调用 next() 返回带 done 值的对象，用于告知消费者是否停止。生成器在 yield 处暂停，以此实现该协议。异步可迭代对象异步提供 next 结果，并由 for await...of 按序消费。
 
@@ -4599,7 +5123,7 @@ The iterable protocol exposes Symbol.iterator, which returns an iterator. The it
 
 The protocol is defined by the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration). / 协议定义见 [ECMAScript 迭代接口](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)。
 
-Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
+Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
 
 ~~~javascript
 const values = [10, 20];
@@ -4760,8 +5284,8 @@ collectInOrder([Promise.resolve("first"), Promise.resolve("second")])
   .then(values => console.log(values)); // ["first", "second"]
 ~~~
 
-See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
-## 44. Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？
+See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise aggregation and host scheduling. Browser and Node event-loop details remain in [Event Loop and Host Scheduling / 事件循环与宿主调度](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F).
+## 42. Where should a JavaScript error be recovered or reported? / JavaScript 错误应在哪一层恢复或上报？
 
 **Core answer / 核心回答：** Handle a failure at the layer with enough context to recover, add information, or report it. If the current layer cannot decide what recovery means, propagate the error. A catch that only logs and returns can silently turn failure into success; browser-global and React handlers cover specific last-resort scopes. / 应在拥有足够上下文进行恢复、补充信息或上报的层级处理错误。当前层无法决定如何恢复时，应继续传播。只记录日志后正常返回的 catch 会悄悄把失败转成成功；浏览器全局处理器和 React 边界只覆盖特定的兜底范围。
 
@@ -4825,7 +5349,7 @@ async function loadData() {
 loadData().catch(reportFailure);
 ~~~
 
-Every rejection needs an owner somewhere in the call chain. The browser’s unhandledrejection event is useful for diagnostics, but it is a late signal, not a substitute for local recovery or deliberate propagation. Host reporting and process behavior differ. See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise chain mechanics. / 每个拒绝都应由调用链某处明确负责。浏览器的 unhandledrejection 事件可用于诊断，但只是较晚的信号，不能替代本地恢复或明确传播。宿主上报和进程行为有所不同。Promise 链机制见 [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
+Every rejection needs an owner somewhere in the call chain. The browser’s unhandledrejection event is useful for diagnostics, but it is a late signal, not a substitute for local recovery or deliberate propagation. Host reporting and process behavior differ. See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) for Promise chain mechanics. / 每个拒绝都应由调用链某处明确负责。浏览器的 unhandledrejection 事件可用于诊断，但只是较晚的信号，不能替代本地恢复或明确传播。宿主上报和进程行为有所不同。Promise 链机制见 [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F)。
 
 ### What browser-global handlers cover / 浏览器全局处理器覆盖什么
 
@@ -4877,7 +5401,7 @@ class ErrorBoundary extends React.Component {
 ~~~
 
 React documentation says boundaries do not catch errors from event handlers, ordinary asynchronous callbacks, server-side rendering, or the boundary itself. Current React documentation describes an exception for errors thrown inside a transition started with the function returned by useTransition. Check the app’s React version and framework behavior. See [React Error Boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary). / React 文档说明，边界不会捕获事件处理器、普通异步回调、服务端渲染或边界自身抛出的错误。当前 React 文档列出由 useTransition 返回函数启动的 transition 中抛错的例外情况。应核对应用使用的 React 版本和框架行为，详见 [React 错误边界](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)。
-## 45. How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
+## 43. How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？
 
 **Short answer / 简答** — Treat API bodies and browser storage as untrusted runtime data. Parse into `unknown`, check syntax and shape, then construct a value whose fields match the application's type. The checker can enforce exhaustive use of that type. The parser does not establish whether a supplied role or identity claim is authorized. / 把 API 响应和浏览器存储视为不可信数据。先解析为 `unknown`，校验语法和结构，再构造与应用类型匹配的值。编译器可以检查是否处理所有受支持的类型分支。结构校验无法证明输入里的角色或身份已经获得授权。
 
@@ -4968,10 +5492,10 @@ if (valid.ok) roleLabel(valid.value.role); // "Reader"
 
 If the server introduces `editor`, the parser still rejects it until the client deliberately supports it. When you add `editor` to `Profile["role"]`, the missing switch case fails the `never` assignment. Update the runtime guard and the consumers together. These checks serve different points in the same data path. The runtime parser protects the input boundary, while the compiler checks the supported cases at this switch. / 输入校验挡住外部未知值，`never` 让受支持的类型新增分支时在该 switch 报错。 [TypeScript handbook on exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
 
-Utility types and generics describe compile-time relationships, not runtime guards: [Utility Types / 工具类型](#47.%20What%20do%20TypeScript%20utility%20types%20guarantee?%20/%20TypeScript%20%E5%B7%A5%E5%85%B7%E7%B1%BB%E5%9E%8B%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F), [Generics / 泛型](#46.%20How%20do%20TypeScript%20generics%20preserve%20relationships%20between%20types?%20/%20TypeScript%20%E6%B3%9B%E5%9E%8B%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%B1%BB%E5%9E%8B%E4%B9%8B%E9%97%B4%E7%9A%84%E5%85%B3%E7%B3%BB%EF%BC%9F). Decorator modes answer a separate class-definition question: [TypeScript Decorators / TypeScript 装饰器](#48.%20Which%20TypeScript%20decorator%20mode%20does%20a%20project%20use?%20/%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F). JavaScript Proxy is a runtime object feature, not a TypeScript type feature; see [JavaScript Proxy / JavaScript Proxy](#36.%20How%20does%20JavaScript%20Proxy%20intercept%20object%20operations?%20/%20JavaScript%20Proxy%20%E5%A6%82%E4%BD%95%E6%8B%A6%E6%88%AA%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C%EF%BC%9F).
+Utility types and generics describe compile-time relationships, not runtime guards: [Utility Types / 工具类型](#45.%20What%20do%20TypeScript%20utility%20types%20guarantee?%20/%20TypeScript%20%E5%B7%A5%E5%85%B7%E7%B1%BB%E5%9E%8B%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F), [Generics / 泛型](#44.%20How%20do%20TypeScript%20generics%20preserve%20relationships%20between%20types?%20/%20TypeScript%20%E6%B3%9B%E5%9E%8B%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%B1%BB%E5%9E%8B%E4%B9%8B%E9%97%B4%E7%9A%84%E5%85%B3%E7%B3%BB%EF%BC%9F). Decorator modes answer a separate class-definition question: [TypeScript Decorators / TypeScript 装饰器](#46.%20Which%20TypeScript%20decorator%20mode%20does%20a%20project%20use?%20/%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F). JavaScript Proxy is a runtime object feature, not a TypeScript type feature; see [JavaScript Proxy / JavaScript Proxy](#35.%20JavaScript%20%E7%9A%84%20Proxy%20%E5%A6%82%E4%BD%95%E6%8B%A6%E6%88%AA%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C%EF%BC%9F).
 
 **Sources checked 2026-10-15:** [TypeScript Basic Types and unknown](https://www.typescriptlang.org/docs/handbook/2/basic-types.html), [Everyday Types and assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions), and [Type Compatibility and Soundness](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness).
-## 46. How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？
+## 44. How do TypeScript generics preserve relationships between types? / TypeScript 泛型如何保留类型之间的关系？
 
 **Core answer / 核心回答：** A generic type parameter preserves a relationship between inputs and outputs. TypeScript can infer a parameter from a call, while an extends constraint limits the values it accepts. Use generics when the same logic should preserve specific types across multiple callers. / 泛型参数用于保留输入与输出之间的关系。TypeScript 可从调用中推断类型参数；extends 约束限制可接受的值。当同一逻辑需要为不同调用者保留各自具体类型时，使用泛型。
 
@@ -4997,8 +5521,8 @@ interface Repository<T> {
 }
 ~~~
 
-A type parameter is not a runtime check. It describes a contract enforced by the checker where type information is available. External values still need runtime validation; see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Generics handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
-## 47. What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？
+A type parameter is not a runtime check. It describes a contract enforced by the checker where type information is available. External values still need runtime validation; see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Generics handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
+## 45. What do TypeScript utility types guarantee? / TypeScript 工具类型能保证什么？
 
 **Core answer / 核心回答：** Utility types derive one compile-time type from another, helping related shapes stay connected instead of repeating property declarations. They do not change or validate runtime values. Readonly is shallow and does not freeze an object; Partial does not validate a request. / 工具类型从已有类型推导出新编译期类型，避免重复声明并让相关结构保持关联。它们不会改变或验证运行时值。Readonly 是浅层的，也不会冻结对象；Partial 不会校验请求。
 
@@ -5033,7 +5557,7 @@ const permissions: Record<Role, string[]> = {
 };
 ~~~
 
-UserPatch expresses an allowed shape to the checker; runtime code still needs to validate parsed JSON. For that boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Utility Types reference](https://www.typescriptlang.org/docs/handbook/utility-types.html).
+UserPatch expresses an allowed shape to the checker; runtime code still needs to validate parsed JSON. For that boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript Utility Types reference](https://www.typescriptlang.org/docs/handbook/utility-types.html).
 
 ### How does ThisType contextually type this? / ThisType 如何提供 this 的上下文类型？
 
@@ -5067,7 +5591,7 @@ const person: Person = {
   greet() { console.log(this.name); }
 };
 ~~~
-## 48. Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？
+## 46. Which TypeScript decorator mode does a project use? / 项目使用哪种 TypeScript 装饰器模式？
 
 **Core answer / 核心回答：** TypeScript supports standard ECMAScript decorators and a separate legacy mode. Their signatures and capabilities differ. Use the mode required by the framework and compiler configuration; do not copy a decorator from a different project without checking its mode. / TypeScript 支持标准 ECMAScript 装饰器和独立的旧版模式。两者的签名与能力不同。应使用框架和编译配置要求的模式，不要未确认模式就复制其他项目的装饰器。
 
@@ -5119,8 +5643,8 @@ function legacyLog(
 }
 ~~~
 
-Decorator metadata is not general runtime validation. For an external JSON value, validate the value itself with runtime logic or a validation library. For the separate unknown-JSON runtime boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#45.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript 5.0 decorator release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators). Sources checked 2026-10-15.
-## 49. How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？
+Decorator metadata is not general runtime validation. For an external JSON value, validate the value itself with runtime logic or a validation library. For the separate unknown-JSON runtime boundary, see [How should TypeScript handle untrusted JSON? / TypeScript 应如何处理不可信 JSON？](#43.%20How%20should%20TypeScript%20handle%20untrusted%20JSON?%20/%20TypeScript%20%E5%BA%94%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%EF%BC%9F). See the [TypeScript 5.0 decorator release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators). Sources checked 2026-10-15.
+## 47. How do ECMAScript modules and CommonJS differ? / ECMAScript 模块与 CommonJS 有何区别？
 
 **Core answer / 核心回答：** ECMAScript modules (ESM) are standardized JavaScript syntax with static imports and exports, module-scoped bindings, strict mode, and top-level this equal to undefined. CommonJS (CJS) is Node’s module wrapper using require and module.exports. Module syntax, host loading rules, bundler analysis, and runtime scheduling are separate concerns. / ECMAScript 模块（ESM）是标准 JavaScript 语法，使用静态导入与导出，绑定属于模块作用域，自动采用严格模式，顶层 this 为 undefined。CommonJS（CJS）是 Node 使用 require 和 module.exports 的模块包装机制。模块语法、宿主加载规则、打包器分析和运行时调度是不同问题。
 
@@ -5160,8 +5684,8 @@ See the [ECMAScript module specification](https://tc39.es/ecma262/2025/multipage
 
 ### Why ESM syntax does not guarantee tree shaking / 为什么 ESM 语法不保证 tree shaking
 
-A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone does not guarantee code removal. The result depends on the bundler and package metadata. See [Build Tools / 构建工具](#51.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) for the transform and production-output boundary. / 打包器可分析 ESM 导入并执行 tree shaking，但仅使用 ESM 语法并不保证代码会被移除；结果还取决于打包器和包元数据。变换与生产产物边界见 [Build Tools / 构建工具](#51.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F).
-## 50. How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？
+A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone does not guarantee code removal. The result depends on the bundler and package metadata. See [Build Tools / 构建工具](#49.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F) for the transform and production-output boundary. / 打包器可分析 ESM 导入并执行 tree shaking，但仅使用 ESM 语法并不保证代码会被移除；结果还取决于打包器和包元数据。变换与生产产物边界见 [Build Tools / 构建工具](#49.%20How%20do%20build%20tools%20transform%20modules%20and%20validate%20production%20output?%20/%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%94%9F%E4%BA%A7%E4%BA%A7%E7%89%A9%EF%BC%9F).
+## 48. How do edition and runtime support affect JavaScript feature use? / 语言版本与运行时支持如何影响 JavaScript 特性的使用？
 
 **Core answer / 核心回答：** A feature’s ECMAScript edition and support in the target runtime are separate facts. Syntax must parse in the target environment or be transformed; APIs also need runtime support or a suitable polyfill. Check the actual browsers, Node versions, and build target before relying on a feature. / 特性属于哪个 ECMAScript 版本，与目标运行时是否支持是两件事。语法必须能被目标环境解析或经过转换；API 也需要运行时实现或合适的 polyfill。依赖某项特性前要检查实际浏览器、Node 版本和构建目标。
 
@@ -5173,9 +5697,9 @@ A bundler can analyze ESM imports for tree shaking, but using ESM syntax alone d
 | Object.assign, Object.is | ES2015 | Object.assign mutates its target; Object.is uses SameValue / Object.assign 会修改目标；Object.is 使用 SameValue |
 | Object.values, Object.entries | ES2017 | Own enumerable string-keyed values or pairs / 自有可枚举字符串键的值或键值对 |
 | Array.from, Array.of | ES2015 | Iterable/array-like conversion or argument list / 可迭代或类数组转换，或参数列表建数组 |
-| Promise.all, Promise.race | ES2015 | Outcome semantics and cancellation limits: see [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 完成条件和不取消其他操作见异步页 |
-| Promise.allSettled | ES2020 | See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
-| Promise.any | ES2021 | See [Asynchronous JavaScript / 异步 JavaScript](#41.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
+| Promise.all, Promise.race | ES2015 | Outcome semantics and cancellation limits: see [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 完成条件和不取消其他操作见异步页 |
+| Promise.allSettled | ES2020 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
+| Promise.any | ES2021 | See [Asynchronous JavaScript / 异步 JavaScript](#39.%20How%20do%20callbacks,%20Promises,%20and%20async%20functions%20compose%20asynchronous%20work?%20/%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E5%A6%82%E4%BD%95%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%EF%BC%9F) / 见异步页的 Promise 比较表 |
 | globalThis | ES2020 | Current realm’s global object; host-specific properties differ / 当前 realm 的全局对象；宿主属性不同 |
 | Array.prototype.at | ES2022 | Supports negative offsets from the end / 支持从末尾反向计数 |
 | Object.hasOwn | ES2022 | Own-property test works with null-prototype objects and overridden hasOwnProperty / 可用于 null 原型对象和被覆盖的 hasOwnProperty |
@@ -5196,8 +5720,8 @@ structuredClone is exposed by browsers and current Node releases, but it does no
 
 For edition-specific language features, see the [ECMAScript 2025 specification](https://tc39.es/ecma262/2025/). / 版本相关语言特性见 [ECMAScript 2025 规范](https://tc39.es/ecma262/2025/)。
 
-**See also:** [Optional Chaining and Destructuring / 可选链与解构](#%E7%BC%BA%E5%A4%B1%E5%B1%9E%E6%80%A7%E9%BB%98%E8%AE%A4%E5%80%BC%E4%B8%8E%E8%A7%A3%E6%9E%84) explains syntax semantics; [Modules and Host Boundaries / 模块与宿主边界](#49.%20How%20do%20ECMAScript%20modules%20and%20CommonJS%20differ?%20/%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%20%E6%9C%89%E4%BD%95%E5%8C%BA%E5%88%AB%EF%BC%9F) explains ESM and CommonJS; [Object helpers / 对象辅助方法](#%E6%9E%9A%E4%B8%BE%E4%B8%8E%E5%A4%8D%E5%88%B6%E5%B1%9E%E6%80%A7%E6%97%B6%EF%BC%8C%E5%85%88%E7%9C%8B%20API%20%E9%80%89%E4%B8%AD%E4%BA%86%E4%BB%80%E4%B9%88) and [Array helpers / 数组辅助方法](#%E4%BB%8E%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%88%96%E7%B1%BB%E6%95%B0%E7%BB%84%E8%BE%93%E5%85%A5%E5%88%9B%E5%BB%BA%E6%95%B0%E7%BB%84) covers property-copying and enumeration behavior.
-## 51. How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？
+**See also:** [Optional Chaining and Destructuring / 可选链与解构](#%E7%BC%BA%E5%A4%B1%E5%B1%9E%E6%80%A7%E9%BB%98%E8%AE%A4%E5%80%BC%E4%B8%8E%E8%A7%A3%E6%9E%84) explains syntax semantics; [Modules and Host Boundaries / 模块与宿主边界](#47.%20How%20do%20ECMAScript%20modules%20and%20CommonJS%20differ?%20/%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%20%E6%9C%89%E4%BD%95%E5%8C%BA%E5%88%AB%EF%BC%9F) explains ESM and CommonJS; [Object helpers / 对象辅助方法](#%E6%9E%9A%E4%B8%BE%E4%B8%8E%E5%A4%8D%E5%88%B6%E5%B1%9E%E6%80%A7%E6%97%B6%EF%BC%8C%E5%85%88%E7%9C%8B%20API%20%E9%80%89%E4%B8%AD%E4%BA%86%E4%BB%80%E4%B9%88) and [Array helpers / 数组辅助方法](#%E4%BB%8E%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%88%96%E7%B1%BB%E6%95%B0%E7%BB%84%E8%BE%93%E5%85%A5%E5%88%9B%E5%BB%BA%E6%95%B0%E7%BB%84) covers property-copying and enumeration behavior.
+## 49. How do build tools transform modules and validate production output? / 构建工具如何转换模块并验证生产产物？
 
 **Core answer / 核心回答：** A bundler follows a module graph, transforms selected modules, and emits assets. Loaders transform individual modules; plugins use broader compiler hooks. A successful development server does not prove that the production build has the same assets, paths, chunks, or source-map exposure. / 打包器沿模块图解析依赖、转换选定模块并输出资源。loader 转换单个模块；plugin 通过更广泛的 compiler hooks 扩展构建。开发服务器成功不代表生产构建具有相同资源、路径、分块或 source map 暴露方式。
 
@@ -5294,10 +5818,10 @@ A source map relates emitted code to source files for debugging and error report
 | hidden-source-map | Emits an external map without the reference comment; useful when a release process uploads maps separately / 输出外部 map 但无引用注释；适合由发布流程单独上传 |
 | nosources-source-map | Omits embedded source content, but mappings and source paths may remain / 不嵌入源码内容，但映射和源码路径仍可能存在 |
 
-These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#64.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
-## 52. 报表页面里的状态应该放在哪里？
+These names represent different detail and delivery choices, not a universal speed ranking or security boundary. See [Webpack devtool configuration](https://webpack.js.org/configuration/devtool/). Release mapping and access control belong to the release process; see [Frontend Testing / 前端测试](#62.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F) for built-output browser smoke checks and [Application Deployment and CI/CD / 应用部署与持续交付](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md) for the shared release path.
+## 50. 报表页面里的状态应该放在哪里？
 
-案例背景：用户打开 `/reports/42?sort=recent#summary`，希望刷新后继续查看同一报表、复制链接分享当前排序，并在另一标签页改变偏好后看到更新。重开时，页面从路径取报表 ID、从查询参数还原 `sort`，然后通过 HTTP 请求服务端报表；片段 `#summary` 定位页面中的摘要。若返回快照仍是 `running`，页面拿到与快照一致的 `event_cursor` 后再订阅更新，见[流式报表恢复案例](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。报表内容由服务端维护，可分享的筛选条件进入 URL，Web Storage (网页存储) 只保存客户端偏好或草稿。
+案例背景：用户打开 `/reports/42?sort=recent#summary`，希望刷新后继续查看同一报表、复制链接分享当前排序，并在另一标签页改变偏好后看到更新。重开时，页面从路径取报表 ID、从查询参数还原 `sort`，然后通过 HTTP 请求服务端报表；片段 `#summary` 定位页面中的摘要。若返回快照仍是 `running`，页面拿到与快照一致的 `event_cursor` 后再订阅更新，见[流式报表恢复案例](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。报表内容由服务端维护，可分享的筛选条件进入 URL，Web Storage (网页存储) 只保存客户端偏好或草稿。
 
 | 状态 | 合适的所有者 | 原因 |
 |---|---|---|
@@ -5337,7 +5861,7 @@ These names represent different detail and delivery choices, not a universal spe
 
 Web Storage 可被当前页面上的脚本读取；若 cross-site scripting (跨站脚本攻击，XSS) 进入页面，存储在其中的 bearer token (持有者令牌) 也可能被窃取。`HttpOnly` Cookie 不向普通页面脚本暴露，但浏览器会按 Cookie 规则自动附带它，服务端仍需设计 Cross-Site Request Forgery (跨站请求伪造，CSRF) 防护。`SameSite=None` Cookie 必须同时带 `Secure`。选用一种存储形式并不会自动解决认证与授权问题。
 
-**延伸阅读：** [同一报表在多个标签页中怎样交换变化？](#53.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 解释怎样通知其他标签页；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论 Cookie、XSS 与 CSRF。
+**延伸阅读：** [同一报表在多个标签页中怎样交换变化？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 解释怎样通知其他标签页；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论 Cookie、XSS 与 CSRF。
 
 > [!info]- 来源
 > - `localStorage`、`sessionStorage` 的作用域、storage event (存储事件) 与访问策略：[WHATWG HTML Standard，Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html)，§12.2，2026-11-06 核对。
@@ -5347,7 +5871,7 @@ Web Storage 可被当前页面上的脚本读取；若 cross-site scripting (跨
 > - 结构化本地记录与事务：[Indexed Database API 3.0](https://w3c.github.io/IndexedDB/)，2026-11-06 核对。
 > - 已发布的 Cookie 存储与请求发送规则、`Secure`、`HttpOnly` 属性：[RFC 6265](https://www.rfc-editor.org/rfc/rfc6265.html)。
 > - `SameSite` 属性及 `SameSite=None` 要求 `Secure`：当前 IETF 文稿 `draft-ietf-httpbis-rfc6265bis-22` 的 §4.1.2.7、§5.7；截至 2026-11-06，Datatracker 仍标记 RFC Editor「Final Approval Pending」，普通 RFC 发布页尚未提供：[IETF 文稿](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis/)，[官方流程状态](https://datatracker.ietf.org/doc/draft-ietf-httpbis-rfc6265bis/)。
-## 53. 同一报表在多个标签页中怎样交换变化？
+## 51. 同一报表在多个标签页中怎样交换变化？
 
 案例背景：用户在标签页 A 查看报表 42，在标签页 B 重新生成报表。A 需要知道自己的画面可能过时，并刷新权威数据。browsing context (浏览上下文) 能否直接通信，取决于来源、浏览器存储分区和生命周期；通知本身也不等于共享或持久化业务状态。
 
@@ -5473,7 +5997,7 @@ window.parent.postMessage({ type: "ready" }, parentOrigin);
 
 WebSocket 适合经过服务器的持续双向消息，不是两个标签页互相通知的默认方案。它的握手来源检查不等同于 Fetch 的 Cross-Origin Resource Sharing (跨源资源共享，CORS) 响应许可；服务端仍需检查握手 `Origin`、验证身份，并逐条授权敏感操作。连接建立后，WebSocket 也不会替业务消息提供去重、确认或断线补发。
 
-**延伸阅读：** [流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 对接服务器事件；[报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地状态的寿命与事务边界。
+**延伸阅读：** [流式报表断线重连后，界面怎样保留正确状态？](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 对接服务器事件；[报表页面里的状态应该放在哪里？](#50.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地状态的寿命与事务边界。
 
 > [!info]- 来源
 > - 跨文档消息、`postMessage` 目标源、`BroadcastChannel` 与共享 worker 的适用场景：[WHATWG HTML Standard，Web Messaging](https://html.spec.whatwg.org/multipage/web-messaging.html)，§9.3–9.5，2026-11-06 核对。
@@ -5481,7 +6005,7 @@ WebSocket 适合经过服务器的持续双向消息，不是两个标签页互�
 > - 存储事件只向共享存储区中的其他文档派发：[WHATWG HTML Standard，Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html)，§12.2.4，2026-11-06 核对。
 > - WebSocket 的连接、来源和消息协议：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，2026-11-06 核对。
 > - `pagehide` 的 `persisted` 值用于表示页面可能留在历史缓存并在返回时复用；它不是可靠的最终退出通知：[WHATWG HTML Standard，PageTransitionEvent](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-pagetransitionevent-interface)，2026-11-06 核对。
-## 54. 流式报表断线重连后，界面怎样保留正确状态？
+## 52. 流式报表断线重连后，界面怎样保留正确状态？
 
 案例背景：用户重开 `/reports/42?sort=recent#summary`。页面从服务端取到报表 42 的状态快照，再订阅进度；断线后浏览器会自动重连，但同一事件可能重放，页面也可能比服务端落后。界面需要分清传输游标、业务状态版本和报表终态。
 
@@ -6002,11 +6526,11 @@ subscribe(initialSnapshot.event_cursor);
 > console.log("PASS abort after text callback returns prevents a buffered terminal frame");
 > ~~~
 
-本地 `AbortController.abort()` 或取消 reader 只会结束当前页面对响应体的读取，不证明服务端工作停止。若产品允许取消作业，还要发取消请求并查询权威作业状态，直到服务端报告终态。`onText` 成功返回表示整帧文本已完整接收并应用，只有此后才推进 `sequence` 和输出长度；回调若先应用部分文本再拒绝，就无法安全确定续读点。解析器在等待 `onText` 时不能强行打断任意 Promise，回调必须有界并自行响应传入的取消信号，或让其完成后再处理中止。示例的竞争测试仅证明渲染回调返回后，中止会阻止消费同一缓冲区里的终态帧。解析器等待回调完成也形成背压：若回调将 DOM 写入排入队列，应在队列保持较小时再读取下一块；可以用 `requestAnimationFrame` 合并可见更新，但它不提供恢复保证。路由卸载时释放 reader 和事件源，保留有用但不完整的文本，并将其标为部分结果。将收到的状态先交给本地 reducer 或事件总线再更新多个视图时，监听器重入也可能改变处理顺序；见[事件总线重入案例](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
+本地 `AbortController.abort()` 或取消 reader 只会结束当前页面对响应体的读取，不证明服务端工作停止。若产品允许取消作业，还要发取消请求并查询权威作业状态，直到服务端报告终态。`onText` 成功返回表示整帧文本已完整接收并应用，只有此后才推进 `sequence` 和输出长度；回调若先应用部分文本再拒绝，就无法安全确定续读点。解析器在等待 `onText` 时不能强行打断任意 Promise，回调必须有界并自行响应传入的取消信号，或让其完成后再处理中止。示例的竞争测试仅证明渲染回调返回后，中止会阻止消费同一缓冲区里的终态帧。解析器等待回调完成也形成背压：若回调将 DOM 写入排入队列，应在队列保持较小时再读取下一块；可以用 `requestAnimationFrame` 合并可见更新，但它不提供恢复保证。路由卸载时释放 reader 和事件源，保留有用但不完整的文本，并将其标为部分结果。将收到的状态先交给本地 reducer 或事件总线再更新多个视图时，监听器重入也可能改变处理顺序；见[事件总线重入案例](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
 
 渲染本身也应有界：把同一帧中到达的文本增量合并后每帧更新一次，而不是每个 token 都刷新 DOM；输出很长时限制缓冲或只渲染可见窗口。状态区域使用 `role="status"` 与 `aria-live="polite"` 可播报连接、完成或失败，但不要逐字播报每个 token。
 
-**延伸阅读：** [实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md) 定义 SSE 的线格式、id/version 和重连边界；[API 可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) 讨论未知结果与安全重试；[JavaScript 事件总线在监听器中重入时怎样保持顺序？](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 讨论把一个状态更新送到本地多个模块。
+**延伸阅读：** [实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md) 定义 SSE 的线格式、id/version 和重连边界；[API 可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) 讨论未知结果与安全重试；[JavaScript 事件总线在监听器中重入时怎样保持顺序？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 讨论把一个状态更新送到本地多个模块。
 
 > [!info]- 来源
 > - SSE 字段解析、EventSource 自动重连和 `Last-Event-ID`：[WHATWG HTML Standard，Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)，§9.2，2026-11-06 核对；报表 42 的 `id`、`version` 和终态沿用[实时更新协议案例](../../engineering-foundations/networking/real-time-web-updates.md)。
@@ -6014,7 +6538,7 @@ subscribe(initialSnapshot.event_cursor);
 > - 增量 UTF-8 解码：[WHATWG Encoding Standard，TextDecoder](https://encoding.spec.whatwg.org/#interface-textdecoder)，2026-11-06 核对。
 > - `AbortController` 和 `AbortSignal` 的 API 语义：[WHATWG DOM Standard](https://dom.spec.whatwg.org/#interface-abortcontroller)，2026-11-06 核对。
 > - `role="status"` 的状态播报语义：[W3C WAI-ARIA 1.2，status role](https://www.w3.org/TR/wai-aria-1.2/#status)，2026-11-06 核对。
-## 55. JavaScript 事件总线在监听器中重入时怎样保持顺序？
+## 53. JavaScript 事件总线在监听器中重入时怎样保持顺序？
 
 案例背景：报表 42 的页面收到进度更新后，会让多个界面模块同步响应。event bus (事件总线) 把发布者和订阅者隔开，但监听器也可能在分发过程中增删订阅，甚至再次发布同名事件。实现必须规定当前这次分发看哪些监听器，以及一次性监听器何时注销。
 
@@ -6095,12 +6619,12 @@ class EventBus {
 
 若一个对象自然拥有订阅者，例如数据模型通知观察者，Observer (观察者模式) 让对象直接管理订阅关系。若多个模块只通过主题名沟通，事件总线用代理降低直接耦合，但会增加追踪事件来源的成本。两者都可把流式报表状态更新送到本地界面；跨标签页则需使用浏览上下文间的通信机制。
 
-**延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#56.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#53.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
+**延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20DOM%20%E4%BA%8B%E4%BB%B6%E5%A6%82%E4%BD%95%E4%BC%A0%E6%92%AD%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E4%BA%8B%E4%BB%B6%E5%A7%94%E6%89%98%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
 
 > [!info]- 来源
 > - `Set` 保存不同监听函数并按插入顺序迭代；`emit()` 的快照和 `once()` 的注销策略是本文这份应用实现明确采用的规则：[ECMAScript Language Specification，Keyed Collections](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-set-objects)，2026-11-06 核对。
 > - DOM 事件的分发规则由浏览器平台定义，与上述应用层事件总线不同：[WHATWG DOM Standard，Events](https://dom.spec.whatwg.org/#events)。
-## 56. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
+## 54. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
 案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM)的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
 
@@ -6143,12 +6667,12 @@ class EventBus {
 
 实时集合适合反映 DOM 的当前成员，但不适合一边按递增索引遍历、一边改变成员；也可从后往前删。静态快照则适合一次查询后按成员执行任务。查询何时更新、节点本身是否仍连接到文档，是两个不同问题。实时描述的是可观察的成员结果，不承诺浏览器内部怎样、多久计算一次。
 
-**延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](#55.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](#57.%20%E7%94%A8%E6%88%B7%E7%A6%BB%E5%BC%80%E6%8A%A5%E8%A1%A8%E9%A1%B5%E6%97%B6%EF%BC%8C%E5%88%86%E6%9E%90%E4%BA%8B%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%B0%BD%E5%8A%9B%E5%8F%91%E9%80%81%EF%BC%9F) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F) 讨论 DOM 与后续渲染。
+**延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](#55.%20%E7%94%A8%E6%88%B7%E7%A6%BB%E5%BC%80%E6%8A%A5%E8%A1%A8%E9%A1%B5%E6%97%B6%EF%BC%8C%E5%88%86%E6%9E%90%E4%BA%8B%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%B0%BD%E5%8A%9B%E5%8F%91%E9%80%81%EF%BC%9F) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F) 讨论 DOM 与后续渲染。
 
 > [!info]- 来源
 > - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-06 核对。
 > - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-06 核对。
-## 57. 用户离开报表页时，分析事件怎样尽力发送？
+## 55. 用户离开报表页时，分析事件怎样尽力发送？
 
 案例背景：用户打开报表、改变一次筛选，然后立刻导航到别处。analytics event (分析事件) 不应拖慢筛选或导航；页面可先在内存中收集少量事件，再小批量发送，并在页面变为隐藏时尝试提交一批。这个生命周期信号只提供最后一次机会，不能保证服务器已收到。
 
@@ -6221,14 +6745,14 @@ Beacon API 的 `navigator.sendBeacon()` 返回 `true` 只表示用户代理接�
 
 本例 `flushEvents()` 在尝试发送前从内存队列取出一批。传输失败后该批不会自动重试；这正是“尽力发送”的损失边界。若统计数据不可丢，应把它升级为持久队列并设计服务端确认与重放，而不是阻塞离页等待。
 
-**延伸阅读：** [报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明偏好与业务状态的归属；[流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明哪些消息影响报表正确性、不能混同于可丢弃的分析事件；[WebView 怎样安全地开放原生能力并更新页面包？](#58.%20WebView%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E5%9C%B0%E5%BC%80%E6%94%BE%E5%8E%9F%E7%94%9F%E8%83%BD%E5%8A%9B%E5%B9%B6%E6%9B%B4%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%8C%85%EF%BC%9F) 讨论混合应用中的宿主权限。
+**延伸阅读：** [报表页面里的状态应该放在哪里？](#50.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明偏好与业务状态的归属；[流式报表断线重连后，界面怎样保留正确状态？](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明哪些消息影响报表正确性、不能混同于可丢弃的分析事件；[WebView 怎样安全地开放原生能力并更新页面包？](#56.%20WebView%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E5%9C%B0%E5%BC%80%E6%94%BE%E5%8E%9F%E7%94%9F%E8%83%BD%E5%8A%9B%E5%B9%B6%E6%9B%B4%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%8C%85%EF%BC%9F) 讨论混合应用中的宿主权限。
 
 > [!info]- 来源
 > - Beacon 是非阻塞的尽力传输；返回值仅表示排队成功，且无响应回调：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3，2026-11-06 核对。
 > - Beacon 在页面 `visibilityState` 变为 `hidden` 时安排发送；规范也提示后台页面在移动设备上仍可能随进程终止而丢失：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3、§4，2026-11-06 核对。
 > - Fetch `keepalive` 与 64 KiB 的在途请求总量限制：[WHATWG Fetch Standard，HTTP-network-or-cache fetch](https://fetch.spec.whatwg.org/)，2026-11-06 核对。
 > - 页面可见性状态：[WHATWG HTML Standard，Page visibility](https://html.spec.whatwg.org/multipage/interaction.html#page-visibility)，2026-11-06 核对。
-## 58. WebView 怎样安全地开放原生能力并更新页面包？
+## 56. WebView 怎样安全地开放原生能力并更新页面包？
 
 案例背景：报表应用把页面放进原生应用的 WebView，页面需要请求宿主打开报表详情；页面脚本同时会随应用安装或网络更新。JavaScript bridge (原生桥接接口) 把页面输入送到宿主应用的权限边界，因此必须把“哪个页面能发消息”“消息能请求什么”“更新后的代码是否兼容”作为一条信任链来设计。
 
@@ -6285,7 +6809,7 @@ Android 的来源和主 frame 信息来自 `WebMessageListener` 平台回调；A
 
 下载包中的密钥、会话数据和最终权限仍应留在原生安全存储或服务端。新页面获准调用原生桥接接口也不代表其所有代码都可信；为包更新和桥接操作分别记录版本、验证结果与授权决策，便于回滚和调查。
 
-**延伸阅读：** [报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地数据不应冒充服务端事实；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论来源、XSS 和授权边界。
+**延伸阅读：** [报表页面里的状态应该放在哪里？](#50.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地数据不应冒充服务端事实；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论来源、XSS 和授权边界。
 
 > [!info]- 来源
 > - AndroidX bridge API、来源规则、frame 信息、功能检测与回调线程：[Android Developers，Access native APIs with JavaScript bridge](https://developer.android.com/develop/ui/views/layout/webapps/native-api-access-jsbridge)，2026-11-06 核对。
@@ -6294,7 +6818,7 @@ Android 的来源和主 frame 信息来自 `WebMessageListener` 平台回调；A
 > - Apple WebKit 消息处理器与回复：[Apple Developer Documentation，WKScriptMessageHandler](https://developer.apple.com/documentation/webkit/wkscriptmessagehandler)；[WKScriptMessageHandlerWithReply](https://developer.apple.com/documentation/webkit/wkscriptmessagehandlerwithreply/usercontentcontroller%28_%3Adidreceive%3Areplyhandler%3A%29?language=objc)，2026-11-06 核对。
 > - Apple 消息 frame 的 `isMainFrame`、`securityOrigin`：[Apple Developer Documentation，WKFrameInfo](https://developer.apple.com/documentation/webkit/wkframeinfo)；[WKScriptMessage.frameInfo](https://developer.apple.com/documentation/webkit/wkscriptmessage/frameinfo)，2026-11-06 核对。
 > - Bundle 签名、兼容矩阵、原子切换与回滚是应用更新策略，不是 WebView 平台规范；本文把它们作为威胁模型驱动的设计建议。
-## 59. 如何为产品选择前端框架？
+## 57. 如何为产品选择前端框架？
 
 **案例背景。** 以报表页面为例：浏览器地址是 `/reports?sort=recent#summary`，服务端实际收到 `/reports?sort=recent` 并据此返回 May、April 两行；`#summary` 只供浏览器定位。用户点 **Oldest first** 后，`pushState` 新增 `sort=oldest` 历史项，可见顺序成为 April、May；按浏览器 Back 会恢复 `sort=recent` 和 May、April。完整历史行为见[浏览器导航路径](#%E8%AE%A9%E7%AD%9B%E9%80%89%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。框架选择要回答的是团队怎样可靠地交付这类更新，以及页面还需要怎样的路由、服务端渲染、无障碍和运维支持。单说“有虚拟 DOM”不能回答这些问题。
 
@@ -6331,13 +6855,13 @@ React 用组件类型、树中的位置和同级 key 判断状态能否保留。
 
 框架不是唯一变量。真实环境还包括数据形状、设备、浏览器、访问性需求、发布约束和团队维护能力。保留一个候选框架的理由，应能说清它满足了哪条必要约束、测试了哪条路径，以及哪类工作仍由浏览器或服务端承担。
 
-React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
+React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（2026-11-06）
 > - 本文关于 React 描述、render 与 commit 的边界：React 19.3 当前文档，[Render and Commit](https://react.dev/learn/render-and-commit)、[Versions](https://react.dev/versions)，核验日期 2026-11-06。
 > - 框架实现可采用不同渲染机制：React 文档同上；Vue 官方文档，[Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism)，核验日期 2026-11-06。
 > - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
-## 60. How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？
+## 58. How do React routes map URLs to views, and when is SPA navigation a fit? / React路由如何把 URL 映射到视图，何时适合 SPA 导航？
 
 **Core answer / 核心回答：** React Router matches the current location to a route, while SPA and MPA describe whether navigation updates the current document or requests another one. The choice depends on delivery, interaction, accessibility, hosting, and operations. / React Router 将当前地址匹配到路由；SPA 与 MPA 则描述导航是更新当前文档还是请求另一个文档。选择取决于内容交付、交互、无障碍、托管和运维需求。
 
@@ -6386,12 +6910,12 @@ Use Link for navigation users can follow and useNavigate for programmatic naviga
 | Initial delivery | Depends on shell size, rendering, and data strategy | Depends on document and asset delivery |
 | SEO and accessibility | Require deliberate rendering and semantic structure | Also require meaningful HTML and semantic structure |
 
-**See also:** [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Next.js / Next.js开发](#61.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) for server/client rendering and framework routing.
+**See also:** [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Next.js / Next.js开发](#59.%20How%20should%20a%20Next.js%20app%20render%20and%20route%20its%20pages?%20/%20Next.js%E5%BA%94%E7%94%A8%E5%BA%94%E5%A6%82%E4%BD%95%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2%E5%B9%B6%E7%BB%84%E7%BB%87%E8%B7%AF%E7%94%B1%EF%BC%9F) for server/client rendering and framework routing.
 
 **Sources checked 2026-10-15:** [React Router v6 Concepts](https://reactrouter.com/docs/en/v6/start/concepts), [React Router: Picking a Mode](https://reactrouter.com/start/modes).
-## 61. How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
+## 59. How should a Next.js app render and route its pages? / Next.js应用应如何渲染页面并组织路由？
 
-**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。
+**Core answer / 核心回答：** Choose the Pages Router or App Router deliberately, then decide per route which work belongs in a request-time server render, reusable static output, a Client Component, or a smaller streamed region. Name the Next.js version when discussing cache defaults: these behaviors have changed across releases. Server-rendered HTML streaming during page navigation is separate from streaming an operation's incremental answer after the page is open; the latter belongs to [Streaming UX / 流式交互](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F). / 先明确使用 Pages Router 还是 App Router，再按路由决定哪些工作适合请求时服务端渲染、可复用静态输出、Client Component 或较小的流式区域。说明缓存默认值时要注明 Next.js 版本，因为不同版本的行为发生过变化。页面导航期间流式传送服务端 HTML，与页面打开后流式呈现某次操作的增量回答，是不同层次；后者见 [Streaming UX / 流式交互](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。
 
 
 ### What does Next.js add to React? / Next.js为React增加了什么？
@@ -6554,10 +7078,10 @@ export async function GET() {
 
 Use framework endpoints for colocated, bounded server work such as webhooks or a small proxy. A larger backend may need its own service boundary, runtime, and operational controls.
 
-**See also:** [React Routing and Navigation / React路由与导航](#60.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F) for client navigation and SPA/MPA document models; [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
+**See also:** [React Routing and Navigation / React路由与导航](#58.%20How%20do%20React%20routes%20map%20URLs%20to%20views,%20and%20when%20is%20SPA%20navigation%20a%20fit?%20/%20React%E8%B7%AF%E7%94%B1%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E6%98%A0%E5%B0%84%E5%88%B0%E8%A7%86%E5%9B%BE%EF%BC%8C%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%20SPA%20%E5%AF%BC%E8%88%AA%EF%BC%9F) for client navigation and SPA/MPA document models; [React Basics / React基础](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) for state-driven rendering; [Node.js Fundamentals / Node.js基础](../../engineering-foundations/backend/node-js-fundamentals.md) for server runtime constraints.
 
 **Sources checked 2026-10-15:** [React release and version references](https://react.dev/versions), [React `hydrateRoot`](https://react.dev/reference/react-dom/client/hydrateRoot), [React `useEffect`](https://react.dev/reference/react/useEffect), [React `Suspense`](https://react.dev/reference/react/Suspense), [Next.js 16.4.1 App Router migration guide](https://nextjs.org/docs/app/guides/migrating/app-router-migration), [Next.js 16.4.1 Fetching Data](https://nextjs.org/docs/app/getting-started/fetching-data), [Pages Router getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props), [Pages Router getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths), [Pages Router Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration), [use cache](https://nextjs.org/docs/app/api-reference/directives/use-cache), [Incremental Static Regeneration](https://nextjs.org/docs/app/guides/incremental-static-regeneration), [Link](https://nextjs.org/docs/app/api-reference/components/link), and [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route).
-## 62. When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
+## 60. When should a UI use Lodash instead of a native JavaScript operation? / 界面何时应使用 Lodash 而不是原生 JavaScript？
 
 **Core answer / 核心回答：** Use Lodash when its documented path, collection, or timing contract removes repeated edge-case code. For a simple known shape, prefer the native operation when it expresses the same behavior more clearly; compare the exact semantics and installed version before substituting. This page is a method lookup, not a claim that one option is always smaller or faster. / Lodash 的路径、集合或定时语义能减少重复的边界处理时可使用它。对象结构简单明确时，如果原生操作能更清晰表达相同行为，就优先考虑原生 API；替换前要核对具体语义和安装版本。本文用于查找方法，不表示某种选择总是更小或更快。
 
@@ -6652,10 +7176,10 @@ Lodash's debounced function also has flush() to invoke a pending call immediatel
 
 Use the library when its edge-case behavior or object/path API simplifies real code. For a known object shape, optional chaining may be clearer; for unique values, Set may fit; for deep cloning, choose an API only after checking its supported data types and semantics. Bundle impact depends on module format and build configuration. Use per-method imports where appropriate and measure the production output rather than assuming a specific size reduction.
 
-**See also:** [Modern JavaScript Features / 现代JavaScript特性](#50.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for choosing debounce or throttle by workload.
+**See also:** [Modern JavaScript Features / 现代JavaScript特性](#48.%20How%20do%20edition%20and%20runtime%20support%20affect%20JavaScript%20feature%20use?%20/%20%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%94%AF%E6%8C%81%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20JavaScript%20%E7%89%B9%E6%80%A7%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9F) for native alternatives such as structuredClone; [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for choosing debounce or throttle by workload.
 
 **Sources checked 2026-10-15:** [Lodash 4.17.21 API source, including debounce and throttle](https://github.com/lodash/lodash/blob/4.17.21/doc/README.md), [Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat), [Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing).
-## 63. When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
+## 61. When should a React UI use an ahooks helper? / React界面何时适合使用 ahooks 工具？
 
 **Core answer / 核心回答：** Use ahooks when an existing helper matches the interaction's state, lifecycle, request, or list contract and the installed package version. A helper still follows React's render and Effect rules; it does not replace decisions about data ownership, cache freshness, transport cancellation, or item identity. The APIs here follow documentation checked on 2026-10-15. / 当现有 ahooks 工具符合交互的状态、生命周期、请求或列表语义，并且与项目安装版本一致时再使用。工具仍遵守 React 的 render 和 Effect 规则；它不会替代对数据归属、缓存新鲜度、传输取消或列表项身份的判断。此处 API 依据 2026-10-15 核对的文档。
 
@@ -6822,7 +7346,7 @@ useDebounce and useThrottle return delayed or rate-limited values; useDebounceFn
 **See also / 另见** — [React component composition / React 组件组合](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8React%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F) for Hook rules and Effect cleanup, [React server state / React 服务端状态](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F) for query and mutation rules, and [Performance Metrics and Analysis / 性能指标与分析](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F) for debounce and throttle tradeoffs.
 
 **Sources checked 2026-10-15:** [ahooks useRequest](https://ahooks.js.org/hooks/use-request), [ahooks v3.10.0 useRequest implementation](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useRequest/src/Fetch.ts), [ahooks v2 to v3 upgrade notes](https://ahooks.js.org/guide/upgrade/), [ahooks 2.6.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v2.6.0/packages/hooks/src/useVirtualList/index.ts), [ahooks 3.10.0 useVirtualList source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useVirtualList/index.ts), [usePagination](https://ahooks.js.org/hooks/use-pagination), [useInfiniteScroll](https://ahooks.js.org/hooks/use-infinite-scroll), [useLocalStorageState](https://ahooks.js.org/hooks/use-local-storage-state), [useLatest](https://ahooks.js.org/hooks/use-latest), [useMemoizedFn](https://ahooks.js.org/hooks/use-memoized-fn), [useVirtualList](https://ahooks.js.org/hooks/use-virtual-list), [useCreation](https://ahooks.js.org/hooks/use-creation), [useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn), [useThrottle](https://ahooks.js.org/hooks/use-throttle), [useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn), [useDynamicList](https://ahooks.js.org/hooks/use-dynamic-list), [useUnmount](https://ahooks.js.org/hooks/use-unmount), [React StrictMode](https://react.dev/reference/react/StrictMode).
-## 64. What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
+## 62. What evidence shows a frontend change works through production delivery? / 哪些证据能证明前端改动可用并能正确交付？
 
 **Core answer / 核心回答：** Build the production output, run a critical browser journey against that output on a production-like server, then promote the exact artifact that passed. A development server alone does not exercise emitted assets or deployment paths. The general risk-to-test-boundary principle belongs to [Software Testing Strategy / 软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md); the tool choices for local logic and component behavior are outlined below. / 构建生产产物，在接近生产环境的服务上用该产物运行关键浏览器流程，然后晋级同一份通过检查的产物。单独运行开发服务器无法覆盖实际生成的资源或部署路径。通用的风险与测试边界原则见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)；本地逻辑和组件行为的工具选择见下文。
 
@@ -6840,7 +7364,7 @@ Keep browser tests for behavior that depends on the real browser or application 
 
 ### Jest fundamentals / Jest基础
 
-Use Jest when the risk can be reproduced around logic, state, or a dependency boundary. A test that starts asynchronous work must return or await the Promise that contains its assertions. Place the mock at the dependency and assert the behavior of the caller. [How a Jest test verifies asynchronous behavior / Jest 怎样验证异步行为](#65.%20How%20can%20a%20Jest%20test%20verify%20behavior%20across%20an%20asynchronous%20boundary?%20/%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E8%B7%A8%E5%BC%82%E6%AD%A5%E8%BE%B9%E7%95%8C%E7%9A%84%E8%A1%8C%E4%B8%BA%EF%BC%9F) contains the complete async, lifecycle, matcher, CommonJS and native ESM examples.
+Use Jest when the risk can be reproduced around logic, state, or a dependency boundary. A test that starts asynchronous work must return or await the Promise that contains its assertions. Place the mock at the dependency and assert the behavior of the caller. [How a Jest test verifies asynchronous behavior / Jest 怎样验证异步行为](#63.%20How%20can%20a%20Jest%20test%20verify%20behavior%20across%20an%20asynchronous%20boundary?%20/%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E8%B7%A8%E5%BC%82%E6%AD%A5%E8%BE%B9%E7%95%8C%E7%9A%84%E8%A1%8C%E4%B8%BA%EF%BC%9F) contains the complete async, lifecycle, matcher, CommonJS and native ESM examples.
 
 ### React Testing Library / React Testing Library
 
@@ -6928,7 +7452,7 @@ Use browser checks where real routing, asset URLs, browser behavior, or app/serv
 **See also:** [Advanced React / React进阶](#8.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E6%8A%A5%E8%A1%A8%E7%AD%9B%E9%80%89%E5%9C%A8%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F) for custom Hook semantics; [Git Essentials / Git基础](../../engineering-foundations/version-control/git-essentials.md) for how tests fit into review and CI.
 
 **Sources checked 2026-10-15:** [Jest Mock Functions](https://jestjs.io/docs/mock-functions), [Jest Object and Mock Lifecycle](https://jestjs.io/docs/jest-object), [Jest ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules), [React Testing Library API](https://testing-library.com/docs/react-testing-library/api/), [Testing Library Queries](https://testing-library.com/docs/queries/about/), [user-event](https://testing-library.com/docs/user-event/intro/), [Testing Library Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/), [Vite static deployment](https://vite.dev/guide/static-deploy.html), [Playwright web server](https://playwright.dev/docs/test-webserver).
-## 65. How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
+## 63. How can a Jest test verify behavior across an asynchronous boundary? / Jest 怎样验证跨异步边界的行为？
 
 Wait for the Promise that carries the assertion, give the code under test an explicit dependency boundary, and assert what the code does with the result. Set up and restore only the resources the test owns. Module mocking depends on the test's module system. / 等待承载断言的 Promise，在被测代码的依赖边界安排模拟，并断言被测代码如何处理结果。测试只负责准备和恢复自己拥有的资源。模块模拟方式取决于测试使用的模块系统。
 
@@ -7100,4 +7624,4 @@ Run Jest with the project’s configured coverage option, commonly --coverage. C
 - [Jest: ECMAScript Modules](https://jestjs.io/docs/30.0/ecmascript-modules)
 - [Jest: The Jest Object](https://jestjs.io/docs/30.0/jest-object)
 - [Jest: Mock Functions](https://jestjs.io/docs/30.0/mock-functions)
-- [Frontend Testing / 前端测试](#64.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F)
+- [Frontend Testing / 前端测试](#62.%20What%20evidence%20shows%20a%20frontend%20change%20works%20through%20production%20delivery?%20/%20%E5%93%AA%E4%BA%9B%E8%AF%81%E6%8D%AE%E8%83%BD%E8%AF%81%E6%98%8E%E5%89%8D%E7%AB%AF%E6%94%B9%E5%8A%A8%E5%8F%AF%E7%94%A8%E5%B9%B6%E8%83%BD%E6%AD%A3%E7%A1%AE%E4%BA%A4%E4%BB%98%EF%BC%9F)

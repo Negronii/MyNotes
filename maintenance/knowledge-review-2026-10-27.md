@@ -117,13 +117,13 @@ Each listed note was read in full. File-specific checkpoints, evidence URLs, lim
 - [`frontend/javascript/error-handling.md`](../frontend/javascript/error-handling.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - 原 `frontend/javascript/es6-new-methods.md`（现并入[值与属性](../frontend/javascript/javascript-types.md)及[数组](../frontend/javascript/arrays.md)） — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/iterators-and-generators.md`](../frontend/javascript/iterators-and-generators.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/javascript-basics.md`](../frontend/javascript/javascript-basics.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/javascript-basics.md`](../frontend/javascript/scope-and-closure.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/javascript-memory-weakmap-and-weakset.md`](../frontend/javascript/javascript-memory-weakmap-and-weakset.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/javascript-types.md`](../frontend/javascript/javascript-types.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/map-and-set.md`](../frontend/javascript/map-and-set.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/modern-javascript-features.md`](../frontend/javascript/modern-javascript-features.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/objects-functions-and-prototypes.md`](../frontend/javascript/objects-functions-and-prototypes.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/other-javascript-topics.md`](../frontend/javascript/other-javascript-topics.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/other-javascript-topics.md`](../frontend/javascript/this-and-function-binding.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/scope-and-closure.md`](../frontend/javascript/scope-and-closure.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/libraries/ahooks.md`](../frontend/libraries/ahooks.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/libraries/lodash.md`](../frontend/libraries/lodash.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
