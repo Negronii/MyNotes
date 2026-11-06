@@ -33,13 +33,15 @@ parent.addEventListener("click", (event) => {
 
 Delegation is useful for many dynamic descendants, but does not reduce every kind of work; use it when the propagation model and ownership make the handler simpler.
 
+If an event handler removes matching descendants, [choose a live collection or a static snapshot](dom-collections.md) before iterating. Removing an element from a live collection can change the index of the next element.
+
 ## Default action, cancellation, and listener options / 默认动作、取消与监听器选项
 
 `preventDefault()` cancels a cancelable event's default action; it does not stop propagation. `stopPropagation()` prevents the event from reaching later objects on the path, while `stopImmediatePropagation()` also prevents later listeners on the current object. A passive listener cannot cancel the default action, so use `{ passive: true }` for scroll/touch listeners that never need to cancel scrolling. The DOM Standard defines passive defaults for particular root-target `touchstart`/`touchmove`/`wheel`/`mousewheel` listeners; set the option explicitly when cancellation matters.
 
 ## Mobile activation and touch gestures / 移动端点击与触控手势
 
-The old click delay was conditional: some browsers delayed click dispatch while waiting to distinguish a tap from a double-tap zoom gesture. It is not a universal fixed delay today. Start with a mobile-optimized viewport, then set a gesture policy only on controls that need one. `touch-action: manipulation` allows panning and pinch zoom while excluding double-tap gestures; do not disable user zoom to address a historical delay. / 历史上的点击延迟有触发条件：部分浏览器曾等待判断点按是否为双击缩放，因此延后派发 click；如今不能把它视为普遍固定延迟。先使用适合移动端的 viewport，再仅为确实需要的控件设置手势策略。`touch-action: manipulation` 允许平移和双指缩放，同时排除双击手势；不要为了处理历史延迟而禁用用户缩放。
+The old click delay was conditional: some browsers delayed click dispatch while waiting to distinguish a tap from a double-tap zoom gesture. It is not a universal fixed delay today. Start with a mobile-optimized viewport, then set a gesture policy only on controls that need one. `touch-action: manipulation` allows panning and pinch zoom while excluding user-agent double-tap zoom; do not disable user zoom to address a historical delay. / 历史上的点击延迟有触发条件：部分浏览器曾等待判断点按是否为双击缩放，因此延后派发 click；如今不能把它视为普遍固定延迟。先使用适合移动端的 viewport，再仅为确实需要的控件设置手势策略。`touch-action: manipulation` 允许平移和双指缩放，同时排除浏览器的双击缩放；不要为了处理历史延迟而禁用用户缩放。
 
 ```html
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -56,7 +58,7 @@ button,
 }
 ```
 
-Apply the rule narrowly enough to preserve the intended panning and zoom behavior. Avoid a legacy tap library unless a tested target requires it: a library that synthesizes click can conflict with the browser's native click, so do not activate the same action on both touch-end and click.
+Apply the rule narrowly enough to preserve panning and zoom. It changes the browser’s direct-manipulation gestures. Controls still need ordinary activation, including keyboard activation. Test the target devices and input modes. Avoid a legacy tap library unless a tested target requires it: a library that synthesizes click can conflict with the browser's native click, so do not activate the same action on both touch-end and click.
 
 **Specification:** [Pointer Events Level 3, `touch-action`](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property) defines the allowed direct-manipulation gestures.
 

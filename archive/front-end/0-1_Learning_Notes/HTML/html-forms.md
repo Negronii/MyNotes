@@ -215,11 +215,12 @@ Specifies the default selected item in the drop-down list.
 **Best Practices**
 
 - **Resizing:**
-  - By default, users can resize the text area by dragging the bottom-right corner. However, it is often best to control resizing via CSS to maintain layout consistency.
+  - Browsers commonly let users resize a text area. Preserve vertical resizing so users can see more of a long response, while constraining the field to the available inline space. [CSS UI on resizing](https://www.w3.org/TR/css-ui-4/#resize)
   - Example:
     ```css
     textarea {
-        resize: none; /* Disables resizing */
+        resize: vertical;
+        max-inline-size: 100%;
     }
     ```
 

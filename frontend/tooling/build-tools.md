@@ -13,7 +13,7 @@ flowchart LR
 
 ## Pin the toolchain before building / 构建前固定工具链
 
-`package.json` can record a project’s package manager and version, for example `"packageManager": "pnpm@10.0.0"` in a project that has tested that version. Provision the pinned tool in both CI and local development, then install from the committed lockfile. The field describes the expected tool. Corepack’s installed shims can select it, but the field alone does not install a manager. Node.js distributed Corepack in earlier releases through Node 24 and dropped it from Node 25 onward. Provision Corepack separately or use the package manager's documented installer. / 声明工具版本后，CI 和本地还需要安装相同版本并按锁文件安装依赖。 [Corepack project README](https://github.com/nodejs/corepack#readme) · [Node.js 25 release](https://nodejs.org/en/blog/release/v25.0.0)
+`package.json` can record a project’s package manager and version, for example `"packageManager": "pnpm@10.0.0"` in a project that has tested that version. Provision the pinned tool in both CI and local development, then install from the committed lockfile. The field describes the expected tool. Corepack’s installed shims can select it, but the field alone does not install a manager. Node.js distributed Corepack starting with the 14.19 and 16.9 release lines through Node 24 and dropped it from Node 25 onward. Provision Corepack separately or use the package manager's documented installer. / 声明工具版本后，CI 和本地还需要安装相同版本并按锁文件安装依赖。 [Corepack project README](https://github.com/nodejs/corepack#readme) · [Node.js 25 release](https://nodejs.org/en/blog/release/v25.0.0)
 
 ## How Webpack loaders and plugins differ / Webpack loader 与 plugin 有何不同
 

@@ -47,7 +47,7 @@ sequenceDiagram
     end
 ~~~
 
-Use `finally` so cleanup runs when cancellation reaches the ASGI application. The smoke check below exercises explicit task cancellation and both streaming lifetimes. A dropped connection does not necessarily cancel every kind of downstream work. Test the selected ASGI server and response type before depending on disconnect behavior. A background job should acquire its own resources at its own lifetime boundary. [FastAPI dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/)
+Put cleanup in `finally`. In an already-cancelled AnyIO scope, awaited cleanup can be cancelled too. When it must await, give that cleanup a short shielded deadline and let the original cancellation propagate. The smoke check below exercises explicit task cancellation and both streaming lifetimes. A dropped connection does not necessarily cancel every kind of downstream work. Test the selected ASGI server and response type before depending on disconnect behavior. A background job should acquire its own resources at its own lifetime boundary. [FastAPI dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/) · [AnyIO finalization](https://anyio.readthedocs.io/en/stable/cancellation.html#finalization)
 
 ~~~mermaid
 flowchart LR

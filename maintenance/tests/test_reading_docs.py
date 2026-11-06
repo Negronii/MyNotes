@@ -63,6 +63,7 @@ def make_fixture(root: Path) -> Path:
         "[Peer chapter](../nested/notes%20with%20space.md)\n"
         "[Cross domain](../../frontend/javascript/scope-and-closure.md#scope-and-closure)\n"
         "[Archive](../archives/legacy.md#archive-heading)\n"
+        "[Bilingual archive section](../archives/legacy.md#List%20Loading%3F%20/%20%E5%88%97%E8%A1%A8)\n"
         "![Diagram](../assets/diagram%20one.png)\n"
         "[External](https://example.test/path#keep)\n"
         "Inline code: " + chr(96) + "[leave](missing-inline.md)" + chr(96) + "\n"
@@ -79,7 +80,7 @@ def make_fixture(root: Path) -> Path:
     )
     write(root / "frontend/javascript/scope-and-closure.md", "# Scope and Closure\n## Scope\n")
     write(root / "engineering-foundations/networking/http.md", "# HTTP Protocol\n")
-    write(root / "ai-engineering/archives/legacy.md", "# Archive Heading\n")
+    write(root / "ai-engineering/archives/legacy.md", "# Archive Heading\n## List Loading? / 列表\n")
     write(root / "ai-engineering/assets/diagram one.png", "fixture image")
     return root / "maintenance/build-reading-docs.py"
 
@@ -125,6 +126,10 @@ class ReadingDocsTests(unittest.TestCase):
         )
         self.assertIn(
             "[Archive](../../ai-engineering/archives/legacy.md#archive-heading)", content
+        )
+        self.assertIn(
+            "[Bilingual archive section](../../ai-engineering/archives/legacy.md#List%20Loading?%20/%20%E5%88%97%E8%A1%A8)",
+            content,
         )
         self.assertIn("../../ai-engineering/assets/diagram%20one.png", content)
         self.assertIn("[External](https://example.test/path#keep)", content)

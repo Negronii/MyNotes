@@ -124,6 +124,6 @@ e.g. `<a href="https://www.google.com">open Google</a>`
 Useful attributes:
 target: the opening form of the target page, the value could be:
 \_self: the default value, jump directly from the current page
-\_blank: request a new browsing context (often a tab); consider `rel="noopener"` when supporting older browsers or when explicitly severing access through `window.opener`.
+\_blank requests a new browsing context, often a tab. The HTML Standard treats it as `noopener` unless the link opts into an opener. An explicit `rel="noopener"` documents that separation and can help with older implementations. [HTML Standard, noopener](https://html.spec.whatwg.org/multipage/links.html#link-type-noopener)
 
 e.g. `<a href="https://www.baidu.com" target="_blank" rel="noopener">Open Baidu</a>`

@@ -2157,7 +2157,7 @@ sequenceDiagram
     end
 ~~~
 
-Use `finally` so cleanup runs when cancellation reaches the ASGI application. The smoke check below exercises explicit task cancellation and both streaming lifetimes. A dropped connection does not necessarily cancel every kind of downstream work. Test the selected ASGI server and response type before depending on disconnect behavior. A background job should acquire its own resources at its own lifetime boundary. [FastAPI dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/)
+Put cleanup in `finally`. In an already-cancelled AnyIO scope, awaited cleanup can be cancelled too. When it must await, give that cleanup a short shielded deadline and let the original cancellation propagate. The smoke check below exercises explicit task cancellation and both streaming lifetimes. A dropped connection does not necessarily cancel every kind of downstream work. Test the selected ASGI server and response type before depending on disconnect behavior. A background job should acquire its own resources at its own lifetime boundary. [FastAPI dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/) · [AnyIO finalization](https://anyio.readthedocs.io/en/stable/cancellation.html#finalization)
 
 ~~~mermaid
 flowchart LR
@@ -2748,12 +2748,12 @@ flowchart LR
     Credential[Validate credential] --> Subject[Authenticated subject]
     Subject --> Membership[Resolve current tenant membership]
     Membership --> Action[Authorize action and resource]
-    Action --> Query[Tenant-scoped database query]
-    Action --> Cache[Authorize before cache lookup]
+    Action --> Cache[Check scoped cache]
+    Cache -->|miss| Query[Tenant-scoped database query]
     Action --> Job[Persist authorized job context]
     Job --> Queue[Queue carries only job ID]
     Queue --> Worker[Worker reloads job and rechecks membership]
-    Worker --> Query
+    Worker --> Cache
 ~~~
 
 ### Tenant-owned resources / 租户资源授权
@@ -2764,7 +2764,7 @@ Authentication yields a validated subject; it does not prove access to every ten
 
 **RBAC / 基于角色的访问控制** maps users to roles and roles to permitted actions. In a relational store, user–role and role–permission tables represent those mappings, and the assignment can be scoped by tenant. In the sample service, a `reader` role in tenant A can request `documents:read`. The server must still confirm that the selected document belongs to A. Rendering or hiding a button only reflects the policy. The service evaluates current membership, the action, and the specific resource independently. / 角色授予某类操作，租户和资源判断决定这次请求实际能访问哪一条记录。 [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
 
-For one synthetic document service, the path is: verified credential → current tenant membership → `GET /documents/{id}` authorization → query constrained by both `tenant_id` and document ID → cache lookup scoped by tenant, subject, and document after authorization → optional job row storing the authorized tenant, requester, and document. The worker loads that canonical job row, rechecks current membership, and calls the same tenant-scoped data function. A worker's broad database role does not make a job payload or object ID trustworthy.
+In the synthetic document service, a verified credential and current tenant membership establish the caller's read capability. The API looks up the cache by tenant, subject, and document ID. On a miss it queries by both tenant and document ID. The example assumes that document ownership never moves between tenants. An optional job row stores the authorized tenant, requester, and document. The worker reloads that row, rechecks current membership, and calls the same scoped read function.
 
 This standard-library example uses SQLite to exercise the API and worker data boundaries. The identity inputs below stand in for a principal produced by a real authentication layer; they are not token validation code.
 
@@ -2863,7 +2863,7 @@ else:
     raise AssertionError("worker exposed a cross-tenant document")
 ```
 
-The query always carries the principal's tenant, and authorization runs before a cache hit. This example gives each principal a separate cache entry; a system with finer-grained permissions must check those permissions on cache hits and include every access-relevant scope or policy version in its cache design. If an object can change ownership, invalidate its old entries or recheck current resource scope before serving a cached copy. A tenant key alone cannot make stale access policy current. Database row-level security or tenant-scoped credentials can add another boundary, but the application still needs correct authorization and job ownership.
+The current membership and role are checked before cache lookup. The SQL tenant predicate applies on a miss. A system with finer-grained permissions must also enforce them on a hit and account for every access-relevant scope in its cache design. If ownership can change, invalidate old entries reliably or recheck current scope before serving a cached copy. Database row-level security or tenant-scoped credentials can add another boundary for database reads.
 
 Permission-aware retrieval uses the same boundary before evidence reaches a model; see [Retrieval-Augmented Generation / 检索增强生成](../../ai-engineering/rag/rag-architecture-and-implementation.md) for that application.
 

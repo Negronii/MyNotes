@@ -681,7 +681,7 @@ def make_rewriter(
                     )
                     return raw
                 return "#" + encode_native_fragment(target_title)
-            suffix = ("#" + quote(fragment, safe="-._~!$&'()*+,;=:@/")) if fragment else ""
+            suffix = ("#" + encode_native_fragment(unquote(fragment))) if fragment else ""
             return format_destination(relative_url(target, output.parent) + suffix, angle)
         suffix = ("?" + query) if query else ""
         if fragment:

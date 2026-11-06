@@ -41,7 +41,7 @@ const { data, loading, pagination } = usePagination(
 pagination.changeCurrent(2);
 ~~~
 
-`useInfiniteScroll` passes the accumulated data to the service when loading more. For downward loading, return the next page's `list` and cursor so the Hook can append the page. Configure the scroll target and stopping rule for the UI. The [archive's list-loading example / 归档列表加载示例](../../archive/front-end/Deprecated_Interview_Notes/ahooks-list-loading-contracts.md) shows the complete service contract. [ahooks v3.10.0 source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useInfiniteScroll/index.tsx)
+`useInfiniteScroll` passes the accumulated data to the service when loading more. For downward loading, return the next page's `list` and cursor so the Hook can append the page. Configure the scroll target and stopping rule for the UI. The [archive's list-loading example / 归档列表加载示例](../../archive/front-end/Deprecated_Interview_Notes/12.2%20ahooks.md#List-loading%20service%20contracts%20/%20%E5%88%97%E8%A1%A8%E5%8A%A0%E8%BD%BD%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%A5%91%E7%BA%A6) shows the complete service contract. [ahooks v3.10.0 source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useInfiniteScroll/index.tsx)
 
 ## State and browser storage / 状态与浏览器存储
 

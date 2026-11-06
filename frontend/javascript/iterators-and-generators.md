@@ -8,7 +8,7 @@ The iterable protocol exposes Symbol.iterator, which returns an iterator. The it
 
 The protocol is defined by the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration). / 协议定义见 [ECMAScript 迭代接口](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)。
 
-Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. NodeList is iterable in modern browser DOM implementations, but it is a host API rather than a JavaScript-language collection. Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
+Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](../browser-apis/dom-collections.md) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
 
 ~~~javascript
 const values = [10, 20];

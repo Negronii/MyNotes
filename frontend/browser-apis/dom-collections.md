@@ -9,12 +9,22 @@ Both are array-like collections of DOM nodes, but they differ in which nodes the
 | `NodeList` | `childNodes` | Elements, text, comments, and other child nodes | Live |
 
 ~~~html
-<p id="p1">
-  <em>hello</em> world <b>bold</b><!-- comment -->
-</p>
+<p id="p1"><em>hello</em> world <b>bold</b><!-- comment --></p>
 ~~~
 
-For this markup, `p1.children` is a live `HTMLCollection` containing `<em>` and `<b>`. `p1.childNodes` is a live `NodeList` that also contains the text nodes and comment. A `querySelectorAll("p em")` result is a static `NodeList` snapshot.
+~~~javascript
+const paragraph = document.querySelector("#p1");
+const elements = paragraph.children;
+const childNodes = paragraph.childNodes;
+const snapshot = paragraph.querySelectorAll("*");
+paragraph.append(document.createElement("i"));
+
+elements.length;   // 3 elements: em, b, i
+childNodes.length; // 5 nodes: em, text, b, comment, i
+snapshot.length;   // still 2 members: em, b
+~~~
+
+A static list fixes which nodes are members. It does not freeze the node objects or their properties. Whitespace and comments can appear in `childNodes`; `tagName` belongs to elements, while all nodes have a `nodeName`.
 
 Removing items from a live collection while incrementing the index shifts later entries underneath the loop. Iterate backward or take an explicit snapshot:
 

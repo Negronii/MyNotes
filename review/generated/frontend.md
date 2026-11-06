@@ -1325,7 +1325,7 @@ The iterable protocol exposes Symbol.iterator, which returns an iterator. The it
 
 The protocol is defined by the [ECMAScript iteration interfaces](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration). / 协议定义见 [ECMAScript 迭代接口](https://tc39.es/ecma262/2025/multipage/control-abstraction-objects.html#sec-iteration)。
 
-Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. NodeList is iterable in modern browser DOM implementations, but it is a host API rather than a JavaScript-language collection. Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
+Arrays, strings, Maps, Sets, typed arrays, and arguments objects are language-provided iterables. A DOM `NodeList` also supports iteration. Its source API determines whether membership is live or static, which matters if you mutate the DOM while iterating. [DOM collection semantics](#46.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) Plain objects are not iterable by default. / 数组、字符串、Map、Set、类型化数组和 arguments 对象由语言提供迭代能力。现代浏览器 DOM 实现中的 NodeList 也可迭代，但它是宿主 API，不是 JavaScript 语言集合。普通对象默认不可迭代。
 
 ~~~javascript
 const values = [10, 20];
@@ -3102,13 +3102,15 @@ parent.addEventListener("click", (event) => {
 
 Delegation is useful for many dynamic descendants, but does not reduce every kind of work; use it when the propagation model and ownership make the handler simpler.
 
+If an event handler removes matching descendants, [choose a live collection or a static snapshot](#46.%20What%20is%20the%20difference%20between%20an%20HTMLCollection%20and%20a%20NodeList?%20/%20HTMLCollection%20%E4%B8%8E%20NodeList%20%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F) before iterating. Removing an element from a live collection can change the index of the next element.
+
 ### Default action, cancellation, and listener options / 默认动作、取消与监听器选项
 
 `preventDefault()` cancels a cancelable event's default action; it does not stop propagation. `stopPropagation()` prevents the event from reaching later objects on the path, while `stopImmediatePropagation()` also prevents later listeners on the current object. A passive listener cannot cancel the default action, so use `{ passive: true }` for scroll/touch listeners that never need to cancel scrolling. The DOM Standard defines passive defaults for particular root-target `touchstart`/`touchmove`/`wheel`/`mousewheel` listeners; set the option explicitly when cancellation matters.
 
 ### Mobile activation and touch gestures / 移动端点击与触控手势
 
-The old click delay was conditional: some browsers delayed click dispatch while waiting to distinguish a tap from a double-tap zoom gesture. It is not a universal fixed delay today. Start with a mobile-optimized viewport, then set a gesture policy only on controls that need one. `touch-action: manipulation` allows panning and pinch zoom while excluding double-tap gestures; do not disable user zoom to address a historical delay. / 历史上的点击延迟有触发条件：部分浏览器曾等待判断点按是否为双击缩放，因此延后派发 click；如今不能把它视为普遍固定延迟。先使用适合移动端的 viewport，再仅为确实需要的控件设置手势策略。`touch-action: manipulation` 允许平移和双指缩放，同时排除双击手势；不要为了处理历史延迟而禁用用户缩放。
+The old click delay was conditional: some browsers delayed click dispatch while waiting to distinguish a tap from a double-tap zoom gesture. It is not a universal fixed delay today. Start with a mobile-optimized viewport, then set a gesture policy only on controls that need one. `touch-action: manipulation` allows panning and pinch zoom while excluding user-agent double-tap zoom; do not disable user zoom to address a historical delay. / 历史上的点击延迟有触发条件：部分浏览器曾等待判断点按是否为双击缩放，因此延后派发 click；如今不能把它视为普遍固定延迟。先使用适合移动端的 viewport，再仅为确实需要的控件设置手势策略。`touch-action: manipulation` 允许平移和双指缩放，同时排除浏览器的双击缩放；不要为了处理历史延迟而禁用用户缩放。
 
 ```html
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -3125,7 +3127,7 @@ button,
 }
 ```
 
-Apply the rule narrowly enough to preserve the intended panning and zoom behavior. Avoid a legacy tap library unless a tested target requires it: a library that synthesizes click can conflict with the browser's native click, so do not activate the same action on both touch-end and click.
+Apply the rule narrowly enough to preserve panning and zoom. It changes the browser’s direct-manipulation gestures. Controls still need ordinary activation, including keyboard activation. Test the target devices and input modes. Avoid a legacy tap library unless a tested target requires it: a library that synthesizes click can conflict with the browser's native click, so do not activate the same action on both touch-end and click.
 
 **Specification:** [Pointer Events Level 3, `touch-action`](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property) defines the allowed direct-manipulation gestures.
 
@@ -3303,12 +3305,22 @@ Both are array-like collections of DOM nodes, but they differ in which nodes the
 | `NodeList` | `childNodes` | Elements, text, comments, and other child nodes | Live |
 
 ~~~html
-<p id="p1">
-  <em>hello</em> world <b>bold</b><!-- comment -->
-</p>
+<p id="p1"><em>hello</em> world <b>bold</b><!-- comment --></p>
 ~~~
 
-For this markup, `p1.children` is a live `HTMLCollection` containing `<em>` and `<b>`. `p1.childNodes` is a live `NodeList` that also contains the text nodes and comment. A `querySelectorAll("p em")` result is a static `NodeList` snapshot.
+~~~javascript
+const paragraph = document.querySelector("#p1");
+const elements = paragraph.children;
+const childNodes = paragraph.childNodes;
+const snapshot = paragraph.querySelectorAll("*");
+paragraph.append(document.createElement("i"));
+
+elements.length;   // 3 elements: em, b, i
+childNodes.length; // 5 nodes: em, text, b, comment, i
+snapshot.length;   // still 2 members: em, b
+~~~
+
+A static list fixes which nodes are members. It does not freeze the node objects or their properties. Whitespace and comments can appear in `childNodes`; `tagName` belongs to elements, while all nodes have a `nodeName`.
 
 Removing items from a live collection while incrementing the index shifts later entries underneath the loop. Iterate backward or take an explicit snapshot:
 
@@ -4878,7 +4890,7 @@ const { data, loading, pagination } = usePagination(
 pagination.changeCurrent(2);
 ~~~
 
-`useInfiniteScroll` passes the accumulated data to the service when loading more. For downward loading, return the next page's `list` and cursor so the Hook can append the page. Configure the scroll target and stopping rule for the UI. The [archive's list-loading example / 归档列表加载示例](../../archive/front-end/Deprecated_Interview_Notes/ahooks-list-loading-contracts.md) shows the complete service contract. [ahooks v3.10.0 source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useInfiniteScroll/index.tsx)
+`useInfiniteScroll` passes the accumulated data to the service when loading more. For downward loading, return the next page's `list` and cursor so the Hook can append the page. Configure the scroll target and stopping rule for the UI. The [archive's list-loading example / 归档列表加载示例](../../archive/front-end/Deprecated_Interview_Notes/12.2%20ahooks.md#List-loading%20service%20contracts%20/%20%E5%88%97%E8%A1%A8%E5%8A%A0%E8%BD%BD%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%A5%91%E7%BA%A6) shows the complete service contract. [ahooks v3.10.0 source](https://raw.githubusercontent.com/alibaba/hooks/v3.10.0/packages/hooks/src/useInfiniteScroll/index.tsx)
 
 ### State and browser storage / 状态与浏览器存储
 
@@ -5502,7 +5514,7 @@ flowchart LR
 
 ### Pin the toolchain before building / 构建前固定工具链
 
-`package.json` can record a project’s package manager and version, for example `"packageManager": "pnpm@10.0.0"` in a project that has tested that version. Provision the pinned tool in both CI and local development, then install from the committed lockfile. The field describes the expected tool. Corepack’s installed shims can select it, but the field alone does not install a manager. Node.js distributed Corepack in earlier releases through Node 24 and dropped it from Node 25 onward. Provision Corepack separately or use the package manager's documented installer. / 声明工具版本后，CI 和本地还需要安装相同版本并按锁文件安装依赖。 [Corepack project README](https://github.com/nodejs/corepack#readme) · [Node.js 25 release](https://nodejs.org/en/blog/release/v25.0.0)
+`package.json` can record a project’s package manager and version, for example `"packageManager": "pnpm@10.0.0"` in a project that has tested that version. Provision the pinned tool in both CI and local development, then install from the committed lockfile. The field describes the expected tool. Corepack’s installed shims can select it, but the field alone does not install a manager. Node.js distributed Corepack starting with the 14.19 and 16.9 release lines through Node 24 and dropped it from Node 25 onward. Provision Corepack separately or use the package manager's documented installer. / 声明工具版本后，CI 和本地还需要安装相同版本并按锁文件安装依赖。 [Corepack project README](https://github.com/nodejs/corepack#readme) · [Node.js 25 release](https://nodejs.org/en/blog/release/v25.0.0)
 
 ### How Webpack loaders and plugins differ / Webpack loader 与 plugin 有何不同
 
