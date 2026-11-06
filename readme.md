@@ -4,7 +4,7 @@ A Markdown knowledge base for AI engineering, frontend, and shared engineering f
 
 ## Start here / 从这里开始
 
-- [Knowledge Navigator / 知识导航](review/index.md) — five routes through connected questions, from UI updates and reliable operations to AI applications and data access.
+- [Knowledge Navigator / 知识导航](review/index.md) — start with a domain question, connect related chapters, or open a continuous-reading document.
 - [Reading progress / 本轮复习进度](review/reading-progress.md) — track notes read in this pass from the canonical domain reading orders.
 - [AI engineering topics / AI 工程主题](ai-engineering/index.md)
 - [Frontend topics / 前端主题](frontend/index.md)

@@ -1,6 +1,12 @@
 # Frontend / 前端
 
-Start with JavaScript and the browser runtime, then follow navigation, layout, and events into a React interface. The later questions cover diagnosis, testing, and delivery. / 先理解 JavaScript 与浏览器运行时，再沿导航、布局和事件走到 React 界面，最后学习诊断、测试与交付。
+Start with a navigation, an interaction, or a performance symptom. The full order covers the JavaScript, browser, and framework mechanisms behind these paths. / 可以从一次导航、一次交互或一个性能现象开始。完整顺序再展开背后的 JavaScript、浏览器和框架机制。
+
+## Start with a question / 从问题开始
+
+- [How does a URL become the first visible frame? / 从输入 URL 到第一帧，发生了什么？](browser/browser-basics.md) — Start with a reports page from address bar to display. / 建议先读，沿同一个报表页面从地址栏走到画面出现。
+- [How does an interaction update the screen? / 一次操作怎样变成界面更新？](../review/index.md#How%20does%20an%20interaction%20update%20the%20screen%3F%20/%20%E4%B8%80%E6%AC%A1%E6%93%8D%E4%BD%9C%E6%80%8E%E6%A0%B7%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F) — Follow event delivery, a state change, and the next frame. / 沿事件处理、状态变化走到下一帧。
+- [Why is a visible page slow to respond? / 页面已经可见，为什么操作还很慢？](performance/performance-metrics-and-analysis.md) — Use a performance recording to locate the delay. / 从性能录制定位延迟落在哪一段。
 
 ## Reading order / 阅读顺序
 

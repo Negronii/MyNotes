@@ -1,6 +1,12 @@
 # Engineering Foundations / 工程基础
 
-Start with the costs of representing and accessing data. Then follow work across runtimes, databases, and service boundaries before deciding how to design, test, and deliver a change. / 先理解数据表示与访问的成本，再看任务如何经过运行时、数据库和服务边界，最后把这些原理用到设计、测试和交付。
+Start with an operation and follow it across data, service, or runtime boundaries. The full order covers the mechanisms behind those outcomes. / 先沿一次操作看它如何经过数据、服务或运行时边界，再按完整顺序理解这些结果背后的原理。
+
+## Start with a question / 从问题开始
+
+- [Who gets the last item when two requests race? / 两个请求抢最后一件库存，谁能成功？](databases/database-fundamentals.md) — Start with the inventory invariant and follow it to commit. / 建议先读，从库存约束走到事务提交。
+- [The reservation response timed out. Can the caller retry? / 预留库存的请求超时，调用方能重试吗？](reliability/api-reliability-and-async-delivery.md) — Follow the same kind of operation across the API boundary and recover its outcome. / 把同类操作放到 API 边界上，沿请求标识确认结果并安全重试。
+- [Which stage made an API miss its objective? / 哪一段导致 API 未达到服务目标？](reliability/observability-slos-and-incident-response.md) — Use metrics, a trace, and logs to locate the stage before changing it. / 先用指标、追踪和日志定位环节，再决定改哪里。
 
 ## Reading order / 阅读顺序
 
