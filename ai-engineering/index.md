@@ -4,7 +4,7 @@ Follow one message through an AI service, then choose whether to study its evide
 
 ## Start with a question / 从问题开始
 
-- [How does one message become a complete answer? / 一条消息怎样变成完整回答？](systems/from-message-to-answer.md) — Start with the model, tool loop, and the answer the service returns. / 建议先读，沿同一次请求看模型推理、工具循环和服务端交付。
+- [How does an AI service turn one message into a complete answer?](systems/from-message-to-answer.md) — Follow a build-failure question through the model, log retrieval, and the explanation returned to the caller.
 - [How does an updated document become usable evidence? / 更新后的文档怎样成为可用证据？](rag/rag-architecture-and-implementation.md) — Follow a document revision through indexing, access checks, retrieval, and citation. / 沿一次文档更新看索引、权限校验、检索和引用。
 - [What would justify shipping a model or prompt change? / 怎样证明模型或提示词的改动值得上线？](evaluation/llm-evaluation-methods.md) — Compare the baseline and candidate on representative tasks and check the production outcome. / 用代表性任务对照基线和候选版本，再看生产结果。
 
@@ -16,7 +16,7 @@ Follow one message through an AI service, then choose whether to study its evide
 
 ### End-to-end application / 应用主线
 
-- [How does an AI service turn one message into a complete answer? / AI 服务怎样把一条消息变成完整回答？](systems/from-message-to-answer.md)
+- [How does an AI service turn one message into a complete answer?](systems/from-message-to-answer.md)
 
 ### Foundation models / 基础模型
 

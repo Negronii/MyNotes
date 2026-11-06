@@ -1,88 +1,133 @@
-# How does an AI service turn one message into a complete answer? / AI 服务怎样把一条消息变成完整回答？
+# How does an AI service turn one message into a complete answer?
 
-AI 服务收到 `Why did build 42 fail?`。用户给出了构建编号，失败记录保存在日志服务里。应用把这次运行记为 `r1`。
+## Case study — explaining a failed build
+
+Imagine a developer using an AI assistant connected to a build system. A build runs automated checks against a code change, and build `42` has failed. The developer asks, `Why did build 42 fail?` The failure details are stored in a log service that the assistant can query through a tool named `read_build_log`.
+
+The assistant needs to retrieve that evidence and explain what it shows. We will follow this one question through the service, from preparing the model's input to returning an answer grounded in the log. The application manages access to the log service, while the model generates a request for the evidence and then an explanation using it. This is a fictional example of an application-managed tool loop.
+
+The flow below follows the successful case. There are two model calls in this run. The first produces a tool request. After the application reads the log, the second produces the answer. If another question already contains enough evidence, the model can answer on its first call.
 
 ~~~mermaid
 flowchart TD
-    Input["1 组装输入 / Prepare input<br/>问题 + 工具定义"]
-    Model["2 模型推理 / Inference<br/>词元 → 隐层状态 → 生成输出"]
-    Choice{"运行时收到工具请求？"}
-    Tool["3 运行工具 / Execute tool<br/>授权并读取构建 42"]
-    Context["4 更新上下文 / Add observation<br/>把 c1 的结果交回模型"]
-    Answer["5 交付回答 / Return answer<br/>保存文本和运行结果"]
+    Input["1 Prepare input<br/>Question + instructions + tool definition"]
+    Model["2 Run the model<br/>Generate the next output"]
+    Choice{"What did the model return?"}
+    Tool["3 Execute the tool<br/>Check access, then read build 42"]
+    Context["4 Update the input<br/>Include the call and its result"]
+    Answer["5 Complete the run<br/>Save and return the explanation"]
     Input --> Model --> Choice
-    Choice -->|工具请求 c1| Tool
-    Tool -->|结果或错误| Context
-    Context -->|同一个 r1，下一轮推理| Model
-    Choice -->|本轮正常结束并给出答案| Answer
+    Choice -->|Tool request| Tool
+    Tool -->|Log evidence or an error| Context
+    Context -->|Next model call| Model
+    Choice -->|Final answer| Answer
 ~~~
 
-## 1. Prepare the model input / 组装模型输入
+## 1. Prepare what the model can see
 
-应用运行时（harness）保存 `r1` 和调用者身份，再为第一轮推理选取信息。这个例子里没有需要带入的历史消息，模型先看到下面三样东西。
+The harness is the application code that coordinates the model and its tools. It records the caller's identity, selects the information for the model, executes tools, and decides when the application has a result to return. Here, the first model call has three inputs.
 
-| 第一轮输入 | 在 `r1` 中的内容 |
+| Input | Content in this example |
 | --- | --- |
-| 应用指令 | 根据可用证据解释构建失败。 |
-| 用户消息 | `Why did build 42 fail?` |
-| 工具定义 | `read_build_log` 接收整数 `build_id`，返回构建日志中的失败记录。 |
+| Application instruction | Explain the build failure using available evidence. |
+| User message | `Why did build 42 fail?` |
+| Tool definition | `read_build_log` accepts an integer `build_id` and returns failure records from the build log. |
 
-工具定义告诉模型可以请求什么，实际日志要等应用查询后才会出现。应用保存的调用者身份用于工具授权。在更长的对话里，应用还需要选择哪些历史和证据值得放进下一轮。[每轮推理应该看到哪些信息](../context/context-engineering-principles.md)
+The tool definition describes an available operation. The log itself enters the conversation only after the application retrieves it. The caller's identity is retained by the application for permission checks.
 
-## 2. Run inference and generate a tool request / 推理生成工具请求
+These inputs form the model's context (上下文) for this call. In a longer conversation, the application would also choose which earlier messages and evidence to include. That selection matters because the model can only condition its output on information actually supplied to it and knowledge encoded in its trained parameters. [Choosing the information for each model call](../context/context-engineering-principles.md)
 
-推理服务按模型的输入格式组织消息和工具定义，再由分词器（tokenizer）转成一列整数 ID。用 `tiktoken 0.12.0` 的 `cl100k_base` 单独编码这句提问，得到 `["Why", " did", " build", " ", "42", " fail", "?"]`，对应 `[10445, 1550, 1977, 220, 2983, 3775, 30]`。这里的字节级 BPE 按训练得到的优先级反复合并相邻片段，所以一个词元可以包含前导空格。下面的 `T` 表示模型收到的整个序列的长度，包含角色、消息和工具说明。[分词算法与词表](../foundations/how-llms-work.md#How%20does%20the%20tokenizer%20choose%20token%20boundaries%3F%20/%20%E5%88%86%E8%AF%8D%E5%99%A8%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E8%BE%B9%E7%95%8C%EF%BC%9F)
+## 2. Generate a request for the missing evidence
 
-用一个宽度为 `8` 的缩小版仅解码器 Transformer（decoder-only Transformer）看中间状态。假设词表有 `N` 项，嵌入表（embedding table）的形状是 `N × 8`。查表时，`42` 对应的 ID `2983` 取索引为 `2983` 的行。把序列里的每个 ID 都查一遍，得到 `T × 8` 的初始隐层状态（hidden state）。之后每层仍为每个位置保留一行向量，以下选用户消息中问号所在的一行演示层内计算。
+The model now has the question and a way to ask for logs. During inference (推理), it processes that input and generates an output one token (词元) at a time. In this run, the output specifies `read_build_log` with `build_id` set to `42`.
+
+How can a sequence of numerical operations produce that request? We can follow the transformations inside a simplified decoder-only Transformer (仅解码器 Transformer). The small dimensions and numerical values below illustrate the computation. They are not measurements of a model responding to this question.
+
+### Turn the input into token IDs and vectors
+
+The inference service formats the messages and tool definition for the model. A tokenizer (分词器) converts that formatted input into integer IDs. For a concrete example, encoding just `Why did build 42 fail?` with `tiktoken 0.12.0`, using `cl100k_base`, gives the following pieces and IDs.
+
+| Token pieces | Token IDs |
+| --- | --- |
+| `"Why", " did", " build", " ", "42", " fail", "?"` | `10445, 1550, 1977, 220, 2983, 3775, 30` |
+
+This tokenizer applies byte pair encoding (字节对编码), or BPE, to byte sequences, repeatedly merging adjacent pieces according to learned merge priorities. A piece can include a leading space. The full model input also contains the instructions, tool description, and formatting markers. Let `T` be the length of that entire sequence. [How token boundaries are chosen](../foundations/how-llms-work.md#How%20does%20the%20tokenizer%20choose%20token%20boundaries%3F%20/%20%E5%88%86%E8%AF%8D%E5%99%A8%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E8%BE%B9%E7%95%8C%EF%BC%9F)
+
+An embedding table (嵌入表) maps each ID to a learned vector. With vocabulary size `N` and a deliberately small model width of `8`, the table has shape `N × 8`. ID `2983`, for example, selects row `2983`. Looking up every ID produces a `T × 8` hidden state (隐层状态), with one row per position. Later layers update these rows using the surrounding context.
+
+### Let each position gather relevant information
+
+Attention (注意力) lets a position gather information from other visible positions. In this example, each of two attention heads (注意力头) takes the normalized `T × 8` state and uses three learned `8 × 4` projection matrices to produce Query (查询), Key (键), and Value (值), abbreviated Q, K, and V. Each resulting matrix has shape `T × 4`.
+
+With rotary position embedding (旋转位置编码), or RoPE, Q and K are first rotated according to position. For one position, its Q is compared with each position's K by taking their dot product and dividing by `√4`. A causal mask (因果掩码) excludes positions to the right of the query. Softmax converts the remaining scores into weights that sum to one, determining how much each visible V contributes to the result. [The QKV calculation](../foundations/how-llms-work.md#How%20do%20Q%2C%20K%2C%20and%20V%20produce%20the%20attention%20update%3F%20/%20Q%E3%80%81K%E3%80%81V%20%E6%80%8E%E6%A0%B7%E4%BA%A7%E7%94%9F%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9B%B4%E6%96%B0%EF%BC%9F) · [Transformer §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2) · [RoFormer §3.2](https://arxiv.org/html/2104.09864v5#S3.SS2)
+
+Take the row for the question mark in the user message. For this arithmetic illustration, keep only `build` and `42`, and assign them weights of `0.25` and `0.75`. If their V vectors are `(1, 0, 0, 0)` and `(0, 2, 0, 0)`, the result is `(0.25, 1.5, 0, 0)`.
+
+Each head performs its own calculation. At each position, their two width-`4` results are concatenated into a width-`8` vector, then mixed by an `8 × 8` output projection. A residual connection (残差连接) adds this update to the input state. The result still has shape `T × 8`, now with information gathered across positions.
+
+### Transform the information within each position
+
+A feed-forward network (前馈网络), or FFN, then transforms each row independently using shared learned weights. Attention has brought contextual information into a row. The FFN can combine those features nonlinearly and write an update back into that row.
+
+Using SwiGLU in our small model, two `8 × 16` projections of the normalized state produce candidate values and gate inputs. SiLU is applied to the gate inputs, and the two branches are multiplied element by element. For the question-mark row, suppose one candidate channel is `3` and its gate input is `1`. SiLU turns `1` into approximately `0.73`, so that channel becomes approximately `2.19`. A `16 × 8` down projection returns the result to the model width, and a residual connection adds it to the state produced by attention. The gate depends on the current row, allowing the same learned weights to produce different updates for different contexts. [FFNs and stacked layers](../foundations/how-llms-work.md#What%20does%20the%20FFN%20add%2C%20and%20how%20do%20blocks%20stack%3F%20/%20FFN%20%E5%A2%9E%E5%8A%A0%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E5%B1%82%E6%80%8E%E6%A0%B7%E5%A0%86%E5%8F%A0%EF%BC%9F) · [GLU Variants §2](https://arxiv.org/html/2002.05202#S2)
+
+One Transformer layer combines these attention and FFN operations with normalization and residual connections. Each layer passes its `T × 8` output to the next layer, which has its own learned parameters. The diagram tracks the shapes through one layer of our example, including normalization before each sublayer.
 
 ~~~mermaid
 flowchart TD
-    X["构建 42 的输入状态<br/>T × 8，每个词元一行"]
-    H1["注意力头 1 / Head 1<br/>Q、K、V 各 T × 4<br/>加权输出 T × 4"]
-    H2["注意力头 2 / Head 2<br/>Q、K、V 各 T × 4<br/>加权输出 T × 4"]
-    A["沿特征维拼接 → 投影<br/>T × 8，加回输入状态"]
-    F["前馈网络 / FFN<br/>候选值和门控各 T × 16<br/>逐元素相乘"]
-    Y["投影回 T × 8<br/>加回注意力更新后的状态"]
-    X --> H1 & H2
-    H1 & H2 --> A
-    A --> F --> Y
+    X["Layer input<br/>T × 8, one row per token"]
+    Norm["Normalize for attention<br/>T × 8"]
+    H1["Head 1<br/>Q, K, V each T × 4<br/>Weighted output T × 4"]
+    H2["Head 2<br/>Q, K, V each T × 4<br/>Weighted output T × 4"]
+    A["Concatenate, then project<br/>T × 8"]
+    R["Add attention update to layer input<br/>T × 8"]
+    F["Normalize, then SwiGLU FFN<br/>Two T × 16 branches<br/>Gate, multiply, project to T × 8"]
+    Y["Add FFN update<br/>T × 8 for the next layer"]
+    X --> Norm
+    Norm --> H1 & H2
+    H1 & H2 --> A --> R
+    X -->|Residual| R
+    R --> F --> Y
+    R -->|Residual| Y
 ~~~
 
-**注意力（attention）先在位置之间传递信息。** 归一化后的 `T × 8` 输入，在每个头里分别乘三个 `8 × 4` 的矩阵，得到形状均为 `T × 4` 的查询（Q）、键（K）和值（V）。若采用旋转位置编码（RoPE），模型在算分前按位置旋转 Q 和 K。某一行用自己的 Q 与可见位置的 K 做点积，除以 `√4`，再用 softmax 得到权重。因果掩码先屏蔽未来位置，因此问号所在的行能读取前面的 `build` 和 `42`。[注意力的矩阵推导](../foundations/how-llms-work.md#How%20do%20Q%2C%20K%2C%20and%20V%20produce%20the%20attention%20update%3F%20/%20Q%E3%80%81K%E3%80%81V%20%E6%80%8E%E6%A0%B7%E4%BA%A7%E7%94%9F%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9B%B4%E6%96%B0%EF%BC%9F) · [Transformer §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2) · [RoFormer §3.2](https://arxiv.org/html/2104.09864v5#S3.SS2)
+### Convert the final state into output tokens
 
-在问号这一行，简化成只对 `build` 和 `42` 两处求和。假设某个头给它们的权重是 `0.25`、`0.75`，两个 V 分别是 `(1, 0, 0, 0)` 和 `(0, 2, 0, 0)`，则该头在这一行的输出为 `(0.25, 1.5, 0, 0)`。两个头分别计算，每个位置得到两条宽度为 `4` 的结果。沿特征维拼成宽度 `8`，再用 `8 × 8` 的输出矩阵混合特征，最后把这次更新加回各位置的原向量。
+Processing the initial input is called prefill (预填充). After the last layer and final normalization in this example, the language model head, usually called the LM head, uses the vector at the last position of the complete formatted input to predict the first new token. Causal attention allows that position to attend to the whole supplied prefix. It may be an assistant-start marker added by the input template. [Chat templates and generation markers](https://huggingface.co/docs/transformers/chat_templating#add_generation_prompt)
 
-**前馈网络（feed-forward network，FFN）接着在每一行内部变换特征。** 注意力已经把与构建和编号相关的信息写进问号的向量。以 SwiGLU 为例，归一化后的 `T × 8` 状态经过两个 `8 × 16` 投影，分别生成候选值和门控输入。对问号这一行，假设其中一个候选通道是 `3`，对应的门控输入是 `1`。SiLU 把 `1` 变成约 `0.73`，相乘后这一通道约为 `2.19`。门控由当前行里的特征共同决定，所以同一个 FFN 能根据上下文写回不同内容。用 `16 × 8` 的下投影把结果变回 `T × 8`，再加到注意力更新后的状态，交给下一个 Transformer 层。[FFN 与层堆叠](../foundations/how-llms-work.md#What%20does%20the%20FFN%20add%2C%20and%20how%20do%20blocks%20stack%3F%20/%20FFN%20%E5%A2%9E%E5%8A%A0%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E5%B1%82%E6%80%8E%E6%A0%B7%E5%A0%86%E5%8F%A0%EF%BC%9F) · [GLU Variants §2](https://arxiv.org/html/2002.05202#S2)
+The LM head projects that width-`8` vector through an `8 × N` matrix to obtain logits (未归一化分数), one score for each vocabulary entry. Decoding (解码) selects an ID, either by taking the highest score or by sampling from a probability distribution derived from the scores. The selected ID is appended to the sequence, and the model predicts the next one from the new position.
 
-第一遍处理整段输入叫预填充（prefill）。预测首个新词元时，语言模型输出头（LM head）取完整格式化输入最后一个位置的最终隐层向量。输入模板决定这个位置是什么，例如模板可能在消息后追加一个回复起始标记。输出头用 `8 × N` 的矩阵为词表里的每个 ID 打分，得到 logits。解码可以选最高分，也可以把分数转成概率后采样。[聊天模板的回复起始标记](https://huggingface.co/docs/transformers/chat_templating#add_generation_prompt)
+A KV cache (键值缓存) retains K and V for previous positions in each layer. At the new position, the model computes Q, K, and V, then uses that Q to attend to both the cached K/V and the new position's own K/V. It appends the new K/V to the cache for subsequent steps. Previous positions' Q vectors have already served their calculations and are not needed for this step. [Decoding and KV cache](llm-serving-and-kv-cache.md) · [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation)
 
-选出的 ID 追加到序列，再用新位置的输出预测下一枚词元。带因果掩码的模型可以缓存各层旧位置的 K、V，因为新位置仍要读取它们。旧位置的 Q 已完成各自的计算，这一步用的是新位置的 Q。[解码与 KV 缓存](llm-serving-and-kv-cache.md) · [Transformers 缓存机制](https://huggingface.co/docs/transformers/main/en/cache_explanation)
+For our build question, this generation produces the tool name and arguments in the model's tool-call format. The inference service interprets the generated tokens according to the model's tool-call protocol and exposes the completed tool name and arguments as a structured API item. In a simplified notation, the application receives `tool_call(c1, read_build_log, {build_id: 42})`. The ID `c1` will associate the tool's result with this particular request. The harness dispatches it to the tool handler, taking the tool branch in the overview. [OpenAI tool-calling flow](https://developers.openai.com/api/docs/guides/function-calling#the-tool-calling-flow) · [Claude application-managed tool use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works#the-agentic-loop-client-tools)
 
-这次，模型按工具调用格式生成了工具名和参数。推理接口识别出完整调用，把它作为带有调用标识的结构化项交给运行时。应用收到的内容可以写成 `tool_call(c1, read_build_log, {build_id: 42})`。运行时看到这是一次工具请求，进入图中的工具分支。[OpenAI 工具调用流程](https://developers.openai.com/api/docs/guides/function-calling#the-tool-calling-flow) · [Claude 应用端工具调用](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works#the-agentic-loop-client-tools)
+## 3. Execute the request and retrieve the log
 
-## 3. Execute the tool and collect evidence / 执行工具并取得证据
+The application checks that `read_build_log` is available, that `build_id` has the required integer type, and that the caller may read build `42`. Argument validation establishes that the request can be interpreted. Authorization (授权) establishes which resource the caller may access. The application reads the log only after these checks succeed. [Tool contracts and authorization](../agents/tool-design-and-function-calling.md)
 
-运行时接到 `c1`，确认工具可用且参数是整数，再按 `r1` 的调用者身份检查对构建 `42` 的读取权限。格式校验确认运行时能按工具定义解析请求，授权检查决定当前用户能读取哪些资源。即使是只读工具，日志也必须在授权通过后才取出。[工具契约与授权检查](../agents/tool-design-and-function-calling.md)
+The retrieved result contains the evidence the model was missing.
 
-读取成功后，运行时把与问题相关的日志附在 `c1` 的结果里。`r1` 贯穿整次回答，`c1` 用来把这条观察对应到具体调用。
-
-| `c1` 的工具结果 | 从构建 `42` 的日志读到的值 |
+| Field in the result for `c1` | Value from build `42` |
 | --- | --- |
-| 失败步骤 | `unit-tests` |
-| 失败测试 | `reject_empty_name` |
-| 失败断言 | 空名称请求预期返回 `400`，实际返回 `200` |
-| 退出状态 | `1` |
+| Failed step | `unit-tests` |
+| Failed test | `reject_empty_name` |
+| Failed assertion | A request with an empty name should return HTTP `400`, but returned `200`. |
+| Process exit status | `1` |
 
-如果权限检查失败，运行时可以为 `c1` 返回读取失败的结果。下一轮模型便能说明证据为何不可用。这个例子按已知编号查一份日志。如果问题需要在一组文档里寻找相关段落，证据获取环节可以使用[检索增强生成（RAG）](../rag/rag-architecture-and-implementation.md)。
+If authorization fails, the application can return a failure result for `c1`, allowing the next model call to explain that the evidence is unavailable. Here the tool retrieves one known log by ID. When a question requires finding relevant passages across many documents, the application can retrieve them and supply them to the model to generate an answer. This retrieval-and-generation process is called retrieval-augmented generation (检索增强生成), or RAG. [Retrieving and grounding an answer](../rag/rag-architecture-and-implementation.md)
 
-## 4. Feed the observation back to the model / 把观察交回模型
+## 4. Let the model use the retrieved evidence
 
-下一轮仍处理 `r1`。在原有输入的基础上，应用带入模型提出的 `tool_call(c1, …)` 和工具返回的 `tool_result(c1, …)`。前者记录要查什么，后者把该调用实际读到的 `unit-tests`、`400` 与 `200` 带入这次推理。日志内容这时才被编码成模型输入，模型使用相同的推理机制和已训练的权重生成回答。如果证据不足以回答，模型也可以再提出一次查询，由运行时重复校验、执行与回填。[动作、观察与下一步决策](../agents/agent-fundamentals.md#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF)
+The application now makes another model call. Alongside the original question and instructions, it includes the model's `tool_call(c1, …)` and the matching `tool_result(c1, …)`. The call records what was requested. The result supplies what the tool actually observed.
 
-如果用户一开始就贴出了足够的日志，证据可以直接进入第一轮输入，图里的工具循环可以省去。这个例子中，日志已经在第二轮提供了足够证据，模型给出最终文本。
+This second input contains `unit-tests`, `reject_empty_name`, and the expected `400` versus observed `200`. Those details are formatted and encoded as part of the model's context. The same inference mechanism processes the expanded input using the same trained weights. The new evidence changes what the model can base its answer on. It does not require retraining the model.
 
-## 5. Finish the run and return the answer / 结束运行并交付回答
+If the evidence leaves a gap, the model can request another tool call, and the application repeats validation, execution, and result collection. In this case the log is enough to describe the observed failure, so the model generates an explanation. Determining the underlying code defect would require further evidence, such as the implementation and the intended behavior. [Actions, observations, and the next decision](../agents/agent-fundamentals.md#ReAct%20and%20the%20decision%20loop%20/%20ReAct%20%E4%B8%8E%E5%86%B3%E7%AD%96%E5%BE%AA%E7%8E%AF)
 
-> 第 42 次构建在 `unit-tests` 步骤失败。`reject_empty_name` 期望空名称请求返回 `400`，实际返回 `200`，测试进程以 `1` 退出。要进一步定位原因，需要核对请求校验逻辑和测试预期。
+## 5. Return the explanation and complete the run
 
-第一轮模型结束时，交出的是 `c1`，应用还有查询要做。第二轮正常结束并给出最终文本后，应用把答案和完成状态保存到 `r1`，再向调用方交付结果。若接口边生成边发送文本，运行记录仍要以应用确认的最终结果为准。[服务端的运行状态与恢复](ai-application-architecture.md)
+The answer can now state what the log establishes.
+
+> Build 42 failed at the `unit-tests` step. The `reject_empty_name` test expected HTTP `400` for a request with an empty name, but received `200`. The test process exited with status `1`. To identify the underlying cause, check the request-validation logic against the test's expected behavior.
+
+The first model call ended with a tool request, leaving the application with work to do. The second ends normally with an answer. In this example, the application saves that answer and marks the run complete before returning the result to the caller. If it streams text as it is generated, the application must still track whether generation ultimately completed or failed. [Run state and recovery](ai-application-architecture.md)

@@ -2,7 +2,7 @@
 
 **Short answer / 简答** — A tokenizer maps text to IDs. Embedding lookup gives each ID an initial vector. A stack of causal Transformer blocks mixes information between positions with attention and transforms each position with an FFN. The final vector at the last position scores the vocabulary. A decoding rule chooses the next token, and the loop continues until a stop condition is met. / 分词器把文本转成 ID，嵌入表查找给每个 ID 一个初始向量。多层因果 Transformer 依次用注意力在位置之间传递信息，再用前馈网络变换每个位置的表示。最后一个位置的向量为整个词表打分，解码规则选出下一个词元，重复直到满足停止条件。
 
-以下用一个简化的 **decoder-only Transformer / 仅解码器 Transformer** 跟踪同一批张量。它采用预归一化、因果自注意力和门控 FFN，形状用刻意缩小的例子展示。这是理解一类常见模型的计算图。消息组装、工具执行和最终答复的交付由 AI 应用的运行时负责。[从一条消息到完整回答](../systems/from-message-to-answer.md)
+以下用一个简化的 **decoder-only Transformer / 仅解码器 Transformer** 跟踪同一批张量。它采用预归一化、因果自注意力和门控 FFN，形状用刻意缩小的例子展示。这是理解一类常见模型的计算图。消息组装、工具执行和最终答复的交付由 AI 应用的运行时负责。[How an AI service turns one message into a complete answer](../systems/from-message-to-answer.md)
 
 ~~~mermaid
 flowchart LR
