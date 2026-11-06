@@ -1,215 +1,149 @@
-# How does WAL and ARIES recovery preserve committed work after a crash? / WAL 与 ARIES 恢复如何在崩溃后保留已提交工作？
+# 崩溃后，数据库如何重做已提交工作并撤销未完成事务？
 
-Write-ahead logging makes required log records durable before dependent page writes or commit acknowledgement. ARIES-style recovery reconstructs transaction and dirty-page state, redoes history from relevant recLSNs, then undoes loser transactions while writing CLRs. / 预写日志要求相关日志记录先于依赖的数据页写入或提交确认而持久化。ARIES 风格恢复重建事务表和脏页表，从相关 recLSN 重做历史，再撤销失败事务并写入 CLR。
+午夜一次断电时，事务 T1 把账户页 P1 的余额从 500 改成 450，又把审计页 P2 加了一条记录；按数据库的持久性配置，它的提交确认可能已经返回，但 P1、P2 仍只在内存缓冲区。另一笔事务 T2 改了库存页 P3，却还没有提交。机器重启后，恢复器要保留 T1、撤销 T2，并避免重复应用已经写到磁盘的更新。要作出这个判断，它需要什么日志和页状态？
 
-## Crash Recovery / 崩溃恢复
-Recover from a failure either when a single-instance database crashes or all instances crash.\
-Crash recovery restores a usable state after a crash: preserve the effects of committed transactions, and undo incomplete transactions (or finish recovery of transactions that had already aborted).
+## 恢复器需要区分哪些状态？
 
-### ACID properties
-Recovery manager guarantees Atomicity and Durability.
+crash recovery（崩溃恢复）是在数据库进程或主机突然停止后，依据持久数据和日志恢复一个可继续服务的状态。它通常帮助实现 atomicity（原子性）和 durability（持久性）：已确认提交的修改在适用故障模型内仍可找回，未完成事务的影响不会留下。它不替代约束检查来保证 ACID consistency（一致性），也不负责并发事务的 isolation（隔离性）。
 
-- Atomicity - All changes to data are performed as if they are a single operation. That is, all the changes are performed, or none of them are.
-- Consistency - Data is in a ‘consistent’ state when a transaction starts and when it ends – in other words, any data written to the database must be valid according to all defined rules (e.g., no duplicate student ID, no negative fund transfer, etc.)
-- Isolation controls interactions among concurrent transactions. Serializable isolation is equivalent to some serial order; weaker isolation levels permit defined anomalies, and product guarantees vary ([PostgreSQL isolation documentation](https://www.postgresql.org/docs/18/transaction-iso.html)).
-- Durability means acknowledged commits survive the failures covered by the engine's durability configuration and failure model.
+先看一张独立的课程事务时间线。图上的 T1、T2、T3 在崩溃前提交；T4、T5 在崩溃时仍未完成；T6 在崩溃前已标记中止，但图没有给出撤销是否完成。恢复要留下已提交事务的影响，撤销未完成事务；若 T6 的撤销尚未结束，也要继续完成。
 
-### Desired behaviors when crash happens
 ![](./desiredCrash.png)
-The graph shows T1, T2, and T3 committed before the crash; T4 and T5 were incomplete; T6 had aborted. Recovery preserves the committed updates, undoes T4 and T5, and ensures T6's abort is reflected if its undo was not yet complete.
 
-### Data Access
+数据库在运行时通常先把页从持久存储读入 buffer pool（缓冲池），再在内存中修改。下图用磁盘页 A、B、缓冲块 X、Y，以及事务 T1、T2 的工作区说明这些位置不同：Input(A) 把磁盘块 A 读到缓冲区 X；Output(B) 把缓冲区 Y 写回磁盘块 B；工作区中的 x1、y1、x2 是示意性的事务局部状态，不是磁盘页。
+
 ![](./dataaccess.png)
-Two types of data blocks
 
-- **Disk pages/blocks** are logical storage units on persistent storage.
-- **Buffer frames** are in-memory slots that hold copies of database pages in the DBMS buffer pool. A device/controller cache is a separate layer.
+buffer frame（缓冲帧）是内存中暂存一页的槽位。页被 pin/fix（固定）时不能被缓冲替换器驱逐，unpin/unfix（解除固定）后才可能回收。dirty page（脏页）是已在内存中修改、但尚未写到持久存储的页。latch（闩锁）保护内存结构的瞬时访问；lock（锁）保护逻辑数据项以实现并发隔离，二者保护对象和持有时间不同。
 
-Two operations between disk and main memory
+> [!info] 两个独立的页写入策略
+> force（强制写）要求事务提交时把修改过的数据页也写到持久存储；no-force（非强制写）允许提交后只保证日志持久，数据页稍后再写。
+>
+> steal（允许偷取）表示缓冲区可以在事务未提交时把含有其修改的页写出；no-steal（禁止偷取）不允许这么做。steal 需要日志支持撤销已落盘的未提交修改；no-force 需要日志支持重做已提交但尚未落盘的修改。因此常见的 steal/no-force 设计需要同时支持 undo（撤销）和 redo（重做）。
 
-- **Input(A)** transfers the physical block A to main memory.
-- **Output(B)** transfers the buffer block B to the disk and replaces the data there.
+## 预写日志怎样约束页写入和提交确认？
 
-### Some Concepts
-- Persistent storage holds database pages; the DBMS buffer pool keeps page copies in main-memory frames.
-- A frame can be evicted when it is unpinned; a dirty page may be written back as part of eviction, subject to the WAL rule. Pin/unpin prevents replacement while an operation needs the page.
-- Latches protect short-lived in-memory structures; transaction locks protect logical data access for transaction isolation. Fix/unfix commonly refers to pinning/unpinning a buffer page.
+write-ahead logging（WAL，预写日志）要求先把恢复所需日志写稳，再允许依赖它的页写稳。log sequence number（LSN，日志序列号）用来比较一条日志在同一日志流里的先后；它不是时间戳，也不表示记录的字节长度。每页记录最近一次已应用更新的 LSN，日志管理器记录目前已经持久刷新的最大 LSN。
 
-More Concepts:
+> [!info] 本章常用的日志位置
+> - pageLSN（页日志序号）：该数据页上最近一次更新所对应的日志序号。
+> - flushedLSN（已刷日志序号）：已经写入持久存储的最大日志序号。
+> - prevLSN（前一事务日志序号）：同一事务上一条记录的 LSN，用于沿事务链向回查找。
+> - recLSN（恢复起始日志序号）：一页自上次干净以来第一次被修改的 LSN，是这页可能需要重做的最早位置。
+> - undoNextLSN（下一撤销位置）：补偿日志记录指定恢复撤销时继续查找的位置。
 
-- **Force** requires modified pages to reach persistent storage at commit; **no-force** permits commit after the required log is durable while data pages remain buffered. No-force does not by itself make a commit nondurable when WAL is used.
-- **Steal** permits flushing a page that contains uncommitted updates; recovery must be able to undo those updates. Together, steal/no-force commonly requires both undo and redo.
+若页 P 的 pageLSN=70，则写 P 之前，日志至少要持久化到 LSN 70，即 pageLSN ≤ flushedLSN。两张图分别展示违反和满足这个条件的状态：第一张图中，页的更新位置在日志已刷写边界之后；第二张图中，刷写边界已经到达或超过页的更新位置。Cannot 和 Can 是原图文件名，不是图内标注；数字轴用于说明顺序关系，不是某数据库产品的完整日志布局。
 
-## Log-based Crash Recovery / 基于日志的崩溃恢复
-### Logging
-- A recovery log records enough information to redo or undo updates, along with transaction and page identifiers and ordering metadata. Log records may contain physical before/after values, logical operations, or other engine-specific data; not every engine stores both old and new bytes in every record. [ARIES](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging) is one specific recovery design; [Database System Concepts, 7e, ch. 19](https://www.db-book.com/slides-dir/PDF-dir/ch19.pdf) presents its recovery algorithm; [PostgreSQL WAL](https://www.postgresql.org/docs/18/wal-intro.html) documents a product-specific implementation.
-- Logs are appended in log sequence order, commonly to buffered log pages. Record size and format depend on the recovery design.
-
-### Write-Ahead Logging (WAL) / 预写日志
-1. Before a dirty data page is written to persistent storage, its update log records must be durable through that page's pageLSN.
-2. Before commit is acknowledged, the commit record and the transaction's preceding log records required by the recovery protocol must be durable. WAL record formats vary by engine.
-
-#### Write-Ahead Logging (WAL) – e.g.,
-- LSN (log sequence number) – LSNs increase monotonically within the illustrated log sequence.
-- pageLSN - The LSN of the most recent log record for an update to that page.
-- flushedLSN - max LSN flushed so far (flush to disk)
-- In this ARIES-style illustration, WAL requires **pageLSN <= flushedLSN** before the data page can be written.
-
-**Cannot** write the page to disk
 ![](./WALegCannot.png)
-**Can** write the page to disk
+
 ![](./WALegCan.png)
 
-### Transaction Table
-- The transaction table tracks transactions that have not yet written an end record; it stores transaction ID, status, and lastLSN.
-- Contains transactionID, status (running/committed/aborted), and lastLSN.\
-  During analysis, remove a transaction when its END record is encountered. A transaction with a durable COMMIT but no END at crash is a winner that may remain in the table; it is not undone.
-  e.g.
+同理，提交成功返回前，提交记录以及恢复此事务所需的较早日志必须已经持久化。日志按序刷写时，刷到提交记录会一并保证之前的日志顺序。多个事务的提交记录可以共用一次日志刷写，这称为 group commit（组提交）；它摊薄刷写开销，但每个获确认事务的持久化边界不变。这样即使数据页仍在内存里，重启后也能从日志重建已提交的值。实际设备的缓存、断电保护和 flush（持久刷写）语义仍受数据库配置与硬件保证影响。
 
-| transactionID | status     | lastLSN |
-| ------------- | ---------- | ------- |
-| T1            | running    | 40      |
-| T2            | committed  | 80      |
+日志记录可以保存物理的前后值，也可以记录逻辑操作或其他恢复信息；并非每个数据库都把旧值和新值以同一格式写入日志。PostgreSQL 18 的 WAL 是一个当前实现例子：其文档说明日志在数据文件修改前刷到永久存储，崩溃恢复可以重放日志；这是产品特定实现，不能据此说 PostgreSQL 使用了 ARIES 的全部结构。
 
-### Dirty Page Table
-- One entry per dirty page in the buffer pool. A page becomes dirty after an update changes it.
-- In ARIES, **recLSN** is the LSN of the first update that made the page dirty after it was last clean; it is the earliest update that may need redo for that page. Loading a page does not itself make it dirty ([Database System Concepts, 7e, ch. 19](https://www.db-book.com/slides-dir/PDF-dir/ch19.pdf)).\
-  e.g.
+## ARIES 怎样记录事务与脏页的恢复位置？
 
-| Pageid | recLSN |
-| ------ | ------ |
-| P1     | 10     |
-| P2     | 50     |
-| P3     | 80     |
+Algorithm for Recovery and Isolation Exploiting Semantics（ARIES，利用语义实现恢复与隔离的算法）是一种具体的日志恢复算法。它把事务的记录串成日志链，并在内存中维护事务表和脏页表。它还会把恢复中的撤销写回日志，让恢复过程再次崩溃时也能继续。
+
+事务表记录仍未写 END（结束）记录的事务及其状态、最后一个 LSN。COMMIT（提交）已持久化但 END 尚未写入时，分析仍会把它判作 winner（已提交事务）而不撤销。脏页表记录崩溃时仍可能需要恢复的页；recLSN 是该页最早需要考虑重做的更新。页加载本身不会使页变脏，只有更新才会。
+
+下图是课程的日志链示意。蓝色圈出的 1、2、3、4 是课上标记的记录自身序号；它们恰好写在原图的 Prev LSN 列附近，不是该字段值。按记录序号，LSN 1、3 更新 P5，LSN 2 更新 P6，LSN 4 更新 P7；因此脏页表的 recLSN 分别为 P5=1、P6=2、P7=4。左下事务表显示 T1 的 lastLSN=4、T2 的 lastLSN=3；实际 prevLSN 应沿事务链读取，例如 T2 在 LSN 3 的上一条记录是 LSN 2。彩色背景用于区分事务，不是恢复器的规范配色。
 
 ![](./dirtyPageTable.png)
 
-### Checkpoint
-Periodically, the DBMS creates a checkpoint, in order to **minimize the time taken to recover in the event of a system crash**.\
-Write to log:
+checkpoint（检查点）把恢复时要读的范围缩小。课程中的 begin checkpoint 和 end checkpoint 之间，事务仍可继续工作；结束记录保存当时的事务表和脏页表。fuzzy checkpoint（模糊检查点）不要求所有事务停下，也不等于把所有脏页都刷到磁盘。ARIES 的 master record（主记录）指向最近完成检查点的 BEGIN CHECKPOINT；分析从这个起点扫描，读到 END CHECKPOINT 时合并其中的事务表与脏页表快照，再继续处理日志直到持久日志末尾。不能直接跳到 END 后面，否则会漏掉 begin/end 之间的更新记录。
 
-- Begin checkpoint record: Indicates when checkpoint began.
-- End checkpoint record: Contains current Transaction table and dirty page table.
+事务显式中止时，恢复器从该事务的 lastLSN 沿 prevLSN 向回撤销更新。每撤销一条更新，会写入 compensation log record（CLR，补偿日志记录）；CLR 记录已经完成的撤销并可在重启时重做，且不会再次被撤销。undoNextLSN 指向接下来还需要撤销的位置。WAL 同样适用于 CLR：包含撤销结果的 CLR 必须先持久化，受它影响的数据页才能写回；若在 CLR 已持久化而页尚未写回时再次崩溃，redo 会重做 CLR，undo 再沿 undoNextLSN 跳过已完成的部分。
 
-**Fuzzy Checkpoint** – the creation of checkpoint **takes a little time**
+> [!example] 多次改同一值时按逆序撤销
+> T1 把 A 从 100 改为 200，再改为 300，最后改为 400。撤销要按相反顺序处理更新：400→300、300→200、200→100。每步写 CLR 并把下一撤销位置记入日志，若撤销途中又崩溃，重启后可重做已经完成的 CLR，再从 undoNextLSN 接续。
 
-- Transactions continue while a fuzzy checkpoint is collected; it is not a quiescent database image. Recovery uses the checkpoint metadata and scans the subsequent log. A fuzzy checkpoint does not itself force dirty pages to disk ([ARIES](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging)).
+下面保留另一段交错日志：T2 的更新穿插在 T1 的两次更新之间。补上 BEGIN 与事务链位置后，T1 中止只回退 T1 的记录，不会撤销 T2 对 P3 的更新。T1 先撤销 P4 的 LSN 430 并写 LSN 445 的 CLR，再撤销 P5 的 LSN 410 并写 LSN 450 的 CLR；LSN 460 是 T1 结束后 T3 的新更新。
 
-### Transaction – Abort
-- Get lastLSN of transaction from transaction table.
-- Follow the transaction's log chain backward through prevLSN. For each update undone, write a Compensation Log Record (CLR) describing the undo and its undoNextLSN; CLRs are redoable and are not themselves undone.
-  - Continue logging while undo proceeds.
-- At end of UNDO, write an “end” log record.
+| LSN | 记录 | 事务链说明 |
+| ---: | --- | --- |
+| 400 | BEGIN CHECKPOINT | 检查点开始 |
+| 405 | END CHECKPOINT | 结束记录；课程例假定事务表和脏页表为空 |
+| 408 | T1 BEGIN | T1 首条事务记录 |
+| 410 | T1 更新 P5 | prevLSN=408 |
+| 415 | T2 BEGIN | T2 首条事务记录 |
+| 420 | T2 更新 P3 | prevLSN=415 |
+| 430 | T1 更新 P4 | prevLSN=410 |
+| 440 | T1 ABORT | prevLSN=430 |
+| 445 | T1 CLR：撤销 LSN 430 | prevLSN=440；undoNextLSN=410 |
+| 450 | T1 CLR：撤销 LSN 410 | prevLSN=445；undoNextLSN=408 |
+| 455 | T1 END | prevLSN=450；T1 的回滚结束 |
+| 458 | T3 BEGIN | T3 首条事务记录 |
+| 460 | T3 更新 P5 | prevLSN=458；T1 结束后的新事务更新 |
 
-#### e.g.
-T1
+## 崩溃后为什么要先分析，再重做，最后撤销？
 
-1. Update A: 100 -> 200
-2. Update A: 200 -> 300
-3. Update A: 300 -> 400
+ARIES 恢复分三阶段：
 
----
+1. analysis（分析）阶段从主记录指向的最近完成检查点的 BEGIN 开始扫描；遇到 END CHECKPOINT 时合并其中的事务表与脏页表快照，再继续到持久日志末尾。COMMIT 记录把事务标为已提交；END 记录才会把它从事务表移除。崩溃时仍在运行或回滚中的事务是 loser（未完成事务）。
+2. redo（重做）阶段从脏页表中最小 recLSN 开始重复历史，包括后来会被判作 loser 的更新。对一条可重做的页更新或 CLR，只有页在脏页表中、记录 LSN 不早于该页 recLSN 时才是候选；若当前页上的 pageLSN 已大于或等于该记录 LSN，就跳过，否则重做并更新 pageLSN。
+3. undo（撤销）阶段只处理 loser。把每个 loser 的 lastLSN 放进 ToUndo 集合，每次取最大 LSN。遇到 CLR 时沿 undoNextLSN 跳过已撤销部分；遇到可撤销更新时撤销它、追加一个 CLR，再沿 prevLSN 前进；其他记录只沿 prevLSN 前进。到达事务链末端后写 END。
 
-              Abort 400
+ARIES 先重做所有事务在日志中留下的历史，再撤销 loser；这样恢复得到的页状态才与 pageLSN 所表示的日志前缀一致。考虑同一页 P 上两个独立记录 A、B，初值为 A=100、B=0：LSN 10 的未提交 T2 把 A 增加 10，LSN 20 的已提交事务 T1 把 B 设为 1，T1 的 COMMIT 位于 LSN 25；假设日志持久到 LSN 25，但 P 仍未写回。本例的日志语义是 T2 对 A 做增量操作、undo 用逆增量 A−10，T1 对 B 则是绝对赋值。重复历史后 P 为 A=110、B=1，再撤销 T2 的 A−10，得到 A=100、B=1。若只重做 winner 的 LSN 20，页会变成 A=100、B=1、pageLSN=20；随后对未重做的 loser 执行 A−10 就会得到错误的 A=90。此例说明 pageLSN 不能越过同页被省略的前序更新；对于采用其他日志/撤销表示的恢复系统，具体判断要按其协议分析。
 
-We will go backward, from UNDO 3, 400 -> 300, to UNDO 2..., finally get 100
+只按事务最终是否提交筛选日志也不够：磁盘上可能已有 loser 更新，也可能尚未落盘的 winner 更新需要重做。重演完整历史后，ARIES 才能从确定的崩溃前状态撤销 loser。
 
-#### Transaction – Abort e.g.,
-| LSN | Log                  |
-| --- | -------------------- |
-| 400 | begin checkpoint     |
-| 405 | end checkpoint       |
-| 410 | update: T1 writes P5 |
-| 420 | update: T2 writes P3 |
-| 430 | update: T1 writes P4 |
-| 440 | T1 abort             |
-| 445 | CLR: Undo T1 LSN 430 |
-| 450 | CLR: Undo T1 LSN 410 |
-| 455 | T1 End               |
-| 460 | update: T3 writes P5 |
+> [!info] 与分布式两阶段提交的边界
+> 本章的事务表和 loser 例题是单库崩溃恢复模型。若分布式参与者已持久写入 prepared 并投 YES，崩溃后它处于 in-doubt（等待全局决定）状态；它不能仅因本地看不到 COMMIT 就按普通 loser 自行回滚，而要查询两阶段提交协调者的持久决定。
 
-### Transaction - Commit
-- Write commit record to log.
-- Mark the transaction committed in the transaction table, then flush the log through the COMMIT record's LSN before acknowledging commit. Earlier transaction records are flushed with it because the log is ordered.
-- Append an END record after commit processing and remove the transaction from the in-memory transaction table. Group commit can amortize flushes; acknowledgment semantics still depend on the engine and its durability configuration.
+> [!example] 例一：已提交事务的脏页还没写回
+> 假设检查点完成后开始 T1，P1、P2 都尚未写回磁盘；T1 在 LSN 20 写入 COMMIT，且该提交记录和之前日志都已持久化，随后系统崩溃。为便于核对，初始磁盘页值分别为 P1=YYY、P2=WWW，pageLSN 都设为 0。
+>
+> | LSN | 记录 | prevLSN |
+> | ---: | --- | ---: |
+> | 0 | BEGIN CHECKPOINT | — |
+> | 5 | END CHECKPOINT（空事务表、空脏页表） | — |
+> | 8 | T1 BEGIN | — |
+> | 10 | T1 更新 P1：YYY→ZZZ | 8 |
+> | 15 | T1 更新 P2：WWW→XXX | 10 |
+> | 20 | T1 COMMIT | 15 |
+>
+> - 分析：T1 的状态为 committed，lastLSN=20；脏页表为 P1→recLSN 10、P2→recLSN 15。T1 没有 END，但它是 winner。
+> - 重做：最小 recLSN=10。P1 的 pageLSN 0<10，重做 LSN 10 后为 ZZZ、pageLSN=10；P2 的 pageLSN 0<15，重做 LSN 15 后为 XXX、pageLSN=15。
+> - 撤销：无 loser，因此不撤销 T1。
+>
+> 若磁盘上的某页 pageLSN 已经等于或大于对应更新的 LSN，该条更新跳过；实际 pageLSN 由崩溃前哪些脏页已写出决定。
 
-### Crash recovery
-Three phases
+> [!example] 例二：保留 T1 的提交、撤销 T2 的后续覆盖
+> 本例中，T1 先把 P1 从 YYY 改成 ZZZ、把 P2 从 WWW 改成 XXX，T2 在 T1 提交前把 P3 从 UUU 改成 VVV；T1 随后提交，T2 再把 P1 从 ZZZ 覆盖成 TTT，却在自身提交前崩溃。假设 WAL 已持久化到 LSN 30（可由后台刷写），而 P1、P2、P3 的数据页都仍未写回磁盘、pageLSN 都是 0；崩溃时这些页都还在脏页表中。
+>
+> | LSN | 记录 | prevLSN |
+> | ---: | --- | ---: |
+> | 0 | BEGIN CHECKPOINT | — |
+> | 5 | END CHECKPOINT（空事务表、空脏页表） | — |
+> | 8 | T1 BEGIN | — |
+> | 10 | T1 更新 P1：YYY→ZZZ | 8 |
+> | 12 | T2 BEGIN | — |
+> | 15 | T1 更新 P2：WWW→XXX | 10 |
+> | 20 | T2 更新 P3：UUU→VVV | 12 |
+> | 25 | T1 COMMIT | 15 |
+> | 30 | T2 更新 P1：ZZZ→TTT | 20 |
+>
+> **分析阶段的状态**
+>
+> | 项目 | 恢复结果 |
+> | --- | --- |
+> | 事务表 T1 | committed（已提交），lastLSN=25，winner（胜者） |
+> | 事务表 T2 | running（运行中），lastLSN=30，loser（未完成事务） |
+> | 脏页表 | P1→10，P2→15，P3→20 |
+>
+> **重做阶段的状态**：候选更新是 LSN 10、15、20、30。按 pageLSN 条件，从 pageLSN=0 开始时依序重做：P1 在 LSN 10 变成 ZZZ，P2 在 LSN 15 变成 XXX，P3 在 LSN 20 变成 VVV，P1 在 LSN 30 再变成 TTT；各页的 pageLSN 随后分别为 P1=30、P2=15、P3=20。
+>
+> **撤销阶段的状态**：ToUndo 初始为 {30}。撤销 LSN 30，把 P1 从 TTT 恢复为 ZZZ，写 CLR 31（prevLSN=30、undoNextLSN=20）；随后沿 T2 链撤销 LSN 20，把 P3 从 VVV 恢复为 UUU，写 CLR 32（prevLSN=31、undoNextLSN=12）。应用 CLR 31、32 时，相应缓冲页的 pageLSN 分别更新为 P1=31、P3=32；P2 的 pageLSN 仍为 15。受影响数据页写回前，必须先把相应 CLR 持久化。LSN 12 是 T2 BEGIN，沿其 prevLSN 到链末端后写 END 33。最终保留 T1 的提交：P1=ZZZ、P2=XXX；撤销 T2 的影响：P3=UUU。
+>
+> 这里按过程展示 T2 的 LSN 30 如何暂时覆盖 T1 已提交的 P1 值，再由 T2 的撤销恢复为 ZZZ；先重做历史的必要性由上文同页更新反例说明，而不是由本例的绝对值覆盖推导。
 
-- Phase 1 – **Analysis**: reconstruct the transaction table and dirty page table from the checkpoint and subsequent log.
-- Phase 2 – **Redo** repeats history from the earliest recLSN, including updates from transactions that were incomplete at the crash.
-- Phase 3 – **Undo** the remaining effects of loser (incomplete) transactions.
+恢复日志只保护它所覆盖的崩溃故障和存储假设。若整个设备损毁、日志也无法读取，还需要独立备份与日志归档；若应用逻辑写错但事务正常提交，崩溃恢复不会自动知道业务上应该回到哪里。
 
-### Crash recovery – Steps
-1. **Analysis phase**
-
-- Transaction table
-- Dirty page table
-
-2. **Redo phase (top - bottom)**
-
-- Start scanning at the smallest recLSN in the Dirty Page Table. For each redoable update or CLR, consider it only when its page is in the table and its LSN is at least that page's recLSN; redo it only if the on-disk pageLSN is less than the record LSN. Update pageLSN after redo. This is the ARIES-style per-page test, not just a comparison to one global x.
-
-3. **Undo phase (bottom - top)**
-
-- Undo only loser transactions that were active or aborting at the crash; committed transactions are winners and are not undone.
-- Initialize ToUndo with the lastLSN of every loser. Repeatedly remove the largest LSN.
-- For a CLR, follow undoNextLSN without undoing the CLR. For an undoable update, undo it, append a CLR whose undoNextLSN is that update's prevLSN, then follow prevLSN. For other records, follow prevLSN ([CMU recovery notes, pp. 2 and 5–6](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf)).
-- Add each non-null next LSN to ToUndo. When a loser's chain reaches null, write END for that transaction; recovery Undo finishes only when ToUndo is empty.
-
-#### Example1
-| Time | Transaction Info                        |
-| ---- | --------------------------------------- |
-| 0    | BEGIN CHECKPOINT                        |
-| 5    | END CHECKPOINT EMPTY XACT TABLE AND DPT |
-| 10   | T1: UPDATE P1 OLD: YYY NEW: ZZZ         |
-| 15   | T1: UPDATE P2 OLD: WWW NEW: XXX         |
-| 20   | T1: COMMIT                              |
-
-Answer:
-
-1. Analysis phase\
-   Transaction table:\
-   T1, commit, 20\
-   Dirty page table:\
-   P1 10\
-   P2 15
-1. Redo phase\
-   Dirty page smallest LSN: 10\
-   Update logs: LSN 10 and LSN 15\
-   LSN 10 => if pageLSN(P1) < 10, redo LSN 10, set pageLSN(P1) = 10\
-   LSN 15 => if pageLSN(P2) < 15, redo LSN 15, set pageLSN(P2) = 15
-1. Undo phase\
-   nothing
-
-#### Example2
-| Time | Transaction Info                          |
-| ---- | ----------------------------------------- |
-| 0    | BEGIN CHECKPOINT                          |
-| 5    | END CHECKPOINT (EMPTY XACT TABLE AND DPT) |
-| 10   | T1: UPDATE P1 (OLD: YYY NEW: ZZZ)         |
-| 15   | T1: UPDATE P2 (OLD: WWW NEW: XXX)         |
-| 20   | T2: UPDATE P3 (OLD: UUU NEW: VVV)         |
-| 25   | T1: COMMIT                                |
-| 30   | T2: UPDATE P1 (OLD: ZZZ NEW: TTT)         |
-
-Answer
-
-1. Analysis phase\
-   Transaction table:\
-   T1, commit, 25\
-   T2, running, 30
-   Dirty page table:\
-   P1 10\
-   P2 15\
-   P3 20
-2. Redo phase\
-   Dirty page smallest LSN: 10\
-   Update-log candidates: LSN 10, 15, 20, and 30; apply the DPT/recLSN/pageLSN test to each.\
-   LSN 10 => if pageLSN(P1) < 10, redo LSN 10, set pageLSN(P1) = 10\
-   LSN 15 => if pageLSN(P2) < 15, redo LSN 15, set pageLSN(P2) = 15\
-   LSN 20 => if pageLSN(P3) < 20, redo LSN 20, set pageLSN(P3) = 20\
-   LSN 30 => if pageLSN(P1) < 30, redo LSN 30 and set pageLSN(P1) = 30; otherwise, skip it.
-3. Undo phase\
-   Initialize ToUndo with T2's lastLSN, 30. Undo LSN 30 and write a CLR whose undoNextLSN points to T2's previous log record, LSN 20.\
-   Follow T2's prevLSN chain; undo each remaining undoable update and write a CLR pointing to that update's prevLSN. Continue through any non-update records until the chain reaches null, then write END for T2. The example table omits any BEGIN record.
+> [!info]- 来源
+> - ARIES 的 write-ahead logging、repeating history、分析/重做/撤销、检查点扫描起点与 CLR/undoNextLSN：Mohan 等，1992，*ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging*，§§5.3–6.3、§10.1：[IBM Research 论文条目](https://research.ibm.com/publications/aries-a-transaction-recovery-method-supporting-fine-granularity-locking-and-partial-rollbacks-using-write-ahead-logging)。
+> - pageLSN、flushedLSN、recLSN、事务表、脏页表、ARIES 检查点及恢复流程：CMU 15-445/645，Fall 2024，Lecture 21，尤其 pp. 1–6：[Database Crash Recovery 讲义](https://15445.courses.cs.cmu.edu/fall2024/notes/21-recovery.pdf)。
+> - WAL 先于数据页持久化、提交只需刷写 WAL，以及归档 WAL 支持时间点恢复：PostgreSQL 18，§28.3（包括 group commit）：[Write-Ahead Logging](https://www.postgresql.org/docs/18/wal-intro.html)。
+> - 崩溃恢复日志与检查点算法的课程背景：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版，2019，第 19 章：[Recovery System 课件](https://www.db-book.com/slides-dir/PDF-dir/ch19.pdf)。
+> - ACID 隔离与产品版本相关的隔离保证并不由 WAL 代替：PostgreSQL 18，§13.2：[Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)。

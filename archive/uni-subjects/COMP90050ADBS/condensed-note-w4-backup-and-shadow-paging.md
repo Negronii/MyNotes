@@ -1,71 +1,71 @@
-# How do remote backup and shadow paging handle failure? / 远程备份与影子分页如何处理故障？
+# 站点故障怎样切换，影子分页又怎样提交事务？
 
-A backup must distinguish a failed primary from a network partition before promotion. Commit-safety modes trade acknowledgment delay against which commits may be missing at failover. Shadow paging copies changed pages and publishes a durable new root, trading log work for copying and fragmentation costs. / 远程备份在提升前必须区分主节点故障与网络分区。提交安全模式权衡确认延迟与故障切换时可能缺失的提交。影子分页复制变更页并持久发布新根，以复制和碎片化成本换取较少日志工作。
+一家银行把主数据库放在站点 A，把备用机放在异地站点 B。夜间 A 的心跳突然中断：这是主机损坏，还是两站点之间的链路断了？B 若立即接管，可能出现两个主站；若等待确认，业务又会停多久？另一个问题发生在单机内部：事务改了几页后断电，数据库如何判断这批新页是否已经提交？本章分别沿站点级备份和页级影子分页回答这两个问题。
 
-## Remote Backup System
-Remote backup systems provide high availability by allowing transaction processing to continue even if the primary site is destroyed
+## 备用站点为何不能只凭心跳接管？
 
-- Detection of failure: **Backup site must detect when primary site has failed**
-  - Heartbeats detect loss of contact but cannot by themselves distinguish a failed primary from a network partition. A safe promotion also needs fencing or an agreed quorum/ownership rule to prevent two primaries.
-- Transfer of control
-  - To take over control, **backup site first perform recovery using its copy of the database and all the log records it has received from primary**. Thus, completed transactions are redone and incomplete transactions are rolled back
-  - After safe promotion, the backup becomes the new primary.
+remote backup（远程备份）通常由主站点持续产生更新日志，并将日志传到备用站点。心跳只能说明“没有收到消息”，不能单独证明发送端已经停止工作：主机故障和网络分区都可能呈现为心跳超时。
 
-### Remote Backup System
-- Time to recover
-  - To reduce delay in takeover, backup site periodically processes the redo log records (don't do undo)
-  - In effect, it performs a **checkpoint**, and can then delete earlier parts of the log
-- Hot-Spare configuration permits very fast takeover:
-  - Backup continually processes redo log record as they arrive, applying the updates locally
-  - When failure of the primary is detected, the backup rolls back incomplete transactions, and is ready to process new transactions
+若主站其实仍能服务，却与备用站点失联，两边都接收写入就会形成 split brain（脑裂），之后的日志无法简单合并。因此，切换前还要有明确的所有权规则，例如隔离旧主的 fencing（隔离控制）、租约，或经设计的仲裁机制。不能把超时本身当作安全的主站所有权证明。
 
-### Remote Backup System
-Ensure durability of updates by delaying transaction commit until update is logged at backup. But we can avoid this delay by permitting lower degrees of durability. i.e. delay commits until the log is committed in backup
+备用端获得接管资格后，还要根据已收到的日志把本地数据推进到一个可用状态。未处理的日志需要重放；日志中没有提交记录的事务按恢复协议撤销。若备用端积累了较长的未处理日志，可周期性回放并形成检查点，以缩短接管时需要处理的范围。课程里的 hot standby（热备）指平时持续接收并应用日志的备用站点；PostgreSQL 的 hot standby 是更具体的产品术语，还指恢复期间允许只读查询。无论术语如何使用，备用端都可能因异步发送而落后于主站。
 
-- One-safe: acknowledge commit when its commit record is durable at the primary, without waiting for the backup. A primary-site loss before log transfer can lose an acknowledged commit.\
-  (A primary-site failure can occur before the latest log records arrive at the backup.)
-- Two-very-safe: acknowledge commit after the commit record is durable at both primary and backup. This reduces the risk of losing an acknowledged commit but reduces availability if either site is unavailable.
-  (Acknowledgments wait for both sites, so a failure of either site can reduce commit availability.)
-- Two-safe: use the two-site acknowledgment rule while both sites are active; if only the primary remains, acknowledge after the primary commit record is durable. This improves availability but has a failover scenario in which the backup may not contain a primary-only acknowledged commit.\
-  (This improves availability over two-very-safe but can lose a primary-only acknowledged commit if failover uses a stale backup.)
+## 提交确认规则如何影响故障切换时的数据？
 
-## Shadow Paging
-Shadow Paging
+课程中的 one-safe（单点持久确认）、two-very-safe（两端持久确认）与 two-safe（双站点自适应确认）是一个简化的两站点模型，用来比较“确认提交前，至少要把提交日志写到哪里”。名称不是所有数据库产品都采用的配置项。
 
-- Idea: maintain two page tables during the lifetime of a transaction, i.e., the current page table, and the shadow page table
-- To start with, both the page tables are identical. Only current page table is used for data item accesses during execution of the transaction
-- Whenever any page is about to be written
-  - A copy of this page is made onto an unused page
-  - The current page table is then made to point to the copy
-  - The update is performed on the copy
-- To commit a transaction
-  1. Flush all modified pages in main memory to disk
-  2. Output current page table to disk
-  3. Make the current page table the new shadow page table
-- Once the new root-page-table pointer is atomically and durably published, the transaction is committed; the modified pages and page table must already be durable.
+| 课程模型 | 何时确认提交 | 主要收益与风险 |
+| --- | --- | --- |
+| one-safe | 主站的提交日志已经写入持久存储 | 不必等待远端确认；若主站在日志到达备用端前永久损坏，已确认事务可能缺失于备用端。 |
+| two-very-safe | 主站和备用端都已持久记录提交日志 | 在假设两站存储可靠、且提交须等两端确认时，已确认提交在任一单站故障后仍可恢复；任一端不可用时，提交会等待或停止。 |
+| two-safe | 两端都活动时按 two-very-safe 等待；只剩主站活动时可只等主站 | 允许备用端离线时继续提交。若主站只是暂时不可达，应等待原主恢复并取回缺失日志后再安全接管。若主站和它独有的已确认提交日志确定永久丢失，且没有第三份副本或备份保存这些更新，剩余备机不能无损重建这些事务：只能继续停服，或明确接受已确认事务丢失、从剩余可用状态切换并另做账目核对。仲裁或 fencing 只能决定谁有权写，不能补回丢失的日志。 |
 
-Advantages of shadow-paging over **log-based schemes**
+这三种规则只描述提交确认与日志复制的边界，并未自动解决谁有权成为主站、两份冲突状态怎样合并，或设备是否真的把“写入”落到了断电可保留的介质上。
 
-- No overhead of writing log records
-- Recovery is trivial - new transactions can start right away, using the shadow page table.
+PostgreSQL 18 可以作为一个具体产品例子，而不是上述名称的通用实现：流复制默认异步，因此主站故障时可能丢失尚未复制的已提交事务。配置同步备用端后，提交可以等待其确认；synchronous_commit 还可选择等待备用端写入操作系统、持久刷盘，或完成重放并使事务可见。等待更强确认会增加往返延迟；确认等级、同步备用端数量以及备用端故障时的处理都要按配置一起核对。
 
-Disadvantages
+## 备份怎样满足恢复点和恢复时限？
 
-- Copying the entire page table is very expensive when the page table is large
-- Commit overhead is high - Need to flush every updated page, and page table
-- Data gets fragmented (related pages get separated on disk)
-- Hard to extend algorithm to allow transactions to run concurrently
+高可用备用端让服务较快切换，备份则用于找回过去的数据状态、应对逻辑误删、损坏或多站点损失。二者目的不同：日志复制本身不是一份可长期保留、可独立还原的备份。
 
-### In Practice
-Strategy plan based on:
+设计备份计划时，先分别写出两个目标：
 
-- Goals and requirement of your organization/task
-- The nature of your data and usage pattern
-- Constraint on resources
+- recovery point objective（RPO，恢复点目标）：最多能接受丢失多长时间的数据。
+- recovery time objective（RTO，恢复时间目标）：服务最多可以中断多久。
 
-Design backup strategy:
+再根据需要恢复整库还是部分数据、数据变化速度、可用存储、保留期和恢复演练结果选择备份范围与频率。无论计划多完整，都要实际测试还原；只确认备份作业“成功”不等于证明备份可恢复。
 
-- Full disk backup vs partial - Are changes likely to occur in only a small part of the database or in a large part of the database?
-- How frequently data changes - If frequent: use differential backup that captures only the changes since the last full database backup
-- Space requirement of the backups – depends on the resource
-- Multiple past instances of backup – useful if point-in-time recovery is needed
+常见备份链可以这样理解：
+
+- full backup（完整备份）保存所选范围的完整基线。
+- incremental backup（增量备份）通常记录自链中上一次备份以来的变化；其确切含义和恢复链依工具而定。
+- differential backup（差异备份）在 SQL Server 的定义中记录自最近一次常规完整备份以来发生的变化；copy-only full backup（仅复制完整备份）不会重置差异基线。恢复时必须先还原目标差异备份所基于的完整备份，再还原差异备份。其他产品的术语与实现应查对应文档。
+- point-in-time recovery（PITR，时间点恢复）以基础备份为起点，再重放归档日志，停止在目标时间或位置。PostgreSQL 18 将物理基础备份与连续 write-ahead log（WAL，预写日志）归档组合用于 PITR，也支持增量基础备份；这些能力不等于任意产品都采用同一恢复链。
+
+> [!example] 逐步还原一条合成备份链
+> 假设周日 00:00 做了完整备份，周一、周二分别记录增量，周三 14:00 发生误删，目标是恢复到 13:55。按这条假设链，先还原周日完整备份，再按顺序还原周一和周二增量，随后重放足够的事务日志到周三 13:55。这里需要的日志区间由备份工具和产品恢复协议确定，不能把“增量文件齐全”当作足够条件。
+>
+> 若同一产品采用差异备份，并假设周日 00:00 的常规完整备份是基线、期间没有其他常规完整备份重置基线，周三 00:00 已完成一份差异备份，则只还原周日完整备份与这份早于 13:55 目标点的差异备份，再重放后续日志到 13:55。不能选取 14:00 误删之后产生的差异备份；也不能把仅复制完整备份误当作重置差异基线。增量链中间少一份、差异基线不匹配，都会使这条路径失效。
+
+## 影子分页怎样把整笔事务变成一次根指针切换？
+
+shadow paging（影子分页）是课程中的一种页级恢复算法。设数据库由页表指向多个数据页，事务开始时保留旧页表作为影子页表，并创建当前页表供事务使用。两张表最初指向同一批已提交数据。
+
+事务要改某页时，不覆盖旧页，而是把它复制到新位置，在新页上修改，并让当前页表指向新副本；影子页表仍指向旧版本。于是，提交前即使断电，旧根仍能找到完整旧状态，未发布的新页可以回收。
+
+提交时必须先让新数据页和当前页表持久化，再原子、持久地发布新的根页表指针。这个根指针是提交点：
+
+1. 指针发布前故障：恢复时选择旧根，整笔事务未提交。
+2. 指针发布后故障：新根已经持久可见，事务提交，新根指向的修改页也必须已经持久化。
+
+> [!info] 这里的“原子发布”是必要前提
+> 根指针切换不能留下一半旧值、一半新值；而且在它之前，新页和页表必须先写稳。算法依赖存储系统能提供合适的持久化顺序和原子元数据更新。没有这些前提，“只切一次指针”并不足以保证崩溃安全。
+
+影子分页不需要按同样方式记录每次更新的撤销与重做日志，恢复时根据持久根选择新旧页树。但代价是复制页和页表更新、提交时刷写延迟、页布局碎片，以及并发事务的冲突处理和旧页回收复杂度。它适合用来理解“先准备新版本、最后原子发布”的恢复思路；现代数据库普遍使用何种日志或快照机制，要以其实现文档为准，不能把教材算法当作默认产品设计。
+
+> [!info]- 来源
+> - 远程备份、热备与 one-safe / two-very-safe / two-safe 课程模型：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版，2019，§19.7；模型结论依赖其两站点与故障切换假设，本文补充了防脑裂和日志对账边界：[教材章节页](https://www.db-book.com/index.html)。
+> - PostgreSQL 18 的基础备份、增量备份和 PITR：§25.1–25.3，尤其 §25.3 的连续归档、恢复目标与限制：[备份与恢复](https://www.postgresql.org/docs/18/backup.html)、[连续归档与时间点恢复](https://www.postgresql.org/docs/18/continuous-archiving.html)。
+> - PostgreSQL 18 的 hot standby、异步流复制与同步确认：§26.2.5–26.2.8；同步确认等级还取决于 `synchronous_commit`：[热备与流复制](https://www.postgresql.org/docs/18/warm-standby.html)、[复制配置](https://www.postgresql.org/docs/18/runtime-config-replication.html)、[`synchronous_commit` 参数](https://www.postgresql.org/docs/18/runtime-config-wal.html#GUC-SYNCHRONOUS-COMMIT)。
+> - 差异备份相对完整备份的定义：SQL Server 17 文档，差异备份概述：[Differential backups](https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/differential-backups-sql-server?view=sql-server-ver17)。
+> - 影子分页与日志恢复作为恢复算法的比较：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版，2019，第 19 章 §19.3（恢复算法）与相关课程材料：[教材第 19 章课件](https://www.db-book.com/slides-dir/PDF-dir/ch19.pdf)。
