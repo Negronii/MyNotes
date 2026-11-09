@@ -104,6 +104,103 @@ Math.abs((0.1 + 0.2) - 0.3) < 1e-12; // 对这个量级的例子成立
 
 金额可在币种规则允许时用最小单位整数表示，或使用明确舍入规则的十进制运算。
 
+## 结构比较要把输入范围写成契约
+
+`===` 对对象只比较身份；业务判断有时还需要问两份输入是否有相同的数据结构。这不是 JavaScript 内建的统一规则，比较结果取决于应用选择的输入契约。这里比较筛选条件和接口纯数据：普通对象键的插入顺序不重要，数组顺序重要，键缺失与显式 `undefined` 不同。
+
+本例只讨论有限、无环的数据树：当前 realm（执行环境）的普通数组、普通对象或 null 原型对象；叶子是 `null`、`undefined`、布尔值、字符串或数字；容器只含自有、可枚举的字符串数据属性。数组还比较自己的 `length`。Symbol 或不可枚举属性、访问器、代理、函数、BigInt、Symbol 值及 Date、Map 等带内部状态的对象都在契约之外；代码不负责检测循环，调用方必须保证输入无环。普通对象可继承标准 `Object.prototype` 成员，但继承属性不参与比较。调用方应先保证输入符合契约；这段递归代码不是验证不可信对象的通用入口。
+
+~~~javascript
+function isPlainObject(value) {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function deepEqual(left, right) {
+  const leftIsObject = left !== null && typeof left === "object";
+  const rightIsObject = right !== null && typeof right === "object";
+  if (!leftIsObject || !rightIsObject) {
+    return !leftIsObject && !rightIsObject && Object.is(left, right);
+  }
+
+  const leftIsArray = Array.isArray(left);
+  const rightIsArray = Array.isArray(right);
+  if (leftIsArray !== rightIsArray) return false;
+
+  if (leftIsArray) {
+    if (Object.getPrototypeOf(left) !== Array.prototype ||
+        Object.getPrototypeOf(right) !== Array.prototype) {
+      throw new TypeError("只支持当前 realm 的普通数组");
+    }
+    if (left.length !== right.length) return false;
+  } else {
+    if (!isPlainObject(left) || !isPlainObject(right)) {
+      throw new TypeError("只支持普通对象或 null 原型对象");
+    }
+    if (Object.getPrototypeOf(left) !== Object.getPrototypeOf(right)) {
+      return false;
+    }
+  }
+
+  if (Object.is(left, right)) return true;
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    if (!Object.hasOwn(right, key)) return false;
+
+    const leftDescriptor = Object.getOwnPropertyDescriptor(left, key);
+    const rightDescriptor = Object.getOwnPropertyDescriptor(right, key);
+    if (!Object.hasOwn(leftDescriptor, "value") ||
+        !Object.hasOwn(rightDescriptor, "value")) {
+      throw new TypeError("只支持数据属性");
+    }
+    if (!deepEqual(leftDescriptor.value, rightDescriptor.value)) {
+      return false;
+    }
+  }
+  return true;
+}
+~~~
+
+递归步骤可以按四件事复算：先区分叶子与容器，叶子用 `Object.is`；再确认两边同为数组或对象；对象原型类别不同就不相等，数组先比 `length`；最后比较自有键集合，并对每个键的值递归。对象键次序因此不影响结果；数组索引是否存在仍影响结果，因为空位不在 `Object.keys` 里。使用属性描述符读取数据值，不会调用输入 getter；当比较走到一个可枚举访问器属性时会抛 `TypeError`。若两边是同一对象引用，容器类别检查后就会由 `Object.is` 短路，因此本函数不能用作输入验证器。
+
+| 输入 | 差异 | 结果 |
+| --- | --- | --- |
+| `{ a: 1, b: 2 }` 与 `{ b: 2, a: 1 }` | 只有键插入顺序不同 | `true` |
+| `{ amount: undefined }` 与 `{}` | 自有键缺失 | `false` |
+| `[]` 与 `[,]` | 数组 `length` 分别为 0 与 1 | `false` |
+| `[,]` 与 `[undefined]` | 前者索引 0 是空位，后者有自有元素 | `false` |
+| `[1, 2]` 与 `[2, 1]` | 数组值的索引顺序不同 | `false` |
+| `{ value: NaN }` 与 `{ value: NaN }` | `Object.is(NaN, NaN)` | `true` |
+| `{ value: -0 }` 与 `{ value: +0 }` | `Object.is(-0, +0)` | `false` |
+| `{}` 与 `Object.create(null)` | 自有键相同，原型类别不同 | `false` |
+| 左侧两个属性共享同一子对象，右侧各自保存等值副本 | 比较值，不维护两边的共享身份关系 | `true` |
+| 两个不同的 `new Date(0)` | Date 有本契约之外的内部状态 | 抛 `TypeError` |
+
+例如，普通对象和 null 原型对象都可装载键值，但本契约把它们的原型类别也纳入结果：
+
+~~~javascript
+deepEqual({}, Object.create(null)); // false
+deepEqual({ value: NaN }, { value: NaN }); // true
+deepEqual({ value: -0 }, { value: +0 });   // false
+~~~
+
+单看可见原型不能证明一个对象确实是纯数据：把 Date 的原型手动改成 `Object.prototype` 会越过这项检查。因此，输入边界必须保证对象来自可信的纯数据构造流程；对任意对象、Proxy 或带隐藏内部状态的值，先用适合其来源的解析和校验。递归深度仍受 JavaScript 调用栈限制；无环是本例前提，代码不负责检测环。
+
+用 `JSON.stringify` 直接比较字符串也不是结构相等：属性插入顺序可能改变输出，显式 `undefined` 属性会被省略，数值 `-0` 会序列化成 `0`。
+
+~~~javascript
+JSON.stringify({ a: 1, b: 2 }) === JSON.stringify({ b: 2, a: 1 }); // false
+JSON.stringify({ amount: undefined }) === JSON.stringify({});    // true
+JSON.stringify({ amount: -0 }) === JSON.stringify({ amount: 0 }); // true
+~~~
+
+若这些差异会影响业务判断，应比较经过约束的数据结构；对象隔离或保留共享身份关系则是复制问题，见[如何安全地深拷贝 JavaScript 值？](./deep-copy-and-structured-clone.md)。
+
+
 ## 变量保存对象身份，不会自动复制对象
 
 把对象赋给新变量后，两个绑定仍指向同一个对象。属性赋值会先求出并记录左侧的基对象，再求右侧；右侧即使重新绑定变量，也不会改变已记录的基对象。
@@ -277,7 +374,9 @@ capture`label: ${untrusted}`;
 
 > [!info]- 来源
 > - 值类型、原始值与对象行为：[ECMAScript 2026 §6.1–6.2](https://tc39.es/ecma262/2026/multipage/ecmascript-data-types-and-values.html)。
-> - 严格相等、SameValue、SameValueZero 和 ToPropertyKey：[ECMAScript 2026 §7.2.9–7.2.14、§7.1.19](https://tc39.es/ecma262/2026/multipage/abstract-operations.html)。
+> - 严格相等、SameValue、SameValueZero 和 ToPropertyKey：[ECMAScript 2027 草案（Draft ECMA-262 / November 3, 2026）§7.2.9–7.2.14、§7.1.19](https://tc39.es/ecma262/)，访问于 2026-11-09。
+> - 本章教学 `deepEqual` 对自有属性、属性描述符、普通对象键及数组索引的检查依据：[ECMAScript 2027 §10.1.5.1、§20.1.2.14、§23.1.4、§10.4.2](https://tc39.es/ecma262/)，访问于 2026-11-09。比较契约、不支持类型及“输入必须无环”由本章示例定义。
+> - `JSON.stringify` 对不可表示的对象值、`undefined` 属性、数字与属性枚举顺序的处理：[ECMAScript 2027 §25.5.4.2、§25.5.4.5、§10.1.11.1](https://tc39.es/ecma262/)，访问于 2026-11-09。
 > - `document.all` 的历史例外：[ECMAScript 2026 Annex B IsHTMLDDA internal slot](https://tc39.es/ecma262/2026/multipage/additional-ecmascript-features-for-web-browsers.html#sec-IsHTMLDDA-internal-slot)。
 > - `instanceof` 与 `Object.prototype.toString` 的检查行为：[ECMAScript 2026 §13.10.2 InstanceofOperator](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-instanceofoperator)、[§20.1.3.6 Object.prototype.toString](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.prototype.tostring)。
 > - Object.keys / values / entries 与 Object.assign 的属性范围：[ECMAScript 2026 §20.1.2](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html)；普通对象的键顺序：[§10.1.11.1 OrdinaryOwnPropertyKeys](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryownpropertykeys)。
@@ -286,3 +385,4 @@ capture`label: ${untrusted}`;
 > - 带标签模板调用参数的组成：[ECMAScript 2026 §13.3.11 Tagged Templates](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-tagged-templates)。
 > - React 条件渲染中 0 会作为结果呈现：[React 文档 Conditional Rendering](https://react.dev/learn/conditional-rendering)，访问于 2026-11-06。
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
+> - 本章 `deepEqual` 边界用例于 Node.js v26.13.0 / V8 14.6.202.34-node.40 执行，2026-11-09。

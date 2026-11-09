@@ -4,7 +4,7 @@
 
 用户从 /reports?sort=recent#summary 打开报表页后切换筛选。页面用 Fetch API（浏览器的应用程序编程接口）请求报表 42、摘要和访问权限，检查 HTTP（超文本传输协议）响应并解析 JSON（JavaScript 对象表示法），再把可显示的数据交给界面。三项基础数据全部到达并通过结构校验后，页面再检查权限结果；若允许查看行，就用相同的报表 ID、排序和取消信号单独按页读取表格行。行不是第四项必须同时完成的基础请求。用户离开页面时，应用可能想停止仍可取消的网络工作。
 
-Promise在这条流程中承接每个异步步骤的未来成功值或失败原因；组合与等待它们不等于取消或并行执行 JavaScript 代码。
+Promise 在这条流程中承接每个异步步骤的未来成功值或失败原因；组合与等待它们不等于取消或并行执行 JavaScript 代码。
 
 下图从请求输入走到交付给界面的值。JavaScript 异步机制能组织等待和结果，不会自动取消输掉竞争的操作，也不保证 JavaScript CPU 代码并行运行。
 
@@ -22,11 +22,11 @@ flowchart TD
   F -->|均有效| H["交付报表、摘要、权限"]
 ~~~
 
-这里把 Promise 和错误归属拆成两个问题：本章解释等待、组合与超时的机制；[JavaScript 错误应在哪一层恢复、传播或上报？](./error-handling.md#报表请求的错误由谁接手)继续说明哪个调用层有足够上下文处理失败。浏览器或 Node 何时执行回调属于宿主调度，见[浏览器事件循环](../runtime/event-loop.md)和[Node.js 事件循环](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+三项基础数据通过校验后，权限结果决定是否进入分页。若允许读取行，后续分页沿用 `id="42"`、`sort="recent"` 和页面已有的 signal；若不允许，就在权限检查处结束，不创建分页任务。若五个页码已预先确定，下一章展示怎样交给并发池；若下一页必须等上一页响应后才能取得 cursor（游标），见[错误处理章节的行流](./error-handling.md#报表请求的错误由谁接手)。两种续接都从权限通过处开始，并沿用同一个 signal。这里把 Promise 和错误归属拆成两个问题：本章解释等待、组合与超时的机制；[JavaScript 错误应在哪一层恢复、传播或上报？](./error-handling.md#报表请求的错误由谁接手)继续说明哪个调用层有足够上下文处理失败。浏览器或 Node 何时执行回调属于宿主调度，见[浏览器事件循环](../runtime/event-loop.md)和[Node.js 事件循环](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
 ## 回调如何表示延后的工作？
 
-callback（回调）是交给 API（应用程序接口）的函数，API 决定在什么时机调用它：有些异步 API 在稍后调用，有些普通函数（如 map）会在当前调用栈中同步调用回调。事件处理器和计时器使用回调；当后续步骤依赖前一步的结果，层层嵌套会分散成功与失败路径。
+callback（回调）是交给 API 的函数，API 决定在什么时机调用它：有些异步 API 在稍后调用，有些普通函数（如 map）会在当前调用栈中同步调用回调。事件处理器和计时器使用回调；当后续步骤依赖前一步的结果，层层嵌套会分散成功与失败路径。
 
 ~~~javascript
 readUser(userId, (error, user) => {
@@ -77,7 +77,7 @@ async function loadUserAndOrders(userId) {
 }
 
 loadUserAndOrders("u-42")
-  .then(renderOrders)
+  .then(({ orders }) => renderOrders(orders))
   .catch(showRequestFailure);
 ~~~
 
@@ -142,7 +142,116 @@ Promise combinator（Promise 组合方法）按不同条件合并输入结果：
 | Promise.any | 第一个成功时成功；全部拒绝时以 AggregateError 拒绝 | 多个备选中接受任一成功 |
 | Promise.race | 第一个成功或拒绝决定结果 | 在结果与计时器之间竞速；输家继续运行，除非 API 另有取消机制 |
 
-Promise.all 保留的是传入项的顺序，不是完成顺序。两个异步操作可各自已经启动；组合 Promise 只负责等待与汇总。
+四个组合方法都消费同步 iterable（可迭代对象），不是只接收数组。调用 `fetch(...)` 会先发起请求，再把已经启动的 Promise 交给 `Promise.all`；组合器不会把它们排队。若要让下一项等出空位才启动，应交给任务工厂并由池按需调用，见[怎样限制异步任务的并发并收尾失败？](./bounded-async-concurrency.md)。
+
+在组合器中，`Promise.resolve(item)` 把普通值和 thenable（带 `then` 方法的对象）都接成普通 Promise。thenable 的 `then` 属性会在读取输入时同步读取；若 getter 抛错，采用它的 Promise 会拒绝。真正调用 thenable 的 `then` 方法则排入 Promise job（Promise 作业），并由 Promise 的解决函数保证只接受一次履行或拒绝。本例单独验证 `Promise.resolve(thenable)` 的时序：读取 `then` getter 发生在这次调用中；调用 getter 返回的 `then` 函数及后续 reaction（反应）稍后排入作业。在组合器代码里，`for...of` 同步消费 iterable，每次取到一项就同步调用 `Promise.resolve(item)`，所以这些 getter 的读取发生在该轮同步遍历中；遍历本身结束后，thenable 的调用和 reaction 才运行：
+
+~~~javascript
+const events = [];
+const thenable = {
+  get then() {
+    events.push("读取 then");
+    return resolve => {
+      events.push("调用 then");
+      resolve("摘要已到");
+    };
+  },
+};
+
+Promise.resolve(thenable).then(value => events.push(value));
+events.push("当前同步代码结束");
+// 立即：["读取 then", "当前同步代码结束"]
+// 随后：再依次追加 "调用 then"、"摘要已到"
+~~~
+
+下面的版本只模拟普通内建 `Promise` 的常见组合语义：输入同步迭代；普通值及 thenable 由 `Promise.resolve` 采用；输出按输入位置写入。它不是可替换所有原生行为的 polyfill（兼容性填充）：不模拟子类构造器、`Symbol.species`（种类构造器）、被改写的内建属性，或对恶意 thenable 的全部规范级防护。
+
+> [!example]- 完整教学实现：四个 Promise 组合器
+>
+> ~~~javascript
+> function allTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     const values = [];
+>     let remaining = 1; // 先保留一个计数，等同步迭代结束后再扣掉
+>     let index = 0;
+>
+>     for (const item of iterable) {
+>       const current = index++;
+>       remaining++;
+>       Promise.resolve(item).then(value => {
+>         values[current] = value;
+>         if (--remaining === 0) resolve(values);
+>       }, reject);
+>     }
+>
+>     if (--remaining === 0) resolve(values);
+>   });
+> }
+>
+> function allSettledTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     const results = [];
+>     let remaining = 1;
+>     let index = 0;
+>
+>     for (const item of iterable) {
+>       const current = index++;
+>       remaining++;
+>       Promise.resolve(item).then(
+>         value => {
+>           results[current] = { status: "fulfilled", value };
+>           if (--remaining === 0) resolve(results);
+>         },
+>         reason => {
+>           results[current] = { status: "rejected", reason };
+>           if (--remaining === 0) resolve(results);
+>         }
+>       );
+>     }
+>
+>     if (--remaining === 0) resolve(results);
+>   });
+> }
+>
+> function anyTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     const errors = [];
+>     let remaining = 1;
+>     let index = 0;
+>
+>     for (const item of iterable) {
+>       const current = index++;
+>       remaining++;
+>       Promise.resolve(item).then(
+>         resolve,
+>         reason => {
+>           errors[current] = reason;
+>           if (--remaining === 0) {
+>             reject(new AggregateError(errors, "没有输入成功履行"));
+>           }
+>         }
+>       );
+>     }
+>
+>     if (--remaining === 0) {
+>       reject(new AggregateError(errors, "没有输入成功履行"));
+>     }
+>   });
+> }
+>
+> function raceTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     for (const item of iterable) {
+>       Promise.resolve(item).then(resolve, reject);
+>     }
+>     // 空迭代器没有任何输入能决定结果；此 Promise 保持 pending。
+>   });
+> }
+> ~~~
+
+`remaining` 初始为 1 的哨兵，表示“同步遍历还没结束”，因此遍历期间即使零项已完成，也不会过早判定最终结果。以 `all` 的两项输入为例：遍历开始时 `1`，登记第 1、2 项后变为 `2 → 3`；循环结束扣掉哨兵变为 `2`；每个输入的处理器各减 1，最后归零时才履行。空输入则是 `1 → 0`，所以 `all([])` 和 `allSettled([])` 返回时已履行出 `[]`；后来附加的 `then` 处理器仍会排入 Promise job。`any` 用同一计数：两个拒绝会在扣哨兵后再把 `2 → 1 → 0`，归零时用按输入顺序收集的原因拒绝；空输入返回时已以 `AggregateError` 拒绝，且 errors 为空数组，处理器同样稍后运行。每个回调捕获当前 `index`，所以即使第二项先完成，也写回第二格；完成时序不会改变输入顺序。
+
+同步迭代与异步拒绝是两回事。for-of 取值或读取一个已取出 Promise 的 `constructor` 等同步步骤抛错，会让外层 Promise 拒绝；若值已取出、循环体中的同步处理抛错且迭代器尚未结束，for-of 会调用迭代器的 `return()` 清理。若 `iterator.next()` 自己抛错，规范将该迭代步骤标成完成，不再调用 `return()`。普通 Promise 拒绝只是异步结果：组合器继续同步拉取后续项、登记处理器，并且不会取消已经启动的操作。
 
 ### 两个 Promise 结果怎样相加？
 
@@ -151,7 +260,7 @@ Promise.all 保留的是传入项的顺序，不是完成顺序。两个异步�
 >
 > 若输入 A 是 50 ms 后的 10，输入 B 是 30 ms 后的 -12，数组仍为 [10, -12]，结果为 -2。两个运算都已经开始，Promise.all 的拒绝也不会取消另一个运算。
 
-Promise.all([]) 和 Promise.allSettled([]) 会以空数组成功完成；Promise.race([]) 会一直保持 pending；Promise.any([]) 会以 AggregateError 拒绝。这些空输入行为来自 Promise 组合算法。
+空输入也能区分它们的完成条件：`allTeaching([])` 和 `allSettledTeaching([])` 履行为 `[]`；`anyTeaching([])` 拒绝为 `AggregateError`，且 `errors` 为空数组；`raceTeaching([])` 没有输入来决定输赢，因此一直 pending。
 
 ## 定时器和超时究竟能取消什么？
 
@@ -159,7 +268,7 @@ Promise 本身没有通用的取消方法。Promise.race 返回“谁先完成�
 
 ### 怎样把定时器延迟包装成 Promise？
 
-Sleep 练习把宿主计时器包成 Promise：resolve 只会在计时器回调运行时发生。100 ms 和 200 ms 是请求延迟，不是测得的实时保证。setTimeout 与 setInterval 是宿主 API：浏览器返回数值 id，Node.js 返回 Timeout 对象，TypeScript 的声明取决于所选宿主类型。
+Sleep 练习把宿主计时器包成 Promise：resolve 只会在计时器回调运行时发生。示例请求 100 ms 延迟；这不是测得的实时保证，回调可能更晚运行。setTimeout 与 setInterval 是宿主 API：浏览器返回数值 id，Node.js 返回 Timeout 对象，TypeScript 的声明取决于所选宿主类型。
 
 ~~~javascript
 function sleep(millis) {
@@ -210,7 +319,7 @@ function timeLimit(fn, millis) {
 > [!example] 50 ms 超时与 100 ms 网络等待
 > 假设 fn 在 100 ms 后完成，timeLimit(fn, 50) 的调用方会在计时器获准执行时收到 Time Limit Exceeded。fn 并没有随之取消；它仍可能在之后完成。若改为 150 ms 限制，则工作可以在约 100 ms 后成功返回。
 >
-> 参数 [5, 10] 在 120 ms 后相加仍得到 15。若 fn 同步抛错，即使限制设为 1000 ms，调用方立即得到拒绝，并由 finally 清除定时器。这里的“约”重要：定时器可晚于请求时刻执行，当前同步代码也不能被定时器打断。
+> 若 fn 等待 120 ms 后返回两个参数之和，`timeLimit(fn, 150)(5, 10)` 在理想调度下履行并得到 15。若 fn 同步抛错，即使限制设为 1000 ms，Promise 处理器也会传播该拒绝，并由 finally 清除定时器；调用方不必等满 1000 ms。这里的“约”重要：定时器可晚于请求时刻执行，当前同步代码也不能被定时器打断。
 
 > [!info] 超过限制时间不一定先收到超时拒绝
 > 若 fn 同步占用 80 ms 后返回一个已履行的 Promise，而 t 是 50 ms，计时器虽已到期，却要等当前调用栈结束才有机会运行；fn 的 Promise 反应可能先作为微任务执行，使包装结果成功。这是宿主调度下可能发生的结果，timeLimit 不是可抢占的硬截止时间。
@@ -246,7 +355,7 @@ function cancellableInterval(fn, args, millis) {
 }
 ~~~
 
-| 参数与取消时间 | 题目中的理想调用时刻 | 每次返回值 |
+| 参数与取消时间 | 题目中的理想调用时刻 | 每次由 fn 算出的值 |
 | --- | --- | --- |
 | fn(x)=2*x，args=[4]，t=35，cancelT=190 | 0、35、70、105、140、175 ms | 每次为 8 |
 | fn(x,y)=x*y，args=[2,5]，t=30，cancelT=165 | 0、30、60、90、120、150 ms | 每次为 10 |
@@ -258,9 +367,7 @@ clearTimeout 只能清除仍在等待调用的 timeout；clearInterval 停止后
 
 ## Promise 处理器为什么会交错？
 
-对多个链条，要从具体代码推导：当前运行的处理器结束后，把它新安排的后续处理器排到队列；已经排队的处理器先执行。返回一个已成功 Promise 时，解析程序还要采用它的最终状态，因此可能加入额外的 Promise 作业。第一段中，log0 返回 Promise.resolve(4)，于是采用作业排在已经安排好的 log1 后面；log1 输出后排入 log2。采用作业再给返回的 Promise 安装后续反应，此时 log2 已排队；log2 输出后排入 log3，后续反应才把输出 4 的处理器排到 log3 后面，所以先看到 3 再看到 4。不要把这次队列追踪换算成跨宿主通用的 tick 数。
-
-先看两条只返回普通值的链：同步代码先把两个首处理器排好；运行第一个后，新排入的第二个处理器排在另一条链已排好的首处理器后面，所以输出交错为 0、2、1、3。
+对多个链条，要从具体代码推导：当前运行的处理器结束后，把它新安排的后续处理器排到队列；已经排队的处理器先执行。处理器返回 Promise 时，解析程序还要采用它的最终状态，因此可能加入额外的 Promise 作业。下面先看两条只返回普通值的链：同步代码先把两个首处理器排好；运行第一个后，新排入的第二个处理器排在另一条链已排好的首处理器后面，所以输出交错为 0、2、1、3。
 
 ~~~javascript
 Promise.resolve().then(() => console.log(0)).then(() => console.log(1));
@@ -269,6 +376,7 @@ Promise.resolve().then(() => console.log(2)).then(() => console.log(3));
 ~~~
 
 以下三个例子来自原归档练习。它们在 Node.js v26.11.1 的 CommonJS 环境逐段执行，分别得到右侧注释的输出；浏览器宿主自己的事件循环细节另见[事件循环章节](../runtime/event-loop.md)。
+第一个例子中，输出 0 的处理器返回 `Promise.resolve(4)`：采用作业排在已经安排好的输出 1 的处理器后面；输出 1 后排入输出 2；采用作业再给已履行 Promise 安装后续反应，此时输出 2 已排队。输出 2 后排入输出 3，后续反应才把输出 4 的处理器排到输出 3 后面，所以先看到 3 再看到 4。不要把这次队列追踪换算成跨宿主通用的 tick 数。
 
 ~~~javascript
 Promise.resolve().then(() => {
@@ -311,7 +419,8 @@ Promise.resolve().then(() => {
 老式 Promise 反应顺序练习已并入上述三个可重放程序，见[归档入口](../../archive/front-end/Deprecated_Interview_Notes/promise-reaction-order-exercises.md)。Promise、定时器与事件循环分别由 ECMAScript 和宿主规范规定，来源列在本章末尾。
 
 > [!info]- 来源
-> - Promise 状态、then/catch/finally、async 函数、迭代和组合方法：ECMAScript 2027 规范（2026-11-05 草案快照），[Promise 对象与作业](https://tc39.es/ecma262/#sec-promise-objects)、[Promise.prototype.finally](https://tc39.es/ecma262/#sec-promise.prototype.finally)、[thenable 采用作业](https://tc39.es/ecma262/#sec-newpromiseresolvethenablejob)、[Promise 组合方法](https://tc39.es/ecma262/#sec-promise.all)、[async 函数](https://tc39.es/ecma262/#sec-async-function-definitions)。处理器队列输出另按原样在 Node.js v26.11.1 CommonJS 重放。
+> - Promise 状态、then/catch/finally、async 函数、迭代和组合方法：ECMAScript 2027 草案（Draft ECMA-262 / November 3, 2026），[Promise 对象与作业](https://tc39.es/ecma262/#sec-promise-objects)、[Promise.prototype.finally](https://tc39.es/ecma262/#sec-promise.prototype.finally)、[thenable 采用作业](https://tc39.es/ecma262/#sec-newpromiseresolvethenablejob)、[Promise 组合方法](https://tc39.es/ecma262/#sec-promise.all)、[迭代器步进与关闭](https://tc39.es/ecma262/#sec-iteratorstepvalue)、[async 函数](https://tc39.es/ecma262/#sec-async-function-definitions)，访问于 2026-11-09。四个教学组合器的原生边界另按 Node.js v26.13.0 / V8 14.6.202.34-node.40 实测。
+> - Promise reaction 调度练习按原样在 Node.js v26.11.1 CommonJS 重放；定时器和 Fetch 中止按本章各条所列宿主规范核对。
 > - 浏览器的 setTimeout/setInterval/clearTimeout：WHATWG HTML Living Standard，2026-11-05 版本，[定时器](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)；标准说明回调不保证精确按延迟执行。
 > - Node.js 定时器的延迟与取消：Node.js v26.13.0 文档，[Timers](https://nodejs.org/api/timers.html#timers)。本机重放使用 v26.11.1。
 > - Fetch 的 AbortSignal 中止行为：[Fetch Standard，Living Standard 2026-10-19：abort a fetch](https://fetch.spec.whatwg.org/#abort-fetch)。该机制可取消 Fetch 的请求/响应处理，不承诺撤回远端已经执行的业务副作用。

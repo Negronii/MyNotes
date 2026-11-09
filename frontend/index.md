@@ -63,6 +63,7 @@
 ### 异步任务与错误恢复
 
 - [回调、Promise 与 async 函数怎样组合异步工作？](javascript/asynchronous-javascript.md)
+- [怎样限制异步任务的并发并收尾失败？](javascript/bounded-async-concurrency.md)
 - [链式接口如何先排队、再依次执行延后任务？](javascript/chainable-task-queue.md)
 - [迭代器与生成器怎样按需产出并清理数据？](javascript/iterators-and-generators.md)
 - [JavaScript 错误应在哪一层恢复、传播或上报？](javascript/error-handling.md)

@@ -203,7 +203,7 @@ cancel.addEventListener("click", () => {
 });
 ~~~
 
-**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)解释点击处理器如何收到按钮事件；React 中 URL 与客户端导航如何映射到视图，见[React 路由如何把 URL 映射到视图？](#60.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)，组件状态更新见[React 如何把用户操作变成更新后的界面？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 > [!info]- 来源
 > - URL 分量的定义及序列化：[WHATWG URL Standard：URL representation](https://url.spec.whatwg.org/#url-representation)，持续更新规范，URL record 组成。核对日期：2026-11-07。
@@ -313,7 +313,7 @@ if (document.readyState === "loading") {
 | 2 | 属性（Attr） | `id="reports"`（有 `Attr` 对象，但不是树的子节点） |
 | 3 | 文本（Text） | `May report` |
 
-向上找父级时，`parentNode` 可返回任意节点父级：`<html>` 的 `parentNode` 是 Document，而 `parentElement` 只返回元素父级，所以 `<html>.parentElement` 为 `null`。`nodeName` 命名任意节点，`tagName` 只属于元素；`nodeValue` 读取单个 Text 节点的值，在 Element 上则为 `null`，读取元素后代文字应使用 `textContent`。若要查某行的下一个元素，使用 `nextElementSibling`；`nextSibling` 可能先遇到 HTML 换行空白对应的文本节点。同理，`firstChild` 与 `firstElementChild` 可能不是同一项。`childNodes` 包含文本、注释等节点，`children` 只包含元素；它们的集合更新规则见[修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。选到具体控件后，再决定修改文本、attribute、DOM property 还是节点顺序。
+向上找父级时，`parentNode` 可返回任意节点父级：`<html>` 的 `parentNode` 是 Document，而 `parentElement` 只返回元素父级，所以 `<html>.parentElement` 为 `null`。`nodeName` 命名任意节点，`tagName` 只属于元素；`nodeValue` 读取单个 Text 节点的值，在 Element 上则为 `null`，读取元素后代文字应使用 `textContent`。若要查某行的下一个元素，使用 `nextElementSibling`；`nextSibling` 可能先遇到 HTML 换行空白对应的文本节点。同理，`firstChild` 与 `firstElementChild` 可能不是同一项。`childNodes` 包含文本、注释等节点，`children` 只包含元素；它们的集合更新规则见[修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#55.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。选到具体控件后，再决定修改文本、attribute、DOM property 还是节点顺序。
 
 ### 修改内容、HTML 属性和 DOM 对象属性有何区别？
 
@@ -440,7 +440,7 @@ controls.addEventListener("click", (event) => {
 });
 ~~~
 
-点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
+点击 `span` 或 `svg` 时，`closest()` 会从该后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认匹配结果没有越出工具栏。事件处理器交出的值是按钮声明的 `recent` 或 `oldest`；点击“最早优先”时输出 `oldest`。应用据此把查询参数写回 URL、切换按钮的 `aria-pressed`，并将列表行改成 April → May；这条状态转换见[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)。如果事件处理器要移除匹配元素再循环，先选择静态快照或合适的实时集合，避免移除节点改变下一次索引；见[如何选择 DOM 集合？](#55.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
 
 ### 默认动作与传播控制是两回事
 
@@ -616,7 +616,7 @@ function stopObservingReport() {
 
 React 的 JSX 事件名和事件对象保留常用的 DOM 事件概念，`onClick` 默认冒泡、`onClickCapture` 对应捕获。事件委托的具体根节点属于 React 实现细节：React 17 将委托根从 `document` 移到了 React root container；早期 React DOM 还会池化 SyntheticEvent，React 17 起移除了池化，所以当前 React DOM 不需要为异步读取事件调用 `persist()`。React Native 的事件行为另有边界。
 
-**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)讨论应用层发布/订阅。
+**延伸：**[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](#52.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](#54.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)讨论应用层发布/订阅。
 
 > [!info]- 来源
 > - DOM 节点类型、树访问与 mutation、cloneNode 的复制范围：[WHATWG DOM：Node and node trees](https://dom.spec.whatwg.org/#interface-node)；[clone algorithm](https://dom.spec.whatwg.org/#concept-node-clone)，持续更新规范，Node 接口与节点复制算法。核对日期：2026-11-07。
@@ -849,7 +849,7 @@ Effect 用于让已提交的组件与 React 之外的系统保持一致，例如
 
 开发环境在根组件开启 StrictMode（严格模式）时，React 可在首挂载额外执行一次 setup 与 cleanup 来暴露不完整的清理逻辑。此例首轮 Effect 因 `requestId === 0` 直接返回，不会因此发出重复请求；这项检查不代表生产中每个请求都会重复。手写 Effect 获取数据时要清理或忽略已经失效的响应；若要缓存、去重、刷新和更新服务端数据，接着读[React如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
-类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
+类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#10.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#60.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-06）
 > - 状态是快照、setter 请求下一次 render、updater 按队列应用：React 官方 [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)、[Queueing a Series of State Updates](https://react.dev/learn/queueing-a-series-of-state-updates)，核验日期 2026-11-06。
@@ -932,7 +932,7 @@ function ReportList({ reports }: { reports: Report[] }) {
 }
 ~~~
 
-数据沿 props（属性）向下传，用户意图用 callback prop（回调属性）向上交给状态所有者。这个结构让一次点击的去向可见。若两个组件不共享状态，把 state（状态）提到更高层只会扩大更新范围；若多个远距离组件确实要读取主题、地区设置等值，可以在共同子树上用 Context；跨多个功能共享且需要统一更新策略时，再考虑 store（共享状态容器）。若确实选 Redux 管理这类共享客户端状态，action、reducer、selector 与异步工作流见[Redux 如何组织共享界面状态与异步工作？](#57.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+数据沿 props（属性）向下传，用户意图用 callback prop（回调属性）向上交给状态所有者。这个结构让一次点击的去向可见。若两个组件不共享状态，把 state（状态）提到更高层只会扩大更新范围；若多个远距离组件确实要读取主题、地区设置等值，可以在共同子树上用 Context；跨多个功能共享且需要统一更新策略时，再考虑 store（共享状态容器）。若确实选 Redux 管理这类共享客户端状态，action、reducer、selector 与异步工作流见[Redux 如何组织共享界面状态与异步工作？](#58.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 Context 适合让同一子树里相距较远的组件读取报表视图偏好。它传递值，但不持有状态；下面 `ReportViewProvider` 用 `useState` 持有行距偏好，工具栏通过 `useContext` 读取并调用 setter，列表也读取新值来呈现行距：
 
@@ -1283,7 +1283,7 @@ function useMarkReviewed() {
 
 这里回滚的是整份当前列表快照，因此这个简化方案假设 `reports/list` 前缀下的所有排序视图共用一个变更入口：从 `onMutate` 到 `onSettled` 返回的失效 Promise 完成前，全局只有一个乐观变更。否则另一排序 key 上的 mutation 或失效重抓可能覆盖乐观值，整表回滚也可能抹掉另一笔已成功变更。调用端应使用列表级 `isPending` gate 禁用所有排序视图中的行操作，不能只按行或按当前排序 key 禁用；首次切换时的本地临时行以及当前 key 尚无 `query.data` 的视图也要禁用操作。如果存在其他触发入口，它们也必须共享提交级串行约束；单靠某个 hook 的 `isPending` 显示或禁用按钮不能阻止其他入口并发提交。若 mutation 失败，界面可检查 `isError`，并用同一组变量重试，例如再次提交上面的 April 参数。当前片段只展示 hook/cache 处理，没有渲染调用按钮。若同一报表还缓存为详情查询，更新也要覆盖或失效对应的详情 key，不能只改当前列表。服务端仍是权威来源；乐观更新只是让等待中的界面先表达用户意图。
 
-查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
+查询函数收到的 `AbortSignal` 要传给 `fetch` 才能让客户端取消底层读取；取消与忽略旧响应是客户端行为，不能承诺服务端已经停止处理请求。若手写 Effect 而不用查询库，要用 cleanup 忽略过期结果，见[React更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。API JSON 仍须在边界运行时校验；TypeScript 类型本身不会验证网络数据，见[如何处理不可信 JSON？](#44.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（TanStack Query v5.90.3；React 19.3；2026-11-06）
 > - `queryKey` 标识查询，函数参数可从 QueryFunctionContext 读取 `signal`：[Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)、[Query Functions](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)，TanStack Query v5.90.3，核验日期 2026-11-06。
@@ -1511,7 +1511,7 @@ field data（现场数据）来自实际用户访问，包含设备、网络、�
 | 处理器开始后，列表迟迟没变化 | 交互的处理时长、事件处理器和框架提交工作 | 定位数据排序、组件计算或回调；只拆分确实阻塞主线程的工作 |
 | 处理器很快结束，但下一帧仍晚 | 呈现延迟、事件回调结束后的样式/布局/绘制轨迹 | 检查 DOM 规模和昂贵样式；见[为什么一次 DOM 改动会增加布局或绘制工作？](#11.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F) |
 | React 处理时长长 | 浏览器 Performance 录制与组件 render/commit 记录 | 用 [React Profiler](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F) 找出组件工作，再回到浏览器轨迹查看提交后的样式、布局和绘制 |
-| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#49.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F) |
+| 路由主脚本传输或解析时间长 | Network 请求体积、脚本解析与执行时间、生产构建的 chunk | 检查路由代码是否实际拆分并延后加载；构建产物边界见[构建工具](#50.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F) |
 | 图片出现时文字或按钮向下跳 | CLS 事件、缺少尺寸的图片/嵌入内容、字体替换或异步插入 | 提前保留内容空间并复现相同网络条件 |
 | 首屏按钮显示了但点击无反馈 | 脚本是否已完成初始化，或处理器是否被主线程工作挡住 | 分清“已经看见”与“事件可处理”；HTML 脚本调度边界见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) |
 
@@ -3274,6 +3274,103 @@ Math.abs((0.1 + 0.2) - 0.3) < 1e-12; // 对这个量级的例子成立
 
 金额可在币种规则允许时用最小单位整数表示，或使用明确舍入规则的十进制运算。
 
+### 结构比较要把输入范围写成契约
+
+`===` 对对象只比较身份；业务判断有时还需要问两份输入是否有相同的数据结构。这不是 JavaScript 内建的统一规则，比较结果取决于应用选择的输入契约。这里比较筛选条件和接口纯数据：普通对象键的插入顺序不重要，数组顺序重要，键缺失与显式 `undefined` 不同。
+
+本例只讨论有限、无环的数据树：当前 realm（执行环境）的普通数组、普通对象或 null 原型对象；叶子是 `null`、`undefined`、布尔值、字符串或数字；容器只含自有、可枚举的字符串数据属性。数组还比较自己的 `length`。Symbol 或不可枚举属性、访问器、代理、函数、BigInt、Symbol 值及 Date、Map 等带内部状态的对象都在契约之外；代码不负责检测循环，调用方必须保证输入无环。普通对象可继承标准 `Object.prototype` 成员，但继承属性不参与比较。调用方应先保证输入符合契约；这段递归代码不是验证不可信对象的通用入口。
+
+~~~javascript
+function isPlainObject(value) {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function deepEqual(left, right) {
+  const leftIsObject = left !== null && typeof left === "object";
+  const rightIsObject = right !== null && typeof right === "object";
+  if (!leftIsObject || !rightIsObject) {
+    return !leftIsObject && !rightIsObject && Object.is(left, right);
+  }
+
+  const leftIsArray = Array.isArray(left);
+  const rightIsArray = Array.isArray(right);
+  if (leftIsArray !== rightIsArray) return false;
+
+  if (leftIsArray) {
+    if (Object.getPrototypeOf(left) !== Array.prototype ||
+        Object.getPrototypeOf(right) !== Array.prototype) {
+      throw new TypeError("只支持当前 realm 的普通数组");
+    }
+    if (left.length !== right.length) return false;
+  } else {
+    if (!isPlainObject(left) || !isPlainObject(right)) {
+      throw new TypeError("只支持普通对象或 null 原型对象");
+    }
+    if (Object.getPrototypeOf(left) !== Object.getPrototypeOf(right)) {
+      return false;
+    }
+  }
+
+  if (Object.is(left, right)) return true;
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    if (!Object.hasOwn(right, key)) return false;
+
+    const leftDescriptor = Object.getOwnPropertyDescriptor(left, key);
+    const rightDescriptor = Object.getOwnPropertyDescriptor(right, key);
+    if (!Object.hasOwn(leftDescriptor, "value") ||
+        !Object.hasOwn(rightDescriptor, "value")) {
+      throw new TypeError("只支持数据属性");
+    }
+    if (!deepEqual(leftDescriptor.value, rightDescriptor.value)) {
+      return false;
+    }
+  }
+  return true;
+}
+~~~
+
+递归步骤可以按四件事复算：先区分叶子与容器，叶子用 `Object.is`；再确认两边同为数组或对象；对象原型类别不同就不相等，数组先比 `length`；最后比较自有键集合，并对每个键的值递归。对象键次序因此不影响结果；数组索引是否存在仍影响结果，因为空位不在 `Object.keys` 里。使用属性描述符读取数据值，不会调用输入 getter；当比较走到一个可枚举访问器属性时会抛 `TypeError`。若两边是同一对象引用，容器类别检查后就会由 `Object.is` 短路，因此本函数不能用作输入验证器。
+
+| 输入 | 差异 | 结果 |
+| --- | --- | --- |
+| `{ a: 1, b: 2 }` 与 `{ b: 2, a: 1 }` | 只有键插入顺序不同 | `true` |
+| `{ amount: undefined }` 与 `{}` | 自有键缺失 | `false` |
+| `[]` 与 `[,]` | 数组 `length` 分别为 0 与 1 | `false` |
+| `[,]` 与 `[undefined]` | 前者索引 0 是空位，后者有自有元素 | `false` |
+| `[1, 2]` 与 `[2, 1]` | 数组值的索引顺序不同 | `false` |
+| `{ value: NaN }` 与 `{ value: NaN }` | `Object.is(NaN, NaN)` | `true` |
+| `{ value: -0 }` 与 `{ value: +0 }` | `Object.is(-0, +0)` | `false` |
+| `{}` 与 `Object.create(null)` | 自有键相同，原型类别不同 | `false` |
+| 左侧两个属性共享同一子对象，右侧各自保存等值副本 | 比较值，不维护两边的共享身份关系 | `true` |
+| 两个不同的 `new Date(0)` | Date 有本契约之外的内部状态 | 抛 `TypeError` |
+
+例如，普通对象和 null 原型对象都可装载键值，但本契约把它们的原型类别也纳入结果：
+
+~~~javascript
+deepEqual({}, Object.create(null)); // false
+deepEqual({ value: NaN }, { value: NaN }); // true
+deepEqual({ value: -0 }, { value: +0 });   // false
+~~~
+
+单看可见原型不能证明一个对象确实是纯数据：把 Date 的原型手动改成 `Object.prototype` 会越过这项检查。因此，输入边界必须保证对象来自可信的纯数据构造流程；对任意对象、Proxy 或带隐藏内部状态的值，先用适合其来源的解析和校验。递归深度仍受 JavaScript 调用栈限制；无环是本例前提，代码不负责检测环。
+
+用 `JSON.stringify` 直接比较字符串也不是结构相等：属性插入顺序可能改变输出，显式 `undefined` 属性会被省略，数值 `-0` 会序列化成 `0`。
+
+~~~javascript
+JSON.stringify({ a: 1, b: 2 }) === JSON.stringify({ b: 2, a: 1 }); // false
+JSON.stringify({ amount: undefined }) === JSON.stringify({});    // true
+JSON.stringify({ amount: -0 }) === JSON.stringify({ amount: 0 }); // true
+~~~
+
+若这些差异会影响业务判断，应比较经过约束的数据结构；对象隔离或保留共享身份关系则是复制问题，见[如何安全地深拷贝 JavaScript 值？](#30.%20%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E5%9C%B0%E6%B7%B1%E6%8B%B7%E8%B4%9D%20JavaScript%20%E5%80%BC%EF%BC%9F)。
+
+
 ### 变量保存对象身份，不会自动复制对象
 
 把对象赋给新变量后，两个绑定仍指向同一个对象。属性赋值会先求出并记录左侧的基对象，再求右侧；右侧即使重新绑定变量，也不会改变已记录的基对象。
@@ -3447,7 +3544,9 @@ capture`label: ${untrusted}`;
 
 > [!info]- 来源
 > - 值类型、原始值与对象行为：[ECMAScript 2026 §6.1–6.2](https://tc39.es/ecma262/2026/multipage/ecmascript-data-types-and-values.html)。
-> - 严格相等、SameValue、SameValueZero 和 ToPropertyKey：[ECMAScript 2026 §7.2.9–7.2.14、§7.1.19](https://tc39.es/ecma262/2026/multipage/abstract-operations.html)。
+> - 严格相等、SameValue、SameValueZero 和 ToPropertyKey：[ECMAScript 2027 草案（Draft ECMA-262 / November 3, 2026）§7.2.9–7.2.14、§7.1.19](https://tc39.es/ecma262/)，访问于 2026-11-09。
+> - 本章教学 `deepEqual` 对自有属性、属性描述符、普通对象键及数组索引的检查依据：[ECMAScript 2027 §10.1.5.1、§20.1.2.14、§23.1.4、§10.4.2](https://tc39.es/ecma262/)，访问于 2026-11-09。比较契约、不支持类型及“输入必须无环”由本章示例定义。
+> - `JSON.stringify` 对不可表示的对象值、`undefined` 属性、数字与属性枚举顺序的处理：[ECMAScript 2027 §25.5.4.2、§25.5.4.5、§10.1.11.1](https://tc39.es/ecma262/)，访问于 2026-11-09。
 > - `document.all` 的历史例外：[ECMAScript 2026 Annex B IsHTMLDDA internal slot](https://tc39.es/ecma262/2026/multipage/additional-ecmascript-features-for-web-browsers.html#sec-IsHTMLDDA-internal-slot)。
 > - `instanceof` 与 `Object.prototype.toString` 的检查行为：[ECMAScript 2026 §13.10.2 InstanceofOperator](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-instanceofoperator)、[§20.1.3.6 Object.prototype.toString](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.prototype.tostring)。
 > - Object.keys / values / entries 与 Object.assign 的属性范围：[ECMAScript 2026 §20.1.2](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html)；普通对象的键顺序：[§10.1.11.1 OrdinaryOwnPropertyKeys](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryownpropertykeys)。
@@ -3456,6 +3555,7 @@ capture`label: ${untrusted}`;
 > - 带标签模板调用参数的组成：[ECMAScript 2026 §13.3.11 Tagged Templates](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-tagged-templates)。
 > - React 条件渲染中 0 会作为结果呈现：[React 文档 Conditional Rendering](https://react.dev/learn/conditional-rendering)，访问于 2026-11-06。
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
+> - 本章 `deepEqual` 边界用例于 Node.js v26.13.0 / V8 14.6.202.34-node.40 执行，2026-11-09。
 ## 28. 何时使用 Map、Set 或普通对象？
 
 报表导入有一列是业务记录，有些记录可能重试；程序既要用 `Map`（映射）按 `reportId` 找最新值，也要为某个对象实例保存临时状态。选择数据结构前，先确定“相同”指什么、键需要什么类型，以及数据是否要按插入顺序遍历。对象字段与身份的比较规则见[JavaScript 值如何转换、比较，并成为属性键？](#27.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)。
@@ -3800,7 +3900,7 @@ Array.of(3); // [3]：参数本身作为元素
 Array.of(1, 2, 3); // [1, 2, 3]
 ~~~
 
-类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#41.%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E6%80%8E%E6%A0%B7%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%B9%B6%E6%B8%85%E7%90%86%E6%95%B0%E6%8D%AE%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+类数组读取、可迭代对象和 `Array.from` 的差异也会出现在[HTMLCollection 与 NodeList 如何处理实时集合？](#55.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)的 DOM 集合快照中；迭代协议本身见[迭代器与生成器如何按需产出值？](#42.%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E7%94%9F%E6%88%90%E5%99%A8%E6%80%8E%E6%A0%B7%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%B9%B6%E6%B8%85%E7%90%86%E6%95%B0%E6%8D%AE%EF%BC%9F)。文本要按 Unicode 码点遍历时，`Array.from(string)` 也会消费字符串迭代器；用户感知字符可能由多个码点组成，还需另做分段，详见[文本算法应按什么单位计数和比较？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
 
 ### 复制数组只复制一层
 
@@ -3915,6 +4015,8 @@ maxOfNumbers([, 7]); // NaN：数组迭代器把空位读成 undefined
 ## 30. 如何安全地深拷贝 JavaScript 值？
 
 报表要保存一份可独立编辑的快照时，浅复制只会新建外层数组或对象，嵌套 `owner` 仍可能与当前界面共享。所谓“深拷贝”没有脱离数据模型的通用实现：先确认输入类型、循环引用、共享子对象、原型行为和所有权边界，再选择 `JSON`、`structuredClone`（结构化克隆）或范围受限的手写复制器。
+
+复制建立新的对象图；它不回答两个值是否满足同一结构契约。若只需判断受限纯数据是否结构相等，见[JavaScript 如何按约定比较对象与数组？](#%E7%BB%93%E6%9E%84%E6%AF%94%E8%BE%83%E8%A6%81%E6%8A%8A%E8%BE%93%E5%85%A5%E8%8C%83%E5%9B%B4%E5%86%99%E6%88%90%E5%A5%91%E7%BA%A6)。
 
 ### JSON 往返只适合 JSON 形状的数据
 
@@ -5201,7 +5303,7 @@ const add = memoizeNumeric(function (a, b) {
 
 只包装 `fib` 外层调用，不会缓存原始 `fib` 函数内部直接发起的递归调用。要缓存每个子问题，递归调用也必须经过记忆化函数或共享内部缓存。
 
-**相关机制：** [函数 `this` 与绑定](#33.%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E7%94%B1%E4%BB%80%E4%B9%88%E5%86%B3%E5%AE%9A%EF%BC%9F) 解释包装器为什么用 `apply` 保留接收者；[作用域与闭包](#31.%20JavaScript%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%8A%B6%E6%80%81%EF%BC%9F) 解释 `once` 和记忆化保留的状态；[Map 与 Set](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明缓存键相等性和存在性；[TypeScript 装饰器](#46.%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F) 讲解装饰器语法。
+**相关机制：** [函数 `this` 与绑定](#33.%20JavaScript%20%E5%87%BD%E6%95%B0%E7%9A%84%20this%20%E5%80%BC%E7%94%B1%E4%BB%80%E4%B9%88%E5%86%B3%E5%AE%9A%EF%BC%9F) 解释包装器为什么用 `apply` 保留接收者；[作用域与闭包](#31.%20JavaScript%20%E4%BD%9C%E7%94%A8%E5%9F%9F%E4%B8%8E%E9%97%AD%E5%8C%85%E5%A6%82%E4%BD%95%E4%BF%9D%E7%95%99%E7%8A%B6%E6%80%81%EF%BC%9F) 解释 `once` 和记忆化保留的状态；[Map 与 Set](#28.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明缓存键相等性和存在性；[TypeScript 装饰器](#47.%20%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E5%93%AA%E7%A7%8D%20TypeScript%20%E8%A3%85%E9%A5%B0%E5%99%A8%E6%A8%A1%E5%BC%8F%EF%BC%9F) 讲解装饰器语法。
 
 
 > [!info]- 来源
@@ -5381,7 +5483,7 @@ Chrome DevTools 堆快照可以显示对象到根的保留者，比较视图可�
 
 用户从 /reports?sort=recent#summary 打开报表页后切换筛选。页面用 Fetch API（浏览器的应用程序编程接口）请求报表 42、摘要和访问权限，检查 HTTP（超文本传输协议）响应并解析 JSON（JavaScript 对象表示法），再把可显示的数据交给界面。三项基础数据全部到达并通过结构校验后，页面再检查权限结果；若允许查看行，就用相同的报表 ID、排序和取消信号单独按页读取表格行。行不是第四项必须同时完成的基础请求。用户离开页面时，应用可能想停止仍可取消的网络工作。
 
-Promise在这条流程中承接每个异步步骤的未来成功值或失败原因；组合与等待它们不等于取消或并行执行 JavaScript 代码。
+Promise 在这条流程中承接每个异步步骤的未来成功值或失败原因；组合与等待它们不等于取消或并行执行 JavaScript 代码。
 
 下图从请求输入走到交付给界面的值。JavaScript 异步机制能组织等待和结果，不会自动取消输掉竞争的操作，也不保证 JavaScript CPU 代码并行运行。
 
@@ -5399,11 +5501,11 @@ flowchart TD
   F -->|均有效| H["交付报表、摘要、权限"]
 ~~~
 
-这里把 Promise 和错误归属拆成两个问题：本章解释等待、组合与超时的机制；[JavaScript 错误应在哪一层恢复、传播或上报？](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E9%94%99%E8%AF%AF%E7%94%B1%E8%B0%81%E6%8E%A5%E6%89%8B%EF%BC%9F)继续说明哪个调用层有足够上下文处理失败。浏览器或 Node 何时执行回调属于宿主调度，见[浏览器事件循环](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)和[Node.js 事件循环](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+三项基础数据通过校验后，权限结果决定是否进入分页。若允许读取行，后续分页沿用 `id="42"`、`sort="recent"` 和页面已有的 signal；若不允许，就在权限检查处结束，不创建分页任务。若五个页码已预先确定，下一章展示怎样交给并发池；若下一页必须等上一页响应后才能取得 cursor（游标），见[错误处理章节的行流](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E9%94%99%E8%AF%AF%E7%94%B1%E8%B0%81%E6%8E%A5%E6%89%8B%EF%BC%9F)。两种续接都从权限通过处开始，并沿用同一个 signal。这里把 Promise 和错误归属拆成两个问题：本章解释等待、组合与超时的机制；[JavaScript 错误应在哪一层恢复、传播或上报？](#%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E9%94%99%E8%AF%AF%E7%94%B1%E8%B0%81%E6%8E%A5%E6%89%8B%EF%BC%9F)继续说明哪个调用层有足够上下文处理失败。浏览器或 Node 何时执行回调属于宿主调度，见[浏览器事件循环](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)和[Node.js 事件循环](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
 ### 回调如何表示延后的工作？
 
-callback（回调）是交给 API（应用程序接口）的函数，API 决定在什么时机调用它：有些异步 API 在稍后调用，有些普通函数（如 map）会在当前调用栈中同步调用回调。事件处理器和计时器使用回调；当后续步骤依赖前一步的结果，层层嵌套会分散成功与失败路径。
+callback（回调）是交给 API 的函数，API 决定在什么时机调用它：有些异步 API 在稍后调用，有些普通函数（如 map）会在当前调用栈中同步调用回调。事件处理器和计时器使用回调；当后续步骤依赖前一步的结果，层层嵌套会分散成功与失败路径。
 
 ~~~javascript
 readUser(userId, (error, user) => {
@@ -5454,7 +5556,7 @@ async function loadUserAndOrders(userId) {
 }
 
 loadUserAndOrders("u-42")
-  .then(renderOrders)
+  .then(({ orders }) => renderOrders(orders))
   .catch(showRequestFailure);
 ~~~
 
@@ -5519,7 +5621,116 @@ Promise combinator（Promise 组合方法）按不同条件合并输入结果：
 | Promise.any | 第一个成功时成功；全部拒绝时以 AggregateError 拒绝 | 多个备选中接受任一成功 |
 | Promise.race | 第一个成功或拒绝决定结果 | 在结果与计时器之间竞速；输家继续运行，除非 API 另有取消机制 |
 
-Promise.all 保留的是传入项的顺序，不是完成顺序。两个异步操作可各自已经启动；组合 Promise 只负责等待与汇总。
+四个组合方法都消费同步 iterable（可迭代对象），不是只接收数组。调用 `fetch(...)` 会先发起请求，再把已经启动的 Promise 交给 `Promise.all`；组合器不会把它们排队。若要让下一项等出空位才启动，应交给任务工厂并由池按需调用，见[怎样限制异步任务的并发并收尾失败？](#40.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%B9%B6%E5%8F%91%E5%B9%B6%E6%94%B6%E5%B0%BE%E5%A4%B1%E8%B4%A5%EF%BC%9F)。
+
+在组合器中，`Promise.resolve(item)` 把普通值和 thenable（带 `then` 方法的对象）都接成普通 Promise。thenable 的 `then` 属性会在读取输入时同步读取；若 getter 抛错，采用它的 Promise 会拒绝。真正调用 thenable 的 `then` 方法则排入 Promise job（Promise 作业），并由 Promise 的解决函数保证只接受一次履行或拒绝。本例单独验证 `Promise.resolve(thenable)` 的时序：读取 `then` getter 发生在这次调用中；调用 getter 返回的 `then` 函数及后续 reaction（反应）稍后排入作业。在组合器代码里，`for...of` 同步消费 iterable，每次取到一项就同步调用 `Promise.resolve(item)`，所以这些 getter 的读取发生在该轮同步遍历中；遍历本身结束后，thenable 的调用和 reaction 才运行：
+
+~~~javascript
+const events = [];
+const thenable = {
+  get then() {
+    events.push("读取 then");
+    return resolve => {
+      events.push("调用 then");
+      resolve("摘要已到");
+    };
+  },
+};
+
+Promise.resolve(thenable).then(value => events.push(value));
+events.push("当前同步代码结束");
+// 立即：["读取 then", "当前同步代码结束"]
+// 随后：再依次追加 "调用 then"、"摘要已到"
+~~~
+
+下面的版本只模拟普通内建 `Promise` 的常见组合语义：输入同步迭代；普通值及 thenable 由 `Promise.resolve` 采用；输出按输入位置写入。它不是可替换所有原生行为的 polyfill（兼容性填充）：不模拟子类构造器、`Symbol.species`（种类构造器）、被改写的内建属性，或对恶意 thenable 的全部规范级防护。
+
+> [!example]- 完整教学实现：四个 Promise 组合器
+>
+> ~~~javascript
+> function allTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     const values = [];
+>     let remaining = 1; // 先保留一个计数，等同步迭代结束后再扣掉
+>     let index = 0;
+>
+>     for (const item of iterable) {
+>       const current = index++;
+>       remaining++;
+>       Promise.resolve(item).then(value => {
+>         values[current] = value;
+>         if (--remaining === 0) resolve(values);
+>       }, reject);
+>     }
+>
+>     if (--remaining === 0) resolve(values);
+>   });
+> }
+>
+> function allSettledTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     const results = [];
+>     let remaining = 1;
+>     let index = 0;
+>
+>     for (const item of iterable) {
+>       const current = index++;
+>       remaining++;
+>       Promise.resolve(item).then(
+>         value => {
+>           results[current] = { status: "fulfilled", value };
+>           if (--remaining === 0) resolve(results);
+>         },
+>         reason => {
+>           results[current] = { status: "rejected", reason };
+>           if (--remaining === 0) resolve(results);
+>         }
+>       );
+>     }
+>
+>     if (--remaining === 0) resolve(results);
+>   });
+> }
+>
+> function anyTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     const errors = [];
+>     let remaining = 1;
+>     let index = 0;
+>
+>     for (const item of iterable) {
+>       const current = index++;
+>       remaining++;
+>       Promise.resolve(item).then(
+>         resolve,
+>         reason => {
+>           errors[current] = reason;
+>           if (--remaining === 0) {
+>             reject(new AggregateError(errors, "没有输入成功履行"));
+>           }
+>         }
+>       );
+>     }
+>
+>     if (--remaining === 0) {
+>       reject(new AggregateError(errors, "没有输入成功履行"));
+>     }
+>   });
+> }
+>
+> function raceTeaching(iterable) {
+>   return new Promise((resolve, reject) => {
+>     for (const item of iterable) {
+>       Promise.resolve(item).then(resolve, reject);
+>     }
+>     // 空迭代器没有任何输入能决定结果；此 Promise 保持 pending。
+>   });
+> }
+> ~~~
+
+`remaining` 初始为 1 的哨兵，表示“同步遍历还没结束”，因此遍历期间即使零项已完成，也不会过早判定最终结果。以 `all` 的两项输入为例：遍历开始时 `1`，登记第 1、2 项后变为 `2 → 3`；循环结束扣掉哨兵变为 `2`；每个输入的处理器各减 1，最后归零时才履行。空输入则是 `1 → 0`，所以 `all([])` 和 `allSettled([])` 返回时已履行出 `[]`；后来附加的 `then` 处理器仍会排入 Promise job。`any` 用同一计数：两个拒绝会在扣哨兵后再把 `2 → 1 → 0`，归零时用按输入顺序收集的原因拒绝；空输入返回时已以 `AggregateError` 拒绝，且 errors 为空数组，处理器同样稍后运行。每个回调捕获当前 `index`，所以即使第二项先完成，也写回第二格；完成时序不会改变输入顺序。
+
+同步迭代与异步拒绝是两回事。for-of 取值或读取一个已取出 Promise 的 `constructor` 等同步步骤抛错，会让外层 Promise 拒绝；若值已取出、循环体中的同步处理抛错且迭代器尚未结束，for-of 会调用迭代器的 `return()` 清理。若 `iterator.next()` 自己抛错，规范将该迭代步骤标成完成，不再调用 `return()`。普通 Promise 拒绝只是异步结果：组合器继续同步拉取后续项、登记处理器，并且不会取消已经启动的操作。
 
 #### 两个 Promise 结果怎样相加？
 
@@ -5528,7 +5739,7 @@ Promise.all 保留的是传入项的顺序，不是完成顺序。两个异步�
 >
 > 若输入 A 是 50 ms 后的 10，输入 B 是 30 ms 后的 -12，数组仍为 [10, -12]，结果为 -2。两个运算都已经开始，Promise.all 的拒绝也不会取消另一个运算。
 
-Promise.all([]) 和 Promise.allSettled([]) 会以空数组成功完成；Promise.race([]) 会一直保持 pending；Promise.any([]) 会以 AggregateError 拒绝。这些空输入行为来自 Promise 组合算法。
+空输入也能区分它们的完成条件：`allTeaching([])` 和 `allSettledTeaching([])` 履行为 `[]`；`anyTeaching([])` 拒绝为 `AggregateError`，且 `errors` 为空数组；`raceTeaching([])` 没有输入来决定输赢，因此一直 pending。
 
 ### 定时器和超时究竟能取消什么？
 
@@ -5536,7 +5747,7 @@ Promise 本身没有通用的取消方法。Promise.race 返回“谁先完成�
 
 #### 怎样把定时器延迟包装成 Promise？
 
-Sleep 练习把宿主计时器包成 Promise：resolve 只会在计时器回调运行时发生。100 ms 和 200 ms 是请求延迟，不是测得的实时保证。setTimeout 与 setInterval 是宿主 API：浏览器返回数值 id，Node.js 返回 Timeout 对象，TypeScript 的声明取决于所选宿主类型。
+Sleep 练习把宿主计时器包成 Promise：resolve 只会在计时器回调运行时发生。示例请求 100 ms 延迟；这不是测得的实时保证，回调可能更晚运行。setTimeout 与 setInterval 是宿主 API：浏览器返回数值 id，Node.js 返回 Timeout 对象，TypeScript 的声明取决于所选宿主类型。
 
 ~~~javascript
 function sleep(millis) {
@@ -5587,7 +5798,7 @@ function timeLimit(fn, millis) {
 > [!example] 50 ms 超时与 100 ms 网络等待
 > 假设 fn 在 100 ms 后完成，timeLimit(fn, 50) 的调用方会在计时器获准执行时收到 Time Limit Exceeded。fn 并没有随之取消；它仍可能在之后完成。若改为 150 ms 限制，则工作可以在约 100 ms 后成功返回。
 >
-> 参数 [5, 10] 在 120 ms 后相加仍得到 15。若 fn 同步抛错，即使限制设为 1000 ms，调用方立即得到拒绝，并由 finally 清除定时器。这里的“约”重要：定时器可晚于请求时刻执行，当前同步代码也不能被定时器打断。
+> 若 fn 等待 120 ms 后返回两个参数之和，`timeLimit(fn, 150)(5, 10)` 在理想调度下履行并得到 15。若 fn 同步抛错，即使限制设为 1000 ms，Promise 处理器也会传播该拒绝，并由 finally 清除定时器；调用方不必等满 1000 ms。这里的“约”重要：定时器可晚于请求时刻执行，当前同步代码也不能被定时器打断。
 
 > [!info] 超过限制时间不一定先收到超时拒绝
 > 若 fn 同步占用 80 ms 后返回一个已履行的 Promise，而 t 是 50 ms，计时器虽已到期，却要等当前调用栈结束才有机会运行；fn 的 Promise 反应可能先作为微任务执行，使包装结果成功。这是宿主调度下可能发生的结果，timeLimit 不是可抢占的硬截止时间。
@@ -5623,7 +5834,7 @@ function cancellableInterval(fn, args, millis) {
 }
 ~~~
 
-| 参数与取消时间 | 题目中的理想调用时刻 | 每次返回值 |
+| 参数与取消时间 | 题目中的理想调用时刻 | 每次由 fn 算出的值 |
 | --- | --- | --- |
 | fn(x)=2*x，args=[4]，t=35，cancelT=190 | 0、35、70、105、140、175 ms | 每次为 8 |
 | fn(x,y)=x*y，args=[2,5]，t=30，cancelT=165 | 0、30、60、90、120、150 ms | 每次为 10 |
@@ -5635,9 +5846,7 @@ clearTimeout 只能清除仍在等待调用的 timeout；clearInterval 停止后
 
 ### Promise 处理器为什么会交错？
 
-对多个链条，要从具体代码推导：当前运行的处理器结束后，把它新安排的后续处理器排到队列；已经排队的处理器先执行。返回一个已成功 Promise 时，解析程序还要采用它的最终状态，因此可能加入额外的 Promise 作业。第一段中，log0 返回 Promise.resolve(4)，于是采用作业排在已经安排好的 log1 后面；log1 输出后排入 log2。采用作业再给返回的 Promise 安装后续反应，此时 log2 已排队；log2 输出后排入 log3，后续反应才把输出 4 的处理器排到 log3 后面，所以先看到 3 再看到 4。不要把这次队列追踪换算成跨宿主通用的 tick 数。
-
-先看两条只返回普通值的链：同步代码先把两个首处理器排好；运行第一个后，新排入的第二个处理器排在另一条链已排好的首处理器后面，所以输出交错为 0、2、1、3。
+对多个链条，要从具体代码推导：当前运行的处理器结束后，把它新安排的后续处理器排到队列；已经排队的处理器先执行。处理器返回 Promise 时，解析程序还要采用它的最终状态，因此可能加入额外的 Promise 作业。下面先看两条只返回普通值的链：同步代码先把两个首处理器排好；运行第一个后，新排入的第二个处理器排在另一条链已排好的首处理器后面，所以输出交错为 0、2、1、3。
 
 ~~~javascript
 Promise.resolve().then(() => console.log(0)).then(() => console.log(1));
@@ -5646,6 +5855,7 @@ Promise.resolve().then(() => console.log(2)).then(() => console.log(3));
 ~~~
 
 以下三个例子来自原归档练习。它们在 Node.js v26.11.1 的 CommonJS 环境逐段执行，分别得到右侧注释的输出；浏览器宿主自己的事件循环细节另见[事件循环章节](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+第一个例子中，输出 0 的处理器返回 `Promise.resolve(4)`：采用作业排在已经安排好的输出 1 的处理器后面；输出 1 后排入输出 2；采用作业再给已履行 Promise 安装后续反应，此时输出 2 已排队。输出 2 后排入输出 3，后续反应才把输出 4 的处理器排到输出 3 后面，所以先看到 3 再看到 4。不要把这次队列追踪换算成跨宿主通用的 tick 数。
 
 ~~~javascript
 Promise.resolve().then(() => {
@@ -5688,13 +5898,275 @@ Promise.resolve().then(() => {
 老式 Promise 反应顺序练习已并入上述三个可重放程序，见[归档入口](../../archive/front-end/Deprecated_Interview_Notes/promise-reaction-order-exercises.md)。Promise、定时器与事件循环分别由 ECMAScript 和宿主规范规定，来源列在本章末尾。
 
 > [!info]- 来源
-> - Promise 状态、then/catch/finally、async 函数、迭代和组合方法：ECMAScript 2027 规范（2026-11-05 草案快照），[Promise 对象与作业](https://tc39.es/ecma262/#sec-promise-objects)、[Promise.prototype.finally](https://tc39.es/ecma262/#sec-promise.prototype.finally)、[thenable 采用作业](https://tc39.es/ecma262/#sec-newpromiseresolvethenablejob)、[Promise 组合方法](https://tc39.es/ecma262/#sec-promise.all)、[async 函数](https://tc39.es/ecma262/#sec-async-function-definitions)。处理器队列输出另按原样在 Node.js v26.11.1 CommonJS 重放。
+> - Promise 状态、then/catch/finally、async 函数、迭代和组合方法：ECMAScript 2027 草案（Draft ECMA-262 / November 3, 2026），[Promise 对象与作业](https://tc39.es/ecma262/#sec-promise-objects)、[Promise.prototype.finally](https://tc39.es/ecma262/#sec-promise.prototype.finally)、[thenable 采用作业](https://tc39.es/ecma262/#sec-newpromiseresolvethenablejob)、[Promise 组合方法](https://tc39.es/ecma262/#sec-promise.all)、[迭代器步进与关闭](https://tc39.es/ecma262/#sec-iteratorstepvalue)、[async 函数](https://tc39.es/ecma262/#sec-async-function-definitions)，访问于 2026-11-09。四个教学组合器的原生边界另按 Node.js v26.13.0 / V8 14.6.202.34-node.40 实测。
+> - Promise reaction 调度练习按原样在 Node.js v26.11.1 CommonJS 重放；定时器和 Fetch 中止按本章各条所列宿主规范核对。
 > - 浏览器的 setTimeout/setInterval/clearTimeout：WHATWG HTML Living Standard，2026-11-05 版本，[定时器](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)；标准说明回调不保证精确按延迟执行。
 > - Node.js 定时器的延迟与取消：Node.js v26.13.0 文档，[Timers](https://nodejs.org/api/timers.html#timers)。本机重放使用 v26.11.1。
 > - Fetch 的 AbortSignal 中止行为：[Fetch Standard，Living Standard 2026-10-19：abort a fetch](https://fetch.spec.whatwg.org/#abort-fetch)。该机制可取消 Fetch 的请求/响应处理，不承诺撤回远端已经执行的业务副作用。
 > - Promise<T> 类型擦除及类型注解不改变运行时行为：[TypeScript Handbook：Erased Types](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types)。
 > - 显式 this 参数在编译时检查并在输出中擦除，且需普通 function 才能接收调用时 this：[TypeScript Handbook：this parameters](https://www.typescriptlang.org/docs/handbook/2/functions.html#declaring-this-in-a-function)。
-## 40. 链式接口如何先排队、再依次执行延后任务？
+## 40. 怎样限制异步任务的并发并收尾失败？
+
+上一章的三项基础报表数据已通过校验，权限结果允许读取行。分页继续使用同一个报表 `id="42"`、排序 `sort="recent"` 和页面已有的 `pageSignal`。现在要按页补齐五个结果，并把同时在途的 Fetch 数限制为 2。
+
+### 先把任务保持为惰性，再填满空槽位
+
+`fetch(url)` 调用时请求就开始；把五个 Fetch Promise 放进 `Promise.all` 仍会启动五个请求。要控制启动时机，输入必须是任务工厂（task factory）：函数被调用时才创建工作。下面的工厂先定义五个请求，池每次只调用有空位的任务：
+
+~~~javascript
+function createPageTasks(reportId, sort) {
+  return [1, 2, 3, 4, 5].map(page => async ({ signal }) => {
+    const query = new URLSearchParams({
+      page: String(page),
+      sort,
+    });
+    const url =
+      "/api/reports/" + encodeURIComponent(reportId) + "/rows?" + query;
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error("页 " + page + " 请求失败");
+    return response.json();
+  });
+}
+~~~
+
+这里的 `map` 只创建函数；尚未请求任何一页。池消费同步 iterable（同步可迭代对象），其中每项都是任务函数；上限是正整数。池把 `{ signal, index }` 交给工厂，工厂再把同一个 `AbortSignal` 交给 Fetch。只有任务被调用后才有 Promise 和网络请求，所以 Promise 集合本身不能冒充限流器。
+
+下面的状态图展示池如何填槽、等待和收尾。一次填槽过程会启动任务，直到达到上限、迭代器耗尽或停止条件触发；等待时只需等一项活动任务结算，随后为每个空槽位各补一项：
+
+~~~mermaid
+flowchart TD
+  A["填空槽位：调用惰性任务工厂"] --> B{"达到上限、耗尽，或停止？"}
+  B -->|未达到且仍有任务| A
+  B -->|达到上限| C["等待任务结算或停止通知"]
+  C -->|结算后仍可调度| A
+  C -->|stop 失败或外部 abort| F
+  B -->|迭代器耗尽| D["等待剩余活动任务收尾"]
+  D -->|已排空且未停止| E["返回按输入位置排列的结果与峰值"]
+  D -->|已停止| H["排空后按首次停止原因拒绝"]
+  B -->|stop 失败或 abort| F["立即关闭未耗尽的输入迭代器"]
+  F --> G["不再取新项"]
+  G --> D
+~~~
+
+池主要跟踪三个状态：`nextIndex` 是下一个输入位置，`active` 是仍占调度槽位的任务，`peakActive` 记录执行中任务数的最高值。每项完成后从 `active` 移除；若尚未停止，则每个空槽位最多启动一项，因此一项结束时可能一次补满多个空位。`results[index]` 固定写回输入位置，不按完成顺序排列。
+
+### 用同一条时间线推算成功、失败和继续收集
+
+以下例子把任务缩成三页，便于逐步计算；每页仍是惰性工厂，上限仍为 2。页 1 在 30 ms 后成功返回 `"A"`；页 2 在 10 ms 后以 `"B failed"` 拒绝；页 3 在启动后 20 ms 成功返回 `"C"`。下表的时间是合成输入，不是实测网络延迟：
+
+| 时刻 | 运行状态 | `failure: "stop"` | `failure: "collect"` |
+| --- | --- | --- | --- |
+| 0 ms | 页 1、页 2 启动，活动数 2 | 两个槽位填满；`peakActive = 2` | 两个槽位填满；`peakActive = 2` |
+| 10 ms | 页 2 失败，页 1 仍在运行 | 停止取项并关闭迭代器，页 3 不启动 | 保存页 2 的拒绝记录，空出的槽位启动页 3 |
+| 30 ms | 页 1 成功；collect 中页 3 也已成功 | 活动任务排空，池以 `"B failed"` 拒绝 | 返回 `[fulfilled("A"), rejected("B failed"), fulfilled("C")]`，峰值仍为 2 |
+
+`stop` 是默认策略：第一个被观察到的任务拒绝就停止取新项，关闭尚未耗尽的迭代器，再等待已经启动的任务结算，最后拒绝整个池。排空很重要：池不会把“拒绝已返回”伪装成“其他工作已停止”。`collect` 只收集实际运行过的任务工厂的成败，失败释放的槽位会继续填入后续任务；结果仍按输入顺序排列。工厂抛错与返回拒绝 Promise 都算该项失败。
+
+| 情况 | 池的结果 |
+| --- | --- |
+| 所有任务成功 | 等迭代器耗尽并排空活动任务，返回结果与 `peakActive` |
+| `stop` 下某项失败 | 关闭未耗尽迭代器，排空已启动任务，然后以首次观察到的失败原因拒绝 |
+| `collect` 下某项失败 | 保存该项的拒绝记录，继续调度；任务失败本身不会拒绝池 |
+| 外部 `abort` | 停止取项并立即关闭未耗尽迭代器；把 signal 交给活动任务，排空后以 abort reason 拒绝 |
+| 坏任务、迭代器步骤或 abort 出错 | 即使策略为 `collect`，也拒绝整个池；惰性输入中从未取到的元素不会被检查 |
+
+这些状态足以复算“第 2 页先失败”的结局：stop 在 10 ms 关掉输入，页 3 从未启动；collect 在 10 ms 腾出一个槽位来运行页 3，最后三格分别对应页 1、页 2、页 3。若输入有五页，collect 会继续以相同规则启动页 4、页 5。
+
+### Abort 会停止调度，不会强行终止任意 Promise
+
+当 `AbortSignal` 发出事件时，池会立刻停止取项、调用未耗尽同步迭代器的 `return()`，并唤醒正在等待活动任务的调度器。池同时把同一个 signal 交给活动工厂；Fetch 会按 Fetch 的中止协议响应它，通用 Promise 则没有强制停止方法。若任务忽略 signal 或永远不结算，池仍要等它，因此迭代器已经关闭，但池调用还不能结束。
+
+| 时间 | 池与迭代器 | 活动任务 |
+| --- | --- | --- |
+| 0 ms | 启动任务 1、2 | 两项持有同一个 `pageSignal` |
+| 5 ms：页面 abort | 关闭尚未耗尽的任务迭代器，不启动任务 3；等待被唤醒 | Fetch 等参与者按 signal 退出；忽略 signal 的任务继续运行 |
+| 所有活动任务结算 | 以 abort reason 拒绝池 | 不会启动新任务 |
+
+`collect` 只影响单项任务失败；abort 仍然拒绝整个池。页面取消与失败时取消兄弟请求也是两个策略：本章把页面已有 signal 传给任务，但任务失败不会自动调用 `abort()`。若产品要求一个任务失败就中止其他请求，应由调用方定义新的控制器和失败传播规则。
+
+~~~javascript
+// pageSignal 来自页面已经持有的 AbortController；权限检查已通过。
+const pageTasks = createPageTasks("42", "recent");
+
+const { results, peakActive } = await runBounded(pageTasks, 2, {
+  failure: "collect",
+  signal: pageSignal,
+});
+// 每个请求使用 /api/reports/42/rows?page=N&sort=recent。
+// 页面离开时，既有生命周期代码会调用 pageController.abort()。
+~~~
+
+### 可折叠查看：有限范围的教学实现
+
+下面实现面向普通内建 Promise、同步 iterable 和遵守 `AbortSignal` 约定的输入。它不是通用队列：不支持异步迭代器、重试、跨进程配额或持久化。stop、abort、坏任务和迭代器错误都会关闭尚未耗尽的迭代器；调用 `return()` 的清理异常不会覆盖已经确定的停止原因。
+
+关键细节是 `stopSignal`：调度器等待时会同时等待“任一活动任务结算”或“池已停止”。因此外部 abort 能立即唤醒 `Promise.race`，在途任务不必先完成，池就可以关闭输入。若 abort 在同步 `iterator.next()` 内部重入，`pulling` 标记会把关闭延后到这次 `next()` 返回后，并在调用任务工厂前检查停止状态。
+
+> [!example]- 完整代码：runBounded
+>
+> ~~~javascript
+> async function runBounded(tasks, limit, { failure = "stop", signal } = {}) {
+>   if (!Number.isSafeInteger(limit) || limit < 1) {
+>     throw new RangeError("limit 必须是正整数");
+>   }
+>   if (failure !== "stop" && failure !== "collect") {
+>     throw new TypeError('failure 必须是 "stop" 或 "collect"');
+>   }
+>   if (tasks == null || typeof tasks[Symbol.iterator] !== "function") {
+>     throw new TypeError("tasks 必须是同步 iterable");
+>   }
+>
+>   const iterator = tasks[Symbol.iterator](#40.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%B9%B6%E5%8F%91%E5%B9%B6%E6%94%B6%E5%B0%BE%E5%A4%B1%E8%B4%A5%EF%BC%9F);
+>   if (iterator == null || typeof iterator.next !== "function") {
+>     throw new TypeError("tasks 必须产生 iterator");
+>   }
+>
+>   const results = [];
+>   const active = new Set();
+>   let nextIndex = 0;
+>   let activeCount = 0;
+>   let peakActive = 0;
+>   let exhausted = false;
+>   let pulling = false;
+>   let closeAfterNext = false;
+>   let iteratorClosed = false;
+>   let stopped = false;
+>   let stopReason;
+>   let wakeStop;
+>   const stopSignal = new Promise(resolve => {
+>     wakeStop = resolve;
+>   });
+>
+>   function closeIterator() {
+>     if (iteratorClosed || exhausted) return;
+>     iteratorClosed = true;
+>     const close = iterator.return;
+>     if (close == null) return;
+>     if (typeof close !== "function") {
+>       throw new TypeError("iterator.return 必须是函数");
+>     }
+>     const result = close.call(iterator);
+>     if (result === null ||
+>         (typeof result !== "object" && typeof result !== "function")) {
+>       throw new TypeError("iterator.return 必须返回对象");
+>     }
+>   }
+>
+>   function closeSafely() {
+>     try {
+>       closeIterator();
+>     } catch {
+>       // 清理错误不覆盖原先确定的失败或 abort reason。
+>     }
+>   }
+>
+>   function stop(reason) {
+>     if (!stopped) {
+>       stopped = true;
+>       stopReason = reason;
+>     }
+>     if (pulling) closeAfterNext = true;
+>     else closeSafely();
+>     wakeStop();
+>   }
+>
+>   const onAbort = () => stop(signal.reason);
+>   if (signal) {
+>     if (signal.aborted) onAbort();
+>     else signal.addEventListener("abort", onAbort, { once: true });
+>   }
+>
+>   async function runTask(task, index) {
+>     activeCount++;
+>     peakActive = Math.max(peakActive, activeCount);
+>     try {
+>       const value = await task({ signal, index });
+>       results[index] = failure === "collect"
+>         ? { status: "fulfilled", value }
+>         : value;
+>     } catch (reason) {
+>       if (failure === "collect") {
+>         results[index] = { status: "rejected", reason };
+>       } else {
+>         stop(reason);
+>       }
+>     } finally {
+>       activeCount--;
+>     }
+>   }
+>
+>   try {
+>     while (!stopped && !exhausted) {
+>       while (!stopped && !exhausted && active.size < limit) {
+>         if (signal?.aborted) {
+>           stop(signal.reason);
+>           break;
+>         }
+>
+>         pulling = true;
+>         let step;
+>         try {
+>           step = iterator.next();
+>         } finally {
+>           pulling = false;
+>           if (closeAfterNext) {
+>             closeAfterNext = false;
+>             closeSafely();
+>           }
+>         }
+>
+>         if (step === null ||
+>             (typeof step !== "object" && typeof step !== "function")) {
+>           throw new TypeError("iterator.next 必须返回对象");
+>         }
+>         if (step.done) {
+>           exhausted = true;
+>           break;
+>         }
+>         if (stopped || signal?.aborted) {
+>           if (!stopped) stop(signal.reason);
+>           break;
+>         }
+>
+>         const task = step.value;
+>         if (stopped || signal?.aborted) {
+>           if (!stopped) stop(signal.reason);
+>           break;
+>         }
+>         if (typeof task !== "function") {
+>           throw new TypeError("第 " + nextIndex + " 项不是任务函数");
+>         }
+>
+>         const index = nextIndex++;
+>         let tracked;
+>         tracked = runTask(task, index).finally(() => active.delete(tracked));
+>         active.add(tracked);
+>       }
+>
+>       if (!stopped && active.size > 0) {
+>         await Promise.race([...active, stopSignal]);
+>       }
+>     }
+>   } catch (error) {
+>     stop(error);
+>   }
+>
+>   if (stopped && !exhausted) closeSafely();
+>   await Promise.all(active);
+>   if (signal) signal.removeEventListener("abort", onAbort);
+>   if (stopped) throw stopReason;
+>   return { results, peakActive };
+> }
+> ~~~
+>
+> `runTask` 把每项任务的拒绝吸收到自己的结果记录中，因此活动任务都能被最终 `Promise.all(active)` 观察。默认 stop 的拒绝会设置首次 `stopReason`；collect 则按该输入位置写入拒绝记录。迭代器的 `next()`、元素形状或调度错误进入外层 catch，仍会停止整个池。对同步 iterable，`return()` 的调用是同步清理；它不等待正在运行的任务，排空活动任务由后续的 `Promise.all` 完成。
+
+> [!info]- 来源
+> - 同步迭代步骤、迭代器关闭、Promise 组合器对同步迭代错误的处理：[ECMAScript 2027 草案，2026-11-03](https://tc39.es/ecma262/) §7.4.6–7.4.11、§27.5.4.1–27.5.4.5；访问于 2026-11-09。本文的池另定义提前停止时调用 `return()` 并排空活动任务的应用层契约。
+> - `AbortController` 与 `AbortSignal` 的 abort reason、事件通知和 API 响应约定：[DOM Standard](https://dom.spec.whatwg.org/#aborting-ongoing-activities)，Living Standard 2026-11-04；访问于 2026-11-09。信号观察者按各自 API 契约响应或忽略中止。
+> - Fetch 接收 `AbortSignal` 及取消 fetch 处理：[Fetch Standard](https://fetch.spec.whatwg.org/#abort-fetch)，Living Standard；访问于 2026-11-09。
+> - 本章 `runBounded` 在 Node.js v26.13.0 / V8 14.6.202.34-node.40 运行，2026-11-09。
+## 41. 链式接口如何先排队、再依次执行延后任务？
 
 ### 案例背景
 
@@ -5798,7 +6270,7 @@ new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
 > [!info]- 来源
 > - setTimeout 的宿主调度、嵌套计时器限制及不精确时序：WHATWG HTML Living Standard（2026-11-05），[Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)。
 > - “当前同步调用栈结束后回调才有机会运行”是宿主任务调度和 JavaScript run-to-completion（运行至完成）规则的应用说明；浏览器见[HTML event loops](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，Node 定时器见[Node.js v26.13.0 timers](https://nodejs.org/api/timers.html)。
-## 41. 迭代器与生成器怎样按需产出并清理数据？
+## 42. 迭代器与生成器怎样按需产出并清理数据？
 
 ### 案例背景
 
@@ -5817,7 +6289,7 @@ iterator.next(); // { value: 20, done: false }
 iterator.next(); // { value: undefined, done: true }
 ~~~
 
-数组、字符串、Map、Set、类型化数组和 arguments 对象都能迭代。Document Object Model（文档对象模型，DOM）的 NodeList（节点列表）也支持迭代，但它是宿主 API；集合是否实时变化取决于返回它的具体 API，DOM 集合的实时/静态差异见[HTMLCollection 与 NodeList 如何处理集合变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
+数组、字符串、Map、Set、类型化数组和 arguments 对象都能迭代。Document Object Model（文档对象模型，DOM）的 NodeList（节点列表）也支持迭代，但它是宿主 API；集合是否实时变化取决于返回它的具体 API，DOM 集合的实时/静态差异见[HTMLCollection 与 NodeList 如何处理集合变化？](#55.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
 
 ~~~mermaid
 flowchart LR
@@ -6063,9 +6535,9 @@ collectInInputOrder().then(values => console.log(JSON.stringify(values)));
 > [!info]- 来源
 > - iterable、iterator、generator、async iterator、yield* 与迭代关闭：ECMAScript 2027 规范（2026-11-05 草案快照），[迭代协议](https://tc39.es/ecma262/#sec-iteration)、[IteratorClose](https://tc39.es/ecma262/#sec-iteratorclose)、[AsyncIteratorClose](https://tc39.es/ecma262/#sec-asynciteratorclose)、[异步生成器请求队列](https://tc39.es/ecma262/#sec-asyncgeneratordrainqueue)、[for-of 与 for-await-of](https://tc39.es/ecma262/#sec-for-in-and-for-of-statements-runtime-semantics-labelledevaluation)。
 > - Fetch 中止与响应体清理：[Fetch Standard，Living Standard 2026-10-19：abort a fetch](https://fetch.spec.whatwg.org/#abort-fetch)。中止请求与回滚远端业务副作用是不同保证。
-> - DOM NodeList 的可迭代与集合实时性：由相应 DOM API 定义，见[DOM Standard，Living Standard 2026-11-04：NodeList](https://dom.spec.whatwg.org/#interface-nodelist)与本仓库的[DOM 集合章节](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
+> - DOM NodeList 的可迭代与集合实时性：由相应 DOM API 定义，见[DOM Standard，Living Standard 2026-11-04：NodeList](https://dom.spec.whatwg.org/#interface-nodelist)与本仓库的[DOM 集合章节](#55.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F)。
 > - 宿主计时器不保证精确触发时间，拒绝处理器的安装时机也可能触发全局未处理拒绝报告：WHATWG HTML Living Standard（2026-11-05），[Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)、[unhandled promise rejections](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections)。
-## 42. JavaScript 错误应在哪一层恢复、传播或上报？
+## 43. JavaScript 错误应在哪一层恢复、传播或上报？
 
 ### 案例背景
 
@@ -6301,7 +6773,7 @@ class ReportBoundary extends React.Component {
 > - 浏览器 window.onerror、未处理拒绝与 image error：[HTML Standard，Living Standard 2026-11-05：runtime script errors](https://html.spec.whatwg.org/multipage/webappapis.html#runtime-script-errors)、[unhandled promise rejections](https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections)、[image data update algorithm](https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data)；事件传播：[DOM Standard，Living Standard 2026-11-04：dispatching events](https://dom.spec.whatwg.org/#concept-event-dispatch)。
 > - React 错误边界范围与 useTransition 例外：[React Component reference](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)，核对日期 2026-11-06。
 > - Error options cause 与 instanceof 的构造函数/prototype 检查：[ECMAScript 2027 Error constructor](https://tc39.es/ecma262/#sec-error-constructor)、[OrdinaryHasInstance](https://tc39.es/ecma262/#sec-ordinaryhasinstance)。
-## 43. 收到不可信 JSON 后，TypeScript 怎样建立可信的类型？
+## 44. 收到不可信 JSON 后，TypeScript 怎样建立可信的类型？
 
 月度报表页从接口或浏览器存储读入数据时，输入内容在运行时仍只是外部值。TypeScript 的类型注解会在输出 JavaScript 时擦除；它们能检查我们写下的代码，却不会替 `JSON.parse` 检查实际字段，也不会验证用户是否有权访问某份报表。
 
@@ -6441,7 +6913,7 @@ function roleLabel(role: Role): string {
 if (result.ok) roleLabel(result.value.viewer.role);
 ~~~
 
-这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](#44.%20%E6%B3%9B%E5%9E%8B%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E8%BE%93%E5%85%A5%E4%B8%8E%E8%BE%93%E5%87%BA%E4%B9%8B%E9%97%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%E5%85%B3%E7%B3%BB%EF%BC%9F)与[怎样从报表行派生预览、更新请求和状态标签？](#45.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
+这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](#45.%20%E6%B3%9B%E5%9E%8B%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E8%BE%93%E5%85%A5%E4%B8%8E%E8%BE%93%E5%87%BA%E4%B9%8B%E9%97%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%E5%85%B3%E7%B3%BB%EF%BC%9F)与[怎样从报表行派生预览、更新请求和状态标签？](#46.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript Handbook：unknown 与类型缩窄](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
@@ -6449,7 +6921,7 @@ if (result.ok) roleLabel(result.value.viewer.role);
 > - [TypeScript Handbook：穷尽性检查](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
 >
 > 按 `JSON.parse` 的语法错误、存储缺失值，以及报表结构检查整理；`localStorage` 访问可能抛出的 `SecurityError` 见 [HTML Standard：localStorage](https://html.spec.whatwg.org/multipage/webstorage.html#dom-localstorage)。来源核对日期：2026-11-06。
-## 44. 泛型怎样保留输入与输出之间的类型关系？
+## 45. 泛型怎样保留输入与输出之间的类型关系？
 
 报表页会处理很多种行数据：月度汇总行、权限信息和分页结果。若每个函数都复制一份实现，维护成本很高；若一律把参数和返回值写成 `any`（任意类型），调用处又会丢掉具体字段信息。generic（泛型）让同一段逻辑保留调用时的具体类型。
 
@@ -6525,14 +6997,14 @@ if (first) first.total.toFixed(2); // first.total 仍是 number
 console.log(firstRow(emptyPage)); // undefined：空页没有第一行
 ~~~
 
-泛型保留的是编译器掌握的关系；它不会在运行时检查服务器是否真的返回 `ReportRow`。真实输入仍应先保持为 `unknown` 并逐项验证，见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。工具类型则可进一步从 `ReportRow` 派生只读表格行或更新请求形状，见[怎样从报表行派生预览、更新请求和状态标签？](#45.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
+泛型保留的是编译器掌握的关系；它不会在运行时检查服务器是否真的返回 `ReportRow`。真实输入仍应先保持为 `unknown` 并逐项验证，见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#44.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。工具类型则可进一步从 `ReportRow` 派生只读表格行或更新请求形状，见[怎样从报表行派生预览、更新请求和状态标签？](#46.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript Handbook：泛型与类型参数推断](https://www.typescriptlang.org/docs/handbook/2/generics.html)
 > - [TypeScript Handbook：`keyof` 类型操作符](https://www.typescriptlang.org/docs/handbook/2/keyof-types.html)、[索引访问类型](https://www.typescriptlang.org/docs/handbook/2/indexed-access-types.html)
 >
 > 来源核对日期：2026-11-06。代码以 TypeScript 5.7.2 执行严格模式检查。
-## 45. 怎样从报表行派生预览、更新请求和状态标签？
+## 46. 怎样从报表行派生预览、更新请求和状态标签？
 
 同一条报表数据会用于接口、列表预览、详情编辑和状态标签映射。如果每个位置重新声明字段，修改字段名时容易漏改一处。TypeScript 的 utility type（工具类型）从现有类型派生新的编译期形状；它们不会验证或转换运行时对象。
 
@@ -6628,14 +7100,14 @@ const viewer: ReportViewer = {
 };
 ~~~
 
-`this: ReportViewer` 只是编译期注解，JavaScript 调用时仍按普通 `this` 绑定规则运行；`ThisType<T>` 也不会替你调用 `bind`。两者与上面的 `ReportPatch` 一样，只有在运行时对象经过边界检查后才有可靠的业务含义。解析入口见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
+`this: ReportViewer` 只是编译期注解，JavaScript 调用时仍按普通 `this` 绑定规则运行；`ThisType<T>` 也不会替你调用 `bind`。两者与上面的 `ReportPatch` 一样，只有在运行时对象经过边界检查后才有可靠的业务含义。解析入口见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#44.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript Utility Types 参考](https://www.typescriptlang.org/docs/handbook/utility-types.html)
 > - [TypeScript Handbook：映射类型](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html)、[条件类型](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html)、[上下文类型](https://www.typescriptlang.org/docs/handbook/type-inference.html#contextual-typing)
 >
 > 来源核对日期：2026-11-06。示例以 TypeScript 5.7.2、`strict` 模式和 `noImplicitThis` 检查。
-## 46. 项目使用哪种 TypeScript 装饰器模式？
+## 47. 项目使用哪种 TypeScript 装饰器模式？
 
 报表服务可能要给方法加日志、缓存或指标统计。decorator（装饰器）会在类定义时接收类元素和上下文，并可包装或替换被修饰的成员。TypeScript 有新版装饰器模式和 `experimentalDecorators` 启用的旧版模式；两者的参数约定、可修饰位置和元数据能力不同，不能把一种模式的装饰器直接贴到另一种项目里。
 
@@ -6702,7 +7174,7 @@ console.log(legacyService.loadMonth("2026-10"));
 // 依次记录“旧版报表方法调用： loadMonth”和“2026-10 报表已加载”。
 ~~~
 
-这两个例子都只是在方法调用周围加日志；它们不会验证网络响应，也不会证明调用者有查看报表的权限。需要在不可信数据入口检查实际值时，使用[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。选择新版或旧版装饰器后，继续核对[ECMAScript 模块与 CommonJS 的加载边界](#47.%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%EF%BC%88Node.js%20%E6%A8%A1%E5%9D%97%E6%A0%BC%E5%BC%8F%EF%BC%89%E5%9C%A8%E8%AF%AD%E6%B3%95%E3%80%81%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C%E6%97%B6%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C%EF%BC%9F)。
+这两个例子都只是在方法调用周围加日志；它们不会验证网络响应，也不会证明调用者有查看报表的权限。需要在不可信数据入口检查实际值时，使用[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#44.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。选择新版或旧版装饰器后，继续核对[ECMAScript 模块与 CommonJS 的加载边界](#48.%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%EF%BC%88Node.js%20%E6%A8%A1%E5%9D%97%E6%A0%BC%E5%BC%8F%EF%BC%89%E5%9C%A8%E8%AF%AD%E6%B3%95%E3%80%81%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C%E6%97%B6%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript 5.0 发布说明：新版装饰器及其与旧版的差异](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators)
@@ -6710,7 +7182,7 @@ console.log(legacyService.loadMonth("2026-10"));
 > - [TC39 装饰器提案](https://github.com/tc39/proposal-decorators)、[TC39 当前提案阶段列表](https://github.com/tc39/proposals)
 >
 > 提案阶段按 2026-11-06 列表核对；示例以 TypeScript 5.7.2 分别按新版和 `experimentalDecorators` 模式作严格编译检查。
-## 47. ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？
+## 48. ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？
 
 报表页把类型、数据读取和界面入口分成不同文件后，`import` 和 `export` 只是这条路径的一部分。模块语法由 ECMAScript 定义；浏览器和 Node.js 作为宿主决定如何定位模块文件；bundler（打包器）还可在运行前合并或改写模块。把这几层分开，才能理解同一段源代码在不同项目里的加载差异。
 
@@ -6809,7 +7281,7 @@ Node.js 通过 `.mjs`、`.cjs`、最近的 `package.json` 中的 `"type"` 等标
 
 打包器能从静态 ESM 依赖分析哪些导出未被使用，但代码是否安全可删还要看副作用。若包把带有副作用的初始化或 CSS 导入误标成无副作用，删除未引用模块就可能改变页面行为。tree shaking（摇树优化）是打包器基于语法、配置和包元数据作出的优化，不是 ESM 语法承诺的运行结果。
 
-开发服务器与生产构建的差异、构建器具体如何转译模块，见[构建工具怎样把源码变成可发布产物？](#49.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F)。Node.js 运行时对 ESM 与 CJS 的支持会随版本演进，部署前应检查正在使用的 Node 主版本。
+开发服务器与生产构建的差异、构建器具体如何转译模块，见[构建工具怎样把源码变成可发布产物？](#50.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F)。Node.js 运行时对 ESM 与 CJS 的支持会随版本演进，部署前应检查正在使用的 Node 主版本。
 
 > [!info]- 来源
 > - [ECMAScript 2026 规范：脚本与模块](https://tc39.es/ecma262/2026/multipage/ecmascript-language-scripts-and-modules.html)
@@ -6817,7 +7289,7 @@ Node.js 通过 `.mjs`、`.cjs`、最近的 `package.json` 中的 `"type"` 等标
 > - [Webpack：模块与 tree shaking 概念](https://webpack.js.org/concepts/)
 >
 > 来源核对日期：2026-11-06。Node.js 示例对应官方当前文档的 26.x 模块规则；Node 版本与包配置可能改变互操作边界。
-## 48. 怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？
+## 49. 怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？
 
 报表页可能在本地 Chrome 正常，却在部署后的旧 WebView 上因语法解析或缺少 API 失败。判断一项特性时，要分清它进入哪一版 ECMAScript、目标运行时是否实现，以及构建器实际转换了什么。TypeScript 的类型声明和构建选项也不能代替运行时能力检测。
 
@@ -6886,8 +7358,8 @@ Vite 的 `build.target` 与 `tsconfig.json` 的 `target` 名字相似，却分�
 >
 > Vite 浏览器版本与默认值按 Vite 8.3 文档核对；运行时更新后重新检查项目目标。来源核对日期：2026-11-06。
 
-相关模块加载和构建链路见[ECMAScript 模块与 CommonJS 的加载边界](#47.%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%EF%BC%88Node.js%20%E6%A8%A1%E5%9D%97%E6%A0%BC%E5%BC%8F%EF%BC%89%E5%9C%A8%E8%AF%AD%E6%B3%95%E3%80%81%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C%E6%97%B6%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C%EF%BC%9F)和[构建工具怎样把源码变成可发布产物？](#49.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F)。
-## 49. 构建工具怎样把源码变成可发布产物？
+相关模块加载和构建链路见[ECMAScript 模块与 CommonJS 的加载边界](#48.%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%EF%BC%88Node.js%20%E6%A8%A1%E5%9D%97%E6%A0%BC%E5%BC%8F%EF%BC%89%E5%9C%A8%E8%AF%AD%E6%B3%95%E3%80%81%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C%E6%97%B6%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C%EF%BC%9F)和[构建工具怎样把源码变成可发布产物？](#50.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+## 50. 构建工具怎样把源码变成可发布产物？
 
 月度报表页的 TypeScript 类型检查、模块解析、样式和图片处理、压缩以及服务器实际返回的文件，属于构建与发布链路上的不同工作。构建工具沿依赖图处理源码并输出页面 HTML（超文本标记语言）、样式表 CSS（层叠样式表）、JavaScript 和静态资源；开发服务器能成功运行，并不能证明生产服务器会提供正确的路径、分块和调试映射。
 
@@ -6972,7 +7444,7 @@ Webpack 现提供原生 HTML 处理。官方文档显示 `experiments.html` 默�
 
 Vite 的开发服务器按需提供转换后的 ESM，并用 HMR（热模块替换）更新开发页面。Vite 8 于 2026-03 发布稳定版，使用 Rolldown 作为打包器，Oxc 工具链处理转换。开发阶段和生产构建可以经过不同的处理路径，检查一个开发页面不能替代检查最终打包文件（bundle）。
 
-Vite 8 对 TypeScript 文件只做转译，不执行完整类型检查；当前文档建议在生产构建之外运行 `tsc --noEmit`。Vite 8.3 默认生产目标是 2026-01-01 的 Baseline Widely Available（广泛可用基线）浏览器范围；如果要支持更早的浏览器，应显式配置 `build.target` 并另行规划 API polyfill（应用程序接口兼容补丁）。`tsconfig.json` 的 `target` 不会设置 Vite 的构建目标。版本与目标细节见[怎样判断目标运行时是否支持 JavaScript 特性？](#48.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)。
+Vite 8 对 TypeScript 文件只做转译，不执行完整类型检查；当前文档建议在生产构建之外运行 `tsc --noEmit`。Vite 8.3 默认生产目标是 2026-01-01 的 Baseline Widely Available（广泛可用基线）浏览器范围；如果要支持更早的浏览器，应显式配置 `build.target` 并另行规划 API polyfill（应用程序接口兼容补丁）。`tsconfig.json` 的 `target` 不会设置 Vite 的构建目标。版本与目标细节见[怎样判断目标运行时是否支持 JavaScript 特性？](#49.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)。
 
 发布前应运行仓库锁定版本的正式 build 命令，检查生成目录里的页面资源地址、动态代码分块（chunk）、样式、图片和服务端路由，再由与生产相同的服务器预览产物。HMR 只覆盖开发循环；不同 `base` 路径、CDN、缓存头和服务器压缩配置都需要在真实部署路径确认。
 
@@ -7003,9 +7475,9 @@ Source map 不是权限边界：映射路径可被公开请求时，部署和服
 > - [Vite 8 发布公告](https://vite.dev/blog/announcing-vite8)、[Vite 8.3 TypeScript 转译](https://vite.dev/guide/features.html#typescript)、[浏览器兼容](https://vite.dev/guide/build.html#browser-compatibility)
 >
 > Webpack 的原生 HTML 默认值按官方文档中“自 5.109.0 起”的说明记录；Vite 目标按 8.3 文档记录。来源核对日期：2026-11-06。
-## 50. 报表页面里的状态应该放在哪里？
+## 51. 报表页面里的状态应该放在哪里？
 
-案例背景：用户打开 `/reports/42?sort=recent#summary`，希望刷新后继续查看同一报表、复制链接分享当前排序，并在另一标签页改变偏好后看到更新。重开时，页面从路径取报表 ID、从查询参数还原 `sort`，然后通过 HTTP 请求服务端报表；片段 `#summary` 定位页面中的摘要。若返回快照仍是 `running`，页面拿到与快照一致的 `event_cursor` 后再订阅更新，见[流式报表恢复案例](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。报表内容由服务端维护，可分享的筛选条件进入 URL，Web Storage (网页存储) 只保存客户端偏好或草稿。
+案例背景：用户打开 `/reports/42?sort=recent#summary`，希望刷新后继续查看同一报表、复制链接分享当前排序，并在另一标签页改变偏好后看到更新。重开时，页面从路径取报表 ID、从查询参数还原 `sort`，然后通过 HTTP 请求服务端报表；片段 `#summary` 定位页面中的摘要。若返回快照仍是 `running`，页面拿到与快照一致的 `event_cursor` 后再订阅更新，见[流式报表恢复案例](#53.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。报表内容由服务端维护，可分享的筛选条件进入 URL，Web Storage (网页存储) 只保存客户端偏好或草稿。
 
 | 状态 | 合适的所有者 | 原因 |
 |---|---|---|
@@ -7045,7 +7517,7 @@ Source map 不是权限边界：映射路径可被公开请求时，部署和服
 
 Web Storage 可被当前页面上的脚本读取；若 cross-site scripting (跨站脚本攻击，XSS) 进入页面，存储在其中的 bearer token (持有者令牌) 也可能被窃取。`HttpOnly` Cookie 不向普通页面脚本暴露，但浏览器会按 Cookie 规则自动附带它，服务端仍需设计 Cross-Site Request Forgery (跨站请求伪造，CSRF) 防护。`SameSite=None` Cookie 必须同时带 `Secure`。选用一种存储形式并不会自动解决认证与授权问题。
 
-**延伸阅读：** [同一报表在多个标签页中怎样交换变化？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 解释怎样通知其他标签页；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论 Cookie、XSS 与 CSRF。
+**延伸阅读：** [同一报表在多个标签页中怎样交换变化？](#52.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 解释怎样通知其他标签页；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论 Cookie、XSS 与 CSRF。
 
 > [!info]- 来源
 > - `localStorage`、`sessionStorage` 的作用域、storage event (存储事件) 与访问策略：[WHATWG HTML Standard，Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html)，§12.2，2026-11-06 核对。
@@ -7055,7 +7527,7 @@ Web Storage 可被当前页面上的脚本读取；若 cross-site scripting (跨
 > - 结构化本地记录与事务：[Indexed Database API 3.0](https://w3c.github.io/IndexedDB/)，2026-11-06 核对。
 > - 已发布的 Cookie 存储与请求发送规则、`Secure`、`HttpOnly` 属性：[RFC 6265](https://www.rfc-editor.org/rfc/rfc6265.html)。
 > - `SameSite` 属性及 `SameSite=None` 要求 `Secure`：当前 IETF 文稿 `draft-ietf-httpbis-rfc6265bis-22` 的 §4.1.2.7、§5.7；截至 2026-11-06，Datatracker 仍标记 RFC Editor「Final Approval Pending」，普通 RFC 发布页尚未提供：[IETF 文稿](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis/)，[官方流程状态](https://datatracker.ietf.org/doc/draft-ietf-httpbis-rfc6265bis/)。
-## 51. 同一报表在多个标签页中怎样交换变化？
+## 52. 同一报表在多个标签页中怎样交换变化？
 
 案例背景：用户在标签页 A 查看报表 42，在标签页 B 重新生成报表。A 需要知道自己的画面可能过时，并刷新权威数据。browsing context (浏览上下文) 能否直接通信，取决于来源、浏览器存储分区和生命周期；通知本身也不等于共享或持久化业务状态。
 
@@ -7181,7 +7653,7 @@ window.parent.postMessage({ type: "ready" }, parentOrigin);
 
 WebSocket 适合经过服务器的持续双向消息，不是两个标签页互相通知的默认方案。它的握手来源检查不等同于 Fetch 的 Cross-Origin Resource Sharing (跨源资源共享，CORS) 响应许可；服务端仍需检查握手 `Origin`、验证身份，并逐条授权敏感操作。连接建立后，WebSocket 也不会替业务消息提供去重、确认或断线补发。
 
-**延伸阅读：** [流式报表断线重连后，界面怎样保留正确状态？](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 对接服务器事件；[报表页面里的状态应该放在哪里？](#50.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地状态的寿命与事务边界。
+**延伸阅读：** [流式报表断线重连后，界面怎样保留正确状态？](#53.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 对接服务器事件；[报表页面里的状态应该放在哪里？](#51.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地状态的寿命与事务边界。
 
 > [!info]- 来源
 > - 跨文档消息、`postMessage` 目标源、`BroadcastChannel` 与共享 worker 的适用场景：[WHATWG HTML Standard，Web Messaging](https://html.spec.whatwg.org/multipage/web-messaging.html)，§9.3–9.5，2026-11-06 核对。
@@ -7189,7 +7661,7 @@ WebSocket 适合经过服务器的持续双向消息，不是两个标签页互�
 > - 存储事件只向共享存储区中的其他文档派发：[WHATWG HTML Standard，Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html)，§12.2.4，2026-11-06 核对。
 > - WebSocket 的连接、来源和消息协议：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，2026-11-06 核对。
 > - `pagehide` 的 `persisted` 值用于表示页面可能留在历史缓存并在返回时复用；它不是可靠的最终退出通知：[WHATWG HTML Standard，PageTransitionEvent](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-pagetransitionevent-interface)，2026-11-06 核对。
-## 52. 流式报表断线重连后，界面怎样保留正确状态？
+## 53. 流式报表断线重连后，界面怎样保留正确状态？
 
 案例背景：用户重开 `/reports/42?sort=recent#summary`。页面从服务端取到报表 42 的状态快照，再订阅进度；断线后浏览器会自动重连，但同一事件可能重放，页面也可能比服务端落后。界面需要分清传输游标、业务状态版本和报表终态。
 
@@ -7710,11 +8182,11 @@ subscribe(initialSnapshot.event_cursor);
 > console.log("PASS abort after text callback returns prevents a buffered terminal frame");
 > ~~~
 
-本地 `AbortController.abort()` 或取消 reader 只会结束当前页面对响应体的读取，不证明服务端工作停止。若产品允许取消作业，还要发取消请求并查询权威作业状态，直到服务端报告终态。`onText` 成功返回表示整帧文本已完整接收并应用，只有此后才推进 `sequence` 和输出长度；回调若先应用部分文本再拒绝，就无法安全确定续读点。解析器在等待 `onText` 时不能强行打断任意 Promise，回调必须有界并自行响应传入的取消信号，或让其完成后再处理中止。示例的竞争测试仅证明渲染回调返回后，中止会阻止消费同一缓冲区里的终态帧。解析器等待回调完成也形成背压：若回调将 DOM 写入排入队列，应在队列保持较小时再读取下一块；可以用 `requestAnimationFrame` 合并可见更新，但它不提供恢复保证。路由卸载时释放 reader 和事件源，保留有用但不完整的文本，并将其标为部分结果。将收到的状态先交给本地 reducer 或事件总线再更新多个视图时，监听器重入也可能改变处理顺序；见[事件总线重入案例](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
+本地 `AbortController.abort()` 或取消 reader 只会结束当前页面对响应体的读取，不证明服务端工作停止。若产品允许取消作业，还要发取消请求并查询权威作业状态，直到服务端报告终态。`onText` 成功返回表示整帧文本已完整接收并应用，只有此后才推进 `sequence` 和输出长度；回调若先应用部分文本再拒绝，就无法安全确定续读点。解析器在等待 `onText` 时不能强行打断任意 Promise，回调必须有界并自行响应传入的取消信号，或让其完成后再处理中止。示例的竞争测试仅证明渲染回调返回后，中止会阻止消费同一缓冲区里的终态帧。解析器等待回调完成也形成背压：若回调将 DOM 写入排入队列，应在队列保持较小时再读取下一块；可以用 `requestAnimationFrame` 合并可见更新，但它不提供恢复保证。路由卸载时释放 reader 和事件源，保留有用但不完整的文本，并将其标为部分结果。将收到的状态先交给本地 reducer 或事件总线再更新多个视图时，监听器重入也可能改变处理顺序；见[事件总线重入案例](#54.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
 
 渲染本身也应有界：把同一帧中到达的文本增量合并后每帧更新一次，而不是每个 token 都刷新 DOM；输出很长时限制缓冲或只渲染可见窗口。状态区域使用 `role="status"` 与 `aria-live="polite"` 可播报连接、完成或失败，但不要逐字播报每个 token。
 
-**延伸阅读：** [实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md) 定义 SSE 的线格式、id/version 和重连边界；[API 可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) 讨论未知结果与安全重试；[JavaScript 事件总线在监听器中重入时怎样保持顺序？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 讨论把一个状态更新送到本地多个模块。
+**延伸阅读：** [实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md) 定义 SSE 的线格式、id/version 和重连边界；[API 可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) 讨论未知结果与安全重试；[JavaScript 事件总线在监听器中重入时怎样保持顺序？](#54.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 讨论把一个状态更新送到本地多个模块。
 
 > [!info]- 来源
 > - SSE 字段解析、EventSource 自动重连和 `Last-Event-ID`：[WHATWG HTML Standard，Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)，§9.2，2026-11-06 核对；报表 42 的 `id`、`version` 和终态沿用[实时更新协议案例](../../engineering-foundations/networking/real-time-web-updates.md)。
@@ -7722,7 +8194,7 @@ subscribe(initialSnapshot.event_cursor);
 > - 增量 UTF-8 解码：[WHATWG Encoding Standard，TextDecoder](https://encoding.spec.whatwg.org/#interface-textdecoder)，2026-11-06 核对。
 > - `AbortController` 和 `AbortSignal` 的 API 语义：[WHATWG DOM Standard](https://dom.spec.whatwg.org/#interface-abortcontroller)，2026-11-06 核对。
 > - `role="status"` 的状态播报语义：[W3C WAI-ARIA 1.2，status role](https://www.w3.org/TR/wai-aria-1.2/#status)，2026-11-06 核对。
-## 53. JavaScript 事件总线在监听器中重入时怎样保持顺序？
+## 54. JavaScript 事件总线在监听器中重入时怎样保持顺序？
 
 案例背景：报表 42 的页面收到进度更新后，会让多个界面模块同步响应。event bus (事件总线) 把发布者和订阅者隔开，但监听器也可能在分发过程中增删订阅，甚至再次发布同名事件。实现必须规定当前这次分发看哪些监听器，以及一次性监听器何时注销。
 
@@ -7803,12 +8275,12 @@ class EventBus {
 
 若一个对象自然拥有订阅者，例如数据模型通知观察者，Observer (观察者模式) 让对象直接管理订阅关系。若多个模块只通过主题名沟通，事件总线用代理降低直接耦合，但会增加追踪事件来源的成本。两者都可把流式报表状态更新送到本地界面；跨标签页则需使用浏览上下文间的通信机制。
 
-**延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#54.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#51.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
+**延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#55.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#52.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
 
 > [!info]- 来源
 > - `Set` 保存不同监听函数并按插入顺序迭代；`emit()` 的快照和 `once()` 的注销策略是本文这份应用实现明确采用的规则：[ECMAScript Language Specification，Keyed Collections](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-set-objects)，2026-11-06 核对。
 > - DOM 事件的分发规则由浏览器平台定义，与上述应用层事件总线不同：[WHATWG DOM Standard，Events](https://dom.spec.whatwg.org/#events)。
-## 54. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
+## 55. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
 案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM) 的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
 
@@ -7864,13 +8336,13 @@ const directRows = reports?.querySelectorAll(":scope > li[data-id]") ?? [];
 
 实时集合适合反映 DOM 的当前成员，但不适合一边按递增索引遍历、一边改变成员；也可从后往前删。静态快照则适合一次查询后按成员执行任务。查询何时更新、节点本身是否仍连接到文档，是两个不同问题。实时描述的是可观察的成员结果，不承诺浏览器内部怎样、多久计算一次。
 
-**延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](#53.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](#55.%20%E7%94%A8%E6%88%B7%E7%A6%BB%E5%BC%80%E6%8A%A5%E8%A1%A8%E9%A1%B5%E6%97%B6%EF%BC%8C%E5%88%86%E6%9E%90%E4%BA%8B%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%B0%BD%E5%8A%9B%E5%8F%91%E9%80%81%EF%BC%9F) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F) 讨论 DOM 与后续渲染。
+**延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](#54.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](#56.%20%E7%94%A8%E6%88%B7%E7%A6%BB%E5%BC%80%E6%8A%A5%E8%A1%A8%E9%A1%B5%E6%97%B6%EF%BC%8C%E5%88%86%E6%9E%90%E4%BA%8B%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%B0%BD%E5%8A%9B%E5%8F%91%E9%80%81%EF%BC%9F) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F) 讨论 DOM 与后续渲染。
 
 > [!info]- 来源
 > - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-07 核对。
 > - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-07 核对。
 > - `querySelector()` 首个匹配项或 `null`、`querySelectorAll()` 静态匹配结果及作用域查询：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#interface-parentnode)，持续更新规范，selector matching methods。核对日期：2026-11-07。
-## 55. 用户离开报表页时，分析事件怎样尽力发送？
+## 56. 用户离开报表页时，分析事件怎样尽力发送？
 
 案例背景：用户打开报表、改变一次筛选，然后立刻导航到别处。analytics event (分析事件) 不应拖慢筛选或导航；页面可先在内存中收集少量事件，再小批量发送，并在页面变为隐藏时尝试提交一批。这个生命周期信号只提供最后一次机会，不能保证服务器已收到。
 
@@ -7943,14 +8415,14 @@ Beacon API 的 `navigator.sendBeacon()` 返回 `true` 只表示用户代理接�
 
 本例 `flushEvents()` 在尝试发送前从内存队列取出一批。传输失败后该批不会自动重试；这正是“尽力发送”的损失边界。若统计数据不可丢，应把它升级为持久队列并设计服务端确认与重放，而不是阻塞离页等待。
 
-**延伸阅读：** [报表页面里的状态应该放在哪里？](#50.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明偏好与业务状态的归属；[流式报表断线重连后，界面怎样保留正确状态？](#52.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明哪些消息影响报表正确性、不能混同于可丢弃的分析事件；[WebView 怎样安全地开放原生能力并更新页面包？](#56.%20WebView%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E5%9C%B0%E5%BC%80%E6%94%BE%E5%8E%9F%E7%94%9F%E8%83%BD%E5%8A%9B%E5%B9%B6%E6%9B%B4%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%8C%85%EF%BC%9F) 讨论混合应用中的宿主权限。
+**延伸阅读：** [报表页面里的状态应该放在哪里？](#51.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明偏好与业务状态的归属；[流式报表断线重连后，界面怎样保留正确状态？](#53.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明哪些消息影响报表正确性、不能混同于可丢弃的分析事件；[WebView 怎样安全地开放原生能力并更新页面包？](#57.%20WebView%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E5%9C%B0%E5%BC%80%E6%94%BE%E5%8E%9F%E7%94%9F%E8%83%BD%E5%8A%9B%E5%B9%B6%E6%9B%B4%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%8C%85%EF%BC%9F) 讨论混合应用中的宿主权限。
 
 > [!info]- 来源
 > - Beacon 是非阻塞的尽力传输；返回值仅表示排队成功，且无响应回调：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3，2026-11-06 核对。
 > - Beacon 在页面 `visibilityState` 变为 `hidden` 时安排发送；规范也提示后台页面在移动设备上仍可能随进程终止而丢失：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3、§4，2026-11-06 核对。
 > - Fetch `keepalive` 与 64 KiB 的在途请求总量限制：[WHATWG Fetch Standard，HTTP-network-or-cache fetch](https://fetch.spec.whatwg.org/)，2026-11-06 核对。
 > - 页面可见性状态：[WHATWG HTML Standard，Page visibility](https://html.spec.whatwg.org/multipage/interaction.html#page-visibility)，2026-11-06 核对。
-## 56. WebView 怎样安全地开放原生能力并更新页面包？
+## 57. WebView 怎样安全地开放原生能力并更新页面包？
 
 案例背景：报表应用把页面放进原生应用的 WebView，页面需要请求宿主打开报表详情；页面脚本同时会随应用安装或网络更新。JavaScript bridge (原生桥接接口) 把页面输入送到宿主应用的权限边界，因此必须把“哪个页面能发消息”“消息能请求什么”“更新后的代码是否兼容”作为一条信任链来设计。
 
@@ -8007,7 +8479,7 @@ Android 的来源和主 frame 信息来自 `WebMessageListener` 平台回调；A
 
 下载包中的密钥、会话数据和最终权限仍应留在原生安全存储或服务端。新页面获准调用原生桥接接口也不代表其所有代码都可信；为包更新和桥接操作分别记录版本、验证结果与授权决策，便于回滚和调查。
 
-**延伸阅读：** [报表页面里的状态应该放在哪里？](#50.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地数据不应冒充服务端事实；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论来源、XSS 和授权边界。
+**延伸阅读：** [报表页面里的状态应该放在哪里？](#51.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明本地数据不应冒充服务端事实；[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md) 讨论来源、XSS 和授权边界。
 
 > [!info]- 来源
 > - AndroidX bridge API、来源规则、frame 信息、功能检测与回调线程：[Android Developers，Access native APIs with JavaScript bridge](https://developer.android.com/develop/ui/views/layout/webapps/native-api-access-jsbridge)，2026-11-06 核对。
@@ -8016,7 +8488,7 @@ Android 的来源和主 frame 信息来自 `WebMessageListener` 平台回调；A
 > - Apple WebKit 消息处理器与回复：[Apple Developer Documentation，WKScriptMessageHandler](https://developer.apple.com/documentation/webkit/wkscriptmessagehandler)；[WKScriptMessageHandlerWithReply](https://developer.apple.com/documentation/webkit/wkscriptmessagehandlerwithreply/usercontentcontroller%28_%3Adidreceive%3Areplyhandler%3A%29?language=objc)，2026-11-06 核对。
 > - Apple 消息 frame 的 `isMainFrame`、`securityOrigin`：[Apple Developer Documentation，WKFrameInfo](https://developer.apple.com/documentation/webkit/wkframeinfo)；[WKScriptMessage.frameInfo](https://developer.apple.com/documentation/webkit/wkscriptmessage/frameinfo)，2026-11-06 核对。
 > - Bundle 签名、兼容矩阵、原子切换与回滚是应用更新策略，不是 WebView 平台规范；本文把它们作为威胁模型驱动的设计建议。
-## 57. Redux 如何组织共享界面状态与异步工作？
+## 58. Redux 如何组织共享界面状态与异步工作？
 
 **案例背景。** 报表页打开 `/reports?sort=recent#summary`，服务端给出 May、April。用户选 **Oldest first** 后，路由把 `sort=oldest` 写成一条新历史记录；路由提交新地址后，组件用新的 `sort` 组成查询 key，TanStack Query 复用仍新鲜的缓存，或在缺少/过期时发请求，结果可用后显示 April、May。浏览器 Back 回到 recent 后，同样按 recent 的查询 key 复用缓存或重取结果。`#summary` 只用于浏览器定位，不会随 HTTP 请求发送。排序由 URL 与路由拥有，报表行由 TanStack Query 缓存服务端结果。Redux（共享状态管理库）只接手另一类问题：报表表格和远处的批量操作栏都需要读取、修改同一份已选报表 ID。选择变化会清除与旧集合对应的预览；用户点“预览导出范围”按钮时，才按当前选中 ID 发起请求。
 
@@ -8065,7 +8537,7 @@ Redux 的价值在于让多个相隔较远的组件围绕同一份客户端状�
 
 导出范围预览是用户点击按钮后开始的一次性工作。假设用户先选中 May，点击“预览导出范围”后为 `["may"]` 派发请求；再选中 April，旧预览会清空，用户再次点击按钮才会为 `["may", "april"]` 派发第二个请求。如果第一份响应较晚到达，它描述的是旧集合，不能覆盖第二份预览。`createAsyncThunk`（异步 thunk 创建器）会为一次调用派发 `pending`、`fulfilled` 或 `rejected` 生命周期 action，并把本次唯一 `requestId` 放在 `action.meta` 中。reducer 只接受仍匹配当前 ID 的结果。
 
-这个示例约定接口 `POST /api/reports/export-preview` 接收 `reportIds`，只返回非负安全整数 `reportCount` 与 `estimatedBytes`，不创建导出文件。服务端仍须按当前身份和租户逐个授权这些 ID；客户端 Redux 中的选择不能代替[服务端资源权限检查](../../engineering-foundations/security/web-security-and-authentication.md)。把响应先视为 `unknown` 并检查结构，因为 TypeScript 泛型或断言本身不会验证服务器实际返回值；边界校验细节见[TypeScript 如何处理不可信 JSON？](#43.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
+这个示例约定接口 `POST /api/reports/export-preview` 接收 `reportIds`，只返回非负安全整数 `reportCount` 与 `estimatedBytes`，不创建导出文件。服务端仍须按当前身份和租户逐个授权这些 ID；客户端 Redux 中的选择不能代替[服务端资源权限检查](../../engineering-foundations/security/web-security-and-authentication.md)。把响应先视为 `unknown` 并检查结构，因为 TypeScript 泛型或断言本身不会验证服务器实际返回值；边界校验细节见[TypeScript 如何处理不可信 JSON？](#44.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
 ~~~typescript
 // features/report-selection/reportSelectionSlice.ts
@@ -8282,7 +8754,7 @@ function ExportPreviewToolbar() {
 > - selector 默认使用严格 `===` 比较及多值选择建议：[React-Redux — Hooks API](https://react-redux.js.org/api/hooks)，React-Redux 9.3.1，核对日期：2026-11-06。
 > - 路由 PUSH 加入新筛选历史、POP 依 URL 恢复筛选和目标数据：[React Router 路由导航](#%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%BC%8F%E5%85%88%E5%8C%B9%E9%85%8D%E8%B7%AF%E7%94%B1%EF%BC%8C%E5%86%8D%E5%8A%A0%E8%BD%BD%E5%8C%B9%E9%85%8D%E9%A1%B5%E9%9D%A2%E7%9A%84%E6%95%B0%E6%8D%AE)，React Router 8.5.1，核对日期：2026-11-06。
 > - `sort` 是 URL 状态、报表行为查询数据，不应由 Redux 再保存第二份：[React Server State 章节](#%E6%8E%92%E5%BA%8F%E5%80%BC%E6%9E%84%E6%88%90%E6%9F%A5%E8%AF%A2%E8%BA%AB%E4%BB%BD)，TanStack Query v5.90.3，核对日期：2026-11-06。
-## 58. 如何为产品选择前端框架？
+## 59. 如何为产品选择前端框架？
 
 **案例背景。** 以报表页面为例：浏览器地址是 `/reports?sort=recent#summary`，服务端实际收到 `/reports?sort=recent` 并据此返回 May、April 两行；`#summary` 只供浏览器定位。用户点 **Oldest first** 后，`pushState` 新增 `sort=oldest` 历史项，可见顺序成为 April、May；按浏览器 Back 会恢复 `sort=recent` 和 May、April。完整历史行为见[浏览器导航路径](#%E8%AE%A9%E7%AD%9B%E9%80%89%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。框架选择要回答的是团队怎样可靠地交付这类更新，以及页面还需要怎样的路由、服务端渲染、无障碍和运维支持。单说“有虚拟 DOM”不能回答这些问题。
 
@@ -8319,13 +8791,13 @@ React 用组件类型、树中的位置和同级 key 判断状态能否保留。
 
 框架不是唯一变量。真实环境还包括数据形状、设备、浏览器、访问性需求、发布约束和团队维护能力。保留一个候选框架的理由，应能说清它满足了哪条必要约束、测试了哪条路径，以及哪类工作仍由浏览器或服务端承担。
 
-React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#59.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
+React 的逐次更新模型见[React如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；路由与客户端导航的判断见[React路由如何把 URL 映射到视图？](#60.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（2026-11-06）
 > - 本文关于 React 描述、render 与 commit 的边界：React 19.3 当前文档，[Render and Commit](https://react.dev/learn/render-and-commit)、[Versions](https://react.dev/versions)，核验日期 2026-11-06。
 > - 框架实现可采用不同渲染机制：React 文档同上；Vue 官方文档，[Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism)，核验日期 2026-11-06。
 > - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
-## 59. React 路由怎样把地址映射到界面并加载数据？
+## 60. React 路由怎样把地址映射到界面并加载数据？
 
 **案例背景。** 用户打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 告诉服务端返回 May、April 两份报表；`#summary` 只用于浏览器定位，不属于 Hypertext Transfer Protocol（超文本传输协议，HTTP）请求。用户点 **Oldest first** 后，地址应新增 `sort=oldest` 历史项，加载结果后行序为 April、May；按 Back 则回到 `sort=recent` 和 May、April。路由把地址、数据请求和界面更新连在一起，不能只把 URL 当作组件选择器。
 
@@ -8550,7 +9022,7 @@ React Router v8.5.1 的 `useParams`、`Link` 和路由对象 API 承接归档 v6
 > - 路由错误边界、最近边界和 404 响应：[Error Boundaries](https://reactrouter.com/how-to/error-boundary)，React Router v8.5.1，核验日期 2026-11-06。
 > - React 子组件同步错误由边界兜底、事件处理和异步回调不在该范围：[React Component — Catching rendering errors with an Error Boundary](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)，核验日期 2026-11-06。
 > - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；React Router 8.5.1 核对 PUSH/POP 等待期的地址与列表、502 错误提交与重试；相关浏览器排序用例通过。接口为本地合成测试服务。
-## 60. Next.js 如何把文件路由、服务端数据与客户端交互连接起来？
+## 61. Next.js 如何把文件路由、服务端数据与客户端交互连接起来？
 
 **案例背景。** 报表页打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端取得 May、April；用户点 **Oldest first** 后，URL 进入 `sort=oldest`，页面显示 April、May，再按 Back 恢复 recent 顺序。`#summary` 是浏览器片段，不会发给服务端。这条主流程假设搜索框为空；若用户已输入查询，客户端本地 query 可以在排序导航和 Back 后继续保留，当前列表仍会被它过滤。本文按当前 Next.js 16.4.5 App Router（应用路由器）讲清：文件怎样选中页面、服务器怎样读 URL 并取数、客户端代码从哪里开始，以及加载和错误如何沿路由边界显示。
 
@@ -8813,7 +9285,7 @@ App Router 的客户端导航优先用 `next/link`；需要在客户端代码中
 > - Pages Router 按请求读取、静态生成与 ISR：[getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props)、[getStaticPaths](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-static-paths)、[Incremental Static Regeneration](https://nextjs.org/docs/pages/building-your-application/data-fetching/incremental-static-regeneration)。
 > - App Router 路由端点的方法导出与响应：[Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route)。
 > - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；Next.js 16.4.5 生产构建核对排序、Back 的 RSC 复用、本地搜索保留及摘要失败后的 retry。上游为本地合成测试服务。
-## 61. Lodash 何时适合处理报表列表，哪些方法会修改输入？
+## 62. Lodash 何时适合处理报表列表，哪些方法会修改输入？
 
 **案例背景。** 用户在 `/reports?sort=recent#summary` 看到 May、April 两份报表。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回 May、April；点击 **Oldest first** 后，地址的 `sort` 变为 `oldest`，服务端返回 April、May；按 Back 回到 recent 和 May、April。地址和请求属于路由层；Lodash 只转换已经交给它的数据，不拥有排序状态，也不会替代服务端查询。
 
@@ -8971,13 +9443,13 @@ Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适�
 
 路径明确时，原生可选链、`Array.prototype.flat`（数组扁平化）、Set 或对象展开常常更易读。需要 Lodash 的边界行为时，先核对版本和输入形状，再决定是否使用。按方法导入可以帮助构建器裁剪依赖，但最终包体还受模块格式和构建配置影响；要用生产产物测量，不能只凭写法推断体积。
 
-相关内容见[现代 JavaScript 特性](#48.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)与[前端性能测量](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+相关内容见[现代 JavaScript 特性](#49.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)与[前端性能测量](#12.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（Lodash 4.18.1；2026-11-06）
 > - 当前稳定版本及 4.18.1 发布记录：[Lodash Releases](https://github.com/lodash/lodash/releases)，2026-04-01。
 > - 排序、深合并、数组按索引合并、对象路径、字符串、集合和计时方法：[Lodash 4.18.1 API 文档](https://github.com/lodash/lodash/blob/4.18.1/doc/README.md)。
 > - 原生数组展平与空值运算符：[Array.prototype.flat](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat)、[Nullish coalescing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing)，核验日期 2026-11-06。
-## 62. ahooks 怎样管理报表请求、分页与列表身份？
+## 63. ahooks 怎样管理报表请求、分页与列表身份？
 
 **案例背景。** 报表从 `/reports?sort=recent#summary` 打开时显示 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 是排序和历史状态的来源；用户选 **Oldest first** 后，路由把 `sort=oldest` 传给报表请求，列表变成 April、May；按 Back 时 recent 再次成为请求输入。ahooks 管组件中的请求状态、分页或可编辑列表，不应另存一份竞争的 sort。
 
@@ -9202,7 +9674,7 @@ debounce 的 `cancel` 只取消尚未执行的函数调用；请求已经开始�
 > - 当前虚拟列表结果形状与行高函数：[useVirtualList](https://ahooks.js.org/hooks/use-virtual-list/)、[v3.11.0 implementation](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useVirtualList/index.ts)；v2.6.0 旧结果形状：[v2.6.0 source](https://github.com/alibaba/hooks/blob/v2.6.0/packages/hooks/src/useVirtualList/index.ts)。
 > - debounce / throttle 返回值与默认选项：[useDebounce](https://ahooks.js.org/hooks/use-debounce/)、[useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn/)、[useThrottle](https://ahooks.js.org/hooks/use-throttle/)、[useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn/)。
 > - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；ahooks 3.11.0 核对请求代次、分页重置、手动游标追加、草稿会话和取消；短首屏自动加载与按钮并用可重复请求同一游标，主例因此只保留按钮触发。
-## 63. 前端测试怎样证明报表排序、历史恢复和发布产物正确？
+## 64. 前端测试怎样证明报表排序、历史恢复和发布产物正确？
 
 **案例背景。** 用户打开 `/reports?sort=recent#summary`，看到 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回该顺序；点击 **Oldest first** 后，地址变成 `sort=oldest`，列表为 April、May；按 Back 则回到 recent 和 May、April。测试要验证用户看到的结果、真实地址历史和请求边界；点击事件触发过或内部状态等于某值，都不足以证明整条流程可用。
 
@@ -9228,7 +9700,7 @@ flowchart LR
 
 React Testing Library 的查询名称表达等待契约：`getByRole` 表示元素现在应存在且唯一；`queryByRole` 适合断言它不存在；`findByRole` 返回 Promise 并等待元素出现。优先使用角色和可访问名称，避免检查组件内部状态、CSS class 或 hook 调用次数。
 
-组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock 与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](#64.%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E7%8A%B6%E6%80%81%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock 与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](#65.%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E7%8A%B6%E6%80%81%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
 
 React Testing Library 16.3.3 也从 `@testing-library/react` 导出 `renderHook`，可单独验证有复用价值的 Hook 契约；只被一个组件使用的 Hook 通常直接测那个组件更能表达用户行为。Testing Library 的 render 和 user-event helper 已处理一般交互的 React `act` 边界；测试从 helper 外部直接触发更新时，再显式包在 `act` 中。快照适合记录稳定的小结构，较大的快照本身说不清用户需要看到什么，排序和错误行为仍应使用有含义的断言。
 
@@ -9304,9 +9776,9 @@ typecheck -> unit/component tests -> production build
 > - Playwright 当前包版本：[npm package](https://www.npmjs.com/package/@playwright/test)，1.65.0；浏览器端断言与拦截请求：[Assertions](https://playwright.dev/docs/test-assertions)、[Page route](https://playwright.dev/docs/api/class-page#page-route)，核验日期 2026-11-06。
 > - 测试产物服务器配置：[Playwright webServer](https://playwright.dev/docs/test-webserver)。
 > - `vite preview` 用于本地预览构建产物，不是生产服务器：[Vite CLI](https://vite.dev/guide/cli.html#vite-preview)、[Static deployment](https://vite.dev/guide/static-deploy.html)，按 Vite v8.3.5 官方文档核验于 2026-11-06。
-## 64. Jest 怎样验证报表请求中的异步状态和结果？
+## 65. Jest 怎样验证报表请求中的异步状态和结果？
 
-**案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](#63.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F)。
+**案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](#64.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F)。
 
 ### 测试必须等待承载断言的异步工作
 
