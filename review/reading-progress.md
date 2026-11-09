@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=449e820fdba3e1e87e5695d80151327996e3a3d0d47e347405cfc856d1aa149e -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=1b023825660d87538e1fc96940b66780e95618009bc10c9adaad99e7a20d2798 -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -136,15 +136,18 @@
 - [ ] 120. [队列和栈怎样表示待处理工作？](../engineering-foundations/algorithms/queue-and-stack-representations.md)
 - [ ] 121. [最近最少使用缓存怎样按键查找并更新最近使用顺序？](../engineering-foundations/algorithms/practical-data-structure-implementations.md)
 - [ ] 122. [有序数据怎样让二分查找和双指针安全排除候选？](../engineering-foundations/algorithms/ordered-array-search.md)
-- [ ] 123. [动态规划如何定义状态并安排更新顺序？](../engineering-foundations/algorithms/dynamic-programming-state-and-order.md)
-- [ ] 124. [分区如何改变快速排序的时间和空间代价？](../engineering-foundations/algorithms/partitioning-and-sorting-costs.md)
-- [ ] 125. [文本算法应按码元、码点还是字素簇处理？](../engineering-foundations/algorithms/text-units-and-algorithms.md)
-- [ ] 126. [为什么连续扫描往往比链表遍历快？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)
-- [ ] 127. [Linux 内核为什么把链表节点嵌入对象？](../engineering-foundations/operating-systems/intrusive-lists-in-linux.md)
-- [ ] 128. [如何让设计原则减少真实的修改成本？](../engineering-foundations/architecture/software-design-principles.md)
-- [ ] 129. [前端架构怎样划分呈现、交互和数据所有权？](../engineering-foundations/architecture/frontend-architecture-boundaries.md)
-- [ ] 130. [页面编辑器何时需要设计模式？](../engineering-foundations/architecture/design-patterns-in-practice.md)
-- [ ] 131. [怎样建模页面文档、编辑会话和发布快照？](../engineering-foundations/architecture/low-code-editor-data-model.md)
-- [ ] 132. [Scrum 怎样让团队检查并调整工作？](../engineering-foundations/teamwork/agile-and-scrum.md)
-- [ ] 133. [怎样准备有事实支撑的行为面试回答？](../engineering-foundations/career/interview-preparation.md)
+- [ ] 123. [怎样在边界前进时维护一个有效窗口或活动区间？](../engineering-foundations/algorithms/range-scans-and-active-sets.md)
+- [ ] 124. [怎样在不断加入任务时持续取出最高优先级？](../engineering-foundations/algorithms/heaps-and-priority-queues.md)
+- [ ] 125. [搜索状态图时，何时永久标记节点，何时必须回退？](../engineering-foundations/algorithms/graph-search-and-backtracking.md)
+- [ ] 126. [动态规划如何定义状态并安排更新顺序？](../engineering-foundations/algorithms/dynamic-programming-state-and-order.md)
+- [ ] 127. [分区如何改变快速排序的时间和空间代价？](../engineering-foundations/algorithms/partitioning-and-sorting-costs.md)
+- [ ] 128. [文本算法应按码元、码点还是字素簇处理？](../engineering-foundations/algorithms/text-units-and-algorithms.md)
+- [ ] 129. [为什么连续扫描往往比链表遍历快？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)
+- [ ] 130. [Linux 内核为什么把链表节点嵌入对象？](../engineering-foundations/operating-systems/intrusive-lists-in-linux.md)
+- [ ] 131. [如何让设计原则减少真实的修改成本？](../engineering-foundations/architecture/software-design-principles.md)
+- [ ] 132. [前端架构怎样划分呈现、交互和数据所有权？](../engineering-foundations/architecture/frontend-architecture-boundaries.md)
+- [ ] 133. [页面编辑器何时需要设计模式？](../engineering-foundations/architecture/design-patterns-in-practice.md)
+- [ ] 134. [怎样建模页面文档、编辑会话和发布快照？](../engineering-foundations/architecture/low-code-editor-data-model.md)
+- [ ] 135. [Scrum 怎样让团队检查并调整工作？](../engineering-foundations/teamwork/agile-and-scrum.md)
+- [ ] 136. [怎样准备有事实支撑的行为面试回答？](../engineering-foundations/career/interview-preparation.md)
 <!-- MYNOTES:READING-PROGRESS:END -->

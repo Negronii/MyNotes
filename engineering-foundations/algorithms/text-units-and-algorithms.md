@@ -112,8 +112,138 @@ function switchAsciiCase(value) {
 }
 ~~~
 
+## Trie 怎样共享前缀并限制候选输出？
+
+在合成报表 42 的描述搜索中，输入框要查找以已输入前缀开头的标签。Trie（前缀树）把键拆成一串单位，让有相同前缀的键沿着同一条路径前进；本例沿用本章的码点单位，按 Unicode 码点建边。Array.from 会把有效代理对组合成一个码点，所以 😀 是一条边；组合重音若未归一化，则仍是另一条码点边，不等同于视觉上的一个字素簇。
+
+匹配合约选择 NFC（Normalization Form C，规范化形式 C）：写入键和查询前缀都先规范化，把规范等价的码点序列映射到同一路径。因而预组字符 café 与 cafe 加 U+0301 的查询相同；键以规范化后的形式枚举。NFC 不是去重音或兼容字符折叠：单独输入 cafe 不匹配规范化后的 café，若产品要不区分重音或处理兼容字符，必须另外定义匹配规则。保存原输入展示时，可在 terminal 的 value 中保留显示文本。
+
+| 插入键 | NFC 后的码点路径 | terminal 标记 |
+|---|---|---|
+| re | r → e | e 节点是完整键 |
+| report | 与 re 共享 r → e，再接 p → o → r → t | t 节点是完整键 |
+| reporter | 继续共享 report，再接 e → r | 最后一个 r 是完整键 |
+| review | 与 re 共享 r → e，再从 v 分支 | 最后一个 w 是完整键 |
+| 😀report | 😀 → r → e → p → o → r → t | t 节点是完整键 |
+| 先 café，后 cafe 加 U+0301 | 两次写入经 NFC 后都走 café 的同一条路径 | 第二次写入覆盖第一次的 value |
+
+每个节点有一张从码点到子节点的 Map 和一个 terminal（键结束）标记。只有 terminal 为 true 才表示完整键；“存在这段前缀”不等于“前缀本身也是键”。因此 re 可以既是完整键，也有通向 report 和 review 的后续分支。共享路径存一次，但每个前缀节点及子边 Map 都占内存。
+
+下面实现插入、精确查询和有限前缀枚举。枚举从前缀节点开始做 depth-first search（DFS，深度优先搜索）；terminal 先于后代输出，因此前缀本身若也是键会先出现。子边按 Map 的插入顺序访问，所以结果不承诺字典序；limit 限制返回候选数，显式栈按需取一个子边，不会为了遍历先复制整张子边表。
+
+> [!example]- 可运行：码点 Trie
+> ~~~javascript
+> class TrieNode {
+>   constructor() {
+>     this.children = new Map();
+>     this.terminal = false;
+>     this.value = undefined;
+>   }
+> }
+>
+> class CodePointTrie {
+>   constructor() {
+>     this.root = new TrieNode();
+>   }
+>
+>   normalizeKey(key) {
+>     if (typeof key !== 'string') throw new TypeError('key must be a string');
+>     return key.normalize('NFC');
+>   }
+>
+>   nodeFor(key) {
+>     let node = this.root;
+>     for (const codePoint of Array.from(this.normalizeKey(key))) {
+>       node = node.children.get(codePoint);
+>       if (!node) return null;
+>     }
+>     return node;
+>   }
+>
+>   insert(key, value) {
+>     const normalized = this.normalizeKey(key);
+>     let node = this.root;
+>     for (const codePoint of Array.from(normalized)) {
+>       if (!node.children.has(codePoint)) node.children.set(codePoint, new TrieNode());
+>       node = node.children.get(codePoint);
+>     }
+>     node.terminal = true;
+>     node.value = value;
+>   }
+>
+>   has(key) {
+>     const node = this.nodeFor(key);
+>     return node !== null && node.terminal;
+>   }
+>
+>   lookup(key) {
+>     const node = this.nodeFor(key);
+>     return node !== null && node.terminal
+>       ? { found: true, value: node.value }
+>       : { found: false };
+>   }
+>
+>   keysWithPrefix(prefix, limit = 20) {
+>     if (!Number.isSafeInteger(limit) || limit < 0) {
+>       throw new RangeError('limit must be a non-negative safe integer');
+>     }
+>     const normalizedPrefix = this.normalizeKey(prefix);
+>     const start = this.nodeFor(normalizedPrefix);
+>     if (start === null || limit === 0) return [];
+>
+>     const results = [];
+>     const path = [];
+>     const stack = [{ node: start, entered: false, children: null }];
+>     while (stack.length > 0 && results.length < limit) {
+>       const frame = stack[stack.length - 1];
+>       if (!frame.entered) {
+>         frame.entered = true;
+>         if (frame.node.terminal) {
+>           results.push(normalizedPrefix + path.join(''));
+>           if (results.length === limit) break;
+>         }
+>         frame.children = frame.node.children.entries();
+>       }
+>
+>       const next = frame.children.next();
+>       if (next.done) {
+>         stack.pop();
+>         if (stack.length > 0) path.pop();
+>       } else {
+>         const [codePoint, child] = next.value;
+>         path.push(codePoint);
+>         stack.push({ node: child, entered: false, children: null });
+>       }
+>     }
+>     return results;
+>   }
+> }
+>
+> const trie = new CodePointTrie();
+> trie.insert('re', 'prefix is also a complete key');
+> trie.insert('report', 'report label');
+> trie.insert('reporter', 'reporter label');
+> trie.insert('review', 'review label');
+> trie.insert('café', 'precomposed spelling');
+> trie.insert('cafe\u0301', 'decomposed spelling replaces the same normalized key');
+> trie.insert('😀report', 'emoji-prefixed key');
+>
+> console.log(trie.has('café'));                  // true
+> console.log(trie.lookup('cafe\u0301'));         // { found: true, value: 'decomposed spelling replaces the same normalized key' }
+> console.log(trie.keysWithPrefix('re', 3));      // ['re', 'report', 'reporter']
+> console.log(trie.keysWithPrefix('rep', 10));    // ['report', 'reporter']
+> console.log(trie.keysWithPrefix('unknown', 5)); // []
+> console.log(trie.keysWithPrefix('', 2));        // first two keys in trie traversal order
+> ~~~
+
+若键有 m 个码点，在 Map 子边查找按平均常数时间估算时，插入和精确查询需 O(m) 时间；更严谨地说，时间是沿 m 条边执行的 Map 操作总成本。令 p 为输入前缀长度；按常见的线性 Unicode 规范化实现估算，前缀规范化、Array.from 转成码点数组和定位节点共需 O(p) 时间，规范化结果字符串与临时码点数组合计 O(p) 空间。设 DFS 实际访问 S 个节点，d 是访问路径的最大深度，L 是返回键的码点总数，r 是实际返回项数：遍历和构造结果的时间按 O(p + S + L) 估算；显式栈帧和码点路径数组各占 O(d) 空间，返回的字符串另占 O(L)，结果数组含 O(r) 个引用。因此不计 Trie 本身的总额外空间为 O(p + d + L + r)。limit 只限制返回条数，不保证访问节点数或字符总数也为 O(limit)。若需要按语言区域排序的建议项，必须另外定义排序规则；本实现的 Map 插入顺序不等于语言排序。哈希表适合完整键的精确查找，不能直接定位整组前缀候选；排序列表可以先二分找到同前缀键的起点再顺序输出；Trie 用更多节点和 Map 结构换取沿前缀直接定位。只有前缀查询足够常见时，这种空间取舍才值得。
+
 > [!info]- 来源
 > - JavaScript 字符串的 UTF-16 表示及字符串迭代按码点处理：[ECMAScript 2026 text processing](https://tc39.es/ecma262/2026/multipage/text-processing.html)，String value 与 StringIterator。
+> - JavaScript NFC 规范化 API：[ECMAScript 2026, §22.1.3.15 String.prototype.normalize](https://tc39.es/ecma262/2026/multipage/text-processing.html#sec-string.prototype.normalize)；该方法按最新 Unicode Standard 的规范化形式处理输入。
 > - 构造器入口：[ECMA-402 2026 §8.2.7 `Intl.NumberFormat`](https://tc39.es/ecma402/2026/#sec-intl.numberformat)、[§8.2.10 `Intl.Segmenter`](https://tc39.es/ecma402/2026/#sec-intl.segmenter)；格式化机制见 [§16 NumberFormat Objects](https://tc39.es/ecma402/2026/#numberformat-objects)，分段机制见 [§19 Segmenter Objects](https://tc39.es/ecma402/2026/#segmenter-objects)。Node.js v26.11.1 只用于复算本例行为，不据此断言运行时采用 UAX #29 rev.49。
 > - 字素簇默认边界与适用限制：[Unicode Standard Annex #29, Unicode 18.0.0, Revision 49](https://www.unicode.org/reports/tr29/tr29-49.html)，2026-09-01；以 extended grapheme cluster 作默认分段，允许声明定制。
 > - 数字安全整数上限：[ECMAScript 2026 Number.MAX_SAFE_INTEGER](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-number.max_safe_integer)，2⁵³−1。
+> - Trie 的前缀路径、完整键终端标记和前缀枚举：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §5.2 “Tries”](https://algs4.cs.princeton.edu/52trie/)，作者实现 [TrieST.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TrieST.java.html) 使用 256 路扩展 ASCII；本页使用 Map 子边与码点，避免把该 ASCII 实现误当成通用 Unicode 代码。
+> - 规范等价与 NFC 规范化形式：[Unicode Standard Annex #15, Unicode 18.0.0, Revision 58, §1.1 “Canonical and Compatibility Equivalence” 与 §1.2 “Normalization Forms”](https://www.unicode.org/reports/tr15/tr15-58.html)，2026-08-12。NFC 选择及其对前缀语义的影响按本节契约说明。
+> - 子边迭代顺序：[ECMAScript 2026, Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)，Map iterator 按插入顺序产生条目。

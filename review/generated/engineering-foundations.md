@@ -3750,7 +3750,7 @@ SLO 告警可以要求至少 100 个符合条件的请求的滚动 10 分钟窗�
 
 报表请求已从数据库得到 acct-17 的 report 42 事件页：1,024 条，按 (occurred_at, event_id) 升序排列。接口要定位游标、显示分类树、缓存最近查看的页面，并按事件描述处理 Unicode（统一码）文本。选算法前先写明输入保证、要执行的操作和结果约束；只有这样才能证明候选范围可以丢弃，并估计成本。
 
-本篇给出选型与复杂度模型。后续章节分别回答[数据结构怎样匹配访问方式](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)、[队列和栈怎样表示待处理工作](#34.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)、[LRU 如何维护按键查找与新近顺序](#35.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[有序数据怎样缩小候选范围](#36.%20%E6%9C%89%E5%BA%8F%E6%95%B0%E6%8D%AE%E6%80%8E%E6%A0%B7%E8%AE%A9%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%E5%AE%89%E5%85%A8%E6%8E%92%E9%99%A4%E5%80%99%E9%80%89%EF%BC%9F)、[动态规划怎样定义状态和更新顺序](#37.%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E5%A6%82%E4%BD%95%E5%AE%9A%E4%B9%89%E7%8A%B6%E6%80%81%E5%B9%B6%E5%AE%89%E6%8E%92%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[分区如何改变排序成本](#38.%20%E5%88%86%E5%8C%BA%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E6%97%B6%E9%97%B4%E5%92%8C%E7%A9%BA%E9%97%B4%E4%BB%A3%E4%BB%B7%EF%BC%9F)和[文本算法应选哪种字符单位](#39.%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E7%A0%81%E5%85%83%E3%80%81%E7%A0%81%E7%82%B9%E8%BF%98%E6%98%AF%E5%AD%97%E7%B4%A0%E7%B0%87%E5%A4%84%E7%90%86%EF%BC%9F)。
+本篇给出选型与复杂度模型。后续章节分别回答[数据结构怎样匹配访问方式](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)、[队列和栈怎样表示待处理工作](#34.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)、[LRU 如何维护按键查找与新近顺序](#35.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[有序数据怎样缩小候选范围](#36.%20%E6%9C%89%E5%BA%8F%E6%95%B0%E6%8D%AE%E6%80%8E%E6%A0%B7%E8%AE%A9%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%E5%AE%89%E5%85%A8%E6%8E%92%E9%99%A4%E5%80%99%E9%80%89%EF%BC%9F)、[动态规划怎样定义状态和更新顺序](#40.%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E5%A6%82%E4%BD%95%E5%AE%9A%E4%B9%89%E7%8A%B6%E6%80%81%E5%B9%B6%E5%AE%89%E6%8E%92%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[分区如何改变排序成本](#41.%20%E5%88%86%E5%8C%BA%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E6%97%B6%E9%97%B4%E5%92%8C%E7%A9%BA%E9%97%B4%E4%BB%A3%E4%BB%B7%EF%BC%9F)和[文本算法应选哪种字符单位](#42.%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E7%A0%81%E5%85%83%E3%80%81%E7%A0%81%E7%82%B9%E8%BF%98%E6%98%AF%E5%AD%97%E7%B4%A0%E7%B0%87%E5%A4%84%E7%90%86%EF%BC%9F)。
 
 ### 先写明不变量，再选方法
 
@@ -3781,7 +3781,7 @@ Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外
 | O(2ⁿ) | 朴素递归 Fibonacci 的上界、枚举子集 | 搜索树节点或候选数；按每个候选常数工作计 |
 | O(n!) | 枚举所有排列 | 搜索树节点工作；每个节点做常数工作时成立 |
 
-这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](#43.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 > [!example] 1,024 条事件页上的查找
 > 假设事件已按复合游标键升序，比较键的工作量为常数。目标位于末尾时，扫描需比较 1,024 次；二分最多进行 11 次中点探测，因为 2¹⁰=1,024，2¹¹=2,048；每次探测调用一个常数时间比较器，再判断比较结果。探测次数不等同于底层关系判断次数：若用直接 `===` 和 `<` 的标量写法，末尾命中例共做 21 次关系判断。若单次查找前要排序，预处理成本可能超过扫描。
@@ -3807,7 +3807,7 @@ Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外
 | 未平衡搜索树 | 最坏 O(n) | 最坏 O(n) | 递增插入可形成长链 |
 | Trie 前缀树 | 长度 m 的键约 O(m) | 沿字符路径增删 | 子边选择成本需受控；可能占较多内存 |
 
-链表只有在已知所需节点/链接时才是 O(1) 更新；先扫描定位会让整体操作成为 O(n)。树的 O(log n) 需要高度界。连续数组扫描通常比指针追逐更有局部性，硬件成本见[内存局部性如何影响访问](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+链表只有在已知所需节点/链接时才是 O(1) 更新；先扫描定位会让整体操作成为 O(n)。树的 O(log n) 需要高度界。连续数组扫描通常比指针追逐更有局部性，硬件成本见[内存局部性如何影响访问](#43.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 ### 树的遍历顺序和搜索条件是什么？
 
@@ -4320,7 +4320,635 @@ function moveZeros(values) {
 
 > [!info]- 来源
 > - 二分与双指针不变量按本页闭区间/升序数组逐步复算；事件页复合游标必须使用与来源排序相同的字典序比较。
-## 37. 动态规划如何定义状态并安排更新顺序？
+## 37. 怎样在边界前进时维护一个有效窗口或活动区间？
+
+合成报表 42 按到达时间记录事件。一个问题要找连续 k 条事件中净变化最大的窗口，另一个问题要找出处理耗时累计达到阈值时最短的连续事件段；资源预约表则要找同一时刻最多有多少任务占用资源。前两项是 fixed-size sliding window（固定宽度滑动窗口）和 variable-size sliding window（变长滑动窗口），第三项要用扫描线。三者都维护随边界变化的状态，但输入次序、状态不变量和移动理由各不相同。
+
+本章统一把数组窗口写成半开区间 [left, right)：包含 left，不包含 right。长度因此是 right - left；相邻的 [a, b) 与 [b, c) 不共享端点。
+
+### 固定宽度窗口：移出一项，再加入一项
+
+假设按到达顺序记录每个事件对待处理任务数的净变化，完成任务可为负数。输入 [4, -2, 3, 5]，求任意连续 3 条事件的最大净变化。第一段 [0, 3) 的和是 4 - 2 + 3 = 5。右边界前进一格后，新段 [1, 4) 只需移出 4、加入 5，得到 -2 + 3 + 5 = 6。
+
+| 窗口 | 本轮变化 | 和 |
+|---|---|---:|
+| [0, 3) | 4 - 2 + 3 | 5 |
+| [1, 4) | 旧和 5 − 移出 4 + 加入 5 | 6 |
+
+循环不变量是：每轮比较时，sum 恰好等于当前长度为 k 的 [left, right) 中所有值的和。固定宽度意味着每次右边界多含一项、左边界少含一项，所以只需增量更新这两项；不要求数据非负。每个输入项至多加入和移出一次，扫描为 O(n) 时间、O(1) 额外空间。这里按到达顺序计算；为了套用有序数组的双指针套路而先排序，会改变连续事件的含义。
+
+~~~javascript
+function maxFixedWindowSum(values, k) {
+  if (!Array.isArray(values)) throw new TypeError('values must be an array');
+  if (!Number.isSafeInteger(k) || k <= 0) throw new RangeError('k must be a positive safe integer');
+  for (const value of values) {
+    if (!Number.isSafeInteger(value)) throw new TypeError('values must contain safe integers');
+  }
+  if (values.length < k) return null;
+
+  let sum = 0;
+  for (let i = 0; i < k; i++) {
+    sum += values[i];
+    if (!Number.isSafeInteger(sum)) throw new RangeError('window sum exceeds the safe integer range');
+  }
+  let best = sum;
+
+  for (let right = k; right < values.length; right++) {
+    sum -= values[right - k];
+    if (!Number.isSafeInteger(sum)) throw new RangeError('window sum exceeds the safe integer range');
+    sum += values[right];
+    if (!Number.isSafeInteger(sum)) throw new RangeError('window sum exceeds the safe integer range');
+    if (sum > best) best = sum;
+  }
+  return best;
+}
+
+console.log(maxFixedWindowSum([4, -2, 3, 5], 3)); // 6
+console.log(maxFixedWindowSum([], 1));            // null
+~~~
+
+若 n < k（包括空输入），没有完整窗口，函数返回 null；k 必须是正整数。示例限定所有值与中间窗口和都在 JavaScript 安全整数范围内；业务值为小数时需改用相应的数值精度约定。
+
+### 变长窗口：只在扩展和收缩都可证明时使用
+
+另一项报表指标是：按事件顺序找到处理耗时总和至少达到 5 毫秒的最短连续区间。每条耗时是非负安全整数。输入 [2, 1, 3, 2] 的扫描如下：
+
+| 新加入下标 | 当前 [left, right) | 和 | 决定 |
+|---:|---|---:|---|
+| 0 | [0, 1) | 2 | 未达 5，继续扩展 |
+| 1 | [0, 2) | 3 | 未达 5，继续扩展 |
+| 2 | [0, 3) | 6 | 记录长度 3；移除下标 0 后和为 4，停止收缩 |
+| 3 | [1, 4) | 6 | 记录长度 3；移除下标 1 后 [2, 4) 和为 5，记录长度 2；再移除下标 2 后和为 2，停止收缩 |
+
+扫描结束，最短区间是 [2, 4)，即耗时 3 和 2。保持的状态是当前区间总和；右边界每次加入一项。当总和达到阈值时，当前区间有效，尝试向右移 left 来缩短它。非负输入保证移除左项不会让和变大；若移除后低于阈值，再移左就不能从当前区间产生一个有效更短后缀，因此先扩展 right。left 和 right 都只向前，每项最多进入、离开一次，时间 O(n)、额外空间 O(1)。若整个扫描从未达到阈值，返回 null。
+
+~~~javascript
+function shortestWindowAtLeast(values, target) {
+  if (!Array.isArray(values)) throw new TypeError('values must be an array');
+  if (!Number.isSafeInteger(target) || target <= 0) {
+    throw new RangeError('target must be a positive safe integer');
+  }
+  for (const value of values) {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new TypeError('values must contain non-negative safe integers');
+    }
+  }
+
+  let left = 0;
+  let sum = 0;
+  let best = null;
+  for (let right = 0; right < values.length; right++) {
+    sum += values[right];
+    if (!Number.isSafeInteger(sum)) throw new RangeError('window sum exceeds the safe integer range');
+
+    while (sum >= target) {
+      const candidate = { start: left, end: right + 1, length: right + 1 - left };
+      if (best === null || candidate.length < best.length) best = candidate;
+      sum -= values[left];
+      if (!Number.isSafeInteger(sum)) throw new RangeError('window sum exceeds the safe integer range');
+      left++;
+    }
+  }
+  return best;
+}
+
+console.log(shortestWindowAtLeast([2, 1, 3, 2], 5)); // { start: 2, end: 4, length: 2 }
+console.log(shortestWindowAtLeast([1, 2], 5));       // null
+~~~
+
+非负约束是这段代码正确性的前提，不是对输入的清洗偏好。若绕过入口的非负检查，把相同移动规则照搬到输入 [1, -1, 5]、阈值 5 上，算法先得到整段 [0, 3) 的和 5，记录长度 3；移除 1 后和变成 4，于是停止收缩并返回长度 3。但 [2, 3) 只含 5，长度为 1。负数让扩展可以降低总和、移除左项也可以提高总和；原来的移动理由失效，不能照搬这个窗口算法。
+
+### sweep line（扫描线）：先排序端点，再维护活动集合大小
+
+预约区间是另一类输入：它们不按开始时间排列，需先把端点排序。对同一批合成任务，预约为 A=[1,4)、B=[2,4)、C=[4,6)。区间采用半开约定，任务在结束时刻已释放，另一个任务可在该时刻开始而不与它重叠。
+
+扫描线按时刻由小到大处理端点。在同一时刻，先结束 [a,t) 的任务，再开始 [t,b) 的任务；代码把同刻端点合成一组，先扣除结束数，再加开始数。这样不会把端点上并不同时活动的任务临时算成重叠。该例的活动数变化为：
+
+| 时刻 | 结束 | 开始 | 处理后活动数 | 峰值 |
+|---:|---|---|---:|---:|
+| 1 | — | A | 1 | 1 |
+| 2 | — | B | 2 | 2 |
+| 4 | A、B | C | 1 | 2 |
+| 6 | C | — | 0 | 2 |
+
+峰值是 2。若在时刻 4 先加 C 再减 A、B，会短暂算出 3，虽然没有任何时刻三项区间同时包含在内。
+
+~~~javascript
+function maxConcurrentHalfOpen(intervals) {
+  if (!Array.isArray(intervals)) throw new TypeError('intervals must be an array');
+  const events = [];
+  for (const interval of intervals) {
+    if (!interval || !Number.isFinite(interval.start) || !Number.isFinite(interval.end)) {
+      throw new TypeError('each interval needs finite start and end values');
+    }
+    if (interval.start >= interval.end) {
+      throw new RangeError('each interval must satisfy start < end');
+    }
+    events.push({ time: interval.start, kind: 1 });
+    events.push({ time: interval.end, kind: -1 });
+  }
+
+  events.sort((a, b) => a.time - b.time || a.kind - b.kind);
+  let active = 0;
+  let peak = 0;
+  for (let i = 0; i < events.length;) {
+    const time = events[i].time;
+    let starts = 0;
+    let ends = 0;
+    while (i < events.length && events[i].time === time) {
+      if (events[i].kind === -1) ends++;
+      else starts++;
+      i++;
+    }
+    active -= ends; // [start, time) 到此已结束
+    active += starts; // [time, end) 从此开始
+    peak = Math.max(peak, active);
+  }
+  return peak;
+}
+
+console.log(maxConcurrentHalfOpen([
+  { name: 'A', start: 1, end: 4 },
+  { name: 'B', start: 2, end: 4 },
+  { name: 'C', start: 4, end: 6 }
+])); // 2
+console.log(maxConcurrentHalfOpen([])); // 0
+~~~
+
+每个区间必须满足 start < end；空区间不是资源预约，函数拒绝它。排序端点需 O(n log n)，线性分组需 O(n)，事件数组占 O(n) 空间。扫描线与保留到达顺序的窗口都维护局部状态，但前者先重排端点，后者不能改变原序列；两者的正确性分别来自半开端点规则和窗口的移动不变量。
+
+> [!info]- 来源
+> - 固定/变长窗口的双指针推进、每个元素有限次进入和离开：[Antti Laaksonen, Competitive Programmer’s Handbook, 2018 draft, §8.1 “Two pointers method” 与 §8.3 “Sliding window minimum”](https://cses.fi/book.pdf)。本页的求和窗口根据各自输入前提推导；带负值的失效例子由本页代码状态复算。
+> - 端点排序后维护活动集合的扫描线思路：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §9.3 “Geometric Intersections”](https://algs4.cs.princeton.edu/93intersection/)，并参看作者实现 [IntervalIntersection.java](https://algs4.cs.princeton.edu/93intersection/IntervalIntersection.java.html)。本页使用半开预约区间，因此端点相等时结束项先退出、开始项再进入；示例峰值由代码复算。
+## 38. 怎样在不断加入任务时持续取出最高优先级？
+
+合成报表 42 有多个待处理任务，系统一边接收新任务，一边要取出当前最紧急的一项。若每次都重新排序整个集合，就会重复整理旧任务。priority queue（优先队列）只要求快速插入和取出当前最高优先级项；binary heap（二叉堆）用一条父子顺序约束支持这两项操作。
+
+### 堆序只规定父子关系，不会把数组排好序
+
+以下用最大堆，优先级较大的任务靠近根。把完全二叉树（最后一层从左向右填充）按层从左到右放入数组，使用 0 起始下标时，只有 i > 0 的位置才有父节点，父节点下标是 floor((i - 1) / 2)，子节点是 2i + 1 与 2i + 2。堆序要求任一父项不低于它的孩子；除根以外，数组并不保证整体有序。
+
+~~~mermaid
+flowchart TD
+    i0["下标 0：根"]
+    i1["下标 1：左子，2i+1"]
+    i2["下标 2：右子，2i+2"]
+    i0 --> i1
+    i0 --> i2
+~~~
+
+本例约定同优先级按先到先出，因此入堆时另带递增序号。表中任务 A 和 B 优先级同为 5，A 先到；C 优先级为 8。
+
+| 操作 | 堆数组（从根到叶） | 发生的修复 |
+|---|---|---|
+| 插入 A(5) | [A(5)] | 根无需调整 |
+| 插入 B(5) | [A(5), B(5)] | 同优先级时 A 序号较早，不交换 |
+| 插入 C(8) | [C(8), B(5), A(5)] | C 从下标 2 上浮到根 |
+| 取出 | [A(5), B(5)] | 返回 C；末项 A 移到根，与同优先级且较晚的 B 保持先后次序 |
+
+插入时先放数组末尾，再沿父节点上浮；删除根时以末项填根，再沿更高优先级的孩子下沉。堆高为 O(log n)，所以 push 和 pop 各需 O(log n)，peek 为 O(1)，额外存储 O(n)。如果所有元素一开始都已知，可以从最后一个非叶节点向根逐层下沉来建堆，整体 O(n)；若元素逐个到达，则用 push，累计为 O(n log n)。线性 heapify（自底向上建堆）的前提是能同时访问整批初始元素。
+
+普通堆若只比较 priority，并不保证并列项稳定；稳定行为来自代码中的 sequence 次级键。此实现用 BigInt 序号，优先级必须是有限数；进入队列的优先级与序号保持不变。空堆的 peek 和 pop 都返回 null，实际任务包装在对象中，所以任务 value 本身即使是 null，也不与空队列混淆。
+
+> [!example]- 可运行：稳定最大优先队列
+> ~~~javascript
+> class BinaryHeap {
+>   constructor(higher) {
+>     if (typeof higher !== 'function') throw new TypeError('higher must be a function');
+>     this.higher = higher;
+>     this.items = [];
+>   }
+>
+>   get size() { return this.items.length; }
+>   peek() { return this.items.length === 0 ? null : this.items[0]; }
+>
+>   push(value) {
+>     const items = this.items;
+>     items.push(value);
+>     let i = items.length - 1;
+>     while (i > 0) {
+>       const parent = Math.floor((i - 1) / 2);
+>       if (!this.higher(items[i], items[parent])) break;
+>       [items[i], items[parent]] = [items[parent], items[i]];
+>       i = parent;
+>     }
+>   }
+>
+>   pop() {
+>     const items = this.items;
+>     if (items.length === 0) return null;
+>     const root = items[0];
+>     const last = items.pop();
+>     if (items.length > 0) {
+>       items[0] = last;
+>       let i = 0;
+>       while (true) {
+>         const left = 2 * i + 1;
+>         const right = left + 1;
+>         let best = i;
+>         if (left < items.length && this.higher(items[left], items[best])) best = left;
+>         if (right < items.length && this.higher(items[right], items[best])) best = right;
+>         if (best === i) break;
+>         [items[i], items[best]] = [items[best], items[i]];
+>         i = best;
+>       }
+>     }
+>     return root;
+>   }
+>
+>   toArray() { return this.items.slice(); }
+> }
+>
+> class StableMaxPriorityQueue {
+>   constructor() {
+>     this.sequence = 0n;
+>     this.heap = new BinaryHeap((a, b) =>
+>       a.priority > b.priority ||
+>       (a.priority === b.priority && a.sequence < b.sequence)
+>     );
+>   }
+>   get size() { return this.heap.size; }
+>   peek() { return this.heap.peek(); }
+>   push(priority, value) {
+>     if (!Number.isFinite(priority)) throw new TypeError('priority must be finite');
+>     this.heap.push(Object.freeze({ priority, sequence: this.sequence, value }));
+>     this.sequence += 1n;
+>   }
+>   pop() { return this.heap.pop(); }
+> }
+>
+> const tasks = new StableMaxPriorityQueue();
+> tasks.push(5, 'A');
+> tasks.push(5, 'B');
+> tasks.push(8, 'C');
+> console.log(tasks.pop().value); // C
+> console.log(tasks.pop().value); // A
+> console.log(tasks.pop().value); // B
+> console.log(tasks.pop());       // null
+> ~~~
+
+上浮或下沉每一步都沿堆的一层前进；每层最多比较两个孩子，因此不会扫描整堆。若输入量一次性已知而且需要取出全部排序结果，直接排序可能更简单；堆的优势出现在不断插入、只需当前极值，或只保留少量 Top K 的时候。
+
+### 只保留 Top K 时，根节点代表淘汰线
+
+一次性读入 n 个带分数的任务，只保留最大的 K 个时，维护一个最多 K 项的最小堆。下方短代码复用前面折叠示例中的 BinaryHeap。根是当前保留集合里最差的一项：分数不高于它的输入直接丢弃，分数更高的输入弹出根，再插入新项。同分时较早项优先保留，根在同分项中是较晚到达的那个。依次读入 A(8)、B(5)、C(5)、D(7)、E(1)，K=3：
+
+| 已读分数 | 保留集合 | 根（当前淘汰线） | 动作 |
+|---|---|---|---|
+| A、B、C | A(8)、B(5)、C(5) | C(5) | 堆已满 |
+| 再读 D | A(8)、D(7)、B(5) | B(5) | D 淘汰同分项里较晚的 C |
+| 再读 E | 不变 | B(5) | E(1) 低于根，丢弃 |
+
+令 k' = min(K, n)。K 为正且 n 非零时，扫描需 O(n log(k' + 1)) 时间，最终按排名排序另需 O(k' log(k' + 1))；额外堆空间为 O(k')。这样 K=1 时扫描仍是 O(n)，K>n 时堆最多只有 n 项。K=0 时仍先校验输入的 n 项，之后返回空数组；n=0 时也返回空数组。代码中的 tie-breaker（平局裁决键）保证选择较早的并列分数。
+
+~~~javascript
+function topK(values, k) {
+  if (!Array.isArray(values)) throw new TypeError('values must be an array');
+  if (!Number.isSafeInteger(k) || k < 0) throw new RangeError('k must be a non-negative safe integer');
+  for (const item of values) {
+    if (!item || !Number.isFinite(item.score)) {
+      throw new TypeError('values must contain items with finite scores');
+    }
+  }
+  if (k === 0 || values.length === 0) return [];
+
+  const worstFirst = (a, b) =>
+    a.score < b.score ||
+    (a.score === b.score && a.sequence > b.sequence);
+  const heap = new BinaryHeap(worstFirst);
+
+  for (let i = 0; i < values.length; i++) {
+    const candidate = { score: values[i].score, sequence: BigInt(i), value: values[i] };
+    if (heap.size < k) {
+      heap.push(candidate);
+    } else if (candidate.score > heap.peek().score) {
+      heap.pop();
+      heap.push(candidate);
+    }
+  }
+
+  return heap.toArray()
+    .sort((a, b) => {
+      if (a.score > b.score) return -1;
+      if (a.score < b.score) return 1;
+      if (a.sequence < b.sequence) return -1;
+      if (a.sequence > b.sequence) return 1;
+      return 0;
+    })
+    .map(item => item.value);
+}
+
+const scoredTasks = [
+  { id: 'A', score: 8 }, { id: 'B', score: 5 }, { id: 'C', score: 5 },
+  { id: 'D', score: 7 }, { id: 'E', score: 1 }
+];
+console.log(topK(scoredTasks, 3).map(task => task.id)); // ['A', 'D', 'B']
+console.log(topK(scoredTasks, 0));                     // []
+~~~
+
+若只需处理一条已完整到达的短数组且最终要所有项有序，排序一次是 O(n log n)，代码更直接；若 n 很大而 K 很小，Top K 堆把保留空间降到 O(K)，也允许数据流逐项到达。优先队列可用于任务调度；固定大小堆适合流式候选筛选。二者共享堆操作，但取舍目标不同。
+
+> [!info]- 来源
+> - 完全二叉树数组表示、上浮/下沉、插入/删除极值、线性 bottom-up heapify：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §2.4 “Priority Queues”](https://algs4.cs.princeton.edu/24pq/)。本页以 0 起始数组实现同一堆序；操作结果由 Node.js 运行复算。
+> - 并列键稳定处理的作者实现样本：[Algorithms, 4th ed., StableMinPQ.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/StableMinPQ.java.html)。本页显式把到达序号作为次级比较键，稳定性因此属于本页 API 合约。
+## 39. 搜索状态图时，何时永久标记节点，何时必须回退？
+
+合成站点 S 要把一件包裹送到 Z。路网是一张有向图：S 可到 A、B；A 与 B 都可到汇点 T；T 可回到 S，也可到 Z。回边让图有环，共享汇点让两条路线合流。我们先用它找一条最少跳数路线，再枚举简单路线、检查依赖环，最后给路段加入非负代价。
+
+本章的邻接表契约是：顶点 ID 都是字符串；Map 为每个顶点都建一项，包括没有出边的顶点（例如 Z→[]）；所有邻居也都作为顶点键出现。BFS 用 null 表示起点没有父节点，因此不接受 null 顶点 ID。
+
+~~~mermaid
+flowchart LR
+    S --> A
+    S --> B
+    A --> T
+    B --> T
+    T --> S
+    T --> Z
+~~~
+
+这些操作都沿边扩展候选状态，但保留的状态不同：breadth-first search（BFS，广度优先搜索）只要每个顶点的一条最短边数路径，可以全局去重；枚举简单路径时，同一顶点可能属于不同合法路径，必须只在当前递归路径内标记并在返回时撤销；拓扑排序要求有向边代表依赖且图无环；Dijkstra 选择当前代价最小的未定顶点，要求所有边权非负。
+
+### 无权图最短路：顶点第一次入队时记录父节点
+
+breadth-first search（广度优先搜索，BFS）用先进先出队列按层扩展：先看距 S 一条边的顶点，再看两条边的顶点。队列中的顶点按发现距离非递减排列，所以第一次发现一个顶点时，已找到它的最少边数路径。用 parent 同时记录“已经发现”与首次父节点，之后的回边或另一条同层路线不再入队。
+
+| 处理的顶点 | 刚发现的邻居 | 队列（从前到后） | parent 新增 |
+|---|---|---|---|
+| S | A、B | A、B | A←S，B←S |
+| A | T | B、T | T←A |
+| B | T 已发现 | T | 无 |
+| T | S 已发现、Z | Z | Z←T |
+| Z | 已到目标 | 空 | — |
+
+按首次父节点从 Z 回溯得到 S→A→T→Z，共 3 条边。若邻接表把 B 放在 A 前，BFS 可能返回 S→B→T→Z；两条都是最少边数路径。若目标不可达，返回 null；起点等于目标时返回仅含起点的路径。
+
+~~~javascript
+const routes = new Map([
+  ['S', ['A', 'B']],
+  ['A', ['T']],
+  ['B', ['T']],
+  ['T', ['S', 'Z']],
+  ['Z', []]
+]);
+
+function shortestUnweightedPath(graph, start, target) {
+  if (!graph.has(start) || !graph.has(target)) return null;
+  const parent = new Map([[start, null]]); // 同时是全局 visited 集合
+  const queue = [start];
+
+  for (let head = 0; head < queue.length; head++) {
+    const vertex = queue[head];
+    if (vertex === target) break;
+    for (const next of graph.get(vertex) ?? []) {
+      if (parent.has(next)) continue;
+      parent.set(next, vertex); // 入队时标记，避免重复排队
+      queue.push(next);
+    }
+  }
+
+  if (!parent.has(target)) return null;
+  const path = [];
+  for (let vertex = target; vertex !== null; vertex = parent.get(vertex)) {
+    path.push(vertex);
+  }
+  return path.reverse();
+}
+
+console.log(shortestUnweightedPath(routes, 'S', 'Z')); // ['S', 'A', 'T', 'Z']
+console.log(shortestUnweightedPath(routes, 'S', 'missing')); // null
+~~~
+
+邻接表下 BFS 为 O(V + E) 时间、O(V) 额外空间，V 为顶点数、E 为边数。这里用数组递增 head 取代反复 shift，队列头前进时不搬移剩余元素。全局 visited 合适的理由是此处只保留每个顶点的一条最短距离与父节点；它并不表示顶点只能出现在一条合法简单路径中。
+
+### 枚举简单路径：visited 只属于当前路径，并在回退时撤销
+
+若要列出所有不重复经过同一站点的路线，S→A→T→Z 与 S→B→T→Z 都是有效候选。BFS 的 parent 只保留 T 的第一个父节点 A；若把全局 visited 直接拿来做路径枚举，T 经 A 加入 visited 后，经 B 到达 T 的分支会被误删。
+
+backtracking（回溯）沿候选边选下一站，递归扩展；回到上一层时撤销刚才加入的站点和路径项。onPath 只表示“这个顶点正在当前候选路径上”。它会拒绝 T→S，因为 S 已在这条路径里；回到起点的另一条分支时，T 的标记已撤销，因此 T 可以再次进入另一条路线。
+
+~~~javascript
+function allSimplePaths(graph, start, target) {
+  const results = [];
+  if (!graph.has(start) || !graph.has(target)) return results;
+  const path = [start];
+  const onPath = new Set([start]);
+
+  function visit(vertex) {
+    if (vertex === target) {
+      results.push(path.slice());
+      return;
+    }
+    for (const next of graph.get(vertex) ?? []) {
+      if (onPath.has(next)) continue; // 本路径内重复才构成环
+      onPath.add(next);
+      path.push(next);
+      visit(next);
+      path.pop();
+      onPath.delete(next); // 回退后允许别的分支复用 next
+    }
+  }
+
+  visit(start);
+  return results;
+}
+
+const routeGraphForPaths = new Map([
+  ['S', ['A', 'B']],
+  ['A', ['T']],
+  ['B', ['T']],
+  ['T', ['S', 'Z']],
+  ['Z', []]
+]);
+console.log(allSimplePaths(routeGraphForPaths, 'S', 'Z'));
+// [['S', 'A', 'T', 'Z'], ['S', 'B', 'T', 'Z']]
+~~~
+
+如果本次问题只需一条路线，不应枚举所有路线。固定不同起终点的完全有向图，仅遍历其余所有顶点的简单路径就有 (V−2)! 条，数量至少可达阶乘级；本例代码没有候选数上限。令 C 为实际检查的候选边数、L 为复制到结果中的路径总长度，运行时间按 O(C + L) 计；即使结果少，搜索也可能访问许多最终无法到达目标的前缀。递归栈、path 与 onPath 的辅助空间为 O(V)，返回结果另占与所有输出路径总长度相称的空间。深图也可能超过 JavaScript 调用栈深度，此时应把递归状态改成显式栈，但仍须在回退时撤销 onPath。
+
+### 依赖排序：每条有向边都必须满足先后顺序
+
+topological sort（拓扑排序）不是在一般图上重新安排搜索次序。若每条边 u→v 表示 u 必须先于 v，拓扑序才是可执行顺序。把 T→S 解释为一项依赖时，S→A→T→S 已成环，要求 S 先于 T 又要求 T 先于 S，因此不存在合法顺序。若 T→S 只是回程路线、不是依赖，就从依赖图删去这条边；其余边形成 DAG（directed acyclic graph，有向无环图），可排成 S、A、B、T、Z。
+
+下面的 Kahn 算法维护每个顶点尚未满足的入边数。入度为 0 表示当前可执行；取出它后，逐条解除后继的一项依赖。若取出的顶点数少于图中顶点数，剩余边属于环内或被环阻塞的依赖，返回 null。
+
+~~~javascript
+function topologicalOrder(graph) {
+  const vertices = new Set(graph.keys());
+  for (const neighbors of graph.values()) {
+    for (const next of neighbors) vertices.add(next);
+  }
+
+  const indegree = new Map(Array.from(vertices, vertex => [vertex, 0]));
+  for (const neighbors of graph.values()) {
+    for (const next of neighbors) indegree.set(next, indegree.get(next) + 1);
+  }
+
+  const ready = Array.from(vertices).filter(vertex => indegree.get(vertex) === 0);
+  const order = [];
+  for (let head = 0; head < ready.length; head++) {
+    const vertex = ready[head];
+    order.push(vertex);
+    for (const next of graph.get(vertex) ?? []) {
+      const remaining = indegree.get(next) - 1;
+      indegree.set(next, remaining);
+      if (remaining === 0) ready.push(next);
+    }
+  }
+  return order.length === vertices.size ? order : null;
+}
+
+const dependencies = new Map([
+  ['S', ['A', 'B']],
+  ['A', ['T']],
+  ['B', ['T']],
+  ['T', ['Z']],
+  ['Z', []]
+]);
+const cyclicDependencies = new Map([
+  ['S', ['A', 'B']],
+  ['A', ['T']],
+  ['B', ['T']],
+  ['T', ['S', 'Z']],
+  ['Z', []]
+]);
+console.log(topologicalOrder(dependencies)); // ['S', 'A', 'B', 'T', 'Z']
+console.log(topologicalOrder(cyclicDependencies)); // null：T → S 使依赖成环
+~~~
+
+每个顶点和边各处理常数次，邻接表下时间 O(V + E)、额外空间 O(V)。入度为 0 的顶点可能不止一个，因此不同合法拓扑序都可能成立。初始 ready 队列按顶点首次出现顺序排列；后续变为 ready 的顶点则按当前出队顶点的邻接表扫描顺序入队，并由 FIFO 队列处理，不保证沿用它们在原 Map 中首次出现的顺序。若业务要求特定顺序，应明确再加优先级规则，而不能把任意拓扑序当成唯一答案。
+
+### 非负权最短路：松弛距离，并跳过过期堆项
+
+现在为路线加上整数耗时：S→A 为 1，S→B 为 4，A→T 为 6，B→T 为 1，T→S 为 2，T→Z 为 1。BFS 仍找到 3 条边的 S→A→T→Z，但总代价是 8；代价较小的 S→B→T→Z 为 6。边数最少和代价最低是两个问题。
+
+Dijkstra 算法用最小堆优先处理当前距离最小且尚未定型的顶点。relaxation（松弛）一条边 v→w 时，若 dist[v]+weight 小于已知 dist[w]，就更新距离与前驱并把新距离推入堆。此实现不原地修改旧堆项；某顶点改善时会留下旧项，弹出时若其距离已不等于当前 dist，就跳过。堆还可含同一个顶点的多条距离记录，settled（已定型）集合保证顶点只处理一次。
+
+| 弹出的堆项 | 更新 | 堆中待处理项（可能含过期项） | 说明 |
+|---|---|---|---|
+| S:0 | A=1，B=4 | A:1、B:4 | 从源点展开 |
+| A:1 | T=7 | B:4、T:7 | 暂时走 A |
+| B:4 | T 从 7 改为 5 | T:5、T:7 | 新项入堆，T:7 成为过期项 |
+| T:5 | Z=6；回到 S 的候选 7 不改善 S=0 | Z:6、T:7 | 走 B 得到 Z 的最短代价 6 |
+| Z:6 | 无 | T:7 | 目标已定型 |
+| T:7 | 无 | 空 | 因 7 不等于 dist[T]=5，跳过 |
+
+边权必须非负：定型当前最小距离顶点的证明依赖于之后经过边不会降低代价。若绕过下方代码的输入校验，另加 B→A、权重 −5，则 A 在距离 1 时已定型；处理 B:4 时，经过 B 到 A 的真实代价为 −1，定型规则会忽略它并错误保留 1。本文实现会在运行核心循环前对负权输入抛出 RangeError；该反例用来说明为什么它拒绝这种输入。负权图应改用能处理负边的算法（例如无负环前提下的 Bellman–Ford），不能因为某个负权样例恰好算对就使用 Dijkstra。
+
+下面的最小堆仅按 distance 排序；它只服务此完整示例，与[优先队列的上浮和下沉](#38.%20%E6%80%8E%E6%A0%B7%E5%9C%A8%E4%B8%8D%E6%96%AD%E5%8A%A0%E5%85%A5%E4%BB%BB%E5%8A%A1%E6%97%B6%E6%8C%81%E7%BB%AD%E5%8F%96%E5%87%BA%E6%9C%80%E9%AB%98%E4%BC%98%E5%85%88%E7%BA%A7%EF%BC%9F)共享数组堆机制。代码把权重和距离限制为安全整数，并拒绝负权或超出安全范围的路径和。
+
+> [!example]- 可运行：Dijkstra 最小堆实现
+> ~~~javascript
+> class MinHeap {
+>   constructor() { this.items = []; }
+>   get size() { return this.items.length; }
+>
+>   push(item) {
+>     this.items.push(item);
+>     let i = this.items.length - 1;
+>     while (i > 0) {
+>       const parent = Math.floor((i - 1) / 2);
+>       if (this.items[parent].distance <= this.items[i].distance) break;
+>       [this.items[i], this.items[parent]] = [this.items[parent], this.items[i]];
+>       i = parent;
+>     }
+>   }
+>
+>   pop() {
+>     if (this.items.length === 0) return null;
+>     const root = this.items[0];
+>     const last = this.items.pop();
+>     if (this.items.length > 0) {
+>       this.items[0] = last;
+>       let i = 0;
+>       while (true) {
+>         const left = 2 * i + 1;
+>         const right = left + 1;
+>         let smallest = i;
+>         if (left < this.items.length &&
+>             this.items[left].distance < this.items[smallest].distance) smallest = left;
+>         if (right < this.items.length &&
+>             this.items[right].distance < this.items[smallest].distance) smallest = right;
+>         if (smallest === i) break;
+>         [this.items[i], this.items[smallest]] = [this.items[smallest], this.items[i]];
+>         i = smallest;
+>       }
+>     }
+>     return root;
+>   }
+> }
+>
+> function dijkstra(graph, source) {
+>   for (const [from, edges] of graph) {
+>     for (const edge of edges) {
+>       if (!Number.isSafeInteger(edge.weight) || edge.weight < 0) {
+>         throw new RangeError('Dijkstra requires non-negative safe-integer weights');
+>       }
+>       if (!graph.has(edge.to)) throw new RangeError('every destination must be a graph vertex');
+>     }
+>   }
+>   if (!graph.has(source)) return { distances: new Map(), previous: new Map() };
+>
+>   const distances = new Map(Array.from(graph.keys(), vertex => [vertex, Infinity]));
+>   const previous = new Map();
+>   const settled = new Set();
+>   const heap = new MinHeap();
+>   distances.set(source, 0);
+>   heap.push({ vertex: source, distance: 0 });
+>
+>   while (heap.size > 0) {
+>     const current = heap.pop();
+>     const vertex = current.vertex;
+>     if (current.distance !== distances.get(vertex) || settled.has(vertex)) continue;
+>     settled.add(vertex);
+>
+>     for (const edge of graph.get(vertex)) {
+>       if (settled.has(edge.to)) continue;
+>       const candidate = current.distance + edge.weight;
+>       if (!Number.isSafeInteger(candidate)) throw new RangeError('path distance exceeds the safe integer range');
+>       if (candidate < distances.get(edge.to)) {
+>         distances.set(edge.to, candidate);
+>         previous.set(edge.to, vertex);
+>         heap.push({ vertex: edge.to, distance: candidate });
+>       }
+>     }
+>   }
+>   return { distances, previous };
+> }
+>
+> function weightedPath(result, source, target) {
+>   if (!result.distances.has(target) || result.distances.get(target) === Infinity) return null;
+>   const path = [];
+>   let vertex = target;
+>   while (vertex !== source) {
+>     path.push(vertex);
+>     if (!result.previous.has(vertex)) return null;
+>     vertex = result.previous.get(vertex);
+>   }
+>   path.push(source);
+>   return path.reverse();
+> }
+>
+> const weightedRoutes = new Map([
+>   ['S', [{ to: 'A', weight: 1 }, { to: 'B', weight: 4 }]],
+>   ['A', [{ to: 'T', weight: 6 }]],
+>   ['B', [{ to: 'T', weight: 1 }]],
+>   ['T', [{ to: 'S', weight: 2 }, { to: 'Z', weight: 1 }]],
+>   ['Z', []]
+> ]);
+> const result = dijkstra(weightedRoutes, 'S');
+> console.log(result.distances.get('Z'));                    // 6
+> console.log(weightedPath(result, 'S', 'Z'));                // ['S', 'B', 'T', 'Z']
+> console.log(weightedPath(result, 'S', 'unreachable'));      // null
+> ~~~
+
+该惰性堆实现每条边至多扫描一次，至多成功松弛并压入一条新项，故时间 O(V + (E + 1) log(E + 1))、空间 O(V + E)。若用带 decrease-key 的索引优先队列，通常可把堆空间降到 O(V)，时间写作 O((V + E) log V)。无论用哪一种实现，距离表、前驱表、堆项和 visited/settled 状态都要对应同一个图与同一组边权。
+
+> [!info]- 来源
+> - 邻接表遍历、BFS 按边数找最短路、首次发现时记录父边：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §4.1 “Undirected Graphs”](https://algs4.cs.princeton.edu/41graph/)，作者实现 [BreadthFirstPaths.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/BreadthFirstPaths.java.html)。BFS 原理同样适用于本页的有向邻接表。
+> - DAG 才有拓扑序，以及顶点/边线性量级的 DFS 版本：[Algorithms, 4th ed., §4.2 “Directed Graphs”](https://algs4.cs.princeton.edu/42digraph/)，作者的队列版本 [TopologicalX.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TopologicalX.java.html)。本页采用 Kahn 入度实现，示例输出由 Node.js 运行复算。
+> - Dijkstra 的非负权前提、松弛、堆优先处理和索引优先队列复杂度：[Algorithms, 4th ed., §4.4 “Shortest Paths”](https://algs4.cs.princeton.edu/44sp/)，作者实现 [DijkstraSP.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/DijkstraSP.java.html)。本页为便于展示过期项，使用惰性重复入堆，复杂度另按本实现计。
+## 40. 动态规划如何定义状态并安排更新顺序？
 
 报表汇总里某些查询可能复用之前算过的子结果，但本篇用三个更小、可完整复算的例子说明一般机制。dynamic programming（动态规划，DP）把问题拆为有限状态；每个状态只保留后续转移需要的信息。先写递推关系和初始状态，再按依赖顺序计算，复用一维数组时还要追踪每个格子属于哪一轮。
 
@@ -4410,7 +5038,7 @@ function knapsack(capacity, weights, values) {
 
 > [!info]- 来源
 > - 动态规划状态、递推与更新顺序按三段代码的输入/输出和中间数组手工复算；Number 安全整数边界按 ECMAScript Number.MAX_SAFE_INTEGER=2⁵³−1 核对：[ECMAScript 2026 numbers](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-number.max_safe_integer)。
-## 38. 分区如何改变快速排序的时间和空间代价？
+## 41. 分区如何改变快速排序的时间和空间代价？
 
 报表 42 的页面可能要按数值指标排序。quicksort（快速排序）先选 pivot（基准值）再分区，分区大小决定递归树的高度；连续偏斜时，即使每层都正确排序，也会反复处理接近原规模的子数组。选择分区方式时还要看算法是否修改输入、是否复制数据以及递归深度。
 
@@ -4468,7 +5096,7 @@ sort 会把 values 原地改为 [9,12,80]；toSorted 则让 copyInput 保持 [80
 > [!info]- 来源
 > - 内置排序稳定性、比较器和原地 sort 语义：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.sort)，ECMAScript 2026。
 > - 返回副本的 toSorted 语义：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.tosorted)，ECMAScript 2026；Node.js v26.11.1 本地复算示例。
-## 39. 文本算法应按码元、码点还是字素簇处理？
+## 42. 文本算法应按码元、码点还是字素簇处理？
 
 报表 42 的事件描述可能含 emoji、组合重音或其他扩展文字。JavaScript 字符串索引、Unicode 码点和用户看到的字符不是同一种单位：先定义任务要计数、比较或切分什么，再实现算法。这里第一次说明三个单位：UTF-16 code unit（UTF-16 编码单元）、Unicode code point（Unicode 码点）和 extended grapheme cluster（扩展字素簇）。
 
@@ -4582,12 +5210,142 @@ function switchAsciiCase(value) {
 }
 ~~~
 
+### Trie 怎样共享前缀并限制候选输出？
+
+在合成报表 42 的描述搜索中，输入框要查找以已输入前缀开头的标签。Trie（前缀树）把键拆成一串单位，让有相同前缀的键沿着同一条路径前进；本例沿用本章的码点单位，按 Unicode 码点建边。Array.from 会把有效代理对组合成一个码点，所以 😀 是一条边；组合重音若未归一化，则仍是另一条码点边，不等同于视觉上的一个字素簇。
+
+匹配合约选择 NFC（Normalization Form C，规范化形式 C）：写入键和查询前缀都先规范化，把规范等价的码点序列映射到同一路径。因而预组字符 café 与 cafe 加 U+0301 的查询相同；键以规范化后的形式枚举。NFC 不是去重音或兼容字符折叠：单独输入 cafe 不匹配规范化后的 café，若产品要不区分重音或处理兼容字符，必须另外定义匹配规则。保存原输入展示时，可在 terminal 的 value 中保留显示文本。
+
+| 插入键 | NFC 后的码点路径 | terminal 标记 |
+|---|---|---|
+| re | r → e | e 节点是完整键 |
+| report | 与 re 共享 r → e，再接 p → o → r → t | t 节点是完整键 |
+| reporter | 继续共享 report，再接 e → r | 最后一个 r 是完整键 |
+| review | 与 re 共享 r → e，再从 v 分支 | 最后一个 w 是完整键 |
+| 😀report | 😀 → r → e → p → o → r → t | t 节点是完整键 |
+| 先 café，后 cafe 加 U+0301 | 两次写入经 NFC 后都走 café 的同一条路径 | 第二次写入覆盖第一次的 value |
+
+每个节点有一张从码点到子节点的 Map 和一个 terminal（键结束）标记。只有 terminal 为 true 才表示完整键；“存在这段前缀”不等于“前缀本身也是键”。因此 re 可以既是完整键，也有通向 report 和 review 的后续分支。共享路径存一次，但每个前缀节点及子边 Map 都占内存。
+
+下面实现插入、精确查询和有限前缀枚举。枚举从前缀节点开始做 depth-first search（DFS，深度优先搜索）；terminal 先于后代输出，因此前缀本身若也是键会先出现。子边按 Map 的插入顺序访问，所以结果不承诺字典序；limit 限制返回候选数，显式栈按需取一个子边，不会为了遍历先复制整张子边表。
+
+> [!example]- 可运行：码点 Trie
+> ~~~javascript
+> class TrieNode {
+>   constructor() {
+>     this.children = new Map();
+>     this.terminal = false;
+>     this.value = undefined;
+>   }
+> }
+>
+> class CodePointTrie {
+>   constructor() {
+>     this.root = new TrieNode();
+>   }
+>
+>   normalizeKey(key) {
+>     if (typeof key !== 'string') throw new TypeError('key must be a string');
+>     return key.normalize('NFC');
+>   }
+>
+>   nodeFor(key) {
+>     let node = this.root;
+>     for (const codePoint of Array.from(this.normalizeKey(key))) {
+>       node = node.children.get(codePoint);
+>       if (!node) return null;
+>     }
+>     return node;
+>   }
+>
+>   insert(key, value) {
+>     const normalized = this.normalizeKey(key);
+>     let node = this.root;
+>     for (const codePoint of Array.from(normalized)) {
+>       if (!node.children.has(codePoint)) node.children.set(codePoint, new TrieNode());
+>       node = node.children.get(codePoint);
+>     }
+>     node.terminal = true;
+>     node.value = value;
+>   }
+>
+>   has(key) {
+>     const node = this.nodeFor(key);
+>     return node !== null && node.terminal;
+>   }
+>
+>   lookup(key) {
+>     const node = this.nodeFor(key);
+>     return node !== null && node.terminal
+>       ? { found: true, value: node.value }
+>       : { found: false };
+>   }
+>
+>   keysWithPrefix(prefix, limit = 20) {
+>     if (!Number.isSafeInteger(limit) || limit < 0) {
+>       throw new RangeError('limit must be a non-negative safe integer');
+>     }
+>     const normalizedPrefix = this.normalizeKey(prefix);
+>     const start = this.nodeFor(normalizedPrefix);
+>     if (start === null || limit === 0) return [];
+>
+>     const results = [];
+>     const path = [];
+>     const stack = [{ node: start, entered: false, children: null }];
+>     while (stack.length > 0 && results.length < limit) {
+>       const frame = stack[stack.length - 1];
+>       if (!frame.entered) {
+>         frame.entered = true;
+>         if (frame.node.terminal) {
+>           results.push(normalizedPrefix + path.join(''));
+>           if (results.length === limit) break;
+>         }
+>         frame.children = frame.node.children.entries();
+>       }
+>
+>       const next = frame.children.next();
+>       if (next.done) {
+>         stack.pop();
+>         if (stack.length > 0) path.pop();
+>       } else {
+>         const [codePoint, child] = next.value;
+>         path.push(codePoint);
+>         stack.push({ node: child, entered: false, children: null });
+>       }
+>     }
+>     return results;
+>   }
+> }
+>
+> const trie = new CodePointTrie();
+> trie.insert('re', 'prefix is also a complete key');
+> trie.insert('report', 'report label');
+> trie.insert('reporter', 'reporter label');
+> trie.insert('review', 'review label');
+> trie.insert('café', 'precomposed spelling');
+> trie.insert('cafe\u0301', 'decomposed spelling replaces the same normalized key');
+> trie.insert('😀report', 'emoji-prefixed key');
+>
+> console.log(trie.has('café'));                  // true
+> console.log(trie.lookup('cafe\u0301'));         // { found: true, value: 'decomposed spelling replaces the same normalized key' }
+> console.log(trie.keysWithPrefix('re', 3));      // ['re', 'report', 'reporter']
+> console.log(trie.keysWithPrefix('rep', 10));    // ['report', 'reporter']
+> console.log(trie.keysWithPrefix('unknown', 5)); // []
+> console.log(trie.keysWithPrefix('', 2));        // first two keys in trie traversal order
+> ~~~
+
+若键有 m 个码点，在 Map 子边查找按平均常数时间估算时，插入和精确查询需 O(m) 时间；更严谨地说，时间是沿 m 条边执行的 Map 操作总成本。令 p 为输入前缀长度；按常见的线性 Unicode 规范化实现估算，前缀规范化、Array.from 转成码点数组和定位节点共需 O(p) 时间，规范化结果字符串与临时码点数组合计 O(p) 空间。设 DFS 实际访问 S 个节点，d 是访问路径的最大深度，L 是返回键的码点总数，r 是实际返回项数：遍历和构造结果的时间按 O(p + S + L) 估算；显式栈帧和码点路径数组各占 O(d) 空间，返回的字符串另占 O(L)，结果数组含 O(r) 个引用。因此不计 Trie 本身的总额外空间为 O(p + d + L + r)。limit 只限制返回条数，不保证访问节点数或字符总数也为 O(limit)。若需要按语言区域排序的建议项，必须另外定义排序规则；本实现的 Map 插入顺序不等于语言排序。哈希表适合完整键的精确查找，不能直接定位整组前缀候选；排序列表可以先二分找到同前缀键的起点再顺序输出；Trie 用更多节点和 Map 结构换取沿前缀直接定位。只有前缀查询足够常见时，这种空间取舍才值得。
+
 > [!info]- 来源
 > - JavaScript 字符串的 UTF-16 表示及字符串迭代按码点处理：[ECMAScript 2026 text processing](https://tc39.es/ecma262/2026/multipage/text-processing.html)，String value 与 StringIterator。
+> - JavaScript NFC 规范化 API：[ECMAScript 2026, §22.1.3.15 String.prototype.normalize](https://tc39.es/ecma262/2026/multipage/text-processing.html#sec-string.prototype.normalize)；该方法按最新 Unicode Standard 的规范化形式处理输入。
 > - 构造器入口：[ECMA-402 2026 §8.2.7 `Intl.NumberFormat`](https://tc39.es/ecma402/2026/#sec-intl.numberformat)、[§8.2.10 `Intl.Segmenter`](https://tc39.es/ecma402/2026/#sec-intl.segmenter)；格式化机制见 [§16 NumberFormat Objects](https://tc39.es/ecma402/2026/#numberformat-objects)，分段机制见 [§19 Segmenter Objects](https://tc39.es/ecma402/2026/#segmenter-objects)。Node.js v26.11.1 只用于复算本例行为，不据此断言运行时采用 UAX #29 rev.49。
 > - 字素簇默认边界与适用限制：[Unicode Standard Annex #29, Unicode 18.0.0, Revision 49](https://www.unicode.org/reports/tr29/tr29-49.html)，2026-09-01；以 extended grapheme cluster 作默认分段，允许声明定制。
 > - 数字安全整数上限：[ECMAScript 2026 Number.MAX_SAFE_INTEGER](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-number.max_safe_integer)，2⁵³−1。
-## 40. 为什么连续扫描往往比链表遍历快？
+> - Trie 的前缀路径、完整键终端标记和前缀枚举：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §5.2 “Tries”](https://algs4.cs.princeton.edu/52trie/)，作者实现 [TrieST.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TrieST.java.html) 使用 256 路扩展 ASCII；本页使用 Map 子边与码点，避免把该 ASCII 实现误当成通用 Unicode 代码。
+> - 规范等价与 NFC 规范化形式：[Unicode Standard Annex #15, Unicode 18.0.0, Revision 58, §1.1 “Canonical and Compatibility Equivalence” 与 §1.2 “Normalization Forms”](https://www.unicode.org/reports/tr15/tr15-58.html)，2026-08-12。NFC 选择及其对前缀语义的影响按本节契约说明。
+> - 子边迭代顺序：[ECMAScript 2026, Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)，Map iterator 按插入顺序产生条目。
+## 43. 为什么连续扫描往往比链表遍历快？
 
 假设一段代码要累计一组事件的时长。它可以把事件放在连续数组里，也可以让每个节点保存一个指向下一节点的指针。两种表示都要访问 n 项，工作量都是 O(n)；差别在于处理器何时能知道下一次读取的地址，以及这次读取会带来哪些相邻数据。本例解释访问机制，不代表实测速度。
 
@@ -4675,7 +5433,7 @@ ECMAScript 规定 JavaScript `Array` 的索引属性、长度和操作行为，�
 
 LRU 缓存常用 Map 从键定位已经存在的链表节点，再把该节点移动到最近使用端；前提是目标节点已由 Map 找到，随后改链只需有限次链接更新。若没有索引而要遍历链表找键，查找仍是 O(n)，指针追逐也没有消失。可继续看[队列、LRU 等数据结构的实际实现](#35.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
 
-**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明链表更新所需的前驱与树高条件；[Linux 内核为什么把链表节点嵌入对象？](#41.%20Linux%20%E5%86%85%E6%A0%B8%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8A%E9%93%BE%E8%A1%A8%E8%8A%82%E7%82%B9%E5%B5%8C%E5%85%A5%E5%AF%B9%E8%B1%A1%EF%BC%9F)说明内嵌节点减少了哪种分配，以及为什么它仍然保留指针依赖。
+**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明链表更新所需的前驱与树高条件；[Linux 内核为什么把链表节点嵌入对象？](#44.%20Linux%20%E5%86%85%E6%A0%B8%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8A%E9%93%BE%E8%A1%A8%E8%8A%82%E7%82%B9%E5%B5%8C%E5%85%A5%E5%AF%B9%E8%B1%A1%EF%BC%9F)说明内嵌节点减少了哪种分配，以及为什么它仍然保留指针依赖。
 
 > [!info]- 来源
 > - 内存墙的提出背景：[Wulf 与 McKee，Hitting the Memory Wall: Implications of the Obvious（1995）](https://doi.org/10.1145/216585.216588)。
@@ -4685,7 +5443,7 @@ LRU 缓存常用 Map 从键定位已经存在的链表节点，再把该节点�
 > - 连续容器保证：[C++ 草案 vector](https://eel.is/c++draft/vector)；C 数组定义：[WG14 C23 草案 N3047](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf)。
 > - JavaScript 索引集合语义：[ECMAScript 2026 Indexed Collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)；引擎数组种类示例：[V8 Elements kinds](https://v8.dev/blog/elements-kinds)。
 > - 页式 B-tree 的实现范围：[PostgreSQL B-tree Implementation](https://www.postgresql.org/docs/current/btree.html)；密集哈希元数据示例：[Abseil Swiss Tables Design](https://abseil.io/about/design/swisstables)。
-## 41. Linux 内核为什么把链表节点嵌入对象？
+## 44. Linux 内核为什么把链表节点嵌入对象？
 
 假设内核要把一个 work item（工作项）放进待处理队列，同时还要把同一对象放进审计队列。Linux 内核的 `struct list_head` 是一对 `next`、`prev` 链接；把它作为成员嵌进工作项，就能让通用链表代码只修改链接，不必为每种关系再分配独立包装节点。
 
@@ -4823,18 +5581,18 @@ static void clear_ready_links(void)
 
 当对象由当前模块拥有、地址在入链期间稳定、一个对象需要参加多种频繁更新的关系，且减少独立包装节点的分配和查找有实际价值时，侵入式链表很合适。每种同时存在的关系仍需一个钩子，每个 `list_head` 仍有两个指针；设计并没有消除链接存储成本。
 
-它也不会把对象放到物理连续的内存中。相邻链表节点可能远隔内存，遍历时仍要先取当前节点的 next 指针，再按它到达下一处数据。应把它看作简化关系表示和已知节点更新的办法，不要把它当作解决缓存局部性的办法。主要操作是顺序扫描时，连续数组往往更合适，具体比较见[为什么连续扫描往往比链表遍历快？](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+它也不会把对象放到物理连续的内存中。相邻链表节点可能远隔内存，遍历时仍要先取当前节点的 next 指针，再按它到达下一处数据。应把它看作简化关系表示和已知节点更新的办法，不要把它当作解决缓存局部性的办法。主要操作是顺序扫描时，连续数组往往更合适，具体比较见[为什么连续扫描往往比链表遍历快？](#43.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 这也不是说所有非侵入式列表都会“给业务对象再包一层指针并分配两次”。C++ 标准规定 `std::list` 的容器语义与操作复杂度，不规定具体节点布局；以 GCC libstdc++ 为例，内部节点把 T 放在节点自带的对齐存储中。那是一个实现样本，不是所有 `std::list` 实现的布局保证。
 
-**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明已知节点与查找前驱的复杂度差别；[内存层次如何改变实际访问成本？](#40.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)比较连续读取与逐节点指针依赖。
+**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#33.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明已知节点与查找前驱的复杂度差别；[内存层次如何改变实际访问成本？](#43.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)比较连续读取与逐节点指针依赖。
 
 > [!info]- 来源
 > - Linux 链表结构、初始化、插入、遍历、删除与删除时遍历：[Linux 内核 Linked Lists in Linux](https://docs.kernel.org/core-api/list.html)，2026-11-06 核对。
 > - list_add_tail、list_del_init 与 list_for_each_entry_safe 的当前实现和注释：[Linux mainline include/linux/list.h](https://github.com/torvalds/linux/blob/master/include/linux/list.h)，2026-11-06 核对。
 > - RCU 链表的读写侧协议与延后释放：[Linux 内核 Using RCU to Protect Read-Mostly Linked Lists](https://docs.kernel.org/RCU/listRCU.html)，2026-11-06 核对。
 > - std::list 标准不规定节点内存布局：[C++ 草案 list](https://eel.is/c++draft/list)；对照实现样本：[GCC libstdc++ stl_list.h](https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_list.h)。
-## 42. 如何让设计原则减少真实的修改成本？
+## 45. 如何让设计原则减少真实的修改成本？
 
 以下用一个合成的通用页面编辑器案例说明原则：用户可以添加标题和按钮、拖动节点、预览并发布页面。需求可能增加新的组件类型，也可能改变保存方式、预览表现或权限规则。设计的关键不是提前把所有细节都变成接口，而是识别哪些变化会一起发生、哪些变化应彼此独立，然后只为高频或高代价的变化建立边界。
 
@@ -4909,12 +5667,12 @@ KISS（Keep It Simple，保持简单）要求方案与当前问题的复杂度�
 
 新增图片组件时，依次问：它是否有不同配置、校验或渲染语义？规则未来是否会独立变化？所有调用者是否都需要了解图片逻辑？注册表是否真的减少改动范围？若答案支持稳定变化点，注册表可能有用；若只是固定页面的一次分支，直接写条件更好。
 
-[前端架构怎样划分呈现、交互和数据所有权？](#43.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)讨论状态归属；[页面编辑器何时需要设计模式？](#44.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)展示工厂、策略和通知怎样落实边界。
+[前端架构怎样划分呈现、交互和数据所有权？](#46.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)讨论状态归属；[页面编辑器何时需要设计模式？](#47.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)展示工厂、策略和通知怎样落实边界。
 
 > [!info]- 来源
 > - 行为子类型的契约基础：[Barbara Liskov 与 Jeannette Wing, A Behavioral Notion of Subtyping](https://www.cs.cmu.edu/~wing/publications/LiskovWing94.pdf)。
 > - OCP、SRP 等面向对象原则讨论：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
-## 43. 前端架构怎样划分呈现、交互和数据所有权？
+## 46. 前端架构怎样划分呈现、交互和数据所有权？
 
 以下沿用合成的页面编辑器案例：画布显示文档树，检查器编辑当前节点属性，工具栏新增组件，预览页呈现访客看到的页面。如果各处各存一份节点数据，拖动或重命名就可能让它们失步。架构应先说明每份状态由谁拥有、哪些模块能发出修改，再决定组件怎样拆分或代码如何部署。
 
@@ -4965,13 +5723,13 @@ unidirectional data flow（单向数据流）让状态所有者把当前数据�
 
 微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。若主要问题是共享状态或数据流不清，先解决状态所有权通常更直接。
 
-**延伸阅读：**[设计原则怎样帮助定位真实变化边界？](#42.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#44.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#45.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
+**延伸阅读：**[设计原则怎样帮助定位真实变化边界？](#45.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#47.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#48.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
 
 > [!info]- 来源
 > - 组件间共享状态的所有权：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
 > - 堆叠上下文内的 CSS 绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
 > - 微前端的团队发布边界和集成权衡：[Martin Fowler, Micro Frontends](https://martinfowler.com/articles/micro-frontends.html)。
-## 44. 页面编辑器何时需要设计模式？
+## 47. 页面编辑器何时需要设计模式？
 
 沿用合成的页面编辑器案例，编辑者要创建标题、按钮等节点，为不同类型校验配置，通知画布和检查器刷新，并共享组件定义。**design pattern（设计模式）**为这些重复结构取名，但模式本身不会替你决定状态所有者、权限边界或对象生命周期。先说清问题，再看模式是否能让变化集中而仍容易跟踪。
 
@@ -5074,13 +5832,13 @@ unsubscribe();
 
 工厂和策略可支持开闭原则，但若它们没有缩小修改范围，就不需要硬套。观察者让变化通知多个视图；依赖倒置要求高层编辑流程依赖通知契约，而非绑死具体全局总线。每个订阅者的生命周期也仍需明确。
 
-新增图片节点时，工厂建立默认配置、校验策略检查属性、状态所有者接受“插入图片”命令，生成新修订后再通知画布。模式说明局部对象怎样协作；文档结构、撤销历史、发布版本与冲突处理见[页面文档和发布快照的数据模型](#45.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。组件之间的数据所有权见[前端架构边界](#43.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。
+新增图片节点时，工厂建立默认配置、校验策略检查属性、状态所有者接受“插入图片”命令，生成新修订后再通知画布。模式说明局部对象怎样协作；文档结构、撤销历史、发布版本与冲突处理见[页面文档和发布快照的数据模型](#48.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。组件之间的数据所有权见[前端架构边界](#46.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。
 
 > [!info]- 来源
 > - 工厂、策略、观察者等模式的适用情境和权衡：[Gamma、Helm、Johnson、Vlissides, Design Patterns: Elements of Reusable Object-Oriented Software](https://www.oreilly.com/library/view/design-patterns-elements/0201633612/)。
 > - 模式与设计原则应服务于变化边界：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
 > - Set 的实时迭代语义：[ECMAScript 2026, Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-set-iterator-objects)。
-## 45. 怎样建模页面文档、编辑会话和发布快照？
+## 48. 怎样建模页面文档、编辑会话和发布快照？
 
 以下用一个合成的通用页面编辑器案例：编辑者正在修改 revision 12 的首页，页面含标题和报名按钮；编辑者需要改文案、拖动排序、撤销修改并发布审核后的版本。若把页面内容、当前选中项、拖动中的临时位置和公开输出塞进同一对象，简单选择也可能触发保存和历史记录，发布时也难以确定实际使用哪个版本。
 
@@ -5187,7 +5945,7 @@ const revision13 = updateNodeText(documentState, 'heading-1', '欢迎');
 
 按离线需求、即时合并、服务端排序和审计要求选择机制。即便采用 CRDT，树结构约束、组件 schema 和发布校验仍然必要。协作是数据所有权与更新协议的一部分，不能因使用 WebSocket 就认为冲突已解决。
 
-**相关机制：**[前端架构怎样划分状态所有权？](#43.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)说明谁持有文档与会话状态；[页面编辑器何时需要设计模式？](#44.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)说明创建、校验和通知的局部实现。
+**相关机制：**[前端架构怎样划分状态所有权？](#46.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)说明谁持有文档与会话状态；[页面编辑器何时需要设计模式？](#47.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)说明创建、校验和通知的局部实现。
 
 > [!info]- 来源
 > - JSON Schema 2020-12 文档与校验规范：[JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12)。
@@ -5195,7 +5953,7 @@ const revision13 = updateNodeText(documentState, 'heading-1', '欢迎');
 > - 组件共享状态的单一所有权示例：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
 > - CRDT 的副本收敛条件：[Shapiro 等，Conflict-free Replicated Data Types（2011）](https://perso.lip6.fr/Marc.Shapiro/papers/2011/CRDTs_SSS-2011.pdf)。
 > - OT 中并发操作转换与一致性属性：[Sun 等，Achieving Convergence, Causality Preservation, and Intention Preservation in Real-Time Cooperative Editing Systems（1998）](https://www.cs.cityu.edu.hk/~jia/research/reduce98.pdf)。
-## 46. Scrum 怎样让团队检查并调整工作？
+## 49. Scrum 怎样让团队检查并调整工作？
 
 假设团队正在开发页面编辑器，目标是让用户创建内容并安全发布。产品方向可能需要数月才能实现，单个 Sprint（冲刺周期）只能完成其中一部分；团队需要不断判断工作是否仍有价值、遇到阻碍时是否要调整计划。
 
@@ -5260,7 +6018,7 @@ Sprint Review（Sprint 评审）是团队与利益相关者检查结果、讨论
 > [!info]- 来源
 > - Scrum Guides 当前官方版本为 2020 年 11 月版；本文按其角色、事件、工件和承诺定义：[The Scrum Guide](https://scrumguides.org/scrum-guide.html)，[官方版本下载页](https://scrumguides.org/download.html)。
 > - 敏捷价值观及左右两侧的关系：[Manifesto for Agile Software Development](https://agilemanifesto.org/)。
-## 47. 怎样准备有事实支撑的行为面试回答？
+## 50. 怎样准备有事实支撑的行为面试回答？
 
 准备面试时，先读岗位职责和组织公开信息，再从自己的真实经历里挑出能说明相关能力的材料。一个有说服力的回答可以按“背景—个人行动—结果或证据”展开。描述团队成果时，区分自己的贡献和团队工作；没有可核实的数字，就说清观察到的变化，不要编造指标、夸大权限或借用别人的故事。
 
@@ -5322,4 +6080,4 @@ Sprint Review（Sprint 评审）是团队与利益相关者检查结果、讨论
 
 结束时感谢面试官，重申一个具体的兴趣理由，并在后续流程尚未说明时询问下一步。若问题已在谈话中回答，可用剩余时间追问相关细节。
 
-**相关背景：**[Scrum 怎样让团队检查并调整工作？](#46.%20Scrum%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明 Product Goal、Sprint Goal 和 Sprint Review 等团队协作用语。
+**相关背景：**[Scrum 怎样让团队检查并调整工作？](#49.%20Scrum%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明 Product Goal、Sprint Goal 和 Sprint Review 等团队协作用语。
