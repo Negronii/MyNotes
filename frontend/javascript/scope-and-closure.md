@@ -210,6 +210,59 @@ animate(animatedElement, 0, 100, 1000); // 约一秒内从 0px 移到 100px
 
 `style.left` 对普通静态定位元素不起偏移作用。本例使用 `position: relative`，改变盒子的绘制位置，同时保留它原本在正常流中占据的位置。
 
+## 定时回调怎样用闭包保留调度状态
+
+debounce（防抖）等待连续调用停止后再运行一次；throttle（节流）限制一段时间内最多运行几次。它们可以选择 leading-edge（首沿）、trailing-edge（尾沿）或两者兼有；下面明确实现 trailing-only debounce（仅尾沿防抖）和 leading-only throttle（仅首沿节流）。每次创建包装函数时，它都通过自己的闭包保存计时状态。
+
+本节假设防抖的 `wait` 为非负数、节流的 `interval` 为正数。
+
+~~~javascript
+function debounce(fn, wait) {
+  let timer;
+
+  function debounced(...args) {
+    const receiver = this;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = undefined;
+      fn.apply(receiver, args);
+    }, wait);
+  }
+
+  debounced.cancel = function () {
+    clearTimeout(timer);
+    timer = undefined;
+  };
+
+  return debounced;
+}
+
+function throttleLeading(fn, interval) {
+  let lastCallAt = null;
+
+  return function (...args) {
+    const now = performance.now();
+    if (lastCallAt !== null && now - lastCallAt < interval) return;
+
+    lastCallAt = now;
+    return fn.apply(this, args);
+  };
+}
+~~~
+
+`debounce` 每次都先取消旧 timer，再用本次调用的参数和接收者安排 callback，因此静默期结束时执行最新的一次；`.cancel()` 只清掉尚未触发的等待。`throttleLeading` 用 `performance.now()` 读取单调时钟，并用 `null` 表示“还没调用过”：这样即使页面刚开始时读数为 `0`，首次调用仍会立即触发。到达间隔边界时，`now - lastCallAt === interval`，因此该次调用会通过。它先写入 `lastCallAt` 再调用 `fn`；若 `fn` 在距离本次开始仍不足 `interval` 时同步重入，重入会被挡住。若 `fn` 同步耗时达到或超过 `interval` 才重入，则重入会通过；`interval` 为 `0` 时也不会限制同步重入。本节只讨论正间隔。
+
+以下是一个合成时间线，等待值和间隔均为 100ms。参数 `A`、`B`、`C` 表示不同时刻的搜索词，`page-A` 等是各次调用的接收者；调用列表示两种包装函数各自收到相同的输入：
+
+| 调用时刻 | 调用 | 防抖结果 | 首沿节流结果 |
+|---:|---|---|---|
+| 0ms | `wrapper.call(pageA, "A")` | 安排在不早于 100ms 时触发 | 立即以 `pageA` 和 `"A"` 执行 |
+| 40ms | `wrapper.call(pageB, "B")` | 重置 timer | 丢弃：距离上次执行 40ms |
+| 110ms | `wrapper.call(pageC, "C")` | 再次重置 timer | 以 `pageC` 和 `"C"` 执行：已过 110ms |
+| 不早于 210ms | 没有新调用 | 以 `pageC` 和 `"C"` 执行 | — |
+
+`setTimeout` 的等待时间是 callback 可运行的门槛，不保证它会在该毫秒准点执行；主线程要先有机会处理 timer task。输入框可在短暂停顿后搜索，滚动监听则可用首沿节流立即更新一次，再在持续滚动时按间隔更新。组件或输入控件销毁时，应移除注册的事件监听器并调用 `debouncedSearch.cancel()`。这只会撤销尚未触发的 callback；若 callback 已经启动 `fetch`，可另行对该请求的 `AbortController` 调用 `abort()`。它会中止客户端 `fetch` 操作，但不会撤回服务端已经收到并开始处理的工作。
+
 
 ## 闭包生命周期取决于可达性
 
@@ -221,4 +274,6 @@ animate(animatedElement, 0, 100, 1000); // 约一秒内从 0px 移到 100px
 > [!info]- 来源
 > - var、let、const 的作用域和初始化时机：[ECMAScript 2026 Let and Const Declarations](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-let-and-const-declarations)（§14.3.1）；执行上下文与词法环境：[Execution Contexts](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-execution-contexts)（§9.4）。
 > - 闭包对词法环境的引用：[ECMAScript Function Objects](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ecmascript-function-objects)（§10.2）。
-> - 全局 `this` 值与脚本、模块、worker 环境：[ECMAScript globalThis](https://tc39.es/ecma262/2026/multipage/global-object.html#sec-globalthis)、[WHATWG HTML script element](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)、[WHATWG HTML worker global scope](https://html.spec.whatwg.org/multipage/workers.html#the-global-scope)、[Node.js CommonJS modules](https://nodejs.org/api/modules.html) 和 [Node.js ECMAScript modules](https://nodejs.org/api/esm.html)；浏览器事件回调：[WHATWG DOM addEventListener](https://dom.spec.whatwg.org/#dom-eventtarget-addeventlistener)；逐帧回调：[WHATWG HTML requestAnimationFrame](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe)；计时 API：[W3C High Resolution Time performance.now](https://www.w3.org/TR/hr-time-3/#dom-performance-now)。
+> - 全局 `this` 值与脚本、模块、worker 环境：[ECMAScript globalThis](https://tc39.es/ecma262/2026/multipage/global-object.html#sec-globalthis)、[WHATWG HTML script element](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)、[WHATWG HTML worker global scope](https://html.spec.whatwg.org/multipage/workers.html#the-global-scope)、[Node.js CommonJS modules](https://nodejs.org/api/modules.html) 和 [Node.js ECMAScript modules](https://nodejs.org/api/esm.html)；浏览器事件回调：[WHATWG DOM addEventListener](https://dom.spec.whatwg.org/#dom-eventtarget-addeventlistener)；逐帧回调：[WHATWG HTML requestAnimationFrame](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe)。
+> - 防抖 callback 的计时与取消，以及 `performance.now()` 所用的单调时钟：[WHATWG HTML Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)（Living Standard，核对日期 2026-11-09）、[W3C High Resolution Time `performance.now()`](https://www.w3.org/TR/hr-time-3/#dom-performance-now)（Level 3，核对日期 2026-11-09）。
+> - 请求取消信号与 `fetch` 对中止的响应：[WHATWG DOM — Aborting ongoing activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities)、[Fetch Standard — Aborting a fetch](https://fetch.spec.whatwg.org/#abort-fetch)，核对日期 2026-11-09。

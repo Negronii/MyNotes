@@ -150,7 +150,7 @@ search({ query: "Ops" }); // 窗口内第二次调用，结束时会执行 trail
 search.flush(); // 若 trailing 尚待执行，现在就执行
 ~~~
 
-Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适合按固定间隔响应滚动或连续事件，不等同于 debounce。
+Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适合按固定间隔响应滚动或连续事件，不等同于 debounce。若要理解这两种计时包装函数怎样用闭包保存 timer、最新参数和触发时刻，见[原生闭包如何实现定时防抖与首沿节流？](../javascript/scope-and-closure.md#定时回调怎样用闭包保留调度状态)。
 
 ## 何时优先用原生操作
 

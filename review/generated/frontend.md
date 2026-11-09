@@ -934,6 +934,61 @@ function ReportList({ reports }: { reports: Report[] }) {
 
 数据沿 props（属性）向下传，用户意图用 callback prop（回调属性）向上交给状态所有者。这个结构让一次点击的去向可见。若两个组件不共享状态，把 state（状态）提到更高层只会扩大更新范围；若多个远距离组件确实要读取主题、地区设置等值，可以在共同子树上用 Context；跨多个功能共享且需要统一更新策略时，再考虑 store（共享状态容器）。若确实选 Redux 管理这类共享客户端状态，action、reducer、selector 与异步工作流见[Redux 如何组织共享界面状态与异步工作？](#57.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
+Context 适合让同一子树里相距较远的组件读取报表视图偏好。它传递值，但不持有状态；下面 `ReportViewProvider` 用 `useState` 持有行距偏好，工具栏通过 `useContext` 读取并调用 setter，列表也读取新值来呈现行距：
+
+~~~jsx
+import { createContext, useContext, useState } from "react";
+
+const ReportViewContext = createContext(null);
+
+function ReportViewProvider({ children }) {
+  const [density, setDensity] = useState("comfortable");
+
+  return (
+    <ReportViewContext value={{ density, setDensity }}>
+      {children}
+    </ReportViewContext>
+  );
+}
+
+function useReportView() {
+  const value = useContext(ReportViewContext);
+  if (value === null) throw new Error("useReportView 必须在 ReportViewProvider 内调用");
+  return value;
+}
+
+function DensityControl() {
+  const { density, setDensity } = useReportView();
+  const nextDensity = density === "compact" ? "comfortable" : "compact";
+
+  return (
+    <button type="button" onClick={() => setDensity(nextDensity)}>
+      {density === "compact" ? "恢复舒适行距" : "切换紧凑行距"}
+    </button>
+  );
+}
+
+function ReportRows({ reports }) {
+  const { density } = useReportView();
+  return (
+    <ul style={{ lineHeight: density === "compact" ? 1.2 : 1.8 }}>
+      {reports.map(report => <li key={report.id}>{report.title}</li>)}
+    </ul>
+  );
+}
+
+function ReportsView({ reports }) {
+  return (
+    <ReportViewProvider>
+      <DensityControl />
+      <ReportRows reports={reports} />
+    </ReportViewProvider>
+  );
+}
+~~~
+
+`DensityControl` 和 `ReportRows` 都是 Provider 后代，所以 `useContext` 读取最近的 `ReportViewContext` 值。点击按钮调用 Provider 持有的 setter，`density` 与 Provider 提供的 `value` 随之改变；读取这个 Context 的组件会获得新值并更新。若改为 React 18 或更早版本，应把开标签 `<ReportViewContext value={...}>` 改为 `<ReportViewContext.Provider value={...}>`，也把闭标签 `</ReportViewContext>` 改为 `</ReportViewContext.Provider>`。TypeScript 的完整 Context 与自定义 Hook 类型边界见归档中的[Context 与自定义 Hook 示例](../../archive/front-end/0-1_Learning_Notes/react_typescript/typed-hooks-and-context.md)。
+
 服务端拥有的报表记录仍属于服务端状态。把它们放进 Context 不会自动提供查询身份、缓存新鲜度、取消或变更协调；这些由[服务端状态章节](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)讲解。
 
 ### 用自定义Hook复用状态行为
@@ -1006,6 +1061,7 @@ children 组合可让调用方控制布局；render prop（渲染属性）把数
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-06）
 > - props、共享 state 与 Context 的所有权：[Passing Props to a Component](https://react.dev/learn/passing-props-to-a-component)、[Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)、[Passing Data Deeply with Context](https://react.dev/learn/passing-data-deeply-with-context)，React 19.3 文档。
+> - Context 创建、最近 Provider 的读取值、默认值及 Provider 语法（React 19 用 `<Context value>`；旧版用 `<Context.Provider>`）：[createContext](https://react.dev/reference/react/createContext)、[useContext](https://react.dev/reference/react/useContext)，React 19 官方文档，核对日期 2026-11-09。
 > - 自定义 Hook 与 Hook 调用边界：[Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)、[Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks)、[`use`](https://react.dev/reference/react/use)，React 19.3 文档。
 > - React 19.2 的 Effect Event 语义与限制：[useEffectEvent](https://react.dev/reference/react/useEffectEvent)，React 官方 API 参考；React 19.2 发布日期 2025-10-01，见[React Blog](https://react.dev/blog)。
 > - ref、forwardRef 与受限命令式接口：[useRef](https://react.dev/reference/react/useRef)、[forwardRef](https://react.dev/reference/react/forwardRef)、[useImperativeHandle](https://react.dev/reference/react/useImperativeHandle)，React 19.3 文档。
@@ -4246,6 +4302,59 @@ animate(animatedElement, 0, 100, 1000); // 约一秒内从 0px 移到 100px
 
 `style.left` 对普通静态定位元素不起偏移作用。本例使用 `position: relative`，改变盒子的绘制位置，同时保留它原本在正常流中占据的位置。
 
+### 定时回调怎样用闭包保留调度状态
+
+debounce（防抖）等待连续调用停止后再运行一次；throttle（节流）限制一段时间内最多运行几次。它们可以选择 leading-edge（首沿）、trailing-edge（尾沿）或两者兼有；下面明确实现 trailing-only debounce（仅尾沿防抖）和 leading-only throttle（仅首沿节流）。每次创建包装函数时，它都通过自己的闭包保存计时状态。
+
+本节假设防抖的 `wait` 为非负数、节流的 `interval` 为正数。
+
+~~~javascript
+function debounce(fn, wait) {
+  let timer;
+
+  function debounced(...args) {
+    const receiver = this;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = undefined;
+      fn.apply(receiver, args);
+    }, wait);
+  }
+
+  debounced.cancel = function () {
+    clearTimeout(timer);
+    timer = undefined;
+  };
+
+  return debounced;
+}
+
+function throttleLeading(fn, interval) {
+  let lastCallAt = null;
+
+  return function (...args) {
+    const now = performance.now();
+    if (lastCallAt !== null && now - lastCallAt < interval) return;
+
+    lastCallAt = now;
+    return fn.apply(this, args);
+  };
+}
+~~~
+
+`debounce` 每次都先取消旧 timer，再用本次调用的参数和接收者安排 callback，因此静默期结束时执行最新的一次；`.cancel()` 只清掉尚未触发的等待。`throttleLeading` 用 `performance.now()` 读取单调时钟，并用 `null` 表示“还没调用过”：这样即使页面刚开始时读数为 `0`，首次调用仍会立即触发。到达间隔边界时，`now - lastCallAt === interval`，因此该次调用会通过。它先写入 `lastCallAt` 再调用 `fn`；若 `fn` 在距离本次开始仍不足 `interval` 时同步重入，重入会被挡住。若 `fn` 同步耗时达到或超过 `interval` 才重入，则重入会通过；`interval` 为 `0` 时也不会限制同步重入。本节只讨论正间隔。
+
+以下是一个合成时间线，等待值和间隔均为 100ms。参数 `A`、`B`、`C` 表示不同时刻的搜索词，`page-A` 等是各次调用的接收者；调用列表示两种包装函数各自收到相同的输入：
+
+| 调用时刻 | 调用 | 防抖结果 | 首沿节流结果 |
+|---:|---|---|---|
+| 0ms | `wrapper.call(pageA, "A")` | 安排在不早于 100ms 时触发 | 立即以 `pageA` 和 `"A"` 执行 |
+| 40ms | `wrapper.call(pageB, "B")` | 重置 timer | 丢弃：距离上次执行 40ms |
+| 110ms | `wrapper.call(pageC, "C")` | 再次重置 timer | 以 `pageC` 和 `"C"` 执行：已过 110ms |
+| 不早于 210ms | 没有新调用 | 以 `pageC` 和 `"C"` 执行 | — |
+
+`setTimeout` 的等待时间是 callback 可运行的门槛，不保证它会在该毫秒准点执行；主线程要先有机会处理 timer task。输入框可在短暂停顿后搜索，滚动监听则可用首沿节流立即更新一次，再在持续滚动时按间隔更新。组件或输入控件销毁时，应移除注册的事件监听器并调用 `debouncedSearch.cancel()`。这只会撤销尚未触发的 callback；若 callback 已经启动 `fetch`，可另行对该请求的 `AbortController` 调用 `abort()`。它会中止客户端 `fetch` 操作，但不会撤回服务端已经收到并开始处理的工作。
+
 
 ### 闭包生命周期取决于可达性
 
@@ -4257,7 +4366,9 @@ animate(animatedElement, 0, 100, 1000); // 约一秒内从 0px 移到 100px
 > [!info]- 来源
 > - var、let、const 的作用域和初始化时机：[ECMAScript 2026 Let and Const Declarations](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-let-and-const-declarations)（§14.3.1）；执行上下文与词法环境：[Execution Contexts](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-execution-contexts)（§9.4）。
 > - 闭包对词法环境的引用：[ECMAScript Function Objects](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ecmascript-function-objects)（§10.2）。
-> - 全局 `this` 值与脚本、模块、worker 环境：[ECMAScript globalThis](https://tc39.es/ecma262/2026/multipage/global-object.html#sec-globalthis)、[WHATWG HTML script element](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)、[WHATWG HTML worker global scope](https://html.spec.whatwg.org/multipage/workers.html#the-global-scope)、[Node.js CommonJS modules](https://nodejs.org/api/modules.html) 和 [Node.js ECMAScript modules](https://nodejs.org/api/esm.html)；浏览器事件回调：[WHATWG DOM addEventListener](https://dom.spec.whatwg.org/#dom-eventtarget-addeventlistener)；逐帧回调：[WHATWG HTML requestAnimationFrame](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe)；计时 API：[W3C High Resolution Time performance.now](https://www.w3.org/TR/hr-time-3/#dom-performance-now)。
+> - 全局 `this` 值与脚本、模块、worker 环境：[ECMAScript globalThis](https://tc39.es/ecma262/2026/multipage/global-object.html#sec-globalthis)、[WHATWG HTML script element](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)、[WHATWG HTML worker global scope](https://html.spec.whatwg.org/multipage/workers.html#the-global-scope)、[Node.js CommonJS modules](https://nodejs.org/api/modules.html) 和 [Node.js ECMAScript modules](https://nodejs.org/api/esm.html)；浏览器事件回调：[WHATWG DOM addEventListener](https://dom.spec.whatwg.org/#dom-eventtarget-addeventlistener)；逐帧回调：[WHATWG HTML requestAnimationFrame](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe)。
+> - 防抖 callback 的计时与取消，以及 `performance.now()` 所用的单调时钟：[WHATWG HTML Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)（Living Standard，核对日期 2026-11-09）、[W3C High Resolution Time `performance.now()`](https://www.w3.org/TR/hr-time-3/#dom-performance-now)（Level 3，核对日期 2026-11-09）。
+> - 请求取消信号与 `fetch` 对中止的响应：[WHATWG DOM — Aborting ongoing activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities)、[Fetch Standard — Aborting a fetch](https://fetch.spec.whatwg.org/#abort-fetch)，核对日期 2026-11-09。
 ## 32. JavaScript 对象如何查找属性并组织成员？
 
 普通对象读取属性时，own property（自有属性）先于继承属性；若没有找到，语言会沿 `[[Prototype]]` 链继续查找。构造函数的 prototype 属性用于建立实例原型，函数对象自身的原型链则是另一条关系。property descriptor（属性描述符）说明属性保存一个值，还是在读取或写入时执行 getter/setter。
@@ -8854,7 +8965,7 @@ search({ query: "Ops" }); // 窗口内第二次调用，结束时会执行 trail
 search.flush(); // 若 trailing 尚待执行，现在就执行
 ~~~
 
-Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适合按固定间隔响应滚动或连续事件，不等同于 debounce。
+Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适合按固定间隔响应滚动或连续事件，不等同于 debounce。若要理解这两种计时包装函数怎样用闭包保存 timer、最新参数和触发时刻，见[原生闭包如何实现定时防抖与首沿节流？](#%E5%AE%9A%E6%97%B6%E5%9B%9E%E8%B0%83%E6%80%8E%E6%A0%B7%E7%94%A8%E9%97%AD%E5%8C%85%E4%BF%9D%E7%95%99%E8%B0%83%E5%BA%A6%E7%8A%B6%E6%80%81)。
 
 ### 何时优先用原生操作
 

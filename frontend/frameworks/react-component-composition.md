@@ -73,6 +73,61 @@ function ReportList({ reports }: { reports: Report[] }) {
 
 数据沿 props（属性）向下传，用户意图用 callback prop（回调属性）向上交给状态所有者。这个结构让一次点击的去向可见。若两个组件不共享状态，把 state（状态）提到更高层只会扩大更新范围；若多个远距离组件确实要读取主题、地区设置等值，可以在共同子树上用 Context；跨多个功能共享且需要统一更新策略时，再考虑 store（共享状态容器）。若确实选 Redux 管理这类共享客户端状态，action、reducer、selector 与异步工作流见[Redux 如何组织共享界面状态与异步工作？](./redux-state-and-async-workflows.md)。
 
+Context 适合让同一子树里相距较远的组件读取报表视图偏好。它传递值，但不持有状态；下面 `ReportViewProvider` 用 `useState` 持有行距偏好，工具栏通过 `useContext` 读取并调用 setter，列表也读取新值来呈现行距：
+
+~~~jsx
+import { createContext, useContext, useState } from "react";
+
+const ReportViewContext = createContext(null);
+
+function ReportViewProvider({ children }) {
+  const [density, setDensity] = useState("comfortable");
+
+  return (
+    <ReportViewContext value={{ density, setDensity }}>
+      {children}
+    </ReportViewContext>
+  );
+}
+
+function useReportView() {
+  const value = useContext(ReportViewContext);
+  if (value === null) throw new Error("useReportView 必须在 ReportViewProvider 内调用");
+  return value;
+}
+
+function DensityControl() {
+  const { density, setDensity } = useReportView();
+  const nextDensity = density === "compact" ? "comfortable" : "compact";
+
+  return (
+    <button type="button" onClick={() => setDensity(nextDensity)}>
+      {density === "compact" ? "恢复舒适行距" : "切换紧凑行距"}
+    </button>
+  );
+}
+
+function ReportRows({ reports }) {
+  const { density } = useReportView();
+  return (
+    <ul style={{ lineHeight: density === "compact" ? 1.2 : 1.8 }}>
+      {reports.map(report => <li key={report.id}>{report.title}</li>)}
+    </ul>
+  );
+}
+
+function ReportsView({ reports }) {
+  return (
+    <ReportViewProvider>
+      <DensityControl />
+      <ReportRows reports={reports} />
+    </ReportViewProvider>
+  );
+}
+~~~
+
+`DensityControl` 和 `ReportRows` 都是 Provider 后代，所以 `useContext` 读取最近的 `ReportViewContext` 值。点击按钮调用 Provider 持有的 setter，`density` 与 Provider 提供的 `value` 随之改变；读取这个 Context 的组件会获得新值并更新。若改为 React 18 或更早版本，应把开标签 `<ReportViewContext value={...}>` 改为 `<ReportViewContext.Provider value={...}>`，也把闭标签 `</ReportViewContext>` 改为 `</ReportViewContext.Provider>`。TypeScript 的完整 Context 与自定义 Hook 类型边界见归档中的[Context 与自定义 Hook 示例](../../archive/front-end/0-1_Learning_Notes/react_typescript/typed-hooks-and-context.md)。
+
 服务端拥有的报表记录仍属于服务端状态。把它们放进 Context 不会自动提供查询身份、缓存新鲜度、取消或变更协调；这些由[服务端状态章节](./react-server-state-and-optimistic-updates.md)讲解。
 
 ## 用自定义Hook复用状态行为
@@ -145,6 +200,7 @@ children 组合可让调用方控制布局；render prop（渲染属性）把数
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-06）
 > - props、共享 state 与 Context 的所有权：[Passing Props to a Component](https://react.dev/learn/passing-props-to-a-component)、[Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)、[Passing Data Deeply with Context](https://react.dev/learn/passing-data-deeply-with-context)，React 19.3 文档。
+> - Context 创建、最近 Provider 的读取值、默认值及 Provider 语法（React 19 用 `<Context value>`；旧版用 `<Context.Provider>`）：[createContext](https://react.dev/reference/react/createContext)、[useContext](https://react.dev/reference/react/useContext)，React 19 官方文档，核对日期 2026-11-09。
 > - 自定义 Hook 与 Hook 调用边界：[Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)、[Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks)、[`use`](https://react.dev/reference/react/use)，React 19.3 文档。
 > - React 19.2 的 Effect Event 语义与限制：[useEffectEvent](https://react.dev/reference/react/useEffectEvent)，React 官方 API 参考；React 19.2 发布日期 2025-10-01，见[React Blog](https://react.dev/blog)。
 > - ref、forwardRef 与受限命令式接口：[useRef](https://react.dev/reference/react/useRef)、[forwardRef](https://react.dev/reference/react/forwardRef)、[useImperativeHandle](https://react.dev/reference/react/useImperativeHandle)，React 19.3 文档。
