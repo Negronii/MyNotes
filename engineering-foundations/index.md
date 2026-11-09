@@ -21,14 +21,17 @@
 - [SQL 空值、连接与分组会怎样改变报表 42 的结果？](databases/sql-null-joins-and-aggregates.md)
 - [如何用约束保护业务规则并为读取建立索引？](databases/database-constraints-and-indexes.md)
 - [事务隔离与预写日志能保证什么？](databases/database-transactions-isolation-and-recovery.md)
+- [InnoDB 怎样用索引记录、旧版本与日志处理库存事务？](databases/mysql-innodb-index-lock-and-recovery.md)
 - [怎样限定对象关系映射会话并排查连接池耗尽？](backend/data-access-and-connection-pools.md)
 - [怎样缓存数据库读取并说明陈旧窗口？](backend/caching-and-redis.md)
+- [单库接近容量上限时，怎样分片并在搬迁中保持唯一写入者？](databases/database-sharding-and-rebalancing.md)
 
 ### 超时之后：确认结果与恢复任务
 
 - [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
 - [怎样设计一个可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 - [报表任务的发布确认、消费者确认与业务完成各证明什么？](reliability/queue-delivery-and-acknowledgement.md)
+- [怎样用 Kafka 分区保序、推进偏移并安全接手？](reliability/kafka-partitions-and-offsets.md)
 - [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 
 ### 运行时如何承接与限制工作
@@ -39,6 +42,7 @@
 - [Node.js 流如何传播背压？](backend/node-stream-backpressure-and-cleanup.md)
 - [Node.js 服务如何排空并关闭？](backend/node-service-shutdown.md)
 - [Python 的值、迭代器与资源生命周期如何工作？](backend/python-fundamentals.md)
+- [Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？](backend/python-attribute-lookup-and-mro.md)
 - [异步 FastAPI 接口为什么仍会阻塞？](backend/python-async-and-fastapi.md)
 - [如何估算并限制异步工作管线？](reliability/api-capacity-and-backpressure.md)
 - [Web 服务如何限制拒绝服务的影响？](security/web-availability-and-ddos.md)
