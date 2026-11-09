@@ -53,6 +53,24 @@
 3. [怎样按工作负载选择数据结构？](../engineering-foundations/algorithms/core-data-structures.md)比较需要支持的操作及其成本条件。
 4. [索引怎样改变数据库的访问路径？](../engineering-foundations/databases/database-constraints-and-indexes.md)从查询条件追到数据库页。需要演算连接代价、隔离或恢复时，进入[数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md)；[事务与恢复](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)连接这些机制和持久提交。
 
+## 按机制查找
+
+已经知道想查的概念时，可以直接进入下面的解释；完整学习顺序仍由各领域地图维护。
+
+| 想查的机制 | 正文入口 |
+|---|---|
+| MCP、用户委托与本地工具执行 | [MCP 连接与鉴权](../ai-engineering/agents/mcp-tool-connections.md)、[OAuth 委托执行](../ai-engineering/agents/delegated-oauth-for-agent-tools.md)、[coding harness](../ai-engineering/agents/coding-agent-harness.md) |
+| LangGraph、重规划与记忆 | [运行恢复](../ai-engineering/systems/ai-application-architecture.md)、[编排与循环诊断](../ai-engineering/agents/orchestration-patterns.md)、[上下文与跨运行记忆](../ai-engineering/context/context-engineering-principles.md) |
+| 模型配额、缓存与向量索引 | [有界模型调用](../ai-engineering/systems/bounded-model-api-calls.md)、[缓存命中与成本](../ai-engineering/systems/ai-latency-and-cost-optimization.md)、[HNSW](../ai-engineering/rag/hnsw-vector-index-search.md) |
+| debounce、throttle、Promise 与结构相等 | [闭包调度](../frontend/javascript/scope-and-closure.md#定时回调怎样用闭包保留调度状态)、[Promise 组合](../frontend/javascript/asynchronous-javascript.md)、[并发池](../frontend/javascript/bounded-async-concurrency.md)、[值与结构比较](../frontend/javascript/javascript-types.md) |
+| Context、编辑草稿与聊天状态 | [组件中的状态所有者](../frontend/frameworks/react-component-composition.md)、[表格与表单](../frontend/frameworks/management-table-and-form-workflows.md)、[流式聊天](../frontend/browser-apis/streaming-ai-chat.md) |
+| 条件写、回调与持久队列 | [HTTP 更新契约](../engineering-foundations/backend/http-api-contracts.md)、[Webhook](../engineering-foundations/reliability/webhook-delivery-and-verification.md)、[任务领取与确认](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)、[Kafka offset](../engineering-foundations/reliability/kafka-partitions-and-offsets.md) |
+| 类型、构建产物与渐进迁移 | [运行时 schema](../frontend/typescript/advanced-typescript.md#怎样用%20Zod%20在同一个输入边界生成运行时检查和静态类型？)、[静态资源版本](../frontend/tooling/build-tools.md#新入口与带哈希代码分块怎样作为同一版本发布？)、[微前端迁移](../engineering-foundations/architecture/frontend-architecture-boundaries.md#怎样迁移微前端而不打断深链、身份与回退？) |
+| 数据分布与存储引擎 | [分片与搬迁](../engineering-foundations/databases/database-sharding-and-rebalancing.md)、[InnoDB 索引、锁与恢复](../engineering-foundations/databases/mysql-innodb-index-lock-and-recovery.md) |
+| Python 属性解析 | [descriptor、方法绑定与 MRO](../engineering-foundations/backend/python-attribute-lookup-and-mro.md) |
+| 部署身份与密钥 | [凭据的注入、轮换与撤销](../engineering-foundations/infrastructure/production-application-runtime.md#worker%20凭据怎样注入、轮换并撤销？) |
+| 窗口、优先级与搜索路径 | [窗口与区间扫描](../engineering-foundations/algorithms/range-scans-and-active-sets.md)、[堆](../engineering-foundations/algorithms/heaps-and-priority-queues.md)、[图搜索与回溯](../engineering-foundations/algorithms/graph-search-and-backtracking.md)、[文本单位与 Trie](../engineering-foundations/algorithms/text-units-and-algorithms.md) |
+
 ## 阅读记录与资料
 
 - [本轮阅读进度](reading-progress.md)只记录本轮读过哪些正文。

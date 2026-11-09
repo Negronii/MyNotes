@@ -49,9 +49,34 @@ unidirectional data flow（单向数据流）让状态所有者把当前数据�
 
 微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。若主要问题是共享状态或数据流不清，先解决状态所有权通常更直接。
 
+## 怎样迁移微前端而不打断深链、身份与回退？
+
+沿用一个合成的页面编辑器：文档 `assetId=42` 当前处于 `revision=12`，选中的节点是 `heading-1`。旧应用通过 `/editor/assets/42?panel=inspector&node=heading-1#canvas` 打开它，新入口使用 `/assets/42/edit?panel=inspector&node=heading-1#canvas`。路径和文档 ID 是本教学变体；页面文档与编辑会话状态仍按[编辑器数据模型](low-code-editor-data-model.md)的稳定节点 ID 和修订区分。`node=heading-1` 只是可恢复的界面选择，不会进入页面文档或修改 revision。新旧地址先并存，让旧书签、邮件链接和浏览器历史都有确定去向。
+
+迁移时由同一个 shell（应用外壳）持有顶级路由、会话启动、公共导航与错误边界；路由注册表把旧路径交给 `EditorV1`，新路径先交给 `EditorV1`，再按用户 cohort（灰度分组）将一小部分流量映射至 `EditorV2`。两版可独立构建，但路由、参数和通用数据格式是容器与子应用之间的合同。路由决策须在挂载前作出：
+
+| 地址或状态 | shell 的责任 | 子应用收到的输入 |
+|---|---|---|
+| 旧深链 `/editor/assets/42?panel=inspector&node=heading-1#canvas` | 迁移窗口内继续交给 V1；用户从页面主动打开新入口时才新增新路径 | `assetId=42`、`panel=inspector`、`node=heading-1`、`#canvas` |
+| 新地址 `/assets/42/edit?panel=inspector&node=heading-1#canvas`，未进入 cohort | 路由仍由 `EditorV1` 处理，不让用户落入空白占位页 | 同一 `assetId` 与视图状态 |
+| 同一新地址，进入 cohort | 动态加载 `EditorV2`，并显示加载或失败状态 | 同一 `assetId` 与视图状态，不另造一份身份 |
+| 浏览器 Back / Forward | shell 独自响应 `popstate` 并重新匹配完整地址 | `panel` 和有效 `node` 从恢复的 URL 查询恢复；片段仍定位到 `#canvas` |
+
+每个子应用只处理传给它的资源标识和视图状态，通过 shell 提供的 `navigate()` 或明确的同源链接请求跨边界导航。shell 是唯一的 history（历史记录）所有者，因此 V1/V2 不会各自安装互不知情的路由器、重复写 `pushState` 或抢先处理 Back。迁移窗口保留旧路由供旧书签与返回历史使用；用户从旧界面主动打开新入口时，shell 用 `pushState` 记录新路径，这样 Back 可回到原页面。若迁移窗口结束后需把旧路由作为别名改写到新路径，才用 `replaceState` 保留原有 query 与 fragment，避免用户按 Back 时在两个等价地址间循环。浏览器处理新地址的硬刷新请求时，静态宿主还须将已知前端路径回退到 shell HTML，同时仍把 `/api/` 请求交给 API 服务。
+
+身份也由宿主边界明确归属。本例 shell 通过 `HttpOnly`、`Secure` 的同源会话 cookie 建立身份，给子应用 `assetId`、非敏感显示信息和受限的数据访问接口，不把访问令牌或会话凭据放入路由参数、DOM、共享状态广播或子应用的 prompt。V1 与 V2 都通过同源 API 读取 `/api/assets/42`；浏览器随请求带会话 cookie，服务端在每次读取和写入时验证当前主体是否能访问该资源。客户端允许显示哪个路由只决定可见页面，不能替代服务端资源鉴权。`node` 只在页面文档加载后与该 revision 的稳定节点 ID 对照；缺失或不存在的节点参数会清除选择并显示文档，而不是请求任意资源。若子应用部署到独立 origin（源），cookie、令牌和跨源身份方案要另外设计；不能假设同源会话自动跨域。
+
+同一份页面文档以明确版本的 schema 交给 V1 和 V2。本轮只迁移入口，不修改文档字段或服务端数据协议，因此两版都能读取和写回 `revision=12` 的既有文档。若 V2 将来要写入新字段，只有在 V1 会原样保留未知字段、或迁移窗口的路由规则能保证旧版不会重新打开含新字段的数据时才可开放；仅仅让 V1 读入时忽略字段，不保证下一次保存时不会把它删掉。删除或重解释字段也要等 V1 不再负责读写。若当前 revision 仍是 12，V2 的未保存草稿不能只因它的动态 chunk 加载失败就被静默丢弃：在编辑开始前加载失败，shell 可以映射到 V1；编辑开始后若要切换实现，应先将草稿转换成共享会话格式或让用户留在当前编辑器处理，否则停止回退并保留草稿。服务端拒绝的未授权访问不应触发降级到另一个前端，避免把代码加载回退误当成授权绕过。
+
+发布按路由逐步改变 owner：先让 shell 可加载两版并验证同一输入合同；再在限定 cohort 中把 `/assets/:assetId/edit` 分给 V2；确认直接深链与刷新、嵌套 query/fragment、V1↔V2 导航、Back/Forward、未授权资源拒绝、V2 chunk 加载失败和 V1 兼容读取都正确后才扩大分流。每个检查都对应一次可见状态变化，而不是只确认首页能挂载。若 V2 的加载率或错误率越过约定门槛，路由注册表将新地址恢复映射到 V1；保持该路径可用让已有书签和历史项继续打开旧实现。仍需保留两版 chunk 和向后兼容的数据合同，才可以在出现问题后真正回退，而不只是把 flag 改回去。
+
+路由契约是微前端沟通的一种公开边界；改变 route schema 或版本映射时要与所有链接来源一起验收。实施过程借用[静态资源版本并存与入口回滚](../../frontend/tooling/build-tools.md)中的旧 chunk 保留规则；新旧服务端资源合同仍要遵循[HTTP API 的授权与条件更新契约](../backend/http-api-contracts.md)。
+
 **延伸阅读：**[设计原则怎样帮助定位真实变化边界？](software-design-principles.md)、[页面编辑器何时需要设计模式？](design-patterns-in-practice.md)、[怎样建模页面文档、编辑会话和发布快照？](low-code-editor-data-model.md)。
 
 > [!info]- 来源
 > - 组件间共享状态的所有权：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
 > - 堆叠上下文内的 CSS 绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
 > - 微前端的团队发布边界和集成权衡：[Martin Fowler, Micro Frontends](https://martinfowler.com/articles/micro-frontends.html)。
+> - 路由作为容器与子应用之间的合同：[Martin Fowler, Micro Frontends, “Cross-application communication via routing”](https://martinfowler.com/articles/micro-frontends.html#Crossapplicationcommunicationviarouting)，核对日期 2026-11-09。
+> - 同源历史写入、恢复与 `popstate`：[WHATWG HTML Standard, History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，持续更新规范，核对日期 2026-11-09。

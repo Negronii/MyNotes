@@ -112,13 +112,11 @@ OpenAI API（应用程序接口）的 `tool_choice` 是一个**调用选择控�
 
 读工具失败时，应用可返回 `c1` 的失败结果，再让模型说明目前无法读取日志或选择有界恢复方式。写工具的超时则不能推断“操作没有发生”；应用需要按权威状态处理未知结果、确认、重试和恢复。持久操作与权限恢复的具体流程见上方运行架构和安全说明；本篇聚焦请求与观察之间的契约边界。
 
-## MCP 把工具连接方式标准化到什么程度
+## MCP 怎样把模型工具请求接到 server？
 
-Model Context Protocol（MCP，模型上下文协议）在 2026-07-28 版中定义 host（承载模型应用）、client（应用内的协议连接器）和 server（提供上下文与能力的服务）之间的互操作方式；消息使用 JSON-RPC 2.0，server 可提供 tools（工具）、resources（资源）和 prompts（提示模板）。该版的核心改为无状态协议请求流，并规定了多轮往返请求等能力，因此不应把更早版本的有状态会话描述直接套到新版本上。协议也定义连接层面的授权要求，但资源是否属于当前调用者、哪些业务操作允许执行，仍须由服务和应用按业务规则判断。
+Model Context Protocol（MCP，模型上下文协议）定义 host、client 和 server 如何交换工具、资源与提示；它不等于模型供应商的函数调用 schema，也不会替应用授予业务权限。以 read_build_log 为例，host 按信任配置连接 server，用 tools/list 发现并筛选工具，再把模型提出的 c1 映射为 MCP tools/call，最后把 JSON-RPC 响应配回同一 c1。模型调用 ID、MCP JSON-RPC 请求 ID 和整次运行 ID 各有各的归属。
 
-以 `read_build_log` 为例，MCP client 可通过 `tools/list` 发现 server 暴露的定义，host 按本轮任务和授权范围筛选后映射为模型工具；模型提出 `c1` 后，应用检查并让 client 发送 `tools/call`，再把 MCP 结果配回同一 `c1` 的 Responses API 工具请求。MCP 的 JSON-RPC 请求 ID 与模型调用的 `call_id` 属于不同协议，host 负责二者关联。
-
-MCP 解决的是应用与外部能力之间的发现和通信协议，不等于某个模型供应商的 function calling schema，也不会替应用选定哪些 server 能力可见、检查业务权限、决定执行顺序或判定回答有依据。使用 MCP 时，host 与应用运行时仍需把协议能力映射到当前模型输入和应用执行契约，并检查工具结果。
+连接传输、2026-07-28 版每请求的协议元数据、远端授权、结果处理和注入边界，见[主机怎样把 MCP 工具从发现接到有权限的执行？](./mcp-tool-connections.md)。
 
 ## 相关知识
 

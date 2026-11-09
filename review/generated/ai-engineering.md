@@ -42,7 +42,7 @@ harness 是负责协调模型与工具的应用代码。它记录调用者身份
 
 工具定义描述了一个可用操作。只有应用取回日志后，日志内容才会进入对话。应用会保留调用者身份，用于权限检查。
 
-这些输入构成了本次调用的模型 context (上下文)。在较长的对话中，应用还需要决定包含哪些较早的消息和证据。这个选择很重要，因为模型只能依据实际提供的信息，以及训练参数中编码的知识来生成输出。[如何为每次模型调用选择信息](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)
+这些输入构成了本次调用的模型 context (上下文)。在较长的对话中，应用还需要决定包含哪些较早的消息和证据。这个选择很重要，因为模型只能依据实际提供的信息，以及训练参数中编码的知识来生成输出。[如何为每次模型调用选择信息](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)
 
 ### 2. 生成请求以获取缺失证据
 
@@ -60,7 +60,7 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 
 ### 3. 执行请求并读取日志
 
-应用会检查 `read_build_log` 是否可用、`build_id` 是否为所需的整数类型，以及调用者是否有权读取构建 `42`。参数校验确保请求可以被正确解释。authorization (授权) 则确定调用者可以访问哪个资源。只有这些检查全部通过后，应用才会读取日志。如果工具会改变外部状态，例如重启构建，那么重试时还需要考虑前一次尝试是否已经生效。[工具契约与授权](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
+应用会检查 `read_build_log` 是否可用、`build_id` 是否为所需的整数类型，以及调用者是否有权读取构建 `42`。参数校验确保请求可以被正确解释。authorization (授权) 则确定调用者可以访问哪个资源。只有这些检查全部通过后，应用才会读取日志。如果工具会改变外部状态，例如重启构建，那么重试时还需要考虑前一次尝试是否已经生效。[工具契约与授权](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)
 
 取回的结果包含模型此前缺少的证据。
 
@@ -71,7 +71,7 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 | 失败断言 | 空名称请求应返回 HTTP `400`，但实际返回了 `200`。 |
 | 进程退出状态 | `1` |
 
-如果 authorization 失败，应用可以为 `c1` 返回失败结果，让模型在下一次调用时说明无法获取证据。本例中，工具按照 ID 查询一条已知日志。如果问题需要在大量文档中查找相关段落，应用可以先检索这些段落，再提供给模型生成回答。这个检索与生成过程称为 retrieval-augmented generation (检索增强生成)，简称 RAG。[如何检索证据并据此生成回答](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)
+如果 authorization 失败，应用可以为 `c1` 返回失败结果，让模型在下一次调用时说明无法获取证据。本例中，工具按照 ID 查询一条已知日志。如果问题需要在大量文档中查找相关段落，应用可以先检索这些段落，再提供给模型生成回答。这个检索与生成过程称为 retrieval-augmented generation (检索增强生成)，简称 RAG。[如何检索证据并据此生成回答](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)
 
 ### 4. 让模型利用检索到的证据
 
@@ -88,9 +88,9 @@ embedding table (嵌入表) 会把每个 ID 映射为一个 vector (向量)。�
 > [!example] 根据日志返回说明
 > 构建 42 在 `unit-tests` 步骤失败。`reject_empty_name` 测试预期空名称请求返回 HTTP `400`，但实际收到 `200`。测试进程以状态 `1` 退出。若要确认底层原因，请对照测试的预期行为检查请求校验逻辑。
 
-第一次模型调用以工具请求结束，因此应用还需要继续工作。第二次调用则正常地以回答结束。在本例中，应用会先保存回答并将本次运行标记为完成，再把结果返回给调用者。如果应用在生成过程中流式传输文本，仍须跟踪生成最终是成功完成还是失败。[运行状态与恢复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)
+第一次模型调用以工具请求结束，因此应用还需要继续工作。第二次调用则正常地以回答结束。在本例中，应用会先保存回答并将本次运行标记为完成，再把结果返回给调用者。如果应用在生成过程中流式传输文本，仍须跟踪生成最终是成功完成还是失败。[运行状态与恢复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)
 
-区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) 会进一步说明验收标准和对比方法。
+区分观察到的失败断言与其底层原因，也能帮助确定评估目标。改变提示词或解码设置后，系统仍应保留日志中的实际值，并避免臆造缺陷原因。评估时也应包含日志缺失或无法访问的情况。[如何判断 AI 系统是否满足任务契约？](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F) 会进一步说明验收标准和对比方法。
 
 本次服务运行到此结束。若想进一步了解任一次模型调用中的计算过程，可以继续阅读[语言模型如何将提示转换为文本](#2.%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%8F%98%E6%88%90%E6%96%87%E6%9C%AC%EF%BC%9F)。该章节会依次展开前向计算、解码和训练。
 
@@ -149,7 +149,7 @@ token 是特定词表中的一个条目。它可以表示标点、一个字节�
 > [!info] 词元边界不一定是字符边界
 > 一个 Unicode 字符可能由多个 UTF-8 字节组成。字节级词元片段可能会拆开这些字节，因此逐个把词元当作完整字符串解码，可能得到损坏的字符。增量文本解码会暂存尚未完整的字节，直到后续字节到达。
 
-这会影响请求的 token 预算。统计输入时，要使用已部署模型的 tokenizer，并计入请求格式中的角色标记和工具定义。如果完整对话太长，接下来要决定的是[每次模型调用应保留哪些信息](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，而不是简单地数词。BPE 只是 tokenizer 的一种类型，并非后续 Transformer 计算的必需条件。
+这会影响请求的 token 预算。统计输入时，要使用已部署模型的 tokenizer，并计入请求格式中的角色标记和工具定义。如果完整对话太长，接下来要决定的是[每次模型调用应保留哪些信息](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，而不是简单地数词。BPE 只是 tokenizer 的一种类型，并非后续 Transformer 计算的必需条件。
 
 ### 第一个 Transformer 块接收什么？
 
@@ -243,7 +243,7 @@ sigmoid `σ` 的取值介于 `0` 和 `1` 之间。SiLU 将输入乘以这个比�
 
 由于门控分支和候选分支都取决于当前行，同一套权重可以针对不同上下文产生不同更新。
 
-这有助于解释学习到的知识为何会影响预测。如果某一行代表篮球语境中的人名，学到的特征组合就可能激活某些方向，从而影响相关的输出词元。Geva 等人发现，他们所研究的部分 FFN 中存在文本模式关联和输出影响。这一发现适用于那些模型，并不表示每个 FFN 都是字面意义上的事实数据库。模型输出事实的能力也取决于 attention、多层计算和最终词表投影。若信息必须保持最新或能够核验，[检索与依据构建](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F) 介绍了应用如何提供外部证据。
+这有助于解释学习到的知识为何会影响预测。如果某一行代表篮球语境中的人名，学到的特征组合就可能激活某些方向，从而影响相关的输出词元。Geva 等人发现，他们所研究的部分 FFN 中存在文本模式关联和输出影响。这一发现适用于那些模型，并不表示每个 FFN 都是字面意义上的事实数据库。模型输出事实的能力也取决于 attention、多层计算和最终词表投影。若信息必须保持最新或能够核验，[检索与依据构建](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F) 介绍了应用如何提供外部证据。
 
 #### 把更新后的状态传给下一层
 
@@ -332,7 +332,7 @@ prefill (预填充) 会让初始序列通过各层。最后一个位置的 logit
 
 在 causal model (因果模型) 中，对于相同的前缀和推理配置，添加新位置不会改变先前位置的 hidden state。因此，KV cache (键值缓存) 会存储每一层此前算出的 K 和 V。在新位置，该层会计算新的 Q、K 和 V。新位置上的 Q 会关注缓存中的 K/V 以及当前位置的 K/V，再把新的 K/V 追加到缓存中。更早位置的 Q 向量已经参与过各自位置的计算，不会作为输入再参与这个新 query 的 attention 运算。
 
-每层的 cache 各自独立，因为每一层的输入表示和投影权重不同。输出变长时，cache 也会随之增大。生成会在模型结束词元、应用停止序列、长度上限或取消操作时结束。长度上限可能会截断尚未完成的回答，因此应用必须判断完成原因。[服务容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) 会进一步说明内存影响；[应用运行状态与恢复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F) 会展开生成结束或中断后的处理。
+每层的 cache 各自独立，因为每一层的输入表示和投影权重不同。输出变长时，cache 也会随之增大。生成会在模型结束词元、应用停止序列、长度上限或取消操作时结束。长度上限可能会截断尚未完成的回答，因此应用必须判断完成原因。[服务容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F) 会进一步说明内存影响；[应用运行状态与恢复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F) 会展开生成结束或中断后的处理。
 
 #### 应用应如何选择解码设置？
 
@@ -395,7 +395,7 @@ Muon 需要每个逻辑矩阵的完整梯度来做上述迭代。DeepSeek-V4 报
 
 所选的训练目标也很重要。BERT 使用的 masked language modeling (掩码语言建模) 会根据左右两侧可见的上下文，预测选定的缺失位置。它的常规过程与上面从左向右的循环不同。研究者可以基于掩码模型构造迭代生成过程，但这需要另外的采样过程。
 
-如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
+如果应用反复以稳定的方式失败，接下来要判断的是：它缺少证据、指令，还是已经学到的行为。[何时进行微调](#23.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F) 会进一步说明这个选择，包括应更新哪些参数。把新证据加入 prompt (提示词) 会改变当前计算；训练则会改变能在后续运行中持续生效的参数。
 
 > [!info]- 来源
 > 下列来源为所列机制提供依据。较小的张量维度、虚构的向量和构建日志调参场景都是教学示例或工程扩展。
@@ -583,7 +583,7 @@ DeepSeek-V4 论文把 Pro 在 **约一百万词元上下文**的单步 decode �
 
 该差距来自多项共同作用：C4 压缩后再 top-k，C128 密集读取更短序列，近邻窗口只留 128 个原始位置，Indexer 使用 FP4，主 KV 混合 FP8/BF16，且 top-k 配置也低于 V3.2。论文给出的是特定配置下的比例；本节条目数是依据公开层配置复算，字节数是按论文精度估算，不足以推出某个 serving 后端的实占显存或端到端延迟。
 
-本文的输入是模型各层已经计算出的历史 hidden state 与当前 query；输出是各层压缩后的 KV、Indexer 候选、近期原始 KV 和必要的未完成尾部状态，以及供 query 使用的 attention 更新。应用层仍要决定哪些对话、工具结果和文档进入 prompt（提示词）；模型内部 KV cache 不替应用选历史，也不是持久记忆。应用上下文选择见[每次推理应看到什么、应用应持久化什么？](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，文档检索见[RAG 怎样检索并使用经过授权的外部证据？](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)。
+本文的输入是模型各层已经计算出的历史 hidden state 与当前 query；输出是各层压缩后的 KV、Indexer 候选、近期原始 KV 和必要的未完成尾部状态，以及供 query 使用的 attention 更新。应用层仍要决定哪些对话、工具结果和文档进入 prompt（提示词）；模型内部 KV cache 不替应用选历史，也不是持久记忆。应用上下文选择见[每次推理应看到什么、应用应持久化什么？](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)，文档检索见[RAG 怎样检索并使用经过授权的外部证据？](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)。
 
 > [!info]- 来源
 > - **MHA/GQA 的每词元缓存量、MLA 的低秩 KV latent、矩阵吸收、RoPE 解耦与 query latent 边界：** DeepSeek-V2 最新公开版本 v5（2024-06-19），§2.1.1–2.1.4、式 (1)–(19)，[arXiv HTML](https://arxiv.org/html/2405.04434v5)。DeepSeek-V3 的 `d_c=512` 与 RoPE key 64 维参数见 [DeepSeek-V3 Technical Report v2](https://arxiv.org/html/2412.19437v2)，§2.1.1。实现路径上的限制由官方 [DeepSeek-V3 `inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/9b4e9788e4a3a731f7567338ed15d3ec549ce03b/inference/model.py) 核对：默认 `absorb` 见 [构造参数](https://github.com/deepseek-ai/DeepSeek-V3/blob/9b4e9788e4a3a731f7567338ed15d3ec549ce03b/inference/model.py#L17-L22)，`naive` 缓存展开 K/V、`absorb` 缓存归一化 latent 与独立位置 key 见[缓存和前向路径](https://github.com/deepseek-ai/DeepSeek-V3/blob/9b4e9788e4a3a731f7567338ed15d3ec549ce03b/inference/model.py#L430-L495)；该官方仓库 `main` commit `9b4e9788e4a3a731f7567338ed15d3ec549ce03b`，核对日期 2026-11-06。
@@ -749,7 +749,7 @@ vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块�
 
 先记录一份完整任务从进入应用到得到有效结果的时间、每个阶段的资源和最终任务结果，再针对已定位的瓶颈一次改变一个因素。time to first token（首 token 时延，TTFT）、完整响应、吞吐量和每份成功任务成本回答不同问题；更快吐出部分文本不一定减少总工作，较便宜的模型若增加重试或人工复核也未必省钱。
 
-本篇承接[模型选择与任务契约](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)的候选、通过门槛和流量目标，建立同一口径的时延/成本测量账本；[部署方式与回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)据此判断托管、自托管、端侧或混合运行能否满足条件。
+本篇承接[模型选择与任务契约](#7.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)的候选、通过门槛和流量目标，建立同一口径的时延/成本测量账本；[部署方式与回滚](#8.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)据此判断托管、自托管、端侧或混合运行能否满足条件。
 
 月报助手承接候选甲的合成筛选结果；月目标为 10,000 份验收成功报告。筛选记录中的常规负载时延和模型 API 直接费用是独立假设，不是峰值或完整成本数据；实际请求/重试数、月末并发和全成本仍待测。本篇的单条 trace 与缓存算例仅演示计算，不作为甲的实测结果。
 
@@ -779,9 +779,9 @@ vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块�
 几种常见优化须分别解释：
 
 - **上下文裁剪与检索：** 只传入回答需要的数据。月报的合计、变化率可以在授权后的确定性聚合阶段计算，模型再把核对过的结果转成说明。保留已有算术测试与行号引用，确认裁剪未移除依据。
-- **prompt caching（提示缓存）：** 重用相同请求前缀的计算状态，可能减少符合特定模型条件的输入处理时间和费用；它不会直接复用上一份答案，也不替代 response cache（响应缓存）。把稳定指令、schema 放在稳定前缀，把动态报表数据放在后缀；用实际缓存命中和账单字段验证收益。
+- **prompt caching（提示缓存）：** 重用满足模型门槛且保持相同顺序的请求前缀计算状态，可能减少输入处理时间和费用；它不会复用上一份答案，也不替代 response cache（响应缓存）。把稳定指令、工具 schema 放在前缀，把动态报表数据放在断点之后；按缓存适用请求计算命中率，同时比较 cached_tokens / input_tokens、读写用量、TTFT 和完整任务成本，见[缓存诊断与分母](#%E5%85%88%E7%A1%AE%E8%AE%A4%20prompt%20cache%20%E5%91%BD%E4%B8%AD%E6%98%AF%E5%90%A6%E7%A8%B3%E5%AE%9A)。
 - **应用响应缓存：** semantic cache（语义缓存）或整份回答缓存只有在可证明请求等价且数据仍新鲜、同租户同权限、同语言、同策略时才可重用。美国与欧盟的退款政策问题向量相近，却可能有不同正确答案；语义相似度本身不能证明回答可共享。
-- **request routing（请求路由）：** 只有当低成本候选在对应任务切片上通过同一质量门槛时才路由。计入分类错误、附加延迟、回退频率和维护成本；候选筛选见[模型选择](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)。
+- **request routing（请求路由）：** 只有当低成本候选在对应任务切片上通过同一质量门槛时才路由。计入分类错误、附加延迟、回退频率和维护成本；候选筛选见[模型选择](#7.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)。
 - **推理批处理与异步批任务：** 支持 continuous batching（连续批处理）的服务引擎可以在生成步骤之间接纳和结束请求，改善设备利用和总体吞吐，但排队与批次策略会改变单请求尾延迟。[GPU 推理容量](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)解释 KV 显存与调度关系。供应商的 Batch API 则是容忍延后完成的一种异步作业接口，不等于在线推理引擎的连续批处理。
 - **quantization（量化）与 distillation（知识蒸馏）：** 量化以较低精度表示权重（某些方法也处理激活），通常可降低权重存储占用；有些格式在目标硬件和内核有高效实现时，也可能减少数据搬运或加快推理。量化误差可能影响任务表现，低位宽不保证端到端更快。蒸馏用较大的教师模型为选定输入生成训练信号，训练较小学生；它可能降低部署成本，也可能丢失能力，且数据生成和评测本身有成本。两者都要在具体模型、硬件、流量和保留集上实测。
 - **streaming（流式输出）：** 可能让用户更早看到部分结果，改善感知响应；若用户必须等待完整结构、引用和安全校验，它不会自动降低任务完成时间。
@@ -810,7 +810,44 @@ $$
 
 节省的 \$0.20 只来自 400 × 500 个输入 token 的价格差；模型仍为每份报告生成输出。
 
-response cache 则是不同操作：若 400 次请求是权限、月份、数据版本、问题、提示词和格式均匹配的精确可复用命中，这些请求完全跳过模型调用，剩下 600 次调用的 token 费是 600 × \$0.0036 = \$2.16，尚未扣除缓存基础设施费用。若报表数据已刷新，旧月报就不再是有效命中。语义缓存也必须单独评估正确性、授权和新鲜度。
+response cache 则是不同操作：若 400 次请求是权限、月份、数据版本、问题、提示词和格式均匹配的精确可复用命中，这些请求完全跳过模型调用，剩下 600 次调用的 token 费是 600 × \$0.0036 = \$2.16；这只是模型费用，尚未计入缓存基础设施费用。若报表数据已刷新，旧月报就不再是有效命中。语义缓存也必须单独评估正确性、授权和新鲜度。
+
+### 先确认 prompt cache 命中是否稳定
+
+Prompt caching（提示缓存）重用符合条件的输入前缀计算状态，不会复用上一份答案。命中依赖当前模型与端点支持缓存、缓存前缀达到该模型门槛，而且请求从开头到缓存断点保持一致。系统指令、消息次序、工具定义及序列化、结构化输出模式、模型版本或显式缓存键变化，都可能缩短可复用前缀。把稳定指令和稳定工具 schema 放在前面，把用户问题、报表行和每轮变化的数据放在断点之后；若 schema 顺序由不稳定 map 迭代生成，先让序列化顺序确定。
+
+诊断时固定一个可比的请求集合和统计窗口，不把所有 API 请求都塞进分母：
+
+- **请求命中率** = 有缓存读取 Token 的已完成、缓存适用请求数 ÷ 同模型、端点和缓存配置下已完成且满足缓存门槛的请求数。
+- **缓存 Token 占比** = Σ cached_tokens ÷ Σ input_tokens。该口径看缓存读取 Token 占输入的比例；输出 Token 不在分母。
+- **成本**另外核算普通输入、缓存读取与缓存写入 Token；单有命中率不代表便宜。超时或 429 等未取得 usage 的尝试要单列，并按提供方账单核对，不能把它们暗中算成未命中或从“每份成功任务成本”里消失。
+
+假设一组 100 次报表请求，每次有 1,200 个输入 Token：固定前缀 1,024 Token，动态后缀 176 Token。为使分项可以手算，此例假设缓存断点明确设在固定前缀末端；断点后的 176 个动态 Token 按普通费率处理，不产生缓存写入。实际要以请求断点和响应 usage 核对；隐式缓存若把断点放在动态内容之后，成本分项会不同。以下价格均为可手算的**教学比例**：普通输入每百万 Token 计 1 美元，缓存读按普通价的 0.10 倍，30 分钟缓存写按普通价的 1.25 倍；不是任何模型的当前报价。输出 Token 成本在各组相同，先不计入。当前 OpenAI Responses API 文档对 GPT-5.6 及更新模型写明 1,024 Token 最小可缓存前缀，30 分钟写为普通输入的 1.25 倍、12 小时写为 2.5 倍；缓存读取价依模型而异。下表仅把这类使用量字段按一个示意读价代数，不将比例推广到其他模型或供应商。
+
+| 工作负载 | 缓存写 / 读 / 普通输入 Token | 请求命中率 | 缓存 Token 占输入 | 输入费用 |
+|---|---:|---:|---:|---:|
+| 关闭缓存的对照组（不在命中率分母中） | 0 / 0 / 120,000 | —（不适用） | 0% | $0.120000 |
+| 一组热点：第 1 次冷写，后 99 次暖读 | 1,024 / 101,376 / 17,600 | 99% | 84.48% | $0.029018 |
+| 十组热点：每组 1 次冷写、9 次暖读 | 10,240 / 92,160 / 17,600 | 90% | 76.8% | $0.039616 |
+| 一百组都只冷写一次，无后续读取 | 102,400 / 0 / 17,600 | 0% | 0% | $0.145600 |
+
+例如第二行输入费用为 (17,600 × 1 + 101,376 × 0.10 + 1,024 × 1.25) ÷ 1,000,000 = $0.0290176；同样输入若全部按普通费率处理为 $0.12。单次冷写成本是 (176 × 1 + 1,024 × 1.25) ÷ 1,000,000 = $0.001456，高于不缓存的 $0.0012。若内容从未再次复用，写入费可能使它更贵。若全部 100 次请求在窗口开始前就已有暖缓存，读入为 102,400 Token、写入为 0，输入成本为 $0.02784；但冷启动写入费用发生在统计窗口之外，不能因此从端到端投入成本中抹掉。
+
+此表的分母揭示两个常被混淆的现象。单一热前缀的请求命中率为 99%，缓存 Token 占比却只有 84.48%，因为每次还带 176 个动态输入 Token；十个热前缀的请求命中率下降到 90%，读 Token 和费用也随之变化。若每个用户的请求都把自己的动态值放在稳定前缀之前，或者每次工具 schema 次序不同，就可能把一条热点拆成许多只写不读的组。不能只报“多少请求命中”，也要报 cached_tokens 与普通、写入输入 Token 之和。
+
+对支持 `prompt_cache_options` 的 GPT-5.6 及更新模型 Responses API，三类输入用量互斥，且 `input_tokens` 包含普通、缓存读取和缓存写入 Token：普通输入量 = `usage.input_tokens - usage.input_tokens_details.cached_tokens - usage.input_tokens_details.cache_write_tokens`。用普通量乘普通输入费率，读取量乘缓存读取费率，写入量乘相应写入费率，再求和；`input_tokens_details.cache_write_tokens_details.ttl_30m_tokens` 和 `input_tokens_details.cache_write_tokens_details.ttl_12h_tokens` 是 `cache_write_tokens` 的子项，若两种寿命同时存在，应分别计价后再汇总，不能重复加回总量。较旧模型、Chat Completions 或其他提供方的字段和计价可能不同，须按当前端点文档与账单重算。
+
+实际排查顺序可以固定为四步：
+
+1. **先比较原始使用量。** 按模型、端点、提示词版本、工具 schema 版本、结构化输出版本、缓存键和 time to live（生存时间，TTL）分组，对照 input_tokens、cached_tokens、写入 Token、TTFT 和完整任务时延。记录版本与哈希，不在普通 trace 里保存敏感提示词正文。
+2. **命中突然变低时检查前缀。** 比较序列化后的稳定前缀哈希和缓存断点；验证工具顺序和参数版本是否稳定，动态内容是否提前，前缀是否达到当前模型的最小缓存长度。确认 prompt_cache_key 是否稳定后再解释缓存分片；该键只用于缓存路由或分组，不能当作租户授权。
+3. **命中率高但成本几乎不变时查分母与费用。** 检查命中的只是很短一段、动态后缀或输出占大头、写入比例与 TTL 费率、缓存写入是否被重复计入，以及失败重试是否分摊到同一成功任务。
+4. **缓存 Token 上升但 TTFT 未下降时看端到端 trace。** Prompt caching 减少的是符合条件的前缀处理工作，实际首 token 时延仍受网络、队列、剩余动态输入、推理负载等影响。按同一请求分布比较冷/暖的 p50 与 p95；不能由 Token 命中直接推出用户一定更快。
+
+TTL 应与复用间隔和当前计价一起看。短期会话若几分钟内反复使用，较短的生存时间可能足够；共享稳定规则若复用间隔更长，延长时间可能减少再次冷写，但写入更贵。OpenAI 对支持 `prompt_cache_options.ttl` 的 Responses API 模型，把 30 分钟或 12 小时设置定义为缓存的最短保留时间；这不是通用缓存期限，也不代表时间到达后必须删除。若另一个提供方按固定比例收读/写费，按它的规则重算，不能套用这里的倍率。
+
+最后用完整工作单元决定是否采用：对同一合成请求分组比较缓存前缀指纹、命中 Token、缓存读取/写入费用、TTFT、完整时延，以及内容与结构通过验收的报告数。集中稳定前缀只有在不把用户或租户专属内容错误共享、质量门槛不变并降低成功任务全成本时才成立。缓存只是推理优化；权限、提示词差异和报告数据新鲜度仍由应用每次检查。
+
 
 ### 把单位成本换成成功任务预算
 
@@ -830,27 +867,374 @@ $$
 
 ### 把测得的工作负载交给部署决策
 
-本篇的目标交付是：候选甲在实际服务区的分阶段时延与尾部分布、实际请求/重试数量、峰值并发回放、每份成功报告完整费用和缓存命中。当前示例只给甲的合成筛选假设；单条 trace、缓存算例和 \$0.36/98 演算都不是这些实测。把仍待验证的项交给[如何选择 AI 部署方式并安全回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：在月末峰值和完整成本通过约定门槛前，只能讨论可逆试点，不能宣布总成本预算已达标。
+本篇的目标交付是：候选甲在实际服务区的分阶段时延与尾部分布、实际请求/重试数量、峰值并发回放、每份成功报告完整费用和缓存命中。当前示例只给甲的合成筛选假设；单条 trace、缓存算例和 \$0.36/98 演算都不是这些实测。把仍待验证的项交给[如何选择 AI 部署方式并安全回滚](#8.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：在月末峰值和完整成本通过约定门槛前，只能讨论可逆试点，不能宣布总成本预算已达标。
 
 ### 相关笔记
 
-- [模型选择与生态](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)：定义候选和任务质量门槛。
+- [模型选择与生态](#7.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)：定义候选和任务质量门槛。
 - [GPU 推理容量与 KV 缓存](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)：检查 KV 内存、批处理、服务吞吐和时延。
-- [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：控制每次推理看到的历史和证据。
-- [AI 应用架构](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：持久化运行身份、状态、截止时间与恢复路径。
+- [上下文工程原则](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：控制每次推理看到的历史和证据。
+- [AI 应用架构](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：持久化运行身份、状态、截止时间与恢复路径。
 - [流式交互体验](../../frontend/browser-apis/streaming-ux.md)：处理浏览器侧部分输出与用户等待体验。
 
 > [!info]- 来源
-> - **提示缓存复用的是前缀状态，不是最终答案；缓存门槛、写入价、读取价依模型和配置变化：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”、“How caching works”和模型差异部分。页面当前说明 GPT-5.6 及更新模型的前缀门槛为 1,024 token；本文 500-token 算例明确是假设性代数练习，不是该接口的可直接执行参数。
+> - **提示缓存复用的是前缀状态，不是最终答案；缓存门槛、断点、寿命、使用量与读写价依模型和配置变化：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-09，“What is the prompt cache?”、“Caching works”、“Cache lifetime”、“Monitor cache performance”和“Summary of model differences”。GPT-5.6 及更新模型的前缀门槛、30 分钟/12 小时写入倍率、显式断点后的普通计价，以及 `cached_tokens`、`cache_write_tokens` 拆分按当前 Responses API 文档表述。文中的 500-token 算例与 0.10 倍读价、每百万 Token 1 美元普通价都是代数教学输入，不是该接口可直接执行的参数或当前报价。
 > - **优化顺序、输出长度、缓存前缀与流式体验：** OpenAI，[Latency optimization](https://developers.openai.com/api/docs/guides/latency-optimization)，核对日期：2026-11-06，“Seven principles”及具体示例；提供方经验用于提示待测方向，不保证本案例的收益幅度。
 > - **费用减少与异步处理的边界：** OpenAI，[Cost optimization](https://developers.openai.com/api/docs/guides/cost-optimization) 与 [Batch API](https://developers.openai.com/api/docs/guides/batch)，核对日期：2026-11-06；后者描述异步批作业接口，并非在线调度合同。
 > - **自托管观测：** vLLM，[Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/)，核对日期：2026-11-06；“request latency”直方图将端到端、排队、推理、prefill 和 decode 分开。引擎指标仍需与应用端到端 trace 配合。
 > - **量化实现和硬件边界：** vLLM，[Quantization](https://docs.vllm.ai/en/stable/features/quantization/index.html)，核对日期：2026-11-06；当前文档说明精度与存储占用的取舍，并列出格式与硬件兼容性；兼容表会随版本改变。
 > - **量化与蒸馏机制：** Frantar et al., [GPTQ v2 (2023-03-22)](https://arxiv.org/abs/2210.17323)；Lin et al., [AWQ v6 (2026-04-25)](https://arxiv.org/abs/2306.00978)；Hinton et al., [Distilling the Knowledge in a Neural Network (2015)](https://arxiv.org/abs/1503.02531)。这些来源提供方法背景，不证明本案例的收益；具体效果受模型、数据、硬件和实现影响。
 > - **推理迭代级调度：** Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu)，2022；作为调度机制背景，不意味着某个当前服务引擎具有相同实现或性能。
-## 6. 如何为具体任务选择模型，并让部署约束进入决策？
+## 6. 怎样让模型 API 调用在限额、失败和截止时间内有界？
 
-先把任务成功条件写成可测的契约，再淘汰不满足硬约束的候选模型。对剩余候选使用同一提示词、输入、工具和评估协议比较任务质量、时延与总成本；模型名称、排行榜和供应商档位只能帮助初筛，不能替代目标任务上的验证。本篇交付候选集、验收门槛和基线假设；[如何测量 AI 服务的时延与成本](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)接着量化工作负载，[如何选择 AI 部署方式并安全回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)再据此选运行位置和发布路径。
+一个调用是否结束不只取决于 SDK 返回结果。请求可能在应用队列中等待，可能撞上请求数或 Token 速率限制，可能收到临时过载，也可能在服务端已经处理后才遇到网络超时。若每一层都自行重试，一个用户动作会变成许多实际 HTTP 请求。
+
+本章用公开、合成的 CI 手册分块说明两类任务：离线为 40 个手册块生成 embedding，以及在线为一条报表问题生成回答。前者可排队、晚些完成；后者要在用户截止时间前返回。两者共用模型服务限额，但重试次数、队列和截止时间要分别控制。
+
+### 一次调用经过哪些闸门？
+
+请求先通过有界队列和限额准入，再占用并发槽位并发出一次 HTTP 请求。若应用层负责重试，每个重试可以重新经过限额闸门；SDK 在应用调用内部自动重试时，应用层看不到每次发送，需关闭 SDK 重试或把准入放到逐次 HTTP 请求可见的传输层。
+
+~~~mermaid
+flowchart TD
+    A["到达：任务、Token 估算、绝对截止时间"] --> B{"队列有空间吗？"}
+    A -->|截止或取消| I
+    B -- 否 --> X["拒绝或让调用者稍后重试"]
+    B -- 是 --> C["有界队列"]
+    C -->|截止或取消| I
+    C --> D{"并发槽位与请求数 / Token 预算可用？"}
+    D -- 否 --> C
+    D -->|截止或取消| I
+    D -- 是 --> E["一次 HTTP 请求"]
+    E -- 成功 --> F["记录用量、结果与请求 ID"]
+    E -- 永久错误 --> G["失败并返回可行动原因"]
+    E -- 可恢复且预算仍足 --> H["等待服务端重试提示或退避抖动"]
+    E -- 可恢复但尝试数或时间预算不足 --> G
+    H --> D
+    E -- 超时、取消或截止到期 --> I["停止排队、等待和重试；若请求已发出，远端结果可能未知"]
+    H -->|截止或取消| I
+~~~
+
+并发槽位、请求速率、Token 速率和截止时间限制不同的东西。只有队列长度有限，不能保证发送速率；只有并发上限，也不能保证 Token 消耗落在配额内。
+
+### 队列、并发和请求配额怎样分工？
+
+有界队列限定尚未启动的工作数量，保护进程内存，也决定过载时是否背压或拒绝。并发上限限定同时在途的 HTTP 调用数；它主要影响连接与服务端工作量。若平均每次调用需 0.5 秒，进程允许 4 个同时在途请求，粗略吞吐上限约为 8 次/秒；这仍未考虑 Token 限额、尾部时延和突发窗口。
+
+RPM 限制单位时间内可发起的请求数，TPM 限制同一时段模型可处理的 Token 数。短请求可能先撞上 RPM；批量 embedding 则可能只有少数 API 请求，却先撞上 TPM。提供方还可能按模型、组织、项目或共享模型组分别计限，也可能设置请求骤增的爬坡限制。实际限额和时间窗以当前账户与 API 响应头为准。
+
+> [!example] 同一批工作受哪一个限额约束？
+> 假设教学服务每分钟允许 60 个请求与 12,000 个 Token。某在线模型请求预计含 900 个输入 Token，并设置 300 个输出 Token 的上限。若该服务按输入量加输出上限估计配额，一个请求预留 1,200 Token，于是固定分钟窗口的算术上限为 min(60, 12,000 / 1,200) = 10 次；只看 60 RPM 会把容量高估六倍。
+>
+> 这只是固定窗口例子。提供方可能用更细时间窗、不同 Token 估算或其他计量方式；某些接口的计数规则也不同。实现前要看对应模型、端点和账户的限额文档，并以响应头、usage 和实际错误核对估算。
+
+离线 embedding 可以把多个输入合并成一个请求以减少 RPM 消耗，但这个批次仍消耗对应输入 Token，且受单请求上限约束。先按当前模型允许的单条与批量 Token 上限切批，再把批次放入队列。在线生成则设置有界输出 Token 上限，并把交互队列与后台索引队列分开；若二者仍共用全部在途槽，后台索引仍可能占满槽位，需让调度器优先处理交互任务或给在线请求保留槽位。并发槽只由正在进行的 HTTP 请求占用；调用完成或进入退避时释放它，下一次尝试再回到并发与速率准入。
+
+单进程可以用信号量限制并发，用 Token bucket（令牌桶）或滑动窗口限制自身发送速率；这只能约束该进程。若多个 worker 共用项目限额，各进程的本地计数并不等于共享预算。要跨进程一致准入，须在共享协调层原子预留 RPM 与 Token 额度，或由集中调度器发放额度；本章假客户端不实现分布式限流器。
+
+每次调用前估算输入 Token 和可能的输出额度并预留内部预算，响应后按接口返回的 usage（用量）对账。若提供方的速率计量规则允许根据 usage 归还预留差额，才把差额放回本地速率预算；账单 usage 与服务端 RPM/TPM 计数可能不是同一口径。失败尝试是否消耗额度、额度多久恢复，应按提供方规则处理，不能因为没有收到内容就假定请求完全免费。速率限制响应头中的剩余额度和重置时间比应用自己的平均值更接近服务端状态。
+
+### 哪些错误可以重试，实际请求会有多少次？
+
+应用尝试是应用代码调用 SDK 一次；实际 HTTP 请求数是网络上真正发到 API 的次数。开启 SDK 内部自动重试后，这两个数字可能不同。应用设 max_attempts=3 是总共最多三次尝试，包含第一次；SDK 设 max_retries=2 则可能是一次初始请求加两次内部重试。
+
+先依据错误类型、错误码和响应头决定是否有恢复可能，而不是只看 HTTP 状态码：
+
+| 观察到的结果 | 典型处理 | 是否再占用一次请求预算 |
+|---|---|---:|
+| API Key、权限、请求格式、模型不可用等稳定错误 | 失败并修正配置或请求；同一输入立刻重发不会改变原因。 | 否 |
+| 额度耗尽、账单或项目支出上限 | 停止自动重试，先处理账户限制。某些此类错误也是 HTTP 429。 | 否 |
+| 临时速率限制、流量骤增或服务过载 | 若有有效 Retry-After（最早重试时间提示），至少等待该值；否则用带抖动的退避，再按剩余截止时间有限重试。 | 是 |
+| 临时网络中断、响应超时或 5xx | 先确认是否可能已处理或计费；仅在调用类型、总预算和截止时间允许时重试。 | 通常按一次新的线上请求预算 |
+| 取消、用户离开或总截止时间已过 | 取消排队项；不要再开始新尝试。对于已发出的请求，远端是否停止要另外确认。 | 不再新增 |
+
+Retry-After 是最早何时再试，不是建议忽略的提示。没有有效值时，可按 min(cap, base × 2^(attempt−1)) + random_jitter 退避；若有提供方给出的最小等待时间，则等待不少于该值，并加入少量抖动，避免许多 worker 同时重发。只有应用逐次发出请求的重试才可在此处重新申请 RPM/TPM 额度；若 SDK 内部重试仍打开，应用层的限额闸门只包住整次 SDK 调用，不会在 SDK 的每次 HTTP 发送前再次检查。要准确限制逐次发送，应关闭 SDK 重试，或把限额控制移到逐请求可见的 HTTP 传输层。无论等待多短，都须同时限制尝试数和总耗时。
+
+重试层叠会乘大请求数。例如，应用允许最多 3 次 SDK 调用，而每次 SDK 调用内部最多重发 2 次，那么每层都遇到可重试错误时，理论上界为 3 × (1 + 2) = 9 个线上请求；若底层 HTTP 客户端还有额外重试，上界更高。一个主要重试层更易审计：若应用负责退避和逐请求限额，就在 SDK 中设 max_retries=0；若保留 SDK 重试，需按其退避、总请求数与每个 HTTP 请求的 Token 预算作保守计数，或在 SDK 下层限流。上界只限制总次数，不保证这些请求落在正确的 RPM/TPM 窗口。
+
+~~~mermaid
+flowchart LR
+    A["应用尝试：最多 3 次"] --> S["每次调用 SDK"]
+    S --> H0["初始 HTTP 请求"]
+    H0 -->|SDK 判断可重试| H1["内部重试 1"]
+    H1 -->|仍可重试| H2["内部重试 2"]
+    A -."下一次应用尝试".-> S
+~~~
+
+以下轨迹使用 `max_retries=0` 的假客户端，一次 `create` 对应一次 HTTP 请求；迟到响应例外见下节。
+
+| 合成调用轨迹 | `max_attempts` | 实际 HTTP 请求 | 结束状态 |
+|---|---:|---:|---|
+| 429 后成功 | 3 | 2 | 恢复成功 |
+| 连续 503 | 3 | 3 | 达应用尝试上限 |
+| `Retry-After=2s`，总截止只余 0.05s | 3 | 1 | 不启动下一次请求 |
+| 请求开始后用户取消 | 3 | 1 | 停止本地等待与重试 |
+| 10ms 单次时限，底层取消清理 40ms | 3 | 1 | 本地约 50ms 后拒收迟到响应，不再重发 |
+
+截至 2026-11-09，OpenAI 官方 Python SDK 文档列出的默认重试包括若干连接错误、408、409、429 和 5xx，构造器默认 `max_retries=2`。响应状态 429 本身不足以判定可重试：官方文档区分 `slow_down` 这种临时速率错误与需要处理的额度、账单限制。错误码和请求 ID 应进入结构化日志，敏感提示词正文不应为了排障复制进日志；部署时要核对实际 SDK 版本和调用路径。
+
+> [!warning] 生成请求的超时结果可能未知
+> 客户端发送请求后若断线或超时，服务端可能仍在完成计算。再发一次可能生成不同答案、重复费用或重复触发后续业务步骤。只有纯生成阶段且产品接受重复成本时，才考虑重试这类不确定结果；工具副作用应先走可核对的操作状态或幂等契约。取消本地任务不能证明远端计算已停止；异步客户端还须响应取消，传输层时限也要覆盖 SDK 等待。
+
+### 可选：用假客户端复算请求数
+
+> [!example]- 完整可运行的异步假客户端
+> 下面的 Python 代码只演示应用级尝试预算：假客户端每次 create 对应一次模拟 HTTP 请求，不含 SDK 内部重试、RPM/TPM 队列或共享配额协调。真实客户端需把可恢复错误映射成同一异常，并明确 SDK 自动重试策略。
+>
+> ~~~python
+> import asyncio
+> import random
+>
+>
+> class ApiError(Exception):
+>     def __init__(self, status, code, *, retry_after=None, retryable=False):
+>         super().__init__(f"{status} {code}")
+>         self.status = status
+>         self.code = code
+>         self.retry_after = retry_after
+>         self.retryable = retryable
+>
+>
+> class DeadlineExceeded(TimeoutError):
+>     pass
+>
+>
+> class OutcomeUnknown(TimeoutError):
+>     pass
+>
+>
+> class LateResponse(TimeoutError):
+>     pass
+>
+>
+> class FakeAPI:
+>     """每次 create 调用恰好计为一次模拟 HTTP 请求。"""
+>     def __init__(self, outcomes):
+>         self.outcomes = list(outcomes)
+>         self.requests = 0
+>
+>     async def create(self, payload):
+>         self.requests += 1
+>         await asyncio.sleep(0)
+>         if not self.outcomes:
+>             raise AssertionError("假客户端没有预设响应")
+>         outcome = self.outcomes.pop(0)
+>         if isinstance(outcome, BaseException):
+>             raise outcome
+>         return outcome
+>
+>
+> class SlowCleanupAPI:
+>     """模拟收到取消后仍需 40ms 清理才返回的 transport。"""
+>     def __init__(self):
+>         self.requests = 0
+>
+>     async def create(self, payload):
+>         self.requests += 1
+>         try:
+>             await asyncio.sleep(10)
+>         except asyncio.CancelledError:
+>             await asyncio.sleep(0.04)
+>             return {"late": True}
+>
+>
+> async def bounded_call(
+>     client,
+>     payload,
+>     *,
+>     max_attempts,
+>     total_timeout_s,
+>     attempt_timeout_s,
+>     base_delay_s=0.05,
+>     max_delay_s=1.0,
+>     jitter_s=0.02,
+>     rng=None,
+> ):
+>     if max_attempts < 1:
+>         raise ValueError("max_attempts 必须至少为 1")
+>     if total_timeout_s <= 0 or attempt_timeout_s <= 0:
+>         raise ValueError("超时必须为正数")
+>
+>     rng = rng or random.Random()
+>     loop = asyncio.get_running_loop()
+>     deadline = loop.time() + total_timeout_s
+>
+>     for attempt in range(1, max_attempts + 1):
+>         remaining = deadline - loop.time()
+>         if remaining <= 0:
+>             raise DeadlineExceeded("总截止时间已过，未开始下一次请求")
+>
+>         attempt_deadline = min(deadline, loop.time() + attempt_timeout_s)
+>         try:
+>             response = await asyncio.wait_for(
+>                 client.create(payload),
+>                 timeout=max(0.0, attempt_deadline - loop.time()),
+>             )
+>         except asyncio.CancelledError:
+>             # 用户取消或上游 Task 被取消：停止等待和重试。
+>             raise
+>         except ApiError as exc:
+>             if loop.time() >= attempt_deadline:
+>                 raise LateResponse(
+>                     "底层在单次时限后抛出错误；不自动重试"
+>                 ) from exc
+>             if not exc.retryable or attempt == max_attempts:
+>                 raise
+>
+>             remaining = deadline - loop.time()
+>             if exc.retry_after is not None:
+>                 # Retry-After 是最短等待时间。
+>                 delay = max(exc.retry_after, 0) + rng.uniform(0, jitter_s)
+>             else:
+>                 backoff = min(max_delay_s, base_delay_s * (2 ** (attempt - 1)))
+>                 delay = backoff + rng.uniform(0, jitter_s)
+>
+>             if delay >= remaining:
+>                 raise DeadlineExceeded(
+>                     "截止时间内没有空间等待后再开始下一次请求"
+>                 ) from exc
+>             await asyncio.sleep(delay)
+>         except TimeoutError as exc:
+>             # 请求可能已经到达服务端；示例默认不自动重发不确定结果。
+>             raise OutcomeUnknown("单次请求超时；远端结果可能未知") from exc
+>         else:
+>             if loop.time() >= attempt_deadline:
+>                 # wait_for 会等待底层协程处理取消；迟到响应不算按时成功，也不自动重发。
+>                 raise LateResponse("底层协程在单次时限后才返回；不自动重发")
+>             return response
+>
+>     raise AssertionError("循环只会返回或抛错")
+>
+>
+> async def demo():
+>     success_api = FakeAPI([
+>         ApiError(429, "slow_down", retry_after=0.001, retryable=True),
+>         {"chunk_id": "handbook-17", "embedding": [0.2, -0.1]},
+>     ])
+>     success = await bounded_call(
+>         success_api,
+>         {"text": "synthetic public CI rule"},
+>         max_attempts=3,
+>         total_timeout_s=1,
+>         attempt_timeout_s=0.5,
+>         jitter_s=0,
+>     )
+>     print("recovered:", success, "HTTP requests:", success_api.requests)
+>
+>     failed_api = FakeAPI([
+>         ApiError(503, "server_is_overloaded", retryable=True),
+>         ApiError(503, "server_is_overloaded", retryable=True),
+>         ApiError(503, "server_is_overloaded", retryable=True),
+>     ])
+>     try:
+>         await bounded_call(
+>             failed_api,
+>             {"text": "synthetic public CI rule"},
+>             max_attempts=3,
+>             total_timeout_s=1,
+>             attempt_timeout_s=0.5,
+>             base_delay_s=0.001,
+>             max_delay_s=0.01,
+>             jitter_s=0,
+>         )
+>     except ApiError as exc:
+>         print("failed:", exc, "HTTP requests:", failed_api.requests)
+>
+>     deadline_api = FakeAPI([
+>         ApiError(429, "slow_down", retry_after=2, retryable=True),
+>     ])
+>     try:
+>         await bounded_call(
+>             deadline_api,
+>             {},
+>             max_attempts=3,
+>             total_timeout_s=0.05,
+>             attempt_timeout_s=0.5,
+>             jitter_s=0,
+>         )
+>     except DeadlineExceeded as exc:
+>         print("deadline:", type(exc).__name__, "HTTP requests:", deadline_api.requests)
+>
+>     class SlowAPI:
+>         def __init__(self):
+>             self.requests = 0
+>             self.started = asyncio.Event()
+>
+>         async def create(self, payload):
+>             self.requests += 1
+>             self.started.set()
+>             await asyncio.sleep(10)
+>
+>     slow_api = SlowAPI()
+>     task = asyncio.create_task(
+>         bounded_call(
+>             slow_api,
+>             {},
+>             max_attempts=3,
+>             total_timeout_s=1,
+>             attempt_timeout_s=0.5,
+>         )
+>     )
+>     await slow_api.started.wait()
+>     task.cancel()
+>     try:
+>         await task
+>     except asyncio.CancelledError:
+>         print("cancelled locally; started HTTP requests:", slow_api.requests)
+>
+>     late_api = SlowCleanupAPI()
+>     loop = asyncio.get_running_loop()
+>     started_at = loop.time()
+>     try:
+>         await bounded_call(
+>             late_api,
+>             {},
+>             max_attempts=3,
+>             total_timeout_s=0.5,
+>             attempt_timeout_s=0.01,
+>         )
+>     except LateResponse as exc:
+>         elapsed_ms = (loop.time() - started_at) * 1000
+>         print(
+>             "late result rejected:", type(exc).__name__,
+>             "local wait ms:", round(elapsed_ms),
+>             "HTTP requests:", late_api.requests,
+>         )
+>
+>
+> if __name__ == "__main__":
+>     asyncio.run(demo())
+> ~~~
+>
+> 假客户端依次得到 429 与成功响应，所以总共调用两次；连续三次 503 后停止，模拟请求数为三，恰好等于 max_attempts。收到 429 后若 Retry-After=2 秒而总截止时间只剩 0.05 秒，示例检查后立刻停止，不等待、不启动第二次请求。取消示例在请求开始后只停止本地协程；真实服务端可能仍继续工作。代码不验证 provider header 格式、不实现并发池或分布式速率限制，也不处理 SDK 例外类型；生产适配器要接入这些细节，不能把示例包装器称作完整限流器。慢清理假客户端的单次时限为 10ms，收到取消后清理 40ms；包装器本地约 50ms 后拒收迟到成功值，只发 1 次 HTTP 请求；迟到的可重试 API 错误也会被拒收，不进入重试。
+
+### 截止时间、取消和流式输出怎样相互作用？
+
+在入口收到请求时创建单调时钟截止点 D。排队、等待并发槽、等待 RPM/TPM、每次 HTTP 调用和退避都消耗同一个预算；从队列取出时用 D - now 算剩余时间，再把剩余预算交给调用层。不要在每次重试时重置为“再等 30 秒”，否则总耗时没有上界。
+
+Python 的 `asyncio.wait_for` 到时会向被等待协程发出取消，再等待它处理取消；取消是协作式的，底层清理可能让本地等待越过 attempt 或总截止点。本例对迟到成功值和迟到的可重试 API 错误都抛出 `LateResponse`，不记作按时成功，也不自动重发；这仍不能保证 `bounded_call` 恰好在 D 返回。生产适配器要传播 `CancelledError`，并给 HTTP transport 配置自己的连接、读写时限。若用户界面必须在 D 前结束等待，由外层请求处理器在 D 返回超时状态，并把本地清理和远端结果核对放入独立、可追踪的生命周期；本例没有强制取消或后台任务管理器。
+
+队列中尚未发出的任务被取消时，可以直接移除，不占用后续额度。已经开始的异步网络任务收到取消后，应用应停止等待和后续重试；但取消是否抵达提供方、提供方是否中止生成，以及已经使用的额度怎样结算，取决于接口和传输协议。业务层应把“已取消”“已完成”“结果未知”作为不同状态。若截止时间到期时还没有可靠响应，返回明确超时或可恢复状态，而不是伪造空答案。
+
+非流式请求失败且没有输出时，新请求仍可能重新计费。流式请求以首个面向用户的内容片段交付为界；协议可能先发送建连或元数据事件，这些不代表已有内容交付。首段内容交付前的 HTTP 错误可按错误类型和剩余预算处理；已有部分内容交付到用户后若自动从头重试，会重复片段并混合两次生成。部分输出应保留为未完成状态，由界面显示中断并让用户明确选择继续、放弃或新建重试；是否可继续取决于当前 API 的会话/响应契约。应用应记录首个用户可见内容时间、结束事件、取消请求、调用尝试和服务端响应 ID。
+
+离线批处理、在线请求重试和任务失败后的人工重跑不是一回事。[RAG 的分块与索引流程](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)负责确定哪些文本被编码、索引与验证；本章只确定单个模型请求能否排队、占用配额、重试以及何时停止。[时延与成本测量](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)记录所有尝试和失败费用，再以通过验收的成功任务作单位成本分母。供应商 Batch API 是可以延迟完成的独立作业接口，不会自动为在线调用补上上述截止时间和重试预算。
+
+### 相关笔记
+
+- [怎样从授权文档中检索并核验回答依据？](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：确定文档来源、embedding 契约和 RAG 证据流程。
+- [如何测量并降低 AI 应用的时延与成本，同时守住任务质量？](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：统计时延、缓存和所有尝试的成功任务成本。
+- [如何选择 AI 部署方式并安全回滚？](#8.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：把测得的容量、尾延迟和成本交给部署决策。
+
+> [!info]- 来源
+> - **RPM、TPM、不同错误码和提供方响应头。** OpenAI，[Rate limits](https://developers.openai.com/api/docs/guides/rate-limits) 与 [Error codes](https://developers.openai.com/api/docs/guides/error-codes)，核对于 2026-11-09；当前说明速率限制可能按组织、项目和模型生效，响应头可提供剩余额度与重置时间，临时 slow_down、server_is_overloaded 与账户额度错误需要不同处理。文中的固定 60 RPM / 12,000 TPM 是合成算术例子。
+> - **Python SDK 重试。** OpenAI，[Python SDK README](https://github.com/openai/openai-python#retries) 与 [API reference](https://developers.openai.com/api/reference/python)，核对于 2026-11-09；当前官方文档说明构造器默认 `max_retries=2`，常见可重试错误包括连接问题、408、409、429 和 5xx。版本、错误集、超时参数和 server hint 处理会变更，生产配置应查看部署版本。
+> - **SDK 请求超时。** [OpenAI Python SDK README](https://github.com/openai/openai-python#timeouts)，核对于 2026-11-09；一次 SDK 请求的默认和细分连接/读写等待不等于涵盖排队、限流等待与重试的应用总截止时间。
+> - **Python 协程超时的取消语义。** [Python 3.11 `asyncio.wait_for`](https://docs.python.org/3.11/library/asyncio-task.html#asyncio.wait_for)，核对于 2026-11-09；超时会请求取消被等待协程，并等待其处理取消，因此总等待可能超过配置时限。
+> - **Retry-After 的协议语义。** IETF，[RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3)，2022；字段表示服务端建议的最早等待时长或日期，本章按最小等待要求处理。
+## 7. 如何为具体任务选择模型，并让部署约束进入决策？
+
+先把任务成功条件写成可测的契约，再淘汰不满足硬约束的候选模型。对剩余候选使用同一提示词、输入、工具和评估协议比较任务质量、时延与总成本；模型名称、排行榜和供应商档位只能帮助初筛，不能替代目标任务上的验证。本篇交付候选集、验收门槛和基线假设；[如何测量 AI 服务的时延与成本](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)接着量化工作负载，[如何选择 AI 部署方式并安全回滚](#8.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)再据此选运行位置和发布路径。
 
 ~~~mermaid
 flowchart TD
@@ -940,21 +1324,21 @@ flowchart TD
 ### 相关笔记
 
 - [如何测量 AI 服务的时延与成本](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：定位端到端瓶颈，计算每份成功任务成本。
-- [如何选择 AI 部署方式并安全回滚](#7.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：把候选和测得的工作负载映射到运行方式和发布计划。
-- [AI 应用架构如何经受断连与 worker 故障？](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：定义稳定运行标识、持久状态与恢复契约。
-- [如何判断 AI 系统是否满足任务契约？](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计样本、评分维度、保留集与不确定性。
-- [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)、[微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)和[检索增强生成架构](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：分别处理模型每次看到什么、何时训练行为，以及怎样使用外部证据。
+- [如何选择 AI 部署方式并安全回滚](#8.%20AI%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%B9%B6%E9%80%90%E6%AD%A5%E4%B8%8A%E7%BA%BF%E6%88%96%E5%9B%9E%E6%BB%9A%EF%BC%9F)：把候选和测得的工作负载映射到运行方式和发布计划。
+- [AI 应用架构如何经受断连与 worker 故障？](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：定义稳定运行标识、持久状态与恢复契约。
+- [如何判断 AI 系统是否满足任务契约？](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计样本、评分维度、保留集与不确定性。
+- [上下文工程原则](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)、[微调策略](#23.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)和[检索增强生成架构](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：分别处理模型每次看到什么、何时训练行为，以及怎样使用外部证据。
 
 > [!info]- 来源
 > - **同任务比较与动态目录：** OpenAI，[Model selection](https://developers.openai.com/api/docs/guides/model-selection)，核对日期：2026-11-06；“Compare it with ... on the same inputs”及模型/产品可用性部分用于佐证同协议比较和目录变化。文中的产品建议是提供方示例，不作为通用模型排名。
 > - **把行为写成评测条件：** OpenAI，[Working with evals](https://developers.openai.com/api/docs/guides/evals)，核对日期：2026-11-06；“Create an eval for a task”展示将任务、测试输入与判定条件对应。该文档标示 Evals 平台已进入弃用过渡期；此处只引用评测思路，不依赖其 API 可用性。
 > - **部署前的确切能力与价格：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；目录和价格是提供方当前页面，不应转抄为长期固定值。
 > - **托管服务数据边界：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored”和“Data retention controls”；仅说明一个具体 API 如何文档化留存与控制，其他提供方和设置须另行核对。
-## 7. AI 应用怎样选择部署方式，并逐步上线或回滚？
+## 8. AI 应用怎样选择部署方式，并逐步上线或回滚？
 
 把已通过任务评测的模型候选、真实流量、数据边界、峰值和运维能力放在同一张表里比较，再制定渐进发布和 rollback（回滚）条件。托管推理可减少自营服务工作，自托管可增加模型与运行位置的控制，但也把容量、更新、安全和 on-call（值班响应）责任转给团队；端侧与混合架构对应特定设备或数据边界。部署标签本身不能证明成本更低、隐私更好或服务更快。
 
-本篇承接[模型选择](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)输出的候选与任务契约，以及[时延和成本测量](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)提供的测量口径与待验证负载。它为月报助手选定一个有边界的运行决策，并把模型、提示词和应用版本一起纳入上线与回退。
+本篇承接[模型选择](#7.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)输出的候选与任务契约，以及[时延和成本测量](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)提供的测量口径与待验证负载。它为月报助手选定一个有边界的运行决策，并把模型、提示词和应用版本一起纳入上线与回退。
 
 ### 先筛掉不满足数据、服务和团队硬约束的方案
 
@@ -1011,22 +1395,22 @@ $$
    完整 TCO 上限尚未定出；在确定并验证总成本门槛前，不把试点当成全面上线许可。
 5. **回滚并核实：** 首次模型试点切回人工月报；以后版本若已存在已验收模型组合，则将流量切回该版本。停止候选流量后，核对未完成运行、错误、数据影响和用户反馈。
 
-Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它不会自动恢复部署模板以外的提示词、供应商模型配置、数据状态或已产生的外部副作用。若用 Kubernetes，自身保留 Deployment 修订史并确认回退完成；其他平台也需有可重放的版本选择和回退机制。AI 运行的持久标识、断连恢复和副作用处理属于[生产 AI 运行架构](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)；上线后持续将任务反馈与版本关联，见[生产可观测性与反馈](#21.%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)。
+Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它不会自动恢复部署模板以外的提示词、供应商模型配置、数据状态或已产生的外部副作用。若用 Kubernetes，自身保留 Deployment 修订史并确认回退完成；其他平台也需有可重放的版本选择和回退机制。AI 运行的持久标识、断连恢复和副作用处理属于[生产 AI 运行架构](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)；上线后持续将任务反馈与版本关联，见[生产可观测性与反馈](#26.%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)。
 
 ### 相关笔记
 
-- [模型选择与生态](#6.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)：先得到满足任务门槛的候选。
+- [模型选择与生态](#7.%20%E5%A6%82%E4%BD%95%E4%B8%BA%E5%85%B7%E4%BD%93%E4%BB%BB%E5%8A%A1%E9%80%89%E6%8B%A9%E6%A8%A1%E5%9E%8B%EF%BC%8C%E5%B9%B6%E8%AE%A9%E9%83%A8%E7%BD%B2%E7%BA%A6%E6%9D%9F%E8%BF%9B%E5%85%A5%E5%86%B3%E7%AD%96%EF%BC%9F)：先得到满足任务门槛的候选。
 - [时延与成本优化](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：提供真实负载、尾延迟、成功任务成本及缓存数据。
-- [AI 应用架构](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：在任何部署模式下保持稳定运行 ID 和权威状态。
+- [AI 应用架构](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：在任何部署模式下保持稳定运行 ID 和权威状态。
 - [GPU 推理容量与 KV 缓存](#4.%20KV%20%E7%BC%93%E5%AD%98%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%80%8E%E6%A0%B7%E5%86%B3%E5%AE%9A%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F%EF%BC%9F)：测量自托管容量与请求调度。
-- [生产可观测性与反馈](#21.%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)：用线上结果决定保留或回滚。
+- [生产可观测性与反馈](#26.%20%E5%A6%82%E4%BD%95%E7%9B%91%E6%8E%A7%E7%94%9F%E4%BA%A7%E4%B8%AD%E7%9A%84%20AI%20%E5%8A%9F%E8%83%BD%E5%B9%B6%E5%AE%89%E5%85%A8%E5%9C%B0%E6%94%B9%E8%BF%9B%EF%BC%9F)：用线上结果决定保留或回滚。
 
 > [!info]- 来源
 > - **托管服务的数据和留存条件必须检查具体控制与 API 功能：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored with the OpenAI API”和“Data retention controls”；这些条款只适用于该平台，不能代替其他提供方的合同评估。
 > - **当前目录、API 能力和用量价格会变化：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；页面用于查当时具体模型与价格，不提供跨部署方式的总拥有成本比较。
 > - **逐步替换与修订回退的具体例子：** Kubernetes，[Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)，文档版本 v1.37，核对日期：2026-11-06，“Rolling Back a Deployment”和“Rolling Update”；这里只将其作为 Kubernetes 实现实例。模型、提示词、数据版本及外部副作用仍需应用级协调。
 > - **服务密钥、流量和上线准备：** OpenAI，[Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices)，核对日期：2026-11-06；“API keys”与“Choose a model”章节用于提示凭据与生产边界，不作为平台无关清单。
-## 8. 怎样写出清楚且可验收的提示词？
+## 9. 怎样写出清楚且可验收的提示词？
 
 提示词要把模型本轮该完成的事、可用材料、约束和输出说清楚；改动应针对已观察到的失败，并用同一组案例检查是否真的改善。提示只能影响模型如何处理输入，不能替应用取回没提供的事实、核实权限、执行动作或保证结论正确。
 
@@ -1043,9 +1427,9 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 返回构建 ID、证据状态、来源调用 ID、失败步骤、测试名、预期值、实际值、退出状态、根因状态及一句说明。已有可用记录（含可靠复用的历史观察）时设为 `available`；没有可用记录且尚未尝试取回时设为 `not_requested`、来源 ID 设为 `null`；尝试取回但被拒或失败且仍无可用记录时设为 `unavailable`，保留已知调用 ID，不填造日志字段。
 ~~~
 
-应用至少要把 `c1` 的请求与结果，或从权威运行记录整理出的等价观察，放进本轮输入。模型不会自动看到日志服务、之前所有会话或当前持续集成（CI）手册。若用户看过这个回答后再问“按当前手册能否重跑”，那是新的用户轮次：应用需要组装先前 `c1` 观察和当前手册证据；继续阅读[每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)与[怎样从授权文档中检索并核验回答依据](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)。
+应用至少要把 `c1` 的请求与结果，或从权威运行记录整理出的等价观察，放进本轮输入。模型不会自动看到日志服务、之前所有会话或当前持续集成（CI）手册。若用户看过这个回答后再问“按当前手册能否重跑”，那是新的用户轮次：应用需要组装先前 `c1` 观察和当前手册证据；继续阅读[每次模型调用应看到什么，应用又应持久化什么](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)与[怎样从授权文档中检索并核验回答依据](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)。
 
-可以把模型看作能处理已给材料的协作者，但不能假定它知道未输入的产品规则、资料版本、调用者权限或下游格式。提示中说“有权限时再读取”不能代替权限检查；必须由应用在工具执行前校验。更多工具执行边界见[应用怎样设计并执行模型提出的工具请求](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
+可以把模型看作能处理已给材料的协作者，但不能假定它知道未输入的产品规则、资料版本、调用者权限或下游格式。提示中说“有权限时再读取”不能代替权限检查；必须由应用在工具执行前校验。更多工具执行边界见[应用怎样设计并执行模型提出的工具请求](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
 
 ### 让输入、约束和输出形成同一份任务说明
 
@@ -1058,7 +1442,7 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 | 推断边界 | 没有代码或请求路径证据时，根因标为未知。 | 把 `400 → 200` 的断言差异直接说成某个校验器缺陷。 |
 | 输出约定 | 固定字段、语言和未知值的表达方式。 | 忘掉退出状态、混淆预期与实际，或让下游无法解析。 |
 
-先把用户请求理解为任务目标，再把用户附上的日志、引用文段、检索片段和工具结果标为待分析材料。目标表达用户意图，但不会自行授予系统权限；材料中的指令性文字也不因此成为应用规则。标记能减少边界歧义，却不是安全隔离，也不证明材料真实。送入模型前，应用还要按当前调用者选择并授权可见资料；参见[生产 AI 如何阻止不可信内容诱导模型越权](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
+先把用户请求理解为任务目标，再把用户附上的日志、引用文段、检索片段和工具结果标为待分析材料。目标表达用户意图，但不会自行授予系统权限；材料中的指令性文字也不因此成为应用规则。标记能减少边界歧义，却不是安全隔离，也不证明材料真实。送入模型前，应用还要按当前调用者选择并授权可见资料；参见[生产 AI 如何阻止不可信内容诱导模型越权](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
 具体 API 可能把持久指令与本轮输入放在不同角色，并为 system（系统）、developer（开发者）、user（用户）消息定义优先级；使用该 API 当前文档规定的语义，不要把一个提供商的角色规则套到另一个。稳定的任务规则与语气可版本化管理，本轮记录用有类型的输入传入。可复用提示和示例应使用合成资料，不要硬编码真实姓名、工单号、秘密或会话历史。
 
@@ -1066,7 +1450,7 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 
 如果基线提示已经能处理 `c1`，不必为了完整而添加示例。若一组验证案例显示模型持续把不同失败类别混在一起，few-shot examples（少样本示例）可以呈现仅靠文字难以描述的边界。例如，用合成记录并列“断言实际值与预期不符”及“测试尚未运行就发生网络中断”；前者报告断言差异但不推断代码原因，后者报告没有测试结果。例子要与指令一致，避免把偶然措辞教成规则。
 
-保留未参与改写的案例来检查改动：断言失败时是否仍保留 `400` 和 `200`，网络中断时是否避免声称测试失败，日志缺失或拒绝访问时是否明确说证据不足。若样例集只包含提示词编写时用过的 `c1`，模型可能只是记住那种表述。评估时应检查事实字段、证据支持、缺证时的行为及输出格式；更完整的验收设计见[如何判断模型是否满足任务契约](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+保留未参与改写的案例来检查改动：断言失败时是否仍保留 `400` 和 `200`，网络中断时是否避免声称测试失败，日志缺失或拒绝访问时是否明确说证据不足。若样例集只包含提示词编写时用过的 `c1`，模型可能只是记住那种表述。评估时应检查事实字段、证据支持、缺证时的行为及输出格式；更完整的验收设计见[如何判断模型是否满足任务契约](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 ### 机器消费时分开检查结构和含义
 
@@ -1124,8 +1508,8 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 
 ### 相关知识
 
-- [简单提示失败后，怎样选择并评估提示技巧？](#9.%20%E7%AE%80%E5%8D%95%E6%8F%90%E7%A4%BA%E5%A4%B1%E8%B4%A5%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E5%B9%B6%E8%AF%84%E4%BC%B0%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7%EF%BC%9F)：从具体失败信号选择少样本、拆分步骤或工具反馈。
-- [每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定 `c1`、历史和证据中哪些内容进入新一轮。
+- [简单提示失败后，怎样选择并评估提示技巧？](#10.%20%E7%AE%80%E5%8D%95%E6%8F%90%E7%A4%BA%E5%A4%B1%E8%B4%A5%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E5%B9%B6%E8%AF%84%E4%BC%B0%E6%8F%90%E7%A4%BA%E6%8A%80%E5%B7%A7%EF%BC%9F)：从具体失败信号选择少样本、拆分步骤或工具反馈。
+- [每次模型调用应看到什么，应用又应持久化什么](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定 `c1`、历史和证据中哪些内容进入新一轮。
 - [AI 服务怎样把一条消息变成完整回答](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)：本章使用的构建 42 运行主线。
 
 > [!info]- 来源
@@ -1134,15 +1518,15 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 > - **按失败改提示、组织消息、代码管理版本和评估。** OpenAI API，[Prompting](https://developers.openai.com/api/docs/guides/prompting)，检查于 2026-11-06，`Refine your prompt`、`Prompts in your application`；含 OpenAI 可复用 prompt 对象退场安排。
 > - **提示写法与模型差异。** OpenAI API，[Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)，检查于 2026-11-06，`Version prompts in code`、`Message formatting with Markdown and XML`、`Few-shot learning`；该页对不同模型家族的建议不能互换为统一配方。
 > - **结构约束的范围。** OpenAI API，[Structured model outputs](https://developers.openai.com/api/docs/guides/structured-outputs)，检查于 2026-11-06，JSON mode、Structured Outputs、拒答和 schema limitations 小节；支持哪些 JSON Schema 特性取决于接口能力。
-## 9. 简单提示失败后，怎样选择并评估提示技巧？
+## 10. 简单提示失败后，怎样选择并评估提示技巧？
 
-先用[提示工程基础](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)建立清楚的 zero-shot（零样本）基线，再看代表性失败究竟来自提示歧义、输入证据缺失，还是下游校验不足。只有第一类问题主要靠提示词解决；其他情况应补材料、调用工具或修复运行时。提示技巧要按“失败信号 → 最小改动 → 同集评估”选择，不按名称堆叠。以下构建 42、网络中断和缺日志情形均为合成示例。
+先用[提示工程基础](#9.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)建立清楚的 zero-shot（零样本）基线，再看代表性失败究竟来自提示歧义、输入证据缺失，还是下游校验不足。只有第一类问题主要靠提示词解决；其他情况应补材料、调用工具或修复运行时。提示技巧要按“失败信号 → 最小改动 → 同集评估”选择，不按名称堆叠。以下构建 42、网络中断和缺日志情形均为合成示例。
 
 ### 先分清构建 42 的失败是哪一类
 
 首次运行的工具结果 `c1` 显示：`unit-tests` 中 `reject_empty_name` 预期 HTTP `400`、实际 `200`，退出状态为 `1`。它证明了断言差异，没有证明代码根因。如果模型看到这些字段，却把结果写成“输入校验器必然有缺陷”，提示改动应限制根因推断；如果字段没有进入本轮输入，追加“请认真思考”也补不回日志。
 
-同一事件能用于比较两种输入条件不同的问题。原问题“构建 42 为什么失败”可以在读到 `c1` 后继续回答；用户再问“按当前持续集成（CI）手册应否重跑”则开启新一轮，应用需要把权威运行记录中的 `c1` 与本轮适用的手册证据重新组装。是否仍开放原工具、如何检索当前手册，分别由[上下文工程](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)和[RAG](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)解释。提示技巧不能代替这项证据交接。
+同一事件能用于比较两种输入条件不同的问题。原问题“构建 42 为什么失败”可以在读到 `c1` 后继续回答；用户再问“按当前持续集成（CI）手册应否重跑”则开启新一轮，应用需要把权威运行记录中的 `c1` 与本轮适用的手册证据重新组装。是否仍开放原工具、如何检索当前手册，分别由[上下文工程](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)和[RAG](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)解释。提示技巧不能代替这项证据交接。
 
 先检查一批代表性错误，再按能观测到的症状选择变化：
 
@@ -1157,7 +1541,7 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 
 ### 例子只有在边界不清时才增加
 
-如果零样本指令下，构建日志的两类事件反复被混淆，可以添加两条简短、互相区分的合成示例。以下只展示关键观察与结论，供说明分类边界，不是[基础章](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)的完整 JSON 输出对象：
+如果零样本指令下，构建日志的两类事件反复被混淆，可以添加两条简短、互相区分的合成示例。以下只展示关键观察与结论，供说明分类边界，不是[基础章](#9.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)的完整 JSON 输出对象：
 
 ~~~text
 输入：测试断言写明 expected=HTTP 400，日志为 actual=HTTP 200。
@@ -1175,7 +1559,7 @@ chain-of-thought（思维链，CoT）提示让模型生成最终答案前的中�
 
 近年的证据让这个边界更清楚：OpenAI 当前针对 reasoning models（推理模型）的指南建议从直接、简短的提示开始，先试零样本；对这类模型显式要求“逐步思考”可能没有收益，有时还会降低表现。2025 年的一项 EMNLP Findings 数学实验在 Qwen2.5 系列上发现，CoT 示例相对零样本 CoT 未提升推理表现，主要帮助输出形式；另一项 2024 年研究在隐式统计学习、视觉识别和含例外模式分类等特定任务中观察到显式 CoT 的性能下降。它们并不说明所有模型都不需要分步，也不能替代对目标模型和任务的实测。
 
-因此，若失败是模型没有保留 `c1` 中的关系，不要要求冗长的私有思维过程；要求它返回可核验的中间字段即可：`step=unit-tests`、`failed_test=reject_empty_name`、`expected=HTTP 400`、`actual=HTTP 200`、`root_cause_status=unknown`、`root_cause=null`。字段名和值与[基础章的输出约定](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)一致，应用可逐项与工具结果比较。若困难来自多个相互依赖的转换，则把检查点拆成程序可验证的结构化结果。该结构能暴露哪里发生了错误，但不能证明解释忠实描述了模型的内部计算。
+因此，若失败是模型没有保留 `c1` 中的关系，不要要求冗长的私有思维过程；要求它返回可核验的中间字段即可：`step=unit-tests`、`failed_test=reject_empty_name`、`expected=HTTP 400`、`actual=HTTP 200`、`root_cause_status=unknown`、`root_cause=null`。字段名和值与[基础章的输出约定](#9.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)一致，应用可逐项与工具结果比较。若困难来自多个相互依赖的转换，则把检查点拆成程序可验证的结构化结果。该结构能暴露哪里发生了错误，但不能证明解释忠实描述了模型的内部计算。
 
 ### 多个答案可以投票，但票数不是证据
 
@@ -1192,7 +1576,7 @@ prompt chaining（提示词链）把一个任务拆成顺序模型调用，并�
 
 多一次模型调用不是免费的可靠性。一般的两阶段通过率是 $P(S_1) \times P(S_2 \mid S_1)$；作一个明确的玩具假设：第一步通过率为 $0.95$，第一步通过后第二步通过率也为 $0.95$，中间的确定性门控能挡住不合格字段，则两阶段都通过的概率为 $0.95 \times 0.95=0.9025$，约 $90.3\%$。若还假设两次调用独立，这也等于两个通过事件概率的乘积。它不是实际系统可靠性数据；共同的输入错误会使失败相关，门控也可能拒绝原本可用的输出，有界重试又会改变最终结果。实际比较需记录阶段通过率、端到端通过率、额外调用、延迟和成本。
 
-更开放的 ReAct（Reason + Act，推理与行动）把模型决定与环境动作、观察结果交替进行。原论文在知识问答、事实核验和交互式环境任务上评估这种反馈路径。一次用户轮次可以包含多次模型调用：模型在首次调用提出 `c1`，应用执行查询，再把观察交给同一用户轮次的后续模型调用，由它继续回答或提出下一步。用户看过回答后再问“按当前手册应否重跑”才开启新用户轮次；应用须重新组装 `c1` 观察和适用手册证据。构建 42 的 `c1` 就是这个基本交接；实际使用工具的请求、调度和结果 ID 由[工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)展开。ReAct 论文的实验也不意味着任意工具链都正确、安全或值得启动。
+更开放的 ReAct（Reason + Act，推理与行动）把模型决定与环境动作、观察结果交替进行。原论文在知识问答、事实核验和交互式环境任务上评估这种反馈路径。一次用户轮次可以包含多次模型调用：模型在首次调用提出 `c1`，应用执行查询，再把观察交给同一用户轮次的后续模型调用，由它继续回答或提出下一步。用户看过回答后再问“按当前手册应否重跑”才开启新用户轮次；应用须重新组装 `c1` 观察和适用手册证据。构建 42 的 `c1` 就是这个基本交接；实际使用工具的请求、调度和结果 ID 由[工具设计与函数调用](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)展开。ReAct 论文的实验也不意味着任意工具链都正确、安全或值得启动。
 
 ### 让自动生成的提示候选接受同一套验收
 
@@ -1206,10 +1590,10 @@ Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索�
 
 ### 相关知识
 
-- [怎样写出清楚且可验收的提示词？](#8.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)：建立任务、输入边界和输出契约的简单基线。
-- [每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：解释新一轮如何重新选取 `c1`、历史和政策材料。
-- [怎样从授权文档中检索并核验回答依据](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：当问题需要当前手册或外部证据时，负责检索与来源核验。
-- [怎样判断模型是否满足任务契约](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计固定案例、留出集和发布判据。
+- [怎样写出清楚且可验收的提示词？](#9.%20%E6%80%8E%E6%A0%B7%E5%86%99%E5%87%BA%E6%B8%85%E6%A5%9A%E4%B8%94%E5%8F%AF%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9F)：建立任务、输入边界和输出契约的简单基线。
+- [每次模型调用应看到什么，应用又应持久化什么](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：解释新一轮如何重新选取 `c1`、历史和政策材料。
+- [怎样从授权文档中检索并核验回答依据](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：当问题需要当前手册或外部证据时，负责检索与来源核验。
+- [怎样判断模型是否满足任务契约](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)：设计固定案例、留出集和发布判据。
 
 > [!info]- 来源
 > 本章的构建 42 及网络中断、缺日志案例均为合成示例；算术表决和阶段成功率也为手工演算。研究结论保留原文任务与模型范围。
@@ -1220,13 +1604,13 @@ Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索�
 > - **自一致性解码。** Wang et al., [“Self-Consistency Improves Chain of Thought Reasoning in Language Models,” arXiv v1](https://arxiv.org/abs/2203.11171v1), 2022-03-21，摘要与 §§2–4；论文比较若干算术与常识推理基准，样本收益和成本取决于其设置。
 > - **自动指令候选生成与选择。** Zhou et al., [“Large Language Models Are Human-Level Prompt Engineers,” arXiv v2](https://arxiv.org/abs/2211.01910v2), 2023-03-10，§§3–5；包含候选指令生成、评分函数和 24 个指令归纳任务与 21 个精选 BIG-Bench 任务的实验。
 > - **推理和行动反馈循环。** Yao et al., [“ReAct: Synergizing Reasoning and Acting in Language Models,” ICLR 2023 / arXiv v3](https://arxiv.org/abs/2210.03629v3)，2023-03-10，§§2–4；论文涵盖 HotpotQA、FEVER、ALFWorld 和 WebShop 等评测任务。
-## 10. 每次模型调用应看到什么，应用又应持久化什么？
+## 11. 每次模型调用应看到什么，应用又应持久化什么？
 
 模型本轮能看到的输入称为 context（上下文）。模型读取的是本次调用最终组装出的内容；如果服务根据会话 ID 自动加入历史，应用也要按该服务的会话语义理解实际输入。模型不会自行查询应用数据库或日志。Prompt engineering（提示工程）侧重指令和样例的写法；**context engineering（上下文工程）**则在每次推理前，把可用的指令、工具、历史、证据与任务状态选成一份足以完成下一步的输入。上一章的 build 42 样板中，先前运行通过 `read_build_log` 得到绑定于构建 42 的 `c1` 日志结果；本章接着处理开发者看过失败后的新一轮追问。[AI 服务怎样把一条消息变成完整回答？](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)
 
 ### 一次推理看到的不是整段会话
 
-想象开发者已经从先前回答看到构建 42 的测试失败，现在开启新一轮追问：“按当前 CI 手册，这个构建该重跑吗？”这是本章的**合成变体**：应用从权威运行记录取回原有 `c1` 和对应日志观察，再为本轮检索手册。`CI-RETRY-v3` 是为演示检索结果而虚构的通用公开手册条目，不代表任何组织政策。它规定只对工作节点（worker）或网络中断重试，断言失败须先调查。
+想象开发者已经从先前回答看到构建 42 的测试失败，现在开启新一轮追问：“按当前 CI 手册，这个构建该重跑吗？”这是独立逻辑任务 `run-r42-8`；在本合成案例中，应用按当前调用者权限从旧运行 `run-r42-7` 的权威记录取回 `c1` 和对应日志观察，不沿用旧 `runId`。然后它为本轮检索手册。`CI-RETRY-v3` 是为演示检索结果而虚构的通用公开手册条目，不代表任何组织政策。它规定只对工作节点（worker）或网络中断重试，断言失败须先调查。
 
 回答这次追问的输入要把这些已确认事实连在一起：应用指令、当前问题、从权威运行记录取回的 `c1` 与对应日志观察，以及检索得到并保留来源标识的手册段落。`c1` 可以作为原请求和返回结果，也可以由应用根据权威记录构建为具名观察；重要的是能追溯到 `build_id=42` 和真实日志。只有当本轮仍开放该只读工具、且模型可能再次调用它时，才需包含相应工具定义。旧消息即使由会话服务续接，也要判断是否仍影响当前决定。
 
@@ -1247,6 +1631,8 @@ Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索�
 >
 > 若还把一段已经解决、与构建 42 无关的旧对话 `Earlier conversation about a different build, already resolved.` 放入输入，它要 10 个 token，合计就成 151，超过本例预算 6 个。先删除这段无关历史，保留 `expected=400`、`actual=200`、`reject_empty_name` 和来源版本，因为这些字段会改变判断。实际系统还要计入角色标记、结构化工具字段、其他模态和输出预留，并用目标模型支持的方式估算或查看用量。
 
+本轮答案应明确说：`c1` 记录的是断言失败；按 `CI-RETRY-v3` 不自动重跑，应先调查。是否人工重跑需另按授权流程判断；`c1` 本身不足以断定代码根因。
+
 > [!info] 请求 ID 连接请求与观察
 > 这次回答调用保留 `c1` 的请求和同 ID 的结果，模型才能把日志观察追溯到 `build_id=42`。若本轮不再开放工具，应用也可将两者从权威运行记录正规化为带 `c1` 和构建 ID 的观察。运行时仍须保留权威事件记录；模型上下文只是本轮输入的一种表达。
 
@@ -1263,9 +1649,9 @@ Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索�
 
 摘要是有损变换，不是权威记录。比如把构建 42 记成“单测失败”会丢失测试名与 `400 → 200` 的断言差异；再把“需要检查”写成“代码校验已失败”则会混淆观察和推测。摘要应保留原始记录的 ID、版本或位置，让下一步能在需要时回到原文。若来源已删除或权限改变，重新读取也必须重新校验访问范围。
 
-**Offload（外置状态）**适合原始日志、完整文件或会话之外的长期资料：持久层保存原件与标识，上下文只带本轮需要的片段或可查询 ID。**Just-in-time retrieval（按需检索）**减少预先复制整库的成本，但会增加一次或多次工具调用；检索端还要正确应用授权和版本条件。[从授权文档中检索证据](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)说明文档更新如何进入索引以及返回模型前应检查什么。
+**Offload（外置状态）**适合原始日志、完整文件或会话之外的长期资料：持久层保存原件与标识，上下文只带本轮需要的片段或可查询 ID。**Just-in-time retrieval（按需检索）**减少预先复制整库的成本，但会增加一次或多次工具调用；检索端还要正确应用授权和版本条件。[从授权文档中检索证据](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)说明文档更新如何进入索引以及返回模型前应检查什么。
 
-**隔离任务**有助于让并行研究或权限不同的 worker（工作者）只接触必要信息，但不会自动共享主流程的记忆。交接中要明确目标、输入证据、权限、输出格式和不确定项；主流程保留来源并自行判断结论。若子任务都依赖同一批近期状态，先比较“一个主循环按需加载工具/技能”与“新建独立上下文”在质量、成本和时延上的差别，再决定是否拆分。[编排模式](#14.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)
+**隔离任务**有助于让并行研究或权限不同的 worker（工作者）只接触必要信息，但不会自动共享主流程的记忆。交接中要明确目标、输入证据、权限、输出格式和不确定项；主流程保留来源并自行判断结论。若子任务都依赖同一批近期状态，先比较“一个主循环按需加载工具/技能”与“新建独立上下文”在质量、成本和时延上的差别，再决定是否拆分。[编排模式](#19.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)
 
 ### 上下文与应用状态分开保存
 
@@ -1290,11 +1676,31 @@ Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索�
 > [!info]- 研究案例：状态遗忘与跨任务复用
 > Manus 报告批量审阅 20 份简历时观察到重复动作，并提出用结构化变体打破模式；这是其系统中的观察和待评估假设，不能支持向当前上下文注入无关格式变化。
 >
-> *Scaling Discovery Requires Forgetting* 在四类带外部评分的搜索任务中比较保留与清空搜索状态后从当前最佳候选重启；它不建立一般对话或生产运行的重置规则。GitSwarm 用共享分支仓库和显式语义依赖复用中间产物：Git 的物理 `parent` 提交记录 worker 开始工作时的树，`informed_by=` 则记录作者声明的语义来源，必须包含 parent，也可指向其他分支产物；来源关系不单独证明因果。其 worker 模型在一次运行中保持固定。Harness² 区分任务级尝试与另行积累的 harness 经验，其结果受特定框架、模型和专业任务基准限制。保存和重读一个经验也不证明它改善了新任务结果，应按相同验收条件对照。[LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
+> *Scaling Discovery Requires Forgetting* 在四类带外部评分的搜索任务中比较保留与清空搜索状态后从当前最佳候选重启；它不建立一般对话或生产运行的重置规则。GitSwarm 用共享分支仓库和显式语义依赖复用中间产物：Git 的物理 `parent` 提交记录 worker 开始工作时的树，`informed_by=` 则记录作者声明的语义来源，必须包含 parent，也可指向其他分支产物；来源关系不单独证明因果。其 worker 模型在一次运行中保持固定。Harness² 区分任务级尝试与另行积累的 harness 经验，其结果受特定框架、模型和专业任务基准限制。保存和重读一个经验也不证明它改善了新任务结果，应按相同验收条件对照。[LLM 评估方法](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
 
+#### 跨运行的记忆怎样写入、检索、更新和忘记？
+
+同一合成追问在新任务 `run-r42-8` 中进行；旧的 `run-r42-7` 仍是 build 42 的独立运行，`c1` 是其中的历史证据，不能把旧 `runId` 当成新任务的身份。之后，用户 `user-42` 在该任务中又明确说“以后摘要默认用中文”；应用读取的虚构手册 `CI-RETRY-v3@fixture-r1` 规定“工作节点或网络中断可重跑；断言失败先调查”。这三条信息分别属于用户偏好、单次任务证据和可能跨任务复用的公开规则。LangGraph 的 thread 检查点服务于运行内短期状态；跨 thread 的 Store 提供存取条目和 namespace 的原语，应用仍负责按用户和来源授权。[RAG 章](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)展开检索内容的来源和访问控制。
+
+| 范围 | 可读记录 | 状态与读取条件 |
+|---|---|---|
+| 用户偏好 | `user-42：以后摘要默认用中文`，来源是用户在 `run-r42-8` 的明确要求 | 已确认、合成示例中 30 天后过期；只供认证后的 `user-42` 使用。 |
+| 单次任务证据 | `run-r42-7：c1 显示 build 42 的 reject_empty_name 预期 400、实际 200` | 只属于旧 run。`run-r42-8` 按当前授权引用它时要明确标成历史证据，不能把它当成当前观察。 |
+| 公开规则 | `fixture-publisher：CI-RETRY-v3@fixture-r1` | 仅当应用既有保留和授权策略允许跨 run 保存、使用时才共享；读取时检查当前来源版本、状态和适用范围。 |
+
+| 操作 | 记录如何变化 |
+|---|---|
+| 写入 | 只有用户明确要求未来沿用“中文摘要”时才存偏好；若只是要求本轮使用中文，不写长期记忆。公共来源是否保留和跨 run 复用依应用已经确定的保留及授权策略；公开信息的每次读取不需要另行取得一份新许可。 |
+| 按范围读取 | 先认证调用者，再查其用户偏好；`run-r42-8` 按权限引用 `run-r42-7` 的 `c1`，并取当前可读手册。检索结果还要核对条目状态、到期条件、当前授权及来源版本。 |
+| 纠正或更新 | 用户后来改为“原文保留英文，只把结论摘要写中文”时，用这条新确认更新偏好版本，并让旧值及其缓存、派生摘要停止命中。来源发布新版本时，先标旧版本过期，再按当前授权取新版本。 |
+| 失效或遗忘 | 到期、撤回或授权变化时，先阻止读取，再清除检索索引和缓存中的副本。用户要求忘记偏好时，也清除含旧偏好的跨 run 摘要与可恢复 checkpoint；删除审计只保留必要且不含原文的信息。 |
+
+过期检查也能避免无效重跑：如果缓存里还留着合成旧版 `CI-RETRY-v2@fixture-r0`（“任何失败都重跑”），它会把 build 42 的断言失败误导成重跑。`run-r42-8` 读取时发现缓存版本与当前已授权来源 `CI-RETRY-v3@fixture-r1` 不符，拒绝旧命中并重新核验；v3 规定断言失败先调查，因此不按旧缓存自动重跑。这里展示的是应用的版本与授权检查，不能仅靠向量相似度接受过期记忆。
+
+运行状态、用户偏好和共享来源由各自的 owner（持有者）与 scope（范围）隔离。忘记用户偏好不删除 `run-r42-7` 已提交的副作用账本或来源发布者自己的记录；发布者撤回公开规则则不应删除用户偏好。把某次处理方式提升成共享经验，还要由有权来源确认适用范围，并按[Agent 改进与版本验收](#25.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)用独立样本验证；一次运行成功或模型记住规则都不足以推广。
 ### 下一章怎样接手
 
-本章给每次模型调用建立边界：应用持有身份和事实来源，按需组装模型可见内容，必要时将工具请求或检索结果作为带来源的观察返回。接下来，RAG 章从构建 42 的日志已知、而“如何解释或重跑”仍需当前手册支持的状态开始，详细说明文档如何分块、授权、更新、排序并进入上下文。模型请求的字段与副作用如何执行和恢复则由[工具契约](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)承接。
+本章给每次模型调用建立边界：应用持有身份和事实来源，按需组装模型可见内容，必要时将工具请求或检索结果作为带来源的观察返回。接下来，RAG 章从已知 `c1`、需要在新任务中取得当前手册依据的状态开始，详细说明文档如何分块、授权、更新、排序并进入上下文。模型请求的字段与副作用如何执行和恢复则由[工具契约](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)承接。
 
 > [!info]- 来源
 > 本章的 145 token 演算由 `tiktoken 0.12.0` 的 `cl100k_base` 对表中原始文本逐段计算；消息封装与真实 provider 用量不包含在该演算中。
@@ -1308,7 +1714,8 @@ Automatic Prompt Engineer（APE，自动提示工程）把指令视为待搜索�
 > - **跨 episode 的共享产物与语义依赖。** Shah et al., [“GitSwarm: Decentralized Compounding Inference,” arXiv v1](https://arxiv.org/html/2610.04862v1), 2026-10-04，§§2.2、3.3–3.4、4。`parent` 与 `informed_by=` 各自表达的来源关系只按论文定义理解。
 > - **任务级和 harness 级经验积累。** Xu et al., [“Harness²: Recursive Agent Harnessing for an Open World,” arXiv v1](https://arxiv.org/html/2610.14224v1), 2026-10-09，§2.3。文中基准和模型配置限制外推范围。
 > - **演算 tokenizer。** OpenAI [`tiktoken` 0.12.0 源码与 `cl100k_base` 编码配置](https://github.com/openai/tiktoken/tree/0.12.0)；该 tokenizer 不等同于所有模型的线上请求序列化。
-## 11. 怎样从授权文档中检索并核验回答依据？
+> - **thread 检查点与跨 thread Store 的边界、namespace 与条目读写/删除：** LangGraph Python [1.2.20](https://pypi.org/project/langgraph/1.2.20/)；在线文档滚动更新，检查于 2026-11-09：[Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) 的 Checkpointer vs. store、[Stores](https://docs.langchain.com/oss/python/langgraph/stores) 的 Basic usage / Namespace design / Base contract，以及 [Memory](https://docs.langchain.com/oss/python/langgraph/add-memory) 的 Add short-term memory / Add long-term memory。Store 提供存储原语；owner 授权、撤权传播、保留期限和派生内容清理仍是应用契约。
+## 12. 怎样从授权文档中检索并核验回答依据？
 
 Retrieval-augmented generation（检索增强生成，RAG）把外部资料选入模型本轮输入，让回答能引用可更新、可核验的来源。它把“哪些资料可用、从哪里找到、怎样带进模型”变成应用责任；检索和引用仍需分别验证。
 
@@ -1349,7 +1756,7 @@ flowchart TD
 
 调用者权限应由可信应用逻辑决定，授权和有效版本条件要带入每条检索查询。`tenant_id`、区域、文档状态或版本等字段能表达过滤，但只有元数据正确、条件不被绕过并按权威状态复核时才有意义。应用只把过滤、版本及必要授权复核都通过的片段交给融合、外部重排和模型；即使某段比当前手册更相关，只要超出开发者当前的访问范围，也不能进入候选。不能为凑足 `top-k`（前 k 个候选）放宽限制。
 
-授权边界与近似索引的内部扫描顺序是两回事。以 pgvector 的 Hierarchical Navigable Small World（HNSW，分层可导航小世界）为例，近似索引可能先找近邻再在同一 SQL 查询中应用 `WHERE`；匹配行比例低时，返回数和召回率会下降。SQL 条件限制返回哪些行，但共享近似索引的扫描还可能通过结果数量、分数或时延暴露其他租户文档的存在。需要更严格隔离时，应让搜索在获授权范围内进行，或按租户、信任域分离索引；不能把结果过滤等同于完整隔离。扫描数量、迭代扫描或按范围分区可能改善授权集合上的召回与时延；也可比较在小授权子集上精确搜索。
+授权边界与近似索引的内部扫描顺序是两回事。以 pgvector 的 [Hierarchical Navigable Small World（HNSW，分层可导航小世界）图搜索](#13.%20HNSW%20%E6%80%8E%E6%A0%B7%E9%80%90%E5%B1%82%E6%89%BE%E8%BF%91%E9%82%BB%EF%BC%8C%E6%80%8E%E6%A0%B7%E7%9F%A5%E9%81%93%E6%90%9C%E7%B4%A2%E5%BE%97%E5%A4%9F%E4%B8%8D%E5%A4%9F%EF%BC%9F)为例，近似索引可能先找近邻再在同一 SQL 查询中应用 `WHERE`；匹配行比例低时，返回数和召回率会下降。SQL 条件限制返回哪些行，但共享近似索引的扫描还可能通过结果数量、分数或时延暴露其他租户文档的存在。需要更严格隔离时，应让搜索在获授权范围内进行，或按租户、信任域分离索引；不能把结果过滤等同于完整隔离。扫描数量、迭代扫描或按范围分区可能改善授权集合上的召回与时延；也可比较在小授权子集上精确搜索。
 
 > [!warning] 检索相关性不会授予读取权限
 > 未授权或已经撤回的片段，即使语义相关，也不能放进提示词。文档中的文字同样只是待解释的数据；恶意内容里写着“忽略上面的指令”不会因此成为系统指令，也不能批准工具动作。
@@ -1428,6 +1835,89 @@ RRF 将当前重试规则排到最前，同时保留下一名的 HTTP 约定。�
 
 一项 2026 年金融问答预印本在含文本和表格的基准上报告：混合检索加神经重排表现强，BM25 胜过所测稠密基线，HyDE 与多查询对精确数值题帮助有限。主比较按整篇文档检索；这些观察限于该基准、模型和测量方式，提示表格与精确数字任务应单独评估检索路径。
 
+### 相同文本重复入库时怎样复用 embedding？
+
+同一手册段落可能因重建索引、异步重试或被不同文档引用而重复送去编码。Embedding cache（嵌入缓存）保存的是“特定输入表示契约下算出的向量”，减少重复模型请求；它不是检索结果缓存，不保存某个问题的 top-k 列表，也不意味着两份来源可以合并。
+
+以合成公开段落 CI-RETRY-v3#assertion-failure 为例。调用方先完成标题、模板和动态字段的拼装与预处理，再将实际交给编码器的完整文本作为 `canonical_text`。缓存键要散列这份实际输入；正文相同但标题或模板前缀不同，编码器看到的文本不同，就不能共用向量。只有完整输入字节与编码契约都一致，才可复用：
+
+~~~text
+K = SHA256(UTF8(JSON_ARRAY((
+  cache_format_version,
+  cache_scope,
+  provider,
+  endpoint,
+  model_revision,
+  input_role,
+  output_dimension,
+  text_canonicalization_version,
+  preprocessing_version,
+  normalization_version,
+  SHA256(UTF8(canonical_text))
+))))
+~~~
+
+键字段是应用的缓存契约，不是提供方要求的 API 参数。按固定顺序把字段序列化为 JSON 数组，再做 UTF-8 与摘要；JSON 会保留字段边界，也会转义字段值内的 NUL 字符。模型别名若会变更，要用明确模型版本或内部部署代次；同名模型更新、模型切换、维度改变、编码用途不同、规范化或清理逻辑改变，均应使键变化。对于 query/document 不对称的双编码器，角色必须区分；即使某端点今天对两种角色恰好返回相同形式，应用也不应把两种语义任务默认为同一个缓存空间。服务支持缩短输出维度时，维度也要进入契约并单独重建对应索引。
+
+下面的函数假定调用方已依指定版本完成所有会改变编码器输入的标题、模板、动态字段拼装、文本清理与分块，并把实际送入编码器的最终文本原样传为 `canonical_text`；它只负责构造缓存键，不实现这些转换。
+
+~~~python
+import hashlib
+import json
+
+
+def embedding_cache_key(
+    *,
+    scope,
+    provider,
+    endpoint,
+    model_revision,
+    role,
+    dimensions,
+    canonicalization,
+    preprocessing,
+    normalization,
+    canonical_text,
+):
+    canonical_bytes = canonical_text.encode("utf-8")
+    text_digest = hashlib.sha256(canonical_bytes).hexdigest()
+    fields = (
+        "embedding-cache-v1",
+        scope,
+        provider,
+        endpoint,
+        model_revision,
+        role,
+        str(dimensions),
+        canonicalization,
+        preprocessing,
+        normalization,
+        text_digest,
+    )
+    encoded = json.dumps(
+        fields,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+~~~
+
+缓存命中后，向量值可以复用，但每份文档的索引记录仍独立：
+
+| 数据 | 例子 | 是否由相同文本命中合并 |
+|---|---|---|
+| embedding 缓存项 | 缓存键、向量、编码契约版本、生成时间 | 可以复用向量值 |
+| 文档块记录 | source_id、chunk_id、来源版本、标题位置、内容状态 | 不合并 |
+| 授权与删除状态 | tenant、ACL/策略版本、可见范围、撤回状态 | 不从缓存继承 |
+
+例如两个合成文档都包含同样的公共 CI 规则。只有二者经过标题、模板和动态字段处理后送给编码器的完整文本也相同，且缓存范围、模型修订、文档角色、维度和预处理版本都一致，才可读同一个向量值；但写入索引时仍须各存各的 source_id、chunk_id、版本和授权元数据。第二份文档因复用同一编码结果，不等于它自动获得第一份文档的权限或来源身份。
+
+若规则来源改版，但经过全部字段拼装和预处理后送给编码器的 `canonical_text` 未变，可以复用向量，同时新增版本化索引记录；若标题、模板、动态字段或正文使实际输入改变，则摘要改变并重新编码。若模型、输出维度或预处理版本变了，缓存键自然不同，需要为新契约重新编码并在独立索引代次验证后切换。旧向量不能因为长度“看起来差不多”就混入新模型空间。若只改变 ACL 而文本和模型契约不变，向量计算本身可以不变，但必须立即更新或撤下索引记录上的 ACL；每次查询仍按可信调用者身份判断权限。缓存范围字段用于避免不同安全域误共享数据，不能作为授权证明。
+
+向量是可还原或推测原文特征的派生数据，不能假定它比正文无敏感性。对敏感语料，缓存键可用密钥化摘要以减少低熵原文的字典猜测风险；日志仅记录不透明键或截断指纹，并按原文删除、保留和访问规则处理派生向量。权限撤销、来源删除或数据保留期到期时，应用仍要处置对应向量索引记录和缓存数据；命中缓存不代表可跳过删除流程。
+
+实际收益按调用量核算：给每次 embedding 请求记录 cache_hit、向量契约版本和来源索引任务 ID；比较节省的 API 请求数与 Token、缓存查找/存储成本，以及索引构建耗时。缓存缺失时仍走[有界模型 API 调用](#6.%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E6%A8%A1%E5%9E%8B%20API%20%E8%B0%83%E7%94%A8%E5%9C%A8%E9%99%90%E9%A2%9D%E3%80%81%E5%A4%B1%E8%B4%A5%E5%92%8C%E6%88%AA%E6%AD%A2%E6%97%B6%E9%97%B4%E5%86%85%E6%9C%89%E7%95%8C%EF%BC%9F)的配额、重试与截止流程；写入索引时则按[HNSW 插入与近似搜索](#13.%20HNSW%20%E6%80%8E%E6%A0%B7%E9%80%90%E5%B1%82%E6%89%BE%E8%BF%91%E9%82%BB%EF%BC%8C%E6%80%8E%E6%A0%B7%E7%9F%A5%E9%81%93%E6%90%9C%E7%B4%A2%E5%BE%97%E5%A4%9F%E4%B8%8D%E5%A4%9F%EF%BC%9F)管理向量空间、过滤和召回。
+
 ### 候选不全时怎样继续找
 
 只有在候选缺少依据或复合问题缺少其中一环时才增加查询步骤；每一步都沿用相同的授权和版本过滤，并记录它解决哪个缺口。
@@ -1455,7 +1945,7 @@ HyDE 原论文把生成段落当作零样本稠密检索的中间表示，并明
 
 将文档内容作为不可信数据提供给模型。系统提示可以要求它根据实际提供的证据回答、标出来源 ID、证据不足时停下，但这只能约束输出意图；模型可能误读或遗漏材料。应用应把每条主张映射到本轮真正交付模型的证据 ID、版本和段落，并确认它仍有效、获授权且确实支持该主张。只在授权候选里、却没有进入最终输入的片段不能被引用；`c1` 还必须能由应用运行记录绑定到构建 42 的原始日志。若两份仍有效且获授权的来源互相冲突，应按预先定义的权威性、适用范围和版本规则裁决；规则不能解决时，就展示冲突及对应段落并说明无法确定，不按检索分数任意选一份。引用标记存在，不等于来源真正支持了主张。
 
-本例的主张—证据映射可以直接写入答案：“构建 42 的 `reject_empty_name` 期望 HTTP `400`、实际为 `200`〔运行记录中的 `c1`，绑定 `build_id=42`〕。按当前 `CI-RETRY-v3#assertion-failure`，断言失败必须先调查，不能自动重跑。当前 `HTTP-CONTRACT-v1#empty-name` 也规定空名称请求应返回 `400`。先检查该请求的校验路径。”第一项只由 `c1` 的日志记录支持，第二项只由本轮实际打包的重试规则支持，第三项只由本轮打包的 HTTP 合约支持；答案没有断言未经日志确认的代码根因。
+本例的主张—证据映射可以直接写入答案：“构建 42 的 `reject_empty_name` 期望 HTTP `400`、实际为 `200`〔运行记录中的 `c1`，绑定 `build_id=42`〕。按当前 `CI-RETRY-v3#assertion-failure`，断言失败必须先调查，不能自动重跑。当前 `HTTP-CONTRACT-v1#empty-name` 也规定空名称请求应返回 `400`。基于这条日志和合约，下一步可检查该请求的校验路径。”前三项分别由本轮实际打包的 `c1`、重试规则和 HTTP 合约支持；最后一句是由已核实事实引出的排查建议，不是证据直接证明的根因。
 
 失败要按其发生阶段定位：
 
@@ -1466,7 +1956,7 @@ HyDE 原论文把生成段落当作零样本稠密检索的中间表示，并明
 | 候选中有证据，最终输入却没有。 | 融合、重排、去重、预算、截断和父块加载。 | 调整排序或组装，确认引用映射仍然准确。 |
 | 证据进了上下文，答案仍不支持或引用错位。 | 实际输入段落、版本冲突、输出中的每条主张与引用。 | 保持检索结果，单独比较提示或模型变化。 |
 
-要知道改动是否有效，应分别评估证据检索和回答生成。对固定查询集标出预期的 `doc_id`、版本与段落 ID，先看 Recall@k（前 $k$ 个候选召回率）是否取到所需依据，再看排序后的证据是否进入上下文；生成侧检查事实正确性、主张支持、引用准确和缺证时是否暂停。系统层还要统计索引新鲜度、权限拒绝、端到端时延和成本。评估集中应包括旧版本、无答案问题、空名称断言失败、工作节点中断、无权文档以及权限撤销；不能只用“答案流畅”当通过条件。RAGChecker 按主张粒度拆分检索和生成问题；Ragas、ARES 以不同方式评估上下文相关性、回答忠实度或相关性。这些自动化框架是诊断信号，应对代表性案例人工复核，并按应用的权限、更新与引用要求设验收条件，不能把框架分数当作通用合格线。[LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
+要知道改动是否有效，应分别评估证据检索和回答生成。对固定查询集标出预期的 `doc_id`、版本与段落 ID，先看 Recall@k（前 $k$ 个候选召回率）是否取到所需依据，再看排序后的证据是否进入上下文；生成侧检查事实正确性、主张支持、引用准确和缺证时是否暂停。系统层还要统计索引新鲜度、权限拒绝、端到端时延和成本。评估集中应包括旧版本、无答案问题、空名称断言失败、工作节点中断、无权文档以及权限撤销；不能只用“答案流畅”当通过条件。RAGChecker 按主张粒度拆分检索和生成问题；Ragas、ARES 以不同方式评估上下文相关性、回答忠实度或相关性。这些自动化框架是诊断信号，应对代表性案例人工复核，并按应用的权限、更新与引用要求设验收条件，不能把框架分数当作通用合格线。[LLM 评估方法](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)
 
 ### RAG、长上下文与微调的分工
 
@@ -1476,7 +1966,7 @@ HyDE 原论文把生成段落当作零样本稠密检索的中间表示，并明
 | 长上下文 | 允许把一批已知材料一起交给模型，适合需要跨材料比较的任务。 | 应用仍要选出有权使用的材料；窗口长度不保证模型可靠使用每一处内容。 |
 | 微调 | 用重复训练样例改变模型的行为、风格或输出模式。 | 不能自动提供当前文档或执行访问规则；有引用需求仍需查询外部证据。 |
 
-更大的上下文窗口只改变模型一次能接收多少输入，不会替应用选择调用者有权看的文档、同步撤回版本或按问题筛选证据。[长上下文注意力机制](#3.%20%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E6%80%8E%E6%A0%B7%E5%B0%91%E5%AD%98%E3%80%81%E5%B0%91%E8%AF%BB%E5%8E%86%E5%8F%B2%EF%BC%8C%E5%90%8C%E6%97%B6%E4%BF%9D%E7%95%99%E9%9C%80%E8%A6%81%E7%9A%84%E4%BF%A1%E6%81%AF%EF%BC%9F)解释模型内部如何表示、访问历史；模型窗口长短不是外部资料的授权与维护机制。若 corpus 很小、调用者可读全集且需要跨文档推理，把授权材料整体放入上下文可能合适；仍需应用层决定读哪些版本和如何核验。训练参数只在训练时更新；检索、输入组装和评估是运行时及验收环节，不能混称为“模型学会了最新政策”。[奖励信号如何用于推理训练](#19.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)
+更大的上下文窗口只改变模型一次能接收多少输入，不会替应用选择调用者有权看的文档、同步撤回版本或按问题筛选证据。[长上下文注意力机制](#3.%20%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E6%80%8E%E6%A0%B7%E5%B0%91%E5%AD%98%E3%80%81%E5%B0%91%E8%AF%BB%E5%8E%86%E5%8F%B2%EF%BC%8C%E5%90%8C%E6%97%B6%E4%BF%9D%E7%95%99%E9%9C%80%E8%A6%81%E7%9A%84%E4%BF%A1%E6%81%AF%EF%BC%9F)解释模型内部如何表示、访问历史；模型窗口长短不是外部资料的授权与维护机制。若 corpus 很小、调用者可读全集且需要跨文档推理，把授权材料整体放入上下文可能合适；仍需应用层决定读哪些版本和如何核验。训练参数只在训练时更新；检索、输入组装和评估是运行时及验收环节，不能混称为“模型学会了最新政策”。[奖励信号如何用于推理训练](#24.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)
 
 已有研究在公开问答集上给出不同的长上下文与 RAG 比较：一项 EMNLP 2024 评测在其资源配置下发现长上下文平均表现较高、RAG 计算成本较低；另一项 2025 复评报告了数据类型相关的差异，并指出问题与上下文相关性影响结果。它们使用的模型、任务、数据、预算与检索策略有限；应用应在自己的查询、权限和时延约束上比较，而不从论文推出统一优胜者。
 
@@ -1488,10 +1978,10 @@ Lewis 等人的 RAG 将可更新的非参数知识库与参数化生成器结合
 
 ### 相关知识
 
-- [上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定每次推理保留哪些历史、工具结果和文档段落，并管理压缩导致的信息损失。
+- [上下文工程原则](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：决定每次推理保留哪些历史、工具结果和文档段落，并管理压缩导致的信息损失。
 - [长上下文注意力](#3.%20%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87%E6%80%8E%E6%A0%B7%E5%B0%91%E5%AD%98%E3%80%81%E5%B0%91%E8%AF%BB%E5%8E%86%E5%8F%B2%EF%BC%8C%E5%90%8C%E6%97%B6%E4%BF%9D%E7%95%99%E9%9C%80%E8%A6%81%E7%9A%84%E4%BF%A1%E6%81%AF%EF%BC%9F)：解释模型内部的历史表示与选择性访问，不替应用进行授权检索。
-- [工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：解释如何执行读取日志、搜索文档等模型请求，并恢复不确定的工具状态。
-- [AI 生产安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：处理文档诱导、权限和运行时控制边界。
+- [工具设计与函数调用](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：解释如何执行读取日志、搜索文档等模型请求，并恢复不确定的工具状态。
+- [AI 生产安全](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：处理文档诱导、权限和运行时控制边界。
 
 > [!info]- 来源
 > 本章以一条不含私有资料的构建 42 合成案例演示端到端机制。名次、RRF 分数和交叉编码器示意分数均是手工演算值，不是测量结果。
@@ -1506,13 +1996,243 @@ Lewis 等人的 RAG 将可更新的非参数知识库与参数化生成器结合
 > - **混合候选和 RRF。** Thakur et al., [“BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models,” arXiv v4 / NeurIPS 2021](https://arxiv.org/abs/2104.08663)，§§3–5；Cormack, Clarke & Büttcher, [“Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods,” SIGIR 2009](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)，pp. 758–759。BEIR 的平均结果受其 18 个公开数据集和评估设置限制。
 > - **索引权限过滤与近似扫描。** [pgvector 官方 README](https://github.com/pgvector/pgvector)，当前版 `Filtering` 与 `Iterative Index Scans`；只描述该实现。[OpenAI API Retrieval](https://developers.openai.com/api/docs/guides/retrieval)，检查于 2026-11-06，`Vector store file operations`、`Chunking`、`Attribute filtering`，用于托管索引异步处理、删除一致性和默认分块参数示例。
 > - **向量搜索表示与输入。** [OpenAI API Vector embeddings](https://developers.openai.com/api/docs/guides/embeddings)，检查于 2026-11-06，向量归一化与相似度说明；DPR v3 §§2–3 支持问题和段落分别编码的通用示例。
+> - **embedding API 的模型、维度、批量输入与 usage。** [OpenAI API Embeddings create reference](https://developers.openai.com/api/reference/resources/embeddings/methods/create)，检查于 2026-11-09；当前接口支持一个或多个输入，text-embedding-3 及更新模型支持可选 dimensions。缓存键中的 provider/model 修订、角色、维度及预处理版本是应用对表示兼容性的工程约定，不是 API 规定的缓存键格式。
 > - **检索策略在文本与表格混合金融问题上的范围。** [“From BM25 to Corrective RAG: Benchmarking Retrieval Strategies for Text-and-Table Documents,” arXiv v1](https://arxiv.org/html/2604.01733v1), 2026-04-02，摘要与 §§III–IV；T²-RAGBench 含 23,088 个问题与 7,318 份文档。主比较以平均约 920 token 的整篇文档为单位（§III-D），§IV-C 的消融比较融合方式与重排深度，分块消融仍列为未来工作；混合 RRF 加 Cohere Rerank 报告 Recall@5 0.816，BM25 在该基准强于所测 dense baseline，HyDE 与多查询对精确数值题表现较弱。该预印本数据和设置有限，本文不把结果外推为通用策略。
 > - **假设文档仅用于检索。** Gao et al., [“Precise Zero-Shot Dense Retrieval without Relevance Labels,” arXiv v1](https://arxiv.org/abs/2212.10496), 2022-12-20，§§2–3；提出 HyDE 中间文本检索方法，并指出假想文档可能含有错误细节。
 > - **检索与生成分开诊断。** Ru et al., [“RAGChecker: A Fine-grained Framework for Diagnosing Retrieval-Augmented Generation,” arXiv v2](https://arxiv.org/abs/2408.08067), 2024-08-17，§§3–4；Es et al., [“Ragas: Automated Evaluation of Retrieval Augmented Generation,” arXiv v2](https://arxiv.org/abs/2309.15217v2), 2025-04-28，§§3–4；Saad-Falcon et al., [“ARES: An Automated Evaluation Framework for Retrieval-Augmented Generation Systems,” arXiv v2](https://arxiv.org/abs/2311.09476v2), 2024-03-31，§§3–4。三者的维度、评审器与校准方式不同；指标是辅助诊断框架，不代表本应用的唯一验收标准。
 > - **检索段落中的恶意指令和向量数据边界。** OWASP GenAI Security Project, [LLM01:2026 Prompt Injection](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/blob/main/2026/final/LLM01_PromptInjection.md) 与 [LLM09:2026 Vector and Embedding Weaknesses](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/blob/main/2026/final/LLM09_VectorAndEmbeddingWeaknesses.md)，检查于 2026-11-06。分别支持不可信输入与权限的分界、共享相似度搜索的跨租户探测风险及按范围检索/隔离索引；不构成完整威胁模型。
-## 12. 应用怎样设计并执行模型提出的工具请求？
+## 13. HNSW 怎样逐层找近邻，怎样知道搜索得够不够？
 
-模型的 tool call（工具调用）是一条结构化请求，不是代码执行、权限授予或成功结果。应用要在当前一轮暴露合适的工具，解释并检查请求，再由运行时执行函数，并把与该请求对应的观察交回模型。本篇的 build 42 记录是合成示例；副作用的持久提交、授权恢复和断连后的运行恢复见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)及[生产 AI 如何阻止不可信内容诱导模型越权](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
+Approximate nearest neighbor search（近似最近邻搜索，ANN）可用 Hierarchical Navigable Small World（分层可导航小世界，HNSW）图实现：高层节点较少，通常提供较长跳转；底层扩大搜索范围，再返回 top-k（最相近的 k 个候选）。它回答的是“怎样在指定距离函数下少比较一部分向量”，并不保证一定找到精确 top-k，也不负责授权。
+
+以下用一份完全合成的 2 维 continuous integration（持续集成，CI）手册 embedding（嵌入向量）讲完建图、搜索与调参。实际 RAG 的向量维数会高得多；这组小坐标只为能手算距离，不是语义 embedding、性能基准或真实用户资料。
+
+### 查询先需要一张怎样的图？
+
+HNSW 为每个节点随机抽取最高层级，层级越高节点越少。每层节点集合是下一层的子集；各层边分别选择，因此某条高层边不保证也出现在下层。高层的节点更少，边通常跨越更远距离，可先走大步，再在底层仔细搜。层级来自概率抽样，不表示该向量“重要”或拥有更高权限。
+
+本例选择 Euclidean distance（欧氏距离，L2），距离越小越近。查询向量 q=(0, 0)，六个手册块的玩具向量和归属如下；A 是最高层入口：
+
+| 节点 | 向量 | 距离 q | 合成租户标签 | 最高层 |
+|---|---:|---:|---|---:|
+| A | (6, 0) | 6 | blue | 2 |
+| B | (3, 0) | 3 | red | 1 |
+| C | (1, 0) | 1 | blue | 1 |
+| D | (0, 2) | 2 | red | 0 |
+| E | (0, 4) | 4 | red | 0 |
+| F | (0, 0.5) | 0.5 | blue | 0 |
+
+固定的简化图如下。实线表示同层边，双向可走；虚线连接相邻层，下降时仍从同名节点继续，并不新增一条层内邻接边。这幅玩具图刻意让 A—B—C 在第 1 层和第 0 层重复，方便手算从上往下移动；一般 HNSW 不要求高层边在下层重现。真实 HNSW 还可能因邻居剪枝出现非对称邻接。
+
+~~~mermaid
+flowchart TB
+    subgraph level2["第 2 层"]
+        direction LR
+        A2["A"]
+    end
+    subgraph level1["第 1 层"]
+        direction LR
+        A1["A"] --- B1["B"] --- C1["C"]
+    end
+    subgraph level0["第 0 层"]
+        direction LR
+        A0["A"] --- B0["B"] --- C0["C"] --- D0["D"] --- E0["E"]
+        C0 --- F0["F"]
+    end
+    level2 -. "下降到同名节点" .-> level1
+    level1 -. "下降到同名节点" .-> level0
+~~~
+
+节点层级逐层向下包含：A 在三层，B、C 在第 1 和第 0 层，D、E、F 只在第 0 层。入口 A 在第 2 层没有同层邻居；下降到第 1 层后，本例可沿 A—B—C 移动。各层边在一般 HNSW 中独立选择；图中的坐标、层级与边都是为本次推演固定的合成输入。
+
+### 查询怎样从入口走到 top-k？
+
+HNSW 查询分两段。上层做贪心下降：从当前入口检查同层邻居，只要邻居离 q 更近就移动过去，直到没有更近邻居，再带着当前节点降到下一层。每一层的入口只保留最佳节点，相当于 ef=1。
+
+到底层后，搜索变成有界的 best-first（优先扩展当前最有希望候选）搜索。要分清两个优先队列：
+
+- **候选队列 C_queue** 是按到 q 距离从小到大弹出的最小堆，保存接下来可扩展的节点。
+- **结果队列 W** 是按距离从大到小维护的最大堆，最多保留 ef 个当前最好节点；堆顶就是暂留集合中最远的节点。
+- **visited** 集合避免同一个图节点被反复扩展。弹出 C_queue 中最近节点后，若它比 W 当前最远节点更差，搜索就停止；否则检查邻居。只有当 W 未满或新邻居比 W 最远项更近时，新邻居才同时进入 C_queue 与 W。W 超出 ef 后只移除其中最远项；被 W 淘汰的节点仍可能留在 C_queue，之后仍可被扩展。
+
+高层手算中，A 的距离为 6，往 B 移动后为 3，再往 C 移动后为 1；C 没有更近的第 1 层邻居。于是第 0 层从 C 开始，以 ef_search（查询时保留的候选数）=3 扩展：
+
+| 步骤 | 操作 | 候选队列 C_queue（最近在前） | 结果队列 W（最远在前，最多 3 个） |
+|---|---|---|---|
+| 0 | 从节点 C 开始 | C(1) | C(1) |
+| 1 | 展开节点 C，按图中邻接顺序发现 B(3)、D(2)、F(0.5)。W 原只有 C，先让 B、D 入队；F 入队后挤掉 W 最远的 B。B 仍留在候选队列。 | F(0.5), D(2), B(3) | D(2), C(1), F(0.5) |
+| 2 | 展开 F，邻居节点 C 已访问。 | D(2), B(3) | D(2), C(1), F(0.5) |
+| 3 | 展开 D，发现 E(4)，比 W 最远的 D(2) 还差，因此不加入。 | B(3) | D(2), C(1), F(0.5) |
+| 4 | 弹出 B(3) 时，3 大于 W 当前最远距离 2，触发停止条件；不再展开 B。 | 空 | D(2), C(1), F(0.5) |
+| 5 | 返回 W，按距离重新排序。 | — | F(0.5), C(1), D(2) |
+
+B 的距离为 3；它先进入 C_queue 与 W，随后被 F 挤出 W，但仍留在 C_queue。等 F、D 均已展开，弹出的 B(3) 大于 W 最远距离 D(2)，搜索才停止。若请求 top-2，返回 F、C；若请求 top-3，则返回 F、C、D。扩大 ef_search 会让算法保留更大的底层搜索候选集合，而不是改变每个向量的距离。
+
+> [!example]- 用 Python 复核固定图搜索结果
+> 下面的小程序用固定图复算队列结果。它只实现单层候选搜索和高层贪心入口，不实现随机层级生成、数据库存储、并发建索引或论文中的邻居多样性启发式。
+>
+> ~~~python
+> from heapq import heappop, heappush
+>
+> vectors = {
+>     "A": (6.0, 0.0),
+>     "B": (3.0, 0.0),
+>     "C": (1.0, 0.0),
+>     "D": (0.0, 2.0),
+>     "E": (0.0, 4.0),
+>     "F": (0.0, 0.5),
+> }
+> layers = [
+>     {"A": ["B"], "B": ["A", "C"], "C": ["B", "D", "F"],
+>      "D": ["C", "E"], "E": ["D"], "F": ["C"]},
+>     {"A": ["B"], "B": ["A", "C"], "C": ["B"]},
+>     {"A": []},
+> ]
+>
+>
+> def distance(name, query):
+>     x, y = vectors[name]
+>     qx, qy = query
+>     return ((x - qx) ** 2 + (y - qy) ** 2) ** 0.5
+>
+>
+> def greedy(query, entry, graph):
+>     current = entry
+>     while True:
+>         closer = [
+>             node for node in graph[current]
+>             if distance(node, query) < distance(current, query)
+>         ]
+>         if not closer:
+>             return current
+>         current = min(closer, key=lambda node: distance(node, query))
+>
+>
+> def search_layer(query, entry, graph, ef):
+>     candidates = [(distance(entry, query), entry)]
+>     results = [(-distance(entry, query), entry)]
+>     visited = {entry}
+>
+>     while candidates:
+>         current_distance, current = heappop(candidates)
+>         worst_distance = -results[0][0]
+>         if current_distance > worst_distance:
+>             break
+>
+>         for neighbor in graph[current]:
+>             if neighbor in visited:
+>                 continue
+>             visited.add(neighbor)
+>             neighbor_distance = distance(neighbor, query)
+>             worst_distance = -results[0][0]
+>
+>             if len(results) < ef or neighbor_distance < worst_distance:
+>                 heappush(candidates, (neighbor_distance, neighbor))
+>                 heappush(results, (-neighbor_distance, neighbor))
+>                 if len(results) > ef:
+>                     heappop(results)
+>
+>     return sorted(
+>         ((-negative_distance, node) for negative_distance, node in results)
+>     )
+>
+>
+> def search(query, ef_search):
+>     entry = "A"
+>     for level in (2, 1):
+>         entry = greedy(query, entry, layers[level])
+>     return search_layer(query, entry, layers[0], ef_search)
+>
+>
+> query = (0.0, 0.0)
+> labels = {"A": "blue", "B": "red", "C": "blue",
+>           "D": "red", "E": "red", "F": "blue"}
+>
+> for ef in (3, 4):
+>     approximate = search(query, ef)
+>     filtered = [node for _, node in approximate if labels[node] == "red"][:2]
+>     print(ef, approximate, "red after filter:", filtered)
+> ~~~
+>
+> 在此固定邻接表上，输出为 ef=3 时近似候选 F、C、D，过滤后只剩 D；ef=4 时候选为 F、C、D、B，过滤后为 D、B。下一节将这组人为图的结果与精确答案对照。它用于验证推演与程序一致，不是 pgvector 的基准成绩，也不代表其他 HNSW 实现必须按相同内部顺序访问节点。
+
+### 插入一个节点时，层级和邻居怎样变化？
+
+假设新增节点 X 的向量为 (0, 1.4)，且这次抽样给它的最高层是第 1 层；在这个手算例子中层级是固定输入，不重新抽样。X 到已有节点的距离为：
+
+| 候选 | 到 X 的 L2 距离 | 可用层 |
+|---|---:|---:|
+| D | 0.6 | 0 |
+| F | 0.9 | 0 |
+| C | √2.96 ≈ 1.720 | 1、0 |
+| E | 2.6 | 0 |
+| B | √10.96 ≈ 3.311 | 1、0 |
+| A | √37.96 ≈ 6.161 | 2、1、0 |
+
+本次固定 ef_construction=4（建图时保留的候选数）、M=2（邻接容量主参数；本例上层上限取 2 条边，底层上限另设）。插入从现有最高入口 A 开始，在第 2 层以 ef=1 贪心查找；随后第 1 层以 ef_construction=4 搜到 W={C(1.720), B(3.311), A(6.161)}。算法把这一层的 W 带作第 0 层的入口候选；以相同 ef_construction 搜索后，本图的 W={D(0.6), F(0.9), C(1.720), E(2.6)}。为能手算，暂把选邻简化为从候选中挑最近节点：
+
+1. 第 1 层候选 W 为 C、B、A；按到 X 的距离选 C、B，给 X 建立这两条初始链接。
+2. 把第 1 层的 W={C,B,A} 带到第 0 层继续搜索，得到 W={D,F,C,E}；按简化规则给 X 选 D、F。
+3. 把新边加入已有节点的邻居列表。第 1 层节点 B 原有邻居 A、C，加 X 后有三个邻居。到 B 的距离分别为 d(B,C)=2、d(B,A)=3、d(B,X)=√10.96≈3.311；简化的最近邻剪枝保留 C、A，去掉 B→X。X→B 仍保留，所以这幅图会出现非对称邻接。
+4. 原论文将底层连接数上限单独记作 Mmax0，并在实验设置中取 2M；这是底层参数选择，不是所有 HNSW 实现都必须满足的算法恒等式。pgvector v0.8.7 则固定底层上限为 2m=4。D 从 C、E 加到 C、E、X，仅三个连接，尚未超限。超过某层上限的已有邻居也要按实现的选邻启发式剪枝。
+
+实际 HNSW 论文不只取最近 M 个点：启发式会检查候选彼此间的距离，让节点边分布到多个方向，减少“都连到同一簇”造成的导航困难。上面的最近邻剪枝是为解释超限发生时要重新选择链接而作的教学简化。真实系统会按其实现做邻居选择、连边和剪枝；M 不足或邻居选择不佳时，图可能更难到达局部簇，搜索就需提高底层候选数，代价是更多距离计算。
+
+### 怎样比较 M、ef_construction 和 ef_search？
+
+这三个参数分别改图结构、建图候选和查询候选，不能当作同一个“召回旋钮”：
+
+| 参数 | 生命周期 | 改变什么 | 常见代价和方向 |
+|---|---|---|---|
+| M（pgvector 参数名 m） | 建图和插入 | HNSW 中控制邻接容量的主参数；原论文另以 Mmax0 表示底层上限。pgvector v0.8.7 对底层固定用 2m、其他层用 m。 | 较大 M 往往增加连通性和召回，也增加图边、索引内存、构建/插入工作；查询扩展节点时要比较更多邻居。 |
+| ef_construction | 建图和插入 | 为新点找邻居时保留的动态候选数。 | 提高通常改善新边选择与后续召回，代价是较慢的索引构建和插入；建完后它不会直接增加每次查询的候选上限。 |
+| ef_search | 每次查询 | 第 0 层查询时保留的动态候选数；不改已建图。 | 提高通常提升召回，代价是查询时延和距离计算更多；按请求复杂度可逐查询调整。 |
+
+截至 2026-11-09，pgvector v0.8.7 的 README 给出的默认值为 m=16、ef_construction=64、ef_search=40；同版源码接受 m 范围 2–100、ef_construction 范围 4–1000、ef_search 范围 1–1000，并在索引构建时要求 ef_construction ≥ 2 × m。这些是 **该版本 pgvector 的接口边界**，不是 HNSW 的通用常数。手算插入例取 ef_construction=4、m=2，正好满足该交叉约束。ef_search 的工程起点通常不低于所需 k，再按召回和时延实测上调；实际设置需检查目标数据库、模型版本、向量维数和工作负载。
+
+固定查询向量、距离度量和授权条件后，在同一个可信授权集合 A(q) 上做精确与近似搜索。为区分“图索引近似得够不够准”和“检索是否找到人工标注的证据”，这里把前者叫 **索引 Recall@k**：令 Exact_k 为 A(q) 中精确最近的 min(k, |A(q)|) 条，ANN_k 为近似扫描并应用同一过滤条件后实际返回的近邻；则
+
+$$
+\operatorname{IndexRecall@k}(q)
+=
+\frac{|\operatorname{ANN}_k(q)\cap\operatorname{Exact}_k(q)|}{|\operatorname{Exact}_k(q)|}
+$$
+
+若授权集合不足 k 条，分母就是其中实际存在的精确近邻数；若集合为空，此指标未定义，应单独检查系统确实返回空集，并记为正确无结果的查询。索引 Recall@k 衡量近似结果与同一度量下精确 top-k 的一致性，不能表示这些结果对问题相关。
+
+若查询 q 有人工标注的相关证据集 Relevant(q)，另算 **Evidence Recall@k（证据召回率）**：被评估检索方法返回的前 k 项（精确 top-k 或 ANN top-k）与 Relevant(q)∩A(q) 的交集大小，除以 Relevant(q)∩A(q) 的大小。它的理论上限为 min(k, |Relevant(q)∩A(q)|) / |Relevant(q)∩A(q)|；调索引前先判断目标 k 是否足以覆盖标注证据。若没有获授权的相关证据，应作为无答案案例单独评估拒答，而不混入这个比例。前者诊断图索引近似，后者同时受语料分块、embedding、距离与索引影响。
+
+用于判断过滤影响时，Exact 与 ANN 都必须在同一授权集合内比较，不能拿全库精确 top-k 充当权限过滤后的答案。每次调参同时记录 P50/P95 查询时延、索引构建时间、索引大小和更新/插入成本。若精确检索对人工证据的 Evidence Recall@k 已低，问题更可能在分块、embedding 模型或距离契约；若精确检索证据召回高而近似索引的 Index Recall@k 低，再检查 HNSW 参数、过滤和扫描上限。不能靠无限调大 ef_search 修复错误向量。
+
+对上面的图，red 标签的精确搜索集合是 D(2)、B(3)、E(4)，top-2 为 D、B。若只用 ef_search=3 得到 F、C、D，再由数据库过滤 red，最终只返回 D，因此这个合成过滤查询的索引 Recall@2 为 1/2；ef_search=4 留下 B 后返回 D、B，索引 Recall@2 为 1。未过滤时，精确 top-2 为 F、C，ef_search=3 的 top-2 也为 F、C，索引 Recall@2=1。一次小例子说明过滤分布怎样改变索引召回，并不证明更大的 ef 一定能解决生产中的所有过滤问题。
+
+### 近似索引的过滤怎样影响召回和授权？
+
+pgvector v0.8.7 文档说明：近似索引先扫描图，之后应用 WHERE 条件。若条件只匹配全表 10% 的行而 hnsw.ef_search=40，且扫描到的近邻标签分布近似全表，平均约 4 行通过过滤；若向量邻域与标签相关，实际通过数可能更高或更低；此时 LIMIT 10 可能返回不足 10 行。v0.8.0 起可启用 iterative index scans 继续走图，直到取够候选或到达 hnsw.max_scan_tuples 等资源边界。strict_order 保持距离排序；relaxed_order 可略微改变顺序以换取更好的过滤召回。大范围之外也可以按过滤值选择 partial index、分区或在小的授权子集上做精确搜索。
+
+**过滤条件不等于授权。** 应用必须根据可信身份计算租户、用户和文档访问条件，并在任何模型可见结果之前再验证返回记录。图过滤解决哪些行参与最终结果的问题；共享近似图的遍历和候选数还可能影响其他租户的召回、时延或可观察结果。若隔离要求更强，应按租户或信任域分索引/表/分区，并在数据库权限与查询路径上落实；不能只让调用方传 tenant_id 就认为已授权。已有 [RAG 授权、版本与索引状态](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F) 说明来源身份、授权和索引状态之间的责任边界。
+
+两种任务的漏召回代价也不一样：
+
+- **CI 手册 RAG**（Retrieval-Augmented Generation，检索增强生成）需要找到能支持回答的有效版本与条件。把检索结果与人工标注的规则块比较 Evidence Recall@k，并检查撤回版本、低频错误标识符、少量授权文档和过滤后不足 k 的情形。漏掉断言失败条款可能导致错误建议，因而要按业务质量门槛评估。
+- **近重复文本去重** 只要正确找出超过相似度阈值的重复段落即可，不要求模型引用政策；漏检会留下重复内容，误报会把不同段落合并。评估应按重复对、阈值与精确确认规则衡量，不能把 RAG 的 top-k 召回门槛直接搬来。
+
+### 相关笔记
+
+- [怎样从授权文档中检索并核验回答依据？](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：提供 embedding、过滤、候选融合、证据版本与引用的完整 RAG 流程。
+- [怎样测量并降低 AI 应用的时延与成本，同时守住任务质量？](#5.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E9%99%8D%E4%BD%8E%20AI%20%E5%BA%94%E7%94%A8%E7%9A%84%E6%97%B6%E5%BB%B6%E4%B8%8E%E6%88%90%E6%9C%AC%EF%BC%8C%E5%90%8C%E6%97%B6%E5%AE%88%E4%BD%8F%E4%BB%BB%E5%8A%A1%E8%B4%A8%E9%87%8F%EF%BC%9F)：帮助比较搜索延迟、缓存和每份成功任务成本。
+- [怎样让模型 API 调用在限额、失败和截止时间内有界？](#6.%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E6%A8%A1%E5%9E%8B%20API%20%E8%B0%83%E7%94%A8%E5%9C%A8%E9%99%90%E9%A2%9D%E3%80%81%E5%A4%B1%E8%B4%A5%E5%92%8C%E6%88%AA%E6%AD%A2%E6%97%B6%E9%97%B4%E5%86%85%E6%9C%89%E7%95%8C%EF%BC%9F)：决定生成 embedding 所用请求如何排队、重试和停止。
+
+> [!info]- 来源
+> 本章固定的 A–F、X 节点、二维坐标、层级、租户标签和距离表均为合成教学输入；搜索结果由文中 Python 程序复算，不是大型语料 benchmark。
+>
+> - **HNSW 的多层结构、随机层级、双优先队列、贪心入口、ef 搜索和插入/剪枝。** Malkov & Yashunin，[“Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs,” arXiv v4](https://arxiv.org/pdf/1603.09320v4)，2018-08-14，pp. 3–5，Algorithms 1–5；参数与构建/查询时间权衡见 §§4.1–4.2、Figures 6–10。论文实验均限定于其数据集、实现与硬件，本章仅把机制用于手推。
+> - **pgvector 近似索引、距离操作符、HNSW 参数、过滤和多租户影响。** pgvector，[v0.8.7 README](https://github.com/pgvector/pgvector/blob/v0.8.7/README.md)，核对于 2026-11-09，“Indexing”“HNSW”“Filtering”“Multitenancy”“Iterative Index Scans”；精确查询/近似查询取舍及过滤后数量以该版本文档为准。
+> - **pgvector v0.8.7 参数的默认值、合法范围、交叉约束和层 0 度数。** [v0.8.7 src/hnsw.h](https://github.com/pgvector/pgvector/blob/v0.8.7/src/hnsw.h)、[src/hnsw.c](https://github.com/pgvector/pgvector/blob/v0.8.7/src/hnsw.c) 与 [src/hnswbuild.c](https://github.com/pgvector/pgvector/blob/v0.8.7/src/hnswbuild.c)，核对于 2026-11-09；m、ef_construction、ef_search 的范围与默认值、第 0 层 2M 上限及构建时 ef_construction ≥ 2 × m 的校验均按对应源码确认。其他 pgvector 版本和向量数据库可能采用不同约束。
+> - **Recall 的 ANN 定义。** HNSW 原论文 v4 §1 将 recall 定义为找到的真实近邻数除以 K；本章将它具体写成相同查询、距离度量和授权过滤下 ANN top-k 与 Exact top-k 的交集比例。
+## 14. 应用怎样设计并执行模型提出的工具请求？
+
+模型的 tool call（工具调用）是一条结构化请求，不是代码执行、权限授予或成功结果。应用要在当前一轮暴露合适的工具，解释并检查请求，再由运行时执行函数，并把与该请求对应的观察交回模型。本篇的 build 42 记录是合成示例；副作用的持久提交、授权恢复和断连后的运行恢复见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)及[生产 AI 如何阻止不可信内容诱导模型越权](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
 ### 一次请求怎样变成下一步可用的观察
 
@@ -1568,7 +2288,7 @@ flowchart TD
 }
 ~~~
 
-模型不能把失败结果当成已读取的日志。用户看过回答后再问“按当前手册应否重跑”才是新用户轮次。此时应用重建独立输入，可把已完成的 `c1` 记录整理成注明来源的事实；只在工具仍可调用时才附上定义。不能用普通上下文文本替换一个尚待回应的 `function_call`。[上下文工程](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)说明如何为新轮次选择历史和证据。
+模型不能把失败结果当成已读取的日志。用户看过回答后再问“按当前手册应否重跑”才是新用户轮次。此时应用重建独立输入，可把已完成的 `c1` 记录整理成注明来源的事实；只在工具仍可调用时才附上定义。不能用普通上下文文本替换一个尚待回应的 `function_call`。[上下文工程](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)说明如何为新轮次选择历史和证据。
 
 本例实际返回的可核对值如下：
 
@@ -1624,22 +2344,20 @@ OpenAI API（应用程序接口）的 `tool_choice` 是一个**调用选择控�
 
 读工具失败时，应用可返回 `c1` 的失败结果，再让模型说明目前无法读取日志或选择有界恢复方式。写工具的超时则不能推断“操作没有发生”；应用需要按权威状态处理未知结果、确认、重试和恢复。持久操作与权限恢复的具体流程见上方运行架构和安全说明；本篇聚焦请求与观察之间的契约边界。
 
-### MCP 把工具连接方式标准化到什么程度
+### MCP 怎样把模型工具请求接到 server？
 
-Model Context Protocol（MCP，模型上下文协议）在 2026-07-28 版中定义 host（承载模型应用）、client（应用内的协议连接器）和 server（提供上下文与能力的服务）之间的互操作方式；消息使用 JSON-RPC 2.0，server 可提供 tools（工具）、resources（资源）和 prompts（提示模板）。该版的核心改为无状态协议请求流，并规定了多轮往返请求等能力，因此不应把更早版本的有状态会话描述直接套到新版本上。协议也定义连接层面的授权要求，但资源是否属于当前调用者、哪些业务操作允许执行，仍须由服务和应用按业务规则判断。
+Model Context Protocol（MCP，模型上下文协议）定义 host、client 和 server 如何交换工具、资源与提示；它不等于模型供应商的函数调用 schema，也不会替应用授予业务权限。以 read_build_log 为例，host 按信任配置连接 server，用 tools/list 发现并筛选工具，再把模型提出的 c1 映射为 MCP tools/call，最后把 JSON-RPC 响应配回同一 c1。模型调用 ID、MCP JSON-RPC 请求 ID 和整次运行 ID 各有各的归属。
 
-以 `read_build_log` 为例，MCP client 可通过 `tools/list` 发现 server 暴露的定义，host 按本轮任务和授权范围筛选后映射为模型工具；模型提出 `c1` 后，应用检查并让 client 发送 `tools/call`，再把 MCP 结果配回同一 `c1` 的 Responses API 工具请求。MCP 的 JSON-RPC 请求 ID 与模型调用的 `call_id` 属于不同协议，host 负责二者关联。
-
-MCP 解决的是应用与外部能力之间的发现和通信协议，不等于某个模型供应商的 function calling schema，也不会替应用选定哪些 server 能力可见、检查业务权限、决定执行顺序或判定回答有依据。使用 MCP 时，host 与应用运行时仍需把协议能力映射到当前模型输入和应用执行契约，并检查工具结果。
+连接传输、2026-07-28 版每请求的协议元数据、远端授权、结果处理和注入边界，见[主机怎样把 MCP 工具从发现接到有权限的执行？](#15.%20%E4%B8%BB%E6%9C%BA%E6%80%8E%E6%A0%B7%E6%8A%8A%20MCP%20%E5%B7%A5%E5%85%B7%E4%BB%8E%E5%8F%91%E7%8E%B0%E6%8E%A5%E5%88%B0%E6%9C%89%E6%9D%83%E9%99%90%E7%9A%84%E6%89%A7%E8%A1%8C%EF%BC%9F)。
 
 ### 相关知识
 
 - [AI 服务如何将一条消息变成完整回答](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)：完整追踪用户问题到 `c1` 日志观察和最终说明。
-- [每次模型调用应看到什么，应用又应持久化什么](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：解释旧 `c1` 如何进入后续新一轮，工具定义应何时继续提供。
-- [怎样从授权文档中检索并核验回答依据](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：当工具或检索返回的文档参与回答时，说明来源版本、访问范围和证据映射。
-- [智能体怎样决定下一步动作](#13.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：解释模型如何在回答和动作之间选择。
-- [多阶段 AI 任务怎样按依赖编排](#14.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：比较串行、并行及委派工作流。
-- [AI 运行怎样在断线或工作进程崩溃后恢复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：处理外部副作用、持久操作和运行恢复。
+- [每次模型调用应看到什么，应用又应持久化什么](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)：解释旧 `c1` 如何进入后续新一轮，工具定义应何时继续提供。
+- [怎样从授权文档中检索并核验回答依据](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)：当工具或检索返回的文档参与回答时，说明来源版本、访问范围和证据映射。
+- [智能体怎样决定下一步动作](#17.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：解释模型如何在回答和动作之间选择。
+- [多阶段 AI 任务怎样按依赖编排](#19.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：比较串行、并行及委派工作流。
+- [AI 运行怎样在断线或工作进程崩溃后恢复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：处理外部副作用、持久操作和运行恢复。
 
 > [!info]- 来源
 > 构建 42 与订单工具均为合成示例。OpenAI 字段语义及 MCP 协议版本按下列资料核验于 2026-11-06。
@@ -1648,7 +2366,381 @@ MCP 解决的是应用与外部能力之间的发现和通信协议，不等于�
 > - **JSON Schema 默认值的验证语义。** [JSON Schema 2020-12: Annotations](https://json-schema.org/understanding-json-schema/reference/annotations)，检查于 2026-11-06，`default`；默认值是注释，不在验证时填入缺失字段。
 > - **为 Agent 设计工具用途、描述和高信号结果。** Anthropic Research，[Writing effective tools for AI agents](https://www.anthropic.com/research/writing-tools-for-agents)，检查于 2026-11-06，`Choosing the right tools for agents`、`Returning meaningful context from tools`、`Prompt-engineering your tool descriptions`；文章中的效果实例属于其作者评估条件。
 > - **协议中的角色、无状态请求、工具发现和执行。** Model Context Protocol，[2026-07-28 Specification](https://modelcontextprotocol.io/specification/2026-07-28)，版号即发布日期，`Overview`；[Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) 说明 `tools/list` 与 `tools/call`；[该版发布说明](https://blog.modelcontextprotocol.io/posts/2026-07-28/)列出无状态协议核心及多轮往返更新。
-## 13. 什么时候应该让模型决定下一步？
+## 15. 主机怎样把 MCP 工具从发现接到有权限的执行？
+
+**案例背景。** 以下是合成教学案例。用户问 build 42 为什么失败。应用已有一次运行 run-r42-7，模型在该轮提出只读工具 read_build_log(build_id=42)，模型调用标识为 c1。工具返回测试名、预期值和实际值；本篇从主机怎样接入提供这项能力的 MCP 服务讲起，走到结果怎样回到 c1。
+
+Model Context Protocol（MCP，模型上下文协议）规定 host（承载模型的应用）、client（host 中负责 MCP 协议通信的连接器）和 server（提供工具、资源或提示的服务）之间如何交换消息。runtime（运行时）是 host 中实际执行请求并检查策略的部分。MCP 统一发现和传输格式，但不替 host 决定哪些工具可见，不替 server 验证某条业务记录属于哪个用户，也不替模型工具调用授予执行权。
+
+下图沿一次远端只读调用走完边界。若 server 受保护，认证挑战可能发生在发现或列举等任何请求上；获得面向该 server 的 token 后，每个请求仍独立携带协议元数据并接受 server 验证。
+
+~~~mermaid
+flowchart TD
+    U[用户问 build 42 为什么失败] --> H[host 固定已信任的 server 地址与传输]
+    H --> D{是否需要 server/discover？}
+    D -->|可选| V[读取支持的版本与 server 能力]
+    D -->|不调用| L
+    V --> L[tools/list 列出工具]
+    L --> C[host 按任务与策略筛选工具契约]
+    C --> M[模型提出 read_build_log，call_id 为 c1]
+    M --> P[runtime 检查参数、用户范围与当前授权]
+    P -->|拒绝| E[把明确错误配回 c1]
+    P -->|允许| T[MCP client 发送 tools/call，JSON-RPC id 为 17]
+    T --> S[server 核验 token audience、scope 与用户对 build 42 的权限]
+    S -->|授权与记录检查通过| R[读取 build 42 日志]
+    S -->|scope 或具体记录权限不足| E
+    R --> O[响应 id 17；host 映射回 run-r42-7 的 c1]
+    O --> A[模型依据该观察作答或选择下一步]
+    V -. 401：server/discover .-> Q[定位 Protected Resource Metadata 与授权服务器]
+    L -. 401：tools/list .-> Q
+    T -. 401：tools/call .-> Q
+    Q --> X[取得只面向 MCP resource 的访问令牌]
+    X --> RP[按原方法和请求体重发触发挑战的请求]
+    RP -. server/discover .-> V
+    RP -. tools/list .-> L
+    RP -. tools/call .-> T
+~~~
+
+### host 为什么先固定连接边界？
+
+工具 server 不应仅因其名称或描述看起来合适就进入模型目录。host 先固定 server 的来源和传输地址，决定由谁维护、谁能改配置、是否允许用户在运行时新增 server，并选择只暴露完成本任务所需的工具。工具名称和参数 schema 帮助模型提出结构化请求，却不等于业务授权。
+
+MCP 的两种标准传输把消息送到同一个协议边界，进程和身份条件却不同：
+
+| 传输 | 消息怎样到达 server | 身份和权限由什么边界承接 |
+|---|---|---|
+| stdio（标准输入输出） | host 启动本机子进程，通过标准输入和标准输出交换逐行 JSON-RPC 消息。标准输出只能写协议消息；诊断信息走标准错误。进程可以跨多次请求保持运行。 | 进程以启动它的操作系统用户运行；host 要限制可执行文件、参数、工作目录、环境变量、可读写路径和继承的秘密。stdio 本身没有 HTTP Bearer 认证头。 |
+| Streamable HTTP | client 向单一 MCP endpoint 发送 POST；server 对每个请求返回一个 JSON 对象，或只关联该请求的 Server-Sent Events（SSE，服务器发送事件）流。 | host 连接远端 HTTPS 服务，按资源边界带上访问令牌；server 每次验证。一个无状态请求可以到达负载均衡后的不同实例。 |
+
+2026-07-28 版移除了协议级 session 和 Streamable HTTP 的 GET stream endpoint；client 每发送一条 MCP 请求都用一个 HTTP POST，server 对该请求返回 JSON 或只关联该请求的 SSE 流。它没有先发 initialize、再靠 Mcp-Session-Id 延续能力协商的旧握手。stdio 进程或 HTTP 连接在操作系统层仍可能持续存在，但它们不再是此版 MCP 的协议会话状态。不要把“进程还活着”或“HTTP 连接还开着”当成前一条请求的版本、能力或授权已经继承。
+
+### 2026-07-28 怎样在每条请求中声明版本和能力？
+
+先记住当前规则：每条 JSON-RPC 请求都要在 params._meta 中声明协议版本和 clientCapabilities。client 可先调用 server/discover；server 必须实现该方法。client 也可以省略发现，直接在后续请求中声明版本。发现响应的 supportedVersions 和 capabilities 告诉 client server 支持什么，例如 tools；请求中的 clientCapabilities 则声明 client 自己支持什么。两者方向不同，server 的能力不能替代 client 对自身能力的声明。clientInfo 可选，client 通常也会提供。
+
+2026-07-28 版没有先发 initialize、再依赖 Mcp-Session-Id 延续协商结果的旧握手。下面是远端发现请求和 server 返回的合成例子；ttlMs 与 cacheScope 是发现响应的字段，缓存要遵守其范围，不能把私人结果当成公开目录缓存。
+
+~~~http
+POST /mcp HTTP/1.1
+Accept: application/json, text/event-stream
+Content-Type: application/json
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: server/discover
+
+{
+  "jsonrpc": "2.0",
+  "id": "discover-1",
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "synthetic-host",
+        "version": "1.0.0"
+      },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+~~~
+
+~~~json
+{
+  "jsonrpc": "2.0",
+  "id": "discover-1",
+  "result": {
+    "resultType": "complete",
+    "supportedVersions": ["2026-07-28"],
+    "capabilities": {"tools": {}},
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "synthetic-build-log",
+        "version": "1.0.0"
+      }
+    },
+    "ttlMs": 60000,
+    "cacheScope": "private"
+  }
+}
+~~~
+
+这里的 serverInfo 是 server 自报信息，适合展示或诊断，协议不验证它。host 的安全决定应基于事先信任的 endpoint、TLS 和授权配置，不应因为响应声称自己叫 trusted-build-log 就改变权限。
+
+示例的 clientCapabilities 是空对象，表示这次请求没有声明额外的 client 能力；它与 server 在响应中宣告的 tools 能力属于相反方向。
+
+HTTP transport 还把部分消息字段映射到请求头。对每条包含 JSON-RPC 请求的 POST，都要带 Content-Type: application/json、Accept: application/json, text/event-stream、MCP-Protocol-Version 和 Mcp-Method。协议版本头必须与请求体 _meta 的版本一致。Mcp-Name 仅对 tools/call、resources/read 和 prompts/get 这类带目标名称或 URI 的请求要求；tools/list 和 server/discover 没有这个头。本篇只展示包含 JSON-RPC 请求的 POST；客户端 notification 的头要求应查阅该版 Streamable HTTP 传输规范，不能从这些请求示例推断。stdio 传输没有这些 HTTP 头，但仍按每条 JSON-RPC 请求携带 _meta。
+
+### host 怎样先列举工具，再执行模型的 c1？
+
+MCP client 先用 tools/list 取得 server 暴露的工具名、描述和 inputSchema。host 检查该目录是否来自预期 server、工具是否允许用于当前任务，再把筛出的 schema 映射为模型 API 的工具定义。client 可以缓存目录，但应按协议结果处理版本、刷新提示和缓存范围。模型提出工具调用后，host 的 runtime 重新解析参数，并按当前用户、运行、目标记录和动作策略作出决定，再交给 MCP client。
+
+下面的列举请求和响应使用本章的同一工具。此版的 PaginatedRequestParams 带每请求必需的 _meta。ListToolsResult 必须包含 resultType、tools、ttlMs 和 cacheScope；分页游标 nextCursor 可以省略。例子使用 ttlMs=60000 和 cacheScope=private，表示工具目录仅能在同一授权上下文中按时限缓存；不同访问令牌不能共用这份私有缓存。若结果含有 nextCursor，client 还要继续分页，不能把第一批工具当成完整目录。目录缓存不能代替每次 tools/call 的当前用户、目标资源和动作授权检查。
+
+~~~http
+POST /mcp HTTP/1.1
+Accept: application/json, text/event-stream
+Content-Type: application/json
+Authorization: Bearer <T_mcp>
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/list
+
+{
+  "jsonrpc": "2.0",
+  "id": "list-1",
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "synthetic-host",
+        "version": "1.0.0"
+      },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+~~~
+
+~~~json
+{
+  "jsonrpc": "2.0",
+  "id": "list-1",
+  "result": {
+    "resultType": "complete",
+    "tools": [
+      {
+        "name": "read_build_log",
+        "description": "Read the failure summary for one build ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "build_id": {"type": "integer"}
+          },
+          "required": ["build_id"],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "ttlMs": 60000,
+    "cacheScope": "private"
+  }
+}
+~~~
+
+MCP 规范建议 server 将工具自身可识别的失败放在工具结果中并标记 isError: true，使模型能看到“查不到 build 42”这类失败并选择下一步；找不到方法、server 不支持 tools/call 等协议异常则使用 JSON-RPC error 响应。两者都由 host 映射回原模型调用，但不能把它们混成“成功且为空”的日志。
+
+下面展示 build 42 的调用请求与响应。JSON-RPC id=17 负责配对这次 MCP 请求和响应；模型 API 的 call_id=c1 负责配对模型提出的工具请求和传回的工具结果；run-r42-7 负责识别整次应用运行。三者没有互换关系。
+
+~~~http
+POST /mcp HTTP/1.1
+Accept: application/json, text/event-stream
+Content-Type: application/json
+Authorization: Bearer <T_mcp>
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: read_build_log
+
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "method": "tools/call",
+  "params": {
+    "name": "read_build_log",
+    "arguments": {"build_id": 42},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "synthetic-host",
+        "version": "1.0.0"
+      },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+~~~
+
+~~~json
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "result": {
+    "resultType": "complete",
+    "content": [
+      {
+        "type": "text",
+        "text": "step=unit-tests; test=reject_empty_name; expected=400; actual=200; exit_status=1"
+      }
+    ],
+    "isError": false
+  }
+}
+~~~
+
+host 将 MCP 响应的 JSON-RPC id 17 映回发起它的 c1，并将经过约束的观察放入模型 API 要求的工具结果条目。该值说明测试断言的预期与实际不同；它没有证明源代码中的根因。MCP 结果也不是模型的最终答复，更不是已授予后续写操作的批准。
+
+### 两种 OAuth token 为什么不能互相转发？
+
+受保护的远端 MCP server 是 OAuth resource server（资源服务器）。它可以用 HTTP 401 返回授权提示，让 client 找到 Protected Resource Metadata（受保护资源元数据），再从该元数据所指向的授权服务器取得访问令牌。提示的形状例如：
+
+~~~http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer resource_metadata="https://logs.example.test/.well-known/oauth-protected-resource",
+                         scope="builds:read"
+~~~
+
+这里的地址和 scope 都是合成值。`resource_metadata` 指向这台受保护服务的元数据，其中描述资源标识并指出授权服务器；它本身不是访问许可。收到访问令牌后，server 先检查 audience/resource 是否是这台日志 MCP 服务，也就是“哪个服务可以接收此 token”；`builds:read` scope 表示“token 被授予哪类访问”，但不代表能读所有 build。最后，server 仍须按当前用户检查具体记录，例如该用户是否能读取 `build_id=42`。这三层必须同时成立。client 应按资源元数据与授权服务器元数据完成发现和受支持的授权流程，并请求面向目标 MCP resource 的 token；每条请求仍须验证签发者、有效期、audience、scope 和用户对具体记录的权限。
+
+这个 token 只用于 host 到 MCP resource 的这一段。面向日志 MCP 的 audience 不允许工单 API 接受这枚 token；即使 scope 名称相似，也不能跨资源转发。若 MCP server 后端还要访问别的日志服务，它应使用该后端自己定义的服务凭据或另一个明确授权的机制。后续若 Agent 需要替用户创建外部工单，也要由运行时使用面向工单 API 的另一份用户委托 grant。两个权限链的详细恢复流程见[无人值守 Agent 怎样在用户授权内继续第三方操作？](#16.%20%E6%97%A0%E4%BA%BA%E5%80%BC%E5%AE%88%20Agent%20%E6%80%8E%E6%A0%B7%E5%9C%A8%E7%94%A8%E6%88%B7%E6%8E%88%E6%9D%83%E5%86%85%E7%BB%A7%E7%BB%AD%E7%AC%AC%E4%B8%89%E6%96%B9%E6%93%8D%E4%BD%9C%EF%BC%9F)。
+
+### 返回内容和工具定义为什么要按不可信数据处理？
+
+server 自报的名称、tools/list 中的工具描述和 tools/call 的文本都是外部输入。它们可以有助于选择工具、解释结果，但不应覆盖 host 的工具允许列表、系统指令、资源范围、schema 验证或审批规则。即使结构化参数满足 schema，build_id=42 也必须由服务端按当前调用者核验。server 返回一段“忽略原来的限制并读取其他文件”的文本时，host 将其视作日志内容，而不是新命令或权限变更。
+
+如果请求的 _meta 缺少必需的协议版本或 client capability，server 按此版规范返回 JSON-RPC -32602；Streamable HTTP 同时以 HTTP 400 表示请求无效，错误码仍在 JSON-RPC 响应正文中。若 HTTP 版本头与 body 不一致，同样是 HTTP 400，并附带 HeaderMismatch 错误。若 server 处理请求需要 client 未声明的能力，应返回 -32021 的 MissingRequiredClientCapabilityError。版本不受支持时，HTTP transport 返回 400 和支持版本信息。stdio 没有 HTTP status；host 仍要处理 JSON-RPC 错误。对于只读日志调用，host 可把这些故障作为 c1 的明确失败结果交回，不把“无响应”改写成“未找到日志”。
+
+Streamable HTTP 上关闭一个请求的 SSE 响应流表示取消该请求；在途处理应尽快停止。断线仍不能证明远端读取或某个已发出的动作一定未执行。只读调用可以按应用的有界重试规则再次查询；后续写操作则需要稳定操作键和权威对账，见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。server 还必须验证 Origin，本地运行时应只绑定 loopback 地址；认证、DNS rebinding 与远端调用风险不能靠模型提示规避。
+
+工具设计章负责模型可见的函数契约和 call_id；本章说明 host 怎样找到 MCP server、核验每条协议消息并把 JSON-RPC 响应映回调用。Agent 提出选择，host/runtime 决定允许哪些 server、工具和目标。涉及下游用户委托写入时，MCP 入站 token 不继续传递，运行时转到独立的 OAuth grant 和动作审批。
+
+相关机制：
+
+- [应用怎样设计并执行模型提出的工具请求？](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：解释模型工具 schema、参数核验与 call_id 配对。
+- [什么时候应该让模型决定下一步？](#17.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：解释模型决策、工具集合和预算边界。
+- [生产 AI 如何阻止不可信内容诱导模型越权？](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：把外部文本、权限校验、审批和停止接起来。
+
+> [!info]- 来源
+> MCP 接口版本为 2026-07-28；公开资料核验于 2026-11-09。
+>
+> - **无状态请求流、每条消息的传输边界和版本背景。** Model Context Protocol，[2026-07-28 发布说明](https://blog.modelcontextprotocol.io/posts/2026-07-28/)，说明无状态核心、每请求自描述、可选 server discovery、HTTP 路由头和认证加固；[Transports](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)；[Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)，检查 “Sending Messages”、“Request Metadata”、“Standard Request Headers”、“Cancellation” 和安全要求。
+> - **精确的 JSON-RPC _meta 必填字段、缺失能力错误和身份字段的安全含义。** Model Context Protocol，[基础规范](https://modelcontextprotocol.io/specification/2026-07-28/basic)，检查 _meta 的 request/response metadata 及 clientInfo / serverInfo 不可作安全验证的说明。
+> - **发现响应字段、server 能力和 tools/call 结果。** Model Context Protocol，[Schema Reference](https://modelcontextprotocol.io/specification/2026-07-28/schema)，检查 DiscoverResult、ServerCapabilities、CallToolResult；[Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)，检查工具定义、tools/list、tools/call 和用户交互建议。
+> - **401 挑战、Protected Resource Metadata 与授权服务器发现。** Model Context Protocol，[Authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)，检查 Unauthorized Responses 和 Authorization Server Discovery；IETF [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728.html) 定义 Protected Resource Metadata。
+> - **令牌面向资源的受众约束。** IETF [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) 定义 OAuth resource 参数；[RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html) §4.10.2 建议 access token 限定到具体 resource server 并由其验证。文中的分层校验是应用对这一边界的落实，不表示任意 provider 都支持相同的 token 形状。
+## 16. 无人值守 Agent 怎样在用户授权内继续第三方操作？
+
+**案例背景。** 以下是合成教学案例。同一 run-r42-7 已用只读调用 c1 从 MCP 日志服务取得 build 42 的观察：reject_empty_name 预期 HTTP 400、实际 200。用户要求应用解释失败，并为 repository_id=build-service 准备缺陷单，提交前让用户审批。工单 provider 账号是 OAuth 身份，build-service 是动作目标；两者不是同一个标识。运行时要用用户对工单 API 的委托授权，但不能把创建权限交给模型，也不能把此前读日志的令牌拿去创建 issue。
+
+无人值守只表示用户不必为每个内部步骤重新登录；它不表示授权无限期有效，也不表示用户授予一个 API scope 就批准了任意动作。完整链路要把用户会话、OAuth grant、动作批准和远端副作用记录分开保存。
+
+本例中的 `attempt` 是同一 run/action 下的一个 worker 执行代次；它可以负责发送，也可以在恢复时只做对账。一次 HTTP 重试不一定产生新的 attempt。租约是 worker 暂时获准更新本地动作状态的资格，带有代次和到期时间。旧 worker 即使还活着，也不能在租约过期后提交状态；但本地租约不能阻止已经暂停的 worker 稍后把请求发到远端。
+
+下图展示正常创建路径，以及必须停止或转入恢复的入口。撤权、租约失效和远端结果未知时的处理在后文逐步展开。
+
+~~~mermaid
+flowchart TD
+    U[用户绑定工单账号；完成 OAuth 授权] --> G[秘密存储保存凭据；运行仅关联 grantRef]
+    G --> R[run-r42-7 读取 c1 日志观察]
+    R --> M[模型提出 create_issue 草稿 c2]
+    M --> V[核验当前用户、目标 repository 与所需 scope]
+    V -->|不允许| STOP[停止；不得创建 issue]
+    V -->|允许| H[展示精确草稿与证据，等待用户审批]
+    H -->|拒绝或取消| STOP
+    H -->|批准| C[必要时刷新令牌；重读 grant、草稿、审批与取消状态]
+    C -->|失效或不匹配| STOP
+    C -->|仍有效且获批| I[条件校验当前 attempt 与未过期租约；持久化操作键、摘要和发送意图]
+    I -->|条件失败| STOP
+    I -->|提交成功| X[向 issue API 发送专属 token 与同一操作键]
+    X -->|成功且写回资格仍有效| S[条件写回 issue ID 和收据；按实际结果收尾]
+    X -->|结果未知或写回资格失效| Q[进入恢复流程：核对回执或合法只读对账；不得直接重发]
+~~~
+
+恢复流程只有在确认原任务仍有效、排除了旧 attempt 迟发和接收端延迟提交、且接收端同键同摘要的去重保证仍在保留窗口内时，才可能返回审批步骤继续。若权威查询已确认没有副作用，但任务已取消或继续写入条件不满足，就记录“未创建”并停止；无法排除迟发或延迟提交时保持 `effect_unknown`。重新授权产生的新 grant 不继承旧动作批准。
+
+### grant 为什么不能等同于登录会话或一次动作批准？
+
+应用会话确认当前浏览器或客户端对应哪个本地用户；OIDC 身份层和应用自己的会话建立方法见[Cookie 会话与 OIDC 令牌怎样建立身份？](../../engineering-foundations/security/web-sessions-and-oidc.md)。OAuth grant 则记录用户把哪些第三方资源和 scope 委托给哪个 client。它通常通过授权码流程取得，并由运行时把它绑定到当前本地用户、tenant 和 provider account。一个登录 cookie 不会自动变成第三方 API token。
+
+运行时还要为某个写动作记录独立的审批和副作用状态：
+
+| 记录 | 例子 | 它能说明什么 |
+|---|---|---|
+| 应用会话 | 本地账号 user-17 当前已登录 | 谁在应用内发起任务；不授予 ticket API 权限 |
+| 用户授权 grant | grantRef=g-31，用户 user-17，tenant=team-4，provider account=repo-owner-2 | 此用户对指定 resource/audience 和 scopes 的委托；不批准某一条正文。provider account 是 OAuth 身份，不是目标仓库 ID |
+| 任务身份 | runId=run-r42-7 | 这次持久运行的身份；不是 OAuth 凭据 |
+| 模型工具调用 | 后续 create_issue 请求的 call_id=c2 | 一次模型提出的动作；不是外部去重键 |
+| 动作审批 | repository_id=build-service、标题、正文和 c1 证据的精确摘要 | 用户批准本次明确预览；内容或目标改变时应重新审批 |
+| 远端操作键 | run-r42-7:create-issue:v1 | 接收端去重或查询这次副作用的稳定键；是否有效由接收端契约决定 |
+
+grant 记录保存 grantRef、用户/tenant、provider account、resource URI 或 audience、实际授予的 scope、到期与 refresh 状态，以及到加密秘密存储的凭据引用。运行、动作摘要、审批状态和操作键保存在各自的任务与动作记录中，并通过 grantRef 关联。本例 provider account=repo-owner-2 是 OAuth 身份，repository_id=build-service 是同一 run 的目标仓库；两者可以不同。access token 和 refresh token 不进入 prompt、模型消息、事件流、普通日志、tool result 或 checkpoint。`access token` 短期用于向目标 API 发请求；只有 provider 实际发放 `refresh token` 时才保存它，并且只把它交给所属授权服务器的 token endpoint 换取新的 access token。
+
+### 两条 OAuth 链分别在谁和谁之间？
+
+MCP 日志读取是 host/client 到 MCP server 的受保护资源访问。host/client 向日志 MCP 授权服务器请求并取得 T_mcp；该 token 的 audience/resource 是日志 MCP resource。工单创建是 Agent runtime 代表用户访问工单 API，使用 T_issue；其 audience/resource 是工单 API，并且受用户授予的 issue scope 约束。两条链的授权服务器、资源标识和权限范围可能不同。即使两个 token 都采用 Bearer 传输，也不能互换或透传。
+
+~~~mermaid
+sequenceDiagram
+    participant H as host/runtime
+    participant AM as 日志 MCP 授权服务器
+    participant MS as 日志 MCP server
+    participant AI as 用户
+    participant AT as 工单授权服务器
+    participant TI as 工单 API
+    H->>AM: 为 logs.example.test 请求 T_mcp
+    AM-->>H: T_mcp，audience=日志 MCP resource
+    H->>MS: read_build_log + T_mcp
+    MS-->>H: JSON-RPC 响应；host 映射回此前的 c1
+    H->>AI: 在浏览器打开授权服务器页面，带 state 和 PKCE challenge
+    AI->>AT: 登录并同意工单 API 的委托 scope
+    AT-->>H: 回调携带一次性短效授权码与 state
+    H->>AT: token endpoint：授权码 + PKCE verifier
+    AT-->>H: 面向工单 API 的 access token；若 provider 提供则另有 refresh token
+    H->>AI: 展示绑定 repository、正文和 c1 证据的 c2 预览
+    AI-->>H: 批准这份精确的 issue 草稿
+    H->>TI: create_issue + T_issue + 稳定操作键
+    TI-->>H: issue ID 或明确失败
+~~~
+
+每个调用目标都要校验它收到的 token 是否由预期 issuer 签发、是否仍有效、audience 是否覆盖这个 resource、scope 是否足够。授权服务器支持时，client 用 OAuth resource 参数请求目标资源；这不会令所有 provider 都返回同一种 access token。Refresh token 只发给它所属的授权服务器 token endpoint，不能发给工单 API，更不能放进模型上下文。
+
+### 一次长任务怎样在授权、刷新、审批和写入间前进？
+
+#### 先绑定 grant，再保存不含凭据的运行状态
+
+用户在应用中已登录后，应用在浏览器打开 provider 的授权页面；用户登录并同意委托，provider 再回调一次性、短效授权码和 state。服务端验证 state、issuer 与回调后，带 PKCE verifier 到授权服务器的 token endpoint 换取 access token；若 provider 同时提供 refresh token，才加密保存它，后续只向同一 token endpoint 换取新 access token。然后，应用通过 provider 支持的账户身份机制或已获授权的账户接口确认第三方账号，把它与本地 user-17 / team-4 关联，并记录实际授予的资源和 scopes；不能把 OAuth 回调本身当成已验证的 provider account。运行状态只保存 g-31 这样的引用。
+
+开始处理 build 42 时，运行数据包含已持久化的 c1 观察。模型依据它提出新调用 c2，参数包括目标 repository_id=build-service、issue 标题和正文。运行时核验用户仍有该仓库的动作资格，grant 仍对应正确 provider account 与 issue API，scope 包含创建需要的写权限，并把动作摘要与 run-r42-7:create-issue:v1 一起持久化。模型不能自行指定可用 token 或更换 resource。
+
+#### 在请求前刷新并重新检查待审批内容
+
+访问令牌可能早于长任务到期，任务也可能跨越多小时甚至多天。运行时在实际发送前依据 provider 返回的到期信息决定是否向授权服务器刷新。启用了 refresh token rotation 的 provider 会在刷新时发新 refresh token 并使旧 token 失效；应以 grant 为粒度串行刷新，并在同一事务或可靠更新中替换秘密引用与版本，避免并发刷新把新 token 覆盖掉。刷新成功后，worker 仍要重新核验用户资格、grant、目标、精确动作摘要、审批和取消状态，再决定能否发送。provider 返回 invalid_grant、撤回或其他不可恢复错误时，把 grant 标成需重新授权，阻止尚未发送的写入，不回退到应用登录 cookie 或其他人的 token。
+
+如果高影响动作需要确认，批准对象是精确的动作摘要，而不是“允许这个模型操作工单”。等待期间若标题、正文、repository_id、证据、当前用户资格、grant scope 或取消状态改变，原审批无效。真正调用前，worker 重新读取这些状态；审批与 grant 检查都要针对将发出的那一份内容成立。这个状态与审批后恢复同一 runId 的关系见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
+
+#### 把秘密只送到它所属的资源
+
+通过检查后，运行时取出或换取面向工单 API 的短期 access token，将其放入发往该 API 的 TLS 请求头，正文携带 issue 草稿和按接收端约定的操作键。MCP 入站的 T_mcp 不会转给工单服务；T_issue 也不会回传到模型。日志可记录用户/tenant、resource、scope、动作摘要、运行标识、审批 ID、操作键与结果状态，但不能记录 bearer 字符串、refresh token 或可还原它们的 URL。
+
+发送前，worker 以条件事务核验当前 attempt、匹配的租约代次且租约尚未过期、预期运行与操作状态、获批动作摘要、当前写授权和取消标记，再持久化 effect_in_flight、原操作键与动作摘要；之后才发送请求。条件检查或更新失败时，必须停止且不得发送。这项事务只约束本地状态，不能向远端服务栅栏旧 worker：旧 worker 若在提交发送意图后暂停，即使租约已过期、恢复器已把状态转成 effect_unknown，它恢复后仍可能发出请求。
+
+若收到成功响应，只有在条件事务确认当前 attempt 仍持有未过期租约时，worker 才能写回 issue ID、操作收据和动作结果。若运行带有 `cancel_requested`，应保留这项请求；当前恢复流程确认外部动作成功后，可按实际结果将运行转为 `completed` 并停止其余步骤。只有确认没有已发出或仍可能提交的副作用时，运行才终结为 `canceled`。条件失败的旧 worker 不得直接完成该运行，应把响应交由持有当前租约的恢复流程核对并条件写回。若发送超时，或 attempt 在记录终态前失联，先前写入的 effect_in_flight 无法证明请求没有发出；租约过期后，恢复器须保留原键和摘要、条件转入 effect_unknown，再先做合法对账，不能退回普通草稿步骤。相反，若刷新返回 invalid_grant 或撤权发生在持久化发送意图之前，当前 worker 明确停止且没有更早的未结清 attempt，则停止新写入本身不构成 effect_unknown。
+
+### 用户撤权或令牌失效后怎样安全恢复？
+
+用户主动在 provider 撤权、应用收到撤权通知或 refresh 返回 invalid_grant 时，运行时将 grant 标记为不可写，清除或撤销其秘密引用，并使依赖该 grant 的待审批草稿过期。若发送意图尚未持久化、当前 worker 已明确停止且没有更早的未结清 attempt，运行只有在未取消时才等待重新授权并重新核验；这本身不表示有远端副作用待核对。若动作已取消且没有旧 attempt，停止该动作，不能在重新授权后按原键提交一个此前未发送的效果。若旧 effect_in_flight attempt 失联，则不能据此推断请求未发出，恢复时按 effect_unknown 处理；撤权期间只允许合法查询和不会新建效果的对账，取得新 grant 后是否能恢复写入见下列条件。恢复器不得为已取消的运行发起新写入。若撤权后已发请求返回明确成功响应，仍须按前文相同的当前 attempt 与尚未过期租约条件写回 issue ID 和收据；失去资格的 worker 必须把回执交给当前租约恢复流程核对并条件写回。只有响应缺失或无法判定时才保持未知。RFC 7009 描述的是 client 通知授权服务器撤销 token；provider 可以同时影响同一 grant 的其他 token。资源服务器是否即时拒绝已经签发的 access token，取决于其验证和撤销机制。因此，撤权不会自动取消已在网络上的请求，也不能由 Agent 用一句“已取消”来代替状态对账。
+
+若 create_issue 已发出或无法排除已发出、且结果未知，先停止新写入并保留原操作键、请求摘要与取消状态。然后只在仍有**合法且有效**的读取能力时查询同一操作键：
+
+- 如果用户刚撤销了唯一 grant，且没有另一份已授权的只读 grant、接收端状态查询能力或其他合法审计接口，运行必须保持 effect_unknown。不能用已撤销的 token 继续查，也不能仅为“确认一下”而偷偷申请新 scope。
+- 如果仍有合法只读查询权限，并且接收端给出权威结果，可将远端 issue ID 写回原操作记录。查询无结果只有在契约能排除旧 attempt 稍后发出请求、并能排除接收端对已收到请求的延迟提交时，才足以判定“未创建”；否则仍为未知。
+- 用户重新授权后，得到的是新 grant，不能假定旧审批或旧 token 恢复有效。先用新授权的合法读取范围查询原操作键。若查询权威确认未创建，就记录“未创建”；run 已取消或继续写入条件不满足时停止，不把已知的无副作用误标为未知。只有原任务仍有效、没有旧未结清 attempt、用户对当前精确草稿重新审批，且接收端保证同键同摘要去重并仍在保留窗口内，才可受控恢复。查询不能排除迟发或延迟提交时，仍保留 effect_unknown 并请用户或管理员人工核查。
+
+日志工具读到 c1 里的结果不会为 c2 增加工单 scope；获得写 scope 也不自动批准这份 issue 草稿。相同原则适用于长任务读取第三方日历或文档：Google Calendar 的 https://www.googleapis.com/auth/calendar.events.readonly scope 允许读取事件；创建或编辑事件需要实际授予相应的写 scope。Google 的 https://www.googleapis.com/auth/calendar.events scope 同时包含查看和编辑权限，因此申请它时仍需按实际 scope 告知用户。某些 provider 的创建 scope 会同时包含读取能力；应检查实际授予的 scope，不应把产品名当成最小权限保证。
+
+相关机制：
+
+- [浏览器会话与 OIDC 怎样确认身份并约束凭据受众？](../../engineering-foundations/security/web-sessions-and-oidc.md)：区分本地登录、身份令牌和面向 API 的访问令牌。
+- [AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)：沿同一操作键处理 effect_in_flight、effect_unknown 和恢复。
+- [生产 AI 如何阻止不可信内容诱导模型越权？](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：把动作预览、重新授权和停止规则连到运行时策略。
+- [生产应用运行时怎样管理部署凭据？](../../engineering-foundations/infrastructure/production-application-runtime.md)：比较部署身份、短期工作负载令牌与用户 OAuth grant。
+
+> [!info]- 来源
+> 授权原则核验于 2026-11-09；token 期限和撤销传播随 provider 而异，Google 的 OAuth 与 Calendar scope 仅作 provider 特定例子。
+>
+> - **授权码与 PKCE、安全授权流程、受众限制和 refresh token 保护/轮换。** IETF [RFC 9700: Best Current Practice for OAuth 2.0 Security](https://www.rfc-editor.org/rfc/rfc9700.html)，2025-01，检查 §§2.1、4.10.2、4.14；其中受众限制是对当前服务的建议，不保证所有 provider 以相同 token 格式实现。
+> - **面向特定资源的 token 请求。** IETF [RFC 8707: Resource Indicators for OAuth 2.0](https://www.rfc-editor.org/rfc/rfc8707.html)，2020-02，检查 §§2–3 的 resource 参数及其资源身份语义；是否支持由授权服务器决定。
+> - **token 撤销接口及同一授权 grant 中其他 token 的可能影响。** IETF [RFC 7009: OAuth 2.0 Token Revocation](https://www.rfc-editor.org/rfc/rfc7009.html)，2013-08，检查 §§2–2.2；规范没有让调用方据此推断任意资源服务器已同步停止接受所有自包含访问令牌。
+> - **provider 特定的 refresh token 获取与撤销示例。** Google for Developers，[Using OAuth 2.0 for Web Server Applications](https://developers.google.com/identity/protocols/oauth2/web-server)，检查 Offline access、Refreshing an access token、invalid_grant 和 Token revocation；[Choose Google Calendar API scopes](https://developers.google.com/workspace/calendar/api/auth) 确认 calendar.events.readonly 只读事件，calendar.events 可查看和编辑；这些是 Google 特定行为，不外推到其他授权服务器。
+## 17. 什么时候应该让模型决定下一步？
 
 **案例背景。** 一次构建失败诊断从用户的问题“build 42 为什么失败？”开始。模型提出读取只读 tool（工具）`read_build_log` 的请求，应用核验权限后才执行。工具调用 ID `c1` 关联这次请求和返回结果；返回值显示 `unit-tests` 步骤中的 `reject_empty_name` 预期 HTTP（Hypertext Transfer Protocol，超文本传输协议）`400`、实际 `200`，进程退出状态为 `1`。这些字段足以说明测试观察到了什么；它们还不能证明是哪一行实现代码造成了问题。
 
@@ -1708,13 +2800,13 @@ ReAct 原论文在 PaLM-540B 的 HotpotQA 与 FEVER 提示实验中发现，ReAc
 
 ### 工具、Skills 和权限分别约束什么？
 
-工具定义模型可以请求哪类读写能力。一个清晰的 action space（动作空间）应让每个工具的用途、参数、失败方式和边界容易区分；用 `browser_search`、`file_read` 这样的服务或资源前缀，可以提示调用归属，却不能授予权限。Anthropic 的 2025 年工具评估发现，命名空间前缀或后缀的效果会随模型变化，因此应按本地任务测试，而不是把一种命名法当成通用最佳做法。每次执行仍由运行时核对调用者和目标资源；参数 schema 也不能证明业务动作已获用户授权。权限、审批和停止路径见[生产环境 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)，工具调用的具体契约见[工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
+工具定义模型可以请求哪类读写能力。一个清晰的 action space（动作空间）应让每个工具的用途、参数、失败方式和边界容易区分；用 `browser_search`、`file_read` 这样的服务或资源前缀，可以提示调用归属，却不能授予权限。Anthropic 的 2025 年工具评估发现，命名空间前缀或后缀的效果会随模型变化，因此应按本地任务测试，而不是把一种命名法当成通用最佳做法。每次执行仍由运行时核对调用者和目标资源；参数 schema 也不能证明业务动作已获用户授权。权限、审批和停止路径见[生产环境 AI 安全](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)，工具调用的具体契约见[工具设计与函数调用](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)。
 
-Agent Skills（智能体技能包）把领域说明、步骤、脚本和参考资料组织为可按需载入的程序知识；Anthropic 公开的方案通过逐层披露，让模型先看到简要说明，需要时再读取完整技能和附属文件。Skill 能教会流程，但实际可读写资源仍由运行时工具与授权决定。因而，领域步骤不同不一定需要一个新的子智能体；可比较按需加载技能与拆分上下文的效果。
+Agent Skills（智能体技能包）把领域说明、步骤、脚本和参考资料组织为可按需载入的程序知识；Anthropic 公开的方案通过逐层披露，让模型先看到简要说明，需要时再读取完整技能和附属文件。Skill 能教会流程，但实际可读写资源仍由运行时工具与授权决定。因而，领域步骤不同不一定需要一个新的子智能体；可比较按需加载技能与拆分上下文的效果。模型选到本地 shell 或文件编辑工具后，谁来检查路径、批准越界动作并限制进程实际能力，见[模型选到 shell 或文件工具后，由谁决定能否执行？](#18.%20%E6%A8%A1%E5%9E%8B%E9%80%89%E5%88%B0%20shell%20%E6%88%96%E6%96%87%E4%BB%B6%E5%B7%A5%E5%85%B7%E5%90%8E%EF%BC%8C%E7%94%B1%E8%B0%81%E5%86%B3%E5%AE%9A%E8%83%BD%E5%90%A6%E6%89%A7%E8%A1%8C%EF%BC%9F)。
 
-Manus 的工程文章给出一种特定实现：用上下文状态机决定哪些工具调用可选，并在解码期间把不允许调用对应的 logits（未归一化分数）设为不可选。该方法依赖模型、序列化格式和运行框架，不是托管 API（应用程序接口）都支持的授权机制。动态修改工具定义还可能改变被缓存的提示词前缀，但实际影响取决于服务的序列化和缓存规则；参见[上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。无论怎样限制模型输出，服务端执行工具时仍须重新做权限检查。
+Manus 的工程文章给出一种特定实现：用上下文状态机决定哪些工具调用可选，并在解码期间把不允许调用对应的 logits（未归一化分数）设为不可选。该方法依赖模型、序列化格式和运行框架，不是托管 API（应用程序接口）都支持的授权机制。动态修改工具定义还可能改变被缓存的提示词前缀，但实际影响取决于服务的序列化和缓存规则；参见[上下文工程原则](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。无论怎样限制模型输出，服务端执行工具时仍须重新做权限检查。
 
-每轮都应检查是否达到完成条件、最大调用次数、时间和成本预算。重复收到相同的无进展结果时，可以改用另一个已授权查证方式、转人工或停止并说明缺口。长任务需要保存证据和真实副作用状态，不能让对话回忆替代运行记录；恢复边界见[AI 运行如何断线恢复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
+每轮都应检查是否达到完成条件、最大调用次数、时间和成本预算。重复收到相同的无进展结果时，可以改用另一个已授权查证方式、转人工或停止并说明缺口。长任务需要保存证据和真实副作用状态，不能让对话回忆替代运行记录；恢复边界见[AI 运行如何断线恢复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
 
 ### 怎样判断智能体循环真的改善了任务？
 
@@ -1722,7 +2814,7 @@ Manus 的工程文章给出一种特定实现：用上下文状态机决定哪�
 
 τ-bench 以模拟对话和领域 API 比较结束时的数据库状态与标注目标，并报告多次试验的一致性指标 `pass^k`。τ²-bench 的 Telecom 任务进一步让模拟用户也能通过工具改变共享环境。它们说明只检查最终自然语言可能漏掉状态错误或协作失败；测试结果仍受各自任务、模拟器和规则范围限制。把同样的检查改写为本地业务契约，而不是照搬论文分数。
 
-相关的编排选择见[多阶段 AI 任务怎样组织](#14.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)；版本变化如何跨运行验收见[如何测试并保留 Agent 改进](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)。
+相关的编排选择见[多阶段 AI 任务怎样组织](#19.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)；版本变化如何跨运行验收见[如何测试并保留 Agent 改进](#25.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)。
 
 > [!info]- 来源
 > - **工作流与智能体的控制流、适用权衡：** Anthropic，[Building effective agents](https://www.anthropic.com/research/building-effective-agents)，2024-12-19，§§“What are agents?”与“When (and when not) to use agents”；页面注明其工具生态描述已有变化，本文只采用工作流/智能体的控制流区分及成本、时延权衡，不沿用旧框架推荐。
@@ -1731,11 +2823,153 @@ Manus 的工程文章给出一种特定实现：用上下文状态机决定哪�
 > - **工具范围与命名评估：** Anthropic，[Writing effective tools for agents — with agents](https://www.anthropic.com/research/writing-tools-for-agents)，2025-09-11，“Choosing the right tools for agents”“Namespacing your tools”；其内部工具使用评估发现前缀与后缀命名的效果会随模型变化，本文据此只建议按自身任务测量。
 > - **技能的渐进式加载：** Anthropic，[Equipping agents for the real world with Agent Skills](https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills)，2025-10-16；2025-12-18 更新称 Agent Skills 已作为开放标准发布；“The anatomy of a skill”与“Skills and the context window”说明 `SKILL.md`、附属资源和渐进式披露。技能的调用权限仍由应用工具实现。
 > - **状态与用户交互评估：** Yao et al.，[τ-bench](https://arxiv.org/abs/2406.12045)，2024-06-17，摘要和 benchmark 设计；Barres et al.，[τ²-Bench](https://arxiv.org/abs/2506.07982)，2025-06-09，摘要与 Telecom dual-control domain。文中只概述其评估对象与状态指标，不把 benchmark 分数当作任意生产任务表现。
-## 14. 怎样按依赖、并行性和控制权组织多阶段 AI 任务？
+## 18. 模型选到 shell 或文件工具后，由谁决定能否执行？
+
+**案例背景。** 以下是合成教学案例。用户从同一条 build 42 日志观察另行提出本地修复任务：reject_empty_name 测试期望空名称返回 HTTP 400，实际得到 200。系统临时目录中的 fixture 源文件为 validator.py，测试文件为 test_validator.py。运行时只在配置的可写根内编辑并运行测试。该任务与前章创建工单的 c2 是两条不同的动作路径。
+
+coding agent harness（代码智能体执行框架）是把模型接到实际执行工具的运行时：它接收模型提出的 shell、文件编辑或 MCP 工具请求，读取项目指令，检查动作和当前权限，在适用的沙箱里执行，再把退出状态、输出或 diff 交回运行。模型能生成一个命令，不代表它已获得操作系统权限；技能说明怎样完成任务，也不构成访问控制。
+
+~~~mermaid
+flowchart TD
+    A[启动会话并固定 cwd 与可用工具] --> B[发现 Skill 名称和说明]
+    B -->|选用时| C[读取 SKILL.md；补充任务知识]
+    B -->|未选用| D[模型提出读文件、补丁或 shell 请求]
+    C --> D
+    D -->|有匹配的前置 hook| E[PreToolUse 可阻断或按产品契约改写]
+    D -->|没有匹配的前置 hook| P[按常规权限策略判断]
+    E -->|阻断| X[不执行该调用]
+    E -->|继续| P
+    P -->|当前沙箱允许| F[本地 shell / 文件按实际生效沙箱执行]
+    P -->|策略允许申请扩权| G[PermissionRequest hook 介入；必要时交审批界面]
+    P -->|策略不允许扩权| X[不执行该调用]
+    G -->|拒绝或未获授权| X
+    G -->|批准本次所需范围| F
+    F --> H[文件变化、退出码、stdout、stderr 或工具结果]
+    H --> I[匹配时运行 PostToolUse；不能撤销副作用]
+    I --> J{本轮是否继续？}
+    J -->|继续| D
+    J -->|结束| K[Stop 处理本轮将结束]
+    K -->|会话结束| S[SessionEnd 处理会话结束]
+    D -. 用户请求中断 .-> Z[Interrupt 事件记录当前轮中断；已启动动作仍需核验]
+    F -. 用户请求中断 .-> Z
+    D -. 客户端连接断开 .-> Y[仅失去输出观察；执行端是否停止尚未确定]
+    F -. 客户端连接断开 .-> Y
+    Z -->|之后恢复时| L[执行端能查询时先查状态；再检查工作树、退出状态、收据和权威状态]
+    Y -->|重连后| L
+    S -->|之后 resume| R[SessionStart 的 resume 事件]
+    RR[收到显式 resume 请求] --> R
+    R --> L
+~~~
+
+这张图只画本地 shell 和文件路径。当前沙箱允许就按其实际文件与网络边界执行；越界请求只有在策略允许申请权限时才进入扩权审批，策略拒绝、审批被拒或权限未实际获准时都不执行。以 Codex 的 `never` 为例，不出现审批提示不代表越界动作获准，超出沙箱的写入和网络访问仍会被拒绝。远端 MCP、托管 web search 等独立工具不属于此本地分支，它们由各自连接和授权策略处理。
+
+### Skill、模型工具和权限分别做什么？
+
+Skill 是含 SKILL.md 的可复用说明目录。以 Codex 的 Skills 工作流为例，发现阶段先向模型提供技能名和简介；模型选择使用它后再读取完整说明及需要的参考或脚本。它适合告诉模型先检查测试、如何解释报错、完成后应报告什么。它不会自动创建一个工具、扩大工作区、打开网络，或替用户授予某项业务权限。
+
+执行时，模型输出仍是待处理请求。harness 从固定目录读取文件，检查编辑路径；遇到 shell 请求时，取命令和运行目录；遇到 MCP 调用时，则使用该 server 的独立连接与授权策略。schema 校验回答“输入形状是否正确”，approval policy 回答“是否需要停下来请求确认”，sandbox 回答“子进程实际上能访问哪些目录和网络”。业务服务还要回答“当前用户能否对这个资源执行动作”。
+
+例如，read-only 适合检查代码与计划。Codex 内置的 :workspace 权限配置允许写入当前活动工作区根和系统临时目录；本例将 /tmp 作为其中一个可写根。生效可写根取决于所选配置，额外 --add-dir 会扩展可写目录。default workspace-write sandbox 下，根内的 .git、.agents、.codex 和 .aws 仍受保护、只读。Codex CLI 默认仍关闭 shell 命令网络；danger-full-access 则移除沙箱限制。审批政策是另一条轴：on-request 在动作需要额外权限时暂停，never 不弹审批；批准一次具体扩权不等于把未来所有操作都永久授权。若某个命令获准以更宽的沙箱边界执行，运行时应清楚记录其真正使用的权限，而不能只记录“用户点过批准”。
+
+例如，在 workspace-write 下，shell 若尝试写 /srv/another-project/report.md 或请求 https://updates.example.test，文件和网络动作超出当前沙箱范围。配置 on-request 时，Codex 可就所需扩权请求审批；用户拒绝后不会执行。配置 never 时不会弹出审批，沙箱会阻止越界动作。该行为取决于实际沙箱与审批配置；远端 MCP 和托管 web 工具仍由各自的连接与授权边界控制。
+
+| 控制点 | 它决定什么 | build 42 示例 |
+|---|---|---|
+| 可用工具 | 模型本轮能提出哪一类请求 | 可读 validator.py 与 test_validator.py，可提出编辑和测试；没有远端工单写工具 |
+| Skill / 项目说明 | 模型按什么步骤工作 | 先重现 reject_empty_name，检查相关实现，修改后再运行边界用例 |
+| 审批 | 是否先暂停等待授权 | 尝试写到工作区外或访问网络时，按配置请求扩权确认 |
+| 沙箱 | 进程被 OS 限制在什么可访问范围 | 配置的工作区根和临时目录可写；根内 .git、.agents、.codex、.aws 仍只读；网络关闭 |
+| 业务权限 | 用户能否在真实业务资源上做这项动作 | 本任务只改本地 fixture，不授予部署或创建外部 issue 权限 |
+| 结果检查 | 实际执行后发生了什么 | 退出码、stdout/stderr、工作树 diff 与测试结果 |
+
+在有些产品中，shell 命令网络策略不会自动关闭托管 web search、远端 MCP 或应用连接器；这些工具有自己的开关、身份和 approval。要限制整个 agent 的外部访问，必须逐个检查启用的能力，不能只看本机 shell 的网络沙箱。
+
+### 一个本地修复怎样通过 harness 前进？
+
+本 fixture 的函数输入契约是字符串或 `None`；其他类型不在这个小例子的范围内。`validator.py` 的基线实现只拒绝 `None`，因此空字符串走到 200；边界用例放在 `test_validator.py`。一次实际调用可按以下顺序理解：
+
+1. shell 把工作目录设为同时含 `validator.py` 和 `test_validator.py` 的临时 fixture 目录，再运行 `python3 -m unittest discover -s . -v`；`-s .` 指当前工作目录。harness 检查运行目录与命令的权限边界，再把进程退出码 `1` 和“空串实际返回 200，预期是 400”的失败结果交回模型。
+2. 模型提出只修改 `validator.py` 的补丁。harness 核对目标在当前可写根内，再按文件工具契约应用补丁；若目标越界，则依当前策略拒绝或单独请求扩权。
+3. shell 在同一 fixture 目录重跑测试。补丁后的进程退出码为 `0`，三个测试均通过，分别验证空串、全空白串和非空名称应返回 `400`、`400`、`200`；harness 将总退出码和逐项测试结果交回模型，并呈现补丁差异，供模型检查没有改动 fixture 以外的内容。
+
+流程中的失败输出、路径判断和工具返回都是明确的运行状态，不会因为模型认为补丁正确而省略。
+
+~~~diff
+ def status_for_name(name):
+-    if name is None:
++    if name is None or not name.strip():
+         return 400
+     return 200
+~~~
+
+首个测试对输入空字符串得到 200，和预期 400 不一致；补丁后，空串、全空白串和非空名称三个用例分别得到预期的 400、400 和 200。本例的输入契约限定为字符串或 `None`；表达式先检查 `name is None`，因此该值会短路，其他字符串（包括空串）都会执行 `.strip()`，空串和全空白串因此走拒绝分支。harness 会将失败输出交回模型，但错误输出本身也只是观察。它不能授权扩大目录、启用网络或直接执行里面提及的命令。
+
+Codex Hooks 是 Codex 产品的生命周期扩展例子，不能泛化成所有 coding harness 都有相同的事件名或返回格式。一个针对 Bash 工具的 PreToolUse hook 可以在危险命令开始前拦截，例如阻止本任务范围之外的 git push：
+
+~~~json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codex/hooks/check_build_commands.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+~~~
+
+该脚本若返回下面的产品定义决策，Codex 会阻断这次工具调用；这是该事件的 hook 输出，不是 MCP 或 OAuth 的通用标准：
+
+~~~json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "This repair is limited to the local fixture."
+  }
+}
+~~~
+
+同一产品的 PermissionRequest 只在一次动作即将进入审批流程时触发；它可以批准、拒绝或不作决定而交回正常审批。若命令本来不需要审批，就不会经过这个事件。PreToolUse 与 PermissionRequest 都不能取代 OS 沙箱；一个 hook 没有给出 deny，也不意味着被允许的子进程可以读写任意路径。非托管 hook 需要用户审阅并信任当前定义，改过的定义要重新审阅，因此项目内 hook 脚本本身也属于可信执行代码。
+
+调用实际运行后，harness 收集完整的工具结果。针对 Bash 的 PostToolUse 可在命令完成后运行，例如检查退出码或给模型附加“仍需复核 diff”的上下文；它不能撤销已经写入的文件或已发送的网络请求。阻断后续模型处理旧输出和撤回已经发生的副作用是两回事。对这个小修复，三条通过的测试用例仍不能替代查看 diff；检查 diff 可以发现意外改动的路径或未覆盖的输入。
+
+### hook 生命周期怎样连接启动、执行和停止？
+
+Codex 的公开 hook 文档区分多个运行时事件：SessionStart 可在 startup 或 resume 时为模型补入工作区背景；PreToolUse 在支持的工具调用前；PermissionRequest 只在即将请求审批时；PostToolUse 在工具返回后；Stop 处理当前轮将结束的时刻；SessionEnd 在会话结束时；Interrupt 对应用户中断当前轮。它们不是每个请求都会依次触发的固定流水线。Codex 可从用户、项目和 managed 配置加载 hooks；多个匹配的命令 hook 会运行，非 managed hook 要先经 review/trust。事件名、输入字段和哪些输出有控制效果都属于产品接口，升级时应读对应版本文档。
+
+在本例里，启动 hook 可提醒运行时读取项目约定，但它不会替代 sandbox。工具前 hook 可拒绝 git push，shell 沙箱同时保持无网络。用户批准一个必要的文件权限升级时，harness 仍要记录动作范围，并保持最小授权。PostToolUse 再检查测试结果和 diff；它可以让模型看到新观察，却不能回滚写入。
+
+恢复本地修复时，Codex session ID 选择保存的对话，`tool_use_id` 标识一次本地工具调用，工作目录和工作树位置标识要检查的文件上下文。它们不证明某个命令还在运行或改动已保存；重连后仍要查本地进程、会话状态、工作树、退出码和测试结果。
+
+远端工单路径使用另一组标识：`run-r42-7` 是应用运行身份，c1/c2 是模型调用 ID，`run-r42-7:create-issue:v1` 是远端副作用的操作键；若事件流有 `seq`，它只在该 run 的事件日志中排序。它们不能替代本地 session、`tool_use_id` 或工作树状态。
+
+用户发起 Interrupt 会中断当前轮，但不能撤销已经开始的本地写入或远端请求。客户端连接断开只是暂时失去输出观察，执行端是否继续取决于该 harness 的托管方式；断线本身不能证明运行已停止。重连或 resume 时，若执行端提供运行状态接口，先查询其权威状态；本地 CLI 则核实进程与会话状态，无法确认时不要假定任务已停止。之后读取当前 git status / diff、可取得的退出状态和工具收据。对安全、幂等的本地测试，可以按当前工作树重跑。对 git push，查询目标远端 ref 是否指向预期 commit SHA；匹配可确认期望状态，不匹配时还要考虑并发变更，不能单凭这一点断言没有推送。对提供稳定幂等或业务操作键的 API，查询原键；其他发布、通知等操作使用接收端提供的权威状态查询。若没有合法可靠的查询能力，保持未知并请求人工核查，不因为旧 transcript 缺少成功回执就重放。运行身份和副作用对账见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
+
+相关机制：
+
+- [什么时候应该让模型决定下一步？](#17.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：说明 agent loop、工具集合、Skill 和每轮停止条件。
+- [生产 AI 如何阻止不可信内容诱导模型越权？](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：补充对高影响动作的授权、审批摘要和停止路径。
+- [生产应用运行时怎样管理部署凭据？](../../engineering-foundations/infrastructure/production-application-runtime.md)：说明服务凭据和部署身份的隔离、轮换及审计。
+
+> [!info]- 来源
+> Codex 本地 CLI 版本为 0.167.0；公开资料核验于 2026-11-09。PreToolUse、PermissionRequest 等 hook 事件名称及其公开输出 schema 是 Codex 产品接口；本例的 hook 脚本名和 permission reason 是教学样例。
+>
+> - **sandbox 与 approval 的职责区别、可写根、受保护路径及默认网络条件。** OpenAI，[Agent approvals & security](https://learn.chatgpt.com/docs/agent-approvals-security)，检查 “Sandbox and approvals”、“Network access”、“Network isolation” 和 “Protected paths in writable roots”；[Permissions](https://learn.chatgpt.com/docs/permissions) 说明 workspace roots 与系统临时目录的写入范围。Codex CLI 当前 reference 的具体 flags 见 [Command line options](https://learn.chatgpt.com/docs/cli/reference)。
+> - **Skills 的发现、按需读取和执行形式。** OpenAI，[Skills](https://developers.openai.com/api/docs/guides/tools-skills)，检查 “What's a skill”、“Prompting behavior” 和 local shell mode；技能只提供可复用指令与材料，具体工具和执行环境由 runtime 提供。
+> - **Hooks 的生命周期、信任审阅及不同事件的输出契约。** OpenAI，[Hooks](https://learn.chatgpt.com/docs/hooks)，检查 “Review and trust hooks”、“SessionStart”、“PreToolUse”、“PermissionRequest”、“PostToolUse”、“Stop”、“SessionEnd” 和 “Interrupt”；[Plugin architecture](https://developers.openai.com/plugins/concepts/plugins) 与 [Bundled MCP servers and lifecycle hooks](https://developers.openai.com/plugins/build/plugins#bundled-mcp-servers-and-lifecycle-hooks) 说明 hook 脚本必须部署在执行环境，并受 surface 与信任流程限制。
+> - **对话 resume 和真实状态分离的工程结论。** OpenAI [CLI reference](https://learn.chatgpt.com/docs/cli/reference) 列出 codex resume 的会话续接用法；恢复不撤销文件或外部副作用，并与[AI 运行恢复章](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)的副作用契约一致。
+## 19. 怎样按依赖、并行性和控制权组织多阶段 AI 任务？
 
 **案例背景。** 从 build 42 的诊断请求开始：用户问为什么构建失败，模型提出读取只读 tool（工具）`read_build_log` 的请求，应用核验权限后执行。工具调用 ID `c1` 关联请求和返回结果，其中 `unit-tests` 的 `reject_empty_name` 预期 HTTP（Hypertext Transfer Protocol，超文本传输协议）`400`、实际 `200`，进程退出状态为 `1`。这一段只需要沿一个运行循环读证据、决定何时作答；若把每个职责都拆成新智能体，既没有独立工作可并行，也增加了交接和校验。
 
-orchestration（编排）决定各步骤的顺序、条件、并行边界和最终答案归属。先画出依赖：只有当任务能独立推进、需要不同权限或按实测能降低总耗时时，才拆分上下文或委托；模型是否控制下一步的基础判断见[什么时候应该让模型决定下一步](#13.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)。
+orchestration（编排）决定各步骤的顺序、条件、并行边界和最终答案归属。先画出依赖：只有当任务能独立推进、需要不同权限或按实测能降低总耗时时，才拆分上下文或委托；模型是否控制下一步的基础判断见[什么时候应该让模型决定下一步](#17.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)。
 
 ### 先看哪些步骤依赖同一份观察
 
@@ -1798,15 +3032,17 @@ agents as tools（把智能体作为工具调用）和 handoff（控制权交接
 | 智能体作为工具／管理者模式 | 主智能体收集专家结果、比较证据并给出最终答复 | build 42 的主运行委托只读来源检查，再自行核对 `c1` 与来源 |
 | 控制权交接 | 专家接手该分支的后续对话和决策 | 分类器确认用户需要技术支持后，把问题交给负责下一轮澄清的支持专家 |
 
-交接前要传递足够的任务背景和当前状态；接手方应知道由谁授权、已经读取了哪些材料、仍有哪些结论未知。避免宽泛转发整个对话，也不能把有损摘要当成权威运行记录。工具返回和副作用应由主运行记录并关联任务身份；稳定 run ID、事件恢复和未知结果如何处理见[AI 运行怎样断线恢复](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
+交接前要传递足够的任务背景和当前状态；接手方应知道由谁授权、已经读取了哪些材料、仍有哪些结论未知。避免宽泛转发整个对话，也不能把有损摘要当成权威运行记录。工具返回和副作用应由主运行记录并关联任务身份；稳定 run ID、事件恢复和未知结果如何处理见[AI 运行怎样断线恢复](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
 
-多个工作者适合并行读取不同材料或验证彼此独立的产物。依赖上一步结果的写操作仍要按序执行。工单创建属于一次外部副作用，不能让多个工作者并发发起相同写入；应用需将已审批的目标与请求绑定到同一个幂等键，并通过运行时授权。更多工具边界和审核流程见[工具设计与函数调用](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)和[生产环境 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
+多个工作者适合并行读取不同材料或验证彼此独立的产物。依赖上一步结果的写操作仍要按序执行。工单创建属于一次外部副作用，不能让多个工作者并发发起相同写入；应用需将已审批的目标与请求绑定到同一个幂等键，并通过运行时授权。更多工具边界和审核流程见[工具设计与函数调用](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)和[生产环境 AI 安全](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
 ### 什么时候保留单主循环，什么时候增加子智能体？
 
 single-agent loop（单智能体循环）可以共享已验证的上下文，按需调用工具或读取技能。拆分成 subagent（子智能体）有三类清楚理由：测量显示长上下文正在降低任务质量；确有并行任务，且它们需要独立上下文；或不同任务必须受不同工具、指令或权限约束。短任务与有依赖的步骤通常留在主循环。
 
-Agent Skills（智能体技能包）可以按需载入领域步骤和参考资料，工具提供可执行的读取或写入能力；这两者让单主循环能覆盖多个任务类型，无需给每个类别建立独立智能体。技能教会流程但不授予数据权限，工具的真实能力仍需应用限制。技能说明和上下文组织见[上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。
+prompt template（提示模板）也是主循环可用的组织方式：如果多个输入的步骤相同，只需填入少量语义一致的变量，就能复用一份清楚的说明。变量过多、规则互相冲突，或任务需要不同权限时，应拆开模板或调整工具边界，并用代表性任务比较效果。
+
+Agent Skills（智能体技能包）可以按需载入领域步骤和参考资料，工具提供可执行的读取或写入能力；这两者让单主循环能覆盖多个任务类型，无需给每个类别建立独立智能体。技能教会流程但不授予数据权限，工具的真实能力仍需应用限制。技能说明和上下文组织见[上下文工程原则](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 Anthropic 的 2026 年工程文章报告，其若干企业场景中，把依赖共享上下文的路由器或领域子智能体折回主循环后，质量、成本或时延有所改善；同一团队也保留并行研究、验证和权限隔离等子智能体用途。Anthropic 的研究系统则展示了开放式研究任务如何并行检索并压缩返回结果。两者提供不同场景的工程经验，不给出所有任务都应合并或拆分的定律；应以本地端到端任务测试决定。
 
@@ -1816,7 +3052,33 @@ Anthropic 的 2026 年工程文章报告，其若干企业场景中，把依赖�
 
 论文在数学证明、程序重建和三项依赖 GPU（图形处理器）计算的神经网络架构研究中评估该实现。它的发布检查验证提交是否满足任务的提交要求，不认证产物正确；论文也明确把投票与正确性证据分开。结果只支持这些模型、任务和预算下的观察，不证明日常支持请求或普通业务流都应采用共享仓库的多工作者架构。
 
-prompt template（提示模板）仍是一个主智能体可用的选项：如果多个输入的步骤相同，只需填入少量语义一致的变量，就能复用一份清楚的说明。变量过多、规则互相冲突，或任务需要不同权限时，应拆开模板或调整工具边界，并用代表性任务比较效果。
+### 计划执行何时需要重规划，怎样识别无进展循环？
+
+plan-and-execute（先计划、再执行）适合目标可拆成若干有前提、证据和验收条件的步骤，但中间观察仍可能改变后续路线。计划是可版本化的运行产物，不是模型内在推理的证明，也不是外部事实账本。沿用 `run-r42-7`：用户起初要求解释 build 42 并准备一个待审核的缺陷单；`c1` 证明 `reject_empty_name` 预期 HTTP `400`、实际 `200`、进程退出 `1`，但单靠这些字段不能断定代码根因。以下 trace 展示用户随后明确追加“请查代码级根因”的授权澄清事件：它附加到原运行，原始提交请求摘要保持不变，计划从 v1 修订为 v2 后才启动 P2；若要改写原始提交请求，则应使用新键和新 run。可保存一份小计划：
+
+| 阶段 | 前提与动作 | 完成条件 | 当前结果 |
+|---|---|---|---|
+| P1 核对证据 | 对照 `c1` 与 build 42 的构建身份、失败测试和原始日志引用 | 断言差异与来源匹配；结论范围不超过日志 | 已完成：能解释测试为何失败，根因仍未知 |
+| P2 补充根因证据 | 用户明确要求代码级解释后，才查本合成 fixture 中同一提交的测试契约和差异摘要 | 两来源的 build/commit 版本相符，差异能解释 `c1` | 若来源不可读或版本不匹配，保留 `c1`、修订计划并报告缺口；若无法取得匹配证据，根因仍未知 |
+| P3 形成草稿 | 按已核验的观察形成工单草稿；若跳过 P2，就只引用 `c1` 并说明根因未知；运行过 P2 时才引用已核验的新来源 | 草稿目标、请求摘要和证据一致，可交审核 | 等待人工审核；此时不调用写工具 |
+| P4 提交 | 仅在该草稿摘要仍获批且权限有效时，以 `run-r42-7:create-issue:v1` 创建工单 | 从应用账本核实远端 ID 或进入结果未知对账 | 由[运行恢复章](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)处理，不由模型再决定是否换键提交 |
+
+如果任务只是“`c1` 能说明什么”，P2–P4 不需要执行；若步骤、依赖和分支事先已知，用代码控制的固定有向无环图（DAG，directed acyclic graph）更便于验收。若下一步真正依赖未知观察，执行一个步骤后再评估和修订计划；若多个短步骤都取决于逐次工具发现，也可留在单主循环，无需生成冗长计划。只有观察推翻了前提、来源版本变了、授权变化或用户目标变化，才以新版本计划保留已完成证据并调整剩余步骤。模型不能因为旧计划写过某动作，就复用过期批准或忽略权限变化。
+
+区分 SDK（软件开发工具包）重试、运行恢复与模型循环重复时，要为每层记录自己的身份和输入，而不是只看“工具被叫了几次”。下面是这个合成任务的一段简化 trace（追踪）：
+
+| 事件 | `runId` / 图线程与尝试 | 模型调用、SDK 次数、工具调用 | 归一化输入与状态变化 | 诊断 |
+|---|---|---|---|---|
+| 首次模型请求收到 `503`，客户端重试成功 | 同一 `run-r42-7` | 同一应用 `model_invocation_id=mi-17`，SDK attempt `1 → 2`；第二次响应首次带 `tool_call_id=c1` | 模型请求摘要相同；attempt 1 没有模型响应或工具调用 | SDK/客户端重试；每次底层传输的服务提供方 request ID 只作该次尝试的元数据，不把它当 run ID 或 `c1` |
+| `c1` 结果已持久化后 worker 崩溃 | 同一 run 和已保存的图 thread/checkpoint；worker attempt（工作进程执行尝试）增加 | 不创建新的模型调用或工具 ID | 检查点包含 `c1` 结果，应用重载同一观察；模型循环轮次与工具调用次数不增加 | 运行恢复；若崩溃点落在模型调用返回或节点状态提交之间，未提交步骤仍可能再执行，须按应用记录和服务契约对账 |
+| 恢复后的新模型调用再次请求读取完整 build 42 日志 | 同一 run/thread | 新 `model_invocation_id=mi-18`、新 `tool_call_id=c-reread-1` | 归一化参数仍为 `read_build_log(build_id=42)`，来源版本相同，`c1` 已在上下文且没有新观察/已完成阶段 | 不是 SDK 重试或恢复；是模型循环再次请求。按当前权限核验后可把已存结果关联到 `c-reread-1`，不必重复取数；如果之后仍无新证据或状态推进，计为无进展 |
+| 用户明确追加“请查代码级根因”，计划 v1→v2；随后读取契约与差异 | 同一 `run-r42-7` / thread；原始提交摘要不变 | 新模型调用 `mi-19`；只读 `c3`、`c4` 两次 | `test-contract@commit-a17d92e` 的 `/items` 空名称测试要求 HTTP 400；同一提交的差异把 `name is None or not name.strip()` 改成 `name is None`，空字符串通过检查并返回 200，与 `c1` 相符 | 澄清后按 P2 取得两项同版本证据，才可形成代码级解释并进入 P3；单独的契约不足以声称已找出根因 |
+
+如果契约或差异摘要对应的 commit 与 build 42 不匹配，P2 不算完成：保留 `c1`，修订计划去取对应 build commit 的证据；若受权限或来源限制无法核实，就明确停在“根因未知”，不从模型猜测补齐。这里的失败测试和两处差异是合成 fixture；测试要求空名称返回 `400`，差异显示旧条件 `name is None or not name.strip()` 被改成 `name is None`，因此该空字符串不再被拒绝，与 `c1` 中的 `200` 对上。
+
+无进展由可核对的状态变化定义：例如新增且授权有效的来源观察、一个验收阶段被证据完成，或经用户确认的计划约束变化；换一种措辞、增加 token、取得一个新随机调用 ID 都不算进展。应用可以比较 run/thread、worker attempt、应用模型调用 ID、SDK attempt、工具调用 ID、规范化参数摘要、来源版本、观察集合和计划版本。
+
+本 trace 的无进展计数只覆盖模型循环：`mi-17` 的 SDK 传输重试不是新模型轮，worker 接管也不增加模型调用数；`mi-18` 的 `c-reread-1` 重复同参同源、未增加观察，计为第 1 轮无进展。若下一轮仍无新证据或计划推进，本例在第 2 轮停止；这里用户授权的澄清和 `c3`、`c4` 新证据使计划前进，计数归零。连续两轮只是本合成运行的停止门槛，不是通用默认值。另设总调用数、截止时间和费用上限；副作用始终走已审批的操作记录与幂等/对账流程，不允许用模型新一轮输出生成新操作键。
 
 ### 如何验证复杂编排是否值得维护？
 
@@ -1824,7 +3086,7 @@ prompt template（提示模板）仍是一个主智能体可用的选项：如�
 
 运行记录应关联 run ID（运行标识）、每个子任务所有者、输入证据引用、模型和工具调用、重试、延迟、资源消耗、完成状态与外部 operation key（操作键）。只保留诊断协作问题所需的内容，并限制敏感上下文。观察到路由错、回传失真或重复动作后，把最小复现加入端到端回归；不要用单个子智能体的局部得分代替系统交付结果。汇总推理成本时也要计入输入和输出 token（词元），并和端到端质量、时延及人工处理量一起比较。
 
-相关测量方法见[LLM 评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+相关测量方法见[LLM 评估方法](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 > [!info]- 来源
 > - **提示链、路由、并行与评估—优化等构件：** Anthropic，[Building effective agents](https://www.anthropic.com/research/building-effective-agents)，2024-12-19，“Building blocks, workflows, and agents”与“Combining and customizing these patterns”；页面提示旧工具生态描述已变化，本文只保留模式结构与适用形状。
@@ -1834,7 +3096,9 @@ prompt template（提示模板）仍是一个主智能体可用的选项：如�
 > - **单循环与折叠子智能体的部署经验：** Anthropic，[Building agents: When to fold subagents into your main agent loop](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)，2026-10-22，“Using an agent loop with progressive disclosure”“Task-completion evals”；报告基于 Anthropic 的若干企业部署对照，不是普遍因果结论。
 > - **技能与渐进式披露：** Anthropic，[Equipping agents for the real world with Agent Skills](https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills)，2025-10-16，2025-12-18 更新称其为开放标准；“The anatomy of a skill”“Skills and the context window”说明技能目录包含 `SKILL.md`、脚本和资源，并按需载入。
 > - **异步工作者与可组合产物：** Shah et al., [GitSwarm: Decentralized Compounding Inference](https://arxiv.org/html/2610.04862v1)，arXiv v1，2026-10-04，§§2.1–2.5、§3 和 §4；工作者运行在特定长程问题求解与 GPU 研究任务中，发布验证不代表产物正确。本文只借其持久、可追溯的中间产物设计作为架构例子。
-## 15. 生产 AI 如何阻止不可信内容诱导模型越权？
+> - **workflow 与 agent 的控制权、可观察图流程：** LangGraph，[Workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)，截至 2026-11-09 检查；本文的固定步骤/模型决策取舍与之对应，计划状态表和 no-progress 门槛是应用层设计。
+> - **Agent loop 内的 middleware 及可自定义重试钩子：** LangChain，[Middleware overview](https://docs.langchain.com/oss/python/langchain/middleware/overview)，截至 2026-11-09 检查；`wrap_model_call` 可控制 handler 调用次数，故 SDK 与 middleware 需分别观测，不能把不同层重试合成一个次数。
+## 20. 生产 AI 如何阻止不可信内容诱导模型越权？
 
 模型会把用户消息、检索片段和工具结果都读作上下文。当其中的文字诱使模型偏离任务目标、约束或既定权限时，模型可能提出不该执行的回答或工具动作。可靠边界要放在模型循环外：应用验证每个动作的调用者、目标和当前业务条件，缩小工具真实能力，并在高影响动作前暂停等待人工决定。提示词和过滤器可以辅助检测，不能代替这些控制。
 
@@ -1885,7 +3149,7 @@ flowchart TD
 
 对低影响、可逆动作可按已定义规则自动继续；涉及删除、外部通知、生产变更或权限不清的操作，应根据风险暂停。本例的 `create_issue` 只有在应用已确认当前用户可写目标仓库、草稿字段通过规则校验，而且策略要求的审核人批准了同一份预览之后，才可执行。审批返回时仍要重新核验权限和目标状态；否则运行保持暂停或进入人工处理。
 
-人工预览至少说明目标仓库、动作、将写入的字段、证据来源和撤销/修正方式。审批若只显示“模型想创建工单”，用户无法判断具体影响。若工单内容或目标在等待期间变化，原审批失效。审批过程作为同一个持久运行中的状态恢复，细节见[断线后如何恢复同一 AI 运行](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
+人工预览至少说明目标仓库、动作、将写入的字段、证据来源和撤销/修正方式。审批若只显示“模型想创建工单”，用户无法判断具体影响。若工单内容或目标在等待期间变化，原审批失效。审批过程作为同一个持久运行中的状态恢复，细节见[断线后如何恢复同一 AI 运行](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
 
 模型自称“有把握”不是安全决策。遇到审批超时、目标不明确、权限检查失败或重复工具失败，应用应暂停后续副作用，并把用户请求、引用证据、已做动作与待决定事项交给人工。结果未知时先阻止新的、不受控的副作用，按接收方契约查询；只有运行未取消、当前授权仍有效、同一请求仍处于接收方保证的去重窗口内，才考虑同键重放。取消后只允许不会创建新效果的对账，无法确认结果时转人工。停止与恢复路径必须位于模型循环之外，由程序限制新调用和重试；提示模型“停止”并不等于应用真的切断了能力。
 
@@ -1912,7 +3176,7 @@ flowchart TD
 > - **下游组件必须处理模型输出：** OWASP GenAI Security Project，[LLM10:2026 Improper Output Handling](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/blob/main/2026/final/LLM10_ImproperOutputHandling.md)，2026 官方版本；对应工单、浏览器和命令等具体接收端的校验/编码。
 > - **风险测试、事故恢复与停用：** NIST，[AI 600-1: Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)，2024，§2.2（confabulation）、MEASURE 2.6（部署前安全评估和安全失效）、MANAGE 2.3–2.4（未知风险响应、恢复和停用）；核对日期：2026-11-06。它是风险管理指导，不是对本合成流程的安全认证。
 > - **审批中断与同一运行恢复的当前实现例：** OpenAI，[Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，核对日期：2026-11-06；Agents SDK 文档说明人审可暂停运行、保存状态后续跑。该状态模型是供应商实现例，不是通用安全保证。
-## 16. AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？
+## 21. AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？
 
 把一次逻辑任务的身份、权威状态和外部副作用保存在应用侧。HTTP（Hypertext Transfer Protocol，超文本传输协议）请求、事件流和 worker（工作进程）都只是完成或交付运行的参与者；任何一个断开，都不能单独证明运行已经停止，也不能证明一次写入没有生效。恢复时先读持久状态，再按操作契约查询、去重或对账。
 
@@ -1920,7 +3184,7 @@ flowchart TD
 
 ### 运行身份、持久状态和交付连接分别负责什么？
 
-每个逻辑任务使用稳定的 run ID（运行标识，字段名 `runId`）。客户端提交 idempotency key（幂等键）时，服务端将调用者、资源范围、键值和规范化请求摘要绑定：同一作用域和摘要的重试返回原有运行；同键但不同摘要应返回冲突，不能借用旧运行，也不能新建第二个动作。`runId` 标识逻辑任务，`tool_call_id`（工具调用 ID）关联模型请求与工具结果，worker attempt（工作进程执行尝试）标识一次获租执行；它们不能相互代替。
+每个逻辑任务使用稳定的 run ID（运行标识，字段名 `runId`）。客户端提交 idempotency key（幂等键）时，服务端将调用者、资源范围、键值和规范化请求摘要绑定：同一作用域、同一键且同一摘要的重试返回原有运行；同键但不同摘要应返回冲突，不能借用旧运行，也不能新建第二个动作。`runId` 标识逻辑任务，`tool_call_id`（工具调用 ID）关联模型请求与工具结果，worker attempt（工作进程执行尝试）标识一次获租执行；它们不能相互代替。
 
 | 记录或通道 | 在本例中的内容 | 能证明什么 |
 |---|---|---|
@@ -1939,7 +3203,9 @@ flowchart TD
 
 ### worker 崩溃后怎样让新尝试接手？
 
-队列消息只是唤醒运行。worker 用条件更新原子领取 `queued` 状态，并在持久记录中取得有期限的 lease（租约）和单调递增的 attempt/fencing token（尝试代次／栅栏令牌）。租约到期只允许恢复器尝试接管，不会自行撤销旧尝试的写入资格；恢复器提交领取下一代的条件更新后，每次检查点写入才会因代次不符而拒绝旧尝试。条件推进还须比较期望状态和取消标记：若扫描器先将运行改回 `queued`，旧 worker 即使代次尚未增加，也会因状态不符而无法继续写入。若旧写入先于接管事务提交，恢复器应读到该状态再继续；若接管先提交，旧尝试的写入被拒绝。栅栏只保护本地状态，不会取消已发出的远端请求。完成本次消息代表的步骤或写下暂停状态后，先持久化检查点再确认消息；若确认前崩溃，重投会从检查点恢复；若确认后崩溃且运行仍需推进，恢复扫描器必须能找到过期的非终态运行，以条件事务重新排队并写入新的 outbox 事件；仅保存状态不会自动唤醒 worker。等待审批的运行由审批事件唤醒，结果未知的操作由对账调度器接续。
+队列消息只是唤醒运行。worker 用条件更新原子领取 `queued` 状态，并在持久记录中取得有期限的 lease（租约）和单调递增的 attempt/fencing token（尝试代次／栅栏令牌）。每次 worker 的本地状态更新或发送意图事务取得运行记录的更新权并判定条件时，都须满足预期状态、当前 attempt、`lease_until` 晚于数据库当前时钟且尚未取消。租约过期会让随后作出的本地条件推进失败，即使恢复器还没领取下一代；它不会杀死旧进程，也不能撤回已经发出的远端请求。旧尝试若在有效租期内通过条件并先于接管提交，恢复器读到该已提交状态；恢复器若先领取下一代，旧 attempt 也会因代次不符而被拒绝。取消、审批和恢复器自己的状态转换使用各自的条件事务；`cancel_requested` 下的对账结果也可在匹配该分支状态并持有当前对账 attempt/lease 后写回 `completed`。
+
+完成本次消息代表的步骤或写下暂停状态后，先持久化检查点再确认消息；若确认前崩溃，重投会从检查点恢复。确认后崩溃时，恢复扫描器不能把所有过期非终态一律排回普通 `queued`：只有当前状态为 `running`、尚未取消且操作账本确认无写入意图的运行，才能以条件事务排队并写入新的 outbox 事件；新 worker 领取时取得下一 attempt。若状态已是 `effect_in_flight`，恢复器保留原操作键和请求摘要，条件转为 `effect_unknown` 并登记对账 outbox；已发送或可能在途的请求只能走对账，不能当作普通步骤重放。`awaiting_approval` 由审批事件唤醒；结果未知的操作由对账事件或调度器接续。单纯持久化状态不会自动唤醒任何处理者。
 
 运行表、操作记录和持久队列可以完成这些职责。更复杂的编排也可选保存事件历史的工作流运行时；持久化的关键不是技术名词，而是进程、连接或 worker 消失后仍能回答“任务到哪一步、外部动作发生了什么”。
 
@@ -1950,44 +3216,50 @@ stateDiagram-v2
   [*] --> accepted
   accepted --> queued: 排队状态持久化，outbox 等待发布
   queued --> running: worker 原子领取并持有有效租约
+  accepted --> canceled: 取消事务确认无写入意图后直接记终态
+  queued --> canceled: 取消事务确认无写入意图后直接记终态
+  running --> canceled: 取消事务确认无写入意图后直接记终态
+  running --> queued: 租约过期、未取消且账本确认无写入意图，条件重排并登记 outbox
   running --> awaiting_approval: c1 证据已保存，缺陷单草稿已生成
   awaiting_approval --> queued: 同事务记录有效审批、排队状态与 outbox
+  awaiting_approval --> canceled: 取消事务确认无写入意图后直接记终态
   awaiting_approval --> rejected: 审核人拒绝
   running --> effect_in_flight: 操作键、请求摘要与当前租约已持久化
   effect_in_flight --> completed: 外部结果和工单 ID 已保存
-  effect_in_flight --> effect_unknown: 新尝试发现租约过期且结果未确认
-  effect_unknown --> effect_unknown: 未取消时按契约查询或同键重放，仍未确认
+  effect_in_flight --> effect_unknown: 租约过期，保留操作键和摘要并登记对账 outbox
+  effect_unknown --> effect_unknown: 有效租期内读回原载荷并核验批准，条件登记本次发送意图再按契约同键重放
   effect_unknown --> completed: 对账确认已提交并保存外部 ID
   running --> failed: 无法恢复的错误
-  running --> cancel_requested: 收到取消请求
-  awaiting_approval --> cancel_requested: 收到取消请求
-  effect_in_flight --> cancel_requested: 收到取消；保留副作用记录
-  effect_unknown --> cancel_requested: 收到取消；仍须对账
+  effect_in_flight --> cancel_requested: 原子记录取消并登记对账 outbox
+  effect_unknown --> cancel_requested: 原子记录取消并登记对账 outbox
   cancel_requested --> cancel_requested: 只查询或非创建式对账，结果仍未确认
   cancel_requested --> canceled: 确认没有尚可能提交的动作
   cancel_requested --> completed: 外部动作已完成，停止后续步骤并如实返回
 ```
 
-`effect_in_flight` 不是死掉的 worker 写出的结论，而是在调用远端之前由当前有效尝试持久化的状态，包含操作键、精确请求摘要与租约代次。租约过期后，新尝试发现该操作没有记录终态，才把它转为 `effect_unknown` 并对账。审批通过时，应用以条件事务核验仍在等待同一动作摘要，将有效审批、`queued` 状态及针对同一 `runId` 的 outbox 恢复事件一起提交；重复或迟到的审批事件不能重新排队一个已经继续或取消的运行。领取该事件的 worker 必须取得新的 attempt 代次和 lease，重新读取草稿摘要、审批记录与当前授权，然后才能进入 `effect_in_flight`。若审批人拒绝，应用将运行记为 `rejected`；若草稿摘要或权限在等待期间变化，原审批失效，更新后需重新审核。未取消且处于 `effect_unknown` 时，查询或契约允许的同键重放都不能凭发起动作本身清除未知状态；只有确认远端结果后才转为完成，确认旧请求不会再提交后才可取消。取消请求不删除副作用记录、操作键或摘要，也不能退回允许写入重放的普通未知状态。同键写入只防重复：若旧请求从未到达接收方，重放可能首次创建工单，所以取消后只允许查询或接收方保证不会创建新效果的对账操作。
 
-`accepted`、`queued`、`running`、`awaiting_approval`、`effect_in_flight`、`effect_unknown` 与 `cancel_requested` 都表示仍有后续处理或对账；`completed`、`failed`、`rejected`、`canceled` 是终态。具体存储可将运行状态与单个副作用状态分别建模，但外部效果必须能关联回唯一的 `runId` 和操作键。
+`effect_in_flight` 是当前有效尝试在调用远端前持久化的发送意图，含操作键、请求摘要与租约代次。租约过期且结果未记录时，恢复器保留这些字段，将状态转为 `effect_unknown` 并登记对账 outbox；新 worker 先对账，不回到普通草稿步骤。相反，只有未取消且操作账本确认还没有写入意图的过期 `running` 才能重排到 `queued`。
+
+审批通过时，应用以条件事务核验仍在等待同一动作摘要，将有效审批、`queued` 状态及针对同一 `runId` 的 outbox 恢复事件一起提交；重复或迟到的审批事件不能重新排队一个已经继续或取消的运行。领取该事件的 worker 必须取得新的 attempt 代次和 lease，重新读取已保存的原始草稿或不可变引用、审批记录与当前授权，再比对摘要；摘要只能校验载荷，不能还原正文。若审批人拒绝，应用将运行记为 `rejected`；若草稿摘要或权限在等待期间变化，原审批失效，更新后需重新审核。对尚无写入意图的 `accepted`、`queued`、`running` 和 `awaiting_approval`，取消事务可直接写入终态 `canceled`；即使旧 worker 仍在计算，它后续的状态更新也会因运行已终结而失败。
+
+`effect_unknown` 的查询不会发起新写入。若服务契约允许同键重放且去重窗口有效，对账 worker 先从应用账本读回已批准的完整原始载荷或不可变引用，核验其摘要与当前批准仍有效，再查询同一操作键。重放前还须像首次发送一样，在事务取得记录更新权时核验当前 attempt、`lease_until` 晚于数据库当前时钟、预期状态 `effect_unknown`、原请求摘要、当前批准、写授权和未取消状态，并登记这次发送意图。这项事务与取消事务互斥：取消先提交就禁止重放；发送意图先提交则按可能在途的请求继续对账。不能只读取“未取消”再裸发，也不能只凭相同摘要跳过当前批准检查。旧请求可能尚未到达接收方，因此同键去重不等于取消后的安全重放。已有写入意图时，取消标记与对账 outbox 一起提交；只允许查询或不会创建新效果的对账，直到确认结果。发起重放也不清除未知状态；只有确认远端结果后才转为完成。
 
 > [!example] 从重复提交到恢复 `run-r42-7`
-> 1. 浏览器在调用者、build 42 范围内以幂等键 `build-42-triage-req-19` 提交“解释失败并准备缺陷单”。服务端计算请求摘要，并在一个持久事务中写入 `run-r42-7` 与 outbox 事件，返回 `202` 和 `runId`。同键重试且摘要相同会得到该运行；若把同一键用于不同问题或目标，服务端返回冲突。HTTP 的 `202 Accepted` 只表示请求已收下，不代表任务已完成。
-> 2. 若进程恰在事务提交后、队列发布前崩溃，outbox 发布器稍后仍能找到待发送事件。若发布器发布后、标记前崩溃，它可能再次发布同一事件。worker 通过条件更新原子领取 `queued` 运行，写入带过期时间的租约与递增 attempt/fencing token；同一时刻只有已提交的当前代次能更新运行检查点。租约到期后，如果旧写入先于接管事务提交，恢复器必须读入这个最新状态；如果接管事务先提交，之后旧代次的状态更新会失败。队列消息只唤醒运行，数据库中的当前代次决定哪一次尝试可以继续。
-> 3. worker 调用模型后，模型提出读取 `read_build_log` 的请求。应用核验调用者可读 build 42 后才执行工具；`c1` 是这次工具调用的 ID，结果关联到该 ID，包含失败步骤、测试名、预期/实际值和退出状态。应用先持久化这些证据及其来源，再继续模型调用。完成本次唤醒代表的步骤或暂停点后，应用先保存对应检查点，再确认队列消息；若确认前崩溃，重投消息会从该检查点恢复，若确认后崩溃且尚未到暂停点或终态，过期运行扫描器以条件事务重新排队并登记 outbox，才能从持久检查点继续。
-> 4. 模型生成解释和缺陷单草稿。应用保存 `repository_id=build-service`、标题、正文、证据摘要和 `payload_hash`，把运行置于 `awaiting_approval`。此时尚未创建工单。
-> 5. 浏览器在审批事件到达前断线。重连后以 `run-r42-7` 查询，看到仍在等待审批；不重新创建任务，也不把部分流文本当作终态。审核人看到的预览绑定到 `repository_id`、标题、正文和证据摘要。审批返回时，应用检查该摘要仍相同、审批人仍有权限、目标仓库状态仍有效，并以条件事务一起提交审批决定、`queued` 状态和唤醒同一 `runId` 的 outbox 恢复事件。
-> 6. worker 收到审批恢复事件后，先通过条件事务领取 `run-r42-7` 的新 attempt 代次和 lease，再回读草稿摘要、审批记录与当前授权。核对通过后，它把 `create_issue` 的操作键 `run-r42-7:create-issue:v1`、完整请求摘要和副作用状态 `effect_in_flight` 持久化，进入该状态的条件更新同时核对当前 attempt、期望状态与取消标记，并重新核验写授权。若取消先提交，这次推进失败；若写入意图先提交，后来取消必须按请求可能已经发出处理，本地栅栏不能撤回网络请求。然后才提交给工单服务。假设服务创建了 `ISSUE-842`，worker 却在写回 ID 前崩溃；它无法自行更新运行。租约过期后，新 worker 通过条件事务提交下一 attempt，读到尚无结果的 `effect_in_flight` 并转为 `effect_unknown`，不会再生成一份草稿或使用新操作键。栅栏只拒绝接管提交后的旧代次写入；先前已发出的远端请求仍需按操作键对账。
-> 7. 恢复 worker 先向接收服务查询同一操作键；副作用记录保持 `effect_unknown` 并保留原键和请求摘要。只有运行未被取消，且接收服务支持绑定相同请求摘要的幂等写入，且当前键仍在接收方保证的去重保留窗口内，应用重新核验当前写授权与取消状态后，才可以用同一键重放；超时或仍在处理时继续保持未知，不能把一次重放当作已确认。若只能查询，查无记录仍不证明原请求没有在途或延迟提交，应继续等待、按服务契约查询，不能改键重发。若去重窗口已经结束，不能仅因键相同就重放写入，应改用查询或人工对账。确认已有 `ISSUE-842` 后，写回副作用记录与最终答复，再标记 `completed`。
+> 1. 浏览器在调用者、build 42 范围内以幂等键 `build-42-triage-req-19` 提交“解释失败并准备缺陷单”。服务端计算请求摘要，并在一个持久事务中写入 `run-r42-7` 与 outbox 事件，返回 `202` 和 `runId`。同一键重试且摘要相同会得到该运行；若把同一键用于不同问题或目标，服务端返回冲突。HTTP 的 `202 Accepted` 只表示请求已收下，不代表任务已完成。
+> 2. 若进程恰在事务提交后、队列发布前崩溃，outbox 发布器稍后仍能找到待发送事件。若发布器发布后、标记前崩溃，它可能再次发布同一事件。worker 通过条件更新原子领取 `queued` 运行，写入带过期时间的租约与递增 attempt/fencing token。每次 worker 本地推进都要求预期状态、当前 attempt、`lease_until` 晚于数据库当前时钟且尚未取消；只有旧写入在有效租期内通过条件、并且先于接管提交，恢复器才会读到该状态。若租约先到期，本地新推进立即失败；若接管先领取下一代，旧 attempt 也会因代次不符而失败。队列消息只唤醒运行，数据库状态和有效 attempt/lease 决定哪次尝试能写入。
+> 3. worker 调用模型后，模型提出读取 `read_build_log` 的请求。应用核验调用者可读 build 42 后才执行工具；`c1` 是这次工具调用的 ID，结果关联到该 ID，包含失败步骤、测试名、预期/实际值和退出状态。应用先持久化这些证据及其来源，再继续模型调用。完成本次唤醒代表的步骤或暂停点后，应用先保存对应检查点，再确认队列消息；若确认前崩溃，重投消息会从该检查点恢复；若确认后崩溃且状态仍是 `running`，只有操作账本确认无写入意图时，扫描器才以条件事务重新排队并登记 outbox。若写入意图已存在，则转入 `effect_unknown` 对账路径。
+> 4. 模型生成解释和缺陷单草稿。应用保存 `repository_id=build-service`、标题、正文、证据摘要和 `payload_hash`，把运行置于 `awaiting_approval`。此时尚未创建工单；生产记录保留原始正文或不可变引用，摘要只用于比对，不能还原载荷。
+> 5. 浏览器在审批事件到达前断线。重连后以 `run-r42-7` 查询权威状态，后台 worker 仍由持久化队列或审批事件独立唤醒；客户端只读状态，不负责继续任务，也不把部分流文本当作终态。审核人看到的预览绑定到 `repository_id`、标题、正文和证据摘要。审批返回时，应用检查该摘要仍相同、审批人仍有权限、目标仓库状态仍有效，并以条件事务一起提交审批决定、`queued` 状态和唤醒同一 `runId` 的 outbox 恢复事件。若等待审批时用户取消，本例在一个事务中确认无写入意图并直接标记 `canceled`；不等待没有活跃 worker 的安全点。
+> 6. worker 收到审批恢复事件后，先通过条件事务领取 `run-r42-7` 的新 attempt 代次和 lease，再读取草稿的原文或不可变引用、审批记录与当前授权，核对保存的请求摘要。核对通过后，它把 `create_issue` 的操作键 `run-r42-7:create-issue:v1`、完整请求摘要和副作用状态 `effect_in_flight` 持久化；这次发送意图事务在取得记录更新权时，还要同时核对预期状态、当前 attempt、`lease_until` 晚于数据库当前时钟、审批仍有效且获批摘要相符、写授权与未取消标记。若取消先提交，这次推进失败；若写入意图先提交，后来取消必须按请求可能已经发出处理，本地栅栏不能撤回网络请求。然后才提交给工单服务。假设服务创建了 `ISSUE-842`，worker 却在写回 ID 前崩溃；它无法自行更新运行。租约过期后，新 worker 通过条件事务提交下一 attempt，保留原操作键与请求摘要，将状态转为 `effect_unknown` 并登记对账 outbox，不会重做普通草稿步骤或使用新操作键。
+> 7. 对账 worker 从应用账本读回已批准的完整原始载荷或不可变引用，并核验当前批准仍有效、载荷摘要相同；摘要只用于比对，不还原正文。它再查询同一操作键，副作用记录保持 `effect_unknown`。若接收服务支持绑定相同请求摘要的幂等写入，且当前键仍在去重保留窗口内，写入前还须用条件事务核验当前 `effect_unknown` 状态、对账 worker 的 attempt 与有效 lease、当前批准摘要和写授权，并确认未取消后原子登记本次发送意图。该事务与取消事务互斥：取消先提交则禁止重放；发送意图先提交则按可能在途继续对账。只读取“未取消”后再发送不安全。超时或仍在处理时保持未知，不能把一次重放当作已确认。若只能查询，查无记录仍不证明原请求没有在途或延迟提交，应继续等待或人工对账，不能改键重发；去重窗口结束后也不能仅因键相同就重放。确认已有 `ISSUE-842` 后，写回副作用记录与最终答复，再标记 `completed`。
 > 8. 如果接收服务既不支持按键去重，也不能按键查询，就暂停自动重试并人工对账。盲目重发可能创建第二张工单；若用户同时要求取消，运行保持 `cancel_requested`，并保留副作用的 `effect_unknown` 账目；只做不会新建工单的对账，直到确认原请求不会再提交。
 
 | 重连时持久状态 | 恢复动作 | 不安全的推断 |
 |---|---|---|
 | `running`，最后检查点是 `c1` 的已存结果 | 恢复必要上下文，继续处理已持久化的观察 | 认为旧流没有到达客户端，所以可新建一份 run |
-| `awaiting_approval`，动作摘要未变 | 继续展示同一审批项；获批后重新检查权限和目标状态 | 把之前对别的动作或旧版本的审批复用到新草稿 |
-| `effect_in_flight`，操作键和请求摘要已保存，原租约过期 | 新 worker 先认领并标记结果未知，再查询；只有未取消时才考虑契约允许的同键写入重放 | 因本地没存到外部 ID 就当作远端没有提交，或用新操作键再写一次 |
-| `effect_unknown`，接收方暂时查无结果 | 保持未知；未取消且当前授权、同键同请求与有效去重窗口条件满足时才按契约重放，否则只查询、等待或人工对账 | 把“查询无记录”视为足以证明旧请求永远不会提交 |
+| `awaiting_approval`，动作摘要未变 | 继续展示同一审批项；取消时以条件事务确认无写入意图并记为 `canceled`，获批后重新检查权限和目标状态 | 把之前对别的动作或旧版本的审批复用到新草稿 |
+| `effect_in_flight`，操作键和请求摘要已保存，原租约过期 | 新 worker 领取下一代后将其转入 `effect_unknown` 并登记对账；查询后才判断契约允许的下一步 | 把它当作普通 `running` 步骤重排，或用新操作键再写一次 |
+| `effect_unknown`，接收方暂时查无结果 | 读回原始批准载荷，核验摘要与当前批准；写前以条件事务核验状态、对账 attempt、有效 lease、权限与未取消状态并登记发送意图，满足后才按契约重放，否则只查询、等待或人工对账 | 把“查询无记录”视为足以证明旧请求永远不会提交 |
 | `cancel_requested`，副作用仍为 `effect_in_flight` 或 `effect_unknown` | 停止新动作，但保留原键和摘要，继续对账 | 清除副作用记录或直接标为 `canceled` |
 | `completed`，结果已持久化 | 返回已存结果；可以另行重放仍被保留的进度事件 | 再跑模型或工具以“补回”丢失的响应 |
 
@@ -2007,7 +3279,7 @@ stateDiagram-v2
 
 ### 取消请求与断线有什么不同？
 
-客户端断开响应连接只结束这次交付，不取消服务端运行。用户发出的取消则是需要鉴权、持久记录并由 worker 在安全点执行的独立请求。应用可以把运行改为 `cancel_requested`，等待 worker 停止后续推理和新工具调用；若外部副作用处于 `effect_in_flight` 或 `effect_unknown`，仍保留操作键、请求摘要与副作用记录，并继续查询或按接收方契约进行不会创建新效果的对账。运行保留取消标记；不得因进入未知结果处理就重新允许写入重放。只有确认远端没有执行且原请求不会再提交，才可标为 `canceled`；确认已成功则保存外部结果、停止后续步骤并如实完成。若远端始终无法给出结论，运行继续待人工对账，不能用取消清除未知结果。
+客户端断开响应连接只结束这次交付，不取消服务端运行。用户发出的取消是需要鉴权、持久记录并按运行状态推进的独立请求：对 `accepted`、`queued`、`running`、`awaiting_approval` 这些尚无写入意图的状态，条件事务可直接标记 `canceled`，旧 worker 随后的状态写入会失败；若写入意图已存在，则同一事务记录 `cancel_requested` 并登记对账唤醒。取消不能删除操作键、摘要或结果未知记录，也不能因进入对账就重新允许写入重放。只有确认远端没有执行且原请求不会再提交，才可标为 `canceled`；确认已成功则保存外部结果、停止后续步骤并如实完成。若远端始终无法给出结论，运行继续待人工对账。
 
 ### 检查点与模型推理缓存分别恢复什么？
 
@@ -2018,14 +3290,145 @@ stateDiagram-v2
 > [!info] 工作流事件回放的适用范围
 > Temporal 的 event history（事件历史）示例把运行时已记录的活动结果用于重建编排状态。该功能可以恢复应用工作流，但不让模型调用变得确定，也不自动判定一个尚未记录的远端副作用是否提交。采用同类运行时，仍要为活动结果和外部写操作定义持久记录与幂等或对账契约。
 
-运行契约承接[应用如何执行模型的工具请求](#12.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)，并与[生产 AI 如何阻止不可信内容触发越权动作](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)中的审批和停止边界配合。队列确认和重试结果的底层语义见[API 交付如何确认结果并限制重试](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)与[队列消息在何时才算被确认](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+运行契约承接[应用如何执行模型的工具请求](#14.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)，并与[生产 AI 如何阻止不可信内容触发越权动作](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)中的审批和停止边界配合。队列确认和重试结果的底层语义见[API 交付如何确认结果并限制重试](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)与[队列消息在何时才算被确认](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+
+### LangGraph 怎样恢复图步骤而不替应用记副作用？
+
+LangGraph 可以把运行过程表示成有状态的节点图。它的 `thread_id`（图线程标识）指向一串图检查点；它不是本应用的 `runId`，即使应用为每个运行建立一对一映射，也应分别保存两者。checkpointer（检查点保存器）恢复图状态和已完成的图步骤；state（图状态）包含本例的 `c1` 观察、缺陷单提案、审核结论，以及节点成功返回后归并的外部回执副本。应用运行账本另行持有权威的审批、`run-r42-7:create-issue:v1` 操作键、请求摘要和远端结果。图检查点不证明工单是否已创建，也不能代替这个副作用账本；示例中的 `journal` 仅在内存里模拟该应用账本。
+
+示例把审核结果作为图内观察用于分支；生产应用还需在运行账本中持久化审核者身份、获批草稿摘要和决定，并在继续写操作前重新检查授权。这条账本和图状态承担不同职责。
+
+无密钥示例使用 LangGraph Python `1.2.20` 的 `StateGraph`、`InMemorySaver` 和 `interrupt()`。`observations` 的 reducer（归并函数）用 `operator.add` 将成功节点返回的新条目追加到已有列表。示例载荷为便于阅读只含仓库、标题和证据；生产请求还要绑定完整草稿正文，摘要覆盖实际获批的全部字段。动作载荷和摘要在暂停前固定，稳定操作键为 `run-r42-7:create-issue:v1`；示例没有在审批后修改内容。若要改动已批准载荷，生产应用应重新审批并使用新的操作版本。fake remote（模拟接收服务）明确模拟按稳定操作键去重：同键同摘要返回同一工单 ID，同键不同摘要拒绝；它还假定去重记录至少保留到本例的重试完成。实际服务只有提供并兑现这一契约时，才有相同结果。
+
+```mermaid
+flowchart TD
+    P[prepare：保存 c1 与提案] --> A[approve：interrupt 暂停]
+    A -->|保存检查点| C[等待审批]
+    C -->|同一 thread 恢复| A2[approve 从节点开头重跑并返回决定]
+    A2 --> W[create_issue：提交远端]
+    W -->|远端已提交，节点在返回前抛出模拟异常| R[保留上个检查点]
+    R -->|同一 thread 再恢复| W2[create_issue 再次执行]
+    W2 -->|同键同摘要，模拟服务返回原 ID| F[节点返回外部回执]
+    F --> D[reducer 追加一条回执]
+```
+
+| 阶段 | 图与账本状态 | 累计计数：审批节点 / 写节点 / 远端请求 / 新建工单 |
+|---|---|---|
+| `prepare` 后进入审批中断 | 检查点含 `c1` 和提案；尚无审核结论 | `1 / 0 / 0 / 0`；暂停 `1` 次 |
+| 批准后恢复并提交 | 审批节点从头执行并返回决定；远端创建 `ISSUE-842` 后，写节点在返回回执前抛出模拟异常；本地图状态仍无回执，账本仍标记处理中 | `2 / 1 / 1 / 1` |
+| 同一 thread 恢复失败节点 | 写节点用同一操作键和摘要再请求；模拟接收服务识别重复请求并返回 `ISSUE-842`，账本记完成，图状态归并一条回执 | `2 / 2 / 2 / 1` |
+
+`observations` 的归并可手推如下。只有节点成功返回时，图才会把它的新增条目交给 reducer；`interrupt()` 暂停和节点抛出异常都不提交本次新增内容。
+
+| 时点 | 归并前列表 | 节点新增 | 归并后列表 |
+|---|---|---|---|
+| 初始 | `[]` | — | `[]` |
+| `prepare` 返回 | `[]` | `[c1 证据, 提案]` | `[c1 证据, 提案]` |
+| `approve` 首次触发中断 | `[c1 证据, 提案]` | 无返回值 | `[c1 证据, 提案]` |
+| 同一 thread 恢复，审批返回 | `[c1 证据, 提案]` | `[审批]` | `[c1 证据, 提案, 审批]` |
+| 远端已提交但节点抛出模拟异常 | `[c1 证据, 提案, 审批]` | 无返回值 | `[c1 证据, 提案, 审批]` |
+| 写节点重跑并成功返回 | `[c1 证据, 提案, 审批]` | `[ISSUE-842 回执]` | `[c1 证据, 提案, 审批, ISSUE-842 回执]` |
+
+> [!example]- 可运行代码：LangGraph Python 1.2.20（无密钥）
+>
+> ```python
+> from hashlib import sha256
+> from importlib.metadata import version
+> import json
+> from operator import add
+> from typing import Annotated, Any, TypedDict
+> from langgraph.checkpoint.memory import InMemorySaver
+> from langgraph.graph import END, START, StateGraph
+> from langgraph.types import Command, interrupt
+>
+> run_id, thread_id = "run-r42-7", "lg-thread-run-r42-7"
+> key = f"{run_id}:create-issue:v1"
+> payload = {"repository_id": "build-service", "title": "reject_empty_name accepted HTTP 200",
+>            "evidence": "build 42 / c1: expected 400, actual 200, exit 1"}
+> digest = sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+>
+> class State(TypedDict):
+>     observations: Annotated[list[dict[str, Any]], add]
+>
+> class FakeRemote:
+>     def __init__(self): self.requests, self.created = 0, {}
+>     def create_issue(self, op_key, body_digest):
+>         self.requests += 1
+>         if op_key in self.created:
+>             old_digest, issue_id = self.created[op_key]
+>             if old_digest != body_digest: raise ValueError("same key, different request")
+>             return issue_id
+>         self.created[op_key] = (body_digest, "ISSUE-842")
+>         return "ISSUE-842"
+>
+> remote, journal = FakeRemote(), {}
+> stats, crash_once = {"approval_node": 0, "side_effect_node": 0}, [True]
+>
+> def prepare(_):
+>     return {"observations": [
+>         {"kind": "evidence", "source_call_id": "c1", "test": "reject_empty_name",
+>          "expected": "HTTP 400", "actual": "HTTP 200", "exit_status": 1},
+>         {"kind": "action_proposal", "run_id": run_id, "action": "create_issue",
+>          "payload": payload, "operation_key": key}]}
+>
+> def approve(state):
+>     stats["approval_node"] += 1
+>     proposal = next(x for x in state["observations"] if x["kind"] == "action_proposal")
+>     answer = interrupt({"run_id": run_id, "action": proposal["action"],
+>                         "payload": proposal["payload"], "operation_key": key})
+>     return {"observations": [{"kind": "approval", "decision": answer["decision"]}]}
+>
+> def route(state):
+>     decision = next(x for x in reversed(state["observations"]) if x["kind"] == "approval")["decision"]
+>     return "create_issue" if decision == "approve" else END
+>
+> def create_issue(_):
+>     stats["side_effect_node"] += 1
+>     journal.setdefault(key, {"digest": digest, "status": "effect_in_flight"})
+>     if journal[key]["digest"] != digest: raise ValueError("same key, different request")
+>     issue_id = remote.create_issue(key, digest)
+>     if crash_once[0]:
+>         crash_once[0] = False
+>         raise RuntimeError("simulated crash after remote commit")
+>     journal[key] = {"digest": digest, "status": "completed", "external_id": issue_id}
+>     return {"observations": [{"kind": "external_receipt", "operation_key": key,
+>                               "external_id": issue_id}]}
+>
+> builder = StateGraph(State)
+> builder.add_node("prepare", prepare).add_node("approve", approve).add_node("create_issue", create_issue)
+> builder.add_edge(START, "prepare").add_edge("prepare", "approve")
+> builder.add_conditional_edges("approve", route, {"create_issue": "create_issue", END: END})
+> builder.add_edge("create_issue", END)
+> graph = builder.compile(checkpointer=InMemorySaver())
+> config = {"configurable": {"thread_id": thread_id}}
+> paused = graph.invoke({"observations": []}, config)
+> print(f"langgraph_version={version('langgraph')} run_id={run_id} thread_id={thread_id}")
+> print(f"interrupt_pauses={len(paused.get('__interrupt__', []))} approval_node_runs_after_pause={stats['approval_node']}")
+> try:
+>     graph.invoke(Command(resume={"decision": "approve"}), config)
+> except RuntimeError as error:
+>     print(f"simulated_failure={error}")
+> final = graph.invoke(None, config)
+> print(f"approval_node_runs_total={stats['approval_node']} side_effect_node_runs={stats['side_effect_node']}")
+> print(f"remote_requests={remote.requests} remote_created_issues={len(remote.created)}")
+> print(f"operation_journal={journal[key]}")
+> print(f"reducer_observations={final['observations']}")
+> ```
+
+运行计数解释了为何两次远端请求只产生一个工单：只有示例接收服务提供并兑现“同一操作键、同一摘要返回同一结果”的去重契约，才会得到 `2` 次请求、`1` 个新建工单。把写入移到中断之后，避免审批节点从头重跑时就执行远端写入；它没有消除远端提交后、本地检查点前的崩溃窗口，也没有产生 exactly-once（恰好一次）保证。若接收方不提供去重或查询契约，第二次请求可能重复建单，或最终结果仍未知。示例不实现取消竞争；生产运行须按上方状态机，在首次发送和同键重放前都用条件事务核验预期状态、当前 attempt、有效 lease、批准载荷、权限和未取消标记，并原子登记这次发送意图。取消先提交时禁止发送，意图先提交时按可能在途处理。取消后的未知副作用只允许查询或人工对账。
+
+这段代码的 `InMemorySaver` 和两个模拟存储都只在同一进程内保留状态；捕获异常后再次调用是故障路径演示，不是跨进程重启演示。LangGraph 官方文档将 `InMemorySaver` 定位为内存实现；部署时应使用持久化 checkpointer，例如数据库支持的 `PostgresSaver`，并单独保留应用运行记录、审批和副作用账本。持久化 LangGraph 状态仍不会让远端 API 和本地数据库共享事务。
+
+LangChain 的 Agent middleware（智能体中间件）属于常规模型—工具循环内部的生命周期钩子：`langchain.agents.create_agent(...)` 接收 `langchain.agents.middleware` 中的 middleware，围绕模型调用或工具步骤做记录、转换、限流、guardrail（行为约束）或受控重试；它本身不是另一套持久化运行时，底层 Agent 图由 LangGraph 执行。若想声明跨工具步骤、条件分支、人审和恢复边界，可直接用 `langgraph.graph.StateGraph`。Deep Agents 则是更高层的 agent harness（智能体执行框架）：从 `deepagents` 包导入的 `create_deep_agent(...)` 将计划、虚拟文件系统上下文、子智能体和长期记忆等预制能力组合起来，并建立在 LangChain 与 LangGraph 之上。想要常见 Agent loop（智能体循环）的局部钩子时选 middleware；任务符合这些预制能力时选 Deep Agents；需要由应用精确定义本例审批、运行账本与副作用对账时，显式图更直接。三个名称属于不同包和层，不应把 `create_deep_agent` 当作 `StateGraph` 节点 API，也不要把 middleware 当作图检查点。
 
 > [!info]- 来源
 > - **HTTP 重试与异步接收的协议边界：** IETF，[RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，2022，§9.2.2（幂等方法与失败后重试）及 §15.3.3（`202 Accepted` 只表示接收处理，不表示完成）；核对日期：2026-11-06。本文额外的 `POST` 幂等键是应用契约，不是该 RFC 自动提供的保证。
 > - **事件历史重建运行状态：** Temporal，[Event History](https://docs.temporal.io/encyclopedia/event-history)，核对日期：2026-11-06；说明工作流命令和活动结果如何记录、worker 崩溃后如何重放。它是运行时实现例，不能证明外部系统未记录的副作用状态。
 > - **运行态与人审恢复：** OpenAI，[Running agents](https://developers.openai.com/api/docs/guides/agents/running-agents) 与 [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，核对日期：2026-11-06；当前 Agents SDK 文档说明运行循环、可保存会话状态、暂停审批并恢复同一 run 的做法。具体 API 属于该 SDK。
 > - **模型上下文缓存的服务边界：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”“Cache lifetime”和常见问题；说明可重用的是匹配前缀的 KV 张量，缓存按模型/配置过期且不能保证每次复用。Anthropic，[Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)，2025-09-29，“Compaction”“Structured note-taking”；讨论上下文整理与外部笔记。运行身份、外部动作和审批账本是本文的应用架构扩展。
-## 17. 如何判断 AI 系统是否满足任务契约？
+> - **LangGraph 图状态、中断、恢复与持久化：** LangGraph Python [1.2.20](https://pypi.org/project/langgraph/1.2.20/)；示例运行条件为 Python 3.11.13 与 LangGraph 1.2.20。[Define and update state](https://docs.langchain.com/oss/python/langgraph/graph-api-state) 的 State / Reducers、[Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts) 的 Rules of interrupts / Side effects called before interrupt must be idempotent、[Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) 的 Checkpointer vs. store 与内存 saver 限制。模拟的远端去重与应用账本是本文明确声明的假设。
+> - **middleware 和 Deep Agents 的层次与 factory 所属包：** LangChain，[Middleware overview](https://docs.langchain.com/oss/python/langchain/middleware/overview) 的 Agent loop / Use middleware inside a LangGraph workflow；Deep Agents，[Overview](https://docs.langchain.com/oss/python/deepagents/overview) 及 [Quickstart](https://docs.langchain.com/oss/python/deepagents/quickstart)，截至 2026-11-09 检查；`create_agent` 是 LangChain agent API，`from deepagents import create_deep_agent` 属于 Deep Agents SDK。
+## 22. 如何判断 AI 系统是否满足任务契约？
 
 ### 从 build 73 的日志开始：回答对用户有用吗？
 
@@ -2139,7 +3542,7 @@ BLEU、ROUGE、模型评审、natural language inference (NLI，自然语言推�
 
 训练中提升奖励只说明策略更会满足优化目标。对于规则可复用且评分定义稳定的任务，**同一评分规则可以用于没有参与训练、调参或筛选的新问题**，这仍是对结果指标的有效独立验收；变化的是样本，而不是必须换一套评分函数。应检查规则是否覆盖等价答案、格式边界、侥幸通过和未知题型，并同时看人工抽检或其他独立检查。
 
-例如，若推理训练只优化“最终数学答案正确”的 verifier (程序验证器) 奖励，新题上继续由同一个正确 verifier 判分可以测量数学答对率；它不能单独证明推理过程每步正确、解释清晰、抗提示注入或广义泛化。[奖励驱动的推理训练](#19.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)解释奖励如何进入更新；本章的独立新样本与任务切片才用于检验这些结果是否迁移到预定任务范围。
+例如，若推理训练只优化“最终数学答案正确”的 verifier (程序验证器) 奖励，新题上继续由同一个正确 verifier 判分可以测量数学答对率；它不能单独证明推理过程每步正确、解释清晰、抗提示注入或广义泛化。[奖励驱动的推理训练](#24.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)解释奖励如何进入更新；本章的独立新样本与任务切片才用于检验这些结果是否迁移到预定任务范围。
 
 ### 把线上反馈转成可复核的新案例
 
@@ -2151,7 +3554,7 @@ BLEU、ROUGE、模型评审、natural language inference (NLI，自然语言推�
 
 公共基准可用于任务、输入输出协议和计分规则与目标问题接近的受控比较。检查覆盖范围、版本、基线和可能的数据污染；污染的检测取决于测试集、模型和测量方法，分数上涨本身既不证明记忆，也不排除污染。公开榜单不自动代替本地回归集和真实任务验收。像 HELM 这样的广泛评估展示了多场景、多指标的价值，但不能自动代表特定部署。
 
-RSI、harness 编辑或仓库产物复用等“系统如何演进”的研究证据属于[Agent 改进与版本验收](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)；这里保留其评估边界：预测、引用、复用和排序都不是端到端任务结果。若改变的是 agent 执行架构，还应在相同任务与预算下评估完整请求，而非只比较中间环节。
+RSI、harness 编辑或仓库产物复用等“系统如何演进”的研究证据属于[Agent 改进与版本验收](#25.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)；这里保留其评估边界：预测、引用、复用和排序都不是端到端任务结果。若改变的是 agent 执行架构，还应在相同任务与预算下评估完整请求，而非只比较中间环节。
 
 > [!info]- 来源
 > 以下链接映射正文中的指标定义、评审偏差、评估设计和公共基准边界；合成数据在正文中明确标注，不来自这些论文。
@@ -2165,7 +3568,7 @@ RSI、harness 编辑或仓库产物复用等“系统如何演进”的研究证
 > - **基准污染。** Sainz et al., [arXiv:2310.18018](https://arxiv.org/abs/2310.18018)；Singh et al., [arXiv:2411.03923](https://arxiv.org/abs/2411.03923)。污染测量依具体模型、数据和方法。
 > - **配对比例与置信区间。** NIST [Wilson 比例置信区间](https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm)；statsmodels [McNemar 检验](https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html)，exact 模式按不一致配对的二项分布计算。
 > - **配对验收扩展证据的归属。** [RSI-Anything v1](https://arxiv.org/html/2610.13912v1)、[Harness² v1](https://arxiv.org/html/2610.14224v1)、[GitSwarm v1](https://arxiv.org/html/2610.04862v1)和 Anthropic 的[子 agent 折叠实践文章](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)在 Agent 改进章详述；本章只使用它们共同提示的“实际任务结果优先”边界。
-## 18. 何时应微调来弥补稳定的行为差距？
+## 23. 何时应微调来弥补稳定的行为差距？
 
 ### 案例：日志助手反复给出错误标签
 
@@ -2179,7 +3582,7 @@ RSI、harness 编辑或仓库产物复用等“系统如何演进”的研究证
 | 指令、标签定义或流程不清 | 提示词、上下文、标签设计或工作流 | 只有这些因素稳定后还存在重复行为差距，训练样例也能表达正确行为时。 |
 | 相同输入反复违反风格、分类或响应格式 | 先试更清楚的提示词与应用层结构约束 | 若特定任务行为仍稳定失败，可用代表性示范训练并用独立评估证明收益。 |
 
-fine-tuning（微调）更新预训练模型的可训练参数，使目标示例所表达的行为在之后的调用中更常出现。权重并不是能按请求精确查询、保持实时或实施用户权限的数据库。外部证据仍需检索的来源时效和访问控制；可从[如何检索并使用经过授权的外部证据？](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)了解应用如何提供证据。训练前应比较提示词基线与相关检索或工作流基线；只有数据代表目标行为、差距可重复且预期收益覆盖训练、部署和维护成本时，才值得继续。
+fine-tuning（微调）更新预训练模型的可训练参数，使目标示例所表达的行为在之后的调用中更常出现。权重并不是能按请求精确查询、保持实时或实施用户权限的数据库。外部证据仍需检索的来源时效和访问控制；可从[如何检索并使用经过授权的外部证据？](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)了解应用如何提供证据。训练前应比较提示词基线与相关检索或工作流基线；只有数据代表目标行为、差距可重复且预期收益覆盖训练、部署和维护成本时，才值得继续。
 
 ### 标签差距应该更新哪些参数？
 
@@ -2259,13 +3662,13 @@ learning rate（学习率）决定优化器更新的尺度；对某个设置来�
 
 ### SFT、偏好优化和奖励训练怎样取舍？
 
-supervised fine-tuning（SFT，监督微调）用期望回答或演示训练模型。它能教会示例实际表达的响应模式，但不能保证模型在未见场景中遵循所有指令或保持安全；生产环境仍需运行时控制，可参阅[生产环境中的 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
+supervised fine-tuning（SFT，监督微调）用期望回答或演示训练模型。它能教会示例实际表达的响应模式，但不能保证模型在未见场景中遵循所有指令或保持安全；生产环境仍需运行时控制，可参阅[生产环境中的 AI 安全](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
 InstructGPT 研究中的 reinforcement learning from human feedback（RLHF，基于人类反馈的强化学习）流程先用人工撰写的演示做 SFT，再用人类偏好比较训练奖励模型，最后让强化学习优化策略来获得更高奖励。这描述的是该论文的方法，不代表所有助手模型的训练过程。
 
 direct preference optimization（DPO，直接偏好优化）从同一提示下被选中和被拒绝的回答优化模型，不像经典 RLHF 流程那样先训练一个单独的奖励模型。它仍依赖偏好数据、目标函数和建模假设，不能据此推断 DPO 一定比 proximal policy optimization（PPO，近端策略优化）更准确或更安全。应根据数据、基础设施和评估结果选择。
 
-reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）适用于存在可靠程序检查或其他独立结果检查的任务；它和 SFT、离线蒸馏承担不同作用。以推理任务为例，[可验证奖励如何训练推理能力？](#19.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)沿一道题讲清采样、判分、组内优势、策略更新、零方差奖励组和长度截断，并比较最终验收方式。偏好标签仍可能互相矛盾，或只反映标注者与 rubric（评分准则）的选择；偏好训练完成后，仍要用目标任务及相关失败案例评估，不能仅凭偏好标签判断安全。
+reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）适用于存在可靠程序检查或其他独立结果检查的任务；它和 SFT、离线蒸馏承担不同作用。以推理任务为例，[可验证奖励如何训练推理能力？](#24.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)沿一道题讲清采样、判分、组内优势、策略更新、零方差奖励组和长度截断，并比较最终验收方式。偏好标签仍可能互相矛盾，或只反映标注者与 rubric（评分准则）的选择；偏好训练完成后，仍要用目标任务及相关失败案例评估，不能仅凭偏好标签判断安全。
 
 > [!info]- 来源
 > 下列来源分别支持微调方法、偏好训练和平台可用性。LoRA 参数示例及训练流程中的建议为教学演算或工程实践。
@@ -2273,11 +3676,11 @@ reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学
 > - **低秩与参数高效微调。** Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)；Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)；Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751)；Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190)；Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)。
 > - **SFT 与 DPO。** Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155)；Rafailov et al., [Direct Preference Optimization: Your Language Model Is Secretly a Reward Model](https://arxiv.org/abs/2305.18290)。
 > - **OpenAI API 上的可用性。** [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization)、[Supervised fine-tuning](https://developers.openai.com/api/docs/guides/supervised-fine-tuning)、[Direct preference optimization](https://developers.openai.com/api/docs/guides/direct-preference-optimization)、[Reinforcement fine-tuning](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning) 与 [Deprecations](https://developers.openai.com/api/docs/deprecations)，核对日期为 2026-11-06。OpenAI 正在逐步结束自助微调：2026-05-07 起，没有既往微调记录的组织不能创建训练任务；2026-07-02 起，过去 60 天未对微调模型运行推理的组织也不能创建新任务；现有合格用户可创建任务至 2027-01-06，或基础模型更早停服之日。微调模型推理会持续到其基础模型退役；先前训练文档仍在迁移，具体资格与模型时限应按官方页面核验。平台可用性仅适用于 OpenAI API，不是对通用微调方法的限制。
-## 19. 可验证奖励如何训练推理能力？
+## 24. 可验证奖励如何训练推理能力？
 
 给模型一道可复算的小题：“4 盒各装 3 个螺丝，另有 2 个散装螺丝，共有多少个？”答案是 `4×3+2=14`。若训练提示要求模型把推理和答案分别放进 `<think>...</think>`、`<answer>...</answer>`，一个运行器可以检查最终数值和标记格式。下面先沿四条回答算分，再追踪分数怎样改变模型的下一次输出概率。
 
-若要判断这类训练是否适合稳定的行为差距，可先读[何时应微调来弥补稳定的行为差距？](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)；要设计独立验收，再读[如何判断 AI 系统是否满足任务契约？](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+若要判断这类训练是否适合稳定的行为差距，可先读[何时应微调来弥补稳定的行为差距？](#23.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)；要设计独立验收，再读[如何判断 AI 系统是否满足任务契约？](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 ### 检查器判的是什么，没判的又是什么？
 
@@ -2511,14 +3914,14 @@ TRL `v1.17.1` 和 verl `v0.9.1` 是本节核对过的具体发布版；新版本
 > - **TRL 当前配置。** Hugging Face [TRL `v1.17.1` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.17.1)（2026-10-30）、[该 tag 的 `grpo_config.py`](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_config.py)和[当前 GRPOTrainer 文档](https://huggingface.co/docs/trl/grpo_trainer)，截至 2026-11-06 核对。版本配置支持 `beta=0`、`epsilon=0.2`、`loss_type="dapo"`、`scale_rewards="group"`、`mask_truncated_completions=False`；无版本文档可能晚于 tag 更新。
 > - **verl 当前配置。** [verl `v0.9.1` 发布记录](https://github.com/verl-project/verl/releases/tag/v0.9.1)（2026-09-20）、[通用 PPO trainer 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/ppo_trainer.yaml)、[actor 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/actor/actor.yaml)、[GRPO 结果优势实现](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/core_algos.py)。配置说明默认优势估计是 GAE、组奖励标准差归一化打开、两种 KL 路径关闭，actor 聚合默认 `token-mean`；实际训练还须检查所用 recipe 的覆盖值。
 > - **DeepSeek-V4 多教师 OPD。** DeepSeek-AI, *DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence*（arXiv:2606.19348v1，2026-04-26；截至 2026-11-06 核对公开报告仍为 v1；§5.1.1–5.1.2、§5.2.2），[v1 HTML](https://arxiv.org/html/2606.19348v1)。支持 specialist 阶段 SFT+GRPO、student 前缀上的多教师 reverse KL 与全词表 logits 蒸馏。权重安排和通用路由规则不由该报告建立。
-## 20. 如何验证并保留对 Agent 的改进？
+## 25. 如何验证并保留对 Agent 的改进？
 
 ### 从 build 73 的误诊开始
 
 > [!example] Build 73：从误诊中提出候选改进
 > 发布团队的日志助手收到 build 73 的失败记录。基线版本把 ECONNREFUSED 归成“业务断言失败”，建议回退服务代码；原始日志却只表明本地服务未在 8081 端口接受连接，集成测试因此没有启动。工程师需要一项可持续的改进：以后面对同类日志，助手应引用证据、区分观察和推断，并在证据不足时保留不确定性。
 
-一次回答中修正结论只改变当前运行状态；要让后续请求也受益，必须留下可部署的系统版本。这个版本可以变化于提示词、动作策略、检索配置、工具执行或模型权重；“Agent 自我改进”不表示模型在一次对话中自行改写参数。单次运行中的状态变化由[智能体基础](#13.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)说明；本章关注跨运行保留的改动。
+一次回答中修正结论只改变当前运行状态；要让后续请求也受益，必须留下可部署的系统版本。这个版本可以变化于提示词、动作策略、检索配置、工具执行或模型权重；“Agent 自我改进”不表示模型在一次对话中自行改写参数。单次运行中的状态变化由[智能体基础](#17.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)说明；本章关注跨运行保留的改动。
 
 将当前已接受版本记为 A。Build 73 的最小候选 B 只在 system prompt (系统提示词) 中补一条规则：找出最早导致任务中止、且重试后仍未恢复的阻塞失败，引用相应日志行，并区分“服务未就绪”与“业务断言失败”。本例的连接拒绝只有结合重试耗尽和测试跳过，才能作为未恢复的阻塞失败；若稍后的重试成功，就不按它定主类别。模型、检索索引、工具、格式和生成设置都保持不变。这样 A→B 的结果才能归因于这项策略改动；通过与否仍由独立任务结果决定。
 
@@ -2546,7 +3949,7 @@ flowchart TD
 | harness (运行脚手架) | 增加日志片段检索、引用校验和结构化输出验证。 | 取回是否完整、验证器能否拦截格式错误、成本和故障路径是否可接受。 |
 | 基础模型权重 | 对经筛选的样本进行 supervised fine-tuning (SFT，监督微调) 或奖励训练。 | 训练信号、数据切分和更新是否值得；训练奖励本身不是新题泛化证据。 |
 
-若同时改 policy 与 predictor，分别跑组件检查后仍需验收组合：更好的候选排序器可能与策略的候选空间不兼容。若一次改提示词、索引、工具和模型，指标变化就难以归因。权重训练的过程与目标归属[微调策略](#18.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)和[奖励驱动的推理训练](#19.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)；本章负责版本化的候选变更和接受证据。
+若同时改 policy 与 predictor，分别跑组件检查后仍需验收组合：更好的候选排序器可能与策略的候选空间不兼容。若一次改提示词、索引、工具和模型，指标变化就难以归因。权重训练的过程与目标归属[微调策略](#23.%20%E4%BD%95%E6%97%B6%E5%BA%94%E5%BE%AE%E8%B0%83%E6%9D%A5%E5%BC%A5%E8%A1%A5%E7%A8%B3%E5%AE%9A%E7%9A%84%E8%A1%8C%E4%B8%BA%E5%B7%AE%E8%B7%9D%EF%BC%9F)和[奖励驱动的推理训练](#24.%20%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%A5%96%E5%8A%B1%E5%A6%82%E4%BD%95%E8%AE%AD%E7%BB%83%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B%EF%BC%9F)；本章负责版本化的候选变更和接受证据。
 
 ### 预测可以省实验，但必须让结果闭环
 
@@ -2583,9 +3986,9 @@ RSI-Anything v1 的 world model (世界模型) 根据当前状态与候选动作
 
 ### 改进运行脚手架时如何做对照
 
-Harness² 研究冻结基础模型权重，用同一基线 H₀ 开始每项任务，并开放八种运行时组件供改进：system prompt (系统提示词)、guardrails (防护规则)、memory (记忆)、skills (技能)、tool guidance (工具指引)、scripts (脚本)、subagents (子 Agent) 与 middleware (中间件)。它提出 Propose–Probe–Compose：提出编辑，在配对条件下真正执行候选，比较行为差异，只组合有对照证据支持的变化；再把可复用组件或经验存入改进脚手架，供后续任务检索。经验跨任务怎样被选择并进入当前上下文，见[上下文工程原则](#10.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。
+Harness² 研究冻结基础模型权重，用同一基线 H₀ 开始每项任务，并开放八种运行时组件供改进：system prompt (系统提示词)、guardrails (防护规则)、memory (记忆)、skills (技能)、tool guidance (工具指引)、scripts (脚本)、subagents (子 Agent) 与 middleware (中间件)。它提出 Propose–Probe–Compose：提出编辑，在配对条件下真正执行候选，比较行为差异，只组合有对照证据支持的变化；再把可复用组件或经验存入改进脚手架，供后续任务检索。经验跨任务怎样被选择并进入当前上下文，见[上下文工程原则](#11.%20%E6%AF%8F%E6%AC%A1%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%E5%BA%94%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88%EF%BC%8C%E5%BA%94%E7%94%A8%E5%8F%88%E5%BA%94%E6%8C%81%E4%B9%85%E5%8C%96%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
-这里的 Probe 是一次实际运行，仍可能受模型方差、共享评委或随机工具状态影响。在线 Propose–Probe–Compose 阶段没有每题真值答案或可靠 verifier (验证器)；行为差异可提示编辑效果，但本身不认证输出正确。论文仍在实验结束后用 WorkBuddy-Bench、JobBench 和 Harvey Legal Agent Benchmark 的外部基准分数评价结果，因此“在线编辑时无 ground-truth verifier”不等于“没有外部评分准则”。生产实现还应给 Probe 限制外部写入权限和费用，否则实验候选可能造成副作用。实际任务契约仍由[独立任务评估](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)验证。
+这里的 Probe 是一次实际运行，仍可能受模型方差、共享评委或随机工具状态影响。在线 Propose–Probe–Compose 阶段没有每题真值答案或可靠 verifier (验证器)；行为差异可提示编辑效果，但本身不认证输出正确。论文仍在实验结束后用 WorkBuddy-Bench、JobBench 和 Harvey Legal Agent Benchmark 的外部基准分数评价结果，因此“在线编辑时无 ground-truth verifier”不等于“没有外部评分准则”。生产实现还应给 Probe 限制外部写入权限和费用，否则实验候选可能造成副作用。实际任务契约仍由[独立任务评估](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)验证。
 
 在四组 executor–harness 配置中，单次对照改进的最高结果分别是 WorkBuddy-Bench 平均得分 +11.5 score points (分数点)、JobBench 得分 +4.5 分数点，以及 Harvey LAB 的 Partial criterion pass rate (Partial 评分条目通过率) +11.8 percentage points (百分点)。前两者是基准分数的点数变化，只有最后一项是比例变化；它们是特定模型、基线和任务的单步结果，不是通用 harness 的预期提升。论文还讨论额外执行成本、行为波动以及 editor 与被编辑系统共用模型时的偏差。
 
@@ -2611,7 +4014,7 @@ Anthropic 的实践文章建议一次只测试一个 subagent (子 Agent) 的合
 
 ### 把候选证据变成可恢复的发布版本
 
-候选比较应使用相同任务、输入和执行预算，并保留目前已接受的版本作为基线。先用开发数据诊断；选择候选后，用未参与调参的新样本和必要的安全边界测试做独立验收。验收不止看平均分，还应查任务类别、失败翻转、延迟、费用和外部副作用。指标、抽样、配对统计及发布门禁的完整算例见[大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+候选比较应使用相同任务、输入和执行预算，并保留目前已接受的版本作为基线。先用开发数据诊断；选择候选后，用未参与调参的新样本和必要的安全边界测试做独立验收。验收不止看平均分，还应查任务类别、失败翻转、延迟、费用和外部副作用。指标、抽样、配对统计及发布门禁的完整算例见[大语言模型评估方法](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 build 73 的候选若只提升证据格式，却把“服务拒绝连接”仍判成业务断言失败，就没有解决目标问题；若分类改善但工具权限测试回归，也不能接受。只有当固定契约下的端到端结果达到预设门禁，才保存版本标识、模型与提示词修订、索引和工具版本、任务集版本、评估配置、日志脱敏规则及回滚目标。先小流量发布，按任务质量和硬约束观察；不满足标准时回退到最后接受的组合。
 
@@ -2623,7 +4026,7 @@ build 73 的候选若只提升证据格式，却把“服务拒绝连接”仍�
 > - **共享产物的声明、访问、主动复用与祖先链。** [GitSwarm v1](https://arxiv.org/html/2610.04862v1)，2026-10-04，§3.4、Appendix F.1；不同分母及图边定义不可互换，也不提供复用的因果收益。
 > - **继续或清除搜索状态。** [*Scaling Discovery Requires Forgetting* v1](https://arxiv.org/abs/2610.20563v1)，2026-10-14，§4.3、Table 3；AHC014 对照按 proposal 数匹配，收益是三次重复均值和标准差，费用按每次重复计，且同时清除 session 与候选历史。
 > - **子 agent 合并的工程经验。** Anthropic, [*Building agents: When to fold subagents into your main agent loop*](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)，2026-10-22；特定提供方的工程实践，按端到端任务与重复运行判断。
-## 21. 如何监控生产中的 AI 功能并安全地改进？
+## 26. 如何监控生产中的 AI 功能并安全地改进？
 
 ### Build 73 上线后，一次错误建议怎样变成可修复证据？
 
@@ -2648,6 +4051,8 @@ flowchart TD
 ### 一条请求需要留下哪些可连起来的信号？
 
 一次 trace (分布式追踪) 把请求根 span 与其子 span 串成端到端操作。span (追踪片段) 可记录身份检查、构建日志读取、运行手册检索、模型生成、结构校验和结果交付等阶段的耗时、状态和关联版本。OpenTelemetry trace 可以连接日志与 span；GenAI 语义约定仍在发展，避免把不断变化的模型字段约定误当固定标准。
+
+诊断重复调用时，再关联应用模型调用 ID、SDK attempt、`runId`/图 thread 与 worker attempt、`tool_call_id`、规范化参数摘要、来源版本、观察数量和计划版本。这样的分层轨迹才能分开客户端重试、运行恢复和 Agent 自己重复发起的无进展循环；一段 build 42 的具体 trace 见[编排中的计划执行与循环诊断](#%E8%AE%A1%E5%88%92%E6%89%A7%E8%A1%8C%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E9%87%8D%E8%A7%84%E5%88%92%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AF%86%E5%88%AB%E6%97%A0%E8%BF%9B%E5%B1%95%E5%BE%AA%E7%8E%AF%EF%BC%9F)。
 
 | 阶段 | 可用于定位的记录 | 不应默认保存什么 |
 |---|---|---|
@@ -2704,7 +4109,7 @@ flowchart TD
 5. **做配对比较和独立验收：** 用开发样本调候选，用未参与调参的新样本验收；按任务切片查看质量、硬约束、成本和时延。
 6. **分阶段发布：** 小流量观察同类错误、拒答和副作用，超过门禁就回滚并保留诊断 trace。
 
-已审查的线上失败可以进入开发回归集，帮助复现；不要让同一事件同时用于调候选、选择赢家和宣称独立验收。一个稳定的规则评分器可以复用于**新的独立样本**，前提是它在此类输入上可靠且评分规则适用；奖励训练分数只说明策略优化了该目标，不证明未见分布上的任务质量。若打算将反馈作监督微调或偏好训练数据，需额外审查标签质量、同意、数据切分与敏感性。[评估章](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)定义独立比较和统计门禁；[Agent 改进与版本验收](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)解释怎样把通过验收的改动保存成版本。
+已审查的线上失败可以进入开发回归集，帮助复现；不要让同一事件同时用于调候选、选择赢家和宣称独立验收。一个稳定的规则评分器可以复用于**新的独立样本**，前提是它在此类输入上可靠且评分规则适用；奖励训练分数只说明策略优化了该目标，不证明未见分布上的任务质量。若打算将反馈作监督微调或偏好训练数据，需额外审查标签质量、同意、数据切分与敏感性。[评估章](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)定义独立比较和统计门禁；[Agent 改进与版本验收](#25.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)解释怎样把通过验收的改动保存成版本。
 
 ### 由服务要求决定阈值
 
@@ -2719,7 +4124,7 @@ flowchart TD
 > - **日志关联。** OpenTelemetry Logs Specification [v1.62.0](https://opentelemetry.io/docs/specs/otel/logs/)：说明 TraceId、SpanId 关联日志和 span。
 > - **GenAI span 字段和敏感载荷。** OpenTelemetry [GenAI spans semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-spans.md)，截至 2026-11-06 检查主分支；文档标为 development，提示输入/输出消息和工具参数可能敏感、默认不记录。
 > - **敏感数据处理。** OpenTelemetry [Handling Sensitive Data](https://opentelemetry.io/docs/security/handling-sensitive-data/)：支持数据最小化、过滤/删除/遮蔽/转换，以及低熵散列不等于匿名化的边界。
-## 22. 如何把 AI 系统设计题转化为有依据的架构？
+## 27. 如何把 AI 系统设计题转化为有依据的架构？
 
 同样使用语言模型，文档问答可能泄露用户无权访问的文件；退款助手可能重复执行资金写入；代码审查助手可能用大量误报耗尽工程师信任。它们的共同点只是包含生成模型，真正决定架构的是失败代价、可信数据边界、外部副作用和可验证的用户结果。
 
@@ -2743,7 +4148,7 @@ flowchart TD
 
 调用者身份来自可信认证层，权限过滤必须在检索时执行，模型只接收当前用户有权看的片段。提示词中写“请勿泄露”不是访问控制；被检索到的文本也不能授予调用工具或读取其他文档的权限。缺少证据、权限服务超时、索引陈旧、来源冲突、模型超时和引用不存在都要有明确分支。
 
-上线前的评估要把检索和生成分开：检查证据是否进候选集，答案主张是否由来源支持，引用是否指向检索片段；还应包含无答案问题、权限边界、更新与删除。上线后监控索引新鲜度、各阶段延迟、访问拒绝和任务完成率。retrieval-augmented generation (RAG，检索增强生成) 的证据组织机制见[RAG 架构与实现](#11.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)，统一的配对评估方法见[大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+上线前的评估要把检索和生成分开：检查证据是否进候选集，答案主张是否由来源支持，引用是否指向检索片段；还应包含无答案问题、权限边界、更新与删除。上线后监控索引新鲜度、各阶段延迟、访问拒绝和任务完成率。retrieval-augmented generation (RAG，检索增强生成) 的证据组织机制见[RAG 架构与实现](#12.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8E%88%E6%9D%83%E6%96%87%E6%A1%A3%E4%B8%AD%E6%A3%80%E7%B4%A2%E5%B9%B6%E6%A0%B8%E9%AA%8C%E5%9B%9E%E7%AD%94%E4%BE%9D%E6%8D%AE%EF%BC%9F)，统一的配对评估方法见[大语言模型评估方法](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 #### 用预算推导候选方案
 
@@ -2795,7 +4200,7 @@ flowchart TD
 
 适合的请求路径是认证客户、读取订单和当前政策、应用代码校验资格、向客户展示拟退款金额并确认、执行受限写入、查询最终状态，再报告结果或交人工。步骤可预期且会改变资金状态，因此固定工作流让确认点和停止路径明确。只有当动态工具选择有明确收益、能受限且可观测时，才值得引入 agent loop (智能体循环)。
 
-工具 schema (参数结构定义) 可以约束字段与类型，但不能授权操作或判断退款资格；应用仍需根据认证身份和业务状态校验权限与幂等。上线评估应覆盖常见意图、资格边界、重复请求、超时后结果未知、政策冲突、工具失败和人工升级；生产可观测性需要把每次状态迁移和交易 ID 关联，但避免在通用日志中复制个人或支付正文。有关运行状态与恢复，见[持久化 AI 运行架构](#16.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)；权限、确认与停止路径见[生产环境中的 AI 安全](#15.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
+工具 schema (参数结构定义) 可以约束字段与类型，但不能授权操作或判断退款资格；应用仍需根据认证身份和业务状态校验权限与幂等。上线评估应覆盖常见意图、资格边界、重复请求、超时后结果未知、政策冲突、工具失败和人工升级；生产可观测性需要把每次状态迁移和交易 ID 关联，但避免在通用日志中复制个人或支付正文。有关运行状态与恢复，见[持久化 AI 运行架构](#21.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)；权限、确认与停止路径见[生产环境中的 AI 安全](#20.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)。
 
 ### 代码审查：误报成本决定自动化边界
 
@@ -2828,7 +4233,7 @@ flowchart TD
 
 上下文可包括 changed lines、附近函数、相关调用方和仓库规范；当上下文限长而被截断时记录省略范围。正确性与安全检查可以分开以便解释，但不要在没有任务收益时把一次审查变成多个昂贵模型调用。对大型或生成代码按文件或逻辑块处理，再合并重复 finding。收集作者接受、驳回和修正时，应解释这些行为仍是有偏反馈，不能直接当成错误标签。
 
-评估集应同时包含已知问题与干净改动；测量按类别的 TP/FP/FN、行号有效率、证据支持、开发者接受/驳回、每次审查费用和增加的工作流延迟。用人工审查基线作比较，不能在没有证据时宣称优于人类审查。评估方法和保留候选版本的门禁见[大语言模型评估方法](#17.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)与[Agent 改进与版本验收](#20.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)。
+评估集应同时包含已知问题与干净改动；测量按类别的 TP/FP/FN、行号有效率、证据支持、开发者接受/驳回、每次审查费用和增加的工作流延迟。用人工审查基线作比较，不能在没有证据时宣称优于人类审查。评估方法和保留候选版本的门禁见[大语言模型评估方法](#22.%20%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%20AI%20%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E4%BB%BB%E5%8A%A1%E5%A5%91%E7%BA%A6%EF%BC%9F)与[Agent 改进与版本验收](#25.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)。
 
 ### 三个案例的发布证据落点
 

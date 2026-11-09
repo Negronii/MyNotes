@@ -1,4 +1,5 @@
 import hashlib
+import importlib.util
 import re
 import subprocess
 import sys
@@ -9,6 +10,10 @@ from pathlib import Path
 
 GENERATOR = Path(__file__).resolve().parents[1] / "build-reading-docs.py"
 FENCE = chr(96) * 3
+SPEC = importlib.util.spec_from_file_location("reading_docs_generator", GENERATOR)
+READING_DOCS = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = READING_DOCS
+SPEC.loader.exec_module(READING_DOCS)
 
 
 def write(path: Path, content: str = "") -> Path:
@@ -104,10 +109,46 @@ class ReadingDocsTests(unittest.TestCase):
             capture_output=True,
         )
 
+    def test_quoted_fence_openers_keep_excess_indentation_as_content(self):
+        self.assertEqual(
+            READING_DOCS.blockquote_content(">     ~~~text\n"),
+            (1, "    ~~~text"),
+        )
+        self.assertEqual(
+            READING_DOCS.blockquote_content("> >     ~~~text\n"),
+            (2, "    ~~~text"),
+        )
+        self.assertEqual(
+            READING_DOCS.fenced_lines([">     ~~~text\n", "> [actual](a.md)\n"]),
+            [False, False],
+        )
+        self.assertEqual(
+            READING_DOCS.fenced_lines(["> >     ~~~text\n", "> > [actual](a.md)\n"]),
+            [False, False],
+        )
+        self.assertEqual(
+            READING_DOCS.fenced_lines(
+                ["> ~~~text\n", "> [code](a.md)\n", "> ~~~~\n", "> [actual](a.md)\n"]
+            ),
+            [True, True, True, False],
+        )
+        self.assertEqual(
+            READING_DOCS.fenced_lines(
+                ["> > ~~~~text\n", "> > [code](a.md)\n", "> > ~~~~~\n", "> > [actual](a.md)\n"]
+            ),
+            [True, True, True, False],
+        )
+        self.assertEqual(
+            READING_DOCS.fenced_lines(
+                ["~~~text\n", "> ~~~\n", "~~~\n", "[actual](a.md)\n"]
+            ),
+            [True, True, True, False],
+        )
+
     def test_preserves_display_math_without_creating_setext_headings(self):
         source = self.root / "ai-engineering/AIagents/agent-fundamentals.md"
         formula = "$$\n\\text{Cost}\n=\n\\frac{10}{2}\n$$\n"
-        code = FENCE + "text\n$$\n" + FENCE + "\n"
+        code = FENCE + "text\n$$\n> ~~~\n[leave](missing-fenced.md)\n" + FENCE + "\n"
         source.write_text(
             source.read_text() + "\n" + code + "\n" + formula
             + "\nAfter math\n---\n[After](#after-math)\n",
@@ -120,6 +161,62 @@ class ReadingDocsTests(unittest.TestCase):
         self.assertIn(code, content)
         self.assertIn("#### After math\n", content)
         self.assertIn("[After](#After%20math)", content)
+        checked = self.run_generator("--check")
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+
+    def test_preserves_quoted_fences_and_resumes_rewriting_after_quote(self):
+        source = self.root / "ai-engineering/AIagents/agent-fundamentals.md"
+        quoted = (
+            "\n> [!example] quoted code\n"
+            "> ~~~typescript\n"
+            '> const values = new Map([["wiki", "[[missing-note#section]]"]]);\n'
+            "> [Markdown](missing-fenced.md)\n"
+            '> <a href="missing.html">HTML link</a>\n'
+            "> > ~~~\n"
+            "> > nested quote is still code\n"
+            "> ~~~~\n"
+            "> [Quoted prose](../nested/notes%20with%20space.md#空间标题)\n"
+            "> $$\n"
+            "> \\text{[[math-wikilink]]}\n"
+            "> $$\n"
+            "> > ~~~typescript\n"
+            '> > const nested = new Map([["wiki", "[[nested-wikilink]]"]]);\n'
+            "> > [Nested Markdown](missing-nested.md)\n"
+            '> > <a href="missing-nested.html">Nested HTML link</a>\n'
+            "> > ~~~~\n"
+            "\n"
+            "[After quote](../nested/notes%20with%20space.md#空间标题)\n"
+            "\nAfter quote\n---\n[After heading](#after-quote)\n"
+        )
+        with source.open("a", encoding="utf-8") as stream:
+            stream.write(quoted)
+
+        built = self.run_generator()
+        self.assertEqual(built.returncode, 0, built.stderr)
+        content = (self.root / "review/generated/ai-engineering.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            '> const values = new Map([["wiki", "[[missing-note#section]]"]]);\n'
+            "> [Markdown](missing-fenced.md)\n"
+            '> <a href="missing.html">HTML link</a>\n'
+            "> > ~~~\n"
+            "> > nested quote is still code\n"
+            "> ~~~~\n",
+            content,
+        )
+        self.assertIn(
+            '> > const nested = new Map([["wiki", "[[nested-wikilink]]"]]);\n'
+            "> > [Nested Markdown](missing-nested.md)\n"
+            '> > <a href="missing-nested.html">Nested HTML link</a>\n'
+            "> > ~~~~\n",
+            content,
+        )
+        self.assertIn("> \\text{[[math-wikilink]]}\n", content)
+        rewritten = "(#%E7%A9%BA%E9%97%B4%E6%A0%87%E9%A2%98)"
+        self.assertIn(f"> [Quoted prose]{rewritten}\n", content)
+        self.assertIn(f"[After quote]{rewritten}\n", content)
+        self.assertIn("#### After quote\n", content)
+        self.assertIn("[After heading](#After%20quote)", content)
         checked = self.run_generator("--check")
         self.assertEqual(checked.returncode, 0, checked.stderr)
 

@@ -87,6 +87,40 @@ Vite 8 对 TypeScript 文件只做转译，不执行完整类型检查；当前�
 
 发布前应运行仓库锁定版本的正式 build 命令，检查生成目录里的页面资源地址、动态代码分块（chunk）、样式、图片和服务端路由，再由与生产相同的服务器预览产物。HMR 只覆盖开发循环；不同 `base` 路径、CDN、缓存头和服务器压缩配置都需要在真实部署路径确认。
 
+## 新入口与带哈希代码分块怎样作为同一版本发布？
+
+构建工具输出的是一组彼此引用的文件，不是可以单独替换的一个 JavaScript bundle。本例沿着页面编辑器的异步入口：构建 `v41` 生成入口 `main-a41.js` 和稍后通过动态 `import()` 加载的 `Editor-a41.js`；构建 `v42` 再生成 `main-b42.js` 与 `Editor-b42.js`。这些缩写名只是说明版本引用的合成示例；真实文件名由内容哈希产生。Vite 的 manifest（资源清单）可以映射源入口、静态依赖、异步依赖和最终哈希文件名；它描述构建关系，不会替部署系统原子切换入口或保证旧文件继续可用。
+
+本例的构建脚本开启 Vite manifest：
+
+~~~javascript
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  build: { manifest: true },
+});
+~~~
+
+例如 `v41` 的 HTML 引用 `main-a41.js`，manifest 列出 `Editor-a41.js` 为动态入口。用户保持页面开启时，浏览器不会因服务器部署了 `v42` 自动替换已执行的入口代码；稍后用户展开编辑器，旧运行时仍请求 `Editor-a41.js`。如果发布过程已删除旧 chunk，这个动态导入会得到 `404`。若保留它，旧标签仍可按它最初取得的静态代码运行；服务端 API 的兼容性仍是另一项前提。
+
+| 资源 | 本例中的版本身份 | 可用的缓存策略 |
+|---|---|---|
+| 顶层 `index.html` 或当前 release 指针 | 可变，选择本次应启动的入口版本 | `Cache-Control: no-cache` 以便复用前重新验证，或按平台策略缩短新鲜时间；回滚时要一起恢复 |
+| 按 release 保存的 manifest | `v41` 与 `v42` 分开保存，发布后不覆盖 | 若 URL 含 release ID 且内容不可变，可长时间缓存；若使用同一可变 URL，则要与入口一起切换并重新验证 |
+| `main-a41.js`、`Editor-a41.js` 等带内容哈希的资产 | 文件名绑定那次构建内容 | 只有发布端永不在同一路径改写内容时，才可长时间缓存并使用 `immutable` |
+
+HTTP `no-cache` 允许保存响应，但在再次使用前要求验证；它不是 `no-store`。相反，`immutable` 只表示在新鲜期内表示不会改变，所以同一内容哈希路径不能被替换成另一份代码。入口、版本清单与运行时资产应配套：可以把每个构建放在版本目录下，再以一个小入口文件或原子指针选择版本；也可以用一次原子发布把 HTML 和清单切换到同一版本。不要让可变 manifest 已指向 `v42`、入口仍启动 `v41`，或发布脚本逐个覆盖正在使用的哈希路径。
+
+安全的发布顺序是先将整套 `v42` 静态文件与版本化 manifest 上传到所有目标存储位置，再从源站和 CDN（内容分发网络）验证新入口、静态依赖及 `Editor-b42.js` 均可读取，随后才原子切换入口或 release 指针。切换后检查若干边缘节点看到的入口版本与它引用的清单一致；边缘节点仍返回旧 HTML 时，它引用的 `v41` 文件必须仍在。把当前入口清缓存不能替代保留旧动态 chunk。
+
+Service Worker（服务工作线程）的 Cache Storage（缓存存储）是独立于 HTTP 缓存的另一层。若它缓存应用入口或 chunk，每个缓存版本应含完整、互相匹配的一套资产；新 worker 安装失败时，旧 worker 和旧缓存仍应可继续工作。激活 `v42` 时不要过早删除仍由打开标签页或回滚所需的 `v41` 资产，也不要让旧 worker 从一个版本缓存入口、再从另一个版本缓存动态模块。需结合应用自己的更新时机检查 Service Worker 命中、网络和 CDN 行为；开发服务器的刷新结果不能证明这些发布状态正确。
+
+如果旧标签请求的异步 chunk 仍然 `404`，客户端捕获动态 `import()` 的加载失败，保留当前路由与尚未保存的编辑草稿，并告诉用户“页面代码已更新，可保存草稿后刷新”。刷新前要确认草稿已保存或由用户明确选择重载，且不能在每次失败时自动无限重载。如果没有记录当前页面的 release ID，也无法可靠地区分发布错配、网络断开和其它模块错误；界面可以统一提示可恢复动作，但不能把每种导入异常都谎报成旧版本错误。
+
+回滚时将入口与 manifest 指针一起指回上一版本，仍保留 `v41` 与 `v42` 文件，再验证旧深链能加载旧入口、旧编辑器动态 chunk 和 API 表示。删除 `v42` 静态资产要等活跃标签、Service Worker、CDN 缓存与观测窗口都不再依赖它。若新版本已提交旧客户端无法读取的服务端字段或数据格式，单独把入口回滚到 v41 并不能恢复兼容；服务端接口需在并行窗口内接受旧、新客户端共享的数据契约，或为不兼容变更加版本化迁移。
+
+这一套检查连接到[如何晋级并回滚已验证的应用产物](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)：构建版本、发布清单和静态入口作为一套明确的产物候选一起验证，而部署平台再决定逐步推广与恢复入口。
+
 ## Source map 怎样用于调试，又会暴露什么？
 
 Source map（源映射）把压缩或转换后的代码位置映回源文件。Webpack 的 `devtool` 选择会影响首次构建与重建速度、映射精度、产物体积，以及映射文件如何关联到 bundle（打包文件）。
@@ -112,5 +146,8 @@ Source map 不是权限边界：映射路径可被公开请求时，部署和服
 > - [Webpack：原生 HTML](https://webpack.js.org/guides/native-html/)、[Webpack `experiments.html` 默认值与规则优先级](https://webpack.js.org/configuration/experiments/#experimentshtml)、[HtmlWebpackPlugin README](https://github.com/jantimon/html-webpack-plugin#readme)、[Webpack `DefinePlugin`](https://webpack.js.org/plugins/define-plugin/)
 > - [Webpack：`devtool`](https://webpack.js.org/configuration/devtool/)、[Webpack 5.105 source map 更新](https://webpack.js.org/blog/2026-02-03-webpack-5-105/)
 > - [Vite 8 发布公告](https://vite.dev/blog/announcing-vite8)、[Vite 8.3 TypeScript 转译](https://vite.dev/guide/features.html#typescript)、[浏览器兼容](https://vite.dev/guide/build.html#browser-compatibility)
+> - **manifest、入口、静态/动态 chunk 的构建映射：** [Vite 8.3.5 `build.manifest`](https://github.com/vitejs/vite/blob/v8.3.5/docs/config/build-options.md#buildmanifest) 与 [Backend Integration](https://github.com/vitejs/vite/blob/v8.3.5/docs/guide/backend-integration.md)，核对日期 2026-11-09。manifest 默认不生成；本例需显式 `build.manifest: true`。
+> - **入口与不可变资源缓存：** [RFC 9111 HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111.html)，2022，§5.2 `Cache-Control` 与 `no-cache`；[RFC 8246 HTTP Immutable Responses](https://www.rfc-editor.org/rfc/rfc8246.html)，2017，`immutable` 仅对新鲜期内不变的表示生效。
+> - **Service Worker 独立拦截请求与缓存版本：** [W3C Service Workers](https://www.w3.org/TR/service-workers/)；服务工作线程的当前规范状态依实现和浏览器版本而异，本文只依其请求拦截和 Cache Storage 模型说明发布边界。
 >
 > Webpack 的原生 HTML 默认值按官方文档中“自 5.109.0 起”的说明记录；Vite 目标按 8.3 文档记录。来源核对日期：2026-11-06。

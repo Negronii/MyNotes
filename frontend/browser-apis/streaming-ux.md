@@ -525,6 +525,8 @@ subscribe(initialSnapshot.event_cursor);
 
 **延伸阅读：** [实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md) 定义 SSE 的线格式、id/version 和重连边界；[API 可靠性与异步交付](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md) 讨论未知结果与安全重试；[JavaScript 事件总线在监听器中重入时怎样保持顺序？](./event-bus-and-observer-patterns.md) 讨论把一个状态更新送到本地多个模块。
 
+若应用交付的是持久 AI run 的完整事件，本篇负责传输解码、断线续读与本地取消边界；事件到达后如何把 `runId`、序号、工具调用与不完整 Markdown 安全地投影到聊天界面，见[一轮 AI 聊天怎样安全展示增量回答、工具状态与恢复操作](./streaming-ai-chat.md)。
+
 > [!info]- 来源
 > - SSE 字段解析、EventSource 自动重连和 `Last-Event-ID`：[WHATWG HTML Standard，Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)，§9.2，2026-11-06 核对；报表 42 的 `id`、`version` 和终态沿用[实时更新协议案例](../../engineering-foundations/networking/real-time-web-updates.md)。
 > - Fetch 响应体与 keepalive、流读取、reader 取消：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)；[WHATWG Streams Standard](https://streams.spec.whatwg.org/)，2026-11-06 核对。

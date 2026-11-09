@@ -130,6 +130,27 @@ def line_ending(line: str) -> str:
     return "\n"
 
 
+def blockquote_content(line: str) -> tuple[int, str]:
+    """Return the quote depth and text after its container markers."""
+    plain = without_line_ending(line)
+    cursor = 0
+    depth = 0
+    while cursor < len(plain):
+        prefix_start = cursor
+        spaces = 0
+        while cursor < len(plain) and plain[cursor] == " ":
+            cursor += 1
+            spaces += 1
+        if spaces > 3 or cursor == len(plain) or plain[cursor] != ">":
+            cursor = prefix_start
+            break
+        depth += 1
+        cursor += 1
+        if cursor < len(plain) and plain[cursor] in " \t":
+            cursor += 1
+    return (depth, plain[cursor:]) if depth else (0, plain)
+
+
 def fence_open(line: str) -> tuple[str, int] | None:
     plain = without_line_ending(line)
     spaces = len(plain) - len(plain.lstrip(" "))
@@ -158,22 +179,50 @@ def fenced_lines(lines: list[str]) -> list[bool]:
     """Protect literal code and display-math blocks from Markdown rewriting."""
     result: list[bool] = []
     marker: tuple[str, int] | None = None
-    display_math = False
+    fence_quote_depth = 0
+    math_quote_depth: int | None = None
     for line in lines:
         if marker is not None:
+            if fence_quote_depth == 0:
+                result.append(True)
+                if fence_close(line, marker):
+                    marker = None
+                continue
+            else:
+                quote_depth, content = blockquote_content(line)
+                if quote_depth < fence_quote_depth:
+                    marker = None
+                    fence_quote_depth = 0
+                else:
+                    result.append(True)
+                    if quote_depth == fence_quote_depth and fence_close(content, marker):
+                        marker = None
+                    continue
+        if math_quote_depth is not None:
+            if math_quote_depth == 0:
+                result.append(True)
+                if without_line_ending(line).strip() == "$$":
+                    math_quote_depth = None
+                continue
+            quote_depth, content = blockquote_content(line)
+            if quote_depth < math_quote_depth:
+                math_quote_depth = None
+            else:
+                result.append(True)
+                if quote_depth == math_quote_depth and content.strip() == "$$":
+                    math_quote_depth = None
+                continue
+
+        quote_depth, content = blockquote_content(line)
+        if content.strip() == "$$":
             result.append(True)
-            if fence_close(line, marker):
-                marker = None
-        elif without_line_ending(line).strip() == "$$":
-            result.append(True)
-            display_math = not display_math
-        elif display_math:
-            result.append(True)
-        else:
-            opening = fence_open(line)
-            result.append(opening is not None)
-            if opening is not None:
-                marker = opening
+            math_quote_depth = quote_depth
+            continue
+        opening = fence_open(content)
+        result.append(opening is not None)
+        if opening is not None:
+            marker = opening
+            fence_quote_depth = quote_depth
     return result
 
 

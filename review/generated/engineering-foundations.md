@@ -121,7 +121,7 @@ COMMIT;
 
 Hypertext Transfer Protocol (HTTP，超文本传输协议) 规定调用方怎样描述操作、服务端怎样返回状态与表示；Transmission Control Protocol (TCP，传输控制协议) 或 QUIC 负责承载字节流，Transport Layer Security (TLS，传输层安全协议) 在安全连接上保护通信。看同一个报表请求，应先认清 HTTP 语义，再按是否有可复用缓存、地址和连接追踪网络阶段。HTTP 版本会改变连接复用和多路复用方式，但不会替 application programming interface (API，应用程序接口) 验证身份、授权资源、允许跨源读取或确认超时操作结果。
 
-**案例：** 查看者已登录并获准读取报表 42。此前浏览器收到 `200` JSON、`ETag: "report-42-v8"` 和 `Cache-Control: private, no-cache`，并把该表示保存在自己的私有缓存。用户再次打开页面时，浏览器用旧验证值询问当前表示。图中的某些阶段会因 Service Worker、缓存、DNS 地址或已有连接而跳过；持续更新则需要独立的消息与恢复契约，见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#18.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
+**案例：** 查看者已登录并获准读取报表 42。此前浏览器收到 `200` JSON、`ETag: "report-42-v8"` 和 `Cache-Control: private, no-cache`，并把该表示保存在自己的私有缓存。用户再次打开页面时，浏览器用旧验证值询问当前表示。图中的某些阶段会因 Service Worker、缓存、DNS 地址或已有连接而跳过；持续更新则需要独立的消息与恢复契约，见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#19.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
 
 ~~~mermaid
 flowchart LR
@@ -236,7 +236,7 @@ TCP 建连常见三次握手：客户端发送 SYN 请求同步序号；服务�
 <link rel="preconnect" href="https://reports-cdn.example">
 ~~~
 
-**接下来：** 若页面与 API 不同源，浏览器何时允许脚本读取响应由[浏览器安全边界](#6.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E5%88%86%E5%88%AB%E4%BF%9D%E6%8A%A4%E4%BB%80%E4%B9%88%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F)说明；若要连续接收报表更新，则选取[实时传输与恢复方式](#18.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
+**接下来：** 若页面与 API 不同源，浏览器何时允许脚本读取响应由[浏览器安全边界](#6.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E5%88%86%E5%88%AB%E4%BF%9D%E6%8A%A4%E4%BB%80%E4%B9%88%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F)说明；若要连续接收报表更新，则选取[实时传输与恢复方式](#19.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
 
 > [!info]- 来源
 > - HTTP 字段、方法安全性与幂等、状态码、URI、表示协商：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§6–§12、§15，2022-06；401 challenge 见 §15.5.2，核对于 2026-11-06。
@@ -264,8 +264,9 @@ Accept: application/json, application/problem+json
 ~~~http
 HTTP/1.1 200 OK
 Content-Type: application/json
+ETag: "report-42-v7"
 
-{"id":42,"title":"Service health","status":"ready"}
+{"id":42,"title":"Monthly summary","delivery":{"channel":"email","recipients":["reader@example.test"]},"note":"Draft"}
 ~~~
 
 路径里的 `42` 是 API 的资源标识，不是访问授权。边界先解析和校验输入，再由服务确认当前身份、租户和对象权限；之后才读取资源。资源归属见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
@@ -296,9 +297,77 @@ Content-Type: application/problem+json
 
 这是本 API 的映射政策，不是所有服务都必须采用的唯一表。`422 Unprocessable Content` 表示内容语法可理解但指令不能处理，因此本例把畸形 JSON 归为 400，把结构有效但字段不合规归为 422。认证/授权、结构校验和数据库并发不变量分别由不同边界负责。
 
+### 如何用条件 PATCH 防止覆盖别人更新？
+
+客户端先读取报表 42，服务为当前表示发出强 ETag（实体标签）`"report-42-v7"`，客户端保存它和基线表示：
+
+~~~http
+GET /api/reports/42 HTTP/1.1
+Host: reports.example
+Accept: application/json
+~~~
+
+~~~http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "report-42-v7"
+
+{"id":42,"title":"Monthly summary","delivery":{"channel":"email","recipients":["reader@example.test"]},"note":"Draft"}
+~~~
+
+之后用户把交付方式切为下载，并删除可选备注。此资源只接受 JSON Merge Patch（JSON 合并补丁），所以请求声明媒体类型 `application/merge-patch+json`，并带上刚读到的强 ETag：
+
+~~~http
+PATCH /api/reports/42 HTTP/1.1
+Host: reports.example
+Content-Type: application/merge-patch+json
+If-Match: "report-42-v7"
+
+{"delivery":{"channel":"download"},"note":null}
+~~~
+
+Merge Patch 的对象成员按名称递归合并：未出现的成员保持，`null` 表示删除成员，数组整体替换。应用补丁后的中间表示仍有旧 `recipients`，因为该成员在补丁里被省略；本合成 API 另规定下载模式不保存收件人字段，业务规范化随后移除它，并验证最终表示。若 `channel` 是 `email`，最终表示必须含至少一个合法收件人；不合法的最终文档整笔拒绝。Merge Patch 里的 `null` 不能同时表示“字段存在且值为空”；若资源必须保留显式 JSON null，应为该字段另定表示或选择别的补丁格式。
+
+~~~http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "report-42-v8"
+
+{"id":42,"title":"Monthly summary","delivery":{"channel":"download"}}
+~~~
+
+表单只序列化当前模式字段：切到 `download` 时不提交隐藏的 `recipients`。服务端通过该模式的领域规则移除不适用字段，因此它既遵守“补丁省略字段表示保持”的通用规则，也返回不含旧收件人的规范表示。若后来切回 `email`，一次新的补丁可把整个收件人数组替换为 `["editor@example.test","audit@example.test"]`；数组元素不是独立增删操作。
+
+版本判断必须和写入处在一个原子条件里。可以在事务中锁定并检查版本、合并和验证，然后执行版本条件更新；也可以把合并后的文档连同预期版本交给数据库条件更新：
+
+~~~sql
+UPDATE reports
+SET document = :validated_document,
+    version = 8
+WHERE report_id = 42
+  AND tenant_id = :authorized_tenant
+  AND version = 7
+RETURNING document, version;
+~~~
+
+只有影响一行的事务提交，服务才返回新表示和 ETag。若版本条件不成立，事务不能写入任何补丁内容。不能先在事务外读到 v7、随后无条件更新：两次并发请求都可能检查 v7 后依次覆盖对方。
+
+假设用户甲和乙都读到 v7。甲先提交后，当前表示成为 v8；乙仍用 v7 的编辑提交时，服务返回 412 Precondition Failed（前置条件失败），不自动覆盖、不自动重放：
+
+~~~http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/problem+json
+
+{"type":"https://api.example/problems/version-mismatch","title":"The report changed","status":412}
+~~~
+
+乙的客户端保留自己的草稿和 v7 编辑基线，重新读取 v8，再把基线、用户草稿与服务器当前表示进行比较；用户确认合并后才以新 ETag 再提交。若请求没有 `If-Match`，此合成端点选择 428 Precondition Required（要求前置条件）；这是一项端点政策。客户端在提交编辑时携带所保存的强 ETag；服务端能验证它是否以强比较匹配当前表示，但不能证明调用方真的曾读取过它。此端点不接受 `W/"…"` 弱标签或 `*`：本合成政策要求逐版本比较，不把“资源存在”当作编辑基线。授权仍先于更改；412 不能替代对象授权结果。
+
+这里选 JSON Merge Patch，不把 JSON Patch（JSON 操作补丁）当成同一语法：后者的 `application/json-patch+json` 正文是带 `add`、`remove`、`replace`、`move`、`copy` 或 `test` 的操作数组，数组元素和 `null` 按操作路径处理。服务应公开自己接受的媒体类型，例如通过 `Accept-Patch`，调用方也不能仅凭 HTTP 方法名猜补丁语义。
+
 ### 201 创建资源和 202 接受作业有什么区别？
 
-`POST /api/reports` 可创建一条报表资源记录，返回 `201 Created` 和 `Location: /api/reports/44`。如果新资源的 `status` 是 `queued`，201 表示资源记录已经建立，不表示报表成品已生成。若请求创建的是独立长作业而不是资源记录，API 可以返回 `202 Accepted` 与稳定的作业状态 URL；202 表示受理处理，不表示成功完成。客户端在连接断开后查状态资源，而不是从原响应推断完成。账户报表的持久 job、outbox 和队列确认见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+`POST /api/reports` 可创建一条报表资源记录，返回 `201 Created` 和 `Location: /api/reports/44`。如果新资源的 `status` 是 `queued`，201 表示资源记录已经建立，不表示报表成品已生成。若请求创建的是独立长作业，账户报表案例使用 `POST /v1/accounts/acct-17/reports`，客户端预先生成 `Idempotency-Key: report-demo-208`；成功受理时，`202 Accepted` 的 `Location` 和正文 `statusUrl` 都指向 `/v1/jobs/job-demo-731`。如果整个响应丢失，客户端用相同请求体和幂等键重发 POST，数据库返回同一个已持久化 job 与状态 URL；同键对应不同规范化请求则冲突，不能猜测 job ID。收到 URL 后再 `GET /v1/jobs/job-demo-731` 查询。202 表示已受理，不表示成功完成。具体事务和映射见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
 
 ### 分页怎样给出明确结束条件？
 
@@ -311,7 +380,7 @@ Accept: application/json
 ~~~
 
 ~~~json
-{"items":[{"id":41,"title":"Monthly overview","status":"ready"},{"id":42,"title":"Service health","status":"ready"}],"next_cursor":"opaque-token-A"}
+{"items":[{"id":41,"title":"Monthly overview","status":"ready"},{"id":42,"title":"Monthly summary","status":"ready"}],"next_cursor":"opaque-token-A"}
 ~~~
 
 客户端原样传回不透明游标：
@@ -326,16 +395,16 @@ Accept: application/json
 {"items":[{"id":43,"title":"Usage summary","status":"queued"}],"next_cursor":null}
 ~~~
 
-第一页的 `[41, 42]` 续到 ID 42 之后，第二页的 `[43]` 以 `null` 明确结束；只有客户端看见该结束标记才停止。短页不总表示没有后续数据。游标不应暴露可篡改的数据库偏移量；生产集合可把游标绑定筛选条件、排序、授权范围和过期时间，并按 `(created_at, id)` 之类的稳定复合键续读。每页重新授权。并列时间戳时游标要同时保存两个排序键，数据变化时还要说明读者看到移动集合还是固定快照。
+这两页使用固定的三条演示数据：第一页 `[41, 42]` 续到 ID 42 之后，第二页 `[43]` 以 `null` 明确结束；只有客户端看见该结束标记才停止。短页不总表示没有后续数据。下面的内存复现把不透明 token 映射为偏移量，只适用于这组不变的演示数据：如果第一页后删除 ID 41，偏移量仍跳过两条，第二页会漏掉 ID 43。生产中的移动集合可把游标绑定筛选条件、授权范围、过期时间和最后一条记录的稳定复合键（如 `(created_at, id)`），下一页按键续读并每页重新授权；若要求固定快照，则必须让后续请求继续读取同一个快照。并列时间戳时，键集游标要同时保存两个排序键。
 
 > [!example] 读完三条报表的分页回放
-> 排序为 ID 升序、页大小为 2：第一批是 `[41, 42]`，游标代表“从 42 之后继续”；第二批是 `[43]`，返回 `next_cursor: null` 后停止。若服务器因资源上限只返回 1 项但仍有后续数据，只凭短页就停止会漏项。示例游标是占位显示；运行代码会生成不可预测的不透明 token。
+> 在这组固定数据中，ID 升序且页大小为 2：第一批是 `[41, 42]`，第二批是 `[43]`，返回 `next_cursor: null` 后停止。内存复现用偏移量映射 token；它不演示可变集合中的 keyset 或快照分页。若服务器因资源上限只返回 1 项但仍有后续数据，只凭短页就停止会漏项。运行代码会生成不透明 token。
 
 ### OpenAPI 怎样描述实际运行契约？
 
 OpenAPI 记录操作路径、参数、媒体类型、成功与错误响应及 schema，使人和工具可据此调用服务。框架可从请求/响应模型生成结构；自定义异常处理器也要在相应操作里声明错误响应。只有运行时错误和 OpenAPI 都匹配，客户端才不会按一份服务实际不返回的契约生成分支。检查时要按操作核对真实路径、状态码、媒体类型、Problem `type`、分页字段是否必填以及 schema 是否允许 `null`。
 
-下面的 FastAPI 复现定义裸应用前缀 `/api`，与本章请求路径一致。它用三条合成报表演示 200、404、字段验证、畸形 JSON、冲突、分页和 OpenAPI。为集中讲契约，它没有实现身份认证、租户授权或数据库并发唯一性；它不是可直接部署的安全报表服务。正常请求和失败的输入输出已在正文展示，无需运行这段代码才能理解契约。
+下面的 FastAPI 复现定义裸应用前缀 `/api`，演示 GET/POST、验证、分页和 OpenAPI；它不实现上一节的 PATCH、Merge Patch 或 `If-Match`。PATCH 合同使用 `/api/reports/42` 和 `Monthly summary` 的表单表示；可运行 fixture 是独立的最小数据集，GET 42 固定返回 `Service health`，只验证 GET/POST 映射，不证明 PATCH 表示或并发写入。复现也没有身份认证、租户授权或数据库并发唯一性，不是可直接部署的安全报表服务。正常请求和失败的输入输出已在正文展示，无需运行这段代码才能理解相应契约。
 
 > [!example]- 可运行的 FastAPI 契约复现
 > 运行环境已核验：FastAPI 0.128.0、Pydantic 2.11.7、Starlette 0.47.2、httpx 0.28.1；本环境的 `app.openapi()` 生成 OpenAPI 3.1.0。OpenAPI 文档版本以运行时字段为准。
@@ -584,10 +653,10 @@ REST 的 Hypermedia as the Engine of Application State（超媒体作为应用�
 
 ~~~json
 {
-  "id": "r-42",
+  "id": 42,
   "links": [
-    { "rel": "self", "href": "/api/reports/r-42" },
-    { "rel": "download", "href": "/api/reports/r-42/download" }
+    { "rel": "self", "href": "/api/reports/42" },
+    { "rel": "download", "href": "/api/reports/42/download" }
   ]
 }
 ~~~
@@ -596,7 +665,7 @@ React 客户端可以按关系查找详情地址并渲染链接。下面假设 `
 
 ~~~tsx
 type ApiLink = { rel: string; href: string };
-type Report = { id: string; links: ApiLink[] };
+type Report = { id: number; links: ApiLink[] };
 
 function ReportDetailsLink({ report }: { report: Report }) {
   const self = report.links.find(link => link.rel === "self");
@@ -614,12 +683,15 @@ function ReportDetailsLink({ report }: { report: Report }) {
 
 > [!info]- 来源
 > - 错误正文的类别标识、状态、标题、详情和扩展字段：[IETF RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)，§3–§4，2023-07；核对于 2026-11-06。
-> - 400、401 challenge、403、404、409、422、429、201 与 202 的 HTTP 语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9、§15，2022-06；核对于 2026-11-06。
+> - 400、401 challenge、403、404、409、422、201 与 202 的 HTTP 语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9、§11.6.1、§15，2022-06；428 和 429 则分别见 RFC 6585 §3–§4；核对于 2026-11-09。
 > - 操作、参数、媒体类型、响应和 schema 的接口描述：[OpenAPI Specification v3.2.1](https://spec.openapis.org/oas/v3.2.1.html)，2026-09-10，§4–§5；核对于 2026-11-06。代码环境当前生成 3.1.0；运行时版本由 `app.openapi()['openapi']` 决定，规范文件描述契约但不保证实现遵循它。
 > - 页大小、请求间参数一致、不透明 page token 和结束信号：[Google AIP-158, Pagination](https://google.aip.dev/158)，2019-02-18，Guidance；核对于 2026-11-06。
 > - FastAPI 请求模型、响应模型和自定义错误处理：[FastAPI Request Body](https://fastapi.tiangolo.com/tutorial/body/)、[Response Model](https://fastapi.tiangolo.com/tutorial/response-model/)、[Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/)，官方文档核对于 2026-11-06；错误类型映射已在列明版本的本地运行环境核对。
 > - REST 超媒体约束及由表示提供状态转移：[Roy Fielding, Architectural Styles and the Design of Network-based Software Architectures, §5.1.5](https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm)，2000；核对日期：2026-11-06。
 > - 安全的 `GET` 方法与 HTTP 方法语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9.2.1，2022-06；核对日期：2026-11-06。
+> - 条件更新与陈旧 ETag： [IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.1) §13.1.1（`If-Match` 必须用强比较）和 §15.5.13（412），2022-06；核对于 2026-11-09。 [IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html#section-3) §3 定义 428，2012-04；它只用于此端点所选择的缺少前置条件响应。该 RFC §4 定义 429，并规定 429 响应不得被缓存。
+> - PATCH 的整组变更原子应用及 `Accept-Patch`： [IETF RFC 5789, PATCH Method for HTTP](https://www.rfc-editor.org/rfc/rfc5789.html#section-2) §2、§3.1，2010-03；核对于 2026-11-09。
+> - `application/merge-patch+json` 的成员省略、`null` 删除和整体数组值语义：[IETF RFC 7396, JSON Merge Patch](https://www.rfc-editor.org/rfc/rfc7396.html#section-2)，§2，2014-10；核对于 2026-11-09。JSON Patch 的操作媒体类型见 [IETF RFC 6902](https://www.rfc-editor.org/rfc/rfc6902.html)，§3–§4，2013-04。
 ## 4. Cookie 会话与 OIDC 令牌怎样建立身份？
 
 浏览器每次读取报表 42 时，服务端要先辨认请求携带的凭据、签发者和可确认的身份。Cookie 可以承载不透明会话标识，应用再由标识查询服务器端会话；bearer token（持有者令牌）本身就是可重放的凭据，由资源服务验证。OpenID Connect (OIDC，基于 OAuth 2.0 的身份层) 让应用验证身份提供方的认证结果。应用随后仍要建立自己的会话；独立的报表 API 则需要面向该 API 签发的 Access Token（访问令牌）。这些凭据只建立调用者身份或调用资格，不决定用户能否读取报表 42。
@@ -896,7 +968,7 @@ WHERE tenant_id = ? AND id = ?;
 > print("tenant-b user-29: report 42 -> 404; wrong-scope and revoked jobs denied")
 > ~~~
 
-**接下来：** 本章负责服务端把主体、动作和租户内资源联系起来；浏览器跨源读取、Cookie 自动发送和脚本执行见[浏览器安全控制分别保护什么信任边界？](#6.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E5%88%86%E5%88%AB%E4%BF%9D%E6%8A%A4%E4%BB%80%E4%B9%88%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F)。网络入口容量与攻击流量准入见[Web 服务如何限制拒绝服务的影响？](#28.%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
+**接下来：** 本章负责服务端把主体、动作和租户内资源联系起来；浏览器跨源读取、Cookie 自动发送和脚本执行见[浏览器安全控制分别保护什么信任边界？](#6.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AE%89%E5%85%A8%E6%8E%A7%E5%88%B6%E5%88%86%E5%88%AB%E4%BF%9D%E6%8A%A4%E4%BB%80%E4%B9%88%E4%BF%A1%E4%BB%BB%E8%BE%B9%E7%95%8C%EF%BC%9F)。网络入口容量与攻击流量准入见[Web 服务如何限制拒绝服务的影响？](#29.%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
 
 > [!info]- 来源
 > - 每次受保护操作检查权限、默认拒绝、最小权限和对象级授权：[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)，Recommendations 与 IDOR 章节，按 2026-11-06 版本核对。
@@ -1018,7 +1090,7 @@ Content-Security-Policy: frame-ancestors 'self'
 
 旧客户端需要兼容时可设置 `X-Frame-Options`。允许列表应符合实际嵌入场景并在完整流程中测试。这个策略限制哪些页面能嵌入报表 UI，不替代服务端对每份报表或操作的权限判断。
 
-WebSocket 握手也不能用 CORS 响应字段授权。浏览器会发送 Origin；服务端应按允许来源校验握手、认证连接，并对敏感消息继续授权。双向消息和断线恢复见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#18.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
+WebSocket 握手也不能用 CORS 响应字段授权。浏览器会发送 Origin；服务端应按允许来源校验握手、认证连接，并对敏感消息继续授权。双向消息和断线恢复见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#19.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
 
 **接下来：** TLS 保护网络连接；安全输出和 CSP 降低脚本注入风险；CSRF 防护检验带 Cookie 的变更请求；CORS 决定浏览器是否暴露跨源响应；`frame-ancestors` 决定页面可由谁嵌入。所有资源读取仍须经过[服务端逐项授权](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
 
@@ -2064,7 +2136,7 @@ attempt fencing（尝试号栅栏）以单调递增的 attempt 号隔离新旧 w
 
 若代表性报表稳定满足调用方截止时间和尾部时延目标，同步接口更简单：校验输入、执行有界查询、返回 CSV，无需 queue、outbox relay、worker、状态轮询和结果清理生命周期。任务可能超过请求预算、必须在断连后可查，或突发流量需要与 API 执行隔离时，才选择异步路径。队列能保存等待和隔离故障，但不会凭空增加处理能力。
 
-沿用[容量与背压页](#27.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)的估算：64 个 worker 槽、准入目标 7 次/秒、30 个任务的短时突发，以及共享上限 240 个已接受未开始任务；应用连接池总上限是 200。若把峰值 20 次/秒持续按平均 6 秒处理，平均需要约 `20 × 6 = 120` 个并发 worker；64 个槽不能长期消化该到达率，因此准入规则要限流/拒绝，等待队列也不能无界增长。未开始任务包括 outbox 中尚未发布的任务。若 broker 暂时不可用，已接受任务仍占槽；槽已满时 API 必须在 **202 之前**返回过载错误。数据库不可用时无法持久接受任务，也不能声称已受理。
+沿用[容量与背压页](#28.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)的估算：64 个 worker 槽、准入目标 7 次/秒、30 个任务的短时突发，以及共享上限 240 个已接受未开始任务；应用连接池总上限是 200。若把峰值 20 次/秒持续按平均 6 秒处理，平均需要约 `20 × 6 = 120` 个并发 worker；64 个槽不能长期消化该到达率，因此准入规则要限流/拒绝，等待队列也不能无界增长。未开始任务包括 outbox 中尚未发布的任务。若 broker 暂时不可用，已接受任务仍占槽；槽已满时 API 必须在 **202 之前**返回过载错误。数据库不可用时无法持久接受任务，也不能声称已受理。
 
 > [!info] 用平均到达率估算并发，不等于压测结果
 > Little's law（利特尔法则）给出稳态关系：平均在途任务数约等于平均到达率乘以平均处理时长。若 20 次/秒持续到达且每项平均 6 秒，`20 × 6 = 120` 是近似并发需求；它不包含长尾、突发与失败重试，不能替代压测和限流。
@@ -2072,7 +2144,7 @@ attempt fencing（尝试号栅栏）以单调递增的 attempt 号隔离新旧 w
 部署与运行时保留以下检查：API、relay 与 worker 的任务表结构兼容，使升级期间旧任务仍可完成；按本例分开的 7 天结果与终态后 14 天状态/幂等元数据策略清理；限制重试数、对象上传时长和每次工作时长；监测 API 接受时延、pending outbox 的最老等待时间、数据库中最老 `queued` job 年龄、broker 最老消息年龄与深度、活跃 worker 槽、任务完成分位数、连接池等待与 SQL 耗时、对象存储用量、重试、取消和终态结果。broker 队列指标正常不能证明数据库中没有积压；`pending outbox` 或 `queued` 年龄持续增长都表示处理路径跟不上。发布时保留回滚路径，并考虑已经按旧 schema 接受的任务。
 
 
-**继续阅读：** [数据库约束与索引](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)说明唯一键与查询路径；[事务隔离与 WAL](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)说明数据库内提交边界；[数据访问与连接池](#11.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)说明每个请求/attempt 的 ORM 与连接生命周期；[HTTP 协议与 WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)说明客户端状态查询的传输边界；[可观测性、服务目标与事件响应](#35.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明阶段指标。更长的设计检查清单见[AI 系统设计案例](../../ai-engineering/systems/ai-system-design-interview-questions.md)。
+**继续阅读：** [数据库约束与索引](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)说明唯一键与查询路径；[事务隔离与 WAL](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)说明数据库内提交边界；[数据访问与连接池](#11.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)说明每个请求/attempt 的 ORM 与连接生命周期；[HTTP 协议与 WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)说明客户端状态查询的传输边界；[可观测性、服务目标与事件响应](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明阶段指标。更长的设计检查清单见[AI 系统设计案例](../../ai-engineering/systems/ai-system-design-interview-questions.md)。
 
 > [!info]- 来源
 > - `202 Accepted` 表示已接受但尚未完成的 HTTP 语义：[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§15.3.3，核对于 2026-11-06。
@@ -2083,7 +2155,7 @@ attempt fencing（尝试号栅栏）以单调递增的 attempt 号隔离新旧 w
 > - 从需求、约束与运行目标选择架构：[Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework)，核对于 2026-11-06。
 ## 16. 报表任务的发布确认、消费者确认与业务完成各证明什么？
 
-账户 acct-17 为 report 42 发起导出时，请求幂等键为 report-demo-208，并在 application programming interface（应用程序接口，API）的数据库事务里创建 job（任务）job-demo-731 和 outbox（事务发件箱）行。report 42 也可由只读 API 路径查询；读状态码与异步 job 的状态或结果对象提交是不同的用户结果，不能互相代替。relay（转发进程）再把工作意图发布到 broker（消息代理）。publisher confirm（发布者确认）覆盖 relay 到 broker 的接收边界；consumer acknowledgement（消费者确认，常写作 ACK）覆盖 broker 到 worker（工作进程）的交付处理边界；job 的 succeeded 状态和私有对象引用才是应用对用户作出的业务完成记录。
+账户 acct-17 为 report 42 发起导出时，请求幂等键为 report-demo-208，并在 application programming interface（应用程序接口，API）的数据库事务里创建 job（任务）job-demo-731 和 outbox（事务发件箱）行，同时预留一个等待槽。这里的等待槽是数据库维护的排队准入额度，不是 RabbitMQ prefetch 或 BullMQ lock：每个尚未领取的逻辑排队轮次占一个槽，接管重排时重新预留，领取时归还，重复 delivery 不增槽。report 42 也可由只读 API 路径查询；读状态码与异步 job 的状态或结果对象提交是不同的用户结果，不能互相代替。relay（转发进程）再把工作意图发布到 broker（消息代理）。publisher confirm（发布者确认）覆盖 relay 到 broker 的接收边界；consumer acknowledgement（消费者确认，常写作 ACK）覆盖 broker 到 worker（工作进程）的交付处理边界；job 的 succeeded 状态和私有对象引用才是应用对用户作出的业务完成记录。
 
 ~~~mermaid
 sequenceDiagram
@@ -2092,7 +2164,7 @@ sequenceDiagram
     participant B as RabbitMQ broker
     participant W as Report worker
     participant O as Private object storage
-    A->>A: 同事务写 job + pending outbox + 预留一个等待槽
+    A->>A: 同事务写 job + pending outbox + 预留一个数据库排队额度
     R->>B: mandatory 发布载荷 {job_id=job-demo-731}
     alt 消息不可路由
         B-->>R: basic.return（关联本次发布）
@@ -2119,13 +2191,22 @@ sequenceDiagram
 
 publisher confirm 覆盖 publisher（发布者）到 RabbitMQ 的通信。它不知道 worker 是否已收到、确认或完成消息。如果 broker 接收了 publish，但 confirm 在网络中丢失，relay 无法区分“broker 未收到”和“broker 已收到但回复丢失”，重发便可能为同一 job 产生重复载荷。outbox 每次调度意图有独立唯一 ID，relay 用这个 ID 更新相应的发布状态；消息载荷只需 job ID。
 
-confirm 的含义还受消息和 queue（队列）类型影响。RabbitMQ 的 publisher confirm 不是路由保证：消息被 exchange（交换器）接受，并不一定已进入预期 queue。若采用 RabbitMQ 的 mandatory 发布，应将该次 publish 的 publisher confirm ack 与关联的 basic.return 联合判断：4.4 中不可路由消息会先 basic.return、再收到 confirm ack，因此“有 confirm ack 且没有关联 return”才能说明至少路由到了某个 queue。它仍不证明该 queue 是业务目标；exchange、binding 和备用 exchange 必须按明确拓扑预先验证。若 routing contract 由其他 broker/机制保证，则按该契约检查路由结果。durable message/queue（持久消息/队列）与副本类型也决定 broker 按什么配置确认承担责任；不要把另一种 queue 的保证套用过来。
+confirm 的含义还受消息和 queue（队列）类型影响。RabbitMQ exchange（交换器）通过 binding（绑定）把 publish 路由到 queue（队列）；publisher confirm 不是路由保证，消息被 exchange 接受并不一定已进入预期 queue。mandatory 发布要求不可路由消息以该次 publish 的 basic.return 返回，应将它与 publisher confirm ack 联合判断：4.4 中不可路由消息会先 basic.return、再收到 confirm ack，因此“有 confirm ack 且没有关联 return”才能说明至少路由到了某个 queue。它仍不证明该 queue 是业务目标；exchange、binding 和备用 exchange 必须按明确拓扑预先验证。若 routing contract 由其他 broker/机制保证，则按该契约检查路由结果。durable message/queue（持久消息/队列）与副本类型也决定 broker 按什么配置确认承担责任；不要把另一种 queue 的保证套用过来。
 
 outbox relay 可以按此顺序推进：读取一条未发布 outbox 意图，发布它所指向的 job ID；只有所选路由契约通过（例如 mandatory publish 已收到 confirm ack，且没有关联的 basic.return）后，才标记这个 intent 自己的 outbox 行已发布。confirm 状态未知或出现 return 时保留意图并报告发布/路由故障，修复后重试；重复 publish 可能得到相同逻辑 job 的消息，RabbitMQ 不在这里替应用去重。数据库事务和 RabbitMQ 事务不是一个原子事务；重复消息可接受的前提是 consumer（消费者）按持久 job 状态幂等处理。账户报表如何把 job、outbox 和等待槽同事务提交见[怎样设计一个可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
 
 ### 消费者在业务结果持久后才 ACK
 
-给 job-demo-731 的 delivery（消息投递）载荷只带稳定 job ID，不带 attempt。worker 从数据库读取任务，并只对 `queued` 状态做 conditional claim（条件领取）：在同一数据库事务中把状态改为 `running`、生成新的 attempt（尝试号）并释放这个排队轮次的等待槽。重投消息只是查询权威 job 的线索；若已有 `running` 尝试且租约尚未过期，不能据此接管或另起 attempt。租约到期只让数据库恢复器有资格尝试接管；它必须先赢得条件更新，再把任务改回 `queued`、预留新槽并写入新的 outbox intent。随后当前 worker 才能领取新 attempt。attempt 来自数据库的胜者更新，不能信任可能重复、延迟或过期的 queue message（队列消息）。结果对象写入后，只有成功提交 `succeeded` 和对象 key，才向 broker 发 consumer ACK。用户读取结果仍要经 API 做授权，不能因 message 已被 ACK 就把对象公开。
+给 job-demo-731 的 delivery（消息投递）载荷只带稳定 job ID，不带 attempt。worker 只对数据库中的 `queued` 状态且 `available_at` 已到的任务做 conditional claim（条件领取）：在同一数据库事务中把状态改为 `running`、生成新的 attempt（尝试号）并释放等待槽。若当前 job 行还没有此字段，支持延迟重试时就在该行持久增加 `available_at`；初次排队的时间可立即到期，重试则以数据库时间判断。重投消息只是查询权威 job 的线索，不能自己生成 attempt。
+
+先区分领取时遇到的重复 delivery：
+
+- `queued` 且 `available_at <= clock_timestamp()` 表示排队轮次已到可领取时间，worker 可竞争条件领取；只有一个事务能领取成功。若 `available_at` 仍在未来，旧轮次早到的重复 delivery 不能提前启动 attempt；只有在后续 outbox/定时发布已持久安排到期唤醒时才可 ACK，否则应延后或不 ACK。
+- `running` 且租约未过期表示已有当前 attempt，重复 delivery 不能另起并行工作。因为本例有持久租约恢复器，数据库能在过期后条件接管、重新预留槽并写新 outbox；因此确认该恢复路径持续运行后，可 ACK 这条重复消息。若没有独立且持久的恢复路径，就延后或不 ACK，不能单凭 `running` 丢掉唯一唤醒消息。
+- 已持久终结的 `succeeded`、`failed` 或 `cancelled` job 不再需要这条 delivery，可 ACK。
+- `running` 已过期也不表示当前 worker 可以自助领取新代次。租期到期只让数据库恢复器有资格尝试接管；它必须先赢得条件更新，再把任务改回 `queued`、预留新槽并写入新的 outbox intent。随后消息唤醒的 worker 才能领取新 attempt。
+
+attempt 来自数据库的胜者更新，不能信任可能重复、延迟或过期的 queue message（队列消息）。结果对象写入后，只有当前 attempt 的条件更新提交 `succeeded` 和对象 key，才向 broker 发 consumer ACK。用户读取结果仍要经 API 做授权，不能因 message 已被 ACK 就把对象公开。
 
 成功条件必须把当前状态、attempt 和取消请求一起放进更新谓词，且对象已经写好后才提交：
 
@@ -2138,16 +2219,14 @@ WHERE job_id = :job_id
   AND cancel_requested = FALSE;
 ~~~
 
-若更新一行，事务提交后 ACK；若更新零行，先重新读取权威 job/outbox 状态。若已有未过期的 `running` attempt，本条重投不能另起尝试；可以按队列策略延迟它，或在确认持久租约恢复器会于过期后创建新 outbox 意图并重排时 ACK 这条重复消息。若任务已取消或终结，持久状态能证明无需再做；若仍为 `queued` 或后继意图尚未持久，则不能盲目 ACK，否则可能丢失尚未重新排队的工作。租约到期也不自动使旧 worker 失权，实际竞争以数据库条件更新的提交先后决定。
-
-如果更新为零是因为 `cancel_requested` 已置位，不能把旧 worker 的失败返回或已上传对象当作成功。先读取并持久化取消终态，或交给租约恢复流程完成取消；只有状态和清理/保留策略已经持久后，才按 broker 契约 ACK。对象上传本身也不让结果对用户可见；只有数据库引用提交后，授权 API 才能提供结果。
+若更新一行，先提交事务，再 ACK。**完成 UPDATE 返回零行是另一条分支，不能与“领取时收到重复 delivery”混为一谈。** worker 重新读取权威 job/outbox：若已是 `succeeded`、`failed` 或取消终态且清理策略已持久，当前 delivery 已无待办工作，可 ACK。若恢复器已把旧 attempt 持久转为 `queued`，且槽位与新 outbox 意图同事务提交，旧 delivery 可 ACK；relay 只会在其 `available_at` 到期后发布，早到消息也不能越过领取时间条件。若后继 worker 已把状态领取为更大的 `running` attempt，则只有在该 claim 已提交且租约恢复路径独立持久时才 ACK 旧 delivery。恢复器的接管尚未提交、或仍为 `queued` 但新 outbox/槽位尚未持久时，不能 ACK；若当前 attempt 仍在运行且恢复器不能保证后续重排，也不能 ACK。只有 `cancel_requested` 尚未写成持久取消终态时，不能把旧 worker 的失败返回或已上传对象当作成功；应完成取消状态和清理/保留策略，或交给有持久保证的恢复流程，再按 broker 契约 ACK。
 
 | 失败时点 | broker 可能采取的动作 | 应用要保持的条件 |
 |---|---|---|
 | broker 已接收 publish，confirm 未到 relay | relay 重发，同一 job ID 可能有多条消息 | 对当前持久 job/attempt 的完成更新只能有一个赢家 |
-| worker 在持久结果前崩溃，delivery 尚未 ACK | RabbitMQ 连接或 channel 关闭后可重新排队未 ACK delivery | 重投仅触发读取权威 job；若仍为未过期的 `running`，不能另起 attempt。租约到期后也须等恢复器条件接管并重排，才可领取新 attempt |
+| worker 在持久结果前崩溃，delivery 尚未 ACK | RabbitMQ 连接或 channel 关闭后可重新排队未 ACK delivery | 重投仅触发读取权威 job；有效租约内不能另起 attempt，过期后仍须等恢复器条件接管并持久重排 |
 | 数据库已提交 succeeded，worker 发 ACK 前崩溃 | delivery 可再次到达另一个 worker | 后继 worker 查到 job 已终态/attempt 已失效，不得重复业务副作用，再 ACK 重复消息 |
-| worker 先 ACK，再提交结果前崩溃 | broker 可删除这条 delivery，不会再因它自动重投 | 如果没有独立的持久恢复扫描，job 可能一直滞留；报表任务设计中的 lease recovery（租约恢复）会扫描过期的 running job，用条件更新 fencing（栅栏校验）并通过新的 outbox intent 重排。因此该恢复依赖数据库恢复器而非 broker。 |
+| worker 先 ACK，再提交结果前崩溃 | broker 可删除这条 delivery，不会再因它自动重投 | 若没有独立的持久恢复扫描，job 可能滞留；canonical 报表设计由数据库租约恢复器条件接管并通过新 outbox 重排，因此该恢复依赖数据库而非 broker |
 
 若成功提交了对象但数据库事务未能提交，可能留下不可见的孤儿对象；以 attempt key 命名并在无引用、任务终态和宽限期满足后清理。若数据库已提交成功但 ACK 丢失，重复 handler 应通过终态 job、attempt fencing（尝试栅栏校验）或 operation key 得到“已完成/重复”而不是再次发布或覆盖结果。数据库提交、ACK 与恢复器抢占的状态谓词由 report job 设计章负责，本篇只解释 broker 交界。
 
@@ -2157,18 +2236,341 @@ RabbitMQ 4.4 使用手动确认时，未确认 delivery 在其 channel（通道�
 
 RabbitMQ 4.4 的 consumer prefetch（消费者预取上限）默认按单个 consumer（消费者）计算，而不是整个 channel（通道）：例如一个 consumer 设 prefetch=4，就最多有四条它自己的 delivery 未 ACK；同一个 channel 上若有三个 consumer，总数可以达到 12。RabbitMQ 4.3 起全局 per-channel QoS 已弃用且默认禁用。prefetch 同时影响 worker 的并行量、进程内排队和内存，不应设置为无限而不评估容量。
 
-失败重试要有边界：瞬时故障可安排有延迟的有限重试；永久 schema（结构定义）错误或格式错误应进入可观测 dead-letter queue（死信队列，DLQ），由处理流程决定修复重放或隔离丢弃。反复立刻重新排队会形成热循环。若业务要求每个账户按顺序更新，必须明确顺序的键范围，并用单一有序分区、序号条件更新或串行化保证；first in, first out（先进先出，FIFO）名称不自动保证多个 worker 的业务完成顺序。
+失败重试要有边界。worker 遇到可重试的瞬时错误时，不能只把原 delivery 延迟重投，因为 job 若仍为 `running`，条件领取不会启动下一 attempt；应用须以当前 attempt 为条件，同事务持久设置 `status=queued`、`available_at=next_retry_at`、重新预留等待槽并写新的 pending outbox 意图。relay 只在 `available_at` 到期后发布；领取谓词也要求数据库当前时间已到，早到的旧 delivery 只检查状态，不能绕过退避。只有新 outbox 与重试时间都已持久后，原 delivery 才可 ACK。不可重试错误或尝试耗尽时先持久写 `failed` 终态，再 ACK。无法映射到有效 job 的格式错误消息进入可观测 dead-letter queue（死信队列，DLQ），不要无限重排。若业务要求每个账户按顺序更新，必须明确顺序的键范围，并用单一有序分区、序号条件更新或串行化保证；first in, first out（先进先出，FIFO）名称不自动保证多个 worker 的业务完成顺序。
+
+### BullMQ 的租锁失效为什么会让任务重复执行？
+
+另一种常见实现是 BullMQ 6.5.3：Redis 保存 BullMQ 的调度状态和 job lock；在本例中，PostgreSQL 的 canonical 报表行仍是业务状态、attempt、租期与结果引用的权威来源，BullMQ 只负责唤醒和调度。每个持久 outbox 发布意图有自己的稳定 ID，relay 用安全字符集的 UUID 意图 ID 生成 `outbox-${intentId}`，作为 BullMQ custom job ID；消息载荷仍只带 canonical job ID `job-demo-731`。同一意图重发时复用调度 ID；租约恢复写入新 outbox 意图时使用新调度 ID，避免保留中的旧 BullMQ job 阻挡合法唤醒。BullMQ 6.5.3 custom job ID 不能含冒号、也不能只由数字组成；外部业务 operation key（如 `report-demo-208:notify:v1`）不是 BullMQ job ID。job 保留期间重复添加相同调度 ID 会被忽略；移除后可再次添加，所以它仍不代替 canonical 数据库和请求幂等记录。
+
+BullMQ worker（工作进程）领取 job 后，队列会为它持有有时限的 lock（锁），并周期续租。进程异常退出、Redis 连接中断，或 Node.js 事件循环被长时间 CPU 工作阻塞，都可能令续租错过 lockDuration；stalled checker（停滞任务检查器）发现锁已过期后，会把 job 放回 waiting 让 worker 重跑。BullMQ 文档把这类语义称为 at-least-once（至少一次），即同一 job 可能被处理超过一次。Stalled 次数上限由 maxStalledCount 控制，6.5.3 文档默认值为 1；普通处理器抛错的 attempts/backoff 与 stalled 次数上限是两条重试路径。要观察 stalled 事件并让 CPU 密集型任务及时让出事件循环。增加锁时长会延长真正崩溃后的发现时间，缩短锁又会放大调度抖动导致的重投，不能把时间配置当成业务幂等。
+
+即使 worker 丢失 Redis 锁，它已经开始的远端请求或对象写入也不一定会停止；稍后另一个 worker 可能拿到同一 job。Redis lock 只决定 BullMQ 何时重投，不授予或撤销报表业务写权限；对同一个 job-demo-731，外部意图和结果提交仍按 canonical 数据库状态检查 `status=running`、当前 attempt、`cancel_requested=false`。该合同中租约到期只允许恢复器尝试接管，接管状态变更提交前旧 attempt 仍可能赢得条件更新；它不同于下文独立 PostgreSQL 示例的严格到期拒绝写入。触发外部效果前使用稳定业务操作键，例如请求键 report-demo-208 对应的 `report-demo-208:notify:v1`；本地 outbox 绑定 job、attempt、请求摘要和上述 canonical 状态栅栏。远端应按稳定操作键与相同请求摘要去重，并公开保留期限或按键查询：查询确认效果完成时记录完成、不再发送；结果仍未知（包括查询不可用），但远端保证该键同摘要在期限内去重时，才用同键同摘要重试；结果仍未知且没有仍有效的去重保证，或摘要不一致、期限已过时，保留未知并人工对账。写对象时则用包含 attempt 的不可变路径，只让当前有效 attempt 的数据库事务提交对象引用。一般未知结果边界见[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
+
+### SQL job 表怎样短时领取并阻止过期 worker 回写？
+
+如果任务状态本来就在 PostgreSQL，worker 也可以直接轮询 job 表。PostgreSQL 的 FOR UPDATE SKIP LOCKED（跳过已锁行）会跳过当前被其他事务锁住的行；官方将它列作适合多个消费者竞争 queue-like（类似队列的）表的机制，不适合作为一般读取的一致视图。领取事务只负责选一行、写 running 状态、递增 attempt 代次并设 lease_until，然后立即提交。worker 在事务外执行昂贵任务；心跳只延长仍属于自己的未过期租约。
+
+下面是可在 PostgreSQL 14+ 的 psql 会话运行的独立 SQL 合成任务演示，使用 `pg-job-demo-42`，不复用上面 RabbitMQ/报表示例的 `job-demo-731`。本例明确选择严格租期合同：到期本身就终止旧 attempt 的写权限，即使接管尚未发生；这与前述 canonical 报表合同“到期仅允许恢复器尝试接管、由状态变更提交栅栏旧 attempt”是两种不同取舍，产品实现应选定一种并贯穿使用。临时表只在当前连接中存在，退出 psql 会话后才消失。领取语句作为各自的短事务提交。写外部意图、完成和续租时，都先按稳定 job ID 锁定行，再由下一条语句使用新鲜 `clock_timestamp()` 检查状态、attempt 与未过期租约；不能让一个带时间谓词的 `SELECT FOR UPDATE` 等锁后沿用锁前判定：
+
+> [!example]- PostgreSQL 领取、租约栅栏与外部意图
+> ~~~sql
+> CREATE TEMP TABLE report_jobs (
+>   job_id text PRIMARY KEY,
+>   status text NOT NULL,
+>   attempt integer NOT NULL DEFAULT 0,
+>   available_at timestamptz NOT NULL,
+>   lease_until timestamptz,
+>   result_key text
+> );
+> INSERT INTO report_jobs(job_id, status, attempt, available_at)
+> VALUES ('pg-job-demo-42', 'queued', 0, clock_timestamp() - interval '1 second');
+>
+> CREATE TEMP TABLE job_effect_outbox (
+>   operation_key text PRIMARY KEY,
+>   job_id text NOT NULL REFERENCES report_jobs(job_id),
+>   attempt integer NOT NULL,
+>   request_sha256 text NOT NULL,
+>   payload text NOT NULL
+> );
+>
+> -- Worker A：领取提交后才在事务外计算。返回 attempt=1。
+> WITH candidate AS (
+>   SELECT job_id
+>   FROM report_jobs
+>   WHERE (status = 'queued' AND available_at <= clock_timestamp())
+>      OR (status = 'running' AND lease_until <= clock_timestamp())
+>   ORDER BY available_at, job_id
+>   LIMIT 1
+>   FOR UPDATE SKIP LOCKED
+> )
+> UPDATE report_jobs AS j
+> SET status = 'running',
+>     attempt = j.attempt + 1,
+>     lease_until = clock_timestamp() + interval '30 seconds'
+> FROM candidate AS c
+> WHERE j.job_id = c.job_id
+> RETURNING j.job_id, j.status, j.attempt, j.lease_until;
+>
+> -- 为了不等待 30 秒，演示中把 Worker A 的租期置为已过期。
+> UPDATE report_jobs
+> SET lease_until = clock_timestamp() - interval '1 second'
+> WHERE job_id = 'pg-job-demo-42' AND attempt = 1;
+>
+> -- Worker A 已过期但 Worker B 尚未接手：严格租期检查返回 0 行。
+> BEGIN;
+> SELECT job_id FROM report_jobs WHERE job_id = 'pg-job-demo-42' FOR UPDATE;
+> UPDATE report_jobs
+> SET status = 'succeeded', result_key = 'reports/42/attempt-1', lease_until = NULL
+> WHERE job_id = 'pg-job-demo-42'
+>   AND status = 'running'
+>   AND attempt = 1
+>   AND lease_until > clock_timestamp()
+> RETURNING job_id, status, attempt;
+> COMMIT;
+>
+> -- Worker B 接手过期任务。返回 attempt=2，旧代次不再拥有提交权。
+> WITH candidate AS (
+>   SELECT job_id
+>   FROM report_jobs
+>   WHERE (status = 'queued' AND available_at <= clock_timestamp())
+>      OR (status = 'running' AND lease_until <= clock_timestamp())
+>   ORDER BY available_at, job_id
+>   LIMIT 1
+>   FOR UPDATE SKIP LOCKED
+> )
+> UPDATE report_jobs AS j
+> SET status = 'running',
+>     attempt = j.attempt + 1,
+>     lease_until = clock_timestamp() + interval '30 seconds'
+> FROM candidate AS c
+> WHERE j.job_id = c.job_id
+> RETURNING j.job_id, j.status, j.attempt, j.lease_until;
+>
+> -- 本例的外部操作键固定属于 pg-job-demo-42。请求摘要是该 JSON 正文原始字节的 SHA-256。
+> -- Worker A 已过期；attempt 检查失败，插入 0 行。
+> BEGIN;
+> SELECT job_id FROM report_jobs WHERE job_id = 'pg-job-demo-42' FOR UPDATE;
+> WITH current_attempt AS (
+>   SELECT job_id, attempt
+>   FROM report_jobs
+>   WHERE job_id = 'pg-job-demo-42'
+>     AND status = 'running'
+>     AND attempt = 1
+>     AND lease_until > clock_timestamp()
+> )
+> INSERT INTO job_effect_outbox(operation_key, job_id, attempt, request_sha256, payload)
+> SELECT 'pg-job-demo-42:notify:v1', job_id, attempt,
+>        'c4dd0f89af3442f1d58ade3561dc85ed51e5e458c7bc58873c2069d0fc97a27c',
+>        '{"jobId":"pg-job-demo-42","reportId":42,"type":"report.ready"}'
+> FROM current_attempt
+> ON CONFLICT (operation_key) DO NOTHING
+> RETURNING operation_key, attempt;
+> COMMIT;
+>
+> -- Worker B 的当前 attempt 持有未过期租约，意图只插入一次，返回 1 行。
+> BEGIN;
+> SELECT job_id FROM report_jobs WHERE job_id = 'pg-job-demo-42' FOR UPDATE;
+> WITH current_attempt AS (
+>   SELECT job_id, attempt
+>   FROM report_jobs
+>   WHERE job_id = 'pg-job-demo-42'
+>     AND status = 'running'
+>     AND attempt = 2
+>     AND lease_until > clock_timestamp()
+> )
+> INSERT INTO job_effect_outbox(operation_key, job_id, attempt, request_sha256, payload)
+> SELECT 'pg-job-demo-42:notify:v1', job_id, attempt,
+>        'c4dd0f89af3442f1d58ade3561dc85ed51e5e458c7bc58873c2069d0fc97a27c',
+>        '{"jobId":"pg-job-demo-42","reportId":42,"type":"report.ready"}'
+> FROM current_attempt
+> ON CONFLICT (operation_key) DO NOTHING
+> RETURNING operation_key, attempt;
+> COMMIT;
+>
+> -- 同键重放必须核对正文摘要；只有 true 才是相同请求。
+> SELECT operation_key,
+>        request_sha256 = 'c4dd0f89af3442f1d58ade3561dc85ed51e5e458c7bc58873c2069d0fc97a27c' AS same_request
+> FROM job_effect_outbox
+> WHERE operation_key = 'pg-job-demo-42:notify:v1';
+>
+> -- Worker A 迟到完成：先锁行，再重新读租期/代次；attempt 不匹配，返回 0 行。
+> BEGIN;
+> SELECT job_id FROM report_jobs WHERE job_id = 'pg-job-demo-42' FOR UPDATE;
+> UPDATE report_jobs
+> SET status = 'succeeded', result_key = 'reports/42/attempt-1', lease_until = NULL
+> WHERE job_id = 'pg-job-demo-42'
+>   AND status = 'running'
+>   AND attempt = 1
+>   AND lease_until > clock_timestamp()
+> RETURNING job_id, status, attempt;
+> COMMIT;
+>
+> -- Worker B 完成：先锁行，再由下一条 UPDATE 检查新鲜租期；返回 1 行。
+> BEGIN;
+> SELECT job_id FROM report_jobs WHERE job_id = 'pg-job-demo-42' FOR UPDATE;
+> UPDATE report_jobs
+> SET status = 'succeeded', result_key = 'reports/42/attempt-2', lease_until = NULL
+> WHERE job_id = 'pg-job-demo-42'
+>   AND status = 'running'
+>   AND attempt = 2
+>   AND lease_until > clock_timestamp()
+> RETURNING job_id, status, attempt, result_key;
+> COMMIT;
+> ~~~
+
+回放结果为：首次领取 attempt=1；A 到期但 B 尚未接手时，严格租期完成更新返回 0 行；之后过期接手为 attempt=2，A 的过期意图写入与迟到完成仍各返回 0 行，B 的当前意图写入和完成各返回 1 行，摘要查询为 true。前文 canonical 报表合同则允许到期至接管提交前由旧 attempt 与恢复器竞争状态写入；两者彼此独立。若租约续期写成另一个 UPDATE，也必须同时要求 job ID、running 状态、当前 attempt 匹配且旧 lease_until 尚未过期；否则已过期 worker 能在接手后再次“续活”。远端副作用仍按三种结果处理：查询确认完成则记录完成并停止发送；结果仍未知（查询不可用也算未知）但远端保证同键同摘要在保留窗内去重，才可重试原键；结果仍未知且无有效保证、摘要冲突或期限过了，就人工对账。SQL 领取避免维护独立 Redis job 状态，但会以轮询和行锁增加主数据库负担，需监控领取扫描、锁等待和空轮询。
+
+代次栅栏只能阻止旧 worker 覆盖 job 行，不会撤回它已经发出的外部请求。worker 写本地外部意图时，必须在同一短事务锁住 job 行、校验 `status=running`、当前 attempt 和未过期租约，再写入唯一 operation_key 与请求摘要；冲突时读取既有行，摘要相同才可视为同一意图，摘要不同则隔离处理。relay 仍可能在远端成功后、写下本地发送回执前崩溃。结果未知时先按原操作键查询：查询确认效果已完成，就持久记完成并停止发送；结果仍未知但远端保证相同键、相同摘要在保留窗内去重，才可同键重试；结果仍未知且没有仍有效的同键同摘要去重保证、摘要不符或远端保留窗已过，就维持未知并人工对账。数据库内唯一键只防止重复创建本地意图，不会自动让远端调用只发生一次。
 
 ### 观测每个交接点，不能只数 ACK
 
-单独记录 publish 尝试、confirm/return、queue depth 和 oldest-message age、unacked 数、重投、重试、ACK、DLQ、job succeeded/failed 及对象引用提交。oldest-message age 持续增长表示结果延迟，即使队列还在接受消息。broker 继续接收并不代表 worker 有容量；worker 发 ACK 也只表示应用确认到达选择的处理边界，不等于用户后来成功下载了报告。更完整的事故定位见[如何从报表服务信号定位发布故障？](#35.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)。
+单独记录 publish 尝试、confirm/return、queue depth 和 oldest-message age、unacked 数、重投、重试、ACK、DLQ、job succeeded/failed 及对象引用提交。oldest-message age 持续增长表示结果延迟，即使队列还在接受消息。broker 继续接收并不代表 worker 有容量；worker 发 ACK 也只表示应用确认到达选择的处理边界，不等于用户后来成功下载了报告。更完整的事故定位见[如何从报表服务信号定位发布故障？](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)。
 
 > [!info]- 来源
 > - RabbitMQ 官方 [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms) 与[发布何时确认](https://www.rabbitmq.com/docs/confirms#when-will-published-messages-be-confirmed-by-the-broker)、[Reliability Guide](https://www.rabbitmq.com/docs/reliability)，checked 2026-11-06：确认方向相互独立、mandatory/unroutable 的 `basic.return` 在 confirm ack 前、手动/自动 ack、未确认消息在 channel/connection 关闭后的重排、publisher 重试与确认语义。latest release 为 RabbitMQ 4.4.0，见[官方 Release Information](https://www.rabbitmq.com/release-information)。
 > - RabbitMQ 4.4.0 官方 [Consumer Prefetch](https://www.rabbitmq.com/docs/consumer-prefetch)，checked 2026-11-06：RabbitMQ 默认 false 的 QoS 标记对应每个 consumer 独立上限；global per-channel 模式在 4.3 起弃用并默认禁用。见[发布信息](https://www.rabbitmq.com/release-information)核对当前 4.4.0 版。
 > - RabbitMQ 官方 [Publishers](https://www.rabbitmq.com/docs/publishers) 与 [Consumers](https://www.rabbitmq.com/docs/consumers)，checked 2026-11-06：publisher confirms、不可路由消息检测、消费者预取和并发交付。具体保证仍由已配置的 exchange、queue 类型、持久性、副本和客户端库决定。
-> - 数据库 outbox、幂等键和 report job attempt 是应用级机制，见[请求超时后的结果确认](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)和[持久报表任务](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)；本文不声称对真实 broker 做了部署验证。
-## 17. 怎样用 Kafka 分区保序、推进偏移并安全接手？
+> - 数据库 outbox、幂等键和 report job attempt 是应用级机制，见[请求超时后的结果确认](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)和[持久报表任务](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+> - BullMQ 6.5.3 官方文档（checked 2026-11-09）：[Important Notes](https://github.com/taskforcesh/bullmq/blob/v6.5.3/docs/gitbook/bull/important-notes.md)、[Stalled Jobs](https://github.com/taskforcesh/bullmq/blob/v6.5.3/docs/gitbook/guide/workers/stalled-jobs.md)、[Retrying failing jobs](https://github.com/taskforcesh/bullmq/blob/v6.5.3/docs/gitbook/guide/retrying-failing-jobs.md)、[Job IDs](https://github.com/taskforcesh/bullmq/blob/v6.5.3/docs/gitbook/guide/jobs/job-ids.md)。这些语义适用于本段标出的 BullMQ 6.5.3；job ID 去重仍受其保留/自动移除边界约束。该版本 custom ID 还不能含冒号或仅由数字组成，因此示例使用带字母前缀的安全意图 ID。
+> - PostgreSQL 14 官方 [SELECT 与锁定子句](https://www.postgresql.org/docs/14/sql-select.html) §SELECT、[显式锁](https://www.postgresql.org/docs/14/explicit-locking.html) §13.3.2，checked 2026-11-09：SKIP LOCKED 会跳过无法立即取得的行锁，适用于 queue-like 并发领取。代次/租期状态设计和远端幂等是应用层契约。
+## 17. Webhook（回调通知）接收方如何验证并可靠受理？
+
+报表 42 生成完成后，报表服务要通知另一个服务；对方可能短时不可用、响应可能在网络中丢失，请求也可能被重复发送。安全交接因此有两个独立判断：签名验证“请求是否由持有共享密钥的一方生成且字节未被改动”，持久去重“这个逻辑事件是否已受理”。单有签名不能阻止有效请求被重放，单有事件 ID 也不能证明发送者身份。
+
+在这条路径中，发送端用 transactional outbox（事务发件箱）记录待通知事件，接收端用 inbox（收件箱）持久保存已受理事件，再异步处理。
+
+以下采用**明确的合成 HMAC（基于哈希的消息认证码）合约**，只用于教学，不兼容 Stripe、GitHub 或其他提供方的 webhook。合约定义 eventId 为稳定逻辑事件 ID，重试时不变；attemptId 是一次应用层 HTTP 投递尝试 ID，每次新发送都换一个。事件正文、签名原文字节、时间戳、字段格式、旋转窗口和重试响应都由本合约定义，不把某个提供方的规则拼进来。`v1` 是签名串格式版本，本例只定义 `report.ready` 的一种载荷形状，不另带事件 schemaVersion。所有域名、密钥和报表字段都是合成示例。
+
+~~~mermaid
+flowchart TD
+    T[业务事务提交 report 42 + outbox eventId] --> S[发送端构造 attemptId、时间戳和签名]
+    S -->|HTTPS + 原始正文| V[接收端验证原文、签名和时钟窗口]
+    V -->|验证失败| X[4xx；不写入受理记录]
+    V -->|验证成功| I[(事务写 inbox（收件箱）+ 处理 outbox)]
+    I -->|提交后才回| A[202 Accepted（已接受）]
+    I --> W[异步处理进程]
+    W -->|稳定操作键或对账| E[外部业务效果]
+~~~
+
+图中 202 Accepted 只证明接收方已持久接受事件，不能证明异步处理或外部效果已经完成。该区别与[报表任务中发布确认、消费者 ACK 和业务完成的边界](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)相同。
+
+### 一次通知从业务提交到签名请求怎样走？
+
+报表完成事务同时写入业务状态和发送端 outbox（事务发件箱）行。该行保存稳定的 eventId、事件类型、签名前的完整 UTF-8 正文原字节和待发送状态；业务事务提交后 relay（转发进程）才会发送它。重试始终使用这些不可变原始字节，不重新解析和序列化，否则空白、字段顺序或数字表示变化都会改变签名输入。
+
+本合成请求的正文如下。代码围栏中的这行 JSON 本身是完整正文，计算时不包括 Markdown 围栏，也不额外附加换行：
+
+~~~json
+{"eventId":"evt-report-42-ready-001","type":"report.ready","reportId":42,"createdAt":"2026-11-09T04:00:00Z"}
+~~~
+
+发送端将本次尝试的时间、键版本和两个 ID 放入单值 ASCII 请求头，签名覆盖这些字段与原始正文：
+
+~~~http
+POST /hooks/reports HTTP/1.1
+Host: receiver.example.test
+Content-Type: application/json
+X-Webhook-Key-Id: demo-k2026-02
+X-Webhook-Timestamp: 1794196800
+X-Webhook-Event-Id: evt-report-42-ready-001
+X-Webhook-Attempt-Id: att-001
+X-Webhook-Signature: v1=00ddffad798719283b3f470bfdae27dafb1e4a9b3710cdc118e75a1657c29b6f
+Content-Length: 108
+
+{"eventId":"evt-report-42-ready-001","type":"report.ready","reportId":42,"createdAt":"2026-11-09T04:00:00Z"}
+~~~
+
+假设接收方已经提交事件但 202 响应丢失。10 分钟 1 秒后，发送端用同一 eventId 和完全相同的 108 个正文字节再发一次，但生成新的 attemptId、时间戳和签名。服务端当前时间假设为 2026-11-09T04:10:01Z：请求头时间代表这一次发送，正文 createdAt 仍是事件创建时间，不能拿它代替签名时钟。正文创建时间虽已超过 5 分钟，新的投递仍在时间窗内：
+
+~~~http
+POST /hooks/reports HTTP/1.1
+Host: receiver.example.test
+Content-Type: application/json
+X-Webhook-Key-Id: demo-k2026-02
+X-Webhook-Timestamp: 1794197401
+X-Webhook-Event-Id: evt-report-42-ready-001
+X-Webhook-Attempt-Id: att-002
+X-Webhook-Signature: v1=f03542e0a28e53585db5107e10147457ae5cd8a71596dffd5dda16d06ccc650c
+Content-Length: 108
+
+{"eventId":"evt-report-42-ready-001","type":"report.ready","reportId":42,"createdAt":"2026-11-09T04:00:00Z"}
+~~~
+
+演示密钥是 synthetic-demo-secret-never-use-outside-example，不是可部署凭据。签名输入由 UTF-8 编码的合约版本、keyId、十进制时间戳、eventId、attemptId 五项 ASCII 字段组成，字段间以单个 LF（换行字节 0x0A）分隔；最后一个字段后再有一个 LF，然后直接拼接原始正文：
+
+~~~text
+UTF8("v1" + LF + keyId + LF + decimalTimestamp + LF + eventId + LF + attemptId + LF) || rawBody
+signature = lowercase_hex(HMAC-SHA-256(secret[keyId], signingInput))
+~~~
+
+ID 只允许 1–128 个 ASCII 字母、数字、句点、下划线或连字符；时间戳用不带前导零的十进制 Unix 秒。HTTPS 保护传输通道；HMAC（基于哈希的消息认证码）验证请求完整性与共享密钥持有者身份，但不加密正文，也不替代接收方的事件类型、租户或资源授权检查。
+
+### 接收方先验哪一份字节和时间？
+
+第一步，网关设正文大小上限，应用保留 HTTP entity body（HTTP 正文）的原始字节；不能先解析 JSON、规范化后再验签。发送端不发 `Content-Encoding`，合约接收未压缩表示且拒绝出现该字段的请求；中间层不得解压、重写或重序列化签名正文。固定 HTTP/1.1 示例用 `Content-Length: 108` 标明 108 个正文八位组，长度字段不参与签名。重复或格式错误的签名头返回 400；未知 keyId 返回通用 401，与签名不匹配共用响应，避免暴露当前密钥集合。两类 401 使用同一个 `WWW-Authenticate: Webhook-HMAC realm="report-webhooks"` challenge，并带 `Cache-Control: no-store`。该 auth-scheme（HTTP 认证方案）只是本篇明确的合成私有协议名称；面向公开互操作标准化时，应发布方案说明并按 RFC 9110 注册。由于它通过自定义请求头而非 `Authorization` 携带凭据，端点所有响应均带 `Cache-Control: no-store`。
+
+第二步，接收方按选中的密钥对精确签名输入计算 HMAC，用常数时间比较等长摘要，再检查发送时间是否在服务端当前时间的 ±300 秒内。生产时钟需同步。通过验签后，验证器从本端点服务端密钥注册表中的 `(endpointId, keyId)` 映射取得 sourceId（发送来源 ID），而不是从未经签名的来信身份字段取得它；同一发送方轮换前后的旧、新 keyId 映射到同一个稳定 sourceId。每个共享密钥只授权给一个 endpointId 与 sourceId 作用域；不同接收端点或授权域不得复用同一密钥值，因为签名原文不含 URL 或 endpointId。
+
+第三步，解析 JSON 并验证业务授权。本合成端点只定义一种 `report.ready` 载荷形状；`v1` 仅指签名串版本，不是载荷版本。此例映射的 sourceId 只获准发送 `report.ready`，且只获准通知 report 42；检查头与正文 eventId 相同、必需字段和 UTC `createdAt` 有效，并确认签名时间戳严格早于 `createdAt` 加 30 天。未获准的事件类型或报表返回 403，不写入 inbox。发送端只在 outbox 首次提交时设置 createdAt，此后不可改写；在截止时刻前签发的有效尝试可在时间窗和最大请求时限内到达。
+
+| 输入变化 | 本合约的判断 | 状态写入 |
+| --- | --- | --- |
+| 签名头重复或格式错误 | 请求结构无效 | 不写 inbox，返回 400 |
+| 未知 keyId、签名不匹配或发送时间超出 ±300 秒 | 使用同一通用认证失败响应 | 不写 inbox，返回带 challenge 的 401 |
+| 已验签的来源无权发送该事件类型或报表 ID | 身份已知但业务授权失败 | 不写 inbox，返回 403 |
+| 已签名请求的时间戳大于或等于 event createdAt + 30 天 | 超出固定投递截止时间 | 不写 inbox，返回 410 Gone |
+| 完整验证通过，`(sourceId, eventId)` 已有已提交行且摘要相同 | 已持久受理事件的重放；attemptId 不参与事件去重 | 返回重复受理 202，不新增处理意图 |
+| 完整验证通过，`(sourceId, eventId)` 尚无已提交行 | 即使是时间窗内旧签名，也可能是首次到达或前次事务未提交 | 执行首次持久受理事务；只有提交后才返回 202 |
+| 完整验证通过，唯一键已存在但正文摘要不同 | 同一逻辑事件 ID 不能替换载荷 | 隔离并告警，返回 409 |
+
+认证失败响应对未知 keyId、摘要错误和时间窗错误使用相同状态、challenge 和通用正文，不把失败原因写入可外部枚举的错误字段：
+
+~~~http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Webhook-HMAC realm="report-webhooks"
+Cache-Control: no-store
+Content-Type: application/problem+json
+
+{"type":"https://receiver.example.test/problems/invalid-webhook-authentication","title":"Webhook authentication failed","status":401}
+~~~
+
+±300 秒是本合成协议为减少旧签名重放机会而选的时间窗，不是所有 webhook 的通用参数。接收方时钟偏移过大可能拒绝合法请求；发件方若误把正文 createdAt 填作请求头的发送时间戳，迟到的合法重投也会越窗。这里的发送端规则明确规定：每次新 HTTP 尝试都使用新的 attemptId、当前时间戳和签名，正文与 eventId 保持不变。真实提供方的重试签名时间规则必须按其官方协议逐项实现。
+
+### 为什么验签后还要持久去重再应答？
+
+持久 inbox（收件箱）以 `(sourceId, eventId)` 为唯一键，保存验签后的原始正文 `raw_body`（字节列）、正文摘要、接收时间和处理状态；处理 outbox 以外键引用该 inbox 行。异步 worker 可从数据库恢复出完整输入，不能只拿摘要后再向已返回 202 的发送方索要正文。若使用不可变对象引用代替字节列，必须在提交受理事务前保证对象已写成、可读且引用已持久；否则返回 503。已完成处理后可按保留政策删除正文，但去重摘要墓碑仍须覆盖允许的重试窗口。原文可能含敏感数据，访问与保留要受控，日志不记录原文。首次受理时，在同一个数据库事务中写 inbox 和处理 outbox：
+
+1. 尝试插入 inbox 行，保存稳定 eventId、正文摘要、原始字节、接收时间和处理状态。
+2. 若唯一键由本次事务插入，同一事务再插入待处理 outbox 行，唯一键继续使用 `(sourceId, eventId)`，意图引用 inbox 行而不复制一份可漂移的载荷。
+3. 若唯一键已由此前提交的事务占用，读取持久行并比较摘要；摘要相同则返回重复受理，不再创建处理任务；摘要不同则隔离并告警，返回 409。
+4. 并发首次请求由数据库唯一约束裁决：若先行事务提交，后行检查已提交正文；若先行事务回滚，另一事务可完成首次插入。不能仅凭时间窗或相同签名推断事件已受理。
+5. 事务提交后才返回 202。数据库暂时不可写或正文/引用无法持久化时返回 503，发送端可重试。
+
+这样重复投递不会产生第二条业务处理意图。HMAC 身份认证与事件去重仍是两个判断：一个经过正确验签、但已处理过的事件，要回 2xx 让发送端停止重试；一个无效签名的请求即使碰巧带有已见过的 eventId，也不能靠去重记录绕过验证。
+
+本合成发送端把正文的 createdAt 作为固定事件创建时间，并把自动投递和人工重放的总截止时间固定为 createdAt 加 30 天；任何新尝试的签名时间戳都必须严格小于该值，等于截止时刻也算过期，Retry-After 不得延长期限。自动尝试最多 12 次；人工重放不会重置期限。接收端按已验证正文计算去重墓碑，至少保留到 createdAt 加 30 天、300 秒签名窗口、最大 HTTP 请求时限和清理余量之后。这样允许截止前签发、在协议窗口及时到达的尝试首次受理，也让已受理事件在所有允许的重试结束前保持去重记录。窗口和请求时限过后，接收端不承诺 inbox 墓碑还在；它只保证 webhook 受理去重，不保证后续外部效果不重复。
+
+| 外部副作用结果 | 处理方式 |
+| --- | --- |
+| 按原 operation key（业务操作键）查询确认已完成 | 持久记录完成，不再发送 |
+| 结果仍未知（包括查询不可用），且远端明确保证相同操作键、相同规范化请求摘要在保留窗内去重 | 只在该保证仍有效时，以原键和原摘要重试；保持原事件状态并继续对账 |
+| 结果仍未知且没有仍有效的同键同摘要去重保证，或摘要不一致、保留窗已过 | 保持结果未知并人工对账，不换新键自动重发 |
+
+不能用 webhook 的 30 天期限替代远端接收方自己的幂等期限；通用的未知结果与安全重试边界见[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
+
+| 崩溃时点 | 接收端的持久事实 | 后续行为 |
+| --- | --- | --- |
+| 首次受理事务提交前 | inbox 和处理 outbox 都不存在，不能回 202 | 合法重试进入首次持久受理 |
+| inbox 与处理 outbox 同事务提交后、202 送达前 | 原正文、摘要和处理意图都已持久 | 重试先完整验签；同键同摘要识别为重复，返回 202 而不重复排队 |
+| 202 已送达、worker 尚未完成 | inbox 含可恢复原文，outbox 含待处理意图 | worker 从持久输入继续；202 不代表业务完成 |
+| 外部副作用可能完成、本地完成记录未提交 | 结果未知 | 按上表查询、同键同摘要有效期重试或人工对账 |
+
+若对方需要维护事件顺序，载荷还必须有提供方定义的序号和资源范围；本合约没有定义全局或逐报表顺序，接收方不能按到达顺序推断业务顺序。
+
+### 发送端怎样重试、停止和人工重放？
+
+发送端把业务事件和 outbox 先提交，再由 relay 投递。收到 2xx 后，发送端将该事件的交付标为完成；连接超时意味着“可能没收到，也可能已收但响应丢失”，所以继续以相同 eventId 和原始正文重试。每次新应用层发送创建新的 attemptId，并用当前密钥、新时间戳重签；在发出网络请求前，先持久写入该 attemptId、keyId、签名时间、发送状态与 eventId 的关联。这样崩溃恢复可追踪潜在已发尝试及其 keyId；只有已持久记录的成功响应才算确认，若没有确认且无法证明请求尚未发出，一律按结果未知处理，并按同一 eventId 安全重试或对账。控制面也能按已撤销 keyId 找出受影响的未确认事件。单次 attempt 的传输层重发仍使用同一组签名头。
+
+此合成发送端选择有限 exponential backoff（指数退避）和随机抖动：首次重试约 1 秒，逐步加倍到 15 分钟上限；最多自动发送 12 次。relay 在发送前检查当前时间，签名时间戳须严格早于正文 createdAt 加 30 天；到达或越过截止时间时停止自动和人工投递。200–299 表示接受；408、429、5xx 及传输结果不确定按重试处理。429 依 RFC 6585 不得由缓存存储，可返回合法 Retry-After；发送端只在建议的下一次发送仍严格早于固定截止时间时遵从，如果等待会到达或越过截止时间，事件转为需处理状态并停止自动发送。其他 4xx 作为契约或载荷错误进入需处理状态，不无限重试。3xx 不自动跟随，按端点或签名目标配置错误转需处理；未列出的响应也不擅自重试。实际产品要按目标服务能力、最大延迟和积压容量选值。本政策是本地合约，不是 HTTP 或各 webhook 提供方统一规定的调度。
+
+达到自动重试上限后，持久保留原事件和失败原因，告警并等待修复。操作员只可在同一绝对截止时间前人工重放，继续用原 eventId 与正文，但生成新 attemptId 并重新签名；若先前已受理，这次就只补回确认、不重复排队；若此前从未提交收件记录，这次就是首次受理。截止时刻及之后不再发起重放。若业务需要再执行一次新动作，应产生新的逻辑事件 ID，并用 causationId 指向原事件；改掉原 ID 来绕过去重会掩盖重复副作用。
+
+### 密钥轮换和撤销怎样覆盖在途请求？
+
+合成协议用 keyId 选择接收方持有的密钥，并把该 ID 一起签名；旧、新 keyId 都映射到同一 sourceId。正常轮换时先把新密钥分发给接收方，让它短期同时接受旧、新两个 ID；确认接收端实例已更新后，发送端开始用新 ID 发送。此合约的 outbox 保存未签名正文，每次发送都用当前密钥即时签名，所以旧密钥的重叠期只需覆盖仍在运行的旧发送端和已经发出的旧签名请求。等旧发送端下线并记录所有旧发送实例签名时间戳的最大值；只有当每个仍可能接收旧请求的实例时钟都已晚于该最大时间戳加 300 秒，并且最大在途请求处理时限也已过，才撤掉旧密钥；不能仅从最后一次发送起等待 300 秒，因为接收端时钟可能落后，生产中还要将已知时钟偏差计入安全余量。重试积压不必继续延长重叠期。若实现把已经签名的请求预先排入队列，则须在过期前重签或等这些旧签名失效后再撤旧键。新旧密钥分别审计，不把值写进配置库以外的部署文件或日志。
+
+若旧密钥疑似泄漏，先确认新 keyId 已预先可用，再停止旧发送端并撤掉旧 keyId。若尚无可用新密钥，立即撤销旧键并暂停该端点交付，待生成、分发和部署新键后再恢复；这段时间不能为了可用性继续接受已泄漏的密钥。旧签名请求会被拒绝；普通 4xx 策略通常将它停在需处理状态，因此部署控制面还要按被撤销的旧 keyId 查找未确认事件，将它们重新调度为新 attemptId、原 eventId 和原正文，由新密钥重新签名，但仍须通过原有的严格截止时间检查，不能因撤键重置期限。若旧请求其实已受理但响应丢失，唯一键会把新投递识别为重复；已确认 2xx 的事件保持完成，不要重放。时间窗限制签名可用时间，密钥撤销限制密钥本身；二者都不能删除已受理的 inbox 行，也不能自动撤销已经发生的外部业务效果。
+
+### 怎样观察交接有没有卡住？
+
+发送端将 eventId、每次 attemptId 与 keyId 的关联、目标端点标识、投递次数、响应类别、下次尝试时间和事件年龄写入受限的投递记录；接收端记录 eventId、attemptId、keyId、时间偏移、验签结果、重复命中或载荷摘要冲突，以及 inbox 到业务终态的时延。不要记录 HMAC 密钥、完整签名头、Authorization 头或原始正文；正文可能包含个人或业务数据。告警需能从一个事件 ID 追到重试和最终状态，但不把签名/正文复制到日志。
+
+若验签错误增长，先分辨密钥版本、时钟偏移、正文是否在中间层被重写及密钥撤销时间；若签名通过但 inbox 年龄增长，瓶颈在持久处理阶段而不是认证。由此读者能知道发送端交付、接收端受理和外部业务完成是三个独立状态。
+
+> [!info]- 来源
+> - HMAC 是共享密钥和哈希函数构造的消息认证码：[IETF RFC 2104, HMAC](https://www.rfc-editor.org/rfc/rfc2104.html)，§2，1997-02；HMAC-SHA-256 的算法标识与一致性测试向量：[IETF RFC 4231](https://www.rfc-editor.org/rfc/rfc4231.html)，§3–§4，2005-12。核对于 2026-11-09。本章拼接格式、字段名、窗口、去重和重试均为明确的合成应用协议，RFC 不定义它，也不能据此声称与某一 webhook 提供方兼容。
+> - 401 必须带适用的 `WWW-Authenticate` challenge，挑战用法及新 auth-scheme 注册/缓存考虑见 [IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§8.4（Content-Encoding）、§11.1、§11.6.1、§15.5.2、§16.4.1–§16.4.2；本文合成 `Webhook-HMAC` challenge 使用 `Cache-Control: no-store`。同 RFC 的 202、410 Gone 和 Retry-After 通用语义见 §10.2.3、§15.3.3、§15.5.11；429 的定义、`Retry-After` 可选提示及不得缓存见 [IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html)，§4。本文具体分类与次数属于合成发送端政策。核对于 2026-11-09。
+## 18. 怎样用 Kafka 分区保序、推进偏移并安全接手？
 
 **案例：** 合成报表服务为 reportId 42 产生 queued、rendered、ready 三个事件，在线投影维护当前状态；值班排查时，还要能从保留的日志重建投影。Kafka 可让同一键的记录落在同一分区并按追加顺序读取，但异步工作线程仍可能乱序写入投影；本例会把业务状态应用顺序与 offset 恢复位置分别说明，也不把 Kafka 的边界误当成外部数据库事务。
 
@@ -2278,7 +2680,7 @@ Kafka 的事务可把 Kafka 输出 topic 的记录与被消费分区的 offset �
 > - classic generation 与 consumer member epoch 均进入 offset commit 协议：[Apache Kafka 4.1 Protocol](https://kafka.apache.org/41/design/protocol/)，OffsetCommit Request。
 > - Kafka 输出记录和消费位置可共处 Kafka 事务；外部系统需要共同参与才能原子提交：[Apache Kafka 4.1 Design](https://kafka.apache.org/41/design/design/)，Using Transactions。
 > - `read_committed` 下的可见记录、offset 超范围时的 earliest/latest/none 策略与消费者故障导致分区重新分配：[Apache Kafka 4.1 Consumer Configs](https://kafka.apache.org/41/configuration/consumer-configs/)；日志压缩与分区保留：[Apache Kafka 4.1 Topic Configs](https://kafka.apache.org/41/configuration/topic-configs/)；本章的报表 42 业务序号、并发完成次序、数据库去重字段、`last_seq` 投影条件和对齐切读的 offset 向量是合成应用合约。
-## 18. 何时选择轮询、SSE、流式 Fetch 或 WebSocket？
+## 19. 何时选择轮询、SSE、流式 Fetch 或 WebSocket？
 
 报表查看者已请求刷新报表 42，接下来要决定怎样收取进度。选择取决于消息方向、请求形状、连接生命周期和恢复要求：轮询重复发普通 HTTP 请求；Server-sent Events (SSE，服务端事件) 用一个 HTTP 响应单向发送事件；流式 Fetch 让应用控制请求与读流；WebSocket 让连接两端主动发消息。重连只恢复连接，不保证所有事件都被应用处理；恢复需要服务端保留日志并接受游标，或客户端重新读取权威状态。
 
@@ -2307,7 +2709,7 @@ flowchart TD
 | 流式 Fetch | 一次 Fetch 的 body 分块可读；请求可按 API 契约带方法、头和正文 | 应用实现线格式解析、重试、游标、退避和取消 | 需要自定义请求头/Bearer 或 POST 查询后接收流 |
 | WebSocket | 握手后客户端与服务端都可主动发完整消息 | 应用定义重连、认证过期、序号、确认和重放 | 双向低延迟交互值得维持长连接；协议不提供业务去重和恢复 |
 
-还要估计连接数、更新频率、消息大小、后台休眠行为和服务端连接容量。一名客户端每秒两次轮询约 2 请求/秒，一万名客户端约 20,000 请求/秒；这只估计请求数，不代表 CPU、网络或数据库开销相同。容量与准入见[Web 服务如何限制拒绝服务的影响？](#28.%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
+还要估计连接数、更新频率、消息大小、后台休眠行为和服务端连接容量。一名客户端每秒两次轮询约 2 请求/秒，一万名客户端约 20,000 请求/秒；这只估计请求数，不代表 CPU、网络或数据库开销相同。容量与准入见[Web 服务如何限制拒绝服务的影响？](#29.%20Web%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E9%99%90%E5%88%B6%E6%8B%92%E7%BB%9D%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%BD%B1%E5%93%8D%EF%BC%9F)。
 
 ### SSE 怎样从一致的快照位置续读？
 
@@ -2495,7 +2897,7 @@ SSE 可以自动重连，WebSocket 需要应用自己重连，Fetch 也要由应
 > - Fetch 请求与响应体、取消和流处理：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§2、§4；[Streams Standard](https://streams.spec.whatwg.org/)，§4；持续维护规范，核对于 2026-11-06。
 > - 浏览器 WebSocket API：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，§2；握手和消息帧：[RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)，§4–§5；HTTP/2 承载扩展：[RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html)；HTTP/3 扩展：[RFC 9220](https://www.rfc-editor.org/rfc/rfc9220.html)，均核对于 2026-11-06。
 > - Node.js `ws` 服务端广播：[ws README, Server broadcast](https://github.com/websockets/ws#server-broadcast)，核对于 2026-11-06。库文档描述该实现，不是协议规范。
-## 19. 何时选线程、进程或异步 I/O？
+## 20. 何时选线程、进程或异步 I/O？
 
 **案例：** 报表服务接到 acct-17 的导出任务，需要读数据库、格式化几万行并写出压缩文件。数据库响应期间主要在等 I/O；格式化若占住一颗 CPU 很久，则会拖慢同一执行路径上的其他请求。选线程、进程或异步 I/O，要先看工作是在等什么、要共享什么，以及停止它时谁负责释放资源。
 
@@ -2523,7 +2925,7 @@ flowchart TD
 | 工作线程 | CPU 密集型转换；或确实需要共享同一进程状态 | 共享可变状态需同步；线程池及其排队量需有界 |
 | 独立进程 | 易崩、需要独立生命周期或独立地址空间的计算 | 消息/序列化、独立内存和启动成本；必须管理子进程退出。不可信代码还需要操作系统权限隔离 |
 
-并发（concurrency）是多个任务在一段时间内交替推进；并行（parallelism）是多个处理单元同时执行指令。单线程事件循环可以在一个请求等待 I/O 时处理另一个请求，因此能有并发；一个很长的同步回调仍会堵住这条线程。要让 CPU 计算并行，需要工作线程或其他执行资源，但能否提速还取决于语言运行时、数据交换和负载大小。Node 的运行时选择见[Node.js 如何在事件循环、worker 与进程之间调度工作？](#20.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+并发（concurrency）是多个任务在一段时间内交替推进；并行（parallelism）是多个处理单元同时执行指令。单线程事件循环可以在一个请求等待 I/O 时处理另一个请求，因此能有并发；一个很长的同步回调仍会堵住这条线程。要让 CPU 计算并行，需要工作线程或其他执行资源，但能否提速还取决于语言运行时、数据交换和负载大小。Node 的运行时选择见[Node.js 如何在事件循环、worker 与进程之间调度工作？](#21.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 阻塞 I/O 会让调用线程等操作完成或可以继续；非阻塞 I/O 在暂时无法继续时迅速返回，但一次返回可能只表示“目前没数据”；异步 I/O 则让调用方提交操作，并在稍后收到完成结果。异步 API 描述调用关系，不表示底层必定由某个工作线程执行：网络 I/O 可由操作系统就绪通知驱动，某些文件或加密工作则可能使用运行时的线程池。
 
@@ -2582,7 +2984,7 @@ if (isMainThread) {
 > - Node worker 并行计算与共享内存：[Node.js v26.11.1, worker_threads](https://nodejs.org/download/release/v26.11.1/docs/api/worker_threads.html)；计数程序于该版本重放，输出 200000。
 > - Node 文件 API 的异步执行方式：[Node.js v26.11.1, File system](https://nodejs.org/download/release/v26.11.1/docs/api/fs.html#threadpool-usage)，核对于 2026-11-06。
 > - 经典资源分配死锁的互斥、持有并等待、不可抢占与循环等待条件：[Coffman, Elphick, and Shoshani (1971), “System Deadlocks”](https://doi.org/10.1145/356586.356588)，核对单实例资源等待环的适用边界。
-## 20. Node.js 如何在事件循环、工作线程与进程之间调度工作？
+## 21. Node.js 如何在事件循环、工作线程与进程之间调度工作？
 
 **案例：** API 收到导出 acct-17 报表的请求：先用数据库网络连接取数据，再压缩输出；同一服务还要接其他用户请求。异步 I/O 能让线程在等待数据库或网络时处理别的工作，不能让一段长时间的 JavaScript 汇总循环自己让路。遇到 CPU 阻塞时才考虑工作线程；需要独立内存或故障边界时考虑进程。
 
@@ -2614,7 +3016,7 @@ Node.js 进程中的每个 JavaScript isolate（隔离环境）有自己的 Java
 | child_process | 工作有独立地址空间、可独立重启或需要更强故障隔离 | 使用 IPC（进程间通信）等显式通信；内存不与父进程自动共享；默认以相同 OS 用户运行，可访问该用户获准的文件和网络，不是安全沙箱 |
 | cluster | 在同一机器上用多个 Node 进程提供 HTTP 服务 | 每个 worker 是进程；进程内会话或缓存不自动共享，退出和重启要由应用或进程管理器处理 |
 
-不要为每个小请求新建一个线程或进程。重复计算应交给有界 worker 池，并限制等待队列；否则只是把事件循环前的无界等待移到 worker 前。进程选择也要计入消息传输、启动时间、独立连接池和每进程内存。操作系统层面的比较见[何时选线程、进程或异步 I/O？](#19.%20%E4%BD%95%E6%97%B6%E9%80%89%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E6%88%96%E5%BC%82%E6%AD%A5%20I/O%EF%BC%9F)；具体槽位与连接预算见[如何估算并限制异步工作管线？](#27.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)。
+不要为每个小请求新建一个线程或进程。重复计算应交给有界 worker 池，并限制等待队列；否则只是把事件循环前的无界等待移到 worker 前。进程选择也要计入消息传输、启动时间、独立连接池和每进程内存。操作系统层面的比较见[何时选线程、进程或异步 I/O？](#20.%20%E4%BD%95%E6%97%B6%E9%80%89%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E6%88%96%E5%BC%82%E6%AD%A5%20I/O%EF%BC%9F)；具体槽位与连接预算见[如何估算并限制异步工作管线？](#28.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)。
 
 若报表只是等待数据库，直接使用异步数据库驱动，额外线程只会增加调度和连接管理成本。若从已取回的数据计算摘要会持续占用主事件循环，就交给有界 worker 池。若扩展可能崩溃或需要独立生命周期，可用子进程隔开地址空间和故障生命周期；子进程不会自动隔离文件、网络或其他操作系统权限。运行不可信代码还需要真实的操作系统权限隔离，本章不实现这部分。cluster 是让多进程接受 HTTP 连接的一种部署方式，不保证吞吐量线性增长；数据库、内存和磁盘也仍是共享的机器资源。
 
@@ -2673,7 +3075,7 @@ if (cluster.isPrimary) {
 }
 ~~~
 
-该服务要用外部状态存储、明确的连接路由或消息机制解决跨进程状态共享。任何多进程部署还需要健康检查、滚动退出和重启策略；怎样排空 Node HTTP 请求见[Node.js 服务如何排空并关闭？](#23.%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F)。
+该服务要用外部状态存储、明确的连接路由或消息机制解决跨进程状态共享。任何多进程部署还需要健康检查、滚动退出和重启策略；怎样排空 Node HTTP 请求见[Node.js 服务如何排空并关闭？](#24.%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F)。
 
 若使用 PM2 管理集群，可用 pm2 start app.js --name api -i max 启动、pm2 list 或 pm2 monit 观察、pm2 reload api 请求滚动重载。PM2 对 stop、restart、reload 默认先发送 SIGINT，等待 `kill_timeout`（默认 1600 ms）后仍未退出就发 SIGKILL；可用 `PM2_KILL_SIGNAL` 改信号。reload 超时也可能退化为 restart。应用应处理部署实际发来的信号并在强杀前完成排空；用户态会话也不能默认留在单进程内存里。
 
@@ -2684,7 +3086,7 @@ if (cluster.isPrimary) {
 > - 文件系统哪些 API 使用 libuv 线程池：[Node.js v26.11.1, File system](https://nodejs.org/download/release/v26.11.1/docs/api/fs.html#threadpool-usage)；加密、压缩和 DNS 的 API 边界见 [crypto](https://nodejs.org/download/release/v26.11.1/docs/api/crypto.html)、[zlib](https://nodejs.org/download/release/v26.11.1/docs/api/zlib.html)、[DNS](https://nodejs.org/download/release/v26.11.1/docs/api/dns.html)，核对于 2026-11-06。
 > - PM2 Cluster mode 的 reload 回退与进程关闭责任：[PM2, Cluster Mode](https://pm2.keymetrics.io/docs/usage/cluster-mode/)；启动、查看和重载命令见 [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/)，核对于 2026-11-06。
 > - PM2 默认 SIGINT、`kill_timeout` 后 SIGKILL 和 `PM2_KILL_SIGNAL` 配置：[PM2, Graceful Start/Shutdown](https://pm2.keymetrics.io/docs/usage/signals-clean-restart/)、[PM2 Environment Variables](https://pm2.keymetrics.io/docs/usage/environment/)，核对于 2026-11-06。
-## 21. Node.js 事件循环阶段与微任务队列如何交互？
+## 22. Node.js 事件循环阶段与微任务队列如何交互？
 
 一个报表请求先排定定时器，再等数据库读回调；两者何时运行取决于当前 JavaScript 操作、event loop（事件循环）阶段和队列。不要只记一个跨所有上下文的“异步先后顺序”：CommonJS 与 ES module 顶层执行中的 nextTick 和 Promise 排序不同，定时器也只承诺最早可运行时间，不是精确截止时刻。
 
@@ -2782,12 +3184,12 @@ const emitter = createEmitter();
 emitter.on('ready', () => console.log('ready'));
 ~~~
 
-该例运行输出 ready；普通的可移植延后优先使用 queueMicrotask。上述顺序是 Node 宿主的调度契约，不是 JavaScript Promise 语言本身的跨宿主规则。浏览器事件循环见[浏览器事件循环](../../frontend/runtime/event-loop.md)；Node 主线程与 CPU worker 的选择见[Node.js 调度与 worker 选择](#20.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+该例运行输出 ready；普通的可移植延后优先使用 queueMicrotask。上述顺序是 Node 宿主的调度契约，不是 JavaScript Promise 语言本身的跨宿主规则。浏览器事件循环见[浏览器事件循环](../../frontend/runtime/event-loop.md)；Node 主线程与 CPU worker 的选择见[Node.js 调度与 worker 选择](#21.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 > [!info]- 来源
 > - 阶段、计时器门槛、poll 与 setImmediate()：[Node.js Event Loop](https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick)，核对于 2026-11-06；Node.js 20 起的阶段变更对应 libuv 1.45.0。
 > - nextTick 队列、CommonJS/ES module 顺序和 Legacy 状态：[Node.js v26.11.1, process](https://nodejs.org/download/release/v26.11.1/docs/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)，三个队列例子于该版本重放。
-## 22. Node.js 流如何传播背压？
+## 23. Node.js 流如何传播背压？
 
 **案例：** 已接受的报表 job 由 worker 顺序读取账户活动，转换成 CSV 并写入私有对象存储。若对象上传比查询慢，生产者不能继续把所有行堆在内存中。Node stream（流）用数据块和 backpressure（背压）协调快慢不同的阶段；取消整条管线时，还要清理管线之外由生产者持有的游标。
 
@@ -2890,13 +3292,13 @@ exportReport(controller.signal).catch(error => {
 
 Writable 的 highWaterMark 是缓冲阈值，不是整条管线的内存预算；如果上游在管线外把所有任务先放入数组或无界队列，stream 背压到不了那条队列。取消会传播给参与管线的流，但不能假定驱动正在执行的 `cursor.next()` 已停止：当前查询可能要先返回，生成器的 `finally` 才能关闭游标。资源所有者应跟踪并等待该操作确实结束，再关闭它仍在使用的连接；仅观察 AbortSignal 已触发不足以证明资源可释放。可读流的 end 表示没有更多输入块；调用 end() 后可写流的 finish 表示已处理接受的写入；close 表示该流报告资源关闭；error 表示失败。文件流 finish 也不证明远端应用收到数据或文件系统已持久化。
 
-**接下来：** 本章说明管线内部的流量控制；HTTP 请求、worker 和持久队列的并发上限见[如何估算并限制异步工作管线？](#27.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)。服务退出时如何停止接入并等流结束，见[Node.js 服务如何排空并关闭？](#23.%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F)。
+**接下来：** 本章说明管线内部的流量控制；HTTP 请求、worker 和持久队列的并发上限见[如何估算并限制异步工作管线？](#28.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)。服务退出时如何停止接入并等流结束，见[Node.js 服务如何排空并关闭？](#24.%20Node.js%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E6%8E%92%E7%A9%BA%E5%B9%B6%E5%85%B3%E9%97%AD%EF%BC%9F)。
 
 > [!info]- 来源
 > - Writable.write() 返回 false、drain、错误/销毁状态，以及 Readable.from() 默认 object mode：[Node.js v26.11.1, Stream](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html)，核对于 2026-11-06。
 > - pipeline() 的 Promise、AbortSignal 和流清理：[Node.js v26.11.1, stream/promises](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html#stream-promises-api)，核对于 2026-11-06。
 > - end、finish、close 和 error 的生命周期定义：[Node.js v26.11.1, Stream API](https://nodejs.org/download/release/v26.11.1/docs/api/stream.html)，核对于 2026-11-06。
-## 23. Node.js 服务如何排空并关闭？
+## 24. Node.js 服务如何排空并关闭？
 
 **案例：** 报表 API 正在读取数据库并写流式响应时收到 SIGTERM。优雅关闭（graceful shutdown）的关键是按所有权顺序收拢工作：先停止对外宣称 readiness（就绪状态）并拒绝新任务，再停止接收连接，等待现有请求和后台工作不再使用依赖，最后关闭连接池、后台工作线程或进程和其他资源。deadline（截止时间）到达时发出协作取消；只有可观察的完成条件才能证明任务已经停下。
 
@@ -3046,7 +3448,7 @@ stateDiagram-v2
 > - PM2 stop/restart/reload 的默认 SIGINT、可配置的 kill signal 和最终 SIGKILL 截止：[PM2, Graceful Start/Shutdown](https://pm2.keymetrics.io/docs/usage/signals-clean-restart/)，核对于 2026-11-06。
 > - 定时器 unref() 与事件循环存活：[Node.js v26.11.1, Timers](https://nodejs.org/download/release/v26.11.1/docs/api/timers.html)，核对于 2026-11-06。
 > - AbortSignal 对 Promise 定时器的协作取消：[Node.js v26.11.1, Timers Promises API](https://nodejs.org/download/release/v26.11.1/docs/api/timers.html#timers-promises-api)，本例按上述时序重放。
-## 24. Python 的值、迭代器与资源生命周期如何工作？
+## 25. Python 的值、迭代器与资源生命周期如何工作？
 
 **案例：** worker 读取账户报表的 CSV 分页，把有效行逐个送入后续处理。要避免意外共享行对象，不能把整份文件先展开到内存；遇到坏行时，还要关闭文件和临时目录。Python 名称绑定到对象，迭代器按需交付值，上下文管理器则界定资源清理。
 
@@ -3216,7 +3618,7 @@ python3.11 -m venv .venv
 .venv/bin/python python-fundamentals-example.py
 ~~~
 
-项目如需第三方库，应把依赖写入项目的 packaging 配置或依赖文件，再用 .venv/bin/python -m pip install -r requirements.txt 从该环境安装；可复现运行还取决于兼容的解释器版本、包版本和平台要求。Python 异步请求怎样选择运行边界见[异步 FastAPI 接口为什么仍会阻塞？](#26.%20%E5%BC%82%E6%AD%A5%20FastAPI%20%E6%8E%A5%E5%8F%A3%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%8D%E4%BC%9A%E9%98%BB%E5%A1%9E%EF%BC%9F)；实例属性优先级、descriptor 与协作式多继承见[Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？](#25.%20Python%20%E5%AE%9E%E4%BE%8B%E5%B1%9E%E6%80%A7%E4%BD%95%E6%97%B6%E6%9D%A5%E8%87%AA%E5%AF%B9%E8%B1%A1%E5%AD%97%E5%85%B8%EF%BC%8C%E4%BD%95%E6%97%B6%E5%8F%98%E6%88%90%E6%8F%8F%E8%BF%B0%E7%AC%A6%E6%88%96%E7%BB%91%E5%AE%9A%E6%96%B9%E6%B3%95%EF%BC%9F)。
+项目如需第三方库，应把依赖写入项目的 packaging 配置或依赖文件，再用 .venv/bin/python -m pip install -r requirements.txt 从该环境安装；可复现运行还取决于兼容的解释器版本、包版本和平台要求。Python 异步请求怎样选择运行边界见[异步 FastAPI 接口为什么仍会阻塞？](#27.%20%E5%BC%82%E6%AD%A5%20FastAPI%20%E6%8E%A5%E5%8F%A3%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%8D%E4%BC%9A%E9%98%BB%E5%A1%9E%EF%BC%9F)；实例属性优先级、descriptor 与协作式多继承见[Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？](#26.%20Python%20%E5%AE%9E%E4%BE%8B%E5%B1%9E%E6%80%A7%E4%BD%95%E6%97%B6%E6%9D%A5%E8%87%AA%E5%AF%B9%E8%B1%A1%E5%AD%97%E5%85%B8%EF%BC%8C%E4%BD%95%E6%97%B6%E5%8F%98%E6%88%90%E6%8F%8F%E8%BF%B0%E7%AC%A6%E6%88%96%E7%BB%91%E5%AE%9A%E6%96%B9%E6%B3%95%EF%BC%9F)。
 
 > [!info]- 来源
 > - 名称绑定、对象可变性和字典顺序：[Python 3.11 Language Reference, Data model](https://docs.python.org/3.11/reference/datamodel.html#objects-values-and-types)，核对于 2026-11-06。
@@ -3226,7 +3628,7 @@ python3.11 -m venv .venv
 > - with 退出时的资源清理：[Python 3.11 Language Reference, The with statement](https://docs.python.org/3.11/reference/compound_stmts.html#the-with-statement)。
 > - 注解不作默认运行时验证：[Python 3.11 typing](https://docs.python.org/3.11/library/typing.html)，注解示例于 CPython 3.11.13 重放。
 > - venv 与包安装：[Python 3.11 venv](https://docs.python.org/3.11/library/venv.html)、[Python Packaging User Guide](https://packaging.python.org/en/latest/tutorials/installing-packages/)，核对于 2026-11-06。
-## 25. Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？
+## 26. Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？
 
 **案例：** 合成报表对象需要拒绝空标题；读者还要理解为什么直接往实例字典塞入同名键有时无效、有时能覆盖类属性。验证代码还组合了审计、规范化 mixin（混入类）与共同基类：调用 super() 时，问题不是“调用语法上写的父类”，而是“当前类 method resolution order（方法解析顺序，MRO）中的下一个实现”。
 
@@ -3410,13 +3812,13 @@ merge 每轮从输入列表左到右扫描，取第一个不在任何列表尾�
 
 协作式 mixin 的每个实现都要遵守共同约定：接受兼容的参数，并在恰当位置调用 super()。若某个 mixin 直接返回而不继续调用，后续步骤会被截断；若不同实现对同名方法的参数约定不兼容，也无法可靠地串起来。多继承适用于确实需要按 MRO 组合的横切行为；若顺序与协作约定难以说清，组合对象或显式调用步骤通常更容易维护。
 
-如果要继续看对象名称绑定、可变性、迭代器和资源生命周期，见[Python 的值、迭代器与资源生命周期如何工作？](#24.%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+如果要继续看对象名称绑定、可变性、迭代器和资源生命周期，见[Python 的值、迭代器与资源生命周期如何工作？](#25.%20Python%20%E7%9A%84%E5%80%BC%E3%80%81%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 > [!info]- 来源
 > - 描述符类型、实例属性和类属性的读取优先级、函数方法绑定及 C3 MRO：[Python 3.11 Language Reference, Data Model](https://docs.python.org/3.11/reference/datamodel.html)，§3.3.2.3、§3.2.8.2，核对于 2026-11-09。
 > - 描述符仅通过类属性触发、`__set_name__` 的用途：[Python 3.11 Descriptor HowTo Guide](https://docs.python.org/3.11/howto/descriptor.html)，Descriptor Protocol，核对于 2026-11-09。
 > - 示例中的实例字典、描述符遮蔽与 MRO 调用次序已在 CPython 3.11.13 实跑；这里只检查普通实例属性，不声称覆盖自定义元类或 `__getattribute__`。
-## 26. 异步 FastAPI 接口为什么仍会阻塞？
+## 27. 异步 FastAPI 接口为什么仍会阻塞？
 
 **案例：** FastAPI 报表接口收到 acct-17 的查询，异步数据库驱动要等数页结果；同一 worker 还必须及时回应其他请求。async def 只是协程函数声明，只有执行到会挂起的 await 才能把事件循环让给别的任务。同步阻塞调用仍会占住当前线程，资源也必须活到最后一次使用它的响应阶段。
 
@@ -3552,7 +3954,7 @@ async def stream(store=Depends(get_store)):
 > - FastAPI 对同步路由/依赖与异步路由的调度边界：[FastAPI, Concurrency and async / await](https://fastapi.tiangolo.com/async/)，核对于 2026-11-06。
 > - 同步路由/依赖使用 AnyIO 线程容量、且 Starlette 内其他同步操作共用该限制：[Starlette, Thread Pool](https://www.starlette.io/threadpool/)；AnyIO 的限制不影响 asyncio 默认 executor：[AnyIO, Working with threads](https://anyio.readthedocs.io/en/stable/threads.html)，核对于 2026-11-06。
 > - yield 依赖默认 request scope 与 function scope 的清理时点：[FastAPI, Dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/)，核对于 2026-11-06；0.128.0 路由 resolver 实现见 [dependency utilities](https://github.com/fastapi/fastapi/blob/0.128.0/fastapi/dependencies/utils.py)。
-## 27. 如何估算并限制异步工作管线？
+## 28. 如何估算并限制异步工作管线？
 
 **案例：** API 接到 acct-17 的账户报表请求：先验证并持久接受任务，后台 worker（工作进程）顺序读数据库并生成 CSV，最后写入私有对象存储。受理事务同时写 job、outbox 和一个共享等待槽，提交后才返回 `202`；只有对象上传完成、结果引用与 `succeeded` 状态提交后，报表才可查询。这里估算的是这条持久后台导出路径。直接用 HTTP 流式响应是另一条请求内路径：连接和流资源要活到正文发送完或请求取消，不会自动变成可查询的 job 结果。
 
@@ -3639,7 +4041,7 @@ flowchart LR
 
 在这些假设下，峰值按时处理需要 120 个平均并发 job，而计划只有 64 个槽，因此 worker 执行槽先于列出的连接配置上限达到规划值。这只是排查顺序的假设，不表示数据库 CPU、存储 I/O 或网络已经有余量。
 
-用代表性的 8 KiB 请求、12 次读取扇出和输出大小逐步加压，再单独试 20/秒突发、满队列、慢读、重试和 worker 丢失。分别记录 API 接受延迟、job 排队时长、生成时长、下载时长，以及 p50、p95、p99（第 50、95、99 百分位）延迟分位数。6 秒是平均处理时长，只能用于这次平均在途量估算，不能写成 p95 保证。观测活动槽位、共享等待槽、最老队列年龄、数据库 checkout 等待和 CPU、结果留存量、完成与失败状态，再按真实 service-level objective（SLO，服务级目标）决定扩副本、改准入还是优化查询。[可观测性、SLO 与事件响应](#35.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明如何按各阶段检查饱和与延迟。
+用代表性的 8 KiB 请求、12 次读取扇出和输出大小逐步加压，再单独试 20/秒突发、满队列、慢读、重试和 worker 丢失。分别记录 API 接受延迟、job 排队时长、生成时长、下载时长，以及 p50、p95、p99（第 50、95、99 百分位）延迟分位数。6 秒是平均处理时长，只能用于这次平均在途量估算，不能写成 p95 保证。观测活动槽位、共享等待槽、最老队列年龄、数据库 checkout 等待和 CPU、结果留存量、完成与失败状态，再按真实 service-level objective（SLO，服务级目标）决定扩副本、改准入还是优化查询。[可观测性、SLO 与事件响应](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明如何按各阶段检查饱和与延迟。
 
 **接下来：** 本章把任务、排队和连接限制到同一工作负载假设；应用是否需要异步 job 以及完整持久生命周期见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)，消息确认语义见[发布者确认和消费者确认分别证明什么？](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
@@ -3648,7 +4050,7 @@ flowchart LR
 > - SQLAlchemy 2.1.8 QueuePool 的 pool_size + max_overflow 同时连接上限：[SQLAlchemy 2.1, Connection Pooling](https://docs.sqlalchemy.org/en/21/core/pooling.html)，官网版本与行为核对于 2026-11-06；部署到其他池实现时按实际配置重算。
 > - 延迟分布分位数与服务目标的关系：[Google SRE Workbook, Implementing SLOs](https://sre.google/workbook/implementing-slos/)，核对于 2026-11-06。
 > - 表中工作负载与容量数字均为按上述显式假设重算的合成算例，不是服务测量。
-## 28. Web 服务如何限制拒绝服务的影响？
+## 29. Web 服务如何限制拒绝服务的影响？
 
 denial of service (DoS，拒绝服务) 通过流量洪峰、连接耗尽或昂贵请求让服务资源不够用；distributed denial-of-service (DDoS，分布式拒绝服务) 指多来源同时发起的攻击。保障要沿请求实际能到达的层次布置：链路入口被塞满时，应用限流代码还没有机会运行；请求已进应用后，按 Internet Protocol address (IP 地址) 限流也不能替代对昂贵工作、并发和排队长度的约束。
 
@@ -3687,7 +4089,7 @@ rate limit（速率限制）约束某个键在一段时间内可提交多少请�
 
 CDN可以在更靠近用户的边缘节点缓存适合共享的公开内容或执行入口规则；Network Address Translation (网络地址转换，NAT)可能让许多合法用户共享同一个出口 IP。匿名请求发生在身份认证之前，不能只靠账户限流；登录后的请求也不能只靠 IP 限流，而分布式攻击来源又可能跨越许多地址。可以在不同阶段组合 IP/网络特征、账户、租户、路由和成本额度，并为误伤、绕过、状态存储可用性设计补救。反向代理转发的客户端 IP 只有在信任该代理、拒绝外部伪造转发头时才可用于策略。
 
-速率限制是准入政策，不会给出一个“安全的 QPS”。容量章负责在正常负载下估算资源与背压，见[如何估算并限制异步工作管线？](#27.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)；本章强调在攻击者可分布请求、上游容量会饱和且不同请求成本悬殊时，应由哪一层拒绝或削减工作。
+速率限制是准入政策，不会给出一个“安全的 QPS”。容量章负责在正常负载下估算资源与背压，见[如何估算并限制异步工作管线？](#28.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)；本章强调在攻击者可分布请求、上游容量会饱和且不同请求成本悬殊时，应由哪一层拒绝或削减工作。
 
 ### 限额触发时如何让客户端和服务一起恢复？
 
@@ -3699,9 +4101,9 @@ CDN可以在更靠近用户的边缘节点缓存适合共享的公开内容或�
 > - 分布式流量、IP 欺骗、攻击类别、预防和响应步骤：[CISA、FBI、MS-ISAC, Understanding and Responding to Distributed Denial-of-Service Attacks](https://www.cisa.gov/sites/default/files/2024-03/understanding-and-responding-to-distributed-denial-of-service-attacks_508c.pdf)，2024-03-21，§2–§5；核对于 2026-11-06。
 > - 网络与应用层 DoS、限速以及可消耗资源的应用输入：[OWASP Denial of Service Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html)，Fundamentals、Application Attacks、Network Attacks、Rate Limiting，按 2026-11-06 版本核对。
 > - `429 Too Many Requests` 与可选 `Retry-After`：[IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html)，§4，2012-04；临时过载 `503` 与等待建议字段：[RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§10.2.3、§15.6.4，2022-06。均核对于 2026-11-06。
-## 29. 怎样用最小反例定位报表授权回归？
+## 30. 怎样用最小反例定位报表授权回归？
 
-报表平台工程师收到一条跨租户访问回归：tenant-a 读自己的 report 42 应返回 200，tenant-b 猜中同一 ID 也只能得到 404。为了定位并修复回归，先把需求改写成可观察结果，再提出一个能被反例推翻的根因假设。若新改动让 B 得到 200，就沿主体、application programming interface（应用程序接口，API）路由、查询和序列化追踪请求，而不是先猜数据库或框架有问题。针对该边界的可运行测试见[测试如何证明报表服务改动？](#30.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E9%AA%8C%E8%AF%81%E4%B8%80%E6%AC%A1%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E6%94%B9%E5%8A%A8%EF%BC%9F)。
+报表平台工程师收到一条跨租户访问回归：tenant-a 读自己的 report 42 应返回 200，tenant-b 猜中同一 ID 也只能得到 404。为了定位并修复回归，先把需求改写成可观察结果，再提出一个能被反例推翻的根因假设。若新改动让 B 得到 200，就沿主体、application programming interface（应用程序接口，API）路由、查询和序列化追踪请求，而不是先猜数据库或框架有问题。针对该边界的可运行测试见[测试如何证明报表服务改动？](#31.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E9%AA%8C%E8%AF%81%E4%B8%80%E6%AC%A1%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E6%94%B9%E5%8A%A8%EF%BC%9F)。
 
 ~~~mermaid
 flowchart TD
@@ -3781,12 +4183,12 @@ report = session.scalar(
 >
 > 变更后：tenant-a 仍得到 200，tenant-b 得到 404，匿名请求得到 401。只有这些观察与需求一致，才说明当前回归已被修复；其他 query path、缓存和后台导出仍各有自己的边界。
 
-在共享分支上保留小而聚焦的修复，用[Git 如何记录通过验收的改动？](#31.%20Git%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E9%80%9A%E8%BF%87%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%94%B9%E5%8A%A8%E5%8F%98%E6%88%90%E5%8F%AF%E8%BF%BD%E6%BA%AF%E6%8F%90%E4%BA%A4%EF%BC%9F)记录源码快照。评审时独立检查实际差异、需求边界和测试覆盖；具体的代码评审流程由团队自己的仓库政策规定。
+在共享分支上保留小而聚焦的修复，用[Git 如何记录通过验收的改动？](#32.%20Git%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E9%80%9A%E8%BF%87%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%94%B9%E5%8A%A8%E5%8F%98%E6%88%90%E5%8F%AF%E8%BF%BD%E6%BA%AF%E6%8F%90%E4%BA%A4%EF%BC%9F)记录源码快照。评审时独立检查实际差异、需求边界和测试覆盖；具体的代码评审流程由团队自己的仓库政策规定。
 
 > [!info]- 来源
 > - GitHub 官方 [Reviewing proposed changes](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests) 与[Review concepts](https://docs.github.com/en/pull-requests/concepts/giving-reviews)，checked 2026-11-06：支持从差异和提交检查改动与评审意见；本文的最小反例是合成 API 的行为推演。
 > - 租户授权的规范规则由[逐次授权报表资源](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)承担；本篇只用该规则定位一次 SQL 条件遗漏，不重复完整认证和授权设计。
-## 30. 怎样用测试边界验证一次报表服务改动？
+## 31. 怎样用测试边界验证一次报表服务改动？
 
 报表平台工程师准备发布一项租户授权修复：tenant-a 应能读取自己的 report 42，得到 200；tenant-b 猜中同一 ID 时只能得到 404。导出 job 重复投递后，任务状态和结果对象引用也只能提交一次。要判断这次改动能否发布，测试必须覆盖这些用户可观察的失败条件，而不只是确认实现和它自己生成的 happy-path 测试一起通过。
 
@@ -3950,13 +4352,13 @@ flowchart TD
 
 ### 从测试证据接到可发布的变更
 
-测试通过只是证据链的一环。它应能指向变更需求、对应代码和具体测试数据；随后由 Git 提交固定源码快照，Docker 根据这个快照构建镜像，部署流水线再验证并晋级相同镜像。生产路径出现问题时，指标、trace 与日志用于定位是哪一环偏离。完整过程见[如何晋级已验证的报表服务产物？](#34.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+测试通过只是证据链的一环。它应能指向变更需求、对应代码和具体测试数据；随后由 Git 提交固定源码快照，Docker 根据这个快照构建镜像，部署流水线再验证并晋级相同镜像。生产路径出现问题时，指标、trace 与日志用于定位是哪一环偏离。完整过程见[如何晋级已验证的报表服务产物？](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
 
 > [!info]- 来源
 > - 测试方式的界限：FastAPI 官方 [Testing](https://fastapi.tiangolo.com/tutorial/testing/) 说明 TestClient 对应用路由的调用，checked 2026-11-06；pytest 官方 [Fixtures reference](https://docs.pytest.org/en/stable/reference/fixtures.html) 说明 fixture 作用域和发现，checked 2026-11-06。
 > - SQLite 约束与共享内存连接：SQLite [CREATE TABLE](https://www.sqlite.org/lang_createtable.html)；SQLAlchemy 2.0 官方 [SQLite 内存数据库与连接池](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines)，适用于本例的 StaticPool / check_same_thread 连接安排。
 > - 本地运行边界：示例执行环境为 FastAPI 0.128.0、SQLAlchemy 2.0.44、pytest 9.0.2 与系统 SQLite；它不代表 PostgreSQL 或 broker 集成测试。
-## 31. Git 怎样把通过验收的报表改动变成可追溯提交？
+## 32. Git 怎样把通过验收的报表改动变成可追溯提交？
 
 修复 report 42 的租户条件并通过相关检查后，Git 能把已审查的源码快照变成可复查的提交。这个提交给构建系统提供固定输入，但它还不是部署产物：之后要记录由它构建出的镜像摘要，并验证、晋级那份镜像。Git 命令改变工作区、暂存区、提交或引用；它不撤销数据库迁移、已发布镜像或生产副作用。
 
@@ -4053,13 +4455,13 @@ git show --stat recovery/report-scope
 
 reflog 是本地引用移动记录，会过期，不是远端备份。恢复到共享存储前先检查保住的快照。Git 对 reset、restore、revert 的职责有明确区分：reset 移动当前提交/重置 index，restore 改文件，revert 新增反向提交。
 
-变更经 PR 和状态检查进入共享分支后，CI 才能用这个确切的提交构建镜像。容器摘要和晋级过程见[Docker 如何把该提交构建成固定镜像？](#32.%20Docker%20%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%BA%90%E7%A0%81%E6%9E%84%E5%BB%BA%E6%88%90%E5%8F%AF%E8%BF%90%E8%A1%8C%E9%95%9C%E5%83%8F%EF%BC%9F)与[如何晋级已验证的报表服务产物？](#34.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+变更经 PR 和状态检查进入共享分支后，CI 才能用这个确切的提交构建镜像。容器摘要和晋级过程见[Docker 如何把该提交构建成固定镜像？](#33.%20Docker%20%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%BA%90%E7%A0%81%E6%9E%84%E5%BB%BA%E6%88%90%E5%8F%AF%E8%BF%90%E8%A1%8C%E9%95%9C%E5%83%8F%EF%BC%9F)与[如何晋级已验证的报表服务产物？](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
 
 > [!info]- 来源
 > - Git 官方手册：[status](https://git-scm.com/docs/git-status)、[diff](https://git-scm.com/docs/git-diff)、[add](https://git-scm.com/docs/git-add)、[commit](https://git-scm.com/docs/git-commit)，checked 2026-11-06：工作区、index 和提交差异。
 > - Git 官方手册：[fetch](https://git-scm.com/docs/git-fetch)、[pull](https://git-scm.com/docs/git-pull)、[merge](https://git-scm.com/docs/git-merge)、[rebase](https://git-scm.com/docs/git-rebase)，checked 2026-11-06：远端跟踪、整合和历史重放。
 > - Git 官方手册：[reset](https://git-scm.com/docs/git-reset)、[restore](https://git-scm.com/docs/git-restore)、[revert](https://git-scm.com/docs/git-revert)、[reflog](https://git-scm.com/docs/git-reflog)、[stash](https://git-scm.com/docs/git-stash)、[cherry-pick](https://git-scm.com/docs/git-cherry-pick)，checked 2026-11-06：各命令的状态影响和恢复范围；本机 Git 2.56.0。
-## 32. Docker 如何把报表服务的源码构建成可运行镜像？
+## 33. Docker 如何把报表服务的源码构建成可运行镜像？
 
 报表平台工程师已修复 tenant-a 对 report 42 的读取条件，现在要确保测试过的提交确实构建成可复用镜像。container image（容器镜像）是只读文件系统和默认配置；container（容器）启动时增加可写层；volume（数据卷）把数据库数据放在容器外；network（网络）让 application programming interface（应用程序接口，API）、worker（工作进程）和数据库互通。发布时把 Git 提交固定为镜像摘要，并把数据库、密钥和运行配置放在镜像之外。下面用示意提交 c4f2a91 演示本地构建；本地验证不会自动发布或部署。
 
@@ -4167,7 +4569,7 @@ volumes:
 | `docker compose ps` | Compose 服务 | 容器状态；实际容器名由项目名和服务名生成 |
 | `docker image history report-api:c4f2a91` | 镜像层历史 | COPY/RUN 的构建结果，不是镜像里的完整文件审计 |
 
-detached mode（后台运行模式）返回 shell 不表示程序有监督，也不证明容器健康。启动探针、就绪探针和应用 SLI 属于运行平台与服务观测，不由镜像构建证明；参见[容器运行时如何承接 API 和 worker？](#33.%20%E6%8A%A5%E8%A1%A8%20API%20%E4%B8%8E%E5%BC%82%E6%AD%A5%20worker%20%E5%BA%94%E7%94%B1%E4%BB%80%E4%B9%88%E8%BF%90%E8%A1%8C%E6%97%B6%E6%89%BF%E6%8E%A5%EF%BC%9F)。ACK、队列延迟与业务完成由[消息交付如何确认](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)说明。
+detached mode（后台运行模式）返回 shell 不表示程序有监督，也不证明容器健康。启动探针、就绪探针和应用 SLI 属于运行平台与服务观测，不由镜像构建证明；参见[容器运行时如何承接 API 和 worker？](#34.%20%E6%8A%A5%E8%A1%A8%20API%20%E4%B8%8E%E5%BC%82%E6%AD%A5%20worker%20%E5%BA%94%E7%94%B1%E4%BB%80%E4%B9%88%E8%BF%90%E8%A1%8C%E6%97%B6%E6%89%BF%E6%8E%A5%EF%BC%9F)。ACK、队列延迟与业务完成由[消息交付如何确认](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)说明。
 
 基本操作可按 image/container 两种对象查看：`docker pull redis:7` 拉取镜像，`docker run --name cache -d redis:7` 创建并启动容器，`docker ps -a` 查看含已停止的容器，`docker stop cache` 与 `docker start cache` 停止或重新启动已有容器，`docker rm cache` 移除已停止容器，`docker image rm redis:7` 移除镜像标签。对正在运行的容器使用 `docker rm -f` 会同时停止并删除它，先确认容器写层中没有要保留的数据。
 
@@ -4181,16 +4583,17 @@ detached mode（后台运行模式）返回 shell 不表示程序有监督，也
 > - Postgres image 的初始化变量和数据路径：[官方 image 环境变量](https://hub.docker.com/_/postgres#environment-variables)与[PGDATA 说明](https://github.com/docker-library/docs/blob/master/postgres/README.md#pgdata)，checked 2026-11-06。`POSTGRES_PASSWORD_FILE` 不会更新既有数据目录中的账号密码；PostgreSQL 18 路径与旧镜像迁移边界适用于相应官方 image，换版不迁移数据。
 > - 固定发布标识：[Docker image digests](https://docs.docker.com/dhi/explore/security-concepts/digests/)，checked 2026-11-06；具体多平台 manifest 应读 builder 和 registry 的实际 metadata。
 > - 基本操作：[docker run](https://docs.docker.com/reference/cli/docker/container/run/)、[docker stop](https://docs.docker.com/reference/cli/docker/container/stop/)、[docker rm](https://docs.docker.com/reference/cli/docker/container/rm/)、[docker login](https://docs.docker.com/reference/cli/docker/login/)、[docker tag](https://docs.docker.com/reference/cli/docker/image/tag/) 和[docker push](https://docs.docker.com/reference/cli/docker/image/push/)，checked 2026-11-06。
-## 33. 报表 API 与异步 worker 应由什么运行时承接？
+## 34. 报表 API 与异步 worker 应由什么运行时承接？
 
-在这次租户授权修复中，tenant-a 读取 report 42 应得到 200，tenant-b 猜中同一 ID 应得到 404。用户通过浏览器访问 application programming interface（应用程序接口，API）；当账户 acct-17 为 report 42 发起异步导出时，请求幂等键为 report-demo-208，API 在同一数据库事务写入 job（任务）job-demo-731、outbox（事务发件箱）意图并预留一个共享等待槽，再由 relay（转发进程）发布到 queue（队列），worker（工作进程）计算结果、写入私有对象并提交状态。只读请求和导出任务虽指向同一报表，但授权响应与 job 成功/失败是不同用户结果；每层的网络可达、身份权限、业务规则和恢复责任都不同。
+在这次租户授权修复中，tenant-a 读取 report 42 应得到 200，tenant-b 猜中同一 ID 应得到 404。用户通过浏览器访问 application programming interface（应用程序接口，API）；当账户 acct-17 为 report 42 发起异步导出时，请求幂等键为 report-demo-208，API 在同一数据库事务写入 job（任务）job-demo-731、outbox（事务发件箱）意图并预留一个等待槽。等待槽是数据库维护的排队准入额度：每个未被领取的排队轮次占一个，接管重排时重新预留，领取时释放，不是 broker 的 prefetch 或锁。relay（转发进程）发布到 queue（队列），worker（工作进程）计算结果、写入私有对象并提交状态。只读请求和导出任务虽指向同一报表，但授权响应与 job 成功/失败是不同用户结果；每层的网络可达、身份权限、业务规则和恢复责任都不同。
 
 ~~~mermaid
 flowchart TD
-    B[浏览器] -->|HTTPS| L[可选 CDN / 负载均衡器]
+    B[浏览器] -->|HTTPS| C[可选 CDN]
+    C --> L[负载均衡器：本图的入口]
     L --> A[私有 API 运行时]
     A -->|按当前主体查 tenant（租户）+ report| D[(数据库)]
-    A -->|job + pending outbox + 预留等待槽，同一事务| D
+    A -->|job + pending outbox + 预留数据库排队额度，同一事务| D
     D --> R[Outbox relay]
     R -->|发布并等待 broker（消息代理）确认| Q[队列]
     Q -->|delivery（消息投递）| W[私有 worker]
@@ -4199,13 +4602,13 @@ flowchart TD
     W -->|耐久结果状态后 ACK| Q
 ~~~
 
-只读请求和异步导出均以 report 42 为报表资源；导出由账户 acct-17 发起，report-demo-208 是幂等键，job-demo-731 是持久任务 ID。导出结果先写入私有对象存储，只有数据库记录已提交对象引用后，授权 API 才能签发短期 signed URL（签名网址）。以 S3 预签名 URL 为例，授权检查发生在发放时；拿到 URL 的人可在其签发权限、对象策略和有效期允许时直接访问，它是一种 bearer 能力。应用后来撤销用户业务权限，不会自动撤销已发出的 URL；新发 URL 应设较短有效期，撤销底层签名凭据或改变资源策略也会影响既有 URL 的可用性。CDN 只是可选入口，含租户私有结果的响应不能按公共 URL 无条件共享缓存。通常 DNS 先把公共服务名解析为入口地址，再建立 HTTPS 连接；更完整的协议过程见[HTTP 与网络请求如何建立？](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)。路由、outbox 与 attempt（尝试号）状态细节见[怎样设计一个可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+只读请求和异步导出均以 report 42 为报表资源；导出由账户 acct-17 发起，report-demo-208 是幂等键，job-demo-731 是持久任务 ID。worker 用 task role（任务角色）把结果写入私有对象；只有数据库记录已提交对象引用后，拥有读取权限的下载 API 才能签发短期 signed URL（签名网址）。浏览器不持有 worker 的 task role；S3 预签名 URL 把签发身份在有效期内可重复使用的受限读取能力交给持有 URL 的浏览器。应用后来撤销用户业务权限，不会自动撤销已发出的 URL；新发 URL 应设较短有效期，撤销底层签名凭据或改变资源策略也会影响既有 URL。CDN 可选地位于本图负载均衡器之前，含租户私有结果的响应不能按公共 URL 无条件共享缓存。通常 DNS 先把公共服务名解析为入口地址，再建立 HTTPS 连接；更完整的协议过程见[HTTP 与网络请求如何建立？](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)。路由、outbox 与 attempt（尝试号）状态细节见[怎样设计一个可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
 
 ### 网络路径和身份策略分开
 
 负载均衡器接收 HTTPS（安全超文本传输协议）并把请求送到配置的健康目标；计算服务运行 API 和 worker；数据库保存结构化状态；对象存储保存大文件；队列把可异步完成的工作和用户请求分离。浏览器可以通过范围受限、短期有效的签名网址直传或下载对象，不需要把 bucket（对象存储桶）设成公开。
 
-网络路由、防火墙或安全组决定“谁能连到哪个地址”；工作负载身份和资源策略决定“该主体能对哪个资源做什么”；应用的授权规则再决定当前业务用户能否读取 tenant-a 的 report 42。这三个层次不能互相替代。常见拓扑只开放负载均衡器，API 仅允许来自负载均衡器，数据库只允许来自 API/worker，队列和对象存储只接受已授予相应任务身份的请求。本地 Compose 只能验证服务发现和网络连通；同一个镜像摘要进入 staging 后，还要经已装配的真实入口和测试身份复放 A→200、B→404，不能把镜像相同当成认证、配置或租户授权已验证。见[晋级验收](#34.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+网络路由、防火墙或安全组决定“谁能连到哪个地址”；工作负载身份和资源策略决定“该主体能对哪个资源做什么”；应用的授权规则再决定当前业务用户能否读取 tenant-a 的 report 42。这三个层次不能互相替代。常见拓扑只开放负载均衡器，API 仅允许来自负载均衡器，数据库只允许来自 API/worker。worker 的 task role 只需要写入报表前缀；签发下载 URL 的 API 还需要相应读取权限，S3 按签发凭据授权预签名请求，浏览器只持有短期 bearer URL，不需加入服务角色。队列只接受被授予权限的服务身份。本地 Compose 只能验证服务发现和网络连通；同一个镜像摘要进入 staging 后，还要经已装配的真实入口和测试身份复放 A→200、B→404，不能把镜像相同当成认证、配置或租户授权已验证。见[晋级验收](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
 
 ### 托管平台管理什么，应用仍拥有哪部分
 
@@ -4214,7 +4617,7 @@ flowchart TD
 | 计算 | 按服务方案提供主机维护、调度和运行环境 | 镜像/包、启动退出、资源上限、扩缩容策略、健康规则 |
 | 数据库 | 所选配置包含的基础设施、补丁、备份或故障切换 | schema 和迁移、查询/连接行为、权限授予、保留期、恢复演练 |
 | 对象存储 | 服务可用性及文档承诺的持久性机制 | 私有命名、保留/生命周期、上传上限、谁能拿 signed URL 及其过期/撤权策略 |
-| 队列 | 在服务合同和配置限制内存储和投递消息 | 幂等处理、重试退避、毒消息处理、队列年龄和 DLQ 恢复 |
+| 队列 | 在服务合同和配置限制内存储和投递消息 | 幂等处理、重试退避、毒消息处理、队列年龄和死信队列（DLQ）恢复 |
 
 “托管”减少平台运维，但不会替工作负载选择安全配置。托管数据库不会修复缺索引查询或连接风暴；托管队列也不会使非幂等 worker 在重试时安全。
 
@@ -4224,7 +4627,30 @@ flowchart TD
 
 在这个报表例子里，HTTP API 要持续接收读请求，worker 要等队列、处理 database（数据库）和对象存储，并在部署停止时完成或释放当前 delivery（消息投递）。因此可把 API 与 worker 作为分开的可扩缩容服务，同一镜像运行不同命令。只有导出任务明确有界且平台事件处理语义合适时，才把它拆为函数。Cloud Run functions 的代际、并发和时长限制见[托管函数何时适合报表任务？](../../archive/front-end/Deprecated_Interview_Notes/hosted-functions-tradeoffs.md)。
 
-进程收到停止信号时，先让 readiness probe（就绪探针）报告未就绪、停止接入新请求或消息，再在宽限期内完成在途请求与其事务；已持久提交业务结果的消息可以 ACK，未提交结果的消息按所选 broker 恢复契约处理。平台终止连接后，未确认 delivery 可被重投，但有效租约内的旧尝试仍由数据库状态保护，不能被新 worker 抢占。数据库连接池、线程、临时文件和 telemetry exporter（遥测导出器）都要有明确清理。具体 stop signal、async cancellation（异步取消）与资源释放依运行时和平台实现；容器 health probe（健康探针）的职责由[容器发布检查](#34.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)说明，消息交接则由[发布确认与消费者 ACK](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)说明。
+进程收到停止信号时，API 服务先把 readiness probe（就绪探针）标为未就绪，让负载均衡器停止送入新的 HTTP 请求；这不会自动停止独立 worker 消费队列。worker 要主动暂停 broker consumer 或停止取新 delivery，再在宽限期内完成当前任务或中止并释放未确认 delivery。只在结果或终态已持久提交后 ACK；未提交的 delivery 让 broker 按其恢复契约重投，数据库租约恢复器另负责接管仍记录为 running 的 job。API 的 readiness 控制入口流量，worker 的 pause/cancel 控制消息领取，二者不能互相替代。数据库连接池、线程、临时文件和 telemetry exporter（遥测导出器）都要有明确清理。具体 stop signal、async cancellation（异步取消）与资源释放依运行时和平台实现；容器 health probe（健康探针）的职责由[容器发布检查](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)说明，消息交接则由[发布确认与消费者 ACK](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)说明。
+
+### worker 凭据怎样注入、轮换并撤销？
+
+报表系统有两个独立进程：发送 worker 用 HMAC（基于哈希的消息认证码）密钥为 Webhook（回调通知）签名；接收服务用允许的 keyId→密钥映射验签。合成协议要求同一 endpoint/source 的发送端与接收端持有对应相同密钥，但每个服务只取得自己需要的密钥值和授权范围，使用独立的 ECS execution role（执行角色）注入各自 Secret ARN。短期工作负载身份、共享消息密钥和某个用户授予第三方的 OAuth grant（OAuth 授权）生命周期不同，不能混成一个环境变量或角色。
+
+以 Amazon ECS 为一个具体部署例子，容器镜像只包含代码，task definition（任务定义）引用 Secrets Manager 中的密钥，不放密钥值。ECS 的 task execution role（任务执行角色）给 ECS agent 启动任务时读取所需 Secret ARN 的权限；该角色的权限不直接交给容器内代码。应用调用 AWS 服务时使用另一个 task role（任务角色），例如只允许向指定报表前缀写对象。角色分开并按服务授予最小动作与资源范围，避免 worker 因共享角色取得无关 API 或 Secret 权限。ECS 任务角色提供短期工作负载凭据，AWS SDK 通过容器凭据接口取得并刷新它们；应用不应把这组 AWS 凭据再复制成长期静态键。
+
+接收 ECS service 在启动时把验证器允许的 keyId→密钥映射注入 `WEBHOOK_VERIFY_KEYS_JSON`；签发 ECS worker 只注入当前 keyId 对应的 `WEBHOOK_SIGNING_KEY` 与 keyId。两服务用不同的 task definition 和 execution role，只能读取各自命名的 Secret ARN；task role 不承担读取 Secret 的职责。ECS 的 `valueFrom` 可以指向完整 secret、JSON key、version-stage 或 VersionId；本例不固定 VersionId，让它跟随 `AWSCURRENT`。移动该 staging label 后，正在运行任务的环境不会自动更新；要启动新 task 或强制 service 滚动部署，进程才会读到新值。若 task definition 固定了 VersionId，则必须先更新 task definition revision 指向新版本，再替换任务。ECS 官方还指出容器内的应用、日志和调试工具都可能访问这些环境变量，所以不能 dump 全部环境、在异常信息中回显配置，也不应把密钥加入镜像层、版本库、任务参数明文、前端 bundle、请求日志或模型 prompt/checkpoint。相同签名、重试和接收路径见[Webhook 接收方怎样验证并可靠受理？](#17.%20Webhook%EF%BC%88%E5%9B%9E%E8%B0%83%E9%80%9A%E7%9F%A5%EF%BC%89%E6%8E%A5%E6%94%B6%E6%96%B9%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E5%8F%AF%E9%9D%A0%E5%8F%97%E7%90%86%EF%BC%9F)。
+
+正常轮换按“接收端先兼容、发送端再切换、接收端最后移除旧键”进行。本合成 Webhook outbox 保存未签名原文，发送 worker 每次新尝试才签名：
+
+1. 为该 endpoint/source 生成新 keyId 和新密钥；把接收端的 `WEBHOOK_VERIFY_KEYS_JSON` 更新为旧、新双键映射，移到新 `AWSCURRENT` 并强制部署 receiver task。若 task definition 固定 VersionId，则发布引用新版本的 revision；确认旧 receiver task 已退出。
+2. 更新发送端 `WEBHOOK_SIGNING_KEY` 和当前 keyId，替换 sender task。Sender 每次尝试都用新 key 重签相同 eventId 和正文；等旧 sender task 全部退出并记录所有旧 sender 实例签名时间戳的最大值；只有当每个仍可能接收旧请求的 receiver 时钟都已晚于该最大时间戳加 300 秒，且最大在途请求处理时限也已过，才可移除旧键。不能只从最后一次发送起等待 300 秒；实际轮换还要覆盖已知时钟偏差。
+3. 将接收端验证映射更新为仅新键，并强制替换 receiver task；若固定 VersionId，更新 task definition revision。确认旧 receiver task 退出后，旧密钥才不再驻留于任一运行进程。过期 Secrets Manager 版本按保留策略移除。
+4. 如果实现预先排队已签名请求而非未签名正文，就要在旧签名失效前重新签名这些请求，或等其失效后再移除旧键。
+
+移动 `AWSCURRENT` 不会改变正在运行的环境变量；每个使用该 Secret 的 sender/receiver service 都要部署新 task。若双方引用 VersionId，则各自 task definition 都要发布指向该版本的新 revision。
+
+若 key 已泄漏，紧急路径不保留新旧双接受窗口。新 key 应预先生成；先暂停端点交付并阻断入口或停止旧 receiver task，再部署只含新 key 的 receiver task；随后把 sender 切到新 key 并替换旧 sender task，确认旧进程均退出后恢复交付。若 task definition 固定 VersionId，两端都要更新 task definition revision。没有可用新 key 时立即撤销旧 key 并维持暂停，不为可用性继续接受泄漏密钥。发送端按撤销 keyId 找出未确认事件，只能在原 `createdAt + 30 天` 截止前，用原 eventId、原正文和新 attemptId 重签；换键不会重置期限。旧请求若已受理但响应丢失，持久 inbox 会识别重复；已确认 2xx 的事件不重放。删除 Secrets Manager 的值本身不能清除已注入进程中的副本，必须替换对应 receiver/sender task。对于能直接访问资源的其他凭据，还要在签发方或目标资源撤销授权；用户 OAuth access token 的撤销时机依 provider 契约处理。
+
+用户 OAuth grant 属于另一个授权主体：它代表某个用户允许 Agent 或应用访问特定下游资源，必须按用户、租户、目标 audience（令牌受众）、scope（权限范围）与过期状态隔离，并在用户撤权后阻止新调用。它不是 ECS task role，也不是服务级 Webhook HMAC 密钥。OAuth 刷新 token 不进入统一 worker 环境、日志、模型上下文或恢复快照；运行时只按已绑定 grant 取用，撤权后依第三方 provider 契约停止或重新授权。短期工作负载身份不替代该用户 grant，也不能扩大用户授权范围。
+
+分开审计 secret 注入与业务 API 调用。CloudTrail 的 Secrets Manager `GetSecretValue` 事件可用于查看 execution role 对 Secret ARN 的访问；再关联 task definition revision、task 启动和部署控制面记录。若 task definition 固定 VersionId，revision 能标出期望版本；若跟随 `AWSCURRENT`，需保存 staging label 变更和滚动部署时间线。不能假定 GetSecretValue 的 CloudTrail 记录含 taskArn 或响应返回的 VersionId。业务 SDK 以 task role 调 AWS API，其 CloudTrail session 可带 taskArn；这类业务调用审计不能替代 secret 注入审计。两条记录都不含密钥值，日志中也不得记签名原文。审计轨迹能定位谁在何时读取或启用了凭据，但不会自动证明权限最小；还要检查实际 IAM policy 与目标资源范围。
 
 ### 用失败信号和成本边界检查组件
 
@@ -4244,7 +4670,9 @@ flowchart TD
 > - 对象授权路径：Amazon S3 [access management](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-management.html) 和[presigned URL](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)，checked 2026-11-06；签名 URL 可给短期访问，不代表 bucket 公开。
 > - 运行探针：Kubernetes 官方 [Liveness, Readiness, and Startup Probes](https://kubernetes.io/docs/concepts/workloads/pods/probes/)，checked 2026-11-06；probe 作用依平台，readiness 影响流量，liveness 可触发重启。
 > - 证据和术语按具体平台合同适用；本文图是通用架构示意，不代表任何已部署系统。
-## 34. 如何晋级并回滚已验证的报表服务产物？
+> - 一个具体注入/身份例子：AWS ECS [task role 最小权限与隔离说明](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/security-iam-roles.html)、[Task IAM role 的临时凭据交付与 taskArn 审计上下文](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html)、[task execution role](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)，以及 AWS SDK [container credential provider](https://docs.aws.amazon.com/sdkref/latest/guide/feature-container-credentials.html) 和[标准 credential provider 自动续期](https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html)，checked 2026-11-09。task role 供应用 SDK 调用云服务并取得/续期临时凭据，execution role 给 ECS agent 启动所需权限。
+> - [ECS 注入 Secrets Manager 环境变量](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/secrets-envvar-secrets-manager.html)，checked 2026-11-09：引用可指定 JSON key、version-stage 或 VersionId；stage 与 VersionId 不能同时指定。未固定 VersionId 且未指定 version-stage 时默认读取 `AWSCURRENT`。Secret 在 task 启动时注入，更新后须启动新 task 或强制服务部署，容器内应用、日志和调试工具可访问这些变量。其他云平台的读取、刷新和撤销语义不同。 [Secrets Manager GetSecretValue API](https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html) 与 [Secrets Manager CloudTrail entries](https://docs.aws.amazon.com/secretsmanager/latest/userguide/cloudtrail_log_entries.html)，checked 2026-11-09：API response 含 VersionId，但 SecretString/SecretBinary 不进入 CloudTrail；审计不能把 API response 内容说成 CloudTrail 返回字段。
+## 35. 如何晋级并回滚已验证的报表服务产物？
 
 对 report 42 的租户范围修复，测试结果应绑定到固定的源码提交。continuous integration（持续集成，CI）在该提交上运行静态检查、单元测试、数据库测试和所需的消息代理检查；构建一次 container image（容器镜像），测试这份确切镜像，再把相同 digest（摘要）从 staging（预发布环境）晋级到 production（生产环境）。continuous delivery（持续交付）让通过门禁的产物随时可发布；continuous deployment（持续部署）则在规则满足后自动发布。部署回滚不能自动撤销数据库写入或远程副作用。
 
@@ -4298,7 +4726,7 @@ readiness probe（就绪探针）判断实例是否可以接收流量；liveness
 
 ### 回退代码时不要假设数据也回去了
 
-如果新镜像导致 5xx、超时或 queue worker 持续失败，可以停止放量并回退到最近一个已完成且安全的应用版本。report 42 的租户隔离修复有安全意义：若旧版存在已知跨租户漏洞，回到旧 image 会重新开放数据风险。此时应先隔离受影响入口、禁用危险路径或前向修复，不能机械恢复成旧 digest。缓解选择需要 production trace、部署时间和权限测试共同支持，见[从报表服务信号定位发布故障](#35.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)。
+如果新镜像导致 5xx、超时或 queue worker 持续失败，可以停止放量并回退到最近一个已完成且安全的应用版本。report 42 的租户隔离修复有安全意义：若旧版存在已知跨租户漏洞，回到旧 image 会重新开放数据风险。此时应先隔离受影响入口、禁用危险路径或前向修复，不能机械恢复成旧 digest。缓解选择需要 production trace、部署时间和权限测试共同支持，见[从报表服务信号定位发布故障](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)。
 
 代码回退不等于数据库回滚。常用 expand-and-contract（扩展-收缩迁移）次序是：先加向后兼容的列、索引或表形态；部署同时接受新旧形态的代码；在可控事务或批次中回填并核对；切换读写；等旧 API 实例和旧 worker 全部退出、旧代码不再是回滚目标后，才删除旧形态。进入删除旧结构的收缩阶段前，要确认线上没有实例或 worker 再读写它，而且发布策略已不再考虑回滚到仍依赖该结构的旧版本。
 
@@ -4311,7 +4739,7 @@ readiness probe（就绪探针）判断实例是否可以接收流量；liveness
 > - 探针：Kubernetes [Liveness, Readiness, and Startup Probes](https://kubernetes.io/docs/concepts/workloads/pods/probes/)，checked 2026-11-06：三种探针的不同动作；不同平台的配置语义须看其官方文档。
 > - 自动回退实例：Amazon ECS [Deployment failure detection](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-failure-detection.html) 与[deployment circuit breaker](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html)，checked 2026-11-06：ECS circuit breaker 根据任务运行与已配置健康检查判断 steady state，CloudWatch alarm 可作另一类 failure detector；自动 rollback 需要配置，且回到上次 COMPLETED deployment。不是所有发布平台都采用相同条件。
 > - 数据库兼容性：AWS blue/green 官方白皮书 [Decoupling schema changes from code changes](https://docs.aws.amazon.com/pdfs/whitepapers/latest/blue-green-deployments/blue-green-deployments.pdf)，checked 2026-11-06：新旧环境共用数据时要保持 schema 兼容；本文的 expand-and-contract 是通用工程安排，不是平台自动回滚数据库的承诺。
-## 35. 怎样从报表服务信号定位发布后的故障？
+## 36. 怎样从报表服务信号定位发布后的故障？
 
 report-api 的新镜像已经通过测试并开始逐步接收真实流量。若用户看到 5xx、report 42 变慢或导出任务迟迟未完成，先用聚合指标确定影响范围，再沿一个 request/job trace（请求或任务的分布式追踪）找出耗时或失败阶段，最后用关联日志核实该阶段做了什么。指标、追踪和日志各自回答不同问题；一个健康进程或没有告警都不能单独证明用户结果正确。
 
@@ -4325,7 +4753,7 @@ flowchart TD
     V --> P[记录原因、修复与检测缺口]
 ~~~
 
-图把已发布构建连接到事故诊断：观测要能够区分“新镜像引入变化”与数据库、队列、对象存储等依赖故障。trace context（追踪上下文）与跨异步边界传播方式由 OpenTelemetry 的上下文传播机制说明；用户 SLO（服务等级目标）的目标和预算由[测试验收与发布流程](#34.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)使用。
+图把已发布构建连接到事故诊断：观测要能够区分“新镜像引入变化”与数据库、队列、对象存储等依赖故障。trace context（追踪上下文）与跨异步边界传播方式由 OpenTelemetry 的上下文传播机制说明；用户 SLO（服务等级目标）的目标和预算由[测试验收与发布流程](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)使用。
 
 ### 从一个用户请求关联三种信号
 
@@ -4367,11 +4795,11 @@ SLO 告警可以要求至少 100 个符合条件的请求的滚动 10 分钟窗�
 > [!info]- 来源
 > - OpenTelemetry [Signals](https://opentelemetry.io/docs/concepts/signals/)、[Traces](https://opentelemetry.io/docs/concepts/signals/traces/)、[Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/)、[Logs](https://opentelemetry.io/docs/concepts/signals/logs/) 与[Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/)，checked 2026-11-06：信号的用途、trace/span 与上下文跨服务传播；cardinality 和隐私边界按本文的 report 例子应用。
 > - Google SRE Workbook, [Chapter 2: Implementing SLOs](https://sre.google/workbook/implementing-slos/)，checked 2026-11-06：为用户结果定义事件 SLI、时间窗、错误预算和迭代规则。本文的 30 天、400 ms、99.5% 数值是合成示例，不是该来源建议的统一目标。
-## 36. 怎样根据输入约束和访问模式选择算法？
+## 37. 怎样根据输入约束和访问模式选择算法？
 
 报表请求已从数据库得到 acct-17 的 report 42 事件页：1,024 条，按 (occurred_at, event_id) 升序排列。接口要定位游标、显示分类树、缓存最近查看的页面，并按事件描述处理 Unicode（统一码）文本。选算法前先写明输入保证、要执行的操作和结果约束；只有这样才能证明候选范围可以丢弃，并估计成本。
 
-本篇给出选型与复杂度模型。后续章节分别回答[数据结构怎样匹配访问方式](#37.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)、[队列和栈怎样表示待处理工作](#38.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)、[LRU 如何维护按键查找与新近顺序](#39.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[有序数据怎样缩小候选范围](#40.%20%E6%9C%89%E5%BA%8F%E6%95%B0%E6%8D%AE%E6%80%8E%E6%A0%B7%E8%AE%A9%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%E5%AE%89%E5%85%A8%E6%8E%92%E9%99%A4%E5%80%99%E9%80%89%EF%BC%9F)、[动态规划怎样定义状态和更新顺序](#44.%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E5%A6%82%E4%BD%95%E5%AE%9A%E4%B9%89%E7%8A%B6%E6%80%81%E5%B9%B6%E5%AE%89%E6%8E%92%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[分区如何改变排序成本](#45.%20%E5%88%86%E5%8C%BA%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E6%97%B6%E9%97%B4%E5%92%8C%E7%A9%BA%E9%97%B4%E4%BB%A3%E4%BB%B7%EF%BC%9F)和[文本算法应选哪种字符单位](#46.%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E7%A0%81%E5%85%83%E3%80%81%E7%A0%81%E7%82%B9%E8%BF%98%E6%98%AF%E5%AD%97%E7%B4%A0%E7%B0%87%E5%A4%84%E7%90%86%EF%BC%9F)。
+本篇给出选型与复杂度模型。后续章节分别回答[数据结构怎样匹配访问方式](#38.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)、[队列和栈怎样表示待处理工作](#39.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)、[LRU 如何维护按键查找与新近顺序](#40.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[有序数据怎样缩小候选范围](#41.%20%E6%9C%89%E5%BA%8F%E6%95%B0%E6%8D%AE%E6%80%8E%E6%A0%B7%E8%AE%A9%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E5%92%8C%E5%8F%8C%E6%8C%87%E9%92%88%E5%AE%89%E5%85%A8%E6%8E%92%E9%99%A4%E5%80%99%E9%80%89%EF%BC%9F)、[动态规划怎样定义状态和更新顺序](#45.%20%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E5%A6%82%E4%BD%95%E5%AE%9A%E4%B9%89%E7%8A%B6%E6%80%81%E5%B9%B6%E5%AE%89%E6%8E%92%E6%9B%B4%E6%96%B0%E9%A1%BA%E5%BA%8F%EF%BC%9F)、[分区如何改变排序成本](#46.%20%E5%88%86%E5%8C%BA%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E6%97%B6%E9%97%B4%E5%92%8C%E7%A9%BA%E9%97%B4%E4%BB%A3%E4%BB%B7%EF%BC%9F)和[文本算法应选哪种字符单位](#47.%20%E6%96%87%E6%9C%AC%E7%AE%97%E6%B3%95%E5%BA%94%E6%8C%89%E7%A0%81%E5%85%83%E3%80%81%E7%A0%81%E7%82%B9%E8%BF%98%E6%98%AF%E5%AD%97%E7%B4%A0%E7%B0%87%E5%A4%84%E7%90%86%EF%BC%9F)。
 
 ### 先写明不变量，再选方法
 
@@ -4402,7 +4830,7 @@ Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外
 | O(2ⁿ) | 朴素递归 Fibonacci 的上界、枚举子集 | 搜索树节点或候选数；按每个候选常数工作计 |
 | O(n!) | 枚举所有排列 | 搜索树节点工作；每个节点做常数工作时成立 |
 
-这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](#47.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+这些界只覆盖指定模型中的工作量。若枚举器还要复制并输出每个完整候选，输出成本要另算：从 n 个元素生成全部子集并复制为数组，元素总数为 n·2ⁿ⁻¹；输出所有 n 项排列则要写出 n·n! 个元素。连续数组扫描可能比指针跳转更快；哈希表扩容会让单次插入成本波动；数据库索引还涉及存储页读取。大 O 不替代测量，也不消除数据布局、内存局部性和运行时常数的影响，见[内存局部性如何改变实际成本](#48.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 > [!example] 1,024 条事件页上的查找
 > 假设事件已按复合游标键升序，比较键的工作量为常数。目标位于末尾时，扫描需比较 1,024 次；二分最多进行 11 次中点探测，因为 2¹⁰=1,024，2¹¹=2,048；每次探测调用一个常数时间比较器，再判断比较结果。探测次数不等同于底层关系判断次数：若用直接 `===` 和 `<` 的标量写法，末尾命中例共做 21 次关系判断。若单次查找前要排序，预处理成本可能超过扫描。
@@ -4413,7 +4841,7 @@ Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外
 
 > [!info]- 来源
 > - 本章渐近复杂度表作为通用算法分析摘要；1,024 项二分中点探测上界由每轮区间减半复算。
-## 37. 数据结构如何匹配访问方式，复杂度界何时成立？
+## 38. 数据结构如何匹配访问方式，复杂度界何时成立？
 
 报表 42 要按下标显示事件页、按 event_id 找记录、按时间顺序遍历；分类视图需要层级结构，运行时也可能保存工作树。选择数据结构时，应看目标如何被找到、链接如何更新、是否需要排序，以及树高或哈希分布等前提是否成立。实际速度还会受连续存储和指针跳转影响。
 
@@ -4428,7 +4856,7 @@ Big-O notation（大 O 记号）描述输入规模增大时，操作数或额外
 | 未平衡搜索树 | 最坏 O(n) | 最坏 O(n) | 递增插入可形成长链 |
 | Trie 前缀树 | 长度 m 的键约 O(m) | 沿字符路径增删 | 子边选择成本需受控；可能占较多内存 |
 
-链表只有在已知所需节点/链接时才是 O(1) 更新；先扫描定位会让整体操作成为 O(n)。树的 O(log n) 需要高度界。连续数组扫描通常比指针追逐更有局部性，硬件成本见[内存局部性如何影响访问](#47.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+链表只有在已知所需节点/链接时才是 O(1) 更新；先扫描定位会让整体操作成为 O(n)。树的 O(log n) 需要高度界。连续数组扫描通常比指针追逐更有局部性，硬件成本见[内存局部性如何影响访问](#48.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 ### 树的遍历顺序和搜索条件是什么？
 
@@ -4497,7 +4925,7 @@ function bfs(root, visit) {
 }
 ~~~
 
-对固定树且 visit 每次为 O(1) 时，访问 n 个节点的遍历工作为 O(n)，显式栈/队列最坏 O(n) 空间；若回调改树，应按实际访问的节点数和回调成本另算。每个节点在调用 visit 后立即快照自己的 childNodes；回调对该节点的修改会影响随后快照，遍历不是整棵树在开始时的一致快照。BFS 用递增 head 下标；反复 shift 可能搬移剩余元素而使总工作达 O(n²)。实现见[队列和栈如何表示待处理工作](#38.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+对固定树且 visit 每次为 O(1) 时，访问 n 个节点的遍历工作为 O(n)，显式栈/队列最坏 O(n) 空间；若回调改树，应按实际访问的节点数和回调成本另算。每个节点在调用 visit 后立即快照自己的 childNodes；回调对该节点的修改会影响随后快照，遍历不是整棵树在开始时的一致快照。BFS 用递增 head 下标；反复 shift 可能搬移剩余元素而使总工作达 O(n²)。实现见[队列和栈如何表示待处理工作](#39.%20%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88%E6%80%8E%E6%A0%B7%E8%A1%A8%E7%A4%BA%E5%BE%85%E5%A4%84%E7%90%86%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 扁平分类行可两趟转成树：第一趟用 Map 按唯一 ID 建节点，第二趟按 parentId 接到父节点。每个父节点的 children 按输入行出现顺序追加，因此保留各自子项的相对输入顺序。约定一个根 parentId=0、ID 唯一且不能使用保留的根标记 ID 0、所有父 ID 存在；然后从根遍历检查不可达环。在常见平均常数时间的 Map 查找模型下，预期 O(n) 时间、O(n) 空间；ECMAScript 只要求平均访问次线性，未承诺精确 O(1)。
 
@@ -4568,7 +4996,7 @@ React Fiber 节点用 child、sibling、return 等链接表达父子关系和同
 > - 哈希扰动与树化机制：[OpenJDK 17u HashMap 源码](https://github.com/openjdk/jdk17u/blob/master/src/java.base/share/classes/java/util/HashMap.java)、[OpenJDK 25u HashMap 源码](https://github.com/openjdk/jdk25u/blob/master/src/java.base/share/classes/java/util/HashMap.java)，2026-11-06 核对维护分支，作为实现样本。
 > - 有序容器契约：[Java SE 25 TreeMap API](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/TreeMap.html)、[C++ associative containers](https://eel.is/c++draft/associative.reqmts)。
 > - React 并发行为：[React 18](https://react.dev/blog/2022/03/29/react-v18)，2022-03-29；Fiber 内部字段：[React Fiber 类型](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js)，2026-11-06 核对。
-## 38. 队列和栈怎样表示待处理工作？
+## 39. 队列和栈怎样表示待处理工作？
 
 处理报表 42 的事件流时，通知消费者应先处理最早到达的事件；解析嵌套表达式时，应先返回最近进入的未完成分支。前者是 first-in, first-out (FIFO，先进先出) 队列，后者是 last-in, first-out (LIFO，后进先出) 栈。选好顺序后，还要让空状态和可存储值之间没有歧义。
 
@@ -4668,7 +5096,7 @@ push/pop 是末端操作；动态数组扩容时可能分配并复制，因此�
 
 > [!info]- 来源
 > - 数组末端和首端操作的规范行为：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)，Array.prototype.shift/push/pop。标准描述可观察效果，不规定某引擎的数组搬移算法。
-## 39. 最近最少使用缓存怎样按键查找并更新最近使用顺序？
+## 40. 最近最少使用缓存怎样按键查找并更新最近使用顺序？
 
 报表界面最近访问 acct-17 的 report/42 游标页和 report/41 页面。容量已满时，Least Recently Used (LRU) cache（最近最少使用缓存）要淘汰最久未访问条目，因此同时需要按键查找和按新近顺序淘汰。若缓存受保护的报表数据，缓存键须隔离账户/授权范围、过滤器和游标；缓存命中不能代替授权检查。
 
@@ -4844,7 +5272,7 @@ class LinkedLRUCache {
 > [!info]- 来源
 > - Map 键值、插入顺序与平均访问复杂度：[ECMAScript 2026 keyed collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)，Map Objects；规范承诺平均次线性访问，不承诺精确 O(1)。
 > - 容量 2 状态与链表指针更新按本页代码复算；无 Map 变体以 TypeScript 5.7.2 编译并运行。
-## 40. 有序数据怎样让二分查找和双指针安全排除候选？
+## 41. 有序数据怎样让二分查找和双指针安全排除候选？
 
 报表 42 的事件页按 (occurred_at, event_id) 升序排列。若目标游标与这组键使用同一比较规则，binary search（二分查找）可以丢弃一半候选；若数组无序或只按 event_id 比较，就不能从时间顺序推断安全的排除范围。two pointers（双指针）也依赖同样的证明：每次移动前要说明为何被排除的一整批组合不可能成为答案。
 
@@ -4941,7 +5369,7 @@ function moveZeros(values) {
 
 > [!info]- 来源
 > - 二分与双指针不变量按本页闭区间/升序数组逐步复算；事件页复合游标必须使用与来源排序相同的字典序比较。
-## 41. 怎样在边界前进时维护一个有效窗口或活动区间？
+## 42. 怎样在边界前进时维护一个有效窗口或活动区间？
 
 合成报表 42 按到达时间记录事件。一个问题要找连续 k 条事件中净变化最大的窗口，另一个问题要找出处理耗时累计达到阈值时最短的连续事件段；资源预约表则要找同一时刻最多有多少任务占用资源。前两项是 fixed-size sliding window（固定宽度滑动窗口）和 variable-size sliding window（变长滑动窗口），第三项要用扫描线。三者都维护随边界变化的状态，但输入次序、状态不变量和移动理由各不相同。
 
@@ -5101,7 +5529,7 @@ console.log(maxConcurrentHalfOpen([])); // 0
 > [!info]- 来源
 > - 固定/变长窗口的双指针推进、每个元素有限次进入和离开：[Antti Laaksonen, Competitive Programmer’s Handbook, 2018 draft, §8.1 “Two pointers method” 与 §8.3 “Sliding window minimum”](https://cses.fi/book.pdf)。本页的求和窗口根据各自输入前提推导；带负值的失效例子由本页代码状态复算。
 > - 端点排序后维护活动集合的扫描线思路：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §9.3 “Geometric Intersections”](https://algs4.cs.princeton.edu/93intersection/)，并参看作者实现 [IntervalIntersection.java](https://algs4.cs.princeton.edu/93intersection/IntervalIntersection.java.html)。本页使用半开预约区间，因此端点相等时结束项先退出、开始项再进入；示例峰值由代码复算。
-## 42. 怎样在不断加入任务时持续取出最高优先级？
+## 43. 怎样在不断加入任务时持续取出最高优先级？
 
 合成报表 42 有多个待处理任务，系统一边接收新任务，一边要取出当前最紧急的一项。若每次都重新排序整个集合，就会重复整理旧任务。priority queue（优先队列）只要求快速插入和取出当前最高优先级项；binary heap（二叉堆）用一条父子顺序约束支持这两项操作。
 
@@ -5272,7 +5700,7 @@ console.log(topK(scoredTasks, 0));                     // []
 > [!info]- 来源
 > - 完全二叉树数组表示、上浮/下沉、插入/删除极值、线性 bottom-up heapify：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §2.4 “Priority Queues”](https://algs4.cs.princeton.edu/24pq/)。本页以 0 起始数组实现同一堆序；操作结果由 Node.js 运行复算。
 > - 并列键稳定处理的作者实现样本：[Algorithms, 4th ed., StableMinPQ.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/StableMinPQ.java.html)。本页显式把到达序号作为次级比较键，稳定性因此属于本页 API 合约。
-## 43. 搜索状态图时，何时永久标记节点，何时必须回退？
+## 44. 搜索状态图时，何时永久标记节点，何时必须回退？
 
 合成站点 S 要把一件包裹送到 Z。路网是一张有向图：S 可到 A、B；A 与 B 都可到汇点 T；T 可回到 S，也可到 Z。回边让图有环，共享汇点让两条路线合流。我们先用它找一条最少跳数路线，再枚举简单路线、检查依赖环，最后给路段加入非负代价。
 
@@ -5456,7 +5884,7 @@ Dijkstra 算法用最小堆优先处理当前距离最小且尚未定型的顶�
 
 边权必须非负：定型当前最小距离顶点的证明依赖于之后经过边不会降低代价。若绕过下方代码的输入校验，另加 B→A、权重 −5，则 A 在距离 1 时已定型；处理 B:4 时，经过 B 到 A 的真实代价为 −1，定型规则会忽略它并错误保留 1。本文实现会在运行核心循环前对负权输入抛出 RangeError；该反例用来说明为什么它拒绝这种输入。负权图应改用能处理负边的算法（例如无负环前提下的 Bellman–Ford），不能因为某个负权样例恰好算对就使用 Dijkstra。
 
-下面的最小堆仅按 distance 排序；它只服务此完整示例，与[优先队列的上浮和下沉](#42.%20%E6%80%8E%E6%A0%B7%E5%9C%A8%E4%B8%8D%E6%96%AD%E5%8A%A0%E5%85%A5%E4%BB%BB%E5%8A%A1%E6%97%B6%E6%8C%81%E7%BB%AD%E5%8F%96%E5%87%BA%E6%9C%80%E9%AB%98%E4%BC%98%E5%85%88%E7%BA%A7%EF%BC%9F)共享数组堆机制。代码把权重和距离限制为安全整数，并拒绝负权或超出安全范围的路径和。
+下面的最小堆仅按 distance 排序；它只服务此完整示例，与[优先队列的上浮和下沉](#43.%20%E6%80%8E%E6%A0%B7%E5%9C%A8%E4%B8%8D%E6%96%AD%E5%8A%A0%E5%85%A5%E4%BB%BB%E5%8A%A1%E6%97%B6%E6%8C%81%E7%BB%AD%E5%8F%96%E5%87%BA%E6%9C%80%E9%AB%98%E4%BC%98%E5%85%88%E7%BA%A7%EF%BC%9F)共享数组堆机制。代码把权重和距离限制为安全整数，并拒绝负权或超出安全范围的路径和。
 
 > [!example]- 可运行：Dijkstra 最小堆实现
 > ~~~javascript
@@ -5569,7 +5997,7 @@ Dijkstra 算法用最小堆优先处理当前距离最小且尚未定型的顶�
 > - 邻接表遍历、BFS 按边数找最短路、首次发现时记录父边：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §4.1 “Undirected Graphs”](https://algs4.cs.princeton.edu/41graph/)，作者实现 [BreadthFirstPaths.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/BreadthFirstPaths.java.html)。BFS 原理同样适用于本页的有向邻接表。
 > - DAG 才有拓扑序，以及顶点/边线性量级的 DFS 版本：[Algorithms, 4th ed., §4.2 “Directed Graphs”](https://algs4.cs.princeton.edu/42digraph/)，作者的队列版本 [TopologicalX.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TopologicalX.java.html)。本页采用 Kahn 入度实现，示例输出由 Node.js 运行复算。
 > - Dijkstra 的非负权前提、松弛、堆优先处理和索引优先队列复杂度：[Algorithms, 4th ed., §4.4 “Shortest Paths”](https://algs4.cs.princeton.edu/44sp/)，作者实现 [DijkstraSP.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/DijkstraSP.java.html)。本页为便于展示过期项，使用惰性重复入堆，复杂度另按本实现计。
-## 44. 动态规划如何定义状态并安排更新顺序？
+## 45. 动态规划如何定义状态并安排更新顺序？
 
 报表汇总里某些查询可能复用之前算过的子结果，但本篇用三个更小、可完整复算的例子说明一般机制。dynamic programming（动态规划，DP）把问题拆为有限状态；每个状态只保留后续转移需要的信息。先写递推关系和初始状态，再按依赖顺序计算，复用一维数组时还要追踪每个格子属于哪一轮。
 
@@ -5659,7 +6087,7 @@ function knapsack(capacity, weights, values) {
 
 > [!info]- 来源
 > - 动态规划状态、递推与更新顺序按三段代码的输入/输出和中间数组手工复算；Number 安全整数边界按 ECMAScript Number.MAX_SAFE_INTEGER=2⁵³−1 核对：[ECMAScript 2026 numbers](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-number.max_safe_integer)。
-## 45. 分区如何改变快速排序的时间和空间代价？
+## 46. 分区如何改变快速排序的时间和空间代价？
 
 报表 42 的页面可能要按数值指标排序。quicksort（快速排序）先选 pivot（基准值）再分区，分区大小决定递归树的高度；连续偏斜时，即使每层都正确排序，也会反复处理接近原规模的子数组。选择分区方式时还要看算法是否修改输入、是否复制数据以及递归深度。
 
@@ -5717,7 +6145,7 @@ sort 会把 values 原地改为 [9,12,80]；toSorted 则让 copyInput 保持 [80
 > [!info]- 来源
 > - 内置排序稳定性、比较器和原地 sort 语义：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.sort)，ECMAScript 2026。
 > - 返回副本的 toSorted 语义：[ECMAScript 2026 indexed collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.tosorted)，ECMAScript 2026；Node.js v26.11.1 本地复算示例。
-## 46. 文本算法应按码元、码点还是字素簇处理？
+## 47. 文本算法应按码元、码点还是字素簇处理？
 
 报表 42 的事件描述可能含 emoji、组合重音或其他扩展文字。JavaScript 字符串索引、Unicode 码点和用户看到的字符不是同一种单位：先定义任务要计数、比较或切分什么，再实现算法。这里第一次说明三个单位：UTF-16 code unit（UTF-16 编码单元）、Unicode code point（Unicode 码点）和 extended grapheme cluster（扩展字素簇）。
 
@@ -5966,7 +6394,7 @@ function switchAsciiCase(value) {
 > - Trie 的前缀路径、完整键终端标记和前缀枚举：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §5.2 “Tries”](https://algs4.cs.princeton.edu/52trie/)，作者实现 [TrieST.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TrieST.java.html) 使用 256 路扩展 ASCII；本页使用 Map 子边与码点，避免把该 ASCII 实现误当成通用 Unicode 代码。
 > - 规范等价与 NFC 规范化形式：[Unicode Standard Annex #15, Unicode 18.0.0, Revision 58, §1.1 “Canonical and Compatibility Equivalence” 与 §1.2 “Normalization Forms”](https://www.unicode.org/reports/tr15/tr15-58.html)，2026-08-12。NFC 选择及其对前缀语义的影响按本节契约说明。
 > - 子边迭代顺序：[ECMAScript 2026, Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)，Map iterator 按插入顺序产生条目。
-## 47. 为什么连续扫描往往比链表遍历快？
+## 48. 为什么连续扫描往往比链表遍历快？
 
 假设一段代码要累计一组事件的时长。它可以把事件放在连续数组里，也可以让每个节点保存一个指向下一节点的指针。两种表示都要访问 n 项，工作量都是 O(n)；差别在于处理器何时能知道下一次读取的地址，以及这次读取会带来哪些相邻数据。本例解释访问机制，不代表实测速度。
 
@@ -6052,9 +6480,9 @@ ECMAScript 规定 JavaScript `Array` 的索引属性、长度和操作行为，�
 
 这些比较都是定位问题的线索，不是脱离负载的通用性能结论。
 
-LRU 缓存常用 Map 从键定位已经存在的链表节点，再把该节点移动到最近使用端；前提是目标节点已由 Map 找到，随后改链只需有限次链接更新。若没有索引而要遍历链表找键，查找仍是 O(n)，指针追逐也没有消失。可继续看[队列、LRU 等数据结构的实际实现](#39.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
+LRU 缓存常用 Map 从键定位已经存在的链表节点，再把该节点移动到最近使用端；前提是目标节点已由 Map 找到，随后改链只需有限次链接更新。若没有索引而要遍历链表找键，查找仍是 O(n)，指针追逐也没有消失。可继续看[队列、LRU 等数据结构的实际实现](#40.%20%E6%9C%80%E8%BF%91%E6%9C%80%E5%B0%91%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98%E6%80%8E%E6%A0%B7%E6%8C%89%E9%94%AE%E6%9F%A5%E6%89%BE%E5%B9%B6%E6%9B%B4%E6%96%B0%E6%9C%80%E8%BF%91%E4%BD%BF%E7%94%A8%E9%A1%BA%E5%BA%8F%EF%BC%9F)。
 
-**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#37.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明链表更新所需的前驱与树高条件；[Linux 内核为什么把链表节点嵌入对象？](#48.%20Linux%20%E5%86%85%E6%A0%B8%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8A%E9%93%BE%E8%A1%A8%E8%8A%82%E7%82%B9%E5%B5%8C%E5%85%A5%E5%AF%B9%E8%B1%A1%EF%BC%9F)说明内嵌节点减少了哪种分配，以及为什么它仍然保留指针依赖。
+**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#38.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明链表更新所需的前驱与树高条件；[Linux 内核为什么把链表节点嵌入对象？](#49.%20Linux%20%E5%86%85%E6%A0%B8%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8A%E9%93%BE%E8%A1%A8%E8%8A%82%E7%82%B9%E5%B5%8C%E5%85%A5%E5%AF%B9%E8%B1%A1%EF%BC%9F)说明内嵌节点减少了哪种分配，以及为什么它仍然保留指针依赖。
 
 > [!info]- 来源
 > - 内存墙的提出背景：[Wulf 与 McKee，Hitting the Memory Wall: Implications of the Obvious（1995）](https://doi.org/10.1145/216585.216588)。
@@ -6064,7 +6492,7 @@ LRU 缓存常用 Map 从键定位已经存在的链表节点，再把该节点�
 > - 连续容器保证：[C++ 草案 vector](https://eel.is/c++draft/vector)；C 数组定义：[WG14 C23 草案 N3047](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf)。
 > - JavaScript 索引集合语义：[ECMAScript 2026 Indexed Collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)；引擎数组种类示例：[V8 Elements kinds](https://v8.dev/blog/elements-kinds)。
 > - 页式 B-tree 的实现范围：[PostgreSQL B-tree Implementation](https://www.postgresql.org/docs/current/btree.html)；密集哈希元数据示例：[Abseil Swiss Tables Design](https://abseil.io/about/design/swisstables)。
-## 48. Linux 内核为什么把链表节点嵌入对象？
+## 49. Linux 内核为什么把链表节点嵌入对象？
 
 假设内核要把一个 work item（工作项）放进待处理队列，同时还要把同一对象放进审计队列。Linux 内核的 `struct list_head` 是一对 `next`、`prev` 链接；把它作为成员嵌进工作项，就能让通用链表代码只修改链接，不必为每种关系再分配独立包装节点。
 
@@ -6202,18 +6630,18 @@ static void clear_ready_links(void)
 
 当对象由当前模块拥有、地址在入链期间稳定、一个对象需要参加多种频繁更新的关系，且减少独立包装节点的分配和查找有实际价值时，侵入式链表很合适。每种同时存在的关系仍需一个钩子，每个 `list_head` 仍有两个指针；设计并没有消除链接存储成本。
 
-它也不会把对象放到物理连续的内存中。相邻链表节点可能远隔内存，遍历时仍要先取当前节点的 next 指针，再按它到达下一处数据。应把它看作简化关系表示和已知节点更新的办法，不要把它当作解决缓存局部性的办法。主要操作是顺序扫描时，连续数组往往更合适，具体比较见[为什么连续扫描往往比链表遍历快？](#47.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
+它也不会把对象放到物理连续的内存中。相邻链表节点可能远隔内存，遍历时仍要先取当前节点的 next 指针，再按它到达下一处数据。应把它看作简化关系表示和已知节点更新的办法，不要把它当作解决缓存局部性的办法。主要操作是顺序扫描时，连续数组往往更合适，具体比较见[为什么连续扫描往往比链表遍历快？](#48.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)。
 
 这也不是说所有非侵入式列表都会“给业务对象再包一层指针并分配两次”。C++ 标准规定 `std::list` 的容器语义与操作复杂度，不规定具体节点布局；以 GCC libstdc++ 为例，内部节点把 T 放在节点自带的对齐存储中。那是一个实现样本，不是所有 `std::list` 实现的布局保证。
 
-**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#37.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明已知节点与查找前驱的复杂度差别；[内存层次如何改变实际访问成本？](#47.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)比较连续读取与逐节点指针依赖。
+**相关机制：** [数据结构怎样匹配访问方式，复杂度界何时成立？](#38.%20%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%A6%82%E4%BD%95%E5%8C%B9%E9%85%8D%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%A4%8D%E6%9D%82%E5%BA%A6%E7%95%8C%E4%BD%95%E6%97%B6%E6%88%90%E7%AB%8B%EF%BC%9F)说明已知节点与查找前驱的复杂度差别；[内存层次如何改变实际访问成本？](#48.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%9E%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BE%80%E5%BE%80%E6%AF%94%E9%93%BE%E8%A1%A8%E9%81%8D%E5%8E%86%E5%BF%AB%EF%BC%9F)比较连续读取与逐节点指针依赖。
 
 > [!info]- 来源
 > - Linux 链表结构、初始化、插入、遍历、删除与删除时遍历：[Linux 内核 Linked Lists in Linux](https://docs.kernel.org/core-api/list.html)，2026-11-06 核对。
 > - list_add_tail、list_del_init 与 list_for_each_entry_safe 的当前实现和注释：[Linux mainline include/linux/list.h](https://github.com/torvalds/linux/blob/master/include/linux/list.h)，2026-11-06 核对。
 > - RCU 链表的读写侧协议与延后释放：[Linux 内核 Using RCU to Protect Read-Mostly Linked Lists](https://docs.kernel.org/RCU/listRCU.html)，2026-11-06 核对。
 > - std::list 标准不规定节点内存布局：[C++ 草案 list](https://eel.is/c++draft/list)；对照实现样本：[GCC libstdc++ stl_list.h](https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_list.h)。
-## 49. 如何让设计原则减少真实的修改成本？
+## 50. 如何让设计原则减少真实的修改成本？
 
 以下用一个合成的通用页面编辑器案例说明原则：用户可以添加标题和按钮、拖动节点、预览并发布页面。需求可能增加新的组件类型，也可能改变保存方式、预览表现或权限规则。设计的关键不是提前把所有细节都变成接口，而是识别哪些变化会一起发生、哪些变化应彼此独立，然后只为高频或高代价的变化建立边界。
 
@@ -6288,12 +6716,12 @@ KISS（Keep It Simple，保持简单）要求方案与当前问题的复杂度�
 
 新增图片组件时，依次问：它是否有不同配置、校验或渲染语义？规则未来是否会独立变化？所有调用者是否都需要了解图片逻辑？注册表是否真的减少改动范围？若答案支持稳定变化点，注册表可能有用；若只是固定页面的一次分支，直接写条件更好。
 
-[前端架构怎样划分呈现、交互和数据所有权？](#50.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)讨论状态归属；[页面编辑器何时需要设计模式？](#51.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)展示工厂、策略和通知怎样落实边界。
+[前端架构怎样划分呈现、交互和数据所有权？](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)讨论状态归属；[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)展示工厂、策略和通知怎样落实边界。
 
 > [!info]- 来源
 > - 行为子类型的契约基础：[Barbara Liskov 与 Jeannette Wing, A Behavioral Notion of Subtyping](https://www.cs.cmu.edu/~wing/publications/LiskovWing94.pdf)。
 > - OCP、SRP 等面向对象原则讨论：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
-## 50. 前端架构怎样划分呈现、交互和数据所有权？
+## 51. 前端架构怎样划分呈现、交互和数据所有权？
 
 以下沿用合成的页面编辑器案例：画布显示文档树，检查器编辑当前节点属性，工具栏新增组件，预览页呈现访客看到的页面。如果各处各存一份节点数据，拖动或重命名就可能让它们失步。架构应先说明每份状态由谁拥有、哪些模块能发出修改，再决定组件怎样拆分或代码如何部署。
 
@@ -6344,13 +6772,38 @@ unidirectional data flow（单向数据流）让状态所有者把当前数据�
 
 微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。若主要问题是共享状态或数据流不清，先解决状态所有权通常更直接。
 
-**延伸阅读：**[设计原则怎样帮助定位真实变化边界？](#49.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#51.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#52.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
+### 怎样迁移微前端而不打断深链、身份与回退？
+
+沿用一个合成的页面编辑器：文档 `assetId=42` 当前处于 `revision=12`，选中的节点是 `heading-1`。旧应用通过 `/editor/assets/42?panel=inspector&node=heading-1#canvas` 打开它，新入口使用 `/assets/42/edit?panel=inspector&node=heading-1#canvas`。路径和文档 ID 是本教学变体；页面文档与编辑会话状态仍按[编辑器数据模型](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)的稳定节点 ID 和修订区分。`node=heading-1` 只是可恢复的界面选择，不会进入页面文档或修改 revision。新旧地址先并存，让旧书签、邮件链接和浏览器历史都有确定去向。
+
+迁移时由同一个 shell（应用外壳）持有顶级路由、会话启动、公共导航与错误边界；路由注册表把旧路径交给 `EditorV1`，新路径先交给 `EditorV1`，再按用户 cohort（灰度分组）将一小部分流量映射至 `EditorV2`。两版可独立构建，但路由、参数和通用数据格式是容器与子应用之间的合同。路由决策须在挂载前作出：
+
+| 地址或状态 | shell 的责任 | 子应用收到的输入 |
+|---|---|---|
+| 旧深链 `/editor/assets/42?panel=inspector&node=heading-1#canvas` | 迁移窗口内继续交给 V1；用户从页面主动打开新入口时才新增新路径 | `assetId=42`、`panel=inspector`、`node=heading-1`、`#canvas` |
+| 新地址 `/assets/42/edit?panel=inspector&node=heading-1#canvas`，未进入 cohort | 路由仍由 `EditorV1` 处理，不让用户落入空白占位页 | 同一 `assetId` 与视图状态 |
+| 同一新地址，进入 cohort | 动态加载 `EditorV2`，并显示加载或失败状态 | 同一 `assetId` 与视图状态，不另造一份身份 |
+| 浏览器 Back / Forward | shell 独自响应 `popstate` 并重新匹配完整地址 | `panel` 和有效 `node` 从恢复的 URL 查询恢复；片段仍定位到 `#canvas` |
+
+每个子应用只处理传给它的资源标识和视图状态，通过 shell 提供的 `navigate()` 或明确的同源链接请求跨边界导航。shell 是唯一的 history（历史记录）所有者，因此 V1/V2 不会各自安装互不知情的路由器、重复写 `pushState` 或抢先处理 Back。迁移窗口保留旧路由供旧书签与返回历史使用；用户从旧界面主动打开新入口时，shell 用 `pushState` 记录新路径，这样 Back 可回到原页面。若迁移窗口结束后需把旧路由作为别名改写到新路径，才用 `replaceState` 保留原有 query 与 fragment，避免用户按 Back 时在两个等价地址间循环。浏览器处理新地址的硬刷新请求时，静态宿主还须将已知前端路径回退到 shell HTML，同时仍把 `/api/` 请求交给 API 服务。
+
+身份也由宿主边界明确归属。本例 shell 通过 `HttpOnly`、`Secure` 的同源会话 cookie 建立身份，给子应用 `assetId`、非敏感显示信息和受限的数据访问接口，不把访问令牌或会话凭据放入路由参数、DOM、共享状态广播或子应用的 prompt。V1 与 V2 都通过同源 API 读取 `/api/assets/42`；浏览器随请求带会话 cookie，服务端在每次读取和写入时验证当前主体是否能访问该资源。客户端允许显示哪个路由只决定可见页面，不能替代服务端资源鉴权。`node` 只在页面文档加载后与该 revision 的稳定节点 ID 对照；缺失或不存在的节点参数会清除选择并显示文档，而不是请求任意资源。若子应用部署到独立 origin（源），cookie、令牌和跨源身份方案要另外设计；不能假设同源会话自动跨域。
+
+同一份页面文档以明确版本的 schema 交给 V1 和 V2。本轮只迁移入口，不修改文档字段或服务端数据协议，因此两版都能读取和写回 `revision=12` 的既有文档。若 V2 将来要写入新字段，只有在 V1 会原样保留未知字段、或迁移窗口的路由规则能保证旧版不会重新打开含新字段的数据时才可开放；仅仅让 V1 读入时忽略字段，不保证下一次保存时不会把它删掉。删除或重解释字段也要等 V1 不再负责读写。若当前 revision 仍是 12，V2 的未保存草稿不能只因它的动态 chunk 加载失败就被静默丢弃：在编辑开始前加载失败，shell 可以映射到 V1；编辑开始后若要切换实现，应先将草稿转换成共享会话格式或让用户留在当前编辑器处理，否则停止回退并保留草稿。服务端拒绝的未授权访问不应触发降级到另一个前端，避免把代码加载回退误当成授权绕过。
+
+发布按路由逐步改变 owner：先让 shell 可加载两版并验证同一输入合同；再在限定 cohort 中把 `/assets/:assetId/edit` 分给 V2；确认直接深链与刷新、嵌套 query/fragment、V1↔V2 导航、Back/Forward、未授权资源拒绝、V2 chunk 加载失败和 V1 兼容读取都正确后才扩大分流。每个检查都对应一次可见状态变化，而不是只确认首页能挂载。若 V2 的加载率或错误率越过约定门槛，路由注册表将新地址恢复映射到 V1；保持该路径可用让已有书签和历史项继续打开旧实现。仍需保留两版 chunk 和向后兼容的数据合同，才可以在出现问题后真正回退，而不只是把 flag 改回去。
+
+路由契约是微前端沟通的一种公开边界；改变 route schema 或版本映射时要与所有链接来源一起验收。实施过程借用[静态资源版本并存与入口回滚](../../frontend/tooling/build-tools.md)中的旧 chunk 保留规则；新旧服务端资源合同仍要遵循[HTTP API 的授权与条件更新契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+
+**延伸阅读：**[设计原则怎样帮助定位真实变化边界？](#50.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
 
 > [!info]- 来源
 > - 组件间共享状态的所有权：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
 > - 堆叠上下文内的 CSS 绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
 > - 微前端的团队发布边界和集成权衡：[Martin Fowler, Micro Frontends](https://martinfowler.com/articles/micro-frontends.html)。
-## 51. 页面编辑器何时需要设计模式？
+> - 路由作为容器与子应用之间的合同：[Martin Fowler, Micro Frontends, “Cross-application communication via routing”](https://martinfowler.com/articles/micro-frontends.html#Crossapplicationcommunicationviarouting)，核对日期 2026-11-09。
+> - 同源历史写入、恢复与 `popstate`：[WHATWG HTML Standard, History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，持续更新规范，核对日期 2026-11-09。
+## 52. 页面编辑器何时需要设计模式？
 
 沿用合成的页面编辑器案例，编辑者要创建标题、按钮等节点，为不同类型校验配置，通知画布和检查器刷新，并共享组件定义。**design pattern（设计模式）**为这些重复结构取名，但模式本身不会替你决定状态所有者、权限边界或对象生命周期。先说清问题，再看模式是否能让变化集中而仍容易跟踪。
 
@@ -6453,13 +6906,13 @@ unsubscribe();
 
 工厂和策略可支持开闭原则，但若它们没有缩小修改范围，就不需要硬套。观察者让变化通知多个视图；依赖倒置要求高层编辑流程依赖通知契约，而非绑死具体全局总线。每个订阅者的生命周期也仍需明确。
 
-新增图片节点时，工厂建立默认配置、校验策略检查属性、状态所有者接受“插入图片”命令，生成新修订后再通知画布。模式说明局部对象怎样协作；文档结构、撤销历史、发布版本与冲突处理见[页面文档和发布快照的数据模型](#52.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。组件之间的数据所有权见[前端架构边界](#50.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。
+新增图片节点时，工厂建立默认配置、校验策略检查属性、状态所有者接受“插入图片”命令，生成新修订后再通知画布。模式说明局部对象怎样协作；文档结构、撤销历史、发布版本与冲突处理见[页面文档和发布快照的数据模型](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。组件之间的数据所有权见[前端架构边界](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。
 
 > [!info]- 来源
 > - 工厂、策略、观察者等模式的适用情境和权衡：[Gamma、Helm、Johnson、Vlissides, Design Patterns: Elements of Reusable Object-Oriented Software](https://www.oreilly.com/library/view/design-patterns-elements/0201633612/)。
 > - 模式与设计原则应服务于变化边界：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
 > - Set 的实时迭代语义：[ECMAScript 2026, Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-set-iterator-objects)。
-## 52. 怎样建模页面文档、编辑会话和发布快照？
+## 53. 怎样建模页面文档、编辑会话和发布快照？
 
 以下用一个合成的通用页面编辑器案例：编辑者正在修改 revision 12 的首页，页面含标题和报名按钮；编辑者需要改文案、拖动排序、撤销修改并发布审核后的版本。若把页面内容、当前选中项、拖动中的临时位置和公开输出塞进同一对象，简单选择也可能触发保存和历史记录，发布时也难以确定实际使用哪个版本。
 
@@ -6566,7 +7019,7 @@ const revision13 = updateNodeText(documentState, 'heading-1', '欢迎');
 
 按离线需求、即时合并、服务端排序和审计要求选择机制。即便采用 CRDT，树结构约束、组件 schema 和发布校验仍然必要。协作是数据所有权与更新协议的一部分，不能因使用 WebSocket 就认为冲突已解决。
 
-**相关机制：**[前端架构怎样划分状态所有权？](#50.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)说明谁持有文档与会话状态；[页面编辑器何时需要设计模式？](#51.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)说明创建、校验和通知的局部实现。
+**相关机制：**[前端架构怎样划分状态所有权？](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)说明谁持有文档与会话状态；[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)说明创建、校验和通知的局部实现。
 
 > [!info]- 来源
 > - JSON Schema 2020-12 文档与校验规范：[JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12)。
@@ -6574,7 +7027,7 @@ const revision13 = updateNodeText(documentState, 'heading-1', '欢迎');
 > - 组件共享状态的单一所有权示例：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
 > - CRDT 的副本收敛条件：[Shapiro 等，Conflict-free Replicated Data Types（2011）](https://perso.lip6.fr/Marc.Shapiro/papers/2011/CRDTs_SSS-2011.pdf)。
 > - OT 中并发操作转换与一致性属性：[Sun 等，Achieving Convergence, Causality Preservation, and Intention Preservation in Real-Time Cooperative Editing Systems（1998）](https://www.cs.cityu.edu.hk/~jia/research/reduce98.pdf)。
-## 53. Scrum 怎样让团队检查并调整工作？
+## 54. Scrum 怎样让团队检查并调整工作？
 
 假设团队正在开发页面编辑器，目标是让用户创建内容并安全发布。产品方向可能需要数月才能实现，单个 Sprint（冲刺周期）只能完成其中一部分；团队需要不断判断工作是否仍有价值、遇到阻碍时是否要调整计划。
 
@@ -6639,7 +7092,7 @@ Sprint Review（Sprint 评审）是团队与利益相关者检查结果、讨论
 > [!info]- 来源
 > - Scrum Guides 当前官方版本为 2020 年 11 月版；本文按其角色、事件、工件和承诺定义：[The Scrum Guide](https://scrumguides.org/scrum-guide.html)，[官方版本下载页](https://scrumguides.org/download.html)。
 > - 敏捷价值观及左右两侧的关系：[Manifesto for Agile Software Development](https://agilemanifesto.org/)。
-## 54. 怎样准备有事实支撑的行为面试回答？
+## 55. 怎样准备有事实支撑的行为面试回答？
 
 准备面试时，先读岗位职责和组织公开信息，再从自己的真实经历里挑出能说明相关能力的材料。一个有说服力的回答可以按“背景—个人行动—结果或证据”展开。描述团队成果时，区分自己的贡献和团队工作；没有可核实的数字，就说清观察到的变化，不要编造指标、夸大权限或借用别人的故事。
 
@@ -6701,4 +7154,4 @@ Sprint Review（Sprint 评审）是团队与利益相关者检查结果、讨论
 
 结束时感谢面试官，重申一个具体的兴趣理由，并在后续流程尚未说明时询问下一步。若问题已在谈话中回答，可用剩余时间追问相关细节。
 
-**相关背景：**[Scrum 怎样让团队检查并调整工作？](#53.%20Scrum%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明 Product Goal、Sprint Goal 和 Sprint Review 等团队协作用语。
+**相关背景：**[Scrum 怎样让团队检查并调整工作？](#54.%20Scrum%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E5%9B%A2%E9%98%9F%E6%A3%80%E6%9F%A5%E5%B9%B6%E8%B0%83%E6%95%B4%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明 Product Goal、Sprint Goal 和 Sprint Review 等团队协作用语。

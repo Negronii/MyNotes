@@ -31,6 +31,7 @@
 - [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
 - [怎样设计一个可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 - [报表任务的发布确认、消费者确认与业务完成各证明什么？](reliability/queue-delivery-and-acknowledgement.md)
+- [Webhook（回调通知）接收方如何验证并可靠受理？](reliability/webhook-delivery-and-verification.md)
 - [怎样用 Kafka 分区保序、推进偏移并安全接手？](reliability/kafka-partitions-and-offsets.md)
 - [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 

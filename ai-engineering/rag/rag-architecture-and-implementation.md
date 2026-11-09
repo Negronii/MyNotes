@@ -39,7 +39,7 @@ flowchart TD
 
 调用者权限应由可信应用逻辑决定，授权和有效版本条件要带入每条检索查询。`tenant_id`、区域、文档状态或版本等字段能表达过滤，但只有元数据正确、条件不被绕过并按权威状态复核时才有意义。应用只把过滤、版本及必要授权复核都通过的片段交给融合、外部重排和模型；即使某段比当前手册更相关，只要超出开发者当前的访问范围，也不能进入候选。不能为凑足 `top-k`（前 k 个候选）放宽限制。
 
-授权边界与近似索引的内部扫描顺序是两回事。以 pgvector 的 Hierarchical Navigable Small World（HNSW，分层可导航小世界）为例，近似索引可能先找近邻再在同一 SQL 查询中应用 `WHERE`；匹配行比例低时，返回数和召回率会下降。SQL 条件限制返回哪些行，但共享近似索引的扫描还可能通过结果数量、分数或时延暴露其他租户文档的存在。需要更严格隔离时，应让搜索在获授权范围内进行，或按租户、信任域分离索引；不能把结果过滤等同于完整隔离。扫描数量、迭代扫描或按范围分区可能改善授权集合上的召回与时延；也可比较在小授权子集上精确搜索。
+授权边界与近似索引的内部扫描顺序是两回事。以 pgvector 的 [Hierarchical Navigable Small World（HNSW，分层可导航小世界）图搜索](hnsw-vector-index-search.md)为例，近似索引可能先找近邻再在同一 SQL 查询中应用 `WHERE`；匹配行比例低时，返回数和召回率会下降。SQL 条件限制返回哪些行，但共享近似索引的扫描还可能通过结果数量、分数或时延暴露其他租户文档的存在。需要更严格隔离时，应让搜索在获授权范围内进行，或按租户、信任域分离索引；不能把结果过滤等同于完整隔离。扫描数量、迭代扫描或按范围分区可能改善授权集合上的召回与时延；也可比较在小授权子集上精确搜索。
 
 > [!warning] 检索相关性不会授予读取权限
 > 未授权或已经撤回的片段，即使语义相关，也不能放进提示词。文档中的文字同样只是待解释的数据；恶意内容里写着“忽略上面的指令”不会因此成为系统指令，也不能批准工具动作。
@@ -118,6 +118,89 @@ RRF 将当前重试规则排到最前，同时保留下一名的 HTTP 约定。�
 
 一项 2026 年金融问答预印本在含文本和表格的基准上报告：混合检索加神经重排表现强，BM25 胜过所测稠密基线，HyDE 与多查询对精确数值题帮助有限。主比较按整篇文档检索；这些观察限于该基准、模型和测量方式，提示表格与精确数字任务应单独评估检索路径。
 
+## 相同文本重复入库时怎样复用 embedding？
+
+同一手册段落可能因重建索引、异步重试或被不同文档引用而重复送去编码。Embedding cache（嵌入缓存）保存的是“特定输入表示契约下算出的向量”，减少重复模型请求；它不是检索结果缓存，不保存某个问题的 top-k 列表，也不意味着两份来源可以合并。
+
+以合成公开段落 CI-RETRY-v3#assertion-failure 为例。调用方先完成标题、模板和动态字段的拼装与预处理，再将实际交给编码器的完整文本作为 `canonical_text`。缓存键要散列这份实际输入；正文相同但标题或模板前缀不同，编码器看到的文本不同，就不能共用向量。只有完整输入字节与编码契约都一致，才可复用：
+
+~~~text
+K = SHA256(UTF8(JSON_ARRAY((
+  cache_format_version,
+  cache_scope,
+  provider,
+  endpoint,
+  model_revision,
+  input_role,
+  output_dimension,
+  text_canonicalization_version,
+  preprocessing_version,
+  normalization_version,
+  SHA256(UTF8(canonical_text))
+))))
+~~~
+
+键字段是应用的缓存契约，不是提供方要求的 API 参数。按固定顺序把字段序列化为 JSON 数组，再做 UTF-8 与摘要；JSON 会保留字段边界，也会转义字段值内的 NUL 字符。模型别名若会变更，要用明确模型版本或内部部署代次；同名模型更新、模型切换、维度改变、编码用途不同、规范化或清理逻辑改变，均应使键变化。对于 query/document 不对称的双编码器，角色必须区分；即使某端点今天对两种角色恰好返回相同形式，应用也不应把两种语义任务默认为同一个缓存空间。服务支持缩短输出维度时，维度也要进入契约并单独重建对应索引。
+
+下面的函数假定调用方已依指定版本完成所有会改变编码器输入的标题、模板、动态字段拼装、文本清理与分块，并把实际送入编码器的最终文本原样传为 `canonical_text`；它只负责构造缓存键，不实现这些转换。
+
+~~~python
+import hashlib
+import json
+
+
+def embedding_cache_key(
+    *,
+    scope,
+    provider,
+    endpoint,
+    model_revision,
+    role,
+    dimensions,
+    canonicalization,
+    preprocessing,
+    normalization,
+    canonical_text,
+):
+    canonical_bytes = canonical_text.encode("utf-8")
+    text_digest = hashlib.sha256(canonical_bytes).hexdigest()
+    fields = (
+        "embedding-cache-v1",
+        scope,
+        provider,
+        endpoint,
+        model_revision,
+        role,
+        str(dimensions),
+        canonicalization,
+        preprocessing,
+        normalization,
+        text_digest,
+    )
+    encoded = json.dumps(
+        fields,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+~~~
+
+缓存命中后，向量值可以复用，但每份文档的索引记录仍独立：
+
+| 数据 | 例子 | 是否由相同文本命中合并 |
+|---|---|---|
+| embedding 缓存项 | 缓存键、向量、编码契约版本、生成时间 | 可以复用向量值 |
+| 文档块记录 | source_id、chunk_id、来源版本、标题位置、内容状态 | 不合并 |
+| 授权与删除状态 | tenant、ACL/策略版本、可见范围、撤回状态 | 不从缓存继承 |
+
+例如两个合成文档都包含同样的公共 CI 规则。只有二者经过标题、模板和动态字段处理后送给编码器的完整文本也相同，且缓存范围、模型修订、文档角色、维度和预处理版本都一致，才可读同一个向量值；但写入索引时仍须各存各的 source_id、chunk_id、版本和授权元数据。第二份文档因复用同一编码结果，不等于它自动获得第一份文档的权限或来源身份。
+
+若规则来源改版，但经过全部字段拼装和预处理后送给编码器的 `canonical_text` 未变，可以复用向量，同时新增版本化索引记录；若标题、模板、动态字段或正文使实际输入改变，则摘要改变并重新编码。若模型、输出维度或预处理版本变了，缓存键自然不同，需要为新契约重新编码并在独立索引代次验证后切换。旧向量不能因为长度“看起来差不多”就混入新模型空间。若只改变 ACL 而文本和模型契约不变，向量计算本身可以不变，但必须立即更新或撤下索引记录上的 ACL；每次查询仍按可信调用者身份判断权限。缓存范围字段用于避免不同安全域误共享数据，不能作为授权证明。
+
+向量是可还原或推测原文特征的派生数据，不能假定它比正文无敏感性。对敏感语料，缓存键可用密钥化摘要以减少低熵原文的字典猜测风险；日志仅记录不透明键或截断指纹，并按原文删除、保留和访问规则处理派生向量。权限撤销、来源删除或数据保留期到期时，应用仍要处置对应向量索引记录和缓存数据；命中缓存不代表可跳过删除流程。
+
+实际收益按调用量核算：给每次 embedding 请求记录 cache_hit、向量契约版本和来源索引任务 ID；比较节省的 API 请求数与 Token、缓存查找/存储成本，以及索引构建耗时。缓存缺失时仍走[有界模型 API 调用](../systems/bounded-model-api-calls.md)的配额、重试与截止流程；写入索引时则按[HNSW 插入与近似搜索](hnsw-vector-index-search.md)管理向量空间、过滤和召回。
+
 ## 候选不全时怎样继续找
 
 只有在候选缺少依据或复合问题缺少其中一环时才增加查询步骤；每一步都沿用相同的授权和版本过滤，并记录它解决哪个缺口。
@@ -145,7 +228,7 @@ HyDE 原论文把生成段落当作零样本稠密检索的中间表示，并明
 
 将文档内容作为不可信数据提供给模型。系统提示可以要求它根据实际提供的证据回答、标出来源 ID、证据不足时停下，但这只能约束输出意图；模型可能误读或遗漏材料。应用应把每条主张映射到本轮真正交付模型的证据 ID、版本和段落，并确认它仍有效、获授权且确实支持该主张。只在授权候选里、却没有进入最终输入的片段不能被引用；`c1` 还必须能由应用运行记录绑定到构建 42 的原始日志。若两份仍有效且获授权的来源互相冲突，应按预先定义的权威性、适用范围和版本规则裁决；规则不能解决时，就展示冲突及对应段落并说明无法确定，不按检索分数任意选一份。引用标记存在，不等于来源真正支持了主张。
 
-本例的主张—证据映射可以直接写入答案：“构建 42 的 `reject_empty_name` 期望 HTTP `400`、实际为 `200`〔运行记录中的 `c1`，绑定 `build_id=42`〕。按当前 `CI-RETRY-v3#assertion-failure`，断言失败必须先调查，不能自动重跑。当前 `HTTP-CONTRACT-v1#empty-name` 也规定空名称请求应返回 `400`。先检查该请求的校验路径。”第一项只由 `c1` 的日志记录支持，第二项只由本轮实际打包的重试规则支持，第三项只由本轮打包的 HTTP 合约支持；答案没有断言未经日志确认的代码根因。
+本例的主张—证据映射可以直接写入答案：“构建 42 的 `reject_empty_name` 期望 HTTP `400`、实际为 `200`〔运行记录中的 `c1`，绑定 `build_id=42`〕。按当前 `CI-RETRY-v3#assertion-failure`，断言失败必须先调查，不能自动重跑。当前 `HTTP-CONTRACT-v1#empty-name` 也规定空名称请求应返回 `400`。基于这条日志和合约，下一步可检查该请求的校验路径。”前三项分别由本轮实际打包的 `c1`、重试规则和 HTTP 合约支持；最后一句是由已核实事实引出的排查建议，不是证据直接证明的根因。
 
 失败要按其发生阶段定位：
 
@@ -196,6 +279,7 @@ Lewis 等人的 RAG 将可更新的非参数知识库与参数化生成器结合
 > - **混合候选和 RRF。** Thakur et al., [“BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models,” arXiv v4 / NeurIPS 2021](https://arxiv.org/abs/2104.08663)，§§3–5；Cormack, Clarke & Büttcher, [“Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods,” SIGIR 2009](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)，pp. 758–759。BEIR 的平均结果受其 18 个公开数据集和评估设置限制。
 > - **索引权限过滤与近似扫描。** [pgvector 官方 README](https://github.com/pgvector/pgvector)，当前版 `Filtering` 与 `Iterative Index Scans`；只描述该实现。[OpenAI API Retrieval](https://developers.openai.com/api/docs/guides/retrieval)，检查于 2026-11-06，`Vector store file operations`、`Chunking`、`Attribute filtering`，用于托管索引异步处理、删除一致性和默认分块参数示例。
 > - **向量搜索表示与输入。** [OpenAI API Vector embeddings](https://developers.openai.com/api/docs/guides/embeddings)，检查于 2026-11-06，向量归一化与相似度说明；DPR v3 §§2–3 支持问题和段落分别编码的通用示例。
+> - **embedding API 的模型、维度、批量输入与 usage。** [OpenAI API Embeddings create reference](https://developers.openai.com/api/reference/resources/embeddings/methods/create)，检查于 2026-11-09；当前接口支持一个或多个输入，text-embedding-3 及更新模型支持可选 dimensions。缓存键中的 provider/model 修订、角色、维度及预处理版本是应用对表示兼容性的工程约定，不是 API 规定的缓存键格式。
 > - **检索策略在文本与表格混合金融问题上的范围。** [“From BM25 to Corrective RAG: Benchmarking Retrieval Strategies for Text-and-Table Documents,” arXiv v1](https://arxiv.org/html/2604.01733v1), 2026-04-02，摘要与 §§III–IV；T²-RAGBench 含 23,088 个问题与 7,318 份文档。主比较以平均约 920 token 的整篇文档为单位（§III-D），§IV-C 的消融比较融合方式与重排深度，分块消融仍列为未来工作；混合 RRF 加 Cohere Rerank 报告 Recall@5 0.816，BM25 在该基准强于所测 dense baseline，HyDE 与多查询对精确数值题表现较弱。该预印本数据和设置有限，本文不把结果外推为通用策略。
 > - **假设文档仅用于检索。** Gao et al., [“Precise Zero-Shot Dense Retrieval without Relevance Labels,” arXiv v1](https://arxiv.org/abs/2212.10496), 2022-12-20，§§2–3；提出 HyDE 中间文本检索方法，并指出假想文档可能含有错误细节。
 > - **检索与生成分开诊断。** Ru et al., [“RAGChecker: A Fine-grained Framework for Diagnosing Retrieval-Augmented Generation,” arXiv v2](https://arxiv.org/abs/2408.08067), 2024-08-17，§§3–4；Es et al., [“Ragas: Automated Evaluation of Retrieval Augmented Generation,” arXiv v2](https://arxiv.org/abs/2309.15217v2), 2025-04-28，§§3–4；Saad-Falcon et al., [“ARES: An Automated Evaluation Framework for Retrieval-Augmented Generation Systems,” arXiv v2](https://arxiv.org/abs/2311.09476v2), 2024-03-31，§§3–4。三者的维度、评审器与校准方式不同；指标是辅助诊断框架，不代表本应用的唯一验收标准。

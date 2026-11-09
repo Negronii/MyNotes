@@ -15,8 +15,9 @@ Accept: application/json, application/problem+json
 ~~~http
 HTTP/1.1 200 OK
 Content-Type: application/json
+ETag: "report-42-v7"
 
-{"id":42,"title":"Service health","status":"ready"}
+{"id":42,"title":"Monthly summary","delivery":{"channel":"email","recipients":["reader@example.test"]},"note":"Draft"}
 ~~~
 
 路径里的 `42` 是 API 的资源标识，不是访问授权。边界先解析和校验输入，再由服务确认当前身份、租户和对象权限；之后才读取资源。资源归属见[如何逐次授权租户内的报表资源？](../security/web-security-and-authentication.md)。
@@ -47,9 +48,77 @@ Content-Type: application/problem+json
 
 这是本 API 的映射政策，不是所有服务都必须采用的唯一表。`422 Unprocessable Content` 表示内容语法可理解但指令不能处理，因此本例把畸形 JSON 归为 400，把结构有效但字段不合规归为 422。认证/授权、结构校验和数据库并发不变量分别由不同边界负责。
 
+## 如何用条件 PATCH 防止覆盖别人更新？
+
+客户端先读取报表 42，服务为当前表示发出强 ETag（实体标签）`"report-42-v7"`，客户端保存它和基线表示：
+
+~~~http
+GET /api/reports/42 HTTP/1.1
+Host: reports.example
+Accept: application/json
+~~~
+
+~~~http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "report-42-v7"
+
+{"id":42,"title":"Monthly summary","delivery":{"channel":"email","recipients":["reader@example.test"]},"note":"Draft"}
+~~~
+
+之后用户把交付方式切为下载，并删除可选备注。此资源只接受 JSON Merge Patch（JSON 合并补丁），所以请求声明媒体类型 `application/merge-patch+json`，并带上刚读到的强 ETag：
+
+~~~http
+PATCH /api/reports/42 HTTP/1.1
+Host: reports.example
+Content-Type: application/merge-patch+json
+If-Match: "report-42-v7"
+
+{"delivery":{"channel":"download"},"note":null}
+~~~
+
+Merge Patch 的对象成员按名称递归合并：未出现的成员保持，`null` 表示删除成员，数组整体替换。应用补丁后的中间表示仍有旧 `recipients`，因为该成员在补丁里被省略；本合成 API 另规定下载模式不保存收件人字段，业务规范化随后移除它，并验证最终表示。若 `channel` 是 `email`，最终表示必须含至少一个合法收件人；不合法的最终文档整笔拒绝。Merge Patch 里的 `null` 不能同时表示“字段存在且值为空”；若资源必须保留显式 JSON null，应为该字段另定表示或选择别的补丁格式。
+
+~~~http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "report-42-v8"
+
+{"id":42,"title":"Monthly summary","delivery":{"channel":"download"}}
+~~~
+
+表单只序列化当前模式字段：切到 `download` 时不提交隐藏的 `recipients`。服务端通过该模式的领域规则移除不适用字段，因此它既遵守“补丁省略字段表示保持”的通用规则，也返回不含旧收件人的规范表示。若后来切回 `email`，一次新的补丁可把整个收件人数组替换为 `["editor@example.test","audit@example.test"]`；数组元素不是独立增删操作。
+
+版本判断必须和写入处在一个原子条件里。可以在事务中锁定并检查版本、合并和验证，然后执行版本条件更新；也可以把合并后的文档连同预期版本交给数据库条件更新：
+
+~~~sql
+UPDATE reports
+SET document = :validated_document,
+    version = 8
+WHERE report_id = 42
+  AND tenant_id = :authorized_tenant
+  AND version = 7
+RETURNING document, version;
+~~~
+
+只有影响一行的事务提交，服务才返回新表示和 ETag。若版本条件不成立，事务不能写入任何补丁内容。不能先在事务外读到 v7、随后无条件更新：两次并发请求都可能检查 v7 后依次覆盖对方。
+
+假设用户甲和乙都读到 v7。甲先提交后，当前表示成为 v8；乙仍用 v7 的编辑提交时，服务返回 412 Precondition Failed（前置条件失败），不自动覆盖、不自动重放：
+
+~~~http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/problem+json
+
+{"type":"https://api.example/problems/version-mismatch","title":"The report changed","status":412}
+~~~
+
+乙的客户端保留自己的草稿和 v7 编辑基线，重新读取 v8，再把基线、用户草稿与服务器当前表示进行比较；用户确认合并后才以新 ETag 再提交。若请求没有 `If-Match`，此合成端点选择 428 Precondition Required（要求前置条件）；这是一项端点政策。客户端在提交编辑时携带所保存的强 ETag；服务端能验证它是否以强比较匹配当前表示，但不能证明调用方真的曾读取过它。此端点不接受 `W/"…"` 弱标签或 `*`：本合成政策要求逐版本比较，不把“资源存在”当作编辑基线。授权仍先于更改；412 不能替代对象授权结果。
+
+这里选 JSON Merge Patch，不把 JSON Patch（JSON 操作补丁）当成同一语法：后者的 `application/json-patch+json` 正文是带 `add`、`remove`、`replace`、`move`、`copy` 或 `test` 的操作数组，数组元素和 `null` 按操作路径处理。服务应公开自己接受的媒体类型，例如通过 `Accept-Patch`，调用方也不能仅凭 HTTP 方法名猜补丁语义。
+
 ## 201 创建资源和 202 接受作业有什么区别？
 
-`POST /api/reports` 可创建一条报表资源记录，返回 `201 Created` 和 `Location: /api/reports/44`。如果新资源的 `status` 是 `queued`，201 表示资源记录已经建立，不表示报表成品已生成。若请求创建的是独立长作业而不是资源记录，API 可以返回 `202 Accepted` 与稳定的作业状态 URL；202 表示受理处理，不表示成功完成。客户端在连接断开后查状态资源，而不是从原响应推断完成。账户报表的持久 job、outbox 和队列确认见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。
+`POST /api/reports` 可创建一条报表资源记录，返回 `201 Created` 和 `Location: /api/reports/44`。如果新资源的 `status` 是 `queued`，201 表示资源记录已经建立，不表示报表成品已生成。若请求创建的是独立长作业，账户报表案例使用 `POST /v1/accounts/acct-17/reports`，客户端预先生成 `Idempotency-Key: report-demo-208`；成功受理时，`202 Accepted` 的 `Location` 和正文 `statusUrl` 都指向 `/v1/jobs/job-demo-731`。如果整个响应丢失，客户端用相同请求体和幂等键重发 POST，数据库返回同一个已持久化 job 与状态 URL；同键对应不同规范化请求则冲突，不能猜测 job ID。收到 URL 后再 `GET /v1/jobs/job-demo-731` 查询。202 表示已受理，不表示成功完成。具体事务和映射见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。
 
 ## 分页怎样给出明确结束条件？
 
@@ -62,7 +131,7 @@ Accept: application/json
 ~~~
 
 ~~~json
-{"items":[{"id":41,"title":"Monthly overview","status":"ready"},{"id":42,"title":"Service health","status":"ready"}],"next_cursor":"opaque-token-A"}
+{"items":[{"id":41,"title":"Monthly overview","status":"ready"},{"id":42,"title":"Monthly summary","status":"ready"}],"next_cursor":"opaque-token-A"}
 ~~~
 
 客户端原样传回不透明游标：
@@ -77,16 +146,16 @@ Accept: application/json
 {"items":[{"id":43,"title":"Usage summary","status":"queued"}],"next_cursor":null}
 ~~~
 
-第一页的 `[41, 42]` 续到 ID 42 之后，第二页的 `[43]` 以 `null` 明确结束；只有客户端看见该结束标记才停止。短页不总表示没有后续数据。游标不应暴露可篡改的数据库偏移量；生产集合可把游标绑定筛选条件、排序、授权范围和过期时间，并按 `(created_at, id)` 之类的稳定复合键续读。每页重新授权。并列时间戳时游标要同时保存两个排序键，数据变化时还要说明读者看到移动集合还是固定快照。
+这两页使用固定的三条演示数据：第一页 `[41, 42]` 续到 ID 42 之后，第二页 `[43]` 以 `null` 明确结束；只有客户端看见该结束标记才停止。短页不总表示没有后续数据。下面的内存复现把不透明 token 映射为偏移量，只适用于这组不变的演示数据：如果第一页后删除 ID 41，偏移量仍跳过两条，第二页会漏掉 ID 43。生产中的移动集合可把游标绑定筛选条件、授权范围、过期时间和最后一条记录的稳定复合键（如 `(created_at, id)`），下一页按键续读并每页重新授权；若要求固定快照，则必须让后续请求继续读取同一个快照。并列时间戳时，键集游标要同时保存两个排序键。
 
 > [!example] 读完三条报表的分页回放
-> 排序为 ID 升序、页大小为 2：第一批是 `[41, 42]`，游标代表“从 42 之后继续”；第二批是 `[43]`，返回 `next_cursor: null` 后停止。若服务器因资源上限只返回 1 项但仍有后续数据，只凭短页就停止会漏项。示例游标是占位显示；运行代码会生成不可预测的不透明 token。
+> 在这组固定数据中，ID 升序且页大小为 2：第一批是 `[41, 42]`，第二批是 `[43]`，返回 `next_cursor: null` 后停止。内存复现用偏移量映射 token；它不演示可变集合中的 keyset 或快照分页。若服务器因资源上限只返回 1 项但仍有后续数据，只凭短页就停止会漏项。运行代码会生成不透明 token。
 
 ## OpenAPI 怎样描述实际运行契约？
 
 OpenAPI 记录操作路径、参数、媒体类型、成功与错误响应及 schema，使人和工具可据此调用服务。框架可从请求/响应模型生成结构；自定义异常处理器也要在相应操作里声明错误响应。只有运行时错误和 OpenAPI 都匹配，客户端才不会按一份服务实际不返回的契约生成分支。检查时要按操作核对真实路径、状态码、媒体类型、Problem `type`、分页字段是否必填以及 schema 是否允许 `null`。
 
-下面的 FastAPI 复现定义裸应用前缀 `/api`，与本章请求路径一致。它用三条合成报表演示 200、404、字段验证、畸形 JSON、冲突、分页和 OpenAPI。为集中讲契约，它没有实现身份认证、租户授权或数据库并发唯一性；它不是可直接部署的安全报表服务。正常请求和失败的输入输出已在正文展示，无需运行这段代码才能理解契约。
+下面的 FastAPI 复现定义裸应用前缀 `/api`，演示 GET/POST、验证、分页和 OpenAPI；它不实现上一节的 PATCH、Merge Patch 或 `If-Match`。PATCH 合同使用 `/api/reports/42` 和 `Monthly summary` 的表单表示；可运行 fixture 是独立的最小数据集，GET 42 固定返回 `Service health`，只验证 GET/POST 映射，不证明 PATCH 表示或并发写入。复现也没有身份认证、租户授权或数据库并发唯一性，不是可直接部署的安全报表服务。正常请求和失败的输入输出已在正文展示，无需运行这段代码才能理解相应契约。
 
 > [!example]- 可运行的 FastAPI 契约复现
 > 运行环境已核验：FastAPI 0.128.0、Pydantic 2.11.7、Starlette 0.47.2、httpx 0.28.1；本环境的 `app.openapi()` 生成 OpenAPI 3.1.0。OpenAPI 文档版本以运行时字段为准。
@@ -335,10 +404,10 @@ REST 的 Hypermedia as the Engine of Application State（超媒体作为应用�
 
 ~~~json
 {
-  "id": "r-42",
+  "id": 42,
   "links": [
-    { "rel": "self", "href": "/api/reports/r-42" },
-    { "rel": "download", "href": "/api/reports/r-42/download" }
+    { "rel": "self", "href": "/api/reports/42" },
+    { "rel": "download", "href": "/api/reports/42/download" }
   ]
 }
 ~~~
@@ -347,7 +416,7 @@ React 客户端可以按关系查找详情地址并渲染链接。下面假设 `
 
 ~~~tsx
 type ApiLink = { rel: string; href: string };
-type Report = { id: string; links: ApiLink[] };
+type Report = { id: number; links: ApiLink[] };
 
 function ReportDetailsLink({ report }: { report: Report }) {
   const self = report.links.find(link => link.rel === "self");
@@ -365,9 +434,12 @@ function ReportDetailsLink({ report }: { report: Report }) {
 
 > [!info]- 来源
 > - 错误正文的类别标识、状态、标题、详情和扩展字段：[IETF RFC 9457, Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)，§3–§4，2023-07；核对于 2026-11-06。
-> - 400、401 challenge、403、404、409、422、429、201 与 202 的 HTTP 语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9、§15，2022-06；核对于 2026-11-06。
+> - 400、401 challenge、403、404、409、422、201 与 202 的 HTTP 语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9、§11.6.1、§15，2022-06；428 和 429 则分别见 RFC 6585 §3–§4；核对于 2026-11-09。
 > - 操作、参数、媒体类型、响应和 schema 的接口描述：[OpenAPI Specification v3.2.1](https://spec.openapis.org/oas/v3.2.1.html)，2026-09-10，§4–§5；核对于 2026-11-06。代码环境当前生成 3.1.0；运行时版本由 `app.openapi()['openapi']` 决定，规范文件描述契约但不保证实现遵循它。
 > - 页大小、请求间参数一致、不透明 page token 和结束信号：[Google AIP-158, Pagination](https://google.aip.dev/158)，2019-02-18，Guidance；核对于 2026-11-06。
 > - FastAPI 请求模型、响应模型和自定义错误处理：[FastAPI Request Body](https://fastapi.tiangolo.com/tutorial/body/)、[Response Model](https://fastapi.tiangolo.com/tutorial/response-model/)、[Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/)，官方文档核对于 2026-11-06；错误类型映射已在列明版本的本地运行环境核对。
 > - REST 超媒体约束及由表示提供状态转移：[Roy Fielding, Architectural Styles and the Design of Network-based Software Architectures, §5.1.5](https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm)，2000；核对日期：2026-11-06。
 > - 安全的 `GET` 方法与 HTTP 方法语义：[IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§9.2.1，2022-06；核对日期：2026-11-06。
+> - 条件更新与陈旧 ETag： [IETF RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.1) §13.1.1（`If-Match` 必须用强比较）和 §15.5.13（412），2022-06；核对于 2026-11-09。 [IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html#section-3) §3 定义 428，2012-04；它只用于此端点所选择的缺少前置条件响应。该 RFC §4 定义 429，并规定 429 响应不得被缓存。
+> - PATCH 的整组变更原子应用及 `Accept-Patch`： [IETF RFC 5789, PATCH Method for HTTP](https://www.rfc-editor.org/rfc/rfc5789.html#section-2) §2、§3.1，2010-03；核对于 2026-11-09。
+> - `application/merge-patch+json` 的成员省略、`null` 删除和整体数组值语义：[IETF RFC 7396, JSON Merge Patch](https://www.rfc-editor.org/rfc/rfc7396.html#section-2)，§2，2014-10；核对于 2026-11-09。JSON Patch 的操作媒体类型见 [IETF RFC 6902](https://www.rfc-editor.org/rfc/rfc6902.html)，§3–§4，2013-04。
