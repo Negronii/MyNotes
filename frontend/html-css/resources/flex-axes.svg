@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="332" viewBox="0 0 800 380" role="img" aria-labelledby="title desc">
+  <title id="title">弹性盒布局的主轴、交叉轴与项目</title>
+  <desc id="desc">图以 flex-direction row 为例。主轴沿行方向，两个弹性项目沿主轴排列；交叉轴与主轴垂直。column 会交换轴的方向。</desc>
+  <defs>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#b7443e"/></marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#34758b"/></marker>
+    <style>
+      .title{font:700 22px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .label{font:700 18px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .body{font:16px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#334155}
+      .axis-end{font:14px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#334155}
+      .main{stroke:#b7443e;stroke-width:3;fill:none;marker-end:url(#arrow-red)}
+      .cross{stroke:#34758b;stroke-width:3;fill:none;marker-end:url(#arrow-blue)}
+    </style>
+  </defs>
+  <rect width="760" height="360" rx="12" fill="#ffffff"/>
+  <text class="label" x="380" y="48" text-anchor="middle" fill="#b7443e">main axis (主轴)：沿行排列</text>
+  <path class="main" d="M140 70 H642"/>
+  <text class="axis-end" x="140" y="98" text-anchor="start">main-start</text>
+  <text class="axis-end" x="642" y="98" text-anchor="end">main-end</text>
+
+  <path class="cross" d="M78 116 V274"/>
+  <text class="axis-end" x="680" y="127" text-anchor="start">cross-start</text>
+  <text class="axis-end" x="680" y="280" text-anchor="start">cross-end</text>
+
+  <rect x="110" y="108" width="550" height="178" rx="16" fill="#f7f8fa" stroke="#687383" stroke-width="2"/>
+  <text class="body" x="136" y="135">Flex container (弹性容器)</text>
+  <rect x="145" y="159" width="172" height="92" rx="10" fill="#e8f1ff" stroke="#6d91c7" stroke-width="1.5"/>
+  <text class="label" x="231" y="188" text-anchor="middle">弹性项目 1</text>
+  <text class="body" x="231" y="213" text-anchor="middle">Flex item 1</text>
+  <text class="body" x="231" y="238" text-anchor="middle">直接子元素</text>
+  <rect x="354" y="159" width="254" height="92" rx="10" fill="#f4efff" stroke="#9575c6" stroke-width="1.5"/>
+  <text class="label" x="481" y="188" text-anchor="middle">弹性项目 2</text>
+  <text class="body" x="481" y="213" text-anchor="middle">Flex item 2</text>
+  <text class="body" x="481" y="238" text-anchor="middle">大小仍受内容与约束影响</text>
+
+  <text class="label" x="380" y="323" text-anchor="middle" fill="#34758b">cross axis (交叉轴) 垂直于主轴</text>
+  <text class="body" x="380" y="352" text-anchor="middle">改成 column 后，主轴沿列方向，交叉轴随之交换。</text>
+</svg>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="645" viewBox="0 0 760 700" role="img" aria-labelledby="title desc">
+  <title id="title">几何读取何时同步更新布局</title>
+  <desc id="desc">脚本写入 DOM 或样式后读取几何。若相关样式和布局仍有效，则复用已有值；若已经失效，浏览器先同步更新所需数据，再返回几何值。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <style>
+      .title{font:700 22px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .step{font:700 18px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .body{font:16px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#334155}
+      .tag{font:700 15px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#334155}
+      .arrow{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .plain{stroke:#475569;stroke-width:2.5;fill:none}
+    </style>
+  </defs>
+  <rect width="760" height="700" rx="12" fill="#ffffff"/>
+  <rect x="115" y="52" width="530" height="64" rx="12" fill="#e8f1ff" stroke="#6d91c7" stroke-width="1.5"/>
+  <text class="step" x="380" y="91" text-anchor="middle">脚本写入 DOM 或样式</text>
+  <path class="arrow" d="M380 116 V156"/>
+  <rect x="115" y="164" width="530" height="74" rx="12" fill="#edf4f7" stroke="#7b9aa6" stroke-width="1.5"/>
+  <text class="step" x="380" y="194" text-anchor="middle">读取 offsetWidth 或 getBoundingClientRect()</text>
+  <text class="body" x="380" y="220" text-anchor="middle">请求调用时可观察到的几何值</text>
+  <path class="arrow" d="M380 238 V274"/>
+
+  <polygon points="380,274 512,334 380,394 248,334" fill="#fff8e7" stroke="#bf9650" stroke-width="1.5"/>
+  <text class="step" x="380" y="328" text-anchor="middle">相关样式与布局</text>
+  <text class="step" x="380" y="352" text-anchor="middle">已经是最新？</text>
+
+  <path class="arrow" d="M248 334 L180 428"/>
+  <text class="tag" x="284" y="372" text-anchor="middle">是</text>
+  <path class="arrow" d="M512 334 L580 428"/>
+  <text class="tag" x="476" y="372" text-anchor="middle">否</text>
+
+  <rect x="45" y="438" width="270" height="84" rx="12" fill="#eef5e9" stroke="#8ca66b" stroke-width="1.5"/>
+  <text class="step" x="180" y="472" text-anchor="middle">复用已有几何值</text>
+  <text class="body" x="180" y="499" text-anchor="middle">无需新的布局计算</text>
+
+  <rect x="445" y="438" width="270" height="84" rx="12" fill="#fff0eb" stroke="#d28d72" stroke-width="1.5"/>
+  <text class="step" x="580" y="472" text-anchor="middle">先同步更新所需数据</text>
+  <text class="body" x="580" y="499" text-anchor="middle">若布局失效，就先重新布局</text>
+
+  <path class="plain" d="M180 522 V558 H380 M580 522 V558 H380"/>
+  <path class="arrow" d="M380 558 V598"/>
+  <rect x="125" y="606" width="510" height="68" rx="12" fill="#f3f4f6" stroke="#9098a3" stroke-width="1.5"/>
+  <text class="step" x="380" y="635" text-anchor="middle">返回当前几何值，脚本继续运行</text>
+  <text class="body" x="380" y="660" text-anchor="middle">后续画面仍按正常渲染更新处理</text>
+</svg>

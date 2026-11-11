@@ -1966,49 +1966,35 @@ React 会把子组件 render、构造函数、React 生命周期，以及 React 
 > - Suspense fallback 仅处理挂起中的内容：[Suspense](https://react.dev/reference/react/Suspense)，React 19.3 文档；核验日期 2026-11-06。
 ## 12. 为什么一次 DOM 改动会增加布局或绘制工作？
 
-案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，看到 May、April 两行报表；点击“最早优先”后，页面把 URL 中的 `sort` 改为 `oldest`，并把行顺序换成 April → May。`/reports.js` 的处理器同步改 DOM，但列表何时出现在屏幕上、浏览器为此需要多少工作，是接下来的问题。
-
-~~~mermaid
-flowchart TD
-    CLICK[点击“最早优先”] --> DOM[同步改动 DOM：行顺序与 aria-pressed]
-    DOM --> INVALID[相关样式或布局数据可能失效]
-    INVALID --> STYLE[需要时重新计算样式]
-    STYLE -->|几何或换行有变化| LAYOUT[需要时重新计算布局]
-    STYLE -->|几何不变但像素变化| PAINT[更新受影响的绘制结果]
-    LAYOUT --> PAINT
-    PAINT --> RASTER[需要时栅格化]
-    RASTER --> COMPOSITE[合成画面]
-    COMPOSITE --> FRAME[有需要时在后续渲染机会呈现]
-    DOM -->|若脚本此时读取几何| READ[脚本读取当前几何]
-    READ --> CHECK{相关数据已经是最新？}
-    CHECK -->|是| VALUE[返回几何值，脚本继续]
-    CHECK -->|否| FLUSH[返回前同步刷新样式或布局]
-    FLUSH --> VALUE
-    STYLE -->|属性与实现路径都适合时| MAYBE[某些实现可跳过布局或绘制]
-    MAYBE --> COMPOSITE
-~~~
-
-图里的阶段是帮助解释依赖的概念模型，不表示每次更新都必须走完全部步骤。浏览器可延后并合并工作，也可跳过没有失效的阶段；脚本中的几何读取若要求最新结果，则可能让原本可延后的刷新提前发生。DOM 改动会提供下一帧的呈现状态；后续网络请求或异步业务结果是否已完成，是另一条时间线，浏览器也不保证每个任务后都立刻呈现。渲染机会与这条时间边界见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，看到 May、April 两行报表；点击“最早优先”后，页面把地址中的 `sort` 参数改为 `oldest`，并把 Document Object Model (DOM, 文档对象模型) 中的行顺序换成 April → May。[DOM 更新与事件章节](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)解释了点击处理器怎样改动节点；本章从“新 DOM 已经写入”开始，解释浏览器怎样让后续画面与新状态一致，以及脚本何时可能为了读取当前几何而等浏览器先更新布局。
 
 ### 浏览器需要让哪些信息重新一致？
 
-DOM 描述节点及其父子顺序，CSS 规则为这些节点提供样式。样式计算得到当前适用的 computed style（计算样式）；布局根据样式、内容和可用空间计算盒子的尺寸与位置；绘制把可见内容表示为绘制操作。后续实现可把绘制操作栅格化为像素内容，再合成各层并提交画面。简单说，列表换序先改了结构，浏览器必须保证它下一次显示时，结构、样式和几何彼此一致。
+HyperText Markup Language (HTML, 超文本标记语言) 标准定义浏览器何时有机会更新窗口渲染，但没有规定每个浏览器都使用同一套内部阶段、线程或绘图技术。把报表变成画面的过程可先分成几层：Cascading Style Sheets (CSS, 层叠样式表) 规则针对当前 DOM 计算 computed style (计算样式)；layout (布局) 为盒子求出尺寸与位置；paint (绘制) 生成描述可见内容的绘制操作；需要生成新像素时再做 rasterization (栅格化)；compositing (合成) 把已有与更新后的绘制表面组合，再交给显示过程。
 
-| 对这张报表做什么 | 下一次呈现通常要考虑什么 | 为什么不能仅凭操作名称断言成本 |
-|---|---|---|
-| 把两行从 May → April 调成 April → May | 更新列表有关的样式与几何，必要时重绘 | 具体失效范围取决于布局依赖和引擎优化 |
-| 只把当前按钮文字颜色改为强调色 | 重算相关样式并更新可见像素 | 若尺寸、字体和换行不变，可能复用已有几何 |
-| 改宽度、字体尺寸，或插入会占空间的内容 | 可能重新布局受影响的区域并更新绘制 | 几何变化会影响后续内容的位置，影响范围不一定只在一个节点内 |
-| 改变适合合成处理的 `transform` 或 `opacity` | 有些情况下可以跳过布局或绘制 | 不保证只在合成阶段完成，也不保证提升图层或使用 GPU |
-| DOM / 样式改动后读取几何 | 若返回值依赖的样式或布局已失效，读取前可能同步刷新 | 若数据仍是最新的，同一读取 API 不需要触发布局 |
+![点击后的 DOM 状态怎样经过按需的样式、布局与绘制更新进入画面](../../frontend/html-css/resources/rendering-update.svg)
 
-`reflow`（重排）和 `repaint`（重绘）是常用说法，不是可以跨浏览器直接比较的性能分数。即使影响的是一个小节点，它的位置也可能牵动后续内容；反过来，大量节点若没有相关数据变化，也不必每次都重算。`transform` 和 `opacity` 常作为动画候选，是因为某些更新路径可以跳过布局或绘制；要确认目标页面是否走了这条路径，应检查实际录制，而不是只看 CSS 属性名。
+图是用来说明依赖关系的概念模型，不表示每次改动都要顺序重做每一层。浏览器可以延后并合并工作、复用仍有效的结果，也可以跳过没有失效的阶段。渲染机会与 JavaScript 任务的边界见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)：处理器返回后 DOM 已是新顺序，但浏览器不保证每个任务后都立即显示一帧；请求或异步业务结果是否完成，也不会由 DOM 写入自动保证。对通常按 DOM 顺序从上到下排布的报表，April 会从第二行移到第一行，May 移到第二行；相关几何与绘制输出更新后，下一次实际呈现的画面才会显示 April 在上。几何读取可以让脚本拿到计算后的值，但不会因此立即把一帧画到屏幕上。
+
+| 对这张报表做什么 | 浏览器可能要更新什么 | 仅凭操作名称不能推出什么 |
+| --- | --- | --- |
+| 把两行从 May → April 调成 April → May | 更新受影响的样式、几何或绘制结果 | 失效范围取决于选择器依赖、布局关系与引擎优化 |
+| 只把按钮文字颜色改成强调色 | 重算适用样式并更新相应绘制结果 | 若尺寸与换行不变，原有几何可能仍可复用 |
+| 改宽度、字体或会占空间的内容 | 重新计算受影响盒子的尺寸与后续位置，再更新绘制 | 重排范围不一定只限于被改的节点 |
+| 改变 `transform` 或 `opacity` | 某些实现路径可不重新布局，甚至复用绘制结果 | 不能仅凭属性名保证提升图层、只走合成或使用 GPU |
+| DOM / 样式写入后读取几何 | 若所需样式或布局已失效，读取前可能同步更新 | 同一几何读取接口并非每次调用都触发布局 |
+
+reflow (重排) 和 repaint (重绘) 是常见工程用语，不是跨浏览器可比较的性能分数。一个节点改变尺寸后，后续流式内容的位置可能一起改变；反过来，属性改了但布局几何未失效时，也可能不需要重做布局。`transform` 和 `opacity` 常被选作动画候选，是因为它们在某些渲染路径中可以绕过布局或复用绘制内容；目标页面是否真的走这条路，应看目标浏览器的性能录制。
 
 ### 为什么读几何会让脚本停下来？
 
-浏览器可以把样式或布局标为待更新，先继续运行 JavaScript，等需要显示或读取当前结果时再计算。`offsetWidth`、`getBoundingClientRect()` 等几何 API 要返回调用时的尺寸或坐标；如果前面的 DOM / 样式写入已经使相关数据失效，浏览器就可能先刷新再返回。这里的停顿不是这个 API 每次都会“主动制造布局”，而是它要求拿到尚未更新的当前值。DOM 写入本身同步生效；同步刷新发生时，脚本会在几何值返回前付出这一段工作。
+浏览器可以把样式或布局结果标为待更新，继续运行 JavaScript，并把工作留到下一次渲染更新。可测量几何的 application programming interface (API, 应用程序接口) 必须返回调用时可观察到的当前值：`offsetWidth` 在普通单盒案例中返回未应用变换的整数边框盒宽度；`getBoundingClientRect()` 返回相对视口的包围矩形，并把变换计入。如果前面的 DOM / CSS 写入使返回值依赖的数据失效，实现就可能在返回前同步重算样式或布局。若数据仍然是最新的，读取可以复用结果，不必新做一次布局。
 
-下面的示例从同一组已有元素开始：两个不受最小/最大宽度或变换约束的普通块级元素，边框盒宽度分别为 100px 和 160px；`box-sizing: border-box` 让 `style.width` 也指定边框盒宽度，因此两种代码都意图把宽度改为 110px 和 170px。示例使用数组而不是直接把 `querySelectorAll()` 返回的 `NodeList` 当作有 `.map()` 的数组：
+![几何读取遇到失效布局时，浏览器先同步更新再把当前值交回脚本](../../frontend/html-css/resources/geometry-read-flow.svg)
+
+同步刷新会让脚本等所需计算完成后才继续；其中同步执行布局的情况，Chrome 文档称为 forced reflow (强制重排)。被等待的工作不一定是 API 本身的固定成本：它取决于此前哪些数据失效、布局影响范围多大，以及实现是否能复用结果。图示的是“读取当前值”这一契约带来的实现压力，不意味着每次读取都会刷新。
+
+下面是一个独立的宽度例子，不是前面的报表行。它从同一组已有元素开始：两个没有最小 / 最大宽度约束、没有变换的普通块级元素，边框盒宽度分别为 100px 和 160px。`box-sizing: border-box` 使声明的宽度指定边框盒宽度，因此将当前值加 10 后，目标宽度分别为 110px 和 170px。
 
 ~~~html
 <div id="width-demo">
@@ -2025,40 +2011,51 @@ DOM 描述节点及其父子顺序，CSS 规则为这些节点提供样式。样
 }
 ~~~
 
+`querySelectorAll()` 返回的 `NodeList` 没有 `Array.prototype.map()`，所以先用 `Array.from()` 转成数组：
+
 ~~~javascript
-const items = Array.from(document.querySelectorAll("#width-demo .item"));
+const items = Array.from(
+  document.querySelectorAll("#width-demo .item")
+);
 ~~~
 
-以下两段代码是从上述相同初始宽度分别运行的两种写法，不是先后连续执行。第一种在每次写入宽度后，又读取下一项当前宽度。若某次写入使后续读取依赖的几何数据失效，读取可能触发同步刷新，形成反复的读—写：
+下面两段是从上述相同起始宽度分别运行的写法，不是先后执行。第一段每次写完宽度就读取同一元素的新宽度；若该写入使布局数据失效，后读会迫使浏览器先把当前尺寸算出来：
 
 ~~~javascript
+const widthsAfterEachWrite = [];
 for (const item of items) {
   item.style.width = (item.offsetWidth + 10) + "px";
+  widthsAfterEachWrite.push(item.offsetWidth);
 }
 ~~~
 
-若需求是按原始宽度统一增加 10 像素，可以先读取一组尺寸，再写回；按上述起始尺寸，写入结果同样是 110px 和 170px：
+如果每个新值只依赖它自己的原宽度，而且不必观察前一项写入后的中间几何，就不必在每次写入后立即读回。先读取所有原值，再统一写入；若仍需要验证最终几何，可在最后集中读取：
 
 ~~~javascript
-const widths = items.map(item => item.offsetWidth);
+const nextWidths = items.map(item => item.offsetWidth + 10);
 items.forEach((item, index) => {
-  item.style.width = (widths[index] + 10) + "px";
+  item.style.width = nextWidths[index] + "px";
 });
+const widthsAfterBatch = items.map(item => item.offsetWidth);
 ~~~
 
-第二种顺序消除了显眼的交替读写，允许浏览器把后续更新合并处理；它不保证整段代码只发生一次布局，也不保证所有数据和页面上都更快。先确认页面确有强制刷新，再用性能录制定位写入与读取的位置。不同几何 API 返回的盒子与坐标系不同，按问题选择，见[哪个 DOM 几何 API 能回答哪种测量问题？](#25.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。
+探针在记录前先读取两个 `offsetWidth`，确保初始几何已就绪。在同一版 headless Chrome (无头 Chrome) 的可重复探针中，两种写法都得到 110px、170px：逐项版本第一次读取原值 100px，写入 110px 后立即读取时，浏览器更新当前几何；随后第二项从原值 160px 写成 170px 并再次读取，又需要更新几何。批量版本先读到 `[100, 160]`，再写入两个新值；末尾第一次读取处理两项变更，第二次读取复用刚更新的结果。用 Chrome DevTools Protocol (CDP, Chrome 开发者工具协议) 记录这一段脚本时，逐项写后读观察到 2 次布局事件，批量读写并在末尾读回观察到 1 次。若开始时的布局本来已失效，批量代码开头的读取也可能先触发更新；这次计数只说明这个小例子的读写次序，不证明任何批量操作在所有页面都更快。应先在性能录制里确认同步布局，再定位让数据失效的写入和紧跟其后的读取。
+
+几何读取接口返回的盒子与坐标系不同：例如，变换会影响 `getBoundingClientRect()` 的结果，却不影响 `offsetWidth`。按问题选择测量方式，见[哪个 DOM 几何 API 能回答哪种测量问题？](#25.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。
 
 ### 引擎怎样实现这些步骤？
 
-Web 平台规定 DOM、CSS 和几何 API 可观察到的结果，但不要求每个浏览器使用相同的内部阶段、进程或线程。以 Chromium 的 RenderingNG 为例，Blink 会计算样式、布局并生成绘制产物，后续可把绘制列表分块栅格化为 GPU 纹理 tile，再提交 compositor frame，由 Viz 聚合并绘制到屏幕；若某次变化不需要某些阶段，管线可以跳过它们。其他引擎的内部组件名称和调度方式可以不同，因此性能判断应围绕可见效果和录制数据，而不是把 Chromium 流程当作所有浏览器的硬性规范。
+Web 平台规定 DOM、CSS 和几何 API 的可观察结果，不要求各浏览器共享一个内部管线。以 Chromium 的 RenderingNG 为例，渲染器会处理样式、布局、预绘制和绘制记录；后续把绘制内容分块栅格化，再提交 compositor frame (合成帧)，由 Chromium 的 Viz 组件聚合可见表面并绘制。Chromium 文档展示的 graphics processing unit (GPU, 图形处理器) 纹理 tile (图块) 是这一实现中的数据结构；实际设备可能使用不同的栅格后端或回退路径，其他引擎的组件名称和阶段安排也会不同。因此，浏览器通用解释要落在“输入状态、失效数据与画面结果”，性能判断则要看目标引擎的录制。
 
-如果报表扩大到许多行，先分清瓶颈在网络传输、服务端查询、客户端数据计算，还是已挂载节点的样式与布局。虚拟滚动主要减少同时挂载的 DOM；它不会自动缩小已下载数据或消除对全量数据的计算。完整的窗口计算、可变行高、焦点和辅助技术边界在[长报表列表何时适合虚拟滚动？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)展开；性能录制怎样区分主线程、布局和绘制成本，见[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+如果报表增长到许多行，先区分网络传输、服务端查询、客户端数据计算和已挂载节点的样式与布局成本。虚拟滚动主要减少同时挂载的 DOM；不会自动缩小已下载数据或消除对全量数据的计算。窗口计算、可变行高、焦点与辅助技术边界见[长报表列表何时适合虚拟滚动？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)；性能录制怎样区分处理时长、布局与绘制成本，见[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
-> [!info]- 来源
-> - 本章的概念阶段不是 Web 平台规定的完整固定流水线；渲染机会、更新渲染： [WHATWG HTML：事件循环与更新渲染](https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering)，Living Standard，持续更新；核对日期：2026-11-06。
-> - 盒子、布局与几何读取的可观察行为： [CSS Display](https://www.w3.org/TR/css-display-3/)，W3C Candidate Recommendation Draft，2026-06-05，display 类型与盒子生成；[CSS Sizing](https://www.w3.org/TR/css-sizing-3/#box-sizing)，box-sizing 的宽度计算；[CSSOM View](https://drafts.csswg.org/cssom-view/)，CSSWG Editor's Draft，`offsetWidth` 与 `getBoundingClientRect()`；核对日期：2026-11-06。
-> - DOM / 样式失效后读取几何可能触发同步布局，以及读写交错的风险： [Chrome Performance Insights：Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，Chrome DevTools 文档，2025-10-08 更新；该诊断解释 Chrome 实现。
-> - 作为一个实现案例的样式、布局、绘制、tile 栅格化、Viz 合成与可跳过阶段： [Chromium RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture)，[RenderingNG 数据结构：tiles 与 Viz](https://developer.chrome.com/docs/chromium/renderingng-data-structures)，Chromium 架构说明；核对日期：2026-11-06。
+> [!info]- 来源与核验
+> - **渲染机会与更新渲染。** [WHATWG HTML §8.1.7 Event loops / update the rendering](https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering)，Living Standard，更新于 2026-11-11，核对于 2026-11-12。规范定义渲染机会与更新渲染中的样式、布局等步骤；图示的绘制、栅格化和合成阶段是概念说明，不是 HTML 要求的跨浏览器固定管线。
+> - **盒子生成与布局模型。** [CSS Display Module Level 3](https://www.w3.org/TR/css-display-3/)，W3C Candidate Recommendation Draft，2026-06-05；用于解释元素生成的盒与格式化模型。
+> - **几何读取的返回值。** [CSSOM View Module Level 1](https://drafts.csswg.org/cssom-view/)，Editor’s Draft，2026-11-05，`offsetWidth` 与 `getBoundingClientRect()` 算法；[CSS Sizing Module Level 3](https://www.w3.org/TR/css-sizing-3/#box-sizing)，`box-sizing` 的尺寸解释。CSSOM View 当前页面标明是讨论中的编辑草案，核对于 2026-11-12。
+> - **强制重排诊断。** [Chrome Performance Insights: Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，Chrome DevTools 官方文档，更新于 2025-10-08；其强制重排描述和诊断范围针对 Chrome 实现。
+> - **Chromium 实现路径。** [RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture) 与 [Key data structures in RenderingNG](https://developer.chrome.com/docs/chromium/renderingng-data-structures)，Chromium 官方架构文档；核对于 2026-11-12。文中的 Viz、tile (图块) 和 compositor frame (合成帧) 仅描述 Chromium。
+> - **本地探针。** 本轮 headless Chrome `157.0.8103.51` 使用 CDP 记录布局：记录前显式读取两个元素的 `offsetWidth` 使初始几何就绪；逐项写后读出现 2 个 `Layout` 完成事件，批量写入并在末尾读回出现 1 个；两种结果均为 `[110, 170]`。这是本机配置和该 DOM/CSS 的可重复观察，不作跨版本性能承诺。
 ## 13. 如何测量并诊断网页性能问题？
 
 案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，等报表首屏出现，再点击“最早优先”把 May → April 排成 April → May。有人反馈“页面开得慢”，有人反馈“点击没反应”；这两种描述可能落在不同阶段，修复前要先把用户感受到的时间与浏览器实际工作对应起来。
@@ -2937,33 +2934,45 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 > - **Flex/Grid 项目的边距与 float。** [CSS Flexbox Level 1 §4.2](https://www.w3.org/TR/css-flexbox-1/#item-margins)、[CSS Grid Level 2 §6.4](https://www.w3.org/TR/css-grid-2/#item-margins)：相邻项目的 margin 不折叠；项目按各自格式化上下文排布，float 不会使它们按浮动盒参与布局。
 ## 20. 哪些 CSS 单位与响应式布局规则适合当前空间？
 
-单位先问“相对于什么”，断点再问“谁的尺寸或状态改变时需要重排”。报表页面通常用内容容器宽度和内在轨道适配列；媒体查询响应视口或用户偏好；容器查询让放在侧栏、主栏等不同区域的卡片按自身可用宽度调整。
+Cascading Style Sheets (CSS, 层叠样式表) 的长度单位先问“相对于什么”，断点再问“谁的尺寸或状态改变时需要换规则”。报表页面通常让 Grid (网格布局) 的自动重复轨道根据网格容器可用宽度和轨道最小尺寸决定列数，不会先量卡片文字宽度；media query (媒体查询) 响应视口或用户偏好；container query (容器查询) 则让放在主栏、窄侧栏等不同区域的卡片按自身可用宽度调整。
 
 ### 常见尺寸单位各自参照什么？
 
 | 单位 | 参照 | 常见用途 | 需要记住的边界 |
 | --- | --- | --- | --- |
-| <code>px</code> | CSS reference pixel | 边框、精确间距 | 不保证等于一个物理设备像素 |
-| <code>%</code> | 属性定义的参照盒 | 流动宽度、偏移 | 每个属性的百分比基准需分别确认 |
-| <code>em</code> | 通常是元素计算后的字号；用于 <code>font-size</code> 时参照继承字号 | 随文字缩放的局部间距 | 嵌套字号会复合 |
-| <code>rem</code> | 普通声明和容器查询中取根元素计算字号；媒体查询中取初始字号 | 跨组件的一致文字相对尺寸 | 固定根字号会影响用户文字偏好；媒体断点按另一基准解析 |
-| <code>vw</code> / <code>vh</code> | large viewport 的宽、高，即动态地址栏或工具栏收起时的视口 | 视口区域 | 视口不是普通内容盒；可能大于浏览器界面展开时的可见区 |
-| <code>svh</code> / <code>lvh</code> / <code>dvh</code> | 小、大、动态视口高度 | 移动端全高界面 | 需选择是否随浏览器工具栏伸缩 |
-| <code>vmin</code> / <code>vmax</code> | 视口短边 / 长边 | 随方向变化的形状 | 不表示内容容器宽度 |
+| `px` | CSS reference pixel (CSS 参考像素) | 边框、精确间距 | 不保证最终绘制成一个物理设备像素 |
+| `%` | 由该属性定义的参照盒或参照值 | 流动宽度、偏移 | 每个属性的百分比基准不同，不能只看符号 |
+| `em` | 通常取使用该值的元素计算字号；用于 `font-size` 时取继承字号 | 随文字缩放的局部间距 | 嵌套字号可能逐层相乘 |
+| `rem` | 根元素的计算字号 | 跨组件的一致文字相对尺寸 | 媒体查询和容器查询对相对单位的求值规则不同 |
+| `vw` / `vh` | 默认 large viewport (大视口) 的宽、高；每单位为对应尺寸的 1% | 视口区域 | 视口不是普通内容盒；工具栏展开时，`100vh` 可能大于当前可见高度 |
+| `svh` / `lvh` / `dvh` | 每单位分别为 small viewport height (小视口高度)、large viewport height (大视口高度)、dynamic viewport height (动态视口高度) 的 1% | 移动端全高界面 | 需选择是否随浏览器工具栏伸缩 |
+| `vmin` / `vmax` | 默认 large viewport 的短边 / 长边；每单位为对应边长的 1% | 随方向变化的尺寸 | 不表示内容容器宽度 |
 
-例如根字号为浏览器默认的 <code>16px</code> 时，<code>1.5rem = 24px</code>；若显式把根字号设为 <code>20px</code>，则 <code>5rem = 100px</code>。<code>em</code> 在嵌套字号上可能逐层相乘；<code>rem</code> 统一参照根字号。固定根字号可能覆盖用户对基础文字大小的偏好，因此除非产品有明确缩放策略，通常保留浏览器根字号。CSS <code>1px</code> 是参考像素：缩放、设备像素比和栅格对齐都会影响最终绘制到多少个设备像素。
+例如，若初始字号与根字号均为 16px，`1.5rem = 24px`；将根元素计算字号改为 20px 后，普通声明中的 `5rem = 100px`。`em` 用在非 `font-size` 声明时参照当前元素字号；用在 `font-size` 本身时参照父元素继承来的字号。`rem` 让一组声明共用根字号，但如果在根元素上计算 `font-size`，CSS 对该循环关系采用初始字号。
 
-<code>100vw</code> 按视口宽度计算，在传统占位滚动条环境下可能比内容区宽，从而出现横向溢出。若目标是填满内容区，通常让块容器 <code>width: 100%</code> 或保持 <code>width: auto</code>，再由父级布局分配可用空间；若元素同时有 padding 或 border，使用 <code>box-sizing: border-box</code> 避免内容宽度之外再加边缘。
+媒体查询、容器查询和普通样式声明对字号相对单位的求值需要分开看：
+
+| 使用位置 | `em` 的参照 | `rem` 的参照 |
+| --- | --- | --- |
+| 普通样式声明 | 使用该值的元素计算字号；`font-size` 取父元素字号 | 根元素计算字号 |
+| `@media` | 初始 `font-size` 值 | 初始 `font-size` 值 |
+| `@container` 尺寸条件 | 被选中查询容器的计算字号 | 根元素计算字号 |
+
+因此，固定根字号可能影响用户的基础文字偏好；而媒体查询中的 `rem` 断点不会跟随页面自己的 `html { font-size: ... }` 声明改变。CSS `1px` 是参考像素：设备像素比、页面缩放与栅格对齐会共同影响它最终覆盖多少个设备像素。
+
+对会改变可见视口高度的浏览器工具栏，`100svh` 按工具栏展开时的小视口计算，`100lvh` 按收起时的大视口计算，`100dvh` 随当前动态视口变化。想让关键内容在工具栏展开时也完整可见，可从小视口单位开始；想随可见区域伸缩，则考虑动态单位，并接受伸缩时的布局变化。
+
+`100vw` 按视口宽度计算；内部滚动容器的滚动条槽只缩小该容器的内容宽度，不缩小视口。在本机 headless Chrome (无头 Chrome) `157.0.8103.51` 的 700px 视口中，内部滚动 `<section>` 设置为 `width: 700px; height: 100px; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable`，并放入高度超过 100px 的内容。经典垂直滚动条在该容器内预留 15px；容器内容宽 685px，与 700px 视口宽度不同。内部 `width: 100vw` 子项按视口宽度为 700px；`width: 100%` 子项按该滚动区域提供的宽度为 685px。数字绑定于本机滚动条环境；overlay scrollbar (覆盖式滚动条) 不占用这段宽度。CSS Overflow 规定根元素的 `scrollbar-gutter` 应用到视口；`vw` 与根滚动条槽的实际尺寸关系需另按目标浏览器检查，不能直接套用这个内部容器结果。若目标是填满当前内容区，块容器通常用 `width: 100%` 或保持 `width: auto`，让父级分配可用空间。如果还需要手动设 `width: 100%`，带有内边距或边框的元素可配合 `box-sizing: border-box`，避免外尺寸超出父级；其他滚动条模式也应按目标环境检查。
 
 ### 断点由视口还是组件决定？
 
 | 需要响应的变化 | 起点 | 报表中的例子 |
 | --- | --- | --- |
-| 整个页面可用宽度或方向变化 | <code>@media</code> | 小视口将侧栏移到筛选表单上方 |
-| 卡片自身分配宽度变化 | <code>@container</code> | 同一查询卡片在主栏横排，在窄侧栏竖排 |
-| 重复卡片依内容自动换列 | Grid 内在轨道 | 可放几列就排几列，不硬编码设备名 |
+| 整个页面的视口宽度或方向变化 | `@media` | 小视口把并排区域改为单列，内容按文档源顺序堆叠 |
+| 卡片自身分配到的宽度变化 | `@container` | 同一查询卡片在主栏横排，在窄侧栏竖排 |
+| 重复卡片随网格可用宽度换列 | Grid 自动重复轨道 | 有空间就放下一列，不硬编码设备名称 |
 
-桌面断点应服务于内容，不是按“手机/平板/桌面”名称机械设置。报表外框的侧栏与主栏在 <code>48rem</code> 及以下改为单列：
+断点应服务于内容，而不是机械套用“手机 / 平板 / 桌面”的设备标签。报表外框在视口宽度 48rem 及以下由两列改为单列，项目按源文档顺序堆叠；这个改列规则本身不会重排侧栏或其他区域的文档顺序：
 
 ~~~css
 .report-layout {
@@ -2977,14 +2986,16 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 }
 ~~~
 
-在媒体查询中，`rem` 按浏览器默认字号或用户字号偏好确定的初始值解析。按默认 `16px` 计算，`48rem = 768px`，`max-width` 包含等号；即使页面写了 `html { font-size: 20px; }`，这个视口断点仍为 `768px`，不是 `960px`。
+媒体查询里的 `em`、`rem` 等字号相对单位按初始字号求值，不按页面样式改过的根字号求值。若初始字号是 16px，`48rem = 768px`，且 `max-width` 包含等号：视口正好 768px 时也改成单列。即使页面写了 `html { font-size: 20px; }`，这个媒体断点仍为 768px。若用户代理或用户偏好改变初始字号，断点也会按那个初始值计算。
 
-若筛选栏按面板自身宽度重排，先建立 inline-size query container，再由容器宽度决定样式。为单独观察轨道，这里只取月份、地区和提交按钮三个项目；每个 label 包含自己的控件，使它们作为一组参与 Grid 布局，状态复选框不在这个精简例中：
+若筛选栏按面板自身宽度换列，建立 inline-size query container (行内尺寸查询容器)，再由该容器决定后代样式。未命名 `@container` 从被设样式的元素向外寻找最近的合格祖先；若需要查询更外层的特定容器，可用 `container-name` 指定名称。本例的 `.report-panel` 提供可查询的 inline size (行内尺寸)，`.report-filter` 是被调整的后代。默认横向书写模式下，inline size 是内容盒宽度；改为纵向书写模式时，它沿行内轴，物理上对应高度。查询条件只能作用于查询容器的后代。筛选区只包含月份、地区与提交按钮三个项目；每个 `label` 把说明与输入控件放在一起，便于作为一组参与 Grid 布局：
 
 ~~~html
 <section class="report-panel">
   <form class="report-filter" action="/reports" method="get">
-    <label>月份 <input name="month" type="month" value="2026-10"></label>
+    <label>月份
+      <input name="month" type="month" value="2026-10">
+    </label>
     <label>地区
       <select name="region">
         <option value="">全部地区</option>
@@ -2997,41 +3008,92 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 ~~~
 
 ~~~css
-.report-panel { container-type: inline-size; }
+.report-panel {
+  container-type: inline-size;
+}
 .report-filter {
   display: grid;
   grid-template-columns: 1fr;
 }
 
 @container (inline-size > 30rem) {
-  .report-panel > .report-filter {
-    display: grid;
+  .report-filter {
     grid-template-columns: 1fr 1fr auto;
     align-items: end;
   }
 }
 ~~~
 
-规则选中 `.report-filter`；它沿祖先查找合格查询容器，由 `.report-panel` 提供尺寸。按根字号 `16px`，面板内容盒宽 `480px` 时仍用基础单列样式，`481px` 才改为三列；普通声明和容器查询里的 `rem` 使用根元素计算字号。若根字号改为 `20px`，这个容器阈值成为 `600px`。建立尺寸查询容器也会改变其尺寸计算约束，使用前应确认组件的布局用途。
+在根字号 16px、面板内容盒为 480px 的演算中，`30rem = 480px`，但条件使用严格大于号，所以 480px 仍是单列；宽度超过 480px 才是三列。以整数 CSS px 步进时，481px 是第一个匹配值；若容器宽度可以是小数，则 480px 以上的任意值都会匹配。若页面把根字号改为 20px，`rem` 查询阈值为 600px；若要让阈值随面板自身字号缩放，可改用 `em`，它按被选中查询容器的计算字号求值。
+
+本例条件使用逻辑特征 `inline-size`，它随书写模式沿行内轴查询；若改用物理特征 `width`，默认横向书写模式下它指向同一宽度，而纵向书写模式下 `width` 是与行内轴垂直的物理宽度，未必由 `container-type: inline-size` 提供。`container-type: inline-size` 让元素成为沿行内轴可查询尺寸的容器，并应用行内尺寸包含与样式包含，建立独立格式化上下文。它改变容器自身的内在尺寸计算，因此组件的行内尺寸应由父级布局或明确约束提供，而不应依赖子内容把容器撑宽。本例的 `section` 是普通块盒，填满父级可用宽度；更复杂的组件需结合自身布局用途选择查询容器。
 
 ### 用内容和实际宽度决定响应规则
 
-以前端设计稿为 <code>1000px</code> 画布为例，某个图标宽 <code>200px</code> 对应 <code>200 / (1000 / 100) = 20vw</code>。这只是在该设计宽度下的换算；若图标在窄屏仍需保持可读尺寸，<code>20vw</code> 会继续缩小，通常应该用有上下限的 <code>clamp()</code>，或让布局在内容放不下时重排。
+#### 让 Grid 按可容纳的最小轨道自动换列
 
-~~~css
-.report-title { font-size: clamp(1.25rem, 2vw + 0.75rem, 2rem); }
+自动列数由 Grid container (网格容器) 的可用行内尺寸和轨道最小值决定，不是先测卡片文字宽度。沿用报表主栏的 880px 可用宽度、根字号 16px，并把最小轨道设为 `15rem = 240px`、间隔设为 `1rem = 16px`：三列至少需要 `3 × 240 + 2 × 16 = 752px`，四列要 `4 × 240 + 3 × 16 = 1008px`，所以这里最多排三列。以下独立例子用三个普通卡片展示；按默认自动放置每项占一列：
+
+~~~html
+<section class="report-cards" aria-label="月度报表">
+  <article>订单总量</article>
+  <article>准时交付</article>
+  <article>待复核</article>
+</section>
 ~~~
 
-根字号为 `16px` 时，这个式子分别在视口宽 `400px`、`600px`、`1200px` 得到 `20px`、`24px`、`32px`：两端值触及 `clamp()` 的下限和上限，中间值按视口连续变化。
+~~~css
+.report-cards {
+  display: grid;
+  inline-size: min(100%, 880px);
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+}
+~~~
 
-不需要连续缩放时，用媒体查询表达台阶变化；需要适配组件大小时，用容器查询；内容自身适合决定列数时，可让 Grid 的最小轨道和最大轨道参与计算。相关固定轨道和内在最小尺寸见[Flexbox 与 Grid 布局](#21.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)。
+若有三张卡片，每列约 `(880 − 2 × 16) ÷ 3 = 282.7px`；本机 Chromium 157 测得约 282.66px。若只有两张卡片，自动重复仍可容纳三条最小轨道，但 `auto-fit` 折叠没有项目的第三条轨道及其相邻间隔，两列各约 `(880 − 16) ÷ 2 = 432px`。若主栏变成 220px，`min(100%, 15rem)` 允许唯一轨道降至 220px。`auto-fill` 会保留空轨道的位置，适合想在两张卡片后留出空槽而不拉宽卡片的情况。
+
+#### 让字号随视口连续变化
+
+以前端设计稿宽 1000px 且视口同为 1000px 为例，宽 200px 的图标占画布 20%，所以对应 `20vw`。这只是特定设计宽度下的换算；如果图标在窄屏仍需保持可读尺寸，`20vw` 会随视口继续缩小，可能需要 `clamp()` 上下限，或让布局在内容放不下时重排。
+
+~~~css
+.report-title {
+  font-size: clamp(1.25rem, calc(2vw + 0.75rem), 2rem);
+}
+~~~
+
+根字号为 16px 时，`1.25rem = 20px` 是下限，`2rem = 32px` 是上限：
+
+| 视口宽度 | 中间表达式 `2vw + 0.75rem` | 最终字号 |
+| --- | --- | --- |
+| 300px | 18px | 20px，下限生效 |
+| 600px | 24px | 24px，随视口变化 |
+| 1000px | 32px | 32px，正好到达上限 |
+| 1200px | 36px | 32px，上限生效 |
+
+不需要连续缩放时，用媒体查询表达台阶变化；需要适配组件大小时，用容器查询；重复内容应随可用宽度换列时，可让 Grid 自动重复轨道参与计算。固定轨道、`fr` 分配与内在最小尺寸的完整关系见[固定与流动内容适合哪种 CSS 布局？](#21.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)。
 
 ### 受限文本与行数裁切
 
-单行省略号要同时满足：盒子有确定的可用宽度、文字不换行、溢出被裁切。<code>text-overflow</code> 只请求省略符号，不会替你限制宽度或隐藏溢出。Flex/Grid 直接子项目有自动最小尺寸；当裁切放在内层文字上时，外层项目可能需要 <code>min-inline-size: 0</code> 才会缩到轨道宽度。
+单行 ellipsis (省略号) 要求文本块有受限的行内宽度、文字不换行、溢出被裁切；`text-overflow` 只决定怎样提示溢出，不替代这些条件。下面假设工具栏父级宽度为 360px，标题直接作为 Flex 项；先看裁切写在该项目上的版本：
+
+~~~html
+<nav class="toolbar" aria-label="当前报表操作">
+  <a class="report-name" href="/reports/october">
+    2026 年 10 月跨地区订单处理与复核情况汇总
+  </a>
+  <button type="button">筛选</button>
+</nav>
+~~~
 
 ~~~css
-.toolbar { display: flex; }
+.toolbar {
+  display: flex;
+  inline-size: 360px;
+  gap: 16px;
+}
 .toolbar > .report-name {
   flex: 1 1 0;
   white-space: nowrap;
@@ -3040,9 +3102,37 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 }
 ~~~
 
-这里的 `overflow: hidden` 写在直接 Flex 项目上，会让自动主轴最小尺寸为零，因此无需再写 `min-inline-size: 0`。若把裁切改到项目内部的子元素，就在直接项目上设置该最小尺寸，允许它缩小后再由内层文字显示省略号。
+这个例子把 `overflow: hidden` 写在直接 Flex 项上；它属于可滚动的溢出值（虽然不显示滚动条，仍能通过程序滚动），所以该项目的自动主轴最小尺寸为零，不需再写 `min-inline-size: 0`。如果保留一个内层链接、只在链接上裁切，直接 Flex 项本身仍可能因为内容最小宽度拒绝收缩：
 
-多行摘要可用目标浏览器支持的行数裁切形式；若使用兼容语法，目标浏览器仍需验证：
+~~~html
+<div class="toolbar">
+  <div class="report-name">
+    <a href="/reports/october">
+      2026 年 10 月跨地区订单处理与复核情况汇总
+    </a>
+  </div>
+  <button type="button">筛选</button>
+</div>
+~~~
+
+这时在直接项目上设零最小行内尺寸，并在内层文本元素上裁切：
+
+~~~css
+.toolbar > .report-name {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+.toolbar > .report-name > a {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+~~~
+
+在 Grid 中也要看项目的直接轨道和最小尺寸条件：像 `minmax(0, 1fr)` 这样的零下限轨道已经允许轨道收缩，但内容本身仍需断行、裁切或滚动。`overflow: clip` 不是 `hidden` 的同义写法：前者不建立 scroll container (滚动容器)，可能保留基于内容的自动最小尺寸。需要看完整轨道约束时见[固定与流动内容适合哪种 CSS 布局？](#21.%20%E5%9B%BA%E5%AE%9A%E4%B8%8E%E6%B5%81%E5%8A%A8%E5%86%85%E5%AE%B9%E9%80%82%E5%90%88%E5%93%AA%E7%A7%8D%20CSS%20%E5%B8%83%E5%B1%80%EF%BC%9F)。
+
+多行摘要可用目标浏览器支持的行数裁切形式。CSS Overflow Level 4 草案定义了未加前缀的 `line-clamp`；截至本地 Chromium 157，`CSS.supports("line-clamp", "3")` 返回 `false`，而 `CSS.supports("-webkit-line-clamp", "3")` 返回 `true`。以下兼容写法在此浏览器中可识别；目标浏览器仍需验证：
 
 ~~~css
 .report-summary {
@@ -3053,11 +3143,11 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 }
 ~~~
 
-裁切改变可见部分，不会删除文本值。关键信息应提供阅读或复制完整内容的办法；不要把省略号当作唯一披露方式。
+裁切会改变可见部分，不会删除文本值；用户能否看见、朗读或复制未显示部分取决于交互与工具。关键信息应提供阅读或复制全文的办法；不要把省略号当成唯一披露方式。
 
 ### 细边框何时等于一个设备像素？
 
-<code>1px</code> 是一个 CSS 像素，效果不必是一条物理设备像素宽的线。有效缩放约为 <code>2×</code> 时，<code>0.5 CSS px</code> 名义上接近一个设备像素，但最终栅格化还受对齐与缩放影响。分数线和阴影是视觉技巧，应在目标设备检查。
+`1px` 是一个 CSS 参考像素，不保证是一条物理设备像素宽的线。若 effective device pixel ratio (DPR, 有效设备像素比) 约为 2，`0.5 CSS px` 名义上接近一个设备像素；实际绘制还受缩放、边缘对齐和栅格化影响。因此分数线与阴影是视觉技巧，应在目标设备检查。
 
 ~~~css
 .hairline {
@@ -3065,31 +3155,34 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 }
 ~~~
 
-> [!info]- 来源
-> - CSS reference pixel、字体相对单位和视口相对单位：W3C CSS Values and Units Level 4，§6，Working Draft（2024-03-12）：[CSS Values and Units](https://www.w3.org/TR/css-values-4/)，检查于 2026-11-06。
-> - 媒体查询中 <code>rem</code> 的初始字号基准：W3C Media Queries Level 5，§1.3，Working Draft（2026-02-19）：[Media Queries Level 5](https://www.w3.org/TR/mediaqueries-5/#units)，检查于 2026-11-06。
-> - 容器查询与 <code>@container</code>：W3C CSS Conditional Rules Level 5，§5，Working Draft（2025-10-30）：[CSS Conditional Level 5](https://www.w3.org/TR/css-conditional-5/#container-queries)，检查于 2026-11-06。
-> - Flex/Grid 自动最小尺寸与轨道宽度：W3C CSS Flexible Box Layout Level 1，§4.5，Candidate Recommendation Draft（2025-10-14）；CSS Grid Layout Level 2，§12，Candidate Recommendation Draft（2025-03-26）：[Flexbox](https://www.w3.org/TR/css-flexbox-1/) · [Grid](https://www.w3.org/TR/css-grid-2/)，检查于 2026-11-06。
-> - <code>text-overflow</code>：W3C CSS Overflow Level 3，§5.1，Working Draft（2025-10-07）；<code>line-clamp</code>：Level 4，§5.1，Working Draft（2023-03-21）。两者仍处于草案阶段，兼容实现需按目标环境确认：[CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/) · [CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/)，检查于 2026-11-06。
+> [!info]- 来源与核验
+> - **CSS 绝对、相对与视口单位。** W3C [CSS Values and Units Module Level 4](https://www.w3.org/TR/css-values-4/)，Working Draft，2024-03-12，§§6.1–6.2；并核对 [CSSWG 编辑草案](https://drafts.csswg.org/css-values-4/)，2026-08-24。包括 `px`、`em`、`rem`、`vw` / `vh`、`svh` / `lvh` / `dvh`、`vmin` / `vmax` 与 `clamp()`。
+> - **媒体查询中的相对单位。** W3C [Media Queries Level 5](https://www.w3.org/TR/mediaqueries-5/)，Working Draft，2026-02-19，§1.3；媒体查询中的字号相对单位按初始字号解析，核对日期：2026-11-12。
+> - **容器查询与相对单位。** W3C [CSS Conditional Rules Level 5](https://www.w3.org/TR/css-conditional-5/)，Working Draft，2025-10-30，§§5、6.1；查询容器、`container-type: inline-size` 与容器查询条件中 `em` / `rem` 的参照值，核对日期：2026-11-12。
+> - **文本溢出与行数裁切。** W3C [CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/)，Working Draft，2025-10-07，§§3.1、5.1；[CSS Overflow Level 4](https://www.w3.org/TR/css-overflow-4/)，Working Draft，2023-03-21，§5.1；并核对 [CSSWG 编辑草案](https://drafts.csswg.org/css-overflow-4/)，2026-10-16，§§5.1、5.1.1，定义 `line-clamp` 与遗留的 `-webkit-line-clamp` 语法。
+> - **Grid / Flex 自动最小尺寸。** W3C [CSS Flexible Box Layout Level 1](https://www.w3.org/TR/css-flexbox-1/)，Candidate Recommendation Draft，2025-10-14，§4.5；[CSS Grid Layout Level 2](https://www.w3.org/TR/css-grid-2/)，Candidate Recommendation Draft，2025-03-26，§6.6。核对日期：2026-11-12。
+> - **本地探针。** 本轮 headless Chrome `157.0.8103.51`：根字号 20px、查询容器字号 10px 时，`30rem` 条件在宽度 601px 匹配、`30em` 在 301px 即匹配；视口 800px 时 `max-width: 48rem` 不匹配；`CSS.supports()` 对未加前缀 `line-clamp` 返回 `false`、对 `-webkit-line-clamp` 返回 `true`。滚动条宽度例子使用 700px 视口和内部 `.scroll-area { width: 700px; height: 100px; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable }`，内容高度 202px；内部 `100vw` / `width: 100%` 子项的实际宽度分别为 700px / 685px。该数值不代表根元素的视口滚动条行为，也不能替代目标浏览器矩阵检查。
 ## 21. 固定与流动内容适合哪种 CSS 布局？
 
-报表外框常同时有固定侧栏和可伸缩主栏；筛选栏则沿一个方向排列控件；卡片列表要在窄宽度下自动换列。上一章的 `<main>` 承载筛选表单和结果表；本章用它作为主栏。选择 Flexbox 或 Grid 时先描述这些关系：Flexbox 解决一条主轴上的分配和对齐，Grid 显式建立行列轨道。默认情况下，这些布局属性只改变视觉位置，不改变 HTML 的源顺序。
-
-![Flexbox composition example](../../archive/front-end/0-1_Learning_Notes/CSS/flex.png)
+报表外框常同时有固定侧栏和可伸缩主栏；操作工具栏沿一个方向排列链接与按钮；卡片列表则要在窄宽度下自动换列。沿用报表页的 `<main>` 作为主栏：先描述项目之间怎样分配空间，再选布局。Flexbox (弹性盒布局) 适合沿一个主轴分配项目；Grid (网格布局) 适合显式组织行列轨道。作为 Cascading Style Sheets (CSS, 层叠样式表) 布局模型，默认情况下两者只改变盒子的视觉布局，不会改写 HyperText Markup Language (HTML, 超文本标记语言) 文档中 Document Object Model (DOM, 文档对象模型) 节点的源顺序。
 
 ### 固定侧栏与流动结果区
 
-设整个报表外框的内容宽度为 <code>1120px</code>，左侧导航固定为 <code>14rem = 224px</code>，中间留 <code>1rem = 16px</code>（按根字号 <code>16px</code> 计算）。Grid 主栏剩余宽度为：
+先把设计输入说清楚：报表外框的内容宽度固定为 1120px，左侧导航固定为 14rem（按根字号 16px，即 224px），中间留 16px。没有内容下限时，主栏剩余宽度为：
 
-> [!example] 轨道宽度演算
-> <code>1120 - 224 - 16 = 880px</code>。为了演算自动最小轨道，假设主栏中有一个合成的不可断长内容，其 min-content 宽度为 <code>920px</code>。使用 <code>1fr</code> 时自动最小轨道可按这 <code>920px</code> 撑开，整行达到 <code>224 + 16 + 920 = 1160px</code>，比外框多 <code>40px</code>；改成 <code>minmax(0, 1fr)</code> 后主栏收缩到 <code>880px</code>，长内容本身仍需裁切、换行或滚动。
+> [!example] 报表主栏的轨道宽度
+> `1120 - 224 - 16 = 880px`。但主栏若含 `min-content`（最小内容尺寸）为 920px 的不可断内容，`1fr` 的自动最小轨道会取 920px；两轨与间隔合计 `224 + 16 + 920 = 1160px`，超出设定为 1120px 的外框 40px。改成 `minmax(0, 1fr)` 后，主栏轨道仍是 880px；本例中的 920px 内容盒被裁掉 40px，真实内容则要自行换行、裁切或滚动。
+
+下面用一个固定 920px 宽的合成内容，单独展示轨道下限怎样影响结果区。它不是实际统一资源定位符的宽度；真实内容如何保留全文见例子之后。
 
 ~~~html
 <div class="report-layout">
-  <nav aria-label="报表导航">...</nav>
+  <nav aria-label="报表分类导航">...</nav>
   <main>
     <h1>月度订单</h1>
-    <p class="report-url"><span class="synthetic-token">合成的 920px 不可断内容</span></p>
+    <p class="report-url">
+      <span class="synthetic-token">合成的 920px 不可断内容</span>
+    </p>
   </main>
 </div>
 ~~~
@@ -3097,6 +3190,7 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 ~~~css
 .report-layout {
   display: grid;
+  inline-size: 1120px;
   grid-template-columns: 14rem minmax(0, 1fr);
   gap: 16px;
 }
@@ -3105,82 +3199,132 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
   overflow: hidden;
   white-space: nowrap;
 }
-.synthetic-token { display: inline-block; width: 920px; }
+.synthetic-token { display: inline-block; inline-size: 920px; }
 ~~~
 
-<code>minmax(0, 1fr)</code> 让 Grid 轨道本身可收缩，因此这里不需要再给直接 Grid 项目加 <code>min-width: 0</code>。这里第一个不可断的行内盒只会被裁切，合成内容用来展示轨道尺寸变化；真实长标题的省略号见下一节。若要把合成盒换成真实长 URL 并显示全文，应移除 <code>.synthetic-token</code> 的 <code>920px</code> 固定宽度，并从 <code>.report-url</code> 去掉 <code>white-space: nowrap</code> 和裁切，再为链接设置 <code>overflow-wrap: anywhere</code>。若结果是宽数据表，把真实 <code>table</code> 保留在带名称且可由键盘到达的局部横向滚动容器内。
+在这个单列主栏中，`1fr` 等价于 `minmax(auto, 1fr)`：`auto` 是轨道最小范围，不总是 min-content (最小内容尺寸)；本例的直接 grid item (网格项目) 在默认约束下采用内容下限，因此 920px 内容会撑开它。`minmax(0, 1fr)` 明确把轨道下限设为零，因而能收进剩下的 880px；它不会替长内容选择换行或滚动方式。这里直接网格项目的自动最小尺寸也已是零，所以不必再为同一问题加 `min-inline-size: 0`。
 
-同样的固定/弹性关系也可以用 Flex 表达：
+这个合成行内盒会被裁切，只用于看清轨道宽度。若换成真实链接地址并要显示全文，应移除固定宽度和 `white-space: nowrap` / 裁切规则，再为长词设置 `overflow-wrap: anywhere`。若结果是宽数据表，应保留真实 `<table>` 的行列和标题关系，把表放进局部横向滚动容器；该滚动区域应有名称，并确保目标浏览器里键盘用户能到达和滚动它。
+
+下面的 Flex 规则替换上例的 `.report-layout` 布局声明；沿用 1120px 外框、16px 间距和根字号 16px，导航仍为 224px，主栏仍为 880px：
 
 ~~~css
-.report-layout { display: flex; gap: 1rem; }
+.report-layout { display: flex; inline-size: 1120px; gap: 16px; }
 .report-layout > nav { flex: 0 0 14rem; }
-.report-layout > main { flex: 1 1 0; min-width: 0; }
+.report-layout > main { flex: 1 1 0; min-inline-size: 0; }
 ~~~
 
-选择 Grid 通常更容易说清多个列轨道；只需按主轴分配空间时，Flex 更直接。若导航只是单独一行控件，Flex 更合适；若侧栏、主栏、页头和页脚需要同时安排行与列，Grid 更容易表达二维关系。
+flex item (弹性项目) 的主轴自动最小尺寸在默认情况下可能受内容最小宽度限制；长链接地址或大表格因此可能拒绝收缩。`min-inline-size: 0` 明确允许主栏沿行方向缩小，内容随后要自行换行、裁切或在局部滚动。Grid 与 Flex 的细节和适用条件不同：多列关系要按轨道同时对齐时 Grid 更容易表达；只需沿主轴分配一排控件时 Flex 更直接。Flex 可以换行，但每条 flex line (弹性行) 仍各自分配，不会像 Grid 那样把不同项目排成共同列轨道。
 
 ### Flexbox 一次处理一个主轴
 
-<code>display: flex</code> 或 <code>inline-flex</code> 让直接子元素成为 Flex 项目；<code>flex-direction</code> 决定主轴方向，交叉轴与其垂直。<code>align-content</code> 用于设置了 <code>flex-wrap: wrap</code> 的容器，并在交叉轴存在剩余空间时分配 flex line；即使最终只有一条 line，也可能移动它。<code>nowrap</code> 容器的单行项目由 <code>align-items</code> / <code>align-self</code> 对齐。
-
-> [!example] 一条 flex line 也能被 align-content 移动
-> 容器高 <code>100px</code>、单行项目高 <code>20px</code> 且 <code>align-content: end</code> 时，<code>flex-wrap: wrap</code> 的单行会移到 <code>y=80px</code>；将容器改成 <code>nowrap</code>，项目仍从 <code>y=0</code> 开始。
+`display: flex` 或 `inline-flex` 会创建 flex container (弹性容器)，其参与正常流的直接子元素成为 flex item (弹性项目)，非纯空白的直接文本内容会被包进匿名项目；绝对定位的子元素不参与这套空间分配。`flex-direction` 决定 main axis (主轴)，cross axis (交叉轴) 与其垂直。布局先求项目的 flex base size (Flex 基础尺寸)，再把它限制在最小 / 最大尺寸之间，得到 hypothetical main size (假设主尺寸)。算法比较各项外部假设主尺寸（包括外边距）之和与容器内主尺寸，决定本轮使用增长还是收缩；因此 min/max 约束在选择分支之前就会参与判断。随后以基础尺寸为起点分配空间：增长按 `flex-grow` 比例分配 positive free space (正剩余空间)；收缩按 `flex-shrink` 与基础尺寸的乘积，即 scaled flex-shrink factor (缩放后的收缩权重)，分配 negative free space (负剩余空间)。算法依据违反约束的情况冻结部分项目，再把剩余空间分给未冻结的项目。这里先考虑增长因子合计不小于 1 的常见情形；若一行的增长因子合计小于 1，可能只用掉部分正剩余空间。
 
 | 属性 | 负责什么 |
 | --- | --- |
-| <code>flex-direction</code>、<code>flex-wrap</code> | 主轴方向、是否换行 |
-| <code>justify-content</code> | 主轴上的分布与对齐 |
-| <code>align-items</code>、<code>align-self</code> | 交叉轴上的项目对齐 |
-| <code>align-content</code> | 开启换行时 flex line 的交叉轴分布；单条 line 也可能移动 |
-| <code>gap</code> | 项目之间的间距 |
-| <code>flex-grow</code>、<code>flex-shrink</code>、<code>flex-basis</code> | 可增长因子、可收缩因子、起始尺寸 |
-| <code>order</code> | 仅改变视觉顺序，不改变文档与键盘顺序 |
+| `flex-direction`、`flex-wrap` | 主轴方向、是否产生多条 flex line (弹性行) |
+| `justify-content` | 项目尺寸与自动外边距确定后，沿主轴分配剩余空间 |
+| `align-items`、`align-self` | 项目在各自 Flex line 的交叉轴上对齐 |
+| `align-content` | 在交叉轴上对齐 Flex line；只对允许换行的容器生效，单条 line 也可能移动 |
+| `gap` | 项目之间的间距；先从容器可用空间中扣除，再计算可分配空间 |
+| `flex-grow`、`flex-shrink`、`flex-basis` | 正剩余空间增长比例、负空间收缩权重、基础尺寸 |
+| `order` | 改变 Flex 项目的视觉顺序，不改 DOM 顺序 |
 
-为精确表示从零基准分配剩余空间，示例显式写 <code>flex: 1 1 0</code>。规范把单数值简写 <code>flex: 1</code> 定义为 <code>1 1 0</code>；常见浏览器的计算样式可能序列化为 <code>0%</code>，在主轴尺寸不确定时，百分比基准可能按内容解析。<code>flex: auto</code> 等于 <code>1 1 auto</code>，以明确的主轴 <code>width</code>/<code>height</code> 为基准，若其值为 <code>auto</code> 则以内容为基准；<code>flex: none</code> 等于 <code>0 0 auto</code>。项目的自动最小尺寸还可能影响最终大小，需结合内容溢出规则判断。
+![默认横向书写模式、direction:ltr、flex-direction:row 下 Flexbox 的两轴方向和项目排列；图中标出 main-start、main-end、cross-start、cross-end](../../frontend/html-css/resources/flex-axes.svg)
 
-### 用 Flex 排列一行报表导航，并收缩长标题
+本图以默认 horizontal writing mode (横向书写模式)、`direction: ltr` (left-to-right, 从左向右) 和 `flex-direction: row` 为例：主轴从左向右，交叉轴从上向下。改用 `column` 后，主轴沿列方向，交叉轴随之交换。两轴起点和终点的物理方向随书写模式与 `direction` 变化；`row-reverse` / `column-reverse` 会反转主轴方向。main size (主尺寸) 和 cross size (交叉尺寸) 分别指项目沿主轴和交叉轴的尺寸。
 
-一排导航、操作按钮和当前报表名只有一条主轴，适合 Flex。若长标题需要让按钮留在原位，允许标题项目收缩，并明确单行裁切规则；内容仍可从真实标题或链接访问。
+> [!example] 允许换行的容器即使只有一条 line，也能移动它
+> 设容器高 100px、唯一项目高 20px，并使用 `flex-wrap: wrap`、`align-content: flex-end` 和 `align-items: flex-start`。在默认行方向下，单条弹性行的起点落在 `y = 80px`。若把容器改成 `flex-wrap: nowrap`，它成为单行 Flex 容器，`align-content` 不生效，项目仍从 `y = 0px` 开始。
+
+> [!example] 负剩余空间遇到最小尺寸时重新分配
+> 容器内宽 256px，项目间距 16px，所以两项共有 240px 可用空间。两项的基础尺寸分别为 200px 和 100px，`flex-shrink` 都为 1，合计比可用空间多 60px。初次按 `1 × 200 : 1 × 100` 的缩放收缩权重分配，得到暂定尺寸 160px 和 80px。若第一项的最小行内尺寸为 180px，它触及下限后被冻结；剩下的第二项重新分配余下空间，最终为 60px。最终尺寸 `180 + 60 + 16 = 256px` 正好填满容器。本机 Chromium 探针也测得 180px、60px。
 
 ~~~html
-<nav class="report-toolbar" aria-label="报表导航">
-  <a href="/reports">全部报表</a>
-  <a href="/reports/monthly">月度报表</a>
-  <span class="current-report">2026 年 10 月跨地区订单处理与复核情况汇总</span>
+<div class="shrink-demo">
+  <div class="first"></div>
+  <div class="second"></div>
+</div>
+~~~
+
+~~~css
+.shrink-demo { display: flex; inline-size: 256px; gap: 16px; }
+.first { flex: 0 1 200px; min-inline-size: 180px; }
+.second { flex: 0 1 100px; min-inline-size: 0; }
+~~~
+
+为从零基准分配剩余空间，可显式写 `flex: 1 1 0`。其中 `flex-grow` 与 `flex-shrink` 都为 1，`flex-basis` 明确为零。CSS Flexbox 规范定义的单数值简写 `flex: 1` 也表示以零基准分配空间；本机 Chromium `157.0.8103.51` 的 `getComputedStyle()` 却将它序列化为 `0%`。在主轴尺寸不确定的列容器中，百分比基准会按内容解析，因而可能与明确的零长度表现不同。下文的探针把 `flex: 1` 与 `flex: 1 1 0` 分开测量；若布局依赖确定的零基准且主轴尺寸可能不确定，应写三值形式。
+
+这个差异在本机无头 Chrome 的小例子里可见：自动高度的列容器有两个项目，文字内容高分别为 40px 和 20px，项目设 `min-height: 0; overflow: hidden`。单值 `flex: 1` 的计算基准为 `0%`，两项按内容得到 40px、20px，容器高 60px；显式写 `flex: 1 1 0px` 时，容器与两项高度都为 0px。该尺寸结果是本机 Chromium 157 的探针观察；它限定了上面的写法建议，不意味着所有主轴或浏览器都会出现相同差异。
+
+`flex: auto` 等价于 `1 1 auto`：先参考明确的主轴尺寸，尺寸为 `auto` 时再依据内容。`flex: none` 等价于 `0 0 auto`，按基础尺寸排布且不增长或收缩。`flex: initial` 等价于 `0 1 auto`：有正剩余时不增长，空间不足时仍可收缩到其最小尺寸。项目的自动最小尺寸可能继续阻止收缩，因此还要看其内容和溢出规则。
+
+### 用 Flex 排列报表工具栏并截断长标题
+
+一排导航、操作按钮和当前报表名只有一条主轴，适合 Flex。工具栏可放在 `<main>` 的标题下方；以下 360px 与 1120px 是单独演算的工具栏宽度，不沿用前面 880px 的主栏约束。为让宽度演算可复现，例子把两个链接固定为 64px，按钮固定为 43px，间隔均为 16px；标题项目从零基准增长，标题本身采用单行省略号。
+
+~~~html
+<nav class="report-toolbar" aria-label="当前报表操作">
+  <a class="fixed-link" href="/reports">全部报表</a>
+  <a class="fixed-link" href="/reports/monthly">月度报表</a>
+  <span class="current-report">
+    2026 年 10 月跨地区订单处理与复核情况汇总
+  </span>
   <button type="button">导出</button>
 </nav>
 ~~~
 
 ~~~css
-.report-toolbar { display: flex; align-items: center; gap: 16px; }
+.report-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  inline-size: 360px;
+  font-size: 16px;
+}
+.report-toolbar > * { box-sizing: border-box; }
+.fixed-link { flex: 0 0 64px; white-space: nowrap; }
 .current-report {
   flex: 1 1 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.report-toolbar > button { flex: 0 0 43px; padding: 0; }
 ~~~
 
-两个链接约占 <code>64px</code> 各，导出按钮约 <code>43px</code>，三处 gap 共 <code>48px</code>。在 <code>360px</code> 工具栏里标题可用约 <code>360 - (64 + 64 + 43) - 48 = 141px</code>；自然宽度约 <code>322px</code> 的标题因此显示省略号。换到 <code>1120px</code> 时标题盒约 <code>901px</code>，文本完整显示。具体文字宽度会随字体变化。因为 <code>overflow: hidden</code> 在直接 Flex 项上，自动最小主尺寸已经为零，这里不需要再加 <code>min-width: 0</code>。若标题本身是导航目标，应使用真实链接并保留完整可访问名称，而不是仅呈现截断后的伪文字。
+工具栏内容宽度为 360px 时，固定部分共占 `64 + 64 + 43 + 3 × 16 = 219px`，标题从零基准得到 `360 − 219 = 141px` 的正剩余空间。这不是 `flex-shrink` 把标题压窄；标题按 `flex-grow` 增长到 141px 后，才在盒内显示省略号。这个标题在本机 16px 字号的 Chromium 探针中自然宽度约 316px；实际文字宽度会随字体变化。把 `inline-size` 改为 1120px 时，标题得到 `1120 − 219 = 901px`，足够显示完整文本。`overflow: hidden` 在直接 Flex 项上属于可滚动的溢出值：它不显示滚动条，但内容仍能通过程序滚动；因此该项的自动主轴最小尺寸为零。如果只在内层子元素上裁切，外层 Flex 项通常要另写 `min-inline-size: 0` 允许收缩。
+
+裁切只隐藏视觉部分，文本仍在 DOM 中。若标题需要导航，应使用真实链接并保留完整的可访问名称；同时确保省略容器不会裁掉键盘焦点指示。不要用已截断的字符串替换完整标题。
 
 ### Grid 同时定义行与列
 
-<code>display: grid</code> 或 <code>inline-grid</code> 建立显式或隐式行列轨道。固定宽度适合不变的导航，<code>fr</code> 将可用剩余空间按因子分配；<code>minmax(min, max)</code> 给轨道范围。内容关键时，<code>min-content</code>、<code>max-content</code>、<code>auto</code> 和 <code>fit-content()</code> 可参与轨道尺寸计算。
+`display: grid` 或 `inline-grid` 建立显式或隐式行列轨道。固定尺寸适合不变的导航，`fr` 表示按因子分配可用剩余空间，但每条轨道仍要满足自身的最小和最大尺寸。内容关键时，可用 `min-content`、`max-content`、`auto` 与 `fit-content()` 参与轨道尺寸计算：`min-content` 尽量缩到仍可在合法断点换行的最窄尺寸；`max-content` (最大内容尺寸) 则按不利用软换行机会时的内容宽度计算。最终结果还受容器空间、可换行机会与显式约束影响。
 
 ~~~css
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 1rem;
 }
 ~~~
 
-每列至少尽量宽 <code>15rem</code>，容器窄于此值时最小项由 <code>min(100%, 15rem)</code> 缩到容器宽度；<code>auto-fit</code> 按可用空间重复轨道，并会折叠没有内容的轨道。沿用上面的 <code>880px</code> 主栏，根字号 <code>16px</code> 时每卡片的设计下限是 <code>15rem = 240px</code>：三列需 <code>3×240 + 2×16 = 752px</code>，四列需 <code>4×240 + 3×16 = 1008px</code>，因此有至少三张卡片时排三列，各约 <code>(880 - 2×16) ÷ 3 = 282.7px</code>。若只有两张卡片，空轨道折叠，两列各约 <code>(880 - 16) ÷ 2 = 432px</code>；容器缩到 <code>220px</code> 时单列下限缩到 <code>100%</code>，宽度为 <code>220px</code>。固定下限应来自卡片内容要求，再决定文字换行、裁切还是局部滚动。
+这里的 `.cards` 直接子项是卡片；容器宽度明确时，默认自动放置会让每张卡片占一列：
+
+~~~html
+<section class="cards" aria-label="月度报表">
+  <article><h2>订单总量</h2><p>本月订单数量与上月比较。</p></article>
+  <article><h2>准时交付</h2><p>按地区查看订单交付情况。</p></article>
+  <article><h2>待复核</h2><p>需要进一步检查的订单。</p></article>
+</section>
+~~~
+
+根字号为 16px 时，轨道的设计下限是 `15rem = 240px`。沿用 880px 的报表主栏，3 条轨道需 `3 × 240 + 2 × 16 = 752px`，4 条需 `4 × 240 + 3 × 16 = 1008px`，放不下，所以三张及以上卡片排三列，每列约 `(880 − 2 × 16) ÷ 3 = 282.7px`；第四张会进入下一行。若只有两张卡片，`auto-fit` 折叠未放入项目的第三条重复轨道及其相邻间隔，于是每列约 `(880 − 16) ÷ 2 = 432px`。若主栏缩到 220px，`min(100%, 15rem)` 使单列轨道下限缩到 220px。轨道宽度和卡片自身的宽度约束是两件事：若卡片写了 `min-inline-size: 300px`，它仍可撑到 300px 并在 220px 轨道内溢出。本机 Chromium 探针测得 880px 容器中，两张卡片各 432px、三张各约 282.66px，220px 容器中轨道宽 220px。若要在空位保留未使用的轨道槽位，可选择 `auto-fill`；`auto-fit` 则折叠空轨道，让现有项目伸展。
 
 ### 居中未知尺寸的内容
 
-如果内容应留在正常流中，用父容器负责二维或单轴对齐。容器必须有多余空间，否则居中没有可分配的空白：
+如果内容应留在正常流中，让父容器负责二维或单轴对齐。容器必须有多余空间，否则没有可分配的空白：
 
 ~~~css
 .center-grid {
@@ -3195,34 +3339,34 @@ BFC 阻止的是盒内外跨边界折叠，不会自动取消 BFC 根自身与�
 }
 ~~~
 
-<code>place-items: center</code> 将 Grid 项目在格内水平和垂直对齐；Flex 版分别沿主轴和交叉轴对齐。需要覆盖整个区域时，让容器本身拿到预期高度，例如由布局轨道或父级分配，而不是给子项写固定尺寸。
+`place-items: center` 将 Grid 项目在格内水平与垂直对齐；Flex 版分别沿主轴和交叉轴对齐。需要覆盖整个区域时，应让容器从父级布局或轨道取得预期高度，而不是给内容写固定尺寸。
 
-居中浮层会离开普通流，需要先确定它的包含块，再用定位和 transform 让未知尺寸自身回移；规则见[CSS 定位与堆叠](#22.%20%E5%AE%9A%E4%BD%8D%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%E5%85%83%E7%B4%A0%E4%BD%8D%E7%BD%AE%E4%B8%8E%E5%89%8D%E5%90%8E%E9%A1%BA%E5%BA%8F%EF%BC%9F)。本节讨论正常流居中，浮层的位置由定位机制决定。
+居中浮层离开普通流，需要先确定它的包含块，再用定位和 `transform` 让未知尺寸自身回移；规则见[定位如何确定元素位置与前后顺序？](#22.%20%E5%AE%9A%E4%BD%8D%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9A%E5%85%83%E7%B4%A0%E4%BD%8D%E7%BD%AE%E4%B8%8E%E5%89%8D%E5%90%8E%E9%A1%BA%E5%BA%8F%EF%BC%9F)。本节的居中元素仍留在正常流中，浮层位置由定位机制决定。
 
 ### 看懂旧布局，不把它当新布局首选
 
-- **Float** 让文字环绕浮动盒，需处理包含浮动与 margin 交互，见[BFC 如何约束浮动和外边距](#19.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)。
-- **表格布局**可用于维护旧项目；<code>display: table-cell</code> 不会创建 HTML 表格的标题、行列等语义。
-- **Inline-block** 项目会保留源码空白形成的间隙，可能需要处理基线对齐。
-- **绝对定位**能把按钮锚定到卡片角落，但脱离普通流，不会参与父级尺寸计算。
-- **Bootstrap Grid** 是框架约定，不等同于 CSS Grid；Bootstrap 3.4.1 和 4.6 的官方文档都标记版本已结束支持，只作为维护旧项目的版本参考。新项目先确认实际采用的版本，按其官方文档选择类名和断点。
+- **float (浮动)。** 让文字绕排浮动盒；还要处理包含浮动与外边距交互，见[block formatting context (BFC, 块级格式上下文) 如何约束浮动和外边距？](#19.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)。
+- **表格布局。** 可维护旧项目；`display: table-cell` 不会创建 HTML 表格的标题、行列等语义。
+- **inline-block (行内块)。** 源码空白会形成项目间隙，基线也可能影响对齐。
+- **绝对定位。** 可把按钮锚定到卡片角落，但它脱离普通流，不参与父级尺寸计算。
+- **Bootstrap Grid。** 是框架约定，不等同于 CSS Grid。新项目先确认实际采用的 Bootstrap 版本，再按对应官方文档选类名与断点。
 
-宽订单表保留 HTML 表格结构；若它比结果区宽，把表格放入有名称且可由键盘到达的局部横向滚动区域，不要拆掉行列标题关系。
-
-> [!info]- Bootstrap 3.4.1 的旧网格示例
-> 归档示例使用 Bootstrap 3.4.1 的十二列系统：<code>.container</code> / <code>.container-fluid</code>、<code>.row</code>、<code>.col-xs-*</code> / <code>.col-sm-*</code> / <code>.col-md-*</code> / <code>.col-lg-*</code>。其中断点是 <code>&lt;768px</code>、<code>≥768px</code>、<code>≥992px</code>、<code>≥1200px</code>。归档附图来自 Bootstrap 4 的 <code>.col-</code>、<code>.col-xl-*</code> 版本，不能用它推断 Bootstrap 3 的类名和断点。Bootstrap 3 插件 JavaScript 需要先加载 jQuery，纯 CSS 网格不需要；新项目不要把这套旧类名当原生 Grid。
+> [!info]- Bootstrap 3.4.1 与 Bootstrap 4.6 的旧网格示例
+> 归档 Bootstrap 3.4.1 示例使用十二列系统：`.container` / `.container-fluid`、`.row`、`.col-xs-*` / `.col-sm-*` / `.col-md-*` / `.col-lg-*`。断点为 `<768px`、`≥768px`、`≥992px`、`≥1200px`。归档截图显示的是 Bootstrap 4.6：它有 `.col-` 与 `.col-xl-`，并包含 `576px` 断点，不能用它推断 Bootstrap 3 的类名和断点。可[打开归档 Bootstrap 4 网格截图](../../archive/front-end/0-1_Learning_Notes/CSS/grid.png) 查看。
 >
-> ![Bootstrap 4 网格断点原图](../../archive/front-end/0-1_Learning_Notes/CSS/grid.png)
+> Bootstrap 3 插件 JavaScript 需要先加载 jQuery；CSS 网格本身不需要该依赖。Bootstrap 官方文档目前将 Bootstrap 3 与 Bootstrap 4 标为结束支持：3.4.1 的维护于 2019-07-24 结束，4.6.2 于 2023-01-01 结束；它们适合作为旧项目维护资料，不是新项目的默认选择。
 >
-> 来源：Bootstrap 3.4 CSS 文档，[Grid system](https://getbootstrap.com/docs/3.4/css/#grid) 与 [JavaScript 插件依赖](https://getbootstrap.com/docs/3.4/javascript/)，版本 3.4.1；归档图示为 Bootstrap 4.6 旧文档截取，[Bootstrap 4 Grid](https://getbootstrap.com/docs/4.6/layout/grid/)。两版文档均标记结束支持，检查于 2026-11-06。
+> 来源：[Bootstrap 3.4 Grid system](https://getbootstrap.com/docs/3.4/css/#grid) 与 [Bootstrap 3.4 JavaScript 插件依赖](https://getbootstrap.com/docs/3.4/javascript/)；[Bootstrap 4.6 Grid system](https://getbootstrap.com/docs/4.6/layout/grid/) 与 [Bootstrap 官方结束支持说明](https://getbootstrap.com/docs/4.6/end-of-life/)，核对日期：2026-11-12。
 
-在未使用显式阅读顺序控制时，HTML 源码顺序决定默认阅读和键盘操作顺序。Flex <code>order</code>、<code>row-reverse</code> 和 Grid 指定区域只改变视觉位置；不要用它们修补错误的源顺序。
+在未使用显式阅读顺序控制时，HTML 源码顺序仍是文档与键盘顺序的通常依据。Flex `order`、`row-reverse` 和 Grid 指定区域改变视觉位置，不会同步改写源码或默认顺序；不要用它们修补错误的源顺序。
 
-> [!info]- 来源
-> - Flex line、项目自动最小尺寸、<code>flex</code> 简写和 <code>align-content</code>：W3C CSS Flexible Box Layout Level 1，§4.5、§6、§7.1、§8.4，Candidate Recommendation Draft（2025-10-14）：[CSS Flexbox Level 1](https://www.w3.org/TR/css-flexbox-1/)，检查于 2026-11-06。
-> - Grid 轨道与自动最小轨道尺寸：W3C CSS Grid Layout Level 2，§6.6、§12，Candidate Recommendation Draft（2025-03-26）：[CSS Grid Level 2](https://www.w3.org/TR/css-grid-2/#min-size-auto)，检查于 2026-11-06。
-> - Flex 项目自动最小尺寸与 overflow 值的关系：W3C CSS Overflow Level 3，§3.1，Working Draft（2025-10-07）：[CSS Overflow Level 3](https://www.w3.org/TR/css-overflow-3/#overflow-properties)，检查于 2026-11-06。
-> - Grid/Flex 视觉顺序与格式化模型：W3C CSS Display Module Level 3，§2（Candidate Recommendation Draft，2026-06-05）：[CSS Display Level 3](https://www.w3.org/TR/css-display-3/)，检查于 2026-11-06。
+> [!info]- 来源与核验
+> - **Flex 项目的轴、尺寸与自动最小尺寸。** W3C [CSS Flexible Box Layout Module Level 1](https://www.w3.org/TR/css-flexbox-1/)，Candidate Recommendation Draft，2025-10-14，§§4.5、6、7.1、8.3–8.4、9；并核对 [CSSWG 编辑草案](https://drafts.csswg.org/css-flexbox/)，2026-05-08。用于单数值 `flex` 简写、基础尺寸、正 / 负剩余空间分配与约束处理。
+> - **Grid 轨道和自动重复。** W3C [CSS Grid Layout Module Level 2](https://www.w3.org/TR/css-grid-2/)，Candidate Recommendation Draft，2025-03-26，§§6.6、7.2.3、12；`1fr` 的自动最小范围、`auto-fit` 折叠空轨道与轨道尺寸算法。
+> - **Flex/Grid 项目自动最小尺寸与裁切值。** W3C [CSS Overflow Module Level 3](https://www.w3.org/TR/css-overflow-3/)，Working Draft，2025-10-07，§3.1；`hidden`、`clip` 与 `scroll` 的区别，核对日期：2026-11-12。
+> - **绘制顺序与格式化模型。** W3C [CSS Display Module Level 3](https://www.w3.org/TR/css-display-3/)，Candidate Recommendation Draft，2026-06-05，§3.1；`order` 改变视觉顺序，不改默认的语音呈现顺序与顺序键盘导航顺序。
+> - **键盘焦点顺序。** W3C [Understanding Success Criterion 2.4.3: Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html)；焦点移动顺序需保留内容含义与操作关系。
+> - **本地布局探针。** 本轮 headless Chrome `157.0.8103.51`：`1fr` 案例主轨道为 920px、两轨与间距合计 1160px，超出 1120px 外框 40px；`minmax(0, 1fr)` 主轨道为 880px。`auto-fit` 在 880px 容器中排出 3 × 282.66px 或 2 × 432px；220px 容器中的轨道为 220px，另测 `min-inline-size: 300px` 卡片本身为 300px 并溢出轨道。负剩余空间的冻结例最终为 180px、60px。独立 Flex 探针中，`flex: 1` 的计算 `flex-basis` 为 `0%`，`flex: 1 1 0` 为 `0px`；自动高度列容器、两项内容高 40px / 20px 时，前者尺寸为 40px / 20px、容器高 60px，后者项目和容器都为 0px。工具栏代码本身使用 `flex: 1 1 0`，不是此处的单值简写探针。这些数字是本机对固定输入的核验，不是跨浏览器性能或兼容性保证。
 ## 22. 定位如何确定元素位置与前后顺序？
 
 报表卡片里的状态徽标要贴住卡片右上角，弹窗要位于视口中央，工具条则要在滚动时贴顶，直到所属区域离开。`position` 决定盒子怎样参与布局、相对什么参照移动；containing block（包含块）提供定位坐标；stacking context（堆叠上下文）决定绘制时一组盒子如何整体排前后。`display` 决定元素生成什么盒子、使用哪类布局，它回答的是另一类问题。
