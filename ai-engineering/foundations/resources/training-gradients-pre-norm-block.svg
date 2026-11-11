@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="260" viewBox="0 0 900 260" role="img" aria-labelledby="title desc"><title id="title">前置归一化 block 的两次残差加法</title><desc id="desc">前置归一化 block 的两次残差加法</desc><defs>
+<marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#879AB5"/></marker>
+<marker id="arrowP" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#A88BD1"/></marker>
+<marker id="arrowB" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#79A7D5"/></marker>
+<marker id="arrowG" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#75B19E"/></marker>
+</defs><rect width="100%" height="100%" fill="#F7F9FC"/><rect x="12" y="108" width="82" height="54" rx="10" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
+<text x="53" y="142" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553"><tspan>H</tspan><tspan baseline-shift="sub" font-size="16.0px">ℓ</tspan></text>
+<line x1="94" y1="135" x2="145" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="148" y="108" width="83" height="54" rx="10" fill="#FFFFFF" stroke="#79A7D5" stroke-width="2"/>
+<text x="189" y="141" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#233553"><tspan>Norm</tspan><tspan baseline-shift="sub" font-size="15.2px">1</tspan></text>
+<line x1="231" y1="135" x2="260" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="263" y="108" width="83" height="54" rx="10" fill="#FFF2E1" stroke="#E2AD68" stroke-width="2"/>
+<text x="304" y="141" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#233553" >Attn</text>
+<line x1="346" y1="135" x2="375" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="378" y="108" width="50" height="54" rx="25" fill="#E8F5F0" stroke="#75B19E" stroke-width="2"/>
+<text x="403" y="143" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="26px" font-weight="600" fill="#75B19E" >+</text>
+<line x1="428" y1="135" x2="450" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="453" y="108" width="75" height="54" rx="10" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
+<text x="490" y="142" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553"><tspan>U</tspan><tspan baseline-shift="sub" font-size="16.0px">ℓ</tspan></text>
+<path d="M94 135 V55 H403 V103" fill="none" stroke="#79A7D5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+<line x1="528" y1="135" x2="565" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="568" y="108" width="83" height="54" rx="10" fill="#FFFFFF" stroke="#79A7D5" stroke-width="2"/>
+<text x="609" y="141" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#233553"><tspan>Norm</tspan><tspan baseline-shift="sub" font-size="15.2px">2</tspan></text>
+<line x1="651" y1="135" x2="681" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="684" y="108" width="72" height="54" rx="10" fill="#F2EDFA" stroke="#A88BD1" stroke-width="2"/>
+<text x="720" y="141" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#233553" >FFN</text>
+<line x1="756" y1="135" x2="780" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="783" y="108" width="50" height="54" rx="25" fill="#E8F5F0" stroke="#75B19E" stroke-width="2"/>
+<text x="808" y="143" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="26px" font-weight="600" fill="#75B19E" >+</text>
+<line x1="833" y1="135" x2="851" y2="135" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="854" y="108" width="40" height="54" rx="8" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
+<text x="874" y="142" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>H</tspan><tspan baseline-shift="sub" font-size="14.4px">ℓ+1</tspan></text>
+<path d="M528 135 V215 H808 V163" fill="none" stroke="#A88BD1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowP)"/>
+</svg>

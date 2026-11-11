@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="230" viewBox="0 0 720 230" role="img" aria-labelledby="title desc"><title id="title">完整参数梯度与输入梯度矩阵</title><desc id="desc">完整参数梯度与输入梯度矩阵</desc><defs>
+<marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#879AB5"/></marker>
+<marker id="arrowP" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#A88BD1"/></marker>
+<marker id="arrowB" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#79A7D5"/></marker>
+<marker id="arrowG" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#75B19E"/></marker>
+</defs><rect width="100%" height="100%" fill="#F7F9FC"/><rect x="12" y="20" width="338" height="190" rx="14" fill="#FFFFFF" stroke="#D6DFEB" stroke-width="2"/>
+<text x="181.0" y="49" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="21px" font-weight="600" fill="#233553"><tspan>G</tspan><tspan baseline-shift="sub" font-size="16.8px">W</tspan><tspan> = X</tspan><tspan baseline-shift="super" font-size="16.8px">T</tspan><tspan>D</tspan></text>
+<rect x="165.79" y="100.7" width="77.74000000000001" height="40" rx="8" fill="#E8F5F0" stroke="#75B19E" stroke-width="1.5"/>
+<text x="204.66" y="127.7" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="21px" font-weight="600" fill="#233553" >+1/12</text>
+<rect x="250.28999999999996" y="100.7" width="77.74000000000001" height="40" rx="8" fill="#F7F9FC" stroke="#E1E7EF" stroke-width="1.5"/>
+<text x="289.15999999999997" y="127.7" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="21px" font-weight="400" fill="#233553" >−1/12</text>
+<rect x="165.79" y="148.20000000000002" width="77.74000000000001" height="40" rx="8" fill="#F7F9FC" stroke="#E1E7EF" stroke-width="1.5"/>
+<text x="204.66" y="175.20000000000002" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="21px" font-weight="400" fill="#233553" >−1/4</text>
+<rect x="250.28999999999996" y="148.20000000000002" width="77.74000000000001" height="40" rx="8" fill="#F7F9FC" stroke="#E1E7EF" stroke-width="1.5"/>
+<text x="289.15999999999997" y="175.20000000000002" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="21px" font-weight="400" fill="#233553" >+1/4</text>
+<rect x="370" y="20" width="338" height="190" rx="14" fill="#FFFFFF" stroke="#D6DFEB" stroke-width="2"/>
+<text x="539.0" y="49" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="21px" font-weight="600" fill="#233553"><tspan>G</tspan><tspan baseline-shift="sub" font-size="16.8px">X</tspan><tspan> = D W</tspan><tspan baseline-shift="super" font-size="16.8px">T</tspan></text>
+<rect x="523.79" y="100.7" width="77.74000000000001" height="40" rx="8" fill="#F7F9FC" stroke="#E1E7EF" stroke-width="1.5"/>
+<text x="562.66" y="127.7" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#233553" >ln2/3</text>
+<rect x="608.29" y="100.7" width="77.74000000000001" height="40" rx="8" fill="#F7F9FC" stroke="#E1E7EF" stroke-width="1.5"/>
+<text x="647.16" y="127.7" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#233553" >−ln2/3</text>
+<rect x="523.79" y="148.20000000000002" width="77.74000000000001" height="40" rx="8" fill="#F7F9FC" stroke="#E1E7EF" stroke-width="1.5"/>
+<text x="562.66" y="175.20000000000002" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#233553" >−ln2/4</text>
+<rect x="608.29" y="148.20000000000002" width="77.74000000000001" height="40" rx="8" fill="#F7F9FC" stroke="#E1E7EF" stroke-width="1.5"/>
+<text x="647.16" y="175.20000000000002" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#233553" >ln2/4</text>
+</svg>

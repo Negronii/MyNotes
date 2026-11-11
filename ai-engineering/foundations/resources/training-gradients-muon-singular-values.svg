@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="430" viewBox="0 0 700 430" role="img" aria-labelledby="title desc"><title id="title">V4 Newton-Schulz 对角教学例的两个奇异值轨迹</title><desc id="desc">V4 Newton-Schulz 对角教学例的两个奇异值轨迹</desc><defs>
+<marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#879AB5"/></marker>
+<marker id="arrowP" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#A88BD1"/></marker>
+<marker id="arrowB" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#79A7D5"/></marker>
+<marker id="arrowG" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#75B19E"/></marker>
+</defs><rect width="100%" height="100%" fill="#F7F9FC"/><line x1="72" y1="337.0" x2="670" y2="337.0" stroke="#DFE5ED" stroke-width="1" stroke-linecap="round"/>
+<text x="62" y="344.0" text-anchor="end" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >0</text>
+<line x1="72" y1="276.4" x2="670" y2="276.4" stroke="#DFE5ED" stroke-width="1" stroke-linecap="round"/>
+<text x="62" y="283.4" text-anchor="end" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >0.25</text>
+<line x1="72" y1="215.8" x2="670" y2="215.8" stroke="#DFE5ED" stroke-width="1" stroke-linecap="round"/>
+<text x="62" y="222.8" text-anchor="end" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >0.5</text>
+<line x1="72" y1="155.20000000000002" x2="670" y2="155.20000000000002" stroke="#DFE5ED" stroke-width="1" stroke-linecap="round"/>
+<text x="62" y="162.20000000000002" text-anchor="end" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >0.75</text>
+<line x1="72" y1="94.6" x2="670" y2="94.6" stroke="#DFE5ED" stroke-width="1" stroke-linecap="round"/>
+<text x="62" y="101.6" text-anchor="end" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >1</text>
+<line x1="72" y1="34.0" x2="670" y2="34.0" stroke="#DFE5ED" stroke-width="1" stroke-linecap="round"/>
+<text x="62" y="41.0" text-anchor="end" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >1.25</text>
+<line x1="72.0" y1="34" x2="72.0" y2="337" stroke="#EEF1F5" stroke-width="1" stroke-linecap="round"/>
+<text x="72.0" y="360" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >0</text>
+<line x1="191.60000000000002" y1="34" x2="191.60000000000002" y2="337" stroke="#EEF1F5" stroke-width="1" stroke-linecap="round"/>
+<text x="191.60000000000002" y="360" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >2</text>
+<line x1="311.20000000000005" y1="34" x2="311.20000000000005" y2="337" stroke="#EEF1F5" stroke-width="1" stroke-linecap="round"/>
+<text x="311.20000000000005" y="360" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >4</text>
+<line x1="430.8" y1="34" x2="430.8" y2="337" stroke="#EEF1F5" stroke-width="1" stroke-linecap="round"/>
+<text x="430.8" y="360" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >6</text>
+<line x1="550.4000000000001" y1="34" x2="550.4000000000001" y2="337" stroke="#EEF1F5" stroke-width="1" stroke-linecap="round"/>
+<text x="550.4000000000001" y="360" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >8</text>
+<line x1="670.0" y1="34" x2="670.0" y2="337" stroke="#EEF1F5" stroke-width="1" stroke-linecap="round"/>
+<text x="670.0" y="360" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >10</text>
+<line x1="72" y1="337" x2="670" y2="337" stroke="#233553" stroke-width="2" stroke-linecap="round"/>
+<line x1="72" y1="34" x2="72" y2="337" stroke="#233553" stroke-width="2" stroke-linecap="round"/>
+<line x1="72" y1="94.6" x2="670" y2="94.6" stroke="#A88BD1" stroke-width="2" stroke-linecap="round" stroke-dasharray="8 6"/>
+<text x="42" y="29" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#63748F" >σ</text>
+<text x="370" y="378" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#63748F" >Newton–Schulz 步</text>
+<path d="M 72.0 96.1 L 131.8 166.0 L 191.6 68.4 L 251.4 163.9 L 311.2 62.1 L 371.0 154.5 L 430.8 67.7 L 490.6 163.2 L 550.4 62.1 L 610.2 90.2 L 670.0 94.6" fill="none" stroke="#79A7D5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="72.0" cy="96.08258271511482" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="131.8" cy="165.95223459037837" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="191.60000000000002" cy="68.35944508568815" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="251.4" cy="163.91010240690247" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="311.20000000000005" cy="62.052731711578815" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="371.0" cy="154.49166179848012" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="430.8" cy="67.7363462009701" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="490.59999999999997" cy="163.16017573098296" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="550.4000000000001" cy="62.053637259406116" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="610.2" cy="90.15923577872289" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="670.0" cy="94.55403766224595" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
+<path d="M 72.0 310.2 L 131.8 246.3 L 191.6 81.7 L 251.4 171.7 L 311.2 70.8 L 371.0 166.5 L 430.8 83.2 L 490.6 171.7 L 550.4 71.7 L 610.2 92.8 L 670.0 94.6" fill="none" stroke="#E2AD68" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="72.0" cy="310.2313980794572" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="131.8" cy="246.34624456737725" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="191.60000000000002" cy="81.68376916670522" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="251.4" cy="171.70353307478013" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="311.20000000000005" cy="70.79898092780343" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="371.0" cy="166.48783204012227" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="430.8" cy="83.2317794102824" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="490.59999999999997" cy="171.70264561213983" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="550.4000000000001" cy="71.71956472571293" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="610.2" cy="92.75762680690633" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<circle cx="670.0" cy="94.59262394226596" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
+<text x="82" y="57.082582715114825" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#79A7D5"><tspan>σ</tspan><tspan baseline-shift="sub" font-size="14.4px">1</tspan><tspan>,0: 0.993884</tspan></text>
+<text x="82" y="334.2313980794572" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#E2AD68"><tspan>σ</tspan><tspan baseline-shift="sub" font-size="14.4px">2</tspan><tspan>,0: 0.110432</tspan></text>
+<line x1="180" y1="407" x2="214" y2="407" stroke="#79A7D5" stroke-width="4" stroke-linecap="round"/>
+<text x="222" y="414" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#233553"><tspan>较大奇异值 σ</tspan><tspan baseline-shift="sub" font-size="16.0px">1</tspan></text>
+<line x1="420" y1="407" x2="454" y2="407" stroke="#E2AD68" stroke-width="4" stroke-linecap="round"/>
+<text x="462" y="414" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#233553"><tspan>较小奇异值 σ</tspan><tspan baseline-shift="sub" font-size="16.0px">2</tspan></text>
+</svg>

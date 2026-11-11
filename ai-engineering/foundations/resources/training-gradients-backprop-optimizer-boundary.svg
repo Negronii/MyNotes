@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="340" viewBox="0 0 760 340" role="img" aria-labelledby="title desc"><title id="title">参数、梯度与优化器历史状态共同产生更新</title><desc id="desc">参数、梯度与优化器历史状态共同产生更新</desc><defs>
+<marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#879AB5"/></marker>
+<marker id="arrowP" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#A88BD1"/></marker>
+<marker id="arrowB" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#79A7D5"/></marker>
+<marker id="arrowG" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#75B19E"/></marker>
+</defs><rect width="100%" height="100%" fill="#F7F9FC"/><rect x="18" y="18" width="724" height="143" rx="14" fill="#FFFFFF" stroke="#A88BD1" stroke-width="2"/>
+<text x="76" y="47" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >AdamW</text>
+<rect x="18" y="183" width="724" height="143" rx="14" fill="#FFFFFF" stroke="#75B19E" stroke-width="2"/>
+<text x="76" y="212" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >Muon</text>
+<rect x="38" y="58" width="146" height="37" rx="8" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
+<text x="111" y="83" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>W</tspan><tspan baseline-shift="sub" font-size="14.4px">t−1</tspan></text>
+<rect x="38" y="103" width="146" height="37" rx="8" fill="#FFF2E1" stroke="#E2AD68" stroke-width="2"/>
+<text x="111" y="128" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>G</tspan><tspan baseline-shift="sub" font-size="14.4px">t</tspan></text>
+<rect x="203" y="80" width="174" height="45" rx="8" fill="#F2EDFA" stroke="#A88BD1" stroke-width="2"/>
+<text x="290" y="108" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>m</tspan><tspan baseline-shift="sub" font-size="14.4px">t−1</tspan><tspan>, </tspan><tspan>v</tspan><tspan baseline-shift="sub" font-size="14.4px">t−1</tspan></text>
+<path d="M184 76 H395 V88 H410" fill="none" stroke="#879AB5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M184 121 H190 V147 H395 V116 H410" fill="none" stroke="#879AB5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<line x1="377" y1="102" x2="407" y2="102" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="410" y="72" width="150" height="60" rx="10" fill="#F2EDFA" stroke="#A88BD1" stroke-width="2"/>
+<text x="485" y="108" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >AdamW</text>
+<line x1="560" y1="102" x2="603" y2="102" stroke="#75B19E" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowG)"/>
+<rect x="607" y="67" width="112" height="70" rx="8" fill="#E8F5F0" stroke="#75B19E" stroke-width="2"/>
+<text x="663" y="95" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#233553"><tspan>W</tspan><tspan baseline-shift="sub" font-size="15.2px">t</tspan></text>
+<text x="663" y="123" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="17px" font-weight="400" fill="#63748F"><tspan>m</tspan><tspan baseline-shift="sub" font-size="13.6px">t</tspan><tspan>, </tspan><tspan>v</tspan><tspan baseline-shift="sub" font-size="13.6px">t</tspan></text>
+<rect x="38" y="223" width="146" height="37" rx="8" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
+<text x="111" y="248" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>W</tspan><tspan baseline-shift="sub" font-size="14.4px">t−1</tspan></text>
+<rect x="38" y="268" width="146" height="37" rx="8" fill="#FFF2E1" stroke="#E2AD68" stroke-width="2"/>
+<text x="111" y="293" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>G</tspan><tspan baseline-shift="sub" font-size="14.4px">t</tspan></text>
+<rect x="203" y="245" width="174" height="45" rx="8" fill="#F2EDFA" stroke="#A88BD1" stroke-width="2"/>
+<text x="290" y="273" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>M</tspan><tspan baseline-shift="sub" font-size="14.4px">t−1</tspan></text>
+<path d="M184 241 H395 V253 H410" fill="none" stroke="#879AB5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M184 286 H190 V317 H395 V286 H410" fill="none" stroke="#879AB5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<line x1="377" y1="268" x2="407" y2="268" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="410" y="238" width="150" height="60" rx="10" fill="#F2EDFA" stroke="#A88BD1" stroke-width="2"/>
+<text x="485" y="275" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >Muon + NS</text>
+<line x1="560" y1="268" x2="603" y2="268" stroke="#75B19E" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowG)"/>
+<rect x="607" y="232" width="112" height="70" rx="8" fill="#E8F5F0" stroke="#75B19E" stroke-width="2"/>
+<text x="663" y="260" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#233553"><tspan>W</tspan><tspan baseline-shift="sub" font-size="15.2px">t</tspan></text>
+<text x="663" y="288" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="17px" font-weight="400" fill="#63748F"><tspan>M</tspan><tspan baseline-shift="sub" font-size="13.6px">t</tspan></text>
+</svg>

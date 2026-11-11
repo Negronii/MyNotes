@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="350" viewBox="0 0 900 350" role="img" aria-labelledby="title desc"><title id="title">两行 logits、目标概率、平均交叉熵与 logits 梯度</title><desc id="desc">两行 logits、目标概率、平均交叉熵与 logits 梯度</desc><defs>
+<marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#879AB5"/></marker>
+<marker id="arrowP" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#A88BD1"/></marker>
+<marker id="arrowB" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#79A7D5"/></marker>
+<marker id="arrowG" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#75B19E"/></marker>
+</defs><rect width="100%" height="100%" fill="#F7F9FC"/><rect x="18" y="25" width="182" height="180" rx="14" fill="#FFFFFF" stroke="#D6DFEB" stroke-width="2"/>
+<rect x="238" y="25" width="182" height="180" rx="14" fill="#FFFFFF" stroke="#D6DFEB" stroke-width="2"/>
+<rect x="458" y="25" width="182" height="180" rx="14" fill="#FFFFFF" stroke="#D6DFEB" stroke-width="2"/>
+<rect x="678" y="25" width="182" height="180" rx="14" fill="#FFFFFF" stroke="#D6DFEB" stroke-width="2"/>
+<text x="109" y="57" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >Y：logits 2×2</text>
+<text x="53" y="96" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#63748F" >位置</text>
+<text x="131" y="96" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >a</text>
+<text x="184" y="96" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#63748F" >c</text>
+<text x="53" y="133" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#63748F"><tspan>t</tspan><tspan baseline-shift="sub" font-size="15.2px">1</tspan></text>
+<text x="131" y="133" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#233553" >ln2</text>
+<text x="184" y="133" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#233553" >0</text>
+<text x="53" y="169" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="600" fill="#63748F"><tspan>t</tspan><tspan baseline-shift="sub" font-size="15.2px">2</tspan></text>
+<text x="131" y="169" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#233553" >0</text>
+<text x="184" y="169" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="19px" font-weight="400" fill="#233553" >0</text>
+<text x="329" y="57" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >P（a,c）与目标</text>
+<text x="329" y="103" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="400" fill="#233553"><tspan>t</tspan><tspan baseline-shift="sub" font-size="14.4px">1</tspan><tspan>：[2/3, 1/3] → c</tspan></text>
+<text x="329" y="141" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="400" fill="#233553"><tspan>t</tspan><tspan baseline-shift="sub" font-size="14.4px">2</tspan><tspan>：[1/2, 1/2] → a</tspan></text>
+<text x="549" y="57" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >逐位置损失</text>
+<text x="549" y="102" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="400" fill="#233553"><tspan x="549" dy="0px">−ln(1/3) = ln3</tspan><tspan x="549" dy="26.099999999999998px">−ln(1/2) = ln2</tspan><tspan x="549" dy="26.099999999999998px">两项取平均</tspan></text>
+<text x="769" y="57" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553" >标量 L</text>
+<text x="769" y="112" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="23px" font-weight="600" fill="#233553"><tspan x="769" dy="0px">ln6 / 2</tspan><tspan x="769" dy="34.5px">≈ 0.895880</tspan></text>
+<line x1="200" y1="115" x2="232" y2="115" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<line x1="420" y1="115" x2="452" y2="115" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<line x1="640" y1="115" x2="672" y2="115" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="150" y="235" width="600" height="95" rx="12" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
+<text x="450" y="267" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553"><tspan>D</tspan><tspan> = (P − onehot([c, a])) / 2</tspan></text>
+<text x="450" y="310" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="22px" font-weight="600" fill="#233553"><tspan>D = </tspan><tspan>[+1/3, −1/3; −1/4, +1/4]</tspan></text>
+</svg>
