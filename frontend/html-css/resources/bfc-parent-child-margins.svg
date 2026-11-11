@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="285" viewBox="0 0 700 285" role="img" aria-labelledby="title desc">
+  <title id="title">flow-root 隔开父级与首个子级的上 margin</title>
+  <desc id="desc">两个宽200像素的父盒各有24像素外部上 margin，首个子盒固定高20像素、宽150像素、上 margin16像素。普通块父盒与子 margin 向外折叠，子盒从父盒顶部开始，父自动高20像素。flow-root 父盒把16像素子 margin 留在内部，父自动高36像素。</desc>
+  <defs>
+    <pattern id="outerMargin" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#f4f6f8" />
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#8999a8" stroke-width="2" />
+    </pattern>
+    <pattern id="innerMargin" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#dcefe6" />
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#8999a8" stroke-width="2" />
+    </pattern>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #243548; }
+      .heading { font-size: 19px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .note { font-size: 15px; fill: #42566b; }
+      .parent { fill: #dcefe6; }
+      .child { fill: #dcecf4; }
+      .measure { stroke: #55758e; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+    </style>
+  </defs>
+  <rect width="700" height="285" fill="#fff" />
+
+  <text class="heading" x="25" y="30">普通块父级：父子 margin 向外折叠</text>
+  <text class="heading" x="370" y="30">flow-root：子 margin 留在父级内</text>
+  <rect x="40" y="48" width="200" height="24" fill="url(#outerMargin)" />
+  <text class="note" x="248" y="66">父 margin 24px</text>
+  <rect class="parent" x="40" y="72" width="200" height="20" />
+  <rect class="child" x="40" y="72" width="150" height="20" />
+  <path class="measure" d="M34 72 H246 M34 92 H246" />
+  <text class="body" x="40" y="124">子盒顶边与父盒起点重合</text>
+  <text class="note" x="40" y="148">父 auto height = 20px；子高固定 20px</text>
+  <text class="note" x="40" y="171">父 margin 24px 与子 margin 16px</text>
+  <text class="note" x="40" y="194">合为外侧 24px</text>
+
+  <rect x="390" y="48" width="200" height="24" fill="url(#outerMargin)" />
+  <text class="note" x="592" y="66">父 margin 24px</text>
+  <rect class="parent" x="390" y="72" width="200" height="36" />
+  <rect x="390" y="72" width="150" height="16" fill="url(#innerMargin)" />
+  <rect class="child" x="390" y="88" width="150" height="20" />
+  <path class="measure" d="M384 72 H596 M384 108 H596" />
+  <text class="body" x="390" y="140">子上 margin 16px 留在父盒内</text>
+  <text class="note" x="390" y="164">父 auto height = 16 + 20 = 36px</text>
+  <text class="note" x="390" y="187">父外 margin 仍为 24px；子高固定 20px</text>
+
+  <text class="note" x="25" y="248">斜线只标透明 margin。下图子 margin 区域与 150px 宽子盒对齐，右侧留出父盒的 50px。</text>
+</svg>

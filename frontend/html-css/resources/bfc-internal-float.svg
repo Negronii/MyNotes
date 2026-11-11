@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="300" viewBox="0 0 700 300" role="img" aria-labelledby="title desc">
+  <title id="title">flow-root 将参与本 BFC 的内部浮动计入自动高度</title>
+  <desc id="desc">按 CSS 像素绘制两张宽360px的摘要卡。普通块卡片内容高20px，48px高的徽标浮动到卡片背景外28px；使用 flow-root 后，卡片内容自动高48px以纳入该浮动的底部 margin edge。右侧文字框仍宽360px，浮动旁边的行框宽304px。</desc>
+  <defs>
+    <pattern id="marginHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#f4f6f8" />
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#8999a8" stroke-width="2" />
+    </pattern>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #243548; }
+      .heading { font-size: 19px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .note { font-size: 15px; fill: #42566b; }
+      .parent { fill: #eef4f8; }
+      .badge { fill: #3d6280; }
+      .white { fill: #fff; font-size: 15px; font-weight: 700; }
+    </style>
+  </defs>
+  <rect width="700" height="300" fill="#fff" />
+
+  <text class="heading" x="20" y="30">普通块：段落盒宽 360px，float 不计入自动高度</text>
+  <rect class="parent" x="20" y="48" width="360" height="20" />
+  <rect class="badge" x="20" y="48" width="48" height="48" />
+  <rect x="68" y="48" width="8" height="48" fill="url(#marginHatch)" stroke="#7f8f9d" stroke-width="0.7" />
+  <text class="white" x="25" y="78">徽标</text>
+  <text class="body" x="76" y="66">12 条记录等待复核</text>
+  <text class="note" x="410" y="57">卡片内容高 20px</text>
+  <text class="note" x="410" y="80">48px 浮动徽标露出 28px</text>
+  <text class="note" x="410" y="103">段落盒宽 360px，附近行框宽 304px</text>
+
+  <text class="heading" x="20" y="155">建立 BFC：flow-root 将自动高度扩至 48px</text>
+  <rect class="parent" x="20" y="173" width="360" height="48" />
+  <rect class="badge" x="20" y="173" width="48" height="48" />
+  <rect x="68" y="173" width="8" height="48" fill="url(#marginHatch)" stroke="#7f8f9d" stroke-width="0.7" />
+  <text class="white" x="25" y="203">徽标</text>
+  <text class="body" x="76" y="191">12 条记录等待复核</text>
+  <path d="M20 221 H380" stroke="#55758e" stroke-width="1.5" stroke-dasharray="5 4" />
+  <text class="note" x="410" y="182">卡片内容高 48px，正好纳入徽标</text>
+  <text class="note" x="410" y="205">行仍绕徽标排；右侧窄斜线为 8px margin</text>
+  <text class="note" x="20" y="263">自动高度按参与本 BFC 的浮动后代底部 margin edge 计算；显式高度或高度限制另行约束结果。</text>
+</svg>

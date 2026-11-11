@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1700" viewBox="0 0 1200 1700">
+<defs><marker id="arr" markerWidth="11" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 Z" fill="#617f99"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<style>text { font-family: Hiragino Sans GB, Arial, sans-serif; fill: #172b4d; }</style>
+<text x="600" y="55" text-anchor="middle" font-size="32px" font-weight="bold">CSA · C₁ 写入：b(B₀) 的 4 行 + a(B₁) 的 4 行</text>
+<text x="600" y="100" text-anchor="middle" font-size="24px" font-weight="normal">合成 2 维投影 · 同一坐标列上的权重沿 8 个位置归一</text>
+<text x="250" y="148" text-anchor="middle" font-size="25px" font-weight="bold">投影矩阵 U₁  ·  8 × 2</text>
+<text x="850" y="148" text-anchor="middle" font-size="25px" font-weight="bold">门控 logits Z₁  ·  8 × 2</text>
+<text x="45" y="318" text-anchor="middle" font-size="22px" font-weight="bold">b(B₀)</text>
+<text x="45" y="486" text-anchor="middle" font-size="22px" font-weight="bold">a(B₁)</text>
+<text x="218.0" y="206" text-anchor="middle" font-size="20px" font-weight="normal">坐标 1</text>
+<text x="338.0" y="206" text-anchor="middle" font-size="20px" font-weight="normal">坐标 2</text>
+<text x="125.0" y="250.72" text-anchor="middle" font-size="20px" font-weight="normal">1</text>
+<rect x="158" y="223" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="250.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="223" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="250.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="125.0" y="292.72" text-anchor="middle" font-size="20px" font-weight="normal">2</text>
+<rect x="158" y="265" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="292.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="265" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="292.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="125.0" y="334.72" text-anchor="middle" font-size="20px" font-weight="normal">3</text>
+<rect x="158" y="307" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="334.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="307" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="334.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="125.0" y="376.72" text-anchor="middle" font-size="20px" font-weight="normal">4</text>
+<rect x="158" y="349" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="376.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="349" width="120" height="42" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="376.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="125.0" y="418.72" text-anchor="middle" font-size="20px" font-weight="normal">5</text>
+<rect x="158" y="391" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="418.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="391" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="418.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="125.0" y="460.72" text-anchor="middle" font-size="20px" font-weight="normal">6</text>
+<rect x="158" y="433" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="460.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="433" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="460.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="125.0" y="502.72" text-anchor="middle" font-size="20px" font-weight="normal">7</text>
+<rect x="158" y="475" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="502.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="475" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="502.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="125.0" y="544.72" text-anchor="middle" font-size="20px" font-weight="normal">8</text>
+<rect x="158" y="517" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="218.0" y="544.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="278" y="517" width="120" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="338.0" y="544.72" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="818.0" y="206" text-anchor="middle" font-size="20px" font-weight="normal">坐标 1</text>
+<text x="938.0" y="206" text-anchor="middle" font-size="20px" font-weight="normal">坐标 2</text>
+<text x="725.0" y="250.72" text-anchor="middle" font-size="20px" font-weight="normal">1</text>
+<rect x="758" y="223" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="250.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="223" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="250.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="725.0" y="292.72" text-anchor="middle" font-size="20px" font-weight="normal">2</text>
+<rect x="758" y="265" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="292.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="265" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="292.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="725.0" y="334.72" text-anchor="middle" font-size="20px" font-weight="normal">3</text>
+<rect x="758" y="307" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="334.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="307" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="334.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="725.0" y="376.72" text-anchor="middle" font-size="20px" font-weight="normal">4</text>
+<rect x="758" y="349" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="376.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="349" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="376.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="725.0" y="418.72" text-anchor="middle" font-size="20px" font-weight="normal">5</text>
+<rect x="758" y="391" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="418.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="391" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="418.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="725.0" y="460.72" text-anchor="middle" font-size="20px" font-weight="normal">6</text>
+<rect x="758" y="433" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="460.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="433" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="460.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="725.0" y="502.72" text-anchor="middle" font-size="20px" font-weight="normal">7</text>
+<rect x="758" y="475" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="502.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="475" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="502.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="725.0" y="544.72" text-anchor="middle" font-size="20px" font-weight="normal">8</text>
+<rect x="758" y="517" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="544.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<rect x="878" y="517" width="120" height="42" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="544.72" text-anchor="middle" font-size="25px" font-weight="normal">0</text>
+<text x="1050" y="580" text-anchor="middle" font-size="22px" font-weight="bold">逐列</text>
+<text x="1050" y="608" text-anchor="middle" font-size="21px" font-weight="normal">沿 8 行</text>
+<text x="850" y="640" text-anchor="middle" font-size="24px" font-weight="bold">softmax → 权重矩阵 α₁  ·  8 × 2</text>
+<path d="M850,559 L850,630" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="818.0" y="686" text-anchor="middle" font-size="19px" font-weight="normal">坐标 1</text>
+<text x="938.0" y="686" text-anchor="middle" font-size="19px" font-weight="normal">坐标 2</text>
+<text x="725.0" y="721.44" text-anchor="middle" font-size="19px" font-weight="normal">1</text>
+<rect x="758" y="699" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="721.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="699" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="721.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<text x="725.0" y="755.44" text-anchor="middle" font-size="19px" font-weight="normal">2</text>
+<rect x="758" y="733" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="755.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="733" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="755.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<text x="725.0" y="789.44" text-anchor="middle" font-size="19px" font-weight="normal">3</text>
+<rect x="758" y="767" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="789.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="767" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="789.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<text x="725.0" y="823.44" text-anchor="middle" font-size="19px" font-weight="normal">4</text>
+<rect x="758" y="801" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="823.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="801" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="823.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<text x="725.0" y="857.44" text-anchor="middle" font-size="19px" font-weight="normal">5</text>
+<rect x="758" y="835" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="857.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="835" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="857.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<text x="725.0" y="891.44" text-anchor="middle" font-size="19px" font-weight="normal">6</text>
+<rect x="758" y="869" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="891.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="869" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="891.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<text x="725.0" y="925.44" text-anchor="middle" font-size="19px" font-weight="normal">7</text>
+<rect x="758" y="903" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="925.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="903" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="925.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<text x="725.0" y="959.44" text-anchor="middle" font-size="19px" font-weight="normal">8</text>
+<rect x="758" y="937" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="818.0" y="959.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<rect x="878" y="937" width="120" height="34" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="938.0" y="959.44" text-anchor="middle" font-size="22px" font-weight="normal">1/8</text>
+<path d="M245.0,559 L48,559 L48,1050 L560,1050" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M850,971 L850,1050 L640,1050" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr)"/>
+<text x="600" y="1059" text-anchor="middle" font-size="38px" font-weight="bold">⊙</text>
+<text x="780" y="1110" text-anchor="middle" font-size="23px" font-weight="bold">α₁ ⊙ U₁</text>
+<path d="M600,1085 L600,1122" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="514.0" y="1161" text-anchor="middle" font-size="19px" font-weight="normal">坐标 1</text>
+<text x="634.0" y="1161" text-anchor="middle" font-size="19px" font-weight="normal">坐标 2</text>
+<text x="421.0" y="1196.44" text-anchor="middle" font-size="19px" font-weight="normal">1</text>
+<rect x="454" y="1174" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1196.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1174" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1196.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="421.0" y="1230.44" text-anchor="middle" font-size="19px" font-weight="normal">2</text>
+<rect x="454" y="1208" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1230.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1208" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1230.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="421.0" y="1264.44" text-anchor="middle" font-size="19px" font-weight="normal">3</text>
+<rect x="454" y="1242" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1264.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1242" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1264.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="421.0" y="1298.44" text-anchor="middle" font-size="19px" font-weight="normal">4</text>
+<rect x="454" y="1276" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1298.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1276" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1298.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="421.0" y="1332.44" text-anchor="middle" font-size="19px" font-weight="normal">5</text>
+<rect x="454" y="1310" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1332.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1310" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1332.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="421.0" y="1366.44" text-anchor="middle" font-size="19px" font-weight="normal">6</text>
+<rect x="454" y="1344" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1366.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1344" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1366.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="421.0" y="1400.44" text-anchor="middle" font-size="19px" font-weight="normal">7</text>
+<rect x="454" y="1378" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1400.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1378" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1400.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="421.0" y="1434.44" text-anchor="middle" font-size="19px" font-weight="normal">8</text>
+<rect x="454" y="1412" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="514.0" y="1434.44" text-anchor="middle" font-size="22px" font-weight="normal">0</text>
+<rect x="574" y="1412" width="120" height="34" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="634.0" y="1434.44" text-anchor="middle" font-size="22px" font-weight="normal">1/4</text>
+<text x="830" y="1295" text-anchor="middle" font-size="23px" font-weight="bold">沿位置求和</text>
+<path d="M600,1446 L600,1510" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="600" y="1550" text-anchor="middle" font-size="25px" font-weight="bold">C₁  ·  1 × 2</text>
+<text x="515.0" y="1610.92" text-anchor="middle" font-size="21px" font-weight="normal">加权和</text>
+<rect x="595" y="1570" width="150" height="62" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="670.0" y="1610.92" text-anchor="middle" font-size="27px" font-weight="normal">0</text>
+<rect x="745" y="1570" width="150" height="62" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="820.0" y="1610.92" text-anchor="middle" font-size="27px" font-weight="normal">2</text>
+</svg>

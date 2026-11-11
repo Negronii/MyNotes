@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="270" viewBox="0 0 700 270" role="img" aria-labelledby="title desc">
+  <title id="title">相邻兄弟的垂直 margin 如何折叠</title>
+  <desc id="desc">同一 BFC 中两组普通流块级兄弟。第一组前块下 margin 24 像素、后块上 margin 16 像素，合并后的间距是24像素。第二组前块下 margin 24 像素、后块上 margin负16像素，合并后间距是8像素。</desc>
+  <defs>
+    <pattern id="marginHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#f4f6f8" />
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#8999a8" stroke-width="2" />
+    </pattern>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #243548; }
+      .heading { font-size: 19px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .note { font-size: 15px; fill: #42566b; }
+      .card { fill: #dcefe6; }
+      .measure { stroke: #55758e; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+    </style>
+  </defs>
+  <rect width="700" height="270" fill="#fff" />
+
+  <text class="heading" x="25" y="32">同一 BFC 内、边缘相接的普通流块级兄弟</text>
+  <text class="body" x="25" y="67">24px + 16px → 24px</text>
+  <rect class="card" x="35" y="88" width="200" height="24" />
+  <text class="body" x="46" y="106">状态卡 A</text>
+  <rect x="35" y="112" width="200" height="24" fill="url(#marginHatch)" />
+  <path class="measure" d="M244 112 V136 M238 112 H250 M238 136 H250" />
+  <rect class="card" x="35" y="136" width="200" height="24" />
+  <text class="body" x="46" y="154">状态卡 B</text>
+  <text class="note" x="270" y="104">A 下 margin 24px</text>
+  <text class="note" x="270" y="128">B 上 margin 16px</text>
+  <text class="note" x="270" y="152">图示间距为 24px</text>
+
+  <text class="body" x="390" y="67">24px + (−16px) → 8px</text>
+  <rect class="card" x="390" y="88" width="200" height="24" />
+  <text class="body" x="401" y="106">状态卡 A</text>
+  <rect x="390" y="112" width="200" height="8" fill="url(#marginHatch)" />
+  <path class="measure" d="M599 112 V120 M593 112 H605 M593 120 H605" />
+  <rect class="card" x="390" y="120" width="200" height="24" />
+  <text class="body" x="401" y="138">状态卡 B</text>
+  <text class="note" x="390" y="178">24px + (−16px) = 8px</text>
+  <text class="note" x="25" y="228">斜线只标合并后透明的间距。两个负 margin 合并时取更负者，例如 −24px 与 −16px 合为 −24px。</text>
+</svg>

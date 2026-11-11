@@ -1,0 +1,326 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="2140" viewBox="0 0 1000 2140">
+<defs><marker id="arr" markerWidth="11" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 Z" fill="#617f99"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<style>text { font-family: Hiragino Sans GB, Arial, sans-serif; fill: #172b4d; }</style>
+<text x="500" y="50" text-anchor="middle" font-size="28px" font-weight="bold">HCA 读取 · 全部可见 C 行与局部行</text>
+<text x="175" y="110" text-anchor="middle" font-size="22px" font-weight="bold"><tspan>当前 </tspan><tspan>Q</tspan><tspan baseline-shift="sub" font-size="15px">t</tspan><tspan> · </tspan><tspan>H</tspan><tspan baseline-shift="sub" font-size="15px">q</tspan><tspan> × 512</tspan></text>
+<text x="500" y="110" text-anchor="middle" font-size="22px" font-weight="bold">压缩 C  ·  S × 512</text>
+<text x="825" y="110" text-anchor="middle" font-size="22px" font-weight="bold">局部 KV  ·  W × 512</text>
+<text x="111.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">坐标 1</text>
+<text x="179.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">坐标 2</text>
+<text x="247.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">… 512</text>
+<text x="54.5" y="205.68" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<rect x="77" y="174" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="111.0" y="205.68" text-anchor="middle" font-size="20px" font-weight="normal">q</text>
+<rect x="145" y="174" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="179.0" y="205.68" text-anchor="middle" font-size="20px" font-weight="normal">q</text>
+<rect x="213" y="174" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="247.0" y="205.68" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="54.5" y="253.68" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<rect x="77" y="222" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="111.0" y="253.68" text-anchor="middle" font-size="20px" font-weight="normal">q</text>
+<rect x="145" y="222" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="179.0" y="253.68" text-anchor="middle" font-size="20px" font-weight="normal">q</text>
+<rect x="213" y="222" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="247.0" y="253.68" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="54.5" y="301.68" text-anchor="middle" font-size="17px" font-weight="normal">⋮</text>
+<rect x="77" y="270" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="111.0" y="301.68" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="145" y="270" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="179.0" y="301.68" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="213" y="270" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="247.0" y="301.68" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<text x="54.5" y="349.68" text-anchor="middle" font-size="17px" font-weight="normal"><tspan>H</tspan><tspan baseline-shift="sub" font-size="12px">q</tspan></text>
+<rect x="77" y="318" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="111.0" y="349.68" text-anchor="middle" font-size="20px" font-weight="normal">q</text>
+<rect x="145" y="318" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="179.0" y="349.68" text-anchor="middle" font-size="20px" font-weight="normal">q</text>
+<rect x="213" y="318" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="247.0" y="349.68" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="436.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">坐标 1</text>
+<text x="504.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">坐标 2</text>
+<text x="572.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">… 512</text>
+<text x="379.5" y="205.68" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<rect x="402" y="174" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="436.0" y="205.68" text-anchor="middle" font-size="20px" font-weight="normal">c</text>
+<rect x="470" y="174" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="504.0" y="205.68" text-anchor="middle" font-size="20px" font-weight="normal">c</text>
+<rect x="538" y="174" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="572.0" y="205.68" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="379.5" y="253.68" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<rect x="402" y="222" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="436.0" y="253.68" text-anchor="middle" font-size="20px" font-weight="normal">c</text>
+<rect x="470" y="222" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="504.0" y="253.68" text-anchor="middle" font-size="20px" font-weight="normal">c</text>
+<rect x="538" y="222" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="572.0" y="253.68" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="379.5" y="301.68" text-anchor="middle" font-size="17px" font-weight="normal">⋮</text>
+<rect x="402" y="270" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="436.0" y="301.68" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="470" y="270" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="504.0" y="301.68" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="538" y="270" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="572.0" y="301.68" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<text x="379.5" y="349.68" text-anchor="middle" font-size="17px" font-weight="normal">S</text>
+<rect x="402" y="318" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="436.0" y="349.68" text-anchor="middle" font-size="20px" font-weight="normal">c</text>
+<rect x="470" y="318" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="504.0" y="349.68" text-anchor="middle" font-size="20px" font-weight="normal">c</text>
+<rect x="538" y="318" width="68" height="48" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="572.0" y="349.68" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="761.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">坐标 1</text>
+<text x="829.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">坐标 2</text>
+<text x="897.0" y="161" text-anchor="middle" font-size="17px" font-weight="normal">… 512</text>
+<text x="704.5" y="205.68" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<rect x="727" y="174" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="761.0" y="205.68" text-anchor="middle" font-size="19px" font-weight="normal">k=v</text>
+<rect x="795" y="174" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="829.0" y="205.68" text-anchor="middle" font-size="19px" font-weight="normal">k=v</text>
+<rect x="863" y="174" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="897.0" y="205.68" text-anchor="middle" font-size="19px" font-weight="normal">…</text>
+<text x="704.5" y="253.68" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<rect x="727" y="222" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="761.0" y="253.68" text-anchor="middle" font-size="19px" font-weight="normal">k=v</text>
+<rect x="795" y="222" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="829.0" y="253.68" text-anchor="middle" font-size="19px" font-weight="normal">k=v</text>
+<rect x="863" y="222" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="897.0" y="253.68" text-anchor="middle" font-size="19px" font-weight="normal">…</text>
+<text x="704.5" y="301.68" text-anchor="middle" font-size="17px" font-weight="normal">⋮</text>
+<rect x="727" y="270" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="761.0" y="301.68" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<rect x="795" y="270" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="829.0" y="301.68" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<rect x="863" y="270" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="897.0" y="301.68" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<text x="704.5" y="349.68" text-anchor="middle" font-size="17px" font-weight="normal">W</text>
+<rect x="727" y="318" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="761.0" y="349.68" text-anchor="middle" font-size="19px" font-weight="normal">k=v</text>
+<rect x="795" y="318" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="829.0" y="349.68" text-anchor="middle" font-size="19px" font-weight="normal">k=v</text>
+<rect x="863" y="318" width="68" height="48" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="897.0" y="349.68" text-anchor="middle" font-size="19px" font-weight="normal">…</text>
+<text x="825" y="407" text-anchor="middle" font-size="20px" font-weight="normal">W ≤ 128</text>
+<text x="484.0" y="531" text-anchor="middle" font-size="18px" font-weight="normal">坐标 1</text>
+<text x="562.0" y="531" text-anchor="middle" font-size="18px" font-weight="normal">坐标 2</text>
+<text x="640.0" y="531" text-anchor="middle" font-size="18px" font-weight="normal">… 512</text>
+<text x="400.0" y="574.36" text-anchor="middle" font-size="18px" font-weight="normal"><tspan>C</tspan><tspan baseline-shift="sub" font-size="12px">0</tspan></text>
+<rect x="445" y="544" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="484.0" y="574.36" text-anchor="middle" font-size="21px" font-weight="normal">c</text>
+<rect x="523" y="544" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="562.0" y="574.36" text-anchor="middle" font-size="21px" font-weight="normal">c</text>
+<rect x="601" y="544" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="640.0" y="574.36" text-anchor="middle" font-size="21px" font-weight="normal">…</text>
+<text x="400.0" y="620.36" text-anchor="middle" font-size="18px" font-weight="normal">⋮</text>
+<rect x="445" y="590" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="484.0" y="620.36" text-anchor="middle" font-size="21px" font-weight="normal">⋮</text>
+<rect x="523" y="590" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="562.0" y="620.36" text-anchor="middle" font-size="21px" font-weight="normal">⋮</text>
+<rect x="601" y="590" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="640.0" y="620.36" text-anchor="middle" font-size="21px" font-weight="normal">⋮</text>
+<text x="400.0" y="666.36" text-anchor="middle" font-size="18px" font-weight="normal"><tspan>C</tspan><tspan baseline-shift="sub" font-size="12px">S−1</tspan></text>
+<rect x="445" y="636" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="484.0" y="666.36" text-anchor="middle" font-size="21px" font-weight="normal">c</text>
+<rect x="523" y="636" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="562.0" y="666.36" text-anchor="middle" font-size="21px" font-weight="normal">c</text>
+<rect x="601" y="636" width="78" height="46" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="640.0" y="666.36" text-anchor="middle" font-size="21px" font-weight="normal">…</text>
+<text x="400.0" y="712.36" text-anchor="middle" font-size="18px" font-weight="normal"><tspan>local</tspan><tspan baseline-shift="sub" font-size="12px">1</tspan></text>
+<rect x="445" y="682" width="78" height="46" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="484.0" y="712.36" text-anchor="middle" font-size="21px" font-weight="normal">k=v</text>
+<rect x="523" y="682" width="78" height="46" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="562.0" y="712.36" text-anchor="middle" font-size="21px" font-weight="normal">k=v</text>
+<rect x="601" y="682" width="78" height="46" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="640.0" y="712.36" text-anchor="middle" font-size="21px" font-weight="normal">…</text>
+<text x="400.0" y="758.36" text-anchor="middle" font-size="18px" font-weight="normal">⋮</text>
+<rect x="445" y="728" width="78" height="46" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="484.0" y="758.36" text-anchor="middle" font-size="21px" font-weight="normal">⋮</text>
+<rect x="523" y="728" width="78" height="46" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="562.0" y="758.36" text-anchor="middle" font-size="21px" font-weight="normal">⋮</text>
+<rect x="601" y="728" width="78" height="46" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="640.0" y="758.36" text-anchor="middle" font-size="21px" font-weight="normal">⋮</text>
+<text x="850" y="800" text-anchor="middle" font-size="21px" font-weight="bold">按行堆叠 → K = V</text>
+<text x="850" y="832" text-anchor="middle" font-size="20px" font-weight="normal">(S + W) × 512</text>
+<path d="M500,366 L500,420 L500,500" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M825,366 L960,430 L920,705 L679,705" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr)"/>
+<text x="800" y="885" text-anchor="middle" font-size="23px" font-weight="bold"><tspan>Q</tspan><tspan baseline-shift="sub" font-size="16px">t</tspan><tspan> </tspan><tspan>K</tspan><tspan baseline-shift="super" font-size="16px">T</tspan><tspan> / √512</tspan></text>
+<path d="M175,366 L315,500 L315,850 L473,850" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M500,774 L500,823" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<circle cx="500" cy="850" r="27" fill="#fff2d5" stroke="#617f99" stroke-width="3"/>
+<text x="500" y="859" text-anchor="middle" font-size="26px" font-weight="bold">×</text>
+<path d="M500,877 L500,930" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="800" y="1000" text-anchor="middle" font-size="21px" font-weight="bold"><tspan>分数 · </tspan><tspan>H</tspan><tspan baseline-shift="sub" font-size="15px">q</tspan><tspan> × (S + W)</tspan></text>
+<text x="394.0" y="981" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<text x="466.0" y="981" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<text x="538.0" y="981" text-anchor="middle" font-size="17px" font-weight="normal">…</text>
+<text x="610.0" y="981" text-anchor="middle" font-size="17px" font-weight="normal">S+W</text>
+<text x="329.0" y="1021.04" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<rect x="358" y="992" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1021.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<rect x="430" y="992" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1021.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<rect x="502" y="992" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1021.04" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<rect x="574" y="992" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1021.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<text x="329.0" y="1065.04" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<rect x="358" y="1036" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1065.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<rect x="430" y="1036" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1065.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<rect x="502" y="1036" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1065.04" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<rect x="574" y="1036" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1065.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<text x="329.0" y="1109.04" text-anchor="middle" font-size="17px" font-weight="normal">⋮</text>
+<rect x="358" y="1080" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1109.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="430" y="1080" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1109.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="502" y="1080" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1109.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="574" y="1080" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1109.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<text x="329.0" y="1153.04" text-anchor="middle" font-size="17px" font-weight="normal"><tspan>H</tspan><tspan baseline-shift="sub" font-size="12px">q</tspan></text>
+<rect x="358" y="1124" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1153.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<rect x="430" y="1124" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1153.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<rect x="502" y="1124" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1153.04" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<rect x="574" y="1124" width="72" height="44" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1153.04" text-anchor="middle" font-size="20px" font-weight="normal">s</text>
+<text x="155" y="1200" text-anchor="middle" font-size="20px" font-weight="bold">逐头沿候选列 softmax</text>
+<text x="820" y="1200" text-anchor="middle" font-size="19px" font-weight="bold">同上 K = V · 作为 V</text>
+<path d="M500,1168 L500,1220" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="394.0" y="1266" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<text x="466.0" y="1266" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<text x="538.0" y="1266" text-anchor="middle" font-size="17px" font-weight="normal">…</text>
+<text x="610.0" y="1266" text-anchor="middle" font-size="17px" font-weight="normal">S+W</text>
+<text x="329.0" y="1306.04" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<rect x="358" y="1277" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1306.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<rect x="430" y="1277" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1306.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<rect x="502" y="1277" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1306.04" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<rect x="574" y="1277" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1306.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<text x="329.0" y="1350.04" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<rect x="358" y="1321" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1350.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<rect x="430" y="1321" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1350.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<rect x="502" y="1321" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1350.04" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<rect x="574" y="1321" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1350.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<text x="329.0" y="1394.04" text-anchor="middle" font-size="17px" font-weight="normal">⋮</text>
+<rect x="358" y="1365" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1394.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="430" y="1365" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1394.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="502" y="1365" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1394.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="574" y="1365" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1394.04" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<text x="329.0" y="1438.04" text-anchor="middle" font-size="17px" font-weight="normal"><tspan>H</tspan><tspan baseline-shift="sub" font-size="12px">q</tspan></text>
+<rect x="358" y="1409" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="394.0" y="1438.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<rect x="430" y="1409" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="466.0" y="1438.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<rect x="502" y="1409" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="538.0" y="1438.04" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<rect x="574" y="1409" width="72" height="44" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="610.0" y="1438.04" text-anchor="middle" font-size="20px" font-weight="normal">p</text>
+<text x="788.0" y="1266" text-anchor="middle" font-size="18px" font-weight="normal">坐标 1</text>
+<text x="848.0" y="1266" text-anchor="middle" font-size="18px" font-weight="normal">坐标 2</text>
+<text x="908.0" y="1266" text-anchor="middle" font-size="18px" font-weight="normal">… 512</text>
+<text x="719.0" y="1300.76" text-anchor="middle" font-size="18px" font-weight="normal"><tspan>C</tspan><tspan baseline-shift="sub" font-size="12px">0</tspan></text>
+<rect x="758" y="1277" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="788.0" y="1300.76" text-anchor="middle" font-size="19px" font-weight="normal">v</text>
+<rect x="818" y="1277" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="848.0" y="1300.76" text-anchor="middle" font-size="19px" font-weight="normal">v</text>
+<rect x="878" y="1277" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="908.0" y="1300.76" text-anchor="middle" font-size="19px" font-weight="normal">…</text>
+<text x="719.0" y="1336.76" text-anchor="middle" font-size="18px" font-weight="normal">⋮</text>
+<rect x="758" y="1313" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="788.0" y="1336.76" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<rect x="818" y="1313" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="848.0" y="1336.76" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<rect x="878" y="1313" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="908.0" y="1336.76" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<text x="719.0" y="1372.76" text-anchor="middle" font-size="18px" font-weight="normal"><tspan>C</tspan><tspan baseline-shift="sub" font-size="12px">S−1</tspan></text>
+<rect x="758" y="1349" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="788.0" y="1372.76" text-anchor="middle" font-size="19px" font-weight="normal">v</text>
+<rect x="818" y="1349" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="848.0" y="1372.76" text-anchor="middle" font-size="19px" font-weight="normal">v</text>
+<rect x="878" y="1349" width="60" height="36" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="908.0" y="1372.76" text-anchor="middle" font-size="19px" font-weight="normal">…</text>
+<text x="719.0" y="1408.76" text-anchor="middle" font-size="18px" font-weight="normal"><tspan>local</tspan><tspan baseline-shift="sub" font-size="12px">1</tspan></text>
+<rect x="758" y="1385" width="60" height="36" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="788.0" y="1408.76" text-anchor="middle" font-size="19px" font-weight="normal">v</text>
+<rect x="818" y="1385" width="60" height="36" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="848.0" y="1408.76" text-anchor="middle" font-size="19px" font-weight="normal">v</text>
+<rect x="878" y="1385" width="60" height="36" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="908.0" y="1408.76" text-anchor="middle" font-size="19px" font-weight="normal">…</text>
+<text x="719.0" y="1444.76" text-anchor="middle" font-size="18px" font-weight="normal">⋮</text>
+<rect x="758" y="1421" width="60" height="36" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="788.0" y="1444.76" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<rect x="818" y="1421" width="60" height="36" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="848.0" y="1444.76" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<rect x="878" y="1421" width="60" height="36" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="908.0" y="1444.76" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
+<path d="M500,1453 L697,1510" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<path d="M848,1457 L743,1510" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<circle cx="720" cy="1525" r="27" fill="#f0eaff" stroke="#617f99" stroke-width="3"/>
+<text x="720" y="1534" text-anchor="middle" font-size="26px" font-weight="bold">×</text>
+<text x="850" y="1533" text-anchor="middle" font-size="22px" font-weight="bold">P × V</text>
+<text x="850" y="1600" text-anchor="middle" font-size="21px" font-weight="bold"><tspan>每头输出 O · </tspan><tspan>H</tspan><tspan baseline-shift="sub" font-size="15px">q</tspan><tspan> × 512</tspan></text>
+<path d="M720,1552 L570,1624" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="459.0" y="1661" text-anchor="middle" font-size="17px" font-weight="normal">坐标 1</text>
+<text x="541.0" y="1661" text-anchor="middle" font-size="17px" font-weight="normal">坐标 2</text>
+<text x="623.0" y="1661" text-anchor="middle" font-size="17px" font-weight="normal">… 512</text>
+<text x="389.0" y="1699.72" text-anchor="middle" font-size="17px" font-weight="normal">1</text>
+<rect x="418" y="1672" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="459.0" y="1699.72" text-anchor="middle" font-size="20px" font-weight="normal">o</text>
+<rect x="500" y="1672" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="541.0" y="1699.72" text-anchor="middle" font-size="20px" font-weight="normal">o</text>
+<rect x="582" y="1672" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="623.0" y="1699.72" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="389.0" y="1741.72" text-anchor="middle" font-size="17px" font-weight="normal">2</text>
+<rect x="418" y="1714" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="459.0" y="1741.72" text-anchor="middle" font-size="20px" font-weight="normal">o</text>
+<rect x="500" y="1714" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="541.0" y="1741.72" text-anchor="middle" font-size="20px" font-weight="normal">o</text>
+<rect x="582" y="1714" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="623.0" y="1741.72" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<text x="389.0" y="1783.72" text-anchor="middle" font-size="17px" font-weight="normal">⋮</text>
+<rect x="418" y="1756" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="459.0" y="1783.72" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="500" y="1756" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="541.0" y="1783.72" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<rect x="582" y="1756" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="623.0" y="1783.72" text-anchor="middle" font-size="20px" font-weight="normal">⋮</text>
+<text x="389.0" y="1825.72" text-anchor="middle" font-size="17px" font-weight="normal"><tspan>H</tspan><tspan baseline-shift="sub" font-size="12px">q</tspan></text>
+<rect x="418" y="1798" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="459.0" y="1825.72" text-anchor="middle" font-size="20px" font-weight="normal">o</text>
+<rect x="500" y="1798" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="541.0" y="1825.72" text-anchor="middle" font-size="20px" font-weight="normal">o</text>
+<rect x="582" y="1798" width="82" height="42" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="623.0" y="1825.72" text-anchor="middle" font-size="20px" font-weight="normal">…</text>
+<path d="M500,1840 L500,1880" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<circle cx="500" cy="1908" r="28" fill="#f4f8ff" stroke="#617f99" stroke-width="3"/>
+<text x="500" y="1917" text-anchor="middle" font-size="22px" font-weight="bold">Wₒ</text>
+<text x="800" y="1917" text-anchor="start" font-size="21px" font-weight="bold">分组输出投影</text>
+<path d="M500,1936 L500,1992" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="500" y="2020" text-anchor="middle" font-size="20px" font-weight="bold">attention update · 1 × d</text>
+<text x="402.5" y="2098.28" text-anchor="middle" font-size="19px" font-weight="normal"></text>
+<rect x="505" y="2060" width="95" height="58" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="552.5" y="2098.28" text-anchor="middle" font-size="21px" font-weight="normal">u</text>
+<rect x="600" y="2060" width="95" height="58" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="647.5" y="2098.28" text-anchor="middle" font-size="21px" font-weight="normal">u</text>
+<rect x="695" y="2060" width="95" height="58" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="742.5" y="2098.28" text-anchor="middle" font-size="21px" font-weight="normal">…</text>
+<rect x="790" y="2060" width="95" height="58" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="837.5" y="2098.28" text-anchor="middle" font-size="21px" font-weight="normal">u</text>
+</svg>

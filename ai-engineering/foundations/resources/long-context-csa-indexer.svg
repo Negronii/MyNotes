@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1600" viewBox="0 0 1000 1600">
+<defs><marker id="arr" markerWidth="11" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 Z" fill="#617f99"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<style>text { font-family: Hiragino Sans GB, Arial, sans-serif; fill: #172b4d; }</style>
+<text x="500" y="52" text-anchor="middle" font-size="27px" font-weight="bold"><tspan>t = 13 · 教学维度 </tspan><tspan>H</tspan><tspan baseline-shift="sub" font-size="19px">I</tspan><tspan> = 2, S = 3, </tspan><tspan>c</tspan><tspan baseline-shift="sub" font-size="19px">I</tspan><tspan> = 2</tspan></text>
+<text x="220" y="122" text-anchor="middle" font-size="25px" font-weight="bold">查询矩阵 Qᴵ  ·  2 × 2</text>
+<text x="750" y="122" text-anchor="middle" font-size="25px" font-weight="bold">已缓存索引键 Kᴵ  ·  3 × 2</text>
+<text x="205.0" y="171" text-anchor="middle" font-size="20px" font-weight="normal">坐标 1</text>
+<text x="315.0" y="171" text-anchor="middle" font-size="20px" font-weight="normal">坐标 2</text>
+<text x="107.5" y="234.24" text-anchor="middle" font-size="20px" font-weight="normal">头 1</text>
+<rect x="150" y="192" width="110" height="64" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="205.0" y="234.24" text-anchor="middle" font-size="27px" font-weight="normal">1</text>
+<rect x="260" y="192" width="110" height="64" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="315.0" y="234.24" text-anchor="middle" font-size="27px" font-weight="normal">0</text>
+<text x="107.5" y="298.24" text-anchor="middle" font-size="20px" font-weight="normal">头 2</text>
+<rect x="150" y="256" width="110" height="64" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="205.0" y="298.24" text-anchor="middle" font-size="27px" font-weight="normal">0</text>
+<rect x="260" y="256" width="110" height="64" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="315.0" y="298.24" text-anchor="middle" font-size="27px" font-weight="normal">2</text>
+<text x="700.0" y="171" text-anchor="middle" font-size="20px" font-weight="normal">坐标 1</text>
+<text x="810.0" y="171" text-anchor="middle" font-size="20px" font-weight="normal">坐标 2</text>
+<text x="600.0" y="230.28" text-anchor="middle" font-size="20px" font-weight="normal">块 0</text>
+<rect x="645" y="192" width="110" height="58" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="700.0" y="230.28" text-anchor="middle" font-size="25px" font-weight="normal">3</text>
+<rect x="755" y="192" width="110" height="58" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="810.0" y="230.28" text-anchor="middle" font-size="25px" font-weight="normal">−1</text>
+<text x="600.0" y="288.28" text-anchor="middle" font-size="20px" font-weight="normal">块 1</text>
+<rect x="645" y="250" width="110" height="58" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="700.0" y="288.28" text-anchor="middle" font-size="25px" font-weight="normal">−1</text>
+<rect x="755" y="250" width="110" height="58" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="810.0" y="288.28" text-anchor="middle" font-size="25px" font-weight="normal">2</text>
+<text x="600.0" y="346.28" text-anchor="middle" font-size="20px" font-weight="normal">块 2</text>
+<rect x="645" y="308" width="110" height="58" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="700.0" y="346.28" text-anchor="middle" font-size="25px" font-weight="normal">1</text>
+<rect x="755" y="308" width="110" height="58" rx="0" fill="#f0eaff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="810.0" y="346.28" text-anchor="middle" font-size="25px" font-weight="normal">0.5</text>
+<text x="500" y="428" text-anchor="middle" font-size="25px" font-weight="bold">矩阵乘：Qᴵ Kᴵᵀ</text>
+<path d="M250,320 L450,468" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<path d="M720,366 L550,468" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<circle cx="500" cy="480" r="30" fill="#f4f8ff" stroke="#617f99" stroke-width="3"/>
+<text x="500" y="489" text-anchor="middle" font-size="28px" font-weight="bold">×</text>
+<path d="M500,510 L500,548" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="500" y="575" text-anchor="middle" font-size="24px" font-weight="bold">点积分数  ·  2 × 3</text>
+<text x="455.0" y="621" text-anchor="middle" font-size="20px" font-weight="normal">块 0</text>
+<text x="565.0" y="621" text-anchor="middle" font-size="20px" font-weight="normal">块 1</text>
+<text x="675.0" y="621" text-anchor="middle" font-size="20px" font-weight="normal">块 2</text>
+<text x="355.0" y="678.92" text-anchor="middle" font-size="20px" font-weight="normal">头 1</text>
+<rect x="400" y="638" width="110" height="62" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="455.0" y="678.92" text-anchor="middle" font-size="26px" font-weight="normal">3</text>
+<rect x="510" y="638" width="110" height="62" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="565.0" y="678.92" text-anchor="middle" font-size="26px" font-weight="normal">−1</text>
+<rect x="620" y="638" width="110" height="62" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="675.0" y="678.92" text-anchor="middle" font-size="26px" font-weight="normal">1</text>
+<text x="355.0" y="740.92" text-anchor="middle" font-size="20px" font-weight="normal">头 2</text>
+<rect x="400" y="700" width="110" height="62" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="455.0" y="740.92" text-anchor="middle" font-size="26px" font-weight="normal">−2</text>
+<rect x="510" y="700" width="110" height="62" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="565.0" y="740.92" text-anchor="middle" font-size="26px" font-weight="normal">4</text>
+<rect x="620" y="700" width="110" height="62" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="675.0" y="740.92" text-anchor="middle" font-size="26px" font-weight="normal">1</text>
+<path d="M500,762 L500,785" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<circle cx="500" cy="815" r="28" fill="#fff2d5" stroke="#617f99" stroke-width="3"/>
+<text x="500" y="824" text-anchor="middle" font-size="18px" font-weight="bold">ReLU</text>
+<path d="M500,843 L500,885" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="455.0" y="926" text-anchor="middle" font-size="20px" font-weight="normal">块 0</text>
+<text x="565.0" y="926" text-anchor="middle" font-size="20px" font-weight="normal">块 1</text>
+<text x="675.0" y="926" text-anchor="middle" font-size="20px" font-weight="normal">块 2</text>
+<text x="355.0" y="983.92" text-anchor="middle" font-size="20px" font-weight="normal">头 1</text>
+<rect x="400" y="943" width="110" height="62" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="455.0" y="983.92" text-anchor="middle" font-size="26px" font-weight="normal">3</text>
+<rect x="510" y="943" width="110" height="62" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="565.0" y="983.92" text-anchor="middle" font-size="26px" font-weight="normal">0</text>
+<rect x="620" y="943" width="110" height="62" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="675.0" y="983.92" text-anchor="middle" font-size="26px" font-weight="normal">1</text>
+<text x="355.0" y="1045.92" text-anchor="middle" font-size="20px" font-weight="normal">头 2</text>
+<rect x="400" y="1005" width="110" height="62" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="455.0" y="1045.92" text-anchor="middle" font-size="26px" font-weight="normal">0</text>
+<rect x="510" y="1005" width="110" height="62" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="565.0" y="1045.92" text-anchor="middle" font-size="26px" font-weight="normal">4</text>
+<rect x="620" y="1005" width="110" height="62" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="675.0" y="1045.92" text-anchor="middle" font-size="26px" font-weight="normal">1</text>
+<text x="100.0" y="1138.28" text-anchor="middle" font-size="21px" font-weight="normal"><tspan>w</tspan><tspan baseline-shift="super" font-size="15px">I</tspan><tspan baseline-shift="sub" font-size="15px">t</tspan></text>
+<rect x="155" y="1100" width="88" height="58" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="199.0" y="1138.28" text-anchor="middle" font-size="26px" font-weight="normal">2</text>
+<rect x="243" y="1100" width="88" height="58" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="287.0" y="1138.28" text-anchor="middle" font-size="26px" font-weight="normal">1</text>
+<text x="790" y="1183" text-anchor="middle" font-size="22px" font-weight="bold">沿索引头轴加权求和</text>
+<path d="M500,1067 L500,1162" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<path d="M331,1129 L465,1162" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<circle cx="500" cy="1190" r="28" fill="#fff2d5" stroke="#617f99" stroke-width="3"/>
+<text x="500" y="1199" text-anchor="middle" font-size="28px" font-weight="bold">Σ</text>
+<path d="M500,1218 L500,1250" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="820" y="1238" text-anchor="middle" font-size="22px" font-weight="bold">I[s] 分数</text>
+<text x="395.0" y="1291" text-anchor="middle" font-size="20px" font-weight="normal">块 0</text>
+<text x="525.0" y="1291" text-anchor="middle" font-size="20px" font-weight="normal">块 1</text>
+<text x="655.0" y="1291" text-anchor="middle" font-size="20px" font-weight="normal">块 2</text>
+<text x="280.0" y="1347.6" text-anchor="middle" font-size="20px" font-weight="normal"><tspan>I</tspan><tspan baseline-shift="sub" font-size="14px">s</tspan></text>
+<rect x="330" y="1308" width="130" height="60" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="395.0" y="1347.6" text-anchor="middle" font-size="28px" font-weight="normal">6</text>
+<rect x="460" y="1308" width="130" height="60" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="525.0" y="1347.6" text-anchor="middle" font-size="28px" font-weight="normal">4</text>
+<rect x="590" y="1308" width="130" height="60" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
+<text x="655.0" y="1347.6" text-anchor="middle" font-size="28px" font-weight="normal">3</text>
+<text x="800" y="1418" text-anchor="start" font-size="24px" font-weight="bold">TopK · k = 2</text>
+<path d="M500,1368 L500,1440" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
+<text x="350.0" y="1500.92" text-anchor="middle" font-size="21px" font-weight="normal">选中 ID</text>
+<rect x="425" y="1460" width="160" height="62" rx="0" fill="#e7f4de" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="505.0" y="1500.92" text-anchor="middle" font-size="29px" font-weight="normal">0</text>
+<rect x="585" y="1460" width="160" height="62" rx="0" fill="#e7f4de" stroke="#9fb1c3" stroke-width="1.8"/>
+<text x="665.0" y="1500.92" text-anchor="middle" font-size="29px" font-weight="normal">1</text>
+</svg>

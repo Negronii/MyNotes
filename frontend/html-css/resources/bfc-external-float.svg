@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="350" viewBox="0 0 700 350" role="img" aria-labelledby="title desc">
+  <title id="title">外层 BFC 中的浮动如何影响内层 BFC 根</title>
+  <desc id="desc">按 CSS 像素绘制两个宽360px的外层区域，左侧都有120乘80像素的 float。上图自动宽度的普通流 BFC 根从 x 等于120开始，占剩余240像素。下图固定宽300像素的普通流 BFC 根放不进剩余空间；Chromium实测将它移到float下方，从y等于80开始。</desc>
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #243548; }
+      .heading { font-size: 19px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .note { font-size: 15px; fill: #42566b; }
+      .lane { fill: #f7fafc; stroke: #345f7b; stroke-width: 1.5; stroke-dasharray: 7 5; }
+      .float { fill: #3d6280; }
+      .root { fill: #dcefe6; stroke: #628a75; stroke-width: 1.5; }
+      .white { fill: #fff; }
+    </style>
+  </defs>
+  <rect width="700" height="350" fill="#fff" />
+
+  <text class="heading" x="20" y="29">自动宽度：同外层 BFC 的 120 × 80px float 占左侧</text>
+  <rect class="lane" x="20" y="45" width="360" height="80" />
+  <rect class="float" x="20" y="45" width="120" height="80" />
+  <text class="body white" x="31" y="78">float</text>
+  <text class="note white" x="31" y="101">120 × 80px</text>
+  <rect class="root" x="140" y="45" width="240" height="32" />
+  <text class="body" x="147" y="67">BFC 根 240 × 32px</text>
+  <text class="note" x="410" y="56">外层宽 360px</text>
+  <text class="note" x="410" y="79">自动宽根从 x=120 开始</text>
+  <text class="note" x="410" y="102">360 − 120 = 240px，填满余宽</text>
+
+  <text class="heading" x="20" y="176">固定宽度：300px 放不进剩余 240px</text>
+  <rect class="lane" x="20" y="192" width="360" height="112" />
+  <rect class="float" x="20" y="192" width="120" height="80" />
+  <text class="body white" x="31" y="225">float</text>
+  <text class="note white" x="31" y="248">120 × 80px</text>
+  <rect class="root" x="20" y="272" width="300" height="32" />
+  <text class="body" x="28" y="294">BFC 根 300 × 32px</text>
+  <path d="M397 192 V272 M391 192 H403 M391 272 H403" stroke="#526477" stroke-width="1.5" />
+  <text class="note" x="410" y="216">Chromium 实测将根移至 float 下方</text>
+  <text class="note" x="410" y="239">位移 80px；根从 x=0 开始</text>
+  <text class="note" x="410" y="262">内层 BFC 根的 border box 避开</text>
+  <text class="note" x="410" y="285">同层 float 的 margin box</text>
+</svg>
