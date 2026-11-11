@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <style>
+    text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
+    .head { font-size: 16px; font-weight: 700; }
+    .label { font-size: 14px; }
+    .small { font-size: 12px; fill: #526681; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 15px; }
+    .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
+    .value { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
+    .empty { fill: #f1f3f6; stroke: #aeb9c7; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .active { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
+    .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  </style>
+</defs>
+<rect width="720" height="400" fill="#fbfcfe"/>
+<g transform="translate(0,-66)">
+<g transform="translate(0,0)">
+<rect class="panel" x="24" y="82" width="672" height="115" rx="12"/>
+<text class="head" x="42" y="108">开始：items = [null, undefined]，head = 0</text>
+<text class="small" x="42" y="130">有效区间 [0, 2)，有 2 项；即使第二项是 undefined，也仍是队列值。</text>
+<text class="small" x="192" y="157">index 0</text><text class="small" x="352" y="157">index 1</text>
+<rect class="active" x="152" y="160" width="140" height="25" rx="4"/><text class="mono" x="194" y="178">null</text>
+<rect class="active" x="312" y="160" width="140" height="25" rx="4"/><text class="mono" x="344" y="178">undefined</text>
+</g>
+<g transform="translate(0,12)">
+<rect class="panel" x="24" y="198" width="672" height="115" rx="12"/>
+<text class="head" x="42" y="224">dequeue() returns null；槽 0 改为 undefined，head 前进到 1</text>
+<text class="small" x="42" y="246">有效区间 [1, 2)，还有一项；已消费的数组位置仍存在，但已不属于队列。</text>
+<text class="small" x="192" y="273">index 0</text><text class="small" x="352" y="273">index 1</text>
+<rect class="empty" x="152" y="276" width="140" height="25" rx="4"/><text class="small" x="188" y="294">队列区间外</text>
+<rect class="active" x="312" y="276" width="140" height="25" rx="4"/><text class="mono" x="344" y="294">undefined</text>
+</g>
+<g transform="translate(0,24)">
+<rect class="panel" x="24" y="314" width="672" height="115" rx="12"/>
+<text class="head" x="42" y="340">dequeue() returns 已存的 undefined；head 前进到 2</text>
+<text class="small" x="42" y="362">有效区间 [2, 2) 为空；head 到达长度，两个数组位置仍存在但已不属于队列。</text>
+<text class="small" x="192" y="389">index 0</text><text class="small" x="352" y="389">index 1</text>
+<rect class="empty" x="152" y="392" width="140" height="25" rx="4"/><text class="small" x="188" y="410">队列区间外</text>
+<rect class="empty" x="312" y="392" width="140" height="25" rx="4"/><text class="small" x="348" y="410">队列区间外</text>
+</g>
+</g>
+</svg>

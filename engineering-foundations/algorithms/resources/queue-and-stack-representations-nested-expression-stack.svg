@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <style>
+    text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
+    .head { font-size: 17px; font-weight: 700; }
+    .label { font-size: 14px; }
+    .small { font-size: 12px; fill: #526681; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 16px; }
+    .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
+    .token { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
+    .top { fill: #f0eafb; stroke: #9a77d1; stroke-width: 2; }
+    .char-cell { fill: #fff; stroke: #d5dfeb; stroke-width: 1.2; }
+    .space-cell { fill: #f4effb; stroke: #9a77d1; stroke-width: 1.2; }
+    .space { fill: #684d91; font-weight: 700; }
+    .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  </style>
+</defs>
+<rect width="720" height="440" fill="#fbfcfe"/>
+<g transform="translate(0,-60)">
+<rect class="panel" x="24" y="78" width="672" height="86" rx="12"/>
+<text class="small" x="42" y="101">字符位置（␠ 表示空格）</text>
+<text class="mono" text-anchor="middle" x="66" y="126">0</text><text class="mono" text-anchor="middle" x="122" y="126">1</text><text class="mono" text-anchor="middle" x="178" y="126">2</text><text class="mono" text-anchor="middle" x="234" y="126">3</text><text class="mono" text-anchor="middle" x="290" y="126">4</text><text class="mono" text-anchor="middle" x="346" y="126">5</text><text class="mono" text-anchor="middle" x="402" y="126">6</text><text class="mono" text-anchor="middle" x="458" y="126">7</text><text class="mono" text-anchor="middle" x="514" y="126">8</text><text class="mono" text-anchor="middle" x="570" y="126">9</text>
+<rect class="char-cell" x="46" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="66" y="151">f</text>
+<rect class="char-cell" x="102" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="122" y="151">(</text>
+<rect class="char-cell" x="158" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="178" y="151">a</text>
+<rect class="char-cell" x="214" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="234" y="151">,</text>
+<rect class="space-cell" x="270" y="132" width="40" height="26" rx="4"/><text class="mono space" text-anchor="middle" x="290" y="151">␠</text>
+<rect class="char-cell" x="326" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="346" y="151">g</text>
+<rect class="char-cell" x="382" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="402" y="151">(</text>
+<rect class="char-cell" x="438" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="458" y="151">b</text>
+<rect class="char-cell" x="494" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="514" y="151">)</text>
+<rect class="char-cell" x="550" y="132" width="40" height="26" rx="4"/><text class="mono" text-anchor="middle" x="570" y="151">)</text>
+<rect class="panel" x="24" y="176" width="672" height="70" rx="12"/>
+<text class="head" x="42" y="204">读到位置 1 的 “(”：push 外层 f(</text>
+<text class="small" x="42" y="226">它要等 f 的参数部分解析完成。</text>
+<path class="line" d="M306,211 L390,211"/>
+<text class="small" x="412" y="199">栈</text><text class="small" x="415" y="230">底</text>
+<rect class="token" x="448" y="192" width="100" height="36" rx="6"/><text class="mono" x="483" y="216">f(</text>
+<text class="small" x="563" y="230">顶</text>
+<rect class="panel" x="24" y="254" width="672" height="70" rx="12"/>
+<text class="head" x="42" y="282">读到位置 6 的 “(”：push 内层 g(</text>
+<text class="small" x="42" y="304">最近未完成的括号位于栈顶。</text>
+<path class="line" d="M306,289 L390,289"/>
+<text class="small" x="415" y="308">底</text>
+<rect class="token" x="448" y="270" width="78" height="36" rx="6"/><text class="mono" x="475" y="294">f(</text>
+<rect class="top" x="532" y="270" width="78" height="36" rx="6"/><text class="mono" x="559" y="294">g(</text>
+<text class="small" x="623" y="308">顶</text>
+<rect class="panel" x="24" y="332" width="672" height="70" rx="12"/>
+<text class="head" x="42" y="360">位置 8 的第一个 “)”：pop 栈顶 g(</text>
+<text class="small" x="42" y="382">内层括号已配对，外层 f( 仍待关闭。</text>
+<path class="line" d="M306,367 L390,367"/>
+<text class="small" x="415" y="386">底</text>
+<rect class="token" x="448" y="348" width="100" height="36" rx="6"/><text class="mono" x="483" y="372">f(</text>
+<text class="small" x="563" y="386">顶</text>
+<rect class="panel" x="24" y="410" width="672" height="70" rx="12"/>
+<text class="head" x="42" y="438">位置 9 的第二个 “)”：pop 外层 f(</text>
+<text class="small" x="42" y="460">栈变空，所有嵌套括号都已配对。</text>
+<path class="line" d="M306,445 L390,445"/>
+<text class="small" x="415" y="464">底</text><text class="mono" x="468" y="451">空</text><text class="small" x="563" y="464">顶</text>
+</g>
+</svg>

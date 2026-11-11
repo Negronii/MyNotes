@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="670" viewBox="0 0 720 670">
+<defs>
+  <marker id="head-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#398468"/></marker>
+  <marker id="tail-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#8568b1"/></marker>
+  <style>
+    text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
+    .head { font-size: 16px; font-weight: 700; }
+    .small { font-size: 12px; fill: #526681; }
+    .index { font-size: 12px; fill: #526681; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 14px; }
+    .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
+    .slot { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
+    .front { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
+    .new { fill: #f0eafb; stroke: #9376bc; stroke-width: 2; }
+    .empty { fill: #f1f3f6; stroke: #aeb9c7; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .head-line { stroke: #398468; stroke-width: 2; marker-end: url(#head-arrow); }
+    .tail-line { stroke: #8568b1; stroke-width: 2; marker-end: url(#tail-arrow); }
+    .head-label { font-size: 12px; fill: #28684f; font-weight: 700; }
+    .tail-label { font-size: 12px; fill: #684d91; font-weight: 700; }
+  </style>
+</defs>
+<rect width="720" height="670" fill="#fbfcfe"/>
+
+<g transform="translate(0,0)">
+<rect class="panel" x="24" y="16" width="672" height="152" rx="12"/>
+<text class="head" x="42" y="42">起始：e07、e03、e11 在队；size=3</text>
+<text class="small" x="42" y="63">head=0 指向最早项；tail=3 是下一次入队槽。</text>
+<text class="index" text-anchor="middle" x="202" y="86">index 0</text><text class="index" text-anchor="middle" x="326" y="86">index 1</text><text class="index" text-anchor="middle" x="450" y="86">index 2</text><text class="index" text-anchor="middle" x="574" y="86">index 3</text>
+<rect class="front" x="156" y="91" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="202" y="111">e07</text>
+<rect class="slot" x="280" y="91" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="326" y="111">e03</text>
+<rect class="slot" x="404" y="91" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="450" y="111">e11</text>
+<rect class="empty" x="528" y="91" width="92" height="30" rx="5"/><text class="small" text-anchor="middle" x="574" y="110">空槽</text>
+<path class="head-line" d="M202,160 L202,127"/><text class="head-label" x="220" y="148">head</text>
+<path class="tail-line" d="M574,160 L574,127"/><text class="tail-label" x="590" y="148">tail</text>
+</g>
+
+<g transform="translate(0,20)">
+<rect class="panel" x="24" y="158" width="672" height="152" rx="12"/>
+<text class="head" x="42" y="184">dequeue 返回 e07 并清空槽 0；size=2</text>
+<text class="small" x="42" y="205">head 前进到 1；tail 仍是 3，等待新项写入。</text>
+<text class="index" text-anchor="middle" x="202" y="228">index 0</text><text class="index" text-anchor="middle" x="326" y="228">index 1</text><text class="index" text-anchor="middle" x="450" y="228">index 2</text><text class="index" text-anchor="middle" x="574" y="228">index 3</text>
+<rect class="empty" x="156" y="233" width="92" height="30" rx="5"/><text class="small" text-anchor="middle" x="202" y="252">空槽</text>
+<rect class="front" x="280" y="233" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="326" y="253">e03</text>
+<rect class="slot" x="404" y="233" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="450" y="253">e11</text>
+<rect class="empty" x="528" y="233" width="92" height="30" rx="5"/><text class="small" text-anchor="middle" x="574" y="252">空槽</text>
+<path class="head-line" d="M326,303 L326,270"/><text class="head-label" x="342" y="290">head</text>
+<path class="tail-line" d="M574,303 L574,270"/><text class="tail-label" x="590" y="290">tail</text>
+</g>
+
+<g transform="translate(0,40)">
+<rect class="panel" x="24" y="300" width="672" height="152" rx="12"/>
+<text class="head" x="42" y="326">enqueue e18 写入槽 3；tail 绕回到 0</text>
+<text class="small" x="42" y="347">head=1、size=3；逻辑队列仍按 e03 → e11 → e18 读取。</text>
+<text class="index" text-anchor="middle" x="202" y="370">index 0</text><text class="index" text-anchor="middle" x="326" y="370">index 1</text><text class="index" text-anchor="middle" x="450" y="370">index 2</text><text class="index" text-anchor="middle" x="574" y="370">index 3</text>
+<rect class="empty" x="156" y="375" width="92" height="30" rx="5"/><text class="small" text-anchor="middle" x="202" y="394">空槽</text>
+<rect class="front" x="280" y="375" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="326" y="395">e03</text>
+<rect class="slot" x="404" y="375" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="450" y="395">e11</text>
+<rect class="new" x="528" y="375" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="574" y="395">e18</text>
+<path class="head-line" d="M326,445 L326,412"/><text class="head-label" x="342" y="432">head</text>
+<path class="tail-line" d="M202,445 L202,412"/><text class="tail-label" x="218" y="432">tail</text>
+</g>
+
+<g transform="translate(0,60)">
+<rect class="panel" x="24" y="442" width="672" height="152" rx="12"/>
+<text class="head" x="42" y="468">enqueue e21 写入槽 0；队满，size=4</text>
+<text class="small" x="42" y="489">head=tail=1；从 head 起按 index 1、2、3、0 读出四项。</text>
+<text class="index" text-anchor="middle" x="202" y="512">index 0</text><text class="index" text-anchor="middle" x="326" y="512">index 1</text><text class="index" text-anchor="middle" x="450" y="512">index 2</text><text class="index" text-anchor="middle" x="574" y="512">index 3</text>
+<rect class="new" x="156" y="517" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="202" y="537">e21</text>
+<rect class="front" x="280" y="517" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="326" y="537">e03</text>
+<rect class="slot" x="404" y="517" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="450" y="537">e11</text>
+<rect class="slot" x="528" y="517" width="92" height="30" rx="5"/><text class="mono" text-anchor="middle" x="574" y="537">e18</text>
+<path class="head-line" d="M326,586 L326,554"/><text class="head-label" x="342" y="576">head = tail</text>
+</g>
+</svg>
