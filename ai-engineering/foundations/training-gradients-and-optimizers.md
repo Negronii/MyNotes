@@ -83,9 +83,9 @@ flowchart TD
     Earlier --> Emb["Embedding 表<br/>按 ID 累加到被查行"]
 ~~~
 
-图中展开一个 block 的反向路径，并示意继续经过更早的 block：残差处拆出的旁路梯度与子层梯度在同一状态合流，Q/K/V 的三条输入梯度在共同的投影输入合流。它省略了 attention 内部的分数与 softmax 运算，下面展开这些步骤。
+图中展开前向篇使用的 pre-norm decoder-only self-attention block 的反向路径，并示意继续经过更早的 block：残差处拆出的旁路梯度与子层梯度在同一状态合流，Q/K/V 的三条输入梯度在共同的投影输入合流。它省略了 attention 内部的分数与 softmax 运算，下面展开这些步骤；其他架构可能有不同的归一化顺序，cross-attention 的 Q 与 K/V 也可能来自不同输入。
 
-回到缩放点积 attention（注意力）。前向篇先将 attention 输入归一化为 $U$，再投影为 Q/K/V，并对 Q/K 做 RoPE。本节为聚焦矩阵反传，暂略归一化与 RoPE 本身的导数；此处的 Q/K 指旋转前的投影，完整计算还要先把梯度经过位置旋转的转置映回投影输出。用 $R$ 表示送入这些投影的共同表示；在前向篇记法中，它对应归一化后的 $U$。设这一头有 $T_q$ 个 query 位置，K/V 轴长度为 $T_k$，每头宽度为 $d_h$：$Q\in\mathbb{R}^{T_q\times d_h}$，$K,V\in\mathbb{R}^{T_k\times d_h}$。因果或 padding mask 决定每个 query 实际可读哪些 K/V 位置；一般情况下 $T_q$ 与 $T_k$ 是各自的轴长度，不必相同。令固定的加性掩码矩阵为 $M$，可读项加 `0`、屏蔽项加 $-\infty$，求导时将 $M$ 视为常量。分数矩阵 $S=QK^T/\sqrt{d_h}+M$ 与沿 key 轴逐行归一化得到的权重 $P=\operatorname{softmax}_{\rm keys}(S)$ 都是 $T_q\times T_k$；加权输出 $Z=PV$ 是 $T_q\times d_h$。若从后续层收到 $G_Z=\partial L/\partial Z$，其形状与 $Z$ 相同；沿值分支有 $G_V=P^TG_Z$，形状为 $T_k\times d_h$，沿权重分支有 $G_P=G_ZV^T$，形状与 $P$ 相同。对每一行的 softmax，
+回到缩放点积 attention（注意力）。前向篇先将 attention 输入归一化为 $U$，再投影为 Q/K/V，并对 Q/K 做 RoPE。本节为聚焦矩阵反传，简化前向为不使用 RoPE，因此下面的 Q/K 都是未经旋转的投影结果，分数和梯度也对应这个简化计算。若实际前向使用 RoPE，点积中的 Q/K 是各位置旋转后的量；先求对旋转后 Q/K 的梯度，再对每个位置应用其旋转矩阵的转置，映回投影输出后才能代入下面的权重梯度。按行向量记法，若 $q'=q\operatorname{Rot}_t$，则 $G_q=G_{q'}\operatorname{Rot}_t^T$，K 同理。用 $R$ 表示送入这些投影的共同表示；在前向篇记法中，它对应归一化后的 $U$。设这一头有 $T_q$ 个 query 位置，K/V 轴长度为 $T_k$，每头宽度为 $d_h$：$Q\in\mathbb{R}^{T_q\times d_h}$，$K,V\in\mathbb{R}^{T_k\times d_h}$。因果或 padding mask 决定每个 query 实际可读哪些 K/V 位置；一般情况下 $T_q$ 与 $T_k$ 是各自的轴长度，不必相同。令固定的加性掩码矩阵为 $M$，可读项加 `0`、屏蔽项加 $-\infty$，求导时将 $M$ 视为常量。分数矩阵 $S=QK^T/\sqrt{d_h}+M$ 与沿 key 轴逐行归一化得到的权重 $P=\operatorname{softmax}_{\rm keys}(S)$ 都是 $T_q\times T_k$；加权输出 $Z=PV$ 是 $T_q\times d_h$。若从后续层收到 $G_Z=\partial L/\partial Z$，其形状与 $Z$ 相同；沿值分支有 $G_V=P^TG_Z$，形状为 $T_k\times d_h$，沿权重分支有 $G_P=G_ZV^T$，形状与 $P$ 相同。对每一行的 softmax，
 
 $$
 (G_S)_{tj}=P_{tj}\left((G_P)_{tj}-\sum_kP_{tk}(G_P)_{tk}\right).
@@ -99,7 +99,7 @@ $$
 G_Q=G_SK/\sqrt{d_h},\qquad G_K=G_S^TQ/\sqrt{d_h}.
 $$
 
-若是一次读取整段序列的 self-attention，三组表示来自同一段、同为 `T` 行的输入 `R`，即 $Q=RW_Q$、$K=RW_K$、$V=RW_V$ 且 $T_q=T_k=T$；这里的 `Q/K` 仍是略去 RoPE 后的简写。三组投影权重的梯度分别为
+若是一次读取整段序列的 self-attention，三组表示来自同一段、同为 `T` 行的输入 `R`，即 $Q=RW_Q$、$K=RW_K$、$V=RW_V$ 且 $T_q=T_k=T$。三组投影权重的梯度分别为
 
 $$
 G_{W_Q}=R^TG_Q,\qquad G_{W_K}=R^TG_K,\qquad G_{W_V}=R^TG_V.
@@ -129,7 +129,7 @@ Embedding lookup（嵌入查表）可以看成从表 $E\in\mathbb{R}^{N\times d}
 
 这些路径决定了冻结和离散选择的含义。冻结某个权重 `W`，意思是训练步不更新它；常见实现会跳过该权重自身梯度的计算或保存。若前面的可训练层仍通过 `XW` 影响损失，反向仍可能需要用固定的 `W` 计算传回输入的梯度 $G_X=DW^T$。因此“参数不更新”不等于“梯度不能经过这个算子”。低秩微调（LoRA）中的有效权重可写为 `W'=W+BA`；基础矩阵 `W` 冻结、增量支路中的 `A` 和 `B` 可训练。它属于[微调策略](../fine-tuning/fine-tuning-strategies.md)；这里解释的是梯度能否继续沿输入路径传播。
 
-相反，若前向使用 `detach`（停止梯度）将一个张量从计算图切开，梯度就不会从后续损失穿过该边返回被切断的上游计算。离散 `top-k`（取前 k 项）产出的整数 ID 也没有普通的连续导数来表达“改选另一个 ID”的影响；但被选中的值仍可沿后续连续运算收到梯度。[长上下文中的 V3.2 索引器例子](long-context-attention.md#Lightning%20Indexer%20怎样从当前表示选出压缩块？)会展示 detach、索引选择和索引器自有损失如何具体限定梯度路径；不应从推理代码中的整数选择反推出 V4 未披露的训练损失。
+相反，若前向使用 `detach`（停止梯度）将一个张量从计算图切开，梯度就不会从后续损失穿过该边返回被切断的上游计算。离散 `top-k`（取前 k 项）产出的整数 ID 也没有普通的连续导数来表达“改选另一个 ID”的影响；但被选中的值仍可沿后续连续运算收到梯度。[长上下文中的 V3.2 索引器例子](long-context-attention.md#DeepSeek-V3.2%20怎样训练离散选择之前的%20Indexer？)会展示 detach、索引选择和索引器自有损失如何具体限定梯度路径；不应从推理代码中的整数选择反推出 V4 未披露的训练损失。
 
 ## AdamW 和 Muon 怎样使用已经算好的梯度
 
@@ -187,6 +187,6 @@ AdamW 和 Muon 的差别主要在梯度怎样被转换成更新：AdamW 按坐�
 > [!info]- 来源
 > 这些推导使用普通实数矩阵与链式法则；本页两类词、二维权重、学习率和奇异值都是教学示例。引用的模型结果与配置仅适用于所列报告版本。
 >
-> - **损失与反向模式自动微分。** [PyTorch CrossEntropyLoss 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.CrossEntropyLoss.html) 定义 logits、目标索引、忽略位置和平均损失；本页使用的是无类别权重、无 label smoothing 的简单情形。[Baydin et al., *Automatic Differentiation in Machine Learning: a Survey*, arXiv v4, 2018-02-05, §§3.2、4.2](https://arxiv.org/html/1502.05767v4#S3.SS2) 说明反向模式如何从标量目标起始，沿运算图在一次反向遍历中计算对大量输入的导数；[PyTorch 2.15 Autograd mechanics](https://docs.pytorch.org/docs/2.15/notes/autograd.html) 记录动态计算图和冻结参数时的梯度控制。Attention 的 `QK^T`、softmax 与 `PV` 前向来自[Attention Is All You Need, v7, §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2)；本页相应反向式由链式法则推得。
+> - **损失与反向模式自动微分。** [PyTorch CrossEntropyLoss 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.CrossEntropyLoss.html) 定义 logits、目标索引、忽略位置和平均损失；本页使用的是无类别权重、无 label smoothing 的简单情形。[Baydin et al., *Automatic Differentiation in Machine Learning: a Survey*, arXiv v4, 2018-02-05, §§3.2、4.2](https://arxiv.org/html/1502.05767v4#S3.SS2) 说明反向模式如何从标量目标起始，沿运算图在一次反向遍历中计算对大量输入的导数；[PyTorch 2.15 Autograd mechanics](https://docs.pytorch.org/docs/2.15/notes/autograd.html) 记录动态计算图和冻结参数时的梯度控制。Attention 的 `QK^T`、softmax 与 `PV` 前向来自[Attention Is All You Need, v7, §3.2](https://arxiv.org/html/1706.03762v7#S3.SS2)；前向篇注意力使用 RoPE 的 Q/K 旋转见 [RoFormer, v5, §3.2.2, equations 14–16](https://arxiv.org/html/2104.09864v5#S3.SS2)；本页相应反向式由链式法则推得。
 > - **Adam 与解耦权重衰减。** [Kingma and Ba, *Adam: A Method for Stochastic Optimization*, arXiv v9, Algorithm 1](https://arxiv.org/abs/1412.6980v9) 给出一阶/二阶矩估计和偏差校正；[Loshchilov and Hutter, *Decoupled Weight Decay Regularization*, arXiv v3, 2019-01-04, §2](https://arxiv.org/html/1711.05101v3#S2) 解释 AdamW 将权重衰减与自适应梯度更新解耦；[PyTorch AdamW 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.optim.AdamW.html) 给出公式及实现参数。DeepSeek-V4 使用 AdamW 的具体参数组见 [Technical Report v1, §4.2.2](https://arxiv.org/html/2606.19348v1#S4.SS2)。
 > - **Muon。** [Jordan, *Muon: An optimizer for hidden layers in neural networks*, 2024-12-08](https://kellerjordan.github.io/posts/muon/) 介绍 Muon 的矩阵参数范围、Newton–Schulz 迭代和非隐藏层参数选择；[Liu et al., *Muon is Scalable for LLM Training*, arXiv v1, 2025-02-24, §§2.1–2.3](https://arxiv.org/html/2502.16982v1) 讨论权重衰减、更新缩放和分布式训练；DeepSeek-V4 Technical Report v1 的 [§2.4](https://arxiv.org/html/2606.19348v1#S2.SS4)、[§3.4.1](https://arxiv.org/html/2606.19348v1#S3.SS4.SSS1) 和 [§4.2.2](https://arxiv.org/html/2606.19348v1#S4.SS2) 分别给出混合 Newton–Schulz 算法、训练框架和参数分工。该报告还说明混合 ZeRO bucket、超出相应并行组时在额外数据并行组上冗余计算 Muon 更新，以及 Newton–Schulz 矩阵乘使用 BF16、MoE 梯度通信前随机舍入到 BF16 并在本地用 FP32 求和；报告没有完整列出 Muon 状态逐参数的数据类型或总字节数。截至 2026-11-11，核对到的公开报告版本为 v1。

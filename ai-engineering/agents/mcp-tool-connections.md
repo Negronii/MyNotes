@@ -4,7 +4,7 @@
 
 Model Context Protocol（MCP，模型上下文协议）规定 host（承载模型的应用）、client（host 中负责 MCP 协议通信的连接器）和 server（提供工具、资源或提示的服务）之间如何交换消息。runtime（运行时）是 host 中实际执行请求并检查策略的部分。MCP 统一发现和传输格式，但不替 host 决定哪些工具可见，不替 server 验证某条业务记录属于哪个用户，也不替模型工具调用授予执行权。
 
-下图沿一次远端只读调用走完边界。若 server 受保护，认证挑战可能发生在发现或列举等任何请求上；获得面向该 server 的 token 后，每个请求仍独立携带协议元数据并接受 server 验证。
+下图和本章协议细节采用 MCP 2026-07-28，沿一次远端只读调用走完边界。若 server 受保护，认证挑战可能发生在发现或列举等任何请求上；取得面向该 server 的 token 后，每个请求仍独立携带协议元数据并接受 server 验证。
 
 ~~~mermaid
 flowchart TD
@@ -42,7 +42,7 @@ MCP 的两种标准传输把消息送到同一个协议边界，进程和身份�
 | 传输 | 消息怎样到达 server | 身份和权限由什么边界承接 |
 |---|---|---|
 | stdio（标准输入输出） | host 启动本机子进程，通过标准输入和标准输出交换逐行 JSON-RPC 消息。标准输出只能写协议消息；诊断信息走标准错误。进程可以跨多次请求保持运行。 | 进程以启动它的操作系统用户运行；host 要限制可执行文件、参数、工作目录、环境变量、可读写路径和继承的秘密。stdio 本身没有 HTTP Bearer 认证头。 |
-| Streamable HTTP | client 向单一 MCP endpoint 发送 POST；server 对每个请求返回一个 JSON 对象，或只关联该请求的 Server-Sent Events（SSE，服务器发送事件）流。 | host 连接远端 HTTPS 服务，按资源边界带上访问令牌；server 每次验证。一个无状态请求可以到达负载均衡后的不同实例。 |
+| Streamable HTTP | client 向单一 MCP endpoint 发送 POST；server 对每个请求返回一个 JSON 对象，或只关联该请求的 Server-Sent Events（SSE，服务器发送事件）流。 | 对受保护的远端 HTTPS 服务，host 按资源边界带上访问令牌，server 每次验证。一个无状态请求可以到达负载均衡后的不同实例。 |
 
 2026-07-28 版移除了协议级 session 和 Streamable HTTP 的 GET stream endpoint；client 每发送一条 MCP 请求都用一个 HTTP POST，server 对该请求返回 JSON 或只关联该请求的 SSE 流。它没有先发 initialize、再靠 Mcp-Session-Id 延续能力协商的旧握手。stdio 进程或 HTTP 连接在操作系统层仍可能持续存在，但它们不再是此版 MCP 的协议会话状态。不要把“进程还活着”或“HTTP 连接还开着”当成前一条请求的版本、能力或授权已经继承。
 

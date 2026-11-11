@@ -2,7 +2,7 @@
 
 ## 案例：日志助手反复给出错误标签
 
-值班工程师希望构建日志助手，把失败日志归入稳定标签并用固定 JSON 结构输出，方便后续聚合。举例：输入 `Build 73 failed: connect ECONNREFUSED 10.0.0.8:5432`；团队约定的标签是 `database_connection_refused`，简短摘要是“构建进程无法连接数据库”。但模型有时把它标成 `database_timeout`，有时又在 JSON 前后附上说明文字。日志已包含分类所需的信号，错误在标签映射和输出行为，而不是少了当日外部事实。
+值班工程师希望构建日志助手，把失败日志归入稳定标签并用固定 JSON 结构输出，方便后续聚合。这个合成案例使用 build 1842：假设构建配置已经确认 `10.0.0.8:5432` 是构建数据库端点，输入为 `Build 1842 failed: connect ECONNREFUSED 10.0.0.8:5432`；团队约定的标签是 `database_connection_refused`，简短摘要是“构建进程无法连接数据库”。但模型有时把它标成 `database_timeout`，有时又在 JSON 前后附上说明文字。日志已包含分类所需的信号，错误在标签映射和输出行为，而不是少了当日外部事实。
 
 先把指令、标签定义、示例、可用结构化输出和工作流改清楚，并在同一批代表性日志上建立基线。如果约束输出能解决 JSON 格式问题，就让应用用结构化输出保证格式；只有在标签误判等行为差距仍反复出现、且手头有经审查的正确示例时，才评估微调。按成因选择方法：
 
@@ -28,7 +28,7 @@ $$
 
 在 `4096 × 4096` 的单个投影矩阵上取 `r=8`，LoRA 矩阵共有 `r(k+d)=8(4096+4096)=65,536` 个可训练数值；原稠密矩阵有 `dk=4096×4096=16,777,216` 个数值。这仅比较单个目标矩阵。全模型的训练参数量取决于目标层数和矩阵数，不能凭一个矩阵的比例预测整模型的质量或训练显存。
 
-**rank（矩阵秩）**决定这个增量能表达多少方向：较低的 `r` 参数和显存更少，但可能表达不了复杂的行为差距；较高的 `r` 容量更大，训练和部署成本也增加。应从可运行的小秩实验开始，用相同数据与留出样例比较，不存在保证质量的通用秩。
+**rank（矩阵秩）**决定这个增量能表达多少方向：较低的 `r` 参数和训练状态显存更少，但可能表达不了复杂的行为差距；较高的 `r` 容量更大，训练成本也增加。若独立加载 adapter，较高秩会增加额外推理计算；若把 LoRA 合并进基础权重，合并后投影矩阵形状不变，单次矩阵乘的规模也不因秩增加。应从可运行的小秩实验开始，用相同数据与留出样例比较，不存在保证质量的通用秩。
 
 其他方法改动模型的不同部分。full fine-tuning（全量微调）更新全部可训练基础权重，适应容量较大但算力、内存和模型产物成本也高；quantized LoRA（QLoRA，量化低秩适配）冻结量化基础权重并训练 LoRA，QLoRA 论文在其特定实验中使用 4-bit 量化，不能推定任一量化、模型或任务都适用。adapter（适配器）在 Transformer 块中加入小型可训练模块；prefix tuning（前缀微调）学连续向量，作为各层的前缀表示输入 Transformer；prompt tuning（软提示微调）则在输入嵌入前加少量连续向量。后两者不是普通可见文本 token（词元），也不同于编辑指令文字的提示词工程。
 
@@ -41,19 +41,19 @@ $$
 ~~~json
 {
   "messages": [
-    {"role": "user", "content": "Classify this build log using one approved category and return JSON only: Build 73 failed: connect ECONNREFUSED 10.0.0.8:5432"},
+    {"role": "user", "content": "Classify this build log using one approved category and return JSON only: Build 1842 failed: connect ECONNREFUSED 10.0.0.8:5432"},
     {"role": "assistant", "content": "{\"category\":\"database_connection_refused\",\"summary\":\"构建进程无法连接数据库。\"}"}
   ]
 }
 ~~~
 
-supervised fine-tuning（SFT，监督微调）将期望回答分成目标 token（词元）序列 `y₁,…,y_N`。计算第 `j` 个 token 的目标时，模型接收输入 `x` 和训练样本中已知的正确前缀 `y_{<j}`，再预测 `y_j`；逐步喂入这些标注前缀的方式称为 teacher forcing（教师强制），不是先让模型自由生成前缀。常见的 cross-entropy（交叉熵）目标可写为
+supervised fine-tuning（SFT，监督微调）将期望回答分成目标 token（词元）序列 `y₁,…,y_N`。计算第 `j` 个 token 的目标时，模型接收输入 `x` 和训练样本中已知的正确前缀 `y_{<j}`，再预测 `y_j`；teacher forcing（教师强制）指使用真实前缀作为条件，不意味着训练时要逐 token 运行完整模型。对带因果 mask 的 decoder，可以一次前向处理整段已知序列，并行计算各目标位置的预测。常见的 cross-entropy（交叉熵）目标可写为
 
 $$
 L(\theta)=-\frac{1}{N}\sum_{j=1}^{N}\log\pi_\theta(y_j\mid x,y_{<j}).
 $$
 
-这是对每个目标 token 的负对数概率取平均。假设只看标签位置的两个候选词元 `[database_timeout, database_connection_refused]`，玩具 logits（未归一化分数）为 `[2,0]`，模型把错误候选放在前面。softmax（归一化指数函数）概率为 `[e²,1]/(e²+1)≈[0.880797,0.119203]`，目标 one-hot（独热向量）是 `[0,1]`，正确标签对应的损失为 `−ln(1/(e²+1))=ln(e²+1)≈2.126928`。对这两个候选分数的梯度是 `p−onehot(y)≈[+0.880797,−0.880797]`；梯度下降会降低错误候选的相对分数、提高正确候选的相对分数。实际共享参数还受其他 token 位置与样本的梯度影响，所以不能由这一项推断模型更新后的具体概率。真实输出有许多 JSON 与摘要 token，损失会覆盖整段目标回答；这个二候选小算例只解释梯度方向，不是实测模型数字。
+这是对每个目标 token 的负对数概率取平均。为只演算一个标签位置，把多词标签 `database_timeout` 和 `database_connection_refused` 各自简化成一个玩具词元，候选为 `[database_timeout, database_connection_refused]`；玩具 logits（未归一化分数）设为 `[2,0]`，模型把错误候选放在前面。softmax（归一化指数函数）概率为 `[e²,1]/(e²+1)≈[0.880797,0.119203]`，目标 one-hot（独热向量）是 `[0,1]`，正确标签对应的损失为 `−ln(1/(e²+1))=ln(e²+1)≈2.126928`。对这两个候选分数的梯度是 `p−onehot(y)≈[+0.880797,−0.880797]`；梯度下降会降低错误候选的相对分数、提高正确候选的相对分数。实际共享参数还受其他 token 位置与样本的梯度影响，所以不能由这一项推断模型更新后的具体概率。本例把整段 assistant 回答设为监督区间；其他 SFT 数据也可用 loss mask 排除部分 token。这个二候选小算例只解释梯度方向，不是实测模型数字。
 
 梯度再沿模型的共享计算图回传到被选参数：全量微调会更新全部可训练权重；LoRA 会更新 `A`、`B`，基础矩阵保持冻结。也就是说，SFT 不会把一条日志作为可查询记录附加到模型中，而是用许多输入—目标对让模型的参数逐渐偏向它们共同表达的映射。新日志分布若与训练样本不同，已学到的标签映射仍可能失效。
 
@@ -103,6 +103,6 @@ reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学
 > [!info]- 来源
 > 下列来源分别支持微调方法、偏好训练和平台可用性。LoRA 参数示例及训练流程中的建议为教学演算或工程实践。
 >
-> - **低秩与参数高效微调。** Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)；Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)；Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751)；Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190)；Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)。
-> - **SFT 与 DPO。** Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155)；Rafailov et al., [Direct Preference Optimization: Your Language Model Is Secretly a Reward Model](https://arxiv.org/abs/2305.18290)。
+> - **低秩与参数高效微调。** Hu et al., [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)，尤其 §4.1 的合并部署与独立动态 adapter 取舍；Dettmers et al., [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)；Houlsby et al., [Parameter-Efficient Transfer Learning for NLP](https://arxiv.org/abs/1902.00751)；Li and Liang, [Prefix-Tuning](https://arxiv.org/abs/2101.00190)；Lester et al., [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)。
+> - **SFT 与 DPO。** [Attention Is All You Need, v7, §3.1](https://arxiv.org/html/1706.03762v7#S3.SS1) 的因果 mask 与右移目标说明已知前缀可作为条件；TRL [SFT Trainer](https://huggingface.co/docs/trl/en/sft_trainer#train-on-assistant-messages-only) 展示 prompt/completion 与 assistant-only loss mask（核对日期：2026-11-11）。Ouyang et al., [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155)；Rafailov et al., [Direct Preference Optimization: Your Language Model Is Secretly a Reward Model](https://arxiv.org/abs/2305.18290)。
 > - **OpenAI API 上的可用性。** [Model optimization](https://developers.openai.com/api/docs/guides/model-optimization)、[Supervised fine-tuning](https://developers.openai.com/api/docs/guides/supervised-fine-tuning)、[Direct preference optimization](https://developers.openai.com/api/docs/guides/direct-preference-optimization)、[Reinforcement fine-tuning](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning) 与 [Deprecations](https://developers.openai.com/api/docs/deprecations)，核对日期为 2026-11-06。OpenAI 正在逐步结束自助微调：2026-05-07 起，没有既往微调记录的组织不能创建训练任务；2026-07-02 起，过去 60 天未对微调模型运行推理的组织也不能创建新任务；现有合格用户可创建任务至 2027-01-06，或基础模型更早停服之日。微调模型推理会持续到其基础模型退役；先前训练文档仍在迁移，具体资格与模型时限应按官方页面核验。平台可用性仅适用于 OpenAI API，不是对通用微调方法的限制。

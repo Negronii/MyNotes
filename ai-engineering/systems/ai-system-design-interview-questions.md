@@ -42,7 +42,7 @@
 >
 > 阶段预算相加得到 4.0 秒，但每阶段预算不是测得的分位数，阶段 p95 也不能直接相加得出端到端 p95；要用联合负载测试测量完整链路。若请求里经常有很长文档或突发流量，队列和生成尾延迟会改变预算是否成立。
 
-容量可先用 Little's Law (利特尔定律) 估算平均在途请求数：
+在系统稳定且样本代表长期平均时，可用 Little's Law (利特尔定律) 粗估平均在途请求数：
 
 > [!example] 用平均停留时间估算在途请求
 > $$
@@ -78,7 +78,7 @@
 
 ## 代码审查：误报成本决定自动化边界
 
-代码审查助手需要读取 pull request (PR，合并请求) 的 diff (代码差异) 与必要仓库上下文，输出有证据、能定位的 finding (审查发现)。团队若不愿承受嘈杂评论，应先以草稿形式提供建议，由人决定是否发布；不自动批准或阻止合并。每条 finding 至少要有类别、受影响行、代码证据和可执行解释；定位不在此次改动内或引用不匹配时拒绝该 finding。要先确定仓库代码、差异、评论和依赖元数据能否发送到托管服务；若不能越过仓库边界，应比较获准的私有端点或本地模型，同时限制所提供上下文。
+代码审查助手需要读取 pull request (PR，合并请求) 的 diff (代码差异) 与必要仓库上下文，输出有证据、能定位的 finding (审查发现)。团队若不愿承受嘈杂评论，应先以草稿形式提供建议，由人决定是否发布；不自动批准或阻止合并。行内意见应锚定到本次改动或平台可接受的 diff 行；证据可以来自相关的未修改代码，但必须说明本 PR 如何引入问题，无法证明时拒绝该 finding。若没有合适的行级锚点，可改用平台支持的文件级意见或摘要供人工审阅。要先确定仓库代码、差异、评论和依赖元数据能否发送到托管服务；若不能越过仓库边界，应比较获准的私有端点或本地模型，同时限制所提供上下文。
 
 > [!example] 代码审查的一次请求路径
 > ~~~text
@@ -120,3 +120,4 @@
 > - **退款幂等与结果读取。** Stripe 官方 [Idempotent requests](https://docs.stripe.com/api/idempotent_requests) 说明支持相同幂等键重放及参数一致性/保留期边界；[Create a refund](https://docs.stripe.com/api/refunds/create) 允许多次部分退款并支持 metadata；[Retrieve a refund](https://docs.stripe.com/api/refunds/retrieve) 按退款 ID 读取，说明“支持幂等键”不等于“可按键查询”。
 > - **退款对象与状态。** Stripe 官方 [Refund object](https://docs.stripe.com/api/refunds/object) 给退款对象唯一 ID，并区分 pending、requires_action、succeeded、failed、canceled；存在对象不等于最终成功。
 > - **结构化输出与工具调用。** OpenAI 官方 [Function calling](https://developers.openai.com/api/docs/guides/function-calling) 和 [Structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)，截至 2026-11-06 核对。schema 约束接口形状，不代替应用授权与业务状态检查。
+> - **PR 审查评论的行级与文件级发布锚点。** GitHub 官方 [Create a review comment](https://docs.github.com/en/rest/pulls/comments#create-a-review-comment-for-a-pull-request)，截至 2026-11-11 核对其 API version header `2026-03-10` 的 `line`、`side` 与 `subject_type` 参数；`line` 锚定 diff 行，`subject_type` 可选 `line` 或 `file`。平台锚点说明评论能放在哪里，不证明 finding 是否由该 PR 引入。

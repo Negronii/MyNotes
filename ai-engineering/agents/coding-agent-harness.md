@@ -4,6 +4,8 @@
 
 coding agent harness（代码智能体执行框架）是把模型接到实际执行工具的运行时：它接收模型提出的 shell、文件编辑或 MCP 工具请求，读取项目指令，检查动作和当前权限，在适用的沙箱里执行，再把退出状态、输出或 diff 交回运行。模型能生成一个命令，不代表它已获得操作系统权限；技能说明怎样完成任务，也不构成访问控制。
 
+以下图是 Codex CLI 0.167.0 的本地 shell/文件路径示意；hook 只在产品支持且有受信任的匹配配置时运行，没有匹配 hook 时仍按常规权限策略判断。
+
 ~~~mermaid
 flowchart TD
     A[启动会话并固定 cwd 与可用工具] --> B[发现 Skill 名称和说明]
@@ -134,9 +136,10 @@ Codex 的公开 hook 文档区分多个运行时事件：SessionStart 可在 sta
 - [生产应用运行时怎样管理部署凭据？](../../engineering-foundations/infrastructure/production-application-runtime.md)：说明服务凭据和部署身份的隔离、轮换及审计。
 
 > [!info]- 来源
-> Codex 本地 CLI 版本为 0.167.0；公开资料核验于 2026-11-09。PreToolUse、PermissionRequest 等 hook 事件名称及其公开输出 schema 是 Codex 产品接口；本例的 hook 脚本名和 permission reason 是教学样例。
+> Codex 本地 CLI 版本为 0.167.0；固定 tag 源码与公开资料核验于 2026-11-11。PreToolUse、PermissionRequest 等 hook 事件名称及其输出 schema 是 Codex 产品接口；本例的 hook 脚本名和 permission reason 是教学样例。
 >
 > - **sandbox 与 approval 的职责区别、可写根、受保护路径及默认网络条件。** OpenAI，[Agent approvals & security](https://learn.chatgpt.com/docs/agent-approvals-security)，检查 “Sandbox and approvals”、“Network access”、“Network isolation” 和 “Protected paths in writable roots”；[Permissions](https://learn.chatgpt.com/docs/permissions) 说明 workspace roots 与系统临时目录的写入范围。Codex CLI 当前 reference 的具体 flags 见 [Command line options](https://learn.chatgpt.com/docs/cli/reference)。
 > - **Skills 的发现、按需读取和执行形式。** OpenAI，[Skills](https://developers.openai.com/api/docs/guides/tools-skills)，检查 “What's a skill”、“Prompting behavior” 和 local shell mode；技能只提供可复用指令与材料，具体工具和执行环境由 runtime 提供。
 > - **Hooks 的生命周期、信任审阅及不同事件的输出契约。** OpenAI，[Hooks](https://learn.chatgpt.com/docs/hooks)，检查 “Review and trust hooks”、“SessionStart”、“PreToolUse”、“PermissionRequest”、“PostToolUse”、“Stop”、“SessionEnd” 和 “Interrupt”；[Plugin architecture](https://developers.openai.com/plugins/concepts/plugins) 与 [Bundled MCP servers and lifecycle hooks](https://developers.openai.com/plugins/build/plugins#bundled-mcp-servers-and-lifecycle-hooks) 说明 hook 脚本必须部署在执行环境，并受 surface 与信任流程限制。
+> - **Codex CLI 0.167.0 的固定实现。** OpenAI Codex 源码 [rust-v0.167.0 tag / commit `086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a`](https://github.com/openai/codex/tree/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a)：核对 `codex-rs/core/src/hook_runtime.rs`、`core/src/tools/approvals.rs`、`core/src/tools/registry.rs` 及 `codex-rs/hooks/src/events/`、`schema.rs`，确认匹配 hook 的执行、PreToolUse 的输入改写、PermissionRequest 的正常审批回退和相应事件 schema。
 > - **对话 resume 和真实状态分离的工程结论。** OpenAI [CLI reference](https://learn.chatgpt.com/docs/cli/reference) 列出 codex resume 的会话续接用法；恢复不撤销文件或外部副作用，并与[AI 运行恢复章](../systems/ai-application-architecture.md)的副作用契约一致。

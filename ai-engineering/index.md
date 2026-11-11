@@ -21,7 +21,7 @@
 ### 模型怎样计算，服务怎样承接请求
 
 - [语言模型如何把提示词变成文本？](foundations/how-llms-work.md)
-- [长上下文怎样少存、少读历史，同时保留需要的信息？](foundations/long-context-attention.md)
+- [DeepSeek 的长上下文 Attention 怎样节省存储与读取？](foundations/long-context-attention.md)
 - [KV 缓存与调度怎样决定大语言模型的服务容量？](systems/llm-serving-and-kv-cache.md)
 - [如何测量并降低 AI 应用的时延与成本，同时守住任务质量？](systems/ai-latency-and-cost-optimization.md)
 - [怎样让模型 API 调用在限额、失败和截止时间内有界？](systems/bounded-model-api-calls.md)

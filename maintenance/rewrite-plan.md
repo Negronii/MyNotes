@@ -31,7 +31,7 @@
 | [DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence](https://arxiv.org/abs/2606.19348) | 怎样减少长历史的存储与读取，同时保留局部细节和全局信息？ | 长上下文机制与服务：CSA/HCA、选择与压缩的损失、局部窗口、按层状态管理。按相关问题纳入 mHC、Muon、训练稳定性和 on-policy distillation；核对 1M 窗口与有效利用能力、单 token 成本与端到端时延的区别。 |
 | [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948) | 谁判断答案对错，奖励怎样更新参数，为什么不等于验证了每个推理步骤？ | 后训练与评估：程序验证器、GRPO 组内相对优势和更新约束、R1-Zero 与完整 R1 的训练流程、SFT/RL/蒸馏分工。核对后续算法对零方差组、长度和截断偏差的处理，以及奖励作弊、独立验收与跨任务泛化边界。 |
 
-对应正文为[模型计算](../ai-engineering/foundations/how-llms-work.md)、[长上下文注意力](../ai-engineering/foundations/long-context-attention.md)、[推理服务与缓存](../ai-engineering/systems/llm-serving-and-kv-cache.md)、[奖励推理训练](../ai-engineering/fine-tuning/reward-based-reasoning-training.md)和[微调选择](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。阅读过来源不等于读过整篇重写后的知识正文，不自动修改正文的阅读勾选。
+对应正文为[模型计算](../ai-engineering/foundations/how-llms-work.md)、[DeepSeek 长上下文 Attention](../ai-engineering/foundations/long-context-attention.md)、[推理服务与缓存](../ai-engineering/systems/llm-serving-and-kv-cache.md)、[奖励推理训练](../ai-engineering/fine-tuning/reward-based-reasoning-training.md)和[微调选择](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。阅读过来源不等于读过整篇重写后的知识正文，不自动修改正文的阅读勾选。
 
 ## 交付范围与合并去向
 

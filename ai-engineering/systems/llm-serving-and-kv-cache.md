@@ -4,7 +4,7 @@
 
 ## Prefill（提示预填充）和 decode（增量解码）为何有不同瓶颈？
 
-[模型生成章节](../foundations/how-llms-work.md)说明了因果 attention（注意力）为何能复用历史状态。服务端先对完整提示做 prefill：逐层处理所有提示词元，把各位置的 key/value（键/值，K/V）存入 KV cache（键值缓存），并从最后位置得到第一个输出词元的分布。之后每一步只把新词元送进各层，用新位置的 query（查询）与缓存中的 key（键）以及当前位置的 key 计算分数，再经 softmax 得到权重并聚合对应的 value（值），算出新的状态并追加缓存。因果掩码保证旧位置不读取未来，所以旧 K/V 可沿用；旧 query 不供后续位置读取。
+[模型生成章节](../foundations/how-llms-work.md)说明了因果 attention（注意力）为何能复用历史状态。以下先按普通全量因果注意力的常规缓存路径说明；滑动窗口、压缩或稀疏注意力会改变每层能读取的历史范围与持久状态，须按模型结构分别核算。服务端先对完整提示做 prefill：逐层处理所有提示词元，把各位置的 key/value（键/值，K/V）存入 KV cache（键值缓存），并从最后位置得到第一个输出词元的分布。之后每一步只把新词元送进各层，用新位置的 query（查询）与缓存中的 key（键）以及当前位置的 key 计算分数，再经 softmax 得到权重并聚合对应的 value（值），算出新的状态并追加缓存。因果掩码保证旧位置不读取未来，所以旧 K/V 可沿用；旧 query 不供后续位置读取。
 
 | 阶段 | 一条请求的典型注意力形状 | 常见成本 |
 | --- | --- | --- |
@@ -36,7 +36,7 @@ Multi-Head Latent Attention (MLA，多头潜注意力)把历史 key 和 value �
 >
 > 若拿一个假设的普通 multi-head attention（多头注意力，MHA）作量纲基线，并设 128 个注意力头、每头 K 和 V 各 128 维，每词元每层需 `2×128×128=32,768` 个数，即 `65,536 bytes`。它与本例 `absorb` 路径的 `1,152 bytes` 相比约为 `56.9:1`。这不是 DeepSeek-V3 `naive` MLA 路径的缓存大小：该路径会按头展开 K/V，并将其写入不同的缓存字段；参考实现的 `naive` 与 `absorb` 分支实际缓存布局不同。此处比较只对照假设的标准 MHA 配置与压缩 `absorb` 缓存，不是端到端显存或速度承诺；并行分片、量化和运行时开销都会改变实测结果。
 
-官方参考实现的 `absorb` 路径会把内容 K 上投影与 query 结合、把内容 V 上投影延后到 latent 加权之后；另一条 `naive` 路径则先展开逐头 K/V，再分别写入 `k_cache` 和 `v_cache`。因此 MLA 的持久缓存形状由具体计算路径决定，本例的 576 标量限定于参考实现的默认压缩 `absorb` 路径。这里关心容量估算与状态布局，矩阵吸收的投影代数见[长上下文注意力中的 MLA 与位置表示](../foundations/long-context-attention.md)。
+官方参考实现的 `absorb` 路径会把内容 K 上投影与 query 结合、把内容 V 上投影延后到 latent 加权之后；另一条 `naive` 路径则先展开逐头 K/V，再分别写入 `k_cache` 和 `v_cache`。因此 MLA 的持久缓存形状由具体计算路径决定，本例的 576 标量限定于参考实现的默认压缩 `absorb` 路径。这里关心容量估算与状态布局，矩阵吸收的投影代数见[DeepSeek-V3 MLA 的矩阵吸收与位置表示](../foundations/long-context-attention.md)。
 
 ## 区分注意力内核与持久缓存分配
 
@@ -68,7 +68,7 @@ flowchart LR
 
 令 `N` 表示已处理的词元数、`m` 表示某层压缩率；`N mod m` 是除以 `m` 的余数。以 V4-Pro 的十进制 `N=1,000,000` 前缀为例，每个 CSA 层有 `floor(N/4)=250,000` 条 C4 主 KV，也有 250,000 条 indexer key；两者条目数相同，载荷不同。每个 HCA 层有 `floor(N/128)=7,812` 条 C128 KV，覆盖至位置 999,936，另有 64 个未完成输入位置。SWA 最近 128 个原始 KV 是另一份状态，依所选窗口缓存策略单独恢复。
 
-`N mod 4=0` 不表示 C4 压缩器没有运行状态：官方参考代码仍为主 KV 与 indexer 各保留最近完整 4 位置组的投影和分数；按一基位置编号，这组是 999,997–1,000,000。压缩条目之外还要取得这两份状态，或重算对应输入，才能继续压缩；这是由公开压缩器实现推出的恢复要求，论文没有说明该重叠状态或 indexer keys 的具体磁盘布局。各层完整的状态计数与载荷示例见[长上下文注意力的逐层 KV、索引器与尾部核算](../foundations/long-context-attention.md#按层复算一百万词元时的状态)；这里的载荷不含量化 scale、页空位、对齐、临时缓冲或整卡其他占用。
+`N mod 4=0` 不表示 C4 压缩器没有运行状态：官方参考代码仍为主 KV 与 indexer 各保留最近完整 4 位置组的投影和分数；按一基位置编号，这组是 999,997–1,000,000。压缩条目之外还要取得这两份状态，或重算对应输入，才能继续压缩；这是由公开压缩器实现推出的恢复要求，论文没有说明该重叠状态或 indexer keys 的具体磁盘布局。各层完整的状态计数与载荷示例见[DeepSeek-V4 预览版的逐层 KV、索引器与尾部核算](../foundations/long-context-attention.md#DeepSeek-V4%20预览版按层保存多少状态？)；这里的载荷不含量化 scale、页空位、对齐、临时缓冲或整卡其他占用。
 
 V4 报告把 prefix cache（前缀缓存）的磁盘状态拆成压缩 KV 与 SWA KV 两类。报告明确未完成压缩块需要重算；官方参考代码还表明，继续 CSA 压缩需要 C4 主 KV 和 indexer 各自的最近完整组状态，但论文未给出它们的磁盘格式或持久化办法。SWA 可按三种存储与计算取舍恢复：完整缓存把所有 SWA 条目写盘，命中时只读前缀末尾 128 个；周期检查点每隔 `p` 个词元保存当时的末尾 128 个，再从不晚于命中边界的最近 checkpoint（检查点）重算其后的尾段；零 SWA 缓存不保存窗口条目；命中压缩 KV 后，长前缀重算末尾 `128×L` 个位置即可恢复 `L` 层的末尾窗口，较短前缀则从开头重算。这里的 `L` 倍来自逐层依赖：重建高一层的窗口，还需要前一层更早一个窗口的输入，往下追溯时范围逐层向前扩展。V4-Pro 的 `L=61`，最多重算 7,808 个位置。完整缓存省重算但写盘量较大，零缓存省存储但增加计算；周期检查点通过 `p` 调节两者。它们是报告提出的磁盘策略，不表示所有推理引擎都默认采用同一种方案。
 
@@ -109,11 +109,13 @@ flowchart LR
     C["前缀 C<br/>目标 KV 已提交"] --> D["Proposer 按 q_i<br/>依次提出 x₁,…,xₘ"]
     D --> V["目标模型完整前向<br/>一次处理整段候选"]
     V --> A{"从 x₁ 起逐个校正"}
-    A -->|全部接受| B["提交 x₁,…,xₘ<br/>从 pₘ₊₁ 取 bonus"]
+    A -->|全部接受且未遇 EOS| B["提交 x₁,…,xₘ<br/>长度允许时从 pₘ₊₁ 取 bonus"]
     A -->|位置 j 首次拒绝| R["保留 x₁,…,xⱼ₋₁<br/>按残差抽 z"]
-    B --> N["继续下一轮"]
+    B --> N["未触发停止条件时继续"]
     R --> N
 ```
+
+图只画本轮尚未触发停止条件的分支：已接受候选、拒绝后的替换词元或 bonus 若为 EOS，或输出达到长度上限，就立即结束并跳过后续候选与 bonus。
 
 > [!example] 第一次拒绝时，哪些缓存状态有效？
 > 已提交前缀为`C`，proposer 提出`[x₁,x₂,x₃]`。目标模型一次前向为这三个输入位置计算了结果和临时 K/V。若`x₁`接受、`x₂`被拒，并从残差抽到替换词元`z`，输出会接在前缀后成为`C,x₁,z`。目标 KV 可以保留`C,x₁`的状态；`x₂`与`x₃`对应的 K/V 是在候选路径上暂存的，应从逻辑缓存长度回退或标记为无效。`z`虽已作为输出词元提交，但目标模型尚未把`z`输入前向，因此它的目标 K/V 要等下一步处理`z`时再计算。若三项候选全被接受，可提交到`x₃`的目标 KV；bonus token 也尚未进入目标缓存。底层物理块不一定立即释放，但逻辑长度和下次读取边界必须只覆盖有效前缀。proposer 自身缓存的回退方式取决于引擎实现。
@@ -142,7 +144,7 @@ vLLM V1 的 chunked prefill（分块预填充）把大型 prefill 切成小块�
 > [!info]- 来源
 > 来源支持的范围与对应章节如下；容量数值是按列明的架构维度与精度复算的载荷估算，不是硬件实测。
 >
-> - **因果缓存、prefill 与 decode。** [Transformers 缓存说明](https://huggingface.co/docs/transformers/main/en/cache_explanation)；[Sarathi-Serve, §§2–4](https://arxiv.org/abs/2403.02310)。
+> - **因果缓存、prefill 与 decode。** [Transformers 缓存说明](https://huggingface.co/docs/transformers/main/en/cache_explanation)；[Sarathi-Serve, §§2–4](https://arxiv.org/abs/2403.02310)；[Mistral 7B, v1, §2, Figures 1–3](https://arxiv.org/html/2310.06825#S2) 对照滑动窗口可见范围与滚动缓存。
 > - **普通 K/V 容量、GQA 与量化。** [GQA, EMNLP 2023, §2](https://aclanthology.org/2023.emnlp-main.298/)；[KIVI, §3](https://arxiv.org/abs/2402.02750)；[vLLM KV cache 配置](https://docs.vllm.ai/en/latest/api/vllm/config/cache/)（文档核对日期：2026-11-06）。
 > - **MLA 缓存维度与实现分支。** [DeepSeek-V3 Technical Report, arXiv v2, §2.1.1、§4.2](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1) 给出联合 KV latent、独立 RoPE key、`d_c=512`、`d_h^R=64` 与 61 层等参数；§2.1.1 的投影式未把 RMSNorm 写入。官方 [`inference/model.py`](https://github.com/deepseek-ai/DeepSeek-V3/blob/9b4e9788e4a3a731f7567338ed15d3ec549ce03b/inference/model.py) 默认 `attn_impl="absorb"`，在压缩 latent 后调用 `kv_norm`，并在 `absorb` 分支缓存归一化 latent 与独立 `pe_cache`；`naive` 分支会展开逐头 K/V 并写入 `k_cache/v_cache`（核对仓库提交 `9b4e9788e4a3a731f7567338ed15d3ec549ce03b`，日期：2026-11-06）。MLA 代数的唯一详解见长上下文注意力章节。
 > - **FlashAttention 内核。** [FlashAttention, §3](https://arxiv.org/abs/2205.14135)；[FlashAttention-4, 2026](https://arxiv.org/abs/2603.05451)。

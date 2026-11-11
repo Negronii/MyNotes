@@ -64,7 +64,7 @@ Kubernetes Deployment 可以渐进替换副本并回退 Pod 模板修订；它�
 ## 相关笔记
 
 - [模型选择与生态](../foundations/model-selection-and-ecosystem.md)：先得到满足任务门槛的候选。
-- [时延与成本优化](ai-latency-and-cost-optimization.md)：提供真实负载、尾延迟、成功任务成本及缓存数据。
+- [时延与成本优化](ai-latency-and-cost-optimization.md)：给出负载、尾延迟、成功任务成本和缓存的测量口径；月报助手的实际负载仍待测。
 - [AI 应用架构](ai-application-architecture.md)：在任何部署模式下保持稳定运行 ID 和权威状态。
 - [GPU 推理容量与 KV 缓存](llm-serving-and-kv-cache.md)：测量自托管容量与请求调度。
 - [生产可观测性与反馈](ai-production-observability-and-feedback.md)：用线上结果决定保留或回滚。

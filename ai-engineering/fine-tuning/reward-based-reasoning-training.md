@@ -6,7 +6,7 @@
 
 ## 检查器判的是什么，没判的又是什么？
 
-reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）要求 reward（奖励）来自能独立复核的目标，例如参考答案比较、结构约束或程序测试。模型评委即使能输出分数，若它只是估计开放式质量或是否符合参考答案，也属于带误差的近似奖励；过程评审器同理，不能仅凭“会评分”就称为可验证结果。RLVR 仍属于 reinforcement learning（RL，强化学习）；其训练循环如下：
+reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学习）要求 reward（奖励）来自能独立复核的目标，例如参考答案比较、结构约束或程序测试。模型评委即使能输出分数，若它只是估计开放式质量或是否符合参考答案，也属于带误差的近似奖励；过程评审器同理，不能仅凭“会评分”就称为可验证结果。RLVR 描述奖励的来源，不限定唯一策略优化算法；下图是本文用可验证奖励训练 Group Relative Policy Optimization（GRPO，组相对策略优化）的教学循环：
 
 ~~~mermaid
 flowchart TD
@@ -163,7 +163,7 @@ R1 的蒸馏例子属于离线监督：教师先产生推理回答，筛选后�
 
 ## 多教师在策略蒸馏又提供了什么训练信号？
 
-离线 SFT 把固定教师回答当作目标 token；在线 RLVR 让学生自己采样回答、再用一个标量 reward 给轨迹分配优势。还有一种目标是：学生先在自己的 rollout 中走到某个 prefix（生成前缀），教师在这个相同前缀上提供整个词表的下一 token 分布，学生再对齐该分布。这称为 on-policy distillation（OPD，在策略蒸馏）：训练前缀由学生当前策略产生，因此训练覆盖学生实际会走到的状态；软分布则让教师可以给未采样到的 token 也提供信息。
+离线 SFT 把固定教师回答当作目标 token；在线 RLVR 让学生自己采样回答、再用一个标量 reward 给轨迹分配优势。on-policy distillation（OPD，在策略蒸馏）的关键是学生用自己当前策略生成训练轨迹，教师在这些学生前缀上提供蒸馏信号；具体信号可按实现选取。DeepSeek-V4 报告采用完整词表 logits 计算 reverse KL（反向 KL），但全词表目标是该报告的实现选择，不是 OPD 的必要条件；报告将其与既有工作的采样 token KL 估计作方法比较。
 
 DeepSeek-V4 论文 v1 报告了一种多教师 OPD 流程。数学、代码等领域分别训练 specialist teacher（领域教师模型）：每个教师是独立的完整模型，先用对应领域数据做 SFT，再用领域 prompt 与奖励信号，通过 GRPO 做强化学习。之后，统一 student（学生模型）从自己的策略采样轨迹，按任务从相关教师的完整输出分布学习。该 OPD 阶段使用十多位教师；报告没有要求每个前缀都运行全部教师。论文将这一阶段的 mixed RL 改为 OPD，并未说 specialist 阶段也跳过 SFT/RL。
 
@@ -198,9 +198,9 @@ $$
 
 | 机制 | 训练时的输入状态 | 提供的信号 | 与其他机制的区别 |
 | --- | --- | --- | --- |
-| 在线 RLVR / GRPO | 学生自己采样的完整回答 | RLVR 用可独立复核的规则分数；一般 GRPO 也可用模型奖励，但评委分数不因此变成可验证结果 | 依赖 reward 与采样组，不直接给每个词的教师分布。 |
+| 在线 GRPO + 可验证奖励（RLVR） | 学生自己采样的完整回答 | 可验证奖励来自规则检查；一般 GRPO 也可用模型奖励，但评委分数不因此变成可验证结果 | 依赖 reward 与采样组，不直接给每个词的教师分布。 |
 | 离线 SFT / 轨迹蒸馏 | 固定收集的教师回答 | 每个目标 token 的 cross-entropy（交叉熵） | 学生不必在每个训练步骤自己 rollout；不会自动覆盖学生独有的前缀。 |
-| 多教师 OPD | 学生自己 rollout 到的前缀 | 各教师在同前缀上的全词表分布与反向 KL | 信号是分布对齐，不是结果 reward 或固定答案 token。 |
+| 多教师 OPD | 学生自己 rollout 到的前缀 | 教师在学生前缀上提供蒸馏信号；DeepSeek-V4 使用全词表分布与反向 KL | 信号是分布对齐，不是结果 reward 或固定答案 token。 |
 | mixture of experts（MoE，混合专家）路由 | 同一次前向中，token 到达 MoE FFN 子层 | 路由器选择内部 expert 子网；V4 前三层按 token ID hash 选 indices，后续路由层按当前表示打分 | 这是模型架构；DeepSeek-V4 的 specialist teacher 是独立完整模型，并非 MoE 层里的 FFN 子网。 |
 
 全词表 logits 的缓存成本也很大。V4 报告的实现按样本对应的教师索引组织数据，缓存该教师的末层 hidden state，再在训练时加载相应输出头重建词表分布；它避免为所有训练位置长期保存完整 logits，但仍需教师推理和输出头计算。

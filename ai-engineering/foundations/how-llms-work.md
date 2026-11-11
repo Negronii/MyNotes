@@ -66,7 +66,7 @@ attention sublayer (注意力子层) 使用这些向量之前，我们的模型�
 
 attention (注意力) 计算每个位置应从可见位置汇集哪些信息。它从当前 hidden state 推导出三种表示。query (查询，Q) 参与决定要匹配什么；key (键，K) 参与计算匹配分数；value (值，V) 提供将根据这些分数组合的内容。这些名称描述的是向量在计算中的用途。
 
-每个 attention head 都有自己的 Q、K、V projection (投影)。在本例中，每个头的宽度为 `4`。将 `3 × 8` 的矩阵 `U` 乘以该头形状为 `8 × 4` 的查询投影权重，得到形状为 `3 × 4` 的 Q。K 和 V 也以相同方式计算，只是使用各自的矩阵。
+本例先用 multi-head attention (多头注意力，MHA) 与全量因果 attention：每个 Q 头各有自己的 K/V 头和对应投影。在本例中，每个头的宽度为 `4`。将 `3 × 8` 的矩阵 `U` 乘以该头形状为 `8 × 4` 的查询投影权重，得到形状为 `3 × 4` 的 Q。K 和 V 也以相同方式计算，只是使用各自的矩阵。
 
 > [!info] 矩阵乘法会得到什么？
 > 每个输出坐标都是输入行与权重列的 dot product (点积)。例如，`[2, 3] · [4, 5] = 2×4 + 3×5 = 23`。如果权重的两列分别是 `[4, 5]` 和 `[1, −1]`，同一输入行就会变成 `[23, −1]`。每一列定义了输入特征的一种加权组合。因此，`3 × 8` 乘以 `8 × 4` 后仍有三个位置，每个位置产生四个特征。相乘的内侧维度相同，决定了哪些坐标会相乘并求和。
@@ -85,11 +85,11 @@ P = \operatorname{softmax}_{\mathrm{keys}}(S),\qquad
 Z = PV.
 $$
 
-这里的 `Kᵀ` 表示 K 的 transpose (转置)，也就是交换 K 的行与列。`Q` 的形状是 `3 × 4`，`Kᵀ` 的形状是 `4 × 3`，所以乘积形状为 `3 × 3`。其中 `(i, j)` 项是位置 `i` 的 Q 与位置 `j` 的 K 的点积。现在每一行都列出一个位置对所有位置的分数。这次乘法比较的是各个位置；前面的 `UW_Q` 则是在每个位置内部变换特征。
+这里的 `Kᵀ` 表示 K 的 transpose (转置)，也就是交换 K 的行与列。`Q` 的形状是 `3 × 4`，`Kᵀ` 的形状是 `4 × 3`，所以乘积形状为 `3 × 3`。其中 `(i, j)` 项是位置 `i` 的 Q 与位置 `j` 的 K 的点积；随后 mask 会排除不可见的位置对。本例的每一行都可直接考虑其前缀位置，所以全量因果注意力会为可见的位置对打分。这次乘法比较的是各个位置；前面的 `UW_Q` 则是在每个位置内部变换特征。
 
 随着头宽增大，除以 `√dh` 会控制分数的尺度。在一个用来解释这一做法的近似假设下，各坐标彼此独立、均值为 `0` 且方差为 `1`，那么 `dh` 个乘积之和的方差与 `dh` 成正比。缩放能抑制分数差异随头宽增大，降低 softmax 过度集中于单项的风险。
 
-causal mask (因果掩码) `M` 在每个 query 行上，把未来 key 对应的分数加上 `−∞`，其他分数加 `0`。随后沿这一行的 key 维度做 softmax，再加权 V，因此当前位置无法读取未来 token。对第二个位置，也就是词元 `c`，假设已经按位置旋转的 Q 是 `[2, 0, 0, 0]`。设 `abab`、`c` 和 `a` 的旋转后 K 分别为 `[1, 0, 0, 0]`、`[0, 1, 0, 0]` 和 `[2, 0, 0, 0]`。这些 K 与 Q 的点积为 `[2, 0, 4]`。除以 `√4 = 2` 后得到 `[1, 0, 2]`。未来的词元 `a` 分数最高，但掩码会把它排除，结果是 `[1, 0, −∞]`。
+causal mask (因果掩码) `M` 在每个 query 行上，把未来 key 对应的分数加上 `−∞`，其他可见分数加 `0`。它阻止当前位置读取未来，但因果性本身不要求所有历史位置都可见；本例没有使用滑动窗口。对第二个位置，也就是词元 `c`，假设已经按位置旋转的 Q 是 `[2, 0, 0, 0]`。设 `abab`、`c` 和 `a` 的旋转后 K 分别为 `[1, 0, 0, 0]`、`[0, 1, 0, 0]` 和 `[2, 0, 0, 0]`。这些 K 与 Q 的点积为 `[2, 0, 4]`。除以 `√4 = 2` 后得到 `[1, 0, 2]`。未来的词元 `a` 分数最高，但掩码会把它排除，结果是 `[1, 0, −∞]`。
 
 > [!example] softmax 把分数变成相对权重
 > softmax 对每个分数取指数，再除以所有指数之和。这里 `e ≈ 2.718`。`[1, 0, −∞]` 对应的权重为 `[e/(e+1), 1/(e+1), 0] ≈ [0.731, 0.269, 0]`，总和为 `1`。这些权重表示这个头如何混合 V 向量；它们不是对应词语为真的概率。
@@ -120,9 +120,9 @@ $$
 
 上面的计算使用 multi-head attention (多头注意力，MHA)，每个 Q 头都有一个 K/V 头。grouped-query attention (分组查询注意力，GQA) 让一组 Q 头共享一个 K/V 头。如果仍保留两个 Q 头、但只使用一个 K/V 头，那么 `W_Q` 仍是 `8 × 8`，而 `W_K` 和 `W_V` 会变为 `8 × 4`。两个 Q 仍各自生成宽度为 `4` 的输出，所以拼接后的形状和 `W_O` 都不变。
 
-`Hkv` 表示 K/V 头数。生成时会保留每层各位置的 K 和 V，供后续 token 复用。MHA 中 `Hkv = Hq`；multi-query attention (多查询注意力，MQA) 则是 `Hkv = 1` 的情况。这些选择会影响所学权重，以及生成过程中存储的 K/V 数量。把 MHA checkpoint 转为其他结构会改变 K/V 权重和模型行为；GQA 论文评估了基于权重平均的转换以及后续训练。在这个例子中，缓存了三个位置时，每层的 MHA 会存储 `2 × 3 × 2 × 4 = 48` 个 K/V 数值，依次对应 K/V 两种表示、三个位置、两个头和每头四个坐标。共享一个 K/V 头后，数量降为 `2 × 3 × 1 × 4 = 24`，而两个 Q 头仍各自计算分数。若想了解服务环节的影响，请继续阅读[KV cache 和调度如何决定推理容量](../systems/llm-serving-and-kv-cache.md)。对于 `T` 个位置的一次完整 prefill 或 full-sequence 训练，dense attention 计算所有位置两两交互，分数计算随 `T²` 增长；增量解码若只处理一个新 query，它对长度为 `T` 的缓存逐项打分，单步随 `T` 线性增长。实际时延还取决于 kernel (计算内核)、其他层和硬件。
+`Hkv` 表示 K/V 头数。在本例的全量因果注意力中，生成时每层都会保留此前位置的 K 和 V，供后续 token 复用。滑动窗口或稀疏注意力还会限制直接可见的历史，缓存长度与策略须按模型结构确认；例如 Mistral 7B 的滑动窗口层只直接读取最近 `W` 个位置，并以固定大小 `W` 的滚动缓存覆盖更早条目，远处信息可经多层向后传递。MHA 中 `Hkv = Hq`；multi-query attention (多查询注意力，MQA) 则是 `Hkv = 1` 的情况。这些选择会影响所学权重，以及生成过程中存储的 K/V 数量。把 MHA checkpoint 转为其他结构会改变 K/V 权重和模型行为；GQA 论文评估了基于权重平均的转换以及后续训练。在这个例子中，缓存了三个位置时，每层的 MHA 会存储 `2 × 3 × 2 × 4 = 48` 个 K/V 数值，依次对应 K/V 两种表示、三个位置、两个头和每头四个坐标。共享一个 K/V 头后，数量降为 `2 × 3 × 1 × 4 = 24`，而两个 Q 头仍各自计算分数。若想了解服务环节的影响，请继续阅读[KV cache 和调度如何决定推理容量](../systems/llm-serving-and-kv-cache.md)。对于 `T` 个位置的一次完整 prefill 或 full-sequence 训练，dense attention 对 mask 允许的 query/key 位置对计算分数，配对数量仍随 `T²` 增长；增量解码若只处理一个新 query，它对长度为 `T` 的全量缓存逐项打分，单步随 `T` 线性增长。实际时延还取决于 kernel (计算内核)、其他层和硬件。
 
-共享 K/V 头减少了每个位置的表示数量，却没有减少历史位置数。输入长到几十万甚至百万个 token 时，还可以追问：能否压缩每个位置的 K/V，或让当前 query 只读取部分历史？[长上下文的存储与读取](long-context-attention.md)从这里展开 MLA 的矩阵吸收，以及选择、压缩历史各自会丢掉什么。
+共享 K/V 头减少了每个位置的表示数量，却没有减少历史位置数。输入长到几十万甚至百万个 token 时，还可以追问：能否压缩每个位置的 K/V，或让当前 query 只读取部分历史？[DeepSeek 的长上下文 Attention](long-context-attention.md)以 V3、V3.2 和 V4 预览版为例，展开 MLA 的矩阵吸收，以及选择、压缩历史各自会丢掉什么。
 
 ## FFN 增加了什么，多个块如何堆叠？
 
@@ -215,7 +215,7 @@ V4 对 $B_l$ 的原始分数先取指数，再用 20 步 Sinkhorn–Knopp 交替
 
 ### 哪些数字属于可学习参数？
 
-矩阵的参数数量等于行数乘以列数。在普通 MHA 且 `Hq·dh = d` 时，Q、K、V 和输出投影合计有 `4d²` 个参数。若 `d = 8`，则共有 `256` 个。三个 SwiGLU 投影合计有 `3d·dff` 个参数；若 `dff = 16`，则共有 `384` 个。
+矩阵的权重元素数等于行数乘以列数。在普通 MHA 且 `Hq·dh = d` 时，仅计 Q、K、V 和输出投影的矩阵权重、不计偏置，合计有 `4d²` 个可学习数值。若 `d = 8`，则共有 `256` 个。三个 SwiGLU 投影矩阵的权重元素也不计偏置，合计有 `3d·dff` 个；若 `dff = 16`，则共有 `384` 个。
 
 完整模型还包含 embedding table、归一化权重，有时还包含单独的词表投影。每一层都有自己权重时，逐层重复计算；共享权重只计一次。hidden state 和缓存的 K/V 是根据这些参数计算出来的临时数据。因此，参数数量本身无法决定 GPU 上能同时容纳多少请求。这也是继续阅读[推理内存与调度章节](../systems/llm-serving-and-kv-cache.md) 的原因之一。
 
@@ -260,9 +260,9 @@ greedy decoding (贪心解码) 会直接选择分数最高的词元。API 的温
 
 prefill (预填充) 会让初始序列通过各层。最后一个位置的 logits 选出第一个输出词元。假设我们选出 `c`，ID 为 `99`。词元序列由 `[257, 99, 97]` 增长为 `[257, 99, 97, 99]`。新生成的文本此时只有 `c`；前面的 `ababca` 是输入，仍留在模型上下文中。decode (增量解码) 会嵌入新位置上的 `c`，并从第一层开始处理它，以预测下一个词元。
 
-在 causal model (因果模型) 中，对于相同的前缀和推理配置，添加新位置不会改变先前位置的 hidden state。因此，KV cache (键值缓存) 会存储每一层此前算出的 K 和 V。在新位置，该层会计算新的 Q、K 和 V。新位置上的 Q 会关注缓存中的 K/V 以及当前位置的 K/V，再把新的 K/V 追加到缓存中。更早位置的 Q 向量已经参与过各自位置的计算，不会作为输入再参与这个新 query 的 attention 运算。
+在本例的全量因果模型中，对于相同的前缀和推理配置，添加新位置不会改变先前位置的 hidden state。因此，KV cache (键值缓存) 会存储每一层此前所有位置算出的 K 和 V。在新位置，该层会计算新的 Q、K 和 V。新位置上的 Q 会关注缓存中的 K/V 以及当前位置的 K/V，再把新的 K/V 追加到缓存中。更早位置的 Q 向量已经参与过各自位置的计算，不会作为输入再参与这个新 query 的 attention 运算。因果掩码只排除未来；滑动窗口会进一步限制可见历史。例如 Mistral 7B 的 SWA 每层只直接读取最近 `W` 个位置，并用固定大小的滚动缓存覆盖更早条目，较远信息可经层间传递。
 
-每层的 cache 各自独立，因为每一层的输入表示和投影权重不同。输出变长时，cache 也会随之增大。生成会在模型结束词元、应用停止序列、长度上限或取消操作时结束。长度上限可能会截断尚未完成的回答，因此应用必须判断完成原因。[服务容量](../systems/llm-serving-and-kv-cache.md) 会进一步说明内存影响；[应用运行状态与恢复](../systems/ai-application-architecture.md) 会展开生成结束或中断后的处理。
+全量注意力下，每层的 cache 各自独立，因为每一层的输入表示和投影权重不同；输出变长时，cache 也会随之增大。滑动窗口 cache 可在窗口长度固定时停止增长，具体取决于该层的注意力结构。生成会在模型结束词元、应用停止序列、长度上限或取消操作时结束。长度上限可能会截断尚未完成的回答，因此应用必须判断完成原因。[服务容量](../systems/llm-serving-and-kv-cache.md) 会进一步说明内存影响；[应用运行状态与恢复](../systems/ai-application-architecture.md) 会展开生成结束或中断后的处理。
 
 ### 应用应如何选择解码设置？
 
@@ -305,9 +305,9 @@ multi-token prediction（多词元预测，MTP）在 next-token prediction（下
 > 下列来源为所列机制提供依据。较小的张量维度、虚构的向量和构建日志调参场景都是教学示例或工程扩展。
 >
 > - **词元化。** [Sennrich et al., 2016, §3.2](https://aclanthology.org/P16-1162/) 解释了子词 BPE。[tiktoken 0.12.0 educational implementation](https://github.com/openai/tiktoken/blob/0.12.0/tiktoken/_educational.py) 实现了字节级训练、合并优先级和解码。文中给出的精确英文词元序列使用该版本软件包和 `cl100k_base` 复现。
-> - **Attention 与原始架构。** [Attention Is All You Need, v7, §§3.1–3.5 and §5.1](https://arxiv.org/html/1706.03762v7#S3) 支持缩放点积、掩码、多头拼接、逐位置 FFN，以及原始 encoder–decoder 的适用范围。论文中的翻译任务设定与这里演示的 decoder-only 模型不同。
+> - **Attention 与原始架构。** [Attention Is All You Need, v7, §§3.1–3.5 and §5.1](https://arxiv.org/html/1706.03762v7#S3) 支持缩放点积、因果掩码、多头拼接、逐位置 FFN，以及原始 encoder–decoder 的适用范围。论文中的翻译任务设定与这里演示的 decoder-only 模型不同。[Mistral 7B, v1, §2, Figures 1–3](https://arxiv.org/html/2310.06825#S2) 说明滑动窗口只让每层读取最近 `W` 个位置、滚动缓存固定为 `W`，且远处信息可经多层传播。
 > - **位置与归一化。** [RoFormer, v5, §3](https://arxiv.org/html/2104.09864v5#S3) 解释 RoPE；[Root Mean Square Layer Normalization, 2019, §3](https://arxiv.org/abs/1910.07467) 解释 RMSNorm。[The Llama 3 Herd of Models, v3, §3.2](https://arxiv.org/html/2407.21783v3#S3.SS2) 和 [Llama 3 参考实现](https://github.com/meta-llama/llama-models/blob/main/models/llama3/model.py) 为 decoder-only 架构选择和归一化顺序提供依据。具体配置由特定模型的实现决定。
-> - **投影权重存储与 K/V 共享。** [PyTorch Linear](https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html) 说明了权重的存储方向。[GQA, EMNLP 2023, §2](https://aclanthology.org/2023.emnlp-main.298/) 介绍了分组 K/V 头，以及通过 uptraining 转换模型的方法。
+> - **投影权重存储与 K/V 共享。** [PyTorch Linear](https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html) 说明了权重的存储方向，并标出 bias 是独立的可选参数；本页参数算例只计矩阵权重。[GQA, EMNLP 2023, §2](https://aclanthology.org/2023.emnlp-main.298/) 介绍了分组 K/V 头，以及通过 uptraining 转换模型的方法。
 > - **FFN 门控与解释。** [GLU Variants Improve Transformer, 2020, §2](https://arxiv.org/html/2002.05202#S2) 定义了 SwiGLU。[Geva et al., EMNLP 2021](https://aclanthology.org/2021.emnlp-main.446/) 研究了 FFN memory 中的文本模式关联与输出影响；结论仅适用于其分析的模型。
 > - **采样与部署控制。** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) 介绍 nucleus sampling。[Transformers generation configuration](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation) 记录了采样控制项。[OpenAI Responses parameters](https://developers.openai.com/api/reference/resources/responses/methods/create) 记录了托管 API 的契约。[OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) 和 [Claude model migration guidance](https://platform.claude.com/docs/en/about-claude/model-deprecations) (核对日期：2026-11-06) 展示了模型和 API 版本可能带来的限制。这里提出的调参比较是这些机制的一种工程应用，并非普遍适用的温度建议。
 > - **缓存生成。** [Transformers cache explanation](https://huggingface.co/docs/transformers/main/en/cache_explanation) 解释了因果复用、逐层 K/V，以及新词元如何关注此前和当前位置。

@@ -1,6 +1,6 @@
 # 如何为具体任务选择模型，并让部署约束进入决策？
 
-先把任务成功条件写成可测的契约，再淘汰不满足硬约束的候选模型。对剩余候选使用同一提示词、输入、工具和评估协议比较任务质量、时延与总成本；模型名称、排行榜和供应商档位只能帮助初筛，不能替代目标任务上的验证。本篇交付候选集、验收门槛和基线假设；[如何测量 AI 服务的时延与成本](../systems/ai-latency-and-cost-optimization.md)接着量化工作负载，[如何选择 AI 部署方式并安全回滚](../systems/ai-deployment-patterns.md)再据此选运行位置和发布路径。
+先把任务成功条件写成可测的契约，再淘汰不满足硬约束的候选模型。若只把当前模型换掉来比较模型本身的影响，应固定提示词、工具和应用路径；若要选择最终可部署方案，可让候选在开发集使用各自支持的提示词、结构化调用与配置，冻结后再按相同任务契约、输入集合、评估协议和预算比较。模型名称、排行榜和供应商档位只能帮助初筛，不能替代目标任务上的验证。本篇交付候选集、验收门槛和基线假设；[如何测量 AI 服务的时延与成本](../systems/ai-latency-and-cost-optimization.md)接着量化工作负载，[如何选择 AI 部署方式并安全回滚](../systems/ai-deployment-patterns.md)再据此选运行位置和发布路径。
 
 ~~~mermaid
 flowchart TD
@@ -17,7 +17,7 @@ flowchart TD
 > [!example] 虚构案例：为月报生成可核对的摘要
 > 一家虚构的报表助手接收已经过应用授权的区域销售汇总，回答“哪些区域环比变化率的绝对值超过 8%，总额变化多少？”。模型输入包含行号、区域名和两期原始金额；租户隔离和行级权限由应用完成。
 >
-> 以下数据是公开教学用的合成数值，单位为万元。表中前两期是模型输入；“环比变化”和“合计”是保留集上的验收参考，不发送给模型。行号必须随原始输入保留：
+> 以下数据是公开教学用的合成数值，单位为万元。表中前两期是模型输入；“环比变化”和“合计”是这道教学例的参考答案，不发送给模型，也不是实际评测的留出集。正式比较应另备未参与提示词、配置或候选选择的独立留出样本。行号必须随原始输入保留：
 >
 > | 行号 | 区域 | 2026-09 原始输入 | 2026-10 原始输入 | 环比变化验收参考 |
 > |---|---|---:|---:|---:|
@@ -96,7 +96,7 @@ flowchart TD
 - [上下文工程原则](../context/context-engineering-principles.md)、[微调策略](../fine-tuning/fine-tuning-strategies.md)和[检索增强生成架构](../rag/rag-architecture-and-implementation.md)：分别处理模型每次看到什么、何时训练行为，以及怎样使用外部证据。
 
 > [!info]- 来源
-> - **同任务比较与动态目录：** OpenAI，[Model selection](https://developers.openai.com/api/docs/guides/model-selection)，核对日期：2026-11-06；“Compare it with ... on the same inputs”及模型/产品可用性部分用于佐证同协议比较和目录变化。文中的产品建议是提供方示例，不作为通用模型排名。
+> - **同任务比较与动态目录：** OpenAI，[Model selection](https://developers.openai.com/api/docs/guides/model-selection)，核对日期：2026-11-11；“Compare it with ... on the same inputs”及模型/产品可用性部分用于佐证同输入比较和目录变化。本文区分固定提示词的模型替换实验与允许候选各自调优的最终方案比较，是对这两种不同决策问题的说明。文中的产品建议是提供方示例，不作为通用模型排名。
 > - **把行为写成评测条件：** OpenAI，[Working with evals](https://developers.openai.com/api/docs/guides/evals)，核对日期：2026-11-06；“Create an eval for a task”展示将任务、测试输入与判定条件对应。该文档标示 Evals 平台已进入弃用过渡期；此处只引用评测思路，不依赖其 API 可用性。
 > - **部署前的确切能力与价格：** OpenAI，[Models](https://developers.openai.com/api/docs/models) 与 [API pricing](https://developers.openai.com/api/docs/pricing)，核对日期：2026-11-06；目录和价格是提供方当前页面，不应转抄为长期固定值。
 > - **托管服务数据边界：** OpenAI，[Data controls in the OpenAI platform](https://developers.openai.com/api/docs/guides/your-data)，核对日期：2026-11-06，“Types of data stored”和“Data retention controls”；仅说明一个具体 API 如何文档化留存与控制，其他提供方和设置须另行核对。
