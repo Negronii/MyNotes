@@ -3120,21 +3120,7 @@ SSE 可以自动重连，WebSocket 需要应用自己重连，Fetch 也要由应
 > - Node.js `ws` 服务端广播：[ws README, Server broadcast](https://github.com/websockets/ws#server-broadcast)，核对于 2026-11-06。库文档描述该实现，不是协议规范。
 ## 20. 何时选线程、进程或异步 I/O？
 
-**案例：** 报表服务接到 acct-17 的导出任务，需要读数据库、格式化几万行并写出压缩文件。数据库响应期间主要在等 I/O；格式化若占住一颗 CPU 很久，则会拖慢同一执行路径上的其他请求。选线程、进程或异步 I/O，要先看工作是在等什么、要共享什么，以及停止它时谁负责释放资源。
-
-~~~mermaid
-flowchart TD
-    Report[账户报表任务] --> Wait{当前主要在等 I/O？}
-    Wait -->|是| Async[异步 I/O：等待时让其他工作继续]
-    Wait -->|否，CPU 计算很久| CPU{需要独立地址空间/故障隔离，或运行时线程不能并行计算？}
-    CPU -->|是| Process[独立进程：消息或显式共享内存]
-    CPU -->|否| Thread[工作线程：共享地址空间；并发修改需同步]
-    Async --> Limit[仍要限制在途任务和等待队列]
-    Thread --> Limit
-    Process --> Limit
-~~~
-
-图里的决定顺序是：先确认是否有长时间 CPU 计算，再选择执行边界。异步 I/O 让等待中的任务不必独占一个线程，但不会让 CPU 计算自动并行；线程与进程也不会自动形成有界的任务队列。
+**合成案例：** 报表服务接到 acct-17 的导出任务，需要读数据库、格式化几万行并写出压缩文件。读库和写文件可能在等 I/O，格式化与压缩也可能持续占用 CPU。这个作业会经过不同阶段，因此可以在 I/O 阶段按支持情况使用 async I/O（异步 I/O），或用有界阻塞池隔离同步调用；较长的 CPU 计算再交给合适的执行资源。选择前要看每阶段在等什么、要共享什么，以及停止时谁负责清理资源。
 
 ### 进程、线程和异步 I/O 各自拥有哪种边界？
 
@@ -3142,22 +3128,58 @@ flowchart TD
 
 | 选择 | 报表服务里的合适工作 | 付出的责任 |
 | --- | --- | --- |
-| 异步 I/O | 等待数据库查询、网络响应或异步文件 I/O | 等待期间仍有任务、连接和缓冲区；必须限制并发 |
-| 工作线程 | CPU 密集型转换；或确实需要共享同一进程状态 | 共享可变状态需同步；线程池及其排队量需有界 |
-| 独立进程 | 易崩、需要独立生命周期或独立地址空间的计算 | 消息/序列化、独立内存和启动成本；必须管理子进程退出。不可信代码还需要操作系统权限隔离 |
+| async I/O（异步 I/O） | 当前运行时为数据库、网络或文件操作提供适用的异步 API | 在事件循环运行时，任务等待结果期间事件循环线程仍可处理其他任务；在途操作仍占连接、缓冲区等资源，必须限制并发 |
+| 工作线程 / 有界线程池 | 运行时支持并行的 CPU 密集型转换；或把同步阻塞调用移入池，释放请求线程 | 通用 OS 线程共享进程地址空间，共享可变状态需同步；阻塞调用会占一个 worker，线程数与队列都要有界 |
+| 独立进程 | 需要独立生命周期、故障或地址空间边界的计算 | 消息/序列化、独立内存和启动成本；必须管理退出。子进程可能继承父进程的 OS 身份和打开句柄；独立地址空间本身不会限制文件、网络等访问。运行不可信代码时，要由操作系统策略缩减其可访问的权限与资源 |
 
-并发（concurrency）是多个任务在一段时间内交替推进；并行（parallelism）是多个处理单元同时执行指令。单线程事件循环可以在一个请求等待 I/O 时处理另一个请求，因此能有并发；一个很长的同步回调仍会堵住这条线程。要让 CPU 计算并行，需要工作线程或其他执行资源，但能否提速还取决于语言运行时、数据交换和负载大小。Node 的运行时选择见[Node.js 如何在事件循环、worker 与进程之间调度工作？](#21.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+concurrency（并发）指多个任务能在重叠的时间段内推进；在单个处理单元上，调度器常靠交替运行它们实现并发。parallelism（并行）指多个处理单元同一时刻执行指令。单线程事件循环可以在一个请求等待 I/O 时处理另一个请求；一个很长的同步回调仍会堵住这条线程。CPU 计算能否并行，还取决于语言运行时、数据交换和负载大小。Node 的运行时选择见[Node.js 如何在事件循环、工作线程与进程之间调度工作？](#21.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
-阻塞 I/O 会让调用线程等操作完成或可以继续；非阻塞 I/O 在暂时无法继续时迅速返回，但一次返回可能只表示“目前没数据”；异步 I/O 则让调用方提交操作，并在稍后收到完成结果。异步 API 描述调用关系，不表示底层必定由某个工作线程执行：网络 I/O 可由操作系统就绪通知驱动，某些文件或加密工作则可能使用运行时的线程池。
+blocking I/O（阻塞 I/O）会让调用线程等操作完成或可以继续；non-blocking I/O（非阻塞 I/O）在暂时无法继续时迅速返回，但一次返回可能只表示“目前没数据”；async I/O 则让调用方提交操作，并在稍后收到完成结果。异步 API 描述调用关系，不表示底层必定由某个工作线程执行：网络 I/O 可由操作系统就绪通知驱动；Node.js v26.13.0 的回调式与 Promise 式文件系统 API（`fs.FSWatcher()` 除外）使用 libuv 线程池。Node 的 `worker_threads` 则针对 CPU 密集型 JavaScript，I/O 密集任务通常优先使用异步 API。使用有界阻塞池封装同步 API 也能释放请求线程，但那是用 worker 承担同步等待，并没有把底层调用变成原生异步操作。
+
+读数据库、接网络响应或写文件时，先看运行时是否提供适用的异步 API：
+
+~~~mermaid
+flowchart TD
+    IOWait[I/O 阶段] --> HasAsync{有合适的异步 API？}
+    HasAsync --> AsyncAPI[有：任务等待时，<br/>事件循环处理其他工作]
+    HasAsync --> BlockingPool[无：有界线程池，<br/>等待占一个 worker]
+    AsyncAPI --> Limit[限制在途操作、连接、缓冲和队列]
+    BlockingPool --> Limit
+~~~
+
+CPU 计算可以有不同目标；隔离、响应和跨核并行可能同时出现。先列出必须满足的目标，再对照可选路径与需要验证的条件：
+
+| 要求 | 可选路径 | 必须验证的条件 |
+| --- | --- | --- |
+| 独立故障或地址空间边界 | 独立进程 | 进程边界能否隔开所需故障或内存；不可信代码的 OS 权限需另行限制；跨进程数据交接及成本。 |
+| 满足响应预算，不要求跨核 | 当前路径拆成短片段并让出；工作线程；若前两种方式不达标，也可评估独立进程 | 当前片段能否在预算内；工作线程能否让响应路径及时获得调度（即使不并行也可能有用）；进程路径能否在当前负载下达到同一预算。 |
+| 硬性要求跨核并行 | 能跨核执行该工作负载的线程；否则使用可并行的多进程 | 运行时是否真的并行执行该工作；系统是否有可用处理单元和 CPU 配额；数据交接成本；若同时有响应预算，两项都须满足。 |
+
+无论选择哪条路径，都要限制作业入口和在途数据；使用线程池或进程池时，再限制执行槽和排队任务。
+
+工作线程把 CPU 计算移出请求或事件循环线程；即使运行时不能让两段代码在多个处理单元上同时执行，调度器仍可能交替运行它们，让响应路径及时获得执行机会。这只能改善响应机会，不保证达成某个延迟预算。跨核并行要求多个处理单元同时执行，需按实际运行时语义判断；用进程跨边界时，通过 IPC（进程间通信）或显式共享内存交接数据。
+
+**acct-17 的一次具体执行（教学假设）：** 服务运行 Node.js v26.13.0，数据库驱动支持按需异步游标；每次只取一批有界的订单行，字段为订单号、金额和日期。读库会等待 I/O，因此走异步 API。作业不要求硬性跨核；即使把 CPU 工作拆到当前可接受的最小片段并在片间让出，单片耗时仍超过请求响应预算，而移到 worker 后假设能达标。Node `worker_threads` 可以并行执行 JavaScript，但本例选择它是为响应路径让出执行机会，不以提高吞吐为前提；工作也不需要隔离可能崩溃的本地库。本例特意假设压缩器是同步调用、能保留状态的增量压缩器；不使用 `node:zlib` 异步流，因为 Node 的异步 zlib API 已使用内部线程池，选择它时 CPU 工作的放置方式不同。一个工作线程持有这条压缩流，并按顺序处理一批行；跨线程消息按运行时规则复制或转移数据，成本计入批次预算。
+
+1. **读取。** 异步游标最多返回一个有界批次订单行；当前批次处理和写完前不拉下一批。
+2. **压缩并写入。** worker 同步增量处理这批订单，回传零个或多个定长字节块以及“本批完成”确认；即使本批没有输出字节也会发确认。写入方按序写完所有字节、等写操作完成并收到批次确认后，才请求下一批。这样在途输入至多是一批。
+3. **输入结束。** 游标读到 EOF 后，单独通知 worker 收尾/flush 压缩流。worker 发完全部尾块、清除这条压缩流的作业状态后，再发 `streamFinished` 确认；确认也表示它不再产出字节；协调者收到这个确认后，才把本作业的 worker 槽归还池。写入方收到确认并写完所有尾块、等待写操作完成，再关闭临时文件。
+4. **发布。** 临时文件与本作业专属的最终路径位于同一文件系统，避免替换其他作业的文件。文件关闭后，同一协调者先把作业从 `running` 转到 `publishing`，紧接着提交 rename，中间不等待其他事件。rename Promise 的真实结果决定发布成功或失败；失败后按作业策略清理仍存在的临时文件。
+
+同一事件循环上的作业协调者串行裁决取消与发布。若取消先在 `running` 状态被接受，作业转到 `cancelling`，不提交 rename；停止拉取数据，按游标契约请求取消并丢弃迟到行，等待查询取消或结束，并停止接受 worker 的迟到字节。若协调者尚未归还本作业的 worker 槽，就请求该 worker 停止，等待 `streamFinished` 或停止确认后归还一次；若已归还，则无需再通知该 worker。停止确认仍需在当前有界片段结束、压缩状态清理后发出。协调者还要等待已提交的文件写入结束，之后关闭并删除临时文件，再把作业标为 `cancelled`。若协调者先进入 `publishing` 并提交 rename，后到的取消不能覆盖结果；作业保持发布中，直到 rename 成功或失败，再据其结果进入成功或失败状态。
+
+同步 CPU 片段里，消息回调不能打断正在运行的 JavaScript；只在同一同步回调的片段间读取由消息回调设置的局部变量也不会看到新值。要让取消消息生效，worker 必须在片段间把控制权交还 event loop，例如 `await timersPromises.setImmediate()`（`timersPromises` 来自 `node:timers/promises`），使消息回调运行；若需要在同步循环内响应，则由协调者对共享 buffer 执行 `Atomics.store`，worker 在片段间用 `Atomics.load` 检查停止标志。
+
+这条合成路径说明机制和预期契约，不是已集成的报表服务。单独的 Node.js `fsPromises.writeFile()` AbortSignal 复演验证了取消后可能留下部分写入；没有连接数据库、worker 增量压缩或发布协调器做端到端回放，也没有测量吞吐或延迟。
 
 ### 共享计数为什么会丢更新？
 
-竞态（race condition）是结果取决于并发操作顺序。count += 1 看起来是一条语句，概念上却是读、加一、写回三个步骤。若两个线程都先读到 10，再各自写 11，最终还是 11；预期的 12 丢了一次更新。对共享不变量，选择一条明确的所有权规则：锁、原子操作、单一写入者消息循环，或数据库约束。数据库中的库存不能靠进程内锁在所有服务副本间保护。
+race condition（竞态）是结果取决于并发操作顺序。`count += 1` 看起来是一条语句，概念上却是读、加一、写回三个步骤。若两个线程都先读到 10，再各自写 11，最终还是 11；预期的 12 丢了一次更新。对共享不变量，选择一条明确的所有权规则：锁、原子操作、单一写入者消息循环，或数据库约束。数据库中的库存不能靠进程内锁在所有服务副本间保护。
 
-以下例子把一个 32 位计数器放进共享内存，用 Atomics.add 将读—改—写变成原子操作。每个工作线程（worker thread）加 100,000 次，因此两者结束后应为 200,000。
+为说明两个 worker 同时上报完成数量时的读—改—写竞态，这里把报表缩小为一个共享计数器。以下例子把一个 32 位计数器放进共享内存，用 `Atomics.add` 将读—改—写变成原子操作。每个 worker thread（工作线程）加 100,000 次，因此两者结束后应为 200,000。Node 用 structured clone（结构化克隆）传递普通对象；本例则通过 `SharedArrayBuffer` 明确共享计数器所依赖的内存。
 
 ~~~javascript
-// 保存为 counter.cjs；使用 Node.js v26.11.1 运行
+// 保存为 counter.cjs；使用 Node.js v26.13.0 运行
 const { Worker, isMainThread, workerData } = require('node:worker_threads');
 
 if (isMainThread) {
@@ -3191,20 +3213,33 @@ if (isMainThread) {
 
 ### 等待环何时才构成死锁？
 
-在每类资源只有一个实例的模型里，deadlock（死锁）等价于资源等待图出现环：例如线程 A 持有互斥锁 R1 并等 R2，线程 B 持有 R2 并等 R1。若资源有多个可互换实例，等待图出现环只是必要线索，不足以单独证明死锁。经典资源分配模型还列出互斥、持有并等待、不可抢占和循环等待四个条件；在这个模型中打破任一条件即可消除此类死锁。它们不是判断任意慢请求的打勾清单：请求等待 I/O 或 Promise 未完成本身不构成死锁，先找出实际的资源与依赖关系。浏览器中等待 fetch 的 Promise 不会持有 DOM 独占锁，event loop 可在其 pending 期间运行其他代码；但真实依赖环、永不完成的 Promise 或资源耗尽仍可能让应用停滞。全局一致的锁顺序和短临界区可以拆掉许多锁环；不要在持锁期间等待不确定时长的网络调用。
+经典资源分配模型中的“不可抢占”指资源不会被系统强行收回，不是 OS 调度器不能抢占线程。若等待不会超时或取消、线程也不会在等待中放弃所持资源，那么在每类资源只有一个实例且实例互斥时，wait-for graph（等待图）出现环就能证明 deadlock（死锁）。图中节点是线程，A→B 表示 A 等待由 B 持有的资源。例如 A 持有 R1 并等待 B 持有的 R2，B 持有 R2 并等待 A 持有的 R1，就形成 A→B→A。
+
+若资源有多个可互换实例，应看 resource-allocation graph（资源分配图）：资源类型节点标出各实例，请求边与分配边分别表示等待和持有；图中有环只是死锁的必要线索，不足以单独证明死锁。设只有一个 R1、两个可互换的 R2 实例：A 持 R1 并等待任一 R2，B 持 R2a 并等待 R1，C 持 R2b 但能独立完成；C 归还 R2b 后，A 可继续并释放 R1，随后 B 也可继续，尽管分配图中曾有环。经典资源模型把互斥、持有并等待、资源不可强行收回和循环等待列为死锁的必要条件；消除任一条件可预防这类死锁，但多个资源实例下四者同时出现仍不保证系统已死锁。
+
+这些条件不是判断任意慢请求的打勾清单：请求等待 I/O 或 Promise 未完成本身不构成资源等待环，先找出实际的资源与依赖关系。浏览器中等待 `fetch` 的 Promise 不会持有 DOM 独占锁，event loop 可在其 pending 期间运行其他代码；但真实依赖环、永不完成的 Promise 或资源耗尽仍可能让应用停滞。按全局一致的顺序取得多把锁可阻止这类锁环；缩短临界区能减少持锁时间。不要在持锁期间等待不确定时长的网络调用。
 
 ### 取消信号能证明什么？
 
-取消（cancellation）通常只是要求任务在安全检查点停止。代码需要观察信号、停止提交新副作用，并通过 finally 或等价清理机制释放自己拥有的资源。若取消的是等待方，底层线程、数据库操作或远端请求可能仍在执行；已经提交的写入也不会因此回滚。调用方应以持久化的业务结果确认副作用，而不是把“本地任务已取消”当成“操作没有发生”。
+在许多应用级任务 API 中，cancellation（取消）是要求任务协作停止，而不是调用方已经证明任务结束。代码需按 API 语义观察取消、停止提交后续副作用，并通过 `finally` 或等价清理路径释放自己拥有的资源。以 POSIX 为例，新线程默认启用延迟取消；目标线程可更改取消状态或类型。取消仍启用时，延迟请求会在取消点处理，异步取消则可能在任意时刻处理。`pthread_cancel` 成功只说明请求已排入，不代表线程已终止。对 joinable thread（可 join 线程）调用 `pthread_join` 会等待其终止；函数本身返回 `0` 表示 join 成功，`PTHREAD_CANCELED` 是通过输出参数取得的线程退出值，只有它能确认目标线程因取消而结束。若取消的是等待方，底层线程、数据库操作或远端请求仍可能继续；已提交的写入也不会因此回滚。调用方应以持久化业务结果确认副作用，而不是把“本地任务已取消”当成“操作没有发生”。
 
 **接下来：** 本章区分执行资源和共享状态；Node 章节把这些边界落实到 isolate、worker 和进程。异步作业何时接受、重试或显式取消见[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
 
 > [!info]- 来源
-> - 进程与线程的资源、地址空间、线程状态模型：[POSIX.1-2024, General Information](https://pubs.opengroup.org/onlinepubs/9799919799/functions/V2_chap02.html)，核对于 2026-11-06。
-> - Linux/POSIX 线程共享内存、取消点及取消类型：[Linux man-pages, pthreads(7)](https://man7.org/linux/man-pages/man7/pthreads.7.html)，核对于 2026-11-06。
-> - Node worker 并行计算与共享内存：[Node.js v26.11.1, worker_threads](https://nodejs.org/download/release/v26.11.1/docs/api/worker_threads.html)；计数程序于该版本重放，输出 200000。
-> - Node 文件 API 的异步执行方式：[Node.js v26.11.1, File system](https://nodejs.org/download/release/v26.11.1/docs/api/fs.html#threadpool-usage)，核对于 2026-11-06。
-> - 经典资源分配死锁的互斥、持有并等待、不可抢占与循环等待条件：[Coffman, Elphick, and Shoshani (1971), “System Deadlocks”](https://doi.org/10.1145/356586.356588)，核对单实例资源等待环的适用边界。
+> - Linux 中 `fork()` 后父子进程有不同内存空间，`mmap()` 可建立显式共享映射：[Linux man-pages 6.19, fork(2)](https://man7.org/linux/man-pages/man2/fork.2.html)，Description；[mmap(2)](https://man7.org/linux/man-pages/man2/mmap.2.html)，`MAP_SHARED` / `MAP_PRIVATE`；2026-11-11 核对。
+> - 阻塞 `read`、非阻塞时可能返回 EAGAIN、`poll` 等待描述符就绪，以及提交操作后收到完成通知：[Linux man-pages, read(2)](https://man7.org/linux/man-pages/man2/read.2.html)、[poll(2)](https://man7.org/linux/man-pages/man2/poll.2.html)、[aio(7)](https://man7.org/linux/man-pages/man7/aio.7.html)，2026-11-11 核对。
+> - POSIX 线程共享全局数据与堆、各自栈及线程状态：[Linux man-pages 6.19, pthreads(7)](https://man7.org/linux/man-pages/man7/pthreads.7.html)，2026-11-11 核对。
+> - 子进程继承凭据和打开文件描述符的常见情况，以及可用 OS 策略限制文件与网络访问：[Linux man-pages 6.19, fork(2)](https://man7.org/linux/man-pages/man2/fork.2.html)，Description；[Linux kernel, Landlock](https://docs.kernel.org/userspace-api/landlock.html)，2026-11-11 核对。
+> - 延迟与异步线程取消、请求不等于终止：[Linux man-pages 6.19, pthread_cancel(3)](https://man7.org/linux/man-pages/man3/pthread_cancel.3.html)，2026-11-11 核对。
+> - joinable thread 的终止状态，以及通过 `PTHREAD_CANCELED` 区分取消退出：[Linux man-pages 6.19, pthread_join(3)](https://man7.org/linux/man-pages/man3/pthread_join.3.html)，2026-11-11 核对。
+> - Node worker 的 CPU 用途、共享内存选项与 worker 池建议：[Node.js v26.13.0, worker_threads](https://nodejs.org/download/release/v26.13.0/docs/api/worker_threads.html)，计数程序于该版本重放，输出 200000。
+> - `worker.postMessage()` 的结构化克隆与转移列表：[Node.js v26.13.0, Worker threads](https://nodejs.org/download/release/v26.13.0/docs/api/worker_threads.html#workerpostmessagevalue-transferlist)，2026-11-12 核对。
+> - Node 异步 zlib API 使用内部线程池，同步 API 除外：[Node.js v26.13.0, Zlib](https://nodejs.org/download/release/v26.13.0/docs/api/zlib.html#threadpool-usage-and-performance-considerations)，2026-11-12 核对。
+> - 将控制权让回 Node 事件循环的 Promise 版 `setImmediate()`：[Node.js v26.13.0, Timers](https://nodejs.org/download/release/v26.13.0/docs/api/timers.html#timerspromisessetimmediatevalue-options)，2026-11-12 核对。
+> - Node 文件 API 的异步执行方式：[Node.js v26.13.0, File system](https://nodejs.org/download/release/v26.13.0/docs/api/fs.html#threadpool-usage)，核对于 2026-11-11。
+> - Node.js v26.13.0 `fsPromises.writeFile()` 的 `AbortSignal` 只尽力取消内部缓冲，部分数据仍可能写入：[Node.js v26.13.0, File system](https://nodejs.org/download/release/v26.13.0/docs/api/fs.html#fspromiseswritefilefile-data-options)，2026-11-12 核对。
+> - `fsPromises.rename()` 在 Promise 成功时完成名称变更；Linux 要求同一文件系统，目标已存在时会原子替换，因此本例使用专属目标名：[Node.js v26.13.0, File system](https://nodejs.org/download/release/v26.13.0/docs/api/fs.html#fspromisesrenameoldpath-newpath)，[Linux man-pages, rename(2)](https://man7.org/linux/man-pages/man2/rename.2.html)，2026-11-12 核对。
+> - 经典资源分配死锁的互斥、持有并等待、不可抢占与循环等待条件，以及多实例图中环的限制：[Coffman, Elphick, and Shoshani (1971), “System Deadlocks,” pp. 70–73](https://uobdv.github.io/Design-Verification/Supplementary/System_Deadlocks-Four_necessary_and_sufficient_conditions_for_deadlock.pdf)，2026-11-11 核对。
 ## 21. Node.js 如何在事件循环、工作线程与进程之间调度工作？
 
 **案例：** API 收到导出 acct-17 报表的请求：先用数据库网络连接取数据，再压缩输出；同一服务还要接其他用户请求。异步 I/O 能让线程在等待数据库或网络时处理别的工作，不能让一段长时间的 JavaScript 汇总循环自己让路。遇到 CPU 阻塞时才考虑工作线程；需要独立内存或故障边界时考虑进程。
@@ -5818,33 +5853,36 @@ console.log(maxConcurrentHalfOpen([])); // 0
 > - 端点排序后维护活动集合的扫描线思路：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §9.3 “Geometric Intersections”](https://algs4.cs.princeton.edu/93intersection/)，并参看作者实现 [IntervalIntersection.java](https://algs4.cs.princeton.edu/93intersection/IntervalIntersection.java.html)。本页使用半开预约区间，因此端点相等时结束项先退出、开始项再进入；示例峰值由代码复算。
 ## 43. 怎样在不断加入任务时持续取出最高优先级？
 
-合成报表 42 有多个待处理任务，系统一边接收新任务，一边要取出当前最紧急的一项。若每次都重新排序整个集合，就会重复整理旧任务。priority queue（优先队列）只要求快速插入和取出当前最高优先级项；binary heap（二叉堆）用一条父子顺序约束支持这两项操作。
+案例背景：合成报表 42 的调度器不断收到待处理任务；每当有执行资源空出来，就取当前最紧急的一项。若每次都重新排序整个集合，就会重复整理旧任务。priority queue（优先队列）只要求快速插入和取出当前最高优先级项；binary heap（二叉堆）用一条父子顺序约束支持这两项操作。
 
 ### 堆序只规定父子关系，不会把数组排好序
 
-以下用最大堆，优先级较大的任务靠近根。把完全二叉树（最后一层从左向右填充）按层从左到右放入数组，使用 0 起始下标时，只有 i > 0 的位置才有父节点，父节点下标是 floor((i - 1) / 2)，子节点是 2i + 1 与 2i + 2。堆序要求任一父项不低于它的孩子；除根以外，数组并不保证整体有序。
+以下用最大堆，数值较大的优先级代表任务更紧急；相同优先级按先到先出。入堆时附上从 0 开始递增的 `sequence`，只有优先级相同时才比较它，较小序号先出。把完全二叉树（最后一层从左向右填充）按层从左到右放入数组，使用 0 起始下标时，只有 `i > 0` 的位置才有父节点，父节点下标是 `floor((i - 1) / 2)`，子节点是 `2i + 1` 与 `2i + 2`。在比较关系可传递时，堆序要求任一父项不低于它的孩子；根沿路径传递下来，便不低于任何节点。除根以外，兄弟节点之间没有整体次序，数组也不是排序结果。
 
-~~~mermaid
-flowchart TD
-    i0["下标 0：根"]
-    i1["下标 1：左子，2i+1"]
-    i2["下标 2：右子，2i+2"]
-    i0 --> i1
-    i0 --> i2
-~~~
+任务 A 和 B 的优先级均为 5，A 先到；C 的优先级为 8。插入 C 后的树形与数组层序表示如下。箭头只表示父子堆序，不表示数组整体排名。
 
-本例约定同优先级按先到先出，因此入堆时另带递增序号。表中任务 A 和 B 优先级同为 5，A 先到；C 优先级为 8。
+![插入 C 后最大堆的树节点、数组下标和层序数组对应](../../engineering-foundations/algorithms/resources/heaps-and-priority-queues-array-tree.svg)
 
-| 操作 | 堆数组（从根到叶） | 发生的修复 |
+| 操作 | 堆数组（按层序） | 发生的修复 |
 |---|---|---|
 | 插入 A(5) | [A(5)] | 根无需调整 |
 | 插入 B(5) | [A(5), B(5)] | 同优先级时 A 序号较早，不交换 |
 | 插入 C(8) | [C(8), B(5), A(5)] | C 从下标 2 上浮到根 |
-| 取出 | [A(5), B(5)] | 返回 C；末项 A 移到根，与同优先级且较晚的 B 保持先后次序 |
+| 插入 D(2) | [C(8), B(5), A(5), D(2)] | D 低于父项 B，留在数组末尾 |
+| 取出 | [A(5), B(5), D(2)] | 返回 C；D 补到根后，B、A 都优于 D；两者同分，较早的右孩子 A 优先，与 D 交换 |
 
-插入时先放数组末尾，再沿父节点上浮；删除根时以末项填根，再沿更高优先级的孩子下沉。堆高为 O(log n)，所以 push 和 pop 各需 O(log n)，peek 为 O(1)，额外存储 O(n)。如果所有元素一开始都已知，可以从最后一个非叶节点向根逐层下沉来建堆，整体 O(n)；若元素逐个到达，则用 push，累计为 O(n log n)。线性 heapify（自底向上建堆）的前提是能同时访问整批初始元素。
+插入先放数组末尾，再只沿父节点上浮；删除根时先用末项填根，再比较左右孩子，和优先级更高的孩子交换后继续下沉，直到当前项不低于两个孩子，或已到叶子。例子中 B 与 A 同为 5，`sequence` 较小的 A 胜出，所以 D 先与右孩子 A 交换。每次修复只走一条根到叶路径，不扫描整堆。
 
-普通堆若只比较 priority，并不保证并列项稳定；稳定行为来自代码中的 sequence 次级键。此实现用 BigInt 序号，优先级必须是有限数；进入队列的优先级与序号保持不变。空堆的 peek 和 pop 都返回 null，实际任务包装在对象中，所以任务 value 本身即使是 null，也不与空队列混淆。
+堆有 `n` 个节点时，最大高度 `H = floor(log₂ n)`。因此上浮或下沉至多走 O(log n) 层：以元素比较和交换次数计，push、pop 各为 O(log n)，peek 只读根是 O(1)，堆项占 O(n) 个槽位。
+
+如果所有元素一开始都已知，可以从最后一个非叶节点向根逐个下沉来建堆，整体 heapify 为 O(n) 次比较/交换；若元素逐个到达，则逐项 push，累计为 O(n log n)。heapify 仍为线性，是因为大多数节点靠近叶子，只能下沉少数几层；可继续下沉至少 h 层的节点数，随 h 每增加 1 至多约减半。设完全树的最大高度 `H = floor(log₂ n)`；高度为 `h` 的节点至多有 `ceil(n / 2^(h+1))` 个，每个最多下沉 `h` 层，因此有限范围 `1 ≤ h ≤ H` 的工作量上界为 `Σ h·ceil(n / 2^(h+1)) = O(n)`。自底向上建堆要求能同时访问整批初始元素。
+
+> [!info]- 实现成本口径
+> 上述堆操作复杂度把单次优先级比较视为 O(1)，计的是元素比较和交换。一次 `items.push` 若触发动态数组扩容，可能额外复制 O(n) 个槽位；在常见几何扩容模型下，扩容成本摊还为每次追加 O(1)。稳定队列用 BigInt `sequence` 作次级键：若序号有 `b` 位，比较或递增最多需 O(b) 位操作；累计 `m` 次入队时，序号位数随 `log m` 增长。这里的 O(n) 空间计堆槽位，不计 BigInt 字段的位数。
+
+普通堆若只比较优先级 `priority`，并不保证并列项稳定；稳定行为来自代码中的 `sequence` 次级键。此实现用 BigInt 序号，优先级必须是有限 JavaScript Number；进入队列的优先级与序号保持不变。非空 `peek()`/`pop()` 返回含 `priority`、`sequence`、`value` 的冻结记录；空堆的两者都返回 `null`。任务包装在对象中，所以任务 `value` 本身即使是 `null`，也不与空队列哨兵混淆。
+
+`BinaryHeap(higher)` 要求 `higher` 是函数，否则抛 `TypeError`；它还必须形成严格弱序：没有元素高于自身，优先关系可传递；若两项互不高于对方，就把它们视为同一优先级档，而且“同档”关系也可传递。堆项留在堆中期间，比较结果也必须保持一致；若可变字段改变了项的相对顺序，就要重建或重新调整堆。否则父子堆序不一定能让根代表全体最高项。`toArray()` 返回内部堆数组的浅拷贝，仍按堆布局排列，不是排序结果；Top K 会再对这份拷贝排序。
 
 > [!example]- 可运行：稳定最大优先队列
 > ~~~javascript
@@ -5917,25 +5955,33 @@ flowchart TD
 > tasks.push(5, 'A');
 > tasks.push(5, 'B');
 > tasks.push(8, 'C');
+> tasks.push(2, 'D');
 > console.log(tasks.pop().value); // C
 > console.log(tasks.pop().value); // A
 > console.log(tasks.pop().value); // B
+> console.log(tasks.pop().value); // D
 > console.log(tasks.pop());       // null
 > ~~~
 
-上浮或下沉每一步都沿堆的一层前进；每层最多比较两个孩子，因此不会扫描整堆。若输入量一次性已知而且需要取出全部排序结果，直接排序可能更简单；堆的优势出现在不断插入、只需当前极值，或只保留少量 Top K 的时候。
+若元素已知且要完整排序，直接排序可能更简单；堆的优势出现在不断插入、只需当前极值，或只保留少量 Top K 的时候。
 
 ### 只保留 Top K 时，根节点代表淘汰线
 
-一次性读入 n 个带分数的任务，只保留最大的 K 个时，维护一个最多 K 项的最小堆。下方短代码复用前面折叠示例中的 BinaryHeap。根是当前保留集合里最差的一项：分数不高于它的输入直接丢弃，分数更高的输入弹出根，再插入新项。同分时较早项优先保留，根在同分项中是较晚到达的那个。依次读入 A(8)、B(5)、C(5)、D(7)、E(1)，K=3：
+这里切换到另一组合成输入：一次收到一批带分数的候选，只返回最高的 K 项。维护最多 K 项的最小堆，根就是当前保留集合里最差的一项；同分时较晚到达者更差。堆未满 K 项时直接插入候选；堆满后，仅当候选分数严格高于根时才删除根并插入候选。与根同分的后来候选也应丢弃，因为根比新候选更早到达。下方代码复用前面折叠示例中的 `BinaryHeap`。依次读入 A(8)、B(5)、C(5)、D(7)、E(1)，K=3：
+
+`topK` 接收 `values` 数组、非负安全整数 `k`，并要求每项都有有限数值 `score`；先校验整批输入，再开始筛选。返回值按分数降序排列，同分按输入先后。
+
+返回数组沿用 `values` 中的原对象引用，筛选和最终排序不会改写输入数组。
 
 | 已读分数 | 保留集合 | 根（当前淘汰线） | 动作 |
 |---|---|---|---|
-| A、B、C | A(8)、B(5)、C(5) | C(5) | 堆已满 |
-| 再读 D | A(8)、D(7)、B(5) | B(5) | D 淘汰同分项里较晚的 C |
-| 再读 E | 不变 | B(5) | E(1) 低于根，丢弃 |
+| A(8) | A(8) | A(8) | 堆未满 3 项，直接插入 |
+| A(8)、B(5) | A(8)、B(5) | B(5) | 堆未满 3 项，直接插入 |
+| A(8)、B(5)、C(5) | A(8)、B(5)、C(5) | C(5) | 插入后堆已满；同分时较晚的 C 是淘汰线 |
+| 再读 D(7) | A(8)、D(7)、B(5) | B(5) | D 高于根，替换同分中较晚的 C |
+| 再读 E(1) | 不变 | B(5) | E 不高于根，丢弃 |
 
-令 k' = min(K, n)。K 为正且 n 非零时，扫描需 O(n log(k' + 1)) 时间，最终按排名排序另需 O(k' log(k' + 1))；额外堆空间为 O(k')。这样 K=1 时扫描仍是 O(n)，K>n 时堆最多只有 n 项。K=0 时仍先校验输入的 n 项，之后返回空数组；n=0 时也返回空数组。代码中的 tie-breaker（平局裁决键）保证选择较早的并列分数。
+令 `k' = min(K, n)`。K 为正且 n 非零时，代码先花 O(n) 校验输入，再扫描 n 项；堆满后，每个候选至多触发一次 O(log(k' + 1)) 的堆调整，所以扫描最多做 O(n log(k' + 1)) 次堆比较。最后只排序保留的 `k'` 项，按比较排序模型另需 O(k' log(k' + 1)) 次比较；分数并列时由 `sequence` 明确排序，因此不依赖内置排序的稳定性。ECMAScript 不保证内置 `sort` 的具体比较次数。堆、中间副本和返回数组共占 O(k') 额外空间；调用方传入的 `values` 不计入。K=1 时扫描为 O(n)，K>n 时保留并返回全部 n 项，再按分数与输入先后排序。K=0 仍先校验全部 n 项，再返回空数组，耗时 O(n)；n=0 时返回空数组。
 
 ~~~javascript
 function topK(values, k) {
@@ -5982,11 +6028,12 @@ console.log(topK(scoredTasks, 3).map(task => task.id)); // ['A', 'D', 'B']
 console.log(topK(scoredTasks, 0));                     // []
 ~~~
 
-若只需处理一条已完整到达的短数组且最终要所有项有序，排序一次是 O(n log n)，代码更直接；若 n 很大而 K 很小，Top K 堆把保留空间降到 O(K)，也允许数据流逐项到达。优先队列可用于任务调度；固定大小堆适合流式候选筛选。二者共享堆操作，但取舍目标不同。
+若所有项都已到达且最终要完整排序，排序一次通常更直接（见[分区如何改变快速排序的时间和空间代价](#46.%20%E5%88%86%E5%8C%BA%E5%A6%82%E4%BD%95%E6%94%B9%E5%8F%98%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F%E7%9A%84%E6%97%B6%E9%97%B4%E5%92%8C%E7%A9%BA%E9%97%B4%E4%BB%A3%E4%BB%B7%EF%BC%9F)）；若 n 很大而 K 很小，同一 Top K 更新规则可在输入逐项到达时只保留 O(K) 个候选。本页代码接收的是数组，所以其 O(K) 是算法额外堆空间，不包括调用方已持有的 O(n) 输入。优先队列可用于任务调度；固定大小堆适合筛选少量最高分候选，二者共享堆操作，但取舍目标不同。
 
 > [!info]- 来源
-> - 完全二叉树数组表示、上浮/下沉、插入/删除极值、线性 bottom-up heapify：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §2.4 “Priority Queues”](https://algs4.cs.princeton.edu/24pq/)。本页以 0 起始数组实现同一堆序；操作结果由 Node.js 运行复算。
-> - 并列键稳定处理的作者实现样本：[Algorithms, 4th ed., StableMinPQ.java](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/StableMinPQ.java.html)。本页显式把到达序号作为次级比较键，稳定性因此属于本页 API 合约。
+> - 完全二叉树数组表示、上浮/下沉、插入/删除极值、线性 bottom-up heapify：[Robert Sedgewick 与 Kevin Wayne, Algorithms, 4th ed., §2.4 “Priority Queues”](https://algs4.cs.princeton.edu/24pq/)。该章按比较次数说明堆界，并说明动态数组扩容的界是摊还界。本页以 0 起始数组实现同一堆序；操作结果由 Node.js 运行复算。
+> - 并列键稳定处理的作者实现样本：[Algorithms, 4th ed., §2.5 “Sorting Applications” 的 StableMinPQ.java](https://algs4.cs.princeton.edu/25applications/StableMinPQ.java.html)。本页显式把到达序号作为次级比较键，稳定性因此属于本页 API 合约。
+> - `Array.prototype.sort` 的稳定比较规则及由运行时决定的比较调用序列：[ECMAScript 2026, §23.1.3.30](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.sort)。本页 Top K 的最终排序复杂度按比较排序模型计，不把某个引擎的具体算法写成语言保证。
 ## 44. 搜索状态图时，何时永久标记节点，何时必须回退？
 
 以一张合成路网为例：站点 S 要把包裹送到 Z。路网是有向图：S 可到 A、B；A 与 B 都可到两路会合的 T；T 可回到 S，也可到 Z。回边让图有环，共享的会合节点让两条路线合流。我们先用它找一条最少跳数路线，再枚举简单路线；随后把部分边改作依赖，检查依赖环；最后给路段加入非负代价。
