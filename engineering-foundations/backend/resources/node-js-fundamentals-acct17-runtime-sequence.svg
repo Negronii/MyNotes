@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1040" viewBox="0 0 1000 1040" role="img" aria-labelledby="title desc">
+  <title id="title">acct-17 一批报表数据经过 Node.js 的执行顺序</title>
+  <desc id="desc">时间由上至下。主事件循环发起数据库读取；socket 通知后，主 isolate 中的驱动解析字节并形成有界订单行。同一作业固定到一个有状态压缩 worker，按序处理批次并回传零个或多个块和独立 batchDone。没有输出时只需等 batchDone。主线程把有输出的块写入文件，异步文件操作由 libuv threadpool 执行。EOF 后通知同一 worker flush；写入方收到 streamFinished 并写完全部尾块（可为零块）后关闭临时文件。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#58769a"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#32927e"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #20354e; }
+      .head { font-size: 22px; font-weight: 650; }
+      .body { font-size: 19px; }
+      .small { font-size: 17px; }
+      .line { stroke: #8fa3bb; stroke-width: 2; stroke-dasharray: 7 8; }
+      .arrow { stroke: #58769a; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .arrowGreen { stroke: #32927e; stroke-width: 3; fill: none; marker-end: url(#arrow-green); }
+    </style>
+  </defs>
+  <rect width="1000" height="1040" fill="#f8fafc"/>
+
+  <text x="28" y="126" class="small" fill="#58769a">时间向下</text>
+  <path d="M44 145 V913" class="arrow"/>
+
+  <rect x="44" y="32" width="262" height="72" rx="13" fill="#e9f2fc" stroke="#91b7e1" stroke-width="2"/>
+  <text x="175" y="61" text-anchor="middle" class="head">主线程</text>
+  <text x="175" y="88" text-anchor="middle" class="small">JavaScript isolate + event loop</text>
+
+  <rect x="320" y="32" width="200" height="72" rx="13" fill="#edf5f3" stroke="#91c6b8" stroke-width="2"/>
+  <text x="420" y="61" text-anchor="middle" class="head">数据库 / 网络</text>
+  <text x="420" y="88" text-anchor="middle" class="small">异步 socket I/O</text>
+
+  <rect x="554" y="32" width="222" height="72" rx="13" fill="#fff3e2" stroke="#e8bf78" stroke-width="2"/>
+  <text x="665" y="61" text-anchor="middle" class="head">固定的 worker</text>
+  <text x="665" y="88" text-anchor="middle" class="small">保留本作业压缩器状态</text>
+
+  <rect x="790" y="32" width="178" height="72" rx="13" fill="#edf2f8" stroke="#a7b7ca" stroke-width="2"/>
+  <text x="879" y="61" text-anchor="middle" class="head">libuv 池</text>
+  <text x="879" y="88" text-anchor="middle" class="small">异步 fs 写入</text>
+
+  <path d="M175 104 V914" class="line"/>
+  <path d="M420 104 V914" class="line"/>
+  <path d="M665 104 V914" class="line"/>
+  <path d="M879 104 V914" class="line"/>
+
+  <path d="M175 151 H420" class="arrow"/>
+  <rect x="210" y="116" width="178" height="29" rx="7" fill="#f8fafc"/>
+  <text x="299" y="137" text-anchor="middle" class="small">1  cursor.next() 读一批</text>
+
+  <rect x="50" y="174" width="250" height="70" rx="11" fill="#ffffff" stroke="#b7c8db" stroke-width="2"/>
+  <text x="175" y="203" text-anchor="middle" class="body">await 挂起当前函数</text>
+  <text x="175" y="229" text-anchor="middle" class="small">调用栈交回事件循环</text>
+
+  <rect x="50" y="264" width="250" height="58" rx="11" fill="#f0f5fb" stroke="#b7c8db" stroke-width="2"/>
+  <text x="175" y="300" text-anchor="middle" class="body">2  其他已就绪回调运行</text>
+
+  <path d="M420 360 H175" class="arrowGreen"/>
+  <rect x="216" y="326" width="285" height="29" rx="7" fill="#f8fafc"/>
+  <text x="358" y="347" text-anchor="middle" class="small">3  socket I/O 通知</text>
+
+  <rect x="50" y="378" width="250" height="100" rx="11" fill="#ffffff" stroke="#b7c8db" stroke-width="2"/>
+  <text x="175" y="408" text-anchor="middle" class="body">4  驱动在主 isolate</text>
+  <text x="175" y="435" text-anchor="middle" class="small">读取并解析到达字节</text>
+  <text x="175" y="462" text-anchor="middle" class="small">形成有界订单行，Promise 结算</text>
+
+  <path d="M175 520 H665" class="arrow"/>
+  <rect x="300" y="486" width="330" height="29" rx="7" fill="#f8fafc"/>
+  <text x="465" y="507" text-anchor="middle" class="small">5  postMessage(本批订单行；固定到同一 worker)</text>
+
+  <rect x="554" y="540" width="222" height="78" rx="11" fill="#fff3e2" stroke="#e8bf78" stroke-width="2"/>
+  <text x="665" y="570" text-anchor="middle" class="body">同步 CPU 转换</text>
+  <text x="665" y="597" text-anchor="middle" class="small">按序更新压缩器状态</text>
+
+  <rect x="50" y="540" width="250" height="78" rx="11" fill="#edf5f3" stroke="#91c6b8" stroke-width="2"/>
+  <text x="175" y="570" text-anchor="middle" class="body">主线程未被这段 CPU 占住</text>
+  <text x="175" y="597" text-anchor="middle" class="small">仍可处理其他短回调</text>
+
+  <path d="M665 662 H175" class="arrowGreen"/>
+  <rect x="282" y="628" width="278" height="29" rx="7" fill="#f8fafc"/>
+  <text x="421" y="649" text-anchor="middle" class="small">6  0…N 个输出块 + batchDone</text>
+
+  <rect x="50" y="681" width="250" height="82" rx="11" fill="#ffffff" stroke="#b7c8db" stroke-width="2"/>
+  <text x="175" y="712" text-anchor="middle" class="body">7  有输出时提交 fs 写入</text>
+  <text x="175" y="741" text-anchor="middle" class="small">等待期间可处理其他回调</text>
+
+  <path d="M175 804 H879" class="arrow"/>
+  <rect x="388" y="771" width="276" height="29" rx="7" fill="#f8fafc"/>
+  <text x="526" y="792" text-anchor="middle" class="small">8  文件写请求提交到 libuv 池</text>
+
+  <rect x="790" y="815" width="178" height="55" rx="10" fill="#edf2f8" stroke="#a7b7ca" stroke-width="2"/>
+  <text x="879" y="849" text-anchor="middle" class="small">执行文件操作</text>
+
+  <path d="M879 906 H175" class="arrowGreen"/>
+  <rect x="252" y="846" width="496" height="54" rx="7" fill="#f8fafc"/>
+  <text x="500" y="868" text-anchor="middle" class="small">9  写完成后回主事件循环</text>
+  <text x="500" y="892" text-anchor="middle" class="small">本批全部写完，且已收到 batchDone</text>
+
+  <rect x="48" y="934" width="920" height="90" rx="12" fill="#eef2f7" stroke="#c1ccd9" stroke-width="2"/>
+  <text x="508" y="968" text-anchor="middle" class="small">本批：有输出则等写完和 batchDone；零输出只等 batchDone，然后取下一批。</text>
+  <text x="508" y="997" text-anchor="middle" class="small" fill="#526b89">EOF：同一 worker flush 后发 streamFinished；槽位可归还。写入方收确认并写完尾块（可零块）才关闭文件。</text>
+</svg>
