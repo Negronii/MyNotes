@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="730" viewBox="0 0 1200 730" role="img" aria-labelledby="title desc">
+  <title id="title">Node.js 流的相邻缓冲与背压传播</title>
+  <desc id="desc">数据从按需来源依次流经 Readable、Transform、Writable 到 sink。Writable 的 write(chunk) 返回 false 时先暂停直接上游 Transform 的可读侧。Transform 的写缓冲仍可吸收在途数据，达到自己的阈值后才暂停更早的 Readable。drain 后相关上游恢复。所有缓冲有各自阈值，阈值不是整条管线的硬性内存上限。</desc>
+  <defs>
+    <marker id="flow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L12,6 L0,12 z" fill="#58769a"/></marker>
+    <marker id="pause" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L12,6 L0,12 z" fill="#a76524"/></marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #20354e; }
+      .head { font-size: 27px; font-weight: 650; }
+      .body { font-size: 24px; }
+      .small { font-size: 22px; }
+      .flow { stroke: #58769a; stroke-width: 4; fill: none; marker-end: url(#flow); }
+      .pause { stroke: #a76524; stroke-width: 4; fill: none; marker-end: url(#pause); }
+      .queue { fill: #e3edf8; stroke: #8ba6c5; stroke-width: 1.7; }
+      .queue-on { fill: #84a9d2; stroke: #58769a; stroke-width: 1.7; }
+      .threshold { stroke: #b45c48; stroke-width: 2.5; stroke-dasharray: 6 5; }
+    </style>
+  </defs>
+  <rect width="1200" height="730" fill="#f8fafc"/>
+
+  <rect x="25" y="76" width="170" height="194" rx="16" fill="#edf5f3" stroke="#91c6b8" stroke-width="2.5"/>
+  <text x="110" y="119" text-anchor="middle" class="head">按需来源</text>
+  <text x="110" y="158" text-anchor="middle" class="small">游标 / 生成器</text>
+  <text x="110" y="198" text-anchor="middle" class="small">下一行或数据块</text>
+  <text x="110" y="246" text-anchor="middle" class="small">能按需变慢</text>
+
+  <rect x="245" y="76" width="165" height="194" rx="16" fill="#ffffff" stroke="#a7b7ca" stroke-width="2.5"/>
+  <text x="327" y="119" text-anchor="middle" class="head">Readable</text>
+  <text x="327" y="158" text-anchor="middle" class="small">读侧队列</text>
+  <rect x="268" y="184" width="21" height="26" rx="3" class="queue-on"/>
+  <rect x="294" y="184" width="21" height="26" rx="3" class="queue-on"/>
+  <rect x="320" y="184" width="21" height="26" rx="3" class="queue"/>
+  <rect x="346" y="184" width="21" height="26" rx="3" class="queue"/>
+  <rect x="372" y="184" width="21" height="26" rx="3" class="queue"/>
+  <line x1="355" y1="176" x2="355" y2="220" class="threshold"/>
+  <text x="327" y="249" text-anchor="middle" class="small">自己的阈值</text>
+
+  <rect x="460" y="76" width="220" height="194" rx="16" fill="#f0f5fb" stroke="#91b7e1" stroke-width="2.5"/>
+  <text x="570" y="119" text-anchor="middle" class="head">Transform</text>
+  <text x="518" y="158" text-anchor="middle" class="small">写侧</text>
+  <text x="622" y="158" text-anchor="middle" class="small">读侧</text>
+  <rect x="480" y="184" width="20" height="26" rx="3" class="queue-on"/>
+  <rect x="505" y="184" width="20" height="26" rx="3" class="queue"/>
+  <rect x="530" y="184" width="20" height="26" rx="3" class="queue"/>
+  <line x1="527" y1="176" x2="527" y2="220" class="threshold"/>
+  <rect x="590" y="184" width="20" height="26" rx="3" class="queue-on"/>
+  <rect x="615" y="184" width="20" height="26" rx="3" class="queue-on"/>
+  <rect x="640" y="184" width="20" height="26" rx="3" class="queue"/>
+  <line x1="643" y1="176" x2="643" y2="220" class="threshold"/>
+  <text x="570" y="249" text-anchor="middle" class="small">两侧分别计量</text>
+
+  <rect x="730" y="76" width="165" height="194" rx="16" fill="#ffffff" stroke="#a7b7ca" stroke-width="2.5"/>
+  <text x="812" y="119" text-anchor="middle" class="head">Writable</text>
+  <text x="812" y="158" text-anchor="middle" class="small">写侧队列</text>
+  <rect x="751" y="184" width="21" height="26" rx="3" class="queue-on"/>
+  <rect x="777" y="184" width="21" height="26" rx="3" class="queue-on"/>
+  <rect x="803" y="184" width="21" height="26" rx="3" class="queue-on"/>
+  <rect x="829" y="184" width="21" height="26" rx="3" class="queue-on"/>
+  <rect x="855" y="184" width="21" height="26" rx="3" class="queue"/>
+  <line x1="855" y1="176" x2="855" y2="220" class="threshold"/>
+  <text x="812" y="249" text-anchor="middle" class="small">自己的阈值</text>
+
+  <rect x="945" y="76" width="220" height="194" rx="16" fill="#fff3e2" stroke="#e8bf78" stroke-width="2.5"/>
+  <text x="1055" y="119" text-anchor="middle" class="head">Sink</text>
+  <text x="1055" y="158" text-anchor="middle" class="small">文件或远端</text>
+  <text x="1055" y="198" text-anchor="middle" class="small">实际接收方</text>
+
+  <path d="M197 164 H237" class="flow"/>
+  <path d="M412 164 H452" class="flow"/>
+  <path d="M682 164 H722" class="flow"/>
+  <path d="M897 164 H937" class="flow"/>
+  <text x="600" y="54" text-anchor="middle" class="body">数据按顺序向下游流动</text>
+
+  <path d="M812 270 V355 H622 V270" class="pause"/>
+  <rect x="875" y="284" width="300" height="68" rx="12" fill="#fff8ef" stroke="#e5c49f" stroke-width="1.5"/>
+  <text x="1025" y="312" text-anchor="middle" class="small">write(chunk) 返回 false</text>
+  <text x="1025" y="340" text-anchor="middle" class="small">暂停 Transform 读侧</text>
+
+  <rect x="875" y="374" width="300" height="54" rx="12" fill="#f1faf7" stroke="#9acabd" stroke-width="1.5"/>
+  <text x="1025" y="408" text-anchor="middle" class="small" fill="#287665">drain 后直接上游恢复</text>
+
+  <path d="M518 270 V520 H327 V270" class="pause"/>
+  <rect x="30" y="406" width="270" height="102" rx="12" fill="#fff8ef" stroke="#e5c49f" stroke-width="1.5"/>
+  <text x="165" y="437" text-anchor="middle" class="small">读侧积压会拖慢输入</text>
+  <text x="165" y="470" text-anchor="middle" class="small">写侧积至自己的阈值</text>
+  <text x="165" y="500" text-anchor="middle" class="small">才暂停 Readable</text>
+
+  <rect x="62" y="568" width="1076" height="126" rx="18" fill="#eef2f7" stroke="#c1ccd9" stroke-width="2.5"/>
+  <text x="600" y="611" text-anchor="middle" class="head">各级先吸收已在途的数据，再逐段施加背压</text>
+  <text x="600" y="650" text-anchor="middle" class="body">每个队列有独立阈值；Transform 的读写侧分开计量。</text>
+  <text x="600" y="680" text-anchor="middle" class="small">阈值不是整条管线的硬内存上限；单个大块、预取与管线外队列另计。</text>
+</svg>
