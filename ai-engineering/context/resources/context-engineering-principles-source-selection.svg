@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="930" viewBox="0 0 1600 930" role="img" aria-labelledby="title desc">
+  <title id="title">从应用持久记录组装新运行输入</title>
+  <desc id="desc">旧运行 c1 作为可追溯的历史观察，与当前授权和手册版本分别核验，再组成新应用运行的输入。工具 schema 是否声明是独立选择。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="18" markerHeight="18" refX="15" refY="9" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L16 9 L1 17 Z" fill="#375c82"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Noto Sans CJK SC", "PingFang SC", sans-serif; fill: #20334d; }
+      .panel { fill: #ffffff; stroke: #bdcbd9; stroke-width: 3; }
+      .header { font-size: 40px; font-weight: 700; }
+      .sub { font-size: 29px; font-weight: 500; fill: #66768a; }
+      .body { font-size: 33px; font-weight: 600; }
+      .small { font-size: 29px; font-weight: 500; }
+      .source { fill: #eaf2fb; stroke: #9ab5d0; stroke-width: 2.5; }
+      .request { fill: #eaf6ef; stroke: #90bda0; stroke-width: 2.5; }
+      .conditional { fill: #fff4d9; stroke: #d9b963; stroke-width: 2.5; }
+      .excluded { fill: #f2f4f7; stroke: #b5bec8; stroke-width: 2.5; stroke-dasharray: 10 8; }
+      .arrow { fill: none; stroke: #375c82; stroke-width: 8; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1600" height="930" rx="28" fill="#f7f9fc"/>
+
+  <rect class="panel" x="40" y="42" width="700" height="810" rx="24"/>
+  <text class="header" x="78" y="104">应用持有的持久记录</text>
+  <text class="sub" x="78" y="145">先核验当前调用者、来源与范围</text>
+
+  <rect class="source" x="78" y="180" width="624" height="105" rx="16"/>
+  <text class="body" x="108" y="222">当前调用者与访问范围</text>
+  <text class="small" x="108" y="262">仅查询本轮获准的用户与构建记录</text>
+
+  <rect class="source" x="78" y="305" width="624" height="190" rx="16"/>
+  <text class="body" x="108" y="348">run-r42-7#c1 · 旧工具调用 ID</text>
+  <text class="small" x="108" y="389">read_build_log(build_id=42) 已完成</text>
+  <text class="small" x="108" y="428">观察：reject_empty_name，预期 400</text>
+  <text class="small" x="108" y="467">实际 200；完整日志仍按 ID 留存</text>
+
+  <rect class="source" x="78" y="515" width="624" height="130" rx="16"/>
+  <text class="body" x="108" y="560">CI-RETRY-v3@fixture-r1</text>
+  <text class="small" x="108" y="603">对照授权发布方的当前版本与状态</text>
+
+  <rect class="excluded" x="78" y="665" width="624" height="145" rx="16"/>
+  <text class="body" x="108" y="710">其他构建的旧对话：不带入</text>
+  <text class="small" x="108" y="752">仍按应用既定保留策略留在原处</text>
+  <text class="small" x="108" y="790">后续需要时，再按 ID 读取并核验</text>
+
+  <path class="arrow" d="M 744 455 H 846"/>
+
+  <rect class="panel" x="860" y="42" width="700" height="810" rx="24"/>
+  <text class="header" x="900" y="104">run-r42-8 · 应用提交的输入</text>
+  <text class="sub" x="900" y="145">这是新应用运行；服务端会话另有范围</text>
+
+  <rect class="request" x="898" y="180" width="624" height="105" rx="16"/>
+  <text class="body" x="928" y="222">应用指令 + 当前问题</text>
+  <text class="small" x="928" y="262">“按当前 CI 手册，这个构建该重跑吗？”</text>
+
+  <rect class="request" x="898" y="305" width="624" height="190" rx="16"/>
+  <text class="body" x="928" y="348">历史观察：run-r42-7#c1</text>
+  <text class="small" x="928" y="389">build 42 的断言失败，预期 400、实际 200</text>
+  <text class="small" x="928" y="428">它是既有证据，不重放旧工具调用</text>
+  <text class="small" x="928" y="467">可追到完整日志与原始事件记录</text>
+
+  <rect class="request" x="898" y="515" width="624" height="130" rx="16"/>
+  <text class="body" x="928" y="560">CI-RETRY-v3@fixture-r1</text>
+  <text class="small" x="928" y="603">v3：断言失败先调查，不自动重跑</text>
+
+  <rect class="conditional" x="898" y="665" width="624" height="145" rx="16"/>
+  <text class="body" x="928" y="710">工具 schema：独立决定</text>
+  <text class="small" x="928" y="752">本轮需要且有权调用时，才声明工具</text>
+  <text class="small" x="928" y="790">与是否引用历史 c1 无关</text>
+
+  <text class="sub" x="78" y="899">服务端 thread 可能补回更多历史；应用仍持有来源、运行记录与可重建输入。</text>
+</svg>
