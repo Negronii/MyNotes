@@ -1,6 +1,6 @@
 # 如何让报表筛选在昂贵更新时保持响应？
 
-**案例背景。** 报表页当前 URL 为 `/reports?sort=recent#summary`，服务端给出 May、April；选择 **Oldest first** 后，`sort=oldest` 让行顺序变成 April、May。随后输入标题筛选时，输入值要即时显示；若结果视图渲染很重，可以让它稍后跟进。React 提供的是更新优先级和可中断的后台 render（渲染），不是把 JavaScript 移到另一个线程，也不是按固定时间延迟请求。状态快照在[React更新轮次](./react-basics.md)说明；服务端查询身份仍由[服务端状态章节](./react-server-state-and-optimistic-updates.md)负责。URL 与 Back 的同步采用[浏览器历史栈机制](../browser/browser-navigation-and-history.md#让筛选状态跟随地址栏与前进后退)，本章代码省略这层连接。
+**案例背景。** 报表页当前 URL 为 `/reports?sort=recent#summary`，服务端给出 May、April；选择 **Oldest first** 后，`sort=oldest` 让行顺序变成 April、May。随后输入标题筛选时，输入值要即时显示；若结果视图渲染很重，可以让它稍后跟进。React 提供的是更新优先级和可中断的后台 render（渲染），不是把 JavaScript 移到另一个线程，也不是按固定时间延迟请求。状态快照在[React更新轮次](./react-basics.md)说明；服务端查询身份仍由[服务端状态章节](./react-server-state-and-optimistic-updates.md)负责。URL 与 Back 的同步采用[浏览器历史栈机制](../browser/browser-navigation-and-history.md#让排序状态跟随地址栏与前进后退)，本章代码省略这层连接。
 
 ## 输入保持即时，结果视图可以延后
 

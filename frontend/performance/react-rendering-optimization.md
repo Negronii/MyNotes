@@ -1,6 +1,6 @@
 # 如何测量并减少不必要的React工作？
 
-**案例背景。** 报表页当前 URL 为 `/reports?sort=recent#summary`，服务端给 May、April 两行；选择 **Oldest first** 后，`sort=oldest` 让可见顺序变成 April、May。打开说明面板不改变报表数据；若这个按钮仍让大量行再次执行组件函数，可能有可优化的 React 工作；若主要时间发生在提交后的布局和绘制，memoization（记忆化）不会修复浏览器瓶颈。排序的 URL 与 Back 恢复由[浏览器历史栈机制](../browser/browser-navigation-and-history.md#让筛选状态跟随地址栏与前进后退)负责，本章代码聚焦面板更新与 React 成本测量。
+**案例背景。** 报表页当前 URL 为 `/reports?sort=recent#summary`，服务端给 May、April 两行；选择 **Oldest first** 后，`sort=oldest` 让可见顺序变成 April、May。打开说明面板不改变报表数据；若这个按钮仍让大量行再次执行组件函数，可能有可优化的 React 工作；若主要时间发生在提交后的布局和绘制，memoization（记忆化）不会修复浏览器瓶颈。排序的 URL 与 Back 恢复由[浏览器历史栈机制](../browser/browser-navigation-and-history.md#让排序状态跟随地址栏与前进后退)负责，本章代码聚焦面板更新与 React 成本测量。
 
 ~~~mermaid
 flowchart TD
