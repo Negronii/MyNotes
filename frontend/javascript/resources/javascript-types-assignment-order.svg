@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 278" role="img" aria-labelledby="title desc">
+  <title id="title">a.x = a = { n: 2 } 的求值前后引用关系</title>
+  <desc id="desc">开始时 a 和 b 都指向旧对象 A。求值时先记录 A 的 x 属性位置，再让 a 指向新对象 B，最后把 B 写入 A.x。结束时 b 仍指向 A，a 指向 B。</desc>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1769aa"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b45309"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #18212b; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.4; }
+      .head { font-size: 15px; font-weight: 700; }
+      .body { font-size: 13px; }
+      .small { font-size: 12px; }
+      .var { fill: #eff6ff; stroke: #1769aa; stroke-width: 1.3; }
+      .obj { fill: #f8fafc; stroke: #475569; stroke-width: 1.3; }
+      .varline { fill: none; stroke: #1769aa; stroke-width: 2; marker-end: url(#arrow-blue); }
+      .propLine { fill: none; stroke: #b45309; stroke-width: 2; marker-end: url(#arrow-orange); }
+      .note { fill: #fff7ed; stroke: #fed7aa; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect width="700" height="278" rx="12" fill="#f8fafc"/>
+
+  <rect class="panel" x="12" y="12" width="205" height="254" rx="10"/>
+  <text class="head" x="26" y="39">表达式开始</text>
+  <text class="small" x="26" y="59">a.x = a = { n: 2 }</text>
+  <rect class="var" x="27" y="91" width="46" height="28" rx="6"/>
+  <text class="body" x="46" y="110">a</text>
+  <rect class="var" x="27" y="153" width="46" height="28" rx="6"/>
+  <text class="body" x="46" y="172">b</text>
+  <rect class="obj" x="133" y="115" width="70" height="48" rx="7"/>
+  <text class="body" x="146" y="135">对象 A</text>
+  <text class="small" x="150" y="153">{ n: 1 }</text>
+  <path class="varline" d="M 73 105 C 97 105, 104 126, 129 132"/>
+  <path class="varline" d="M 73 167 C 102 167, 104 151, 129 145"/>
+  <text class="small" x="26" y="222">两个变量当前都指向 A。</text>
+
+  <rect class="note" x="230" y="56" width="164" height="166" rx="9"/>
+  <text class="body" x="246" y="86">① 记录旧对象 A 的 x</text>
+  <text class="body" x="246" y="126">② 右侧把 a 改指向 B</text>
+  <text class="body" x="246" y="166">③ 把 B 写入 A.x</text>
+  <path d="M 251 188 H 373" stroke="#b45309" stroke-width="2" marker-end="url(#arrow-orange)"/>
+  <text class="small" x="246" y="211">写入位置不会随 a 改变</text>
+
+  <rect class="panel" x="407" y="12" width="281" height="254" rx="10"/>
+  <text class="head" x="421" y="39">表达式完成</text>
+  <rect class="var" x="422" y="77" width="46" height="28" rx="6"/>
+  <text class="body" x="441" y="96">a</text>
+  <rect class="var" x="422" y="148" width="46" height="28" rx="6"/>
+  <text class="body" x="441" y="167">b</text>
+  <rect class="obj" x="542" y="60" width="100" height="50" rx="7"/>
+  <text class="body" x="567" y="81">对象 B</text>
+  <text class="small" x="572" y="99">{ n: 2 }</text>
+  <rect class="obj" x="520" y="173" width="100" height="50" rx="7"/>
+  <text class="body" x="545" y="194">对象 A</text>
+  <text class="small" x="550" y="212">{ n: 1 }</text>
+  <path class="varline" d="M 468 91 C 495 91, 510 85, 538 85"/>
+  <path class="varline" d="M 468 162 C 490 162, 493 190, 516 197"/>
+  <path class="propLine" d="M 620 188 H 666 V 85 H 646"/>
+  <text class="small" x="652" y="142" fill="#b45309">x</text>
+  <text class="small" x="421" y="246">b → A，A.x → B；a → B</text>
+</svg>

@@ -1,3 +1,3 @@
-# CSS 伪类和伪元素怎样选择文档中的局部？
+# CSS 结构伪类怎样计数，伪元素怎样生成内容？
 
-结构伪类的兄弟计数、specificity、生成伪元素是否属于 DOM，以及可访问内容不能只放入伪元素，已并入[CSS 级联如何决定胜出声明](../../../../frontend/html-css/html-and-css-basics.md)。
+结构伪类的兄弟计数、specificity、生成伪元素是否属于 DOM，以及生成内容的可访问性边界，已并入[选择器如何计数，伪元素如何生成内容](../../../../frontend/html-css/html-and-css-basics.md#先确认选择器匹配到谁)。

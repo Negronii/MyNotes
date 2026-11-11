@@ -3658,7 +3658,7 @@ icon font（图标字体）把图案映射到字体字形，因此可按文字�
 > - 自动轮播控制：W3C WAI [ARIA APG Carousel Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/)，检查于 2026-11-06。
 ## 28. JavaScript 值如何转换、比较，并成为属性键？
 
-报表结果里，金额 0、缺失的数组位置、两个字段相同的记录，看起来都像“没有数据”或“同一条记录”；JavaScript 会按不同规则处理它们。本章从一次结果导入开始，先分清值与对象身份，再说明比较和属性键转换。后续章节沿用这组输入：
+**案例背景：**2026 年 10 月的报表导入中，`first` 与 `retry` 的 `reportId` 相同但金额不同，`rows` 还保留了一个缺失位置。导入代码需要保住合法的零金额、识别缺行，并决定按业务键还是对象身份查记录。本章用这组输入说明值转换、相等比较、对象图比较和属性键转换；后续章节沿用同一组输入：
 
 ~~~javascript
 const owner = { id: "u-17", name: "Ada" };
@@ -3671,7 +3671,7 @@ const retry = {
 const rows = [first, , retry]; // 第二个位置是空位；第三项是重试记录
 ~~~
 
-业务字段 reportId 相同，表示两条输入记录描述同一业务实体；first 与 retry 仍是两个对象。它们的 owner 字段也指向内容相同、身份不同的对象。
+业务字段 `reportId` 相同，表示两条输入记录描述同一业务实体；`first` 与 `retry` 仍是两个对象。它们的 `owner` 字段也指向内容相同、身份不同的对象。
 
 ### 值的类型决定哪些转换有意义
 
@@ -3693,7 +3693,7 @@ JavaScript 有七种 primitive types（原始值类型）：`undefined`（未定
 
 `0` 是假值，但空数组和空对象是真值；非空字符串 `"false"` 也是真值。`Number` 转换遵循另一套规则，因此输入含义重要时应显式转换。
 
-对普通值，`Boolean(value)` 与 `!!value` 都执行真值转换。
+`Boolean(value)` 与 `!!value` 都执行真值转换；在历史浏览器对象 `document.all` 上，二者也都返回 `false`，因为标准为它保留了特殊例外。
 
 ~~~javascript
 Boolean("false");  // true
@@ -3708,7 +3708,7 @@ Number.isNaN(NaN);  // true
 Number.isNaN("x");  // false：不做隐式转换
 ~~~
 
-浏览器里的历史对象 `document.all` 是例外：它带有标准附录定义的特殊行为，`Boolean(document.all)` 为 `false`，`typeof document.all` 为 `"undefined"`，且 `document.all == null` 为 `true`。这不是普通对象的真值规则，业务代码不应依赖它。
+浏览器里的历史对象 `document.all` 带有标准附录定义的特殊行为，此外 `typeof document.all` 为 `"undefined"`，且 `document.all == null` 为 `true`。普通对象的真值规则不受影响，业务代码不应依赖这个例外。
 
 逻辑运算也不会自动把结果变成 `Boolean`。逻辑与 `&&` 返回某个操作数，因此 React 条件渲染中，`0 && <ItemList />` 的结果是 `0`，可能直接显示数字零；条件需要表达“条数大于零”时就写出比较条件。
 
@@ -3731,7 +3731,7 @@ first.reportId === retry.reportId; // true：业务字段相等
 first === retry;                    // false：对象身份不同
 first.owner === retry.owner;        // false：嵌套对象身份不同
 
-5 == "5";              // true
+5 == "5";              // true：字符串转换为数值后比较
 5 === "5";             // false
 null == undefined;     // true
 ~~~
@@ -3766,7 +3766,7 @@ Math.abs((0.1 + 0.2) - 0.3) < 1e-12; // 对这个量级的例子成立
 
 `===` 对对象只比较身份；业务判断有时还需要问两份输入是否有相同的数据结构。这不是 JavaScript 内建的统一规则，比较结果取决于应用选择的输入契约。这里比较筛选条件和接口纯数据：普通对象键的插入顺序不重要，数组顺序重要，键缺失与显式 `undefined` 不同。
 
-本例只讨论有限、无环的数据树：当前 realm（执行环境）的普通数组、普通对象或 null 原型对象；叶子是 `null`、`undefined`、布尔值、字符串或数字；容器只含自有、可枚举的字符串数据属性。数组还比较自己的 `length`。Symbol 或不可枚举属性、访问器、代理、函数、BigInt、Symbol 值及 Date、Map 等带内部状态的对象都在契约之外；代码不负责检测循环，调用方必须保证输入无环。普通对象可继承标准 `Object.prototype` 成员，但继承属性不参与比较。调用方应先保证输入符合契约；这段递归代码不是验证不可信对象的通用入口。
+本例只讨论有限、无环的数据对象图；不同属性可以共享同一个子对象。容器限于当前 realm（执行环境）的普通数组、普通对象或 null 原型对象；叶子是 `null`、`undefined`、布尔值、字符串或数字；容器的数据属性为自有、可枚举的字符串键。数组的 `length` 是不可枚举的自有属性，因此代码会单独比较它，再比较可枚举键。Symbol 或其他不可枚举属性、访问器、代理、函数、BigInt、Symbol 值及 Date、Map 等带内部状态的对象都在契约之外；代码不负责检测循环，调用方必须保证输入无环。普通对象可继承标准 `Object.prototype` 成员，但继承属性不参与比较。调用方应先保证输入符合契约；这段递归代码不是验证不可信对象的通用入口。
 
 ~~~javascript
 function isPlainObject(value) {
@@ -3823,7 +3823,7 @@ function deepEqual(left, right) {
 }
 ~~~
 
-递归步骤可以按四件事复算：先区分叶子与容器，叶子用 `Object.is`；再确认两边同为数组或对象；对象原型类别不同就不相等，数组先比 `length`；最后比较自有键集合，并对每个键的值递归。对象键次序因此不影响结果；数组索引是否存在仍影响结果，因为空位不在 `Object.keys` 里。使用属性描述符读取数据值，不会调用输入 getter；当比较走到一个可枚举访问器属性时会抛 `TypeError`。若两边是同一对象引用，容器类别检查后就会由 `Object.is` 短路，因此本函数不能用作输入验证器。
+递归步骤可以按四件事复算：先区分叶子与容器，叶子用 `Object.is`；再确认两边同为数组或对象；对象原型类别不同就不相等，数组先比不可枚举的 `length`；最后比较可枚举自有键集合，并对每个键的值递归。对象键次序因此不影响结果；数组索引是否存在仍影响结果，因为空位不在 `Object.keys` 里。使用属性描述符读取数据值，不会调用输入 getter；当比较走到一个可枚举访问器属性时会抛 `TypeError`。若两边是同一对象引用，容器类别检查后就会由 `Object.is` 短路，因此本函数不能用作输入验证器。
 
 | 输入 | 差异 | 结果 |
 | --- | --- | --- |
@@ -3838,12 +3838,16 @@ function deepEqual(left, right) {
 | 左侧两个属性共享同一子对象，右侧各自保存等值副本 | 比较值，不维护两边的共享身份关系 | `true` |
 | 两个不同的 `new Date(0)` | Date 有本契约之外的内部状态 | 抛 `TypeError` |
 
-例如，普通对象和 null 原型对象都可装载键值，但本契约把它们的原型类别也纳入结果：
+同一批报表行能把身份比较和结构比较区分开：两个 `owner` 的引用不同，但按本契约内容相等；两条记录的金额不同，因此结构不相等。
+
+例如，两个记录可以分别共享一个等值子对象，比较器会按值递归，不要求两侧的共享关系一致。普通对象和 null 原型对象都可装载键值，但本契约把它们的原型类别也纳入结果：
 
 ~~~javascript
 deepEqual({}, Object.create(null)); // false
 deepEqual({ value: NaN }, { value: NaN }); // true
 deepEqual({ value: -0 }, { value: +0 });   // false
+deepEqual(first.owner, retry.owner); // true：引用不同，数据相同
+deepEqual(first, retry); // false：amount 不同
 ~~~
 
 单看可见原型不能证明一个对象确实是纯数据：把 Date 的原型手动改成 `Object.prototype` 会越过这项检查。因此，输入边界必须保证对象来自可信的纯数据构造流程；对任意对象、Proxy 或带隐藏内部状态的值，先用适合其来源的解析和校验。递归深度仍受 JavaScript 调用栈限制；无环是本例前提，代码不负责检测环。
@@ -3871,6 +3875,12 @@ a.x = a = { n: 2 };
 a.x; // undefined
 b.x; // { n: 2 }：写入落在先前记录的旧对象上
 ~~~
+
+求值顺序可拆成三步：赋值左侧先记下旧对象 `A` 的 `x` 属性位置，右侧再把 `a` 改指向新对象 `B`，最后把 `B` 写进已记下的 `A.x`。
+
+![赋值顺序：先记录旧对象的 x 属性位置，再把新对象写入该位置](../../frontend/javascript/resources/javascript-types-assignment-order.svg)
+
+*图：左侧求值时固定写入位置；整个表达式求值完成后，`a` 与 `b` 分别指向新旧对象。*
 
 函数实参按值传递：形参拿到实参值的副本。实参若是原始值，修改形参不改调用方的绑定；若是对象，副本仍指向同一对象，所以属性变更可见，但重新给形参赋另一个对象不会重绑调用方变量。
 
@@ -3911,26 +3921,51 @@ Object.prototype.toString.call(misleading); // "[object Array]"，但它不是�
 
 普通对象的属性键只能是字符串或 `Symbol`。方括号里传入其他值时，JavaScript 会执行 `ToPropertyKey`（转成属性键）；对象可以通过 `Symbol.toPrimitive` 等钩子影响转换结果，因此不能简单概括为“总是调用 `toString`”。
 
+转换分两步：`ToPropertyKey` 先用字符串提示（string hint）调用 `ToPrimitive`（转成原始值）；对象若提供可调用的 `Symbol.toPrimitive` 就以该提示调用它，若提供了非 `null`/`undefined` 的不可调用值则报错。没有这个方法时，普通转换依次试 `toString`、`valueOf`，取第一个原始值。得到 `Symbol` 时原样保留，其他原始值再转成字符串；`Symbol.toPrimitive` 若返回对象会抛出 `TypeError`，普通转换若两个方法都未返回原始值也会抛错。
+
+| 键输入 | `ToPrimitive` 的结果 | 最终属性键 |
+|---|---|---|
+| `123` | 数值 `123` | 字符串 `"123"` |
+| `accountKey` | 字符串 `"account"` | 字符串 `"account"` |
+| `symbolKey` | `Symbol("account")` | 同一个 Symbol |
+| `first`、`retry` | 各自都得到字符串 `"[object Object]"` | 同一个字符串键；后写值覆盖先写值 |
+
+`first` 和 `retry` 都没有自定义转换钩子；它们继承的 `Object.prototype.toString` 先返回相同的 `"[object Object]"`，于是普通对象转换在 `toString` 这一步就结束了。
+
 ~~~javascript
 const dictionary = {};
 dictionary[123] = "number key";
 dictionary["123"]; // "number key"
 
 const accountKey = {
-  [Symbol.toPrimitive]: () => "account",
+  [Symbol.toPrimitive](hint) {
+    console.log(hint); // "string"
+    return "account";
+  },
 };
 dictionary[accountKey] = "Ada";
 dictionary.account; // "Ada"
 
+const symbol = Symbol("account");
+const symbolKey = {
+  [Symbol.toPrimitive](hint) {
+    console.log(hint); // "string"
+    return symbol;
+  },
+};
+dictionary[symbolKey] = "symbol key";
+dictionary[symbol]; // "symbol key"：Symbol 被保留为属性键
+
 dictionary[first] = "first object";
-dictionary[retry]; // "first object"：两个对象默认都转成 "[object Object]"
+dictionary[retry] = "retry object";
+dictionary["[object Object]"]; // "retry object"：默认转换相同，后写覆盖先写
 ~~~
 
 如果键需要保持对象身份、数字与字符串必须区分，或需要任意类型的键，使用 `Map`。若普通对象确实是字典，可用 `Object.create(null)` 去掉继承原型行为，并用 `Object.hasOwn` 检查自有属性。键值集合的选择见[何时使用 Map、Set 或普通对象？](#29.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%20Map%E3%80%81Set%20%E6%88%96%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
 
 ### 枚举与复制属性时，先看 API 选中了什么
 
-`Object.keys`、`Object.values` 和 `Object.entries` 读取对象的自有、可枚举、字符串键属性；`Symbol` 键不在结果中。普通对象的数组索引键先按数值升序排列，其他字符串键按创建顺序排列；`Proxy` 和特殊对象可能有不同的键顺序。`for...in` 还会遍历可枚举的继承字符串键，因此对象数据和数组索引应选不同的遍历方式。
+`Object.keys`、`Object.values` 和 `Object.entries` 选择同一类属性：自有、可枚举、字符串键；`Symbol` 键不在结果中。`keys` 只列键；`values` 和 `entries` 会读取相应的值，因此可能调用 getter。普通对象的数组索引键先按数值升序排列，其他字符串键按创建顺序排列；`Proxy` 和特殊对象可能有不同的键顺序。`for...in` 还会遍历可枚举的继承字符串键，因此对象数据和数组索引应选不同的遍历方式。
 
 ~~~javascript
 const record = { name: "Ada", age: 36 };
@@ -3967,11 +4002,12 @@ const merged = { ...defaults, ...overrides };
 
 ### 缺失属性默认值与解构
 
-读取嵌套字段时，optional chaining（可选链）运算符 `?.` 只在紧邻值为 `null` 或 `undefined` 时停止，不把 `0`、`false` 或空字符串当成缺失。根变量本身若未声明，使用 `?.` 仍会抛 `ReferenceError`；用括号结束一段链后，括号外的普通属性读取也不再受短路保护。
+读取嵌套字段时，optional chaining（可选链）运算符 `?.` 只在它检查的值为 `null` 或 `undefined` 时短路，不把 `0`、`false` 或空字符串当成缺失。根变量本身若未声明，使用 `?.` 仍会抛 `ReferenceError`；用括号结束一段链后，括号外的普通属性读取也不再受短路保护。
 
 ~~~javascript
 const report = { profile: null, rows };
 report.profile?.name; // undefined
+// report?.profile.name; // TypeError：report 存在，但后续普通访问 .name 遇到 null
 report.rows[0]?.amount; // 0：合法的零值
 report.rows[1]?.amount; // undefined：读取空位
 
@@ -3997,7 +4033,7 @@ report.rows[0].amount || 100; // 100
 report.rows[1]?.amount ?? 100; // 100
 ~~~
 
-destructuring（解构）把属性或可迭代值绑定到局部变量。默认初始化仅在读到 `undefined` 时运行，所以不会覆盖合法零值、`false`、空字符串或 `null`。对象剩余项收集来源对象余下的自有可枚举属性，但只复制一层；数组解构按迭代器取值，空位读成 `undefined`，而省略绑定仍会向前消费一个值。
+destructuring（解构）把属性或可迭代值绑定到局部变量。默认初始化仅在读到 `undefined` 时运行，所以不会覆盖合法零值、`false`、空字符串或 `null`。对象剩余项收集来源对象余下的自有可枚举属性，但只复制一层；数组解构按迭代器取值，省略绑定仍会向前消费一个值。
 
 ~~~javascript
 const { amount: firstAmount = 100, owner: firstOwner, ...rowFields } = first;
@@ -4009,10 +4045,12 @@ profile; // null：默认值只处理 undefined
 const [firstRow, , ...tail] = rows;
 firstRow === first; // true
 tail[0] === retry; // true：rest 收集剩余项，形成新数组
-1 in rows; // false：被省略的项对应空位
+Object.hasOwn(rows, 1); // false：索引 1 没有自有属性
+1 in rows; // false：本例的原型链上也没有索引 1
+rowFields; // { reportId: "r-104" }：只剩下 first 的其他自有可枚举字段
 ~~~
 
-数组解构和数组展开同样消费迭代器，空位的其他读取结果见[数组空位如何改变遍历结果？](#%E7%A9%BA%E4%BD%8D%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E9%81%8D%E5%8E%86%E7%BB%93%E6%9E%9C)；同一个属性是否缺失或显式为 `undefined`，也不能只靠读取结果区分。
+数组解构和数组展开同样消费迭代器；本例原型链没有索引 1，所以空位被读成 `undefined`。`Object.hasOwn` 可区分自有索引与空位，`in` 还会检查原型链：继承索引可让 `Object.hasOwn(rows, 1)` 为假而 `1 in rows` 为真。数组空位的其他读取结果见[数组空位如何改变遍历结果？](#%E7%A9%BA%E4%BD%8D%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E9%81%8D%E5%8E%86%E7%BB%93%E6%9E%9C)；同一个属性是否缺失或显式为 `undefined`，也不能只靠读取结果区分。
 
 ### 模板标签收到值，但不会自动净化它
 
@@ -4032,18 +4070,19 @@ capture`label: ${untrusted}`;
 
 > [!info]- 来源
 > - 值类型、原始值与对象行为：[ECMAScript 2026 §6.1–6.2](https://tc39.es/ecma262/2026/multipage/ecmascript-data-types-and-values.html)。
-> - 严格相等、SameValue、SameValueZero 和 ToPropertyKey：[ECMAScript 2027 草案（Draft ECMA-262 / November 3, 2026）§7.2.9–7.2.14、§7.1.19](https://tc39.es/ecma262/)，访问于 2026-11-09。
-> - 本章教学 `deepEqual` 对自有属性、属性描述符、普通对象键及数组索引的检查依据：[ECMAScript 2027 §10.1.5.1、§20.1.2.14、§23.1.4、§10.4.2](https://tc39.es/ecma262/)，访问于 2026-11-09。比较契约、不支持类型及“输入必须无环”由本章示例定义。
-> - `JSON.stringify` 对不可表示的对象值、`undefined` 属性、数字与属性枚举顺序的处理：[ECMAScript 2027 §25.5.4.2、§25.5.4.5、§10.1.11.1](https://tc39.es/ecma262/)，访问于 2026-11-09。
+> - 严格相等、SameValue、SameValueZero 和宽松相等：[ECMAScript 2026 §7.2.9、§7.2.10、§7.2.13、§7.2.14](https://tc39.es/ecma262/2026/multipage/abstract-operations.html)，访问于 2026-11-12。
+> - 属性键转换先执行 `ToPrimitive`（含 string hint 下的 `OrdinaryToPrimitive`），再按 Symbol 保留或转成字符串：[ECMAScript 2026 §7.1.1、§7.1.1.1、§7.1.19](https://tc39.es/ecma262/2026/multipage/abstract-operations.html)，访问于 2026-11-12。
+> - 本章教学 `deepEqual` 的属性描述符与数组检查：[ECMAScript 2026 — OrdinaryGetOwnProperty](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinarygetownproperty)、[Array Exotic Objects](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-array-exotic-objects)、[Object.hasOwn](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.hasown)、[数组实例的 length](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-properties-of-array-instances-length)，访问于 2026-11-12。比较契约、不支持类型及“输入必须无环”由本章示例定义。
+> - 赋值先求得左侧引用，再求右侧值并写回：[ECMAScript 2026 §13.15.2 Assignment Operators — Runtime Semantics](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-assignment-operators-runtime-semantics-evaluation)，访问于 2026-11-12。
+> - `JSON.stringify` 对不可表示的对象值、`undefined` 属性、数字与属性枚举顺序的处理：[ECMAScript 2026 §25.5.4.2、§25.5.4.5、§10.1.11.1](https://tc39.es/ecma262/2026/)，访问于 2026-11-12。
 > - `document.all` 的历史例外：[ECMAScript 2026 Annex B IsHTMLDDA internal slot](https://tc39.es/ecma262/2026/multipage/additional-ecmascript-features-for-web-browsers.html#sec-IsHTMLDDA-internal-slot)。
 > - `instanceof` 与 `Object.prototype.toString` 的检查行为：[ECMAScript 2026 §13.10.2 InstanceofOperator](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-instanceofoperator)、[§20.1.3.6 Object.prototype.toString](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.prototype.tostring)。
 > - Object.keys / values / entries 与 Object.assign 的属性范围：[ECMAScript 2026 §20.1.2](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html)；普通对象的键顺序：[§10.1.11.1 OrdinaryOwnPropertyKeys](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryownpropertykeys)。
 > - 可选链与空值合并的短路条件、运算优先级：[ECMAScript 2026 §13.3.9 Optional Chains](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-optional-chains) 与 [§13.13 Binary Logical Operators](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-binary-logical-operators)。
-> - 对象与数组解构默认值、剩余项和迭代读取：[ECMAScript 2026 §14.3.3 Destructuring Binding Patterns](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-destructuring-binding-patterns)；数组迭代器：[§23.1.3.38](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.values)。
+> - 对象与数组解构默认值、剩余项和迭代读取：[ECMAScript 2026 §14.3.3 Destructuring Binding Patterns](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-destructuring-binding-patterns)；数组迭代器及空位的属性读取：[ECMAScript 2026 §23.1.3.38 Array.prototype.values](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.values)；自有性测试：[§20.1.2.14 Object.hasOwn](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.hasown)，访问于 2026-11-12。
 > - 带标签模板调用参数的组成：[ECMAScript 2026 §13.3.11 Tagged Templates](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-tagged-templates)。
 > - React 条件渲染中 0 会作为结果呈现：[React 文档 Conditional Rendering](https://react.dev/learn/conditional-rendering)，访问于 2026-11-06。
-> - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
-> - 本章 `deepEqual` 边界用例于 Node.js v26.13.0 / V8 14.6.202.34-node.40 执行，2026-11-09。
+> - 本章值转换和相等示例在 Node.js v26.13.0 / V8 14.6.202.34-node.40 执行，2026-11-12；`deepEqual` 边界用例同版本执行，原始复演日期 2026-11-09。
 ## 29. 何时使用 Map、Set 或普通对象？
 
 报表导入有一列是业务记录，有些记录可能重试；程序既要用 `Map`（映射）按 `reportId` 找最新值，也要为某个对象实例保存临时状态。选择数据结构前，先确定“相同”指什么、键需要什么类型，以及数据是否要按插入顺序遍历。对象字段与身份的比较规则见[JavaScript 值如何转换、比较，并成为属性键？](#28.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)。
@@ -4178,7 +4217,7 @@ Object.hasOwn(record, "toString"); // false
 > - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
 ## 30. JavaScript 数组操作如何处理空位、修改与复制？
 
-报表结果既可能包含同一业务记录的重复输入，也可能因上游筛选留下稀疏位置。数组操作的结果取决于它读取的是值还是存在的索引、是否修改原数组，以及复制时是否只复制一层。本章复用同一组输入；第二个位置是刻意保留的空位，第三个位置是重复业务 `id` 的更新记录：
+2026 年 10 月月报导入两条 `reportId` 相同的记录：首条金额为 0，重试记录金额为 120；数组第二个位置刻意保留空位。本章先用这组报表行对照去重策略，再用短数组看空位、删除、排序与展平，在复制节回到 `rows` 和 `owner` 观察浅复制。选择哪条报表记录由业务规则决定：后文会比较 Map 保留最后一次写入与排序后保留组内首项的不同结果。
 
 ~~~javascript
 const owner = { id: "u-17", name: "Ada" };
@@ -4191,7 +4230,7 @@ const retry = {
 const rows = [first, , retry];
 ~~~
 
-普通业务结果通常应使用稠密数组；这个空位用于辨别 JavaScript 操作的迭代契约。空位、显式 `undefined` 和数组迭代器返回的 `undefined` 不是同一个结构状态。
+业务字段 `reportId` 相同，表示两条输入记录描述同一业务实体；`first` 与 `retry` 仍是两个对象。它们的 `owner` 字段也指向内容相同、身份不同的对象，后文用来说明浅复制共享嵌套对象。普通业务结果通常应使用稠密数组；这个空位用于辨别 JavaScript 操作的迭代契约。空位、显式 `undefined` 和数组迭代器返回的 `undefined` 不是同一个结构状态。
 
 ### 去重前先选“相同”的定义
 
@@ -4210,7 +4249,7 @@ values.filter((value, index) => values.indexOf(value) === index); // [1]
 [...new Set(values)]; // [NaN, 1]
 ~~~
 
-记录若按业务字段判重，用 `Map` 把字段映射到最新对象。重复 `reportId` 的后一个对象替换值，而 `Map` 键的遍历位置仍取首次插入时的位置：
+记录若按业务字段判重，用 `Map` 把字段映射到最后出现的对象。重复 `reportId` 的后一个对象替换值，而 `Map` 键的遍历位置仍取首次插入时的位置：
 
 ~~~javascript
 function uniqueByReportId(items) {
@@ -4224,17 +4263,13 @@ uniqueByReportId(rows); // [retry]
 
 这里使用 `forEach`，空位不会被当成一条记录；若输入可能包含显式 `undefined`，仍需在业务边界另行校验。重复项按 `reportId` 保留最后版本，是一个业务策略，不是 `Map` 自动推断出来的“对象相等”。
 
-如果结果允许改变顺序，也可先排序副本，再对相邻项按同一业务等价关系去重。这个策略是“保留排序后每组首项”，不同于上面的 Map “保留最后一次写入”：当前输入的排序比较相等，稳定排序保留原顺序，所以结果会保留 `first`（金额 `0`），Map 结果则保留 `retry`（金额 `120`）。比较器必须把所有相等项排在一起；`same` 必须和 `compare` 表达同一组等价类。函数先用 `filter` 跳过空位；它假设每个现存元素都是记录，不含显式 `undefined`，外部输入不满足时应先校验。
+如果结果允许改变顺序，也可先排序副本，再对相邻项按同一业务等价关系去重。这个策略是“保留排序后每组首项”，不同于上面的 Map “保留最后一次写入”：当前输入的排序比较相等，稳定排序保留原顺序，所以结果会保留 `first`（金额 `0`），Map 结果则保留 `retry`（金额 `120`）。比较器必须把所有相等项排在一起；`same` 必须和 `compare` 表达同一组等价类。函数先用 `filter` 跳过普通空位；它假设原型链没有提供缺失索引，每个现存元素都是记录且不含显式 `undefined`，外部输入不满足时应先校验。
 
-~~~typescript
-function uniqueSorted<T>(
-  items: T[],
-  compare: (left: T, right: T) => number,
-  same: (left: T, right: T) => boolean,
-): T[] {
-  const result: T[] = [];
-  const presentItems = items.filter(() => true); // 跳过空位，保留现存值
-  for (const item of [...presentItems].sort(compare)) {
+~~~javascript
+function uniqueSorted(items, compare, same) {
+  const result = [];
+  const presentItems = items.filter(() => true); // 跳过空位，结果已是稠密副本
+  for (const item of presentItems.sort(compare)) {
     if (result.length === 0 || !same(result[result.length - 1], item)) {
       result.push(item);
     }
@@ -4251,7 +4286,7 @@ uniqueSorted(
 uniqueByReportId(rows).map(item => item.amount); // [120]：Map 策略保留最后一次写入
 ~~~
 
-这个方法会改变排序顺序，但不会修改输入数组；当“保留首次顺序”重要时，不要用排序去重替代 Set 或 Map。
+`filter` 已经创建稠密副本，`sort` 只改变这个副本的顺序；这段方法不会修改 `items`，无需再展开复制一次。当“保留首次顺序”重要时，不要用排序去重替代 Set 或 Map。
 
 ### 删除匹配项时，选择副本还是原地修改
 
@@ -4300,7 +4335,7 @@ splicedRemoval.length; // 1：splice 删除 1 后保留了原空位
 
 ### 空位怎样改变遍历结果
 
-空位表示该索引没有自有属性；它不同于存在一个值为 `undefined` 的属性。多数数组回调方法用 `HasProperty`（属性存在性检查）检查索引，因此普通稀疏数组的空位会被跳过；若原型链上存在同索引属性，该属性也可能被访问。`find` 系列（查找方法）则读取每个索引；原型链没有同索引属性时，空位会以 `undefined` 传给回调。
+空位表示该索引没有自有属性；它不同于存在一个值为 `undefined` 的属性。多数数组回调方法用 `HasProperty`（属性存在性检查）检查索引，因此普通稀疏数组的空位会被跳过；若原型链上存在同索引属性，该属性也可能被访问。`find` 系列（查找方法）会按查找方向逐个读取索引，遇到第一个使回调返回真值的位置就立即停止；原型链没有同索引属性时，空位会以 `undefined` 传给回调。
 
 下表按没有继承索引属性的普通数组描述空位结果。
 
@@ -4309,16 +4344,17 @@ splicedRemoval.length; // 1：splice 删除 1 后保留了原空位
 | `map` | 跳过空位，并在对应结果位置保留空位 | 否 |
 | `filter` | 跳过空位，结果只包含通过的现存值 | 否 |
 | `forEach`、`some`、`every`、`reduce` | 普通空位不调用回调；`reduce` 无初始值且没有现存项时抛错 | 否 |
-| `find`、`findIndex`、`findLast`、`findLastIndex` | 按索引读取；回调会收到 `undefined` | 否 |
+| `find`、`findIndex`、`findLast`、`findLastIndex` | 按查找方向读取；普通空位作为 `undefined` 传给回调，命中后立即停止 | 否 |
 | `for...of`、数组展开 | 消费数组迭代器；无继承索引属性时，空位读成 `undefined` | 否 |
-| `flat` | 被展平层级中不存在的索引不写入结果 | 否 |
+| `flat` | 被展平层级中自身与原型链都不存在的索引不写入结果 | 否 |
 | `sort`、`reverse`、`splice` | 操作原接收数组；稀疏结构可能改变 | 是 |
-| `toSorted`、`toReversed`、`toSpliced` | 生成副本；读取空位时会在结果中写入 `undefined` | 否 |
+| `toSorted`、`toReversed`、`toSpliced` | 生成副本；被复制的空位若无继承索引值，会写成显式 `undefined` | 否 |
 
 ~~~javascript
 const sparse = [, "x"];
 
-0 in sparse; // false
+Object.hasOwn(sparse, 0); // false：索引 0 没有自有属性
+0 in sparse; // false：原型链上也没有索引 0
 sparse[0]; // undefined
 sparse.map(value => value); // [ <1 empty item>, "x" ]
 sparse.filter(() => true); // ["x"]
@@ -4327,7 +4363,7 @@ sparse.find((value, index) => {
   visited.push(index);
   return value === undefined;
 });
-visited; // [0]：find 回调确实访问了空位
+visited; // [0]：空位读为 undefined 后命中，find 随即停止
 [...sparse]; // [undefined, "x"]
 Object.keys(sparse); // ["1"]
 ~~~
@@ -4339,6 +4375,9 @@ const inheritedPrototype = Object.create(Array.prototype);
 inheritedPrototype[0] = "from prototype";
 const holeWithInheritedIndex = new Array(1);
 Object.setPrototypeOf(holeWithInheritedIndex, inheritedPrototype);
+Object.hasOwn(holeWithInheritedIndex, 0); // false：仍没有自有索引 0
+0 in holeWithInheritedIndex; // true：原型链提供了索引 0
+holeWithInheritedIndex[0]; // "from prototype"
 holeWithInheritedIndex.map(value => value); // ["from prototype"]
 
 const enumerableArray = [10, 20];
@@ -4375,7 +4414,7 @@ new Array(2).every(() => false); // true：所有空位都被跳过
 
 ### 从迭代器或类数组输入创建数组
 
-`Array.from` 可以消费可迭代对象，也可以按 `length` 和索引读取类数组对象；可选映射函数能在创建时转换元素。空位在读取时成为 `undefined`，因此结果是稠密数组。数组展开也消费迭代器并产生同样的空位值，但不能像 `Array.from` 一样处理只有 `length` 和索引的类数组对象。
+`Array.from` 可以消费可迭代对象，也可以按 `length` 和索引读取类数组对象；可选映射函数能在创建时转换元素。对没有继承索引的普通稀疏数组，迭代器读取空位得到 `undefined`，所以结果是稠密数组；如果原型链提供该索引，则读取继承值。数组展开也消费迭代器并产生同样的结果，但不能像 `Array.from` 一样处理只有 `length` 和索引的类数组对象。
 
 ~~~javascript
 Array.from(rows); // [first, undefined, retry]
@@ -4392,19 +4431,28 @@ Array.of(1, 2, 3); // [1, 2, 3]
 
 ### 复制数组只复制一层
 
-数组展开和 `slice` 会创建新数组，但元素值仍是原来的对象引用；修改复制数组内的嵌套记录，原数组仍能观察到这次属性变更。数组的空位行为还取决于复制方式：`slice` 和 `concat` 可保留空位，展开与 `Array.from` 通过迭代会把它们变为 `undefined`。
+数组展开和 `slice` 会创建新数组，但元素值仍是原来的对象引用；修改复制数组内的嵌套记录，原数组仍能观察到这次属性变更。对原型链没有同索引属性的普通稀疏数组，`slice` 和 `concat` 保留空位；展开与 `Array.from` 通过迭代读取时会把它变为 `undefined`。
+
+| 结果 | `Object.hasOwn(..., 1)` | 读取 `[1]` | 现存记录及 `owner` 是否仍共享 |
+| --- | --- | --- | --- |
+| `rows.slice()` | `false` | `undefined` | 是 |
+| `[...rows]` | `true` | `undefined` | 是 |
 
 ~~~javascript
-const original = [{ score: 1 }];
-const copy = [...original];
-copy[0].score = 2;
-original[0].score; // 2：嵌套对象共享
+const slicedRows = rows.slice();
+const spreadRows = [...rows];
 
-const holeCopy = sparse.slice();
-0 in holeCopy; // false：slice 保留空位
+Object.hasOwn(slicedRows, 1); // false：slice 保留这个空位
+Object.hasOwn(spreadRows, 1); // true：展开写入显式 undefined
+slicedRows[0] === rows[0]; // true：数组副本仍引用同一条记录
+spreadRows[0].owner === rows[0].owner; // true：嵌套对象也共享
+spreadRows[0].owner.name = "Grace";
+rows[0].owner.name; // "Grace"：原数组仍可观察到同一对象的变化
 
-const spreadCopy = [...sparse];
-0 in spreadCopy; // true：展开生成了显式 undefined
+const scoreRows = [{ score: 1 }];
+const scoreCopy = [...scoreRows];
+scoreCopy[0].score = 2;
+scoreRows[0].score; // 2：副本中的对象仍与原数组共享
 ~~~
 
 对象展开与数组展开不是同一协议。数组展开消费迭代器；`Object.assign` 和对象展开读取自有可枚举属性。两者都只是浅复制，且对 `getter`、`setter` 的影响不同；见[JavaScript 值如何转换、比较，并成为属性键？](#28.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)。
@@ -4432,7 +4480,7 @@ const concatOnly = {
 
 ### flat、递归与逐层 concat 的空位结果
 
-`flat(depth)` 返回展平副本，默认只展平一层；`flat(Infinity)` 展开所有非循环嵌套数组层级。它会跳过被访问层级中的空位，不会递归展平 `Set` 之类的非数组可迭代对象。
+`flat(depth)` 返回展平副本，默认只展平一层；`flat(Infinity)` 不设置展平层数上限，也不检测循环，应当用于无环的嵌套数组；极深嵌套仍可能超出引擎调用栈或资源限制。它会跳过被访问层级中原型链上也不存在的索引，不会递归展平 `Set` 之类的非数组可迭代对象。
 
 ~~~javascript
 const sparseNested = [, [, 1]];
@@ -4440,9 +4488,9 @@ const sparseNested = [, [, 1]];
 sparseNested.flat(Infinity); // [1]
 ~~~
 
-旧式逐层 concat 的差别来自两步：外层展开消费迭代器，把外层空位变成 undefined；concat 随后浅复制嵌套数组时仍保留其中空位。它还可能反复复制宽数组，或超过引擎的实参数量限制。
+旧式逐层 concat 的差别来自两步：外层展开消费迭代器，把没有继承值的外层空位变成 `undefined`；concat 随后浅复制嵌套数组时仍可保留其中空位。它还可能反复复制宽数组，或超过引擎的实参数量限制。
 
-递归循环可清楚展示层级规则，但极深输入可能耗尽调用栈；这里按每个数值索引读取，因此空位变成 undefined，与 flat 不同。
+递归循环可清楚展示层级规则，但极深输入可能耗尽调用栈；这里按每个数值索引读取，因此没有继承同索引值时，空位变成 `undefined`，与 `flat` 不同。
 
 ~~~javascript
 function flattenNested(items) {
@@ -4462,7 +4510,7 @@ flattenNested([1, [2, [3]], 4]); // [1, 2, 3, 4]
 [1, [2, [3]], 4].flat(Infinity); // [1, 2, 3, 4]
 ~~~
 
-迭代式 `[].concat(...items)` 每轮展平一层，可能命中参数数量限制、重复复制大数组，且空位行为与 `flat` 不同。如果输入没有嵌套数组，它还会直接返回原输入，而非副本。
+迭代式 `[].concat(...items)` 每轮展平一层，可能命中参数数量限制、重复复制大数组，且空位行为与 `flat` 不同。如果输入没有嵌套数组，它会直接返回原输入，而非副本。循环只适用于无环、普通且嵌套数组可由 `concat` 默认展开的输入；若某个嵌套数组设置 `Symbol.isConcatSpreadable = false`，`some(Array.isArray)` 仍看到它，`concat` 却不展开它，循环将无法收敛。
 
 ~~~javascript
 function flattenByLevels(items) {
@@ -4495,11 +4543,12 @@ maxOfNumbers([, 7]); // NaN：数组迭代器把空位读成 undefined
 
 > [!info]- 来源
 > - 数组方法对缺失索引的读取、HasProperty、回调参数、concat、flat、展开复制与排序：[ECMAScript 2026 §23.1.3 Indexed Collections](https://tc39.es/ecma262/2026/multipage/indexed-collections.html)。
-> - `concat` 与 `Symbol.isConcatSpreadable` 的展开规则：[ECMAScript 2026 §23.1.3.2 Array.prototype.concat](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.concat)；稳定排序：[ECMAScript 2019 §22.1.3.27 Array.prototype.sort](https://tc39.es/ecma262/2019/#sec-array.prototype.sort)。
+> - `concat` 与 `Symbol.isConcatSpreadable` 的展开规则：[ECMAScript 2026 §23.1.3.2 Array.prototype.concat](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.concat)；稳定排序：[ECMAScript 2026 §23.1.3.30 Array.prototype.sort](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.sort)。
 > - `for...in` 与 `for...of` 的枚举和迭代规则：[ECMAScript 2026 §14.7.5](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-for-in-and-for-of-statements)；数组迭代器的索引读取：[§23.1.3.38](https://tc39.es/ecma262/2026/multipage/indexed-collections.html#sec-array.prototype.values)。
+> - `Object.hasOwn` 只检查对象自有属性，不查原型链：[ECMAScript 2026 §20.1.2.14](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.hasown)，访问于 2026-11-12。
 > - Set 去重、SameValueZero 与平均访问时间：[ECMAScript 2026 §24.1–24.2 Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)；[§7.2.10 SameValueZero](https://tc39.es/ecma262/2026/multipage/abstract-operations.html#sec-samevaluezero)。
-> - Math.max 和实参处理：[ECMAScript 2026 §21.3.2.24](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math.max)。
-> - 本章代码核对：Node.js v26.11.1 / V8 14.6.202.34-node.37，2026-11-06。
+> - Math.max 和实参处理：[ECMAScript 2026 §21.3.2.25](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math.max)。
+> - 本章代码核对：Node.js v26.13.0 / V8 14.6.202.34-node.40，2026-11-12。
 ## 31. 如何安全地深拷贝 JavaScript 值？
 
 报表要保存一份可独立编辑的快照时，浅复制只会新建外层数组或对象，嵌套 `owner` 仍可能与当前界面共享。所谓“深拷贝”没有脱离数据模型的通用实现：先确认输入类型、循环引用、共享子对象、原型行为和所有权边界，再选择 `JSON`、`structuredClone`（结构化克隆）或范围受限的手写复制器。
