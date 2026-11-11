@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="930" viewBox="0 0 1000 930" role="img" aria-labelledby="title desc">
+  <title id="title">推测验证在首次拒绝处保留有效 KV、抽样替换词并作废暂存后缀</title>
+  <desc id="desc">已提交前缀 C 有目标 KV 和下一词分布 p1。一次目标前向处理候选 x1、x2、x3，算出 p2、p3、p4 并暂存 KV(x1)、KV(x2)、KV(x3)。本例 x1 由 p1 接受，x2 由 p2 首次拒绝，x3 不再检查。拒绝后分支为从残差分布抽 z 并输出，以及使暂存 KV(x2)、KV(x3) 无效。保留状态为 C 与 KV(x1)；z 已输出但尚未经过目标模型前向，所以还没有 KV(z)。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7f95b5"/>
+    </marker>
+    <style>
+      text { font-family: Arial, "Noto Sans CJK SC", sans-serif; fill: #24344d; }
+      .muted { fill: #667891; }
+      .body { font-size: 27px; }
+      .small { font-size: 24px; }
+      .head { font-size: 30px; font-weight: 700; }
+      .token { font-size: 29px; font-weight: 700; }
+      .commit { fill: #eaf6f1; stroke: #b6dfce; stroke-width: 2; }
+      .tentative { fill: #eaf3ff; stroke: #aac8ef; stroke-width: 2; }
+      .reject { fill: #fff4e5; stroke: #efd2a8; stroke-width: 2; }
+      .discard { fill: #f2f4f7; stroke: #cbd3de; stroke-width: 2; stroke-dasharray: 8 6; }
+      .output { fill: #f3edfb; stroke: #d4c3ed; stroke-width: 2; }
+      .line { stroke: #7f95b5; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1000" height="930" fill="#fbfcff"/>
+
+  <text x="46" y="54" class="head">前缀分布与本轮目标前向</text>
+  <rect x="46" y="80" width="326" height="118" rx="15" class="commit"/>
+  <text x="209" y="120" text-anchor="middle" class="body heavy">已提交前缀 C</text>
+  <text x="209" y="153" text-anchor="middle" class="small muted">目标 KV + 下一词分布 p₁</text>
+  <path d="M 378 139 L 420 139" class="line"/>
+  <rect x="435" y="80" width="513" height="118" rx="15" class="tentative"/>
+  <text x="691" y="117" text-anchor="middle" class="body heavy">候选输入 [x₁, x₂, x₃]</text>
+  <text x="691" y="151" text-anchor="middle" class="small muted">一次目标前向：计算 p₂、p₃、p₄</text>
+  <text x="691" y="180" text-anchor="middle" class="small muted">p₄ 仅在全部接受时供 bonus 使用</text>
+
+  <path d="M 691 206 L 691 237" class="line"/>
+  <text x="50" y="271" class="head">前向算出的候选 KV 先暂存</text>
+  <rect x="100" y="289" width="230" height="74" rx="13" class="tentative"/>
+  <rect x="385" y="289" width="230" height="74" rx="13" class="reject"/>
+  <rect x="670" y="289" width="230" height="74" rx="13" class="discard"/>
+  <text x="215" y="336" text-anchor="middle" class="token">KV(x₁)</text>
+  <text x="500" y="336" text-anchor="middle" class="token">KV(x₂)</text>
+  <text x="785" y="336" text-anchor="middle" class="token">KV(x₃)</text>
+  <path d="M 215 367 V 397 M 500 367 V 397 M 785 367 V 397" class="line"/>
+
+  <rect x="75" y="410" width="280" height="102" rx="14" class="commit"/>
+  <rect x="360" y="410" width="280" height="102" rx="14" class="reject"/>
+  <rect x="645" y="410" width="280" height="102" rx="14" class="discard"/>
+  <text x="215" y="450" text-anchor="middle" class="body heavy">x₁ 由 p₁ 接受</text>
+  <text x="215" y="485" text-anchor="middle" class="small">目标前缀到 x₁</text>
+  <text x="500" y="450" text-anchor="middle" class="body heavy">x₂ 由 p₂ 首次拒绝</text>
+  <text x="500" y="485" text-anchor="middle" class="small">保留 C + KV(x₁)</text>
+  <text x="785" y="450" text-anchor="middle" class="body heavy">x₃ 不再检查</text>
+  <text x="785" y="485" text-anchor="middle" class="small">但其 KV 已暂存</text>
+
+  <path d="M 500 515 V 544" fill="none" stroke="#7f95b5" stroke-width="4"/>
+  <path d="M 500 544 H 275 V 572" class="line"/>
+  <path d="M 500 544 H 725 V 572" class="line"/>
+  <rect x="60" y="586" width="420" height="150" rx="15" class="output"/>
+  <rect x="520" y="586" width="420" height="150" rx="15" class="discard"/>
+  <text x="270" y="623" text-anchor="middle" class="body heavy">从残差分布 r₂ 抽 z</text>
+  <text x="270" y="659" text-anchor="middle" class="small">输出序列 C, x₁, z</text>
+  <text x="270" y="698" text-anchor="middle" class="small muted">z 尚未经过目标前向；无 KV(z)</text>
+  <text x="730" y="623" text-anchor="middle" class="body heavy">作废暂存 KV 后缀</text>
+  <text x="730" y="659" text-anchor="middle" class="small">KV(x₂)、KV(x₃)</text>
+  <text x="730" y="698" text-anchor="middle" class="small muted">二者已算出，但不属于有效前缀</text>
+
+  <rect x="60" y="775" width="880" height="112" rx="14" fill="#fff9ef" stroke="#ead5b4" stroke-width="2"/>
+  <text x="500" y="817" text-anchor="middle" class="small">若接受的候选是 EOS，立即提交到 EOS 并停止，不检查后续候选或 bonus。</text>
+  <text x="500" y="856" text-anchor="middle" class="small">若 z 是 EOS，输出后停止；z 不会再被送入目标模型前向。</text>
+</svg>

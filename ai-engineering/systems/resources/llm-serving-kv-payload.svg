@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="760" viewBox="0 0 1100 760" role="img" aria-labelledby="title desc">
+  <title id="title">从单个位置的 K/V 到整批缓存载荷</title>
+  <desc id="desc">以32层、每层8个KV头、每头128维、BF16、8192个位置和32条互不共享前缀的请求为例：每个位置每层有K和V两个8乘128张量，合计4KiB；一层8192位置为32MiB，32层为每请求1GiB，32请求为32GiB KV数据载荷。总显存还需另计模型权重、工作区、页空位和元数据。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7f95b5"/>
+    </marker>
+    <style>
+      text { font-family: Arial, "Noto Sans CJK SC", sans-serif; fill: #24344d; }
+      .muted { fill: #667891; }
+      .card { fill: #ffffff; stroke: #cbd8e8; stroke-width: 2; }
+      .blue { fill: #eaf3ff; stroke: #aac8ef; stroke-width: 2; }
+      .purple { fill: #f3edfb; stroke: #d4c3ed; stroke-width: 2; }
+      .green { fill: #eaf6f1; stroke: #b6dfce; stroke-width: 2; }
+      .orange { fill: #fff4e5; stroke: #efd2a8; stroke-width: 2; }
+      .arrow { stroke: #7f95b5; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .heavy { font-weight: 700; }
+      .large { font-size: 42px; font-weight: 700; }
+      .body { font-size: 29px; }
+      .small { font-size: 25px; }
+    </style>
+  </defs>
+  <rect width="1100" height="760" fill="#fbfcff"/>
+
+  <rect x="32" y="58" width="235" height="458" rx="20" class="blue"/>
+  <text x="149" y="104" text-anchor="middle" class="body heavy">每位置 · 每层</text>
+  <text x="149" y="150" text-anchor="middle" class="small muted">K、V 各有一份</text>
+  <rect x="66" y="177" width="166" height="74" rx="12" fill="#72a8df"/>
+  <text x="149" y="225" text-anchor="middle" font-size="38" font-weight="700" fill="#ffffff">K</text>
+  <rect x="66" y="266" width="166" height="74" rx="12" fill="#9b84cf"/>
+  <text x="149" y="314" text-anchor="middle" font-size="38" font-weight="700" fill="#ffffff">V</text>
+  <text x="149" y="383" text-anchor="middle" class="body">每份形状</text>
+  <text x="149" y="421" text-anchor="middle" class="body heavy">8 头 × 128 维</text>
+  <text x="149" y="465" text-anchor="middle" class="small muted">BF16：每值 2 bytes</text>
+
+  <path d="M 272 272 L 302 272" class="arrow"/>
+
+  <rect x="310" y="58" width="235" height="458" rx="20" class="card"/>
+  <text x="427" y="104" text-anchor="middle" class="body heavy">一层 · 8,192 位置</text>
+  <text x="427" y="150" text-anchor="middle" class="small muted">K 与 V 沿位置轴增长</text>
+  <text x="345" y="206" class="small heavy" fill="#3975b7">K</text>
+  <rect x="386" y="180" width="31" height="36" rx="5" fill="#8eb8e6"/>
+  <rect x="421" y="180" width="31" height="36" rx="5" fill="#8eb8e6"/>
+  <rect x="456" y="180" width="31" height="36" rx="5" fill="#8eb8e6"/>
+  <text x="502" y="207" text-anchor="middle" class="body muted">…</text>
+  <text x="345" y="266" class="small heavy" fill="#775cac">V</text>
+  <rect x="386" y="240" width="31" height="36" rx="5" fill="#b3a0dc"/>
+  <rect x="421" y="240" width="31" height="36" rx="5" fill="#b3a0dc"/>
+  <rect x="456" y="240" width="31" height="36" rx="5" fill="#b3a0dc"/>
+  <text x="502" y="267" text-anchor="middle" class="body muted">…</text>
+  <text x="427" y="310" text-anchor="middle" class="small muted">每位置、本层</text>
+  <text x="427" y="344" text-anchor="middle" class="small">2 × 8 × 128 × 2 B</text>
+  <text x="427" y="378" text-anchor="middle" class="small heavy">= 4 KiB</text>
+  <line x1="344" y1="397" x2="510" y2="397" stroke="#d8e1ed" stroke-width="2"/>
+  <text x="427" y="431" text-anchor="middle" class="small">4 KiB × 8,192</text>
+  <text x="427" y="475" text-anchor="middle" class="large">= 32 MiB</text>
+  <text x="427" y="504" text-anchor="middle" class="small muted">本层 KV 载荷</text>
+
+  <path d="M 550 272 L 580 272" class="arrow"/>
+
+  <rect x="588" y="58" width="235" height="458" rx="20" class="purple"/>
+  <text x="705" y="104" text-anchor="middle" class="body heavy">一条请求 · 32 层</text>
+  <rect x="634" y="145" width="142" height="40" rx="8" fill="#d3c5ea"/>
+  <rect x="634" y="194" width="142" height="40" rx="8" fill="#d3c5ea"/>
+  <rect x="634" y="243" width="142" height="40" rx="8" fill="#d3c5ea"/>
+  <text x="705" y="174" text-anchor="middle" class="small">第 1 层</text>
+  <text x="705" y="223" text-anchor="middle" class="small">第 2 层</text>
+  <text x="705" y="272" text-anchor="middle" class="small">… 第 32 层</text>
+  <text x="705" y="328" text-anchor="middle" class="small muted">32 MiB / 层 × 32</text>
+  <line x1="622" y1="350" x2="788" y2="350" stroke="#d4c3ed" stroke-width="2"/>
+  <text x="705" y="408" text-anchor="middle" class="large">1 GiB</text>
+  <text x="705" y="448" text-anchor="middle" class="small muted">每条序列 KV 载荷</text>
+
+  <path d="M 828 272 L 858 272" class="arrow"/>
+
+  <rect x="866" y="58" width="202" height="458" rx="20" class="green"/>
+  <text x="967" y="104" text-anchor="middle" class="body heavy">32 条请求</text>
+  <g fill="#94cbb2">
+    <rect x="900" y="145" width="132" height="26" rx="7"/><rect x="900" y="180" width="132" height="26" rx="7"/>
+    <rect x="900" y="215" width="132" height="26" rx="7"/><rect x="900" y="250" width="132" height="26" rx="7"/>
+    <rect x="900" y="285" width="132" height="26" rx="7"/>
+  </g>
+  <text x="967" y="349" text-anchor="middle" class="small muted">无共享前缀</text>
+  <line x1="897" y1="370" x2="1037" y2="370" stroke="#b6dfce" stroke-width="2"/>
+  <text x="967" y="424" text-anchor="middle" class="large">32 GiB</text>
+  <text x="967" y="460" text-anchor="middle" class="small muted">KV 数据载荷</text>
+
+  <rect x="32" y="545" width="1036" height="192" rx="20" class="orange"/>
+  <text x="58" y="590" class="body heavy">GPU 总显存还要留给</text>
+  <rect x="56" y="615" width="193" height="76" rx="12" class="card"/>
+  <rect x="266" y="615" width="193" height="76" rx="12" class="card"/>
+  <rect x="476" y="615" width="244" height="76" rx="12" class="card"/>
+  <rect x="737" y="615" width="307" height="76" rx="12" class="card"/>
+  <text x="152" y="663" text-anchor="middle" class="body">模型权重</text>
+  <text x="362" y="663" text-anchor="middle" class="body">KV 载荷</text>
+  <text x="598" y="663" text-anchor="middle" class="body">工作区与缓冲</text>
+  <text x="890" y="663" text-anchor="middle" class="body">页空位、元数据、余量</text>
+  <text x="550" y="723" text-anchor="middle" class="small muted">上面的 32 GiB 只计 KV 数据载荷，不代表整卡显存需求</text>
+</svg>

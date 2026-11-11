@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700" role="img" aria-labelledby="desc">
+  <title id="desc">一条合成月报请求的后端时间线，TTFT 为 0.82 秒，结构校验完成为 1.50 秒</title>
+  <rect width="1400" height="700" fill="#fff"/>
+  <g font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" fill="#17212b">
+    <text x="100" y="100" font-size="28" font-weight="600">计时起点：请求已进入后端</text>
+    <text x="1300" y="100" font-size="28" font-weight="600" text-anchor="end">报告通过校验：1.50 s</text>
+    <text x="428" y="190" font-size="32" font-weight="700" text-anchor="middle">后端 TTFT = 0.82 s</text>
+    <path d="M100 218 V244 M100 225 H756 M756 218 V244" fill="none" stroke="#34495e" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- 800 px per second: widths encode 0.12 + 0.08 + 0.62 + 0.58 + 0.10 = 1.50 s. -->
+    <rect x="100" y="270" width="96" height="82" rx="6" fill="#4d8c76"/>
+    <rect x="196" y="270" width="64" height="82" fill="#7992aa"/>
+    <rect x="260" y="270" width="496" height="82" fill="#d08a35"/>
+    <rect x="756" y="270" width="464" height="82" fill="#7868a4"/>
+    <rect x="1220" y="270" width="80" height="82" rx="6" fill="#4d7993"/>
+    <path d="M196 270 V352 M260 270 V352 M756 270 V352 M1220 270 V352" stroke="#fff" stroke-width="4"/>
+
+    <path d="M100 365 V390 M260 365 V390 M756 365 V390 M1300 365 V390" fill="none" stroke="#536273" stroke-width="3"/>
+    <text x="100" y="424" font-size="26" text-anchor="start">0</text>
+    <text x="260" y="424" font-size="26" text-anchor="middle">0.20</text>
+    <text x="756" y="424" font-size="26" text-anchor="middle">0.82</text>
+    <text x="1300" y="424" font-size="26" text-anchor="end">1.50 s</text>
+    <text x="700" y="458" font-size="24" text-anchor="middle" fill="#4b5968">累计后端时间</text>
+
+    <g font-size="28">
+      <rect x="100" y="498" width="22" height="22" rx="3" fill="#4d8c76"/>
+      <text x="138" y="520">读取汇总与组装上下文 · 0.12 s</text>
+      <rect x="755" y="498" width="22" height="22" rx="3" fill="#7992aa"/>
+      <text x="793" y="520">应用队列 · 0.08 s</text>
+
+      <rect x="100" y="558" width="22" height="22" rx="3" fill="#d08a35"/>
+      <text x="138" y="580">模型调用至首 token（不含前置排队）· 0.62 s</text>
+      <rect x="755" y="558" width="22" height="22" rx="3" fill="#7868a4"/>
+      <text x="793" y="580">首 token 后生成剩余内容 · 0.58 s</text>
+
+      <rect x="100" y="618" width="22" height="22" rx="3" fill="#4d7993"/>
+      <text x="138" y="640">结构与行号校验 · 0.10 s</text>
+    </g>
+  </g>
+</svg>

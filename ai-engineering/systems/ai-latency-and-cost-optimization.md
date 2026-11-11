@@ -4,7 +4,7 @@
 
 本篇承接[模型选择与任务契约](../foundations/model-selection-and-ecosystem.md)的候选、通过门槛和流量目标，建立同一口径的时延/成本测量账本；[部署方式与回滚](ai-deployment-patterns.md)据此判断托管、自托管、端侧或混合运行能否满足条件。
 
-月报助手承接候选甲的合成筛选结果；月目标为 10,000 份验收成功报告。筛选记录中的常规负载时延和模型 API 直接费用是独立假设，不是峰值或完整成本数据；实际请求/重试数、月末并发和全成本仍待测。本篇的单条 trace 与缓存算例仅演示计算，不作为甲的实测结果。
+月报助手承接候选甲的合成筛选结果；月目标为 10,000 份验收成功报告。候选筛选表中的模型 API 直接费按每份成功报告 \$0.007 估算，这是筛选假设，不是实测价格，也不是完整成本；常规负载时延同样是独立假设。实际请求/重试数、月末并发和全成本仍待测。本篇的单条 trace 与缓存算例仅演示计算，不作为甲的实测结果。
 
 ## 先把月报助手的端到端时延拆开
 
@@ -15,9 +15,13 @@
 >
 > - 后端请求完成时延：0.12 + 0.08 + 0.62 + 0.58 + 0.10 = **1.50 秒**。
 > - 后端首 token 时延（TTFT）：0.12 + 0.08 + 0.62 = **0.82 秒**。
-> - 若用户必须等报告校验通过才能使用，0.82 秒不能替代 1.50 秒的后端完成时间；客户端实际等待还要加网络与显示处理。
+> - 若用户必须等报告校验通过才能使用，0.82 秒不能替代 1.50 秒的后端完成时间；客户端实际等待还要加网络与显示处理。示例刻意假设五段串行且不重叠。真实阶段若有重叠，直接相加各段持续时间会重复计算；应以请求进入后端和结果可用的时间戳差测完成时延。
 
-线上要按同一运行标识记录阶段起止时间，并分别报告后端时延和客户端观测时延的中位数 p50、第 95 百分位 p95（必要时 p99），以及请求完成量、排队、超时、重试、输入/输出 token（词元）长度与每份成功任务成本。标出模型、提示词、检索/数据版本、服务区域、并发和 GPU（图形处理器）等相关硬件配置。尾部时延可能来自高并发排队，不能仅凭平均值定位。自托管时，推理引擎的排队、prefill（预填充）、decode（解码）和端到端指标能帮助区分服务瓶颈；应用外部链路仍需自己计入。
+![单条合成请求的后端时延时间线](resources/ai-latency-trace.svg)
+
+*各段宽度按示例持续时间成比例；TTFT 在应用收到首 token 时结束。*
+
+线上要按同一运行标识记录阶段起止时间，并分别报告后端时延和客户端观测时延的中位数 p50、第 95 百分位 p95（必要时 p99），以及给定并发和输入/输出 token 长度下的完成请求吞吐（如请求/秒）、排队、超时、重试与每份成功任务成本。若只对成功请求计算时延分位数，应同时报告同一窗口全体任务的超时率、失败率与验收通过数量，避免删除难样本后得到虚假的改善。p95 是同一观察窗口中，请求级时延观测值约有 95% 不超过的分位数；先为每个请求按同一边界得到完整时延，再对这些请求值取分位数。不能把分别计算的阶段 p95 相加；若真实阶段重叠，逐段持续时间也不能直接相加，端到端结果以请求起止时间戳为准。此例从请求进入后端开始计时，漏掉此前的入站网络；用户动作到可用报告的等待还包括入站网络、后端处理、返回网络与显示，需从客户端另行打点。标出模型、提示词、检索/数据版本、服务区域、并发和 GPU（图形处理器）等相关硬件配置。尾部时延可能来自高并发排队，不能仅凭平均值定位。自托管时，推理引擎的排队、prefill（预填充）、decode（解码）和端到端指标能帮助区分服务瓶颈；应用外部链路仍需自己计入。
 
 ## 根据瓶颈选一个可检验的改动
 
@@ -67,7 +71,7 @@ response cache 则是不同操作：若 400 次请求是权限、月份、数据
 
 ## 先确认 prompt cache 命中是否稳定
 
-Prompt caching（提示缓存）重用符合条件的输入前缀计算状态，不会复用上一份答案。命中依赖当前模型与端点支持缓存、缓存前缀达到该模型门槛，而且请求从开头到缓存断点保持一致。系统指令、消息次序、工具定义及序列化、结构化输出模式、模型版本或显式缓存键变化，都可能缩短可复用前缀。把稳定指令和稳定工具 schema 放在前面，把用户问题、报表行和每轮变化的数据放在断点之后；若 schema 顺序由不稳定 map 迭代生成，先让序列化顺序确定。
+Prompt caching（提示缓存）重用符合条件的输入前缀计算状态，不会复用上一份答案。命中依赖当前模型与端点支持缓存、前缀达到该模型门槛，而且从请求开头到缓存断点的输入与请求配置满足匹配条件。系统指令、消息次序、工具定义及序列化、结构化输出模式或模型变化，都可能改变可复用前缀。缓存键不改变提示内容：GPT-5.6 之前的 OpenAI 模型用稳定的 `prompt_cache_key` 帮助路由相关请求；GPT-5.6 及更新模型自动路由，无需靠该键优化路由；不同键仍会隔开缓存复用组，便于区分客户用量。相同前缀若使用不同键，也不能据此期待跨组复用。把稳定指令和工具 schema 放在前面，把用户问题、报表行和每轮变化的数据放在断点之后；若 schema 顺序由不稳定 map 迭代生成，先让序列化顺序确定。
 
 诊断时固定一个可比的请求集合和统计窗口，不把所有 API 请求都塞进分母：
 
@@ -75,7 +79,7 @@ Prompt caching（提示缓存）重用符合条件的输入前缀计算状态，
 - **缓存 Token 占比** = Σ cached_tokens ÷ Σ input_tokens。该口径看缓存读取 Token 占输入的比例；输出 Token 不在分母。
 - **成本**另外核算普通输入、缓存读取与缓存写入 Token；单有命中率不代表便宜。超时或 429 等未取得 usage 的尝试要单列，并按提供方账单核对，不能把它们暗中算成未命中或从“每份成功任务成本”里消失。
 
-假设一组 100 次报表请求，每次有 1,200 个输入 Token：固定前缀 1,024 Token，动态后缀 176 Token。为使分项可以手算，此例假设缓存断点明确设在固定前缀末端；断点后的 176 个动态 Token 按普通费率处理，不产生缓存写入。实际要以请求断点和响应 usage 核对；隐式缓存若把断点放在动态内容之后，成本分项会不同。以下价格均为可手算的**教学比例**：普通输入每百万 Token 计 1 美元，缓存读按普通价的 0.10 倍，30 分钟缓存写按普通价的 1.25 倍；不是任何模型的当前报价。输出 Token 成本在各组相同，先不计入。当前 OpenAI Responses API 文档对 GPT-5.6 及更新模型写明 1,024 Token 最小可缓存前缀，30 分钟写为普通输入的 1.25 倍、12 小时写为 2.5 倍；缓存读取价依模型而异。下表仅把这类使用量字段按一个示意读价代数，不将比例推广到其他模型或供应商。
+假设一组 100 次报表请求，每次有 1,200 个输入 Token：固定前缀 1,024 Token，动态后缀 176 Token。为使分项可以手算，此例使用支持该配置的 Responses API：设 `prompt_cache_options.mode: "explicit"`，仅在固定前缀末端的受支持内容块设置一个 `prompt_cache_breakpoint: {"mode": "explicit"}`。这样断点后的 176 个动态 Token 按普通费率处理，不产生缓存写入。只添加显式断点但保留 implicit mode，并不会关闭服务自动选择的断点；若它覆盖动态内容，成本分项就会不同。实际以模式、断点和响应 usage 一起核对。以下价格均为可手算的**教学比例**：普通输入每百万 Token 计 1 美元，缓存读按普通价的 0.10 倍，30 分钟缓存写按普通价的 1.25 倍；不是任何模型的当前报价。输出 Token 成本在各组相同，先不计入。当前 OpenAI Responses API 文档对 GPT-5.6 及更新模型写明 1,024 Token 最小可缓存前缀，30 分钟写为普通输入的 1.25 倍、12 小时写为 2.5 倍；缓存读取价依模型而异。下表仅把这类使用量字段按一个示意读价代数，不将比例推广到其他模型或供应商。关闭缓存的对照使用同一模型与输入，保留 `mode: "explicit"`，但不设置任何显式断点；按该 API 的规则，这时既不读缓存，也不产生缓存写入。
 
 | 工作负载 | 缓存写 / 读 / 普通输入 Token | 请求命中率 | 缓存 Token 占输入 | 输入费用 |
 |---|---:|---:|---:|---:|
@@ -93,11 +97,11 @@ Prompt caching（提示缓存）重用符合条件的输入前缀计算状态，
 实际排查顺序可以固定为四步：
 
 1. **先比较原始使用量。** 按模型、端点、提示词版本、工具 schema 版本、结构化输出版本、缓存键和 time to live（生存时间，TTL）分组，对照 input_tokens、cached_tokens、写入 Token、TTFT 和完整任务时延。记录版本与哈希，不在普通 trace 里保存敏感提示词正文。
-2. **命中突然变低时检查前缀。** 比较序列化后的稳定前缀哈希和缓存断点；验证工具顺序和参数版本是否稳定，动态内容是否提前，前缀是否达到当前模型的最小缓存长度。确认 prompt_cache_key 是否稳定后再解释缓存分片；该键只用于缓存路由或分组，不能当作租户授权。
+2. **命中突然变低时检查前缀与路由。** 比较序列化后的稳定前缀哈希和缓存断点；验证工具顺序和参数版本是否稳定，动态内容是否提前，前缀是否达到当前模型的最小缓存长度。若用 GPT-5.6 之前的 OpenAI 模型，再核对 `prompt_cache_key` 是否稳定，因为它会影响路由但不固定机器或保证命中；GPT-5.6 及更新模型由服务自动路由，但不同键仍隔开缓存复用组，因此也要检查键是否被意外改变。任何版本的键都不能代替租户授权。
 3. **命中率高但成本几乎不变时查分母与费用。** 检查命中的只是很短一段、动态后缀或输出占大头、写入比例与 TTL 费率、缓存写入是否被重复计入，以及失败重试是否分摊到同一成功任务。
 4. **缓存 Token 上升但 TTFT 未下降时看端到端 trace。** Prompt caching 减少的是符合条件的前缀处理工作，实际首 token 时延仍受网络、队列、剩余动态输入、推理负载等影响。按同一请求分布比较冷/暖的 p50 与 p95；不能由 Token 命中直接推出用户一定更快。
 
-TTL 应与复用间隔和当前计价一起看。短期会话若几分钟内反复使用，较短的生存时间可能足够；共享稳定规则若复用间隔更长，延长时间可能减少再次冷写，但写入更贵。OpenAI 对支持 `prompt_cache_options.ttl` 的 Responses API 模型，把 30 分钟或 12 小时设置定义为缓存的最短保留时间；这不是通用缓存期限，也不代表时间到达后必须删除。若另一个提供方按固定比例收读/写费，按它的规则重算，不能套用这里的倍率。
+TTL 应与复用间隔和当前计价一起看。短期会话若几分钟内反复使用，较短的生存时间可能足够；共享稳定规则若复用间隔更长，延长时间可能减少再次冷写，但写入更贵。OpenAI 对支持 `prompt_cache_options.ttl` 的 Responses API 模型，提供 30 分钟或 12 小时的最短期限。这里的保证针对匹配前缀获得缓存读取价格的资格，不保证每次都能复用仍驻留的 KV tensors，也不保证延迟下降；到期同样不是强制删除时刻。若另一个提供方按固定比例收读/写费，按它的规则重算，不能套用这里的倍率。
 
 最后用完整工作单元决定是否采用：对同一合成请求分组比较缓存前缀指纹、命中 Token、缓存读取/写入费用、TTFT、完整时延，以及内容与结构通过验收的报告数。集中稳定前缀只有在不把用户或租户专属内容错误共享、质量门槛不变并降低成功任务全成本时才成立。缓存只是推理优化；权限、提示词差异和报告数据新鲜度仍由应用每次检查。
 
@@ -118,7 +122,7 @@ Anthropic 的 Message Threads 当前以 beta API 形式提供：创建 thread �
 
 当前文档所述的 beta 边界会影响恢复设计：服务以最近一次请求后的 5 分钟作为尽力续接窗口，并会在一小时内删除 thread；应用需保存完整历史。续接是 append-only，每个 response ID 只能继续一次；较早消息不能原地修改或从旧轮分支。流式响应要收到 `message_stop` 后才从该 response ID 继续。
 
-如果续接的流在 `message_stop` 前断开，按当前手动恢复协议先重试同一个 continue 请求；若重试返回 `thread_already_continued` 或 `thread_continue_in_flight`，而客户端没有可继续的完整响应，则用应用保存的完整历史创建新 thread。明确收到 `thread_not_found` 时也重建，不能只见一次超时或任意 404 就认定历史已过期。重放消息不等于重新执行其中的工具动作；已执行、失败或结果未知的外部写入仍须对照应用账本处理。这里是当前 beta 协议，部署时应重新核对。[运行恢复章](ai-application-architecture.md)说明运行 ID、应用检查点和副作用账本为何仍由应用持有。
+如果续接流在 `message_stop` 前断开，例如应用已发送 `U₃`，并以完整回复 `A₂` 的 ID 继续，但只收到不完整的 `A₃`，不要把半条 `A₃` 记成完整对话轮次；按当前手动恢复协议，先以 `previous_message_id=A₂ID` 和 `messages=[U₃]` 重试同一个 continue 请求。若返回 `thread_already_continued` 或 `thread_continue_in_flight`，而客户端没有可继续的完整响应，则从应用保存的完整历史 `U₁ A₁ U₂ A₂ U₃` 新建 thread，并一并提供原 `system` 与 `tools`；不把不完整的 `A₃` 当作已完成消息。`thread_not_found` 也要求从完整历史新建；此时服务会重建完整模型输入，这是一次新的模型尝试，模型仍按完整历史产生 token 用量和费用，应计入所有尝试成本。该费用若已计入本期所有尝试，不再另加一次。`thread_not_found` 不等于“已过期”，当前文档列出的原因还包括上一轮未存储、仍在生成、组织/workspace 或服务账号不匹配。核对身份与错误码；未知模型等其他 404 不应按 thread 过期处理。若以完整历史新建后仍不能续接，当前文档建议该次请求不使用 thread。重放消息不等于重新执行其中的工具动作；已执行、失败或结果未知的外部写入仍须对照应用账本处理。这里是当前 beta 协议，部署时应重新核对。[运行恢复章](ai-application-architecture.md)说明运行 ID、应用检查点和副作用账本为何仍由应用持有。
 
 
 ## 把单位成本换成成功任务预算
@@ -126,14 +130,22 @@ Anthropic 的 Message Threads 当前以 beta API 形式提供：创建 thread �
 只计算每次 API 调用会漏掉失败和人工返工。适合决策的指标是：
 
 $$
-\text{每份成功报告成本}
+\text{每份成功报告完整成本}
 =
-\frac{\text{所有尝试费用}+\text{共享费用}}{\text{内容与结构均通过的报告数}}
+\frac{\text{所有尝试的可变成本}+\text{本期固定/共享费用}}{\text{内容与结构均通过的报告数}}
 $$
 
-所有尝试费用包括每次模型与检索调用，含失败和重试；共享费用包括存储、人工复核以及分摊的运维与控制成本。两部分按同一统计周期归集。
+可变成本包括每次模型与检索调用，含失败和重试；按报告发生的人工复核、用量型存储也归入可变成本。固定/共享费用包括月度固定平台费与共享运维、控制费用，每期只计一次。费用按实际计费方式分类，同一费用只归入一项。若每份成功报告的可变成本已由所有尝试总额除以成功报告数得到，就不要再另加一次重试费用。
 
-本例把成功报告定义为内容与结构都通过的交集。举例说，若 100 次模型尝试各花 \$0.0036、无重试，其中 98 份最终报告通过两项检查，而且人工工作另计，则这组样本的推理费为 \$0.36 / 98 ≈ \$0.00367 每份成功报告。这是只计推理费用的独立演算，不是甲的 \$0.007 直接费估算，也不是长期失败率估计。预算分母必须是成功报告数；重试的推理/检索费用已在所有尝试中，只计一次，不再另加“重试费”。
+本例把成功报告定义为内容与结构都通过的交集。同一报告 ID 的所有尝试费用汇总在一起；即使重试多次后通过，分母也只计一份报告。举例说，若 100 次模型尝试各花 \$0.0036、无重试，其中 98 份最终报告通过两项检查，而且人工工作另计，则这组样本的推理可变费用为 \$0.36 / 98 ≈ \$0.00367 每份成功报告。这是只计推理费用的独立演算，不是甲的筛选估算，也不是长期失败率估计。
+
+以候选筛选假设的 \$0.007 模型直接费换算，10,000 份成功报告对应约 \$70 的模型 API 直接费变量预算；这只是筛选级推算，实际月账还要加其他按量可变费用和一次本期固定/共享费用。上述 \$0.00367 教学值与 \$0.007 筛选假设是两套独立假设，不能相加。预算分母必须是成功报告数；可变成本若已含重试，就不能另加“重试费”。
+
+月度预算结构为：
+
+$$
+\text{月度总成本} = 10{,}000 \times \text{每份成功报告的可变成本} + \text{本期固定/共享费用}
+$$
 
 月报助手预算还要按流量分布测量：日常与月末峰值、并发、最长输入、报告输出长度、缓存命中与失效率。吞吐增加但超过交互时延目标的批次，不算改善交互体验；费用降低但数值错误更多，也不能称为优化。
 
@@ -150,11 +162,10 @@ $$
 - [流式交互体验](../../frontend/browser-apis/streaming-ux.md)：处理浏览器侧部分输出与用户等待体验。
 
 > [!info]- 来源
-> - **提示缓存复用的是前缀状态，不是最终答案；缓存门槛、断点、寿命、使用量与读写价依模型和配置变化：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-09，“What is the prompt cache?”、“Caching works”、“Cache lifetime”、“Monitor cache performance”和“Summary of model differences”。GPT-5.6 及更新模型的前缀门槛、30 分钟/12 小时写入倍率、显式断点后的普通计价，以及 `cached_tokens`、`cache_write_tokens` 拆分按当前 Responses API 文档表述。文中的 500-token 算例与 0.10 倍读价、每百万 Token 1 美元普通价都是代数教学输入，不是该接口可直接执行的参数或当前报价。
-> - **优化顺序、输出长度、缓存前缀与流式体验：** OpenAI，[Latency optimization](https://developers.openai.com/api/docs/guides/latency-optimization)，核对日期：2026-11-06，“Seven principles”及具体示例；提供方经验用于提示待测方向，不保证本案例的收益幅度。
-> - **费用减少与异步处理的边界：** OpenAI，[Cost optimization](https://developers.openai.com/api/docs/guides/cost-optimization) 与 [Batch API](https://developers.openai.com/api/docs/guides/batch)，核对日期：2026-11-06；后者描述异步批作业接口，并非在线调度合同。
-> - **自托管观测：** vLLM，[Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/)，核对日期：2026-11-06；“request latency”直方图将端到端、排队、推理、prefill 和 decode 分开。引擎指标仍需与应用端到端 trace 配合。
-> - **量化实现和硬件边界：** vLLM，[Quantization](https://docs.vllm.ai/en/stable/features/quantization/index.html)，核对日期：2026-11-06；当前文档说明精度与存储占用的取舍，并列出格式与硬件兼容性；兼容表会随版本改变。
-> - **量化与蒸馏机制：** Frantar et al., [GPTQ v2 (2023-03-22)](https://arxiv.org/abs/2210.17323)；Lin et al., [AWQ v6 (2026-04-25)](https://arxiv.org/abs/2306.00978)；Hinton et al., [Distilling the Knowledge in a Neural Network (2015)](https://arxiv.org/abs/1503.02531)。这些来源提供方法背景，不证明本案例的收益；具体效果受模型、数据、硬件和实现影响。
-> - **推理迭代级调度：** Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu)，2022；作为调度机制背景，不意味着某个当前服务引擎具有相同实现或性能。
-> - **仅减少重复历史上传的当前 beta 协议、续接与数据保留边界：** Anthropic，[Message Threads](https://claude.com/resources/articles/message-threads)，文章日期 2026-11-02；[当前 API 文档](https://platform.claude.com/docs/en/build-with-claude/message-threads)，核对日期 2026-11-11，“How message threads work”“What to send”“Recovering from errors”“Pricing and rate limits”“Data retention”。三轮 `9` 对 `3` 消息块是忽略固定字段的教学输入量，不是 TTFT 或账单比例；每轮完整模型上下文和 token 用量不变。
+> - **提示缓存复用前缀 KV 状态，不复用答案；最低长度、断点、路由、TTL 与计价依模型/API 变化：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-12，“What is the prompt cache?”、“How caching works”、“Cache lifetime”、“Prompt cache keys”、“Summary of model differences”和“Monitor cache performance”。当前 GPT-5.6+ 最低可缓存前缀为 1,024 个可见输入 token；30 分钟/12 小时写入计价为普通输入的 1.25/2.5 倍，GPT-5.6+ 自动路由，不同 `prompt_cache_key` 分离复用组；explicit mode 才只使用开发者设置的断点。30 分钟/12 小时期限定价资格，不保证物理 KV 复用或降低时延，也不是删除期限。Responses API usage 说明 `cached_tokens`、`cache_write_tokens` 与 `ttl_30m_tokens`/`ttl_12h_tokens` 的拆分关系。文中的 500-token 示意案例、每百万 1 美元普通价及 0.10 倍缓存读取价均为手算教学输入，不是任何供应商报价或可直接使用的 API 配置。
+> - **定位延迟瓶颈的方法与流式体验边界：** OpenAI，[Latency optimization](https://developers.openai.com/api/docs/guides/latency-optimization)，核对日期：2026-11-12，“Seven principles”及“Generate fewer tokens”“Use fewer input tokens”“Make fewer requests”“Make your users wait less”；其收益方向不是本案例的测量结果。
+> - **异步任务的等待与费用边界：** OpenAI，[Cost optimization](https://developers.openai.com/api/docs/guides/cost-optimization) 与 [Batch API](https://developers.openai.com/api/docs/guides/batch)，核对日期：2026-11-12；Batch API 是异步批作业接口，不等同在线引擎的连续批处理。
+> - **自托管延迟观测字段：** vLLM，[Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/)，核对日期：2026-11-12；当前文档将 `vllm:e2e_request_latency_seconds`、`vllm:request_queue_time_seconds`、`vllm:request_inference_time_seconds`、`vllm:request_prefill_time_seconds`、`vllm:request_decode_time_seconds` 列为请求时延直方图，并另列 TTFT；应与应用端到端 trace 配合。
+> - **量化格式与硬件兼容性会随实现变化：** vLLM，[Quantization](https://docs.vllm.ai/en/latest/features/quantization/)，核对日期：2026-11-12，“Quantization”和“Supported Hardware”；兼容表是特定实现/硬件支持信息，不证明某格式在所有工作负载上更快。机制背景见 Frantar et al., [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323)，v2（2023-03-22）；Lin et al., [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978)，v6（2026-04-25）。这些论文的实验不等于本案例的速度、质量或成本结果。蒸馏机制背景见 Hinton et al., [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531)，2015。
+> - **连续批处理的迭代级调度背景：** Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu)，OSDI 2022；不表示当前任一服务引擎使用同一实现或获得相同性能。
+> - **当前 beta 的重复上传、完整上下文与恢复路径：** Anthropic，[Message Threads](https://claude.com/resources/articles/message-threads)，文章日期 2026-11-02；[当前 API 文档](https://platform.claude.com/docs/en/build-with-claude/message-threads)，核对日期：2026-11-12，“How message threads work”“Recover when a thread can’t be continued”“Streaming”和“How the SDK helper behaves”。API 文档称服务可在不重新上传历史时重建完整输入，通常只对新一轮做校验与分词；线程本身不减少完整上下文 token 用量。文章报告的约 35% TTFT 中位数改善仅针对 Claude Code 的 500k–1M token 请求，缺乏足够基准细节外推。三轮 `9` 对 `3` 消息块是忽略固定字段的教学上传量，不是实际字节、模型 token 或费用比例。

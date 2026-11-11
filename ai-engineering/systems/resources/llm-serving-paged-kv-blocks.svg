@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560" role="img" aria-labelledby="title desc">
+  <title id="title">Paged KV cache 的逻辑块映射到非连续物理块</title>
+  <desc id="desc">每块容纳4个词元。逻辑块0保存位置1至4，映射到物理块7；逻辑块1保存位置5至7，映射到物理块1且尚空一格。逻辑块2尚未分配。下一位置8填满物理块1，再处理位置9时才需申请新块。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="12" markerHeight="12" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7f95b5"/>
+    </marker>
+    <style>
+      text { font-family: Arial, "Noto Sans CJK SC", sans-serif; fill: #24344d; }
+      .muted { fill: #667891; }
+      .head { font-size: 30px; font-weight: 700; }
+      .body { font-size: 27px; }
+      .small { font-size: 24px; }
+      .heavy { font-weight: 700; }
+      .line { stroke: #7f95b5; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .logic { fill: #eaf3ff; stroke: #aac8ef; stroke-width: 2; }
+      .phys { fill: #f3edfb; stroke: #d4c3ed; stroke-width: 2; }
+      .slot { fill: #ffffff; stroke: #b7c7dc; stroke-width: 2; }
+      .free { fill: #fbfcff; stroke: #aab9cc; stroke-width: 2; stroke-dasharray: 7 5; }
+    </style>
+  </defs>
+  <rect width="1000" height="560" fill="#fbfcff"/>
+  <text x="64" y="64" class="head">逻辑序列（每块 4 个位置）</text>
+  <text x="625" y="64" class="head">显存中的物理块</text>
+  <text x="68" y="112" class="small muted">按请求的词元顺序连续编号</text>
+  <text x="628" y="112" class="small muted">物理位置可分散，由块表寻址</text>
+
+  <text x="65" y="190" class="body heavy">L0</text>
+  <rect x="123" y="143" width="392" height="74" rx="11" class="logic"/>
+  <rect x="135" y="153" width="79" height="54" rx="7" class="slot"/><rect x="227" y="153" width="79" height="54" rx="7" class="slot"/>
+  <rect x="319" y="153" width="79" height="54" rx="7" class="slot"/><rect x="411" y="153" width="79" height="54" rx="7" class="slot"/>
+  <text x="174" y="189" text-anchor="middle" class="body">1</text><text x="266" y="189" text-anchor="middle" class="body">2</text>
+  <text x="358" y="189" text-anchor="middle" class="body">3</text><text x="450" y="189" text-anchor="middle" class="body">4</text>
+
+  <text x="65" y="307" class="body heavy">L1</text>
+  <rect x="123" y="260" width="392" height="74" rx="11" class="logic"/>
+  <rect x="135" y="270" width="79" height="54" rx="7" class="slot"/><rect x="227" y="270" width="79" height="54" rx="7" class="slot"/>
+  <rect x="319" y="270" width="79" height="54" rx="7" class="slot"/><rect x="411" y="270" width="79" height="54" rx="7" class="free"/>
+  <text x="174" y="306" text-anchor="middle" class="body">5</text><text x="266" y="306" text-anchor="middle" class="body">6</text>
+  <text x="358" y="306" text-anchor="middle" class="body">7</text><text x="450" y="306" text-anchor="middle" class="small muted">空</text>
+
+  <text x="65" y="418" class="body heavy">L2</text>
+  <rect x="123" y="373" width="392" height="62" rx="11" fill="#f2f4f7" stroke="#d5dde7" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="319" y="413" text-anchor="middle" class="body muted">尚未分配</text>
+
+  <path d="M 522 180 C 565 180, 565 181, 607 181" class="line"/>
+  <path d="M 522 298 C 565 298, 565 298, 607 298" class="line"/>
+
+  <rect x="620" y="143" width="320" height="74" rx="11" class="phys"/>
+  <text x="651" y="188" class="body heavy">物理块 7</text>
+  <rect x="779" y="153" width="34" height="54" rx="6" class="slot"/><rect x="816" y="153" width="34" height="54" rx="6" class="slot"/>
+  <rect x="853" y="153" width="34" height="54" rx="6" class="slot"/><rect x="890" y="153" width="34" height="54" rx="6" class="slot"/>
+  <text x="796" y="188" text-anchor="middle" class="small">1</text><text x="833" y="188" text-anchor="middle" class="small">2</text><text x="870" y="188" text-anchor="middle" class="small">3</text><text x="907" y="188" text-anchor="middle" class="small">4</text>
+
+  <rect x="620" y="260" width="320" height="74" rx="11" class="phys"/>
+  <text x="651" y="305" class="body heavy">物理块 1</text>
+  <rect x="779" y="270" width="34" height="54" rx="6" class="slot"/><rect x="816" y="270" width="34" height="54" rx="6" class="slot"/>
+  <rect x="853" y="270" width="34" height="54" rx="6" class="slot"/><rect x="890" y="270" width="34" height="54" rx="6" class="free"/>
+  <text x="796" y="305" text-anchor="middle" class="small">5</text><text x="833" y="305" text-anchor="middle" class="small">6</text><text x="870" y="305" text-anchor="middle" class="small">7</text><text x="907" y="305" text-anchor="middle" class="small muted">空</text>
+
+  <line x1="55" y1="465" x2="945" y2="465" stroke="#d8e1ed" stroke-width="2"/>
+  <text x="500" y="510" text-anchor="middle" class="body heavy">位置 8 填最后一格；位置 9 才申请新物理块</text>
+  <text x="500" y="544" text-anchor="middle" class="small muted">逻辑块顺序连续，不要求物理块相邻</text>
+</svg>
