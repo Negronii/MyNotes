@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1520" role="img" aria-labelledby="title desc">
+  <title id="title">LoRA 局部投影的前向计算</title>
+  <desc id="desc">同一二维列向量分别经过冻结的单位矩阵 W 和可训练的 A、B 低秩分支，两个二维结果逐坐标相加得到 W' x。</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M1 1 L13 7 L1 13 Z" fill="#51677f"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="1520" fill="#ffffff"/>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", "PingFang SC", sans-serif; fill: #172b43; }
+    .box { stroke-width: 3; rx: 20; }
+    .label { font-size: 31px; font-weight: 650; }
+    .value { font-size: 30px; font-weight: 550; }
+    .shape { font-size: 25px; fill: #536b83; }
+    .arrow { stroke: #51677f; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+    .path { stroke: #8194a8; stroke-width: 4; fill: none; }
+    .base { fill: #edf4fb; stroke: #88a8ca; }
+    .adapter { fill: #eff9f5; stroke: #79b79d; }
+    .result { fill: #f7f2fc; stroke: #b79bd8; }
+    .cell { fill: #dce9f7; stroke: #8aa8c8; stroke-width: 2.5; }
+    .cell-a { fill: #d9f0e6; stroke: #76af96; stroke-width: 2.5; }
+  </style>
+
+  <!-- Shared input -->
+  <rect class="box base" x="380" y="30" width="240" height="180"/>
+  <text class="label" x="500" y="72" text-anchor="middle">输入 x</text>
+  <path d="M467 90 h-12 v62 h12 M533 90 h12 v62 h-12" stroke="#526b84" stroke-width="3.5" fill="none"/>
+  <text class="value" x="500" y="117" text-anchor="middle">1</text>
+  <text class="value" x="500" y="148" text-anchor="middle">2</text>
+  <text class="shape" x="500" y="179" text-anchor="middle">2 × 1</text>
+
+  <!-- Branching -->
+  <path class="path" d="M500 210 V230 H265"/>
+  <path class="arrow" d="M265 230 V280"/>
+  <path class="arrow" d="M500 230 H735 V280"/>
+  <circle cx="500" cy="230" r="7" fill="#51677f"/>
+
+  <!-- Frozen base projection -->
+  <rect class="box base" x="60" y="280" width="410" height="240"/>
+  <text class="label" x="265" y="325" text-anchor="middle">冻结基础矩阵 W</text>
+  <rect class="cell" x="190" y="350" width="75" height="52" rx="5"/>
+  <rect class="cell" x="265" y="350" width="75" height="52" rx="5"/>
+  <rect class="cell" x="190" y="402" width="75" height="52" rx="5"/>
+  <rect class="cell" x="265" y="402" width="75" height="52" rx="5"/>
+  <text class="value" x="227.5" y="386" text-anchor="middle">1</text>
+  <text class="value" x="302.5" y="386" text-anchor="middle">0</text>
+  <text class="value" x="227.5" y="438" text-anchor="middle">0</text>
+  <text class="value" x="302.5" y="438" text-anchor="middle">1</text>
+  <text class="shape" x="265" y="495" text-anchor="middle">2 × 2 · 前向仍使用</text>
+
+  <path class="arrow" d="M265 520 V580"/>
+  <rect class="box base" x="120" y="580" width="290" height="140"/>
+  <text class="label" x="265" y="625" text-anchor="middle">Wx</text>
+  <text class="value" x="265" y="665" text-anchor="middle">[1, 2]ᵀ</text>
+  <text class="shape" x="265" y="702" text-anchor="middle">2 × 1</text>
+
+  <!-- Trainable low-rank branch -->
+  <rect class="box adapter" x="530" y="280" width="410" height="190"/>
+  <text class="label" x="735" y="323" text-anchor="middle">训练因子 A</text>
+  <rect class="cell-a" x="660" y="344" width="75" height="52" rx="5"/>
+  <rect class="cell-a" x="735" y="344" width="75" height="52" rx="5"/>
+  <text class="value" x="697.5" y="380" text-anchor="middle">1</text>
+  <text class="value" x="772.5" y="380" text-anchor="middle">1</text>
+  <text class="shape" x="735" y="441" text-anchor="middle">1 × 2</text>
+
+  <path class="arrow" d="M735 470 V530"/>
+  <rect class="box adapter" x="610" y="530" width="250" height="105"/>
+  <text class="label" x="735" y="575" text-anchor="middle">Ax = 3</text>
+  <text class="shape" x="735" y="615" text-anchor="middle">1 × 1</text>
+
+  <path class="arrow" d="M735 635 V695"/>
+  <rect class="box adapter" x="530" y="695" width="410" height="210"/>
+  <text class="label" x="735" y="740" text-anchor="middle">训练因子 B</text>
+  <path d="M698 760 h-13 v88 h13 M772 760 h13 v88 h-13" stroke="#56816f" stroke-width="3.5" fill="none"/>
+  <text class="value" x="735" y="798" text-anchor="middle">0.1</text>
+  <text class="value" x="735" y="839" text-anchor="middle">−0.2</text>
+  <text class="shape" x="735" y="885" text-anchor="middle">2 × 1</text>
+
+  <path class="arrow" d="M735 905 V965"/>
+  <rect class="box adapter" x="585" y="965" width="300" height="145"/>
+  <text class="label" x="735" y="1008" text-anchor="middle">B(Ax)</text>
+  <text class="value" x="735" y="1052" text-anchor="middle">[0.3, −0.6]ᵀ</text>
+  <text class="shape" x="735" y="1090" text-anchor="middle">2 × 1</text>
+
+  <!-- Merge the two branch outputs -->
+  <path class="path" d="M265 720 V1125"/>
+  <path class="arrow" d="M265 1125 L459 1170"/>
+  <path class="path" d="M735 1110 V1125"/>
+  <path class="arrow" d="M735 1125 L541 1170"/>
+  <circle cx="500" cy="1180" r="42" fill="#ffffff" stroke="#9d7fc2" stroke-width="3.5"/>
+  <text x="500" y="1193" text-anchor="middle" font-size="48" font-weight="600">+</text>
+  <text class="shape" x="430" y="1280" text-anchor="end">逐坐标相加</text>
+
+  <path class="arrow" d="M500 1222 V1350"/>
+  <rect class="box result" x="320" y="1350" width="360" height="150"/>
+  <text class="label" x="500" y="1395" text-anchor="middle">W′x</text>
+  <text class="value" x="500" y="1440" text-anchor="middle">[1.3, 1.4]ᵀ</text>
+  <text class="shape" x="500" y="1482" text-anchor="middle">2 × 1</text>
+</svg>
