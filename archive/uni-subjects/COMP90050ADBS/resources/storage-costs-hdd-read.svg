@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
+  <title id="title">机械硬盘读取的定位与传输时间</title>
+  <desc id="desc">先寻道到目标磁道，再等待目标扇区旋转到磁头下，最后传输请求数据。课程算例按比例显示 12、4、1 毫秒，总计 17 毫秒。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d97706"/></marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .title { font-size: 25px; font-weight: 700; }
+      .stage { font-size: 21px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 17px; }
+      .box { fill: #f8fafc; stroke: #94a3b8; stroke-width: 2; }
+      .arrow { stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect x="1" y="1" width="898" height="428" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="32" y="45" class="title">一次 HDD 读取：先定位，再传输</text>
+
+  <rect x="32" y="78" width="238" height="112" rx="12" class="box"/>
+  <circle cx="69" cy="119" r="20" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <path d="M69 119 L86 104" stroke="#0284c7" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="69" cy="119" r="4" fill="#0284c7"/>
+  <text x="102" y="115" class="stage">寻道</text>
+  <text x="52" y="157" class="body">磁头移到目标磁道</text>
+
+  <line x1="278" y1="134" x2="323" y2="134" class="arrow"/>
+  <rect x="333" y="78" width="238" height="112" rx="12" class="box"/>
+  <circle cx="371" cy="119" r="21" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <path d="M371 98 A21 21 0 0 1 390 111" fill="none" stroke="#d97706" stroke-width="3" marker-end="url(#arrowOrange)"/>
+  <text x="407" y="115" class="stage">旋转定位</text>
+  <text x="352" y="157" class="body">等目标扇区到磁头下</text>
+
+  <line x1="579" y1="134" x2="624" y2="134" class="arrow"/>
+  <rect x="634" y="78" width="234" height="112" rx="12" class="box"/>
+  <rect x="658" y="101" width="32" height="34" rx="3" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+  <path d="M666 110 H682 M666 118 H682 M666 126 H678" stroke="#15803d" stroke-width="2"/>
+  <text x="704" y="115" class="stage">传输</text>
+  <text x="653" y="157" class="body">读取请求字节</text>
+
+  <text x="32" y="235" class="stage">课程算例的时间线（按时长比例绘制）</text>
+  <text x="868" y="235" text-anchor="end" class="small">4 KB，带宽 4 MB/s</text>
+  <rect x="48" y="263" width="536.5" height="56" rx="6" fill="#bae6fd" stroke="#0284c7" stroke-width="2"/>
+  <rect x="584.5" y="263" width="178.8" height="56" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
+  <rect x="763.3" y="263" width="44.7" height="56" rx="0 6 6 0" fill="#bbf7d0" stroke="#15803d" stroke-width="2"/>
+  <text x="316" y="298" text-anchor="middle" class="stage">寻道 12 ms</text>
+  <text x="674" y="298" text-anchor="middle" class="stage">旋转 4 ms</text>
+  <text x="785" y="298" text-anchor="middle" class="small" font-weight="700">1 ms</text>
+  <path d="M785 323 V340 H744" fill="none" stroke="#15803d" stroke-width="2"/>
+  <text x="739" y="347" text-anchor="end" class="small">传输 4 KB ÷ 4 MB/s</text>
+  <rect x="48" y="365" width="760" height="39" rx="9" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="428" y="391" text-anchor="middle" class="stage">总计：12 + 4 + 1 = 17 ms</text>
+</svg>
