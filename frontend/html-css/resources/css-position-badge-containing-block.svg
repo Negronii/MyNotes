@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="320" viewBox="0 60 700 320" role="img" aria-labelledby="title desc">
+  <title id="title">Positioned badge inside a card containing block</title>
+  <desc id="desc">A 320 by 180 CSS pixel card contains a 32 by 24 pixel absolutely positioned badge. Its top and right insets are 8 pixels, so its top-left coordinate is 280, 8.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#365d7a"/>
+    </marker>
+    <marker id="axisArrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#273a4b"/>
+    </marker>
+  </defs>
+  <rect width="700" height="380" fill="#ffffff"/>
+  <!-- Card: 320 × 180 CSS px, drawn at 1.4× -->
+  <rect x="100" y="76" width="448" height="252" rx="5" fill="#eaf1f6" stroke="#315d78" stroke-width="2"/>
+  <text x="118" y="104" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="16" fill="#315d78">padding box：320 × 180 CSS px</text>
+  <!-- Badge x = 100 + (320 - 8 - 32) × 1.4 = 492.8; y = 76 + 8 × 1.4 = 87.2 -->
+  <rect x="492.8" y="87.2" width="44.8" height="33.6" rx="3" fill="#b75537" stroke="#853b28" stroke-width="1.5"/>
+  <text x="515.2" y="108" text-anchor="middle" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="14" fill="#ffffff">徽标</text>
+  <!-- top inset measure -->
+  <line x1="572" y1="76" x2="572" y2="87.2" stroke="#365d7a" stroke-width="1.5"/>
+  <line x1="567" y1="76" x2="578" y2="76" stroke="#365d7a" stroke-width="1.2"/>
+  <line x1="567" y1="87.2" x2="578" y2="87.2" stroke="#365d7a" stroke-width="1.2"/>
+  <text x="586" y="87" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">top = 8px</text>
+  <!-- right inset measure -->
+  <line x1="537.6" y1="138" x2="548" y2="138" stroke="#365d7a" stroke-width="1.5"/>
+  <line x1="537.6" y1="133" x2="537.6" y2="144" stroke="#365d7a" stroke-width="1.2"/>
+  <line x1="548" y1="133" x2="548" y2="144" stroke="#365d7a" stroke-width="1.2"/>
+  <text x="560" y="145" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">right = 8px</text>
+  <text x="560" y="169" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">徽标：32 × 24px</text>
+  <!-- coordinate guide -->
+  <line x1="100" y1="350" x2="492.8" y2="350" stroke="#273a4b" stroke-width="1.5" marker-end="url(#axisArrow)"/>
+  <line x1="492.8" y1="350" x2="492.8" y2="121" stroke="#8c9eaa" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <circle cx="492.8" cy="87.2" r="3.2" fill="#273a4b"/>
+  <text x="100" y="372" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#273a4b">徽标左上角：(280px, 8px)；280 = 320 − 8 − 32</text>
+</svg>
