@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1320" viewBox="0 0 1100 1320" role="img" aria-labelledby="title desc">
+  <title id="title">任务边界检查点与 callback 返回检查点回到不同步骤</title>
+  <desc id="desc">用户输入、计时器和渲染机会产生可运行任务，经用户代理组织的任务队列选择后进入当前任务。任务内部的 Web IDL callback 返回后，如果脚本清理使 JavaScript 栈为空，会排空微任务并恢复当前任务的宿主步骤。当前任务全部步骤结束后，任务边界检查点排空微任务；完成后事件循环才选择下一任务。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M2 1 L12 7 L2 13" fill="none" stroke="#3f5871" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="arrow-dash" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M2 1 L12 7 L2 13" fill="none" stroke="#76559b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #17283b; }
+      .head { font-size: 28px; font-weight: 700; }
+      .label { font-size: 23px; font-weight: 650; }
+      .body { font-size: 21px; }
+      .small { font-size: 19px; }
+      .muted { fill: #52677d; }
+      .task { fill: #edf5ff; stroke: #4274a7; stroke-width: 3; }
+      .render { fill: #eef7f1; stroke: #488567; stroke-width: 3; }
+      .queue { fill: #f5f7fa; stroke: #60758d; stroke-width: 3; }
+      .micro { fill: #f5effa; stroke: #8c6cab; stroke-width: 3; }
+      .note { fill: #fff8e9; stroke: #c38322; stroke-width: 3; }
+      .flow { fill: none; stroke: #3f5871; stroke-width: 3; marker-end: url(#arrow); }
+      .flow-dash { fill: none; stroke: #76559b; stroke-width: 3; stroke-dasharray: 9 8; marker-end: url(#arrow-dash); }
+    </style>
+  </defs>
+  <rect x="8" y="8" width="1084" height="1304" rx="24" fill="#fff" stroke="#d7e0e8" stroke-width="2"/>
+  <text class="head" x="48" y="58">两种微任务检查点，返回位置不同</text>
+
+  <rect class="task" x="42" y="90" width="315" height="146" rx="18"/>
+  <text class="label" x="66" y="130">用户交互 task source</text>
+  <text class="body" x="66" y="171">例：click 事件处理</text>
+  <text class="small muted" x="66" y="210">输入到达不等于立刻运行</text>
+
+  <rect class="task" x="392" y="90" width="315" height="146" rx="18"/>
+  <text class="label" x="416" y="130">计时器 task source</text>
+  <text class="body" x="416" y="171">门槛到达后回调可运行</text>
+  <text class="small muted" x="416" y="210">0 ms 也要等之后的机会</text>
+
+  <rect class="render" x="742" y="90" width="315" height="146" rx="18"/>
+  <text class="label" x="766" y="130">渲染机会</text>
+  <text class="body" x="766" y="171">刷新、可见性、性能等</text>
+  <text class="small muted" x="766" y="210">出现时排入更新渲染 task</text>
+
+  <rect class="queue" x="84" y="278" width="932" height="122" rx="18"/>
+  <text class="label" x="115" y="324">用户代理组织的一个或多个 task queue</text>
+  <text class="body muted" x="115" y="366">不同 task source 可合并；microtask queue 不参与这一步选择</text>
+  <path class="flow" d="M198 236 V264 Q198 274 208 278"/>
+  <path class="flow" d="M550 236 V278"/>
+  <path class="flow" d="M900 236 V264 Q900 274 890 278"/>
+
+  <rect class="note" x="147" y="436" width="806" height="126" rx="18"/>
+  <text class="label" x="184" y="480">选择一个有可运行任务的 queue</text>
+  <text class="body" x="184" y="523">所选队列取最早的 runnable task；不同队列间由用户代理选择</text>
+  <path class="flow" d="M550 400 V436"/>
+
+  <rect class="task" x="75" y="622" width="520" height="178" rx="18"/>
+  <text class="label" x="110" y="669">继续当前 task 的宿主步骤</text>
+  <text class="body" x="110" y="712">常见同步 JavaScript 不被另一普通 task 抢占</text>
+  <text class="small muted" x="110" y="754">callback 检查点排空后，任务仍从这里继续</text>
+  <path class="flow" d="M550 562 V594 Q550 608 536 622"/>
+
+  <rect class="micro" x="650" y="622" width="400" height="145" rx="18"/>
+  <text class="label" x="680" y="667">当前 task 内的 callback 返回</text>
+  <text class="body" x="680" y="710">清理 callback，再清理 script</text>
+  <text class="small muted" x="680" y="746">若 JS 栈空，才触发检查点</text>
+  <path class="flow-dash" d="M595 682 H650"/>
+
+  <rect class="micro" x="650" y="812" width="400" height="158" rx="18"/>
+  <text class="label" x="680" y="857">callback 返回检查点</text>
+  <text class="body" x="680" y="900">排空微任务，包括运行中新加的项</text>
+  <text class="small muted" x="680" y="942">队列空后，恢复当前 task 的宿主步骤</text>
+  <path class="flow-dash" d="M850 767 V812"/>
+  <path class="flow-dash" d="M850 970 V1018 H620 V785 H595"/>
+
+  <rect class="micro" x="75" y="864" width="520" height="145" rx="18"/>
+  <text class="label" x="110" y="909">task 步骤完成后的边界检查点</text>
+  <text class="body" x="110" y="952">使用同一套排空算法，直到微任务队列为空</text>
+  <text class="small muted" x="110" y="990">只有在这里排空后，事件循环才选下一 task</text>
+  <path class="flow" d="M335 800 V864"/>
+
+  <path class="flow" d="M335 1009 V1195 H30 V499 H147"/>
+  <text class="small muted" x="390" y="1146">task 边界检查点结束后，回到下一轮 task 选择</text>
+</svg>

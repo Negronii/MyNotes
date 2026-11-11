@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1680" viewBox="0 0 1100 1680" role="img" aria-labelledby="title desc">
+  <title id="title">报表 listener 检查点后恢复当前事件分发，task 结束后再选择</title>
+  <desc id="desc">物理输入的 click task 中，报表状态从 recent 经 click listener A 的 pushState、aria-pressed 和列表改动变为 oldest。listener 返回并在 JavaScript 栈空时排空 Promise reaction、queueMicrotask 和 nested microtask；第三项排空后恢复当前事件分发，之后可运行 listener B。click task 全部步骤完成后才到任务边界检查点和下一次 task 选择。之后可能先运行更新渲染 task，也可能先运行 timer task；具体过程在各自的单框中连续展示。rAF callback 的微任务检查点排空后恢复当前 rendering task 的后续动画帧回调和样式布局步骤。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M2 1 L12 7 L2 13" fill="none" stroke="#3f5871" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="arrow-purple" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M2 1 L12 7 L2 13" fill="none" stroke="#76559b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #17283b; }
+      .head { font-size: 28px; font-weight: 700; }
+      .label { font-size: 23px; font-weight: 650; }
+      .body { font-size: 20px; }
+      .small { font-size: 18px; }
+      .muted { fill: #52677d; }
+      .task { fill: #edf5ff; stroke: #4274a7; stroke-width: 3; }
+      .render { fill: #eef7f1; stroke: #488567; stroke-width: 3; }
+      .timer { fill: #fff8e9; stroke: #c38322; stroke-width: 3; }
+      .state { fill: #f5f7fa; stroke: #60758d; stroke-width: 3; }
+      .micro { fill: #f5effa; stroke: #8c6cab; stroke-width: 3; }
+      .flow { fill: none; stroke: #3f5871; stroke-width: 3; marker-end: url(#arrow); }
+      .flow-purple { fill: none; stroke: #76559b; stroke-width: 3; marker-end: url(#arrow-purple); }
+    </style>
+  </defs>
+  <rect x="8" y="8" width="1084" height="1664" rx="24" fill="#fff" stroke="#d7e0e8" stroke-width="2"/>
+  <text class="head" x="46" y="58">一次报表点击：handler 改状态，微任务检查点再续跑</text>
+
+  <rect class="state" x="40" y="82" width="300" height="192" rx="18"/>
+  <text class="label" x="66" y="121">listener A 运行前</text>
+  <text class="body" x="66" y="160">URL：?sort=recent#summary</text>
+  <text class="body" x="66" y="199">aria：recent true / oldest false</text>
+  <text class="body" x="66" y="238">行：May → April</text>
+
+  <rect class="task" x="400" y="82" width="300" height="192" rx="18"/>
+  <text class="label" x="426" y="121">物理 click · listener A</text>
+  <text class="body" x="426" y="160">pushState 更新 URL</text>
+  <text class="body" x="426" y="199">改 aria-pressed</text>
+  <text class="body" x="426" y="238">重排 DOM 行</text>
+
+  <rect class="state" x="760" y="82" width="300" height="192" rx="18"/>
+  <text class="label" x="786" y="121">listener A 返回时</text>
+  <text class="body" x="786" y="160">URL：?sort=oldest#summary</text>
+  <text class="body" x="786" y="199">aria：recent false / oldest true</text>
+  <text class="body" x="786" y="238">行：April → May</text>
+
+  <path class="flow" d="M340 177 H400"/>
+  <path class="flow" d="M700 177 H760"/>
+  <path class="flow" d="M910 274 V323"/>
+
+  <rect class="micro" x="72" y="323" width="956" height="153" rx="18"/>
+  <text class="label" x="108" y="367">listener A 返回 · Web IDL 清理 callback，再清理 script</text>
+  <text class="body" x="108" y="410">script 清理后若 JS 栈空，就在当前 click task 内排空微任务</text>
+  <text class="small muted" x="108" y="450">队列排空后恢复事件分发；这一步不会跳到下一项 task</text>
+
+  <path class="flow-purple" d="M550 476 V530"/>
+  <text class="label" x="88" y="559">进入检查点后，队列依次排空</text>
+
+  <rect class="micro" x="60" y="584" width="280" height="112" rx="16"/>
+  <text class="body" x="88" y="625">Promise reaction</text>
+  <text class="small muted" x="88" y="664">新增 µnested 到队尾</text>
+
+  <rect class="micro" x="410" y="584" width="280" height="112" rx="16"/>
+  <text class="body" x="440" y="625">queueMicrotask</text>
+  <text class="small muted" x="440" y="664">在 reaction 前已入队</text>
+
+  <rect class="micro" x="760" y="584" width="280" height="112" rx="16"/>
+  <text class="body" x="792" y="625">µnested</text>
+  <text class="small muted" x="792" y="664">第三项后队列为空</text>
+  <path class="flow-purple" d="M340 640 H410"/>
+  <path class="flow-purple" d="M690 640 H760"/>
+
+  <path class="flow" d="M900 696 V750"/>
+  <rect class="task" x="72" y="750" width="956" height="116" rx="18"/>
+  <text class="label" x="108" y="794">队列空 → 恢复当前事件分发；此后 listener B 才能运行</text>
+  <text class="body" x="108" y="837">listener B 若存在，也仍属于这次 click task</text>
+
+  <path class="flow" d="M550 866 V910"/>
+  <rect class="task" x="72" y="910" width="956" height="112" rx="18"/>
+  <text class="label" x="108" y="954">全部 click task 步骤完成后，执行 task 边界检查点</text>
+  <text class="body" x="108" y="995">边界检查点排空微任务后，事件循环才选择下一项 task</text>
+
+  <path class="flow" d="M550 1022 V1060"/>
+  <rect class="state" x="72" y="1060" width="956" height="132" rx="18"/>
+  <text class="label" x="108" y="1104">更新渲染 task 与 timer task 后续都可运行时</text>
+  <text class="body" x="108" y="1147">用户代理选择 task queue；若两者共用一队列，取其中较早的 runnable task</text>
+  <text class="small muted" x="108" y="1179">还有其他可运行队列时，也可能先选它们</text>
+
+  <path class="flow" d="M310 1192 V1228 H292 V1252"/>
+  <path class="flow" d="M790 1192 V1228 H808 V1252"/>
+
+  <rect class="render" x="48" y="1252" width="490" height="334" rx="18"/>
+  <text class="label" x="78" y="1296">可能：更新渲染 task 先运行</text>
+  <text class="body" x="78" y="1342">rAF A 返回后：清理 callback，再清理 script</text>
+  <text class="body" x="78" y="1386">栈空时排空 µrAF</text>
+  <text class="body" x="78" y="1430">恢复当前渲染 task，继续 rAF B</text>
+  <text class="body" x="78" y="1474">再做常规样式与布局步骤</text>
+  <text class="body" x="78" y="1518">渲染 task 结束，执行 task 边界检查点</text>
+  <text class="small muted" x="78" y="1562">timer 若仍可运行，之后重选任务时再考虑</text>
+
+  <rect class="timer" x="562" y="1252" width="490" height="334" rx="18"/>
+  <text class="label" x="592" y="1296">可能：timer task 先运行</text>
+  <text class="body" x="592" y="1342">click timer 返回后：清理 callback，再清理 script</text>
+  <text class="body" x="592" y="1386">栈空时排空微任务</text>
+  <text class="body" x="592" y="1430">恢复当前 timer task 的宿主步骤</text>
+  <text class="body" x="592" y="1474">task 结束后，执行 task 边界检查点</text>
+  <text class="body" x="592" y="1518">事件循环重新选择任务</text>
+  <text class="small muted" x="592" y="1562">更新渲染 task 仍可能随后运行</text>
+</svg>
