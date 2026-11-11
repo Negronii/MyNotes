@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 40 720 480">
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <style>
+    text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
+    .title { font-size: 24px; font-weight: 700; }
+    .head { font-size: 17px; font-weight: 700; }
+    .label { font-size: 14px; }
+    .small { font-size: 12px; fill: #526681; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 14px; }
+    .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
+    .record { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
+    .parent { fill: #f0eafb; stroke: #9a77d1; stroke-width: 2; }
+    .child { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
+    .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  </style>
+</defs>
+<rect x="0" y="40" width="720" height="480" fill="#fbfcfe"/>
+<rect class="panel" x="24" y="54" width="672" height="83" rx="12"/>
+<text class="head" x="42" y="80">输入 rows（子行先于根行）</text>
+<rect class="record" x="42" y="91" width="300" height="32" rx="6"/><text class="mono" x="53" y="112">{ id:2, parentId:1, name:"收入" }</text>
+<rect class="record" x="363" y="91" width="300" height="32" rx="6"/><text class="mono" x="374" y="112">{ id:1, parentId:0, name:"根" }</text>
+<path class="line" d="M360,138 L360,185"/>
+<rect class="panel" x="24" y="190" width="672" height="112" rx="12"/>
+<text class="head" x="42" y="217">第一趟：复制记录并按 id 放进 Map</text>
+<text class="small" x="42" y="242">Map.get(2)</text>
+<rect class="child" x="108" y="227" width="250" height="42" rx="7"/><text class="mono" x="120" y="253">id=2 "收入"；children: []</text>
+<text class="small" x="374" y="242">Map.get(1)</text>
+<rect class="parent" x="440" y="227" width="230" height="42" rx="7"/><text class="mono" x="451" y="253">id=1 "根"；children: []</text>
+<text class="small" x="42" y="286">此时两项各有自己的浅拷贝；第二趟会接节点引用，不再复制行。</text>
+<path class="line" d="M360,303 L360,345"/>
+<rect class="panel" x="24" y="355" width="672" height="139" rx="12"/>
+<text class="head" x="42" y="382">第二趟：id=2 的子行 parentId=1，Map.get(1) 找到父节点</text>
+<text class="small" x="42" y="405">parent.children.push(node2) 后，从唯一根遍历并核对 seen.size = nodes.size。</text>
+<text class="small" x="44" y="449">根</text><path class="line" d="M70,444 L115,444"/>
+<rect class="parent" x="119" y="420" width="220" height="51" rx="7"/><text class="mono" x="132" y="443">id=1  根</text><text class="small" x="132" y="461">children → node2</text>
+<text class="small" x="358" y="437">引用</text><path class="line" d="M344,446 L423,446"/>
+<rect class="child" x="428" y="420" width="220" height="51" rx="7"/><text class="mono" x="441" y="443">id=2  收入</text><text class="small" x="441" y="461">children = []</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <style>
+    text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
+    .title { font-size: 25px; font-weight: 700; }
+    .head { font-size: 18px; font-weight: 700; }
+    .label { font-size: 15px; }
+    .small { font-size: 13px; fill: #526681; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 15px; }
+    .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
+    .slot { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
+    .active { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
+    .node { fill: #f0eafa; stroke: #9376bc; stroke-width: 2; }
+    .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    .plain { stroke: #7187a8; stroke-width: 2.5; fill: none; }
+  </style>
+</defs>
+<rect x="0" y="0" width="720" height="720" fill="#fbfcfe"/>
+<text class="small" x="30" y="64">合成事件按 (occurred_at, event_id) 排序：e07 → e03 → e11 → e18。</text>
+<rect class="panel" x="22" y="82" width="676" height="168" rx="12"/>
+<text class="head" x="40" y="111">数组：下标已知时直接到槽位</text>
+<text class="small" x="40" y="135">按报表页顺序连续放置；index 3 可直接读到 e18。</text>
+<g>
+  <text class="small" x="94" y="162">0</text><text class="small" x="229" y="162">1</text><text class="small" x="364" y="162">2</text><text class="small" x="499" y="162">3</text>
+  <rect class="slot" x="52" y="170" width="118" height="43" rx="6"/><text class="mono" x="81" y="197">e07</text>
+  <rect class="slot" x="187" y="170" width="118" height="43" rx="6"/><text class="mono" x="216" y="197">e03</text>
+  <rect class="slot" x="322" y="170" width="118" height="43" rx="6"/><text class="mono" x="351" y="197">e11</text>
+  <rect class="active" x="457" y="170" width="118" height="43" rx="6"/><text class="mono" x="486" y="197">e18</text>
+  <path class="line" d="M637 191 L580 191"/><text class="small" x="585" y="163">index = 3</text>
+</g>
+<rect class="panel" x="22" y="264" width="676" height="178" rx="12"/>
+<text class="head" x="40" y="293">单链表：按值找目标要沿 next 逐项前进</text>
+<text class="small" x="40" y="317">head 指向首节点；要找到 e18，须经过 3 条 next 链接。</text>
+<g>
+  <text class="small" x="43" y="368">head</text><path class="line" d="M82 363 L108 363"/>
+  <rect class="node" x="112" y="340" width="102" height="48" rx="8"/><text class="mono" x="135" y="370">e07</text>
+  <path class="line" d="M214 364 L258 364"/><text class="small" x="220" y="349">next</text>
+  <rect class="node" x="262" y="340" width="102" height="48" rx="8"/><text class="mono" x="285" y="370">e03</text>
+  <path class="line" d="M364 364 L408 364"/><text class="small" x="370" y="349">next</text>
+  <rect class="node" x="412" y="340" width="102" height="48" rx="8"/><text class="mono" x="435" y="370">e11</text>
+  <path class="line" d="M514 364 L558 364"/><text class="small" x="520" y="349">next</text>
+  <rect class="active" x="562" y="340" width="102" height="48" rx="8"/><text class="mono" x="585" y="370">e18</text>
+  <text class="small" x="40" y="421">若已经拿到前驱节点，插入或删除只改相邻链接；先找前驱仍需遍历。</text>
+</g>
+<rect class="panel" x="22" y="456" width="676" height="250" rx="12"/>
+<text class="head" x="40" y="485">平衡搜索树：按同一复合键比较，选择一侧子树</text>
+<text class="small" x="40" y="509">目标 (09:05,e18)：与根 e11 比较后向右命中；树高 h 决定操作成本。</text>
+<g>
+  <path class="plain" d="M360 557 L220 601 M360 557 L500 601"/>
+  <path class="line" d="M220 635 L150 650"/>
+  <rect class="node" x="306" y="528" width="108" height="45" rx="9"/><text class="mono" x="327" y="556">e11</text>
+  <rect class="node" x="166" y="590" width="108" height="45" rx="9"/><text class="mono" x="187" y="618">e03</text>
+  <rect class="active" x="446" y="590" width="108" height="45" rx="9"/><text class="mono" x="467" y="618">e18</text>
+  <rect class="node" x="96" y="650" width="108" height="34" rx="8"/><text class="mono" x="117" y="673">e07</text>
+</g>
+</svg>
