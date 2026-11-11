@@ -3370,7 +3370,7 @@ sequenceDiagram
 
 **案例背景。** 一次构建失败诊断从用户的问题“build 42 为什么失败？”开始。模型提出读取只读 tool（工具）`read_build_log` 的请求，应用核验权限后才执行。工具调用 ID `c1` 关联这次请求和返回结果；返回值显示 `unit-tests` 步骤中的 `reject_empty_name` 预期 HTTP（Hypertext Transfer Protocol，超文本传输协议）`400`、实际 `200`，进程退出状态为 `1`。这些字段足以说明测试观察到了什么；它们还不能证明是哪一行实现代码造成了问题。
 
-如果每次请求只需读取固定日志并解释字段，程序可以安排全部步骤。如果下一步取决于日志中尚未知晓的内容，模型在给定工具、权限和预算内决定“再查、澄清还是作答”可能有用。后者把更多控制权交给 agent（智能体）；是否值得，要用端到端任务结果判断。
+如果每次请求只需读取固定日志并解释字段，程序可以安排全部步骤。如果下一步取决于日志中尚未知晓的内容，且可靠分支难以事先列全，模型在给定工具、权限和预算内决定“再查、澄清还是作答”可能有用。后者把更多控制权交给 agent（智能体）；是否值得，要用端到端任务结果判断。
 
 ### 智能体、工作流、聊天界面和检索增强生成分别描述什么？
 
@@ -3392,37 +3392,43 @@ workflow（工作流）指程序预先安排模型调用、工具操作和分支
 | 任务约束 | 合适的起点 | 成本或边界 |
 |---|---|---|
 | 步骤稳定、输入范围清楚、结果可直接校验 | 代码工作流 | 灵活性有限；步骤变化时需要更新规则 |
-| 后续动作依赖尚未获得的观察 | 有预算和停止条件的智能体循环 | 要评估重复调用、坏观察传播和未完成运行 |
+| 新证据可能改变路径，且可靠规则难以事先列全 | 有预算和停止条件的智能体循环 | 要评估重复调用、坏观察传播和未完成运行 |
 | 大部分路径固定，只有诊断或解释节点需要适应 | 混合流程 | 由代码保留稳定的授权与副作用门；只把需要判断的节点交给模型 |
 
-这些结构可以分层组合：应用固定必须成立的状态转换和校验，需要根据观察选择下一步的节点则可复用现成 agent harness（智能体执行框架）。如果现成运行时已满足任务契约，只需配置并接入所需能力；如何判断还缺哪些编排，见[固定流程、主循环与委派怎样配合](#%E5%85%88%E7%9C%8B%E5%93%AA%E4%BA%9B%E6%AD%A5%E9%AA%A4%E4%BE%9D%E8%B5%96%E5%90%8C%E4%B8%80%E4%BB%BD%E8%A7%82%E5%AF%9F)。
+观察会影响下一步，并不自动要求智能体。即使代码依据工具观察执行 `if`，只要分支和路径是预先定义的，它仍是工作流；例如，已知仅有“状态码不符”和“超时”两种情况时，代码可以按字段分派。只有新证据会打开难以预列的路径、需要结合上下文选择补查、澄清或结束时，才值得让模型动态提出下一步。应用仍固定必须成立的状态转换和校验；如何判断还缺哪些编排，见[固定流程、主循环与委派怎样配合](#%E5%85%88%E7%9C%8B%E5%93%AA%E4%BA%9B%E6%AD%A5%E9%AA%A4%E4%BE%9D%E8%B5%96%E5%90%8C%E4%B8%80%E4%BB%BD%E8%A7%82%E5%AF%9F)。
 
-build 42 的 `c1` 是一个边界清楚的选择：若用户只问为何构建失败，回答“该测试实际返回 `200`，与预期 `400` 不符，因此 `unit-tests` 步骤失败”有现成证据；不应据此断言具体实现缺陷。若用户要求代码级根因，运行时只能在有合适、获授权的只读能力时继续查；否则说明证据不足。模型是否愿意猜，不应改变可用事实。
+build 42 的 `c1` 是一个边界清楚的选择：若用户只问构建结果，可以报告日志记录的观察：`reject_empty_name` 实测 `200`、预期 `400`，而 `unit-tests` 步骤的退出状态为 `1`。现有字段没有说明这两项是否存在因果关系。若用户要求代码级根因，运行时只能在有合适、获授权的只读能力时继续查；否则说明证据不足。模型是否愿意猜，不应改变可用事实。
 
 ### ReAct 循环怎样让观察影响下一步？
 
 ReAct（reasoning and acting，推理与行动）把模型生成的决策文字、实际动作和环境观察交替起来。它的工程要点是“决策 → 行动 → 观察”：真实工具结果而不是模型对结果的猜测，成为下一轮判断的输入。生产运行时记录动作请求、权限决定、工具结果和停止原因即可；不需要保存模型的内部推理文字来证明动作发生过。
 
 > [!example] HotpotQA 中观察怎样改变后续搜索？
-> 论文附录 C.1 的 few-shot prompt（少样本提示）示范要求找出 Colorado orogeny 东部延伸区的海拔范围。`Search[Colorado orogeny]` 只返回造山运动概述，没有东部地区信息；模型于是改查 `Lookup[eastern sector]`，得到 High Plains。第一次 `Search[High Plains]` 返回的名称不明确，模型再限定为 `Search[High Plains (United States)]`，观察到其海拔约为 `1,800–7,000 ft`，才结束回答。这是提示中给模型看的示范，不是独立报告的一次评测成功轨迹。两次补查都由前一次观察触发；若检索结果无关，循环也可能把错误继续带下去。
+> 论文附录 C.1 的 few-shot prompt（少样本提示）示范要求找出 Colorado orogeny 东部延伸区的海拔范围。`Search[Colorado orogeny]` 只返回造山运动概述，没有东部地区信息；模型于是改查 `Lookup[eastern sector]`，得到 High Plains。`Search[High Plains]` 返回的名称不明确，模型再限定为 `Search[High Plains (United States)]`，观察到其海拔约为 `1,800–7,000 ft`，才结束回答。这是提示中给模型看的示范，不是独立报告的一次评测成功轨迹。后续查找的关键词和范围由新观察改变；若检索结果无关，循环也可能把错误继续带下去。
 
 | 环节 | 执行者 | 交给下一步的状态 |
 |---|---|---|
 | 决策 | 模型根据问题、已核对的工具观察和允许动作提出工具请求、澄清问题或最终回答 | 结构化的动作提议或答复 |
 | 授权与执行 | runtime（运行时）校验调用者、schema（结构模式）、资源范围和业务条件，再执行或拒绝 | 真实工具结果、明确错误、审批等待或结果未知 |
 | 观察与更新 | 运行时关联工具调用和返回值，保存必要的应用状态 | 新证据与剩余预算 |
-| 验收与停止 | 运行时检查完成条件、调用上限、截止时间、取消与风险规则 | 完成、待澄清、转人工、失败或待对账 |
+| 验收与停止 | 模型可输出最终答复；运行时据此交付，或按预算、截止时间、取消与安全规则先行停止 | 已交付、待澄清、转人工、运行受限停止或待对账 |
+
+**图：build 42 中的动作提议、执行门与观察回流**
+
+![build 42 的模型提议、运行时核验、c1 观察和回答或继续分支](../../ai-engineering/agents/resources/agent-decision-loop.svg)
+
+图里，中间两个蓝色节点表示模型提出或选择下一步，黄色节点表示运行时控制是否执行，橙色节点保存每轮工具观察，图内列出首轮的 `c1`。模型给出最终答复表示它不再请求工具，不等于运行时已验证答复正确。运行时收到结束信号后按预算、截止时间、取消和安全规则决定是否交付；这些硬性规则也可能在模型完成前先行停止。若用户要求代码根因，模型仍需提出新的只读证据请求，运行时逐次核验。
 
 用 `c1` 重放一次：
 
 > [!example] 一条观察支撑到哪里？
 > - **已知输入：** 用户问 build 42 为什么失败，当前任务范围是解释这次构建结果。
 > - **观察 `c1`：** `step=unit-tests`；`test=reject_empty_name`；`expected=400`；`actual=200`；`exit_status=1`。
-> - **可支持的结论：** 指定测试的实际状态码不符合预期，且测试步骤失败。
-> - **尚未支持的结论：** `c1` 没有源代码、提交差异或完整业务规则，因此不能指出代码根因。
-> - **下一步：** 对只问构建结果的请求，可以作答并停止；对根因请求，要么调用运行时提供的只读代码查找能力，要么请求补充证据。不得把“模型认为够了”当成验证。
+> - **可支持的结论：** 日志分别记录 `reject_empty_name` 的实际状态码为 `200`、预期为 `400`，以及 `unit-tests` 的退出状态为 `1`。
+> - **尚未支持的结论：** 这些字段没有说明状态码不符是否导致退出状态为 `1`，也没有源代码、提交差异或完整业务规则来指出代码根因。
+> - **下一步：** 对只问构建结果的请求，模型可以提出答复；运行时仍按预算、安全和取消规则决定交付还是停止。对根因请求，要么提出只读代码查找请求并由运行时逐次核验，要么请求补充证据。不得把“模型认为够了”当成验证。
 
-这个结构同时适用于需要动作的任务。退款例中，订单查询显示已付款，但没有说明优惠券是否应退回。智能体可以选择读取退款规则或请用户补齐信息；退款金额与权限仍由应用校验。若退款服务超时，`outcome_unknown`（结果未知）表示不能据此再次退款；应用先以 operation ID（操作标识）查询权威状态。若只是给航班报价 `189`、`210`、`175` 美元排序，固定代码取最小值 `175` 即可，不需要让模型选择下一步。这两个任务展示了两种不同结构的价值，不构成通用阈值。
+这个结构同时适用于需要动作的任务。退款例中，订单查询显示已付款，但没有说明优惠券是否应退回。智能体可以选择读取退款规则或请用户补齐信息；退款金额与权限仍由应用校验。若退款服务超时，`outcome_unknown`（结果未知）表示不能据此再次退款；应用先以 operation ID（操作标识）查询权威状态。若只是从航班报价 `189`、`210`、`175` 美元中找最低报价，固定代码取最小值 `175` 即可，不需要让模型选择下一步。这两个任务展示了两种不同结构的价值，不构成通用阈值。
 
 ReAct 原论文在 PaLM-540B 的 HotpotQA 与 FEVER 提示实验中发现，ReAct 的表 1 分数分别为 `27.4` EM（Exact Match，完全匹配）、`60.9` accuracy（准确率）；仅行动基线为 `25.7`、`58.9`，chain-of-thought（思维链，CoT）为 `29.4`、`56.3`。这说明 ReAct 相对基线的结果随任务而变：它在论文设置的 FEVER 上超过两项对照，在 HotpotQA 上超过行动基线但低于 CoT。论文还记录了重复动作和无信息检索结果会让部分轨迹偏离目标；这些是特定模型、数据集、工具和提示设置中的研究结果，不是生产成功率预测。
 
@@ -3440,17 +3446,17 @@ Manus 的工程文章给出一种特定实现：用上下文状态机决定哪�
 
 在同一组代表性任务上对照固定工作流和智能体循环。除了最终文字，还检查外部状态、证据引用、必须披露的信息、权限违规、重复动作、调用数、总成本、端到端时延和人工接管率。若任务由用户与智能体共同改变状态，测试时也要允许用户在中途更新状态；智能体应重新读取权威值再继续。
 
-τ-bench 以模拟对话和领域 API 比较结束时的数据库状态与标注目标，并报告多次试验的一致性指标 `pass^k`。τ²-bench 的 Telecom 任务进一步让模拟用户也能通过工具改变共享环境。它们说明只检查最终自然语言可能漏掉状态错误或协作失败；测试结果仍受各自任务、模拟器和规则范围限制。把同样的检查改写为本地业务契约，而不是照搬论文分数。
+τ-bench 以模拟对话和领域 API 比较结束时的数据库状态与标注目标。`pass^k` 表示同一任务的 `k` 次独立试验全部满足该任务成功条件的概率，再对任务求平均；它衡量一致完成，不同于 `pass@k` 的“至少一次通过”。τ²-bench 的 Telecom 任务进一步让模拟用户也能通过工具改变共享环境。它们说明只检查最终自然语言可能漏掉状态错误或协作失败；测试结果仍受各自任务、模拟器和规则范围限制。做本地比较前，先写清每类任务必须达成的结果和成本、时延、安全上限，再对照成功率、`pass^k`、人工接管和单位完成成本；模型动态选择只有在改善契约结果且落在预算与风险边界内时才值得保留。
 
 相关的编排选择见[多阶段 AI 任务怎样组织](#20.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)；版本变化如何跨运行验收见[如何测试并保留 Agent 改进](#27.%20%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%B9%B6%E4%BF%9D%E7%95%99%E5%AF%B9%20Agent%20%E7%9A%84%E6%94%B9%E8%BF%9B%EF%BC%9F)。
 
 > [!info]- 来源
-> - **工作流与智能体的控制流、适用权衡：** Anthropic，[Building effective agents](https://www.anthropic.com/research/building-effective-agents)，2024-12-19，§§“What are agents?”与“When (and when not) to use agents”；页面注明其工具生态描述已有变化，本文只采用工作流/智能体的控制流区分及成本、时延权衡，不沿用旧框架推荐。
-> - **ReAct 机制和实验边界：** Yao et al.，[ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/html/2210.03629v3)，arXiv v3，2023-03-10，§2、图 1、§3.3 表 1、附录 C.1 的 HotpotQA 提示示范；原论文 PaLM-540B 在 HotpotQA、FEVER 上的表中分数与错误类型对应正文说明，不能外推为生产成功率。
+> - **工作流与智能体的控制流、适用权衡和终止条件：** Anthropic，[Building effective agents](https://www.anthropic.com/research/building-effective-agents)，2024-12-19，§§“What are agents?”、“When (and when not) to use agents”与“Agents”；原文区分预定义代码路径和模型动态控制，提到任务常在完成时结束，也可设置最大迭代次数。预算、安全与取消条件是本文说明的应用运行时约束。页面注明工具生态描述已有变化，本文不沿用旧框架推荐。
+> - **ReAct 机制和实验边界：** Yao et al.，[ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/html/2210.03629v3)，arXiv v3，2023-03-10，§2、图 1、§3.3 表 1、附录 C.1 的 HotpotQA 提示示范；C.1 的首轮搜索后依次是 `Lookup[eastern sector]`、`Search[High Plains]`、`Search[High Plains (United States)]`。原论文 PaLM-540B 在 HotpotQA、FEVER 上的分数不能外推为生产成功率。
 > - **工具列表状态控制实例：** Manus，[Context Engineering for AI Agents: Lessons from Building Manus](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus)，2025-07-18，“Mask, Don't Remove”；来源描述 Manus 自身的状态机、工具可用性与受限解码设计，不表示其他 API 支持同一能力。
-> - **工具范围与命名评估：** Anthropic，[Writing effective tools for agents — with agents](https://www.anthropic.com/research/writing-tools-for-agents)，2025-09-11，“Choosing the right tools for agents”“Namespacing your tools”；其内部工具使用评估发现前缀与后缀命名的效果会随模型变化，本文据此只建议按自身任务测量。
+> - **工具范围与命名评估：** Anthropic，[Writing effective tools for agents — with agents](https://www.anthropic.com/research/writing-tools-for-agents)，2025-09-11，“Choosing the right tools”“Namespacing your tools”；其内部工具使用评估发现前缀与后缀命名的效果会随模型变化，本文据此只建议按自身任务测量。
 > - **技能的渐进式加载：** Anthropic，[Equipping agents for the real world with Agent Skills](https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills)，2025-10-16；2025-12-18 更新称 Agent Skills 已作为开放标准发布；“The anatomy of a skill”与“Skills and the context window”说明 `SKILL.md`、附属资源和渐进式披露。技能的调用权限仍由应用工具实现。
-> - **状态与用户交互评估：** Yao et al.，[τ-bench](https://arxiv.org/abs/2406.12045)，2024-06-17，摘要和 benchmark 设计；Barres et al.，[τ²-Bench](https://arxiv.org/abs/2506.07982)，2025-06-09，摘要与 Telecom dual-control domain。文中只概述其评估对象与状态指标，不把 benchmark 分数当作任意生产任务表现。
+> - **状态与用户交互评估：** Yao et al.，[τ-bench](https://arxiv.org/html/2406.12045)，2024-06-17，摘要、§3 的 `pass^k` 定义与 benchmark 设计；它定义 `pass^k` 为同一任务的 k 次独立试验全部成功，并对任务求平均。Barres et al.，[τ²-Bench](https://arxiv.org/abs/2506.07982)，2025-06-09，摘要与 Telecom dual-control domain。文中只概述其评估对象与状态指标，不把 benchmark 分数当作任意生产任务表现。
 ## 19. 模型选到 shell 或文件工具后，由谁决定能否执行？
 
 **案例背景。** 以下是合成教学案例。用户从同一条 build 42 日志观察另行提出本地修复任务：reject_empty_name 测试期望空名称返回 HTTP 400，实际得到 200。系统临时目录中的 fixture 源文件为 validator.py，测试文件为 test_validator.py。运行时只在配置的可写根内编辑并运行测试。该任务与前章创建工单的 c2 是两条不同的动作路径。
@@ -3627,7 +3633,7 @@ workflow（工作流）用代码安排已知步骤；agent（智能体）在运�
 | 判断是否够答 | 用户问题与 `c1` 证据 | 能说明测试失败；不能证明具体代码根因 |
 | 结束或继续 | 证据缺口是否影响用户目标 | 当前问题可先作答；若用户要求代码根因，才查获准的代码证据或请求补充资料 |
 
-这条路径没有未解决的并行依赖，因此主循环保留 `c1` 的证据并给出有界结论即可。若把“读取日志”和“解释日志”都做成互相调用的专家，主流程反而要再次拼回同一条 `c1` 记录。
+解释依赖 `c1` 的读取结果，当前目标没有可独立并行的调查分支；因此主循环保留 `c1` 的证据并给出有界结论即可。若把“读取日志”和“解释日志”都做成互相调用的专家，主流程反而要再次拼回同一条 `c1` 记录。
 
 ### 固定流程有哪些可组合模式？
 
@@ -3645,25 +3651,31 @@ Anthropic 的模式文章将常见结构作为可组合的构件：
 
 ### 动态拆分时，怎样让工作者独立且结果可核？
 
-orchestrator–workers（编排者—工作者）由主模型在运行中拆出需要探索的子任务，工作者返回证据或产物，再由主模型判断缺口与合并结果。它适合无法预先列出全部调查路径的任务；对步骤明确的处理，直接用串行或固定并行代码更易控制。
+Anthropic 的 orchestrator–workers（编排者—工作者）模式由主模型动态拆出未预先列明的子任务，交给 worker models（工作者模型），再汇总结果；它适合事先难以预测调查路径的任务。若步骤已知且互不依赖，应用可以直接固定并行只读调用，这属于工作流并行，不需要另加模型规划者。是否把任务拆开、以及由哪个模型或工具执行，是两个不同的选择。
 
-在 build 42 的合成扩展中，假设用户补充要求“找出 `reject_empty_name` 的代码级根因”，应用提供 build 元数据，显示目标提交为 `a17d92e`，并提供两个独立只读来源：测试定义和该提交差异。仅凭 `c1` 仍不能预先下代码根因结论。是否继续调查，取决于当前目标和已得到的观察；进入调查后，这两个已知来源的读取本身可以固定并行，不必再让规划器决定分工。只有来源或调查路径尚待发现时，才需要动态拆分。两项读取不依赖对方的发现，合并仍由主运行完成：
+在 build 42 的合成扩展中，另一个独立长运行 `run-r42-7` 从一开始就接到“解释 build 42 并准备一份待审核的缺陷单”。它重新读取日志，得到同样字段但属于本次运行的工具调用 ID `c2`；前面的短答运行已停止，这里不是从那次运行继续。用户随后补充“找出 `reject_empty_name` 的代码级根因”，应用核验权限后开放目标提交 `a17d92e` 下两个独立只读来源：测试定义和该提交差异。仅凭 `c2` 仍不能预先下代码根因结论。是否继续调查，取决于当前目标和已得到的观察；进入调查后，这两个已知来源的读取本身可以固定并行，不必再让规划器决定分工。只有来源或调查路径尚待发现时，才需要动态拆分。比如日志只指出失败模块时，主运行先定位可能的测试定义与实现路径，再根据新发现决定下一批互不依赖的调查。两项读取不依赖对方的发现，合并仍由主运行完成：
 
-> [!example] 从 `c1` 到可复核的并行调查
-> - **输入状态：** `build_id=42`、目标提交 `a17d92e`；证据 `c1` 已持久化，字段为 `step=unit-tests`、`test=reject_empty_name`、`expected=400`、`actual=200`、`exit_status=1`。
-> - **工作者 A 的产物：** 合成测试定义 `tests/test_reject_empty_name.py:18` 的原文为 `response = client.post("/items", json={"name": ""}); assert response.status_code == 400`，契约要求空名称返回 `400`；A 未判断实现原因。
-> - **工作者 B 的产物：** 合成提交 `a17d92e` 的差异 `app/routes.py:42` 将 `if name is None or not name.strip()` 改为 `if name is None`；此合成路由的完整处理路径是从请求 JSON 取出 `name`，仅执行这一项校验，命中时返回 `400`，否则返回 `200`；没有其他中间件或名称校验。空字符串会命中旧检查，却通过新检查，因此同一输入的返回值从 `400` 变为 `200`。B 只报告差异，不修改代码或创建工单。
-> - **主运行的汇合：** 先核对 build 元数据、A 的测试和 B 的差异都指向 `a17d92e`，再回读两处原文并与 `c1` 对照。测试契约要求拒绝空名称，差异后的检查却放行空字符串，与 `c1` 的实际 `200` 相符；因此可以把这次校验变更报告为该失败的直接原因。结论限于这条测试和该提交，不外推到其他失败。
-> - **验收：** 每个结论必须能回到来源引用；“两个模型都这么说”不算独立验证。
+> [!example] 从 `c2` 到可复核的并行调查
+> - **输入状态：** `build_id=42`、目标提交 `a17d92e`；证据 `c2` 已持久化，字段为 `step=unit-tests`、`test=reject_empty_name`、`expected=400`、`actual=200`、`exit_status=1`。
+> - **只读任务 A 的产物：** 合成测试定义 `tests/test_reject_empty_name.py:18` 的原文为 `response = client.post("/items", json={"name": ""}); assert response.status_code == 400`，契约要求空名称返回 `400`；A 未判断实现原因。
+> - **只读任务 B 的产物：** 合成提交 `a17d92e` 的差异 `app/routes.py:42` 将 `if name is None or not name.strip()` 改为 `if name is None`；此合成路由的完整处理路径是从请求 JSON 取出 `name`，仅执行这一项校验，命中时返回 `400`，否则返回 `200`；没有其他中间件或名称校验。空字符串会命中旧检查，却通过新检查，因此同一输入的返回值从 `400` 变为 `200`。B 只报告差异，不修改代码或创建工单。
+> - **主运行的汇合：** 先核对 build 元数据、A 的测试和 B 的差异都指向 `a17d92e`，再回读两处原文并与 `c2` 对照。测试契约要求拒绝空名称，差异后的检查却放行空字符串，与 `c2` 的实际 `200` 相符；因此可以把这次校验变更报告为该失败的直接原因。结论限于这条测试和该提交，不外推到其他失败。
+> - **验收：** 每个结论必须能回到来源引用；“两项回传都这么说”不算独立验证。
+
+**图：`c2` 之后的独立证据分支怎样汇回主运行**
+
+![run-r42-7 中 A/B 只读证据汇合、版本校验和人工批准写入](../../ai-engineering/agents/resources/orchestration-build42-evidence.svg)
+
+图中 `a17d92e`、测试文件和路由差异都属于合成 fixture。只有用户提出代码根因目标、且应用开放相应只读范围后，才走 P2；若用户只想知道 `c2` 说明什么，沿短答路径结束即可。主运行保留用户目标和运行状态，A、B 各自只读取受限来源并回传可核引用；是否并行取决于这两项读取能否独立完成。
 
 #### 共享事实为什么仍可能协作失败？
 
-工作者共同读取同一事实，不代表它们共享字段含义或未写明的协调约定。相同的 `c1` 和 `commit` 是共同事实；`passed` 究竟表示什么，则是需要版本化并验证的约定。
+工作者共同读取同一事实，不代表它们共享字段含义或未写明的协调约定。相同的 `c2` 和 `commit` 是共同事实；`passed` 究竟表示什么，则是需要版本化并验证的约定。
 
 > [!example] Cat & Dog：共同看见信号，不等于同意它的含义
 > Zero-Shot Coordination 论文的最小协调游戏中，Alice 看见猫或狗并控制灯的亮灭，Bob 看不见动物，只能根据灯猜测。若双方都采用“灯亮表示猫”，Alice 看见猫后亮灯，Bob 猜猫，双方共得 `+10`。若 Alice 仍这样编码，Bob 却采用“灯亮表示狗”，同一次亮灯就会导致猜错，双方共得 `−10`。若没有已共享的映射，Alice 可以花 `5` 移除墙，让 Bob 直接看动物再猜对，净得 `+5`。如果游戏允许沟通，先明确约定灯的含义是另一种工程选择；不应把单方认为“自然”的映射当成双方已同意。
 
-将这种错配放回 build 42，可以看到同名字段怎样让两套各自自洽的协议混用时失效。以下是合成的接口例子，不是 `c1` 的实际回传格式；两套协议分别称为“契约版”和“执行版”：
+将这种错配放回 build 42，可以看到同名字段怎样让两套各自自洽的协议混用时失效。以下是合成的接口例子，不是 `c2` 的实际回传格式；两套协议分别称为“契约版”和“执行版”：
 
 | 生产者 / 消费者 | `passed` 的约定 | 对 build 42 的解释 |
 |---|---|---|
@@ -3677,7 +3689,9 @@ orchestrator–workers（编排者—工作者）由主模型在运行中拆出�
 
 工程上可借鉴的是把需要共享的约定写清，并实际测试独立实现、模型或版本的组合。若允许参与者沟通，可以先澄清含义，再执行动作；这属于工程延伸。共同提示不能代替程序执行的协议检查、所有权和授权。
 
-每个子任务都要写明 task scope（任务范围）、所需事实、允许工具、禁止的副作用、预期字段和停止条件。适合汇总的回传至少包含原始证据引用、局部结论、未验证项和失败状态；只回一段摘要会丢失行号、版本或限定条件，主运行就无法检查结论是否越界。根据数据最小化原则，只给工作者完成任务所需的那段上下文；但如果它要判断 `c1` 中的实际状态码，就应明确传入 `c1` 或其可靠引用，不能假定子智能体共享完整历史。
+每个子任务都要写明 task scope（任务范围）、所需事实、允许工具、禁止的副作用、预期字段和停止条件。适合汇总的回传至少包含原始证据引用、局部结论、未验证项和失败状态；只回一段摘要会丢失行号、版本或限定条件，主运行就无法检查结论是否越界。根据数据最小化原则，只给工作者完成任务所需的那段上下文；但如果它要判断 `c2` 中的实际状态码，就应明确传入 `c2` 或其可靠引用，不能假定子智能体共享完整历史。
+
+在本例里，主运行保留用户目标、运行标识和外部副作用状态；A、B 只需得到 `c2`、目标提交引用和各自的只读问题。每次交接仍要传送必要状态、等待结果并核验回传；共享状态多或步骤短且彼此依赖时，交接成本容易超过并行收益。只有两项读取不等待对方结果、确实同时执行，且精简回传足以支持主运行复核时，并行才可能抵回这些成本。
 
 ### 专家是工具还是接管用户交互？
 
@@ -3685,7 +3699,7 @@ agents as tools（把智能体作为工具调用）和 handoff（控制权交接
 
 | 结构 | 谁继续对用户负责？ | 适用例子 |
 |---|---|---|
-| 智能体作为工具／管理者模式 | 主智能体收集专家结果、比较证据并给出最终答复 | build 42 的主运行委托只读来源检查，再自行核对 `c1` 与来源 |
+| 智能体作为工具／管理者模式 | 主智能体收集专家结果、比较证据并给出最终答复 | build 42 的主运行委托只读来源检查，再自行核对 `c2` 与来源 |
 | 控制权交接 | 专家接手该分支的后续对话和决策 | 分类器确认用户需要技术支持后，把问题交给负责下一轮澄清的支持专家 |
 
 交接前要传递足够的任务背景和当前状态；接手方应知道由谁授权、已经读取了哪些材料、仍有哪些结论未知。避免宽泛转发整个对话，也不能把有损摘要当成权威运行记录。交接改变后续由谁与用户交互，应用仍负责维护运行记录、授权及外部操作状态。工具返回和副作用应由应用记录并关联任务身份；稳定 run ID、事件恢复和未知结果如何处理见[AI 运行怎样断线恢复](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
@@ -3714,7 +3728,7 @@ Anthropic 的 2026 年工程文章报告，其若干企业场景中，把依赖�
 
 ### 计划执行何时需要重规划，怎样识别无进展循环？
 
-plan-and-execute（先计划、再执行）适合目标可拆成若干有前提、证据和验收条件的步骤，但中间观察仍可能改变后续路线。计划是可版本化的运行产物，不是模型内在推理的证明，也不是外部事实账本。接下来把案例扩展成另一段长运行演练：`run-r42-7` 从一开始就收到“解释 build 42 并准备一个待审核的缺陷单”，并非重新打开前文已经答复结束的短任务。它重现同样的日志观察，以下 `c1` 属于这段长运行；`c1` 证明 `reject_empty_name` 预期 HTTP `400`、实际 `200`、进程退出 `1`，但单靠这些字段不能断定代码根因。
+plan-and-execute（先计划、再执行）适合目标可拆成若干有前提、证据和验收条件的步骤，但中间观察仍可能改变后续路线。计划是可版本化的运行产物，不是模型内在推理的证明，也不是外部事实账本。下面继续追踪同一个 `run-r42-7` 的计划与恢复：`c2` 证明 `reject_empty_name` 预期 HTTP `400`、实际 `200`、进程退出 `1`，但单靠这些字段不能断定代码根因。
 
 以下 trace 展示运行尚未完成时，用户追加“请查代码级根因”的澄清事件，计划从 v1 修订为 v2 后才启动 P2。
 
@@ -3727,23 +3741,25 @@ plan-and-execute（先计划、再执行）适合目标可拆成若干有前提�
 
 | 阶段 | 前提与动作 | 完成条件 | 当前结果 |
 |---|---|---|---|
-| P1 核对证据 | 对照 `c1` 与 build 42 的构建身份、失败测试和原始日志引用 | 断言差异与来源匹配；结论范围不超过日志 | 已完成：能解释测试为何失败，根因仍未知 |
-| P2 补充根因证据 | 用户明确要求代码级解释后，才查本合成 fixture 中同一提交的测试契约和差异摘要 | 两份来源都对应 build 42 的目标提交，差异能解释 `c1` | 若来源不可读或版本不匹配，保留 `c1`、修订计划并报告缺口；若无法取得匹配证据，根因仍未知 |
-| P3 形成草稿 | 按已核验的观察形成工单草稿；若跳过 P2，就只引用 `c1` 并说明根因未知；运行过 P2 时才引用已核验的新来源 | 草稿目标、内容摘要和证据一致，可交审核 | 等待人工审核；此时不调用写工具 |
-| P4 提交 | 仅在该草稿摘要仍获批且权限有效时，以外部操作键 `run-r42-7:create-issue:v1` 创建工单；按接收方契约获准重放同一次写入时沿用该键 | 从应用账本核实远端 ID 或进入结果未知对账 | 由[运行恢复章](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)处理，不由模型再决定是否换键提交 |
+| P1 核对证据 | 对照 `c2` 与 build 42 的构建身份、失败测试和原始日志引用 | 断言差异与来源匹配；结论范围不超过日志 | 已完成：能解释测试为何失败；仅凭日志无法确认代码根因 |
+| P2 补充根因证据 | 用户明确要求代码级解释后，才查本合成 fixture 中同一提交的测试契约和差异摘要 | 两份来源都对应 build 42 的目标提交，差异能解释 `c2` | 已完成：`c2`、构建目标和 `c3` / `c4` 均对应 `a17d92e`，差异能解释实际 `200` |
+| P3 形成草稿 | 按已核验的观察形成工单草稿；若 P2 未能确认根因，只有当草稿可明确写“根因未知”时才可继续 | 草稿目标、内容摘要和证据一致，可交审核；未获批则停在 P3 | 待起草并送人工审核；尚未获批 |
+| P4 提交 | 仅在该草稿摘要仍获批且权限有效时，以外部操作键 `run-r42-7:create-issue:v1` 创建工单；按接收方契约获准重放同一次写入时沿用该键 | 从应用账本核实远端 ID 或进入结果未知对账 | 尚未进入：P3 尚待起草和审核；未批准、未调用写工具或创建工单 |
 
-如果任务只是“`c1` 能说明什么”，P2–P4 不需要执行；若步骤、依赖和分支事先已知，用代码控制的固定有向无环图（DAG，directed acyclic graph）更便于验收。若下一步真正依赖未知观察，执行一个步骤后再评估和修订计划；若多个短步骤都取决于逐次工具发现，也可留在单主循环，无需生成冗长计划。只有观察推翻了前提、来源版本变了、授权变化或用户目标变化，才以新版本计划保留已完成证据并调整剩余步骤。模型不能因为旧计划写过某动作，就复用过期批准或忽略权限变化。
+若 P2 的来源或版本核对失败，或同版本差异仍无法解释 `c2`，最多对构建元数据指明的目标提交再做一次限范围补读；补读后仍没有能解释 `c2` 的同版本证据，便将根因标为未知，不再无限扩展搜索。此时若待审草稿允许写明“根因未知”，可用 `c2` 进入 P3；若草稿必须包含代码根因，就停止并请求补充来源。审批拒绝或撤回同样在 P3 结束，绝不进入 P4。
 
-区分 SDK（软件开发工具包）重试、运行恢复与模型循环重复时，要为每层记录自己的身份和输入，而不是只看“工具被叫了几次”。应用标识一次模型调用，SDK 为其底层请求重试，执行进程从 checkpoint（已保存的运行状态）恢复，模型响应再提出各个工具调用；外部写入由操作键单独去重。表中的图 thread 是框架为这次图执行保存状态所用的标识。下面是这个合成任务的一段简化 trace（追踪）：
+如果任务只是“`c2` 能说明什么”，P2–P4 不需要执行；若步骤、依赖和分支事先已知，用代码控制的固定有向无环图（DAG，directed acyclic graph）更便于验收。若下一步真正依赖未知观察，执行一个步骤后再评估和修订计划；若多个短步骤都取决于逐次工具发现，也可留在单主循环，无需生成冗长计划。只有观察推翻了前提、来源版本变了、授权变化或用户目标变化，才以新版本计划保留已完成证据并调整剩余步骤。模型不能因为旧计划写过某动作，就复用过期批准或忽略权限变化。
 
-| 事件 | `runId` / 图线程与尝试 | 模型调用、SDK 次数、工具调用 | 归一化输入与状态变化 | 诊断 |
-|---|---|---|---|---|
-| 首次模型请求收到 `503`，客户端重试成功 | 同一 `run-r42-7` | 同一应用 `model_invocation_id=mi-17`，SDK attempt `1 → 2`；第二次响应首次带 `tool_call_id=c1` | 模型请求摘要相同；attempt 1 只收到 HTTP 503，未获得模型输出或工具调用 | SDK/客户端重试；每次底层传输的服务提供方 request ID 只作该次尝试的元数据，不把它当 run ID 或 `c1` |
-| `c1` 结果已持久化后，承载运行的执行进程崩溃 | 同一 run 和已保存的图 thread/checkpoint；worker attempt（工作进程执行尝试）增加 | 不创建新的模型调用或工具 ID | 检查点包含 `c1` 结果，应用重载同一观察；模型循环轮次与工具调用次数不增加 | 运行恢复；若崩溃点落在模型调用返回或节点状态提交之间，未提交步骤仍可能再执行，须按应用记录和服务契约对账 |
-| 恢复后的新模型调用再次请求读取完整 build 42 日志 | 同一 run/thread | 新 `model_invocation_id=mi-18`、新 `tool_call_id=c-reread-1` | 归一化参数仍为 `read_build_log(build_id=42)`，来源版本相同，`c1` 已在上下文，没有新增观察，也没有完成新阶段 | 不是 SDK 重试或恢复；是模型循环再次请求。按当前权限核验后可把已存结果关联到 `c-reread-1`，不必重复取数；新工具调用记录仍引用同一份旧证据。如果之后仍无新证据或状态推进，计为无进展 |
-| 用户明确追加“请查代码级根因”，计划 v1→v2；随后读取契约与差异 | 同一 `run-r42-7` / thread；启动请求摘要不变 | 新模型调用 `mi-19`；只读 `c3`、`c4` 两次 | `test-contract@commit-a17d92e` 的 `/items` 空名称测试要求 HTTP 400；同一提交的差异把 `name is None or not name.strip()` 改成 `name is None`，空字符串通过检查并返回 200，与 `c1` 相符 | 澄清后按 P2 取得两项同版本证据，才可形成代码级解释并进入 P3；单独的契约不足以声称已找出根因 |
+区分 SDK（软件开发工具包）重试、运行恢复与模型循环重复时，要为每层记录自己的身份和输入，而不是只看“工具被叫了几次”。应用标识一次模型调用，SDK 为其底层请求重试，执行进程从 checkpoint（已保存的运行状态）恢复，模型响应再提出各个工具调用；外部写入由操作键单独去重。这里的图 thread 是框架为这次图执行保存状态所用的标识。下面是这个合成任务的一段简化 trace（追踪）：
 
-如果契约或差异摘要对应的 commit 与 build 42 不匹配，P2 不算完成：保留 `c1`，修订计划去取对应 build commit 的证据；若受权限或来源限制无法核实，就明确停在“根因未知”，不从模型猜测补齐。这里的测试契约和代码差异来自同一合成 fixture；测试要求空名称返回 `400`，差异显示旧条件 `name is None or not name.strip()` 被改成 `name is None`，因此该空字符串不再被拒绝，与 `c1` 中的 `200` 对上。
+这四个事件共用 `run-r42-7` 和已保存的图 thread；下面分别看每一层的身份、输入和状态变化。
+
+1. **底层请求重试，尚未产生工具调用。** 应用模型调用 `model_invocation_id=mi-17` 的第一次请求只收到 HTTP `503`，没有模型输出。SDK attempt 从 `1` 变为 `2`，模型请求摘要不变；第二次响应才首次带回 `tool_call_id=c2`。这是同一应用模型调用的传输重试。每次传输的服务提供方 request ID 只标识该次尝试，不替代 run ID 或工具调用 ID。
+2. **执行进程恢复，已有观察不重新取得。** `c2` 结果已持久化后，执行进程崩溃；恢复时 worker attempt（工作进程执行尝试）增加。检查点包含 `c2`，应用重载同一观察，不创建新的模型调用或工具 ID，也不增加模型循环轮次和工具调用次数。若模型调用已返回、节点状态尚未提交时崩溃，未提交步骤仍可能再执行，须按应用记录和服务契约对账。
+3. **模型重复提议，调用身份新但证据没变。** 恢复后的新模型调用 `mi-18` 又提出 `tool_call_id=c-reread-1`，归一化参数仍为 `read_build_log(build_id=42)`。来源版本相同，`c2` 已在上下文，未新增观察或完成新阶段。这不是 SDK 重试或运行恢复。重新核验权限后，应用可把已存结果关联到新调用，无需重复取数；记录仍引用同一份旧证据。如果之后也无新证据或状态推进，这一轮计为无进展。
+4. **用户补充目标，新证据使计划前进。** 用户追加“请查代码级根因”，同一运行的计划从 v1 升为 v2，启动请求摘要不改写。新模型调用 `mi-19` 发起只读 `c3`（`test-contract@commit-a17d92e`）、`c4`：同一提交 `a17d92e` 的测试契约要求 `/items` 空名称返回 HTTP `400`，差异却把 `name is None or not name.strip()` 改成 `name is None`，使空字符串返回 `200`，与 `c2` 相符。主运行核对这两份同版本证据后完成 P2，才可形成代码级解释并进入 P3；单独读到契约还不够。
+
+如果契约或差异摘要对应的 commit 与 build 42 不匹配，P2 不算完成：保留 `c2`，修订计划去取对应 build commit 的证据；若受权限或来源限制无法核实，就明确停在“根因未知”，不从模型猜测补齐。这里的测试契约和代码差异来自同一合成 fixture；测试要求空名称返回 `400`，差异显示旧条件 `name is None or not name.strip()` 被改成 `name is None`，因此该空字符串不再被拒绝，与 `c2` 中的 `200` 对上。
 
 无进展由可核对的状态变化定义：例如新增且授权有效的来源观察、一个验收阶段被证据完成，或经用户确认的计划约束变化；换一种措辞、增加 token、取得一个新随机调用 ID 都不算进展。应用可以比较 run/thread、worker attempt、应用模型调用 ID、SDK attempt、工具调用 ID、规范化参数摘要、来源版本、观察集合和计划版本。
 
@@ -3761,17 +3777,17 @@ plan-and-execute（先计划、再执行）适合目标可拆成若干有前提�
 
 > [!info]- 来源
 > - **提示链、路由、并行与评估—优化等构件：** Anthropic，[Building effective agents](https://www.anthropic.com/research/building-effective-agents)，2024-12-19，“Building blocks, workflows, and agents”与“Combining and customizing these patterns”；页面提示旧工具生态描述已变化，本文只保留模式结构与适用形状。
-> - **管理者保留最终答复与专家接管：** OpenAI，[Orchestration and handoffs](https://developers.openai.com/api/docs/guides/agents/orchestration)，核对日期：2026-11-06，当前 Agents SDK 文档“Choose the orchestration pattern”，区分 handoffs 与 agents as tools，并建议为专家设窄职责；代码接口属于该 SDK。
-> - **独立子任务与结果合同：** OpenAI，[Multi-agent](https://developers.openai.com/api/docs/guides/agents-api/multi-agent)，核对日期：2026-11-06，当前 Agents API beta 文档“When to use subagents”，建议把独立工作并行处理、为任务写清问题与预期结果，并让短任务和依赖步骤留在主智能体；文中的 `agent.multi_agent.enabled` 属于此 API 的配置。
+> - **管理者保留最终答复与专家接管：** OpenAI，[Orchestration and handoffs](https://developers.openai.com/api/docs/guides/agents/orchestration)，核对日期：2026-11-12，当前 Agents SDK 文档“Choose the orchestration pattern”，区分 handoffs 与 agents as tools，并建议为专家设窄职责；代码接口属于该 SDK。
+> - **独立子任务与结果合同：** OpenAI，[Multi-agent](https://developers.openai.com/api/docs/guides/agents-api/multi-agent)，核对日期：2026-11-12，当前 Agents API beta 文档“When to use subagents”，建议把独立工作并行处理、为任务写清问题与预期结果，并让短任务和依赖步骤留在主智能体；文中的 `agent.multi_agent.enabled` 属于此 API 的配置。
 > - **开放式研究中的并行工作：** Anthropic，[How we built our multi-agent research system](https://www.anthropic.com/research/multi-agent-research-system)，2025-06-13，“Benefits of a multi-agent system”及“Production reliability and engineering challenges”；这是 Anthropic Research 功能的工程经验，来源也强调协调、评估与可靠性挑战。
 > - **单循环与折叠子智能体的部署经验：** Anthropic，[Building agents: When to fold subagents into your main agent loop](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)，2026-10-22，“Using an agent loop with progressive disclosure”“Task-completion evals”；报告基于 Anthropic 的若干企业部署对照，不是普遍因果结论。
 > - **技能与渐进式披露：** Anthropic，[Equipping agents for the real world with Agent Skills](https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills)，2025-10-16，2025-12-18 更新称其为开放标准；“The anatomy of a skill”“Skills and the context window”说明技能目录包含 `SKILL.md`、脚本和资源，并按需载入。
 > - **异步工作者与可组合产物：** Shah et al., [GitSwarm: Decentralized Compounding Inference](https://arxiv.org/html/2610.04862v1)，arXiv v1，2026-10-04，§§2.1–2.5、§3 和 §4；工作者运行在特定长程问题求解与 GPU 研究任务中，发布验证不代表产物正确。本文只借其持久、可追溯的中间产物设计作为架构例子。
-> - **workflow 与 agent 的控制权、可观察图流程：** LangGraph，[Workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)，截至 2026-11-09 检查；本文的固定步骤/模型决策取舍与之对应，计划状态表和 no-progress 门槛是应用层设计。
-> - **Agent loop 内的 middleware 及可自定义重试钩子：** LangChain，[Middleware overview](https://docs.langchain.com/oss/python/langchain/middleware/overview)，截至 2026-11-09 检查；`wrap_model_call` 可控制 handler 调用次数，故 SDK 与 middleware 需分别观测，不能把不同层重试合成一个次数。
+> - **workflow 与 agent 的控制权、可观察图流程：** LangGraph，[Workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)，核对日期：2026-11-12；本文的固定步骤/模型决策取舍与之对应，计划状态表和 no-progress 门槛是应用层设计。
+> - **Agent loop 内的 middleware 及可自定义重试钩子：** LangChain，[Middleware overview](https://docs.langchain.com/oss/python/langchain/middleware/overview) 的“The agent loop”“Use middleware inside a LangGraph workflow”，及[Custom middleware](https://docs.langchain.com/oss/python/langchain/middleware/custom) 的“Wrap-style hooks”，核对日期：2026-11-12；`wrap_model_call` 可将 handler 调用零次、一次或多次，故应分别观测 SDK 重试与 middleware 重试。
 > - **协调事实与共享约定：** Hayler et al., [Zero-Shot Coordination among LLM Agents](https://arxiv.org/html/2611.06409v1)，arXiv v1，2026-11-04，§2 Figure 1、§3、§4 与 §§6–7；Cat & Dog 的收益和两种不兼容灯光约定见 Figure 1 和 §4，`text agents` / `code agents` 的定义见 §3。实验覆盖论文的最小协调环境；CFD 是自然语言的一般协调原则，不是字段 schema 或生产工具协议。
-> - **Agent SDK 复用循环与工具：** Anthropic，[Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview)，滚动官方文档，核验 2026-11-11，“Compare the Agent SDK to other Claude tools”与“Capabilities”；SDK 提供 Claude Code 的工具和循环，并列出 sessions、permissions、hooks、subagents、MCP 等能力。本文只据此说明可复用执行层，不推断其替应用实现领域授权。
-> - **CLI 的执行范围：** OpenAI，[Codex CLI](https://learn.chatgpt.com/docs/codex/cli)，滚动官方文档，核验 2026-11-11，“Work against your local repository”“Use skills and plugins”“Connect external tools with MCP”；CLI 可用本机已安装工具并连接外部能力，仍需宿主为具体领域工具实现授权与业务契约。
+> - **Agent SDK 复用循环与工具：** Anthropic，[Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview)，滚动官方文档，核验 2026-11-12，“Compare the Agent SDK to other Claude tools”与“Capabilities”；SDK 提供 Claude Code 的工具和循环，并列出 sessions、permissions、hooks、subagents、MCP 等能力。本文只据此说明可复用执行层，不推断其替应用实现领域授权。
+> - **CLI 的执行范围：** OpenAI，[Codex CLI](https://learn.chatgpt.com/docs/codex/cli)，滚动官方文档，核验 2026-11-12，“Work against your local repository”“Use skills and plugins”“Connect external tools with MCP”；CLI 可用本机已安装工具并连接外部能力，仍需宿主为具体领域工具实现授权与业务契约。
 > - **共享购物状态与业务 handoff 的边界：** Anthropic，[A guide to the anatomy of effective commerce agents](https://claude.com/resources/articles/the-anatomy-of-effective-commerce-agents)，2026-09-02，“Skills, not subagents”“System prompt or skill: decide by frequency”“handoff”；这是商业 agent 场景的工程报告，不能据此推断跨领域路由阈值或普遍质量收益。
 ## 21. 生产 AI 如何阻止不可信内容诱导模型越权？
 
