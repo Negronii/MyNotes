@@ -1323,31 +1323,21 @@ ORDER BY c.customer_id;
 > - WHERE、GROUP BY、HAVING 顺序与聚合函数的非空输入规则：[PostgreSQL 18, Table Expressions](https://www.postgresql.org/docs/18/queries-table-expressions.html)，§7.2.2–7.2.3 与 [Aggregate Functions](https://www.postgresql.org/docs/18/functions-aggregate.html)，§9.21；SQLite [Aggregate Functions](https://www.sqlite.org/lang_aggfunc.html)，核对于 2026-11-06。
 ## 8. 如何用约束保护业务规则并为读取建立索引？
 
-**案例：** 报表服务接收账户 acct-17 的幂等请求 report-demo-208，生成任务 job-demo-731，并按账户读取最近任务状态。数据库要让每个合法操作最多对应一行、外键有真实目标、库存不能为负；读取路径还需在任务增多后可控。约束是所有写入方共享的正确性规则；索引是为某些查询维护的访问路径，只有当计划器判断成本合适时才会选择。
+**案例：** 报表服务接收账户 `acct-17`、主体 `user-17` 的幂等请求 `report-demo-208`，持久化任务 `job-demo-731`，之后按账户读取最近任务。数据库要保证库存不可为负、外键指向真实父行、同一作用域的报表键最多对应一行；读取任务列表时，索引则提供一个可能更省成本的路径。
 
-~~~mermaid
-flowchart TD
-    Write[API / relay / worker 写入] --> Rules{约束成立？}
-    Rules -->|否| Reject[拒绝写入，事务不提交]
-    Rules -->|是| Store[提交业务状态]
-    Query[读取请求] --> Planner[计划器估算候选路径]
-    Planner -->|估计省成本| Index[使用索引]
-    Planner -->|扫描更划算| Scan[顺序扫描或其他计划]
-    Index --> Rows[按条件返回行]
-    Scan --> Rows
-~~~
+本页的业务 schema 与索引说明以 **PostgreSQL 18** 为准；前一篇库存事务明确使用 PostgreSQL 18 Read Committed。这里的 `report-demo-208` 是报表操作键，`reserve-demo-208` 是另一篇库存案例的操作键，两者只是合成标识，不代表同一次业务操作。约束是所有写入方共享的数据规则；索引是需额外维护的查询结构，是否采用由计划器按成本决定。
 
 ### 先把不变量放在数据库边界
 
-应用输入校验能及时给用户更友好的错误；数据库约束也要校验每一次写入，防止另一个 API、定时任务或人工脚本绕开这次校验后破坏已提交数据。以下业务 schema 以 PostgreSQL 18 为例；后面的 SQLite 计划演示独立建表，不声称同一 DDL 在两个引擎上有相同类型和外键语义。primary key (主键) 唯一标识行；unique constraint (唯一约束) 防止某组键重复；foreign key (外键) 要求被引用的父键存在；NOT NULL constraint (非空约束) 阻止缺值；CHECK constraint (检查约束) 限制每一行必须满足的布尔条件。
+下面是一个**独立教学 schema**：它包含库存案例中的 `inventory` 与 `reservations`，并额外加入 `accounts` 父表及 `reservations.account_id` 外键，说明账户、SKU 和报表任务如何关联。不要在已按库存篇创建过同名表的数据库里原样重跑这些 `CREATE TABLE`。本例的 `principal_id` 是存储的作用域值，没有主体表外键；身份认证和访问授权不由这个字段或外键自动完成。
 
 ~~~sql
 CREATE TABLE accounts (
-    account_id TEXT PRIMARY KEY NOT NULL
+    account_id TEXT PRIMARY KEY
 );
 
 CREATE TABLE inventory (
-    sku TEXT PRIMARY KEY NOT NULL,
+    sku TEXT PRIMARY KEY,
     available INTEGER NOT NULL CHECK (available >= 0)
 );
 
@@ -1362,7 +1352,7 @@ CREATE TABLE reservations (
 );
 
 CREATE TABLE report_jobs (
-    job_id TEXT PRIMARY KEY NOT NULL,
+    job_id TEXT PRIMARY KEY,
     account_id TEXT NOT NULL REFERENCES accounts(account_id),
     principal_id TEXT NOT NULL,
     idempotency_key TEXT NOT NULL,
@@ -1371,23 +1361,86 @@ CREATE TABLE report_jobs (
         status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')
     ),
     created_at TIMESTAMPTZ NOT NULL,
-    UNIQUE (account_id, principal_id, idempotency_key)
+    CONSTRAINT report_jobs_idempotency_scope_key
+        UNIQUE (account_id, principal_id, idempotency_key)
 );
 
 INSERT INTO accounts (account_id) VALUES ('acct-17');
 INSERT INTO inventory (sku, available) VALUES ('SKU-7', 1);
 ~~~
 
-这里三种规则解决不同问题：available 的 CHECK 禁止负库存；reservation 的外键确保账户和 SKU 存在；report_jobs 的复合唯一键把同一账户、同一主体、同一幂等键限定为同一个逻辑提交。插入 acct-17 账户父行与 SKU-7 后，才有合法值可供 reservation 引用。键列是 NOT NULL，避免缺值绕过该业务比较。创建时间使用 TIMESTAMPTZ 表示绝对时间，不能把不同本地时区格式的任意 TEXT 直接按字典序当作时间顺序。任务 job-demo-731 可以在 queued 到 running 再到 succeeded 等已定义状态间变化，但 CHECK 只限制允许取值，并不单独验证转移顺序；转移需要由带前置状态的 UPDATE 或其他并发控制实现。ON DELETE CASCADE 是另一项独立的生命周期规则，只有业务确实要求删父行时也删掉关联子行才应选择；它不会默认发生。
+![关系图仅列出键和约束相关字段：账户与库存为父表，箭头指向预留或报表任务的外键列；reservations 的 principal_id 属于复合主键，report_jobs 的 principal_id 属于作用域唯一键，两者都没有主体外键](../../engineering-foundations/databases/resources/database-constraints-and-indexes-schema.svg)
 
-> [!info] CHECK 不一定拒绝 NULL
-> 在 PostgreSQL 中，CHECK 表达式只在结果为 FALSE 时拒绝行；结果为 TRUE 或 NULL 都满足约束。因此 CHECK (available >= 0) 若允许 available 为 NULL，并不能表达“必须有非负库存”。需要 NOT NULL 与 CHECK 一起约束。SQLite 还使用动态类型，普通 INTEGER 列可能存入文本；若要用 SQLite 验证同一强类型不变量，应启用 STRICT 表或加显式类型检查。SQLite 外键也必须在每个连接执行 PRAGMA foreign_keys = ON。
+约束分别保护不同的不变量：
+
+| 要保护的事实 | 示例约束 | 它能保证什么 |
+| --- | --- | --- |
+| 每个账户、SKU、任务 ID 只对应一行 | `PRIMARY KEY` | 主键是唯一且非空的行标识；即使显式省略 `NOT NULL`，PostgreSQL 主键列也不接受 NULL。 |
+| 库存有已知、非负的数值 | `available NOT NULL CHECK (available >= 0)` | 两条规则须并用：CHECK 结果为 TRUE 或 NULL 都算通过，单独 CHECK 不能拒绝 NULL。 |
+| 子记录引用已有账户或 SKU | `REFERENCES` | 本例引用父表主键所标识的已有行。默认删除动作是 `NO ACTION`；级联删除须显式声明。 |
+| 每个作用域操作键最多保存一条记录 | 复合主键或 `UNIQUE` | `reservations` 用复合主键；`report_jobs` 用任务 ID 主键和操作作用域唯一约束。 |
+| 状态值来自允许集合 | `CHECK (status IN (...))` | 只限制当前值，不验证 `queued → running → succeeded` 之类的转移顺序。 |
+
+PostgreSQL 的 `UNIQUE` 默认把含 NULL 的键视作彼此不同；需要把 NULL 也视为相同键时可用 `NULLS NOT DISTINCT`。此 schema 中唯一键每列都声明为 `NOT NULL`，因此操作键比较没有这个歧义。主键和唯一约束会自动建立唯一 B-tree 索引，不要再为相同键重复建一个索引。外键会使用父表主键/唯一键的索引查找父行；PostgreSQL 不会自动为子表的外键列建索引。这里的 `reservations` 主键和 `report_jobs` 作用域唯一索引都以 `account_id` 开头，已有索引可用于账户前缀查找和父账户变更时的子行检查。`reservations.sku` 不在主键索引中；若按 SKU 查预留或删除/更新库存 SKU 时需检查大量子行，可按负载评估单独的 `reservations(sku)` 索引。
+
+CHECK 表达式检查的是当前行，不能可靠表达跨行或跨表不变量；应优先使用 UNIQUE、外键等约束，或把需要协调的写入放进合适的事务协议。`created_at TIMESTAMPTZ` 表示一个时间点：带时区的输入会换算后按 UTC 存储，原时区标签不保留，输出按会话时区显示；混合格式的本地时间文本不能直接当作可靠时间顺序。
+
+在本例 DDL 中，唯一和外键约束未声明 `DEFERRABLE`，因此使用 PostgreSQL 默认的立即检查方式；CHECK 与 NOT NULL 在行插入或更新时立即检查。显式事务里若立即约束报错，当前事务进入失败状态，应用需回滚，或回滚到先前建立的 savepoint，才能继续执行。不能把这句话泛化到所有数据库：例如 SQLite 默认的 ABORT 冲突策略撤销失败语句的更改，但保留同一事务中之前语句的更改。
+
+幂等键的唯一约束只裁决“最多一行”，本身不规定重放返回什么。报表 API 的应用契约是：成功持久化的任务才绑定键；已接受请求以相同键、相同参数重放时，返回已存任务 `job-demo-731` 及其当前状态查询入口；同键不同 `period` 或 `format` 则返回参数冲突。若并发请求先查无记录，那个语句快照只说明当时没有可见的已提交行，不能证明另一个事务尚未提交的任务不存在；最终由写入约束裁决。
+
+例如，任务首次写入时，下面的 `INSERT` 是一条语句，其 `$1` 到 `$5` 由该语句单独绑定：
+
+~~~sql
+BEGIN ISOLATION LEVEL READ COMMITTED;
+INSERT INTO report_jobs
+    (job_id, account_id, principal_id, idempotency_key,
+     request_fingerprint, status, created_at)
+VALUES ($1, $2, $3, $4, $5, 'queued', now());
+COMMIT;
+~~~
+
+本例首次 `INSERT` 的绑定为 `$1 = job-demo-731`、`$2 = acct-17`、`$3 = user-17`、`$4 = report-demo-208`、`$5 = fingerprint-A`。以下并发重放分支假设 B 为本次尝试生成新的候选任务 ID `job-demo-732`；它与 A 的其他作用域参数、指纹相同：
+
+~~~sql
+BEGIN ISOLATION LEVEL READ COMMITTED;
+INSERT INTO report_jobs
+    (job_id, account_id, principal_id, idempotency_key,
+     request_fingerprint, status, created_at)
+VALUES ($1, $2, $3, $4, $5, 'queued', now());
+-- 这里是 B 并发 INSERT；A 的同键 INSERT 尚未提交。
+~~~
+
+B 这条 `INSERT` 的独立绑定是 `$1 = job-demo-732`、`$2 = acct-17`、`$3 = user-17`、`$4 = report-demo-208`、`$5 = fingerprint-A`。A 和 B 的 INSERT 是两条语句，各自从 `$1` 开始绑定；B 使用新的候选任务 ID，让此例只考察作用域键唯一约束。
+
+| A 的事务结果 | B 等待中的 INSERT | B 接下来做什么 |
+| --- | --- | --- |
+| A 提交 `job-demo-731` | B 收到 `report_jobs_idempotency_scope_key` 冲突 | 回滚 B 的失败事务，再开新事务按作用域键回查。 |
+| A 回滚 | 唯一键冲突消失，B 的 INSERT 可成功 | 提交 B 的事务，键绑定到 `job-demo-732`。 |
+
+只有明确识别为 `report_jobs_idempotency_scope_key` 的冲突才是同键重放的查询线索。`job_id` 主键冲突也会产生 SQLSTATE `23505`，但它是任务 ID 冲突，不能仅凭同一错误码当作同键重放；应用应检查 PostgreSQL 错误诊断中的约束名。即使作用域键冲突，也要回查指纹才能区分重放与换参数。
+
+若 B 因作用域唯一键冲突，先回滚失败事务，再在新事务回查。查询是另一条语句，重新从 `$1` 开始绑定账户、主体和操作键；SQL 位置参数不会跨语句共享一组编号。
+
+~~~sql
+ROLLBACK;
+
+BEGIN ISOLATION LEVEL READ COMMITTED;
+SELECT job_id, request_fingerprint, status, created_at
+FROM report_jobs
+WHERE account_id = $1
+  AND principal_id = $2
+  AND idempotency_key = $3;
+COMMIT;
+~~~
+
+这条 recovery `SELECT` 的绑定独立为 `$1 = acct-17`、`$2 = user-17`、`$3 = report-demo-208`。本例重放结论假定重放窗口内绑定行仍被保留、作用域键未变。A 已提交时读到的是现有 `job-demo-731`，不是第二条已提交记录；同指纹复用该任务，异指纹返回参数冲突。若 A 回滚，B 的 INSERT 可继续而无需读到 A 的记录。具体 HTTP 重放与响应丢失契约见[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)；库存的键绑定和失败不占键见[两个请求争夺最后一件库存时，怎样保证只预留一次？](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F)。
 
 ### 复合索引怎样配合任务列表？
 
-报表所有者查询账户 acct-17 最近 20 个任务，按创建时间倒序；同一时间戳时用任务 ID 决定稳定顺序：
+调用方已获得查看账户 `acct-17` 全部任务的授权，现在读取该账户最近 20 个任务，同一创建时间用任务 ID 决定稳定顺序：
 
-~~~
+~~~sql
 CREATE INDEX report_jobs_by_account_recent
     ON report_jobs (account_id, created_at DESC, job_id DESC);
 
@@ -1398,15 +1451,53 @@ ORDER BY created_at DESC, job_id DESC
 LIMIT 20;
 ~~~
 
-B-tree index (B 树索引) 按键列的顺序保存索引项。查询中的 $1 是 PostgreSQL 驱动绑定的账户参数。第一个键 account_id 是等值条件，后两列直接提供稳定排序，因此这个复合索引可能同时缩小扫描范围并避免额外排序。把 account_id 去掉或调到末尾后，索引就不能同样直接定位某账户的那段连续键范围。索引的列序需从真实过滤条件与排序推导；字段多并不自动更快。
+这条查询自己的 `$1` 绑定为 `acct-17`。B-tree 按复合键的字典序排列：前导列 `account_id` 的等值条件通常最有效，能直接定位这个账户的键区间；`created_at DESC, job_id DESC` 随后给出该区间内要求的次序和稳定并列顺序。
 
-UNIQUE (account_id, principal_id, idempotency_key) 通常会让数据库同时维护一条唯一索引来阻止重复键。外键查父表需要主键或唯一键，但在 PostgreSQL 中，创建外键并不会自动为子表引用列建立索引；删除账户或查某账户预留时，是否需要相应的子表索引取决于数据量与访问模式。索引只能缩短查询路径，不能替代业务授权；在服务端依然须先检查调用者是否可见任务或预留。
+| 索引键 | 查询中的作用 | 本例边界 |
+| --- | --- | --- |
+| `account_id` | `WHERE account_id = $1` 限定账户区间 | PostgreSQL 18 的多列 B-tree 也能利用非前导列条件或 skip scan；只是前导列等值条件通常更直接、更有效。 |
+| `created_at DESC` | 在账户范围内按最近时间先读 | 匹配的 B-tree 可以避免另做排序，但计划器仍会比较它与顺序扫描加排序的成本。 |
+| `job_id DESC` | 为相同时间的任务提供确定顺序 | 查询排序须与索引能够提供的列序和方向匹配；B-tree 也可反向扫描，不要求索引声明与查询方向逐字相同。 |
+| `status` | 只在 SELECT 输出 | 本索引没有 `status`，需要从表行取值；它不是覆盖该查询的索引。 |
+
+若计划器选择匹配的索引，`LIMIT 20` 可在收集到 20 条可见结果后停止继续取行；MVCC 可见性等条件可能使它检查多于 20 个索引项。它不保证只读前 20 个物理项，也不保证计划器必选索引。若查询需读取整表很大比例，顺序读表再排序可能更便宜。
+
+索引列序应从过滤和排序需求推导，字段越多不等于越快。每个索引占磁盘和缓存，并增加写入和后续清理的维护成本；给表加索引后还需用目标数据库的真实数据、统计信息与 `EXPLAIN` 检查查询计划。`EXPLAIN ANALYZE` 会实际执行语句，评估有写入副作用的语句时要考虑它真的会改数据。
 
 ### 计划器为什么有时不用已建索引？
 
-索引会占用磁盘和缓存，也会增加 INSERT、UPDATE、DELETE 时维护条目的工作。若查询预计读取表的大部分行，顺序扫描可能比逐个索引查找再回表便宜。query planner (查询计划器) 会根据表规模、分布、统计信息、谓词和输出列估算成本；估算和选择会随引擎、版本、数据与统计而变。必须用目标引擎的 EXPLAIN 检查代表性查询，不能以“索引存在”推断性能已提升。
+计划器比较不同访问路径的估算成本，不会因为索引存在就必定选它。前面的 PostgreSQL 列表索引已建好后，本机 PostgreSQL 14.24 两行小表的计划器估算后选择了顺序扫描加排序；数据、统计信息、目标版本都会影响计划。接着保留一个独立 SQLite 教学库：它的 `orders` 与下一篇 NULL / join 章节的同名表结构不同，需分别建表。这里合成 1,000 个订单，`customer_id = 17` 对应 10 行（`order_id` 为 17、117、……、917），再观察索引前后的查询计划。
 
-下面在独立 SQLite 教学库保留一个计划复现：它与 NULL 章节同名的 customers、orders 表结构不同，需分别建表。这里创建 1,000 个合成订单，按一个客户筛选并按时间倒序；先检查无索引计划，再加 customer_id、placed_at 复合索引并检查。可见行数、统计信息和版本都会影响输出；本例实测计划只说明这组 SQLite 数据上的选择。
+> [!example]- 两行表上已有索引但仍选择顺序扫描（本地 PostgreSQL 14.24）
+> 下面的两条任务插入到前面刚创建的 `report_jobs` 教学表；复现时表中只有这两行，查询用字面量绑定账户值：
+>
+> ~~~sql
+> INSERT INTO report_jobs VALUES
+>     ('job-demo-731', 'acct-17', 'user-17', 'report-demo-208',
+>      'fingerprint-A', 'queued', '2026-11-10 12:00:00+00'),
+>     ('job-demo-730', 'acct-17', 'user-17', 'report-demo-207',
+>      'fingerprint-B', 'running', '2026-11-11 12:00:00+00');
+> ANALYZE report_jobs;
+>
+> EXPLAIN (COSTS OFF)
+> SELECT job_id, status, created_at
+> FROM report_jobs
+> WHERE account_id = 'acct-17'
+> ORDER BY created_at DESC, job_id DESC
+> LIMIT 20;
+> ~~~
+>
+> 本机实际计划：
+>
+> ~~~text
+> Limit
+>   ->  Sort
+>         Sort Key: created_at DESC, job_id DESC
+>         ->  Seq Scan on report_jobs
+>               Filter: (account_id = 'acct-17'::text)
+> ~~~
+>
+> 对这两行表，PostgreSQL 14.24 的计划器估算后仍选了 `Seq Scan → Sort`，虽然匹配过滤和排序的索引已经存在。这是该版本、数据集和统计信息下的一次实际计划，不表示测得顺序扫描耗时更低，也不代表 PostgreSQL 18 或更大数据集会作出相同选择。
 
 > [!example]- 用 1,000 个合成订单观察索引计划
 > ~~~sql
@@ -1430,7 +1521,7 @@ UNIQUE (account_id, principal_id, idempotency_key) 通常会让数据库同时�
 > FROM orders
 > WHERE customer_id = 17
 > ORDER BY placed_at DESC;
-> -- 本地输出：SCAN orders；USE TEMP B-TREE FOR ORDER BY
+> -- SQLite 3.51.0：SCAN orders；USE TEMP B-TREE FOR ORDER BY
 >
 > CREATE INDEX orders_by_customer_and_time
 >     ON orders(customer_id, placed_at);
@@ -1440,19 +1531,22 @@ UNIQUE (account_id, principal_id, idempotency_key) 通常会让数据库同时�
 > FROM orders
 > WHERE customer_id = 17
 > ORDER BY placed_at DESC;
-> -- 本地输出：SEARCH orders USING INDEX orders_by_customer_and_time (customer_id=?)
+> -- SQLite 3.51.0：SEARCH orders USING INDEX orders_by_customer_and_time (customer_id=?)
 > ~~~
-> SQLite 3.51.0 的本地复现用于观察查询计划；不同 SQLite 版本、统计状态及不同规模的数据可能选择其他计划。PostgreSQL 的 EXPLAIN ANALYZE 会实际执行语句并报告观察到的耗时与行数，评估有写入副作用的语句前须先考虑它会真的执行。
 
-本次计划回放观察到的变化是访问路径和排序步骤：从全表 SCAN 加临时 B-tree 排序，变成按 customer_id 的索引 SEARCH。它没有量出端到端耗时，因此只能说明 SQLite 为这组数据选择了不同计划，不能据此声称实际延迟必然下降；amount_cents 不在索引键中，这条读取也不是覆盖索引。
+本地 SQLite 3.51.0 实际输出显示：无索引时全表 `SCAN` 并用临时 B-tree 排序；创建 `(customer_id, placed_at)` 后改为按 `customer_id` 的索引 `SEARCH`，在等值筛出的客户区间内按索引反向读取以满足 `placed_at DESC`。这验证了该引擎、该数据集上的路径和排序变化，不是 PostgreSQL 的计划，也没有测量查询耗时或证明端到端延迟必然下降。查询取出 `amount_cents`，但索引不含该列，所以也不是覆盖索引。SQLite 的 `EXPLAIN QUERY PLAN` 输出是面向调试的描述，版本升级时格式可能变化。
 
-**接下来：** 唯一键为操作结果提供重放边界；具体怎样原子提交与处理并发见[事务隔离与 WAL 能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。SQL 空值、连接与聚合对结果行的影响见[NULL、连接与分组如何改变报表 42 的结果？](#7.%20SQL%20%E7%A9%BA%E5%80%BC%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E6%8A%A5%E8%A1%A8%2042%20%E7%9A%84%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+**接下来：** 事务如何将扣库存与操作记录一起提交，见[事务隔离与预写日志能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。NULL、外连接与聚合会如何改变报表行数，见[SQL 空值、连接与分组会怎样改变报表 42 的结果？](#7.%20SQL%20%E7%A9%BA%E5%80%BC%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E6%8A%A5%E8%A1%A8%2042%20%E7%9A%84%E7%BB%93%E6%9E%9C%EF%BC%9F)。
 
 > [!info]- 来源
-> - CHECK、NOT NULL、主键、唯一键与外键：[PostgreSQL 18, Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html)，§5.5；特别是 CHECK 的 TRUE/NULL 行为，核对于 2026-11-06。
-> - 复合 B-tree 的前导列条件与索引开销：[PostgreSQL 18, Indexes](https://www.postgresql.org/docs/18/indexes.html)，§11.1、§11.3；排序：[Indexes and ORDER BY](https://www.postgresql.org/docs/18/indexes-ordering.html)，§11.4；核对于 2026-11-06。
-> - 计划估算与实际执行的区别：[PostgreSQL 18, EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html)，核对于 2026-11-06。
-> - SQLite 外键与查询计划：[SQLite Foreign Key Support](https://www.sqlite.org/foreignkeys.html) 与 [EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html)，核对于 2026-11-06。
+> - 主键、唯一、外键、删除动作和 CHECK/NULL 语义：[PostgreSQL 18, Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html)，§5.5；`TIMESTAMPTZ` 的输入、存储与显示：[Date/Time Types](https://www.postgresql.org/docs/18/datatype-datetime.html)，§8.5，核对于 2026-11-11。
+> - 可延迟约束类型与立即检查边界：[PostgreSQL 18, SET CONSTRAINTS](https://www.postgresql.org/docs/18/sql-set-constraints.html)，核对于 2026-11-11。
+> - 显式事务的原子性与失败后 `ROLLBACK` / savepoint 边界：[PostgreSQL 18, Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html)，§3.4；[ROLLBACK](https://www.postgresql.org/docs/18/sql-rollback.html)，核对于 2026-11-11。
+> - 唯一索引检查会等待未提交竞争者并按其提交/回滚结果重检：[PostgreSQL 18, Index Uniqueness Checks](https://www.postgresql.org/docs/18/index-unique-checks.html)，§63.5；唯一违规可读取约束名等错误诊断字段，PK 与 UNIQUE 冲突都属 `23505`：[Error Codes](https://www.postgresql.org/docs/18/errcodes-appendix.html)，Appendix A，核对于 2026-11-11。
+> - 报表任务 API 的同键重放、指纹与查询入口契约：[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)，库存键策略另见[库存事务页](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F)。
+> - 多列 B-tree 的前导列、后续列与 skip scan：[PostgreSQL 18, Multicolumn Indexes](https://www.postgresql.org/docs/18/indexes-multicolumn.html)，§11.3；索引排序和 `ORDER BY` / `LIMIT`：[Indexes and ORDER BY](https://www.postgresql.org/docs/18/indexes-ordering.html)，§11.4，核对于 2026-11-11。
+> - 索引维护成本与计划器取舍：[PostgreSQL 18, Indexes](https://www.postgresql.org/docs/18/indexes.html)，§11.1；索引更新和统计信息：[Indexes Introduction](https://www.postgresql.org/docs/18/indexes-intro.html)，§11.1；估算计划和实际执行的区别：[EXPLAIN](https://www.postgresql.org/docs/18/sql-explain.html)，核对于 2026-11-11。
+> - SQLite 默认 ABORT 的语句级回滚范围：[SQLite, The ON CONFLICT Clause](https://www.sqlite.org/lang_conflict.html)；`SCAN`、`SEARCH` 和计划输出格式边界：[EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html)；多列索引同时筛选和排序：[Query Planning](https://www.sqlite.org/queryplanner.html)，§§2.2、3.1，核对于 2026-11-11。
 ## 9. 事务隔离与预写日志能保证什么？
 
 **案例：** 报表系统中的两条请求同时预留 SKU-7 的最后一件库存，初始 available = 1。事务要把库存扣减和 reserve-demo-208 结果记录一起提交。随后连接超时只会让调用方不知道结果，数据库是否提交仍由持久记录决定。要分析这个过程，需分清一组语句的提交边界、并发事务看到的版本，以及写前日志 (write-ahead log, WAL) 在崩溃后能够恢复的状态。

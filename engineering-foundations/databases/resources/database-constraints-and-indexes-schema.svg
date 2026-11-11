@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="schema-title schema-desc">
+  <title id="schema-title">Database relation map</title>
+  <desc id="schema-desc">The diagram shows key and constraint columns. Accounts and inventory are parent tables; arrows point from account_id and sku parent keys to their referencing child columns. Reservations use account_id, principal_id, and idempotency_key as a primary key. Report jobs have a unique scoped operation key and a separate job_id primary key. The principal_id fields participate in those composite keys but have no principal foreign key.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,1 L10,6 L1,11" fill="none" stroke="#3b5b72" stroke-width="1.7"/>
+    </marker>
+    <style>
+      .canvas { fill: #f7f9fc; }
+      .table { fill: #fff; stroke: #b8c7d6; stroke-width: 2.5; }
+      .head { fill: #e7eff8; }
+      .line { stroke: #c7d2de; stroke-width: 1.5; }
+      .edge { fill: none; stroke: #3b5b72; stroke-width: 3; marker-end: url(#arrow); }
+      .edge-secondary { fill: none; stroke: #527664; stroke-width: 3; marker-end: url(#arrow); }
+      .t { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #1f2937; }
+      .name { font-size: 34px; font-weight: 700; }
+      .col { font-size: 28px; }
+      .tag { font-size: 28px; font-weight: 700; fill: #34536a; }
+      .note { font-size: 28px; fill: #475569; }
+    </style>
+  </defs>
+  <rect class="canvas" x="0" y="0" width="1600" height="980" rx="20"/>
+
+  <!-- Parent keys point to the corresponding referencing child columns. -->
+  <path class="edge" d="M560 294 H630 V620 H700"/>
+  <path class="edge-secondary" d="M560 685 H650 V782 H700"/>
+  <path class="edge" d="M560 294 H660 V45 H960 V246 H990"/>
+
+  <!-- Parent tables -->
+  <g>
+    <rect class="table" x="80" y="170" width="480" height="260" rx="13"/>
+    <path class="head" d="M93 170 H547 Q560 170 560 183 V230 H80 V183 Q80 170 93 170Z"/>
+    <line class="line" x1="80" y1="230" x2="560" y2="230"/>
+    <text class="t name" x="112" y="214">accounts</text>
+    <text class="t col" x="112" y="294">account_id</text><text class="t tag" x="530" y="294" text-anchor="end">PK</text>
+    <text class="t note" x="112" y="365">one row per account</text>
+  </g>
+  <g>
+    <rect class="table" x="80" y="555" width="480" height="270" rx="13"/>
+    <path class="head" d="M93 555 H547 Q560 555 560 568 V615 H80 V568 Q80 555 93 555Z"/>
+    <line class="line" x1="80" y1="615" x2="560" y2="615"/>
+    <text class="t name" x="112" y="599">inventory</text>
+    <text class="t col" x="112" y="685">sku</text><text class="t tag" x="530" y="685" text-anchor="end">PK</text>
+    <text class="t col" x="112" y="755">available</text><text class="t tag" x="530" y="755" text-anchor="end">NOT NULL + CHECK</text>
+  </g>
+
+  <!-- Child tables -->
+  <g>
+    <rect class="table" x="700" y="500" width="650" height="445" rx="13"/>
+    <path class="head" d="M713 500 H1337 Q1350 500 1350 513 V560 H700 V513 Q700 500 713 500Z"/>
+    <line class="line" x1="700" y1="560" x2="1350" y2="560"/>
+    <text class="t name" x="732" y="544">reservations</text>
+    <text class="t col" x="732" y="620">account_id</text><text class="t tag" x="1320" y="620" text-anchor="end">FK · part of PK</text>
+    <text class="t col" x="732" y="674">principal_id</text><text class="t tag" x="1320" y="674" text-anchor="end">part of PK · no FK</text>
+    <text class="t col" x="732" y="728">idempotency_key</text><text class="t tag" x="1320" y="728" text-anchor="end">part of PK</text>
+    <text class="t col" x="732" y="782">sku</text><text class="t tag" x="1320" y="782" text-anchor="end">FK</text>
+    <text class="t col" x="732" y="836">status</text><text class="t tag" x="1320" y="836" text-anchor="end">NOT NULL + CHECK</text>
+    <text class="t note" x="732" y="883">PK (account_id, principal_id,</text>
+    <text class="t note" x="732" y="919">idempotency_key)</text>
+  </g>
+  <g>
+    <rect class="table" x="990" y="70" width="550" height="405" rx="13"/>
+    <path class="head" d="M1003 70 H1527 Q1540 70 1540 83 V130 H990 V83 Q990 70 1003 70Z"/>
+    <line class="line" x1="990" y1="130" x2="1540" y2="130"/>
+    <text class="t name" x="1022" y="114">report_jobs</text>
+    <text class="t col" x="1022" y="190">job_id</text><text class="t tag" x="1510" y="190" text-anchor="end">PK</text>
+    <text class="t col" x="1022" y="246">account_id</text><text class="t tag" x="1510" y="246" text-anchor="end">FK</text>
+    <text class="t col" x="1022" y="302">principal_id</text><text class="t tag" x="1510" y="302" text-anchor="end">UNIQUE scope · no FK</text>
+    <text class="t col" x="1022" y="358">idempotency_key</text><text class="t tag" x="1510" y="358" text-anchor="end">part of scope</text>
+    <text class="t note" x="1022" y="414">scope = account + principal</text>
+    <text class="t note" x="1022" y="450">+ idempotency_key</text>
+  </g>
+</svg>
