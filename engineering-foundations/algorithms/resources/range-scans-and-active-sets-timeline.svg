@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" role="img" aria-labelledby="title desc">
+  <title id="title">三个半开预约区间及其活动数</title>
+  <desc id="desc">A 从时刻 1 到 4，B 从 2 到 4，C 从 4 到 6。开始端实心且包含，结束端空心且不包含。各端点之间的活动数依次为 0、1、2、1、0。</desc>
+  <rect width="760" height="420" fill="#fffdf8"/>
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" fill="#182230">
+    <g font-size="15">
+      <circle cx="468" cy="34" r="7" fill="#1b6d78"/>
+      <text x="482" y="39">开始：包含端点</text>
+      <circle cx="616" cy="34" r="7" fill="#fffdf8" stroke="#1b6d78" stroke-width="2.5"/>
+      <text x="630" y="39">结束：不包含</text>
+    </g>
+
+    <g font-size="16" font-weight="600">
+      <text x="26" y="93">A [1,4)</text>
+      <text x="26" y="148">B [2,4)</text>
+      <text x="26" y="203">C [4,6)</text>
+    </g>
+
+    <g stroke="#d7dde3" stroke-width="1.5" stroke-dasharray="5 5">
+      <line x1="100" y1="64" x2="100" y2="238"/>
+      <line x1="190" y1="64" x2="190" y2="238"/>
+      <line x1="280" y1="64" x2="280" y2="238"/>
+      <line x1="460" y1="64" x2="460" y2="238"/>
+      <line x1="640" y1="64" x2="640" y2="238"/>
+      <line x1="730" y1="64" x2="730" y2="238"/>
+    </g>
+
+    <g fill="none" stroke="#1b6d78" stroke-width="5" stroke-linecap="round">
+      <line x1="197" y1="88" x2="453" y2="88"/>
+      <line x1="287" y1="143" x2="453" y2="143"/>
+      <line x1="467" y1="198" x2="633" y2="198"/>
+    </g>
+    <g fill="#1b6d78" stroke="#1b6d78" stroke-width="2.5">
+      <circle cx="190" cy="88" r="7"/>
+      <circle cx="280" cy="143" r="7"/>
+      <circle cx="460" cy="198" r="7"/>
+    </g>
+    <g fill="#fffdf8" stroke="#1b6d78" stroke-width="2.5">
+      <circle cx="460" cy="88" r="7"/>
+      <circle cx="460" cy="143" r="7"/>
+      <circle cx="640" cy="198" r="7"/>
+    </g>
+
+    <text x="100" y="254" font-size="15" font-weight="600">端点分组处理后的活动任务数</text>
+    <g stroke="#ffffff" stroke-width="2">
+      <rect x="100" y="274" width="90" height="38" rx="5" fill="#e5e9ed"/>
+      <rect x="190" y="274" width="90" height="38" rx="5" fill="#a9cbd0"/>
+      <rect x="280" y="274" width="180" height="38" rx="5" fill="#548f99"/>
+      <rect x="460" y="274" width="180" height="38" rx="5" fill="#a9cbd0"/>
+      <rect x="640" y="274" width="90" height="38" rx="5" fill="#e5e9ed"/>
+    </g>
+    <g font-size="15" font-weight="600" text-anchor="middle">
+      <text x="145" y="299">0 项</text>
+      <text x="235" y="299">1 项</text>
+      <text x="370" y="299" fill="#ffffff">2 项</text>
+      <text x="550" y="299">1 项</text>
+      <text x="685" y="299">0 项</text>
+    </g>
+
+    <g stroke="#596574" stroke-width="1.5">
+      <line x1="100" y1="325" x2="730" y2="325"/>
+      <line x1="100" y1="320" x2="100" y2="330"/>
+      <line x1="190" y1="320" x2="190" y2="330"/>
+      <line x1="280" y1="320" x2="280" y2="330"/>
+      <line x1="460" y1="320" x2="460" y2="330"/>
+      <line x1="640" y1="320" x2="640" y2="330"/>
+      <line x1="730" y1="320" x2="730" y2="330"/>
+    </g>
+    <g font-size="15" text-anchor="middle">
+      <text x="100" y="354">0</text>
+      <text x="190" y="354">1</text>
+      <text x="280" y="354">2</text>
+      <text x="460" y="354">4</text>
+      <text x="640" y="354">6</text>
+      <text x="730" y="354">7</text>
+    </g>
+    <text x="390" y="383" font-size="15" text-anchor="middle">时刻（合成单位）</text>
+  </g>
+</svg>

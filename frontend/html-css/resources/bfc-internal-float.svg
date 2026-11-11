@@ -18,7 +18,7 @@
   </defs>
   <rect width="700" height="300" fill="#fff" />
 
-  <text class="heading" x="20" y="30">普通块：段落盒宽 360px，float 不计入自动高度</text>
+  <text class="heading" x="20" y="30">普通块：360px 段落盒，float 底边不直接计入 auto 高度</text>
   <rect class="parent" x="20" y="48" width="360" height="20" />
   <rect class="badge" x="20" y="48" width="48" height="48" />
   <rect x="68" y="48" width="8" height="48" fill="url(#marginHatch)" stroke="#7f8f9d" stroke-width="0.7" />

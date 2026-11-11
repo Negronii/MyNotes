@@ -30,7 +30,7 @@ html { font-size: 16px; }
 
 徽标是 <code>48 × 48px</code>。它和右侧 <code>8px</code> margin 一起占 <code>56px</code>，所以文字旁边的行框宽 <code>360 − 48 − 8 = 304px</code>；文字实测约 <code>162px</code>，只占一行。段落块盒仍宽 <code>360px</code>。普通块卡片的内容高是 <code>20px</code>，徽标则向下露出背景 <code>48 − 20 = 28px</code>。把卡片改为 <code>display: flow-root</code> 后，BFC 根的自动高度增至 <code>48px</code>，将参与这个 BFC 的徽标纳入高度。
 
-![普通块的自动高度不计入内部浮动；flow-root 根按本 BFC 浮动的底部 margin edge 扩展](resources/bfc-internal-float.svg)
+![普通块的自动高度不直接计入内部 float 的边缘；flow-root 根按本 BFC 浮动的底部 margin edge 扩展](resources/bfc-internal-float.svg)
 
 ## 外部 float 怎样影响一个 BFC 盒？
 
