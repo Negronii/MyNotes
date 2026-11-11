@@ -49,6 +49,8 @@ Preserve task state outside prose when work spans many turns:
 
 Compaction should retain facts needed to resume, not reproduce the entire trace. Keep failures when they prevent repeated mistakes. Use structured state or files for machine-consumed continuity and validate them where practical.
 
+When the host delivers in-flight user updates, define their effect on ongoing work: answer a status question and continue; apply corrections to affected decisions, artifacts, and pending actions; stop affected further actions on a clear pause, cancellation, or incompatible redirection. Preserve still-valid evidence and completed work. A changed target or payload must still satisfy the existing authorization contract; a past approval record does not automatically cover the revision. Report cancellation of an already-issued external operation only when runtime evidence confirms it.
+
 When repeated attempts add no useful information and a valuable question remains within scope and budget, the same owner may delegate an alternative investigation to a fresh-context worker. Supply the objective, reliable baseline, decisive facts, constraints, and remaining budget; separate observations from interpretations and retrieve detailed evidence on demand. Preserve durable records, cumulative attempts, selection/exposure history, and existing closure or validation restrictions. Assess the resulting work and total effort before reusing this approach; a context reset alone is not evidence of improvement.
 
 ## Autonomy boundaries
@@ -60,6 +62,8 @@ Define authorization by request type and consequence:
 - external writes, destructive actions, purchases, production changes, or material scope expansion: require explicit authorization.
 
 Questions do not automatically authorize side effects. Conversely, do not ask for confirmation for every safe local action when the user already requested implementation.
+
+Resolve missing facts from relevant, readily available trusted context, and use conventional, low-cost-to-revise defaults where appropriate. Ask a focused question when an unresolved user decision materially changes the deliverable or action; leave dependent work pending and continue useful independent work when the host supports it.
 
 Use retry limits based on idempotency and error type. Retry a transient, idempotent failure within a bound. Change strategy or stop when evidence does not support repeating the action.
 

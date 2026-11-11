@@ -54,6 +54,8 @@ Validate all model-generated arguments before execution. Structured generation r
 
 Return stable, documented structures that support the next decision. Include human-readable labels alongside opaque identifiers when follow-up calls need both.
 
+For asynchronous or uncertain outcomes, document what each result actually proves and how to correlate a later event, query, or reconciliation with the same operation. Match completion evidence to the user's requested outcome: an acceptance receipt can prove submission, while delivery of an export requires evidence that the same export completed and its file is available. Reuse existing operation identifiers and status interfaces. If decisive evidence is unavailable, report the known stage or unknown outcome; a timeout alone proves neither failure nor cancellation. A result or event that already provides sufficient evidence needs no extra confirmation call.
+
 Keep results high-signal:
 
 - paginate, filter, range-select, or truncate potentially large results;

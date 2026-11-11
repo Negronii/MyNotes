@@ -27,6 +27,7 @@ Read only the references needed for the current task:
 - For context budgets, delegation, caching, compaction, autonomy, prompt injection, or guardrails, read [references/context-security.md](references/context-security.md).
 - For material behavioral uncertainty, production validation, or controlled comparisons, read [references/evaluation.md](references/evaluation.md).
 - For reusable solution shapes after identifying a specific failure class, read [references/patterns.md](references/patterns.md).
+- For learning from archived product prompts, read [references/practice-observations.md](references/practice-observations.md); use its evidence boundaries and compare against existing rules before adding instructions.
 - When the user asks for a draft or concrete starting point, read [references/templates.md](references/templates.md).
 - For provider-specific behavior, current limits, or syntax, read [references/provider-notes.md](references/provider-notes.md) and re-check the linked official documentation when freshness matters.
 
