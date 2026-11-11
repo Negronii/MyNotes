@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="740" viewBox="0 0 740 740" role="img" aria-labelledby="desc">
+  <title id="desc">简单路径递归中的路径状态与回退</title>
+  <defs>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#2469a5"/></marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#21845b"/></marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#bf3c35"/></marker>
+    <style>
+      text { font-family: Arial, "Noto Sans CJK SC", sans-serif; fill: #202938; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .heading { font-size: 21px; font-weight: 700; }
+      .state { font-size: 17px; fill: #344054; }
+      .edge { fill: none; stroke: #8b95a5; stroke-width: 2.6; marker-end: url(#arrow-gray); }
+      .active { stroke: #2469a5; stroke-width: 4; marker-end: url(#arrow-blue); }
+      .goal { stroke: #21845b; stroke-width: 4; marker-end: url(#arrow-green); }
+      .blocked { stroke: #bf3c35; stroke-width: 3; stroke-dasharray: 7 6; marker-end: url(#arrow-red); }
+      .node { fill: #f3f4f6; stroke: #667085; stroke-width: 2; }
+      .node-active { fill: #e4f0fb; stroke: #2469a5; stroke-width: 3; }
+      .node-goal { fill: #e5f5ec; stroke: #21845b; stroke-width: 3; }
+      .node-text { font-size: 20px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+      .note { font-size: 17px; }
+      .red-label { font-size: 16px; font-weight: 700; fill: #a62f29; text-anchor: middle; }
+      .green-label { font-size: 15px; font-weight: 700; fill: #176b49; text-anchor: middle; }
+      .transition { stroke: #475467; stroke-width: 3; marker-end: url(#arrow-gray); }
+      .transition-label { font-size: 16px; font-weight: 600; fill: #344054; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="740" height="740" fill="#ffffff"/>
+  <rect x="10" y="10" width="720" height="330" rx="12" class="panel"/>
+  <text x="34" y="43" class="heading">① 先走 S → A → T</text>
+  <text x="34" y="72" class="state">到达 T：path = [S, A, T]　·　onPath = {S, A, T}</text>
+
+  <!-- 其他路线边作为背景，主线与命中目标边高亮。 -->
+  <path d="M137 203 L263 170" class="edge active"/>
+  <path d="M137 217 L263 240" class="edge"/>
+  <path d="M317 169 L443 204" class="edge active"/>
+  <path d="M317 240 L443 217" class="edge"/>
+  <path d="M497 212 L589 212" class="edge goal"/>
+  <path d="M443 194 C385 100, 195 100, 137 194" class="edge blocked"/>
+  <text x="290" y="117" class="red-label">T → S 跳过：S 已在 onPath</text>
+  <text x="545" y="196" class="green-label">命中 Z</text>
+
+  <circle cx="110" cy="212" r="28" class="node-active"/><text x="110" y="212" class="node-text">S</text>
+  <circle cx="290" cy="158" r="28" class="node-active"/><text x="290" y="158" class="node-text">A</text>
+  <circle cx="290" cy="245" r="28" class="node"/><text x="290" y="245" class="node-text">B</text>
+  <circle cx="470" cy="212" r="28" class="node-active"/><text x="470" y="212" class="node-text">T</text>
+  <circle cx="625" cy="212" r="28" class="node-goal"/><text x="625" y="212" class="node-text">Z</text>
+  <text x="34" y="302" class="note">到达 Z 后复制路径；返回时依次撤销 Z、T、A。</text>
+  <text x="34" y="326" class="note">回到 S 时，path = [S]，onPath = {S}。</text>
+
+  <path d="M370 345 L370 375" class="transition"/>
+  <text x="390" y="366" class="transition-label">回退后再选 B</text>
+
+  <rect x="10" y="380" width="720" height="330" rx="12" class="panel"/>
+  <text x="34" y="413" class="heading">② 改走 S → B → T</text>
+  <text x="34" y="442" class="state">再次到达 T：path = [S, B, T]　·　onPath = {S, B, T}</text>
+
+  <path d="M137 573 L263 540" class="edge"/>
+  <path d="M137 587 L263 610" class="edge active"/>
+  <path d="M317 539 L443 574" class="edge"/>
+  <path d="M317 610 L443 587" class="edge active"/>
+  <path d="M497 582 L589 582" class="edge goal"/>
+  <path d="M443 564 C385 470, 195 470, 137 564" class="edge blocked"/>
+  <text x="290" y="487" class="red-label">T → S 跳过：S 仍在 onPath</text>
+  <text x="545" y="566" class="green-label">命中 Z</text>
+
+  <circle cx="110" cy="582" r="28" class="node-active"/><text x="110" y="582" class="node-text">S</text>
+  <circle cx="290" cy="528" r="28" class="node"/><text x="290" y="528" class="node-text">A</text>
+  <circle cx="290" cy="615" r="28" class="node-active"/><text x="290" y="615" class="node-text">B</text>
+  <circle cx="470" cy="582" r="28" class="node-active"/><text x="470" y="582" class="node-text">T</text>
+  <circle cx="625" cy="582" r="28" class="node-goal"/><text x="625" y="582" class="node-text">Z</text>
+  <text x="34" y="672" class="note">A 分支的 T 已撤销，所以 T 可再次进入；再复制 [S, B, T, Z]。</text>
+  <text x="34" y="696" class="note">结果保留两条顶点序列：[S, A, T, Z] 与 [S, B, T, Z]。</text>
+</svg>
