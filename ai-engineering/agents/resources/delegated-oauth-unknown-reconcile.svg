@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="850" viewBox="0 0 700 850" role="img" aria-labelledby="title desc">
+<title id="title">对 effect_unknown 选择安全重放或合法对账</title><desc id="desc">原授权重放必须同时满足当前写权限、精确审批、任务活动、无未结清或可迟发旧 attempt，以及接收端同键同载荷去重窗口有效。安全重放重核 attempt、租约和写权限，沿用原键和原载荷回图 2a 复核并持久化发送意图，通过后交图 2b。否则只用合法读取能力查询；查询不确定或无法排除迟发、延迟提交时保持 effect_unknown。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="850" rx="12" fill="#f8faff"/>
+<g id="U" data-old-node="U"><rect class="box" x="160" y="20" width="380" height="60" fill="#f1f4fa" stroke="#d5deeb"/>
+<text class="small" x="350.0" y="45.44">effect_unknown：保留原键、摘要</text>
+<text class="small" x="350.0" y="65.44">attempt 与取消状态</text>
+</g>
+<g id="D" data-old-node="D"><rect class="box" x="85" y="110" width="530" height="92" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="350.0" y="141.44">原 grant 当前可写；精确审批当前有效</text>
+<text class="small" x="350.0" y="161.44">run 活动且未取消；旧 attempt 已结清且不可能迟发</text>
+<text class="small" x="350.0" y="181.44">接收端去重窗保证同键同载荷？</text>
+</g>
+<g id="REPLAY" data-old-node="REPLAY"><rect class="box" x="20" y="240" width="320" height="80" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="180.0" y="260.44">重核 attempt、租约与写权限</text>
+<text class="small" x="180.0" y="280.44">沿用原操作键 + 原载荷</text>
+<text class="small" x="180.0" y="300.44">回图 2a 复核并持久化 intent → 图 2b</text>
+</g>
+<g id="READ" data-old-node="READ"><rect class="box" x="370" y="240" width="300" height="76" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="520.0" y="273.44">是否有合法且有效的</text>
+<text class="small" x="520.0" y="293.44">只读查询能力？</text>
+</g>
+<g id="HOLD_READ" data-old-node="HOLD_READ" transform="translate(-470,0)"><rect class="box" x="490" y="360" width="180" height="68" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="580.0" y="374.44">无合法读取</text>
+<text class="small" x="580.0" y="394.44">保持 effect_unknown</text>
+</g>
+<g id="QUERY" data-old-node="QUERY"><rect class="box" x="370" y="345" width="300" height="64" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="maintext" x="520.0" y="383.12">按原操作键查询</text>
+</g>
+<g id="FOUND" data-old-node="FOUND" transform="translate(0,-10)"><rect class="box" x="20" y="510" width="210" height="78" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="125.0" y="554.44">权威发现 issue</text>
+</g>
+<g id="ERROR" data-old-node="ERROR" transform="translate(0,-10)"><rect class="box" x="245" y="510" width="210" height="78" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="350.0" y="554.44">查询错误或结果不确定</text>
+</g>
+<g id="EMPTY" data-old-node="EMPTY" transform="translate(0,-10)"><rect class="box" x="470" y="510" width="210" height="78" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="575.0" y="544.44">成功且权威地无结果</text>
+<text class="small" x="575.0" y="564.44">还可能迟发/延迟提交？</text>
+</g>
+<g id="WRITE_FOUND" data-old-node="WRITE_FOUND" transform="translate(0,-10)"><rect class="box" x="20" y="625" width="210" height="78" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="125.0" y="659.44">经当前租约流程</text>
+<text class="small" x="125.0" y="679.44">写回 issue ID 与回执</text>
+</g>
+<g id="HOLD_ERROR" data-old-node="HOLD_ERROR" transform="translate(0,-10)"><rect class="box" x="245" y="625" width="210" height="78" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="350.0" y="659.44">保持 effect_unknown</text>
+<text class="small" x="350.0" y="679.44">等待合法对账或人工核查</text>
+</g>
+<g id="NO_EFFECT" data-old-node="NO_EFFECT" transform="translate(0,-10)"><rect class="box" x="80" y="770" width="300" height="70" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="230.0" y="800.44">排除迟发和延迟提交</text>
+<text class="small" x="230.0" y="820.44">权威无副作用 → 图 3b</text>
+</g>
+<g id="HOLD_EMPTY" data-old-node="HOLD_EMPTY" transform="translate(0,-10)"><rect class="box" x="440" y="770" width="240" height="70" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="560.0" y="800.44">不能排除</text>
+<text class="small" x="560.0" y="820.44">保持 effect_unknown</text>
+</g>
+<path id="edge-unknown-gate" class="flow" d="M350 80V110"/>
+<path id="edge-gate-replay" class="flow" d="M205 202V240"/>
+<text class="edge-label" x="150" y="225">是</text>
+<path id="edge-gate-read" class="flow" d="M495 202V240"/>
+<text class="edge-label" x="525" y="225">否</text>
+<path id="edge-read-none" class="flow" d="M420 316V338H110V360"/>
+<text class="edge-label" x="270" y="334">否</text>
+
+<path id="edge-read-yes" class="flow" d="M520 316V345"/>
+<text class="edge-label" x="545" y="333">是</text>
+<path id="edge-query-found" class="flow" d="M420 409V455H125V500"/>
+<text class="edge-label" x="220" y="449">找到</text>
+<path id="edge-query-error" class="flow" d="M495 409V470H350V500"/>
+<text class="edge-label" x="435" y="464">错误</text>
+<path id="edge-query-empty" class="flow" d="M570 409V500"/>
+<text class="edge-label" x="608" y="428">空结果</text>
+<path id="edge-found-write" class="flow" d="M125 568V615"/>
+<path id="edge-error-hold" class="flow" d="M350 568V615"/>
+<path id="edge-empty-exclude-yes" class="flow" d="M515 568V720H230V760"/>
+<text class="edge-label" x="365" y="714">均能排除</text>
+<path id="edge-empty-exclude-no" class="flow" d="M630 568V760"/>
+<text class="edge-label" x="645" y="714">不能排除</text>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="570" viewBox="0 0 700 570" role="img" aria-labelledby="title desc">
+<title id="title">scope 与记录权限通过后实际读取日志</title><desc id="desc">resource 令牌已接受后，检查本次读操作所需 scope 和用户对 build 42 的权限；只有两项均通过才实际读取，结果与拒绝均交图 3。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="570" rx="12" fill="#f8faff"/>
+<g id="IN" data-old-node="IN"><rect class="box" x="40" y="25" width="390" height="58" fill="#f1f4fa" stroke="#d5deeb"/>
+<text class="small" x="250.0" y="59.44">图 2a 输出：resource 令牌已接受</text>
+</g>
+<g id="SCOPE" data-old-node="SCOPE"><rect class="box" x="40" y="115" width="390" height="66" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="250.0" y="153.44">本次 scope 检查最终通过？</text>
+</g>
+<g id="FAIL_SCOPE" data-old-node="FAIL_SCOPE"><rect class="box" x="490" y="115" width="190" height="66" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="587.5" y="143.44">scope 未恢复</text>
+<text class="small" x="587.5" y="163.44">c1 失败 → 图 3</text>
+</g>
+<g id="RECORD" data-old-node="RECORD"><rect class="box" x="40" y="235" width="390" height="66" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="250.0" y="273.44">用户能读取 build 42？</text>
+</g>
+<g id="FAIL_RECORD" data-old-node="FAIL_RECORD"><rect class="box" x="490" y="235" width="190" height="66" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="587.5" y="263.44">记录权限拒绝</text>
+<text class="small" x="587.5" y="283.44">不读取；交图 3</text>
+</g>
+<g id="READ" data-old-node="READ"><rect class="box" x="40" y="355" width="390" height="66" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="maintext" x="250.0" y="394.12">server 实际读取 build 42 日志</text>
+</g>
+<g id="RES" data-old-node="RES"><rect class="box" x="40" y="465" width="390" height="70" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="250.0" y="495.44">JSON-RPC 终态 id 17 与日志</text>
+<text class="small" x="250.0" y="515.44">交图 3</text>
+</g>
+<path id="edge-input-scope" class="flow" d="M235 83V115"/>
+<path id="edge-scope-pass" class="flow" d="M235 181V235"/>
+<text class="edge-label" x="255" y="210">是</text>
+<path id="edge-scope-fail" class="flow" d="M430 148H490"/>
+<text class="edge-label" x="460" y="141">否</text>
+<path id="edge-record-pass" class="flow" d="M235 301V355"/>
+<text class="edge-label" x="255" y="328">是</text>
+<path id="edge-record-fail" class="flow" d="M430 268H490"/>
+<text class="edge-label" x="460" y="261">否</text>
+<path id="edge-read-result" class="flow" d="M235 421V465"/>
+</svg>

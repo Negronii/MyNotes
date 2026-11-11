@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="820" viewBox="0 0 700 820" role="img" aria-labelledby="title desc">
+<title id="title">在发送前重核精确审批并持久化发送意图</title><desc id="desc">用户批准精确草稿后，worker 按需刷新并重读授权、草稿、审批、取消状态，再检查当前 attempt 与有效租约；全部通过才持久化 effect_in_flight、原操作键和摘要。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="820" rx="12" fill="#f8faff"/>
+<g id="C1" data-old-node="C1"><rect class="box" x="30" y="20" width="390" height="64" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="245.0" y="47.44">run-r42-7 有 c1 观察</text>
+<text class="small" x="245.0" y="67.44">模型提出面向 build-service 的 c2</text>
+</g>
+<g id="V" data-old-node="V"><rect class="box" x="30" y="110" width="390" height="76" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="245.0" y="143.44">核验当前用户、目标、grant</text>
+<text class="small" x="245.0" y="163.44">provider account 与创建 scope</text>
+</g>
+<g id="STOP1" data-old-node="STOP1"><rect class="box" x="490" y="118" width="185" height="64" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="582.5" y="145.44">资格或授权无效</text>
+<text class="small" x="582.5" y="165.44">停止；不创建</text>
+</g>
+<g id="PREVIEW" data-old-node="PREVIEW"><rect class="box" x="30" y="215" width="390" height="72" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="245.0" y="246.44">应用展示精确仓库、标题/正文</text>
+<text class="small" x="245.0" y="266.44">以及 c1 证据</text>
+</g>
+<g id="APPROVAL" data-old-node="APPROVAL"><rect class="box" x="30" y="315" width="390" height="64" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="245.0" y="352.44">用户批准这份精确摘要？</text>
+</g>
+<g id="STOP2" data-old-node="STOP2"><rect class="box" x="490" y="315" width="185" height="64" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="582.5" y="342.44">拒绝或取消</text>
+<text class="small" x="582.5" y="362.44">停止创建</text>
+</g>
+<g id="F" data-old-node="F"><rect class="box" x="30" y="415" width="390" height="78" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="245.0" y="449.44">发送前按需刷新</text>
+<text class="small" x="245.0" y="469.44">重读授权、草稿、审批与取消状态</text>
+</g>
+<g id="CANCEL" data-old-node="CANCEL"><rect class="box" x="490" y="405" width="185" height="58" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="582.5" y="429.44">用户已取消</text>
+<text class="small" x="582.5" y="449.44">停止创建</text>
+</g>
+<g id="STOP3" data-old-node="STOP3"><rect class="box" x="490" y="470" width="185" height="58" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="582.5" y="494.44">授权或草稿失效</text>
+<text class="small" x="582.5" y="514.44">重新授权/审批后再评估</text>
+</g>
+<g id="LEASE" data-old-node="LEASE"><rect class="box" x="30" y="520" width="390" height="78" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="245.0" y="554.44">run 活动；当前 attempt 与</text>
+<text class="small" x="245.0" y="574.44">未过期租约匹配？</text>
+</g>
+<g id="STOP4" data-old-node="STOP4"><rect class="box" x="490" y="540" width="185" height="66" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="582.5" y="568.44">条件失败</text>
+<text class="small" x="582.5" y="588.44">不得发送</text>
+</g>
+<g id="P" data-old-node="P"><rect class="box" x="30" y="625" width="390" height="70" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="245.0" y="655.44">持久化 effect_in_flight</text>
+<text class="small" x="245.0" y="675.44">原操作键与精确摘要</text>
+</g>
+<g id="OUT" data-old-node="OUT"><rect class="box" x="30" y="730" width="390" height="64" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="245.0" y="767.44">发送意图已持久化 → 图 2b</text>
+</g>
+<path id="edge-c1-check" class="flow" d="M225 84V110"/>
+<path id="edge-v-no" class="flow" d="M420 148H490"/>
+<text class="edge-label" x="455" y="141">否</text>
+<path id="edge-v-yes-preview" class="flow" d="M225 186V215"/>
+<text class="edge-label" x="248" y="202">是</text>
+<path id="edge-preview-approval" class="flow" d="M225 287V315"/>
+<path id="edge-approval-no" class="flow" d="M420 347H490"/>
+<text class="edge-label" x="455" y="340">拒绝</text>
+<path id="edge-approval-yes" class="flow" d="M225 379V415"/>
+<text class="edge-label" x="248" y="400">批准</text>
+<path id="edge-refresh-cancel" class="flow" d="M420 435H490"/>
+<text class="edge-label" x="455" y="427">取消</text>
+<path id="edge-refresh-stale" class="flow" d="M420 475H455V500H490"/>
+<text class="edge-label" x="455" y="466">失效/不匹配</text>
+<path id="edge-refresh-pass" class="flow" d="M225 493V520"/>
+<text class="edge-label" x="248" y="508">通过</text>
+<path id="edge-lease-fail" class="flow" d="M420 559H455V573H490"/>
+<text class="edge-label" x="455" y="552">否</text>
+<path id="edge-lease-pass" class="flow" d="M225 598V625"/>
+<text class="edge-label" x="248" y="614">是</text>
+<path id="edge-persist-output" class="flow" d="M225 695V730"/>
+</svg>

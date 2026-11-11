@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="500" viewBox="0 0 700 500" role="img" aria-labelledby="title desc">
+<title id="title">将 MCP 响应或 host 失败关联回 c1</title><desc id="desc">有匹配 id 的 JSON-RPC 响应按 id 找到 c1；无 id 错误、id 不匹配及其他 host 终态失败按原请求上下文关联待完成 c1。两条路径都构造匹配 c1 的工具结果或失败条目，再交下一次模型输入。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="500" rx="12" fill="#f8faff"/>
+<g id="IN" data-old-node="IN"><rect class="box" x="160" y="20" width="380" height="58" fill="#f1f4fa" stroke="#d5deeb"/>
+<text class="small" x="350.0" y="54.44">图 2a/2b 终态：MCP 响应或 host 失败</text>
+</g>
+<g id="CORRELATE" data-old-node="CORRELATE"><rect class="box" x="20" y="135" width="310" height="80" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="175.0" y="170.44">响应 id 与原请求匹配</text>
+<text class="small" x="175.0" y="190.44">按 response id 找回 c1</text>
+</g>
+<g id="ERROR" data-old-node="ERROR"><rect class="box" x="370" y="135" width="310" height="80" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="525.0" y="170.44">host 终态失败</text>
+<text class="small" x="525.0" y="190.44">关联当前待完成的 c1</text>
+</g>
+<g id="RESULT" data-old-node="RESULT"><rect class="box" x="105" y="275" width="490" height="72" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="350.0" y="316.44">构造匹配 c1 的工具结果或失败条目</text>
+</g>
+<g id="NEXT" data-old-node="NEXT"><rect class="box" x="105" y="385" width="490" height="72" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="350.0" y="426.44">下一次模型输入包含 tool_result(call_id=c1, …)</text>
+</g>
+<path id="edge-in-response-left" class="flow" d="M250 78V105H315V135"/>
+<text class="edge-label" x="160" y="111">有匹配 id 的响应</text>
+<path id="edge-in-response-right" class="flow" d="M450 78V105H385V135"/>
+<text class="edge-label" x="560" y="111">host 终态失败</text>
+<path id="edge-response-result" class="flow" d="M175 215V245H350V275"/>
+<path id="edge-failure-result" class="flow" d="M525 215V245H350V275"/>
+<path id="edge-result-next" class="flow" d="M350 347V385"/>
+</svg>

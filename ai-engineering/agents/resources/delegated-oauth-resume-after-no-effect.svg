@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="500" viewBox="0 0 700 500" role="img" aria-labelledby="title desc">
+<title id="title">确认无副作用后再判断是否能恢复写入</title><desc id="desc">只有权威确认无远端副作用才进入此图。恢复要求 run 活动且未取消、当前写授权有效、精确审批当前有效（更新 grant 时须重批同一草稿）、旧 attempt 已结清、去重窗口仍有效；随后沿用原键与原载荷回图 2a 复核 attempt、租约、写权限并持久化发送意图，通过后交图 2b。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="500" rx="12" fill="#f8faff"/>
+<g id="NONE" data-old-node="NONE"><rect class="box" x="150" y="25" width="400" height="65" fill="#f1f4fa" stroke="#d5deeb"/>
+<text class="small" x="350.0" y="62.94">图 3a：权威确认没有远端副作用</text>
+</g>
+<g id="C" data-old-node="C"><rect class="box" x="85" y="130" width="530" height="112" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="350.0" y="171.44">run 活动且未取消；当前写授权有效</text>
+<text class="small" x="350.0" y="191.44">精确审批当前有效（换 grant 时同稿重批）</text>
+<text class="small" x="350.0" y="211.44">无未结清旧 attempt；同键同载荷仍在去重窗？</text>
+</g>
+<g id="STOP" data-old-node="STOP"><rect class="box" x="20" y="300" width="300" height="80" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="170.0" y="335.44">停止写入</text>
+<text class="small" x="170.0" y="355.44">保留无副作用结论</text>
+</g>
+<g id="RESUME" data-old-node="RESUME"><rect class="box" x="380" y="300" width="300" height="120" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="530.0" y="326.44">沿用原键 + 原载荷</text>
+<text class="small" x="530.0" y="346.44">回图 2a 重核 attempt / 租约 / 写权限</text>
+<text class="small" x="530.0" y="366.44">通过后持久化发送意图</text>
+<text class="small" x="530.0" y="386.44">再交图 2b 发送</text>
+</g>
+<path id="edge-no-effect-gate" class="flow" d="M350 90V130"/>
+<path id="edge-gate-stop" class="flow" d="M215 242V270H170V300"/>
+<text class="edge-label" x="150" y="275">否或已取消</text>
+<path id="edge-gate-resume" class="flow" d="M485 242V270H530V300"/>
+<text class="edge-label" x="550" y="275">是</text>
+</svg>

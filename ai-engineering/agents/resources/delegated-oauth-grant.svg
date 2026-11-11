@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="775" viewBox="0 0 700 775" role="img" aria-labelledby="title desc">
+<title id="title">先完成 PKCE 交易，再确认账号并绑定 grant</title><desc id="desc">应用先创建并保存 PKCE verifier/state 交易；浏览器带 challenge 授权，回调校验通过后只兑换一次，再确认 provider account 并安全保存 grant。验证失败不兑换、不建 grant。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="775" rx="12" fill="#f8faff"/>
+<g id="A" data-old-node="A"><rect class="box" x="35" y="20" width="430" height="82" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="250.0" y="46.44">授权前创建一次性交易</text>
+<text class="small" x="250.0" y="66.44">高熵 code_verifier 与 state</text>
+<text class="small" x="250.0" y="86.44">记录预期授权服务器</text>
+</g>
+<g id="B" data-old-node="B"><rect class="box" x="35" y="135" width="430" height="76" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="250.0" y="168.44">浏览器带 S256 challenge、state</text>
+<text class="small" x="250.0" y="188.44">与 scope 前往授权端点</text>
+</g>
+<g id="C" data-old-node="C"><rect class="box" x="35" y="245" width="430" height="76" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="250.0" y="278.44">用户登录并同意 provider 委托</text>
+<text class="small" x="250.0" y="298.44">回调 code、state、可选 iss</text>
+</g>
+<g id="V" data-old-node="V"><rect class="box" x="35" y="355" width="430" height="76" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="250.0" y="388.44">绑定原交易并校验 state</text>
+<text class="small" x="250.0" y="408.44">按部署要求核验 issuer</text>
+</g>
+<g id="STOP" data-old-node="STOP"><rect class="box" x="490" y="360" width="185" height="68" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="582.5" y="389.44">拒绝回调</text>
+<text class="small" x="582.5" y="409.44">不兑换 / 不建 grant</text>
+</g>
+<g id="X" data-old-node="X"><rect class="box" x="35" y="465" width="430" height="76" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="250.0" y="498.44">向原 token endpoint 兑换一次</text>
+<text class="small" x="250.0" y="518.44">使用 code 与已保存 verifier</text>
+</g>
+<g id="AID" data-old-node="AID"><rect class="box" x="35" y="570" width="430" height="68" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="maintext" x="250.0" y="610.12">确认第三方 provider account</text>
+</g>
+<g id="G" data-old-node="G"><rect class="box" x="35" y="672" width="430" height="76" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="250.0" y="705.44">加密保存凭据并绑定 grantRef</text>
+<text class="small" x="250.0" y="725.44">用户、租户与已确认账号</text>
+</g>
+<path id="edge-a-b" class="flow" d="M250 102V135"/>
+<path id="edge-b-c" class="flow" d="M250 211V245"/>
+<path id="edge-c-v" class="flow" d="M250 321V355"/>
+<path id="edge-v-stop" class="flow" d="M465 393H490"/>
+
+<path id="edge-v-x" class="flow" d="M250 431V465"/>
+<text class="edge-label" x="272" y="450">通过</text>
+<path id="edge-x-account" class="flow" d="M250 541V570"/>
+<path id="edge-account-grant" class="flow" d="M250 638V672"/>
+</svg>

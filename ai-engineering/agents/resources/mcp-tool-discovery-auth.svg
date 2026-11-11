@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="845" viewBox="0 0 700 845" role="img" aria-labelledby="title desc">
+<title id="title">MCP 连接、发现与首次 tools/list 授权</title><desc id="desc">固定可信 endpoint；本例使用 Streamable HTTP。可选 server/discover；首次受保护 tools/list 收到 401，读取资源授权元数据，取得面向日志 resource 的 T_mcp 后重发。取消则没有工具目录，也没有 c1。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="845" rx="12" fill="#f8faff"/>
+<g id="HOST" data-old-node="HOST"><rect class="box" x="200" y="20" width="300" height="58" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="350.0" y="44.44">固定可信 server endpoint</text>
+<text class="small" x="350.0" y="64.44">本例使用 Streamable HTTP</text>
+</g>
+<g id="D" data-old-node="D"><rect class="box" x="160" y="105" width="380" height="62" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="maintext" x="350.0" y="142.12">是否调用 server/discover？</text>
+</g>
+<g id="DISC" data-old-node="DISC"><rect class="box" x="20" y="200" width="290" height="70" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="165.0" y="230.44">调用：发现版本与能力</text>
+<text class="small" x="165.0" y="250.44">随后请求 tools/list</text>
+</g>
+<g id="SKIP" data-old-node="SKIP"><rect class="box" x="390" y="200" width="290" height="70" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="535.0" y="230.44">跳过发现</text>
+<text class="small" x="535.0" y="250.44">直接请求 tools/list</text>
+</g>
+<g id="L0" data-old-node="L0"><rect class="box" x="150" y="303" width="400" height="64" fill="#f1f4fa" stroke="#d5deeb"/>
+<text class="maintext" x="350.0" y="341.12">首次受保护 tools/list → HTTP 401</text>
+</g>
+<g id="PRM" data-old-node="PRM"><rect class="box" x="100" y="392" width="500" height="68" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="350.0" y="421.44">按挑战读取受保护资源元数据</text>
+<text class="small" x="350.0" y="441.44">与授权服务器元数据</text>
+</g>
+<g id="CONSENT" data-old-node="CONSENT"><rect class="box" x="100" y="487" width="500" height="68" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="350.0" y="516.44">向用户申请日志 resource 的</text>
+<text class="small" x="350.0" y="536.44">builds:read 授权</text>
+</g>
+<g id="TOKEN" data-old-node="TOKEN"><rect class="box" x="25" y="593" width="390" height="64" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="220.0" y="620.44">同意后取得面向日志 resource</text>
+<text class="small" x="220.0" y="640.44">的 T_mcp</text>
+</g>
+<g id="FAIL" data-old-node="FAIL"><rect class="box" x="470" y="593" width="205" height="78" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="572.5" y="627.44">用户取消或授权失败</text>
+<text class="small" x="572.5" y="647.44">无工具目录；无 c1</text>
+</g>
+<g id="RETRY" data-old-node="RETRY"><rect class="box" x="25" y="690" width="390" height="60" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="220.0" y="725.44">携带 T_mcp 重发 tools/list</text>
+</g>
+<g id="OUT" data-old-node="OUT"><rect class="box" x="25" y="775" width="390" height="60" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="220.0" y="810.44">接收工具目录；交工具筛选阶段</text>
+</g>
+<path id="edge-host-d" class="flow" d="M350 78V105"/>
+<path id="edge-d-disc" class="flow" d="M250 167V182H165V200"/>
+<text class="edge-label" x="205" y="187">调用</text>
+<path id="edge-d-skip" class="flow" d="M450 167V182H535V200"/>
+<text class="edge-label" x="495" y="187">跳过</text>
+<path id="edge-disc-list" class="flow" d="M165 270V286H350V303"/>
+<path id="edge-skip-list" class="flow" d="M535 270V286H350V303"/>
+<path id="edge-list-prm" class="flow" d="M350 367V392"/>
+<path id="edge-prm-consent" class="flow" d="M350 460V487"/>
+<path id="edge-consent-token" class="flow" d="M280 555V575H220V593"/>
+<text class="edge-label" x="235" y="578">同意</text>
+<path id="edge-consent-fail" class="flow" d="M420 555V575H572V593"/>
+<text class="edge-label" x="505" y="578">取消/失败</text>
+<path id="edge-token-retry" class="flow" d="M220 657V690"/>
+<path id="edge-retry-out" class="flow" d="M220 750V775"/>
+</svg>

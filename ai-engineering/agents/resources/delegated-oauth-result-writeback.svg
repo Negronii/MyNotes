@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="635" viewBox="0 0 700 635" role="img" aria-labelledby="title desc">
+<title id="title">发送之后按响应与当前租约写回结果</title><desc id="desc">只有图 2a 已持久化发送意图后才发送。成功与明确无副作用失败都要按当前租约条件写回；失租时交给当前恢复 worker。超时或结果不明进入 effect_unknown。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.edge-label{font-size:16px;fill:#526782;paint-order:stroke;stroke:#f8faff;stroke-width:6px;stroke-linejoin:round}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="635" rx="12" fill="#f8faff"/>
+<g id="P" data-old-node="P"><rect class="box" x="180" y="20" width="340" height="60" fill="#f1f4fa" stroke="#d5deeb"/>
+<text class="small" x="350.0" y="45.44">图 2a 输出：发送意图已持久化</text>
+<text class="small" x="350.0" y="65.44">effect_in_flight、原键与摘要</text>
+</g>
+<g id="SEND" data-old-node="SEND"><rect class="box" x="85" y="115" width="530" height="68" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="350.0" y="144.44">经 TLS 保护的 HTTPS 请求到工单 API</text>
+<text class="small" x="350.0" y="164.44">Authorization 头携 T_issue；操作键按契约</text>
+</g>
+<g id="R" data-old-node="R"><rect class="box" x="225" y="225" width="250" height="70" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="350.0" y="265.44">API 响应能确认哪种结果？</text>
+</g>
+<g id="SUCCESS" data-old-node="SUCCESS"><rect class="box" x="20" y="355" width="205" height="60" fill="#eef5ff" stroke="#c7daf5"/>
+<text class="small" x="122.5" y="390.44">明确创建成功</text>
+</g>
+<g id="FAIL" data-old-node="FAIL"><rect class="box" x="250" y="355" width="210" height="75" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="355.0" y="387.94">契约确认无副作用</text>
+<text class="small" x="355.0" y="407.94">写回失败受租约约束</text>
+</g>
+<g id="UNKNOWN" data-old-node="UNKNOWN"><rect class="box" x="475" y="355" width="205" height="75" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="577.5" y="387.94">超时或结果不明</text>
+<text class="small" x="577.5" y="407.94">effect_unknown；不重发</text>
+</g>
+<g id="LEASE" data-old-node="LEASE"><rect class="box" x="20" y="450" width="205" height="70" fill="#fff6e7" stroke="#e8d2aa"/>
+<text class="small" x="122.5" y="480.44">当前 attempt</text>
+<text class="small" x="122.5" y="500.44">仍持有效租约？</text>
+</g>
+<g id="WRITE" data-old-node="WRITE"><rect class="box" x="20" y="550" width="205" height="68" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="122.5" y="579.44">条件写回 issue ID</text>
+<text class="small" x="122.5" y="599.44">与收据；呈现用户</text>
+</g>
+<g id="HANDOFF" data-old-node="HANDOFF"><rect class="box" x="245" y="550" width="215" height="68" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="352.5" y="579.44">失租：回执交当前恢复</text>
+<text class="small" x="352.5" y="599.44">worker 核验后条件写回</text>
+</g>
+<path id="edge-persist-send" class="flow" d="M350 80V115"/>
+<text class="edge-label" x="382" y="101">发送意图已持久化</text>
+<path id="edge-send-response" class="flow" d="M350 183V225"/>
+<path id="edge-response-success" class="flow" d="M270 295V325H122V355"/>
+<text class="edge-label" x="166" y="327">成功</text>
+<path id="edge-response-failure" class="flow" d="M350 295V355"/>
+<text class="edge-label" x="384" y="330">明确无副作用</text>
+<path id="edge-response-unknown" class="flow" d="M430 295V325H578V355"/>
+<text class="edge-label" x="530" y="327">不确定</text>
+<path id="edge-success-lease" class="flow" d="M122 415V450"/>
+<path id="edge-lease-current" class="flow" d="M75 520V550"/>
+<text class="edge-label" x="55" y="537">是</text>
+<path id="edge-lease-lost" class="flow" d="M170 520V533H352V550"/>
+<text class="edge-label" x="279" y="536">否</text>
+</svg>
