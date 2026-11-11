@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="630" viewBox="0 0 720 630">
+<defs>
+  <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7187a8"/></marker>
+  <style>
+    text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
+    .label { font-size: 16px; font-weight: 600; }
+    .small { font-size: 14px; }
+    .tiny { font-size: 12px; fill: #526681; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 14px; }
+    .panel { fill: #ffffff; stroke: #d5dfeb; stroke-width: 2; }
+    .cell { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
+    .focus { fill: #f0eafa; stroke: #9376bc; stroke-width: 2; }
+    .kept { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
+    .discard { fill: #f1f3f6; stroke: #c5ced9; stroke-width: 1.5; }
+    .line { stroke: #7187a8; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .boundary { stroke: #526681; stroke-width: 2; }
+    .range { stroke: #58a88a; stroke-width: 4; }
+  </style>
+</defs>
+<rect width="720" height="630" fill="#fbfcfe"/>
+<text class="tiny" x="77" y="27">元素下标 0</text><text class="tiny" x="217" y="27">元素下标 1</text><text class="tiny" x="357" y="27">元素下标 2</text><text class="tiny" x="497" y="27">元素下标 3</text>
+<rect class="cell" x="40" y="35" width="132" height="56" rx="8"/><text class="mono" x="53" y="58">(09:00,e07)</text><text class="tiny" x="53" y="79">较早</text>
+<rect class="cell" x="180" y="35" width="132" height="56" rx="8"/><text class="mono" x="191" y="58">(09:02,e03)</text><text class="tiny" x="191" y="79">同刻，ID 较小</text>
+<rect class="cell" x="320" y="35" width="132" height="56" rx="8"/><text class="mono" x="331" y="58">(09:02,e11)</text><text class="tiny" x="331" y="79">同刻，ID 较大</text>
+<rect class="cell" x="460" y="35" width="132" height="56" rx="8"/><text class="mono" x="471" y="58">(09:05,e18)</text><text class="tiny" x="471" y="79">较晚</text>
+<text class="tiny" x="42" y="111">插入边界</text>
+<path class="boundary" d="M40,96 L40,108 M176,96 L176,108 M316,96 L316,108 M456,96 L456,108 M592,96 L592,108"/>
+<text class="tiny" x="34" y="124">0</text><text class="tiny" x="170" y="124">1</text><text class="tiny" x="310" y="124">2</text><text class="tiny" x="450" y="124">3</text><text class="tiny" x="586" y="124">4</text>
+<rect x="32" y="132" width="570" height="35" rx="8" fill="#fff7e8" stroke="#e3bd77" stroke-width="1.5"/>
+<text class="label" x="49" y="155">lower_bound target = (09:02,e08)</text><text class="tiny" x="382" y="155">返回首个 ≥ target 的边界</text>
+
+<rect class="panel" x="24" y="178" width="672" height="182" rx="12"/>
+<text class="label" x="42" y="204">第 1 轮：探测元素 A[2] = (09:02,e11)</text>
+<rect class="cell" x="40" y="216" width="132" height="42" rx="6"/><text class="tiny" x="64" y="242">index 0</text>
+<rect class="cell" x="180" y="216" width="132" height="42" rx="6"/><text class="tiny" x="204" y="242">index 1</text>
+<rect class="focus" x="320" y="216" width="132" height="42" rx="6"/><text class="mono" x="328" y="242">(09:02,e11)</text>
+<rect class="discard" x="460" y="216" width="132" height="42" rx="6"/><text class="tiny" x="484" y="242">index 3</text>
+<path class="range" d="M40,272 L316,272"/><path class="boundary" d="M40,265 L40,280 M316,265 L316,280"/>
+<text class="small" x="42" y="300">更新后：元素探测范围 [0,2)，可返回的插入边界 [0,2]。</text>
+<text class="small" x="42" y="333">复合键排在目标之后，令 hi=2；边界 2 仍保留为答案候选。</text>
+
+<rect class="panel" x="24" y="370" width="672" height="182" rx="12"/>
+<text class="label" x="42" y="396">第 2 轮：探测元素 A[1] = (09:02,e03)</text>
+<rect class="discard" x="40" y="408" width="132" height="42" rx="6"/><text class="tiny" x="64" y="434">index 0</text>
+<rect class="focus" x="180" y="408" width="132" height="42" rx="6"/><text class="mono" x="188" y="434">(09:02,e03)</text>
+<rect class="kept" x="320" y="408" width="132" height="42" rx="6"/><text class="tiny" x="328" y="425">A[2] 可为</text><text class="tiny" x="330" y="441">首个 ≥ target</text>
+<rect class="discard" x="460" y="408" width="132" height="42" rx="6"/><text class="tiny" x="484" y="434">index 3</text>
+<path class="range" d="M316,464 L316,464"/><path class="boundary" d="M316,456 L316,472"/>
+<text class="small" x="42" y="493">更新后：元素探测范围 [2,2) 为空；唯一插入边界是 2。</text>
+<text class="small" x="42" y="525">复合键排在目标之前，令 lo=2；此时 lo=hi，停止。</text>
+
+<rect x="24" y="564" width="672" height="40" rx="8" fill="#e7f5ef" stroke="#58a88a" stroke-width="1.5"/>
+<text class="label" x="42" y="590">返回边界 2：A[0..1] &lt; target，A[2..3] ≥ target。</text>
+</svg>
