@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="280" viewBox="0 0 700 280" role="img" aria-labelledby="title desc">
+  <title id="title">零尺寸内容盒的 border triangle 机制</title>
+  <desc id="desc">左右图都把20乘20 CSS像素边框盒的几何放大四倍显示。左图的四条10px solid边框各形成一个三角并在零尺寸内容盒中心收尖。右图用虚线标出盒子轮廓，其他边框透明，只给左边框着色，留下一个尖端向右的三角；透明边框仍占位。</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #25364a; }
+    .title { font-size: 18px; font-weight: 700; }
+    .body { font-size: 14px; }
+    .small { font-size: 12px; fill: #526477; }
+  </style>
+  <rect width="700" height="280" fill="#fff" />
+  <text class="small" x="22" y="28">图形按 CSS border 几何放大 4×，便于看清四边如何收尖。</text>
+
+  <text class="title" x="32" y="66">四条 solid 边框</text>
+  <text class="body" x="32" y="90">10px 的四边分别形成一个边框三角。</text>
+  <rect x="80" y="112" width="80" height="80" fill="#fff" stroke="#aab6c2" stroke-width="1" stroke-dasharray="4 3" />
+  <path d="M80 112 L160 112 L120 152 Z" fill="#4d87a8" />
+  <path d="M160 112 L160 192 L120 152 Z" fill="#ce8054" />
+  <path d="M160 192 L80 192 L120 152 Z" fill="#6e9b75" />
+  <path d="M80 192 L80 112 L120 152 Z" fill="#9c79aa" />
+  <circle cx="120" cy="152" r="3" fill="#25364a" />
+  <text class="small" x="120" y="222" text-anchor="middle">0×0 内容区的中心</text>
+
+  <text class="title" x="390" y="66">只显示左边框</text>
+  <text class="body" x="390" y="90">其余三边透明；尖端朝右。</text>
+  <rect x="470" y="112" width="80" height="80" fill="none" stroke="#aab6c2" stroke-width="1" stroke-dasharray="4 3" />
+  <path d="M470 112 L510 152 L470 192 Z" fill="#9c79aa" />
+  <text class="small" x="510" y="222" text-anchor="middle">透明边框只保留几何，不绘制颜色</text>
+</svg>

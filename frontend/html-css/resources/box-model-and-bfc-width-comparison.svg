@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="620" viewBox="0 0 840 620" role="img" aria-labelledby="title desc">
+  <title id="title">content-box 和 border-box 在 360px 父内容区中的尺寸</title>
+  <desc id="desc">所有长度按 CSS 像素等比例绘制。父内容区宽360px，子项左右 margin各12px、padding各16px、border各1px。第一行 content-box 宽360时，padding box 392、border box 394、margin box 418，边框盒越出父内容区46px，margin box越出58px。第二行 border-box 宽360时，padding box 358、border box 360、margin box 384，边框盒越出12px，margin box越出24px。第三行 border-box宽336时，padding box334、border box336、margin box360，正好与父内容区同宽。</desc>
+  <defs>
+    <pattern id="marginHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#f4f6f8" />
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#9aa9b7" stroke-width="2" />
+    </pattern>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #25364a; }
+      .row { font-size: 18px; font-weight: 700; }
+      .formula { font-size: 17px; }
+      .small { font-size: 15px; fill: #526477; }
+      .parent { fill: #f5f9fb; }
+      .boundary { stroke: #345f7b; stroke-width: 1.5; stroke-dasharray: 5 4; }
+      .dimension { stroke: #526477; stroke-width: 1.3; fill: none; }
+      .content { fill: #dcefe6; stroke: #628a75; stroke-width: 0.7; }
+      .padding { fill: #dcecf4; stroke: #587f98; stroke-width: 0.7; }
+      .border { fill: #263747; }
+      .margin { fill: url(#marginHatch); stroke: #8796a4; stroke-width: 0.7; }
+    </style>
+  </defs>
+  <rect width="840" height="620" fill="#fff" />
+  <text class="small" x="22" y="31">虚线内是父级 360px 内容区；每行均有左右 margin 12px、padding 16px、border 1px。</text>
+  <g class="small" transform="translate(22 59)">
+    <rect x="0" y="-12" width="20" height="14" fill="#dcefe6" stroke="#628a75" />
+    <text x="27" y="0">content</text>
+    <rect x="145" y="-12" width="20" height="14" fill="#dcecf4" stroke="#587f98" />
+    <text x="172" y="0">padding</text>
+    <rect x="300" y="-12" width="8" height="14" fill="#263747" />
+    <text x="315" y="0">border（1px，图例放大）</text>
+    <rect x="565" y="-12" width="20" height="14" fill="url(#marginHatch)" stroke="#8796a4" />
+    <text x="592" y="0">margin（透明）</text>
+  </g>
+
+  <text class="row" x="130" y="87">content-box · width 360px</text>
+  <rect class="parent" x="130" y="96" width="450" height="60" />
+  <path class="boundary" d="M130 91 V159 M580 91 V159" />
+  <rect class="margin" x="130" y="112" width="15" height="30" />
+  <rect class="border" x="145" y="112" width="1.25" height="30" />
+  <rect class="padding" x="146.25" y="112" width="20" height="30" />
+  <rect class="content" x="166.25" y="112" width="450" height="30" />
+  <rect class="padding" x="616.25" y="112" width="20" height="30" />
+  <rect class="border" x="636.25" y="112" width="1.25" height="30" />
+  <rect class="margin" x="637.5" y="112" width="15" height="30" />
+  <text class="formula" x="391.25" y="132" text-anchor="middle">内容区 360px</text>
+  <path class="dimension" d="M580 166 H637.5 M580 161 V171 M637.5 161 V171" />
+  <text class="small" x="645" y="170">边框盒越界 46px</text>
+  <path class="dimension" d="M580 185 H652.5 M580 180 V190 M652.5 180 V190" />
+  <text class="small" x="660" y="189">margin box 越界 58px</text>
+  <text class="formula" x="130" y="219">内容 360px　→　padding box 392px　→　border box 394px　→　margin box 418px</text>
+
+  <text class="row" x="130" y="251">border-box · width 360px</text>
+  <rect class="parent" x="130" y="260" width="450" height="60" />
+  <path class="boundary" d="M130 255 V323 M580 255 V323" />
+  <rect class="margin" x="130" y="276" width="15" height="30" />
+  <rect class="border" x="145" y="276" width="1.25" height="30" />
+  <rect class="padding" x="146.25" y="276" width="20" height="30" />
+  <rect class="content" x="166.25" y="276" width="407.5" height="30" />
+  <rect class="padding" x="573.75" y="276" width="20" height="30" />
+  <rect class="border" x="593.75" y="276" width="1.25" height="30" />
+  <rect class="margin" x="595" y="276" width="15" height="30" />
+  <text class="formula" x="370" y="296" text-anchor="middle">内容区 326px</text>
+  <path class="dimension" d="M580 330 H595 M580 325 V335 M595 325 V335" />
+  <text class="small" x="602" y="334">边框盒越界 12px</text>
+  <path class="dimension" d="M580 349 H610 M580 344 V354 M610 344 V354" />
+  <text class="small" x="617" y="353">margin box 越界 24px</text>
+  <text class="formula" x="130" y="383">内容 326px　→　padding box 358px　→　border box 360px　→　margin box 384px</text>
+
+  <text class="row" x="130" y="415">border-box · width 336px</text>
+  <rect class="parent" x="130" y="424" width="450" height="60" />
+  <path class="boundary" d="M130 419 V487 M580 419 V487" />
+  <rect class="margin" x="130" y="440" width="15" height="30" />
+  <rect class="border" x="145" y="440" width="1.25" height="30" />
+  <rect class="padding" x="146.25" y="440" width="20" height="30" />
+  <rect class="content" x="166.25" y="440" width="377.5" height="30" />
+  <rect class="padding" x="543.75" y="440" width="20" height="30" />
+  <rect class="border" x="563.75" y="440" width="1.25" height="30" />
+  <rect class="margin" x="565" y="440" width="15" height="30" />
+  <text class="formula" x="355" y="460" text-anchor="middle">内容区 302px</text>
+  <path class="dimension" d="M565 494 H580 M565 489 V499 M580 489 V499" />
+  <text class="small" x="590" y="498">边框盒内 12px；margin box 齐父边</text>
+  <text class="formula" x="130" y="528">内容 302px　→　padding box 334px　→　border box 336px　→　margin box 360px</text>
+
+  <path d="M22 554 H818" stroke="#d6dee6" stroke-width="1" />
+  <text class="small" x="22" y="578">局部标尺从父区右边界量到子项右边缘；边框宽度仍按比例绘制，1px 由图例标出。</text>
+  <text class="small" x="22" y="598">margin 斜线只标示透明区域；本图只演算水平尺寸。</text>
+</svg>
