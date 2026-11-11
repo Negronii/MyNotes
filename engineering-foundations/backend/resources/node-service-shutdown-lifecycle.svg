@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="1040" viewBox="0 0 1300 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Node.js 服务关停与外部硬截止</title>
+  <desc id="desc">收到 SIGTERM 或 SIGINT 后先同步关闸并关闭新连接，再并行等待 HTTP server 和 handler Promise。handler 结束后补关新近空闲的 keep-alive 连接。内部 timer 到期只通知请求协作取消并关闭 HTTP 活动连接，仍须等待实际清理。生产还需资源 owner 确认释放后关闭依赖。只有 supervisor 自己的硬截止在进程仍未退出时才会强杀进程。已持久接受的 job 由队列 owner 管理。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#344054"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#b42318"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #101828; }
+      .box { stroke: #475467; stroke-width: 3; rx: 18; }
+      .arrow { fill: none; stroke: #344054; stroke-width: 5; marker-end: url(#arrow); }
+      .outer { fill: none; stroke: #b42318; stroke-width: 5; stroke-dasharray: 12 9; marker-end: url(#arrow-red); }
+      .label { font-size: 29px; font-weight: 650; text-anchor: middle; }
+      .small { font-size: 25px; font-weight: 500; text-anchor: middle; }
+      .note { font-size: 23px; font-weight: 550; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect width="1300" height="1040" fill="#ffffff"/>
+
+  <!-- Signal, synchronous gate, listener close, and two independent waits -->
+  <rect class="box" x="40" y="55" width="200" height="120" fill="#eef4ff"/>
+  <text class="label" x="140" y="103">SIGTERM</text>
+  <text class="label" x="140" y="143">/ SIGINT</text>
+
+  <path class="arrow" d="M250 115 H305"/>
+  <rect class="box" x="315" y="55" width="250" height="120" fill="#e6f4ea"/>
+  <text class="label" x="440" y="103">同步关闸</text>
+  <text class="small" x="440" y="145">draining = true</text>
+
+  <path class="arrow" d="M575 115 H630"/>
+  <rect class="box" x="640" y="55" width="250" height="120" fill="#f2f4f7"/>
+  <text class="label" x="765" y="103">server.close()</text>
+  <text class="small" x="765" y="145">停止接新连接</text>
+
+  <path class="arrow" d="M900 115 H955"/>
+  <rect class="box" x="965" y="55" width="295" height="120" fill="#f2f4f7"/>
+  <text class="label" x="1112" y="103">并行等待</text>
+  <text class="small" x="1112" y="145">HTTP + 应用工作</text>
+
+  <!-- Normal HTTP close and newly idle keep-alive sockets -->
+  <rect x="1010" y="190" width="250" height="90" rx="14" fill="#f8fafc" stroke="#98a2b3" stroke-width="2"/>
+  <text class="note" x="1135" y="218">handler 结束后</text>
+  <text class="note" x="1135" y="245">补关刚转为空闲的</text>
+  <text class="note" x="1135" y="272">keep-alive 连接</text>
+
+  <!-- Internal deadline: notify cancellation, then continue waiting -->
+  <rect x="665" y="204" width="210" height="55" rx="12" fill="#fff4e5" stroke="#e7b36f" stroke-width="2"/>
+  <text class="note" x="770" y="239">内部 timer 到期</text>
+  <path class="arrow" d="M975 165 C940 210 900 250 870 305"/>
+  <rect class="box" x="520" y="290" width="345" height="110" fill="#fff4e5"/>
+  <text class="small" x="692" y="337">通知在途请求取消</text>
+  <text class="small" x="692" y="375">关闭 HTTP 活动连接</text>
+
+  <path class="arrow" d="M692 410 V450"/>
+  <rect class="box" x="520" y="460" width="345" height="120" fill="#fff4e5"/>
+  <text class="label" x="692" y="510">继续等待清理</text>
+  <text class="small" x="692" y="552">查询 / worker / 写流</text>
+
+  <!-- The join requires HTTP close and application settlement -->
+  <path class="arrow" d="M985 185 V615"/>
+  <path class="arrow" d="M870 520 H895 V657 H920"/>
+  <rect class="box" x="930" y="615" width="330" height="105" fill="#e6f4ea"/>
+  <text class="small" x="1095" y="658">HTTP close 回调已到</text>
+  <text class="small" x="1095" y="696">handler Promise 已结算</text>
+
+  <!-- Production needs owner-confirmed resource release, separate from Promise settlement -->
+  <path class="arrow" d="M1095 720 V775"/>
+  <rect class="box" x="930" y="775" width="330" height="100" fill="#eef4ff"/>
+  <text class="small" x="1095" y="817">生产还要等资源 owner</text>
+  <text class="small" x="1095" y="852">确认释放成功</text>
+
+  <path class="arrow" d="M1095 875 V915"/>
+  <rect class="box" x="930" y="925" width="330" height="80" fill="#f2f4f7"/>
+  <text class="small" x="1095" y="960">关闭共享依赖</text>
+  <text class="small" x="1095" y="990">再让进程自然退出</text>
+
+  <!-- The supervisor starts its own hard timer with the stop signal; it covers every application phase. -->
+  <path d="M140 175 V520" fill="none" stroke="#b42318" stroke-width="5" stroke-dasharray="12 9"/>
+  <rect x="40" y="520" width="390" height="95" rx="16" fill="#fef3f2" stroke="#b42318" stroke-width="2.5"/>
+  <text class="small" x="235" y="560" fill="#b42318">supervisor 独立计时</text>
+  <text class="small" x="235" y="596" fill="#b42318">覆盖整个关停过程</text>
+  <path class="outer" d="M235 615 V665"/>
+  <rect class="box" x="40" y="675" width="390" height="115" fill="#fef3f2" stroke="#b42318"/>
+  <text class="small" x="235" y="719" fill="#b42318">外部硬截止时仍未退出</text>
+  <text class="label" x="235" y="762" fill="#b42318">supervisor 发 SIGKILL</text>
+
+  <!-- Durable jobs remain owned by the queue and job coordinator. -->
+  <rect x="40" y="835" width="790" height="145" rx="16" fill="#f9fafb" stroke="#98a2b3" stroke-width="2"/>
+  <text class="small" x="435" y="885">acct-17 持久 job 归队列与协调者；HTTP 断开不撤销 job。</text>
+  <text class="small" x="435" y="928">取消 attempt 后，等查询 / worker / 写入清理，再安全归还租约。</text>
+</svg>
