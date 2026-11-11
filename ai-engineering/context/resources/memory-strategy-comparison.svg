@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="610" viewBox="0 0 700 610" role="img" aria-labelledby="title desc">
+<title id="title">从同一历史比较原文检索与派生记忆</title><desc id="desc">固定权限和时间截面，冻结两种策略，在独立任务上比较质量与成功任务全成本。相对目标和绝对底线均达标才保留派生策略；否则保留原文基线，回开发集修订。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#71839d"/></marker></defs>
+<style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#26364e;text-anchor:middle;font-size:18px}.small{font-size:16px}.box{stroke-width:1.5;rx:12}.flow{fill:none;stroke:#71839d;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="700" height="610" rx="12" fill="#f8faff"/>
+<rect class="box" x="210" y="20" width="280" height="66" fill="#eef5ff" stroke="#c7daf5"/>
+<text x="350" y="47">同一份授权历史</text><text class="small" x="350" y="71">相同时间截面</text>
+<path class="flow" d="M310 86V110H175V139"/><path class="flow" d="M390 86V110H525V139"/>
+<rect class="box" x="40" y="145" width="270" height="72" fill="#eef5ff" stroke="#c7daf5"/>
+<text x="175" y="173">原文检索</text><text class="small" x="175" y="199">直接取回证据</text>
+<rect class="box" x="390" y="145" width="270" height="72" fill="#f3effb" stroke="#d6c7ee"/>
+<text x="525" y="173">派生记忆</text><text class="small" x="525" y="199">按需读取，并可回查来源</text>
+<path class="flow" d="M175 217V240H270V269"/><path class="flow" d="M525 217V240H430V269"/>
+<rect class="box" x="130" y="275" width="440" height="80" fill="#eef5ff" stroke="#c7daf5"/>
+<text x="350" y="304">冻结策略，在独立任务上同题对照</text><text class="small" x="350" y="332">比较质量得失与每个成功任务的全成本</text>
+<path class="flow" d="M350 355V389"/>
+<rect class="box" x="195" y="395" width="310" height="68" fill="#fff6e7" stroke="#e8d2aa"/>
+<text x="350" y="422">相对目标与绝对底线</text><text x="350" y="447">都达成了吗？</text>
+<path class="flow" d="M255 463V485H175V529"/><path class="flow" d="M445 463V485H525V529"/>
+<text class="small" x="130" y="513">达标</text><text class="small" x="585" y="513">未达标或未决</text>
+<rect class="box" x="40" y="535" width="270" height="56" fill="#edf7f3" stroke="#b9d9cc"/>
+<text class="small" x="175" y="568">保留已验收的派生策略</text>
+<rect class="box" x="390" y="535" width="270" height="56" fill="#f3effb" stroke="#d6c7ee"/>
+<text class="small" x="525" y="558">保留原文基线</text><text class="small" x="525" y="580">回开发集诊断修订</text>
+</svg>
