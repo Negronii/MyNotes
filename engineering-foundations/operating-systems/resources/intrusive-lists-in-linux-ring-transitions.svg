@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1260" viewBox="0 0 1000 1260" role="img" aria-labelledby="title desc">
+  <title id="title">ready 與 audit 双向环的插入和摘除状态</title>
+  <desc id="desc">用教学地址展示三步状态。插入后，ready_items head 的 next 到 A.ready_link，再到 B.ready_link，再回 head，prev 方向相反；audit_items 与 A.audit_link 构成独立的二节点环。摘除 A.ready 后 ready_items 与 B.ready 互相指向，A.ready 自指，audit 不变。再摘 B.ready 后 head、A.ready、B.ready 都自指，audit 仍保留 A。</desc>
+  <defs>
+    <marker id="nextArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#28689c"/>
+    </marker>
+    <marker id="prevArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#7652a5"/>
+    </marker>
+    <marker id="bothArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#465260"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #1f2937; }
+      .mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
+      .panel { fill: #fff; stroke: #d8e1ec; stroke-width: 2; }
+      .heading { font-size: 22px; font-weight: 700; }
+      .nodeName { font-size: 18px; font-weight: 700; }
+      .nodeAddr { font-size: 17px; }
+      .edgeLabel { font-size: 17px; font-weight: 700; }
+      .note { font-size: 16px; fill: #53657d; }
+      .head { fill: #eef4ef; stroke: #91b49b; stroke-width: 1.5; }
+      .ready { fill: #eaf2fb; stroke: #8caed2; stroke-width: 1.5; }
+      .audit { fill: #f1eaff; stroke: #b7a2dc; stroke-width: 1.5; }
+      .self { fill: #f3f4f6; stroke: #aeb8c3; stroke-width: 1.5; }
+      .next { fill: none; stroke: #28689c; stroke-width: 2.8; marker-end: url(#nextArrow); }
+      .prev { fill: none; stroke: #7652a5; stroke-width: 2.8; marker-end: url(#prevArrow); }
+      .both { fill: none; stroke: #465260; stroke-width: 3; marker-end: url(#bothArrow); }
+      .divider { stroke: #d8e1ec; stroke-width: 1.2; }
+    </style>
+  </defs>
+  <rect width="1000" height="1260" fill="#f7f9fc"/>
+
+  <rect class="panel" x="22" y="34" width="956" height="418" rx="16"/>
+  <text class="heading" x="44" y="72">插入后</text>
+  <line class="divider" x1="680" y1="92" x2="680" y2="428"/>
+  <text class="nodeName" x="45" y="110">ready 环：head → A.ready_link → B.ready_link → head</text>
+
+  <rect class="head" x="255" y="132" width="180" height="74" rx="10"/>
+  <text class="nodeName" x="275" y="163">ready_items</text>
+  <text class="nodeAddr mono" x="275" y="190">head @ 0x8000</text>
+
+  <rect class="ready" x="48" y="314" width="220" height="82" rx="10"/>
+  <text class="nodeName" x="67" y="348">A.ready_link</text>
+  <text class="nodeAddr mono" x="67" y="378">@ 0x1008　id=4</text>
+
+  <rect class="ready" x="438" y="314" width="220" height="82" rx="10"/>
+  <text class="nodeName" x="457" y="348">B.ready_link</text>
+  <text class="nodeAddr mono" x="457" y="378">@ 0x2008　id=7</text>
+
+  <path class="next" d="M 284 206 C 266 250, 229 273, 210 314"/>
+  <text class="edgeLabel" x="218" y="257" fill="#28689c">next</text>
+  <path class="prev" d="M 116 314 C 148 253, 204 224, 267 206"/>
+  <text class="edgeLabel" x="133" y="284" fill="#7652a5">prev</text>
+
+  <path class="next" d="M 268 338 L 438 338"/>
+  <text class="edgeLabel" x="326" y="329" fill="#28689c">next</text>
+  <path class="prev" d="M 438 376 L 268 376"/>
+  <text class="edgeLabel" x="326" y="405" fill="#7652a5">prev</text>
+
+  <path class="next" d="M 505 314 C 499 255, 464 228, 422 206"/>
+  <text class="edgeLabel" x="478" y="258" fill="#28689c">next</text>
+  <path class="prev" d="M 425 206 C 498 231, 560 264, 584 314"/>
+  <text class="edgeLabel" x="531" y="281" fill="#7652a5">prev</text>
+
+  <text class="nodeName" x="704" y="110">独立的 audit 环</text>
+  <rect class="head" x="716" y="132" width="232" height="74" rx="10"/>
+  <text class="nodeName" x="738" y="163">audit_items</text>
+  <text class="nodeAddr mono" x="738" y="190">head @ 0x9000</text>
+  <rect class="audit" x="716" y="314" width="232" height="82" rx="10"/>
+  <text class="nodeName" x="738" y="348">A.audit_link</text>
+  <text class="nodeAddr mono" x="738" y="378">@ 0x1018</text>
+  <path class="both" d="M 810 206 L 810 314"/>
+  <text class="edgeLabel" x="800" y="268" text-anchor="end" fill="#465260">next = prev</text>
+  <path class="both" d="M 850 314 L 850 206"/>
+  <text class="edgeLabel" x="860" y="268" fill="#465260">next = prev</text>
+  <text class="note" x="704" y="426">同属工作项 A 的两个钩子</text>
+
+  <rect class="panel" x="22" y="474" width="956" height="316" rx="16"/>
+  <text class="heading" x="44" y="512">摘除 A.ready_link 后</text>
+  <line class="divider" x1="680" y1="530" x2="680" y2="766"/>
+
+  <rect class="head" x="64" y="570" width="205" height="76" rx="10"/>
+  <text class="nodeName" x="83" y="602">ready_items</text>
+  <text class="nodeAddr mono" x="83" y="630">@ 0x8000</text>
+  <rect class="ready" x="428" y="570" width="220" height="76" rx="10"/>
+  <text class="nodeName" x="449" y="602">B.ready_link</text>
+  <text class="nodeAddr mono" x="449" y="630">@ 0x2008　id=7</text>
+  <path class="both" d="M 269 590 L 428 590"/>
+  <text class="edgeLabel" x="348" y="582" text-anchor="middle" fill="#465260">next = prev</text>
+  <path class="both" d="M 428 626 L 269 626"/>
+  <text class="edgeLabel" x="348" y="651" text-anchor="middle" fill="#465260">next = prev</text>
+
+  <rect class="self" x="187" y="690" width="300" height="66" rx="10"/>
+  <text class="nodeName" x="208" y="718">A.ready_link @ 0x1008</text>
+  <text class="nodeAddr mono" x="208" y="743">next = prev = 0x1008</text>
+  <path class="next" d="M 310 690 C 287 651, 390 651, 365 690"/>
+
+  <text class="nodeName" x="704" y="552">audit 环未改变</text>
+  <rect class="head" x="716" y="570" width="232" height="72" rx="10"/>
+  <text class="nodeName" x="738" y="600">audit_items</text>
+  <text class="nodeAddr mono" x="738" y="628">head @ 0x9000</text>
+  <rect class="audit" x="716" y="690" width="232" height="66" rx="10"/>
+  <text class="nodeName" x="738" y="718">A.audit_link</text>
+  <text class="nodeAddr mono" x="738" y="743">@ 0x1018</text>
+  <path class="both" d="M 810 642 L 810 690"/>
+  <text class="edgeLabel" x="800" y="673" text-anchor="end" fill="#465260">next = prev</text>
+  <path class="both" d="M 850 690 L 850 642"/>
+  <text class="edgeLabel" x="860" y="673" fill="#465260">next = prev</text>
+
+  <rect class="panel" x="22" y="812" width="956" height="386" rx="16"/>
+  <text class="heading" x="44" y="850">再摘除 B.ready_link 后</text>
+  <line class="divider" x1="680" y1="868" x2="680" y2="1172"/>
+  <text class="nodeName" x="44" y="890">ready 环为空：三个 head / 钩子各自自指</text>
+
+  <rect class="head" x="42" y="978" width="188" height="82" rx="10"/>
+  <text class="nodeName" x="58" y="1011">ready_items</text>
+  <text class="nodeAddr mono" x="58" y="1041">@ 0x8000</text>
+  <path class="next" d="M 92 978 C 75 925, 199 925, 178 978"/>
+  <text class="edgeLabel" x="99" y="951" fill="#28689c">self</text>
+
+  <rect class="self" x="256" y="978" width="188" height="82" rx="10"/>
+  <text class="nodeName" x="272" y="1011">A.ready_link</text>
+  <text class="nodeAddr mono" x="272" y="1041">@ 0x1008</text>
+  <path class="next" d="M 306 978 C 289 925, 413 925, 392 978"/>
+  <text class="edgeLabel" x="313" y="951" fill="#28689c">self</text>
+
+  <rect class="self" x="470" y="978" width="188" height="82" rx="10"/>
+  <text class="nodeName" x="486" y="1011">B.ready_link</text>
+  <text class="nodeAddr mono" x="486" y="1041">@ 0x2008</text>
+  <path class="next" d="M 520 978 C 503 925, 627 925, 606 978"/>
+  <text class="edgeLabel" x="527" y="951" fill="#28689c">self</text>
+  <text class="note" x="44" y="1110">每个节点此时的 next 与 prev 都等于它自己的地址</text>
+
+  <text class="nodeName" x="704" y="890">audit 仍保留 A</text>
+  <rect class="head" x="716" y="930" width="232" height="82" rx="10"/>
+  <text class="nodeName" x="738" y="963">audit_items</text>
+  <text class="nodeAddr mono" x="738" y="993">head @ 0x9000</text>
+  <rect class="audit" x="716" y="1076" width="232" height="72" rx="10"/>
+  <text class="nodeName" x="738" y="1106">A.audit_link</text>
+  <text class="nodeAddr mono" x="738" y="1135">@ 0x1018</text>
+  <path class="both" d="M 810 1012 L 810 1076"/>
+  <text class="edgeLabel" x="800" y="1053" text-anchor="end" fill="#465260">next = prev</text>
+  <path class="both" d="M 850 1076 L 850 1012"/>
+  <text class="edgeLabel" x="860" y="1053" fill="#465260">next = prev</text>
+
+  <text class="note" x="28" y="1232">蓝色 = next　紫色 = prev　深灰箭头的 next = prev（双节点环）　绿色 = head　灰色 = 已摘除且自指的钩子</text>
+</svg>
