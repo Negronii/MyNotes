@@ -25,6 +25,8 @@
 >
 > 若还把一段已经解决、与构建 42 无关的旧对话 `Earlier conversation about a different build, already resolved.` 放入输入，它要 10 个 token，合计就成 151，超过本例预算 6 个。先删除这段无关历史，保留 `expected=400`、`actual=200`、`reject_empty_name` 和来源版本，因为这些字段会改变判断。实际系统还要计入角色标记、结构化工具字段、其他模态和输出预留，并用目标模型支持的方式估算或查看用量。
 
+145 token 是一段文本的上下文预算演算，不是可命中 prompt cache 的请求实例。上下文裁剪和前缀复用也不是同一操作：删除尾部无关历史会让模型看不到它，之前的稳定前缀仍可保持不变；如果把中间的手册版本或日志字段从 `v2` 改为 `v3`，两次序列化输入的共同前缀通常止于变化处，后续内容不能仅凭前面相同就视为同一前缀。用摘要和来源 ID 替换日志时，模型实际只看见摘要与 ID；需要精确事实时仍要另行读取来源。删减或压缩即使缩短后续可复用的前缀，也可能因输入更短而降低总成本或改善任务结果；按目标模型和任务比较质量、冷暖缓存命中和每份成功任务成本，没有通用的最佳删减比例。具体缓存命中还受模型、端点、门槛、断点、生命周期和路由影响，必须实测。
+
 本轮答案应明确说：`c1` 记录的是断言失败；按 `CI-RETRY-v3` 不自动重跑，应先调查。是否人工重跑需另按授权流程判断；`c1` 本身不足以断定代码根因。
 
 > [!info] 请求 ID 连接请求与观察
@@ -44,6 +46,8 @@
 摘要是有损变换，不是权威记录。比如把构建 42 记成“单测失败”会丢失测试名与 `400 → 200` 的断言差异；再把“需要检查”写成“代码校验已失败”则会混淆观察和推测。摘要应保留原始记录的 ID、版本或位置，让下一步能在需要时回到原文。若来源已删除或权限改变，重新读取也必须重新校验访问范围。
 
 **Offload（外置状态）**适合原始日志、完整文件或会话之外的长期资料：持久层保存原件与标识，上下文只带本轮需要的片段或可查询 ID。**Just-in-time retrieval（按需检索）**减少预先复制整库的成本，但会增加一次或多次工具调用；检索端还要正确应用授权和版本条件。[从授权文档中检索证据](../rag/rag-architecture-and-implementation.md)说明文档更新如何进入索引以及返回模型前应检查什么。
+
+服务端 thread 可以让请求只上传新增消息，但它仍按完整对话重建模型输入；它不会替应用删掉旧上下文，也不等同提示缓存。如何区分输入裁剪、前缀计算复用和重复传输，见[AI 时延与成本优化](../systems/ai-latency-and-cost-optimization.md)。
 
 **隔离任务**有助于让并行研究或权限不同的 worker（工作者）只接触必要信息，但不会自动共享主流程的记忆。交接中要明确目标、输入证据、权限、输出格式和不确定项；主流程保留来源并自行判断结论。若子任务都依赖同一批近期状态，先比较“一个主循环按需加载工具/技能”与“新建独立上下文”在质量、成本和时延上的差别，再决定是否拆分。[编排模式](../agents/orchestration-patterns.md)
 
@@ -92,6 +96,9 @@
 过期检查也能避免无效重跑：如果缓存里还留着合成旧版 `CI-RETRY-v2@fixture-r0`（“任何失败都重跑”），它会把 build 42 的断言失败误导成重跑。`run-r42-8` 读取时发现缓存版本与当前已授权来源 `CI-RETRY-v3@fixture-r1` 不符，拒绝旧命中并重新核验；v3 规定断言失败先调查，因此不按旧缓存自动重跑。这里展示的是应用的版本与授权检查，不能仅靠向量相似度接受过期记忆。
 
 运行状态、用户偏好和共享来源由各自的 owner（持有者）与 scope（范围）隔离。忘记用户偏好不删除 `run-r42-7` 已提交的副作用账本或来源发布者自己的记录；发布者撤回公开规则则不应删除用户偏好。把某次处理方式提升成共享经验，还要由有权来源确认适用范围，并按[Agent 改进与版本验收](../agents/agent-improvement-and-version-acceptance.md)用独立样本验证；一次运行成功或模型记住规则都不足以推广。
+
+本节回答哪些信息能跨运行保留、何时更新以及谁能读取；若要决定是否将历史加工为偏好摘要、事实索引或过程经验，并与原文检索比较它的题目得失和全成本，见[什么时候值得把历史加工成 Agent 记忆？](agent-memory-design-and-evaluation.md)。
+
 ## 下一章怎样接手
 
 本章给每次模型调用建立边界：应用持有身份和事实来源，按需组装模型可见内容，必要时将工具请求或检索结果作为带来源的观察返回。接下来，RAG 章从已知 `c1`、需要在新任务中取得当前手册依据的状态开始，详细说明文档如何分块、授权、更新、排序并进入上下文。模型请求的字段与副作用如何执行和恢复则由[工具契约](../agents/tool-design-and-function-calling.md)承接。
@@ -101,7 +108,7 @@
 >
 > - **上下文与提示工程的边界、按需维护信息。** Anthropic, [“Effective context engineering for AI agents”](https://www.anthropic.com/research/effective-context-engineering-for-ai-agents), 2025-09-29，§§1–4。组织对多轮输入的工程经验，不是通用实验结论。
 > - **长输入的位置效应。** Liu et al., [“Lost in the Middle: How Language Models Use Long Contexts,” TACL 2024 / arXiv v3](https://arxiv.org/abs/2307.03172v3)，§§3–4。研究中的具体模型与多文档/键值任务，不证明所有模型在所有输入中都有相同的首尾偏好。
-> - **KV 前缀复用的 provider 示例。** OpenAI API, [“Prompt caching”](https://developers.openai.com/api/docs/guides/prompt-caching), 检查于 2026-11-06。实现细节、模型支持、缓存生命周期和计费均依当前文档与部署配置。
+> - **KV 前缀复用的 provider 示例。** OpenAI API, [“Prompt caching”](https://developers.openai.com/api/docs/guides/prompt-caching), 检查于 2026-11-11。实现细节、模型支持、缓存生命周期和计费均依当前文档与部署配置。
 > - **稳定前缀、追加式历史与任务清单的实践经验。** Manus, [“Context Engineering for AI Agents: Lessons from Building Manus”](https://www.manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus), 2025-07-18。文中运行观察来自 Manus 自有 agent，不能当作跨 provider 的保证。
 > - **按需加载能力与独立 worker 的部署比较。** Claude Platform, [“Building agents: When to fold subagents into your main agent loop”](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop), 2026-10-22；数据来自若干企业部署，适用于其比较过的工作流。
 > - **开放式搜索重置。** Tan et al., [“Scaling Discovery Requires Forgetting,” arXiv v1](https://arxiv.org/abs/2610.20563v1), 2026-10-14，§§3–4、Appendix B、§6。测试四项带外部评分的搜索任务，范围见正文。

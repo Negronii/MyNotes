@@ -46,6 +46,7 @@
 
 - 想知道模型内部发生了什么，继续看[提示词怎样变成文本](../ai-engineering/foundations/how-llms-work.md)，再把中间状态连接到[KV cache 与服务容量](../ai-engineering/systems/llm-serving-and-kv-cache.md)。
 - 问题需要先找到某份资料时，进入[文档更新、检索与证据核对](../ai-engineering/rag/rag-architecture-and-implementation.md)。[上下文组织](../ai-engineering/context/context-engineering-principles.md)解释每次推理该看到什么。
+- 再次遇到相关问题时，看[什么时候值得把历史加工成记忆](../ai-engineering/context/agent-memory-design-and-evaluation.md)：先与原文检索比较，再检查加工后的信息损失、使用成本和独立任务结果。
 - 一次工具调用不足以完成目标时，看[如何组织多阶段任务](../ai-engineering/agents/orchestration-patterns.md)和[如何验证并保留改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md)。
 
 ## 访问数据的成本从哪来？
@@ -62,7 +63,7 @@
 | 想查的机制 | 正文入口 |
 |---|---|
 | MCP、用户委托与本地工具执行 | [MCP 连接与鉴权](../ai-engineering/agents/mcp-tool-connections.md)、[OAuth 委托执行](../ai-engineering/agents/delegated-oauth-for-agent-tools.md)、[coding harness](../ai-engineering/agents/coding-agent-harness.md) |
-| LangGraph、重规划与记忆 | [运行恢复](../ai-engineering/systems/ai-application-architecture.md)、[编排与循环诊断](../ai-engineering/agents/orchestration-patterns.md)、[上下文与跨运行记忆](../ai-engineering/context/context-engineering-principles.md) |
+| LangGraph、重规划与记忆 | [运行恢复](../ai-engineering/systems/ai-application-architecture.md)、[编排与循环诊断](../ai-engineering/agents/orchestration-patterns.md)、[上下文与跨运行记忆](../ai-engineering/context/context-engineering-principles.md)、[记忆加工的净收益](../ai-engineering/context/agent-memory-design-and-evaluation.md) |
 | 模型配额、缓存与向量索引 | [有界模型调用](../ai-engineering/systems/bounded-model-api-calls.md)、[缓存命中与成本](../ai-engineering/systems/ai-latency-and-cost-optimization.md)、[HNSW](../ai-engineering/rag/hnsw-vector-index-search.md) |
 | debounce、throttle、Promise 与结构相等 | [闭包调度](../frontend/javascript/scope-and-closure.md#定时回调怎样用闭包保留调度状态)、[Promise 组合](../frontend/javascript/asynchronous-javascript.md)、[并发池](../frontend/javascript/bounded-async-concurrency.md)、[值与结构比较](../frontend/javascript/javascript-types.md) |
 | Context、编辑草稿与聊天状态 | [组件中的状态所有者](../frontend/frameworks/react-component-composition.md)、[表格与表单](../frontend/frameworks/management-table-and-form-workflows.md)、[流式聊天](../frontend/browser-apis/streaming-ai-chat.md) |

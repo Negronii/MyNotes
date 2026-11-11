@@ -5,7 +5,10 @@
 - [模型计算与学习](#%E6%A8%A1%E5%9E%8B%E8%AE%A1%E7%AE%97%E4%B8%8E%E5%AD%A6%E4%B9%A0)
 - [推理显存与服务容量](#%E6%8E%A8%E7%90%86%E6%98%BE%E5%AD%98%E4%B8%8E%E6%9C%8D%E5%8A%A1%E5%AE%B9%E9%87%8F)
 - [检索与工具驱动的推理](#%E6%A3%80%E7%B4%A2%E4%B8%8E%E5%B7%A5%E5%85%B7%E9%A9%B1%E5%8A%A8%E7%9A%84%E6%8E%A8%E7%90%86)
+- [提示策略与可核验的中间结果](#提示策略与可核验的中间结果)
 - [Agent 循环与经验积累](#Agent%20%E5%BE%AA%E7%8E%AF%E4%B8%8E%E7%BB%8F%E9%AA%8C%E7%A7%AF%E7%B4%AF)
+- [上下文与跨次记忆](#上下文与跨次记忆)
+- [生产评估与改进信号](#生产评估与改进信号)
 
 ## 模型计算与学习
 
@@ -68,13 +71,35 @@
 
 | 来源与版本 | 核心贡献或阅读理由 | 知识落点 |
 |---|---|---|
+| [Building effective agents](https://www.anthropic.com/research/building-effective-agents) · Anthropic · 2024-12-19 · 当前页面于 2026-11-11 复核 | 用控制权区分 workflow (工作流) 与 agent (智能体)，提倡按可观察收益增加复杂度；页面已提示工具生态变化，今天应结合现成 harness 选择需自行实现的层。 | [模型何时决定下一步](../ai-engineering/agents/agent-fundamentals.md)、[固定流程、主循环与委派](../ai-engineering/agents/orchestration-patterns.md#先看哪些步骤依赖同一份观察)。 |
+| [Zero-Shot Coordination among LLM Agents](https://arxiv.org/html/2611.06409v1) · arXiv v1 · 2026-11-04 | 用 self-play (自我对弈) 与 cross-play (交叉对弈) 揭示各自自洽的策略仍可能因约定错配而协作失败，并检验共享协调提示的收益和反作用；最小博弈结果不直接证明生产协议有效。 | [协作语义与跨版本组合](../ai-engineering/agents/orchestration-patterns.md#共享事实为什么仍可能协作失败？)。 |
 | [Building agents: When to fold subagents into your main agent loop](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop) · Anthropic 文章 · 2026-10-22 | 讨论如何把依赖共享 context (上下文)的专业工作流合入主循环，按需加载 skills 和工具，以及何时保留独立 worker。 | [编排](../ai-engineering/agents/orchestration-patterns.md) 解释结构选择；[上下文](../ai-engineering/context/context-engineering-principles.md) 解释按需加载与交接损失；[评估](../ai-engineering/evaluation/llm-evaluation-methods.md) 解释迁移对照。 |
 | [Scaling Discovery Requires Forgetting](https://arxiv.org/abs/2610.20563v1) · arXiv v1 · 2026-10-14 | 在由外部评分的开放搜索中，研究清除 session 和候选历史、但保留最佳产物及分数的重启策略。 | [上下文](../ai-engineering/context/context-engineering-principles.md) 解释保留对象与重启范围；[Agent 改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#搜索停滞时，清除什么要由对照回答) 解释对照、预算和归因边界。 |
 | [Harness²: Recursive Agent Harnessing for an Open World](https://arxiv.org/html/2610.14224v1) · arXiv v1 · 2026-10-09 | 通过实际执行对照，迭代冻结模型之外的 harness，并跨任务积累可检索的改进经验。 | [Agent 改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md) 解释更新对象和共同基线；[上下文](../ai-engineering/context/context-engineering-principles.md) 解释经验复用；[评估](../ai-engineering/evaluation/llm-evaluation-methods.md) 解释如何对照行为并检验正确性。 |
 | [RSI-Anything: Unlocking Recursive Self-Improvement with World Models](https://arxiv.org/html/2610.13912v1) · arXiv v1 · 2026-10-09 | 提出一个框架，以候选效果预测、真实反馈，以及策略和 predictor (预测器)的配对验收来组织递归改进。 | [Agent 改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md) 解释反馈和持久更新；[Agent 改进的组件与配对门禁](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#预测可以省实验，但必须让结果闭环) 保留原协议；[评估](../ai-engineering/evaluation/llm-evaluation-methods.md) 展开独立样本与统计。 |
 | [GitSwarm: Decentralized Compounding Inference](https://arxiv.org/html/2610.04862v1) · arXiv v1 · 2026-10-04 | 借助持久、可分支的共享产物和显式来源记录，让 worker 跨尝试复用、验证并组合已有工作。 | [上下文](../ai-engineering/context/context-engineering-principles.md) 解释经验积累与来源；[编排](../ai-engineering/agents/orchestration-patterns.md) 解释独立任务与并行边界；[复用证据与因果收益](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#复用记录说明了什么，又没有说明什么) 区分依赖声明、实际消费和祖先贡献。 |
-| [Effective context engineering for AI agents](https://www.anthropic.com/research/effective-context-engineering-for-ai-agents) · Anthropic · 2025-09-29 | 把提示写作扩展到每轮信息选择、压缩和按需读取，提供系统实践中的组织方式。 | [每次调用的输入与持久状态](../ai-engineering/context/context-engineering-principles.md)。 |
+
+## 上下文与跨次记忆
+
+| 来源与版本 | 核心贡献或阅读理由 | 知识落点 |
+|---|---|---|
+| [Effective context engineering for AI agents](https://www.anthropic.com/research/effective-context-engineering-for-ai-agents) · Anthropic · 2025-09-29 · 2026-11-11 复核 | 把每轮输入看成需要选择、压缩和按需读取的有限资源；成熟 harness 可承担实现，应用仍需验证关键证据是否保住，缓存命中与任务质量要分别测量。 | [输入选择与缓存取舍](../ai-engineering/context/context-engineering-principles.md#选择、压缩和按需读取)。 |
 | [Context Engineering for AI Agents: Lessons from Building Manus](https://www.manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus) · Manus · 2025-07-18 | 讨论稳定前缀、任务清单与外置资料；其运行观察应作为待测工程假设。 | [上下文压缩与状态保留](../ai-engineering/context/context-engineering-principles.md#选择、压缩和按需读取)。 |
 | [Lost in the Middle: How Language Models Use Long Contexts](https://arxiv.org/abs/2307.03172v3) · TACL 2024 / arXiv v3 | 揭示所测模型与任务中相关信息位置的影响，区分输入窗口长度与可靠使用能力。 | [长输入的选择边界](../ai-engineering/context/context-engineering-principles.md#选择、压缩和按需读取)。 |
+| [Memory Tax: Dissecting the Net Value of Agent Memory](https://arxiv.org/html/2610.34073v1) · arXiv v1 · 2026-10-25 | 相对原始历史检索逐题拆开记忆加工带来的收益与损失，追查信息保留、取回和跨模型使用；净收益取决于基线、任务与成本。 | [什么时候值得加工历史](../ai-engineering/context/agent-memory-design-and-evaluation.md#%E5%90%8C%E9%A2%98%E9%80%90%E9%A1%B9%E6%AF%94%E8%BE%83%EF%BC%9A%E6%9C%89%E5%A4%9A%E5%B0%91%E5%BE%97%E5%88%B0%EF%BC%8C%E5%A4%9A%E5%B0%91%E5%A4%B1%E5%8E%BB%EF%BC%9F)。 |
+| [MemSteer: Turning User Histories into Supervision for Agent Memory Optimization](https://arxiv.org/html/2610.39276v1) · arXiv v1 · 2026-10-29 | 从历史记录构造带答案与来源的监督，迭代存储、检索和上下文组装；合成核查仍可能共同出错，官方题对照的复用范围与跨用户结果需分别读。 | [记忆设计的监督与验收](../ai-engineering/context/agent-memory-design-and-evaluation.md#%E7%94%A8%E5%8E%86%E5%8F%B2%E7%94%9F%E6%88%90%E7%9B%91%E7%9D%A3%EF%BC%8C%E5%86%8D%E7%94%A8%E7%9C%9F%E6%AD%A3%E6%B2%A1%E5%8F%82%E4%B8%8E%E9%80%89%E5%9E%8B%E7%9A%84%E4%BB%BB%E5%8A%A1%E9%AA%8C%E6%94%B6)。 |
+| [Make long-running agents faster with message threads](https://claude.com/resources/articles/message-threads) · Anthropic · 2026-11-02 · 配套 Beta 文档于 2026-11-11 复核 | 客户端发送新增消息，服务端重建完整模型输入，减少重复上传及前处理；短期线程、prompt cache 和应用持久状态是不同机制。 | [传输、缓存与成功任务成本](../ai-engineering/systems/ai-latency-and-cost-optimization.md#Message%20Threads%20%E5%87%8F%E5%B0%91%E9%87%8D%E5%A4%8D%E4%B8%8A%E4%BC%A0%EF%BC%8C%E4%BD%86%E4%BB%8D%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%A4%84%E7%90%86%E5%AE%8C%E6%95%B4%E5%8E%86%E5%8F%B2)。 |
+
+## 生产评估与改进信号
+
+| 来源与版本 | 核心贡献或阅读理由 | 知识落点 |
+|---|---|---|
+| [Measuring Agents in Production](https://proceedings.mlr.press/v306/pan26a.html) · ICML 2026 / PMLR 306 · 调查期 2025-04 至 2025-11 | 通过访谈和问卷描述生产与试点系统怎样运行和评估；各比例分母不同，报告的常见做法不能直接推出可靠性的因果收益。 | [生产信号如何成为可复核标签](../ai-engineering/systems/ai-production-observability-and-feedback.md#%E6%8A%8A%E7%BA%BF%E4%B8%8A%E4%BF%A1%E5%8F%B7%E5%8F%98%E6%88%90%E7%8B%AC%E7%AB%8B%E9%AA%8C%E8%AF%81%EF%BC%8C%E8%80%8C%E4%B8%8D%E6%98%AF%E7%9B%B4%E6%8E%A5%E5%96%82%E8%AE%AD%E7%BB%83)、[任务契约与独立评估](../ai-engineering/evaluation/llm-evaluation-methods.md)。 |
+| [Do Repetitions Matter? Strengthening Reliability in LLM Evaluations](https://arxiv.org/abs/2509.24086v1) · arXiv v1 · 2025-09-28 | 在其数学评测、模型和解码设置中比较单次运行与三次聚合后的排名变化，帮助区分任务抽样与单次运行波动；不提供通用复跑次数。 | [多次生成怎样分配开发与验收预算](../ai-engineering/evaluation/llm-evaluation-methods.md#多次生成时怎样分配开发和最终验收预算)。 |
+| [A-RSI: Adaptive Task Refresh for Zero-Data Multimodal Self-Improvement](https://arxiv.org/html/2610.38568v1) · arXiv v1 · 2026-10-28 | 在求解模型的权重训练中根据已有训练信号切换预生成任务池；换新题的收益与自适应触发时机的优势尚不能由单次轨迹等同起来。 | [改进循环怎样选择有用经验](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#%E4%BB%8E%E5%93%AA%E4%BA%9B%E6%A0%B7%E6%9C%AC%E5%92%8C%E8%BD%A8%E8%BF%B9%E4%B8%AD%E5%AD%A6)。 |
+| [GEPA-Curator: Curated Learning for Self Improving Agents](https://arxiv.org/html/2610.37651v1) · arXiv v1 · 2026-10-27 | 为提示词优化选择本轮任务，并为失败检索同题可信成功轨迹，减少无效反馈诱导的过度修订；跳过决定可错，需回访并独立选择最终版本。 | [任务筛选、成功参照与候选验收](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#%E4%BB%8E%E5%93%AA%E4%BA%9B%E6%A0%B7%E6%9C%AC%E5%92%8C%E8%BD%A8%E8%BF%B9%E4%B8%AD%E5%AD%A6)。 |
+| [Harness-S: Learning from Sibling Harnesses for Generalizable Agent Training](https://arxiv.org/html/2611.04277v1) · arXiv v1 · 2026-11-03 | 先构建互补 harness 池，在基础环境整组失败时重采救援轨迹，再训练共享 policy (策略) 权重并回到基础环境验收；不同于冻结模型、持续编辑 harness。 | [运行环境与权重分别怎样改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#改进运行脚手架时如何做对照)。 |
+| [Teaching AI to build scientific models](https://www.anthropic.com/research/teaching-ai-to-build-scientific-models) · Anthropic 客座文章 · 2026-11-06 | 区分提出模型结构、用数据约束参数和解释机制，保留同样解释既有数据的多个候选，再寻找可区分它们的新观察；文章是研究方向综述，非统一算法的验证报告。 | [预测、竞争假设与真实反馈](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#%E5%A4%9A%E7%A7%8D%E6%A0%B9%E5%9B%A0%E5%8F%AF%E4%BB%A5%E5%85%B1%E5%AD%98%EF%BC%9B%E4%B8%8B%E4%B8%80%E9%A1%B9%E8%A7%82%E6%B5%8B%E8%A6%81%E8%AE%A9%E5%AE%83%E4%BB%AC%E4%BD%9C%E5%87%BA%E4%B8%8D%E5%90%8C%E9%A2%84%E6%B5%8B)。 |
+| [A Probabilistic Framework for LLM-Based Model Discovery](https://proceedings.mlr.press/v306/wahl26a.html) · ICML 2026 / PMLR 306 | ModelSMC 用语言模型提出可执行候选，并按已有观测重新赋权，保留多种能解释数据的模型；搜索模型分布与主动执行下一项实验是不同问题。 | [竞争解释与下一项可核对观察](../ai-engineering/agents/agent-improvement-and-version-acceptance.md#多种根因可以共存；下一项观测要让它们作出不同预测)。 |
 
 返回 [AI 工程领域地图](../ai-engineering/index.md) 或 [知识导航](index.md)。想连着读，可以打开 [AI 工程连续阅读稿](generated/ai-engineering.md)。

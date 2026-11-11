@@ -35,6 +35,7 @@
 - [每次模型调用应看到什么，应用又应持久化什么？](context/context-engineering-principles.md)
 - [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)
 - [HNSW 怎样逐层找近邻，怎样知道搜索得够不够？](rag/hnsw-vector-index-search.md)
+- [什么时候值得把历史加工成 Agent 记忆？](context/agent-memory-design-and-evaluation.md)
 - [应用怎样设计并执行模型提出的工具请求？](agents/tool-design-and-function-calling.md)
 - [主机怎样把 MCP 工具从发现接到有权限的执行？](agents/mcp-tool-connections.md)
 - [无人值守 Agent 怎样在用户授权内继续第三方操作？](agents/delegated-oauth-for-agent-tools.md)

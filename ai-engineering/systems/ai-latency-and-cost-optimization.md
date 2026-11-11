@@ -101,6 +101,25 @@ TTL 应与复用间隔和当前计价一起看。短期会话若几分钟内反�
 
 最后用完整工作单元决定是否采用：对同一合成请求分组比较缓存前缀指纹、命中 Token、缓存读取/写入费用、TTFT、完整时延，以及内容与结构通过验收的报告数。集中稳定前缀只有在不把用户或租户专属内容错误共享、质量门槛不变并降低成功任务全成本时才成立。缓存只是推理优化；权限、提示词差异和报告数据新鲜度仍由应用每次检查。
 
+## Message Threads 减少重复上传，但仍让模型处理完整历史
+
+Anthropic 的 Message Threads 当前以 beta API 形式提供：创建 thread 时发送完整对话；后续请求使用上一轮的 response ID，并只追加新消息，由服务端重建完整的模型输入。因此它主要减少客户端重复上传历史和服务端重复校验、分词的工作；文档说明模型仍读取完整历史，token 用量与计费不因 thread 本身改变。它也不代表服务端复用模型推理时的 KV 状态。可选的 prompt caching 是另一项机制，必须分别配置、测量与计价。
+
+下面假设每条用户消息 `Uᵢ` 和模型回复 `Aᵢ` 都是一个等长块，忽略固定系统提示、工具、response ID、schema 和协议头：
+
+| 轮次 | 完整重发模式上传 | Message Threads 上传 |
+|---|---|---|
+| 1 | `U₁`：1 块 | `U₁`：1 块，并创建 thread |
+| 2 | `U₁ A₁ U₂`：3 块 | `U₂`：1 块，并引用前一 response ID |
+| 3 | `U₁ A₁ U₂ A₂ U₃`：5 块 | `U₃`：1 块，并引用前一 response ID |
+| 合计 | **9 块** | **3 块** |
+
+这是上传消息内容的教学算例，不是实际字节、模型输入量、TTFT 或费用比例。三次模型调用仍分别处理 1、3、5 块的完整历史，累计上下文相同；实际端点还会传递其它字段，消息长短也不相等。文章报告 Claude Code 在 500k–1M token 请求上的 TTFT 中位数改善约 35%，但未给出足以外推的样本量与基准细节；该结果不推出任意请求更快 35%，更不推出模型账单减少。
+
+当前文档所述的 beta 边界会影响恢复设计：服务以最近一次请求后的 5 分钟作为尽力续接窗口，并会在一小时内删除 thread；应用需保存完整历史。续接是 append-only，每个 response ID 只能继续一次；较早消息不能原地修改或从旧轮分支。流式响应要收到 `message_stop` 后才从该 response ID 继续。
+
+如果续接的流在 `message_stop` 前断开，按当前手动恢复协议先重试同一个 continue 请求；若重试返回 `thread_already_continued` 或 `thread_continue_in_flight`，而客户端没有可继续的完整响应，则用应用保存的完整历史创建新 thread。明确收到 `thread_not_found` 时也重建，不能只见一次超时或任意 404 就认定历史已过期。重放消息不等于重新执行其中的工具动作；已执行、失败或结果未知的外部写入仍须对照应用账本处理。这里是当前 beta 协议，部署时应重新核对。[运行恢复章](ai-application-architecture.md)说明运行 ID、应用检查点和副作用账本为何仍由应用持有。
+
 
 ## 把单位成本换成成功任务预算
 
@@ -138,3 +157,4 @@ $$
 > - **量化实现和硬件边界：** vLLM，[Quantization](https://docs.vllm.ai/en/stable/features/quantization/index.html)，核对日期：2026-11-06；当前文档说明精度与存储占用的取舍，并列出格式与硬件兼容性；兼容表会随版本改变。
 > - **量化与蒸馏机制：** Frantar et al., [GPTQ v2 (2023-03-22)](https://arxiv.org/abs/2210.17323)；Lin et al., [AWQ v6 (2026-04-25)](https://arxiv.org/abs/2306.00978)；Hinton et al., [Distilling the Knowledge in a Neural Network (2015)](https://arxiv.org/abs/1503.02531)。这些来源提供方法背景，不证明本案例的收益；具体效果受模型、数据、硬件和实现影响。
 > - **推理迭代级调度：** Yu et al., [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu)，2022；作为调度机制背景，不意味着某个当前服务引擎具有相同实现或性能。
+> - **仅减少重复历史上传的当前 beta 协议、续接与数据保留边界：** Anthropic，[Message Threads](https://claude.com/resources/articles/message-threads)，文章日期 2026-11-02；[当前 API 文档](https://platform.claude.com/docs/en/build-with-claude/message-threads)，核对日期 2026-11-11，“How message threads work”“What to send”“Recovering from errors”“Pricing and rate limits”“Data retention”。三轮 `9` 对 `3` 消息块是忽略固定字段的教学输入量，不是 TTFT 或账单比例；每轮完整模型上下文和 token 用量不变。
