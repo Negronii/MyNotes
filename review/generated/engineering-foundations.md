@@ -4362,21 +4362,21 @@ flowchart TD
 
 修复 report 42 的租户条件并通过相关检查后，Git 能把已审查的源码快照变成可复查的提交。这个提交给构建系统提供固定输入，但它还不是部署产物：之后要记录由它构建出的镜像摘要，并验证、晋级那份镜像。Git 命令改变工作区、暂存区、提交或引用；它不撤销数据库迁移、已发布镜像或生产副作用。
 
-branch（分支）是指向提交的可移动引用；working tree（工作区）保存文件，index（暂存区）保存下一次提交的快照，commit（提交）固定一棵树及父提交。区分这几层，才能选择正确的恢复动作。
+branch（分支）是指向提交的可移动引用；working tree（工作区）保存文件，index（暂存区）保存下一次提交的快照，commit（提交）固定一棵树及父提交。本章采用普通分支工作方式：`HEAD` 指向当前分支，分支指向当前提交；成功创建提交后，分支移动到新提交。区分这几层，才能选择正确的恢复动作。
 
-创建分支只建立一个指向提交的引用，`git switch -c <name>` 也不会把未提交的工作区或暂存区改动保存成快照。要在切换任务前保护这类改动，应先提交或暂存保存，再核对恢复后的状态。
+创建分支只建立一个指向提交的引用，`git switch -c <name>` 也不会把未提交的工作区或暂存区改动保存成快照。要在切换任务前保护这类改动，应先提交，或用 `git stash` 保存，再核对恢复后的状态。仅执行 `git add` 不会把改动保存成独立的提交或 stash。
 
-~~~mermaid
-flowchart TD
-    A[工作区：改了查询与测试] --> B[检查 diff 并选择文件]
-    B --> C[暂存区：本次提交精确内容]
-    C --> D[提交：固定源码树和父提交]
-    D --> E[CI（持续集成）以提交号构建镜像]
-    E --> F[镜像摘要与提交号形成可追溯映射]
-    D --> G{哪里需要修复？}
-    G -->|仅未共享的本地历史| H[reset / rebase]
-    G -->|已经共享的提交| I[revert 新增反向提交]
-~~~
+下面只追踪同一个文件的三个版本：`v0` 是原内容，`v1` 加上租户限定，`v2` 又补了错误处理。表中每格是该层保存的文件内容，并非提交号。
+
+| 执行到哪一步 | Working tree | Index | HEAD 提交中的文件 |
+| --- | --- | --- | --- |
+| 编辑为 `v1` | `v1` | `v0` | `v0` |
+| 执行 `git add` | `v1` | `v1` | `v0` |
+| 再编辑为 `v2`，没有再次 add | `v2` | `v1` | `v0` |
+| 执行 `git commit` | `v2` | `v1` | `v1` |
+
+`git add` 复制的是执行当时的内容。之后继续编辑，index 不会跟着变化；所以最后一步只提交了租户限定，错误处理仍是未暂存改动。`git diff` 对照工作区与 index，`git diff --cached` 对照 index 与 HEAD。提交前分别看两份差异，才能知道哪些改动会进入这次提交。测试通常读取 working tree；在 `v2` 上通过测试，不能据此认定只含 `v1` 的提交也通过。验收时要让被测内容与准备提交的快照一致；若工作区混有其他改动，可在隔离目录验证待提交快照。
+
 
 ### 把一个小修复明确放进暂存区
 
@@ -4387,17 +4387,23 @@ git status --short
 git diff -- src/reports.py tests/test_report_scope.py
 ~~~
 
-逐文件暂存能避免把本地配置、调试输出或其他人的改动混进报告修复：
+逐文件暂存用于选择此次修复的路径；它会保留 index 中已经存在的其他暂存改动，也会收录所选文件当前的全部修改。因此必须检查完整的 `git diff --cached`：只应出现属于本次修复的文件与代码块，包含既有暂存内容的情况也一样。
 
 ~~~bash
 git add src/reports.py tests/test_report_scope.py
 git diff --cached
 git diff --cached --check
 git status --short
+~~~
+
+`git diff --cached --check` 检查差异中的空白错误和冲突标记。先对准备提交的同一份内容完成项目测试，再创建提交；若使用提交后的 CI 验收，则核对实际通过检查的提交 ID，之后才晋级产物。
+
+~~~bash
 git commit -m "fix(reports): enforce tenant-scoped reads"
 git show --stat --oneline HEAD
 git log --oneline --graph --decorate -8
 ~~~
+
 
 commit message（提交说明）描述变化和对象，`fix(reports): ...` 属于可选的 Conventional Commits（常规提交说明格式），不是 Git 本身的要求。仓库策略若规定 squash、merge commit 或签名提交，就按该策略执行。代码审查应检查实际 diff（差异）和测试边界；提交标题不等于测试通过。
 
@@ -4415,17 +4421,19 @@ git log --left-right --oneline --graph HEAD...origin/main
 | 当前状态 | 常见做法 | 原因 |
 |---|---|---|
 | 更新尚未发布的本地分支 | 按仓库政策 rebase（变基）或 merge（合并） | 变基重放提交会创建新提交 ID；合并保留双侧历史和可能的汇合点 |
-| 多人已经基于该分支继续提交 | 先协调，通常不改写共享提交 | 改写会让其他人的父提交失效并要求重新整合 |
-| 仓库需要显示集成节点 | merge | 合并提交可显式记录两条历史如何接合 |
+| 多人已经基于该分支继续提交 | 先协调，通常不改写共享提交 | 其他人的分支仍基于旧提交；改写后的提交 ID 不同，需要重新整合两条历史 |
+| 仓库需要保留合并节点 | 需要整合时使用 `merge --no-ff` | 普通 merge 在可快进时只移动分支；`--no-ff` 会为这次合并创建节点 |
 
-例如仅有自己未推送的 `fix/report-tenant-scope` 分支，可以按团队约定 `git rebase origin/main`。若团队需要保留合并关系，则 `git merge origin/main`。两者都可能产生冲突；不要用某种分支模型替代仓库现行策略。
+例如仅有自己未推送的 `fix/report-tenant-scope` 分支，可以按团队约定 `git rebase origin/main`。也可以用 `git merge origin/main` 整合；如果当前提交是远端提交的祖先，它可以 fast-forward（快进），直接移动分支而不新增合并提交。若团队要求这次整合保留合并节点，可用 `git merge --no-ff origin/main`；如果双方已经无须整合，则不会凭空生成合并节点。merge 和 rebase 都可能产生冲突；不要用某种分支模型替代仓库现行策略。
 
-发生冲突时，先看带冲突标记的源文件及 `git diff --cc`。在 report42 的例子里，必须保留当前主体与报表 ID 两个条件，再解决与远端其他调整的真实冲突。检查文件、运行相应测试后暂存并继续：
+发生冲突时，先看带冲突标记的源文件及 `git diff --cc`。在 report42 的例子里，必须保留当前主体与报表 ID 两个条件，再解决与远端其他调整的真实冲突。检查解决冲突后的文件，运行相应测试，再暂存并继续当前操作。下面这段针对正在进行的 rebase：
 
 ~~~bash
 git add src/reports.py
 git rebase --continue
 ~~~
+
+若正在进行的是 merge，解决并暂存冲突后用 `git merge --continue` 完成合并；先看 `git status` 确认当前操作。
 
 示例从干净工作区开始。合并未完成前可 `git merge --abort` 尝试重建合并前状态；如果开始合并时已有未提交改动，Git 在某些情况下无法完整恢复它们。变基未完成前可 `git rebase --abort`。不要把未理解的冲突整块接受为 ours 或 theirs。
 
@@ -4437,7 +4445,7 @@ git rebase --continue
 
 ### 按变化所在层恢复
 
-若只是暂存了不想提交的文件，用 `git restore --staged <path>` 保留工作区内容并移出 index；若只丢弃工作区的未暂存编辑，用 `git restore <path>`，该路径内容会被覆盖。对已经提交的共享修复，用 `git revert <commit>` 添加一个反向提交，保留原提交供历史审计。普通提交可直接指定；撤销 merge commit 时须选择主线父提交，例如 `git revert -m 1 <merge-commit>`，并先检查这个反向差异以及后续合并会受什么影响。回滚共享历史时通常用 revert，不要直接把远端分支强制指回旧位置。
+若只是暂存了不想提交的修改，用 `git restore --staged <path>` 将该路径的 index 内容恢复为 HEAD 中的版本，工作区内容保留。若只丢弃工作区的未暂存编辑，用 `git restore <path>` 将工作区该路径恢复为 index 中的版本；该路径内容会被覆盖。对已经提交的共享修复，用 `git revert <commit>` 添加一个反向提交，保留原提交供历史审计。普通提交可直接指定；撤销 merge commit 时须选择主线父提交，例如 `git revert -m 1 <merge-commit>`，并先检查这个反向差异以及后续合并会受什么影响。回滚共享历史时通常用 revert，不要直接把远端分支强制指回旧位置。
 
 | reset 方式 | branch 引用 | 暂存区 | 工作区 |
 |---|---|---|---|
@@ -4455,7 +4463,7 @@ git show --stat recovery/report-scope
 
 reflog 是本地引用移动记录，会过期，不是远端备份。恢复到共享存储前先检查保住的快照。Git 对 reset、restore、revert 的职责有明确区分：reset 移动当前提交/重置 index，restore 改文件，revert 新增反向提交。
 
-变更经 PR 和状态检查进入共享分支后，CI 才能用这个确切的提交构建镜像。容器摘要和晋级过程见[Docker 如何把该提交构建成固定镜像？](#33.%20Docker%20%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%BA%90%E7%A0%81%E6%9E%84%E5%BB%BA%E6%88%90%E5%8F%AF%E8%BF%90%E8%A1%8C%E9%95%9C%E5%83%8F%EF%BC%9F)与[如何晋级已验证的报表服务产物？](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+CI 可以在开发分支、PR 或共享分支上运行。发布流程应记录实际用于构建的提交；若仓库要求通过 PR 和状态检查后再发布，就把这些检查作为晋级条件。容器摘要和晋级过程见[Docker 如何把该提交构建成固定镜像？](#33.%20Docker%20%E5%A6%82%E4%BD%95%E6%8A%8A%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%BA%90%E7%A0%81%E6%9E%84%E5%BB%BA%E6%88%90%E5%8F%AF%E8%BF%90%E8%A1%8C%E9%95%9C%E5%83%8F%EF%BC%9F)与[如何晋级已验证的报表服务产物？](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
 
 > [!info]- 来源
 > - Git 官方手册：[status](https://git-scm.com/docs/git-status)、[diff](https://git-scm.com/docs/git-diff)、[add](https://git-scm.com/docs/git-add)、[commit](https://git-scm.com/docs/git-commit)，checked 2026-11-06：工作区、index 和提交差异。
