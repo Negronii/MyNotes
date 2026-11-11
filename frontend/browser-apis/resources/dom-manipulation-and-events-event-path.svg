@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="730" viewBox="0 0 700 730" role="img" aria-label="点击 Oldest first 标签文字时的普通 DOM 事件路径；工具栏框接出下一节的委托处理，显示 target 与 currentTarget">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8294b1"/>
+    </marker>
+  </defs>
+  <rect width="700" height="730" fill="#ffffff"/>
+
+  <text x="350" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#5d6e87">点“Oldest first”文字 · 传播路径与委托交接</text>
+
+  <rect x="88" y="50" width="524" height="72" rx="14" fill="#edf4fc" stroke="#bfd2ea" stroke-width="2"/>
+  <text x="350" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#263955">捕获阶段 · body 监听器</text>
+  <text x="350" y="105" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">currentTarget = body · target = span</text>
+
+  <path d="M350 124 L350 159" fill="none" stroke="#8294b1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="88" y="166" width="524" height="72" rx="14" fill="#f3effb" stroke="#d0c1e9" stroke-width="2"/>
+  <text x="350" y="196" text-anchor="middle" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#263955">目标阶段 · span 监听器</text>
+  <text x="350" y="221" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">currentTarget = span · target = span</text>
+
+  <path d="M350 240 L350 275" fill="none" stroke="#8294b1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="88" y="282" width="524" height="72" rx="14" fill="#eef7f5" stroke="#b9d8d0" stroke-width="2"/>
+  <text x="350" y="312" text-anchor="middle" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#263955">冒泡阶段 · button 监听器</text>
+  <text x="350" y="337" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">currentTarget = button · target 仍为 span</text>
+
+  <path d="M350 356 L350 391" fill="none" stroke="#8294b1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="45" y="398" width="610" height="132" rx="14" fill="#fff5e8" stroke="#eed2a8" stroke-width="2"/>
+  <text x="350" y="425" text-anchor="middle" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#263955">冒泡阶段 · #sort-controls 委托监听器</text>
+  <text x="350" y="450" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">currentTarget = controls · event.target = span</text>
+  <text x="350" y="475" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">event.target.closest("button[data-sort]") → button</text>
+  <text x="350" y="500" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">button.dataset.sort → “oldest”</text>
+
+  <path d="M350 532 L350 567" fill="none" stroke="#8294b1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="88" y="574" width="524" height="72" rx="14" fill="#edf4fc" stroke="#bfd2ea" stroke-width="2"/>
+  <text x="350" y="604" text-anchor="middle" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#263955">冒泡阶段 · body 监听器</text>
+  <text x="350" y="629" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">currentTarget = body · target 仍为 span</text>
+
+  <text x="350" y="699" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" fill="#5d6e87">箭头描边命中 path，图标留白可命中 svg；两者都能委托到按钮。</text>
+</svg>
