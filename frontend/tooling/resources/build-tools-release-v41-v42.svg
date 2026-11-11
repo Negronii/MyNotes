@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="550" viewBox="0 0 760 550" role="img" aria-labelledby="title desc">
+  <title id="title">静态发布切换后两个版本页面的异步请求</title>
+  <desc id="desc">左侧：仍打开的 v41 页面继续使用 v41 入口，首次点击请求旧 editor；旧文件保留时返回 200，删除时返回 404。右侧：取得 v42 HTML 的新标签使用 v42 入口并请求 v42 editor。本例首次请求前没有可用的 editor 副本；静态服务对缺失的 v41 文件返回 404。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
+    </marker>
+    <style>
+      text { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+      .panel { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; rx: 16; }
+      .old { fill: #fff7ed; stroke: #c2410c; }
+      .new { fill: #eff6ff; stroke: #2563eb; }
+      .outcome { fill: #fff; stroke: #64748b; stroke-width: 2; rx: 11; }
+      .box { stroke-width: 2; rx: 11; }
+      .edge { fill: none; stroke: #475569; stroke-width: 2.4; marker-end: url(#arrow); }
+      .heading { font-size: 20px; font-weight: 700; text-anchor: middle; }
+      .title { font-size: 19px; font-weight: 700; text-anchor: middle; }
+      .sub { font-size: 15px; text-anchor: middle; fill: #475569; }
+      .branch-label { font-size: 15px; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: #f8fafc; stroke-width: 7px; stroke-linejoin: round; }
+      .condition { font-size: 16px; text-anchor: middle; fill: #475569; }
+    </style>
+  </defs>
+
+  <rect width="760" height="550" fill="#ffffff" />
+
+  <rect class="panel" x="20" y="24" width="350" height="492" />
+  <rect class="panel" x="390" y="24" width="350" height="492" />
+  <text class="heading" x="195" y="60">切换后仍打开的旧标签</text>
+  <text class="heading" x="565" y="60">取得 v42 HTML 的新标签</text>
+
+  <!-- Old document keeps its already loaded v41 entry and its recorded chunk URL. -->
+  <path class="edge" d="M195 148 L195 174" />
+  <path class="edge" d="M195 236 L195 260" />
+  <path class="edge" d="M195 322 L195 344 L111 373" />
+  <path class="edge" d="M195 344 L279 373" />
+  <text class="branch-label" x="132" y="360">保留</text>
+  <text class="branch-label" x="258" y="360">删除</text>
+
+  <rect class="box old" x="48" y="86" width="294" height="62" />
+  <text class="title" x="195" y="113">v41 页面</text>
+  <text class="sub" x="195" y="135">仍在运行</text>
+  <rect class="box old" x="48" y="174" width="294" height="62" />
+  <text class="title" x="195" y="201">v41 入口</text>
+  <text class="sub" x="195" y="223">保留旧 editor 引用</text>
+  <rect class="box old" x="48" y="260" width="294" height="62" />
+  <text class="title" x="195" y="287">首次点击请求 v41 editor</text>
+  <text class="sub" x="195" y="309">沿入口中的旧 URL 请求</text>
+  <rect class="outcome" x="38" y="373" width="146" height="70" />
+  <text class="title" x="111" y="402">旧文件保留</text>
+  <text class="sub" x="111" y="425">200 · 可加载</text>
+  <rect class="outcome" x="206" y="373" width="146" height="70" />
+  <text class="title" x="279" y="402">旧文件删除</text>
+  <text class="sub" x="279" y="425">404 · 导入失败</text>
+
+  <!-- New HTML selects the matching v42 entry and async chunk. -->
+  <path class="edge" d="M565 148 L565 174" />
+  <path class="edge" d="M565 236 L565 278" />
+  <path class="edge" d="M565 340 L565 373" />
+  <text class="branch-label" x="630" y="262">首次点击</text>
+
+  <rect class="box new" x="418" y="86" width="294" height="62" />
+  <text class="title" x="565" y="113">v42 HTML</text>
+  <text class="sub" x="565" y="135">新标签入口</text>
+  <rect class="box new" x="418" y="174" width="294" height="62" />
+  <text class="title" x="565" y="201">v42 入口</text>
+  <text class="sub" x="565" y="223">引用 v42 editor</text>
+  <rect class="box new" x="418" y="278" width="294" height="62" />
+  <text class="title" x="565" y="305">请求 v42 editor</text>
+  <text class="sub" x="565" y="327">浏览器取对应版本文件</text>
+  <rect class="outcome" x="418" y="373" width="294" height="70" />
+  <text class="title" x="565" y="402">200 · 可加载</text>
+  <text class="sub" x="565" y="425">本例本地静态服务实测</text>
+
+  <text class="condition" x="380" y="540">本例：首次请求前无可用 editor 副本；静态服务对缺失的 v41 文件返回 404</text>
+</svg>

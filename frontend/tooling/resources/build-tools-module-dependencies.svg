@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500" role="img" aria-labelledby="title desc">
+  <title id="title">合成月度报表项目的模块依赖关系</title>
+  <desc id="desc">index.html 引用 main.ts。main.ts 静态导入 rows.ts 和 report.css，并以动态 import 导入 editor.ts。report.css 通过 url 引用 report.svg；本例关闭小资源内联。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
+    </marker>
+    <style>
+      text { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+      .node { fill: #f8fafc; stroke: #64748b; stroke-width: 2; rx: 12; }
+      .entry { fill: #eff6ff; stroke: #2563eb; }
+      .output { fill: #f0fdf4; stroke: #15803d; }
+      .edge { fill: none; stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+      .async { stroke-dasharray: 8 6; }
+      .title { font-size: 21px; font-weight: 700; text-anchor: middle; }
+      .sub { font-size: 16px; text-anchor: middle; fill: #475569; }
+      .edge-label { font-size: 16px; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 7px; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="760" height="500" fill="#ffffff" />
+
+  <!-- Relationships: HTML entry -> main module; main -> static, dynamic; CSS -> asset. -->
+  <path class="edge" d="M380 87 L380 138" />
+  <path class="edge" d="M294 198 C255 220 195 246 145 295" />
+  <path class="edge" d="M380 211 L380 295" />
+  <path class="edge async" d="M466 198 C510 224 571 250 622 295" />
+  <path class="edge" d="M380 366 L380 412" />
+
+  <text class="edge-label" x="442" y="119">入口脚本</text>
+  <text class="edge-label" x="224" y="251">静态值导入</text>
+  <text class="edge-label" x="448" y="272">静态样式导入</text>
+  <text class="edge-label" x="577" y="232">动态 import()</text>
+  <text class="edge-label" x="445" y="397">CSS url()</text>
+
+  <rect class="node entry" x="280" y="25" width="200" height="62" />
+  <text class="title" x="380" y="53">index.html</text>
+  <text class="sub" x="380" y="75">script → main.ts</text>
+
+  <rect class="node entry" x="280" y="138" width="200" height="73" />
+  <text class="title" x="380" y="169">main.ts</text>
+  <text class="sub" x="380" y="193">值导入 formatRow</text>
+
+  <rect class="node" x="45" y="295" width="200" height="71" />
+  <text class="title" x="145" y="325">rows.ts</text>
+  <text class="sub" x="145" y="349">formatRow · Column 类型</text>
+
+  <rect class="node" x="280" y="295" width="200" height="71" />
+  <text class="title" x="380" y="325">report.css</text>
+  <text class="sub" x="380" y="349">静态样式模块</text>
+
+  <rect class="node" x="522" y="295" width="200" height="71" />
+  <text class="title" x="622" y="325">editor.ts</text>
+  <text class="sub" x="622" y="349">异步模块</text>
+
+  <rect class="node output" x="280" y="412" width="200" height="71" />
+  <text class="title" x="380" y="442">report.svg</text>
+  <text class="sub" x="380" y="466">本例关闭小资源内联</text>
+</svg>
