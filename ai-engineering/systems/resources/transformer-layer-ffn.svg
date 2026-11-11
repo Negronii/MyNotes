@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="1150" viewBox="0 0 740 1150" role="img" aria-labelledby="title desc">
+  <title id="title">一个 Transformer layer 的两次更新</title>
+  <desc id="desc">从上向下读取。4×8输入经第一次Norm和Attention后，与本层输入逐元素相加。所得Attention后表示再经第二次Norm和FFN，与第二次Norm之前的表示相加。每一步均保持4×8。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#8396B0" />
+    </marker>
+    <style>text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#27364D}.edge{fill:none;stroke:#8396B0;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;marker-end:url(#arrow)}.skip{fill:none;stroke:#A794C6;stroke-width:3;stroke-dasharray:7 6;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect x="0" y="0" width="740" height="1150" rx="0" fill="#FAFBFE" stroke="#FAFBFE" stroke-width="2" />
+  <rect x="250" y="20" width="240" height="66" rx="11" fill="#EEF5FE" stroke="#CDE0F4" stroke-width="2" />
+  <text x="370" y="49" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">本层输入</text>
+  <text x="370" y="75" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <rect x="250" y="160" width="240" height="66" rx="11" fill="#FFF" stroke="#DAE3EF" stroke-width="2" />
+  <text x="370" y="189" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">第一次 Norm</text>
+  <text x="370" y="215" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <rect x="250" y="300" width="240" height="66" rx="11" fill="#F5F1FB" stroke="#DCD1EA" stroke-width="2" />
+  <text x="370" y="329" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">Attention 更新</text>
+  <text x="370" y="355" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <rect x="250" y="540" width="240" height="66" rx="11" fill="#EEE7F8" stroke="#CDBCE5" stroke-width="2" />
+  <text x="370" y="569" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">Attention 后的表示</text>
+  <text x="370" y="595" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <rect x="250" y="680" width="240" height="66" rx="11" fill="#FFF" stroke="#DAE3EF" stroke-width="2" />
+  <text x="370" y="709" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">第二次 Norm</text>
+  <text x="370" y="735" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <rect x="250" y="820" width="240" height="66" rx="11" fill="#FFF5E7" stroke="#E9D6B5" stroke-width="2" />
+  <text x="370" y="849" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">FFN 更新</text>
+  <text x="370" y="875" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <rect x="250" y="1060" width="240" height="66" rx="11" fill="#EEF5FE" stroke="#CDE0F4" stroke-width="2" />
+  <text x="370" y="1089" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">本层输出</text>
+  <text x="370" y="1115" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <path class="edge" d="M370 98 L370 148" />
+  <path class="edge" d="M370 238 L370 288" />
+  <path class="edge" d="M370 378 L370 418" />
+  <path class="edge" d="M370 490 L370 528" />
+  <path class="edge" d="M370 618 L370 668" />
+  <path class="edge" d="M370 758 L370 808" />
+  <path class="edge" d="M370 898 L370 938" />
+  <path class="edge" d="M370 1010 L370 1048" />
+  <circle cx="370" cy="454" r="24" fill="#FFF" stroke="#AB97C9" stroke-width="2.5" />
+  <text x="370" y="464" font-size="34" font-weight="600" text-anchor="middle" style="fill:#27364D">+</text>
+  <circle cx="370" cy="974" r="24" fill="#FFF" stroke="#AB97C9" stroke-width="2.5" />
+  <text x="370" y="984" font-size="34" font-weight="600" text-anchor="middle" style="fill:#27364D">+</text>
+  <path class="skip" d="M238 53 L126 53 L126 454 L340 454" />
+  <path class="skip" d="M502 573 L612 573 L612 974 L400 974" />
+  <text x="138" y="260" font-size="24" font-weight="400" text-anchor="start" style="fill:#876BAF">本层输入</text>
+  <text x="600" y="790" font-size="24" font-weight="400" text-anchor="end" style="fill:#876BAF">Attention 后</text>
+  <text x="600" y="824" font-size="24" font-weight="400" text-anchor="end" style="fill:#876BAF">的表示</text>
+</svg>

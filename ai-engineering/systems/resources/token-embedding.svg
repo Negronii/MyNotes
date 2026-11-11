@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="180" viewBox="20 110 1040 180" role="img" aria-labelledby="title desc">
+  <title id="title">从 token IDs 到位置向量</title>
+  <desc id="desc">四个教学用 token ID 查询 N×8 嵌入表的四行，得到4×8矩阵；行表示位置，列表示特征坐标。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#8396B0" />
+    </marker>
+    <style>text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#27364D}.edge{fill:none;stroke:#8396B0;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;marker-end:url(#arrow)}.skip{fill:none;stroke:#A794C6;stroke-width:3;stroke-dasharray:7 6;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect x="0" y="0" width="1450" height="380" rx="0" fill="#FAFBFE" stroke="#FAFBFE" stroke-width="2" />
+  <rect x="50" y="153" width="50" height="49" rx="8" fill="#EEF5FE" stroke="#C9DCF2" stroke-width="2" />
+  <text x="75" y="188" font-size="29" font-weight="600" text-anchor="middle" style="fill:#27364D">1</text>
+  <rect x="112" y="153" width="50" height="49" rx="8" fill="#EEF5FE" stroke="#C9DCF2" stroke-width="2" />
+  <text x="137" y="188" font-size="29" font-weight="600" text-anchor="middle" style="fill:#27364D">2</text>
+  <rect x="174" y="153" width="50" height="49" rx="8" fill="#EEF5FE" stroke="#C9DCF2" stroke-width="2" />
+  <text x="199" y="188" font-size="29" font-weight="600" text-anchor="middle" style="fill:#27364D">3</text>
+  <rect x="236" y="153" width="50" height="49" rx="8" fill="#EEF5FE" stroke="#C9DCF2" stroke-width="2" />
+  <text x="261" y="188" font-size="29" font-weight="600" text-anchor="middle" style="fill:#27364D">4</text>
+  <text x="165" y="247" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">token IDs</text>
+  <path class="edge" d="M305 178 L373 178" />
+  <rect x="391" y="133" width="334" height="103" rx="13" fill="#EFF5FE" stroke="#D0E1F3" stroke-width="2" />
+  <text x="558" y="172" font-size="27" font-weight="600" text-anchor="middle" style="fill:#27364D">Embedding table</text>
+  <text x="558" y="213" font-size="25" font-weight="400" text-anchor="middle" style="fill:#27364D">N × 8：按 ID 查表</text>
+  <path class="edge" d="M742 178 L807 178" />
+  <rect x="842" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="865" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="888" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="911" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="934" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="957" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="980" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="1003" y="137" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="842" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="865" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="888" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="911" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="934" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="957" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="980" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="1003" y="160" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="842" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="865" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="888" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="911" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="934" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="957" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="980" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="1003" y="183" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="842" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="865" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="888" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="911" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="934" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="957" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="980" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="1003" y="206" width="21" height="21" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <path d="M837 134h-6v96h6 M1029 134h6v96h-6" stroke="#27364D" stroke-width="2" fill="none" />
+  <text x="933.0" y="259" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">X₀ : 4 × 8</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="1150" viewBox="0 0 860 1150" role="img" aria-labelledby="title desc">
+  <title id="title">从logits到概率，再采样一个token</title>
+  <desc id="desc">教学词表含ID0至4。假设logits为2、1、0、-1、-2，温度1且不筛选候选，softmax得到约63.64%、23.41%、8.61%、3.17%、1.17%。按概率划分0至1区间，示意均匀抽到0.72，位于ID1的区间，因此这次选择ID1。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#8396B0" />
+    </marker>
+    <style>text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#27364D}.edge{fill:none;stroke:#8396B0;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;marker-end:url(#arrow)}.skip{fill:none;stroke:#A794C6;stroke-width:3;stroke-dasharray:7 6;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect x="0" y="0" width="860" height="1150" rx="0" fill="#FAFBFE" stroke="#FAFBFE" stroke-width="2" />
+  <rect x="60" y="25" width="740" height="100" rx="12" fill="#FFF5E5" stroke="#EAD7B5" stroke-width="2" />
+  <text x="430" y="66" font-size="30" font-weight="600" text-anchor="middle" style="fill:#27364D">z = [2, 1, 0, −1, −2]</text>
+  <text x="430" y="104" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">ID 顺序：0、1、2、3、4；形状 1 × 5</text>
+  <path class="edge" d="M430 145 L430 201" />
+  <rect x="260" y="220" width="340" height="100" rx="12" fill="#F5F0FB" stroke="#DCD0EC" stroke-width="2" />
+  <text x="430" y="262" font-size="30" font-weight="600" text-anchor="middle" style="fill:#27364D">p = softmax(z)</text>
+  <text x="430" y="303" font-size="25" font-weight="400" text-anchor="middle" style="fill:#27364D">1 × 5</text>
+  <path class="edge" d="M430 340 L430 397" />
+  <text x="80" y="438" font-size="24" font-weight="600" text-anchor="start" style="fill:#27364D">Token ID</text>
+  <text x="736" y="438" font-size="24" font-weight="600" text-anchor="middle" style="fill:#27364D">概率</text>
+  <text x="80" y="485" font-size="25" font-weight="600" text-anchor="start" style="fill:#27364D">ID 0</text>
+  <rect x="180" y="460" width="500" height="32" rx="3" fill="#EAF0F6" stroke="#EAF0F6" stroke-width="2" />
+  <rect x="180" y="460" width="318.204" height="32" rx="3" fill="#74A7DC" />
+  <text x="736" y="485" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">63.64%</text>
+  <text x="80" y="543" font-size="25" font-weight="600" text-anchor="start" style="fill:#27364D">ID 1</text>
+  <rect x="180" y="518" width="500" height="32" rx="3" fill="#EAF0F6" stroke="#EAF0F6" stroke-width="2" />
+  <rect x="180" y="518" width="117.061" height="32" rx="3" fill="#A58BD1" />
+  <text x="736" y="543" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">23.41%</text>
+  <text x="80" y="601" font-size="25" font-weight="600" text-anchor="start" style="fill:#27364D">ID 2</text>
+  <rect x="180" y="576" width="500" height="32" rx="3" fill="#EAF0F6" stroke="#EAF0F6" stroke-width="2" />
+  <rect x="180" y="576" width="43.064" height="32" rx="3" fill="#6AB4A2" />
+  <text x="736" y="601" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">8.61%</text>
+  <text x="80" y="659" font-size="25" font-weight="600" text-anchor="start" style="fill:#27364D">ID 3</text>
+  <rect x="180" y="634" width="500" height="32" rx="3" fill="#EAF0F6" stroke="#EAF0F6" stroke-width="2" />
+  <rect x="180" y="634" width="15.842" height="32" rx="3" fill="#E4B271" />
+  <text x="736" y="659" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">3.17%</text>
+  <text x="80" y="717" font-size="25" font-weight="600" text-anchor="start" style="fill:#27364D">ID 4</text>
+  <rect x="180" y="692" width="500" height="32" rx="3" fill="#EAF0F6" stroke="#EAF0F6" stroke-width="2" />
+  <rect x="180" y="692" width="5.828" height="32" rx="3" fill="#A6B3C8" />
+  <text x="736" y="717" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">1.17%</text>
+  <text x="430" y="792" font-size="26" font-weight="600" text-anchor="middle" style="fill:#27364D">按概率划分 0 到 1 的区间</text>
+  <text x="588.4" y="845" font-size="27" font-weight="600" text-anchor="middle" style="fill:#27364D">r = 0.72</text>
+  <path class="edge" d="M588.4 866 L588.4 902" />
+  <rect x="70.0000" y="920" width="458.2142" height="40" fill="#74A7DC" stroke="#FFF" stroke-width="1" />
+  <rect x="528.2142" y="920" width="168.5676" height="40" fill="#A58BD1" stroke="#FFF" stroke-width="1" />
+  <rect x="696.7818" y="920" width="62.0126" height="40" fill="#6AB4A2" stroke="#FFF" stroke-width="1" />
+  <rect x="758.7944" y="920" width="22.8131" height="40" fill="#E4B271" stroke="#FFF" stroke-width="1" />
+  <rect x="781.6075" y="920" width="8.3925" height="40" fill="#A6B3C8" stroke="#FFF" stroke-width="1" />
+  <text x="70" y="998" font-size="23" font-weight="400" text-anchor="middle" style="fill:#27364D">0</text>
+  <text x="790" y="998" font-size="23" font-weight="400" text-anchor="middle" style="fill:#27364D">1</text>
+  <path class="edge" d="M588.4 974 L588.4 1002 L430 1002 L430 1021" />
+  <rect x="190" y="1040" width="480" height="88" rx="12" fill="#EDF8F3" stroke="#C8E3D7" stroke-width="2" />
+  <text x="430" y="1075" font-size="28" font-weight="600" text-anchor="middle" style="fill:#27364D">本次选中 ID 1</text>
+  <text x="430" y="1112" font-size="24" font-weight="400" text-anchor="middle" style="fill:#27364D">对应区间约为 [0.6364, 0.8705)</text>
+</svg>

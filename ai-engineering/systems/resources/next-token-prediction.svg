@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="960" viewBox="0 0 860 960" role="img" aria-labelledby="title desc">
+  <title id="title">最后一个位置如何得到词表分数</title>
+  <desc id="desc">从最后一层4×8状态中取最后一行h_last，归一化后得到1×8的h。LM head计算完整的z=h W_LM，权重8×N，输出logits为1×N。下一张图继续把分数转换成概率并采样。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#8396B0" />
+    </marker>
+    <style>text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#27364D}.edge{fill:none;stroke:#8396B0;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;marker-end:url(#arrow)}.skip{fill:none;stroke:#A794C6;stroke-width:3;stroke-dasharray:7 6;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect x="0" y="0" width="860" height="960" rx="0" fill="#FAFBFE" stroke="#FAFBFE" stroke-width="2" />
+  <rect x="50" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="74" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="98" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="122" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="146" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="170" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="194" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="218" y="65" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="50" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="74" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="98" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="122" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="146" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="170" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="194" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="218" y="89" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="50" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="74" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="98" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="122" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="146" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="170" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="194" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="218" y="113" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.18" />
+  <rect x="50" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="74" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="98" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="122" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="146" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="170" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="194" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="218" y="137" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <path d="M45 62h-6v100h6 M245 62h6v100h-6" stroke="#27364D" stroke-width="2" fill="none" />
+  <text x="145.0" y="49" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">最后一层</text>
+  <text x="145.0" y="191" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">4 × 8</text>
+  <path class="edge" d="M258 149 L470 149" />
+  <text x="364" y="112" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">取末行</text>
+  <rect x="490" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="514" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="538" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <rect x="562" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.60" />
+  <rect x="586" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.80" />
+  <rect x="610" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.50" />
+  <rect x="634" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.70" />
+  <rect x="658" y="138" width="22" height="22" rx="2" fill="#74A7DC" fill-opacity="0.90" />
+  <path d="M485 135h-6v28h6 M685 135h6v28h-6" stroke="#27364D" stroke-width="2" fill="none" />
+  <text x="585.0" y="192" font-size="25" font-weight="600" text-anchor="middle" style="fill:#27364D">1 × 8</text>
+  <text x="585" y="107" font-size="28" font-weight="500" text-anchor="middle">h<tspan baseline-shift="-7px" font-size="70%">last</tspan>
+  </text>
+  <path class="edge" d="M585 220 L585 287" />
+  <rect x="395" y="306" width="380" height="140" rx="14" fill="#FFF" stroke="#DAE3EF" stroke-width="2" />
+  <text x="585" y="351" font-size="28" font-weight="500" text-anchor="middle">h = Norm(h<tspan baseline-shift="-7px" font-size="70%">last</tspan>)</text>
+  <text x="585" y="418" font-size="25" font-weight="400" text-anchor="middle" style="fill:#27364D">1 × 8</text>
+  <path class="edge" d="M585 465 L585 530" />
+  <rect x="345" y="550" width="480" height="190" rx="12" fill="#F5F0FB" stroke="#DCD0EC" stroke-width="2" />
+  <text x="585" y="588" font-size="28" font-weight="600" text-anchor="middle" style="fill:#27364D">LM head</text>
+  <text x="585" y="639" font-size="30" font-weight="500" text-anchor="middle">z = h · W<tspan baseline-shift="-7px" font-size="70%">LM</tspan>
+  </text>
+  <text x="585" y="706" font-size="25" font-weight="400" text-anchor="middle" style="fill:#27364D">(1 × 8) · (8 × N) = 1 × N</text>
+  <path class="edge" d="M585 760 L585 825" />
+  <rect x="425" y="845" width="320" height="80" rx="12" fill="#FFF5E5" stroke="#EAD7B5" stroke-width="2" />
+  <text x="585" y="880" font-size="28" font-weight="600" text-anchor="middle" style="fill:#27364D">Logits  z</text>
+  <text x="585" y="912" font-size="25" font-weight="400" text-anchor="middle" style="fill:#27364D">1 × N</text>
+</svg>
