@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1120" viewBox="0 0 1200 1120" role="img" aria-labelledby="fig-title fig-desc">
+  <title id="fig-title">Browser, API and PostgreSQL response-loss retry sequence</title>
+  <desc id="fig-desc">PostgreSQL commits the stock update and reservation row together. The HTTP response is lost, leaving the browser uncertain. The browser repeats the original POST with the same key and body; the API reauthorizes and reads the stored reservation instead of decrementing again.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#40556a"/></marker>
+    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#b84c43"/></marker>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #172635; }
+    .scope { font-size: 25px; font-weight: 700; }
+    .lane { font-size: 26px; font-weight: 700; }
+    .label { font-size: 22px; font-weight: 650; }
+    .note { font-size: 20px; font-weight: 500; }
+    .actor { fill: #eaf0f5; stroke: #9aaaba; stroke-width: 2; }
+    .lifeline { stroke: #b3bfca; stroke-width: 2.5; stroke-dasharray: 8 8; }
+    .arrow { fill: none; stroke: #40556a; stroke-width: 4.5; marker-end: url(#arrow); }
+    .lost { fill: none; stroke: #b84c43; stroke-width: 4.5; stroke-dasharray: 11 9; marker-end: url(#arrow-red); }
+    .db { fill: #e5f2ea; stroke: #71a17f; stroke-width: 2.5; }
+    .api { fill: #eaf1fa; stroke: #7799bc; stroke-width: 2.5; }
+    .browser { fill: #fff7e9; stroke: #cc9a51; stroke-width: 2.5; }
+    .unknown { fill: #fff0ee; stroke: #c86f65; stroke-width: 2.5; }
+    .lostText { fill: #a73e36; }
+  </style>
+  <rect width="1200" height="1120" rx="22" fill="#ffffff"/>
+  <rect x="28" y="22" width="1144" height="64" rx="14" fill="#eaf0f5"/>
+  <text class="scope" x="52" y="61">acct-17 / user-17 · reserve-demo-208 · 同一 POST 参数 · fingerprint-A</text>
+
+  <rect x="62" y="113" width="270" height="58" rx="14" class="actor"/>
+  <rect x="465" y="113" width="270" height="58" rx="14" class="actor"/>
+  <rect x="868" y="113" width="270" height="58" rx="14" class="actor"/>
+  <text class="lane" x="145" y="151">浏览器</text>
+  <text class="lane" x="566" y="151">API</text>
+  <text class="lane" x="925" y="151">PostgreSQL</text>
+  <path d="M197 171 V1080" class="lifeline"/>
+  <path d="M600 171 V1080" class="lifeline"/>
+  <path d="M1003 171 V1080" class="lifeline"/>
+
+  <circle cx="197" cy="225" r="20" fill="#d6e4f0"/><text class="label" x="190" y="233">1</text>
+  <text class="label" x="302" y="209">原始 POST</text>
+  <path d="M220 231 H574" class="arrow"/>
+
+  <circle cx="600" cy="300" r="20" fill="#d6e4f0"/><text class="label" x="593" y="308">2</text>
+  <text class="label" x="704" y="284">快查：作用域键</text>
+  <path d="M623 306 H977" class="arrow"/>
+  <text class="note" x="713" y="358">查无已提交记录</text>
+  <path d="M980 374 H626" class="arrow"/>
+
+  <circle cx="600" cy="425" r="20" fill="#d6e4f0"/><text class="label" x="593" y="433">3</text>
+  <text class="label" x="630" y="410">BEGIN · UPDATE · INSERT · COMMIT</text>
+  <path d="M623 432 H977" class="arrow"/>
+  <rect x="882" y="457" width="242" height="94" rx="15" class="db"/>
+  <text class="label" x="907" y="491">同事务提交</text>
+  <text class="note" x="907" y="521">SKU-7 · 1 → 0</text>
+  <text class="note" x="907" y="545">+ reservation row</text>
+
+  <circle cx="1003" cy="585" r="20" fill="#d6e4f0"/><text class="label" x="996" y="593">4</text>
+  <text class="label" x="697" y="570">COMMIT 确认</text>
+  <path d="M980 592 H626" class="arrow"/>
+
+  <circle cx="600" cy="660" r="20" fill="#f6d6d3"/><text class="label" x="593" y="668">5</text>
+  <text class="label lostText" x="303" y="642">HTTP 响应丢失</text>
+  <path d="M577 667 H223" class="lost"/>
+  <rect x="62" y="695" width="270" height="84" rx="15" class="unknown"/>
+  <text class="label" x="91" y="730">结果未知</text>
+  <text class="note" x="91" y="758">数据库可能已提交</text>
+
+  <circle cx="197" cy="860" r="20" fill="#d6e4f0"/><text class="label" x="190" y="868">6</text>
+  <text class="label" x="278" y="831">重放原 POST · 同键同参</text>
+  <path d="M220 867 H574" class="arrow"/>
+
+  <circle cx="600" cy="926" r="20" fill="#d6e4f0"/><text class="label" x="593" y="934">7</text>
+  <text class="label" x="674" y="907">重新授权 · SELECT key</text>
+  <path d="M623 933 H977" class="arrow"/>
+
+  <circle cx="1003" cy="992" r="20" fill="#d6e4f0"/><text class="label" x="996" y="1000">8</text>
+  <text class="label" x="630" y="972">返回同指纹记录 · 当前状态</text>
+  <path d="M980 999 H626" class="arrow"/>
+  <circle cx="600" cy="1058" r="20" fill="#d6e4f0"/><text class="label" x="593" y="1066">9</text>
+  <text class="note" x="276" y="1038">API 返回同一预留记录 · 不再扣减</text>
+  <path d="M577 1065 H220" class="arrow"/>
+</svg>

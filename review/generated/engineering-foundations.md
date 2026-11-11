@@ -4,49 +4,15 @@
 
 ## 1. 两个请求争夺最后一件库存时，怎样保证只预留一次？
 
-**案例：** 账户 acct-17 的请求要预留商品 SKU-7。数据库中 available = 1。浏览器携带稳定操作键 reserve-demo-208 发出请求；网络超时后，客户端不知道事务是否提交。正确边界是在数据库里同时检查库存、扣减一件并写入可查询的操作结果，让并发请求无法把数量扣成负数，也让同一操作键重放时能查回同一结果。
+**案例：** 账户 `acct-17`、主体 `user-17` 要预留 `SKU-7`，初始库存 `available = 1`。浏览器发送携带稳定操作键 `reserve-demo-208` 的 POST；请求 A 是首次尝试，B 可能是并发到达的重放。数据库必须保证不同操作不能把库存扣成负数，同一作用域键也不能提交两条预留记录。
 
-~~~mermaid
-sequenceDiagram
-    participant C as 调用方
-    participant A as API
-    participant D as 数据库
-    C->>A: 预留 SKU-7，操作键 reserve-demo-208
-    A->>A: 验证当前账户/主体与参数指纹
-    A->>D: 快速查询同一作用域的操作键
-    alt 已有记录且参数指纹相同
-        D-->>A: 已提交预留结果
-        A-->>C: 返回同一预留记录，不扣库存
-    else 已有同键但参数指纹不同
-        A-->>C: 返回操作键冲突
-    else 当前快照没有可见记录，结果仍可能未知
-        A->>D: 条件扣减，available 必须大于 0
-        alt 条件更新恰好 1 行且插入键成功
-            D-->>A: available = 0
-            A->>D: 插入唯一的账户/主体/操作键记录
-            A->>D: COMMIT
-            D-->>A: 提交完成
-            A--xC: 响应丢失，客户端结果未知
-        else 更新 0 行或插入时作用域键唯一冲突
-            A->>D: ROLLBACK 整个尝试
-            A->>D: 新事务再次查询操作键与指纹
-            alt 找到同键同指纹的已提交结果
-                D-->>A: 返回已存在结果
-                A-->>C: 返回同一预留记录，不扣库存
-            else 找到同键但指纹不同
-                A-->>C: 返回操作键冲突
-            else 确认没有可重放记录
-                A-->>C: SKU 不存在或已售罄
-            end
-        end
-    end
-~~~
+本页的建表和并发时序以 **PostgreSQL 18 Read Committed（读已提交）**为准。复合键 `(account_id, principal_id, idempotency_key)` 标识一次逻辑操作；规范化业务参数的指纹用于识别同键请求是否仍表达同一意图。本文选定的 API 契约是：**成功提交的预留才绑定操作键；库存失败回滚且不占键；同键同指纹重放返回同一预留记录的当前状态。**这不是“逐字节重放第一次 HTTP 响应”。
 
 ### 为什么先读再无条件写会超卖？
 
-如果应用先 SELECT available，再根据返回值计算 available - 1 并无条件更新，两个请求可能都读到 1，再分别把值写成 0；数据库最终只有一件被扣减，但两条业务记录都可能显示预留成功。读到的旧值没有保护写入条件。
+如果两个不同操作先后 `SELECT available`，都读到 1，再按旧读数无条件写成 0，最终库存虽为 0，两个调用方却都可能得到“预留成功”。读取只是观察当时的值；它没有把“库存仍大于零”这个条件附着到之后的写入上。
 
-把条件放进同一个更新语句，数据库才会在写入发生处判断库存是否仍大于零。先用小型数据库模式表示每个 SKU 的可用量，以及每个成功操作的唯一记录：
+把条件放进扣减语句，并把成功操作记录写在同一事务中：
 
 ~~~sql
 -- PostgreSQL 18 DDL
@@ -68,55 +34,141 @@ CREATE TABLE reservations (
 INSERT INTO inventory VALUES ('SKU-7', 1);
 ~~~
 
-复合主键保证同一账户、主体和幂等键最多一条操作记录；外键保证预留指向存在的 SKU；CHECK 与 NOT NULL 一起禁止负库存和未知库存。数据库约束如何对所有写入方生效，见[如何用约束保护业务规则并为读取建立索引？](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)。
+`inventory.sku` 的主键使每个 SKU 只有一行，`CHECK` 与 `NOT NULL` 一起禁止负数和未知库存；单独的 `CHECK` 不会拒绝表达式为 `NULL` 的值。`reservations` 的复合主键使同一账户、主体和操作键最多保存一条成功结果；外键让预留指向存在的 SKU。记录在重放承诺窗口内保留，`status` 可从 `reserved` 变为 `cancelled`，但取消不会释放这个作用键或删除其历史结果。约束如何作用于所有写入方，以及索引如何服务读取，见[如何用约束保护业务规则并为读取建立索引？](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)。
+
+> [!info] SQL 方言边界
+> `$1`、`$2` 等是 PostgreSQL 位置参数，由驱动对**每条语句分别**绑定；编号不会跨语句共享一组参数。SQLite 的参数形式另有 `?`、`?NNN` 和命名参数，不能不经方言转换就照抄。本页的并发结论也不应直接套到其他数据库。若另建 SQLite 对照表，需在每条连接启用外键；普通 SQLite 表的类型声明不等同 PostgreSQL 的强类型约束，可选用 SQLite 3.37+ 的 `STRICT` 表或适当检查。
 
 ### 条件更新怎样让两个并发请求竞争？
 
-以 PostgreSQL 18 的 Read Committed（读已提交）行为为例。请求 A 执行条件更新时拿到该行的写锁，把库存从 1 改为 0，但尚未提交；请求 B 在同一行上等待。A 提交后，B 会针对新版本重新判断 available > 0，条件不再成立，更新行数为 0。**这时不能立刻把 B 判成售罄：**它可能正是重放 reserve-demo-208 的同一逻辑操作。B 必须先回滚这次尝试，再在新事务中按当前账户和主体查询键、比较请求指纹：找到已提交的相同意图就返回同一预留记录及当前状态；同键不同指纹就返回冲突；确实没有该键时，零行才表示 SKU 不存在或已售罄。
+#### 先查操作键是快路径，不是并发裁决
 
-同键请求即使先查过仍可能同时进入事务；查不到只表示当前快照没有已提交记录，不证明原请求已回滚。PostgreSQL Read Committed 下，同一 SKU 的条件更新会等待持锁者结束：前者提交后，后者若因库存变为 0 得到零行，就先回滚，再用新事务查结果；前者回滚时，后者可重新判断并继续。若库存大于 1，两笔同键请求都可能扣减成功，后插入的一方会撞上作用域唯一约束；PostgreSQL 中该错误使当前事务失败，必须回滚整笔扣减，再在新的事务读取胜者结果。只有确认没有同键可重放记录时，零行才表示 SKU 不存在或已售罄；请求指纹不同则返回冲突。不能只回滚 INSERT 后保留扣减。
-
-以下 SQL 按 PostgreSQL 18 写法，$1 到 $5 是由驱动绑定的参数；它不是 SQLite 的问号占位符语法。应用先授权并核验/生成参数指纹，只有条件更新返回一行后才执行 INSERT：
+API 先按当前认证得到的账户和主体授权，再规范化业务参数并计算指纹。可先查询已提交的操作记录：
 
 ~~~sql
-BEGIN;
+SELECT request_fingerprint, sku, status
+FROM reservations
+WHERE account_id = $1
+  AND principal_id = $2
+  AND idempotency_key = $3;
+~~~
+
+**这条 SELECT 自己绑定三个参数：**`$1 = acct-17`、`$2 = user-17`、`$3 = reserve-demo-208`。同键同指纹返回该预留记录的**当前** `status`；同键异指纹返回冲突。若记录状态已是 `cancelled`，重放仍返回该记录的当前状态，不会重新扣库存或把它“复活”。
+
+快查没有找到记录，只能说明本条 SELECT 的语句快照里没有**已提交且可见**的记录；原事务可能仍在执行。不能据此断言旧操作已回滚，也不能跳过后面的行锁与唯一约束。
+
+如果快查未命中，服务在一个事务中条件扣减并插入成功操作记录。每条语句的 `$1` 都从自己的绑定开始：UPDATE 只绑定 SKU；INSERT 另行绑定作用域键、指纹和 SKU。
+
+~~~sql
+BEGIN ISOLATION LEVEL READ COMMITTED;
 
 UPDATE inventory
 SET available = available - 1
 WHERE sku = $1 AND available > 0
 RETURNING available;
--- 仅一行（本例 available = 0）才继续。
+-- UPDATE 的绑定：$1 = SKU-7。
+-- 恰好返回一行才执行 INSERT；返回零行则 ROLLBACK 并跳过 INSERT。
 
 INSERT INTO reservations
     (account_id, principal_id, idempotency_key, request_fingerprint, sku, status)
-VALUES ($2, $3, $4, $5, $1, 'reserved');
+VALUES ($1, $2, $3, $4, $5, 'reserved');
+-- INSERT 的绑定：$1 = acct-17，$2 = user-17，$3 = reserve-demo-208，
+--               $4 = fingerprint-A，$5 = SKU-7。
 
 COMMIT;
 ~~~
 
-**中间状态：** 初值是 SKU-7 → 1。A 更新一行，得到 available=0，插入 (acct-17, user-17, reserve-demo-208, fingerprint-A) 并提交。若 B 是同键同指纹的重放，A 提交后 B 得到更新零行，回滚并读取这条已提交记录，因此返回同一预留记录且不再扣库存。若 B 是不同操作键，它回滚后查不到自己的键，才报告售罄。若 B 同键却携带另一参数指纹，应返回冲突，不复用 A 的结果。
+UPDATE 的 `RETURNING` 返回实际更新行的新值：库存从 1 扣到 0 时，它返回**一行，值为 0**；“返回零行”才表示没有可扣减的库存行。两条 SQL 的参数编号各自从 `$1` 开始，不是一个跨语句的五参数列表。
 
 > [!info] 更新行数为什么是业务判断
-> PostgreSQL 的 UPDATE ... WHERE available > 0 将“仍有库存”的条件放在扣减发生处。恰好一行才说明此次扣减成功；零行需要再检查幂等结果后才能确定是同键重放还是售罄；多行则表示 schema 没保证 SKU 唯一，数据模型应修正。本章 DDL 与占位符以 PostgreSQL 18 为准；若在 SQLite 另建对照表，需考虑其动态类型，并在每条连接启用 PRAGMA foreign_keys = ON；需要强类型约束时使用 STRICT 表或等效检查。
+> `inventory.sku` 的主键保证每个 SKU 只有一行，因此这里最多更新一行。恰好一行才表示扣减成功；零行后要在新事务按幂等契约回查。若这条 SELECT 仍未看到已提交记录，API 才能按本例契约返回这次库存失败；这只表示该语句快照当时不可见，不保证另一个事务稍后不会提交同键记录。若 UPDATE 影响多行，说明实际 schema 没有维持本例的 SKU 唯一性。
+
+![PostgreSQL 18 Read Committed 下，SKU-7 已提交库存、A 的事务内版本、行锁等待和 B 的重检状态](../../engineering-foundations/databases/resources/database-fundamentals-inventory-row-lock.svg)
+
+图中 A 的未提交 `available = 0` 对其他事务不可见；A 同时插入的操作记录也尚不可见。B 等待 A 持有的 SKU 行锁。A 提交时，库存 0 和 `reserve-demo-208` 记录一同可见；B 随后在新行版本上重检 `available > 0`，条件为假，UPDATE 返回零行，所以 B 不执行 INSERT。B 回滚本次尝试，再以新事务按键查记录。
+
+如果 A 回滚，库存更改和未提交记录一起撤销。等待中的 B 重检原值 1，条件成立时可扣减、写入该作用键并提交。行锁释放不表示前一个请求成功；结果取决于事务最终提交还是回滚。
+
+#### 零行或唯一冲突后，先回滚再开新事务查询
+
+如果 B 的 UPDATE 返回零行，可能是 SKU 不存在或当前无库存；如果 INSERT 因复合主键冲突报错，本事务也不能保留之前的库存扣减。PostgreSQL 的普通唯一约束错误会使当前事务进入失败状态。两种路径都先结束整笔尝试，再用**另一条独立绑定的 SELECT**查询：
+
+~~~sql
+-- UPDATE 无行，或 INSERT 因唯一键报错后：
+ROLLBACK;
+
+BEGIN ISOLATION LEVEL READ COMMITTED;
+SELECT request_fingerprint, sku, status
+FROM reservations
+WHERE account_id = $1
+  AND principal_id = $2
+  AND idempotency_key = $3;
+-- 这条新 SELECT 独立绑定：$1 = acct-17，$2 = user-17，$3 = reserve-demo-208。
+COMMIT;
+~~~
+
+这次 SELECT 的 `$1` 到 `$3` 与快查一样映射到账户、主体、键，但它是新语句、重新绑定；前面的 UPDATE/INSERT 参数不在这里延续。新事务取得新的 Read Committed 语句快照。
+
+API 在已重新授权的作用域内比较指纹：这条新 SELECT 找到同键同指纹记录，就返回该记录的当前状态；异指纹就返回冲突。若 SELECT 仍未看到已提交记录，API 可按业务规则报告这次 SKU 不存在或已售罄。它不能据此断言并发请求之后不会提交。**失败回滚不占键**，所以完全相同的 POST 日后可在补货后成功；失败期间也没有一条“失败结果”供 API 永久重放。是否区分“不存在”和“售罄”，可通过另一次库存读取实现，但它只说明那次读取的新状态。
+
+成功绑定的记录须在承诺的重放窗口内留存。响应未知时，浏览器重放原 POST；API 在 POST 处理过程中查记录，而不是要求浏览器调用本例未定义的“按键 GET”。窗口与重试边界见[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。
+
+#### 库存仍有余量时，同一操作键由唯一约束裁决
+
+为了单独观察唯一约束路径，下面**只把 SKU-7 初始库存从 1 改为 2**。A 与 B 仍是同一 POST：账户、主体、SKU、操作键、请求参数和 `fingerprint-A` 全相同。A 未提交前，B 的快查也看不到 A 的记录。
+
+![SKU-7 初始库存为2时，相同请求的 B 临时扣减后因唯一键冲突整笔回滚](../../engineering-foundations/databases/resources/database-fundamentals-idempotency-unique-conflict.svg)
+
+A 把库存从 2 改成 1，并和预留记录一起提交。B 等待行锁后基于新值 1 重检，条件仍成立，所以本事务暂时把库存从 1 改到 0。B 随后插入同一复合主键，数据库不允许第二条记录。**不能只撤销 INSERT**：那会让 B 的临时扣减留在库里。B 必须 `ROLLBACK` 整笔尝试；库存恢复为已提交的 1，A 的记录仍在。新事务读到同键同指纹的 A 记录，API 返回同一预留记录的当前状态。
+
+这个单 SKU 时序中，两个 UPDATE 先被库存行锁串行化；B 进入 INSERT 时 A 已提交，所以这里的唯一冲突立即判定，并没有等待未提交的唯一索引插入。其他并发插入写法可能在唯一性检查时等待未提交的竞争者结束，再判定冲突。本例的安全性来自原子事务、复合主键和整笔回滚，不是“预查曾经没有记录”。
+
+#### 同键但不同 SKU 的未提交边界
+
+复合主键只在尝试写入 `reservations` 时裁决键冲突，并不会预先锁住所有使用该键的请求。假设 A 正在事务内预留有货的 `SKU-7`，还没提交；B 复用 `reserve-demo-208`，却改为无货的 `SKU-8`。SKU 是业务参数，因此 B 的指纹不同于 A。B 的快查看不到 A 尚未提交的记录，UPDATE 只触及 SKU-8 并返回零行；B 回滚后新事务查询时，A 的记录仍不可见。B **可以先返回无库存失败**，而 A 随后提交 SKU-7 的预留。若 B 之后再次提交 `SKU-8` 和 B 原有的其他请求参数，并继续使用 `reserve-demo-208`，快查会看到 A 的 SKU-7 记录并因指纹不同返回冲突。
+
+| 时点 | A：`SKU-7` | B：`SKU-8`，复用同一键 | 可见性与结果 |
+| --- | --- | --- | --- |
+| A 尚未提交 | 事务内 `1 → 0`，操作记录未提交 | 快查没有可见记录 | B 的快查不能判断 A 已完成或已回滚 |
+| B 尝试 | 仍持有 `SKU-7` 行锁 | 库存为 0，UPDATE 返回零行 | B 不碰 `SKU-7`，也没有执行 INSERT |
+| B 回查 | 操作记录仍未提交 | 新事务 SELECT 仍无可见记录 | B 可以先返回无库存；A 随后仍可提交 |
+
+这里没有承诺 B 必须等待 A，也没有承诺立即把 B 判为参数冲突，因为 B 在失败前没有尝试 INSERT，也没有占用键。如果 B 有库存并到达 INSERT，唯一约束才可能让它等待 A 的事务，然后在 A 提交后拒绝重复键；若 A 回滚，则 B 的 INSERT 可能成功。若产品要求**所有未提交的同键请求**都先裁决键与参数，需另行设计明确的占键/claim 协议；本例的最小成功记录模式不提供该承诺。
 
 ### 提交成功但响应超时，怎样认出原操作？
 
-超时只代表调用方没有收到响应；它无法区分请求未到达、事务回滚、事务仍在进行，或提交后只有响应丢失。每次查询或重放前，服务都要再次校验当前账户和主体有权读取这条操作结果。事务提交后，数据库中库存为 0，且存在 reserve-demo-208 与请求指纹 fingerprint-A 绑定的预留记录。客户端使用同一个操作键查记录或按明确的幂等契约重放；API 比较账户、主体与请求指纹后返回已记录结果而不再次扣减。不能为重试生成新键，否则服务端会把它当成另一次购买。键的作用域、保留窗口与未知结果重试规则由[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)专门解释。
+一次 POST 超时只说明浏览器没有收到响应。它不能单独区分请求未到服务器、数据库事务回滚、原事务仍在进行，或提交成功但 HTTP 响应丢失。以最后一种情况为例，数据库已经同时保存 `SKU-7.available = 0` 和 `(acct-17, user-17, reserve-demo-208, fingerprint-A)` 的预留记录；浏览器仍处于 unknown outcome（未知结果）。
 
-操作键记录必须和库存效果处于同一事务；若先扣库存并提交，之后再单独写操作键，二者之间崩溃仍可能造成“效果已发生但重试认不出”。支付服务或消息队列不在这个本地事务中，不能靠 SQL COMMIT 宣称远端副作用也完成。账户报表的数据库到队列边界会用 transactional outbox（事务型发件箱）延伸这一问题，见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+![浏览器、API 和 PostgreSQL 间的提交、响应丢失与原 POST 重放顺序](../../engineering-foundations/databases/resources/database-fundamentals-response-loss-replay.svg)
+
+浏览器在未知结果时重放**原 POST**，使用同一作用域键和原业务参数；本例没有按操作键查询的 GET 契约。API 重新验证当前主体权限，按账户、主体和键查持久记录并核对指纹。同键同指纹返回该预留记录的**当前状态**；若记录已取消，返回 `cancelled`，不会再次扣库存。这里承诺恢复的是同一业务记录与效果，不要求 HTTP 状态码、响应时间戳或字节表示和首次响应完全相同。RFC 9110 的幂等定义关注重复请求的预期效果；本页的记录及当前状态约定是这个 API 示例的具体契约。
+
+若 API 查不到记录，结论仍只是“这条 SELECT 没看到已提交记录”，不能据此断定旧事务已回滚。相同 SKU 上仍由行锁、条件 UPDATE 和唯一约束决定后续结果；跨 SKU 的未提交边界见上一节，失败可先于另一事务提交返回。浏览器继续使用原 POST 与原键，不生成新键把重试伪装成第二项购买。
+
+库存更新和操作记录必须处于同一数据库事务。如果扣减先提交、操作键之后另行写入，进程可能在两者之间崩溃；重试就无法判断是旧操作还是新购买。
+
+这个事务只覆盖本数据库，不能同时提交远端支付或消息队列副作用。若要通知队列，应把待发指令作为 outbox 记录和本地业务效果一同提交，再由发送端重试投递；远端仍须以自己的业务键去重或核对，见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。本节的未知结果发生在 HTTP 响应交付路径；若还要承诺数据库故障后的提交持久性，需一并核对同步提交和存储 flush 配置，见[事务隔离与预写日志能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### 同一库存不变量怎样用于抽奖？
 
-抽奖服务对外提供公开只读的 GET /draws/{campaignId}，返回活动规则、时间与可见状态；已认证参与者以 POST /draws/{campaignId}/entries 提交自己的请求。服务端按当前主体检查活动仍开放、资格和一次参与规则，并使用 (campaign_id, principal_id) 唯一约束及作用域幂等键阻止重复参与。活动已关闭应返回明确 campaign-closed 状态；已有参与记录或其他规则冲突应返回明确 conflict，不让浏览器从通用错误猜结果。抽奖随机性和审计规则须符合活动承诺；统计事件不能决定资格或权威中奖结果。
+抽奖服务可提供公开只读的 `GET /draws/{campaignId}`，返回活动规则、时间和可见状态；已认证参与者以 `POST /draws/{campaignId}/entries` 提交请求。服务先验证当前主体权限，再按 `(campaign_id, principal_id, idempotency_key)` 查该操作：同键同指纹且已有参与结果时，返回已保存的抽取结果和当前领奖状态，即使活动已关闭；同键异指纹返回冲突。只有该查询未看到已提交操作记录，才检查活动是否开放和参与资格，再尝试建立新参与记录。参与表必须有 `UNIQUE (campaign_id, principal_id)`，让同一参与者即使用不同操作键并发提交，也只能有一个参与结果。活动关闭要返回明确的 `campaign-closed` 状态。
 
-有限奖品应在同一事务里条件扣减并保存参与、抽取结果与待领取状态；若扣减零行，要按活动规则明确返回库存已用完/未中奖等业务结果，不能假定数据库自动替用户重新抽取。GET /draws/{campaignId}/entries/{entryId} 只能向当前结果所有者返回本人结果与领取状态；单独的 POST /prizes/{prizeId}/claims 再验证中奖记录所有者，只收集履约所需资料并写入履约状态。后台活动管理权限应比公开读取和本人参与更严格。抽奖提交也需使用稳定操作键，并按幂等契约定义保留窗口与重放结果，避免超时后重复参与；通用规则见[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)。原档案的独特接口流、显式关闭/冲突结果和权限分层已迁入本节；旧入口保留导航，见[归档抽奖 API 规则入口](../../archive/front-end/Deprecated_Interview_Notes/prize-draw-api-invariants.md)。
+若写参与记录时唯一约束冲突，先回滚本次事务并在新事务按同一 `(campaign_id, principal_id, idempotency_key)` 重新查询：查到同键同指纹已提交结果，说明这是同一 POST 的并发重放，应返回该结果；查到同键异指纹则返回操作键冲突；仍未看到该操作键时，才把 `(campaign_id, principal_id)` 冲突处理为“已经参与”，不把换键重试当作同一抽奖结果。这样既能恢复并发同键请求的已提交结果，也由唯一约束裁决换键重复参与。其他规则冲突应返回明确状态，不让浏览器从通用错误猜测结果。
 
-**接下来：** 此处只说明原子库存写入及本地约束。NULL、连接和分组改变报表查询的方式见[NULL、连接与分组如何改变报表 42 的结果？](#7.%20SQL%20%E7%A9%BA%E5%80%BC%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E6%8A%A5%E8%A1%A8%2042%20%E7%9A%84%E7%BB%93%E6%9E%9C%EF%BC%9F)；事务隔离、WAL 和崩溃恢复的保证见[事务隔离与 WAL 能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
+本例把“报名已接受但奖品库存为零”定义为已完成的未中奖结果：服务在同一事务保存参与记录和权威 `no-prize` 结果，之后同键重放仍取回该结果，不会重新抽一次。如果某活动把库存不足定义为拒绝报名，则那次尝试不保存完成结果、不占键；活动规则必须选择其中一种语义。有限奖品的扣减与参与、中奖结果、待领取状态仍需同事务提交。随机性与审计须符合活动承诺；统计事件不能决定资格或权威中奖结果。抽奖操作记录也要在约定的重放窗口内保留。
+
+`GET /draws/{campaignId}/entries/{entryId}` 只向当前结果所有者返回本人结果与领取状态。独立的 `POST /prizes/{prizeId}/claims` 再验证中奖记录所有者，只收集履约所需资料并写入履约状态；后台活动管理权限应比公开读取和本人参与更严格。旧档案保留导航入口，见[归档抽奖 API 规则入口](../../archive/front-end/Deprecated_Interview_Notes/prize-draw-api-invariants.md)。
+
+**接下来：** 本页解释原子库存写入、操作结果和局部事务边界。NULL、连接与分组改变报表查询的方式见[SQL 空值、连接与分组会怎样改变报表 42 的结果？](#7.%20SQL%20%E7%A9%BA%E5%80%BC%E3%80%81%E8%BF%9E%E6%8E%A5%E4%B8%8E%E5%88%86%E7%BB%84%E4%BC%9A%E6%80%8E%E6%A0%B7%E6%94%B9%E5%8F%98%E6%8A%A5%E8%A1%A8%2042%20%E7%9A%84%E7%BB%93%E6%9E%9C%EF%BC%9F)；隔离级别、WAL 和崩溃恢复见[事务隔离与预写日志能保证什么？](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 > [!info]- 来源
-> - 条件扣减的并发重检与事务隔离行为：[PostgreSQL 18, Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)，§13.2.1，核对于 2026-11-06；此处并发时序明确标为 PostgreSQL 行为。
-> - 主键、唯一、外键、CHECK 和 NOT NULL 的持久约束：[PostgreSQL 18, Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html)，§5.5，核对于 2026-11-06。
-> - SQLite 事务和外键约束：[SQLite Transactions](https://www.sqlite.org/lang_transaction.html) 与 [Foreign Key Support](https://www.sqlite.org/foreignkeys.html)，核对于 2026-11-06。
+> - Read Committed 的语句快照、并发 `UPDATE` 等待以及在提交的新行上重检 `WHERE`；前一个更新者回滚时后一个可以继续：[PostgreSQL 18, Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)，§13.2.1，核对于 2026-11-11。
+> - `UPDATE ... RETURNING` 只返回实际更新行的新值；位置参数在各个预备语句内绑定：[PostgreSQL 18, UPDATE](https://www.postgresql.org/docs/18/sql-update.html)，§UPDATE；[PREPARE](https://www.postgresql.org/docs/18/sql-prepare.html)，§PREPARE，核对于 2026-11-11。
+> - 主键、唯一、外键、CHECK 与 NOT NULL 的约束行为：[PostgreSQL 18, Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html)，§5.5.1–5.5.5，核对于 2026-11-11。
+> - 事务把多步写入作为一个全有或全无的边界、提交时一同可见、回滚撤销；错误后须回滚到保存点或结束失败事务：[PostgreSQL 18, Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html)，§3.4；[ROLLBACK](https://www.postgresql.org/docs/18/sql-rollback.html)，核对于 2026-11-11。
+> - 竞争插入同一唯一键时等待并根据另一事务提交或回滚裁决：[PostgreSQL 18, INSERT](https://www.postgresql.org/docs/18/sql-insert.html)，§INSERT；[Index Uniqueness Checks](https://www.postgresql.org/docs/18/index-unique-checks.html)，§63.5，核对于 2026-11-11。本页单 SKU 时序展示行锁先串行化、插入时胜者已提交的具体路径。
+> - 幂等方法重复请求的预期效果应等同于单次请求：[RFC 9110, §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2)，核对于 2026-11-11。RFC 不规定本例响应序列化或取消后的当前状态；这些是上文声明的 API 契约。
+> - SQLite 外键默认关闭、须由应用启用；动态类型、`STRICT` 表及参数语法：[SQLite Foreign Key Support](https://www.sqlite.org/foreignkeys.html)，§1–2；[STRICT Tables](https://www.sqlite.org/stricttables.html)，§1–2；[SQL Language Expressions](https://www.sqlite.org/lang_expr.html)，§4 Parameters，核对于 2026-11-11。
 ## 2. 浏览器请求如何到达 HTTP 响应？
 
 Hypertext Transfer Protocol (HTTP，超文本传输协议) 规定调用方怎样描述操作、服务端怎样返回状态与表示；Transmission Control Protocol (TCP，传输控制协议) 或 QUIC 负责承载字节流，Transport Layer Security (TLS，传输层安全协议) 在安全连接上保护通信。看同一个报表请求，应先认清 HTTP 语义，再按是否有可复用缓存、地址和连接追踪网络阶段。HTTP 版本会改变连接复用和多路复用方式，但不会替 application programming interface (API，应用程序接口) 验证身份、授权资源、允许跨源读取或确认超时操作结果。
@@ -1985,29 +2037,33 @@ Vitess 的公开 resharding 流程也把复制、追赶、校验和切换流量�
 > - 新分片先复制、校验并追平，切换时暂停写入：[Vitess 25.0 Sharding](https://vitess.io/docs/25.0/reference/features/sharding/)，Resharding，页面更新于 2026-04-14；本文的 epoch、写屏障和回滚条件是用于证明单一写者的示例合约，不声称 Vitess 文档提供完全相同的 fencing API。
 ## 14. 请求超时后如何确认结果并安全重试？
 
-**案例：** reserve-demo-208 条件扣减 SKU-7 的最后一件库存，数据库提交后 HTTP 响应丢失。调用方看到超时，但不知道请求没到服务器、事务回滚，还是扣减已经提交。网络超时描述的是“调用方没收到结果”，不是“数据库没有执行”；解决方法是为逻辑操作分配稳定身份，并把操作结果和本地效果一并持久化，使客户端可查询或按契约重放同一操作。
+**案例：** 账户 `acct-17` 的主体 `user-17` 用操作键 `reserve-demo-208` 预留 SKU-7 的最后一件库存。数据库已经提交，HTTP 响应却丢失了。调用方看到超时，不知道请求没到服务器、事务回滚，还是扣减已经完成。要恢复结果，服务需要识别“这是刚才那次预留的重试”，而不是再扣一次库存。
+
+本例沿用[库存事务页](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F)的契约：成功提交才绑定操作键；库存失败回滚且不占键；同键同参数重放返回同一笔预留的**当前状态**。下面先跟完一次响应丢失的恢复，再解释如何设计键、控制重试成本和处理取消。
 
 ~~~mermaid
 sequenceDiagram
     participant C as 客户端
     participant A as API
     participant D as 数据库
-    C->>A: reserve-demo-208，预留 SKU-7
-    A->>D: 条件扣减 + 写操作结果
-    D-->>A: 同一事务提交，库存变 0
+    C->>A: POST 预留，键 reserve-demo-208
+    A->>D: 扣库存 + 写预留记录
+    D-->>A: 同一事务提交
     A--xC: 响应在途中丢失
-    Note over C: 客户端结果未知，不能据此断言回滚
-    C->>A: POST 原预留请求，沿用同一键和相同参数
-    A->>D: 按作用域键读取或裁决同键并发
-    D-->>A: 返回已提交结果；不再扣库存
-    A-->>C: 返回原结果
+    Note over C,D: 此时库存为 0；客户端尚不知道已成功
+    C->>A: 重放原 POST，沿用键与参数
+    A->>D: 授权后按作用域键读记录
+    D-->>A: 已存在的预留及其当前状态
+    A-->>C: 返回同一笔预留，不再扣库存
 ~~~
 
 ### 超时和截止时间让调用方处于什么状态？
 
 timeout（超时）限定一次等待或操作的时长；deadline（截止时间）是整条调用链最晚允许完成的时间点。每经过一层都重新开始完整 timeout，会让多个串行下游调用的总耗时远超最初预算。服务应传递剩余时间或截止时限，并为清理和响应留出时间。连接建立、TLS 和响应读取是否都包含在一次库的 timeout 内，要按客户端 API 检查。
 
-当写入被接受而响应丢失，调用方得到的是 unknown outcome（未知结果）：它无法从自己的连接状态区分“请求没到”与“效果已提交但响应丢失”。reserve-demo-208 的权威记录已是 `reserved`，`available` 从 1 变 0；客户端没有一个按此键查询的 GET 契约，因此重放原 POST，并沿用相同作用域键与相同参数，服务端返回已记录结果而不再扣减。若读取查询暂时查不到记录，这只表示当前可见快照没有已提交结果，并不能证明原事务已经回滚或不在进行。只有明确允许幂等重放的写请求，才能用同一键和同一参数安全重试；单纯的只读状态查询不应意外启动原操作。
+当写入可能已经执行而响应丢失，调用方得到的是 unknown outcome（未知结果）：它无法从自己的连接状态区分“请求没到”与“效果已提交但响应丢失”。图中 `available` 已从 1 变成 0，预留记录为 `reserved`。客户端没有按键查询的 GET 接口，因此重放原 POST；服务重新授权并核对参数后，找到同一笔记录，不再扣库存。若期间这笔预留已被另一个合法操作取消，就返回当前的 `cancelled`，不会把它重新激活。这恢复的是同一业务操作，不要求逐字节重放首次 HTTP 响应。
+
+查不到记录时，不能立即断言“原请求失败了”：原事务可能仍在执行，尚未提交。重放必须继续经过数据库的原子约束；普通的先查后写无法排除并发。只读状态查询也必须保持只读，不能因为查无记录就偷偷启动原操作。
 
 HTTP 202 Accepted 是另一种显式状态：API 确认任务已受理，但没有表示已完成。账户报表契约没有按幂等键查询的 GET；若 202 响应丢失，客户端用相同 `report-demo-208` 和相同请求正文重放 POST，服务返回已存在的 `job-demo-731` 与状态 URL，再 GET 该已知 URL。连接断开不会自动取消已经持久接受的 job；需要取消时使用明确的取消请求。完整作业生命周期见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
 
@@ -2017,23 +2073,37 @@ idempotency key（幂等键）是客户端为一次逻辑意图生成并在重�
 
 RFC 9110 对 HTTP 方法的幂等性定义为：重复一次或多次相同请求，其预期服务端效果等同于只执行一次；这不禁止每次请求分别记录日志。它是 HTTP 方法的语义。给某个 POST 另加稳定幂等键，则是应用层的去重和结果重放约定，两者不能互相代替。
 
-去重记录和本地数据库效果必须处于同一事务；若扣库存提交后才单独写 reserve-demo-208 操作记录，中间崩溃会让重试无法识别原操作：本例最后一件已被扣完时会误报无库存；若其后补货，重试还可能再次扣减。对同键并发，先查询再插入不够：两个请求可能都看见“没有记录”。要由唯一约束裁决一方；失败方回滚本次条件扣减，再读取胜者提交的结果。服务还要明确保证的重放窗口，并在窗口内保留识别同一键所需的记录。窗口过后若删掉所有信息，服务无法仅凭键字符串判断它是旧操作还是新意图；若要拒绝任何过期旧键，就得继续保留可验证的墓碑。窗口外的重试保证必须写清楚，调用方不能把旧操作当成新请求重做。
+去重记录和本地数据库效果必须处于同一事务；若扣库存提交后才单独写 reserve-demo-208 操作记录，中间崩溃会让重试无法识别原操作：本例最后一件已被扣完时会误报无库存；若其后补货，重试还可能再次扣减。
 
-若操作会调用外部支付或发消息，单库事务无法覆盖远端系统。durable outbox（持久发件箱）只让本地结果与待发布指令一起提交，并使 relay 能在崩溃后重发；它不会替远端付款去重。真正的资金效果仍需要收款方按相同业务键幂等处理，或通过权威对账识别重复。超时不自动撤销远端副作用。
+在库存例中，复合唯一键是 `(account_id, principal_id, idempotency_key)`。两次尝试都走到插入记录时，只能有一个提交；冲突方须回滚**整笔事务**，撤销自己的临时库存扣减，再用新事务读取已提交记录和比较参数。
+
+库存更新没有返回行时，也要先回滚，再以新事务按操作键查记录。假如 A 刚扣完最后一件并提交，B 重放相同 POST，等到 A 释放行锁后发现库存为零，就会走这条分支：B 查回 A 的同键同参数记录，仍返回同一笔预留；只有回查未见已提交结果时，才报告本次库存失败。查不到不证明另一个原请求已经失败。
+
+这个方案不是在请求一到达时就抢占键。一次真正无库存的失败不保存操作记录，相同 POST 日后可能在补货后成功。同键改参数、更新另一 SKU 的并发请求，也可能在另一请求尚未提交时先得到无库存失败。若产品要求“第一次尝试就固定键与结果，包括失败”，需要另行设计前置占键与处理中状态，不能从这个最小库存事务推导出来。具体时序见[同一请求并发到达时，库存与操作记录怎样保持一致？](#1.%20%E4%B8%A4%E4%B8%AA%E8%AF%B7%E6%B1%82%E4%BA%89%E5%A4%BA%E6%9C%80%E5%90%8E%E4%B8%80%E4%BB%B6%E5%BA%93%E5%AD%98%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E5%8F%AA%E9%A2%84%E7%95%99%E4%B8%80%E6%AC%A1%EF%BC%9F)。
+
+服务还要明确保证的重放窗口，并在窗口内保留识别同一键所需的记录。窗口过后若删掉所有信息，服务无法仅凭键字符串判断它是旧操作还是新意图；对于本例这种不带可验证有效期的键，若要在删除结果后仍拒绝过期旧键，就得继续保留可识别该旧键的墓碑记录。窗口外的重试保证必须写清楚，调用方不能把旧操作当成新请求重做。
+
+若操作会调用外部支付或发消息，单库事务无法覆盖远端系统。durable outbox（持久发件箱）只让本地结果与待发布指令一起提交，并使 relay 能在崩溃后重发；它不会替远端付款去重。避免重复付款仍需要收款方按相同业务键幂等处理；如果没有这样的保证，超时后不能盲目重发，应先向权威交易记录查证。对账可以发现重复，但自身不阻止重复扣款。超时也不自动撤销远端副作用。
 
 ### 重试时间和总工作量怎样受控？
 
-只对可能暂时失败且重复执行安全的操作重试。使用有上限的 exponential backoff (指数退避) 并加入 full jitter（全抖动），避免所有客户端同时再试：
+先判断失败是否可能恢复、操作是否可安全重放，再决定是否重试。参数校验失败和同键异参数冲突应先修正意图；把它们原样反复提交不会恢复。对可恢复失败，使用有上限的 exponential backoff (指数退避) 并加入 full jitter（全抖动），分散再次到达的请求：
 
 ~~~text
 cap(n) = min(max_delay, base_delay × 2^n)
 wait(n) = 从 0 到 cap(n) 均匀随机选择
 ~~~
 
-假定 base_delay 为 100 ms、max_delay 为 800 ms，前几次等待区间依次为 0–100 ms、0–200 ms、0–400 ms；客户端实际次数还须受剩余 deadline 限制。若最多 3 次尝试，初次请求失败后只在剩余预算装得下下一次调用和必要回包时重试。base、上限和次数是服务策略，不是通用常数。避免多个调用层各自重试：5 层各做 3 次会把一次逻辑请求放大为 3⁵ = 243 次下游调用。
+假定 base_delay 为 100 ms、max_delay 为 800 ms，第一次失败后的 `n=0`，前几次等待区间依次为 0–100 ms、0–200 ms、0–400 ms；客户端实际次数还须受剩余 deadline 限制。若最多 3 次尝试，初次请求失败后只在剩余预算装得下下一次调用和必要回包时重试。base、上限和次数是服务策略，不是通用常数。若服务要求等待一段时间，例如响应携带 `Retry-After`，也要结合接口契约与剩余预算处理，不能退避后立即绕过该等待。
+
+避免多个调用层各自放大工作量：一条串行调用链上，5 层调用者都最多尝试 3 次，且每次都耗尽后再向上失败，则最深层最多收到 `3⁵ = 243` 次调用。这是最深层的次数，不是整条链所有调用的总和。通常由最了解端到端预算的一层承担重试，其余层明确失败边界。
 
 > [!example] 响应截止时间下的重试复盘
 > 客户端总截止时间为 2 秒，第一次（共最多 3 次尝试中的第 1 次）请求用了 1.2 秒后超时，剩余 0.8 秒。第一次失败后的退避是 `n=0`，所以等待上限为 100 毫秒；下一次调用至少需要 700 毫秒，并为处理/返回预留 50 毫秒，能容纳的等待最多只有 `800−700−50=50` 毫秒。若全抖动抽到 80 毫秒（合法，因为低于 100 毫秒），总计要 `80+700+50=830` 毫秒，超过剩余预算，应停止并把状态留作未知。最多 3 次尝试包括初次调用，因此总共最多只有两次退避，后续上限才是 200 毫秒。
+
+![剩余预算为800毫秒，计划等待80毫秒、调用700毫秒、处理返回50毫秒，总计830毫秒，超过截止时间30毫秒](../../engineering-foundations/reliability/resources/api-retry-deadline-budget.svg)
+
+图中的 700 毫秒是这个教学例子选定的最小调用预算；真实请求并没有可预知的固定耗时。应根据服务时延目标、观测数据和取消能力设预算，并把剩余 deadline 传给下游。客户端停止等待后，尚未查证的写入仍然是未知结果，不能自动改成“失败且未生效”。
 
 ### 取消如何作为协作式信号？
 
@@ -2042,10 +2112,11 @@ cancellation（取消）是通知仍在运行的工作“结果不再需要”�
 **接下来：** 账户报表把幂等键、202、outbox 和后台尝试组合成一个可长期查询的流程，见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。队列发布确认与消费者 acknowledgement 的 broker 语义归[发布者确认和消费者确认分别证明什么？](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)，连接借用预算归[如何限定 ORM Session 并排查连接池耗尽？](#11.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。
 
 > [!info]- 来源
-> - HTTP 幂等方法与 202 受理语义：[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§9.2.2、§15.3.3，核对于 2026-11-06。
-> - 副作用、超时、重试安全与请求令牌：[AWS Builders’ Library, Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)，核对于 2026-11-06。
-> - timeout、backoff 与 jitter：[AWS Builder Center, Timeouts, retries, and backoff with jitter](https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter)，原文 2019-12-05，核对于 2026-11-06。
-> - deadline 传播和协作式取消：[gRPC Deadlines](https://grpc.io/docs/guides/deadlines/)，核对于 2026-11-06；具体行为仍取决于各 API。
+> - HTTP 幂等方法、202 受理与 Retry-After 语义：[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§9.2.2、§15.3.3、§10.2.3，核对于 2026-11-11；库存键绑定和当前状态重放是本例声明的应用契约。
+> - 副作用、超时、重试安全与请求令牌：[AWS Builders’ Library, Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)，核对于 2026-11-11。
+> - timeout、backoff 与 jitter：[AWS Builder Center, Timeouts, retries, and backoff with jitter](https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter)，原文 2019-12-05，核对于 2026-11-11。
+> - Full jitter 的均匀等待区间：[AWS Architecture Blog, Exponential Backoff and Jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/)，2015-03-04、2023 年补充 SDK 说明；本文只使用其算法定义，不将模拟负载的收益当成通用性能保证。
+> - deadline 传播和协作式取消：[gRPC Deadlines](https://grpc.io/docs/guides/deadlines/)，核对于 2026-11-11；具体行为仍取决于各 API。
 ## 15. 怎样设计一个可持久查询的账户报表？
 
 **案例：** 用户为账户 acct-17 请求报表 42，统计有限时间范围内的账户活动并导出 CSV。任务可能超出一次 HTTP 请求的时限；用户断开浏览器后仍要能查询结果，且结果保留七天。请求只读账户数据，但会消耗查询、连接、worker（工作进程）和对象存储资源。这里使用 `report-demo-208` 作为客户端幂等键，`job-demo-731` 作为持久任务 ID；账户与报表共同标识报表资源，报表 ID 42、任务 ID 和请求键是三个不同身份。

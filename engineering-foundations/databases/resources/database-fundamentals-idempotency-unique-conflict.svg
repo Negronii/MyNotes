@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="690" viewBox="0 0 1200 690" role="img" aria-labelledby="fig-title fig-desc">
+  <title id="fig-title">Same-key reservation duplicate and whole-transaction rollback</title>
+  <desc id="fig-desc">With initial stock two, A commits stock one and a reservation. Same-parameter B then changes stock to zero inside its transaction but collides with the unique key. Rolling back B restores committed stock one and preserves A's record.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#40556a"/></marker>
+    <marker id="arrow-amber" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#a65a12"/></marker>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #172635; }
+    .scope { font-size: 25px; font-weight: 700; }
+    .head { font-size: 25px; font-weight: 700; }
+    .label { font-size: 21px; font-weight: 650; }
+    .value { font-size: 31px; font-weight: 750; }
+    .note { font-size: 19px; font-weight: 500; }
+    .panel { fill: #f8fafc; stroke: #cbd5df; stroke-width: 2; }
+    .committed { fill: #e5f2ea; stroke: #71a17f; stroke-width: 2.5; }
+    .private { fill: #eaf1fa; stroke: #7799bc; stroke-width: 2.5; stroke-dasharray: 9 6; }
+    .conflict { fill: #fff0ee; stroke: #c86f65; stroke-width: 2.5; }
+    .plain { fill: #ffffff; stroke: #91a1b2; stroke-width: 2; }
+    .arrow { fill: none; stroke: #40556a; stroke-width: 4; marker-end: url(#arrow); }
+    .rollback { fill: none; stroke: #a65a12; stroke-width: 5; marker-end: url(#arrow-amber); }
+    .guide { fill: none; stroke: #93a2b2; stroke-width: 2.5; stroke-dasharray: 7 6; }
+  </style>
+  <rect width="1200" height="690" rx="22" fill="#ffffff"/>
+  <rect x="28" y="22" width="1144" height="54" rx="13" fill="#eaf0f5"/>
+  <text class="scope" x="52" y="58">PostgreSQL 18 · Read Committed · SKU-7 · 初始 available = 2</text>
+  <text class="scope" x="52" y="113">A / B 完全相同：acct-17 · user-17 · reserve-demo-208 · fingerprint-A</text>
+
+  <rect x="28" y="144" width="266" height="382" rx="17" class="panel"/>
+  <rect x="322" y="144" width="266" height="382" rx="17" class="panel"/>
+  <rect x="616" y="144" width="266" height="382" rx="17" class="panel"/>
+  <rect x="910" y="144" width="262" height="382" rx="17" class="panel"/>
+  <text class="head" x="52" y="184">t₀ · 初始状态</text>
+  <text class="head" x="346" y="184">t₁ · A 提交</text>
+  <text class="head" x="640" y="184">t₂ · B 临时扣减</text>
+  <text class="head" x="934" y="184">t₃ · B 回滚</text>
+
+  <rect x="54" y="223" width="214" height="116" rx="14" class="committed"/>
+  <text class="label" x="77" y="256">已提交库存</text>
+  <text class="value" x="77" y="306">2</text>
+  <rect x="54" y="368" width="214" height="88" rx="14" class="plain"/>
+  <text class="label" x="77" y="405">操作记录</text>
+  <text class="note" x="77" y="435">无</text>
+
+  <rect x="348" y="223" width="214" height="116" rx="14" class="committed"/>
+  <text class="label" x="371" y="256">已提交库存</text>
+  <text class="value" x="371" y="306">1</text>
+  <rect x="348" y="368" width="214" height="88" rx="14" class="committed"/>
+  <text class="label" x="371" y="405">A 的记录</text>
+  <text class="note" x="371" y="435">reserved · 已提交</text>
+
+  <rect x="642" y="223" width="214" height="87" rx="14" class="committed"/>
+  <text class="label" x="664" y="255">已提交仍为 1</text>
+  <text class="note" x="664" y="286">A 的记录仍在</text>
+  <rect x="642" y="326" width="214" height="91" rx="14" class="private"/>
+  <text class="label" x="664" y="359">B 事务内库存</text>
+  <text class="value" x="664" y="400">0</text>
+  <rect x="642" y="432" width="214" height="67" rx="13" class="conflict"/>
+  <text class="label" x="664" y="460">INSERT · 唯一冲突</text>
+  <text class="note" x="664" y="486">不能留住 B 的扣减</text>
+
+  <rect x="936" y="223" width="210" height="116" rx="14" class="committed"/>
+  <text class="label" x="958" y="256">最终已提交库存</text>
+  <text class="value" x="958" y="306">1</text>
+  <rect x="936" y="368" width="210" height="88" rx="14" class="committed"/>
+  <text class="label" x="958" y="405">A 的记录保留</text>
+  <text class="note" x="958" y="435">同一指纹 · 当前状态</text>
+  <path d="M269 279 H333" class="arrow"/>
+  <path d="M563 279 H627" class="arrow"/>
+  <path d="M857 279 H921" class="arrow"/>
+
+  <path d="M748 505 V567 H1037 V469" class="rollback"/>
+  <rect x="478" y="578" width="475" height="72" rx="15" fill="#fff8ed" stroke="#d6a66a" stroke-width="2.5"/>
+  <text class="label" x="508" y="608">B 临时的 0 被整笔撤销，库存恢复为 1</text>
+  <text class="note" x="508" y="635">新事务查 A 的行 → 返回同一预留记录</text>
+  <path d="M958 614 H1002" class="arrow"/>
+  <rect x="1012" y="578" width="160" height="72" rx="15" fill="#eaf0f5" stroke="#91a1b2" stroke-width="2"/>
+  <text class="label" x="1037" y="608">返回 A</text>
+  <text class="note" x="1037" y="635">不再扣减</text>
+</svg>

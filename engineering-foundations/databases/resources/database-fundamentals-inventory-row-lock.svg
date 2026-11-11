@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1060" viewBox="0 0 1200 1060" role="img" aria-labelledby="fig-title fig-desc">
+  <title id="fig-title">SKU-7 row lock and committed inventory states</title>
+  <desc id="fig-desc">At PostgreSQL 18 Read Committed, A privately changes stock from one to zero and owns the SKU row lock. B waits. If A commits stock and reservation together, B rechecks zero, updates no row, rolls back, and looks up A's record in a new transaction. If A rolls back, B can recheck one and commit.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#40556a"/></marker>
+    <marker id="arrow-amber" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#a65a12"/></marker>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #172635; }
+    .scope { font-size: 25px; font-weight: 700; }
+    .legend { font-size: 20px; font-weight: 600; }
+    .head { font-size: 26px; font-weight: 700; }
+    .label { font-size: 22px; font-weight: 650; }
+    .value { font-size: 32px; font-weight: 750; }
+    .note { font-size: 20px; font-weight: 500; }
+    .panel { fill: #f8fafc; stroke: #cbd5df; stroke-width: 2; }
+    .committed { fill: #e5f2ea; stroke: #71a17f; stroke-width: 2.5; }
+    .private { fill: #eaf1fa; stroke: #7799bc; stroke-width: 2.5; stroke-dasharray: 9 6; }
+    .waiting { fill: #fff1df; stroke: #cc8b43; stroke-width: 2.5; }
+    .plain { fill: #ffffff; stroke: #91a1b2; stroke-width: 2; }
+    .arrow { fill: none; stroke: #40556a; stroke-width: 4.5; marker-end: url(#arrow); }
+    .branch { fill: none; stroke: #a65a12; stroke-width: 4.5; marker-end: url(#arrow-amber); }
+    .guide { fill: none; stroke: #93a2b2; stroke-width: 2.5; stroke-dasharray: 7 6; }
+  </style>
+  <rect width="1200" height="1060" rx="22" fill="#ffffff"/>
+  <rect x="28" y="22" width="1144" height="54" rx="13" fill="#eaf0f5"/>
+  <text class="scope" x="52" y="58">PostgreSQL 18 · Read Committed · SKU-7 · 初始 available = 1</text>
+  <text class="legend" x="54" y="116">acct-17 / user-17</text>
+  <text class="legend" x="300" y="116">reserve-demo-208</text>
+  <text class="legend" x="570" y="116">fingerprint-A · 同一 POST</text>
+  <rect x="875" y="97" width="22" height="22" rx="5" class="committed"/>
+  <text class="legend" x="906" y="116">已提交</text>
+  <rect x="1010" y="97" width="22" height="22" rx="5" class="private"/>
+  <text class="legend" x="1041" y="116">事务内</text>
+
+  <rect x="28" y="144" width="550" height="638" rx="18" class="panel"/>
+  <rect x="622" y="144" width="550" height="638" rx="18" class="panel"/>
+  <text class="head" x="54" y="185">t₁ · A 尚未提交</text>
+  <text class="head" x="648" y="185">t₂ · A 提交，B 重检</text>
+
+  <text class="label" x="58" y="222">其他事务可见</text>
+  <rect x="163" y="233" width="280" height="80" rx="14" class="committed"/>
+  <text class="note" x="185" y="263">已提交 · SKU-7</text>
+  <text class="value" x="185" y="301">1</text>
+  <path d="M303 316 V352" class="arrow"/>
+  <text class="label" x="326" y="347">A UPDATE</text>
+  <rect x="163" y="364" width="280" height="80" rx="14" class="private"/>
+  <text class="note" x="185" y="394">A 的事务内版本</text>
+  <text class="value" x="185" y="432">0</text>
+
+  <rect x="58" y="463" width="230" height="60" rx="13" class="waiting"/>
+  <text class="label" x="80" y="500">行锁 · owner A</text>
+  <rect x="310" y="463" width="230" height="60" rx="13" class="private"/>
+  <text class="label" x="330" y="488">A 操作记录</text>
+  <text class="note" x="330" y="513">尚未提交</text>
+  <path d="M303 445 V457" class="guide"/>
+
+  <rect x="58" y="554" width="177" height="68" rx="12" class="plain"/>
+  <text class="label" x="92" y="583">B UPDATE</text>
+  <text class="note" x="91" y="608">同一 SKU</text>
+  <path d="M242 588 H328" class="arrow"/>
+  <rect x="338" y="554" width="202" height="68" rx="12" class="waiting"/>
+  <text class="label" x="377" y="597">B 等待解锁</text>
+  <rect x="91" y="650" width="414" height="90" rx="14" fill="#edf2f6" stroke="#91a1b2" stroke-width="2"/>
+  <text class="label" x="119" y="686">A 事务仍打开</text>
+  <text class="note" x="119" y="716">B 尚无最终库存结果</text>
+
+  <rect x="652" y="221" width="490" height="96" rx="14" class="committed"/>
+  <text class="label" x="681" y="255">A COMMIT</text>
+  <text class="note" x="681" y="285">SKU-7 = 0  +  reserve-demo-208 行一同可见</text>
+  <path d="M897 322 V348" class="arrow"/>
+
+  <rect x="652" y="360" width="490" height="78" rx="14" class="waiting"/>
+  <text class="label" x="681" y="390">B 解锁继续 · 重检 0 &gt; 0</text>
+  <text class="note" x="681" y="420">false</text>
+  <path d="M897 443 V469" class="arrow"/>
+
+  <rect x="652" y="481" width="490" height="78" rx="14" class="plain"/>
+  <text class="label" x="681" y="511">UPDATE 返回零行</text>
+  <text class="note" x="681" y="541">不执行 INSERT</text>
+  <path d="M897 564 V590" class="arrow"/>
+
+  <rect x="652" y="602" width="490" height="52" rx="13" class="waiting"/>
+  <text class="label" x="834" y="636">ROLLBACK B</text>
+  <path d="M897 659 V685" class="arrow"/>
+
+  <rect x="652" y="697" width="490" height="68" rx="13" fill="#edf2f6" stroke="#91a1b2" stroke-width="2"/>
+  <text class="label" x="681" y="726">新事务 SELECT → A 的记录</text>
+  <text class="note" x="681" y="752">同指纹 · 返回当前状态</text>
+
+  <rect x="28" y="808" width="1144" height="220" rx="18" fill="#fff8ed" stroke="#d6a66a" stroke-width="2"/>
+  <text class="head" x="54" y="852">若 A ROLLBACK</text>
+  <rect x="54" y="878" width="347" height="115" rx="14" class="committed"/>
+  <text class="label" x="80" y="922">已提交库存仍为 1</text>
+  <text class="note" x="80" y="958">A 的库存与记录都撤销</text>
+  <path d="M410 948 H468" class="branch"/>
+  <rect x="479" y="878" width="285" height="115" rx="14" class="waiting"/>
+  <text class="label" x="505" y="922">B 重检 1 &gt; 0</text>
+  <text class="note" x="505" y="958">条件成立，可扣减</text>
+  <path d="M773 948 H829" class="branch"/>
+  <rect x="840" y="878" width="306" height="115" rx="14" class="committed"/>
+  <text class="label" x="865" y="922">B 可插入并提交</text>
+  <text class="note" x="865" y="958">成为唯一提交者</text>
+</svg>

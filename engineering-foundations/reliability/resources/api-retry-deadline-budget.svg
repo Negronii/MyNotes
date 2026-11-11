@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="350" viewBox="0 0 800 350" role="img" aria-labelledby="title desc">
+  <title id="title">重试计划怎样超过剩余截止时间</title>
+  <desc id="desc">等比例比较800毫秒剩余预算与830毫秒计划。等待80毫秒、调用700毫秒、处理和返回50毫秒。最后30毫秒落在截止时刻之后。</desc>
+  <rect width="800" height="350" rx="14" fill="#f8faff"/>
+  <g font-family="Arial, PingFang SC, sans-serif" fill="#29384f" font-size="22">
+    <text x="70" y="42">剩余预算：800 ms</text>
+    <rect x="70" y="58" width="640" height="24" rx="4" fill="#dce9fa"/>
+    <text x="70" y="139">重试计划：830 ms</text>
+    <rect x="70" y="164" width="64" height="68" fill="#f7e7c7" stroke="#d9b77c"/>
+    <rect x="134" y="164" width="560" height="68" fill="#dce9fa" stroke="#94b7df"/>
+    <rect x="694" y="164" width="40" height="68" fill="#e8dff5" stroke="#b5a0d1"/>
+    <rect x="710" y="164" width="24" height="68" fill="#f2b8b4"/>
+    <text x="102" y="191" text-anchor="middle" font-size="20">等待</text>
+    <text x="102" y="218" text-anchor="middle" font-size="18">80 ms</text>
+    <text x="414" y="193" text-anchor="middle">下一次调用</text>
+    <text x="414" y="221" text-anchor="middle">700 ms</text>
+    <path d="M714 161 V115 H676" stroke="#9076ac" stroke-width="2" fill="none"/>
+    <text x="670" y="101" text-anchor="end" font-size="20">处理与返回：50 ms</text>
+    <path d="M710 50 V254" stroke="#ba5554" stroke-width="2.5" stroke-dasharray="7 5"/>
+    <text x="704" y="280" text-anchor="end" fill="#9c4544">截止时刻</text>
+    <path d="M722 234 V306 H610" stroke="#ba5554" stroke-width="2" fill="none"/>
+    <text x="598" y="313" text-anchor="end" fill="#9c4544">超出 30 ms</text>
+  </g>
+</svg>
