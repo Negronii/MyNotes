@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="660" viewBox="0 0 700 660" role="img" aria-labelledby="title desc">
+  <title id="title">RAG 回答主张与证据核验</title>
+  <desc id="desc">输入实际送达模型的三项证据：run-r42-7#c1 中构建 42 的观察、HTTP-CONTRACT-v1 的空名称 HTTP 400 规则、CI-RETRY-v3 的断言失败规则。应用逐条核验后，支持充分则回答两项问题；不支持的主张删除或改写，缺少关键证据时说明不足并停止。只被引用但未实际进入模型输入的段落不能作依据。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#3d6684"/></marker>
+    <marker id="passArrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#4c8c63"/></marker>
+    <marker id="failArrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#b45d55"/></marker>
+    <style>
+      text{font-family:Inter,"Noto Sans CJK SC","PingFang SC",sans-serif;fill:#20364b}
+      .head{font-size:18px;font-weight:700}
+      .body{font-size:16px;font-weight:500}
+      .small{font-size:14px;fill:#647589}
+      .box{stroke-width:2;rx:14}
+      .input{fill:#eaf2fb;stroke:#87a9c6}
+      .model{fill:#f3effb;stroke:#9a88c3}
+      .verify{fill:#fff3df;stroke:#d4ae5d}
+      .pass{fill:#eaf6ef;stroke:#7fa98e}
+      .fail{fill:#fbeceb;stroke:#cd837a}
+      .note{fill:#f3f5f7;stroke:#c3cbd3;stroke-width:1.5;rx:10}
+      .arrow{fill:none;stroke:#3d6684;stroke-width:2.8;marker-end:url(#arrow)}
+      .good{fill:none;stroke:#4c8c63;stroke-width:2.8;marker-end:url(#passArrow)}
+      .bad{fill:none;stroke:#b45d55;stroke-width:2.8;marker-end:url(#failArrow)}
+    </style>
+  </defs>
+  <rect width="700" height="660" fill="#ffffff"/>
+  <text class="small" x="25" y="23">承接上图：只处理已经实际送达的证据与上下文</text>
+
+  <rect class="box input" x="55" y="38" width="590" height="122"/>
+  <text class="head" x="350" y="64" text-anchor="middle">本轮实际输入 · 三项证据</text>
+  <text class="body" x="350" y="91" text-anchor="middle">run-r42-7#c1：build 42 预期 400、实际 200</text>
+  <text class="body" x="350" y="117" text-anchor="middle">HTTP-CONTRACT-v1：空名称预期返回 HTTP 400</text>
+  <text class="body" x="350" y="143" text-anchor="middle">CI-RETRY-v3：断言失败先调查，不自动重跑</text>
+
+  <rect class="box model" x="100" y="185" width="500" height="68"/>
+  <text class="head" x="350" y="212" text-anchor="middle">模型生成主张与引用</text>
+  <text class="body" x="350" y="238" text-anchor="middle">分别回答返回码是否符合合约、断言失败能否自动重跑</text>
+
+  <rect class="box verify" x="75" y="278" width="550" height="78"/>
+  <text class="head" x="350" y="306" text-anchor="middle">应用逐条核验支持关系</text>
+  <text class="body" x="350" y="334" text-anchor="middle">主张 ↔ 实际输入的来源 / 版本 / 段落 / 观察；复核当前授权</text>
+
+  <path class="arrow" d="M350 161 V183"/>
+  <path class="arrow" d="M350 254 V276"/>
+
+  <rect class="box pass" x="55" y="395" width="590" height="125"/>
+  <text class="head" x="350" y="422" text-anchor="middle">通过 · 返回有来源的回答</text>
+  <text class="body" x="350" y="449" text-anchor="middle">① HTTP-CONTRACT-v1：空名称预期 HTTP 400；</text>
+  <text class="body" x="350" y="475" text-anchor="middle">c1 记录本次实际 HTTP 200。</text>
+  <text class="body" x="350" y="501" text-anchor="middle">② CI-RETRY-v3：断言失败先调查，不自动重跑。</text>
+
+  <rect class="box fail" x="55" y="548" width="590" height="76"/>
+  <text class="head" x="350" y="575" text-anchor="middle">不通过 / 缺证</text>
+  <text class="body" x="350" y="603" text-anchor="middle">删除或改写不支持的主张；缺关键依据就说明不足并停止。</text>
+
+  <path class="good" d="M350 357 V387"/>
+  <text class="small" x="365" y="378" fill="#397451">支持充分</text>
+  <path class="bad" d="M625 316 H680 V586 H645"/>
+  <text class="small" x="672" y="386" text-anchor="end" fill="#a54f49">不支持 / 缺证</text>
+  <rect class="note" x="55" y="628" width="590" height="25"/>
+  <text class="small" x="350" y="646" text-anchor="middle">只被引用、未实际进入本轮输入的段落，不能作为回答依据。</text>
+</svg>

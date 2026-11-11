@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1050" viewBox="0 0 700 1050" role="img" aria-labelledby="title desc">
+  <title id="title">RAG 授权检索与证据组装</title>
+  <desc id="desc">查询先固定身份和权威范围，再从当前活动索引取得候选；候选通过 ACL 与版本门禁后才能融合重排。旧运行 run-r42-7 中 c1 的已授权具名历史观察单独汇入组装；接口支持时可携带配对工具调用和结果。入模前复核权限、版本和来源绑定，产生实际送达的证据清单与上下文。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#3d6684"/></marker>
+    <marker id="warnArrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#b45d55"/></marker>
+    <style>
+      text{font-family:Inter,"Noto Sans CJK SC","PingFang SC",sans-serif;fill:#20364b}
+      .head{font-size:18px;font-weight:700}
+      .body{font-size:16px;font-weight:500}
+      .small{font-size:14px;fill:#647589}
+      .box{stroke-width:2;rx:14}
+      .request{fill:#eaf6ef;stroke:#81ad91}
+      .authority{fill:#fff3df;stroke:#d4ae5d}
+      .search{fill:#eaf2fb;stroke:#87a9c6}
+      .gate{fill:#f3effb;stroke:#9a88c3}
+      .rank{fill:#edf3fb;stroke:#839db8}
+      .history{fill:#f3f5f7;stroke:#a8b1bb}
+      .assemble{fill:#eaf6ef;stroke:#81ad91}
+      .out{fill:#e5f1fb;stroke:#6294b7}
+      .fail{fill:#fbeceb;stroke:#cd837a}
+      .arrow{fill:none;stroke:#3d6684;stroke-width:2.8;marker-end:url(#arrow)}
+      .warn{fill:none;stroke:#b45d55;stroke-width:2.6;marker-end:url(#warnArrow)}
+    </style>
+  </defs>
+  <rect width="700" height="1050" fill="#ffffff"/>
+  <text class="small" x="25" y="23">查询路径 · 重排与入模之前都要过授权边界</text>
+
+  <rect class="box request" x="70" y="45" width="560" height="72"/>
+  <text class="head" x="350" y="71" text-anchor="middle">本轮问题 + 调用者身份</text>
+  <text class="body" x="350" y="99" text-anchor="middle">空名称应返回 400 吗？断言失败能自动重跑吗？</text>
+
+  <rect class="box authority" x="70" y="152" width="560" height="72"/>
+  <text class="head" x="350" y="178" text-anchor="middle">确定权威范围</text>
+  <text class="body" x="350" y="206" text-anchor="middle">当前 ACL + 业务版本；固定调用者、租户与构建范围</text>
+
+  <rect class="box search" x="70" y="259" width="560" height="72"/>
+  <text class="head" x="350" y="285" text-anchor="middle">当前活动索引 → 词法与向量候选</text>
+  <text class="body" x="350" y="313" text-anchor="middle">保留查询范围及 source_id / 版本 / 原文位置</text>
+
+  <rect class="box gate" x="70" y="366" width="560" height="72"/>
+  <text class="head" x="350" y="392" text-anchor="middle">外部重排前的可信门禁</text>
+  <text class="body" x="350" y="420" text-anchor="middle">按权威 ACL 与版本复核；未授权或过期候选不得外发</text>
+
+  <rect class="box rank" x="70" y="473" width="560" height="72"/>
+  <text class="head" x="350" y="499" text-anchor="middle">融合与重排</text>
+  <text class="body" x="350" y="527" text-anchor="middle">只处理已核验候选；外部 reranker 在门禁之后</text>
+
+  <path class="arrow" d="M70 188 H12 V570 H132.5 V605"/>
+  <text class="small" x="20" y="591">按权威范围取历史</text>
+  <path class="arrow" d="M350 117 V152"/>
+  <path class="arrow" d="M350 224 V259"/>
+  <path class="arrow" d="M350 331 V366"/>
+  <path class="arrow" d="M350 438 V473"/>
+
+  <rect class="box history" x="20" y="605" width="225" height="120"/>
+  <text class="head" x="132.5" y="631" text-anchor="middle">具名历史观察</text>
+  <text class="body" x="132.5" y="655" text-anchor="middle">run-r42-7#c1</text>
+  <text class="body" x="132.5" y="677" text-anchor="middle">旧工具调用 ID · build 42</text>
+  <text class="small" x="132.5" y="700" text-anchor="middle">获准带入；API支持时可配对</text>
+
+  <rect class="box assemble" x="285" y="605" width="395" height="120"/>
+  <text class="head" x="482.5" y="631" text-anchor="middle">组装证据</text>
+  <text class="body" x="482.5" y="655" text-anchor="middle">CI-RETRY-v3 + HTTP-CONTRACT-v1 + c1</text>
+  <text class="body" x="482.5" y="677" text-anchor="middle">记录 source_id / 版本 / 原文位置</text>
+  <text class="small" x="482.5" y="700" text-anchor="middle">形成待发送清单与上下文</text>
+
+  <path class="arrow" d="M350 545 V565 H482.5 V605"/>
+  <path class="arrow" d="M246 665 H283"/>
+
+  <rect class="box gate" x="90" y="790" width="520" height="72"/>
+  <text class="head" x="350" y="816" text-anchor="middle">入模前再核验</text>
+  <text class="body" x="350" y="844" text-anchor="middle">当前权限、版本、范围与 c1 身份关联</text>
+  <path class="arrow" d="M482.5 725 V740 H350 V790"/>
+
+  <rect class="box out" x="90" y="905" width="520" height="72"/>
+  <text class="head" x="350" y="931" text-anchor="middle">核验通过 → 实际送达的证据清单 + 上下文</text>
+  <text class="body" x="350" y="959" text-anchor="middle">下一图直接承接这份实际输入</text>
+  <path class="arrow" d="M350 862 V905"/>
+
+  <rect class="box fail" x="90" y="990" width="520" height="55"/>
+  <text class="body" x="350" y="1013" text-anchor="middle">权限 / 版本变化：丢弃受影响内容，回权威范围重取；</text>
+  <text class="body" x="350" y="1036" text-anchor="middle">无合法依据则说明缺口并停止。</text>
+  <path class="warn" d="M610 826 H662 V1017 H608"/>
+  <text class="small" x="615" y="870" fill="#a54f49">复核失败</text>
+</svg>

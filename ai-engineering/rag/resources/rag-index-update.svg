@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="860" viewBox="0 0 700 860" role="img" aria-labelledby="title desc">
+  <title id="title">RAG 资料更新与权限生效</title>
+  <desc id="desc">竖向资料管线从权威正文、解析、分块、双路表示、索引代次校验到活动代次切换。另列独立的权限快路径：撤回和改权立即更新权威 ACL 并阻断读取；索引 ACL 仅后台同步。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#3d6684"/></marker>
+    <marker id="syncArrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#7a8795"/></marker>
+    <style>
+      text{font-family:Inter,"Noto Sans CJK SC","PingFang SC",sans-serif;fill:#20364b}
+      .head{font-size:18px;font-weight:700}
+      .body{font-size:16px;font-weight:500}
+      .small{font-size:14px;fill:#647589}
+      .box{stroke-width:2;rx:14}
+      .source{fill:#eaf2fb;stroke:#87a9c6}
+      .work{fill:#f3f6fa;stroke:#b8c5d2}
+      .ready{fill:#eaf6ef;stroke:#7fa98e}
+      .active{fill:#e7f4ee;stroke:#5f9b75}
+      .authority{fill:#fff1e8;stroke:#cc8660}
+      .derived{fill:#f3f5f7;stroke:#a8b1bb}
+      .arrow{fill:none;stroke:#3d6684;stroke-width:2.8;marker-end:url(#arrow)}
+      .sync{fill:none;stroke:#7a8795;stroke-width:2.5;stroke-dasharray:7 6;marker-end:url(#syncArrow)}
+    </style>
+  </defs>
+  <rect width="700" height="860" fill="#ffffff"/>
+  <text class="small" x="28" y="25">资料更新路径 · 自上而下，逐步发布</text>
+
+  <rect class="box source" x="90" y="42" width="520" height="74"/>
+  <text class="head" x="350" y="68" text-anchor="middle">① 权威正文与当前业务版本</text>
+  <text class="body" x="350" y="96" text-anchor="middle">当前有效性与适用范围由权威来源决定</text>
+
+  <rect class="box work" x="90" y="151" width="520" height="74"/>
+  <text class="head" x="350" y="177" text-anchor="middle">② 解析结构</text>
+  <text class="body" x="350" y="205" text-anchor="middle">正文、标题、表格、代码；保留原文位置</text>
+
+  <rect class="box work" x="90" y="260" width="520" height="74"/>
+  <text class="head" x="350" y="286" text-anchor="middle">③ 分块并保留身份</text>
+  <text class="body" x="350" y="314" text-anchor="middle">source_id · 内容版本 · offset · 标题路径</text>
+
+  <rect class="box work" x="90" y="369" width="520" height="74"/>
+  <text class="head" x="350" y="395" text-anchor="middle">④ 生成检索表示</text>
+  <text class="body" x="350" y="423" text-anchor="middle">词法索引 + 向量表示；记录各自表示契约</text>
+
+  <rect class="box ready" x="90" y="478" width="520" height="74"/>
+  <text class="head" x="350" y="504" text-anchor="middle">⑤ 校验新索引代次</text>
+  <text class="body" x="350" y="532" text-anchor="middle">来源与版本覆盖完整，任务成功并可查询</text>
+
+  <rect class="box active" x="90" y="587" width="520" height="74"/>
+  <text class="head" x="350" y="613" text-anchor="middle">⑥ 切换活动索引代次</text>
+  <text class="body" x="350" y="641" text-anchor="middle">只切换检索表示；业务版本仍由权威来源裁定</text>
+
+  <path class="arrow" d="M350 116 V151"/>
+  <path class="arrow" d="M350 225 V260"/>
+  <path class="arrow" d="M350 334 V369"/>
+  <path class="arrow" d="M350 443 V478"/>
+  <path class="arrow" d="M350 552 V587"/>
+
+  <text class="small" x="28" y="688">并行权限快路径 · 不等待解析、重算向量或索引切换</text>
+  <rect class="box work" x="25" y="714" width="150" height="94"/>
+  <text class="head" x="100" y="746" text-anchor="middle">撤回 / 改权</text>
+  <text class="body" x="100" y="776" text-anchor="middle">权威状态变化</text>
+
+  <rect class="box authority" x="225" y="714" width="225" height="94"/>
+  <text class="head" x="337.5" y="742" text-anchor="middle">权威 ACL · 访问边界</text>
+  <text class="body" x="337.5" y="772" text-anchor="middle">立即阻断未授权读取</text>
+  <text class="body" x="337.5" y="796" text-anchor="middle">每次查询按当前状态核验</text>
+
+  <rect class="box derived" x="500" y="714" width="175" height="94"/>
+  <text class="head" x="587.5" y="742" text-anchor="middle">索引 ACL</text>
+  <text class="body" x="587.5" y="772" text-anchor="middle">后台同步</text>
+  <text class="small" x="587.5" y="796" text-anchor="middle">派生；旧值不授权</text>
+
+  <path class="arrow" d="M176 761 H224"/>
+  <text class="small" x="200" y="744" text-anchor="middle">立即</text>
+  <path class="sync" d="M451 761 H499"/>
+  <text class="small" x="475" y="744" text-anchor="middle">异步</text>
+  <text class="small" x="28" y="837">业务版本由权威来源决定；ACL 决定谁能读；索引代次只决定使用哪代检索表示。</text>
+</svg>
