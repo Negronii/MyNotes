@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="370" viewBox="0 0 700 370" role="img" aria-labelledby="title desc">
+<title id="title">同一文本的编码单元、码点与字素簇</title>
+<desc id="desc">A、笑脸、e和组合重音共五个UTF-16编码单元，四个码点，三个扩展字素簇。笑脸的两个代理合为一个码点，e和组合重音合为一个字素簇。</desc>
+<rect width="700" height="370" fill="#ffffff"/>
+<style>text{font-family:Arial,"PingFang SC",sans-serif;fill:#25364b}.main{font-size:16px;font-weight:600}.sub{font-size:14px;fill:#526780}.glyph{font-size:28px;font-family:Arial,"Apple Color Emoji","PingFang SC",sans-serif}</style>
+<text x="20" y="64" class="sub">UTF-16 code units</text><text x="20" y="89" class="main">5 个编码单元</text>
+<text x="20" y="184" class="sub">Unicode code points</text><text x="20" y="209" class="main">4 个码点</text>
+<text x="20" y="304" class="sub">Extended graphemes</text><text x="20" y="329" class="main">3 个扩展字素簇</text>
+<rect x="200" y="40" width="80" height="64" rx="7" fill="#eaf2ff" stroke="#8daed6" stroke-width="1.5"/>
+<text x="240.0" y="78" text-anchor="middle" class="sub">0x0041</text>
+<rect x="290" y="40" width="80" height="64" rx="7" fill="#efe9fa" stroke="#b09acb" stroke-width="1.5"/>
+<text x="330.0" y="78" text-anchor="middle" class="sub">0xD83D</text>
+<rect x="380" y="40" width="80" height="64" rx="7" fill="#efe9fa" stroke="#b09acb" stroke-width="1.5"/>
+<text x="420.0" y="78" text-anchor="middle" class="sub">0xDE00</text>
+<rect x="470" y="40" width="80" height="64" rx="7" fill="#fff0da" stroke="#d8ad6d" stroke-width="1.5"/>
+<text x="510.0" y="78" text-anchor="middle" class="sub">0x0065</text>
+<rect x="560" y="40" width="80" height="64" rx="7" fill="#fff0da" stroke="#d8ad6d" stroke-width="1.5"/>
+<text x="600.0" y="78" text-anchor="middle" class="sub">0x0301</text>
+<rect x="200" y="160" width="80" height="64" rx="7" fill="#eaf2ff" stroke="#8daed6" stroke-width="1.5"/>
+<text x="240.0" y="190" text-anchor="middle" class="glyph">A</text><text x="240.0" y="212" text-anchor="middle" class="sub">U+0041</text>
+<rect x="290" y="160" width="170" height="64" rx="7" fill="#efe9fa" stroke="#b09acb" stroke-width="1.5"/>
+<g aria-label="grinning face U+1F600"><circle cx="375.0" cy="180.0" r="14" fill="#ffd86b" stroke="#c39123"/><circle cx="370.0" cy="176.0" r="1.8" fill="#25364b"/><circle cx="380.0" cy="176.0" r="1.8" fill="#25364b"/><path d="M367.0 182.0 H383.0 Q375.0 197.0 367.0 182.0Z" fill="#25364b"/><path d="M368.5 183.0 H381.5" stroke="#fff" stroke-width="2.5"/></g><text x="375.0" y="212" text-anchor="middle" class="sub">U+1F600</text>
+<rect x="470" y="160" width="80" height="64" rx="7" fill="#fff0da" stroke="#d8ad6d" stroke-width="1.5"/>
+<text x="510.0" y="190" text-anchor="middle" class="glyph">e</text><text x="510.0" y="212" text-anchor="middle" class="sub">U+0065</text>
+<rect x="560" y="160" width="80" height="64" rx="7" fill="#fff0da" stroke="#d8ad6d" stroke-width="1.5"/>
+<text x="600.0" y="190" text-anchor="middle" class="glyph">◌́</text><text x="600.0" y="212" text-anchor="middle" class="sub">U+0301</text>
+<rect x="200" y="280" width="80" height="64" rx="7" fill="#eaf2ff" stroke="#8daed6" stroke-width="1.5"/>
+<text x="240.0" y="310" text-anchor="middle" class="glyph">A</text><text x="240.0" y="332" text-anchor="middle" class="sub">1 个码点</text>
+<rect x="290" y="280" width="170" height="64" rx="7" fill="#efe9fa" stroke="#b09acb" stroke-width="1.5"/>
+<g aria-label="grinning face U+1F600"><circle cx="375.0" cy="300.0" r="14" fill="#ffd86b" stroke="#c39123"/><circle cx="370.0" cy="296.0" r="1.8" fill="#25364b"/><circle cx="380.0" cy="296.0" r="1.8" fill="#25364b"/><path d="M367.0 302.0 H383.0 Q375.0 317.0 367.0 302.0Z" fill="#25364b"/><path d="M368.5 303.0 H381.5" stroke="#fff" stroke-width="2.5"/></g><text x="375.0" y="332" text-anchor="middle" class="sub">1 个码点</text>
+<rect x="470" y="280" width="170" height="64" rx="7" fill="#fff0da" stroke="#d8ad6d" stroke-width="1.5"/>
+<text x="555.0" y="310" text-anchor="middle" class="glyph">é</text><text x="555.0" y="332" text-anchor="middle" class="sub">2 个码点</text>
+<path d="M200 111 V153 M200 231 V273" stroke="#c7d1dc" stroke-dasharray="4 5" fill="none"/>
+<path d="M280 111 V153 M280 231 V273" stroke="#c7d1dc" stroke-dasharray="4 5" fill="none"/>
+<path d="M290 111 V153 M290 231 V273" stroke="#c7d1dc" stroke-dasharray="4 5" fill="none"/>
+<path d="M460 111 V153 M460 231 V273" stroke="#c7d1dc" stroke-dasharray="4 5" fill="none"/>
+<path d="M470 111 V153 M470 231 V273" stroke="#c7d1dc" stroke-dasharray="4 5" fill="none"/>
+<path d="M640 111 V153 M640 231 V273" stroke="#c7d1dc" stroke-dasharray="4 5" fill="none"/>
+</svg>
