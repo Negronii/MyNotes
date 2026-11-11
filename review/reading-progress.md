@@ -87,7 +87,7 @@
 - [ ] 73. [JavaScript 错误应在哪一层恢复、传播或上报？](../frontend/javascript/error-handling.md)
 - [ ] 74. [收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../frontend/typescript/advanced-typescript.md)
 - [ ] 75. [泛型怎样保留输入与输出之间的类型关系？](../frontend/typescript/generics.md)
-- [ ] 76. [怎样从报表行派生预览、更新请求和状态标签？](../frontend/typescript/utility-types.md)
+- [ ] 76. [怎样从报表类型派生数据形状并约束方法中的 `this`？](../frontend/typescript/utility-types.md)
 - [ ] 77. [项目使用哪种 TypeScript 装饰器模式？](../frontend/typescript/decorators.md)
 - [ ] 78. [ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？](../frontend/javascript/modules-and-host-boundaries.md)
 - [ ] 79. [怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？](../frontend/javascript/modern-javascript-features.md)

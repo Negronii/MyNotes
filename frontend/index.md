@@ -73,7 +73,7 @@
 
 - [收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](typescript/advanced-typescript.md)
 - [泛型怎样保留输入与输出之间的类型关系？](typescript/generics.md)
-- [怎样从报表行派生预览、更新请求和状态标签？](typescript/utility-types.md)
+- [怎样从报表类型派生数据形状并约束方法中的 `this`？](typescript/utility-types.md)
 - [项目使用哪种 TypeScript 装饰器模式？](typescript/decorators.md)
 - [ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？](javascript/modules-and-host-boundaries.md)
 - [怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？](javascript/modern-javascript-features.md)

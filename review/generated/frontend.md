@@ -7913,7 +7913,7 @@ function roleLabel(role: Role): string {
 if (result.ok) roleLabel(result.value.viewer.role);
 ~~~
 
-这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](#46.%20%E6%B3%9B%E5%9E%8B%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E8%BE%93%E5%85%A5%E4%B8%8E%E8%BE%93%E5%87%BA%E4%B9%8B%E9%97%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%E5%85%B3%E7%B3%BB%EF%BC%9F)与[怎样从报表行派生预览、更新请求和状态标签？](#47.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
+这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](#46.%20%E6%B3%9B%E5%9E%8B%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E8%BE%93%E5%85%A5%E4%B8%8E%E8%BE%93%E5%87%BA%E4%B9%8B%E9%97%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%E5%85%B3%E7%B3%BB%EF%BC%9F)与[怎样从报表类型派生数据形状并约束方法中的 `this`？](#47.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E7%B1%BB%E5%9E%8B%E6%B4%BE%E7%94%9F%E6%95%B0%E6%8D%AE%E5%BD%A2%E7%8A%B6%E5%B9%B6%E7%BA%A6%E6%9D%9F%E6%96%B9%E6%B3%95%E4%B8%AD%E7%9A%84%20this%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript Handbook：unknown 与类型缩窄](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
@@ -7924,7 +7924,7 @@ if (result.ok) roleLabel(result.value.viewer.role);
 > 按 `JSON.parse` 的语法错误、存储缺失值，以及报表结构检查整理；`localStorage` 访问可能抛出的 `SecurityError` 见 [HTML Standard：localStorage](https://html.spec.whatwg.org/multipage/webstorage.html#dom-localstorage)。来源核对日期：2026-11-06。
 ## 46. 泛型怎样保留输入与输出之间的类型关系？
 
-报表页会处理很多种行数据：月度汇总行、权限信息和分页结果。若每个函数都复制一份实现，维护成本很高；若一律把参数和返回值写成 `any`（任意类型），调用处又会丢掉具体字段信息。generic（泛型）让同一段逻辑保留调用时的具体类型。
+报表页会处理很多种行数据和分页结果。若每个函数都复制一份实现，维护成本很高；若一律把参数和返回值写成 `any`（任意类型），调用处又会丢掉具体字段信息。generic（泛型）让同一段逻辑保留调用时的具体类型。
 
 ### 怎样把所选字段的类型一并保留下来？
 
@@ -7957,10 +7957,24 @@ const row: ReportRow = {
 
 const reportId = getProperty(row, "id");       // string
 const reportTotal = getProperty(row, "total"); // number
+const statusOrTotalKey: "status" | "total" =
+  Math.random() < 0.5 ? "status" : "total";
+// ReportRow["status"] | number
+const statusOrTotal = getProperty(row, statusOrTotalKey);
 // getProperty(row, "owner");                  // 编译错误：不是 ReportRow 的键
 ~~~
 
-`K extends keyof T` 中的 `extends` 是 constraint（约束），意思是 `K` 必须属于允许的键集合。没有这个约束，函数就无法安全访问 `row[key]`。由于返回值是 `T[K]`，读 `id` 得到 `string`，读 `total` 得到 `number`；若把返回类型写成 `T[keyof T]`，结果会变成所有字段类型的联合。
+`T` 与 `K` 是两个分别推断的类型参数：`T` 保留行形状，`K extends keyof T` 中的 `extends` 是 constraint（约束），要求本次传入的键属于该行已有的键。返回类型 `T[K]` 再按 `K` 取属性值类型，因此单键 `"id"` 得到 `string`，单键 `"total"` 得到 `number`。
+
+把一次调用拆开看，编译器先从 `row` 得到 `T`，再把键限制在 `keyof T` 内，并由传入的字面量键推断 `K`，最后计算 `T[K]`：
+
+| 调用与推导 | 返回类型 |
+|---|---|
+| `getProperty(row, "id")`：`T = ReportRow`，`K = "id"`，满足 `K extends keyof T` | `T[K]`，即 `ReportRow["id"]`，为 `string` |
+| `getProperty(row, "total")`：`T = ReportRow`，`K = "total"`，满足 `K extends keyof T` | `T[K]`，即 `ReportRow["total"]`，为 `number` |
+| `getProperty(row, statusOrTotalKey)`：`T = ReportRow`，`K` 是 `"status"` 和 `"total"` 组成的联合 | `T[K]` 是 `ReportRow["status"]` 与 `number` 的联合 |
+
+单独保留 `K` 很重要：若签名只把参数写成 `keyof T`、返回值写成 `T[keyof T]`，即使传入字面量 `"id"`，返回类型也会包含字段值类型的联合。若调用者只掌握部分键组成的联合，`T[K]` 只合并这些键对应的字段类型；例如 `"status" | "total"` 得到 `ReportRow["status"] | number`。只有 `K = keyof ReportRow` 时才覆盖全部字段，本例的结果为 `string | number`。泛型约束保证编译器看到的键有效，不在运行时校验键或行数据。
 
 ### 怎样让分页与仓储接口为不同数据复用？
 
@@ -7998,20 +8012,22 @@ if (first) first.total.toFixed(2); // first.total 仍是 number
 console.log(firstRow(emptyPage)); // undefined：空页没有第一行
 ~~~
 
-泛型保留的是编译器掌握的关系；它不会在运行时检查服务器是否真的返回 `ReportRow`。真实输入仍应先保持为 `unknown` 并逐项验证，见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。工具类型则可进一步从 `ReportRow` 派生只读表格行或更新请求形状，见[怎样从报表行派生预览、更新请求和状态标签？](#47.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%B4%BE%E7%94%9F%E9%A2%84%E8%A7%88%E3%80%81%E6%9B%B4%E6%96%B0%E8%AF%B7%E6%B1%82%E5%92%8C%E7%8A%B6%E6%80%81%E6%A0%87%E7%AD%BE%EF%BC%9F)。
+`reports` 的类型是 `ReportPage<ReportRow>`；传给 `firstRow<T>` 时，参数形状让编译器推断 `T = ReportRow`，因此 `first` 是 `ReportRow | undefined`。`Repository<ReportRow>` 也把同一个 `T` 替换到每个操作：`getById` 返回 `ReportRow | undefined`，`getAll` 返回 `ReportRow[]`，`save` 接收 `ReportRow`。
+
+泛型保留的是编译器掌握的关系；它不会在运行时检查服务器是否真的返回 `ReportRow`。来自网络或存储的外部输入应先保持为 `unknown` 并逐项验证，见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。工具类型则可进一步从 `ReportRow` 派生列表预览或更新请求形状，见[怎样从报表类型派生数据形状并约束方法中的 `this`？](#47.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E7%B1%BB%E5%9E%8B%E6%B4%BE%E7%94%9F%E6%95%B0%E6%8D%AE%E5%BD%A2%E7%8A%B6%E5%B9%B6%E7%BA%A6%E6%9D%9F%E6%96%B9%E6%B3%95%E4%B8%AD%E7%9A%84%20this%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript Handbook：泛型与类型参数推断](https://www.typescriptlang.org/docs/handbook/2/generics.html)
 > - [TypeScript Handbook：`keyof` 类型操作符](https://www.typescriptlang.org/docs/handbook/2/keyof-types.html)、[索引访问类型](https://www.typescriptlang.org/docs/handbook/2/indexed-access-types.html)
 >
-> 来源核对日期：2026-11-06。代码以 TypeScript 5.7.2 执行严格模式检查。
-## 47. 怎样从报表行派生预览、更新请求和状态标签？
+> 来源核对日期：2026-11-12。代码以 TypeScript 5.7.2 执行严格模式和 `noUncheckedIndexedAccess` 检查。
+## 47. 怎样从报表类型派生数据形状并约束方法中的 `this`？
 
-同一条报表数据会用于接口、列表预览、详情编辑和状态标签映射。如果每个位置重新声明字段，修改字段名时容易漏改一处。TypeScript 的 utility type（工具类型）从现有类型派生新的编译期形状；它们不会验证或转换运行时对象。
+列表预览和局部更新可以从 `ReportRow` 派生；状态标签使用与 `ReportRow.status` 共用的 `ReportStatus`，避免两处状态定义漂移。对象字面量中的方法也需要知道调用接收者有哪些字段：`ThisType<T>` 或显式的 `this` 参数能提供编译期上下文。工具类型只影响静态检查，不会投影或验证运行时数据，也不会替方法绑定接收者；不可信的外部输入应在数据边界执行运行时检查。
 
 ### 哪些工具类型适合哪些数据形状？
 
-下面把一份 `ReportRow` 派生成列表需要的预览、允许编辑的局部更新和状态标签映射。`Pick` 选取字段，`Partial` 把选中的字段变成可选项，`Record` 要求每个状态都对应一个标签。
+下面用 `Pick` 从 `ReportRow` 选出列表预览字段，用 `Partial` 把允许编辑的字段变为可选项；`Record` 则为共享的 `ReportStatus` 联合要求每个状态都有标签。
 
 ~~~typescript
 type ReportStatus = "open" | "published" | "archived";
@@ -8041,23 +8057,54 @@ const patch: ReportPatch = input;
 console.log(Object.keys(patch)); // ["region", "ownerEmail"]：仍是同一个运行时对象
 ~~~
 
-若 `ReportStatus` 增加 `"scheduled"`，`labels` 会因缺少该键而报错；这让新增状态需要同步更新界面映射。`ReportPatch` 只收窄 `patch` 这个变量可通过静态类型访问的字段，不会从对象中删除 `ownerEmail`。这里先把对象存入变量再赋值，因此结构类型允许多出的字段；直接把带额外键的新对象字面量写给 `ReportPatch` 通常会触发多余属性检查。接收更新请求时应在运行时挑选并验证白名单字段，再处理未提供、提供 `null` 和提供具体值之间的业务差异。
+`Partial<Pick<ReportRow, "title" | "region">>` 从内向外展开为 `{ title?: string; region?: string }`。示例变量 `input` 含有共同键 `region`，所以它可赋给这个部分类型；多出的 `ownerEmail` 仍留在同一个运行时对象中。若变量只有 `ownerEmail`，则与目标类型没有共同属性而不能赋值；直接把含 `ownerEmail` 的新对象字面量赋给 `ReportPatch` 也会触发多余属性检查。`Pick` 只筛选静态声明的字段，列表展示若需要实际投影，仍须在运行时构造新对象。
+
+`ReportStatus` 增加 `"scheduled"` 后，`labels` 会因缺少该键而报错，提醒界面补上新状态。当前 `ReportPatch` 的字段是可选 `string`；在示例所用的 `strictNullChecks` 下，显式写入 `null` 不通过检查。只有当接口把 `null` 定义为清空字段等业务操作时，才应在对应属性类型中加入 `| null`，并让运行时边界按该语义解析。启用 `exactOptionalPropertyTypes`（要求 `strictNullChecks`）时，可选字段可以省略，但不能显式写 `undefined`，除非其类型包含 `undefined`；未启用时，编译器允许把 `undefined` 赋给可选字段。无论开关如何，读取 `patch.title` 都可能得到 `undefined`，因为属性可以缺席。
+
+接收网络或存储中的更新数据时，运行时仍要按接口白名单检查字段，并区分省略、`null` 和具体值。这个检查针对不可信输入；本地按 `ReportPatch` 构造的对象仍由编译器检查。
 
 常用变换可按目的理解：
 
 | 需要 | 工具类型 | 结果与边界 |
 |---|---|---|
-| 列表只露出部分字段 | `Pick<T, K>` / `Omit<T, K>` | 选取或排除键；不会复制对象 |
+| 列表类型只声明所需字段 | `Pick<T, K>` / `Omit<T, K>` | 选取或排除键；不会复制或投影对象 |
 | 表达部分更新或完成默认值后的完整配置 | `Partial<T>` / `Required<T>` | 属性变为可选或必需；运行时仍需合并、检查 |
 | 标出只读视图 | `Readonly<T>` | 浅层地禁止通过该类型重新赋值属性；不冻结对象 |
 | 给一组键创建映射 | `Record<K, V>` | 约束对象键和值的类型；动态输入仍须验证 |
 | 从联合类型中筛选成员 | `Exclude<U, X>` / `Extract<U, X>` | 移除或保留可赋给指定类型的成员 |
 | 排除 `null` 与 `undefined` | `NonNullable<T>` | 仅改变静态类型，不会替值做空值检查 |
-| 读取函数签名 | `Parameters<F>` / `ReturnType<F>` | 得到参数元组或返回类型 |
+| 读取函数签名 | `Parameters<F>` / `ReturnType<F>` | 得到参数元组或返回类型；对重载函数取最后一个签名 |
 | 读取构造签名 | `ConstructorParameters<C>` / `InstanceType<C>` | 得到构造参数元组或实例类型 |
-| 解开 Promise 返回类型 | `Awaited<T>` | 递归得到等待后的类型；不会等待运行时值 |
+| 解开 Promise 返回类型 | `Awaited<T>` | 递归解包 Promise 及兼容其 `then` 约定的类型；不会等待运行时值 |
 
-这些工具大多通过mapped type（映射类型）、conditional type（条件类型）或索引访问组合实现。阅读 `Partial<Pick<ReportRow, "title" | "region">>` 时，可以从内到外读：先取两个允许编辑的字段，再把它们变为可选。
+这些工具大多通过 mapped type（映射类型）、conditional type（条件类型）或索引访问组合实现。阅读 `Partial<Pick<ReportRow, "title" | "region">>` 时，先用 `Pick` 取两个允许编辑的字段，再用 `Partial` 将它们变为可选；前文已展开其具体对象形状。
+
+### 条件类型遇到联合类型时，为什么会逐项筛选？
+
+条件类型（conditional type）若在被检查的位置直接写类型参数，例如 `T extends X`，传入联合类型时会把联合成员逐个代入条件。`Exclude` 就利用这个规则：成员可赋给排除类型时变成 `never`，剩余成员再组成联合。
+
+~~~typescript
+type WithoutArchived<T> = T extends "archived" ? never : T;
+type VisibleStatus = WithoutArchived<ReportStatus>;
+// "open" | "published" | never -> "open" | "published"
+
+const visibleStatus: VisibleStatus = "published";
+// @ts-expect-error "archived" 已被筛掉
+const archivedStatus: VisibleStatus = "archived";
+
+type IsArchived<T> = T extends "archived" ? true : false;
+type DistributedCheck = IsArchived<ReportStatus>; // true | false -> boolean
+const distributedTrue: DistributedCheck = true;
+const distributedFalse: DistributedCheck = false;
+
+type IsWholeUnionArchived<T> = [T] extends ["archived"] ? true : false;
+type WholeStatusCheck = IsWholeUnionArchived<ReportStatus>; // false
+const wholeStatusCheck: WholeStatusCheck = false;
+// @ts-expect-error 整个 ReportStatus 联合并非全是 "archived"
+const wholeStatusTrue: WholeStatusCheck = true;
+~~~
+
+`WithoutArchived<ReportStatus>` 会得到 `"open" | "published" | never`，而 `never` 没有可取值，所以结果只剩前两种状态。两个布尔条件使用相同的分支：裸 `T` 分配后得到 `true | false`（也就是 `boolean`）；把 `T` 包在元组中则比较整个联合，结果为 `false`。同样，`Exclude<ReportStatus, "archived">` 与 `VisibleStatus` 一样得到剩余状态。
 
 ### 对象字面量方法里的 `this` 怎样获得上下文类型？
 
@@ -8079,13 +8126,16 @@ const rowCounter = makeObject({
   data: { loadedRows: 0 },
   methods: {
     addLoadedRow() {
-      this.loadedRows += 1;
+      this.loadedRows += 1; // 此处 this 有 loadedRows: number
     }
   }
 });
 
-rowCounter.addLoadedRow(); // this.loadedRows 在编译期被识别为 number
+rowCounter.addLoadedRow();
+console.log(rowCounter.loadedRows); // 1
 ~~~
+
+调用 `makeObject` 时，编译器从 `data` 推断 `Data = { loadedRows: number }`，从 `methods` 推断含 `addLoadedRow` 的 `Methods`；`ThisType<Data & Methods>` 再把两个对象的成员提供给方法体中的 `this`。返回表达式在运行时通过对象展开合并两个对象，再由 `rowCounter.addLoadedRow()` 的成员调用提供接收者，计数随后变为 1。这个小例只适用于数据和方法都是普通对象且所需成员是可枚举自有属性的情况；从原型继承的方法不会被对象展开复制。`Data & Methods` 本身不会禁止两个输入对象有重名键；重名时后展开的 `methods` 会覆盖 `data`，而交叉类型仍可能描述冲突字段。本例保持两边键名不重叠。
 
 另一个做法是在普通函数签名中显式声明接收者：
 
@@ -8099,15 +8149,18 @@ const viewer: ReportViewer = {
   name: "Ada",
   describe() { return `报表查看者：${this.name}`; }
 };
+
+console.log(viewer.describe()); // 报表查看者：Ada
 ~~~
 
-`this: ReportViewer` 只是编译期注解，JavaScript 调用时仍按普通 `this` 绑定规则运行；`ThisType<T>` 也不会替你调用 `bind`。两者与上面的 `ReportPatch` 一样，只有在运行时对象经过边界检查后才有可靠的业务含义。解析入口见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
+`this: ReportViewer` 只是编译期接收者注解；调用 `viewer.describe()` 时仍由普通 JavaScript 成员调用提供 `this`。`ThisType<T>` 也只影响方法体中的静态检查，不会替你调用 `bind`。单独取出 `viewer.describe` 后直接调用，会因缺少显式接收者而报类型错误；单独取出 `rowCounter.addLoadedRow` 后直接调用可能通过静态检查，但运行时仍需要正确的接收者。如果 `ReportPatch` 来自网络或存储，需在该输入边界挑选并验证字段；类型工具不会过滤其运行时键。解析入口见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript Utility Types 参考](https://www.typescriptlang.org/docs/handbook/utility-types.html)
 > - [TypeScript Handbook：映射类型](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html)、[条件类型](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html)、[上下文类型](https://www.typescriptlang.org/docs/handbook/type-inference.html#contextual-typing)
+> - [TSConfig：`exactOptionalPropertyTypes`](https://www.typescriptlang.org/tsconfig/exactOptionalPropertyTypes.html)
 >
-> 来源核对日期：2026-11-06。示例以 TypeScript 5.7.2、`strict` 模式和 `noImplicitThis` 检查。
+> 来源核对日期：2026-11-12。示例以 TypeScript 5.7.2、`strict` 模式、`noImplicitThis` 及文中说明的精确可选属性设置检查。
 ## 48. 项目使用哪种 TypeScript 装饰器模式？
 
 报表服务可能要给方法加日志、缓存或指标统计。decorator（装饰器）会在类定义时接收类元素和上下文，并可包装或替换被修饰的成员。TypeScript 有新版装饰器模式和 `experimentalDecorators` 启用的旧版模式；两者的参数约定、可修饰位置和元数据能力不同，不能把一种模式的装饰器直接贴到另一种项目里。

@@ -192,7 +192,7 @@ function roleLabel(role: Role): string {
 if (result.ok) roleLabel(result.value.viewer.role);
 ~~~
 
-这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](./generics.md)与[怎样从报表行派生预览、更新请求和状态标签？](./utility-types.md)。
+这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](./generics.md)与[怎样从报表类型派生数据形状并约束方法中的 `this`？](./utility-types.md)。
 
 > [!info]- 来源
 > - [TypeScript Handbook：unknown 与类型缩窄](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
