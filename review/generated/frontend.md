@@ -7723,18 +7723,20 @@ class ReportBoundary extends React.Component {
 
 月度报表页从接口或浏览器存储读入数据时，输入内容在运行时仍只是外部值。TypeScript 的类型注解会在输出 JavaScript 时擦除；它们能检查我们写下的代码，却不会替 `JSON.parse` 检查实际字段，也不会验证用户是否有权访问某份报表。
 
-因此，数据要经过两个不同步骤：先解析 JSON（JavaScript 对象表示法）语法，再按运行时规则检查结构和取值。成功后从已检查字段重新构造应用对象，后续代码才可以依赖这个对象的静态类型。
+因此，数据要经过两个不同步骤：先解析 JSON（JavaScript 对象表示法）语法，再按运行时规则检查结构和取值。成功后从已检查字段重新构造应用对象，后续代码才可以依赖这个对象的静态类型。图只画运行时执行链；`unknown` 是编译期的静态边界，不是 JSON 解析后的运行时转换。
 
 ~~~mermaid
-flowchart LR
-  A[接口文本或存储文本] --> B{JSON.parse}
-  B -- 语法错误 --> E[返回语法错误]
-  B -- 解析成功 --> C[unknown]
-  C --> D{检查 viewer 与 rows}
-  D -- 字段或取值不合格 --> F[返回结构错误]
-  D -- 合格 --> G[重建 ReportData]
-  G --> H[编译期检查消费者分支]
+flowchart TB
+  A[已取得的接口或存储文本] --> B{JSON.parse}
+  B -- 语法错误 --> E[返回 syntax]
+  B -- 解析成功 --> C[JavaScript 运行时值]
+  C --> D{逐项检查字段和值}
+  D -- 检查失败 --> F[返回 shape]
+  D -- 检查通过 --> G[按已检查字段重建对象]
+  G --> H[业务代码使用已检查对象]
 ~~~
+
+如果文本来自浏览器存储，`getItem` 返回 `null` 时会在进入这条共用链之前返回 `missing`。
 
 ### 怎样在运行时检查报表数据？
 
@@ -7763,8 +7765,14 @@ type ParseResult<T> =
   | { ok: true; value: T }
   | { ok: false; reason: "syntax" | "shape" | "missing" };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
 }
 
 function parseReportData(text: string): ParseResult<ReportData> {
@@ -7779,7 +7787,8 @@ function parseReportData(text: string): ParseResult<ReportData> {
     !isRecord(input) ||
     !isRecord(input.viewer) ||
     typeof input.viewer.id !== "string" ||
-    (input.viewer.role !== "admin" && input.viewer.role !== "reader") ||
+    (input.viewer.role !== "admin" &&
+      input.viewer.role !== "reader") ||
     !Array.isArray(input.rows)
   ) {
     return { ok: false, reason: "shape" };
@@ -7825,22 +7834,42 @@ function parseReportData(text: string): ParseResult<ReportData> {
   };
 }
 
-function readStoredReport(storage: Storage): ParseResult<ReportData> {
+function readStoredReport(
+  storage: Storage
+): ParseResult<ReportData> {
   const text = storage.getItem("monthly-report");
   if (text === null) return { ok: false, reason: "missing" };
   return parseReportData(text);
 }
 
-const result = parseReportData(
-  '{"viewer":{"id":"u-7","role":"reader"},"rows":[{"id":"r-21","title":"北区月报","month":"2026-10","region":"north","status":"published","total":820,"ownerEmail":"ada@example.com"}]}'
-);
+const manualResult = parseReportData(`
+{
+  "viewer": {
+    "id": "u-7",
+    "role": "reader"
+  },
+  "rows": [
+    {
+      "id": "r-21",
+      "title": "北区月报",
+      "month": "2026-10",
+      "region": "north",
+      "status": "published",
+      "total": 820,
+      "ownerEmail": "ada@example.com"
+    }
+  ]
+}
+`);
 ~~~
 
-解析器现在只保证字段形状和示例所写的格式规则。它不证明 `viewer.id` 是当前登录用户，也不证明该用户可以查看报表；这些授权判断必须由受信任的服务端完成。若业务还要求金额非负、地区来自配置清单等约束，应把对应规则也写入运行时解析，而不是只扩大 TypeScript 类型。`readStoredReport` 把缺失项转换为 `missing`，但不捕获存储访问异常：调用时读取 `localStorage` 可能因来源或策略抛出 `SecurityError`，而 `getItem` 的其他异常也会向上抛出。调用方应按自身降级策略处理，不要把存储故障误报成 JSON 语法错误。
+TypeScript 标准库把 `JSON.parse` 的返回类型声明为 `any`。赋给 `let input: unknown` 只改变编译器看到的静态类型；运行时仍是 `JSON.parse` 得到的同一个值，并没有自动验证或转换。`isRecord` 内部的对象、非 `null`、非数组条件会实际运行；返回类型 `value is Record<string, unknown>` 则是函数向编译器作出的缩窄承诺，编译器依据它分析后续属性访问，不会替函数证明该承诺正确。实现中的布尔检查和类型谓词必须保持一致。`Array.isArray` 在 TypeScript 标准库中的类型谓词会把值缩窄为 `any[]`，所以这里立即把 `input.rows` 赋给 `unknown[]`，让循环中的每个 `candidate` 仍须先检查再读取。
+
+解析器现在只保证字段形状和示例所写的格式规则。它在运行时检查月份符合 `YYYY-MM` 形式、`total` 是有限数值，但返回类型仍分别是普通 `string` 和 `number`，并未把这两条细则编码进静态类型。解析器按已检查字段重建 `ReportData`，因此忽略并丢弃未声明字段；它不证明 `viewer.id` 是当前登录用户，也不证明该用户可以查看报表，这些授权判断必须由受信任的服务端完成。若业务还要求金额非负、地区来自配置清单等约束，应把对应规则也写入运行时解析，而不是只扩大 TypeScript 类型。`readStoredReport` 把缺失项转换为 `missing`，但不捕获存储访问异常：调用时读取 `localStorage` 可能因来源或策略抛出 `SecurityError`，而 `getItem` 的其他异常也会向上抛出。调用方应按自身降级策略处理，不要把存储故障误报成 JSON 语法错误。
 
 ### 怎样用 Zod 在同一个输入边界生成运行时检查和静态类型？
 
-如果手写检查开始重复字段路径和类型判断，可以在同一个报表 JSON 边界使用 schema（结构模式）。下面固定用 Zod `4.6.7`，直接复用上面的 `viewer` 与 `rows` 合约。选择 `z.strictObject` 是为了拒绝未声明的字段；默认的 `z.object` 会剥除未知键，这两种行为表达不同的输入政策。不能只为了得到 `z.infer` 类型就把宽泛外部数据断言成模型。
+如果手写检查开始重复字段路径和类型判断，可以在同一个报表 JSON 边界使用 schema（结构模式）。下面固定用 Zod `4.6.7`，声明与上例相同的字段形状，但两种检查的接纳规则并不相同：手写解析器重建已知字段并忽略额外键，`z.strictObject` 会拒绝额外键；默认的 `z.object` 则会剥除未知键。Zod 还要求 `ownerEmail` 符合邮箱格式，而手写版本只要求它是字符串。是否拒绝额外键、邮箱需要多严格，应按接口契约决定。不能只为了得到 `z.infer` 类型就把宽泛外部数据断言成模型。
 
 ~~~typescript
 import * as z from "zod"; // zod@4.6.7
@@ -7851,8 +7880,8 @@ const ReportRowSchema = z.strictObject({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
   region: z.string(),
   status: z.enum(["open", "published", "archived"]),
-  total: z.number().finite(),
-  ownerEmail: z.string().email(),
+  total: z.number(), // Zod 4 的 number schema 只接受有限数值
+  ownerEmail: z.email(),
 });
 
 const ReportDataSchema = z.strictObject({
@@ -7865,7 +7894,9 @@ const ReportDataSchema = z.strictObject({
 
 type ReportDataFromSchema = z.infer<typeof ReportDataSchema>;
 
-function parseReportDataWithZod(text: string): ParseResult<ReportDataFromSchema> {
+function parseReportDataWithZod(
+  text: string
+): ParseResult<ReportDataFromSchema> {
   let input: unknown;
   try {
     input = JSON.parse(text);
@@ -7882,15 +7913,32 @@ function parseReportDataWithZod(text: string): ParseResult<ReportDataFromSchema>
   return { ok: true, value: parsed.data };
 }
 
-const result = parseReportDataWithZod(
-  '{"viewer":{"id":"u-7","role":"reader"},"rows":[{"id":"r-21","title":"北区月报","month":"2026-10","region":"north","status":"published","total":"820","ownerEmail":"ada@example.com"}]}'
-);
-// 第一个结构错误的 path 为 ["rows", 0, "total"]；字符串不会被默默转成数字。
+const zodResult = parseReportDataWithZod(`
+{
+  "viewer": {
+    "id": "u-7",
+    "role": "reader"
+  },
+  "rows": [
+    {
+      "id": "r-21",
+      "title": "北区月报",
+      "month": "2026-10",
+      "region": "north",
+      "status": "published",
+      "total": "820",
+      "ownerEmail": "ada@example.com"
+    }
+  ]
+}
+`);
+// 第一个结构错误的 path 为 ["rows", 0, "total"]。
+// 字符串不会被默默转成数字。
 ~~~
 
-语法仍先由 `JSON.parse` 负责；成功后变量被声明为 `unknown`，`safeParse` 才检查结构和值。成功分支的 `parsed.data` 是已校验并推导出的 `ReportDataFromSchema`；失败分支提供 `ZodError.issues`，路径可直接指回哪一行哪一列。未知字段会由 strict object 报告，而不会静默地从解析结果消失。这个 schema 还用 `.email()` 限制 `ownerEmail` 的值域；上面的手写示例只检查它是字符串，实际采用时需由接口需求决定要不要增加这项约束。若系统更愿意向前兼容额外字段，可以改用默认剥除未知键的 `z.object`，并检查 `parsed.data` 中只留下 schema 声明的值；不要让前端 schema 的选择替代服务端对请求和权限的核验。
+JSON 语法仍先由 `JSON.parse` 处理；成功后 `input` 是静态 `unknown`，`safeParse` 再实际检查字段和值。成功分支的 `parsed.data` 是已校验并推导出的 `ReportDataFromSchema`。失败分支的 `ZodError.issues` 保存结构化问题；`path` 用字段键和数组索引定位，例如 `rows` 第 0 项的 `total` 对应 `["rows", 0, "total"]`，不是 JSON 文本的行号和列号。遇到未声明键时，路径可能只到包含它的对象（如 `["rows", 0]`），具体键名在问题消息中。手写示例的 `total` 是数值 `820`，所以通过；Zod 示例将该字段改为字符串 `"820"`，虽然仍是语法合法的 JSON，Zod 结构检查会拒绝它。同一个字符串输入也会被手写解析器拒绝，因为它要求 `total` 的运行时类型是 `number`。包装函数打印首个 issue 后只向调用者返回 `{ ok: false, reason: "shape" }`，不会把完整 issue 传出去。后文的 `if (zodResult.ok)` 因此不会调用角色标签函数。
 
-这个例子只替换接口 JSON 的结构检查。服务器侧同一类请求边界可由 Pydantic 模型执行，并从实际响应生成 OpenAPI 契约，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/backend/http-api-contracts.md)。Zod 与 Pydantic 都检查运行时输入；TypeScript 的 `z.infer` 只帮助后续代码在编译期保持同一结构，不会自动让网络载荷、浏览器存储或授权可信。
+Zod 4 的 `z.number()` 已拒绝 `NaN` 与正负无穷，因此这里不再重复加有限数检查。服务器侧可用 Pydantic 模型检查请求，FastAPI 则从路由与模型声明生成 OpenAPI 契约；实际响应是否兑现契约仍需核验，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/backend/http-api-contracts.md)。Zod 与 Pydantic 都检查运行时输入；TypeScript 的 `z.infer` 只帮助后续代码在编译期保持同一结构，不会自动让网络载荷、浏览器存储或授权可信。
 
 ### 类型联合新增分支时怎样让编译器提醒调用处？
 
@@ -7910,7 +7958,12 @@ function roleLabel(role: Role): string {
   }
 }
 
-if (result.ok) roleLabel(result.value.viewer.role);
+if (manualResult.ok) {
+  console.log(roleLabel(manualResult.value.viewer.role));
+}
+if (zodResult.ok) {
+  console.log(roleLabel(zodResult.value.viewer.role));
+}
 ~~~
 
 这两道检查覆盖不同边界：运行时解析器决定外部值是否进入应用；穷尽性检查提醒开发者是否处理了应用类型中所有已支持的分支。泛型和工具类型也只描述编译期关系，见[泛型怎样保留输入与输出之间的类型关系？](#46.%20%E6%B3%9B%E5%9E%8B%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E8%BE%93%E5%85%A5%E4%B8%8E%E8%BE%93%E5%87%BA%E4%B9%8B%E9%97%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%E5%85%B3%E7%B3%BB%EF%BC%9F)与[怎样从报表类型派生数据形状并约束方法中的 `this`？](#47.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E7%B1%BB%E5%9E%8B%E6%B4%BE%E7%94%9F%E6%95%B0%E6%8D%AE%E5%BD%A2%E7%8A%B6%E5%B9%B6%E7%BA%A6%E6%9D%9F%E6%96%B9%E6%B3%95%E4%B8%AD%E7%9A%84%20this%EF%BC%9F)。
@@ -7919,9 +7972,9 @@ if (result.ok) roleLabel(result.value.viewer.role);
 > - [TypeScript Handbook：unknown 与类型缩窄](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
 > - [TypeScript Handbook：断言与类型兼容](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions)、[类型兼容与健全性取舍](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#a-note-on-soundness)
 > - [TypeScript Handbook：穷尽性检查](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking)
-> - **Zod `4.6.7`：** [对象 schema、strict keys、`safeParse` 与错误路径](https://github.com/colinhacks/zod/tree/v4.6.7/packages/docs/content)；示例 schema 和错误输入已在 Node `v26.13.0` 中运行核对，2026-11-09。
+> - **Zod `4.6.7`：** [版本发布记录](https://github.com/colinhacks/zod/releases/tag/v4.6.7)、[4.6.7 文档与源码](https://github.com/colinhacks/zod/tree/v4.6.7/packages/docs/content)、[对象 schema 与 strict keys](https://zod.dev/api?id=objects)、[`safeParse` 与 `z.infer`](https://zod.dev/basics)、[错误 issue 路径](https://zod.dev/packages/core#issues)、[Zod 4 的格式 API](https://zod.dev/v4)。已在隔离的临时目录安装此版本，TypeScript 编译并于 Node `v26.13.0` 运行核对，2026-11-12。
 >
-> 按 `JSON.parse` 的语法错误、存储缺失值，以及报表结构检查整理；`localStorage` 访问可能抛出的 `SecurityError` 见 [HTML Standard：localStorage](https://html.spec.whatwg.org/multipage/webstorage.html#dom-localstorage)。来源核对日期：2026-11-06。
+> 按 `JSON.parse` 的语法错误、存储缺失值，以及报表结构检查整理；[TypeScript 类型注解会在输出 JavaScript 时擦除](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types)，`localStorage` 属性访问可能抛出的 `SecurityError` 见 [HTML Standard：localStorage](https://html.spec.whatwg.org/multipage/webstorage.html#dom-localstorage)。来源核对日期：2026-11-12。
 ## 46. 泛型怎样保留输入与输出之间的类型关系？
 
 报表页会处理很多种行数据和分页结果。若每个函数都复制一份实现，维护成本很高；若一律把参数和返回值写成 `any`（任意类型），调用处又会丢掉具体字段信息。generic（泛型）让同一段逻辑保留调用时的具体类型。
@@ -8163,11 +8216,18 @@ console.log(viewer.describe()); // 报表查看者：Ada
 > 来源核对日期：2026-11-12。示例以 TypeScript 5.7.2、`strict` 模式、`noImplicitThis` 及文中说明的精确可选属性设置检查。
 ## 48. 项目使用哪种 TypeScript 装饰器模式？
 
-报表服务可能要给方法加日志、缓存或指标统计。decorator（装饰器）会在类定义时接收类元素和上下文，并可包装或替换被修饰的成员。TypeScript 有新版装饰器模式和 `experimentalDecorators` 启用的旧版模式；两者的参数约定、可修饰位置和元数据能力不同，不能把一种模式的装饰器直接贴到另一种项目里。
+报表服务可能要给方法加日志、缓存或指标统计。decorator（装饰器）在类或类成员定义时调用，可以替换被装饰的定义；本文聚焦方法装饰器。TypeScript 5.0 起可使用新版（提案）模式；`experimentalDecorators` 选择旧版（legacy）模式。两者的调用参数、可修饰位置和元数据配置不同，不能把一种模式的装饰器直接贴到另一种项目里。
+
+| 模式与配置边界 |
+|---|
+| 新模式（TypeScript 5.0 起）：有效配置未启用 `experimentalDecorators`；新版**方法**装饰器收到原方法函数和上下文对象，可返回替代方法。不能装饰参数，也不能使用 `emitDecoratorMetadata`。字段装饰器的第一个参数是 `undefined`，调用约定并非所有成员相同。 |
+| 旧模式（legacy）：有效配置设置 `experimentalDecorators: true`；方法装饰器收到 `target`、属性键和描述符。可使用参数装饰器；若框架要读取 TypeScript 生成的设计类型元数据，再按其要求启用 `emitDecoratorMetadata` 并加载 `reflect-metadata`。 |
+
+TypeScript 5.0 的无标志模式采用 TC39 新装饰器提案的调用约定，常被称为“标准装饰器”以区别旧版实现；截至 2026-11-12，TC39 当前提案列表仍标为 Stage 2.7，尚未完成标准化。因此这里的“新版/标准”说明 TypeScript 的模式边界，不表示提案已成为正式 ECMAScript 标准。
 
 ### 新版方法装饰器怎样保留原方法的签名？
 
-TypeScript 5.0 引入了不依赖 `experimentalDecorators` 的新版装饰器实现。下面的包装器使用 generic（泛型）保留接收者、参数元组和返回值类型；它可以为同步或异步方法加日志，而不把 `this` 和参数丢成 `any`。
+TypeScript 5.0 引入了不依赖 `experimentalDecorators` 的新版装饰器实现。执行类定义时，`@loggedMethod` 收到当前的 `loadMonth` 函数和方法上下文；它返回的包装函数会被安装为 `ReportService.prototype.loadMonth`。创建 `ReportService` 实例时不会因此记录日志；稍后调用 `service.loadMonth(...)` 才进入包装函数，日志后它用同一个 `this` 和参数调用原方法，再把原方法的返回值交还调用方。下面的 generic（泛型）保留这项转发的接收者、参数元组和返回值类型。
 
 ~~~typescript
 function loggedMethod<This, Args extends unknown[], Return>(
@@ -8193,15 +8253,17 @@ class ReportService {
 }
 
 const service = new ReportService();
-void service.loadMonth("2026-10").then(rows => console.log(rows));
-// 先记录“报表方法调用： loadMonth”；Promise 完成后输出 ["2026-10 报表已加载"]。
+void service.loadMonth("2026-10")
+  .then(rows => console.log(rows));
+// 先记录“报表方法调用： loadMonth”。
+// Promise 完成后输出 ["2026-10 报表已加载"]。
 ~~~
 
-新版方法装饰器会收到原方法和 `ClassMethodDecoratorContext`（类方法上下文），可以返回兼容的替代方法。它不能装饰参数，也不能使用旧版 `emitDecoratorMetadata`。新版模式对应 TC39 装饰器提案的调用约定；截至 2026-11-06，TC39 提案列表仍将装饰器标作 Stage 2.7。TypeScript 文档称其实现为标准装饰器支持，但项目能否直接在目标运行时执行仍取决于该运行时是否解析 `@` 语法，构建器也可能负责转换。
+源代码中的 `@` 不一定会原样出现在输出 JavaScript：编译器或构建器可能把它转换为运行时辅助代码；若构建流水线保留装饰器语法，目标运行时就必须支持相应语法和语义。应检查实际构建产物，而不能只凭 TypeScript 源文件判断。
 
 ### 旧版方法装饰器为什么不能沿用同一签名？
 
-开启 `experimentalDecorators` 后，旧版方法装饰器接收原型或构造函数、属性键和属性描述符。许多既有框架依赖此约定，也可能使用参数装饰器或 `emitDecoratorMetadata`；选择模式时应以框架文档和 `tsconfig.json` 为准。
+开启 `experimentalDecorators` 后，旧版方法装饰器接收原型或构造函数、属性键和属性描述符。下面装饰的是实例方法，所以 `target` 是类原型；`descriptor.value` 是 `loadMonth` 当前的方法函数槽位。装饰器把包装函数写回该槽位，TypeScript 的旧版装饰器运行时代码随后将更新后的描述符应用回原方法。许多既有框架依赖此约定，也可能使用参数装饰器或 `emitDecoratorMetadata`。
 
 ~~~typescript
 function legacyLog(
@@ -8210,7 +8272,9 @@ function legacyLog(
   descriptor: PropertyDescriptor
 ) {
   const original = descriptor.value;
-  descriptor.value = function (this: unknown, ...args: unknown[]) {
+  descriptor.value = function (
+    this: unknown, ...args: unknown[]
+  ) {
     console.log("旧版报表方法调用：", key);
     return original.apply(this, args);
   };
@@ -8228,14 +8292,16 @@ console.log(legacyService.loadMonth("2026-10"));
 // 依次记录“旧版报表方法调用： loadMonth”和“2026-10 报表已加载”。
 ~~~
 
+要判断现有文件采用哪种模式，应查看**实际编译该文件的项目配置**。使用 `tsc` 时，可运行 `tsc -p path/to/tsconfig.json --showConfig` 查看合并 `extends` 后的有效值；TypeScript 5.0 起，有效的 `experimentalDecorators: true` 表示旧版，否则是新版。多配置仓库要选实际参与构建的配置；若另一个构建器还会转换装饰器，则再检查它的配置和最终 JavaScript 产物。
+
 这两个例子都只是在方法调用周围加日志；它们不会验证网络响应，也不会证明调用者有查看报表的权限。需要在不可信数据入口检查实际值时，使用[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。选择新版或旧版装饰器后，继续核对[ECMAScript 模块与 CommonJS 的加载边界](#49.%20ECMAScript%20%E6%A8%A1%E5%9D%97%E4%B8%8E%20CommonJS%EF%BC%88Node.js%20%E6%A8%A1%E5%9D%97%E6%A0%BC%E5%BC%8F%EF%BC%89%E5%9C%A8%E8%AF%AD%E6%B3%95%E3%80%81%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C%E6%97%B6%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C%EF%BC%9F)。
 
 > [!info]- 来源
 > - [TypeScript 5.0 发布说明：新版装饰器及其与旧版的差异](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html#decorators)
-> - [TypeScript TSConfig：`experimentalDecorators`](https://www.typescriptlang.org/tsconfig/experimentalDecorators.html)
+> - [TypeScript TSConfig：`experimentalDecorators`](https://www.typescriptlang.org/tsconfig/experimentalDecorators.html)、[`emitDecoratorMetadata`](https://www.typescriptlang.org/tsconfig/emitDecoratorMetadata.html)
 > - [TC39 装饰器提案](https://github.com/tc39/proposal-decorators)、[TC39 当前提案阶段列表](https://github.com/tc39/proposals)
 >
-> 提案阶段按 2026-11-06 列表核对；示例以 TypeScript 5.7.2 分别按新版和 `experimentalDecorators` 模式作严格编译检查。
+> 提案阶段按 2026-11-12 的当前列表核对。示例以 TypeScript 5.7.2 分别按无 `experimentalDecorators` 的新版模式和 `experimentalDecorators: true` 的旧版模式严格编译；`target: ES2022` 的产物已在 Node v26.13.0 运行，`target: ESNext` 是否保留 `@` 也已检查。
 ## 49. ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？
 
 报表页把类型、数据读取和界面入口分成不同文件后，`import` 和 `export` 只是这条路径的一部分。模块语法由 ECMAScript 定义；浏览器和 Node.js 作为宿主决定如何定位模块文件；bundler（打包器）还可在运行前合并或改写模块。把这几层分开，才能理解同一段源代码在不同项目里的加载差异。
