@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="430" viewBox="0 0 700 430" role="img" aria-labelledby="desc">
+  <desc id="desc">起点时固定320像素视窗显示原组的A图；1920像素轨道左移960像素后，同一视窗显示复制组的A图。原组和复制组各有A、B、C三项，字母和颜色一一相同。</desc>
+  <defs>
+    <marker id="arrow-left" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#17324d" />
+    </marker>
+    <style>
+      .label { font: 16px system-ui, -apple-system, sans-serif; fill: #17324d; }
+      .small { font: 15px system-ui, -apple-system, sans-serif; fill: #17324d; }
+      .strong { font: 19px system-ui, -apple-system, sans-serif; font-weight: 700; fill: #17324d; }
+      .cell-letter { font: 18px system-ui, -apple-system, sans-serif; font-weight: 700; fill: #ffffff; text-anchor: middle; dominant-baseline: middle; }
+      .group-label { font: 16px system-ui, -apple-system, sans-serif; font-weight: 650; fill: #17324d; text-anchor: middle; }
+      .track-border { fill: none; stroke: #17324d; stroke-width: 1.5; }
+      .cell-line { stroke: #ffffff; stroke-width: 2; }
+      .window { fill: none; stroke: #b54724; stroke-width: 4; }
+      .arrow { fill: none; stroke: #17324d; stroke-width: 2.5; marker-end: url(#arrow-left); }
+      .guide { stroke: #8c9aa8; stroke-width: 1.2; stroke-dasharray: 5 5; }
+    </style>
+  </defs>
+
+  <rect width="700" height="430" fill="#ffffff" />
+
+  <text class="strong" x="22" y="47">起点</text>
+  <text class="label" x="22" y="75">translateX(0)</text>
+  <text class="label" x="22" y="101">整轨 1,920px</text>
+  <text class="label" x="22" y="127">固定视窗 320px</text>
+  <text class="label" x="22" y="153">看到原组 A</text>
+
+  <text class="group-label" x="430" y="63">原组 · 960px</text>
+  <text class="group-label" x="590" y="63">复制组 · 960px</text>
+  <g transform="translate(350 80)">
+    <rect x="0" y="0" width="53.333" height="56" fill="#d65c48" />
+    <rect x="53.333" y="0" width="53.333" height="56" fill="#39887d" />
+    <rect x="106.666" y="0" width="53.334" height="56" fill="#4c70a8" />
+    <rect x="160" y="0" width="53.333" height="56" fill="#d65c48" />
+    <rect x="213.333" y="0" width="53.333" height="56" fill="#39887d" />
+    <rect x="266.666" y="0" width="53.334" height="56" fill="#4c70a8" />
+    <path class="cell-line" d="M53.333 0V56 M106.666 0V56 M160 0V56 M213.333 0V56 M266.666 0V56" />
+    <rect class="track-border" x="0" y="0" width="320" height="56" />
+    <text class="cell-letter" x="26.666" y="28">A</text>
+    <text class="cell-letter" x="79.999" y="28">B</text>
+    <text class="cell-letter" x="133.333" y="28">C</text>
+    <text class="cell-letter" x="186.666" y="28">A</text>
+    <text class="cell-letter" x="239.999" y="28">B</text>
+    <text class="cell-letter" x="293.333" y="28">C</text>
+  </g>
+  <rect class="window" x="350" y="77" width="53.333" height="62" rx="2" />
+
+  <text class="small" x="216" y="195">轨道左移 960px</text>
+  <path class="arrow" d="M350 210 H190" />
+
+  <text class="strong" x="22" y="260">一轮终点</text>
+  <text class="label" x="22" y="288">translateX(-50%)</text>
+  <text class="label" x="22" y="314">左移 960px</text>
+  <text class="label" x="22" y="340">同一视窗看复制组 A</text>
+
+  <text class="group-label" x="270" y="258">原组 · 960px</text>
+  <text class="group-label" x="430" y="258">复制组 · 960px</text>
+  <g transform="translate(190 275)">
+    <rect x="0" y="0" width="53.333" height="56" fill="#d65c48" />
+    <rect x="53.333" y="0" width="53.333" height="56" fill="#39887d" />
+    <rect x="106.666" y="0" width="53.334" height="56" fill="#4c70a8" />
+    <rect x="160" y="0" width="53.333" height="56" fill="#d65c48" />
+    <rect x="213.333" y="0" width="53.333" height="56" fill="#39887d" />
+    <rect x="266.666" y="0" width="53.334" height="56" fill="#4c70a8" />
+    <path class="cell-line" d="M53.333 0V56 M106.666 0V56 M160 0V56 M213.333 0V56 M266.666 0V56" />
+    <rect class="track-border" x="0" y="0" width="320" height="56" />
+    <text class="cell-letter" x="26.666" y="28">A</text>
+    <text class="cell-letter" x="79.999" y="28">B</text>
+    <text class="cell-letter" x="133.333" y="28">C</text>
+    <text class="cell-letter" x="186.666" y="28">A</text>
+    <text class="cell-letter" x="239.999" y="28">B</text>
+    <text class="cell-letter" x="293.333" y="28">C</text>
+  </g>
+  <rect class="window" x="350" y="272" width="53.333" height="62" rx="2" />
+  <path class="guide" d="M350 140 V272" />
+
+  <text class="label" x="22" y="387">−50% 参照整条 1,920px 轨道，因此位移 −960px；不按 320px 视窗计算。</text>
+  <text class="label" x="22" y="412">字母和颜色标识相同内容；复制组 A 在同一视窗位置接替原组 A。</text>
+</svg>

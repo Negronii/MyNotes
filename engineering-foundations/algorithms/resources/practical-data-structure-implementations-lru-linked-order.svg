@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 412" role="img" aria-labelledby="title desc">
+  <title id="title">容量为 2 的 LRU 双向链表状态</title>
+  <desc id="desc">按 put A、put B、get A、put C 跟踪最近到最久的链表节点、前驱后继字段和 Map 索引。最终淘汰 B，保留 C 和 A。</desc>
+  <defs>
+    <marker id="next-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7,3.5 L0,7 z" fill="#315f91"/>
+    </marker>
+    <marker id="prev-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7,3.5 L0,7 z" fill="#78539b"/>
+    </marker>
+    <marker id="step-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#64748b"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+      .step { font-size: 15px; font-weight: 700; }
+      .label { font-size: 14px; font-weight: 700; }
+      .field { font-size: 12px; fill: #334155; }
+      .maplabel { font-size: 14px; font-weight: 700; }
+      .mapline { font-size: 13px; fill: #253348; }
+      .sentinel { fill: #f0f3f7; stroke: #64748b; stroke-width: 1.5; }
+      .node { fill: #edf5ff; stroke: #5684bb; stroke-width: 1.5; }
+      .accessed { fill: #fff3df; stroke: #c78324; stroke-width: 1.5; }
+      .inserted { fill: #e9f6ef; stroke: #4c9671; stroke-width: 1.5; }
+      .mapbox { fill: #f6f8fb; stroke: #aab6c5; stroke-width: 1.2; }
+      .next { stroke: #315f91; stroke-width: 2; marker-end: url(#next-arrow); }
+      .prev { stroke: #78539b; stroke-width: 2; marker-end: url(#prev-arrow); }
+      .step-line { stroke: #64748b; stroke-width: 2; marker-end: url(#step-arrow); }
+    </style>
+  </defs>
+  <rect width="720" height="412" fill="#ffffff"/>
+
+  <text x="525" y="20" class="field"><tspan fill="#315f91">→ next</tspan><tspan dx="14" fill="#78539b">← prev</tspan></text>
+
+  <text x="20" y="39" class="step">1. put(A)，put(B)</text>
+  <text x="20" y="57" class="field">head.next 最近 → tail.prev 最久</text>
+  <rect x="20" y="66" width="68" height="66" rx="8" class="sentinel"/>
+  <text x="54" y="84" text-anchor="middle" class="label">head</text>
+  <text x="54" y="101" text-anchor="middle" class="field">prev: null</text>
+  <text x="54" y="117" text-anchor="middle" class="field">next: B</text>
+  <rect x="125" y="66" width="110" height="66" rx="8" class="node"/>
+  <text x="180" y="84" text-anchor="middle" class="label">节点 B</text>
+  <text x="180" y="101" text-anchor="middle" class="field">prev: head</text>
+  <text x="180" y="117" text-anchor="middle" class="field">next: A</text>
+  <rect x="280" y="66" width="110" height="66" rx="8" class="node"/>
+  <text x="335" y="84" text-anchor="middle" class="label">节点 A</text>
+  <text x="335" y="101" text-anchor="middle" class="field">prev: B</text>
+  <text x="335" y="117" text-anchor="middle" class="field">next: tail</text>
+  <rect x="435" y="66" width="68" height="66" rx="8" class="sentinel"/>
+  <text x="469" y="84" text-anchor="middle" class="label">tail</text>
+  <text x="469" y="101" text-anchor="middle" class="field">prev: A</text>
+  <text x="469" y="117" text-anchor="middle" class="field">next: null</text>
+  <line x1="92" y1="91" x2="120" y2="91" class="next"/>
+  <line x1="121" y1="108" x2="93" y2="108" class="prev"/>
+  <line x1="239" y1="91" x2="275" y2="91" class="next"/>
+  <line x1="276" y1="108" x2="240" y2="108" class="prev"/>
+  <line x1="394" y1="91" x2="430" y2="91" class="next"/>
+  <line x1="431" y1="108" x2="395" y2="108" class="prev"/>
+  <rect x="525" y="66" width="175" height="66" rx="8" class="mapbox"/>
+  <text x="538" y="85" class="maplabel">Map 索引</text>
+  <text x="538" y="104" class="mapline">A → 节点 A</text>
+  <text x="538" y="121" class="mapline">B → 节点 B</text>
+
+  <line x1="490" y1="142" x2="490" y2="169" class="step-line"/>
+  <g transform="translate(0 8)">
+  <text x="20" y="178" class="step">2. get(A)：把已定位的 A 移到 head 后</text>
+  <rect x="20" y="187" width="68" height="66" rx="8" class="sentinel"/>
+  <text x="54" y="205" text-anchor="middle" class="label">head</text>
+  <text x="54" y="222" text-anchor="middle" class="field">prev: null</text>
+  <text x="54" y="238" text-anchor="middle" class="field">next: A</text>
+  <rect x="125" y="187" width="110" height="66" rx="8" class="accessed"/>
+  <text x="180" y="205" text-anchor="middle" class="label">节点 A</text>
+  <text x="180" y="222" text-anchor="middle" class="field">prev: head</text>
+  <text x="180" y="238" text-anchor="middle" class="field">next: B</text>
+  <rect x="280" y="187" width="110" height="66" rx="8" class="node"/>
+  <text x="335" y="205" text-anchor="middle" class="label">节点 B</text>
+  <text x="335" y="222" text-anchor="middle" class="field">prev: A</text>
+  <text x="335" y="238" text-anchor="middle" class="field">next: tail</text>
+  <rect x="435" y="187" width="68" height="66" rx="8" class="sentinel"/>
+  <text x="469" y="205" text-anchor="middle" class="label">tail</text>
+  <text x="469" y="222" text-anchor="middle" class="field">prev: B</text>
+  <text x="469" y="238" text-anchor="middle" class="field">next: null</text>
+  <line x1="92" y1="212" x2="120" y2="212" class="next"/>
+  <line x1="121" y1="229" x2="93" y2="229" class="prev"/>
+  <line x1="239" y1="212" x2="275" y2="212" class="next"/>
+  <line x1="276" y1="229" x2="240" y2="229" class="prev"/>
+  <line x1="394" y1="212" x2="430" y2="212" class="next"/>
+  <line x1="431" y1="229" x2="395" y2="229" class="prev"/>
+  <rect x="525" y="187" width="175" height="66" rx="8" class="mapbox"/>
+  <text x="538" y="206" class="maplabel">Map 索引</text>
+  <text x="538" y="225" class="mapline">A → 节点 A</text>
+  <text x="538" y="242" class="mapline">B → 节点 B</text>
+
+  </g>
+  <line x1="490" y1="271" x2="490" y2="299" class="step-line"/>
+  <g transform="translate(0 17)">
+  <text x="20" y="299" class="step">3. put(C)：满容量时摘除 tail.prev，再插入 C</text>
+  <rect x="20" y="308" width="68" height="66" rx="8" class="sentinel"/>
+  <text x="54" y="326" text-anchor="middle" class="label">head</text>
+  <text x="54" y="343" text-anchor="middle" class="field">prev: null</text>
+  <text x="54" y="359" text-anchor="middle" class="field">next: C</text>
+  <rect x="125" y="308" width="110" height="66" rx="8" class="inserted"/>
+  <text x="180" y="326" text-anchor="middle" class="label">节点 C</text>
+  <text x="180" y="343" text-anchor="middle" class="field">prev: head</text>
+  <text x="180" y="359" text-anchor="middle" class="field">next: A</text>
+  <rect x="280" y="308" width="110" height="66" rx="8" class="node"/>
+  <text x="335" y="326" text-anchor="middle" class="label">节点 A</text>
+  <text x="335" y="343" text-anchor="middle" class="field">prev: C</text>
+  <text x="335" y="359" text-anchor="middle" class="field">next: tail</text>
+  <rect x="435" y="308" width="68" height="66" rx="8" class="sentinel"/>
+  <text x="469" y="326" text-anchor="middle" class="label">tail</text>
+  <text x="469" y="343" text-anchor="middle" class="field">prev: A</text>
+  <text x="469" y="359" text-anchor="middle" class="field">next: null</text>
+  <line x1="92" y1="333" x2="120" y2="333" class="next"/>
+  <line x1="121" y1="350" x2="93" y2="350" class="prev"/>
+  <line x1="239" y1="333" x2="275" y2="333" class="next"/>
+  <line x1="276" y1="350" x2="240" y2="350" class="prev"/>
+  <line x1="394" y1="333" x2="430" y2="333" class="next"/>
+  <line x1="431" y1="350" x2="395" y2="350" class="prev"/>
+  <rect x="525" y="308" width="175" height="66" rx="8" class="mapbox"/>
+  <text x="538" y="327" class="maplabel">Map 索引</text>
+  <text x="538" y="346" class="mapline">A → 节点 A · C → 节点 C</text>
+  <text x="538" y="363" class="mapline" fill="#9b3131">B 已从 Map 和链表移除</text>
+  </g>
+</svg>
