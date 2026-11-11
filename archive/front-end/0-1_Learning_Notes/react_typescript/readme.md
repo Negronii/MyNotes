@@ -9,9 +9,9 @@ React 与 TypeScript 的核心语义见当前主题笔记。以下课程示例�
 ## 课程参考
 
 - [TypeScript 怎样描述 React props 与样式模块？](typed-components-and-assets.md)
-- [TypeScript 怎样为 React 类组件的 state 与事件定型？](typed-class-components-and-events.md)
+- [React 类组件的 state 与事件怎样标注类型？](typed-class-components-and-events.md)
 - [React 类组件如何在生命周期中请求数据？](typed-lifecycle-data-fetching.md)
-- [TypeScript 如何给 Context 与自定义 Hook 建立边界？](typed-hooks-and-context.md)
+- [Context 与自定义 Hook 怎样建立类型边界？](typed-hooks-and-context.md)
 - [目录聚合导出怎样改变组件的导入路径？](barrel-exports.md)
 - [Ant Design 如何组合布局与菜单组件？](ant-design-reference.md)
 - [React Router v6 如何建模路由与导航？](react-router-v6-reference.md)
