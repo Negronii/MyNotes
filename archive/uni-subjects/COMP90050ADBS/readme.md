@@ -9,7 +9,7 @@ COMP90050 围绕访问成本、查询执行、并发控制和故障恢复展开�
 - [存储层级与缓冲如何影响数据库访问成本？](condensed-note-w1-storage-costs.md)
 - [本课程比较哪些数据库类型与体系结构？](condensed-note-w1-database-architectures.md)
 - [阵列可靠性计算如何依赖故障模型？](condensed-note-w1-redundancy-and-raid.md)
-- [多数表决与故障即停模式分别能保证什么？](condensed-note-w1-fault-voting.md)
+- [多数表决与 fail-fast 模式分别能保证什么？](condensed-note-w1-fault-voting.md)
 - [为什么消息确认仍可能导致重复处理？](condensed-note-w1-message-reliability.md)
 - [双写与日志能保证什么，循环冗余校验又能证明什么？](condensed-note-w1-durable-writes-and-crc.md)
 
