@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="550" viewBox="0 0 920 550" role="img" aria-labelledby="title desc">
+  <title id="title">局部报表布局的实测 CSS 像素几何</title>
+  <desc id="desc">720 乘 433 CSS 像素视口中，main 的内容起点为 24、24，依次显示标题、块级图片、两个并排按钮和两条报表行。</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #18283d; }
+    .head { font-size: 23px; font-weight: 700; }
+    .body { font-size: 22px; }
+    .small { font-size: 19px; }
+    .muted { fill: #53677c; }
+    .outline { fill: #fff; stroke: #7a8da1; stroke-width: 2; }
+    .guide { fill: none; stroke: #7b899b; stroke-width: 2; stroke-dasharray: 8 6; }
+    .blue { fill: #dbeafe; stroke: #4776a8; stroke-width: 2; }
+    .green { fill: #e4efe8; stroke: #408666; stroke-width: 2; }
+    .gold { fill: #fce7c3; stroke: #bb8a24; stroke-width: 2; }
+    .row { fill: #f5f7fa; stroke: #8797a8; stroke-width: 2; }
+  </style>
+  <rect x="0" y="0" width="920" height="550" fill="#fff"/>
+  <text class="head" x="100" y="45">视口 · 720 × 433 CSS px</text>
+  <text class="small muted" x="100" y="75">坐标原点在左上角 (0, 0)，y 轴向下</text>
+  <rect class="outline" x="100" y="95" width="720" height="433" rx="4"/>
+  <text class="small muted" x="110" y="115">main · x=0, y=0 · 720 × 398</text>
+  <rect x="100" y="95" width="720" height="398" fill="none" stroke="#61758b" stroke-width="2"/>
+
+  <!-- content edges: x=24 and x=696 -->
+  <path class="guide" d="M124 119 V467 M796 119 V467"/>
+  <path class="guide" d="M124 119 H796"/>
+  <text class="small muted" x="126" y="137">内容区 · x=24 … 696 · 宽 672</text>
+
+  <!-- h1: x24 y24 w672 h30 -->
+  <rect class="blue" x="124" y="119" width="672" height="30"/>
+  <text class="small" x="138" y="141">h1 · x=24, y=24 · 672 × 30</text>
+
+  <!-- image: x24 y66 w320 h180 -->
+  <rect class="green" x="124" y="161" width="320" height="180"/>
+  <text class="body" x="150" y="190">report-summary.png</text>
+  <text class="small muted" x="150" y="222">x=24, y=66 · 320 × 180</text>
+
+  <!-- flex control container spans content width; two 128px children with an 8px gap -->
+  <rect x="124" y="353" width="672" height="36" fill="none" stroke="#b1bbc6" stroke-width="2" stroke-dasharray="3 5"/>
+  <rect class="gold" x="124" y="353" width="128" height="36" rx="4"/>
+  <rect class="gold" x="260" y="353" width="128" height="36" rx="4"/>
+  <text class="small" x="132" y="377">Most recent</text>
+  <text class="small" x="269" y="377">Oldest first</text>
+  <text class="small muted" x="410" y="376">#sort-controls · y=258–294</text>
+
+  <!-- ol and both list items -->
+  <rect class="row" x="124" y="401" width="672" height="68"/>
+  <line x1="124" y1="435" x2="796" y2="435" stroke="#8797a8" stroke-width="2"/>
+  <text class="body" x="145" y="426">May report · y=306–340</text>
+  <text class="body" x="145" y="460">April report · y=340–374</text>
+
+</svg>

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1260" viewBox="0 0 1000 1260" role="img" aria-labelledby="title desc">
+  <title id="title">同一报表从绘制与属性状态走到栅格 tile 和合成帧</title>
+  <desc id="desc">Pre-paint 计算属性树，Paint 消费属性状态并生成绘制块，commit 后 layerize 形成图层。报表表面被划成相邻矩形 tile；图示止于合成帧描述的本页画面，Viz 的全局聚合与最终绘制由正文说明。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M2 1 L12 7 L2 13" fill="none" stroke="#435a72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #18283d; }
+      .head { font-size: 25px; font-weight: 700; }
+      .body { font-size: 21px; }
+      .small { font-size: 19px; }
+      .muted { fill: #52657b; }
+      .card { fill: #f4f7fb; stroke: #73879c; stroke-width: 3; }
+      .prop { fill: #edf6fb; stroke: #35819f; stroke-width: 3; }
+      .layer { fill: #eef7f1; stroke: #428565; stroke-width: 3; }
+      .flow { fill: none; stroke: #435a72; stroke-width: 4; marker-end: url(#arrow); stroke-linecap: round; stroke-linejoin: round; }
+      .grid { fill: none; stroke: #53677e; stroke-width: 2.5; stroke-dasharray: 9 6; opacity: .86; }
+      .tiletag { fill: #fff; stroke: #53677e; stroke-width: 1.5; }
+      .btn { fill: #fff; stroke: #7b8998; stroke-width: 2; }
+    </style>
+  </defs>
+  <rect x="8" y="8" width="984" height="1244" rx="24" fill="#fff" stroke="#d7e0e8" stroke-width="2"/>
+
+  <!-- One causal chain: property state produced by pre-paint is consumed by paint before commit. -->
+  <rect class="prop" x="30" y="40" width="220" height="130" rx="16"/>
+  <text class="head" x="55" y="82">Pre-paint</text>
+  <text class="small" x="55" y="119">计算属性树</text>
+  <text class="small" x="55" y="147">标记失效内容</text>
+
+  <rect class="card" x="285" y="40" width="220" height="130" rx="16"/>
+  <text class="head" x="310" y="82">Paint</text>
+  <text class="small" x="310" y="119">消费属性状态</text>
+  <text class="small" x="310" y="147">绘制项 → paint chunks</text>
+
+  <rect class="card" x="540" y="40" width="190" height="130" rx="16"/>
+  <text class="head" x="565" y="82">commit</text>
+  <text class="small" x="565" y="119">显示列表 + 属性树</text>
+  <text class="small" x="565" y="147">交给合成器</text>
+
+  <rect class="layer" x="765" y="40" width="205" height="130" rx="16"/>
+  <text class="head" x="790" y="82">layerize</text>
+  <text class="small" x="790" y="119">绘制块 → 图层</text>
+  <text class="small" x="790" y="147">按视觉关系分组</text>
+
+  <path class="flow" d="M250 105 H285"/>
+  <path class="flow" d="M505 105 H540"/>
+  <path class="flow" d="M730 105 H765"/>
+  <path class="flow" d="M867 170 V220"/>
+
+  <text class="head" x="130" y="245">可见内容区域 · 720 × 398 CSS px</text>
+  <text class="small muted" x="130" y="270">示意 tile 网格：3 列 × 4 行 · 每格 240 × 100px · 末行 98px</text>
+
+  <!-- One continuous page surface, partitioned into adjacent rectangular regions. -->
+  <g id="raster-input">
+    <rect x="130" y="290" width="720" height="398" fill="#fff" stroke="#61758b" stroke-width="3"/>
+    <rect x="154" y="314" width="672" height="30" fill="#dbeafe" stroke="#4776a8" stroke-width="2"/>
+    <text class="small" x="194" y="336">Recent reports</text>
+    <rect x="154" y="356" width="320" height="180" fill="#e4efe8" stroke="#408666" stroke-width="2"/>
+    <text class="small" x="190" y="438">image · 320 × 180</text>
+    <rect x="154" y="548" width="672" height="36" fill="none" stroke="#718397" stroke-width="2" stroke-dasharray="7 5"/>
+    <rect class="btn" x="154" y="548" width="128" height="36" rx="4"/>
+    <rect class="btn" x="290" y="548" width="128" height="36" rx="4"/>
+    <text class="small" x="160" y="572">Most recent</text>
+    <text class="small" x="296" y="572">Oldest first</text>
+    <text class="small muted" x="600" y="572">#sort-controls</text>
+    <rect x="154" y="596" width="672" height="68" fill="#f5f7fa" stroke="#8797a8" stroke-width="2"/>
+    <line x1="154" y1="630" x2="826" y2="630" stroke="#8797a8" stroke-width="2"/>
+    <text class="body" x="194" y="622">May report</text>
+    <text class="body" x="194" y="656">April report</text>
+    <!-- Twelve adjacent spatial tiles cover the complete main region in this teaching layout. -->
+    <path class="grid" d="M370 290 V688 M610 290 V688 M130 390 H850 M130 490 H850 M130 590 H850"/>
+    <g class="small" text-anchor="middle">
+      <rect class="tiletag" x="136" y="296" width="48" height="25" rx="5"/><text x="160" y="315">T01</text>
+      <rect class="tiletag" x="376" y="296" width="48" height="25" rx="5"/><text x="400" y="315">T02</text>
+      <rect class="tiletag" x="616" y="296" width="48" height="25" rx="5"/><text x="640" y="315">T03</text>
+      <rect class="tiletag" x="136" y="396" width="48" height="25" rx="5"/><text x="160" y="415">T04</text>
+      <rect class="tiletag" x="376" y="396" width="48" height="25" rx="5"/><text x="400" y="415">T05</text>
+      <rect class="tiletag" x="616" y="396" width="48" height="25" rx="5"/><text x="640" y="415">T06</text>
+      <rect class="tiletag" x="136" y="496" width="48" height="25" rx="5"/><text x="160" y="515">T07</text>
+      <rect class="tiletag" x="376" y="496" width="48" height="25" rx="5"/><text x="400" y="515">T08</text>
+      <rect class="tiletag" x="616" y="496" width="48" height="25" rx="5"/><text x="640" y="515">T09</text>
+      <rect class="tiletag" x="136" y="596" width="48" height="25" rx="5"/><text x="160" y="615">T10</text>
+      <rect class="tiletag" x="376" y="596" width="48" height="25" rx="5"/><text x="400" y="615">T11</text>
+      <rect class="tiletag" x="616" y="596" width="48" height="25" rx="5"/><text x="640" y="615">T12</text>
+    </g>
+  </g>
+
+  <path class="flow" d="M490 698 V748"/>
+  <text class="small" x="525" y="713">各 tile 栅格为对应区域生成像素</text>
+  <text class="small muted" x="525" y="739">彼此独立的 tile 任务可并行</text>
+  <text class="head" x="130" y="780">合成帧描述的报表画面</text>
+
+  <!-- The final frame keeps the same title, image, controls and both report rows. -->
+  <g id="final-frame">
+    <rect x="130" y="800" width="720" height="398" fill="#fff" stroke="#61758b" stroke-width="3"/>
+    <rect x="154" y="824" width="672" height="30" fill="#dbeafe" stroke="#4776a8" stroke-width="2"/>
+    <text class="small" x="170" y="846">Recent reports</text>
+    <rect x="154" y="866" width="320" height="180" fill="#e4efe8" stroke="#408666" stroke-width="2"/>
+    <text class="small" x="184" y="895">summary image</text>
+    <text class="small muted" x="184" y="923">320 × 180</text>
+    <rect class="btn" x="154" y="1058" width="128" height="36" rx="4"/>
+    <rect class="btn" x="290" y="1058" width="128" height="36" rx="4"/>
+    <text class="small" x="160" y="1082">Most recent</text>
+    <text class="small" x="296" y="1082">Oldest first</text>
+    <rect x="154" y="1106" width="672" height="68" fill="#f5f7fa" stroke="#8797a8" stroke-width="2"/>
+    <line x1="154" y1="1140" x2="826" y2="1140" stroke="#8797a8" stroke-width="2"/>
+    <text class="body" x="170" y="1132">May report</text>
+    <text class="body" x="170" y="1166">April report</text>
+  </g>
+</svg>

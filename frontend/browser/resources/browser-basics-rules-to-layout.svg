@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1120" viewBox="0 0 1200 1120" role="img" aria-labelledby="title desc">
+  <title id="title">DOM 和 CSS 规则如何形成布局片段</title>
+  <desc id="desc">DOM、CSS 规则进入匹配和级联，产生计算样式；显示类型生成盒，再由可用空间、字体和前序内容约束布局，输出片段结构。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M2 1 L12 7 L2 13" fill="none" stroke="#435a72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #18283d; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .head { font-size: 29px; font-weight: 700; }
+      .body { font-size: 25px; }
+      .small { font-size: 23px; }
+      .muted { fill: #52657b; }
+      .card { fill: #f4f7fb; stroke: #73879c; stroke-width: 3; }
+      .rule { fill: #edf6fb; stroke: #35819f; stroke-width: 3; }
+      .stage { fill: #fff7df; stroke: #bb8a24; stroke-width: 3; }
+      .out { fill: #eef7f1; stroke: #428565; stroke-width: 3; }
+      .edge { fill: none; stroke: #435a72; stroke-width: 4; marker-end: url(#arrow); stroke-linecap: round; stroke-linejoin: round; }
+      .branch { fill: none; stroke: #7c8da0; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+  <rect x="8" y="8" width="1184" height="1104" rx="24" fill="#fff" stroke="#d7e0e8" stroke-width="2"/>
+
+  <rect class="card" x="45" y="42" width="500" height="190" rx="18"/>
+  <text class="head" x="75" y="82">DOM 节点</text>
+  <text class="mono body" x="75" y="123">h1#summary · img</text>
+  <text class="mono body" x="75" y="160">#sort-controls · ol#reports</text>
+  <text class="small muted" x="75" y="205">解析后的元素与文本节点</text>
+
+  <rect class="rule" x="655" y="42" width="500" height="190" rx="18"/>
+  <text class="head" x="685" y="82">CSSOM 中解析的规则</text>
+  <text class="mono body" x="685" y="123">h1: 24px / 30px</text>
+  <text class="mono body" x="685" y="160">img: block · 320 × 180px</text>
+  <text class="mono body" x="685" y="197">controls: flex · gap 8px</text>
+
+  <path class="branch" d="M295 232 V263 H600 M905 232 V263 H600"/>
+  <path class="edge" d="M600 263 V300"/>
+  <rect class="stage" x="325" y="300" width="550" height="112" rx="18"/>
+  <text class="head" x="600" y="346" text-anchor="middle">选择器匹配 → 级联与继承</text>
+  <text class="small muted" x="600" y="385" text-anchor="middle">按元素挑出适用声明；DOM 树和规则表仍各自独立</text>
+
+  <path class="edge" d="M600 412 V455"/>
+  <rect class="rule" x="235" y="455" width="730" height="148" rx="18"/>
+  <text class="head" x="275" y="498">计算样式</text>
+  <text class="mono body" x="275" y="542">h1 → block · 24px · line-height 30px</text>
+  <text class="mono body" x="275" y="580">img → block · width 320px · height 180px</text>
+
+  <path class="edge" d="M600 603 V646"/>
+  <rect class="stage" x="235" y="646" width="730" height="142" rx="18"/>
+  <text class="head" x="275" y="690">display 生成盒结构</text>
+  <text class="mono body" x="275" y="735">h1 / img / ol → block</text>
+  <text class="mono body" x="275" y="771">#sort-controls → flex row · 2 buttons</text>
+  <text class="small muted" x="820" y="735">display:none</text>
+  <path class="edge" d="M965 728 H1035 V775"/>
+  <text class="small muted" x="1035" y="797" text-anchor="middle">no box</text>
+
+  <path class="edge" d="M600 788 V820 H580 V852"/>
+  <rect class="card" x="40" y="852" width="290" height="165" rx="18"/>
+  <text class="head" x="185" y="895" text-anchor="middle">布局约束</text>
+  <text class="small" x="185" y="938" text-anchor="middle">可用宽度</text>
+  <text class="small" x="185" y="973" text-anchor="middle">字体度量 · 前序内容</text>
+
+  <rect class="stage" x="425" y="852" width="310" height="165" rx="18"/>
+  <text class="head" x="580" y="904" text-anchor="middle">布局算法</text>
+  <text class="small muted" x="580" y="948" text-anchor="middle">求使用尺寸、换行与位置</text>
+  <text class="small muted" x="580" y="985" text-anchor="middle">width:auto 需结合约束</text>
+  <path class="edge" d="M330 934 H425"/>
+
+  <rect class="out" x="800" y="825" width="360" height="265" rx="18"/>
+  <text class="head" x="980" y="862" text-anchor="middle">布局输出</text>
+  <text class="small muted" x="980" y="891" text-anchor="middle">片段结构摘录（Blink）</text>
+  <rect x="930" y="907" width="100" height="36" rx="8" fill="#fff" stroke="#428565" stroke-width="2"/>
+  <text class="small" x="980" y="932" text-anchor="middle">main</text>
+  <path class="branch" d="M980 943 V953 H895 V968 M980 953 H1065 V968 M980 943 V1018 H895 V1034 M980 1018 H1065 V1034"/>
+  <rect x="820" y="968" width="150" height="40" rx="8" fill="#fff" stroke="#428565" stroke-width="2"/>
+  <rect x="990" y="968" width="150" height="40" rx="8" fill="#fff" stroke="#428565" stroke-width="2"/>
+  <rect x="820" y="1034" width="150" height="40" rx="8" fill="#fff" stroke="#428565" stroke-width="2"/>
+  <rect x="990" y="1034" width="150" height="40" rx="8" fill="#fff" stroke="#428565" stroke-width="2"/>
+  <text class="small" x="895" y="995" text-anchor="middle">h1</text>
+  <text class="small" x="1065" y="995" text-anchor="middle">img</text>
+  <text class="small" x="895" y="1061" text-anchor="middle">flex</text>
+  <text class="small" x="1065" y="1061" text-anchor="middle">ol · 2 li</text>
+  <path class="edge" d="M735 930 H775 V945 H800"/>
+</svg>
