@@ -165,7 +165,16 @@ R1 的蒸馏例子属于离线监督：教师先产生推理回答，筛选后�
 
 离线 SFT 把固定教师回答当作目标 token；在线 RLVR 让学生自己采样回答、再用一个标量 reward 给轨迹分配优势。还有一种目标是：学生先在自己的 rollout 中走到某个 prefix（生成前缀），教师在这个相同前缀上提供整个词表的下一 token 分布，学生再对齐该分布。这称为 on-policy distillation（OPD，在策略蒸馏）：训练前缀由学生当前策略产生，因此训练覆盖学生实际会走到的状态；软分布则让教师可以给未采样到的 token 也提供信息。
 
-DeepSeek-V4 论文 v1 报告了一种多教师 OPD 流程。数学、代码、Agent、指令遵循等领域分别训练 specialist teacher（领域教师模型）：先用领域数据做 SFT，再用领域 prompt 与 GRPO 奖励做强化学习。之后，统一 student（学生模型）从自己的策略采样轨迹，按任务从相关教师的完整输出分布学习。十多个是整个训练系统的教师数量，不是每个前缀都要运行全部教师。该报告将这一阶段的 mixed RL 改为 OPD；它没有说 specialist 阶段也跳过 SFT/RL。
+DeepSeek-V4 论文 v1 报告了一种多教师 OPD 流程。数学、代码等领域分别训练 specialist teacher（领域教师模型）：每个教师是独立的完整模型，先用对应领域数据做 SFT，再用领域 prompt 与奖励信号，通过 GRPO 做强化学习。之后，统一 student（学生模型）从自己的策略采样轨迹，按任务从相关教师的完整输出分布学习。该 OPD 阶段使用十多位教师；报告没有要求每个前缀都运行全部教师。论文将这一阶段的 mixed RL 改为 OPD，并未说 specialist 阶段也跳过 SFT/RL。
+
+以一道数学题为例，把训练和部署连起来看：
+
+1. **按任务配教师。** 训练样本属于数学任务，因此使用完整的数学领域教师。选择发生在训练任务/样本尺度；这里的 teacher 是一套完整模型权重，不是某层 FFN 里的一个 expert 子网。
+2. **由学生生成前缀。** student 接收题目提示词，从自己的策略 rollout（采样轨迹），走到一个前缀。
+3. **教师在同一前缀上给分布。** 数学教师接收该 student prefix，对整个词表输出下一词元 logits；按 student 到 teacher 的 reverse KL 计算蒸馏目标，并用它更新统一 student 的参数。
+4. **部署学生。** 线上运行已训练的 student，不需要继续调用领域教师。若 student 的架构含有 MoE，模型内部仍可在每个 token 到达 MoE FFN 子层时路由到若干 expert 子网。DeepSeek-V4 前三层 MoE 按 token ID 的固定 hash 选择 expert indices，后续路由层则依据当前表示的分数选择；这是一次模型前向中的 token 级路由，不是按任务切换完整教师。
+
+因此，教师选择决定“这条训练样本向哪一个完整领域模型学习”，MoE 路由决定“当前前向中的这个 token 经过哪些内部 FFN 子网”。二者粒度和对象都不同。
 
 把来自不同任务的训练样本按适用教师分组，多教师目标可概括为
 
@@ -176,7 +185,7 @@ $$
 \right)\right].
 $$
 
-`\mathcal{D}_j` 表示适用教师 `j` 的任务中，学生 rollout 实际走到的前缀分布；`π_θ` 是学生在该前缀的分布，`π_Ej` 是该教师在同一前缀上的分布，`w_j` 是教师权重。求和概括整个训练混合，不要求把每个前缀都交给所有教师。对每个学生前缀，目标先用学生和教师完整词表 logits 经 softmax（归一化指数函数）得到两张概率分布，再对全词表精确求和计算 reverse KL（反向 KL），方向为学生到教师；它不是只评估刚采样到的一个 token，也不是对最终回答打分后广播一个优势。DeepSeek-V4 报告认为，相较于只用学生刚采样的 token 估计 KL，全词表 logit 蒸馏在其系统中梯度方差更低、训练更稳定；这是该报告的方法选择，不能推为所有任务的通用结论。
+$\mathcal{D}_j$ 表示适用教师 `j` 的任务中，学生 rollout 实际走到的前缀分布；`π_θ` 是学生在该前缀的分布，`π_Ej` 是该教师在同一前缀上的分布，`w_j` 是教师权重。求和概括整个训练混合，不要求把每个前缀都交给所有教师。对每个学生前缀，目标先用学生和教师完整词表 logits 经 softmax（归一化指数函数）得到两张概率分布，再对全词表精确求和计算 reverse KL（反向 KL），方向为学生到教师；它不是只评估刚采样到的一个 token，也不是对最终回答打分后广播一个优势。DeepSeek-V4 报告认为，相较于只用学生刚采样的 token 估计 KL，全词表 logit 蒸馏在其系统中梯度方差更低、训练更稳定；这是该报告的方法选择，不能推为所有任务的通用结论。
 
 看只有两个候选 token 的小分布：学生 `Q=(0.8,0.2)`，教师 `P=(0.9,0.1)`。学生到教师的方向是
 
@@ -192,7 +201,7 @@ $$
 | 在线 RLVR / GRPO | 学生自己采样的完整回答 | RLVR 用可独立复核的规则分数；一般 GRPO 也可用模型奖励，但评委分数不因此变成可验证结果 | 依赖 reward 与采样组，不直接给每个词的教师分布。 |
 | 离线 SFT / 轨迹蒸馏 | 固定收集的教师回答 | 每个目标 token 的 cross-entropy（交叉熵） | 学生不必在每个训练步骤自己 rollout；不会自动覆盖学生独有的前缀。 |
 | 多教师 OPD | 学生自己 rollout 到的前缀 | 各教师在同前缀上的全词表分布与反向 KL | 信号是分布对齐，不是结果 reward 或固定答案 token。 |
-| mixture of experts（MoE，混合专家）路由 | 同一个模型的一次前向计算 | 路由器选择内部 expert 子网络参与计算 | 这是模型架构；DeepSeek-V4 报告的 specialist teacher 是独立完整模型权重，并非 MoE 层里的 FFN 子网。 |
+| mixture of experts（MoE，混合专家）路由 | 同一次前向中，token 到达 MoE FFN 子层 | 路由器选择内部 expert 子网；V4 前三层按 token ID hash 选 indices，后续路由层按当前表示打分 | 这是模型架构；DeepSeek-V4 的 specialist teacher 是独立完整模型，并非 MoE 层里的 FFN 子网。 |
 
 全词表 logits 的缓存成本也很大。V4 报告的实现按样本对应的教师索引组织数据，缓存该教师的末层 hidden state，再在训练时加载相应输出头重建词表分布；它避免为所有训练位置长期保存完整 logits，但仍需教师推理和输出头计算。
 
@@ -235,4 +244,4 @@ TRL `v1.17.1` 和 verl `v0.9.1` 是本节核对过的具体发布版；新版本
 > - **Dr.GRPO。** Liu et al., *Understanding R1-Zero-Like Training: A Critical Perspective*（arXiv:2503.20783v2，2025-10-06；§3.1–3.2），[v2 HTML](https://arxiv.org/html/2503.20783)。支持回答长度与题目难度加权分析及 Dr.GRPO 的固定预算分母方案。
 > - **TRL 当前配置。** Hugging Face [TRL `v1.17.1` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.17.1)（2026-10-30）、[该 tag 的 `grpo_config.py`](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_config.py)和[当前 GRPOTrainer 文档](https://huggingface.co/docs/trl/grpo_trainer)，截至 2026-11-06 核对。版本配置支持 `beta=0`、`epsilon=0.2`、`loss_type="dapo"`、`scale_rewards="group"`、`mask_truncated_completions=False`；无版本文档可能晚于 tag 更新。
 > - **verl 当前配置。** [verl `v0.9.1` 发布记录](https://github.com/verl-project/verl/releases/tag/v0.9.1)（2026-09-20）、[通用 PPO trainer 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/ppo_trainer.yaml)、[actor 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/actor/actor.yaml)、[GRPO 结果优势实现](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/core_algos.py)。配置说明默认优势估计是 GAE、组奖励标准差归一化打开、两种 KL 路径关闭，actor 聚合默认 `token-mean`；实际训练还须检查所用 recipe 的覆盖值。
-> - **DeepSeek-V4 多教师 OPD。** DeepSeek-AI, *DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence*（arXiv:2606.19348v1，2026-04-26；截至 2026-11-06 核对公开报告仍为 v1；§5.1.1–5.1.2、§5.2.2），[v1 HTML](https://arxiv.org/html/2606.19348v1)。支持 specialist 阶段 SFT+GRPO、student 前缀上的多教师 reverse KL 与全词表 logits 蒸馏。权重安排和通用路由规则不由该报告建立。
+> - **DeepSeek-V4 多教师 OPD 与 MoE 路由。** DeepSeek-AI, *DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence*（arXiv:2606.19348v1，2026-04-26；截至 2026-11-11 核对公开报告仍为 v1；§2.1、§4.2.1、§5.1.1–5.1.2、§5.2.2），[v1 HTML](https://arxiv.org/html/2606.19348v1)。支持初始 MoE 层的 token ID hash 路由、specialist 阶段 SFT+GRPO、student 前缀上的多教师 reverse KL 与全词表 logits 蒸馏。Pro 的[固定版本 Gate 实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L546-L584)显示 hash 层从 token ID 表读取 expert indices，其他路由层按当前表示的分数 top-k 选择；具体层数由配置决定。论文描述其系统的教师权重与按任务选择，不将这些安排推广为任意模型都适用的规则。

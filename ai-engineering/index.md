@@ -47,6 +47,7 @@
 ### 从发现差距到验证改进
 
 - [如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)
+- [模型怎样从训练损失得到每个权重的更新？](foundations/training-gradients-and-optimizers.md)
 - [何时应微调来弥补稳定的行为差距？](fine-tuning/fine-tuning-strategies.md)
 - [可验证奖励如何训练推理能力？](fine-tuning/reward-based-reasoning-training.md)
 - [如何验证并保留对 Agent 的改进？](agents/agent-improvement-and-version-acceptance.md)

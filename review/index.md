@@ -38,6 +38,8 @@
 
 模型、提示词或 Agent 的改动还需要[独立的任务评估](../ai-engineering/evaluation/llm-evaluation-methods.md)：训练奖励或一次成功演示不能代替发布证据。
 
+若评估发现了稳定的模型行为差距，先看[训练怎样把 loss 变成每个权重的更新](../ai-engineering/foundations/training-gradients-and-optimizers.md)，再判断[是否应该微调、更新哪些参数](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。
+
 ## AI 应用怎样凭证据回答？
 
 从[一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md)开始，沿构建 42 的失败问题，走完输入组装、模型推理、授权查询日志和解释结果。
