@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1180" viewBox="0 0 700 1180" role="img" aria-labelledby="title desc">
+<title id="title">Webhook 持久受理、HTTP 确认与异步处理边界</title>
+<desc id="desc">完整验证后的请求由唯一键裁定首次或重复。首次受理在同一事务提交 inbox 和处理 outbox；数据库提交后 worker 可以开始，应用读到成功结果后才返回首次 202。重复分支在下一条查询找到有效墓碑后比较摘要。同摘要返回重复 202，异摘要审计并返回 409。图示要求墓碑仍按保留合同存在；冲突后墓碑缺失是完整性故障，停止首次受理并告警。提交结果未知不等于回滚。</desc>
+<defs><marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="13" refY="7" orient="auto"><path d="M1,1 L13,7 L1,13 Z" fill="#34495e"/></marker></defs>
+<rect width="700" height="1180" fill="#ffffff"/>
+<g font-family="-apple-system,BlinkMacSystemFont,'Noto Sans CJK SC',sans-serif" fill="#17324d" text-anchor="middle">
+<rect x="45" y="24" width="610" height="88" rx="14" fill="#edf4fb" stroke="#547a9e" stroke-width="2"/>
+<text x="350.0" y="58" font-size="22" font-weight="700">请求已完整验签并通过业务授权</text>
+<text x="350.0" y="89" font-size="18">来源、事件 ID、正文语义与资源权限已验证</text>
+<path d="M350 116 V160" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="55" y="168" width="590" height="94" rx="14" fill="#f5f8fa" stroke="#70899b" stroke-width="2"/>
+<text x="350.0" y="204" font-size="21" font-weight="700">INSERT inbox ... ON CONFLICT DO NOTHING</text>
+<text x="350.0" y="236" font-size="19">RETURNING 决定首次插入还是唯一键冲突</text>
+<path d="M350 266 V302" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M184 302 H516" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M184 302 V340" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M516 302 V340" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="28" y="348" width="312" height="106" rx="14" fill="#eaf6ef" stroke="#4b8d64" stroke-width="2"/>
+<text x="184.0" y="379" font-size="21" font-weight="700">返回一行：首次插入</text>
+<text x="184.0" y="412" font-size="18">同一事务写 processing outbox</text>
+<text x="184.0" y="438" font-size="18">意图引用本次 inbox 行</text>
+<rect x="360" y="348" width="312" height="106" rx="14" fill="#fff6e5" stroke="#b98228" stroke-width="2"/>
+<text x="516.0" y="379" font-size="20" font-weight="700">返回零行：唯一键已占用</text>
+<text x="516.0" y="412" font-size="19">下一条 SELECT 读取墓碑</text>
+<text x="516.0" y="438" font-size="18">READ COMMITTED 的新快照</text>
+<path d="M184 458 V510" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M516 458 V510" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="28" y="518" width="312" height="82" rx="14" fill="#f5f8fa" stroke="#70899b" stroke-width="2"/>
+<text x="184.0" y="552" font-size="21" font-weight="700">发出 COMMIT</text>
+<text x="184.0" y="582" font-size="19">应用等待提交结果</text>
+<rect x="360" y="518" width="312" height="82" rx="14" fill="#f5f8fa" stroke="#70899b" stroke-width="2"/>
+<text x="516.0" y="552" font-size="21" font-weight="700">查到有效墓碑</text>
+<text x="516.0" y="582" font-size="19">比较已提交正文摘要</text>
+<path d="M184 604 V656" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M516 604 V632" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M435 632 H597" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M435 632 V664" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M597 632 V664" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="28" y="664" width="312" height="88" rx="14" fill="#eaf6ef" stroke="#4b8d64" stroke-width="2"/>
+<text x="184.0" y="698" font-size="21" font-weight="700">数据库已提交两行</text>
+<text x="184.0" y="728" font-size="18">inbox 与处理 outbox 已持久</text>
+<rect x="360" y="672" width="150" height="122" rx="14" fill="#edf4fb" stroke="#547a9e" stroke-width="2"/>
+<text x="435.0" y="703" font-size="19" font-weight="700">摘要相同</text>
+<text x="435.0" y="737" font-size="19">重复 202</text>
+<text x="435.0" y="770" font-size="18">不新建意图</text>
+<rect x="522" y="672" width="150" height="122" rx="14" fill="#fff0ec" stroke="#b45649" stroke-width="2"/>
+<text x="597.0" y="703" font-size="19" font-weight="700">摘要不同</text>
+<text x="597.0" y="737" font-size="19">受限审计</text>
+<text x="597.0" y="770" font-size="18">返回 409</text>
+<path d="M184 756 V852" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M184 852 H516" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M184 852 V904" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M516 852 V904" fill="none" stroke="#34495e" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="445" y="830" font-size="18" fill="#425d72">实际提交后的两个独立进展</text>
+<rect x="28" y="912" width="312" height="108" rx="14" fill="#eaf6ef" stroke="#4b8d64" stroke-width="2"/>
+<text x="184.0" y="942" font-size="20" font-weight="700">应用观察到提交成功</text>
+<text x="184.0" y="974" font-size="20" font-weight="700">才能返回首次 202</text>
+<text x="184.0" y="1003" font-size="18">不代表外部副作用完成</text>
+<rect x="360" y="912" width="312" height="108" rx="14" fill="#edf4fb" stroke="#547a9e" stroke-width="2"/>
+<text x="516.0" y="942" font-size="20" font-weight="700">worker 可领取处理意图</text>
+<text x="516.0" y="974" font-size="18">可早于应用收到提交结果</text>
+<text x="516.0" y="1003" font-size="18">无需等待 HTTP 响应</text>
+<text x="350" y="1062" font-size="18" fill="#425d72">图示重复分支要求墓碑仍在；冲突后缺行须暂停受理并告警。</text>
+<text x="350" y="1100" font-size="18" fill="#425d72">COMMIT 回复未知：可能已提交，也可能未提交；不声称回滚。</text>
+<text x="350" y="1132" font-size="18" fill="#425d72">不回首次 202；发送方按原 eventId 和正文重试，由唯一键裁定。</text>
+</g></svg>

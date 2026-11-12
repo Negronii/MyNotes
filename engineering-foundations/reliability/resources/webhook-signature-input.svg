@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="650" viewBox="0 0 700 650" role="img" aria-labelledby="title desc">
+<title id="title">合成 webhook 签名输入如何组成</title>
+<desc id="desc">本次尝试的五个 ASCII 字段以 LF 分隔，随后拼接未解析的原始正文，再交给 HMAC-SHA-256 生成签名头。</desc>
+<defs>
+  <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="13" refY="7" orient="auto">
+    <path d="M1,1 L13,7 L1,13 Z" fill="#34495e"/>
+  </marker>
+</defs>
+<rect width="700" height="650" fill="#ffffff"/>
+<g font-family="-apple-system,BlinkMacSystemFont,'Noto Sans CJK SC',sans-serif" fill="#17324d" text-anchor="middle">
+  <rect x="45" y="28" width="610" height="130" rx="14" fill="#edf4fb" stroke="#547a9e" stroke-width="2"/>
+  <text x="350" y="61" font-size="22" font-weight="700">本次尝试的 ASCII 字段</text>
+  <text x="350" y="96" font-size="19">v1 + LF + keyId + LF + timestamp + LF</text>
+  <text x="350" y="128" font-size="19">eventId + LF + attemptId + LF</text>
+
+  <line x1="350" y1="160" x2="350" y2="201" stroke="#34495e" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="45" y="208" width="610" height="94" rx="14" fill="#f5f8fa" stroke="#70899b" stroke-width="2"/>
+  <text x="350" y="246" font-size="22" font-weight="700">拼接未解析的原始正文</text>
+  <text x="350" y="279" font-size="18">rawBody：精确字节；不解析、不重序列化、不附加换行</text>
+
+  <line x1="350" y1="304" x2="350" y2="345" stroke="#34495e" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="45" y="352" width="610" height="82" rx="14" fill="#f5f8fa" stroke="#70899b" stroke-width="2"/>
+  <text x="350" y="402" font-size="21" font-weight="700">signingInput = metadata bytes || rawBody</text>
+
+  <line x1="350" y1="436" x2="350" y2="477" stroke="#34495e" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="45" y="484" width="610" height="122" rx="14" fill="#eaf6ef" stroke="#4b8d64" stroke-width="2"/>
+  <text x="350" y="520" font-size="22" font-weight="700">HMAC-SHA-256(secret[keyId], signingInput)</text>
+  <text x="350" y="553" font-size="19">输出 64 个小写十六进制字符</text>
+  <text x="350" y="584" font-size="18">X-Webhook-Signature: v1=…</text>
+  <text x="350" y="636" font-size="17" fill="#425d72">Content-Length 不进入签名输入</text>
+</g>
+</svg>
