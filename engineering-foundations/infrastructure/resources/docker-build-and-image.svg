@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="380" viewBox="0 0 700 380" role="img" aria-labelledby="title desc">
+<title id="title">从受控提交分成本地检查与 registry 发布</title>
+<desc id="desc">固定提交和依赖锁文件进入干净构建上下文，由 BuildKit 按层构建。每次构建分别选择本地 --load 路径或 CI --push 路径：本地输出摘要供 Engine inspect/history 检查，不证明 registry 收到镜像；远端路径读取本次 push metadata，以 repo@digest 通过 imagetools inspect 核对，再把完整 registry 引用交给 Compose。两条路径的摘要不能假定相同；多平台还要按实际平台核对子摘要。</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#36546f"/></marker>
+  <style>
+    text { font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #18324b; }
+    .title { font-size: 18px; font-weight: 700; }
+    .body { font-size: 16px; font-weight: 600; }
+    .small { font-size: 14px; }
+    .box { fill: #f4f8fb; stroke: #557c9a; stroke-width: 1.6; }
+    .local { fill: #f0f4fa; stroke: #6b70a8; stroke-width: 1.6; }
+    .remote { fill: #eef6f1; stroke: #4d806c; stroke-width: 1.6; }
+    .footer { fill: #f7f9fb; stroke: #c6d4de; stroke-width: 1.2; }
+    .line { fill: none; stroke: #36546f; stroke-width: 2; marker-end: url(#arrow); }
+    .plain { fill: none; stroke: #36546f; stroke-width: 2; }
+  </style>
+</defs>
+<rect x="1" y="1" width="698" height="378" rx="14" fill="#fff" stroke="#d4e0e8"/>
+
+<rect x="18" y="48" width="200" height="68" rx="10" class="box"/>
+<text x="118" y="76" text-anchor="middle" class="body">固定提交 c4f2a91</text>
+<text x="118" y="99" text-anchor="middle" class="small">源码 + 依赖锁文件</text>
+<path d="M218 82 H246" class="line"/>
+<rect x="250" y="48" width="200" height="68" rx="10" class="box"/>
+<text x="350" y="76" text-anchor="middle" class="body">干净构建上下文</text>
+<text x="350" y="99" text-anchor="middle" class="small">.dockerignore 排除无关文件</text>
+<path d="M450 82 H478" class="line"/>
+<rect x="482" y="48" width="200" height="68" rx="10" class="box"/>
+<text x="582" y="76" text-anchor="middle" class="body">BuildKit 分层构建</text>
+<text x="582" y="99" text-anchor="middle" class="small">每次选一种输出路径</text>
+
+<path d="M582 116 V155" class="plain"/>
+<path d="M582 155 H180 V186" class="line"/>
+<path d="M582 155 V186" class="line"/>
+<rect x="18" y="194" width="324" height="166" rx="11" class="local"/>
+<text x="180" y="220" text-anchor="middle" class="body">本机验证（Engine）</text>
+<text x="180" y="248" text-anchor="middle" class="small">--load → 本机镜像存储</text>
+<text x="180" y="275" text-anchor="middle" class="small">inspect / history 查看配置与层</text>
+<text x="180" y="302" text-anchor="middle" class="small">记录本地输出摘要</text>
+<text x="180" y="330" text-anchor="middle" class="small">不证明 registry 已收到镜像</text>
+
+<rect x="358" y="194" width="324" height="166" rx="11" class="remote"/>
+<text x="520" y="220" text-anchor="middle" class="body">CI 发布（registry）</text>
+<text x="520" y="248" text-anchor="middle" class="small">--push → 镜像仓库</text>
+<text x="520" y="275" text-anchor="middle" class="small">读取本次 push 的 metadata digest</text>
+<text x="520" y="302" text-anchor="middle" class="small">imagetools inspect repo@digest</text>
+<text x="520" y="330" text-anchor="middle" class="small">核验后把完整摘要引用传给 Compose</text>
+
+</svg>

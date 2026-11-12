@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="440" viewBox="0 0 700 440" role="img" aria-labelledby="title desc">
+<title id="title">Compose 服务网络和数据卷拓扑</title>
+<desc id="desc">本地 Compose 默认 bridge/NAT 示例。浏览器访问宿主机回环地址 127.0.0.1:8080，端口映射转发到监听 0.0.0.0:8080 的 API 容器。API 与 worker 运行同一份经 registry 核验的 digest X，二者都通过服务地址 db:5432 连接 PostgreSQL。数据库文件存入网络之外的命名卷 report-data。容器镜像引用是前图 --push 核验后交给 Compose 的 REPORT_IMAGE，不是 --load 本地摘要。</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#36546f"/></marker>
+  <style>
+    text { font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #18324b; }
+    .title { font-size: 18px; font-weight: 700; }
+    .body { font-size: 15px; font-weight: 600; }
+    .small { font-size: 13px; }
+    .host { fill: #f4f8fb; stroke: #557c9a; stroke-width: 1.6; }
+    .app { fill: #edf5f1; stroke: #4d806c; stroke-width: 1.6; }
+    .db { fill: #fff8e9; stroke: #a77920; stroke-width: 1.6; }
+    .volume { fill: #f3f0fa; stroke: #7763a8; stroke-width: 1.6; }
+    .network { fill: none; stroke: #8aa8bf; stroke-width: 1.6; stroke-dasharray: 8 6; }
+    .line { fill: none; stroke: #36546f; stroke-width: 2; marker-end: url(#arrow); }
+    .plain { fill: none; stroke: #36546f; stroke-width: 2; }
+  </style>
+</defs>
+<rect x="1" y="1" width="698" height="438" rx="14" fill="#fff" stroke="#d4e0e8"/>
+
+<rect x="20" y="108" width="175" height="56" rx="9" class="host"/>
+<text x="107" y="142" text-anchor="middle" class="body">本机浏览器</text>
+<path d="M107 164 V202" class="line"/>
+<rect x="20" y="208" width="175" height="88" rx="9" class="host"/>
+<text x="107" y="234" text-anchor="middle" class="small">宿主机回环发布</text>
+<text x="107" y="258" text-anchor="middle" class="body">127.0.0.1:8080</text>
+<text x="107" y="281" text-anchor="middle" class="small">转发到容器 :8080</text>
+
+<rect x="224" y="68" width="458" height="272" rx="18" class="network"/>
+<text x="242" y="90" class="small">Compose 默认 bridge network</text>
+<path d="M195 252 H218 V156 H250" class="line"/>
+
+<rect x="252" y="102" width="185" height="108" rx="10" class="app"/>
+<text x="344" y="130" text-anchor="middle" class="body">API 容器</text>
+<text x="344" y="157" text-anchor="middle" class="small">registry digest X</text>
+<text x="344" y="184" text-anchor="middle" class="small">监听 0.0.0.0:8080</text>
+
+<rect x="470" y="102" width="192" height="108" rx="10" class="app"/>
+<text x="566" y="130" text-anchor="middle" class="body">worker 容器</text>
+<text x="566" y="157" text-anchor="middle" class="small">同一 registry digest X</text>
+<text x="566" y="184" text-anchor="middle" class="small">连接 db:5432</text>
+
+<path d="M344 210 V229 H440 V245" class="line"/>
+<path d="M566 210 V229 H480 V245" class="line"/>
+<rect x="370" y="251" width="180" height="67" rx="10" class="db"/>
+<text x="460" y="278" text-anchor="middle" class="body">PostgreSQL 容器</text>
+<text x="460" y="302" text-anchor="middle" class="small">服务地址 db:5432</text>
+
+<path d="M460 318 V350" class="line"/>
+<rect x="370" y="356" width="180" height="62" rx="10" class="volume"/>
+<text x="460" y="381" text-anchor="middle" class="body">命名卷 report-data</text>
+<text x="460" y="403" text-anchor="middle" class="small">/var/lib/postgresql</text>
+</svg>
