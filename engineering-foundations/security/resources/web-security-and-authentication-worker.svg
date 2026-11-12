@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1050" viewBox="0 0 900 1050" role="img" aria-label="读取任务提交前授权后保存主体租户动作和对象；只传jobID，执行时重新检查权限，成功复用相同缓存查询，撤权则拒绝">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="1050" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<rect x="65" y="25" width="770" height="139" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="60" text-anchor="middle" font-size="25" font-weight="600">提交读取任务：仍是 user-17 / tenant-a / 42</text>
+<text x="450.0" y="98" text-anchor="middle" font-size="23">先检查当前成员、report:read 和目标可读</text>
+<text x="450.0" y="130" text-anchor="middle" font-size="23">任一条件不满足 → 拒绝，不创建任务</text>
+<path d="M450,176 L450,220" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="470" y="204" text-anchor="start" font-size="22">检查通过</text>
+<rect x="65" y="236" width="770" height="171" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="271" text-anchor="middle" font-size="25" font-weight="600">服务端保存可信任务记录</text>
+<text x="450.0" y="309" text-anchor="middle" font-size="23">requester=user-17 · tenant=tenant-a</text>
+<text x="450.0" y="341" text-anchor="middle" font-size="23">action=report:read · report_id=42</text>
+<text x="450.0" y="373" text-anchor="middle" font-size="23">队列只传 job_id；ID 是定位值，不是权限</text>
+<path d="M450,419 L450,463" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="65" y="479" width="770" height="138" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="514" text-anchor="middle" font-size="25" font-weight="600">worker 按 job_id 读取记录，再查当前权限</text>
+<text x="450.0" y="552" text-anchor="middle" font-size="23">按记录的主体和租户检查当前成员、动作</text>
+<text x="450.0" y="584" text-anchor="middle" font-size="23">队列正文不能替换保存的主体和租户</text>
+<path d="M450,629 L450,674 L240,674 M450,674 L670,674" fill="none" stroke="#7086a3" stroke-width="3"/>
+<path d="M240,674 L240,728" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M670,674 L670,728" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="240" y="661" text-anchor="middle" font-size="22">成员撤销 / 动作不允许</text>
+<text x="670" y="661" text-anchor="middle" font-size="22">当前仍允许读取</text>
+<rect x="35" y="744" width="410" height="174" rx="12" fill="#fff5e9" stroke="#e8cda7" stroke-width="2"/>
+<text x="240.0" y="779" text-anchor="middle" font-size="25" font-weight="600">worker 拒绝任务</text>
+<text x="240.0" y="817" text-anchor="middle" font-size="23">拒绝继续执行</text>
+<text x="240.0" y="849" text-anchor="middle" font-size="23">不读取缓存</text>
+<text x="240.0" y="881" text-anchor="middle" font-size="23">不读取报表正文</text>
+<rect x="475" y="744" width="390" height="174" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="670.0" y="779" text-anchor="middle" font-size="25" font-weight="600">复用前图的授权取数路径</text>
+<text x="670.0" y="817" text-anchor="middle" font-size="23">缓存命中 → 返回正文</text>
+<text x="670.0" y="849" text-anchor="middle" font-size="23">未命中 → 按租户和ID查询</text>
+<text x="670.0" y="881" text-anchor="middle" font-size="23">查询不到 → 拒绝本次任务</text>
+<text x="450" y="978" text-anchor="middle" font-size="22">读到正文后返回对象给 worker 调用方。</text>
+<text x="450" y="1017" text-anchor="middle" font-size="22">示例用直接函数调用演示，不实现 broker 与结果投递。</text>
+</g>
+</svg>

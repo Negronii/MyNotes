@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="910" viewBox="0 0 900 910" role="img" aria-label="调用方选择租户和报表编号，服务端根据已验证主体查当前成员和动作；授权通过后才进入缓存取数">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="910" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<rect x="65" y="25" width="770" height="172" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="60" text-anchor="middle" font-size="25" font-weight="600">请求：读取 tenant-a 的报表 42</text>
+<text x="450.0" y="98" text-anchor="middle" font-size="23">已验证会话 → subject = user-17</text>
+<text x="450.0" y="130" text-anchor="middle" font-size="23">调用方路径 → tenant-a / report 42</text>
+<text x="450.0" y="162" text-anchor="middle" font-size="23">服务端端点 → action = report:read</text>
+<path d="M450,209 L450,253" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="65" y="269" width="770" height="140" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="304" text-anchor="middle" font-size="25" font-weight="600">按主体和租户查当前成员，再核对动作</text>
+<text x="450.0" y="342" text-anchor="middle" font-size="23">user-17 在 tenant-a 的角色是 reader</text>
+<text x="450.0" y="374" text-anchor="middle" font-size="23">reader 在本例只允许 report:read</text>
+<path d="M450,421 L450,465 L240,465 M450,465 L670,465" fill="none" stroke="#7086a3" stroke-width="3"/>
+<path d="M240,465 L240,520" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M670,465 L670,520" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="240" y="452" text-anchor="middle" font-size="22">无成员 / 无该动作权限</text>
+<text x="670" y="452" text-anchor="middle" font-size="22">当前检查通过</text>
+<rect x="35" y="536" width="410" height="141" rx="12" fill="#fff5e9" stroke="#e8cda7" stroke-width="2"/>
+<text x="240.0" y="571" text-anchor="middle" font-size="25" font-weight="600">404：本例的隐藏策略</text>
+<text x="240.0" y="609" text-anchor="middle" font-size="23">不访问应用缓存</text>
+<text x="240.0" y="641" text-anchor="middle" font-size="23">不读取报表正文</text>
+<rect x="475" y="536" width="390" height="141" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="670.0" y="571" text-anchor="middle" font-size="25" font-weight="600">进入缓存与取数步骤</text>
+<text x="670.0" y="609" text-anchor="middle" font-size="23">已核验 user-17 的读权限</text>
+<text x="670.0" y="641" text-anchor="middle" font-size="23">对象仍限 tenant-a / 42</text>
+<rect x="65" y="739" width="770" height="132" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="774" text-anchor="middle" font-size="25" font-weight="600">角色不证明对象归属</text>
+<text x="450.0" y="812" text-anchor="middle" font-size="23">reader 不获得 export / refresh 权限</text>
+<text x="450.0" y="844" text-anchor="middle" font-size="23">下一图仍按租户和对象 ID 取数</text>
+</g>
+</svg>
