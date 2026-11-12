@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1810" viewBox="0 0 1000 1810" role="img" aria-labelledby="title desc">
+  <title id="title">Exact-candidate cutover and same-row recovery</title>
+  <desc id="desc">The D/8 candidate C8 is closed, continuously applied through L, drained of in-flight CDC writes, and finally validated before the directory CAS. A successful K8 grants permission to open only the exact candidate but does not itself open it. Normal cutover conditionally opens D/8. Cancellation from closed or open races a delayed K8 opener on the same ownership row. Freeze-first makes the late opener fail; open-first drains business transactions before freezing. A fresh authoritative read of D's local epoch-8 commit ledger permits B/9 only when it proves zero commits; nonzero or unknown requires keeping D authoritative or reverse catch-up.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="#334155"/></marker>
+    <style>
+      text { font-family:Arial, "PingFang SC", "Heiti SC", sans-serif; fill:#172033; text-anchor:middle; dominant-baseline:middle; }
+      .box { fill:#f8fafc; stroke:#475569; stroke-width:3; rx:18; }
+      .main { fill:#eaf2ff; stroke:#315c9b; }
+      .good { fill:#e7f6ec; stroke:#34734a; }
+      .warn { fill:#fff6df; stroke:#9a6a12; }
+      .bad { fill:#fff0ed; stroke:#a54838; }
+      .line { fill:none; stroke:#334155; stroke-width:5; marker-end:url(#arrow); }
+      .rail { fill:none; stroke:#334155; stroke-width:5; }
+      .t { font-size:28px; font-weight:600; }
+      .small { font-size:25px; fill:#334155; }
+    </style>
+  </defs>
+  <rect width="1000" height="1810" fill="#ffffff"/>
+
+  <rect class="box main" x="40" y="20" width="920" height="140"/>
+  <text class="t" x="500" y="54">D/8/closed，C8 已连续追到 L 并通过初验</text>
+  <text class="small" x="500" y="96">停发新 CDC 写并排空在途事务；拒绝迟到的 C8 写</text>
+  <text class="small" x="500" y="132">确认候选不再变化后最终校验，再竞争目录 CAS</text>
+  <path class="line" d="M500 160 L500 212"/>
+
+  <rect class="box main" x="40" y="220" width="920" height="146"/>
+  <text class="t" x="500" y="260">目录 CAS：当前 B/7 时原子发布 D/8 + C8 + K8</text>
+  <text class="small" x="500" y="305">K8 持久记录本次获胜决定；重试读取权威决定</text>
+  <text class="small" x="500" y="342">迁出前，B/7 已本地冻结并持久提交</text>
+  <path class="rail" d="M500 366 L500 405 M250 405 L750 405"/>
+  <path class="line" d="M250 405 L250 444"/>
+  <path class="line" d="M750 405 L750 444"/>
+
+  <rect class="box good" x="32" y="448" width="436" height="180"/>
+  <text class="t" x="250" y="484">CAS 确认 K8 获胜</text>
+  <text class="small" x="250" y="526">D/8 仍为 closed</text>
+  <text class="small" x="250" y="566">只获得精确 C8 / K8 的开门资格</text>
+  <text class="small" x="250" y="605">获胜决定本身不等于已经开门</text>
+
+  <rect class="box bad" x="532" y="448" width="436" height="180"/>
+  <text class="t" x="750" y="484">CAS 未命中</text>
+  <text class="small" x="750" y="526">不发开门命令，重读权威目录</text>
+  <text class="small" x="750" y="566">确认该候选不可逆落败</text>
+  <text class="small" x="750" y="605">先冻结 C8，才能准备更高代次</text>
+
+  <path class="rail" d="M250 628 L250 678 M250 678 L750 678"/>
+  <path class="line" d="M250 678 L250 720"/>
+  <path class="line" d="M750 678 L750 720"/>
+
+  <rect class="box good" x="32" y="728" width="436" height="170"/>
+  <text class="t" x="250" y="765">继续本次切换</text>
+  <text class="small" x="250" y="808">仅匹配 C8 与 K8 的条件更新</text>
+  <text class="small" x="250" y="846">closed → open，D/8 才可写</text>
+  <text class="small" x="250" y="880">候选与目录决定必须相同</text>
+
+  <rect class="box warn" x="532" y="728" width="436" height="170"/>
+  <text class="t" x="750" y="765">若取消或恢复</text>
+  <text class="small" x="750" y="808">从 closed 或 open 请求同一行冻结</text>
+  <text class="small" x="750" y="846">与可能迟到的 K8 开门条件竞争</text>
+  <text class="small" x="750" y="880">closed | open → frozen</text>
+
+  <path class="rail" d="M750 898 L750 946 M250 946 L750 946"/>
+  <path class="line" d="M250 946 L250 988"/>
+  <path class="line" d="M750 946 L750 988"/>
+
+  <rect class="box warn" x="32" y="996" width="436" height="182"/>
+  <text class="t" x="250" y="1033">冻结先赢</text>
+  <text class="small" x="250" y="1076">closed → frozen，同代不可复开</text>
+  <text class="small" x="250" y="1115">迟到的 K8 条件开门失败</text>
+  <text class="small" x="250" y="1154">D/8 没有获准业务写</text>
+
+  <rect class="box warn" x="532" y="996" width="436" height="182"/>
+  <text class="t" x="750" y="1033">若 K8 条件开门先赢</text>
+  <text class="small" x="750" y="1076">closed → open，已有写事务可持锁</text>
+  <text class="small" x="750" y="1115">冻结等待它们提交或回滚</text>
+  <text class="small" x="750" y="1154">随后 open → frozen</text>
+
+  <path class="rail" d="M250 1178 L250 1220 L500 1220 M750 1178 L750 1220 L500 1220"/>
+  <path class="line" d="M500 1220 L500 1260"/>
+  <rect class="box bad" x="40" y="1268" width="920" height="118"/>
+  <text class="t" x="500" y="1308">D/8/frozen 是同代终态；同代迟到开门不能复活</text>
+  <text class="small" x="500" y="1350">目录离开 D/8 前，本地冻结必须已持久提交</text>
+  <path class="line" d="M500 1386 L500 1430"/>
+
+  <rect class="box" x="40" y="1438" width="920" height="132"/>
+  <text class="t" x="500" y="1478">冻结提交后，从 D 权威写主新鲜查询 D/8 本地账本</text>
+  <text class="small" x="500" y="1522">业务效果与账本同事务；B 复制来的幂等结果不计入</text>
+  <path class="rail" d="M500 1570 L500 1604 M250 1604 L750 1604"/>
+  <path class="line" d="M250 1604 L250 1644"/>
+  <path class="line" d="M750 1604 L750 1644"/>
+
+  <rect class="box good" x="32" y="1648" width="436" height="142"/>
+  <text class="t" x="250" y="1685">账本确定为 0</text>
+  <text class="small" x="250" y="1725">准备 B/9；CAS D/8 → B/9</text>
+  <text class="small" x="250" y="1764">K9 获胜后才开放 B/9</text>
+
+  <rect class="box bad" x="532" y="1648" width="436" height="142"/>
+  <text class="t" x="750" y="1685">有提交或结果未知</text>
+  <text class="small" x="750" y="1725">保留 D 权威并前向修复</text>
+  <text class="small" x="750" y="1764">或反向追平后再切</text>
+</svg>

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Snapshot and change stream handoff</title>
+  <desc id="desc">One source at snapshot coordinate S branches into a baseline copy and capture of every later committed transaction. The change stream is buffered while the baseline is backfilled. Only after the baseline completes are changes replayed in source commit order to candidate D with applied progress committed atomically.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="#334155"/></marker>
+    <style>
+      text { font-family:Arial, "PingFang SC", "Heiti SC", sans-serif; fill:#172033; text-anchor:middle; dominant-baseline:middle; }
+      .box { fill:#f8fafc; stroke:#475569; stroke-width:3; rx:18; }
+      .base { fill:#eaf2ff; stroke:#315c9b; }
+      .stream { fill:#fff6df; stroke:#9a6a12; }
+      .target { fill:#e7f6ec; stroke:#34734a; }
+      .line { fill:none; stroke:#334155; stroke-width:5; marker-end:url(#arrow); }
+      .t { font-size:28px; font-weight:600; }
+      .small { font-size:25px; fill:#334155; }
+    </style>
+  </defs>
+  <rect width="1000" height="1000" fill="#ffffff"/>
+
+  <rect class="box" x="300" y="24" width="400" height="104"/>
+  <text class="t" x="500" y="60">源 B：在 S 后继续服务写入</text>
+  <text class="small" x="500" y="97">回填与变更捕获来自同一复制起点</text>
+  <path class="line" d="M410 128 L250 166"/>
+  <path class="line" d="M590 128 L750 166"/>
+
+  <rect class="box base" x="30" y="174" width="430" height="124"/>
+  <text class="t" x="245" y="214">一致快照 S</text>
+  <text class="small" x="245" y="256">定义基线包含的已提交状态</text>
+  <path class="line" d="M245 298 L245 342"/>
+  <rect class="box base" x="30" y="350" width="430" height="124"/>
+  <text class="t" x="245" y="390">回填 acct-17 基线</text>
+  <text class="small" x="245" y="432">含 S 时刻的报表、作业和幂等结果</text>
+  <path class="line" d="M245 474 L245 518"/>
+  <rect class="box base" x="30" y="526" width="430" height="112"/>
+  <text class="t" x="245" y="565">D 的基线完整</text>
+  <text class="small" x="245" y="604">这只是重放的前置条件</text>
+
+  <rect class="box stream" x="540" y="174" width="430" height="124"/>
+  <text class="t" x="755" y="214">捕获所有 S 后提交事务</text>
+  <text class="small" x="755" y="256">包含 UPDATE、DELETE 与事务边界</text>
+  <path class="line" d="M755 298 L755 342"/>
+  <rect class="box stream" x="540" y="350" width="430" height="124"/>
+  <text class="t" x="755" y="390">可靠保留变更流</text>
+  <text class="small" x="755" y="432">基线完成前先缓冲，不覆盖快照</text>
+  <path class="line" d="M755 474 L755 518"/>
+  <rect class="box stream" x="540" y="526" width="430" height="112"/>
+  <text class="t" x="755" y="565">按源端提交顺序排队</text>
+  <text class="small" x="755" y="604">重复可识别；缺口则重建起点</text>
+
+  <path class="line" d="M245 638 L245 682 L390 722"/>
+  <path class="line" d="M755 638 L755 682 L610 722"/>
+  <rect class="box target" x="160" y="730" width="680" height="126"/>
+  <text class="t" x="500" y="772">两路只在“基线完整”后汇合</text>
+  <text class="small" x="500" y="818">从 S 起按源端事务顺序重放变更</text>
+  <path class="line" d="M500 856 L500 894"/>
+  <rect class="box target" x="160" y="900" width="680" height="82"/>
+  <text class="t" x="500" y="928">D 原子提交业务效果与连续应用检查点</text>
+  <text class="small" x="500" y="962">校验前不开放应用业务写</text>
+</svg>

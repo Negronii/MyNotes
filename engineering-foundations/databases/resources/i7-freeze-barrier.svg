@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1140" viewBox="0 0 1000 1140" role="img" aria-labelledby="title desc">
+  <title id="title">Source freeze barrier and durable CDC position L</title>
+  <desc id="desc">Stop admitting new source transactions. An op-9 business transaction and a freeze update contend on the same ownership row. If op-9 wins, report-ready and its idempotency result commit before the freeze barrier. If freeze wins, op-9 sees frozen and rolls back. The freeze transaction emits a transactional logical message at L. The target applies source changes and advances a durable checkpoint in the same target transaction, then validates before opening.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="#334155"/></marker>
+    <style>
+      text { font-family:Arial, "PingFang SC", "Heiti SC", sans-serif; fill:#172033; text-anchor:middle; dominant-baseline:middle; }
+      .box { fill:#f8fafc; stroke:#475569; stroke-width:3; rx:18; }
+      .gate { fill:#fff6df; stroke:#9a6a12; }
+      .good { fill:#e7f6ec; stroke:#34734a; }
+      .bad { fill:#fff0ed; stroke:#a54838; }
+      .line { fill:none; stroke:#334155; stroke-width:5; marker-end:url(#arrow); }
+      .rail { fill:none; stroke:#334155; stroke-width:5; }
+      .t { font-size:28px; font-weight:600; }
+      .small { font-size:25px; fill:#334155; }
+    </style>
+  </defs>
+  <rect width="1000" height="1140" fill="#ffffff"/>
+  <rect class="box gate" x="40" y="18" width="920" height="100"/>
+  <text class="t" x="500" y="55">停止准入新的 B/7 业务事务</text>
+  <text class="small" x="500" y="91">已准入或正在等 ownership 行锁的事务仍需由数据库排序</text>
+  <path class="line" d="M500 118 L500 157"/>
+
+  <rect class="box" x="40" y="162" width="920" height="112"/>
+  <text class="t" x="500" y="201">op-9 业务写与冻结 UPDATE 竞争同一行</text>
+  <text class="small" x="500" y="244">业务事务持 FOR SHARE；冻结 UPDATE 与它冲突</text>
+  <path class="rail" d="M500 274 L500 312 M250 312 L750 312"/>
+  <path class="line" d="M250 312 L250 350"/>
+  <path class="line" d="M750 312 L750 350"/>
+
+  <rect class="box good" x="32" y="356" width="436" height="172"/>
+  <text class="t" x="250" y="392">op-9 先持锁并提交</text>
+  <text class="small" x="250" y="434">report-42: queued → ready</text>
+  <text class="small" x="250" y="466">幂等结果与业务更新同事务提交</text>
+  <text class="small" x="250" y="496">随后冻结更新取得行锁</text>
+
+  <rect class="box bad" x="532" y="356" width="436" height="172"/>
+  <text class="t" x="750" y="392">冻结更新先取得行锁</text>
+  <text class="small" x="750" y="434">提交 state=frozen</text>
+  <text class="small" x="750" y="466">op-9 后读到 frozen 并回滚</text>
+  <text class="small" x="750" y="496">没有 ready 更新或幂等结果</text>
+
+  <path class="rail" d="M250 528 L250 568 L500 568 M750 528 L750 568 L500 568"/>
+  <path class="line" d="M500 568 L500 606"/>
+  <rect class="box gate" x="40" y="612" width="920" height="124"/>
+  <text class="t" x="500" y="652">冻结状态与事务性逻辑屏障同一源事务提交</text>
+  <text class="small" x="500" y="698">pg_logical_emit_message(true, ...)，屏障事务的提交位置定义 L</text>
+  <path class="line" d="M500 736 L500 774"/>
+  <rect class="box" x="40" y="782" width="920" height="138"/>
+  <text class="t" x="500" y="822">D 按源事务顺序应用至 L</text>
+  <text class="small" x="500" y="864">写入业务效果，并在同一目标事务推进连续检查点</text>
+  <text class="small" x="500" y="900">未提交检查点不能声称该事务已持久应用</text>
+  <path class="line" d="M500 920 L500 960"/>
+  <rect class="box good" x="40" y="968" width="920" height="160"/>
+  <text class="t" x="500" y="1008">目标连续进度提交到 L 后再做完整性校验</text>
+  <text class="small" x="500" y="1052">确认主键、report-42、作业与幂等效果后，才可切换</text>
+  <text class="small" x="500" y="1092">源端行数、低延迟或单次收到屏障都不足以代替提交检查点</text>
+</svg>
