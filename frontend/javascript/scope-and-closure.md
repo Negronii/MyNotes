@@ -1,36 +1,57 @@
 # JavaScript 作用域与闭包如何保留状态？
 
-标识符查找从当前 lexical environment（词法环境）开始，沿函数定义处的环境向外进行；调用者的局部变量不会插入这条链。closure（闭包）让函数在外层调用结束后仍可读取自己使用的 name binding（名称绑定）及其当前值。先看名称查找路径，再追踪闭包状态如何与调用时的 this 分开。
+**案例背景。** 网页用 `attachLogger` 为按钮注册点击日志；注册函数返回后，用户再点击按钮，callback（回调）为什么仍能读到当时传入的 `label`？scope（作用域）决定一个名称在哪里可见，closure（闭包）让函数以后仍能访问它定义处的绑定。本章沿名称查找、声明初始化和几个延后执行的回调追踪这条路径。ordinary function（普通函数）的 `this` 由调用形式提供；arrow function（箭头函数）没有自己的 `this` 绑定，而是从定义处的外层环境读取。本章的接收者规则只针对普通函数；更多形式见[JavaScript 函数的 `this` 值由什么决定？](./this-and-function-binding.md)。
+
+以下代码块彼此独立。标为 HTML 的代码需要浏览器；计时器例子使用浏览器或 Node.js 提供的计时 API。
 
 ## 名称查找沿函数的定义位置进行
 
-函数不会查找调用者的局部变量。它先查自己的词法环境，再查定义位置外层的环境。调用者仍可传入参数和 `this`，但不会因此成为被调用函数的词法外层作用域。
+当代码读取标识符时，JavaScript 从当前 lexical environment（词法环境）查找对应的 binding（绑定）；当前环境没有该名称才沿外层环境继续。每次调用 `outer` 时，函数体开始执行前的声明实例化会建立 `inner` 的绑定并创建函数对象；它的 `[[Environment]]` 指向这次 `outer` 调用的词法环境。接着函数体才执行，初始化 `label` 并返回这个函数。即使本次 `outer` 调用结束，返回的函数仍能让那份环境可达。`callFromElsewhere` 调用返回值时，才建立 `inner` 本次调用的局部环境。调用者的局部环境不会插入函数定义时建立的查找链；普通函数调用者能提供实参和接收者 `this`，箭头函数则从词法外层读取 `this`。
+
+下面的图只展示 `outer` 已返回、`inner` 又被调用之后的名称查找。`inner` 的局部环境里有 `detail`，没有 `label`；因此查找沿函数对象保留的那次 `outer` 环境继续，而不是沿调用者 `callFromElsewhere` 的局部环境继续。
+
+~~~mermaid
+flowchart TB
+  Q["inner 读取 label"] -->|先查当前环境| I["inner 的词法环境<br/>有 detail；没有 label"]
+  I -->|未找到 label，沿定义时的外层环境查找| O["outer 本次调用的环境<br/>label = outer；命中并停止"]
+~~~
 
 ~~~javascript
 const label = "global";
 
 function outer() {
+  const read = inner;
   const label = "outer";
   function inner() {
     const detail = "inner";
     return [label, detail];
   }
-  return inner;
+  return read;
 }
 
 function callFromElsewhere() {
   const label = "caller";
-  return outer()();
+  const read = outer();
+  return read();
 }
 
 callFromElsewhere(); // ["outer", "inner"]
 ~~~
 
-`inner` 先找到自己的 `detail`，再找到 `outer` 的 `label`；调用者的 `label` 不在这条查找链上。规范用 execution context（执行上下文）和 environment record（环境记录）描述这套行为，引擎不必创建名称和结构完全相同的对象。
+这里的环境节点是语言规范描述名称查找的抽象，不表示引擎必须按相同形状分配 JavaScript 对象。execution context（执行上下文）描述当前正在执行的脚本或函数及其状态；environment record（环境记录）描述绑定与名称查找操作。调用栈告诉我们哪些调用尚未返回，词法链告诉我们一个名称按什么顺序解析；两者相关，但不是同一条链。
 
 ## 声明方式决定绑定范围与初始化时机
 
-`var` 是 function-scoped（函数作用域）。函数环境准备时，其绑定会初始化为 `undefined`；赋值表达式仍在声明出现的位置执行。`if` 等代码块不会为 `var` 创建独立绑定。
+`var`、`let`、`const` 的差异不只是“函数级或块级”：声明先在哪个环境建立绑定、什么时候初始化，也会决定读取结果。
+
+| 声明 | 绑定范围 | 初始化时机 | 重复声明与重新赋值 |
+| --- | --- | --- | --- |
+| `var` | 普通函数作用域；脚本或模块的顶层也有各自范围 | 本节没有同名形参的例子里，声明实例化把新变量绑定初始化为 `undefined`；声明中的初始化式到代码执行至声明处才运行 | 兼容的 `var` 声明可重复；可重新赋值 |
+| `let` | 所在词法作用域，如代码块或脚本、模块顶层 | 进入作用域先建立未初始化绑定；从进入作用域到声明初始化完成是 temporal dead zone（暂时性死区）；无初始化式时到声明处初始化为 `undefined` | 同一词法作用域不能重复声明；可重新赋值 |
+| `const` | 所在词法作用域，如代码块或脚本、模块顶层 | 与 `let` 一样先建立未初始化绑定；从进入作用域到声明初始化完成是暂时性死区；通常必须写初始化式，`for...in` / `for...of` 头部例外 | 同一词法作用域不能重复声明；初始化后不能重新绑定 |
+
+`if` 代码块不会为 `var` 创建新绑定，因此即使声明写在条件块里，函数开头读取的也是已初始化为 `undefined` 的同一个 `status`。`let` 和 `const` 进入代码块时已经有绑定，但初始化前读取会抛出 `ReferenceError`。下例的内层 `let count` 已经遮蔽外层 `count`；查找遇到这个尚未初始化的内层绑定就抛错，不会跳过它再去读外层的 `0`。离开代码块后，外层 `count` 仍为 `0`。`const` 限制变量名重新绑定，不会冻结它指向的对象。
+`for...in` 和 `for...of` 头部的 `const` 由每轮枚举或迭代取出的值初始化；普通 `const` 声明则必须显式写初始化式。
 
 ~~~javascript
 function readBeforeAssignment() {
@@ -40,37 +61,64 @@ function readBeforeAssignment() {
   }
   return status; // "ready"
 }
-~~~
 
-`let` 和 `const` 是 block-scoped（块级作用域）。代码块环境创建时，绑定已经建立，但声明初始化前不可访问；这段时间称为 temporal dead zone（暂时性死区）。普通 `const` 声明必须带初始化式并禁止重新绑定；`for...in` 和 `for...of` 头部的 `const` 则由每轮取出的值初始化。`const` 不会冻结对象。
-同一词法作用域中，`var` 名称可以重复声明；重复声明同名 `let` 或 `const` 会产生语法错误。`let` 可以不写初始化值，此时初始化为 `undefined`。
-
-~~~javascript
+let count = 0;
+let tdzError;
 {
-  // console.log(count); // ReferenceError：仍处于暂时性死区
+  try {
+    count;
+  } catch (error) {
+    tdzError = error.name;
+  }
   let count = 1;
 }
 
 const options = { theme: "light" };
-options.theme = "dark"; // 允许：对象仍可修改
-// options = {};        // TypeError：const 绑定不能重新赋值
+options.theme = "dark";
+let reassignmentError;
+try {
+  options = {};
+} catch (error) {
+  reassignmentError = error.name;
+}
+const statusAfterReturn = readBeforeAssignment();
+[statusAfterReturn, tdzError, count, options.theme, reassignmentError];
+// ["ready", "ReferenceError", 0, "dark", "TypeError"]
 ~~~
 
-绑定本身不会重新赋值时用 `const`，会重新赋值时用 `let`；维护依赖函数作用域的旧代码时才需要 `var`。经典浏览器脚本与 ES 模块、Node.js 模块有不同的顶层环境：经典脚本的顶层 `var` 可以成为全局对象属性，顶层 `let`、`const` 则是全局词法绑定。跨宿主访问当前 Realm（执行域）的全局 `this` 值可用 `globalThis`。浏览器主线程提供 `window` 接口；worker 有自己的 `WorkerGlobalScope`，Node.js 模块也有自己的模块环境。不要把经典脚本规则套用到模块。
+兼容的 `var` 名称可以在同一变量作用域重复声明，但不能与同一作用域内冲突的词法声明混用；重复声明同名 `let` 或 `const` 是语法错误。绑定不需要重新赋值时通常用 `const`，需要重新赋值时用 `let`；维护依赖函数作用域的旧代码时才需要 `var`。
+
+### “顶层”取决于宿主怎样执行代码
+
+浏览器经典脚本、浏览器模块、Node.js CommonJS 和 Node.js ESM 都能声明顶层变量，但它们处在不同的外层环境中。top-level `this`（顶层 `this`）也不总是全局对象；`globalThis` 才是跨这些调用位置访问当前 Realm（执行域）全局 `this` 值的标准入口。
+
+| 运行方式 | 顶层声明 | 顶层 `this` | 宿主全局入口 |
+| --- | --- | --- | --- |
+| 浏览器 classic script（经典脚本，`<script>` 不写 `type="module"`） | `var` 通常成为 `window` 属性；`let` / `const` 是 global lexical binding（全局词法绑定） | 当前全局 `this` 值，即 `window` | `window`、`globalThis` |
+| 浏览器 module script（模块脚本） | `var`、`let`、`const` 都是 module-local binding（模块局部绑定） | `undefined` | `globalThis`；窗口页面另有 `window` |
+| Node.js CommonJS（Node.js 模块格式，简称 CJS） | `var`、`let`、`const` 都是 wrapper-local binding（包装函数内的局部绑定） | 包装函数收到的初始 `exports` 对象 | `globalThis` |
+| Node.js ECMAScript module（ES 模块，简称 ESM） | `var`、`let`、`const` 都是 module-local binding | `undefined` | `globalThis` |
+
+浏览器主线程的 `window` 代表窗口全局；Web Worker（Web 工作线程）有自己的全局环境，可用 `self` 或 `globalThis`，没有 `window`。模块规则与 Node.js 包格式及互操作的更多差异见[ECMAScript 模块与 CommonJS 在语法、加载和运行时有什么不同？](./modules-and-host-boundaries.md)。
 
 ~~~html
 <script>
   var scriptValue = "global object property";
   let scriptBinding = "global lexical binding";
 
-  window.scriptValue; // "global object property"
-  window.scriptBinding; // undefined
+  const browserScriptResults = [
+    window.scriptValue,
+    window.scriptBinding,
+    scriptBinding,
+    this === globalThis,
+  ];
+  // ["global object property", undefined, "global lexical binding", true]
 </script>
 ~~~
 
 ## 闭包保留绑定，而不是冻结快照
 
-每次调用工厂函数都会创建自己的绑定。工厂返回后，返回函数仍可让这些绑定保持可达；之后读取时看到的是同一绑定上最新的值。
+closure（闭包）使函数代码以后仍能访问它定义处可见的绑定。每次调用 `makeCounter(start)` 都会建立参数 `start` 和独立的局部 `value` 绑定。执行到 `let value = start` 时，用 `start` 的值初始化 `value`。返回的函数保留对这份 `value` 的访问。`value++` 先读取旧值，再把加一后的值写回原绑定，然后以旧值作为表达式结果交给调用者。因此第一次调用将 `value` 从 `10` 写成 `11` 并返回 `10`；第二次读取同一绑定时从 `11` 开始。它不是创建时复制下来的快照。
 
 ~~~javascript
 function makeCounter(start) {
@@ -80,11 +128,13 @@ function makeCounter(start) {
 
 const first = makeCounter(10);
 const second = makeCounter(-2);
-[first(), first(), first()];   // [10, 11, 12]
-[second(), second(), second()]; // [-2, -1, 0]
+const firstResults = [first(), first(), first()];
+const secondResults = [second(), second(), second()];
+[firstResults, secondResults];
+// [[10, 11, 12], [-2, -1, 0]]
 ~~~
 
-同一次调用返回的多个闭包可以共享一个绑定。计数器对象中的 `increment`、`decrement` 和 `reset` 可以共同访问一个 `current` 值；`reset` 将同一绑定恢复到初始输入，而不是创建新计数器。
+同一次调用也可以返回多个共享状态的函数。`increment`、`decrement` 和 `reset` 都访问同一份 `current`；`reset` 把该绑定改回输入的初值，不会创建一个新的计数器。
 
 ~~~javascript
 function createCounter(init) {
@@ -102,7 +152,7 @@ const counter = createCounter(5);
 
 ## 报表处理器把闭包状态与调用时接收者结合起来
 
-案例背景：报表服务创建处理器时捕获 `tag` 和 `calls`；每次调用都会更新同一个 `calls` 绑定。`this` 是另一种输入，由调用形式提供；[函数 this 与绑定](./this-and-function-binding.md) 继续说明它如何随方法调用和 `bind` 传递。
+报表服务创建处理器时，工厂函数把 `tag` 和 `calls` 两个词法绑定交给返回的普通函数继续访问。每次方法调用都更新同一份 `calls`；闭包不会顺带捕获普通函数的 `this`。先看 `service.onReport(...)`：成员调用以 `service` 为接收者，所以 `onReport` 里的 `this` 是 `service`。函数体又执行 `this.format(...)` 这个成员调用，于是 `format` 里的 `this` 仍是 `service`。
 
 ~~~javascript
 function makeReportHandler(tag) {
@@ -122,15 +172,30 @@ const service = {
   onReport: makeReportHandler("daily"),
 };
 
-service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #1"
-service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #2"
+const firstReport = service.onReport({ title: "Q4" });
+const secondReport = service.onReport({ title: "Q4" });
+const { onReport } = service;
+let bareCallError;
+try {
+  onReport({ title: "Q4" });
+} catch (error) {
+  bareCallError = error.name;
+}
+const reportAfterBareCall = service.onReport({ title: "Q4" });
+[firstReport, secondReport, bareCallError, reportAfterBareCall];
+// [
+//   "Sales/daily: Q4 #1",
+//   "Sales/daily: Q4 #2",
+//   "TypeError",
+//   "Sales/daily: Q4 #4",
+// ]
 ~~~
 
-`tag` 和 `calls` 是词法状态；`this.prefix`、`this.format` 则通过调用时的接收者解析。处理器闭包保存前者，但它的 `this` 并未固定为某个 `service` 对象。
+裸调时，`onReport` 的严格模式使 `this` 为 `undefined`。函数先执行 `calls += 1`，再读 `this.format` 才抛出 `TypeError`；因此下一次正常服务调用是 `#4`。`tag`、`calls` 来自函数定义时的词法环境；普通函数的 `this` 则由每次调用形式分别提供。箭头函数没有自己的 `this`；若此处把处理器改写成箭头，它会读定义它的外层 `this`，不再随 `service.onReport(...)` 改变。
 
 ## 循环回调需要符合预期数量的绑定
 
-`var` 循环复用一个函数作用域绑定，延后执行的回调都会读到最终值。`let` 循环每轮创建一个绑定，各回调就能读到各自迭代时的值。
+循环把回调保存起来、稍后才调用时，关键是每个回调最后读取的是同一份绑定，还是每轮各自的绑定。`var` 在循环里重复赋值同一份函数作用域绑定；顶层示例里的 `var` 归脚本/模块环境，放进普通函数时则归函数环境。带 `let` 的 `for` 循环会为每轮提供新的绑定：第一轮体读取 `j = 0`，回调记住这份绑定；循环体结束后，语言先把当前值复制到下一轮的新绑定，再在新绑定上执行 `j++`。因此下一轮体是 `1`，第一份回调仍读旧的 `0`。
 
 ~~~javascript
 const fromVar = [];
@@ -139,11 +204,11 @@ for (var i = 0; i < 3; i++) fromVar.push(() => i);
 const fromLet = [];
 for (let j = 0; j < 3; j++) fromLet.push(() => j);
 
-fromVar.map(fn => fn()); // [3, 3, 3]
-fromLet.map(fn => fn()); // [0, 1, 2]
+[fromVar.map(fn => fn()), fromLet.map(fn => fn())];
+// [[3, 3, 3], [0, 1, 2]]
 ~~~
 
-旧式 `var` 代码可用 Immediately Invoked Function Expression（IIFE，立即调用函数表达式）为每轮创建参数绑定；`let` 可以直接表达这种意图。
+旧代码也能用 Immediately Invoked Function Expression（IIFE，立即调用函数表达式）为每轮新建一个函数调用参数绑定。回调读取各自的 `capturedIndex`，所以得到和 `let` 循环相同的结果。
 
 ~~~javascript
 const callbacks = [];
@@ -157,7 +222,7 @@ callbacks.map(fn => fn()); // [0, 1, 2]
 
 ## 工厂函数专门化行为，回调保留捕获值
 
-闭包也可以保留工厂参数，返回专门化后的函数。
+工厂可以把一次调用建立的参数绑定保存在闭包里，返回一个更专用的函数。本例的 `x` 绑定在工厂返回后仍可读，且后续不再赋值；这正是“捕获值”恰好保持不变的条件。同一机制也让延后执行的 callback（回调）读取注册时的参数绑定。
 
 ~~~javascript
 function add(x) {
@@ -170,6 +235,8 @@ const addFive = add(5);
 addFive(3); // 8
 ~~~
 
+下面两段 DOM 代码都要在浏览器页面的 `<body>` 已经存在后运行。注册监听器后，`attachLogger` 已经返回；真实用户可以之后点击按钮。这里用 `dispatchEvent` 在注册函数返回后同步派发事件，监听器会在 `dispatchEvent` 返回前运行。箭头回调读取 `attachLogger` 那次调用创建的 `label` 参数绑定；该绑定之后不再赋值。
+
 ~~~javascript
 function attachLogger(elementId, label) {
   document.getElementById(elementId).addEventListener("click", () => {
@@ -181,9 +248,11 @@ const loggerButton = document.createElement("button");
 loggerButton.id = "btn1";
 document.body.append(loggerButton);
 attachLogger("btn1", "primary");
+loggerButton.dispatchEvent(new MouseEvent("click"));
+// 控制台输出："Clicked: primary"
 ~~~
 
-延后调度的回调可以在多帧之间保留动画参数和计时状态。此例要求 `duration` 为正；每帧都会通过同一个闭包读取 `start`、`element`、`from` 和 `to`。
+animation frame（动画帧）回调也会延后运行。`animate` 每次调用都会建立 `start`、`element`、`from`、`to` 和 `duration` 绑定；这些参数和 `start` 随后不再赋值。`performance.now()` 返回毫秒时间戳，因此 `duration` 也以毫秒计。后续每一帧的 `update` 都从同一次 `animate` 调用读取它们，算出当前位置，再决定是否请求下一帧。代码也必须等页面 `<body>` 已经存在后运行。
 
 ~~~javascript
 function animate(element, from, to, duration) {
@@ -205,16 +274,14 @@ const animatedElement = document.createElement("div");
 animatedElement.textContent = "报表已更新";
 animatedElement.style.position = "relative";
 document.body.append(animatedElement);
-animate(animatedElement, 0, 100, 1000); // 约一秒内从 0px 移到 100px
+animate(animatedElement, 0, 100, 1000); // duration 必须大于 0
 ~~~
 
-`style.left` 对普通静态定位元素不起偏移作用。本例使用 `position: relative`，改变盒子的绘制位置，同时保留它原本在正常流中占据的位置。
+当进度到达 `1` 时，`style.left` 最终为 `100px`，并且不再请求下一帧。`left` 对普通静态定位元素不起偏移作用；本例设置 `position: relative`，只移动绘制位置，不移除元素在正常流中占据的空间。
 
 ## 定时回调怎样用闭包保留调度状态
 
-debounce（防抖）等待连续调用停止后再运行一次；throttle（节流）限制一段时间内最多运行几次。它们可以选择 leading-edge（首沿）、trailing-edge（尾沿）或两者兼有；下面明确实现 trailing-only debounce（仅尾沿防抖）和 leading-only throttle（仅首沿节流）。每次创建包装函数时，它都通过自己的闭包保存计时状态。
-
-本节假设防抖的 `wait` 为非负数、节流的 `interval` 为正数。
+debounce（防抖）在一段静默时间后运行最后一次调用；throttle（节流）则限制调用频率。两者都让返回函数通过闭包保存跨调用状态，但保存内容和更新时机不同。库和自定义包装函数可以选择 leading-edge（首沿）、trailing-edge（尾沿）或两者兼有；下面的实现分别是 trailing-only debounce（仅尾沿防抖）和 leading-only throttle（仅首沿节流）。示例把 `wait` 和 `interval` 设为正整数毫秒数；时间表采用理想时钟推演，不代表任一宿主的实际触发测量或保证。节流的推论只针对正间隔。
 
 ~~~javascript
 function debounce(fn, wait) {
@@ -250,30 +317,32 @@ function throttleLeading(fn, interval) {
 }
 ~~~
 
-`debounce` 每次都先取消旧 timer，再用本次调用的参数和接收者安排 callback，因此静默期结束时执行最新的一次；`.cancel()` 只清掉尚未触发的等待。`throttleLeading` 用 `performance.now()` 读取单调时钟，并用 `null` 表示“还没调用过”：这样即使页面刚开始时读数为 `0`，首次调用仍会立即触发。到达间隔边界时，`now - lastCallAt === interval`，因此该次调用会通过。它先写入 `lastCallAt` 再调用 `fn`；若 `fn` 在距离本次开始仍不足 `interval` 时同步重入，重入会被挡住。若 `fn` 同步耗时达到或超过 `interval` 才重入，则重入会通过；`interval` 为 `0` 时也不会限制同步重入。本节只讨论正间隔。
+`timer` 来自某一次 `debounce(fn, wait)` 调用，并由返回的 `debounced` 闭包跨调用共享。每次进入 `debounced(...args)` 时都会新建这一轮的 `args` 绑定与 `receiver` 绑定；旧计时器被清除后，新计时器的箭头回调访问的就是这次调用的接收者和参数。因而静默期结束时只执行最后一组输入。`.cancel()` 只撤销尚未触发的 timer。`throttleLeading` 用 `performance.now()` 的单调时钟计算间隔，系统校时不会改变这段差值；用 `null` 表示“尚无上次调用时间”，因此即使计时器初始读数为 `0`，第一次调用也会立即通过；到达间隔边界时，差值等于 `interval`，本次也会通过。
 
-以下是一个合成时间线，等待值和间隔均为 100ms。参数 `A`、`B`、`C` 表示不同时刻的搜索词，`page-A` 等是各次调用的接收者；调用列表示两种包装函数各自收到相同的输入：
+下面是理想时钟的合成时间线：等待值与节流间隔都设为 `100ms`，`pageA`、`pageB`、`pageC` 表示不同接收者，包装目标把接收者页面名和搜索词记下来。每一行同时把相同输入交给两个包装函数；这些时刻是便于推演的逻辑时间，不是宿主时钟的测量结果。
 
-| 调用时刻 | 调用 | 防抖结果 | 首沿节流结果 |
-|---:|---|---|---|
-| 0ms | `wrapper.call(pageA, "A")` | 安排在不早于 100ms 时触发 | 立即以 `pageA` 和 `"A"` 执行 |
-| 40ms | `wrapper.call(pageB, "B")` | 重置 timer | 丢弃：距离上次执行 40ms |
-| 110ms | `wrapper.call(pageC, "C")` | 再次重置 timer | 以 `pageC` 和 `"C"` 执行：已过 110ms |
-| 不早于 210ms | 没有新调用 | 以 `pageC` 和 `"C"` 执行 | — |
+| 理想时刻 | 防抖包装函数收到的输入与状态 | 首沿节流包装函数收到的输入与结果 |
+| ---: | --- | --- |
+| `0ms` | `debouncedSearch.call(pageA, "A")`：设置 `100ms` 等待 | `throttledSearch.call(pageA, "A")`：立即以 `pageA` 和 `"A"` 执行，记录上次通过时刻 `0` |
+| `40ms` | `debouncedSearch.call(pageB, "B")`：取消旧 timer，重新等待 `100ms` | `throttledSearch.call(pageB, "B")`：丢弃，距离上次通过 `40ms` |
+| `110ms` | `debouncedSearch.call(pageC, "C")`：再次取消旧 timer，重新等待 `100ms` | `throttledSearch.call(pageC, "C")`：执行，距上次通过 `110ms`，超过间隔 |
+| 自 `210ms` 起 | 若无新调用，timer 以 `pageC` 和 `"C"` 执行 | 没有新调用 |
 
-`setTimeout` 的等待时间是 callback 可运行的门槛，不保证它会在该毫秒准点执行；主线程要先有机会处理 timer task。输入框可在短暂停顿后搜索，滚动监听则可用首沿节流立即更新一次，再在持续滚动时按间隔更新。组件或输入控件销毁时，应移除注册的事件监听器并调用 `debouncedSearch.cancel()`。这只会撤销尚未触发的 callback；若 callback 已经启动 `fetch`，可另行对该请求的 `AbortController` 调用 `abort()`。它会中止客户端 `fetch` 操作，但不会撤回服务端已经收到并开始处理的工作。
+`setTimeout` 接收 delay（延迟）并由宿主安排计时器任务；它不保证回调会在指定的精确时刻触发。隔离复现中，Node.js 26.13.0 的高分辨率时间实测有时观察到略短于传入值的等待，因此上表采用理想时钟，不把时间点当作实际保证。Node.js 26.13 将小于 `1ms` 或大于 `2147483647ms` 的 delay 改为 `1ms`，并截去非整数小数部分；这是 Node 的边界，不可套用为所有宿主的规则。控件销毁时应移除事件监听器并调用 `.cancel()`；它只移除尚未触发的防抖 callback。如果 callback 已经启动 `fetch`，还可以调用该请求 AbortController（中止控制器）的 `abort()`，这会取消客户端操作，但不会撤回服务端已经收到并开始处理的工作。
 
+节流实现先写入 `lastCallAt` 再调用目标函数，所以目标同步重入时会看到这次调用的时间：若重入时仍未经过间隔，会被挡下；若目标同步耗时已达到或超过间隔才重入，重入会通过。`interval` 为 `0` 时该判断不会限制同步重入；本节的节流结论限于正间隔。
 
 ## 闭包生命周期取决于可达性
 
-外层调用返回后，返回函数仍能观察捕获的绑定。这是行为保证，不表示引擎会把所有局部变量永久存入环境对象。长期存在的事件监听器可能通过闭包让数据保持可达；生命周期结束时应移除监听器和其他引用。循环引用本身不足以造成泄漏，关键在于活动程序状态是否仍能到达这些数据。
+外层调用返回后，返回函数仍可观察它使用的绑定，这是行为保证；这不表示引擎必须把所有局部变量永久装进一个环境对象。长期存在的事件监听器可以让闭包与数据继续可达，控件销毁时应移除监听器和其他引用。循环引用本身不等于内存泄漏；需要判断的是活动程序仍能否沿引用到达这些数据。
 
-**相关机制：** [对象与原型](./objects-functions-and-prototypes.md) 将同一报表处理器放入构造出的 service 实例，并说明它如何从原型取得 `format`。
-
+**相关机制：** [JavaScript 对象如何查找属性并组织成员？](./objects-functions-and-prototypes.md) 将同一报表处理器放入服务实例，并说明 `format` 如何从原型查找；[JavaScript 函数的 `this` 值由什么决定？](./this-and-function-binding.md) 解释调用形式怎样提供接收者。
 
 > [!info]- 来源
-> - var、let、const 的作用域和初始化时机：[ECMAScript 2026 Let and Const Declarations](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-let-and-const-declarations)（§14.3.1）；执行上下文与词法环境：[Execution Contexts](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-execution-contexts)（§9.4）。
-> - 闭包对词法环境的引用：[ECMAScript Function Objects](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ecmascript-function-objects)（§10.2）。
-> - 全局 `this` 值与脚本、模块、worker 环境：[ECMAScript globalThis](https://tc39.es/ecma262/2026/multipage/global-object.html#sec-globalthis)、[WHATWG HTML script element](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)、[WHATWG HTML worker global scope](https://html.spec.whatwg.org/multipage/workers.html#the-global-scope)、[Node.js CommonJS modules](https://nodejs.org/api/modules.html) 和 [Node.js ECMAScript modules](https://nodejs.org/api/esm.html)；浏览器事件回调：[WHATWG DOM addEventListener](https://dom.spec.whatwg.org/#dom-eventtarget-addeventlistener)；逐帧回调：[WHATWG HTML requestAnimationFrame](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe)。
-> - 防抖 callback 的计时与取消，以及 `performance.now()` 所用的单调时钟：[WHATWG HTML Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)（Living Standard，核对日期 2026-11-09）、[W3C High Resolution Time `performance.now()`](https://www.w3.org/TR/hr-time-3/#dom-performance-now)（Level 3，核对日期 2026-11-09）。
-> - 请求取消信号与 `fetch` 对中止的响应：[WHATWG DOM — Aborting ongoing activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities)、[Fetch Standard — Aborting a fetch](https://fetch.spec.whatwg.org/#abort-fetch)，核对日期 2026-11-09。
+> - 词法环境、环境记录和标识符查找：[ECMAScript 2026 Execution Contexts](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-execution-contexts)、[Environment Records](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-environment-records)、[GetIdentifierReference](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-getidentifierreference)、[NewFunctionEnvironment](https://tc39.es/ecma262/2026/multipage/executable-code-and-execution-contexts.html#sec-newfunctionenvironment)。
+> - `var`、`let`、`const` 的绑定建立、初始化和声明限制：[ECMAScript 2026 FunctionDeclarationInstantiation](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-functiondeclarationinstantiation)、[Source Text Module Record InitializeEnvironment](https://tc39.es/ecma262/2026/multipage/ecmascript-language-scripts-and-modules.html#sec-source-text-module-record-initialize-environment)、[Let and Const Declarations](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-let-and-const-declarations)、[Variable Statement](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-variable-statement)。
+> - 函数对象保留定义处环境，以及普通函数调用与箭头函数 `this` 的区别：[ECMAScript 2026 Function Objects](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ecmascript-function-objects)、[Arrow Function Definitions](https://tc39.es/ecma262/2026/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions)、[EvaluateCall](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-evaluatecall)、[OrdinaryCallBindThis](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinarycallbindthis)。
+> - `for (let...)` 的每轮绑定复制与更新顺序：[ECMAScript 2026 ForBodyEvaluation](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-forbodyevaluation)、[CreatePerIterationEnvironment](https://tc39.es/ecma262/2026/multipage/ecmascript-language-statements-and-declarations.html#sec-createperiterationenvironment)。
+> - 浏览器经典脚本、模块脚本、DOM 点击与 Web Worker 全局环境：[WHATWG HTML The `script` element](https://html.spec.whatwg.org/multipage/scripting.html#the-script-element)、[Document.body](https://html.spec.whatwg.org/multipage/dom.html#dom-document-body)、[dispatchEvent](https://dom.spec.whatwg.org/#dom-eventtarget-dispatchevent)、[The global scope](https://html.spec.whatwg.org/multipage/workers.html#the-global-scope)（Living Standard，核对日期 2026-11-12）；Node.js [CommonJS module wrapper](https://nodejs.org/api/modules.html#the-module-wrapper) 与 [ECMAScript modules](https://nodejs.org/api/esm.html)（官方文档 26.13.1，实际回放 Node.js 26.13.0）。
+> - 动画帧、计时器时限和延迟任务：[WHATWG HTML `requestAnimationFrame`](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe)、[Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)（Living Standard，核对日期 2026-11-12）、[Node.js Timers: `setTimeout`](https://nodejs.org/api/timers.html#settimeoutcallback-delay-args)（官方文档 26.13.1）；单调时间戳：[W3C High Resolution Time `performance.now()`](https://www.w3.org/TR/hr-time-3/#dom-performance-now)（Level 3，核对日期 2026-11-12）；`position: relative` 的偏移语义：[CSS Positioned Layout Level 3](https://drafts.csswg.org/css-position-3/#valdef-position-relative)（Editor’s Draft，2026-05-14）。
+> - 监听器注册与请求取消边界：[WHATWG DOM `addEventListener`](https://dom.spec.whatwg.org/#dom-eventtarget-addeventlistener)、[Aborting ongoing activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities)、[Fetch Standard Aborting a fetch](https://fetch.spec.whatwg.org/#abort-fetch)，核对日期 2026-11-12。
