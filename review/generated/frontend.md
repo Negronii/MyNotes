@@ -13476,14 +13476,6 @@ debounce 的 `cancel` 只取消尚未执行的函数调用；请求已经开始�
 
 **案例背景。** 用户打开 `/reports?sort=recent#summary`，看到 May、April。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 让服务端返回该顺序；点击 **Oldest first** 后，地址变成 `sort=oldest`，列表为 April、May；按 Back 则回到 recent 和 May、April。测试要验证用户看到的结果、真实地址历史和请求边界；点击事件触发过或内部状态等于某值，都不足以证明整条流程可用。
 
-~~~mermaid
-flowchart LR
-    A[纯函数与契约] --> B[组件交互和异步状态]
-    B --> C[真实浏览器路由与 Back]
-    C --> D[生产构建资源]
-    D --> E[发布同一份已验证产物]
-~~~
-
 ### 先按风险选择测试边界
 
 | 测试边界 | 适合验证 | 报表排序例子 |
@@ -13496,65 +13488,131 @@ flowchart LR
 
 ### 用用户能找到的名称和内容断言
 
-React Testing Library 的查询名称表达等待契约：`getByRole` 表示元素现在应存在且唯一；`queryByRole` 适合断言它不存在；`findByRole` 返回 Promise 并等待元素出现。优先使用角色和可访问名称，避免检查组件内部状态、CSS class 或 hook 调用次数。
+React Testing Library 的查询名称表达等待契约：`getByRole` 表示元素现在应存在且唯一；`queryByRole` 在没有匹配时返回 `null`，适合断言不存在，但有多个匹配仍会抛错；`findByRole` 返回 Promise，等待唯一匹配出现。优先使用角色和可访问名称，避免检查组件内部状态、CSS class 或 hook 调用次数。
 
-组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock 与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](#67.%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E7%8A%B6%E6%80%81%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+组件集成测试可以用 `user-event` 的用户操作模拟器执行点击和键盘交互；异步数据出现时等待可见行或状态，而不是固定睡眠。`waitFor` 的回调必须在未满足时抛出断言错误，返回 `false` 不会要求它重试；也不要把点击等副作用放进会重跑的回调。完整异步 Mock（模拟）与计时例子见[Jest 怎样验证报表请求中的异步状态和结果？](#67.%20Jest%20%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%E6%8A%A5%E8%A1%A8%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E7%8A%B6%E6%80%81%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
 
-React Testing Library 16.3.3 也从 `@testing-library/react` 导出 `renderHook`，可单独验证有复用价值的 Hook 契约；只被一个组件使用的 Hook 通常直接测那个组件更能表达用户行为。Testing Library 的 render 和 user-event helper 已处理一般交互的 React `act` 边界；测试从 helper 外部直接触发更新时，再显式包在 `act` 中。快照适合记录稳定的小结构，较大的快照本身说不清用户需要看到什么，排序和错误行为仍应使用有含义的断言。
+React Testing Library 16.3.3 也从 `@testing-library/react` 导出 `renderHook`，适合单独验证作为复用接口的 Hook 契约；只被一个组件使用的 Hook 通常直接测那个组件，更能表达用户行为。Testing Library 的 `render` 和 `user-event` 操作工具已处理一般交互的 React `act` 边界；测试从这些工具外部直接触发更新时，再显式包在 `act` 中。快照适合记录稳定的小结构，较大的快照本身说不清用户需要看到什么，排序和错误行为仍应使用有含义的断言。
 
 ### 浏览器测试应经过同一条 URL 和 Back 流程
 
-下面的端到端测试是 React Router Data Mode 浏览器 loader 加同源 `/api/reports` 的方案。它假定 Playwright 配置了应用 `baseURL` 与启动待测应用的 `webServer`。`page.route` 只拦截浏览器页面发出的请求；Next Server Component 在服务器进程发出的上游 `fetch` 不会经过它，要为 Next 配置可达的服务端测试上游。此处在浏览器 API 边界按 `sort` 返回固定数据，断言链接、地址、列表和浏览器历史；拦截器中的断言只检查实际出现的请求，URL 和行序断言验证界面行为；它们不证明每次导航一定发生网络调用。若还要证明应用确实接入接口，可增加至少一次拦截命中的断言，或用不会出现在初始静态页面中的 fixture 值。这里不固定请求次数，因为预取、路由再验证或返回历史项可能影响网络调用次数：
+下面的端到端测试约定被测 React Router 数据模式（Data Mode）页面部署在站点根路径，并将 Playwright `baseURL` 指向该站点根地址：浏览器 loader（路由数据加载器）从当前页面 URL 读取唯一的 `sort` 值，向同源 `GET /api/reports?sort=…` 请求报表，再按响应顺序渲染名为“报表”的列表；“Oldest first”链接将地址变为 `/reports?sort=oldest#summary` 并创建历史项，Back 恢复 recent 地址。若应用注册 Service Worker（服务工作线程），还须在 Playwright `use` 配置中阻断它，使 `page.route` 能观察该请求。`page.route` 只拦截浏览器页面发出的请求；Next.js Server Component（服务端组件）在服务器进程发出的上游 `fetch` 不会经过它，要为 Next.js 配置可达的服务端测试上游。
 
-~~~ts
-import { expect, test } from "@playwright/test";
+测试为 recent 和 oldest 两种响应分别设置只会由该响应提供的标记标题。除了检查地址和行序，测试还用精确的来源（origin）与路径名（pathname）限定路由，记录整个流程收到的 `sort` 值，并要求两种排序都至少命中过一次。预取也可以满足该请求要求，所以不固定请求发生在点击的哪个时点或总次数；各页的独有标题则证明页面消费的是对应排序的响应，而不是把 recent 行在客户端反转：
 
-const recentRows = [
-  { id: "may", period: "May", title: "Operations" },
-  { id: "april", period: "April", title: "Finance" }
-];
-const oldestRows = [...recentRows].reverse();
+不用展开代码，可以先核对这三次页面结果：
 
-test("sorts reports and restores the previous URL with Back", async ({ page }) => {
-  await page.route(/\/api\/reports(?:\?.*)?$/, async route => {
-    expect(route.request().method()).toBe("GET");
-    const url = new URL(route.request().url());
-    const sorts = url.searchParams.getAll("sort");
-    expect(sorts).toHaveLength(1);
-    const sort = sorts[0];
-    expect(["recent", "oldest"]).toContain(sort);
-    const rows = sort === "oldest" ? oldestRows : recentRows;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(rows)
-    });
-  });
+| 用户步骤 | 页面地址中的排序 | 应看到的列表 |
+| --- | --- | --- |
+| 打开报表 | `sort=recent` | May、April；两行标题都带 `Recent API:`。 |
+| 点击 Oldest first | `sort=oldest` | April、May；两行标题都带 `Oldest API:`。 |
+| 按 Back | `sort=recent` | 恢复 May、April 及 `Recent API:` 标题。 |
 
-  await page.goto("/reports?sort=recent#summary");
-  const rows = page.getByRole("list", { name: "报表" }).getByRole("listitem");
-  await expect(rows).toHaveText([
-    "May — Operations",
-    "April — Finance"
-  ]);
+三个地址都保留 `#summary`。标题标记只属于测试输入：即使应用发了 oldest 请求，却丢弃响应、只倒序排列旧行，第二步也会因仍显示 `Recent API:` 而失败。
 
-  await page.getByRole("link", { name: "Oldest first" }).click();
-  await expect(page).toHaveURL(/\/reports\?sort=oldest#summary$/);
-  await expect(rows).toHaveText([
-    "April — Finance",
-    "May — Operations"
-  ]);
+> [!example]- 完整 Playwright 浏览器测试
+>
+> ~~~ts
+> import { expect, test } from "@playwright/test";
+>
+> const recentRows = [
+>   {
+>     id: "may-recent",
+>     period: "May",
+>     title: "Recent API: Operations"
+>   },
+>   {
+>     id: "april-recent",
+>     period: "April",
+>     title: "Recent API: Finance"
+>   }
+> ];
+> const oldestRows = [
+>   {
+>     id: "april-oldest",
+>     period: "April",
+>     title: "Oldest API: Finance"
+>   },
+>   {
+>     id: "may-oldest",
+>     period: "May",
+>     title: "Oldest API: Operations"
+>   }
+> ];
+>
+> test(
+>   "sorts reports and restores the previous URL with Back",
+>   async ({ page }) => {
+>     const configuredBaseURL = test.info().project.use.baseURL;
+>     if (typeof configuredBaseURL !== "string") {
+>       throw new Error(
+>         "This test requires a configured Playwright baseURL."
+>       );
+>     }
+>
+>     const appOrigin = new URL(configuredBaseURL).origin;
+>     const reportURL = (sort: "recent" | "oldest") => {
+>       const url = new URL("/reports", configuredBaseURL);
+>       url.searchParams.set("sort", sort);
+>       url.hash = "summary";
+>       return url.href;
+>     };
+>     const servedSorts = new Set<string>();
+>
+>     await page.route(
+>       url =>
+>         url.origin === appOrigin && url.pathname === "/api/reports",
+>       async route => {
+>         expect(route.request().method()).toBe("GET");
+>         const requestURL = new URL(route.request().url());
+>         const sorts = requestURL.searchParams.getAll("sort");
+>         expect(sorts).toHaveLength(1);
+>         const sort = sorts[0];
+>         if (sort !== "recent" && sort !== "oldest") {
+>           throw new Error(
+>             `Unexpected sort value: ${sort ?? "(missing)"}`
+>           );
+>         }
+>         servedSorts.add(sort);
+>         const rows = sort === "oldest" ? oldestRows : recentRows;
+>         await route.fulfill({
+>           status: 200,
+>           contentType: "application/json",
+>           body: JSON.stringify(rows)
+>         });
+>       }
+>     );
+>
+>     await page.goto(reportURL("recent"));
+>     const rows = page
+>       .getByRole("list", { name: "报表" })
+>       .getByRole("listitem");
+>     await expect(rows).toHaveText([
+>       "May — Recent API: Operations",
+>       "April — Recent API: Finance"
+>     ]);
+>
+>     await page.getByRole("link", { name: "Oldest first" }).click();
+>     await expect(page).toHaveURL(reportURL("oldest"));
+>     await expect(rows).toHaveText([
+>       "April — Oldest API: Finance",
+>       "May — Oldest API: Operations"
+>     ]);
+>
+>     await page.goBack();
+>     await expect(page).toHaveURL(reportURL("recent"));
+>     await expect(rows).toHaveText([
+>       "May — Recent API: Operations",
+>       "April — Recent API: Finance"
+>     ]);
+>
+>     expect(servedSorts.has("recent")).toBe(true);
+>     expect(servedSorts.has("oldest")).toBe(true);
+>   }
+> );
+> ~~~
 
-  await page.goBack();
-  await expect(page).toHaveURL(/\/reports\?sort=recent#summary$/);
-  await expect(rows).toHaveText([
-    "May — Operations",
-    "April — Finance"
-  ]);
-});
-~~~
-
-这类测试把 `#summary` 留在页面地址，并让 API 只按查询参数读取排序；浏览器不会把片段发给服务端。URL 断言只证明片段仍在地址栏，不证明页面滚动到了 `id="summary"` 的位置；若页面确有滚动契约，应单独断言锚点与视口位置。DOM 角色查询也只证明可访问树中的结构和名称，不证明屏幕阅读器实际播报。测试应用可以把 `page.route` 换成测试服务或 Mock Service Worker（请求拦截工具），但不要在同一案例里一边 Mock 页面实现、一边又声称覆盖了真实路由。
+这类测试把 `#summary` 留在页面地址，并让 API 只按查询参数读取排序；浏览器不会把片段发给服务端。URL 断言只证明片段仍在地址栏，不证明页面滚动到了 `id="summary"` 的位置；若页面确有滚动契约，应单独断言锚点与视口位置。DOM 角色查询按 DOM 的角色和可访问名称匹配，不证明屏幕阅读器实际播报。`page.route` 不会拦截已被 Service Worker 接管的请求，Playwright 项目配置须让本例可观察到预期的请求，例如设置 `serviceWorkers: "block"`；启用路由还会禁用 HTTP 缓存，因此不能用此 Mock 测试证明浏览器缓存行为。测试应用可以把 `page.route` 换成测试服务或 Mock Service Worker（请求拦截工具），但不要在同一案例里一边 Mock 页面实现、一边又声称覆盖了真实路由。
 
 ### 验证将发布的构建产物
 
@@ -13562,132 +13620,207 @@ test("sorts reports and restores the previous URL with Back", async ({ page }) =
 
 ~~~text
 typecheck -> unit/component tests -> production build
-  -> serve that build -> critical browser journey -> promote the same artifact
+  -> serve that build -> critical browser journey
+  -> promote the same artifact
 ~~~
 
-用接近生产的服务器启动刚生成的构建产物，再执行一次上面的关键用户流程；使用 Vite 时，`vite preview` 可以本地预览刚构建的 `dist`，但官方不把它定位为生产服务器。发布时晋级同一份通过检查的产物，避免重新构建后部署了另一份代码。Source map（源码映射）应绑定发布版本并受控上传；隐藏注释不会自动阻止外部直接访问 map 文件。公共的构建产物晋级、运行时和发布门禁见[应用部署与持续集成及持续交付（CI/CD）](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)，通用测试边界见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)。
+用接近生产的服务器启动刚生成的构建产物，再冷开一个深链或刷新页面，确认实际代码分块（chunk）加载并执行关键用户流程；本例从根路径进入且 Mock 了 API，所以本地构建检查只覆盖该配置下的前端资源与行为。目标部署若使用子路径、不同的单页应用（SPA）回退规则、真实 API 代理或 Service Worker，另在该基础路径（base）与服务器配置下冷开深链/刷新，并按发布风险决定是否使用真实 API。使用 Vite 时，`vite preview` 可以本地预览刚构建的 `dist`，但官方不把它定位为生产服务器。发布时晋级同一份通过检查的产物，避免重新构建后部署了另一份代码。Source map（源码映射）应绑定发布版本并受控上传；若 `.map` 文件仍随产物发布且可从公开路径访问，隐藏 sourceMappingURL 注释本身不会阻止外部直接请求该文件。公共的构建产物晋级、运行时和发布门禁见[应用部署与持续集成及持续交付（CI/CD）](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)，通用测试边界见[软件测试策略](../../engineering-foundations/testing/software-testing-strategy.md)。
 
-> [!info]- 来源与版本核验（React Testing Library 16.3.3；user-event 14.6.8；Playwright 1.65.0；2026-11-06）
-> - React Testing Library 当前包版本：[npm package](https://www.npmjs.com/package/@testing-library/react)，16.3.3；角色查询和异步行为：[ByRole](https://testing-library.com/docs/queries/byrole/)、[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)。
-> - `renderHook` API 与测试单个 Hook 的适用边界：[React Testing Library API](https://testing-library.com/docs/react-testing-library/api/#renderhook)，v16.3.3，核验日期 2026-11-06。
-> - user-event 当前版本：[npm package](https://www.npmjs.com/package/@testing-library/user-event)，14.6.8；用户交互模型：[Introduction](https://testing-library.com/docs/user-event/intro/)，核验日期 2026-11-06。
-> - Playwright 当前包版本：[npm package](https://www.npmjs.com/package/@playwright/test)，1.65.0；浏览器端断言与拦截请求：[Assertions](https://playwright.dev/docs/test-assertions)、[Page route](https://playwright.dev/docs/api/class-page#page-route)，核验日期 2026-11-06。
+> [!info]- 来源与版本核验（React Router 8.5.1；React Testing Library 16.3.3；user-event 14.6.10；Playwright 1.65.0；Vite 8.3.8；2026-11-12）
+> - React Testing Library 当前包版本：[npm package](https://www.npmjs.com/package/@testing-library/react)，16.3.3；角色查询、异步行为、`renderHook` 与 `act`：[ByRole](https://testing-library.com/docs/queries/byrole/)、[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)、[API](https://testing-library.com/docs/react-testing-library/api/)，核验日期 2026-11-12。
+> - user-event 当前版本：[npm package](https://www.npmjs.com/package/@testing-library/user-event)，14.6.10；用户交互模型与假时钟设置：[Introduction](https://testing-library.com/docs/user-event/intro/)、[Options](https://testing-library.com/docs/user-event/options/)，核验日期 2026-11-12。
+> - React Router Data Mode 用 route `loader` 提供组件数据：[Data Loading](https://reactrouter.com/start/data/data-loading)；本例使用 React Router 8.5.1 实跑。
+> - Playwright 当前包版本：[npm package](https://www.npmjs.com/package/@playwright/test)，1.65.0；浏览器端断言、精确请求拦截、URL predicate 与 Service Worker 边界：[Assertions](https://playwright.dev/docs/test-assertions)、[Page route](https://playwright.dev/docs/api/class-page#page-route)、[Network](https://playwright.dev/docs/network)、[Configuration (use)](https://playwright.dev/docs/test-use-options)，核验日期 2026-11-12。
 > - 测试产物服务器配置：[Playwright webServer](https://playwright.dev/docs/test-webserver)。
-> - `vite preview` 用于本地预览构建产物，不是生产服务器：[Vite CLI](https://vite.dev/guide/cli.html#vite-preview)、[Static deployment](https://vite.dev/guide/static-deploy.html)，按 Vite v8.3.5 官方文档核验于 2026-11-06。
+> - Vite 当前包版本：[npm package](https://www.npmjs.com/package/vite)，8.3.8；`vite preview` 用于本地预览构建产物，不是生产服务器：[Vite CLI](https://vite.dev/guide/cli.html#vite-preview)、[Static deployment](https://vite.dev/guide/static-deploy.html)，核验日期 2026-11-12。
 ## 67. Jest 怎样验证报表请求中的异步状态和结果？
 
 **案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](#66.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E6%80%8E%E6%A0%B7%E8%AF%81%E6%98%8E%E6%8A%A5%E8%A1%A8%E6%8E%92%E5%BA%8F%E3%80%81%E5%8E%86%E5%8F%B2%E6%81%A2%E5%A4%8D%E5%92%8C%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%E6%AD%A3%E7%A1%AE%EF%BC%9F)。
 
 ### 测试必须等待承载断言的异步工作
 
-在 Promise 风格的 Jest 测试里，框架会等待测试返回或 `await` 的 Promise；另一种受支持的异步方式是 `done` 回调，不要在同一个测试中混用两种完成协议。若启动请求却不等待，测试可能在断言执行前就结束。`rejects` / `resolves` 自身也会返回 Promise，必须 `return` 或 `await`；不能把同步 `toThrow` 用在已经执行过的调用结果上。
+在 Promise 风格的 Jest 测试里，框架会等待测试返回或 `await` 的 Promise；另一种受支持的异步方式是 `done` 回调，不要在同一个测试中混用两种完成协议。若启动请求却不等待，测试可能在断言执行前就结束。`rejects` / `resolves` 自身也会返回 Promise，必须 `return` 或 `await`；`toThrow` 只检查同步调用抛错，异步拒绝应写成 `await expect(loadReports()).rejects.toThrow("unavailable")`。先按界面契约拆出可观察结果：本例要分别确认点击后旧行保留且显示等待、成功后顺序更新、失败后显示错误并保留旧行；只断言加载函数被调用不能覆盖这些结果。
 
 ### 用用户操作和假时钟控制请求返回
 
-下例用 300 ms 定时器模拟报表服务。运行 TSX 前要配置 `jsdom` 环境及 TypeScript/JSX transformer；测试全局从 `@jest/globals` 显式导入。Fake timers（假时钟）让测试控制响应时机：先点击控件、确认等待状态和旧列表还在，再只推进所需时间，最后检查新行序。这个小组件仅用于隔离请求状态；真正的 sort URL 与 Back 由浏览器测试覆盖：
+下例用 300 ms 定时器模拟报表服务。运行 TypeScript JSX（TSX）前要配置独立的 `jest-environment-jsdom` 套件、`testEnvironment: "jsdom"` 和 TypeScript/JSX transformer（代码转换器）；Jest 默认 `node` 环境没有 Document Object Model（文档对象模型，DOM）。此代码按 Babel `@babel/preset-react` 的自动 JSX 运行时（automatic runtime）编译，并保留 Jest 默认的 `injectGlobals: true`，让 React Testing Library 自动注册的 `afterEach(cleanup)` 生效。本例以这两项配置为前提；若使用传统 JSX（classic runtime），生成 `React.createElement` 的 TSX 模块还须导入 `React`。测试全局从 `@jest/globals` 显式导入。Fake timers（假时钟）让测试控制响应时机：先点击控件、确认等待状态和旧列表还在，再只推进所需时间，最后检查新行序。这个小组件仅用于隔离请求状态；真正的 sort URL 与 Back 由浏览器测试覆盖：
 
-~~~tsx
-import { useState } from "react";
-import { act, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import "@testing-library/jest-dom/jest-globals";
-import { afterEach, beforeEach, expect, jest, test } from "@jest/globals";
+这组测试里的时间由测试推进，页面仍通过正常的 Promise 与 React 更新路径变化：
 
-type SortOrder = "recent" | "oldest";
-type Report = { id: string; period: string; title: string };
-type LoadReports = (sort: SortOrder) => Promise<Report[]>;
+| 测试操作 | 被测组件发生什么 | 此时断言什么 |
+| --- | --- | --- |
+| 渲染初始组件 | 使用 recent 的旧行。 | 后续步骤以 May、April 为基线。 |
+| 点击 Oldest first，暂不推进 300 ms | `loadReports("oldest")` 返回尚未兑现的 Promise；组件进入 loading。 | 请求参数为 oldest；等待提示出现，May、April 仍在。 |
+| 在 `act` 中推进 300 ms | timer 兑现 Promise，处理函数续跑，React 提交新行并结束 loading。 | April、May 已出现，等待提示消失。 |
+| 另一独立用例：请求直接拒绝 | 组件捕获错误，保留初始旧行并结束 loading。 | 等到错误提示出现，检查 May、April 仍在且没有等待提示。 |
 
-const recentRows: Report[] = [
-  { id: "may", period: "May", title: "Operations" },
-  { id: "april", period: "April", title: "Finance" }
-];
-const oldestRows = [...recentRows].reverse();
+> [!example]- 完整组件与 Jest 异步测试代码
+>
+> ~~~tsx
+> import { useState } from "react";
+> import {
+>   act,
+>   render,
+>   screen,
+>   within
+> } from "@testing-library/react";
+> import userEvent from "@testing-library/user-event";
+> import "@testing-library/jest-dom/jest-globals";
+> import {
+>   afterEach,
+>   beforeEach,
+>   expect,
+>   jest,
+>   test
+> } from "@jest/globals";
+>
+> type SortOrder = "recent" | "oldest";
+> type Report = { id: string; period: string; title: string };
+> type LoadReports = (sort: SortOrder) => Promise<Report[]>;
+>
+> const recentRows: Report[] = [
+>   { id: "may", period: "May", title: "Operations" },
+>   { id: "april", period: "April", title: "Finance" }
+> ];
+> const oldestRows = [...recentRows].reverse();
+>
+> function ReportPanel({
+>   loadReports
+> }: { loadReports: LoadReports }) {
+>   const [rows, setRows] = useState(recentRows);
+>   const [loading, setLoading] = useState(false);
+>   const [error, setError] = useState(false);
+>
+>   async function showOldest() {
+>     setLoading(true);
+>     setError(false);
+>     try {
+>       setRows(await loadReports("oldest"));
+>     } catch {
+>       setError(true);
+>     } finally {
+>       setLoading(false);
+>     }
+>   }
+>
+>   return (
+>     <section>
+>       <button
+>         type="button"
+>         disabled={loading}
+>         onClick={() => void showOldest()}
+>       >
+>         Oldest first
+>       </button>
+>       {loading && <p role="status">正在读取 oldest 排序…</p>}
+>       {error && <p role="alert">报表读取失败。</p>}
+>       <ol aria-label="报表" aria-busy={loading}>
+>         {rows.map(report => (
+>           <li key={report.id}>{report.period} — {report.title}</li>
+>         ))}
+>       </ol>
+>     </section>
+>   );
+> }
+>
+> beforeEach(() => {
+>   jest.useFakeTimers();
+> });
+>
+> afterEach(() => {
+>   jest.runOnlyPendingTimers();
+>   jest.useRealTimers();
+> });
+>
+> test(
+>   "keeps the visible rows pending, then shows the oldest order",
+>   async () => {
+>     const loadReports = jest.fn<LoadReports>(
+>       sort =>
+>         new Promise(resolve => {
+>           setTimeout(
+>             () =>
+>               resolve(
+>                 sort === "oldest" ? oldestRows : recentRows
+>               ),
+>             300
+>           );
+>         })
+>     );
+>     const user = userEvent.setup({
+>       advanceTimers: jest.advanceTimersByTime
+>     });
+>
+>     render(<ReportPanel loadReports={loadReports} />);
+>     await user.click(
+>       screen.getByRole("button", { name: "Oldest first" })
+>     );
+>
+>     expect(loadReports).toHaveBeenCalledWith("oldest");
+>     expect(screen.getByRole("status")).toBeInTheDocument();
+>     const list = screen.getByRole("list", { name: "报表" });
+>     const rowsText = () =>
+>       within(list)
+>         .getAllByRole("listitem")
+>         .map(row => row.textContent);
+>     expect(rowsText()).toEqual([
+>       "May — Operations",
+>       "April — Finance"
+>     ]);
+>
+>     await act(async () => {
+>       await jest.advanceTimersByTimeAsync(300);
+>     });
+>
+>     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+>     expect(rowsText()).toEqual([
+>       "April — Finance",
+>       "May — Operations"
+>     ]);
+>   }
+> );
+>
+> test(
+>   "shows an alert and keeps the old rows when loading rejects",
+>   async () => {
+>     const loadReports = jest.fn<LoadReports>()
+>       .mockRejectedValue(new Error("service unavailable"));
+>     const user = userEvent.setup({
+>       advanceTimers: jest.advanceTimersByTime
+>     });
+>
+>     render(<ReportPanel loadReports={loadReports} />);
+>     await user.click(
+>       screen.getByRole("button", { name: "Oldest first" })
+>     );
+>
+>     const alert = await screen.findByRole("alert");
+>     expect(alert).toHaveTextContent("报表读取失败。");
+>     const list = screen.getByRole("list", { name: "报表" });
+>     const rowsText = () =>
+>       within(list)
+>         .getAllByRole("listitem")
+>         .map(row => row.textContent);
+>     expect(rowsText()).toEqual([
+>       "May — Operations",
+>       "April — Finance"
+>     ]);
+>     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+>   }
+> );
+> ~~~
 
-function ReportPanel({ loadReports }: { loadReports: LoadReports }) {
-  const [rows, setRows] = useState(recentRows);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-
-  async function showOldest() {
-    setLoading(true);
-    setError(false);
-    try {
-      setRows(await loadReports("oldest"));
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <section>
-      <button type="button" disabled={loading} onClick={() => void showOldest()}>
-        Oldest first
-      </button>
-      {loading && <p role="status">正在读取 oldest 排序…</p>}
-      {error && <p role="alert">报表读取失败。</p>}
-      <ol aria-label="报表" aria-busy={loading}>
-        {rows.map(report => (
-          <li key={report.id}>{report.period} — {report.title}</li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-test("keeps the visible rows pending, then shows the oldest order", async () => {
-  const loadReports = jest.fn<LoadReports>(
-    sort =>
-      new Promise(resolve => {
-        setTimeout(
-          () => resolve(sort === "oldest" ? oldestRows : recentRows),
-          300
-        );
-      })
-  );
-  const user = userEvent.setup({
-    advanceTimers: jest.advanceTimersByTime
-  });
-
-  render(<ReportPanel loadReports={loadReports} />);
-  await user.click(screen.getByRole("button", { name: "Oldest first" }));
-
-  expect(loadReports).toHaveBeenCalledWith("oldest");
-  expect(screen.getByRole("status")).toBeInTheDocument();
-  const list = screen.getByRole("list", { name: "报表" });
-  expect(within(list).getAllByRole("listitem").map(row => row.textContent))
-    .toEqual(["May — Operations", "April — Finance"]);
-
-  await act(async () => {
-    await jest.advanceTimersByTimeAsync(300);
-  });
-
-  expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  expect(within(list).getAllByRole("listitem").map(row => row.textContent))
-    .toEqual(["April — Finance", "May — Operations"]);
-});
-~~~
-
-`user-event` 在输入或点击过程中也会安排定时任务；启用 Jest 假时钟时，把 `jest.advanceTimersByTime` 传给 `userEvent.setup`。不要用 `delay: null` 绕过假计时器。对只需立即完成的服务 Mock 可用 `mockResolvedValue`；需要验证防抖或加载延迟时，让 Mock Promise 用明确的定时器解决，并调用 `advanceTimersByTimeAsync`。异步定时器 API 会让 Promise 回调有机会执行，旧式 fake timers 不支持它。
+`user-event` 在输入或点击过程中也会安排定时任务；启用 Jest 假时钟时，把 `jest.advanceTimersByTime` 传给 `userEvent.setup`。不要用 `delay: null` 绕过假计时器。对只需立即完成的服务 Mock 可用 `mockResolvedValue`；需要验证防抖或加载延迟时，让 Mock Promise 用明确的定时器解决，并调用 `advanceTimersByTimeAsync`。现代假时钟的异步定时器 API 会让已排入的 Promise 回调有机会在计时器推进时执行；旧式 fake timers 不支持它。每例结束时先调用 `runOnlyPendingTimers` 再恢复真实计时器，可避免第三方库留下的定时任务泄漏到后续测试或清理代码。
 
 此处推进 300 ms 会让定时器调用 Mock Promise 的 `resolve`；`act` 再等 React 把 `setRows` 和 `setLoading(false)` 提交到 DOM，之后同步查询才观察得到 April、May 和消失的等待提示。按钮在 `loading` 时禁用，因此本例定义的是一次只处理一个请求；若产品允许连续切换或重试，要另测并发返回次序和过期结果保护。
 
-当目标元素本来就不存在且需要异步出现时，`findByRole` 返回等待 Promise；如果整条断言需要重试，用 `waitFor`，其回调应在未满足时抛错。固定等待 1 秒既慢又不说明等的是什么。组件请求失败的测试应再用 `mockRejectedValue` 并确认用户能找到 `role="alert"`，不要只断言 Mock 曾经被调用。
+当目标元素本来就不存在且需要异步出现时，`findByRole` 返回等待 Promise；如果整条断言需要重试，用 `waitFor`，其回调应在未满足时抛错。固定等待 1 秒既慢又不说明等的是什么。代码中的失败分支使用 `mockRejectedValue`，等待可见 `role="alert"`，并确认 May、April 旧行仍在、等待提示已消失；这能检查拒绝是否映射成页面状态。
 
 ### Mock 要停在真实依赖边界
 
-`jest.fn` 可记录参数、调用和 Promise 结果；例如 `mock.results[0].value` 是 Mock 返回的 Promise 对象，不是它之后兑现的报表数组。组件例最后断言的是 Promise 结算后用户实际看到的行序。`jest.spyOn(object, method)` 默认仍会执行原实现，需调用 `mockReturnValue` / `mockImplementation` 才替换，并在测试后用 `mockRestore` 恢复。普通函数 Mock（模拟函数）应断言业务代码如何处理 May、April，不要只复述自己设置了什么结果。
+`jest.fn` 可记录参数、调用和 Promise 结果；例如 `mock.results[0].value` 是 Mock 返回的 Promise 对象，不是它之后兑现的报表数组。组件例最后断言的是 Promise 结算后用户实际看到的行序。`jest.spyOn(object, method)` 创建 spy（监视函数），默认仍会执行原实现，需调用 `mockReturnValue` / `mockImplementation` 才替换，并在测试后用 `mockRestore` 恢复。普通函数 Mock（模拟函数）应断言业务代码如何处理 May、April，不要只复述自己设置了什么结果。
 
-在 Babel 或其他转换为 CommonJS（通用模块系统）的配置中，`jest.mock` 可能由 transformer（代码转换器）提升到导入前。原生 ECMAScript Module（ECMAScript 模块，ESM）的静态导入先执行，Mock 必须在动态导入被测模块前登记：
+在 Babel 转换为 CommonJS（通用模块系统）的配置中，`babel-jest` 会把 `jest.mock` 提升到导入前；不要把这一转换行为假设为所有 transformer（代码转换器）的通用规则。ECMAScript Module（ECMAScript 模块，ESM）的静态导入先执行；本例用 `unstable_mockModule` 显式登记 factory 时，应先登记它，再动态导入被测模块：
 
 ~~~javascript
 import { jest } from "@jest/globals";
@@ -13699,7 +13832,7 @@ jest.unstable_mockModule("./report-api.js", () => ({
 const { reportsLoader } = await import("./reports-loader.js");
 ~~~
 
-`reports-loader.js` 应在模块中导入 `./report-api.js` 的 `fetchReports`；测试先登记该依赖的 Mock，再动态导入真正使用它的 loader。`unstable_mockModule` 仍带 unstable 前缀，模块 ESM Mock 方式要和项目的 Jest 版本、Node 运行时以及 transformer 配置一致。Jest 30.5.2 对 Node 24.9+ 同步可求值的 ESM 图也有 automock 和手写 Mock 支持；包含顶层 await 或异步 resolver（模块解析器）/ transformer 的图仍要按当前 ESM 文档选方法。
+`reports-loader.js` 应在模块中导入 `./report-api.js` 的 `fetchReports`；测试先登记该依赖的 Mock，再动态导入真正使用它的 loader。Jest 30.5 的 ESM 测试支持整体仍标为实验性，`unstable_mockModule` 也带 unstable 前缀；原生 ESM 测试还须关闭转换或让 transformer 输出 ESM，并用 Node 的 `--experimental-vm-modules` 启动 Jest。示例只展示 mock 登记顺序，实际 `.mjs` 文件或 `type: "module"` 配置须与项目一致。Jest 30.5.2 对 Node 24.9+ 同步可求值的 ESM 图也支持 automock（自动 Mock）和手写 Mock；包含顶层 `await` 或异步 resolver（模块解析器）/ transformer 的图仍要按当前 ESM 文档选方法。
 
 ### 断言要匹配数据结构和观察方式
 
@@ -13713,16 +13846,17 @@ const { reportsLoader } = await import("./reports-loader.js");
 
 Mock 清理方法不会互相替代：
 
-| 方法 | 清除什么 | 保留什么 |
-|---|---|---|
-| `jest.clearAllMocks()` | 调用、实例与结果记录 | Mock 的实现与返回值设置 |
-| `jest.resetAllMocks()` | 调用记录和 Mock 实现 | spy 仍被替换；需要另行恢复原属性 |
-| `jest.restoreAllMocks()` | `spyOn` / 替换属性保存的原实现 | 独立创建或手动赋值的 `jest.fn()` 不会自动还原 |
+- `jest.clearAllMocks()` 清空调用、上下文、实例与结果记录，保留 Mock 实现和一次性返回值设置。
+- `jest.resetAllMocks()` 清空调用记录并重置 Mock 实现；`spyOn` 目标仍指向替换后的 Mock，不会恢复原属性。
+- `jest.restoreAllMocks()` 把 `spyOn` / `replaceProperty` 改过的对象属性恢复为原方法或原值。独立的 `jest.fn()` 和手动赋值不会自动还原；已保存的 spy 变量仍是 Mock 引用，对象属性恢复不会清空这条引用的调用记录。
 
 `beforeAll` / `afterAll` 可为整组测试打开和关闭共享资源；`beforeEach` / `afterEach` 负责逐测试建立和恢复假时钟、spy 与 DOM；不要让一个用例的调用记录或待处理计时器泄漏到另一个用例。Jest 的 `--coverage` 报告哪些分支执行过，不代表断言已验证了用户要的 May/April 顺序、错误恢复或历史行为。
 
-> [!info]- 来源与版本核验（Jest 30.5.2；React Testing Library 16.3.3；user-event 14.6.8；2026-11-06）
-> - 当前包版本及发行记录：[Jest v30.5.2 release](https://github.com/jestjs/jest/releases/tag/v30.5.2)，2026-09-18。
-> - 定时器 Mock、推进时钟以及异步 timer API：[Timer Mocks](https://jestjs.io/docs/timer-mocks)、[Jest Object API](https://jestjs.io/docs/jest-object)，Jest 30.5.2，核验日期 2026-11-06。
-> - 函数 Mock、spy 和 ESM 模块 Mock：[Mock Functions](https://jestjs.io/docs/mock-functions)、[ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules)，Jest 30.5.2，核验日期 2026-11-06。
-> - 假时钟下的用户操作、异步查询和重试断言：[user-event setup options](https://testing-library.com/docs/user-event/options/)、[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)，核验日期 2026-11-06。
+> [!info]- 来源与版本核验（Jest 30.5.2；React Testing Library 16.3.3；user-event 14.6.10；jest-dom 7.0.1；2026-11-12）
+> - 当前包版本：[Jest](https://www.npmjs.com/package/jest)，30.5.2；[`jest-environment-jsdom`](https://www.npmjs.com/package/jest-environment-jsdom)，30.5.2；[React Testing Library](https://www.npmjs.com/package/@testing-library/react)，16.3.3；[user-event](https://www.npmjs.com/package/@testing-library/user-event)，14.6.10；[jest-dom](https://www.npmjs.com/package/@testing-library/jest-dom)，7.0.1，均按 npm registry 核验于 2026-11-12。Jest 30.5.2 的发行时间为 2026-09-18：[release](https://github.com/jestjs/jest/releases/tag/v30.5.2)。
+> - Jest 的 Promise 测试、显式全局导入与环境设置：[Globals](https://jestjs.io/docs/api)、[Configuring Jest](https://jestjs.io/docs/configuration)，Jest 30.5，核验日期 2026-11-12。
+> - 例子所用的 JSX automatic runtime 与 RTL 自动 cleanup 前提：[Babel preset-react runtime](https://babeljs.io/docs/babel-preset-react#runtime)、[Jest `injectGlobals`](https://jestjs.io/docs/configuration#injectglobals-boolean)、[RTL cleanup](https://testing-library.com/docs/react-testing-library/api/#cleanup)，核验日期 2026-11-12。
+> - 现代/legacy 假时钟、异步 timer API 与 `runOnlyPendingTimers`：[Timer Mocks](https://jestjs.io/docs/timer-mocks)、[Jest Object API](https://jestjs.io/docs/jest-object)，Jest 30.5，核验日期 2026-11-12。
+> - Mock 返回记录、`spyOn`、清理与恢复：[Mock Functions](https://jestjs.io/docs/mock-function-api)、[Jest Object API](https://jestjs.io/docs/jest-object)，Jest 30.5，核验日期 2026-11-12。
+> - `babel-jest` 的 mock 提升与 ESM 静态导入、`unstable_mockModule`、Node 24.9+ automock 的边界：[Manual Mocks](https://jestjs.io/docs/manual-mocks)、[ECMAScript Modules](https://jestjs.io/docs/ecmascript-modules)，Jest 30.5，核验日期 2026-11-12。
+> - 用户操作中的假时钟推进及其回调签名：[user-event Options](https://testing-library.com/docs/user-event/options/)，v14.6.10；`findBy`、`waitFor` 的重试条件和等待 Promise：[Async Methods](https://testing-library.com/docs/dom-testing-library/api-async/)；`act`、自动 cleanup：[React Testing Library API](https://testing-library.com/docs/react-testing-library/api/)，核验日期 2026-11-12。
