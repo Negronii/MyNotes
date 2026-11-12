@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="290" viewBox="0 0 700 290" role="img" aria-labelledby="title desc">
+  <title id="title">报表列表的错误边界范围</title>
+  <desc id="desc">报表页把排序工具栏放在错误边界外，把列表放在边界内。虚线表示组件树中的父子连接；列表 render 抛错后，橙色箭头表示列表被 fallback 替换；工具栏仍挂载。当前排序为 oldest，列表顺序是 April、May。</desc>
+  <defs>
+    <marker id="replacement-arrow" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1,1 L10,6 L1,11 Z" fill="#a45b26" />
+    </marker>
+  </defs>
+  <rect width="700" height="290" fill="#ffffff" />
+  <g fill="#ffffff" stroke="#315a6a" stroke-width="2">
+    <rect x="235" y="14" width="230" height="62" rx="10" />
+    <rect x="28" y="126" width="238" height="92" rx="10" fill="#eef5f8" />
+    <rect x="302" y="94" width="370" height="176" rx="12" fill="#f7fafb" stroke="#386679" />
+    <rect x="322" y="182" width="142" height="72" rx="8" fill="#eef5f8" />
+    <rect x="523" y="182" width="130" height="72" rx="8" fill="#fff3e8" stroke="#a45b26" />
+  </g>
+  <g fill="none" stroke="#607a84" stroke-width="2" stroke-dasharray="6 5">
+    <path d="M350 76 V89 H147 V118" />
+    <path d="M350 76 V86 H487 V88" />
+  </g>
+  <path d="M464 218 H514" fill="none" stroke="#a45b26" stroke-width="2" marker-end="url(#replacement-arrow)" />
+  <g fill="#24343b" font-family="system-ui, -apple-system, sans-serif" font-size="19" text-anchor="middle">
+    <text x="350" y="39" font-size="22">ReportsShell</text>
+    <text x="350" y="61">（报表页仍挂载）</text>
+    <text x="147" y="162" font-size="22">排序工具栏</text>
+    <text x="147" y="190">边界外，仍显示</text>
+    <text x="487" y="119" font-size="22">ReportBoundary</text>
+    <text x="487" y="141">（最近仍挂载的边界）</text>
+    <text x="393" y="166">此子树 render 抛错</text>
+    <text x="393" y="213" font-size="22">ReportsList</text>
+    <text x="393" y="238">April · May</text>
+    <text x="588" y="213" font-size="22">fallback</text>
+    <text x="588" y="238">替代列表</text>
+  </g>
+</svg>
