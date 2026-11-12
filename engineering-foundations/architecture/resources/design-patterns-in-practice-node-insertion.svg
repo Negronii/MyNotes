@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="500" viewBox="0 0 1120 500" role="img" aria-labelledby="title desc">
+  <title id="title">页面编辑器插入节点的责任顺序</title>
+  <desc id="desc">插入命令经过工厂创建默认节点，再由编辑策略校验；只有校验通过才提交新文档修订。校验失败时原文档和视图通知保持不变。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L11,6 L1,11 z" fill="#29435c"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L11,6 L1,11 z" fill="#a53c3c"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #182536; }
+      .title { font-size: 30px; font-weight: 700; }
+      .head { font-size: 25px; font-weight: 700; }
+      .body { font-size: 21px; }
+      .small { font-size: 19px; }
+      .box { stroke: #29435c; stroke-width: 3; rx: 18; }
+      .line { fill: none; stroke: #29435c; stroke-width: 4; marker-end: url(#arrow); }
+      .fail { fill: none; stroke: #a53c3c; stroke-width: 4; marker-end: url(#arrow-red); }
+    </style>
+  </defs>
+  <rect width="1120" height="500" fill="#ffffff"/>
+  <text class="title" x="36" y="48">插入标题：先验证，再提交，再通知</text>
+
+  <rect class="box" x="36" y="126" width="238" height="145" fill="#eef3f8"/>
+  <text class="head" x="155" y="168" text-anchor="middle">插入命令</text>
+  <text class="body" x="155" y="208" text-anchor="middle">工具栏 / 粘贴</text>
+  <text class="body" x="155" y="239" text-anchor="middle">快捷键</text>
+
+  <path class="line" d="M279 199 H312"/>
+
+  <rect class="box" x="321" y="126" width="238" height="145" fill="#e7f0fb"/>
+  <text class="head" x="440" y="168" text-anchor="middle">工厂</text>
+  <text class="body" x="440" y="208" text-anchor="middle">text="" · level=2</text>
+  <text class="small" x="440" y="239" text-anchor="middle">生成 node-1</text>
+
+  <path class="line" d="M564 199 H597"/>
+
+  <rect class="box" x="606" y="126" width="238" height="145" fill="#f0ecfa"/>
+  <text class="head" x="725" y="168" text-anchor="middle">编辑策略</text>
+  <text class="body" x="725" y="208" text-anchor="middle">检查节点结构</text>
+  <text class="small" x="725" y="239" text-anchor="middle">不执行发布门禁</text>
+
+  <path class="line" d="M849 199 H882"/>
+
+  <rect class="box" x="891" y="126" width="193" height="145" fill="#e8f4ec"/>
+  <text class="head" x="987" y="168" text-anchor="middle">提交修订</text>
+  <text class="body" x="987" y="208" text-anchor="middle">12 → 13</text>
+  <text class="small" x="987" y="239" text-anchor="middle">随后通知视图</text>
+
+  <path class="fail" d="M725 276 V342"/>
+  <text x="751" y="316" font-size="19" font-weight="600" fill="#8d3030">校验失败</text>
+  <rect class="box" x="569" y="354" width="312" height="104" fill="#fff0ef" stroke="#a53c3c"/>
+  <text x="725" y="394" text-anchor="middle" font-size="23" font-weight="700" fill="#842d2d">拒绝这次编辑</text>
+  <text x="725" y="428" text-anchor="middle" font-size="19" fill="#842d2d">修订仍为 12；不通知视图</text>
+
+</svg>

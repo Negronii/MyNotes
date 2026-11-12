@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="640" viewBox="0 0 1120 640" role="img" aria-labelledby="title desc">
+  <title id="title">文档修订通知及视图订阅生命周期</title>
+  <desc id="desc">状态所有者提交修订 13 后交给文档通知器。通知器把同一修订传给画布和检查器。视图挂载时注册监听，卸载时调用取消函数。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L11,6 L1,11 z" fill="#29435c"/>
+    </marker>
+    <marker id="arrow-teal" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L11,6 L1,11 z" fill="#176b67"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #182536; }
+      .title { font-size: 30px; font-weight: 700; }
+      .head { font-size: 25px; font-weight: 700; }
+      .body { font-size: 21px; }
+      .small { font-size: 19px; }
+      .box { stroke: #29435c; stroke-width: 3; rx: 18; }
+      .solid { fill: none; stroke: #29435c; stroke-width: 4; marker-end: url(#arrow); }
+      .sub { fill: none; stroke: #176b67; stroke-width: 4; stroke-dasharray: 10 8; marker-end: url(#arrow-teal); }
+    </style>
+  </defs>
+  <rect width="1120" height="640" fill="#ffffff"/>
+  <text class="title" x="36" y="48">一个已提交修订，两个视图各自订阅</text>
+
+  <rect class="box" x="383" y="83" width="354" height="126" fill="#e8f4ec"/>
+  <text class="head" x="560" y="128" text-anchor="middle">文档状态所有者</text>
+  <text class="body" x="560" y="166" text-anchor="middle">持有当前修订：12 → 13</text>
+  <path class="solid" d="M560 214 V259"/>
+  <text x="586" y="243" font-size="19" font-weight="600" fill="#29435c">提交后发送</text>
+
+  <rect class="box" x="383" y="272" width="354" height="126" fill="#e7f0fb"/>
+  <text class="head" x="560" y="317" text-anchor="middle">DocumentNotifier</text>
+  <text class="body" x="560" y="354" text-anchor="middle">只持有订阅者集合</text>
+  <text class="small" x="560" y="383" text-anchor="middle">不拥有文档或发布规则</text>
+
+  <path class="solid" d="M492 403 C440 443 337 454 257 486"/>
+  <path class="solid" d="M628 403 C680 443 783 454 863 486"/>
+
+  <rect class="box" x="68" y="493" width="300" height="92" fill="#f0ecfa"/>
+  <text class="head" x="218" y="532" text-anchor="middle">画布视图</text>
+  <text class="small" x="218" y="563" text-anchor="middle">挂载注册 / 卸载取消</text>
+  <rect class="box" x="752" y="493" width="300" height="92" fill="#f0ecfa"/>
+  <text class="head" x="902" y="532" text-anchor="middle">检查器视图</text>
+  <text class="small" x="902" y="563" text-anchor="middle">挂载注册 / 卸载取消</text>
+
+  <path class="sub" d="M110 493 V310 H383"/>
+  <path class="sub" d="M1010 493 V310 H737"/>
+  <text x="36" y="617" font-size="19" fill="#29435c">实线：提交后通知修订 r13。</text>
+  <text x="372" y="617" font-size="19" fill="#176b67">虚线箭头：视图注册监听；卸载时调用返回的取消函数。</text>
+</svg>

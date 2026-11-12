@@ -8462,84 +8462,193 @@ RCU 是读侧与生命周期协议，不是把普通 `list_for_each_entry_safe` 
 > - `std::list` 标准只规定容器语义与复杂度：[C++ 工作草案 list.overview](https://eel.is/c++draft/list.overview)；GCC 15.2.0 样本的 list node 在节点内用对齐存储保存 T：[libstdc++ `stl_list.h`](https://github.com/gcc-mirror/gcc/blob/releases/gcc-15.2.0/libstdc%2B%2B-v3/include/bits/stl_list.h)。
 ## 50. 如何让设计原则减少真实的修改成本？
 
-以下用一个合成的通用页面编辑器案例说明原则：用户可以添加标题和按钮、拖动节点、预览并发布页面。需求可能增加新的组件类型，也可能改变保存方式、预览表现或权限规则。设计的关键不是提前把所有细节都变成接口，而是识别哪些变化会一起发生、哪些变化应彼此独立，然后只为高频或高代价的变化建立边界。
+以下用一个完全合成的页面编辑器案例说明：编辑者可以添加标题和按钮节点，编辑器负责校验节点配置、生成画布预览，并保存文档。现在产品提出新增图片节点，规定发布时必须填写非空 alt text（替代文本）。表单尚未填写时仍将字段保留为空字符串，编辑者可以预览并保存草稿；只有发布某个具体修订时，发布门禁才检查这项规则。本例把所有图片都列入这条合成发布政策；真实产品还需区分装饰图，装饰图适合使用空 `alt`。替代文本应随图片用途决定。
 
-设计原则是判断边界的工具。若一个原则无法指出当前代码中哪种改动会扩散，以及边界如何缩小扩散范围，它就还没有给出引入抽象的理由。
+假设现有文档格式已能保存新节点的 `type` 与 `props`，不用改存储契约。节点仍保留稳定 `id`、`children`，文档有独立修订号；下面的最小示例只展开展示分发、预览和发布所需字段。若真实存储结构只允许固定类型，新类型也必须纳入存储契约。
 
-~~~mermaid
-flowchart TD
-    Change["需求变化"] --> Question["会迫使哪些模块一起改？"]
-    Question --> Evidence["重复规则 / 依赖方向 / 行为契约"]
-    Evidence --> Boundary["建立最小而稳定的边界"]
-    Boundary --> Cost["计算新增间接层与维护成本"]
-    Cost --> Decision{"减少的修改成本<br/>是否大于新增成本？"}
-    Decision -->|是| Keep["保留边界"]
-    Decision -->|否| Simplify["直接实现，待真实变化出现"]
-~~~
+设计原则是追踪变化传播的判断工具。先确认本次规则实际会改哪些代码，再看同一次改动是否迫使不相关的调用者、规则或发布单元一起变。抽象只有在它能缩小这种传播、且收益大于新边界的维护成本时才值得保留。
 
 ### 单一职责：按共同变化原因聚合
 
-**Single Responsibility Principle（单一职责原则，SRP）**关注模块是否有多个彼此独立的变化原因，而不是类里是否只有一个方法。页面编辑器的节点持久化规则与画布阴影样式可能由不同需求驱动，因此可以归入文档存储与呈现模块。反过来，把每个字段都拆成类，会让理解一次简单修改要跳过许多文件。
+**Single Responsibility Principle (单一职责原则，SRP)** 不是要求一个类只能有一个方法，而是提醒我们不要把会因不同业务要求而变化的规则绑在一起。Robert C. Martin 将它表述为模块只有一个变化理由，并把变化理由连到提出需求的业务方或维护方。
 
-判断时列出真实的变更来源：谁提出变化、哪条规则必须同步修改、哪些调用者只关心其中一部分。只有当这些来源相对独立，且当前耦合确实让修改变贵时，再拆分职责。
+回到编辑器：发布规则可能要求修订中的图片有非空替代文本；设计系统则可能要求画布改变图片圆角和阴影。前者属于指定修订是否可发布的规则，后者属于视觉呈现。如果画布渲染函数也检查发布用的非空 `alt`，未完成的草稿就无法预览；如果保存入口复用发布门禁，草稿也不能保存。按实际变化来源分开草稿结构校验与预览、发布修订的完整性检查，视觉样式改动便不会改变草稿能否编辑或预览。
+
+反过来，不能因为类里有两个名词就机械拆分。若只有一个简单的预览函数，且校验与生成视图总是作为同一次规则变化，拆成数个接口、文件和对象只会增加追踪路径。先列出这次变更由谁提出、哪条保证要同步修改、哪些调用者只依赖其中一部分；只有共同变化的证据出现，职责边界才有依据。
 
 ### 开闭：为已知的变化点留扩展位置
 
-**Open/Closed Principle（开闭原则，OCP）**主张让稳定部分能在预期变化点扩展，而不是每增加一种情况都改动核心。它不是“永远不修改旧代码”，也无法预先关闭所有未来变化。
+**Open/Closed Principle (开闭原则，OCP)** 的目标是让一个相对稳定的模块可以沿已知变化点扩展，尽量不必改动它的核心。它并不要求代码永远不修改，也不能让未预料的需求自动适配。
 
-若编辑器已经支持标题、按钮两种组件，并且类型校验和渲染逻辑各不相同，可以把定义按类型注册。下面的 `renderNode` 只演示类型分发；调用前由通用文档 schema 确认 `node` 和 `props` 是对象、`type` 是字符串，注册表负责识别受支持类型并校验该类型字段：
+假设当前渲染入口按 `heading`、`button` 类型分支；新增 `image` 时，这个入口必须再加一个分支。按类型校验也有同样的问题。若“增加组件类型”已成为反复发生的变化，可以把类型定义与校验、渲染行为登记在一个受约束的注册表中。调用方只查找对应定义，不必随着每种类型增加新的中央分支：
 
-~~~javascript
-const definitions = new Map([
-  ['heading', {
-    validate: node => typeof node.props.text === 'string',
-    render: node => ({ tag: 'h2', text: node.props.text }),
-  }],
-  ['button', {
-    validate: node => typeof node.props.label === 'string',
-    render: node => ({ tag: 'button', text: node.props.label }),
-  }],
-]);
+注册表为每种类型分别保存 `validateDraft`（草稿检查）、`render`（预览）和 `validatePublish`（发布检查）。统一入口先按 `type` 取定义，再调用当前阶段需要的行为。同一图片节点因此能得到下面两种结果：
 
-function renderNode(node) {
-  const definition = definitions.get(node.type);
-  if (!definition) throw new RangeError('unsupported component type');
-  if (!definition.validate(node)) throw new TypeError('invalid node');
-  return definition.render(node);
-}
-~~~
+| 图片修订 | 草稿检查 | 画布预览与草稿保存 | 发布该修订 |
+| --- | --- | --- | --- |
+| 13：`alt: ''` | 通过，字段类型完整 | 生成 `<img alt="">` 描述符；文档所有者保存修订 13 | 发布门禁拒绝 13；已发布修订仍为 12 |
+| 14：`alt: '页面结构图'` | 通过，字段类型完整 | 预览同一节点的新属性；文档所有者保存修订 14 | 发布门禁接受 14，可切换活动发布版本 |
 
-新类型可以通过同一契约加入，渲染入口不必增加另一条类型分支。若现在只有一种节点，普通条件判断也许更清楚。扩展点仍需维护命名、契约和注册时机。
+> [!example]- 注册表如何同时服务草稿预览、保存和发布
+>
+> ~~~javascript
+> const definitions = new Map([
+>   ['heading', {
+>     validateDraft: node => (
+>       typeof node.props.text === 'string' &&
+>       Number.isInteger(node.props.level) && node.props.level >= 1 && node.props.level <= 6
+>     ),
+>     validatePublish: () => true,
+>     render: node => ({ tag: 'h' + node.props.level, text: node.props.text }),
+>   }],
+>   ['button', {
+>     validateDraft: node => typeof node.props.label === 'string',
+>     validatePublish: () => true,
+>     render: node => ({ tag: 'button', text: node.props.label }),
+>   }],
+>   ['image', {
+>     validateDraft: node => (
+>       typeof node.props.src === 'string' && typeof node.props.alt === 'string'
+>     ),
+>     validatePublish: node => node.props.alt.trim().length > 0,
+>     render: node => ({ tag: 'img', src: node.props.src, alt: node.props.alt }),
+>   }],
+> ]);
+>
+> function definitionFor(node) {
+>   if (
+>     !node || typeof node !== 'object' || typeof node.id !== 'string' ||
+>     typeof node.type !== 'string' || !node.props || typeof node.props !== 'object' ||
+>     Array.isArray(node.props) || !Array.isArray(node.children)
+>   ) throw new TypeError('invalid node structure');
+>
+>   const definition = definitions.get(node.type);
+>   if (!definition) throw new RangeError('unsupported component type');
+>   if (!definition.validateDraft(node)) throw new TypeError('invalid draft node');
+>   return definition;
+> }
+>
+> function renderNode(node) {
+>   return definitionFor(node).render(node);
+> }
+>
+> function commitDraft(document, node) {
+>   definitionFor(node);
+>   return {
+>     ...document,
+>     revision: document.revision + 1,
+>     nodes: [...document.nodes, node],
+>   };
+> }
+>
+> function saveDraft(document, drafts) {
+>   for (const node of document.nodes) definitionFor(node);
+>   drafts.set(document.revision, document);
+>   return document.revision;
+> }
+>
+> let publishedRevision = 12;
+> function publishRevision(revision, drafts) {
+>   const document = drafts.get(revision);
+>   if (!document) throw new RangeError('draft revision not found');
+>   for (const node of document.nodes) {
+>     const definition = definitionFor(node);
+>     if (!definition.validatePublish(node)) throw new TypeError('publication requirements not met');
+>   }
+>   publishedRevision = revision;
+>   return publishedRevision;
+> }
+>
+> const revision12 = {
+>   revision: 12,
+>   nodes: [
+>     { id: 'heading-1', type: 'heading', props: { text: '首页', level: 1 }, children: [] },
+>     { id: 'button-1', type: 'button', props: { label: '报名' }, children: [] },
+>   ],
+> };
+> const imageDraft = {
+>   id: 'image-1', type: 'image',
+>   props: { src: '/media/diagram.png', alt: '' }, children: [],
+> };
+> const drafts = new Map();
+> const revision13 = commitDraft(revision12, imageDraft);
+> const savedRevision13 = saveDraft(revision13, drafts);
+> const preview13 = renderNode(imageDraft);
+> let publicationError;
+> try {
+>   publishRevision(13, drafts);
+> } catch (error) {
+>   publicationError = error.name;
+> }
+> console.log(JSON.stringify({
+>   preview13, savedRevision13, publicationError, publishedRevision,
+> }));
+>
+> const completedImage = {
+>   ...imageDraft,
+>   props: { ...imageDraft.props, alt: '页面结构图' },
+> };
+> const revision14 = {
+>   ...revision13,
+>   revision: 14,
+>   nodes: revision13.nodes.map(node => node.id === completedImage.id ? completedImage : node),
+> };
+> const savedRevision14 = saveDraft(revision14, drafts);
+> const preview14 = renderNode(completedImage);
+> const acceptedRevision = publishRevision(14, drafts);
+> console.log(JSON.stringify({ preview14, savedRevision14, publishedRevision: acceptedRevision }));
+> ~~~
+
+`definitionFor` 先确认节点形状与编辑期契约。新增图片只需登记草稿字段规则、预览描述符与发布条件；统一的画布渲染、修订保存和发布遍历都从同一注册表读取定义，不必再增加 `image` 分支。登记仍是代码变更；OCP 的收益是避免修改所有既有调用路径。
+
+草稿结构要求 `alt` 是字符串，因此表单未填写时存为 `''`，而不是缺少字段。`renderNode` 只执行草稿结构检查并返回可预览的 `<img>` 描述符；文档所有者把它保存为修订 13。发布者按修订号读取已保存的 13，再运行发布门禁，所以空 `alt` 会阻止公开，而不会撤销草稿保存。填写替代文本产生修订 14，预览与保存继续成功，发布检查才允许将活动发布修订推进到 14。代码输出中修订 13 的 `publishedRevision` 仍为 12。`drafts` 只是演示按修订读写的内存 Map；本例修改时新建对象，保存后不再改写旧对象。Map 自身不会复制或冻结对象，真实版本保存还需由文档持久化层落实。
+
+本例为突出类型分发而把 `nodes` 写成数组；完整的根节点顺序、ID 索引、样式及树约束见[页面文档和发布快照的数据模型](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。真实服务端仍应对发布请求重新检查其权威修订与输入，不依赖浏览器的即时检查。
+
+如果只有一两个稳定类型，`switch` 通常更直观。注册表也有维护成本：类型、校验器与渲染器必须保持一致，错误处理和注册时机也需要约定。等到类型变更在多个入口重复扩散，再引入边界通常比提前设计插件系统更有证据。
 
 ### 里氏替换：子类型不能改变调用者依赖的行为
 
-**Liskov Substitution Principle（里氏替换原则，LSP）**关注行为契约：调用者依赖基类或接口的保证，替代实现也应满足。若渲染器承诺每个已注册组件都能渲染，某个“只供预览”的子类型不能在普通渲染时突然抛出未支持异常；可以把预览能力单独建模为接口或可选能力。
+**Liskov Substitution Principle (里氏替换原则，LSP)** 讨论的是行为契约，而不只是继承关系或相同的方法名。若调用者依赖 `NodeRenderer.render(node)` 对每个满足已登记类型草稿契约的节点（包括未发布草稿）都能同步返回预览描述符，那么子类型也必须满足这份保证。
 
-判断替换关系时要看前置条件、后置条件和不变量，不只是方法名与类型签名。若某个子类型要求调用者先做额外检查，它可能不属于同一可替换集合。Liskov 与 Wing 对行为子类型的描述强调，这是一种语义关系。
+假设画布按同步的 `NodeRenderer.render(node)` 契约工作，现有实现 `DefaultNodeRenderer` 能为合法远程图片返回预览描述符。若把传给画布的实现换成它的子类型 `ImagePreviewRenderer`，而该子类型要求调用者先下载图片并对同一合法输入抛出“暂不支持”，画布便无法安全地用子类型替代原实现。这个子类型收紧了调用者的前置条件，违反了原契约。若当前仍要求同步返回，图片子类型可以返回 `<img>` 描述符，让画布或浏览器继续加载资源；若产品必须等待加载结果，就要共同修改 `render` 契约为异步结果，并让现有调用者处理加载状态，不能只在子类型里悄悄改变行为。
+
+判断替换关系时，列清前置条件、后置保证、错误结果和状态不变量：子类型不能要求调用者额外准备条件，也不能撤回基类已经承诺的结果。Liskov 与 Wing 的形式化定义把这些可观察行为与类型不变量一并纳入；它帮助识别“看起来像一种节点、实际却不能安全替换”的设计。
 
 ### 接口隔离与依赖倒置：按调用者需要定义契约
 
-**Interface Segregation Principle（接口隔离原则，ISP）**要求按客户端实际使用的能力切分契约。画布只需要“把节点渲染成视图”，发布服务需要“校验并序列化文档”；若两者都被迫依赖包含编辑、渲染、保存和发布的大接口，修改与测试都会牵动无关能力。
+**Interface Segregation Principle (接口隔离原则，ISP)** 针对调用者被迫依赖自己不用的能力。画布只需把节点渲染成视图；发布流程需要校验文档并持久化；如果两者都依赖一个同时含编辑、渲染、校验、存储和发布方法的大接口，任何一方的变化都可能拉动另一方重新编译、测试或部署。
 
-**Dependency Inversion Principle（依赖倒置原则，DIP）**让高层策略和底层细节通过稳定契约协作。发布流程表达“保存已校验修订”，存储适配器负责具体数据库调用。**dependency injection（依赖注入）**可以把适配器传给流程，但它只是组织依赖的一种技术，不等同于依赖倒置。
+可以按稳定的调用角色拆分契约，例如让画布依赖 `NodeRenderer`，让发布流程依赖 `DocumentValidator` 与 `DocumentWriter`。这不等于为每个类和每个调用点都新建专属接口；Martin 特别提醒接口也可能切得过细，造成数量和关系难以维护。
 
-只有在替换存储、隔离测试或改变部署方式是真实需求时，这条边界才值得存在。若应用只有一个简单内存存储，数层接口可能只增加跳转。
+**Dependency Inversion Principle (依赖倒置原则，DIP)** 解决的是依赖箭头：发布模块定义自己需要的 `DocumentWriter` 契约，数据库适配器引用并实现它；运行时的组合入口把适配器交给发布流程，发布流程仍只调用 `writer.write(revision)`。依赖方向因此从数据库细节指向发布模块的契约，而不是发布策略直接依赖具体数据库驱动。
+
+**dependency injection (依赖注入)** 可以把 `DocumentWriter` 传给发布流程，但它只是传递依赖的方式，不等于依赖倒置本身。若文档只写入一个很简单的内存对象，既无替换需求，也无测试隔离收益，再包几层接口并不会自动让设计更好。
 
 ### DRY、KISS 与 YAGNI 如何约束抽象？
 
-DRY（Don't Repeat Yourself，不重复同一知识）针对必须保持一致的规则重复，不要求所有相似代码都合并。标题文本和按钮标签都用字符串，不表示它们需要相同业务模型；但“组件类型是否允许发布”的规则若复制在预览与发布两处，就容易不一致。
+DRY (Don't Repeat Yourself，不重复同一知识)要消除的是同一知识被多处独立维护的风险，不是让长得相似的代码必须合并。标题文本和按钮标签都恰好是字符串，却代表不同配置；把它们合成一个含糊的 `text` 字段可能让调用者更难判断含义。相反，如果“哪些节点可以发布”的同一政策被编辑预览与发布流程各自维护，两个列表就可能逐渐不一致，应找出真正的政策所有者或共同契约。用户端即时提示与服务端权威校验即使内容相似，也可能需要分别执行，因为它们处在不同信任边界。Hunt 与 Thomas 将 DRY 定义为让每份知识在系统中只有一个清楚且权威的表示；如果需求变更必须在多个位置以不同形式同步更新，就出现了重复知识。
 
-KISS（Keep It Simple，保持简单）要求方案与当前问题的复杂度相称。YAGNI（You Aren't Gonna Need It，尚未需要的能力先不实现）提醒团队别为没有证据的未来需求造扩展接口。它们不要求忽略已发生的耦合：当一次变更反复影响多处，抽象收益就有了证据。
+KISS (Keep It Simple，保持简单)要求方案与当前变化规模相称。YAGNI (You Aren't Gonna Need It，尚未需要的能力先不实现)提醒我们不要仅凭假想的插件需求预建多层接口。若添加一种固定节点只需一条清楚的分支，直接写分支更易维护；如果同类需求已反复要求同时修改创建、校验和渲染入口，再把这些变化收拢到可验证的扩展点。
 
 ### 用变化案例决定边界
 
-新增图片组件时，依次问：它是否有不同配置、校验或渲染语义？规则未来是否会独立变化？所有调用者是否都需要了解图片逻辑？注册表是否真的减少改动范围？若答案支持稳定变化点，注册表可能有用；若只是固定页面的一次分支，直接写条件更好。
+现在沿同一图片节点走一遍。草稿结构要求 `alt` 字段存在且是字符串；空字符串可以预览并保存。发布服务按明确修订读取草稿，再检查这项合成产品规则：本例要求每张图片发布时 `alt` 非空。
 
-[前端架构怎样划分呈现、交互和数据所有权？](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)讨论状态归属；[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)展示工厂、策略和通知怎样落实边界。
+这条路径中，失败的是针对修订 13 的发布请求，不是编辑提交、画布渲染或草稿保存。浏览器中的即时提示只帮助编辑者尽早发现问题；发布服务仍需对选定修订权威校验，不能信任客户端已运行的检查。`alt` 规则仅为本例政策：装饰图或与邻近文本重复的图片可以用空 `alt`，真实产品应依据图片用途定义发布条件。
+
+谁把通过草稿检查的插入请求提交为新修订？由文档所有者负责，编辑会话只表达变更意图；修订、撤销、保存和发布快照见[页面文档和发布快照的数据模型](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)，状态由谁持有见[前端架构怎样划分呈现、交互和数据所有权？](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)再展示工厂、策略和观察者如何落实创建、校验与通知边界。
+
+是否采用注册表，取决于变化轨迹：第一次新增类型且只有一处调用时，直接分支更简单；若多个类型连续要求改动同一批入口，注册表会让校验和渲染扩展集中。继续观察每次新增是否真只需一条定义、是否把一致性问题转移到了注册表和类型声明；当扩展机制本身开始变复杂，就应重新评估边界。
 
 > [!info]- 来源
-> - 行为子类型的契约基础：[Barbara Liskov 与 Jeannette Wing, A Behavioral Notion of Subtyping](https://www.cs.cmu.edu/~wing/publications/LiskovWing94.pdf)。
-> - OCP、SRP 等面向对象原则讨论：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
+> - **SRP 的变化理由。** Robert C. Martin, “The Single Responsibility Principle,” 2014-05-08，讨论 Parnas 的变化决策封装和按变化请求来源划分模块：[原文](https://blog.cleancoder.com/uncle-bob/2014/05/08/SingleReponsibilityPrinciple.html)，尤其是 “What defines a reason to change?” 至结尾。
+> - **OCP、LSP、DIP 与 ISP。** Robert C. Martin, “Design Principles and Design Patterns,” 2000，OCP pp. 4–8、LSP pp. 8–12、DIP pp. 12–14、ISP pp. 14–16：[原文 PDF](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。文中把这些原则应用到页面编辑器的注册表、存储边界和调用者契约，是本章的合成工程案例。
+> - **行为子类型。** Barbara H. Liskov 与 Jeannette M. Wing, “A Behavioral Notion of Subtyping,” *ACM Transactions on Programming Languages and Systems*, 16(6), 1994, pp. 1811–1841；第 5.2 节的不变量、方法前后置条件与约束规则：[论文 PDF](https://www.cs.cmu.edu/~wing/publications/LiskovWing94.pdf)。
+> - **DRY。** Andy Hunt 与 Dave Thomas, *The Pragmatic Programmer: Your Journey to Mastery*, 20th Anniversary Edition, 第 9 节 “The Evils of Duplication”；DRY 要求每份知识在系统中有单一、清楚且权威的表示：[节选 PDF](https://media.pragprog.com/titles/tpp20/dry.pdf)。
+> - **客户端与服务端校验。** OWASP *Input Validation Cheat Sheet* 的 “Client-only checks” 指出客户端检查适合即时反馈，但可被绕过；服务端仍须执行权威校验：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)。
+> - **装饰图片替代文本。** W3C WAI 的 alt 决策树指出，装饰图或与邻近文字重复的图片可以使用空 `alt`；本例的非空发布规则是产品假设而非通用无障碍要求：[原文](https://www.w3.org/WAI/tutorials/images/decision-tree/)。
+> - **YAGNI。** Martin Fowler 将 YAGNI 描述为暂不实现尚未需要的功能，并提醒未使用的扩展点会增加当前复杂度：[原文](https://martinfowler.com/bliki/Yagni.html)。
 ## 51. 前端架构怎样划分呈现、交互和数据所有权？
 
 以下沿用合成的页面编辑器案例：画布显示文档树，检查器编辑当前节点属性，工具栏新增组件，预览页呈现访客看到的页面。如果各处各存一份节点数据，拖动或重命名就可能让它们失步。架构应先说明每份状态由谁拥有、哪些模块能发出修改，再决定组件怎样拆分或代码如何部署。
@@ -8624,17 +8733,17 @@ unidirectional data flow（单向数据流）让状态所有者把当前数据�
 > - 同源历史写入、恢复与 `popstate`：[WHATWG HTML Standard, History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，持续更新规范，核对日期 2026-11-09。
 ## 52. 页面编辑器何时需要设计模式？
 
-沿用合成的页面编辑器案例，编辑者要创建标题、按钮等节点，为不同类型校验配置，通知画布和检查器刷新，并共享组件定义。**design pattern（设计模式）**为这些重复结构取名，但模式本身不会替你决定状态所有者、权限边界或对象生命周期。先说清问题，再看模式是否能让变化集中而仍容易跟踪。
+案例使用一份合成的页面编辑器文档：当前修订为 12，已有 `heading-1` 和 `button-1`；编辑者从工具栏插入标题，画布与检查器都要看到新修订。**design pattern（设计模式）**给反复出现的对象协作方式命名，但模式不会替系统决定谁拥有文档、哪些规则只在发布时检查，或订阅何时结束。**GoF（Gang of Four，四人帮）**原著也把适用情境、约束、结果和取舍作为模式说明的一部分，并以文档编辑器作案例；它不是可机械套用的类图。
 
-模式有代价：额外类型、注册步骤、调用层和清理责任。若间接层没有减小真实修改范围，普通函数或条件分支更清楚。
+先找出哪种变化正在重复。如果一次普通函数调用或稳定的条件分支已经让修改范围清楚，多加对象、注册步骤和清理责任只会增加跳转。下面三个 JavaScript 代码块按出现顺序在同一模块中运行；工厂产出的 `heading` 会直接交给策略和状态所有者。
 
 ### 创建规则变多时，用工厂集中入口
 
-**factory（工厂）**把创建规则放在一处：生成稳定 ID、填入默认属性并拒绝未知类型。它通常先是一个函数，不必马上设计成复杂层级。这样的简单工厂函数不自动等同于《设计模式》中的 Factory Method（工厂方法）或 Abstract Factory（抽象工厂）模式。
+工具栏、粘贴和快捷键都能创建标题。若每个入口都各自填写默认属性、分配 ID（标识符），节点形状会逐渐不一致。此时 **factory（工厂）**适合集中这些创建规则；最初通常只是一个函数。
 
 ~~~javascript
 const defaults = new Map([
-  ['heading', { text: '新标题', level: 2 }],
+  ['heading', { text: '', level: 2 }],
   ['button', { label: '按钮', variant: 'primary' }],
 ]);
 
@@ -8644,93 +8753,220 @@ function createNode(type) {
   const initialProps = defaults.get(type);
   if (!initialProps) throw new RangeError('unknown component type');
   if (!Number.isSafeInteger(nextId)) throw new RangeError('node ID counter exhausted');
+
   const id = 'node-' + nextId;
   nextId += 1;
   return { id, type, props: { ...initialProps }, children: [] };
 }
 
 const heading = createNode('heading');
-// heading.id === 'node-1'; createNode('constructor') throws RangeError
+console.log(JSON.stringify(heading));
+try {
+  createNode('constructor');
+} catch (error) {
+  console.log(error.name);
+}
 ~~~
 
-多个入口若各自生成默认字段和 ID，很容易得到不一致节点，共用入口就有价值。若只在一处创建固定对象，直接写对象更简单。这里的 Number 计数器只在当前模块运行期间有效；越过安全整数范围时工厂会停止发号。可持久化文档或协作编辑还需要跨重启、跨窗口不冲突的 ID 生成方案。工厂生成的草稿并不代表权限或发布校验已经完成。
+这段程序输出一个 `node-1` 标题草稿，文本初始为空、层级为 2；`createNode('constructor')` 输出 `RangeError`。空文本是编辑期默认值，后续策略会检查字段类型和层级，但不把发布要求塞进节点创建。`Map` 只接受显式注册的组件类型，因此不会把对象原型上的同名属性误当作可创建类型。若整个页面只有一处创建固定对象，直接写对象字面量更清楚。
+
+这里的计数器只在本次运行中分配不重复的安全整数。刷新、跨窗口协作或多个写入者并发时，它不能保证全局唯一；持久化系统需由文档状态或专门的 ID 方案处理。对象创建后若未通过后续编辑校验，计数器也可能留下空号，这不影响唯一性。这个简单函数也不是 GoF 中的 **Factory Method（工厂方法）**或 **Abstract Factory（抽象工厂）**：前者让子类决定实例化哪个类，后者创建相关对象族；本例没有这类变化需求。
 
 ### 行为可互换时，用策略
 
-**strategy（策略）**把不同算法放进同一调用契约。编辑器可按组件类型选择配置校验器；通用 schema 已先确认 node 是对象、type 是字符串且 props 是对象，这些策略只检查对应类型的特有字段并返回错误集合。
+当组件类型各自有不同的编辑期结构规则，而且新增规则需要避免挤进一个不断增长的条件块时，可以把校验行为放进类型对应的函数。**strategy（策略）**让调用方通过同一契约使用这些可替换的算法。
 
 ~~~javascript
-const validators = new Map([
-  ['heading', node => (
-    typeof node.props.text === 'string' ? [] : ['标题文本必须是字符串']
-  )],
+const editableValidators = new Map([
+  ['heading', node => {
+    const errors = [];
+    if (typeof node.props.text !== 'string') errors.push('标题文本必须是字符串');
+    if (!Number.isInteger(node.props.level) || node.props.level < 1 || node.props.level > 6) {
+      errors.push('标题层级必须是 1 到 6 的整数');
+    }
+    return errors;
+  }],
   ['button', node => (
-    typeof node.props.label === 'string' ? [] : ['按钮需要标签']
+    typeof node.props.label === 'string' ? [] : ['按钮标签必须是字符串']
   )],
 ]);
 
-function validateNode(node) {
-  const validate = validators.get(node.type);
+function validateEditableNode(node) {
+  const validate = editableValidators.get(node.type);
   return validate ? validate(node) : ['未知组件类型：' + node.type];
 }
 
-validateNode({
-  id: 'button-1',
-  type: 'button',
-  props: { label: '发布' },
-});
-// []
+function previewDraftNode(node) {
+  const errors = validateEditableNode(node);
+  if (errors.length > 0) throw new TypeError('invalid draft node');
+  return { type: node.type, props: { ...node.props } };
+}
+
+const invalidHeading = {
+  ...heading,
+  props: { ...heading.props, level: 8 },
+};
+console.log(JSON.stringify({
+  headingErrors: validateEditableNode(heading),
+  invalidHeadingErrors: validateEditableNode(invalidHeading),
+  preview: previewDraftNode(heading),
+}));
 ~~~
 
-调用者不需要理解每种组件的检查细节。新增策略是否真的避免集中式分支，取决于注册、类型管理和错误契约是否也统一。若规则少而稳定，普通 `switch` 可能更好。策略不能取代输入校验或授权检查。
+输出中空标题的编辑错误列表是 `[]`，同一 `node-1` 的 8 级变体返回 `['标题层级必须是 1 到 6 的整数']`；预览保留空文本和 2 级结构。状态所有者会直接调用 `validateEditableNode(node)`，而不是信任调用者另传一个错误列表。来自服务器或外部文件的节点，还要先通过通用结构解析；这里的策略只校验已解析节点的类型特有字段，也不负责授权。
+
+编辑合法性与发布门槛必须由不同流程负责。当前空标题可保存为草稿并预览；本例的产品发布规则另要求标题非空，后面会让发布入口针对某个修订检查它。若类型和规则数量很少且稳定，`switch` 更直接；只有变化确实分散时，策略注册才值得承担额外维护。
 
 ### 多个视图订阅同一修订时，用观察者
 
-**observer（观察者）**结构中，状态主体直接维护订阅者并通知变化。下面用 `DocumentNotifier`（文档通知器）只展示通知职责；文档数据仍由上游状态所有者持有。订阅者应能取消订阅，避免卸载视图继续被引用。浏览器 `EventTarget` 也是这种直接注册到目标对象的观察者式 API，见[DOM 事件与交互](../../frontend/browser-apis/dom-manipulation-and-events.md)。
+插入命令传入前两节构造并校验过的同一个 `heading`。状态所有者在拒绝错误节点或接受合法草稿时都会自行调用策略；只有无错误时才创建修订并提交，再把已提交文档交给通知器。画布与检查器因此读到同一修订。**observer（观察者）**让状态主体管理多个接收者；文档仍由状态所有者持有，通知器只持有订阅。
 
-~~~javascript
-class DocumentNotifier {
-  #listeners = new Set();
+![标题插入先经工厂和编辑策略；有效节点才提交新修订，错误分支保留原修订](../../engineering-foundations/architecture/resources/design-patterns-in-practice-node-insertion.svg)
 
-  subscribe(listener) {
-    this.#listeners.add(listener);
-    return () => this.#listeners.delete(listener);
-  }
+> [!example]- 状态提交、通知快照与指定修订的发布实现
+>
+> ~~~javascript
+> class DocumentNotifier {
+>   #listeners = new Set();
+>
+>   subscribe(listener) {
+>     this.#listeners.add(listener);
+>     return () => this.#listeners.delete(listener);
+>   }
+>
+>   notify(document) {
+>     const listeners = [...this.#listeners];
+>     for (const listener of listeners) listener(document);
+>   }
+> }
+>
+> function freezeNode(node) {
+>   return Object.freeze({
+>     ...node,
+>     props: Object.freeze({ ...node.props }),
+>     children: Object.freeze([...node.children]),
+>   });
+> }
+>
+> function freezeDocument(document) {
+>   return Object.freeze({
+>     ...document,
+>     nodes: Object.freeze(document.nodes.map(freezeNode)),
+>   });
+> }
+>
+> const state = {
+>   current: freezeDocument({
+>     revision: 12,
+>     nodes: [
+>       { id: 'heading-1', type: 'heading', props: { text: '首页', level: 1 }, children: [] },
+>       { id: 'button-1', type: 'button', props: { label: '报名' }, children: [] },
+>     ],
+>   }),
+> };
+> const revisions = new Map([[12, state.current]]);
+> const notifier = new DocumentNotifier();
+> const received = [];
+> const unsubscribeCanvas = notifier.subscribe(doc => received.push('canvas r' + doc.revision));
+> const unsubscribeInspector = notifier.subscribe(doc => received.push('inspector r' + doc.revision));
+> let notifying = false;
+> let publishedRevision = 12;
+>
+> function commitEditableNode(node) {
+>   if (notifying) return { ok: false, errors: ['通知期间不能同步提交编辑'] };
+>   const errors = validateEditableNode(node);
+>   if (errors.length > 0) return { ok: false, errors };
+>
+>   const exists = state.current.nodes.some(existing => existing.id === node.id);
+>   const nodes = exists
+>     ? state.current.nodes.map(existing => existing.id === node.id ? node : existing)
+>     : [...state.current.nodes, node];
+>   const next = freezeDocument({
+>     ...state.current,
+>     revision: state.current.revision + 1,
+>     nodes,
+>   });
+>   state.current = next;
+>   revisions.set(next.revision, next);
+>
+>   notifying = true;
+>   try {
+>     notifier.notify(next);
+>   } finally {
+>     notifying = false;
+>   }
+>   return { ok: true, revision: next.revision, nodeId: node.id };
+> }
+>
+> function publishRevision(revision) {
+>   const document = revisions.get(revision);
+>   if (!document) throw new RangeError('draft revision not found');
+>   for (const node of document.nodes) {
+>     const errors = validateEditableNode(node);
+>     if (errors.length > 0) return { ok: false, errors, publishedRevision };
+>     if (node.type === 'heading' && node.props.text.trim().length === 0) {
+>       return { ok: false, error: '标题发布时不能为空', publishedRevision };
+>     }
+>   }
+>   publishedRevision = revision;
+>   return { ok: true, publishedRevision };
+> }
+>
+> console.log(JSON.stringify(commitEditableNode(invalidHeading)));
+> console.log(JSON.stringify({ revision: state.current.revision, notifications: received.length }));
+> console.log(JSON.stringify(commitEditableNode(heading)));
+> console.log(JSON.stringify({
+>   preview: previewDraftNode(state.current.nodes.find(node => node.id === heading.id)),
+>   revision: state.current.revision,
+>   notifications: received.join(', '),
+> }));
+> console.log(JSON.stringify(publishRevision(13)));
+>
+> const savedHeading13 = state.current.nodes.find(node => node.id === heading.id);
+> const completedHeading = {
+>   ...savedHeading13,
+>   props: { ...savedHeading13.props, text: '首页标题' },
+> };
+> console.log(JSON.stringify(commitEditableNode(completedHeading)));
+> console.log(JSON.stringify(publishRevision(14)));
+> console.log(JSON.stringify({ notifications: received.join(', ') }));
+> unsubscribeCanvas();
+> unsubscribeInspector();
+> ~~~
 
-  notify(document) {
-    for (const listener of this.#listeners) listener(document);
-  }
-}
+这段顺序执行的程序先以 8 级标题尝试提交：策略实际返回错误，状态仍是 revision 12，通知数为 0。工厂生成的空标题通过编辑校验，文档所有者才将它提交为 revision 13；画布得到预览描述符，画布和检查器都收到 `r13`。发布流程读取确切的 revision 13，因标题为空而拒绝，公开版本仍是 12。填写同一 `node-1` 后，状态所有者提交 revision 14，两个视图收到 `r14`，发布门禁再允许活动公开版本切换到 14。此处用活动修订号表示发布结果；实际不可变快照的创建与切换由相邻数据模型章节展开。
 
-const notifier = new DocumentNotifier();
-const unsubscribe = notifier.subscribe(document => {
-  console.log('画布收到修订', document.revision);
-});
+通知接收者列表在 `notify()` 开始时复制，因此本轮新增或取消订阅只影响后续通知；若回调在本轮中取消别人的订阅，该人仍会收到本轮已排定的通知。副本只固定接收者集合，不会保护文档内容。这里通过不可变更新和 `Object.freeze` 复制并冻结文档、节点、属性与子节点数组；画布和检查器只读修订。同步通知期间再次提交会被状态所有者拒绝，避免嵌套提交导致检查器先看到 `r14`、再看到旧的 `r13`。这段简化代码的属性是字符串和数字，实际含嵌套可变值时也要按其结构复制冻结或采用其他不可变约定。
 
-notifier.notify({ revision: 13 });
-unsubscribe();
-~~~
+一个监听器若抛错，异常会向提交调用者传播并停止当前快照中的后续监听器；文档修订已经在通知前提交，`finally` 会解除同步提交保护。若每个视图都必须收到通知，可在通知边界另行定义错误隔离或重试；这会改变当前错误语义，不必为本例另造事件队列。
 
-该循环是同步通知：若一个 listener 抛错，异常会向调用方传播，后续 listener 不会继续收到本轮通知；遍历期间新增或删除 listener 也遵循 Set 迭代器的实时行为。这个小例没有隔离回调异常或冻结订阅快照。
+![通知器把同一不可变修订送给画布和检查器；视图卸载时取消订阅](../../engineering-foundations/architecture/resources/design-patterns-in-practice-observer-lifecycle.svg)
 
-**publish-subscribe（发布订阅）**常通过主题或中介路由消息，让发布者不必掌握每个接收者。若插件要监听 `document:saved`，典型实现会从 `listenersByTopic.get(topic)` 取得 Set 并同步通知，其中每个 Set 保存该主题的订阅者；取消时从同一 Set 删除 listener。它可能减少直接依赖，但全局事件名和隐式调用会让修改来源难以追踪。简单父子组件回调已足够时，不用事件总线。实际 API 可能混合两种形式，应看订阅由谁持有、消息如何路由。
+订阅随视图生命周期结束：卸载时调用返回的取消函数。`Set` 本身按插入顺序保存不同监听器；本文使用快照，ECMAScript 的实时迭代规则只解释为何没有复制时删除下一位会跳过它、而新增项可能加入本轮。具体规则见来源条目中的 §§24.2.4.4、24.2.4.17–18 和 24.2.6.1。
+
+浏览器的 `EventTarget` 也让对象直接管理监听器，并支持注册与移除；它是直接观察者式 API 的类比，但还有事件捕获、冒泡和取消语义。页面级事件分发细节见[浏览器怎样查询、更新 DOM 并响应用户输入？](../../frontend/browser-apis/dom-manipulation-and-events.md)；应用层消息总线与监听器重入见[JavaScript 事件总线在监听器中重入时怎样保持顺序？](../../frontend/browser-apis/event-bus-and-observer-patterns.md)。
+
+**publish-subscribe（发布订阅）**把消息按主题交给中介路由；发布者只知道主题，不必知道具体接收者。例如中介可持有 `Map<topic, Set<listener>>`，订阅者收到返回的取消函数后从相同主题集合中移除自己。若多个独立插件要监听 `document:saved`，这种路由可能减少直接引用；但主题字符串和跨模块调用也会让消息来源更难追踪。画布和检查器天然属于这份文档，直接订阅文档通知器更容易沿着对象找到依赖；父子组件只有一个回调时，普通回调就够了。有多个接收者也不意味着必须创建全局事件总线。
 
 ### 共享实例有明确范围时，才用单例
 
-**singleton（单例）**让某个范围通过统一入口访问一个共享实例。例如一个编辑器应用实例可以持有一份组件注册表。在 JavaScript 中，模块变量通常由当前模块实例共享；worker、进程、重复加载的模块副本之间不自动共享同一个对象。
+若一个编辑器运行时要求所有面板使用同一份组件注册表，必须先说明“一份”指哪个范围。**singleton（单例）**组合了唯一实例与全局访问点；它不能自动保证浏览器所有标签、worker（工作线程）、进程或重复模块副本共享同一对象。
 
-全局单例会隐藏依赖，也可能让多个编辑器或测试互相污染。显式创建 `EditorRuntime` 并传给使用者通常更易测试。必须说清“一份”是每个模块、应用、进程还是其他范围。若该类仍暴露公有构造器，调用者通常仍能直接创建额外实例，访问器并不会自动阻止这种创建。
+多数编辑器只需由每个应用组合入口创建一个 `EditorRuntime`，再把注册表传给画布、检查器和命令处理器。这样一个应用范围内确实共享同一实例，但测试可以独立创建另一个运行时。JavaScript 模块变量只在该模块实例范围共享；它不等于一个页面只有一个编辑器，更不保证不同模块副本共用实例。全局单例则隐藏依赖，容易让两个编辑器实例或不同测试相互污染。如果类的构造器仍公开，`getInstance()` 访问器也不能阻止调用方 `new` 出额外对象。只有全局访问点本身能解决明确问题时才承担这种耦合；否则显式创建和传递更容易观察生命周期。
 
 ### 用设计原则检查模式是否合适
 
-工厂和策略可支持开闭原则，但若它们没有缩小修改范围，就不需要硬套。观察者让变化通知多个视图；依赖倒置要求高层编辑流程依赖通知契约，而非绑死具体全局总线。每个订阅者的生命周期也仍需明确。
+沿着“插入空标题”流程检查责任边界：工厂只负责节点初值与 ID；编辑期策略负责节点结构；状态所有者对策略结果作决定并提交修订；观察者只通知已提交的只读状态；发布服务另行检查指定修订能否成为公开版本。发布失败不会撤销可以保存、预览和继续编辑的草稿。
 
-新增图片节点时，工厂建立默认配置、校验策略检查属性、状态所有者接受“插入图片”命令，生成新修订后再通知画布。模式说明局部对象怎样协作；文档结构、撤销历史、发布版本与冲突处理见[页面文档和发布快照的数据模型](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。组件之间的数据所有权见[前端架构边界](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。
+添加一种新节点类型时，开发者可能仍要修改类型定义、渲染器和发布规则。工厂或策略不会自动兑现开闭原则；只有新变化能在局部扩展，并且调用契约仍稳定，修改范围才真的缩小。观察者省去逐个调用视图的依赖，但订阅清理、文档只读和错误传播仍需明确。上层流程依赖通知契约、下层通知器实现该契约，是依赖倒置的一种接法；模式应配合变化边界，而非成为新的清单。
+
+本篇沿合成 revision 12 插入空标题走到 revision 13；[页面文档和发布快照的数据模型](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)则从 revision 12 另行把 `heading-1` 文案从“首页”改为“欢迎”，得到它自己的 revision 13。两次操作是各自独立的教学路径，不表示同一文档连续从 revision 13 改到 revision 13。本篇用 `nodes` 数组聚焦对象协作，完整案例以 `rootIds` 和按 ID 索引的节点表保存文档树；撤销、持久化和发布快照契约见数据模型章节。组件数据由哪些前端对象拥有见[前端架构边界](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)。
 
 > [!info]- 来源
-> - 工厂、策略、观察者等模式的适用情境和权衡：[Gamma、Helm、Johnson、Vlissides, Design Patterns: Elements of Reusable Object-Oriented Software](https://www.oreilly.com/library/view/design-patterns-elements/0201633612/)。
-> - 模式与设计原则应服务于变化边界：[Robert C. Martin, Principles and Patterns](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
-> - Set 的实时迭代语义：[ECMAScript 2026, Keyed Collections](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-set-iterator-objects)。
+> - GoF 对模式适用情境、约束、结果与权衡的说明，及文档编辑器案例：[Gamma、Helm、Johnson、Vlissides, *Design Patterns: Elements of Reusable Object-Oriented Software*](https://www.oreilly.com/library/view/design-patterns-elements/0201633612/)。
+> - `Set` 删除、默认值迭代入口与迭代器行为：[ECMAScript 2026, Keyed Collections, §§24.2.4.4、24.2.4.17–18、24.2.6.1](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-set-iterator-objects)，2026-11-12 核对。
+> - `EventTarget` 的监听列表、注册、移除与事件分发：[WHATWG DOM Standard, §§2.7、2.9](https://dom.spec.whatwg.org/#interface-eventtarget)，2026-11-12 核对。
+> - 设计原则与模式的关系：[Robert C. Martin, “Design Principles and Design Patterns” (2000), p. 4](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
 ## 53. 怎样建模页面文档、编辑会话和发布快照？
 
 以下用一个合成的通用页面编辑器案例：编辑者正在修改 revision 12 的首页，页面含标题和报名按钮；编辑者需要改文案、拖动排序、撤销修改并发布审核后的版本。若把页面内容、当前选中项、拖动中的临时位置和公开输出塞进同一对象，简单选择也可能触发保存和历史记录，发布时也难以确定实际使用哪个版本。
