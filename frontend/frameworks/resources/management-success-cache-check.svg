@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1280" viewBox="0 0 700 1280" role="img" aria-labelledby="title desc">
+  <title id="title">成功回执的缓存版本保护</title>
+  <desc id="desc">PATCH 以 v7 为前置条件并收到 v8 回执；按当前缓存的 ETag 相等关系更新、复用或重读。只有当前表示与回执 ETag 相等且 sessionId 和 submitId 仍匹配时才重建会话。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .node{fill:#f3efff;stroke:#7e61b3;stroke-width:2}
+      .edge{fill:none;stroke:#334155;stroke-width:2;stroke-linecap:round;marker-end:url(#arrow)}
+      .rail{fill:none;stroke:#64748b;stroke-width:2;stroke-linecap:round}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:18px;fill:#1f2937;text-anchor:middle}
+      .strong{font-weight:700}
+    </style>
+  </defs>
+  <rect width="700" height="1280" fill="#ffffff"/>
+
+  <rect class="node" x="110" y="20" width="480" height="88" rx="7"/>
+  <text x="350" y="56" class="strong"><tspan x="350">PATCH 条件基线 v7</tspan><tspan x="350" dy="27">If-Match: "report-42-v7"</tspan></text>
+  <path class="edge" d="M 350 108 L 350 153"/>
+
+  <rect class="node" x="110" y="155" width="480" height="88" rx="7"/>
+  <text x="350" y="191" class="strong"><tspan x="350">成功回执 v8</tspan><tspan x="350" dy="27">ETag: "report-42-v8"</tspan></text>
+  <path class="edge" d="M 350 243 L 350 288"/>
+
+  <rect class="node" x="80" y="290" width="540" height="104" rx="7"/>
+  <text x="350" y="328" class="strong"><tspan x="350">取消并等待旧读取，再检查详情缓存</tspan><tspan x="350" dy="27">按 ETag 严格相等比较；不按数字大小排序</tspan></text>
+
+  <path class="rail" d="M 350 394 L 350 434 M 120 434 L 580 434"/>
+  <path class="edge" d="M 120 434 L 120 476"/>
+  <path class="edge" d="M 350 434 L 350 476"/>
+  <path class="edge" d="M 580 434 L 580 476"/>
+
+  <rect class="node" x="20" y="478" width="200" height="150" rx="7"/>
+  <text x="120" y="515" class="strong"><tspan x="120">缓存 ETag = v7</tspan><tspan x="120" dy="27">等于 If-Match</tspan><tspan x="120" dy="27">写入确认的回执 v8</tspan></text>
+
+  <rect class="node" x="250" y="478" width="200" height="150" rx="7"/>
+  <text x="350" y="515" class="strong"><tspan x="350">缓存 ETag = v8</tspan><tspan x="350" dy="27">等于回执 ETag</tspan><tspan x="350" dy="27">复用当前缓存值</tspan></text>
+
+  <rect class="node" x="480" y="478" width="200" height="150" rx="7"/>
+  <text x="580" y="507" class="strong"><tspan x="580">缓存 v9 或为空</tspan><tspan x="580" dy="27">保留已知 v9；</tspan><tspan x="580" dy="27">空缓存不写回，</tspan><tspan x="580" dy="27">重新验证读取</tspan></text>
+
+  <path class="edge" d="M 120 628 L 120 683"/>
+  <path class="edge" d="M 350 628 L 350 683"/>
+  <path class="edge" d="M 580 628 L 580 683"/>
+  <rect class="node" x="55" y="685" width="590" height="118" rx="7"/>
+  <text x="350" y="721" class="strong"><tspan x="350">确定本次可见的当前表示</tspan><tspan x="350" dy="27">其他版本或空缓存均须重新验证；已知值不被回执覆盖</tspan></text>
+
+  <path class="edge" d="M 350 803 L 350 846"/>
+  <polygon class="node" points="350,848 630,926 350,1004 70,926"/>
+  <text x="350" y="919" class="strong"><tspan x="350">当前表示 ETag 与回执 v8 相等，且</tspan><tspan x="350" dy="27">sessionId / submitId 仍属于当前会话？</tspan></text>
+
+  <path class="edge" d="M 300 990 L 185 1093"/>
+  <path class="edge" d="M 400 990 L 515 1093"/>
+  <text x="222" y="1035" class="strong">是</text>
+  <text x="478" y="1035" class="strong">否</text>
+
+  <rect class="node" x="20" y="1095" width="320" height="150" rx="7"/>
+  <text x="180" y="1135" class="strong"><tspan x="180">用已确认的当前表示</tspan><tspan x="180" dy="27">重建当前会话</tspan><tspan x="180" dy="27">缓存和写入回执一致</tspan></text>
+
+  <rect class="node" x="360" y="1095" width="320" height="150" rx="7"/>
+  <text x="520" y="1124" class="strong"><tspan x="520">旧尝试：当前表单不动</tspan><tspan x="520" dy="27">当前尝试：保留草稿；</tspan><tspan x="520" dy="27">异版本复核，无已知表示则</tspan><tspan x="520" dy="27">提示当前版本未确认</tspan></text>
+</svg>

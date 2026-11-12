@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="540" viewBox="0 0 700 540" role="img" aria-labelledby="title desc">
+  <title id="title">同一筛选范围内的跨页选择</title>
+  <desc id="desc">同账户 acct-a 与已发布筛选下，第 1 页显示 17、42 并由用户点选 42；翻到第 2 页后显示 61，Redux 共享选择仍为 42。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .node{fill:#f3efff;stroke:#7e61b3;stroke-width:2}
+      .edge{fill:none;stroke:#334155;stroke-width:2;stroke-linecap:round;marker-end:url(#arrow)}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:18px;fill:#1f2937;text-anchor:middle}
+      .strong{font-weight:700}
+    </style>
+  </defs>
+  <rect width="700" height="540" fill="#ffffff"/>
+
+  <rect class="node" x="50" y="20" width="600" height="74" rx="7"/>
+  <text x="350" y="65" class="strong">共同范围：accountId = acct-a · status = published</text>
+
+  <rect class="node" x="30" y="145" width="282" height="190" rx="7"/>
+  <text x="171" y="190" class="strong"><tspan x="171">第 1 页 · query key page=1</tspan><tspan x="171" dy="30">列表显示 [17, 42]</tspan><tspan x="171" dy="30">用户点选 42</tspan></text>
+
+  <text x="350" y="220" class="strong">翻页</text>
+  <path class="edge" d="M 316 245 L 381 245"/>
+
+  <rect class="node" x="388" y="145" width="282" height="190" rx="7"/>
+  <text x="529" y="190" class="strong"><tspan x="529">第 2 页 · 新 query key</tspan><tspan x="529" dy="30">列表显示 [61]</tspan><tspan x="529" dy="30">同一账户/status 范围</tspan></text>
+
+  <path class="edge" d="M 529 335 L 529 394"/>
+  <rect class="node" x="70" y="397" width="560" height="116" rx="7"/>
+  <text x="350" y="440" class="strong"><tspan x="350">Redux reportSelection.selectedIds = ["42"]</tspan><tspan x="350" dy="30">换页只换列表 key；当前选择保持不变</tspan></text>
+</svg>
