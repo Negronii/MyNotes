@@ -8191,11 +8191,13 @@ Promise.resolve().then(() => {
 > - **包装函数的显式 `this` 类型。** [TypeScript Handbook：Declaring this in a Function](https://www.typescriptlang.org/docs/handbook/2/functions.html#declaring-this-in-a-function)，类型参数在编译时擦除；运行时调用仍由普通函数及 `apply` 保留接收者。
 ## 41. 怎样限制异步任务的并发并收尾失败？
 
-上一章的三项基础报表数据已通过校验，权限结果允许读取行。分页继续使用同一个报表 `id="42"`、排序 `sort="recent"` 和页面已有的 `pageSignal`。现在要按页补齐五个结果，并把同时在途的 Fetch 数限制为 2。
+上一章的报表案例已经收到 `reportId="42"`、`sort="recent"` 的三项基础数据并通过运行时校验；权限结果 `canReadRows === true`，所以页面现在可以读取明细。五个页码事先已知，页面还持有生命周期使用的 `AbortSignal` (中止信号)。本章把上一章控制器的 `controller.signal` 简称为 `pageSignal`；页面离开时仍由 `controller.abort()` 发出信号。本例把任务池同时追踪的活动任务数限为两个。`2` 是这个案例给出的资源限制，不代表所有服务的通用最佳值。
 
 ### 先把任务保持为惰性，再填满空槽位
 
-`fetch(url)` 调用时请求就开始；把五个 Fetch Promise 放进 `Promise.all` 仍会启动五个请求。要控制启动时机，输入必须是任务工厂（task factory）：函数被调用时才创建工作。下面的工厂先定义五个请求，池每次只调用有空位的任务：
+调用 Fetch API 的 `fetch(url)` 时，请求就开始，并返回一个 Promise。若先创建五个 Fetch Promise 再交给 `Promise.all`，五个请求已经全部启动；组合器只会等它们的结果。
+
+要控制启动时间，把每项工作写成task factory (任务工厂)：函数被调用时才创建请求。下面 `map` 只生成五个异步函数（`async` 函数），尚未请求任何一页：
 
 ~~~javascript
 function createPageTasks(reportId, sort) {
@@ -8213,78 +8215,83 @@ function createPageTasks(reportId, sort) {
 }
 ~~~
 
-这里的 `map` 只创建函数；尚未请求任何一页。池消费同步 iterable（同步可迭代对象），其中每项都是任务函数；上限是正整数。池把 `{ signal, index }` 交给工厂，工厂再把同一个 `AbortSignal` 交给 Fetch。只有任务被调用后才有 Promise 和网络请求，所以 Promise 集合本身不能冒充限流器。
+任务池消费同步 iterable (可迭代对象)，其中每项都必须是函数。同时最多等待两个工厂调用，并把 `{ signal, index }` 作为参数传给每个被调用的工厂；代码用 `runTask` 的 Promise 等待调用返回值结算。若工厂启动额外工作却先返回，池会释放槽位，而那项工作仍可能继续；工厂若自行启动多项并发工作，池也不会分别限流。
 
-下面的状态图展示池如何填槽、等待和收尾。一次填槽过程会启动任务，直到达到上限、迭代器耗尽或停止条件触发；等待时只需等一项活动任务结算，随后为每个空槽位各补一项：
+Fetch 收到 HTTP 非成功状态时仍会履行并给出响应对象（`Response`）；本例检查 `response.ok`，并在收到响应后立即把非 2xx 状态转换为任务拒绝，没有读取或取消那条响应正文流。于是该工厂 Promise 已结算、槽位已释放，正文流却可能仍打开。成功状态下，`response.json()` 会继续读取并解析正文，工厂 Promise 要等这一步结算才释放槽位。因此 `limit` 限制池仍在等待的任务数，不限制物理 HTTP 请求、连接或响应体流的数量。并发池接收每个工厂的最终成功值或失败原因，不负责解释 HTTP 或 JSON 契约。
 
-~~~mermaid
-flowchart TD
-  A["填空槽位：调用惰性任务工厂"] --> B{"达到上限、耗尽，或停止？"}
-  B -->|未达到且仍有任务| A
-  B -->|达到上限| C["等待任务结算或停止通知"]
-  C -->|结算后仍可调度| A
-  C -->|stop 失败或外部 abort| F
-  B -->|迭代器耗尽| D["等待剩余活动任务收尾"]
-  D -->|已排空且未停止| E["返回按输入位置排列的结果与峰值"]
-  D -->|已停止| H["排空后按首次停止原因拒绝"]
-  B -->|stop 失败或 abort| F["立即关闭未耗尽的输入迭代器"]
-  F --> G["不再取新项"]
-  G --> D
-~~~
+下图和后面的时间线使用从五页主例缩小出的三页合成输入：页 1、2 先占槽，页 2 随后失败，页 3 等待补位。
 
-池主要跟踪三个状态：`nextIndex` 是下一个输入位置，`active` 是仍占调度槽位的任务，`peakActive` 记录执行中任务数的最高值。每项完成后从 `active` 移除；若尚未停止，则每个空槽位最多启动一项，因此一项结束时可能一次补满多个空位。`results[index]` 固定写回输入位置，不按完成顺序排列。
+![三项合成分页任务输入任务池：页 1 与页 2 在 t=0ms 占满两个活动槽；页 2 在 t=10ms 以 new Error("B failed") 拒绝，页 1 仍在运行，页 3 尚未启动](../../frontend/javascript/resources/bounded-pool-input-failure.svg)
+
+图一先把输入、起始状态和失败时刻固定下来：工厂 `index` 从 0 开始；页 1 用 30 ms 得到 A，页 2 用 10 ms 以 `new Error("B failed")` 失败，页 3 启动后用 20 ms 得到 C。接着看这个 Error 如何走向两种终态：
+
+![页 2 的 new Error("B failed") 分成 stop 与 collect 两条路径：stop 停止取项、尝试 return 一次、排空页 1 后拒绝；collect 把拒绝写入索引 1，启动页 3，并按输入位置返回 A、错误记录和 C](../../frontend/javascript/resources/bounded-pool-outcomes.svg)
+
+页码从 1 开始，工厂索引从 0 开始；因此页 2 对应 `results[1]`。`collect` 的履行值和拒绝原因分别保存在 `value` 与 `reason` 字段，结果按输入位置排列。
+
+调度器用 `nextIndex` 记下一个输入位置，用 `active` 集合占住运行中的槽位，并用 `peakActive` 记实际活动数的峰值。它有空槽位时持续取项并启动任务；槽位填满后，用竞速组合器（`Promise.race`）等待一项任务结算或停止通知先到。任务结算会腾出槽位，调度器再填所有可用空位。每项结果写入 `results[index]`，所以完成先后不会改变输出位置。
 
 ### 用同一条时间线推算成功、失败和继续收集
 
-以下例子把任务缩成三页，便于逐步计算；每页仍是惰性工厂，上限仍为 2。页 1 在 30 ms 后成功返回 `"A"`；页 2 在 10 ms 后以 `"B failed"` 拒绝；页 3 在启动后 20 ms 成功返回 `"C"`。下表的时间是合成输入，不是实测网络延迟：
+为了逐步看清失败策略，下面沿用图中的三项惰性任务工厂，`limit` 为 2。页 1 在启动 30 ms 后履行并给出 `"A"`；页 2 在 10 ms 后以 `new Error("B failed")` 拒绝；页 3 在启动 20 ms 后履行并给出 `"C"`。这些延迟是合成输入，不是网络测量。
 
-| 时刻 | 运行状态 | `failure: "stop"` | `failure: "collect"` |
+| 时刻 | 活动状态 | `failure: "stop"` | `failure: "collect"` |
 | --- | --- | --- | --- |
-| 0 ms | 页 1、页 2 启动，活动数 2 | 两个槽位填满；`peakActive = 2` | 两个槽位填满；`peakActive = 2` |
-| 10 ms | 页 2 失败，页 1 仍在运行 | 停止取项并关闭迭代器，页 3 不启动 | 保存页 2 的拒绝记录，空出的槽位启动页 3 |
-| 30 ms | 页 1 成功；collect 中页 3 也已成功 | 活动任务排空，池以 `"B failed"` 拒绝 | 返回 `[fulfilled("A"), rejected("B failed"), fulfilled("C")]`，峰值仍为 2 |
+| `0 ms` | 页 1、页 2 启动，活动数 `2` | `peakActive = 2` | `peakActive = 2` |
+| `10 ms` | 页 2 拒绝，页 1 仍在运行 | 记录首次失败、停止取项，尝试调用 `return()` 一次；页 3 不启动 | 在结果位置 `1` 记录拒绝，腾出的槽位启动页 3 |
+| `30 ms` | 页 1 完成；`collect` 中页 3 也已完成 | 排空后以 `new Error("B failed")` 拒绝池调用 | 按输入位置履行 A、Error 和 C 的三项状态记录，峰值仍是 `2` |
 
-`stop` 是默认策略：第一个被观察到的任务拒绝就停止取新项，关闭尚未耗尽的迭代器，再等待已经启动的任务结算，最后拒绝整个池。排空很重要：池不会把“拒绝已返回”伪装成“其他工作已停止”。`collect` 只收集实际运行过的任务工厂的成败，失败释放的槽位会继续填入后续任务；结果仍按输入顺序排列。工厂抛错与返回拒绝 Promise 都算该项失败。
+`stop`（停止）是默认策略：首个被池观察到的任务失败后，不再调用新任务工厂；池停止取项，并尝试对尚未耗尽的输入迭代器调用一次可选的 `return()`，然后等待已经启动的任务全部结算，再以第一个停止原因拒绝。一次 `return()` 调用不保证迭代器自己的清理已经完成。排空只表示池不再等待活动任务；它不会回滚已完成的写入，也不会把忽略 signal 的工作杀掉。
 
-| 情况 | 池的结果 |
-| --- | --- |
-| 所有任务成功 | 等迭代器耗尽并排空活动任务，返回结果与 `peakActive` |
-| `stop` 下某项失败 | 关闭未耗尽迭代器，排空已启动任务，然后以首次观察到的失败原因拒绝 |
-| `collect` 下某项失败 | 保存该项的拒绝记录，继续调度；任务失败本身不会拒绝池 |
-| 外部 `abort` | 停止取项并立即关闭未耗尽迭代器；把 signal 交给活动任务，排空后以 abort reason 拒绝 |
-| 坏任务、迭代器步骤或 abort 出错 | 即使策略为 `collect`，也拒绝整个池；惰性输入中从未取到的元素不会被检查 |
-
-这些状态足以复算“第 2 页先失败”的结局：stop 在 10 ms 关掉输入，页 3 从未启动；collect 在 10 ms 腾出一个槽位来运行页 3，最后三格分别对应页 1、页 2、页 3。若输入有五页，collect 会继续以相同规则启动页 4、页 5。
+`collect`（收集）把每个实际启动任务的履行值或拒绝原因保存为状态记录，并继续填充空槽位，直到输入耗尽且活动任务排空。履行（`fulfilled`）表示任务成功，拒绝（`rejected`）表示任务失败；对应字段分别是 `value` 和 `reason`。未启动的任务没有结果记录。工厂索引从 0 开始，Fetch 的 `page` 参数从 1 开始；例如页 2 对应 `results[1]`。
 
 ### Abort 会停止调度，不会强行终止任意 Promise
 
-当 `AbortSignal` 发出事件时，池会立刻停止取项、调用未耗尽同步迭代器的 `return()`，并唤醒正在等待活动任务的调度器。池同时把同一个 signal 交给活动工厂；Fetch 会按 Fetch 的中止协议响应它，通用 Promise 则没有强制停止方法。若任务忽略 signal 或永远不结算，池仍要等它，因此迭代器已经关闭，但池调用还不能结束。
+中止信号收到 `abort` 事件时，池停止再取输入，尝试对未耗尽的同步迭代器调用一次可选的 `return()`，并唤醒正在等待活动任务结算的调度器。池把同一个中止信号传给在途工厂；Fetch 会按 Fetch 的取消协议响应它，普通 Promise 本身没有强制终止能力。若在途任务忽略该信号或永不结算，池就继续等待，调用不会提前结束。
 
-| 时间 | 池与迭代器 | 活动任务 |
+| 时刻 | 池和输入 | 已启动任务 |
 | --- | --- | --- |
-| 0 ms | 启动任务 1、2 | 两项持有同一个 `pageSignal` |
-| 5 ms：页面 abort | 关闭尚未耗尽的任务迭代器，不启动任务 3；等待被唤醒 | Fetch 等参与者按 signal 退出；忽略 signal 的任务继续运行 |
-| 所有活动任务结算 | 以 abort reason 拒绝池 | 不会启动新任务 |
+| `0 ms` | 从页 1、页 2 开始，活动数为 `2` | 两个工厂都收到同一个 `pageSignal` |
+| `5 ms`：页面调用 `controller.abort()` | 停止取项，尝试调用迭代器 `return()` 一次，不启动页 3，并立即唤醒调度器 | 支持中止的 Fetch 收到信号；忽略它的工作仍运行 |
+| 已启动任务全部结算后 | 用选定的首个停止原因拒绝池调用 | 不会再启动任务；一次 `return()` 不保证迭代器清理已完成 |
 
-`collect` 只影响单项任务失败；abort 仍然拒绝整个池。页面取消与失败时取消兄弟请求也是两个策略：本章把页面已有 signal 传给任务，但任务失败不会自动调用 `abort()`。若产品要求一个任务失败就中止其他请求，应由调用方定义新的控制器和失败传播规则。
+停止原因按首先调用 `stop(reason)` 的事件确定。比如 stop 策略下若页 2 的失败先被池观察到，后来到达的外部 abort 不会替换这个失败；若 abort 先被观察到，随后到达的任务失败也不会替换中止原因。`collect` 不会因单项任务失败调用 `stop`，但外部 abort 仍会停止整池并拒绝。
+
+页面取消与“任一任务失败就取消兄弟请求”是两项独立策略。本例只把页面生命周期已有的中止信号传给任务，任务失败不会自动调用控制器的 `abort()`。若调用方要求失败时中止仍在途的 Fetch，应定义相应控制器和失败策略。即使 Fetch 中止，也不能撤回服务器已经收到并执行的写操作。
+
+在该报表案例中，`pageSignal` 是 `controller.signal`；页面离开处理器调用同一个 `controller.abort()`。调用方只在权限校验通过后创建任务：
 
 ~~~javascript
-// pageSignal 来自页面已经持有的 AbortController；权限检查已通过。
+const pageSignal = controller.signal;
 const pageTasks = createPageTasks("42", "recent");
-
 const { results, peakActive } = await runBounded(pageTasks, 2, {
   failure: "collect",
   signal: pageSignal,
 });
-// 每个请求使用 /api/reports/42/rows?page=N&sort=recent。
-// 页面离开时，既有生命周期代码会调用 pageController.abort()。
+
+for (const [index, result] of results.entries()) {
+  if (result.status === "fulfilled") {
+    console.log(index, result.value);
+  } else {
+    console.error(index, result.reason);
+  }
+}
 ~~~
+
+若外部 abort、输入迭代器错误或非法任务项使池整体拒绝，`await runBounded(...)` 会抛出原因，不会返回这份 `results`。
+
+如果上游没有预先得到五个页码，而是每次要等上一页返回 `nextCursor` 才能确定下一项，就不适合提前构造这组任务；应从已知输入开始顺序读取，[报表行怎样按页异步读取？](#%E6%8A%A5%E8%A1%A8%E8%A1%8C%E6%80%8E%E6%A0%B7%E6%8C%89%E9%A1%B5%E5%BC%82%E6%AD%A5%E8%AF%BB%E5%8F%96%EF%BC%9F)解释了这种依赖。
 
 ### 可折叠查看：有限范围的教学实现
 
-下面实现面向普通内建 Promise、同步 iterable 和遵守 `AbortSignal` 约定的输入。它不是通用队列：不支持异步迭代器、重试、跨进程配额或持久化。stop、abort、坏任务和迭代器错误都会关闭尚未耗尽的迭代器；调用 `return()` 的清理异常不会覆盖已经确定的停止原因。
+- `limit` 必须是大于 0 的安全整数；`failure` 只能是 `"stop"` 或 `"collect"`。
+- 输入是同步可迭代对象，逐项产出的值必须是函数；池只在有槽位时调用它，并以 `{ signal, index }` 调用。
+- 池仍在等待的活动任务数不会超过 `limit`；它等待工厂调用返回值的结算，不限制工厂启动但未纳入返回值的底层工作。成功时履行 `{ results, peakActive }`；`stop` 时以首次停止原因拒绝；`collect` 时履行已运行项目的状态和值或原因。
+- 外部 abort、同步输入错误和非法任务项都会拒绝整个池，即使 `failure` 是 `"collect"`。输入中尚未取到的项目不会被检查。
+- 停止或 abort 后停止取项，并尝试对未耗尽迭代器（iterator）调用一次可选的 `return()`；一次调用不保证迭代器完成自己的清理。清理异常不会覆盖已确定的首个停止原因。池会等待已启动任务的返回值结算。
+- 只支持同步可迭代对象；不提供重试、异步迭代、持久配额或持久化。它限制调用工厂的并发，不限制工厂内部额外发起的工作。
 
-关键细节是 `stopSignal`：调度器等待时会同时等待“任一活动任务结算”或“池已停止”。因此外部 abort 能立即唤醒 `Promise.race`，在途任务不必先完成，池就可以关闭输入。若 abort 在同步 `iterator.next()` 内部重入，`pulling` 标记会把关闭延后到这次 `next()` 返回后，并在调用任务工厂前检查停止状态。
+同步 `iterator.next()` 可以在池调用期间触发用户代码。本例只说明 `next()` 函数体内同步触发 abort、并返回普通数据属性步骤的情况：若返回 `{ done: true }`，池记录输入耗尽，不再尝试 `return()`；若返回 `{ done: false, value: task }`，池尝试调用一次 `return()`，再次确认停止状态后不启动刚取到的任务。带自定义 `done` 或 `value` getter 的迭代步骤会在属性读取期间执行其他代码，不属于这项说明覆盖的重入路径。
 
 > [!example]- 完整代码：runBounded
 >
@@ -8312,8 +8319,8 @@ const { results, peakActive } = await runBounded(pageTasks, 2, {
 >   let peakActive = 0;
 >   let exhausted = false;
 >   let pulling = false;
->   let closeAfterNext = false;
->   let iteratorClosed = false;
+>   let returnAfterNext = false;
+>   let iteratorReturnAttempted = false;
 >   let stopped = false;
 >   let stopReason;
 >   let wakeStop;
@@ -8321,24 +8328,24 @@ const { results, peakActive } = await runBounded(pageTasks, 2, {
 >     wakeStop = resolve;
 >   });
 >
->   function closeIterator() {
->     if (iteratorClosed || exhausted) return;
->     iteratorClosed = true;
->     const close = iterator.return;
->     if (close == null) return;
->     if (typeof close !== "function") {
+>   function attemptIteratorReturn() {
+>     if (iteratorReturnAttempted || exhausted) return;
+>     iteratorReturnAttempted = true;
+>     const returnMethod = iterator.return;
+>     if (returnMethod == null) return;
+>     if (typeof returnMethod !== "function") {
 >       throw new TypeError("iterator.return 必须是函数");
 >     }
->     const result = close.call(iterator);
+>     const result = returnMethod.call(iterator);
 >     if (result === null ||
 >         (typeof result !== "object" && typeof result !== "function")) {
 >       throw new TypeError("iterator.return 必须返回对象");
 >     }
 >   }
 >
->   function closeSafely() {
+>   function attemptIteratorReturnSafely() {
 >     try {
->       closeIterator();
+>       attemptIteratorReturn();
 >     } catch {
 >       // 清理错误不覆盖原先确定的失败或 abort reason。
 >     }
@@ -8349,8 +8356,8 @@ const { results, peakActive } = await runBounded(pageTasks, 2, {
 >       stopped = true;
 >       stopReason = reason;
 >     }
->     if (pulling) closeAfterNext = true;
->     else closeSafely();
+>     if (pulling) returnAfterNext = true;
+>     else attemptIteratorReturnSafely();
 >     wakeStop();
 >   }
 >
@@ -8393,10 +8400,6 @@ const { results, peakActive } = await runBounded(pageTasks, 2, {
 >           step = iterator.next();
 >         } finally {
 >           pulling = false;
->           if (closeAfterNext) {
->             closeAfterNext = false;
->             closeSafely();
->           }
 >         }
 >
 >         if (step === null ||
@@ -8405,7 +8408,12 @@ const { results, peakActive } = await runBounded(pageTasks, 2, {
 >         }
 >         if (step.done) {
 >           exhausted = true;
+>           returnAfterNext = false;
 >           break;
+>         }
+>         if (returnAfterNext) {
+>           returnAfterNext = false;
+>           attemptIteratorReturnSafely();
 >         }
 >         if (stopped || signal?.aborted) {
 >           if (!stopped) stop(signal.reason);
@@ -8435,54 +8443,44 @@ const { results, peakActive } = await runBounded(pageTasks, 2, {
 >     stop(error);
 >   }
 >
->   if (stopped && !exhausted) closeSafely();
+>   if (stopped && !exhausted) attemptIteratorReturnSafely();
 >   await Promise.all(active);
 >   if (signal) signal.removeEventListener("abort", onAbort);
 >   if (stopped) throw stopReason;
 >   return { results, peakActive };
 > }
 > ~~~
->
-> `runTask` 把每项任务的拒绝吸收到自己的结果记录中，因此活动任务都能被最终 `Promise.all(active)` 观察。默认 stop 的拒绝会设置首次 `stopReason`；collect 则按该输入位置写入拒绝记录。迭代器的 `next()`、元素形状或调度错误进入外层 catch，仍会停止整个池。对同步 iterable，`return()` 的调用是同步清理；它不等待正在运行的任务，排空活动任务由后续的 `Promise.all` 完成。
+
+`runTask` 在每项任务内部接住抛出或拒绝，所以活动任务完成时池能统一等待。`stop` 把首次停止原因留在 `stopReason`；`collect` 则把项的状态写回 `results[index]`。`Promise.race([...active, stopSignal])` 只用于“任一活动任务结算”与“池已停止”之间唤醒调度器；它本身不取消输掉的 Promise。最后的 `Promise.all(active)` 负责排空已启动任务。
+
+首个停止原因优先、尝试调用未耗尽迭代器的 `return()`、以及 abort 后等待活动任务 Promise，是这份 `runBounded` 的应用层契约；ECMAScript 规定同步迭代步骤怎样读取和调用迭代器的 `return()`，DOM/Fetch 规定哪些活动能响应 AbortSignal，但这些标准并没有定义这个教学池的 stop/collect 策略。
 
 > [!info]- 来源
-> - 同步迭代步骤、迭代器关闭、Promise 组合器对同步迭代错误的处理：[ECMAScript 2027 草案，2026-11-03](https://tc39.es/ecma262/) §7.4.6–7.4.11、§27.5.4.1–27.5.4.5；访问于 2026-11-09。本文的池另定义提前停止时调用 `return()` 并排空活动任务的应用层契约。
-> - `AbortController` 与 `AbortSignal` 的 abort reason、事件通知和 API 响应约定：[DOM Standard](https://dom.spec.whatwg.org/#aborting-ongoing-activities)，Living Standard 2026-11-04；访问于 2026-11-09。信号观察者按各自 API 契约响应或忽略中止。
-> - Fetch 接收 `AbortSignal` 及取消 fetch 处理：[Fetch Standard](https://fetch.spec.whatwg.org/#abort-fetch)，Living Standard；访问于 2026-11-09。
-> - 本章 `runBounded` 在 Node.js v26.13.0 / V8 14.6.202.34-node.40 运行，2026-11-09。
+> - **同步迭代器步骤与关闭。** [ECMAScript 2027 草案（2026-11-08）§7.4.4、§7.4.10–7.4.11、§27.8.1.3](https://tc39.es/ecma262/#sec-iteratorclose)，核对日期：2026-11-12。`GetIterator`、`IteratorStepValue`、`IteratorClose` 和生成器的 `return()` 支持同步输入与关闭方法语义；一次生成器 `return()` 可以返回 `done: false`，因此池的单次尝试不保证生成器清理完毕。
+> - **Promise 竞速。** [ECMAScript 2027 草案 §27.5.4.5 `Promise.race`](https://tc39.es/ecma262/#sec-promise.race)，核对日期：2026-11-12。它按首个结算输入决定组合 Promise；此处只拿它唤醒调度器，不把它当作活动任务取消机制。
+> - **Fetch 响应与正文。** [WHATWG Fetch §2.2.3 Statuses、§5.3 Body mixin、§5.5 Response](https://fetch.spec.whatwg.org/)，Living Standard 更新时间：2026-10-19。`ok` 对应 200–299 状态；`json()` 消费并解析正文，解析可拒绝；Fetch 只有遇到网络错误等失败时才拒绝，HTTP 非成功状态仍可产生 Response。
+> - **AbortSignal。** [WHATWG DOM §3 Aborting ongoing activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities)，Living Standard 更新时间：2026-11-11；Promise 本身没有内建 abort，API 可以选择接受、响应或忽略 `AbortSignal`。
+> - **Fetch 中止。** [WHATWG Fetch §5.6 Fetch methods — Abort a fetch](https://fetch.spec.whatwg.org/#abort-fetch)，Living Standard 更新时间：2026-10-19。Fetch 可响应 signal 并中止 Fetch/响应体处理；这不能撤销远端已发生的副作用。
+> - **隔离执行范围。** 使用 Node.js `v26.13.0` / V8 `14.6.202.34-node.40` 实测顺序、`stop` / `collect`、abort、iterator `return()` 和本地 loopback HTTP 响应体场景。图和时间表的 10/20/30 ms 是合成延迟，只表达完成先后，不是网络测量或其他宿主的时间保证。
 ## 42. 链式接口如何先排队、再依次执行延后任务？
 
 ### 案例背景
 
-面试题 LazyMan 要让调用者先写完一串链式命令，再按顺序打印吃饭与睡眠状态：
+用一个合成的 LazyMan 案例说明方法链如何变成按序执行的闭包队列。调用者希望先写完三项命令，再依次看到吃水果、等待后醒来、吃面包：
 
 ~~~javascript
 new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
 ~~~
 
-预期输出是 eat fruit、等待后输出 wake up after 10ms、最后输出 eat bread。关键是分开两个时序：同步方法先把任务加入对象自己的队列；宿主定时器稍后启动第一项；每项结束时显式推进下一项。
+这里的 `Ada` 是这条链的示例身份；精简输出只打印食物和等待，不打印名字。链式调用在当前同步代码里把三项任务放进实例的 `tasks` 数组；构造函数安排的初始定时器回调稍后才启动第一项。队列不是宿主事件循环的任务队列，里面保存的是应用自己的函数。
 
-~~~mermaid
-sequenceDiagram
-  participant Caller as 同步调用者
-  participant Queue as LazyMan 任务队列
-  participant Timer as 宿主计时器
-  Caller->>Queue: 构造并安排首轮 next
-  Caller->>Queue: 加入 eat(fruit)
-  Caller->>Queue: 加入 sleep(10)
-  Caller->>Queue: 加入 eat(bread)
-  Timer->>Queue: 首轮 next
-  Queue->>Queue: 执行 eat，推进 next
-  Queue->>Timer: 安排 10 ms 后继续
-  Timer->>Queue: 打印醒来并推进 next
-  Queue->>Queue: 执行 eat，队列结束
-~~~
+![构造函数先安排 setTimeout 箭头回调 this.next()，链式方法随后同步登记三项。初始 next 取出 eat fruit；已登记的 sleep 闭包设置 10 ms 定时器后返回；等待回调再推进至 eat bread，最终 next 发现队列为空并返回](../../frontend/javascript/resources/lazyman-queue-timing.svg)
 
 ### 为什么构造时要延后第一项？
 
-如果构造函数立即调用 next，方法链还没有来得及把 eat 和 sleep 放进队列。用 setTimeout 安排一个稍后的 next，让当前同步调用栈先跑完，三个方法就能先依次登记工作。延时为 0 也不是“立刻执行”：回调要等当前同步代码退出，并且实际执行时机由宿主调度。
+如果构造函数立刻调用 `next()`，当时 `tasks` 还是空数组；`shift()` 会取到 `undefined`，而后续 `.eat()` 与 `.sleep()` 尚未执行。构造函数改用 `setTimeout` 安排一个稍后的回调，让当前同步链先把三项工作登记好。JavaScript 不会在这段同步代码中途切去执行另一个普通定时器回调；具体回调何时获得调度由宿主决定。
 
-下面的 tasks 是应用自己实现的任务队列，它保存闭包；它不是浏览器或 Node.js 的事件循环队列。
+下面是本例的完整教学队列。`name` 记录实例身份；任务输出为聚焦顺序而省略名字。
 
 ~~~javascript
 class LazyMan {
@@ -8517,26 +8515,28 @@ class LazyMan {
 }
 ~~~
 
-eat 与 sleep 都把一个函数压入 tasks，并返回 this，所以调用者还能继续链式调用。closure（闭包）在入队时记住当前的 food 或 ms。next 取出并执行队首函数；普通 eat 打印后马上调用 next，sleep 则设定计时器，在计时器回调中打印，再调用 next。
+`.eat(food)` 和 `.sleep(ms)` 当场只把函数压入队列，并返回同一个 `this`，所以调用者可以继续链式调用。closure（闭包）保留入队时的 `food` 或 `ms`；箭头函数也在回调中继续使用同一个实例的 `this`。等 `next()` 取出函数时，工作才真正发生。
+
+`next()` 取出并执行队首任务；若队列为空，它就返回。构造函数安排的定时器回调负责第一次调用 `next()`，之后由各项任务在自己的工作完成时调用一次。普通 `eat` 任务打印后立刻推进；轮到已登记的 `sleep` 闭包时，它才安排定时器并返回，等回调打印醒来消息后再推进。调用者按本例约定只使用 `.eat()`、`.sleep()` 这类登记方法，不直接调用 `next()`。
+
+`next()` 是这个类自己定义的普通方法，不是浏览器、Node.js、定时器或 Promise 内建的队列推进接口。
 
 ### 队列怎样推进到最终输出？
 
-~~~javascript
-new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
-~~~
+继续跟踪同一条合成输入。`tasks` 中从左到右是下一项先执行；`next()` 取走队首后，任务可能同步推进，也可能把推进交给稍后的宿主回调。
 
-| 阶段 | 任务队列剩余项 | 正在执行的工作 | 下一步由谁触发 |
+| 阶段 | 应用队列剩余项 | 正在执行的工作 | 谁触发下一步 |
 | --- | --- | --- | --- |
-| 链式调用结束 | eat fruit、sleep 10、eat bread | 还未开始 | 构造函数安排的计时器 |
-| 首轮 next | sleep 10、eat bread | eat fruit，打印后立即 next | 当前 JavaScript 调用 |
-| 第二轮 next | eat bread | 安排 10 ms 定时器后返回 | 宿主定时器回调 |
-| 定时器到期 | eat bread | 打印 wake up after 10ms，再 next | 当前 JavaScript 调用 |
-| 最后一轮 next | 空 | eat bread，随后队列结束 | 当前 JavaScript 调用 |
+| 链式调用结束 | `eat fruit → sleep 10 → eat bread` | 尚未启动 | 构造函数安排的初始定时器回调；当前同步代码结束后才有机会运行 |
+| 初始 `next()` 取出第一项 | `sleep 10 → eat bread` | `eat fruit` 打印，然后同步调用 `next()` | 当前 JavaScript 调用 |
+| `next()` 取出已登记的等待闭包 | `eat bread` | 执行等待闭包，安排延时参数为 10 ms 的定时器，然后返回；队列暂不继续 | 宿主稍后调度的定时器回调 |
+| 等待回调运行 | `eat bread` | 打印醒来消息，再调用 `next()` | 当前定时器回调中的 JavaScript |
+| 最后一项完成 | 空 | `eat bread` 打印，再调用 `next()`；`shift()` 得到 `undefined`，调用结束 | 无下一项 |
 
-输出顺序因此是：
+输出顺序是：
 
 > [!example] Ada 的三个排队命令
-> 输入是 eat("fruit")、sleep(10)、eat("bread")。队列按入队顺序执行；sleep 在 10 ms 定时器回调中才调用 next，因此最后一项不会越过等待提前执行。
+> 输入为 `eat("fruit")`、`sleep(10)`、`eat("bread")`。`sleep` 任务未在入队时等待；它直到轮到自己时才启动 10 ms 定时器。定时器回调运行后才推进到面包任务。
 >
 > ~~~text
 > eat fruit
@@ -8544,16 +8544,18 @@ new LazyMan("Ada").eat("fruit").sleep(10).eat("bread");
 > eat bread
 > ~~~
 
-此处 next 的含义是“当前任务已完成，可以继续”，不是定时器、Promise 或浏览器内置的推进机制。若任务没有调用 next，队列就会停住；若在 sleep 期间加入任务，下一项仍等计时器完成。实际定时器可能晚于 10 ms，例子描述的是先后关系，不是精确时钟保证。
+这里的 10 ms 是传给定时器的延时参数，醒来日志复用同一参数，不表示测得的经过时间。浏览器标准说明定时器会在指定延时后安排回调，但负载或其他任务可让实际执行变晚；Node.js v26.13.0 也明确不保证精确时刻或回调间的固定顺序。本例只依赖“等待回调推进队列”这一先后关系。
 
-> [!info] 这段示例没有定义什么？
-> 这是教学用的串行任务队列，没有规定任务抛错时如何恢复、如何取消等待中的计时器，也没有处理永不完成或重复推进。连续排入很多个同步 eat 任务会通过 next 递归推进，可能耗尽调用栈；队列已经清空后再加入任务也不会自动重新启动。生产队列要为这些状态另外定义契约，不能把本例当成已经具备这些保证。
+在原例中，若外部代码在 `sleep` 等待期间调用 `.eat("cake")`，新闭包追加到 `tasks` 尾部；回调推进后，原有 `eat bread` 先于 `eat cake` 执行。另一个变体以 `.sleep(10)` 作为最后一项：等待闭包已出队，所以 `tasks.length` 暂时为 0，但等待回调仍在途；此时追加的 `eat cake` 会在回调推进后运行。只有最后一项完成并调用 `next()`、而 `next()` 看到空队列返回之后，后续单纯追加任务才不会自动重启队列，因为登记方法只入队，不安排新的启动回调。
 
-如果任务本身要返回结果、并发组合或把失败交给调用链处理，应使用 Promise链或 async/await（异步函数和等待表达式）；见[回调、Promise 与 async 函数怎样组合异步工作？](#40.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。本页只回答如何把链式命令转成按序推进的闭包队列。
+这个串行队列依赖一个明确约定：调用者只登记任务；每个出队任务只在自身工作完成时调用一次 `next()`。若漏调，队列就停住；若任务提前或重复调用，后续任务可能在当前工作完成前启动。调用者直接调用 `next()` 也可能绕过尚未完成的等待。任务抛错时本实现没有恢复策略；等待中的定时器没有保存句柄，不能由实例取消。连续的同步任务会通过 `next()` 递归推进，很多项可能耗尽调用栈。它只演示链式登记、闭包保存参数和显式推进，不是具备错误恢复或取消能力的生产队列。
+
+若任务需要返回值、并发组合或把失败交给调用者处理，可以用 Promise 链或 `async function` (异步函数)；[回调、Promise 与 async 函数怎样组合异步工作？](#40.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)解释这些结果怎样传播。本页只回答链式命令如何排队并按序推进。
 
 > [!info]- 来源
-> - setTimeout 的宿主调度、嵌套计时器限制及不精确时序：WHATWG HTML Living Standard（2026-11-05），[Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)。
-> - “当前同步调用栈结束后回调才有机会运行”是宿主任务调度和 JavaScript run-to-completion（运行至完成）规则的应用说明；浏览器见[HTML event loops](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，Node 定时器见[Node.js v26.13.0 timers](https://nodejs.org/api/timers.html)。
+> - **浏览器定时器与事件循环。** [WHATWG HTML §8.7 Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)、[§8.1.7 Event loops](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，Living Standard 更新时间：2026-11-11。定时器初始化会创建稍后进入 timer task source（定时器任务源）的任务；事件循环先执行当前选中的任务步骤，之后再选择可运行任务。标准明确不保证定时器按精确延时准点运行。
+> - **Node.js 计时器范围。** [Node.js v26.13.0 Timers](https://nodejs.org/download/release/v26.13.0/docs/api/timers.html)。Node 定时器采用不同的内部实现；文档说明实际时刻及回调顺序不作精确保证，且小于 1 ms（含 0）的延迟参数（`delay`）会设为 1 ms。本例不把浏览器定时器的延时规则外推到 Node。
+> - **闭包与箭头函数。** [ECMAScript 2027 草案（2026-11-08）§10.2 ECMAScript Function Objects、§15.3 Arrow Function Definitions](https://tc39.es/ecma262/)，核对日期：2026-11-12。函数对象保存它闭合的词法环境；箭头函数不创建自己的 `this` 绑定。本例入队的函数稍后仍能读取 `food`、`ms` 参数，并通过外层方法的 `this` 调用 `next()`。
 ## 43. 迭代器与生成器怎样按需产出并清理数据？
 
 ### 案例背景

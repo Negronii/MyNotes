@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 1100" role="img" aria-labelledby="title desc">
+  <title id="title">LazyMan 的链式任务从同步登记到延后完成</title>
+  <desc id="desc">输入为 new LazyMan Ada eat fruit sleep 10 eat bread。构造函数先初始化应用队列并安排 setTimeout 箭头回调调用 this.next；同步链随后依次入队三项闭包。初始回调在同步代码结束后取出 eat fruit，打印后同步推进到此前登记的 sleep 等待闭包。该闭包安排延时参数为十毫秒的 timer 后返回，队列中只剩 eat bread。timer 回调打印 wake up after 10ms，推进并执行 eat bread，再次 next 时看到空队列而返回。图中的 10 ms 是输入参数，不是经过时间测量。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L10 5L0 10z" fill="#52677f"/>
+    </marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",sans-serif;fill:#172638}
+      .panel{fill:#fff;stroke:#cbd5e1;stroke-width:1.5}
+      .head{font-size:20px;font-weight:700}
+      .body{font-size:18px}
+      .note{font-size:17px}
+      .input{fill:#eff6ff;stroke:#1769aa;stroke-width:1.4}
+      .queue{fill:#f8fafc;stroke:#64748b;stroke-width:1.4}
+      .timer{fill:#fff7ed;stroke:#c2410c;stroke-width:1.4}
+      .output{fill:#ecfdf5;stroke:#15803d;stroke-width:1.4}
+      .edge{fill:none;stroke:#52677f;stroke-width:2.5;stroke-linecap:round;marker-end:url(#arrow)}
+      .muted{fill:#475569}
+    </style>
+  </defs>
+  <rect width="700" height="1100" rx="12" fill="#f8fafc"/>
+
+  <rect class="panel" x="20" y="20" width="660" height="245" rx="10"/>
+  <rect class="panel" x="20" y="315" width="660" height="230" rx="10"/>
+  <rect class="panel" x="20" y="595" width="660" height="210" rx="10"/>
+  <rect class="panel" x="20" y="855" width="660" height="225" rx="10"/>
+  <path class="edge" d="M350 265V315"/>
+  <path class="edge" d="M350 545V595"/>
+  <path class="edge" d="M350 805V855"/>
+
+  <text class="head" x="44" y="58">输入与构造顺序</text>
+  <rect class="input" x="40" y="77" width="620" height="48" rx="8"/>
+  <text class="body" x="350" y="108" text-anchor="middle">new LazyMan("Ada").eat("fruit").sleep(10).eat("bread")</text>
+  <text class="body" x="44" y="164">构造函数先初始化 tasks[]，安排初始回调：</text>
+  <text class="body" x="44" y="199">setTimeout(() =&gt; this.next(), 0)</text>
+  <text class="note muted" x="44" y="237">随后链式方法同步入队并返回同一实例；回调等同步代码结束后运行。</text>
+
+  <text class="head" x="44" y="353">初始回调调用 next()，任务完成后继续取队首</text>
+  <rect class="queue" x="40" y="378" width="620" height="132" rx="8"/>
+  <text class="body" x="60" y="415">1 · this.next() 取出 eat fruit 闭包，打印 eat fruit</text>
+  <text class="body" x="60" y="452">2 · eat 闭包同步调用 this.next()</text>
+  <text class="body" x="60" y="489">3 · 取出已登记的 sleep 等待闭包</text>
+
+  <text class="head" x="44" y="633">执行等待闭包；此时没有调用公开 sleep() 方法</text>
+  <rect class="timer" x="40" y="656" width="620" height="123" rx="8"/>
+  <text class="body" x="60" y="694">安排 setTimeout(callback, 10)，闭包随后返回</text>
+  <text class="body" x="60" y="731">应用队列剩余：[eat bread]；等待回调仍在途</text>
+  <text class="note muted" x="60" y="765">10 ms 是传给 timer 的 delay 参数，不是耗时测量。</text>
+
+  <text class="head" x="44" y="893">等待回调推进到终态</text>
+  <text class="body" x="44" y="933">回调打印 wake up after 10ms，再调用 this.next() 执行 eat bread。</text>
+  <text class="body" x="44" y="969">bread 闭包再次调用 next()；它看到空队列，于是返回。</text>
+  <rect class="output" x="40" y="989" width="620" height="68" rx="8"/>
+  <text class="body" x="60" y="1020">输出：eat fruit → wake up after 10ms → eat bread</text>
+  <text class="note muted" x="60" y="1047">终态：tasks[] 为空；没有下一项，也没有新的启动回调。</text>
+</svg>

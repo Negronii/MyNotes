@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 790" role="img" aria-labelledby="title desc">
+  <title id="title">有界任务池的合成输入和页二失败</title>
+  <desc id="desc">从五页主例缩成三项合成任务：页一在 t 等于零启动，三十毫秒后给出 A；页二同一时刻启动，十毫秒后以 new Error B failed 对象拒绝；页三等待空槽，启动后用二十毫秒给出 C。limit 为二，因此初始活动任务数为二。页二失败时页一仍活动，页三尚未启动。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L10 5L0 10z" fill="#52677f"/>
+    </marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",sans-serif;fill:#172638}
+      .panel{fill:#fff;stroke:#cbd5e1;stroke-width:1.5}
+      .head{font-size:20px;font-weight:700}
+      .body{font-size:18px}
+      .note{font-size:17px}
+      .input{fill:#eff6ff;stroke:#1769aa;stroke-width:1.4}
+      .slot{fill:#f8fafc;stroke:#64748b;stroke-width:1.4}
+      .failure{fill:#fef2f2;stroke:#b91c1c;stroke-width:1.5}
+      .edge{fill:none;stroke:#52677f;stroke-width:2.5;stroke-linecap:round;marker-end:url(#arrow)}
+      .muted{fill:#475569}
+    </style>
+  </defs>
+  <rect width="700" height="790" rx="12" fill="#f8fafc"/>
+
+  <rect class="panel" x="20" y="20" width="660" height="250" rx="10"/>
+  <rect class="panel" x="20" y="320" width="660" height="240" rx="10"/>
+  <rect class="panel" x="20" y="610" width="660" height="160" rx="10"/>
+  <path class="edge" d="M350 270V320"/>
+  <path class="edge" d="M350 560V610"/>
+
+  <text class="head" x="44" y="58">输入 · 五页主例中的三项合成任务</text>
+  <text class="body" x="44" y="91">reportId = 42 · sort = recent · pageSignal</text>
+  <rect class="input" x="40" y="112" width="198" height="132" rx="8"/>
+  <text class="body" x="58" y="145">页 1 · index 0</text>
+  <text class="note muted" x="58" y="178">t = 0 ms 启动</text>
+  <text class="note" x="58" y="218">t = 30 ms → A</text>
+
+  <rect class="input" x="251" y="112" width="198" height="132" rx="8"/>
+  <text class="body" x="269" y="145">页 2 · index 1</text>
+  <text class="note muted" x="269" y="178">t = 0 ms 启动</text>
+  <text class="note" x="269" y="207">t = 10 ms 后拒绝</text>
+  <text class="note" x="269" y="232">Error object</text>
+
+  <rect class="input" x="462" y="112" width="198" height="132" rx="8"/>
+  <text class="body" x="480" y="145">页 3 · index 2</text>
+  <text class="note muted" x="480" y="178">等待空槽</text>
+  <text class="note" x="480" y="218">启动后 20 ms → C</text>
+
+  <text class="head" x="44" y="360">起始状态 · t = 0 ms · limit = 2 · active = 2</text>
+  <rect class="slot" x="40" y="382" width="296" height="112" rx="8"/>
+  <text class="body" x="60" y="420">槽位 1 · 页 1 正在运行</text>
+  <text class="note muted" x="60" y="460">结果在 t = 30 ms 到达</text>
+  <rect class="slot" x="364" y="382" width="296" height="112" rx="8"/>
+  <text class="body" x="384" y="420">槽位 2 · 页 2 正在运行</text>
+  <text class="note muted" x="384" y="460">预计 t = 10 ms 结算</text>
+  <text class="body" x="44" y="532">页 3 仍在惰性输入中，尚未启动。</text>
+
+  <text class="head" x="44" y="650">失败事件 · t = 10 ms</text>
+  <rect class="failure" x="40" y="668" width="620" height="82" rx="8"/>
+  <text class="body" x="60" y="704">页 2 拒绝，reason = new Error("B failed")</text>
+  <text class="note" x="60" y="735">页 1 仍活动；页 3 等待 stop / collect 决策</text>
+</svg>

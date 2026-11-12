@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 920" role="img" aria-labelledby="title desc">
+  <title id="title">页二 Error 在 stop 与 collect 下的终态</title>
+  <desc id="desc">输入是 t 等于十毫秒时页二以 new Error B failed 对象拒绝，页一仍活动，页三等待。stop 分支停止取项，尝试 iterator.return 一次，不启动页三，等待页一结算后以原 Error 拒绝；一次 return 不保证迭代器自己的清理完成。collect 分支在 results 索引一记录拒绝并启动页三；页一与页三在 t 等于三十毫秒结算，池履行包含三项状态记录的结果并报告 peakActive 为二。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L10 5L0 10z" fill="#52677f"/>
+    </marker>
+    <marker id="fail-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L10 5L0 10z" fill="#b91c1c"/>
+    </marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",sans-serif;fill:#172638}
+      .panel{fill:#fff;stroke:#cbd5e1;stroke-width:1.5}
+      .head{font-size:20px;font-weight:700}
+      .body{font-size:18px}
+      .note{font-size:17px}
+      .event{fill:#fef2f2;stroke:#b91c1c;stroke-width:1.5}
+      .stop{fill:#fff7ed;stroke:#c2410c;stroke-width:1.5}
+      .collect{fill:#ecfdf5;stroke:#15803d;stroke-width:1.5}
+      .terminal-stop{fill:#fff1f2;stroke:#be123c;stroke-width:1.4}
+      .terminal-collect{fill:#f0fdf4;stroke:#15803d;stroke-width:1.4}
+      .edge{fill:none;stroke:#52677f;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}
+      .fail{fill:none;stroke:#b91c1c;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#fail-arrow)}
+      .muted{fill:#475569}
+    </style>
+  </defs>
+  <rect width="700" height="920" rx="12" fill="#f8fafc"/>
+
+  <rect class="panel" x="20" y="20" width="660" height="140" rx="10"/>
+  <rect class="panel" x="20" y="250" width="320" height="640" rx="10"/>
+  <rect class="panel" x="360" y="250" width="320" height="640" rx="10"/>
+  <path d="M350 160V192" stroke="#52677f" stroke-width="2.5"/>
+  <circle cx="350" cy="192" r="4" fill="#52677f"/>
+  <path class="fail" d="M350 192V215H180V245"/>
+  <path class="edge" d="M350 192V215H520V245"/>
+
+  <text class="head" x="44" y="58">失败输入 · t = 10 ms</text>
+  <text class="body" x="44" y="96">页 2 reason = new Error("B failed")</text>
+  <text class="note muted" x="44" y="132">页 1 仍活动；页 3 等待策略决定是否启动</text>
+
+  <text class="head" x="44" y="290">failure: "stop"</text>
+  <rect class="stop" x="42" y="315" width="276" height="205" rx="8"/>
+  <text class="body" x="60" y="351">t = 10 ms：停止取项</text>
+  <text class="note" x="60" y="387">尝试 iterator.return() 一次</text>
+  <text class="body" x="60" y="423">页 3 不启动</text>
+  <text class="note" x="60" y="459">页 1 仍运行，池等待它</text>
+  <text class="note" x="60" y="495">在 t = 30 ms 结算</text>
+  <path class="edge" d="M180 520V570"/>
+  <rect class="terminal-stop" x="42" y="570" width="276" height="286" rx="8"/>
+  <text class="head" x="60" y="608">终态</text>
+  <text class="body" x="60" y="648">池以首个原因拒绝</text>
+  <text class="body" x="60" y="684">new Error("B failed")</text>
+  <text class="note muted" x="60" y="727">return() 只尝试一次</text>
+  <text class="note muted" x="60" y="759">不保证迭代器自己的</text>
+  <text class="note muted" x="60" y="791">清理已经完成</text>
+
+  <text class="head" x="384" y="290">failure: "collect"</text>
+  <rect class="collect" x="382" y="315" width="276" height="205" rx="8"/>
+  <text class="body" x="400" y="351">t = 10 ms：记录索引 1</text>
+  <text class="note" x="400" y="387">status: rejected</text>
+  <text class="note" x="400" y="423">reason: new Error("B failed")</text>
+  <text class="body" x="400" y="459">空槽启动页 3</text>
+  <text class="note" x="400" y="495">t = 30 ms：页 1 → A，页 3 → C</text>
+  <path class="edge" d="M520 520V570"/>
+  <rect class="terminal-collect" x="382" y="570" width="276" height="286" rx="8"/>
+  <text class="head" x="400" y="608">终态 · pool fulfilled</text>
+  <text class="note" x="400" y="646">peakActive = 2</text>
+  <text class="note" x="400" y="686">index 0 · fulfilled</text>
+  <text class="note" x="400" y="714">value: "A"</text>
+  <text class="note" x="400" y="752">index 1 · rejected</text>
+  <text class="note" x="400" y="780">reason: new Error("B failed")</text>
+  <text class="note" x="400" y="818">index 2 · fulfilled · value "C"</text>
+</svg>
