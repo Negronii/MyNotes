@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="740" viewBox="0 0 700 740" role="img" aria-labelledby="title desc">
+<title id="title">小流量后的放量、保持与恢复决策</title>
+<desc id="desc">在当前比例观察有代表性的请求、授权结果、依赖和 worker。SLI 与业务达到加流门槛才增加比例；样本或遥测不足，或未达加流门槛但尚未触发止损时保持；业务契约失败或止损阈值越界时停止放量并评估安全回退。有兼容且安全的候选就启动、切流并复验；没有安全候选则隔离并前向修复，不恢复已知有租户漏洞的旧版。恢复或前向修复后检查实际摘要、配置、用户结果和 worker 任务。</desc>
+<defs>
+  <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#36546f"/></marker>
+  <style>
+    text { font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #18324b; }
+    .title { font-size: 19px; font-weight: 700; }
+    .body { font-size: 15px; }
+    .small { font-size: 13px; }
+    .box { fill: #f4f8fb; stroke: #557c9a; stroke-width: 1.6; }
+    .check { fill: #edf5f1; stroke: #4d806c; stroke-width: 1.6; }
+    .hold { fill: #fff8e9; stroke: #a77920; stroke-width: 1.6; }
+    .stop { fill: #fbefed; stroke: #a44b40; stroke-width: 1.6; }
+    .line { fill: none; stroke: #36546f; stroke-width: 2; marker-end: url(#arrow); }
+  </style>
+</defs>
+<rect x="1" y="1" width="698" height="738" rx="14" fill="#fff" stroke="#d4e0e8"/>
+
+<rect x="52" y="48" width="596" height="63" rx="11" class="box"/>
+<text x="350" y="74" text-anchor="middle" class="body">发布负责人 / 控制器：观察当前小流量版本</text>
+<text x="350" y="97" text-anchor="middle" class="small">合格请求、租户授权、遥测完整性、依赖容量与 worker 队列/任务</text>
+<path d="M350 111 V150 M112 150 H588" fill="none" stroke="#36546f" stroke-width="2"/>
+<path d="M112 150 V167" class="line"/><path d="M350 150 V167" class="line"/><path d="M588 150 V167" class="line"/>
+<text x="18" y="162" text-anchor="start" class="small">加流门槛通过</text>
+<text x="330" y="162" text-anchor="end" class="small">未达加流门槛</text>
+<text x="681" y="162" text-anchor="end" class="small">止损条件触发</text>
+
+<rect x="18" y="173" width="190" height="92" rx="10" class="check"/>
+<text x="113" y="201" text-anchor="middle" class="body">证据充分且</text>
+<text x="113" y="222" text-anchor="middle" class="body">业务和 SLI 都达标</text>
+<text x="113" y="247" text-anchor="middle" class="small">A=200/预期；B=404</text>
+
+<rect x="255" y="173" width="190" height="92" rx="10" class="hold"/>
+<text x="350" y="201" text-anchor="middle" class="body">样本或遥测不足</text>
+<text x="350" y="222" text-anchor="middle" class="body">SLI 未达加流门槛</text>
+<text x="350" y="247" text-anchor="middle" class="small">未触发止损；保持</text>
+
+<rect x="492" y="173" width="190" height="92" rx="10" class="stop"/>
+<text x="587" y="201" text-anchor="middle" class="body">授权契约失败，或</text>
+<text x="587" y="222" text-anchor="middle" class="body">预设止损阈值越界</text>
+<text x="587" y="247" text-anchor="middle" class="small">停止放量并处置</text>
+
+<path d="M113 265 V303" class="line"/>
+<path d="M350 265 V303" class="line"/>
+<path d="M587 265 V303" class="line"/>
+<rect x="18" y="309" width="190" height="76" rx="10" class="check"/>
+<text x="113" y="337" text-anchor="middle" class="body">按计划增加一步</text>
+<text x="113" y="361" text-anchor="middle" class="small">重开窗口；100% 后复核</text>
+<text x="113" y="378" text-anchor="middle" class="small">最终门禁通过才结束</text>
+
+<rect x="255" y="309" width="190" height="76" rx="10" class="hold"/>
+<text x="350" y="337" text-anchor="middle" class="body">保持当前比例</text>
+<text x="350" y="361" text-anchor="middle" class="small">补证据或调查指标</text>
+<text x="350" y="378" text-anchor="middle" class="small">再作下一轮判断</text>
+
+<rect x="492" y="309" width="190" height="76" rx="10" class="stop"/>
+<text x="587" y="337" text-anchor="middle" class="body">限制问题版本流量</text>
+<text x="587" y="361" text-anchor="middle" class="small">评估兼容与安全候选</text>
+<text x="587" y="378" text-anchor="middle" class="small">worker 另行停领或恢复</text>
+<path d="M587 385 V426" class="line"/>
+
+<polygon points="587,428 675,463 587,498 499,463" class="hold"/>
+<text x="587" y="467" text-anchor="middle" class="small">有安全且兼容的候选？</text>
+
+<path d="M499 463 H343 V529" class="line"/>
+<text x="413" y="453" text-anchor="middle" class="small">是</text>
+<path d="M587 498 V529" class="line"/>
+<text x="635" y="526" class="small">否</text>
+
+<rect x="188" y="535" width="310" height="70" rx="10" class="check"/>
+<text x="343" y="562" text-anchor="middle" class="body">恢复候选到就绪并备足容量，再切回</text>
+<text x="343" y="588" text-anchor="middle" class="small">HTTP 入口切流；worker 消费另行控制</text>
+
+<rect x="514" y="535" width="168" height="70" rx="10" class="stop"/>
+<text x="598" y="560" text-anchor="middle" class="body">隔离受影响入口</text>
+<text x="598" y="581" text-anchor="middle" class="small">并前向修复</text>
+<text x="598" y="599" text-anchor="middle" class="small">不恢复已知漏洞版</text>
+
+<path d="M343 605 V644 H350 V660" class="line"/>
+<path d="M598 605 V644 H350" fill="none" stroke="#36546f" stroke-width="2"/>
+<rect x="84" y="660" width="532" height="68" rx="9" class="box"/>
+<text x="350" y="686" text-anchor="middle" class="body">切回或前向修复后复验</text>
+<text x="350" y="710" text-anchor="middle" class="small">实际摘要与配置符合预期；A/B 命中预期摘要且结果正确；worker 任务恢复</text>
+</svg>

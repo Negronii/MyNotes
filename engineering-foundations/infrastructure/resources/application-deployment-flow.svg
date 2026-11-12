@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="904" viewBox="0 0 700 904" role="img" aria-labelledby="title desc">
+<title id="title">从固定源码提交到生产首轮流量</title>
+<desc id="desc">CI 检出并检查固定提交、构建一次并记录镜像摘要；预发布用同一摘要运行 API 与 worker 验收。验收和生产环境门禁通过后部署系统才启动生产实例。实例就绪后，受控生产入口把两种专用身份定向到新摘要做冒烟检查。两种身份都命中新摘要且结果正确后，流量入口才向它开放首轮小流量。任一门禁、就绪或冒烟检查失败时不切流，并定位业务错误或补齐证据。</desc>
+<defs>
+  <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#36546f"/></marker>
+  <style>
+    text { font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #18324b; }
+    .title { font-size: 19px; font-weight: 700; }
+    .body { font-size: 16px; }
+    .small { font-size: 14px; }
+    .box { fill: #f4f8fb; stroke: #557c9a; stroke-width: 1.6; }
+    .check { fill: #edf5f1; stroke: #4d806c; stroke-width: 1.6; }
+    .decision { fill: #fff8e9; stroke: #a77920; stroke-width: 1.6; }
+    .stop { fill: #fbefed; stroke: #a44b40; stroke-width: 1.6; }
+    .line { fill: none; stroke: #36546f; stroke-width: 2; marker-end: url(#arrow); }
+    .plain { fill: none; stroke: #36546f; stroke-width: 2; }
+  </style>
+</defs>
+<rect x="1" y="1" width="698" height="902" rx="14" fill="#fff" stroke="#d4e0e8"/>
+
+<rect x="84" y="52" width="532" height="62" rx="11" class="box"/>
+<text x="350" y="78" text-anchor="middle" class="body">CI：检出干净的 commit c4f2a91，运行门禁</text>
+<text x="350" y="100" text-anchor="middle" class="small">构建一次，推送并保存摘要、检查结果与来源记录</text>
+<path d="M350 114 V154" class="line"/>
+
+<rect x="84" y="159" width="532" height="62" rx="11" class="check"/>
+<text x="350" y="185" text-anchor="middle" class="body">预发布负责人：以同一摘要启动 API 与 worker</text>
+<text x="350" y="207" text-anchor="middle" class="small">经已装配入口验证 tenant-a / tenant-b，并检查任务路径</text>
+<path d="M350 221 V260" class="line"/>
+
+<polygon points="350,262 462,305 350,348 238,305" class="decision"/>
+<text x="350" y="298" text-anchor="middle" class="body">预发布通过且</text>
+<text x="350" y="319" text-anchor="middle" class="body">生产门禁获批？</text>
+
+<path d="M238 305 H166 V377" class="line"/>
+<text x="184" y="295" class="small">否</text>
+<rect x="26" y="377" width="280" height="72" rx="10" class="stop"/>
+<text x="166" y="405" text-anchor="middle" class="body">拒绝或失败：停止晋级</text>
+<text x="166" y="429" text-anchor="middle" class="small">生产流量继续留在当前版本</text>
+
+<text x="365" y="360" class="small">是</text>
+<rect x="366" y="377" width="308" height="72" rx="10" class="box"/>
+<text x="520" y="405" text-anchor="middle" class="body">部署系统：启动获批摘要</text>
+<text x="520" y="429" text-anchor="middle" class="small">使用记录过的运行配置与密钥引用</text>
+<path d="M350 348 V363 H520 V377" class="line"/>
+<path d="M520 449 V487" class="line"/>
+
+<polygon points="520,489 620,529 520,569 420,529" class="decision"/>
+<text x="520" y="526" text-anchor="middle" class="body">实例就绪？</text>
+
+<path d="M420 529 H173 V610" class="line"/>
+<text x="340" y="519" class="small">否</text>
+<rect x="26" y="610" width="294" height="48" rx="9" class="stop"/>
+<text x="173" y="640" text-anchor="middle" class="small">不切流；保留当前版本并诊断</text>
+
+<path d="M520 569 V610" class="line"/>
+<text x="535" y="598" class="small">是</text>
+<rect x="350" y="610" width="324" height="72" rx="9" class="check"/>
+<text x="512" y="637" text-anchor="middle" class="body">生产入口：定向检查本轮新摘要</text>
+<text x="512" y="662" text-anchor="middle" class="small">tenant-a 200；tenant-b 404；追踪核摘要</text>
+
+<path d="M512 682 V719" class="line"/>
+<polygon points="512,719 604,755 512,791 420,755" class="decision"/>
+<text x="512" y="751" text-anchor="middle" class="small">两身份都命中新</text>
+<text x="512" y="770" text-anchor="middle" class="small">摘要且结果正确？</text>
+
+<path d="M420 755 H173 V830" class="line"/>
+<text x="337" y="745" class="small">否</text>
+<rect x="26" y="830" width="294" height="52" rx="9" class="stop"/>
+<text x="173" y="852" text-anchor="middle" class="small">不切流，定位错误或补齐证据</text>
+
+<path d="M512 791 V830" class="line"/>
+<text x="527" y="820" class="small">是</text>
+<rect x="350" y="830" width="324" height="52" rx="9" class="check"/>
+<text x="512" y="862" text-anchor="middle" class="small">流量入口：开放首轮少量真实 HTTP 流量</text>
+</svg>
