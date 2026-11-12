@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="1390" viewBox="0 0 760 1390" role="img" aria-labelledby="title desc">
+  <title id="title">结构化克隆前后的报表对象图</title>
+  <desc id="desc">上图是包含 report 自循环、rows 数组、两条行记录和共享 owner 的输入对象图。下图是 structuredClone 结果：对应图内引用仍连接到相同对应节点，所有对象均有新身份。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M 1 1 L 11 6 L 1 11" fill="none" stroke="#344c5e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .panel-title { font: 700 25px system-ui, sans-serif; fill: #172b3a; }
+      .panel-note { font: 19px system-ui, sans-serif; fill: #405768; }
+      .input-node { fill: #e8f3fb; stroke: #36769e; stroke-width: 2.5; }
+      .clone-node { fill: #e9f4ea; stroke: #477d4d; stroke-width: 2.5; }
+      .array-frame { fill: #f9fbfc; stroke: #647b8b; stroke-width: 2; stroke-dasharray: 9 7; }
+      .node-title { font: 700 21px system-ui, sans-serif; fill: #182d3c; text-anchor: middle; }
+      .node-body { font: 20px system-ui, sans-serif; fill: #263d4c; text-anchor: middle; }
+      .array-title { font: 700 21px system-ui, sans-serif; fill: #304a5b; }
+      .edge { fill: none; stroke: #344c5e; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .edge-label { font: 20px system-ui, sans-serif; fill: #21394a; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 6px; stroke-linejoin: round; }
+      .separator { stroke: #d7e0e6; stroke-width: 2; }
+    </style>
+  </defs>
+  <rect width="760" height="1390" fill="#ffffff"/>
+
+
+  <text class="panel-title" x="30" y="38">输入：报表对象图（5 个对象）</text>
+  <text class="panel-note" x="30" y="65">实线箭头表示属性引用；虚线框表示 rows 数组</text>
+
+  <rect class="array-frame" x="35" y="255" width="650" height="225" rx="18"/>
+
+  <!-- Input object graph edges -->
+  <path class="edge" d="M 180 112 C 123 62, 123 190, 180 145"/>
+  <text class="edge-label" x="142" y="126">self</text>
+  <path class="edge" d="M 290 175 L 290 250"/>
+  <text class="edge-label" x="321" y="222">rows</text>
+  <path class="edge" d="M 400 125 L 735 125 L 735 605 L 495 605"/>
+  <text class="edge-label" x="568" y="113">focusedOwner</text>
+  <path class="edge" d="M 200 440 L 200 492 L 320 560"/>
+  <text class="edge-label" x="166" y="465">owner</text>
+  <path class="edge" d="M 520 440 L 520 492 L 440 560"/>
+  <text class="edge-label" x="558" y="465">owner</text>
+
+  <!-- Input nodes -->
+  <rect class="input-node" x="180" y="75" width="220" height="100" rx="16"/>
+  <text class="node-title" x="290" y="117">report #1</text>
+  <text class="node-body" x="290" y="148">报表对象</text>
+
+  <text class="array-title" x="55" y="290">rows 数组 #2</text>
+  <rect class="input-node" x="70" y="335" width="260" height="105" rx="14"/>
+  <text class="node-title" x="200" y="367">rows[0] #3</text>
+  <text class="node-body" x="200" y="396">reportId: r-104</text>
+  <text class="node-body" x="200" y="423">amount: 0</text>
+
+  <rect class="input-node" x="390" y="335" width="260" height="105" rx="14"/>
+  <text class="node-title" x="520" y="367">rows[1] #4</text>
+  <text class="node-body" x="520" y="396">reportId: r-105</text>
+  <text class="node-body" x="520" y="423">amount: 120</text>
+
+  <rect class="input-node" x="265" y="560" width="230" height="92" rx="16"/>
+  <text class="node-title" x="380" y="596">sharedOwner #5</text>
+  <text class="node-body" x="380" y="626">id: u-17 · name: Ada</text>
+
+  <text class="panel-title" x="30" y="718">输出：structuredClone(report)（5 个新对象）</text>
+  <text class="panel-note" x="30" y="745">编号对应输入图；撇号表示新对象身份</text>
+
+  <g transform="translate(0 90)">
+  <rect class="array-frame" x="35" y="875" width="650" height="225" rx="18"/>
+  <!-- Clone graph edges -->
+  <path class="edge" d="M 180 732 C 123 682, 123 810, 180 765"/>
+  <text class="edge-label" x="142" y="746">self</text>
+  <path class="edge" d="M 290 795 L 290 870"/>
+  <text class="edge-label" x="321" y="842">rows</text>
+  <path class="edge" d="M 400 745 L 735 745 L 735 1225 L 495 1225"/>
+  <text class="edge-label" x="568" y="733">focusedOwner</text>
+  <path class="edge" d="M 200 1060 L 200 1112 L 320 1180"/>
+  <text class="edge-label" x="166" y="1085">owner</text>
+  <path class="edge" d="M 520 1060 L 520 1112 L 440 1180"/>
+  <text class="edge-label" x="558" y="1085">owner</text>
+
+  <!-- Cloned nodes -->
+  <rect class="clone-node" x="180" y="695" width="220" height="100" rx="16"/>
+  <text class="node-title" x="290" y="737">report #1&#8242;</text>
+  <text class="node-body" x="290" y="768">新报表对象</text>
+
+  <text class="array-title" x="55" y="910">rows 数组 #2&#8242;</text>
+  <rect class="clone-node" x="70" y="955" width="260" height="105" rx="14"/>
+  <text class="node-title" x="200" y="987">rows[0] #3&#8242;</text>
+  <text class="node-body" x="200" y="1016">reportId: r-104</text>
+  <text class="node-body" x="200" y="1043">amount: 0</text>
+
+  <rect class="clone-node" x="390" y="955" width="260" height="105" rx="14"/>
+  <text class="node-title" x="520" y="987">rows[1] #4&#8242;</text>
+  <text class="node-body" x="520" y="1016">reportId: r-105</text>
+  <text class="node-body" x="520" y="1043">amount: 120</text>
+
+  <rect class="clone-node" x="265" y="1180" width="230" height="92" rx="16"/>
+  <text class="node-title" x="380" y="1216">sharedOwner #5&#8242;</text>
+  <text class="node-body" x="380" y="1246">id: u-17 · name: Ada</text>
+  </g>
+</svg>

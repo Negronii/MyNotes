@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 780" role="img" aria-label="面板关闭时可用状态立即改变，视觉淡出稍后结束">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10Z" fill="#8093ad"/></marker></defs>
+<style>text{font-family:Arial,'PingFang SC','Noto Sans CJK SC',sans-serif;fill:#27364b;font-size:17px}.bold{font-weight:600;font-size:19px}.code{font-family:Menlo,Consolas,monospace;font-size:16px}.muted{fill:#5f718c}.line{stroke:#8093ad;stroke-width:2.5;fill:none;marker-end:url(#arrow)}</style>
+<rect width="700" height="780" rx="12" fill="#f8faff"/>
+<rect x="25" y="22" width="650" height="180" rx="12" fill="#eef5ff" stroke="#c8d9ef"/>
+<text x="48" y="55" class="bold">完全展开</text>
+<text x="48" y="91" class="code">hidden=false · inert=false</text>
+<text x="48" y="121" class="code">aria-expanded="true"</text>
+<text x="48" y="163">焦点：面板内的“关闭详情”</text>
+<rect x="430" y="73" width="215" height="95" rx="8" fill="white" stroke="#8da6c8"/>
+<text x="450" y="104">详情可见、可操作</text>
+<text x="450" y="133" class="code">display:block</text>
+<text x="450" y="157" class="code">opacity:1</text>
+<path class="line" d="M350 213V309"/>
+<text x="378" y="244">① 焦点移回外部触发按钮</text>
+<text x="378" y="275">② 同步设置关闭属性</text>
+<rect x="25" y="322" width="650" height="180" rx="12" fill="#eef5ff" stroke="#c8d9ef"/>
+<text x="48" y="355" class="bold">关闭已生效，画面正在淡出</text>
+<text x="48" y="391" class="code">hidden=true · inert=true</text>
+<text x="48" y="421" class="code">aria-expanded="false"</text>
+<text x="48" y="463">焦点：“查看详情”</text>
+<rect x="430" y="373" width="215" height="95" rx="8" fill="white" stroke="#8da6c8" stroke-dasharray="5 4"/>
+<text x="450" y="404">有占位，已不可交互</text>
+<text x="450" y="433" class="code">display:block</text>
+<text x="450" y="457" class="code">opacity:1 → 0</text>
+<path class="line" d="M350 513V592"/>
+<text x="378" y="548">③ 淡出结束</text>
+<text x="378" y="577" class="muted">本例时长 180 ms</text>
+<rect x="25" y="605" width="650" height="150" rx="12" fill="#eef5ff" stroke="#c8d9ef"/>
+<text x="48" y="638" class="bold">布局盒移除</text>
+<text x="48" y="676">关闭属性保持不变</text>
+<text x="48" y="714">焦点仍在面板外</text>
+<text x="450" y="671" class="code">display:none</text>
+<text x="450" y="701" class="code">opacity:0</text>
+<text x="450" y="730">不再占据布局空间</text>
+</svg>
