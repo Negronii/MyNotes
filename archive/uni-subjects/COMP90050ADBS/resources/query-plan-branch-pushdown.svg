@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" role="img" aria-labelledby="title desc">
+  <title id="title">连接前后筛选 branch 的两种关系代数计划</title>
+  <desc id="desc">两棵等价的内连接计划使用相同的 branch、account、depositor 关系和连接条件；左图在连接后筛选 Brooklyn，右图先筛选 branch 再连接。无箭头连线表示输入依赖，查询结果沿树从叶节点返回根节点。</desc>
+  <rect width="1000" height="650" fill="#fff"/>
+  <g font-family="Arial, 'Noto Sans CJK SC', sans-serif" fill="#18324b">
+    <text x="500" y="45" text-anchor="middle" font-size="29" font-weight="700">同一查询的两种逻辑计划</text>
+    <rect x="18" y="75" width="466" height="490" rx="12" fill="#fbfdff" stroke="#b7c6d3" stroke-width="2"/>
+    <rect x="516" y="75" width="466" height="490" rx="12" fill="#fbfdff" stroke="#b7c6d3" stroke-width="2"/>
+
+    <g fill="#edf4fa" stroke="#607d96" stroke-width="2.5">
+      <rect x="140" y="135" width="230" height="64" rx="10"/>
+      <rect x="125" y="225" width="260" height="64" rx="10"/>
+      <rect x="160" y="320" width="190" height="64" rx="10"/>
+      <rect x="50" y="415" width="160" height="64" rx="10"/>
+      <rect x="275" y="415" width="190" height="64" rx="10"/>
+      <rect x="258" y="500" width="100" height="64" rx="10" fill="#f6f8fa"/>
+      <rect x="370" y="500" width="95" height="64" rx="10" fill="#f6f8fa"/>
+
+      <rect x="630" y="135" width="230" height="64" rx="10" fill="#edf4fa"/>
+      <rect x="650" y="225" width="190" height="64" rx="10" fill="#edf4fa"/>
+      <rect x="525" y="320" width="200" height="64" rx="10" fill="#fff8e9" stroke="#b9872f"/>
+      <rect x="770" y="320" width="190" height="64" rx="10" fill="#edf4fa"/>
+      <rect x="530" y="415" width="190" height="64" rx="10" fill="#f6f8fa"/>
+      <rect x="745" y="415" width="104" height="64" rx="10" fill="#f6f8fa"/>
+      <rect x="865" y="415" width="104" height="64" rx="10" fill="#f6f8fa"/>
+    </g>
+
+    <g stroke="#365f85" stroke-width="3" fill="none" stroke-linecap="round">
+      <path d="M255 199 V220"/>
+      <path d="M255 289 V315"/>
+      <path d="M255 384 L130 410"/>
+      <path d="M255 384 L370 410"/>
+      <path d="M370 479 L308 495"/>
+      <path d="M370 479 L418 495"/>
+
+      <path d="M745 199 V220"/>
+      <path d="M745 289 L625 315"/>
+      <path d="M745 289 L865 315"/>
+      <path d="M625 384 V410"/>
+      <path d="M865 384 L797 410"/>
+      <path d="M865 384 L917 410"/>
+    </g>
+
+    <g text-anchor="middle">
+      <text x="251" y="115" font-size="24" font-weight="700">计划 A：连接后筛选</text>
+      <text x="748" y="115" font-size="24" font-weight="700">计划 B：先筛 branch</text>
+
+      <text x="255" y="176" font-size="23">Π customer_name</text>
+      <text x="255" y="250" font-size="21">σ branch_city</text>
+      <text x="255" y="277" font-size="21">= Brooklyn</text>
+      <text x="255" y="361" font-size="23">⋈ branch_name</text>
+      <text x="130" y="455" font-size="23">branch</text>
+      <text x="370" y="455" font-size="21">⋈ account_number</text>
+      <text x="308" y="540" font-size="20">account</text>
+      <text x="418" y="540" font-size="18">depositor</text>
+
+      <text x="745" y="176" font-size="23">Π customer_name</text>
+      <text x="745" y="266" font-size="23">⋈ branch_name</text>
+      <text x="625" y="346" font-size="20">σ branch_city</text>
+      <text x="625" y="373" font-size="20">= Brooklyn</text>
+      <text x="865" y="361" font-size="21">⋈ account_number</text>
+      <text x="625" y="455" font-size="23">branch</text>
+      <text x="797" y="455" font-size="21">account</text>
+      <text x="917" y="455" font-size="20">depositor</text>
+    </g>
+
+    <text x="500" y="608" text-anchor="middle" font-size="21" fill="#526679">筛选位置不同；计划 B 只把通过筛选的 branch 行交给顶层连接。</text>
+    <text x="500" y="635" text-anchor="middle" font-size="18" fill="#526679">无箭头连线表示输入依赖；逻辑结果从叶节点沿树向根返回。</text>
+  </g>
+</svg>
