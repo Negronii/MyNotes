@@ -3398,7 +3398,7 @@ WWW-Authenticate: Bearer resource_metadata="https://logs.example.test/.well-know
 
 这里的地址和权限范围都为合成值。`resource_metadata` 指向这台受保护服务的 Protected Resource Metadata，其中描述资源标识并指出授权服务器；它本身不是访问许可。MCP 2026-07-28 的 HTTP 授权流程要求 client 在授权请求和 token 请求中都带上目标 server 的规范 `resource` URI（统一资源标识符）。浏览器回调带回授权码的授权响应，须在把 code 发往 token endpoint 兑换前，按已验证的授权服务器元数据应用 `iss` 校验规则：若元数据声明支持 `iss`，该响应必须带 `iss` 且须与已记录 issuer（签发者）完全匹配；若元数据未声明或声明不支持，响应若带 `iss` 仍要比较，不带则可继续。兑换后，服务端再确认访问令牌由其认可的授权服务器签发且确实面向该资源。`audience`（令牌受众）回答“哪个服务可以接收此 token”；`builds:read` `scope`（权限范围）回答“token 被授予哪类访问”，但不代表能读所有 build。最后，server 仍须按当前用户检查具体记录，例如该用户是否能读取 `build_id=42`。这些条件必须同时成立；每条请求也要按服务端的验证机制检查令牌有效性、audience、scope 和用户对具体记录的权限。若令牌有效但权限范围不足，MCP 授权规范建议 server 用 HTTP 403 和 `insufficient_scope` 发起范围挑战；是否取得更宽 scope 仍由用户授权与 client 策略决定。
 
-这个 token 只用于 host 到 MCP resource 的这一段。面向日志 MCP 的 audience 不允许工单 API 接受这枚 token；即使 scope 名称相似，也不能跨资源转发。若 MCP server 后端还要访问别的日志服务，它应使用该后端自己定义的服务凭据或另一个明确授权的机制。后续若 Agent 需要替用户创建外部工单，也要由运行时使用面向工单 API 的另一份用户委托 grant。两个权限链的详细恢复流程见[无人值守 Agent 怎样在用户授权内继续第三方操作？](#17.%20%E6%97%A0%E4%BA%BA%E5%80%BC%E5%AE%88%20Agent%20%E6%80%8E%E6%A0%B7%E5%9C%A8%E7%94%A8%E6%88%B7%E6%8E%88%E6%9D%83%E5%86%85%E7%BB%A7%E7%BB%AD%E7%AC%AC%E4%B8%89%E6%96%B9%E6%93%8D%E4%BD%9C%EF%BC%9F)。
+这个 token 只用于 host 到 MCP resource 的这一段。面向日志 MCP 的 audience 不允许工单 API 接受这枚 token；即使 scope 名称相似，也不能跨资源转发。若 MCP server 后端还要访问别的日志服务，它应使用该后端自己定义的服务凭据或另一个明确授权的机制。后续若 Agent 需要替用户创建外部工单，也要由运行时使用面向工单 API 的另一份用户委托 grant。两个权限链的详细恢复流程见[无人值守 Agent 怎样在用户授权内继续第三方操作？](#17.%20%E6%97%A0%E4%BA%BA%E5%80%BC%E5%AE%88%20Agent%EF%BC%88%E6%99%BA%E8%83%BD%E4%BD%93%EF%BC%89%E6%80%8E%E6%A0%B7%E5%9C%A8%E7%94%A8%E6%88%B7%E6%8E%88%E6%9D%83%E5%86%85%E7%BB%A7%E7%BB%AD%E7%AC%AC%E4%B8%89%E6%96%B9%E6%93%8D%E4%BD%9C%EF%BC%9F)。
 
 ### 返回内容和工具定义为什么要按不可信数据处理？
 
@@ -3424,9 +3424,7 @@ Streamable HTTP 上关闭一个请求的 SSE 响应流表示取消该请求；�
 > - **发现响应字段、server 能力、tools/call 结果与多轮往返。** Model Context Protocol，[Schema Reference](https://modelcontextprotocol.io/specification/2026-07-28/schema)，检查 DiscoverResult、ServerCapabilities、CallToolResult；[Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)，检查工具定义、tools/list、tools/call 和用户交互建议；[Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)，检查 input_required、requestState 完整性和重试字段。
 > - **401 挑战、Protected Resource Metadata、issuer 校验及目标 resource 参数。** Model Context Protocol，[Authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)，检查 Unauthorized Responses、Authorization Server Discovery、Authorization Response Validation、Resource Parameter Implementation；IETF [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728.html) 定义 Protected Resource Metadata。
 > - **令牌面向资源的受众约束。** IETF [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) 定义 OAuth resource 参数；[RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html) §4.10.2 建议 access token 限定到具体 resource server 并由其验证。文中的分层校验是应用对这一边界的落实，不表示任意 provider 都支持相同的 token 形状。
-## 17. 无人值守 Agent 怎样在用户授权内继续第三方操作？
-
-### 无人值守 Agent（智能体）怎样在用户授权内继续第三方操作？
+## 17. 无人值守 Agent（智能体）怎样在用户授权内继续第三方操作？
 
 **案例背景。** 以下是合成教学案例。同一 run-r42-7 已用只读调用 c1 从 Model Context Protocol（MCP，模型上下文协议）日志服务取得 build 42 的观察：reject_empty_name 预期 HTTP 400、实际 200。用户要求应用解释失败，并为 repository_id=build-service 准备缺陷单，提交前让用户审批。工单服务的 OAuth（开放授权）提供方（provider）账号是用户的 OAuth 身份，build-service 是动作目标；两者不是同一个标识。运行时要用用户对工单 API（应用程序接口）的委托授权，但不能把创建权限交给模型，也不能把此前读日志的令牌拿去创建 issue（工单）。
 
@@ -3436,7 +3434,7 @@ Streamable HTTP 上关闭一个请求的 SSE 响应流表示取消该请求；�
 
 本章按三个阶段说明这条链：先把工单 provider 的 OAuth 授权安全地绑定到本地 grant；再让应用审批并提交一份精确的缺陷单；如果远端结果不确定，保留原操作状态并按合法读取能力恢复。日志令牌 `T_mcp` 与工单令牌 `T_issue` 始终面向各自的资源。
 
-#### grant 为什么不能等同于登录会话或一次动作批准？
+### grant 为什么不能等同于登录会话或一次动作批准？
 
 应用会话确认当前浏览器或客户端对应哪个本地用户；OpenID Connect（OIDC，开放身份连接）身份层和应用自己的会话建立方法见[Cookie 会话与 OIDC 令牌怎样建立身份？](../../engineering-foundations/security/web-sessions-and-oidc.md)。OAuth grant 则记录用户把哪些第三方资源和 scope 委托给哪个 client。它通常通过授权码流程取得，并由运行时把它绑定到当前本地用户、tenant（租户）和 provider account。一个登录 cookie 不会自动变成第三方 API token。
 
@@ -3453,7 +3451,7 @@ Streamable HTTP 上关闭一个请求的 SSE 响应流表示取消该请求；�
 
 grant 记录保存 grantRef、用户/tenant、provider account、目标资源 resource（资源标识）URI 或令牌受众 audience（受众）、实际授予的 scope、到期与 refresh 状态，以及到加密秘密存储的凭据引用。运行、动作摘要、审批状态和操作键保存在各自的任务与动作记录中，并通过 grantRef 关联。本例 provider account=repo-owner-2 是 OAuth 身份，repository_id=build-service 是同一 run 的目标仓库；两者可以不同。`access token`（访问令牌）和 `refresh token`（刷新令牌）不进入 prompt（提示词）、模型消息、事件流、普通日志、tool result（工具结果）或 checkpoint（检查点）。access token 用于向目标 API 发请求；其有效期和是否能刷新由 provider 决定。只有 provider 实际发放 refresh token 时才保存它，并且只把它交给所属授权服务器的 token endpoint（令牌端点）换取新 access token。
 
-#### 两条 OAuth 链分别在谁和谁之间？
+### 两条 OAuth 链分别在谁和谁之间？
 
 MCP 日志读取是 host/client（主机/客户端）到 MCP server 的受保护资源访问。host/client 向日志 MCP 授权服务器请求并取得 T_mcp；该 token 的 audience（令牌受众）和 resource（目标资源）是日志 MCP 服务。工单创建是 Agent runtime 代表用户访问工单 API，使用 T_issue；其目标资源是工单 API，并受用户授予的 issue 权限范围约束。两条链的授权服务器、资源标识和权限范围可能不同。即使两个 token 都采用 Bearer（持有者令牌）传输，也不能互换或透传。
 
@@ -3466,9 +3464,9 @@ MCP 日志读取是 host/client（主机/客户端）到 MCP server 的受保护
 
 每个调用目标都要按其支持的方式校验收到的 token：是否来自预期 issuer（签发者）、是否仍有效、audience 是否覆盖这个 resource、scope 是否足够。授权服务器支持时，client 用 OAuth `resource` 参数请求目标资源；这不会令所有 provider 都返回同一种 access token。refresh token 只发给它所属的授权服务器 token endpoint，不能发给工单 API，更不能放进模型上下文。
 
-#### 一次长任务怎样在授权、刷新、审批和写入间前进？
+### 一次长任务怎样在授权、刷新、审批和写入间前进？
 
-##### 先绑定 grant，再保存不含凭据的运行状态
+#### 先绑定 grant，再保存不含凭据的运行状态
 
 一次授权码流程在浏览器跳转前就先建立 PKCE 交易；授权码只在回调验证完成后兑换一次：
 
@@ -3482,13 +3480,13 @@ MCP 日志读取是 host/client（主机/客户端）到 MCP server 的受保护
 
 开始处理 build 42 时，运行数据包含已持久化的 c1 观察。模型依据它提出新调用 c2，参数包括目标 repository_id=build-service、issue 标题和正文。运行时核验用户仍有该仓库的动作资格，grant 仍对应正确 provider account 与 issue API，scope 包含创建需要的写权限，并把动作摘要与 run-r42-7:create-issue:v1 一起持久化。模型不能自行指定可用 token 或更换 resource。
 
-##### 审批后在发送前按需刷新并复核
+#### 审批后在发送前按需刷新并复核
 
 access token 可能早于长任务到期，任务也可能跨越多小时甚至多天。运行时在实际发送前依据 provider 返回的到期信息决定是否向授权服务器刷新。RFC 9700 要求 public client（公共客户端）的 refresh token 采用 sender constraint（发送方约束）或 rotation（轮换）；若 provider 使用轮换，它会在刷新时签发新 refresh token 并使旧 token 失效。运行时应以 grant 为粒度串行刷新，并在同一事务或可靠更新中替换秘密引用与版本，避免并发刷新把新 token 覆盖掉。刷新成功后，worker 仍要重新核验用户资格、grant、目标、精确动作摘要、审批和取消状态，再决定能否发送。provider 返回 invalid_grant、撤回或其他不可恢复错误时，把 grant 标成需重新授权，阻止尚未发送的写入，不回退到应用登录 cookie 或其他人的 token。
 
 如果高影响动作需要确认，批准对象是精确的动作摘要，而不是“允许这个模型操作工单”。等待期间若标题、正文、repository_id、证据、当前用户资格、grant scope 或取消状态改变，原审批无效。真正调用前，worker 重新读取这些状态；审批与 grant 检查都要针对将发出的那一份内容成立。这个状态与审批后恢复同一 runId 的关系见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
 
-##### 把秘密只送到它所属的资源
+#### 把秘密只送到它所属的资源
 
 通过检查后，运行时取出或换取面向工单 API 的 access token，通过 TLS 保护的 HTTPS 请求发送，并在 HTTP `Authorization: Bearer <T_issue>` 请求头携带它；正文携带 issue 草稿，操作键则按接收端契约放在其规定的位置。MCP 入站的 `T_mcp` 不会转给工单服务；`T_issue` 也不会回传到模型。日志可记录用户/tenant、resource、scope、动作摘要、运行标识、审批 ID、操作键与结果状态，但不能记录 bearer 字符串、refresh token 或可还原它们的 URL。
 
@@ -3496,7 +3494,7 @@ access token 可能早于长任务到期，任务也可能跨越多小时甚至�
 
 图 2a 的输出是已获批摘要和已持久化的发送意图；只有这条状态交给下图发送。拒绝、过期授权、草稿变化、取消或租约条件失败都在发送前停止。
 
-##### 发送意图持久化后怎样处理远端结果？
+#### 发送意图持久化后怎样处理远端结果？
 
 本例发往工单 API 的请求通过 TLS 保护的 HTTPS 发送，`T_issue` 放在 HTTP `Authorization: Bearer` 请求头，操作键的位置由接收端契约决定。下面只跟踪发送之后的远端结果与本地写回。
 
@@ -3513,7 +3511,7 @@ access token 可能早于长任务到期，任务也可能跨越多小时甚至�
 
 若 API 响应契约明确证明本次请求未产生副作用，失败终态也只能由仍持有当前有效租约的 attempt 条件写回。旧 worker 失租时，不得直接更新动作状态；应把响应及其可核验依据交给当前租约恢复流程，再按当前状态条件记录失败。若响应无法证明无副作用，则按下文 `effect_unknown` 的恢复条件处理。
 
-#### 用户撤权或令牌失效后怎样安全恢复？
+### 用户撤权或令牌失效后怎样安全恢复？
 
 [应用架构章](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)的恢复示例先查询原操作键。本节进一步展开授权条件；下图还展示一种可选路径：接收端契约明确允许且所有恢复条件成立时，可以受控重放原键、原载荷。
 

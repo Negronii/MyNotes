@@ -12,11 +12,11 @@
 
 ## 一次操作怎样变成界面更新？
 
-[报表页首次出现](../frontend/browser/browser-basics.md)之后，用户点击筛选条件。跟着这一次点击，看页面怎样得到下一帧。
+[报表页首次出现](../frontend/browser/browser-basics.md)之后，用户点击筛选条件。先跟着原生 JavaScript 实现理解事件与调度，再把相同的筛选意图放进 React 实现，看两种方式的 DOM 改动怎样得到下一帧。
 
 1. [点击先交给谁，事件怎样传播？](../frontend/browser-apis/dom-manipulation-and-events.md)点击进入事件分发路径，轮到该任务执行时才调用处理器。
 2. [JavaScript 什么时候处理事件？](../frontend/runtime/event-loop.md)回调、microtask 和浏览器渲染机会相互交错。
-3. [React 怎样把状态变成界面更新？](../frontend/frameworks/react-basics.md)处理器请求状态变化，React 计算视图并提交必要的 DOM 改动。计算结果很贵时，再看[怎样让输入保持响应](../frontend/frameworks/advanced-react.md)。
+3. [React 怎样把状态变成界面更新？](../frontend/frameworks/react-basics.md)这里切换到 React 实现：处理器将相同的 `oldest` 筛选意图交给 state，React 计算视图并提交必要的 DOM 改动。原生实现与 React 实现是两条替代路径。计算结果很贵时，再看[怎样让输入保持响应](../frontend/frameworks/advanced-react.md)。
 4. [DOM 改动怎样变成像素？](../frontend/html-css/rendering-pipeline-and-forced-layout.md)浏览器按改动的依赖关系完成样式、布局、绘制和合成。
 5. [如果这一帧迟到了，怎样定位原因？](../frontend/performance/performance-metrics-and-analysis.md)用同一次交互的时间线区分输入等待、执行和呈现成本。
 

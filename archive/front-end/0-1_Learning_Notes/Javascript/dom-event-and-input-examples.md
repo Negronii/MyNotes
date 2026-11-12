@@ -4,4 +4,5 @@
 
 - [一次点击沿哪些节点传播？](../../../../frontend/browser-apis/dom-manipulation-and-events.md#一次点击沿哪些节点传播)解释 target、currentTarget 和传播阶段。
 - [移动端点击与手势策略](../../../../frontend/browser-apis/dom-manipulation-and-events.md#移动端点击与手势策略)讨论 viewport、touch-action 和原生键盘激活。
+- [键盘事件怎样区分按键含义、位置与重复？](../../../../frontend/browser-apis/dom-manipulation-and-events.md#键盘事件怎样区分按键含义位置与重复)解释 `key`、`code`、`repeat` 和旧 `keypress` 的边界。
 - [拖动时怎样跟踪坐标并处理取消？](../../../../frontend/browser-apis/dom-manipulation-and-events.md#拖动时怎样跟踪坐标并处理取消)保留坐标、pointer capture、cancel 与键盘替代例。

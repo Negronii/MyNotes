@@ -5,7 +5,7 @@
 ## 从问题开始
 
 - [两个请求争夺最后一件库存时，怎样保证只预留一次？](databases/database-fundamentals.md)——建议先读，从库存约束走到事务提交。
-- [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)——沿请求标识确认结果并安全重试。
+- [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)——接着看服务端已提交、客户端却未收到响应时，如何沿请求标识确认结果并安全重试。
 - [怎样从报表服务信号定位发布后的故障？](reliability/observability-slos-and-incident-response.md)——先用指标、追踪和日志定位环节，再决定改哪里。
 
 ## Reading order / 阅读顺序

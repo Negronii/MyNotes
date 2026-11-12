@@ -250,11 +250,30 @@ loader 抛出的状态数据或运行异常交给最近匹配的路由 `ErrorBou
 
 若部署环境不能提供路径回退，可用 Data Mode 的 `createHashRouter` 并继续传给 `RouterProvider`，保留本例的 loader 和错误边界；它把应用路径放进 URL 片段，因此地址形式会变，`#summary` 也不能再单独占用片段作为普通页面锚点。测试或非浏览器环境可用 `createMemoryRouter`，它以内存历史运行并保留数据路由能力。`HashRouter` 和 `MemoryRouter` 属于 Declarative Mode，直接替换会失去本例使用的 loader。
 
+### 旧版路由代码怎样对应这里的概念
+
+旧课程固定使用 `react-router-dom@6.3.0`：`BrowserRouter` 提供浏览器历史上下文，`Routes` 选择匹配分支，`Route` 的 `element` 指定要显示的元素。下面只展示旧版声明方式，`ReportsLayout` 和 `ReportDetail` 代表应用组件：
+
+~~~jsx
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+<BrowserRouter>
+  <Routes>
+    <Route path="reports" element={<ReportsLayout />}>
+      <Route path=":reportId" element={<ReportDetail />} />
+    </Route>
+  </Routes>
+</BrowserRouter>
+~~~
+
+访问 `/reports/42` 时，布局中的 `Outlet` 显示详情；详情调用 `useParams()` 得到字符串 `reportId="42"`。`Link`、`useNavigate()`、`useLocation()` 分别承担链接导航、程序化导航和读取位置，多个 `:参数` 各自进入参数对象。6.3.0 的这套声明不提供本篇 Data Mode 的 loader；读取数据还要由应用负责。这里保留旧版识别入口，当前主例仍按前文的版本和模式运行。
+
 旧 React Router v5 代码中的 `component={Post}`、`withRouter` 与 `match.params` 属于旧路由上下文；旧版 `StaticRouter` 的固定 location 服务端匹配也不能直接当作当前 Framework Mode 的服务端入口。维护旧项目时先查看它实际安装的主版本，按对应版本文档处理，不要把 v5 API 混入这里的 v8 route object。
 
 React 本身的状态提交与一次用户操作如何变成画面，见[React 如何把一次用户操作变成界面更新？](./react-basics.md)；若同一报表还需要查询缓存、乐观更新和账户隔离，见[React 界面如何维护服务端数据与乐观更新的正确性？](./react-server-state-and-optimistic-updates.md)。
 
-> [!info]- 来源与版本核验（截至 2026-11-12）
+> [!info]- 来源与版本核验（截至 2026-11-13）
+> - 旧课程锁定版本的包名、声明式路由、Outlet、参数和导航接口：[React Router v6.3.0 API](https://raw.githubusercontent.com/remix-run/react-router/v6.3.0/docs/api.md)。
 > - React Router 当前稳定文档选择器显示 v8.5.1；Changelog 将 v8.5.1 标为 2026-10-27 发布：[React Router Changelog](https://reactrouter.com/changelog)。
 > - 三种模式及其能力范围：[Picking a Mode（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/modes.md)；Framework 服务端 loader 与 clientLoader 的区别见 [Framework Data Loading（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/framework/data-loading.md)。
 > - Data Mode 路由对象、loader、查询参数变化时的默认重验证：[Route Object（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/data/route-object.md)、[Data Loading（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/data/data-loading.md)。

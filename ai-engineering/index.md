@@ -5,7 +5,7 @@
 ## 从问题开始
 
 - [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md) — 沿一个构建失败问题，走完模型推理、日志查询和返回解释的过程。
-- [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)——沿一次文档更新看索引、权限校验、检索和引用。
+- [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)——从同一构建已获授权的 `c1` 日志继续，检索现行 HTTP 合约与 CI 规则，判断预期状态码是否正确、失败是否该重跑。
 - [如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)——用代表性任务对照基线和候选版本，再看生产结果。
 
 ## 论文与文章
@@ -38,7 +38,7 @@
 - [什么时候值得把历史加工成 Agent 记忆？](context/agent-memory-design-and-evaluation.md)
 - [应用怎样设计并执行模型提出的工具请求？](agents/tool-design-and-function-calling.md)
 - [主机怎样把 MCP 工具从发现接到有权限的执行？](agents/mcp-tool-connections.md)
-- [无人值守 Agent 怎样在用户授权内继续第三方操作？](agents/delegated-oauth-for-agent-tools.md)
+- [无人值守 Agent（智能体）怎样在用户授权内继续第三方操作？](agents/delegated-oauth-for-agent-tools.md)
 - [什么时候应该让模型决定下一步？](agents/agent-fundamentals.md)
 - [模型选到 shell 或文件工具后，由谁决定能否执行？](agents/coding-agent-harness.md)
 - [怎样按依赖、并行性和控制权组织多阶段 AI 任务？](agents/orchestration-patterns.md)
@@ -57,4 +57,4 @@
 
 ## 跨域脉络
 
-生产级 AI 应用依赖通用网络与安全机制：[HTTP 与 WebSocket](../engineering-foundations/networking/http-protocols-and-websockets.md) 介绍服务通信，[Web 安全与身份认证](../engineering-foundations/security/web-security-and-authentication.md) 补充应用边界。
+生产级 AI 应用依赖通用网络与安全机制：[HTTP 请求](../engineering-foundations/networking/http-protocols-and-websockets.md)解释单次交换，[轮询、SSE 与 WebSocket](../engineering-foundations/networking/real-time-web-updates.md)解释持续更新；[Cookie 会话与 OIDC](../engineering-foundations/security/web-sessions-and-oidc.md)建立身份，[租户资源授权](../engineering-foundations/security/web-security-and-authentication.md)决定每次操作能访问什么。

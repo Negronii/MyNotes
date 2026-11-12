@@ -9,4 +9,4 @@
 - [TypeScript 的 Promise 类型能保证什么？](promise.md) — 创建、链式组合、拒绝、组合器与宿主定时器。
 - [字符串处理怎样从位置索引走到用户看见的文字？](string.md) — 方法、UTF-16 索引、本地化大小写转换与码点迭代。
 
-TypeScript 的完整类型系统见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../../../../frontend/typescript/advanced-typescript.md)。练习集合仍保留在 [`leetcode30days/`](leetcode30days/) 目录。
+运行时输入校验与类型收窄见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../../../../frontend/typescript/advanced-typescript.md)。练习集合仍保留在 [`leetcode30days/`](leetcode30days/) 目录。

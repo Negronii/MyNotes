@@ -76,6 +76,21 @@
 > [!info]- 相邻表单控件的边界
 > `type="password"` 只遮住屏幕显示，不会加密传输或替代安全存储；文件选择器的 `accept` 只是可选类型提示，服务器仍须校验收到的文件。`select multiple` 也可让一个字段提交多个同名值。相同 `name` 的单选按钮保证同组只能选择一个值，复选框则可提交多个已选值。表单里的按钮默认可能提交表单，因此写明 `type="submit"`、`type="reset"` 或 `type="button"`；页面导航用有真实 `href` 的链接，`href="#"` 会导航到当前文档顶部，不能当作无动作的占位符。若地区改变会影响下一级门店选项，应用更新选项时还要清除不再有效的旧门店值；选项暂不可用时应明确告知用户。
 
+### placeholder 文字为什么不能替代标签？
+
+`placeholder`（占位提示）在控件没有值时提供一个简短样例，例如给下方通知邮箱的 `input` 加上 `placeholder="name@example.com"`。它不是字段值，提交时不会代替用户输入，也不会满足 `required`；用户输入后提示消失，因此“通知邮箱”这个可见 `label` 和持续显示的帮助文字仍要保留。
+
+CSS 的 `::placeholder` 伪元素只选中提示文字。例如给这个邮箱字段应用以下规则，可在白色输入背景上显示灰色样例；实际主题仍需检查文字与背景对比度：
+
+~~~css
+#email::placeholder {
+  color: #595959;
+  opacity: 1;
+}
+~~~
+
+这条规则不会设置邮箱值、改变输入文字的颜色或替代标签。若要选择“正在显示占位提示的整个控件”，对应的是 `:placeholder-shown` 伪类，二者作用对象不同。
+
 ## 让报表结果保持数据表语义
 
 当数据的行和列本身有意义时，用表格标记，而不是用 CSS Grid（网格布局）伪造表格语义。`caption` 说明表格主题；`th scope="col"` 给出列标题，`scope="row"` 标记本行的识别值。这样读者可以把单元格 `A-1042` 关联到“订单号”，并把“处理中”关联到“状态”列与该行；具体导航方式和播报文字随浏览器与辅助技术而异。
@@ -169,6 +184,7 @@ email.addEventListener("input", () => {
 > 在普通 HTML 文本上下文中，源码 `&lt;` 和 `&amp;` 分别显示为 `<` 和 `&`；`&nbsp;` 表示不换行空格，不应用来代替 CSS 间距。字符引用依所在解析状态处理：例如 `script` 中的 script data 与 `style` 中的 RAWTEXT 状态不会按普通正文那样解码字符引用。它也不是动态字符串安全插入的替代品；把用户输入作为普通文字显示时，应使用 DOM（Document Object Model，文档对象模型）的文本接口，而不是把拼接后的字符串当作标记解析。
 
 > [!info]- 来源
+> - 空值提示与标签的边界：[WHATWG HTML — placeholder](https://html.spec.whatwg.org/multipage/input.html#the-placeholder-attribute)；提示文字与控件本身的选择：[CSS Pseudo-Elements Level 4 — placeholder](https://www.w3.org/TR/css-pseudo-4/#placeholder-pseudo)、[Selectors Level 4 — placeholder-shown](https://www.w3.org/TR/selectors/#placeholder)。核对日期：2026-11-13。
 > - 文档骨架、语言、地标、内容模型与文本结构：WHATWG HTML Living Standard，§3–4；更新时间 2026-11-11：[document semantics and metadata](https://html.spec.whatwg.org/multipage/semantics.html)、[grouping content](https://html.spec.whatwg.org/multipage/grouping-content.html)、[text-level semantics](https://html.spec.whatwg.org/multipage/text-level-semantics.html)，检查于 2026-11-11。
 > - 表单标签、分组、输入类型、当前控件状态、按钮、月字符串和约束验证：WHATWG HTML Living Standard，§4.10；更新时间 2026-11-11：[forms](https://html.spec.whatwg.org/multipage/forms.html)、[input](https://html.spec.whatwg.org/multipage/input.html)、[months](https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#months)，检查于 2026-11-11。
 > - 表单项按控件顺序构造、重复名称与 GET 查询序列化：WHATWG HTML Living Standard，§4.10.22，[form control infrastructure](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constructing-form-data-set)；URL 表单编码算法：[WHATWG URL Standard](https://url.spec.whatwg.org/#concept-urlencoded-serializer)，检查于 2026-11-11。

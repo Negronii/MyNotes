@@ -2,6 +2,12 @@
 
 **案例背景。** 报表页从 recent 的 May、April 开始；用户点 **Oldest first** 后，页面应显示等待状态，读取完成再展示 April、May。生产路由还要确认 `sort` 写进 URL 并能按 Back 恢复；这里的 Jest 组件测试只隔离点击、定时 Mock（模拟）和可见列表，不声称模拟了真实浏览器历史，完整 Back 流程见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](frontend-testing.md)。
 
+## Jest 怎样先找到要执行的测试？
+
+在本篇的 Jest 30.5.2 默认配置中，`ReportPanel.test.tsx`、`ReportPanel.spec.tsx` 或 `__tests__/ReportPanel.tsx` 都是可被收集的命名方式；普通组件文件 `ReportPanel.tsx` 放在其他目录时，不会仅因为里面写了 `test()` 就自动成为测试文件。Jest 先按配置发现文件，再载入并执行其中注册的用例。
+
+项目可用 `testMatch` 的 glob 模式或 `testRegex` 的正则改变发现规则，两者不能同时设置；搜索根目录、忽略规则和命令行筛选也会影响实际运行集合。找不到测试时先检查配置及 `jest --listTests` 的列表。被发现只代表路径符合条件：下面的 TSX 仍需相应转换器和 DOM 测试环境，命名不会让 TypeScript、JSX 自动变成可执行 JavaScript。
+
 ## 测试必须等待承载断言的异步工作
 
 在 Promise 风格的 Jest 测试里，框架会等待测试返回或 `await` 的 Promise；另一种受支持的异步方式是 `done` 回调，不要在同一个测试中混用两种完成协议。若启动请求却不等待，测试可能在断言执行前就结束。`rejects` / `resolves` 自身也会返回 Promise，必须 `return` 或 `await`；`toThrow` 只检查同步调用抛错，异步拒绝应写成 `await expect(loadReports()).rejects.toThrow("unavailable")`。先按界面契约拆出可观察结果：本例要分别确认点击后旧行保留且显示等待、成功后顺序更新、失败后显示错误并保留旧行；只断言加载函数被调用不能覆盖这些结果。
@@ -218,6 +224,7 @@ Mock 清理方法不会互相替代：
 `beforeAll` / `afterAll` 可为整组测试打开和关闭共享资源；`beforeEach` / `afterEach` 负责逐测试建立和恢复假时钟、spy 与 DOM；不要让一个用例的调用记录或待处理计时器泄漏到另一个用例。Jest 的 `--coverage` 报告哪些分支执行过，不代表断言已验证了用户要的 May/April 顺序、错误恢复或历史行为。
 
 > [!info]- 来源与版本核验（Jest 30.5.2；React Testing Library 16.3.3；user-event 14.6.10；jest-dom 7.0.1；2026-11-12）
+> - 测试文件发现、配置互斥与路径过滤：[Jest testMatch / testRegex](https://jestjs.io/docs/configuration#testmatch-arraystring)；查看实际收集结果：[Jest CLI — listTests](https://jestjs.io/docs/cli#--listtests)。Jest 30.5 文档，补核于 2026-11-13。
 > - 当前包版本：[Jest](https://www.npmjs.com/package/jest)，30.5.2；[`jest-environment-jsdom`](https://www.npmjs.com/package/jest-environment-jsdom)，30.5.2；[React Testing Library](https://www.npmjs.com/package/@testing-library/react)，16.3.3；[user-event](https://www.npmjs.com/package/@testing-library/user-event)，14.6.10；[jest-dom](https://www.npmjs.com/package/@testing-library/jest-dom)，7.0.1，均按 npm registry 核验于 2026-11-12。Jest 30.5.2 的发行时间为 2026-09-18：[release](https://github.com/jestjs/jest/releases/tag/v30.5.2)。
 > - Jest 的 Promise 测试、显式全局导入与环境设置：[Globals](https://jestjs.io/docs/api)、[Configuring Jest](https://jestjs.io/docs/configuration)，Jest 30.5，核验日期 2026-11-12。
 > - 例子所用的 JSX automatic runtime 与 RTL 自动 cleanup 前提：[Babel preset-react runtime](https://babeljs.io/docs/babel-preset-react#runtime)、[Jest `injectGlobals`](https://jestjs.io/docs/configuration#injectglobals-boolean)、[RTL cleanup](https://testing-library.com/docs/react-testing-library/api/#cleanup)，核验日期 2026-11-12。

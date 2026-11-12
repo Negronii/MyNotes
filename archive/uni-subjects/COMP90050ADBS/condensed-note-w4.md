@@ -10,4 +10,4 @@
 - [数据仓库怎样把多源业务数据整理成可分析的历史数据？](condensed-note-w4-data-warehousing.md)
 - [多个参与者怎样取得同一事务结果，副本又怎样等价于一份数据？](condensed-note-w4-two-phase-commit-and-replicated-data.md)
 
-通用保证见[事务隔离与预写日志能保证什么？](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)；上面各篇保留课程中的 ARIES 恢复与分布式系统演算。
+通用保证见[事务隔离与预写日志能保证什么？](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)；各篇保留相应的课程演算。数据仓库另讨论多源历史数据的分析模型，不属于事务崩溃恢复的下一步骤。
