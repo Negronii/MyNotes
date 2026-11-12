@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="422" viewBox="0 0 700 422" role="img" aria-labelledby="desc"><title id="desc">Provider 持有行距状态，布局层不转交该值，两个消费者读取最近 Provider</title>
+<rect x="12" y="12" width="676" height="398" rx="14" fill="#edf4fd" stroke="#7b9fc5" stroke-width="2"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364b">
+<text x="34" y="46" font-size="22" font-weight="700">ReportViewProvider</text>
+<text x="34" y="81" font-size="18">useState 持有 density；Context 提供值与 setDensity</text>
+<rect x="34" y="107" width="632" height="279" rx="12" fill="white" stroke="#b2bdce" stroke-width="2"/>
+<text x="56" y="143" font-size="21" font-weight="700">ReportPanel</text>
+<text x="56" y="177" font-size="18">在 section 中放入 children，不转交 density</text>
+<rect x="56" y="202" width="276" height="157" rx="10" fill="#f2edfa" stroke="#b49dcf" stroke-width="2"/>
+<rect x="364" y="202" width="280" height="157" rx="10" fill="#eaf6f2" stroke="#9ebfb4" stroke-width="2"/>
+<text x="76" y="237" font-size="21" font-weight="700">DensityControl</text>
+<text x="76" y="273" font-size="18">读取 density 显示按钮</text>
+<text x="76" y="307" font-size="18">点击时调用 setDensity</text>
+<text x="76" y="339" font-size="17">更新归 Provider 所有</text>
+<text x="384" y="237" font-size="21" font-weight="700">ReportRows</text>
+<text x="384" y="273" font-size="18">读取同一个 density</text>
+<text x="384" y="307" font-size="18">据此选择行距</text>
+<text x="384" y="339" font-size="17">报表内容由 reports 提供</text>
+</g></svg>
