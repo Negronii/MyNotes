@@ -6,18 +6,18 @@
 
 shared lock（共享锁，`S`）允许多个事务同时读取同一数据项，但会阻止其他事务在该项上取得不兼容的写锁。exclusive lock（排他锁，`X`）允许持有者读取和修改该项，并阻止其他事务取得 `S` 或 `X` 锁。lock compatibility（锁兼容性）回答的是：一个资源已经有某种锁时，另一个请求能不能同时获准。
 
-| 新请求 | 资源空闲 | 已有 S | 已有 X |
+| 新请求 | 资源空闲 | 另一事务已有 S | 另一事务已有 X |
 | --- | --- | --- | --- |
 | S | 获准 | 获准 | 等待 |
 | X | 获准 | 等待 | 等待 |
 
-读操作需要 `S`、写操作需要 `X` 是本课程的基础锁模型。`BEGIN`、提交、解锁，以及回滚时如何撤销写入，需要结合具体恢复模型解释；它们不是所有数据库都必须由应用手写的同一种锁操作。
+在本课程模型中，读可由 `S` 或 `X` 保护，写必须由 `X` 保护；因此持有 `X(A)` 后读取 A 不需要再加 `S(A)`。表中的已有锁指另一事务已经获准持有的锁。`BEGIN`、提交、解锁，以及回滚时如何撤销写入，需要结合具体恢复模型解释；它们不是所有数据库都必须由应用手写的同一种锁操作。
 
 ## 两阶段锁怎样保证冲突可串行化？
 
-well-formed transaction（结构良好的事务）在读或写数据项前取得覆盖该操作的适当锁，并在操作受保护时保持锁。two-phase locking（两阶段锁，2PL）把锁管理分成两个阶段：增长阶段只能加锁或升级，第一次解锁之后进入收缩阶段，此后不能再加锁，也不能升级锁。
+well-formed transaction（结构良好的事务）在读或写数据项前取得覆盖该操作的适当锁，并在操作受保护时保持锁。two-phase locking（两阶段锁，2PL）把锁管理分成两个阶段：增长阶段可以取得或升级锁；第一次释放或降级锁就进入收缩阶段，此后只能释放或降级，不能再取得或升级锁。
 
-若所有事务都结构良好、都遵守 2PL，且锁管理器只授予兼容的锁请求，那么该调度是冲突可串行化的。直观上，每笔事务的最后一次加锁可用来排列事务先后；2PL 禁止事务在释放锁以后再重新取得更强的锁，从而不会把冲突次序绕成环。反向说法不能倒过来用：某笔事务不遵守 2PL，不表示它参与的每个具体调度都一定不可串行化，只表示 2PL 的这个充分保证不再适用。
+若所有事务都结构良好、都遵守 2PL，且锁管理器只授予兼容的锁请求，那么该调度是冲突可串行化的。每笔事务最后一次取得或升级锁的时点称为 lock point（加锁点）。看任意冲突边 `Ti → Tj`：Ti 在数据项上的锁必须先释放或降级，Tj 才能取得与之冲突的锁；Ti 的 lock point 在这次释放或降级之前，Tj 的 lock point 则不早于取得冲突锁的时点，所以 `Ti` 的 lock point 早于 `Tj` 的。每条冲突边都从较早的 lock point 指向较晚者，因此冲突图不可能有环。反向说法不能倒过来用：某笔事务不遵守 2PL，不表示它参与的每个具体调度都一定不可串行化，只表示 2PL 的这个充分保证不再适用。
 
 strict two-phase locking（严格两阶段锁，strict 2PL）进一步把排他锁保持到提交或回滚完成。这样其他事务不能读到未提交的写入，也不会在其后才被迫跟随一个已经回滚的事务撤销；代价是写锁占用更久，等待可能增加。课程的基础 2PL 与严格 2PL 不应混为一条规则。
 
@@ -38,9 +38,9 @@ strict two-phase locking（严格两阶段锁，strict 2PL）进一步把排他�
 
 ![两个事务同时从共享锁升级到排他锁的死锁场景](./deadlockExample.png)
 
-wait-for graph（等待图）出现 `T1 → T2 → T1` 的环，所以两边都无法靠自行推进来完成。第三个事务 `T3` 只读后释放 `S(A)`；若它先完成，短暂等待可能解除，但不能保证 `T1` 与 `T2` 之间的升级环自动消失。
+wait-for graph（等待图）的边 `Ti → Tj` 表示 Ti 当前请求的锁被 Tj 持有，因此 Ti 正在等 Tj；这与冲突图中“Ti 的冲突操作先于 Tj”的箭头不是同一含义。此处有 `T1 → T2 → T1` 的环，两边都无法靠自行推进来完成。若 `T3` 仍持有 `S(A)`，等待 `X(A)` 的事务还会多出指向 T3 的等待边；T3 自己没有等待，不因此成为环的一部分。即使 T3 先释放 `S(A)`，它也只去掉指向自己的边，不会解除 T1 与 T2 的闭环。
 
-图中的一种教学解法是先释放 `S(A)`，再申请 `X(A)`；锁获准后必须重新读取 `A` 并重验条件。这样放弃了旧读值，避免两个事务都一直持有 `S` 相互等待。不过释放后再加锁违反 2PL，因而不再获得 2PL 的冲突可串行化保证；它也不是任何隔离级别下都通用的替代方案。实际应用可在读前取得适当的更新锁或排他锁，使用数据库条件更新，或让数据库检测死锁并回滚一个受害事务。跨多个资源时还应统一加锁次序；仅统一资源顺序不能消除同一资源上的共享锁升级环。
+图中的一种教学解法是先释放 `S(A)`，再申请 `X(A)`；锁获准后必须重新读取 `A` 并重验条件。若 T1 先取得 X 并把 A 写成 4，提交后 T2 获准时读到的是当前 `A=4`，所以 `A == 3` 不再成立，T2 应跳过这次写入。这样放弃了旧读值，避免两个事务都一直持有 `S` 相互等待。不过释放后再加锁违反 2PL，因而不再获得 2PL 的冲突可串行化保证；它也不是任何隔离级别下都通用的替代方案。实际应用可在读前取得适当的更新锁或排他锁，使用数据库条件更新，或让数据库检测死锁并回滚一个受害事务。跨多个资源时还应统一加锁次序；仅统一资源顺序不能消除同一资源上的共享锁升级环。
 
 ![释放共享锁后重新申请排他锁，并重读条件的课程示意解法](./deadlockexamplesolution.png)
 
@@ -52,9 +52,9 @@ lock granularity（锁粒度）指锁覆盖的资源范围。粗粒度锁（如�
 
 ![从数据库、城市、郊区到客户编号的层次锁定示例](./granularitylockExample.png)
 
-图示展示由根节点向下到叶子的资源层次。intention lock（意向锁）在祖先节点声明事务准备在后代加什么锁：`IS` 表示准备在更细层级加共享锁，`IX` 表示准备加排他锁，`SIX` 表示本节点共享读取且准备在后代排他修改。一般从根向叶取得锁，从叶向根释放，避免别的事务只看粗粒度节点时漏掉后代锁。
+图示展示由根节点向下到叶子的资源层次。intention lock（意向锁）在祖先节点声明事务准备在后代加什么锁：`IS` 表示准备在更细层级加共享锁，`IX` 表示准备加排他锁，`SIX` 是同一节点上 `S` 与 `IX` 的组合。一般从根向叶取得锁，从叶向根释放，避免别的事务只看粗粒度节点时漏掉后代锁。
 
-标准五模式协议按资源树从根向叶取锁：在节点显式请求 `S` 或 `IS` 前，沿祖先路径取得 `IS` 或 `IX`；请求 `X`、`IX` 或 `SIX` 前，沿祖先路径取得 `IX` 或 `SIX`。已有祖先 `S` 可隐含保护后代读取，已有祖先 `X` 可隐含保护后代读写，因此不必重复显式取得每个后代锁；`SIX` 同时包含子树读取与后代写入意向。提前解锁时从叶向根释放，仍需遵守所选事务锁协议。
+标准五模式协议按资源树从根向叶取锁：在节点显式请求 `S` 或 `IS` 前，沿祖先路径取得 `IS` 或 `IX`；请求 `X`、`IX` 或 `SIX` 前，沿祖先路径取得 `IX` 或 `SIX`。已有祖先 `S` 可隐含保护后代读取，已有祖先 `X` 可隐含保护后代读写，因此不必重复显式取得每个后代锁；`SIX` 是本节点 `S` 与 `IX` 的组合，其中 `S` 隐含保护本节点及整棵子树的读取。持有节点 `IX` 的事务可在后代继续显式请求 `S` 或 `X`，但 `IX` 自身不隐含持有任何后代锁或已经执行读写；`SIX` 中的 `S` 表示读取保护，不表示应用已经实际读过子树中的数据。原层级图中的一条写路径是 `IX(Database) → IX(Melbourne) → IX(Parkville) → X(123)`。提前解锁时从叶向根释放，仍需遵守所选事务锁协议。
 
 下表的行是新请求，列是另一事务在同一资源上已获准的模式。`S` 与 `IX` 不是简单的强弱关系：`S` 保护整个子树读取，`IX` 允许在后代逐项申请写锁，两者冲突。
 
@@ -80,25 +80,30 @@ SQL Server 的 `update lock（更新锁，U）` 解决的是同一资源上准�
 
 课程的 Degree 0–3 是历史锁协议分类，不是 SQL 隔离级别的别名。四张图用 `S/X` 锁和锁保持时长逐步提高保护程度；可按本课程模型这样读：
 
-| 课程级别 | 图中保护方式 | 能避免什么 | 仍可能出现什么 |
+| 课程级别 | 保护规则 | 能避免什么 | 仍可能出现什么 |
 | --- | --- | --- | --- |
 | Degree 0 | 写入期间短暂使用 `X` | 不覆盖其他仍受 `X` 保护的未提交写入 | 自己提前释放写锁后不再受保护；读改写丢失、脏读等仍可能 |
 | Degree 1 | 写入使用 `X` 并保持到事务结束 | 避免他人覆盖自己的未提交写入，以及回滚抹去后写的更新 | 读可无锁，脏读与基于旧读值覆盖已提交更新仍可能 |
 | Degree 2 | 读时取得 `S` 后可释放；`X` 保持到事务结束 | 在 Degree 1 上避免脏读 | 不可重复读和基于旧读值的丢失更新仍可能 |
 | Degree 3 | `S/X` 都保持到事务结束 | 保护已读数据及未提交写入，避免上述交错 | 谓词、范围和幻读仍取决于锁是否覆盖相应资源 |
 
+这里的不可重复读是同一已有行再次读取时值改变；幻读是同一谓词再次查询时匹配行集合改变，例如第二次查询 `balance < 0` 多出一条新插入的账户。只锁住第一次返回的行不能挡住这条新行，必须由谓词锁或覆盖该范围的锁保护查询条件。
+
 这里区分两种曾被称为 lost update 的现象。Gray 原始 Degree 定义关注未提交写覆盖及回滚恢复；前一篇的“两个读改写都依据旧值”是另一种丢失更新。Degree 1/2 的长写锁本身不能保证后者不发生。
 
 > [!example] 没有脏写也可能丢一次自增
 > 初始 A=3。T1 与 T2 都先读取 3；Degree 2 下各自读时取 `S`，读完即释放。T1 随后取 `X`、写 4、提交并释放；T2 再取 `X`，仍把先前算出的 4 写回并提交。每次写锁都持到结束，没有未提交覆盖，但两次加一只得到 4。要保住检查到更新之间的条件，需要保持相应读保护、使用原子条件更新，或提交时验证旧读仍有效。
 
-![课程 Degree 0 图：写入期间短暂持有 X 锁](./degree0.png)
+> [!note]- 课程原 Degree 图
+> ![课程 Degree 0 图：写入期间短暂持有 X 锁](./degree0.png)
+>
+> ![课程 Degree 1 图：写锁保持规则，以正文事务结束边界为准](./degree1.png)
+>
+> ![课程 Degree 2 图：读锁在读操作后释放，写锁遵守两阶段规则](./degree2.png)
+>
+> ![课程 Degree 3 图：共享锁和排他锁统一遵守两阶段规则](./degree3.png)
 
-![课程 Degree 1 图：写锁保持规则，以正文事务结束边界为准](./degree1.png)
-
-![课程 Degree 2 图：读锁在读操作后释放，写锁遵守两阶段规则](./degree2.png)
-
-![课程 Degree 3 图：共享锁和排他锁统一遵守两阶段规则](./degree3.png)
+以上四张图都只画数据操作及取锁/解锁，没有画 `COMMIT` 或 `ROLLBACK`；图末尾的 `UNLOCK` 只表示释放该锁，不能单凭它推断事务已结束。应按上表的保护规则读时点：Degree 0 的 `X` 在对应写后释放；Degree 1 的 `X` 保持到事务结束；Degree 2 的 `S` 可在读后释放、`X` 保持到结束；Degree 3 的 `S/X` 都保持到结束。图中的 `Phase 2` 表示收缩阶段，不等于提交。
 
 图中的概括针对课程给出的基本 `S/X` 模型；Degree 名称不能直接推断 PostgreSQL、SQL Server 或其他系统的实现行为。
 
@@ -115,13 +120,13 @@ PostgreSQL 18 文档中的隔离级别保证如下。这里的“可串行化异
 | `REPEATABLE READ` | 不可能 | 不可能 | 不可能（高于 SQL 最低要求） | 仍可能 |
 | `SERIALIZABLE` | 不可能 | 不可能 | 不可能 | 不可能 |
 
-`READ COMMITTED` 通常为每条语句取一个新快照；同一事务后续语句可能看到其他事务已提交的更改。`REPEATABLE READ` 使用稳定事务快照，但仍可能遇到下一篇会展开的写偏斜。`SERIALIZABLE` 在快照上监测危险的读写依赖；若无法安全地按某个串行顺序提交，PostgreSQL 会中止一个事务，应用需从事务开头重试，常见错误码为 `40001`。这个保证适用于参与所需一致性检查的相关读写事务；外部副作用不由数据库隔离级别撤销。
+`READ COMMITTED` 下，普通 `SELECT` 在每条语句开始时取得新快照；同一事务的后续查询可能看到其他事务已提交的更改，并会看到本事务先前写入。`REPEATABLE READ` 的事务快照在第一条非事务控制语句开始时建立，不是执行 `BEGIN` 时建立；后续普通查询继续使用该快照，也能看到本事务自己的写入。若该级别的 `UPDATE` 或行锁定语句遇到快照建立后已被他人更新的行：对方事务仍在运行时，当前事务会等待其提交或回滚；对方若已经提交（包括等待后刚提交），当前事务报 `40001` 并回滚；对方若回滚，当前操作可以继续。它不会把课程单版本等待例子里的读值直接换成最新值。该级别仍可能遇到下一篇会展开的写偏斜。`SERIALIZABLE` 在快照上监测危险的读写依赖；若无法安全地按某个串行顺序提交，PostgreSQL 会中止一个事务，应用需从事务开头重试，常见错误码为 `40001`。这个保证适用于参与所需一致性检查的相关读写事务；外部副作用不由数据库隔离级别撤销。
 
 PostgreSQL 也会检测实际的锁等待死锁，选择事务中止以打破等待环。官方文档建议多个事务以一致顺序取得锁，并让应用准备处理被取消事务后的重试；这种产品行为不同于前文由应用手工遍历锁层级的课程模型。
 
 > [!info]- 来源
-> - `S/X`、多粒度锁与 2PL 的算法基础：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版第 18 章“Concurrency Control”，2019 年 3 月课程幻灯片，https://www.db-book.com/slides-dir/PDF-dir/ch18.pdf 。
-> - 当前 PostgreSQL 的 MVCC、隔离级别、快照和串行化失败：PostgreSQL 18 文档第 13.1 节“Introduction”、第 13.2 节“Transaction Isolation”，访问于 2026-11-06，https://www.postgresql.org/docs/18/mvcc-intro.html 和 https://www.postgresql.org/docs/18/transaction-iso.html 。
-> - PostgreSQL 显式锁、锁模式和死锁：PostgreSQL 18 文档第 13.3 节“Explicit Locking”，访问于 2026-11-06，https://www.postgresql.org/docs/18/explicit-locking.html 。
+> - `S/X`、多粒度锁与 2PL 的课程模型：Silberschatz、Korth、Sudarshan，《Database System Concepts》第 7 版第 18 章“Concurrency Control”，作者课程幻灯片，https://www.db-book.com/slides-dir/PDF-dir/ch18.pdf 。
+> - PostgreSQL 18 的 MVCC、语句/事务快照、隔离级别与并发更新错误：第 13.1、13.2 节，访问于 2026-11-13，https://www.postgresql.org/docs/18/mvcc-intro.html 和 https://www.postgresql.org/docs/18/transaction-iso.html 。
+> - PostgreSQL 显式锁、死锁、用隔离和锁保证应用一致性，以及完整事务重试：第 13.3–13.5 节，访问于 2026-11-13，https://www.postgresql.org/docs/18/explicit-locking.html 、https://www.postgresql.org/docs/18/applevel-consistency.html 和 https://www.postgresql.org/docs/18/mvcc-serialization-failure-handling.html 。
 > - 图中 `U` 更新锁的 SQL Server 语义和兼容矩阵：Microsoft Learn，“Transaction locking and row versioning guide”，SQL Server 17，访问于 2026-11-06，章节“Lock modes”“Update locks”“Lock compatibility”，https://learn.microsoft.com/en-us/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide?view=sql-server-ver17 。
-> - 层级锁五模式与 Degree 的原始含义：[Gray et al., Granularity of Locks and Degrees of Consistency in a Shared Data Base](https://people.eecs.berkeley.edu/~kubitron/courses/cs262a-F21/handouts/papers/Granularity%20of%20Locks%20and%20Degrees%20of%20Consistency%20RJ%201654.pdf)，1976，Table 1、Rules for requesting nodes、Definition 1；不要与基于旧读值的读改写丢失混同。
+> - 层级锁五模式与 Degree 的原始含义：[Gray et al., Granularity of Locks and Degrees of Consistency in a Shared Data Base](https://people.eecs.berkeley.edu/~kubitron/courses/cs262a-F13/handouts/papers/Granularity%20of%20Locks%20and%20Degrees%20of%20Consistency%20RJ%201654.pdf)，1976，Table 1、Rules for requesting nodes、Definition 1；不要与基于旧读值的读改写丢失混同。
