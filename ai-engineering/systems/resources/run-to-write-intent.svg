@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1065" viewBox="0 0 700 1065" role="img" aria-labelledby="title desc">
+  <title id="title">从新运行到持久化发送意图</title>
+  <desc id="desc">新请求创建run-r42-7。有效attempt与lease中的worker重演c1证据并草拟动作，在单一条件事务中保存检查点、同一待审版本、awaiting_approval并结束lease。审批只消费该版本，批准与queued和outbox同事务。新worker通过包含当前写授权的发送闸门，持久化原操作键及发送意图。图止于发送意图，不代表远端已收到请求。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" fill="#334155" /></marker>
+  </defs>
+  <rect x="0" y="0" width="700" height="1065" fill="#ffffff" />
+  <g font-family="-apple-system,BlinkMacSystemFont,'Noto Sans CJK SC','PingFang SC',sans-serif" fill="#172033">
+    <g>
+      <rect x="30" y="22" width="640" height="115" rx="14" fill="#edf4ff" stroke="#24578a" stroke-width="2.5" />
+      <text x="54" y="51" font-size="20" font-weight="700">新建逻辑运行</text>
+      <text x="54" y="78" font-size="18">同一调用者与 build-service 资源范围</text>
+      <text x="54" y="101" font-size="18">键 build-42-triage-req-19 + 本次 request_digest → run-r42-7</text>
+      <text x="54" y="122" font-size="16">它识别原任务，不是之后审批的载荷摘要</text>
+    </g>
+    <g transform="translate(0 10)"><path d="M350 128 L350 151" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="160" width="640" height="150" rx="14" fill="#f5f8fc" stroke="#53677d" stroke-width="2.5" />
+      <text x="54" y="190" font-size="20" font-weight="700">普通 worker：attempt 1，持有效 lease</text>
+      <text x="54" y="219" font-size="18">先授权，再执行 read_build_log</text>
+      <text x="54" y="245" font-size="18">参数：repository_id=build-service，build_id=42</text>
+      <text x="54" y="271" font-size="18">保存 tool_call_id=c1、工具名/完整参数并配对结果</text>
+      <text x="54" y="297" font-size="18">unit-tests/reject_empty_name：预期 400，实际 200，exit 1</text>
+    </g>
+    <path d="M350 311 L350 331" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="340" width="640" height="155" rx="14" fill="#f5f8fc" stroke="#53677d" stroke-width="2.5" />
+      <text x="54" y="370" font-size="20" font-weight="700">基于已保存的 c1 观察生成完整缺陷单</text>
+      <text x="54" y="399" font-size="18">保存完整正文/不可变引用，绑定仓库、标题、正文和证据</text>
+      <text x="54" y="425" font-size="18">计算 payload_digest；与原始 request_digest 分开</text>
+      <text x="54" y="451" font-size="18">有效 attempt/lease 下，一笔事务写 检查点与待审版本</text>
+      <text x="54" y="477" font-size="18">同时进入 awaiting_approval 并结束当前 lease</text>
+    </g>
+    <path d="M350 496 L350 516" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="525" width="640" height="175" rx="14" fill="#fff8e8" stroke="#9a6a10" stroke-width="2.5" />
+      <text x="54" y="555" font-size="20" font-weight="700">审批事件只消费当前待审版本</text>
+      <text x="54" y="584" font-size="18">审批身份有效且目标/摘要相同，事务写入批准</text>
+      <text x="54" y="610" font-size="18">并同时写 queued + 同一 run 的 outbox 唤醒</text>
+      <text x="54" y="636" font-size="18">新 worker 才领取新的 attempt 与 lease</text>
+      <text x="54" y="662" font-size="18">拒绝→rejected；取消→canceled；不空唤醒</text>
+      <text x="54" y="688" font-size="16">重复/迟到旧版决定无效；新载荷另建版本重审</text>
+    </g>
+    <path d="M350 701 L350 721" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="730" width="640" height="150" rx="14" fill="#f5f8fc" stroke="#53677d" stroke-width="2.5" />
+      <text x="54" y="760" font-size="20" font-weight="700">新 worker：attempt 2，持有效 lease</text>
+      <text x="54" y="789" font-size="18">发送闸门预期运行态为 running，复核数据库实际时间与 attempt</text>
+      <text x="54" y="815" font-size="18">同一事务内检查当前批准载荷、写授权和未取消标记</text>
+      <text x="54" y="841" font-size="18">通过闸门才登记发送意图；事务短小，不在锁内等网络</text>
+    </g>
+    <path d="M350 881 L350 901" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="910" width="640" height="128" rx="14" fill="#e9f6ef" stroke="#28744a" stroke-width="2.5" />
+      <text x="54" y="940" font-size="20" font-weight="700">事务持久化 effect_in_flight 与本 attempt 发送意图</text>
+      <text x="54" y="969" font-size="18">原键 run-r42-7:create-issue:v1 + 原 payload_digest</text>
+      <text x="54" y="995" font-size="18">提交后才把请求交给接收方</text>
+      <text x="54" y="1023" font-size="18">这不证明请求已送达，也不证明远端效果已发生</text>
+    </g>
+  </g></g>
+</svg>

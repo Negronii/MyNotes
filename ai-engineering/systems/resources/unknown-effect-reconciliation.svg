@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1300" viewBox="0 0 700 1300" role="img" aria-labelledby="title desc">
+  <title id="title">远端已提交但本地回执丢失时的对账交接</title>
+  <desc id="desc">旧worker持久化发送意图后把请求交给合成工单服务；服务创建ISSUE-842，worker在保存回执前崩溃。扫描器只改持久状态并写唤醒；新对账worker领取新attempt和lease，按原资源和键只读查询。若确认创建，就绑定回执、最终答复和completed，并授权后用同一个runId返回存储的答案；否则保持未知并持久安排后续只读查询或人工处理。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" fill="#334155" /></marker>
+  </defs>
+  <rect x="0" y="0" width="700" height="1300" fill="#ffffff" />
+  <g font-family="-apple-system,BlinkMacSystemFont,'Noto Sans CJK SC','PingFang SC',sans-serif" fill="#172033">
+    <g>
+      <rect x="30" y="22" width="640" height="105" rx="14" fill="#e9f6ef" stroke="#28744a" stroke-width="2.5" />
+      <text x="54" y="52" font-size="20" font-weight="700">旧 attempt 已持久化发送意图</text>
+      <text x="54" y="81" font-size="18">effect_in_flight；键 run-r42-7:create-issue:v1</text>
+      <text x="54" y="108" font-size="18">记录不区分请求未发、在途或远端已受理</text>
+    </g>
+    <path d="M350 128 L350 151" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="160" width="640" height="130" rx="14" fill="#f5f8fc" stroke="#53677d" stroke-width="2.5" />
+      <text x="54" y="191" font-size="20" font-weight="700">请求到达合成工单服务，业务效果已经提交</text>
+      <text x="54" y="221" font-size="18">远端创建 ISSUE-842</text>
+      <text x="54" y="248" font-size="18">worker 在写回本地回执前崩溃</text>
+      <text x="54" y="276" font-size="18">本地仍不能断定成功或失败</text>
+    </g>
+    <path d="M350 291 L350 311" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="320" width="640" height="160" rx="14" fill="#fff8e8" stroke="#9a6a10" stroke-width="2.5" />
+      <text x="54" y="351" font-size="20" font-weight="700">恢复扫描器只做条件状态变更和 outbox 唤醒</text>
+      <text x="54" y="381" font-size="18">租约过期：effect_in_flight → effect_unknown</text>
+      <text x="54" y="408" font-size="18">保留原键、载荷摘要及全部发送意图</text>
+      <text x="54" y="435" font-size="18">扫描器不领 lease、不查询，也不重放外部写入</text>
+      <text x="54" y="462" font-size="18">对账 lease 再过期，仍唤醒同一未知分支</text>
+    </g>
+    <path d="M350 481 L350 501" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <g>
+      <rect x="30" y="510" width="640" height="140" rx="14" fill="#edf4ff" stroke="#24578a" stroke-width="2.5" />
+      <text x="54" y="541" font-size="20" font-weight="700">新的对账 worker 另领 attempt 3 与 lease</text>
+      <text x="54" y="571" font-size="18">按原资源范围、原操作键和原摘要做只读查询</text>
+      <text x="54" y="598" font-size="18">使用当前对账读取授权；不要求动作重放批准</text>
+      <text x="54" y="626" font-size="18">远端查询在锁外；写回时取得记录更新权并复核当前 attempt/lease</text>
+    </g>
+    <path d="M350 651 L350 676" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)" />
+    <polygon points="350,680 535,735 350,790 165,735" fill="#f0efff" stroke="#5b4b9a" stroke-width="2.5" />
+    <text x="350" y="731" text-anchor="middle" font-size="20" font-weight="700">读回能否证实工单</text>
+    <text x="350" y="759" text-anchor="middle" font-size="20" font-weight="700">ISSUE-842 已创建？</text>
+    <path d="M259 763 L180 811" fill="none" stroke="#28744a" stroke-width="3" marker-end="url(#arrow)" />
+    <path d="M441 763 L520 811" fill="none" stroke="#9a6a10" stroke-width="3" marker-end="url(#arrow)" />
+    <text x="44" y="807" font-size="16" font-weight="700" fill="#28744a">已确认创建</text>
+    <text x="570" y="807" font-size="16" font-weight="700" fill="#8a5e0d">未确认</text>
+    <g>
+      <rect x="20" y="820" width="320" height="460" rx="14" fill="#e9f6ef" stroke="#28744a" stroke-width="2.5" />
+      <text x="40" y="852" font-size="20" font-weight="700">已确认：ISSUE-842</text>
+      <text x="40" y="883" font-size="18">当前对账读取授权有效</text>
+      <text x="40" y="909" font-size="18">当前 attempt/lease 和状态有效</text>
+      <text x="40" y="935" font-size="18">回执绑定原资源与操作</text>
+      <text x="40" y="961" font-size="18">同一事务保存回执与最终答复</text>
+      <text x="40" y="987" font-size="18">并将运行置为 completed</text>
+      <text x="40" y="1023" font-size="18">答复含：build 42 / unit-tests</text>
+      <text x="40" y="1049" font-size="18">reject_empty_name</text>
+      <text x="40" y="1075" font-size="18">预期 HTTP 400；实际 HTTP 200</text>
+      <text x="40" y="1101" font-size="18">进程退出 1；缺陷单 ISSUE-842</text>
+      <text x="40" y="1137" font-size="18">若已请求取消，说明后续步骤已停止</text>
+      <text x="40" y="1163" font-size="18">不推断工单创建早于取消</text>
+      <text x="40" y="1199" font-size="18">重连鉴权后用同一 run-r42-7</text>
+      <text x="40" y="1225" font-size="18">返回已存答复，不重跑模型</text>
+      <text x="40" y="1260" font-size="16" fill="#425466">只读核实不要求原批准或写权限仍有效</text>
+    </g>
+    <g>
+      <rect x="360" y="820" width="320" height="460" rx="14" fill="#fff8e8" stroke="#9a6a10" stroke-width="2.5" />
+      <text x="380" y="852" font-size="20" font-weight="700">未确认：继续保持未知</text>
+      <text x="380" y="883" font-size="18">查无记录或超时不证明</text>
+      <text x="380" y="909" font-size="18">旧请求不会晚到提交</text>
+      <text x="380" y="945" font-size="18">保留原键与全部发送意图</text>
+      <text x="380" y="971" font-size="18">持久安排同分支只读续查</text>
+      <text x="380" y="997" font-size="18">或交指定人工责任人</text>
+      <text x="380" y="1023" font-size="18">先保存接续，再确认消息</text>
+      <text x="380" y="1049" font-size="18">人工项目永不自动重放</text>
+      <text x="380" y="1085" font-size="18">无当前批准/写权和安全接收契约时</text>
+      <text x="380" y="1111" font-size="18">不登记重放，也不换操作键</text>
+      <text x="380" y="1147" font-size="18">对账 lease 再过期，扫描器再唤醒</text>
+      <text x="380" y="1173" font-size="18">worker 按预期 attempt 条件领取</text>
+    </g>
+  </g>
+</svg>

@@ -4102,7 +4102,7 @@ moderation（内容审核）、redaction（脱敏）和分类器可辅助减少�
 
 把一次逻辑任务的身份、权威状态和外部副作用保存在应用侧。HTTP（Hypertext Transfer Protocol，超文本传输协议）请求、事件流和 worker（工作进程）都只是完成或交付运行的参与者；任何一个断开，都不能单独证明运行已经停止，也不能证明一次写入没有生效。恢复时先读持久状态，再按操作契约查询、去重或对账。
 
-本篇沿用[一条构建失败消息](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)：开发者问 build 42 为什么失败。工具请求的 `tool_call_id` 为 `c1`；应用执行 `read_build_log` 后，将匹配的结果关联到 `c1`，其中 `unit-tests` 的 `reject_empty_name` 预期返回 HTTP `400`、实际返回 `200`，进程退出状态为 `1`。为走完长运行，合成案例增加一个请求：“解释失败并准备缺陷单；提交前让我审核。”新增的 `create_issue` 是本例的应用工具，不是上游章节已经存在的接口。
+本篇以[一条构建失败消息](#1.%20AI%20%E6%9C%8D%E5%8A%A1%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%80%E6%9D%A1%E6%B6%88%E6%81%AF%E5%8F%98%E6%88%90%E5%AE%8C%E6%95%B4%E5%9B%9E%E7%AD%94%EF%BC%9F)的合成 build 42 证据为起点，但新建运行 `run-r42-7`，不续接任何结果未知的旧运行。为走完长运行，案例增加请求“解释失败并准备缺陷单；提交前让我审核。”本次重新执行的 `read_build_log` 与 `c1` 的证据关联会在后文走一遍；新增的 `create_issue` 是本例应用工具，不是上游章节已有的接口。
 
 ### 运行身份、持久状态和交付连接分别负责什么？
 
@@ -4123,69 +4123,68 @@ moderation（内容审核）、redaction（脱敏）和分类器可辅助减少�
 
 初始提交可能已成功写入运行记录，但响应尚未送到客户端；如果运行记录和队列发送不是一个原子动作，也可能在两者之间崩溃。常见做法是在同一数据库事务中写入运行记录和待发布的 outbox（事务发件箱）事件。发布器先持久化 `accepted` 到 `queued` 的状态变化，保留待发送事件，再投递队列消息；若在投递前崩溃，发布器仍能找到事件并重试，若投递后、标记已发送前崩溃，重复消息会唤醒同一个 `queued` 运行，由条件领取消重。这样 worker 收到消息时不会遇到尚未入队的 `accepted` 状态。若运行记录和 outbox 记录无法参加同一事务，就需要等价的可恢复入队协议与扫描修复任务。
 
-本例只在请求摘要与运行记录、outbox 事件持久化后返回 `202 Accepted`。同一调用者在同一 build 42 范围内用原键重试相同请求，会找到相同的 `runId`；若改了问题或目标，服务返回冲突。RFC 9110 中的 `202` 只表示请求已接受处理，业务的去重和队列恢复仍由应用实现。
+本例只在请求摘要与运行记录、outbox 事件持久化后返回 `202 Accepted`。同一调用者在 `repository_id=build-service` 的 build 42 范围内用原键重试相同请求，会找到相同的 `runId`；若改了问题或目标，服务返回冲突。RFC 9110 中的 `202` 只表示请求已接受处理，业务的去重和队列恢复仍由应用实现。
 
 ### worker 崩溃后怎样让新尝试接手？
 
-队列消息只是唤醒运行。worker 用条件更新原子领取 `queued` 状态，并在持久记录中取得有期限的 lease（租约）和单调递增的 attempt/fencing token（尝试代次／栅栏令牌）。每次 worker 的本地状态更新或发送意图事务取得运行记录的更新权并判定条件时，都须满足预期状态、当前 attempt、`lease_until` 晚于数据库当前时钟且尚未取消。租约过期会让随后作出的本地条件推进失败，即使恢复器还没领取下一代；它不会杀死旧进程，也不能撤回已经发出的远端请求。旧尝试若在有效租期内通过条件并先于接管提交，恢复器读到该已提交状态；恢复器若先领取下一代，旧 attempt 也会因代次不符而被拒绝。取消、审批和恢复器自己的状态转换使用各自的条件事务；`cancel_requested` 下的对账结果也可在匹配该分支状态并持有当前对账 attempt/lease 后写回 `completed`。
+队列消息只是唤醒运行。worker 用条件更新原子领取 `queued`，在持久记录中取得有期限的 lease（租约）和单调递增的 attempt/fencing token（尝试代次／栅栏令牌）。每次本地状态推进都先锁定运行记录，再用数据库实际时钟核验预期状态、当前 attempt、未过期 lease 和未取消标记。PostgreSQL 14.24 的复放显示，直接执行 `UPDATE ... WHERE lease_until > clock_timestamp()` 即使等待行锁后仍可能推进已过期租约；锁定该行后再读取 `clock_timestamp()`，才是在取得更新权时检查租约。事务必须短小，不在锁内等待模型或网络。lease 不会杀死旧进程或撤回远端请求；如果本地条件不再成立，旧 attempt 不能继续写运行记录。扫描器只落持久状态与 outbox，不能替 worker 领取下一代；收到唤醒的 worker 才能按当前状态和 attempt 条件原子领取新 lease。若原 attempt 在有效期内先提交，后续扫描读到该状态；若扫描与唤醒之后新 worker 先领取，旧 attempt 会因代次不符而失效。取消、审批和恢复都各有条件事务；`cancel_requested` 下只有当前对账 attempt 能写回已确认的只读结果。
 
-完成本次消息代表的步骤或写下暂停状态后，先持久化检查点再确认消息；若确认前崩溃，重投会从检查点恢复。确认后崩溃时，恢复扫描器不能把所有过期非终态一律排回普通 `queued`：只有当前状态为 `running`、尚未取消且操作账本确认无写入意图的运行，才能以条件事务排队并写入新的 outbox 事件；新 worker 领取时取得下一 attempt。若状态已是 `effect_in_flight`，恢复器保留原操作键和请求摘要，条件转为 `effect_unknown` 并登记对账 outbox；已发送或可能在途的请求只能走对账，不能当作普通步骤重放。`awaiting_approval` 由审批事件唤醒；结果未知的操作由对账事件或调度器接续。单纯持久化状态不会自动唤醒任何处理者。
+完成本次消息代表的步骤或写下暂停状态后，先持久化检查点再确认消息；若确认前崩溃，重投会从检查点恢复。确认后崩溃时，扫描器按持久状态分流，不把所有过期运行都放回普通 `queued`：只有 `running` 且操作账本确认没有任何发送意图的运行，才条件地改为 `queued` 并写普通 outbox；执行 worker 收到后原子领取下一 attempt。过期的 `effect_in_flight` 则由扫描器保留原操作键、载荷摘要和全部发送意图，条件转成 `effect_unknown` 并写对账 outbox。扫描器不增 attempt、不领 lease。
+
+对账 worker 消息重投时，worker 只有在运行仍是该 `effect_unknown` 分支（若已取消则仍是 `cancel_requested`）、消息预期 attempt 相符且数据库实际时钟确认现有对账 lease 已过期或为空时，才能原子领取下一 attempt 和新 lease；并发或重复消息只有一个能领取。若对账 attempt 再次过期，扫描器在同一条件下保持原分支，写新的持久对账唤醒；下一 worker 沿用原键和全部发送意图。扫描器仍不领取执行租约。`awaiting_approval` 只由绑定当前待审版本的审批事务唤醒。对账没有结论时，确认消息前必须持久安排下一次只读处理或指定人工责任人；人工项目永不自动重放。
 
 运行表、操作记录和持久队列可以完成这些职责。更复杂的编排也可选保存事件历史的工作流运行时；持久化的关键不是技术名词，而是进程、连接或 worker 消失后仍能回答“任务到哪一步、外部动作发生了什么”。
 
 ### 同一运行怎样跨审批和外部写入恢复？
 
-```mermaid
-stateDiagram-v2
-  [*] --> accepted
-  accepted --> queued: 排队状态持久化，outbox 等待发布
-  queued --> running: worker 原子领取并持有有效租约
-  accepted --> canceled: 取消事务确认无写入意图后直接记终态
-  queued --> canceled: 取消事务确认无写入意图后直接记终态
-  running --> canceled: 取消事务确认无写入意图后直接记终态
-  running --> queued: 租约过期、未取消且账本确认无写入意图，条件重排并登记 outbox
-  running --> awaiting_approval: c1 证据已保存，缺陷单草稿已生成
-  awaiting_approval --> queued: 同事务记录有效审批、排队状态与 outbox
-  awaiting_approval --> canceled: 取消事务确认无写入意图后直接记终态
-  awaiting_approval --> rejected: 审核人拒绝
-  running --> effect_in_flight: 操作键、请求摘要与当前租约已持久化
-  effect_in_flight --> completed: 外部结果和工单 ID 已保存
-  effect_in_flight --> effect_unknown: 租约过期，保留操作键和摘要并登记对账 outbox
-  effect_unknown --> effect_unknown: 有效租期内读回原载荷并核验批准，条件登记本次发送意图再按契约同键重放
-  effect_unknown --> completed: 对账确认已提交并保存外部 ID
-  running --> failed: 无法恢复的错误
-  effect_in_flight --> cancel_requested: 原子记录取消并登记对账 outbox
-  effect_unknown --> cancel_requested: 原子记录取消并登记对账 outbox
-  cancel_requested --> cancel_requested: 只查询或非创建式对账，结果仍未确认
-  cancel_requested --> canceled: 确认没有尚可能提交的动作
-  cancel_requested --> completed: 外部动作已完成，停止后续步骤并如实返回
-```
+本例从一个新建的合成运行 `run-r42-7` 开始，不续接任何结果未知的旧运行。客户端以 `build-42-triage-req-19` 提交“解释失败并准备缺陷单；提交前让我审核”，服务把调用者、`repository_id=build-service`、幂等键和本次提交摘要绑定到同一个 `runId`。这个 request digest（原始请求摘要，`request_digest`）只识别原始任务；之后审核的完整缺陷单另有 payload digest（动作载荷摘要，`payload_digest`），二者不能互相代替。
 
+普通 worker 持有 attempt 1 和有效 lease 时，应用本次执行 `read_build_log(repository_id="build-service", build_id=42)`。主机先检查调用者对该仓库中 build 42 的读取权限，再执行工具，并把模型给出的 `tool_call_id=c1`、工具名、完整参数与匹配的返回值一起保存：`unit-tests` 中 `reject_empty_name` 预期 HTTP `400`、实际 `200`，进程退出状态 `1`。只有这组证据关联持久化后，应用才把它交回模型。模型据此生成缺陷单完整草稿；应用保存正文或不可变引用，并为仓库、标题、正文和证据等全部获批字段计算 `payload_digest`。
 
-`effect_in_flight` 是当前有效尝试在调用远端前持久化的发送意图，含操作键、请求摘要与租约代次。租约过期且结果未记录时，恢复器保留这些字段，将状态转为 `effect_unknown` 并登记对账 outbox；新 worker 先对账，不回到普通草稿步骤。相反，只有未取消且操作账本确认还没有写入意图的过期 `running` 才能重排到 `queued`。
+#### 从请求到可发送意图
 
-审批通过时，应用以条件事务核验仍在等待同一动作摘要，将有效审批、`queued` 状态及针对同一 `runId` 的 outbox 恢复事件一起提交；重复或迟到的审批事件不能重新排队一个已经继续或取消的运行。领取该事件的 worker 必须取得新的 attempt 代次和 lease，重新读取已保存的原始草稿或不可变引用、审批记录与当前授权，再比对摘要；摘要只能校验载荷，不能还原正文。若审批人拒绝，应用将运行记为 `rejected`；若草稿摘要或权限在等待期间变化，原审批失效，更新后需重新审核。对尚无写入意图的 `accepted`、`queued`、`running` 和 `awaiting_approval`，取消事务可直接写入终态 `canceled`；即使旧 worker 仍在计算，它后续的状态更新也会因运行已终结而失败。
+![新建运行从本次工具观察经过审批，直到持久化外部发送意图](../../ai-engineering/systems/resources/run-to-write-intent.svg)
 
-`effect_unknown` 的查询不会发起新写入。若服务契约允许同键重放且去重窗口有效，对账 worker 先从应用账本读回已批准的完整原始载荷或不可变引用，核验其摘要与当前批准仍有效，再查询同一操作键。重放前还须像首次发送一样，在事务取得记录更新权时核验当前 attempt、`lease_until` 晚于数据库当前时钟、预期状态 `effect_unknown`、原请求摘要、当前批准、写授权和未取消状态，并登记这次发送意图。这项事务与取消事务互斥：取消先提交就禁止重放；发送意图先提交则按可能在途的请求继续对账。不能只读取“未取消”再裸发，也不能只凭相同摘要跳过当前批准检查。旧请求可能尚未到达接收方，因此同键去重不等于取消后的安全重放。已有写入意图时，取消标记与对账 outbox 一起提交；只允许查询或不会创建新效果的对账，直到确认结果。发起重放也不清除未知状态；只有确认远端结果后才转为完成。
+模型生成草稿后，当前仍有效的 attempt 在一笔条件事务中核验 `running` 状态、attempt 和 lease，再一并保存包含 `payload_digest` 与目标的不可变待审版本、检查点、`awaiting_approval`，并结束这次普通 worker lease。事务失败就没有审批等待项；审批期间没有执行 lease。客户端和审批人始终看到同一个 `run-r42-7` 待审版本。
 
-> [!example] 从重复提交到恢复 `run-r42-7`
-> 1. 浏览器在调用者、build 42 范围内以幂等键 `build-42-triage-req-19` 提交“解释失败并准备缺陷单”。服务端计算请求摘要，并在一个持久事务中写入 `run-r42-7` 与 outbox 事件，返回 `202` 和 `runId`。同一键重试且摘要相同会得到该运行；若把同一键用于不同问题或目标，服务端返回冲突。HTTP 的 `202 Accepted` 只表示请求已收下，不代表任务已完成。
-> 2. 若进程恰在事务提交后、队列发布前崩溃，outbox 发布器稍后仍能找到待发送事件。若发布器发布后、标记前崩溃，它可能再次发布同一事件。worker 通过条件更新原子领取 `queued` 运行，写入带过期时间的租约与递增 attempt/fencing token。每次 worker 本地推进都要求预期状态、当前 attempt、`lease_until` 晚于数据库当前时钟且尚未取消；只有旧写入在有效租期内通过条件、并且先于接管提交，恢复器才会读到该状态。若租约先到期，本地新推进立即失败；若接管先领取下一代，旧 attempt 也会因代次不符而失败。队列消息只唤醒运行，数据库状态和有效 attempt/lease 决定哪次尝试能写入。
-> 3. worker 调用模型后，模型提出读取 `read_build_log` 的请求。应用核验调用者可读 build 42 后才执行工具；`c1` 是这次工具调用的 ID，结果关联到该 ID，包含失败步骤、测试名、预期/实际值和退出状态。应用先持久化这些证据及其来源，再继续模型调用。完成本次唤醒代表的步骤或暂停点后，应用先保存对应检查点，再确认队列消息；若确认前崩溃，重投消息会从该检查点恢复；若确认后崩溃且状态仍是 `running`，只有操作账本确认无写入意图时，扫描器才以条件事务重新排队并登记 outbox。若写入意图已存在，则转入 `effect_unknown` 对账路径。
-> 4. 模型生成解释和缺陷单草稿。应用保存 `repository_id=build-service`、标题、正文、证据摘要和 `payload_hash`，把运行置于 `awaiting_approval`。此时尚未创建工单；生产记录保留原始正文或不可变引用，摘要只用于比对，不能还原载荷。
-> 5. 浏览器在审批事件到达前断线。重连后以 `run-r42-7` 查询权威状态，后台 worker 仍由持久化队列或审批事件独立唤醒；客户端只读状态，不负责继续任务，也不把部分流文本当作终态。审核人看到的预览绑定到 `repository_id`、标题、正文和证据摘要。审批返回时，应用检查该摘要仍相同、审批人仍有权限、目标仓库状态仍有效，并以条件事务一起提交审批决定、`queued` 状态和唤醒同一 `runId` 的 outbox 恢复事件。若等待审批时用户取消，本例在一个事务中确认无写入意图并直接标记 `canceled`；不等待没有活跃 worker 的安全点。
-> 6. worker 收到审批恢复事件后，先通过条件事务领取 `run-r42-7` 的新 attempt 代次和 lease，再读取草稿的原文或不可变引用、审批记录与当前授权，核对保存的请求摘要。核对通过后，它把 `create_issue` 的操作键 `run-r42-7:create-issue:v1`、完整请求摘要和副作用状态 `effect_in_flight` 持久化；这次发送意图事务在取得记录更新权时，还要同时核对预期状态、当前 attempt、`lease_until` 晚于数据库当前时钟、审批仍有效且获批摘要相符、写授权与未取消标记。若取消先提交，这次推进失败；若写入意图先提交，后来取消必须按请求可能已经发出处理，本地栅栏不能撤回网络请求。然后才提交给工单服务。假设服务创建了 `ISSUE-842`，worker 却在写回 ID 前崩溃；它无法自行更新运行。租约过期后，新 worker 通过条件事务提交下一 attempt，保留原操作键与请求摘要，将状态转为 `effect_unknown` 并登记对账 outbox，不会重做普通草稿步骤或使用新操作键。
-> 7. 对账 worker 从应用账本读回已批准的完整原始载荷或不可变引用，并核验当前批准仍有效、载荷摘要相同；摘要只用于比对，不还原正文。它再查询同一操作键，副作用记录保持 `effect_unknown`。若接收服务支持绑定相同请求摘要的幂等写入，且当前键仍在去重保留窗口内，写入前还须用条件事务核验当前 `effect_unknown` 状态、对账 worker 的 attempt 与有效 lease、当前批准摘要和写授权，并确认未取消后原子登记本次发送意图。该事务与取消事务互斥：取消先提交则禁止重放；发送意图先提交则按可能在途继续对账。只读取“未取消”后再发送不安全。超时或仍在处理时保持未知，不能把一次重放当作已确认。若只能查询，查无记录仍不证明原请求没有在途或延迟提交，应继续等待或人工对账，不能改键重发；去重窗口结束后也不能仅因键相同就重放。确认已有 `ISSUE-842` 后，写回副作用记录与最终答复，再标记 `completed`。
-> 8. 如果接收服务既不支持按键去重，也不能按键查询，就暂停自动重试并人工对账。盲目重发可能创建第二张工单；若用户同时要求取消，运行保持 `cancel_requested`，并保留副作用的 `effect_unknown` 账目；只做不会新建工单的对账，直到确认原请求不会再提交。
+审批决定只消费仍处于 `awaiting_approval` 的当前版本：目标和摘要相符且审批人当前有权批准时，同一事务写入批准决定、`queued` 和同 `runId` 的 outbox 唤醒。拒绝写为 `rejected` 且不排队；取消写为 `canceled` 且不排队；过期、重复或针对旧摘要的审批不能重新入队。载荷变化需另建待审版本并重新审批。
 
-| 重连时持久状态 | 恢复动作 | 不安全的推断 |
+批准后，新 worker 领取 attempt 2 和 lease，重新读取原始草稿、目标与批准版本。首次发送和后文的同键重放共用一个发送意图闸门：在数据库事务中取得运行记录更新权后，按上一节方法读取实际时钟，并检查预期状态（首次为 `running`、重放为 `effect_unknown`）、当前 attempt 与有效 lease、完整载荷仍符合当前批准、当前写权限有效且没有取消。事务还须把这一次 attempt 的发送意图和稳定操作键 `run-r42-7:create-issue:v1`、原始载荷摘要一并持久化；提交后才能调用工单服务。这个闸门与取消事务串行化：取消先提交就不能登记新意图，意图先提交则请求仍可能尚未发出、在途或已受理。意图只准许请求继续，不证明请求已送达或工单已创建。
+
+下表列出各分支由谁推进：
+
+| 持久化事实 | 条件变更与持有者交接 | 边界 |
 |---|---|---|
-| `running`，最后检查点是 `c1` 的已存结果 | 恢复必要上下文，继续处理已持久化的观察 | 认为旧流没有到达客户端，所以可新建一份 run |
-| `awaiting_approval`，动作摘要未变 | 继续展示同一审批项；取消时以条件事务确认无写入意图并记为 `canceled`，获批后重新检查权限和目标状态 | 把之前对别的动作或旧版本的审批复用到新草稿 |
-| `effect_in_flight`，操作键和请求摘要已保存，原租约过期 | 新 worker 领取下一代后将其转入 `effect_unknown` 并登记对账；查询后才判断契约允许的下一步 | 把它当作普通 `running` 步骤重排，或用新操作键再写一次 |
-| `effect_unknown`，接收方暂时查无结果 | 读回原始批准载荷，核验摘要与当前批准；写前以条件事务核验状态、对账 attempt、有效 lease、权限与未取消状态并登记发送意图，满足后才按契约重放，否则只查询、等待或人工对账 | 把“查询无记录”视为足以证明旧请求永远不会提交 |
-| `cancel_requested`，副作用仍为 `effect_in_flight` 或 `effect_unknown` | 停止新动作，但保留原键和摘要，继续对账 | 清除副作用记录或直接标为 `canceled` |
-| `completed`，结果已持久化 | 返回已存结果；可以另行重放仍被保留的进度事件 | 再跑模型或工具以“补回”丢失的响应 |
+| `awaiting_approval` 收到决定 | 只消费当前待审版本；批准后同事务写 `queued` 与 outbox，worker 再领新 attempt | 拒绝为 `rejected`，取消为 `canceled`；迟到/重复/旧版本审批不入队 |
+| lease 过期的 `running`，没有发送意图 | 扫描器条件改为 `queued` 并写普通 outbox；worker 原子领取下一 attempt | 只有此分支能普通续跑；无可恢复的普通错误记 `failed` |
+| lease 过期的 `effect_in_flight` | 扫描器保留原键、摘要和全部意图，改为 `effect_unknown` 并写对账 outbox；worker 另领新 attempt | 扫描器不领取 attempt 或 lease |
+| `effect_unknown` 或 `cancel_requested` 中，对账 lease 再次过期 | 扫描器取得记录更新权并核验当前 attempt/实际时钟后，保持原分支、写新对账 outbox；worker 仅在分支与预期 attempt 相符且无有效 lease 时原子领取下一 attempt 和新 lease | 重复消息只有一条能成功领取；同键、旧载荷和所有发送意图不变 |
+| 当前普通 attempt 收到远端成功回执 | 在有效 attempt 持有下，同一事务把绑定原资源/操作的回执、最终答复和 `completed` 写入 | 直接完成，不必等扫描或额外查询 |
+| 没有未知外部效果的不可恢复错误 | 保存错误并把运行记为 `failed` | 有结果未知的发送意图时不能把未知伪装为普通失败 |
+| 取消时没有发送意图，或收到重复终态取消 | 无意图时条件写 `canceled`；已终态时返回运行记录里的既有结果 | 发送前必须先持久化意图，所以无意图的 `canceled` 不可能已有本例工单 |
+| 取消时已有任一发送意图 | 写 `cancel_requested`、结束旧 lease 并发只读唤醒；重复取消沿用已存决定 | 旧 attempt 已登记的意图即使尚未发送仍可能到达；未知时不重放，也不清记录 |
+
+扫描器只做条件状态变更与 outbox 写入，不查远端、不领取执行 lease，也不增加 attempt。对账 worker 消息重复投递时，只有持有当前分支、预期 attempt 相符且不存在有效 lease 的消费者能原子取得下一代。若 attempt 3 在查询后或登记重放意图后再次崩溃，租约过期后扫描器仍按 `effect_unknown` 或 `cancel_requested` 分支写持久唤醒，attempt 4 才能领取；每轮都沿用原操作键和累计发送意图。若没有查询结论，当前 worker 在确认消息前持久安排下一次只读处理，或交给指定人工责任人；人工项目永不自动重放。
+
+#### 远端提交后丢失回执，谁能恢复结果？
+
+![发送意图后的崩溃、扫描器交接、只读对账与结果分支](../../ai-engineering/systems/resources/unknown-effect-reconciliation.svg)
+
+图中的崩溃情形是：请求到达服务并创建 `ISSUE-842`，worker 在写回回执前消失。扫描器将过期 `effect_in_flight` 条件转成 `effect_unknown` 并发只读唤醒；新的对账 worker 才领取 attempt 3 和 lease，再按原资源范围、操作键与摘要查询。活 worker 若等待远端时超时，只有在仍持当前有效 attempt/lease、预期状态仍为 `effect_in_flight` 时，才能在同一条件事务里转成 `effect_unknown`、写只读 outbox 并结束 lease；若 gate 检查失败，它不再写，等扫描器依到期分支接手。
+
+查询授权、写入重放授权和向客户端披露结果是三次不同判断：
+
+| 操作 | 当前必须满足的授权 | 结果与边界 |
+|---|---|---|
+| 只读对账与记录已确认结果 | 当前对账身份有权读原资源/操作；记录写回仍须由当前 attempt 在正确分支持有更新权 | 可记录已发生的事实，即使原动作批准已过期或原写权限已撤销；在 `cancel_requested` 中只准当前对账持有者写回 |
+| 重放原写请求 | 当前批准仍覆盖原完整载荷/目标，写权限有效；预期状态是 `effect_unknown`，当前 attempt/lease 有效且未取消 | 先从不可变引用读回原载荷并核对摘要，再经共用发送闸门原子登记本次意图；提交后才用原键/摘要发送。请求失败或超时仍是未知 |
+| 向调用者展示结果 | 调用者当前有权读该资源与运行结果 | `runId` 只是定位符；通过当前鉴权后，用同一 `runId` 返回已存终态答复，不重跑模型 |
+
+接收方必须按同一资源范围原子绑定操作键和摘要，使业务效果与可恢复去重结果一致；同键异摘要应拒绝。相同键也不够：有限 TTL（time to live，保留期限）可能漏掉晚到的原请求。接收方在 `t=3` 接受同键重放并创建 `ISSUE-842`，去重记录于 `t=13` 过期，而更早发出的原请求在 `t=14` 才到达，便可能再建 `ISSUE-843`。保证必须覆盖原请求、重放、处理中和所有仍可能晚到的请求，或明确拒绝保证区间外的提交；只在发送前检查 TTL 不够。临时查无记录也不能证明旧请求以后不会提交。
+
+无论当前 worker 正常收到成功回执，还是对账 worker 查证已建单，持有者都在取得记录更新权后复核状态与 attempt；同一事务把绑定原资源/操作的回执、最终答复和 `completed` 一起保存。答复引用本次 `c1` 的失败事实和工单 `ISSUE-842`。若运行已在 `cancel_requested`，只记录已发生结果并说明后续步骤已停止，不声称工单一定在取消前创建；不再产生新动作。
+
+有发送意图的运行只有在对账证实目标上没有已创建的工单、每个意图都已不可再发送或远端确定不会提交、没有已受理且仍可能提交的请求，并且接收方会拒绝所有可能迟到的请求后，才可最终标为 `canceled`。单纯查无记录不够。条件不足时保留 `cancel_requested` 与未知副作用记录，继续只读对账或人工处理。客户端重连后按当前资源权限用同一 `run-r42-7` 读取该终态答复；再次提交取消或读请求时返回已存结果，不重跑模型或外部动作。
 
 ### 客户端断线后怎样查询同一次运行？
 
@@ -4197,13 +4196,13 @@ stateDiagram-v2
 | 临时流 | 先收到文本或进度，最终再有终态 | 流文本在运行记录到达终态前仍属临时内容 |
 | 排队或后台 | `202` 与 `runId`，之后查询状态或事件 | `202` 不是完成；消息重投时仍按运行记录和租约恢复 |
 
-例如，合成接口可以让 `POST /runs` 接受问题和 `Idempotency-Key`，持久化后返回 `202 {"runId":"run-r42-7","status":"accepted"}`；客户端用 `GET /runs/run-r42-7` 查询权威状态，用 `GET /runs/run-r42-7/events?after=12` 续读服务器仍保留的事件。短任务可以在同一 `runId` 上等待直接答复，流模式则把进度作为临时事件。状态查询、事件续读和审批入口每次都按当前调用者与资源范围授权；`runId` 只定位运行，不是访问凭据。路径与字段是本例的应用契约，并非 HTTP 规范要求。
+例如，合成接口可以让 `POST /runs` 接受问题和 `Idempotency-Key`，持久化后返回 `202 {"runId":"run-r42-7","status":"accepted"}`；客户端用 `GET /runs/run-r42-7` 查询权威状态，用 `GET /runs/run-r42-7/events?after=12` 续读服务器仍保留的事件。短任务可以在同一 `runId` 上等待直接答复，流模式则把进度作为临时事件。状态查询、事件续读和审批入口每次都按当前调用者与资源范围授权；`runId` 只定位运行，不是访问凭据。路径与字段是本例的应用契约，并非 HTTP 规范要求。重连看到 `awaiting_approval` 时继续展示同一待审版本；看到 `completed`、`rejected`、`failed` 或 `canceled` 时，只返回该 `runId` 已存的终态答复或错误，不重跑模型或工具。
 
 初始 `POST /runs` 可能已经创建运行，只是响应未到客户端。客户端应在服务支持时用同一调用者与资源范围查询幂等键，或用该键重试完全相同的请求；不能改写请求后复用键，也不能换新键盲目重提。HTTP 规范只把方法语义定义为幂等或非幂等；业务应用需为 `POST` 另设明确的去重契约。流事件只能在服务保留相应游标时补齐，断线后应先查运行记录。
 
 ### 取消请求与断线有什么不同？
 
-本例中，持久 run 的取消由独立鉴权请求触发；浏览器断线只结束交付。取消请求需要持久记录并按运行状态推进：对 `accepted`、`queued`、`running`、`awaiting_approval` 这些尚无写入意图的状态，条件事务可直接标记 `canceled`，旧 worker 随后的状态写入会失败；若写入意图已存在，则同一事务记录 `cancel_requested` 并登记对账唤醒。取消不能删除操作键、摘要或结果未知记录，也不能因进入对账就重新允许写入重放。只有确认远端没有执行且原请求不会再提交，才可标为 `canceled`；确认已成功则保存外部结果、停止后续步骤并如实完成。若远端始终无法给出结论，运行继续待人工对账。
+本例中，持久运行的取消由独立鉴权请求触发；浏览器断线只结束交付。对没有发送意图的 `accepted`、`queued`、`running` 或 `awaiting_approval`，条件事务可以直接标记 `canceled`；若已有意图，则写入 `cancel_requested` 并登记只读对账唤醒，保留原键和结果状态。只有对账证实目标上没有已创建的工单、每个已登记意图都已不可再发送或确定不会提交、没有已受理且仍可能提交的请求，并且接收方会拒绝可能迟到的请求后，才标记 `canceled`。已终态收到取消时返回已存结果；确认已创建就记录 `completed` 并停止后续步骤，未知时继续只读对账或人工处理。
 
 ### 检查点与模型推理缓存分别恢复什么？
 
@@ -4224,34 +4223,13 @@ LangGraph 可以把运行过程表示成有状态的节点图。它的 `thread_i
 
 无密钥示例使用 LangGraph Python `1.2.20` 的 `StateGraph`、`InMemorySaver` 和 `interrupt()`。`observations` 的 reducer（归并函数）用 `operator.add` 将成功节点返回的新条目追加到已有列表。示例载荷为便于阅读只含仓库、标题和证据；生产请求还要绑定完整草稿正文，摘要覆盖实际获批的全部字段。动作载荷和摘要在暂停前固定，稳定操作键为 `run-r42-7:create-issue:v1`；示例没有在审批后修改内容。原版本尚未登记发送意图时，可以修改草稿、重新审批并使用新的操作版本；一旦登记了发送意图，就先保留原键和载荷对账。结果未知时不能换键发起新建；若已确认创建，应把修改既有工单作为单独审批的动作。fake remote（模拟接收服务）明确模拟按稳定操作键去重：同键同摘要返回同一工单 ID，同键不同摘要拒绝；它还假定去重记录至少保留到本例的重试完成。实际服务只有提供并兑现这一契约时，才有相同结果。
 
-```mermaid
-flowchart TD
-    P[prepare：保存 c1 与提案] --> A[approve：interrupt 暂停]
-    A -->|保存检查点| C[等待审批]
-    C -->|同一 thread 恢复| A2[approve 从节点开头重跑并返回决定]
-    A2 --> W[create_issue：提交远端]
-    W -->|远端已提交，节点在返回前抛出模拟异常| R[保留上个检查点]
-    R -->|同一 thread 再恢复| W2[create_issue 再次执行]
-    W2 -->|同键同摘要，模拟服务返回原 ID| F[节点返回外部回执]
-    F --> D[reducer 追加一条回执]
-```
+表中的三次观察对应已复放的 LangGraph Python `1.2.20` 示例（Python `3.11.13`）。`InMemorySaver`、`journal` 和模拟接收端都在同一进程；第三行的 `graph.invoke(None, config)` 使用同一个 `thread_id` 继续检查点并重跑失败的写节点，不代表新进程重启或生产对账。只有节点成功返回的增量才进入 reducer：暂停和异常没有回执增量。
 
-| 阶段 | 图与账本状态 | 累计计数：审批节点 / 写节点 / 远端请求 / 新建工单 |
-|---|---|---|
-| `prepare` 后进入审批中断 | 检查点含 `c1` 和提案；尚无审核结论 | `1 / 0 / 0 / 0`；暂停 `1` 次 |
-| 批准后恢复并提交 | 审批节点从头执行并返回决定；远端创建 `ISSUE-842` 后，写节点在返回回执前抛出模拟异常；本地图状态仍无回执，账本仍标记处理中 | `2 / 1 / 1 / 1` |
-| 同一 thread 恢复失败节点 | 写节点用同一操作键和摘要再请求；模拟接收服务识别重复请求并返回 `ISSUE-842`，账本记完成，图状态归并一条回执 | `2 / 2 / 2 / 1` |
-
-`observations` 的归并可手推如下。只有节点成功返回时，图才会把它的新增条目交给 reducer；`interrupt()` 暂停和节点抛出异常都不提交本次新增内容。
-
-| 时点 | 归并前列表 | 节点新增 | 归并后列表 |
+| 同一进程中的阶段 | 节点与副作用变化 | 累计：审批节点 / 写节点 / 远端请求 / 新建工单 | `observations` reducer 的本次增量 |
 |---|---|---|---|
-| 初始 | `[]` | — | `[]` |
-| `prepare` 返回 | `[]` | `[c1 证据, 提案]` | `[c1 证据, 提案]` |
-| `approve` 首次触发中断 | `[c1 证据, 提案]` | 无返回值 | `[c1 证据, 提案]` |
-| 同一 thread 恢复，审批返回 | `[c1 证据, 提案]` | `[审批]` | `[c1 证据, 提案, 审批]` |
-| 远端已提交但节点抛出模拟异常 | `[c1 证据, 提案, 审批]` | 无返回值 | `[c1 证据, 提案, 审批]` |
-| 写节点重跑并成功返回 | `[c1 证据, 提案, 审批]` | `[ISSUE-842 回执]` | `[c1 证据, 提案, 审批, ISSUE-842 回执]` |
+| 初次 `graph.invoke(...)` 暂停 | `prepare` 保存 `c1` 与提案；`approve` 触发 `interrupt()` | `1 / 0 / 0 / 0` | 追加 `[c1 证据, 提案]`；中断无增量 |
+| `Command(resume=...)` 后模拟崩溃 | `approve` 从节点开头重跑并返回批准；远端创建 `ISSUE-842` 后，写节点在返回回执前抛异常 | `2 / 1 / 1 / 1` | 追加 `[审批]`；写节点异常无回执增量 |
+| 同一 `thread_id` 执行 `graph.invoke(None, config)` | 失败的写节点再发同键同摘要请求；模拟服务返回原 ID，账本记完成 | `2 / 2 / 2 / 1` | 追加 `[ISSUE-842 回执]`，没有重复追加 |
 
 > [!example]- 可运行代码：LangGraph Python 1.2.20（无密钥）
 >
@@ -4351,6 +4329,7 @@ LangChain 的 Agent middleware（智能体中间件）属于常规模型—工�
 > - **运行态与人审恢复：** OpenAI，[Running agents](https://developers.openai.com/api/docs/guides/agents/running-agents) 与 [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，核对日期：2026-11-06；当前 Agents SDK 文档说明运行循环、可保存会话状态、暂停审批并恢复同一 run 的做法。具体 API 属于该 SDK。
 > - **模型上下文缓存的服务边界：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”“Cache lifetime”和常见问题；说明可重用的是匹配前缀的 KV 张量，缓存按模型/配置过期且不能保证每次复用。Anthropic，[Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)，2025-09-29，“Compaction”“Structured note-taking”；讨论上下文整理与外部笔记。运行身份、外部动作和审批账本是本文的应用架构扩展。
 > - **LangGraph 图状态、中断、恢复与持久化：** LangGraph Python [1.2.20](https://pypi.org/project/langgraph/1.2.20/)；示例运行条件为 Python 3.11.13 与 LangGraph 1.2.20。[Define and update state](https://docs.langchain.com/oss/python/langgraph/graph-api-state) 的 State / Reducers、[Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts) 的 Rules of interrupts / Side effects called before interrupt must be idempotent、[Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) 的 Checkpointer vs. store 与内存 saver 限制。模拟的远端去重与应用账本是本文明确声明的假设。
+> - **PostgreSQL 行锁与时钟：** PostgreSQL 14 官方 [Date/Time Functions](https://www.postgresql.org/docs/14/functions-datetime.html) 区分事务起始时的 `CURRENT_TIMESTAMP` 与调用时读取实际时间的 `clock_timestamp()`；[Explicit Locking](https://www.postgresql.org/docs/14/explicit-locking.html) 说明竞争事务可能等待行锁。本文的取锁后复核与行锁时序也在 PostgreSQL 14.24 上复放；这是本例持久状态事务的实现依据，不是远端副作用保证。
 > - **middleware 和 Deep Agents 的层次与 factory 所属包：** LangChain，[Middleware overview](https://docs.langchain.com/oss/python/langchain/middleware/overview) 的 Agent loop / Use middleware inside a LangGraph workflow；Deep Agents，[Overview](https://docs.langchain.com/oss/python/deepagents/overview) 及 [Quickstart](https://docs.langchain.com/oss/python/deepagents/quickstart)，截至 2026-11-09 检查；`create_agent` 是 LangChain agent API，`from deepagents import create_deep_agent` 属于 Deep Agents SDK。
 ## 23. 如何判断 AI 系统是否满足任务契约？
 
