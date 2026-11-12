@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="1340" viewBox="0 0 820 1340" role="img" aria-labelledby="svgTitle svgDesc">
+  <title id="svgTitle">Load, test, promote or roll back a WebView bundle</title>
+  <desc id="svgDesc">A host records stable report-web-17 and pending trial report-web-18a before selecting the candidate. Android and Apple load it through distinct local entry URLs and origins. A shared bridgeHello passes the source, frame, protocol, request ID, package binding and compatibility checks while businessReady remains false. Within a 15-second host deadline, the host runs non-mutating readiness checks. Only a durable atomic promotion is followed by the same-ID businessReady response. Load, handshake, health, commit failure or timeout recovers report-web-17. An exit after pending and before promotion is recovered from the pending record before the next WebView is created.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#385777"/>
+    </marker>
+    <marker id="arrowFailure" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a14b46"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #182636; }
+      .headline { font-size: 20px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; fill: #42566b; }
+      .box { stroke-width: 2; rx: 14; }
+      .arrow { fill: none; stroke: #385777; stroke-width: 3; marker-end: url(#arrow); }
+      .failure { fill: none; stroke: #a14b46; stroke-width: 3; marker-end: url(#arrowFailure); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="820" height="1340" fill="#ffffff"/>
+
+  <rect class="box" x="120" y="22" width="580" height="92" fill="#eaf6e9" stroke="#60914f"/>
+  <text x="410" y="59" class="headline" text-anchor="middle">当前稳定包继续可用</text>
+  <text x="410" y="89" class="body" text-anchor="middle">report-web-17 · bridge API 2.0</text>
+
+  <path class="arrow" d="M410 116 V145"/>
+  <rect class="box" x="100" y="149" width="620" height="128" fill="#eaf3ff" stroke="#4b78a8"/>
+  <text x="410" y="185" class="headline" text-anchor="middle">先持久化待确认记录，再选择候选</text>
+  <text x="410" y="219" class="body" text-anchor="middle">{ stable: 17, trial: 18a, pending: true }</text>
+  <text x="410" y="251" class="small" text-anchor="middle">写入失败则不切换；17 保持恢复目标</text>
+
+  <path class="arrow" d="M410 279 V306"/>
+  <rect class="box" x="100" y="310" width="620" height="178" fill="#fff7e8" stroke="#c08a2f"/>
+  <text x="410" y="346" class="headline" text-anchor="middle">按平台从已验证的不可变目录装载</text>
+  <text x="410" y="381" class="body" text-anchor="middle">Android · https://reports.example/app/&lt;bundleId&gt;/index.html</text>
+  <text x="410" y="414" class="body" text-anchor="middle">Apple · reportassets://bundle/&lt;bundleId&gt;/index.html</text>
+  <text x="410" y="448" class="small" text-anchor="middle">对应 origin 各自精确校验；包资源缺失即失败</text>
+  <text x="410" y="474" class="small" text-anchor="middle">不为缺失脚本或资源回源到网络</text>
+
+  <path class="arrow" d="M410 490 V518"/>
+  <rect class="box" x="100" y="522" width="620" height="146" fill="#eaf3ff" stroke="#4b78a8"/>
+  <text x="410" y="558" class="headline" text-anchor="middle">同一 handler 接受受限 bridgeHello</text>
+  <text x="410" y="592" class="body" text-anchor="middle">校验来源、主 frame、协议 1、原请求 id</text>
+  <text x="410" y="623" class="small" text-anchor="middle">并核对实际文档绑定的 bundleId 与 API 范围</text>
+  <text x="410" y="651" class="small" text-anchor="middle">业务门仍关闭：此时不能调用 openReport</text>
+
+  <path class="arrow" d="M410 670 V698"/>
+  <rect class="box" x="100" y="702" width="620" height="154" fill="#edf8f4" stroke="#4e927d"/>
+  <text x="410" y="738" class="headline" text-anchor="middle">宿主负责健康检查 · 总限时 15 秒</text>
+  <text x="410" y="772" class="body" text-anchor="middle">文档/资源/API 有效；原生无副作用探测通过</text>
+  <text x="410" y="804" class="small" text-anchor="middle">hello 回复保持等待，直到晋升成功才报告 ready</text>
+  <text x="410" y="834" class="small" text-anchor="middle">晋升提交前发生错误或超时，才回退</text>
+
+  <path class="arrow" d="M365 858 V883 H215 V908"/>
+  <path class="failure" d="M455 858 V883 H605 V908"/>
+
+  <rect class="box" x="35" y="912" width="360" height="164" fill="#eaf6e9" stroke="#60914f"/>
+  <text x="215" y="948" class="headline" text-anchor="middle">成功路径</text>
+  <text x="215" y="982" class="body" text-anchor="middle">原子提交 stable=18a, pending=false</text>
+  <text x="215" y="1014" class="small" text-anchor="middle">之后按原 hello id 回复</text>
+  <text x="215" y="1042" class="small" text-anchor="middle">bridgeApi=2.0 · businessReady=true</text>
+  <text x="215" y="1066" class="small" text-anchor="middle">页面此后才开放 openReport</text>
+
+  <rect class="box" x="425" y="912" width="360" height="164" fill="#fff0ee" stroke="#a14b46"/>
+  <text x="605" y="948" class="headline" text-anchor="middle">提交前失败或到期</text>
+  <text x="605" y="982" class="body" text-anchor="middle">当前进程立即恢复 17，业务门关闭</text>
+  <text x="605" y="1014" class="small" text-anchor="middle">可用时按 hello id 回稳定错误</text>
+  <text x="605" y="1042" class="small" text-anchor="middle">旧页面/handler 释放，不再等其回复</text>
+  <text x="605" y="1066" class="small" text-anchor="middle">本周期不重试同一不可变包 ID</text>
+
+  <path class="failure" d="M605 1078 V1103"/>
+  <rect class="box" x="145" y="1107" width="530" height="194" fill="#fff7e8" stroke="#c08a2f"/>
+  <text x="410" y="1143" class="headline" text-anchor="middle">恢复结果：稳定 report-web-17</text>
+  <text x="410" y="1179" class="body" text-anchor="middle">清除 pending 成功：保留 17，等待后续更新周期</text>
+  <text x="410" y="1213" class="small" text-anchor="middle">若清除失败，保留 pending 以强制下次先恢复 17</text>
+  <text x="410" y="1247" class="small" text-anchor="middle">pending 写入后、晋升前若进程退出也走此恢复</text>
+  <text x="410" y="1277" class="small" text-anchor="middle">下次启动先处理 pending，再创建 WebView</text>
+
+  <path class="failure" d="M720 210 H800 V1200 H681"/>
+  <path class="failure" d="M720 456 H790 V950 H784"/>
+</svg>

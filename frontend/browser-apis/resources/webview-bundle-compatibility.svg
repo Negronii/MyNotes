@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="790" viewBox="0 0 820 790" role="img" aria-labelledby="svgTitle svgDesc">
+  <title id="svgTitle">Independent WebView bundle candidates and API compatibility</title>
+  <desc id="svgDesc">Stable report-web-17 with host API 2.0 remains active while the update source independently offers report-web-18 and report-web-18a. Each package is separately verified. Version 18 requires 2.1 and is rejected; version 18a includes 2.0 in its range and can enter a trial activation.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#385777"/>
+    </marker>
+    <marker id="arrowReject" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a14b46"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #182636; }
+      .headline { font-size: 20px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .small { font-size: 15px; fill: #42566b; }
+      .box { stroke-width: 2; rx: 14; }
+      .arrow { fill: none; stroke: #385777; stroke-width: 3; marker-end: url(#arrow); }
+      .reject { fill: none; stroke: #a14b46; stroke-width: 3; marker-end: url(#arrowReject); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="820" height="790" fill="#ffffff"/>
+
+  <rect class="box" x="185" y="25" width="450" height="100" fill="#eaf6e9" stroke="#60914f"/>
+  <text x="410" y="64" class="headline" text-anchor="middle">稳定包继续服务</text>
+  <text x="410" y="96" class="body" text-anchor="middle">report-web-17 · 原生 bridge API 2.0</text>
+
+  <path class="arrow" d="M410 127 V158"/>
+
+  <rect class="box" x="150" y="162" width="520" height="105" fill="#eaf3ff" stroke="#4b78a8"/>
+  <text x="410" y="202" class="headline" text-anchor="middle">更新源独立提供两个候选包</text>
+  <text x="410" y="235" class="body" text-anchor="middle">report-web-18 与另一个 report-web-18a</text>
+
+  <path class="arrow" d="M410 269 V292 H210 V316"/>
+  <path class="arrow" d="M410 269 V292 H610 V316"/>
+
+  <rect class="box" x="35" y="318" width="350" height="154" fill="#fff7e8" stroke="#c08a2f"/>
+  <text x="210" y="355" class="headline" text-anchor="middle">候选 report-web-18</text>
+  <text x="210" y="389" class="body" text-anchor="middle">它自己的签名与文件摘要通过</text>
+  <text x="210" y="421" class="body" text-anchor="middle">manifest 最低要求 bridge API 2.1</text>
+  <text x="210" y="452" class="small" text-anchor="middle">独立验证；不会被改名为 18a</text>
+
+  <rect class="box" x="435" y="318" width="350" height="154" fill="#fff7e8" stroke="#c08a2f"/>
+  <text x="610" y="355" class="headline" text-anchor="middle">候选 report-web-18a</text>
+  <text x="610" y="389" class="body" text-anchor="middle">它自己的签名与文件摘要通过</text>
+  <text x="610" y="421" class="body" text-anchor="middle">manifest 兼容范围含 API 2.0</text>
+  <text x="610" y="452" class="small" text-anchor="middle">另一个独立发布的候选</text>
+
+  <path class="reject" d="M210 474 V505"/>
+  <path class="arrow" d="M610 474 V505"/>
+
+  <rect class="box" x="35" y="509" width="350" height="118" fill="#fff0ee" stroke="#a14b46"/>
+  <text x="210" y="548" class="headline" text-anchor="middle">2.0 不满足最低版本 2.1</text>
+  <text x="210" y="584" class="body" text-anchor="middle">拒绝 report-web-18</text>
+  <text x="210" y="612" class="small" text-anchor="middle">稳定包 17 仍在服务</text>
+
+  <rect class="box" x="435" y="509" width="350" height="118" fill="#edf8f4" stroke="#4e927d"/>
+  <text x="610" y="548" class="headline" text-anchor="middle">宿主 2.0 落在声明范围内</text>
+  <text x="610" y="584" class="body" text-anchor="middle">report-web-18a 可进入试启</text>
+  <text x="610" y="612" class="small" text-anchor="middle">下一步先持久化试启状态</text>
+
+  <path class="arrow" d="M610 629 V660"/>
+  <rect class="box" x="435" y="664" width="350" height="103" fill="#eaf3ff" stroke="#4b78a8"/>
+  <text x="610" y="706" class="headline" text-anchor="middle">有资格进入独立试启流程</text>
+  <text x="610" y="741" class="body" text-anchor="middle">不是 API 权限或脚本可信的证明</text>
+
+</svg>

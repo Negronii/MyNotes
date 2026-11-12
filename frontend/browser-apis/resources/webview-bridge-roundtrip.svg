@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="1340" viewBox="0 0 820 1340" role="img" aria-labelledby="svgTitle svgDesc">
+  <title id="svgTitle">WebView bridge request and reply path</title>
+  <desc id="svgDesc">A synthetic report request crosses distinct Android and Apple WebKit message APIs, then common host validation and authorization before a fixed native action. Platform-specific replies carry the request ID back to the pending page request.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#385777"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #182636; }
+      .headline { font-size: 20px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .small { font-size: 15px; fill: #42566b; }
+      .box { stroke-width: 2; rx: 14; }
+      .arrow { fill: none; stroke: #385777; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="820" height="1340" fill="#ffffff"/>
+
+  <rect class="box" x="155" y="30" width="510" height="120" fill="#eaf3ff" stroke="#4b78a8"/>
+  <text x="410" y="62" class="headline" text-anchor="middle">页面为一次等待建立 id</text>
+  <text x="410" y="91" class="body" text-anchor="middle">{ protocolVersion: 1, id: "web-17:request-17",</text>
+  <text x="410" y="117" class="body" text-anchor="middle">operation: "openReport", payload: { reportId: 42 } }</text>
+
+  <path class="arrow" d="M410 151 V174 H205 V196"/>
+  <path class="arrow" d="M410 151 V174 H615 V196"/>
+
+  <rect class="box" x="35" y="198" width="350" height="190" fill="#edf8f4" stroke="#4e927d"/>
+  <text x="210" y="230" class="headline" text-anchor="middle">Android · AndroidX WebKit</text>
+  <text x="60" y="263" class="body">addWebMessageListener 注入对象</text>
+  <text x="60" y="290" class="body">页面 postMessage() → host</text>
+  <text x="60" y="322" class="small">callback: sourceOrigin, isMainFrame,</text>
+  <text x="60" y="344" class="small">message, JavaScriptReplyProxy</text>
+  <text x="60" y="372" class="small">需 feature check，且导航前注册</text>
+
+  <rect class="box" x="435" y="198" width="350" height="190" fill="#f5efff" stroke="#8266a8"/>
+  <text x="610" y="230" class="headline" text-anchor="middle">Apple WebKit · WithReply</text>
+  <text x="460" y="263" class="body">WKUserContentController handler</text>
+  <text x="460" y="290" class="body">postMessage() → 单条 Promise</text>
+  <text x="460" y="322" class="small">callback: frameInfo.securityOrigin,</text>
+  <text x="460" y="344" class="small">isMainFrame, body, replyHandler</text>
+  <text x="460" y="372" class="small">WKScriptMessageHandler 是单向接口</text>
+
+  <path class="arrow" d="M210 390 V413 H330 V434"/>
+  <path class="arrow" d="M610 390 V413 H490 V434"/>
+
+  <rect class="box" x="150" y="436" width="520" height="125" fill="#fff7e8" stroke="#c08a2f"/>
+  <text x="410" y="469" class="headline" text-anchor="middle">宿主先用平台元数据过来源门</text>
+  <text x="410" y="499" class="body" text-anchor="middle">Android origin: https://reports.example</text>
+  <text x="410" y="527" class="body" text-anchor="middle">Apple origin: reportassets://bundle (无端口)</text>
+  <text x="410" y="550" class="small" text-anchor="middle">主 frame；业务要 ready，bridgeHello 只作引导</text>
+
+  <path class="arrow" d="M410 564 V594"/>
+
+  <rect class="box" x="150" y="598" width="520" height="126" fill="#fff7e8" stroke="#c08a2f"/>
+  <text x="410" y="631" class="headline" text-anchor="middle">解析并限制请求</text>
+  <text x="410" y="661" class="body" text-anchor="middle">版本 1 · 正确 id · operation=openReport</text>
+  <text x="410" y="689" class="body" text-anchor="middle">reportId 是正安全整数；拒绝任意调用/路径/eval</text>
+  <text x="410" y="713" class="small" text-anchor="middle">坏格式不执行；已识别请求可回通用错误码</text>
+
+  <path class="arrow" d="M410 727 V757"/>
+
+  <rect class="box" x="150" y="761" width="520" height="122" fill="#fff7e8" stroke="#c08a2f"/>
+  <text x="410" y="795" class="headline" text-anchor="middle">使用当前原生主体做对象级授权</text>
+  <text x="410" y="825" class="body" text-anchor="middle">currentUser 是否能 report:read / reportId 42？</text>
+  <text x="410" y="853" class="small" text-anchor="middle">不允许则拒绝；网页用户 ID 与隐藏 UI 不授权</text>
+
+  <path class="arrow" d="M410 886 V916"/>
+
+  <rect class="box" x="200" y="920" width="420" height="94" fill="#eaf6e9" stroke="#60914f"/>
+  <text x="410" y="956" class="headline" text-anchor="middle">openNativeReportDetail(42)</text>
+  <text x="410" y="985" class="body" text-anchor="middle">规范化结果与原请求 id 关联</text>
+
+  <path class="arrow" d="M410 1017 V1044 H210 V1066"/>
+  <path class="arrow" d="M410 1017 V1044 H610 V1066"/>
+
+  <rect class="box" x="35" y="1068" width="350" height="128" fill="#edf8f4" stroke="#4e927d"/>
+  <text x="210" y="1102" class="headline" text-anchor="middle">Android 回复</text>
+  <text x="210" y="1133" class="body" text-anchor="middle">replyProxy.postMessage(JSON)</text>
+  <text x="210" y="1162" class="small" text-anchor="middle">注入对象 message 事件收到响应</text>
+  <text x="210" y="1186" class="small" text-anchor="middle">同 id；不是同步 JS 返回值</text>
+
+  <rect class="box" x="435" y="1068" width="350" height="128" fill="#f5efff" stroke="#8266a8"/>
+  <text x="610" y="1102" class="headline" text-anchor="middle">Apple 回复</text>
+  <text x="610" y="1133" class="body" text-anchor="middle">replyHandler(dictionary, nil)</text>
+  <text x="610" y="1162" class="small" text-anchor="middle">该 postMessage() Promise 得到结果</text>
+  <text x="610" y="1186" class="small" text-anchor="middle">同 id 与本次 Promise 绑定</text>
+
+  <path class="arrow" d="M210 1199 V1228 H300 V1241"/>
+  <path class="arrow" d="M610 1199 V1228 H520 V1241"/>
+  <rect class="box" x="190" y="1243" width="440" height="75" fill="#eaf3ff" stroke="#4b78a8"/>
+  <text x="410" y="1274" class="headline" text-anchor="middle">页面按 id 结束对应 waiter</text>
+  <text x="410" y="1301" class="small" text-anchor="middle">迟到 / 重复响应无 waiter 可匹配</text>
+</svg>
