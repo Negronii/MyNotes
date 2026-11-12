@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="710" viewBox="0 0 700 710" role="img" aria-labelledby="desc">
+  <desc id="desc">Accessing localStorage can throw SecurityError before setItem. Same-value writes return without mutation or notification; quota failure leaves the stored value unchanged. A successful write updates the map and queues storage event tasks before setItem returns; another document dispatches the event later.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="9" refX="10" refY="4.5" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L11 4.5 L0 9 Z" fill="#315f91"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="11" markerHeight="9" refX="10" refY="4.5" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L11 4.5 L0 9 Z" fill="#387652"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="11" markerHeight="9" refX="10" refY="4.5" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L11 4.5 L0 9 Z" fill="#a34d4d"/>
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #24344d; }
+      .label { font-size: 15px; }
+      .small { font-size: 13px; }
+      .box { stroke-width: 1.4; rx: 8; }
+      .arrow { fill: none; stroke: #315f91; stroke-width: 2; marker-end: url(#arrow); }
+      .success { fill: none; stroke: #387652; stroke-width: 2; marker-end: url(#arrowGreen); }
+      .failure { fill: none; stroke: #a34d4d; stroke-width: 1.8; marker-end: url(#arrowRed); }
+    </style>
+  </defs>
+  <rect width="700" height="710" fill="#ffffff"/>
+
+  <rect x="27" y="24" width="285" height="61" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="169" y="50" text-anchor="middle" class="label">标签页 B 读取 window.localStorage</text>
+  <text x="169" y="70" text-anchor="middle" class="small">访问 getter 取得 Storage 对象</text>
+  <path d="M312 54 H361" class="arrow"/>
+  <polygon points="411,20 462,54 411,88 360,54" fill="#f4efff" stroke="#cdbdeb" stroke-width="1.4"/>
+  <text x="411" y="59" text-anchor="middle" class="small">成功？</text>
+  <text x="426" y="111" class="small">是</text>
+  <text x="479" y="45" class="small">否</text>
+  <path d="M462 54 H510" class="failure"/>
+  <rect x="514" y="24" width="160" height="61" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
+  <text x="594" y="50" text-anchor="middle" class="label">抛出 SecurityError</text>
+  <text x="594" y="70" text-anchor="middle" class="small">尚未调用 setItem</text>
+
+  <path d="M411 88 V132" class="arrow"/>
+  <rect x="236" y="135" width="350" height="54" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="411" y="159" text-anchor="middle" class="label">调用 setItem(key, "true")</text>
+  <text x="411" y="178" text-anchor="middle" class="small">下面的判断都在这次调用内</text>
+  <path d="M411 189 V223" class="arrow"/>
+  <polygon points="411,225 466,263 411,301 356,263" fill="#fff7e8" stroke="#e7c988" stroke-width="1.4"/>
+  <text x="411" y="260" text-anchor="middle" class="small">新旧字符串</text>
+  <text x="411" y="278" text-anchor="middle" class="small">相同？</text>
+  <text x="484" y="249" class="small">是</text>
+  <path d="M466 263 H511" class="arrow"/>
+  <rect x="515" y="228" width="160" height="68" class="box" fill="#f4f6f9" stroke="#cbd3df"/>
+  <text x="595" y="255" text-anchor="middle" class="label">直接返回</text>
+  <text x="595" y="276" text-anchor="middle" class="small">不更新、不排通知</text>
+  <text x="426" y="319" class="small">否</text>
+  <path d="M411 301 V336" class="arrow"/>
+
+  <polygon points="411,338 466,376 411,414 356,376" fill="#fff7e8" stroke="#e7c988" stroke-width="1.4"/>
+  <text x="411" y="373" text-anchor="middle" class="small">能够保存</text>
+  <text x="411" y="391" text-anchor="middle" class="small">这个新值？</text>
+  <text x="347" y="366" text-anchor="end" class="small">否</text>
+  <path d="M356 376 H247" class="failure"/>
+  <rect x="27" y="343" width="216" height="67" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
+  <text x="135" y="370" text-anchor="middle" class="label">抛出 QuotaExceededError</text>
+  <text x="135" y="391" text-anchor="middle" class="small">存储映射保持原值</text>
+  <text x="423" y="432" class="small">是</text>
+  <path d="M411 414 V450" class="success"/>
+
+  <rect x="241" y="453" width="340" height="48" class="box" fill="#eff7f1" stroke="#83aa91"/>
+  <text x="411" y="483" text-anchor="middle" class="label">更新存储映射</text>
+  <path d="M411 501 V538" class="success"/>
+  <rect x="201" y="541" width="420" height="55" class="box" fill="#eff7f1" stroke="#83aa91"/>
+  <text x="411" y="564" text-anchor="middle" class="label">排入共享同一存储区的其他文档的事件任务</text>
+  <text x="411" y="584" text-anchor="middle" class="small">这一步先于 setItem 返回</text>
+
+  <path d="M411 596 V635" class="success"/>
+  <rect x="242" y="638" width="205" height="53" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="344" y="661" text-anchor="middle" class="label">setItem 返回到 B</text>
+  <text x="344" y="680" text-anchor="middle" class="small">当前 JavaScript 继续执行</text>
+  <path d="M621 568 H645 V633" class="arrow"/>
+  <rect x="459" y="638" width="205" height="53" class="box" fill="#f1edff" stroke="#cdbdeb"/>
+  <text x="561" y="661" text-anchor="middle" class="label">之后在 A 派发事件</text>
+  <text x="561" y="680" text-anchor="middle" class="small">B 不收到自己的事件</text>
+</svg>
