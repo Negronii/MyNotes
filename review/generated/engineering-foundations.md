@@ -1152,131 +1152,160 @@ WHERE tenant_id = ? AND id = ?;
 > - SQL 参数化与允许列表：[OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)，Primary Defenses，按 2026-11-06 版本核对。
 ## 6. 浏览器安全控制分别保护什么信任边界？
 
-报表页面会跨过多个不同边界。Transport Layer Security (TLS，传输层安全协议) 保护 HTTP 网络链路；Cross-Site Scripting (XSS，跨站脚本攻击) 防护避免不可信文本变成活动脚本；Cross-Site Request Forgery (CSRF，跨站请求伪造) 防护限制另一页面借用浏览器自动附带的 Cookie 发起变更；Cross-Origin Resource Sharing (CORS，跨源资源共享) 控制浏览器脚本能否读取跨源响应；Content Security Policy (CSP，内容安全策略) 的 `frame-ancestors` 限制哪些来源能嵌入页面。它们都不替代服务端认证和对报表 42 的逐次授权。
+**案例背景。** 认证层已确认请求主体是 `user-17`；他是 `tenant-a` 的 `reader`，可读取租户甲的报表 42，报表内容为合成数据 `Service health`。页面由 `https://console.example.test` 提供，API 位于 `https://api.example.test`。API 设置 host-only 会话 Cookie `__Host-api-session`；本文讨论的登录态和权限均是案例输入，不代表浏览器控制本身会授予访问权。另有不可信的旧子域 `https://legacy.example.test`，用于检查“同站”是否足以代表可信。本例中用户直接打开这个旧子域页面，它是浏览器的顶层页面。
 
-| 信任边界 | 控制主要保证什么 | 本身不保证什么 |
-| --- | --- | --- |
-| 网络链路 | 正确配置的 TLS 加密传输、检测篡改并认证服务端 | 登录用户身份或其可读取的报表 |
-| 页面解释数据 | 按上下文输出编码和必要的标记消毒，避免数据成为活动内容 | 已执行脚本不会滥用页面已有权限 |
-| Cookie 自动发送 | CSRF token 或经审查的来源校验限制伪造状态变更 | 阻止所有未授权调用 |
-| 浏览器跨源读取 | 同源策略与 CORS 控制脚本能否读取响应 | 请求一定未到服务器或用户已经获授权 |
-| 页面嵌入 | `frame-ancestors` 限制谁能嵌入报表界面 | 报表数据和操作的服务端权限 |
+这些地址共用 `example.test`，只用于讲解。下面依次跟着一次连接、一段不可信标题、一项书签变更和一次跨源读取，看这些控制分别在何处生效：
+
+| 边界 | 控制与成立条件 | 失败时会怎样 | 它不负责什么 |
+| --- | --- | --- | --- |
+| 网络链路 | HTTPS 的证书身份验证与 TLS 加密传输 | 验证失败时连接应终止或显示证书错误；若退回明文，链路保护消失 | 识别应用用户或决定用户能否读报表 |
+| 页面解释数据 | 用适合目标上下文的安全 DOM 接口或编码；富文本另行消毒 | 不可信标记被 HTML 解析后，可能生成元素、事件处理器或可执行脚本 | 限制已经运行的同源脚本 |
+| Cookie 自动发送 | CSRF token 或经审查的来源验证在服务端、状态变更前执行 | Cookie 仍可能随请求到达；防护失败会让伪造操作进入业务逻辑 | 认证本身、对象授权或脚本注入 |
+| 浏览器跨源读取 | 预检时允许请求方法与请求头；实际响应的来源和凭据字段匹配请求 | 预检失败时浏览器不发后续的非简单请求；实际响应检查失败时脚本读不到响应 | 拦住所有请求、保护非浏览器客户端或授权报表 |
+| 页面嵌入 | 报表响应的 CSP `frame-ancestors` 允许每个祖先来源 | 浏览器拒绝在不允许的祖先页面中呈现该页面 | API、附件和后台任务的服务端权限 |
 
 ### 网络连接如何保护数据并认证服务端？
 
-TLS 握手后为连接建立流量保护。浏览器正确验证证书链、主机名和握手时，HTTPS 可以保护传输机密性与完整性，并认证连接到预期的服务器。TLS 不说明当前浏览器用户是谁；即使浏览器验证了报表站点提供的证书，服务仍须验证会话或访问凭据，并授权读取报表 42。证书状态查询和撤销行为受客户端及部署方式影响，不应假设所有浏览器以相同步骤即时检查撤销。
+本例使用带服务器证书的 HTTPS；Transport Layer Security (传输层安全协议，TLS) 在 HTTP 之下保护连接。浏览器验证链路上的证书身份与目标主机匹配，并成功完成 TLS 握手后，TLS 保护该连接上后续应用数据的机密性和完整性；证书身份匹配说明客户端连到预期服务端。错误证书、主机名不匹配或握手失败时，浏览器不能把该连接当作正常受保护的会话。证书撤销状态依赖客户端与部署所用的机制及其新鲜度，不应假设浏览器会在每个请求上即时查询撤销状态。
+
+TLS 只保护浏览器到服务端的传输。它不知道请求当前代表 `user-17`，也不判断 `report 42` 属于哪个租户。即使 HTTPS 完全正常，API 仍须验证会话，并按当前主体和租户逐项授权。
 
 ### 不可信报表标题怎样安全显示？
 
-Document Object Model (DOM，文档对象模型) 是页面结构；XSS 指不可信数据被当作活动内容执行。假设报表 42 的标题是 ` <img src=x onerror=alert(1)> `。若把它交给将值设为纯文本的 `textContent`，它仍只是字符；若拼进 `innerHTML`，浏览器会按 HyperText Markup Language (HTML，超文本标记语言) 解析。当图片加载失败且策略允许 inline handler 时，`onerror` 处理器可能执行。
+Cross-Site Scripting (跨站脚本攻击，XSS) 发生在不可信数据变成可执行内容时。Document Object Model (文档对象模型，DOM) 是浏览器页面中的节点树。假设报表 42 的标题是 ` <img src=x onerror=alert(1)> `。`textContent` 会把它作为普通字符放进一般的标题元素；`innerHTML` 则把字符串交给 HTML 片段解析器。若图像加载失败且内联事件处理器没有被有效策略拦下，解析出的 `onerror` 可以运行。
 
-1. 普通文本使用框架默认安全的文本呈现接口。只有需要将数据放入安全属性值等允许上下文时，才用对应的上下文编码。
-2. 不把不可信字符串拼进执行位置，例如动态脚本正文、事件处理器代码或 CSS 选择器；这些位置不能靠一种通用转义方式修好。
-3. 只有产品确实要呈现用户编写的富文本时，才使用维护良好的 HTML 消毒器过滤允许的标记和属性。
-4. 避免把不可信字符串传给 `innerHTML`、`document.write`、事件属性、`eval` 或 `new Function`。框架常规自动转义不保护有意使用的 raw HTML 入口。
-5. 为链接和资源 URL 验证 scheme 与目标，例如拒绝不允许的 `javascript:`；HTML 属性编码不会限制 URL 的语义。经测试的 CSP 可限制脚本来源，作为纵深防御，不能代替安全呈现。
+![同一报表标题经 textContent 成为字符，经 innerHTML 则会被解析为可触发事件的图像元素](../../engineering-foundations/security/resources/web-browser-security-boundaries-xss.svg)
 
-如果 XSS 已执行，脚本通常能以页面所属 origin 发起请求并读取脚本可访问的页面数据；即使会话 Cookie 是 `HttpOnly`，恶意脚本仍可能让浏览器替用户调用报表 API。因此要修复注入点并保留服务端授权。`HttpOnly` 减少 Cookie 值被脚本直接窃取的途径，不是 XSS 防护本身。
+所以普通文本应使用框架默认安全的文本插值或一般元素的 `textContent`。需要把值放入 HTML 属性时，固定元素和属性名，并使用该属性上下文对应的编码；HTML 属性编码不会验证 URL 的语义，例如是否允许 `javascript:`。不要把不可信值拼进脚本、事件处理器、CSS 规则、标签名或属性名。只有产品确实支持用户撰写富文本时，才用维护中的 HTML 消毒器过滤允许的元素和属性；清理后再改写内容可能重新引入风险。框架的 raw HTML 入口仍需这些检查；不要把不可信字符串交给 `document.write`、`eval` 或 `new Function`，文本插值的安全性不会传递给这些解析或执行入口。
+
+Content Security Policy (内容安全策略，CSP) 的脚本指令可以限制内联脚本或脚本来源，降低某些注入的可利用性；这属于纵深防御，不能让 `innerHTML` 变成安全文本接口。如果在 `console.example.test` 展示的标题已执行恶意脚本，它通常能以控制台页面的权限调用该源可用的接口；若 API 也允许该 origin 通过 CORS 读取，脚本还可能带着浏览器凭据读取 API 响应。`HttpOnly` 只阻止脚本直接读取 Cookie 值，不阻止它调用 `fetch` 让浏览器代为发送 Cookie。因此仍需修复注入点并在 API 检查每个资源。
 
 ### Cookie 自动发送时，怎样防止伪造变更？
 
-CSRF 利用浏览器自动附带目标站点 Cookie 的行为。以下场景固定为明确可复现的条件：用户已经登录 `api.example.test`，其当前主体本来就有执行 `reports:refresh` 的权限；另一个同 site 但不可信的旧子域 `legacy.example.test` 可被攻击者控制；API 接受下方表单格式，且目前没有 token 或来源校验。host-only Cookie 仍会发给目标 API 主机；同 site 不等于同 origin。
+Cross-Site Request Forgery (跨站请求伪造，CSRF) 利用浏览器自动携带的登录凭据，让另一个页面发起用户没有意图执行的变更。
+
+Origin (源) 由协议、主机和端口组成；site (站点) 采用 schemeful site 判定，端口不参与比较，同一可注册域下的 HTTPS 子域属于同站。于是 `https://legacy.example.test` 与 `https://api.example.test` 是不同 origin，却是同 site。子域可由不同团队、租户或旧系统控制，因此“同站”不能当作同源或可信身份的替代物。
+
+会话 Cookie 示例为：
+
+~~~http
+Set-Cookie: __Host-api-session=<opaque-session-id>; Path=/; Secure; HttpOnly; SameSite=Lax
+~~~
+
+`__Host-` 要求 `Secure`、`Path=/` 且不带 `Domain`，所以旧子域不能把这个 Cookie 的作用域扩大到 API 主机。但用户登录 API 后，浏览器会在目标主机、路径、Secure 要求及其他 Cookie 发送条件都匹配时，自动把它附加到发往 `api.example.test` 的请求。控制旧子域的脚本不必读取该 Cookie，就可能借用户现有会话发起请求。Cookie 怎样建立会话见[Cookie 会话与 OIDC 令牌怎样建立身份？](#4.%20Cookie%20%E4%BC%9A%E8%AF%9D%E4%B8%8E%20OIDC%20%E4%BB%A4%E7%89%8C%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E8%BA%AB%E4%BB%BD%EF%BC%9F)。
+
+为了具体展示状态变化，本节的合成 API 另允许 `reader` 维护自己的报表书签；这不授予 `report:refresh` 或 `report:export`。书签初始为未置顶 (`pinned=false`)，这个示例端点接受 `application/x-www-form-urlencoded` 表单编码，并将 `pinned=true` 解释为置顶。旧子域提交下面的普通表单：
 
 ~~~html
-<form action="https://api.example.test/api/reports/42/refresh" method="post">
-  <input name="range" value="365-days">
+<form action="https://api.example.test/api/tenants/tenant-a/reports/42/bookmark" method="post">
+  <input name="pinned" value="true">
 </form>
 <script>document.forms[0].submit();</script>
 ~~~
 
-这次跨源表单 POST 的响应不必可被攻击页面读取，副作用仍可能已经发生。例子中的两个主机使用 HTTPS 且共享可注册域 `example.test`，所以是同 site、不同 origin；若 Cookie 为 `SameSite=Lax`，同 site 的表单 POST 仍可能附带 Cookie。真正跨 site 的普通 POST 通常会被 Lax 限制，但顶层安全方法导航等仍有不同规则，不能把 `Lax` 当成授权或完整 CSRF 防护。
+两个页面都是 HTTPS 且同站，所以即使 Cookie 设置为 `SameSite=Lax`，发往 API 的同站表单 POST 仍可附带会话 Cookie。这个表单请求使用浏览器可直接提交的格式，不需要 CORS 预检。攻击页面不需要读回响应，副作用就可能发生。
 
-对 Cookie 认证的状态变更，服务端验证与当前会话绑定的 CSRF token，或使用经过审查的等价机制；适用时再校验 Origin/Referer，并用合适的 SameSite 设置纵深防御。使用 GET 等安全方法的路由不应改变状态。加上 token 后，同一请求仍可能抵达 API，但因缺少或无效 token 而被拒绝；token 让服务识别伪造来源，不证明用户操作意图。如果同源 XSS 已执行，它可能读取页面中的 token 或调用合法请求接口，因此还要修复注入并持续执行资源授权。
+下面用服务端精确检查 `Origin` 的变体画出结果；CSRF token 是正文随后说明的另一种防伪机制。两条分支比较同一个未置顶书签在两种实现下的结果。
 
-当某个合法流程确实需要跨 site 附带 Cookie，应设置 `SameSite=None; Secure` 并单独设计 CSRF 防护。不要为了让登录回调或嵌入工作而静默取消请求校验。
+![同站旧子域的表单 POST 带 Cookie 到达 API；认证和动作授权之后，来源校验拦下变更，漏检则将书签置顶](../../engineering-foundations/security/resources/web-browser-security-boundaries-csrf.svg)
+
+API 仍要先从有效 Cookie 会话得到 `user-17`，再检查该主体是否能执行这项书签操作，然后验证与当前会话绑定的 CSRF token，或执行经审查的等价来源校验。应用先选定并贯彻自己的校验策略：要求 token 的接口拒绝缺少或无效 token；图中的来源校验变体只接受精确的控制台 origin，并拒绝缺失、`null` 或不匹配的来源值。两者都应在变更前拒绝，书签保持 `pinned=false`；这个校验只说明请求通过了该防伪机制，不证明用户表达了操作意图。若用 token 作为主要校验，传统表单必须提交攻击者无法跨源取得的有效 token。
+
+显式设置为 `SameSite=Lax` 通常会限制真正跨站的不安全方法请求，但允许符合规则的顶层安全方法导航携带 Cookie；因此 GET 等安全方法不能改状态。它也不拦截上面的同站子域请求。若合法流程确实需要在 Lax 排除的跨站上下文中发送 Cookie，才考虑 `SameSite=None; Secure`；浏览器的第三方 Cookie 政策仍可能限制它，而且应用仍须单独防 CSRF。若同源 XSS 已执行，恶意脚本可能读取页面里的 token 或调用正常请求接口，不能把 CSRF token 当作 XSS 修复。
 
 ### 同源策略如何控制跨源响应读取？
 
-浏览器将 origin 定义为协议、主机和端口。`https://console.example.test` 与 `https://api.example.test` 的 scheme 和可注册域相同，属于 same-site；主机不同，所以是不同 origin。Cookie 的 SameSite 依据 site 判定，不能与 origin 混为一谈。
+same-origin policy (同源策略，SOP) 默认限制页面脚本读取另一个 origin 的页面或响应。API 可用 Cross-Origin Resource Sharing (跨源资源共享，CORS) 明确开放 Fetch 响应；这是对浏览器默认读取限制的受控放行。
 
-以下部署变体让控制台脚本直接请求 API；浏览器已通过 `api.example.test` 的登录流程持有 API 自己设置的 host-only `__Host-api-session` Cookie。`console.example.test` 的 Cookie 不会发给 `api.example.test`；`__Host-` Cookie 也不能设置 `Domain` 扩大范围。`credentials: "include"` 允许浏览器按目标 URL、Cookie 属性和 Fetch 凭据模式附带匹配凭据，JavaScript 不读取 Cookie 值。
+控制台脚本访问独立 API 时，浏览器依据目标 URL、Cookie 属性和 Fetch 凭据模式决定 Cookie 是否符合发送条件。跨 origin 的 Fetch 默认不带目标源 Cookie；本例显式使用 `credentials: "include"`。Cookie 值仍由浏览器管理，脚本不能手动设置 `Cookie` 请求头，也不能读取 `Set-Cookie` 响应头。
 
-~~~javascript
-const response = await fetch('https://api.example.test/api/reports/42', {
+```javascript
+const response = await fetch('https://api.example.test/api/tenants/tenant-a/reports/42', {
   credentials: 'include',
   headers: { 'X-Report-View': 'compact' },
 });
-~~~
+```
 
-`X-Report-View` 不在 CORS safelist 中，因此在无可用预检缓存的本例里，浏览器先发送不含用户凭据的预检：
+`X-Report-View` 不是 CORS safelisted request header。假设没有可用的预检缓存，浏览器先发不带用户 Cookie 的预检，请 API 声明此来源、方法、请求头和凭据模式是否可被共享：
 
-~~~http
-OPTIONS /api/reports/42 HTTP/1.1
+```http
+OPTIONS /api/tenants/tenant-a/reports/42 HTTP/1.1
 Host: api.example.test
 Origin: https://console.example.test
 Access-Control-Request-Method: GET
 Access-Control-Request-Headers: x-report-view
-~~~
+```
 
-~~~http
+API 同意本例控制台读取时，可对预检返回：
+
+```http
 HTTP/1.1 204 No Content
 Access-Control-Allow-Origin: https://console.example.test
 Access-Control-Allow-Methods: GET
 Access-Control-Allow-Headers: X-Report-View
 Access-Control-Allow-Credentials: true
 Vary: Origin
-~~~
+```
 
-预检获准后，浏览器才按 Fetch 凭据模式和 Cookie 规则发送实际 GET。这里假设 API Cookie 匹配目标 URL、已登录且请求的 SameSite 条件允许附带：
+![带自定义头的 Fetch 在无预检缓存时先发不带 Cookie 的 OPTIONS；预检通过才允许实际 GET，否则 Fetch 拒绝](../../engineering-foundations/security/resources/web-browser-security-boundaries-cors.svg)
 
-~~~http
-GET /api/reports/42 HTTP/1.1
+预检通过后，浏览器才发送实际 GET。由于 Cookie 由 API 主机设置且本例两个 HTTPS 子域同站，若其余 Cookie 条件符合，实际请求可以带上它：
+
+```http
+GET /api/tenants/tenant-a/reports/42 HTTP/1.1
 Host: api.example.test
 Origin: https://console.example.test
 Cookie: __Host-api-session=<opaque-session-id>
 X-Report-View: compact
-~~~
+```
 
-若请求获准读取，实际响应本身也必须带允许来源和凭据字段，脚本才能取得正文：
+服务器此时仍须认证 Cookie、确认 `user-17` 当前属于 `tenant-a` 并有 `report:read`，再按租户与 ID 读取 42。仅在允许分享该结果时，实际响应本身才返回匹配的 CORS 字段：
 
-~~~http
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Cache-Control: private, no-store
 Access-Control-Allow-Origin: https://console.example.test
 Access-Control-Allow-Credentials: true
 Vary: Origin
 
 {"id":42,"title":"Service health","status":"ready"}
-~~~
+```
 
-若预检通过但实际 `200` 漏掉 `Access-Control-Allow-Origin` 或 `Access-Control-Allow-Credentials`，API 仍已收到 GET 并执行处理，浏览器却不把响应暴露给脚本。按隐藏策略返回的 `404` 也必须有匹配的 CORS 响应字段，控制台脚本才可读取该错误。预检失败时浏览器不会发送实际请求；无需预检的请求则可能先到达服务器，即便脚本最后读不到响应。两种时序都要求 API 独立验证身份与权限。
+![实际 GET 已到 API 并经过身份和资源授权；响应的 CORS 字段再决定脚本能否读到状态和正文](../../engineering-foundations/security/resources/web-browser-security-boundaries-cors-response.svg)
 
-CORS 是浏览器实现的读取协议，不能认证用户、授权报表、约束 curl 等非浏览器客户端，也不是一般网络防火墙。`Vary: Origin` 只让共享缓存按来源区分响应变体，不隔离不同用户的数据；私有响应还须正确设置缓存策略和用户范围。若页面与 API 可通过同一源反向代理到 `/api/`，通常可以省去跨源读取配置，但服务端授权仍需保留。
+对于 `credentials: "include"` 的请求，响应必须使用精确允许的 origin 和小写字面值 `true`，不能用 `Access-Control-Allow-Origin: *`。即便服务器返回了 `200`，若实际响应缺少匹配的允许来源或 `Access-Control-Allow-Credentials`，Fetch 会以 `TypeError` 拒绝，脚本拿不到这个响应的状态和正文；请求本身可能已经抵达并完成读取。隐藏式 `404` 若也要由控制台识别，同样需要可读的 CORS 响应字段：此时 Fetch 正常返回 `Response`，`response.status === 404` 且 `response.ok === false`，不是 CORS 导致的网络错误。相反，若预检响应不允许请求头或来源，浏览器不会发送这个带自定义头的后续 GET，Fetch 也以 `TypeError` 拒绝。没有预检的简单表单请求则可能先到服务器，所以两条失败路径都不能代替 API 的身份和授权检查。
 
-> [!info] Fetch 对 Cookie 响应字段的边界
-> 浏览器脚本不能通过 Fetch/XHR 手动设置 `Cookie` 请求字段；它由浏览器依请求 URL 和 Cookie 政策管理。`Set-Cookie` 是禁止暴露给脚本的响应字段，网页不能靠读取它来取得 HttpOnly 会话值。登录 Cookie 的 host-only 范围见[会话与身份令牌](#4.%20Cookie%20%E4%BC%9A%E8%AF%9D%E4%B8%8E%20OIDC%20%E4%BB%A4%E7%89%8C%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E8%BA%AB%E4%BB%BD%EF%BC%9F)。
+CORS 是浏览器将跨源响应分享给脚本的协议，不是通用网络防火墙，不限制 `curl` 等客户端，也不替服务端授权。动态选择 `Access-Control-Allow-Origin` 时，`Vary: Origin` 让 HTTP 缓存区分不同来源的表示；它不区分同一个来源下的不同用户。对本例的私人报表，`Cache-Control: private, no-store` 表示合规 HTTP 缓存不得保存响应；这是缓存存储指令，不是服务端授权或绝对隐私保证。若产品需要可缓存表示，则要按 HTTP 缓存规则设计，并确保用户范围不会被别人的请求复用。`Vary: Origin` 本身不保护私有数据。若部署允许把 API 反向代理到页面同源的 `/api/`，可以省去这次跨源读取协商；会话也须能在控制台主机建立，因为 API 主机原有的 host-only Cookie 不会发给控制台主机。身份认证与资源授权仍照常执行。
+
+> [!info] Fetch 对 Cookie 字段的边界
+> 浏览器按目标 URL 和 Cookie 政策管理 `Cookie` 请求字段；网页脚本不能用 Fetch/XHR 手动设置它。`Set-Cookie` 是禁止暴露给脚本的响应字段，增加 `Access-Control-Expose-Headers` 也不能让网页读取该字段，无论 Cookie 是否设置了 `HttpOnly`。
 
 ### 什么时候限制页面被嵌入？
 
-点击劫持可将真实页面放进攻击者控制的 frame 下方，诱导用户点击错位按钮。CSP 的 `frame-ancestors` 响应指令声明哪些祖先来源可以嵌入页面；例如仅允许同源嵌入：
+点击劫持会把真实页面放进攻击者控制的框架，再诱导用户点错位置。报表页面可以通过 HTTP 响应头限制哪些祖先来源可嵌入它：
 
 ~~~http
 Content-Security-Policy: frame-ancestors 'self'
 ~~~
 
-旧客户端需要兼容时可设置 `X-Frame-Options`。允许列表应符合实际嵌入场景并在完整流程中测试。这个策略限制哪些页面能嵌入报表 UI，不替代服务端对每份报表或操作的权限判断。
+策略只允许同源祖先；任意一层祖先来源不匹配时，浏览器拒绝在该框架中呈现报表。必须用响应头发送 `frame-ancestors`；放进 `meta` 元素不会生效。旧客户端兼容需要可另评估 `X-Frame-Options`，并按目标浏览器验证策略。嵌入控制保护报表界面不被伪装成按钮，但不会阻止攻击者直接请求 API，也不会替 API 检查报表 42 的权限。
 
-WebSocket 握手也不能用 CORS 响应字段授权。浏览器会发送 Origin；服务端应按允许来源校验握手、认证连接，并对敏感消息继续授权。双向消息和断线恢复见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#19.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
+WebSocket 握手不使用 CORS 的响应字段来授权。浏览器会在握手中发送 `Origin`；服务端应按允许来源校验它，并验证连接身份。非浏览器客户端可以伪造或省略 `Origin`，所以它不能代替认证。连接建立也不等于对所有动作有权；每条读取或变更消息仍按资源和动作授权。双向消息与断线恢复见[何时选择轮询、SSE、流式 Fetch 或 WebSocket？](#19.%20%E4%BD%95%E6%97%B6%E9%80%89%E6%8B%A9%E8%BD%AE%E8%AF%A2%E3%80%81SSE%E3%80%81%E6%B5%81%E5%BC%8F%20Fetch%20%E6%88%96%20WebSocket%EF%BC%9F)。
 
-**接下来：** TLS 保护网络连接；安全输出和 CSP 降低脚本注入风险；CSRF 防护检验带 Cookie 的变更请求；CORS 决定浏览器是否暴露跨源响应；`frame-ancestors` 决定页面可由谁嵌入。所有资源读取仍须经过[服务端逐项授权](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+**接下来：** TLS 保护网络链路；安全呈现控制数据如何进入页面解释器；CSRF 防护验证自动附带 Cookie 的变更请求；CORS 决定脚本能否读取跨源响应；CSP 的 `frame-ancestors` 限制页面嵌入方。它们都不改变身份层已经确认的主体，也不取代[对报表 42 的服务端逐次授权](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
 
 > [!info]- 来源
-> - TLS 1.3 握手、服务器认证与流量密钥：[IETF RFC 8446](https://www.rfc-editor.org/rfc/rfc8446.html)，§2–§4，2018-08；核对于 2026-11-06。
-> - Same-Origin 与 same-site 判定：[WHATWG HTML, Origins and Sites](https://html.spec.whatwg.org/multipage/browsers.html#origins)，Living Standard，核对于 2026-11-06；`example.test` 属于示例域。
-> - origin、Cookie、预检、CORS、credentialed 响应及禁止脚本设置 Cookie/读取 `Set-Cookie`：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§2、§3.3、§4.2、§4.10，2026-10-19 版本；核对于 2026-11-06。Cookie 属性同时见 [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265.html)，§5，2011-04。
-> - 安全上下文输出、HTML 消毒与危险执行上下文：[OWASP Cross Site Scripting Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)，Contextual Output Encoding、HTML Sanitization、Dangerous Contexts，按 2026-11-06 版本核对。
-> - CSP 的脚本纵深防御：[OWASP Content Security Policy Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html)，按 2026-11-06 版本核对；`frame-ancestors`：[W3C Content Security Policy Level 3](https://www.w3.org/TR/CSP3/#directive-frame-ancestors)，2026-10-27 Working Draft，§6.4.2；该规范仍是工作草案，浏览器支持应与目标环境核验。
-> - Cookie 认证请求的 CSRF token、Origin 和 SameSite 条件：[OWASP Cross-Site Request Forgery Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)，Synchronizer Token、SameSite 与 Origin Validation，按 2026-11-06 版本核对；Cookie same-site 规则：[HTTPWG RFC6265bis 草案](https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html)，§5.6.7，核对于 2026-11-06。
+> - TLS 1.3 的握手认证与数据机密性、完整性：[IETF RFC 9846](https://datatracker.ietf.org/doc/html/rfc9846)，2026-07，§§2、4.5、5.2；服务器身份与目标主机匹配：[RFC 9525](https://www.rfc-editor.org/rfc/rfc9525.html)，2023-11，§§1.1、6；证书撤销没有完整且高效的通用检查方案：[RFC 9325](https://www.rfc-editor.org/rfc/rfc9325.html)，2022-11，§7.5。均核对于 2026-11-12。RFC 9846 已取代 RFC 8446。
+> - Chromium 的 CRLSet 更新与浏览器端撤销数据示例：[Chromium CRLSet](https://www.chromium.org/Home/chromium-security/crlsets/)，核对于 2026-11-12。客户端采用的状态机制及新鲜度因实现而异。
+> - origin 的协议、主机、端口及 same-site 的 schemeful site 判定：[WHATWG HTML Standard](https://html.spec.whatwg.org/multipage/browsers.html#origins)，Living Standard，2026-11-12，§7.1.1。
+> - Cookie 作用域、`__Host-` 前缀和 `SameSite` 请求条件：[HTTPWG Cookies Internet-Draft](https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html)，2026-11-12 draft，§§4.1.3.2、5.6.7；它仍是工作草案。Cookie 被 Fetch 如何处理另见 [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/#cookies)，Living Standard，2026-10-19。
+> - DOM 安全呈现、上下文编码、危险上下文、富文本消毒以及 CSP 的 XSS 纵深防御：[OWASP Cross Site Scripting Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)，Safe Sinks、Output Encoding、Dangerous Contexts、HTML Sanitization、Other Controls，核对于 2026-11-12。
+> - Cookie 认证状态变更的 CSRF token、Origin/Referer 校验和 SameSite 的限制：[OWASP Cross-Site Request Forgery Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)，Synchronizer Token、Defense in Depth、SameSite 与 Origin Validation，核对于 2026-11-12；SameSite 规则同时见上一条 Cookie 草案 §5.6.7。
+> - 预检、CORS 凭据和 CORS 检查：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/#cors-protocol)，Living Standard，2026-10-19，§§3.3.1–3.3.5、4.8–4.10；`Cookie` / `Set-Cookie` 字段限制见 §§2.2.2、3.1。
+> - HTTP 缓存的 `private`、`no-store` 与共享缓存约束：[IETF RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html)，2022-06，§§3–4、5.2.2.5、5.2.2.7。
+> - `frame-ancestors` 的祖先匹配与禁止通过 `meta` 声明：[W3C Content Security Policy Level 3](https://www.w3.org/TR/CSP3/#directive-frame-ancestors)，Working Draft，2026-10-27，§6.4.2。
+> - WebSocket 握手 `Origin` 字段、非浏览器客户端可自行提供来源值：[IETF RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html)，§§1.6、4.1、10.1–10.2，2011-12；来源允许列表、连接认证和消息级授权：[OWASP WebSocket Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html)，Authentication and Authorization，核对于 2026-11-12。
 ## 7. SQL 空值、连接与分组会怎样改变报表 42 的结果？
 
 **案例：** 报表 42 按客户汇总一小组已付款和待付款订单。为便于手算，输入已经限定为账户 `acct-17` 的四客户、四订单切片。`customers` / `orders` 表省略账户和报表列；本页解释 SQL 查询语义，不展示租户过滤或授权。

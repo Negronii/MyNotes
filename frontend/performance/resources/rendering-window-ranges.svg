@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1020" viewBox="0 0 700 1020" role="img" aria-labelledby="title desc">
+  <title id="title">固定高度列表中完整占位区与局部挂载窗口的关系</title>
+  <desc id="desc">完整占位区高四百万像素。左侧仅作位置示意，右侧展开滚动位置三千八百四十到四千六百四十像素的二十行挂载窗口，其中上下各四行为 overscan，中间十二行为可见行。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#365a73" />
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #17232d; }
+      .major { font-size: 19px; font-weight: 650; }
+      .body { font-size: 18px; }
+      .minor { font-size: 17px; }
+      .muted { fill: #455864; }
+      .row-line { stroke: #b6c7d1; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="700" height="1020" fill="#ffffff" />
+  <text x="28" y="34" class="major">100,000 行 × 40px = 4,000,000px 完整占位区</text>
+  <text x="28" y="66" class="minor muted">右侧把局部窗口放大；左侧位置示意与右侧均不按整条高度比例绘制。</text>
+
+  <text x="28" y="119" class="body" font-weight="600">完整滚动区</text>
+  <text x="47" y="151" class="minor">0px</text>
+  <rect x="46" y="165" width="112" height="744" rx="4" fill="#f8fafb" stroke="#527083" stroke-width="2" />
+  <line x1="48" y1="338" x2="156" y2="338" stroke="#8b9ca5" stroke-width="1.5" stroke-dasharray="6 6" />
+  <line x1="48" y1="708" x2="156" y2="708" stroke="#8b9ca5" stroke-width="1.5" stroke-dasharray="6 6" />
+  <text x="102" y="311" class="body" text-anchor="middle">⋮</text>
+  <text x="102" y="679" class="body" text-anchor="middle">⋮</text>
+  <rect x="48" y="426" width="108" height="54" rx="3" fill="#ffe8bc" stroke="#b66b12" stroke-width="2" />
+  <text x="102" y="459" class="minor" text-anchor="middle">窗口</text>
+  <text x="23" y="946" class="minor">4,000,000px</text>
+
+  <text x="183" y="424" class="minor" text-anchor="middle">局部</text>
+  <text x="183" y="445" class="minor" text-anchor="middle">展开</text>
+  <line x1="158" y1="453" x2="215" y2="453" stroke="#365a73" stroke-width="2.5" marker-end="url(#arrow)" />
+
+  <text x="238" y="119" class="body" font-weight="600">挂载窗口细节：每行占列表坐标 40px</text>
+  <text x="226" y="151" class="body" text-anchor="end">3840px</text>
+  <text x="226" y="311" class="body" text-anchor="end">4000px</text>
+  <text x="226" y="791" class="body" text-anchor="end">4480px</text>
+  <text x="226" y="951" class="body" text-anchor="end">4640px</text>
+  <line x1="244" y1="145" x2="244" y2="945" stroke="#526977" stroke-width="1.5" />
+  <line x1="238" y1="145" x2="250" y2="145" stroke="#526977" stroke-width="1.5" />
+  <line x1="238" y1="305" x2="250" y2="305" stroke="#526977" stroke-width="1.5" />
+  <line x1="238" y1="785" x2="250" y2="785" stroke="#526977" stroke-width="1.5" />
+  <line x1="238" y1="945" x2="250" y2="945" stroke="#526977" stroke-width="1.5" />
+
+  <rect x="340" y="145" width="94" height="160" fill="#fff0d4" stroke="#526977" stroke-width="1.5" />
+  <rect x="340" y="305" width="94" height="480" fill="#dff1e5" stroke="#526977" stroke-width="1.5" />
+  <rect x="340" y="785" width="94" height="160" fill="#fff0d4" stroke="#526977" stroke-width="1.5" />
+    <line x1="340" y1="185" x2="434" y2="185" class="row-line" />
+  <line x1="340" y1="225" x2="434" y2="225" class="row-line" />
+  <line x1="340" y1="265" x2="434" y2="265" class="row-line" />
+  <line x1="340" y1="305" x2="434" y2="305" class="row-line" />
+  <line x1="340" y1="345" x2="434" y2="345" class="row-line" />
+  <line x1="340" y1="385" x2="434" y2="385" class="row-line" />
+  <line x1="340" y1="425" x2="434" y2="425" class="row-line" />
+  <line x1="340" y1="465" x2="434" y2="465" class="row-line" />
+  <line x1="340" y1="505" x2="434" y2="505" class="row-line" />
+  <line x1="340" y1="545" x2="434" y2="545" class="row-line" />
+  <line x1="340" y1="585" x2="434" y2="585" class="row-line" />
+  <line x1="340" y1="625" x2="434" y2="625" class="row-line" />
+  <line x1="340" y1="665" x2="434" y2="665" class="row-line" />
+  <line x1="340" y1="705" x2="434" y2="705" class="row-line" />
+  <line x1="340" y1="745" x2="434" y2="745" class="row-line" />
+  <line x1="340" y1="785" x2="434" y2="785" class="row-line" />
+  <line x1="340" y1="825" x2="434" y2="825" class="row-line" />
+  <line x1="340" y1="865" x2="434" y2="865" class="row-line" />
+  <line x1="340" y1="905" x2="434" y2="905" class="row-line" />
+  <text x="455" y="205" class="body">上方 overscan</text>
+  <text x="455" y="235" class="body">[96, 100) · 4 行</text>
+  <text x="455" y="528" class="body">视口可见行</text>
+  <text x="455" y="558" class="body">[100, 112) · 12 行</text>
+  <text x="455" y="845" class="body">下方 overscan</text>
+  <text x="455" y="875" class="body">[112, 116) · 4 行</text>
+  <text x="340" y="980" class="minor muted">挂载半开区间 [96, 116) · 共 20 行</text>
+</svg>
