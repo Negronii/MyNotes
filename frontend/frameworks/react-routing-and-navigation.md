@@ -1,225 +1,268 @@
 # React 路由怎样把地址映射到界面并加载数据？
 
-**案例背景。** 用户打开 `/reports?sort=recent#summary`。Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 告诉服务端返回 May、April 两份报表；`#summary` 只用于浏览器定位，不属于 Hypertext Transfer Protocol（超文本传输协议，HTTP）请求。用户点 **Oldest first** 后，地址应新增 `sort=oldest` 历史项，加载结果后行序为 April、May；按 Back 则回到 `sort=recent` 和 May、April。路由把地址、数据请求和界面更新连在一起，不能只把 URL 当作组件选择器。
+**合成案例。** 用户先打开Uniform Resource Locator（统一资源定位符，URL）`/reports?sort=recent#summary`；报表 API（应用程序编程接口）返回 May、April 两行。用户点 **Oldest first** 后，`sort=oldest` 的 API 返回 April、May；地址应新增对应历史项并显示这两行；按浏览器 Back（后退）后，地址和数据应回到 recent 与 May、April。浏览器导航章已经说明 path（路径）、query（查询）和 fragment（片段）怎样影响文档、网络请求与历史；这里接着解释 React Router 如何把这些输入变成路由、loader（加载器）请求和已提交的界面。
 
-~~~mermaid
-flowchart TD
-    A[读取地址 /reports 与查询 sort=recent] --> B[匹配报表路由]
-    B --> C[loader（加载器）从地址读 sort]
-    C --> D[请求服务端 May、April]
-    D --> E[useLoaderData 渲染当前列表]
-    E --> F[点击 Oldest first]
-    F --> G[PUSH pending：recent 地址和列表暂留]
-    G --> H[加载器请求 oldest 数据]
-    H --> I{loader 结算}
-    I -->|成功| J[提交 oldest URL、历史项与列表]
-    I -->|失败| K[提交 oldest URL 与路由错误界面]
-    J --> L[Back 的 POP 立即恢复 recent 地址]
-    L --> M[loader 等待期间仍显示 oldest 列表]
-    M --> N{recent loader 结算后显示列表或错误}
-~~~
+本篇以 **React Router v8.5.1 Data Mode（数据模式）**、`createBrowserRouter` 和 `RouterProvider` 为准。案例是浏览器端数据路由：它匹配页面、运行 loader 并显示等待状态；不把 React Router Framework Mode（框架模式）与 Next.js App Router 的路由约定当成同一套 API。
 
 ## 路径、查询和片段各自表达什么
 
-路由器用 pathname（路径名）选择页面，例如 `/reports` 或 `/reports/:reportId`；动态段 `:reportId` 用来标识一份具体报表。多个动态段也能组合成 `/teams/:teamId/reports/:reportId`，`useParams` 读取匹配的路径值。查询参数描述页面当前的筛选、排序或分页状态，像 `?sort=oldest` 可以复制、刷新和由浏览器历史恢复。片段 `#summary` 由浏览器用于定位页面内的位置，客户端能读到它，普通 HTTP 请求不会把它发给服务端。
+同一个地址的三个部分负责不同工作：
 
-因此，报表排序由 URL 作为状态来源；用户打开旧地址或按 Back 时，路由从地址重建数据请求和选中状态。不要再用独立的 React state 保存一份互相竞争的 sort。需要低层理解 `pushState`、`popstate` 和片段导航时，见[浏览器导航与历史如何恢复筛选状态？](../browser/browser-navigation-and-history.md)。
+| 地址部分 | 本例 | 谁使用它 |
+|---|---|---|
+| 路径 | `/reports` | 路由器按路径匹配报表页面。`/reports/:reportId` 这样的动态段可匹配单份报表，`useParams()` 读取它。 |
+| 查询 | `?sort=recent` 或 `?sort=oldest` | 报表 loader 读取排序条件，再请求对应结果。它也让筛选可复制、刷新和通过历史恢复。 |
+| 片段 | `#summary` | 浏览器或客户端用于页面内定位；它不会随 Hypertext Transfer Protocol（超文本传输协议，HTTP）请求发送给服务器。 |
+
+排序只保存在 URL 中。loader 从当前请求 URL 读取 `sort`，组件用已提交的 loader 数据渲染行；若再单独用 React state 保存一份排序值，两份状态就可能在 Back、刷新或直接打开链接时分叉。需要理解 `pushState()`、`popstate` 和片段导航的浏览器层行为，可读[浏览器导航与历史如何恢复筛选状态？](../browser/browser-navigation-and-history.md)。
+
+详情路径 `/reports/:reportId` 用 `useParams()` 读出该份报表的 ID；更深的页面也可以用 `/teams/:teamId/reports/:reportId` 同时匹配团队和报表。下方代码中的详情组件只展示这个参数；真实详情页还应有自己的 loader，按 ID 读取记录，并在记录不存在时抛出 404。列表路由的错误提示不应把未知详情 ID 误报成“列表加载失败”。
 
 ## 数据模式先匹配路由，再加载匹配页面的数据
 
-React Router 有 Declarative Mode（声明式模式）、Data Mode（数据模式）和 Framework Mode（框架模式）三种模式。声明式模式适合只把路径匹配到组件；数据模式在路由配置之外增加 loader（加载器）、action（提交处理器）、pending（等待）状态和错误边界；框架模式在数据模式上再提供文件路由、类型生成、Server-Side Rendering（服务端渲染，SSR）和静态渲染。以下用当前 React Router v8.5.1 的数据模式与 `createBrowserRouter` 把同一报表地址接到数据加载器。此例是浏览器端路由；框架模式的 loader 可以运行在服务端，部署边界不同。
+React Router 有三种使用模式。Declarative Mode（声明式模式）负责路径匹配、`Link` 和程序化导航；Data Mode 在路径匹配之外提供 `loader`、`action`（动作处理器）、导航等待状态和路由错误边界；Framework Mode（框架模式）再提供 Route Module API（路由模块 API）、类型生成、代码拆分，以及 single-page application（单页应用，SPA）、server-side rendering（服务端渲染，SSR）和静态渲染策略。它们是同一 React Router 产品的不同接口层；Next.js App Router 有自己的文件路由、Server Components（服务端组件）和服务端数据约定，不能把这里的 loader 代码直接套过去。Framework Mode 的路由模块可提供服务端 loader；本篇的独立 Data Mode 示例让 loader 在浏览器中运行。
 
-下面从首次 `recent` loader 已成功、May 和 April 已显示后开始观察。PUSH 切换时关注三处：浏览器地址、`useNavigation().location` 中的目标地址、当前已提交的列表。POP 的地址栏更新时间不同，所以不能把两种导航压成“地址与列表一起切换”。
+路径 `/reports` 命中 route object（路由对象）；`reportsLoader` 从 `request.url` 读取 `sort`，将值带到同源 API，并把 `request.signal` 传给 `fetch`。成功返回的 `{ sort, reports }` 成为匹配路由的 loader data（加载数据），组件用 `useLoaderData()` 读取。`useNavigation()` 则描述当前等待中的导航，适合显示“正在切换到最早顺序…”。这些对象回答不同问题：`useNavigation().location` 是目标地址；`useLoaderData()` 仍是当前已提交页面的数据。
 
-| 导航 | loader 等待时 | loader 结算后 |
+首次直接打开页面时还没有已提交的 loader data，`useNavigation()` 不表示这次初始化读取。本例在 `/reports` route object 上配置 `HydrateFallback`，让首次等待显示“正在首次读取报表…”。Fallback 仍渲染与最终页面相同的 `<main>` 和 `h1#summary`，因此首次 URL 的片段定位在 loader 等待期间已有目标；后续导航才由 `useNavigation()` 显示新目标，同时保留旧列表。
+
+![React Router v8.5.1 Data Mode 中，sort 从目标 URL 进入报表 loader，等待结果后提交页面或路由错误。](./resources/react-router-data-navigation.svg)
+
+下表中的 recent / oldest 表示完整地址中的 `sort` 值，路径仍为 `/reports`、片段仍为 `#summary`。
+
+| 时点 | 浏览器地址与历史 | 屏幕上的内容 |
 |---|---|---|
-| 点 Oldest first（PUSH） | 地址和已提交列表仍是 recent；`navigation.location` 是 oldest。 | 成功时提交 oldest 地址、历史项和 April/May；失败时仍提交目标地址和历史项，但显示该目标路由的错误界面。 |
-| 按 Back（POP） | 浏览器地址和历史指针先回到 recent；已提交路由状态与列表暂留 oldest，`navigation.location` 指向 recent。 | 成功后列表切回 May/April；失败后显示 recent 路由的错误界面。 |
+| 首次打开，等待 recent loader | recent；已有初始文档历史项 | 还没有列表；`HydrateFallback` 显示首次读取状态。 |
+| 首次加载完成 | recent | May → April，没有等待提示。 |
+| 点击 **Oldest first**（PUSH），等待 loader | 仍为 recent；目标历史项尚未提交 | 仍为 May → April，提示正在切换到 oldest。 |
+| oldest loader 成功 | 提交 oldest 地址，新增历史项 | April → May，结束等待。 |
+| oldest loader 失败 | 仍提交 oldest 地址和历史项 | `ErrorBoundary` 显示错误，替换旧列表。 |
+| 等 oldest 成功后按 Back（POP），等待 loader | 浏览器先回到 recent 历史项 | 暂留 April → May，显示正在加载的提示。 |
 
-首次打开页面时还没有旧列表；上面的“暂留”只适用于从已显示 recent 的状态导航。
+这张表假设第一次 recent 加载成功，而且用户等到 oldest 导航结束后才按 Back。PUSH 的加载阶段不会先把新地址写入已提交的路由状态；POP 则由浏览器先移动现有历史指针，因此地址栏会先变。两种导航在 loader 结算前都能通过 `useNavigation().location` 读到目标地址，但当前路由组件仍依据旧的已提交 loader data 渲染。POP 的 loader 结算后，才换为 recent 列表或它对应的错误界面。这里会重读旧 URL，不保证恢复首次访问时的数据快照。
 
-~~~tsx
-import {
-  createBrowserRouter,
-  data,
-  isRouteErrorResponse,
-  Link,
-  Outlet,
-  useLoaderData,
-  useNavigation,
-  useParams,
-  useRevalidator,
-  useRouteError,
-  type LoaderFunctionArgs
-} from "react-router";
-import { RouterProvider } from "react-router/dom";
+本例的排序链接保留 `#summary`。若根组件挂载 Data Mode 提供的 `<ScrollRestoration />`，对于本例普通 GET 导航，它会管理窗口滚动：有保存位置时恢复该位置；没有保存位置时先尝试滚到目标 fragment 的元素，否则回到页面顶部。默认位置键是本次 location 的 `key`，位置存于 `sessionStorage`。因此最近一次按 Back 可恢复之前保存的 recent 滚动位置；若尚无保存位置，则 `#summary` 提供定位目标。该组件只管理窗口滚动；自定义滚动容器仍由应用负责。`<Link preventScrollReset />` 可阻止新位置在无法恢复位置时回到顶部，但不关闭 Back/Forward 的位置恢复。
 
-type SortOrder = "recent" | "oldest";
-type Report = { id: string; period: string; title: string };
+在 v8.5.1 中，如果 pathname 和查询不变，且导航只是从无片段变为有片段，或把一个非空片段换成另一个非空片段，在没有显式重验证时，路由器会直接提交新位置而不运行 loader。移除已有片段（例如 `#other` 变为空）不走这个快速路径，而继续按默认规则重验证；本例会再次读取同一个排序。查询变化也默认让相关 loader 重验证；链接上的 `defaultShouldRevalidate` 可改变默认重验证值；若路由定义了 `shouldRevalidate`，它会收到这个值并作最终决定。调整时必须确认不会跳过实际影响结果的 `sort`。
 
-function isReport(value: unknown): value is Report {
-  if (typeof value !== "object" || value === null) return false;
-  const row = value as Record<string, unknown>;
-  return typeof row.id === "string" &&
-    typeof row.period === "string" &&
-    typeof row.title === "string";
-}
+一个 loader 的核心工作可归纳为：
 
-function parseReports(value: unknown): Report[] {
-  if (!Array.isArray(value)) {
-    throw data("报表服务返回的不是列表", { status: 502 });
-  }
-  return (value as unknown[]).map(row => {
-    if (!isReport(row)) {
-      throw data("报表服务返回了无效行", { status: 502 });
-    }
-    return row;
-  });
-}
+1. 从本次导航的 `request.url` 解析并校验 `sort`；不要把 URL 输入直接当作任意服务端查询值。
+2. 按该值构造 `/api/reports?sort=…`，传递 `request.signal`，等待响应。
+3. 检查 HTTP 状态并验证返回行；成功时返回与这个排序对应的 `{ sort, reports }`。
+4. 组件只从 `useLoaderData()` 取已提交结果；等待中的目标由 `useNavigation()` 提供。
 
-async function reportsLoader({ request }: LoaderFunctionArgs) {
-  const url = new URL(request.url);
-  const rawSort = url.searchParams.get("sort") ?? "recent";
-  if (rawSort !== "recent" && rawSort !== "oldest") {
-    throw data("不支持这个排序方式", { status: 400 });
-  }
-  const requestedSort: SortOrder = rawSort;
+完整实现放在下方折叠示例中。运行它时，应用需挂载一次 `App`，同源 `GET /api/reports?sort=…` 需返回 `{ id, period, title }` 组成的 JSON 数组；React Router v8.5.1 的 peer 约束要求 `react` 与 `react-dom` 均为 19.2.7 或更高。部署时，直接打开或刷新 `/reports` 必须由站点入口返回应用文档；`/api/reports` 仍由 API 应答，不能被同一个 HTML fallback 吞掉。
 
-  const apiUrl = new URL("/api/reports", url.origin);
-  apiUrl.searchParams.set("sort", requestedSort);
-  const response = await fetch(apiUrl, { signal: request.signal });
-  if (!response.ok) {
-    throw data("报表读取失败", { status: response.status });
-  }
-
-  const payload: unknown = await response.json();
-  return { sort: requestedSort, reports: parseReports(payload) };
-}
-
-function Root() {
-  return <Outlet />;
-}
-
-function ReportsPage() {
-  const { sort, reports } = useLoaderData<typeof reportsLoader>();
-  const navigation = useNavigation();
-  const loading = navigation.state !== "idle";
-  const pendingSort = navigation.location
-    ? new URLSearchParams(navigation.location.search).get("sort")
-    : null;
-
-  return (
-    <main>
-      <h1 id="summary">报表</h1>
-      <nav aria-label="报表排序">
-        <Link
-          to="/reports?sort=recent#summary"
-          aria-current={sort === "recent" ? "page" : undefined}
-        >
-          Recent
-        </Link>
-        {" · "}
-        <Link
-          to="/reports?sort=oldest#summary"
-          aria-current={sort === "oldest" ? "page" : undefined}
-        >
-          Oldest first
-        </Link>
-      </nav>
-      {loading && (
-        <p role="status">
-          {pendingSort === "oldest" ? "正在切换到最早顺序…" : "正在加载所选排序…"}
-        </p>
-      )}
-      <ol aria-label="报表" aria-busy={loading}>
-        {reports.map(report => (
-          <li key={report.id}>
-            <Link to={"/reports/" + encodeURIComponent(report.id)}>
-              {report.period} — {report.title}
-            </Link>
-          </li>
-        ))}
-      </ol>
-    </main>
-  );
-}
-
-function ReportDetail() {
-  const { reportId } = useParams();
-  return <h1>报表 ID：{reportId}</h1>;
-}
-
-function ReportsErrorBoundary() {
-  const error = useRouteError();
-  const revalidator = useRevalidator();
-  const status = isRouteErrorResponse(error) ? error.status : undefined;
-
-  return (
-    <section>
-      <p role="alert">
-        {status === 400 ? "不支持这个排序方式。" : "报表列表暂时无法显示。"}
-      </p>
-      {(!isRouteErrorResponse(error) || (status !== undefined && status >= 500)) && (
-        <button
-          type="button"
-          onClick={() => revalidator.revalidate()}
-          disabled={revalidator.state !== "idle"}
-        >
-          重新加载
-        </button>
-      )}
-    </section>
-  );
-}
-
-const router = createBrowserRouter([
-  {
-    path: "/",
-    Component: Root,
-    children: [
-      {
-        path: "reports",
-        loader: reportsLoader,
-        Component: ReportsPage,
-        ErrorBoundary: ReportsErrorBoundary
-      },
-      { path: "reports/:reportId", Component: ReportDetail },
-      { path: "*", Component: () => <h1>页面不存在</h1> }
-    ]
-  }
-]);
-
-export function App() {
-  return <RouterProvider router={router} />;
-}
-~~~
-
-`reportsLoader` 从当前 URL 校验 `sort`，再把它传给同源 `/api/reports`；片段不会进入 API URL。这个片段假定应用已挂载 `App`，托管端把 `/reports` 文档请求回退到应用入口，同时让 `/api/reports` 继续进入 API 处理器。PUSH 的目标 loader 结算时，不论成功还是失败都会提交目标地址与历史项：成功时换成目标列表，失败时换成目标错误界面。POP 则先改变浏览器历史地址，等待期间保留已提交的列表；loader 结算后再显示 recent 列表或它的错误界面。按 Back 重新走旧 URL 的 loader，不保证取回首次访问时的缓存快照。`useNavigation` 的 `location` 展示等待中的目标，`useLoaderData` 和 `aria-current` 仍代表当前已提交结果。不要在 `Link` 点击之外再手动调用 `history.pushState`，否则浏览器历史和路由状态会有两套写入者。
+> [!example]- 完整 Data Mode 路由实现（loader、等待状态、失败重试与滚动恢复）
+>
+> ~~~tsx
+> import {
+>   createBrowserRouter,
+>   data,
+>   isRouteErrorResponse,
+>   Link,
+>   Outlet,
+>   ScrollRestoration,
+>   useLoaderData,
+>   useNavigation,
+>   useParams,
+>   useRevalidator,
+>   useRouteError,
+>   type LoaderFunctionArgs
+> } from "react-router";
+> import { RouterProvider } from "react-router/dom";
+>
+> type SortOrder = "recent" | "oldest";
+> type Report = { id: string; period: string; title: string };
+>
+> function isReport(value: unknown): value is Report {
+>   if (typeof value !== "object" || value === null) return false;
+>   const row = value as Record<string, unknown>;
+>   return typeof row.id === "string" &&
+>     typeof row.period === "string" &&
+>     typeof row.title === "string";
+> }
+>
+> function parseReports(value: unknown): Report[] {
+>   if (!Array.isArray(value)) {
+>     throw data("报表服务返回的不是列表", { status: 502 });
+>   }
+>   return (value as unknown[]).map(row => {
+>     if (!isReport(row)) {
+>       throw data("报表服务返回了无效行", { status: 502 });
+>     }
+>     return row;
+>   });
+> }
+>
+> async function reportsLoader({ request }: LoaderFunctionArgs) {
+>   const pageUrl = new URL(request.url);
+>   const rawSort = pageUrl.searchParams.get("sort") ?? "recent";
+>   if (rawSort !== "recent" && rawSort !== "oldest") {
+>     throw data({ kind: "unsupported-sort" }, { status: 400 });
+>   }
+>   const sort: SortOrder = rawSort;
+>
+>   const apiUrl = new URL("/api/reports", pageUrl.origin);
+>   apiUrl.searchParams.set("sort", sort);
+>   const response = await fetch(apiUrl, { signal: request.signal });
+>   if (!response.ok) {
+>     throw data("报表读取失败", { status: response.status });
+>   }
+>
+>   const payload: unknown = await response.json();
+>   return { sort, reports: parseReports(payload) };
+> }
+>
+> function Root() {
+>   return (
+>     <>
+>       <Outlet />
+>       <ScrollRestoration />
+>     </>
+>   );
+> }
+>
+> function ReportsPage() {
+>   const { sort, reports } = useLoaderData<typeof reportsLoader>();
+>   const navigation = useNavigation();
+>   const loading = navigation.state !== "idle";
+>   const pendingSort = navigation.location
+>     ? new URLSearchParams(navigation.location.search).get("sort")
+>     : null;
+>
+>   return (
+>     <main>
+>       <h1 id="summary">报表</h1>
+>       <nav aria-label="报表排序">
+>         <Link
+>           to="/reports?sort=recent#summary"
+>           aria-current={sort === "recent" ? "page" : undefined}
+>         >
+>           Recent
+>         </Link>
+>         {" · "}
+>         <Link
+>           to="/reports?sort=oldest#summary"
+>           aria-current={sort === "oldest" ? "page" : undefined}
+>         >
+>           Oldest first
+>         </Link>
+>       </nav>
+>       {loading && (
+>         <p role="status">
+>           {pendingSort === "oldest" ? "正在切换到最早顺序…" : "正在加载所选排序…"}
+>         </p>
+>       )}
+>       <ol aria-label="报表" aria-busy={loading}>
+>         {reports.map(report => (
+>           <li key={report.id}>
+>             <Link to={"/reports/" + encodeURIComponent(report.id)}>
+>               {report.period} — {report.title}
+>             </Link>
+>           </li>
+>         ))}
+>       </ol>
+>     </main>
+>   );
+> }
+>
+> function ReportDetail() {
+>   const { reportId } = useParams();
+>   return <h1>报表 ID：{reportId}</h1>;
+> }
+>
+> function ReportsHydrateFallback() {
+>   return (
+>     <main>
+>       <h1 id="summary">报表</h1>
+>       <p role="status">正在首次读取报表…</p>
+>     </main>
+>   );
+> }
+>
+> function ReportsErrorBoundary() {
+>   const error = useRouteError();
+>   const revalidator = useRevalidator();
+>   const status = isRouteErrorResponse(error) ? error.status : undefined;
+>   const errorData = isRouteErrorResponse(error) ? error.data : undefined;
+>   const unsupportedSort = status === 400 &&
+>     typeof errorData === "object" && errorData !== null &&
+>     "kind" in errorData && errorData.kind === "unsupported-sort";
+>
+>   return (
+>     <section>
+>       <p role="alert">
+>         {unsupportedSort ? "不支持这个排序方式。" : "报表列表暂时无法显示。"}
+>       </p>
+>       {(!isRouteErrorResponse(error) || (status !== undefined && status >= 500)) && (
+>         <button
+>           type="button"
+>           onClick={() => { void revalidator.revalidate(); }}
+>           disabled={revalidator.state !== "idle"}
+>         >
+>           重新加载
+>         </button>
+>       )}
+>     </section>
+>   );
+> }
+>
+> const router = createBrowserRouter([
+>   {
+>     path: "/",
+>     Component: Root,
+>     children: [
+>       {
+>         path: "reports",
+>         loader: reportsLoader,
+>         Component: ReportsPage,
+>         HydrateFallback: ReportsHydrateFallback,
+>         ErrorBoundary: ReportsErrorBoundary
+>       },
+>       { path: "reports/:reportId", Component: ReportDetail },
+>       { path: "*", Component: () => <h1>页面不存在</h1> }
+>     ]
+>   }
+> ]);
+>
+> export function App() {
+>   return <RouterProvider router={router} />;
+> }
+> ~~~
+>
+> 报表数组的结构检查只说明客户端接收到的 JSON 符合本例需要的字段；它不是身份、授权或数据完整性的服务端边界。
 
 ## 请求取消、过期响应与错误边界
 
-一次数据导航被新的导航打断时，React Router 会取消前一轮 loader 请求并立即处理新地址。把 loader 收到的 `request.signal` 传给底层 `fetch`，客户端就能停止等待已失效的读取；路由器也不会把过期的页面结果提交到当前导航。**这不等于服务端停止了工作**：请求到达服务端后，服务端仍可能继续处理，所以取消客户端读取不能代替写操作的幂等、权限或事务约束。
+若用户在 oldest loader 尚未完成时又发起另一条导航，React Router 会中断前一轮导航并处理新目标。传入底层 `fetch` 的 `request.signal` 会在导航被打断时发出 abort（中止）信号；原生 `fetch` 会据此停止该客户端请求，路由器也会丢弃过期导航结果，避免它覆盖更新的界面。该信号能否停止更深层的工作，取决于对应 API 是否遵守取消约定；请求已抵达服务器后，服务器仍可能继续处理。取消客户端读取不能替代服务端写操作的幂等、权限或事务约束。
 
-loader 返回的数据交给匹配的路由组件；它抛出的 HTTP 状态或异常交给最近的路由 `ErrorBoundary`。报表排序参数的 400 错误会提示排序无效，不提供只会重复失败的重试；网络错误或 5xx 可通过 `useRevalidator` 重跑当前已提交 URL 的 loader。列表项的详细页用 `:reportId` 动态段匹配；真实应用也应给它自己的 loader，并在不存在时抛出 404。当前列表错误边界不会把服务端 404 说成“找不到某一份报表”。
+loader 抛出的状态数据或运行异常交给最近匹配的路由 `ErrorBoundary`；它也能处理匹配路由组件树中由 React 边界捕获的渲染错误，以及子组件 Effect setup 同步抛出的异常。按钮事件处理器或 timer（定时器）中随后产生的 Promise 拒绝仍须在触发处处理，详见[React 错误边界能恢复哪些失败？](./react-error-boundaries.md)。因此本例 `sort=other` 的本地标记 400 显示参数错误；API 返回的非成功状态（包括 400）或网络失败显示列表错误，只有 5xx 与非路由异常提供重试按钮。`useRevalidator()` 用于这类页面外部原因的重读，例如聚焦窗口或轮询；这里把它用作明确的“重新加载”按钮。表单 action、`Form`、`useFetcher` 和 `useSubmit` 的正常写入会自动触发页面数据重验证，不应为普通增删改重复手动刷新。若还要理解组件事件处理器、timer（定时器）与 Promise 拒绝分别在哪一层恢复，见[JavaScript 错误应在哪一层恢复、传播或上报？](../javascript/error-handling.md)。
 
-路由错误边界也覆盖它下面的 React 子组件：同步渲染错误和子组件 Effect setup 同步抛出的异常会交给边界；事件处理器、timer 或后续 Promise 拒绝不会被它捕获，应在触发这些工作的位置处理。
+传给 loader 的 `request.url` 不含 fragment，但它仍是包含来源、路径和查询的完整 URL；片段留在客户端位置。按 v8.5.1 的上述规则，添加或替换非空片段通常不重读同一报表，移除片段会回到默认重验证判定。本例的排序改变了 loader 输入，所以必须按目标查询读取结果。若把 loader 改为多个嵌套路由，还要检查每个匹配路由的默认重验证条件，不能从“只改排序”推断所有其他 loader 都不会运行。
 
 ## 客户端导航与整页导航怎么选
 
-内部 `Link` 在当前文档中切换路由；外部地址或需要浏览器请求另一个完整文档时，使用普通 `<a>`。读取完整 location 时可用 `useLocation`，有明确的程序化跳转需求（例如提交成功后）时再用 `useNavigate`；普通链接仍应保留锚点语义。客户端导航可保留共同布局和局部界面，但部署端必须把直接打开的 `/reports` **文档请求**交给应用入口；`/api/reports` 仍须由 API 处理器应答，不能一并回退到 HTML。若托管环境无法配置路径回退，可以考虑 `HashRouter`（哈希路由器）；它会占用本例的 URL 片段空间。若同时要支持 `#summary` 锚点，应用还得定义并解析自己的片段格式或负责滚动恢复，不能原样使用这个简单地址。`MemoryRouter`（内存路由器）让地址保存在内存中，适合测试和非浏览器环境。
+同一应用内的 `Link` 用客户端路由切换，保留浏览器 `<a href>` 的链接语义；外部 URL、下载或明确要浏览器请求另一份完整文档时，使用普通 `<a>`，或对路由链接设置 `reloadDocument`。普通链接通常把当前项留在历史里并新增目标项；要替换当前项可用 `replace`。`useNavigate()` 适合提交成功后的程序化跳转，`useLocation()` 读取已经提交的当前位置。不要在 Link 处理之外手动再调用 `history.pushState()`，否则路由器和应用会争夺历史状态。
 
-single-page application（单页应用，SPA）与 multi-page application（多页应用，MPA）描述的是页面导航方式，不是服务端渲染的二选一：React Router 框架模式能服务端渲染，也能选择客户端或静态输出。内容以可爬取文档和无 JavaScript 首屏为主时，完整文档导航通常更直接；需要大量共享界面和路由内数据交互时，客户端导航更容易保留上下文。两种方式都要提供语义化链接、明确的加载与错误状态，并验证直接访问和刷新目标 URL。
+客户端导航保留文档，不会让服务器重新发送整个 HTML；所以服务器仍需把直接打开的应用路径（如 `/reports`）交给应用入口，并让 `/api/reports` 继续交给 API。SPA 与 multi-page application（多页应用，MPA）描述页面间导航的常见方式；服务端渲染（SSR）或静态预渲染说明初始文档怎样产生，这是不同维度，可以组合。若需要爬虫或不执行 JavaScript 的读者直接看到内容，首先要让初始 HTML 包含这些内容；后续点击仍可采用客户端导航。需要共享布局和路由内数据交互时，客户端导航更容易保留上下文。React Router Framework Mode 提供这些渲染策略；本篇示例仍是独立的 Data Mode 浏览器路由。Next.js App Router 的文件段、`page` / `layout`、服务端组件与缓存按[Next.js 如何把文件路由、服务端数据与客户端交互连接起来？](./next-js.md)解释，不能将两者的 loader、服务端执行边界或导航 API 互换。
 
-React Router v8.5.1 的 `useParams`、`Link` 和路由对象 API 承接归档 v6 例子；老 v5 的 `component={Post}` 与 `withRouter` 是另一套接口，不要混用。v5 的 `StaticRouter` 以固定 location 做服务端匹配；当前 Framework Mode 使用自己的服务端路由入口，不应把它当作同一 API。需要维护旧项目时，先看实际依赖版本，再查对应版本的文档。React 组件的状态更新与提交顺序见[React如何把用户操作变成界面更新？](./react-basics.md)，服务端查询缓存见[React界面如何维护服务端数据与乐观更新的正确性？](./react-server-state-and-optimistic-updates.md)。
+若部署环境不能提供路径回退，可用 Data Mode 的 `createHashRouter` 并继续传给 `RouterProvider`，保留本例的 loader 和错误边界；它把应用路径放进 URL 片段，因此地址形式会变，`#summary` 也不能再单独占用片段作为普通页面锚点。测试或非浏览器环境可用 `createMemoryRouter`，它以内存历史运行并保留数据路由能力。`HashRouter` 和 `MemoryRouter` 属于 Declarative Mode，直接替换会失去本例使用的 loader。
 
-> [!info]- 来源与版本核验（React Router v8.5.1；2026-11-06）
-> - 当前稳定版本、v8 迁移边界与运行时最低版本：[React Router Changelog](https://reactrouter.com/changelog)，v8.5.1，2026-10-27。
-> - 三种模式的职责和框架模式的服务端渲染 / 静态渲染能力：[Picking a Mode](https://reactrouter.com/start/modes)，核验日期 2026-11-06。
-> - 路由对象、嵌套页、动态段和 loader：[Routing](https://reactrouter.com/start/data/routing)、[Route Object](https://reactrouter.com/start/data/route-object)、[Data Loading](https://reactrouter.com/start/data/data-loading)，React Router v8.5.1，核验日期 2026-11-06。
-> - 导航提交、等待界面和 pending 位置：[Navigating](https://reactrouter.com/start/data/navigating)、[Pending UI](https://reactrouter.com/start/data/pending-ui)、[useNavigation](https://reactrouter.com/api/hooks/useNavigation)，React Router v8.5.1，核验日期 2026-11-06。
-> - 浏览器入口 `react-router/dom` 提供带 `react-dom` flushSync 的 `RouterProvider`：[RouterProvider](https://reactrouter.com/api/data-routers/RouterProvider)，React Router v8.5.1，核验日期 2026-11-06。
-> - 当前 location、程序化导航和 loader 重验证的 hook：[useLocation](https://reactrouter.com/api/hooks/useLocation)、[useNavigate](https://api.reactrouter.com/v8/functions/react-router.useNavigate.html)、[useRevalidator](https://api.reactrouter.com/v8/functions/react-router.useRevalidator.html)，React Router v8.5.1，核验日期 2026-11-06。
-> - 导航打断、loader 取消和服务端仍可能处理请求：[Race Conditions](https://reactrouter.com/explanation/race-conditions)，React Router v8.5.1，核验日期 2026-11-06。
-> - 路由错误边界、最近边界和 404 响应：[Error Boundaries](https://reactrouter.com/how-to/error-boundary)，React Router v8.5.1，核验日期 2026-11-06。
-> - React 子组件同步错误由边界兜底、事件处理和异步回调不在该范围：[React Component — Catching rendering errors with an Error Boundary](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)，核验日期 2026-11-06。
-> - 本轮隔离重放（2026-11-06）：Node 26.11.1、React 19.3.1、Chrome 157、Playwright 1.65.0；React Router 8.5.1 核对 PUSH/POP 等待期的地址与列表、502 错误提交与重试；相关浏览器排序用例通过。接口为本地合成测试服务。
+旧 React Router v5 代码中的 `component={Post}`、`withRouter` 与 `match.params` 属于旧路由上下文；旧版 `StaticRouter` 的固定 location 服务端匹配也不能直接当作当前 Framework Mode 的服务端入口。维护旧项目时先查看它实际安装的主版本，按对应版本文档处理，不要把 v5 API 混入这里的 v8 route object。
+
+React 本身的状态提交与一次用户操作如何变成画面，见[React 如何把一次用户操作变成界面更新？](./react-basics.md)；若同一报表还需要查询缓存、乐观更新和账户隔离，见[React 界面如何维护服务端数据与乐观更新的正确性？](./react-server-state-and-optimistic-updates.md)。
+
+> [!info]- 来源与版本核验（截至 2026-11-12）
+> - React Router 当前稳定文档选择器显示 v8.5.1；Changelog 将 v8.5.1 标为 2026-10-27 发布：[React Router Changelog](https://reactrouter.com/changelog)。
+> - 三种模式及其能力范围：[Picking a Mode（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/modes.md)；Framework 服务端 loader 与 clientLoader 的区别见 [Framework Data Loading（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/framework/data-loading.md)。
+> - Data Mode 路由对象、loader、查询参数变化时的默认重验证：[Route Object（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/data/route-object.md)、[Data Loading（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/data/data-loading.md)。
+> - 浏览器数据路由与路由器的创建边界：[createBrowserRouter（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/api/data-routers/createBrowserRouter.md)、[useLoaderData（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/api/hooks/useLoaderData.md)、[useNavigation（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/api/hooks/useNavigation.md)。
+> - 外部原因的显式重读、action 成功后的自动重验证，以及默认规则的覆盖方式：[useRevalidator（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/api/hooks/useRevalidator.md)、[Actions（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/start/data/actions.md)、[Revalidation Optimization（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/how-to/optimize-revalidation.md)。
+> - Data Mode 的路由错误处理与错误边界：[Error Boundaries（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/how-to/error-boundary.md)。
+> - 首次数据读取期间的 `HydrateFallback` 与路由属性：[createBrowserRouter（v8.5.1）](https://reactrouter.com/api/data-routers/createBrowserRouter)、[Route（v8.5.1）](https://reactrouter.com/api/components/Route)。
+> - 保留 Data Mode 能力的哈希和内存路由器：[createHashRouter（v8.5.1）](https://reactrouter.com/api/data-routers/createHashRouter)、[createMemoryRouter（v8.5.1）](https://reactrouter.com/api/data-routers/createMemoryRouter)。
+> - 片段变化时的 loader 快速路径与默认重验证判定：[v8.5.1 路由器实现](https://github.com/remix-run/react-router/blob/react-router%408.5.1/packages/react-router/lib/router/router.ts#L7126)。
+> - loader / fetcher 请求取消、过期重验证与服务端可能继续处理：[Race Conditions（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/explanation/race-conditions.md)。
+> - 页面内链接、fragment 和滚动恢复 API：[Link（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/api/components/Link.md)、[ScrollRestoration（v8.5.1）](https://raw.githubusercontent.com/remix-run/react-router/refs/tags/react-router@8.5.1/docs/api/components/ScrollRestoration.md)；hash 定位、位置保存与恢复流程另核对了[同版本实现](https://github.com/remix-run/react-router/blob/react-router%408.5.1/packages/react-router/lib/dom/lib.tsx)。

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1040" viewBox="0 0 700 1040" role="img" aria-labelledby="title desc">
+  <title id="title">React Router Data Mode 的报表排序导航</title>
+  <desc id="desc">当前已经提交 recent 地址和 May、April 列表。点击 Oldest first 后，路由器按 pathname 命中 reports 路由并等待 reportsLoader 请求 oldest 数据。等待期间 useNavigation 指向 oldest，而已提交 location 与列表仍是 recent。reportsLoader 结算后，成功分支提交 oldest 地址和 April、May；失败分支提交目标地址并由最近的 ErrorBoundary 显示错误。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#263b52"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172b3f; }
+      .box { rx: 16; stroke-width: 2; }
+      .head { font-size: 20px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .label { font-size: 17px; font-weight: 600; }
+      .arrow { fill: none; stroke: #263b52; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="22" y="18" width="656" height="1004" rx="20" fill="#ffffff" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="350" y="48" text-anchor="middle" class="head">React Router v8.5.1 · Data Mode · createBrowserRouter</text>
+
+  <rect class="box" x="38" y="72" width="624" height="116" fill="#eaf2fb" stroke="#4c78a8"/>
+  <text x="62" y="104" class="head">当前已提交页面</text>
+  <text x="62" y="137" class="body">URL  /reports?sort=recent#summary</text>
+  <text x="62" y="168" class="body">loaderData  recent；列表 May → April</text>
+
+  <path class="arrow" d="M350 188 V232"/>
+  <text x="374" y="218" class="label">点击 Oldest first（PUSH）</text>
+
+  <rect class="box" x="38" y="240" width="624" height="152" fill="#f2f6fb" stroke="#6d879f"/>
+  <text x="62" y="272" class="head">匹配目标路由并启动 loader</text>
+  <text x="62" y="305" class="body">路由器按 pathname 命中 /reports</text>
+  <text x="62" y="336" class="body">reportsLoader 从 request.url 读取 sort=oldest</text>
+  <text x="62" y="367" class="body">请求 /api/reports?sort=oldest，并传 request.signal</text>
+
+  <path class="arrow" d="M350 392 V432"/>
+  <text x="374" y="418" class="label">等待 API 数据</text>
+
+  <rect class="box" x="38" y="440" width="624" height="160" fill="#fff4df" stroke="#bf8627"/>
+  <text x="62" y="472" class="head">等待期间：目标与已提交状态分开</text>
+  <text x="62" y="505" class="body">当前 location 与 loaderData 仍是 recent</text>
+  <text x="62" y="536" class="body">useNavigation().location 指向 oldest</text>
+  <text x="62" y="567" class="body">显示等待状态；已提交列表仍是 May → April</text>
+
+  <path class="arrow" d="M350 600 V644"/>
+  <text x="374" y="631" class="label">等待本例的 reportsLoader 结算</text>
+
+  <polygon points="350,652 462,710 350,768 238,710" fill="#edf1f5" stroke="#60758b" stroke-width="2"/>
+  <text x="350" y="717" text-anchor="middle" class="head">结算结果</text>
+
+  <path class="arrow" d="M286 748 L180 820"/>
+  <path class="arrow" d="M414 748 L520 820"/>
+  <text x="122" y="795" text-anchor="middle" class="label">成功</text>
+  <text x="580" y="795" text-anchor="middle" class="label">抛错或拒绝</text>
+
+  <rect class="box" x="28" y="832" width="310" height="148" fill="#e8f5ee" stroke="#4b8a68"/>
+  <text x="50" y="866" class="head">成功后提交</text>
+  <text x="50" y="900" class="body">oldest URL 与历史项</text>
+  <text x="50" y="932" class="body">loaderData：April → May</text>
+  <text x="50" y="962" class="body">导航结束，列表按新数据渲染</text>
+
+  <rect class="box" x="362" y="832" width="310" height="148" fill="#fbebeb" stroke="#b85c5c"/>
+  <text x="384" y="866" class="head">失败后提交</text>
+  <text x="384" y="900" class="body">目标 URL 与历史项</text>
+  <text x="384" y="932" class="body">最近的 ErrorBoundary</text>
+  <text x="384" y="962" class="body">显示错误；旧排序不冒充新结果</text>
+</svg>
