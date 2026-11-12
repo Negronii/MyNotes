@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="680" viewBox="0 48 700 680">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      text { font-family: "Noto Sans CJK SC", "PingFang SC", sans-serif; fill: #172033; }
+      .title { font-size: 24px; font-weight: 700; }
+      .heading { font-size: 20px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .note { font-size: 18px; fill: #334155; }
+      .box { stroke: #526276; stroke-width: 2; rx: 12; }
+      .arrow { stroke: #334155; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="728" fill="#ffffff"/>
+
+  <rect x="24" y="62" width="652" height="354" rx="18" fill="#f0f7ff" stroke="#a8bfd9" stroke-width="2"/>
+  <text class="heading" x="46" y="96">异步驱动：第 1 页等待未完成（教学等待 40 ms）</text>
+  <rect class="box" x="56" y="118" width="588" height="48" fill="#ffffff"/>
+  <text class="body" x="350" y="148" text-anchor="middle">1. 报表 Task 等待 await fetch_page("acct-17", 1)</text>
+  <line class="arrow" x1="350" y1="168" x2="350" y2="185"/>
+  <rect class="box" x="56" y="190" width="588" height="48" fill="#e3f0ff"/>
+  <text class="body" x="350" y="220" text-anchor="middle">2. 查询未就绪 → 报表 Task 挂起</text>
+  <line class="arrow" x1="350" y1="240" x2="350" y2="257"/>
+  <rect class="box" x="56" y="262" width="588" height="48" fill="#ffffff"/>
+  <text class="body" x="350" y="292" text-anchor="middle">3. 若 /health 此时已就绪，同一循环可处理并返回 200</text>
+  <line class="arrow" x1="350" y1="312" x2="350" y2="329"/>
+  <rect class="box" x="56" y="334" width="588" height="48" fill="#e3f0ff"/>
+  <text class="body" x="350" y="364" text-anchor="middle">4. 第 1 页就绪 → 报表 Task 恢复并请求第 2 页</text>
+  <text class="note" x="46" y="402">尚未就绪的任务仍等待；若 await 对象已就绪，当前 Task 可直接继续。</text>
+
+  <rect x="24" y="434" width="652" height="280" rx="18" fill="#fff7ed" stroke="#e7bd91" stroke-width="2"/>
+  <text class="heading" x="46" y="470">同步 helper 在 async 路由中直接运行（每页阻塞 60 ms）</text>
+  <rect class="box" x="56" y="492" width="588" height="44" fill="#ffffff"/>
+  <text class="body" x="350" y="520" text-anchor="middle">1. 路由调用 read_pages_sync("acct-17")</text>
+  <line class="arrow" x1="350" y1="538" x2="350" y2="551"/>
+  <rect class="box" x="56" y="554" width="588" height="44" fill="#ffead3"/>
+  <text class="body" x="350" y="582" text-anchor="middle">2. 第 1 → 2 → 3 页连续阻塞当前事件循环</text>
+  <line class="arrow" x1="350" y1="600" x2="350" y2="613"/>
+  <rect class="box" x="56" y="616" width="588" height="44" fill="#ffffff"/>
+  <text class="body" x="350" y="644" text-anchor="middle">3. 三页全部返回后才处理 /health；共约 180 ms</text>
+  <text class="note" x="46" y="696">图中等待值是教学参数，不是数据库测量。</text>
+</svg>
