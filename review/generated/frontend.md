@@ -4534,35 +4534,26 @@ transform（变换）可平移、旋转或缩放绘制盒子。下面用类名�
 > - `aria-hidden` 对辅助技术树的影响：W3C WAI-ARIA 1.2 Recommendation（2023-06-06），§7.1，[Excluding Elements from the Accessibility Tree](https://www.w3.org/TR/wai-aria-1.2/#aria-hidden)，检查于 2026-11-12。
 ## 25. 哪些网页几何接口能测量哪一种盒子？
 
-Document Object Model（文档对象模型，DOM）提供多组几何 API，它们测量的盒子和坐标系不同。读布局偏移尺寸（`offset*`）或内客户区尺寸（`client*`），读滚动范围与偏移（`scroll*`），读包含 CSS transform（变换）后的视口矩形则用 `getBoundingClientRect()`（获取包围矩形）。一次几何读取可能迫使浏览器先完成尚未更新的样式或布局，但值已是最新时不一定产生新布局。
+Document Object Model（文档对象模型，DOM）的几何 API 读的是不同结果：`offset*` 与 `client*` 测量布局盒的大小或相对偏移，`scroll*` 描述滚动区域和当前位置，`getBoundingClientRect()` 则给出经过 CSS transform（变换）后的视口矩形。先问自己要的是盒子的尺寸、内部可用范围、滚动位置，还是视口坐标；选错 API 时，数值即使没有异常，也可能回答了另一个问题。
 
-```text
-┌────────────────────────── margin ──────────────────────────┐
-│ ┌────────────────────── border ─────────────────────────┐ │
-│ │ ┌────────────────── padding ───────────────────────┐  │ │
-│ │ │ ┌────────────── content ──────────────────────┐  │  │ │
-│ │ │ └────────────────────────────────────────────┘  │  │ │
-│ │ └─────────────────────────────────────────────────┘  │ │
-│ └──────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
-```
+![content box（内容区）、padding（内边距）、border（边框）、margin（外边距）的层次，以及两种 box-sizing 下 offsetWidth 与 clientWidth 的计算](../../frontend/html-css/resources/dom-box-metrics.svg)
 
 ### 先按测量目标选择属性
 
 | API | 返回内容 | 不包含或需留意 |
-| --- | --- | --- |
-| `offsetWidth` / `offsetHeight` | 整数布局尺寸，含 padding、border 和占空间的滚动条 | 不含 margin；不反映 CSS transform |
-| `clientWidth` / `clientHeight` | padding 区域尺寸 | 不含 border 和占空间的滚动条 |
-| `scrollWidth` / `scrollHeight` | 滚动区域尺寸，包含溢出的内容 | 不含 border；不是“用户一定能滚动”的保证 |
-| `scrollLeft` / `scrollTop` | 当前滚动偏移 | 可写；某些布局中数值可为小数或超出熟悉范围 |
-| `offsetLeft` / `offsetTop` | 相对 `offsetParent`（偏移父元素）的边缘位置 | 它不一定是直接父元素或最近定位祖先 |
-| `getBoundingClientRect()` | 相对视口、包含 transform 后的边框矩形联合范围 | 不含 margin；返回读取时的快照 |
+|---|---|---|
+| `offsetWidth` / `offsetHeight` | 未变换边框盒片段的整数轴对齐范围；占空间的滚动条计入常见布局尺寸 | 不含 margin；忽略元素和祖先上的 transform |
+| `clientWidth` / `clientHeight` | 整数 padding 区尺寸 | 普通 inline 元素或没有布局盒时返回 `0`；不含 border，也不含 padding 边缘与 border 边缘之间占空间的滚动条；标准模式下根元素例外地表示视口尺寸 |
+| `scrollWidth` / `scrollHeight` | 整数滚动区域尺寸，可大于可见的客户区 | 不含 border；值大于客户区不保证用户能滚动该元素 |
+| `scrollLeft` / `scrollTop` | 当前滚动区域相对滚动框的偏移 | 可写；当前 CSSOM View 接口允许小数，具体浏览器可能量化；零点方向和可用范围取决于滚动方向与布局 |
+| `offsetLeft` / `offsetTop` | 第一个边框盒片段相对 `offsetParent` 第一个盒的 padding edge 的偏移 | `body` 或无布局盒时返回 `0`；其他元素若 `offsetParent` 为 `null`，则相对初始包含块原点；这些值忽略 transform |
+| `getBoundingClientRect()` | 本次读取时，变换后边框片段的视口包围矩形；坐标和尺寸可为小数 CSS px | 不含 margin；结果是快照，不会跟着之后的滚动或布局变化而更新 |
 
-这些数字使用 CSS 像素，不是设备物理像素。占空间的滚动条会改变布局测量，覆盖式滚动条则可能不占空间；这取决于平台及浏览器设置。
+这些尺寸使用 CSS 像素，不是设备物理像素。占空间的滚动条会减少 `clientWidth` 或 `clientHeight`；覆盖在内容上的滚动条通常不占这部分布局空间。没有布局盒的元素，例如 `display: none` 的元素，部分尺寸属性会返回 `0`。普通 inline 元素即使有文字片段，`clientWidth` / `clientHeight` 仍为 `0`；合成页中的普通 `span` 读到 `clientWidth = 0`、`offsetWidth = 101`，说明这两个属性回答的并非同一问题。
 
 ### 用固定数字对照布局尺寸
 
-假设一个内容盒宽 `320px`，左右 padding 各 `16px`，左右 border 各 `1px`，没有占空间的滚动条：
+下面的两个元素都声明 `width: 320px`。第一种宽度只给 content；第二种把 padding 和 border 也算在声明宽度里。假设采用普通横排，且没有占空间的滚动条：
 
 ~~~css
 .content-box {
@@ -4571,72 +4562,111 @@ Document Object Model（文档对象模型，DOM）提供多组几何 API，它�
   padding-inline: 16px;
   border: 1px solid;
 }
+
+.border-box {
+  box-sizing: border-box;
+  width: 320px;
+  padding-inline: 16px;
+  border: 1px solid;
+}
 ~~~
 
-> [!example] 内容盒尺寸的计算
-> `offsetWidth = 320 + 16×2 + 1×2 = 354px`；`clientWidth = 320 + 16×2 = 352px`。前者含边框，后者含 padding 但不含边框。
+| `box-sizing` | content 宽度 | `clientWidth` | `offsetWidth` | 计算 |
+|---|---:|---:|---:|---|
+| `content-box` | 320px | 352px | 354px | content `320` + 左右 padding `16×2` + 左右 border `1×2` |
+| `border-box` | 286px | 318px | 320px | 声明总宽 `320` − 左右 padding `16×2` − 左右 border `1×2` |
 
-把声明宽度改为 `box-sizing: border-box; width: 320px`，则内容宽度为 `320 − 16×2 − 1×2 = 286px`；在同样无滚动条的条件下，`clientWidth = 318px`、`offsetWidth = 320px`。
+`offsetWidth` 取边框盒宽度，`clientWidth` 取扣除边框与占空间滚动条后的内部宽度。`margin` 在这两个数值之外；因此它们都不能直接当作元素与相邻元素之间的总间距。
 
 ### 读滚动区域与当前偏移
 
-`scrollHeight` / `scrollWidth` 表示滚动区域尺寸。溢出内容可能使它大于可见的 `clientHeight` / `clientWidth`：
+`scrollHeight` / `scrollWidth` 表示滚动区域的尺寸；溢出内容可能使其大于可见的 `clientHeight` / `clientWidth`：
 
 ~~~javascript
 const hasVerticalOverflow = element.scrollHeight > element.clientHeight;
 const currentY = element.scrollTop;
-element.scrollTop = 0; // 回到顶部
+element.scrollTop = 0; // 在普通向下溢出的例子中，回到滚动起点
 ~~~
 
-`scrollTop` 和 `scrollLeft` 可写。反向书写方向、弹性滚动及缩放等情形会使数值不符合“非负整数”的简单假设。
+这个比较只说明滚动区域比客户区高，并不单独证明用户能滚动它。`overflow: hidden` 会裁剪内容且不允许用户直接滚动，但仍可通过 `scrollTop` 程序滚动；`overflow: visible` 则把溢出内容画在盒外，不建立可滚动的区域，对它写入 `scrollTop` 不起作用。在 Chrome 157 的合成页中，两种盒子的 `scrollHeight` 都是 `200`、`clientHeight` 都是 `80`；写入 `30.5` 后，`hidden` 读回 `31`，`visible` 仍为 `0`。因此，区域尺寸和实际滚动能力要分开检查。`scrollTop` 和 `scrollLeft` 可写；当前 CSSOM View 的接口类型允许小数，但浏览器可能把它量化为整数。反向溢出方向也会改变滚动起点：普通 `direction: rtl` 横向溢出容器从右端的 `scrollLeft = 0` 开始，向左滚动时读数可变为负数。合成页中它的 `scrollWidth = 240`、`clientWidth = 100`，初值为 `0`；设为 `-20.5` 后 Chrome 读回 `-20`，随后设为 `25` 会回到 `0`。
 
-在 standards mode（标准模式）下，根元素 `document.documentElement.scrollHeight` 特别返回视口滚动区域高度与视口高度的较大值；`clientHeight` 则是扣除占空间滚动条后的视口高度。对普通元素，`scrollHeight` 返回其自身滚动区域高度。
+带弹性回弹的浏览器还可能在用户拖过滚动边界时暴露通常范围外的偏移；这是依赖实现的行为。判断“已经到顶”或“已经到底”时，需要结合方向、范围与目标浏览器，不能先假设偏移总是非负整数。
+
+在 standards mode（标准模式）下，根元素 `document.documentElement.scrollHeight` 特别返回视口滚动区域高度与视口高度的较大值；`clientHeight` 则是扣除占空间滚动条后的视口高度。普通元素的 `scrollHeight` 返回它自己的滚动区域高度。若只是想异步知道元素何时与观察区域相交，图片延迟加载的 [IntersectionObserver（相交观察器）示例](#26.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)通常比反复读取矩形更合适；它会异步报告结果，但不承诺完全不需要布局信息。
 
 ### offset 相对哪个父元素？
 
-`offsetParent`（偏移父元素）由同名属性给出。`offsetTop` / `offsetLeft` 描述元素边框边缘相对该父元素 padding 边缘的位置；表格结构、固定定位、包含块和 Shadow DOM（影子 DOM）边界等都会影响返回的父元素。它不固定等同于最近的 `position` 祖先。
+`offsetLeft` / `offsetTop` 先处理两个返回 `0` 的情况：元素是 `body`，或元素没有布局盒。其他元素若 `offsetParent` 为 `null`，返回第一个盒片段的边框边缘相对初始包含块原点的位置；例如在没有祖先建立固定定位包含块的合成页中，`position: fixed; left: 55px; top: 30px` 的元素得到 `offsetParent === null` 和 `(offsetLeft, offsetTop) = (55, 30)`。此例的初始包含块原点与布局视口左上角重合。若 `offsetParent` 存在，坐标是子元素第一个边框盒片段的边框边缘，减去该父元素第一个盒片段的 padding edge；这里指 padding 区靠边框的一侧边缘，不是 content 与 padding 的分界。`offsetParent` 的规则还会考虑固定定位、表格结构、包含块、缩放和 Shadow DOM（影子 DOM）边界；它不固定等同于最近的 `position` 祖先。
 
 ### 读变换后的视口矩形
 
-`getBoundingClientRect()` 返回元素非空 client rect（客户端矩形）的最小包围矩形，坐标原点在当前视口左上角，尺寸受 transform 影响。行内内容跨多行时可能有多个 client rect，方法返回它们的联合矩形；结果是本次读取时的 DOMRect（DOM 矩形）快照。
+`getBoundingClientRect()` 先取得元素的 client rect（客户端矩形）列表。对于普通、宽高均非零的盒片段，它返回这些片段的最小轴对齐包围矩形；元素没有布局盒、片段列表为空时，返回位置与尺寸全为 `0` 的矩形。CSS transform 及其祖先的变换会反映在片段上。行内文字跨多行时可以产生多个片段，返回的是它们的联合范围；`DOMRect`（DOM 矩形）是读取时的快照，不会自行更新。这里的坐标以 layout viewport（布局视口）左上角为原点；它不是双指缩放后可见的 visual viewport 坐标原点。
+
+> [!info]- 零宽或零高片段要区分规范算法与实现
+> CSSOM View 草案规定：若列表中每个片段都至少有一边为 `0`，返回首片段；否则，对宽或高至少一项非 `0` 的片段求包围范围。这里陈述的是规范算法。Chrome 157.0.8103.51 的合成页中，三个零宽但非零高的片段实际返回末片段；混有普通片段和零宽尾片时，又没有把那些尾片纳入包围范围。依赖这类退化片段时，应按目标浏览器验证，不能把草案分支直接当作跨浏览器保证。下面的数值例子全部使用普通非退化盒子。
+
+下面是一个可复算的布局例子：文档未滚动或缩放，也没有变换祖先；初始包含块左上角与布局视口原点对齐。盒子以 `(100px, 100px)` 起始，content 宽高为 `100px × 40px`，四边 border 各为 `2px`；变换原点设为左上角。`transform` 列表按从左到右的顺序合成矩阵，因此对点的实际作用从右侧函数开始：先绕左上角执行 `scale(1.5)`，再执行 `translate(20px, 12px)`。左上角本身在缩放时仍是原点，所以最终矩形从布局位置 `(100px, 100px)` 平移到视口位置 `(120px, 112px)`。
+
+~~~html
+<div id="target"></div>
+~~~
+
+~~~css
+#target {
+  position: absolute;
+  left: 100px;
+  top: 100px;
+  box-sizing: content-box;
+  width: 100px;
+  height: 40px;
+  border: 2px solid;
+  transform-origin: 0 0;
+  transform: translate(20px, 12px) scale(1.5);
+}
+~~~
+
+布局边框盒宽 `100 + 2×2 = 104px`，高 `40 + 2×2 = 44px`；`offsetWidth` / `offsetHeight` 忽略变换，仍是 `104px × 44px`。变换后矩形从视口坐标 `(120px, 112px)` 开始，宽高为 `104×1.5 = 156px` 与 `44×1.5 = 66px`。因此，`rect.left = 120` 是视口原点到矩形左边缘的水平坐标，不是矩形宽度：
+
+![transform 使边框盒从布局尺寸变为视口矩形；rect.left 是从视口原点到左边缘的距离](../../frontend/html-css/resources/dom-viewport-rect.svg)
 
 ~~~javascript
-const rect = element.getBoundingClientRect();
+const target = document.querySelector("#target");
+const rect = target.getBoundingClientRect();
 // rect.top / bottom：相对视口顶部的上下边缘
 // rect.left / right：相对视口左侧的左右边缘
-// rect.width / height：变换后边框盒联合范围，单位为 CSS px
+// rect.width / height：变换后边框盒片段的联合范围，单位为 CSS px
 ~~~
 
-~~~text
-视口左上角 (0, 0)
-┌──────────────────────────────────────────────┐
-│          ┌────── rect.left ──────┐            │
-│          │ 元素 transform 后的外接矩形 │            │
-│          └────────────────────────┘            │
-└──────────────────────────────────────────────┘
-~~~
-
-以矩形判断是否与视口相交，只能说明几何区域有正面积交叠，无法判断元素是否被其他内容遮挡、是否透明或辅助技术是否可见。`getBoundingClientRect()` 对退化的零宽或零高元素也可能返回矩形，因此必须单独检查宽高。下面假设文档处于 standards mode；根元素的 `clientWidth`/`clientHeight` 表示扣除占空间滚动条后的视口尺寸。
+在标准模式中，下面的函数测试元素的变换后矩形是否与 layout viewport（布局视口）有正面积交叠。根元素的 `clientWidth` / `clientHeight` 给出扣除占空间滚动条后的布局视口尺寸；仅在边缘相接不算有面积交叠。
 
 ~~~javascript
-function overlapsViewport(element) {
+function overlapsLayoutViewport(element) {
   const rect = element.getBoundingClientRect();
   const root = document.documentElement;
-  return rect.width > 0 && rect.height > 0 &&
+  return root.clientWidth > 0 && root.clientHeight > 0 &&
+    rect.width > 0 && rect.height > 0 &&
     rect.bottom > 0 && rect.top < root.clientHeight &&
     rect.right > 0 && rect.left < root.clientWidth;
 }
 ~~~
 
+这个判断只比较矩形与布局视口，不检查祖先滚动容器的裁切、遮挡、透明度或旋转形状内部的空白区域，因此函数名不是“元素已可见”。移动端 pinch-zoom（双指缩放）缩小或平移当前可见区域时，layout viewport（布局视口）也不等于 visual viewport（视觉视口）。若需求要比较当前视觉视口，可把 `window.visualViewport.offsetLeft` / `offsetTop` 作为布局视口内的可见区域左上角，并将 `(offsetLeft, offsetTop, offsetLeft + width, offsetTop + height)` 当作当前视口四边界，按相同的矩形条件比较；这样仍不包含祖先裁切或遮挡。
+
 ### 把写入和读取分批
 
-偶尔读取一次几何属性时，选与问题相符的盒子和坐标系。滚动阈值通知或图片延迟加载优先使用 IntersectionObserver（相交观察器）[图片加载中的观察器示例](#26.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)，而不是反复轮询矩形；观察器会异步报告相交状态，但不承诺完全不触发布局工作。
-
-若先改样式再马上读几何值，浏览器可能同步完成待处理的样式或布局；循环交替执行写入和读取会重复付出这类成本。有关批量读取、批量写入的路径见[渲染流水线与强制布局](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+偶尔读取几何属性时，选择与问题相符的盒子和坐标系。若此前的 DOM 或样式写入使布局信息失效，紧接着读几何值可能迫使浏览器先同步完成所需的样式或布局；若布局仍有效，读取可以直接使用现有结果。循环交替写入和读取，在每次写入都影响下一次读取结果时可能反复付出这类成本。关于失效怎样沿渲染工作传播，以及如何批量读、再批量写，见[为什么一次 DOM 改动会增加布局或绘制工作？](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 > [!info]- 来源
-> - 元素布局尺寸、滚动 API、视口矩形：W3C CSSOM View，Working Draft（2025-09-16），[CSSOM View](https://www.w3.org/TR/cssom-view-1/)，检查于 2026-11-06。其中 [Element.scrollHeight](https://www.w3.org/TR/cssom-view-1/#dom-element-scrollheight) 说明根元素和普通元素的滚动高度规则。
-> - 异步相交通知：W3C [Intersection Observer](https://www.w3.org/TR/intersection-observer/)，Working Draft（2023-10-18），检查于 2026-11-06。
+> - `offsetWidth` / `offsetHeight` 忽略变换并量边框盒片段：[W3C CSSOM View §7，HTMLElement 扩展](https://www.w3.org/TR/cssom-view-1/#extensions-to-the-htmlelement-interface)；`clientWidth` / `clientHeight` 对普通 inline 或无盒元素返回 `0`，并按 §6 定义边框、滚动区域和根元素例外：[Element 扩展](https://www.w3.org/TR/cssom-view-1/#extensions-to-the-element-interface)。几何坐标和尺寸以 CSS px 表示：[§2.1 CSS pixels](https://www.w3.org/TR/cssom-view-1/#css-pixels)。CSSOM View，W3C Working Draft，2025-09-16；核对于 2026-11-12。
+> - `offsetParent`、`offsetLeft` / `offsetTop` 的参照关系与例外：`offsetLeft` / `offsetTop` 在元素是 `body` 或没有布局盒时返回 `0`；其他元素的 `offsetParent` 为 `null` 时，坐标取第一个盒片段相对初始包含块原点的位置；非空父元素时以其第一个盒片段的 padding edge 为参照。`getClientRects()` 与 `getBoundingClientRect()` 的片段联合及非实时结果：[W3C CSSOM View §6–7](https://www.w3.org/TR/cssom-view-1/)，核对于 2026-11-12。
+> - `scrollTop` / `scrollLeft` 的可写属性、滚动范围与负向坐标规则：[W3C CSSOM View，Editor’s Draft §6](https://drafts.csswg.org/cssom-view/#extensions-to-the-element-interface)，2026-11-05 版本；这是工作草案，当前 IDL 将偏移定义为 `unrestricted double`。本地 Chrome 157 的合成页把 `30.5` 读回 `31`、把 RTL 的 `-20.5` 读回 `-20`，所以文中不把小数支持说成每个浏览器的保证。
+> - `overflow: visible` 让溢出内容绘制在盒外；`overflow: hidden` 裁剪内容、不提供用户直接滚动，但仍允许程序滚动。初始滚动位置通常取决于书写模式，并与滚动原点重合；滚动原点默认在 block-start 与 inline-start 的交角，RTL 的 inline-start 位于右侧：[CSS Overflow Module Level 3 §2.3、§3.1](https://drafts.csswg.org/css-overflow-3/)，Editor’s Draft，2026-08-13。
+> - 弹性回弹可能暴露超出常规边界的偏移；这是实现差异，不是所有浏览器的保证：[CSSWG issue 4011](https://github.com/w3c/csswg-drafts/issues/4011)、[WebKit issue 198597](https://bugs.webkit.org/show_bug.cgi?id=198597)。2026-11-12 核对时仍未形成统一约定；本章没有声称已实测 Safari 的回弹。
+> - content-box 与 border-box 的 `box-sizing` 计算：[W3C CSS Sizing Level 3 §3.3，Box Edges for Sizing](https://www.w3.org/TR/css-sizing-3/#box-sizing)，W3C Working Draft，2026-09-04；核对于 2026-11-12。
+> - `getBoundingClientRect()` 对空片段、每个片段都至少有一边为零、其余片段的联合分别执行的返回规则，以及视口矩形；标准模式根元素的视口尺寸、布局视口与视觉视口的嵌套关系、视觉视口偏移和尺寸：[W3C CSSOM View §2、§6、§12](https://www.w3.org/TR/cssom-view-1/)，W3C Working Draft，2025-09-16；核对于 2026-11-12。
+> - `transform` 函数从左到右合成变换矩阵；把局部点映射到父坐标系时，右侧的函数先作用：[CSS Transforms Module Level 1 §2，Transform Rendering Model](https://drafts.csswg.org/css-transforms/#transform-rendering)，Editor’s Draft，2025-11-30。
+> - IntersectionObserver 的结果异步送达，面向相对根或视口的位置查询；规范明确不以像素级实际显示结果为目标：[W3C Intersection Observer §1](https://www.w3.org/TR/intersection-observer/#introduction)，Working Draft，2023-10-18；核对于 2026-11-12。
+> - 几何读取可能同步触发布局的条件是此前样式或 DOM 已使布局失效；Chrome 的实现说明及读写批处理建议：[Chrome for Developers，Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，更新于 2025-10-08。本仓库的机制展开见[渲染流水线与强制布局](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 ## 26. 图片与媒体资源怎样加载并保持页面稳定？
 
 同一张图片可能是装饰、信息本身，也可能是链接或按钮的操作入口；资源何时请求则关系到首屏内容和网络开销。先按内容决定 HTML 语义与替代文本，再选择尺寸、候选资源和加载时机。
@@ -11596,31 +11626,36 @@ class EventBus {
 > - DOM 事件的分发规则由浏览器平台定义，与上述应用层事件总线不同：[WHATWG DOM Standard，Events](https://dom.spec.whatwg.org/#events)。
 ## 57. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
-案例背景：报表列表收到新结果后，界面要删除旧行并插入新行。Document Object Model (文档对象模型，DOM) 的查询会返回 HTMLCollection（元素集合）或 NodeList（节点列表）；集合成员可能随树变化，也可能固定。若代码在遍历时修改实时集合，索引会移动，导致行被跳过。
+案例背景：报表列表准备显示新结果，先要清空现有行。Document Object Model（文档对象模型，DOM）查询能返回 `HTMLCollection`（元素集合）或 `NodeList`（节点列表）；成员是否随树变化，由具体 API 决定。若代码遍历实时集合时同时删除成员，后续索引会移动，递增索引可能跳过一行，旧行便会留在下一份结果中。
 
 ### 先查询到要操作的节点
 
-`document.documentElement` 是 `<html>` 根元素，`document.body` 指向 `<body>`；脚本若在 HTML parser 解析到相应标签前运行，`body` 可能还是 `null`。`getElementById()` 与 `querySelector()` 都返回一个元素或 `null`，后者的参数是 CSS 选择器。拿到容器后，可继续在容器内查询，避免把页面上另一个同类按钮误当成报表控件：
+`document.documentElement` 是 `<html>` 根元素，`document.body` 指向 `<body>`；如果脚本在 HTML parser（HTML 解析器）处理到相应标签前运行，`body` 可能还是 `null`。`getElementById()` 与 `querySelector()` 都返回一个元素或 `null`；后者的参数是 CSS 选择器。拿到容器后，在容器内查询可以避免把页面上另一个同类控件误当成报表控件：
 
 ~~~javascript
 const reports = document.querySelector("#reports");
 const controls = document.querySelector("#sort-controls");
 const oldestButton = controls?.querySelector('button[data-sort="oldest"]') ?? null;
-const directRows = reports?.querySelectorAll(":scope > li[data-id]") ?? [];
+const directRows = reports?.querySelectorAll(":scope > li.report") ?? [];
 ~~~
 
-`querySelectorAll()` 在没有匹配项时仍返回长度为 `0` 的 `NodeList`；`querySelector()` 则返回 `null`。选择器字符串若不是有效 CSS 语法，查询会抛 `SyntaxError`，不是返回空结果。完整页面的 `body`、根元素和控件在 DOM 构建后的关系见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
+`querySelectorAll()` 在没有匹配项时仍返回长度为 `0` 的 `NodeList`；`querySelector()` 则返回 `null`。选择器字符串若不是有效 CSS 语法，查询会抛出 `SyntaxError`，不会返回空结果。完整页面中 `body`、根元素和控件的关系见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
 
-| 来源 | 类型 | 包含什么 | 查询后发生 DOM 变更时 |
+这里的可选链还处理了容器不存在的情况：找不到 `#reports` 时，`directRows` 是普通空数组；容器存在但没有匹配行时，它是空 `NodeList`。`:scope >` 把查询范围限定为容器本身的直接子元素。下面的教学列表只有报表行，因此 `children` 与 `.report` 查询开头都得到 `[r1, r2, r3]`；若以后加入状态提示行，`children` 也会包含它，而 `.report` 查询不会。
+
+| 来源 | 返回类型 | 包含什么 | 查询后 DOM 改变时，集合成员怎样变化 |
 |---|---|---|---|
-| `element.children`、`getElementsByClassName()`、`getElementsByTagName()` | `HTMLCollection` | 元素节点 | 实时反映当前树 |
-| `element.querySelectorAll()` | `NodeList` | 匹配元素 | 静态成员列表 |
-| `element.childNodes` | `NodeList` | 元素、文本、注释等子节点 | 实时反映当前树 |
+| `element.children` | `HTMLCollection` | 直接子元素 | 实时反映当前树 |
+| `getElementsByClassName()`、`getElementsByTagName()` | `HTMLCollection` | 匹配的后代元素，包含更深层级 | 实时反映当前树 |
+| `element.querySelectorAll()` | `NodeList` | 匹配元素 | 保持查询时的成员列表 |
+| `element.childNodes` | `NodeList` | 元素、文本、注释等直接子节点 | 实时反映当前树 |
 
-因此，`NodeList` 不代表“静态”。需要根据具体查询 API 的契约判断；空白文本也会成为 `childNodes` 中的文本节点；通用节点应使用 `nodeName`，因为 `tagName` 只属于元素。`HTMLCollection` 和 `NodeList` 都不是普通数组，直接调用 `map()` 不可行，可用 `Array.from()` 创建数组快照。
+因此，不能只看 `NodeList` 这个类型来判断它是否实时：`childNodes` 是实时集合，而 `querySelectorAll()` 返回静态列表。`childNodes` 中的缩进空白也会成为文本节点；通用节点应使用 `nodeName`，因为 `tagName` 只属于元素。两种集合都不是普通数组，不能直接调用 `map()`；`Array.from()` 可把当前成员引用复制进数组。
 
-> [!example] 正向删除实时集合会跳过一行
-> 开始时列表按顺序是 `[r1, r2, r3]`。这些只是合成行 ID，与报表 ID、业务版本或事件游标无关。`children` 是实时集合：删掉索引 0 的 `r1` 后，`r2` 移到索引 0、`r3` 移到索引 1。循环把索引递增到 1，于是跳过 `r2`，下一轮删的是 `r3`。
+### 删除实时集合时，索引为什么会跳过一行？
+
+> [!example] 正向删除实时集合会留下 r2
+> 报表行的教学 ID 是 `r1`、`r2`、`r3`，它们只是合成标识，与真实报表 ID、业务版本或事件游标无关。开始时，循环变量 `i = 0`，实时集合和 `querySelectorAll(":scope > .report")` 的静态结果都按树顺序包含 `[r1, r2, r3]`。这份列表的直接子元素全是报表行，所以 `children` 与按 `.report` 选择的范围相同。
 >
 > ~~~html
 > <ul id="reports">
@@ -11638,24 +11673,36 @@ const directRows = reports?.querySelectorAll(":scope > li[data-id]") ?? [];
 > for (let i = 0; i < liveRows.length; i += 1) {
 >   liveRows[i].remove();
 > }
-> // 起初 r1、r2、r3；循环结束后 r2 仍在列表中。
-> // queriedRows 仍有 3 个成员，但 queriedRows[0].isConnected 为 false。
+> // 最后 r2 仍在列表中。
+> // queriedRows 仍有 3 个成员；queriedRows[0].isConnected 为 false。
 > ~~~
 >
-> 若在这份原始列表上先复制成员，循环处理的就是固定顺序 `[r1, r2, r3]`，删除树节点不会改变待遍历数组。`querySelectorAll()` 的静态列表也仍有三个成员，但其中已移除节点的 `isConnected` 会变成 `false`：静态只固定列表成员，不冻结节点对象。以下是与上面错误循环二选一的写法，应从同一份初始列表开始。
+> 第一次执行 `i = 0` 时，循环移除 `liveRows[0]`，也就是 `r1`。实时集合立即变成 `[r2, r3]`，`r2` 从索引 `1` 移到索引 `0`。循环递增 `i` 到 `1` 后，`liveRows[1]` 现在是 `r3`，于是第二次移除 `r3`。集合此时只剩 `[r2]`。第二轮循环体结束后，`for` 语句先把 `i` 再递增到 `2`，然后才检查条件；此时 `2 < liveRows.length`（即 `2 < 1`）为假，循环结束。
+>
+> 清理步骤结束后 `r2` 还在列表里；如果接下来把新结果插入这份列表，旧行就会和新结果同时显示。
+>
+> ![正向删除实时集合的三步索引变化，以及静态查询仍保留三个节点引用](../../frontend/browser-apis/resources/dom-collections-live-static.svg)
+>
+> 静态结果 `queriedRows` 仍含三个节点引用，但已移除的 `r1`、`r3` 的 `isConnected` 会变成 `false`。静态只固定成员列表，不冻结节点对象。可以在改树之前先复制实时成员，或从末尾向前删除：
 >
 > ~~~javascript
+> // 与上面的错误循环二选一，并从同一份初始列表开始。
 > for (const row of Array.from(liveRows)) row.remove();
+> // 也可以倒序删除：
+> for (let i = liveRows.length - 1; i >= 0; i -= 1) {
+>   liveRows[i].remove();
+> }
 > ~~~
 
-实时集合适合反映 DOM 的当前成员，但不适合一边按递增索引遍历、一边改变成员；也可从后往前删。静态快照则适合一次查询后按成员执行任务。查询何时更新、节点本身是否仍连接到文档，是两个不同问题。实时描述的是可观察的成员结果，不承诺浏览器内部怎样、多久计算一次。
+实时集合适合读取 DOM 当前有哪些成员；若遍历期间修改它，递增索引就可能不再指向预期节点。静态查询结果适合按查询时确定的成员执行任务。查询列表是否变化、列表里的节点是否仍连接到文档，是两个不同问题。这里的“实时”描述读取时可见的成员结果，不规定浏览器内部怎样或多久计算一次。
 
 **延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](#56.%20JavaScript%20%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%9C%A8%E7%9B%91%E5%90%AC%E5%99%A8%E4%B8%AD%E9%87%8D%E5%85%A5%E6%97%B6%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E9%A1%BA%E5%BA%8F%EF%BC%9F) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](#58.%20%E7%94%A8%E6%88%B7%E7%A6%BB%E5%BC%80%E6%8A%A5%E8%A1%A8%E9%A1%B5%E6%97%B6%EF%BC%8C%E5%88%86%E6%9E%90%E4%BA%8B%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%B0%BD%E5%8A%9B%E5%8F%91%E9%80%81%EF%BC%9F) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F) 讨论 DOM 与后续渲染。
 
 > [!info]- 来源
-> - `NodeList`、`HTMLCollection` 的集合定义与 live/static 成员规则：[WHATWG DOM Standard，Old-style collections](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，2026-11-07 核对。
-> - `querySelectorAll()` 返回静态 `NodeList`，由其 API 规范定义：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)，2026-11-07 核对。
-> - `querySelector()` 首个匹配项或 `null`、`querySelectorAll()` 静态匹配结果及作用域查询：[WHATWG DOM Standard，ParentNode](https://dom.spec.whatwg.org/#interface-parentnode)，持续更新规范，selector matching methods。核对日期：2026-11-07。
+> - `Document.body` 可能为空；HTML Standard 将它定义为可返回 `null` 的元素属性：[WHATWG HTML §3.1.1、§3.1.7，Document tree accessors](https://html.spec.whatwg.org/multipage/dom.html#dom-document-body)，Living Standard，核对于 2026-11-12。
+> - `NodeList` 与 `HTMLCollection` 的集合规则：默认集合为实时集合；`HTMLCollection` 只包含元素，`NodeList` 可包含节点。[WHATWG DOM Standard §4.2.10，NodeList 与 HTMLCollection](https://dom.spec.whatwg.org/#old-style-collections-node-list-and-htmlcollection)，Living Standard，核对于 2026-11-12。
+> - `querySelector()` 返回首个匹配项或 `null`；无匹配的 `querySelectorAll()` 返回空列表，且其算法返回静态结果：[WHATWG DOM Standard §4.2.6，ParentNode](https://dom.spec.whatwg.org/#interface-parentnode)，Living Standard，核对于 2026-11-12。
+> - `children`、`childNodes`、`getElementsBy*()` 的成员筛选与实时性按具体接口算法定义；`nodeName`、`tagName` 属于通用节点和元素接口各自的字段：[WHATWG DOM Standard §4.2.6 ParentNode](https://dom.spec.whatwg.org/#interface-parentnode)、[§4.4 Node](https://dom.spec.whatwg.org/#interface-node)、[§4.5 Document](https://dom.spec.whatwg.org/#interface-document) 与 [§4.9 Element](https://dom.spec.whatwg.org/#interface-element)，Living Standard，核对于 2026-11-12。
 ## 58. 用户离开报表页时，分析事件怎样尽力发送？
 
 案例背景：用户打开报表、改变一次筛选，然后立刻导航到别处。analytics event (分析事件) 不应拖慢筛选或导航；页面可先在内存中收集少量事件，再小批量发送，并在页面变为隐藏时尝试提交一批。这个生命周期信号只提供最后一次机会，不能保证服务器已收到。

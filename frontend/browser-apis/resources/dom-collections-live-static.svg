@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="500" viewBox="0 0 700 500" role="img" aria-labelledby="title desc">
+  <title id="title">删除实时集合中的成员会改变后续索引</title>
+  <desc id="desc">三个状态显示 live children 从 r1、r2、r3 开始，删除 r1 后索引一指向 r3，删除 r3 后循环结束并留下 r2。下方的 querySelectorAll 静态结果仍保留三个节点引用，但 r1 和 r3 已不再连接文档。</desc>
+  <defs>
+    <marker id="down" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L10 6 L1 11 Z" fill="#6f86a6"/>
+    </marker>
+    <style>
+      text { font-family: Arial, "PingFang SC", sans-serif; fill: #24344d; }
+      .panel { fill: #ffffff; stroke: #d6dfeb; stroke-width: 2; }
+      .heading { font-size: 18px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; fill: #536783; }
+      .code { font-family: Menlo, Consolas, monospace; font-size: 17px; }
+      .node { fill: #eef4fb; stroke: #8da6c7; stroke-width: 2; }
+      .selected { fill: #fff2de; stroke: #dfa74d; stroke-width: 3; }
+      .left { text-anchor: start; }
+      .center { text-anchor: middle; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="700" height="500" fill="#f7f9fc"/>
+  <rect class="panel" x="24" y="18" width="652" height="397" rx="14"/>
+  <text class="code" x="48" y="51">for (i = 0; i &lt; liveRows.length; i++) liveRows[i].remove()</text>
+
+  <text class="heading left" x="48" y="94">开始：i = 0</text>
+  <text class="small left" x="48" y="119">liveRows 当前为</text>
+  <rect class="node selected" x="208" y="78" width="92" height="48" rx="8"/>
+  <rect class="node" x="318" y="78" width="92" height="48" rx="8"/>
+  <rect class="node" x="428" y="78" width="92" height="48" rx="8"/>
+  <text class="heading center" x="254" y="108">r1</text>
+  <text class="heading center" x="364" y="108">r2</text>
+  <text class="heading center" x="474" y="108">r3</text>
+  <text class="small left" x="536" y="106">移除 [0]</text>
+
+  <line x1="350" y1="132" x2="350" y2="156" stroke="#6f86a6" stroke-width="2" marker-end="url(#down)"/>
+  <text class="heading left" x="48" y="190">移除 r1 后：i 递增为 1</text>
+  <text class="small left" x="48" y="215">r2 左移到 [0]</text>
+  <rect class="node" x="263" y="174" width="92" height="48" rx="8"/>
+  <rect class="node selected" x="373" y="174" width="92" height="48" rx="8"/>
+  <text class="heading center" x="309" y="204">r2</text>
+  <text class="heading center" x="419" y="204">r3</text>
+  <text class="small left" x="485" y="202">[1] 现在是 r3</text>
+
+  <line x1="350" y1="228" x2="350" y2="252" stroke="#6f86a6" stroke-width="2" marker-end="url(#down)"/>
+  <text class="heading left" x="48" y="285">移除 r3 后：i 再递增为 2</text>
+  <text class="small left" x="48" y="310">检查 2 &lt; 1 为假，循环结束</text>
+  <rect class="node" x="318" y="269" width="92" height="48" rx="8"/>
+  <text class="heading center" x="364" y="299">r2</text>
+  <text class="small left" x="428" y="297">r2 被跳过</text>
+
+  <line x1="350" y1="323" x2="350" y2="347" stroke="#6f86a6" stroke-width="2" marker-end="url(#down)"/>
+  <rect x="42" y="353" width="616" height="48" rx="10" fill="#f2effa" stroke="#cbbbe8" stroke-width="2"/>
+  <text class="heading left" x="60" y="383">删除前查询的 queriedRows 仍引用 [r1, r2, r3]</text>
+
+  <rect x="24" y="431" width="652" height="52" rx="12" fill="#ffffff" stroke="#d6dfeb" stroke-width="2"/>
+  <text class="small left" x="43" y="463">成员列表不变，但节点连接状态可变：r1、r3 为 false；r2 为 true。</text>
+</svg>
