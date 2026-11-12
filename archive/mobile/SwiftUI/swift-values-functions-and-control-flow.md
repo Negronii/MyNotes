@@ -79,7 +79,7 @@ swapTwoInts(&someInt, &anotherInt)
 // someInt 为 107，anotherInt 为 3
 ```
 
-这个交换函数没有返回值，但调用者的两个变量在执行后改变了。读代码时要把这种写回当作函数的可观察结果。
+这个交换函数的两个 `inout` 参数必须访问不同的变量位置；`swapTwoInts(&someInt, &someInt)` 会违反独占访问规则，不能用来交换同一变量。函数没有返回值，但调用者的两个变量在执行后改变了。读代码时要把这种写回当作函数的可观察结果。
 
 ## 函数可以作为值传递或返回吗？
 
@@ -184,7 +184,7 @@ copy.box.value = 7
 print(original.box.value) // 7：两个结构体值引用同一个类实例
 ```
 
-结构体不支持类继承，但可用协议与扩展组织共享行为。若类型本体声明了自定义初始化方法，编译器合成的成员逐一初始化方法可能不再可用；初始化方法的位置与访问控制也会影响可见性，不能假定每个结构体都有公开的成员逐一初始化器。
+结构体不支持类继承，但可用协议与扩展组织共享行为。在结构体本体中声明自定义初始化方法后，编译器不再合成成员逐一初始化器；若要同时保留它，可把自定义初始化方法放进扩展。合成的成员逐一初始化器也不会自动成为 `public`，不能假定别的 module 能直接调用它。
 
 ## 类为什么共享身份？
 
@@ -234,7 +234,7 @@ let text = "正在学习 \(varName)。"
 closed range（闭区间）`0...5` 包含两端；half-open range（半开区间）`0..<5` 包含 0 但不包含 5。这个差别会影响循环次数和数组索引边界。
 
 > [!info] 先看端点，再数迭代次数
-> `1...5` 经过 1、2、3、4、5 共五次；`1..<5` 经过 1、2、3、4 共四次。循环上限若是数组的 `count`，通常用半开区间避免访问不存在的下标。
+> `1...5` 经过 1、2、3、4、5 共五次；`1..<5` 经过 1、2、3、4 共四次。遍历数组下标可用 `array.indices`；若明确从零开始，也可用 `0..<array.count` 避免访问不存在的末尾下标。
 
 ## 循环如何筛选、等待和提前离开？
 
@@ -264,7 +264,7 @@ for number in 1...30 where number % 3 == 0 {
 }
 ```
 
-字典没有供程序依赖的固定遍历次序；若输出顺序有要求，先对键排序。普通 `while` 在每轮开始前检查条件；`repeat-while` 先执行一次循环体，再检查条件。
+字典没有供程序依赖的固定遍历次序；若输出顺序有要求，先对键排序。普通 `while` 在每轮开始前检查条件；`repeat-while` 先执行一次循环体，再检查条件。下面两段都从 5 开始，各执行五次；若各自从 0 开始，`while` 执行零次，`repeat-while` 仍执行一次。
 
 ```swift
 var counter = 5
@@ -299,7 +299,7 @@ for i in 1...10 {
 ```
 
 > [!info]- 来源
-> - **常量绑定和值类型**：Swift 语言指南“Properties”“Structures and Classes”，说明值类型复制、常量结构体属性与类引用的可变性；[Swift 语言指南](https://docs.swift.org/swift-book/LanguageGuide/Properties.html) 与[结构体和类](https://docs.swift.org/swift-book/LanguageGuide/ClassesAndStructures.html)，核对日期 2026-11-06。
-> - **函数标签、默认值、返回值、可变参数、输入输出参数与函数类型**：Swift 语言指南“Functions”与声明参考“In-Out Parameters”；[函数](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/functions/)及[声明](https://docs.swift.org/latest/documentation/the-swift-programming-language/declarations/)，核对日期 2026-11-06。
-> - **`mutating` 方法、类身份、ARC 与结构体初始化限制**：Swift 语言指南“Methods”“Choosing Between Structures and Classes”“Initialization”；[方法](https://docs.swift.org/swift-book/LanguageGuide/Methods.html)、[类型选择](https://docs.swift.org/latest/documentation/swift/choosing-between-structures-and-classes/)及[初始化](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/)，核对日期 2026-11-06。
-> - **范围与循环**：Swift 语言指南“Control Flow”；[控制流](https://docs.swift.org/swift-book/LanguageGuide/ControlFlow.html)，核对日期 2026-11-06。
+> - **常量绑定和值类型**：Swift 语言指南“Properties”“Structures and Classes”，说明值类型复制、常量结构体属性与类引用的可变性；[Swift 语言指南](https://docs.swift.org/swift-book/LanguageGuide/Properties.html)与[结构体和类](https://docs.swift.org/swift-book/LanguageGuide/ClassesAndStructures.html)，核对日期 2026-11-13。
+> - **函数标签、默认值、返回值、可变参数、输入输出参数与函数类型**：Swift 语言指南“Functions”与声明参考“In-Out Parameters”；[函数](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/functions/)及[声明](https://docs.swift.org/latest/documentation/the-swift-programming-language/declarations/)，核对日期 2026-11-13。
+> - **`mutating` 方法、类身份、ARC 与结构体初始化限制**：Swift 语言指南“Methods”“Choosing Between Structures and Classes”“Initialization”；[方法](https://docs.swift.org/swift-book/LanguageGuide/Methods.html)、[类型选择](https://docs.swift.org/latest/documentation/swift/choosing-between-structures-and-classes/)、[初始化](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/)及[访问控制](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/accesscontrol/)，核对日期 2026-11-13。
+> - **范围与循环**：Swift 语言指南“Control Flow”；[控制流](https://docs.swift.org/swift-book/LanguageGuide/ControlFlow.html)，核对日期 2026-11-13。

@@ -28,7 +28,13 @@ let image: UIImage = #imageLiteral(resourceName: "your_image_name")
 `Image` 默认按图像自身大小显示。要让它适应布局尺寸，先加 `.resizable()`；再选 `.fit` 或 `.fill` 保留原始宽高比。`.fit` 会让整幅图进入目标框，可能留白；`.fill` 会填满目标框，但内容可能超出边界，必要时再用 `.clipped()` 裁掉超出的部分。
 
 > [!example] 头像框比原图更接近正方形时会发生什么？
-> 假设原图宽高比为 2:1，目标框为 1:1。使用 `.fit` 时，图像缩放到宽 1、高 0.5，目标框上下各留 0.25 空白；使用 `.fill` 时，图像缩放到宽 2、高 1，目标框左右各裁掉 0.5，叠加 `.clipped()` 后才只显示框内区域。下面的圆形裁剪同时保留描边。
+> 假设原图宽高比为 2:1，目标框为 1:1。以 150 × 150 pt 方框为例，`.fit` 显示为 150 × 75 pt，方框上下各留 37.5 pt；`.fill` 显示为 300 × 150 pt，左右各有 75 pt 超出方框。方框裁切时，左右各裁掉缩放后图宽的四分之一，框内可见面积是整幅图的一半。`Circle` 裁剪则沿圆形轮廓截取可见内容，并可继续叠加圆形描边。
+
+下面图只展示保持 2:1 比例的图像进入方形矩形框；圆形头像是后续再加的遮罩步骤。
+
+![把 2:1 图像放入 1:1 方框：fit 显示整幅图并在上下留白；fill 放大后超出方框的左右部分被裁掉。](resources/swiftui-image-fit-fill-2-to-1.svg)
+
+_目标框为 150 × 150 pt：fit 图像为 150 × 75 pt、上下各留 37.5 pt；fill 图像为 300 × 150 pt、左右各裁 75 pt。_
 
 ```swift
 Image("avatar")
@@ -41,7 +47,7 @@ Image("avatar")
     }
 ```
 
-若需要完整显示图形，把 `.fill` 改为 `.fit`；若要直接在固定宽度下保留比例，也可写：
+上面的头像代码把 `.fill` 放大后再用 `Circle` 遮罩裁成圆形；遮罩会继续裁掉方框四角。若要完整显示矩形原图，需把 `.fill` 改为 `.fit`，并同时移除 `.clipShape(Circle())` 与叠加的圆形描边；否则遮罩会裁角，描边也可能盖住原图像素。下面的菱形例子用 `.fit` 且没有圆形遮罩或描边：
 
 ```swift
 Image("diamond")
@@ -68,7 +74,7 @@ ZStack {
 
 ## 自定义字体如何注册并支持动态字体大小？
 
-Dynamic Type（动态字体）允许用户调整文字大小。先将有分发授权的字体文件加入目标并确认 target membership（目标成员资格）；然后按平台注册资源。iOS、watchOS、tvOS 与 Mac Catalyst 使用 `UIAppFonts` 数组，macOS 使用 `ATSApplicationFontsPath` 并给出字体所在目录。这两个键不能混用。
+Dynamic Type（动态字体）允许用户调整文字大小。在支持用户调整 Dynamic Type 的平台上，SwiftUI 可随设置缩放自定义字体；macOS 上用户不能更改 `dynamicTypeSize`，它也不影响文本尺寸。先将有分发授权的字体文件加入目标并确认 target membership（目标成员资格）；然后按平台注册资源。iOS、iPadOS、watchOS、tvOS、visionOS 与 Mac Catalyst 使用 `UIAppFonts` 数组，其元素是包内相对文件路径并包含扩展名，例如 `Fonts/Brand.ttf`；macOS 使用 `ATSApplicationFontsPath`，值相对于 app bundle 的 `Resources` 目录，例如 `Fonts/`。这两个键不能混用。
 
 Xcode 常由 target build settings（目标构建设置）生成最终的应用信息属性列表；项目里没有单独可见的 `Info.plist` 文件并不代表没有应用信息列表。编辑应用信息时，先选中项目和 app target，再查看 Info 页支持的键；若项目手动维护 plist，就在 Build Settings 检查生成开关与实际来源，避免只改了不会进入 app bundle 的文件。
 
@@ -117,9 +123,9 @@ Image(systemName: "phone.fill")
 使用 SF Symbols app 查找名称并核对部署目标。符号名称和变体会随系统与符号库版本变化；若需要支持较旧系统，检查该符号的最低目标版本并准备合适的替代资源。
 
 > [!info]- 来源
-> - **SwiftUI 图像资源、缩放、比例与裁剪**：Apple SwiftUI “Image”“Fitting Images into Available Space”；[Image](https://developer.apple.com/documentation/swiftui/image)及[适配图像空间](https://developer.apple.com/documentation/swiftui/fitting-images-into-available-space)，核对日期 2026-11-06。
-> - **UIKit 图像对象与旧 image literal 对照**：Apple UIKit 的 `UIImage(imageLiteralResourceName:)`；[UIImage 初始化器](https://developer.apple.com/documentation/uikit/uiimage/init%28imageliteralresourcename%3A%29)，核对日期 2026-11-06。
-> - **安全区背景、前景样式与弃用状态**：Apple SwiftUI “Adding a Background to Your View”“ignoresSafeArea”“foregroundColor(_:)”；[背景](https://developer.apple.com/documentation/swiftui/adding-a-background-to-your-view)、[安全区](https://developer.apple.com/documentation/swiftui/view/ignoressafearea%28_%3Aedges%3A%29)、[前景颜色](https://developer.apple.com/documentation/swiftui/view/foregroundcolor%28_%3A%29)及[前景样式](https://developer.apple.com/documentation/swiftui/view/foregroundstyle%28_%3A_%3A_%3A%29)，核对日期 2026-11-06。
-> - **字体授权资源、平台 plist 键、PostScript 名称与 Dynamic Type**：Apple SwiftUI “Applying Custom Fonts to Text”与 bundle property-list reference；[应用自定义字体](https://developer.apple.com/documentation/swiftui/applying-custom-fonts-to-text)、[UIAppFonts](https://developer.apple.com/documentation/bundleresources/information-property-list/uiappfonts)、[ATSApplicationFontsPath](https://developer.apple.com/documentation/bundleresources/information-property-list/atsapplicationfontspath)，核对日期 2026-11-06。
-> - **Xcode 生成应用信息属性列表**：[管理应用信息属性列表值](https://developer.apple.com/documentation/bundleresources/managing-your-app-s-information-property-list)，核对日期 2026-11-06。
-> - **系统符号名称与版本检查**：Apple “Configuring and Displaying Symbol Images in Your UI”；[配置与显示系统符号](https://developer.apple.com/documentation/uikit/configuring-and-displaying-symbol-images-in-your-ui)，核对日期 2026-11-06。
+> - **SwiftUI 图像资源、缩放、比例、形状遮罩与覆盖层**：Apple SwiftUI “Image”“Fitting Images into Available Space”及 `clipShape`、`overlay(alignment:content:)` API；[Image](https://developer.apple.com/documentation/swiftui/image)、[适配图像空间](https://developer.apple.com/documentation/swiftui/fitting-images-into-available-space)、[形状遮罩](https://developer.apple.com/documentation/swiftui/view/clipshape%28_%3Astyle%3A%29)及[覆盖层](https://developer.apple.com/documentation/swiftui/view/overlay%28alignment%3Acontent%3A%29)，核对日期 2026-11-13。
+> - **UIKit 图像对象与旧 image literal 对照**：Apple UIKit 的 `UIImage(imageLiteralResourceName:)`；[UIImage 初始化器](https://developer.apple.com/documentation/uikit/uiimage/init%28imageliteralresourcename%3A%29)，核对日期 2026-11-13。
+> - **安全区背景、前景样式与弃用状态**：Apple SwiftUI “Adding a Background to Your View”“ignoresSafeArea”“foregroundColor(_:)”与弃用修饰符列表；[背景](https://developer.apple.com/documentation/swiftui/adding-a-background-to-your-view)、[安全区](https://developer.apple.com/documentation/swiftui/view/ignoressafearea%28_%3Aedges%3A%29)、[前景颜色](https://developer.apple.com/documentation/swiftui/view/foregroundcolor%28_%3A%29)、[前景样式](https://developer.apple.com/documentation/swiftui/view/foregroundstyle%28_%3A%29)及[弃用修饰符](https://developer.apple.com/documentation/swiftui/view-deprecated)，核对日期 2026-11-13。
+> - **字体授权资源、平台 plist 键、PostScript 名称与 Dynamic Type**：Apple SwiftUI “Applying Custom Fonts to Text”、`dynamicTypeSize` API 与 bundle property-list reference；[应用自定义字体](https://developer.apple.com/documentation/swiftui/applying-custom-fonts-to-text)、[Dynamic Type 大小](https://developer.apple.com/documentation/swiftui/environmentvalues/dynamictypesize)、[UIAppFonts](https://developer.apple.com/documentation/bundleresources/information-property-list/uiappfonts)、[ATSApplicationFontsPath](https://developer.apple.com/documentation/bundleresources/information-property-list/atsapplicationfontspath)，核对日期 2026-11-13。
+> - **Xcode 生成应用信息属性列表**：[管理应用信息属性列表值](https://developer.apple.com/documentation/bundleresources/managing-your-app-s-information-property-list)，核对日期 2026-11-13。
+> - **系统符号名称与版本检查**：Apple “Configuring and Displaying Symbol Images in Your UI”；[配置与显示系统符号](https://developer.apple.com/documentation/uikit/configuring-and-displaying-symbol-images-in-your-ui)，核对日期 2026-11-13。

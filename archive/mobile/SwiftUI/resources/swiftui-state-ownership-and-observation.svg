@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1000" viewBox="0 0 1400 1000" role="img" aria-labelledby="title desc">
+  <title id="title">SwiftUI 状态的所有权、Binding 写回与 Observation 依赖</title>
+  <desc id="desc">上图：父视图以 State 保存 number，向子视图传 Binding，点击后写回同一存储。下图：父视图以 State 持有 Observable 模型并注入环境，读取 title 的子视图建立该属性的依赖。</desc>
+  <defs>
+    <marker id="blueArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12z" fill="#286B9A"/>
+    </marker>
+    <marker id="orangeArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12z" fill="#B76527"/>
+    </marker>
+    <marker id="purpleArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12z" fill="#7153A6"/>
+    </marker>
+    <style>
+      .ink{fill:#203442;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .muted{fill:#526776;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .code{fill:#203442;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+      .panel{fill:#fff;stroke:#C9D6DE;stroke-width:2}
+      .view{fill:#F7FAFC;stroke:#78909E;stroke-width:3}
+      .data{fill:#E6F1F7;stroke:#286B9A;stroke-width:3}
+      .link{stroke:#286B9A;stroke-width:4;fill:none;marker-end:url(#blueArrow)}
+      .write{stroke:#B76527;stroke-width:4;fill:none;marker-end:url(#orangeArrow)}
+      .dependency{stroke:#7153A6;stroke-width:4;stroke-dasharray:11 8;fill:none;marker-end:url(#purpleArrow)}
+    </style>
+  </defs>
+  <rect width="1400" height="1000" fill="#F7FAFC"/>
+  <text class="ink" x="48" y="62" font-size="40" font-weight="700">谁持有值，谁能读写，谁依赖它</text>
+  <text class="muted" x="48" y="101" font-size="25">Binding 接回同一状态；Observation 记录 body 实际读取的属性。</text>
+
+  <rect class="panel" x="36" y="128" width="1328" height="370" rx="20"/>
+  <text class="ink" x="68" y="176" font-size="31" font-weight="700">Binding：子视图写回所有者的值</text>
+  <rect class="view" x="82" y="222" width="368" height="172" rx="16"/>
+  <text class="muted" x="108" y="259" font-size="23">父视图 · CounterView</text>
+  <rect class="data" x="108" y="278" width="316" height="92" rx="12"/>
+  <text class="code" x="266" y="316" font-size="28" text-anchor="middle">@State number = 0</text>
+  <text class="ink" x="266" y="352" font-size="24" text-anchor="middle">Text(number) 显示 0 → 1</text>
+
+  <rect class="view" x="950" y="222" width="368" height="172" rx="16"/>
+  <text class="muted" x="976" y="259" font-size="23">子视图 · CounterButton</text>
+  <rect class="data" x="976" y="278" width="316" height="92" rx="12"/>
+  <text class="code" x="1134" y="316" font-size="27" text-anchor="middle">@Binding var number</text>
+  <text class="ink" x="1134" y="352" font-size="24" text-anchor="middle">点击：number += 1</text>
+
+  <path class="link" d="M450 292H950"/>
+  <rect x="632" y="258" width="138" height="32" rx="8" fill="#fff"/>
+  <text class="muted" x="701" y="282" font-size="22" text-anchor="middle">传入 $number</text>
+  <path class="write" d="M950 354H450"/>
+  <rect x="620" y="359" width="162" height="32" rx="8" fill="#fff"/>
+  <text class="muted" x="701" y="383" font-size="22" text-anchor="middle">写回同一存储</text>
+  <text class="muted" x="700" y="452" font-size="23" text-anchor="middle">Binding 是现有值的读写连接，不会在子视图另存一份 number。</text>
+
+  <rect class="panel" x="36" y="520" width="1328" height="440" rx="20"/>
+  <text class="ink" x="68" y="568" font-size="31" font-weight="700">Observation：读取属性建立依赖</text>
+  <rect class="view" x="82" y="605" width="410" height="220" rx="16"/>
+  <text class="muted" x="108" y="642" font-size="23">所有者 · ModernOwner</text>
+  <text class="code" x="287" y="683" font-size="27" text-anchor="middle">@State model</text>
+  <rect class="data" x="117" y="704" width="340" height="92" rx="12"/>
+  <text class="code" x="287" y="741" font-size="26" text-anchor="middle">@Observable</text>
+  <text class="ink" x="287" y="777" font-size="24" text-anchor="middle">title = "Sample"</text>
+
+  <rect class="view" x="950" y="625" width="368" height="205" rx="16"/>
+  <text class="muted" x="976" y="662" font-size="23">后代 · ModernChild</text>
+  <text class="code" x="1134" y="704" font-size="25" text-anchor="middle">@Environment(</text>
+  <text class="code" x="1134" y="741" font-size="25" text-anchor="middle">ModernModel.self)</text>
+  <text class="ink code" x="1134" y="783" font-size="26" text-anchor="middle">Text(model.title)</text>
+
+  <path class="link" d="M492 680H950"/>
+  <rect x="634" y="647" width="176" height="32" rx="8" fill="#fff"/>
+  <text class="muted" x="722" y="671" font-size="21" text-anchor="middle">.environment(model)</text>
+  <path class="dependency" d="M1134 830V852H287V797"/>
+  <rect x="563" y="831" width="290" height="34" rx="8" fill="#fff"/>
+  <text class="muted" x="708" y="856" font-size="22" text-anchor="middle">body 读取 title → 建立依赖</text>
+  <text class="ink" x="700" y="914" font-size="23" text-anchor="middle">title 改变时，SwiftUI 更新读取该属性的视图。</text>
+</svg>

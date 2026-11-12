@@ -39,6 +39,10 @@ Text("Contact")
     .padding(8) // 外侧留白不在边框内
 ```
 
+两种写法都会把 8 pt 留白计入父布局看到的尺寸；区别是蓝色边框包住的是含留白的视图，还是只有文字的视图。
+
+![modifier 顺序示意：先 padding 再 border 时边框圈住文字与留白；先 border 再 padding 时边框只圈住文字，留白在边框外。](resources/swiftui-padding-border-order.svg)
+
 > [!example] 读 modifier 链时逐层追踪边界
 > 从内到外读第一段：矩形形状先填白色，再获得 50 点高度，再叠加图标和文字，最后整体增加系统默认留白。因此父容器看到的是带留白的完整卡片，而不是单独的文字或矩形。
 
@@ -57,6 +61,8 @@ Text("Contact")
 >     RoundedRectangle(cornerRadius: 25).fill(.white)
 > }
 > ```
+>
+> 这里先让内容的最小高度达到 50 pt，再在上下各加 8 pt 留白，因此白色背景的最小高度是 66 pt；内容更高时卡片会随内容长高。在支持 Dynamic Type 的平台上，还要检查较大字号和较长标签。
 
 ## 什么时候把一段界面抽成参数化子视图？
 
@@ -103,7 +109,7 @@ struct ContactList: View {
 
 ## Xcode 预览能验证什么？
 
-预览用给定输入在 canvas 中显示视图，帮助检查布局和不同样例；它不是运行时数据源，也不保证网络、权限、完整导航或设备行为与真实 app 一致。提供可重复的样例输入，可以更快定位布局变化：
+预览用给定输入在 canvas 中显示视图，帮助检查布局和不同样例；它不是运行时数据源，也不保证网络、权限、完整导航或设备行为与真实 app 一致。SwiftUI 的 `#Preview` 从 Xcode 15 提供，是开发工具的预览宏；它本身不要求 app 把 deployment target 提高到 iOS 17 或 macOS 14。Xcode 15 发布说明也允许 SwiftUI 预览在更早的 iOS 16、macOS 13 等系统版本上运行，但需给预览宏标出相应 `@available`，而视图中使用的 API 仍受各自可用性限制。提供可重复的样例输入，可以更快定位布局变化：
 
 ```swift
 // MARK: - Preview
@@ -116,7 +122,7 @@ struct ContactList: View {
 }
 ```
 
-较旧的工具链或不便使用预览宏的项目仍可通过 `PreviewProvider` 声明：
+旧工具链或既有预览仍会用到 `PreviewProvider`；Apple 当前已将该协议标为弃用，并建议新预览使用 `#Preview`：
 
 ```swift
 struct InfoView_Previews: PreviewProvider {
@@ -126,9 +132,10 @@ struct InfoView_Previews: PreviewProvider {
 }
 ```
 
-两种写法描述的是 Xcode 预览配置；现代项目通常用 `#Preview`。预览通过后仍要在目标平台检查交互、动态字体、资源与系统环境差异。
+两种写法都描述 Xcode 预览配置。预览通过后仍要在目标平台检查交互、动态字体、资源与系统环境差异。
 
 > [!info]- 来源
-> - **父子视图提议尺寸、返回尺寸与组合布局**：Apple SwiftUI “Laying Out a Simple View”及布局调整指南；[简单布局](https://developer.apple.com/documentation/swiftui/laying-out-a-simple-view)及[布局调整](https://developer.apple.com/documentation/swiftui/layout-adjustments)，核对日期 2026-11-06。
-> - **padding 尺寸和 modifier 顺序**：Apple SwiftUI `padding(_:)` API；[padding](https://developer.apple.com/documentation/swiftui/view/padding%28_%3A%29-68shk)，核对日期 2026-11-06。
-> - **`#Preview`、样例数据与旧 `PreviewProvider`**：Apple Xcode “Adding Previews to Your Interface Files”及 SwiftUI “Previews in Xcode”；[添加预览](https://developer.apple.com/documentation/xcode/adding-previews-to-your-interface-files)及[预览集合](https://developer.apple.com/documentation/swiftui/previews-in-xcode)，核对日期 2026-11-06。
+> - **父子视图提议尺寸、返回尺寸与组合布局**：Apple SwiftUI “Laying Out a Simple View”及布局调整指南；[简单布局](https://developer.apple.com/documentation/swiftui/laying-out-a-simple-view)及[布局调整](https://developer.apple.com/documentation/swiftui/layout-adjustments)，核对日期 2026-11-13。
+> - **padding 尺寸和 modifier 顺序**：Apple SwiftUI `padding(_:_:)` 与 `border(_:width:)` API；[padding](https://developer.apple.com/documentation/swiftui/view/padding%28_%3A_%3A%29)及[border](https://developer.apple.com/documentation/swiftui/view/border%28_%3Awidth%3A%29)，核对日期 2026-11-13。
+> - **`#Preview` 的工具链引入、旧部署目标支持与样例数据**：Apple Xcode 15 Release Notes、“Adding Previews to Your Interface Files”及 SwiftUI “Previews in Xcode”；[Xcode 15 发布说明](https://developer.apple.com/documentation/xcode-release-notes/xcode-15-release-notes/)、[添加预览](https://developer.apple.com/documentation/xcode/adding-previews-to-your-interface-files)及[预览集合](https://developer.apple.com/documentation/swiftui/previews-in-xcode)，核对日期 2026-11-13。
+> - **旧 `PreviewProvider` 的兼容用途与弃用状态**：Apple SwiftUI `PreviewProvider` API；[PreviewProvider](https://developer.apple.com/documentation/swiftui/previewprovider)，当前文档标为弃用并建议使用 preview macro，核对日期 2026-11-13。

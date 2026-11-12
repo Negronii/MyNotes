@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520" role="img" aria-labelledby="title desc">
+  <title id="title">padding 与 border 的修饰顺序</title>
+  <desc id="desc">先加 padding 再加 border，蓝框包含留白；先加 border 再加 padding，蓝框只围文字。两种写法的父布局尺寸都包含留白。</desc>
+  <defs>
+    <style>
+      .ink{fill:#203442;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .muted{fill:#526776;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .code{fill:#203442;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+      .card{fill:#fff;stroke:#C9D6DE;stroke-width:2}
+      .layout{fill:#EEF5F8;stroke:#96AAB6;stroke-width:2;stroke-dasharray:9 7}
+      .border{fill:none;stroke:#286B9A;stroke-width:5}
+    </style>
+  </defs>
+  <rect width="1400" height="520" fill="#F7FAFC"/>
+  <text class="ink" x="48" y="62" font-size="40" font-weight="700">modifier 顺序决定边框围住哪一层</text>
+  <text class="muted" x="48" y="100" font-size="25">灰色虚线是父布局尺寸（与蓝边重合时遮住）；浅蓝环带是 8 pt padding。</text>
+  <rect class="card" x="36" y="128" width="650" height="360" rx="20"/>
+  <rect class="card" x="714" y="128" width="650" height="360" rx="20"/>
+  <text class="ink code" x="66" y="176" font-size="25">Text → padding(8) → border(.blue)</text>
+  <text class="ink code" x="744" y="176" font-size="25">Text → border(.blue) → padding(8)</text>
+
+  <rect class="layout" x="155" y="225" width="360" height="135" rx="8"/>
+  <rect x="179" y="249" width="312" height="87" rx="4" fill="#D9EAF3"/>
+  <rect class="border" x="155" y="225" width="360" height="135" rx="8"/>
+  <text class="muted" x="167" y="386" font-size="23">边框圈住文字 + 留白</text>
+  <text class="ink" x="335" y="301" font-size="31" text-anchor="middle">Contact</text>
+  <text class="muted" x="335" y="427" font-size="22" text-anchor="middle">父布局尺寸包含 padding</text>
+
+  <rect class="layout" x="833" y="225" width="360" height="135" rx="8"/>
+  <rect x="857" y="249" width="312" height="87" rx="4" fill="#D9EAF3"/>
+  <rect class="border" x="857" y="249" width="312" height="87" rx="4"/>
+  <text class="muted" x="845" y="386" font-size="23">边框只圈住文字；留白在外</text>
+  <text class="ink" x="1013" y="301" font-size="31" text-anchor="middle">Contact</text>
+  <text class="muted" x="1013" y="427" font-size="22" text-anchor="middle">父布局尺寸同样包含 padding</text>
+</svg>

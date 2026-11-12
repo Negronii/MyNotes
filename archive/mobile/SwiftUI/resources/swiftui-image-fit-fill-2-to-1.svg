@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="650" viewBox="0 0 1400 650" role="img" aria-labelledby="title desc">
+  <title id="title">2:1 图像怎样放进 1:1 方框</title>
+  <desc id="desc">Fit 保留整幅图，在方框上下留白；fill 保持比例并填满方框，左右各裁掉缩放后图宽的四分之一。</desc>
+  <defs>
+    <clipPath id="fitFrame"><rect x="190" y="230" width="300" height="300" rx="12"/></clipPath>
+    <g id="landscape">
+      <rect width="600" height="300" fill="#CDEBFA"/>
+      <rect y="196" width="600" height="104" fill="#D5EACB"/>
+      <circle cx="485" cy="75" r="35" fill="#F1B84B"/>
+      <path d="M0 218 132 95l122 123z" fill="#6286A6"/>
+      <path d="m150 218 166-153 170 153z" fill="#466C8A"/>
+      <path d="m251 218 138-122 141 122z" fill="#7899AE"/>
+      <path d="M0 245c92-37 165-30 260 3s201 30 340-4v56H0z" fill="#86B58D"/>
+      <path d="M0 271c105-29 207-18 309 8s185 23 291-8v29H0z" fill="#6E9F77"/>
+    </g>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10z" fill="#385E78"/>
+    </marker>
+    <style>
+      .ink{fill:#203442;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .muted{fill:#526776;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .card{fill:#fff;stroke:#C9D6DE;stroke-width:2}
+      .frameOutline{fill:none;stroke:#385E78;stroke-width:4}
+      .source{fill:none;stroke:#385E78;stroke-width:3;stroke-dasharray:10 8}
+    </style>
+  </defs>
+  <rect width="1400" height="650" fill="#F7FAFC"/>
+  <text class="ink" x="48" y="62" font-size="40" font-weight="700">2:1 图像进入 1:1 方框</text>
+  <text class="muted" x="48" y="98" font-size="25">两种模式都保留比例；差别是让整幅图进框，还是让图像铺满框。</text>
+
+  <rect class="card" x="36" y="125" width="650" height="490" rx="20"/>
+  <rect class="card" x="714" y="125" width="650" height="490" rx="20"/>
+  <text class="ink" x="66" y="172" font-size="32" font-weight="700">.fit · 整幅图可见</text>
+  <text class="muted" x="66" y="207" font-size="24">目标框 150 × 150 pt</text>
+  <text class="ink" x="744" y="172" font-size="32" font-weight="700">.fill · 填满后裁切</text>
+  <text class="muted" x="744" y="207" font-size="24">目标框 150 × 150 pt</text>
+
+  <rect x="190" y="230" width="300" height="300" rx="12" fill="#EEF2F5"/>
+  <svg x="190" y="305" width="300" height="150" viewBox="0 0 600 300" preserveAspectRatio="none">
+    <use href="#landscape"/>
+  </svg>
+  <rect x="190" y="230" width="300" height="300" rx="12" class="frameOutline"/>
+  <text class="muted" x="340" y="480" font-size="22" text-anchor="middle">上下各留 37.5 pt</text>
+  <text class="ink" x="340" y="570" font-size="24" text-anchor="middle">显示尺寸：150 × 75 pt</text>
+
+  <svg x="760" y="230" width="600" height="300" viewBox="0 0 600 300" preserveAspectRatio="none">
+    <use href="#landscape"/>
+  </svg>
+  <rect x="760" y="230" width="150" height="300" fill="#E6EDF1" fill-opacity="0.72"/>
+  <rect x="1210" y="230" width="150" height="300" fill="#E6EDF1" fill-opacity="0.72"/>
+  <rect x="760" y="230" width="600" height="300" class="source"/>
+  <rect x="910" y="230" width="300" height="300" rx="12" class="frameOutline"/>
+  <path d="M825 278v-25h65" stroke="#385E78" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1295 278v-25h-65" stroke="#385E78" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <text class="muted" x="1060" y="570" font-size="24" text-anchor="middle">显示尺寸：300 × 150 pt；每侧裁 75 pt</text>
+  <text class="ink" x="1060" y="600" font-size="22" text-anchor="middle">方框内可见面积 = 整幅图的一半</text>
+</svg>

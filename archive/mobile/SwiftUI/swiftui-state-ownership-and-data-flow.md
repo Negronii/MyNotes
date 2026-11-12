@@ -42,17 +42,27 @@ struct CounterButton: View {
 
 Observation（观察框架）从 iOS 17、iPadOS 17、macOS 14、tvOS 17 与 watchOS 10 开始受 SwiftUI 支持。把引用模型声明为 `@Observable`，再由所有者视图用 `@State` 保存。SwiftUI 根据各视图 body 实际读取的可观察属性建立依赖；模型属性改变时，只需更新依赖该属性的视图。
 
+下面给模型输入值的初始化方式按 Xcode 27 起的 `@State` 宏语法书写；Observation 在 SwiftUI 中的系统支持版本仍以上述系统边界为准。
+
 ```swift
 import Observation
 import SwiftUI
 
 @Observable
 final class ModernModel {
-    var title = "Sample"
+    var title: String
+
+    init(title: String) {
+        self.title = title
+    }
 }
 
 struct ModernOwner: View {
-    @State private var model = ModernModel()
+    @State private var model: ModernModel
+
+    init(initialTitle: String) {
+        self.model = ModernModel(title: initialTitle)
+    }
 
     var body: some View {
         VStack {
@@ -80,12 +90,18 @@ struct ModernEditor: View {
 }
 ```
 
-这里所有者保存模型；`.environment(model)` 将它提供给容器及其后代；只读子视图用类型化的 `@Environment(ModernModel.self)` 读取；需要把模型属性接入控件时，子视图用 `@Bindable` 创建 `TextField` 所需的绑定。
+这里所有者保存模型；`.environment(model)` 将它提供给容器及其后代；此例中负责显示标题的子视图用类型化的 `@Environment(ModernModel.self)` 读取。这个引用在其他需要编辑的子视图中仍可修改；`@Bindable` 的作用是为控件创建属性绑定。一次具体写回是：`ModernOwner(initialTitle: "Sample")` 建立标题为 `Sample` 的模型；`ModernEditor` 的 `TextField` 通过 `$model.title` 把输入 `Edited` 写回同一模型，`ModernChild` 读取 `model.title` 后显示 `Edited`。
+
+`initialTitle` 只用来创建该身份第一次拥有的模型，不是持续同步规则。同一身份下，调用者后来把输入改成 `New seed`，`@State` 仍保存已经编辑为 `Edited` 的模型。若新输入代表不同联系人、且应重置其局部状态，就在所有者边界用稳定的联系人 ID 改变身份，例如 `.id(contact.id)`；若仍是同一联系人而标题要跟随外部数据，则显式定义输入变化时如何更新 `model.title`，不要依赖 `@State` 再跑初始值。
 
 非可选的 `@Environment(ModernModel.self)` 假设祖先已经用 `.environment(model)` 注入该模型。缺少注入时，SwiftUI 会在运行时抛出异常。检查 app、scene 或父视图边界，确保注入与读取的类型一致。
 
-> [!warning] `@State` 不会替你延迟昂贵的初始化
-> SwiftUI 依据视图身份保留状态，但 View 值本身仍可能反复初始化。状态属性的默认表达式也可能随 View 初始化而求值；不要在其中启动网络请求或执行磁盘读写。Apple 建议把昂贵对象的创建延后到适当的生命周期任务。
+![状态传递示意：左侧父视图以 @State 保存 number，向子视图传 Binding，点击后写回同一存储；右侧父视图持有 @Observable 模型并注入环境，读取 title 的子视图建立该属性的依赖。](resources/swiftui-state-ownership-and-observation.svg)
+
+_Binding 是现有数据源的读写连接；Observation 视图依赖来自 body 实际读取的属性。_
+
+> [!warning] `@State` 默认值不要承载副作用
+> 把编译器和运行系统版本一起看：Xcode 26 及更早工具链使用 `@State` 属性包装器，类模型的声明初始值可能在每次重建 `View` 值时重新计算；即使同一 identity 的状态存储继续保留原模型，昂贵对象仍可能被重复构造。Xcode 27 起改用 `@State` 宏，使这类初始值惰性创建；Apple 说明该优化回移到 iOS 17、macOS 14 与同代系统。运行在更早系统时，不要依赖这项惰性优化；不据此推断其内部实现。网络请求、磁盘访问等 I/O 仍应放在 `.task` 等生命周期任务中。identity 改变或状态存储重建时，新的初始状态会再次建立。
 
 ## 既有 `ObservableObject` 项目怎样维护？
 
@@ -127,8 +143,8 @@ struct ModernEditor: View {
 仍需支持较早系统或维护现有 `ObservableObject` 模型时，沿用 `@StateObject` 所有、`@ObservedObject` 传入，或由祖先调用 `.environmentObject(_:)` 注入并用 `@EnvironmentObject` 读取的方案。选择取决于部署目标、模型采用的观察机制，以及视图是否拥有或只接收数据。
 
 > [!info]- 来源
-> - **视图 identity 与状态生命周期**：Apple WWDC21 “Demystify SwiftUI”，说明 View 值可重建而状态存储跟随 identity；[WWDC21 10022](https://developer.apple.com/videos/play/wwdc2021/10022/)，核对日期 2026-11-06。
-> - **`@State` 与 `@Binding` 的数据所有权和双向连接**：Apple SwiftUI “Managing User Interface State”“Binding”；[状态管理](https://developer.apple.com/documentation/swiftui/managing-user-interface-state)及[Binding](https://developer.apple.com/documentation/swiftui/binding)，核对日期 2026-11-06。
-> - **Observation 的系统版本边界、属性依赖追踪与环境读取**：Apple SwiftUI “Migrating from the Observable Object protocol to the Observable macro”“Managing Model Data in Your App”，列明 iOS 17/iPadOS 17/macOS 14/tvOS 17/watchOS 10 起支持；[迁移指南](https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro)及[模型数据](https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app)，核对日期 2026-11-06。
-> - **新 Observation 对象的 `@State`、`@Bindable` 与环境注入**：Apple SwiftUI `State`、`Binding`、`environment(_ object:)` API；[State](https://developer.apple.com/documentation/swiftui/state)、[Binding](https://developer.apple.com/documentation/swiftui/binding)及[环境对象注入](https://developer.apple.com/documentation/swiftui/view/environment%28_%3A%29)，核对日期 2026-11-06。
-> - **既有 `ObservableObject` 的所有者、输入模型与环境对象**：Apple SwiftUI `StateObject`、`ObservedObject` 与 `EnvironmentObject` API；[StateObject](https://developer.apple.com/documentation/swiftui/stateobject)、[ObservedObject](https://developer.apple.com/documentation/swiftui/observedobject)及[EnvironmentObject](https://developer.apple.com/documentation/swiftui/environmentobject)，核对日期 2026-11-06。
+> - **视图 identity 与状态生命周期**：Apple WWDC21 “Demystify SwiftUI”，说明 View 值可重建而状态存储跟随 identity；[WWDC21 10022](https://developer.apple.com/videos/play/wwdc2021/10022/)，核对日期 2026-11-13。
+> - **`@State`、`@Binding` 的数据所有权和双向连接，以及 Xcode 27 的 `@State` 宏变化与回移系统**：Apple SwiftUI “Managing User Interface State”、WWDC26 “What’s new in SwiftUI”、iOS & iPadOS 27 Release Notes 与 Technote “Resolving SwiftUI source incompatibilities for State and ContentBuilder”；[状态管理](https://developer.apple.com/documentation/swiftui/managing-user-interface-state)、[State](https://developer.apple.com/documentation/swiftui/state)、[State(wrappedValue:) 宏](https://developer.apple.com/documentation/swiftui/state%28wrappedvalue%3A%29)、[Binding](https://developer.apple.com/documentation/swiftui/binding)、[WWDC26](https://developer.apple.com/videos/play/wwdc2026/269/)、[iOS & iPadOS 27 发布说明](https://developer.apple.com/documentation/ios-ipados-release-notes/ios-ipados-27-release-notes)及[State 与 ContentBuilder 兼容性说明](https://developer.apple.com/documentation/technotes/tn3211-resolving-swiftui-source-incompatibilities-for-state-and-contentbuilder)，核对日期 2026-11-13。
+> - **Observation 的系统版本边界、属性依赖追踪与环境读取**：Apple SwiftUI “Migrating from the Observable Object protocol to the Observable macro”“Managing Model Data in Your App”，列明 iOS 17/iPadOS 17/macOS 14/tvOS 17/watchOS 10 起支持；[迁移指南](https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro)及[模型数据](https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app)，核对日期 2026-11-13。
+> - **新 Observation 对象的 `@State`、`@Bindable` 与环境注入**：Apple SwiftUI `State`、`Binding`、`Environment` API；[State](https://developer.apple.com/documentation/swiftui/state)、[Binding](https://developer.apple.com/documentation/swiftui/binding)、[Environment](https://developer.apple.com/documentation/swiftui/environment)及[环境对象注入](https://developer.apple.com/documentation/swiftui/view/environment%28_%3A%29)，核对日期 2026-11-13。
+> - **既有 `ObservableObject` 的所有者、输入模型与环境对象**：Apple SwiftUI `StateObject`、`ObservedObject` 与 `EnvironmentObject` API；[StateObject](https://developer.apple.com/documentation/swiftui/stateobject)、[ObservedObject](https://developer.apple.com/documentation/swiftui/observedobject)及[EnvironmentObject](https://developer.apple.com/documentation/swiftui/environmentobject)，核对日期 2026-11-13。
