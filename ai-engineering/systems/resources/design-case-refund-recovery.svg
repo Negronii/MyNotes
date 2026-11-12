@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1070" viewBox="0 0 900 1070" role="img" aria-label="退款未决操作的只读恢复：从已知或候选退款ID取可信对象，核验完整关联；关联不清继续未知">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="1070" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<rect x="115" y="25" width="670" height="105" rx="12" fill="#fff5e9" stroke="#e8cda7" stroke-width="2"/>
+<text x="450.0" y="60" text-anchor="middle" font-size="25" font-weight="600">R-204：未决退款进入只读核对</text>
+<text x="450.0" y="98" text-anchor="middle" font-size="23">保留原参数与 K-R204，不新建另一笔退款</text>
+<path d="M450,141 L450,180 L240,180 L240,222" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M450,180 L675,180 L675,222" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="35" y="238" width="410" height="140" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="240.0" y="273" text-anchor="middle" font-size="25" font-weight="600">已有退款 ID</text>
+<text x="240.0" y="311" text-anchor="middle" font-size="23">例如 re_demo_204</text>
+<text x="240.0" y="343" text-anchor="middle" font-size="23">按该 ID 读取提供方对象</text>
+<rect x="475" y="238" width="390" height="140" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="670.0" y="273" text-anchor="middle" font-size="25" font-weight="600">尚无退款 ID</text>
+<text x="670.0" y="311" text-anchor="middle" font-size="23">验证事件 / 原支付对账</text>
+<text x="670.0" y="343" text-anchor="middle" font-size="23">先找候选 ID，再读取</text>
+<path d="M240,390 L240,440 L670,440 L670,390" fill="none" stroke="#7086a3" stroke-width="3"/>
+<circle cx="450" cy="440" r="4" fill="#7086a3"/>
+<path d="M450,440 L450,486" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="65" y="502" width="770" height="173" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="537" text-anchor="middle" font-size="25" font-weight="600">提供方 API 返回 → 核对完整关联</text>
+<text x="450.0" y="575" text-anchor="middle" font-size="23">账户 + P-73 + 2000 + usd</text>
+<text x="450.0" y="607" text-anchor="middle" font-size="23">R-204 的操作关联（本例写入 metadata）</text>
+<text x="450.0" y="639" text-anchor="middle" font-size="23">仅“同一金额”不能排除另一笔退款</text>
+<path d="M450,687 L450,735 L240,735 L240,787" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M450,735 L670,735 L670,787" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="235" y="719" text-anchor="middle" font-size="22">取得可信且匹配的对象</text>
+<text x="675" y="719" text-anchor="middle" font-size="22">对象取不到 / 关联不清</text>
+<rect x="35" y="803" width="410" height="174" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="240.0" y="838" text-anchor="middle" font-size="25" font-weight="600">绑定 re_demo_204 → R-204</text>
+<text x="240.0" y="876" text-anchor="middle" font-size="23">pending 仍是处理中</text>
+<text x="240.0" y="908" text-anchor="middle" font-size="23">succeeded：支付方已确认</text>
+<text x="240.0" y="940" text-anchor="middle" font-size="23">到账以原支付方式为准</text>
+<rect x="475" y="803" width="390" height="174" rx="12" fill="#fff5e9" stroke="#e8cda7" stroke-width="2"/>
+<text x="670.0" y="838" text-anchor="middle" font-size="25" font-weight="600">保持 OUTCOME_UNKNOWN</text>
+<text x="670.0" y="876" text-anchor="middle" font-size="23">不推断退款失败</text>
+<text x="670.0" y="908" text-anchor="middle" font-size="23">继续有界对账或交人工</text>
+<text x="670.0" y="940" text-anchor="middle" font-size="23">不换键创建新退款</text>
+<text x="450" y="1030" text-anchor="middle" font-size="22">此图只读恢复；同键写重放的保留期与参数条件见正文。</text>
+</g>
+</svg>

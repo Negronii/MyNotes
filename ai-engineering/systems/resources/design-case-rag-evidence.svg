@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1035" viewBox="0 0 900 1035" role="img" aria-label="同一规则查询依次通过当前版本与权限、检索、两次发送前输入复核和主张引用检查；旧版本不作回答依据">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="1035" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<rect x="145" y="25" width="610" height="110" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="60" text-anchor="middle" font-size="25" font-weight="600">输入：查询当前 CI-RETRY 规则</text>
+<text x="450.0" y="98" text-anchor="middle" font-size="23">“断言失败的构建可以自动重跑吗？”</text>
+<path d="M450,145 L450,190" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="55" y="205" width="790" height="136" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="240" text-anchor="middle" font-size="25" font-weight="600">权威目录 + 已认证身份 → 当前可读范围</text>
+<text x="450.0" y="278" text-anchor="middle" font-size="23">v3：当前有效，调用者可读</text>
+<text x="450.0" y="310" text-anchor="middle" font-size="23">v2：已撤回，排除；无权限或无法核验 → 停止</text>
+<path d="M450,352 L450,397" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="55" y="412" width="790" height="137" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="447" text-anchor="middle" font-size="25" font-weight="600">检索 → v3#assertion-failure</text>
+<text x="450.0" y="485" text-anchor="middle" font-size="23">找到：“先调查断言失败，不自动重试”</text>
+<text x="450.0" y="517" text-anchor="middle" font-size="23">索引未就绪 → 同权限直读 v3；仍取不到 → 不补答</text>
+<path d="M450,560 L450,605" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="55" y="620" width="790" height="137" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="655" text-anchor="middle" font-size="25" font-weight="600">每次发送前：复核当前权限、版本与位置</text>
+<text x="450.0" y="693" text-anchor="middle" font-size="23">发给外部重排前 → 核对候选</text>
+<text x="450.0" y="725" text-anchor="middle" font-size="23">发给模型前 → 核对组装后的实际证据</text>
+<path d="M450,768 L450,813" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="55" y="828" width="790" height="174" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="863" text-anchor="middle" font-size="25" font-weight="600">生成答案 → 核验主张与引用</text>
+<text x="450.0" y="901" text-anchor="middle" font-size="23">答案：“不能自动重跑，应先调查”</text>
+<text x="450.0" y="933" text-anchor="middle" font-size="23">v3 的本次输入段落确实支持 → 可以回答</text>
+<text x="450.0" y="965" text-anchor="middle" font-size="23">证据不支持或引用不对应 → 修正或停止</text>
+</g>
+</svg>
