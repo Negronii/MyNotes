@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="940" viewBox="0 0 1000 940" role="img" aria-labelledby="title desc">
+  <title id="title">从用户结果到事故复验</title>
+  <desc id="desc">每步以明确的输入开始，并产出后续判断所需的证据：用户结果、分母、阶段线索、复验结果。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="7" refY="7" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L13,7 L1,13 z" fill="#355c7d"/>
+    </marker>
+    <style>
+      .box { fill:#f4f8fb; stroke:#355c7d; stroke-width:3; }
+      .head { fill:#17324d; font:700 32px "Noto Sans CJK SC", "PingFang SC", sans-serif; }
+      .body { fill:#1f2933; font:400 30px "Noto Sans CJK SC", "PingFang SC", sans-serif; }
+      .connector { stroke:#355c7d; stroke-width:4; fill:none; marker-end:url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1000" height="940" fill="#ffffff"/>
+  <rect class="box" x="60" y="30" width="880" height="160" rx="18"/>
+  <text class="head" x="95" y="72">1　定义真实用户结果</text>
+  <text class="body" x="95" y="118">输入：读取与导出契约</text>
+  <text class="body" x="95" y="155">输出：≤400 ms 内的正确 200 或 404；202 ≠ 完成</text>
+
+  <path class="connector" d="M500 192 L500 258"/>
+
+  <rect class="box" x="60" y="266" width="880" height="160" rx="18"/>
+  <text class="head" x="95" y="308">2　固定分母和时间边界</text>
+  <text class="body" x="95" y="354">输入：用户结果与完成期限</text>
+  <text class="body" x="95" y="391">输出：按摘要、路由、时间窗分组的好/总数</text>
+
+  <path class="connector" d="M500 428 L500 494"/>
+
+  <rect class="box" x="60" y="502" width="880" height="160" rx="18"/>
+  <text class="head" x="95" y="544">3　聚合定位，再核对事件</text>
+  <text class="body" x="95" y="590">输入：受影响摘要、路由与时间窗</text>
+  <text class="body" x="95" y="627">输出：可核对的慢/失败阶段、版本与依赖证据</text>
+
+  <path class="connector" d="M500 664 L500 730"/>
+
+  <rect class="box" x="60" y="738" width="880" height="160" rx="18"/>
+  <text class="head" x="95" y="780">4　缓解后复验用户路径</text>
+  <text class="body" x="95" y="826">输入：交叉核对的依赖与版本证据</text>
+  <text class="body" x="95" y="863">输出：安全止损；读、成熟 job、授权下载均复验</text>
+</svg>
