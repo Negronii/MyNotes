@@ -11977,51 +11977,92 @@ function AssistantMessage({ text }: { text: string }) {
 > - **动态 HTML 是独立安全边界，工具文字可由 DOM 文本接口显示：** [WHATWG DOM：`textContent`](https://dom.spec.whatwg.org/#dom-node-textcontent) 与 [DOMPurify：Security Goals & Threat Model](https://github.com/cure53/DOMPurify/wiki/Security-Goals-&-Threat-Model)，核对日期 2026-11-09。
 ## 56. JavaScript 事件总线在监听器中重入时怎样保持顺序？
 
-案例背景：报表 42 的页面收到进度更新后，会让多个界面模块同步响应。event bus (事件总线) 把发布者和订阅者隔开，但监听器也可能在分发过程中增删订阅，甚至再次发布同名事件。实现必须规定当前这次分发看哪些监听器，以及一次性监听器何时注销。
+报表 42 的进度事件会通知摘要、旧界面和恢复模块。下面用一个合成的同步事件总线示例：监听器在处理事件时可以增删订阅并再次发布同名事件。要读懂最终顺序，先区分“当前分发开始时复制的快照”与“事件总线现在保存的监听器集合”。
 
-下面的总线是应用层的 publish–subscribe (发布订阅) 模式，不是浏览器的 DOM 事件系统。它在 `emit()` 开始时复制监听器集合；分发途中发生的增删只影响之后开始的分发。`once()` 在调用用户函数前先标记并注销，因此递归 `emit()` 也不能再次执行同一个一次性监听器。
+这里的 event bus（事件总线）是应用层 publish–subscribe（发布订阅）实现，不是浏览器的文档对象模型（DOM）事件分发。示例用 Map（映射）按事件名索引一个 Set（集合）；对同一事件调用 `on` 重复注册同一个函数对象只占一个成员，Set 按插入顺序迭代。每次 emit 都先复制该事件当前的成员，再同步逐个调用快照中的函数。
 
-~~~javascript
-class EventBus {
-  events = new Map();
+### 当前分发使用自己的快照
 
-  on(type, listener) {
-    let listeners = this.events.get(type);
-    if (!listeners) this.events.set(type, listeners = new Set());
-    listeners.add(listener);
-    return () => this.off(type, listener);
-  }
-
-  once(type, listener) {
-    let fired = false;
-    const wrapper = (...args) => {
-      if (fired) return;
-      fired = true;
-      this.off(type, wrapper); // 在用户代码运行前注销
-      listener(...args);
-    };
-    return this.on(type, wrapper);
-  }
-
-  off(type, listener) {
-    const listeners = this.events.get(type);
-    if (!listeners) return;
-    listeners.delete(listener);
-    if (listeners.size === 0) this.events.delete(type);
-  }
-
-  emit(type, ...args) {
-    for (const listener of [...(this.events.get(type) ?? [])]) {
-      listener(...args);
-    }
-  }
-}
-~~~
-
-> [!example] 跟踪一次重入分发
-> 初始顺序是 `summary`、一次性 `once`、旧的 `legacy`。处理版本 10 时，`summary` 移除 `legacy`、加入 `recovery`，随后同步发布版本 11。版本 11 的分发会取一份新快照；其中的 `once` 监听器注销自己后又发布版本 12。
+> [!example]- 完整 EventBus 实现
 >
-> `v10`、`v11`、`v12` 是展示重入顺序的合成输入，不是报表 42 的服务端版本序列；SSE 示例中服务端版本 11 已是 `ready` 终态。真实报表消费者只把已接受的服务端状态交给界面，并继续按业务 `version` 拒绝旧更新。
+> ~~~javascript
+> class EventBus {
+>   events = new Map();
+>
+>   on(type, listener) {
+>     let listeners = this.events.get(type);
+>     if (!listeners) this.events.set(type, listeners = new Set());
+>     listeners.add(listener);
+>     return () => this.off(type, listener);
+>   }
+>
+>   once(type, listener) {
+>     let fired = false;
+>     const wrapper = (...args) => {
+>       if (fired) return;
+>       fired = true;
+>       this.off(type, wrapper); // 在用户代码运行前注销
+>       listener(...args);
+>     };
+>     return this.on(type, wrapper);
+>   }
+>
+>   off(type, listener) {
+>     const listeners = this.events.get(type);
+>     if (!listeners) return;
+>     listeners.delete(listener);
+>     if (listeners.size === 0) this.events.delete(type);
+>   }
+>
+>   emit(type, ...args) {
+>     for (const listener of [...(this.events.get(type) ?? [])]) {
+>       listener(...args);
+>     }
+>   }
+> }
+> ~~~
+
+`once(type, listener)` 每次注册都会创建新的包装函数和独立的 `fired` 状态；因此对同一事件两次调用 `once`，Set 中会有两个包装器，原回调最多分别调用一次。
+
+当一次 emit 开始时，表达式 `[...(this.events.get(type) ?? [])]` 立即建立数组快照。此后本次循环只沿该数组继续：
+
+- 监听器从 Set 删除后，若它已在本次快照中，当前这次仍可能调用它。
+- 新监听器不会进入已经建立的快照，但下一个 emit（包括同步嵌套的 emit）会从更新后的 Set 建立新快照。
+- 若删除的是最后一个成员，off 也删除 Map 中该事件名；旧数组快照仍独立存在。
+
+所以，“注销成功”表示后续快照不再包含该监听器，不等同于把所有已经创建的分发快照都改写。
+
+### 逐层跟踪 v10、v11 与 v12
+
+开始时顺序为 `summary`、一次性监听器 `once`、`legacy`。处理 `v10` 时，`summary` 移除 `legacy`、加入 `recovery`，然后同步发布 `v11`。处理 `v11` 时，`once` 先注销包装器，再运行用户回调；回调同步发布 `v12`。
+
+> [!example] 三层同步调用怎样返回
+> 报表 42 的服务端流可能报告 `version: 11` 已到 `ready` 终态；消费者仍须按业务版本拒绝旧状态，事件总线不会排序业务版本。这里的 `v10`、`v11`、`v12` 是区分三次合成本地发布的标签，不是服务端事件序列；本例只观察同步调用顺序。
+>
+> 每层快照和回调变化如下：
+>
+> | 当前分发 | 本层开始时的快照 | 本层发生的变化与返回顺序 |
+> | --- | --- | --- |
+> | `v10` | `[summary, once, legacy]` | `summary v10` 删除实时 Set 中的 `legacy`，加入 `recovery`，再进入 `v11`。外层旧快照不变。 |
+> | `v11` | `[summary, once, recovery]` | `summary v11` 后执行 `once`。包装器先设 `fired = true` 并注销自己，再调用用户回调，进入 `v12`。 |
+> | `v12` | `[summary, recovery]` | 实时 Set 已不含 `once`，依次记录 `summary v12`、`recovery v12`，然后返回 `v11`。 |
+> | 返回 `v11`、`v10` | 各层仍继续原快照 | `v11` 接着记录 `recovery v11`。回到 `v10` 后，旧快照还会碰到 `once` 包装器，但 `fired` 使其直接返回；随后旧快照中的 `legacy` 仍记录 `legacy v10`。 |
+>
+> 日志的先后顺序如下；缩进表示嵌套调用深度，方便与上表对照：
+>
+> ```text
+> summary v10
+>   summary v11
+>   once v11
+>     summary v12
+>     recovery v12
+>   recovery v11
+> legacy v10
+> ```
+>
+> 在本例中，先注销包装器会让之后的 `v12` 快照不再包含它；`fired` 则保护仍持有该包装器的 `v10` 旧快照，阻止它再次进入用户函数。若用户回调抛错，本实现仍把该次 `once` 视为已消费，因为 `fired` 和注销都发生在调用用户代码之前。
+
+> [!example]- 完整重入输入代码
 >
 > ~~~javascript
 > const bus = new EventBus();
@@ -12047,20 +12088,27 @@ class EventBus {
 > });
 > bus.on("report:updated", legacy);
 > bus.emit("report:updated", { reportId: 42, version: 10 });
-> console.log(trace);
+> console.log(trace.join(" → "));
 > ~~~
->
-> 输出顺序是 `summary v10 → summary v11 → once v11 → summary v12 → recovery v12 → recovery v11 → legacy v10`。版本 10 开始的旧快照仍含 `legacy`，所以即使它已注销，最后仍会执行一次；新加入的 `recovery` 不在版本 10 的快照中，但会出现在后续的快照中。`once` 先注销，避免后续新快照再次包含它；外层版本 10 的快照仍持有包装器，真正阻止它第二次调用用户函数的是 `fired` 检查。
 
-这个行为来自本实现的快照策略，不是所有事件总线的通用保证。同步监听器抛错时，此实现会让错误向 `emit()` 调用者传播，并停止后续监听器；异步监听器返回的 Promise 不会被等待。生产实现应按需要另行定义错误隔离、异步处理和监听器移除语义。
+### 选择事件总线还是观察者模式
 
-若一个对象自然拥有订阅者，例如数据模型通知观察者，Observer (观察者模式) 让对象直接管理订阅关系。若多个模块只通过主题名沟通，事件总线用代理降低直接耦合，但会增加追踪事件来源的成本。两者都可把流式报表状态更新送到本地界面；跨标签页则需使用浏览上下文间的通信机制。
+Observer（观察者模式）通常由拥有状态的对象直接保存并通知观察者；事件总线则让发布者和订阅者通过事件名及中间总线通信。前者容易沿对象找到订阅关系，后者减少模块间直接引用，却更依赖明确的事件名、载荷契约和追踪工具。本节比较的是同一浏览上下文中的两种内存实现；跨标签页消息还需要浏览上下文间通信机制。
+
+示例保留几项实现边界：
+
+- 分发是同步的；嵌套 `emit` 会先完成，再回到外层监听器。
+- 监听器抛出的同步异常会沿调用栈传播并停止当前循环中的后续监听器。
+- 返回 Promise 的监听器不会被等待；Promise 的拒绝也不会由这个 `emit` 自动收集或处理。
+- 移除或新增订阅不会撤销其他地方已保存的旧快照。若生产实现选择直接遍历实时集合、异步队列或隔离监听器异常，结果顺序和错误契约都会不同。
+
+此页的插入顺序由 ECMAScript Set 保证；快照复制时机、同步重入和 `once` 的注销规则是这份应用实现自行选择的策略，不是所有事件总线的通用保证。文档对象模型（DOM）的事件传播、默认动作和取消规则由浏览器平台另行定义，不能从这个类推导。
 
 **延伸阅读：** [修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](#57.%20%E4%BF%AE%E6%94%B9%20DOM%20%E6%97%B6%EF%BC%8CHTMLCollection%20%E5%92%8C%20NodeList%20%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%8F%98%E5%8C%96%EF%BC%9F) 跟踪状态通知后的节点增删；[同一报表在多个标签页中怎样交换变化？](#53.%20%E5%90%8C%E4%B8%80%E6%8A%A5%E8%A1%A8%E5%9C%A8%E5%A4%9A%E4%B8%AA%E6%A0%87%E7%AD%BE%E9%A1%B5%E4%B8%AD%E6%80%8E%E6%A0%B7%E4%BA%A4%E6%8D%A2%E5%8F%98%E5%8C%96%EF%BC%9F) 介绍跨标签页消息；[DOM 事件传播如何经过节点？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F) 介绍浏览器自身的事件阶段和取消规则。
 
 > [!info]- 来源
-> - `Set` 保存不同监听函数并按插入顺序迭代；`emit()` 的快照和 `once()` 的注销策略是本文这份应用实现明确采用的规则：[ECMAScript Language Specification，Keyed Collections](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-set-objects)，2026-11-06 核对。
-> - DOM 事件的分发规则由浏览器平台定义，与上述应用层事件总线不同：[WHATWG DOM Standard，Events](https://dom.spec.whatwg.org/#events)。
+> - Set 至多保存每个不同值一次；`add` 不会重复加入相同值，`values`/`forEach` 按值的插入顺序遍历，这支持示例中快照的初始顺序：[ECMAScript 2026 §24.2、§24.2.4.1、§24.2.4.7、§24.2.4.17](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-set-objects)，核验于 2026-11-12。复制快照、`once` 包装器及异常传播是本文代码的可观察结果，不是该规范规定的事件总线语义。
+> - 浏览器 `EventTarget` 的事件分发、传播路径、监听器移除和取消机制：[WHATWG DOM Living Standard §2.9–2.11 Events](https://dom.spec.whatwg.org/#events)，核验于 2026-11-12。它是平台事件系统，与本页自建 `EventBus` 分开。
 ## 57. 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
 案例背景：报表列表准备显示新结果，先要清空现有行。Document Object Model（文档对象模型，DOM）查询能返回 `HTMLCollection`（元素集合）或 `NodeList`（节点列表）；成员是否随树变化，由具体 API 决定。若代码遍历实时集合时同时删除成员，后续索引会移动，递增索引可能跳过一行，旧行便会留在下一份结果中。
