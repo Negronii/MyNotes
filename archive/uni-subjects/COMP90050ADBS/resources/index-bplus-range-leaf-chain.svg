@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="440" viewBox="0 0 1120 440" role="img" aria-labelledby="title desc">
+  <title id="title">范围 Brandt 到 Singh 怎样沿叶链扫描</title>
+  <desc id="desc">按唯一字符串键从候选叶的 Brandt 开始，跨过有序叶链，到 Singh 项处理完即停，不必打开首键为 Srinivasan 的下一页。</desc>
+  <defs>
+    <marker id="arrow-gray" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#62758b"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#2b6496"/></marker>
+    <marker id="arrow-green" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#287a58"/></marker>
+    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#b84c45"/></marker>
+    <style>
+      text{font-family:Inter,"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#23344b}
+      .title{font-size:28px;font-weight:700}
+      .heading{font-size:24px;font-weight:700}
+      .body{font-size:24px}
+      .small{font-size:22px}
+      .key{font-size:23px;font-weight:650}
+      .muted{fill:#6c7c90}
+      .panel{fill:#f7f9fc;stroke:#c8d3e0;stroke-width:2}
+      .node{fill:#fff;stroke:#61758d;stroke-width:2.5}
+      .focus{fill:#edf7f1;stroke:#287a58;stroke-width:3}
+      .warm{fill:#fff6e7;stroke:#bc8a32;stroke-width:3}
+      .dim{fill:#f2f4f7;stroke:#b8c1cc;stroke-width:2}
+      .line-gray{fill:none;stroke:#62758b;stroke-width:3;marker-end:url(#arrow-gray)}
+      .line-blue{fill:none;stroke:#2b6496;stroke-width:3;marker-end:url(#arrow-blue)}
+      .line-green{fill:none;stroke:#287a58;stroke-width:3;marker-end:url(#arrow-green)}
+      .line-red{fill:none;stroke:#b84c45;stroke-width:3;marker-end:url(#arrow-red)}
+      .plain-gray{fill:none;stroke:#62758b;stroke-width:3}
+      .plain-green{fill:none;stroke:#287a58;stroke-width:3}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1120" height="440" fill="#ffffff"/>
+<text x="560" y="40" class="title" text-anchor="middle">完整键唯一：[Brandt, Singh] 读到上界即可停</text>
+<rect x="20" y="145" width="160" height="102" rx="8" class="warm"/>
+<text x="100.0" y="189.0" class="key" text-anchor="middle">Adams</text>
+<text x="100.0" y="219.0" class="key" text-anchor="middle">Brandt</text>
+<text x="100" y="282" class="small" text-anchor="middle" fill="#8a641d">候选页</text>
+<path d="M182 195 L201 195" class="line-green"/>
+<rect x="204" y="145" width="160" height="102" rx="8" class="focus"/>
+<text x="284.0" y="189.0" class="key" text-anchor="middle">Califieri</text>
+<text x="284.0" y="219.0" class="key" text-anchor="middle">Crick</text>
+<path d="M366 195 L385 195" class="line-green"/>
+<rect x="388" y="145" width="160" height="102" rx="8" class="focus"/>
+<text x="468.0" y="189.0" class="key" text-anchor="middle">Einstein</text>
+<text x="468.0" y="219.0" class="key" text-anchor="middle">El Said</text>
+<path d="M550 195 L569 195" class="line-green"/>
+<rect x="572" y="145" width="160" height="102" rx="8" class="focus"/>
+<text x="652.0" y="174.0" class="key" text-anchor="middle">Gold</text>
+<text x="652.0" y="204.0" class="key" text-anchor="middle">Katz</text>
+<text x="652.0" y="234.0" class="key" text-anchor="middle">Kim</text>
+<path d="M734 195 L753 195" class="line-green"/>
+<rect x="756" y="145" width="160" height="102" rx="8" class="warm"/>
+<text x="836.0" y="189.0" class="key" text-anchor="middle">Mozart</text>
+<text x="836.0" y="219.0" class="key" text-anchor="middle">Singh</text>
+<text x="836" y="282" class="small" text-anchor="middle" fill="#8a641d">含上界</text>
+<path d="M918 195 L937 195" class="line-gray" stroke-dasharray="9 7"/>
+<rect x="940" y="145" width="160" height="102" rx="8" class="dim"/>
+<text x="1020.0" y="189.0" class="key" text-anchor="middle">Srinivasan</text>
+<text x="1020.0" y="219.0" class="key" text-anchor="middle">Wu</text>
+<text x="1020" y="282" class="small" text-anchor="middle" fill="#6c7c90">下一页</text>
+<path d="M24 331 L24 348 L913 348 L913 331" fill="none" stroke="#287a58" stroke-width="3"/>
+<text x="560" y="390" class="small" text-anchor="middle" fill="#287a58">收集 Brandt…Singh（含端点）；读完 Singh 项后停止，不打开下一页</text>
+</svg>

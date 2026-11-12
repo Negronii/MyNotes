@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="760" viewBox="0 0 1000 760" role="img" aria-labelledby="title desc">
+  <title id="title">Lamport 插入怎样分裂内部页而不新建根</title>
+  <desc id="desc">加入 Lamport 后叶分裂并把 Kim 复制到父内页；五个指针的内页按课程图在 Gold 处分成三指针和两指针，Gold 插入有空位的原根。</desc>
+  <defs>
+    <marker id="arrow-gray" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#62758b"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#2b6496"/></marker>
+    <marker id="arrow-green" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#287a58"/></marker>
+    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#b84c45"/></marker>
+    <style>
+      text{font-family:Inter,"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#23344b}
+      .title{font-size:28px;font-weight:700}
+      .heading{font-size:24px;font-weight:700}
+      .body{font-size:24px}
+      .small{font-size:22px}
+      .key{font-size:23px;font-weight:650}
+      .muted{fill:#6c7c90}
+      .panel{fill:#f7f9fc;stroke:#c8d3e0;stroke-width:2}
+      .node{fill:#fff;stroke:#61758d;stroke-width:2.5}
+      .focus{fill:#edf7f1;stroke:#287a58;stroke-width:3}
+      .warm{fill:#fff6e7;stroke:#bc8a32;stroke-width:3}
+      .dim{fill:#f2f4f7;stroke:#b8c1cc;stroke-width:2}
+      .line-gray{fill:none;stroke:#62758b;stroke-width:3;marker-end:url(#arrow-gray)}
+      .line-blue{fill:none;stroke:#2b6496;stroke-width:3;marker-end:url(#arrow-blue)}
+      .line-green{fill:none;stroke:#287a58;stroke-width:3;marker-end:url(#arrow-green)}
+      .line-red{fill:none;stroke:#b84c45;stroke-width:3;marker-end:url(#arrow-red)}
+      .plain-gray{fill:none;stroke:#62758b;stroke-width:3}
+      .plain-green{fill:none;stroke:#287a58;stroke-width:3}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1000" height="760" fill="#ffffff"/>
+<text x="500" y="40" class="title" text-anchor="middle">Lamport 插入：Gold 上移到有空位的旧根</text>
+<text x="500" y="84" class="heading" text-anchor="middle">1 叶页溢出，Kim 复制到父内页</text>
+<rect x="42" y="110" width="360" height="74" rx="12" class="panel"/>
+<text x="222.0" y="155.0" class="small" text-anchor="middle">[Gold, Katz, Kim] + Lamport</text>
+<path d="M405 147 L474 147" class="line-blue"/>
+<rect x="485" y="110" width="445" height="74" rx="12" class="focus"/>
+<text x="707.5" y="155.0" class="small" text-anchor="middle">[Gold, Katz]  →  [Kim, Lamport]</text>
+<text x="500" y="224" class="heading" text-anchor="middle">2 父页暂有 5 个子指针、4 个分隔键</text>
+<rect x="65" y="270" width="80" height="78" rx="6" class="dim"/>
+<text x="105.0" y="317.0" class="small" text-anchor="middle">P₁</text>
+<rect x="145" y="270" width="165" height="78" rx="6" class="node"/>
+<text x="227.5" y="317.0" class="small" text-anchor="middle">Califieri</text>
+<rect x="310" y="270" width="80" height="78" rx="6" class="dim"/>
+<text x="350.0" y="317.0" class="small" text-anchor="middle">P₂</text>
+<rect x="390" y="270" width="165" height="78" rx="6" class="node"/>
+<text x="472.5" y="317.0" class="small" text-anchor="middle">Einstein</text>
+<rect x="555" y="270" width="80" height="78" rx="6" class="dim"/>
+<text x="595.0" y="317.0" class="small" text-anchor="middle">P₃</text>
+<rect x="635" y="270" width="125" height="78" rx="6" class="warm"/>
+<text x="697.5" y="317.0" class="small" text-anchor="middle">Gold</text>
+<rect x="760" y="270" width="80" height="78" rx="6" class="dim"/>
+<text x="800.0" y="317.0" class="small" text-anchor="middle">P₄</text>
+<rect x="840" y="270" width="105" height="78" rx="6" class="node"/>
+<text x="892.5" y="317.0" class="small" text-anchor="middle">Kim</text>
+<rect x="945" y="270" width="45" height="78" rx="6" class="dim"/>
+<text x="967.5" y="317.0" class="small" text-anchor="middle">P₅</text>
+<text x="500" y="392" class="heading" text-anchor="middle">3 在 Gold 处分裂为 3 / 2 个子指针；Gold 插入原根</text>
+<rect x="45" y="430" width="245" height="70" rx="12" class="dim"/>
+<text x="167.5" y="473.0" class="small" text-anchor="middle">旧根：[Mozart]</text>
+<path d="M297 465 L365 465" class="line-green"/>
+<rect x="375" y="420" width="300" height="88" rx="12" class="focus"/>
+<text x="525.0" y="457.0" class="small" text-anchor="middle">同一根：[Gold, Mozart]</text>
+<text x="525.0" y="487.0" class="small" text-anchor="middle">现在有 3 个子指针</text>
+<text x="830" y="467" class="small" text-anchor="middle" fill="#287a58">根未溢出</text>
+<path d="M525 510 L172 565" class="line-green"/>
+<path d="M525 510 L500 565" class="line-green"/>
+<path d="M525 510 L828 565" class="line-gray"/>
+<rect x="30" y="575" width="285" height="98" rx="12" class="node"/>
+<text x="172.5" y="602.0" class="small" text-anchor="middle">左内页</text>
+<text x="172.5" y="632.0" class="small" text-anchor="middle">[Califieri, Einstein]</text>
+<text x="172.5" y="662.0" class="small" text-anchor="middle">3 个子指针</text>
+<rect x="357" y="575" width="285" height="98" rx="12" class="node"/>
+<text x="499.5" y="602.0" class="small" text-anchor="middle">新内页</text>
+<text x="499.5" y="632.0" class="small" text-anchor="middle">[Kim]</text>
+<text x="499.5" y="662.0" class="small" text-anchor="middle">2 个子指针</text>
+<rect x="685" y="575" width="285" height="98" rx="12" class="dim"/>
+<text x="827.5" y="602.0" class="small" text-anchor="middle">原右内页</text>
+<text x="827.5" y="632.0" class="small" text-anchor="middle">[Srinivasan]</text>
+<text x="827.5" y="662.0" class="small" text-anchor="middle">2 个子指针</text>
+<text x="500" y="724" class="small" text-anchor="middle">树仍三层；只有旧根本身溢出并分裂时才增加树高</text>
+</svg>

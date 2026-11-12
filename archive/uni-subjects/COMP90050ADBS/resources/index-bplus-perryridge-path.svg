@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="590" viewBox="0 0 1000 590" role="img" aria-labelledby="title desc">
+  <title id="title">查找 Perryridge 时如何沿分隔键下行</title>
+  <desc id="desc">完整 n=3 教学树中，Perryridge 等于根分隔键，因此走右子树；再小于 Redwood，因此走左叶并在该叶命中。</desc>
+  <defs>
+    <marker id="arrow-gray" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#62758b"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#2b6496"/></marker>
+    <marker id="arrow-green" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#287a58"/></marker>
+    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#b84c45"/></marker>
+    <style>
+      text{font-family:Inter,"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#23344b}
+      .title{font-size:28px;font-weight:700}
+      .heading{font-size:24px;font-weight:700}
+      .body{font-size:24px}
+      .small{font-size:22px}
+      .key{font-size:23px;font-weight:650}
+      .muted{fill:#6c7c90}
+      .panel{fill:#f7f9fc;stroke:#c8d3e0;stroke-width:2}
+      .node{fill:#fff;stroke:#61758d;stroke-width:2.5}
+      .focus{fill:#edf7f1;stroke:#287a58;stroke-width:3}
+      .warm{fill:#fff6e7;stroke:#bc8a32;stroke-width:3}
+      .dim{fill:#f2f4f7;stroke:#b8c1cc;stroke-width:2}
+      .line-gray{fill:none;stroke:#62758b;stroke-width:3;marker-end:url(#arrow-gray)}
+      .line-blue{fill:none;stroke:#2b6496;stroke-width:3;marker-end:url(#arrow-blue)}
+      .line-green{fill:none;stroke:#287a58;stroke-width:3;marker-end:url(#arrow-green)}
+      .line-red{fill:none;stroke:#b84c45;stroke-width:3;marker-end:url(#arrow-red)}
+      .plain-gray{fill:none;stroke:#62758b;stroke-width:3}
+      .plain-green{fill:none;stroke:#287a58;stroke-width:3}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1000" height="590" fill="#ffffff"/>
+<text x="500" y="42" class="title" text-anchor="middle">Perryridge 等值查找：两次比较后在叶项结束</text>
+<rect x="360" y="82" width="280" height="76" rx="12" class="focus"/>
+<text x="500.0" y="128.0" class="heading" text-anchor="middle">根：Perryridge</text>
+<rect x="90" y="245" width="210" height="70" rx="12" class="dim"/>
+<text x="195.0" y="288.0" class="heading" text-anchor="middle">内页：Mianus</text>
+<rect x="700" y="245" width="210" height="70" rx="12" class="focus"/>
+<text x="805.0" y="288.0" class="heading" text-anchor="middle">内页：Redwood</text>
+<path d="M405 157 L240 239" class="line-gray"/>
+<path d="M595 157 L760 239" class="line-green"/>
+<text x="825" y="199" class="small" text-anchor="middle" fill="#287a58">等于根分隔键，走右侧</text>
+<rect x="8" y="430" width="228" height="82" rx="12" class="dim"/>
+<text x="122.0" y="464.0" class="small" text-anchor="middle">Brighton</text>
+<text x="122.0" y="494.0" class="small" text-anchor="middle">Downtown</text>
+<rect x="257" y="430" width="185" height="82" rx="12" class="dim"/>
+<text x="349.5" y="479.0" class="small" text-anchor="middle">Mianus</text>
+<rect x="557" y="430" width="200" height="82" rx="12" class="focus"/>
+<text x="657.0" y="479.0" class="heading" text-anchor="middle">Perryridge</text>
+<rect x="777" y="430" width="215" height="82" rx="12" class="dim"/>
+<text x="884.5" y="464.0" class="small" text-anchor="middle">Redwood</text>
+<text x="884.5" y="494.0" class="small" text-anchor="middle">Round Hill</text>
+<path d="M145 315 L120 423" class="line-gray"/>
+<path d="M240 315 L350 423" class="line-gray"/>
+<path d="M760 315 L658 423" class="line-green"/>
+<path d="M850 315 L878 423" class="line-gray"/>
+<text x="545" y="389" class="small" text-anchor="middle" fill="#287a58">小于 Redwood，走左侧</text>
+<text x="500" y="553" class="small" text-anchor="middle">叶项命中后读取其记录指针并停止；这次等值查找不沿叶链继续</text>
+</svg>

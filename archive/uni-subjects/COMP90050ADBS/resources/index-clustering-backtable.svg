@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600" role="img" aria-labelledby="title desc">
+  <title id="title">聚簇与非聚簇索引如何把键带到数据行</title>
+  <desc id="desc">左侧按教师 ID 排列数据记录；右侧用 dept_name 索引取得三条行指针，再回到按 ID 排序的数据文件读取对应记录。数据页号未给出。</desc>
+  <defs>
+    <marker id="arrow-gray" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#62758b"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#2b6496"/></marker>
+    <marker id="arrow-green" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#287a58"/></marker>
+    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#b84c45"/></marker>
+    <style>
+      text{font-family:Inter,"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#23344b}
+      .title{font-size:28px;font-weight:700}
+      .heading{font-size:24px;font-weight:700}
+      .body{font-size:24px}
+      .small{font-size:22px}
+      .key{font-size:23px;font-weight:650}
+      .muted{fill:#6c7c90}
+      .panel{fill:#f7f9fc;stroke:#c8d3e0;stroke-width:2}
+      .node{fill:#fff;stroke:#61758d;stroke-width:2.5}
+      .focus{fill:#edf7f1;stroke:#287a58;stroke-width:3}
+      .warm{fill:#fff6e7;stroke:#bc8a32;stroke-width:3}
+      .dim{fill:#f2f4f7;stroke:#b8c1cc;stroke-width:2}
+      .line-gray{fill:none;stroke:#62758b;stroke-width:3;marker-end:url(#arrow-gray)}
+      .line-blue{fill:none;stroke:#2b6496;stroke-width:3;marker-end:url(#arrow-blue)}
+      .line-green{fill:none;stroke:#287a58;stroke-width:3;marker-end:url(#arrow-green)}
+      .line-red{fill:none;stroke:#b84c45;stroke-width:3;marker-end:url(#arrow-red)}
+      .plain-gray{fill:none;stroke:#62758b;stroke-width:3}
+      .plain-green{fill:none;stroke:#287a58;stroke-width:3}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1000" height="600" fill="#ffffff"/>
+<text x="500" y="42" class="title" text-anchor="middle">课程 instructor 表：数据顺序决定回表局部性</text>
+<rect x="24" y="70" width="438" height="510" rx="16" class="panel"/>
+<rect x="490" y="70" width="486" height="510" rx="16" class="panel"/>
+<text x="243" y="112" class="heading" text-anchor="middle">按教师 ID 聚簇</text>
+<text x="243" y="151" class="small" text-anchor="middle">数据文件本身按 ID 相邻排列</text>
+<rect x="46" y="202" width="82" height="65" rx="8" class="node"/>
+<text x="87.0" y="242.5" class="key" text-anchor="middle">10101</text>
+<path d="M129 234 L140 234" class="line-blue"/>
+<rect x="142" y="202" width="82" height="65" rx="8" class="node"/>
+<text x="183.0" y="242.5" class="key" text-anchor="middle">12121</text>
+<path d="M225 234 L236 234" class="line-blue"/>
+<rect x="238" y="202" width="82" height="65" rx="8" class="node"/>
+<text x="279.0" y="242.5" class="key" text-anchor="middle">15151</text>
+<path d="M321 234 L332 234" class="line-blue"/>
+<rect x="334" y="202" width="82" height="65" rx="8" class="node"/>
+<text x="375.0" y="242.5" class="key" text-anchor="middle">22222</text>
+<text x="243" y="325" class="small" text-anchor="middle">范围命中邻近 ID 时，能沿记录顺序继续读</text>
+<text x="243" y="374" class="small" text-anchor="middle" fill="#6c7c90">此图表示排序关系，不指定数据页号</text>
+<text x="733" y="112" class="heading" text-anchor="middle">按系名的非聚簇索引</text>
+<rect x="525" y="145" width="205" height="78" rx="12" class="warm"/>
+<text x="627.5" y="177.0" class="small" text-anchor="middle">索引键</text>
+<text x="627.5" y="207.0" class="small" text-anchor="middle">Comp. Sci.</text>
+<rect x="756" y="138" width="190" height="120" rx="12" class="node"/>
+<text x="851.0" y="161.0" class="small" text-anchor="middle">行指针列表</text>
+<text x="851.0" y="191.0" class="small" text-anchor="middle">10101</text>
+<text x="851.0" y="221.0" class="small" text-anchor="middle">45565</text>
+<text x="851.0" y="251.0" class="small" text-anchor="middle">83821</text>
+<path d="M731 184 L752 184" class="line-blue"/>
+<rect x="767" y="322" width="180" height="54" rx="8" class="focus"/>
+<text x="857.0" y="357.0" class="small" text-anchor="middle">10101  Srinivasan</text>
+<rect x="767" y="392" width="180" height="54" rx="8" class="focus"/>
+<text x="857.0" y="427.0" class="small" text-anchor="middle">45565  Katz</text>
+<rect x="767" y="462" width="180" height="54" rx="8" class="focus"/>
+<text x="857.0" y="497.0" class="small" text-anchor="middle">83821  Brandt</text>
+<polyline points="756,191 742,191 742,322 764,322" fill="none" stroke="#b84c45" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-red)"/>
+<polyline points="756,221 728,221 728,392 764,392" fill="none" stroke="#b84c45" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-red)"/>
+<polyline points="756,251 714,251 714,462 764,462" fill="none" stroke="#b84c45" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-red)"/>
+<text x="733" y="555" class="small" text-anchor="middle">行位置分散；未覆盖列需读数据页</text>
+</svg>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560" role="img" aria-labelledby="title desc">
+  <title id="title">插入 Adams 后如何更新叶页、父页和叶链</title>
+  <desc id="desc">n=4 课程图的三键叶溢出后分成两个有序叶页；Califieri 留在右叶，同时父页增加分隔键和新右叶指针，叶链保留原后继。</desc>
+  <defs>
+    <marker id="arrow-gray" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#62758b"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#2b6496"/></marker>
+    <marker id="arrow-green" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#287a58"/></marker>
+    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11 Z" fill="#b84c45"/></marker>
+    <style>
+      text{font-family:Inter,"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#23344b}
+      .title{font-size:28px;font-weight:700}
+      .heading{font-size:24px;font-weight:700}
+      .body{font-size:24px}
+      .small{font-size:22px}
+      .key{font-size:23px;font-weight:650}
+      .muted{fill:#6c7c90}
+      .panel{fill:#f7f9fc;stroke:#c8d3e0;stroke-width:2}
+      .node{fill:#fff;stroke:#61758d;stroke-width:2.5}
+      .focus{fill:#edf7f1;stroke:#287a58;stroke-width:3}
+      .warm{fill:#fff6e7;stroke:#bc8a32;stroke-width:3}
+      .dim{fill:#f2f4f7;stroke:#b8c1cc;stroke-width:2}
+      .line-gray{fill:none;stroke:#62758b;stroke-width:3;marker-end:url(#arrow-gray)}
+      .line-blue{fill:none;stroke:#2b6496;stroke-width:3;marker-end:url(#arrow-blue)}
+      .line-green{fill:none;stroke:#287a58;stroke-width:3;marker-end:url(#arrow-green)}
+      .line-red{fill:none;stroke:#b84c45;stroke-width:3;marker-end:url(#arrow-red)}
+      .plain-gray{fill:none;stroke:#62758b;stroke-width:3}
+      .plain-green{fill:none;stroke:#287a58;stroke-width:3}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1000" height="560" fill="#ffffff"/>
+<text x="500" y="42" class="title" text-anchor="middle">Adams 插入：复制分隔键，并把新右叶接入叶链</text>
+<rect x="35" y="112" width="278" height="205" rx="12" class="panel"/>
+<text x="174.0" y="177.5" class="small" text-anchor="middle">原叶：</text>
+<text x="174.0" y="207.5" class="small" text-anchor="middle">[Brandt, Califieri, Crick]</text>
+<text x="174.0" y="237.5" class="small" text-anchor="middle">next → 旧后继</text>
+<text x="174.0" y="267.5" class="small" text-anchor="middle">+ 插入 Adams</text>
+<rect x="360" y="112" width="250" height="205" rx="12" class="warm"/>
+<text x="485.0" y="192.5" class="small" text-anchor="middle">临时有序项：</text>
+<text x="485.0" y="222.5" class="small" text-anchor="middle">[Adams, Brandt,</text>
+<text x="485.0" y="252.5" class="small" text-anchor="middle">Califieri, Crick]</text>
+<rect x="657" y="112" width="305" height="205" rx="12" class="focus"/>
+<text x="809.5" y="177.5" class="small" text-anchor="middle">保留原页作左叶：</text>
+<text x="809.5" y="207.5" class="small" text-anchor="middle">[Adams, Brandt]</text>
+<text x="809.5" y="237.5" class="small" text-anchor="middle">新右叶：[Califieri, Crick]</text>
+<text x="809.5" y="267.5" class="small" text-anchor="middle">→ 原后继</text>
+<path d="M315 213 L354 213" class="line-blue"/>
+<path d="M613 213 L650 213" class="line-blue"/>
+<rect x="98" y="385" width="804" height="90" rx="14" class="node"/>
+<text x="500" y="423" class="heading" text-anchor="middle">父页新增一对： (Califieri, 新右叶指针)</text>
+<text x="500" y="458" class="small" text-anchor="middle">Califieri 在叶中保留；新右叶替换原叶与旧后继之间的链接</text>
+<path d="M807 385 L807 324" class="line-green"/>
+</svg>
