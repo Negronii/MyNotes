@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="930" viewBox="0 0 700 930" role="img"><title>响应正文读取、同步校验与页面权限分支</title><defs><marker id="a" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#647991"/></marker><marker id="r" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#b34c43"/></marker></defs><rect width="700" height="930" rx="16" fill="#fafcff"/>
+<rect x="40" y="20" width="390" height="70" rx="12" fill="#eef5ff" stroke="#b8cce6" stroke-width="1.5"/>
+<text x="235.0" y="62.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">承接 3 份可接受的 Response</text>
+<path d="M235 90V140" fill="none" stroke="#647991" stroke-width="2.2" marker-end="url(#a)"/>
+<rect x="40" y="140" width="390" height="105" rx="12" fill="#eef5ff" stroke="#b8cce6" stroke-width="1.5"/>
+<text x="235.0" y="185.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">3 份响应各调用一次 json()</text>
+<text x="235.0" y="214.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">Promise.all 等待全部解析完成</text>
+<path d="M235 245V300" fill="none" stroke="#647991" stroke-width="2.2" marker-end="url(#a)"/>
+<rect x="40" y="300" width="390" height="105" rx="12" fill="#fff7e9" stroke="#dfc995" stroke-width="1.5"/>
+<text x="235.0" y="345.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">依次运行 3 个同步校验器</text>
+<text x="235.0" y="374.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">报表 → 摘要 → 权限</text>
+<rect x="500" y="180" width="175" height="220" rx="12" fill="#fff0ed" stroke="#d29d94" stroke-width="1.5"/>
+<text x="587.5" y="253.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">loadReport</text>
+<text x="587.5" y="282.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">拒绝</text>
+<text x="587.5" y="311.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">正文读取、解析</text>
+<text x="587.5" y="340.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">或校验失败</text>
+<path d="M430 195H470V235H500" fill="none" stroke="#b34c43" stroke-width="2.2" marker-end="url(#r)"/>
+<path d="M430 350H470V345H500" fill="none" stroke="#b34c43" stroke-width="2.2" marker-end="url(#r)"/>
+<path d="M235 405V465" fill="none" stroke="#647991" stroke-width="2.2" marker-end="url(#a)"/>
+<rect x="40" y="465" width="620" height="95" rx="12" fill="#eaf7ef" stroke="#9dc5ae" stroke-width="1.5"/>
+<text x="350.0" y="505.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">loadReport 履行，交付已校验对象</text>
+<text x="350.0" y="534.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">{ report, summary, permissions }</text>
+<path d="M350 560V615" fill="none" stroke="#647991" stroke-width="2.2" marker-end="url(#a)"/>
+<rect x="90" y="615" width="520" height="70" rx="12" fill="#f4effc" stroke="#cbbce6" stroke-width="1.5"/>
+<text x="350.0" y="657.0" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">页面读取 permissions.canReadRows</text>
+<path d="M350 685V730H180V785" fill="none" stroke="#647991" stroke-width="2.2" marker-end="url(#a)"/>
+<path d="M350 685V730H525V785" fill="none" stroke="#647991" stroke-width="2.2" marker-end="url(#a)"/>
+<text x="205" y="765" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">true</text>
+<text x="555" y="765" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">false</text>
+<rect x="30" y="785" width="300" height="100" rx="12" fill="#eaf7ef" stroke="#9dc5ae" stroke-width="1.5"/>
+<text x="180.0" y="827.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">继续请求报表行</text>
+<text x="180.0" y="856.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">沿用 reportId / sort / signal</text>
+<rect x="380" y="785" width="290" height="100" rx="12" fill="#eef5ff" stroke="#b8cce6" stroke-width="1.5"/>
+<text x="525.0" y="827.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="600" fill="#24344b">只显示报表与摘要</text>
+<text x="525.0" y="856.5" text-anchor="middle" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19" font-weight="400" fill="#24344b">不创建行请求</text>
+</svg>
