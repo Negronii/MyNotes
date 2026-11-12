@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="718" viewBox="0 32 700 718" role="img" aria-labelledby="title desc">
+  <title id="title">for 请求如何驱动 CSV 生成器，以及异常后的状态</title>
+  <desc id="desc">每次外层 for 请求都会让 ready_rows 恢复，再由生成器向 csv.reader 取记录。第一次请求产出 evt-1，第二次跳过 evt-2 后产出 evt-3，第三次在 evt-4 处因未知状态报错。with 清理资源但保留已有报表数据。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#344054"/>
+    </marker>
+    <marker id="error-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b54738"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+    .title { font-size: 21px; font-weight: 700; }
+    .head { font-size: 19px; font-weight: 700; }
+    .node { font-size: 18px; font-weight: 650; }
+    .detail { font-size: 18px; font-weight: 400; }
+    .error { font-size: 18px; font-weight: 650; fill: #a23f32; }
+    .arrow { stroke: #344054; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+    .error-arrow { stroke: #b54738; stroke-width: 2.2; fill: none; marker-end: url(#error-arrow); }
+  </style>
+  <rect width="700" height="750" fill="#ffffff"/>
+
+  <rect x="20" y="52" width="195" height="76" rx="11" fill="#e9f2ff" stroke="#5276a7" stroke-width="1.6"/>
+  <text class="node" x="117" y="76" text-anchor="middle">for 请求生成器</text>
+  <text class="detail" x="117" y="98" text-anchor="middle">下一个产出</text>
+  <text class="detail" x="117" y="120" text-anchor="middle">next(iterator)</text>
+  <path class="arrow" d="M216 90 L251 90"/>
+  <rect x="254" y="52" width="194" height="76" rx="11" fill="#f2edff" stroke="#7862a8" stroke-width="1.6"/>
+  <text class="node" x="351" y="76" text-anchor="middle">ready_rows</text>
+  <text class="detail" x="351" y="98" text-anchor="middle">开始或恢复</text>
+  <text class="detail" x="351" y="120" text-anchor="middle">首次运行 / 接续 yield</text>
+  <path class="arrow" d="M449 90 L484 90"/>
+  <rect x="487" y="52" width="193" height="76" rx="11" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="node" x="583" y="82" text-anchor="middle">向 csv.reader 取数</text>
+  <text class="detail" x="583" y="108" text-anchor="middle">解析下一条 CSV 记录</text>
+
+  <text class="detail" x="350" y="155" text-anchor="middle">请求链每次重复；不符合筛选条件的合法记录会被跳过，生成器继续取数</text>
+  <text class="detail" x="350" y="181" text-anchor="middle">筛选条件：status == "ready" 且 count &gt; 0；只有 yield 才把事件交回 for</text>
+
+  <rect x="25" y="198" width="650" height="116" rx="12" fill="#f5f7fa" stroke="#8492a6" stroke-width="1.4"/>
+  <text class="head" x="48" y="223">第一次请求</text>
+  <rect x="48" y="235" width="240" height="65" rx="9" fill="#e9f6ef" stroke="#528266" stroke-width="1.4"/>
+  <text class="node" x="168" y="261" text-anchor="middle">先读表头，再取 evt-1</text>
+  <text class="detail" x="168" y="286" text-anchor="middle">物理行 2–3，note 跨行</text>
+  <path class="arrow" d="M291 267 L359 267"/>
+  <rect x="363" y="235" width="287" height="65" rx="9" fill="#e9f6ef" stroke="#528266" stroke-width="1.4"/>
+  <text class="node" x="506" y="261" text-anchor="middle">ready 且 count 正数：通过</text>
+  <text class="detail" x="506" y="286" text-anchor="middle">yield evt-1，for 追加到报表</text>
+
+  <rect x="25" y="328" width="650" height="137" rx="12" fill="#f5f7fa" stroke="#8492a6" stroke-width="1.4"/>
+  <text class="head" x="48" y="353">第二次请求</text>
+  <rect x="45" y="365" width="180" height="84" rx="9" fill="#fff8e8" stroke="#a2833f" stroke-width="1.4"/>
+  <text class="node" x="135" y="392" text-anchor="middle">evt-2</text>
+  <text class="detail" x="135" y="418" text-anchor="middle">queued，count=1</text>
+  <text class="detail" x="135" y="441" text-anchor="middle">合法但未入选</text>
+  <path class="arrow" d="M228 407 L269 407"/>
+  <rect x="273" y="365" width="145" height="84" rx="9" fill="#fff8e8" stroke="#a2833f" stroke-width="1.4"/>
+  <text class="node" x="345" y="396" text-anchor="middle">条件不满足</text>
+  <text class="detail" x="345" y="423" text-anchor="middle">跳过，继续取数</text>
+  <path class="arrow" d="M421 407 L459 407"/>
+  <rect x="463" y="365" width="192" height="84" rx="9" fill="#e9f6ef" stroke="#528266" stroke-width="1.4"/>
+  <text class="node" x="559" y="392" text-anchor="middle">reader 再取 evt-3</text>
+  <text class="detail" x="559" y="418" text-anchor="middle">ready，count=2：通过</text>
+  <text class="detail" x="559" y="441" text-anchor="middle">yield 后 for 追加</text>
+
+  <rect x="25" y="479" width="650" height="112" rx="12" fill="#f5f7fa" stroke="#8492a6" stroke-width="1.4"/>
+  <text class="head" x="48" y="504">第三次请求</text>
+  <rect x="45" y="516" width="185" height="62" rx="9" fill="#fff8e8" stroke="#a2833f" stroke-width="1.4"/>
+  <text class="node" x="137" y="542" text-anchor="middle">reader 取 evt-4</text>
+  <text class="detail" x="137" y="566" text-anchor="middle">物理行 6</text>
+  <path class="error-arrow" d="M233 547 L277 547"/>
+  <rect x="281" y="516" width="176" height="62" rx="9" fill="#fff0ed" stroke="#bd6658" stroke-width="1.4"/>
+  <text class="error" x="369" y="542" text-anchor="middle">unknown 状态</text>
+  <text class="error" x="369" y="566" text-anchor="middle">抛出 ValueError</text>
+  <path class="error-arrow" d="M460 547 L496 547"/>
+  <rect x="500" y="516" width="155" height="62" rx="9" fill="#fff0ed" stroke="#bd6658" stroke-width="1.4"/>
+  <text class="node" x="577" y="542" text-anchor="middle">异常离开 for</text>
+  <text class="detail" x="577" y="566" text-anchor="middle">退出两个 with</text>
+
+  <path class="arrow" d="M578 592 L578 613 L195 613 L195 642"/>
+  <path class="arrow" d="M578 613 L505 613 L505 642"/>
+  <text class="head" x="350" y="635" text-anchor="middle">资源清理与对象结果分别检查</text>
+  <rect x="35" y="649" width="310" height="78" rx="11" fill="#f5f7fa" stroke="#8492a6" stroke-width="1.5"/>
+  <text class="node" x="190" y="679" text-anchor="middle">上下文管理器清理资源</text>
+  <text class="detail" x="190" y="706" text-anchor="middle">文件关闭，临时目录删除</text>
+  <rect x="355" y="649" width="310" height="78" rx="11" fill="#f5f7fa" stroke="#8492a6" stroke-width="1.5"/>
+  <text class="node" x="510" y="679" text-anchor="middle">已追加的对象状态保留</text>
+  <text class="detail" x="510" y="706" text-anchor="middle">report.rows 仍有 evt-1、evt-3</text>
+</svg>

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="508" viewBox="0 32 700 508" role="img" aria-labelledby="title desc">
+  <title id="title">Report 菱形继承的 MRO 与 super 调用顺序</title>
+  <desc id="desc">Report 以 AuditMixin、NormalizeMixin 顺序继承，二者都继承 FieldBase。C3 线性化为 Report、AuditMixin、NormalizeMixin、FieldBase、object；super 在方法的当前类之后继续查找。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#344054"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+    .title { font-size: 21px; font-weight: 700; }
+    .head { font-size: 19px; font-weight: 700; }
+    .node { font-size: 18px; font-weight: 600; }
+    .detail { font-size: 18px; font-weight: 400; }
+    .arrow { stroke: #344054; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+  </style>
+  <rect width="700" height="540" fill="#ffffff"/>
+
+  <text class="head" x="150" y="61" text-anchor="middle">继承关系</text>
+  <rect x="44" y="77" width="212" height="60" rx="10" fill="#e9f2ff" stroke="#5276a7" stroke-width="1.6"/>
+  <text class="node" x="150" y="101" text-anchor="middle">Report</text>
+  <text class="detail" x="150" y="126" text-anchor="middle">bases: Audit, Normalize</text>
+  <rect x="20" y="183" width="132" height="52" rx="10" fill="#f2edff" stroke="#7862a8" stroke-width="1.6"/>
+  <text class="node" x="86" y="215" text-anchor="middle">AuditMixin</text>
+  <rect x="166" y="183" width="142" height="52" rx="10" fill="#f2edff" stroke="#7862a8" stroke-width="1.6"/>
+  <text class="node" x="237" y="215" text-anchor="middle">NormalizeMixin</text>
+  <rect x="76" y="291" width="162" height="52" rx="10" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="node" x="157" y="323" text-anchor="middle">FieldBase</text>
+  <rect x="76" y="390" width="162" height="48" rx="10" fill="#f5f7fa" stroke="#8492a6" stroke-width="1.6"/>
+  <text class="node" x="157" y="420" text-anchor="middle">object</text>
+
+  <path class="arrow" d="M105 138 L86 181"/>
+  <path class="arrow" d="M196 138 L237 181"/>
+  <path class="arrow" d="M86 236 L133 289"/>
+  <path class="arrow" d="M237 236 L181 289"/>
+  <path class="arrow" d="M157 344 L157 388"/>
+
+  <text class="head" x="505" y="61" text-anchor="middle">C3 线性化：super() 的后续顺序</text>
+  <rect x="345" y="77" width="320" height="50" rx="10" fill="#e9f2ff" stroke="#5276a7" stroke-width="1.6"/>
+  <text class="node" x="505" y="108" text-anchor="middle">1  Report</text>
+  <rect x="345" y="157" width="320" height="50" rx="10" fill="#f2edff" stroke="#7862a8" stroke-width="1.6"/>
+  <text class="node" x="505" y="188" text-anchor="middle">2  AuditMixin</text>
+  <rect x="345" y="237" width="320" height="50" rx="10" fill="#f2edff" stroke="#7862a8" stroke-width="1.6"/>
+  <text class="node" x="505" y="268" text-anchor="middle">3  NormalizeMixin</text>
+  <rect x="345" y="317" width="320" height="50" rx="10" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="node" x="505" y="348" text-anchor="middle">4  FieldBase</text>
+  <rect x="345" y="397" width="320" height="50" rx="10" fill="#f5f7fa" stroke="#8492a6" stroke-width="1.6"/>
+  <text class="node" x="505" y="428" text-anchor="middle">5  object</text>
+  <path class="arrow" d="M505 128 L505 155"/>
+  <path class="arrow" d="M505 208 L505 235"/>
+  <path class="arrow" d="M505 288 L505 315"/>
+  <path class="arrow" d="M505 368 L505 395"/>
+  <text class="detail" x="345" y="479">validate_title 的调用在 FieldBase 结束；</text>
+  <text class="detail" x="345" y="505">object 仍在 MRO，但没有这个方法。</text>
+  <text class="detail" x="20" y="505">相同父类只在线性化结果中出现一次。</text>
+</svg>

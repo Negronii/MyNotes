@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="768" viewBox="0 32 700 768" role="img" aria-labelledby="title desc">
+  <title id="title">普通实例属性读取的默认优先级</title>
+  <desc id="desc">实例读取先检查类 MRO 中的数据描述符，再检查实例字典、非数据描述符与普通类候选。默认查找的 AttributeError 最后才触发 getattr 回退。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#344054"/>
+    </marker>
+    <marker id="error-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b54738"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+    .title { font-size: 21px; font-weight: 700; }
+    .node { font-size: 18px; font-weight: 600; }
+    .detail { font-size: 18px; font-weight: 400; }
+    .branch { font-size: 18px; font-weight: 700; fill: #344054; }
+    .error { font-size: 18px; font-weight: 600; fill: #a23f32; }
+    .arrow { stroke: #344054; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+    .error-path { stroke: #b54738; stroke-width: 2.1; stroke-dasharray: 7 5; fill: none; }
+    .error-end { stroke: #b54738; stroke-width: 2.1; fill: none; marker-end: url(#error-arrow); }
+    .diamond { fill: #fff8e8; stroke: #a2833f; stroke-width: 1.6; }
+  </style>
+  <rect width="700" height="800" fill="#ffffff"/>
+
+  <rect x="50" y="48" width="600" height="48" rx="11" fill="#e9f2ff" stroke="#5276a7" stroke-width="1.6"/>
+  <text class="node" x="350" y="78" text-anchor="middle">obj.name → 默认 __getattribute__</text>
+  <path class="arrow" d="M350 97 L350 113"/>
+  <rect x="50" y="117" width="600" height="50" rx="11" fill="#f2edff" stroke="#7862a8" stroke-width="1.6"/>
+  <text class="node" x="350" y="148" text-anchor="middle">在 type(obj).__mro__ 找第一个类属性候选</text>
+  <path class="arrow" d="M350 168 L350 194"/>
+
+  <path class="diamond" d="M220 196 L430 237 L220 278 L10 237 Z"/>
+  <text class="node" x="220" y="230" text-anchor="middle">候选类型有 __get__</text>
+  <text class="node" x="220" y="251" text-anchor="middle" font-size="17">并且也有 __set__ 或 __delete__？</text>
+  <path class="arrow" d="M431 237 L470 237"/>
+  <text class="branch" x="450" y="228" text-anchor="middle">是</text>
+  <rect x="475" y="198" width="200" height="78" rx="10" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="node" x="575" y="224" text-anchor="middle">调用数据描述符</text>
+  <text class="detail" x="575" y="249" text-anchor="middle">返回 getter 值</text>
+  <text class="error" x="575" y="270" text-anchor="middle">AttributeError → 回退</text>
+  <path class="arrow" d="M220 279 L220 304"/>
+  <text class="branch" x="239" y="296">否</text>
+
+  <path class="diamond" d="M220 305 L385 340 L220 375 L55 340 Z"/>
+  <text class="node" x="220" y="346" text-anchor="middle">obj.__dict__ 有同名键？</text>
+  <path class="arrow" d="M386 340 L470 340"/>
+  <text class="branch" x="426" y="331" text-anchor="middle">是</text>
+  <rect x="475" y="313" width="200" height="54" rx="10" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="node" x="575" y="347" text-anchor="middle">返回实例字典值</text>
+  <path class="arrow" d="M220 376 L220 400"/>
+  <text class="branch" x="239" y="394">否</text>
+
+  <path class="diamond" d="M220 401 L385 436 L220 471 L55 436 Z"/>
+  <text class="node" x="220" y="442" text-anchor="middle">剩余类候选有 __get__？</text>
+  <path class="arrow" d="M386 436 L470 436"/>
+  <text class="branch" x="426" y="427" text-anchor="middle">是</text>
+  <rect x="475" y="395" width="200" height="82" rx="10" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="node" x="575" y="421" text-anchor="middle">调用非数据描述符</text>
+  <text class="detail" x="575" y="446" text-anchor="middle">返回 getter 值</text>
+  <text class="error" x="575" y="470" text-anchor="middle">AttributeError → 回退</text>
+  <path class="arrow" d="M220 472 L220 496"/>
+  <text class="branch" x="239" y="490">否</text>
+
+  <path class="diamond" d="M220 497 L385 532 L220 567 L55 532 Z"/>
+  <text class="node" x="220" y="538" text-anchor="middle">类候选存在？</text>
+  <path class="arrow" d="M386 532 L470 532"/>
+  <text class="branch" x="426" y="523" text-anchor="middle">是</text>
+  <rect x="475" y="505" width="200" height="54" rx="10" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="node" x="575" y="539" text-anchor="middle">返回类候选本身</text>
+  <path class="arrow" d="M220 568 L220 594"/>
+  <text class="branch" x="239" y="587">否</text>
+
+  <rect x="70" y="598" width="300" height="54" rx="10" fill="#fff0ed" stroke="#bd6658" stroke-width="1.6"/>
+  <text class="node" x="220" y="621" text-anchor="middle">默认查找抛</text>
+  <text class="node" x="220" y="644" text-anchor="middle">AttributeError</text>
+  <path class="arrow" d="M220 653 L220 695"/>
+
+  <path class="error-path" d="M675 237 L690 237 L690 673 L610 673"/>
+  <path class="error-path" d="M675 436 L680 436 L680 661 L555 661 L555 673"/>
+  <path class="error-end" d="M610 673 L610 694"/>
+  <path class="error-end" d="M555 673 L555 694"/>
+  <rect x="50" y="698" width="600" height="88" rx="11" fill="#fff8e8" stroke="#a2833f" stroke-width="1.6"/>
+  <text class="node" x="350" y="725" text-anchor="middle">点号访问 / getattr：若定义 __getattr__，在此调用</text>
+  <text class="detail" x="350" y="750" text-anchor="middle">未定义或再次抛 AttributeError → 错误传给调用方</text>
+  <text class="detail" x="350" y="775" text-anchor="middle">直接调用 object.__getattribute__ 不执行这层回退</text>
+</svg>

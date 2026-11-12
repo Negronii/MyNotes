@@ -1,53 +1,149 @@
 # Python 的值、迭代器与资源生命周期如何工作？
 
-**案例：** worker 读取账户报表的 CSV 分页，把有效行逐个送入后续处理。要避免意外共享行对象，不能把整份文件先展开到内存；遇到坏行时，还要关闭文件和临时目录。Python 名称绑定到对象，迭代器按需交付值，上下文管理器则界定资源清理。
+**案例：** 一个报表工作进程（worker）读取合成 comma-separated values（CSV，逗号分隔值）文件，把状态为 `ready` 且数量为正的事件加入 `Report("November", source_rows)`。第一条事件的引号字段跨两行；最后一条事件含无效状态。我们要追踪名字指向哪些对象、修改会不会共享、生成器何时交付每行，以及坏记录出现后哪些状态保留、哪些资源关闭。
 
-~~~mermaid
-flowchart LR
-    File[CSV 文件] --> Iterator[生成器逐行读取]
-    Iterator -->|有效行| Yield[交付一行给调用者]
-    Iterator -->|后续格式错误| Error[抛出解析异常]
-    Error --> Unwind[离开嵌套 with 块]
-    Unwind --> Close[关闭文件并删除临时目录]
-    Yield --> Partial[更早输出的行已经离开生成器]
-~~~
+![报表处理从 CSV 记录到部分结果和资源清理的流程](resources/python-report-pipeline.svg)
 
-图中从输入到输出是一条惰性流程：错误可能在已经产出部分结果后才出现，所以资源会清理，但副作用不会自动回滚。
+图中的 `for` 循环每次请求生成器的下一个产出时才推进生成器。前几行已经加入 `report.rows` 后，后续坏记录仍可抛出异常；异常离开 `with` 块会关闭文件并清理临时目录，却不会撤销已修改的 Python 对象。
 
-## 名称、可变对象和浅拷贝怎样相互影响？
+本例的 Python 代码块按页面顺序在同一进程执行，后面的代码沿用前面创建的 `Report` 实例和列表；解析阶段会把 `evt-1`、`evt-3` 加入该列表。
 
-赋值通常是把名称绑定到对象，不是复制对象。列表和字典可变；同一列表被两个名称引用时，经任一名称原地修改，另一个名称看到的也是同一结果。把其中一个名称重新绑定到新字典，不会改变另一个绑定。浅拷贝会新建外层容器，但其中嵌套的可变对象仍可能共用。
+## 创建 Report 时，名字绑定到什么？
 
-字符串和元组不可原地替换其成员；不过，元组里仍可以放一个可变列表，再修改列表内容。set 保存唯一元素但不提供序列索引；字典把键映射到值，并从 Python 3.7 起保证保留插入顺序。CPython 的 id(obj) 当前以对象地址作为运行期身份值，但不能跨进程或运行期拿来标识账户、job 或数据库记录。
+Python 中数据由对象表示。每个对象有 identity（身份）、type（类型）和值。身份在对象存续期间不变；`is` 比较是否为同一对象，`id(obj)` 返回代表身份的整数。类型决定对象支持哪些操作以及值的范围；它不像列表内容那样可随意原地修改，但也不能说成绝对不可改变：在 CPython 3.11.13 中，`class A: pass` 和 `class B: pass` 这两个普通类的实例布局兼容。对 `obj = A()` 先保存 `saved_id = id(obj)`，再执行 `obj.__class__ = B`，会得到 `type(obj) is B` 且 `id(obj) == saved_id`。这个受限赋值不会替换对象本身。对象结束生命周期后，另一个对象可能复用同一个 `id()`，所以它不是跨运行或长期保存的业务标识。`==` 比较值是否相等，具体相等规则也可由类型定义。
+
+名字只是命名空间（namespace）中的绑定，执行赋值通常是让名字指向某个已有对象，并不复制对象；多个名称指向同一对象也称 aliasing（别名）。普通类调用通常先由 `__new__` 取得实例，再由 `__init__` 初始化该实例；`__init__` 本身不负责创建新实例。下面的 `Report` 把标题和传入的列表存为实例属性：
 
 ~~~python
-event = {"id": "evt-1", "tags": ["new"]}
-alias = event
-alias["tags"].append("priority")
-print(event["tags"])
+class Report:
+    def __init__(self, title: str, rows: list[dict[str, object]]) -> None:
+        self.title = title
+        self.rows = rows
 
-outer_copy = event.copy()
-outer_copy["id"] = "evt-copy"
-outer_copy["tags"].append("shared")
-print(event["tags"])
-
-alias = {"id": "evt-2", "tags": []}
-print(event["id"])
+source_rows = []
+report = Report("November", source_rows)
+rows_alias = report.rows
+print(report.rows is source_rows, rows_alias is source_rows)
 ~~~
 
-输出依次是 ['new', 'priority']、['new', 'priority', 'shared']、evt-1。若要隔离嵌套状态，应按所需字段显式重建，或在确有需要时深拷贝；不要把“拷贝了字典”理解为递归复制所有对象。
+输出是 `True True`：`report` 指向新建的 `Report` 实例，而 `source_rows`、`report.rows` 和 `rows_alias` 指向同一个列表对象。`self.rows = rows` 只保存对列表的引用，没有复制列表或其中的对象。实例的 `__dict__` 保存这些普通属性绑定；本例暂时没有 descriptor（描述符）截获 `title` 的读写，下一篇会在相同 `Report` 案例中加入这层机制。
 
-函数调用也传递对象引用。若函数原地修改传入列表，调用者能观察到修改；函数内部把形参改绑到新对象则不会替调用方重新绑定名称。函数默认表达式在执行 def 时求值一次，因此可变默认对象会被多次调用共用：
+## 生成器如何把一条记录交给报表？
+
+可迭代对象（iterable）能提供迭代器；迭代器（iterator）逐次返回值，结束时以 `StopIteration` 表示没有下一值，`for` 会处理这个结束信号。生成器函数包含 `yield`：调用它只返回一个生成器对象，函数体要等到 `for` 循环或 `next()` 请求下一值才继续执行。`list(generator)` 则会立即消费后续产出并存入列表；它会持续推进，直至耗尽或异常中断，不再保留逐条消费的内存优势。生成器让处理方不必先把整个输入读成列表；但已经产生的副作用不会因之后出错而自动回滚。
+
+下面的代码块接在上段之后。生成器检查 CSV 表头、列数、状态和整数数量，把 `tags` 拆成列表，只交付 `status == "ready"` 且 `count > 0` 的事件；合法的 `queued` 事件仍会被过滤掉。`csv.reader.line_num` 表示读过的源文件物理行数；一条引号字段跨多行的 CSV 记录会使它大于记录序号。文本文件使用 `newline=""`，让 CSV 模块按自己的规则处理换行。
 
 ~~~python
-def unsafe_add(item: str, items: list[str] = []) -> list[str]:
+import csv
+from collections.abc import Iterator
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import TextIO
+
+def ready_rows(source: TextIO) -> Iterator[dict[str, object]]:
+    reader = csv.reader(source)
+    try:
+        headers = next(reader)
+    except StopIteration:
+        return
+
+    expected = ["id", "status", "count", "tags", "note"]
+    if headers != expected:
+        raise ValueError("unexpected CSV header")
+
+    for values in reader:
+        line_number = reader.line_num
+        if len(values) != len(headers):
+            raise ValueError(f"CSV physical line {line_number}: wrong column count")
+
+        fields = dict(zip(headers, values))
+        status = fields["status"]
+        if status not in {"ready", "queued"}:
+            raise ValueError(
+                f"CSV physical line {line_number}: unknown status {status!r}"
+            )
+        try:
+            count = int(fields["count"])
+        except ValueError as error:
+            raise ValueError(
+                f"CSV physical line {line_number}: count must be an integer"
+            ) from error
+
+        row = {**fields, "count": count, "tags": fields["tags"].split("|")}
+        if status == "ready" and count > 0:
+            yield row
+
+CSV_TEXT = (
+    "id,status,count,tags,note\n"
+    'evt-1,ready,3,new|priority,"account\n'
+    'export"\n'
+    "evt-2,queued,1,backlog,skip\n"
+    "evt-3,ready,2,review,year-end\n"
+    "evt-4,unknown,1,bad,invalid\n"
+)
+
+source = None
+path = None
+try:
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "events.csv"
+        path.write_text(CSV_TEXT, encoding="utf-8")
+        with path.open(encoding="utf-8", newline="") as source:
+            for row in ready_rows(source):
+                report.rows.append(row)
+except ValueError as error:
+    print(f"Rejected input: {error}")
+
+print(source.closed, path.exists())
+print([row["id"] for row in report.rows])
+print(repr(report.rows[0]["note"]))
+~~~
+
+本机以 CPython 3.11.13 执行上述代码块，解析阶段输出：
+
+~~~text
+Rejected input: CSV physical line 6: unknown status 'unknown'
+True False
+['evt-1', 'evt-3']
+'account\nexport'
+~~~
+
+每次 `for row in ready_rows(source)` 请求生成器的下一个产出，都会让它开始运行或从上次 `yield` 处恢复；控制顺序是外层 `for` 请求 `ready_rows`，生成器再向 `csv.reader` 取一条 CSV 记录。第一次请求先读表头，再取到跨物理行 2–3 的 `evt-1`；`note` 的值是含换行的 `'account\nexport'`，事件满足 `status == "ready" and count > 0`，所以生成器 `yield` 它，循环追加到报表。第二次请求从上次 `yield` 处恢复，先取得合法但状态为 `queued` 的 `evt-2`，条件不成立，生成器继续向 `csv.reader` 取数，再 `yield` 满足条件的 `evt-3`。第三次请求恢复后读到物理行 6 的 `evt-4`，状态 `unknown` 不合法，于是抛出异常而不再产出值。
+
+生成器只借用调用方已打开的 `source`，它不负责打开或关闭流。在本例中，异常从循环传播后，两个上下文管理器按嵌套顺序退出：内层文件上下文关闭文件，外层 `TemporaryDirectory` 删除路径，然后异常才被 `except` 捕获。打印的 `True False` 分别是 `source.closed` 和 `path.exists()`：`source` 这个名称仍指向已关闭的流对象，`path` 仍是一个 `Path` 值，但它所指位置已不存在。外部的 `report` 仍引用原列表，已经追加的两条记录不会随资源退出而撤销。若结果必须全有或全无，应先验证并暂存，再在合适的事务边界提交；`with` 调用退出协议，是否回滚由上下文管理器实现决定；这里的文件和临时目录清理不会回滚列表修改。自定义 context manager 的 `__exit__` 还可以通过返回真值抑制块内异常，或在清理失败时抛出新异常。因此，判断错误能否到达外层 `except`，也要检查退出协议；本例两个管理器在成功清理后让原异常继续传播。
+
+## 改对象和改名字，影响范围有什么不同？
+
+现在 `report.rows` 已含 `evt-1`、`evt-3`。对象图只展开第一条记录：实例的 `rows` 属性、`source_rows` 和 `rows_alias` 三条引用路径指向同一行列表；列表里的事件字典又指向一只标签列表。
+
+![Report 实例、行列表、事件字典与标签列表的对象引用关系](resources/python-object-aliases.svg)
+
+list 和 dict 是可变对象，原地追加或更新会改变同一对象的值；给名字重新赋值则只改变该名字的绑定。浅拷贝（shallow copy）只创建最外层容器，其成员引用仍可能共享：
+
+~~~python
+rows_alias[0]["tags"].append("reviewed")
+copied_rows = report.rows.copy()
+copied_rows[0]["tags"].append("shared")
+print(report.rows[0]["tags"])
+
+rows_alias = []
+print(len(report.rows))
+~~~
+
+输出依次是 `['new', 'priority', 'reviewed', 'shared']` 和 `2`。第一行通过别名修改原列表中第一条事件的标签。`copy()` 创建另一只行列表，但 `copied_rows[0]` 和 `report.rows[0]` 仍指向同一个事件字典，字典中的 `tags` 也仍是同一列表；所以通过复制列表再修改嵌套标签，原报表也能观察到变化。最后把 `rows_alias` 改绑到新列表，不会替 `report.rows` 重新绑定。若需要独立修改标签，应重建对应的事件字典和 `tags` 列表；只有确实需要隔离整棵对象图时，再考虑 `deepcopy`（深拷贝）。
+
+函数调用也会为形参建立新的局部名称，并让它们引用传入的对象。函数原地修改形参所指的列表，调用方可见；函数把形参改绑到另一只列表，不会改掉调用方的名称。另一个常见共享点是默认值：默认表达式在执行 `def` 时求值一次，后续调用会继续使用同一对象。
+
+~~~python
+def unsafe_add(item, items=[]):
     items.append(item)
     return items
 
 print(unsafe_add("first"))
 print(unsafe_add("second"))
 
-def add(item: str, items: list[str] | None = None) -> list[str]:
+def add(item, items=None):
     if items is None:
         items = []
     items.append(item)
@@ -57,124 +153,32 @@ print(add("first"))
 print(add("second"))
 ~~~
 
-前两个结果会累积为 ['first'] 和 ['first', 'second']；修正后的调用分别得到 ['first'] 和 ['second']。若 None 本身也是有效输入，用单独 sentinel 表示“调用方未提供”。
+前两次 `unsafe_add` 共用默认列表，结果依次是 `['first']` 和 `['first', 'second']`。`add` 在每次未提供列表时新建一只，因此结果分别是 `['first']` 和 `['second']`。如果 `None` 也是有意义的输入，再用独立 sentinel（哨兵值）表示“未提供”。
 
-## 迭代器和生成器如何控制读取量？
+不可变也要按对象边界理解：字符串不能原地改写；元组不能替换它的成员，但成员若是列表，仍可修改那只列表。`set` 保存不重复元素但没有序列索引；`dict` 将键映射到值，插入顺序从 Python 3.7 起是语言保证（CPython 3.6 中只是实现细节）。这些性质都不意味着名称本身不可重新绑定。
 
-可迭代对象能提供迭代器；迭代器每次被请求时给出一个值，直到完成。生成器函数包含 yield，调用时返回一个保存执行位置的迭代器；循环或消费端每次请求下一值时，生成器才继续执行。这样可以逐行处理大文件，避免先构造完整结果列表；把生成器转成 list 则会立即消费并保存所有值。
+## 类型提示和虚拟环境能保证什么？
 
-~~~python
-from collections.abc import Iterable, Iterator
+type hint（类型提示）中的 `TextIO`、`Iterator` 和返回类型帮助读者、IDE 与静态类型检查器理解预期形状；Python 默认不会因为实际对象不符合注解而拒绝它。示例中的输入验证由表头检查、状态判断和 `int()` 转换执行，而不是由类型注解执行。文件也不应等垃圾回收时才关闭；`with` 语句使用上下文管理器（context manager）在确定的控制流边界执行关闭。
 
-Row = dict[str, str]
-
-def ready_rows(rows: Iterable[Row]) -> Iterator[Row]:
-    for row in rows:
-        if row["status"] == "ready":
-            yield row
-~~~
-
-惰性读取减少中间存储，也可以更早开始输出，但不会让一个多行事务自动具备原子性。如果第 500 条数据记录才有格式错误，而前 499 条已经写入其他系统，就必须由调用方决定这些部分结果能否保留；需要全有或全无时，先验证并暂存，或把修改置于合适的事务边界。
-
-## 解析失败时资源和先前输出会怎样？
-
-下面用合成 CSV 展示完整过程。生成器按 CSV 记录验证列数、状态值和整数数量；错误时读取 `csv.reader.line_num`，报告读到该记录时的物理文件行号，并保留原始异常。CSV 记录可能跨多行，所以不能用记录序号当文件行号。外层在文件与临时目录两个 with 块之外捕获异常。坏记录到来之前已经打印的报表行仍会保留，但两个资源都会在异常退出时关闭。
-
-~~~python
-import csv
-from collections.abc import Iterator
-from pathlib import Path
-from tempfile import TemporaryDirectory
-
-Row = dict[str, str]
-
-def ready_rows(source) -> Iterator[Row]:
-    reader = csv.reader(source)
-    try:
-        headers = next(reader)
-    except StopIteration:
-        return
-
-    required = {"id", "status", "count"}
-    if not required.issubset(headers):
-        raise ValueError("CSV header must include id, status, and count")
-
-    for values in reader:
-        line_number = reader.line_num
-        if len(values) != len(headers):
-            raise ValueError(
-                f"CSV physical line {line_number}: column count does not match header"
-            )
-        row = dict(zip(headers, values))
-        try:
-            status = row["status"]
-            if status not in {"ready", "queued"}:
-                raise ValueError(f"unknown status {status!r}")
-            count = int(row["count"])
-        except (KeyError, TypeError, ValueError) as error:
-            raise ValueError(
-                f"CSV physical line {line_number}: status must be ready or queued, "
-                "and count must be an integer"
-            ) from error
-
-        if status == "ready" and count > 0:
-            yield row
-
-def add_tag(row: Row, tag: str = "reviewed") -> Row:
-    enriched = row.copy()
-    enriched["tag"] = tag
-    return enriched
-
-CSV_TEXT = """id,status,count,note
-evt-1,ready,3,"account
-export"
-evt-2,queued,1,skip
-evt-3,unknown,2,bad-status
-"""
-
-try:
-    with TemporaryDirectory() as directory:
-        path = Path(directory) / "events.csv"
-        path.write_text(CSV_TEXT, encoding="utf-8")
-
-        with path.open(encoding="utf-8", newline="") as source:
-            for row in ready_rows(source):
-                print(add_tag(row))
-except ValueError as error:
-    print(f"Rejected input: {error}")
-~~~
-
-本机以 CPython 3.11.13 重放，输出第一条 evt-1 记录，再报告 `CSV physical line 5` 的未知状态。该坏行是第 3 条数据记录；第一条 evt-1 记录跨文件第 2、3 两行，第二条 evt-2 在第 4 行，所以记录序号和物理行号不同。生成器是在消费者推进时运行，异常离开两个上下文后文件关闭，TemporaryDirectory 清除其目录。由于第一条结果已输出，资源清理不等同于撤回此前效果。
-
-普通文件的 with 语句能在异常时关闭文件。上下文管理器会先进入代码块，退出时运行清理逻辑；若清理器选择抑制异常，还可改变异常传播，因此应检查实际管理器契约。需及时释放游标、文件或锁时，显式使用 with/finally，不依赖垃圾回收何时运行。
-
-## 类型标注和虚拟环境分别保证什么？
-
-type hint（类型提示）描述函数参数、结果或变量的预期形状，供读者、IDE 和静态类型检查器使用。Python 运行时默认不会因为注解不匹配而拒绝返回值；从网络、文件或数据库读入的 str 仍需解析、验证并转换为可信类型。若一个返回 int 的函数实际返回 str，静态检查器可以报告，但普通调用仍会拿到字符串。
-
-~~~python
-def declared_integer() -> int:
-    return "still a string"
-
-print(declared_integer())
-~~~
-
-本机输出 still a string。版本和实现也要分开说明：本文代码使用 Python 3.11 的语法和标准库行为；字典插入顺序从 Python 3.7 起是语言保证，CPython 3.6 中只是实现细节；CPython 的 id(obj) 目前表现为对象身份值，但不能把它当作跨进程、跨运行的业务标识。
-
-虚拟环境隔离项目安装的包，不会安装或固定 Python 解释器本身。创建环境时选定解释器，再用该环境中的 Python 运行 pip，才能保证装包和执行指向同一环境。将上面的完整文件处理程序保存为 python-fundamentals-example.py。这个示例只依赖标准库，不需要额外安装：
+这份示例只用 Python 标准库，可直接保存为文件后运行。虚拟环境（virtual environment）以创建命令所调用的基础 Python 为基准，并隔离项目安装的包；它不会替项目安装一个独立于基础解释器的 Python 版本。创建时选定解释器，再用该环境中的 Python 运行程序与安装依赖，例如：
 
 ~~~sh
 python3.11 -m venv .venv
 .venv/bin/python python-fundamentals-example.py
 ~~~
 
-项目如需第三方库，应把依赖写入项目的 packaging 配置或依赖文件，再用 .venv/bin/python -m pip install -r requirements.txt 从该环境安装；可复现运行还取决于兼容的解释器版本、包版本和平台要求。Python 异步请求怎样选择运行边界见[异步 FastAPI 接口为什么仍会阻塞？](python-async-and-fastapi.md)；实例属性优先级、descriptor 与协作式多继承见[Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？](python-attribute-lookup-and-mro.md)。
+项目需要第三方依赖时，也使用同一个环境的解释器运行 `-m pip`，例如 `.venv/bin/python -m pip install httpx`；这样安装位置与程序运行环境一致。上面的 `.venv/bin/` 是 POSIX 环境路径。
+
+本章先用普通实例属性建立 `Report` 对象和列表的状态。下一篇沿用 `November` 报表及其事件数据，把 `title` 改成会验证输入的数据描述符，并说明属性读取、实例字典、绑定方法和多继承如何共同决定结果：[Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？](python-attribute-lookup-and-mro.md)。异步接口如何让同一类报表读取跨过 I/O 等待，以及资源需要活到什么时候，见[异步 FastAPI 接口为什么仍会阻塞？](python-async-and-fastapi.md)。
 
 > [!info]- 来源
-> - 名称绑定、对象可变性和字典顺序：[Python 3.11 Language Reference, Data model](https://docs.python.org/3.11/reference/datamodel.html#objects-values-and-types)，核对于 2026-11-06。
-> - 默认参数只在函数定义时求值：[Python 3.11 Tutorial, Default Argument Values](https://docs.python.org/3.11/tutorial/controlflow.html#default-argument-values)，本例于 CPython 3.11.13 重放。
-> - `csv.reader.line_num` 计源文件物理行，CSV 记录可跨多行：[Python 3.11 csv module](https://docs.python.org/3.11/library/csv.html#csv.csvreader.line_num)，多行记录例于 CPython 3.11.13 重放。
-> - 迭代器、生成器与 StopIteration：[Python 3.11 Language Reference, Data model](https://docs.python.org/3.11/reference/datamodel.html#generator-functions)，CSV 例子于 CPython 3.11.13 重放。
-> - with 退出时的资源清理：[Python 3.11 Language Reference, The with statement](https://docs.python.org/3.11/reference/compound_stmts.html#the-with-statement)。
-> - 注解不作默认运行时验证：[Python 3.11 typing](https://docs.python.org/3.11/library/typing.html)，注解示例于 CPython 3.11.13 重放。
-> - venv 与包安装：[Python 3.11 venv](https://docs.python.org/3.11/library/venv.html)、[Python Packaging User Guide](https://packaging.python.org/en/latest/tutorials/installing-packages/)，核对于 2026-11-06。
+> - 对象身份、类型、可变性、不可变容器中的可变成员，以及不要依赖对象立即终结：[Python 3.15.2 Language Reference, Data model §3.1](https://docs.python.org/3.15/reference/datamodel.html#objects-values-and-types)，核对于 2026-11-12。受限 `__class__` 赋值须兼容 `__slots__`：[Python 3.15.2 Language Reference, `__slots__`](https://docs.python.org/3.15/reference/datamodel.html#object.__slots__)；固定实现 CPython 3.11.13 的兼容性检查和类型指针替换：[Objects/typeobject.c `compatible_for_assignment` / `object_set_class`](https://github.com/python/cpython/blob/v3.11.13/Objects/typeobject.c#L4715-L4869)。`id()` 在对象生命周期内唯一、恒定，生命周期不重叠的对象可能复用该值：[Python 3.15.2 Built-in Functions, `id`](https://docs.python.org/3.15/library/functions.html#id)；CPython 3.11.13 中它由对象指针转成整数：[Python/bltinmodule.c `builtin_id`](https://github.com/python/cpython/blob/v3.11.13/Python/bltinmodule.c#L1197-L1225)。
+> - 类调用通常经 `__new__` 取得实例并由 `__init__` 初始化；名字可别名引用同一对象：[Python 3.15.2 Language Reference, Classes / Basic customization](https://docs.python.org/3.15/reference/datamodel.html#classes)，[Python 3.15.2 Tutorial, Classes §9.1](https://docs.python.org/3.15/tutorial/classes.html#a-word-about-names-and-objects)，核对于 2026-11-12。
+> - 字典插入顺序从 3.7 起是语言保证，CPython 3.6 中是实现细节：[Python 3.15.2 Built-in Types, Dictionary](https://docs.python.org/3.15/library/stdtypes.html#dict)，核对于 2026-11-12。
+> - 函数默认参数在函数定义时求值：[Python 3.15.2 Tutorial, Default Argument Values](https://docs.python.org/3.15/tutorial/controlflow.html#default-argument-values)，核对于 2026-11-12。
+> - 生成器函数、`yield` 与按需迭代：[Python 3.15.2 Language Reference, Yield expressions](https://docs.python.org/3.15/reference/expressions.html#yield-expressions)，核对于 2026-11-12。
+> - 多行 CSV 记录与 `reader.line_num` 的物理行计数、打开文件时的 `newline=""`：[Python 3.15.2 `csv` library](https://docs.python.org/3.15/library/csv.html#csv.csvreader.line_num)，本例于 CPython 3.11.13 重放。
+> - `with` 语句的进入、退出和异常传播：[Python 3.15.2 Language Reference, The with statement](https://docs.python.org/3.15/reference/compound_stmts.html#the-with-statement)；文件流作为上下文管理器在块退出时关闭：[Python 3.15.2 `io.IOBase`](https://docs.python.org/3.15/library/io.html#io.IOBase)；临时目录上下文退出时清理：[Python 3.15.2 `tempfile.TemporaryDirectory`](https://docs.python.org/3.15/library/tempfile.html#tempfile.TemporaryDirectory) 和固定实现 [CPython 3.11.13 `Lib/tempfile.py`](https://github.com/python/cpython/blob/v3.11.13/Lib/tempfile.py#L857-L949)，本例记录了实际资源状态。
+> - Python 运行时默认不强制函数和变量注解：[Python 3.15.2 `typing`](https://docs.python.org/3.15/library/typing.html)，核对于 2026-11-12。
+> - 虚拟环境隔离包安装位置，并由创建命令选定基础解释器：[Python 3.15.2 `venv`](https://docs.python.org/3.15/library/venv.html)，核对于 2026-11-12。

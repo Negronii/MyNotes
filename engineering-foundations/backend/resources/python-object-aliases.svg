@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="308" viewBox="0 32 700 308" role="img" aria-labelledby="title desc">
+  <title id="title">Report 实例及其行数据中的对象引用</title>
+  <desc id="desc">report 指向 Report 实例。source_rows、report.rows 和 rows_alias 指向同一列表；第一条事件字典再指向 tags 列表。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#344054"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+    .title { font-size: 21px; font-weight: 700; }
+    .label { font-size: 18px; font-weight: 600; }
+    .boxhead { font-size: 19px; font-weight: 700; }
+    .detail { font-size: 18px; font-weight: 400; }
+    .arrow { stroke: #344054; stroke-width: 2.1; fill: none; marker-end: url(#arrow); }
+  </style>
+  <rect width="700" height="340" fill="#ffffff"/>
+
+  <rect x="18" y="75" width="140" height="42" rx="9" fill="#e9f2ff" stroke="#5276a7" stroke-width="1.5"/>
+  <text class="label" x="88" y="102" text-anchor="middle">report</text>
+  <rect x="18" y="185" width="140" height="42" rx="9" fill="#e9f2ff" stroke="#5276a7" stroke-width="1.5"/>
+  <text class="label" x="88" y="212" text-anchor="middle">source_rows</text>
+  <rect x="18" y="258" width="140" height="42" rx="9" fill="#e9f2ff" stroke="#5276a7" stroke-width="1.5"/>
+  <text class="label" x="88" y="285" text-anchor="middle">rows_alias</text>
+
+  <rect x="205" y="58" width="165" height="106" rx="11" fill="#f2edff" stroke="#7862a8" stroke-width="1.6"/>
+  <text class="boxhead" x="287" y="87" text-anchor="middle">Report 实例</text>
+  <text class="detail" x="220" y="117">title: November</text>
+  <text class="detail" x="220" y="147">rows → list A</text>
+
+  <rect x="205" y="198" width="165" height="62" rx="11" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="boxhead" x="287" y="224" text-anchor="middle">list A</text>
+  <text class="detail" x="287" y="249" text-anchor="middle">[0] → event</text>
+
+  <rect x="435" y="166" width="160" height="88" rx="11" fill="#fff8e8" stroke="#a2833f" stroke-width="1.6"/>
+  <text class="boxhead" x="515" y="193" text-anchor="middle">事件字典</text>
+  <text class="detail" x="449" y="221">id: evt-1</text>
+  <text class="detail" x="449" y="247">tags → list B</text>
+
+  <rect x="510" y="277" width="178" height="54" rx="11" fill="#e9f6ef" stroke="#528266" stroke-width="1.6"/>
+  <text class="boxhead" x="599" y="300" text-anchor="middle">list B</text>
+  <text class="detail" x="599" y="323" text-anchor="middle">new, priority</text>
+
+  <path class="arrow" d="M159 96 L203 96"/>
+  <path class="arrow" d="M288 165 L288 196"/>
+  <path class="arrow" d="M159 206 L203 224"/>
+  <path class="arrow" d="M159 279 L174 279 L174 243 L203 243"/>
+  <path class="arrow" d="M371 226 L433 210"/>
+  <path class="arrow" d="M515 255 L515 267 L599 267 L599 275"/>
+</svg>
