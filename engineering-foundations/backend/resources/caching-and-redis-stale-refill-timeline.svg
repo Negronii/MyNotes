@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="770" viewBox="0 0 700 770" role="img" aria-labelledby="title desc"><title id="title">在途旧读取在数据库更新后回填缓存</title><desc id="desc">单一报表表示的教学时间线。t=0读者取得数据库v9，t=1写者提交v10并删缓存，t=3读者回填v9并设置30秒TTL，约t=33过期；数据库从t=1始终是v10。横向是动作和缓存状态，纵向是事件顺序，不按时间比例绘制。</desc><defs><marker id="a" markerWidth="12" markerHeight="12" refX="11" refY="6" markerUnits="userSpaceOnUse" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#687e9c"/></marker><style>text{font:18px Inter,"PingFang SC",sans-serif;fill:#24344d}.bold{font-size:20px;font-weight:650}.arrow{stroke:#687e9c;stroke-width:2.5;fill:none;marker-end:url(#a)}</style></defs><rect width="700" height="770" fill="white"/>
+<text x="270" y="28" text-anchor="middle" class="bold">事件</text>
+<text x="580" y="28" text-anchor="middle" class="bold">Redis 中的报表表示</text>
+<text x="42" y="126" text-anchor="middle" class="bold">t=0</text>
+<rect x="100" y="60" width="340" height="120" rx="12" fill="#edf4ff" stroke="#d1dceb" stroke-width="1.5"/>
+<text x="270.0" y="94" text-anchor="middle" class="bold">R 读取</text>
+<text x="270.0" y="124" text-anchor="middle" class="">GET 未命中；从数据库取得 v9</text>
+<text x="270.0" y="154" text-anchor="middle" class="">v9 暂留在 R 内存里</text>
+<rect x="480" y="60" width="200" height="120" rx="12" fill="#edf4ff" stroke="#d1dceb" stroke-width="1.5"/>
+<text x="580.0" y="94" text-anchor="middle" class="bold">空键</text>
+<text x="580.0" y="124" text-anchor="middle" class="">尚未回填</text>
+<path class="arrow" d="M440 120 H478"/>
+<text x="42" y="306" text-anchor="middle" class="bold">t=1</text>
+<rect x="100" y="240" width="340" height="120" rx="12" fill="#fff6e8" stroke="#d1dceb" stroke-width="1.5"/>
+<text x="270.0" y="274" text-anchor="middle" class="bold">W 更新</text>
+<text x="270.0" y="304" text-anchor="middle" class="">数据库提交 v10</text>
+<text x="270.0" y="334" text-anchor="middle" class="">随后 DEL 缓存键</text>
+<rect x="480" y="240" width="200" height="120" rx="12" fill="#fff6e8" stroke="#d1dceb" stroke-width="1.5"/>
+<text x="580.0" y="274" text-anchor="middle" class="bold">空键</text>
+<text x="580" y="304" text-anchor="middle">删除后仍为空</text>
+<path class="arrow" d="M440 300 H478"/>
+<text x="42" y="486" text-anchor="middle" class="bold">t=3</text>
+<rect x="100" y="420" width="340" height="120" rx="12" fill="#f2edfc" stroke="#d1dceb" stroke-width="1.5"/>
+<text x="270.0" y="454" text-anchor="middle" class="bold">R 继续</text>
+<text x="270.0" y="484" text-anchor="middle" class="">把先前读到的 v9 写回缓存</text>
+<text x="270.0" y="514" text-anchor="middle" class="">此时数据库已是 v10</text>
+<rect x="480" y="420" width="200" height="120" rx="12" fill="#f2edfc" stroke="#d1dceb" stroke-width="1.5"/>
+<text x="580.0" y="454" text-anchor="middle" class="bold">v9</text>
+<text x="580.0" y="484" text-anchor="middle" class="">SET … EX 30</text>
+<text x="580.0" y="514" text-anchor="middle" class="">TTL 从此刻开始</text>
+<path class="arrow" d="M440 480 H478"/>
+<path class="arrow" d="M580 540 V615"/>
+<text x="415" y="585" text-anchor="middle" class="">没有其他回填</text>
+<rect x="100" y="615" width="580" height="120" rx="12" fill="#f4f7fb" stroke="#d1dceb" stroke-width="1.5"/>
+<text x="390.0" y="649" text-anchor="middle" class="bold">约 t=33 到期，过期后不再命中 v9</text>
+<text x="390.0" y="679" text-anchor="middle" class="">从数据库提交到这次到期：约 32 秒</text>
+<text x="390.0" y="709" text-anchor="middle" class="">(3 + 30) − 1 = 32；不是提交后 30 秒</text>
+</svg>
