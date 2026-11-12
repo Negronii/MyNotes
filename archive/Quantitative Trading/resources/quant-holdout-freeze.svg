@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700" role="img" aria-labelledby="title desc">
+  <title id="title">冻结方案后怎样使用留出期</title>
+  <desc id="desc">开发期选择并写定检验规则，经过冻结边界后在留出期按原规则评估并报告效果、区间和成本。查看留出结果后若更改方案，旧留出期转为新探索，需要另取未触碰时期复核。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12z" fill="#365C73"/>
+    </marker>
+    <marker id="orangeArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12z" fill="#A85E2A"/>
+    </marker>
+    <style>
+      .ink{fill:#203442;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .muted{fill:#526776;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .panelA{fill:#EAF3F8;stroke:#B7CBD7;stroke-width:2}
+      .panelB{fill:#EDF5EF;stroke:#B8CEBE;stroke-width:2}
+      .card{fill:#fff;stroke:#8299A7;stroke-width:2}
+      .arrow{stroke:#365C73;stroke-width:4;fill:none;marker-end:url(#arrow)}
+      .branch{fill:#FFF2E6;stroke:#D7A77E;stroke-width:2}
+      .branchArrow{stroke:#A85E2A;stroke-width:4;fill:none;marker-end:url(#orangeArrow)}
+    </style>
+  </defs>
+  <rect width="1400" height="700" fill="#F7FAFC"/>
+  <text class="ink" x="55" y="66" font-size="40" font-weight="700">方案冻结与留出复核</text>
+  <text class="muted" x="55" y="108" font-size="25">先选定主要检验，再把未参与选择的时期留到最后。</text>
+
+  <rect class="panelA" x="55" y="145" width="600" height="305" rx="20"/>
+  <rect class="panelB" x="745" y="145" width="600" height="305" rx="20"/>
+  <text class="ink" x="85" y="190" font-size="30" font-weight="700">开发期</text>
+  <text class="ink" x="775" y="190" font-size="30" font-weight="700">留出期</text>
+
+  <rect class="card" x="85" y="235" width="210" height="145" rx="14"/>
+  <text class="ink" x="190" y="285" font-size="30" text-anchor="middle">选定方案</text>
+  <text class="muted" x="190" y="330" font-size="23" text-anchor="middle">信号 · 股票范围</text>
+
+  <path class="arrow" d="M300 307H365"/>
+  <rect class="card" x="370" y="235" width="240" height="145" rx="14"/>
+  <text class="ink" x="490" y="285" font-size="30" text-anchor="middle">冻结规则</text>
+  <text class="muted" x="490" y="330" font-size="22" text-anchor="middle">断点 · 权重 · 基准 · 成本</text>
+
+  <path class="arrow" d="M615 307H780"/>
+  <rect class="card" x="785" y="235" width="220" height="145" rx="14"/>
+  <text class="ink" x="895" y="285" font-size="29" text-anchor="middle">按原规则评估</text>
+  <text class="muted" x="895" y="330" font-size="23" text-anchor="middle">不再挑版本</text>
+
+  <path class="arrow" d="M1010 307H1055"/>
+  <rect class="card" x="1060" y="235" width="250" height="145" rx="14"/>
+  <text class="ink" x="1185" y="285" font-size="30" text-anchor="middle">报告结果</text>
+  <text class="muted" x="1185" y="330" font-size="23" text-anchor="middle">方向 · 区间 · 成本</text>
+
+  <rect class="branch" x="55" y="495" width="1290" height="145" rx="20"/>
+  <text class="muted" x="85" y="535" font-size="21" font-weight="700">若看过留出结果后调整</text>
+  <rect class="card" x="85" y="553" width="325" height="60" rx="12"/>
+  <text class="ink" x="248" y="592" font-size="26" text-anchor="middle">改规则</text>
+  <path class="branchArrow" d="M415 583H525"/>
+  <rect class="card" x="535" y="553" width="345" height="60" rx="12"/>
+  <text class="ink" x="708" y="592" font-size="26" text-anchor="middle">旧留出转为新探索</text>
+  <path class="branchArrow" d="M885 583H995"/>
+  <rect class="card" x="1005" y="553" width="300" height="60" rx="12"/>
+  <text class="ink" x="1155" y="592" font-size="26" text-anchor="middle">另取新留出验证</text>
+</svg>
