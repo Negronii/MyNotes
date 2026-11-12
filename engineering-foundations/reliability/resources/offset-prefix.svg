@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1050" height="560" viewBox="0 0 1050 560" role="img" aria-labelledby="title desc">
+  <title id="title">当前位置领先时，只提交已完成的连续前缀</title>
+  <desc id="desc">poll 交付 offset 四十到四十二后，本地 position 到四十三。四十一和四十二先完成、四十仍运行时，安全 committed offset 保持四十；四十完成后才提交四十三。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#245b78"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172b3a; }
+      .head { font-size: 29px; font-weight: 700; }
+      .body { font-size: 27px; }
+      .small { font-size: 26px; }
+      .box { fill: #f5f8fa; stroke: #35566b; stroke-width: 3px; rx: 14px; }
+      .pending { fill: #fff4e7; stroke: #9a6526; stroke-width: 3px; rx: 14px; }
+      .done { fill: #edf6ef; stroke: #3e7350; stroke-width: 3px; rx: 14px; }
+      .arrow { fill: none; stroke: #245b78; stroke-width: 4px; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect x="1" y="1" width="1048" height="558" fill="#ffffff" stroke="#d2dbe0" stroke-width="2" rx="18"/>
+
+  <text class="head" x="38" y="55">P0 已交付给应用：40 → 41 → 42</text>
+  <rect class="box" x="40" y="82" width="255" height="85"/>
+  <text class="body" x="68" y="119">40 · queued</text>
+  <text class="small" x="68" y="151">seq 1</text>
+  <path class="arrow" d="M 301 124 H 358"/>
+  <rect class="box" x="369" y="82" width="255" height="85"/>
+  <text class="body" x="392" y="119">41 · rendered</text>
+  <text class="small" x="402" y="151">seq 2</text>
+  <path class="arrow" d="M 630 124 H 687"/>
+  <rect class="box" x="698" y="82" width="310" height="85"/>
+  <text class="body" x="731" y="119">42 · ready</text>
+  <text class="small" x="741" y="151">seq 3</text>
+
+  <text class="small" x="38" y="214">poll 已交付到 42 → 本地 position = 43</text>
+  <path class="arrow" d="M 492 205 H 581"/>
+  <text class="small" x="616" y="214">这不等于处理完成</text>
+
+  <rect class="pending" x="38" y="258" width="420" height="218"/>
+  <text class="head" x="64" y="301">现在：40 还在运行</text>
+  <text class="body" x="64" y="348">40 运行中 · 41 ✓ · 42 ✓</text>
+  <text class="small" x="64" y="396">连续完成前缀尚未越过 40</text>
+  <text class="head" x="64" y="447">安全提交位置 = 40</text>
+
+  <path class="arrow" d="M 466 365 H 613"/>
+  <text class="small" x="510" y="342">40 完成</text>
+
+  <rect class="done" x="630" y="258" width="380" height="218"/>
+  <text class="head" x="656" y="301">随后：三条都完成</text>
+  <text class="body" x="656" y="348">40 ✓ · 41 ✓ · 42 ✓</text>
+  <text class="small" x="656" y="396">恢复从下一位置继续</text>
+  <text class="head" x="656" y="447">安全提交位置 = 43</text>
+
+  <text class="small" x="40" y="527">提交值是下一条要处理的 offset；整数空洞不等于未完成的业务记录。</text>
+</svg>

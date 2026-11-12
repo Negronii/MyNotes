@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1050" height="650" viewBox="0 0 1050 650" role="img" aria-labelledby="title desc">
+  <title id="title">同一分区由在线组与重建组各自读取</title>
+  <desc id="desc">report-42 的三个有序事件追加到分区零。日志的同一份可见记录分别送给在线 consumer group 和独立重建 consumer group；每个组维护自己的读取位置。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#245b78"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172b3a; }
+      .head { font-size: 29px; font-weight: 700; }
+      .body { font-size: 27px; }
+      .small { font-size: 26px; }
+      .box { fill: #f5f8fa; stroke: #35566b; stroke-width: 3px; rx: 14px; }
+      .green { fill: #edf6ef; stroke: #3e7350; stroke-width: 3px; rx: 14px; }
+      .blue { fill: #edf4f8; stroke: #245b78; stroke-width: 3px; rx: 14px; }
+      .arrow { fill: none; stroke: #245b78; stroke-width: 4px; marker-end: url(#arrow); }
+      .branch { fill: none; stroke: #245b78; stroke-width: 4px; }
+    </style>
+  </defs>
+  <rect x="1" y="1" width="1048" height="648" fill="#ffffff" stroke="#d2dbe0" stroke-width="2" rx="18"/>
+
+  <rect class="box" x="34" y="55" width="270" height="135"/>
+  <text class="head" x="58" y="93">生产者</text>
+  <text class="body" x="58" y="132">key = report-42</text>
+  <text class="small" x="58" y="166">seq 1 → 2 → 3</text>
+  <path class="arrow" d="M 315 123 H 386"/>
+  <text class="small" x="322" y="95">键路由</text>
+
+  <rect class="blue" x="401" y="35" width="615" height="230"/>
+  <text class="head" x="425" y="77">report-events / P0</text>
+  <text class="small" x="425" y="112">同一份日志；两个 group 各自读取</text>
+  <rect class="box" x="425" y="135" width="150" height="92"/>
+  <text class="body" x="442" y="174">40 queued</text>
+  <text class="small" x="442" y="210">seq 1</text>
+  <path class="arrow" d="M 582 181 H 628"/>
+  <rect class="box" x="637" y="135" width="150" height="92"/>
+  <text class="body" x="648" y="174">41 rendered</text>
+  <text class="small" x="655" y="210">seq 2</text>
+  <path class="arrow" d="M 794 181 H 840"/>
+  <rect class="box" x="849" y="135" width="150" height="92"/>
+  <text class="body" x="863" y="174">42 ready</text>
+  <text class="small" x="867" y="210">seq 3</text>
+
+  <path class="branch" d="M 708 267 V 299"/>
+  <path class="arrow" d="M 708 299 H 270 V 351"/>
+  <path class="arrow" d="M 708 299 H 780 V 351"/>
+
+  <rect class="green" x="35" y="363" width="470" height="183"/>
+  <text class="head" x="60" y="405">G-live · 在线投影</text>
+  <text class="body" x="60" y="447">C1 消费 P0</text>
+  <path class="arrow" d="M 246 439 H 300"/>
+  <text class="body" x="314" y="447">在线表</text>
+  <text class="small" x="60" y="497">按 seq 应用并独立提交位置</text>
+
+  <rect class="blue" x="545" y="363" width="470" height="183"/>
+  <text class="head" x="570" y="405">G-rebuild · 重建表</text>
+  <text class="body" x="570" y="447">独立读取 P0</text>
+  <path class="arrow" d="M 750 439 H 823"/>
+  <text class="body" x="837" y="447">新表</text>
+  <text class="small" x="570" y="497">从对应快照位置开始重放</text>
+
+  <text class="small" x="36" y="590">传统 group：同一分区同一时刻只由一名成员消费。</text>
+  <text class="small" x="36" y="624">两个 group 都读 P0，但各自保存自己的恢复位置。</text>
+</svg>
