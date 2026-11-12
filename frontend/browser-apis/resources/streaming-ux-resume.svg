@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640" role="img" aria-label="本例报表42的快照状态与游标来自同一一致点；用after103首次订阅，应用事件104的完整视图到版本10">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="640" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<rect x="60" y="25" width="780" height="135" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="60" text-anchor="middle" font-size="25" font-weight="600">首次 GET → 同一读点的状态与游标</text>
+<text x="450.0" y="98" text-anchor="middle" font-size="23">报表 id=42 · version=9 · running · progress=0%</text>
+<text x="450.0" y="130" text-anchor="middle" font-size="23">event_cursor=&quot;103&quot;：从这一位置之后继续</text>
+<path d="M450,172 L450,235" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="250" width="780" height="135" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="285" text-anchor="middle" font-size="25" font-weight="600">建立 EventSource</text>
+<text x="450.0" y="323" text-anchor="middle" font-size="23">GET /api/reports/42/events?after=103</text>
+<text x="450.0" y="355" text-anchor="middle" font-size="23">after 是本例约定；浏览器先解析 SSE 帧</text>
+<path d="M450,397 L450,460" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="475" width="780" height="135" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="510" text-anchor="middle" font-size="25" font-weight="600">收到 id: 104 → 验证并应用完整视图</text>
+<text x="450.0" y="548" text-anchor="middle" font-size="23">report_id=42 · version=10 · running · progress=80%</text>
+<text x="450.0" y="580" text-anchor="middle" font-size="23">视图修订号是 version；SSE id 是日志续读位置</text>
+</g>
+</svg>

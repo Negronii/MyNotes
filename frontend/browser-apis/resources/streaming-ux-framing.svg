@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1080" viewBox="0 0 900 1080" role="img" aria-label="run-7的局部两帧示例：增量UTF-8解码保留E5待A5BD到达才输出好，按换行组装JSON，接受seq1文本后推进游标，再接受seq2终帧">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="1080" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<rect x="60" y="25" width="780" height="135" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="60" text-anchor="middle" font-size="25" font-weight="600">输入：可在任意位置切开的字节块</text>
+<text x="450.0" y="98" text-anchor="middle" font-size="23">上一块已解码到 …&quot;text&quot;:&quot;你</text>
+<text x="450.0" y="130" text-anchor="middle" font-size="23">后续：[E5]、[A5 BD]、[行尾 + 下一条终帧]</text>
+<path d="M450,172 L450,235" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="250" width="780" height="135" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="285" text-anchor="middle" font-size="25" font-weight="600">增量 TextDecoder → 字符</text>
+<text x="450.0" y="323" text-anchor="middle" font-size="23">E5 先暂存；A5 BD 到达后，才组成“好”</text>
+<text x="450.0" y="355" text-anchor="middle" font-size="23">使用 stream 保留跨块状态；无效 UTF-8 拒绝</text>
+<path d="M450,397 L450,460" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="475" width="780" height="135" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="510" text-anchor="middle" font-size="25" font-weight="600">字符缓冲 → 按 LF / CRLF 分出完整行</text>
+<text x="450.0" y="548" text-anchor="middle" font-size="23">第一行：seq=1 / delta / text=&quot;你好&quot;</text>
+<text x="450.0" y="580" text-anchor="middle" font-size="23">第二行：seq=2 / complete / runId=&quot;run-7&quot;</text>
+<path d="M450,622 L450,685" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="700" width="780" height="135" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="735" text-anchor="middle" font-size="25" font-weight="600">JSON + 字段 + 连续序号校验 → 应用第一帧</text>
+<text x="450.0" y="773" text-anchor="middle" font-size="23">onText(&quot;你好&quot;) 完整成功后，sequence：0 → 1</text>
+<text x="450.0" y="805" text-anchor="middle" font-size="23">重复忽略，缺号拒绝；半行继续缓冲</text>
+<path d="M450,847 L450,910" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="925" width="780" height="125" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="960" text-anchor="middle" font-size="25" font-weight="600">接受第二帧 → 本次消费完成</text>
+<text x="450.0" y="998" text-anchor="middle" font-size="23">终帧及已读余文校验通过，sequence：1 → 2</text>
+<text x="450.0" y="1030" text-anchor="middle" font-size="23">取消 reader；不能检查未来未读取的字节</text>
+</g>
+</svg>
