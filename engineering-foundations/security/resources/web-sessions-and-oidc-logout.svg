@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="2152" viewBox="0 48 900 2152" role="img" aria-labelledby="title desc">
+<title id="title">本地退出、顶层 IdP 导航和独立的令牌撤销</title>
+<desc id="desc">Local sequence diagram with explicit inputs, outputs and a stop condition.</desc>
+<defs>
+  <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L11,6 L1,11 z" fill="#2b668f"/></marker>
+  <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L11,6 L1,11 z" fill="#a63f3f"/></marker>
+  <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L11,6 L1,11 z" fill="#2f6b53"/></marker>
+  <marker id="arrow-grey" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L11,6 L1,11 z" fill="#738294"/></marker>
+  <style>text { font-family: Arial, "Noto Sans CJK SC", sans-serif; }</style>
+</defs>
+<rect x="0" y="48" width="100%" height="100%" fill="#ffffff"/>
+<rect x="15" y="71" width="230" height="68" rx="14" fill="#f5f8fb" stroke="#9aaaba" stroke-width="2"/>
+<text x="130" y="111" text-anchor="middle" font-size="23px" font-weight="700" fill="#24415f"><tspan x="130" dy="0">浏览器</tspan></text>
+<line x1="130" y1="142" x2="130" y2="2005" stroke="#bcc8d3" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="335" y="71" width="230" height="68" rx="14" fill="#f5f8fb" stroke="#9aaaba" stroke-width="2"/>
+<text x="450" y="111" text-anchor="middle" font-size="23px" font-weight="700" fill="#24415f"><tspan x="450" dy="0">报表 BFF</tspan></text>
+<line x1="450" y1="142" x2="450" y2="2005" stroke="#bcc8d3" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="655" y="71" width="230" height="68" rx="14" fill="#f5f8fb" stroke="#9aaaba" stroke-width="2"/>
+<text x="770" y="111" text-anchor="middle" font-size="23px" font-weight="700" fill="#24415f"><tspan x="770" dy="0">固定 IdP</tspan></text>
+<line x1="770" y1="142" x2="770" y2="2005" stroke="#bcc8d3" stroke-width="2" stroke-dasharray="8 8"/>
+<text x="45" y="195" text-anchor="start" font-size="25px" font-weight="700" fill="#24415f"><tspan x="45" dy="0">A · 本地退出并可选请求 IdP SSO 退出</tspan></text>
+<line x1="130" y1="330" x2="450" y2="330" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="148.0" y="244" width="284" height="74" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
+<text x="290.0" y="270" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="290.0" dy="0">fetch POST /logout</tspan><tspan x="290.0" dy="27">Cookie + CSRF header</tspan></text>
+<circle cx="155" cy="356" r="18" fill="#24415f"/><text x="155" y="363" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">1</text>
+<rect x="275.0" y="385" width="350" height="118" rx="16" fill="#edf5fb" stroke="#2b668f" stroke-width="2"/>
+<text x="450" y="425.0" text-anchor="middle" font-size="21px" font-weight="600" fill="#24415f"><tspan x="450" dy="0">验证会话 / CSRF / Origin</tspan><tspan x="450" dy="27">保存 hint/RT，建立 logout state</tspan><tspan x="450" dy="27">再撤销本地 session</tspan></text>
+<line x1="450" y1="700" x2="130" y2="700" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="148.0" y="530" width="284" height="158" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
+<text x="290.0" y="556" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="290.0" dy="0">200 JSON + logoutUrl</tspan><tspan x="290.0" dy="27">清除 session Cookie</tspan><tspan x="290.0" dy="27">设置退出 Cookie：</tspan><tspan x="290.0" dy="27">__Host-oidc-logout-tx</tspan><tspan x="290.0" dy="27">URL 来自固定 IdP metadata</tspan></text>
+<circle cx="425" cy="726" r="18" fill="#24415f"/><text x="425" y="733" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">2</text>
+<rect x="15.0" y="760" width="270" height="100" rx="16" fill="#edf5fb" stroke="#2b668f" stroke-width="2"/>
+<text x="150" y="791.0" text-anchor="middle" font-size="21px" font-weight="600" fill="#24415f"><tspan x="150" dy="0">页面顶层执行</tspan><tspan x="150" dy="27">window.location.assign</tspan><tspan x="150" dy="27">(logoutUrl)</tspan></text>
+<line x1="130" y1="1000" x2="770" y2="1000" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="148.0" y="886" width="604" height="102" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
+<text x="450.0" y="912" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="450.0" dy="0">顶层 GET 到 end_session_endpoint</tspan><tspan x="450.0" dy="27">id_token_hint + post_logout_redirect_uri</tspan><tspan x="450.0" dy="27">+ state</tspan></text>
+<circle cx="155" cy="1026" r="18" fill="#24415f"/><text x="155" y="1033" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">3</text>
+<rect x="640.0" y="1065" width="260" height="92" rx="16" fill="#edf5fb" stroke="#2b668f" stroke-width="2"/>
+<text x="770" y="1105.5" text-anchor="middle" font-size="21px" font-weight="600" fill="#24415f"><tspan x="770" dy="0">IdP 按策略结束 SSO</tspan><tspan x="770" dy="27">并重定向到已登记回跳</tspan></text>
+<line x1="770" y1="1270" x2="130" y2="1270" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="148.0" y="1184" width="604" height="74" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
+<text x="450.0" y="1210" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="450.0" dy="0">顶层回跳：post_logout_redirect_uri</tspan><tspan x="450.0" dy="27">附带原 state</tspan></text>
+<circle cx="745" cy="1296" r="18" fill="#24415f"/><text x="745" y="1303" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">4</text>
+<line x1="130" y1="1445" x2="450" y2="1445" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="148.0" y="1359" width="284" height="74" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
+<text x="290.0" y="1385" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="290.0" dy="0">GET logout callback</tspan><tspan x="290.0" dy="27">退出事务 Cookie + state</tspan></text>
+<circle cx="155" cy="1471" r="18" fill="#24415f"/><text x="155" y="1478" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">5</text>
+<rect x="275.0" y="1490" width="350" height="96" rx="16" fill="#edf7f1" stroke="#2f6b53" stroke-width="2"/>
+<text x="450" y="1532.5" text-anchor="middle" font-size="21px" font-weight="600" fill="#2f6b53"><tspan x="450" dy="0">精确比对并原子消费 state</tspan><tspan x="450" dy="27">只确认本应用的退出回跳</tspan></text>
+<line x1="48" y1="1630" x2="852" y2="1630" stroke="#aebbc7" stroke-width="2"/>
+<text x="45" y="1685" text-anchor="start" font-size="25px" font-weight="700" fill="#24415f"><tspan x="45" dy="0">B · 单独的后台令牌撤销（可选）</tspan></text>
+<line x1="450" y1="1850" x2="770" y2="1850" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="468.0" y="1708" width="284" height="130" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
+<text x="610.0" y="1734" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="610.0" dy="0">HTTPS POST /revoke</tspan><tspan x="610.0" dy="27">Refresh Token</tspan><tspan x="610.0" dy="27">confidential client auth</tspan><tspan x="610.0" dy="27">固定 IdP endpoint</tspan></text>
+<circle cx="475" cy="1876" r="18" fill="#24415f"/><text x="475" y="1883" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">6</text>
+<line x1="770" y1="2005" x2="450" y2="2005" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="468.0" y="1891" width="284" height="102" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
+<text x="610.0" y="1917" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="610.0" dy="0">200：不揭示原状态</tspan><tspan x="610.0" dy="27">503：假定仍有效</tspan><tspan x="610.0" dy="27">可稍后重试</tspan></text>
+<circle cx="745" cy="2031" r="18" fill="#24415f"/><text x="745" y="2038" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">7</text>
+<rect x="125.0" y="2070" width="650" height="90" rx="16" fill="#f5f8fb" stroke="#9aaaba" stroke-width="2"/>
+<text x="450" y="2110.5" text-anchor="middle" font-size="20px" font-weight="600" fill="#24415f"><tspan x="450" dy="0">是否撤销关联 Access Token</tspan><tspan x="450" dy="25">以及 API 何时观察到撤销，各由对应服务决定</tspan></text>
+</svg>
