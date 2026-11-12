@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="600" viewBox="0 0 980 600" role="img" aria-labelledby="title desc">
+  <title id="title">2022 S1 历史的优先图</title>
+  <desc id="desc">冲突边 k 到 m 标 a，m 到 n 标 b，k 到 o 标 c，o 到 p 标 d。l 是孤立顶点。图无环并有多个拓扑顺序。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L11,6 L1,11 z" fill="#2458a6"/></marker>
+    <style>
+      text { font-family: "PingFang SC", "Heiti SC", sans-serif; fill:#17212f; }
+      .edge { fill:none; stroke:#2458a6; stroke-width:5; marker-end:url(#arrow); }
+      .node { fill:#fff; stroke:#20344f; stroke-width:4; }
+      .v { font-size:30px; font-weight:700; text-anchor:middle; dominant-baseline:middle; }
+      .label { font-size:26px; font-weight:600; fill:#2458a6; }
+      .note { font-size:26px; }
+    </style>
+  </defs>
+  <rect width="980" height="600" fill="#fff"/>
+  <path class="edge" d="M175,180 C235,155 278,128 335,112"/>
+  <path class="edge" d="M415,105 L555,105"/>
+  <path class="edge" d="M175,220 C235,248 278,278 335,294"/>
+  <path class="edge" d="M415,300 L555,300"/>
+  <text class="label" x="245" y="132">a</text>
+  <text class="label" x="480" y="88">b</text>
+  <text class="label" x="247" y="275">c</text>
+  <text class="label" x="480" y="284">d</text>
+  <circle class="node" cx="135" cy="200" r="40"/><text class="v" x="135" y="200">k</text>
+  <circle class="node" cx="375" cy="105" r="40"/><text class="v" x="375" y="105">m</text>
+  <circle class="node" cx="595" cy="105" r="40"/><text class="v" x="595" y="105">n</text>
+  <circle class="node" cx="375" cy="300" r="40"/><text class="v" x="375" y="300">o</text>
+  <circle class="node" cx="595" cy="300" r="40"/><text class="v" x="595" y="300">p</text>
+  <circle class="node" cx="135" cy="360" r="40"/><text class="v" x="135" y="360">l</text>
+  <text class="note" x="220" y="390">l 只有 W(e)，无跨事务冲突边</text>
+  <line x1="32" y1="430" x2="948" y2="430" stroke="#ccd5e0" stroke-width="2"/>
+  <text class="note" x="42" y="480">拓扑顺序 1：k, m, n, l, o, p</text>
+  <text class="note" x="42" y="530">拓扑顺序 2：l, k, o, p, m, n</text>
+  <text class="note" x="42" y="576">边分别保留 a、b、c、d 上的冲突先后；图无环。</text>
+</svg>

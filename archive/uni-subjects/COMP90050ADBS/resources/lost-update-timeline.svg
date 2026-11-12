@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="410" viewBox="0 0 700 410" role="img" aria-labelledby="title desc">
+  <title id="title">丢失更新时序</title>
+  <desc id="desc">两条事务泳道 T1、T2 和共享数据项 x；时间向下。初始 x 为 10，两事务都读 10；T1 写 11 并提交后，T2 写入基于旧读值算出的 11 并提交。</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#225b8f"/>
+    </marker>
+    <style>
+      text { font-family:"PingFang SC","Noto Sans CJK SC",sans-serif; fill:#17212f; }
+      .head { font-size:20px; font-weight:700; }
+      .action { font-size:19px; font-weight:600; }
+      .state { font-size:18px; fill:#34465f; }
+      .lane { stroke:#a9b8c9; stroke-width:2; stroke-dasharray:7 7; }
+      .data { stroke:#6d7f92; stroke-width:2; stroke-dasharray:4 6; }
+      .arrow { stroke:#225b8f; stroke-width:3; fill:none; marker-end:url(#arrow); }
+      .pill { fill:#eef4fa; stroke:#557796; stroke-width:2; }
+      .statebox { fill:#f4f7fa; stroke:#6d7f92; stroke-width:2; }
+      .time { stroke:#52677d; stroke-width:2.5; fill:none; marker-end:url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="410" fill="#fff"/>
+  <text class="head" x="130" y="42" text-anchor="middle">T1</text>
+  <text class="head" x="350" y="42" text-anchor="middle">共享项 x</text>
+  <text class="head" x="570" y="42" text-anchor="middle">T2</text>
+  <text class="state" x="27" y="68">时间</text>
+  <path class="time" d="M42 78 L42 390"/>
+  <path class="lane" d="M130 68 L130 395 M570 68 L570 395"/>
+  <path class="data" d="M350 68 L350 395"/>
+
+  <rect class="statebox" x="298" y="79" width="104" height="34" rx="17"/>
+  <text class="action" x="350" y="102" text-anchor="middle">初始 x=10</text>
+
+  <text class="action" x="240" y="132" text-anchor="middle">R₁(x)=10</text>
+  <path class="arrow" d="M350 143 L137 143"/>
+  <text class="action" x="460" y="177" text-anchor="middle">R₂(x)=10</text>
+  <path class="arrow" d="M350 188 L563 188"/>
+
+  <text class="action" x="240" y="222" text-anchor="middle">W₁(x:=11)</text>
+  <path class="arrow" d="M137 233 L343 233"/>
+  <text class="state" x="363" y="256">x=11，T1 尚未提交</text>
+
+  <rect class="pill" x="70" y="263" width="120" height="31" rx="15"/>
+  <text class="action" x="130" y="285" text-anchor="middle">T1 commit</text>
+  <text class="state" x="363" y="292">x=11 已提交</text>
+
+  <text class="action" x="460" y="311" text-anchor="middle">W₂(x:=11)</text>
+  <path class="arrow" d="M563 322 L357 322"/>
+  <text class="state" x="363" y="345">T2 覆盖后仍为 x=11</text>
+
+  <rect class="pill" x="510" y="351" width="120" height="31" rx="15"/>
+  <text class="action" x="570" y="373" text-anchor="middle">T2 commit</text>
+  <text class="state" x="363" y="400">最终 x=11</text>
+</svg>
