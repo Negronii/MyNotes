@@ -2,7 +2,7 @@
 
 i18next 保存语言资源与翻译规则，react-i18next 把翻译函数接到 React 组件。当前函数组件可用 useTranslation 读取 t 与 i18n；切换语言调用 changeLanguage。语言资源的实际加载方式由配置的 backend 和 namespace 决定。
 
-在应用入口先导入 `./i18n`，让实例在渲染 React 树前初始化一次；不要在组件 render 中反复初始化：
+在应用入口先导入 `./i18n`，启动一次实例初始化；不要在组件 render 中反复初始化：
 
 ~~~typescript
 // i18n.ts
@@ -11,8 +11,8 @@ import { initReactI18next } from "react-i18next";
 
 i18n.use(initReactI18next).init({
   resources: {
-    en: { translation: { title: "Reports", oldest: "Oldest first" } },
-    zh: { translation: { title: "报表", oldest: "最早优先" } },
+    en: { translation: { title: "Reports" } },
+    zh: { translation: { title: "报表" } },
   },
   lng: "en",
   fallbackLng: "en",
@@ -25,27 +25,39 @@ i18n.use(initReactI18next).init({
 export default i18n;
 ~~~
 
-组件只展示语言切换和翻译。语言选项属于本例的界面设置；当用户选择中文时，翻译函数读取中文资源，切回 English 后又使用英文资源。
+组件只展示语言切换和翻译。语言选项属于本例的界面设置；当用户选择中文时，`changeLanguage` 切换语言，Hook 默认订阅的 `languageChanged` 事件触发组件重新渲染；`t("title")` 因而从 `Reports` 变成「报表」。切回 English 后再使用英文资源。
 
 ~~~tsx
 import { useTranslation } from "react-i18next";
 
 export function ReportHeader() {
-  const { t, i18n, ready } = useTranslation("translation", { useSuspense: false });
+  const { t, i18n, ready } = useTranslation("translation", {
+    useSuspense: false,
+  });
 
   if (!ready) return <p role="status">正在加载语言资源…</p>;
 
   return (
     <header>
       <h1>{t("title")}</h1>
-      <button type="button" onClick={() => void i18n.changeLanguage("en")}>English</button>
-      <button type="button" onClick={() => void i18n.changeLanguage("zh")}>中文</button>
+      <button
+        type="button"
+        onClick={() => void i18n.changeLanguage("en")}
+      >
+        English
+      </button>
+      <button
+        type="button"
+        onClick={() => void i18n.changeLanguage("zh")}
+      >
+        中文
+      </button>
     </header>
   );
 }
 ~~~
 
-默认情况下，useTranslation 在所需 namespace 尚未就绪时可触发 Suspense；示例以 `useSuspense: false` 显式关闭它，才由组件读取 `ready` 显示加载状态。若开启 Suspense，应在组件外提供匹配的边界。使用 backend 动态加载资源时，应通过加载事件处理资源失败；不要假定 `changeLanguage` 的 Promise 拒绝就能表示加载失败。长页面的导航排序仍属于 URL：不要让语言切换意外改写 sort 或浏览器历史。
+默认情况下，useTranslation 在所需 namespace 尚未就绪时可触发 Suspense；示例以 `useSuspense: false` 显式关闭它，才由组件读取 `ready` 显示加载状态。若开启 Suspense，应在组件外提供匹配的边界。使用 backend 动态加载资源时，应通过 `failedLoading` 事件或错误回调处理资源失败；不要假定 `changeLanguage` 的 Promise 拒绝就能表示加载失败。入口的导入只启动初始化；若资源来自异步 backend，仍需这些就绪机制等待加载完成。
 
 旧课程把语言代码同时写入 Redux，再调用 i18n.changeLanguage。若业务确实需要两个系统都读取语言代码，应把外部语言切换放在事件处理器或 thunk 中，并明确失败时的协调策略；reducer 只应计算下一个 Redux state。通常由 i18next 持有当前语言即可，避免两份可独立修改的值彼此不同步。Redux 的 action、reducer 与异步工作流见[共享界面状态章节](../../../../frontend/frameworks/redux-state-and-async-workflows.md)。
 
