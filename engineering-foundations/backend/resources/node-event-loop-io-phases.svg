@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="635" viewBox="0 85 700 635" role="img" aria-labelledby="title desc">
+  <title id="title">Node.js 中 I/O 回调、setImmediate 与 timer 的交接</title>
+  <desc id="desc">报表读取的 I/O callback 在 poll 阶段运行到返回，Node 处理 nextTick 和微任务，然后执行 check 阶段的 setImmediate；timer 必须等到阈值过后，并不能抢占当前 callback。主模块中 timer 与 setImmediate 的顺序不固定。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L10 5L0 10z" fill="#71839A" />
+    </marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#27364D}
+      .edge{stroke:#71839A;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="700" height="720" fill="#FBFCFE" />
+  <text x="350" y="43" text-anchor="middle" font-size="24" font-weight="600">Node.js v26.13.0：I/O 回调后怎样交还控制权？</text>
+  <text x="350" y="76" text-anchor="middle" font-size="19">沿报表读取回调看 Poll、微任务、setImmediate 和 timer</text>
+
+  <rect x="55" y="103" width="590" height="72" rx="12" fill="#FFF5E5" stroke="#EAD7B5" stroke-width="2" />
+  <text x="350" y="132" text-anchor="middle" font-size="21" font-weight="600">Poll：运行已就绪的 I/O callback</text>
+  <text x="350" y="159" text-anchor="middle" font-size="19">例如报表读取完成；如果暂时没有就绪回调，事件循环可等待 I/O</text>
+  <path class="edge" d="M350 176L350 205" />
+
+  <rect x="55" y="211" width="590" height="84" rx="12" fill="#EAF4FB" stroke="#C6DFEF" stroke-width="2" />
+  <text x="350" y="243" text-anchor="middle" font-size="21" font-weight="600">当前 JavaScript callback 运行到返回</text>
+  <text x="350" y="274" text-anchor="middle" font-size="19">其中的同步代码不会被 timer 或另一个 I/O callback 抢占</text>
+  <path class="edge" d="M350 296L350 325" />
+
+  <rect x="55" y="331" width="590" height="88" rx="12" fill="#F5F0FB" stroke="#DCD0EC" stroke-width="2" />
+  <text x="350" y="363" text-anchor="middle" font-size="21" font-weight="600">Node 调度检查点（不属于 libuv 阶段）</text>
+  <text x="350" y="396" text-anchor="middle" font-size="19">本例先清 nextTick，再按入队顺序清 Promise / queueMicrotask</text>
+  <path class="edge" d="M350 420L350 450" />
+
+  <rect x="55" y="456" width="590" height="84" rx="12" fill="#EDF8F3" stroke="#C8E3D7" stroke-width="2" />
+  <text x="350" y="489" text-anchor="middle" font-size="21" font-weight="600">Check：执行已排入的 setImmediate callback</text>
+  <text x="350" y="520" text-anchor="middle" font-size="19">从 I/O callback 安排的 immediate 在它安排的 0ms timer 前运行</text>
+  <path class="edge" d="M350 541L350 570" />
+
+  <rect x="55" y="576" width="590" height="80" rx="12" fill="#EAF0F6" stroke="#C9D6E5" stroke-width="2" />
+  <text x="350" y="607" text-anchor="middle" font-size="21" font-weight="600">Timer callback：阈值已达且获得调度机会时运行</text>
+  <text x="350" y="636" text-anchor="middle" font-size="19">setTimeout(fn, 0) 不会中断 callback，也不是精确截止时间</text>
+
+  <text x="350" y="686" text-anchor="middle" font-size="18" font-weight="600">主模块中 setImmediate 与 setTimeout 的先后顺序不作保证</text>
+</svg>

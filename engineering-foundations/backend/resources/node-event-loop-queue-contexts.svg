@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="590" viewBox="0 90 700 590" role="img" aria-labelledby="title desc">
+  <title id="title">Node.js 直接运行模块入口时的队列顺序与独立嵌套微任务示例</title>
+  <desc id="desc">上半部比较 Node CLI 直接运行 CommonJS 与 ES module 文件作为主模块时的队列顺序。下半部是独立的 CommonJS 示例：微任务 A 排入 nextTick X、Promise B 和 queueMicrotask C，当前微任务队列先排空，再处理新排入的 nextTick。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L10 5L0 10z" fill="#71839A" />
+    </marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#27364D}
+      .edge{stroke:#71839A;stroke-width:3;fill:none;marker-end:url(#arrow)}
+      .box{stroke-width:2;rx:12}
+    </style>
+  </defs>
+  <rect width="700" height="680" fill="#FBFCFE" />
+
+  <text x="55" y="119" font-size="20" font-weight="600">node queues.cjs 直接运行</text>
+  <text x="645" y="119" text-anchor="end" font-size="18">同步入口交还控制权后</text>
+  <rect class="box" x="50" y="137" width="175" height="72" fill="#EAF0F6" stroke="#C9D6E5" />
+  <text x="137" y="168" text-anchor="middle" font-size="19" font-weight="600">nextTick 队列</text>
+  <text x="137" y="195" text-anchor="middle" font-size="18">先排空</text>
+  <path class="edge" d="M229 173L258 173" />
+  <rect class="box" x="263" y="137" width="387" height="72" fill="#F5F0FB" stroke="#DCD0EC" />
+  <text x="456" y="168" text-anchor="middle" font-size="19" font-weight="600">Promise / queueMicrotask 队列</text>
+  <text x="456" y="195" text-anchor="middle" font-size="18">按入队顺序排空</text>
+
+  <text x="55" y="260" font-size="20" font-weight="600">node queues.mjs 直接运行</text>
+  <text x="645" y="260" text-anchor="end" font-size="18">入口模块求值处于微任务中</text>
+  <rect class="box" x="50" y="278" width="387" height="72" fill="#F5F0FB" stroke="#DCD0EC" />
+  <text x="243" y="309" text-anchor="middle" font-size="19" font-weight="600">Promise / queueMicrotask 队列</text>
+  <text x="243" y="336" text-anchor="middle" font-size="18">先于 nextTick 运行</text>
+  <path class="edge" d="M441 314L470 314" />
+  <rect class="box" x="475" y="278" width="175" height="72" fill="#EAF0F6" stroke="#C9D6E5" />
+  <text x="562" y="309" text-anchor="middle" font-size="19" font-weight="600">nextTick 队列</text>
+  <text x="562" y="336" text-anchor="middle" font-size="18">之后处理</text>
+
+  <rect x="50" y="388" width="600" height="240" rx="14" fill="#FFF5E5" stroke="#EAD7B5" stroke-width="2" />
+  <text x="350" y="419" text-anchor="middle" font-size="21" font-weight="600">独立 CJS 示例：微任务 A 执行中加入队列</text>
+  <rect class="box" x="70" y="435" width="230" height="92" fill="#FFF" stroke="#EAD7B5" />
+  <text x="185" y="469" text-anchor="middle" font-size="19" font-weight="600">microtask A 执行</text>
+  <text x="185" y="502" text-anchor="middle" font-size="18">排入 nextTick X、B、C</text>
+  <path class="edge" d="M304 481L358 481" />
+  <rect class="box" x="364" y="435" width="256" height="92" fill="#F5F0FB" stroke="#DCD0EC" />
+  <text x="492" y="461" text-anchor="middle" font-size="18" font-weight="600">当前微任务队列 FIFO</text>
+  <text x="492" y="490" text-anchor="middle" font-size="18">Promise B</text>
+  <text x="492" y="516" text-anchor="middle" font-size="18">queueMicrotask C</text>
+  <path class="edge" d="M492 531L492 558" />
+  <rect class="box" x="342" y="562" width="300" height="54" fill="#EAF0F6" stroke="#C9D6E5" />
+  <text x="492" y="596" text-anchor="middle" font-size="19" font-weight="600">之后才运行 nextTick X</text>
+  <text x="350" y="652" text-anchor="middle" font-size="18">递归 nextTick 可饿死 I/O；多数用户代码优先用 queueMicrotask()</text>
+</svg>
