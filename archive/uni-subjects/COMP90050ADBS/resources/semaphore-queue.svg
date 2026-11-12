@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1080" viewBox="0 0 1200 1080" role="img" aria-labelledby="title desc">
+  <title id="title">单个信号量许可的等待与释放</title>
+  <desc id="desc">许可初值为一，P1 成功调用 sem_wait 后消费许可并进入临界区。P2、P3 到达时许可为零而阻塞。P1 离开临界区并调用 sem_post 后，一个等待者的 sem_wait 成功返回并消费许可，可用数仍为零；另一个仍等待。图不表示 FIFO 唤醒。</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M1 1 L13 7 L1 13 Z" fill="#334155"/>
+    </marker>
+    <style>
+      text { font-family: "Noto Sans CJK SC", "Noto Sans SC", sans-serif; fill: #172033; }
+      .card { fill: #ffffff; stroke: #334155; stroke-width: 3; rx: 24; }
+      .head { font-size: 34px; font-weight: 700; }
+      .body { font-size: 30px; }
+      .foot { font-size: 30px; font-weight: 600; }
+      .arrow { stroke: #334155; stroke-width: 5; fill: none; marker-end: url(#arrow); }
+      .arrow-label { font-size: 28px; font-weight: 600; fill: #334155; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1200" height="1080" fill="#f8fafc"/>
+
+  <rect class="card" x="90" y="35" width="1020" height="155"/>
+  <text class="head" x="600" y="91" text-anchor="middle">信号量初始状态</text>
+  <text class="body" x="600" y="145" text-anchor="middle">许可数 = 1；还没有调用者进入临界区</text>
+
+  <path class="arrow" d="M600 195 L600 257"/>
+  <text class="arrow-label" x="625" y="235">P1 wait</text>
+
+  <rect class="card" x="90" y="270" width="1020" height="160"/>
+  <text class="head" x="600" y="326" text-anchor="middle">P1 调用 sem_wait()</text>
+  <text class="body" x="600" y="382" text-anchor="middle">许可从 1 减到 0；调用返回，P1 进入临界区</text>
+
+  <path class="arrow" d="M600 435 L600 497"/>
+  <text class="arrow-label" x="625" y="475">P2、P3 wait</text>
+
+  <rect class="card" x="90" y="510" width="1020" height="205"/>
+  <text class="head" x="600" y="566" text-anchor="middle">许可数 = 0</text>
+  <text class="body" x="600" y="622" text-anchor="middle">P2 与 P3 调用 sem_wait()，都阻塞</text>
+  <text class="body" x="600" y="670" text-anchor="middle">P1 仍在临界区；等待者没有许可可消费</text>
+
+  <path class="arrow" d="M600 720 L600 782"/>
+  <text class="arrow-label" x="625" y="760">P1 post</text>
+
+  <rect class="card" x="90" y="795" width="1020" height="210"/>
+  <text class="head" x="600" y="851" text-anchor="middle">P1 离开临界区后调用 sem_post()</text>
+  <text class="body" x="600" y="907" text-anchor="middle">一个等待者的 sem_wait() 成功返回并消费许可</text>
+  <text class="body" x="600" y="954" text-anchor="middle">可用数仍为 0；另一名等待者仍被阻塞</text>
+
+  <text class="foot" x="600" y="1055" text-anchor="middle">选择依所支持的调度策略；POSIX 不保证 FIFO</text>
+</svg>

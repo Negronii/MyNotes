@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="900" viewBox="0 0 1100 900" role="img" aria-labelledby="title desc">
+  <title id="title">三个同类资源实例的资源分配图</title>
+  <desc id="desc">资源类型 R 有三个实例 r₁、r₂、r₃，分别分配给 T1、T2、T3。T1 和 T2 各请求一个额外实例。图中有 T1 到 R 到 T1 与 T2 到 R 到 T2 的环，但 T3 没有等待，可以结束并归还实例，所以环不足以证明多实例死锁。</desc>
+  <defs>
+    <marker id="allocation-arrow" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" refX="11" refY="6.5" orient="auto">
+      <path d="M1 1 L12 6.5 L1 12 Z" fill="#2457a6"/>
+    </marker>
+    <marker id="request-arrow" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" refX="11" refY="6.5" orient="auto">
+      <path d="M1 1 L12 6.5 L1 12 Z" fill="#b64a3a"/>
+    </marker>
+    <style>
+      text { font-family: "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", sans-serif; fill:#172033; }
+      .legend { font-size:28px; fill:#334155; }
+      .process { fill:#ffffff; stroke:#23364d; stroke-width:4; }
+      .resource { fill:#ffffff; stroke:#23364d; stroke-width:4; }
+      .instance { fill:#23364d; }
+      .node-label { font-size:34px; font-weight:700; }
+      .r-label { font-size:31px; font-weight:700; }
+      .edge-label { font-size:27px; font-weight:600; }
+      .note { font-size:28px; font-weight:600; fill:#334155; }
+      .allocation { stroke:#2457a6; stroke-width:5; fill:none; marker-end:url(#allocation-arrow); }
+      .request { stroke:#b64a3a; stroke-width:5; stroke-dasharray:13 10; fill:none; marker-end:url(#request-arrow); }
+    </style>
+  </defs>
+  <rect width="1100" height="900" fill="#ffffff"/>
+
+  <text class="legend" x="550" y="48" text-anchor="middle">蓝实线：实例分配给进程　　红虚线：进程请求资源类型 R</text>
+  <text class="legend" x="550" y="84" text-anchor="middle">r₁、r₂、r₃ 是资源类型 R 的三个实例</text>
+
+  <!-- Three instance assignments: each instance dot points to its holder. -->
+  <path class="allocation" d="M520 315 C430 115 180 115 130 283"/>
+  <path class="allocation" d="M580 375 C690 115 925 115 970 283"/>
+  <path class="allocation" d="M550 465 L550 627"/>
+
+  <!-- Requests for one more instance each. -->
+  <path class="request" d="M188 350 L385 350"/>
+  <path class="request" d="M912 350 L715 350"/>
+
+  <circle class="process" cx="130" cy="350" r="58"/>
+  <text class="node-label" x="130" y="362" text-anchor="middle">T1</text>
+  <circle class="process" cx="970" cy="350" r="58"/>
+  <text class="node-label" x="970" y="362" text-anchor="middle">T2</text>
+  <circle class="process" cx="550" cy="690" r="58"/>
+  <text class="node-label" x="550" y="702" text-anchor="middle">T3</text>
+
+  <rect class="resource" x="390" y="240" width="320" height="260" rx="14"/>
+  <text class="r-label" x="550" y="278" text-anchor="middle">R：三个实例</text>
+  <circle class="instance" cx="520" cy="320" r="11"/>
+  <circle class="instance" cx="580" cy="380" r="11"/>
+  <circle class="instance" cx="550" cy="450" r="11"/>
+  <text class="r-label" x="612" y="329">r₁</text>
+  <text class="r-label" x="612" y="389">r₂</text>
+  <text class="r-label" x="612" y="459">r₃</text>
+
+  <text class="edge-label" x="280" y="330" text-anchor="middle" fill="#b64a3a">请求 R</text>
+  <text class="edge-label" x="820" y="330" text-anchor="middle" fill="#b64a3a">请求 R</text>
+  <text class="edge-label" x="320" y="150" text-anchor="middle" fill="#2457a6">r₁ → T1</text>
+  <text class="edge-label" x="780" y="150" text-anchor="middle" fill="#2457a6">r₂ → T2</text>
+  <text class="edge-label" x="583" y="555" fill="#2457a6">r₃ → T3</text>
+
+  <line x1="48" y1="790" x2="1052" y2="790" stroke="#cbd5e1" stroke-width="2"/>
+  <text class="note" x="550" y="842" text-anchor="middle">有 T1 → R → T1 的环；T3 没有等待，能先完成并归还 r₃</text>
+  <text class="note" x="550" y="878" text-anchor="middle">多实例下，有环不等于已死锁</text>
+</svg>
