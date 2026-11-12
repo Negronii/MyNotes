@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="520" viewBox="0 0 700 520" role="img" aria-labelledby="title desc">
+  <title id="title">应用 API 与签名对象下载两条 HTTPS 路径</title>
+  <desc id="desc">上半部分是浏览器经可选 CDN 与负载均衡器访问私有 API，或不使用 CDN 时直接访问负载均衡器。下半部分是独立下载路径：API 在对象引用已持久且当前用户获授权后签发短期 URL，浏览器必须能到达 S3 HTTPS 端点，bucket 与 IAM 策略也必须允许该请求来源。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+    <marker markerUnits="userSpaceOnUse" id="purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7e22ce"/></marker>
+    <style>
+      text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+      .head { font-size: 18px; font-weight: 700; fill: #334155; }
+      .label { font-size: 18px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .note { font-size: 17px; }
+      .panel { stroke-width: 2; rx: 14; }
+      .app { fill: #f5f3ff; stroke: #7e22ce; stroke-width: 2; rx: 12; }
+      .edge { fill: #eff6ff; stroke: #2563eb; stroke-width: 2; rx: 12; }
+      .data { fill: #fff7ed; stroke: #c2410c; stroke-width: 2; rx: 12; }
+      .flow { fill: none; stroke: #1d4ed8; stroke-width: 3; marker-end: url(#arrow); }
+      .download { fill: none; stroke: #7e22ce; stroke-width: 3; marker-end: url(#purple); }
+      .optional { fill: none; stroke: #1d4ed8; stroke-width: 3; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="520" fill="#fff"/>
+
+  <rect x="15" y="15" width="670" height="215" class="panel" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="28" y="43" class="head">应用请求：浏览器经 HTTPS 到私有 API</text>
+  <text x="350" y="76" text-anchor="middle" class="note">不使用 CDN 时，浏览器直连负载均衡器</text>
+  <path d="M82 105 V88 H413 V105" class="optional"/>
+  <rect x="25" y="105" width="114" height="112" class="edge"/>
+  <text x="82" y="145" text-anchor="middle" class="label">浏览器</text>
+  <text x="82" y="174" text-anchor="middle" class="body">当前会话</text>
+  <rect x="190" y="105" width="112" height="112" class="edge" stroke-dasharray="7 5"/>
+  <text x="246" y="145" text-anchor="middle" class="label">可选 CDN</text>
+  <text x="246" y="174" text-anchor="middle" class="body">访问另配置</text>
+  <rect x="353" y="105" width="120" height="112" class="edge"/>
+  <text x="413" y="145" text-anchor="middle" class="label">负载均衡器</text>
+  <text x="413" y="174" text-anchor="middle" class="body">HTTPS 入口</text>
+  <rect x="521" y="105" width="160" height="112" class="app"/>
+  <text x="601" y="132" text-anchor="middle" class="label">私有 API</text>
+  <text x="601" y="157" text-anchor="middle" class="body">只接受 LB 请求</text>
+  <text x="601" y="182" text-anchor="middle" class="body">验证真实主体</text>
+  <text x="601" y="207" text-anchor="middle" class="body">检查报表权限</text>
+  <path d="M139 158 H190" class="flow"/>
+  <path d="M302 158 H353" class="flow"/>
+  <path d="M473 158 H521" class="flow"/>
+
+  <rect x="15" y="244" width="670" height="261" class="panel" fill="#faf5ff" stroke="#d8b4fe"/>
+  <text x="28" y="273" class="head">签名下载：浏览器直达另一 HTTPS 对象端点</text>
+  <rect x="25" y="285" width="155" height="88" class="app"/>
+  <text x="102" y="314" text-anchor="middle" class="label">API 授权</text>
+  <text x="102" y="340" text-anchor="middle" class="body">对象引用已持久</text>
+  <text x="102" y="363" text-anchor="middle" class="body">后签发短期 URL</text>
+  <rect x="265" y="285" width="155" height="88" class="edge"/>
+  <text x="342" y="314" text-anchor="middle" class="label">浏览器</text>
+  <text x="342" y="340" text-anchor="middle" class="body">持短期签名 URL</text>
+  <text x="342" y="363" text-anchor="middle" class="body">发起 HTTPS GET</text>
+  <rect x="535" y="285" width="140" height="88" class="data"/>
+  <text x="605" y="314" text-anchor="middle" class="label">私有 S3 对象</text>
+  <text x="605" y="340" text-anchor="middle" class="body">浏览器可达端点</text>
+  <text x="605" y="363" text-anchor="middle" class="body">策略授权请求</text>
+  <path d="M180 329 H265" class="download"/>
+  <text x="222" y="310" text-anchor="middle" class="note">签发 URL</text>
+  <path d="M420 329 H535" class="flow"/>
+  <text x="477" y="310" text-anchor="middle" class="note">HTTPS GET</text>
+  <text x="28" y="411" class="note">签发条件：对象引用已持久，API 已按当前用户授权。</text>
+  <text x="28" y="440" class="note">下载条件：浏览器能到 S3 HTTPS 端点；对象访问策略放行该来源。</text>
+  <text x="28" y="469" class="note">仅允许虚拟私有云（VPC）端点的策略会拒绝未经过该端点的浏览器请求。</text>
+</svg>

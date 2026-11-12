@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="850" viewBox="0 0 700 850" role="img" aria-labelledby="title desc">
+  <title id="title">API 与 worker 各自停止并安全交还工作</title>
+  <desc id="desc">第一段分开展示 API 收到停止通知后的本地门闩动作，以及平台按自身生命周期更新路由；两条路径不互为前置条件。ECS 配置目标组时可以先注销目标，再通知容器停止。第二段展示 worker 独立停止新 delivery，并区分预取未启动投递与运行中 attempt：前者按 broker 契约归还，后者完成并持久提交后 ACK，不能完成时不 ACK，由 broker 重投且数据库恢复器在租约到期后独立尝试接管。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+    <style>
+      text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+      .head { font-size: 18px; font-weight: 700; fill: #334155; }
+      .label { font-size: 18px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .note { font-size: 17px; }
+      .panel { stroke-width: 2; rx: 14; }
+      .app { fill: #eff6ff; stroke: #2563eb; stroke-width: 2; rx: 12; }
+      .worker { fill: #f5f3ff; stroke: #7e22ce; stroke-width: 2; rx: 12; }
+      .route { fill: #f0fdf4; stroke: #15803d; stroke-width: 2; rx: 12; }
+      .warn { fill: #fff7ed; stroke: #c2410c; stroke-width: 2; rx: 12; }
+      .arrow { fill: none; stroke: #334155; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="850" fill="#fff"/>
+
+  <rect x="15" y="12" width="670" height="354" class="panel" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="28" y="40" class="head">API：本地停止动作与入口路由各自推进</text>
+  <rect x="25" y="62" width="300" height="62" class="app"/>
+  <text x="175" y="100" text-anchor="middle" class="label">API 收到停止通知</text>
+  <path d="M175 124 V158" class="arrow"/>
+  <rect x="25" y="158" width="300" height="132" class="app"/>
+  <text x="175" y="185" text-anchor="middle" class="label">本地立即关业务门闩</text>
+  <text x="42" y="213" class="body">readiness=false</text>
+  <text x="42" y="240" class="body">拒绝新操作，排空已在途请求</text>
+  <rect x="375" y="62" width="300" height="62" class="route"/>
+  <text x="525" y="100" text-anchor="middle" class="label">平台按生命周期摘流</text>
+  <path d="M525 124 V158" class="arrow"/>
+  <rect x="375" y="158" width="300" height="132" class="route"/>
+  <text x="525" y="185" text-anchor="middle" class="label">入口路由独立传播</text>
+  <text x="392" y="213" class="body">收敛前请求仍可能到旧实例</text>
+  <text x="392" y="240" class="body">应用本地门闩拒绝新业务</text>
+  <text x="28" y="314" class="note">API 收到通知就关入口，不等路由传播。</text>
+  <text x="28" y="340" class="note">ECS 配置目标组时可先注销目标，再通知容器停止。</text>
+
+  <rect x="15" y="382" width="670" height="445" class="panel" fill="#faf5ff" stroke="#d8b4fe"/>
+  <text x="28" y="410" class="head">worker：独立停收，再分两类投递处理</text>
+  <rect x="25" y="430" width="250" height="60" class="worker"/>
+  <text x="150" y="467" text-anchor="middle" class="label">worker 收到 stop 通知</text>
+  <rect x="425" y="430" width="250" height="60" class="worker"/>
+  <text x="550" y="467" text-anchor="middle" class="label">停止接收新 delivery</text>
+  <path d="M275 460 H425" class="arrow"/>
+  <path d="M550 490 V509 H182 V550" class="arrow"/>
+  <path d="M550 490 V550" class="arrow"/>
+  <rect x="25" y="550" width="315" height="220" class="warn"/>
+  <text x="182" y="579" text-anchor="middle" class="label">预取但尚未启动</text>
+  <text x="42" y="608" class="body">按 broker 契约归还或重排。</text>
+  <text x="42" y="636" class="body">RabbitMQ 4.4：basic.cancel</text>
+  <text x="42" y="664" class="body">只停止后续派发；已发出的</text>
+  <text x="42" y="692" class="body">未确认投递不会自动回队；</text>
+  <text x="42" y="720" class="body">本例关闭 channel 自动归还。</text>
+  <rect x="360" y="550" width="315" height="220" class="worker"/>
+  <text x="517" y="579" text-anchor="middle" class="label">运行中的 attempt</text>
+  <text x="377" y="608" class="body">能完成：持久提交结果后</text>
+  <text x="377" y="636" class="body">ACK 原投递。</text>
+  <text x="377" y="664" class="body">不能完成：不 ACK；broker</text>
+  <text x="377" y="692" class="body">按契约重投；数据库恢复器</text>
+  <text x="377" y="720" class="body">在租约到期后独立尝试接管。</text>
+  <text x="28" y="806" class="note">readiness 不会替 worker 暂停队列；其他 broker 按自己的归还语义处理。</text>
+</svg>

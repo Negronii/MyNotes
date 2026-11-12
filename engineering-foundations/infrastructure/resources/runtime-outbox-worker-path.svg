@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1080" viewBox="0 0 700 1080" role="img" aria-labelledby="title desc">
+  <title id="title">API 受理、relay 发布与 worker 成功确认边界</title>
+  <desc id="desc">第一段展示 API 授权后将 job、pending outbox 与等待槽写入同一事务，提交后才返回 202。第二段展示 relay 发布 job ID、按 broker 契约收到 publisher confirm 后更新同一 outbox；broker 可以在数据库写回前投递。第三段仅展示 worker 成功分支：取得执行槽、条件领取、写 attempt 独立对象键、提交成功终态与对象引用，再 ACK 原投递。失败、取消、重排和重复终态的 ACK 条件见正文。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+    <marker markerUnits="userSpaceOnUse" id="confirm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7e22ce"/></marker>
+    <marker markerUnits="userSpaceOnUse" id="returnArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+    <style>
+      text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+      .head { font-size: 18px; font-weight: 700; fill: #334155; }
+      .label { font-size: 18px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .note { font-size: 17px; }
+      .panel { stroke-width: 2; rx: 14; }
+      .app { fill: #f5f3ff; stroke: #7e22ce; stroke-width: 2; rx: 12; }
+      .data { fill: #fff7ed; stroke: #c2410c; stroke-width: 2; rx: 12; }
+      .broker { fill: #eff6ff; stroke: #2563eb; stroke-width: 2; rx: 12; }
+      .flow { fill: none; stroke: #1d4ed8; stroke-width: 3; marker-end: url(#arrow); }
+      .confirm { fill: none; stroke: #7e22ce; stroke-width: 3; marker-end: url(#confirm); }
+      .return { fill: none; stroke: #334155; stroke-width: 3; marker-end: url(#returnArrow); }
+      .leader { fill: none; stroke: #334155; stroke-width: 2; }
+    </style>
+  </defs>
+  <rect width="700" height="1080" fill="#fff"/>
+
+  <rect x="15" y="12" width="670" height="178" class="panel" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="28" y="39" class="head">1. API 授权受理：事务提交后才返回 202</text>
+  <rect x="25" y="62" width="205" height="78" class="app"/>
+  <text x="127" y="88" text-anchor="middle" class="label">API 授权受理</text>
+  <text x="127" y="113" text-anchor="middle" class="body">账户成员 + 导出权</text>
+  <text x="127" y="135" text-anchor="middle" class="body">检查幂等键</text>
+  <rect x="470" y="62" width="205" height="78" class="data"/>
+  <text x="572" y="88" text-anchor="middle" class="label">同一数据库事务</text>
+  <text x="572" y="113" text-anchor="middle" class="body">job + pending outbox</text>
+  <text x="572" y="135" text-anchor="middle" class="body">预留一个等待槽</text>
+  <path d="M230 101 H470" class="flow"/>
+  <text x="350" y="89" text-anchor="middle" class="note">授权后提交</text>
+  <text x="28" y="169" class="note">仅提交成功后返回 202、稳定 job ID 与状态 URL；202 不代表已完成。</text>
+
+  <rect x="15" y="205" width="670" height="250" class="panel" fill="#faf5ff" stroke="#d8b4fe"/>
+  <text x="28" y="233" class="head">2. relay 发布：发布者确认不等于 job 完成</text>
+  <rect x="25" y="260" width="175" height="68" class="data"/>
+  <text x="112" y="286" text-anchor="middle" class="label">数据库 outbox</text>
+  <text x="112" y="312" text-anchor="middle" class="body">pending 意图</text>
+  <rect x="263" y="260" width="175" height="68" class="app"/>
+  <text x="350" y="286" text-anchor="middle" class="label">Outbox relay</text>
+  <text x="350" y="312" text-anchor="middle" class="body">认领并发布</text>
+  <rect x="500" y="260" width="175" height="68" class="broker"/>
+  <text x="587" y="286" text-anchor="middle" class="label">broker / queue</text>
+  <text x="587" y="312" text-anchor="middle" class="body">稳定 job ID</text>
+  <path d="M200 294 H263" class="flow"/>
+  <path d="M438 294 H500" class="flow"/>
+  <text x="231" y="283" text-anchor="middle" class="note">认领</text>
+  <path d="M675 294 V356 H438 V294" class="confirm"/>
+  <text x="556" y="348" text-anchor="middle" class="note">broker 发布确认</text>
+  <path d="M263 328 V392 H112 V328" class="confirm"/>
+  <text x="188" y="384" text-anchor="middle" class="note">写回 published</text>
+  <text x="28" y="421" class="note">发布确认、路由和持久性均满足后，relay 才更新同一 outbox 行。</text>
+  <text x="28" y="444" class="note">broker 可先投递；worker 可在写回前领取。published 不表示 job 已完成。</text>
+
+  <rect x="15" y="470" width="670" height="582" class="panel" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="28" y="498" class="head">3. worker 成功分支：提交对象引用与终态后才 ACK</text>
+  <rect x="80" y="518" width="540" height="58" class="broker"/>
+  <text x="350" y="542" text-anchor="middle" class="label">broker / queue</text>
+  <text x="350" y="566" text-anchor="middle" class="body">投递稳定 job ID</text>
+  <path d="M350 576 V630" class="flow"/>
+  <text x="265" y="611" text-anchor="middle" class="note">投递</text>
+  <path d="M42 599 H80" class="leader"/>
+  <text x="88" y="605" class="note">确认原投递</text>
+  <rect x="80" y="630" width="540" height="72" class="app"/>
+  <text x="350" y="659" text-anchor="middle" class="label">worker 先取得真实执行槽</text>
+  <text x="350" y="686" text-anchor="middle" class="body">再条件领取当前 job / attempt</text>
+  <path d="M350 702 V738" class="flow"/>
+  <rect x="80" y="738" width="540" height="58" class="data"/>
+  <text x="350" y="774" text-anchor="middle" class="label">写入 attempt 独立的私有对象 key</text>
+  <path d="M350 796 V832" class="flow"/>
+  <rect x="80" y="832" width="540" height="72" class="data"/>
+  <text x="350" y="861" text-anchor="middle" class="label">数据库条件提交对象引用 + succeeded</text>
+  <text x="350" y="888" text-anchor="middle" class="body">只接受仍匹配的 attempt</text>
+  <path d="M350 904 V940" class="flow"/>
+  <rect x="80" y="940" width="540" height="58" class="app"/>
+  <text x="350" y="976" text-anchor="middle" class="label">worker ACK 原投递</text>
+  <path d="M80 969 H42 V547 H80" class="return"/>
+  <text x="28" y="1028" class="note">只画成功分支；失败、取消、持久重排与终态重复消息各有 ACK 前提，见正文。</text>
+</svg>
