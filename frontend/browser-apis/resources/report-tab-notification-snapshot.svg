@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1120" viewBox="0 0 700 1120" role="img" aria-labelledby="desc">
+  <desc id="desc">标签页 A 从报表 42 的版本 9 和游标 103 开始，先安装 BroadcastChannel 监听器，再请求服务端快照。标签页 B 提交重新生成；服务端提交失败时停止且不通知，成功返回版本 11、状态 ready 后发送提示。发送方不接收自己的消息；接收方在后续任务中处理提示。A 忽略无效或较旧提示，为较新提示读取权威快照。有效 v11 清除待确认；有效 v10 会推进画面但仍等待 v11；网络、HTTP 失败或字段校验失败保留最后有效画面。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="10" refX="11" refY="5" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L12 5 L0 10 Z" fill="#315f91"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="12" markerHeight="10" refX="11" refY="5" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L12 5 L0 10 Z" fill="#387652"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="12" markerHeight="10" refX="11" refY="5" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L12 5 L0 10 Z" fill="#a34d4d"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="12" markerHeight="10" refX="11" refY="5" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L12 5 L0 10 Z" fill="#7a8798"/>
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #24344d; }
+      .lane { font-size: 15px; font-weight: 600; }
+      .label { font-size: 13.5px; }
+      .small { font-size: 12.5px; }
+      .box { stroke-width: 1.35; rx: 8; }
+      .arrow { fill: none; stroke: #315f91; stroke-width: 2; marker-end: url(#arrow); }
+      .success { fill: none; stroke: #387652; stroke-width: 2; marker-end: url(#arrowGreen); }
+      .failure { fill: none; stroke: #a34d4d; stroke-width: 1.8; marker-end: url(#arrowRed); }
+      .muted { fill: none; stroke: #7a8798; stroke-width: 1.8; marker-end: url(#arrowGray); }
+      .lifeline { stroke: #a9b4c2; stroke-width: 1.1; stroke-dasharray: 5 5; }
+    </style>
+  </defs>
+  <rect width="700" height="1120" fill="#ffffff"/>
+
+  <text x="90" y="27" text-anchor="middle" class="lane">标签页 A</text>
+  <text x="260" y="27" text-anchor="middle" class="lane">服务端</text>
+  <text x="390" y="27" text-anchor="middle" class="lane">BroadcastChannel</text>
+  <text x="605" y="27" text-anchor="middle" class="lane">标签页 B</text>
+  <path d="M90 40 V1100 M260 40 V1100 M390 40 V1100 M605 40 V1100" class="lifeline"/>
+
+  <rect x="15" y="55" width="150" height="58" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="90" y="79" text-anchor="middle" class="label">A 显示 v9 / running</text>
+  <text x="90" y="99" text-anchor="middle" class="small">先接监听器，再对账</text>
+  <path d="M90 137 H260" class="arrow"/>
+  <text x="192" y="129" text-anchor="middle" class="small">GET 快照</text>
+  <path d="M260 173 H90" class="success"/>
+  <text x="192" y="166" text-anchor="middle" class="small">v9，游标 103</text>
+  <rect x="15" y="188" width="150" height="45" class="box" fill="#eff7f1" stroke="#83aa91"/>
+  <text x="90" y="216" text-anchor="middle" class="small">已持有版本不回退</text>
+
+  <rect x="525" y="270" width="160" height="55" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="605" y="294" text-anchor="middle" class="label">提交重新生成</text>
+  <text x="605" y="314" text-anchor="middle" class="small">报表 42</text>
+  <path d="M525 298 H260 V340" class="arrow"/>
+  <text x="415" y="290" text-anchor="middle" class="small">POST /regenerate</text>
+  <polygon points="260,340 300,370 260,400 220,370" fill="#fff7e8" stroke="#e7c988" stroke-width="1.4"/>
+  <text x="260" y="367" text-anchor="middle" class="small">服务端</text>
+  <text x="260" y="383" text-anchor="middle" class="small">提交成功？</text>
+  <path d="M260 400 V431" class="failure"/>
+  <text x="269" y="420" class="small">否</text>
+  <rect x="190" y="432" width="140" height="50" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
+  <text x="260" y="454" text-anchor="middle" class="label">提交失败</text>
+  <text x="260" y="473" text-anchor="middle" class="small">停止，不广播</text>
+  <path d="M300 370 H370 V535 H525" class="success"/>
+  <text x="320" y="361" class="small">是</text>
+  <text x="445" y="526" text-anchor="middle" class="small">返回已提交快照</text>
+  <rect x="525" y="510" width="160" height="55" class="box" fill="#eff7f1" stroke="#83aa91"/>
+  <text x="605" y="534" text-anchor="middle" class="label">B 收到 v11 / ready</text>
+  <text x="605" y="553" text-anchor="middle" class="small">先更新自己的画面</text>
+
+  <path d="M605 565 V594 H480 V635 H460" class="arrow"/>
+  <text x="492" y="585" text-anchor="middle" class="small">postMessage</text>
+  <rect x="320" y="604" width="140" height="70" class="box" fill="#f3f1fb" stroke="#afa5d0"/>
+  <text x="390" y="628" text-anchor="middle" class="label">仅发送 ID 与版本</text>
+  <text x="390" y="649" text-anchor="middle" class="small">同存储键和频道名</text>
+  <text x="390" y="666" text-anchor="middle" class="small">发送方不接收</text>
+  <path d="M320 636 H190 V711 H165" class="arrow"/>
+  <text x="243" y="627" text-anchor="middle" class="small">排入 A 的消息任务</text>
+  <rect x="15" y="682" width="150" height="58" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="90" y="706" text-anchor="middle" class="label">A 校验 ID 与版本</text>
+  <text x="90" y="726" text-anchor="middle" class="small">更高提示才重读</text>
+  <path d="M90 740 V755 H260 V775" class="arrow"/>
+  <text x="191" y="748" text-anchor="middle" class="small">GET 快照</text>
+  <polygon points="260,775 300,800 260,825 220,800" fill="#fff7e8" stroke="#e7c988" stroke-width="1.4"/>
+  <text x="260" y="797" text-anchor="middle" class="small">HTTP</text>
+  <text x="260" y="813" text-anchor="middle" class="small">2xx？</text>
+  <path d="M220 800 H175 V850 H165" class="success"/>
+  <path d="M300 800 H520 V915 H605 V950" class="failure"/>
+  <text x="410" y="792" text-anchor="middle" class="small">网络 / HTTP 失败</text>
+  <rect x="15" y="817" width="150" height="80" class="box" fill="#eff7f1" stroke="#83aa91"/>
+  <text x="90" y="840" text-anchor="middle" class="label">验证 JSON 快照</text>
+  <text x="90" y="862" text-anchor="middle" class="small">ID、版本、status</text>
+  <text x="90" y="881" text-anchor="middle" class="small">只应用更高版本</text>
+
+  <path d="M90 897 V919 H435" fill="none" stroke="#7a8798" stroke-width="1.6"/>
+  <path d="M95 919 V950" class="success"/>
+  <path d="M265 919 V950" class="muted"/>
+  <path d="M435 919 V950" class="failure"/>
+  <rect x="15" y="950" width="160" height="125" class="box" fill="#eff7f1" stroke="#83aa91"/>
+  <text x="95" y="975" text-anchor="middle" class="label">有效快照 v11 / ready</text>
+  <text x="95" y="1000" text-anchor="middle" class="small">应用新画面</text>
+  <text x="95" y="1022" text-anchor="middle" class="small">清除待确认 v11</text>
+  <rect x="185" y="950" width="160" height="125" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="265" y="975" text-anchor="middle" class="label">有效快照 v10</text>
+  <text x="265" y="1000" text-anchor="middle" class="small">比 v9 更新，仍应用</text>
+  <text x="265" y="1022" text-anchor="middle" class="small">继续待确认 v11</text>
+  <rect x="355" y="950" width="160" height="125" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
+  <text x="435" y="975" text-anchor="middle" class="label">无效 JSON / 字段</text>
+  <text x="435" y="1000" text-anchor="middle" class="small">保留最后有效画面</text>
+  <text x="435" y="1022" text-anchor="middle" class="small">目标未达才标不可用</text>
+  <rect x="525" y="950" width="160" height="125" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
+  <text x="605" y="975" text-anchor="middle" class="label">网络 / HTTP 失败</text>
+  <text x="605" y="1000" text-anchor="middle" class="small">保留最后有效画面</text>
+  <text x="605" y="1022" text-anchor="middle" class="small">目标未达才标不可用</text>
+</svg>

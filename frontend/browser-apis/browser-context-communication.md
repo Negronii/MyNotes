@@ -1,134 +1,402 @@
 # 同一报表在多个标签页中怎样交换变化？
 
-案例背景：用户在标签页 A 查看报表 42，在标签页 B 重新生成报表。A 需要知道自己的画面可能过时，并刷新权威数据。browsing context (浏览上下文) 能否直接通信，取决于来源、浏览器存储分区和生命周期；通知本身也不等于共享或持久化业务状态。
+案例背景：标签页 A 正在显示报表 42 的服务端快照 `{ id: 42, version: 9, status: "running", event_cursor: "103" }`。上一章说明 URL、本地偏好、会话存储与服务端数据各自保存什么；这里继续追问：标签页 B 提交一次重新生成后，怎样让 A 知道旧画面可能过时，又怎样避免把通知误当成最新数据？本例假定服务端提交成功并返回版本 11、状态 `ready`；版本在同一报表 ID 下单调递增。前两节处理同一浏览器内的页面；若通信对象变成跨来源窗口或服务端，后两节给出对应选择。
 
-| 需求 | 机制 | 关键边界 |
-|---|---|---|
-| same-origin (同源) 且符合存储分区条件的临时广播 | `BroadcastChannel` | 消息不持久化；不在线的标签页收不到历史消息 |
-| 存储一项值并通知其他文档 | `localStorage` + `storage` 事件 | 字符串写入、无事务或锁；写入者不收到自己的事件 |
-| 同源上下文共享一个协调者或连接 | `SharedWorker` (共享工作线程) | worker 内存不是持久状态，需探测浏览器支持；页面关闭或进入 back-forward cache (前进/后退缓存，BFCache) 时需清理或重连端口 |
-| 跨源 iframe (内嵌框架) 或窗口消息 | `postMessage()` | 固定目标 origin (来源)，并验证发送方窗口和数据结构 |
-| 服务端持续更新或跨设备状态 | SSE、Fetch 流或 WebSocket | 服务端认证授权；重连与状态恢复由应用协议定义 |
+| 要联系的对象 | 机制 | 解决什么问题 | 主要边界 |
+|---|---|---|---|
+| 符合相同 storage key (存储键) 和频道名的活动 browsing context (浏览上下文) | `BroadcastChannel` | 同一浏览器里的临时广播 | 不保存历史；发送方不收到自己发送的消息 |
+| 共享同一存储区的其他文档 | `localStorage` + `storage` 事件 (存储事件) | 写入字符串并通知变化 | 不是跨标签页锁或事务；详见[浏览器页面里的状态应该放在哪里？](./browser-storage-and-communication.md) |
+| 需要集中管理端口或一条连接的页面 | `SharedWorker` (共享工作线程) | 让 worker (工作线程) 内存中的协调者向多个页面转发 | 连接和内存不是持久状态；页面离开时应显式注销，恢复后重连 |
+| 跨来源窗口或 iframe | `postMessage()` | 在不同来源的两个窗口间定向发消息 | 必须限制目标来源，并检查发送窗口和数据 |
+| 浏览器页面与服务端 | Server-Sent Events (服务器推送事件，SSE)、Fetch 流、WebSocket | 接收服务端事件或进行双向通信 | 认证、补发、去重和恢复需要服务端及应用协议 |
 
-在简单的同源通知中，发送报表标识和单调状态版本即可；不要把另一个标签页发来的对象当成权威记录。接收端发现版本更高时，重新请求服务端快照可以减少陈旧数据和消息缺失的影响。`BroadcastChannel` 会用 structured clone (结构化克隆) 传递消息，不保留共享对象引用，也不会替应用保存未读消息。
+## 1. 先通知，再向服务端核实
 
-> [!example] 通知“报表可能更新”，再读权威状态
-> A 已持有报表 42 的版本 9。B 提交更新后收到服务端版本 11、状态 `ready`，并广播一条轻量通知；本例假设版本在同一报表 ID 下单调递增。若 A 收到高于当前版本的提示，就 GET 权威快照；广播不携带快照游标，也不补发离线期间的历史。
+`BroadcastChannel` 按频道名和存储键寻找可接收消息的活动上下文；发送者会从接收列表中排除。存储键可能把同一 origin (来源) 但处于不同顶层站点的页面隔开，所以 same-origin (同源) 本身并不保证互通。对象消息按 structured clone (结构化克隆) 序列化，接收方得到自己的副本。频道不会给刚打开、已关闭或当时不符合接收条件的页面补发历史。
+
+下图把报表案例中的写入顺序拆开：A 先接好频道并向服务端对账；B 只有在服务端确认提交成功后才发送轻量提示；A 在自己的后续任务中校验提示，再取回权威快照。通知只说“可能有新版本”，不会证明业务更新已完成。
+
+![A 初连时取得 v9；B 成功提交 v11/ready 后广播；A 有效取得 v11 时清除待确认，有效取得 v10 时应用 v10 并继续等待 v11，网络、HTTP 或无效响应失败时保留最后有效画面，目标尚未达到时才提示不可用](resources/report-tab-notification-snapshot.svg)
+
+本例开始时 A、B 都展示版本 9。A 先安装监听器再主动读取快照，避免在“读快照”和“开始监听”之间错过一次更新。B 提交成功后，从响应中取得版本 11、状态 `ready`，先更新自己的画面，再广播报表 ID 与版本。广播方法把消息序列化并为接收方排入 message task (消息任务) 后返回；接收方的处理器在自己的 event loop (事件循环) 中运行，发送方不会等待它完成。若消息不能结构化序列化，发送方的调用会抛出 `DataCloneError`；接收方无法反序列化时会收到 `messageerror`。本例在该事件后提示协议异常并触发一次快照重读。
+
+接收提示时，A 校验类型、报表 ID 和非负安全整数版本；比当前版本旧或相同的提示直接忽略。较新提示只提高待确认的版本门槛，然后调用与初次读取相同的快照函数。这里有两个不同阈值：A 当前显示 v9，收到 v11 提示后待确认 v11；如果 GET 返回有效 v10，A 仍会把画面推进到 v10，同时继续等待 v11。有效 v11 或更高版本才清除待确认状态。快照必须含本例渲染所需的 `status` 字符串；网络错误、非成功 HTTP 状态或缺少必需字段的响应保留最后有效画面。失败后不无限重试，后续新提示、BFCache 恢复、重载或用户主动重试再触发对账。普通标签页重新聚焦不会触发此处的恢复流程。
+
+> [!example]- 可选实现：提示触发可恢复的重读
+> 下面片段用于已经展示版本 9 的 A 和 B。界面函数（如 `renderReport`、`showRefreshUnavailable`）由页面提供。两页运行同一段频道与快照代码；只有 B 在服务端的重新生成请求成功后调用 `announceCommittedSnapshot`。本合成 API 约定非成功 HTTP 状态表示未提交。若 POST 断线或成功响应体无法解析，提交结果未知：显示“结果待确认”并 GET 对账，不据此报告失败，也不盲目重试。`showRefreshUnavailable(version)` 表示版本目标尚未核实；不带版本则表示初次或恢复读取失败，当前仍无可确认的新目标。测试若省略页面 UI，可用记录调用的替身函数代替它们。
 >
 > ~~~javascript
-> const channel = new BroadcastChannel("reports");
+> const reportId = 42;
 > let currentVersion = 9;
+> let pendingVersion = currentVersion;
+> let channel = null;
+> let refreshRequestId = 0;
 >
-> channel.addEventListener("message", event => {
->   const message = event.data;
->   if (!message || message.type !== "report:changed" ||
->       message.reportId !== 42 || !Number.isSafeInteger(message.version)) return;
+> function isReportSnapshot(value, id) {
+>   return value !== null &&
+>     typeof value === "object" &&
+>     value.id === id &&
+>     Number.isSafeInteger(value.version) &&
+>     value.version >= 0 &&
+>     typeof value.status === "string";
+> }
+>
+> function receiveReportHint(message) {
+>   if (!message ||
+>       message.type !== "report:changed" ||
+>       message.reportId !== reportId ||
+>       !Number.isSafeInteger(message.version) ||
+>       message.version < 0) return;
 >   if (message.version <= currentVersion) return;
->   void reloadReportFromServer(42, message.version);
-> });
 >
-> async function reloadReportFromServer(reportId, announcedVersion) {
+>   pendingVersion = Math.max(pendingVersion, message.version);
+>   void reloadReportFromServer(reportId, pendingVersion);
+> }
+>
+> async function reloadReportFromServer(
+>   id,
+>   minimumVersion = currentVersion,
+>   { requireFreshRead = false } = {}
+> ) {
+>   const requestId = ++refreshRequestId;
+>   const versionAtStart = currentVersion;
+>   pendingVersion = Math.max(pendingVersion, minimumVersion);
 >   try {
->     const response = await fetch(`/api/reports/${reportId}`);
+>     const response = await fetch("/api/reports/" + id, { cache: "no-store" });
 >     if (!response.ok) throw new Error("Snapshot request failed");
->     const latest = await response.json();
->     if (latest.id !== reportId || !Number.isSafeInteger(latest.version)) {
->       throw new Error("Invalid snapshot");
+>     const snapshot = await response.json();
+>     if (!isReportSnapshot(snapshot, id)) throw new Error("Invalid snapshot");
+>
+>     if (snapshot.version > currentVersion) {
+>       currentVersion = snapshot.version;
+>       renderReport(snapshot);
 >     }
->     if (latest.version > currentVersion) {
->       currentVersion = latest.version;
->       renderReport(latest);
+>     if (currentVersion >= pendingVersion) {
+>       pendingVersion = currentVersion;
+>       clearRefreshMessage();
+>     } else if (requestId === refreshRequestId) {
+>       showRefreshPending(pendingVersion);
 >     }
->     if (currentVersion < announcedVersion) showRefreshPending();
 >   } catch {
->     // Keep the current view and show a bounded refresh error; do not retry forever.
->     if (currentVersion < announcedVersion) showRefreshUnavailable();
+>     if (requestId !== refreshRequestId) return;
+>     if (currentVersion >= pendingVersion) {
+>       pendingVersion = currentVersion;
+>       clearRefreshMessage();
+>       if (requireFreshRead && currentVersion === versionAtStart) {
+>         showRefreshUnavailable();
+>       }
+>     } else {
+>       showRefreshUnavailable(pendingVersion);
+>     }
 >   }
 > }
 >
-> function announceChanged(reportId, version) {
->   channel.postMessage({ type: "report:changed", reportId, version });
+> function connectReportChannel() {
+>   channel?.close();
+>   try {
+>     channel = new BroadcastChannel("reports");
+>     channel.addEventListener("message", event => receiveReportHint(event.data));
+>     channel.addEventListener("messageerror", () => {
+>       showMessageDecodeError();
+>       void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>     });
+>   } catch {
+>     channel = null;
+>     showCrossTabSyncUnavailable();
+>   }
+>   void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
 > }
 >
-> // 页面所有者释放时执行；生命周期恢复时重新创建 channel。
-> function disposeReportChannel() {
->   channel.close();
+> function closeReportChannel() {
+>   channel?.close();
+>   channel = null;
 > }
+>
+> function announceCommittedSnapshot(committed) {
+>   if (!isReportSnapshot(committed, reportId)) {
+>     showRegenerationOutcomeUnknown();
+>     void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>     return;
+>   }
+>   if (committed.version > currentVersion) {
+>     currentVersion = committed.version;
+>     renderReport(committed);
+>   }
+>   pendingVersion = Math.max(pendingVersion, currentVersion);
+>   if (currentVersion >= pendingVersion) {
+>     pendingVersion = currentVersion;
+>     clearRefreshMessage();
+>   }
+>   try {
+>     if (!channel) throw new Error("Channel is unavailable");
+>     channel.postMessage({
+>       type: "report:changed",
+>       reportId,
+>       version: committed.version
+>     });
+>   } catch {
+>     showOtherTabsMayBeStale();
+>   }
+> }
+>
+> async function regenerateReport() {
+>   let response;
+>   try {
+>     response = await fetch("/api/reports/42/regenerate", { method: "POST" });
+>   } catch {
+>     showRegenerationOutcomeUnknown();
+>     void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>     return;
+>   }
+>   if (!response.ok) {
+>     showRegenerationError();
+>     return;
+>   }
+>   try {
+>     announceCommittedSnapshot(await response.json());
+>   } catch {
+>     showRegenerationOutcomeUnknown();
+>     void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>   }
+> }
+>
+> connectReportChannel();
+> window.addEventListener("pagehide", closeReportChannel);
+> window.addEventListener("pageshow", event => {
+>   if (event.persisted) connectReportChannel();
+> });
 > ~~~
+>
+即使 B 的广播失败，服务端已经提交的报表仍然有效；A 需要在恢复或下一次对账时取回它。本例约定重新生成的非成功 HTTP 状态表示未提交，此时 B 不调用 `announceCommittedSnapshot`，也不广播更新。若请求断线或响应体无法解析，提交结果可能未知，代码显示不确定并主动重读；生产接口可用幂等键或操作状态查询解决重试时是否重复提交的问题。
 
-若更新值本身要跨刷新保留，可写入 `localStorage` 并监听其他文档的 `storage` 事件；值发生变化时其他文档才收到通知，写入文档不收到，同一字符串重复写入也不派发事件。此机制只报告发生过某次有效变化，不协调并发写入。对于复杂协调，WHATWG HTML 建议考虑 `SharedWorker`：它可以集中管理端口、版本或一条共享连接。页面可以在 `pagehide` 尝试发送断开消息、在恢复时重新注册，但 `pagehide` 不是可靠的退出确认；崩溃或系统回收时需靠租约/心跳过期，并允许回来的页面重新注册。旧端口也应从 worker 的集合中移除并 `close()`，而不能假设平台会向另一端提供通用的 peer-close event (对端关闭事件)。
+多个页面同时收到提示时，快照请求可能并发结束。每个有效响应都只能把版本向前推进；`refreshRequestId` 只让最近启动的请求设置提示。更关键的是，失败分支会重新比较实时的 `currentVersion` 与 `pendingVersion`：若另一个 GET 已应用 v11，较晚失败的重复请求会清除旧提示，不会再把已确认的 v11 标成不可用；若当前仍是 v9 而待确认 v11，最新 GET 失败才显示 v11 暂不可用。初次连接、BFCache 恢复和结果未知后的强制对账即使没有更高目标，读取失败也显示通用不可用提示。
 
-> [!example] SharedWorker 端口需要显式注销
-> `SharedWorker` 可以在内存中把一个标签页的变更转给其他连接页面。正常离开时页面发 `disconnect` 并关闭自己的端口；从 BFCache 恢复时重新建立端口。以下代码只展示协作式注销与恢复，不实现心跳或租约；若页面进程直接退出，worker 仍需按上文策略清除过期连接。
+这里的 `pagehide` 只是协作式清理时机，不是可靠的“页面已退出”确认。进入 back-forward cache (前进/后退缓存，BFCache) 时 `pagehide` 的 `persisted` 可为真，返回该历史页面后 `pageshow` 的 `persisted` 也为真；因此页面关闭旧频道并在 BFCache 恢复时重建，再次请求快照。重载会重新执行初始化路径。页面若被浏览器直接丢弃，脚本可能没有机会运行清理代码；重新加载后仍会从初次连接路径主动读取。浏览器生命周期的具体冻结与丢弃行为由用户代理决定。
+
+> [!warning] 通知不等于共享状态或确认
+> `BroadcastChannel` 不保存最后一条消息，也不保证接收页面在你发送时正在运行。两个页面各自持有自己的 JS 对象；通知带来的版本只是“应该重读”的提示。服务端才是此报表的状态权威，A 必须通过快照接口校验并单调推进版本。
+
+## 2. 多个页面需要一个协调者时使用 SharedWorker
+
+若通知的值还要跨刷新保留，可以写入 `localStorage` 并监听 `storage` 事件：共享存储区的其他文档收到变化通知，写入文档不收到；写入相同字符串也不产生新事件。这个读写过程没有跨标签页事务或锁。更复杂的协调才需要下面的共享工作线程。
+
+如果页面不只要广播，还要共享一个内存中的协调者或服务端连接，可以让它们连接到 `SharedWorker`。当前标准在 worker 是否复用时会比较调用者的存储键、脚本 URL、名字和相关选项；只写“同源页面共用 worker”会漏掉存储分区与构造参数条件。worker (工作线程) 通过每个页面对应的 `MessagePort` (消息端口) 收发消息。它可以维护连接端口集合并转发上面定义的 `report:changed` 提示，但不会因此成为报表数据的持久权威。`connect` 是排入 worker 的任务：页面仅取得并启动自己的端口后，worker 可能还没有把它加入转发集合。下面用 `worker:ready` 握手封住这个启动窗口：worker 先登记端口、安装监听并启动端口，再告知页面；页面收到 ready 后才发初始 GET。若 SharedWorker API 不可用、构造器抛错，或 worker/端口明确发出 error 或 messageerror，页面会用普通快照 GET 并提示其他页面可能暂时收不到通知。若 worker 静默且始终不发 ready，本例没有超时，也不会自动退回 GET。
+
+下面展示 worker 收到页面连接、转发有效版本提示并移除显式断开的端口。页面侧复用上一节的 `receiveReportHint` 与 `reloadReportFromServer`，但必须等 ready 握手后才做初始对账；提交发生在握手前时，页面暂存该报表最新的一条版本提示，连接就绪后再转发。
+
+> [!example]- 可选实现：SharedWorker 内存中继
+> worker 独立运行，所以在 worker 内重复校验报表 ID 和版本字段；生产代码还应按报表权限过滤端口可以接收的记录。
 >
 > ~~~javascript
-> // report-worker.js
 > const ports = new Set();
+>
+> function validReportHint(data) {
+>   return data !== null &&
+>     typeof data === "object" &&
+>     data.type === "report:changed" &&
+>     data.reportId === 42 &&
+>     Number.isSafeInteger(data.version) &&
+>     data.version >= 0;
+> }
+>
+> function dropPort(port) {
+>   ports.delete(port);
+>   port.close();
+> }
+>
 > self.addEventListener("connect", event => {
 >   const port = event.ports[0];
 >   ports.add(port);
->   const dropPort = () => {
->     ports.delete(port);
->     port.close();
->   };
 >   port.addEventListener("message", ({ data }) => {
->     if (data?.type === "disconnect") return dropPort();
->     for (const peer of ports) if (peer !== port) peer.postMessage(data);
+>     if (data?.type === "report:disconnect" && data.reportId === 42) {
+>       dropPort(port);
+>       return;
+>     }
+>     if (!validReportHint(data)) return;
+>     for (const peer of ports) {
+>       if (peer !== port) peer.postMessage(data);
+>     }
 >   });
->   port.addEventListener("messageerror", dropPort);
+>   port.addEventListener("messageerror", () => dropPort(port));
 >   port.start();
+>   port.postMessage({ type: "worker:ready" });
 > });
 > ~~~
 >
 > ~~~javascript
-> // 页面所有者维护自己的连接，并在恢复时重新注册。
-> let port;
+> let reportPort = null;
+> let reportWorkerReady = false;
+> let queuedWorkerHint = null;
+>
 > function connectReportWorker() {
->   port = new SharedWorker("/report-worker.js").port;
->   port.onmessage = event => renderReportNotice(event.data);
+>   if (typeof SharedWorker === "undefined") {
+>     showWorkerUnavailable();
+>     void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>     return;
+>   }
+>   let worker;
+>   try {
+>     worker = new SharedWorker("/report-worker.js", { name: "reports" });
+>   } catch {
+>     showWorkerUnavailable();
+>     void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>     return;
+>   }
+>   reportWorkerReady = false;
+>   worker.onerror = () => {
+>     showWorkerUnavailable();
+>     void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>   };
+>   const port = worker.port;
+>   reportPort = port;
+>   port.addEventListener("message", event => {
+>     if (reportPort !== port) return;
+>     const message = event.data;
+>     if (message?.type === "worker:ready") {
+>       reportWorkerReady = true;
+>       if (queuedWorkerHint) {
+>         try {
+>           port.postMessage(queuedWorkerHint);
+>           queuedWorkerHint = null;
+>         } catch {
+>           showOtherTabsMayBeStale();
+>         }
+>       }
+>       void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>       return;
+>     }
+>     if (reportWorkerReady) receiveReportHint(message);
+>   });
+>   port.addEventListener("messageerror", () => {
+>     showMessageDecodeError();
+>     void reloadReportFromServer(reportId, currentVersion, { requireFreshRead: true });
+>   });
+>   port.start();
 > }
+>
+> function disconnectReportWorker() {
+>   const port = reportPort;
+>   reportPort = null;
+>   reportWorkerReady = false;
+>   if (!port) return;
+>   port.postMessage({ type: "report:disconnect", reportId: 42 });
+>   port.close();
+> }
+>
+> function announceThroughWorker(snapshot) {
+>   if (!isReportSnapshot(snapshot, reportId)) return;
+>   if (snapshot.version > currentVersion) {
+>     currentVersion = snapshot.version;
+>     renderReport(snapshot);
+>   }
+>   pendingVersion = Math.max(pendingVersion, currentVersion);
+>   if (currentVersion >= pendingVersion) {
+>     pendingVersion = currentVersion;
+>     clearRefreshMessage();
+>   }
+>   const hint = {
+>     type: "report:changed",
+>     reportId,
+>     version: snapshot.version
+>   };
+>   if (!reportPort) {
+>     showOtherTabsMayBeStale();
+>     return;
+>   }
+>   if (!reportWorkerReady) {
+>     if (!queuedWorkerHint || hint.version > queuedWorkerHint.version) {
+>       queuedWorkerHint = hint;
+>     }
+>     return;
+>   }
+>   try {
+>     reportPort.postMessage(hint);
+>   } catch {
+>     showOtherTabsMayBeStale();
+>   }
+> }
+>
 > connectReportWorker();
-> window.addEventListener("pagehide", () => {
->   port?.postMessage({ type: "disconnect" });
->   port?.close();
->   port = null;
-> });
+> window.addEventListener("pagehide", disconnectReportWorker);
 > window.addEventListener("pageshow", event => {
 >   if (event.persisted) connectReportWorker();
 > });
 > ~~~
+>
+选择 worker 方案时，POST 仍保留上一节的 HTTP 失败、断线和解析错误处理。B 收到成功响应体后，先用 `isReportSnapshot` 验证，只有有效快照才交给 `announceThroughWorker`；字段无效则显示结果待确认并 GET 对账。它和上一节的 `channel.postMessage` 是两种替代传输；选择 worker 示例时保留共享的快照函数，改用 worker 的初始化和生命周期监听，不同时连接两个通道。worker 的 `Set` 和页面端口都只存在于当前 worker 及页面生命周期内。正常 `pagehide` 可发送注销并关闭端口；崩溃或资源回收可能跳过清理。HTML 的端口接口定义了 `message` 和 `messageerror`，没有通用的对端关闭事件；若必须及时清除意外失联的端口，worker 可以按业务需要加心跳或租约。只有 BFCache 恢复（`pageshow.persisted === true`）会走本文演示的关闭后重连；重载自然重新执行初始化连接。重连收到 ready 后再用已复用的服务端快照函数补齐遗漏，普通标签页重新聚焦不会触发这条路径。
 
-跨源页面必须在 `postMessage(data, targetOrigin)` 中设置精确目标来源。接收方同时检查 `event.origin`（消息来源）和 `event.source`（发送窗口），再验证允许的消息类型、字段及大小；来源不包括路径。子页先装好监听器并向父页发 `ready`，父页再发 `refresh`，避免消息先于监听器到达。使用 `"*"` 发送敏感内容可能把消息交给已经导航到另一站点的目标窗口。信任的页面也可能因 cross-site scripting (跨站脚本攻击，XSS) 被控制，因此来源校验不能替代操作授权和载荷校验。
+## 3. 跨来源窗口使用 postMessage
 
-~~~javascript
-const childOrigin = "https://reports.example";
-const frame = document.querySelector("#report-frame");
-window.addEventListener("message", event => {
-  if (event.origin !== childOrigin || event.source !== frame.contentWindow) return;
-  if (event.data?.type === "ready") {
-    frame.contentWindow.postMessage({ type: "refresh", reportId: 42 }, childOrigin);
-  }
-});
-~~~
+same-origin (同源) 限制阻止一个来源直接读取另一个来源的页面对象；合作的父页和跨来源 iframe 可以用 `postMessage(data, targetOrigin)` 交换有限消息。目标来源要写成精确的协议、主机名与端口，不包含路径；接收端再检查 `event.origin`、`event.source` 和数据字段。若目标窗口已导航到不匹配的来源，浏览器会丢弃定向消息。
 
-~~~javascript
-// 子页在装好监听器后向父页宣告 ready。
-const parentOrigin = "https://app.example";
-window.addEventListener("message", event => {
-  if (event.origin !== parentOrigin || event.source !== window.parent) return;
-  if (event.data?.type !== "refresh" || event.data.reportId !== 42) return;
-  refreshEmbeddedReport();
-});
-window.parent.postMessage({ type: "ready" }, parentOrigin);
-~~~
+父页先创建 iframe 并安装监听器，再设置 `src`。子页先安装 `message` 监听器，再发 `ready`；父页收到来自该 iframe 的 `ready` 后才发刷新命令。这避免父页消息早于子页监听器到达。跨来源不意味着要发送敏感数据，本例只交换报表 ID 和动作名，子页仍须通过服务端会话重新请求其有权访问的数据。
 
-WebSocket 适合经过服务器的持续双向消息，不是两个标签页互相通知的默认方案。它的握手来源检查不等同于 Fetch 的 Cross-Origin Resource Sharing (跨源资源共享，CORS) 响应许可；服务端仍需检查握手 `Origin`、验证身份，并逐条授权敏感操作。连接建立后，WebSocket 也不会替业务消息提供去重、确认或断线补发。
+> [!example] 父页与报表 iframe 握手
+> `https://app.example` 与 `https://reports.example` 是公开合成来源；部署时必须换成实际允许的精确来源。父页的容器 `#report-slot` 已存在。
+>
+> ~~~javascript
+> // 父页：https://app.example
+> const childOrigin = "https://reports.example";
+> const frame = document.createElement("iframe");
+>
+> window.addEventListener("message", event => {
+>   if (event.origin !== childOrigin || event.source !== frame.contentWindow) return;
+>   if (!event.data ||
+>       event.data.type !== "ready" ||
+>       event.data.reportId !== 42) return;
+>   frame.contentWindow.postMessage(
+>     { type: "refresh", reportId: 42 },
+>     childOrigin
+>   );
+> });
+>
+> frame.src = childOrigin + "/embed/reports/42";
+> document.querySelector("#report-slot").append(frame);
+> ~~~
+>
+> ~~~javascript
+> // 子页：https://reports.example
+> const parentOrigin = "https://app.example";
+>
+> window.addEventListener("message", event => {
+>   if (event.origin !== parentOrigin || event.source !== window.parent) return;
+>   if (!event.data ||
+>       event.data.type !== "refresh" ||
+>       event.data.reportId !== 42) return;
+>   refreshEmbeddedReport();
+> });
+>
+> window.parent.postMessage(
+>   { type: "ready", reportId: 42 },
+>   parentOrigin
+> );
+> ~~~
+>
+> 若发往非目标来源，消息会被丢弃；若发送的数据不能结构化克隆，发送方会得到 `DataCloneError`。来源检查仍不替代数据校验：可信页面也可能有 cross-site scripting (跨站脚本攻击，XSS)，因此只让允许的消息类型触发有限动作，不要把消息当成授权凭证。
 
-**延伸阅读：** [流式报表断线重连后，界面怎样保留正确状态？](./streaming-ux.md) 对接服务器事件；[报表页面里的状态应该放在哪里？](./browser-storage-and-communication.md) 说明本地状态的寿命与事务边界。
+## 4. 持续更新需要服务端时选择流协议
+
+前面的频道和 worker 都只在当前浏览器上下文之间转发通知。若更新来自服务端或还要同步到其他设备，就必须通过服务端通信，再由各页面按自己的业务权限核实状态。
+
+| 机制 | 方向与数据形式 | 断线后的恢复由谁负责 |
+|---|---|---|
+| SSE | 服务端到页面的文本事件流 | `EventSource` 通常会重连；提供过 `id:` 的事件可让浏览器在重连请求中发送 `Last-Event-ID`，是否重放取决于服务端保留的历史，HTTP 204 会停止重连 |
+| Fetch response stream | Fetch 响应体的 `ReadableStream`，可使用自定义请求与响应处理 | 应用要读字节、按自己的格式解析事件，控制取消、重试和续读位置 |
+| WebSocket | 建立连接后双向发送消息 | 应用协议要定义重连、事件 ID、确认、去重和补发 |
+
+本案例入口的服务端快照带有 `event_cursor: "103"`。如果要进入[流式报表断线重连后，界面怎样保留正确状态？](./streaming-ux.md)，该恢复章节用这份版本 9、状态 `running` 的快照，从 `after=103` 请求后续事件，首条新事件为 104。上面 B 提交得到版本 11 的频道提示是另一条并发状态更新示例；广播中只带版本，不替代流协议自己的事件游标。重连是否能补齐事件，仍取决于服务端是否保留了游标之后的事件。
+
+WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标签页互相提醒的默认方案。浏览器 WebSocket 握手与 Fetch 流程集成，并使用 WebSocket 专有的握手模式；它不是普通 Fetch 的 Cross-Origin Resource Sharing (跨来源资源共享，CORS) 响应授权。服务端可用握手 `Origin` 限制浏览器来源，但非浏览器客户端可以伪造这个头，所以它不是身份认证。仍须验证用户身份、逐条检查操作权限，并规定丢线重放、确认与去重方式。
+
+本章先解决“怎样通知同一报表的其他页面并在恢复后读回权威状态”。[浏览器页面里的状态应该放在哪里？](./browser-storage-and-communication.md) 负责 URL、Web Storage 和事务选择；[流式报表断线重连后，界面怎样保留正确状态？](./streaming-ux.md) 从快照与游标继续处理实际服务端事件。
 
 > [!info]- 来源
-> - 跨文档消息、`postMessage` 目标源、`BroadcastChannel` 与共享 worker 的适用场景：[WHATWG HTML Standard，Web Messaging](https://html.spec.whatwg.org/multipage/web-messaging.html)，§9.3–9.5，2026-11-06 核对。
-> - `BroadcastChannel` 消息结构化克隆：[WHATWG HTML Standard，Structured data](https://html.spec.whatwg.org/multipage/structured-data.html)，2026-11-06 核对。
-> - 存储事件只向共享存储区中的其他文档派发：[WHATWG HTML Standard，Web Storage](https://html.spec.whatwg.org/multipage/webstorage.html)，§12.2.4，2026-11-06 核对。
-> - WebSocket 的连接、来源和消息协议：[WHATWG WebSockets Standard](https://websockets.spec.whatwg.org/)，2026-11-06 核对。
-> - `pagehide` 的 `persisted` 值用于表示页面可能留在历史缓存并在返回时复用；它不是可靠的最终退出通知：[WHATWG HTML Standard，PageTransitionEvent](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-pagetransitionevent-interface)，2026-11-06 核对。
+> - 跨窗口 `postMessage` 的目标来源、消息任务与安全校验；`BroadcastChannel` 的活动接收对象、存储键、频道名、排队任务、发送方排除及序列化错误；`MessagePort` 的消息事件与关闭方式：[WHATWG HTML Standard，Web Messaging §§9.3、9.4.4、9.5](https://html.spec.whatwg.org/multipage/web-messaging.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。
+> - worker 消息、SharedWorker 连接、构造条件和 worker 生命周期：[WHATWG HTML Standard，Web Workers §§10.1.3.3、10.2.3、10.2.6.4](https://html.spec.whatwg.org/multipage/workers.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。
+> - `pageshow` / `pagehide` 的 `persisted` 语义与历史缓存复用：[WHATWG HTML Standard §7.2.7.6](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-pagetransitionevent-interface)，Living Standard 更新于 2026-11-12；2026-11-12 核对。浏览器可能冻结或丢弃后台页面，丢弃时不会运行脚本：[Chrome Page Lifecycle API](https://developer.chrome.com/docs/web-platform/page-lifecycle-api)，最后更新于 2026-10-16；2026-11-12 核对。
+> - 序列化对象副本及结构化克隆限制：[WHATWG HTML Standard，Structured data §2.7](https://html.spec.whatwg.org/multipage/structured-data.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。
+> - 同源页面的 `storage` 事件只提供存储变化通知，不提供锁：[WHATWG HTML Standard，Web Storage §12.2.4](https://html.spec.whatwg.org/multipage/webstorage.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。
+> - `fetch()` 的请求与响应、响应体流接口及 `websocket` 请求模式：[WHATWG Fetch Standard §§2.2.5、5.3、5.6](https://fetch.spec.whatwg.org/)，Living Standard 更新于 2026-10-19；2026-11-12 核对。
+> - SSE 重连与 `Last-Event-ID` 请求头：[WHATWG HTML Standard §§9.2.2–9.2.5](https://html.spec.whatwg.org/multipage/server-sent-events.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。服务器保留事件历史并按 ID 重放是应用协议的条件。
+> - WebSocket 握手与 Fetch 集成：[WHATWG WebSockets Standard §§2.1–2.2](https://websockets.spec.whatwg.org/)，Living Standard 更新于 2026-10-19；2026-11-12 核对。
+> - 浏览器来源检查与非浏览器客户端可伪造 `Origin`：[RFC 6455 §§4.2.1、10.1–10.2](https://www.rfc-editor.org/rfc/rfc6455.html)，2011-12；2026-11-12 核对。
