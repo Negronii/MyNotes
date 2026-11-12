@@ -3441,76 +3441,79 @@ Manus 的工程文章给出一种特定实现：用上下文状态机决定哪�
 > - **状态与用户交互评估：** Yao et al.，[τ-bench](https://arxiv.org/html/2406.12045)，2024-06-17，摘要、§3 的 `pass^k` 定义与 benchmark 设计；它定义 `pass^k` 为同一任务的 k 次独立试验全部成功，并对任务求平均。Barres et al.，[τ²-Bench](https://arxiv.org/abs/2506.07982)，2025-06-09，摘要与 Telecom dual-control domain。文中只概述其评估对象与状态指标，不把 benchmark 分数当作任意生产任务表现。
 ## 19. 模型选到 shell 或文件工具后，由谁决定能否执行？
 
-**案例背景。** 以下是合成教学案例。用户从同一条 build 42 日志观察另行提出本地修复任务：reject_empty_name 测试期望空名称返回 HTTP 400，实际得到 200。系统临时目录中的 fixture 源文件为 validator.py，测试文件为 test_validator.py。运行时只在配置的可写根内编辑并运行测试。该任务与前章创建工单的 c2 是两条不同的动作路径。
+**案例背景。** 本章沿用 build 42 日志调用 `c1` 的观察，只追踪一条本地修复路径：`reject_empty_name` 测试预期空名称返回 HTTP（超文本传输协议）400，实际得到 200。这是测试观察，不足以说明真实项目的根因。以下 `validator.py`、`test_validator.py` 和运行结果都是合成教学样例，不对应任何工作项目。用户要求修正这个边界行为并检查差异；代码改动不会创建工单、推送或部署。相邻的编排章节在另一运行中用只读调用 `c2` 重新取得日志，再讨论需要单独审批的工单路径。
 
-coding agent harness（代码智能体执行框架）是把模型接到实际执行工具的运行时：它接收模型提出的 shell、文件编辑或 MCP 工具请求，读取项目指令，检查动作和当前权限，在适用的沙箱里执行，再把退出状态、输出或 diff 交回运行。模型能生成一个命令，不代表它已获得操作系统权限；技能说明怎样完成任务，也不构成访问控制。
+coding agent harness（代码智能体运行框架）把模型接到工具和运行环境。模型提出工具调用或补丁；宿主检查工具、参数和权限后，才把可执行请求交给本地进程或服务，再把结果送回模型。Codex CLI（command-line interface，CLI；命令行界面）是本文采用的具体运行时，不是模型。模型写出补丁或声称“已修复”，本身不授予文件系统或业务权限，也不证明操作成功。
 
-以下图是 Codex CLI 0.167.0 的本地 shell/文件路径示意；hook 只在产品支持且有受信任的匹配配置时运行，没有匹配 hook 时仍按常规权限策略判断。
+下图追踪一次获准的 shell 调用，从模型提出请求到宿主回传结果。调用可能在前置检查或审批阶段停下；执行后也可能替换原结果，具体分支在图后说明。Codex CLI 0.167.0 的控制点包括：`PreToolUse`（工具使用前钩子）可以阻断或改写匹配请求；`PermissionRequest`（权限请求钩子）只在即将请求审批时触发；`PostToolUse`（工具执行后钩子）在工具产生结果后运行，不能撤销已经发生的操作。审批策略和操作系统沙箱是不同控制点；行为取决于版本、配置和工具路径。
 
 ~~~mermaid
-flowchart TD
-    A[启动会话并固定 cwd 与可用工具] --> B[发现 Skill 名称和说明]
-    B -->|选用时| C[读取 SKILL.md；补充任务知识]
-    B -->|未选用| D[模型提出读文件、补丁或 shell 请求]
-    C --> D
-    D -->|有匹配的前置 hook| E[PreToolUse 可阻断或按产品契约改写]
-    D -->|没有匹配的前置 hook| P[按常规权限策略判断]
-    E -->|阻断| X[不执行该调用]
-    E -->|继续| P
-    P -->|当前沙箱允许| F[本地 shell / 文件按实际生效沙箱执行]
-    P -->|策略允许申请扩权| G[PermissionRequest hook 介入；必要时交审批界面]
-    P -->|策略不允许扩权| X[不执行该调用]
-    G -->|拒绝或未获授权| X
-    G -->|批准本次所需范围| F
-    F --> H[文件变化、退出码、stdout、stderr 或工具结果]
-    H --> I[匹配时运行 PostToolUse；不能撤销副作用]
-    I --> J{本轮是否继续？}
-    J -->|继续| D
-    J -->|结束| K[Stop 处理本轮将结束]
-    K -->|会话结束| S[SessionEnd 处理会话结束]
-    D -. 用户请求中断 .-> Z[Interrupt 事件记录当前轮中断；已启动动作仍需核验]
-    F -. 用户请求中断 .-> Z
-    D -. 客户端连接断开 .-> Y[仅失去输出观察；执行端是否停止尚未确定]
-    F -. 客户端连接断开 .-> Y
-    Z -->|之后恢复时| L[执行端能查询时先查状态；再检查工作树、退出状态、收据和权威状态]
-    Y -->|重连后| L
-    S -->|之后 resume| R[SessionStart 的 resume 事件]
-    RR[收到显式 resume 请求] --> R
-    R --> L
+sequenceDiagram
+    participant M as 模型
+    participant H as 宿主
+    participant T as 执行进程
+    M->>H: 工具名与参数
+    H->>H: 前置检查与授权
+    H->>T: 获准后执行
+    T-->>H: 输出与退出状态
+    H->>H: 匹配的 PostToolUse
+    H-->>M: 继续时回传处理结果
 ~~~
 
-这张图只画本地 shell 和文件路径。当前沙箱允许就按其实际文件与网络边界执行；越界请求只有在策略允许申请权限时才进入扩权审批，策略拒绝、审批被拒或权限未实际获准时都不执行。以 Codex 的 `never` 为例，不出现审批提示不代表越界动作获准，超出沙箱的写入和网络访问仍会被拒绝。远端 MCP、托管 web search 等独立工具不属于此本地分支，它们由各自连接和授权策略处理。
+图中“获准后执行”要看这个具体请求，而不是只看“工具是否存在”。Codex CLI 0.167.0 的几个关键分支如下：
+
+**工具校验与 `PreToolUse`。** 支持的 Codex 工具路径可由受信任且匹配的 hook 阻断，或用 `updatedInput` 改写。当前官方 hook 文档说明，支持的调用会以改写后的输入执行。 后续要检查的实际对象是最终执行参数。文档与固定源码没有证明所有工具都会统一重跑同一套格式和权限校验；宿主必须按具体执行路径核实输入形状、访问范围和授权。`^Bash$` 只按 shell 工具名匹配，不筛选某一条命令。
+
+**沙箱与审批策略。** 请求若不在直接可执行范围，策略决定是否允许请求本次审批。 本机 `on-request` 下模型可以请求；`PermissionRequest` 只在即将请求时触发，可允许、拒绝或交由普通审批。未批准即不执行；获准也不保证执行成功。
+
+**执行与 `PostToolUse`。** 进程先运行并产生实际输出、退出码或文件变化，之后才运行匹配的后置 hook。 默认沿正常路径处理原结果；`decision: "block"` 会以 hook 反馈替换原工具结果后继续模型流程；`continue: false` 会停止正常处理原结果，并以 hook 反馈或 stop text 继续。两者都不能撤销已发生的写入或请求。
+
+审批是请求级控制，不会自动改写所有后续权限。审计时应记录进程实际生效的文件和网络权限范围，单独的批准记录不能说明这个范围。对 Codex CLI 0.167.0，越界文件写入或网络访问是否触发审批取决于具体命令、沙箱、审批策略和 hook；本机 `never` 不会询问。MCP（模型上下文协议）工具或连接器的权限则由各自服务和连接配置执行。
 
 ### Skill、模型工具和权限分别做什么？
 
-Skill 是含 SKILL.md 的可复用说明目录。以 Codex 的 Skills 工作流为例，发现阶段先向模型提供技能名和简介；模型选择使用它后再读取完整说明及需要的参考或脚本。它适合告诉模型先检查测试、如何解释报错、完成后应报告什么。它不会自动创建一个工具、扩大工作区、打开网络，或替用户授予某项业务权限。
+Codex 的 Skill（技能说明）在发现阶段向模型提供名称和描述；选择后才载入完整 `SKILL.md`，参考资料、脚本等文件按需读取。它可以指导模型先复现失败、再作最小补丁、最后运行边界用例，但不会自动添加工具、扩大可写目录、开启网络或授予业务资源权限。
 
-执行时，模型输出仍是待处理请求。harness 从固定目录读取文件，检查编辑路径；遇到 shell 请求时，取命令和运行目录；遇到 MCP 调用时，则使用该 server 的独立连接与授权策略。schema 校验回答“输入形状是否正确”，approval policy 回答“是否需要停下来请求确认”，sandbox 回答“子进程实际上能访问哪些目录和网络”。业务服务还要回答“当前用户能否对这个资源执行动作”。
+项目说明是另一条指引来源。当前 Codex 文档描述会在开始工作前按目录层级发现 `AGENTS.md` 等项目指导文件，并把它们纳入指令。它与 Skill 的按需载入机制分开，不授予工具、文件或业务权限；具体工具执行与访问边界仍由宿主、沙箱及相应服务决定。
 
-例如，read-only 适合检查代码与计划。Codex 内置的 :workspace 权限配置允许写入当前活动工作区根和系统临时目录；本例将 /tmp 作为其中一个可写根。生效可写根取决于所选配置，额外 --add-dir 会扩展可写目录。default workspace-write sandbox 下，根内的 .git、.agents、.codex 和 .aws 仍受保护、只读。Codex CLI 默认仍关闭 shell 命令网络；danger-full-access 则移除沙箱限制。审批政策是另一条轴：on-request 在动作需要额外权限时暂停，never 不弹审批；批准一次具体扩权不等于把未来所有操作都永久授权。若某个命令获准以更宽的沙箱边界执行，运行时应清楚记录其真正使用的权限，而不能只记录“用户点过批准”。
-
-例如，在 workspace-write 下，shell 若尝试写 /srv/another-project/report.md 或请求 https://updates.example.test，文件和网络动作超出当前沙箱范围。配置 on-request 时，Codex 可就所需扩权请求审批；用户拒绝后不会执行。配置 never 时不会弹出审批，沙箱会阻止越界动作。该行为取决于实际沙箱与审批配置；远端 MCP 和托管 web 工具仍由各自的连接与授权边界控制。
-
-| 控制点 | 它决定什么 | build 42 示例 |
+| 层 | 它负责什么 | 它不能证明什么 |
 |---|---|---|
-| 可用工具 | 模型本轮能提出哪一类请求 | 可读 validator.py 与 test_validator.py，可提出编辑和测试；没有远端工单写工具 |
-| Skill / 项目说明 | 模型按什么步骤工作 | 先重现 reject_empty_name，检查相关实现，修改后再运行边界用例 |
-| 审批 | 是否先暂停等待授权 | 尝试写到工作区外或访问网络时，按配置请求扩权确认 |
-| 沙箱 | 进程被 OS 限制在什么可访问范围 | 配置的工作区根和临时目录可写；根内 .git、.agents、.codex、.aws 仍只读；网络关闭 |
-| 业务权限 | 用户能否在真实业务资源上做这项动作 | 本任务只改本地 fixture，不授予部署或创建外部 issue 权限 |
-| 结果检查 | 实际执行后发生了什么 | 退出码、stdout/stderr、工作树 diff 与测试结果 |
+| 模型 | 选择下一步并生成工具调用、补丁或说明 | 没有自行获得 shell、文件或业务权限；自称完成不是验证结果 |
+| CLI / harness | 提供可用工具，校验请求、路由执行并收集工具结果 | 工具存在不代表当前动作在权限范围内 |
+| Skill | 先提供名称与描述；选中后载入 `SKILL.md`，相关参考按需读取 | 不注册工具、不授予执行和资源权限 |
+| `AGENTS.md` / 项目说明 | 开始工作前按 Codex 的项目指导发现规则纳入任务指令 | 不授予执行和资源权限 |
+| 工具前钩子 | 对支持且匹配的调用作前置阻断或按接口改写 | 不是完整执行边界；没有拦截不等于安全或获准 |
+| 审批策略 | 决定何时暂停请求批准，以及未获批准时如何处理 | 不限制已获准进程可触及的实际路径和网络 |
+| 操作系统沙箱 | 限制子进程实际可读写的目录和网络 | 不代替业务服务判断当前身份能否操作资源 |
+| 测试与人工审阅 | 判断观测结果是否满足本次代码契约，并检查 diff（代码差异） | 只覆盖已检查的代码与用例，不能单独证明生产行为 |
 
-在有些产品中，shell 命令网络策略不会自动关闭托管 web search、远端 MCP 或应用连接器；这些工具有自己的开关、身份和 approval。要限制整个 agent 的外部访问，必须逐个检查启用的能力，不能只看本机 shell 的网络沙箱。
+本机 `codex-cli 0.167.0` 的帮助列出 `read-only`（只读）、`workspace-write`（工作区可写）、`danger-full-access`（完整访问）三种 shell 沙箱选项，以及 `on-request`、`never` 两种审批策略。沙箱限制命令在操作系统层可以做什么；审批策略决定是否以及何时请求批准。此版本中 `on-request` 表示模型可以决定何时请求批准，不表示每个受限命令必然弹窗；`never` 则不请求用户批准，也不会因此把沙箱外请求变成获准操作。官方文档和较新配置可能另有用语，具体选项以正在运行的版本为准。
+
+在 Codex CLI 或集成开发环境（IDE）扩展启用 `workspace-write` 并沿用其默认网络设置时，shell 网络访问关闭，工作区外写入可能触发审批。官方当前文档说明，可写根目录内的 `.git`、`.agents`、`.codex` 和 `.aws` 仍递归只读；对本机 0.167.0 或不同会话，实际目录和限制应以正在运行的配置为准。`--add-dir` 可显式增加可写目录，`danger-full-access` 移除 shell 沙箱限制，但不替业务服务授予资源权限。shell 网络、托管网页搜索、远端 MCP 服务和连接器是不同的工具或连接边界，不能从一个本地 shell 配置推断其他工具是否联网。
+
+例如，仅在受控教学环境中用以下命令说明这两条配置轴；它不是夹具里的实际外部写入命令：
+
+~~~sh
+codex --sandbox workspace-write --ask-for-approval on-request
+~~~
+
+当前边界内的本地读取、补丁或测试可以执行。若 shell 尝试写入 `/srv/another-project/report.md` 或访问 `https://updates.example.test`，沙箱会阻止未获准访问；在本机 0.167.0 的 `on-request` 策略下，模型可以请求审批，批准只适用于该请求的实际范围，而且不保证进程执行成功。`never` 不弹审批，也不会让越界请求自动获准。MCP 服务端和业务 API 仍须依据自己的凭据、资源权限和副作用规则执行。
 
 ### 一个本地修复怎样通过 harness 前进？
 
-本 fixture 的函数输入契约是字符串或 `None`；其他类型不在这个小例子的范围内。`validator.py` 的基线实现只拒绝 `None`，因此空字符串走到 200；边界用例放在 `test_validator.py`。一次实际调用可按以下顺序理解：
+本例的输入契约仅含字符串或 `None`。基线 `validator.py` 只拒绝 `None`，所以空字符串会得到函数返回值 200。这个数字是本地 `status_for_name` 的返回值，不是发起 HTTP 请求测出的状态码。文中的模型与 harness 执行过程用于说明职责；可复放的部分是独立合成夹具，不是 Codex 模型会话，也不涉及真实 build 42 源码。
 
-1. shell 把工作目录设为同时含 `validator.py` 和 `test_validator.py` 的临时 fixture 目录，再运行 `python3 -m unittest discover -s . -v`；`-s .` 指当前工作目录。harness 检查运行目录与命令的权限边界，再把进程退出码 `1` 和“空串实际返回 200，预期是 400”的失败结果交回模型。
-2. 模型提出只修改 `validator.py` 的补丁。harness 核对目标在当前可写根内，再按文件工具契约应用补丁；若目标越界，则依当前策略拒绝或单独请求扩权。
-3. shell 在同一 fixture 目录重跑测试。补丁后的进程退出码为 `0`，三个测试均通过，分别验证空串、全空白串和非空名称应返回 `400`、`400`、`200`；harness 将总退出码和逐项测试结果交回模型，并呈现补丁差异，供模型检查没有改动 fixture 以外的内容。
+1. 在同时包含 `validator.py` 和 `test_validator.py` 的夹具目录运行 `python3 -B -m unittest discover -s . -v`。基线实现中，空字符串和全空白字符串两个断言失败，`Ada` 用例通过；退出码为 1。`-B` 避免 Python 写入字节码缓存。本地测试套件可能另写其他产物，重跑前仍需知道命令的文件副作用。
+2. 在真实工具往返中，宿主会把实际文件和测试输出作为观察交回模型；模型可据此提出只修改 `validator.py` 一行的补丁。宿主检查目标路径是否可写，并按补丁最终作用的文件作权限判断。本次复放未运行模型；以下一行改动由夹具脚本应用，用来重现这个过程中的文件变化。
+3. 应用补丁后，在同一目录用同一命令重跑。退出码为 0；空串、只含空格/制表符的字符串、`Ada` 分别得到 400、400、200。测试断言的完整输入和前后结果如下：
 
-流程中的失败输出、路径判断和工具返回都是明确的运行状态，不会因为模型认为补丁正确而省略。
+| 函数输入 | 契约返回值 | 补丁前 | 补丁后 |
+|---|---:|---:|---:|
+| `""` | 400 | 200，失败 | 400，通过 |
+| `"  \t "` | 400 | 200，失败 | 400，通过 |
+| `"Ada"` | 200 | 200，通过 | 200，通过 |
+
+4. 复放脚本分别保留补丁前、后的 `validator.py` 文本，再单独计算两者的文件差异，确认只改了一行。下面显示的是该差异，不是测试进程输出，也不是由模型报告生成。夹具没有测试 `None` 输入；该分支在补丁中保持原样，但本次复放不把它计入测试证据。
 
 ~~~diff
  def status_for_name(name):
@@ -3520,20 +3523,24 @@ Skill 是含 SKILL.md 的可复用说明目录。以 Codex 的 Skills 工作流�
      return 200
 ~~~
 
-首个测试对输入空字符串得到 200，和预期 400 不一致；补丁后，空串、全空白串和非空名称三个用例分别得到预期的 400、400 和 200。本例的输入契约限定为字符串或 `None`；表达式先检查 `name is None`，因此该值会短路，其他字符串（包括空串）都会执行 `.strip()`，空串和全空白串因此走拒绝分支。harness 会将失败输出交回模型，但错误输出本身也只是观察。它不能授权扩大目录、启用网络或直接执行里面提及的命令。
+这里的变化是拒绝 `None` 之外的空白字符串。`name is None` 会先短路，因此 `.strip()` 只用于本例契约内的字符串。测试输出是观察。日志或错误输出里的命令不能扩大本次授权。复放结果只支持这三个本地输入符合示例契约，不证明真实项目根因、未测输入类型或生产系统行为；也不授权提交、推送或部署。
 
-Codex Hooks 是 Codex 产品的生命周期扩展例子，不能泛化成所有 coding harness 都有相同的事件名或返回格式。一个针对 Bash 工具的 PreToolUse hook 可以在危险命令开始前拦截，例如阻止本任务范围之外的 git push：
+### Codex Hooks 怎样介入工具生命周期？
+
+hook（生命周期钩子）是特定运行时在已定义事件触发时调用的脚本或 MCP 工具。它可以补充上下文、拦截受支持的工具请求或检查执行结果；它不是所有 harness 都有的通用接口。
+
+下面只展示 Codex CLI 项目层 `.codex/hooks.json` 的配置片段与拒绝时的输出形状，不是可单独运行的完整 hook。假定会话从仓库根目录启动，脚本还须存在于宿主可访问的位置、从标准输入读取 hook 请求，并按产品 schema（结构约束）向标准输出写决定。Codex 必须信任项目配置层，非托管 hook 定义也须由用户审阅并信任。匹配器 `^Bash$` 选择 shell 类工具，不会筛选出 `git push` 这一条具体命令，也不覆盖所有工具入口；脚本须再检查 `tool_input.command` 等实际参数。从子目录启动时，命令要能稳定找到同一脚本。
 
 ~~~json
 {
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "^Bash$",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .codex/hooks/check_build_commands.py"
+            "command": "python3 .codex/hook.py"
           }
         ]
       }
@@ -3542,48 +3549,77 @@ Codex Hooks 是 Codex 产品的生命周期扩展例子，不能泛化成所有 
 }
 ~~~
 
-该脚本若返回下面的产品定义决策，Codex 会阻断这次工具调用；这是该事件的 hook 输出，不是 MCP 或 OAuth 的通用标准：
+若脚本从实际输入中发现本地任务不应执行 `git push`，Codex 0.167.0 可接收如下 `PreToolUse` 输出并在工具运行前阻断该次调用。这是 Codex 的 hook 输出 schema，不是模型、shell 或 MCP 的通用协议。
 
 ~~~json
 {
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "deny",
-    "permissionDecisionReason": "This repair is limited to the local fixture."
+    "permissionDecisionReason": "Local fixture only."
   }
 }
 ~~~
 
-同一产品的 PermissionRequest 只在一次动作即将进入审批流程时触发；它可以批准、拒绝或不作决定而交回正常审批。若命令本来不需要审批，就不会经过这个事件。PreToolUse 与 PermissionRequest 都不能取代 OS 沙箱；一个 hook 没有给出 deny，也不意味着被允许的子进程可以读写任意路径。非托管 hook 需要用户审阅并信任当前定义，改过的定义要重新审阅，因此项目内 hook 脚本本身也属于可信执行代码。
+以官方当前 hook 文档说明的语义为例，`PermissionRequest` 只在即将请求审批时触发：hook 可允许或拒绝该请求；若不作决定，才交回常规审批。它不会拦截不需要审批的调用。批准的是一次具体请求，不会永久放开后续操作；获准后的执行仍按本次权限与沙箱配置运行，并可能失败。`PreToolUse` 与审批都不能替代操作系统沙箱。`PostToolUse` 在支持的工具产生结果后执行；当前文档所述的 `decision: "block"` 会以反馈替换原工具结果并继续模型流程，`continue: false` 会停止正常处理原结果；二者都不能撤销已经写入的文件或发出的请求。检查工具输出也不等于任务验收通过。
 
-调用实际运行后，harness 收集完整的工具结果。针对 Bash 的 PostToolUse 可在命令完成后运行，例如检查退出码或给模型附加“仍需复核 diff”的上下文；它不能撤销已经写入的文件或已发送的网络请求。阻断后续模型处理旧输出和撤回已经发生的副作用是两回事。对这个小修复，三条通过的测试用例仍不能替代查看 diff；检查 diff 可以发现意外改动的路径或未覆盖的输入。
+Codex CLI 0.167.0 源码列出 14 个事件名。它们分属不同生命周期点：
 
-### hook 生命周期怎样连接启动、执行和停止？
+| 触发点 | 事件 | 读图时要注意 |
+|---|---|---|
+| 每次模型请求 | `PreModelRequest`、`PostModelRequest` | 每次请求尝试，而非每个用户任务一次 |
+| 工具调用前后 | `PreToolUse`、`PermissionRequest`、`PostToolUse` | 审批 hook 只在即将请求审批时触发；工具 hook 仅覆盖受支持的工具路径 |
+| 用户输入或轮次 | `UserPromptSubmit`、`Stop`、`Interrupt` | 用户提交、当前轮将停止、用户中断；中断不撤销已发生的动作 |
+| 上下文压缩 | `PreCompact`、`PostCompact` | 分别在压缩前后，不是工具执行步骤 |
+| 会话开始或结束 | `SessionStart`、`SessionEnd` | 开始可来自启动、恢复等来源；会话结束不是每轮结束 |
+| 子 agent 启停 | `SubagentStart`、`SubagentStop` | 针对子 agent 生命周期，不等于主会话工具调用 |
 
-Codex 的公开 hook 文档区分多个运行时事件：SessionStart 可在 startup 或 resume 时为模型补入工作区背景；PreToolUse 在支持的工具调用前；PermissionRequest 只在即将请求审批时；PostToolUse 在工具返回后；Stop 处理当前轮将结束的时刻；SessionEnd 在会话结束时；Interrupt 对应用户中断当前轮。它们不是每个请求都会依次触发的固定流水线。Codex 可从用户、项目和 managed 配置加载 hooks；多个匹配的命令 hook 会运行，非 managed hook 要先经 review/trust。事件名、输入字段和哪些输出有控制效果都属于产品接口，升级时应读对应版本文档。
+这些事件不是每个工具调用都会依序执行的流水线；Codex CLI 0.167.0 中只有 9 个事件接受 `matcher`，其他事件忽略该字段。各事件的输入、匹配器和输出控制效果由产品版本定义。升级 Codex 时应核实当前安装版本的配置与 schema，不能把当前文档或其他 harness 的事件名直接套给旧版本。
 
-在本例里，启动 hook 可提醒运行时读取项目约定，但它不会替代 sandbox。工具前 hook 可拒绝 git push，shell 沙箱同时保持无网络。用户批准一个必要的文件权限升级时，harness 仍要记录动作范围，并保持最小授权。PostToolUse 再检查测试结果和 diff；它可以让模型看到新观察，却不能回滚写入。
+### 中断、断线或 resume 后怎样恢复？
 
-恢复本地修复时，Codex session ID 选择保存的对话，`tool_use_id` 标识一次本地工具调用，工作目录和工作树位置标识要检查的文件上下文。它们不证明某个命令还在运行或改动已保存；重连后仍要查本地进程、会话状态、工作树、退出码和测试结果。
+中断后要先分清身份标识与执行状态：Codex CLI 的 `session_id` 定位会话，`tool_use_id` 标识一次工具调用；上游 `c1` 和编排章的 `c2` 是不同运行中的只读日志调用。编排章的应用运行 ID `run-r42-7` 追踪后一运行，`run-r42-7:create-issue:v1` 标识后续独立的工单创建意图，可用于接收端查询。它们不能相互替代。`resume`（恢复会话）只载入会话记录，不会恢复原进程或撤销副作用；网络断开也可能只是失去观察。先靠标识定位同一动作，再向进程或接收端核对；查询不到可靠状态时按表末行处理。
 
-远端工单路径使用另一组标识：`run-r42-7` 是应用运行身份，c1/c2 是模型调用 ID，`run-r42-7:create-issue:v1` 是远端副作用的操作键；若事件流有 `seq`，它只在该 run 的事件日志中排序。它们不能替代本地 session、`tool_use_id` 或工作树状态。
+恢复时按查询到的状态采取动作：
 
-用户发起 Interrupt 会中断当前轮，但不能撤销已经开始的本地写入或远端请求。客户端连接断开只是暂时失去输出观察，执行端是否继续取决于该 harness 的托管方式；断线本身不能证明运行已停止。重连或 resume 时，若执行端提供运行状态接口，先查询其权威状态；本地 CLI 则核实进程与会话状态，无法确认时不要假定任务已停止。之后读取当前 git status / diff、可取得的退出状态和工具收据。对安全、幂等的本地测试，可以按当前工作树重跑。对 git push，查询目标远端 ref 是否指向预期 commit SHA；匹配可确认期望状态，不匹配时还要考虑并发变更，不能单凭这一点断言没有推送。对提供稳定幂等或业务操作键的 API，查询原键；其他发布、通知等操作使用接收端提供的权威状态查询。若没有合法可靠的查询能力，保持未知并请求人工核查，不因为旧 transcript 缺少成功回执就重放。运行身份和副作用对账见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
+| 权威状态 | 下一步 | 重放边界 |
+|---|---|---|
+| 原进程或外部动作仍在处理 | 等待或继续查询同一进程/同一接收端操作，并记录实际终态。 | 不另起重复进程或动作。 |
+| 本地测试已结束 | 检查退出码、日志、当前工作树及测试所对应的文件版本。 | 需要时只重跑已知安全的本地验证；先确认它的文件副作用。示例用 `python -B` 避免字节码缓存，但其他测试仍可能写产物。 |
+| 外部动作已落地 | 对照远端分支、服务收据或原业务操作键检查实际结果。 | 不重做已完成动作；若状态不符合预期，按原动作契约修复或补偿。 |
+| 接收端确认执行失败且无副作用 | 核对失败回执和接收端状态，确认没有落地、部分提交或仍在处理。 | 原授权仍覆盖该动作且接收端契约允许时才重试；非幂等写入按接收端操作键/去重规则处理，不自行换键绕过去重。 |
+| 明确未执行且无副作用 | 检查授权是否仍有效，以及原动作是否可重复。 | 只在原授权仍覆盖该动作、且动作契约允许时重试；非幂等写入按接收端操作键/去重规则处理。 |
+| 有部分效果或未能可靠核实 | 先记录并核对已知文件改动/远端回执，再对账未知部分；无法核实时保持未知。 | 不盲目重放；必要时停止并由维护者决定如何恢复。 |
+
+对 `git push`，检查远端目标分支是否指向预期提交，并考虑并发更新；对创建工单等服务请求，查询原业务操作键。如果原会话记录（transcript）没有成功回执，只说明记录里没有回执，不能推出动作未发生。应用运行恢复和副作用对账见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)。
 
 相关机制：
 
-- [什么时候应该让模型决定下一步？](#18.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：说明 agent loop、工具集合、Skill 和每轮停止条件。
-- [生产 AI 如何阻止不可信内容诱导模型越权？](#21.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：补充对高影响动作的授权、审批摘要和停止路径。
-- [生产应用运行时怎样管理部署凭据？](../../engineering-foundations/infrastructure/production-application-runtime.md)：说明服务凭据和部署身份的隔离、轮换及审计。
+- [什么时候应该让模型决定下一步？](#18.%20%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BA%94%E8%AF%A5%E8%AE%A9%E6%A8%A1%E5%9E%8B%E5%86%B3%E5%AE%9A%E4%B8%8B%E4%B8%80%E6%AD%A5%EF%BC%9F)：说明 agent loop（智能体循环）、工具集合、Skill 和停止条件；本章接手一个已观察到的测试失败，落实文件与 shell 的执行边界。
+- [模型怎样把工具请求交给宿主执行？](#15.%20%E5%BA%94%E7%94%A8%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E5%B9%B6%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%8F%90%E5%87%BA%E7%9A%84%E5%B7%A5%E5%85%B7%E8%AF%B7%E6%B1%82%EF%BC%9F)：说明工具调用请求、授权、实际执行与结果回传的分工。
+- [智能体如何把证据变成任务、工具调用和可恢复的运行？](#20.%20%E6%80%8E%E6%A0%B7%E6%8C%89%E4%BE%9D%E8%B5%96%E3%80%81%E5%B9%B6%E8%A1%8C%E6%80%A7%E5%92%8C%E6%8E%A7%E5%88%B6%E6%9D%83%E7%BB%84%E7%BB%87%E5%A4%9A%E9%98%B6%E6%AE%B5%20AI%20%E4%BB%BB%E5%8A%A1%EF%BC%9F)：另一运行以只读日志调用 `c2` 起步，工单写入另行审批。本章只到本地补丁、测试和差异验收。
+- [生产 AI 如何阻止不可信内容诱导模型越权？](#21.%20%E7%94%9F%E4%BA%A7%20AI%20%E5%A6%82%E4%BD%95%E9%98%BB%E6%AD%A2%E4%B8%8D%E5%8F%AF%E4%BF%A1%E5%86%85%E5%AE%B9%E8%AF%B1%E5%AF%BC%E6%A8%A1%E5%9E%8B%E8%B6%8A%E6%9D%83%EF%BC%9F)：补充高影响操作的授权、审批摘要与停止路径。
+- [生产应用运行时怎样管理部署凭据？](../../engineering-foundations/infrastructure/production-application-runtime.md)：说明服务凭据和部署身份的隔离、轮换与审计。
 
 > [!info]- 来源
-> Codex 本地 CLI 版本为 0.167.0；固定 tag 源码与公开资料核验于 2026-11-11。PreToolUse、PermissionRequest 等 hook 事件名称及其输出 schema 是 Codex 产品接口；本例的 hook 脚本名和 permission reason 是教学样例。
+> Codex CLI 本机行为核验于 2026-11-12，版本为 `0.167.0`；该版本源码固定于 commit `086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a`。同日也查阅 OpenAI 当前文档；其内容会比本机版本更新。每条来源只支持标明的接口/版本范围，不把 Codex 行为外推为所有 harness 的承诺。
 >
-> - **sandbox 与 approval 的职责区别、可写根、受保护路径及默认网络条件。** OpenAI，[Agent approvals & security](https://learn.chatgpt.com/docs/agent-approvals-security)，检查 “Sandbox and approvals”、“Network access”、“Network isolation” 和 “Protected paths in writable roots”；[Permissions](https://learn.chatgpt.com/docs/permissions) 说明 workspace roots 与系统临时目录的写入范围。Codex CLI 当前 reference 的具体 flags 见 [Command line options](https://learn.chatgpt.com/docs/cli/reference)。
-> - **Skills 的发现、按需读取和执行形式。** OpenAI，[Skills](https://developers.openai.com/api/docs/guides/tools-skills)，检查 “What's a skill”、“Prompting behavior” 和 local shell mode；技能只提供可复用指令与材料，具体工具和执行环境由 runtime 提供。
-> - **Hooks 的生命周期、信任审阅及不同事件的输出契约。** OpenAI，[Hooks](https://learn.chatgpt.com/docs/hooks)，检查 “Review and trust hooks”、“SessionStart”、“PreToolUse”、“PermissionRequest”、“PostToolUse”、“Stop”、“SessionEnd” 和 “Interrupt”；[Plugin architecture](https://developers.openai.com/plugins/concepts/plugins) 与 [Bundled MCP servers and lifecycle hooks](https://developers.openai.com/plugins/build/plugins#bundled-mcp-servers-and-lifecycle-hooks) 说明 hook 脚本必须部署在执行环境，并受 surface 与信任流程限制。
-> - **Codex CLI 0.167.0 的固定实现。** OpenAI Codex 源码 [rust-v0.167.0 tag / commit `086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a`](https://github.com/openai/codex/tree/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a)：核对 `codex-rs/core/src/hook_runtime.rs`、`core/src/tools/approvals.rs`、`core/src/tools/registry.rs` 及 `codex-rs/hooks/src/events/`、`schema.rs`，确认匹配 hook 的执行、PreToolUse 的输入改写、PermissionRequest 的正常审批回退和相应事件 schema。
-> - **对话 resume 和真实状态分离的工程结论。** OpenAI [CLI reference](https://learn.chatgpt.com/docs/cli/reference) 列出 codex resume 的会话续接用法；恢复不撤销文件或外部副作用，并与[AI 运行恢复章](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)的副作用契约一致。
+>
+> - **Codex CLI 参数与会话续接。** OpenAI，[CLI reference](https://developers.openai.com/codex/cli/reference)，检查 `--sandbox`、`--ask-for-approval`、`--add-dir` 和 `codex resume`；另用本机 `codex --version` 与 `codex --help` 核对安装版本及 flag。CLI 会话续接不表明原命令的外部效果状态。
+>
+> - **审批、操作系统沙箱、工作区范围和命令网络。** OpenAI，[Agent approvals & security](https://developers.openai.com/codex/agent-approvals-security)，检查 “Sandbox and approvals”、“Network access”、“Protected paths in writable roots” 和 “Run without approval prompts”。页面说明 Codex CLI / IDE / Desktop 的本地命令边界；web 搜索、MCP 和连接器仍有各自的网络/权限控制。
+>
+> - **模型工具调用由谁执行，以及如何用 ID 回传结果。** OpenAI，[Function calling](https://developers.openai.com/api/docs/guides/function-calling)，检查 “Handling function calls”；模型返回带有调用 ID、工具名与参数的调用项，调用方执行后再回传结果。该 API 例子用于解释宿主职责，不等于 Codex CLI 的内置文件/shell 工具接口。
+>
+> - **Skill 的发现与按需读取。** OpenAI，[Skills](https://developers.openai.com/codex/skills)，检查 Codex 先暴露技能名称与描述、匹配后再加载完整 `SKILL.md` 的说明；它是指引层，不是工具注册或权限机制。
+>
+> - **项目级说明文件的发现与合并。** OpenAI，[Custom instructions with AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)，检查项目目录内发现 `AGENTS.md` 的路径与合并顺序，以及会话启动时重建指令链的说明；此机制与 Skill 的渐进加载分开。
+>
+> - **hook 事件、发现配置、信任、matcher、PreToolUse 与 PermissionRequest 输出契约。** OpenAI，[Hooks](https://developers.openai.com/codex/hooks)，检查事件表、“Where Codex looks for hooks”、“Review and trust hooks”、“Matcher patterns”、“Tool coverage”、“PreToolUse”、“PermissionRequest” 和 “PostToolUse”。当前页面说明 PostToolUse 怎样替换普通结果；本机 0.167.0 对应输出 schema 还由固定源码核对。
+>
+> - **0.167.0 的事件列表和 schema。** OpenAI Codex [rust-v0.167.0 release](https://github.com/openai/codex/releases/tag/rust-v0.167.0)，源码固定于 [commit `086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a`](https://github.com/openai/codex/tree/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a)：`codex-rs/hooks/src/lib.rs` 的 `HOOK_EVENT_NAMES` 与 `HOOK_EVENT_NAMES_WITH_MATCHERS`；`codex-rs/hooks/src/schema.rs` 的 hook command input/output wire 类型；`codex-rs/core/src/hook_runtime.rs` 的调用前、权限请求和调用后调度；`codex-rs/core/src/tools/approvals.rs` 的审批决策流程。
+>
+> - **运行身份与副作用核对。** [AI 应用架构](#22.%20AI%20%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E5%9C%A8%E6%96%AD%E7%BA%BF%E6%88%96%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E5%B4%A9%E6%BA%83%E5%90%8E%E6%81%A2%E5%A4%8D%EF%BC%8C%E5%B9%B6%E9%81%BF%E5%85%8D%E5%89%AF%E4%BD%9C%E7%94%A8%E9%87%8D%E5%A4%8D%EF%BC%9F)说明本地会话状态与应用运行状态、接收端副作用核对的边界；此处在合成案例中沿用该机制，没有执行远端写入。
 ## 20. 怎样按依赖、并行性和控制权组织多阶段 AI 任务？
 
 **案例背景。** 从 build 42 的诊断请求开始：用户问为什么构建失败，模型提出读取只读 tool（工具）`read_build_log` 的请求，应用核验权限后执行。工具调用 ID `c1` 关联请求和返回结果，其中 `unit-tests` 的 `reject_empty_name` 预期 HTTP（Hypertext Transfer Protocol，超文本传输协议）`400`、实际 `200`，进程退出状态为 `1`。这一段只需要沿一个运行循环读证据、决定何时作答；若把每个职责都拆成新智能体，既没有独立工作可并行，也增加了交接和校验。
