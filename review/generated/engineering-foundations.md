@@ -5533,22 +5533,15 @@ CDN可以在更靠近用户的边缘节点缓存适合共享的公开内容或�
 > - `429 Too Many Requests` 与可选 `Retry-After`：[IETF RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html)，§4，2012-04；临时过载 `503` 与等待建议字段：[RFC 9110, HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，§10.2.3、§15.6.4，2022-06。均核对于 2026-11-06。
 ## 30. 怎样用最小反例定位报表授权回归？
 
-报表平台工程师收到一条跨租户访问回归：tenant-a 读自己的 report 42 应返回 200，tenant-b 猜中同一 ID 也只能得到 404。为了定位并修复回归，先把需求改写成可观察结果，再提出一个能被反例推翻的根因假设。若新改动让 B 得到 200，就沿主体、application programming interface（应用程序接口，API）路由、查询和序列化追踪请求，而不是先猜数据库或框架有问题。针对该边界的可运行测试见[测试如何证明报表服务改动？](#31.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E9%AA%8C%E8%AF%81%E4%B8%80%E6%AC%A1%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E6%94%B9%E5%8A%A8%EF%BC%9F)。
+报表平台工程师收到跨租户访问回归：`tenant-a` 读取自己的报表 42 应返回 200；已认证的 `tenant-b` 猜中同一个全局编号时只能得到 404。定位时先把这条需求改写成可观察的输入和输出，再提出能被反例推翻的根因假设。若 B 收到 200，就沿可信主体、Application Programming Interface (应用程序接口，API)路由参数、实际取数方式、返回对象归属及响应映射逐段核对，不能仅凭状态码或预设“数据库一定发了查询”猜根因。完整路由的可运行回归测试见[怎样用测试边界验证一次报表服务改动？](#31.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E9%AA%8C%E8%AF%81%E4%B8%80%E6%AC%A1%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E6%94%B9%E5%8A%A8%EF%BC%9F)；本页会比较其中用到的 Structured Query Language (结构化查询语言，SQL)条件。
 
-~~~mermaid
-flowchart TD
-    A[可信主体为 tenant-b，请求 report 42] --> B[主体依赖得到当前租户]
-    B --> C[路由把主体交给数据查询]
-    C --> D{查询同时限制租户与报表 ID？}
-    D -->|否| E[返回其他租户的行]
-    D -->|是| F[查无匹配行，返回 404]
-~~~
+![已认证的 tenant-b 请求同一报表；仅当 Session.get 和显式查询这两种实现本次都实际发出 SELECT 时，图才比较只按全局 report_id 会命中 tenant-a 的行并泄露 200，以及同时约束 tenant-b 和 report 42 后无匹配并按本例隐藏策略返回 404](../../engineering-foundations/architecture/resources/reading-debugging-report-scope.svg)
 
-这张图标出三处必须核对的交接：主体依赖是否正确给出当前租户，路由是否把它传入查询，查询是否把主体范围用于取行。一个响应状态只能提示失败发生了，不能单独证明是哪一处失效。
+图只比较两种实现本次都实际发出 SELECT 时的路径：红列的 `Session.get()` 按全局主键读取，绿列的显式查询按租户与编号过滤。`Session.get()` 若从本会话 identity map (身份映射表)直接返回未完全过期的对象，就不会进入图示的 SQL 路径；此时应核对调用键、返回对象归属以及该对象是否进入响应。只有确认实际取得 A 的对象且响应映射使用了该对象，才能把漏掉的授权条件与越权 200 连起来。若查询条件和绑定值正确、结果为空，但响应仍含 A 的数据，就继续追查旁路缓存、备用读取或序列化分支。响应码提示结果，不单独证明故障位置。
 
 ### 先把症状变成可证伪假设
 
-假设一次自动化重构把原有的租户范围查询：
+先固定这个合成模型：`report_id` 是全局主键，`tenant_id` 是资源所有者；表中有 `(tenant-a, 42, ready)`。假设一次重构把原有的租户范围查询：
 
 ~~~python
 report = session.scalar(
@@ -5559,35 +5552,42 @@ report = session.scalar(
 )
 ~~~
 
-替换成按主键直接读：
+替换成按主键取对象：
 
 ~~~python
 report = session.get(Report, report_id)
 ~~~
 
-这个合成模型把 report_id 设成全局主键、tenant_id 设成资源所有者，所以 session.get(Report, report_id) 是合法的主键查找，但不会验证所有权。若真实表用复合主键，get 的参数应是相应的主键 tuple；具体形式要与真实 schema 对齐。原测试只以 tenant-a 创建并读取自己的报表，因此仍然通过。这个测试确认了所有者的成功路径，却没有测试访问边界。
+SQLAlchemy 的 `Session.get()` 按映射对象的主键身份取对象：使用默认选项时，如果对象已在当前 Session 的 identity map (身份映射表)中且未完全过期，它可能直接返回而不发 SELECT；若对象不在 identity map 中或已完全过期，才会按主键查询。显式设置 `populate_existing=True` 也会强制查询。两种读取路径都不会自动加上当前主体的租户授权条件。因为本例把 `report_id` 设为全局主键，`session.get(Report, 42)` 是合法主键读取，但不是所有权检查。若实际表用复合主键，应把相应键元组交给 `get`；仍要另行验证主体是否有权访问该资源。
 
-先写出预期观察：
+原测试只以 A 建立并读取自己的报表，所以在这次重构前后都可能通过；它证明了所有者能读，却没有区分授权边界。先列出该路由应满足的结果：
 
-| 主体 | 请求 | 预期结果 |
+| 主体 | 输入 | 预期结果 |
 |---|---|---|
-| tenant-a | GET /api/reports/42 | 200，返回 report 42 |
-| tenant-b | GET /api/reports/42 | 404，不泄露跨租户资源是否存在 |
-| 无有效主体 | GET /api/reports/42 | 401，由认证入口拒绝 |
+| `tenant-a` | `GET /api/reports/42` | 200，返回自己的报表 42 |
+| `tenant-b` | 同一请求，主体已由可信认证接缝给出 | 按本例隐藏策略返回通用 404；正文不含 A 的归属或报表数据，且与请求不存在的 43 相同 |
+| 无有效主体 | 同一请求 | 401，由本例的认证入口拒绝，并带适用的 `WWW-Authenticate` 认证质询 |
 
-假设是“数据读取不再依据当前 tenant_id 限定行”。最小反例只需要一条归属 tenant-a 的 report 42 和一次可信主体 tenant-b 的读取。变更前若得到 200，这支持假设；若得到 404，则应检查主体解析、更早的拒绝分支、缓存或另一条路由。反例缩小调查范围，但只有看到查询缺少租户谓词并将其与这条行记录对应起来，才定位到数据库查询根因。
+最小反例只有两件东西：数据库里那条属于 A 的 42，以及一次可信主体 B 对相同路由的读取。要验证本例隐藏存在性的策略，还需比较 B 请求已存在的 A/42 与确实不存在的 43，确认状态和通用正文相同；只看 404 状态码不能证明正文不含 A 的归属或数据。然后按实测结果缩小调查范围：
+
+| B 的观察 | 它能说明什么 | 接下来核对什么 |
+|---|---|---|
+| 得到 200 | 保护条件可能丢失，但还不能单凭状态码定根因 | 确认当前主体、实际入口、取数调用及结果归属、缓存命中和响应映射 |
+| 得到 404 | 状态码符合预期，但仍需确认响应没有带出 A 的数据 | 检查测试是否走到同一入口、确实使用 B、装入 A/42 数据，以及响应对象归属和正文；若要验证隐藏存在性，再与不存在的 43 比较 |
+
+若 B 得到 200，先追踪这次实际取数：认证依赖是否给出 B，路由是否把 `tenant-b` 与 42 传下去，读取调用究竟返回了什么，响应是否真的采用了该对象。若发出了 SQL，就核对最终谓词和绑定值；若 `Session.get()` 从 identity map 直接返回，就核对调用键和对象归属。只有实际取得 A 的行或对象并确认它进入 200 响应，才能证实这条授权回归。若 SQL 正确限定租户且查无可见行，但响应仍含 A 的数据，继续追踪旁路缓存、备用读取或序列化分支；不要把反例结果本身当作根因证据。
 
 ### 沿调用路径找出丢失的条件
 
-从 API 路由向内读：
+从公开入口向数据读取方向追踪同一个请求：
 
-1. 确认请求经过哪一个公开入口，是否经过认证依赖。
-2. 看依赖返回的主体来自已验证会话或 token（令牌），而非任意客户端字段。
-3. 沿函数调用检查 report_id 和 tenant_id 是否都传到数据层。
-4. 查看最终 SQL 或 object-relational mapping（对象关系映射，ORM）条件、行归属以及 cache（缓存）是否绕过了同一授权范围。
-5. 查看错误映射和序列化，确认不存在“查无权限行却返回成功”之类的备用分支。
+1. 确认请求到达哪条公开路由，是否经过认证依赖。
+2. 核对依赖返回的主体来自已验证会话或令牌，而非任意客户端字段。
+3. 查看路由是否把 `report_id` 和可信主体的 `tenant_id` 都传给数据层。
+4. 检查实际取数方式和参数；若执行查询，再核对最终 SQL 或 object-relational mapping (对象关系映射，ORM)条件与绑定值。确认返回对象归属，以及 cache (缓存)是否绕过同一授权范围。
+5. 追到错误映射和序列化，确认“查无当前主体可见行”没有被备用分支改成成功响应。
 
-在这个合成例中，路由仍然拿到了 tenant_id，但 session.get 只按主键载入记录，没有使用 tenant_id。根因是查询丢失了范围条件。聚焦修正就是重新同时约束租户和资源：
+在这个例子中，路由仍然拿到了 `tenant_id`，但 `session.get` 只按全局主键身份取记录，没有用这个租户值。修正数据库查询时，要把报表编号与可信租户值一起作为条件：
 
 ~~~python
 report = session.scalar(
@@ -5598,84 +5598,81 @@ report = session.scalar(
 )
 ~~~
 
-然后重跑所有者和非所有者测试及同一入口的邻近检查。若成功响应缓存键仅包含 report_id，数据库查询正确也可能再次泄露；缓存命中必须在返回前执行同等范围检查。这类授权边界和后台任务执行时的复验条件见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+对实际代码还要核对 ORM 生成的查询或条件构造，确认两个绑定值进入最终查询，而不是只在调用者局部变量中存在。若通过 identity map 直接拿到对象，则确认查询分支没有执行，并按同一主体范围验证对象归属。若成功响应 cache 键只含 `report_id`，修好数据库查询仍可能被缓存命中绕开；缓存返回之前也必须执行同一主体范围检查。逐次授权规则、查询与缓存边界见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+修完后重放同一入口和输入：A 仍为 200；B 对 A/42 与不存在的 43 都得到通用 404，正文不含 A 的归属或报表数据。匿名请求按本例入口策略为 401；真实认证方案还必须返回并测试适用的 `WWW-Authenticate` 质询。再检查相邻参数校验、错误映射和缓存路径，确保修正没有改变不相关响应或留下另一条绕行路径。真实路由、SQLite 查询及测试夹具的完整执行例子由[测试边界页](#31.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E9%AA%8C%E8%AF%81%E4%B8%80%E6%AC%A1%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E6%94%B9%E5%8A%A8%EF%BC%9F)承担；该测试页明确了 SQLite 和 TestClient 不能代表生产数据库或真实网络的范围。
 
 ### 独立阅读实现与测试
 
-先从需求列预期结果，再读修改过的路由、调用者、依赖、SQL/事务和错误响应。之后阅读测试本身，判断它是否确实通过被修改的入口到达真实数据库，fixture（测试夹具）是否建立了正确主体，断言是否覆盖必须拒绝的访问。模型或生成式改动的实现与测试可能共享同一遗漏假设；全部通过也不代表遗漏的需求已被验证。
+先从需求列出拒绝条件，再分别阅读实现和测试。实现侧要看改动后的公开路由、调用者、认证依赖、实际读取 (无论 SQL 查询还是身份映射表返回)、事务、缓存和响应分支；测试侧要确认输入主体可信且归属不同、测试经过被修改的入口、fixture (测试夹具)接上预期数据库，断言检查了不能发生的成功响应。模型或生成式改动的实现和测试可能共用一个遗漏假设，因此测试全绿并不表示漏掉的授权条件已经被检查。
 
-一个实际复核要把四项证据串起来：报告 42 的所有者/非所有者输入，观察到的状态码，改动前后的查询条件，以及回归断言。需要数据库约束或 broker（消息代理）的 redelivery（重投）结论时，再确认测试实际使用的引擎或 broker；模拟会话、本地重复调用和部署探针只能证明各自的接缝，不能外推到未执行的边界。
+对这次回归，要能把四项证据接起来：主体 A/B 的实际输入、HTTP 状态与正文、改动前后的查询条件、以及断言失败/恢复的回归测试。若把租户谓词删掉后，所有者测试通过而 B 的 404 断言失败，就证明测试能区分这两种实现。数据库约束、消息代理重投或部署装配需要额外结论时，先核实测试是否使用了目标数据库、真实消息代理或部署路径；模拟会话、本地重复调用和健康探针只覆盖各自接缝。测试层如何匹配具体失败边界见[怎样用测试边界验证一次报表服务改动？](#31.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E6%B5%8B%E8%AF%95%E8%BE%B9%E7%95%8C%E9%AA%8C%E8%AF%81%E4%B8%80%E6%AC%A1%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E6%94%B9%E5%8A%A8%EF%BC%9F)。
 
-> [!example] 反例通过前后比较
-> 变更前：tenant-b 请求 /api/reports/42 得到 200，支持“缺少租户范围”的假设；沿调用路径确认查询确实漏了 tenant 谓词，才定位到根因。
+> [!example] 修复前后复验同一反例
+> - **输入：** 数据库只有 A 持有的全局 `report_id=42`；认证依赖为请求给出可信主体 B。
+> - **修复前 (重构之后)：** `session.get(Report, 42)` 可能从 identity map 返回 A/42，也可能按全局主键查询。确认实际返回的对象属于 A，且该对象进入 B 的 200 响应，才定位到这条越权路径；是否发出 SQL 要以本次执行为准。
+> - **修复：** 用 `report_id=42` 和可信主体的租户值 `tenant-b` 同时过滤。
+> - **修复后：** A 仍读到自己的行并得到 200；B 对已有的 A/42 与不存在的 43 都得到相同通用 404，正文不含 A 的归属或报表数据；匿名请求按本例策略得到 401，真实认证实现还要带适用的质询。
 >
-> 变更：查询从只按 report_id 读取，改为同时匹配 report_id 和主体的 tenant_id。
->
-> 变更后：tenant-a 仍得到 200，tenant-b 得到 404，匿名请求得到 401。只有这些观察与需求一致，才说明当前回归已被修复；其他 query path、缓存和后台导出仍各有自己的边界。
+> 这些输出只覆盖所测路由与缓存状态。后台导出、其他查询入口和缓存各自有独立访问路径，应按相应数据边界核对。
 
-在共享分支上保留小而聚焦的修复，用[Git 如何记录通过验收的改动？](#32.%20Git%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E9%80%9A%E8%BF%87%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%94%B9%E5%8A%A8%E5%8F%98%E6%88%90%E5%8F%AF%E8%BF%BD%E6%BA%AF%E6%8F%90%E4%BA%A4%EF%BC%9F)记录源码快照。评审时独立检查实际差异、需求边界和测试覆盖；具体的代码评审流程由团队自己的仓库政策规定。
+在共享分支保留聚焦修复，再用[Git 怎样把通过验收的报表改动变成可追溯提交？](#32.%20Git%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E9%80%9A%E8%BF%87%E9%AA%8C%E6%94%B6%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%94%B9%E5%8A%A8%E5%8F%98%E6%88%90%E5%8F%AF%E8%BF%BD%E6%BA%AF%E6%8F%90%E4%BA%A4%EF%BC%9F)记录源码快照。评审应独立看实际差异、需求边界和测试覆盖；具体审批与合并门槛由仓库政策决定。
 
 > [!info]- 来源
-> - GitHub 官方 [Reviewing proposed changes](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests) 与[Review concepts](https://docs.github.com/en/pull-requests/concepts/giving-reviews)，checked 2026-11-06：支持从差异和提交检查改动与评审意见；本文的最小反例是合成 API 的行为推演。
-> - 租户授权的规范规则由[逐次授权报表资源](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)承担；本篇只用该规则定位一次 SQL 条件遗漏，不重复完整认证和授权设计。
+> - SQLAlchemy 2.0 官方 [Session.get API](https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.Session.get)：若主键对象在身份映射表且未完全过期，默认调用可不发 SQL；过期对象会刷新，`populate_existing=True` 会强制查询；复合主键可用元组或字典表示。核对于 2026-11-12；实际包版本为 2.0.44。
+> - IETF [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) §§15.5.2、15.5.4–15.5.5：401 必须含适用 `WWW-Authenticate` 质询；服务可用 404 隐藏当前禁止访问的资源，但正文是否披露归属仍需由响应与测试保证。核对于 2026-11-12。
+> - GitHub 官方 [Reviewing proposed changes in a pull request](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/reviewing-proposed-changes-in-a-pull-request) 与[Giving reviews](https://docs.github.com/en/pull-requests/concepts/giving-reviews)：支持阅读文件差异、对具体改动评论和提交审查；代码根因与修复结论来自本页合成例的查询和测试证据。核对于 2026-11-12。
+> - 租户授权的完整规则与缓存边界由[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)承担；本文只追踪一次范围条件回归。
 ## 31. 怎样用测试边界验证一次报表服务改动？
 
-报表平台工程师准备发布一项租户授权修复：tenant-a 应能读取自己的 report 42，得到 200；tenant-b 猜中同一 ID 时只能得到 404。导出 job 重复投递后，任务状态和结果对象引用也只能提交一次。要判断这次改动能否发布，测试必须覆盖这些用户可观察的失败条件，而不只是确认实现和它自己生成的 happy-path 测试一起通过。
+报表平台的合成案例有两条需要验证的契约：`tenant-a` 读取自己的报表 42 得到 200；已认证的 `tenant-b` 猜中同一个全局 ID 时得到 404。重复处理同一个导出任务时，数据库只能提交一次有效状态转换，已完成任务保留第一次写入的结果键。后面的 SQLite 例子只检查数据库行，不写入或读取对象存储；它不证明结果对象存在，也不证明物理上传只发生一次。测试要把这些失败条件变成可观察的断言，不能只让实现和它自己生成的成功路径测试一起通过。
 
-application programming interface（应用程序接口，API）集成和数据库集成分别需要真实路由与 structured query language（结构化查询语言，SQL）。若要声称 publisher confirm（发布者确认）、consumer acknowledgement（消费者确认，ACK）或部署装配正确，还要把实际 broker（消息代理）或近似生产链路纳入测试。本文 SQLite 示例验证 FastAPI 路由和 SQL，不代表 PostgreSQL、broker 或生产身份系统已经验证。
-
-~~~mermaid
-flowchart TD
-    A[契约：A 读 report 42 得 200；B 得 404] --> B[单元：租户规则]
-    B --> C[API + SQLite：路由、主体接缝、查询]
-    C --> D[契约：与已发布响应结构比较]
-    D --> E[PostgreSQL：生产数据库方言与约束]
-    E --> F[RabbitMQ：发布确认、重投、消费者确认]
-    F --> G[近生产旅程：组件装配与流量路径]
-~~~
-
-每升高一层，必须能指出新增层解决的失败条件。测试数量多不能替代边界正确。单个端到端测试不易定位原因，也很难覆盖大量输入；只测函数又看不到依赖装配或真实数据库行为。
+测试边界由“哪种失败可能发生”决定。用 Application Programming Interface (应用程序接口，API) 集成和数据库集成时，分别把真实路由、测试选定的身份接缝和选定数据库纳入测试；只有要证明 broker (消息代理) 的发布、重投或确认，才需要对应的消息代理测试；只有问题可能由部署装配引起，才需要近生产端到端旅程。本文用 SQLite 演示路由与 Structured Query Language (结构化查询语言，SQL) 的本地证据，不把它扩展成 PostgreSQL、消息代理或生产身份系统的证据。
 
 ### 先把风险与可证明的边界对应起来
 
-| 要排除的失败 | 合适边界 | 该边界能给出的证据 | 不能据此声称 |
-|---|---|---|---|
-| 租户 A/B 条件判断颠倒 | 单元测试 | 给定主体和资源归属，访问规则输出允许或拒绝 | 真实 HTTP 路由一定调用该规则 |
-| 路由忘记传租户条件、返回错状态或错字段 | API 集成 | 实际路由、参数校验、依赖注入、响应序列化和错误映射 | 真实网络或生产身份提供方正常 |
-| 唯一键、回滚或条件更新不守约束 | 数据库集成 | 选定数据库执行真实表结构与 SQL | 换一个数据库也有相同锁和类型行为 |
-| 新响应不兼容已发布客户端 | 契约测试 | 当前输出与已发布 schema（结构定义）/代表性旧客户端比较 | 只检查本次自动生成的 schema 就兼容旧客户端 |
-| 确认或重投造成丢失、重复业务效果 | broker 集成 | 指定 broker、队列配置、ACK 模式和持久化存储共同执行交接 | 本地函数调用两次等同于 broker 重投 |
-| 只有服务装配后才出现的故障 | 近生产端到端 | 真实身份、API、数据库、队列和 worker 的受控旅程 | 一个健康探针就代表用户旅程正确 |
+从需要守住的业务条件出发，挑一个包含实际故障边界的最小环境，并先写清输入和可观察结果。下表是互补的检查位置，不是每个改动都要依次跑完的固定测试层级：只有较低边界不能证明目标属性时，才再引入更完整的环境。
 
-这些边界是互补关系，不是固定的“测试金字塔”。尽量把快速、确定的检查放在靠近故障条件的位置；只有下层无法证明的属性才提高边界。前端组件和浏览器行为另由[前端测试](../../frontend/testing/frontend-testing.md)说明，本篇聚焦 API、持久化和消息交付。
+| 要排除的失败 | 测试边界 | 能看到的证据 | 仍不能据此声称 |
+|---|---|---|---|
+| 租户 A/B 的纯访问规则判断颠倒 | 单元测试 | 给定可信主体和资源归属，规则返回允许或拒绝 | 实际路由一定调用了这条规则 |
+| 路由忘记传租户条件、状态码或响应字段错误 | API 集成 | 实际路由、所选身份接缝 (本例直接定义测试接缝)、参数校验、数据库查询、序列化和错误映射一起工作 | 真实网络、生产身份提供方或生产数据库方言正常 |
+| 唯一约束、回滚或条件更新的实际数据库行为错误 | 数据库集成 | 选定数据库执行真实表结构和 SQL | 另一种数据库有相同类型、锁或并发行为 |
+| 新响应不兼容已发布客户端 | 契约测试 | 当前响应与已发布 schema (结构定义) 或代表性旧客户端比较 | 只检查本次生成的 OpenAPI 就兼容旧客户端 |
+| 消息发布、重复投递或 acknowledgment (消费者确认，ACK)路径丢失、重做 | 消息代理集成 | 选定消息代理及其路由、持久性和确认设置下的实际交接 | 在本地把 worker (工作进程)函数调用两次就等于代理完成了重投 |
+| 只有服务装配后出现的故障 | 近生产端到端 | 受控的身份、API、数据库、队列和工作进程旅程 | 一个健康探针就证明用户旅程正确 |
+
+前端组件和浏览器边界另见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](../../frontend/testing/frontend-testing.md)。本篇重点放在服务路由、持久化和消息交付。
 
 ### 用实际路由重放跨租户反例
 
-先将主体边界做成可替换依赖。X-Tenant-ID 只是测试接缝，用来把 tenant-a、tenant-b 送到实际路由；生产服务必须从已验证的登录上下文取得主体，不能信任客户端任填的租户头。示意表把 report_id 设为全局主键、tenant_id 设为资源所有者；若真实表用复合主键，测试应按真实 schema 改写，不能照搬主键读取方式。
+测试用 FastAPI 的 dependency injection (依赖注入)把测试主体交给同一个路由。完整示例直接定义 `tenant_from_test_header` 测试接缝，用 `X-Tenant-ID` 让两种主体走同一入口；它不是生产认证实现。已有 FastAPI 路由可在测试中覆盖认证依赖，同时保留真实路由；生产身份仍必须来自已验证的登录上下文，不能信任客户端任填的租户头。示意表把 `report_id` 设为全局主键、`tenant_id` 设为所有者；若实际 schema 使用复合主键，测试要按真实键改写。
 
-> [!example] 关键查询和断言
-> 关键是查询同时约束当前租户和 report 42，且两个租户走同一个 API 路由：
->
-> ~~~python
-> row = connection.execute(
->     text("""
->         SELECT report_id, state FROM reports
->         WHERE tenant_id = :tenant_id AND report_id = :report_id
->     """),
->     {"tenant_id": tenant_id, "report_id": report_id},
-> ).mappings().first()
->
-> owner = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-a"})
-> other = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-b"})
-> assert owner.status_code == 200
-> assert owner.json() == {"report_id": 42, "state": "ready"}
-> assert other.status_code == 404
-> ~~~
->
-> 这组检查通过 FastAPI TestClient 进程内调用实际路由、通过 SQLAlchemy 执行参数化查询，并由 SQLite 执行真实 SELECT。它不是 mock，也没有建立网络 socket。
+关键查询同时约束当前租户和报表 ID。下面展示查询和可观察断言；完整 FastAPI、SQLite 与 pytest 夹具放在折叠示例中。
 
-> [!example]- 完整 FastAPI + SQLite fixture 与 OpenAPI 检查
-> 下方测试夹具为每次测试建立内存 SQLite，使用 StaticPool 让 TestClient 所在线程与数据库检查共享该连接。示例中的测试头不是真实认证协议。
+~~~python
+row = connection.execute(
+    text("""
+        SELECT report_id, state FROM reports
+        WHERE tenant_id = :tenant_id AND report_id = :report_id
+    """),
+    {"tenant_id": tenant_id, "report_id": report_id},
+).mappings().first()
+
+owner = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-a"})
+other = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-b"})
+missing = client.get("/api/reports/43", headers={"X-Tenant-ID": "tenant-b"})
+assert owner.status_code == 200
+assert owner.json() == {"report_id": 42, "state": "ready"}
+assert other.status_code == 404
+assert missing.status_code == 404
+assert other.json() == missing.json() == {"detail": "report not found"}
+~~~
+
+`TestClient` 在进程内调用 FastAPI 应用，不建立真实 HTTP socket (套接字)；SQLAlchemy 仍把参数化查询交给 SQLite 执行。所有者查到自己的行得到 200，另一租户查无可见行得到通用 404。本例把生产身份边界设为 Bearer 认证，测试依赖用 `X-Tenant-ID` 注入已认证主体；未注入主体时，它模拟认证层返回 401 和 `WWW-Authenticate: Bearer realm="reports"`。测试会检查这个质询头，真实令牌的校验由认证层自己的测试负责。
+
+> [!example]- 完整 FastAPI + SQLite 测试夹具与 pytest 检查
+> 每个测试由默认的 function scope (函数作用域)fixture (测试夹具)建立独立内存数据库和应用。`StaticPool` 让本例各次串行访问复用同一 SQLite 连接，使测试客户端调用的路由读到已准备的数据；它不支持并发事务，不能把这组设置用于并发测试。
 >
 > ~~~python
 > from typing import Annotated
@@ -5713,7 +5710,11 @@ flowchart TD
 >         x_tenant_id: Annotated[str | None, Header()] = None,
 >     ) -> str:
 >         if not x_tenant_id:
->             raise HTTPException(status_code=401, detail="authentication required")
+>             raise HTTPException(
+>                 status_code=401,
+>                 detail="authentication required",
+>                 headers={"WWW-Authenticate": 'Bearer realm="reports"'},
+>             )
 >         return x_tenant_id
 >
 >     @app.get(
@@ -5754,40 +5755,149 @@ flowchart TD
 > def test_report_scope_and_authentication(client):
 >     owner = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-a"})
 >     other = client.get("/api/reports/42", headers={"X-Tenant-ID": "tenant-b"})
+>     missing = client.get("/api/reports/43", headers={"X-Tenant-ID": "tenant-b"})
 >     anonymous = client.get("/api/reports/42")
+>     malformed = client.get(
+>         "/api/reports/not-a-number", headers={"X-Tenant-ID": "tenant-a"}
+>     )
 >
 >     assert owner.status_code == 200
 >     assert owner.json() == {"report_id": 42, "state": "ready"}
 >     assert other.status_code == 404
+>     assert missing.status_code == 404
+>     assert other.json() == missing.json() == {"detail": "report not found"}
 >     assert anonymous.status_code == 401
+>     assert anonymous.headers["www-authenticate"] == 'Bearer realm="reports"'
+>     assert malformed.status_code == 422
 >
 >
-> def test_public_schema_declares_scope_errors(client):
->     operation = client.get("/openapi.json").json()["paths"]["/api/reports/{report_id}"]["get"]
+> def test_openapi_declares_scope_error_responses(client):
+>     operation = client.get("/openapi.json").json()["paths"][
+>         "/api/reports/{report_id}"
+>     ]["get"]
 >     assert {"200", "401", "404", "422"} <= set(operation["responses"])
 > ~~~
 >
-> 保存为 test_report_scope.py 后运行 python -m pytest -q test_report_scope.py。OpenAPI 检查说明本应用声明了哪些响应码；若要保证已有客户端兼容，仍需与已发布 schema 或代表性旧客户端比较。
+> 保存为 `test_report_scope.py` 后运行 `python -m pytest -q test_report_scope.py`。OpenAPI 检查只说明本应用当前声明哪些响应码；若要保证旧客户端兼容，仍须与已发布 schema 或代表性旧客户端比较。
 
-若原实现只按 report_id 读取，tenant-b 的测试会得到 200，暴露缺失的租户条件。示例中 report_id 是全局主键，所以 SQLAlchemy 的 session.get(Report, 42) 能找到该行，但这不等于当前主体有权读取它；复合主键则需要不同的主键参数。修正后，所有者得到 200、越租户请求得到 404、匿名请求得到 401。相关授权规则见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+本例路由没有声明 `response_model`；本机运行生成的 200 OpenAPI 响应 schema 是 `{}`，因此没有把 `state` 标成必需字段。上面的 OpenAPI 用例只检查响应码，不能证明删掉 `state` 会被 schema 拦住。所有者的精确 JSON 断言会在本例中发现该字段被删，但要验证已发布客户端兼容性，仍要用标明必需字段的已发布 schema 或固定旧客户端响应契约来检查。
 
-参数校验和旧客户端兼容也要分别验收：请求先通过认证后，`GET /api/reports/not-a-number` 由整数路径参数校验返回 422；没有可信主体的请求应在认证边界先得到 401。若既有客户端依赖响应中的 `state` 字段，应把上一版发布的 schema 或代表性请求/响应作为固定契约，删掉 `state` 时该契约测试应失败。当前 `/openapi.json` 只证明此版本声明了什么，不证明它仍兼容旧客户端。
+本例把 404 作为隐藏资源的策略：B 请求 A 实际拥有的 42，与 B 请求表中不存在的 43，必须得到相同状态和通用正文；断言同时确认正文不含 A 的租户归属或报表状态。只看状态码不能证明响应没有泄露。若查询退回只按全局主键 `report_id` 读取，`tenant-a` 的原所有者测试仍会通过，但 `tenant-b` 会得到 200，新增的跨租户输入才会暴露漏掉的租户谓词。示例的 `session.get(Report, 42)` 同样只按全局主键取行，不等于它验证了当前主体的权限；实际表若使用复合主键，读取参数和反例都应依真实键定义调整。
 
-> [!example] 唯一约束与重复投递的最小状态轨迹
-> SQLite 演算的插入表以 `(tenant_id, request_key)` 为唯一键。首次插入影响 1 行；相同键再次插入触发唯一约束并回滚事务，查询仍只有原来的 1 行。这个约束例说明重复 insert 不会多建一行；它不等于 API 应对相同幂等键返回 409。报表接口若收到相同键和相同参数，应按[持久报表任务](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)的契约读取并返回原 job；键相同但参数冲突时再按该业务契约拒绝。
+认证得到可信主体之后，仍要对具体报表和动作逐次授权；测试头不改变这一生产边界。授权模型和缓存命中也要保留当前租户范围，见[如何逐次授权租户内的报表资源？](#5.%20%E5%A6%82%E4%BD%95%E9%80%90%E6%AC%A1%E6%8E%88%E6%9D%83%E7%A7%9F%E6%88%B7%E5%86%85%E7%9A%84%E6%8A%A5%E8%A1%A8%E8%B5%84%E6%BA%90%EF%BC%9F)。
+
+参数校验、认证和旧客户端兼容也分别验收：带可信测试主体的 `GET /api/reports/not-a-number` 由整数路径参数校验返回 422；无主体请求按本例策略得到 401。用例同时检查 401 的 `Bearer realm="reports"` 质询；若真实服务采用另一种认证方案，质询及对应断言也须与该方案一致。
+
+#### 用数据库检查重复提交与重复处理
+
+入口重放同一 `(tenant_id, request_key)` 且参数相同的提交时，应用应返回第一次创建的 `job_id`；同键但参数不同，则按 API 契约拒绝。消费者对该 `job_id` 重复收到任务时，条件更新应只允许一次从 `pending` 到 `done` 的状态转换。下面的 SQLite 片段分别展示这两个数据库行为：`jobs` 的任务由首条插入创建，`work` 的行由脚本独立预置，并非从 `jobs` 自动生成；冲突插入只检查唯一键是否保留原 `job_id`，并不实现应用层读取后返回原任务的逻辑。
+
+固定本次 `job_id = "job-demo-731"`，结果键为 `private/reports/job-demo-731.csv`。提交表 `jobs` 初始为空；消费表 `work` 已单独预置该任务，状态是 `pending`、计数为 0、结果键为空。逐步读取数据库就能观察下面的区别：
+
+| 操作 | 数据库返回的信号 | 操作后保留的状态 |
+|---|---|---|
+| 首次插入 `(tenant-a, export-42, job-demo-731)` | 影响 1 行 | `jobs` 保存该完整任务行 |
+| 同一租户和请求键，换成候选任务 `job-duplicate` 再插入 | `SQLITE_CONSTRAINT_PRIMARYKEY`；脚本调用 `rollback()` 结束本次事务 | 原任务行仍在，不能被替换或多出一行 |
+| 首次处理 `job-demo-731`，只更新 `status='pending'` 的行 | 影响 1 行 | `work` 变为 `done`、计数 1、写入上述结果键 |
+| 再次处理同一任务，沿用相同条件 | 影响 0 行 | 已完成的任务行与第一次写入的结果键不变 |
+
+冲突测试还要断言异常类型和完整原行。只数“一行”会让 `INSERT OR REPLACE` 偷换 `job_id` 后仍通过；只捕获任意 `IntegrityError` 又会把非空约束失败误当成重复主键。消费侧检查的是本地条件更新，不能据此判断消息代理已经重投或确认。
+
+> [!example]- 用标准库 SQLite 重放唯一键和条件更新
+> 这段独立示例只执行本地数据库约束；它没有连接消息代理，也没有并发工作进程。
 >
-> 对 worker 的本地条件更新，初始行是 `pending, processed_count=0`。第一次以 `WHERE status='pending'` 更新为 `done` 并递增计数，`rowcount=1`；再次执行同一条件时 `rowcount=0`；事务后最终状态仍为 `done, processed_count=1`。这证明选定 SQLite SQL 对重复函数调用只计一次，不证明 broker 的重投、ACK 或跨进程并发契约。
+> ~~~python
+> import sqlite3
+>
+> db = sqlite3.connect(":memory:")
+> job_id = "job-demo-731"
+> result_key = f"private/reports/{job_id}.csv"
+> db.executescript("""
+> CREATE TABLE jobs (
+>     tenant_id TEXT NOT NULL,
+>     request_key TEXT NOT NULL,
+>     job_id TEXT NOT NULL,
+>     PRIMARY KEY (tenant_id, request_key)
+> );
+> CREATE TABLE work (
+>     job_id TEXT PRIMARY KEY,
+>     status TEXT NOT NULL,
+>     processed_count INTEGER NOT NULL,
+>     result_key TEXT
+> );
+> """)
+> db.execute(
+>     "INSERT INTO work VALUES (?, 'pending', 0, NULL)",
+>     (job_id,),
+> )
+> db.commit()
+>
+> first_insert = db.execute(
+>     "INSERT INTO jobs VALUES (?, ?, ?)",
+>     ("tenant-a", "export-42", job_id),
+> ).rowcount
+> db.commit()
+> try:
+>     db.execute(
+>         "INSERT INTO jobs VALUES (?, ?, ?)",
+>         ("tenant-a", "export-42", "job-duplicate"),
+>     )
+> except sqlite3.IntegrityError as error:
+>     error_name = error.sqlite_errorname
+>     db.rollback()
+>     assert error_name == "SQLITE_CONSTRAINT_PRIMARYKEY", error_name
+> else:
+>     db.rollback()
+>     raise AssertionError("duplicate key did not raise primary-key conflict")
+>
+> jobs = db.execute(
+>     "SELECT tenant_id, request_key, job_id FROM jobs"
+> ).fetchall()
+> assert jobs == [("tenant-a", "export-42", job_id)]
+>
+> first_update = db.execute(
+>     "UPDATE work SET status='done', processed_count=processed_count+1, "
+>     "result_key=? WHERE job_id=? AND status='pending'",
+>     (result_key, job_id),
+> ).rowcount
+> db.commit()
+> second_update = db.execute(
+>     "UPDATE work SET status='done', processed_count=processed_count+1, "
+>     "result_key=? WHERE job_id=? AND status='pending'",
+>     (result_key, job_id),
+> ).rowcount
+> db.commit()
+>
+> inserted_rows = db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
+> final_work = db.execute("SELECT * FROM work").fetchone()
+> assert (first_insert, inserted_rows) == (1, 1)
+> assert (first_update, second_update) == (1, 0)
+> assert final_work == (job_id, "done", 1, result_key)
+> print(first_insert, inserted_rows)
+> print(first_update, second_update, final_work)
+> ~~~
+>
+> 预期输出为 `1 1` 和 `1 0 ('job-demo-731', 'done', 1, 'private/reports/job-demo-731.csv')`。这只证明数据库最终保留一个对象键引用，不代表真的上传过对象或测试了消息代理；SQLite 的内存连接和唯一约束细节见来源，也不要用这条串行轨迹宣称多个数据库进程下的争用已测过。
 
-若 worker（工作进程）被本地函数调用两次，只能验证数据库状态迁移是否防重；它不覆盖消息是否被 broker 接收、连接中断后怎样重投或 ACK 是否可靠。若 worker 外发邮件、付款等副作用，还要让外部动作具备操作键幂等性或经持久 outbox 处理。任务与数据库结果边界见[超时后的结果确认与安全重试](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)；发布者确认与消费者 ACK 的 broker 语义见[消息交付如何确认](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
+如果重复任务还会付款、发邮件或通知其他服务，本地条件更新不会回滚已经发生的远端副作用。transactional outbox (事务发件箱)把业务行与待发送意图一同持久化，relay (转发进程)恢复后仍可能再次发送；外部动作还要使用对端认可的幂等键，或通过权威记录确认并修复重复。仅有 outbox 不足以防止远端重复付款。超时后的未知结果与安全重试见[请求超时后如何确认结果并安全重试？](#14.%20%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%E5%A6%82%E4%BD%95%E7%A1%AE%E8%AE%A4%E7%BB%93%E6%9E%9C%E5%B9%B6%E5%AE%89%E5%85%A8%E9%87%8D%E8%AF%95%EF%BC%9F)；账户报表任务与 outbox 的完整交接见[怎样设计一个可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)；publisher confirm (发布者确认)和 consumer acknowledgement (消费者确认)的范围见[报表任务的发布确认、消费者确认与业务完成各证明什么？](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### 从测试证据接到可发布的变更
 
-测试通过只是证据链的一环。它应能指向变更需求、对应代码和具体测试数据；随后由 Git 提交固定源码快照，Docker 根据这个快照构建镜像，部署流水线再验证并晋级相同镜像。生产路径出现问题时，指标、trace 与日志用于定位是哪一环偏离。完整过程见[如何晋级已验证的报表服务产物？](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
+测试结果应能追溯到变更、代码、测试输入和实际产物。Continuous Integration (持续集成，CI)先固定源码提交，再用该快照构建镜像；发布流程应验证并晋级同一份通过检查的镜像，不能把“源码上的测试通过”说成另一次重新构建的镜像也已验证。变更交付的完整路径见[如何晋级并回滚已验证的报表服务产物？](#35.%20%E5%A6%82%E4%BD%95%E6%99%8B%E7%BA%A7%E5%B9%B6%E5%9B%9E%E6%BB%9A%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BA%A7%E7%89%A9%EF%BC%9F)。
 
-> [!info]- 来源
-> - 测试方式的界限：FastAPI 官方 [Testing](https://fastapi.tiangolo.com/tutorial/testing/) 说明 TestClient 对应用路由的调用，checked 2026-11-06；pytest 官方 [Fixtures reference](https://docs.pytest.org/en/stable/reference/fixtures.html) 说明 fixture 作用域和发现，checked 2026-11-06。
-> - SQLite 约束与共享内存连接：SQLite [CREATE TABLE](https://www.sqlite.org/lang_createtable.html)；SQLAlchemy 2.0 官方 [SQLite 内存数据库与连接池](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines)，适用于本例的 StaticPool / check_same_thread 连接安排。
-> - 本地运行边界：示例执行环境为 FastAPI 0.128.0、SQLAlchemy 2.0.44、pytest 9.0.2 与系统 SQLite；它不代表 PostgreSQL 或 broker 集成测试。
+> [!info]- 来源与运行边界
+> - FastAPI 官方 [Testing](https://fastapi.tiangolo.com/tutorial/testing/) 与 [TestClient 参考](https://fastapi.tiangolo.com/reference/testclient/)：说明客户端测试如何调用应用；TestClient 不建立实际 HTTP 套接字，核对于 2026-11-12。
+> - FastAPI 官方 [Testing Dependencies with Overrides](https://fastapi.tiangolo.com/advanced/testing-dependencies/)：可用 `app.dependency_overrides` 替换认证依赖同时保留真实路由；本例则在路由定义处直接接入测试身份，核对于 2026-11-12。
+> - FastAPI 官方 [Response Model](https://fastapi.tiangolo.com/tutorial/response-model/)：响应模型会生成对应的 OpenAPI schema 并校验返回值；本例没有 `response_model`，所以运行得到的 200 schema 为 `{}`，核对于 2026-11-12。
+> - pytest 官方 [Fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html)：fixture 注入和生命周期；本例使用默认的 function scope，核对于 2026-11-12。
+> - SQLAlchemy 2.0 官方 [SQLite 方言：内存库、多线程与 StaticPool](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#using-a-memory-database-in-multiple-threads-or-coroutines)：内存数据库与连接绑定；StaticPool 只适合完全串行访问，核对于 2026-11-12。
+> - SQLite 官方 [CREATE TABLE](https://www.sqlite.org/lang_createtable.html)：主键和唯一约束；这里只演算本地 SQLite 实际行为，核对于 2026-11-12。
+> - SQLite 官方 [ON CONFLICT](https://sqlite.org/lang_conflict.html) 与 [Result and Error Codes](https://www.sqlite.org/rescode.html)：`IGNORE` 可静默跳过冲突，`REPLACE` 可删除原冲突行；扩展约束码可区分主键与非空约束失败，核对于 2026-11-12。
+> - IETF [RFC 6750 §3](https://www.rfc-editor.org/rfc/rfc6750.html#section-3)：Bearer 质询的认证参数；本例用 `realm="reports"` 标识保护空间。
+> - IETF [RFC 9110 §15.5.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.2)：生成 401 时必须包含适用于资源的 `WWW-Authenticate`；本例模拟 Bearer 认证边界的质询并在测试中断言该头，核对于 2026-11-12。
+> - AWS Prescriptive Guidance [Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html)：outbox 的本地原子写入不消除重复消息，消费者还要能幂等处理，核对于 2026-11-12。
+> - RabbitMQ 4.4 官方 [Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms)：发布确认与消费者 ACK 属于不同交接边界；本文不声称本例执行了 RabbitMQ，核对于 2026-11-12。
+> - 实际运行版本：Python 3.11.13、FastAPI 0.128.0、Starlette 0.47.2、HTTPX 0.28.1、SQLAlchemy 2.0.44、pytest 9.0.2、SQLite 3.51.0。版本仅描述这次本地复现环境，不代表最新版本或 PostgreSQL、broker 集成结果。
 ## 32. Git 怎样把通过验收的报表改动变成可追溯提交？
 
 修复 report 42 的租户条件并通过相关检查后，Git 能把已审查的源码快照变成可复查的提交。这个提交给构建系统提供固定输入，但它还不是部署产物：之后要记录由它构建出的镜像摘要，并验证、晋级那份镜像。Git 命令改变工作区、暂存区、提交或引用；它不撤销数据库迁移、已发布镜像或生产副作用。

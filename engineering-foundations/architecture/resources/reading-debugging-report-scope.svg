@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="862" viewBox="0 0 700 862" role="img" aria-labelledby="desc">
+  <desc id="desc">A trusted tenant-b request for report 42. This diagram compares two implementations only when each actually emits a SELECT. Session.get may instead return an unexpired object from the identity map without SQL. The red column shows Session.get reading only by global report ID, which returns tenant-a's row; the green column shows an explicit query binding tenant-b and report 42, which finds no row and returns a generic 404 under this example's hiding policy.</desc>
+  <defs>
+    <marker id="arrow-blue" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#35566d"/>
+    </marker>
+    <marker id="arrow-red" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#9d3b38"/>
+    </marker>
+    <marker id="arrow-green" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#24694d"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="700" height="862" fill="#ffffff"/>
+
+  <rect x="28" y="16" width="644" height="62" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
+  <text x="350" y="53" text-anchor="middle" font-family="sans-serif" font-size="19" fill="#172b3a">输入：已认证 tenant-b 请求 GET /api/reports/42</text>
+
+  <rect x="28" y="128" width="644" height="62" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
+  <text x="350" y="165" text-anchor="middle" font-family="sans-serif" font-size="19" fill="#172b3a">认证依赖 → 路由：tenant-b + report_id=42</text>
+
+  <rect x="28" y="240" width="644" height="58" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
+  <text x="350" y="275" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172b3a">共同前提：本次读取实际发出了 SELECT</text>
+
+  <rect x="70" y="352" width="560" height="58" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
+  <text x="350" y="388" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#172b3a">这条 SELECT 使用哪些条件？</text>
+
+  <rect x="24" y="488" width="320" height="130" rx="10" fill="#fff7f6" stroke="#9d3b38" stroke-width="2"/>
+  <text x="184" y="518" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#762d2b">Session.get：只按全局编号</text>
+  <text x="184" y="550" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">WHERE report_id=42</text>
+  <text x="184" y="582" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#762d2b">没有 tenant-b 谓词</text>
+
+  <rect x="356" y="488" width="320" height="130" rx="10" fill="#f5fbf7" stroke="#24694d" stroke-width="2"/>
+  <text x="516" y="518" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#19513a">显式查询：租户与编号</text>
+  <text x="516" y="546" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">WHERE tenant_id=:tenant_id</text>
+  <text x="516" y="572" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">AND report_id=42</text>
+  <text x="516" y="598" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">:tenant_id='tenant-b'</text>
+
+  <rect x="24" y="670" width="320" height="62" rx="10" fill="#fff7f6" stroke="#9d3b38" stroke-width="2"/>
+  <text x="184" y="708" text-anchor="middle" font-family="sans-serif" font-size="19" fill="#172b3a">命中唯一行：tenant-a / 42</text>
+
+  <rect x="356" y="670" width="320" height="62" rx="10" fill="#f5fbf7" stroke="#24694d" stroke-width="2"/>
+  <text x="516" y="708" text-anchor="middle" font-family="sans-serif" font-size="19" fill="#172b3a">本表无匹配行</text>
+
+  <rect x="24" y="786" width="320" height="62" rx="10" fill="#fff7f6" stroke="#9d3b38" stroke-width="2"/>
+  <text x="184" y="812" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#762d2b">返回 200</text>
+  <text x="184" y="837" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#762d2b">响应包含 A 的报表数据</text>
+
+  <rect x="356" y="786" width="320" height="62" rx="10" fill="#f5fbf7" stroke="#24694d" stroke-width="2"/>
+  <text x="516" y="812" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#19513a">返回通用 404</text>
+  <text x="516" y="837" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#19513a">正文不含 A 的报表数据</text>
+
+  <path d="M350 78 V128" fill="none" stroke="#35566d" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <path d="M350 190 V240" fill="none" stroke="#35566d" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <path d="M350 298 V352" fill="none" stroke="#35566d" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <path d="M350 410 V442 H184 V488" fill="none" stroke="#9d3b38" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <path d="M350 442 H516 V488" fill="none" stroke="#24694d" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <path d="M184 618 V670" fill="none" stroke="#9d3b38" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <path d="M516 618 V670" fill="none" stroke="#24694d" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <path d="M184 732 V786" fill="none" stroke="#9d3b38" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <path d="M516 732 V786" fill="none" stroke="#24694d" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+</svg>
