@@ -4,11 +4,11 @@
 
 ## 聚集索引和非聚集索引分别保存什么？
 
-clustered index (聚集索引) 按索引键值顺序组织表的数据行；SQL Server 每张表最多有一个，因为同一份数据行只能按一种聚集顺序存放。没有聚集索引的表是 heap (堆表)，行本身没有按聚集键排序。nonclustered index (非聚集索引) 是独立于数据行的结构，索引项保存键以及定位数据行的 row locator (行定位符)。
+本节说的是 SQL Server 磁盘 rowstore 的 B+ tree 索引与堆表；columnstore 和内存优化表不适用这套布局。clustered index (聚集索引) 的叶层包含表数据行，并按索引键的逻辑顺序排列；这表示索引遍历顺序，不表示文件里每个数据页的物理地址都连续。每张表最多一个聚集索引。没有聚集索引的表是 heap (堆表)，行没有聚集键顺序。nonclustered index (非聚集索引) 是独立结构，保存键以及定位数据行的 row locator (行定位符)。
 
 聚集索引的叶层保存完整数据行。非聚集索引的叶项用行定位符找到基表行：基表是堆时定位符是指向该行的指针，基表有聚集索引时定位符是聚集键，因此查到非聚集索引项后仍可能需要回表。
 
-课程示例的语法如下：
+假定 `dbo.table1` 已存在且有 `column1`、`column2`、`column3`；创建第一个索引前表上没有聚集索引，已有数据中 `(column1, column2, column3)` 组合不重复。课程示例的语法如下：
 
 ~~~sql
 CREATE CLUSTERED INDEX index1
@@ -20,9 +20,9 @@ ON dbo.table1 (column1 DESC, column2 ASC, column3 DESC);
 
 unique index (唯一索引) 不允许索引键组合重复。复合索引中的键顺序、升降序和前导列会影响哪些查询能利用它；它不是“给列贴上唯一标签”而不付存储和更新代价。
 
-在 SQL Server 中，定义 PRIMARY KEY (主键) 或 UNIQUE constraint (唯一约束) 会自动创建相应唯一索引。主键默认使用聚集索引，但若表已存在聚集索引，主键会由非聚集索引支撑；也可以显式声明主键为非聚集。不同数据库的主键默认物理组织不能由此推断。
+在 SQL Server 中，定义 PRIMARY KEY (主键) 或 UNIQUE constraint (唯一约束) 会自动创建相应唯一索引；唯一约束默认由非聚集索引支撑。主键默认使用聚集索引，但若表已存在聚集索引，主键会由非聚集索引支撑；也可以显式声明主键为非聚集。不同数据库的主键默认物理组织不能由此推断。
 
-删除索引使用该产品的对象限定语法：
+下面删除的是手动创建的 `index1`。要移除主键或唯一约束，应使用 `ALTER TABLE ... DROP CONSTRAINT` 删除约束及其索引，不要把约束误当成可直接删除的普通索引。
 
 ~~~sql
 DROP INDEX index1 ON dbo.table1;
@@ -38,9 +38,9 @@ ON dbo.table1 (column1)
 WHERE [Year] > 2010;
 ~~~
 
-过滤条件决定哪些行进入索引，键列 `column1` 决定这些行按什么键顺序存储；两者是不同维度。查询结果必须是过滤索引所含行的子集，且优化器要能证明这一点。例如 `WHERE column1 = 42 AND [Year] >= 2020` 在行集合上属于过滤索引覆盖范围。因为查询比较条件与过滤表达式不等价，若要由索引直接判断该更严格的年份条件并覆盖查询，`Year` 应作为索引键或 INCLUDE 列；若未包含 `Year`，优化器仍可能先从过滤索引取候选，再回表读取 `Year` 并筛选，只是要付出查表成本。若查询是 `[Year] >= 2010`，它还需要 2010 年的行，过滤索引本身不能完整提供结果。
+过滤条件决定哪些行进入索引，键列 `column1` 决定这些行按什么键顺序存储；两者是不同维度。查询要返回的每一行必须属于过滤索引收录的集合，且优化器要能证明这一点。例如 `WHERE column1 = 42 AND [Year] >= 2020` 在行集合上属于索引收录集合的子集，但这只说明谓词资格，不表示索引已经包含查询所需的所有列，也不保证优化器实际采用它。由于索引键中没有 `Year`，该索引不能单独检查更严格的年份条件；是否先从过滤索引取候选、回表读取 `Year` 再筛选，要看实际执行计划。若查询是 `[Year] >= 2010`，它还需要 2010 年的行，过滤索引本身不能完整提供结果。
 
-当查询中对过滤列使用与过滤表达式相同的谓词，且结果不需要返回 `Year` 时，`Year` 可不出现在索引键或 INCLUDE 列中，例如 `WHERE column1 = 42 AND [Year] > 2010` 且只选 `column1`。若查询要输出 `Year`，或用 `[Year] >= 2020` 这样的不同比较条件，若希望索引自身覆盖输出或判断条件，就应把该列列入索引键或 INCLUDE 列；没有该列时仍可通过回表取得它。过滤索引也有自己的过滤统计信息；它减少存储和维护并非免费保证，是否值得仍要对照实际查询与写入负载。
+当查询中对过滤列使用与过滤表达式相同的谓词，且结果不需要返回 `Year` 时，`Year` 可不出现在索引键或 INCLUDE 列中，例如 `WHERE column1 = 42 AND [Year] > 2010` 且只选 `column1`。这种情况下，索引收录了查询要找的行且已包含输出列；优化器是否选择它仍取决于成本估算。若查询要输出 `Year`，或用 `[Year] >= 2020` 这样的不同比较条件，若希望索引本身提供该输出或检查该条件，就应把该列列入索引键或 INCLUDE 列。过滤索引也有自己的过滤统计信息；它减少存储和维护并非免费保证，是否值得仍要对照实际查询与写入负载。
 
 课程旧例把年份数字写成带引号的 '2010'。若 Year 是数值列，应写数值 2010；若列是文本，则字符排序与数值大小不是同一语义。
 
@@ -68,8 +68,8 @@ SQL Server 支持 indexed view (索引视图)，但不能把任意查询结果�
 所以应把普通视图、索引视图和表上的普通索引分开判断：能否创建、优化器是否能用、写入如何维护，都需要对照 SQL Server 对应版本的规则；迁移到另一产品时重新设计。
 
 > [!info]- 来源
-> - **SQL Server 聚集/非聚集索引、堆表、行定位符、主键与唯一约束默认索引：** [Microsoft Learn, Clustered and Nonclustered Indexes](https://learn.microsoft.com/en-us/sql/relational-databases/indexes/clustered-and-nonclustered-indexes-described?view=sql-server-ver17)，2026-11-06 核验；这些默认与物理定义只针对 SQL Server。
-> - **CREATE INDEX、DROP INDEX 以及唯一索引的产品语法：** [Microsoft Learn, CREATE INDEX](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-index-transact-sql?view=sql-server-ver17) 和 [DROP INDEX](https://learn.microsoft.com/en-us/sql/t-sql/statements/drop-index-transact-sql?view=sql-server-ver17)，2026-11-06 核验。
-> - **过滤索引只覆盖谓词选出的部分行；查询谓词须属于过滤范围，且过滤列是否需为键列或 INCLUDE 列取决于比较谓词是否等价及查询是否返回该列：** [Microsoft Learn, Create Filtered Indexes](https://learn.microsoft.com/en-us/sql/relational-databases/indexes/create-filtered-indexes?view=sql-server-ver17)，2026-11-06 核验。
-> - **空间索引要求聚集主键，geometry 与 geography 网格及包围盒选项：** [Microsoft Learn, CREATE SPATIAL INDEX](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-spatial-index-transact-sql?view=sql-server-ver17)；**包围盒确定索引划分范围，盒外映射到 cell 0，且应覆盖全部或大部分对象：** [Microsoft Learn, Spatial Indexes Overview](https://learn.microsoft.com/en-us/sql/relational-databases/spatial/spatial-indexes-overview?view=sql-server-ver17#the-bounding-box)，2026-11-06 核验；本例显式选 `GEOMETRY_GRID`，并只对 geometry 指定 BOUNDING_BOX。
-> - **索引视图的 schemabinding、唯一聚集索引和源表写入维护：** [Microsoft Learn, Create Indexed Views](https://learn.microsoft.com/en-us/sql/relational-databases/views/create-indexed-views?view=sql-server-ver17)，2026-11-06 核验。
+> - **SQL Server 磁盘 rowstore 的 B+ tree、聚集/非聚集索引、堆表、行定位符、主键与唯一约束默认索引：** [Microsoft Learn, Clustered and Nonclustered Indexes](https://learn.microsoft.com/en-us/sql/relational-databases/indexes/clustered-and-nonclustered-indexes-described?view=sql-server-ver17) 与 [Index Architecture and Design Guide](https://learn.microsoft.com/en-us/sql/relational-databases/sql-server-index-design-guide?view=sql-server-ver17)；列存储另见 [Columnstore Indexes Overview](https://learn.microsoft.com/en-us/sql/relational-databases/indexes/columnstore-indexes-overview?view=sql-server-ver17)，2026-11-13 核验。
+> - **CREATE INDEX、DROP INDEX 以及唯一索引的产品语法：** [Microsoft Learn, CREATE INDEX](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-index-transact-sql?view=sql-server-ver17) 和 [DROP INDEX](https://learn.microsoft.com/en-us/sql/t-sql/statements/drop-index-transact-sql?view=sql-server-ver17)，2026-11-13 核验。
+> - **过滤索引的谓词资格、覆盖列与计划选择：** [Microsoft Learn, Create Filtered Indexes / Design Considerations](https://learn.microsoft.com/en-us/sql/relational-databases/indexes/create-filtered-indexes?view=sql-server-ver17#design-considerations)，2026-11-13 核验；本页不据集合关系预测具体执行计划。
+> - **空间索引要求聚集主键，geometry 与 geography 网格及包围盒选项：** [Microsoft Learn, CREATE SPATIAL INDEX](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-spatial-index-transact-sql?view=sql-server-ver17)；**包围盒确定索引划分范围，盒外映射到 cell 0，且应覆盖全部或大部分对象：** [Microsoft Learn, Spatial Indexes Overview](https://learn.microsoft.com/en-us/sql/relational-databases/spatial/spatial-indexes-overview?view=sql-server-ver17#the-bounding-box)，2026-11-13 核验；本例显式选 `GEOMETRY_GRID`，并只对 geometry 指定 BOUNDING_BOX。
+> - **索引视图的 schemabinding、唯一聚集索引和源表写入维护：** [Microsoft Learn, Create Indexed Views](https://learn.microsoft.com/en-us/sql/relational-databases/views/create-indexed-views?view=sql-server-ver17)，2026-11-13 核验。
