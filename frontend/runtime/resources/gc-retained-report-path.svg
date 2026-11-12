@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1000" viewBox="0 0 700 1000" role="img" aria-labelledby="title desc">
+  <title id="title">关闭报表时强引用路径怎样变化</title>
+  <desc id="desc">三步显示 window 监听器和调用方保存的清理函数如何共同保留同一 onResize 闭包，再依次移除两条路径。最后的灰色虚线对象图从图中列出的根不可达，但回收时机没有保证。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#526176"/>
+    </marker>
+    <marker id="ghostArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+    <style>
+      .panel { fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+      .head { font:700 18px sans-serif; fill:#172033; }
+      .label { font:17px sans-serif; fill:#253247; }
+      .root { fill:#e0f2fe; stroke:#38bdf8; stroke-width:1.4; }
+      .host { fill:#eef2ff; stroke:#818cf8; stroke-width:1.4; }
+      .closure { fill:#fef3c7; stroke:#f59e0b; stroke-width:1.4; }
+      .data { fill:#ecfdf5; stroke:#34d399; stroke-width:1.4; }
+      .ghost { fill:#f1f5f9; stroke:#94a3b8; stroke-width:1.4; stroke-dasharray:6 4; }
+      .edge { fill:none; stroke:#526176; stroke-width:2; marker-end:url(#arrow); }
+      .ghostEdge { fill:none; stroke:#94a3b8; stroke-width:2; stroke-dasharray:6 5; marker-end:url(#ghostArrow); }
+      .note { font:17px sans-serif; fill:#536176; }
+    </style>
+  </defs>
+  <rect width="700" height="1000" fill="#ffffff"/>
+
+  <rect class="panel" x="8" y="8" width="684" height="304" rx="12"/>
+  <text class="head" x="28" y="37">打开时：两条根路径到达同一 rows</text>
+  <rect class="root" x="30" y="62" width="160" height="42" rx="8"/>
+  <text class="label" x="78" y="89">window 根</text>
+  <rect class="root" x="508" y="62" width="160" height="42" rx="8"/>
+  <text class="label" x="522" y="89">调用方环境根</text>
+  <path class="edge" d="M110 104 V120"/>
+  <path class="edge" d="M588 104 V120"/>
+  <rect class="host" x="30" y="120" width="200" height="44" rx="8"/>
+  <text class="label" x="43" y="148">resize 监听器列表</text>
+  <rect class="host" x="508" y="120" width="160" height="44" rx="8"/>
+  <text class="label" x="524" y="148">releaseReport</text>
+  <path class="edge" d="M588 164 V184"/>
+  <rect class="closure" x="508" y="184" width="160" height="44" rx="8"/>
+  <text class="label" x="549" y="212">清理闭包</text>
+  <path class="edge" d="M130 164 V206 H82 V248"/>
+  <path class="edge" d="M508 206 H138 V248"/>
+  <rect class="closure" x="24" y="248" width="160" height="44" rx="8"/>
+  <text class="label" x="42" y="276">onResize 闭包</text>
+  <path class="edge" d="M184 270 H224"/>
+  <rect class="data" x="224" y="248" width="130" height="44" rx="8"/>
+  <text class="label" x="257" y="276">rows 数组</text>
+  <path class="edge" d="M354 270 H384"/>
+  <rect class="data" x="384" y="248" width="145" height="44" rx="8"/>
+  <text class="label" x="397" y="276">first r-104</text>
+  <path class="edge" d="M529 270 H560"/>
+  <rect class="data" x="560" y="248" width="112" height="44" rx="8"/>
+  <text class="label" x="575" y="276">owner Ada</text>
+
+  <rect class="panel" x="8" y="326" width="684" height="304" rx="12"/>
+  <text class="head" x="28" y="355">调用 releaseReport()：移除监听器，句柄仍在</text>
+  <rect class="root" x="30" y="380" width="160" height="42" rx="8"/>
+  <text class="label" x="78" y="407">window 根</text>
+  <rect class="root" x="508" y="380" width="160" height="42" rx="8"/>
+  <text class="label" x="522" y="407">调用方环境根</text>
+  <path class="edge" d="M110 422 V438"/>
+  <path class="edge" d="M588 422 V438"/>
+  <rect class="host" x="30" y="438" width="200" height="44" rx="8"/>
+  <text class="label" x="43" y="466">已移除本回调</text>
+  <rect class="host" x="508" y="438" width="160" height="44" rx="8"/>
+  <text class="label" x="524" y="466">releaseReport</text>
+  <path class="edge" d="M588 482 V502"/>
+  <rect class="closure" x="508" y="502" width="160" height="44" rx="8"/>
+  <text class="label" x="549" y="530">清理闭包</text>
+  <path class="edge" d="M508 524 H104 V566"/>
+  <rect class="closure" x="24" y="566" width="160" height="44" rx="8"/>
+  <text class="label" x="42" y="594">onResize 闭包</text>
+  <path class="edge" d="M184 588 H224"/>
+  <rect class="data" x="224" y="566" width="130" height="44" rx="8"/>
+  <text class="label" x="257" y="594">rows 数组</text>
+  <path class="edge" d="M354 588 H384"/>
+  <rect class="data" x="384" y="566" width="145" height="44" rx="8"/>
+  <text class="label" x="397" y="594">first r-104</text>
+  <path class="edge" d="M529 588 H560"/>
+  <rect class="data" x="560" y="566" width="112" height="44" rx="8"/>
+  <text class="label" x="575" y="594">owner Ada</text>
+
+  <rect class="panel" x="8" y="644" width="684" height="304" rx="12"/>
+  <text class="head" x="28" y="673">再令 releaseReport = null：两条根路径都断开</text>
+  <rect class="root" x="30" y="698" width="160" height="42" rx="8"/>
+  <text class="label" x="78" y="725">window 根</text>
+  <rect class="root" x="508" y="698" width="160" height="42" rx="8"/>
+  <text class="label" x="522" y="725">调用方环境根</text>
+  <path class="edge" d="M110 740 V756"/>
+  <path class="edge" d="M588 740 V756"/>
+  <rect class="host" x="30" y="756" width="200" height="44" rx="8"/>
+  <text class="label" x="43" y="784">已移除本回调</text>
+  <rect class="host" x="508" y="756" width="160" height="44" rx="8"/>
+  <text class="label" x="524" y="784">绑定值为 null</text>
+  <rect class="ghost" x="508" y="804" width="160" height="44" rx="8"/>
+  <text class="label" x="549" y="832">清理闭包</text>
+  <path class="ghostEdge" d="M508 826 H104 V860"/>
+  <rect class="ghost" x="24" y="860" width="160" height="44" rx="8"/>
+  <text class="label" x="42" y="888">onResize 闭包</text>
+  <path class="ghostEdge" d="M184 882 H224"/>
+  <rect class="ghost" x="224" y="860" width="130" height="44" rx="8"/>
+  <text class="label" x="257" y="888">rows 数组</text>
+  <path class="ghostEdge" d="M354 882 H384"/>
+  <rect class="ghost" x="384" y="860" width="145" height="44" rx="8"/>
+  <text class="label" x="397" y="888">first r-104</text>
+  <path class="ghostEdge" d="M529 882 H560"/>
+  <rect class="ghost" x="560" y="860" width="112" height="44" rx="8"/>
+  <text class="label" x="575" y="888">owner Ada</text>
+
+  <text class="note" x="28" y="980">灰色虚线表示图中对象仍相互引用，但从已列出的根不可达；不代表已回收或何时回收。</text>
+</svg>
