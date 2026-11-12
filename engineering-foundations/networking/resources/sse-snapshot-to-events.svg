@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="620" viewBox="0 0 700 620" role="img" aria-labelledby="title desc">
+  <title id="title">从一致快照回放到实时尾读</title>
+  <desc id="desc">报表42的快照是状态版本9并覆盖日志游标103。服务端授权后以游标103订阅，捕获高水位105，沿同一追加日志回放104和105，再从105之后继续尾读；回放期间追加的106也不会遗漏。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#284f70"/>
+    </marker>
+    <style>
+      text { font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #172b3a; }
+      .step { font-size: 18px; font-weight: 700; }
+      .label { font-size: 16px; }
+      .small { font-size: 15px; }
+      .card { stroke: #557184; stroke-width: 2; rx: 12; }
+      .arrow { stroke: #284f70; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="620" fill="#ffffff"/>
+
+  <text x="26" y="34" class="step">① 读取状态与同一时点的日志游标</text>
+  <rect x="28" y="52" width="644" height="98" class="card" fill="#edf5fb"/>
+  <text x="50" y="82" class="label" font-weight="700">报表 42：权威快照 version=9 · running · progress=0</text>
+  <text x="50" y="116" class="small">快照已包含同一事件日志的位置 103；后续订阅从 103 之后开始</text>
+
+  <path d="M 350 154 V 177" class="arrow"/>
+  <text x="26" y="207" class="step">② 授权后捕获本轮回放水位</text>
+  <rect x="28" y="224" width="278" height="84" class="card" fill="#edf5fb"/>
+  <text x="48" y="257" class="label" font-weight="700">浏览器请求</text>
+  <text x="48" y="285" class="small">GET /events?after=103</text>
+  <path d="M 312 266 H 382" class="arrow"/>
+  <rect x="394" y="224" width="278" height="84" class="card" fill="#fff5e4"/>
+  <text x="414" y="257" class="label" font-weight="700">报表服务</text>
+  <text x="414" y="285" class="small">授权后取高水位 W=105</text>
+
+  <path d="M 533 312 V 339" class="arrow"/>
+  <text x="26" y="369" class="step">③ 回放后沿同一日志位置继续尾读</text>
+
+  <rect x="28" y="390" width="137" height="116" class="card" fill="#f4f6f7"/>
+  <text x="45" y="420" class="label" font-weight="700">≤ 103</text>
+  <text x="45" y="451" class="small">快照覆盖的</text>
+  <text x="45" y="478" class="small">日志前缀</text>
+  <path d="M 170 448 H 187" class="arrow"/>
+  <rect x="198" y="390" width="137" height="116" class="card" fill="#eef5ff"/>
+  <text x="215" y="420" class="label" font-weight="700">游标 104</text>
+  <text x="215" y="451" class="small">版本 10</text>
+  <text x="215" y="478" class="small">running · 80%</text>
+  <path d="M 340 448 H 357" class="arrow"/>
+  <rect x="368" y="390" width="137" height="116" class="card" fill="#ecf7ed"/>
+  <text x="385" y="420" class="label" font-weight="700">游标 105</text>
+  <text x="385" y="451" class="small">版本 11</text>
+  <text x="385" y="478" class="small">ready · 100%</text>
+  <path d="M 510 448 H 527" class="arrow"/>
+  <rect x="538" y="390" width="134" height="116" class="card" fill="#fff5e4"/>
+  <text x="555" y="420" class="label" font-weight="700">游标 106+</text>
+  <text x="555" y="451" class="small">回放中或之后</text>
+  <text x="555" y="478" class="small">新追加的事件</text>
+
+  <rect x="28" y="526" width="644" height="72" rx="9" fill="#f6f0fb" stroke="#7d6593" stroke-width="1.5"/>
+  <text x="46" y="554" class="small">本例数字表示同一日志的顺序，真实游标可以是不透明字符串。</text>
+  <text x="46" y="580" class="small">先读完 ≤ W，再从 W 后继续；通知只唤醒读取，不取代日志游标。</text>
+</svg>

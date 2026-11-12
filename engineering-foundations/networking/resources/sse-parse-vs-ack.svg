@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="790" viewBox="0 0 700 790" role="img" aria-labelledby="title desc">
+  <title id="title">解析位置与逐事件确认游标如何决定恢复</title>
+  <desc id="desc">浏览器已完整解析104并推进Last-Event-ID；本次示例断线时，逐事件路径的持久ACK仍为103，105尚未解析且仍在日志。另一个分支假设断线前已经持久确认104。确认103时重放104，处理并持久确认104后再续读105；持久ACK为104时从105续读。游标过期不能用快照替代缺失事件。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#284f70"/>
+    </marker>
+    <style>
+      text { font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #172b3a; }
+      .head { font-size: 18px; font-weight: 700; }
+      .label { font-size: 16px; }
+      .small { font-size: 15px; }
+      .card { stroke: #557184; stroke-width: 2; rx: 12; }
+      .arrow { stroke: #284f70; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="790" fill="#ffffff"/>
+
+  <text x="26" y="34" class="head">解析游标与业务确认是两条位置</text>
+  <rect x="28" y="54" width="278" height="126" class="card" fill="#eef5ff"/>
+  <text x="48" y="84" class="label" font-weight="700">完整解析事件 104</text>
+  <text x="48" y="114" class="small">空行已到达</text>
+  <text x="48" y="144" class="small">Last-Event-ID = 104</text>
+  <path d="M 310 117 H 386" class="arrow"/>
+  <rect x="398" y="54" width="274" height="126" class="card" fill="#fff3ec"/>
+  <text x="418" y="84" class="label" font-weight="700">本次示例断线时</text>
+  <text x="418" y="114" class="small">持久 ACK = 103</text>
+  <text x="418" y="144" class="small">105 尚未解析，仍在日志</text>
+
+  <rect x="28" y="197" width="644" height="66" rx="9" fill="#fdecec" stroke="#a44848" stroke-width="1.8"/>
+  <text x="48" y="225" class="small" font-weight="700">本次示例中，解析游标 104 不能覆盖 ACK=103：</text>
+  <text x="48" y="249" class="small">否则尚未完成的 104 会被跳过。</text>
+
+  <text x="26" y="303" class="head">恢复分支：按该订阅持久保存的连续确认游标</text>
+  <rect x="185" y="322" width="330" height="64" class="card" fill="#f5f7f8"/>
+  <text x="207" y="350" class="label" font-weight="700">断线重连时先读取应用 ACK</text>
+  <text x="207" y="374" class="small">按报表与消费者范围读取</text>
+
+  <path d="M 350 389 V 406 H 183 V 423" class="arrow"/>
+  <path d="M 350 406 H 517 V 423" class="arrow"/>
+
+  <rect x="28" y="435" width="310" height="216" class="card" fill="#edf5fb"/>
+  <text x="48" y="468" class="label" font-weight="700">分支 A：持久 ACK = 103</text>
+  <text x="48" y="501" class="small">重连 after=103 → 重放 104</text>
+  <text x="48" y="532" class="small">成功处理并提交事件 104</text>
+  <path d="M 309 538 V 563" class="arrow"/>
+  <text x="48" y="585" class="small">持久确认连续前缀到 104</text>
+  <text x="48" y="620" class="small">下次重连 after=104 → 续读 105</text>
+
+  <rect x="362" y="435" width="310" height="216" class="card" fill="#f1f7ee"/>
+  <text x="382" y="468" class="label" font-weight="700">另一状态：断线前 ACK = 104</text>
+  <text x="382" y="501" class="small">重连 after=104</text>
+  <path d="M 517 511 V 538" class="arrow"/>
+  <text x="382" y="568" class="small">直接续读 105</text>
+  <text x="382" y="601" class="small">105 处理失败仍带 after=104</text>
+  <text x="382" y="630" class="small">重放 105，而不是重放 104</text>
+
+  <rect x="28" y="680" width="644" height="82" rx="9" fill="#f6f0fb" stroke="#7d6593" stroke-width="1.5"/>
+  <text x="46" y="711" class="small">确认只能推进已处理完成的连续前缀；ACK 延迟或副作用重复要用</text>
+  <text x="46" y="739" class="small">事件 ID 去重并保持副作用幂等。游标过期时，快照不能补回漏掉的事件。</text>
+</svg>
