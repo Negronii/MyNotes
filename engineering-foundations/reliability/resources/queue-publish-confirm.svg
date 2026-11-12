@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1190" viewBox="0 0 700 1190" role="img" aria-labelledby="title desc">
+  <title id="title">Outbox 发布的路由、confirm 与 relay 决策</title>
+  <desc id="desc">API commits job and pending outbox. Each publishing channel has at most one in-flight publish. Relay matches a confirm by channel and publish sequence; mandatory basic.return has no confirm sequence, but its message properties and the single in-flight rule identify the send. If the outcome is unknown, relay closes and discards the old channel before retrying. The exchange and any configured alternate exchange may route to one or more queues or none. Relay marks the intent published only after it verifies target topology, the matching confirm ACK and the absence of a return.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M1 1L11 6L1 11Z" fill="#49627D" />
+    </marker>
+    <style>
+      text { font-family: "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif; fill: #24364B; }
+      .node { stroke: #526B85; stroke-width: 2; rx: 16; }
+      .db { fill: #EAF2FB; }
+      .relay { fill: #F2EDFA; }
+      .broker { fill: #E8F5EF; }
+      .ok { fill: #E7F3EA; stroke: #4B7955; }
+      .bad { fill: #FFF1E8; stroke: #A75B31; }
+      .main { font-size: 20px; font-weight: 650; }
+      .sub { font-size: 18px; }
+      .arrow { fill: none; stroke: #49627D; stroke-width: 3; stroke-linecap: round; marker-end: url(#arrow); }
+      .branch { fill: none; stroke: #49627D; stroke-width: 3; stroke-linecap: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="1190" fill="#FFFFFF" />
+
+  <rect x="40" y="24" width="620" height="88" class="node db" />
+  <text x="350" y="59" text-anchor="middle" class="main">API 同事务提交 job、pending outbox、等待槽</text>
+  <text x="350" y="90" text-anchor="middle" class="sub">数据库先持久接受，再交给 relay</text>
+
+  <path d="M350 114V151" class="arrow" />
+  <text x="372" y="140" class="sub">提交后</text>
+
+  <rect x="40" y="156" width="620" height="92" class="node relay" />
+  <text x="350" y="192" text-anchor="middle" class="main">relay 发布稳定 job ID，设置 mandatory</text>
+  <text x="350" y="224" text-anchor="middle" class="sub">每条 channel 仅一条在途；未知时关闭后重发</text>
+
+  <path d="M350 250V286" class="arrow" />
+  <text x="372" y="278" class="sub">publish</text>
+
+  <path d="M350 275L640 358L350 441L60 358Z" class="node broker" />
+  <text x="350" y="352" text-anchor="middle" class="main">交换器链按 binding 判定</text>
+  <text x="350" y="382" text-anchor="middle" class="sub">是否有 queue 接收（含备用交换器）？</text>
+
+  <path d="M137 380L178 454" class="branch" />
+  <text x="80" y="422" class="sub">无队列</text>
+  <path d="M563 380L522 454" class="branch" />
+  <text x="575" y="422" class="sub">有队列</text>
+
+  <rect x="30" y="458" width="305" height="122" class="node bad" />
+  <text x="182" y="495" text-anchor="middle" class="main">整个路由链不可达</text>
+  <text x="182" y="527" text-anchor="middle" class="sub">mandatory 时先回 basic.return</text>
+  <text x="182" y="557" text-anchor="middle" class="sub">之后仍可能收到 confirm ACK</text>
+
+  <rect x="365" y="458" width="305" height="122" class="node broker" />
+  <text x="517" y="495" text-anchor="middle" class="main">至少一个 queue 接收</text>
+  <text x="517" y="527" text-anchor="middle" class="sub">可能只是 alternate fallback</text>
+  <text x="517" y="557" text-anchor="middle" class="sub">还要核对预期目标 queue</text>
+
+  <path d="M182 582L294 650" class="arrow" />
+  <text x="105" y="625" class="sub">return 在前</text>
+  <path d="M517 582L405 650" class="arrow" />
+  <text x="526" y="625" class="sub">路由后</text>
+
+  <rect x="40" y="654" width="620" height="100" class="node broker" />
+  <text x="350" y="693" text-anchor="middle" class="main">relay 核对本次发布回执或中断状态</text>
+  <text x="350" y="728" text-anchor="middle" class="sub">ACK · NACK · return · channel 关闭 · 结果未知</text>
+
+  <path d="M350 756V790" class="arrow" />
+
+  <path d="M350 792L640 862L350 932L60 862Z" class="node relay" />
+  <text x="350" y="850" text-anchor="middle" class="main">预期目标已核验，confirm ACK</text>
+  <text x="350" y="882" text-anchor="middle" class="sub">且没有关联 basic.return？</text>
+
+  <path d="M164 887L178 965" class="branch" />
+  <text x="30" y="932" class="sub">未满足或未知</text>
+  <path d="M536 887L522 965" class="branch" />
+  <text x="564" y="932" class="sub">全部满足</text>
+
+  <rect x="30" y="970" width="305" height="128" class="node bad" />
+  <text x="182" y="1007" text-anchor="middle" class="main">intent 保持 pending</text>
+  <text x="182" y="1039" text-anchor="middle" class="sub">告警或修复路由后重试</text>
+  <text x="182" y="1069" text-anchor="middle" class="sub">未知后重发可能产生重复消息</text>
+
+  <rect x="365" y="970" width="305" height="128" class="node ok" />
+  <text x="517" y="1007" text-anchor="middle" class="main">只标记对应 intent</text>
+  <text x="517" y="1039" text-anchor="middle" class="sub">为 published</text>
+  <text x="517" y="1069" text-anchor="middle" class="sub">不代表 worker 已处理</text>
+
+  <rect x="40" y="1120" width="620" height="48" fill="#F7F8FA" stroke="#AAB6C4" stroke-width="1.5" rx="10" />
+  <text x="350" y="1152" text-anchor="middle" class="sub">publisher confirm ≠ consumer ACK ≠ job 成功</text>
+</svg>

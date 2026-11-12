@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="880" viewBox="0 0 700 880" role="img" aria-labelledby="title desc">
+  <title id="title">报表成功分支中业务提交先于消费者 ACK</title>
+  <desc id="desc">RabbitMQ delivers a stable job ID. Worker acquires a physical execution slot, then atomically claims a due queued database job, increments attempt, sets a bounded lease, and releases the logical waiting slot. It writes a private attempt-specific object, then in one transaction commits success, the object reference, and a report.ready outbox intent. Only after that commit it sends a single acknowledgement using the current channel's delivery tag.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M1 1L11 6L1 11Z" fill="#49627D" />
+    </marker>
+    <style>
+      text { font-family: "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif; fill: #24364B; }
+      .node { stroke: #526B85; stroke-width: 2; rx: 16; }
+      .broker { fill: #E8F5EF; }
+      .work { fill: #F2EDFA; }
+      .object { fill: #FFF4DF; }
+      .db { fill: #EAF2FB; }
+      .ack { fill: #E7F3EA; stroke: #4B7955; }
+      .main { font-size: 20px; font-weight: 650; }
+      .sub { font-size: 18px; }
+      .arrow { fill: none; stroke: #49627D; stroke-width: 3; stroke-linecap: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="880" fill="#FFFFFF" />
+
+  <rect x="40" y="24" width="620" height="84" class="node broker" />
+  <text x="350" y="58" text-anchor="middle" class="main">RabbitMQ 投递稳定 job ID</text>
+  <text x="350" y="88" text-anchor="middle" class="sub">消息只唤醒 worker；attempt 以数据库为准</text>
+
+  <path d="M350 110V151" class="arrow" />
+
+  <rect x="40" y="155" width="620" height="144" class="node work" />
+  <text x="350" y="190" text-anchor="middle" class="main">先取得物理执行槽，再条件领取 job</text>
+  <text x="350" y="223" text-anchor="middle" class="sub">只领取已到期的 queued；写 running、attempt + 1</text>
+  <text x="350" y="255" text-anchor="middle" class="sub">同事务设置有界 lease_expires_at</text>
+  <text x="350" y="284" text-anchor="middle" class="sub">并归还当前排队轮次的等待槽</text>
+
+  <path d="M350 301V342" class="arrow" />
+
+  <rect x="40" y="346" width="620" height="104" class="node object" />
+  <text x="350" y="384" text-anchor="middle" class="main">写 attempt 独立的私有对象键</text>
+  <text x="350" y="419" text-anchor="middle" class="sub">对象存在还不代表结果可见</text>
+
+  <path d="M350 452V493" class="arrow" />
+
+  <rect x="40" y="497" width="620" height="150" class="node db" />
+  <text x="350" y="535" text-anchor="middle" class="main">一个数据库事务条件提交三项事实</text>
+  <text x="350" y="570" text-anchor="middle" class="sub">succeeded + 私有 object key + report.ready outbox</text>
+  <text x="350" y="603" text-anchor="middle" class="sub">只在仍匹配 running / 当前 attempt / 未取消时</text>
+  <text x="350" y="632" text-anchor="middle" class="sub">成功更新一行后，三者一同 COMMIT</text>
+
+  <path d="M350 649V690" class="arrow" />
+  <text x="374" y="679" class="sub">提交之后</text>
+
+  <rect x="40" y="694" width="620" height="100" class="node ack" />
+  <text x="350" y="733" text-anchor="middle" class="main">worker 向当前 channel 发送单条 ACK</text>
+  <text x="350" y="769" text-anchor="middle" class="sub">使用 delivery tag，multiple=false</text>
+
+  <rect x="40" y="818" width="620" height="44" fill="#F7F8FA" stroke="#AAB6C4" stroke-width="1.5" rx="10" />
+  <text x="350" y="847" text-anchor="middle" class="sub">图只画成功分支；取消、重试与恢复须先持久决定</text>
+</svg>
