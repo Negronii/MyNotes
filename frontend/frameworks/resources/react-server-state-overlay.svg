@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="540" viewBox="0 0 700 540" role="img" aria-label="查询缓存和匹配的待处理变量合成 April 与 May 的界面">
+  <defs>
+    <marker id="cache-arrow" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M 0 0 L 11 5.5 L 0 11 Z" fill="#2563eb" />
+    </marker>
+    <marker id="variable-arrow" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M 0 0 L 11 5.5 L 0 11 Z" fill="#c2410c" />
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, "PingFang SC", sans-serif; fill: #172033; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .head { font-size: 18px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .label { font-size: 18px; font-weight: 600; }
+    </style>
+  </defs>
+  <rect width="700" height="540" fill="#ffffff" />
+  <rect x="24" y="24" width="300" height="216" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2" />
+  <text x="44" y="62" class="head">查询缓存</text>
+  <text x="44" y="98" class="body code">acct-a / oldest</text>
+  <text x="44" y="154" class="body code">April · reviewed=false</text>
+  <text x="44" y="194" class="body code">May · title=新标题</text>
+
+  <rect x="376" y="24" width="300" height="216" rx="10" fill="#fff7ed" stroke="#c2410c" stroke-width="2" />
+  <text x="396" y="62" class="head">待处理 mutation 变量</text>
+  <text x="396" y="98" class="body code">acct-a / oldest</text>
+  <text x="396" y="154" class="body code">id=april</text>
+  <text x="396" y="194" class="body code">reviewed=true</text>
+
+  <path d="M 174 240 V 306 H 244 V 352" fill="none" stroke="#2563eb" stroke-width="2.25" marker-end="url(#cache-arrow)" />
+  <text x="92" y="280" class="label">查询行</text>
+  <path d="M 526 240 V 306 H 456 V 352" fill="none" stroke="#c2410c" stroke-width="2.25" marker-end="url(#variable-arrow)" />
+  <text x="546" y="280" class="label">匹配后覆盖</text>
+
+  <rect x="100" y="354" width="500" height="164" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="2" />
+  <text x="124" y="388" class="head">合成后的界面</text>
+  <text x="124" y="430" class="body code">April · reviewed=true</text>
+  <text x="124" y="466" class="body code">May · title=新标题</text>
+  <text x="124" y="500" class="body">其余字段来自缓存行</text>
+</svg>
