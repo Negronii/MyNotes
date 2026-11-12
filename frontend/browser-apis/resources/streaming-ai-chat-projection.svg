@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1040" viewBox="0 0 900 1040" role="img" aria-label="run-r42-7 的一致快照与下一条事件共同更新投影；后续重复忽略，跳号先补读，身份或结构错误拒绝">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="1040" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<text x="450" y="36" text-anchor="middle" font-size="23">同一运行：run-r42-7</text>
+<rect x="30" y="65" width="405" height="180" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="232.5" y="100" text-anchor="middle" font-size="25" font-weight="600">完整投影 · lastSeq=3</text>
+<text x="232.5" y="138" text-anchor="middle" font-size="23">文本（来自 seq=2）</text>
+<text x="232.5" y="170" text-anchor="middle" font-size="23">正在读取 build 42 日志</text>
+<text x="232.5" y="202" text-anchor="middle" font-size="23">c1：running（来自 seq=3）</text>
+<rect x="465" y="65" width="405" height="180" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="667.5" y="100" text-anchor="middle" font-size="25" font-weight="600">完整事件 · seq=4</text>
+<text x="667.5" y="138" text-anchor="middle" font-size="23">type: tool.completed</text>
+<text x="667.5" y="170" text-anchor="middle" font-size="23">toolCallId: c1</text>
+<text x="667.5" y="202" text-anchor="middle" font-size="23">摘要：400 / 200 / exit 1</text>
+<path d="M232,257 L232,295 L668,295 L668,257" fill="none" stroke="#7086a3" stroke-width="3"/>
+<circle cx="450" cy="295" r="4" fill="#7086a3"/>
+<path d="M450,295 L450,335" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="155" y="350" width="590" height="170" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="385" text-anchor="middle" font-size="25" font-weight="600">校验后更新现有 c1 卡</text>
+<text x="450.0" y="423" text-anchor="middle" font-size="23">c1 → completed，附工具摘要</text>
+<text x="450.0" y="455" text-anchor="middle" font-size="23">文本不变；lastSeq → 4</text>
+<text x="450.0" y="487" text-anchor="middle" font-size="23">投影与游标一起替换</text>
+<path d="M450,532 L450,585" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="120" y="600" width="660" height="105" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="635" text-anchor="middle" font-size="25" font-weight="600">继续接收：先校验身份与结构</text>
+<text x="450.0" y="673" text-anchor="middle" font-size="23">以下分支均从 lastSeq=4 判断；无效事件拒绝</text>
+<path d="M450,717 L450,765 L160,765 L160,805" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M450,765 L450,805" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M450,765 L740,765 L740,805" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="30" y="820" width="260" height="145" rx="12" fill="#f1f3f6" stroke="#d5dbe4" stroke-width="2"/>
+<text x="160.0" y="855" text-anchor="middle" font-size="25" font-weight="600">seq ≤ 4</text>
+<text x="160.0" y="893" text-anchor="middle" font-size="23">重复交付</text>
+<text x="160.0" y="925" text-anchor="middle" font-size="23">保留原投影</text>
+<rect x="320" y="820" width="260" height="145" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="855" text-anchor="middle" font-size="25" font-weight="600">seq = 5</text>
+<text x="450.0" y="893" text-anchor="middle" font-size="23">下一条完整事件</text>
+<text x="450.0" y="925" text-anchor="middle" font-size="23">应用并推进到 5</text>
+<rect x="610" y="820" width="260" height="145" rx="12" fill="#fff5e9" stroke="#e8cda7" stroke-width="2"/>
+<text x="740.0" y="855" text-anchor="middle" font-size="25" font-weight="600">seq &gt; 5</text>
+<text x="740.0" y="893" text-anchor="middle" font-size="23">先补读缺口</text>
+<text x="740.0" y="925" text-anchor="middle" font-size="23">投影仍停在 4</text>
+<text x="450" y="1010" text-anchor="middle" font-size="23">历史已过期：取新的权威快照与对应游标，替换旧投影。</text>
+</g>
+</svg>

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1145" viewBox="0 0 900 1145" role="img" aria-label="受支持浏览器每帧从完整累计Markdown解析HTML，经DOMPurify允许清单和URL策略后进入HTML入口；工具摘要和旧浏览器回退只走文本入口">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="1145" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<text x="450" y="33" text-anchor="middle" font-size="23">HTML 路径：运行时须受 DOMPurify 支持</text>
+<rect x="140" y="55" width="620" height="105" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="90" text-anchor="middle" font-size="25" font-weight="600">累计 Markdown（每次界面更新）</text>
+<text x="450.0" y="128" text-anchor="middle" font-size="23">分片原样拼接；重新解析完整消息</text>
+<path d="M450,172 L450,217" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="140" y="232" width="620" height="105" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="267" text-anchor="middle" font-size="25" font-weight="600">Marked 解析 → 未经净化的 HTML</text>
+<text x="450.0" y="305" text-anchor="middle" font-size="23">解析 Markdown 语法，不保证输出安全</text>
+<path d="M450,349 L450,394" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="140" y="409" width="620" height="135" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="444" text-anchor="middle" font-size="25" font-weight="600">DOMPurify → 允许的元素与属性</text>
+<text x="450.0" y="482" text-anchor="middle" font-size="23">按本例清单保留文本格式和链接</text>
+<text x="450.0" y="514" text-anchor="middle" font-size="23">排除图片、表单、脚本、样式等</text>
+<path d="M450,556 L450,601" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="140" y="616" width="620" height="135" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="651" text-anchor="middle" font-size="25" font-weight="600">链接策略 → 检查最终 URL</text>
+<text x="450.0" y="689" text-anchor="middle" font-size="23">用 URL 解析器检查协议和最终目标</text>
+<text x="450.0" y="721" text-anchor="middle" font-size="23">不允许 → 去掉 href，保留链接文字</text>
+<path d="M450,763 L450,808" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="140" y="823" width="620" height="105" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="858" text-anchor="middle" font-size="25" font-weight="600">最终结果 → HTML sink</text>
+<text x="450.0" y="896" text-anchor="middle" font-size="23">innerHTML / dangerouslySetInnerHTML</text>
+<path d="M30,956 L870,956" stroke="#d5dbe4" stroke-width="2"/>
+<rect x="30" y="980" width="400" height="140" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="230.0" y="1015" text-anchor="middle" font-size="25" font-weight="600">纯文本路径</text>
+<text x="230.0" y="1053" text-anchor="middle" font-size="23">工具摘要；或旧浏览器</text>
+<text x="230.0" y="1085" text-anchor="middle" font-size="23">无法净化时的原始 Markdown</text>
+<path d="M445,1050 L525,1050" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="540" y="980" width="330" height="140" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="705.0" y="1015" text-anchor="middle" font-size="25" font-weight="600">textContent</text>
+<text x="705.0" y="1053" text-anchor="middle" font-size="23">显示字面文本</text>
+<text x="705.0" y="1085" text-anchor="middle" font-size="23">不解析为 HTML</text>
+</g>
+</svg>

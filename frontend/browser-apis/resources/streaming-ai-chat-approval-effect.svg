@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="715" viewBox="0 0 900 715" role="img" aria-label="run-r42-7 在seq6等待完整草稿审批；核验版本与当前权限后，同一运行在seq7恢复，并在seq8开始c2">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#7086a3"/></marker></defs>
+<rect width="900" height="715" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
+<rect x="60" y="25" width="780" height="140" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
+<text x="450.0" y="60" text-anchor="middle" font-size="25" font-weight="600">seq=6：awaiting_approval</text>
+<text x="450.0" y="98" text-anchor="middle" font-size="23">已保存：仓库、标题、正文、证据摘要、payloadHash</text>
+<text x="450.0" y="130" text-anchor="middle" font-size="23">界面展示这一版本；此时还没有创建工单</text>
+<path d="M450,177 L450,222" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="237" width="780" height="180" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
+<text x="450.0" y="272" text-anchor="middle" font-size="25" font-weight="600">服务端核对状态、草稿与当前权限</text>
+<text x="450.0" y="310" text-anchor="middle" font-size="23">仍为 awaiting_approval；目标与草稿 hash 匹配</text>
+<text x="450.0" y="342" text-anchor="middle" font-size="23">审批人当前有权；条件事务只消费一次决定</text>
+<text x="450.0" y="374" text-anchor="middle" font-size="23">写 queued 与唤醒记录；重复或过期决定不再入队</text>
+<path d="M450,429 L450,484" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="60" y="499" width="780" height="180" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
+<text x="450.0" y="534" text-anchor="middle" font-size="25" font-weight="600">worker 领取后：seq=7 → seq=8</text>
+<text x="450.0" y="572" text-anchor="middle" font-size="23">同一 run 恢复 running → 开始 c2 / create_issue</text>
+<text x="450.0" y="604" text-anchor="middle" font-size="23">远端操作使用固定键：run-r42-7:create-issue:v1</text>
+<text x="450.0" y="636" text-anchor="middle" font-size="23">事件序号接续；c2 只用于配对工具请求与结果</text>
+</g>
+</svg>
