@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="745" viewBox="0 0 700 745" role="img" aria-labelledby="title desc">
+  <title id="title">先用浏览器 Performance 定位，再判断是否分析 React 子树</title>
+  <desc id="desc">在相同页面、设备与数据下录制开说明按钮的交互，Interactions 轨道定位交互，Main 轨迹展示主线程工作。React 子树 render 占主要成本时用 React Profiler；否则沿主线程检查事件处理、commit、Effect、样式、布局与绘制。最后按实际阶段优化并复测。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,1 L11,6 L1,11" fill="none" stroke="#334155" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="700" height="745" fill="#ffffff" />
+  <g font-family="PingFang SC, Hiragino Sans GB, sans-serif" fill="#172033" text-anchor="middle">
+    <rect x="70" y="18" width="560" height="80" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="2" />
+    <text x="350" y="51" font-size="19" font-weight="600">Chrome DevTools Performance 录同一点击</text>
+    <text x="350" y="80" font-size="18">Interactions 轨道定位“打开说明”</text>
+
+    <path d="M350 98 L350 128" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+    <rect x="70" y="138" width="560" height="84" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2" />
+    <text x="350" y="172" font-size="18" font-weight="600">顺着 Main 轨迹看点击到呈现的主线程工作</text>
+    <text x="350" y="201" font-size="18">区分事件处理、React 与浏览器阶段</text>
+
+    <path d="M350 222 L350 254" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+    <path d="M350 260 L482 330 L350 400 L218 330 Z" fill="#fff7ed" stroke="#c2410c" stroke-width="2.2" />
+    <text x="350" y="325" font-size="19" font-weight="600">React 子树 render</text>
+    <text x="350" y="353" font-size="19" font-weight="600">是主要耗时吗？</text>
+
+    <path d="M234 338 L180 428" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+    <path d="M466 338 L520 428" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+
+    <rect x="20" y="438" width="320" height="94" rx="14" fill="#eff6ff" stroke="#2563eb" stroke-width="2" />
+    <text x="180" y="475" font-size="18" font-weight="600">是：用 React Profiler</text>
+    <text x="180" y="505" font-size="18">定位参与工作的子树</text>
+
+    <rect x="360" y="438" width="320" height="100" rx="14" fill="#ecfdf5" stroke="#047857" stroke-width="2" />
+    <text x="520" y="470" font-size="18" font-weight="600">否：沿 Main 轨迹继续查</text>
+    <text x="520" y="498" font-size="18">事件处理、commit/Effect</text>
+    <text x="520" y="523" font-size="18">样式、布局或绘制</text>
+
+    <path d="M180 532 L180 552" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+    <path d="M520 538 L520 552" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+
+    <rect x="20" y="562" width="320" height="94" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2" />
+    <text x="180" y="598" font-size="18">检查状态范围、列表计算和 props</text>
+    <text x="180" y="628" font-size="18">确认行函数开销是否主导</text>
+
+    <rect x="360" y="562" width="320" height="94" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2" />
+    <text x="520" y="598" font-size="18">按录制确认的阶段处理</text>
+    <text x="520" y="628" font-size="18">必要 DOM/CSS 更新仍需浏览器工作</text>
+
+    <path d="M180 656 L180 674 L275 684" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+    <path d="M520 656 L520 674 L425 684" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" />
+
+    <rect x="50" y="690" width="600" height="50" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="2" />
+    <text x="350" y="721" font-size="18" font-weight="600">同一动作复测：端到端时间、React 更新与界面结果</text>
+  </g>
+</svg>
