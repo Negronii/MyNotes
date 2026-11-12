@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="440" viewBox="0 0 700 440" role="img" aria-labelledby="title desc"><title id="title">同步提交与数据页写回</title><desc id="desc">修改时产生 WAL，COMMIT 追加提交记录，所需 WAL 持久后服务端确认。数据页可在提交前后写回，但相关 WAL 必须先持久。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" markerWidth="9" markerHeight="9" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#62758b"/></marker></defs>
+<rect width="700" height="440" rx="12" fill="#f8faff"/>
+<text x="24" y="34" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="19" font-weight="600" text-anchor="start">PostgreSQL 本地同步提交</text>
+<rect x="24" y="58" width="336" height="90" rx="10" fill="#edf4fd" stroke="#b9cfe8" stroke-width="1.5"/>
+<text x="38" y="88" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">事务修改库存与预留行</text>
+<text x="38" y="116" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">在内存中生成相应 WAL</text>
+<rect x="24" y="202" width="336" height="68" rx="10" fill="#edf4fd" stroke="#b9cfe8" stroke-width="1.5"/>
+<text x="38" y="232" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">COMMIT 时追加提交记录</text>
+<rect x="24" y="324" width="336" height="90" rx="10" fill="#eaf5ec" stroke="#a2c9ab" stroke-width="1.5"/>
+<text x="38" y="354" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">提交所需 WAL 持久</text>
+<text x="38" y="382" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">服务端随后确认提交成功</text>
+<path d="M192 154 V194" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M192 276 V316" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M366 102 H422 V151" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<text x="446" y="133" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="17" font-weight="400" text-anchor="start">对应 WAL 先持久</text>
+<rect x="398" y="162" width="278" height="118" rx="10" fill="#f2edfc" stroke="#c7b8e5" stroke-width="1.5"/>
+<text x="412" y="192" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">数据页写回存储</text>
+<text x="412" y="220" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">可发生在 COMMIT 之前</text>
+<text x="412" y="248" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">也可在 COMMIT 之后</text>
+<text x="398" y="341" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="17" font-weight="400" text-anchor="start">确认响应也可能丢失。</text>
+<text x="398" y="371" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="17" font-weight="400" text-anchor="start">数据库是否提交，</text>
+<text x="398" y="401" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="17" font-weight="400" text-anchor="start">需查询原操作的结果。</text>
+</svg>

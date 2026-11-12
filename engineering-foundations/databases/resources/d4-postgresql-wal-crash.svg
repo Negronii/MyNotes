@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="480" viewBox="0 0 700 480" role="img" aria-labelledby="title desc"><title id="title">崩溃后按提交状态判断可见结果</title><desc id="desc">在无其他库存写者的条件下，A B 都无持久提交时查询仍看到库存 1，无预留记录；至少一个成功提交持久时库存为 0，有一条成功记录。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" markerWidth="9" markerHeight="9" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#62758b"/></marker></defs>
+<rect width="700" height="480" rx="12" fill="#f8faff"/>
+<rect x="24" y="24" width="180" height="66" rx="10" fill="#fff0ed" stroke="#ddb5aa" stroke-width="1.5"/>
+<text x="38" y="54" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">数据库崩溃</text>
+<rect x="258" y="24" width="418" height="66" rx="10" fill="#edf4fd" stroke="#b9cfe8" stroke-width="1.5"/>
+<text x="272" y="54" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">启动恢复：重放所需 WAL</text>
+<path d="M210 57 H250" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<rect x="166" y="146" width="368" height="88" rx="10" fill="#f2edfc" stroke="#c7b8e5" stroke-width="1.5"/>
+<text x="180" y="176" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">检查恢复出的事务提交状态</text>
+<text x="180" y="204" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">页面修改被重放 ≠ 事务已提交</text>
+<path d="M468 96 V120 H350 V138" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M270 240 V270 H180 V310" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M430 240 V270 H520 V310" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<rect x="24" y="318" width="312" height="134" rx="10" fill="#fff5e6" stroke="#dfc18b" stroke-width="1.5"/>
+<text x="38" y="348" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">A、B 均无持久提交</text>
+<text x="38" y="376" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">未提交版本对查询不可见</text>
+<text x="38" y="404" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">库存仍为 1</text>
+<text x="38" y="432" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">没有该键的预留记录</text>
+<rect x="364" y="318" width="312" height="134" rx="10" fill="#eaf5ec" stroke="#a2c9ab" stroke-width="1.5"/>
+<text x="378" y="348" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">至少一份成功提交已持久</text>
+<text x="378" y="376" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">扣减与成功记录可恢复</text>
+<text x="378" y="404" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">库存为 0</text>
+<text x="378" y="432" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">有一条 reserved 预留记录</text>
+</svg>

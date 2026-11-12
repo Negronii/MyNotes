@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="470" viewBox="0 0 700 470" role="img" aria-labelledby="title desc"><title id="title">同键请求的库存竞争</title><desc id="desc">PostgreSQL Read Committed 下，同键同指纹的 B 等 A 提交后重检更新条件，零行更新后回滚并在新事务查询成功记录。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" markerWidth="9" markerHeight="9" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#62758b"/></marker></defs>
+<rect width="700" height="470" rx="12" fill="#f8faff"/>
+<text x="24" y="33" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="19" font-weight="600" text-anchor="start">PostgreSQL · Read Committed</text>
+<text x="24" y="66" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="17" font-weight="400" text-anchor="start">初态：库存为 1，无该键记录；A、B 使用同一操作键和指纹。</text>
+<text x="24" y="108" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="19" font-weight="600" text-anchor="start">A：先取得库存行锁</text>
+<rect x="24" y="128" width="184" height="100" rx="10" fill="#edf4fd" stroke="#b9cfe8" stroke-width="1.5"/>
+<text x="38" y="158" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">UPDATE 成功一行</text>
+<text x="38" y="186" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">库存 1 → 0</text>
+<text x="38" y="214" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">仍未提交</text>
+<rect x="258" y="128" width="184" height="100" rx="10" fill="#edf4fd" stroke="#b9cfe8" stroke-width="1.5"/>
+<text x="272" y="158" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">INSERT 预留记录</text>
+<text x="272" y="186" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">与库存扣减</text>
+<text x="272" y="214" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">处于同一事务</text>
+<rect x="492" y="128" width="184" height="100" rx="10" fill="#eaf5ec" stroke="#a2c9ab" stroke-width="1.5"/>
+<text x="506" y="158" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">COMMIT 成功</text>
+<text x="506" y="186" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">库存 0 + 预留记录</text>
+<text x="506" y="214" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">一并可见</text>
+<path d="M214 173 H250" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M448 173 H484" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<text x="24" y="292" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="19" font-weight="600" text-anchor="start">B：更新同一库存行</text>
+<rect x="24" y="312" width="184" height="134" rx="10" fill="#fff5e6" stroke="#dfc18b" stroke-width="1.5"/>
+<text x="38" y="342" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">UPDATE 尚未完成</text>
+<text x="38" y="370" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">等待 A 释放锁</text>
+<rect x="258" y="312" width="184" height="134" rx="10" fill="#fff5e6" stroke="#dfc18b" stroke-width="1.5"/>
+<text x="272" y="342" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">A 提交后重检</text>
+<text x="272" y="370" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">库存 0，不满足 &gt; 0</text>
+<text x="272" y="398" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">UPDATE 返回零行</text>
+<rect x="492" y="312" width="184" height="134" rx="10" fill="#f2edfc" stroke="#c7b8e5" stroke-width="1.5"/>
+<text x="506" y="342" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="600" text-anchor="start">ROLLBACK 尝试</text>
+<text x="506" y="370" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">新事务按原键查询</text>
+<text x="506" y="398" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">命中同指纹结果</text>
+<text x="506" y="426" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="18" font-weight="400" text-anchor="start">重放成功响应</text>
+<path d="M214 368 H250" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M448 368 H484" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M584 232 V252 H350 V304" fill="none" stroke="#62758b" stroke-width="2.3" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<text x="440" y="280" fill="#283b52" font-family="Arial, PingFang SC, sans-serif" font-size="17" font-weight="400" text-anchor="start">提交后解除等待</text>
+</svg>
