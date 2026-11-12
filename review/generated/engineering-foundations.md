@@ -8895,86 +8895,115 @@ KISS (Keep It Simple，保持简单)要求方案与当前变化规模相称。YA
 > - **YAGNI。** Martin Fowler 将 YAGNI 描述为暂不实现尚未需要的功能，并提醒未使用的扩展点会增加当前复杂度：[原文](https://martinfowler.com/bliki/Yagni.html)。
 ## 51. 前端架构怎样划分呈现、交互和数据所有权？
 
-以下沿用合成的页面编辑器案例：画布显示文档树，检查器编辑当前节点属性，工具栏新增组件，预览页呈现访客看到的页面。如果各处各存一份节点数据，拖动或重命名就可能让它们失步。架构应先说明每份状态由谁拥有、哪些模块能发出修改，再决定组件怎样拆分或代码如何部署。
+以一个合成的页面编辑器为例：资产 `42` 当前是 revision (修订) 12，`section-1` 下有标题 `heading-1` 和报名按钮 `button-1`。为看清树关系，本篇将两个组件放进一个合成分组节点；关键是稳定 ID (标识符)、父子关系与修订边界，而不是这个容器类型。画布显示文档树，检查器修改当前节点，编辑预览读取当前草稿，访客读取已发布页面。架构要回答三件事：哪份状态可保存、谁能提交文档变更、哪些视图消费同一份结果。保存草稿不会发布；发布服务只在编辑者明确请求后校验选定的已保存修订，通过后才切换公开快照。
 
-~~~mermaid
-flowchart TD
-    Select["选择节点"] --> Session["编辑会话：selectedId / dragPreview"]
-    Drag["拖动中的候选位置"] --> Session
-    Session --> CanvasPreview["画布显示选中和拖动预览"]
-    Session --> Inspector["检查器显示当前节点属性"]
-    Commit["确认属性修改或放下排序"] --> Intent["命令表达已提交的编辑"]
-    Intent --> Owner["文档状态所有者"]
-    Owner --> Revision["生成新的文档修订"]
-    Revision --> Canvas["画布读取新文档"]
-    Revision --> Inspector
-    Revision --> Preview["预览器读取同一修订"]
-~~~
+| 状态 | 初始值 | 生命周期 | 所有者 |
+|---|---|---|---|
+| 页面文档 | `revision=12`、`rootIds=['section-1']`、`section-1.children=['heading-1','button-1']` | 可保存、可撤销、可作为预览输入 | 文档状态所有者 |
+| 编辑会话 | `selectedId=null`、`openPanel='inspector'`、`dragPreview=null` | 当前编辑器会话；不进入页面文档 | 编辑会话状态所有者 |
+| 组件局部状态 | 输入焦点、光标与尚未确认的输入缓冲 | 当前组件挂载期间 | 对应输入组件 |
+| 公开页面 | 活动指针为 `r12`，指向已发布的不可变快照 | 多个草稿修订并存时仍保持原发布版 | 发布服务与快照存储 |
 
-文档节点属于可保存页面内容；当前选中项、拖动状态和面板属于编辑会话；焦点和输入光标等短暂状态通常留在组件内部。不是所有状态都要进全局状态存储，但每种状态都应有清楚的所有者。
+完整的节点对象、命令、撤销和发布代码见[怎样建模页面文档、编辑会话和发布快照？](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。下面先追一次编辑如何改变文档，再看已保存修订怎样成为公开页面，最后讨论组件、模块与部署边界。
 
 ### 单向数据流让修改原因可追踪
 
-unidirectional data flow（单向数据流）让状态所有者把当前数据传给视图，视图通过事件或命令请求变化。检查器不私下改写画布节点副本，而是发出“把 `heading-1` 的 `text` 改成‘欢迎’”这样的意图。
+**unidirectional data flow (单向数据流)** 让状态所有者把当前数据交给视图，视图通过事件或命令请求变化。检查器不能私下改写自己保存的节点副本；它应发出“把 `heading-1` 的 `text` 改成‘欢迎’”这样的意图，由文档所有者检查并产生新修订。若命令未通过校验，错误返回给发起方，当前文档修订保持不变。
 
-以下沿用同一个修订 12 的页面案例；完整文档与会话输入见[修订 12 的文档与编辑会话数据](#%E6%96%87%E6%A1%A3%E6%A0%91%E5%92%8C%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E8%AE%B0%E5%BD%95%E4%B8%8D%E5%90%8C%E4%BA%8B%E5%AE%9E)，可运行命令代码也在那里。选择、拖动预览和已提交修改走不同路径：
+下图的实线表示提交与后续显示，虚线表示读取已有状态。每次只处理一个命令；先改标题得到修订 13，再确认排序得到修订 14，具体值在图后的表中展开。
 
-| 事件 | 编辑会话 | 文档修订 |
+~~~mermaid
+flowchart TD
+    Input["用户确认修改<br/>setText / move"] --> Owner["文档所有者<br/>校验命令"]
+    Current["当前文档修订"] -.->|作为校验依据| Owner
+    Owner -->|通过| New["提交新修订<br/>标题：12 → 13<br/>排序：13 → 14"]
+    Owner -->|拒绝| Error["返回错误<br/>文档修订不变"]
+    New --> Views["画布 / 检查器<br/>读取当前文档"]
+    New --> Preview["编辑预览<br/>只读取当前文档"]
+    Session["编辑会话<br/>selectedId<br/>dragPreview"] -.->|辅助界面显示| Views
+~~~
+
+同一个修订 12 案例中，选择、输入、拖动预览和已提交修改走不同路径：
+
+| 用户动作 | 会话或组件状态 | 文档结果 |
 |---|---|---|
-| 选中 `heading-1` | `selectedId` 设为 `heading-1` | `revision` 仍为 12，文本仍是“首页” |
-| 在检查器确认标题改为“欢迎” | `selectedId` 仍为 `heading-1` | 所有者校验后产生 `revision` 13 |
-| 把 `heading-1` 拖到 `button-1` 后的预览 | `dragPreview` 记录候选位置 | `revision` 仍为 13，节点顺序不变 |
-| 在画布放下并确认排序 | 清除 `dragPreview` | 独立命令产生 `revision` 14，`rootIds` 变为 `['button-1', 'heading-1']` |
+| 选中 `heading-1` | `selectedId` 变成 `heading-1` | 仍为修订 12，标题还是“首页” |
+| 在检查器输入但未确认 | 输入组件暂存 `textDraft='欢迎'`，光标留在组件中 | 仍为修订 12 |
+| 确认标题文案 | 发出 `setText('heading-1', '欢迎')` 命令 | 所有者校验后提交修订 13 |
+| 拖动标题越过按钮 | `dragPreview` 记录 `section-1` 内候选顺序 | 仍为修订 13，树顺序不变 |
+| 在画布放下并确认 | 发出移动命令；成功后清除 `dragPreview` | 所有者提交修订 14，子节点顺序变成 `['button-1','heading-1']` |
 
-所以拖动中的每个鼠标移动都不需要写入可保存文档；只有放下并接受排序变更时才提交文档命令。React 官方状态共享指南用“将共享状态提升到最近共同父级”解释这种所有权；其他框架可以用不同机制实现同样约束。经典 Flux 模型让 action（动作）经过 dispatcher（分发器）到 store（状态存储），再由 store 通知 view（视图）；其他状态库采用不同契约，重点是让状态变化及其原因可追踪。
+鼠标移动只改变会话里的候选位置。只有放下后才把命令交给文档所有者，因此撤销历史和保存任务不会记录几十次无意义的指针坐标。画布和检查器随后都从修订 14 读取，而不是分别维护一份副本。撤销也由文档所有者处理；它恢复先前的内容，但仍产生一个新的单调递增修订号，详见数据模型章节。
+
+React 的状态共享指南以“把要协调的状态移动到最近共同父组件”解释了同一所有权思路；它不意味着所有状态都要搬到一个全局对象。其他框架可用不同机制，只要选中项、草稿输入与已提交文档的持有者仍清楚可辨。若浏览器端只是草稿缓存，服务端在保存时还要检查当前修订或版本条件，避免较旧客户端覆盖较新的提交；这一步属于持久化合同，不应由视图自行假定成功。
+
+**从草稿到公开页面。** 编辑者可以保存修订 14，访客此时仍读取活动快照 r12。只有编辑者另外请求发布该已保存修订，发布服务才开始校验；通过后生成不可变快照，再原子切换活动指针。校验拒绝时，已保存草稿和线上页面仍是两份不同状态。
+
+~~~mermaid
+flowchart TD
+    Saved["已保存 r14<br/>活动快照 r12"] -->|编辑者明确请求发布| Gate{"发布校验"}
+    Gate -->|通过| Snapshot["生成不可变快照<br/>r14"]
+    Snapshot --> Switch["原子切换<br/>活动指针到 r14"]
+    Switch --> Public["访客读取 r14"]
+    Gate -->|拒绝| Keep["不切换指针<br/>访客仍读取 r12"]
+~~~
 
 ### 组件与分层分别解决什么问题？
 
-**component-based architecture（基于组件的架构）**按可复用视图和交互边界拆分 user interface（用户界面，UI）。`Canvas` 呈现画布，`Inspector` 编辑属性，`NodeView` 呈现一种节点类型。组件接口应写明输入输出：数据与回调怎样传入，选择、修改、删除等意图怎样传出。不是每个组件都要持有状态、调用服务并执行副作用。
+**component-based architecture (基于组件的架构)** 按可复用视图和交互边界拆分 user interface (用户界面，UI)。`Canvas` 呈现文档树，`Inspector` 编辑选中节点的属性，`NodeView` 呈现一种节点类型。组件接口应说明数据和回调怎样传入，以及选择、修改、删除等意图怎样传出。视图不因被拆成组件就自动得到文档所有权。
 
-分层则按职责分开状态管理、领域命令、持久化适配和视图。小编辑器可能只需要几个清楚模块；只有一层确实承载独立规则或依赖边界时，再拆成独立包或服务。为每个组件都造“控制器—服务—仓库”容易使跟踪简单操作变慢。
+分层则按职责分开交互状态、文档命令、持久化适配和视图。这个合成编辑器可先用少数模块：会话控制器持有 `selectedId` 与 `dragPreview`；文档所有者接受命令、校验结构与业务规则、产生修订；存储适配器保存一个指定修订；视图读取会话和文档投影。只有某层确实承载独立规则或依赖边界，才值得拆成独立包或服务。为每个组件都造“控制器—服务—仓库”会增加跨层跳转，却未必减少变化范围。
 
-文档树顺序也不等于最终绘制顺序。浏览器布局和 CSS stacking context（堆叠上下文）参与绘制；若编辑器显示精确图层，需要把节点顺序、定位和堆叠上下文规则一并纳入模型。
+文档树的逻辑顺序也不等于最终绘制顺序。浏览器会依 CSS stacking context (层叠上下文) 和定位规则绘制；编辑器若要提供“置顶”，必须说明改的是树的兄弟顺序、同一层叠上下文内的层级，还是更高层渲染模型。单独重排 `children` 不保证节点覆盖另一个不同层叠上下文中的元素。
 
 ### 何时微前端有实际收益？
 
-**micro-frontend（微前端）**按业务或团队边界拆分可独立开发、集成、发布的部分。可以构建时组合、运行时加载、用 iframe 或 Web Components；隔离、依赖共享、导航和样式方式各不相同。
+**micro-frontend (微前端)** 把前端的一部分按业务或团队边界独立开发、集成和发布。可以在构建时组合、运行时加载，也可以用 iframe 或 Web Components；它们在隔离、依赖共享、导航和样式方面各有成本。
 
-页面编辑器的检查器与画布若由同一团队同步发布，放在一个模块化应用更简单。若多支独立团队分别负责组件库、编辑器和资产管理，且确实需要独立发布，微前端可能减少协调阻塞。此时仍要定义路由、权限、设计系统、可访问性、错误处理、遥测、依赖版本和加载失败处理，否则集成成本会变成运行时故障。
+若画布、检查器和资产面板由同一团队一起发布，放在一个模块化应用通常更直接；当前主要问题若是两处各存节点副本，拆成微前端只会把同步问题推到跨应用通信。若组件库、页面编辑器和资产管理由不同团队负责，确有独立发布节奏且集成合同稳定，拆分才可能减少发布协调。与此同时，运行时集成会增加路由、深链、身份传递、样式隔离、依赖版本、可访问性、故障处理和监控等合同；这些成本必须由独立发布带来的收益抵消。
 
-微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。若主要问题是共享状态或数据流不清，先解决状态所有权通常更直接。
+微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。先解决文档状态由谁持有，再判断是否存在团队自治、独立部署或渐进迁移的实际需求。
 
 ### 怎样迁移微前端而不打断深链、身份与回退？
 
-沿用一个合成的页面编辑器：文档 `assetId=42` 当前处于 `revision=12`，选中的节点是 `heading-1`。旧应用通过 `/editor/assets/42?panel=inspector&node=heading-1#canvas` 打开它，新入口使用 `/assets/42/edit?panel=inspector&node=heading-1#canvas`。路径和文档 ID 是本教学变体；页面文档与编辑会话状态仍按[编辑器数据模型](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)的稳定节点 ID 和修订区分。`node=heading-1` 只是可恢复的界面选择，不会进入页面文档或修改 revision。新旧地址先并存，让旧书签、邮件链接和浏览器历史都有确定去向。
+现在从单应用切换到另一种合成部署情境：资产 42 当前仍为修订 12，旧入口 `/editor/assets/42?panel=inspector&node=heading-1#canvas` 要逐步迁到 `/assets/42/edit?panel=inspector&node=heading-1#canvas`。文档字段不变；`node=heading-1` 是可恢复的界面选择，不是文档内容，也不会推进 `revision`。新旧地址先并存，避免旧书签和历史项没有去向。
 
-迁移时由同一个 shell（应用外壳）持有顶级路由、会话启动、公共导航与错误边界；路由注册表把旧路径交给 `EditorV1`，新路径先交给 `EditorV1`，再按用户 cohort（灰度分组）将一小部分流量映射至 `EditorV2`。两版可独立构建，但路由、参数和通用数据格式是容器与子应用之间的合同。路由决策须在挂载前作出：
+shell (应用外壳) 可以负责顶级路由、公共导航和错误边界。路由注册表先把两种地址都交给 `EditorV1`，再让 cohort (灰度分组) 中的一小部分用户把新地址路由到 `EditorV2`。这是一个合同选择：也可以让子应用共享同一个路由器或由构建入口组合，但不可让两个互不知情的路由器同时争抢浏览器历史。
 
-| 地址或状态 | shell 的责任 | 子应用收到的输入 |
+| 地址或事件 | 外壳的路由选择 | 子应用输入 |
 |---|---|---|
-| 旧深链 `/editor/assets/42?panel=inspector&node=heading-1#canvas` | 迁移窗口内继续交给 V1；用户从页面主动打开新入口时才新增新路径 | `assetId=42`、`panel=inspector`、`node=heading-1`、`#canvas` |
-| 新地址 `/assets/42/edit?panel=inspector&node=heading-1#canvas`，未进入 cohort | 路由仍由 `EditorV1` 处理，不让用户落入空白占位页 | 同一 `assetId` 与视图状态 |
-| 同一新地址，进入 cohort | 动态加载 `EditorV2`，并显示加载或失败状态 | 同一 `assetId` 与视图状态，不另造一份身份 |
-| 浏览器 Back / Forward | shell 独自响应 `popstate` 并重新匹配完整地址 | `panel` 和有效 `node` 从恢复的 URL 查询恢复；片段仍定位到 `#canvas` |
+| 旧深链 | 迁移窗口内继续交给 V1 | `assetId=42`、`panel=inspector`、`node=heading-1`、`#canvas` |
+| 新地址，未进 cohort | 先交给 V1，不呈现空白占位页 | 同一资源与视图状态 |
+| 新地址，进入 cohort | 加载 V2，显示加载或失败状态 | 同一资源与视图状态 |
+| 直接打开或刷新 | 完整 URL 匹配后等待所选子应用挂载 | 从 query 恢复选择；目标挂载后按 `#canvas` 定位 |
+| Back / Forward | 根据浏览器恢复的完整 URL 重新匹配路由 | 从 query 恢复选择，并在目标挂载后恢复 URL fragment (片段) 定位 |
 
-每个子应用只处理传给它的资源标识和视图状态，通过 shell 提供的 `navigate()` 或明确的同源链接请求跨边界导航。shell 是唯一的 history（历史记录）所有者，因此 V1/V2 不会各自安装互不知情的路由器、重复写 `pushState` 或抢先处理 Back。迁移窗口保留旧路由供旧书签与返回历史使用；用户从旧界面主动打开新入口时，shell 用 `pushState` 记录新路径，这样 Back 可回到原页面。若迁移窗口结束后需把旧路由作为别名改写到新路径，才用 `replaceState` 保留原有 query 与 fragment，避免用户按 Back 时在两个等价地址间循环。浏览器处理新地址的硬刷新请求时，静态宿主还须将已知前端路径回退到 shell HTML，同时仍把 `/api/` 请求交给 API 服务。
+V1 与 V2 都应声明同一个 `id="canvas"` 目标。直接打开或刷新时，外壳先选定子应用，编辑器等目标节点随视图挂载后，再读取当前 `location.hash` 并定位到目标；不能假定异步加载的画布在浏览器首次处理 fragment 时已经存在。`pushState()` 和 `replaceState()` 只更新历史项和 URL，不会触发浏览器的 fragment 定位，所以发起导航的路由所有者应在视图挂载后调用同一恢复逻辑。Back / Forward 触发 `popstate` 后，应用重新读取完整 URL、恢复选择，并在目标挂载后定位。迁移验收要分别断言 `#canvas` 保留在 URL 中，以及画布确实进入视口；只检查 hash 不足以证明深链可用。
 
-身份也由宿主边界明确归属。本例 shell 通过 `HttpOnly`、`Secure` 的同源会话 cookie 建立身份，给子应用 `assetId`、非敏感显示信息和受限的数据访问接口，不把访问令牌或会话凭据放入路由参数、DOM、共享状态广播或子应用的 prompt。V1 与 V2 都通过同源 API 读取 `/api/assets/42`；浏览器随请求带会话 cookie，服务端在每次读取和写入时验证当前主体是否能访问该资源。客户端允许显示哪个路由只决定可见页面，不能替代服务端资源鉴权。`node` 只在页面文档加载后与该 revision 的稳定节点 ID 对照；缺失或不存在的节点参数会清除选择并显示文档，而不是请求任意资源。若子应用部署到独立 origin（源），cookie、令牌和跨源身份方案要另外设计；不能假设同源会话自动跨域。
+浏览器 History API (历史记录接口) 中，`pushState()` 会新增一条历史项，适合用户主动从旧入口进入新入口；`replaceState()` 替换当前历史项，适合旧路径已成为别名、且不希望 Back 在两个等价地址间循环时使用。应用在历史遍历时响应 `popstate` 并重新读取 URL；发起 `pushState()` 导航的路由所有者也要同步更新自身状态。改写旧路径时保留 query 与 fragment；服务端还要让前端深链回退到 shell HTML，同时继续把 `/api/` 交给 API (应用程序接口) 服务。
 
-同一份页面文档以明确版本的 schema 交给 V1 和 V2。本轮只迁移入口，不修改文档字段或服务端数据协议，因此两版都能读取和写回 `revision=12` 的既有文档。若 V2 将来要写入新字段，只有在 V1 会原样保留未知字段、或迁移窗口的路由规则能保证旧版不会重新打开含新字段的数据时才可开放；仅仅让 V1 读入时忽略字段，不保证下一次保存时不会把它删掉。删除或重解释字段也要等 V1 不再负责读写。若当前 revision 仍是 12，V2 的未保存草稿不能只因它的动态 chunk 加载失败就被静默丢弃：在编辑开始前加载失败，shell 可以映射到 V1；编辑开始后若要切换实现，应先将草稿转换成共享会话格式或让用户留在当前编辑器处理，否则停止回退并保留草稿。服务端拒绝的未授权访问不应触发降级到另一个前端，避免把代码加载回退误当成授权绕过。
+每个子应用通过明确的 `navigate()` 或同源链接请求跨边界导航。选中的 `node` 在文档加载后才与该修订的稳定节点 ID 对照；若节点不存在，就清除选择并显示页面，不把参数当成任意资源读取入口。
 
-发布按路由逐步改变 owner：先让 shell 可加载两版并验证同一输入合同；再在限定 cohort 中把 `/assets/:assetId/edit` 分给 V2；确认直接深链与刷新、嵌套 query/fragment、V1↔V2 导航、Back/Forward、未授权资源拒绝、V2 chunk 加载失败和 V1 兼容读取都正确后才扩大分流。每个检查都对应一次可见状态变化，而不是只确认首页能挂载。若 V2 的加载率或错误率越过约定门槛，路由注册表将新地址恢复映射到 V1；保持该路径可用让已有书签和历史项继续打开旧实现。仍需保留两版 chunk 和向后兼容的数据合同，才可以在出现问题后真正回退，而不只是把 flag 改回去。
+身份也要在部署边界定义。本例外壳使用同源会话 cookie，设置 `HttpOnly`、`Secure` 与适用的 `SameSite` 属性；给子应用传 `assetId`、非敏感显示数据和受限的数据访问接口，不把会话凭据放入路由、DOM 或共享状态广播。浏览器发出的资源读取与写入仍由服务端逐次验证当前主体是否获准访问该资产。客户端“能否显示该路由”不代替授权；服务端拒绝应以拒绝结果呈现，不要误判成代码加载失败再静默切换到另一版。本例 V1 与 V2 都在 shell 的同一页面运行，仍处在同一浏览器文档信任边界；仅从不同 origin 加载脚本不构成隔离。若子应用运行在另一 origin 的独立文档或 iframe 中，则需要单独设计跨源消息、身份、cookie 属性与 API 访问；它与同一页面加载远程脚本的边界不同。
 
-路由契约是微前端沟通的一种公开边界；改变 route schema 或版本映射时要与所有链接来源一起验收。实施过程借用[静态资源版本并存与入口回滚](../../frontend/tooling/build-tools.md)中的旧 chunk 保留规则；新旧服务端资源合同仍要遵循[HTTP API 的授权与条件更新契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+V1 和 V2 在迁移初期读取、写入相同版本的文档格式。若 V2 将来写入 V1 不认识的新字段，只有 V1 会原样保留它，或路由能确保旧版不再打开这些文档，才可开放；仅忽略未知字段可能让 V1 下次保存时把字段删除。删除或改变字段含义，也要等旧版不再负责读写。若 V2 加载失败发生在用户开始编辑之前，可安全把新地址映射回 V1；编辑开始之后若已有未保存草稿，就先转换并交接草稿，或留在当前编辑器给出错误，不能静默切回并丢失用户修改。
 
-**延伸阅读：**[设计原则怎样帮助定位真实变化边界？](#50.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
+发布按路由逐步改变处理者：先验证 shell 可加载两版并保持同一输入合同；再把新地址的一小组 cohort 交给 V2；检查直接深链与刷新时 hash 保留和画布定位、query、Back / Forward、未授权请求、V2 代码块加载失败、V1/V2 文档兼容与草稿保留，再扩大分流。若 V2 的错误率越过预设门槛，将新地址重新交给 V1。有效回退还要求 V1 代码仍可加载，且 V1 兼容当前数据格式。只有把流量开关拨回去、却没有旧代码或兼容格式，并不能恢复服务。
+
+路由格式是跨应用通信合同，改路径或参数时要更新所有链接来源和消费者。页面构建资源的版本并存与回滚见[构建工具怎样把源码变成可发布产物？](../../frontend/tooling/build-tools.md)；服务端读写仍遵循[如何设计可预期的 HTTP API 契约？](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+
+**延伸阅读：** [如何让设计原则减少真实的修改成本？](#50.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
 
 > [!info]- 来源
-> - 组件间共享状态的所有权：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
-> - 堆叠上下文内的 CSS 绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
-> - 微前端的团队发布边界和集成权衡：[Martin Fowler, Micro Frontends](https://martinfowler.com/articles/micro-frontends.html)。
-> - 路由作为容器与子应用之间的合同：[Martin Fowler, Micro Frontends, “Cross-application communication via routing”](https://martinfowler.com/articles/micro-frontends.html#Crossapplicationcommunicationviarouting)，核对日期 2026-11-09。
-> - 同源历史写入、恢复与 `popstate`：[WHATWG HTML Standard, History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，持续更新规范，核对日期 2026-11-09。
+> - **共享状态的所有权。** React，“Sharing State Between Components”，状态上提与每份状态唯一所有者：[原文](https://react.dev/learn/sharing-state-between-components)，2026-11-12 核对。
+> - **绘制顺序。** W3C CSS 2.2，Appendix E “Elaborate description of Stacking Contexts”，绘制顺序和层叠上下文：[原文](https://www.w3.org/TR/CSS22/zindex.html)，2026-11-12 核对。
+> - **独立团队发布的收益与集成成本。** Cam Jackson, “Micro Frontends,” 2019-06-19，Benefits、Integration approaches、Downsides 与 Operational and governance complexity：[原文](https://martinfowler.com/articles/micro-frontends.html)。
+> - **路由作为跨应用通信合同。** 同上，“Cross-application communication via routing”：[原文](https://martinfowler.com/articles/micro-frontends.html#Crossapplicationcommunicationviarouting)。
+> - **浏览器历史行为。** WHATWG HTML Living Standard，§7.2.5 “The `History` interface” 中 `pushState()`、`replaceState()` 与历史遍历：[原文](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，2026-11-12 核对。
+> - **片段定位。** WHATWG HTML Living Standard，“Scrolling to a fragment” 规定 fragment 对应文档中的定位目标；异步子应用须在目标挂载后恢复定位：[原文](https://html.spec.whatwg.org/multipage/browsing-the-web.html#scrolling-to-a-fragment)，2026-11-12 核对。
+> - **会话 cookie 属性。** OWASP Session Management Cheat Sheet，`Secure`、`HttpOnly` 与 `SameSite` 说明：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)，2026-11-12 核对。
+> - **客户端反馈与服务端校验。** OWASP Input Validation Cheat Sheet，“Client-only checks”：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)，2026-11-12 核对。
+> - **跨应用运行时与授权边界。** OWASP Micro Frontend Security Cheat Sheet，“Choose and Enforce Runtime Boundaries”说明远程脚本仍使用宿主页面权限、跨源 iframe 才建立 origin 边界；“Authorize Every Request on the Server”要求每次后端请求重新授权：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Micro_Frontend_Security_Cheat_Sheet.html)，2026-11-12 核对。
 ## 52. 页面编辑器何时需要设计模式？
 
 案例使用一份合成的页面编辑器文档：当前修订为 12，已有 `heading-1` 和 `button-1`；编辑者从工具栏插入标题，画布与检查器都要看到新修订。**design pattern（设计模式）**给反复出现的对象协作方式命名，但模式不会替系统决定谁拥有文档、哪些规则只在发布时检查，或订阅何时结束。**GoF（Gang of Four，四人帮）**原著也把适用情境、约束、结果和取舍作为模式说明的一部分，并以文档编辑器作案例；它不是可机械套用的类图。
@@ -9213,44 +9242,35 @@ console.log(JSON.stringify({
 > - 设计原则与模式的关系：[Robert C. Martin, “Design Principles and Design Patterns” (2000), p. 4](https://objectmentor.com/resources/articles/Principles_and_Patterns.pdf)。
 ## 53. 怎样建模页面文档、编辑会话和发布快照？
 
-以下用一个合成的通用页面编辑器案例：编辑者正在修改 revision 12 的首页，页面含标题和报名按钮；编辑者需要改文案、拖动排序、撤销修改并发布审核后的版本。若把页面内容、当前选中项、拖动中的临时位置和公开输出塞进同一对象，简单选择也可能触发保存和历史记录，发布时也难以确定实际使用哪个版本。
+回到前端架构篇的合成页面编辑器起点：资产 42 的页面当前是 revision (修订) 12，访客也从修订 12 的初始快照读取页面。文档里有标题 `heading-1` 和报名按钮 `button-1`。本篇继续用 `section-1` 根节点容纳它们，专门展示父子关系；其他编辑行为沿用同一组稳定 ID (标识符)。编辑者修改标题、重排组件、撤销、保存草稿，并发布审核后的版本。要避免选择或拖动时误写页面，也要让访客明确看到哪个已校验的修订。
 
-先分开三个生命周期：可保存文档、只服务当前编辑器会话的状态，以及从某个文档修订派生的发布快照。
-
-~~~mermaid
-flowchart TD
-    Command["编辑命令"] --> Validate["按结构与业务规则校验"]
-    Validate --> Document["页面文档 revision 13"]
-    Document --> History["撤销 / 重做历史"]
-    Document --> Preview["编辑预览"]
-    Document --> PublishCheck["发布校验"]
-    PublishCheck --> Snapshot["不可变快照 revision 13"]
-    Snapshot --> PublicPage["访客页面"]
-    Session["编辑会话：选中 ID / 面板"] --> Canvas["画布与检查器"]
-    Document --> Canvas
-~~~
+三个生命周期分别是：可保存的页面文档、当前编辑会话里的临时状态、从某个文档修订及固定渲染依赖派生的公开快照。
 
 ### 文档树和编辑会话记录不同事实
 
-文档要保存页面事实：节点稳定身份、组件类型、属性和子节点。编辑会话记录当前选择、焦点面板、拖动候选目标等短暂 UI 状态。
+文档保存页面事实：稳定节点 ID (标识符)、组件类型、属性、子节点和顶层顺序。会话保存当前选择、面板和拖动中的候选位置。代码用 `section-1` 作根节点，标题和按钮是它的两个孩子；根 ID 与子节点 ID 分开存放，所以重排兄弟节点只改 `section-1.children`，不必把节点对象从 ID 表里挪来挪去。
 
 ~~~javascript
 const documentState = {
   schemaVersion: 1,
   revision: 12,
-  rootIds: ['heading-1', 'button-1'],
+  rootIds: ['section-1'],
   nodes: {
+    'section-1': {
+      id: 'section-1', type: 'section',
+      props: { label: '首页内容' }, children: ['heading-1', 'button-1'],
+    },
     'heading-1': {
-      id: 'heading-1',
-      type: 'heading',
-      props: { text: '首页', level: 1 },
+      id: 'heading-1', type: 'heading',
+      props: { text: '首页', level: 1 }, children: [],
       style: { position: 'absolute', top: 100, left: 200 },
-      children: [],
     },
     'button-1': {
-      id: 'button-1',
-      type: 'button',
-      props: { label: '报名', action: { kind: 'navigate', pageId: 'form' } },
+      id: 'button-1', type: 'button',
+      props: {
+        label: '报名',
+        action: { kind: 'navigate', pageId: 'form' },
+      },
       children: [],
     },
   },
@@ -9263,69 +9283,525 @@ const editorSession = {
 };
 ~~~
 
-`rootIds` 表示顶层顺序；`nodes` 按 ID 索引，便于定位和局部更新。示例采用已提交文档中的森林规则：根 ID 不重复，根节点不能同时作为子节点；每条父子边只出现一次，每个非根节点恰有一个父节点；所有节点都能从某个根到达，且不形成环。只检查 ID 唯一、引用存在和无环还不够，因为两个父节点仍可能引用同一个孩子，文档里也可能留下无法从根到达的孤儿节点。新节点在尚未挂到树上时可以先留在编辑会话的拖动草稿中，提交命令前再检查这些约束。
+`rootIds` 表示顶层节点及其顺序；`nodes` 按 ID 索引，便于通过 `heading-1` 定位并局部更新。已提交树采用森林规则：根 ID 不重复，根节点不能同时是孩子；每条父子边只出现一次，每个非根节点只有一个父节点；所有节点能从某个根到达，且没有环。只检查 ID 唯一、引用存在和无环还不够：两个父节点可能同时引用同一个孩子，文档也可能留下无法从根到达的孤儿节点。若产品允许未挂入树中的新节点草稿，可暂存在会话里，提交前才要求完整树满足这些约束；本例没有实现新建节点流程。
 
-较小编辑器也可用嵌套树，避免过早规范化，但仍需保持相同的单父和根归属规则。示例中的 `style` 是产品选择持久化的布局配置；如果它只用于画布临时呈现，则应留在编辑会话。`selectedId` 是对节点的引用，不是节点属性；切换选择不推进文档修订、不进入撤销历史，也不影响发布内容。
+较小编辑器也可用嵌套树，避免过早规范化，但仍要保持单父与根归属规则。示例不把光标或 `selectedId` 存进页面：切换选择不推进文档修订、不进入撤销历史，也不影响发布输出。这里选择把 `style` 类布局属性放进文档，因为产品要保存布局；若某种样式只服务于拖动中的临时预览，就应跟 `dragPreview` 一起留在会话。可保存和临时状态的边界取决于产品语义，而不是字段名。
 
 ### 稳定身份与命令使修改可追踪
 
-数组下标会因插入和排序改变，不适合作为长期节点身份。稳定 ID 让检查器、历史记录与协作消息指向同一节点。**command（命令）**把用户意图表示为可检查操作，例如把 `heading-1` 的 `text` 改为“欢迎”。
+数组下标会因插入和排序改变，不适合作为长期节点身份。稳定 ID 让检查器、历史记录和协作消息指向同一个节点。**command (命令)** 把用户意图表达成可验证操作，例如更新标题文本或移动一个兄弟节点；调用方不能直接修改状态所有者持有的对象。
 
-下面的代码承接上节定义的完整 `documentState`，包括 `schemaVersion`、`rootIds`、标题样式和报名按钮；它只更新标题文本，不重新声明或裁剪初始文档。
+先停在标题已经改成“欢迎”的 r13，看一次拖动还未提交时的状态。图中“标题”和“按钮”分别是 `heading-1` 与 `button-1`，两者始终属于 `section-1`。
 
-~~~javascript
-function updateNodeText(document, id, text) {
-  const node = document.nodes[id];
-  if (!node || node.type !== 'heading') {
-    throw new RangeError('heading does not exist');
-  }
-
-  return {
-    ...document,
-    revision: document.revision + 1,
-    nodes: {
-      ...document.nodes,
-      [id]: { ...node, props: { ...node.props, text } },
-    },
-  };
-}
-
-const revision13 = updateNodeText(documentState, 'heading-1', '欢迎');
-// revision13 仍有 rootIds=[heading-1, button-1]，button-1 未变；只改标题并从 12 变为 13。
+~~~mermaid
+flowchart TD
+    Doc["文档 r13<br/>标题 → 按钮<br/>撤销深度 1"] -.->|读取已提交内容| View["画布临时投影<br/>按钮 → 标题"]
+    Drag["会话 dragPreview<br/>候选：按钮 → 标题"] -.->|只替换本次显示顺序| View
+    Drag -->|取消| Cancel["清空候选<br/>文档仍 r13<br/>撤销深度仍 1"]
+    Drag -->|松手确认| Command["提交移动命令<br/>相同节点 ID<br/>moveSiblingAfter"]
+    Command -->|结构校验通过| R14["文档 r14<br/>按钮 → 标题<br/>撤销深度 2<br/>清空候选"]
 ~~~
 
-撤销和重做可以保存前后状态快照，也可以记录带逆操作的命令。快照简单但占更多存储；逆操作紧凑，却必须正确处理删除、移动和并发修改。输入字段可以每次击键更新，也可本地缓冲到失焦再提交；提交到文档的修改仍须经过一致验证路径。
+画布的临时投影不会写回文档。取消时清空候选，显示回到 r13 的文档顺序；确认时才由命令生成 r14。若移动命令被拒绝，文档与撤销栈都不变，候选仍留在会话里供处理。下面的表从最初 r12 继续到保存与发布，补齐每一步的状态。
+
+
+| 用户动作 | 会话与画布 | 文档、历史和访客 |
+|---|---|---|
+| 初始页面 | `selectedId=null`、`dragPreview=null`；画布顺序为标题、按钮 | 文档 r12，`children=['heading-1','button-1']`；访客活动快照 r12 |
+| 确认标题“欢迎” | 输入组件提交 `setText` | 文档到 r13，`heading-1` ID 不变；撤销历史增加一项，访客仍读 r12 |
+| 选择标题 | `selectedId='heading-1'` | 文档仍 r13；撤销历史不变 |
+| 拖到按钮后方，尚未松手 | `dragPreview` 保存 `section-1`、`heading-1`、`button-1` 和候选顺序；画布暂时按候选顺序预览 | 文档 children 仍是 `['heading-1','button-1']`，仍 r13；历史不变，访客仍读 r12 |
+| 取消拖动 | 清空 `dragPreview`，画布回到文档顺序 | 文档 r13、历史和活动快照均不变 |
+| 再拖一次并松手确认 | 用 `moveSiblingAfter('section-1','heading-1','button-1')` 提交相同 ID；成功后清空候选 | 文档到 r14，`children=['button-1','heading-1']`；历史增加一项，访客仍读 r12 |
+| 撤销后重做 | 会话选择仍指向 `heading-1` | r15 恢复原顺序，r16 恢复重排；两个动作都新增修订，访客仍读 r12 |
+| 保存 r16 | 保存该确切修订 | `savedDrafts` 保存 r16；活动快照仍 r12 |
+| 明确请求发布 r16 | 发布服务重新校验已保存的 r16 | 通过后才原子切换活动指针 r12→r16，访客读取 r16 |
+| 清空标题并提交 | 文档到 r17，活动快照仍为 r16 | 标题为空；撤销历史增加一项，已保存与已发布的 r16 不变 |
+| 预览 r17 | 画布显示空标题 | 只读草稿，不改文档、历史或活动快照 |
+| 保存 r17 | 保存该确切修订 | 活动快照仍 r16，访客仍读“欢迎” |
+| 明确请求发布 r17 | 发布服务重新校验已保存的 r17 | 非空标题规则拒绝；活动快照和访客仍为 r16 |
+
+下面的完整实现按顺序使用上方可见的初始输入。接受的文档命令、撤销和重做会生成新的单调修订号；选择、拖动和取消不会增加修订或修改撤销栈。
+
+> [!example]- 完整可运行实现（需和上面的初始输入一起运行）
+> 本实现使用上节可见的 `documentState` 与 `editorSession`。按页面顺序拼接两个 JavaScript 围栏运行；只复制本折叠围栏会缺少初始输入。
+>
+> ~~~javascript
+> function clone(value) {
+>   return structuredClone(value);
+> }
+>
+> function freezeDeep(value) {
+>   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+>     for (const child of Object.values(value)) freezeDeep(child);
+>     Object.freeze(value);
+>   }
+>   return value;
+> }
+>
+> function validateDocument(document) {
+>   const errors = [];
+>   if (!document || typeof document !== 'object' || Array.isArray(document)) {
+>     return ['document must be an object'];
+>   }
+>   if (document.schemaVersion !== 1) errors.push('unsupported schemaVersion');
+>   if (!Number.isSafeInteger(document.revision) || document.revision < 0) {
+>     errors.push('revision must be a non-negative safe integer');
+>   }
+>   if (!Array.isArray(document.rootIds)) errors.push('rootIds must be an array');
+>   if (!document.nodes || typeof document.nodes !== 'object' || Array.isArray(document.nodes)) {
+>     errors.push('nodes must be an ID map');
+>   }
+>   if (errors.length) return errors;
+>
+>   const ids = Object.keys(document.nodes);
+>   const roots = document.rootIds;
+>   const rootSet = new Set();
+>   for (const id of roots) {
+>     if (typeof id !== 'string') {
+>       errors.push('rootIds must contain only string IDs');
+>       continue;
+>     }
+>     if (rootSet.has(id)) errors.push('rootIds contains duplicates');
+>     rootSet.add(id);
+>     if (!Object.hasOwn(document.nodes, id)) {
+>       errors.push('rootIds contains an unknown node');
+>     }
+>   }
+>
+>   const parents = new Map(ids.map(id => [id, 0]));
+>   for (const [key, node] of Object.entries(document.nodes)) {
+>     if (!node || typeof node !== 'object') {
+>       errors.push(`node ${key} must be an object`);
+>       continue;
+>     }
+>     if (node.id !== key) errors.push(`node key and id differ for ${key}`);
+>     if (!Array.isArray(node.children)) {
+>       errors.push(`children of ${key} must be an array`);
+>       continue;
+>     }
+>     if (node.style !== undefined) {
+>       if (!node.style || typeof node.style !== 'object' || Array.isArray(node.style)) {
+>         errors.push(`style of ${key} must be an object`);
+>       } else {
+>         const allowedStyleKeys = new Set(['position', 'top', 'left']);
+>         if (Object.keys(node.style).some(styleKey => !allowedStyleKeys.has(styleKey))) {
+>           errors.push(`style of ${key} has an unknown property`);
+>         }
+>         if (!['absolute', 'relative'].includes(node.style.position)) {
+>           errors.push(`style position of ${key} must be absolute or relative`);
+>         }
+>         for (const coordinate of ['top', 'left']) {
+>           if (node.style[coordinate] !== undefined && !Number.isFinite(node.style[coordinate])) {
+>             errors.push(`${coordinate} of ${key} must be finite`);
+>           }
+>         }
+>       }
+>     }
+>     if (node.type === 'section') {
+>       if (typeof node.props?.label !== 'string') errors.push(`section ${key} needs a string label`);
+>     } else if (node.type === 'heading') {
+>       if (typeof node.props?.text !== 'string') errors.push(`heading ${key} needs string text`);
+>       if (!Number.isInteger(node.props?.level) || node.props.level < 1 || node.props.level > 6) {
+>         errors.push(`heading ${key} level must be an integer from 1 to 6`);
+>       }
+>       if (node.children.length) errors.push(`heading ${key} cannot have children`);
+>     } else if (node.type === 'button') {
+>       if (typeof node.props?.label !== 'string') errors.push(`button ${key} needs a string label`);
+>       if (node.props?.action?.kind !== 'navigate' || typeof node.props?.action?.pageId !== 'string') {
+>         errors.push(`button ${key} needs a navigate action with pageId`);
+>       }
+>       if (node.children.length) errors.push(`button ${key} cannot have children`);
+>     } else {
+>       errors.push(`unknown component type for ${key}`);
+>     }
+>
+>     const childSet = new Set();
+>     for (const childId of node.children) {
+>       if (typeof childId !== 'string') {
+>         errors.push(`children of ${key} must contain only string IDs`);
+>         continue;
+>       }
+>       if (childSet.has(childId)) errors.push(`${key} lists child ${childId} more than once`);
+>       childSet.add(childId);
+>       if (!parents.has(childId)) {
+>         errors.push(`${key} refers to unknown child ${childId}`);
+>       } else {
+>         parents.set(childId, parents.get(childId) + 1);
+>       }
+>     }
+>   }
+>
+>   for (const id of ids) {
+>     const count = parents.get(id);
+>     if (count > 1) errors.push(`node ${id} has more than one parent`);
+>     if (rootSet.has(id) && count !== 0) errors.push(`root ${id} is also a child`);
+>     if (!rootSet.has(id) && count === 0) errors.push(`node ${id} is neither root nor child`);
+>   }
+>
+>   const colors = new Map();
+>   function visitForCycle(id) {
+>     if (!Object.hasOwn(document.nodes, id)) return;
+>     const node = document.nodes[id];
+>     if (!node || typeof node !== 'object') return;
+>     if (colors.get(id) === 'gray') {
+>       errors.push(`cycle reaches node ${id}`);
+>       return;
+>     }
+>     if (colors.get(id) === 'black') return;
+>     colors.set(id, 'gray');
+>     const children = node.children;
+>     if (Array.isArray(children)) {
+>       for (const child of children) {
+>         if (typeof child === 'string') visitForCycle(child);
+>       }
+>     }
+>     colors.set(id, 'black');
+>   }
+>   for (const id of ids) visitForCycle(id);
+>
+>   const reachable = new Set();
+>   function visitFromRoot(id) {
+>     if (reachable.has(id) || !Object.hasOwn(document.nodes, id)) return;
+>     const node = document.nodes[id];
+>     if (!node || typeof node !== 'object') return;
+>     reachable.add(id);
+>     const children = node.children;
+>     if (Array.isArray(children)) {
+>       for (const child of children) {
+>         if (typeof child === 'string') visitFromRoot(child);
+>       }
+>     }
+>   }
+>   for (const id of roots) {
+>     if (typeof id === 'string') visitFromRoot(id);
+>   }
+>   for (const id of ids) {
+>     if (!reachable.has(id)) errors.push(`node ${id} is unreachable from rootIds`);
+>   }
+>   return [...new Set(errors)];
+> }
+>
+> let current = freezeDeep(clone(documentState));
+> if (validateDocument(current).length) throw new TypeError('invalid initial document');
+> const initialPublished = freezeDeep({
+>   documentId: 'asset-42',
+>   revision: current.revision,
+>   schemaVersion: current.schemaVersion,
+>   componentRegistryVersion: 'components-v1',
+>   rendererVersion: 'renderer-v1',
+>   document: clone(current),
+> });
+> let activeSnapshot = initialPublished;
+> const revisions = new Map([[current.revision, current]]);
+> const savedDrafts = new Map([[current.revision, current]]);
+> const past = [];
+> const future = [];
+>
+> function commit(candidate, label, historyMode = 'command') {
+>   const next = clone(candidate);
+>   next.revision = current.revision + 1;
+>   const errors = validateDocument(next);
+>   if (errors.length) return { ok: false, label, errors, revision: current.revision };
+>
+>   if (historyMode === 'command') {
+>     past.push(clone(current));
+>     future.length = 0;
+>   }
+>   current = freezeDeep(next);
+>   revisions.set(current.revision, current);
+>   return { ok: true, label, revision: current.revision };
+> }
+>
+> function updateHeadingText(id, text) {
+>   if (typeof id !== 'string') {
+>     return { ok: false, errors: ['node ID must be a string'], revision: current.revision };
+>   }
+>   if (typeof text !== 'string') return { ok: false, errors: ['text must be a string'], revision: current.revision };
+>   const node = current.nodes[id];
+>   if (!node || node.type !== 'heading') {
+>     return { ok: false, errors: ['heading does not exist'], revision: current.revision };
+>   }
+>   const next = clone(current);
+>   next.nodes[id].props.text = text;
+>   return commit(next, `setText(${id})`);
+> }
+>
+> function selectNode(id) {
+>   if (typeof id !== 'string' || !Object.hasOwn(current.nodes, id)) {
+>     return { ok: false, errors: ['selected node ID must name an existing node'], revision: current.revision };
+>   }
+>   editorSession.selectedId = id;
+>   return { ok: true, selectedId: id, revision: current.revision };
+> }
+>
+> function reorderedSiblingIds(parentId, movingId, afterId) {
+>   if (![parentId, movingId, afterId].every(id => typeof id === 'string')) {
+>     return { ok: false, errors: ['move IDs must be strings'] };
+>   }
+>   const parent = current.nodes[parentId];
+>   if (!parent || parent.type !== 'section') {
+>     return { ok: false, errors: ['section does not exist'] };
+>   }
+>   const siblings = [...parent.children];
+>   if (movingId === afterId || !siblings.includes(movingId) || !siblings.includes(afterId)) {
+>     return { ok: false, errors: ['move requires two distinct current siblings'] };
+>   }
+>   const remaining = siblings.filter(id => id !== movingId);
+>   const afterIndex = remaining.indexOf(afterId);
+>   remaining.splice(afterIndex + 1, 0, movingId);
+>   return { ok: true, children: remaining };
+> }
+>
+> function startDrag(parentId, movingId, afterId) {
+>   if (typeof movingId !== 'string' || editorSession.selectedId !== movingId) {
+>     return { ok: false, errors: ['select the node before dragging it'], revision: current.revision };
+>   }
+>   const plan = reorderedSiblingIds(parentId, movingId, afterId);
+>   if (!plan.ok) return { ...plan, revision: current.revision };
+>   editorSession.dragPreview = { parentId, movingId, afterId, children: plan.children };
+>   return { ok: true, dragPreview: clone(editorSession.dragPreview), revision: current.revision };
+> }
+>
+> function cancelDrag() {
+>   if (!editorSession.dragPreview) {
+>     return { ok: false, errors: ['there is no drag preview to cancel'], revision: current.revision };
+>   }
+>   editorSession.dragPreview = null;
+>   return { ok: true, cancelled: true, revision: current.revision };
+> }
+>
+> function moveSiblingAfter(parentId, movingId, afterId) {
+>   const plan = reorderedSiblingIds(parentId, movingId, afterId);
+>   if (!plan.ok) return { ...plan, revision: current.revision };
+>   const next = clone(current);
+>   next.nodes[parentId].children = plan.children;
+>   const result = commit(next, `move(${movingId}, after ${afterId})`);
+>   if (result.ok) editorSession.dragPreview = null;
+>   return result;
+> }
+>
+> function dropDragPreview() {
+>   const candidate = editorSession.dragPreview;
+>   if (!candidate) {
+>     return { ok: false, errors: ['there is no drag preview to commit'], revision: current.revision };
+>   }
+>   return moveSiblingAfter(candidate.parentId, candidate.movingId, candidate.afterId);
+> }
+>
+> function undo() {
+>   if (!past.length) return { ok: false, errors: ['nothing to undo'], revision: current.revision };
+>   const target = past.pop();
+>   future.push(clone(current));
+>   return commit(target, 'undo', 'history');
+> }
+>
+> function redo() {
+>   if (!future.length) return { ok: false, errors: ['nothing to redo'], revision: current.revision };
+>   const target = future.pop();
+>   past.push(clone(current));
+>   return commit(target, 'redo', 'history');
+> }
+>
+> function preview(document, session = {}) {
+>   const visible = [];
+>   function visit(id) {
+>     const node = document.nodes[id];
+>     if (node.type === 'section') {
+>       const order = session.dragPreview?.parentId === id
+>         ? session.dragPreview.children
+>         : node.children;
+>       for (const childId of order) visit(childId);
+>     } else if (node.type === 'heading') {
+>       visible.push(`heading:${node.props.text}`);
+>     } else if (node.type === 'button') {
+>       visible.push(`button:${node.props.label}`);
+>     }
+>   }
+>   for (const rootId of document.rootIds) visit(rootId);
+>   return visible;
+> }
+>
+> function saveDraft(revision) {
+>   const document = revisions.get(revision);
+>   if (!document) return { ok: false, error: 'revision not found' };
+>   const errors = validateDocument(document);
+>   if (errors.length) return { ok: false, errors };
+>   savedDrafts.set(revision, freezeDeep(clone(document)));
+>   return { ok: true, savedRevision: revision };
+> }
+>
+> function publishRevision(revision) {
+>   const document = savedDrafts.get(revision);
+>   if (!document) return { ok: false, error: 'publish requires a saved revision', activeRevision: activeSnapshot.revision };
+>   const errors = validateDocument(document);
+>   if (errors.length) return { ok: false, errors, activeRevision: activeSnapshot.revision };
+>   const emptyHeading = Object.values(document.nodes).find(
+>     node => node.type === 'heading' && node.props.text.trim().length === 0,
+>   );
+>   if (emptyHeading) {
+>     return { ok: false, error: `heading ${emptyHeading.id} must not be empty at publish`, activeRevision: activeSnapshot.revision };
+>   }
+>
+>   const nextSnapshot = freezeDeep({
+>     documentId: 'asset-42',
+>     revision,
+>     schemaVersion: document.schemaVersion,
+>     componentRegistryVersion: 'components-v1',
+>     rendererVersion: 'renderer-v1',
+>     document: clone(document),
+>   });
+>   activeSnapshot = nextSnapshot;
+>   return { ok: true, publishedRevision: activeSnapshot.revision };
+> }
+>
+> function makeInvalidSharedChildExample() {
+>   const invalid = clone(current);
+>   invalid.nodes['section-2'] = {
+>     id: 'section-2', type: 'section', props: { label: '重复引用' }, children: ['heading-1'],
+>   };
+>   invalid.rootIds.push('section-2');
+>   return validateDocument(invalid);
+> }
+>
+> function makeInvalidCycleExample() {
+>   const invalid = clone(current);
+>   invalid.nodes['heading-1'].children = ['section-1'];
+>   return validateDocument(invalid);
+> }
+>
+> function makeMalformedIdExamples() {
+>   const badRoot = clone(documentState);
+>   badRoot.rootIds = [{ toString: 0 }];
+>   const badChild = clone(documentState);
+>   badChild.nodes['section-1'].children = [{ toString: 0 }];
+>   return {
+>     rootErrors: validateDocument(badRoot),
+>     childErrors: validateDocument(badChild),
+>   };
+> }
+>
+> function probeTree(mutator) {
+>   const candidate = clone(documentState);
+>   mutator(candidate);
+>   return validateDocument(candidate);
+> }
+>
+> function editorState() {
+>   return {
+>     selectedId: editorSession.selectedId,
+>     dragPreview: clone(editorSession.dragPreview),
+>     revision: current.revision,
+>     children: [...current.nodes['section-1'].children],
+>     undoDepth: past.length,
+>     redoDepth: future.length,
+>     activeRevision: activeSnapshot.revision,
+>   };
+> }
+>
+> console.log(JSON.stringify({
+>   initialTreeErrors: validateDocument(current),
+>   sharedChildErrors: makeInvalidSharedChildExample(),
+>   cycleErrors: makeInvalidCycleExample(),
+>   malformedIdErrors: makeMalformedIdExamples(),
+> }));
+> console.log(JSON.stringify(updateHeadingText('heading-1', '欢迎'))); // revision 13
+> console.log(JSON.stringify({ selection: selectNode('heading-1'), state: editorState() }));
+> console.log(JSON.stringify({
+>   drag: startDrag('section-1', 'heading-1', 'button-1'),
+>   canvas: preview(current, editorSession),
+>   state: editorState(),
+> }));
+> console.log(JSON.stringify({
+>   cancel: cancelDrag(),
+>   canvas: preview(current, editorSession),
+>   state: editorState(),
+> }));
+> console.log(JSON.stringify(startDrag('section-1', 'heading-1', 'button-1')));
+> console.log(JSON.stringify({ drop: dropDragPreview(), canvas: preview(current, editorSession), state: editorState() })); // revision 14
+> console.log(JSON.stringify(undo())); // revision 15, original order
+> console.log(JSON.stringify(redo())); // revision 16, moved order restored
+> console.log(JSON.stringify({ state: editorState(), canvas: preview(current, editorSession) }));
+> console.log(JSON.stringify({ save: saveDraft(16), activeRevisionAfterSave: activeSnapshot.revision }));
+> console.log(JSON.stringify({
+>   publishRequest: 16,
+>   result: publishRevision(16),
+>   activeRevision: activeSnapshot.revision,
+> }));
+> console.log(JSON.stringify(updateHeadingText('heading-1', ''))); // revision 17
+> console.log(JSON.stringify({
+>   preview: preview(current),
+>   save: saveDraft(17),
+>   publishRequest: 17,
+>   publish: publishRevision(17),
+>   activeRevision: activeSnapshot.revision,
+>   publicTitle: activeSnapshot.document.nodes['heading-1'].props.text,
+> }));
+>
+> for (const [branch, mutate] of [
+>   ['duplicate-root', doc => doc.rootIds.push('section-1')],
+>   ['orphan-node', doc => { doc.nodes['orphan-1'] = { id: 'orphan-1', type: 'section', props: { label: '孤儿' }, children: [] }; }],
+>   ['dangling-child', doc => doc.nodes['section-1'].children.push('missing-1')],
+>   ['prototype-like-child', doc => doc.nodes['section-1'].children.push('constructor')],
+>   ['duplicate-edge', doc => doc.nodes['section-1'].children.push('heading-1')],
+>   ['invalid-child-list', doc => { doc.nodes['heading-1'].children = null; }],
+>   ['invalid-heading-level', doc => { doc.nodes['heading-1'].props.level = 8; }],
+> ]) {
+>   console.log(JSON.stringify({ branch, errors: probeTree(mutate) }));
+> }
+> ~~~
+
+完整实现还验证了多父节点、环、重复根、孤儿、悬空引用和非法字段类型。两个分组同时引用 `heading-1` 会得到多父错误；`rootIds` 或 `children` 中出现对象而非字符串 ID 时，返回结构错误列表。
+
+本例用整份内容快照保存 `past` 与 `future`，实现直观但会随历史长度和文档大小占用更多存储。逆命令或操作日志可减少重复内容，却必须为移动、删除和之后发生的变更正确定义反向操作；协作写入还要说明操作针对哪个基线。示例中的 `style` 是明确选择持久化的布局属性；若它只记录拖动中尚未确认的位置，就应放进会话而不是文档。
+
+在本例中，`past` 与 `future` 保存可恢复的文档内容；每次恢复仍从当前最大修订号加一，所以撤销不会改写过去已保存的修订。保存 16 把确切修订副本放入 `savedDrafts`，但不会切换活动指针；只有显式请求发布 16 且门禁通过，访客才改读 r16。之后填写空标题并提交得到 r17，不会污染已保存的 16；r17 也不能覆盖已发布的 r16。撤销历史只在当前编辑会话中，保存档案与发布快照有独立生命周期；应用重启后恢复撤销能力需要另行持久化历史或命令日志。普通编辑预览调用 `preview(document)`，始终按文档顺序遍历；画布调用 `preview(document, editorSession)`，在拖动期间临时使用 `dragPreview.children` 生成画布描述。两种调用都不改文档，也不模拟浏览器布局或截图渲染。
+
+代码用 `structuredClone` 与深度冻结表达状态所有者不把可变内部对象直接交给视图。快照值限于 JSON 形状；实际框架可以用不可变数据结构、序列化边界或受控更新实现同样的隔离。代码只模拟单个编辑会话，不包含两个编辑器同时写入时的版本比较，因此不能用它推断并发保存已经安全。示例里 `activeSnapshot` 的一次同步赋值只标出切换边界；多进程服务需要用数据库事务或等效的原子更新来切换持久化指针。
 
 ### `schema`（结构描述）描述形状，业务规则解释含义
 
-**component registry（组件注册表）**为每种类型提供配置形状、渲染器和可选校验器。`schema`（结构描述）可声明标题文本是字符串、按钮标签必填。JSON Schema 2020-12 可校验 JSON 结构，但应用还需检查引用页面是否存在、用户是否有权发布，或组件树是否允许特定父子关系。
+组件注册表可为每种类型提供配置形状、渲染器和校验器。JSON Schema 2020-12 的 `type`、`required`、数组和数值约束可表达很多 JSON 结构条件；上面的 `validateDocument` 展示了跨节点关系，例如树必须只有一个父节点、所有节点要从根可达。这类整体图约束还要由应用代码或专门扩展实现。引用目标是否存在、用户是否有权操作、发布是否允许空标题，也属于结构类型以外的产品和服务端规则。
 
-未知类型、缺失 ID、非法属性和悬空引用都应在持久化或发布前给出可定位错误。客户端校验改善反馈，但授权应由可信服务端重新检查。不要让渲染阶段以空白组件静默掩盖无效文档。
+持久化载入时先解析结构并返回能定位到节点的错误；编辑命令再检查状态变更；发布服务对选定修订重新做结构、引用、权限与资源确认。浏览器里的即时校验能更早提示，但不能替代可信边界上的校验。渲染器也不应把无效节点静默隐藏成空白页，否则读者无法区分“内容本来为空”和“数据已损坏”。本例的编辑规则允许标题文本为空字符串，发布规则另要求非空；空标题可预览和保存，但发布该修订会失败。这个非空条件只是本例产品政策，不是通用页面文档规则。
 
 ### 文档顺序不等于全部绘制顺序
 
-子节点顺序可定义图层面板中的逻辑顺序，但浏览器绘制还受定位、`z-index` 和 **stacking context（堆叠上下文）**影响。若产品提供“置顶”或“置底”，要定义它改的是节点顺序、同一堆叠上下文内的层级，还是更高层渲染模型。单独重排数组不能保证元素跨越 CSS 上下文覆盖另一个元素。
+`section-1.children` 的顺序可以决定组件在图层面板中的逻辑顺序，但浏览器绘制还受 Cascading Style Sheets (层叠样式表，CSS) 定位、`z-index` 和 **stacking context (层叠上下文)** 影响。本例重排两个同级子节点只改变树顺序；若某组件创建了独立层叠上下文，把它在数组里移到另一个节点后面，不保证视觉上覆盖另一个上下文中的元素。若产品提供“置顶”或“置底”，需明确它改变的是树顺序、同一层叠上下文内的绘制级别，还是另一个独立渲染模型。
 
 ### 发布绑定确切修订，避免混入未校验草稿
 
-发布服务应选择具体文档修订，执行结构校验、引用检查、权限检查和资源确认，再生成公开页面所需数据或制品。快照应记录 `documentId`、`revision`、`schema` 版本等来源。若构建期间只引用“当前文档”，草稿更新可能让未校验内容混入产物。仅固定文档修订还不足以重现输出：快照应同时固定组件注册表、渲染器和会影响页面的外部资源版本，或保存确切制品并封存/固定它引用的外部资源；否则重渲染或浏览仍可能读到新素材，显示效果随时间变化。
+发布服务先选出具体保存修订，再检查结构与组件属性、引用目标、当前用户权限和需要的外部资源，全部通过后才生成公开版本。草稿修订 17 为空标题时，本例发布入口拒绝它，`activeSnapshot` 仍指向修订 16；访客不会突然看到未通过发布规则的修订。产品可以设计不同的“保存即发布”流程，但要清楚哪些校验在编辑期、保存期和发布期执行，不能让同一条规则在一个入口允许、在另一个入口意外阻断。
 
-草稿修订和公开版本可并存：编辑生成 revision 14 时，访客仍看到已校验的 revision 13。发布完成后原子切换活动版本引用；回滚则重新指向已发布快照，而不是把旧内容复制进当前草稿。
+下图并列展开先后的两次发布请求。左列开始时活动版是 r12；左列发布完成后，再编辑和保存 r17，才开始右列。保存操作本身都不改变活动指针。
+
+~~~mermaid
+flowchart TD
+    R16["第一次发布<br/>已保存 r16<br/>标题：欢迎<br/>活动版 r12"] -->|明确请求发布 r16| Check16["校验通过<br/>生成不可变快照<br/>r16"]
+    Check16 --> Switch16["原子切换<br/>活动指针<br/>r12 → r16"]
+    Switch16 --> Public16["访客读取 r16<br/>标题：欢迎"]
+    R17["第二次发布<br/>已保存 r17<br/>标题为空<br/>活动版 r16"] -->|明确请求发布 r17| Reject17["空标题校验失败<br/>不生成新快照<br/>不切换活动指针"]
+    Reject17 --> Keep16["访客仍读取 r16<br/>标题：欢迎"]
+~~~
+
+快照记录 `documentId`、`revision`、`schemaVersion`、组件注册表版本和渲染器版本。只固定文档修订不足以复现画面：组件渲染代码或引用的外部图片发生变化后，旧修订可能重新渲染出不同内容。系统可固定这些依赖版本，也可保存确切构建产物并固定其外部资源引用。只有待校验的具体修订和所有会影响输出的依赖都确定后，才生成并原子切换活动快照指针。
+
+草稿与公开版可以并存：修订 17 正在编辑，访客仍读取已接受的修订 16。失败发布不删除草稿或改写当前页面；若要回滚，只需把活动指针重新指向一个仍可用的既有快照。撤销则作用在编辑历史里，二者解决的是不同问题。
 
 ### 协作、传输与冲突解决需要分别设计
 
-`WebSocket` 能传输编辑事件，却不会自动决定两人同时移动同一节点时谁胜出。单写者模型可让服务端排序命令；锁能防并发但增加等待。operational transformation（操作转换，OT）通过转换并发操作维护规定的一致性；conflict-free replicated data type（无冲突复制数据类型，CRDT）可在满足其收敛条件时合并副本更新。两种方案都要求定义操作格式、冲突语义与版本兼容。
+`WebSocket` 能传输编辑事件，却不会自动决定两人同时移动 `heading-1` 时谁先提交。单写者模型可由服务端按顺序处理命令；版本条件或锁能拒绝并发写入，但会增加冲突提示或等待。**operational transformation (操作转换，OT)** 按并发操作调整彼此内容以维护规定的一致性；**conflict-free replicated data type (无冲突复制数据类型，CRDT)** 只有在满足其数据类型的收敛条件后，才能让副本合并并最终收敛。两者仍需定义操作格式、删除与移动语义、版本兼容和树约束。
 
-按离线需求、即时合并、服务端排序和审计要求选择机制。即便采用 CRDT，树结构约束、组件 schema 和发布校验仍然必要。协作是数据所有权与更新协议的一部分，不能因使用 WebSocket 就认为冲突已解决。
-
-**相关机制：**[前端架构怎样划分状态所有权？](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)说明谁持有文档与会话状态；[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)说明创建、校验和通知的局部实现。
+按离线需求、实时合并要求、服务端排序能力和审计要求选机制。即便采用 OT 或 CRDT，节点类型校验、树的父子约束和发布规则仍然需要执行。具体文档状态由谁持有见[前端架构怎样划分呈现、交互和数据所有权？](#51.%20%E5%89%8D%E7%AB%AF%E6%9E%B6%E6%9E%84%E6%80%8E%E6%A0%B7%E5%88%92%E5%88%86%E5%91%88%E7%8E%B0%E3%80%81%E4%BA%A4%E4%BA%92%E5%92%8C%E6%95%B0%E6%8D%AE%E6%89%80%E6%9C%89%E6%9D%83%EF%BC%9F)；创建、局部校验和通知视图的实现见[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)。设计模式篇的 `nodes` 数组只是聚焦对象协作的教学简化；本篇和前端架构篇展示完整 `rootIds` 与 ID 索引树。
 
 > [!info]- 来源
-> - JSON Schema 2020-12 文档与校验规范：[JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12)。
-> - 堆叠上下文中的绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
-> - 组件共享状态的单一所有权示例：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
-> - CRDT 的副本收敛条件：[Shapiro 等，Conflict-free Replicated Data Types（2011）](https://perso.lip6.fr/Marc.Shapiro/papers/2011/CRDTs_SSS-2011.pdf)。
-> - OT 中并发操作转换与一致性属性：[Sun 等，Achieving Convergence, Causality Preservation, and Intention Preservation in Real-Time Cooperative Editing Systems（1998）](https://www.cs.cityu.edu.hk/~jia/research/reduce98.pdf)。
+> - **JSON 结构校验。** JSON Schema Draft 2020-12，Validation §6 的 `type`、`required`、数组和数值关键词；其用途包括验证 JSON 实例结构：[规范](https://json-schema.org/draft/2020-12/json-schema-validation)，2026-11-12 核对。
+> - **绘制顺序。** W3C CSS 2.2，Appendix E “Elaborate description of Stacking Contexts”：[规范](https://www.w3.org/TR/CSS22/zindex.html)，2026-11-12 核对。
+> - **前端共享状态。** React，“Sharing State Between Components”，共同所有者与状态上提：[原文](https://react.dev/learn/sharing-state-between-components)，2026-11-12 核对。
+> - **客户端反馈与可信边界校验。** OWASP Input Validation Cheat Sheet，“Common Pitfalls · Client-only checks”建议浏览器校验用于即时反馈，服务端仍要校验输入：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html#common-pitfalls)，2026-11-12 核对。
+> - **资源授权。** OWASP Authorization Cheat Sheet，“Validate the Permissions on Every Request”要求针对每个请求校验权限：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#validate-the-permissions-on-every-request)，2026-11-12 核对。
+> - **副本收敛。** Shapiro 等，*Conflict-free Replicated Data Types*（2011），强最终一致性与状态/操作型 CRDT 的充分条件，§§2–3：[论文](https://perso.lip6.fr/Marc.Shapiro/papers/2011/CRDTs_SSS-2011.pdf)。
+> - **并发操作转换。** Sun 等，*Achieving Convergence, Causality Preservation, and Intention Preservation in Real-Time Cooperative Editing Systems*（1998），OT 的一致性性质：[论文](https://www.cs.cityu.edu.hk/~jia/research/reduce98.pdf)。
 ## 54. Scrum 怎样让团队检查并调整工作？
 
 假设团队正在开发页面编辑器，目标是让用户创建内容并安全发布。产品方向可能需要数月才能实现，单个 Sprint（冲刺周期）只能完成其中一部分；团队需要不断判断工作是否仍有价值、遇到阻碍时是否要调整计划。

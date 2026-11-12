@@ -1,82 +1,111 @@
 # 前端架构怎样划分呈现、交互和数据所有权？
 
-以下沿用合成的页面编辑器案例：画布显示文档树，检查器编辑当前节点属性，工具栏新增组件，预览页呈现访客看到的页面。如果各处各存一份节点数据，拖动或重命名就可能让它们失步。架构应先说明每份状态由谁拥有、哪些模块能发出修改，再决定组件怎样拆分或代码如何部署。
+以一个合成的页面编辑器为例：资产 `42` 当前是 revision (修订) 12，`section-1` 下有标题 `heading-1` 和报名按钮 `button-1`。为看清树关系，本篇将两个组件放进一个合成分组节点；关键是稳定 ID (标识符)、父子关系与修订边界，而不是这个容器类型。画布显示文档树，检查器修改当前节点，编辑预览读取当前草稿，访客读取已发布页面。架构要回答三件事：哪份状态可保存、谁能提交文档变更、哪些视图消费同一份结果。保存草稿不会发布；发布服务只在编辑者明确请求后校验选定的已保存修订，通过后才切换公开快照。
 
-~~~mermaid
-flowchart TD
-    Select["选择节点"] --> Session["编辑会话：selectedId / dragPreview"]
-    Drag["拖动中的候选位置"] --> Session
-    Session --> CanvasPreview["画布显示选中和拖动预览"]
-    Session --> Inspector["检查器显示当前节点属性"]
-    Commit["确认属性修改或放下排序"] --> Intent["命令表达已提交的编辑"]
-    Intent --> Owner["文档状态所有者"]
-    Owner --> Revision["生成新的文档修订"]
-    Revision --> Canvas["画布读取新文档"]
-    Revision --> Inspector
-    Revision --> Preview["预览器读取同一修订"]
-~~~
+| 状态 | 初始值 | 生命周期 | 所有者 |
+|---|---|---|---|
+| 页面文档 | `revision=12`、`rootIds=['section-1']`、`section-1.children=['heading-1','button-1']` | 可保存、可撤销、可作为预览输入 | 文档状态所有者 |
+| 编辑会话 | `selectedId=null`、`openPanel='inspector'`、`dragPreview=null` | 当前编辑器会话；不进入页面文档 | 编辑会话状态所有者 |
+| 组件局部状态 | 输入焦点、光标与尚未确认的输入缓冲 | 当前组件挂载期间 | 对应输入组件 |
+| 公开页面 | 活动指针为 `r12`，指向已发布的不可变快照 | 多个草稿修订并存时仍保持原发布版 | 发布服务与快照存储 |
 
-文档节点属于可保存页面内容；当前选中项、拖动状态和面板属于编辑会话；焦点和输入光标等短暂状态通常留在组件内部。不是所有状态都要进全局状态存储，但每种状态都应有清楚的所有者。
+完整的节点对象、命令、撤销和发布代码见[怎样建模页面文档、编辑会话和发布快照？](low-code-editor-data-model.md)。下面先追一次编辑如何改变文档，再看已保存修订怎样成为公开页面，最后讨论组件、模块与部署边界。
 
 ## 单向数据流让修改原因可追踪
 
-unidirectional data flow（单向数据流）让状态所有者把当前数据传给视图，视图通过事件或命令请求变化。检查器不私下改写画布节点副本，而是发出“把 `heading-1` 的 `text` 改成‘欢迎’”这样的意图。
+**unidirectional data flow (单向数据流)** 让状态所有者把当前数据交给视图，视图通过事件或命令请求变化。检查器不能私下改写自己保存的节点副本；它应发出“把 `heading-1` 的 `text` 改成‘欢迎’”这样的意图，由文档所有者检查并产生新修订。若命令未通过校验，错误返回给发起方，当前文档修订保持不变。
 
-以下沿用同一个修订 12 的页面案例；完整文档与会话输入见[修订 12 的文档与编辑会话数据](low-code-editor-data-model.md#文档树和编辑会话记录不同事实)，可运行命令代码也在那里。选择、拖动预览和已提交修改走不同路径：
+下图的实线表示提交与后续显示，虚线表示读取已有状态。每次只处理一个命令；先改标题得到修订 13，再确认排序得到修订 14，具体值在图后的表中展开。
 
-| 事件 | 编辑会话 | 文档修订 |
+~~~mermaid
+flowchart TD
+    Input["用户确认修改<br/>setText / move"] --> Owner["文档所有者<br/>校验命令"]
+    Current["当前文档修订"] -.->|作为校验依据| Owner
+    Owner -->|通过| New["提交新修订<br/>标题：12 → 13<br/>排序：13 → 14"]
+    Owner -->|拒绝| Error["返回错误<br/>文档修订不变"]
+    New --> Views["画布 / 检查器<br/>读取当前文档"]
+    New --> Preview["编辑预览<br/>只读取当前文档"]
+    Session["编辑会话<br/>selectedId<br/>dragPreview"] -.->|辅助界面显示| Views
+~~~
+
+同一个修订 12 案例中，选择、输入、拖动预览和已提交修改走不同路径：
+
+| 用户动作 | 会话或组件状态 | 文档结果 |
 |---|---|---|
-| 选中 `heading-1` | `selectedId` 设为 `heading-1` | `revision` 仍为 12，文本仍是“首页” |
-| 在检查器确认标题改为“欢迎” | `selectedId` 仍为 `heading-1` | 所有者校验后产生 `revision` 13 |
-| 把 `heading-1` 拖到 `button-1` 后的预览 | `dragPreview` 记录候选位置 | `revision` 仍为 13，节点顺序不变 |
-| 在画布放下并确认排序 | 清除 `dragPreview` | 独立命令产生 `revision` 14，`rootIds` 变为 `['button-1', 'heading-1']` |
+| 选中 `heading-1` | `selectedId` 变成 `heading-1` | 仍为修订 12，标题还是“首页” |
+| 在检查器输入但未确认 | 输入组件暂存 `textDraft='欢迎'`，光标留在组件中 | 仍为修订 12 |
+| 确认标题文案 | 发出 `setText('heading-1', '欢迎')` 命令 | 所有者校验后提交修订 13 |
+| 拖动标题越过按钮 | `dragPreview` 记录 `section-1` 内候选顺序 | 仍为修订 13，树顺序不变 |
+| 在画布放下并确认 | 发出移动命令；成功后清除 `dragPreview` | 所有者提交修订 14，子节点顺序变成 `['button-1','heading-1']` |
 
-所以拖动中的每个鼠标移动都不需要写入可保存文档；只有放下并接受排序变更时才提交文档命令。React 官方状态共享指南用“将共享状态提升到最近共同父级”解释这种所有权；其他框架可以用不同机制实现同样约束。经典 Flux 模型让 action（动作）经过 dispatcher（分发器）到 store（状态存储），再由 store 通知 view（视图）；其他状态库采用不同契约，重点是让状态变化及其原因可追踪。
+鼠标移动只改变会话里的候选位置。只有放下后才把命令交给文档所有者，因此撤销历史和保存任务不会记录几十次无意义的指针坐标。画布和检查器随后都从修订 14 读取，而不是分别维护一份副本。撤销也由文档所有者处理；它恢复先前的内容，但仍产生一个新的单调递增修订号，详见数据模型章节。
+
+React 的状态共享指南以“把要协调的状态移动到最近共同父组件”解释了同一所有权思路；它不意味着所有状态都要搬到一个全局对象。其他框架可用不同机制，只要选中项、草稿输入与已提交文档的持有者仍清楚可辨。若浏览器端只是草稿缓存，服务端在保存时还要检查当前修订或版本条件，避免较旧客户端覆盖较新的提交；这一步属于持久化合同，不应由视图自行假定成功。
+
+**从草稿到公开页面。** 编辑者可以保存修订 14，访客此时仍读取活动快照 r12。只有编辑者另外请求发布该已保存修订，发布服务才开始校验；通过后生成不可变快照，再原子切换活动指针。校验拒绝时，已保存草稿和线上页面仍是两份不同状态。
+
+~~~mermaid
+flowchart TD
+    Saved["已保存 r14<br/>活动快照 r12"] -->|编辑者明确请求发布| Gate{"发布校验"}
+    Gate -->|通过| Snapshot["生成不可变快照<br/>r14"]
+    Snapshot --> Switch["原子切换<br/>活动指针到 r14"]
+    Switch --> Public["访客读取 r14"]
+    Gate -->|拒绝| Keep["不切换指针<br/>访客仍读取 r12"]
+~~~
 
 ## 组件与分层分别解决什么问题？
 
-**component-based architecture（基于组件的架构）**按可复用视图和交互边界拆分 user interface（用户界面，UI）。`Canvas` 呈现画布，`Inspector` 编辑属性，`NodeView` 呈现一种节点类型。组件接口应写明输入输出：数据与回调怎样传入，选择、修改、删除等意图怎样传出。不是每个组件都要持有状态、调用服务并执行副作用。
+**component-based architecture (基于组件的架构)** 按可复用视图和交互边界拆分 user interface (用户界面，UI)。`Canvas` 呈现文档树，`Inspector` 编辑选中节点的属性，`NodeView` 呈现一种节点类型。组件接口应说明数据和回调怎样传入，以及选择、修改、删除等意图怎样传出。视图不因被拆成组件就自动得到文档所有权。
 
-分层则按职责分开状态管理、领域命令、持久化适配和视图。小编辑器可能只需要几个清楚模块；只有一层确实承载独立规则或依赖边界时，再拆成独立包或服务。为每个组件都造“控制器—服务—仓库”容易使跟踪简单操作变慢。
+分层则按职责分开交互状态、文档命令、持久化适配和视图。这个合成编辑器可先用少数模块：会话控制器持有 `selectedId` 与 `dragPreview`；文档所有者接受命令、校验结构与业务规则、产生修订；存储适配器保存一个指定修订；视图读取会话和文档投影。只有某层确实承载独立规则或依赖边界，才值得拆成独立包或服务。为每个组件都造“控制器—服务—仓库”会增加跨层跳转，却未必减少变化范围。
 
-文档树顺序也不等于最终绘制顺序。浏览器布局和 CSS stacking context（堆叠上下文）参与绘制；若编辑器显示精确图层，需要把节点顺序、定位和堆叠上下文规则一并纳入模型。
+文档树的逻辑顺序也不等于最终绘制顺序。浏览器会依 CSS stacking context (层叠上下文) 和定位规则绘制；编辑器若要提供“置顶”，必须说明改的是树的兄弟顺序、同一层叠上下文内的层级，还是更高层渲染模型。单独重排 `children` 不保证节点覆盖另一个不同层叠上下文中的元素。
 
 ## 何时微前端有实际收益？
 
-**micro-frontend（微前端）**按业务或团队边界拆分可独立开发、集成、发布的部分。可以构建时组合、运行时加载、用 iframe 或 Web Components；隔离、依赖共享、导航和样式方式各不相同。
+**micro-frontend (微前端)** 把前端的一部分按业务或团队边界独立开发、集成和发布。可以在构建时组合、运行时加载，也可以用 iframe 或 Web Components；它们在隔离、依赖共享、导航和样式方面各有成本。
 
-页面编辑器的检查器与画布若由同一团队同步发布，放在一个模块化应用更简单。若多支独立团队分别负责组件库、编辑器和资产管理，且确实需要独立发布，微前端可能减少协调阻塞。此时仍要定义路由、权限、设计系统、可访问性、错误处理、遥测、依赖版本和加载失败处理，否则集成成本会变成运行时故障。
+若画布、检查器和资产面板由同一团队一起发布，放在一个模块化应用通常更直接；当前主要问题若是两处各存节点副本，拆成微前端只会把同步问题推到跨应用通信。若组件库、页面编辑器和资产管理由不同团队负责，确有独立发布节奏且集成合同稳定，拆分才可能减少发布协调。与此同时，运行时集成会增加路由、深链、身份传递、样式隔离、依赖版本、可访问性、故障处理和监控等合同；这些成本必须由独立发布带来的收益抵消。
 
-微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。若主要问题是共享状态或数据流不清，先解决状态所有权通常更直接。
+微前端是组织与部署边界，不是把普通组件拆成多个项目的同义词。先解决文档状态由谁持有，再判断是否存在团队自治、独立部署或渐进迁移的实际需求。
 
 ## 怎样迁移微前端而不打断深链、身份与回退？
 
-沿用一个合成的页面编辑器：文档 `assetId=42` 当前处于 `revision=12`，选中的节点是 `heading-1`。旧应用通过 `/editor/assets/42?panel=inspector&node=heading-1#canvas` 打开它，新入口使用 `/assets/42/edit?panel=inspector&node=heading-1#canvas`。路径和文档 ID 是本教学变体；页面文档与编辑会话状态仍按[编辑器数据模型](low-code-editor-data-model.md)的稳定节点 ID 和修订区分。`node=heading-1` 只是可恢复的界面选择，不会进入页面文档或修改 revision。新旧地址先并存，让旧书签、邮件链接和浏览器历史都有确定去向。
+现在从单应用切换到另一种合成部署情境：资产 42 当前仍为修订 12，旧入口 `/editor/assets/42?panel=inspector&node=heading-1#canvas` 要逐步迁到 `/assets/42/edit?panel=inspector&node=heading-1#canvas`。文档字段不变；`node=heading-1` 是可恢复的界面选择，不是文档内容，也不会推进 `revision`。新旧地址先并存，避免旧书签和历史项没有去向。
 
-迁移时由同一个 shell（应用外壳）持有顶级路由、会话启动、公共导航与错误边界；路由注册表把旧路径交给 `EditorV1`，新路径先交给 `EditorV1`，再按用户 cohort（灰度分组）将一小部分流量映射至 `EditorV2`。两版可独立构建，但路由、参数和通用数据格式是容器与子应用之间的合同。路由决策须在挂载前作出：
+shell (应用外壳) 可以负责顶级路由、公共导航和错误边界。路由注册表先把两种地址都交给 `EditorV1`，再让 cohort (灰度分组) 中的一小部分用户把新地址路由到 `EditorV2`。这是一个合同选择：也可以让子应用共享同一个路由器或由构建入口组合，但不可让两个互不知情的路由器同时争抢浏览器历史。
 
-| 地址或状态 | shell 的责任 | 子应用收到的输入 |
+| 地址或事件 | 外壳的路由选择 | 子应用输入 |
 |---|---|---|
-| 旧深链 `/editor/assets/42?panel=inspector&node=heading-1#canvas` | 迁移窗口内继续交给 V1；用户从页面主动打开新入口时才新增新路径 | `assetId=42`、`panel=inspector`、`node=heading-1`、`#canvas` |
-| 新地址 `/assets/42/edit?panel=inspector&node=heading-1#canvas`，未进入 cohort | 路由仍由 `EditorV1` 处理，不让用户落入空白占位页 | 同一 `assetId` 与视图状态 |
-| 同一新地址，进入 cohort | 动态加载 `EditorV2`，并显示加载或失败状态 | 同一 `assetId` 与视图状态，不另造一份身份 |
-| 浏览器 Back / Forward | shell 独自响应 `popstate` 并重新匹配完整地址 | `panel` 和有效 `node` 从恢复的 URL 查询恢复；片段仍定位到 `#canvas` |
+| 旧深链 | 迁移窗口内继续交给 V1 | `assetId=42`、`panel=inspector`、`node=heading-1`、`#canvas` |
+| 新地址，未进 cohort | 先交给 V1，不呈现空白占位页 | 同一资源与视图状态 |
+| 新地址，进入 cohort | 加载 V2，显示加载或失败状态 | 同一资源与视图状态 |
+| 直接打开或刷新 | 完整 URL 匹配后等待所选子应用挂载 | 从 query 恢复选择；目标挂载后按 `#canvas` 定位 |
+| Back / Forward | 根据浏览器恢复的完整 URL 重新匹配路由 | 从 query 恢复选择，并在目标挂载后恢复 URL fragment (片段) 定位 |
 
-每个子应用只处理传给它的资源标识和视图状态，通过 shell 提供的 `navigate()` 或明确的同源链接请求跨边界导航。shell 是唯一的 history（历史记录）所有者，因此 V1/V2 不会各自安装互不知情的路由器、重复写 `pushState` 或抢先处理 Back。迁移窗口保留旧路由供旧书签与返回历史使用；用户从旧界面主动打开新入口时，shell 用 `pushState` 记录新路径，这样 Back 可回到原页面。若迁移窗口结束后需把旧路由作为别名改写到新路径，才用 `replaceState` 保留原有 query 与 fragment，避免用户按 Back 时在两个等价地址间循环。浏览器处理新地址的硬刷新请求时，静态宿主还须将已知前端路径回退到 shell HTML，同时仍把 `/api/` 请求交给 API 服务。
+V1 与 V2 都应声明同一个 `id="canvas"` 目标。直接打开或刷新时，外壳先选定子应用，编辑器等目标节点随视图挂载后，再读取当前 `location.hash` 并定位到目标；不能假定异步加载的画布在浏览器首次处理 fragment 时已经存在。`pushState()` 和 `replaceState()` 只更新历史项和 URL，不会触发浏览器的 fragment 定位，所以发起导航的路由所有者应在视图挂载后调用同一恢复逻辑。Back / Forward 触发 `popstate` 后，应用重新读取完整 URL、恢复选择，并在目标挂载后定位。迁移验收要分别断言 `#canvas` 保留在 URL 中，以及画布确实进入视口；只检查 hash 不足以证明深链可用。
 
-身份也由宿主边界明确归属。本例 shell 通过 `HttpOnly`、`Secure` 的同源会话 cookie 建立身份，给子应用 `assetId`、非敏感显示信息和受限的数据访问接口，不把访问令牌或会话凭据放入路由参数、DOM、共享状态广播或子应用的 prompt。V1 与 V2 都通过同源 API 读取 `/api/assets/42`；浏览器随请求带会话 cookie，服务端在每次读取和写入时验证当前主体是否能访问该资源。客户端允许显示哪个路由只决定可见页面，不能替代服务端资源鉴权。`node` 只在页面文档加载后与该 revision 的稳定节点 ID 对照；缺失或不存在的节点参数会清除选择并显示文档，而不是请求任意资源。若子应用部署到独立 origin（源），cookie、令牌和跨源身份方案要另外设计；不能假设同源会话自动跨域。
+浏览器 History API (历史记录接口) 中，`pushState()` 会新增一条历史项，适合用户主动从旧入口进入新入口；`replaceState()` 替换当前历史项，适合旧路径已成为别名、且不希望 Back 在两个等价地址间循环时使用。应用在历史遍历时响应 `popstate` 并重新读取 URL；发起 `pushState()` 导航的路由所有者也要同步更新自身状态。改写旧路径时保留 query 与 fragment；服务端还要让前端深链回退到 shell HTML，同时继续把 `/api/` 交给 API (应用程序接口) 服务。
 
-同一份页面文档以明确版本的 schema 交给 V1 和 V2。本轮只迁移入口，不修改文档字段或服务端数据协议，因此两版都能读取和写回 `revision=12` 的既有文档。若 V2 将来要写入新字段，只有在 V1 会原样保留未知字段、或迁移窗口的路由规则能保证旧版不会重新打开含新字段的数据时才可开放；仅仅让 V1 读入时忽略字段，不保证下一次保存时不会把它删掉。删除或重解释字段也要等 V1 不再负责读写。若当前 revision 仍是 12，V2 的未保存草稿不能只因它的动态 chunk 加载失败就被静默丢弃：在编辑开始前加载失败，shell 可以映射到 V1；编辑开始后若要切换实现，应先将草稿转换成共享会话格式或让用户留在当前编辑器处理，否则停止回退并保留草稿。服务端拒绝的未授权访问不应触发降级到另一个前端，避免把代码加载回退误当成授权绕过。
+每个子应用通过明确的 `navigate()` 或同源链接请求跨边界导航。选中的 `node` 在文档加载后才与该修订的稳定节点 ID 对照；若节点不存在，就清除选择并显示页面，不把参数当成任意资源读取入口。
 
-发布按路由逐步改变 owner：先让 shell 可加载两版并验证同一输入合同；再在限定 cohort 中把 `/assets/:assetId/edit` 分给 V2；确认直接深链与刷新、嵌套 query/fragment、V1↔V2 导航、Back/Forward、未授权资源拒绝、V2 chunk 加载失败和 V1 兼容读取都正确后才扩大分流。每个检查都对应一次可见状态变化，而不是只确认首页能挂载。若 V2 的加载率或错误率越过约定门槛，路由注册表将新地址恢复映射到 V1；保持该路径可用让已有书签和历史项继续打开旧实现。仍需保留两版 chunk 和向后兼容的数据合同，才可以在出现问题后真正回退，而不只是把 flag 改回去。
+身份也要在部署边界定义。本例外壳使用同源会话 cookie，设置 `HttpOnly`、`Secure` 与适用的 `SameSite` 属性；给子应用传 `assetId`、非敏感显示数据和受限的数据访问接口，不把会话凭据放入路由、DOM 或共享状态广播。浏览器发出的资源读取与写入仍由服务端逐次验证当前主体是否获准访问该资产。客户端“能否显示该路由”不代替授权；服务端拒绝应以拒绝结果呈现，不要误判成代码加载失败再静默切换到另一版。本例 V1 与 V2 都在 shell 的同一页面运行，仍处在同一浏览器文档信任边界；仅从不同 origin 加载脚本不构成隔离。若子应用运行在另一 origin 的独立文档或 iframe 中，则需要单独设计跨源消息、身份、cookie 属性与 API 访问；它与同一页面加载远程脚本的边界不同。
 
-路由契约是微前端沟通的一种公开边界；改变 route schema 或版本映射时要与所有链接来源一起验收。实施过程借用[静态资源版本并存与入口回滚](../../frontend/tooling/build-tools.md)中的旧 chunk 保留规则；新旧服务端资源合同仍要遵循[HTTP API 的授权与条件更新契约](../backend/http-api-contracts.md)。
+V1 和 V2 在迁移初期读取、写入相同版本的文档格式。若 V2 将来写入 V1 不认识的新字段，只有 V1 会原样保留它，或路由能确保旧版不再打开这些文档，才可开放；仅忽略未知字段可能让 V1 下次保存时把字段删除。删除或改变字段含义，也要等旧版不再负责读写。若 V2 加载失败发生在用户开始编辑之前，可安全把新地址映射回 V1；编辑开始之后若已有未保存草稿，就先转换并交接草稿，或留在当前编辑器给出错误，不能静默切回并丢失用户修改。
 
-**延伸阅读：**[设计原则怎样帮助定位真实变化边界？](software-design-principles.md)、[页面编辑器何时需要设计模式？](design-patterns-in-practice.md)、[怎样建模页面文档、编辑会话和发布快照？](low-code-editor-data-model.md)。
+发布按路由逐步改变处理者：先验证 shell 可加载两版并保持同一输入合同；再把新地址的一小组 cohort 交给 V2；检查直接深链与刷新时 hash 保留和画布定位、query、Back / Forward、未授权请求、V2 代码块加载失败、V1/V2 文档兼容与草稿保留，再扩大分流。若 V2 的错误率越过预设门槛，将新地址重新交给 V1。有效回退还要求 V1 代码仍可加载，且 V1 兼容当前数据格式。只有把流量开关拨回去、却没有旧代码或兼容格式，并不能恢复服务。
+
+路由格式是跨应用通信合同，改路径或参数时要更新所有链接来源和消费者。页面构建资源的版本并存与回滚见[构建工具怎样把源码变成可发布产物？](../../frontend/tooling/build-tools.md)；服务端读写仍遵循[如何设计可预期的 HTTP API 契约？](../backend/http-api-contracts.md)。
+
+**延伸阅读：** [如何让设计原则减少真实的修改成本？](software-design-principles.md)、[页面编辑器何时需要设计模式？](design-patterns-in-practice.md)、[怎样建模页面文档、编辑会话和发布快照？](low-code-editor-data-model.md)。
 
 > [!info]- 来源
-> - 组件间共享状态的所有权：[React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)。
-> - 堆叠上下文内的 CSS 绘制顺序：[W3C CSS 2.2, Appendix E](https://www.w3.org/TR/CSS22/zindex.html)。
-> - 微前端的团队发布边界和集成权衡：[Martin Fowler, Micro Frontends](https://martinfowler.com/articles/micro-frontends.html)。
-> - 路由作为容器与子应用之间的合同：[Martin Fowler, Micro Frontends, “Cross-application communication via routing”](https://martinfowler.com/articles/micro-frontends.html#Crossapplicationcommunicationviarouting)，核对日期 2026-11-09。
-> - 同源历史写入、恢复与 `popstate`：[WHATWG HTML Standard, History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，持续更新规范，核对日期 2026-11-09。
+> - **共享状态的所有权。** React，“Sharing State Between Components”，状态上提与每份状态唯一所有者：[原文](https://react.dev/learn/sharing-state-between-components)，2026-11-12 核对。
+> - **绘制顺序。** W3C CSS 2.2，Appendix E “Elaborate description of Stacking Contexts”，绘制顺序和层叠上下文：[原文](https://www.w3.org/TR/CSS22/zindex.html)，2026-11-12 核对。
+> - **独立团队发布的收益与集成成本。** Cam Jackson, “Micro Frontends,” 2019-06-19，Benefits、Integration approaches、Downsides 与 Operational and governance complexity：[原文](https://martinfowler.com/articles/micro-frontends.html)。
+> - **路由作为跨应用通信合同。** 同上，“Cross-application communication via routing”：[原文](https://martinfowler.com/articles/micro-frontends.html#Crossapplicationcommunicationviarouting)。
+> - **浏览器历史行为。** WHATWG HTML Living Standard，§7.2.5 “The `History` interface” 中 `pushState()`、`replaceState()` 与历史遍历：[原文](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，2026-11-12 核对。
+> - **片段定位。** WHATWG HTML Living Standard，“Scrolling to a fragment” 规定 fragment 对应文档中的定位目标；异步子应用须在目标挂载后恢复定位：[原文](https://html.spec.whatwg.org/multipage/browsing-the-web.html#scrolling-to-a-fragment)，2026-11-12 核对。
+> - **会话 cookie 属性。** OWASP Session Management Cheat Sheet，`Secure`、`HttpOnly` 与 `SameSite` 说明：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)，2026-11-12 核对。
+> - **客户端反馈与服务端校验。** OWASP Input Validation Cheat Sheet，“Client-only checks”：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)，2026-11-12 核对。
+> - **跨应用运行时与授权边界。** OWASP Micro Frontend Security Cheat Sheet，“Choose and Enforce Runtime Boundaries”说明远程脚本仍使用宿主页面权限、跨源 iframe 才建立 origin 边界；“Authorize Every Request on the Server”要求每次后端请求重新授权：[原文](https://cheatsheetseries.owasp.org/cheatsheets/Micro_Frontend_Security_Cheat_Sheet.html)，2026-11-12 核对。
