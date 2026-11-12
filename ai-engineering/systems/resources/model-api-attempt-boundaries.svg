@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="890" viewBox="0 0 700 890" role="img" aria-labelledby="title desc"><title id="title">同步模型 API 调用从队列到 SDK 的准入顺序</title><desc id="desc">本例的两种同步工作可共用应用队列和并发槽；按实际共享范围分别本地额度准入。每项任务从入口固定自己的截止 D。获得槽以后先检查取消、截止与预留，再调用 SDK。连接池等待发生在 SDK 传输层内部。任一阶段不再满足条件就结束本次尝试并清理已占资源。Batch 是另外的作业流程。</desc><defs><marker id="a" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#687e9c"/></marker><style>text{font-family:Inter,"PingFang SC",sans-serif;fill:#24344d;font-size:18px}.strong{font-size:20px;font-weight:650}.line{fill:none;stroke:#687e9c;stroke-width:2.5;marker-end:url(#a)}.route{fill:none;stroke:#687e9c;stroke-width:2.5}</style></defs><rect width="700" height="890" fill="white"/>
+<rect x="20" y="15" width="320" height="92" rx="12" fill="#edf4ff" stroke="#cfdaea" stroke-width="1.5"/>
+<text x="180.0" y="46" text-anchor="middle" class="strong">40 个手册块</text>
+<text x="180.0" y="75" text-anchor="middle" class="">同步 Embeddings 请求</text>
+<rect x="360" y="15" width="320" height="92" rx="12" fill="#f2edfc" stroke="#dbceef" stroke-width="1.5"/>
+<text x="520.0" y="46" text-anchor="middle" class="strong">一条报表问题</text>
+<text x="520.0" y="75" text-anchor="middle" class="">同步 Responses 请求</text>
+<path class="route" d="M180 107 V137 H520 V107"/>
+<path class="line" d="M350 137 V180"/>
+<rect x="100" y="180" width="500" height="92" rx="12" fill="#f4f7fb" stroke="#cfdaea" stroke-width="1.5"/>
+<text x="350.0" y="211" text-anchor="middle" class="strong">应用有界队列</text>
+<text x="350.0" y="240" text-anchor="middle" class="">每项任务入口固定 D；等待不重置 D</text>
+<path class="line" d="M350 272 V320"/>
+<rect x="100" y="320" width="500" height="92" rx="12" fill="#fff6e8" stroke="#e8d5b2" stroke-width="1.5"/>
+<text x="350.0" y="351" text-anchor="middle" class="strong">本地额度准入</text>
+<text x="350.0" y="380" text-anchor="middle" class="">按供应商实际额度作用域预留</text>
+<path class="line" d="M350 412 V460"/>
+<rect x="100" y="460" width="500" height="92" rx="12" fill="#f4f7fb" stroke="#cfdaea" stroke-width="1.5"/>
+<text x="350.0" y="491" text-anchor="middle" class="strong">取得应用并发槽</text>
+<text x="350.0" y="520" text-anchor="middle" class="">额度等待与槽位等待都消耗 D − now</text>
+<path class="line" d="M350 552 V600"/>
+<rect x="100" y="600" width="500" height="92" rx="12" fill="#edf7f2" stroke="#bddccc" stroke-width="1.5"/>
+<text x="350.0" y="631" text-anchor="middle" class="strong">调用 SDK 前再检查</text>
+<text x="350.0" y="660" text-anchor="middle" class="">尚未取消、未到 D、额度预留仍有效</text>
+<path class="line" d="M350 692 V740"/>
+<text x="385" y="725" text-anchor="start" class="">通过</text>
+<rect x="100" y="740" width="500" height="120" rx="12" fill="#f4f7fb" stroke="#cfdaea" stroke-width="1.5"/>
+<text x="350.0" y="771" text-anchor="middle" class="strong">调用 SDK → 传输层 → 远端</text>
+<text x="350.0" y="800" text-anchor="middle" class="">连接池等待在 SDK 内；也受 D 约束</text>
+<text x="350.0" y="829" text-anchor="middle" class="">一次 SDK 调用不等于一次 HTTP 发送</text>
+</svg>

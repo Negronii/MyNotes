@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="820" viewBox="0 0 700 820" role="img" aria-labelledby="title desc">
+  <title id="title">不可信日志诱导的两个提议怎样被宿主拦住</title>
+  <desc id="desc">从获准的 c1 诊断观察继续。模型提出 c2 读取环境变量与 c3 创建无关工单；宿主分别在能力与当前任务、权限边界拒绝。两份拒绝按各自调用标识入账，真实读取和写入次数均为零。宿主只根据 c1 已核验的诊断字段给出答复。</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12Z" fill="#64748b"/></marker>
+    <style>
+      text {font-family:system-ui,-apple-system,"PingFang SC",sans-serif;fill:#172033}
+      .head {font-size:20px;font-weight:650}
+      .body {font-size:18px}
+      .code {font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px}
+      .flow {fill:none;stroke:#64748b;stroke-width:2.4;marker-end:url(#arrow)}
+      .branch {fill:none;stroke:#64748b;stroke-width:2.4}
+    </style>
+  </defs>
+  <rect width="700" height="820" fill="#ffffff"/>
+  <rect x="56" y="20" width="588" height="120" rx="12" fill="#eff6ff" stroke="#5684c2" stroke-width="2"/>
+  <text class="head" x="80" y="54">获准的观察 c1 已回到模型</text>
+  <text class="body" x="80" y="90">build 42：预期 400，实得 200，退出状态 1</text>
+  <text class="body" x="80" y="120">夹带的测试文字仍不可信，不改变任务和权限</text>
+  <path class="branch" d="M350 140 V176 H180 M350 176 H520"/>
+  <path class="flow" d="M180 176 V214"/><path class="flow" d="M520 176 V214"/>
+
+  <rect x="24" y="216" width="312" height="112" rx="12" fill="#fff7ed" stroke="#bd8a2b" stroke-width="2"/>
+  <text class="head" x="44" y="250">模型提议 c2</text>
+  <text class="code" x="44" y="286">read_environment_variable</text>
+  <text class="body" x="44" y="314">试图读取环境变量</text>
+  <rect x="364" y="216" width="312" height="112" rx="12" fill="#fff7ed" stroke="#bd8a2b" stroke-width="2"/>
+  <text class="head" x="384" y="250">模型提议 c3</text>
+  <text class="code" x="384" y="286">create_issue</text>
+  <text class="body" x="384" y="314">试图创建无关工单</text>
+
+  <path class="flow" d="M180 328 V388"/><path class="flow" d="M520 328 V388"/>
+  <rect x="24" y="390" width="312" height="144" rx="12" fill="#fdf0ee" stroke="#bf6a49" stroke-width="2"/>
+  <text class="head" x="44" y="426">宿主拒绝 c2</text>
+  <text class="body" x="44" y="464">该工具未提供</text>
+  <text class="body" x="44" y="506">环境变量读取次数：0</text>
+  <rect x="364" y="390" width="312" height="144" rx="12" fill="#fdf0ee" stroke="#bf6a49" stroke-width="2"/>
+  <text class="head" x="384" y="426">宿主拒绝 c3</text>
+  <text class="body" x="384" y="464">无写权限；本次任务也未要求</text>
+  <text class="body" x="384" y="506">真实写端点调用数：0</text>
+
+  <path class="branch" d="M180 534 V574 H350 M520 534 V574 H350"/>
+  <path class="flow" d="M350 574 V612"/>
+  <rect x="56" y="614" width="588" height="182" rx="12" fill="#edf7f3" stroke="#43856a" stroke-width="2"/>
+  <text class="head" x="80" y="650">分别记录 c2 / c3 的拒绝，结束这条运行</text>
+  <text class="body" x="80" y="688">宿主只使用可信 c1 字段生成答复：</text>
+  <text class="body" x="80" y="726">reject_empty_name 预期 HTTP 400，实得 200。</text>
+  <text class="body" x="80" y="764">根因待核验。</text>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="730" viewBox="0 0 700 730" role="img" aria-labelledby="title desc"><title id="title">同一截止时间下如何处理一次模型调用的结果</title><desc id="desc">本次非流式调用或流读取结束并完成本地清理后，释放本次持有的应用槽并按结果分流。成功也必须完成最终结果校验和截止检查；流中可提前逐段交付，图表示终态确认。稳定错误停止自动重试。临时错误只有满足取消、截止、次数与副作用契约才退避并重新准入。确认未发送时只做本地收尾；超时或断线且无法排除已发送时，不证明远端失败；依对应端点契约查询、取消或补缺。</desc><defs><marker id="a" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#687e9c"/></marker><style>text{font-family:Inter,"PingFang SC",sans-serif;fill:#24344d;font-size:18px}.strong{font-size:20px;font-weight:650}.line{fill:none;stroke:#687e9c;stroke-width:2.5;marker-end:url(#a)}.route{fill:none;stroke:#687e9c;stroke-width:2.5}</style></defs><rect width="700" height="730" fill="white"/>
+<rect x="155" y="15" width="390" height="92" rx="12" fill="#f4f7fb" stroke="#cfdaea" stroke-width="1.5"/>
+<text x="350.0" y="46" text-anchor="middle" class="strong">本次调用或流读取结束</text>
+<text x="350.0" y="75" text-anchor="middle" class="">完成本地清理并释放本次应用槽</text>
+<path class="route" d="M350 107 V137 H177 M350 137 H523"/>
+<path class="line" d="M177 137 V175"/>
+<path class="line" d="M523 137 V175"/>
+<rect x="20" y="175" width="314" height="150" rx="12" fill="#edf7f2" stroke="#bddccc" stroke-width="1.5"/>
+<text x="177.0" y="206" text-anchor="middle" class="strong">成功返回</text>
+<text x="177.0" y="235" text-anchor="middle" class="">最终校验：取消、D 与结果</text>
+<text x="177.0" y="264" text-anchor="middle" class="">有效且未到 D → 确认完成</text>
+<text x="177.0" y="293" text-anchor="middle" class="">否则 → 不补交最终结果</text>
+<rect x="366" y="175" width="314" height="150" rx="12" fill="#f2edfc" stroke="#dbceef" stroke-width="1.5"/>
+<text x="523.0" y="206" text-anchor="middle" class="strong">稳定错误</text>
+<text x="523.0" y="235" text-anchor="middle" class="">参数、权限或账单额度问题</text>
+<text x="523.0" y="264" text-anchor="middle" class="">停止自动重试</text>
+<text x="523.0" y="293" text-anchor="middle" class="">先处理具体原因</text>
+<path class="route" d="M350 137 V375 H177 M350 375 H523"/>
+<path class="line" d="M177 375 V415"/>
+<path class="line" d="M523 375 V415"/>
+<rect x="20" y="415" width="314" height="270" rx="12" fill="#fff6e8" stroke="#e8d5b2" stroke-width="1.5"/>
+<text x="177.0" y="446" text-anchor="middle" class="strong">临时错误，可考虑重试</text>
+<text x="177.0" y="475" text-anchor="middle" class="">先检查取消、D、次数上限</text>
+<text x="177.0" y="504" text-anchor="middle" class="">以及端点的副作用契约</text>
+<text x="177.0" y="533" text-anchor="middle" class="">有资格且等得起才退避</text>
+<text x="177.0" y="562" text-anchor="middle" class="">等待期间不占应用并发槽</text>
+<text x="177.0" y="591" text-anchor="middle" class="">结束等待后再次检查条件</text>
+<text x="177.0" y="620" text-anchor="middle" class="">用原 D 回到额度与槽准入</text>
+<text x="177.0" y="649" text-anchor="middle" class="">不能开始下一次 → 停止</text>
+<rect x="366" y="415" width="314" height="270" rx="12" fill="#fff1ec" stroke="#e8c8bd" stroke-width="1.5"/>
+<text x="523.0" y="446" text-anchor="middle" class="strong">超时、断线或取消</text>
+<text x="523.0" y="475" text-anchor="middle" class="">确认未发送：清理本地资源</text>
+<text x="523.0" y="504" text-anchor="middle" class="">否则：按远端结果未知处理</text>
+<text x="523.0" y="533" text-anchor="middle" class="">有契约和 ID 才查询或取消</text>
+<text x="523.0" y="562" text-anchor="middle" class="">向量补算可能重复花费</text>
+<text x="523.0" y="591" text-anchor="middle" class="">用户已取消：不再应用重试</text>
+<text x="523.0" y="620" text-anchor="middle" class="">可重试时仍须满足左侧条件</text>
+<text x="523.0" y="649" text-anchor="middle" class="">未知副作用不能盲目重放</text>
+</svg>
