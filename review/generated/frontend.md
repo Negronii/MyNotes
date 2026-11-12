@@ -1036,160 +1036,316 @@ Node.js 有另一套宿主边界：它按 libuv 阶段处理 I/O、定时器和 
 > - **本地重放。** 用 headless Chrome `157.0.8103.50` 经 CDP `Input.dispatchMouseEvent` 对本地按钮模拟一次鼠标输入，产生可信的 click 事件，观察到 `click A → promise microtask → queueMicrotask → microtask queued by promise → click B → rAF A → microtask from rAF A → rAF B → timer task`。另一次从同步脚本调用 `button.click()`，观察到 `click A → click B → outer end → promise microtask → queueMicrotask → microtask queued by promise → timer task → rAF A → microtask from rAF A → rAF B`。这两次本机运行观察到相反先后；它们不构成不同 task source 的固定优先级保证。另以文档中的同一语句块重放同步代码例，只在 `console.log` 外包了一层记录器，观察到 `start → end → Promise reaction → queued microtask → queued by reaction → timer task`。本地 CDP 模拟鼠标输入 trace 和代码示例的运行记录在本轮报告目录；同步 `.click()` 的对照记录来自独立复读。
 ## 6. React如何把一次用户操作变成界面更新？
 
-**案例背景。** 浏览器主线已经把 `/reports?sort=recent#summary` 的点击交给 React 处理器。`#summary` 是浏览器定位片段，不会随 HTTP 请求发给服务端；服务端依据 `sort=recent` 返回 May、April。本章从 React 处理器继续：用户点击 **Oldest first**，排序状态请求变为 `oldest`，完整应用以 `pushState` 记录新筛选项，可见行在下一次提交时先变成 April、May；随后 Effect（副作用同步）请求对应服务端数据，只有仍有效的 Effect 响应才能确认新结果。按浏览器后退时，路由从 URL 恢复 `recent`，列表回到 May、April；这段 React 示例省略 URL/history 集成，细节见[筛选状态与前进后退](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。React 负责从 state（状态）推导下一份界面描述，并提交 commit（提交）的 DOM（文档对象模型）变化；浏览器样式、布局和绘制接回[浏览器渲染主线](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
+**案例背景。** 沿用浏览器主线中的 `/reports?sort=recent#summary` 报表页，本章用 React 实现它的筛选控件和列表。`#summary` 是浏览器定位片段，不会发给服务端；服务端按 `sort=recent` 给出 May、April。现在用户点 **Oldest first**。React 把 `sort` 改为 `oldest` 后，会先用手头已有的两条记录在本地排成 April、May，再在提交后请求服务端确认。若很快又选回 **Most recent**，界面再次先排成 May、April；较早的请求不能把较新的选择误标成已确认。
 
-~~~mermaid
-flowchart TD
-    A[点击 Oldest first] --> B[处理器请求 sort=oldest]
-    B --> C[下一次 render（渲染）读到 oldest]
-    C --> D[按稳定 key（键）对应报表行]
-    D --> E[提交必要 DOM 变化]
-    E --> F[Effect 请求当前排序]
-    F --> G{该 Effect 仍有效？}
-    G -- 是（ignore=false） --> H[保存服务端结果并再次 render]
-    G -- 否（已 cleanup） --> I[忽略过期响应]
-    E --> J[浏览器后续处理样式与像素]
-~~~
+以下示例按 React 19.3.0 与对应 React DOM 核验。本章从点击处理器接手，解释一次状态更新如何经过 `render`（渲染）和 `commit`（提交）改变 React 管理的 DOM（文档对象模型）。`useEffect`（副作用同步）在提交后协调需要跟随已提交状态的外部工作，例如网络请求。完整页面由路由把选择写入浏览器历史，并在 Back 时恢复；这里展示 React 内部轮次，省略 URL（统一资源定位符）与历史栈接线，细节见[筛选状态与前进后退](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。本章停在 React 已提交 DOM；后续是否需要样式计算、布局或绘制，由浏览器决定，接回[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
+
+先看点击后没有再次切换选择的一轮；快速反选时，后文再展开旧响应的处理。
+
+| 阶段 | 这一轮发生什么 |
+| --- | --- |
+| 点击处理器 | 用户选择 Oldest first；处理器排入 `sort=oldest` 与 `requestId=1`，当前处理器仍读到旧的 `sort=recent`。 |
+| `render` | React 读取新状态，从上次成功的两条记录派生 April、May，并计算“等待请求 1”；这里不发网络请求。 |
+| `commit` | React 更新选中按钮、行顺序和提示对应的 DOM。 |
+| `useEffect` 建立 | 提交后，Effect 才调用 `fetchReports("oldest")`。 |
+| 响应回调 | 成功或失败回调排入带 `requestId=1` 的结果；React 再 render、commit，显示确认，或单独报错并保留上次成功数据。 |
 
 ### 处理器读到的是本次界面的状态快照
 
-state（状态）不在组件函数的局部变量里被原地改写。React 每次调用组件时给它一份当前快照；事件处理器也属于那次 render（渲染）。调用 setter（状态更新函数）会排入下一次状态更新，因此同一处理器里的 `sort` 仍然是 `recent`。
+`state`（状态）变量不会被 setter（状态更新函数）原地改写；调用 setter 不会改变当前处理器读到的 `state`。React 每次调用组件，都给它一份当前状态快照；事件处理器也是在某一次 `render` 时创建的。因此在本例的 `chooseSort` 中，若这轮的 `sort` 还是 `recent`，调用 `setSort("oldest")` 后，这个处理器里的 `sort` 仍然是 `recent`。本例的一次点击中，React 会在处理器返回后一起处理排序和请求编号这两个更新，再据此计算下一份界面。
 
-报表用 `periodStart` 保存 `YYYY-MM-DD` 排序值，`period` 只作为 May、April 这样的显示标签；不能按月份单词的字母顺序推断日期先后。
+例如本轮 `count` 为 `0` 时，同一处理器连续调用两次 `setCount(count + 1)`，两次都根据快照 `0` 排入 `1`，结果仍是 `1`。若要让每一步基于队列中前一步的结果，传入 updater（更新函数）。以下处理器定义在组件函数内部：
 
 ~~~tsx
-import { useEffect, useState } from "react";
+const [count, setCount] = useState(0);
 
-type SortOrder = "recent" | "oldest";
-type Report = { id: string; period: string; periodStart: string; title: string };
-
-declare function fetchReports(sort: SortOrder): Promise<Report[]>;
-
-const initialReports: Report[] = [
-  { id: "may", period: "May", periodStart: "2026-05-01", title: "May summary" },
-  { id: "april", period: "April", periodStart: "2026-04-01", title: "April summary" }
-];
-// 路由把 URL 的 sort=recent 和这份服务端响应交给 ReportsPage。
-
-function sortReports(reports: Report[], sort: SortOrder) {
-  // 复制数组，避免对 state 持有的数组原地 sort。
-  return [...reports].sort((a, b) => {
-    const order = a.periodStart.localeCompare(b.periodStart);
-    return sort === "recent" ? -order : order;
-  });
+function addFromSnapshot() {
+  setCount(count + 1);
+  setCount(count + 1);
 }
 
+function addFromQueue() {
+  setCount(value => value + 1);
+  setCount(value => value + 1);
+}
+~~~
+
+在 `count` 快照为 `0` 时单独调用 `addFromSnapshot`，结果是 `1`；单独调用 `addFromQueue`，React 依次应用两个 updater，结果是 `2`。本页的 `setRequestId(id => id + 1)` 也用 updater，让编号从待处理状态继续递增。
+
+**用户动作直接触发的一次性工作放在事件处理器里；从 props（属性）和 state 可算出的值在 render 里计算；只有需要随着已提交界面同步外部系统的工作才放进 Effect。** 本例点击处理器记录新的排序意图，`sortReports` 在 render 中派生可见行，Effect 在 commit 后请求与这份选择相符的数据。把可见行再写进一份 state 并用 Effect 同步，会多出一次不必要的更新轮次。
+
+下面的 TypeScript JSX（TSX）代码把 `fetchReports` 作为路由传入的数据层函数：它接收排序值，成功时返回已验证的 `Report[]`，失败时以拒绝的 Promise 表示。`initialReports` 常量是“路由已经取得并验证首屏服务端数据”的合成输入；组件从收到这份数据开始，不实现首屏读取。列表以每条报表稳定的 `key`（键）作为身份，排序不会更换报表身份。`periodStart` 用固定格式日期排序；`period` 只作 May、April 这样的显示标签，不按月份单词的字母顺序比较。两个排序按钮用 `aria-pressed` 暴露当前选择。初始数据由路由先给好，所以 `requestId=0` 时跳过请求。示例刻意只保留 React 状态和请求身份；真实 URL 历史接线在上面的浏览器章节。若需知道排序状态由哪些组件共同持有，见[如何在 React 中组合组件与复用行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)。
+
+> [!info]- 输入类型与首屏示意数据
+>
+> ~~~tsx
+> import { useEffect, useState } from "react";
+>
+> type SortOrder = "recent" | "oldest";
+> type Report = {
+>   id: string;
+>   period: string;
+>   periodStart: string;
+>   title: string;
+> };
+> type FetchReports = (sort: SortOrder) => Promise<Report[]>;
+> type SuccessfulRequest = {
+>   requestId: number;
+>   sort: SortOrder;
+>   reports: Report[];
+> };
+> type FailedRequest = {
+>   requestId: number;
+>   sort: SortOrder;
+> };
+>
+> const initialReports: Report[] = [
+>   {
+>     id: "may",
+>     period: "May",
+>     periodStart: "2026-05-01",
+>     title: "May summary"
+>   },
+>   {
+>     id: "april",
+>     period: "April",
+>     periodStart: "2026-04-01",
+>     title: "April summary"
+>   }
+> ];
+>
+> function sortReports(reports: Report[], sort: SortOrder): Report[] {
+>   // periodStart 是固定格式 YYYY-MM-DD；复制后排序，不改写上游数据。
+>   return [...reports].sort((a, b) => {
+>     const order = a.periodStart.localeCompare(b.periodStart);
+>     return sort === "recent" ? -order : order;
+>   });
+> }
+> ~~~
+
+#### 点击怎样记录新的选择？
+
+下面依次展开同一个 `ReportsPage` 组件；输入、状态、Effect、派生值、JSX、路由这六段按顺序拼接，组成完整示例。`sort` 保存当前选择，`requestId` 标识本次确认请求；`lastSuccess` 保存最近一次有效成功数据，`lastFailure` 单独记录失败。分开保存后，当前请求失败也能保留旧数据，并明确告诉读者它尚未被这次请求确认。
+
+~~~tsx
 function ReportsPage({
   initialSort,
-  initialReports
+  initialReports,
+  fetchReports
 }: {
   initialSort: SortOrder;
   initialReports: Report[];
+  fetchReports: FetchReports;
 }) {
   const [sort, setSort] = useState(initialSort);
   const [requestId, setRequestId] = useState(0);
-  const [reports, setReports] = useState(initialReports);
-  const [status, setStatus] = useState<"confirmed" | "pending" | "error">("confirmed");
+  const [lastSuccess, setLastSuccess] = useState<SuccessfulRequest>({
+    requestId: 0,
+    sort: initialSort,
+    reports: initialReports
+  });
+  const [lastFailure, setLastFailure] = useState<
+    FailedRequest | null
+  >(null);
 
   function chooseSort(nextSort: SortOrder) {
     if (nextSort === sort) return;
     setSort(nextSort);
     setRequestId(id => id + 1);
-    setStatus("pending");
   }
+~~~
 
+处理器只排入新选择和新编号。此时还没有向服务端发请求，也没有直接挪动列表节点。React 接着根据新状态 render、commit，再执行相应 Effect。
+
+#### 提交后，怎样识别这一轮请求？
+
+这个 Effect 属于特定的一次已提交选择。它把当时的 `requestId` 和 `sort` 放进结果，同时用独立的 `ignore` 变量记录自己的生命周期。首屏 `requestId=0` 已有路由数据，直接跳过读取。
+
+~~~tsx
   useEffect(() => {
     if (requestId === 0) return;
 
     let ignore = false;
+    const currentRequestId = requestId;
+
     fetchReports(sort).then(
-      nextReports => {
+      reports => {
         if (!ignore) {
-          setReports(nextReports);
-          setStatus("confirmed");
+          setLastSuccess({
+            requestId: currentRequestId,
+            sort,
+            reports
+          });
         }
       },
       () => {
-        if (!ignore) setStatus("error");
+        if (!ignore) {
+          setLastFailure({ requestId: currentRequestId, sort });
+        }
       }
     );
 
     return () => {
       ignore = true;
     };
-  }, [sort, requestId]);
-
-  const visibleReports = sortReports(reports, sort);
-
-  return (
-    <section>
-      <button type="button" onClick={() => chooseSort("oldest")}>
-        Oldest first
-      </button>
-      <p aria-live="polite">
-        {status === "pending" ? "正在确认服务端结果" :
-         status === "error" ? "确认失败；仍显示本地已有报表" :
-         `当前排序：${sort}`}
-      </p>
-      <ul>
-        {visibleReports.map(report => (
-          <li key={report.id}>{report.period} — {report.title}</li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function ReportsRoute() {
-  return <ReportsPage initialSort="recent" initialReports={initialReports} />;
-}
+  }, [sort, requestId, fetchReports]);
 ~~~
 
-这段代码把同一次操作拆成两个可见结果：`setSort("oldest")` 请求一次新 render，下一次提交就可见本地 April、May 顺序，不必等网络；Effect 的结果再替换数据并改变确认状态。完整应用应由路由把排序写入一条新历史项，并在 `popstate` 时把当前 URL 恢复到 React 状态；本例聚焦更新轮次，省略这层集成。不要用替换当前历史项的写法代替新筛选历史项，否则用户无法按 Back 返回 `recent`。手写 Effect 只演示提交后的同步和旧结果防护。
+`ignore` 在这次 Effect 被清理后阻止旧回调写状态。回调写入结果时附上的编号还承担另一项工作：即使旧回调抢在 cleanup 前运行，它也只能写入自己的编号，不能把后来的请求误标为已确认。稍后的时序表会分别跟踪这两种情况。
 
-`requestId` 初始为 `0`，让首屏沿用服务器已经给出的 May、April，并跳过 `recent` 请求；它也作为 Effect 的依赖之一，但响应回调不会比较这个编号。旧请求失效的门槛是对应 Effect 已运行 cleanup：cleanup 把自己的 `ignore` 设为 `true`，后续 Promise 即使返回也不会写 state。这个清理不会取消网络请求；当完整路由、另一排序控件或浏览器后退让排序再次变化时，新一轮 Effect 会清理旧闭包并请求当前值。请求失败时，界面保留已有数据并把失败显示出来，而不是把本地排序误称为服务端已确认。
+#### 状态怎样决定列表和提示？
+
+每次 render 都从当前状态算出以下三个值。`visibleReports` 用最近一次成功数据配合当前排序；是否确认或失败，则必须同时匹配当前请求编号和排序。
+
+~~~tsx
+  const requestConfirmed =
+    lastSuccess.requestId === requestId && lastSuccess.sort === sort;
+  const requestFailed =
+    lastFailure !== null &&
+    lastFailure.requestId === requestId &&
+    lastFailure.sort === sort;
+  const visibleReports = sortReports(lastSuccess.reports, sort);
+~~~
+
+| 当前结果 | 界面提示 | 列表使用的数据 |
+| --- | --- | --- |
+| 匹配当前编号和排序的失败结果存在 | 通过 `role="alert"` 显示失败 | 最近成功数据，按当前选择排序 |
+| 否则，成功结果匹配当前编号与排序 | 通过 `role="status"` 显示已确认 | 本次成功数据 |
+| 其余情况 | 通过 `role="status"` 显示等待当前请求 | 最近成功数据，按当前选择排序 |
+
+返回的 JSX 根据这些值描述界面：按钮点击调用 `chooseSort`，其 `aria-pressed` 跟随 `sort`；列表遍历 `visibleReports`，以 `report.id` 为 key。React 的 commit 再把这份描述落实到 DOM。
+
+> [!info]- 组件的 JSX 返回部分（承接上面的 ReportsPage）
+>
+> ~~~tsx
+>   return (
+>     <section>
+>       <div role="group" aria-label="报表排序">
+>         <button
+>           type="button"
+>           aria-pressed={sort === "recent"}
+>           onClick={() => chooseSort("recent")}
+>         >
+>           Most recent
+>         </button>
+>         <button
+>           type="button"
+>           aria-pressed={sort === "oldest"}
+>           onClick={() => chooseSort("oldest")}
+>         >
+>           Oldest first
+>         </button>
+>       </div>
+>
+>       {requestFailed ? (
+>         <p role="alert">
+>           {"当前选择：" + sort + "；请求 #" + requestId +
+>             " 失败。仍显示上次成功（" + lastSuccess.sort +
+>             "）的数据，并按当前选择排序。"}
+>         </p>
+>       ) : requestConfirmed ? (
+>         <p role="status">
+>           {"服务端已确认当前选择：" + sort + "（请求 #" + requestId + "）。"}
+>         </p>
+>       ) : (
+>         <p role="status">
+>           {"当前选择：" + sort + "；等待请求 #" + requestId +
+>             "。下方保留上次成功（" + lastSuccess.sort +
+>             "）的数据，并按当前选择排序。"}
+>         </p>
+>       )}
+>
+>       <ul>
+>         {visibleReports.map(report => (
+>           <li key={report.id}>{report.period} — {report.title}</li>
+>         ))}
+>       </ul>
+>     </section>
+>   );
+> }
+> ~~~
+
+路由传入初始排序、首屏数据和数据层函数。下面的外层组件只展示这些输入怎样交接，不实现 URL/history 或真实请求。
+
+> [!info]- 路由如何传入本例输入
+>
+> ~~~tsx
+> function ReportsRoute({
+>   fetchReports
+> }: {
+>   fetchReports: FetchReports;
+> }) {
+>   return (
+>     <ReportsPage
+>       initialSort="recent"
+>       initialReports={initialReports}
+>       fetchReports={fetchReports}
+>     />
+>   );
+> }
+> ~~~
+
+`initialSort` 和 `initialReports` 是首屏输入；`useState` 只在首次挂载时用它们初始化。后续 URL 变化不能只改这两个 prop 就期待状态自动重置。由于 `fetchReports` 在依赖中，同一数据域内应传入稳定的数据层函数；若每次 render 都新建函数，Effect 会把它当作依赖变化而重新请求。若 `fetchReports` 内部读取原始 JSON，也应先在数据边界验证形状，而不是只用 TypeScript 类型断言；见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。完整路由需要在用户选择筛选时用 `pushState` 新增历史项；若用 `replaceState` 覆盖当前项，Back 就无法返回之前的选择。路由还要在 `popstate` 到来时把 URL 中的排序交给状态所有者。若 Back 恢复的排序需要重新向服务端确认，即使排序值和上一次相同，路由也要为这次读取发出新请求身份；若能复用该历史项对应的有效数据，则不必为了编号而强制请求。React Router 与单页应用（SPA）/多页应用（MPA）的边界见[React 路由如何把 URL 映射到视图？](#62.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
+
+请求身份只约束同一数据域内的确认结果，不负责隔离界面正在显示的数据。切换账户时，仅增加请求编号仍会让 `lastSuccess.reports` 中的旧账户行留在列表里，等待期间和失败时尤其明显。路由应在数据域变化时同时隔离或清空成功数据；一种直接做法是按账户 ID 重新挂载 `ReportsPage`，并传入该账户已取得的首屏数据。
+
+**跟着 May 和 April 走一遍。** 初始 `requestId=0` 的路由输入是 May、April，首屏直接显示它们，不额外请求。点击 **Oldest first** 后，React 将 `sort=oldest` 与编号 `1` 排入更新；下一次 render 从上次成功的两条记录派生 April、May。commit 提交按钮、列表和等待提示；之后 Effect 才为 `oldest` 启动请求 `1`。排序操作由点击触发，纯排序在 render 执行，请求则由已提交选择的 Effect 发起。请求成功或失败时，回调只把带编号的结果排入状态；React 下一轮 render 和 commit 才更新确认提示或错误提示。
+
+若请求 `1` 尚未结束时又点 **Most recent**，下一次 render 会把选择和请求身份计算为 `recent #2`，并从当前上次成功数据派生 May、April；commit 更新按钮、列表和等待 `#2` 的提示。这个 render 本身不会发请求。依赖改变的旧 Effect 会清理，然后新 Effect 才启动请求 `2`。旧请求 `1` 的响应回调可能在 cleanup 前或后运行，两个路径的生命周期和显示数据不同。这里比较的是回调实际运行的时刻；Promise 先完成，并不代表排队的回调已在 cleanup 前运行：
+
+| 请求 1 回调相对 cleanup 的时机 | 响应回调 | 等待请求 2 时的列表与提示 |
+| --- | --- | --- |
+| cleanup 前运行 | `ignore` 仍为 `false`，成功回调可把响应写为 `lastSuccess`，但仍标记 `requestId=1`。 | 用这份刚到的成功数据按当前 `recent` 排序；确认条件仍不匹配 `#2`，所以界面继续等待请求 2。 |
+| cleanup 后运行 | cleanup 已将 `ignore` 设为 `true`，回调不写入状态。 | 保留之前的 `lastSuccess`，按当前 `recent` 排序；界面继续等待请求 2。 |
+
+若请求 `1` 的失败回调在 cleanup 前运行，它只记下编号 `1` 的失败，不改 `lastSuccess`，也不能把请求 `2` 标成失败；cleanup 后运行则直接被忽略。无论哪条路径，编号 `1` 都不能确认编号 `2`。请求身份决定哪个响应可以确认当前轮次；`lastSuccess` 决定等待或失败时屏幕拿哪份同一数据域的成功数据来显示。若当前请求失败，独立的 `role="alert"` 会报错，列表保留同一数据域最近成功的数据，并按当前选择排序；不会把旧数据说成服务端刚确认的结果。
+
+cleanup 守卫是“Effect 已被 React 清理后不再采用它的结果”，不是取消网络请求的承诺。Back 若需重新向服务端确认同一排序，也由路由创建新的请求身份；若重用缓存数据，则由路由提供相应有效结果。生产应用要缓存、去重、取消、重试或协调多组件请求时，通常由路由数据层或查询库承担这些契约，见[React 如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
 ### 渲染、协调与提交是不同工作
 
-render 阶段调用组件，得到当前状态对应的 JSX 元素描述。渲染应保持纯净，因为 React 可能重试或放弃尚未提交的工作；不要在组件函数里改 DOM、写 URL、发请求或直接调用 setter。若下一状态依赖前一状态，用 updater（更新函数）让排队更新逐个读取队列中的值：
+`render` 阶段调用组件，把当前 props、state 转成 JSX 元素描述。它是计算，不是直接改 DOM。并发特性可能让尚未提交的 render 暂停、重试或放弃；因此不能在 render 中发请求、写 URL、改现有对象，或手动改 React 管理的 DOM。**是否调用组件、是否产生 DOM 变化、浏览器是否绘制，是三个不同问题。**
 
-~~~jsx
-setCount(count + 1);
-setCount(count + 1);
-~~~
+reconciliation（协调）按树中的位置、元素类型和 key（键）对应前后两次描述。本例的 `sortReports` 每次按当前 `sort` 生成新数组；它不修改 `lastSuccess.reports`。May 和 April 的 `id` 在顺序改变时保持不变，`key`（键）取 `report.id`，让 React 把前后两棵列表中属于同一报表的行对应起来。key 只需在同一列表兄弟节点间稳定且唯一；用数组下标代替数据身份，排序后行内状态可能跟着位置走。
 
-如果这两次 setter 在同一个处理器中运行，都会从当前 render 的 `count` 快照计算，所以只加一。若下一次更新要基于队列中刚排入的值，使用 updater：
+render 完成后才进入 `commit`（提交阶段），React 将必要的改动写到宿主树。一个 setter 不等于一次 DOM 修改：新旧界面若相同，React 可以不改 DOM；若排序改变，则更新所需的行位置和按钮属性。React 负责 DOM commit，浏览器按需在后续渲染机会处理样式、布局或绘制；任务排队和帧调度的细节见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。浏览器帧与 React setter 不是一一对应关系。
 
-~~~jsx
-setCount(value => value + 1);
-setCount(value => value + 1);
-~~~
+React 会把同一批的多个状态更新一起处理，避免逐个更新都触发一次完整的 render/commit，这叫 batching（批量处理）。本例点击处理器同时排入 `sort` 与 `requestId`，React 不会先提交一个只改排序、又立刻提交一个只改编号的半成品。React 18 起，使用 `createRoot` 的应用也会自动批量处理 Promise、定时器和原生事件处理器中的更新；React 18 的旧 `ReactDOM.render` 根会保留旧的批处理范围，升级后切换根 API 才启用新行为。批量处理不会改写当前 handler 的快照，也不表示每个更新都会单独绘制一帧。
 
-React 18 的 `createRoot` 把自动批处理扩展到 Promise、定时器和原生事件回调，因此这里一个 Promise 成功回调中的 `setReports` 与 `setStatus` 会作为同一批更新处理；旧 `ReactDOM.render` 根的自动批处理范围较窄。
-
-reconciliation（协调）用树位置、元素类型和同级 key 将前后两次描述对应起来。上例的 `report.id` 是稳定身份；排序变动时，React 可以把既有行对应到新位置。若用数组索引作 key，插入或重排后行内输入状态可能跟着位置而不是报表走。key 只需在同级列表中唯一。
-
-commit 阶段才把已完成结果写到宿主树。render 调用组件不等于每次都会改 DOM；若行顺序变化，React 只提交所需宿主改动。之后浏览器是否布局、绘制以及何时呈现到帧上，由浏览器渲染阶段决定，不与每个 setter 一一对应。
-
-> [!example] JSX描述界面，不是HTML字符串
-> JSX 是 JavaScript 中描述元素的语法。构建配置可将它转换为自动 JSX runtime 的 `react/jsx-runtime` 调用，也可使用经典的 `React.createElement` 形式；转换方式不会改变上面的 state、render 和 commit 关系。
+> [!example] JSX 描述界面，不是 HTML（超文本标记语言）字符串
+> JSX 是描述元素的语法。构建工具可以把它转换成自动运行时的 `react/jsx-runtime` 调用，也可以转换成经典的 `React.createElement` 调用。转换方式不改变 state 快照、render 和 commit 的关系。
 
 ### Effect在提交后同步外部系统
 
-Effect 用于让已提交的组件与 React 之外的系统保持一致，例如订阅事件、连接服务或发送请求。依赖变化后的顺序是：先用旧值执行 cleanup，再用新值 setup；卸载时执行最后一次 cleanup。Effect 在 commit 后运行，但 React 不保证它总在浏览器 paint 之后运行；具体帧边界仍由[浏览器主线](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)说明。没有外部系统要同步时，派生排序数组应直接在 render 里算，不要为了它再加一个 Effect 和 state。
+`Effect` 适合做由“组件现在需要与外部系统保持一致”触发的工作，例如订阅、连接，或按已提交选择读取服务端数据。它不适合代替点击处理器执行只由那次点击触发的一次性动作，也不适合在两份 React state 之间搬运可直接算出的值。需要时 `useEffect` 在 commit 后运行；依赖改变时先用旧闭包执行 `cleanup`（清理），再用新值执行 `setup`（建立）；卸载时再执行最后一次清理。依赖应包含 setup 实际读取的响应式值，React 用 `Object.is` 比较它们。本例的 `sort`、`requestId` 与 `fetchReports` 都在依赖中。
 
-开发环境在根组件开启 StrictMode（严格模式）时，React 可在首挂载额外执行一次 setup 与 cleanup 来暴露不完整的清理逻辑。此例首轮 Effect 因 `requestId === 0` 直接返回，不会因此发出重复请求；这项检查不代表生产中每个请求都会重复。手写 Effect 获取数据时要清理或忽略已经失效的响应；若要缓存、去重、刷新和更新服务端数据，接着读[React如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+React 不能保证 Effect 总在浏览器 paint（绘制）之后运行。与点击交互有关的 Effect 可能在 paint 前运行；其他更新通常会让浏览器先绘制。若任务本身需要测量或在绘制前调整 DOM，可评估 `useLayoutEffect`；本例发起数据请求，不依赖这个精确帧时机。Promise 失败由此处显式转为状态与错误提示；渲染期间抛出的异常属于错误边界处理范围。
 
-类组件的 `render` 同样要纯净；`getSnapshotBeforeUpdate` 在 DOM 变更前读取快照，`componentDidMount`、`componentDidUpdate` 和 `componentWillUnmount` 过去常承接外部同步与清理。函数组件 Effect 有自己的 setup/cleanup 生命周期，不能把每个类方法简单替换成同名 Hook。渲染失败的恢复由[React错误边界章节](#11.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)负责；路由和 SPA/MPA 的完整边界见[React路由如何把 URL 映射到视图？](#62.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
+根组件包在 `StrictMode`（严格模式）中时，开发环境首次挂载会额外执行一次 Effect 的 `setup → cleanup`，再执行正式 setup，用来检查清理能否撤销建立工作。不是生产环境每次都发两次请求。本例初次调用因 `requestId=0` 提前返回，既不启动请求也没有可调用的 cleanup；之后排序更新才会为请求建立清理函数。即便使用 ignore，网络请求本身也可能继续运行；它解决的是清理后旧闭包不能采用结果。
 
-> [!info]- 来源与版本核验（React 19.3；2026-11-06）
-> - 状态是快照、setter 请求下一次 render、updater 按队列应用：React 官方 [State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)、[Queueing a Series of State Updates](https://react.dev/learn/queueing-a-series-of-state-updates)，核验日期 2026-11-06。
-> - React 18 `createRoot` 将自动批处理扩展到 Promise、定时器和原生事件回调：[React 18 — Automatic Batching](https://react.dev/blog/2022/03/29/react-v18#new-feature-automatic-batching)，React 团队，2022-03-29。
-> - render/commit 以及状态保留由类型、位置和 key 决定：[Render and Commit](https://react.dev/learn/render-and-commit)、[Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state)，React 19.3 文档。
-> - Effect 在 commit 后 setup、依赖改变时先 cleanup 再 setup、StrictMode 根边界的开发检查及过期 fetch 响应处理：[useEffect](https://react.dev/reference/react/useEffect)、[StrictMode](https://react.dev/reference/react/StrictMode#enabling-strict-mode-for-a-part-of-the-app)、[Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects)，React 19.3 文档。
-> - 自动/经典 JSX runtime 的转换边界：[Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform)，React 团队，2020-09-22。
-> - URL 修改当前历史项的标准语义：[HTML Standard, History API](https://html.spec.whatwg.org/multipage/nav-history-apis.html)，核验日期 2026-11-06。
-> - URI 片段只在客户端用于定位，不属于发给服务端的请求：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-06。
+类组件的 `render()` 同样必须保持纯计算。维护旧类组件时，`componentDidMount` 和 `componentDidUpdate` 可在 DOM 提交后同步外部系统，`componentWillUnmount` 可清理连接；若要在 DOM 更新前读取布局快照，使用 `getSnapshotBeforeUpdate`。这些生命周期帮助定位阶段，但不与函数组件的 Effect 一一对应；React 仍支持 class components（类组件），但新组件通常使用函数组件。若一次排序确实让用户输入变慢，再看[如何让报表筛选在昂贵更新时保持响应？](#8.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E6%8A%A5%E8%A1%A8%E7%AD%9B%E9%80%89%E5%9C%A8%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F)；若是渲染抛出的异常需要恢复，则看[React 错误边界能恢复哪些失败？](#11.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。
+
+> [!info]- 来源与版本核验（当前 React 文档 19.3；历史行为按 React 18 核验，日期 2026-11-12）
+>
+> - 状态快照、setter 请求下一次 render、处理器保留当前状态，以及函数 updater 在队列中逐个计算：[State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)、[Queueing a Series of State Updates](https://react.dev/learn/queueing-a-series-of-state-updates)、[`useState`](https://react.dev/reference/react/useState)，React 19.3 文档。
+>
+> - render/commit 分工、render 纯净及组件调用不必对应 DOM 改动：[Render and Commit](https://react.dev/learn/render-and-commit)、[Keeping Components Pure](https://react.dev/learn/keeping-components-pure)，React 19.3 文档。
+>
+> - 同级 key 与树位置怎样确定状态身份：[Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state)，React 19.3 文档。
+>
+> - Effect 与事件的不同触发来源，依赖比较，改变依赖时先 cleanup 再 setup，Effect 相对 paint 的时序条件，以及 fetch 结果忽略模式：[Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects)、[`useEffect`](https://react.dev/reference/react/useEffect)，React 19.3 文档；绘制前测量布局的 API：[`useLayoutEffect`](https://react.dev/reference/react/useLayoutEffect)，React 19.3 文档。
+>
+> - 根 StrictMode 的开发时额外 Effect setup/cleanup 检查：[StrictMode](https://react.dev/reference/react/StrictMode)，React 19.3 文档。
+>
+> - React 18 `createRoot` 与 legacy `ReactDOM.render` 的行为边界：[How to Upgrade to React 18 — Client Rendering APIs](https://react.dev/blog/2022/03/08/react-18-upgrade-guide#updates-to-client-rendering-apis)；自动批处理：[React v18 — Automatic Batching](https://react.dev/blog/2022/03/29/react-v18#new-feature-automatic-batching)；并发 render 的中断、恢复、放弃与完整树提交：[React v18 — What Is Concurrent React?](https://react.dev/blog/2022/03/29/react-v18#what-is-concurrent-react)，React 团队发布文档。
+>
+> - `pushState` 添加历史项、`replaceState` 替换当前项：[HTML Standard — History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface)，核验日期 2026-11-12。
+>
+> - JSX 自动与经典转换：[Introducing the New JSX Transform](https://react.dev/blog/2020/09/22/introducing-the-new-jsx-transform)，React 团队，2020-09-22。
+>
+> - 类组件 render、`getSnapshotBeforeUpdate` 与 mount/update/unmount lifecycle：[Component](https://react.dev/reference/react/Component)，React 19.3 文档。
+>
+> - URL 片段只供客户端定位且不会随 HTTP（超文本传输协议）请求发给服务端：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-12。
 ## 7. 如何在 React 中组合组件与复用行为？
 
 **案例背景。** 报表页的浏览器地址为 `/reports?sort=recent#summary`；服务端按 `sort=recent` 返回 May、April，`#summary` 只供浏览器定位。选择 **Oldest first** 后，排序状态变成 `oldest`，可见顺序应为 April、May。这个排序状态要同时驱动工具栏的选中状态和列表顺序，因此由包含二者的最近共同父组件持有；列表只拿已排序的报表数组，工具栏收到更新回调。沿 props（属性）、Context（上下文）、自定义 Hook（自定义钩子）、ref（引用）逐层选择能表达清楚所有权的边界，不把组件组合变成隐式的全局通信。
@@ -5816,37 +5972,13 @@ V8 可用 hidden class（隐藏类）和属性布局转换优化属性访问，�
 > - V8 的隐藏类和属性访问优化：[V8 Fast Properties](https://v8.dev/blog/fast-properties)。
 ## 34. JavaScript 函数的 `this` 值由什么决定？
 
-调用 ordinary function（普通函数）时，调用形式提供 receiver（接收者），而被调用函数自身的严格性决定是否转换它：strict function（严格函数）的普通裸调用收到 `undefined`，sloppy function（非严格函数）会把它换成全局对象。方法调用使用点号前的对象，`call` 和 `apply` 可以立即指定接收者，`bind` 会创建保存接收者的新函数。arrow function（箭头函数）没有自己的 `this` 绑定，而是读取定义位置的外层值。
+**案例背景。** 报表服务要把 Q4 数据格式化成一行文本：`service.onReport(...)` 能格式化报表，把同一个函数取出再裸调却抛 `TypeError`。函数值没有改变，调用表达式变了。本页讲 ordinary function（普通函数）在普通调用中的 `this`；构造调用见[JavaScript 的 `new` 如何构造对象？](#35.%20JavaScript%20%E7%9A%84%20new%20%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%EF%BC%9F)。
 
-### 严格模式会改变部分调用行为
-
-Strict mode（严格模式）会把部分历史代码中的错误转为异常，并改变普通函数调用收到 `this` 的方式。严格函数的普通裸调用中 `this` 为 `undefined`；非严格函数会把 `null` 或 `undefined` 替换为全局对象，并将原始值接收者装箱，即使调用它的代码本身是严格代码。ES 模块和 class 函数体自动采用严格模式。严格模式不是安全沙箱，也不会让 `eval` 变安全。
-
-~~~javascript
-function strictPlainCall() {
-  "use strict";
-  return this;
-}
-
-strictPlainCall(); // undefined
-
-function writeUndeclaredName() {
-  "use strict";
-  undeclaredName = 1;
-}
-
-try {
-  writeUndeclaredName();
-} catch (error) {
-  error.name; // "ReferenceError"
-}
-~~~
-
-`"use strict"` 指令可以写在经典脚本或函数体开头。严格代码中给未声明名称赋值会抛出 `ReferenceError`；给不可写属性赋值会抛出 `TypeError`，而不是静默忽略。其他差异包括禁止 `with`、旧式八进制字面量和严格函数中的重复形参。
+以下每个代码块都可独立运行，行内注释给出求值结果。包含 sloppy function（非严格函数）的代码块须按 classic script（经典脚本）执行，不能改作 ES module（ES 模块）；DOM（Document Object Model，文档对象模型）例子需要浏览器页面已有 `document.body`。
 
 ### 调用形式为报表处理器提供接收者
 
-案例背景：本章在本地建立一份新的报表服务和新的处理器，避免依赖前一页的调用状态。处理器先递增闭包计数，再通过调用时的 `this` 查找 `format`：
+同一个处理器先以方法形式调用，再取出裸调，最后恢复为方法调用：
 
 ~~~javascript
 function makeReportHandler(tag) {
@@ -5866,8 +5998,7 @@ const service = {
   onReport: makeReportHandler("daily"),
 };
 
-service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #1"
-
+const firstReport = service.onReport({ title: "Q4" });
 const detached = service.onReport;
 let detachedError;
 try {
@@ -5875,64 +6006,176 @@ try {
 } catch (error) {
   detachedError = error.name;
 }
-detachedError; // "TypeError"
-
-service.onReport({ title: "Q4" }); // "Sales/daily: Q4 #3"
+const thirdReport = service.onReport({ title: "Q4" });
+[firstReport, detachedError, thirdReport];
+// ["Sales/daily: Q4 #1", "TypeError", "Sales/daily: Q4 #3"]
 ~~~
 
-`service.onReport` 作为方法调用时，`service` 是接收者。赋给 `detached` 后，函数值不再带有点号前的对象，严格模式下 `this` 为 `undefined`。失败调用仍先执行 `calls += 1`，所以闭包计数已经从 1 变为 2；下一次成功调用返回 `#3`。词法状态与调用接收者分别由闭包和调用形式决定。
+`service.onReport(...)` 是方法调用，属性访问的基底 `service` 成为这次调用的 `this`。存入 `detached` 后再用变量调用，通常没有对象基底；这个 strict function（严格函数）收到 `undefined`，访问 `this.format` 时抛出 `TypeError`。处理器也把计数存在 closure（闭包）里；失败发生在递增之后，所以第三次调用成功时返回 `#3`。
+
+### 严格模式会改变部分调用行为
+
+先分清两步：ordinary function（普通函数）调用时，调用表达式提供一个 `this` 初值，即 receiver（接收者）；被调函数自己的模式再决定怎样绑定这个初值。点号或方括号属性调用会保留属性访问的基底，基底可以是对象或原始值。常见作用域里的变量裸调用 `fn()` 提供 `undefined`；非严格脚本的 `with` 环境是特殊情况，可以为这种调用提供对象接收者。
+
+strict mode（严格模式）会让部分历史代码中的错误变成异常，也改变普通函数如何绑定 `this`。经典脚本或函数体可用开头的 `"use strict"` 指令启用它；ES module（ES 模块）和 class（类）方法则自动处于严格模式。strict function（严格函数）原样保留初值；sloppy function（非严格函数）把 `null` 或 `undefined` 换成函数所属 Realm（执行域）的全局 `this` 值，并把数字、字符串、布尔值、BigInt（大整数）或 Symbol（符号值）接收者装箱。即使调用表达式位于严格代码中，非严格被调函数仍会进行转换。严格模式不是安全沙箱，也不会让 `eval` 变安全。
+
+| 被调函数模式 | 常见变量裸调用 `fn()` | `fn.call(null)` | `fn.call(7)` |
+| --- | --- | --- | --- |
+| strict function（严格函数） | `undefined` | `null` | 原始数字 `7` |
+| sloppy function（非严格函数） | 所属 Realm 的全局 `this` 值 | 所属 Realm 的全局 `this` 值 | Number object（Number 包装对象） |
+
+~~~javascript
+function sloppyTarget() {
+  return this;
+}
+
+function strictCaller() {
+  "use strict";
+  return sloppyTarget();
+}
+strictCaller() === globalThis; // true：被调函数仍按非严格模式绑定 this。
+
+function writeUndeclaredName() {
+  "use strict";
+  undeclaredName = 1;
+}
+
+try {
+  writeUndeclaredName();
+} catch (error) {
+  error.name; // "ReferenceError"
+}
+~~~
+
+严格函数把 `this` 原样保留，非严格函数则按表格转换。`strictCaller` 虽然严格，仍不会替它调用的 `sloppyTarget` 改变模式。严格代码中给不可写属性赋值会抛出 `TypeError`，并禁止 `with`、旧式八进制字面量和严格函数中的重复形参。
 
 ### `call`、`apply` 与 `bind` 的调用时机不同
 
-`call` 立即调用并接收分开的实参；`apply` 立即调用并接收类数组实参列表；`bind` 返回一个供以后调用的新函数。
+三个方法何时执行目标、怎样提供实参和 `thisArg`（传给目标函数的 `this` 参数）如下：
+
+| 方法 | 目标执行时机 | 实参来源 | `thisArg`（传给目标函数的 `this` 参数）怎样到达目标 |
+| --- | --- | --- | --- |
+| `call` | 立即 | 后续分开的参数 | 原样交给目标；strict function 保留，sloppy function 按上一节转换 |
+| `apply` | 立即 | 空列表，或从对象的 `length` 和索引读取 | 原样交给目标；strict function 保留，sloppy function 按上一节转换 |
+| `bind`（绑定） | 调用返回的新函数时 | 保存的前置参数，再加调用时参数 | 保存并交给目标；strict function 保留，sloppy function 按上一节转换 |
+
+目标若是 arrow function（箭头函数）或 bound function（绑定函数）则会忽略传入的 `thisArg`；箭头函数稍后单独说明。`apply` 省略 argument list（实参列表）或传 `null`、`undefined` 时使用空列表；其他输入必须是对象，内置方法按其 `length` 与数字索引读取实参，不会遍历迭代器。
 
 ~~~javascript
-function describe(prefix, report) {
+function describe(prefix, report, punctuation) {
   "use strict";
-  return this.prefix + ": " + prefix + " " + report.title;
+  const message = this.prefix + ": " + prefix + " " + report.title;
+  return message + (punctuation === undefined ? "" : punctuation);
 }
 
+const salesContext = { prefix: "Sales" };
 const report = { title: "Q4" };
-describe.call(service, "Ready", report);          // "Sales: Ready Q4"
-describe.apply(service, ["Ready", report]);       // "Sales: Ready Q4"
-const boundDescribe = describe.bind(service, "Ready");
-boundDescribe(report);                            // "Sales: Ready Q4"
+const boundDescribe = describe.bind(salesContext, "Ready");
+const reboundDescribe = boundDescribe.bind(
+  { prefix: "Ignored" }, report, "!",
+);
+
+const callResults = [
+  describe.call(salesContext, "Ready", report),
+  describe.apply(salesContext, ["Ready", report]),
+  describe.apply(salesContext, { 0: "Ready", 1: report, length: 2 }),
+  boundDescribe(report),
+  reboundDescribe(),
+];
+
+function countArgs() {
+  return arguments.length;
+}
+let primitiveListError;
+try {
+  countArgs.apply(salesContext, "Q4");
+} catch (error) {
+  primitiveListError = error.name;
+}
+const applyResults = [
+  countArgs.apply(salesContext),
+  countArgs.apply(salesContext, null),
+  countArgs.apply(salesContext, undefined),
+  countArgs.apply(salesContext, { 0: "one", length: 1 }),
+  countArgs.apply(salesContext, new Set(["one"])),
+  primitiveListError,
+];
+[callResults[0], callResults[4], applyResults];
+// [
+//   "Sales: Ready Q4",
+//   "Sales: Ready Q4!",
+//   [0, 0, 0, 1, 0, "TypeError"],
+// ]
 ~~~
 
-`call`、`apply` 会把指定的 `thisArg` 传给函数调用；接收者是否转换取决于函数自身是否严格。`bind` 把接收者和前置参数保存在绑定函数中。绑定函数通过 `new` 调用时会忽略已保存的接收者，但仍使用前置参数。只拼接实参与 `apply` 的普通包装函数不会自动具备原生绑定函数的构造行为或 `name`、`length` 等元数据。
+再次对已绑定函数调用 `bind` 不会改掉最初保存的接收者，但会把新前置实参追加在原参数之后；`reboundDescribe()` 因此在原报表结果后追加标点。`Set` 实例没有 `length`，而 `apply` 不读取它的迭代器，所以这里得到空实参列表；原始字符串不是对象，作为原生 `apply` 的参数列表会抛 `TypeError`。`new` 调用可构造的绑定函数时会忽略已保存的接收者，却保留前置参数；构造行为见[JavaScript 的 `new` 如何构造对象？](#35.%20JavaScript%20%E7%9A%84%20new%20%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%EF%BC%9F)。只用包装函数拼接实参，不会自动得到原生绑定函数的构造行为或相同的 `name`、`length` 等元数据。
 
 ### 箭头函数与宿主回调遵循不同规则
 
-箭头函数没有自己的 `this` 绑定、`arguments` 对象或 `prototype` 属性，也不能用 `new` 构造。它的 `this` 来自外层词法环境；`call`、`apply`、`bind` 都不能替换它。希望接收对象成为 `this` 时使用普通方法；确实需要词法捕获时使用箭头函数。
+arrow function（箭头函数）没有自己的 `this`、`arguments`、`super` 或 `new.target` 绑定，不能用 `new` 构造；它创建时也没有自有 `prototype` 属性。这两点并非因果关系，因为可构造的 bound function（绑定函数）也没有自有 `prototype`。箭头读取定义位置的 lexical `this`（词法 `this`）；`call`、`apply` 和 `bind` 可以传递实参或预填参数，但不能替换这个 `this`。需要让对象成为接收者时使用普通方法；需要词法 `this` 时才使用箭头函数。
 
 ~~~javascript
-const panel = {
-  title: "Q4",
-  read() { return this.title; },
-  readArrow: () => this.title, // 读取外层 this；panel 不会成为接收者
-};
+function makePanel(title) {
+  return {
+    title,
+    read() { return this.title; },
+    readArrow: label => this.title + ":" + label,
+  };
+}
 
-panel.read(); // "Q4"
-panel.readArrow(); // 结果取决于外层 this；panel 不会提供它
+const panel = makePanel.call({ title: "Outer" }, "Q4");
+const arrowReader = panel.readArrow;
+let arrowConstructError;
+try {
+  new arrowReader();
+} catch (error) {
+  arrowConstructError = error.name;
+}
+[
+  panel.read(),
+  panel.readArrow("direct"),
+  panel.readArrow.call({ title: "Call" }, "call"),
+  panel.readArrow.apply({ title: "Apply" }, ["apply"]),
+  panel.readArrow.bind({ title: "Bind" }, "bind")(),
+  Object.hasOwn(arrowReader, "prototype"),
+  arrowConstructError,
+];
+// [
+//   "Q4",
+//   "Outer:direct", "Outer:call", "Outer:apply", "Outer:bind",
+//   false, "TypeError",
+// ]
 ~~~
 
-宿主调用回调时也能指定接收者。DOM 事件监听器算法会让普通监听器的 `this` 指向 `event.currentTarget`；箭头函数仍使用外层 `this`，因此应从事件对象显式读取目标。
+`makePanel` 的这次调用通过 `call` 收到 `{ title: "Outer" }` 作为 `this`。`readArrow` 调用时访问的是 `makePanel` 这次调用的 `this`，其 `title` 值为 `"Outer"`，不是创建箭头时复制下来的一份值。之后的 `call`、`apply` 或 `bind` 都不能把箭头的 `this` 改成别的对象，但照常传入或预填 `"call"`、`"apply"`、`"bind"` 这些实参；`panel.read()` 是普通方法，才以 `panel` 为接收者。
+
+host API（宿主 API）提供接收者的另一例是 DOM event listener（文档对象模型事件监听器）。普通监听函数运行时，DOM 把注册该监听器的当前对象设为 `event.currentTarget`，并作为监听函数的 `this`；事件冒泡时它可以与事件目标 `event.target` 不同；本例中前者是 `wrapper`，后者是按钮。`currentTarget` 只在监听器执行期间可用，派发结束后会重置。箭头仍保留外层 `this`，所以应通过事件对象显式读取目标：
 
 ~~~javascript
 const button = document.createElement("button");
-document.body.append(button);
+const wrapper = document.createElement("div");
+wrapper.append(button);
+document.body.append(wrapper);
+const listenerResults = [];
 
-button.addEventListener("click", function (event) {
-  this === event.currentTarget; // true
+wrapper.addEventListener("click", function (event) {
+  const matches = this === event.currentTarget &&
+    this === wrapper && event.target === button;
+  listenerResults.push(matches);
 });
-button.addEventListener("click", event => {
-  event.currentTarget === button; // true
+wrapper.addEventListener("click", event => {
+  const matches = event.currentTarget === wrapper &&
+    event.target === button;
+  listenerResults.push(matches);
 });
+button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+listenerResults;
+// [true, true]
 ~~~
 
 ### 临时属性调用辅助函数只覆盖有限契约
 
-临时 Symbol 属性可用来演示 `object.method()` 为何会把对象作为 `this`。它无法复现内置方法对原始值、不可扩展接收者、代理、所有访问器或所有异常路径的处理。向 `Function.prototype` 添加自定义方法还会修改共享内置对象，因此这只是练习，不是应用代码。
+临时 Symbol（符号值）属性能演示未绑定 ordinary function 通过 `receiver.method()` 如何把 `receiver` 作为 `this`：先将函数放到临时键，再用 `receiver[key](...)` 的方法调用形式执行它，最后删除该键。箭头函数和 bound function 会忽略这个方法接收者；这个办法也只适合可扩展的普通对象或函数。辅助函数会拒绝非对象接收者；原生 `call`、`apply`、`bind` 则把给定值传给目标，再由目标按自身严格性决定是否转换。non-extensible object（不可扩展对象）、Proxy（代理对象）以及宿主对象可能让属性定义、读取或删除失败或产生额外行为。
 
 ~~~javascript
 function callWithObjectReceiver(fn, receiver, ...args) {
@@ -5948,53 +6191,79 @@ function callWithObjectReceiver(fn, receiver, ...args) {
     delete receiver[key];
   }
 }
-~~~
-
-即使被调用函数抛错，`finally` 仍会清理临时键。归档中的 `myApply` 练习用 `Array.prototype.slice.call` 转换类数组，把 `null`、`undefined` 当成空列表，再委托给范围受限的 `myCall`；因此对没有实参的 `arguments` 调用会得到 `0`。
-
-<details>
-<summary>归档练习：范围受限的 myCall 与 myApply</summary>
-
-这个练习用临时 Symbol 属性制造方法调用语法，只接受对象或函数接收者。apply 版本把 nullish 实参列表当作空列表，并复制其他类数组输入；它不模拟原始值接收者转换，也不覆盖所有 Proxy 和异质对象行为。
-
-~~~javascript
-Function.prototype.myCall = function (context, ...args) {
-  if (context === null ||
-      (typeof context !== "object" && typeof context !== "function")) {
-    throw new TypeError("This exercise requires an object receiver");
-  }
-  const key = Symbol("temporary call");
-  Object.defineProperty(context, key, { value: this, configurable: true });
-  try {
-    return context[key](...args);
-  } finally {
-    delete context[key];
-  }
-};
-
-Function.prototype.myApply = function (context, args) {
-  const list = args == null ? [] : Array.prototype.slice.call(args);
-  return this.myCall(context, ...list);
-};
 
 const receiver = { base: 10 };
-function sum(a, b) { return this.base + a + b; }
+function addToBase(amount) {
+  "use strict";
+  return this.base + amount;
+}
+const sum = callWithObjectReceiver(addToBase, receiver, 3);
 
-sum.myCall(receiver, 1, 2); // 13
-(function () { return arguments.length; }).myApply(receiver, []); // 0
+function failAfterReceivingThis() {
+  "use strict";
+  if (this !== receiver) throw new TypeError("receiver was lost");
+  throw new Error("target failed");
+}
+let failureName;
+try {
+  callWithObjectReceiver(failAfterReceivingThis, receiver);
+} catch (error) {
+  failureName = error.name;
+}
+[sum, failureName, Object.getOwnPropertySymbols(receiver).length];
+// [13, "Error", 0]
 ~~~
 
-唯一 Symbol 可避免与字符串键冲突；即使目标抛错，`finally` 也会清理临时属性。修改 `Function.prototype` 只用于练习，应用代码应使用内置方法。
+`finally` 会在目标抛错后继续执行删除语句；普通接收者的例子验证临时 Symbol 已清除。目标若把临时键改成不可配置，非严格辅助函数的删除会返回 `false`，键会留下；若辅助函数处于严格模式，删除会抛 `TypeError` 并可能替换目标原先的异常。归档中的 `myApply` 练习用 `Array.prototype.slice.call` 复制类数组实参，遇到 `null` 或 `undefined` 时直接使用空列表，再委托给范围受限的 `myCall`；`countArgs.myApply(receiver, [])` 与 `countArgs.myApply(receiver, null)` 都令被调函数收到 0 个实参。
 
-</details>
+> [!info]- 归档练习：范围受限的 myCall 与 myApply
+>
+> 该练习用临时 Symbol 属性制造方法调用语法，只接受对象或函数接收者。apply 版本把 nullish（`null` 或 `undefined`）实参列表当作空列表，并复制其他 array-like（类数组）输入；它不模拟原始值接收者转换，也不完全复现原生 `apply` 对非对象实参列表的检查，且不能覆盖不可扩展对象和 Proxy 的所有行为。
+>
+> ~~~javascript
+> Function.prototype.myCall = function (context, ...args) {
+>   if (context === null ||
+>       (typeof context !== "object" && typeof context !== "function")) {
+>     throw new TypeError("This exercise requires an object receiver");
+>   }
+>   const key = Symbol("temporary call");
+>   Object.defineProperty(context, key, {
+>     value: this, configurable: true,
+>   });
+>   try {
+>     return context[key](...args);
+>   } finally {
+>     delete context[key];
+>   }
+> };
+>
+> Function.prototype.myApply = function (context, args) {
+>   const list = args === null || args === undefined
+>     ? []
+>     : Array.prototype.slice.call(args);
+>   return this.myCall(context, ...list);
+> };
+>
+> const receiver = { base: 10 };
+> function sum(a, b) { return this.base + a + b; }
+> function countArgs() { return arguments.length; }
+>
+> const zeroWithArray = countArgs.myApply(receiver, []);
+> const zeroWithNull = countArgs.myApply(receiver, null);
+> [sum.myCall(receiver, 1, 2), zeroWithArray, zeroWithNull];
+> // [13, 0, 0]
+> ~~~
+>
+> 唯一 Symbol 避免与既有字符串键冲突；`finally` 总会执行删除尝试，但目标若让临时键不可配置，属性就无法清除。向 `Function.prototype` 添加自定义方法会修改共享内置对象，因此这仅是机制练习，应用代码应使用内置方法。
 
-
-**相关机制：** [JavaScript 对象如何查找属性？](#33.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%B1%9E%E6%80%A7%E5%B9%B6%E7%BB%84%E7%BB%87%E6%88%90%E5%91%98%EF%BC%9F) 解释属性查找和 getter；[使用 `new` 构造对象](#35.%20JavaScript%20%E7%9A%84%20new%20%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明绑定函数构造时为何忽略已绑定的 `this`。
-
+**相关机制：** [JavaScript 对象如何查找属性？](#33.%20JavaScript%20%E5%AF%B9%E8%B1%A1%E5%A6%82%E4%BD%95%E6%9F%A5%E6%89%BE%E5%B1%9E%E6%80%A7%E5%B9%B6%E7%BB%84%E7%BB%87%E6%88%90%E5%91%98%EF%BC%9F) 解释属性查找和 getter；[JavaScript 的 `new` 如何构造对象？](#35.%20JavaScript%20%E7%9A%84%20new%20%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E5%AF%B9%E8%B1%A1%EF%BC%9F) 说明绑定函数构造时为何忽略已绑定的 `this`。
 
 > [!info]- 来源
-> - 严格模式和普通调用的 this 绑定：[ECMAScript 2026 Strict Mode Code](https://tc39.es/ecma262/2026/multipage/ecmascript-language-source-code.html#sec-strict-mode-code)、[Function Calls](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-function-calls) 和 [OrdinaryCallBindThis](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinarycallbindthis)（§10.2.1.2）。
+>
+> - 严格模式与普通调用的接收者绑定：[ECMAScript 2026 Strict Mode Code](https://tc39.es/ecma262/2026/multipage/ecmascript-language-source-code.html#sec-strict-mode-code)、[Function Calls](https://tc39.es/ecma262/2026/multipage/ecmascript-language-expressions.html#sec-function-calls) 和 [OrdinaryCallBindThis](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinarycallbindthis)（§10.2.1.2）。
+>
 > - 显式接收者与绑定函数：[ECMAScript Function.prototype.call](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function.prototype.call)、[Function.prototype.apply](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function.prototype.apply) 和 [Function.prototype.bind](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-function.prototype.bind)；箭头函数：[Arrow Function Definitions](https://tc39.es/ecma262/2026/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions)。
+>
 > - DOM 普通事件监听器的接收者：[WHATWG DOM Event Listener Invocation](https://dom.spec.whatwg.org/#concept-event-listener-invoke)。
 ## 35. JavaScript 的 `new` 如何构造对象？
 
