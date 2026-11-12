@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="970" viewBox="0 0 900 970" role="img" aria-labelledby="title desc">
+  <title id="title">等待槽与物理执行槽的所有权在不同事件间交接</title>
+  <desc id="desc">数据库接受job和outbox时取得一个全管线共享等待槽。outbox到broker仍是同一排队轮次；worker进程取得可复用的物理执行槽，成功条件领取才释放等待槽。物理槽仅在当前attempt停止并释放连接、游标和上传资源后归还；worker进程可以继续工作。没有物理执行槽时不领取；若领取失败则返还刚预留的物理槽。租约到期、取消请求和数据库栅栏都不等于attempt停止。恢复器只在尚有总attempt额度且重新取得等待槽时重排。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#60738e"/>
+    </marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247}
+      .edge{fill:none;stroke:#60738e;stroke-width:4;stroke-linecap:round;marker-end:url(#arrow)}
+      .main{font-size:24px;font-weight:600}
+      .detail{font-size:22px}
+      .small{font-size:22px}
+    </style>
+  </defs>
+  <rect width="900" height="970" fill="#fafbfe"/>
+
+  <text x="52" y="68" class="main">共享等待槽：最多 240 个未领取的逻辑排队轮次</text>
+  <rect x="35" y="112" width="240" height="142" rx="15" fill="#f5f0fb" stroke="#dcd0ec" stroke-width="2"/>
+  <text x="155" y="155" text-anchor="middle" class="main">接受事务提交</text>
+  <text x="155" y="196" text-anchor="middle" class="detail">job + outbox</text>
+  <text x="155" y="232" text-anchor="middle" class="detail">等待槽 +1</text>
+  <path class="edge" d="M275 183 L325 183"/>
+  <rect x="325" y="112" width="240" height="142" rx="15" fill="#eef5fe" stroke="#c9dcf2" stroke-width="2"/>
+  <text x="445" y="155" text-anchor="middle" class="main">outbox → broker</text>
+  <text x="445" y="196" text-anchor="middle" class="detail">同一排队轮次</text>
+  <text x="445" y="232" text-anchor="middle" class="detail">槽数不变</text>
+  <path class="edge" d="M565 183 L615 183"/>
+  <rect x="615" y="112" width="250" height="142" rx="15" fill="#eaf4fb" stroke="#c9ddea" stroke-width="2"/>
+  <text x="740" y="155" text-anchor="middle" class="main">条件领取提交</text>
+  <text x="740" y="196" text-anchor="middle" class="detail">queued → running</text>
+  <text x="740" y="232" text-anchor="middle" class="detail">等待槽 −1</text>
+
+  <rect x="54" y="280" width="800" height="98" rx="15" fill="#ffffff" stroke="#cbd6e4" stroke-width="2"/>
+  <text x="454" y="320" text-anchor="middle" class="detail">queued 取消：终态与释放同事务；每轮只减一次</text>
+  <text x="454" y="357" text-anchor="middle" class="small">恢复器重排：重新占 1 个等待槽并写新 outbox；无槽则持久失败</text>
+
+  <path d="M50 415 L850 415" stroke="#d6dee8" stroke-width="2"/>
+  <text x="52" y="470" class="main">物理执行槽：合成共 64 个；每 worker 进程 8 个</text>
+  <rect x="30" y="530" width="145" height="114" rx="15" fill="#eef5fe" stroke="#c9dcf2" stroke-width="2"/>
+  <text x="102" y="576" text-anchor="middle" class="main">delivery</text>
+  <text x="102" y="616" text-anchor="middle" class="small">job ID 到达</text>
+  <path class="edge" d="M175 587 L215 587"/>
+  <path d="M300 522 L385 587 L300 652 L215 587 Z" fill="#fff5e5" stroke="#ead7b5" stroke-width="2"/>
+  <text x="300" y="581" text-anchor="middle" class="detail">执行槽</text>
+  <text x="300" y="615" text-anchor="middle" class="detail">可用？</text>
+  <path class="edge" d="M385 587 L426 587"/>
+  <text x="395" y="568" class="small">是</text>
+  <rect x="434" y="530" width="230" height="114" rx="15" fill="#eaf4fb" stroke="#c9ddea" stroke-width="2"/>
+  <text x="549" y="566" text-anchor="middle" class="main">先预留物理槽</text>
+  <text x="549" y="601" text-anchor="middle" class="detail">再条件领取</text>
+  <text x="549" y="632" text-anchor="middle" class="detail">失败即还槽</text>
+  <path class="edge" d="M664 587 L706 587"/>
+  <rect x="714" y="530" width="166" height="130" rx="15" fill="#e9f5ed" stroke="#c9e4d0" stroke-width="2"/>
+  <text x="797" y="574" text-anchor="middle" class="detail">attempt 停止且</text>
+  <text x="797" y="607" text-anchor="middle" class="detail">资源释放后</text>
+  <text x="797" y="638" text-anchor="middle" class="small">归还物理槽</text>
+
+  <path class="edge" d="M300 652 L300 704"/>
+  <text x="320" y="686" class="small">否</text>
+  <rect x="72" y="714" width="380" height="92" rx="14" fill="#fff5e5" stroke="#ead7b5" stroke-width="2"/>
+  <text x="262" y="754" text-anchor="middle" class="detail">不领取；按 broker 契约保留 delivery</text>
+  <text x="262" y="790" text-anchor="middle" class="small">不 ACK，也不塞入无界本地缓冲</text>
+
+  <path d="M549 660 L549 702" stroke="#b45c49" stroke-width="3"/>
+  <path d="M536 690 L562 690 M536 681 L562 699" stroke="#b45c49" stroke-width="3"/>
+  <rect x="478" y="714" width="402" height="92" rx="14" fill="#fff1ef" stroke="#ecc9c2" stroke-width="2"/>
+  <text x="679" y="754" text-anchor="middle" class="detail">租约到期 / 取消 / 数据库 fence</text>
+  <text x="679" y="790" text-anchor="middle" class="small">都不代表旧 attempt 已停止</text>
+
+  <rect x="54" y="827" width="800" height="128" rx="15" fill="#ffffff" stroke="#cbd6e4" stroke-width="2"/>
+  <text x="454" y="864" text-anchor="middle" class="detail">恢复重排仅在 attempt &lt; 3 时：新等待槽 + 新 outbox</text>
+  <text x="454" y="903" text-anchor="middle" class="detail">槽满 → capacity_exhausted；到上限 → attempts_exhausted</text>
+  <text x="454" y="940" text-anchor="middle" class="small">被栅栏的旧 attempt 仍占原物理槽，直到真实停止</text>
+</svg>

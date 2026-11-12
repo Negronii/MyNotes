@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="830" viewBox="0 0 900 830" role="img" aria-labelledby="title desc"><title id="title">任务怎样从发件箱交给一个 attempt</title><desc id="desc">从持久 job、outbox 和等待槽开始，经 relay 和 broker 唤醒，worker 取得物理执行槽后条件领取已到期轮次，成功才进入 running 并归还等待槽；未领取则归还预占执行槽，见正文。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#60738e"/>
+    </marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247}
+      .edge{fill:none;stroke:#60738e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}
+      .label{font-size:24px;font-weight:600}
+      .detail{font-size:22px}
+      .muted{fill:#54657c}
+    </style>
+  </defs>
+<rect width="900" height="830" fill="#fafbfe"/>
+  <rect x="150" y="26" width="600" height="112" rx="16" fill="#f5f0fb" stroke="#dcd0ec" stroke-width="2"/>
+  <text x="450" y="69" text-anchor="middle" class="label">数据库已提交：job + outbox + 等待槽</text>
+  <text x="450" y="107" text-anchor="middle" class="detail">一个逻辑排队轮次只占一个共享等待槽</text>
+  <path class="edge" d="M450 138 L450 178"/>
+
+  <rect x="205" y="184" width="490" height="96" rx="16" fill="#ffffff" stroke="#cbd6e4" stroke-width="2"/>
+  <text x="450" y="224" text-anchor="middle" class="label">relay 发布稳定 job ID</text>
+  <text x="450" y="259" text-anchor="middle" class="detail">回执未知可重发；消息可能重复</text>
+  <path class="edge" d="M450 280 L450 320"/>
+
+  <rect x="205" y="326" width="490" height="96" rx="16" fill="#eef5fe" stroke="#c9dcf2" stroke-width="2"/>
+  <text x="450" y="366" text-anchor="middle" class="label">broker 投递 job ID</text>
+  <text x="450" y="401" text-anchor="middle" class="detail">任何唤醒可竞争已到期的 queued 轮次</text>
+  <path class="edge" d="M450 422 L450 462"/>
+
+  <rect x="205" y="468" width="490" height="112" rx="16" fill="#fff5e5" stroke="#ead7b5" stroke-width="2"/>
+  <text x="450" y="510" text-anchor="middle" class="label">worker 先取得物理执行槽</text>
+  <text x="450" y="549" text-anchor="middle" class="detail">满载时不领取；预取与本地缓冲保持有界</text>
+  <path class="edge" d="M450 580 L450 625"/>
+
+  <rect x="145" y="631" width="610" height="166" rx="16" fill="#eaf4fb" stroke="#c9ddea" stroke-width="2"/>
+  <text x="450" y="675" text-anchor="middle" class="label">条件领取当前 queued 轮次</text>
+  <text x="450" y="716" text-anchor="middle" class="detail">成功改为 running、递增 attempt、写租约</text>
+  <text x="450" y="751" text-anchor="middle" class="detail">领取成功归还等待槽；queued 取消也归还</text>
+  <text x="450" y="782" text-anchor="middle" class="detail muted">本 job 最多 3 次 attempt，包含首次领取</text>
+
+</svg>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1060" viewBox="0 0 900 1060" role="img" aria-labelledby="title desc"><title id="title">当前 attempt 怎样发布结果并确认投递</title><desc id="desc">输入是已条件领取的 running attempt。有权且完成读取后上传私有对象，再条件提交结果；一行更新并确认提交才走成功 ACK。零行或提交未知查权威状态。物理槽仅在该 attempt 停止并释放资源后归还。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#60738e"/>
+    </marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247}
+      .edge{fill:none;stroke:#60738e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}
+      .label{font-size:24px;font-weight:600}
+      .detail{font-size:22px}
+      .muted{fill:#54657c}
+    </style>
+  </defs>
+<rect width="900" height="1060" fill="#fafbfe"/>
+<text x="450" y="43" text-anchor="middle" class="label">接图二：已领取的 running attempt</text>
+<path class="edge" d="M450 61 L450 106"/>
+<g transform="translate(0,-730)">
+  <rect x="205" y="843" width="490" height="134" rx="16" fill="#ffffff" stroke="#cbd6e4" stroke-width="2"/>
+  <text x="450" y="886" text-anchor="middle" class="label">复验导出权限，执行有界读取</text>
+  <text x="450" y="927" text-anchor="middle" class="detail">最多 12 页；单页读取各有有限截止时间</text>
+  <text x="450" y="959" text-anchor="middle" class="detail">上传另有有限截止时间</text>
+  <path class="edge" d="M450 977 L450 1017"/>
+
+  <rect x="205" y="1023" width="490" height="104" rx="16" fill="#fff5e5" stroke="#ead7b5" stroke-width="2"/>
+  <text x="450" y="1065" text-anchor="middle" class="label">上传 attempt 专属私有对象</text>
+  <text x="450" y="1102" text-anchor="middle" class="detail">引用提交前，对象尚不是用户可见结果</text>
+  <path class="edge" d="M450 1127 L450 1167"/>
+
+  <rect x="70" y="1173" width="760" height="190" rx="16" fill="#e9f5ed" stroke="#c9e4d0" stroke-width="2"/>
+  <text x="450" y="1216" text-anchor="middle" class="label">尝试提交结果：条件 UPDATE 核对当前 attempt</text>
+  <text x="450" y="1258" text-anchor="middle" class="detail">同一事务提交 succeeded + 对象引用 + report.ready outbox</text>
+  <text x="450" y="1299" text-anchor="middle" class="detail">仅一行更新且 COMMIT 已确认，才满足成功 ACK 条件</text>
+  <text x="450" y="1340" text-anchor="middle" class="detail muted">零行可能仍成功提交，但不自动授权 ACK</text>
+
+  <path class="edge" d="M450 1363 L450 1393 L233 1393 L233 1432"/>
+  <path class="edge" d="M450 1363 L450 1393 L667 1393 L667 1432"/>
+  <rect x="35" y="1438" width="396" height="142" rx="16" fill="#e9f5ed" stroke="#c9e4d0" stroke-width="2"/>
+  <text x="233" y="1480" text-anchor="middle" class="label">成功分支</text>
+  <text x="233" y="1521" text-anchor="middle" class="detail">UPDATE 一行 + COMMIT 确认</text>
+  <text x="233" y="1562" text-anchor="middle" class="detail">ACK 当前投递</text>
+  <rect x="469" y="1438" width="396" height="192" rx="16" fill="#fff5e5" stroke="#ead7b5" stroke-width="2"/>
+  <text x="667" y="1480" text-anchor="middle" class="label">零行 / COMMIT 未知</text>
+  <text x="667" y="1521" text-anchor="middle" class="detail">新连接查权威 job 与 outbox</text>
+  <text x="667" y="1562" text-anchor="middle" class="detail">终态或持久后继才 ACK</text>
+  <text x="667" y="1603" text-anchor="middle" class="detail">否则保留投递与未决对象</text>
+
+  <rect x="95" y="1665" width="710" height="78" rx="16" fill="#ffffff" stroke="#cbd6e4" stroke-width="2"/>
+  <text x="450" y="1698" text-anchor="middle" class="detail">物理执行槽在该 attempt 实际停止、释放资源后归还</text>
+  <text x="450" y="1730" text-anchor="middle" class="detail muted">数据库 fence、租约到期或 ACK 都不等于 attempt 已停止</text>
+</g></svg>

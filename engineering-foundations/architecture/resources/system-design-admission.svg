@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900" role="img" aria-labelledby="title desc">
+  <title id="title">请求如何成为可查询的账户报表任务</title>
+  <desc id="desc">新请求先认证授权并生成规范化参数。数据库在一个事务中用唯一键裁决新 job，胜出的新意图才预留速率令牌与一个等待槽，并写入 job、参数和 pending outbox。任一门槛失败则事务回滚；成功提交后才返回 202 与稳定状态 URL。幂等重放及同键不同参数冲突在正文说明。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#60738e"/>
+    </marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247}
+      .edge{fill:none;stroke:#60738e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}
+      .label{font-size:24px;font-weight:600}
+      .detail{font-size:22px}
+      .muted{fill:#54657c}
+    </style>
+  </defs>
+  <rect width="900" height="900" fill="#fafbfe"/>
+
+  <rect x="150" y="28" width="600" height="112" rx="16" fill="#eef5fe" stroke="#c9dcf2" stroke-width="2"/>
+  <text x="450" y="70" text-anchor="middle" class="label">POST 报表请求</text>
+  <text x="450" y="108" text-anchor="middle" class="detail">acct-17 · report 42 · report-demo-208</text>
+  <path class="edge" d="M450 140 L450 184"/>
+
+  <rect x="150" y="190" width="600" height="136" rx="16" fill="#ffffff" stroke="#cbd6e4" stroke-width="2"/>
+  <text x="450" y="235" text-anchor="middle" class="label">认证、授权并限定请求</text>
+  <text x="450" y="274" text-anchor="middle" class="detail">检查导出权限、时间范围、格式与读取上限</text>
+  <text x="450" y="305" text-anchor="middle" class="detail muted">先生成规范化参数；事务中再持久化</text>
+  <path class="edge" d="M450 326 L450 370"/>
+
+  <rect x="95" y="378" width="710" height="260" rx="18" fill="#f5f0fb" stroke="#dcd0ec" stroke-width="2"/>
+  <text x="450" y="424" text-anchor="middle" class="label">数据库事务：唯一键先裁决新意图</text>
+  <text x="450" y="471" text-anchor="middle" class="detail">只有胜者才扣速率令牌并预留 1 个等待槽</text>
+  <text x="450" y="513" text-anchor="middle" class="detail">持久化 job + 参数 + pending outbox</text>
+  <text x="450" y="555" text-anchor="middle" class="detail">共享上限 240 个尚未领取的逻辑排队轮次</text>
+  <text x="450" y="597" text-anchor="middle" class="detail muted">令牌/槽不足则回滚；全项提交后才算已接受</text>
+
+  <path class="edge" d="M450 638 L450 693"/>
+  <text x="478" y="676" class="detail">新 job：事务提交成功</text>
+  <rect x="180" y="702" width="540" height="142" rx="16" fill="#e9f5ed" stroke="#c9e4d0" stroke-width="2"/>
+  <text x="450" y="751" text-anchor="middle" class="label">返回 202 + 稳定状态 URL</text>
+  <text x="450" y="792" text-anchor="middle" class="detail">GET /v1/jobs/job-demo-731 查询持久状态</text>
+  <text x="450" y="824" text-anchor="middle" class="detail muted">同键重放不创建第二个 job（见正文）</text>
+</svg>

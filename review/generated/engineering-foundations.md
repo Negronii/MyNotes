@@ -2484,13 +2484,15 @@ cancellation（取消）是通知仍在运行的工作“结果不再需要”�
 > - deadline 传播和协作式取消：[gRPC Deadlines](https://grpc.io/docs/guides/deadlines/)，核对于 2026-11-11；具体行为仍取决于各 API。
 ## 15. 怎样设计一个可持久查询的账户报表？
 
-**案例：** 用户为账户 acct-17 请求报表 42，统计有限时间范围内的账户活动并导出 CSV。任务可能超出一次 HTTP 请求的时限；用户断开浏览器后仍要能查询结果，且结果保留七天。请求只读账户数据，但会消耗查询、连接、worker（工作进程）和对象存储资源。这里使用 `report-demo-208` 作为客户端幂等键，`job-demo-731` 作为持久任务 ID；账户与报表共同标识报表资源，报表 ID 42、任务 ID 和请求键是三个不同身份。
+**案例：** 用户为账户 `acct-17` 请求报表 42：只读有限时间范围内的账户活动，并导出 Comma-Separated Values (CSV，逗号分隔值) 文件。一次查询有时超出 Hypertext Transfer Protocol (HTTP，超文本传输协议) 请求预算；浏览器断线后，用户仍要查询状态，并在成功后七天内下载私有结果。客户端以 `report-demo-208` 作为 idempotency key (幂等键)，服务用 `job-demo-731` 标识已持久接受的 job (任务)；报表 ID、任务 ID 和幂等键不能互相替代。案例假设请求约 8 KiB，最多顺序读取 12 页，结果平均 128 KiB。
 
-设计从用户结果、硬约束和负载开始，再选满足要求的最小架构。若一次有界同步读取总能在调用方截止时间内完成，直接返回报表更简单；若任务可能更久、需在断连后继续，或要独立准入突发工作，才引入持久 job（任务）、队列和 worker（工作进程）。这不是生产测量：本例沿用容量页的教学假设——平均 5 次提交/秒、10 分钟峰值 20 次/秒、worker 平均处理 6 秒、每请求约 8 KiB、至多 12 次顺序数据库读取、平均结果 128 KiB、结果保留七天。可由请求参数预先判定的范围超限，在接受任务之前拒绝；实际读取时若到第 12 页仍未取完，worker 停止并写入有界失败状态，不继续无上限读取；报表只读账户活动，不改写账户业务数据。所有用户可见路径都要重新授权；系统要限制未开始任务和数据库连接，并持久记录成功、失败或取消结果。
+平均每秒 5 个新 job、峰值每秒 20 个新 job 且持续十分钟、每个 attempt (尝试) 平均六秒、每个 job 最多三个 attempt (含首次)，都是合成输入，不是测量值。
+
+先决定是否真的需要异步化。若有界读取可以稳定在调用方截止时间和尾延迟目标内完成，同步接口只须校验、读取并返回 CSV，省掉状态、排队和清理生命周期。只有当工作可能超过请求预算、断线后仍须继续，或必须与 application programming interface (API，应用程序接口) 的执行资源隔离时，才创建可恢复的持久 job (任务)。队列保留唤醒，不增加处理能力；可持久的 job 才让用户在连接之外查到服务已接受什么、正在发生什么以及最终结果。
 
 ### 如何接受请求并让用户查询结果？
 
-一个可用的 HTTP API（HTTP 应用接口）契约如下：
+客户端可以发出如下请求：
 
 ~~~http
 POST /v1/accounts/acct-17/reports
@@ -2498,97 +2500,148 @@ Idempotency-Key: report-demo-208
 Content-Type: application/json
 
 {"reportId":42,"period":"2026-Q2","format":"csv"}
+~~~
 
+服务先认证当前 principal (调用主体)，再检查它是否能为 `acct-17` 导出报表；然后验证时间范围、格式、页面数等有界条件，并生成会影响执行的规范化参数。请求参数若已可判定超过 12 页，就在接受前拒绝；读取中到第 12 页仍未完成时，worker (工作进程) 停止并提交有界失败，不能再无限分页。页数限制不限制单次 I/O 可能无限等待，因此每页读取和对象上传还各自配置并强制执行有限截止时间；具体时长须与客户端、存储和租约策略一起设定。
+
+请求路径中的账户号和随机 job ID 不是授权凭据。`report:read` 不自动包含 `report:export`。后台 worker 使用服务身份访问有限数据，并在开始读取前重新确认原请求主体仍有本报表导出权限；若授权此时已撤销，则不读数据，提交有界的 `authorization_revoked` 失败结果。状态、取消和下载端点也各自检查调用者对该 job 与结果的当前访问权。
+
+若条件满足，响应可为：
+
+~~~http
 HTTP/1.1 202 Accepted
 Location: /v1/jobs/job-demo-731
+Content-Type: application/json
 
 {"jobId":"job-demo-731","status":"queued","cancelRequested":false,"statusUrl":"/v1/jobs/job-demo-731"}
 ~~~
 
-`202 Accepted` 只表示已接受处理，不表示任务完成或最终必然成功。客户端之后可 `GET /v1/jobs/job-demo-731` 查询状态，`DELETE /v1/jobs/job-demo-731` 表示请求取消并保留可查询的 job 资源；若任务已终结，返回当前终态。只有成功且结果尚在保留期内，才可通过 `GET /v1/jobs/job-demo-731/result` 取回私有结果。`report.version` 表示报表展示数据的版本；job 的 `status` 和 `attempt` 表示这次导出的生命周期，两组字段不能互相推导。每个端点先验证当前调用者身份，再检查其是否可为 acct-17 创建/导出报表、访问该任务或读取其结果；路径中的账户号和难以猜测的 job ID 都不是授权凭据。`report:read` 不自动授予 `report:export`。worker 使用范围受限的服务身份，并在读取报表数据前重新验证提交主体当前仍有该报表的导出权限；若已撤销，就写入有界的 `authorization_revoked` 失败状态而不读取数据。接口的成功和错误表示应服从[HTTP API 契约](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F)；断线后的未知结果如何查证见[请求超时后如何确认结果并安全重试？](#%E8%B6%85%E6%97%B6%E5%92%8C%E6%88%AA%E6%AD%A2%E6%97%B6%E9%97%B4%E8%AE%A9%E8%B0%83%E7%94%A8%E6%96%B9%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E7%8A%B6%E6%80%81%EF%BC%9F)。
+HTTP 的 `202 Accepted` 表示请求已接受处理，但处理尚未完成，也不承诺之后一定成功。这个服务把“已接受”定义得更强：只有 job、待发布 outbox (事务发件箱) 意图和一个等待槽已在同一数据库事务提交，才返回 202。若数据库提交结果对 API 仍未知，就不能猜测成功；客户端使用原幂等键重试，已有 job ID 时也可查状态，数据库唯一键会把它与已提交记录重新关联。这个应用契约让 `202` 成为可查询的承诺，而不是“内存里排了一个后台任务”。
 
-idempotency key（幂等键）在本例按 `(account_id, principal_id, key)` 唯一；同键还绑定规范化请求指纹，其中包含 `reportId=42`、时间范围和格式。若键与指纹都匹配，返回已存在的 job；同键但 `reportId`、时间段或格式不同，则按本例契约返回冲突。仅先查再插入不能关闭竞态：两个相同请求可能都查不到。数据库唯一约束裁决胜者；失败方先回滚整笔事务，不新增等待槽，再读取胜者 job 并比较指纹。既有键的重放只返回原 job，不重新准入或占用第二个槽。请求指纹只用于比较，worker 重启所需的标准化报表参数必须另行持久保存。不要把原始请求正文或敏感筛选条件塞进队列消息。
+此处的 `202` 和过载响应是本服务定义的接口合同，具体成功与错误表示仍要有一致的 HTTP API 契约，见[如何设计可预期的 HTTP API 契约？](#3.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F)。如果客户端在请求仍可能提交时就超时，必须用同一幂等键和查询路径查证，不能创建一个新意图；其他超时、截止时间与重试边界见[请求超时后如何确认结果并安全重试？](#%E8%B6%85%E6%97%B6%E5%92%8C%E6%88%AA%E6%AD%A2%E6%97%B6%E9%97%B4%E8%AE%A9%E8%B0%83%E7%94%A8%E6%96%B9%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E7%8A%B6%E6%80%81%EF%BC%9F)。
 
-本例把成功结果对象保留 7 天，从 `succeeded` 与对象引用一同提交、结果对用户可见时起算；job 状态和最小幂等映射保留到终态后 14 天，以覆盖更长的客户端重试窗口。结果对象过期时，job 仍是 `succeeded`，结果端点返回 `result_expired`，同键请求仍指向原 job，绝不重建一次导出。14 天后删除幂等映射就不再有窗口外重放保证；若服务要拒绝任意旧键，必须继续保留可识别它的墓碑。调用方在约定窗口外应先查证旧操作，不能把同一键当成全新意图。
+幂等键在本例按 `(account_id, principal_id, key)` 唯一，并绑定规范化请求指纹，例如报表 ID、期间和格式。新请求在事务中尝试插入带唯一键的 job 身份；唯一约束裁决谁成为这项新意图的胜者。只有胜者才在**同一事务**内预留一个准入令牌与等待槽、补齐 job 参数并写入 outbox，再一起提交。若令牌或槽位不足，事务回滚，未提交的 job 行也消失，不留下已接受的半条记录。
 
-job 行至少保存稳定的 job ID、账户与请求主体、`report_id`、已验证的标准化报表参数、请求指纹和幂等键、创建/到期时间、状态、取消请求、attempt（尝试号）、`lease_expires_at`（租约到期时间）、等待槽保留状态、私有结果引用以及范围受限的错误码。
+相同键的并发败方等待唯一约束裁决后回滚，再用新事务读取胜者并比较指纹：同指纹返回同一个 job，不再扣令牌或占槽；异指纹返回冲突。
 
-| 持久状态 | 含义与转移 |
-| --- | --- |
-| `queued` | 请求已提交，尚无 worker 领取当前排队轮次；可以仍待 outbox（事务型发件箱）发布，也可以已经在队列中。每个排队轮次持有一个等待槽。 |
-| `running` | worker 已通过 conditional update（条件更新）领取当前尝试，等待槽已释放。`lease_expires_at` 到期使恢复器可以尝试接管；到期本身不自动撤销当前尝试。 |
-| `succeeded` | 当前尝试的私有对象已写好，数据库已将结果引用与成功状态一起提交。 |
-| `failed` | 不可重试错误或尝试耗尽后写入的终态，客户端能查询有界错误码。 |
-| `cancelled` | 取消在完成提交之前生效的终态；不暴露结果对象引用。 |
+令牌与等待槽通过所有副本共享的配额行管理：扣减使用带余量条件的原子更新，或锁定该行后检查并扣减。两个不同幂等键也必须争用同一份余量，不能各自先读到最后一个空槽就都接受。这里的合成服务把令牌桶也放在同一数据库事务内；若改用外部限流器，必须另设可幂等确认或补偿的预留合同，不能假定数据库回滚会退回外部令牌。不能只先 `SELECT` 再 `INSERT`：并发请求可能都先查无记录。队列消息只携带稳定 job ID，不塞入原始正文或敏感筛选条件；worker 所需的规范化参数在 job 中单独持久保存，指纹只负责比较。
 
-`cancel_requested` 是独立布尔字段，不是任务状态：运行中的任务可保持 `running` 同时收到取消请求。终态一经提交就不再变成其他终态。租约到期后，恢复器按数据库当前时间才有资格提交接管；原 worker 在接管事务成功提交之前仍可能完成，租约时刻本身不撤权。成功、取消和恢复接管都用条件更新比较当前 `status`、`attempt` 与 `cancel_requested`，并只接受更新一行的胜者；先提交的一方决定后续状态。恢复器若赢得条件更新，则把尝试标为已取代，旧 worker 后续完成更新会因状态或 attempt 不匹配而失败。outbox（事务型发件箱）另有 `pending` / `published` 状态；`published` 表示 relay（中继器）已按选定 broker 的确认、路由和持久性契约记录发布结果，不表示 worker 已处理或 job 仍处于 `queued`。队列消费者的 acknowledgement（消费者确认，ACK）也不属于 job 状态。
+![新请求经过认证、授权和范围限制后，在 job、outbox 与等待槽同事务提交才返回 202](../../engineering-foundations/architecture/resources/system-design-admission.svg)
+
+图一只画首次接受新 job 的成功路径。幂等重放不创建新 job：若并发唯一键争用使本事务失败，调用方先回滚，再读取胜者；同指纹返回同一个 job，异指纹返回冲突。等待槽达到共享上限 240 时事务回滚，在 202 前拒绝；数据库不可用或提交结果未知时，服务也不能声称接受成功。
+
+状态查询返回 job 的持久状态与有界错误码。取消用 `DELETE /v1/jobs/job-demo-731` 表达“请求停止”，不代表计算已立即停止；运行中 job 可继续显示 `running` 并带 `cancelRequested=true`。只有 `succeeded` 且对象仍在保留期内，结果端点才允许下载。例：
+
+~~~http
+GET /v1/jobs/job-demo-731/result
+~~~
+
+每种终态都写 `terminal_at`；成功事务还以数据库时间写 `succeeded_at` 和 `result_expires_at = succeeded_at + 7 days`，与对象引用一起提交，结果从这次提交起对用户可见。job 与最小幂等映射从 `terminal_at` 起保留 14 天，以覆盖更长的重试窗口。
+
+对象过期后 job 仍是 `succeeded`，端点返回 `result_expired`，同一幂等键仍指向原 job，不自动重建。删除 14 天后的幂等记录就不再提供窗口外重放保证；若业务要拒绝任意久以前的键，须保留能识别它的墓碑。
+
+job 的 `status` 和 `attempt` 描述执行生命周期；若产品要说明报表读到的数据版本，应把版本作为结果元数据保存。若报表承诺一个精确的“截至时点”，请求还须持久化对应的数据水位或快照语义；有限时间过滤本身不保证多个分页读取来自同一快照。
 
 ### 任务、发件箱与队列怎样交接？
 
-在同一个数据库事务中插入唯一 job、`pending` outbox 行，并原子预留一个共享等待槽；仅在计数未达到 240 时提交，否则回滚并在 **202 之前**拒绝过载请求。所有 API 副本都通过同一数据库计数规则争用槽位。队列载荷只需携带 job ID；每个 outbox 发布意图还需自己的唯一 ID 和发布状态，relay 只确认对应意图，不能让旧发布确认覆盖重新排队产生的新意图。等待槽跟随逻辑 job 的当前排队轮次：任务尚未被 worker 领取时，不论仍在 outbox 还是已经排入 broker，都只占一个槽；重排再次占一个槽，领取时释放；一条消息被重复投递也不新增槽位。
+系统至少维护五个 job 状态；`cancel_requested` 是独立标志。`outbox.state` 是另一条生命周期，不可代替 job 状态。
 
-~~~mermaid
-flowchart TD
-    A[认证、授权并校验报表范围] --> T[同一数据库事务：job、outbox、一个等待槽]
-    T -->|提交成功| R[返回 202 与稳定状态 URL]
-    T -->|槽满或键冲突| X[回滚：拒绝过载，或查询同键结果]
-    T -->|提交后| L[relay 发布 job ID]
-    L --> Q[broker 按所选契约确认发布]
-    Q --> O[outbox 标为 published；job 状态独立推进]
-~~~
+| 持久状态 | 含义和下一步 |
+| --- | --- |
+| `queued` | 已接受但尚未领取的逻辑排队轮次，可能仍在 outbox 中待发布，也可能已进入 broker；持有一个共享等待槽；达到 `available_at` 后才能领取。 |
+| `running` | worker 已成功条件领取，等待槽释放，当前 attempt 与有界 `lease_expires_at` 已写入。 |
+| `succeeded` | 当前 attempt 的私有对象引用与成功状态已一起提交；同一事务还写入 `report.ready` outbox。 |
+| `failed` | 不可重试错误、达到本 job 的最多三次 attempt (含首次)，或重试/恢复时没有等待槽；错误用可查询有限码表达，如 `authorization_revoked`、`attempts_exhausted`、`capacity_exhausted`。 |
+| `cancelled` | 取消赢得状态竞争后的终态，不暴露结果对象引用。 |
 
-发布确认只结束发送端的一步。消费者继续按持久 job 状态推进：
+job 行还需保存 job ID、账户与原请求主体、`report_id`、规范化参数、请求指纹与幂等键、创建时间、不可变的 `max_attempts=3` 策略、当前 attempt、租约、最早可领取时间 `available_at`、是否持有等待槽、`cancel_requested`、成功/终态时间、结果到期时间、私有结果引用和范围受限的错误码。初次任务的 `available_at` 取当前数据库时间，延迟重试则保存退避到期时间，relay 与 worker 使用同一数据库时间基准。
 
-~~~mermaid
-flowchart TD
-    Q[收到 job ID] --> W[条件领取：running、增加 attempt、释放等待槽]
-    W --> Read[按已存参数读取有界数据]
-    Read --> Obj[写当前 attempt 专属的私有对象]
-    Obj --> Guard{仍是当前 attempt，且没有取消？}
-    Guard -->|是| Done[提交 succeeded 与对象引用]
-    Guard -->|否| Orphan[不发布此对象；按权威状态取消或延后]
-    Done --> Ack[终态持久后确认消息]
-~~~
+三次上限包括首次领取，最多允许两次重试；为已有 job 改部署配置时不能悄悄改变其上限。终态一旦提交就不再回到 `queued` 或 `running`；取消请求是字段，不是终态。outbox 有自己的 `pending` / `published` 状态。已确认发布的 outbox 行在满足审计和重放保留期后按策略清理；未决发布意图要保留，不能跟成功结果对象使用同一删除条件。每次新排队轮次产生独立唯一 outbox 意图，relay 的回写以该意图 ID 为条件，旧轮次的迟到确认不能把新轮次也误标为已发布。
 
-读写失败、重复投递和租约超时不会跳过这些边界；下面分别说明它们怎样恢复。
+从上节提交后的状态继续：job、等待槽与 `pending` outbox 已持久保存。未开始任务的上限 240 覆盖 outbox 和消息代理（broker）中相同逻辑 job 的等待轮次；它们迁移位置或重复投递都不会重复计数。提交后 API 才返回 202，独立 relay (转发进程) 扫描 outbox 并向选定 broker 发布稳定 job ID。
 
+数据库与 broker 没有一个普通原子事务可同时覆盖双方。先提交 job 后直接发布，进程可能在两步间崩溃，留下无人唤醒的 job；先发消息再提交，数据库回滚后消息会引用不存在的 job。outbox 把业务提交和“将来必须发布”的意图放进同一数据库事务。relay 可能在 broker 接收后、回写发布状态前崩溃，于是再次发同一意图。因此消息可能重复；worker 依据数据库 job 状态和条件领取消重，而不是假设消息只投递一次。relay 只有按所选 broker 的契约核对发布结果、所需路由与持久性条件后，才把意图标为 `published`；publisher confirm (发布者确认) 本身未必证明目标路由正确。发布结果不证明 worker 已经处理；consumer acknowledgement (ACK，消费者确认) 也不证明报表成功。各 broker 的精确边界由其协议决定，见[发布确认、消费者确认与业务完成各证明什么？](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
-数据库提交与队列发布是两个系统的写入，不能放进一个普通数据库事务。若先提交 job 后直接发布，进程可能在两步之间崩溃，导致永远无人处理的任务；若先发消息再提交，数据库回滚后队列会出现不存在的任务。outbox 把 job 和待发布记录一起提交；relay 读取并重试发布，只有按所选 broker 的契约验证发布确认、路由与所需持久性条件后才更新 outbox。relay 若在 broker 接收后、更新 outbox 前崩溃，可能再次发布，所以 worker 按 job ID 幂等领取；已确认的 outbox 行也要按保留策略清理。发布者确认和消费者 ACK 是两个独立边界；即使 relay 记录 `published`，worker 也可能已经领取任务甚至写入终态。数据库事务不覆盖 broker，也不覆盖对象存储。[队列确认页](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)详解 broker 语义。
+![已提交的 job 经 outbox 与 broker 唤醒，worker 先取物理执行槽，再条件领取当前排队轮次](../../engineering-foundations/architecture/resources/system-design-execution.svg)
 
-> [!example] job-demo-731 的一次正常完成
-> 在这个明确的顺序示例中，relay 先验证所选 broker 契约并更新 `outbox=published`，之后 worker 才领取；因此这一时刻 `job=queued`、等待槽占用 1。worker 原子领取后，job 变成 `running`、attempt=1，等待槽归还。worker 写私有对象并提交结果引用后，job 才变成 `succeeded`；消费者随后按 broker 契约确认消息。真实系统中 worker 可能在 relay 更新 `published` 前就已领取，因此 outbox 状态、job 状态和消费者确认不能互相推导。
+图二的终点是一个已取得执行权的 attempt：job 已变成 `running`，等待槽已经归还，但物理执行槽仍由这个 attempt 占用。领取条件未命中时，worker 归还刚预占的物理槽，再读权威 job 决定保留或确认投递；不能继续读数据。取得执行权后，才进入下图的读取和结果发布。
+
+![当前 attempt 复验权限、读取与上传后，只有更新一行且提交确认才走成功 ACK；零行或提交未知另行查证](../../engineering-foundations/architecture/resources/system-design-result-commit.svg)
+
+图三展开有权且成功读完后的结果发布，以及成功条件未命中的分支。worker 只有在取得本进程的物理执行槽后才领取；成功路径先完成有界读取并上传 attempt 专属私有对象，再在一个数据库事务里以当前 job 状态、attempt 和未取消条件写入 `succeeded`、对象键与 `report.ready` outbox。**只有条件更新恰好一行且 `COMMIT` 确认后，才走成功 ACK。**
+
+更新零行时下面的 common table expression (公共表表达式，CTE) 不产生 ready，但整个事务仍可成功提交；零行本身不是 ACK 许可。此时要从新连接读权威 job 与 outbox：已持久终态或已提交且可恢复的后继路径才允许确认旧投递；若仍没有持久终点，就保留投递。提交结果未知时，一次读到旧 `running` 状态也不能证明原事务回滚。对象引用结局未决时不要把 attempt 对象当孤儿删除。取消、永久失败、重试和租约接管各有自己的 ACK 条件，具体投递 tag 与确认行为取决于 broker。
+
+> [!example]- 对照 SQL 看同一事务怎样限定 ready 意图
+> 下面的极简事务只展示状态更新与 ready 意图的原子边界，省略完整表定义、成功/终态时间戳和三次上限字段：若条件更新未命中，CTE 不产生行，`report.ready` 也不插入；外层事务仍可成功提交，所以不能仅凭 `COMMIT` 成功就 ACK。对象上传在事务外，因此可留孤儿；消费者不能因上传成功就报告结果可用。
+>
+> ~~~sql
+> BEGIN;
+> WITH completed AS (
+>   UPDATE report_jobs
+>   SET status = 'succeeded', result_object_key = :attempt_object_key
+>   WHERE job_id = :job_id
+>     AND status = 'running'
+>     AND attempt = :attempt
+>     AND cancel_requested = FALSE
+>   RETURNING job_id, attempt
+> )
+> INSERT INTO report_outbox(operation_key, job_id, attempt, payload)
+> SELECT :ready_operation_key, job_id, attempt, :ready_payload
+> FROM completed;
+> COMMIT;
+> ~~~
+
+relay 重发时重用数据库中同一条持久 outbox 意图和稳定操作键，不为未知结果造新通知。`report.ready` 与结果引用同事务，避免“ready 已发，job 仍在 running 或后来由 B 接管”的假成功通知。
 
 ### 工作进程重试怎样避免旧结果覆盖新结果？
 
-worker 领取任务时，以条件更新检查状态仍为 `queued`，递增 attempt 并设置有界租约，同时释放这个排队轮次的等待槽。另一个当前 attempt 仍持有任务时，重复投递不能另起并行工作，应按所选队列契约延后或确认重复消息。worker 崩溃后，恢复器用数据库当前时间检查 `lease_expires_at`，再按 `job_id` 和 attempt 做条件接管：先检查 `cancel_requested`；若已请求取消，直接写 `cancelled`，无需争用槽位。否则只有恢复任务取得一个新的共享等待槽，才能在同一数据库事务中把 job 改回 `queued` 并写入新的 `pending` outbox 发布意图；relay 持续重发该意图直到满足选定 broker 契约。若无槽，写入可查询的 `capacity_exhausted` 终态，但不能把已取消任务写成容量失败。该闭环确保只改 job 行不会让消息凭空重新可达；新旧重复消息都由条件领取规则消重。
+队列中的 job ID 只是唤醒线索，不携带 attempt。worker 持有物理执行槽后，任何唤醒——包括上一轮迟到的旧投递——都可以条件竞争**当前**的 `queued` 轮次。领取事务只允许一个 worker 把状态改为 `running`、增加 attempt、设有限租约并归还本轮等待槽一次；投递本身不能创建新轮次。旧 attempt 能否写入由数据库当前状态和 attempt 栅栏决定，而不是靠辨认唤醒消息的新旧。队列预取量和进程内缓冲要有界，避免任务虽未获执行槽却已离开 broker 堆在内存中。物理槽与等待槽不同：前者表示活进程正在占用 CPU、连接、游标或上传句柄；后者只表示一个未开始的逻辑 job 等待被领取。
 
-attempt fencing（尝试号栅栏）以单调递增的 attempt 号隔离新旧 worker；每次 attempt 用不同、只创建一次的对象键，例如 `reports/job-demo-731/attempt-2.csv`。先将私有对象写入该键，再用 compare-and-set（比较并交换，CAS）条件更新，比较 `job_id`、`status='running'`、当前 `attempt` 和 `cancel_requested=false`。只有恰好更新一行，才提交 `succeeded` 和对象引用并让结果对用户可见；零行表示接管、取消或终态已先提交。worker 不以 `lease_expires_at` 到期时刻单独拒绝自己，胜负由这些持久条件更新的提交顺序决定。对象写入与数据库仍是两个持久系统；上传后进程崩溃可能留下未引用对象，但垃圾回收不能只按“当前无引用”立即删除：只有 attempt 已被接管或 job 已终结、数据库确认无引用，并且有上界的上传时限和额外安全宽限都已过去，才可回收。即使已失效的旧 worker 仍晚到上传，其对象也不能获得有效结果引用；后续清理仍需处理这类迟到的孤儿对象。S3 的 `If-None-Match: *` 是一种防止同名对象被覆盖的条件写法；本设计依赖的是“每次尝试使用不同键，且仅由数据库当前 attempt 引用”，并不要求选 S3。
+领取、取消、完成和恢复都要竞争数据库中的当前 job 行，条件字段至少包括 job ID、状态、attempt 和取消标志。租约到期**只让独立恢复器取得竞争接管资格**，不会自动撤销旧 worker 的提交权。到期后恢复器与原 worker 可能同时继续；若 worker 的成功事务先提交，job 成功，恢复器随后看到终态便不重排；若恢复器先把 job 原子改回 `queued`，旧 worker 的成功条件就不匹配。fencing (写权栅栏) 发生在恢复事务提交处，不是时钟到达租约时刻。
 
-具体时序：worker A 领取 attempt 1 后停顿，租约到期但恢复器尚未接管；此刻 A 仍可能先提交成功。若恢复器先提交接管事务，job 变回 `queued` 并新增 outbox 意图，随后 B 领取 attempt 2；A 再恢复时，`WHERE attempt = 1 AND status = 'running'` 更新零行，不能引用自己的对象。若 B 已发布结果引用，A 的不同对象键也不能覆盖它。对象是否可见由数据库当前 attempt 的条件提交决定，租约到期时间本身不作栅栏。
+> [!example] A 停顿后，B 怎样接手同一份报表？
+> A 领取 `job-demo-731 / attempt=1` 后停顿。租约到期时，A 还可能先提交成功；只有恢复器先提交 `running → queued`，才阻止 A 的旧成功更新。B 随后领取 `attempt=2` 并提交结果，A 再恢复时，条件 `attempt=1 AND status=running` 已不匹配，更新零行。A 的私有对象不会替换 B 的结果；A 自己占用的物理槽则要等 A 停止并释放资源。
 
-取消只是请求停止，并非证明计算已停止。API 将 `cancel_requested=true` 持久化；若 `queued` 任务仍占有当前排队轮次的槽位，API 可用条件状态转移将其置为 `cancelled` 并释放该槽，之后到达的重复消息只按权威终态处理。领取与取消若同时竞争同一行，条件状态更新决定唯一结果：取消先提交时，worker 不能再领取；领取先提交时，任务转为 `running`，worker 随后检查取消标志。若 `running` 任务收到取消后 worker 崩溃，恢复器过期接管时先写 `cancelled`，不会重新排队或因槽位不足写容量失败。运行中的 worker 还要在有界数据页之间以及发布结果前检查。worker 的完成更新与取消终态更新都比较当前 attempt 和取消字段：如果取消先提交，当前尝试不再能转为成功；若成功终态先提交，后到的取消请求返回当前终态。浏览器断开只结束连接；202 已持久接受的 job 会继续，只有向 `DELETE /v1/jobs/{id}` 显式请求取消才改变任务状态。202 之前尚未被接受的请求级工作可以在断开后结束。
+本例把总尝试上限定为三次，初次领取也计一次。worker 发现可重试的暂时错误并停止当前工作后，或恢复器在租约到期后取得接管资格时，都用同一决策顺序：先核对 job 和当前 attempt；取消请求优先落为 `cancelled`，永久错误或 `attempt >= max_attempts` 落为 `failed`，否则只有预留到等待槽才可重排。
+
+重排事务把 `queued`、下一次 `available_at`、新的 `pending` outbox 和一个等待槽一起提交；relay 按持久的 `available_at` 安排到期唤醒，过早重复到达不能越过 worker 的条件领取，且只有已持久安排到期唤醒时才可确认早到投递。槽已满时持久失败为 `failed/capacity_exhausted`，不能靠 broker 无限重投。恢复器只有在自己的事务提交时才 fence 旧 attempt；单纯发现 lease 到期不改变旧 worker 的写权。例：attempt 1 暂时失败、停止业务操作后预留槽并写退避唤醒，attempt 2 可以成功；若 attempt 1、2、3 都失败或失联，第三次后的恢复写 `attempts_exhausted` 终态，不再预留第四次。
+
+若 relay、broker、worker 或数据库长期不可用，任务无法继续推进；有限的 attempt 截止时间、lease 扫描以及这些组件最终恢复并取得进展，是该例的活性条件。已排队任务仍持有等待槽，240 槽满后 API 停止接受新 job。
+
+| 并发结果 | job 与等待槽 | 外部对象及投递 |
+| --- | --- | --- |
+| worker 成功先提交 | `running → succeeded`；提交结果引用及 `report.ready` 意图；无需等待槽。 | 当前 attempt 对象成为唯一公开引用，成功提交后可 ACK；恢复器不得重排。 |
+| 运行中取消先标记 | 状态可暂时仍为 `running`，`cancel_requested=true`。 | worker 到有界检查点后条件提交 `cancelled` 与清理决定；在终态提交前不 ACK。 |
+| 恢复器见到取消 | 条件写 `cancelled` 与对象清理/保留决定。 | 不重新排队、不占等待槽；决定持久后旧 delivery 可 ACK。 |
+| 恢复器先提交接管，未取消、`attempt < max_attempts` 且存在空槽 | `running → queued`，同事务重新预留一个共享等待槽并新增 `pending` outbox；随后新 worker 领取并增加 attempt。 | 旧 attempt 被数据库状态栅栏阻止写结果；其物理执行槽仍要等旧 attempt 实际停止并释放资源才归还。 |
+| 可重试失败/恢复时达到 `max_attempts` | 写 `failed` 与 `error_code='attempts_exhausted'`，不占槽、不新增 outbox。 | 这是持久终态；终态与必要清理决定持久后可 ACK，不再安排下一轮。 |
+| 可重试失败/恢复时 240 槽已满且尚有 attempt 额度 | 写 `failed` 与 `error_code='capacity_exhausted'`，不占槽、不新增 outbox。 | 这是持久终态，不是无限 nack/requeue；终态与必要清理决定持久后可 ACK。 |
+
+若 job 仍为 `queued` 且持有等待槽，取消事务可条件地写入 `cancelled` 和对象处理决定并只释放该槽一次。领取与取消同时发生时由 job 行的条件更新决定唯一胜者：领取先提交时已经释放等待槽，API 不能再释放一次，只能给 `running` 写 `cancel_requested=true`；取消先提交时 worker 领取条件不匹配。运行中 worker 在有界检查点发现取消请求后，以 job、状态、attempt 与取消标志为条件提交 `cancelled`；如果它先失联，租约到期后的恢复器提交相同的取消终态，不会为了取消去抢等待槽。`cancel_requested` 还不是 ACK 许可，终态或可靠后继恢复路径仍须先持久化。
+
+“请求取消”“发出停止信号”“租约到期”“数据库已栅栏旧 attempt”都不证明旧 attempt 已停止。该 attempt 实际停止并释放它占有的连接、游标和上传资源后，才归还物理执行槽；同一进程仍可运行其他 attempt。若取消请求和成功提交同时发生，条件事务的提交顺序选出唯一终态：取消先写入时，成功条件失败；成功先提交时，取消端返回现有成功状态，不改写终态。
+
+每个 attempt 写到独立、只用于该次尝试的私有对象键，例如 `reports/job-demo-731/attempt-2.csv`。B 成功后，A 迟到的数据库更新因状态或 attempt 不匹配而影响零行；A 的对象不会被用户下载。若旧 attempt 仍可能在被栅栏后开始上传，则一次孤儿扫描不够：只有上传能力已撤销或存在明确的最大上传启动/持续时间，且安全宽限和存储传播时间已过，再次确认对象键未被任何已提交结果引用，才删除。当前 attempt 确认停止与异步孤儿回收是两个独立责任，不需要为了清理孤儿继续占 worker 槽。
+
+对象写入若选 Amazon S3，`If-None-Match: *` 可阻止覆盖当前同名对象；这是避免覆写的存储条件，并不能代替数据库 attempt 栅栏。另一种存储应按其写入条件语义设计，案例本身不依赖 S3。
 
 ### 何时应排队，怎样设容量边界？
 
-若代表性报表稳定满足调用方截止时间和尾部时延目标，同步接口更简单：校验输入、执行有界查询、返回 CSV，无需 queue、outbox relay、worker、状态轮询和结果清理生命周期。任务可能超过请求预算、必须在断连后可查，或突发流量需要与 API 执行隔离时，才选择异步路径。队列能保存等待和隔离故障，但不会凭空增加处理能力。
+沿用同一工作负载，4 个 worker 副本、每副本 2 个进程、每进程 8 个并行 attempt 槽，共 64 个物理执行槽；每个 attempt 平均占用六秒。若峰值每秒 20 个新 job 都被长期接受，且每个 job 只需一个 attempt，平均就需要 `20 × 6 = 120` 个并发 attempt，超过 64 槽；实际重试还会增加总 attempt 槽秒，租约恢复重叠时旧 attempt 仍占物理槽。队列只能暂存超出服务能力的任务，不能消除持续过载。容量页继续计算在假设的 70% 平均利用率下把准入目标设为每秒 7 个新 job、短时突发 30 个、未开始任务 240 个，并给出共享数据库连接池 200 的预算拆分。这里的 7 是**每秒 7 个新逻辑 job**，不是七秒等待时间。
 
-沿用[容量与背压页](#28.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)的估算：64 个 worker 槽、准入目标 7 次/秒、30 个任务的短时突发，以及共享上限 240 个已接受未开始任务；应用连接池总上限是 200。若把峰值 20 次/秒持续按平均 6 秒处理，平均需要约 `20 × 6 = 120` 个并发 worker；64 个槽不能长期消化该到达率，因此准入规则要限流/拒绝，等待队列也不能无界增长。未开始任务包括 outbox 中尚未发布的任务。若 broker 暂时不可用，已接受任务仍占槽；槽已满时 API 必须在 **202 之前**返回过载错误。数据库不可用时无法持久接受任务，也不能声称已受理。
+准入要分别限制速率、短时 burst (突发) 和持久等待槽。相同幂等键重放返回既有 job，不算新逻辑 job，也不多占令牌或槽，但每个 HTTP 重放仍耗 API 计算资源。新 job 在 202 前同时拿到 job/outbox/等待槽；恢复器重排也必须先取得槽再提交新 outbox。已有 broker 深度很低不证明系统空闲：outbox 未发布的 queued job 仍在 240 槽统计中。持续容量不足时拒绝新任务；本例每个 job 最多三个 attempt (包含首次)，暂时失败与租约恢复都须在当前 job/attempt 条件下决定取消、耗尽、容量或重排。最多三次只限制开始次数，不是旧 attempt 立即停止的保证；被 fence 的 attempt 仍占物理槽直到该 attempt 停止并释放资源，故要用有限读取/上传截止时间及可观察的停止路径限制资源重叠。无等待槽时将 job 持久失败为 `failed/capacity_exhausted`，不可通过无限消息重排把存储和数据库压力转成看不见的积压。
 
-> [!info] 用平均到达率估算并发，不等于压测结果
-> Little's law（利特尔法则）给出稳态关系：平均在途任务数约等于平均到达率乘以平均处理时长。若 20 次/秒持续到达且每项平均 6 秒，`20 × 6 = 120` 是近似并发需求；它不包含长尾、突发与失败重试，不能替代压测和限流。
+上线时要让 API、relay、worker 的 schema (数据库结构与消息字段) 兼容窗口覆盖已经接受的任务；升级不能假定队列中只有新版本消息。运行中监控 API 受理时延、最老 pending outbox 与 queued job 年龄、broker 最老消息年龄和深度、活跃物理槽、成功完成分位数、重试/取消/容量失败、数据库连接池等待与 SQL 时长、对象存储用量。指标各自只覆盖一段路径；broker 没有积压，仍可能有旧 outbox 或数据库 queued 任务。容量估算与池上限见[如何估算并限制异步工作管线？](#28.%20%E5%A6%82%E4%BD%95%E4%BC%B0%E7%AE%97%E5%B9%B6%E9%99%90%E5%88%B6%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%E7%AE%A1%E7%BA%BF%EF%BC%9F)，各阶段的信号和响应见[怎样从报表服务信号定位发布后的故障？](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)。
 
-部署与运行时保留以下检查：API、relay 与 worker 的任务表结构兼容，使升级期间旧任务仍可完成；按本例分开的 7 天结果与终态后 14 天状态/幂等元数据策略清理；限制重试数、对象上传时长和每次工作时长；监测 API 接受时延、pending outbox 的最老等待时间、数据库中最老 `queued` job 年龄、broker 最老消息年龄与深度、活跃 worker 槽、任务完成分位数、连接池等待与 SQL 耗时、对象存储用量、重试、取消和终态结果。broker 队列指标正常不能证明数据库中没有积压；`pending outbox` 或 `queued` 年龄持续增长都表示处理路径跟不上。发布时保留回滚路径，并考虑已经按旧 schema 接受的任务。
-
-
-**继续阅读：** [数据库约束与索引](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F)说明唯一键与查询路径；[事务隔离与 WAL](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)说明数据库内提交边界；[数据访问与连接池](#11.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)说明每个请求/attempt 的 ORM 与连接生命周期；[HTTP 协议与 WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F)说明客户端状态查询的传输边界；[可观测性、服务目标与事件响应](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明阶段指标。更长的设计检查清单见[AI 系统设计案例](../../ai-engineering/systems/ai-system-design-interview-questions.md)。
+**继续阅读：** [数据库约束与索引](#8.%20%E5%A6%82%E4%BD%95%E7%94%A8%E7%BA%A6%E6%9D%9F%E4%BF%9D%E6%8A%A4%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99%E5%B9%B6%E4%B8%BA%E8%AF%BB%E5%8F%96%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%EF%BC%9F) 解释幂等唯一键；[事务隔离与预写日志](#9.%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%8E%E9%A2%84%E5%86%99%E6%97%A5%E5%BF%97%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F) 解释数据库内的提交边界；[数据访问与连接池](#11.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F) 解释每个请求和 attempt 的 ORM 连接生命周期；[HTTP 协议与 WebSocket](#2.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AF%B7%E6%B1%82%E5%A6%82%E4%BD%95%E5%88%B0%E8%BE%BE%20HTTP%20%E5%93%8D%E5%BA%94%EF%BC%9F) 解释状态查询的传输边界；[发布确认与消费者确认](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F) 解释所选 broker 的具体行为。更长的通用系统设计问答见[AI 系统设计案例](../../ai-engineering/systems/ai-system-design-interview-questions.md)。
 
 > [!info]- 来源
-> - `202 Accepted` 表示已接受但尚未完成的 HTTP 语义：[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§15.3.3，核对于 2026-11-06。
-> - 同一数据库事务内的提交边界、唯一约束和并发行为：[PostgreSQL 18, Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html)、[Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html) 与 [Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)，核对于 2026-11-06。
-> - 数据库与消息通知的双写故障、outbox 重复发布及消费者幂等：[AWS Prescriptive Guidance, Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html)，核对于 2026-11-06。
-> - 发送端 publisher confirms 与消费端 acknowledgements 是两个独立边界；RabbitMQ 的 unroutable/持久消息行为：[RabbitMQ 4.4, Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms)，核对于 2026-11-06；本架构只要求按最终选择的 broker 契约确认。
-> - 按对象名防止覆盖的条件写入示例：[Amazon S3, Conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)，核对于 2026-11-06；S3 只是可选实现。
-> - 从需求、约束与运行目标选择架构：[Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework)，核对于 2026-11-06。
+> - `202 Accepted`：请求已接受但处理未完成，协议不承诺操作最终会成功；[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§15.3.3，核对于 2026-11-12。文中要求先持久提交再返回是本例服务比通用 HTTP 语义更强的应用合同。
+> - 唯一约束、并发 `INSERT`、`ON CONFLICT` 和隔离级别：[PostgreSQL 18, Constraints](https://www.postgresql.org/docs/18/ddl-constraints.html)、[Index Uniqueness Checks](https://www.postgresql.org/docs/18/index-unique-checks.html)、[INSERT](https://www.postgresql.org/docs/18/sql-insert.html)、[Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)，核对于 2026-11-12。唯一索引冲突检查会等待尚未提交的冲突行后再裁决；`READ COMMITTED` 下 `ON CONFLICT DO NOTHING` 可能因当前语句快照不可见的并发行而不插入，因此败方回滚后用新事务读胜者。[Data-modifying WITH Queries](https://www.postgresql.org/docs/18/queries-with.html) 支持将 `UPDATE ... RETURNING` 的实际行输入后续 `INSERT`；本例用 CTE 把 `report.ready` 限定到成功更新一行的情况。案例 SQL 与限流表不是文档中的完整 schema。
+> - 数据库提交与消息通知的 dual-write 缺口、重复消息和消费者幂等：[AWS Prescriptive Guidance, Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html)，核对于 2026-11-12。
+> - attempt 对象的可选防覆盖写入：[Amazon S3, Conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)，核对于 2026-11-12；所述数据库栅栏不依赖 S3。
+> - 安全、可靠性、性能、运维与成本等非功能目标的通用背景：[Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework)，官方页面最后核阅于 2026-10-13，见“Pillars and perspectives”。[官方变更记录](https://docs.cloud.google.com/architecture/framework/whats-new) 记载其于 2024-08-27 移除 System Design 分类；本页不把它当作系统设计清单，具体异步化边界和报表状态是合成案例的分析。
 ## 16. 报表任务的发布确认、消费者确认与业务完成各证明什么？
 
 案例中，账户 acct-17 发起 report 42 的 CSV 导出；断线后调用方仍要能查状态，并在成功后按授权下载私有对象。application programming interface（API，应用程序接口）在一个数据库事务里创建稳定 job ID（任务 ID）`job-demo-731`、待发布的 outbox（事务发件箱）意图和一个等待槽。等待槽是数据库中的准入计数：每个尚未领取的逻辑排队轮次占一个；领取后归还；重试或租约恢复器重新排队时再次预留；重复消息不增槽。它不是 RabbitMQ 的 consumer prefetch（消费者预取上限），也不是 BullMQ 的 job lock（任务锁）。客户端 idempotency key（幂等键）`report-demo-208`、报表 ID 42 与 job ID 是不同身份；读取报表状态、完成一个 job 和读取结果对象也是不同用户结果。
@@ -2629,8 +2682,8 @@ outbox relay 按 intent 读取待发记录，发布它指向的稳定 job ID；p
 | --- | --- | --- |
 | 排队已到期 | `status='queued'` 时先取得物理执行槽，再竞争条件领取；只有一个事务能转为 `running` 并增加 attempt。 | 领取成功后继续处理；此处不 ACK；领取失败则重读状态。 |
 | 排队未到期 | `status='queued'` 不能让旧的早到消息越过退避。 | 只有后续到期唤醒已经持久安排好时，才能 ACK 早到的重复消息；否则按 broker 契约延后或保留未确认。 |
-| 运行中租约有效 | `status='running'` 时不能另起并行 attempt。 | 只有确认独立、持久的数据库租约恢复器会在过期后接管并重排时，才可 ACK 重复消息；否则保留或延后。 |
-| 运行中租约过期 | `status='running'` 时 worker 不能自助领取下一代；到期只让独立恢复器有资格竞争接管。 | 恢复器把取消、容量失败或重新排队决定持久提交后，旧 delivery 才有可确认的终态或新唤醒路径；接管提交前不能把过期当作旧 attempt 已失权。 |
+| 运行中租约有效 | `status='running'` 时不能另起并行 attempt。 | 只有确认独立、持久的数据库租约恢复器会在过期后持久处理（提交终态或可恢复的重排）时，才可 ACK 重复消息；否则保留或延后。 |
+| 运行中租约过期 | `status='running'` 时 worker 不能自助领取下一代；到期只让独立恢复器有资格竞争接管。 | 恢复器把取消、尝试耗尽、容量失败或重新排队决定持久提交后，旧 delivery 才有可确认的终态或新唤醒路径；接管提交前不能把过期当作旧 attempt 已失权。 |
 | 已到终态 | `succeeded`、`failed` 或 `cancelled` 时不再计算；按既定清理和可查询结果策略处理。容量耗尽以 `failed` 加 `error_code='capacity_exhausted'` 表示，不另造状态。 | 终态、错误码及必要清理/保留决定已持久后可 ACK。 |
 
 取消也要按状态归还等待槽。API 取消一个仍为 `queued` 的 job 时，在一个条件事务中将其改为 `cancelled`、保存清理/保留决定，并只归还该排队轮次仍占有的槽；已发布或之后才发布的唤醒消息只会读到终态，不会领取或增加 attempt。领取与取消并发时由同一 job 行的条件更新决胜：若领取先提交，领取事务已归还等待槽，API 只能对 `running` 写 `cancel_requested=true`，不能再次归还等待槽；若取消先提交，worker 无法领取。
@@ -2646,8 +2699,8 @@ outbox relay 按 intent 读取待发记录，发布它指向的稳定 job ID；p
 | A 领取 | `queued → running`，`attempt=1`，同一领取事务写入有界租约。 | A 领取时归还该轮等待槽。 | A 处理当前投递；不能在领取后就 ACK。 |
 | 租约到期、恢复器尚未提交接管 | 仅恢复器取得竞争接管资格；行仍为 `running / attempt=1`。 | 不变。 | 若 A 的完成事务先提交，job 成为成功且一同写入结果引用与 `report.ready` 意图；恢复器看到终态后不重排。 |
 | 恢复器先提交且有取消请求 | 条件转为 `cancelled`，并持久化对象清理/保留决定。 | 不需等待槽。 | 取消终态与清理决定提交后可 ACK。 |
-| 恢复器先提交、未取消且 240 个共享等待槽已满 | 条件写入 `status='failed'` 和可查询的 `error_code='capacity_exhausted'`。 | 不预留槽，不写新 outbox。 | 失败状态和错误码提交后可 ACK。 |
-| 恢复器先提交、未取消且有空槽 | 同一事务将 job 改回 `queued`，清除旧租约。 | 原子预留一个等待槽并插入新的 `pending` outbox；relay 后续重发该意图。 | 重排、槽位和唤醒意图均持久后，旧 delivery 可 ACK。 |
+| 恢复器先提交、未取消、尚有尝试额度但 240 个共享等待槽已满 | 条件写入 `status='failed'` 和可查询的 `error_code='capacity_exhausted'`。 | 不预留槽，不写新 outbox。 | 失败状态和错误码提交后可 ACK。 |
+| 恢复器先提交、未取消、尚有尝试额度且有空槽 | 同一事务将 job 改回 `queued`，清除旧租约。 | 原子预留一个等待槽并插入新的 `pending` outbox；relay 后续重发该意图。 | 重排、槽位和唤醒意图均持久后，旧 delivery 可 ACK。 |
 | B 领取新唤醒 | `queued → running`，`attempt=2`，同一事务写新有界租约。 | B 领取时归还新排队轮次的等待槽。 | A 随后迟到的成功条件更新因状态或 attempt 不匹配而返回零行。 |
 
 若 A 与恢复器同时争夺有效状态，条件更新以行锁与提交顺序选出一个胜者。租约到期本身不等于恢复器已提交；worker 也不能只因时钟已过期就自助递增 attempt。对 `running` 的重复投递，仅在独立恢复器确实会在租约到期后持续接管时，才能安全 ACK；否则要保留唤醒信号。
@@ -5415,100 +5468,129 @@ async def stream_rows(
 > - CPython 3.11 普通线程受 GIL 限制；free-threaded 构建的可选支持和扩展模块可能重新启用 GIL：[Python support for free threading](https://docs.python.org/3/howto/free-threading-python.html)，§Installation、§The global interpreter lock in free-threaded Python；3.14 的正式支持阶段见 [PEP 779](https://peps.python.org/pep-0779/)，§Abstract。两页核对于 2026-11-12。
 ## 28. 如何估算并限制异步工作管线？
 
-**案例：** API 接到 acct-17 的账户报表请求：先验证并持久接受任务，后台 worker（工作进程）顺序读数据库并生成 CSV，最后写入私有对象存储。受理事务同时写 job、outbox 和一个共享等待槽，提交后才返回 `202`；只有对象上传完成、结果引用与 `succeeded` 状态提交后，报表才可查询。这里估算的是这条持久后台导出路径。直接用 HTTP 流式响应是另一条请求内路径：连接和流资源要活到正文发送完或请求取消，不会自动变成可查询的 job 结果。
+**案例：** application programming interface (API，应用程序接口) 收到 `acct-17` 的报表导出请求，事务写入 job（任务）、outbox（事务发件箱）和一个共享等待槽后才返回 202。worker（工作进程）有限地读取数据库，生成 Comma-Separated Values (CSV，逗号分隔值) 文件并上传私有结果对象；只有结果引用与 `succeeded` 同时提交，结果才对用户可用。这是“先接受、后台继续、之后可查”的持久路径。直接以 Hypertext Transfer Protocol (HTTP，超文本传输协议) 流式返回 CSV 属于另一种请求内工作：发送正文期间仍占用请求连接和处理资源，断开后的读取不会自动变成可查询 job。
 
-要决定接多少任务，必须同时看准入速率、等待上限、每个执行槽的处理时间、数据库连接和输出体量。队列能保留待办工作，却不会自动增加处理能力。
+容量不是一个“队列长度”数字。准入速率限制新逻辑 job（任务）的到达，等待槽限制已经承诺但尚未领取的工作量，执行槽限制同时运行的 attempt（一次物理执行尝试）；连接池和对象存储又各有自己的资源预算。队列只能改变工作等在哪里，不能提高下游服务率。
 
-容量规划中的 admission control（准入控制）决定是否接受新工作；backpressure（背压）把下游拥塞反馈给上游。两者都要与任务槽位和连接池的所有权一起定义。
+admission control（准入控制）决定新逻辑 job 是否进入系统；backpressure（背压）则把下游已满的信号传回上游，使上游减速、延后或停止提交。HTTP 调用方若不能被动调速，服务就必须在返回 202 之前明确拒绝这次未受理的请求，而不能先承诺接受再丢弃。两者的边界不同：速率限制新 job 的到达，等待槽限制已承诺但未领取的工作量。
 
-~~~mermaid
-flowchart LR
-    Request[提交报表] --> Rate{速率预算可用？}
-    Rate -->|否| Reject[拒绝，尚未承诺受理]
-    Rate -->|是| Slot{共享等待槽可用？}
-    Slot -->|否| Reject
-    Slot -->|是| Persist[同一事务：写 job、outbox 与一个等待槽]
-    Persist --> Relay[relay 发布 outbox]
-    Relay --> Broker[message broker（消息代理）]
-    Broker --> ExecSlot{worker 已取得执行槽？}
-    ExecSlot -->|否| Broker
-    ExecSlot -->|是| Claim[条件领取 job]
-    Claim --> Active[领取时释放等待槽；执行槽继续归 worker]
-    Active --> Settle[尝试完成或确认停止并清理]
-    Settle --> Free[归还执行槽]
-    Broker -->|重投仍是同一逻辑 job| Broker
-~~~
+本例的 idempotency key (幂等键) 按 `(account_id, principal_id, key)` 唯一，绑定报表 ID、期间和格式等规范化请求的 fingerprint (指纹)。相同范围、同键、同指纹表示重放原意图，返回既有 job；同键异指纹则冲突。准确重放不消耗新 job 的速率令牌或等待槽，但“先查、后扣额”不能解决不同 key 争用最后一个槽。
 
-等待槽属于尚未被 worker 领取的逻辑 job。API 在同一数据库事务提交 job、`pending` outbox 行和等待槽；relay 重发同一 outbox 意图、broker 重复投递时都不新占槽。worker 必须在领取前先预占一个执行槽；没有执行槽就不领取、不确认消息，并把预取和本地待处理消息限制在执行容量内。条件更新成功时 job 变为 `running`、等待槽释放，执行槽由 worker 持有；若消息重复、job 已终态或条件领取失败，就归还刚预占的执行槽。等待中的 job 若在领取前取消或转为其他终态，状态变化与释放等待槽必须同事务进行且只释放一次。
+数据库事务先尝试插入带唯一范围的 job 身份；同键并发败方回滚后读取胜者并核对指纹，同指纹返回原 job，异指纹冲突。只有唯一约束确认新意图胜出，才竞争一条**整条管线共用**的准入额度记录：本例的 7 个/秒令牌、30 枚桶深和 240 个等待槽由所有 API/worker 副本、账户和新 key 共享；不能各实例各自保留一份完整额度。事务先锁这条额度行，按数据库时钟补充令牌，再检查至少一枚令牌及 `waiting_count < 240`，一次更新扣令牌并加等待计数，然后补全 job、参数和 outbox。
 
-成功领取后执行槽一直由该物理 attempt 持有，直到该尝试确实停止运行、不再使用它持有的连接、游标或上传句柄后才归还。不要仅因数据库状态变化就释放物理槽，也不必为了回收异步孤儿对象而继续占着已停止 worker 的执行槽；孤儿对象由独立的清理责任方按宽限期处理。请求超时、发出取消信号、租约到期都不能单独证明执行停止。租约到期后，恢复器先检查取消请求：若 job 已请求取消，就条件提交终态，不重排；若仍可重试且能取得新等待槽，则用条件更新 fencing（隔离旧 attempt 对结果的写入权），并在同一事务中把逻辑 job 重排、写新的 outbox 意图。这不代表旧 worker 的计算、连接或游标已经停止。被 fencing 的旧 attempt 仍占原物理执行槽到实际退出并释放正在使用的资源，新 attempt 领取时另取一个执行槽。若是已确定结束的普通失败，完成资源清理后再为重试预留等待槽。租约接管和旧结果 fencing 的状态转移见[怎样设计可持久查询的账户报表？](#%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E9%87%8D%E8%AF%95%E6%80%8E%E6%A0%B7%E9%81%BF%E5%85%8D%E6%97%A7%E7%BB%93%E6%9E%9C%E8%A6%86%E7%9B%96%E6%96%B0%E7%BB%93%E6%9E%9C%EF%BC%9F)。
+两个不同 key 争最后一槽时会在同一额度行上串行，先提交者占槽，后者看到已满后回滚自己的临时 job 身份；令牌、计数、job 和 outbox 同事务提交或一起回滚。令牌不足时在接受前返回 `429 Too Many Requests`，等待槽已满时按暂时过载返回 `503 Service Unavailable`；两种拒绝都不留下 job。若实现为条件原子更新，也必须让令牌和槽检查/递增成为同一事务的唯一胜者操作。每账户限流可以叠加，不能代替这个全管线预算。若额度行在独立外部限流器，数据库回滚不能替它退回令牌，须另建幂等预留/补偿合同。
+
+等待槽的 240 覆盖所有尚未领取轮次，不论 outbox 尚待发布还是 job 已在 broker；它随同一逻辑 job 的位置迁移而不变。领取提交时释放，`queued` 取消与状态终结同事务释放一次，重试重排须重新预留一个槽并写新 outbox。
+
+worker 不能因为 broker 有消息就直接领取：先取得本进程的物理执行槽，再尝试条件领取 job。没有槽时不领取，不无限预取或塞入本地缓冲；这只会推迟领取，不会把已受理 job 判为 `capacity_exhausted`。若条件领取失败，因为重复、已取消或 job 已经终态，worker 归还刚预留的执行槽。领取提交后，job 变为 `running`，attempt（一次物理执行尝试）加一、有界租约写入，逻辑等待槽释放；物理执行槽继续归该 attempt。
+
+fencing（写权栅栏）是恢复器提交接管后拒绝旧 attempt 再提交当前 job 的结果；租约到期本身只让独立恢复器得到竞争资格，不会自动停止旧 attempt。恢复器先处理取消；可重试且未达到上限时，重排事务原子取得新的共享等待槽并写新 outbox；如果这项**已受理 job 的重排**拿不到槽，则提交 `failed` 和 `capacity_exhausted` 错误码。即使恢复器已栅栏旧 attempt，它仍占物理槽，直到该 attempt 实际停止并释放连接、游标或上传句柄。worker 进程可以继续处理其他 job；物理槽归还跟随 attempt 停止，不要求整个进程退出。旧 attempt 停止后的孤儿对象清扫由独立清理任务负责，不必继续占用已归还的 worker 执行槽。
+
+![共享等待槽在领取提交时释放；物理执行槽需等 attempt 停止并释放资源才归还，worker 进程可以复用](../../engineering-foundations/reliability/resources/capacity-slot-ownership.svg)
+
+图中两个槽位属于不同的量纲和所有者。等待槽记未领取的逻辑排队轮次，不随着 outbox 到 broker 的迁移而变；物理执行槽记仍在运行且占有处理器时间、连接、游标或上传句柄的 attempt。worker 结束一次业务操作后可以持久决定重排；该 job 可先占新等待槽，而旧 attempt 的物理槽要等它真正停止并释放资源才归还。worker 进程通常留在池中继续工作。租约恢复可能在旧 attempt 停顿时提交新排队轮次，之后新 worker 可另占一个物理槽；若两次 attempt 短暂重叠，必须分别计算和占用两个槽。
 
 ### 用平均在途量估算，不要把平均值当峰值保证
 
-先给公式里的量对齐单位和边界。若一个稳定系统平均每秒接受 40 个请求，每个请求在该系统内平均停留 0.2 秒，则平均在途请求约为 40 次/秒 × 0.2 秒 = 8 个。这是 Little 定律（Little's Law）：平均在系统中的任务数 = 平均到达速率 × 平均停留时间。若 W 包含排队，就必须把同一个队列纳入系统边界；若只算 worker 执行时间，就不能把排队延迟偷偷算进 W。
+Little's law（利特尔定律）给出稳定系统的长期平均关系：
 
-这个关系描述长期平均量，不能推出峰值吞吐、p95/p99 时延或安全并发上限。需求成批到达、重试、变长任务和下游资源限制都要另外测量。队列长度（queue depth）说明有多少任务在等；queue age（队列等待时长）说明最老任务等了多久，两者都应跟踪。
+~~~text
+平均系统内任务数 L = 平均有效到达率 λ × 平均系统停留时间 W
+~~~
+
+三个量必须属于同一个边界和同一种任务。若系统只算 worker 的执行，`W` 用平均 attempt 执行时间；若系统包括等待，`W` 也包含队列时间。`λ` 是该边界实际接纳并进入系统的平均速率，不是已被拒绝的原始 HTTP 请求速率。公式使用长期稳定状态下的有限均值；若无界到达持续超过服务能力而队列一直增长，就不能借这个公式假设一个有限的稳态等待量。
+
+例如某个稳定服务平均接纳 40 个请求/秒，每个请求从进入到离开该服务平均 0.2 秒，那么服务内平均有 `40 × 0.2 = 8` 个在途请求。Little 定律是平均量恒等关系；它不预测突发峰值、等待时间的 p95/p99，也不单独证明一个容量上限安全。到达批次、服务时间长尾、失败重试、拒绝策略和下游瓶颈仍须另行分析。若边界是等待队列，queue depth（队列深度）说明有多少工作在等，queue age（队列年龄）说明最老的工作等了多久；二者揭示不同故障。
 
 ### 合成账户报表要预留多少执行槽？
 
-下表是用于演算的合成输入，不是生产测量、服务目标或默认推荐值。
+以下是用于演算的显式合成输入，既不是生产测量，也不是服务目标或默认推荐值。
 
-| 输入 | 假设 |
+| 输入 | 教学假设 |
 | --- | ---: |
-| 新幂等键产生的平均与 10 分钟峰值 job 提交速率 | 5 / 20 个每秒 |
-| 单个请求大小 | 8 KiB |
-| 提交事务持有数据库连接 | 10 ms |
-| 每份报表的顺序索引读取 | 12 次，每次借连接 20 ms |
-| worker 每个 attempt 平均处理时间 | 6 s |
-| 每份结果与每个 job 元数据 | 128 KiB / 2 KiB |
-| 结果对象与终态/幂等元数据保留期 | 7 天 / 终态后 14 天 |
+| 新幂等键产生的平均提交速率 / 十分钟峰值提交速率 | 5 / 20 个新 job 每秒 |
+| 单个请求正文 | 8 KiB |
+| API 提交事务借用数据库连接 | 10 ms/job |
+| 每份报表的顺序索引读取 | 12 次；每次借连接 20 ms |
+| 单个 worker attempt 平均处理时间 | 6 s |
+| 平均结果对象 / 每个 job 元数据 | 128 KiB / 2 KiB |
+| 结果对象保留期 / 终态及幂等元数据保留期 | 7 天 / 终态后 14 天 |
 
-先假设每份报表只执行一个 attempt，且重试、恢复和失败清理额外耗时不计入 6 秒。平均到达 5 份/秒、平均 attempt 处理 6 秒，对应 5 × 6 = 30 个平均在途 attempt。若 10 分钟峰值 20 份/秒都被接受，则需要约 20 × 6 = 120 个平均并发 attempt。4 个后台 worker 副本、每副本 2 个进程、每进程 8 个并行 attempt 槽，一共是 4 × 2 × 8 = 64 个执行槽。
+先只计算每个新 job 一个 attempt，假定六秒平均处理时间已包括生成与上传；重试、租约接管重叠、失败清理与下载另计。若五个新 job/s 实际被接纳并稳定处理，且每个只用一次平均六秒的 attempt，平均有 `5 × 6 = 30` 个在执行的 attempt。峰值时若希望持续处理每秒 20 个新 job，且每个只需一个 attempt，则容量需求为 `20 × 6 = 120` 个平均并发 attempt；这是跟上输入的规划需求，不是当前 worker 的实际执行率。每个 worker 副本有两个进程、每进程八个 attempt 槽，共四个副本时只有 `4 × 2 × 8 = 64` 个物理执行槽，理想上限 `64 / 6 ≈ 10.67 attempt/s`，因此在该负载下不能形成稳定的 20/s 执行流，等待会增长或新 job 被拒绝。
 
-64 个执行槽全满时，按 6 秒平均处理时间，理想平均服务率是 64 / 6 ≈ 10.67 个 attempt/秒。若规划时先把平均利用率压在假设的 70%，估算速率为 64 × 0.70 / 6 ≈ 7.47 个/秒。将 token bucket（令牌桶）准入目标设为 7 份报表/秒，则按每份一次 attempt 估算会占用 7 × 6 / 64 ≈ 65.6% 的槽。70% 和 7 个/秒只是后续负载测试的起点，不是实测容量承诺；重试会占用额外 attempt 槽。
+若 64 槽都持续有工作，按六秒平均服务时间折算的理想平均服务率是 `64 / 6 ≈ 10.67 attempt/s`。这是忽略调度空隙和所有额外工作的上界型估算，不是压测吞吐。规划时先把平均利用率假设为 70%，可算出 `64 × 0.70 / 6 ≈ 7.47 attempt/s`。于是本例将新 job 的准入目标暂设为每秒 7 个：若平均每个新 job 只运行一次 attempt，则占槽 `7 × 6 = 42` 个，即 `42 / 64 ≈ 65.6%`。70% 目标相当于每秒 `44.8` 个 attempt 槽秒；以 7 个新 job/s 均摊，最多约 `44.8 ÷ (7 × 6) ≈ 1.067` 个六秒 attempt/job 才不超过该规划预算。70% 和 7/s 是待负载测试验证的起点。重试、租约接管重叠、处理时间长尾和运维任务都会改变实际服务率。
 
-准入速率和等待队列要分别封顶。本例假设持续准入 7 份/秒、短时突发 30 份、所有 outbox 与 broker 队列中最多 240 个已接受未领取的逻辑 job。受理前，在同一事务里持久化 job、outbox 发布意图并原子预留一个共享等待槽；outbox 和 broker 之间迁移同一个 job 不再占第二槽。worker 有执行槽后才条件领取；领取事务只释放该 job 当前排队轮次的等待槽一次。领取前取消的 job 转终态时，也要在同一条件状态转移中释放等待槽一次。运行中的 job 只有在 attempt 实际完成或已确认停止、不再使用实时资源后才能归还该物理 attempt 的执行槽；若租约恢复已 fencing 旧 attempt，恢复器只在 job 未请求取消且取得新等待槽时才能重排并写 outbox，旧物理执行槽仍占用，新 attempt 领取时另取执行槽。重试重排须同事务再次取得等待槽并写新的 outbox 意图；没有槽位就记录可查询的容量失败状态，不得无界重发。
+这里要分清三种控制：
 
-若 20 个/秒的新幂等键提交持续 600 秒，共有 12,000 个新的逻辑 job 意图到达。令牌桶最多准入 7 × 600 + 30 = 4,230 个，因此在共享等待槽和其他限额没有更早拒绝的假设下，至少 12,000 − 4,230 = 7,770 个新逻辑 job 不能受理。相同幂等键重放会返回原 job，不在这组新 job 到达量中，也不再占一个令牌或等待槽；重放 HTTP 请求本身仍消耗 API 服务容量。速率或等待槽已满时返回明确过载错误，不能返回 202 Accepted（已受理）后再悄悄丢任务。完整 job 状态和事务边界见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)。
+| 控制量 | 合成上限 | 解决的问题 | 不能推出什么 |
+| --- | ---: | --- | --- |
+| token bucket（令牌桶）新 job 速率 | 补充 7 个/秒 | 平滑长期新工作到达 | 不保证下游一定及时完成 |
+| token bucket 瞬时 burst（突发） | 最多 30 个新 job | 允许短时成批提交 | 不提供无限等待区 |
+| 共享未领取等待槽 | 最多 240 个逻辑排队轮次 | 限制已承诺但尚未执行的工作量 | 不限制正在执行 attempt 的物理资源 |
+| worker 执行槽 | 64 个 attempt 槽 | 限制并发计算与实时资源 | 不限制 queued/outbox backlog |
+
+这些门槛要共同生效。假设账户十分钟都以 20 个**新幂等键**每秒提交，共有 `20 × 600 = 12,000` 个新逻辑意图。若令牌桶开始时有 30 个令牌、此后以 7/s 补充，则令牌桶单独最多放行 `7 × 600 + 30 = 4,230` 个；在等待槽和其他限额均未先行拒绝的条件下，至少 `12,000 − 4,230 = 7,770` 个新任务不会受理。真实队列故障、worker 停机或重排可能更早占满 240 槽。相同幂等键重放不属于这些新意图，不再耗一枚令牌或一个等待槽；但每次重放仍占用 API 的认证、网络和服务处理资源。
+
+等待槽数量限制了承诺了多少尚未领取的工作，不直接设定队列可等待多久。举例：开始时无积压且令牌桶已满、上游有足够的新 key、其他额度都不冲突、worker 连续 30 秒不能领取，也没有重试重排；令牌桶可让 `30 + 7 × 30 = 240` 个新 job 进入，正好填满 240 个等待槽，之后即使仍有速率令牌也必须拒绝。已有积压或其他重排会让等待槽更早占满；若 worker 停领超过 30 秒，填满后后续符合速率条件的新 job 会持续被拒绝，直到有槽释放。240 是本案例的等待工作量边界，不代表最长等待 30 秒；容量应按业务可接受的排队 service-level objective (SLO，服务等级目标) 和实测服务/恢复速度校准，队列年龄持续上升时要降速或拒绝。
+
+本例每个 job 固定最多三次 attempt（含首次），即最多两次重试；这是为说明有界恢复而设的案例策略，不是队列或框架默认值。worker 遇到可重试暂时错误并结束当前工作后，与租约到期后取得竞争资格的恢复器，都要按当前 job/attempt 条件决定下一步：取消优先；永久错误或达到三次上限写终态；其余只有成功取得等待槽时，才同事务写 `queued`、退避后的 `available_at` 和新的 `pending` outbox。relay 必须在到期时可靠唤醒；过早到达的重复投递仍受数据库可领取时间条件约束，未确认到期唤醒已持久安排时不能提前 ACK。槽不足则持久写 `failed/capacity_exhausted`；达到上限则持久写 `failed/attempts_exhausted`。旧投递只带 job ID，即使来自上一轮也可以唤醒并竞争当前 queued 轮次；数据库条件让一轮最多被领取一次，它不能自行增加 attempt。租约到期只让恢复器有资格竞争，恢复事务提交才 fence 旧 attempt。fence 后，旧 attempt 仍占原物理执行槽，直到该 attempt 停止并释放连接、游标、上传等资源；三次上限限制启动总数，有限读取/上传截止时间和可观察的停止路径才限制物理重叠持续多久。相关提交、ACK 与租约条件见[怎样设计一个可持久查询的账户报表？](#%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E9%87%8D%E8%AF%95%E6%80%8E%E6%A0%B7%E9%81%BF%E5%85%8D%E6%97%A7%E7%BB%93%E6%9E%9C%E8%A6%86%E7%9B%96%E6%96%B0%E7%BB%93%E6%9E%9C%EF%BC%9F)和[报表任务的发布确认、消费者确认与业务完成各证明什么？](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### 进程内连接池怎样叠加成数据库总预算？
 
-连接池通常由每个应用进程持有；扩容进程会复制池上限，多个服务还会争用同一数据库预算。假设本例 API 和 worker 都部署 4 个副本、每副本 2 个进程，每个进程使用 SQLAlchemy QueuePool，配置 pool_size=8、max_overflow=2：
+SQLAlchemy 的连接池由进程内 Engine（引擎对象）持有；扩容应用进程会复制连接上限。本例假定 API 和 worker 各有四个副本、每副本两个进程，每个进程一个同步 `QueuePool`，设置 `pool_size=8` 与 `max_overflow=2`。该池最多允许每进程十条并发连接；超出常驻池容量的连接在归还时关闭，空闲池最多保留八条。若使用异步 Engine，则使用 `AsyncAdaptedQueuePool`；SQLite 内存数据库也有不同默认池行为，所以其他数据库、池实现或进程模型都要重算。
 
-| 连接使用者 | 最大上限计算 | 连接上限 |
+| 连接使用者 | 配置最大值计算 | 连接数上限 |
 | --- | ---: | ---: |
-| API：4 个副本，每副本 2 个进程 | 4 × 2 × (8 + 2) | 80 |
-| worker：4 个副本，每副本 2 个进程 | 4 × 2 × (8 + 2) | 80 |
+| API：4 个副本，每副本 2 个进程 | `4 × 2 × (8 + 2)` | 80 |
+| worker：4 个副本，每副本 2 个进程 | `4 × 2 × (8 + 2)` | 80 |
 | 其他共用数据库的服务 | 本例预留 | 40 |
-| 应用配置总上限 | 80 + 80 + 40 | 200 |
+| 应用配置总上限 | `80 + 80 + 40` | 200 |
 | 教学用数据库连接预算 | 本例假设 | 240 |
-| 未分配余量 | 240 − 200 | 40 |
+| 配置上限之外的余量 | `240 − 200` | 40 |
 
-这是并发借出连接的配置上限，不是数据库此刻一定会有 200 条活跃连接；池也可能保留已连接但空闲的物理连接。单份报表读取的 connection-seconds（连接秒）为 12 × 0.020 秒 = 0.24；按 5 个报表/秒估算，平均约有 5 × 0.24 = 1.2 条连接被报表读取借出。若假设峰值 20 个/秒都被接受，该数为 4.8；10 ms 的提交事务另加 0.05 条平均借出连接，峰值假设下另加 0.2 条。平均借出量是需求估算，连接预算仍应按各进程池上限核算。每进程连接池上限与 checkout 等待见[怎样限定 ORM Session 并排查连接池耗尽？](#11.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)。
+这是池可同时借出的配置上限，不代表数据库此刻有 200 条活跃查询；连接池会按需打开连接，也可能保留已打开的空闲连接。此预算还必须核对迁移程序、运维连接及数据库自身保留额度；教学用的 240 已把其他共享服务列为 40，但不等于任意数据库都能把 240 条分配给应用。
+
+按每页借连接 20 ms，单个 report attempt 的读取是 `12 × 0.020 = 0.24` 连接秒；新 job 提交事务另占 `0.010` 连接秒。连接池平均借用量要用各自边界内**实际**速率计算：`0.24 × λ_attempt + 0.010 × λ_accepted_job`，其中 `λ_attempt` 是实际执行 attempt/s，`λ_accepted_job` 是实际接受的新 job/s。若本例稳定地处理 5 个新 job/s、每个一个 attempt，则约为 `5 × 0.24 + 5 × 0.010 = 1.25` 条平均连接。若 workers 实际达到规划的 7 attempts/s 且 API 同时接受 7 jobs/s，则预测约 `7 × 0.24 + 7 × 0.010 = 1.75` 条；这是按规划速率估算，不是测量。峰值 20 jobs/s 若要稳定处理且每个只跑一个 attempt，需要约 `4.8` 条读取连接和 `0.2` 条提交连接，共 5 条；但当前 64 槽无法稳定达到这个 worker 速率，所以这组 20/s 数字是假设扩容后的需求，不是当前系统的平均实际借用量。重试会让 attempt 速率高于新 job 速率。以上均不含长事务、慢查询、池等待或上传期间误持连接；池上限仍须按各进程的并发配置求和。
 
 ### 结果存储和请求字节量会涨到多少？
 
-按 5 份报表/秒、每份结果 128 KiB，长期平均结果写入速率是 640 KiB/s。七天是 7 × 24 × 60 × 60 = 604,800 秒；若都保留，结果数据体量约为：
+若每个请求正文都读完整，5 个请求/s 的平均入口正文约为 `5 × 8 KiB = 40 KiB/s`；20 个请求/s 的十分钟峰值约为 `20 × 8 KiB = 160 KiB/s`，累计 `20 × 600 × 8 KiB = 93.75 MiB`。这是按**到达的 HTTP 请求**算的入口量，不是新 job 的接纳率：速率令牌只约束创建 job，已读完才拒绝的请求、幂等重放和同 key 冲突仍耗用网络及解析资源；若服务在读正文前拒绝，实际正文流量会更低。这里未计 HTTP 头、Transport Layer Security (TLS，传输层安全协议)、重传或响应字节。
+
+若长期每秒有五个 job 成功完成、每份结果 128 KiB 且保留七天，结果对象约占：
 
 ~~~text
-128 KiB × 5/s × 604,800 s ÷ 1,048,576 KiB/GiB = 369 GiB
+128 KiB × 5 个/s × 604,800 s ÷ 1,048,576 KiB/GiB
+= 369.140625 GiB ≈ 369 GiB
 ~~~
 
-这还没计入索引、复制、压缩和清理滞后。结果对象保留七天约占 `128 KiB × 5/s × 604,800 s ÷ 1,048,576 ≈ 369 GiB`。假设每个 job 的 2 KiB 终态/幂等元数据在完成后保留 14 天，近似体量是 `2 KiB × 5/s × 1,209,600 s ÷ 1,048,576 ≈ 11.54 GiB`，未计索引；处理时长和清理滞后会略微增加实际在库行数。若准入后以 7 份/秒持续完成，结果速率约 0.875 MiB/s；30 个 job 的突发全部完成时约生成 3.75 MiB。当前 64 槽、6 秒平均处理时间对应的理想持续完成率是 10.67 份/秒，结果写入约 1.33 MiB/s；实际要以对象上传、worker 执行和数据库状态提交测量，不能把 20 个/秒的提交峰值当作可达到的完成速率。下载流量要和报表生成分开预算。
+这是仅含对象正文的平均体量，不含副本、元数据、版本、压缩差异或删除延迟。另按稳态每秒 5 个 job 转为终态（成功、失败或取消）计算，每个 2 KiB 终态与幂等记录保留在终态后 14 天，元数据约占：
+
+~~~text
+2 KiB × 5 个/s × 1,209,600 s ÷ 1,048,576 KiB/GiB
+= 11.5356 GiB ≈ 11.54 GiB
+~~~
+
+这项估算不含索引；示例中的 2 KiB 已包含每个 job 一条持久记录（其状态原位更新为终态）和幂等元数据，失败 job 也包含在每秒 5 个终态 job 的假设里，不应再把失败重复加成一条 job 记录。若系统把 attempt 历史或诊断事件另存为行，它们和清理滞后会增加额外空间。若每秒 7 份都成功完成，平均结果写入约 `7 × 128 KiB = 896 KiB/s = 0.875 MiB/s`；本例 30 个突发任务全部成功会写入 `30 × 128 KiB = 3.75 MiB`。64 槽按六秒平均服务时间的理想完成率 10.67 attempts/s，在每个 attempt 都成功且产出平均结果的条件下，对应约 `1.33 MiB/s`；这是理想完成量，不是观测写入率，对象存储限速和数据库提交也会降低实际值。下载流量是读取负载，应另外估算，不能和生成带宽混为一谈。
 
 ### 如何确认最先到达的瓶颈？
 
-在这些假设下，峰值按时处理需要 120 个平均并发 job，而计划只有 64 个槽，因此 worker 执行槽先于列出的连接配置上限达到规划值。这只是排查顺序的假设，不表示数据库 CPU、存储 I/O 或网络已经有余量。
+峰值输入是 20 个新 job/s；若都被接纳并想稳定完成、每个只需一个六秒 attempt，就需要平均 120 个并发 attempt。当前 64 槽在理想条件下最多支撑约 10.67 attempts/s，实际吞吐还会受调度、失败重试和下游影响，所以 120 是需求量，不是当前 worker 的实测并发或吞吐。若新 job 准入目标设为 7/s 且每个 job 平均一次六秒 attempt，规划平均并发是 42 槽；这是假设值，不是 SLO 或容量保证。与 200 条应用连接配置上限对比只能帮助排查哪项预算可能先紧，不能排除单进程池等待、数据库处理器/输入输出/锁或对象存储瓶颈。
 
-用代表性的 8 KiB 请求、12 次读取扇出和输出大小逐步加压，再单独试 20/秒突发、满队列、慢读、重试和 worker 丢失。分别记录 API 接受延迟、job 排队时长、生成时长、下载时长，以及 p50、p95、p99（第 50、95、99 百分位）延迟分位数。6 秒是平均处理时长，只能用于这次平均在途量估算，不能写成 p95 保证。观测活动槽位、共享等待槽、最老队列年龄、数据库 checkout 等待和 CPU、结果留存量、完成与失败状态，再按真实 service-level objective（SLO，服务级目标）决定扩副本、改准入还是优化查询。[可观测性、SLO 与事件响应](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明如何按各阶段检查饱和与延迟。
+用代表性的请求大小、12 页读取扇出和结果体量逐步加压，再分别尝试 20/s 十分钟峰值、30 个突发、240 槽满、慢查询、对象上传变慢、重试、worker 丢失和租约重叠。每个场景记录 API 受理延迟、排队等待时长、执行时长、结果下载时长以及 p50、p95、p99（第 50、95、99 百分位）时延；六秒只是假设的平均 attempt 时长，不是 p95 目标。观察 token 放行与拒绝、等待槽占用、最老 outbox / queued / broker age、活跃与被栅栏但仍存活的 attempt、数据库连接池借出与 checkout（借出连接）等待、structured query language (SQL，结构化查询语言) 查询耗时、对象体量、重试、取消和终态码。若 broker 深度下降而数据库 queued 年龄继续上升，工作只是换了积压位置。再按用户实际 SLO 决定调整准入、资源或查询计划，而不是只扩队列。
 
-**接下来：** 本章把任务、排队和连接限制到同一工作负载假设；应用是否需要异步 job 以及完整持久生命周期见[怎样设计可持久查询的账户报表？](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)，消息确认语义见[发布者确认和消费者确认分别证明什么？](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
+API 在新 job 还未接受时因共享速率令牌不足而拒绝，或因等待槽已满而拒绝；案例可分别按限流返回 `429 Too Many Requests`、按暂时过载返回 `503 Service Unavailable`。这些是受理边界的拒绝，不能伪装成已经接受的 job 失败。调用方按同一幂等键重试受理结果未知的提交。已经受理的 job 若重试或租约恢复时预留不到共享等待槽，才持久为 `failed/capacity_exhausted`；attempt 耗尽则是 `failed/attempts_exhausted`。worker 本地物理槽不足只推迟领取，不把 queued job 改为容量失败。HTTP 流式路径则由请求自己的截止时间、连接和流背压决定能持续发送多久，不应把异步队列的等待槽公式挪过去。
+
+**接下来：** [持久报表任务状态与恢复](#15.%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%8F%AF%E6%8C%81%E4%B9%85%E6%9F%A5%E8%AF%A2%E7%9A%84%E8%B4%A6%E6%88%B7%E6%8A%A5%E8%A1%A8%EF%BC%9F)说明 job、等待槽、attempt 和结果如何同数据库状态交接；[队列确认页](#16.%20%E6%8A%A5%E8%A1%A8%E4%BB%BB%E5%8A%A1%E7%9A%84%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E4%B8%8E%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)展开 prefetch、发布确认与消费者 ACK；[数据访问与连接池](#11.%20%E6%80%8E%E6%A0%B7%E9%99%90%E5%AE%9A%E5%AF%B9%E8%B1%A1%E5%85%B3%E7%B3%BB%E6%98%A0%E5%B0%84%E4%BC%9A%E8%AF%9D%E5%B9%B6%E6%8E%92%E6%9F%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E8%80%97%E5%B0%BD%EF%BC%9F)解释每进程 object-relational mapping (ORM，对象关系映射) 连接池与 Session 的使用边界；[可观测性、SLO 与事件响应](#36.%20%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8A%A5%E8%A1%A8%E6%9C%8D%E5%8A%A1%E4%BF%A1%E5%8F%B7%E5%AE%9A%E4%BD%8D%E5%8F%91%E5%B8%83%E5%90%8E%E7%9A%84%E6%95%85%E9%9A%9C%EF%BC%9F)说明阶段信号怎样支持饱和判断。
 
 > [!info]- 来源
-> - Little 定律成立条件、平均数和系统边界：[Little, “A Proof for the Queuing Formula: L = λW,” Operations Research 9(3), 1961](https://doi.org/10.1287/opre.9.3.383)，该关系对应长期稳定系统的平均量。
-> - SQLAlchemy 2.1.8 QueuePool 的 pool_size + max_overflow 同时连接上限：[SQLAlchemy 2.1, Connection Pooling](https://docs.sqlalchemy.org/en/21/core/pooling.html)，官网版本与行为核对于 2026-11-06；部署到其他池实现时按实际配置重算。
-> - 延迟分布分位数与服务目标的关系：[Google SRE Workbook, Implementing SLOs](https://sre.google/workbook/implementing-slos/)，核对于 2026-11-06。
-> - 表中工作负载与容量数字均为按上述显式假设重算的合成算例，不是服务测量。
+> - Little 定律及其有限均值、严格平稳条件：[Little, “A Proof for the Queuing Formula: L = λW,” Operations Research 9(3), 1961](https://pubsonline.informs.org/doi/abs/10.1287/opre.9.3.383)，DOI `10.1287/opre.9.3.383`；核对于 2026-11-12。文中只把它用于均值与单位一致的演算，不据此推导尾部或安全容量。
+> - `QueuePool` 同时连接上限 `pool_size + max_overflow`、常驻连接数、异步池与 SQLite 特例：[SQLAlchemy 2.1.8, Connection Pooling](https://docs.sqlalchemy.org/en/21/core/pooling.html)，当前版本与官网文档核对于 2026-11-12。示例明确配置两个值，不依赖默认值。
+> - 服务级目标与用户可见可靠性：[Google SRE Workbook, Implementing SLOs](https://sre.google/workbook/implementing-slos/)，核对于 2026-11-12；压测方案和 70% 利用率是本合成案例的工程假设。
+> - 异步请求已接受但尚未完成的 HTTP 语义：[RFC 9110 §15.3.3](https://datatracker.ietf.org/doc/html/rfc9110#section-15.3.3) 定义 202 Accepted；受理事务先提交才返回，是本案例附加的持久性合同。令牌桶的 `rT+b` 关系见 [RFC 2216 §2](https://datatracker.ietf.org/doc/html/rfc2216#section-2)；该 RFC 描述数据流量上界，本例把它改作“每个新逻辑 job 一枚令牌”的准入模型。
+> - 过量请求与临时不可用的 HTTP 状态码：[RFC 6585 §4](https://datatracker.ietf.org/doc/html/rfc6585#section-4) 定义 429 Too Many Requests；[RFC 9110 §15.6.4](https://datatracker.ietf.org/doc/html/rfc9110#section-15.6.4) 定义 503 Service Unavailable。本文把速率令牌耗尽映射为前者、等待槽全满映射为后者，是示例 API 的状态映射，不是必须的数据库或队列实现。
+> - 等待队列在持续过载时会增加等待时间并占用资源：[Google SRE Book, Queue Management](https://sre.google/sre-book/addressing-cascading-failures/#queue-management)，核对于 2026-11-12。该来源解释队列与过载，不给出本例 240 的 SLO；这个数量须由本服务允许的等待时长和负载测试选择。
+> - 同 key 新意图的唯一胜者可依赖数据库唯一约束；[PostgreSQL 18, 63.5 Index Uniqueness Checks](https://www.postgresql.org/docs/18/index-unique-checks.html) 说明未提交冲突行可能让插入方等待并复查。不同 key 争最后一槽则靠所有受理者共用的额度行：[PostgreSQL 18, 13.2.1 Read Committed](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED) 说明并发 `UPDATE` 等待已锁行后会在更新版本上重新检查条件。本文不指定 PostgreSQL 为唯一实现；事务数据库若不能提供等效的唯一性仲裁和原子条件更新/行锁，不可照搬该额度行设计。
+> - 本页所有负载、预算、速率、保留期及对象大小均为教学设定；百分比和容量运算由这些显式假设重算，不是线上观察结果。
 ## 29. Web 服务如何限制拒绝服务的影响？
 
 denial of service (DoS，拒绝服务) 通过流量洪峰、连接耗尽或昂贵请求让服务资源不够用；distributed denial-of-service (DDoS，分布式拒绝服务) 指多来源同时发起的攻击。保障要沿请求实际能到达的层次布置：链路入口被塞满时，应用限流代码还没有机会运行；请求已进应用后，按 Internet Protocol address (IP 地址) 限流也不能替代对昂贵工作、并发和排队长度的约束。
