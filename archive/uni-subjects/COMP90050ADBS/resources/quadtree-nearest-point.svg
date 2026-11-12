@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="820" viewBox="0 0 800 820" role="img" aria-labelledby="title desc">
+<title id="title">四叉树最近邻的跨区比较</title><desc id="desc">合成平面根区域为零到八的正方形。查询点Q三一和A一一同在西南区，距离二。B四点五一位于东南区，距Q一点五，比A更近。西南、东南、西北、东北到Q的区域下界依次为零、一、三、根号十。找到B之后北侧两个区域可剪枝。</desc>
+<style>text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247;font-size:23px}.muted{fill:#536783;font-size:21px}.region{font-size:25px;font-weight:600}</style>
+<rect width="800" height="820" rx="14" fill="#fafbfe"/>
+<rect x="120" y="80" width="280" height="280" fill="#f1f3f7"/><rect x="400" y="80" width="280" height="280" fill="#f1f3f7"/>
+<rect x="120" y="360" width="280" height="280" fill="#f1ecfc"/><rect x="400" y="360" width="280" height="280" fill="#e9f6ef"/>
+<path d="M120 80H680V640H120Z M400 80V640 M120 360H680" fill="none" stroke="#71819a" stroke-width="2.5"/>
+<text x="260" y="150" text-anchor="middle" class="region">西北</text><text x="260" y="191" text-anchor="middle">区域下界 3</text>
+<text x="540" y="150" text-anchor="middle" class="region">东北</text><text x="540" y="191" text-anchor="middle">区域下界 √10 ≈ 3.16</text>
+<text x="260" y="415" text-anchor="middle" class="region">西南</text><text x="260" y="456" text-anchor="middle">区域下界 0</text>
+<text x="540" y="415" text-anchor="middle" class="region">东南</text><text x="540" y="456" text-anchor="middle">区域下界 1</text>
+<path d="M190 570H330" stroke="#8a69b6" stroke-width="4"/><path d="M330 570H435" stroke="#338b69" stroke-width="4"/>
+<text x="260" y="548" text-anchor="middle">2</text><text x="382" y="548" text-anchor="middle">1.5</text>
+<circle cx="190" cy="570" r="7" fill="#8a69b6"/><rect x="323" y="563" width="14" height="14" fill="#243247"/><circle cx="435" cy="570" r="8" fill="#338b69"/>
+<text x="190" y="610" text-anchor="middle">A (1, 1)</text><text x="491" y="610" text-anchor="middle">B (4.5, 1)</text>
+<path d="M330 581V683" stroke="#243247" stroke-width="1.7"/><text x="330" y="718" text-anchor="middle">Q (3, 1)</text>
+<text x="97" y="647" text-anchor="end">0</text><text x="97" y="368" text-anchor="end">4</text><text x="97" y="88" text-anchor="end">8</text>
+<text x="120" y="675" text-anchor="middle">0</text><text x="400" y="675" text-anchor="middle">4</text><text x="680" y="675" text-anchor="middle">8</text>
+<text x="94" y="45">y</text><text x="716" y="650">x</text>
+<text x="400" y="777" text-anchor="middle" class="muted">线段旁的数值是真实距离；区域标签是距离下界。</text>
+</svg>
