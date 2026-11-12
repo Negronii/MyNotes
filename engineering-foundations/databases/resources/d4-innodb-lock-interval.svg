@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="620" viewBox="0 0 700 620" role="img" aria-labelledby="title desc">
+<title id="title">InnoDB unique-record and next-key locking</title><desc id="desc">A full unique lookup locks only record seven, leaving insertable integer keys six and eight. A range lock protects the interval thirteen to twenty inclusive, so insert fifteen waits.</desc>
+<defs><marker markerUnits="userSpaceOnUse" id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#43576a"/></marker></defs>
+<rect width="700" height="620" fill="#ffffff"/>
+<!-- Unique point lookup -->
+<rect x="32" y="32" width="636" height="188" rx="12" fill="#f7fafc" stroke="#d0dbe3" stroke-width="2"/>
+<text x="52" y="66" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#1f4b6c">完整唯一点查：sku_id = 7</text>
+<line x1="88" y1="120" x2="612" y2="120" stroke="#7d8d9b" stroke-width="4"/>
+<rect x="122" y="91" width="58" height="58" rx="9" fill="#f0f3f5" stroke="#9aa9b5" stroke-width="2"/>
+<rect x="321" y="86" width="78" height="68" rx="9" fill="#e8f2fa" stroke="#4a89b8" stroke-width="3"/>
+<rect x="520" y="91" width="58" height="58" rx="9" fill="#f0f3f5" stroke="#9aa9b5" stroke-width="2"/>
+<text x="143" y="128" font-family="Arial,sans-serif" font-size="19" fill="#34495a">5</text>
+<text x="343" y="128" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#173c59">7 锁</text>
+<text x="541" y="128" font-family="Arial,sans-serif" font-size="19" fill="#34495a">9</text>
+<text x="187" y="181" font-family="Arial,sans-serif" font-size="16" fill="#34495a">6 可插入</text>
+<text x="447" y="181" font-family="Arial,sans-serif" font-size="16" fill="#34495a">8 可插入</text>
+<!-- Range scan -->
+<rect x="32" y="250" width="636" height="338" rx="12" fill="#f7fafc" stroke="#d0dbe3" stroke-width="2"/>
+<text x="52" y="284" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#1f4b6c">REPEATABLE READ：主键范围 10 ≤ sku_id ≤ 20</text>
+<text x="52" y="316" font-family="Arial,sans-serif" font-size="16" fill="#465b6d">命中记录：10、11、13、20</text>
+<line x1="78" y1="410" x2="620" y2="410" stroke="#7d8d9b" stroke-width="4"/>
+<rect x="86" y="381" width="54" height="58" rx="8" fill="#e8f2fa" stroke="#4a89b8" stroke-width="2"/>
+<rect x="192" y="381" width="54" height="58" rx="8" fill="#e8f2fa" stroke="#4a89b8" stroke-width="2"/>
+<rect x="298" y="381" width="54" height="58" rx="8" fill="#e8f2fa" stroke="#4a89b8" stroke-width="2"/>
+<rect x="570" y="374" width="68" height="72" rx="9" fill="#f9e9c9" stroke="#c5903d" stroke-width="3"/>
+<text x="101" y="417" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#173c59">10</text>
+<text x="207" y="417" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#173c59">11</text>
+<text x="313" y="417" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#173c59">13</text>
+<text x="590" y="417" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#5d421d">20</text>
+<rect x="380" y="333" width="88" height="46" rx="8" fill="#fff2de" stroke="#c5903d" stroke-width="2"/>
+<text x="394" y="362" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#5d421d">插入 15</text>
+<line x1="424" y1="380" x2="424" y2="410" stroke="#c5903d" stroke-width="3" marker-end="url(#arrow)"/>
+<line x1="354" y1="473" x2="581" y2="473" stroke="#c5903d" stroke-width="9" stroke-linecap="round"/>
+<text x="115" y="514" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#7a531f">next-key：间隙 (13,20) + 记录 20</text>
+<text x="115" y="550" font-family="Arial,sans-serif" font-size="16" fill="#465b6d">B 的 15 落在锁区间内；等待 A 结束后继续。</text>
+</svg>

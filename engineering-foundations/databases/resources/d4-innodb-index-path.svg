@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="560" viewBox="0 0 700 560" role="img" aria-labelledby="title desc">
+<title id="title">InnoDB primary and secondary index paths</title><desc id="desc">A primary lookup returns a clustered row. A secondary index can cover projected fields, but MVCC visibility may require a clustered-record lookup by primary key.</desc>
+<defs><marker markerUnits="userSpaceOnUse" id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#43576a"/></marker></defs>
+<rect width="700" height="560" fill="#ffffff"/>
+<!-- Primary-key path -->
+<rect x="32" y="32" width="250" height="94" rx="12" fill="#e8f2fa" stroke="#4a89b8" stroke-width="2"/>
+<text x="50" y="63" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#173c59">主键点查</text>
+<text x="50" y="96" font-family="Arial,sans-serif" font-size="18" fill="#173c59">sku_id = 7</text>
+<line x1="284" y1="79" x2="322" y2="79" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="330" y="32" width="338" height="94" rx="12" fill="#e7f3e7" stroke="#54824e" stroke-width="2"/>
+<text x="350" y="63" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#234923">聚簇索引记录</text>
+<text x="350" y="92" font-family="Arial,sans-serif" font-size="17" fill="#234923">完整行：7 | W-1 | available=1</text>
+<text x="350" y="116" font-family="Arial,sans-serif" font-size="17" fill="#234923">note=last unit</text>
+<!-- Secondary-index record -->
+<rect x="32" y="166" width="636" height="112" rx="12" fill="#f0eef8" stroke="#8371a8" stroke-width="2"/>
+<text x="52" y="198" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#3d3158">仓库二级索引项</text>
+<text x="52" y="231" font-family="Arial,sans-serif" font-size="17" fill="#3d3158">键：(warehouse_id, available, 主键)</text>
+<text x="52" y="259" font-family="Arial,sans-serif" font-size="17" fill="#3d3158">(W-1,1,7)　(W-1,4,11)　(W-1,5,10)</text>
+<!-- Branch from secondary entries -->
+<line x1="350" y1="279" x2="350" y2="316" stroke="#43576a" stroke-width="3"/>
+<line x1="181" y1="316" x2="519" y2="316" stroke="#43576a" stroke-width="3"/>
+<line x1="181" y1="316" x2="181" y2="348" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<line x1="519" y1="316" x2="519" y2="348" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<!-- Covering path -->
+<rect x="32" y="356" width="298" height="172" rx="12" fill="#e7f3e7" stroke="#54824e" stroke-width="2"/>
+<text x="52" y="389" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#234923">投影覆盖</text>
+<text x="52" y="421" font-family="Arial,sans-serif" font-size="17" fill="#234923">只取 sku_id、available</text>
+<text x="52" y="451" font-family="Arial,sans-serif" font-size="17" fill="#234923">字段都在二级项中</text>
+<text x="52" y="484" font-family="Arial,sans-serif" font-size="16" fill="#234923">无需回表核验可见性时，</text>
+<text x="52" y="509" font-family="Arial,sans-serif" font-size="16" fill="#234923">可直接从二级项返回</text>
+<!-- Clustered lookup path -->
+<rect x="370" y="356" width="298" height="172" rx="12" fill="#fff2de" stroke="#c5903d" stroke-width="2"/>
+<text x="390" y="389" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#5d421d">需查聚簇记录</text>
+<text x="390" y="421" font-family="Arial,sans-serif" font-size="16" fill="#5d421d">还要 note，或二级项删标/</text>
+<text x="390" y="446" font-family="Arial,sans-serif" font-size="16" fill="#5d421d">索引页有快照之后的更新</text>
+<text x="390" y="478" font-family="Arial,sans-serif" font-size="16" fill="#5d421d">按主键核对可见版本；</text>
+<text x="390" y="503" font-family="Arial,sans-serif" font-size="16" fill="#5d421d">需要旧值时再由 undo 还原</text>
+</svg>

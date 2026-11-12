@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="560" viewBox="0 0 700 560" role="img" aria-labelledby="title desc">
+<title id="title">InnoDB snapshot read and current read</title><desc id="desc">A establishes a repeatable-read snapshot at one before B commits zero. Ordinary SELECT follows undo to one. FOR UPDATE sees current zero; UPDATE available greater than zero affects zero rows.</desc>
+<defs><marker markerUnits="userSpaceOnUse" id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#43576a"/></marker></defs>
+<rect width="700" height="560" fill="#ffffff"/>
+<!-- Time order -->
+<rect x="32" y="32" width="270" height="96" rx="12" fill="#f0eef8" stroke="#8371a8" stroke-width="2"/>
+<text x="50" y="64" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#3d3158">A 建立 RR 快照</text>
+<text x="50" y="99" font-family="Arial,sans-serif" font-size="17" fill="#3d3158">sku 7：available = 1</text>
+<line x1="304" y1="80" x2="338" y2="80" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="346" y="32" width="322" height="96" rx="12" fill="#e7f3e7" stroke="#54824e" stroke-width="2"/>
+<text x="364" y="64" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#234923">B 提交条件扣减</text>
+<text x="364" y="94" font-family="Arial,sans-serif" font-size="16" fill="#234923">available 1→0；保存操作键/指纹</text>
+<!-- Snapshot-read path -->
+<rect x="32" y="168" width="180" height="112" rx="12" fill="#f0eef8" stroke="#8371a8" stroke-width="2"/>
+<text x="50" y="202" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#3d3158">A 普通 SELECT</text>
+<text x="50" y="236" font-family="Arial,sans-serif" font-size="16" fill="#3d3158">使用旧 read view</text>
+<line x1="214" y1="224" x2="251" y2="224" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="259" y="168" width="183" height="112" rx="12" fill="#f4f0f8" stroke="#9c8bb6" stroke-width="2"/>
+<text x="277" y="202" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#3d3158">快照看不到 B</text>
+<text x="277" y="236" font-family="Arial,sans-serif" font-size="16" fill="#3d3158">按聚簇版本判可见性</text>
+<line x1="444" y1="224" x2="481" y2="224" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="489" y="168" width="179" height="112" rx="12" fill="#eee8f5" stroke="#8371a8" stroke-width="2"/>
+<text x="507" y="202" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#3d3158">沿 undo 重建</text>
+<text x="507" y="239" font-family="Arial,sans-serif" font-size="18" fill="#3d3158">available = 1</text>
+<!-- Current-read/update path -->
+<rect x="32" y="322" width="180" height="122" rx="12" fill="#e8f2fa" stroke="#4a89b8" stroke-width="2"/>
+<text x="50" y="356" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#173c59">FOR UPDATE</text>
+<text x="50" y="389" font-family="Arial,sans-serif" font-size="16" fill="#173c59">当前锁定读</text>
+<text x="50" y="419" font-family="Arial,sans-serif" font-size="16" fill="#173c59">锁定当前记录</text>
+<line x1="214" y1="383" x2="251" y2="383" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="259" y="322" width="183" height="122" rx="12" fill="#e8f2fa" stroke="#4a89b8" stroke-width="2"/>
+<text x="277" y="356" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#173c59">当前聚簇记录</text>
+<text x="277" y="391" font-family="Arial,sans-serif" font-size="18" fill="#173c59">available = 0</text>
+<text x="277" y="419" font-family="Arial,sans-serif" font-size="16" fill="#173c59">并持有行锁</text>
+<line x1="444" y1="383" x2="481" y2="383" stroke="#43576a" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="489" y="322" width="179" height="122" rx="12" fill="#fff2de" stroke="#c5903d" stroke-width="2"/>
+<text x="507" y="356" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#5d421d">UPDATE 条件</text>
+<text x="507" y="389" font-family="Arial,sans-serif" font-size="16" fill="#5d421d">available &gt; 0 为假</text>
+<text x="507" y="419" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#5d421d">影响 0 行</text>
+<text x="32" y="493" font-family="Arial,sans-serif" font-size="16" fill="#34495a">普通读沿旧快照返回 1；锁定读和 UPDATE 检查 B 提交后的当前值 0。</text>
+</svg>
