@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="690" viewBox="0 0 760 690" role="img" aria-labelledby="title desc">
+<title id="title">一次合成交互的三个延迟阶段</title>
+<desc id="desc">时间从上向下。0到90毫秒等待处理，90到195毫秒处理事件，其中105到190毫秒为回调内同步布局，195到230毫秒等待下一帧呈现。共230毫秒。</desc>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="#536b88"/></marker></defs>
+<rect width="760" height="690" fill="#fff"/>
+<g font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" fill="#25374d" font-size="20">
+<path d="M95 36V649" stroke="#536b88" stroke-width="2.5" fill="none" marker-end="url(#a)"/>
+<g stroke="#536b88" stroke-width="2"><path d="M87 50H104M87 275H104M87 537.5H104M87 625H104"/></g>
+<g text-anchor="end" font-size="18"><text x="79" y="56">0 ms</text><text x="79" y="281">90 ms</text><text x="79" y="543.5">195 ms</text><text x="79" y="631">230 ms</text></g>
+<rect x="135" y="50" width="590" height="225" rx="8" fill="#edf5fe" stroke="#96b6d8"/>
+<text x="159" y="87" font-weight="600">input delay：90 ms</text>
+<text x="159" y="124">输入已到达，主线程尚未开始处理</text>
+<text x="159" y="183" font-size="18" fill="#465d76">本例 0 ms 是该条目的起点</text>
+<rect x="135" y="275" width="590" height="262.5" rx="8" fill="#f4effb" stroke="#b59fce"/>
+<text x="159" y="303" font-weight="600">processing duration：105 ms</text>
+<rect x="159" y="312.5" width="542" height="212.5" rx="8" fill="#fff5e7" stroke="#c18e4d"/>
+<text x="180" y="353" font-weight="600">回调内读取布局 → 同步布局</text>
+<text x="180" y="402">105 → 190 ms，共 85 ms</text>
+<text x="180" y="453" font-size="18">回调尚未返回，所以计入处理时长</text>
+<rect x="135" y="537.5" width="590" height="87.5" rx="8" fill="#edf8f2" stroke="#83b29b"/>
+<text x="159" y="571" font-weight="600">presentation delay：35 ms</text>
+<text x="159" y="606" font-size="18">回调已结束，等下一帧可呈现</text>
+<text x="135" y="673" font-size="20">90 + 105 + 35 = 230 ms</text>
+</g></svg>
