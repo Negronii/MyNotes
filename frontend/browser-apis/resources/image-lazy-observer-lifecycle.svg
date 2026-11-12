@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="980" viewBox="0 0 700 980" role="img" aria-labelledby="title desc">
+  <title id="title">自定义图片延迟加载的观察与请求流程</title>
+  <desc id="desc">三阶段展示同一组图片文件名、顶层视口的上下扩展区域与回调分支。false 时继续观察；true 时 image.src 赋值触发浏览器加载，随后移除 data-src 并停止观察。图形不按比例。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#526176"/>
+    </marker>
+    <style>
+      .panel { fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+      .title { font:700 20px sans-serif; fill:#172033; }
+      .label { font:18px sans-serif; fill:#253247; }
+      .note { font:17px sans-serif; fill:#536176; }
+      .code { font:17px ui-monospace, SFMono-Regular, Menlo, monospace; fill:#253247; }
+      .source { fill:#eff6ff; stroke:#60a5fa; stroke-width:1.5; }
+      .process { fill:#f8fafc; stroke:#94a3b8; stroke-width:1.5; }
+      .expanded { fill:#eff6ff; stroke:#60a5fa; stroke-width:2; }
+      .viewport { fill:#ffffff; stroke:#64748b; stroke-width:2; stroke-dasharray:7 5; }
+      .target { fill:#fef3c7; stroke:#f59e0b; stroke-width:1.5; }
+      .result { fill:#ecfdf5; stroke:#34d399; stroke-width:1.5; }
+      .arrow { fill:none; stroke:#526176; stroke-width:2; marker-end:url(#arrow); }
+    </style>
+  </defs>
+  <rect width="700" height="980" fill="#ffffff"/>
+
+  <rect class="panel" x="8" y="8" width="684" height="178" rx="12"/>
+  <text class="title" x="28" y="38">挂载：目标还在预加载区外，先显示占位图</text>
+  <rect class="source" x="28" y="58" width="300" height="116" rx="10"/>
+  <text class="label" x="44" y="83">img[data-src]</text>
+  <text class="code" x="44" y="109">src: chart-placeholder.svg</text>
+  <text class="code" x="44" y="133">data-src:</text>
+  <text class="code" x="44" y="157">  report-chart-640.webp</text>
+  <path class="arrow" d="M328 111 H368"/>
+  <rect class="process" x="368" y="58" width="304" height="106" rx="10"/>
+  <text class="label" x="386" y="84">observer.observe(image)</text>
+  <text class="code" x="386" y="110">root: null</text>
+  <text class="code" x="386" y="135">rootMargin: 200px 0px</text>
+  <text class="note" x="386" y="158">初始 false → 继续观察</text>
+
+  <rect class="panel" x="8" y="204" width="684" height="360" rx="12"/>
+  <text class="title" x="28" y="235">滚动后：目标进入下方扩展区，仍在视口外</text>
+  <rect class="expanded" x="76" y="260" width="218" height="260" rx="10"/>
+  <text class="label" x="90" y="289">上下扩展的 root</text>
+  <rect class="viewport" x="76" y="322" width="218" height="120" rx="6"/>
+  <text class="label" x="90" y="351">顶层视口矩形</text>
+  <text class="note" x="90" y="380">左右边界不变</text>
+  <rect class="target" x="96" y="452" width="192" height="42" rx="8"/>
+  <text class="label" x="114" y="479">图表目标（img）</text>
+  <path class="arrow" d="M288 473 H368 V389 H400"/>
+  <rect class="process" x="400" y="326" width="270" height="126" rx="10"/>
+  <text class="code" x="418" y="354">entry.target = img</text>
+  <text class="code" x="418" y="382">isIntersecting = true</text>
+  <text class="label" x="418" y="414">仍在实际视口外</text>
+  <text class="note" x="28" y="549">图形不按比例；蓝框只在上下留白，左右与视口对齐。</text>
+
+  <rect class="panel" x="8" y="580" width="684" height="392" rx="12"/>
+  <text class="title" x="28" y="612">回调：逐项处理 entries，并按相交状态分支</text>
+  <rect class="process" x="28" y="652" width="160" height="68" rx="10"/>
+  <text class="label" x="48" y="680">entry</text>
+  <text class="note" x="48" y="704">isIntersecting</text>
+  <path class="arrow" d="M188 686 H214"/>
+  <path class="process" d="M214 686 L288 646 L362 686 L288 726 Z"/>
+  <text class="label" x="270" y="692">相交？</text>
+  <text class="note" x="376" y="670">false</text>
+  <path class="arrow" d="M362 686 H438"/>
+  <rect class="process" x="438" y="650" width="234" height="72" rx="10"/>
+  <text class="label" x="458" y="680">继续观察该目标</text>
+  <text class="note" x="458" y="705">等待下一次变化</text>
+  <text class="note" x="306" y="750">true</text>
+  <path class="arrow" d="M288 726 V752 H140 V776"/>
+  <rect class="result" x="28" y="776" width="268" height="64" rx="10"/>
+  <text class="code" x="44" y="813">image.src ← data-src</text>
+  <path class="arrow" d="M296 808 H340"/>
+  <rect class="result" x="340" y="776" width="332" height="64" rx="10"/>
+  <text class="label" x="358" y="805">浏览器加载目标图片</text>
+  <text class="note" x="358" y="829">可能直接命中缓存</text>
+  <path class="arrow" d="M140 842 V895"/>
+  <rect class="process" x="28" y="902" width="644" height="60" rx="10"/>
+  <text class="code" x="46" y="938">清理跟踪：移除 data-src → unobserve(image)</text>
+</svg>
